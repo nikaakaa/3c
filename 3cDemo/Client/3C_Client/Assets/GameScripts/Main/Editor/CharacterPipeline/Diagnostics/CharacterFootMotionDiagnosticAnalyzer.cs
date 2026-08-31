@@ -539,8 +539,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                         ? CharacterFootContactSupportGapAvailability.OwnershipUnavailable
                         : frame.FormalFootPlacementWeight <= 0d
                             ? CharacterFootContactSupportGapAvailability.PlacementWeightZero
-                            : !frame.FinalPhysicalWriteAvailable ||
-                              frame.FinalPhysicalWriteCompletionIdentity !=
+                            : !frame.Solver.PhysicalWriteAvailable ||
+                              frame.Solver.PhysicalWriteCompletionIdentity !=
                               frame.CompletionIdentity
                                 ? CharacterFootContactSupportGapAvailability.PhysicalPoseUnavailable
                                 : !frame.CurrentContactAnchorAvailable ||
@@ -554,17 +554,17 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             if (availability != CharacterFootContactSupportGapAvailability.Available)
                 return fact;
             fact.qualityEligible = fact.applicable && fact.fullPositionWeight;
-            if (!FiniteVector(frame.FinalHeel) || !FiniteVector(frame.FinalToe))
+            if (!FiniteVector(frame.Solver.PhysicalHeelWorld) || !FiniteVector(frame.Solver.PhysicalToeWorld))
                 throw new InvalidDataException(
                     $"Foot Motion Contact support gap physical pose is invalid " +
                     $"Frame={frame.Frame} Side={frame.Side}.");
             Vector3 normal = frame.CurrentContactAnchorNormal.normalized;
             Vector3 point = frame.CurrentContactAnchorPoint;
-            double heel = Vector3.Dot(frame.FinalHeel - point, normal);
-            double toe = Vector3.Dot(frame.FinalToe - point, normal);
-            Vector3 sole = (frame.FinalHeel + frame.FinalToe) * 0.5f;
-            fact.physicalHeel = CharacterFootVectorFact.From(frame.FinalHeel);
-            fact.physicalToe = CharacterFootVectorFact.From(frame.FinalToe);
+            double heel = Vector3.Dot(frame.Solver.PhysicalHeelWorld - point, normal);
+            double toe = Vector3.Dot(frame.Solver.PhysicalToeWorld - point, normal);
+            Vector3 sole = (frame.Solver.PhysicalHeelWorld + frame.Solver.PhysicalToeWorld) * 0.5f;
+            fact.physicalHeel = CharacterFootVectorFact.From(frame.Solver.PhysicalHeelWorld);
+            fact.physicalToe = CharacterFootVectorFact.From(frame.Solver.PhysicalToeWorld);
             fact.heelClearanceMeters = heel;
             fact.toeClearanceMeters = toe;
             fact.soleClearanceMeters = Vector3.Dot(sole - point, normal);
@@ -1242,8 +1242,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 FootFrame current = frames[i];
                 if (!Continuous(previous, current) ||
                     !current.PlantInterpolationEvaluated ||
-                    !current.FinalPhysicalWriteAvailable ||
-                    !previous.FinalPhysicalWriteAvailable)
+                    !current.Solver.PhysicalWriteAvailable ||
+                    !previous.Solver.PhysicalWriteAvailable)
                 {
                     continue;
                 }
@@ -1915,8 +1915,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     previous.ConstraintState != "Swing" ||
                     current.ConstraintState != "Swing" ||
                     previous.HasAnchor || current.HasAnchor ||
-                    !previous.FinalPhysicalWriteAvailable ||
-                    !current.FinalPhysicalWriteAvailable ||
+                    !previous.Solver.PhysicalWriteAvailable ||
+                    !current.Solver.PhysicalWriteAvailable ||
                     previous.FootMotionEventIdentity == 0 ||
                     previous.FootMotionEventIdentity !=
                     current.FootMotionEventIdentity ||
@@ -2019,8 +2019,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 FootFrame previous = frames[i - 1];
                 FootFrame current = frames[i];
                 if (!Continuous(previous, current) ||
-                    !previous.FinalPhysicalWriteAvailable ||
-                    !current.FinalPhysicalWriteAvailable)
+                    !previous.Solver.PhysicalWriteAvailable ||
+                    !current.Solver.PhysicalWriteAvailable)
                 {
                     continue;
                 }
@@ -2549,8 +2549,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             FootFrame previous = frames[index - 1];
             FootFrame current = frames[index];
             if (!Continuous(previous, current) ||
-                !previous.FinalPhysicalWriteAvailable ||
-                !current.FinalPhysicalWriteAvailable)
+                !previous.Solver.PhysicalWriteAvailable ||
+                !current.Solver.PhysicalWriteAvailable)
             {
                 return false;
             }
@@ -2603,8 +2603,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             probe switch
             {
                 0 => FinalPhysicalAnkleWorld(frame),
-                1 => frame.FinalHeel,
-                2 => frame.FinalToe,
+                1 => frame.Solver.PhysicalHeelWorld,
+                2 => frame.Solver.PhysicalToeWorld,
                 _ => throw new ArgumentOutOfRangeException(nameof(probe))
             };
 
@@ -3054,8 +3054,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     ? current.ComponentUp.normalized
                     : default;
                 bool physicalAvailable =
-                    previous.FinalPhysicalWriteAvailable &&
-                    current.FinalPhysicalWriteAvailable;
+                    previous.Solver.PhysicalWriteAvailable &&
+                    current.Solver.PhysicalWriteAvailable;
                 Vector3 physicalAnkleDelta = physicalAvailable
                     ? FinalPhysicalAnkleWorld(current) -
                       FinalPhysicalAnkleWorld(previous)
@@ -3263,20 +3263,20 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     end - Math.Max(0, i - 1) + 1);
                 double correctionStep = MaximumCorrectionStep(window);
                 double originalExtensionPeak = window.Max(
-                    frame => frame.OriginalExtensionRatio);
-                double targetExtensionPeak = window.Max(frame => frame.TargetExtensionRatio);
-                double solvedExtensionPeak = window.Max(frame => frame.SolvedExtensionRatio);
-                double bendMinimum = window.Min(frame => frame.SolvedBendDegrees);
+                    frame => frame.Solver.IkLegOriginalExtensionRatio);
+                double targetExtensionPeak = window.Max(frame => frame.Solver.IkLegTargetExtensionRatio);
+                double solvedExtensionPeak = window.Max(frame => frame.Solver.IkLegSolvedExtensionRatio);
+                double bendMinimum = window.Min(frame => frame.Solver.IkLegSolvedBendDegrees);
                 double originalCompressionMinimum = window.Min(
-                    frame => frame.OriginalCompressionReserve);
+                    frame => frame.Solver.IkLegOriginalCompressionReserve);
                 double targetCompressionMinimum = window.Min(
-                    frame => frame.TargetCompressionReserve);
+                    frame => frame.Solver.IkLegTargetCompressionReserve);
                 double solvedCompressionMinimum = window.Min(
-                    frame => frame.SolvedCompressionReserve);
-                double bendDirectionMinimum = window.Min(frame => frame.BendDirectionPreviousDot);
+                    frame => frame.Solver.IkLegSolvedCompressionReserve);
+                double bendDirectionMinimum = window.Min(frame => frame.Solver.IkLegEffectiveBendDirectionPreviousDot);
                 double targetExtensionDelta =
-                    targetExtensionPeak - previous.TargetExtensionRatio;
-                double bendDrop = previous.SolvedBendDegrees - bendMinimum;
+                    targetExtensionPeak - previous.Solver.IkLegTargetExtensionRatio;
+                double bendDrop = previous.Solver.IkLegSolvedBendDegrees - bendMinimum;
                 int peakFrame = PeakCorrectionFrame(window);
                 FootFrame peak = window.First(
                     frame => frame.Frame == peakFrame);
@@ -3307,7 +3307,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                         ["solvedBendDegreesMinimum"] = bendMinimum,
                         ["solvedBendDropDegrees"] = bendDrop,
                         ["solvedExtensionRatioPeak"] = solvedExtensionPeak,
-                        ["targetExtensionRatioBaseline"] = previous.TargetExtensionRatio,
+                        ["targetExtensionRatioBaseline"] = previous.Solver.IkLegTargetExtensionRatio,
                         ["targetExtensionRatioDelta"] = targetExtensionDelta,
                         ["targetExtensionRatioPeak"] = targetExtensionPeak,
                         ["landingReachCandidateCompressionReserveMeters"] =
@@ -3599,8 +3599,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             Vector3 stateAdditionalDelta =
                 correctedDelta - animatedDelta * blend;
             bool physicalAvailable =
-                previous.FinalPhysicalWriteAvailable &&
-                current.FinalPhysicalWriteAvailable;
+                previous.Solver.PhysicalWriteAvailable &&
+                current.Solver.PhysicalWriteAvailable;
             return new CharacterFootOutputBoundaryMotion(
                 Vector3.Distance(
                     previous.EffectiveCorrection,
@@ -3651,8 +3651,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     ? Vector3.Dot(correctionDelta, up)
                     : 0d;
                 bool physicalAvailable =
-                    previous.FinalPhysicalWriteAvailable &&
-                    current.FinalPhysicalWriteAvailable;
+                    previous.Solver.PhysicalWriteAvailable &&
+                    current.Solver.PhysicalWriteAvailable;
                 Vector3 physicalAnkleDelta = physicalAvailable
                     ? FinalPhysicalAnkleWorld(current) -
                       FinalPhysicalAnkleWorld(previous)
@@ -3900,12 +3900,12 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         }
 
         static Vector3 FinalSole(FootFrame frame) =>
-            (frame.FinalHeel + frame.FinalToe) * 0.5f;
+            (frame.Solver.PhysicalHeelWorld + frame.Solver.PhysicalToeWorld) * 0.5f;
 
         static Vector3 FinalPhysicalAnkleWorld(FootFrame frame) =>
             frame.PoseRootWorldPosition +
             frame.PoseRootWorldRotation *
-            frame.FinalPhysicalAnkleComponentPosition;
+            frame.Solver.PhysicalAnkleComponentPosition;
 
         static void AnalyzeLockedEvents(
             List<FootFrame> frames,
@@ -3958,8 +3958,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 double visibleStep = MaximumVectorStep(
                     window.Select(frame => frame.CorrectedSole).ToList());
                 bool physicalAnchorAvailable = window.All(frame =>
-                    frame.FinalPhysicalWriteAvailable &&
-                    frame.FinalPhysicalWriteCompletionIdentity == frame.CompletionIdentity &&
+                    frame.Solver.PhysicalWriteAvailable &&
+                    frame.Solver.PhysicalWriteCompletionIdentity == frame.CompletionIdentity &&
                     frame.CurrentContactAnchorAvailable &&
                     frame.CurrentContactAnchorEventIdentity == frame.FootMotionEventIdentity);
                 var metrics = new SortedDictionary<string, double>(StringComparer.Ordinal)
@@ -3991,7 +3991,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 if (physicalAnchorAvailable)
                     metrics["physicalSoleAnchorHorizontalDistanceMaximumMeters"] =
                         window.Max(frame => (double)Vector3.ProjectOnPlane(
-                            (frame.FinalHeel + frame.FinalToe) * 0.5f -
+                            (frame.Solver.PhysicalHeelWorld + frame.Solver.PhysicalToeWorld) * 0.5f -
                             frame.CurrentContactAnchorPoint,
                             frame.ComponentUp.normalized).magnitude);
                 var evidence = new SortedDictionary<string, bool>(StringComparer.Ordinal)
@@ -4215,10 +4215,10 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 frame.SourceToe - frame.Anchor,
                 normal);
             double finalHeelClearance = Vector3.Dot(
-                frame.FinalHeel - frame.Anchor,
+                frame.Solver.PhysicalHeelWorld - frame.Anchor,
                 normal);
             double finalToeClearance = Vector3.Dot(
-                frame.FinalToe - frame.Anchor,
+                frame.Solver.PhysicalToeWorld - frame.Anchor,
                 normal);
             return CharacterFootContactPlanePenetration.Evaluate(
                 sourceHeelClearance,
@@ -4439,18 +4439,18 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 Stage(
                     CharacterFootPathStageNames.EncodedGoalToSolvedFoot,
                     previous.EncodedGoalAvailable && current.EncodedGoalAvailable &&
-                    previous.FinalIkEffectorAvailable &&
-                    current.FinalIkEffectorAvailable,
+                    previous.Solver.IkEffectorAvailable &&
+                    current.Solver.IkEffectorAvailable,
                     "EncodedGoalOrSolvedFootUnavailable",
                     previous.EncodedGoalPosition,
                     current.EncodedGoalPosition,
-                    previous.FinalIkSolvedPosition,
-                    current.FinalIkSolvedPosition,
+                    previous.Solver.IkSolvedPosition,
+                    current.Solver.IkSolvedPosition,
                     previous.Frame,
                     current.Frame,
                     missing,
-                    previous.FinalIkEffectorAvailable ||
-                    current.FinalIkEffectorAvailable)
+                    previous.Solver.IkEffectorAvailable ||
+                    current.Solver.IkEffectorAvailable)
             };
             var stateEvidence = new CharacterFootPathStageStateEvidence
             {
@@ -4535,12 +4535,12 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     groundEnvelopeSafetyCorrection = StageVector(
                         current.SafetyFloorMinimumCorrection),
                     physicalFootAvailable =
-                        previous.FinalPhysicalWriteAvailable &&
-                        current.FinalPhysicalWriteAvailable,
+                        previous.Solver.PhysicalWriteAvailable &&
+                        current.Solver.PhysicalWriteAvailable,
                     physicalFootPrevious = StageVector(
-                        previous.FinalPhysicalAnkleComponentPosition),
+                        previous.Solver.PhysicalAnkleComponentPosition),
                     physicalFoot = StageVector(
-                        current.FinalPhysicalAnkleComponentPosition)
+                        current.Solver.PhysicalAnkleComponentPosition)
                 },
                 missingStages = missing,
                 stages = stages,
@@ -5344,8 +5344,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     previous.Pelvis.PhysicalComponent,
                     current.Pelvis.PhysicalComponent);
                 double extensionChange = Math.Max(
-                    Math.Abs(current.TargetExtensionRatio - previous.TargetExtensionRatio),
-                    Math.Abs(currentRight.TargetExtensionRatio - previousRight.TargetExtensionRatio));
+                    Math.Abs(current.Solver.IkLegTargetExtensionRatio - previous.Solver.IkLegTargetExtensionRatio),
+                    Math.Abs(currentRight.Solver.IkLegTargetExtensionRatio - previousRight.Solver.IkLegTargetExtensionRatio));
                 var metrics = new SortedDictionary<string, double>(StringComparer.Ordinal)
                 {
                     ["pelvisGoalStepMeters"] = goalStep,
@@ -5723,8 +5723,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     !left[i].Pelvis.PhysicalComponent.Equals(right[i].Pelvis.PhysicalComponent) ||
                     !left[i].Pelvis.FinalGoal.Equals(right[i].Pelvis.FinalGoal) ||
                     left[i].PelvisWeight != right[i].PelvisWeight ||
-                    left[i].FinalPhysicalWriteAvailable != right[i].FinalPhysicalWriteAvailable ||
-                    left[i].FinalPhysicalWriteCompletionIdentity != right[i].FinalPhysicalWriteCompletionIdentity)
+                    left[i].Solver.PhysicalWriteAvailable != right[i].Solver.PhysicalWriteAvailable ||
+                    left[i].Solver.PhysicalWriteCompletionIdentity != right[i].Solver.PhysicalWriteCompletionIdentity)
                 {
                     throw new InvalidDataException(
                         $"Foot Motion shared Pelvis height target differs between Foot rows Frame={left[i].Frame}.");
@@ -6083,7 +6083,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 RequireEnum<T>(value, name);
                 return Enum.Parse<T>(value);
             }
-
 
             string side = Cell("Side");
             bool hasSurfaceFacts = indices.ContainsKey("GroundSurfaceState");
@@ -6728,48 +6727,16 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 EncodedGoalPosition = Vector("FinalGoalPosition"),
                 EncodedGoalCorrection =
                     Vector("FootMotionEncodedGoalCorrection"),
-                FinalIkEffectorAvailable =
-                    Int("FinalIkEffectorAvailable") != 0,
-                FinalIkTargetPosition = Vector("FinalIkTargetPosition"),
-                FinalIkSolvedPosition = Vector("FinalIkSolvedPosition"),
-                FinalPhysicalWriteAvailable =
-                    Int("FinalPhysicalWriteAvailable") != 0,
-                FinalPhysicalWriteCompletionIdentity =
-                    Ulong("FinalPhysicalWriteCompletionIdentity"),
-                FinalPhysicalAnkleComponentPosition =
-                    Vector("FinalPhysicalAnkleComponentPosition"),
-                FinalPhysicalAnkleGoalResidual = Float("FinalPhysicalAnkleGoalResidual"),
                 PenetrationAvailability = Cell("FootContactPlanePenetrationAvailability"),
                 SourceHeel = Vector("FootMotionSourceHeel"),
                 SourceToe = Vector("FootMotionSourceToe"),
-                FinalHeel = Vector("FinalPhysicalHeelWorld"),
-                FinalToe = Vector("FinalPhysicalToeWorld"),
                 HasAnchor = Ulong("FootMotionLandingEventIdentity") != 0 &&
                             Cell("FootMotionConstraintState") != "Swing",
-                OriginalExtensionRatio =
-                    Float("FinalIkLegOriginalExtensionRatio"),
-                TargetExtensionRatio = Float("FinalIkLegTargetExtensionRatio"),
-                SolvedExtensionRatio = Float("FinalIkLegSolvedExtensionRatio"),
-                SolvedBendDegrees = Float("FinalIkLegSolvedBendDegrees"),
-                OriginalCompressionReserve =
-                    Float("FinalIkLegOriginalCompressionReserve"),
-                TargetCompressionReserve =
-                    Float("FinalIkLegTargetCompressionReserve"),
-                SolvedCompressionReserve =
-                    Float("FinalIkLegSolvedCompressionReserve"),
-                BendDirectionPreviousDot = Float("FinalIkLegEffectiveBendDirectionPreviousDot"),
-                FinalIkLegAvailable = Int("FinalIkLegAvailable") != 0,
-                FinalIkLegOriginalHip = Vector("FinalIkLegOriginalHip"),
-                FinalIkLegOriginalKnee = Vector("FinalIkLegOriginalKnee"),
-                FinalIkLegOriginalAnkle = Vector("FinalIkLegOriginalAnkle"),
-                FinalIkLegTargetAnkle = Vector("FinalIkLegTargetAnkle"),
-                FinalIkLegSolvedHip = Vector("FinalIkLegSolvedHip"),
-                FinalIkLegSolvedKnee = Vector("FinalIkLegSolvedKnee"),
-                FinalIkLegSolvedAnkle = Vector("FinalIkLegSolvedAnkle"),
                 PrimarySupportAvailable =
                     Int("PrimarySupportHasValue") != 0,
                 PrimarySupportSide = Cell("PrimarySupportSide"),
                 PrimarySupportEventIdentity = Ulong("PrimarySupportLandingEventIdentity"),
+                Solver = bindings.Solver.Read(cells),
                 Pelvis = bindings.Pelvis.Read(cells),
                 PelvisWeight = Float("PelvisPositionWeight")
             };
@@ -8802,22 +8769,22 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         static void RequireFootGoalComponentFacts(FootFrame frame)
         {
             Vector3 target = Vector3.Lerp(
-                frame.FinalIkLegOriginalAnkle, frame.EncodedGoalPosition, frame.FinalGoalPositionWeight);
-            bool physicalAvailable = frame.FinalPhysicalWriteAvailable && frame.FinalIkLegAvailable &&
+                frame.Solver.IkLegOriginalAnkle, frame.EncodedGoalPosition, frame.FinalGoalPositionWeight);
+            bool physicalAvailable = frame.Solver.PhysicalWriteAvailable && frame.Solver.IkLegAvailable &&
                 frame.FinalGoalPositionWeight > 0f;
             float expectedResidual = physicalAvailable
-                ? Vector3.Distance(frame.FinalPhysicalAnkleComponentPosition,
-                    frame.FinalIkLegOriginalAnkle +
-                    (frame.EncodedGoalPosition - frame.FinalIkLegOriginalAnkle) * frame.FinalGoalPositionWeight)
+                ? Vector3.Distance(frame.Solver.PhysicalAnkleComponentPosition,
+                    frame.Solver.IkLegOriginalAnkle +
+                    (frame.EncodedGoalPosition - frame.Solver.IkLegOriginalAnkle) * frame.FinalGoalPositionWeight)
                 : 0f;
-            if (frame.FinalIkLegAvailable &&
-                    Vector3.Distance(frame.FinalIkLegTargetAnkle, target) > PositionNoiseFloor ||
-                frame.FinalPhysicalAnkleGoalResidual < 0f ||
-                Math.Abs(frame.FinalPhysicalAnkleGoalResidual - expectedResidual) > PositionNoiseFloor ||
-                physicalAvailable && frame.FinalPhysicalWriteCompletionIdentity != frame.CompletionIdentity)
+            if (frame.Solver.IkLegAvailable &&
+                    Vector3.Distance(frame.Solver.IkLegTargetAnkle, target) > PositionNoiseFloor ||
+                frame.Solver.PhysicalAnkleGoalResidual < 0f ||
+                Math.Abs(frame.Solver.PhysicalAnkleGoalResidual - expectedResidual) > PositionNoiseFloor ||
+                physicalAvailable && frame.Solver.PhysicalWriteCompletionIdentity != frame.CompletionIdentity)
                 throw new InvalidDataException(
                     $"Foot Motion component Goal and physical residual facts are inconsistent " +
-                    $"Frame={frame.Frame} Side={frame.Side} Residual={frame.FinalPhysicalAnkleGoalResidual:R}/{expectedResidual:R}.");
+                    $"Frame={frame.Frame} Side={frame.Side} Residual={frame.Solver.PhysicalAnkleGoalResidual:R}/{expectedResidual:R}.");
         }
 
         static void ApplyAnchorCommand(
@@ -9202,8 +9169,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         }
 
         static bool PelvisPhysicalAvailable(FootFrame frame) =>
-            frame.FinalPhysicalWriteAvailable &&
-            frame.FinalPhysicalWriteCompletionIdentity == frame.CompletionIdentity;
+            frame.Solver.PhysicalWriteAvailable &&
+            frame.Solver.PhysicalWriteCompletionIdentity == frame.CompletionIdentity;
 
         static void RequirePelvisObservation(FootFrame frame)
         {
@@ -9255,60 +9222,60 @@ namespace ThirdPersonCharacter.Pipeline.Editor
 
         static void RequireLegReachFacts(FootFrame frame)
         {
-            if (!frame.FinalIkLegAvailable)
+            if (!frame.Solver.IkLegAvailable)
                 return;
             double legLength = Vector3.Distance(
-                                   frame.FinalIkLegOriginalHip,
-                                   frame.FinalIkLegOriginalKnee) +
+                                   frame.Solver.IkLegOriginalHip,
+                                   frame.Solver.IkLegOriginalKnee) +
                                Vector3.Distance(
-                                   frame.FinalIkLegOriginalKnee,
-                                   frame.FinalIkLegOriginalAnkle);
+                                   frame.Solver.IkLegOriginalKnee,
+                                   frame.Solver.IkLegOriginalAnkle);
             if (!double.IsFinite(legLength) || legLength <= TimeEpsilon)
             {
                 throw new InvalidDataException(
                     "Foot Motion leg length facts are invalid.");
             }
             double originalLength = Vector3.Distance(
-                frame.FinalIkLegOriginalHip,
-                frame.FinalIkLegOriginalAnkle);
+                frame.Solver.IkLegOriginalHip,
+                frame.Solver.IkLegOriginalAnkle);
             double targetLength = Vector3.Distance(
-                frame.FinalIkLegOriginalHip,
-                frame.FinalIkLegTargetAnkle);
+                frame.Solver.IkLegOriginalHip,
+                frame.Solver.IkLegTargetAnkle);
             double solvedLegLength = Vector3.Distance(
-                                         frame.FinalIkLegSolvedHip,
-                                         frame.FinalIkLegSolvedKnee) +
+                                         frame.Solver.IkLegSolvedHip,
+                                         frame.Solver.IkLegSolvedKnee) +
                                      Vector3.Distance(
-                                         frame.FinalIkLegSolvedKnee,
-                                         frame.FinalIkLegSolvedAnkle);
+                                         frame.Solver.IkLegSolvedKnee,
+                                         frame.Solver.IkLegSolvedAnkle);
             double solvedLength = Vector3.Distance(
-                frame.FinalIkLegSolvedHip,
-                frame.FinalIkLegSolvedAnkle);
+                frame.Solver.IkLegSolvedHip,
+                frame.Solver.IkLegSolvedAnkle);
             bool consistent =
-                float.IsFinite(frame.OriginalExtensionRatio) &&
-                float.IsFinite(frame.TargetExtensionRatio) &&
-                float.IsFinite(frame.SolvedExtensionRatio) &&
-                float.IsFinite(frame.OriginalCompressionReserve) &&
-                float.IsFinite(frame.TargetCompressionReserve) &&
-                float.IsFinite(frame.SolvedCompressionReserve) &&
+                float.IsFinite(frame.Solver.IkLegOriginalExtensionRatio) &&
+                float.IsFinite(frame.Solver.IkLegTargetExtensionRatio) &&
+                float.IsFinite(frame.Solver.IkLegSolvedExtensionRatio) &&
+                float.IsFinite(frame.Solver.IkLegOriginalCompressionReserve) &&
+                float.IsFinite(frame.Solver.IkLegTargetCompressionReserve) &&
+                float.IsFinite(frame.Solver.IkLegSolvedCompressionReserve) &&
                 Math.Abs(solvedLegLength - legLength) <=
                     PositionNoiseFloor &&
                 Math.Abs(
-                    frame.OriginalExtensionRatio -
+                    frame.Solver.IkLegOriginalExtensionRatio -
                     originalLength / legLength) <= PositionNoiseFloor &&
                 Math.Abs(
-                    frame.TargetExtensionRatio -
+                    frame.Solver.IkLegTargetExtensionRatio -
                     targetLength / legLength) <= PositionNoiseFloor &&
                 Math.Abs(
-                    frame.SolvedExtensionRatio -
+                    frame.Solver.IkLegSolvedExtensionRatio -
                     solvedLength / legLength) <= PositionNoiseFloor &&
                 Math.Abs(
-                    frame.OriginalCompressionReserve -
+                    frame.Solver.IkLegOriginalCompressionReserve -
                     Math.Max(0d, legLength - originalLength)) <= PositionNoiseFloor &&
                 Math.Abs(
-                    frame.TargetCompressionReserve -
+                    frame.Solver.IkLegTargetCompressionReserve -
                     Math.Max(0d, legLength - targetLength)) <= PositionNoiseFloor &&
                 Math.Abs(
-                    frame.SolvedCompressionReserve -
+                    frame.Solver.IkLegSolvedCompressionReserve -
                     Math.Max(0d, legLength - solvedLength)) <= PositionNoiseFloor;
             if (!consistent)
             {
@@ -9764,37 +9731,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 "FootMotionEncodedGoalCorrectionY",
                 "FootMotionEncodedGoalCorrectionZ",
                 "FinalGoalPositionX", "FinalGoalPositionY", "FinalGoalPositionZ",
-                "FinalIkEffectorAvailable",
-                "FinalIkTargetPositionX", "FinalIkTargetPositionY",
-                "FinalIkTargetPositionZ", "FinalIkSolvedPositionX",
-                "FinalIkSolvedPositionY", "FinalIkSolvedPositionZ",
-                "FinalPhysicalWriteAvailable",
-                "FinalPhysicalWriteCompletionIdentity",
-                "FinalPhysicalAnkleComponentPositionX",
-                "FinalPhysicalAnkleComponentPositionY",
-                "FinalPhysicalAnkleComponentPositionZ",
-                "FinalPhysicalAnkleGoalResidual",
                 "FootMotionSourceHeelX", "FootMotionSourceHeelY", "FootMotionSourceHeelZ",
                 "FootMotionSourceToeX", "FootMotionSourceToeY", "FootMotionSourceToeZ",
-                "FinalPhysicalHeelWorldX", "FinalPhysicalHeelWorldY", "FinalPhysicalHeelWorldZ",
-                "FinalPhysicalToeWorldX", "FinalPhysicalToeWorldY", "FinalPhysicalToeWorldZ",
-                "FinalIkLegAvailable",
-                "FinalIkLegOriginalHipX", "FinalIkLegOriginalHipY",
-                "FinalIkLegOriginalHipZ",
-                "FinalIkLegOriginalKneeX", "FinalIkLegOriginalKneeY",
-                "FinalIkLegOriginalKneeZ",
-                "FinalIkLegOriginalAnkleX", "FinalIkLegOriginalAnkleY",
-                "FinalIkLegOriginalAnkleZ",
-                "FinalIkLegTargetAnkleX", "FinalIkLegTargetAnkleY",
-                "FinalIkLegTargetAnkleZ",
-                "FinalIkLegSolvedHipX", "FinalIkLegSolvedHipY",
-                "FinalIkLegSolvedHipZ", "FinalIkLegSolvedKneeX",
-                "FinalIkLegSolvedKneeY", "FinalIkLegSolvedKneeZ",
-                "FinalIkLegSolvedAnkleX", "FinalIkLegSolvedAnkleY",
-                "FinalIkLegSolvedAnkleZ",
-                "FinalIkLegOriginalExtensionRatio", "FinalIkLegTargetExtensionRatio", "FinalIkLegSolvedExtensionRatio",
-                "FinalIkLegSolvedBendDegrees", "FinalIkLegOriginalCompressionReserve", "FinalIkLegTargetCompressionReserve", "FinalIkLegSolvedCompressionReserve",
-                "FinalIkLegEffectiveBendDirectionPreviousDot",
                 "PrimarySupportHasValue", "PrimarySupportSide",
                 "PrimarySupportLandingEventIdentity",
                 "PelvisPositionWeight", };
@@ -10518,45 +10456,21 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             internal bool EncodedGoalAvailable;
             internal Vector3 EncodedGoalPosition;
             internal Vector3 EncodedGoalCorrection;
-            internal bool FinalIkEffectorAvailable;
-            internal Vector3 FinalIkTargetPosition;
-            internal Vector3 FinalIkSolvedPosition;
-            internal bool FinalPhysicalWriteAvailable;
-            internal ulong FinalPhysicalWriteCompletionIdentity;
             internal CharacterFootContactSupportGapFrame ContactSupportGap;
-            internal Vector3 FinalPhysicalAnkleComponentPosition;
-            internal float FinalPhysicalAnkleGoalResidual;
             internal string PenetrationAvailability;
             internal Vector3 SourceHeel;
             internal Vector3 SourceToe;
-            internal Vector3 FinalHeel;
-            internal Vector3 FinalToe;
             internal bool HasAnchor;
             internal bool PenetrationAvailable =>
                 ContactPlaneAvailable &&
                 (ConstraintState == "Landing" || ConstraintState == "Locked") &&
                 PenetrationAvailability ==
                 CharacterFootContactPlanePenetrationAvailability.Available.ToString();
-            internal float OriginalExtensionRatio;
-            internal float TargetExtensionRatio;
-            internal float SolvedExtensionRatio;
-            internal float SolvedBendDegrees;
-            internal float OriginalCompressionReserve;
-            internal float TargetCompressionReserve;
-            internal float SolvedCompressionReserve;
-            internal float BendDirectionPreviousDot;
-            internal bool FinalIkLegAvailable;
-            internal Vector3 FinalIkLegOriginalHip;
-            internal Vector3 FinalIkLegOriginalKnee;
-            internal Vector3 FinalIkLegOriginalAnkle;
-            internal Vector3 FinalIkLegTargetAnkle;
-            internal Vector3 FinalIkLegSolvedHip;
-            internal Vector3 FinalIkLegSolvedKnee;
-            internal Vector3 FinalIkLegSolvedAnkle;
             internal bool PrimarySupportAvailable;
             internal string PrimarySupportSide;
             internal ulong PrimarySupportEventIdentity;
             internal CharacterFootPelvisSample Pelvis;
+            internal CharacterFootSolverSample Solver;
             internal float PelvisWeight;
             internal Vector3 EffectiveCorrection => CorrectedAnkle - OriginalAnkle;
         }
@@ -10590,7 +10504,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 animatedWorldPosition = observation.PoseInputAvailable ? CharacterFootVectorFact.From(observation.AnimatedWorldPosition) : null,
                 animatedComponentPosition = observation.PoseInputAvailable ? CharacterFootVectorFact.From(observation.AnimatedComponentPosition) : null,
                 physicalWriteAvailable = physicalAvailable,
-                physicalWriteCompletionIdentity = frame.FinalPhysicalWriteCompletionIdentity.ToString(CultureInfo.InvariantCulture),
+                physicalWriteCompletionIdentity = frame.Solver.PhysicalWriteCompletionIdentity.ToString(CultureInfo.InvariantCulture),
                 physicalWorldPosition = physicalAvailable ? CharacterFootVectorFact.From(observation.PhysicalWorldPosition) : null,
                 physicalComponentPosition = physicalAvailable ? CharacterFootVectorFact.From(frame.Pelvis.PhysicalComponent) : null,
                 goalCorrectionComponent = CharacterFootVectorFact.From(frame.Pelvis.FinalGoal),
@@ -10815,29 +10729,29 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     classification = "LandingReachUnavailable",
                     candidateCompressionReserveMeters =
                         LandingReachCompressionReserveMeters,
-                    finalIkLegAvailable = frame.FinalIkLegAvailable,
+                    finalIkLegAvailable = frame.Solver.IkLegAvailable,
                     componentUp = ScalarVector3Fact.From(frame.ComponentUp),
                     originalHip = ScalarVector3Fact.From(
-                        frame.FinalIkLegOriginalHip),
+                        frame.Solver.IkLegOriginalHip),
                     originalKnee = ScalarVector3Fact.From(
-                        frame.FinalIkLegOriginalKnee),
+                        frame.Solver.IkLegOriginalKnee),
                     originalAnkle = ScalarVector3Fact.From(
-                        frame.FinalIkLegOriginalAnkle),
+                        frame.Solver.IkLegOriginalAnkle),
                     targetAnkle = ScalarVector3Fact.From(
-                        frame.FinalIkLegTargetAnkle),
+                        frame.Solver.IkLegTargetAnkle),
                     baselineHipBeforePelvisOutput =
                         ScalarVector3Fact.From(
-                            frame.FinalIkLegOriginalHip),
+                            frame.Solver.IkLegOriginalHip),
                     strideSpringOutputMeters = frame.Pelvis.Response.Output,
-                    originalExtensionRatio = frame.OriginalExtensionRatio,
-                    targetExtensionRatio = frame.TargetExtensionRatio,
-                    solvedExtensionRatio = frame.SolvedExtensionRatio,
+                    originalExtensionRatio = frame.Solver.IkLegOriginalExtensionRatio,
+                    targetExtensionRatio = frame.Solver.IkLegTargetExtensionRatio,
+                    solvedExtensionRatio = frame.Solver.IkLegSolvedExtensionRatio,
                     originalCompressionReserveMeters =
-                        frame.OriginalCompressionReserve,
+                        frame.Solver.IkLegOriginalCompressionReserve,
                     actualTargetCompressionReserveMeters =
-                        frame.TargetCompressionReserve,
+                        frame.Solver.IkLegTargetCompressionReserve,
                     solvedCompressionReserveMeters =
-                        frame.SolvedCompressionReserve,
+                        frame.Solver.IkLegSolvedCompressionReserve,
                     runtimeReachEvaluated = frame.LandingReachEvaluated,
                     runtimeReachAvailable = frame.LandingReachAvailable,
                     resolvedReachRequestAvailable =
@@ -10865,7 +10779,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                         frame.Pelvis.Reach.IntersectionMaximumAlongUp,
                     correctionDirection = "Unavailable"
                 };
-                if (!frame.FinalIkLegAvailable)
+                if (!frame.Solver.IkLegAvailable)
                 {
                     result.availability = "FinalIkLegUnavailable";
                     return result;
@@ -10878,11 +10792,11 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 }
                 Vector3 up = frame.ComponentUp.normalized;
                 double upperLength = Vector3.Distance(
-                    frame.FinalIkLegOriginalHip,
-                    frame.FinalIkLegOriginalKnee);
+                    frame.Solver.IkLegOriginalHip,
+                    frame.Solver.IkLegOriginalKnee);
                 double lowerLength = Vector3.Distance(
-                    frame.FinalIkLegOriginalKnee,
-                    frame.FinalIkLegOriginalAnkle);
+                    frame.Solver.IkLegOriginalKnee,
+                    frame.Solver.IkLegOriginalAnkle);
                 double legLength = upperLength + lowerLength;
                 double usableLegLength = legLength -
                     LandingReachCompressionReserveMeters;
@@ -10899,14 +10813,14 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 double appliedPelvisAlongUp = Vector3.Dot(
                     frame.Pelvis.FinalGoal,
                     up) * frame.PelvisWeight;
-                Vector3 baselineHip = frame.FinalIkLegOriginalHip -
+                Vector3 baselineHip = frame.Solver.IkLegOriginalHip -
                     up * (float)appliedPelvisAlongUp;
                 result.appliedPelvisGoalAlongUpMeters =
                     appliedPelvisAlongUp;
                 result.baselineHipBeforePelvisOutput =
                     ScalarVector3Fact.From(baselineHip);
                 Vector3 hipFromTarget =
-                    baselineHip - frame.FinalIkLegTargetAnkle;
+                    baselineHip - frame.Solver.IkLegTargetAnkle;
                 double vertical = Vector3.Dot(hipFromTarget, up);
                 Vector3 horizontal = Vector3.ProjectOnPlane(
                     hipFromTarget,

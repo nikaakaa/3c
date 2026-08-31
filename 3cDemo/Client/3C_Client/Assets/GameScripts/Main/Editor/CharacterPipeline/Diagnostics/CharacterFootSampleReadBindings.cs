@@ -15,6 +15,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             OutputEvents = CharacterFootEventColumns.Output.Bind(indices);
             InputEvents = CharacterFootEventColumns.Input.Bind(indices);
             Pelvis = CharacterFootPelvisColumns.Schema.Bind(indices);
+            Solver = CharacterFootSolverColumns.Schema.Bind(indices);
         }
 
         internal CharacterFootCsvReader<CharacterFootResolvedSample> Resolved { get; }
@@ -26,5 +27,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         internal CharacterFootCsvReader<CharacterFootEventSample> OutputEvents { get; }
         internal CharacterFootCsvReader<CharacterFootEventSample> InputEvents { get; }
         internal CharacterFootCsvReader<CharacterFootPelvisSample> Pelvis { get; }
+        internal CharacterFootCsvReader<CharacterFootSolverSample> Solver { get; }
     }
 }

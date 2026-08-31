@@ -9,7 +9,7 @@
 - [ ] 1.7 为全部现行Operation Code建立`新Family / 跨帧状态Owner / Frame页Owner / Execution Domain / Workspace需求 / 删除字段`迁移表，覆盖Parameter、ActionPlaybackInput lifecycle、Motion Matching、Pose History与Tuning读取
 - [ ] 1.8 固定本change不修改PoseState选择、source时间、Action lifecycle、生效中的Tuning值、Blend权重、Transition、Slot、Inertialization、Foot、Goal、FBBIK和Physical Pose结果
 
-- [ ] 1.9 明确不并入未实施IK维护提案的Foot请求／结果重排、Interpolation历史分型、Solver Reset方向修正与诊断列绑定统一；实际代码冲突单独报告
+- [ ] 1.9 记录第一阶段IK维护重构通过提交和证据作为串行接入点，保留其Foot请求／最终结果、Interpolation历史、独立Reset修正与诊断列绑定，不恢复旧结构；总基线仍为ad3527e，实际冲突单独报告
 - [ ] 1.10 按behavior-baseline.md逐项核对动画时钟、Transition／Blend／Slot顺序、Foot source选择、IK计算与持久状态、Root Bone写入政策；被下一帧消费的内部Fact不得当诊断冗余删除
 
 ## 2. 建立统一lineage、根事务与typed Result合同
@@ -32,7 +32,7 @@
 - [ ] 3.5 让Constraint `Complete`只验证完整闭包并发布一个Constraint Result，不扫描Program、不维护第二Stage Schedule也不重新执行Operation
 - [ ] 3.6 删除调用方可见的NativeSlice、Goal offset/count、Operation index、Callsite index、内部Bank页和Diagnostics页
 - [ ] 3.7 让Constraint内部Pending页只响应根Frame lineage和唯一Seal/Discard，不再拥有可与根事务分离的完成身份
-- [ ] 3.8 将Foot Placement与FBBIK调参接入Constraint-owned Candidate Tuning Snapshot，保持当前字段、值域、成功resetOwnerState结果和生效时机，不并入Vendor方向或BendHistory行为修正
+- [ ] 3.8 将Foot Placement与FBBIK调参接入Constraint-owned Candidate Tuning Snapshot，保持当前字段、值域、成功resetOwnerState结果和生效时机，保留第一阶段独立验证的Vendor方向与BendHistory Reset结果，本阶段不另改行为
 - [ ] 3.9 对账Foot、Support、Pelvis、Goal、Assembler、Bend与最终骨骼保持冻结基线；发现差异定位外层迁移，不修改已保留IK公式或配置
 
 ## 4. 建立CharacterPoseSourceModule
@@ -165,5 +165,5 @@
 - [ ] 14.6 更新`openspec/project.md`为实际PoseGraph Module、根事务/Owned页数据流、Projection内Program Image、actor-local Execution View与Tuning、Compiler Pass和ABI真相
 - [ ] 14.7 使用规定参数编译Runtime与Editor工程，并在每次构建后立即执行`dotnet build-server shutdown`
 - [ ] 14.8 执行`git diff --check`、本change严格校验和全量严格OpenSpec校验
-- [ ] 14.9 核对未恢复中央Foot状态机、骨盆Reach硬夹紧、末端夹脚、已撤销SmoothKnee或CurrentSupport替代Swing包络候选，保留指定基线的有符号膝向运输，未接管未实施IK任务
+- [ ] 14.9 核对未恢复中央Foot状态机、骨盆Reach硬夹紧、末端夹脚、已撤销SmoothKnee或CurrentSupport替代Swing包络候选，保留指定基线的有符号膝向运输，已保留第一阶段IK维护成果，未接管其它未实施IK行为任务
 - [ ] 14.10 每个代码小步复用现有正式输入Replay／Proof和诊断链，对指定基线与上一保留小步分别保存输入、Body、source时间、Foot／Pelvis／Goal／Solved／Physical的差异；未解释业务差异时停止，不用调参或改评分补偿

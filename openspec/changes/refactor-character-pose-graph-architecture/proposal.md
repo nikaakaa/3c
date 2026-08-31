@@ -40,16 +40,16 @@
 
 - Foot／IK已经到用户当前保留阶段，本change不要求全部待办完成或归档，也不把“差不多”解释为所有视觉问题已经解决。
 - 实施前对照该提交检查实际源码、配置与产物。之后的相关改动必须单独列出，由用户裁决冲突，不能覆盖或静默并入基线；无关工作不回退。
-- Foot、Pelvis、Goal、FBBIK公式、数值顺序、准入、权重、配置、Anchor、Rotation、连续历史与正常Reset保持。保留该提交中的有符号膝向运输；已撤除的骨盆Reach硬夹紧、末端夹脚、SmoothKnee和CurrentSupport替代Swing包络候选不恢复。
+- Foot、Pelvis、Goal、FBBIK公式、数值顺序、准入、权重、配置、Anchor、Rotation、连续历史与正常Reset保持；第一阶段已批准并独立验证的Reset修正作为明确例外继续保留。保留该提交中的有符号膝向运输；已撤除的骨盆Reach硬夹紧、末端夹脚、SmoothKnee和CurrentSupport替代Swing包络候选不恢复。
 - 本次只迁移外层调用、存储归属、根事务、Compiler、ABI和最终Pose发布。不借迁移重写Foot内部流程、修复Vendor历史方向、改变动画时钟／混合顺序、调整地面查询或重新调IK。
 - 已知抖动、穿透、离面、反弯及未覆盖输入原样记录；不能通过改算法、参数、评分或分母掩盖。不能只用“编译通过”或“总分不变”宣称行为等价。
-- 本轮仅更新重构文档，不启动代码迁移、Build或Replay，不将新架构提前写入current specs或project truth。
+- 用户本次Goal已授权串行实施：先完成并验证IK维护重构，再实施本change；不将未完成的新架构提前写入current specs或project truth。
 
 ## Dependencies And Sequencing
 
 1. current specs中唯一Goal Contribution、Assembler、Goal Set、FBBIK和Writer的外部数量与隔离合同继续保留；实际动画与IK行为按上面指定提交迁移。
 2. `build-character-foot-motion-data-foundation`已归档；`stabilize-character-foot-path-and-landing`未完成或未归档不再阻塞本change。其已保留实现属于基线，剩余行为任务不自动接管、不要求先做完。
-3. `refactor-character-ik-maintenance-boundaries`不是本次前置。尚未实施的Foot请求／结果重排、Interpolation历史分型、Solver Reset方向修正与诊断列绑定统一均不并入；不能将“后续消费其完成结果”继续作为隐含等待条件。
+3. 用户本次Goal明确将`refactor-character-ik-maintenance-boundaries`列为本change的已验证接入前置。Foot请求／最终结果、Interpolation历史、独立验证的Solver Reset修正及诊断列绑定由第一阶段完成；本change保留其通过成果，只迁移外部架构，不恢复第一阶段删除的旧结构。
 4. ClipPlayer与BlendSpacePlayer通用能力已进入current specs；独立Blend Space演示内容不作为前置。Linked Pose、Motion Matching、Transition Routing、Blend Stack与Inertialization只迁移已存在的正式节点和source生命周期，不补装未运行内容。
 5. `compact-foot-diagnostic-publication`与`consolidate-foot-diagnostic-scoring`已落地的采样、分析、明细存储和评分链继续使用，不要求为PoseGraph迁移重新实现或先归档。
 6. 本次按指定提交冻结动画与IK算法、时钟和配置。若其它任务改动同一Owner、同一字段或同一行为基线，必须先报告具体冲突由用户决定，不覆盖已经改对的内容；无关任务不构成本change的全局等待条件。
@@ -77,7 +77,7 @@
 - 当前实现没有保持外层协调器与Pose Plan执行职责的Locality。本change把该边界写成可执行的current delta，并明确删除旧巨型Owner的完成标准，避免只新增类名而不迁移责任。
 
 - current Foot spec已不固定内部状态机类名，而本change旧delta仍要求`CharacterFootStateMachine`；本次删除该过期约束，只保留当前Foot输入、结果与唯一事务边界，不重做已经完成的Lifecycle拆分。
-- 部分current／active文字仍按旧Reach夹紧与“Pelvis先读最终Resolved”描述；当前保留代码和用户最新裁决已撤除业务层骨盆／末端夹脚。这里明确保护已保留行为，不利用旧文字恢复政策，也不提前执行IK维护提案的内部请求／结果重排。
+- 部分current／active文字仍按旧Reach夹紧与“Pelvis先读最终Resolved”描述；当前保留代码和用户最新裁决已撤除业务层骨盆／末端夹脚。这里明确保护已保留行为，不利用旧文字恢复政策，并在第一阶段通过后保留其内部请求／最终结果边界。
 - 已落地诊断已有唯一Sampler、Analyzer、Publisher、版本化小报告／明细存储和七维评分。本change只迁移Runtime事实来源；不新增第二采样、重新评分或旧格式兼容路径。
 
 ## Non-Goals
@@ -85,7 +85,7 @@
 - 不改变PoseState选择、Transition rule、Standard Blend、Blend Stack、Inertialization、Slot、Linked Pose、Blend Space、Motion Matching、Foot Placement、Goal、FBBIK或Writer的逐帧业务结果。
 - 不删除或降级现有actor-local在线调参能力；调参只迁移Owner与事务，不得修改共享Program Image、跨Actor传播或改变生效时机。
 - 不新增Pose节点、Layer、Control Rig、传统Animator Controller、第二PlayableGraph、第二Animator、第二IK solver或GPU动画路径。
-- 不重新设计Foot Contact Plan、Heel/Toe、脚掌旋转、Reactive、移动平台或上下楼专用动画；不恢复已撤销Reach夹紧或SmoothKnee，不接管任何未实施IK行为任务，不改正常初始化／Reset的IK结果。
+- 不重新设计Foot Contact Plan、Heel/Toe、脚掌旋转、Reactive、移动平台或上下楼专用动画；不恢复已撤销Reach夹紧或SmoothKnee，不接管任何未实施IK行为任务，不再改变第一阶段通过后的正常初始化／Reset结果。
 - 不改变Gameplay/Presentation边界，不把Pose、Program Actor State或Frame workspace写入Rollback snapshot或网络协议。
 - 不创建通用插件容器、运行时反射Handler、任意Operation注册表、Solver抽象接口或只有一个Adapter的假设性Seam。
 - 不以拆分文件行数作为完成标准；如果调用方仍需理解内部页、offset、index、Seal顺序或节点特例，视为重构未完成。静态合法性只在Build证明、固定绑定只在Runtime创建检查；逐帧只检查变化事实和跨Owner交接，不在每层重复完整验证。
@@ -124,8 +124,8 @@ Diagnostics只读取Committed Result，不读取内部Workspace或重新执行�
 不存在旧Runtime wrapper、旧Program容器、旧Executor构造、旧Handler Registry、旧ABI reader或fallback
 
 既有动画、Foot Placement、Goal、FBBIK和Final Pose业务结果保持ad3527e103cc3235a63e8a1c1dbd26df5155e0ba基线
-Foot／IK未完成任务和归档状态不是本次开工前置
-不吸收未实施或已撤销的IK方案，不掩盖基线已有问题
+IK维护重构通过后串行接入；其它Foot待办与归档状态不是开工前置
+保留第一阶段已通过的IK成果；不吸收其余未实施或已撤销方案，不掩盖基线已有问题
 既有Sampler、Analyzer、Publisher、明细存储与七维评分保持原链路和数学
 Gameplay ContractHash、Float32/Fixed ProgramHash与Network identity不因Pose ABI重构改变
 ```

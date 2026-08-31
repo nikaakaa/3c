@@ -35,14 +35,14 @@
 | Pelvis | `CharacterFootStrideHipsBuilder.cs::ResolvePelvis/AdvancePelvisResponse` | 双脚目标与动画Sole最低高度差、当前软姿态偏好范围、Support／Slope／TargetCrossedOutput与反向速度清零条件、同一Critical Spring及频率保持。Reach保留观察／Landing资格，不恢复业务层骨盆或末端脚硬夹紧 |
 | Goal | `CharacterFootPlacementModule.cs::CreateFootGoal/CreatePelvisGoal`、`Animation/PoseConstraints/CharacterFullBodyIkGoalAssembler.cs::Assemble` | Ready与Position／Rotation Weight资格、零Correction仍有效、world到component转换、Pelvis pre-solve translation、Contribution既有顺序和同Slot拒绝保持；不重新排序或降低权重补偿误差 |
 | FBBIK | `Animation/PoseConstraints/CharacterFinalIkFullBodySolver.cs::SolvePrepared/ApplyGoals/ApplyLegBendStabilization` | 绑定同一Component Pose后，先Pelvis translation，再Foot pre-solve rotation、identity PoseBone Slot识别、ResetEffectors、Effector Goal、腿弯曲方向；有有效Goal才Vendor Update，随后Virtual Bone重建与原结果验证。Operation一次不意味着无有效Goal也强制Update |
-| 膝盖方向 | 同一Solver的`ApplyLegBendStabilization` | 保留a40b71f已确认的可靠动画有符号方向及FromToRotation腿轴运输；退化时保留原历史／投影／符号策略和Bend权重公式，不当作SmoothKnee删除，也不修复缺历史时的Vendor方向路径 |
+| 膝盖方向 | 同一Solver的`ApplyLegBendStabilization` | 保留a40b71f已确认的可靠动画有符号方向及FromToRotation腿轴运输；退化时保留原历史／投影／符号策略和Bend权重公式，不当作SmoothKnee删除，第一阶段独立验证的Reset方向修正作为接入成果保留，本阶段不再改方向政策 |
 | Physical写入 | `Presentation/Animancer/AnimationFinalPosePhysicalWriter.cs::Write/ResolvePose` | 整Rig预检后按现有bone顺序写Local Position／Rotation／Scale；ExcludeSourceRoot仍用Rig reference root pose。OutputPose数据与实际Physical写入结果不能合并成错误的同一事实；保留原Committed／Reference选择和Fault语义 |
 | 跨帧提交 | `Animation/Presentation/CharacterPoseConstraintRuntime.cs::SealFrame/DiscardFrame/ResetSolvers`、`CharacterFootPlacementBank.Begin` | 保留Committed到Pending的实际历史、Prediction／BodyTrajectory、Pelvis Spring、Bend、Anchor／Path以及页有效性。不得因重命名HasFrame或“清理无用字段”启用基线未启用的PreviousVisibleOutput接管 |
 | 诊断发布 | `CharacterPresentationRuntime.cs::Present`的PostCommit与现有Sampler／Analyzer／Publisher | 只迁移事实来源，不改采样窗口、规则／评分、存储和数据解释；PostCommit异常及停止政策不作顺手修复，无法证明重排等价时报告冲突 |
 
 ## 不能按名字删除的状态
 
-`CharacterFootInterpolationState.CorrectionResponseFact.ResponseDirection`当前会被下一帧读取。它虽然名为Fact，却不是可随诊断关闭而删除的冗余；迁移必须保留其真实消费者和时序。本次不顺手实施IK维护提案的历史分型。
+`CharacterFootInterpolationState.CorrectionResponseFact.ResponseDirection`当前会被下一帧读取。它虽然名为Fact，却不是可随诊断关闭而删除的冗余；迁移必须保留其真实消费者和时序。第一阶段将该消费者迁入正式Interpolation历史后，本阶段沿用新的唯一历史，不能恢复从Fact反读的路径。
 
 同理，BendHistory、Stable／Applied方向、Movement clock、Continuation anchor、Phase游标、Slot／BlendStack时钟、Inertialization history／residual、source generation和retirement handshake都需要逐字段列出初始化、写入、下一帧消费者及Reset。不能只保留最终Pose而丢掉影响下一帧的值。
 
@@ -67,4 +67,4 @@ Program Image／Projection ABI变化允许显式Build生成新schema、layout与
 
 不恢复：SmoothKnee后处理、CurrentSupport零净空替代Swing包络、业务层骨盆Reach硬夹紧及末端夹脚。它们与基线仍存在的Reach观察、Landing完成资格和既有Swing地面约束不是同一件事，不能按“删除Reach”一并删掉。
 
-未实施IK维护提案、未完成Foot行为和已有可见问题继续在原范围记录，不是本次重构的隐含修复目标，也不是要求先完成的前置。
+用户本次Goal明确要求先完成并验证IK维护提案，本change串行接入其通过提交。其它未完成Foot行为与已有可见问题仍留在原范围，不成为隐含修复目标。第一阶段结构变化应对233436保持行为；其独立Reset修正需附单独证据，本阶段同时对固定总基线和第一阶段通过提交对账，不能把接入点偷偷改成总基线。

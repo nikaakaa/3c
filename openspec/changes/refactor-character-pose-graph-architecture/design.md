@@ -72,7 +72,7 @@ Foot输入继续是同帧Component Pose、正式Foot Motion、Body／World事实
 
 当前保留的Reach观察／Landing资格与已经撤除的业务层硬挪骨盆、末端夹脚必须区分。不得依据旧spec恢复夹紧，不迁入被否决的SmoothKnee。当前未解决的抖动、穿透、离面或反弯保留为已知问题，不能在同一架构提交中修算法或改评分掩盖。
 
-`refactor-character-ik-maintenance-boundaries`中的Foot请求／结果重排、Interpolation运行历史分型、Solver Reset方向修正和诊断列绑定统一不在本次范围；未实施不阻塞本change，也不自动变成本change任务。其以后实施必须适配本次形成的唯一外部边界，不形成第二Owner。
+本次Goal按用户要求串行执行：`refactor-character-ik-maintenance-boundaries`先完成并验证Foot请求／最终结果、Interpolation历史、Solver Reset独立修正与诊断列绑定。本change以第一阶段通过提交作为接入点，保持这些成果并迁移唯一外部边界，不恢复旧结构或形成第二Owner。总源码与行为对照仍为`ad3527e103cc3235a63e8a1c1dbd26df5155e0ba`；Reset允许差异单独引用第一阶段证据。
 
 ## Goals
 
@@ -772,7 +772,7 @@ Editor/CharacterSimulation/Compilation/Presentation/PoseGraph/
 
 迁移在同一change中顺序完成，但不保留并行运行路径：
 
-1. 对照指定提交`ad3527e103cc3235a63e8a1c1dbd26df5155e0ba`及behavior-baseline.md核对当前动画／IK源码、配置、节点行为、产物与已有诊断证据；后续差异单独报告，不等待Foot／IK全部归档，不并入未实施IK维护或已撤销实验。
+1. 对照指定提交`ad3527e103cc3235a63e8a1c1dbd26df5155e0ba`及behavior-baseline.md核对当前动画／IK源码、配置、节点行为、产物与已有诊断证据；后续差异单独报告，先接入第一阶段已通过的IK维护成果，不等待其它Foot待办或全部归档，不并入其它未实施行为或已撤销实验。
 2. 建立根Frame lineage、typed Result、Module lease与Owner规则，让现有单一路径先携带新身份；根事务只保存阶段和typed lease/result，不提前创建共享页、空壳Module或第二Frame事务。
 3. 保留当前Foot、Pelvis、Goal与FBBIK内部实现，只迁移`CharacterPoseConstraintRuntime`及根Bank外部归属，并按各Constraint Operation收窄typed Handle/Result；删除布局泄露调用，不重排IK算法。
 4. 提取`CharacterPoseSourceModule`，原子迁移provider、有限Action sample、Animancer、Physical Source和release所有权；从旧Runtime删除对应字段与方法。
@@ -856,7 +856,7 @@ Program Runtime内部仍会包含多种节点Implementation和大量Native页；
 
 - 本change旧前置要求Foot完成并归档，用户2026-09-01已明确改为冻结当前保留IK后开始PoseGraph重构。Foot／IK未完成状态不阻塞，重叠的后续行为修改不能与本次同Owner迁移混写；出现实际冲突才由用户裁决。
 - current Foot spec已不固定中央状态机类名，旧PoseGraph delta仍写`CharacterFootStateMachine`，本次删除该过期条款，保留现有Lifecycle内部实现。
-- 当前保留实现已撤除业务层骨盆Reach硬夹紧与末端夹脚，SmoothKnee候选已撤销；部分旧current／active文字尚未同步。本change明确按用户当前保留行为迁移，不借旧文档恢复政策，也不实施IK维护提案的请求／结果或Reset修正。
+- 当前保留实现已撤除业务层骨盆Reach硬夹紧与末端夹脚，SmoothKnee候选已撤销；部分旧current／active文字尚未同步。本change明确按用户当前保留行为迁移，不借旧文档恢复政策，并保留第一阶段已经验证的请求／结果边界及独立Reset修正，本阶段不另改其业务行为。
 - 已落地诊断存储与评分change继续作为现有实现输入，是否归档不影响本次接线；Runtime事实来源可以迁移，Sampler、Analyzer、Publisher、明细存储、评分规则与历史证据不重做。
 - active Blend Space change的通用Clip/Blend Space能力已经进入current specs，剩余任务只建立独立演示内容。本change直接迁移current节点Definition与Source Adapter，不依赖该演示归档；两者不得并行修改通用Runtime或Compiler合同。
 - current `character-presentation-pose-graph`仍写明`compiler handler`，而current `graph-authoring-domain-framework`已经要求唯一Pose Node Definition并禁止第二Handler；现行代码仍保留Handler Registry。本change以Framework current requirement为方向修改Pose Graph requirement并删除旧实现，明确这是current specs之间的冲突，不把代码现状误写成current truth。

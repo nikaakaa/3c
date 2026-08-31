@@ -2,7 +2,7 @@
 
 ### Requirement: 架构迁移必须保护当前保留的IK行为基线
 
-本change MUST以用户指定提交`ad3527e103cc3235a63e8a1c1dbd26df5155e0ba`中的动画与Corin IK代码、配置和行为为唯一基线，并使用本change的behavior-baseline.md保护清单，不要求Foot／IK所有待办完成或归档。实施前 MUST对照该提交检查当前源码、Profile／Rig／作者数据、产物与已有输入／诊断证据；后续相关差异必须报告，不自动吸收、回退或更换基线。Constraint内的Foot、Pelvis、Goal、FBBIK公式、数值顺序、准入、权重、连续历史与正常初始化／Reset结果 MUST保持；只允许外层调用、存储归属、事务和结果发布迁移。未实施IK维护任务与已撤销实验 MUST不自动并入，已撤除Reach硬夹紧与末端夹脚、已撤销SmoothKnee与CurrentSupport替代Swing包络候选 MUST不恢复；该提交已经保留的有符号膝向运输 MUST保持。动画与IK的具体计算顺序、source时间、混合、跨帧历史和根骨写入政策 MUST按behavior-baseline.md保持，不得仅凭最终总分或编译通过声明等价。
+本change MUST以用户指定提交`ad3527e103cc3235a63e8a1c1dbd26df5155e0ba`中的动画与Corin IK代码、配置和行为为唯一基线，并使用本change的behavior-baseline.md保护清单，按本次Goal先完成并验证IK维护重构后串行接入，不要求其它Foot待办完成或归档。第一阶段通过提交 MUST作为接入点与逐步对照，保留请求／最终结果、正式历史及独立验证的Reset修正；该接入点 MUST不替换指定总基线。实施前 MUST对照该提交检查当前源码、Profile／Rig／作者数据、产物与已有输入／诊断证据；后续相关差异必须报告，不自动吸收、回退或更换基线。Constraint内的Foot、Pelvis、Goal、FBBIK公式、数值顺序、准入、权重、连续历史 MUST保持；正常初始化／Reset MUST保留第一阶段通过后的正式结果，批准的Reset差异单独引用第一阶段证据；只允许外层调用、存储归属、事务和结果发布迁移。第一阶段之外的未实施IK行为任务与已撤销实验 MUST不自动并入，已撤除Reach硬夹紧与末端夹脚、已撤销SmoothKnee与CurrentSupport替代Swing包络候选 MUST不恢复；该提交已经保留的有符号膝向运输 MUST保持。动画与IK的具体计算顺序、source时间、混合、跨帧历史和根骨写入政策 MUST按behavior-baseline.md保持，不得仅凭最终总分或编译通过声明等价。
 
 #### Scenario: 重构遇到基线已有IK问题
 
@@ -216,7 +216,7 @@ Pose Graph Preview与正式Runtime MUST使用同一Program Image schema、actor-
 
 Program replacement、Projection revision变化、Preview非连续seek、Actor reset、Fault和Dispose MUST由根Runtime生成typed reset reason，并按固定顺序让Program Runtime、Source Module、Constraint Module和Final Publication各自清理Owned状态。Reset MUST提升相关generation并使旧Frame lease、Tuning Candidate、source completion、constraint result和diagnostics失效；Projection replacement MUST由Program Runtime释放自己的旧Execution View并只按新Image/hash建立一份新View。系统 MUST不由一个Module直接清空另一Module内部页，也 MUST不保留旧Program reader、旧Execution View或source资源fallback。
 
-Constraint的成功Reset MUST保持当前冻结基线的IK初始化结果，不得借外层Reset协议迁移实施未批准的BendHistory／Vendor方向修正。
+Constraint的成功Reset MUST保持第一阶段IK维护重构已通过的初始化结果，并引用其相对固定总基线的独立Reset证据；不得借外层Reset协议迁移再实施其它BendHistory／Vendor方向修正，也不得恢复第一阶段已删除的旧Vendor读取。
 
 #### Scenario: Projection被显式重建
 

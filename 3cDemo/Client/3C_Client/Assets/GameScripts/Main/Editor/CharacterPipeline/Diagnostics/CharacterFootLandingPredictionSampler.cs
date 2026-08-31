@@ -872,7 +872,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         static string s_LastSavedPath = string.Empty;
         static string s_LastSavedGeometryPath = string.Empty;
         static string s_LastSavedDirectory = string.Empty;
-        static string s_LastSavedFactsPath = string.Empty;
+        static string s_LastSavedAnalysisPath = string.Empty;
         static string s_LastSavedDiagnosisDirectory = string.Empty;
         static string s_LastDiagnosticSummary = string.Empty;
         static string s_LastSavedSampleIdentity = string.Empty;
@@ -899,7 +899,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         public static string LastSavedPath => s_LastSavedPath;
         public static string LastSavedGeometryPath => s_LastSavedGeometryPath;
         public static string LastSavedDirectory => s_LastSavedDirectory;
-        public static string LastSavedFactsPath => s_LastSavedFactsPath;
+        public static string LastSavedAnalysisPath => s_LastSavedAnalysisPath;
         public static string LastSavedDiagnosisDirectory =>
             s_LastSavedDiagnosisDirectory;
         public static string LastDiagnosticSummary => s_LastDiagnosticSummary;
@@ -936,11 +936,12 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 s_LastSavedGeometryPath = File.Exists(geometryPath)
                     ? geometryPath
                     : string.Empty;
-                string factsPath = System.IO.Path.Combine(
+                string analysisPath = System.IO.Path.Combine(
                     s_LastSavedDirectory,
-                    "facts.json");
-                s_LastSavedFactsPath = File.Exists(factsPath)
-                    ? factsPath
+                    "diagnoses",
+                    CharacterFootDiagnosticStore.ManifestFileName);
+                s_LastSavedAnalysisPath = File.Exists(analysisPath)
+                    ? analysisPath
                     : string.Empty;
                 string diagnosisDirectory = System.IO.Path.Combine(
                     s_LastSavedDirectory,
@@ -1059,7 +1060,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 s_LastSavedPath = s_Session.Path;
                 s_LastSavedGeometryPath = s_Session.GeometryPath;
                 s_LastSavedDirectory = s_Session.DirectoryPath;
-                s_LastSavedFactsPath = string.Empty;
+                s_LastSavedAnalysisPath = string.Empty;
                 s_LastSavedDiagnosisDirectory = string.Empty;
                 s_LastSavedSampleIdentity = s_Session.SampleIdentity.ToString("N");
                 CharacterFootLandingPredictionDebugRegistry.Published += Capture;
@@ -1533,7 +1534,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             s_LastSavedGeometryPath = session.GeometryPath;
             s_LastSavedDirectory = session.DirectoryPath;
             s_LastSavedSampleIdentity = session.SampleIdentity.ToString("N");
-            s_LastSavedFactsPath = string.Empty;
+            s_LastSavedAnalysisPath = string.Empty;
             s_LastSavedDiagnosisDirectory = string.Empty;
             s_LastDiagnosticSummary = "Foot Landing finalizing capture package.";
             s_LastFinalizationFailure = string.Empty;
@@ -1586,7 +1587,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 s_LastFinalizationFailure = job.Failure.Message;
                 s_LastDiagnosticSummary =
                     $"Foot Landing finalization failed: {job.Failure.Message}";
-                s_LastSavedFactsPath = string.Empty;
+                s_LastSavedAnalysisPath = string.Empty;
                 s_LastSavedDiagnosisDirectory = string.Empty;
                 Debug.LogError(s_LastDiagnosticSummary);
                 Debug.LogException(job.Failure);
@@ -1597,7 +1598,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 s_LastSavedPath = string.Empty;
                 s_LastSavedGeometryPath = string.Empty;
                 s_LastSavedDirectory = string.Empty;
-                s_LastSavedFactsPath = string.Empty;
+                s_LastSavedAnalysisPath = string.Empty;
                 s_LastSavedDiagnosisDirectory = string.Empty;
                 s_LastSavedSampleIdentity = string.Empty;
                 s_LastDiagnosticSummary =
@@ -1622,7 +1623,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 $"with {job.DroppedPendingFrameCount} dropped pending frames. " +
                 $"Sample={s_LastSavedSampleIdentity}, " +
                 $"Samples={s_LastSavedPath}, Geometry={s_LastSavedGeometryPath}, " +
-                $"Facts={s_LastSavedFactsPath}, " +
+                $"Analysis={s_LastSavedAnalysisPath}, " +
                 $"Diagnoses={s_LastSavedDiagnosisDirectory}, " +
                 $"Summary={s_LastDiagnosticSummary}");
         }
@@ -1634,7 +1635,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             s_LastSavedGeometryPath = analysis.GeometryPath;
             s_LastSavedDirectory = System.IO.Path.GetDirectoryName(
                 analysis.SamplesPath) ?? string.Empty;
-            s_LastSavedFactsPath = analysis.FactsPath;
+            s_LastSavedAnalysisPath = analysis.AnalysisPath;
             s_LastSavedDiagnosisDirectory = analysis.DiagnosisDirectory;
             s_LastDiagnosticSummary = analysis.Summary;
             s_LastFactEventCount = analysis.EventCount;

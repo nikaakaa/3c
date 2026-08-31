@@ -15,23 +15,73 @@ namespace ThirdPersonCharacter.Pipeline.Editor
 
     internal sealed class CharacterFootDiagnosisContext
     {
-        const int RepresentativeEventLimit = 8;
+        internal const int RepresentativeEventLimit = 5;
         readonly JObject m_Facts;
         readonly JArray m_Events;
+        readonly Dictionary<JObject, int> m_RecordIds = new Dictionary<JObject, int>();
+        readonly List<CharacterFootDiagnosticRecord> m_Records = new List<CharacterFootDiagnosticRecord>();
+        readonly Dictionary<string, List<JObject>> m_EventsByKind;
+        readonly SortedDictionary<string, CharacterFootDiagnosticTargetIndex> m_Targets =
+            new SortedDictionary<string, CharacterFootDiagnosticTargetIndex>(StringComparer.Ordinal);
 
         internal CharacterFootDiagnosisContext(JObject facts)
         {
             m_Facts = facts ?? throw new ArgumentNullException(nameof(facts));
             m_Events = facts["events"] as JArray ?? new JArray();
+            foreach (string family in new[] { "events", "landingReaches", "pelvisFrames", "stepTimeCandidateSelections" })
+            {
+                if (!(facts[family] is JArray records))
+                    continue;
+                foreach (JObject record in records.OfType<JObject>())
+                {
+                    int id = m_Records.Count + 1;
+                    m_RecordIds.Add(record, id);
+                    m_Records.Add(new CharacterFootDiagnosticRecord { id = id, family = family, data = record });
+                }
+            }
+            m_EventsByKind = m_Events.OfType<JObject>().GroupBy(
+                    value => value.Value<string>("kind") ?? string.Empty, StringComparer.Ordinal)
+                .ToDictionary(value => value.Key, value => value.ToList(), StringComparer.Ordinal);
+        }
+
+        internal JObject Metadata(string name) => m_Facts[name] as JObject ??
+            throw new InvalidDataException($"Foot diagnostic metadata '{name}' is missing.");
+
+        internal string FactsSchema => m_Facts.Value<string>("schema");
+        internal IReadOnlyList<CharacterFootDiagnosticSourceIndex> SourceIndices { get; set; }
+        internal IEnumerable<CharacterFootDiagnosticTargetIndex> TargetIndices => m_Targets.Values;
+
+        internal void WriteDetails(CharacterFootDiagnosticStore store)
+        {
+            foreach (CharacterFootDiagnosticRecord record in m_Records)
+                if (store.Add(record.family, record.data) != record.id)
+                    throw new InvalidDataException("Foot diagnostic record ordering changed.");
+        }
+
+        internal int RecordId(JObject value) => m_RecordIds.TryGetValue(value, out int id)
+            ? id : throw new InvalidDataException("Foot diagnostic record is not owned by this analysis.");
+
+        internal int ObservationRecordId(string family, int frame, string side) =>
+            m_Records.Single(value => value.family == family &&
+                value.data.Value<int?>("frame") == frame &&
+                value.data.Value<string>("side") == side).id;
+
+        internal void RegisterTarget(string id, List<JObject> eligible, IEnumerable<int> matched)
+        {
+            m_Targets.Add(id, new CharacterFootDiagnosticTargetIndex
+            {
+                id = id,
+                eligible = eligible.Select(RecordId).ToList(),
+                matched = matched.ToList()
+            });
         }
 
         internal List<JObject> Events(params string[] kinds)
         {
             var accepted = new HashSet<string>(kinds, StringComparer.Ordinal);
-            return m_Events
-                .OfType<JObject>()
-                .Where(value => accepted.Contains(
-                    value.Value<string>("kind") ?? string.Empty))
+            return m_EventsByKind
+                .Where(value => accepted.Contains(value.Key))
+                .SelectMany(value => value.Value)
                 .OrderBy(value => value.Value<int?>("startFrame") ?? 0)
                 .ThenBy(value => value.Value<string>("side"), StringComparer.Ordinal)
                 .ToList();
@@ -56,14 +106,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 StringComparer.Ordinal)
             .ToList();
 
-        internal List<CharacterFootPelvisFrameObservation> PelvisFrames()
-        {
-            if (!(m_Facts["pelvisFrames"] is JArray values))
-                throw new InvalidDataException("Foot Motion Pelvis frame facts are missing.");
-            return values.ToObject<List<CharacterFootPelvisFrameObservation>>() ??
-                throw new InvalidDataException("Foot Motion Pelvis frame facts are invalid.");
-        }
-
         internal CharacterFootDiagnosisTarget Target(
             string id,
             string question,
@@ -77,6 +119,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             List<CharacterFootDiagnosisEvidence> matched = Match(
                 eligible,
                 matchRules);
+            RegisterTarget(id, eligible, matched.Select(value => value.detailId));
             var measurements = new SortedDictionary<string, CharacterFootDiagnosisDistribution>(
                 StringComparer.Ordinal);
             foreach (string metricName in metricNames)
@@ -126,7 +169,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             return Match(eligible, matchRules)
                 .OrderByDescending(rank)
                 .ThenBy(value => value.startFrame)
-                .Take(limit)
+                .Take(Math.Min(limit, RepresentativeEventLimit))
                 .OrderBy(value => value.startFrame)
                 .ThenBy(value => value.side, StringComparer.Ordinal)
                 .ToList();
@@ -223,11 +266,11 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             var list = targets.ToList();
             var document = new CharacterFootDiagnosisDocument
             {
-                schema = "character-foot-diagnosis-file/34",
+                schema = "character-foot-diagnosis-file/35",
                 diagnosticId = diagnosticId,
                 facts = new CharacterFootDiagnosisFactsReference
                 {
-                    file = "facts.json",
+                    file = CharacterFootDiagnosticStore.ManifestFileName,
                     schema = m_Facts.Value<string>("schema") ?? string.Empty,
                     sampleIdentity = sample?.Value<string>("identity") ?? string.Empty
                 },
@@ -281,7 +324,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         static double? MetricToken(JObject value, string name) =>
             value["metrics"]?[name]?.Value<double?>();
 
-        static List<CharacterFootDiagnosisEvidence> Match(
+        List<CharacterFootDiagnosisEvidence> Match(
             IEnumerable<JObject> events,
             Func<JObject, List<string>> matchRules)
         {
@@ -293,6 +336,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     continue;
                 result.Add(new CharacterFootDiagnosisEvidence
                 {
+                    detailId = RecordId(value),
                     eventKind = value.Value<string>("kind") ?? string.Empty,
                     side = value.Value<string>("side") ?? string.Empty,
                     startFrame = value.Value<int?>("startFrame") ?? 0,
@@ -303,22 +347,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     sourceCycle = value.Value<int?>("sourceCycle") ?? 0,
                     matchedRules = rules,
                     metrics = ReadDoubleMap(value["metrics"] as JObject),
-                    evidence = ReadBoolMap(value["evidence"] as JObject),
-                    swingToLandingFloorHandoff =
-                        value["swingToLandingFloorHandoff"]?
-                            .ToObject<
-                                CharacterFootSwingToLandingFloorHandoffAnalysis>(),
-                    lateApproachLandingRevision =
-                        value["lateApproachLandingRevision"]?
-                            .ToObject<
-                                CharacterFootLateApproachLandingRevisionAnalysis>(),
-                    landingObservation = value["landingObservation"]?
-                        .ToObject<CharacterFootLandingObservationAnalysis>(),
-                    visibleOutputJump =
-                        value["visibleOutputJump"]?
-                            .ToObject<CharacterFootVisibleOutputJumpAnalysis>(),
-                    contactSupportGap = value["contactSupportGap"]?
-                        .ToObject<CharacterFootContactSupportGapSequence>()
+                    evidence = ReadBoolMap(value["evidence"] as JObject)
                 });
             }
             return result;
@@ -387,7 +416,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         public CharacterFootStepTimeCandidateSelectionReport
             stepTimeCandidateSelection;
         public CharacterFootLandingReachReport landingReach;
-        public List<CharacterFootPelvisFrameObservation> pelvisFrames;
         public CharacterFootContactSupportGapCoverage contactSupportGapCoverage;
     }
 
@@ -395,8 +423,10 @@ namespace ThirdPersonCharacter.Pipeline.Editor
     internal sealed class CharacterFootDiagnosisFactsReference
     {
         public string file;
-        public string sha256;
+        public string indexFile;
+        public string indexSha256;
         public string schema;
+        public string factsSchema;
         public string sampleIdentity;
     }
 
@@ -508,7 +538,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
     [Serializable]
     internal sealed class CharacterFootQualityScorecard
     {
-        public string schema = "character-foot-quality-score/1";
+        public string schema = "character-foot-quality-score/2";
         public string scoringVersion = "foot-quality-seven-dimensions/1";
         public string purpose = "ProvisionalReference";
         public bool isShallowReference = true;
@@ -971,6 +1001,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
     [Serializable]
     internal sealed class CharacterFootDiagnosisEvidence
     {
+        public int detailId;
         public string eventKind;
         public string side;
         public int startFrame;
@@ -983,13 +1014,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         public SortedDictionary<string, double> metrics;
         public SortedDictionary<string, bool> evidence;
         public CharacterFootPathStageAnalysis pathStageAnalysis;
-        public CharacterFootSwingToLandingFloorHandoffAnalysis
-            swingToLandingFloorHandoff;
-        public CharacterFootLateApproachLandingRevisionAnalysis
-            lateApproachLandingRevision;
-        public CharacterFootLandingObservationAnalysis landingObservation;
-        public CharacterFootVisibleOutputJumpAnalysis visibleOutputJump;
-        public CharacterFootContactSupportGapSequence contactSupportGap;
     }
 
     [Serializable]

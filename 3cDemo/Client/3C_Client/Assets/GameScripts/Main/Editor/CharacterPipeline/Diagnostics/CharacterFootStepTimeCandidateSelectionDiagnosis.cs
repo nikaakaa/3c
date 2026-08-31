@@ -8,7 +8,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
     internal sealed class CharacterFootStepTimeCandidateSelectionDiagnosis :
         ICharacterFootDiagnosis
     {
-        const int RepresentativeLimitPerReason = 8;
+        const int RepresentativeLimitPerReason = 5;
 
         public string DiagnosticId => "step-time-candidate-selection";
         public string FileName => "step-time-candidate-selection.json";
@@ -16,8 +16,10 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         public CharacterFootDiagnosisDocument Build(
             CharacterFootDiagnosisContext context)
         {
+            List<JObject> facts = context.StepTimeCandidateSelections();
+            context.RegisterTarget("step-time-candidate-selection-observations", facts, Array.Empty<int>());
             List<CharacterFootStepTimeCandidateSelectionObservation>
-                observations = context.StepTimeCandidateSelections()
+                observations = facts
                     .Select(
                         CharacterFootStepTimeCandidateSelectionObservation
                             .From)
@@ -69,8 +71,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             timeDeltaDistributions;
         public List<CharacterFootStepTimeCandidateRepresentative>
             representativeEvents;
-        public List<CharacterFootStepTimeCandidateSelectionObservation>
-            observations;
 
         internal static CharacterFootStepTimeCandidateSelectionReport Create(
             List<CharacterFootStepTimeCandidateSelectionObservation>
@@ -116,8 +116,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 },
                 representativeEvents = Representatives(
                     observations,
-                    representativeLimitPerReason),
-                observations = observations
+                    representativeLimitPerReason)
             };
         }
 
@@ -193,6 +192,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             return selected.Values
                 .OrderBy(value => value.frame)
                 .ThenBy(value => value.side, StringComparer.Ordinal)
+                .Take(CharacterFootDiagnosisContext.RepresentativeEventLimit)
                 .ToList();
         }
 

@@ -86,7 +86,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             document.landingReach = CharacterFootLandingReachReport.Create(
                 context.LandingReaches(),
                 events);
-            document.pelvisFrames = context.PelvisFrames();
             return document;
         }
     }

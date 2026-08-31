@@ -118,7 +118,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     foot_sampling = CharacterFootLandingPredictionSampler.IsCapturing,
                     foot_sampling_finalizing = CharacterFootLandingPredictionSampler.IsFinalizing,
                     samples_path = CharacterFootLandingPredictionSampler.LastSavedPath,
-                    facts_path = CharacterFootLandingPredictionSampler.LastSavedFactsPath,
+                    analysis_path = CharacterFootLandingPredictionSampler.LastSavedAnalysisPath,
                     diagnoses_directory = CharacterFootLandingPredictionSampler.LastSavedDiagnosisDirectory,
                     traces = traces.Select(value => new
                     {

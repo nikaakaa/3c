@@ -98,9 +98,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation
 
 namespace ThirdPersonCharacter.Pipeline.Presentation
 {
-    internal sealed class AnimationPresentationFrameTransaction
+    internal sealed class CharacterPoseFrameTransaction
     {
-        internal AnimationPresentationFrameTransaction(
+        internal CharacterPoseFrameTransaction(
             int playbackCapacity,
             int backendReleaseCompletionCapacity)
         {
@@ -124,9 +124,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             Closed = true;
         }
 
-        internal ulong Identity { get; private set; }
-        internal ulong PresentationFrame { get; private set; }
-        internal ulong BodyTick { get; private set; }
+        internal CharacterPoseFrameLineage Lineage { get; private set; }
         internal PresentationFrameWorkspaceLease WorkspaceLease
         {
             get;
@@ -159,31 +157,27 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         internal AnimationPresentationFramePhase Phase { get; private set; }
         internal AnimationPresentationFrameOutcome Outcome { get; private set; }
         internal bool IsValid =>
-            Identity != 0 &&
-            PresentationFrame != 0 &&
-            BodyTick != 0 &&
+            Lineage.IsValid &&
             WorkspaceLease.IsValid &&
-            WorkspaceLease.Identity == Identity &&
-            WorkspaceLease.PresentationFrame == PresentationFrame &&
+            WorkspaceLease.Identity == Lineage.FrameIdentity &&
+            WorkspaceLease.PresentationFrame == Lineage.PresentationFrame &&
             ActionTransaction?.IsValid == true &&
-            ActionTransaction.Identity == Identity &&
-            ActionTransaction.PresentationFrame == PresentationFrame &&
+            ActionTransaction.Identity == Lineage.FrameIdentity &&
+            ActionTransaction.PresentationFrame == Lineage.PresentationFrame &&
             SamplingTransaction?.IsValid == true &&
-            SamplingTransaction.Identity == Identity &&
-            SamplingTransaction.PresentationFrame == PresentationFrame &&
+            SamplingTransaction.Identity == Lineage.FrameIdentity &&
+            SamplingTransaction.PresentationFrame == Lineage.PresentationFrame &&
             SlotLease.IsValid &&
-            SlotLease.FrameIdentity == Identity &&
+            SlotLease.FrameIdentity == Lineage.FrameIdentity &&
             PoseLease.IsValid &&
-            PoseLease.FrameIdentity == Identity &&
+            PoseLease.FrameIdentity == Lineage.FrameIdentity &&
             HasMotionMatchingLease == MotionMatchingLease.IsValid &&
             (!HasMotionMatchingLease ||
-             MotionMatchingLease.FrameIdentity == Identity) &&
+             MotionMatchingLease.FrameIdentity == Lineage.FrameIdentity) &&
             !Closed;
 
         internal void Begin(
-            ulong identity,
-            ulong presentationFrame,
-            ulong bodyTick,
+            in CharacterPoseFrameLineage lineage,
             PresentationFrameWorkspaceLease workspaceLease,
             CharacterActionPlaybackFrameTransaction actionTransaction,
             ActionPresentationSamplingFrameTransaction samplingTransaction,
@@ -193,35 +187,31 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             bool hasMotionMatchingLease)
         {
             if (!Closed ||
-                identity == 0 ||
-                presentationFrame == 0 ||
-                bodyTick == 0 ||
+                !lineage.IsOpenValid ||
                 !workspaceLease.IsValid ||
-                workspaceLease.Identity != identity ||
-                workspaceLease.PresentationFrame != presentationFrame ||
+                workspaceLease.Identity != lineage.FrameIdentity ||
+                workspaceLease.PresentationFrame != lineage.PresentationFrame ||
                 actionTransaction == null ||
                 !actionTransaction.IsValid ||
-                actionTransaction.Identity != identity ||
-                actionTransaction.PresentationFrame != presentationFrame ||
+                actionTransaction.Identity != lineage.FrameIdentity ||
+                actionTransaction.PresentationFrame != lineage.PresentationFrame ||
                 samplingTransaction == null ||
                 !samplingTransaction.IsValid ||
-                samplingTransaction.Identity != identity ||
-                samplingTransaction.PresentationFrame != presentationFrame ||
+                samplingTransaction.Identity != lineage.FrameIdentity ||
+                samplingTransaction.PresentationFrame != lineage.PresentationFrame ||
                 !slotLease.IsValid ||
-                slotLease.FrameIdentity != identity ||
+                slotLease.FrameIdentity != lineage.FrameIdentity ||
                 !poseLease.IsValid ||
-                poseLease.FrameIdentity != identity ||
+                poseLease.FrameIdentity != lineage.FrameIdentity ||
                 hasMotionMatchingLease != motionMatchingLease.IsValid ||
                 hasMotionMatchingLease &&
-                motionMatchingLease.FrameIdentity != identity)
+                motionMatchingLease.FrameIdentity != lineage.FrameIdentity)
             {
                 throw new ArgumentException(
                     "Animation Presentation frame transaction is invalid.");
             }
             ClearBatches();
-            Identity = identity;
-            PresentationFrame = presentationFrame;
-            BodyTick = bodyTick;
+            Lineage = lineage;
             WorkspaceLease = workspaceLease;
             ActionTransaction = actionTransaction;
             SamplingTransaction = samplingTransaction;
@@ -232,6 +222,17 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             Outcome = AnimationPresentationFrameOutcome.None;
             Phase = AnimationPresentationFramePhase.Begin;
             Closed = false;
+        }
+
+        internal void BindCompletion(ulong completionIdentity)
+        {
+            RequirePhase(AnimationPresentationFramePhase.Prepare);
+            if (Lineage.CompletionIdentity != 0 || completionIdentity == 0)
+            {
+                throw new InvalidOperationException(
+                    "Character Pose frame completion identity is invalid.");
+            }
+            Lineage = Lineage.WithCompletion(completionIdentity);
         }
 
         internal void BeginPrepare()
@@ -297,9 +298,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     "Animation Presentation frame cannot reset before close.");
             }
             ClearBatches();
-            Identity = 0;
-            PresentationFrame = 0;
-            BodyTick = 0;
+            Lineage = default;
             WorkspaceLease = default;
             ActionTransaction = null;
             SamplingTransaction = null;

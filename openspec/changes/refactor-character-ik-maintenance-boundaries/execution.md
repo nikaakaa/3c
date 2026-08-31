@@ -87,7 +87,7 @@ PredictionMotion、BodyTrajectory及其Tick/Generation/ResetSequence/AuthorityTi
 
 ## 第三个闭环：运行历史与本帧证据分离
 
-状态：实现与Runtime/Editor编译通过、0错误，等待同输入回放；上一通过为`48d7bbc`，固定总基线不变。
+状态：候选`514d9b5d21a86aa74c0a6a94653d576e95e22bcf`已通过Runtime/Editor编译及本Record正式回放；上一通过为`48d7bbc`，固定总基线不变。
 
 - `CharacterFootCorrectionResponseHistory`只保存HasValue、Scalar、Domain、AppliedDirection。旧HasCorrectionResponse与Fact.Evaluated的所有生产／清理入口原本始终同写同清，现在由一份有效性表达，不新增状态判定或方向限制。
 - `ApplyCorrectionResponse`返回typed位置／方向结果及只读Fact；Plant、Release、Swing只读正式结果的AppliedDirection，不再从解释记录反读。CorrectionResponseFact与PlantFact从Interpolation持久State删除，仅随本帧InterpolationResult返回。
@@ -95,3 +95,12 @@ PredictionMotion、BodyTrajectory及其Tick/Generation/ResetSequence/AuthorityTi
 - 删除三个调用恒为false的旧VisibleOutputTransfer参数及不可达分支，诊断原有Transferred列仍按原语义为false，不启用Goal Sole历史接管。
 - PrimarySupport改为State命名，只持久化HasValue/Side/Event；Retained只随本帧选择结果发布。删除无任何消费者的LastTransitionPhase/Reason与LastEdge字段。Pending标志改名IsPendingFrameOpen，Root仍只关闭和提交，不新增数学。
 - 本步未触碰FBBIK、Vendor方向、Profile或算法常量，普通Reset语义保持；Solver空历史方向修正仍作为后续独立行为提交。
+
+## 第三个闭环的验证封口
+
+- 原包：`Diagnostics/FootPlacementRuns/20260901-015751-281-77de9a9ff4d74a97a47e922ebb4666bb`，正式数据与同目录持久Proof已保留，未提交原包。
+- 官方proof/4直接对014135匹配1044输入；独立对014135、233436、205014的runtime identity、起始Body、输入／Body hash、驱动和全部1044帧无差异。
+- 三组对照均2086×1215，1191业务列逐格字符串相同，23身份列双向映射无冲突，StartedUtc为运行元数据。几何67186×27的22业务列完全相同，5身份列双向映射无冲突。
+- Response初始化／分域／Previous／Current／方向／连续历史，以及Foot、Pelvis、Knee、Goal、全部已采Solved/Physical和时序状态均无差异；facts71/Analyzer71/d40、42个Target的规则和统计、coverage与quality保持，61.9不变。
+- Action/reentry/BodyReset零覆盖、窄Landing仅2、未采最终Physical Knee及完全Reset配对未覆盖的限制继续保留。此次只证明历史分型不改变已覆盖行为，不证明后续Solver Reset修正。
+- 测试任务已回Edit/Idle、未暂停、非编译、Console0并归还Unity；下一小步的上一通过提交为514d9b5。

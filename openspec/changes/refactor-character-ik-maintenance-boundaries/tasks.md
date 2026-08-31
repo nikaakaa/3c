@@ -19,10 +19,10 @@
 
 ## 3. 运行历史与过程证据分责
 
-- [ ] 3.1 把CorrectionResponseFact中被下一帧读取的方向迁入最小typed Interpolation历史，保留现有方向限制、分域、残差和Reset语义
-- [ ] 3.2 将响应、接触和可达过程Fact改为本帧不可变证据，删除同义状态副本及对公开Diagnostics的运行依赖
-- [ ] 3.3 保持Pending开放状态与Committed结果有效性分责，不在本change启用或重设计stabilize拥有的Goal Sole历史接管
-- [ ] 3.4 用既有正式录制对233436核对状态搬移前后Goal、Pelvis、Foot连续输出、已保留膝向与实际骨骼，保存独立差异和版本证据
+- [x] 3.1 把CorrectionResponseFact中被下一帧读取的方向迁入最小typed Interpolation历史，保留现有方向限制、分域、残差和Reset语义
+- [x] 3.2 将响应、接触和可达过程Fact改为本帧不可变证据，删除同义状态副本及对公开Diagnostics的运行依赖
+- [x] 3.3 保持Pending开放状态与Committed结果有效性分责，不在本change启用或重设计stabilize拥有的Goal Sole历史接管
+- [x] 3.4 用既有正式录制对233436核对状态搬移前后Goal、Pelvis、Foot连续输出、已保留膝向与实际骨骼，保存独立差异和版本证据
 
 ## 4. 独立修正Solver重置后的方向所有权
 

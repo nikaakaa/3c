@@ -49,6 +49,6 @@
 ## 9. 持续Goal：下降需求取消旧向上速度
 
 - [x] 9.1 只增加背离下降目标的正速度清除资格，保留原Handoff/负速度政策、3Hz、目标、硬区间、Foot及Bend；规定flags增量确认0警告0错误并shutdown，效果待9.3
-- [ ] 9.2 由唯一Diagnostics迁移该公式与独立facts64/diagnosis33，保持CSV和37质量规则不变，不复用失败63或补旧包
-- [ ] 9.3 同Record正式Replay并对035643及固定193957核对真实Foot/Pelvis/Knee；特别检查266/591/789、R996/997和R826，不按模型或总分提前通过
-- [ ] 9.4 按真实结果保留或精确撤销，保存全部新旧原包/Proof与独立提交；不把本轮闭合代替持续质量Goal达成
+- [x] 9.2 805468a由唯一Diagnostics迁移该公式与独立facts64/diagnosis33，仅3文件5行增删；CSV1221列和37质量规则不变，完整Editor57既有警告0错误并shutdown，strict95/95，不复用失败63或补旧包
+- [x] 9.3 075917正式Replay对035643 matched1044，Foot保护和37计数保持；266/789修正大步减小、R994–997逐值保持，迟滞+1帧及Knee少量步长增加单列，R826未解决；根任务与独立Diagnostics均封口
+- [x] 9.4 保留0ae8bb5/805468a为局部响应改进，12文件ZIP/原始Proof/manifest逐项核对保存，原包不删；完整质量Goal仍未完成，详见experiments/20260831-pelvis-upward-velocity.md

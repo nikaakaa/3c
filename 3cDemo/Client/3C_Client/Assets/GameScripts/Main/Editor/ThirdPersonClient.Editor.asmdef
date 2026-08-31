@@ -2,6 +2,8 @@
     "name": "ThirdPersonClient.Editor",
     "rootNamespace": "ThirdPersonCharacter.Editor",
     "references": [
+        "ThirdPerson.Development.Gm.Contracts",
+        "ThirdPerson.Development.Gm.Unity",
         "ThirdPersonClient.Runtime",
         "ThirdPersonSimulation.Core",
         "ThirdPersonSimulation.Float32",

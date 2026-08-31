@@ -1,0 +1,10 @@
+{
+    "name": "GmConsole",
+    "maps": [{
+        "name": "Console",
+        "id": "63610742-bec6-44b0-9b5f-5761c710b0c2",
+        "actions": [{ "name": "Toggle", "type": "Button", "id": "a464f304-8408-4474-bdb4-6c4b0a455e48", "expectedControlType": "Button", "processors": "", "interactions": "", "initialStateCheck": false }],
+        "bindings": [{ "name": "", "id": "9c8204cf-9df7-4d8a-aa3b-fcf420dc6aa0", "path": "<Keyboard>/backquote", "interactions": "", "processors": "", "groups": "", "action": "Toggle", "isComposite": false, "isPartOfComposite": false }]
+    }],
+    "controlSchemes": []
+}

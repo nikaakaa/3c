@@ -56,5 +56,4 @@ MonoBehaviour:
     m_LockDistance: 0.08
     m_SlideDistance: 0.2
     m_PelvisSpringFrequency: 3
-    m_PelvisFootProximityRadius: 0.2
     m_MinimumLandingLegCompressionReserve: 0.02

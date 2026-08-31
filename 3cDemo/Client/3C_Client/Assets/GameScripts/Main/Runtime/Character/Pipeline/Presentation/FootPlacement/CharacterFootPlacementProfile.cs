@@ -234,7 +234,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         [SerializeField] float m_LockDistance = 0.08f;
         [SerializeField] float m_SlideDistance = 0.2f;
         [SerializeField] float m_PelvisSpringFrequency = 3f;
-        [SerializeField] float m_PelvisFootProximityRadius;
         [SerializeField] float m_MinimumLandingLegCompressionReserve;
 
         internal CharacterFootMotionSettings Build() =>
@@ -255,7 +254,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 m_LockDistance,
                 m_SlideDistance,
                 m_PelvisSpringFrequency,
-                m_PelvisFootProximityRadius,
                 m_MinimumLandingLegCompressionReserve);
     }
 
@@ -278,7 +276,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             float lockDistance,
             float slideDistance,
             float pelvisSpringFrequency,
-            float pelvisFootProximityRadius,
             float minimumLandingLegCompressionReserve)
         {
             LandingAcceptanceDistance = landingAcceptanceDistance;
@@ -299,7 +296,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             LockDistance = lockDistance;
             SlideDistance = slideDistance;
             PelvisSpringFrequency = pelvisSpringFrequency;
-            PelvisFootProximityRadius = pelvisFootProximityRadius;
             MinimumLandingLegCompressionReserve =
                 minimumLandingLegCompressionReserve;
             RequireValid();
@@ -321,7 +317,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         internal float LockDistance { get; }
         internal float SlideDistance { get; }
         internal float PelvisSpringFrequency { get; }
-        internal float PelvisFootProximityRadius { get; }
         internal float MinimumLandingLegCompressionReserve { get; }
 
         internal void RequireValid()
@@ -365,7 +360,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 !float.IsFinite(SlideDistance) ||
                 SlideDistance <= LockDistance ||
                 !float.IsFinite(PelvisSpringFrequency) || PelvisSpringFrequency <= 0f ||
-                !float.IsFinite(PelvisFootProximityRadius) || PelvisFootProximityRadius <= 0f ||
                 !float.IsFinite(MinimumLandingLegCompressionReserve) ||
                 MinimumLandingLegCompressionReserve <= 0f)
             {
@@ -380,7 +374,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         menuName = "Third Person/Character/Pipeline/Presentation/Foot Placement Profile")]
     public sealed class CharacterFootPlacementProfile : ScriptableObject
     {
-        public const string SchemaVersion = "character-foot-placement-profile/v37-pelvis-foot-candidates";
+        public const string SchemaVersion = "character-foot-placement-profile/v35-direction-history";
 
         [SerializeField] string m_ProfileId = string.Empty;
         [SerializeField] CharacterFootLandingPredictionAuthoringSettings m_LandingPrediction =

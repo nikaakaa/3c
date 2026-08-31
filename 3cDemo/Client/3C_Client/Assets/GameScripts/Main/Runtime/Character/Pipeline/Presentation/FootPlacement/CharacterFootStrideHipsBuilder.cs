@@ -129,128 +129,39 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         internal bool ReleasePelvis { get; }
     }
 
-    public enum CharacterFootPelvisFootCandidateKind : byte
-    {
-        None = 0,
-        OriginalWithinRadius = 1,
-        TargetOutsideRadius = 2,
-        TargetAtOrAboveReference = 3,
-        TargetBelowReference = 4
-    }
-
-    public enum CharacterFootPelvisTargetSelection : byte
-    {
-        None = 0,
-        OriginalProximityMaximum = 1,
-        SingleTargetCandidate = 2,
-        CorrectionMinimum = 3
-    }
-
-    internal readonly struct CharacterFootPelvisFootCandidate
-    {
-        internal CharacterFootPelvisFootCandidate(
-            Vector3 animatedAnkle,
-            Vector3 targetAnkle,
-            Vector3 referencePoint,
-            Vector3 up,
-            float radius)
-        {
-            CorrectionAlongUp = Vector3.Dot(targetAnkle - animatedAnkle, up);
-            float radiusSquare = radius * radius;
-            if ((animatedAnkle - referencePoint).sqrMagnitude < radiusSquare)
-            {
-                Kind = CharacterFootPelvisFootCandidateKind.OriginalWithinRadius;
-                Value = CorrectionAlongUp;
-                return;
-            }
-            Vector3 fromTarget = referencePoint - targetAnkle;
-            float squareDifference = fromTarget.sqrMagnitude - radiusSquare;
-            if (squareDifference >= 0f)
-            {
-                Kind = CharacterFootPelvisFootCandidateKind.TargetOutsideRadius;
-                Value = 0f;
-                return;
-            }
-            float twiceHeight = 2f * Vector3.Dot(fromTarget, up);
-            if (twiceHeight <= 0f)
-            {
-                Kind = CharacterFootPelvisFootCandidateKind.TargetAtOrAboveReference;
-                Value = CorrectionAlongUp;
-                return;
-            }
-            Kind = CharacterFootPelvisFootCandidateKind.TargetBelowReference;
-            Value = (-twiceHeight + Mathf.Sqrt(
-                twiceHeight * twiceHeight - 4f * squareDifference)) * 0.5f;
-        }
-
-        internal CharacterFootPelvisFootCandidateKind Kind { get; }
-        internal float CorrectionAlongUp { get; }
-        internal float Value { get; }
-        internal bool OriginalWithinRadius =>
-            Kind == CharacterFootPelvisFootCandidateKind.OriginalWithinRadius;
-        internal bool Available =>
-            Kind != CharacterFootPelvisFootCandidateKind.None &&
-            Kind != CharacterFootPelvisFootCandidateKind.TargetOutsideRadius;
-    }
-
     internal readonly struct CharacterFootPelvisHeightTarget
     {
         internal CharacterFootPelvisHeightTarget(
             Vector3 componentUp,
-            Vector3 referencePoint,
-            float footProximityRadius,
-            Vector3 leftAnimatedAnkle,
-            Vector3 rightAnimatedAnkle,
-            Vector3 leftTargetAnkle,
-            Vector3 rightTargetAnkle)
+            Vector3 leftAnimatedSole,
+            Vector3 rightAnimatedSole,
+            Vector3 leftTargetSole,
+            Vector3 rightTargetSole)
         {
             if (!CharacterFootConstraintMath.Finite(componentUp) ||
                 Mathf.Abs(componentUp.sqrMagnitude - 1f) >
                 CharacterFootConstraintMath.GeometryEpsilon ||
-                !CharacterFootConstraintMath.Finite(referencePoint) ||
-                !float.IsFinite(footProximityRadius) || footProximityRadius <= 0f ||
-                !CharacterFootConstraintMath.Finite(leftAnimatedAnkle) ||
-                !CharacterFootConstraintMath.Finite(rightAnimatedAnkle) ||
-                !CharacterFootConstraintMath.Finite(leftTargetAnkle) ||
-                !CharacterFootConstraintMath.Finite(rightTargetAnkle))
+                !CharacterFootConstraintMath.Finite(leftAnimatedSole) ||
+                !CharacterFootConstraintMath.Finite(rightAnimatedSole) ||
+                !CharacterFootConstraintMath.Finite(leftTargetSole) ||
+                !CharacterFootConstraintMath.Finite(rightTargetSole))
             {
                 throw new System.ArgumentException("Pelvis height target input is invalid.");
             }
             ComponentUp = componentUp;
-            ReferencePoint = referencePoint;
-            FootProximityRadius = footProximityRadius;
-            LeftAnimatedAnkle = leftAnimatedAnkle;
-            RightAnimatedAnkle = rightAnimatedAnkle;
-            LeftTargetAnkle = leftTargetAnkle;
-            RightTargetAnkle = rightTargetAnkle;
-            LeftCandidate = new CharacterFootPelvisFootCandidate(
-                leftAnimatedAnkle, leftTargetAnkle, referencePoint, componentUp,
-                footProximityRadius);
-            RightCandidate = new CharacterFootPelvisFootCandidate(
-                rightAnimatedAnkle, rightTargetAnkle, referencePoint, componentUp,
-                footProximityRadius);
-            if (LeftCandidate.OriginalWithinRadius || RightCandidate.OriginalWithinRadius)
-            {
-                Selection = CharacterFootPelvisTargetSelection.OriginalProximityMaximum;
-                OffsetAlongUp = LeftCandidate.OriginalWithinRadius && RightCandidate.OriginalWithinRadius
-                    ? Mathf.Max(LeftCandidate.Value, RightCandidate.Value)
-                    : LeftCandidate.OriginalWithinRadius ? LeftCandidate.Value : RightCandidate.Value;
-            }
-            else if (LeftCandidate.Available != RightCandidate.Available)
-            {
-                Selection = CharacterFootPelvisTargetSelection.SingleTargetCandidate;
-                OffsetAlongUp = LeftCandidate.Available ? LeftCandidate.Value : RightCandidate.Value;
-            }
-            else
-            {
-                Selection = CharacterFootPelvisTargetSelection.CorrectionMinimum;
-                OffsetAlongUp = Mathf.Min(
-                    LeftCandidate.CorrectionAlongUp, RightCandidate.CorrectionAlongUp);
-            }
-            if (!float.IsFinite(LeftCandidate.CorrectionAlongUp) ||
-                !float.IsFinite(RightCandidate.CorrectionAlongUp) ||
-                !float.IsFinite(LeftCandidate.Value) ||
-                !float.IsFinite(RightCandidate.Value) ||
+            LeftAnimatedSole = leftAnimatedSole;
+            RightAnimatedSole = rightAnimatedSole;
+            LeftTargetSole = leftTargetSole;
+            RightTargetSole = rightTargetSole;
+            AnimatedMinimumAlongUp = Mathf.Min(
+                Vector3.Dot(leftAnimatedSole, componentUp),
+                Vector3.Dot(rightAnimatedSole, componentUp));
+            TargetMinimumAlongUp = Mathf.Min(
+                Vector3.Dot(leftTargetSole, componentUp),
+                Vector3.Dot(rightTargetSole, componentUp));
+            OffsetAlongUp = TargetMinimumAlongUp - AnimatedMinimumAlongUp;
+            if (!float.IsFinite(AnimatedMinimumAlongUp) ||
+                !float.IsFinite(TargetMinimumAlongUp) ||
                 !float.IsFinite(OffsetAlongUp))
             {
                 throw new System.ArgumentException("Pelvis height target result is invalid.");
@@ -260,15 +171,12 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
 
         internal bool Available { get; }
         internal Vector3 ComponentUp { get; }
-        internal Vector3 ReferencePoint { get; }
-        internal float FootProximityRadius { get; }
-        internal Vector3 LeftAnimatedAnkle { get; }
-        internal Vector3 RightAnimatedAnkle { get; }
-        internal Vector3 LeftTargetAnkle { get; }
-        internal Vector3 RightTargetAnkle { get; }
-        internal CharacterFootPelvisFootCandidate LeftCandidate { get; }
-        internal CharacterFootPelvisFootCandidate RightCandidate { get; }
-        internal CharacterFootPelvisTargetSelection Selection { get; }
+        internal Vector3 LeftAnimatedSole { get; }
+        internal Vector3 RightAnimatedSole { get; }
+        internal Vector3 LeftTargetSole { get; }
+        internal Vector3 RightTargetSole { get; }
+        internal float AnimatedMinimumAlongUp { get; }
+        internal float TargetMinimumAlongUp { get; }
         internal float OffsetAlongUp { get; }
     }
 
@@ -280,8 +188,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             Vector3 animatedPelvis,
             Vector3 animatedPelvisComponentPosition,
             in CharacterFootPlacementAnimatedPose pose,
-            Vector3 leftTargetAnkle,
-            Vector3 rightTargetAnkle,
+            Vector3 leftCorrectedSole,
+            Vector3 rightCorrectedSole,
             float leftLegLength,
             float rightLegLength,
             float footPlacementWeight,
@@ -292,8 +200,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             AnimatedPelvis = animatedPelvis;
             AnimatedPelvisComponentPosition = animatedPelvisComponentPosition;
             Pose = pose;
-            LeftTargetAnkle = leftTargetAnkle;
-            RightTargetAnkle = rightTargetAnkle;
+            LeftCorrectedSole = leftCorrectedSole;
+            RightCorrectedSole = rightCorrectedSole;
             LeftLegLength = leftLegLength;
             RightLegLength = rightLegLength;
             FootPlacementWeight = footPlacementWeight;
@@ -305,8 +213,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         internal Vector3 AnimatedPelvis { get; }
         internal Vector3 AnimatedPelvisComponentPosition { get; }
         internal CharacterFootPlacementAnimatedPose Pose { get; }
-        internal Vector3 LeftTargetAnkle { get; }
-        internal Vector3 RightTargetAnkle { get; }
+        internal Vector3 LeftCorrectedSole { get; }
+        internal Vector3 RightCorrectedSole { get; }
         internal float LeftLegLength { get; }
         internal float RightLegLength { get; }
         internal float FootPlacementWeight { get; }
@@ -767,19 +675,12 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         public bool ProducesPelvisGoal => m_Result.ProducesPelvisGoal;
         public bool HeightTargetAvailable => m_Result.HeightTarget.Available;
         public Vector3 HeightTargetComponentUp => m_Result.HeightTarget.ComponentUp;
-        public Vector3 HeightTargetReferencePoint => m_Result.HeightTarget.ReferencePoint;
-        public float HeightTargetFootProximityRadius => m_Result.HeightTarget.FootProximityRadius;
-        public Vector3 HeightTargetLeftAnimatedAnkle => m_Result.HeightTarget.LeftAnimatedAnkle;
-        public Vector3 HeightTargetRightAnimatedAnkle => m_Result.HeightTarget.RightAnimatedAnkle;
-        public Vector3 HeightTargetLeftTargetAnkle => m_Result.HeightTarget.LeftTargetAnkle;
-        public Vector3 HeightTargetRightTargetAnkle => m_Result.HeightTarget.RightTargetAnkle;
-        public float HeightTargetLeftCorrectionAlongUp => m_Result.HeightTarget.LeftCandidate.CorrectionAlongUp;
-        public float HeightTargetRightCorrectionAlongUp => m_Result.HeightTarget.RightCandidate.CorrectionAlongUp;
-        public CharacterFootPelvisFootCandidateKind HeightTargetLeftCandidateKind => m_Result.HeightTarget.LeftCandidate.Kind;
-        public CharacterFootPelvisFootCandidateKind HeightTargetRightCandidateKind => m_Result.HeightTarget.RightCandidate.Kind;
-        public float HeightTargetLeftCandidateValue => m_Result.HeightTarget.LeftCandidate.Value;
-        public float HeightTargetRightCandidateValue => m_Result.HeightTarget.RightCandidate.Value;
-        public CharacterFootPelvisTargetSelection HeightTargetSelection => m_Result.HeightTarget.Selection;
+        public Vector3 HeightTargetLeftAnimatedSole => m_Result.HeightTarget.LeftAnimatedSole;
+        public Vector3 HeightTargetRightAnimatedSole => m_Result.HeightTarget.RightAnimatedSole;
+        public Vector3 HeightTargetLeftTargetSole => m_Result.HeightTarget.LeftTargetSole;
+        public Vector3 HeightTargetRightTargetSole => m_Result.HeightTarget.RightTargetSole;
+        public float HeightTargetAnimatedMinimumAlongUp => m_Result.HeightTarget.AnimatedMinimumAlongUp;
+        public float HeightTargetMinimumAlongUp => m_Result.HeightTarget.TargetMinimumAlongUp;
         public float RequestedOffsetAlongUp => m_Result.HeightTarget.OffsetAlongUp;
         public CharacterFootPelvisReachDiagnostics Reach => new(m_Result.Reach);
         public bool PosturePreferenceEvaluated => m_Result.PosturePreference.Evaluated;
@@ -1174,12 +1075,10 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     : CharacterFootStrideSlope.Flat;
             var heightTarget = new CharacterFootPelvisHeightTarget(
                 up,
-                frame.AnimatedPelvis,
-                settings.PelvisFootProximityRadius,
-                frame.Pose.Left.AnklePosition,
-                frame.Pose.Right.AnklePosition,
-                frame.LeftTargetAnkle,
-                frame.RightTargetAnkle);
+                frame.Pose.Left.HeelPosition * 0.5f + frame.Pose.Left.ToePosition * 0.5f,
+                frame.Pose.Right.HeelPosition * 0.5f + frame.Pose.Right.ToePosition * 0.5f,
+                frame.LeftCorrectedSole,
+                frame.RightCorrectedSole);
             CharacterFootPlacementAnimatedFootPose supportPose =
                 intent.SupportSide == CharacterFootSide.Left ? frame.Pose.Left : frame.Pose.Right;
             float supportLegLength = intent.SupportSide == CharacterFootSide.Left

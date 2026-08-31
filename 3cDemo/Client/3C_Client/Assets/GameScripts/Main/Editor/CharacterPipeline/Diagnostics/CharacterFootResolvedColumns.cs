@@ -50,36 +50,14 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         internal float LandingReachMinimumCompressionReserve;
     }
 
-    internal sealed class CharacterFootSupportTargetSample
-    {
-        internal bool Available;
-        internal ulong Frame;
-        internal ulong Completion;
-        internal string Side;
-        internal Vector3 Position;
-        internal Vector3 Normal;
-        internal int Surface;
-        internal ulong WorldRevision;
-        internal string Kind;
-        internal string PositionSource;
-        internal ulong PositionFrame;
-        internal ulong PositionCompletion;
-        internal ulong PositionEvent;
-        internal ulong PositionPath;
-        internal string NormalSource;
-        internal ulong NormalFrame;
-        internal ulong NormalCompletion;
-        internal ulong NormalEvent;
-    }
-
     internal static class CharacterFootResolvedColumns
     {
-        internal static readonly CharacterFootCsvGroup<Source, CharacterFootResolvedSample> Schema =
-            new CharacterFootCsvGroup<Source, CharacterFootResolvedSample>(
-                "ResolvedFoot",
-                () => new CharacterFootResolvedSample(),
-                new Column[]
-                {
+        internal static readonly CharacterFootCsvGroup<Source, CharacterFootResolvedSample> Schema = Create();
+
+        static CharacterFootCsvGroup<Source, CharacterFootResolvedSample> Create()
+        {
+            var columns = new System.Collections.Generic.List<Column>
+            {
                 Column.Create("ResolvedFrameSequence", Codecs.UInt64, Unit.Frame,
                     (in Source source) => source.FrameSequence, (target, value) => target.Frame = value),
                 Column.Create("ResolvedCompletionIdentity", Codecs.UInt64, Unit.Identity,
@@ -122,42 +100,13 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     (in Source source) => source.PositionWeight, (target, value) => target.PositionWeight = value),
                 Column.Create("ResolvedRotationWeight", Codecs.Float32, Unit.Unitless,
                     (in Source source) => source.RotationWeight, (target, value) => target.RotationWeight = value),
-                Column.Create("ResolvedSupportTargetAvailable", Codecs.Boolean, Unit.None,
-                    (in Source source) => source.SupportTarget.Available, (target, value) => target.SupportTarget.Available = value),
-                Column.Create("ResolvedSupportTargetFrameSequence", Codecs.UInt64, Unit.Frame,
-                    (in Source source) => source.SupportTarget.FrameSequence, (target, value) => target.SupportTarget.Frame = value),
-                Column.Create("ResolvedSupportTargetCompletionIdentity", Codecs.UInt64, Unit.Identity,
-                    (in Source source) => source.SupportTarget.CompletionIdentity, (target, value) => target.SupportTarget.Completion = value),
-                Column.Create("ResolvedSupportTargetSide", Codecs.Text, Unit.Category,
-                    (in Source source) => source.SupportTarget.Side.ToString(), (target, value) => target.SupportTarget.Side = value),
-                Column.Create("ResolvedSupportTargetPosition", Codecs.Vector, Unit.Metres,
-                    (in Source source) => source.SupportTarget.Position, (target, value) => target.SupportTarget.Position = value, "ResolvedSupportTargetAvailable"),
-                Column.Create("ResolvedSupportTargetNormal", Codecs.Vector, Unit.Direction,
-                    (in Source source) => source.SupportTarget.SupportNormal, (target, value) => target.SupportTarget.Normal = value, "ResolvedSupportTargetAvailable"),
-                Column.Create("ResolvedSupportTargetSurfaceIdentity", Codecs.Int32, Unit.Identity,
-                    (in Source source) => source.SupportTarget.SurfaceIdentity, (target, value) => target.SupportTarget.Surface = value, "ResolvedSupportTargetAvailable"),
-                Column.Create("ResolvedSupportTargetWorldRevision", Codecs.UInt64, Unit.Identity,
-                    (in Source source) => source.SupportTarget.WorldRevision, (target, value) => target.SupportTarget.WorldRevision = value, "ResolvedSupportTargetAvailable"),
-                Column.Create("ResolvedSupportTargetKind", Codecs.Text, Unit.Category,
-                    (in Source source) => source.SupportTarget.Kind.ToString(), (target, value) => target.SupportTarget.Kind = value, "ResolvedSupportTargetAvailable"),
-                Column.Create("ResolvedSupportTargetPositionSource", Codecs.Text, Unit.Category,
-                    (in Source source) => source.SupportTarget.PositionSource.ToString(), (target, value) => target.SupportTarget.PositionSource = value, "ResolvedSupportTargetAvailable"),
-                Column.Create("ResolvedSupportTargetPositionFrameSequence", Codecs.UInt64, Unit.Frame,
-                    (in Source source) => source.SupportTarget.PositionFrameSequence, (target, value) => target.SupportTarget.PositionFrame = value, "ResolvedSupportTargetAvailable"),
-                Column.Create("ResolvedSupportTargetPositionCompletionIdentity", Codecs.UInt64, Unit.Identity,
-                    (in Source source) => source.SupportTarget.PositionCompletionIdentity, (target, value) => target.SupportTarget.PositionCompletion = value, "ResolvedSupportTargetAvailable"),
-                Column.Create("ResolvedSupportTargetPositionEventIdentity", Codecs.UInt64, Unit.Identity,
-                    (in Source source) => source.SupportTarget.PositionEventIdentity, (target, value) => target.SupportTarget.PositionEvent = value, "ResolvedSupportTargetAvailable"),
-                Column.Create("ResolvedSupportTargetPositionPathIdentity", Codecs.UInt64, Unit.Identity,
-                    (in Source source) => source.SupportTarget.PositionPathIdentity, (target, value) => target.SupportTarget.PositionPath = value, "ResolvedSupportTargetAvailable"),
-                Column.Create("ResolvedSupportTargetNormalSource", Codecs.Text, Unit.Category,
-                    (in Source source) => source.SupportTarget.NormalSource.ToString(), (target, value) => target.SupportTarget.NormalSource = value, "ResolvedSupportTargetAvailable"),
-                Column.Create("ResolvedSupportTargetNormalFrameSequence", Codecs.UInt64, Unit.Frame,
-                    (in Source source) => source.SupportTarget.NormalFrameSequence, (target, value) => target.SupportTarget.NormalFrame = value, "ResolvedSupportTargetAvailable"),
-                Column.Create("ResolvedSupportTargetNormalCompletionIdentity", Codecs.UInt64, Unit.Identity,
-                    (in Source source) => source.SupportTarget.NormalCompletionIdentity, (target, value) => target.SupportTarget.NormalCompletion = value, "ResolvedSupportTargetAvailable"),
-                Column.Create("ResolvedSupportTargetNormalEventIdentity", Codecs.UInt64, Unit.Identity,
-                    (in Source source) => source.SupportTarget.NormalEventIdentity, (target, value) => target.SupportTarget.NormalEvent = value, "ResolvedSupportTargetAvailable"),
+            };
+            columns.AddRange(CharacterFootSupportTargetColumns.Create("ResolvedSupportTarget")
+                .Project<Source, CharacterFootResolvedSample>(
+                    (in Source source) => source.SupportTarget,
+                    target => target.SupportTarget));
+            columns.AddRange(new Column[]
+            {
                 Column.Create("ResolvedContactAvailable", Codecs.Boolean, Unit.None,
                     (in Source source) => source.ContactAvailable, (target, value) => target.ContactAvailable = value),
                 Column.Create("ResolvedContactEventIdentity", Codecs.UInt64, Unit.Identity,
@@ -194,6 +143,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     (in Source source) => source.LandingReachLegLength, (target, value) => target.LandingReachLegLength = value, "ResolvedLandingReachAvailable"),
                 Column.Create("ResolvedLandingReachMinimumCompressionReserve", Codecs.Float32, Unit.Metres,
                     (in Source source) => source.LandingReachMinimumCompressionReserve, (target, value) => target.LandingReachMinimumCompressionReserve = value, "ResolvedLandingReachAvailable"),
-                });
+            });
+            return new CharacterFootCsvGroup<Source, CharacterFootResolvedSample>(
+                "ResolvedFoot", () => new CharacterFootResolvedSample(), columns.ToArray());
+        }
     }
 }

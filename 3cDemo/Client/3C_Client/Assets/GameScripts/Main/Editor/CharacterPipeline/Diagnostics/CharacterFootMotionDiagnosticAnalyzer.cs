@@ -526,9 +526,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 formalFootPlacementWeight = frame.FormalFootPlacementWeight,
                 lockWeight = frame.CurrentLockRequestWeight,
                 deltaSeconds = frame.DeltaSeconds,
-                currentSupportAvailable = frame.CurrentSupportAvailable,
-                currentSupportRejectReason = frame.CurrentSupportRejectReason,
-                currentSupportSurfaceIdentity = frame.CurrentSupportTarget.Surface,
+                currentSupportAvailable = frame.CurrentSupport.Available,
+                currentSupportRejectReason = frame.CurrentSupport.RejectReason,
+                currentSupportSurfaceIdentity = frame.CurrentSupport.Target.Surface,
                 landingReachAvailable = frame.LandingReachAvailable,
                 gapMotion = "Unavailable"
             };
@@ -5619,7 +5619,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         };
 
         static object CurrentSupportProbeFact(
-            CurrentSupportProbeFrame probe) => new
+            CharacterFootCurrentSupportProbeSample probe) => new
         {
             purpose = probe.Purpose,
             kind = probe.Kind,
@@ -5671,6 +5671,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             RequireColumns(indices);
             CharacterFootCsvReader<CharacterFootResolvedSample> resolvedColumns =
                 CharacterFootResolvedColumns.Schema.Bind(indices);
+            var currentSupportColumns = CharacterFootCurrentSupportColumns.Schema.Bind(indices);
+            var selectedTargetColumns = CharacterFootSupportTargetColumns.Selected.Bind(indices);
             var unique = new Dictionary<(int frame, string side), FootFrame>();
             int rawRows = 0;
             string line;
@@ -5686,7 +5688,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                         $"Foot Motion samples CSV row {rawRows + 1} has " +
                         $"{cells.Length} columns; expected {names.Length}.");
                 }
-                FootFrame frame = ParseFrame(indices, cells, resolvedColumns);
+                FootFrame frame = ParseFrame(indices, cells, resolvedColumns, currentSupportColumns, selectedTargetColumns);
                 reader.Include(frame.Frame, frame.Side);
                 var key = (frame.Frame, frame.Side);
                 if (!unique.TryAdd(key, frame))
@@ -6059,7 +6061,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         static FootFrame ParseFrame(
             Dictionary<string, int> indices,
             string[] cells,
-            CharacterFootCsvReader<CharacterFootResolvedSample> resolvedColumns)
+            CharacterFootCsvReader<CharacterFootResolvedSample> resolvedColumns,
+            CharacterFootCsvReader<CharacterFootCurrentSupportSample> currentSupportColumns,
+            CharacterFootCsvReader<CharacterFootSupportTargetSample> selectedTargetColumns)
         {
             string Cell(string name) =>
                 indices.TryGetValue(name, out int index) && index < cells.Length
@@ -6138,57 +6142,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 Requested = Int(prefix + "Requested") != 0,
                 Available = Int(prefix + "Available") != 0,
             };
-            CharacterFootSupportTargetSample SupportTarget(string prefix) =>
-                new CharacterFootSupportTargetSample
-                {
-                    Available = Int(prefix + "Available") != 0,
-                    Frame = Ulong(prefix + "FrameSequence"),
-                    Completion = Ulong(prefix + "CompletionIdentity"),
-                    Side = Cell(prefix + "Side"),
-                    Position = Vector(prefix + "Position"),
-                    Normal = Vector(prefix + "Normal"),
-                    Surface = Int(prefix + "SurfaceIdentity"),
-                    WorldRevision = Ulong(prefix + "WorldRevision"),
-                    Kind = Cell(prefix + "Kind"),
-                    PositionSource = Cell(prefix + "PositionSource"),
-                    PositionFrame = Ulong(prefix + "PositionFrameSequence"),
-                    PositionCompletion =
-                        Ulong(prefix + "PositionCompletionIdentity"),
-                    PositionEvent = Ulong(prefix + "PositionEventIdentity"),
-                    PositionPath = Ulong(prefix + "PositionPathIdentity"),
-                    NormalSource = Cell(prefix + "NormalSource"),
-                    NormalFrame = Ulong(prefix + "NormalFrameSequence"),
-                    NormalCompletion =
-                        Ulong(prefix + "NormalCompletionIdentity"),
-                    NormalEvent = Ulong(prefix + "NormalEventIdentity")
-                };
-            CurrentSupportProbeFrame CurrentSupportProbe(string prefix) =>
-                new CurrentSupportProbeFrame
-                {
-                    Purpose = Cell(prefix + "Purpose"),
-                    Kind = Cell(prefix + "Kind"),
-                    State = Cell(prefix + "State"),
-                    RejectReason = Cell(prefix + "RejectReason"),
-                    ProbePosition = Vector(prefix + "ProbePosition"),
-                    ComponentUp = Vector(prefix + "ComponentUp"),
-                    Origin = Vector(prefix + "Origin"),
-                    Direction = Vector(prefix + "Direction"),
-                    MaximumDistance = Float(prefix + "MaximumDistance"),
-                    Radius = Float(prefix + "Radius"),
-                    LayerMask = Int(prefix + "LayerMask"),
-                    MinimumGroundNormalDot =
-                        Float(prefix + "MinimumGroundNormalDot"),
-                    HitCapacity = Int(prefix + "HitCapacity"),
-                    CandidateCount = Int(prefix + "CandidateCount"),
-                    Surface = Int(prefix + "SurfaceIdentity"),
-                    Point = Vector(prefix + "Point"),
-                    Normal = Vector(prefix + "Normal"),
-                    Distance = Float(prefix + "Distance"),
-                    WorldRevision = Ulong(prefix + "WorldRevision"),
-                    SphereCastExecuted =
-                        Int(prefix + "SphereCastExecuted") != 0,
-                    Accepted = Int(prefix + "Accepted") != 0
-                };
+
             string side = Cell("Side");
             bool hasSurfaceFacts = indices.ContainsKey("GroundSurfaceState");
             if (indices.ContainsKey("GroundSurfaceWorldRevision") != hasSurfaceFacts ||
@@ -6738,8 +6692,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     Int("FootMotionPlantLockWeightCompleted") != 0,
                 PlantDesiredPoint = Vector("FootMotionPlantDesiredPoint"),
                 PlantFilteredPoint = Vector("FootMotionPlantFilteredPoint"),
-                SelectedSupportTarget =
-                    SupportTarget("FootMotionSelectedSupportTarget"),
+                SelectedSupportTarget = selectedTargetColumns.Read(cells),
                 PlantTargetHeightAdoptionMode =
                     Cell("FootMotionPlantTargetHeightAdoptionMode"),
                 PlantTargetMaximumVerticalSpeed =
@@ -6847,35 +6800,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     Float("FootMotionPlantOutputDistance"),
                 PlantPenetrationDepth =
                     Float("FootMotionPlantPenetrationDepth"),
-                CurrentSupportSpecified =
-                    Int("CurrentSupportIsSpecified") != 0,
-                CurrentSupportAvailable =
-                    Int("CurrentSupportAvailable") != 0,
-                CurrentSupportRejectReason =
-                    Cell("CurrentSupportRejectReason"),
-                CurrentSupportFrame = Ulong("CurrentSupportFrameSequence"),
-                CurrentSupportCompletion =
-                    Ulong("CurrentSupportCompletionIdentity"),
-                CurrentSupportWorldRevision =
-                    Ulong("CurrentSupportWorldRevision"),
-                CurrentSupportHeel =
-                    CurrentSupportProbe("CurrentSupportHeel"),
-                CurrentSupportToe =
-                    CurrentSupportProbe("CurrentSupportToe"),
-                CurrentSupportHeelRequiredDisplacement =
-                    Float("CurrentSupportHeelRequiredDisplacement"),
-                CurrentSupportToeRequiredDisplacement =
-                    Float("CurrentSupportToeRequiredDisplacement"),
-                CurrentSupportSelectedProbe =
-                    Cell("CurrentSupportSelectedProbe"),
-                CurrentSupportSelectionReason =
-                    Cell("CurrentSupportSelectionReason"),
-                CurrentSupportSelectionEpsilon =
-                    Float("CurrentSupportSelectionEpsilon"),
-                CurrentSupportSelectedNormalBeforeNormalization =
-                    Vector("CurrentSupportSelectedSupportNormalBeforeNormalization"),
-                CurrentSupportTarget =
-                    SupportTarget("CurrentSupportTarget"),
+                CurrentSupport = currentSupportColumns.Read(cells),
                 Resolved = resolvedColumns.Read(cells),
                 EncodedGoalAvailable =
                     Int("FootMotionEncodedGoalAvailable") != 0,
@@ -8204,30 +8129,30 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             for (int i = 0; i < frames.Count; i++)
             {
                 FootFrame frame = frames[i];
-                if (!frame.CurrentSupportSpecified)
+                if (!frame.CurrentSupport.Specified)
                     continue;
                 var metrics = new SortedDictionary<string, double>(
                     StringComparer.Ordinal)
                 {
                     ["HeelCandidateCount"] =
-                        frame.CurrentSupportHeel.CandidateCount,
+                        frame.CurrentSupport.Heel.CandidateCount,
                     ["ToeCandidateCount"] =
-                        frame.CurrentSupportToe.CandidateCount,
+                        frame.CurrentSupport.Toe.CandidateCount,
                     ["HeelRequiredDisplacement"] =
-                        frame.CurrentSupportHeelRequiredDisplacement,
+                        frame.CurrentSupport.HeelRequiredDisplacement,
                     ["ToeRequiredDisplacement"] =
-                        frame.CurrentSupportToeRequiredDisplacement
+                        frame.CurrentSupport.ToeRequiredDisplacement
                 };
                 var evidence = new SortedDictionary<string, bool>(
                     StringComparer.Ordinal)
                 {
-                    ["available"] = frame.CurrentSupportAvailable,
-                    ["heelAccepted"] = frame.CurrentSupportHeel.Accepted,
-                    ["toeAccepted"] = frame.CurrentSupportToe.Accepted,
+                    ["available"] = frame.CurrentSupport.Available,
+                    ["heelAccepted"] = frame.CurrentSupport.Heel.Accepted,
+                    ["toeAccepted"] = frame.CurrentSupport.Toe.Accepted,
                     ["heelSphereCastExecuted"] =
-                        frame.CurrentSupportHeel.SphereCastExecuted,
+                        frame.CurrentSupport.Heel.SphereCastExecuted,
                     ["toeSphereCastExecuted"] =
-                        frame.CurrentSupportToe.SphereCastExecuted
+                        frame.CurrentSupport.Toe.SphereCastExecuted
                 };
                 events.Add(new EventFact(
                     "CurrentSupportQuery",
@@ -8284,7 +8209,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         }
 
         static void RequireCurrentSupportProbe(
-            CurrentSupportProbeFrame probe,
+            CharacterFootCurrentSupportProbeSample probe,
             string kind,
             ulong worldRevision,
             string prefix)
@@ -8338,10 +8263,10 @@ namespace ThirdPersonCharacter.Pipeline.Editor
 
         static void RequireCurrentSupport(FootFrame frame)
         {
-            if (!frame.CurrentSupportSpecified)
+            if (!frame.CurrentSupport.Specified)
             {
-                if (frame.CurrentSupportAvailable ||
-                    frame.CurrentSupportTarget.Available)
+                if (frame.CurrentSupport.Available ||
+                    frame.CurrentSupport.Target.Available)
                 {
                     throw new InvalidDataException(
                         "Foot Motion unspecified Current Support is available.");
@@ -8349,40 +8274,40 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 return;
             }
             RequireEnum<CharacterFootCurrentSupportRejectReason>(
-                frame.CurrentSupportRejectReason,
+                frame.CurrentSupport.RejectReason,
                 "CurrentSupportRejectReason");
             RequireCurrentSupportProbe(
-                frame.CurrentSupportHeel,
+                frame.CurrentSupport.Heel,
                 "Heel",
-                frame.CurrentSupportWorldRevision,
+                frame.CurrentSupport.WorldRevision,
                 "CurrentSupportHeel");
             RequireCurrentSupportProbe(
-                frame.CurrentSupportToe,
+                frame.CurrentSupport.Toe,
                 "Toe",
-                frame.CurrentSupportWorldRevision,
+                frame.CurrentSupport.WorldRevision,
                 "CurrentSupportToe");
             RequireSupportTarget(
-                frame.CurrentSupportTarget,
+                frame.CurrentSupport.Target,
                 frame.Side,
                 "CurrentSupportTarget");
-            bool available = frame.CurrentSupportRejectReason == "None" &&
-                             frame.CurrentSupportHeel.Accepted &&
-                             frame.CurrentSupportToe.Accepted &&
-                             frame.CurrentSupportTarget.Available;
-            if (frame.CurrentSupportFrame != (ulong)frame.Frame ||
-                frame.CurrentSupportCompletion != frame.CompletionIdentity ||
-                frame.CurrentSupportWorldRevision == 0 ||
-                frame.CurrentSupportAvailable != available ||
+            bool available = frame.CurrentSupport.RejectReason == "None" &&
+                             frame.CurrentSupport.Heel.Accepted &&
+                             frame.CurrentSupport.Toe.Accepted &&
+                             frame.CurrentSupport.Target.Available;
+            if (frame.CurrentSupport.Frame != (ulong)frame.Frame ||
+                frame.CurrentSupport.Completion != frame.CompletionIdentity ||
+                frame.CurrentSupport.WorldRevision == 0 ||
+                frame.CurrentSupport.Available != available ||
                 !float.IsFinite(
-                    frame.CurrentSupportHeelRequiredDisplacement) ||
+                    frame.CurrentSupport.HeelRequiredDisplacement) ||
                 !float.IsFinite(
-                    frame.CurrentSupportToeRequiredDisplacement) ||
-                !float.IsFinite(frame.CurrentSupportSelectionEpsilon) ||
-                frame.CurrentSupportSelectionEpsilon <= 0f ||
+                    frame.CurrentSupport.ToeRequiredDisplacement) ||
+                !float.IsFinite(frame.CurrentSupport.SelectionEpsilon) ||
+                frame.CurrentSupport.SelectionEpsilon <= 0f ||
                 available &&
                     (!FiniteVector(
-                         frame.CurrentSupportSelectedNormalBeforeNormalization) ||
-                     frame.CurrentSupportSelectedNormalBeforeNormalization
+                         frame.CurrentSupport.SelectedNormalBeforeNormalization) ||
+                     frame.CurrentSupport.SelectedNormalBeforeNormalization
                          .sqrMagnitude <=
                      RuntimeGeometryEpsilon * RuntimeGeometryEpsilon))
             {
@@ -8392,10 +8317,10 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             if (available)
             {
                 RequireEnum<CharacterFootCurrentSupportProbeKind>(
-                    frame.CurrentSupportSelectedProbe,
+                    frame.CurrentSupport.SelectedProbe,
                     "CurrentSupportSelectedProbe");
                 RequireEnum<CharacterFootCurrentSupportSelectionReason>(
-                    frame.CurrentSupportSelectionReason,
+                    frame.CurrentSupport.SelectionReason,
                     "CurrentSupportSelectionReason");
             }
         }
@@ -10206,18 +10131,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 "FootProfileId,FootProfileRevision,ApproachPlantTargetPrepared,PlantTargetNormalX,PlantTargetNormalY,PlantTargetNormalZ,PlantTargetTrajectoryGeneration,PlantTargetFutureBodyTranslationSourceIdentity,FormalEventPhase,FormalEventApproachContactToLandingProgress,FormalInApproachContactToLanding,InputFormalEventPhase,InputFormalEventApproachContactToLandingProgress,InputFormalInApproachContactToLanding,FootMotionSourceAnkleRotationX,FootMotionSourceAnkleRotationY,FootMotionSourceAnkleRotationZ,FootMotionSourceAnkleRotationW,FootMotionPositionWeight,FootMotionRotationWeight");
             RequireColumnGroup(
                 indices,
-                "FootMotionSelectedSupportTargetAvailable,FootMotionSelectedSupportTargetFrameSequence,FootMotionSelectedSupportTargetCompletionIdentity,FootMotionSelectedSupportTargetSide,FootMotionSelectedSupportTargetPositionX,FootMotionSelectedSupportTargetPositionY,FootMotionSelectedSupportTargetPositionZ,FootMotionSelectedSupportTargetNormalX,FootMotionSelectedSupportTargetNormalY,FootMotionSelectedSupportTargetNormalZ,FootMotionSelectedSupportTargetSurfaceIdentity,FootMotionSelectedSupportTargetWorldRevision,FootMotionSelectedSupportTargetKind,FootMotionSelectedSupportTargetPositionSource,FootMotionSelectedSupportTargetPositionFrameSequence,FootMotionSelectedSupportTargetPositionCompletionIdentity,FootMotionSelectedSupportTargetPositionEventIdentity,FootMotionSelectedSupportTargetPositionPathIdentity,FootMotionSelectedSupportTargetNormalSource,FootMotionSelectedSupportTargetNormalFrameSequence,FootMotionSelectedSupportTargetNormalCompletionIdentity,FootMotionSelectedSupportTargetNormalEventIdentity");
-            RequireColumnGroup(
-                indices,
                 "FootMotionCorrectionResponseRequestedDirectionX,FootMotionCorrectionResponseRequestedDirectionY,FootMotionCorrectionResponseRequestedDirectionZ,FootMotionCorrectionResponsePreviousDirectionX,FootMotionCorrectionResponsePreviousDirectionY,FootMotionCorrectionResponsePreviousDirectionZ,FootMotionCorrectionResponseDirectionLimited,FootMotionCorrectionResponseMaximumDirectionChangeDegrees,FootMotionCorrectionResponseAppliedDirectionChangeDegrees,FootMotionCorrectionResponseVisibleOutputTransferred,FootMotionCorrectionResponseBeforeRebase,FootMotionCorrectionResponseDirectionX,FootMotionCorrectionResponseDirectionY,FootMotionCorrectionResponseDirectionZ");
-            RequireColumnGroup(
-                indices,
-                "CurrentSupportFrameSequence,CurrentSupportCompletionIdentity,CurrentSupportWorldRevision,CurrentSupportIsSpecified,CurrentSupportAvailable,CurrentSupportRejectReason,CurrentSupportHeelPurpose,CurrentSupportHeelKind,CurrentSupportHeelState,CurrentSupportHeelRejectReason,CurrentSupportHeelProbePositionX,CurrentSupportHeelProbePositionY,CurrentSupportHeelProbePositionZ,CurrentSupportHeelComponentUpX,CurrentSupportHeelComponentUpY,CurrentSupportHeelComponentUpZ,CurrentSupportHeelOriginX,CurrentSupportHeelOriginY,CurrentSupportHeelOriginZ,CurrentSupportHeelDirectionX,CurrentSupportHeelDirectionY,CurrentSupportHeelDirectionZ,CurrentSupportHeelMaximumDistance,CurrentSupportHeelRadius,CurrentSupportHeelLayerMask,CurrentSupportHeelMinimumGroundNormalDot,CurrentSupportHeelHitCapacity,CurrentSupportHeelCandidateCount,CurrentSupportHeelSurfaceIdentity,CurrentSupportHeelPointX,CurrentSupportHeelPointY,CurrentSupportHeelPointZ,CurrentSupportHeelNormalX,CurrentSupportHeelNormalY,CurrentSupportHeelNormalZ,CurrentSupportHeelDistance,CurrentSupportHeelWorldRevision,CurrentSupportHeelSphereCastExecuted,CurrentSupportHeelAccepted,CurrentSupportToePurpose,CurrentSupportToeKind,CurrentSupportToeState,CurrentSupportToeRejectReason,CurrentSupportToeProbePositionX,CurrentSupportToeProbePositionY,CurrentSupportToeProbePositionZ,CurrentSupportToeComponentUpX,CurrentSupportToeComponentUpY,CurrentSupportToeComponentUpZ,CurrentSupportToeOriginX,CurrentSupportToeOriginY,CurrentSupportToeOriginZ,CurrentSupportToeDirectionX,CurrentSupportToeDirectionY,CurrentSupportToeDirectionZ,CurrentSupportToeMaximumDistance,CurrentSupportToeRadius,CurrentSupportToeLayerMask,CurrentSupportToeMinimumGroundNormalDot,CurrentSupportToeHitCapacity,CurrentSupportToeCandidateCount,CurrentSupportToeSurfaceIdentity,CurrentSupportToePointX,CurrentSupportToePointY,CurrentSupportToePointZ,CurrentSupportToeNormalX,CurrentSupportToeNormalY,CurrentSupportToeNormalZ,CurrentSupportToeDistance,CurrentSupportToeWorldRevision,CurrentSupportToeSphereCastExecuted,CurrentSupportToeAccepted,CurrentSupportHeelRequiredDisplacement,CurrentSupportToeRequiredDisplacement,CurrentSupportSelectedProbe,CurrentSupportSelectionReason,CurrentSupportSelectionEpsilon,CurrentSupportSelectedSupportNormalBeforeNormalizationX,CurrentSupportSelectedSupportNormalBeforeNormalizationY,CurrentSupportSelectedSupportNormalBeforeNormalizationZ");
-            RequireColumnGroup(indices, SupportTargetColumns("CurrentSupportTarget"));
         }
-
-        static string SupportTargetColumns(string prefix) =>
-            $"{prefix}Available,{prefix}FrameSequence,{prefix}CompletionIdentity,{prefix}Side,{prefix}PositionX,{prefix}PositionY,{prefix}PositionZ,{prefix}NormalX,{prefix}NormalY,{prefix}NormalZ,{prefix}SurfaceIdentity,{prefix}WorldRevision,{prefix}Kind,{prefix}PositionSource,{prefix}PositionFrameSequence,{prefix}PositionCompletionIdentity,{prefix}PositionEventIdentity,{prefix}PositionPathIdentity,{prefix}NormalSource,{prefix}NormalFrameSequence,{prefix}NormalCompletionIdentity,{prefix}NormalEventIdentity";
 
         static void RequireColumnGroup(
             Dictionary<string, int> indices,
@@ -10442,12 +10357,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             return values[lower] + (values[upper] - values[lower]) * t;
         }
 
-
-
-
-
-
-
         readonly struct CharacterFootOutputBoundaryMotion
         {
             internal CharacterFootOutputBoundaryMotion(
@@ -10563,36 +10472,10 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             internal double JerkMetersPerSecondCubed;
         }
 
-
-
-        sealed class CurrentSupportProbeFrame
-        {
-            internal string Purpose;
-            internal string Kind;
-            internal string State;
-            internal string RejectReason;
-            internal Vector3 ProbePosition;
-            internal Vector3 ComponentUp;
-            internal Vector3 Origin;
-            internal Vector3 Direction;
-            internal float MaximumDistance;
-            internal float Radius;
-            internal int LayerMask;
-            internal float MinimumGroundNormalDot;
-            internal int HitCapacity;
-            internal int CandidateCount;
-            internal int Surface;
-            internal Vector3 Point;
-            internal Vector3 Normal;
-            internal float Distance;
-            internal ulong WorldRevision;
-            internal bool SphereCastExecuted;
-            internal bool Accepted;
-        }
-
         sealed class FootFrame
         {
             internal CharacterFootResolvedSample Resolved;
+            internal CharacterFootCurrentSupportSample CurrentSupport;
             internal string SampleIdentity;
             internal string ProgramIdentity;
             internal string ProjectionRevision;
@@ -10965,21 +10848,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             internal Vector3 PlantEffectiveCorrectionAfter;
             internal float PlantOutputDistance;
             internal float PlantPenetrationDepth;
-            internal bool CurrentSupportSpecified;
-            internal bool CurrentSupportAvailable;
-            internal string CurrentSupportRejectReason;
-            internal ulong CurrentSupportFrame;
-            internal ulong CurrentSupportCompletion;
-            internal ulong CurrentSupportWorldRevision;
-            internal CurrentSupportProbeFrame CurrentSupportHeel;
-            internal CurrentSupportProbeFrame CurrentSupportToe;
-            internal float CurrentSupportHeelRequiredDisplacement;
-            internal float CurrentSupportToeRequiredDisplacement;
-            internal string CurrentSupportSelectedProbe;
-            internal string CurrentSupportSelectionReason;
-            internal float CurrentSupportSelectionEpsilon;
-            internal Vector3 CurrentSupportSelectedNormalBeforeNormalization;
-            internal CharacterFootSupportTargetSample CurrentSupportTarget;
             internal bool EncodedGoalAvailable;
             internal Vector3 EncodedGoalPosition;
             internal Vector3 EncodedGoalCorrection;
@@ -11166,7 +11034,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 appliedOffsetAlongUp = response.Evaluated ? (double?)(response.Output * response.PositionWeight) : null
             };
 
-
         sealed class PelvisFrame
         {
             internal PelvisObservationFrame Observation;
@@ -11315,7 +11182,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 PreviousSlope == other.PreviousSlope &&
                 Handoff == other.Handoff;
         }
-
 
         sealed class PelvisHeightTargetFrame
         {

@@ -124,9 +124,25 @@ PredictionMotion、BodyTrajectory及其Tick/Generation/ResetSequence/AuthorityTi
 
 ## 第五个闭环：先统一Resolved字段组的读写绑定
 
-状态：Unity刷新／编译与规定参数Editor构建通过、0错误，等待原Record回放；没有改Runtime、列格式或版本。
+状态：候选bb25738已通过Unity／Editor编译和原Record回放；没有改Runtime、列格式或版本。
 
 - 新建唯一Editor typed列绑定基础，字段声明同时提供原始列名、CLR值类型、单位、业务组、可用性引用、Runtime证据getter和解析记录setter。标量／Vector／Quaternion沿同一CSV codec读写；配置完整性在初始化检查，文件列索引在读文件时绑定一次。
 - Resolved Foot先迁移57个typed binding／98个原始CSV列，静态逐项核对顺序与原Header完全一致。删除该组旧Header字面量、AddResolvedFoot写行、ParseFrame赋值与RequireColumns清单；没有同组新旧读写并存。
 - Editor解析记录将Resolved聚合为一份CharacterFootResolvedSample，SupportTarget记录提取为共享typed记录；诊断公式只改字段路径，规则／评分表达式不动。全部字符串转义、数值R格式和解析失败规则从原实现原样迁入唯一共享CSV Values。
 - 仍使用原Sampler/Analyzer/Publisher和原始帧字节索引；几何仍为独立表，未恢复facts.json。facts71/Analyzer71/d40保持。其它尚未迁移字段组仍在原位置，后续逐组替换并删除各自旧映射；任务5整体尚未完成。
+
+## 首组列绑定的验证封口
+
+- 原包：`Diagnostics/FootPlacementRuns/20260901-024845-141-603a49a924ca4398aa453f9aaa230e8b`，候选bb25738，上一通过fc00789/021236，总基线ad3527e/233436不变。
+- 官方Proof对021236匹配1044输入；独立对021236、233436、205014输入及完整1044帧相同。三组CSV2086×1215列名／顺序相同，1191业务列逐格一致，23身份列双向映射无冲突、StartedUtc归元数据。Resolved98列全部维持原格式与值；几何22业务列及5身份映射保持。
+- facts71/Analyzer71/d40、42个Target及规则／统计／coverage、七维评分61.9保持。20447条details的连续offset/length、SHA及id/family逐条通过；samples2086段与geometry1787段字节长度和SHA通过。
+- 正式MCP summary、contact-support-gap events、detail3033与实际JSONL一致；3L/3R/476R/746L/1045L/1045R的98列帧查询，以及geometry92L的27列24行，与独立原始数据逐值一致。没有重分析或第二报告。
+- 测试已回Edit/Idle并归还Unity。这里只确认合法原包与查询链，未制造坏CSV负样本；Reset4.4和已有未覆盖输入限制仍保留。
+
+## 下一组：Current Support与共享支撑目标
+
+状态：实现、Unity刷新／编译与Editor构建通过、0错误，等待回放。
+
+- Current Support新增102列完整typed绑定，脚掌两Probe复用同一形状；Selected Support Target的22列也改由同一绑定读写，三个SupportTarget场景共享一个字段定义。
+- 增加静态typed投影来组合父记录与子记录，不复制字段清单、不重新查询或生成支撑决定。删除相应旧Header、写入helper、局部解析函数和必需列字符串。
+- Analyzer的Current Support聚合为一个记录，诊断规则只改读取路径。全局共222列已迁入唯一绑定，剩余字段仍按组继续迁移；不提前完成任务5。Runtime、格式identity、规则与评分未变。

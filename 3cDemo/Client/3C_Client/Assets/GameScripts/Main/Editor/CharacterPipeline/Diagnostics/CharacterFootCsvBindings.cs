@@ -11,7 +11,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
     internal enum CharacterFootCsvUnit
     {
         None, Identity, Frame, Category, Metres, Seconds, Degrees,
-        MetresPerSecond, Unitless, Direction
+        MetresPerSecond, Unitless, Direction, Count, Bitmask
     }
 
     internal enum CharacterFootCsvKind
@@ -101,6 +101,26 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         internal ReadOnlyCollection<CharacterFootCsvColumnInfo> Columns { get; }
         internal void Write(StringBuilder row, in TSource source) => m_Write(row, in source);
         internal Action<string[], TRecord> Bind(Dictionary<string, int> indices) => m_Bind(indices);
+
+        internal CharacterFootCsvColumn<TParentSource, TParentRecord> Project<TParentSource, TParentRecord>(
+            CharacterFootCsvGetter<TParentSource, TSource> source,
+            Func<TParentRecord, TRecord> record)
+        {
+            var columns = new CharacterFootCsvColumnInfo[Columns.Count];
+            Columns.CopyTo(columns, 0);
+            return new CharacterFootCsvColumn<TParentSource, TParentRecord>(
+                columns,
+                (StringBuilder row, in TParentSource parent) =>
+                {
+                    TSource value = source(in parent);
+                    m_Write(row, in value);
+                },
+                indices =>
+                {
+                    Action<string[], TRecord> read = m_Bind(indices);
+                    return (cells, parent) => read(cells, record(parent));
+                });
+        }
 
         internal static CharacterFootCsvColumn<TSource, TRecord> Create<T>(
             string name, CharacterFootCsvCodec<T> codec, CharacterFootCsvUnit unit,
@@ -195,6 +215,16 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         {
             for (int i = 0; i < m_Columns.Length; i++)
                 m_Columns[i].Write(row, in source);
+        }
+
+        internal CharacterFootCsvColumn<TParentSource, TParentRecord>[] Project<TParentSource, TParentRecord>(
+            CharacterFootCsvGetter<TParentSource, TSource> source,
+            Func<TParentRecord, TRecord> record)
+        {
+            var result = new CharacterFootCsvColumn<TParentSource, TParentRecord>[m_Columns.Length];
+            for (int i = 0; i < result.Length; i++)
+                result[i] = m_Columns[i].Project(source, record);
+            return result;
         }
 
         internal CharacterFootCsvReader<TRecord> Bind(Dictionary<string, int> indices)

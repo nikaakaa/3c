@@ -96,28 +96,18 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             "NextLandingTrackingState,NextLandingTrackingEventIdentity,VerifiedLastLandingAvailable,VerifiedLastLandingEventIdentity," +
             "PlantTargetState,PlantTargetAvailable,PlantTargetEventIdentity,PlantTargetSurfaceIdentity,PlantTargetPointX,PlantTargetPointY,PlantTargetPointZ,PlantTargetNormalX,PlantTargetNormalY,PlantTargetNormalZ,PlantTargetTrajectoryGeneration,PlantTargetFutureBodyTranslationSourceIdentity,PlantTargetUpdated,PlantVerificationAttempted,PlantVerificationUnavailable,ApproachPlantTargetPrepared," +
             "StepSelectionMaximumPredictionTimeSeconds,StepSelectionLastLandingEventIdentity,SelectedStepSource,SelectedLandingEventIdentity," +
-            "SelectedStepEventPhase,SelectedStepApproachContactToLandingProgress,SelectedStepLandingPhase,SelectedStepAtOrAfterApproachContact,SelectedStepInApproachContactToLanding," +
-            "CurrentStepIsValid,CurrentStepIsAuthoritative,CurrentStepHasConsistentLandingEventIdentity,CurrentStepIsPreSwing,CurrentStepIsSwing," +
-            "CurrentStepEventOrdinal,CurrentStepSourceLandingCycleOffset,CurrentStepSourceSampleCycle,CurrentStepContributionContinuityIdentity,CurrentStepLandingEventIdentity,CurrentStepTimeToLandingSeconds," +
-            "CurrentStepEventPhase,CurrentStepApproachContactToLandingProgress,CurrentStepLandingPhase,CurrentStepAtOrAfterApproachContact,CurrentStepInApproachContactToLanding," +
-            "CurrentStepRootLocalLandingX,CurrentStepRootLocalLandingY,CurrentStepRootLocalLandingZ," +
-            "IncomingStepIsValid,IncomingStepIsAuthoritative,IncomingStepHasConsistentLandingEventIdentity,IncomingStepIsPreSwing,IncomingStepIsSwing," +
-            "IncomingStepEventOrdinal,IncomingStepSourceLandingCycleOffset,IncomingStepSourceSampleCycle,IncomingStepContributionContinuityIdentity,IncomingStepLandingEventIdentity,IncomingStepTimeToLandingSeconds," +
-            "IncomingStepEventPhase,IncomingStepApproachContactToLandingProgress,IncomingStepLandingPhase,IncomingStepAtOrAfterApproachContact,IncomingStepInApproachContactToLanding," +
-            "IncomingStepRootLocalLandingX,IncomingStepRootLocalLandingY,IncomingStepRootLocalLandingZ," +
+            CharacterFootStepColumns.SelectedPhase.Header + "," +
+            CharacterFootStepColumns.Current.Header + "," +
+            CharacterFootStepColumns.Incoming.Header + "," +
             "FormalStepObservationAvailable,FormalStepSourceIdentity,FormalStepSourceWeight,FormalStepSourceNormalizedTime,FormalStepTimeSeconds,FormalStepDistance," +
             "FormalFootHeight,FormalToeHeight,FormalToeSpeed,FormalPositionError,FormalRotationError," +
             "FormalContact,FormalLockMode,FormalLockWeight,FormalSupport," +
-            "FormalEventPhase,FormalEventApproachContactToLandingProgress,FormalEventTimeToLandingSeconds,FormalInApproachContactToLanding," +
-            "FormalCurrentContactEventAvailable,FormalCurrentContactEventIdentity,FormalCurrentContactEventOrdinal,FormalCurrentContactEventCycle,FormalCurrentContactEventDistance,FormalCurrentContactRootLocalLandingX,FormalCurrentContactRootLocalLandingY,FormalCurrentContactRootLocalLandingZ," +
-            "FormalNextLandingEventAvailable,FormalNextLandingEventIdentity,FormalNextLandingEventOrdinal,FormalNextLandingEventCycle,FormalNextLandingEventDistance,FormalNextRootLocalLandingX,FormalNextRootLocalLandingY,FormalNextRootLocalLandingZ," +
+            CharacterFootEventColumns.Output.Header + "," +
             "InputFormalStepObservationAvailable,InputFormalStepSourceId,InputFormalStepSourceIdentity,InputFormalStepSourceWeight,InputFormalStepSourceNormalizedTime," +
             "InputFormalStepClipBindingIndex,InputFormalStepSourceCycle,InputFormalStepContributionContinuityIdentity,InputFormalStepCompletionIdentity,InputFormalStepTimeSeconds,InputFormalStepDistance," +
             "InputFormalFootHeight,InputFormalToeHeight,InputFormalToeSpeed,InputFormalPositionError,InputFormalRotationError," +
             "InputFormalContact,InputFormalLockMode,InputFormalLockWeight,InputFormalSupport," +
-            "InputFormalEventPhase,InputFormalEventApproachContactToLandingProgress,InputFormalEventTimeToLandingSeconds,InputFormalInApproachContactToLanding," +
-            "InputFormalCurrentContactEventAvailable,InputFormalCurrentContactEventIdentity,InputFormalCurrentContactEventOrdinal,InputFormalCurrentContactEventCycle,InputFormalCurrentContactEventDistance,InputFormalCurrentContactRootLocalLandingX,InputFormalCurrentContactRootLocalLandingY,InputFormalCurrentContactRootLocalLandingZ," +
-            "InputFormalNextLandingEventAvailable,InputFormalNextLandingEventIdentity,InputFormalNextLandingEventOrdinal,InputFormalNextLandingEventCycle,InputFormalNextLandingEventDistance,InputFormalNextRootLocalLandingX,InputFormalNextRootLocalLandingY,InputFormalNextRootLocalLandingZ," +
+            CharacterFootEventColumns.Input.Header + "," +
             "RootLocalLandingX,RootLocalLandingY,RootLocalLandingZ," +
             "PresentationDeltaSeconds,PreviousBodyTick,CurrentBodyTick,BodySampleAlpha,BodySampleAgeSeconds," +
             "MotionTimelineAvailable,TimelineGeneration,TimelineAuthorityTick,TimelineTickRate," +
@@ -1779,9 +1769,11 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 CharacterFootLandingStepSource.FormalNextLanding
                     ? stepSelection.Current
                     : default;
-            AddStepPhase(row, in selectedStep);
-            AddStepCandidate(row, stepSelection.Current);
-            AddStepCandidate(row, stepSelection.Incoming);
+            CharacterFootStepColumns.SelectedPhase.Write(row, in selectedStep);
+            CharacterFootStepCandidateDiagnostics currentCandidate = stepSelection.Current;
+            CharacterFootStepColumns.Current.Write(row, in currentCandidate);
+            CharacterFootStepCandidateDiagnostics incomingCandidate = stepSelection.Incoming;
+            CharacterFootStepColumns.Incoming.Write(row, in incomingCandidate);
             AnimationFootMotionRuntimeSample observedStep =
                 foot.Side == CharacterFootSide.Left
                     ? footStepObservation.Left
@@ -1802,7 +1794,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             Add(row, hasObservedStep ? observedStep.LockMode.ToString() : string.Empty);
             Add(row, hasObservedStep ? observedStep.LockWeight : 0f);
             Add(row, hasObservedStep ? observedStep.Support : 0f);
-            AddFormalEventFrame(row, hasObservedStep, observedStep.Events);
+            var outputEvents = new CharacterFootEventCsvSource(hasObservedStep, observedStep.Events);
+            CharacterFootEventColumns.Output.Write(row, in outputEvents);
             CharacterFootStepObservationInputDiagnostics inputObservation =
                 input.FootStepObservation;
             AnimationFootMotionRuntimeSample inputObservedStep =
@@ -1832,7 +1825,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             Add(row, hasInputObservedStep ? inputObservedStep.LockMode.ToString() : string.Empty);
             Add(row, hasInputObservedStep ? inputObservedStep.LockWeight : 0f);
             Add(row, hasInputObservedStep ? inputObservedStep.Support : 0f);
-            AddFormalEventFrame(row, hasInputObservedStep, inputObservedStep.Events);
+            var inputEvents = new CharacterFootEventCsvSource(hasInputObservedStep, inputObservedStep.Events);
+            CharacterFootEventColumns.Input.Write(row, in inputEvents);
             Add(row, foot.RootLocalLanding);
             Add(row, input.PresentationDeltaSeconds);
             Add(row, input.PreviousBodyTick);
@@ -2833,66 +2827,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     .InvalidContactNormal;
             }
             return CharacterFootContactPlanePenetrationAvailability.Available;
-        }
-
-        static void AddFormalEventFrame(
-            StringBuilder row,
-            bool available,
-            AnimationFootMotionEventFrame events)
-        {
-            bool valid = available && events.IsValid;
-            AnimationFootMotionEventOccurrence current = valid
-                ? events.CurrentContact
-                : default;
-            AnimationFootMotionEventOccurrence next = valid
-                ? events.NextLanding
-                : default;
-            Add(row, valid ? events.Phase.ToString() : string.Empty);
-            Add(row, valid ? events.ApproachContactToLandingProgress : 0f);
-            Add(row, valid ? events.TimeToLandingSeconds : 0f);
-            Add(row, valid && events.InApproachContactToLanding);
-            Add(row, current.IsValid);
-            Add(row, current.IsBound ? current.Identity : 0UL);
-            Add(row, current.IsValid ? current.Ordinal : 0);
-            Add(row, current.IsValid ? current.LandingCycle : 0);
-            Add(row, current.IsValid ? current.Distance : 0f);
-            Add(row, current.IsValid ? current.RootLocalLanding : Vector3.zero);
-            Add(row, next.IsValid);
-            Add(row, next.IsBound ? next.Identity : 0UL);
-            Add(row, next.IsValid ? next.Ordinal : 0);
-            Add(row, next.IsValid ? next.LandingCycle : 0);
-            Add(row, next.IsValid ? next.Distance : 0f);
-            Add(row, next.IsValid ? next.RootLocalLanding : Vector3.zero);
-        }
-
-        static void AddStepCandidate(
-            StringBuilder row,
-            in CharacterFootStepCandidateDiagnostics candidate)
-        {
-            Add(row, candidate.IsValid);
-            Add(row, candidate.IsAuthoritative);
-            Add(row, candidate.HasConsistentLandingEventIdentity);
-            Add(row, candidate.IsPreSwing);
-            Add(row, candidate.IsSwing);
-            Add(row, candidate.EventOrdinal);
-            Add(row, candidate.SourceLandingCycleOffset);
-            Add(row, candidate.SourceSampleCycle);
-            Add(row, candidate.ContributionContinuityIdentity);
-            Add(row, candidate.LandingEventIdentity);
-            Add(row, candidate.TimeToLandingSeconds);
-            AddStepPhase(row, in candidate);
-            Add(row, candidate.RootLocalLanding);
-        }
-
-        static void AddStepPhase(
-            StringBuilder row,
-            in CharacterFootStepCandidateDiagnostics candidate)
-        {
-            Add(row, candidate.EventPhase);
-            Add(row, candidate.ApproachContactToLandingProgress);
-            Add(row, candidate.LandingPhase);
-            Add(row, candidate.AtOrAfterApproachContact);
-            Add(row, candidate.InApproachContactToLanding);
         }
 
     }

@@ -692,8 +692,18 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             float normalizedTime,
             CharacterFootSide side)
         {
-            AnimationFootFeatureSample feature = curves.SamplePrepared(normalizedTime);
-            return BindPredictionSource(feature, side);
+            try
+            {
+                AnimationFootFeatureSample feature = curves.SamplePrepared(normalizedTime);
+                return BindPredictionSource(feature, side);
+            }
+            catch (ArgumentException exception)
+            {
+                throw new InvalidOperationException(
+                    $"Foot feature sampling failed. Clip={m_Source.Clip.name}, Side={side}, " +
+                    $"NormalizedTime={normalizedTime:R}, Cycle={m_Cycle}.",
+                    exception);
+            }
         }
 
         AnimationFootFeatureSample BindPredictionSource(

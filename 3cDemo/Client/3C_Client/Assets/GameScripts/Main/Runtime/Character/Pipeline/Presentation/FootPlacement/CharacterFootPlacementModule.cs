@@ -627,11 +627,11 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 ref bank.PrimarySupport);
             CharacterFootPrimarySupportResult primarySupport =
                 bank.PrimarySupport.Result;
-            Vector3 leftCorrectedSole = ResolveWeightedGoalSole(
+            Vector3 leftTargetAnkle = ResolveWeightedGoalAnkle(
                 pose.Left,
                 in leftGoal,
                 goalRoot);
-            Vector3 rightCorrectedSole = ResolveWeightedGoalSole(
+            Vector3 rightTargetAnkle = ResolveWeightedGoalAnkle(
                 pose.Right,
                 in rightGoal,
                 goalRoot);
@@ -657,8 +657,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 m_Rig.PoseRoot.TransformPoint(pose.PelvisLocalPosition),
                 pose.PelvisLocalPosition,
                 in pose,
-                leftCorrectedSole,
-                rightCorrectedSole,
+                leftTargetAnkle,
+                rightTargetAnkle,
                 m_Rig.LeftLegLength,
                 m_Rig.RightLegLength,
                 footPlacementWeight,
@@ -1608,6 +1608,19 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 selectedWeight);
         }
 
+        static Vector3 ResolveWeightedGoalAnkle(
+            CharacterFootPlacementAnimatedFootPose foot,
+            in CharacterFullBodyIkGoal goal,
+            Transform poseRoot)
+        {
+            if (goal.PositionWeight <= 0f)
+                return foot.AnklePosition;
+            return Vector3.LerpUnclamped(
+                foot.AnklePosition,
+                poseRoot.TransformPoint(goal.ComponentPosition),
+                goal.PositionWeight);
+        }
+
         static Vector3 ResolveWeightedGoalSole(
             CharacterFootPlacementAnimatedFootPose foot,
             in CharacterFullBodyIkGoal goal,
@@ -1616,11 +1629,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             Vector3 originalSole = foot.HeelPosition * 0.5f + foot.ToePosition * 0.5f;
             if (poseRoot == null || goal.PositionWeight <= 0f)
                 return originalSole;
-            Vector3 targetAnkle = poseRoot.TransformPoint(goal.ComponentPosition);
-            Vector3 effectiveAnkle = Vector3.LerpUnclamped(
-                foot.AnklePosition,
-                targetAnkle,
-                goal.PositionWeight);
+            Vector3 effectiveAnkle = ResolveWeightedGoalAnkle(foot, in goal, poseRoot);
             Quaternion targetRotation =
                 (poseRoot.rotation * goal.ComponentRotation).normalized;
             Quaternion effectiveRotation = Quaternion.Slerp(

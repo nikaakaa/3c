@@ -1095,9 +1095,12 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 supportLegLength, postureReserve,
                 out float postureUsableLength,
                 out float postureMinimum, out float postureMaximum);
-            float preferredTarget = postureAvailable
-                ? Mathf.Clamp(heightTarget.OffsetAlongUp, postureMinimum, postureMaximum)
-                : heightTarget.OffsetAlongUp;
+            float requestedTarget = heightTarget.OffsetAlongUp;
+            float postureTarget = postureAvailable
+                ? Mathf.Clamp(requestedTarget, postureMinimum, postureMaximum)
+                : requestedTarget;
+            float preferredTarget = Mathf.Clamp(
+                postureTarget, Mathf.Min(0f, requestedTarget), Mathf.Max(0f, requestedTarget));
             var posture = new CharacterFootPelvisPosturePreference(
                 postureAvailable,
                 supportPose.HipPosition,

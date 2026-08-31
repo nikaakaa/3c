@@ -43,13 +43,13 @@
 | 对比项 | 当前口径 | 本轮处理 |
 | --- | --- | --- |
 | 服务端职责 | Relay 只转发/确认输入，不执行 Program、KCC 或 Presentation | 查询只读 Relay 已有事实；GM 服务模块不取得 Gameplay 权威，也不向 Relay Runtime 塞业务逻辑 |
-| 产品闭包和启动 | Relay 产品依赖受限，Rollback Run 固定一个 Relay 加两个客户端 | GM 同进程或独立部署都会涉及不同产品合同，选定宿主后必须补对应 delta，不能偷装服务或沿用旧 manifest |
+| 产品闭包和启动 | Relay 产品依赖受限，Rollback Run 原固定一个 Relay 加两个客户端 | 已选择独立 GM 服务；本 change 增加 GM artifact、Relay 查询桥及四进程 topology delta，拒绝旧 topology 产物 |
 | 运行状态 | Relay 拥有网络计数、名单和前沿，不拥有客户端骨骼或角色完整状态 | `runtime.status` 明确查询服务端事实；不伪造客户端 FPS、Pose、生命值或 Action 生命周期 |
 | 输入 | 正式 Input Adapter 产出 portable input，Program 管请求历史 | 焦点只影响此后设备采集；不改已提交请求、历史或网络队列 |
 | 诊断和采样 | 已有独立 Trace、Foot Writer/Analyzer 与 Editor 工作流 | 本轮保持原样；删除旧提案对这些合同的修改 |
 
-## 尚待选择的部署项
+## 已选择的部署项
 
-服务端 GM 的逻辑职责已经确定，物理宿主尚未选择：可以在现有 Relay 产品进程内安装独立 GM 模块，也可以部署独立工具服务。design 已列出两者业务取舍。选定后须补齐宿主、只读状态来源、工具连接、endpoint、开发权限和产品闭包/拓扑 delta，相关实现才可开始。
+用户已选择独立 GM 工具服务。客户端通过本机 HTTP/JSON 请求 GM，GM 通过单独认证的 HTTP 查询桥读取 Relay 运行线程生成的快照。正式产品包含 Player、Relay Server、GM Server 三个 artifact，Run 启动四个进程。具体身份、容量、凭据交付与失效语义见 design。
 
-这不影响本轮控制台和首批命令的范围，但结构化校验通过不代表部署决策已经完成。
+本轮仍只管理当前一个双端会话。未来图形业务 UI、多场调度和四端启动不作为本轮完成条件。

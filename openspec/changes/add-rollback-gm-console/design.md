@@ -56,7 +56,11 @@
 
 消息、在途请求、命令历史与输出均有明确容量。网络请求不能阻塞 Unity 主线程；绘制回调不做 Build、文件扫描、完整状态序列化或其它重操作。只读状态通过 Relay 的正式边界读取，不在网络线程直接遍历其可变集合。
 
-首版只声明开发工具访问配置，不引入完整商业账号系统。具体工具传输、endpoint、凭据交付与服务宿主一起确定，并写入正式产品配置；不能把已有 gameplay peer identity 直接当作 GM 授权。
+首版使用仅监听 IPv4 loopback 的 HTTP/JSON，不启用 CORS，也不接收任意远程地址。客户端到 GM、GM 到 Relay 查询入口分别使用 Build 生成的 256 bit 开发 Bearer token；两种凭据不得混用，Relay 查询凭据不得写入 Player 配置。该配置只用于本机开发，不是商业账号系统，也不把 gameplay peer identity 当作 GM 授权。
+
+正式开发配置声明 GM 端口 24200、Relay 查询端口 24201、请求容量和超时。Build 从配置发布客户端连接 manifest、GM 服务 manifest 和 Relay 查询 manifest，将它们纳入 exact closure；每次 Build 生成新的凭据，Run 只读取既有配置，操作日志不包含凭据。缺配置、错误身份或占用端口均明确失败。
+
+单条 HTTP 消息上限 64 KiB，GM 最多 16 个在途命令，Relay 查询队列最多 32 项且每次 Pump 最多处理 2 项；客户端最多 8 个在途请求，历史 32 条、输出 64 条且每条最多 4096 字符。客户端结果超时 5 秒，GM 到 Relay 查询超时 2 秒。HTTP 等待使用异步任务，Relay 只在自己的运行线程生成快照。
 
 ### 5. Rollback 模型保持不变
 
@@ -72,18 +76,21 @@
 
 释放焦点后由原适配器恢复输入，不补发控制台期间的按键。关闭窗口只释放 UI 资源与焦点，不改变服务端会话。
 
-### 7. 尚未选定的服务端宿主
+### 7. 已选择独立 GM 服务进程
 
-| 方案 | 业务价值 | 成本及必须修改的合同 |
-| --- | --- | --- |
-| 现有 Relay 产品进程内的独立 GM 模块 | 少一个进程，能直接通过受控只读端口取得 Relay 状态 | 与 Relay 共用进程生命周期；需要修改 Relay 产品允许的模块/依赖、入口配置和 endpoint 合同，但不能把处理器塞进 Relay Runtime |
-| 独立 GM 工具服务 | 生命周期可独立，后续便于集中管理多个测试会话 | 多一份构建与启动；需要正式的 Relay 状态查询连接，若由同一 Run 启动还要修改 artifact/topology 和进程数量合同 |
+用户已选择独立进程，后续 UI 使用相同命令合同。唯一正式链路为：`Unity 控制台 -> GM HTTP 服务 -> Relay HTTP 只读查询桥 -> Relay 运行线程 -> 快照 -> GM 命令结果 -> 控制台`。不再保留同进程命令执行选项。
 
-用户尚未在两者中选择。本轮不以“以后可配置”保留两套实现，也不暗中选定宿主。选择后只实现对应正式链路，并补齐精确的产品/配置 delta；工具协议选择也必须随之落定。
+`ThirdPerson.Development.Gm.Service` executable 拥有命令目录、准入、处理器和结果日志，不引用 Endpoint runtime 或 Unity。Relay 进程只安装窄查询桥，不安装 GM 命令注册表或处理器。查询桥提供 session、actors、runtime 三类事实及 Relay 运行身份，没有反射、任意方法或玩法写入。
+
+GM 运行身份和 Relay 运行身份共同绑定请求目标。Relay 重启后即使业务 SessionId 相同，也必须使旧请求失效，客户端须显式重新连接；不能由新的 Relay 接管旧请求。GM 重启或暂不可用不停止 Gameplay Session；Relay 退出仍按既有网络模型结束测试。
+
+产品固定发布 `Player`、`Server`、`Gm` 三个 artifact，运行时为 GM、Relay、Client A、Client B 四个进程。首先启动并验证 Relay 查询身份，再启动并验证 GM 服务，最后启动客户端；失败时清理本次启动的进程，不停止其它测试进程。现有三进程 topology identity 废止，使用 `thirdperson.runtime-topology.deterministic-rollback.gm-relay-two-peers.v1`。
+
+独立服务的业务收益是可以单独维护工具，后续 UI 不必随 Player 改动；代价是新增一次跨进程查询、独立产物和访问边界。本轮仍只安装一个明确目标会话，多场目录、批量调度和四端产品属于后续能力，不把“独立进程”描述为已具备多场管理。
 
 ## 与现行规格的对比
 
-- `deterministic-rollback-relay-product` 限制纯.NET依赖、启动职责及三个进程拓扑。两种宿主方案分别影响不同条款；宿主未定前，不伪造某份已定案的产品 delta，相关实现先停在该前置决策。
+- `deterministic-rollback-relay-product` 的依赖与三进程条款、`network-test-runtime-product-boundary` 的精确 artifact 清单及 `deterministic-rollback-two-client-demo` 的启动职责与本次已选择部署不一致。本 change 提供对应 delta：增加独立 GM artifact 和 Relay 工具查询桥，不改变模型或角色模拟权威。
 - `gameplay-network-model-boundary` 不允许通用 Host 解释模型消息。本轮 GM 查询不进入 SimulationSessionHost、角色 Program 或网络模型 Pass，保持该边界。
 - `character-input-pipeline` 已规定 portable input 和请求历史归属。本 change 只新增控制台焦点约束，不清空 Program 请求、不改变输入历史。
 - `btsmtl-runtime-diagnostics`、Foot storage/scoring 及已有 Editor 录制工作流不修改。原草案针对它们的增量已删除，不再要求这些 active change 先归档。

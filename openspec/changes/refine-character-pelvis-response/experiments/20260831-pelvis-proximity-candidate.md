@@ -2,7 +2,7 @@
 
 ## 当前状态与授权
 
-用户批准从112611开始对齐输入、筛选ZZZ共同候选，并在候选有实际价值时进入独立实现与同输入回放。当前已完成只读输入/数学筛选，准备进入候选；尚未运行新的Runtime Replay，不称可用修复。
+用户批准从112611开始对齐输入、筛选ZZZ共同候选，并在候选有实际价值时进入独立实现与同输入回放。当前已完成只读输入/数学筛选及Runtime候选，正在同步Diagnostics；尚未运行新的Runtime Replay，不称可用修复。
 
 固定Foot效果参照为193957，直接前驱d51e247／20260831-112611-018-2429691288e6434a8588a55de100efc2。原样保留3Hz、20毫米硬Reach、原Handoff和正速度清理、中性软姿态偏好、Support资格及Release首选0。此步暂不改末端硬投影是隔离目标变量，不是将Reach认定为永久正确。
 
@@ -73,3 +73,11 @@ ZZZ的c经过自身Foot高度缩放、基准及位移构造，本项目保留世
 真实Replay需要同时核对原始输入和候选每个分支、985退高、420及全包世界大步、移动/静止负偏移、脚部穿透/间隙/轨迹、Landing完成以及实际Solved Knee。总分不作为单独准入；若出现明确不可接受回归，精确撤销本候选及匹配产品/诊断，并同Record确认恢复。原始模型、失败、恢复证据都保留。
 
 原始只读输入核对与模型结果见evidence/20260831-pelvis-proximity-inputs.json和evidence/20260831-pelvis-proximity-model.json。
+
+## Runtime候选落地
+
+CharacterFootPlacementModule在原Pre-Pelvis阶段从唯一Foot Goal解析有效Ankle，继续共用原PositionWeight与同一PoseRoot；原Committed Sole计算复用相同Ankle运算，未启用旧Visible读取门。CharacterFootStrideHipsBuilder只替换HeightTarget，公开每脚候选Kind、Value与最终Selection；没有新增持久历史或第二骨盆生产者。
+
+Corin正式Profile新增PelvisFootProximityRadius=0.2，Schema迁移到character-foot-placement-profile/v37-pelvis-foot-candidates，其他参数保持原值。该字段经现有JsonUtility/Profile Revision进入产品身份，不手写生成产物。TrainingEnemy不在本次范围，未修改或构建。
+
+Runtime通过规定flags构建：27个既有依赖/字段警告、0错误，用时52.79秒；finally立即执行build-server shutdown成功。此结果只证明Runtime编译，完整Editor、正式产品和新Replay仍待后续步骤。

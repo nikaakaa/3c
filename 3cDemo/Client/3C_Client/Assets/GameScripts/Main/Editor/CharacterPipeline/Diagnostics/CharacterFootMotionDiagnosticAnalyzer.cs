@@ -307,12 +307,12 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                         ["FormalFootPlacementWeight"] =
                             current.Lifecycle.FormalFootPlacementWeight,
                         ["LockWeight"] = current.Lifecycle.CurrentLockRequestWeight,
-                        ["MotionPositionWeight"] = current.MotionPositionWeight,
-                        ["MotionRotationWeight"] = current.MotionRotationWeight,
+                        ["MotionPositionWeight"] = current.MotionCore.MotionPositionWeight,
+                        ["MotionRotationWeight"] = current.MotionCore.MotionRotationWeight,
                         ["ResolvedPositionWeight"] = current.Resolved.PositionWeight,
                         ["ResolvedRotationWeight"] = current.Resolved.RotationWeight,
-                        ["FinalGoalPositionWeight"] = current.FinalGoalPositionWeight,
-                        ["FinalGoalRotationWeight"] = current.FinalGoalRotationWeight
+                        ["FinalGoalPositionWeight"] = current.Goal.PositionWeight,
+                        ["FinalGoalRotationWeight"] = current.Goal.RotationWeight
                     },
                     new SortedDictionary<string, bool>(StringComparer.Ordinal)
                     {
@@ -339,9 +339,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                             ["FormalFootPlacementWeight"] =
                                 current.Lifecycle.FormalFootPlacementWeight,
                             ["MotionPositionWeight"] =
-                                current.MotionPositionWeight,
+                                current.MotionCore.MotionPositionWeight,
                             ["MotionRotationWeight"] =
-                                current.MotionRotationWeight,
+                                current.MotionCore.MotionRotationWeight,
                             ["ResolvedPositionWeight"] =
                                 current.Resolved.PositionWeight,
                             ["ResolvedRotationWeight"] =
@@ -494,18 +494,18 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 side = frame.Side,
                 requested = frame.Lifecycle.CurrentLockRequested,
                 observed = frame.Lifecycle.CurrentLockRequested ||
-                    frame.ConstraintState == "Releasing" && frame.Lifecycle.CurrentContactAnchorAvailable,
+                    frame.MotionCore.ConstraintState == "Releasing" && frame.Lifecycle.CurrentContactAnchorAvailable,
                 applicable = frame.Lifecycle.CurrentLockRequested &&
-                    (frame.ConstraintState == "Landing" || frame.ConstraintState == "Locked") &&
+                    (frame.MotionCore.ConstraintState == "Landing" || frame.MotionCore.ConstraintState == "Locked") &&
                     frame.Grounded && frame.CurrentStep.IsAuthoritative &&
                     frame.Lifecycle.FormalFootPlacementWeight > 0d,
-                constraintState = frame.ConstraintState,
+                constraintState = frame.MotionCore.ConstraintState,
                 domain = ContactSupportDomain(frame),
-                lockResponse = frame.LockResponse,
+                lockResponse = frame.MotionCore.LockResponse,
                 targetKind = frame.OutputStages.PlantTargetKind,
                 contactEdge = frame.Lifecycle.ContactEdge,
-                positionWeight = frame.FinalGoalPositionWeight,
-                fullPositionWeight = frame.FinalGoalPositionWeight >= 1f - TimeEpsilon,
+                positionWeight = frame.Goal.PositionWeight,
+                fullPositionWeight = frame.Goal.PositionWeight >= 1f - TimeEpsilon,
                 requestEventIdentity = frame.Lifecycle.CurrentLockRequestEventIdentity.ToString(
                     CultureInfo.InvariantCulture),
                 anchorEventIdentity = frame.Lifecycle.CurrentContactAnchorEventIdentity.ToString(
@@ -529,7 +529,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 currentSupportAvailable = frame.CurrentSupport.Available,
                 currentSupportRejectReason = frame.CurrentSupport.RejectReason,
                 currentSupportSurfaceIdentity = frame.CurrentSupport.Target.Surface,
-                landingReachAvailable = frame.LandingReachAvailable,
+                landingReachAvailable = frame.MotionCore.LandingReachAvailable,
                 gapMotion = "Unavailable"
             };
             CharacterFootContactSupportGapAvailability availability =
@@ -544,7 +544,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                               frame.CompletionIdentity
                                 ? CharacterFootContactSupportGapAvailability.PhysicalPoseUnavailable
                                 : !frame.Lifecycle.CurrentContactAnchorAvailable ||
-                                  frame.ConstraintState != "Releasing" &&
+                                  frame.MotionCore.ConstraintState != "Releasing" &&
                                   frame.Lifecycle.CurrentContactAnchorEventIdentity != frame.Lifecycle.CurrentLockRequestEventIdentity
                                     ? CharacterFootContactSupportGapAvailability.SameEventAnchorUnavailable
                                     : fact.domain == "Unclassified"
@@ -580,11 +580,11 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             frame.ContactSupportGap.availability ==
             CharacterFootContactSupportGapAvailability.Available.ToString();
 
-        static string ContactSupportDomain(FootFrame frame) => frame.ConstraintState switch
+        static string ContactSupportDomain(FootFrame frame) => frame.MotionCore.ConstraintState switch
         {
             "Landing" => "Landing",
-            "Locked" when frame.LockResponse == "FullAnchor" => "FullAnchor",
-            "Locked" when frame.LockResponse == "Sliding" => "Sliding",
+            "Locked" when frame.MotionCore.LockResponse == "FullAnchor" => "FullAnchor",
+            "Locked" when frame.MotionCore.LockResponse == "Sliding" => "Sliding",
             "Releasing" => "Release",
             _ => "Unclassified"
         };
@@ -790,7 +790,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             FootFrame next = end + 1 < frames.Count ? frames[end + 1] : null;
             bool adjacentNext = next != null && Continuous(last, next);
             string endReason = next == null ? "SampleEnded" : !adjacentNext ? "FrameGap" :
-                next.ConstraintState == "Releasing" || !next.Lifecycle.CurrentLockRequested ? "FormalContactExit" :
+                next.MotionCore.ConstraintState == "Releasing" || !next.Lifecycle.CurrentLockRequested ? "FormalContactExit" :
                 !SameContactSupportGapReference(last, next) ? "ContactReferenceChangedOrUnavailable" :
                 "ContactPolicyOrWeightChanged";
             bool endingTouch = exitGap <= ContactSupportTouchToleranceMeters;
@@ -897,8 +897,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     sameEventPlantInterpolation &&
                     current.Response.PlantResidualCaptureReason != "None";
                 bool ordinarySwingDomain =
-                    (current.ConstraintState == "Swing" ||
-                     current.ConstraintState == "UnlockedSupport") &&
+                    (current.MotionCore.ConstraintState == "Swing" ||
+                     current.MotionCore.ConstraintState == "UnlockedSupport") &&
                     current.SelectedSupportTarget.Kind == "SwingGround";
                 bool approachEventVisiblePositionOwned =
                     ordinarySwingDomain &&
@@ -913,11 +913,11 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     !approachEventVisiblePositionOwned;
                 bool goalWeightChanged = sameLineage &&
                     (Math.Abs(
-                         current.MotionPositionWeight -
-                         previous.MotionPositionWeight) > TimeEpsilon ||
+                         current.MotionCore.MotionPositionWeight -
+                         previous.MotionCore.MotionPositionWeight) > TimeEpsilon ||
                      Math.Abs(
-                         current.MotionRotationWeight -
-                         previous.MotionRotationWeight) > TimeEpsilon);
+                         current.MotionCore.MotionRotationWeight -
+                         previous.MotionCore.MotionRotationWeight) > TimeEpsilon);
                 if (!ownershipConsistent)
                 {
                     throw new InvalidDataException(
@@ -959,12 +959,12 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                             current.OutputStages.FinalEffectiveCorrection)
                         : 0d,
                     ["PositionWeightDelta"] = sameLineage
-                        ? current.MotionPositionWeight -
-                          previous.MotionPositionWeight
+                        ? current.MotionCore.MotionPositionWeight -
+                          previous.MotionCore.MotionPositionWeight
                         : 0d,
                     ["RotationWeightDelta"] = sameLineage
-                        ? current.MotionRotationWeight -
-                          previous.MotionRotationWeight
+                        ? current.MotionCore.MotionRotationWeight -
+                          previous.MotionCore.MotionRotationWeight
                         : 0d
                 };
                 var evidence = new SortedDictionary<string, bool>(
@@ -1060,7 +1060,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                         frame.Response.PlantPenetrationDepth <=
                         ExpectedGroundPenetrationToleranceMeters +
                         PositionNoiseFloor &&
-                        frame.LandingReachAvailable;
+                        frame.MotionCore.LandingReachAvailable;
                     if (!completionConsistent)
                     {
                         throw new InvalidDataException(
@@ -1070,7 +1070,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                             $"OutputDistance={frame.Response.PlantOutputDistance:R} " +
                             $"Penetration={frame.Response.PlantPenetrationDepth:R} " +
                             $"Tolerance={frame.Response.PlantWorldResidualCompletionTolerance:R} " +
-                            $"LandingReach={frame.LandingReachAvailable}.");
+                            $"LandingReach={frame.MotionCore.LandingReachAvailable}.");
                     }
                 }
                 releaseAppliedOnPreviousFrame =
@@ -1091,7 +1091,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 List<FootFrame> window = frames.Where(frame =>
                         frame.InputEvents.Current.Identity == eventIdentity ||
                         frame.OutputStages.PlantTargetEventIdentity == eventIdentity ||
-                        frame.FootMotionEventIdentity == eventIdentity)
+                        frame.MotionCore.LandingEventIdentity == eventIdentity)
                     .OrderBy(frame => frame.Frame)
                     .ToList();
                 List<FootFrame> requestFrames = window
@@ -1109,13 +1109,13 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     frame.Lifecycle.PostTransitionReason == "LandingCompleted" &&
                     frame.OutputStages.PlantTargetEventIdentity == eventIdentity);
                 bool enteredLocked = window.Any(frame =>
-                    frame.ConstraintState == "Locked" &&
-                    (frame.FootMotionEventIdentity == eventIdentity ||
+                    frame.MotionCore.ConstraintState == "Locked" &&
+                    (frame.MotionCore.LandingEventIdentity == eventIdentity ||
                      frame.OutputStages.PlantTargetEventIdentity == eventIdentity));
                 bool completionLatch =
                     completion?.OutputStages.PlantLockWeightCompleted == true;
                 bool completionReach =
-                    completion?.LandingReachAvailable == true;
+                    completion?.MotionCore.LandingReachAvailable == true;
                 bool completionOutputClosed = completion != null &&
                     completion.Response.PlantOutputDistance <=
                     completion.Response.PlantWorldResidualCompletionTolerance +
@@ -1206,8 +1206,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     landingCompletedFrame = completion?.Frame,
                     sourceIdentity = peak.FormalInput.SourceIdentity,
                     sourceCycle = peak.FormalInput.SourceCycle,
-                    completionState = completion?.ConstraintState ??
-                                      window[^1].ConstraintState,
+                    completionState = completion?.MotionCore.ConstraintState ??
+                                      window[^1].MotionCore.ConstraintState,
                     completionPlantTargetKind =
                         completion?.OutputStages.PlantTargetKind ?? "None"
                 };
@@ -1296,7 +1296,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                         current.Response.PlantResidualCaptureReason != "None"
                             ? Vector3.Distance(
                                 current.Response.PlantWorldResidualCapturedBeforeDecay,
-                                current.OriginalSole +
+                                current.MotionCore.OriginalSole +
                                 current.Response.PlantEffectiveCorrectionBefore -
                                 current.Response.PlantSelectedWorldTarget)
                             : Vector3.Distance(
@@ -1441,21 +1441,21 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 }
                 Vector3 up = current.PathContinuity.ComponentUp.normalized;
                 Vector3 animationBaselineStep =
-                    current.OriginalSole - previous.OriginalSole;
+                    current.MotionCore.OriginalSole - previous.MotionCore.OriginalSole;
                 Vector3 originalSoleToAnchor =
-                    current.Anchor - current.OriginalSole;
+                    current.MotionCore.Anchor - current.MotionCore.OriginalSole;
                 Vector3 previousVisibleToAnchor =
-                    current.Anchor - previous.Resolved.FinalSole;
+                    current.MotionCore.Anchor - previous.Resolved.FinalSole;
                 Vector3 previousResponseToAnchor =
-                    current.Anchor - current.Response.PreviousResponseOutputPoint;
+                    current.MotionCore.Anchor - current.Response.PreviousResponseOutputPoint;
                 Vector3 desiredToResponse =
                     current.Response.ResponseOutputPoint - current.Response.DesiredOutputPoint;
                 Vector3 previousVisibleToFinalOutput =
                     current.Resolved.FinalSole - previous.Resolved.FinalSole;
                 Vector3 responseOutputToAnchor =
-                    current.Anchor - current.Response.ResponseOutputPoint;
+                    current.MotionCore.Anchor - current.Response.ResponseOutputPoint;
                 Vector3 finalOutputToAnchor =
-                    current.Anchor - current.Resolved.FinalSole;
+                    current.MotionCore.Anchor - current.Resolved.FinalSole;
                 Vector3 expectedCapturedResidual =
                     current.Response.PreviousResponseOutputPoint -
                     current.Response.PlantSelectedWorldTarget;
@@ -1554,7 +1554,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                         Vector3.Dot(finalOutputToAnchor, up),
                     ["AnchorToSelectedTargetErrorMeters"] =
                         Vector3.Distance(
-                            current.Anchor,
+                            current.MotionCore.Anchor,
                             current.Response.PlantSelectedWorldTarget),
                     ["CorrectionResponseDesired"] =
                         current.Response.CorrectionResponseDesired,
@@ -1607,11 +1607,11 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                         .ToString(CultureInfo.InvariantCulture),
                     eventIdentity = ResolveEventIdentity(current)
                         .ToString(CultureInfo.InvariantCulture),
-                    anchor = CharacterFootVectorFact.From(current.Anchor),
+                    anchor = CharacterFootVectorFact.From(current.MotionCore.Anchor),
                     previousOriginalSole = CharacterFootVectorFact.From(
-                        previous.OriginalSole),
+                        previous.MotionCore.OriginalSole),
                     originalSole = CharacterFootVectorFact.From(
-                        current.OriginalSole),
+                        current.MotionCore.OriginalSole),
                     previousVisibleOutput = CharacterFootVectorFact.From(
                         previous.Resolved.FinalSole),
                     previousResponseOutput = CharacterFootVectorFact.From(
@@ -1659,26 +1659,26 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 FootFrame current = frames[i];
                 if (!Continuous(first, previous) ||
                     !Continuous(previous, current) ||
-                    first.FootMotionState != "Accepted" ||
-                    previous.FootMotionState != "Accepted" ||
-                    current.FootMotionState != "Accepted" ||
-                    first.ConstraintState != "Swing" ||
-                    previous.ConstraintState != "Swing" ||
-                    current.ConstraintState != "Swing" ||
+                    first.MotionCore.State != "Accepted" ||
+                    previous.MotionCore.State != "Accepted" ||
+                    current.MotionCore.State != "Accepted" ||
+                    first.MotionCore.ConstraintState != "Swing" ||
+                    previous.MotionCore.ConstraintState != "Swing" ||
+                    current.MotionCore.ConstraintState != "Swing" ||
                     first.FormalInput.SourceIdentity != current.FormalInput.SourceIdentity ||
                     previous.FormalInput.SourceIdentity != current.FormalInput.SourceIdentity ||
                     first.FormalInput.SourceCycle != current.FormalInput.SourceCycle ||
                     previous.FormalInput.SourceCycle != current.FormalInput.SourceCycle ||
-                    first.FootMotionEventIdentity == 0 ||
-                    first.FootMotionEventIdentity !=
-                    current.FootMotionEventIdentity ||
-                    previous.FootMotionEventIdentity !=
-                    current.FootMotionEventIdentity ||
-                    first.FootMotionGroundPathInputIdentity == 0 ||
-                    first.FootMotionGroundPathInputIdentity !=
-                    current.FootMotionGroundPathInputIdentity ||
-                    previous.FootMotionGroundPathInputIdentity !=
-                    current.FootMotionGroundPathInputIdentity ||
+                    first.MotionCore.LandingEventIdentity == 0 ||
+                    first.MotionCore.LandingEventIdentity !=
+                    current.MotionCore.LandingEventIdentity ||
+                    previous.MotionCore.LandingEventIdentity !=
+                    current.MotionCore.LandingEventIdentity ||
+                    first.MotionCore.GroundPathInputIdentity == 0 ||
+                    first.MotionCore.GroundPathInputIdentity !=
+                    current.MotionCore.GroundPathInputIdentity ||
+                    previous.MotionCore.GroundPathInputIdentity !=
+                    current.MotionCore.GroundPathInputIdentity ||
                     current.PathContinuity.PathRevisionReason != "None" ||
                     current.PathContinuity.PathResidualRebuilt ||
                     !first.OutputStages.OutputStagesAvailable ||
@@ -1720,41 +1720,41 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     previous.Response.ResponseOutputPoint,
                     current.Response.ResponseOutputPoint);
                 float previousFormalHeightDelta =
-                    previous.SwingFormalFootHeight -
-                    first.SwingFormalFootHeight;
+                    previous.MotionCore.SwingFormalFootHeight -
+                    first.MotionCore.SwingFormalFootHeight;
                 float currentFormalHeightDelta =
-                    current.SwingFormalFootHeight -
-                    previous.SwingFormalFootHeight;
+                    current.MotionCore.SwingFormalFootHeight -
+                    previous.MotionCore.SwingFormalFootHeight;
                 float previousEnvelopeStep = Vector3.Distance(
-                    first.SwingEnvelopeSample,
-                    previous.SwingEnvelopeSample);
+                    first.MotionCore.SwingEnvelopeSample,
+                    previous.MotionCore.SwingEnvelopeSample);
                 float currentEnvelopeStep = Vector3.Distance(
-                    previous.SwingEnvelopeSample,
-                    current.SwingEnvelopeSample);
+                    previous.MotionCore.SwingEnvelopeSample,
+                    current.MotionCore.SwingEnvelopeSample);
                 float previousEnvelopeAlongUpDelta =
-                    previous.SwingEnvelopeSampleAlongUp -
-                    first.SwingEnvelopeSampleAlongUp;
+                    previous.MotionCore.SwingEnvelopeSampleAlongUp -
+                    first.MotionCore.SwingEnvelopeSampleAlongUp;
                 float currentEnvelopeAlongUpDelta =
-                    current.SwingEnvelopeSampleAlongUp -
-                    previous.SwingEnvelopeSampleAlongUp;
+                    current.MotionCore.SwingEnvelopeSampleAlongUp -
+                    previous.MotionCore.SwingEnvelopeSampleAlongUp;
                 float previousOriginalSoleStep = Vector3.Distance(
-                    first.OriginalSole,
-                    previous.OriginalSole);
+                    first.MotionCore.OriginalSole,
+                    previous.MotionCore.OriginalSole);
                 float currentOriginalSoleStep = Vector3.Distance(
-                    previous.OriginalSole,
-                    current.OriginalSole);
+                    previous.MotionCore.OriginalSole,
+                    current.MotionCore.OriginalSole);
                 float previousEnvelopeDirectionContribution = Vector3.Dot(
-                    previous.SwingEnvelopeSample - first.SwingEnvelopeSample,
+                    previous.MotionCore.SwingEnvelopeSample - first.MotionCore.SwingEnvelopeSample,
                     previous.Response.CorrectionResponseDirection);
                 float currentEnvelopeDirectionContribution = Vector3.Dot(
-                    current.SwingEnvelopeSample -
-                    previous.SwingEnvelopeSample,
+                    current.MotionCore.SwingEnvelopeSample -
+                    previous.MotionCore.SwingEnvelopeSample,
                     current.Response.CorrectionResponseDirection);
                 float previousOriginalSoleDirectionContribution = -Vector3.Dot(
-                    previous.OriginalSole - first.OriginalSole,
+                    previous.MotionCore.OriginalSole - first.MotionCore.OriginalSole,
                     previous.Response.CorrectionResponseDirection);
                 float currentOriginalSoleDirectionContribution = -Vector3.Dot(
-                    current.OriginalSole - previous.OriginalSole,
+                    current.MotionCore.OriginalSole - previous.MotionCore.OriginalSole,
                     current.Response.CorrectionResponseDirection);
                 bool useCurrentStep = holdToAdvance || !advanceToHold;
                 string firstLargeStepStage = ResolveFirstLargeCadenceStage(
@@ -1845,7 +1845,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     previousFrame = previous.Frame,
                     frame = current.Frame,
                     pathIdentity =
-                        current.FootMotionGroundPathInputIdentity.ToString(
+                        current.MotionCore.GroundPathInputIdentity.ToString(
                             CultureInfo.InvariantCulture),
                     previousPathRevisionReason =
                         previous.PathContinuity.PathRevisionReason,
@@ -1874,7 +1874,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     first.Frame,
                     current.Frame,
                     current.Frame,
-                    current.FootMotionEventIdentity,
+                    current.MotionCore.LandingEventIdentity,
                     current.FormalInput.SourceIdentity,
                     current.FormalInput.SourceCycle,
                     DeltaSeconds(previous) + DeltaSeconds(current),
@@ -1910,16 +1910,16 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 FootFrame previous = frames[i - 1];
                 FootFrame current = frames[i];
                 if (!Continuous(previous, current) ||
-                    previous.FootMotionState != "Accepted" ||
-                    current.FootMotionState != "Accepted" ||
-                    previous.ConstraintState != "Swing" ||
-                    current.ConstraintState != "Swing" ||
+                    previous.MotionCore.State != "Accepted" ||
+                    current.MotionCore.State != "Accepted" ||
+                    previous.MotionCore.ConstraintState != "Swing" ||
+                    current.MotionCore.ConstraintState != "Swing" ||
                     previous.HasAnchor || current.HasAnchor ||
                     !previous.Solver.PhysicalWriteAvailable ||
                     !current.Solver.PhysicalWriteAvailable ||
-                    previous.FootMotionEventIdentity == 0 ||
-                    previous.FootMotionEventIdentity !=
-                    current.FootMotionEventIdentity ||
+                    previous.MotionCore.LandingEventIdentity == 0 ||
+                    previous.MotionCore.LandingEventIdentity !=
+                    current.MotionCore.LandingEventIdentity ||
                     !string.Equals(
                         previous.FormalInput.SourceIdentity,
                         current.FormalInput.SourceIdentity,
@@ -1943,28 +1943,28 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                         kinematics.Heel.StepMeters,
                         kinematics.Toe.StepMeters));
                 bool uniqueInCorridor =
-                    current.ActualEnvelopeCounterfactualState ==
+                    current.MotionCore.ActualEnvelopeCounterfactualState ==
                     "UniqueInCorridor";
                 var metrics = new SortedDictionary<string, double>(
                     StringComparer.Ordinal)
                 {
                     ["ActualProgressEnvelopeAdvanceAboveBuilderTarget"] =
-                        current.ActualProgressEnvelopeAdvanceAboveBuilderTarget,
+                        current.MotionCore.ActualProgressEnvelopeAdvanceAboveBuilderTarget,
                     ["ActualProgressEnvelopeMinimumCorrection"] =
-                        current.ActualProgressEnvelopeMinimumCorrection,
+                        current.MotionCore.ActualProgressEnvelopeMinimumCorrection,
                     ["BuilderSwingTargetAlongUp"] =
                         current.PathContinuity.ComponentUp.sqrMagnitude >
                         TimeEpsilon * TimeEpsilon
                             ? Vector3.Dot(
-                                current.BuilderSwingTargetCorrection,
+                                current.MotionCore.BuilderSwingTargetCorrection,
                                 current.PathContinuity.ComponentUp.normalized)
                             : 0d,
                     ["ActualFootCrossTrackDistance"] =
-                        current.ActualFootCrossTrackDistance,
+                        current.MotionCore.ActualFootCrossTrackDistance,
                     ["ActualEnvelopeCandidateCount"] =
-                        current.ActualEnvelopeCandidateCount,
+                        current.MotionCore.ActualEnvelopeCandidateCount,
                     ["ActualEnvelopeHeightSpan"] =
-                        current.ActualEnvelopeHeightSpan,
+                        current.MotionCore.ActualEnvelopeHeightSpan,
                     ["GroundEnvelopeHardClamp"] =
                         current.OutputStages.SafetyFloorOwner == "GroundPathEnvelope"
                             ? current.OutputStages.SafetyFloorClampMeters
@@ -1977,21 +1977,21 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 {
                     ["uniqueInCorridor"] = uniqueInCorridor,
                     ["ambiguousInCorridor"] =
-                        current.ActualEnvelopeCounterfactualState ==
+                        current.MotionCore.ActualEnvelopeCounterfactualState ==
                         "AmbiguousInCorridor",
                     ["outsideGroundPathCorridor"] =
-                        current.ActualEnvelopeCounterfactualState ==
+                        current.MotionCore.ActualEnvelopeCounterfactualState ==
                         "OutsideGroundPathCorridor",
                     ["noIntersection"] =
-                        current.ActualEnvelopeCounterfactualState ==
+                        current.MotionCore.ActualEnvelopeCounterfactualState ==
                         "NoIntersection",
                     ["counterfactualUnavailable"] =
-                        current.ActualEnvelopeCounterfactualState ==
+                        current.MotionCore.ActualEnvelopeCounterfactualState ==
                         "Unavailable",
                     ["groundEnvelopeOwner"] =
                         current.OutputStages.SafetyFloorOwner == "GroundPathEnvelope",
                     ["actualProgressCorrectionAvailable"] =
-                        current.ActualProgressEnvelopeCorrectionAvailable,
+                        current.MotionCore.ActualProgressEnvelopeCorrectionAvailable,
                     ["visibleOutputAboveTwoCentimeters"] =
                         visibleStep > 0.02d
                 };
@@ -2001,7 +2001,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     previous.Frame,
                     current.Frame,
                     current.Frame,
-                    current.FootMotionEventIdentity,
+                    current.MotionCore.LandingEventIdentity,
                     current.FormalInput.SourceIdentity,
                     current.FormalInput.SourceCycle,
                     DeltaSeconds(current),
@@ -2026,14 +2026,14 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 }
                 bool swingToLanding =
                     current.OutputStages.ConstraintStateBefore == "Swing" &&
-                    current.ConstraintState == "Landing";
-                bool contactOutputPair = IsContactOutputState(previous.ConstraintState) ||
-                    IsContactOutputState(current.ConstraintState);
+                    current.MotionCore.ConstraintState == "Landing";
+                bool contactOutputPair = IsContactOutputState(previous.MotionCore.ConstraintState) ||
+                    IsContactOutputState(current.MotionCore.ConstraintState);
                 bool acceptedUnanchoredSwingPair =
-                    previous.ConstraintState == "Swing" &&
-                    current.ConstraintState == "Swing" &&
-                    previous.FootMotionState == "Accepted" &&
-                    current.FootMotionState == "Accepted" &&
+                    previous.MotionCore.ConstraintState == "Swing" &&
+                    current.MotionCore.ConstraintState == "Swing" &&
+                    previous.MotionCore.State == "Accepted" &&
+                    current.MotionCore.State == "Accepted" &&
                     !previous.HasAnchor && !current.HasAnchor;
                 if (!contactOutputPair && !acceptedUnanchoredSwingPair)
                     continue;
@@ -2074,9 +2074,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     endpointTreadChanged ||
                     landingPointRevised ||
                     counterfactualPathRevision;
-                bool sameEvent = previous.FootMotionEventIdentity != 0 &&
-                    previous.FootMotionEventIdentity ==
-                    current.FootMotionEventIdentity;
+                bool sameEvent = previous.MotionCore.LandingEventIdentity != 0 &&
+                    previous.MotionCore.LandingEventIdentity ==
+                    current.MotionCore.LandingEventIdentity;
                 bool sameSource = string.Equals(
                     previous.FormalInput.SourceIdentity,
                     current.FormalInput.SourceIdentity,
@@ -2169,9 +2169,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                         .ToString(CultureInfo.InvariantCulture),
                     sourceIdentity = current.FormalInput.SourceIdentity,
                     sourceCycle = current.FormalInput.SourceCycle,
-                    previousConstraintState = previous.ConstraintState,
+                    previousConstraintState = previous.MotionCore.ConstraintState,
                     constraintStateBefore = current.OutputStages.ConstraintStateBefore,
-                    constraintState = current.ConstraintState,
+                    constraintState = current.MotionCore.ConstraintState,
                     preTransitionReason = current.Lifecycle.PreTransitionReason,
                     preTransitionSource = current.Lifecycle.PreTransitionSource,
                     preTransitionTarget = current.Lifecycle.PreTransitionTarget,
@@ -2593,9 +2593,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         static Vector3 ResolveSourceProbe(FootFrame frame, int probe) =>
             probe switch
             {
-                0 => frame.OriginalAnkle,
-                1 => frame.SourceHeel,
-                2 => frame.SourceToe,
+                0 => frame.MotionCore.OriginalAnkle,
+                1 => frame.MotionCore.SourceHeel,
+                2 => frame.MotionCore.SourceToe,
                 _ => throw new ArgumentOutOfRangeException(nameof(probe))
             };
 
@@ -2698,9 +2698,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                         : null;
                 bool contactEventChanged = previousCommitted != null &&
                     previousCommitted.Resolved.ContactAvailable &&
-                    (previousCommitted.ConstraintState == "Landing" ||
-                     previousCommitted.ConstraintState == "Locked" ||
-                     previousCommitted.ConstraintState == "Releasing") &&
+                    (previousCommitted.MotionCore.ConstraintState == "Landing" ||
+                     previousCommitted.MotionCore.ConstraintState == "Locked" ||
+                     previousCommitted.MotionCore.ConstraintState == "Releasing") &&
                     previousCommitted.InputEvents.Current.Identity != 0 &&
                     current.InputEvents.Current.Identity != 0 &&
                     previousCommitted.InputEvents.Current.Identity !=
@@ -2712,10 +2712,10 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     current.Lifecycle.PreTransitionReason ==
                     "NewEventContactAcquired" &&
                     current.Lifecycle.PreTransitionSource ==
-                    previousCommitted.ConstraintState &&
+                    previousCommitted.MotionCore.ConstraintState &&
                     current.Lifecycle.PreTransitionTarget == "Landing" &&
                     current.Lifecycle.PreTransitionAnchorCommand == "Create" &&
-                    current.ConstraintState == "Landing" &&
+                    current.MotionCore.ConstraintState == "Landing" &&
                     current.Resolved.SupportTarget.Available &&
                     current.Resolved.SupportTarget.PositionEvent ==
                     current.InputEvents.Current.Identity &&
@@ -3288,7 +3288,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     current.Frame,
                     frames[end].Frame,
                     peakFrame,
-                    current.FootMotionEventIdentity,
+                    current.MotionCore.LandingEventIdentity,
                     current.FormalInput.SourceIdentity,
                     current.FormalInput.SourceCycle,
                     Duration(window),
@@ -3414,16 +3414,16 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     StringComparer.Ordinal)
                 {
                     ["runtimeLandingAtBoundary"] =
-                        current.ConstraintState == "Landing",
+                        current.MotionCore.ConstraintState == "Landing",
                     ["runtimeLockedAtBoundary"] =
-                        current.ConstraintState == "Locked",
+                        current.MotionCore.ConstraintState == "Locked",
                     ["runtimeSwingAtBoundary"] =
-                        current.ConstraintState == "Swing",
+                        current.MotionCore.ConstraintState == "Swing",
                     ["runtimeUnlockedSupportAtBoundary"] =
-                        current.ConstraintState == "UnlockedSupport",
+                        current.MotionCore.ConstraintState == "UnlockedSupport",
                     ["runtimeReleasingAtBoundary"] =
-                        current.ConstraintState == "Releasing",
-                    ["contactPlaneAvailable"] = current.ContactPlaneAvailable
+                        current.MotionCore.ConstraintState == "Releasing",
+                    ["contactPlaneAvailable"] = current.MotionCore.ContactPlaneAvailable
                 };
                 events.Add(new EventFact(
                     "LandingStateBoundary",
@@ -3431,7 +3431,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     previous.Frame,
                     current.Frame,
                     current.Frame,
-                    current.FootMotionEventIdentity,
+                    current.MotionCore.LandingEventIdentity,
                     current.FormalInput.SourceIdentity,
                     current.FormalInput.SourceCycle,
                     DeltaSeconds(current),
@@ -3442,17 +3442,17 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             int index = 0;
             while (index < frames.Count)
             {
-                if (frames[index].ConstraintState != "Landing")
+                if (frames[index].MotionCore.ConstraintState != "Landing")
                 {
                     index++;
                     continue;
                 }
                 int start = index;
-                ulong eventIdentity = frames[index].FootMotionEventIdentity;
+                ulong eventIdentity = frames[index].MotionCore.LandingEventIdentity;
                 while (index + 1 < frames.Count &&
                        Continuous(frames[index], frames[index + 1]) &&
-                       frames[index + 1].ConstraintState == "Landing" &&
-                       frames[index + 1].FootMotionEventIdentity == eventIdentity)
+                       frames[index + 1].MotionCore.ConstraintState == "Landing" &&
+                       frames[index + 1].MotionCore.LandingEventIdentity == eventIdentity)
                 {
                     index++;
                 }
@@ -3465,17 +3465,17 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 FootFrame entryPrevious = hasEntry ? frames[start - 1] : null;
                 FootFrame exitNext = hasExit ? frames[end + 1] : null;
                 double correctedEntryDistance = Vector3.Distance(
-                    window[0].CorrectedSole,
-                    window[0].Anchor);
+                    window[0].MotionCore.CorrectedSole,
+                    window[0].MotionCore.Anchor);
                 double correctedExitDistance = Vector3.Distance(
-                    window[^1].CorrectedSole,
-                    window[^1].Anchor);
+                    window[^1].MotionCore.CorrectedSole,
+                    window[^1].MotionCore.Anchor);
                 double finalEntryDistance = Vector3.Distance(
                     FinalSole(window[0]),
-                    window[0].Anchor);
+                    window[0].MotionCore.Anchor);
                 double finalExitDistance = Vector3.Distance(
                     FinalSole(window[^1]),
-                    window[^1].Anchor);
+                    window[^1].MotionCore.Anchor);
                 CharacterFootOutputBoundaryMotion entryMotion = hasEntry
                     ? ResolveOutputBoundaryMotion(entryPrevious, window[0])
                     : default;
@@ -3539,7 +3539,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     ["entryFollowedFormalBoundary"] = hasEntry &&
                         FormalLandingBoundary(entryPrevious, window[0]),
                     ["contactPlaneAvailableThroughout"] = window.All(
-                        value => value.ContactPlaneAvailable),
+                        value => value.MotionCore.ContactPlaneAvailable),
                     ["closedTowardAnchor"] = correctedExitDistance +
                         CharacterFootContactPlanePenetration.GeometryEpsilonMeters <
                         correctedEntryDistance,
@@ -3549,13 +3549,13 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     ["exitPhysicalOutputAvailable"] =
                         exitMotion.PhysicalOutputAvailable,
                     ["exitedToLocked"] = hasExit &&
-                        exitNext.ConstraintState == "Locked",
+                        exitNext.MotionCore.ConstraintState == "Locked",
                     ["exitedToReleasing"] = hasExit &&
-                        exitNext.ConstraintState == "Releasing",
+                        exitNext.MotionCore.ConstraintState == "Releasing",
                     ["exitedToSwing"] = hasExit &&
-                        exitNext.ConstraintState == "Swing",
+                        exitNext.MotionCore.ConstraintState == "Swing",
                     ["exitedToUnlockedSupport"] = hasExit &&
-                        exitNext.ConstraintState == "UnlockedSupport",
+                        exitNext.MotionCore.ConstraintState == "UnlockedSupport",
                     ["formalUnlockedWithinLanding"] = window.Any(
                         value => value.FormalInput.LockMode == "Unlocked")
                 };
@@ -3586,9 +3586,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             FootFrame current)
         {
             Vector3 correctedDelta =
-                current.CorrectedSole - previous.CorrectedSole;
+                current.MotionCore.CorrectedSole - previous.MotionCore.CorrectedSole;
             Vector3 animatedDelta =
-                current.OriginalSole - previous.OriginalSole;
+                current.MotionCore.OriginalSole - previous.MotionCore.OriginalSole;
             float animatedMagnitudeSquared = animatedDelta.sqrMagnitude;
             float blend = animatedMagnitudeSquared >
                           RuntimeGeometryEpsilon * RuntimeGeometryEpsilon
@@ -3631,8 +3631,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 FootFrame previous = frames[i - 1];
                 FootFrame current = frames[i];
                 if (!Continuous(previous, current) ||
-                    previous.ConstraintState != "Swing" ||
-                    current.ConstraintState != "Landing")
+                    previous.MotionCore.ConstraintState != "Swing" ||
+                    current.MotionCore.ConstraintState != "Landing")
                 {
                     continue;
                 }
@@ -3713,8 +3713,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                         contributionContinuityIdentity =
                             current.FormalInput.ContributionContinuityIdentity.ToString(
                                 CultureInfo.InvariantCulture),
-                        stateBefore = previous.ConstraintState,
-                        stateAfter = current.ConstraintState,
+                        stateBefore = previous.MotionCore.ConstraintState,
+                        stateAfter = current.MotionCore.ConstraintState,
                         entryCorrectionReexpressionStepMeters =
                             outputMotion.CorrectionReexpressionStepMeters,
                         entryCorrectionReexpressionAlongUpMeters =
@@ -3783,11 +3783,11 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                         currentSafetyFloorAvailable =
                             current.OutputStages.SafetyFloorAvailable,
                         currentContactOwnership =
-                            current.ContactOwnership,
+                            current.MotionCore.ContactOwnership,
                         currentContactPlaneAvailable =
-                            current.ContactPlaneAvailable,
+                            current.MotionCore.ContactPlaneAvailable,
                         currentContactSurfaceIdentity =
-                            current.ContactSurfaceIdentity,
+                            current.MotionCore.ContactSurfaceIdentity,
                         stepHeightMeters = stepHeight,
                         stepDirection = stepDirection,
                         previousFormalFootHeightMeters =
@@ -3797,8 +3797,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                             previous.FormalOutput.Available,
                         formalFootHeightAvailable =
                             current.FormalOutput.Available,
-                        previousProgress = previous.SwingProgress,
-                        progress = current.SwingProgress,
+                        previousProgress = previous.MotionCore.SwingProgress,
+                        progress = current.MotionCore.SwingProgress,
                         previousTimeToLandingSeconds =
                             previous.TimeToLandingSeconds,
                         timeToLandingSeconds = current.TimeToLandingSeconds,
@@ -3848,8 +3848,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                         previous.FormalOutput.FootHeight,
                     ["formalFootHeightMeters"] =
                         current.FormalOutput.FootHeight,
-                    ["previousProgress"] = previous.SwingProgress,
-                    ["progress"] = current.SwingProgress,
+                    ["previousProgress"] = previous.MotionCore.SwingProgress,
+                    ["progress"] = current.MotionCore.SwingProgress,
                     ["previousTimeToLandingSeconds"] =
                         previous.TimeToLandingSeconds,
                     ["timeToLandingSeconds"] =
@@ -3877,7 +3877,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     ["currentSafetyFloorAvailable"] =
                         current.OutputStages.SafetyFloorAvailable,
                     ["currentContactPlaneAvailable"] =
-                        current.ContactPlaneAvailable,
+                        current.MotionCore.ContactPlaneAvailable,
                     ["previousFormalFootHeightAvailable"] =
                         previous.FormalOutput.Available,
                     ["formalFootHeightAvailable"] =
@@ -3914,14 +3914,14 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             int index = 0;
             while (index < frames.Count)
             {
-                if (frames[index].ConstraintState != "Locked")
+                if (frames[index].MotionCore.ConstraintState != "Locked")
                 {
                     index++;
                     continue;
                 }
                 int start = index;
-                ulong eventIdentity = frames[index].FootMotionEventIdentity;
-                string lockResponse = frames[index].LockResponse;
+                ulong eventIdentity = frames[index].MotionCore.LandingEventIdentity;
+                string lockResponse = frames[index].MotionCore.LockResponse;
                 if (lockResponse != "FullAnchor" &&
                     lockResponse != "Sliding")
                 {
@@ -3930,38 +3930,38 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 }
                 while (index + 1 < frames.Count &&
                        Continuous(frames[index], frames[index + 1]) &&
-                       frames[index + 1].ConstraintState == "Locked" &&
-                       frames[index + 1].FootMotionEventIdentity == eventIdentity &&
-                       frames[index + 1].LockResponse == lockResponse)
+                       frames[index + 1].MotionCore.ConstraintState == "Locked" &&
+                       frames[index + 1].MotionCore.LandingEventIdentity == eventIdentity &&
+                       frames[index + 1].MotionCore.LockResponse == lockResponse)
                 {
                     index++;
                 }
                 int end = index;
                 List<FootFrame> window = frames.GetRange(start, end - start + 1);
                 double anchorDisplacement = VectorRange(
-                    window.Select(frame => frame.Anchor));
+                    window.Select(frame => frame.MotionCore.Anchor));
                 List<double> anchorDistances = window
-                    .Select(frame => (double)Vector3.Distance(frame.CorrectedSole, frame.Anchor))
+                    .Select(frame => (double)Vector3.Distance(frame.MotionCore.CorrectedSole, frame.MotionCore.Anchor))
                     .ToList();
                 List<double> alongUp = window
                     .Select(frame => (double)Vector3.Dot(
-                        frame.CorrectedSole - frame.Anchor,
+                        frame.MotionCore.CorrectedSole - frame.MotionCore.Anchor,
                         frame.PathContinuity.ComponentUp.normalized))
                     .ToList();
                 List<double> horizontalAnchorDistances = window
                     .Select(frame => (double)Vector3.ProjectOnPlane(
-                        frame.CorrectedSole - frame.Anchor,
+                        frame.MotionCore.CorrectedSole - frame.MotionCore.Anchor,
                         frame.PathContinuity.ComponentUp.normalized).magnitude)
                     .ToList();
                 double sink = Math.Max(0d, -alongUp.Min());
                 double drift = anchorDistances[^1] - anchorDistances[0];
                 double visibleStep = MaximumVectorStep(
-                    window.Select(frame => frame.CorrectedSole).ToList());
+                    window.Select(frame => frame.MotionCore.CorrectedSole).ToList());
                 bool physicalAnchorAvailable = window.All(frame =>
                     frame.Solver.PhysicalWriteAvailable &&
                     frame.Solver.PhysicalWriteCompletionIdentity == frame.CompletionIdentity &&
                     frame.Lifecycle.CurrentContactAnchorAvailable &&
-                    frame.Lifecycle.CurrentContactAnchorEventIdentity == frame.FootMotionEventIdentity);
+                    frame.Lifecycle.CurrentContactAnchorEventIdentity == frame.MotionCore.LandingEventIdentity);
                 var metrics = new SortedDictionary<string, double>(StringComparer.Ordinal)
                 {
                     ["anchorDisplacementMeters"] = anchorDisplacement,
@@ -4038,15 +4038,15 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     continue;
                 }
                 int start = index;
-                ulong eventIdentity = frames[index].FootMotionEventIdentity;
-                int surfaceIdentity = frames[index].ContactSurfaceIdentity;
-                string constraintState = frames[index].ConstraintState;
+                ulong eventIdentity = frames[index].MotionCore.LandingEventIdentity;
+                int surfaceIdentity = frames[index].MotionCore.ContactSurfaceIdentity;
+                string constraintState = frames[index].MotionCore.ConstraintState;
                 while (index + 1 < frames.Count &&
                        Continuous(frames[index], frames[index + 1]) &&
                        frames[index + 1].PenetrationAvailable &&
-                       frames[index + 1].FootMotionEventIdentity == eventIdentity &&
-                       frames[index + 1].ContactSurfaceIdentity == surfaceIdentity &&
-                       frames[index + 1].ConstraintState == constraintState)
+                       frames[index + 1].MotionCore.LandingEventIdentity == eventIdentity &&
+                       frames[index + 1].MotionCore.ContactSurfaceIdentity == surfaceIdentity &&
+                       frames[index + 1].MotionCore.ConstraintState == constraintState)
                 {
                     index++;
                 }
@@ -4207,18 +4207,18 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         static CharacterFootContactPlanePenetrationSample EvaluatePenetration(
             FootFrame frame)
         {
-            Vector3 normal = frame.ContactNormal.normalized;
+            Vector3 normal = frame.MotionCore.ContactNormal.normalized;
             double sourceHeelClearance = Vector3.Dot(
-                frame.SourceHeel - frame.Anchor,
+                frame.MotionCore.SourceHeel - frame.MotionCore.Anchor,
                 normal);
             double sourceToeClearance = Vector3.Dot(
-                frame.SourceToe - frame.Anchor,
+                frame.MotionCore.SourceToe - frame.MotionCore.Anchor,
                 normal);
             double finalHeelClearance = Vector3.Dot(
-                frame.Solver.PhysicalHeelWorld - frame.Anchor,
+                frame.Solver.PhysicalHeelWorld - frame.MotionCore.Anchor,
                 normal);
             double finalToeClearance = Vector3.Dot(
-                frame.Solver.PhysicalToeWorld - frame.Anchor,
+                frame.Solver.PhysicalToeWorld - frame.MotionCore.Anchor,
                 normal);
             return CharacterFootContactPlanePenetration.Evaluate(
                 sourceHeelClearance,
@@ -4240,17 +4240,17 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             int index = 0;
             while (index < frames.Count)
             {
-                if (frames[index].ConstraintState != "Releasing")
+                if (frames[index].MotionCore.ConstraintState != "Releasing")
                 {
                     index++;
                     continue;
                 }
                 int start = index;
-                ulong eventIdentity = frames[index].FootMotionEventIdentity;
+                ulong eventIdentity = frames[index].MotionCore.LandingEventIdentity;
                 while (index + 1 < frames.Count &&
                        Continuous(frames[index], frames[index + 1]) &&
-                       frames[index + 1].ConstraintState == "Releasing" &&
-                       frames[index + 1].FootMotionEventIdentity == eventIdentity)
+                       frames[index + 1].MotionCore.ConstraintState == "Releasing" &&
+                       frames[index + 1].MotionCore.LandingEventIdentity == eventIdentity)
                 {
                     index++;
                 }
@@ -4302,8 +4302,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     !Continuous(previous, current) ||
                     previous.HasAnchor ||
                     current.HasAnchor ||
-                    previous.ConstraintState != "Swing" ||
-                    current.ConstraintState != "Swing")
+                    previous.MotionCore.ConstraintState != "Swing" ||
+                    current.MotionCore.ConstraintState != "Swing")
                 {
                     continue;
                 }
@@ -4348,27 +4348,27 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     CharacterFootPathStageNames.PathTargetToSwingTarget,
                     previous.GroundPath.TargetAvailable &&
                     current.GroundPath.TargetAvailable &&
-                    previous.BuilderSwingTargetAvailable &&
-                    current.BuilderSwingTargetAvailable,
+                    previous.MotionCore.BuilderSwingTargetAvailable &&
+                    current.MotionCore.BuilderSwingTargetAvailable,
                     "PathTargetOrSwingTargetUnavailable",
                     previous.GroundPath.NextSwingLanding,
                     current.GroundPath.NextSwingLanding,
-                    previous.BuilderSwingTargetCorrection,
-                    current.BuilderSwingTargetCorrection,
+                    previous.MotionCore.BuilderSwingTargetCorrection,
+                    current.MotionCore.BuilderSwingTargetCorrection,
                     previous.Frame,
                     current.Frame,
                     missing,
-                    previous.BuilderSwingTargetAvailable ||
-                    current.BuilderSwingTargetAvailable),
+                    previous.MotionCore.BuilderSwingTargetAvailable ||
+                    current.MotionCore.BuilderSwingTargetAvailable),
                 Stage(
                     CharacterFootPathStageNames.SwingTargetToCapturedResidual,
-                    previous.BuilderSwingTargetAvailable &&
-                    current.BuilderSwingTargetAvailable &&
+                    previous.MotionCore.BuilderSwingTargetAvailable &&
+                    current.MotionCore.BuilderSwingTargetAvailable &&
                     previous.PathContinuity.PathContinuityEvaluated &&
                     current.PathContinuity.PathContinuityEvaluated,
                     "SwingTargetOrCapturedResidualUnavailable",
-                    previous.BuilderSwingTargetCorrection,
-                    current.BuilderSwingTargetCorrection,
+                    previous.MotionCore.BuilderSwingTargetCorrection,
+                    current.MotionCore.BuilderSwingTargetCorrection,
                     previous.PathContinuity.SwingResidualBeforeDecay,
                     current.PathContinuity.SwingResidualBeforeDecay,
                     previous.Frame,
@@ -4426,24 +4426,24 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     CharacterFootPathStageNames.FinalCorrectionToEncodedGoal,
                     previous.OutputStages.OutputStagesAvailable &&
                     current.OutputStages.OutputStagesAvailable &&
-                    previous.EncodedGoalAvailable && current.EncodedGoalAvailable,
+                    previous.Goal.Available && current.Goal.Available,
                     "FinalCorrectionOrEncodedGoalUnavailable",
                     previous.OutputStages.FinalEffectiveCorrection,
                     current.OutputStages.FinalEffectiveCorrection,
-                    previous.EncodedGoalCorrection,
-                    current.EncodedGoalCorrection,
+                    previous.Goal.Correction,
+                    current.Goal.Correction,
                     previous.Frame,
                     current.Frame,
                     missing,
-                    previous.EncodedGoalAvailable || current.EncodedGoalAvailable),
+                    previous.Goal.Available || current.Goal.Available),
                 Stage(
                     CharacterFootPathStageNames.EncodedGoalToSolvedFoot,
-                    previous.EncodedGoalAvailable && current.EncodedGoalAvailable &&
+                    previous.Goal.Available && current.Goal.Available &&
                     previous.Solver.IkEffectorAvailable &&
                     current.Solver.IkEffectorAvailable,
                     "EncodedGoalOrSolvedFootUnavailable",
-                    previous.EncodedGoalPosition,
-                    current.EncodedGoalPosition,
+                    previous.Goal.Position,
+                    current.Goal.Position,
                     previous.Solver.IkSolvedPosition,
                     current.Solver.IkSolvedPosition,
                     previous.Frame,
@@ -4454,12 +4454,12 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             };
             var stateEvidence = new CharacterFootPathStageStateEvidence
             {
-                previousState = previous.ConstraintState,
+                previousState = previous.MotionCore.ConstraintState,
                 stateBefore = current.OutputStages.ConstraintStateBefore,
-                stateAfter = current.ConstraintState,
-                previousLockResponse = previous.LockResponse,
+                stateAfter = current.MotionCore.ConstraintState,
+                previousLockResponse = previous.MotionCore.LockResponse,
                 lockResponseBefore = current.OutputStages.LockResponseBefore,
-                lockResponseAfter = current.LockResponse,
+                lockResponseAfter = current.MotionCore.LockResponse,
                 revisionReason = current.PathContinuity.PathRevisionReason,
                 residualRebuilt = current.PathContinuity.PathResidualRebuilt,
                 targetTrackingApplied = current.PathContinuity.TargetTrackingApplied,
@@ -4507,10 +4507,10 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     previousSourceCycle = previous.FormalInput.SourceCycle,
                     sourceCycle = current.FormalInput.SourceCycle,
                     previousPathInputIdentity =
-                        previous.FootMotionGroundPathInputIdentity.ToString(
+                        previous.MotionCore.GroundPathInputIdentity.ToString(
                             CultureInfo.InvariantCulture),
                     pathInputIdentity =
-                        current.FootMotionGroundPathInputIdentity.ToString(
+                        current.MotionCore.GroundPathInputIdentity.ToString(
                             CultureInfo.InvariantCulture)
                 },
                 stateEvidence = stateEvidence,
@@ -4556,7 +4556,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 FootFrame previous,
                 FootFrame current)
         {
-            if (!previous.BuilderSwingTargetAvailable ||
+            if (!previous.MotionCore.BuilderSwingTargetAvailable ||
                 !TryReconstructSwingTarget(
                     current,
                     previous,
@@ -4574,18 +4574,18 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 };
             }
             Vector3 actualTarget =
-                current.BuilderSwingTargetCorrection;
+                current.MotionCore.BuilderSwingTargetCorrection;
             double reconstructionError = Vector3.Distance(
                 pathRevisedTarget,
                 actualTarget);
             double phaseDelta = Vector3.Distance(
-                previous.BuilderSwingTargetCorrection,
+                previous.MotionCore.BuilderSwingTargetCorrection,
                 phaseOnlyTarget);
             double pathDelta = Vector3.Distance(
                 phaseOnlyTarget,
                 pathRevisedTarget);
             double observedDelta = Vector3.Distance(
-                previous.BuilderSwingTargetCorrection,
+                previous.MotionCore.BuilderSwingTargetCorrection,
                 actualTarget);
             double totalCounterfactualDelta =
                 phaseDelta + pathDelta;
@@ -4631,14 +4631,14 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             out Vector3 target)
         {
             target = default;
-            if (currentState.FootMotionState != "Accepted" ||
-                !currentState.BuilderSwingTargetAvailable ||
+            if (currentState.MotionCore.State != "Accepted" ||
+                !currentState.MotionCore.BuilderSwingTargetAvailable ||
                 path.GroundPath.State != "Accepted" ||
                 path.GroundEnvelopeVertices.Count < 2 ||
-                !float.IsFinite(currentState.SwingProgress) ||
+                !float.IsFinite(currentState.MotionCore.SwingProgress) ||
                 !currentState.FormalOutput.Available ||
                 !float.IsFinite(
-                    currentState.SwingFormalFootHeight) ||
+                    currentState.MotionCore.SwingFormalFootHeight) ||
                 currentState.PathContinuity.ComponentUp.sqrMagnitude <=
                 PositionNoiseFloor * PositionNoiseFloor ||
                 path.GroundPath.ComponentUp.sqrMagnitude <=
@@ -4657,7 +4657,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             {
                 return false;
             }
-            float progress = currentState.SwingProgress;
+            float progress = currentState.MotionCore.SwingProgress;
             if (!TrySampleEnvelope(
                     path.GroundEnvelopeVertices.Values,
                     progress,
@@ -4666,11 +4666,11 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 return false;
             }
             float originalSoleHeight = Vector3.Dot(
-                currentState.OriginalSole,
+                currentState.MotionCore.OriginalSole,
                 up);
             float rawTargetHeight = Vector3.Dot(
                 envelopeSample,
-                up) + currentState.SwingFormalFootHeight;
+                up) + currentState.MotionCore.SwingFormalFootHeight;
             float targetHeightDelta = rawTargetHeight -
                                       currentState
                                           .PathContinuity.SwingFilteredTargetHeightBefore;
@@ -5141,8 +5141,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 return 0;
             if (frame.PathContinuity.PathCurrentLandingEventIdentity != 0)
                 return frame.PathContinuity.PathCurrentLandingEventIdentity;
-            if (frame.FootMotionEventIdentity != 0)
-                return frame.FootMotionEventIdentity;
+            if (frame.MotionCore.LandingEventIdentity != 0)
+                return frame.MotionCore.LandingEventIdentity;
             return frame.GroundPath.NextSwingLandingEventIdentity;
         }
 
@@ -5156,8 +5156,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 FootFrame previous = i > 0 ? frames[i - 1] : null;
                 bool continuous = previous != null && Continuous(previous, current);
                 bool inputIdentityChanged = continuous &&
-                    previous.FootMotionGroundPathInputIdentity !=
-                    current.FootMotionGroundPathInputIdentity;
+                    previous.MotionCore.GroundPathInputIdentity !=
+                    current.MotionCore.GroundPathInputIdentity;
                 bool availabilityChanged =
                     current.PathContinuity.PathAvailableBefore != current.PathContinuity.PathAvailableAfter;
                 bool comparablePath = current.PathContinuity.PathAvailableBefore &&
@@ -5279,7 +5279,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     ["safetyFloorOwnerContactAnchor"] =
                         current.OutputStages.SafetyFloorOwner == "ContactAnchor",
                     ["stateAfterSwing"] =
-                        current.ConstraintState == "Swing",
+                        current.MotionCore.ConstraintState == "Swing",
                     ["stateBeforeReleasing"] =
                         current.OutputStages.ConstraintStateBefore == "Releasing"
                 };
@@ -5291,7 +5291,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     current.Frame,
                     current.PathContinuity.PathCurrentLandingEventIdentity != 0
                         ? current.PathContinuity.PathCurrentLandingEventIdentity
-                        : current.FootMotionEventIdentity,
+                        : current.MotionCore.LandingEventIdentity,
                     current.FormalInput.SourceIdentity,
                     current.FormalInput.SourceCycle,
                     DeltaSeconds(current),
@@ -5722,7 +5722,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     !left[i].Pelvis.Delta.Equals(right[i].Pelvis.Delta) ||
                     !left[i].Pelvis.PhysicalComponent.Equals(right[i].Pelvis.PhysicalComponent) ||
                     !left[i].Pelvis.FinalGoal.Equals(right[i].Pelvis.FinalGoal) ||
-                    left[i].PelvisWeight != right[i].PelvisWeight ||
+                    left[i].Goal.PelvisPositionWeight != right[i].Goal.PelvisPositionWeight ||
                     left[i].Solver.PhysicalWriteAvailable != right[i].Solver.PhysicalWriteAvailable ||
                     left[i].Solver.PhysicalWriteCompletionIdentity != right[i].Solver.PhysicalWriteCompletionIdentity)
                 {
@@ -6060,12 +6060,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 Float(prefix + "X"),
                 Float(prefix + "Y"),
                 Float(prefix + "Z"));
-            Quaternion Rotation(string prefix) => new Quaternion(
-                Float(prefix + "X"),
-                Float(prefix + "Y"),
-                Float(prefix + "Z"),
-                Float(prefix + "W"));
-
             string side = Cell("Side");
             var frame = new FootFrame
             {
@@ -6117,113 +6111,13 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 IncomingStep = bindings.IncomingStep.Read(cells),
                 LandingPredictionState = Cell("State"),
                 ObservedLandingEventIdentity = Ulong("LandingEventIdentity"),
-                FootMotionEventIdentity = Ulong("FootMotionLandingEventIdentity"),
-                FootMotionGroundPathInputIdentity =
-                    Ulong("FootMotionGroundPathInputIdentity"),
-                FootMotionState = Cell("FootMotionState"),
-                ConstraintState = Cell("FootMotionConstraintState"),
-                LockResponse = Cell("FootMotionLockResponse"),
-                OriginalSole = Vector("FootMotionOriginalSole"),
-                OriginalAnkle = Vector("FootMotionOriginalAnkle"),
-                SourceAnkleRotation =
-                    Rotation("FootMotionSourceAnkleRotation"),
-                SwingProgress = Float("FootMotionProgress"),
-                SwingBaselineSample =
-                    Vector("FootMotionBaselineSample"),
-                SwingBaselineSampleAlongUp =
-                    Float("FootMotionBaselineSampleAlongUp"),
-                SwingEnvelopeSample =
-                    Vector("FootMotionEnvelopeSample"),
-                SwingEnvelopeSampleAlongUp =
-                    Float("FootMotionEnvelopeSampleAlongUp"),
-                SwingFormalFootHeight =
-                    Float("FootMotionFormalFootHeight"),
-                SwingRawFormalTargetHeight =
-                    Float("FootMotionRawFormalTargetHeight"),
-                SwingEnvelopeMinimumCorrection =
-                    Float("FootMotionEnvelopeMinimumCorrection"),
-                SwingBuilderSelectedCorrection =
-                    Float("FootMotionBuilderSelectedCorrection"),
-                BuilderSwingTargetAvailable =
-                    Int("FootMotionBuilderSwingTargetAvailable") != 0,
-                BuilderSwingTargetCorrection =
-                    Vector("FootMotionBuilderSwingTargetCorrection"),
-                SwingPathHorizontalAxisState =
-                    Cell("FootMotionSwingPathHorizontalAxisState"),
-                ActualFootHorizontalDistance =
-                    Float("FootMotionActualFootHorizontalDistanceMeters"),
-                BaselineHorizontalDistance =
-                    Float("FootMotionBaselineHorizontalDistanceMeters"),
-                EnvelopeHorizontalDistance =
-                    Float("FootMotionEnvelopeHorizontalDistanceMeters"),
-                ActualMinusEnvelopeHorizontalDistance =
-                    Float("FootMotionActualMinusEnvelopeHorizontalDistanceMeters"),
-                ActualFootAxisRegion =
-                    Cell("FootMotionActualFootAxisRegion"),
-                ActualFootClosestPathParameter =
-                    Float("FootMotionActualFootClosestPathParameter"),
-                ActualFootDistanceAlongAxis =
-                    Float("FootMotionActualFootDistanceAlongAxisMeters"),
-                ActualFootCrossTrackDistance =
-                    Float("FootMotionActualFootCrossTrackDistanceMeters"),
-                ActualFootGroundPathCorridorRadius =
-                    Float("FootMotionActualFootGroundPathCorridorRadiusMeters"),
-                ActualFootWithinGroundPathCorridor =
-                    Int("FootMotionActualFootWithinGroundPathCorridor") != 0,
-                ActualEnvelopeIntersectionState =
-                    Cell("FootMotionActualEnvelopeIntersectionState"),
-                ActualEnvelopeCandidateCount =
-                    Int("FootMotionActualEnvelopeCandidateCount"),
-                ActualEnvelopeMinimumHeightAlongUp =
-                    Float("FootMotionActualEnvelopeMinimumHeightAlongUp"),
-                ActualEnvelopeMaximumHeightAlongUp =
-                    Float("FootMotionActualEnvelopeMaximumHeightAlongUp"),
-                ActualEnvelopeHeightSpan =
-                    Float("FootMotionActualEnvelopeHeightSpan"),
-                ActualEnvelopeHasVerticalEdge =
-                    Int("FootMotionActualEnvelopeHasVerticalEdge") != 0,
-                ActualEnvelopeHasMultipleHeights =
-                    Int("FootMotionActualEnvelopeHasMultipleHeights") != 0,
-                ActualEnvelopeAmbiguous =
-                    Int("FootMotionActualEnvelopeAmbiguous") != 0,
-                ActualEnvelopeCounterfactualState =
-                    Cell("FootMotionActualEnvelopeCounterfactualState"),
-                ActualProgressEnvelopeCorrectionAvailable =
-                    Int("FootMotionActualProgressEnvelopeCorrectionAvailable") != 0,
-                ActualProgressEnvelopeMinimumCorrection =
-                    Float("FootMotionActualProgressEnvelopeMinimumCorrection"),
-                ActualProgressEnvelopeAdvanceAboveBuilderTarget =
-                    Float("FootMotionActualProgressEnvelopeAdvanceAboveBuilderTarget"),
-                SwingDesiredCorrection =
-                    Vector("FootMotionDesiredCorrection"),
-                CorrectedSole = Vector("FootMotionCorrectedSole"),
-                CorrectedAnkle = Vector("FootMotionCorrectedAnkle"),
-                MotionPositionWeight = Float("FootMotionPositionWeight"),
-                MotionRotationWeight = Float("FootMotionRotationWeight"),
-                FinalGoalPositionWeight = Float("FinalGoalPositionWeight"),
-                FinalGoalRotationWeight = Float("FinalGoalRotationWeight"),
-                Anchor = Vector("FootMotionSupportContactAnchor"),
-                ContactPlaneAvailable = Int("FootMotionContactPlaneAvailable") != 0,
-                ContactOwnership = Float("FootMotionContactOwnership"),
-                LandingReachEvaluated =
-                    Int("FootMotionLandingReachEvaluated") != 0,
-                LandingReachAvailable =
-                    Int("FootMotionLandingReachAvailable") != 0,
-                ContactSurfaceIdentity = Int("FootMotionContactSurfaceIdentity"),
-                ContactNormal = Vector("FootMotionContactPlaneNormal"),
                 SelectedSupportTarget = bindings.SelectedTarget.Read(cells),
                 CurrentSupport = bindings.CurrentSupport.Read(cells),
                 Resolved = bindings.Resolved.Read(cells),
-                EncodedGoalAvailable =
-                    Int("FootMotionEncodedGoalAvailable") != 0,
-                EncodedGoalPosition = Vector("FinalGoalPosition"),
-                EncodedGoalCorrection =
-                    Vector("FootMotionEncodedGoalCorrection"),
-                PenetrationAvailability = Cell("FootContactPlanePenetrationAvailability"),
-                SourceHeel = Vector("FootMotionSourceHeel"),
-                SourceToe = Vector("FootMotionSourceToe"),
                 HasAnchor = Ulong("FootMotionLandingEventIdentity") != 0 &&
                             Cell("FootMotionConstraintState") != "Swing",
+                MotionCore = bindings.MotionCore.Read(cells),
+                Goal = bindings.Goal.Read(cells),
                 PathContinuity = bindings.PathContinuity.Read(cells),
                 Lifecycle = bindings.Lifecycle.Read(cells),
                 OutputStages = bindings.OutputStages.Read(cells),
@@ -6239,7 +6133,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 Response = bindings.Response.Read(cells),
                 Solver = bindings.Solver.Read(cells),
                 Pelvis = bindings.Pelvis.Read(cells),
-                PelvisWeight = Float("PelvisPositionWeight")
             };
             RequireValidFrame(frame);
             frame.ContactSupportGap = ResolveContactSupportGap(frame);
@@ -6319,16 +6212,16 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 "QueryCandidateSelectionState");
             RequireLandingObservation(frame);
             RequireEnum<CharacterFootSwingMotionState>(
-                frame.FootMotionState,
+                frame.MotionCore.State,
                 "FootMotionState");
             RequireEnum<CharacterFootConstraintState>(
-                frame.ConstraintState,
+                frame.MotionCore.ConstraintState,
                 "FootMotionConstraintState");
             RequireEnum<CharacterFootConstraintState>(
                 frame.OutputStages.ConstraintStateBefore,
                 "FootMotionConstraintStateBefore");
             RequireEnum<CharacterFootLockResponse>(
-                frame.LockResponse,
+                frame.MotionCore.LockResponse,
                 "FootMotionLockResponse");
             RequireEnum<CharacterFootLockResponse>(
                 frame.OutputStages.LockResponseBefore,
@@ -6371,11 +6264,11 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             RequireLegReachFacts(frame);
             RequirePelvisHeightTarget(frame);
             RequirePelvisFacts(frame);
-            if (frame.LandingReachAvailable &&
-                !frame.LandingReachEvaluated ||
+            if (frame.MotionCore.LandingReachAvailable &&
+                !frame.MotionCore.LandingReachEvaluated ||
                 frame.Lifecycle.PostTransitionReason == "LandingCompleted" &&
-                (!frame.LandingReachEvaluated ||
-                 !frame.LandingReachAvailable))
+                (!frame.MotionCore.LandingReachEvaluated ||
+                 !frame.MotionCore.LandingReachAvailable))
             {
                 throw new InvalidDataException(
                     "Foot Motion Landing Reach facts are inconsistent.");
@@ -6391,15 +6284,15 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 "ContactAnchor" => frame.OutputStages.SafetyFloorAvailable &&
                                    frame.OutputStages.SafetyFloorOwnerSurfaceIdentity != 0 &&
                                    frame.OutputStages.SafetyFloorOwnerPathIdentity == 0 &&
-                                   (frame.ConstraintState == "Landing" ||
-                                     frame.ConstraintState == "Locked"),
+                                   (frame.MotionCore.ConstraintState == "Landing" ||
+                                     frame.MotionCore.ConstraintState == "Locked"),
                 "PlantTarget" => frame.OutputStages.SafetyFloorAvailable &&
                                  frame.OutputStages.SafetyFloorOwnerSurfaceIdentity != 0 &&
                                  frame.OutputStages.SafetyFloorOwnerPathIdentity == 0 &&
                                  frame.ApproachPlantTargetPrepared &&
                                  !frame.OutputStages.PlantInterpolationEvaluated &&
-                                 (frame.ConstraintState == "Swing" ||
-                                  frame.ConstraintState == "UnlockedSupport"),
+                                 (frame.MotionCore.ConstraintState == "Swing" ||
+                                  frame.MotionCore.ConstraintState == "UnlockedSupport"),
                 _ => false
             };
             if (!floorOwnerValid)
@@ -6471,7 +6364,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                         : !distanceForceRefresh && !verificationRefresh);
                 bool residualCaptured =
                     frame.Response.PlantResidualCaptureReason != "None";
-                Vector3 outputBefore = frame.OriginalSole +
+                Vector3 outputBefore = frame.MotionCore.OriginalSole +
                                        frame.Response.PlantEffectiveCorrectionBefore;
                 Vector3 expectedCapturedBeforeDecay = residualCaptured
                     ? outputBefore - frame.Response.PlantSelectedWorldTarget
@@ -6687,7 +6580,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     Vector3.Distance(
                         frame.Response.PlantEffectiveCorrectionAfter,
                         frame.Response.ResponseOutputPoint -
-                        frame.OriginalSole) >
+                        frame.MotionCore.OriginalSole) >
                     PositionNoiseFloor ||
                     Vector3.Distance(
                         frame.Response.PlantEffectiveCorrectionAfter,
@@ -6712,7 +6605,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                         $"DesiredOutputError={Vector3.Distance(frame.Response.DesiredOutputPoint, frame.Response.PlantSelectedWorldTarget + frame.Response.PlantWorldResidualAfterDecay):R} " +
                         $"ResponseOutputError={Vector3.Distance(frame.Response.ResponseOutputPoint, ExpectedResponseOutput(frame)):R} " +
                         $"PreviousOutputError={Vector3.Distance(frame.Response.PreviousResponseOutputPoint, outputBefore):R} " +
-                        $"EffectiveResponseError={Vector3.Distance(frame.Response.PlantEffectiveCorrectionAfter, frame.Response.ResponseOutputPoint - frame.OriginalSole):R} " +
+                        $"EffectiveResponseError={Vector3.Distance(frame.Response.PlantEffectiveCorrectionAfter, frame.Response.ResponseOutputPoint - frame.MotionCore.OriginalSole):R} " +
                         $"InterpolationError={Vector3.Distance(frame.Response.PlantEffectiveCorrectionAfter, frame.OutputStages.InterpolationOutputCorrection):R} " +
                         $"DirectionMagnitude={frame.Response.CorrectionResponseDirection.magnitude:R} " +
                         $"PreviousDirectionMagnitude={frame.Response.CorrectionResponsePreviousDirection.magnitude:R} " +
@@ -6728,33 +6621,33 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 }
             }
             RequireEnum<CharacterFootSwingPathHorizontalAxisState>(
-                frame.SwingPathHorizontalAxisState,
+                frame.MotionCore.SwingPathHorizontalAxisState,
                 "FootMotionSwingPathHorizontalAxisState");
             RequireEnum<CharacterFootActualEnvelopeIntersectionState>(
-                frame.ActualEnvelopeIntersectionState,
+                frame.MotionCore.ActualEnvelopeIntersectionState,
                 "FootMotionActualEnvelopeIntersectionState");
             RequireEnum<CharacterFootActualFootAxisRegion>(
-                frame.ActualFootAxisRegion,
+                frame.MotionCore.ActualFootAxisRegion,
                 "FootMotionActualFootAxisRegion");
             RequireEnum<CharacterFootActualEnvelopeCounterfactualState>(
-                frame.ActualEnvelopeCounterfactualState,
+                frame.MotionCore.ActualEnvelopeCounterfactualState,
                 "FootMotionActualEnvelopeCounterfactualState");
-            if (frame.FootMotionState == "Accepted" &&
+            if (frame.MotionCore.State == "Accepted" &&
                 frame.PathContinuity.ComponentUp.sqrMagnitude >
                 TimeEpsilon * TimeEpsilon)
             {
                 Vector3 up = frame.PathContinuity.ComponentUp.normalized;
                 float originalSoleAlongUp = Vector3.Dot(
-                    frame.OriginalSole,
+                    frame.MotionCore.OriginalSole,
                     up);
                 float baselineAlongUp = Vector3.Dot(
-                    frame.SwingBaselineSample,
+                    frame.MotionCore.SwingBaselineSample,
                     up);
                 float envelopeAlongUp = Vector3.Dot(
-                    frame.SwingEnvelopeSample,
+                    frame.MotionCore.SwingEnvelopeSample,
                     up);
                 float expectedRawFormalTargetHeight =
-                    envelopeAlongUp + frame.SwingFormalFootHeight;
+                    envelopeAlongUp + frame.MotionCore.SwingFormalFootHeight;
                 float expectedEnvelopeMinimumCorrection =
                     envelopeAlongUp - originalSoleAlongUp;
                 float expectedBuilderSelectedCorrection = Mathf.Max(
@@ -6762,29 +6655,29 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     expectedRawFormalTargetHeight - originalSoleAlongUp);
                 if (Math.Abs(
                         baselineAlongUp -
-                        frame.SwingBaselineSampleAlongUp) >
+                        frame.MotionCore.SwingBaselineSampleAlongUp) >
                     PositionNoiseFloor ||
                     Math.Abs(
                         envelopeAlongUp -
-                        frame.SwingEnvelopeSampleAlongUp) >
+                        frame.MotionCore.SwingEnvelopeSampleAlongUp) >
                     PositionNoiseFloor ||
                     Math.Abs(
-                        frame.SwingRawFormalTargetHeight -
+                        frame.MotionCore.SwingRawFormalTargetHeight -
                         expectedRawFormalTargetHeight) >
                     PositionNoiseFloor ||
                     Math.Abs(
-                        frame.SwingEnvelopeMinimumCorrection -
+                        frame.MotionCore.SwingEnvelopeMinimumCorrection -
                         expectedEnvelopeMinimumCorrection) >
                     PositionNoiseFloor ||
                     Math.Abs(
-                        frame.SwingBuilderSelectedCorrection -
+                        frame.MotionCore.SwingBuilderSelectedCorrection -
                         expectedBuilderSelectedCorrection) >
                     PositionNoiseFloor)
                 {
                     throw new InvalidDataException(
                         "Foot Motion formal Swing height facts are inconsistent.");
                 }
-                if (frame.BuilderSwingTargetAvailable)
+                if (frame.MotionCore.BuilderSwingTargetAvailable)
                 {
                     float expectedHeightDelta =
                         frame.PathContinuity.SwingRawTargetHeightAlongUp -
@@ -6821,7 +6714,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     if (!frame.PathContinuity.PathContinuityEvaluated ||
                         !frame.PathContinuity.PathAvailableAfter ||
                         frame.PathContinuity.PathCurrentLandingEventIdentity !=
-                            frame.FootMotionEventIdentity ||
+                            frame.MotionCore.LandingEventIdentity ||
                         Math.Abs(
                             frame.PathContinuity.SwingRawTargetHeightAlongUp -
                             expectedRawFormalTargetHeight) >
@@ -6854,7 +6747,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                             expectedFilteredTargetHeight) >
                         PositionNoiseFloor ||
                         Vector3.Distance(
-                            frame.BuilderSwingTargetCorrection,
+                            frame.MotionCore.BuilderSwingTargetCorrection,
                             up * expectedFilteredCorrection) >
                         PositionNoiseFloor)
                     {
@@ -6862,7 +6755,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                             "Foot Motion Builder Swing target facts are inconsistent.");
                     }
                 }
-                else if (frame.BuilderSwingTargetCorrection.sqrMagnitude >
+                else if (frame.MotionCore.BuilderSwingTargetCorrection.sqrMagnitude >
                          PositionNoiseFloor * PositionNoiseFloor)
                 {
                     throw new InvalidDataException(
@@ -7095,49 +6988,49 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         static void RequireActualFootEnvelopeFacts(FootFrame frame)
         {
             bool accepted = frame.GroundPath.State == "Accepted" &&
-                            frame.FootMotionState == "Accepted" &&
-                            frame.ConstraintState == "Swing" &&
+                            frame.MotionCore.State == "Accepted" &&
+                            frame.MotionCore.ConstraintState == "Swing" &&
                             frame.GroundEnvelopeVertices.Count >= 2;
             float valueMagnitude = Math.Max(
-                Math.Abs(frame.ActualFootHorizontalDistance),
+                Math.Abs(frame.MotionCore.ActualFootHorizontalDistance),
                 Math.Max(
-                    Math.Abs(frame.BaselineHorizontalDistance),
+                    Math.Abs(frame.MotionCore.BaselineHorizontalDistance),
                     Math.Max(
-                        Math.Abs(frame.EnvelopeHorizontalDistance),
+                        Math.Abs(frame.MotionCore.EnvelopeHorizontalDistance),
                         Math.Abs(
-                            frame.ActualMinusEnvelopeHorizontalDistance))));
+                            frame.MotionCore.ActualMinusEnvelopeHorizontalDistance))));
             float finiteSegmentMagnitude = Math.Max(
-                Math.Abs(frame.ActualFootClosestPathParameter),
+                Math.Abs(frame.MotionCore.ActualFootClosestPathParameter),
                 Math.Max(
-                    Math.Abs(frame.ActualFootDistanceAlongAxis),
+                    Math.Abs(frame.MotionCore.ActualFootDistanceAlongAxis),
                     Math.Max(
-                        Math.Abs(frame.ActualFootCrossTrackDistance),
+                        Math.Abs(frame.MotionCore.ActualFootCrossTrackDistance),
                         Math.Abs(
-                            frame.ActualFootGroundPathCorridorRadius))));
-            if (frame.SwingPathHorizontalAxisState == "Unavailable")
+                            frame.MotionCore.ActualFootGroundPathCorridorRadius))));
+            if (frame.MotionCore.SwingPathHorizontalAxisState == "Unavailable")
             {
                 if (accepted ||
-                    frame.ActualEnvelopeIntersectionState != "Unavailable" ||
-                    frame.ActualFootAxisRegion != "Unavailable" ||
-                    frame.ActualEnvelopeCounterfactualState != "Unavailable" ||
+                    frame.MotionCore.ActualEnvelopeIntersectionState != "Unavailable" ||
+                    frame.MotionCore.ActualFootAxisRegion != "Unavailable" ||
+                    frame.MotionCore.ActualEnvelopeCounterfactualState != "Unavailable" ||
                     valueMagnitude > PositionNoiseFloor ||
                     finiteSegmentMagnitude > PositionNoiseFloor ||
-                    frame.ActualFootWithinGroundPathCorridor)
+                    frame.MotionCore.ActualFootWithinGroundPathCorridor)
                     throw new InvalidDataException(
                         "Foot Motion unavailable Swing Path axis facts are inconsistent.");
                 return;
             }
-            if (frame.SwingPathHorizontalAxisState == "InvalidComponentUp")
+            if (frame.MotionCore.SwingPathHorizontalAxisState == "InvalidComponentUp")
             {
                 if (!accepted ||
-                    frame.ActualEnvelopeIntersectionState !=
+                    frame.MotionCore.ActualEnvelopeIntersectionState !=
                     "InvalidComponentUp" ||
-                    frame.ActualFootAxisRegion != "Unavailable" ||
-                    frame.ActualEnvelopeCounterfactualState != "Unavailable" ||
+                    frame.MotionCore.ActualFootAxisRegion != "Unavailable" ||
+                    frame.MotionCore.ActualEnvelopeCounterfactualState != "Unavailable" ||
                     frame.GroundPath.ComponentUp.sqrMagnitude > 0.000001f ||
                     valueMagnitude > PositionNoiseFloor ||
                     finiteSegmentMagnitude > PositionNoiseFloor ||
-                    frame.ActualFootWithinGroundPathCorridor)
+                    frame.MotionCore.ActualFootWithinGroundPathCorridor)
                 {
                     throw new InvalidDataException(
                         "Foot Motion invalid-up Swing Path axis facts are inconsistent.");
@@ -7148,17 +7041,17 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             Vector3 horizontalAxis = Vector3.ProjectOnPlane(
                 frame.GroundPath.NextSwingLanding - frame.GroundPath.LastLanding,
                 up);
-            if (frame.SwingPathHorizontalAxisState == "DegenerateAxis")
+            if (frame.MotionCore.SwingPathHorizontalAxisState == "DegenerateAxis")
             {
                 if (!accepted ||
-                    frame.ActualEnvelopeIntersectionState !=
+                    frame.MotionCore.ActualEnvelopeIntersectionState !=
                     "DegenerateAxis" ||
-                    frame.ActualFootAxisRegion != "Unavailable" ||
-                    frame.ActualEnvelopeCounterfactualState != "Unavailable" ||
+                    frame.MotionCore.ActualFootAxisRegion != "Unavailable" ||
+                    frame.MotionCore.ActualEnvelopeCounterfactualState != "Unavailable" ||
                     horizontalAxis.sqrMagnitude > 0.00000001f ||
                     valueMagnitude > PositionNoiseFloor ||
                     finiteSegmentMagnitude > PositionNoiseFloor ||
-                    frame.ActualFootWithinGroundPathCorridor)
+                    frame.MotionCore.ActualFootWithinGroundPathCorridor)
                 {
                     throw new InvalidDataException(
                         "Foot Motion degenerate Swing Path axis facts are inconsistent.");
@@ -7172,31 +7065,31 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     $"Foot Motion available Swing Path axis lacks a valid input " +
                     $"Frame={frame.Frame} Side={frame.Side} " +
                     $"GroundPathState={frame.GroundPath.State} " +
-                    $"FootMotionState={frame.FootMotionState} " +
-                    $"ConstraintState={frame.ConstraintState} " +
+                    $"FootMotionState={frame.MotionCore.State} " +
+                    $"ConstraintState={frame.MotionCore.ConstraintState} " +
                     $"EnvelopeVertices={frame.GroundEnvelopeVertices.Count}.");
             }
             Vector3 direction = horizontalAxis.normalized;
             float expectedActual = Vector3.Dot(
-                frame.OriginalSole - frame.GroundPath.LastLanding,
+                frame.MotionCore.OriginalSole - frame.GroundPath.LastLanding,
                 direction);
             float expectedBaseline = Vector3.Dot(
-                frame.SwingBaselineSample - frame.GroundPath.LastLanding,
+                frame.MotionCore.SwingBaselineSample - frame.GroundPath.LastLanding,
                 direction);
             float expectedEnvelope = Vector3.Dot(
-                frame.SwingEnvelopeSample - frame.GroundPath.LastLanding,
+                frame.MotionCore.SwingEnvelopeSample - frame.GroundPath.LastLanding,
                 direction);
             if (Math.Abs(
-                    frame.ActualFootHorizontalDistance - expectedActual) >
+                    frame.MotionCore.ActualFootHorizontalDistance - expectedActual) >
                 PositionNoiseFloor ||
                 Math.Abs(
-                    frame.BaselineHorizontalDistance - expectedBaseline) >
+                    frame.MotionCore.BaselineHorizontalDistance - expectedBaseline) >
                 PositionNoiseFloor ||
                 Math.Abs(
-                    frame.EnvelopeHorizontalDistance - expectedEnvelope) >
+                    frame.MotionCore.EnvelopeHorizontalDistance - expectedEnvelope) >
                 PositionNoiseFloor ||
                 Math.Abs(
-                    frame.ActualMinusEnvelopeHorizontalDistance -
+                    frame.MotionCore.ActualMinusEnvelopeHorizontalDistance -
                     (expectedActual - expectedEnvelope)) >
                 PositionNoiseFloor)
             {
@@ -7208,7 +7101,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 expectedActual / pathLength);
             float distanceAlongAxis = closestPathParameter * pathLength;
             Vector3 actualHorizontalOffset = Vector3.ProjectOnPlane(
-                frame.OriginalSole - frame.GroundPath.LastLanding,
+                frame.MotionCore.OriginalSole - frame.GroundPath.LastLanding,
                 up);
             float crossTrackDistance = Vector3.Distance(
                 actualHorizontalOffset,
@@ -7221,20 +7114,20 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             bool withinGroundPathCorridor = frame.GroundPath.Radius > 0f &&
                 crossTrackDistance <=
                 frame.GroundPath.Radius + PositionNoiseFloor;
-            if (frame.ActualFootAxisRegion != axisRegion ||
+            if (frame.MotionCore.ActualFootAxisRegion != axisRegion ||
                 Math.Abs(
-                    frame.ActualFootClosestPathParameter -
+                    frame.MotionCore.ActualFootClosestPathParameter -
                     closestPathParameter) > PositionNoiseFloor ||
                 Math.Abs(
-                    frame.ActualFootDistanceAlongAxis -
+                    frame.MotionCore.ActualFootDistanceAlongAxis -
                     distanceAlongAxis) > PositionNoiseFloor ||
                 Math.Abs(
-                    frame.ActualFootCrossTrackDistance -
+                    frame.MotionCore.ActualFootCrossTrackDistance -
                     crossTrackDistance) > PositionNoiseFloor ||
                 Math.Abs(
-                    frame.ActualFootGroundPathCorridorRadius -
+                    frame.MotionCore.ActualFootGroundPathCorridorRadius -
                     frame.GroundPath.Radius) > PositionNoiseFloor ||
-                frame.ActualFootWithinGroundPathCorridor !=
+                frame.MotionCore.ActualFootWithinGroundPathCorridor !=
                     withinGroundPathCorridor)
             {
                 throw new InvalidDataException(
@@ -7297,23 +7190,23 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     withinGroundPathCorridor
                         ? "NoIntersection"
                         : "OutsideGroundPathCorridor";
-                if (frame.ActualEnvelopeIntersectionState !=
+                if (frame.MotionCore.ActualEnvelopeIntersectionState !=
                         "NoIntersection" ||
-                    frame.ActualEnvelopeCounterfactualState !=
+                    frame.MotionCore.ActualEnvelopeCounterfactualState !=
                     emptyCounterfactualState ||
-                    frame.ActualEnvelopeCandidateCount != 0 ||
+                    frame.MotionCore.ActualEnvelopeCandidateCount != 0 ||
                     Math.Abs(
-                        frame.ActualEnvelopeMinimumHeightAlongUp) >
+                        frame.MotionCore.ActualEnvelopeMinimumHeightAlongUp) >
                     PositionNoiseFloor ||
                     Math.Abs(
-                        frame.ActualEnvelopeMaximumHeightAlongUp) >
+                        frame.MotionCore.ActualEnvelopeMaximumHeightAlongUp) >
                     PositionNoiseFloor ||
-                    Math.Abs(frame.ActualEnvelopeHeightSpan) >
+                    Math.Abs(frame.MotionCore.ActualEnvelopeHeightSpan) >
                     PositionNoiseFloor ||
-                    frame.ActualEnvelopeHasVerticalEdge ||
-                    frame.ActualEnvelopeHasMultipleHeights ||
-                    frame.ActualEnvelopeAmbiguous ||
-                    frame.ActualProgressEnvelopeCorrectionAvailable)
+                    frame.MotionCore.ActualEnvelopeHasVerticalEdge ||
+                    frame.MotionCore.ActualEnvelopeHasMultipleHeights ||
+                    frame.MotionCore.ActualEnvelopeAmbiguous ||
+                    frame.MotionCore.ActualProgressEnvelopeCorrectionAvailable)
                 {
                     throw new InvalidDataException(
                         "Foot Motion empty Actual Envelope intersection facts are inconsistent.");
@@ -7335,35 +7228,35 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     : ambiguous
                         ? "AmbiguousInCorridor"
                         : "UniqueInCorridor";
-            if (frame.ActualEnvelopeIntersectionState != expectedState ||
-                frame.ActualEnvelopeCounterfactualState !=
+            if (frame.MotionCore.ActualEnvelopeIntersectionState != expectedState ||
+                frame.MotionCore.ActualEnvelopeCounterfactualState !=
                 expectedCounterfactualState ||
-                frame.ActualEnvelopeCandidateCount != heights.Count ||
+                frame.MotionCore.ActualEnvelopeCandidateCount != heights.Count ||
                 Math.Abs(
-                    frame.ActualEnvelopeMinimumHeightAlongUp -
+                    frame.MotionCore.ActualEnvelopeMinimumHeightAlongUp -
                     minimumHeight) > PositionNoiseFloor ||
                 Math.Abs(
-                    frame.ActualEnvelopeMaximumHeightAlongUp -
+                    frame.MotionCore.ActualEnvelopeMaximumHeightAlongUp -
                     maximumHeight) > PositionNoiseFloor ||
                 Math.Abs(
-                    frame.ActualEnvelopeHeightSpan - heightSpan) >
+                    frame.MotionCore.ActualEnvelopeHeightSpan - heightSpan) >
                 PositionNoiseFloor ||
-                frame.ActualEnvelopeHasVerticalEdge != hasVerticalEdge ||
-                frame.ActualEnvelopeHasMultipleHeights !=
+                frame.MotionCore.ActualEnvelopeHasVerticalEdge != hasVerticalEdge ||
+                frame.MotionCore.ActualEnvelopeHasMultipleHeights !=
                 hasMultipleHeights ||
-                frame.ActualEnvelopeAmbiguous != ambiguous)
+                frame.MotionCore.ActualEnvelopeAmbiguous != ambiguous)
             {
                 throw new InvalidDataException(
                     "Foot Motion Actual Envelope candidate facts are inconsistent.");
             }
             if (ambiguous)
             {
-                if (frame.ActualProgressEnvelopeCorrectionAvailable ||
+                if (frame.MotionCore.ActualProgressEnvelopeCorrectionAvailable ||
                     Math.Abs(
-                        frame.ActualProgressEnvelopeMinimumCorrection) >
+                        frame.MotionCore.ActualProgressEnvelopeMinimumCorrection) >
                     PositionNoiseFloor ||
                     Math.Abs(
-                        frame.ActualProgressEnvelopeAdvanceAboveBuilderTarget) >
+                        frame.MotionCore.ActualProgressEnvelopeAdvanceAboveBuilderTarget) >
                     PositionNoiseFloor)
                 {
                     throw new InvalidDataException(
@@ -7373,26 +7266,26 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             }
             bool correctionAvailable =
                 expectedCounterfactualState == "UniqueInCorridor" &&
-                frame.BuilderSwingTargetAvailable;
-            float originalSoleAlongUp = Vector3.Dot(frame.OriginalSole, up);
+                frame.MotionCore.BuilderSwingTargetAvailable;
+            float originalSoleAlongUp = Vector3.Dot(frame.MotionCore.OriginalSole, up);
             float minimumCorrection = correctionAvailable
                 ? minimumHeight - originalSoleAlongUp
                 : 0f;
             float builderTargetAlongUp = correctionAvailable
-                ? Vector3.Dot(frame.BuilderSwingTargetCorrection, up)
+                ? Vector3.Dot(frame.MotionCore.BuilderSwingTargetCorrection, up)
                 : 0f;
             float advanceAboveBuilder = correctionAvailable
                 ? Mathf.Max(
                     0f,
                     minimumCorrection - builderTargetAlongUp)
                 : 0f;
-            if (frame.ActualProgressEnvelopeCorrectionAvailable !=
+            if (frame.MotionCore.ActualProgressEnvelopeCorrectionAvailable !=
                     correctionAvailable ||
                 Math.Abs(
-                    frame.ActualProgressEnvelopeMinimumCorrection -
+                    frame.MotionCore.ActualProgressEnvelopeMinimumCorrection -
                     minimumCorrection) > PositionNoiseFloor ||
                 Math.Abs(
-                    frame.ActualProgressEnvelopeAdvanceAboveBuilderTarget -
+                    frame.MotionCore.ActualProgressEnvelopeAdvanceAboveBuilderTarget -
                     advanceAboveBuilder) > PositionNoiseFloor)
             {
                 throw new InvalidDataException(
@@ -7748,10 +7641,10 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 {
                     valid &= !frame.OutputStages.PlantInterpolationEvaluated &&
                         (frame.OutputStages.InterpolationPolicy == "SwingResidual" || frame.OutputStages.InterpolationPolicy == "ReleaseResidual");
-                    float desired = Vector3.Dot(frame.Response.DesiredOutputPoint - frame.OriginalSole,
+                    float desired = Vector3.Dot(frame.Response.DesiredOutputPoint - frame.MotionCore.OriginalSole,
                         frame.Response.CorrectionResponseDirection);
                     float previous = exiting ? desired : frame.Response.CorrectionResponseVisibleOutputTransferred
-                        ? Vector3.Dot(frame.Response.PreviousResponseOutputPoint - frame.OriginalSole,
+                        ? Vector3.Dot(frame.Response.PreviousResponseOutputPoint - frame.MotionCore.OriginalSole,
                             frame.Response.CorrectionResponseDirection) : frame.Response.CorrectionResponseBeforeRebase;
                     float delta = desired - previous;
                     bool advance = initialized && !exiting;
@@ -7770,8 +7663,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                         (initialized || Math.Abs(frame.Response.CorrectionResponseBeforeRebase - desired) <= PositionNoiseFloor);
                     if (exiting)
                     {
-                        Vector3 captured = frame.Response.PreviousResponseOutputPoint - frame.OriginalSole - frame.OutputStages.StateTargetCorrection;
-                        Vector3 expectedDesired = frame.OriginalSole + frame.OutputStages.StateTargetCorrection +
+                        Vector3 captured = frame.Response.PreviousResponseOutputPoint - frame.MotionCore.OriginalSole - frame.OutputStages.StateTargetCorrection;
+                        Vector3 expectedDesired = frame.MotionCore.OriginalSole + frame.OutputStages.StateTargetCorrection +
                             AdvanceResidual(captured, frame.Timing.DeltaSeconds, frame.PathContinuity.ResidualBaseHalfLifeSeconds);
                         valid &= frame.Response.PreviousResponseOutputAvailable && !frame.Response.CorrectionResponseVisibleOutputTransferred &&
                             frame.Response.CorrectionResponseBeforeRebase == 0f && frame.Response.CorrectionResponseAppliedDelta == 0f &&
@@ -8205,7 +8098,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 "FootMotionPostTransitionAnchorCommand");
             if (frame.Lifecycle.PostTransitionSource != frame.Lifecycle.PreTransitionTarget ||
                 frame.Resolved.Outcome == "Ready" &&
-                frame.ConstraintState != frame.Lifecycle.PostTransitionTarget)
+                frame.MotionCore.ConstraintState != frame.Lifecycle.PostTransitionTarget)
             {
                 throw new InvalidDataException(
                     $"Foot Motion executed Post Transition State is inconsistent " +
@@ -8246,17 +8139,17 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                  expectedRotation > RuntimeGeometryEpsilon);
             float expectedGoalPosition = hasGoal ? expectedPosition : 0f;
             float expectedGoalRotation = hasGoal ? expectedRotation : 0f;
-            if (Math.Abs(frame.MotionPositionWeight - expectedPosition) >
+            if (Math.Abs(frame.MotionCore.MotionPositionWeight - expectedPosition) >
                     TimeEpsilon ||
-                Math.Abs(frame.MotionRotationWeight - expectedRotation) >
+                Math.Abs(frame.MotionCore.MotionRotationWeight - expectedRotation) >
                     TimeEpsilon ||
                 Math.Abs(frame.Resolved.PositionWeight - expectedPosition) >
                     TimeEpsilon ||
                 Math.Abs(frame.Resolved.RotationWeight - expectedRotation) >
                     TimeEpsilon ||
-                Math.Abs(frame.FinalGoalPositionWeight -
+                Math.Abs(frame.Goal.PositionWeight -
                     expectedGoalPosition) > TimeEpsilon ||
-                Math.Abs(frame.FinalGoalRotationWeight -
+                Math.Abs(frame.Goal.RotationWeight -
                     expectedGoalRotation) > TimeEpsilon)
             {
                 throw new InvalidDataException(
@@ -8270,13 +8163,13 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         static void RequireFootGoalComponentFacts(FootFrame frame)
         {
             Vector3 target = Vector3.Lerp(
-                frame.Solver.IkLegOriginalAnkle, frame.EncodedGoalPosition, frame.FinalGoalPositionWeight);
+                frame.Solver.IkLegOriginalAnkle, frame.Goal.Position, frame.Goal.PositionWeight);
             bool physicalAvailable = frame.Solver.PhysicalWriteAvailable && frame.Solver.IkLegAvailable &&
-                frame.FinalGoalPositionWeight > 0f;
+                frame.Goal.PositionWeight > 0f;
             float expectedResidual = physicalAvailable
                 ? Vector3.Distance(frame.Solver.PhysicalAnkleComponentPosition,
                     frame.Solver.IkLegOriginalAnkle +
-                    (frame.EncodedGoalPosition - frame.Solver.IkLegOriginalAnkle) * frame.FinalGoalPositionWeight)
+                    (frame.Goal.Position - frame.Solver.IkLegOriginalAnkle) * frame.Goal.PositionWeight)
                 : 0f;
             if (frame.Solver.IkLegAvailable &&
                     Vector3.Distance(frame.Solver.IkLegTargetAnkle, target) > PositionNoiseFloor ||
@@ -8374,11 +8267,11 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     "Foot Motion Ready visible policy did not evaluate Correction Response exactly once.");
             }
             Vector3 expectedEffectiveSole = Vector3.LerpUnclamped(
-                frame.OriginalSole,
+                frame.MotionCore.OriginalSole,
                 frame.Resolved.FinalSole,
                 frame.Resolved.PositionWeight);
             Vector3 expectedEffectiveSoleCorrection =
-                frame.Resolved.EffectiveSoleFromContacts - frame.OriginalSole;
+                frame.Resolved.EffectiveSoleFromContacts - frame.MotionCore.OriginalSole;
             Vector3 forward = Vector3.ProjectOnPlane(
                 frame.Resolved.SourceSoleForward,
                 frame.Resolved.SupportTarget.Normal);
@@ -8397,27 +8290,27 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     InverseRotation(
                         frame.Resolved.SourceSoleFrameLocalRotation)));
             Quaternion expectedEffectiveRotation = SlerpRotation(
-                frame.SourceAnkleRotation,
+                frame.MotionCore.SourceAnkleRotation,
                 expectedGoalRotation,
                 frame.Resolved.RotationWeight);
             Quaternion rotationDelta = NormalizeRotation(
                 MultiplyRotation(
                     expectedEffectiveRotation,
-                    InverseRotation(frame.SourceAnkleRotation)));
+                    InverseRotation(frame.MotionCore.SourceAnkleRotation)));
             Vector3 expectedEffectiveAnkle = expectedEffectiveSole -
                 RotateVector(
                     rotationDelta,
-                    frame.OriginalSole - frame.OriginalAnkle);
+                    frame.MotionCore.OriginalSole - frame.MotionCore.OriginalAnkle);
             Vector3 expectedGoalAnkle = frame.Resolved.PositionWeight >
                                         RuntimeGeometryEpsilon
-                ? frame.OriginalAnkle +
-                  (expectedEffectiveAnkle - frame.OriginalAnkle) /
+                ? frame.MotionCore.OriginalAnkle +
+                  (expectedEffectiveAnkle - frame.MotionCore.OriginalAnkle) /
                   frame.Resolved.PositionWeight
-                : frame.OriginalAnkle;
+                : frame.MotionCore.OriginalAnkle;
             if (!frame.Resolved.SupportTarget.Available ||
                 Vector3.Distance(
                     frame.Resolved.GoalTargetCorrection,
-                    frame.Resolved.FinalSole - frame.OriginalSole) >
+                    frame.Resolved.FinalSole - frame.MotionCore.OriginalSole) >
                 PositionNoiseFloor ||
                 Vector3.Distance(
                     frame.Resolved.EffectiveSole,
@@ -8549,7 +8442,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             bool footAvailable = leg.FootTarget && leg.Available &&
                 applied >= leg.MinimumAlongUp - RuntimeGeometryEpsilon &&
                 applied <= leg.MaximumAlongUp + RuntimeGeometryEpsilon;
-            RequirePelvis(frame.LandingReachEvaluated == leg.FootTarget && frame.LandingReachAvailable == footAvailable,
+            RequirePelvis(frame.MotionCore.LandingReachEvaluated == leg.FootTarget && frame.MotionCore.LandingReachAvailable == footAvailable,
                 frame, "weighted Foot reach result");
         }
 
@@ -8615,7 +8508,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             {
                 RequirePelvis(response.SameAs(new CharacterFootPelvisResponseSample()) && !frame.Pelvis.HeightTarget.Available &&
                     frame.Pelvis.State != "Releasing" &&
-                    frame.Pelvis.Delta.Equals(Vector3.zero) && frame.PelvisWeight == 0f, frame, "unevaluated response");
+                    frame.Pelvis.Delta.Equals(Vector3.zero) && frame.Goal.PelvisPositionWeight == 0f, frame, "unevaluated response");
                 return;
             }
             bool releasing = !frame.Pelvis.HeightTarget.Available;
@@ -8664,7 +8557,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 PelvisClose(response.InputVelocity, inputVelocity) && PelvisClose(response.Target, target) &&
                 PelvisClose(response.IntegratedOutput, integrated) && PelvisClose(response.Output, output) &&
                 PelvisClose(response.Velocity, velocity) && response.Completed == completed &&
-                PelvisClose(response.PositionWeight, weight) && PelvisClose(frame.PelvisWeight, weight) &&
+                PelvisClose(response.PositionWeight, weight) && PelvisClose(frame.Goal.PelvisPositionWeight, weight) &&
                 Vector3.Distance(frame.Pelvis.Delta, reach.ComponentUp * output) <= RuntimeGeometryEpsilon,
                 frame, "single spring response");
         }
@@ -8682,18 +8575,18 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 FiniteVector(observation.AnimatedWorldPosition) &&
                 FiniteVector(observation.AnimatedComponentPosition) &&
                 FiniteVector(observation.PhysicalWorldPosition) && FiniteVector(frame.Pelvis.PhysicalComponent) &&
-                FiniteVector(frame.Pelvis.FinalGoal) && float.IsFinite(frame.PelvisWeight) &&
-                frame.PelvisWeight >= 0f && frame.PelvisWeight <= 1f,
+                FiniteVector(frame.Pelvis.FinalGoal) && float.IsFinite(frame.Goal.PelvisPositionWeight) &&
+                frame.Goal.PelvisPositionWeight >= 0f && frame.Goal.PelvisPositionWeight <= 1f,
                 frame, "physical observation input");
             if (!observation.PoseInputAvailable)
                 RequirePelvis(observation.PoseRootWorldPosition.Equals(Vector3.zero) &&
                     observation.AnimatedWorldPosition.Equals(Vector3.zero) &&
                     observation.AnimatedComponentPosition.Equals(Vector3.zero), frame, "unavailable pose input");
             bool residualAvailable = PelvisPhysicalAvailable(frame) &&
-                observation.PoseInputAvailable && frame.PelvisWeight > 0f;
+                observation.PoseInputAvailable && frame.Goal.PelvisPositionWeight > 0f;
             float expectedResidual = residualAvailable
                 ? Vector3.Distance(frame.Pelvis.PhysicalComponent,
-                    observation.AnimatedComponentPosition + frame.Pelvis.FinalGoal * frame.PelvisWeight)
+                    observation.AnimatedComponentPosition + frame.Pelvis.FinalGoal * frame.Goal.PelvisPositionWeight)
                 : 0f;
             RequirePelvis(observation.GoalResidualAvailable == residualAvailable &&
                 observation.GoalResidual >= 0f && PelvisClose(observation.GoalResidual, expectedResidual) &&
@@ -8800,7 +8693,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                  Math.Abs(
                      frame.Resolved.LandingReachLegLength - legLength) <=
                  PositionNoiseFloor) &&
-                (!frame.LandingReachEvaluated ||
+                (!frame.MotionCore.LandingReachEvaluated ||
                  frame.Resolved.LandingReachAvailable);
             if (!resolvedReachConsistent)
             {
@@ -8872,69 +8765,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 "TimeToLandingSeconds", "StepSelectionMaximumPredictionTimeSeconds",
                 "StepSelectionLastLandingEventIdentity",
                 "SelectedStepSource", "SelectedLandingEventIdentity",
-                "State", "LandingEventIdentity", "FootMotionLandingEventIdentity", "FootMotionGroundPathInputIdentity",
-                "FinalGoalPositionWeight", "FinalGoalRotationWeight",
-                "FootMotionState", "FootMotionConstraintState",
-                "FootMotionLockResponse",
-                "FootMotionOriginalSoleX", "FootMotionOriginalSoleY", "FootMotionOriginalSoleZ",
-                "FootMotionOriginalAnkleX", "FootMotionOriginalAnkleY", "FootMotionOriginalAnkleZ",
-                "FootMotionProgress",
-                "FootMotionBaselineSampleX", "FootMotionBaselineSampleY",
-                "FootMotionBaselineSampleZ", "FootMotionBaselineSampleAlongUp",
-                "FootMotionEnvelopeSampleX", "FootMotionEnvelopeSampleY",
-                "FootMotionEnvelopeSampleZ",
-                "FootMotionEnvelopeSampleAlongUp",
-                "FootMotionFormalFootHeight",
-                "FootMotionRawFormalTargetHeight",
-                "FootMotionEnvelopeMinimumCorrection",
-                "FootMotionBuilderSelectedCorrection",
-                "FootMotionBuilderSwingTargetAvailable",
-                "FootMotionBuilderSwingTargetCorrectionX",
-                "FootMotionBuilderSwingTargetCorrectionY",
-                "FootMotionBuilderSwingTargetCorrectionZ",
-                "FootMotionSwingPathHorizontalAxisState",
-                "FootMotionActualFootHorizontalDistanceMeters",
-                "FootMotionBaselineHorizontalDistanceMeters",
-                "FootMotionEnvelopeHorizontalDistanceMeters",
-                "FootMotionActualMinusEnvelopeHorizontalDistanceMeters",
-                "FootMotionActualFootAxisRegion",
-                "FootMotionActualFootClosestPathParameter",
-                "FootMotionActualFootDistanceAlongAxisMeters",
-                "FootMotionActualFootCrossTrackDistanceMeters",
-                "FootMotionActualFootGroundPathCorridorRadiusMeters",
-                "FootMotionActualFootWithinGroundPathCorridor",
-                "FootMotionActualEnvelopeIntersectionState",
-                "FootMotionActualEnvelopeCandidateCount",
-                "FootMotionActualEnvelopeMinimumHeightAlongUp",
-                "FootMotionActualEnvelopeMaximumHeightAlongUp",
-                "FootMotionActualEnvelopeHeightSpan",
-                "FootMotionActualEnvelopeHasVerticalEdge",
-                "FootMotionActualEnvelopeHasMultipleHeights",
-                "FootMotionActualEnvelopeAmbiguous",
-                "FootMotionActualEnvelopeCounterfactualState",
-                "FootMotionActualProgressEnvelopeCorrectionAvailable",
-                "FootMotionActualProgressEnvelopeMinimumCorrection",
-                "FootMotionActualProgressEnvelopeAdvanceAboveBuilderTarget",
-                "FootMotionDesiredCorrectionX",
-                "FootMotionDesiredCorrectionY",
-                "FootMotionDesiredCorrectionZ",
-                "FootMotionCorrectedSoleX", "FootMotionCorrectedSoleY", "FootMotionCorrectedSoleZ",
-                "FootMotionCorrectedAnkleX", "FootMotionCorrectedAnkleY", "FootMotionCorrectedAnkleZ",
-                "FootMotionSupportContactAnchorX", "FootMotionSupportContactAnchorY", "FootMotionSupportContactAnchorZ",
-                "FootMotionContactOwnership",
-                "FootMotionLandingReachEvaluated",
-                "FootMotionLandingReachAvailable",
-                "FootMotionContactPlaneAvailable", "FootMotionContactSurfaceIdentity",
-                "FootMotionContactPlaneNormalX", "FootMotionContactPlaneNormalY", "FootMotionContactPlaneNormalZ",
-                "FootContactPlanePenetrationAvailability",
-                "FootMotionEncodedGoalAvailable",
-                "FootMotionEncodedGoalCorrectionX",
-                "FootMotionEncodedGoalCorrectionY",
-                "FootMotionEncodedGoalCorrectionZ",
-                "FinalGoalPositionX", "FinalGoalPositionY", "FinalGoalPositionZ",
-                "FootMotionSourceHeelX", "FootMotionSourceHeelY", "FootMotionSourceHeelZ",
-                "FootMotionSourceToeX", "FootMotionSourceToeY", "FootMotionSourceToeZ",
-                "PelvisPositionWeight", };
+                "State", "LandingEventIdentity", };
             foreach (string name in required)
             {
                 if (!indices.ContainsKey(name))
@@ -8942,7 +8773,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             }
             RequireColumnGroup(
                 indices,
-                "FootProfileId,FootProfileRevision,ApproachPlantTargetPrepared,PlantTargetNormalX,PlantTargetNormalY,PlantTargetNormalZ,PlantTargetTrajectoryGeneration,PlantTargetFutureBodyTranslationSourceIdentity,FootMotionSourceAnkleRotationX,FootMotionSourceAnkleRotationY,FootMotionSourceAnkleRotationZ,FootMotionSourceAnkleRotationW,FootMotionPositionWeight,FootMotionRotationWeight");
+                "FootProfileId,FootProfileRevision,ApproachPlantTargetPrepared,PlantTargetNormalX,PlantTargetNormalY,PlantTargetNormalZ,PlantTargetTrajectoryGeneration,PlantTargetFutureBodyTranslationSourceIdentity");
         }
 
         static void RequireColumnGroup(
@@ -9000,8 +8831,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     continue;
                 }
                 if (swingOnly &&
-                    (frames[i - 1].ConstraintState != "Swing" ||
-                     frames[i].ConstraintState != "Swing"))
+                    (frames[i - 1].MotionCore.ConstraintState != "Swing" ||
+                     frames[i].MotionCore.ConstraintState != "Swing"))
                 {
                     continue;
                 }
@@ -9029,8 +8860,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     continue;
                 }
                 if (swingOnly &&
-                    (frames[i - 1].ConstraintState != "Swing" ||
-                     frames[i].ConstraintState != "Swing"))
+                    (frames[i - 1].MotionCore.ConstraintState != "Swing" ||
+                     frames[i].MotionCore.ConstraintState != "Swing"))
                 {
                     continue;
                 }
@@ -9051,7 +8882,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             int frame = frames.Count > 0 ? frames[0].Frame : 0;
             for (int i = 0; i < frames.Count; i++)
             {
-                double value = Vector3.Distance(frames[i].CorrectedSole, frames[i].Anchor);
+                double value = Vector3.Distance(frames[i].MotionCore.CorrectedSole, frames[i].MotionCore.Anchor);
                 if (value <= maximum)
                     continue;
                 maximum = value;
@@ -9145,9 +8976,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             var result = new SortedDictionary<string, int>(StringComparer.Ordinal);
             foreach (FootFrame frame in frames)
             {
-                string key = string.IsNullOrEmpty(frame.PenetrationAvailability)
+                string key = string.IsNullOrEmpty(frame.MotionCore.PenetrationAvailability)
                     ? "Unspecified"
-                    : frame.PenetrationAvailability;
+                    : frame.MotionCore.PenetrationAvailability;
                 result.TryGetValue(key, out int count);
                 result[key] = count + 1;
             }
@@ -9325,75 +9156,13 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             internal readonly SortedDictionary<int, Vector3>
                 GroundEnvelopeVertices =
                     new SortedDictionary<int, Vector3>();
-            internal ulong FootMotionEventIdentity;
-            internal ulong FootMotionGroundPathInputIdentity;
-            internal string FootMotionState;
-            internal string ConstraintState;
-            internal string LockResponse;
-            internal Vector3 OriginalSole;
-            internal Vector3 OriginalAnkle;
-            internal Quaternion SourceAnkleRotation;
-            internal float SwingProgress;
-            internal Vector3 SwingBaselineSample;
-            internal float SwingBaselineSampleAlongUp;
-            internal Vector3 SwingEnvelopeSample;
-            internal float SwingEnvelopeSampleAlongUp;
-            internal float SwingFormalFootHeight;
-            internal float SwingRawFormalTargetHeight;
-            internal float SwingEnvelopeMinimumCorrection;
-            internal float SwingBuilderSelectedCorrection;
-            internal bool BuilderSwingTargetAvailable;
-            internal Vector3 BuilderSwingTargetCorrection;
-            internal string SwingPathHorizontalAxisState;
-            internal float ActualFootHorizontalDistance;
-            internal float BaselineHorizontalDistance;
-            internal float EnvelopeHorizontalDistance;
-            internal float ActualMinusEnvelopeHorizontalDistance;
-            internal string ActualFootAxisRegion;
-            internal float ActualFootClosestPathParameter;
-            internal float ActualFootDistanceAlongAxis;
-            internal float ActualFootCrossTrackDistance;
-            internal float ActualFootGroundPathCorridorRadius;
-            internal bool ActualFootWithinGroundPathCorridor;
-            internal string ActualEnvelopeIntersectionState;
-            internal int ActualEnvelopeCandidateCount;
-            internal float ActualEnvelopeMinimumHeightAlongUp;
-            internal float ActualEnvelopeMaximumHeightAlongUp;
-            internal float ActualEnvelopeHeightSpan;
-            internal bool ActualEnvelopeHasVerticalEdge;
-            internal bool ActualEnvelopeHasMultipleHeights;
-            internal bool ActualEnvelopeAmbiguous;
-            internal string ActualEnvelopeCounterfactualState;
-            internal bool ActualProgressEnvelopeCorrectionAvailable;
-            internal float ActualProgressEnvelopeMinimumCorrection;
-            internal float ActualProgressEnvelopeAdvanceAboveBuilderTarget;
-            internal Vector3 SwingDesiredCorrection;
-            internal Vector3 CorrectedSole;
-            internal Vector3 CorrectedAnkle;
-            internal float MotionPositionWeight;
-            internal float MotionRotationWeight;
-            internal float FinalGoalPositionWeight;
-            internal float FinalGoalRotationWeight;
-            internal Vector3 Anchor;
-            internal bool ContactPlaneAvailable;
-            internal float ContactOwnership;
-            internal bool LandingReachEvaluated;
-            internal bool LandingReachAvailable;
-            internal int ContactSurfaceIdentity;
-            internal Vector3 ContactNormal;
             internal CharacterFootSupportTargetSample SelectedSupportTarget;
-            internal bool EncodedGoalAvailable;
-            internal Vector3 EncodedGoalPosition;
-            internal Vector3 EncodedGoalCorrection;
             internal CharacterFootContactSupportGapFrame ContactSupportGap;
-            internal string PenetrationAvailability;
-            internal Vector3 SourceHeel;
-            internal Vector3 SourceToe;
             internal bool HasAnchor;
             internal bool PenetrationAvailable =>
-                ContactPlaneAvailable &&
-                (ConstraintState == "Landing" || ConstraintState == "Locked") &&
-                PenetrationAvailability ==
+                MotionCore.ContactPlaneAvailable &&
+                (MotionCore.ConstraintState == "Landing" || MotionCore.ConstraintState == "Locked") &&
+                MotionCore.PenetrationAvailability ==
                 CharacterFootContactPlanePenetrationAvailability.Available.ToString();
             internal CharacterFootPelvisSample Pelvis;
             internal CharacterFootSolverSample Solver;
@@ -9410,8 +9179,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             internal CharacterFootOutputStagesSample OutputStages;
             internal CharacterFootLifecycleSample Lifecycle;
             internal CharacterFootPathContinuitySample PathContinuity;
-            internal float PelvisWeight;
-            internal Vector3 EffectiveCorrection => CorrectedAnkle - OriginalAnkle;
+            internal CharacterFootMotionCoreSample MotionCore;
+            internal CharacterFootGoalSample Goal;
+            internal Vector3 EffectiveCorrection => MotionCore.CorrectedAnkle - MotionCore.OriginalAnkle;
         }
 
         static CharacterFootPelvisFrameObservation BuildPelvisFact(FootFrame frame, FootFrame previous) =>
@@ -9447,11 +9217,11 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 physicalWorldPosition = physicalAvailable ? CharacterFootVectorFact.From(observation.PhysicalWorldPosition) : null,
                 physicalComponentPosition = physicalAvailable ? CharacterFootVectorFact.From(frame.Pelvis.PhysicalComponent) : null,
                 goalCorrectionComponent = CharacterFootVectorFact.From(frame.Pelvis.FinalGoal),
-                positionWeight = frame.PelvisWeight,
-                weightedCorrectionComponent = CharacterFootVectorFact.From(frame.Pelvis.FinalGoal * frame.PelvisWeight),
+                positionWeight = frame.Goal.PelvisPositionWeight,
+                weightedCorrectionComponent = CharacterFootVectorFact.From(frame.Pelvis.FinalGoal * frame.Goal.PelvisPositionWeight),
                 goalResidualAvailable = observation.GoalResidualAvailable,
                 expectedPhysicalComponentPosition = observation.GoalResidualAvailable
-                    ? CharacterFootVectorFact.From(observation.AnimatedComponentPosition + frame.Pelvis.FinalGoal * frame.PelvisWeight) : null,
+                    ? CharacterFootVectorFact.From(observation.AnimatedComponentPosition + frame.Pelvis.FinalGoal * frame.Goal.PelvisPositionWeight) : null,
                 goalResidualComponentUnits = observation.GoalResidualAvailable ? (double?)observation.GoalResidual : null
             };
         }
@@ -9471,7 +9241,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 physicalComponentDelta = physicalAvailable
                     ? CharacterFootVectorFact.From(frame.Pelvis.PhysicalComponent - previous.Pelvis.PhysicalComponent) : null,
                 weightedCorrectionComponentDelta = continuous
-                    ? CharacterFootVectorFact.From(frame.Pelvis.FinalGoal * frame.PelvisWeight - previous.Pelvis.FinalGoal * previous.PelvisWeight) : null
+                    ? CharacterFootVectorFact.From(frame.Pelvis.FinalGoal * frame.Goal.PelvisPositionWeight - previous.Pelvis.FinalGoal * previous.Goal.PelvisPositionWeight) : null
             };
         }
 
@@ -9691,8 +9461,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                         frame.Solver.IkLegTargetCompressionReserve,
                     solvedCompressionReserveMeters =
                         frame.Solver.IkLegSolvedCompressionReserve,
-                    runtimeReachEvaluated = frame.LandingReachEvaluated,
-                    runtimeReachAvailable = frame.LandingReachAvailable,
+                    runtimeReachEvaluated = frame.MotionCore.LandingReachEvaluated,
+                    runtimeReachAvailable = frame.MotionCore.LandingReachAvailable,
                     resolvedReachRequestAvailable =
                         frame.Resolved.LandingReachAvailable,
                     resolvedReachEventIdentity =
@@ -9751,7 +9521,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 }
                 double appliedPelvisAlongUp = Vector3.Dot(
                     frame.Pelvis.FinalGoal,
-                    up) * frame.PelvisWeight;
+                    up) * frame.Goal.PelvisPositionWeight;
                 Vector3 baselineHip = frame.Solver.IkLegOriginalHip -
                     up * (float)appliedPelvisAlongUp;
                 result.appliedPelvisGoalAlongUpMeters =

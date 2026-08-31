@@ -112,38 +112,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             CharacterFootBodyCorrectionColumns.Schema.Header + "," +
             CharacterFootLandingObservationColumns.Schema.Header + "," +
             CharacterFootGroundPathColumns.Schema.Header + "," +
-            "FootMotionState,FootMotionRejectReason,FootMotionLandingEventIdentity,FootMotionGroundPathInputIdentity," +
-            "FootMotionDistance,FootMotionProgress," +
-            "FootMotionOriginalSoleX,FootMotionOriginalSoleY,FootMotionOriginalSoleZ," +
-            "FootMotionOriginalAnkleX,FootMotionOriginalAnkleY,FootMotionOriginalAnkleZ," +
-            "FootMotionSourceAnkleRotationX,FootMotionSourceAnkleRotationY,FootMotionSourceAnkleRotationZ,FootMotionSourceAnkleRotationW," +
-            "FootMotionSourceHeelX,FootMotionSourceHeelY,FootMotionSourceHeelZ," +
-            "FootMotionSourceToeX,FootMotionSourceToeY,FootMotionSourceToeZ," +
-            "FootMotionBaselineSampleX,FootMotionBaselineSampleY,FootMotionBaselineSampleZ,FootMotionBaselineSampleAlongUp," +
-            "FootMotionEnvelopeSampleX,FootMotionEnvelopeSampleY,FootMotionEnvelopeSampleZ,FootMotionEnvelopeSampleAlongUp," +
-            "FootMotionFormalFootHeight,FootMotionRawFormalTargetHeight,FootMotionEnvelopeMinimumCorrection,FootMotionBuilderSelectedCorrection," +
-            "FootMotionBuilderSwingTargetAvailable,FootMotionBuilderSwingTargetCorrectionX,FootMotionBuilderSwingTargetCorrectionY,FootMotionBuilderSwingTargetCorrectionZ," +
-            "FootMotionSwingPathHorizontalAxisState,FootMotionActualFootHorizontalDistanceMeters,FootMotionBaselineHorizontalDistanceMeters," +
-            "FootMotionEnvelopeHorizontalDistanceMeters,FootMotionActualMinusEnvelopeHorizontalDistanceMeters," +
-            "FootMotionActualFootAxisRegion,FootMotionActualFootClosestPathParameter,FootMotionActualFootDistanceAlongAxisMeters," +
-            "FootMotionActualFootCrossTrackDistanceMeters,FootMotionActualFootGroundPathCorridorRadiusMeters,FootMotionActualFootWithinGroundPathCorridor," +
-            "FootMotionActualEnvelopeIntersectionState,FootMotionActualEnvelopeCandidateCount," +
-            "FootMotionActualEnvelopeMinimumHeightAlongUp,FootMotionActualEnvelopeMaximumHeightAlongUp,FootMotionActualEnvelopeHeightSpan," +
-            "FootMotionActualEnvelopeHasVerticalEdge,FootMotionActualEnvelopeHasMultipleHeights,FootMotionActualEnvelopeAmbiguous," +
-            "FootMotionActualEnvelopeCounterfactualState," +
-            "FootMotionActualProgressEnvelopeCorrectionAvailable,FootMotionActualProgressEnvelopeMinimumCorrection," +
-            "FootMotionActualProgressEnvelopeAdvanceAboveBuilderTarget," +
-            "FootMotionLandingPredictionError," +
-            "FootMotionCorrectedSoleX,FootMotionCorrectedSoleY,FootMotionCorrectedSoleZ," +
-            "FootMotionCorrectedAnkleX,FootMotionCorrectedAnkleY,FootMotionCorrectedAnkleZ,FootMotionPositionWeight,FootMotionRotationWeight," +
-            "FootMotionConstraintState,FootMotionLockResponse,FootMotionSupportHorizontalError," +
-            "FootMotionContactOwnership,FootMotionSupportWeight," +
-            "FootMotionLandingReachEvaluated,FootMotionLandingReachAvailable," +
-            "FootMotionSupportContactAnchorX,FootMotionSupportContactAnchorY,FootMotionSupportContactAnchorZ," +
-            "FootMotionContactPlaneAvailable,FootMotionContactSurfaceIdentity," +
-            "FootMotionContactPlaneNormalX,FootMotionContactPlaneNormalY,FootMotionContactPlaneNormalZ," +
-            "FootContactPlanePenetrationAvailability," +
-            "FootMotionDesiredCorrectionX,FootMotionDesiredCorrectionY,FootMotionDesiredCorrectionZ," +
+            CharacterFootMotionCoreColumns.Schema.Header + "," +
             CharacterFootPathContinuityColumns.Schema.Header + "," +
             CharacterFootLifecycleColumns.Schema.Header + "," +
             CharacterFootOutputStagesColumns.Schema.Header + "," +
@@ -151,8 +120,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             CharacterFootResponseColumns.Schema.Header + "," +
             CharacterFootCurrentSupportColumns.Schema.Header + "," +
             CharacterFootResolvedColumns.Schema.Header + "," +
-            "FootMotionEncodedGoalAvailable,FootMotionEncodedGoalCorrectionX,FootMotionEncodedGoalCorrectionY,FootMotionEncodedGoalCorrectionZ," +
-            "FinalGoalPositionX,FinalGoalPositionY,FinalGoalPositionZ,FinalGoalRotationX,FinalGoalRotationY,FinalGoalRotationZ,FinalGoalRotationW,FinalGoalPositionWeight,FinalGoalRotationWeight,PelvisPositionWeight,PelvisRotationWeight," +
+            CharacterFootGoalColumns.Schema.Header + "," +
             CharacterFootPelvisColumns.Schema.Header + "," +
             CharacterFootSolverColumns.Schema.Header;
         const string GeometryHeader =
@@ -1663,18 +1631,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             CharacterFootGroundPathColumns.Schema.Write(row, in ground);
             CharacterFootSwingMotionDiagnostics motion = foot.FootMotion;
             CharacterFullBodyIkGoal footGoal = foot.Goal;
-            Add(row, motion.State.ToString());
-            Add(row, motion.RejectReason.ToString());
-            Add(row, motion.LandingEventIdentity);
-            Add(row, motion.GroundPathInputIdentity);
-            Add(row, motion.Distance);
-            Add(row, motion.Progress);
-            Add(row, motion.OriginalSole);
-            Add(row, motion.OriginalAnkle);
-            Add(row, foot.SourceAnkleRotation);
-            Add(row, foot.SourceHeelPosition);
-            Add(row, foot.SourceToePosition);
-            Add(row, motion.BaselineSample);
+
             Vector3 motionUp =
                 motion.TargetHeightComponentUp.sqrMagnitude > 0.000001f
                 ? motion.TargetHeightComponentUp.normalized
@@ -1688,8 +1645,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             float baselineSampleAlongUp = Vector3.Dot(
                 motion.BaselineSample,
                 motionUp);
-            Add(row, baselineSampleAlongUp);
-            Add(row, motion.EnvelopeSample);
             float envelopeSampleAlongUp = Vector3.Dot(
                 motion.EnvelopeSample,
                 motionUp);
@@ -1712,13 +1667,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 builderSwingTargetAvailable
                     ? motion.PathCurrentTargetCorrection
                     : default;
-            Add(row, envelopeSampleAlongUp);
-            Add(row, motionFormalFootHeight);
-            Add(row, rawFormalTargetHeight);
-            Add(row, envelopeMinimumCorrection);
-            Add(row, builderSelectedCorrection);
-            Add(row, builderSwingTargetAvailable);
-            Add(row, builderSwingTargetCorrection);
             CharacterFootActualEnvelopeIntersectionFact actualEnvelope =
                 ResolveActualFootEnvelopeIntersection(
                     in ground,
@@ -1735,29 +1683,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                         CharacterFootSwingPathHorizontalAxisState.DegenerateAxis,
                     _ => CharacterFootSwingPathHorizontalAxisState.Available
                 };
-            Add(row, horizontalAxisState.ToString());
-            Add(row, actualEnvelope.ActualFootHorizontalDistance);
-            Add(row, actualEnvelope.BaselineHorizontalDistance);
-            Add(row, actualEnvelope.EnvelopeHorizontalDistance);
-            Add(
-                row,
-                actualEnvelope.ActualFootHorizontalDistance -
-                actualEnvelope.EnvelopeHorizontalDistance);
-            Add(row, actualEnvelope.AxisRegion.ToString());
-            Add(row, actualEnvelope.ClosestPathParameter);
-            Add(row, actualEnvelope.DistanceAlongAxis);
-            Add(row, actualEnvelope.CrossTrackDistance);
-            Add(row, actualEnvelope.CorridorRadius);
-            Add(row, actualEnvelope.WithinGroundPathCorridor);
-            Add(row, actualEnvelope.State.ToString());
-            Add(row, actualEnvelope.CandidateCount);
-            Add(row, actualEnvelope.MinimumHeightAlongUp);
-            Add(row, actualEnvelope.MaximumHeightAlongUp);
-            Add(row, actualEnvelope.HeightSpan);
-            Add(row, actualEnvelope.HasVerticalEdge);
-            Add(row, actualEnvelope.HasMultipleHeights);
-            Add(row, actualEnvelope.Ambiguous);
-            Add(row, actualEnvelope.CounterfactualState.ToString());
             bool actualEnvelopeCorrectionAvailable =
                 actualEnvelope.CounterfactualState ==
                 CharacterFootActualEnvelopeCounterfactualState
@@ -1779,31 +1704,17 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                         actualEnvelopeMinimumCorrection -
                         builderSwingTargetAlongUp)
                     : 0f;
-            Add(row, actualEnvelopeCorrectionAvailable);
-            Add(row, actualEnvelopeMinimumCorrection);
-            Add(row, actualEnvelopeAdvanceAboveBuilderTarget);
-            Add(row, motion.LandingPredictionError);
-
-            Add(row, motion.CorrectedSole);
-            Add(row, motion.CorrectedAnkle);
-            Add(row, motion.PositionWeight);
-            Add(row, motion.RotationWeight);
-            Add(row, motion.ConstraintState.ToString());
-            Add(row, motion.LockResponse.ToString());
-            Add(row, motion.SupportHorizontalError);
-            Add(row, motion.ContactOwnership);
-            Add(row, motion.SupportWeight);
-            Add(row, motion.LandingReachEvaluated);
-            Add(row, motion.LandingReachAvailable);
-            Add(row, motion.SupportContactAnchor);
-            Add(row, motion.ContactPlaneAvailable);
-            Add(row, motion.ContactSurfaceIdentity);
-            Add(row, motion.ContactPlaneNormal);
-            Add(
-                row,
-                ResolvePenetrationAvailability(in frame, in motion, in ik)
-                    .ToString());
-            Add(row, motion.DesiredCorrection);
+            CharacterFootContactPlanePenetrationAvailability penetrationAvailability =
+                ResolvePenetrationAvailability(in frame, in motion, in ik);
+            var motionCoreSource = new CharacterFootMotionCoreCsvSource(
+                in foot, in motion, baselineSampleAlongUp, envelopeSampleAlongUp,
+                motionFormalFootHeight, rawFormalTargetHeight,
+                envelopeMinimumCorrection, builderSelectedCorrection,
+                builderSwingTargetAvailable, builderSwingTargetCorrection,
+                horizontalAxisState, in actualEnvelope,
+                actualEnvelopeCorrectionAvailable, actualEnvelopeMinimumCorrection,
+                actualEnvelopeAdvanceAboveBuilderTarget, penetrationAvailability);
+            CharacterFootMotionCoreColumns.Schema.Write(row, in motionCoreSource);
             CharacterFootPathContinuityColumns.Schema.Write(row, in motion);
             CharacterFootLifecycleColumns.Schema.Write(row, in motion);
             CharacterFootOutputStagesColumns.Schema.Write(row, in motion);
@@ -1814,18 +1725,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             CharacterFootCurrentSupportColumns.Schema.Write(row, in currentSupport);
             CharacterResolvedFootDiagnostics resolved = foot.Resolved;
             CharacterFootResolvedColumns.Schema.Write(row, in resolved);
-            Add(row, footGoal.IsValid);
-            Add(
-                row,
-                footGoal.IsValid
-                    ? footGoal.ComponentPosition - motion.OriginalAnkle
-                    : default);
-            Add(row, foot.Goal.ComponentPosition);
-            Add(row, foot.Goal.ComponentRotation);
-            Add(row, foot.Goal.PositionWeight);
-            Add(row, foot.Goal.RotationWeight);
-            Add(row, frame.PelvisGoal.PositionWeight);
-            Add(row, frame.PelvisGoal.RotationWeight);
+            var goalSource = new CharacterFootGoalCsvSource(
+                in footGoal, motion.OriginalAnkle, frame.PelvisGoal);
+            CharacterFootGoalColumns.Schema.Write(row, in goalSource);
             CharacterFootStrideHipsDiagnostics stride = frame.StrideHips;
             Vector3 expectedPhysicalPelvis = stride.AnimatedPelvisComponentPosition +
                 frame.PelvisGoal.ComponentPosition * frame.PelvisGoal.PositionWeight;

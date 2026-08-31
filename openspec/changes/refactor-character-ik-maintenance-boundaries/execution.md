@@ -276,8 +276,22 @@ PredictionMotion、BodyTrajectory及其Tick/Generation/ResetSequence/AuthorityTi
 
 ## 落点观察与正式动画输入输出列
 
-状态：104列实现完成，Unity与Editor构建0错误，build server已关闭；等待实际回放。
+状态：候选685700e已完成实际Replay和全部1056列迁移验证。
 
 - 将Future Body、当前动画脚、Raw Landing、缓存Observation、本次Query、候选选择与最终命中的69列收进43个typed绑定。缓存观察的QueryPurpose继续与本次Query Request分开，Selected Candidate与最终Accepted Landing也不互相补值。
 - 正式动画采样输出15列与运行输入20列复用同一动画字段定义；输入独有SourceId、ClipBindingIndex、Cycle、Contribution Continuity和Completion仍由Input源拥有。原有可用性条件、无效时的空值/零值和事件采样顺序保持。
 - 删除对应旧Header、手工写行、解析字段和必需列清单。累计1056/1215列迁入绑定，剩余159列及主行组合、格式identity、Runtime证据分组和Reset取证仍待完成。下一比较点为6531023/045658与固定ad3527e/233436。
+
+## 落点观察与正式动画输入输出列的验证封口
+
+- 原包：`Diagnostics/FootPlacementRuns/20260901-051323-526-a68a52c3e0ba4caeaf6cb40ae1c1183b`，唯一原Record完成1044输入/Body、1043采样帧和2086脚行。对045658及固定233436，1191业务列逐值相同；新104列为102精确及2个Surface身份，累计1056列为1040精确及16既有身份列。
+- 缓存Observation、本帧Query、Selected Candidate、最终Accepted Landing的非身份事实分别保持；Formal Output/Input、Input独有身份和Event字段均一致。几何22业务列精确，5身份列映射无冲突。
+- 42项诊断、20447明细及索引、六次1056列实际帧查询和其它正式查询保持；Proof matched1044、DivergentFrameCount0，输入/Body/时钟及1044帧数组一致。Unity已归还、Edit/Idle、failure空、Console0。
+
+## Foot Motion Core与最终Goal列
+
+状态：104列实现完成，Unity与Editor最终构建0错误，build server已关闭；等待实际回放。
+
+- 将Foot Motion核心89列收进62个typed绑定。原Envelope交集、路径走廊、Builder目标、接触面与穿透可用性仍在原Sampler顺序计算一次，绑定只接收完成后的本帧证据，不进入Runtime控制链。
+- 将编码Goal和最终Foot/Pelvis Goal权重15列收进8个typed绑定。Goal只读取正式Goal、原Ankle及Pelvis Goal，不重选目标、不修改权重，也不把Goal冒充Physical结果。
+- 删除两个区段的旧Header、逐项Add、解析字段和必需列清单；原列名、顺序、值与格式identity保持。累计1160/1215列迁入绑定，剩余55列为身份/Foot状态/Step选择、RootLocalLanding与Action输入；之后仍需统一主行组合、格式identity、Runtime证据分组和Reset取证。

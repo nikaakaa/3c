@@ -2,7 +2,7 @@
 
 ## 已批准调用链
 
-`原动画Pose -> 双脚唯一Resolved目标 -> 共同Pelvis期望 -> 统一Reach边界与一次响应 -> 唯一GoalSet/FBBIK`
+`原动画Pose -> 双脚唯一Resolved目标 -> 共同Pelvis期望 -> 一次骨盆响应与独立Reach观察 -> 唯一GoalSet/FBBIK`
 
 只替换三个明确业务决定，不恢复212054卸载，不调整已认可的Foot位置、旋转或查询算法。
 
@@ -26,31 +26,15 @@ Resolved有效目标与现有Goal作者权重语义一致：作者0不让不可�
 
 Runtime用不可变`CharacterFootPelvisHeightTarget`保存本次真正消费的Component Up、左右动画Sole、左右按正式Goal权重解析的目标Sole、两份最低高度和有符号请求。输入仍来自本帧Resolved→既有Goal编码/基线混合，不来自最后Physical Pose；保留这一输入路径也保持作者0及极小权重的原编码语义。`HeightTargetAvailable=false`明确表示该帧未消费高度公式，零字段仅为无测量占位；后续Reach不能反写这些输入。旧RawPelvisDelta、RootRelativeGroundTargetAlongUp、SoleClearanceLiftAlongUp和UnclampedSpringTarget命名删除，以HeightTarget与RequestedOffsetAlongUp表达真实用途。只被旧下降地形公式使用的Stride私有SwingTimeToLanding传递同时删除，正式Foot Motion时钟不动。
 
-## 第3步：一次处理可达性与响应
+## 第16步：撤除Reach硬执行
 
-同帧typed Reach Request提供Hip、有效Ankle目标、真实腿长、正式安全余量和lineage。全部请求腿继续形成逐腿及交集观察。第15步实验仅由Accepted且Goal有效的Primary Support提供硬区间，进入现有Pelvis模块后一次用于目标和响应合法性。原动画弯曲余量可形成目标偏好，但不再缩小另一份最终输出硬区间。
+用户明确要求删除当前Reach硬执行。保留共同高度目标、软姿态偏好、3Hz及既有Handoff／背向速度处理。唯一Spring只积分preferredTarget，不再接收可达区间。
 
-保留一份根Bank内的Spring状态、原频率与Handoff/Velocity Reset业务。不增加第二响应或新速率参数。最终输出若触及主支撑硬边界，统一阶段记录夹紧并清除继续向外的速度；之后Module只消费结果，不再次改写Pelvis输出。无交集、横向本已不可达等情况继续发布明确typed观察；主支撑保留原Foot Reach保护，非主脚则实测原Goal与最终骨骼差，不能以FBBIK伸直或降低未授权权重掩盖。
+同帧Reach Request仍计算逐腿及全腿交集，类型改为ReachObservation。Primary仅说明支撑身份，不再提供执行权限。删除BoundarySelection、被执行的公共上下界、三个HardReach动作字段、Foot Goal clamp标志／距离；不保留恒值兼容字段。积分前完成吸零用IntegratedOutput表达，不再称UnconstrainedOutput。
 
-此结构不能保证所有几何冲突都无突降；它先减少不必要目标上抬与动画姿态偏好造成的硬压，再用Replay评估剩余真实约束。
+Reach不夹目标、不夹输出、不清边界速度、不阻止骨盆Release完成、不强开骨盆权重。原请求存在与否决定的0.1毫米／5毫米可见门不变。Module删除ClampFootGoalToReach及调用；原Resolved目标直接进入唯一GoalSet。每脚Landing完成仍检查本腿实际加权位移可达性，不把未知或不可达填为成功。
 
-### 第3步的实际输入、数学和事实
-
-Module只把原有IsLandingReachCandidate准入结果、Resolved的左右typed Reach Request、Primary Support、原Pose和第2步有效目标交给一次ResolvePelvis；不再调用ApplyLandingReach或另写Spring Output。Foot FinalizeLanding、唯一Goal编码和FBBIK顺序保持；末端Goal夹紧与骨盆硬约束使用同一Primary角色授权，不因非主脚观测不可达而挪Goal。
-
-每腿硬半径严格为`LegLength-MinimumCompressionReserve`，不沿用旧辅助函数按水平距离放宽安全余量的做法。令`v=Hip-TargetAnkle`、`y=dot(v,up)`、`h2=|v-up*y|²`，若`radius²-h2<0`则为HorizontalUnreachable，否则沿Up的合法平移区间为`[-y-sqrt(radius²-h2), -y+sqrt(radius²-h2)]`。Primary只在原Accepted资格且Goal有效时参与；有同侧正式Foot Request则复用其几何，无第二份同腿硬区间。
-
-Reach Role可同时为FootTarget与PrimarySupport，后者只标该腿的优先角色，不改写输入来源。复用Foot Request时EventIdentity属于该Request，公共Primary Event独立保留；两者不能强制同值。只有独立Primary输入才以其正式Event构造几何，不能把它反报成Foot Motion已请求的Landing Reach。
-
-Status与Intersection仅报告全部请求腿的几何观察；Selection只允许None或PrimarySupport。合法主支撑区间不再与非主脚相交，也不受非主脚HorizontalUnreachable否决。每脚LandingReachAvailable独立检查本腿区间是否包含Response.Output×PositionWeight，不能从公共Status、Selection或另一腿推断。末端Goal投影权限取Primary角色而非区间Available，因此主脚横向不可达时原保护仍可执行。
-
-Pelvis Release保留真实ComponentUp、全部逐腿观察与原Spring回零，但无硬区间；目标夹紧、输出夹紧、边界清速度、完成阻拦及强制可见权重均不执行。无上一Spring时直接Rejected，不再建立LandingReach骨盆状态。HasLandingRequests仍只按真实请求决定原0.1毫米／5毫米可见门，不能通过删观察顺带改权重。非主脚目标与权重保持原值；若真实腿长不足，按Physical Ankle、Heel/Toe、骨长及现有质量规则裁决，而非假称Solver必能达到。
-
-原动画压缩量仍为`LegLength-distance(AnimatedHip,AnimatedAnkle)`，原姿态区间计算只生成PosturePreference目标。它不可达时发布Evaluated=true/Available=false，共同HeightTarget仍是独立合法需求；不产生另一份输出夹紧。未消费姿态偏好的Release/Rejected帧为Evaluated=false，零字段不是测量。
-
-唯一AdvancePelvisResponse先把preferred target限制到选中的硬边界，在原Handoff条件下保留或清除背离目标的旧速度，再按原频率执行一次Critical Spring，最后只对硬边界夹紧一次并清除朝外速度。区间先按正式Pelvis PositionWeight换算到Spring的未加权标量域；真正应用的位移仍为Output×PositionWeight。必须输出的安全平移不受5毫米显示门掩盖；非安全必需的小量仍保留原可见门，Release完成仍按既有GeometryEpsilon吸零。
-
-Runtime发布完整左右Reach角色/输入/区间、公共交集与选择、PosturePreference实际输入、一次响应前后和硬夹紧事实。旧SupportReach字段与WithLandingReachOutput命名删除，不以旧字段代表新硬边界。ResponseEvaluated=false只表示本帧无需推进Spring，已计算Reach不因此变成无效；对未运行公式或响应不伪造零测量。非单位作者权重、横向不可达、无交集和无上一Spring等边界需按实际Replay覆盖报告，不由本轮全权重样本冒称全覆盖。
+本步不修改Contact／Swing／Anchor／Rotation、Bend或Vendor Solver。PelvisPreSolveTranslation仍是求解前平移，不是最终Pelvis pin；FBBIK映射造成的实际骨盆／脚误差继续测量，不以业务夹脚、降权或恢复删除的硬路径隐藏。普通记录追加到原实验MD，原采样原位保留。
 
 ## 不变项
 

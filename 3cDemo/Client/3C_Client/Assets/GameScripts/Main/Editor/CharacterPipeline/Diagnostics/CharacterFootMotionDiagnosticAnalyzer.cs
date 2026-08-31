@@ -11,6 +11,7 @@ using Newtonsoft.Json.Linq;
 using ThirdPersonCharacter.Pipeline.Animation;
 using ThirdPersonCharacter.Pipeline.Presentation;
 using UnityEngine;
+using static ThirdPersonCharacter.Pipeline.Editor.CharacterFootCsvValues;
 
 namespace ThirdPersonCharacter.Pipeline.Editor
 {
@@ -308,15 +309,15 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                         ["LockWeight"] = current.CurrentLockRequestWeight,
                         ["MotionPositionWeight"] = current.MotionPositionWeight,
                         ["MotionRotationWeight"] = current.MotionRotationWeight,
-                        ["ResolvedPositionWeight"] = current.ResolvedPositionWeight,
-                        ["ResolvedRotationWeight"] = current.ResolvedRotationWeight,
+                        ["ResolvedPositionWeight"] = current.Resolved.PositionWeight,
+                        ["ResolvedRotationWeight"] = current.Resolved.RotationWeight,
                         ["FinalGoalPositionWeight"] = current.FinalGoalPositionWeight,
                         ["FinalGoalRotationWeight"] = current.FinalGoalRotationWeight
                     },
                     new SortedDictionary<string, bool>(StringComparer.Ordinal)
                     {
                         ["formalWeightPolicyConsistent"] = true,
-                        ["ready"] = current.ResolvedOutcome == "Ready",
+                        ["ready"] = current.Resolved.Outcome == "Ready",
                         ["contactAnchorAvailable"] = current.CurrentContactAnchorAvailable
                     }));
                 if (actionOccupied)
@@ -342,9 +343,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                             ["MotionRotationWeight"] =
                                 current.MotionRotationWeight,
                             ["ResolvedPositionWeight"] =
-                                current.ResolvedPositionWeight,
+                                current.Resolved.PositionWeight,
                             ["ResolvedRotationWeight"] =
-                                current.ResolvedRotationWeight
+                                current.Resolved.RotationWeight
                         },
                         new SortedDictionary<string, bool>(
                             StringComparer.Ordinal)
@@ -374,7 +375,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     current.PreviousResponseOutputAvailable &&
                     current.PlantInterpolationEvaluated &&
                     current.CorrectionResponseEvaluated &&
-                    current.ResolvedOutcome == "Ready";
+                    current.Resolved.Outcome == "Ready";
                 if (reentryGeometryAvailable)
                 {
                     Vector3 capturedOutput = current.PlantSelectedWorldTarget +
@@ -402,7 +403,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                                 Vector3.Distance(current.PreviousResponseOutputPoint,
                                     current.ResponseOutputPoint),
                             ["ResponseToFinalSoleStepMeters"] = Vector3.Distance(
-                                current.ResponseOutputPoint, current.ResolvedFinalSole)
+                                current.ResponseOutputPoint, current.Resolved.FinalSole)
                         },
                         new SortedDictionary<string, bool>(StringComparer.Ordinal)
                         {
@@ -1431,8 +1432,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     !current.HasAnchor ||
                     !current.PlantInterpolationEvaluated ||
                     !current.PreviousResponseOutputAvailable ||
-                    previous.ResolvedOutcome != "Ready" ||
-                    current.ResolvedOutcome != "Ready" ||
+                    previous.Resolved.Outcome != "Ready" ||
+                    current.Resolved.Outcome != "Ready" ||
                     current.ComponentUp.sqrMagnitude <=
                     RuntimeGeometryEpsilon * RuntimeGeometryEpsilon)
                 {
@@ -1444,17 +1445,17 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 Vector3 originalSoleToAnchor =
                     current.Anchor - current.OriginalSole;
                 Vector3 previousVisibleToAnchor =
-                    current.Anchor - previous.ResolvedFinalSole;
+                    current.Anchor - previous.Resolved.FinalSole;
                 Vector3 previousResponseToAnchor =
                     current.Anchor - current.PreviousResponseOutputPoint;
                 Vector3 desiredToResponse =
                     current.ResponseOutputPoint - current.DesiredOutputPoint;
                 Vector3 previousVisibleToFinalOutput =
-                    current.ResolvedFinalSole - previous.ResolvedFinalSole;
+                    current.Resolved.FinalSole - previous.Resolved.FinalSole;
                 Vector3 responseOutputToAnchor =
                     current.Anchor - current.ResponseOutputPoint;
                 Vector3 finalOutputToAnchor =
-                    current.Anchor - current.ResolvedFinalSole;
+                    current.Anchor - current.Resolved.FinalSole;
                 Vector3 expectedCapturedResidual =
                     current.PreviousResponseOutputPoint -
                     current.PlantSelectedWorldTarget;
@@ -1612,7 +1613,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     originalSole = CharacterFootVectorFact.From(
                         current.OriginalSole),
                     previousVisibleOutput = CharacterFootVectorFact.From(
-                        previous.ResolvedFinalSole),
+                        previous.Resolved.FinalSole),
                     previousResponseOutput = CharacterFootVectorFact.From(
                         current.PreviousResponseOutputPoint),
                     capturedBeforeDecay = CharacterFootVectorFact.From(
@@ -1624,7 +1625,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     responseOutput = CharacterFootVectorFact.From(
                         current.ResponseOutputPoint),
                     finalOutput = CharacterFootVectorFact.From(
-                        current.ResolvedFinalSole),
+                        current.Resolved.FinalSole),
                     plantResidualCaptureReason =
                         current.PlantResidualCaptureReason,
                     responseDomain = ResponseDomainFact(current),
@@ -2696,7 +2697,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                         ? frames[i - 1]
                         : null;
                 bool contactEventChanged = previousCommitted != null &&
-                    previousCommitted.ResolvedContactAvailable &&
+                    previousCommitted.Resolved.ContactAvailable &&
                     (previousCommitted.ConstraintState == "Landing" ||
                      previousCommitted.ConstraintState == "Locked" ||
                      previousCommitted.ConstraintState == "Releasing") &&
@@ -2715,18 +2716,18 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     current.PreTransitionTarget == "Landing" &&
                     current.PreTransitionAnchorCommand == "Create" &&
                     current.ConstraintState == "Landing" &&
-                    current.ResolvedSupportTarget.Available &&
-                    current.ResolvedSupportTarget.PositionEvent ==
+                    current.Resolved.SupportTarget.Available &&
+                    current.Resolved.SupportTarget.PositionEvent ==
                     current.FormalCurrentContactEventIdentity &&
-                    current.ResolvedSupportTarget.NormalEvent ==
+                    current.Resolved.SupportTarget.NormalEvent ==
                     current.FormalCurrentContactEventIdentity &&
                     current.SelectedSupportTarget.Available &&
                     current.SelectedSupportTarget.PositionEvent ==
                     current.FormalCurrentContactEventIdentity &&
                     current.SelectedSupportTarget.NormalEvent ==
                     current.FormalCurrentContactEventIdentity &&
-                    current.ResolvedContactAvailable &&
-                    current.ResolvedContactEventIdentity ==
+                    current.Resolved.ContactAvailable &&
+                    current.Resolved.ContactEventIdentity ==
                     current.FormalCurrentContactEventIdentity &&
                     current.PlantTargetEventIdentity ==
                     current.FormalCurrentContactEventIdentity;
@@ -5482,7 +5483,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                             (!value.PreviousResponseOutputAvailable ||
                              !value.PlantInterpolationEvaluated ||
                              !value.CorrectionResponseEvaluated ||
-                             value.ResolvedOutcome != "Ready")),
+                             value.Resolved.Outcome != "Ready")),
                     stableSwingCorrectionResponseCadenceCount = events.Count(
                         value => value.kind ==
                                  "StableSwingCorrectionResponseCadence"),
@@ -5586,7 +5587,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 resetInterpolation = frame.PostTransitionResetInterpolation
             };
 
-        static object SupportTargetFact(SupportTargetFrame target) => new
+        static object SupportTargetFact(CharacterFootSupportTargetSample target) => new
         {
             available = target.Available,
             frame = target.Frame.ToString(CultureInfo.InvariantCulture),
@@ -5668,6 +5669,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 if (!indices.TryAdd(names[i], i))
                     throw new InvalidDataException($"Foot Motion samples CSV has duplicate column '{names[i]}'.");
             RequireColumns(indices);
+            CharacterFootCsvReader<CharacterFootResolvedSample> resolvedColumns =
+                CharacterFootResolvedColumns.Schema.Bind(indices);
             var unique = new Dictionary<(int frame, string side), FootFrame>();
             int rawRows = 0;
             string line;
@@ -5683,7 +5686,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                         $"Foot Motion samples CSV row {rawRows + 1} has " +
                         $"{cells.Length} columns; expected {names.Length}.");
                 }
-                FootFrame frame = ParseFrame(indices, cells);
+                FootFrame frame = ParseFrame(indices, cells, resolvedColumns);
                 reader.Include(frame.Frame, frame.Side);
                 var key = (frame.Frame, frame.Side);
                 if (!unique.TryAdd(key, frame))
@@ -6055,7 +6058,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
 
         static FootFrame ParseFrame(
             Dictionary<string, int> indices,
-            string[] cells)
+            string[] cells,
+            CharacterFootCsvReader<CharacterFootResolvedSample> resolvedColumns)
         {
             string Cell(string name) =>
                 indices.TryGetValue(name, out int index) && index < cells.Length
@@ -6134,8 +6138,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 Requested = Int(prefix + "Requested") != 0,
                 Available = Int(prefix + "Available") != 0,
             };
-            SupportTargetFrame SupportTarget(string prefix) =>
-                new SupportTargetFrame
+            CharacterFootSupportTargetSample SupportTarget(string prefix) =>
+                new CharacterFootSupportTargetSample
                 {
                     Available = Int(prefix + "Available") != 0,
                     Frame = Ulong(prefix + "FrameSequence"),
@@ -6872,66 +6876,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     Vector("CurrentSupportSelectedSupportNormalBeforeNormalization"),
                 CurrentSupportTarget =
                     SupportTarget("CurrentSupportTarget"),
-                ResolvedFrame = Ulong("ResolvedFrameSequence"),
-                ResolvedCompletion = Ulong("ResolvedCompletionIdentity"),
-                ResolvedRigId = Cell("ResolvedRigId"),
-                ResolvedRigRevision = Cell("ResolvedRigRevision"),
-                ResolvedSide = Cell("ResolvedSide"),
-                ResolvedOutcome = Cell("ResolvedOutcome"),
-                ResolvedFinalSole = Vector("ResolvedFinalSole"),
-                ResolvedEffectiveSole = Vector("ResolvedEffectiveSole"),
-                ResolvedGoalTargetAnkle = Vector("ResolvedGoalTargetAnkle"),
-                ResolvedGoalTargetRotation = Rotation("ResolvedGoalTargetRotation"),
-                ResolvedEffectiveAnkle = Vector("ResolvedEffectiveAnkle"),
-                ResolvedEffectiveRotation = Rotation("ResolvedEffectiveRotation"),
-                ResolvedEffectiveHeel = Vector("ResolvedEffectiveHeel"),
-                ResolvedEffectiveToe = Vector("ResolvedEffectiveToe"),
-                ResolvedEffectiveSoleFromContacts =
-                    Vector("ResolvedEffectiveSoleFromContacts"),
-                ResolvedSourceSoleForward =
-                    Vector("ResolvedSourceSoleForward"),
-                ResolvedSourceSoleFrameLocalRotation =
-                    Rotation("ResolvedSourceSoleFrameLocalRotation"),
-                ResolvedGoalTargetCorrection =
-                    Vector("ResolvedGoalTargetCorrection"),
-                ResolvedEffectiveSoleCorrection =
-                    Vector("ResolvedEffectiveSoleCorrection"),
-                ResolvedPositionWeight = Float("ResolvedPositionWeight"),
-                ResolvedRotationWeight = Float("ResolvedRotationWeight"),
-                ResolvedSupportTarget =
-                    SupportTarget("ResolvedSupportTarget"),
-                ResolvedContactAvailable =
-                    Int("ResolvedContactAvailable") != 0,
-                ResolvedContactEventIdentity =
-                    Ulong("ResolvedContactEventIdentity"),
-                ResolvedContactPoint = Vector("ResolvedContactPoint"),
-                ResolvedContactOwnership =
-                    Float("ResolvedContactOwnership"),
-                ResolvedSupportEligibility =
-                    Cell("ResolvedSupportEligibility"),
-                ResolvedSupportWeight = Float("ResolvedSupportWeight"),
-                ResolvedSupportIntentWeight =
-                    Float("ResolvedSupportIntentWeight"),
-                ResolvedSupportHorizontalError =
-                    Float("ResolvedSupportHorizontalError"),
-                ResolvedSupportEventIdentity =
-                    Ulong("ResolvedSupportEventIdentity"),
-                ResolvedPelvisReachAvailable =
-                    Int("ResolvedPelvisReachAvailable") != 0,
-                ResolvedPelvisReachEventIdentity =
-                    Ulong("ResolvedPelvisReachEventIdentity"),
-                ResolvedPelvisReachPoint = Vector("ResolvedPelvisReachPoint"),
-                ResolvedLandingReachAvailable =
-                    Int("ResolvedLandingReachAvailable") != 0,
-                ResolvedLandingReachEventIdentity =
-                    Ulong("ResolvedLandingReachEventIdentity"),
-                ResolvedLandingReachHip = Vector("ResolvedLandingReachHip"),
-                ResolvedLandingReachTargetAnkle =
-                    Vector("ResolvedLandingReachTargetAnkle"),
-                ResolvedLandingReachLegLength =
-                    Float("ResolvedLandingReachLegLength"),
-                ResolvedLandingReachMinimumCompressionReserve =
-                    Float("ResolvedLandingReachMinimumCompressionReserve"),
+                Resolved = resolvedColumns.Read(cells),
                 EncodedGoalAvailable =
                     Int("FootMotionEncodedGoalAvailable") != 0,
                 EncodedGoalPosition = Vector("FinalGoalPosition"),
@@ -8300,7 +8245,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         }
 
         static void RequireSupportTarget(
-            SupportTargetFrame target,
+            CharacterFootSupportTargetSample target,
             string side,
             string prefix)
         {
@@ -9004,8 +8949,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     frame.PostTransitionSuppressOutput ||
                     frame.PostTransitionResetInterpolation ||
                     frame.PreTransitionSuppressOutput ||
-                    (frame.ResolvedOutcome != "CurrentSupportUnavailable" &&
-                     frame.ResolvedOutcome != "SupportTargetUnavailable"))
+                    (frame.Resolved.Outcome != "CurrentSupportUnavailable" &&
+                     frame.Resolved.Outcome != "SupportTargetUnavailable"))
                 {
                     throw new InvalidDataException(
                         $"Foot Motion unevaluated Post Transition is inconsistent " +
@@ -9023,7 +8968,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 frame.PostTransitionAnchorCommand,
                 "FootMotionPostTransitionAnchorCommand");
             if (frame.PostTransitionSource != frame.PreTransitionTarget ||
-                frame.ResolvedOutcome == "Ready" &&
+                frame.Resolved.Outcome == "Ready" &&
                 frame.ConstraintState != frame.PostTransitionTarget)
             {
                 throw new InvalidDataException(
@@ -9041,18 +8986,18 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     $"Frame={frame.Frame} Side={frame.Side}.");
             float expectedRotation = 0f;
             float expectedPosition = 0f;
-            if (frame.ResolvedOutcome == "Ready")
+            if (frame.Resolved.Outcome == "Ready")
             {
                 expectedRotation = frame.CurrentContactAnchorAvailable
                     ? formal * frame.CurrentLockRequestWeight
                     : 0f;
                 expectedPosition = formal;
-                if (frame.ResolvedContactAvailable !=
+                if (frame.Resolved.ContactAvailable !=
                     frame.CurrentContactAnchorAvailable ||
-                    frame.ResolvedContactAvailable &&
-                    (frame.ResolvedContactEventIdentity !=
+                    frame.Resolved.ContactAvailable &&
+                    (frame.Resolved.ContactEventIdentity !=
                      frame.CurrentContactAnchorEventIdentity ||
-                     Vector3.Distance(frame.ResolvedContactPoint,
+                     Vector3.Distance(frame.Resolved.ContactPoint,
                          frame.CurrentContactAnchorPoint) > PositionNoiseFloor))
                 {
                     throw new InvalidDataException(
@@ -9060,7 +9005,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                         $"Frame={frame.Frame} Side={frame.Side}.");
                 }
             }
-            bool hasGoal = frame.ResolvedOutcome == "Ready" &&
+            bool hasGoal = frame.Resolved.Outcome == "Ready" &&
                 (expectedPosition > RuntimeGeometryEpsilon ||
                  expectedRotation > RuntimeGeometryEpsilon);
             float expectedGoalPosition = hasGoal ? expectedPosition : 0f;
@@ -9069,9 +9014,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     TimeEpsilon ||
                 Math.Abs(frame.MotionRotationWeight - expectedRotation) >
                     TimeEpsilon ||
-                Math.Abs(frame.ResolvedPositionWeight - expectedPosition) >
+                Math.Abs(frame.Resolved.PositionWeight - expectedPosition) >
                     TimeEpsilon ||
-                Math.Abs(frame.ResolvedRotationWeight - expectedRotation) >
+                Math.Abs(frame.Resolved.RotationWeight - expectedRotation) >
                     TimeEpsilon ||
                 Math.Abs(frame.FinalGoalPositionWeight -
                     expectedGoalPosition) > TimeEpsilon ||
@@ -9137,50 +9082,50 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         static void RequireResolvedFoot(FootFrame frame)
         {
             RequireEnum<CharacterFootResolvedOutcome>(
-                frame.ResolvedOutcome,
+                frame.Resolved.Outcome,
                 "ResolvedOutcome");
             RequireSupportTarget(
-                frame.ResolvedSupportTarget,
+                frame.Resolved.SupportTarget,
                 frame.Side,
                 "ResolvedSupportTarget");
-            if (frame.ResolvedFrame != (ulong)frame.Frame ||
-                frame.ResolvedCompletion != frame.CompletionIdentity ||
-                frame.ResolvedSide != frame.Side ||
+            if (frame.Resolved.Frame != (ulong)frame.Frame ||
+                frame.Resolved.Completion != frame.CompletionIdentity ||
+                frame.Resolved.Side != frame.Side ||
                 string.IsNullOrWhiteSpace(frame.ProfileId) ||
                 string.IsNullOrWhiteSpace(frame.ProfileRevision) ||
-                string.IsNullOrWhiteSpace(frame.ResolvedRigId) ||
-                string.IsNullOrWhiteSpace(frame.ResolvedRigRevision) ||
-                !FiniteVector(frame.ResolvedFinalSole) ||
-                !FiniteVector(frame.ResolvedEffectiveSole) ||
-                !FiniteVector(frame.ResolvedGoalTargetAnkle) ||
-                !FiniteVector(frame.ResolvedEffectiveAnkle) ||
-                !FiniteVector(frame.ResolvedEffectiveHeel) ||
-                !FiniteVector(frame.ResolvedEffectiveToe) ||
-                !FiniteVector(frame.ResolvedEffectiveSoleFromContacts) ||
-                !FiniteVector(frame.ResolvedSourceSoleForward) ||
-                !FiniteRotation(frame.ResolvedGoalTargetRotation) ||
-                !FiniteRotation(frame.ResolvedEffectiveRotation) ||
-                !FiniteRotation(frame.ResolvedSourceSoleFrameLocalRotation) ||
-                !float.IsFinite(frame.ResolvedPositionWeight) ||
-                frame.ResolvedPositionWeight < 0f ||
-                frame.ResolvedPositionWeight > 1f ||
-                !float.IsFinite(frame.ResolvedRotationWeight) ||
-                frame.ResolvedRotationWeight < 0f ||
-                frame.ResolvedRotationWeight > 1f ||
+                string.IsNullOrWhiteSpace(frame.Resolved.RigId) ||
+                string.IsNullOrWhiteSpace(frame.Resolved.RigRevision) ||
+                !FiniteVector(frame.Resolved.FinalSole) ||
+                !FiniteVector(frame.Resolved.EffectiveSole) ||
+                !FiniteVector(frame.Resolved.GoalTargetAnkle) ||
+                !FiniteVector(frame.Resolved.EffectiveAnkle) ||
+                !FiniteVector(frame.Resolved.EffectiveHeel) ||
+                !FiniteVector(frame.Resolved.EffectiveToe) ||
+                !FiniteVector(frame.Resolved.EffectiveSoleFromContacts) ||
+                !FiniteVector(frame.Resolved.SourceSoleForward) ||
+                !FiniteRotation(frame.Resolved.GoalTargetRotation) ||
+                !FiniteRotation(frame.Resolved.EffectiveRotation) ||
+                !FiniteRotation(frame.Resolved.SourceSoleFrameLocalRotation) ||
+                !float.IsFinite(frame.Resolved.PositionWeight) ||
+                frame.Resolved.PositionWeight < 0f ||
+                frame.Resolved.PositionWeight > 1f ||
+                !float.IsFinite(frame.Resolved.RotationWeight) ||
+                frame.Resolved.RotationWeight < 0f ||
+                frame.Resolved.RotationWeight > 1f ||
                 Vector3.Distance(
-                    frame.ResolvedEffectiveSoleFromContacts,
-                    (frame.ResolvedEffectiveHeel + frame.ResolvedEffectiveToe) *
+                    frame.Resolved.EffectiveSoleFromContacts,
+                    (frame.Resolved.EffectiveHeel + frame.Resolved.EffectiveToe) *
                     0.5f) > PositionNoiseFloor)
             {
                 throw new InvalidDataException(
                     "Foot Motion Resolved facts are inconsistent.");
             }
-            if (frame.ResolvedOutcome != "Ready")
+            if (frame.Resolved.Outcome != "Ready")
             {
-                if (frame.ResolvedSupportTarget.Available ||
-                    frame.ResolvedPositionWeight != 0f ||
-                    frame.ResolvedRotationWeight != 0f ||
-                    frame.ResolvedGoalTargetCorrection.sqrMagnitude != 0f)
+                if (frame.Resolved.SupportTarget.Available ||
+                    frame.Resolved.PositionWeight != 0f ||
+                    frame.Resolved.RotationWeight != 0f ||
+                    frame.Resolved.GoalTargetCorrection.sqrMagnitude != 0f)
                 {
                     throw new InvalidDataException(
                         "Foot Motion unavailable Resolved output is not zeroed.");
@@ -9194,13 +9139,13 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             }
             Vector3 expectedEffectiveSole = Vector3.LerpUnclamped(
                 frame.OriginalSole,
-                frame.ResolvedFinalSole,
-                frame.ResolvedPositionWeight);
+                frame.Resolved.FinalSole,
+                frame.Resolved.PositionWeight);
             Vector3 expectedEffectiveSoleCorrection =
-                frame.ResolvedEffectiveSoleFromContacts - frame.OriginalSole;
+                frame.Resolved.EffectiveSoleFromContacts - frame.OriginalSole;
             Vector3 forward = Vector3.ProjectOnPlane(
-                frame.ResolvedSourceSoleForward,
-                frame.ResolvedSupportTarget.Normal);
+                frame.Resolved.SourceSoleForward,
+                frame.Resolved.SupportTarget.Normal);
             if (forward.sqrMagnitude <=
                 RuntimeGeometryEpsilon * RuntimeGeometryEpsilon)
             {
@@ -9209,16 +9154,16 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             }
             Quaternion targetSoleRotation = LookRotation(
                 forward.normalized,
-                frame.ResolvedSupportTarget.Normal);
+                frame.Resolved.SupportTarget.Normal);
             Quaternion expectedGoalRotation = NormalizeRotation(
                 MultiplyRotation(
                     targetSoleRotation,
                     InverseRotation(
-                        frame.ResolvedSourceSoleFrameLocalRotation)));
+                        frame.Resolved.SourceSoleFrameLocalRotation)));
             Quaternion expectedEffectiveRotation = SlerpRotation(
                 frame.SourceAnkleRotation,
                 expectedGoalRotation,
-                frame.ResolvedRotationWeight);
+                frame.Resolved.RotationWeight);
             Quaternion rotationDelta = NormalizeRotation(
                 MultiplyRotation(
                     expectedEffectiveRotation,
@@ -9227,34 +9172,34 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 RotateVector(
                     rotationDelta,
                     frame.OriginalSole - frame.OriginalAnkle);
-            Vector3 expectedGoalAnkle = frame.ResolvedPositionWeight >
+            Vector3 expectedGoalAnkle = frame.Resolved.PositionWeight >
                                         RuntimeGeometryEpsilon
                 ? frame.OriginalAnkle +
                   (expectedEffectiveAnkle - frame.OriginalAnkle) /
-                  frame.ResolvedPositionWeight
+                  frame.Resolved.PositionWeight
                 : frame.OriginalAnkle;
-            if (!frame.ResolvedSupportTarget.Available ||
+            if (!frame.Resolved.SupportTarget.Available ||
                 Vector3.Distance(
-                    frame.ResolvedGoalTargetCorrection,
-                    frame.ResolvedFinalSole - frame.OriginalSole) >
+                    frame.Resolved.GoalTargetCorrection,
+                    frame.Resolved.FinalSole - frame.OriginalSole) >
                 PositionNoiseFloor ||
                 Vector3.Distance(
-                    frame.ResolvedEffectiveSole,
+                    frame.Resolved.EffectiveSole,
                     expectedEffectiveSole) > PositionNoiseFloor ||
                 Vector3.Distance(
-                    frame.ResolvedEffectiveSoleCorrection,
+                    frame.Resolved.EffectiveSoleCorrection,
                     expectedEffectiveSoleCorrection) > PositionNoiseFloor ||
                 RotationAngleDegrees(
-                    frame.ResolvedGoalTargetRotation,
+                    frame.Resolved.GoalTargetRotation,
                     expectedGoalRotation) > RotationNoiseFloorDegrees ||
                 RotationAngleDegrees(
-                    frame.ResolvedEffectiveRotation,
+                    frame.Resolved.EffectiveRotation,
                     expectedEffectiveRotation) > RotationNoiseFloorDegrees ||
                 Vector3.Distance(
-                    frame.ResolvedEffectiveAnkle,
+                    frame.Resolved.EffectiveAnkle,
                     expectedEffectiveAnkle) > PositionNoiseFloor ||
                 Vector3.Distance(
-                    frame.ResolvedGoalTargetAnkle,
+                    frame.Resolved.GoalTargetAnkle,
                     expectedGoalAnkle) > PositionNoiseFloor)
             {
                 throw new InvalidDataException(
@@ -9345,15 +9290,15 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 PelvisClose(reach.IntersectionMaximumAlongUp, intersectionMaximum), frame, "reach observation");
             PelvisLegFrame leg = frame.Side == "Left" ? reach.Left : reach.Right;
             bool primaryExpected = frame.StrideState == "Accepted" && frame.StrideSupportSide == frame.Side &&
-                frame.ResolvedPositionWeight > RuntimeGeometryEpsilon;
+                frame.Resolved.PositionWeight > RuntimeGeometryEpsilon;
             RequirePelvis(leg.PrimarySupport == primaryExpected, frame, "primary observation role");
             if (leg.FootTarget)
-                RequirePelvis(frame.ResolvedLandingReachAvailable &&
-                    leg.EventIdentity == frame.ResolvedLandingReachEventIdentity &&
-                    Vector3.Distance(leg.Hip, frame.ResolvedLandingReachHip) <= RuntimeGeometryEpsilon &&
-                    Vector3.Distance(leg.TargetAnkle, frame.ResolvedLandingReachTargetAnkle) <= RuntimeGeometryEpsilon &&
-                    PelvisClose(leg.LegLength, frame.ResolvedLandingReachLegLength) &&
-                    PelvisClose(leg.MinimumCompressionReserve, frame.ResolvedLandingReachMinimumCompressionReserve), frame, "Foot request lineage");
+                RequirePelvis(frame.Resolved.LandingReachAvailable &&
+                    leg.EventIdentity == frame.Resolved.LandingReachEventIdentity &&
+                    Vector3.Distance(leg.Hip, frame.Resolved.LandingReachHip) <= RuntimeGeometryEpsilon &&
+                    Vector3.Distance(leg.TargetAnkle, frame.Resolved.LandingReachTargetAnkle) <= RuntimeGeometryEpsilon &&
+                    PelvisClose(leg.LegLength, frame.Resolved.LandingReachLegLength) &&
+                    PelvisClose(leg.MinimumCompressionReserve, frame.Resolved.LandingReachMinimumCompressionReserve), frame, "Foot request lineage");
             if (leg.PrimarySupport)
             {
                 RequirePelvis(frame.PelvisHeightTarget.Available && frame.PrimarySupportAvailable &&
@@ -9604,23 +9549,23 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     $"Frame={frame.Frame} Side={frame.Side}.");
             }
             bool resolvedReachConsistent =
-                float.IsFinite(frame.ResolvedLandingReachLegLength) &&
+                float.IsFinite(frame.Resolved.LandingReachLegLength) &&
                 float.IsFinite(
-                    frame.ResolvedLandingReachMinimumCompressionReserve) &&
-                frame.ResolvedLandingReachLegLength >= 0f &&
-                frame.ResolvedLandingReachMinimumCompressionReserve >= 0f &&
-                (!frame.ResolvedLandingReachAvailable ||
-                 frame.ResolvedLandingReachEventIdentity != 0 &&
-                 FiniteVector(frame.ResolvedLandingReachHip) &&
-                 FiniteVector(frame.ResolvedLandingReachTargetAnkle) &&
-                 frame.ResolvedLandingReachLegLength > TimeEpsilon &&
-                 frame.ResolvedLandingReachMinimumCompressionReserve <
-                 frame.ResolvedLandingReachLegLength &&
+                    frame.Resolved.LandingReachMinimumCompressionReserve) &&
+                frame.Resolved.LandingReachLegLength >= 0f &&
+                frame.Resolved.LandingReachMinimumCompressionReserve >= 0f &&
+                (!frame.Resolved.LandingReachAvailable ||
+                 frame.Resolved.LandingReachEventIdentity != 0 &&
+                 FiniteVector(frame.Resolved.LandingReachHip) &&
+                 FiniteVector(frame.Resolved.LandingReachTargetAnkle) &&
+                 frame.Resolved.LandingReachLegLength > TimeEpsilon &&
+                 frame.Resolved.LandingReachMinimumCompressionReserve <
+                 frame.Resolved.LandingReachLegLength &&
                  Math.Abs(
-                     frame.ResolvedLandingReachLegLength - legLength) <=
+                     frame.Resolved.LandingReachLegLength - legLength) <=
                  PositionNoiseFloor) &&
                 (!frame.LandingReachEvaluated ||
-                 frame.ResolvedLandingReachAvailable);
+                 frame.Resolved.LandingReachAvailable);
             if (!resolvedReachConsistent)
             {
                 throw new InvalidDataException(
@@ -10269,10 +10214,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 indices,
                 "CurrentSupportFrameSequence,CurrentSupportCompletionIdentity,CurrentSupportWorldRevision,CurrentSupportIsSpecified,CurrentSupportAvailable,CurrentSupportRejectReason,CurrentSupportHeelPurpose,CurrentSupportHeelKind,CurrentSupportHeelState,CurrentSupportHeelRejectReason,CurrentSupportHeelProbePositionX,CurrentSupportHeelProbePositionY,CurrentSupportHeelProbePositionZ,CurrentSupportHeelComponentUpX,CurrentSupportHeelComponentUpY,CurrentSupportHeelComponentUpZ,CurrentSupportHeelOriginX,CurrentSupportHeelOriginY,CurrentSupportHeelOriginZ,CurrentSupportHeelDirectionX,CurrentSupportHeelDirectionY,CurrentSupportHeelDirectionZ,CurrentSupportHeelMaximumDistance,CurrentSupportHeelRadius,CurrentSupportHeelLayerMask,CurrentSupportHeelMinimumGroundNormalDot,CurrentSupportHeelHitCapacity,CurrentSupportHeelCandidateCount,CurrentSupportHeelSurfaceIdentity,CurrentSupportHeelPointX,CurrentSupportHeelPointY,CurrentSupportHeelPointZ,CurrentSupportHeelNormalX,CurrentSupportHeelNormalY,CurrentSupportHeelNormalZ,CurrentSupportHeelDistance,CurrentSupportHeelWorldRevision,CurrentSupportHeelSphereCastExecuted,CurrentSupportHeelAccepted,CurrentSupportToePurpose,CurrentSupportToeKind,CurrentSupportToeState,CurrentSupportToeRejectReason,CurrentSupportToeProbePositionX,CurrentSupportToeProbePositionY,CurrentSupportToeProbePositionZ,CurrentSupportToeComponentUpX,CurrentSupportToeComponentUpY,CurrentSupportToeComponentUpZ,CurrentSupportToeOriginX,CurrentSupportToeOriginY,CurrentSupportToeOriginZ,CurrentSupportToeDirectionX,CurrentSupportToeDirectionY,CurrentSupportToeDirectionZ,CurrentSupportToeMaximumDistance,CurrentSupportToeRadius,CurrentSupportToeLayerMask,CurrentSupportToeMinimumGroundNormalDot,CurrentSupportToeHitCapacity,CurrentSupportToeCandidateCount,CurrentSupportToeSurfaceIdentity,CurrentSupportToePointX,CurrentSupportToePointY,CurrentSupportToePointZ,CurrentSupportToeNormalX,CurrentSupportToeNormalY,CurrentSupportToeNormalZ,CurrentSupportToeDistance,CurrentSupportToeWorldRevision,CurrentSupportToeSphereCastExecuted,CurrentSupportToeAccepted,CurrentSupportHeelRequiredDisplacement,CurrentSupportToeRequiredDisplacement,CurrentSupportSelectedProbe,CurrentSupportSelectionReason,CurrentSupportSelectionEpsilon,CurrentSupportSelectedSupportNormalBeforeNormalizationX,CurrentSupportSelectedSupportNormalBeforeNormalizationY,CurrentSupportSelectedSupportNormalBeforeNormalizationZ");
             RequireColumnGroup(indices, SupportTargetColumns("CurrentSupportTarget"));
-            RequireColumnGroup(indices, SupportTargetColumns("ResolvedSupportTarget"));
-            RequireColumnGroup(
-                indices,
-                "ResolvedFrameSequence,ResolvedCompletionIdentity,ResolvedRigId,ResolvedRigRevision,ResolvedSide,ResolvedOutcome,ResolvedFinalSoleX,ResolvedFinalSoleY,ResolvedFinalSoleZ,ResolvedEffectiveSoleX,ResolvedEffectiveSoleY,ResolvedEffectiveSoleZ,ResolvedGoalTargetAnkleX,ResolvedGoalTargetAnkleY,ResolvedGoalTargetAnkleZ,ResolvedGoalTargetRotationX,ResolvedGoalTargetRotationY,ResolvedGoalTargetRotationZ,ResolvedGoalTargetRotationW,ResolvedEffectiveAnkleX,ResolvedEffectiveAnkleY,ResolvedEffectiveAnkleZ,ResolvedEffectiveRotationX,ResolvedEffectiveRotationY,ResolvedEffectiveRotationZ,ResolvedEffectiveRotationW,ResolvedEffectiveHeelX,ResolvedEffectiveHeelY,ResolvedEffectiveHeelZ,ResolvedEffectiveToeX,ResolvedEffectiveToeY,ResolvedEffectiveToeZ,ResolvedEffectiveSoleFromContactsX,ResolvedEffectiveSoleFromContactsY,ResolvedEffectiveSoleFromContactsZ,ResolvedSourceSoleForwardX,ResolvedSourceSoleForwardY,ResolvedSourceSoleForwardZ,ResolvedSourceSoleFrameLocalRotationX,ResolvedSourceSoleFrameLocalRotationY,ResolvedSourceSoleFrameLocalRotationZ,ResolvedSourceSoleFrameLocalRotationW,ResolvedGoalTargetCorrectionX,ResolvedGoalTargetCorrectionY,ResolvedGoalTargetCorrectionZ,ResolvedEffectiveSoleCorrectionX,ResolvedEffectiveSoleCorrectionY,ResolvedEffectiveSoleCorrectionZ,ResolvedPositionWeight,ResolvedRotationWeight,ResolvedContactAvailable,ResolvedContactEventIdentity,ResolvedContactPointX,ResolvedContactPointY,ResolvedContactPointZ,ResolvedContactOwnership,ResolvedSupportEligibility,ResolvedSupportWeight,ResolvedSupportIntentWeight,ResolvedSupportHorizontalError,ResolvedSupportEventIdentity,ResolvedPelvisReachAvailable,ResolvedPelvisReachEventIdentity,ResolvedPelvisReachPointX,ResolvedPelvisReachPointY,ResolvedPelvisReachPointZ,ResolvedLandingReachAvailable,ResolvedLandingReachEventIdentity,ResolvedLandingReachHipX,ResolvedLandingReachHipY,ResolvedLandingReachHipZ,ResolvedLandingReachTargetAnkleX,ResolvedLandingReachTargetAnkleY,ResolvedLandingReachTargetAnkleZ,ResolvedLandingReachLegLength,ResolvedLandingReachMinimumCompressionReserve");
         }
 
         static string SupportTargetColumns(string prefix) =>
@@ -10501,48 +10442,11 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             return values[lower] + (values[upper] - values[lower]) * t;
         }
 
-        static float ParseFloat(string value, string field)
-        {
-            if (!float.TryParse(
-                    value,
-                    NumberStyles.Float,
-                    CultureInfo.InvariantCulture,
-                    out float result) ||
-                !float.IsFinite(result))
-            {
-                throw new InvalidDataException(
-                    $"Foot Motion Foot row {field} '{value}' is invalid.");
-            }
-            return result;
-        }
 
-        static int ParseInt(string value, string field)
-        {
-            if (!int.TryParse(
-                    value,
-                    NumberStyles.Integer,
-                    CultureInfo.InvariantCulture,
-                    out int result))
-            {
-                throw new InvalidDataException(
-                    $"Foot Motion Foot row {field} '{value}' is invalid.");
-            }
-            return result;
-        }
 
-        static ulong ParseUlong(string value, string field)
-        {
-            if (!ulong.TryParse(
-                    value,
-                    NumberStyles.Integer,
-                    CultureInfo.InvariantCulture,
-                    out ulong result))
-            {
-                throw new InvalidDataException(
-                    $"Foot Motion Foot row {field} '{value}' is invalid.");
-            }
-            return result;
-        }
+
+
+
 
         readonly struct CharacterFootOutputBoundaryMotion
         {
@@ -10659,27 +10563,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             internal double JerkMetersPerSecondCubed;
         }
 
-        sealed class SupportTargetFrame
-        {
-            internal bool Available;
-            internal ulong Frame;
-            internal ulong Completion;
-            internal string Side;
-            internal Vector3 Position;
-            internal Vector3 Normal;
-            internal int Surface;
-            internal ulong WorldRevision;
-            internal string Kind;
-            internal string PositionSource;
-            internal ulong PositionFrame;
-            internal ulong PositionCompletion;
-            internal ulong PositionEvent;
-            internal ulong PositionPath;
-            internal string NormalSource;
-            internal ulong NormalFrame;
-            internal ulong NormalCompletion;
-            internal ulong NormalEvent;
-        }
+
 
         sealed class CurrentSupportProbeFrame
         {
@@ -10708,6 +10592,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
 
         sealed class FootFrame
         {
+            internal CharacterFootResolvedSample Resolved;
             internal string SampleIdentity;
             internal string ProgramIdentity;
             internal string ProjectionRevision;
@@ -11024,7 +10909,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             internal bool PlantLockWeightCompleted;
             internal Vector3 PlantDesiredPoint;
             internal Vector3 PlantFilteredPoint;
-            internal SupportTargetFrame SelectedSupportTarget;
+            internal CharacterFootSupportTargetSample SelectedSupportTarget;
             internal string PlantTargetHeightAdoptionMode;
             internal float PlantTargetMaximumVerticalSpeed;
             internal float PlantTargetHeightBefore;
@@ -11094,47 +10979,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             internal string CurrentSupportSelectionReason;
             internal float CurrentSupportSelectionEpsilon;
             internal Vector3 CurrentSupportSelectedNormalBeforeNormalization;
-            internal SupportTargetFrame CurrentSupportTarget;
-            internal ulong ResolvedFrame;
-            internal ulong ResolvedCompletion;
-            internal string ResolvedRigId;
-            internal string ResolvedRigRevision;
-            internal string ResolvedSide;
-            internal string ResolvedOutcome;
-            internal Vector3 ResolvedFinalSole;
-            internal Vector3 ResolvedEffectiveSole;
-            internal Vector3 ResolvedGoalTargetAnkle;
-            internal Quaternion ResolvedGoalTargetRotation;
-            internal Vector3 ResolvedEffectiveAnkle;
-            internal Quaternion ResolvedEffectiveRotation;
-            internal Vector3 ResolvedEffectiveHeel;
-            internal Vector3 ResolvedEffectiveToe;
-            internal Vector3 ResolvedEffectiveSoleFromContacts;
-            internal Vector3 ResolvedSourceSoleForward;
-            internal Quaternion ResolvedSourceSoleFrameLocalRotation;
-            internal Vector3 ResolvedGoalTargetCorrection;
-            internal Vector3 ResolvedEffectiveSoleCorrection;
-            internal float ResolvedPositionWeight;
-            internal float ResolvedRotationWeight;
-            internal SupportTargetFrame ResolvedSupportTarget;
-            internal bool ResolvedContactAvailable;
-            internal ulong ResolvedContactEventIdentity;
-            internal Vector3 ResolvedContactPoint;
-            internal float ResolvedContactOwnership;
-            internal string ResolvedSupportEligibility;
-            internal float ResolvedSupportWeight;
-            internal float ResolvedSupportIntentWeight;
-            internal float ResolvedSupportHorizontalError;
-            internal ulong ResolvedSupportEventIdentity;
-            internal bool ResolvedPelvisReachAvailable;
-            internal ulong ResolvedPelvisReachEventIdentity;
-            internal Vector3 ResolvedPelvisReachPoint;
-            internal bool ResolvedLandingReachAvailable;
-            internal ulong ResolvedLandingReachEventIdentity;
-            internal Vector3 ResolvedLandingReachHip;
-            internal Vector3 ResolvedLandingReachTargetAnkle;
-            internal float ResolvedLandingReachLegLength;
-            internal float ResolvedLandingReachMinimumCompressionReserve;
+            internal CharacterFootSupportTargetSample CurrentSupportTarget;
             internal bool EncodedGoalAvailable;
             internal Vector3 EncodedGoalPosition;
             internal Vector3 EncodedGoalCorrection;
@@ -11640,14 +11485,14 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     runtimeReachEvaluated = frame.LandingReachEvaluated,
                     runtimeReachAvailable = frame.LandingReachAvailable,
                     resolvedReachRequestAvailable =
-                        frame.ResolvedLandingReachAvailable,
+                        frame.Resolved.LandingReachAvailable,
                     resolvedReachEventIdentity =
-                        frame.ResolvedLandingReachEventIdentity.ToString(
+                        frame.Resolved.LandingReachEventIdentity.ToString(
                             CultureInfo.InvariantCulture),
                     resolvedReachLegLengthMeters =
-                        frame.ResolvedLandingReachLegLength,
+                        frame.Resolved.LandingReachLegLength,
                     resolvedReachMinimumCompressionReserveMeters =
-                        frame.ResolvedLandingReachMinimumCompressionReserve,
+                        frame.Resolved.LandingReachMinimumCompressionReserve,
                     primarySupportAvailable =
                         frame.PrimarySupportAvailable,
                     primarySupportSide = frame.PrimarySupportSide,

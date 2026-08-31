@@ -12,6 +12,7 @@ using ThirdPersonCharacter.Pipeline.Presentation;
 using ThirdPersonCharacter.Pipeline.Simulation.Fixed;
 using UnityEditor;
 using UnityEngine;
+using static ThirdPersonCharacter.Pipeline.Editor.CharacterFootCsvValues;
 
 namespace ThirdPersonCharacter.Pipeline.Editor
 {
@@ -88,7 +89,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         const string StopMenu =
             "Tools/3C/Diagnostics/Foot Landing Sampling/Stop and Save";
         const string GeometryFileName = "ground-path-geometry.csv";
-        const string Header =
+        static readonly string Header =
             "SampleIdentity,SampleStartedUtc,ProgramIdentity,ProjectionRevision,PoseGraphId,PoseGraphRevision,PosePlanHash," +
             "FrameSequence,CompletionIdentity,TargetRuntimeInstanceId,TargetHostInstanceId,RootInstanceId,FootProfileId,FootProfileRevision,Side,State,RejectReason,StepSource," +
             "LandingEventIdentity,TrajectoryGeneration,LandingConfidence,TimeToLandingSeconds," +
@@ -276,9 +277,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             "CurrentSupportToePurpose,CurrentSupportToeKind,CurrentSupportToeState,CurrentSupportToeRejectReason,CurrentSupportToeProbePositionX,CurrentSupportToeProbePositionY,CurrentSupportToeProbePositionZ,CurrentSupportToeComponentUpX,CurrentSupportToeComponentUpY,CurrentSupportToeComponentUpZ,CurrentSupportToeOriginX,CurrentSupportToeOriginY,CurrentSupportToeOriginZ,CurrentSupportToeDirectionX,CurrentSupportToeDirectionY,CurrentSupportToeDirectionZ,CurrentSupportToeMaximumDistance,CurrentSupportToeRadius,CurrentSupportToeLayerMask,CurrentSupportToeMinimumGroundNormalDot,CurrentSupportToeHitCapacity,CurrentSupportToeCandidateCount,CurrentSupportToeSurfaceIdentity,CurrentSupportToePointX,CurrentSupportToePointY,CurrentSupportToePointZ,CurrentSupportToeNormalX,CurrentSupportToeNormalY,CurrentSupportToeNormalZ,CurrentSupportToeDistance,CurrentSupportToeWorldRevision,CurrentSupportToeSphereCastExecuted,CurrentSupportToeAccepted," +
             "CurrentSupportHeelRequiredDisplacement,CurrentSupportToeRequiredDisplacement,CurrentSupportSelectedProbe,CurrentSupportSelectionReason,CurrentSupportSelectionEpsilon,CurrentSupportSelectedSupportNormalBeforeNormalizationX,CurrentSupportSelectedSupportNormalBeforeNormalizationY,CurrentSupportSelectedSupportNormalBeforeNormalizationZ," +
             "CurrentSupportTargetAvailable,CurrentSupportTargetFrameSequence,CurrentSupportTargetCompletionIdentity,CurrentSupportTargetSide,CurrentSupportTargetPositionX,CurrentSupportTargetPositionY,CurrentSupportTargetPositionZ,CurrentSupportTargetNormalX,CurrentSupportTargetNormalY,CurrentSupportTargetNormalZ,CurrentSupportTargetSurfaceIdentity,CurrentSupportTargetWorldRevision,CurrentSupportTargetKind,CurrentSupportTargetPositionSource,CurrentSupportTargetPositionFrameSequence,CurrentSupportTargetPositionCompletionIdentity,CurrentSupportTargetPositionEventIdentity,CurrentSupportTargetPositionPathIdentity,CurrentSupportTargetNormalSource,CurrentSupportTargetNormalFrameSequence,CurrentSupportTargetNormalCompletionIdentity,CurrentSupportTargetNormalEventIdentity," +
-            "ResolvedFrameSequence,ResolvedCompletionIdentity,ResolvedRigId,ResolvedRigRevision,ResolvedSide,ResolvedOutcome,ResolvedFinalSoleX,ResolvedFinalSoleY,ResolvedFinalSoleZ,ResolvedEffectiveSoleX,ResolvedEffectiveSoleY,ResolvedEffectiveSoleZ,ResolvedGoalTargetAnkleX,ResolvedGoalTargetAnkleY,ResolvedGoalTargetAnkleZ,ResolvedGoalTargetRotationX,ResolvedGoalTargetRotationY,ResolvedGoalTargetRotationZ,ResolvedGoalTargetRotationW,ResolvedEffectiveAnkleX,ResolvedEffectiveAnkleY,ResolvedEffectiveAnkleZ,ResolvedEffectiveRotationX,ResolvedEffectiveRotationY,ResolvedEffectiveRotationZ,ResolvedEffectiveRotationW,ResolvedEffectiveHeelX,ResolvedEffectiveHeelY,ResolvedEffectiveHeelZ,ResolvedEffectiveToeX,ResolvedEffectiveToeY,ResolvedEffectiveToeZ,ResolvedEffectiveSoleFromContactsX,ResolvedEffectiveSoleFromContactsY,ResolvedEffectiveSoleFromContactsZ,ResolvedSourceSoleForwardX,ResolvedSourceSoleForwardY,ResolvedSourceSoleForwardZ,ResolvedSourceSoleFrameLocalRotationX,ResolvedSourceSoleFrameLocalRotationY,ResolvedSourceSoleFrameLocalRotationZ,ResolvedSourceSoleFrameLocalRotationW,ResolvedGoalTargetCorrectionX,ResolvedGoalTargetCorrectionY,ResolvedGoalTargetCorrectionZ,ResolvedEffectiveSoleCorrectionX,ResolvedEffectiveSoleCorrectionY,ResolvedEffectiveSoleCorrectionZ,ResolvedPositionWeight,ResolvedRotationWeight," +
-            "ResolvedSupportTargetAvailable,ResolvedSupportTargetFrameSequence,ResolvedSupportTargetCompletionIdentity,ResolvedSupportTargetSide,ResolvedSupportTargetPositionX,ResolvedSupportTargetPositionY,ResolvedSupportTargetPositionZ,ResolvedSupportTargetNormalX,ResolvedSupportTargetNormalY,ResolvedSupportTargetNormalZ,ResolvedSupportTargetSurfaceIdentity,ResolvedSupportTargetWorldRevision,ResolvedSupportTargetKind,ResolvedSupportTargetPositionSource,ResolvedSupportTargetPositionFrameSequence,ResolvedSupportTargetPositionCompletionIdentity,ResolvedSupportTargetPositionEventIdentity,ResolvedSupportTargetPositionPathIdentity,ResolvedSupportTargetNormalSource,ResolvedSupportTargetNormalFrameSequence,ResolvedSupportTargetNormalCompletionIdentity,ResolvedSupportTargetNormalEventIdentity," +
-            "ResolvedContactAvailable,ResolvedContactEventIdentity,ResolvedContactPointX,ResolvedContactPointY,ResolvedContactPointZ,ResolvedContactOwnership,ResolvedSupportEligibility,ResolvedSupportWeight,ResolvedSupportIntentWeight,ResolvedSupportHorizontalError,ResolvedSupportEventIdentity,ResolvedPelvisReachAvailable,ResolvedPelvisReachEventIdentity,ResolvedPelvisReachPointX,ResolvedPelvisReachPointY,ResolvedPelvisReachPointZ,ResolvedLandingReachAvailable,ResolvedLandingReachEventIdentity,ResolvedLandingReachHipX,ResolvedLandingReachHipY,ResolvedLandingReachHipZ,ResolvedLandingReachTargetAnkleX,ResolvedLandingReachTargetAnkleY,ResolvedLandingReachTargetAnkleZ,ResolvedLandingReachLegLength,ResolvedLandingReachMinimumCompressionReserve," +
+            CharacterFootResolvedColumns.Schema.Header + "," +
             "FootMotionEncodedGoalAvailable,FootMotionEncodedGoalCorrectionX,FootMotionEncodedGoalCorrectionY,FootMotionEncodedGoalCorrectionZ," +
             "FinalGoalPositionX,FinalGoalPositionY,FinalGoalPositionZ,FinalGoalRotationX,FinalGoalRotationY,FinalGoalRotationZ,FinalGoalRotationW,FinalGoalPositionWeight,FinalGoalRotationWeight,PelvisPositionWeight,PelvisRotationWeight," +
             "StrideState,StrideRejectReason,StrideSupportSide,StrideSwingSide,StrideProgress,StrideSlope," +
@@ -2335,7 +2334,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             Add(row, motion.PlantOutputDistance);
             Add(row, motion.PlantPenetrationDepth);
             AddCurrentSupport(row, foot.CurrentSupport);
-            AddResolvedFoot(row, foot.Resolved);
+            CharacterResolvedFootDiagnostics resolved = foot.Resolved;
+            CharacterFootResolvedColumns.Schema.Write(row, in resolved);
             Add(row, footGoal.IsValid);
             Add(
                 row,
@@ -2837,65 +2837,19 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             return CharacterFootContactPlanePenetrationAvailability.Available;
         }
 
-        static void Add(StringBuilder row, string value)
-        {
-            Separate(row);
-            value ??= string.Empty;
-            if (value.IndexOf('\r') >= 0 || value.IndexOf('\n') >= 0)
-                throw new InvalidOperationException(
-                    "Foot Landing CSV string contains a line break.");
-            bool quote = value.IndexOf(',') >= 0 ||
-                         value.IndexOf('"') >= 0;
-            if (!quote)
-            {
-                row.Append(value);
-                return;
-            }
-            row.Append('"');
-            for (int i = 0; i < value.Length; i++)
-            {
-                char character = value[i];
-                if (character == '"')
-                    row.Append('"');
-                row.Append(character);
-            }
-            row.Append('"');
-        }
 
-        static void Add(StringBuilder row, bool value) => Add(row, value ? 1 : 0);
 
-        static void Add(StringBuilder row, int value)
-        {
-            Separate(row);
-            row.Append(value.ToString(CultureInfo.InvariantCulture));
-        }
 
-        static void Add(StringBuilder row, ulong value)
-        {
-            Separate(row);
-            row.Append(value.ToString(CultureInfo.InvariantCulture));
-        }
 
-        static void Add(StringBuilder row, float value)
-        {
-            Separate(row);
-            row.Append(value.ToString("R", CultureInfo.InvariantCulture));
-        }
 
-        static void Add(StringBuilder row, Vector3 value)
-        {
-            Add(row, value.x);
-            Add(row, value.y);
-            Add(row, value.z);
-        }
 
-        static void Add(StringBuilder row, Quaternion value)
-        {
-            Add(row, value.x);
-            Add(row, value.y);
-            Add(row, value.z);
-            Add(row, value.w);
-        }
+
+
+
+
+
+
+
 
         static void AddSupportTarget(
             StringBuilder row,
@@ -2969,51 +2923,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             AddSupportTarget(row, support.Target);
         }
 
-        static void AddResolvedFoot(
-            StringBuilder row,
-            in CharacterResolvedFootDiagnostics resolved)
-        {
-            Add(row, resolved.FrameSequence);
-            Add(row, resolved.CompletionIdentity);
-            Add(row, resolved.RigId);
-            Add(row, resolved.RigRevision);
-            Add(row, resolved.Side.ToString());
-            Add(row, resolved.Outcome.ToString());
-            Add(row, resolved.FinalSole);
-            Add(row, resolved.EffectiveSole);
-            Add(row, resolved.GoalTargetAnkle);
-            Add(row, resolved.GoalTargetRotation);
-            Add(row, resolved.EffectiveAnkle);
-            Add(row, resolved.EffectiveRotation);
-            Add(row, resolved.EffectiveHeel);
-            Add(row, resolved.EffectiveToe);
-            Add(row, resolved.EffectiveSoleFromContacts);
-            Add(row, resolved.SourceSoleForward);
-            Add(row, resolved.SourceSoleFrameLocalRotation);
-            Add(row, resolved.GoalTargetCorrection);
-            Add(row, resolved.EffectiveSoleCorrection);
-            Add(row, resolved.PositionWeight);
-            Add(row, resolved.RotationWeight);
-            AddSupportTarget(row, resolved.SupportTarget);
-            Add(row, resolved.ContactAvailable);
-            Add(row, resolved.ContactEventIdentity);
-            Add(row, resolved.ContactPoint);
-            Add(row, resolved.ContactOwnership);
-            Add(row, resolved.SupportEligibility.ToString());
-            Add(row, resolved.SupportWeight);
-            Add(row, resolved.SupportIntentWeight);
-            Add(row, resolved.SupportHorizontalError);
-            Add(row, resolved.SupportEventIdentity);
-            Add(row, resolved.PelvisReachAvailable);
-            Add(row, resolved.PelvisReachEventIdentity);
-            Add(row, resolved.PelvisReachPoint);
-            Add(row, resolved.LandingReachAvailable);
-            Add(row, resolved.LandingReachEventIdentity);
-            Add(row, resolved.LandingReachHip);
-            Add(row, resolved.LandingReachTargetAnkle);
-            Add(row, resolved.LandingReachLegLength);
-            Add(row, resolved.LandingReachMinimumCompressionReserve);
-        }
+
 
         static void AddFormalEventFrame(
             StringBuilder row,
@@ -3075,10 +2985,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             Add(row, candidate.InApproachContactToLanding);
         }
 
-        static void Separate(StringBuilder row)
-        {
-            if (row.Length > 0)
-                row.Append(',');
-        }
+
     }
 }

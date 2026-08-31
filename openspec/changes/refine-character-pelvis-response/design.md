@@ -100,3 +100,5 @@ ae10348只将Corin现有正式频率从3Hz改2Hz，并显式重建匹配的Float
 保持原Posture几何，先得到p0，再使用`preferred=Clamp(p0,Min(0,requested),Max(0,requested))`。这是降低额外弯腿偏好的目标优先级，不是增加可见输出夹紧；原动画零偏移为已知本帧基准，不是fallback。真Reach及20毫米安全余量继续位于后续唯一响应中并可覆盖软目标范围。脚目标、支撑资格、原Spring、Bend、Body和作者配置均不动。
 
 Available/Reserve/Min/Max继续描述原姿态几何，OffsetAlongUp与TargetAdjusted描述实际采用的软目标；不要求软目标必须满足姿态区间，只要求真正硬Reach仍有效。既有事实足够重算，不新增CSV列。该步可能少保留一部分原动画弯腿程度，必须由同Record检查脚部、膝盖和台阶，不能用175单窗改善宣布平地整体修好。详细分解与模型边界见experiments/20260831-pelvis-neutral-posture-preference.md。
+
+085223已完成正式Replay与独立验收并保留该局部修正：移动平地平均额外下压约减少1毫米，175减少21.515毫米，Foot及37质量计数保持；静止83帧、最深值和主要硬约束问题不变，R826峰与部分Knee步长略增。该结果不替代193957质量基线，不宣称平地下陷全部修复，也不取消后续原目标/硬边界排查。

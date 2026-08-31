@@ -72,14 +72,14 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     Vector3 minimum =
                         CharacterFootConstraintMath.ResolvePointMinimumCorrection(
                         frame.AnimatedFoot,
-                        swing.EnvelopeSample,
+                        swing.SwingHeightReference.Position,
                         frame.ComponentUp);
                     return Result(
                         true,
                         true,
-                        CharacterFootSafetyFloorOwner.GroundPathEnvelope,
+                        CharacterFootSafetyFloorOwner.CurrentSupport,
+                        swing.SwingHeightReference.SurfaceIdentity,
                         0,
-                        swing.GroundPathInputIdentity,
                         correction,
                         minimum,
                         frame.ComponentUp,

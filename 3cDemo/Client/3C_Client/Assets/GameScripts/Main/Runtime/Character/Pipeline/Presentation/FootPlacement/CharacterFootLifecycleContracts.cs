@@ -24,13 +24,13 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         None = 0,
         PathAvailabilityChanged = 1,
         LandingEventChanged = 2,
-        LandingPointChanged = 4
+        SupportSurfaceChanged = 4
     }
 
     public enum CharacterFootSafetyFloorOwner : byte
     {
         None = 0,
-        GroundPathEnvelope = 1,
+        CurrentSupport = 1,
         ContactAnchor = 2,
         PlantTarget = 3
     }
@@ -210,9 +210,11 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             float swingTargetMaximumVerticalSpeed,
             CharacterFootTargetHeightAdoptionMode swingTargetHeightAdoptionMode,
             float swingFilteredTargetHeightAlongUp,
-            Vector3 interpolationComponentUp)
+            Vector3 interpolationComponentUp,
+            CharacterFootSupportTarget previousSwingHeightReference = default)
         {
             Evaluated = evaluated;
+            PreviousSwingHeightReference = previousSwingHeightReference;
             RevisionReason = revisionReason;
             ResidualRebuilt = residualRebuilt;
             TargetTrackingApplied = targetTrackingApplied;
@@ -363,6 +365,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             float safetyFloorClearanceAfterMeters)
         {
             Evaluated = source.Evaluated;
+            PreviousSwingHeightReference = source.PreviousSwingHeightReference;
             RevisionReason = source.RevisionReason;
             ResidualRebuilt = source.ResidualRebuilt;
             TargetTrackingApplied = source.TargetTrackingApplied;
@@ -550,6 +553,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         internal Vector3 CurrentTargetCorrection { get; }
         internal float LandingPointDelta { get; }
         internal float TargetDelta { get; }
+        internal CharacterFootSupportTarget PreviousSwingHeightReference { get; }
         internal Vector3 ResidualBeforeRevision { get; }
         internal Vector3 ResidualBeforeDecay { get; }
         internal Vector3 ResidualAfterDecay { get; }
@@ -1437,7 +1441,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         internal bool HasOutput;
         internal bool HasSwingPath;
         internal ulong SwingLandingEventIdentity;
-        internal ulong SwingGroundPathInputIdentity;
+        internal CharacterFootSupportTarget SwingHeightReference;
         internal Vector3 SwingLandingPoint;
         internal Vector3 PreviousTargetCorrection;
         internal Vector3 PreviousSwingTargetCorrection;

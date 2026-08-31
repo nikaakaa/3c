@@ -97,3 +97,13 @@ FullAnchor新分项0／15段对应21脚帧，其中15帧还是VerifiedAnchor完�
 R825–827的Foot PositionWeight均1，但BendWeight均0，新请求未被Vendor采用，Solved Knee逐值不变；R826仍单步648.299毫米，整体最大步未下降。它是脚目标近髋、腿轴快速改变的深折叠问题，需要后续独立研究目标/髋协调，不恢复Reach强压、不加后处理或猜权重来隐藏。零目标轴与严格反平行轴未有动态覆盖；最终Physical Knee、其它路线与真实非固定帧率未在本次证明。
 
 结论：保留a40b71f这一小步，保住认可的Foot/Pelvis链，未宣称反弯与所有腿部大步全部消失。编译后Unity留下的单个闲置Roslyn进程已按PID/启动身份核实并清理，之后复查.NET/MSBuild残留为0；以后不能仅把shutdown成功当作清理完成。
+
+## 2026-08-31：当前支撑高度候选，待同输入裁决
+
+用户已授权继续实验；不另建change、不重复确认。固定比较205014，保留本记录已经通过的膝向运输、Contact完整世界残差与同帧衰减、世界Anchor、旋转和骨盆算法。本步不加SmoothKnee、g/k/W或新速率。重复创建的9714970提案已由2336e14精确撤销，原采样与失败经验均保留。
+
+直接靶点是R825–826：当前Heel/Toe查询均落在3.42米踏面，但按未来GroundPath相位取到的Envelope约3.762/3.780米，Envelope采样点与实际脚底水平相距约0.903/0.866米；R825额外抬脚约441毫米，目标脚踝已接近Hip，R826的零BendWeight深折叠不会被已经修好的膝向运输改变。低于预测包络不等于穿入实际踏面，验收必须分开这两种测量。
+
+唯一行为变量是可见Swing高度的支撑来源：同帧CurrentSupport发布的零净空Sole参考加原FormalFootHeight，仍只沿ComponentUp生成非负修正，不改动画XZ。相同CurrentSupport参考同时提供Swing安全下限；未来Envelope不能在下游再把当前脚抬回去。Height History与Target Tracking也使用当前支撑高度/Surface，不再因未来Landing点或Path身份改变重捕可见残差。正式GroundPath准入、规划采样和供已有Pelvis Reach使用的未来事件/点仍保留；这一步不额外修改预测可用性政策。Release继续收敛到这一份Swing目标；Contact/Locked仍走原世界Anchor目标。
+
+取舍是减少远处高包络对当前腿的深折叠，同时可能减少跨台阶时的提前抬脚余量。接受与否看同输入完整Replay：R825–827的目标/髋距离和Solved Knee，以及所有真实Heel/Toe、Contact间隙/穿透、锁脚、Swing跳变和Pelvis输出；不以原包络负距离冒充实际穿透，也不以膝步长减少抵消新踏空。更改目标高度会通过既有双脚输入间接改变骨盆，不能把“未改骨盆代码”写成“骨盆输出必不变”。当前仅为候选，未宣布效果通过。

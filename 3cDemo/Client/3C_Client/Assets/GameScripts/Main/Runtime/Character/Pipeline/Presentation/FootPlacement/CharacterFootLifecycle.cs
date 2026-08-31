@@ -486,7 +486,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 hasContact ? context.Contact.SurfaceIdentity : 0,
                 hasContact ? context.Contact.Normal : default,
                 continuityFact,
-                lifecycleTransition: lifecycleTransition);
+                lifecycleTransition: lifecycleTransition,
+                swingHeightReference: swing.SwingHeightReference);
             var contactReference = hasContact
                 ? new CharacterFootContactReference(
                     context.Contact.EventIdentity,
@@ -739,6 +740,12 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 frame.SwingMotion.Accepted &&
                 !float.IsFinite(
                     frame.SwingMotion.FormalTargetHeightAlongUp) ||
+                frame.SwingMotion.Accepted &&
+                (!frame.SwingMotion.SwingHeightReference.IsValid ||
+                 frame.SwingMotion.SwingHeightReference.FrameSequence != frame.FrameSequence ||
+                 frame.SwingMotion.SwingHeightReference.CompletionIdentity != frame.CompletionIdentity ||
+                 frame.SwingMotion.SwingHeightReference.Side != frame.Side ||
+                 frame.SwingMotion.SwingHeightReference.WorldRevision != frame.WorldRevision) ||
                 frame.HasContactLanding &&
                 frame.ContactLanding.LandingEventIdentity == 0 ||
                 !frame.CurrentSupport.IsSpecified ||

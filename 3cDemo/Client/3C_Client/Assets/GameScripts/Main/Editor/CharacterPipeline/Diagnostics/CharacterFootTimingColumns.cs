@@ -63,7 +63,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                         (in Source source) => source.TimelineBodyYawVelocityDegreesPerSecond, (target, value) => target.TimelineBodyYawVelocityDegreesPerSecond = value),
                     Column.Create("TimelineMaximumBodyYawVelocityDegreesPerSecond", Codecs.Float32, Unit.DegreesPerSecond,
                         (in Source source) => source.TimelineMaximumBodyYawVelocityDegreesPerSecond, (target, value) => target.TimelineMaximumBodyYawVelocityDegreesPerSecond = value),
-                    Column.Create("CurrentSegmentRemainingSeconds", Codecs.Float32, Unit.Seconds,
+                    Column.Create("CurrentSegmentRemainingSeconds", Codecs.NonNegativeDuration, Unit.Seconds,
                         (in Source source) => source.CurrentSegmentRemainingSeconds, (target, value) => target.CurrentSegmentRemainingSeconds = value),
                 });
     }

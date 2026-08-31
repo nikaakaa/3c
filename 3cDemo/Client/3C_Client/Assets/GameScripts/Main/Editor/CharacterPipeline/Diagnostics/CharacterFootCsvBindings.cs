@@ -76,6 +76,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             CharacterFootCsvKind.UInt64, Scalar, Add, (c, i, n) => ParseUlong(c[i[0]], n[0]));
         internal static readonly CharacterFootCsvCodec<float> Float32 = new CharacterFootCsvCodec<float>(
             CharacterFootCsvKind.Float32, Scalar, Add, (c, i, n) => ParseFloat(c[i[0]], n[0]));
+        internal static readonly CharacterFootCsvCodec<float> NonNegativeDuration = new CharacterFootCsvCodec<float>(
+            CharacterFootCsvKind.Float32, Scalar, Add, (c, i, n) => ParseNonNegativeDuration(c[i[0]], n[0]));
         internal static readonly CharacterFootCsvCodec<Vector3> Vector = new CharacterFootCsvCodec<Vector3>(
             CharacterFootCsvKind.Vector3, new[] { "X", "Y", "Z" }, Add,
             (c, i, n) => new Vector3(ParseFloat(c[i[0]], n[0]), ParseFloat(c[i[1]], n[1]), ParseFloat(c[i[2]], n[2])));

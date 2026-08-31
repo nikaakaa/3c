@@ -586,55 +586,45 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 CharacterFootSide.Left,
                 in leftCurrentStep,
                 in left,
-                in leftConstraintFrame);
+                in leftConstraintFrame,
+                in leftSelectedStep,
+                facts.Grounded,
+                goalRoot);
             var rightEvaluation = new CharacterFootStateEvaluation(
                 CharacterFootSide.Right,
                 in rightCurrentStep,
                 in right,
-                in rightConstraintFrame);
-            CharacterResolvedFootResult leftResolved =
+                in rightConstraintFrame,
+                in rightSelectedStep,
+                facts.Grounded,
+                goalRoot);
+            CharacterFootPlacementRequest leftRequest =
                 CharacterFootLifecycle.Evaluate(
                     ref bank.LeftFoot,
                     in leftEvaluation,
                     out CharacterFootSwingMotionResult leftFootMotion,
                     out CharacterFootLifecycleEvaluationReceipt
                         leftLifecycleReceipt);
-            CharacterResolvedFootResult rightResolved =
+            CharacterFootPlacementRequest rightRequest =
                 CharacterFootLifecycle.Evaluate(
                     ref bank.RightFoot,
                     in rightEvaluation,
                     out CharacterFootSwingMotionResult rightFootMotion,
                     out CharacterFootLifecycleEvaluationReceipt
                         rightLifecycleReceipt);
-            var resolvedPair = new CharacterResolvedFootPair(
-                in leftResolved,
-                in rightResolved);
+            var requestPair = new CharacterFootPlacementRequestPair(
+                in leftRequest,
+                in rightRequest);
             CharacterFootLandingReachRequest leftReachRequest =
-                leftResolved.LandingReachRequest;
+                leftRequest.LandingReachRequest;
             CharacterFootLandingReachRequest rightReachRequest =
-                rightResolved.LandingReachRequest;
-            leftGoal = CreateFootGoal(
-                CharacterFootSide.Left,
-                pose.Left,
-                in leftResolved);
-            rightGoal = CreateFootGoal(
-                CharacterFootSide.Right,
-                pose.Right,
-                in rightResolved);
+                rightRequest.LandingReachRequest;
             CharacterFootStrideHipsBuilder.ResolvePrimarySupport(
-                in leftResolved,
-                in rightResolved,
+                in leftRequest,
+                in rightRequest,
                 ref bank.PrimarySupport);
             CharacterFootPrimarySupportResult primarySupport =
                 bank.PrimarySupport.Result;
-            Vector3 leftCorrectedSole = ResolveWeightedGoalSole(
-                pose.Left,
-                in leftGoal,
-                goalRoot);
-            Vector3 rightCorrectedSole = ResolveWeightedGoalSole(
-                pose.Right,
-                in rightGoal,
-                goalRoot);
             CharacterFootStrideIntentResult strideIntent =
                 CharacterFootStrideHipsBuilder.ResolveIntent(
                 in leftSelectedStep,
@@ -648,7 +638,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 leftGroundPath.Accepted,
                 rightGroundPath.Accepted,
                 facts.Grounded,
-                in resolvedPair,
+                in requestPair,
                 in primarySupport,
                 componentUp);
             var pelvisFrame = new CharacterFootPelvisFrame(
@@ -657,22 +647,20 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 m_Rig.PoseRoot.TransformPoint(pose.PelvisLocalPosition),
                 pose.PelvisLocalPosition,
                 in pose,
-                leftCorrectedSole,
-                rightCorrectedSole,
+                leftRequest.GoalTarget.EffectiveSole,
+                rightRequest.GoalTarget.EffectiveSole,
                 m_Rig.LeftLegLength,
                 m_Rig.RightLegLength,
                 footPlacementWeight,
                 frame.PresentationDeltaSeconds);
-            bool leftLandingReach = facts.Grounded && IsLandingReachCandidate(
-                in leftSelectedStep, in leftFootMotion, in leftResolved);
-            bool rightLandingReach = facts.Grounded && IsLandingReachCandidate(
-                in rightSelectedStep, in rightFootMotion, in rightResolved);
+            bool leftLandingReach = leftRequest.LandingReachAdmitted;
+            bool rightLandingReach = rightRequest.LandingReachAdmitted;
             var pelvisReachInput = new CharacterFootPelvisReachInput(
                 leftLandingReach, in leftReachRequest,
                 rightLandingReach, in rightReachRequest);
             CharacterFootStrideHipsResult strideHips = CharacterFootStrideHipsBuilder.ResolvePelvis(
                 in strideIntent,
-                in resolvedPair,
+                in requestPair,
                 in primarySupport,
                 in pelvisFrame,
                 in pelvisReachInput,
@@ -680,30 +668,24 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 ref bank.PelvisSpring);
             bool leftReachAvailable = strideHips.LeftLandingReachAvailable;
             bool rightReachAvailable = strideHips.RightLandingReachAvailable;
-            leftResolved = CharacterFootLifecycle.FinalizeLanding(
+            CharacterResolvedFootResult leftResolved = CharacterFootLifecycle.FinalizeLanding(
                 ref bank.LeftFoot,
                 in leftLifecycleReceipt,
                 !leftLifecycleReceipt.LandingCompletionPending ||
                 leftReachAvailable,
                 out leftFootMotion);
-            rightResolved = CharacterFootLifecycle.FinalizeLanding(
+            CharacterResolvedFootResult rightResolved = CharacterFootLifecycle.FinalizeLanding(
                 ref bank.RightFoot,
                 in rightLifecycleReceipt,
                 !rightLifecycleReceipt.LandingCompletionPending ||
                 rightReachAvailable,
                 out rightFootMotion);
-            resolvedPair = new CharacterResolvedFootPair(
+            var resolvedPair = new CharacterResolvedFootPair(
                 in leftResolved,
                 in rightResolved);
             bank.ResolvedFeet = resolvedPair;
-            leftGoal = CreateFootGoal(
-                CharacterFootSide.Left,
-                pose.Left,
-                in leftResolved);
-            rightGoal = CreateFootGoal(
-                CharacterFootSide.Right,
-                pose.Right,
-                in rightResolved);
+            leftGoal = CreateFootGoal(in leftResolved);
+            rightGoal = CreateFootGoal(in rightResolved);
             leftFootMotion = CharacterFootSwingMotionBuilder.WithLandingReach(
                 in leftFootMotion, leftLandingReach, leftReachAvailable);
             rightFootMotion = CharacterFootSwingMotionBuilder.WithLandingReach(
@@ -722,14 +704,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             bank.PelvisGoal = pelvisGoal;
             bank.LeftGoal = leftGoal;
             bank.RightGoal = rightGoal;
-            bank.LeftVisibleSole = ResolveWeightedGoalSole(
-                pose.Left,
-                in leftGoal,
-                goalRoot);
-            bank.RightVisibleSole = ResolveWeightedGoalSole(
-                pose.Right,
-                in rightGoal,
-                goalRoot);
+            bank.LeftVisibleSole = leftResolved.GoalTarget.EffectiveSole;
+            bank.RightVisibleSole = rightResolved.GoalTarget.EffectiveSole;
             bank.HasVisibleFootOutputs = true;
             bank.FrameSequence = frame.RenderFrame;
             bank.CompletionIdentity = frame.Pose.CompletionIdentity;
@@ -1572,32 +1548,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 selectedWeight);
         }
 
-        static Vector3 ResolveWeightedGoalSole(
-            CharacterFootPlacementAnimatedFootPose foot,
-            in CharacterFullBodyIkGoal goal,
-            Transform poseRoot)
-        {
-            Vector3 originalSole = foot.HeelPosition * 0.5f + foot.ToePosition * 0.5f;
-            if (poseRoot == null || goal.PositionWeight <= 0f)
-                return originalSole;
-            Vector3 targetAnkle = poseRoot.TransformPoint(goal.ComponentPosition);
-            Vector3 effectiveAnkle = Vector3.LerpUnclamped(
-                foot.AnklePosition,
-                targetAnkle,
-                goal.PositionWeight);
-            Quaternion targetRotation =
-                (poseRoot.rotation * goal.ComponentRotation).normalized;
-            Quaternion effectiveRotation = Quaternion.Slerp(
-                foot.AnkleRotation,
-                targetRotation,
-                goal.RotationWeight).normalized;
-            CharacterFootPlacementSoleContactPose contacts =
-                foot.ResolveSoleContacts(
-                    effectiveAnkle,
-                    effectiveRotation);
-            return (contacts.HeelPosition + contacts.ToePosition) * 0.5f;
-        }
-
         static CharacterFootGoalOwnershipLossReason ResolveFootGoalOwnershipLoss(
             bool grounded,
             bool authoritative)
@@ -1634,29 +1584,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             return true;
         }
 
-        static bool IsLandingReachCandidate(
-            in AnimationFootMotionRuntimeSample step,
-            in CharacterFootSwingMotionResult motion,
-            in CharacterResolvedFootResult resolved)
-        {
-            if (!resolved.LandingReachRequest.IsAvailable ||
-                resolved.GoalWeight <= CharacterPoseConstraintMath.Epsilon ||
-                motion.LandingEventIdentity !=
-                resolved.LandingReachRequest.EventIdentity)
-            {
-                return false;
-            }
-            if (motion.ConstraintState == CharacterFootConstraintState.Landing ||
-                motion.ConstraintState == CharacterFootConstraintState.Locked ||
-                motion.ConstraintState == CharacterFootConstraintState.Releasing)
-                return resolved.ContactReference.IsAvailable;
-            return step.IsAuthoritative &&
-                   step.HasConsistentLandingEventIdentity &&
-                   step.HasPredictiveLanding &&
-                   motion.Accepted &&
-                   motion.LandingEventIdentity == step.LandingEventIdentity;
-        }
-
         static CharacterFullBodyIkGoal CreatePelvisGoal() =>
             CreatePelvisGoal(default, null);
 
@@ -1686,46 +1613,31 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             CharacterFootSide side,
             CharacterFootPlacementAnimatedFootPose foot)
         {
-            CharacterResolvedFootResult result = default;
-            return CreateFootGoal(side, foot, in result);
+            CharacterFootGoalTarget target = CharacterFootLifecycle.ResolveInactiveGoalTarget(
+                in foot, m_Rig.PoseRoot);
+            return EncodeFootGoal(side, in target);
         }
 
-        CharacterFullBodyIkGoal CreateFootGoal(
-            CharacterFootSide side,
-            CharacterFootPlacementAnimatedFootPose foot,
-            in CharacterResolvedFootResult result)
+        static CharacterFullBodyIkGoal CreateFootGoal(in CharacterResolvedFootResult result)
         {
-            Transform root = m_Rig.PoseRoot;
-            bool hasEffectiveOutput =
-                                      result.Outcome == CharacterFootResolvedOutcome.Ready &&
-                                      (result.GoalWeight >
-                                           CharacterPoseConstraintMath.Epsilon ||
-                                       result.RotationWeight >
-                                           CharacterPoseConstraintMath.Epsilon);
-            Vector3 anklePosition = hasEffectiveOutput
-                ? result.FinalAnkle
-                : foot.AnklePosition;
-            float positionWeight = hasEffectiveOutput
-                ? result.GoalWeight
-                : 0f;
-            Quaternion ankleRotation = hasEffectiveOutput
-                ? result.FinalRotation
-                : foot.AnkleRotation;
-            float rotationWeight = hasEffectiveOutput
-                ? result.RotationWeight
-                : 0f;
-            return new CharacterFullBodyIkGoal(
+            CharacterFootGoalTarget target = result.GoalTarget;
+            return EncodeFootGoal(result.Identity.Side, in target);
+        }
+
+        static CharacterFullBodyIkGoal EncodeFootGoal(
+            CharacterFootSide side,
+            in CharacterFootGoalTarget target) =>
+            new CharacterFullBodyIkGoal(
                 side == CharacterFootSide.Left
                     ? CharacterFullBodyIkEffectorSlot.LeftFoot
                     : CharacterFullBodyIkEffectorSlot.RightFoot,
-                root.InverseTransformPoint(anklePosition),
-                (Quaternion.Inverse(root.rotation) * ankleRotation).normalized,
-                positionWeight,
-                rotationWeight,
+                target.ComponentPosition,
+                target.ComponentRotation,
+                target.PositionWeight,
+                target.RotationWeight,
                 CharacterFullBodyIkGoalApplication.FootPlacementEffectorTarget,
                 CharacterFullBodyIkGoalSourceKind.FootPlacement,
                 -1);
-        }
 
         void RequireAlive()
         {

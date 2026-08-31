@@ -1587,18 +1587,27 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             CharacterFootSide side,
             in AnimationFootMotionRuntimeSample formalFootMotion,
             in CharacterFootLandingPredictionResult landingPrediction,
-            in CharacterFootStateFrame frame)
+            in CharacterFootStateFrame frame,
+            in AnimationFootMotionRuntimeSample selectedFootMotion,
+            bool grounded,
+            Transform goalRoot)
         {
             Side = side;
             FormalFootMotion = formalFootMotion;
             LandingPrediction = landingPrediction;
             Frame = frame;
+            SelectedFootMotion = selectedFootMotion;
+            Grounded = grounded;
+            GoalRoot = goalRoot;
         }
 
         internal CharacterFootSide Side { get; }
         internal AnimationFootMotionRuntimeSample FormalFootMotion { get; }
         internal CharacterFootLandingPredictionResult LandingPrediction { get; }
         internal CharacterFootStateFrame Frame { get; }
+        internal AnimationFootMotionRuntimeSample SelectedFootMotion { get; }
+        internal bool Grounded { get; }
+        internal Transform GoalRoot { get; }
     }
 
     internal readonly struct CharacterFootLifecycleEvaluationReceipt
@@ -1609,7 +1618,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             in CharacterFootStateTarget target,
             in CharacterFootInterpolationResult interpolation,
             in CharacterFootSwingMotionResult outputSwing,
-            in CharacterResolvedFootResult preliminaryResolved,
+            in CharacterFootPlacementRequest request,
             in CharacterFootSwingMotionResult preliminaryMotion,
             in CharacterFootLifecycleTransitionFact lifecycleTransition,
             bool landingCompletionPending)
@@ -1619,7 +1628,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             Target = target;
             Interpolation = interpolation;
             OutputSwing = outputSwing;
-            PreliminaryResolved = preliminaryResolved;
+            Request = request;
             PreliminaryMotion = preliminaryMotion;
             LifecycleTransition = lifecycleTransition;
             LandingCompletionPending = landingCompletionPending;
@@ -1630,7 +1639,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         internal CharacterFootStateTarget Target { get; }
         internal CharacterFootInterpolationResult Interpolation { get; }
         internal CharacterFootSwingMotionResult OutputSwing { get; }
-        internal CharacterResolvedFootResult PreliminaryResolved { get; }
+        internal CharacterFootPlacementRequest Request { get; }
         internal CharacterFootSwingMotionResult PreliminaryMotion { get; }
         internal CharacterFootLifecycleTransitionFact LifecycleTransition { get; }
         internal bool LandingCompletionPending { get; }

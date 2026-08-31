@@ -104,14 +104,32 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         internal float MinimumCompressionReserve { get; }
     }
 
-    internal readonly struct CharacterResolvedFootResult
+    internal readonly struct CharacterFootPlacementIdentity
     {
-        internal CharacterResolvedFootResult(
+        internal CharacterFootPlacementIdentity(
             ulong frameSequence,
             ulong completionIdentity,
             FixedString64Bytes rigId,
             FixedString64Bytes rigRevision,
-            CharacterFootSide side,
+            CharacterFootSide side)
+        {
+            FrameSequence = frameSequence;
+            CompletionIdentity = completionIdentity;
+            RigId = rigId;
+            RigRevision = rigRevision;
+            Side = side;
+        }
+
+        internal ulong FrameSequence { get; }
+        internal ulong CompletionIdentity { get; }
+        internal FixedString64Bytes RigId { get; }
+        internal FixedString64Bytes RigRevision { get; }
+        internal CharacterFootSide Side { get; }
+    }
+
+    internal readonly struct CharacterFootPlacementPose
+    {
+        internal CharacterFootPlacementPose(
             Vector3 finalSole,
             Vector3 effectiveSole,
             Vector3 finalAnkle,
@@ -120,23 +138,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             Quaternion effectiveRotation,
             Vector3 goalTargetCorrection,
             float goalWeight,
-            float rotationWeight,
-            in CharacterFootSupportTarget supportTarget,
-            in CharacterFootContactReference contactReference,
-            float contactOwnership,
-            CharacterFootSupportEligibility supportEligibility,
-            float supportWeight,
-            float supportIntentWeight,
-            float supportHorizontalError,
-            ulong supportEventIdentity,
-            in CharacterFootPelvisReachReference pelvisReachReference,
-            in CharacterFootLandingReachRequest landingReachRequest)
+            float rotationWeight)
         {
-            FrameSequence = frameSequence;
-            CompletionIdentity = completionIdentity;
-            RigId = rigId;
-            RigRevision = rigRevision;
-            Side = side;
             FinalSole = finalSole;
             EffectiveSole = effectiveSole;
             FinalAnkle = finalAnkle;
@@ -146,24 +149,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             GoalTargetCorrection = goalTargetCorrection;
             GoalWeight = goalWeight;
             RotationWeight = rotationWeight;
-            SupportTarget = supportTarget;
-            ContactReference = contactReference;
-            ContactOwnership = contactOwnership;
-            SupportEligibility = supportEligibility;
-            SupportWeight = supportWeight;
-            SupportIntentWeight = supportIntentWeight;
-            SupportHorizontalError = supportHorizontalError;
-            SupportEventIdentity = supportEventIdentity;
-            PelvisReachReference = pelvisReachReference;
-            LandingReachRequest = landingReachRequest;
-            Outcome = CharacterFootResolvedOutcome.Ready;
         }
 
-        internal ulong FrameSequence { get; }
-        internal ulong CompletionIdentity { get; }
-        internal FixedString64Bytes RigId { get; }
-        internal FixedString64Bytes RigRevision { get; }
-        internal CharacterFootSide Side { get; }
         internal Vector3 FinalSole { get; }
         internal Vector3 EffectiveSole { get; }
         internal Vector3 FinalAnkle { get; }
@@ -173,80 +160,142 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         internal Vector3 GoalTargetCorrection { get; }
         internal float GoalWeight { get; }
         internal float RotationWeight { get; }
-        internal CharacterFootSupportTarget SupportTarget { get; }
-        internal CharacterFootContactReference ContactReference { get; }
-        internal float ContactOwnership { get; }
-        internal CharacterFootSupportEligibility SupportEligibility { get; }
-        internal float SupportWeight { get; }
-        internal float SupportIntentWeight { get; }
-        internal float SupportHorizontalError { get; }
-        internal ulong SupportEventIdentity { get; }
-        internal CharacterFootPelvisReachReference PelvisReachReference { get; }
-        internal CharacterFootLandingReachRequest LandingReachRequest { get; }
-        internal CharacterFootResolvedOutcome Outcome { get; }
+    }
 
-        internal static CharacterResolvedFootResult CurrentSupportUnavailable(
-            ulong frameSequence,
-            ulong completionIdentity,
-            FixedString64Bytes rigId,
-            FixedString64Bytes rigRevision,
-            CharacterFootSide side,
-            in CharacterFootPlacementAnimatedFootPose foot) =>
-            Unavailable(
-                frameSequence,
-                completionIdentity,
-                rigId,
-                rigRevision,
-                side,
-                in foot,
-                CharacterFootResolvedOutcome.CurrentSupportUnavailable);
-
-        internal static CharacterResolvedFootResult Unavailable(
-            ulong frameSequence,
-            ulong completionIdentity,
-            FixedString64Bytes rigId,
-            FixedString64Bytes rigRevision,
-            CharacterFootSide side,
-            in CharacterFootPlacementAnimatedFootPose foot,
-            CharacterFootResolvedOutcome outcome)
+    internal readonly struct CharacterFootSupportFacts
+    {
+        internal CharacterFootSupportFacts(
+            CharacterFootSupportTarget target,
+            CharacterFootContactReference contact,
+            float contactOwnership,
+            CharacterFootSupportEligibility eligibility,
+            float weight,
+            float horizontalError,
+            ulong eventIdentity,
+            CharacterFootPelvisReachReference reachReference)
         {
-            CharacterResolvedFootResult result = new CharacterResolvedFootResult(
-                frameSequence,
-                completionIdentity,
-                rigId,
-                rigRevision,
-                side,
-                (foot.HeelPosition + foot.ToePosition) * 0.5f,
-                (foot.HeelPosition + foot.ToePosition) * 0.5f,
-                foot.AnklePosition,
-                foot.AnkleRotation,
-                foot.AnklePosition,
-                foot.AnkleRotation,
-                default,
-                0f,
-                0f,
-                default,
-                default,
-                0f,
-                CharacterFootSupportEligibility.None,
-                0f,
-                0f,
-                0f,
-                0,
-                default,
-                default);
-            return new CharacterResolvedFootResult(
-                in result,
-                outcome);
+            Target = target;
+            Contact = contact;
+            ContactOwnership = contactOwnership;
+            Eligibility = eligibility;
+            Weight = weight;
+            HorizontalError = horizontalError;
+            EventIdentity = eventIdentity;
+            ReachReference = reachReference;
         }
 
-        CharacterResolvedFootResult(
-            in CharacterResolvedFootResult source,
+        internal CharacterFootSupportTarget Target { get; }
+        internal CharacterFootContactReference Contact { get; }
+        internal float ContactOwnership { get; }
+        internal CharacterFootSupportEligibility Eligibility { get; }
+        internal float Weight { get; }
+        internal float HorizontalError { get; }
+        internal ulong EventIdentity { get; }
+        internal CharacterFootPelvisReachReference ReachReference { get; }
+    }
+
+    internal readonly struct CharacterFootGoalTarget
+    {
+        internal CharacterFootGoalTarget(
+            Vector3 componentPosition,
+            Quaternion componentRotation,
+            float positionWeight,
+            float rotationWeight,
+            Vector3 effectiveSole)
+        {
+            ComponentPosition = componentPosition;
+            ComponentRotation = componentRotation;
+            PositionWeight = positionWeight;
+            RotationWeight = rotationWeight;
+            EffectiveSole = effectiveSole;
+        }
+
+        internal Vector3 ComponentPosition { get; }
+        internal Quaternion ComponentRotation { get; }
+        internal float PositionWeight { get; }
+        internal float RotationWeight { get; }
+        internal Vector3 EffectiveSole { get; }
+    }
+
+    internal readonly struct CharacterFootPlacementRequest
+    {
+        internal CharacterFootPlacementRequest(
+            CharacterFootPlacementIdentity identity,
+            CharacterFootPlacementPose pose,
+            CharacterFootSupportFacts support,
+            CharacterFootLandingReachRequest landingReachRequest,
+            CharacterFootGoalTarget goalTarget,
+            CharacterFootResolvedOutcome outcome,
+            bool landingReachAdmitted)
+        {
+            Identity = identity;
+            Pose = pose;
+            Support = support;
+            LandingReachRequest = landingReachRequest;
+            GoalTarget = goalTarget;
+            Outcome = outcome;
+            LandingReachAdmitted = landingReachAdmitted;
+        }
+
+        internal CharacterFootPlacementIdentity Identity { get; }
+        internal CharacterFootPlacementPose Pose { get; }
+        internal CharacterFootSupportFacts Support { get; }
+        internal CharacterFootLandingReachRequest LandingReachRequest { get; }
+        internal CharacterFootGoalTarget GoalTarget { get; }
+        internal CharacterFootResolvedOutcome Outcome { get; }
+        internal bool LandingReachAdmitted { get; }
+    }
+
+    internal readonly struct CharacterResolvedFootResult
+    {
+        internal CharacterResolvedFootResult(
+            CharacterFootPlacementIdentity identity,
+            CharacterFootPlacementPose pose,
+            CharacterFootSupportFacts support,
+            CharacterFootLandingReachRequest landingReachRequest,
+            CharacterFootGoalTarget goalTarget,
             CharacterFootResolvedOutcome outcome)
         {
-            this = source;
+            Identity = identity;
+            Pose = pose;
+            Support = support;
+            LandingReachRequest = landingReachRequest;
+            GoalTarget = goalTarget;
             Outcome = outcome;
         }
+
+        internal CharacterFootPlacementIdentity Identity { get; }
+        internal CharacterFootPlacementPose Pose { get; }
+        internal CharacterFootSupportFacts Support { get; }
+        internal CharacterFootLandingReachRequest LandingReachRequest { get; }
+        internal CharacterFootGoalTarget GoalTarget { get; }
+        internal CharacterFootResolvedOutcome Outcome { get; }
+    }
+
+    internal readonly struct CharacterFootPlacementRequestPair
+    {
+        internal CharacterFootPlacementRequestPair(
+            in CharacterFootPlacementRequest left,
+            in CharacterFootPlacementRequest right)
+        {
+            CharacterFootPlacementIdentity leftIdentity = left.Identity;
+            CharacterFootPlacementIdentity rightIdentity = right.Identity;
+            CharacterFootPlacementContract.RequirePair(
+                in leftIdentity, in rightIdentity, left.Outcome, right.Outcome);
+            FrameSequence = leftIdentity.FrameSequence;
+            CompletionIdentity = leftIdentity.CompletionIdentity;
+            RigId = leftIdentity.RigId;
+            RigRevision = leftIdentity.RigRevision;
+            Left = left;
+            Right = right;
+        }
+
+        internal ulong FrameSequence { get; }
+        internal ulong CompletionIdentity { get; }
+        internal FixedString64Bytes RigId { get; }
+        internal FixedString64Bytes RigRevision { get; }
+        internal CharacterFootPlacementRequest Left { get; }
+        internal CharacterFootPlacementRequest Right { get; }
     }
 
     internal readonly struct CharacterResolvedFootPair
@@ -255,31 +304,17 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             in CharacterResolvedFootResult left,
             in CharacterResolvedFootResult right)
         {
-            if (!ValidOutcome(left.Outcome) || !ValidOutcome(right.Outcome) ||
-                left.FrameSequence == 0 ||
-                left.FrameSequence != right.FrameSequence ||
-                left.CompletionIdentity == 0 ||
-                left.CompletionIdentity != right.CompletionIdentity ||
-                !left.RigId.Equals(right.RigId) ||
-                !left.RigRevision.Equals(right.RigRevision))
-            {
-                throw new InvalidOperationException(
-                    "Resolved Foot Pair lineage is inconsistent.");
-            }
-            FrameSequence = left.FrameSequence;
-            CompletionIdentity = left.CompletionIdentity;
-            RigId = left.RigId;
-            RigRevision = left.RigRevision;
+            CharacterFootPlacementIdentity leftIdentity = left.Identity;
+            CharacterFootPlacementIdentity rightIdentity = right.Identity;
+            CharacterFootPlacementContract.RequirePair(
+                in leftIdentity, in rightIdentity, left.Outcome, right.Outcome);
+            FrameSequence = leftIdentity.FrameSequence;
+            CompletionIdentity = leftIdentity.CompletionIdentity;
+            RigId = leftIdentity.RigId;
+            RigRevision = leftIdentity.RigRevision;
             Left = left;
             Right = right;
         }
-
-        static bool ValidOutcome(CharacterFootResolvedOutcome outcome) =>
-            outcome == CharacterFootResolvedOutcome.Ready ||
-            outcome == CharacterFootResolvedOutcome.CurrentSupportUnavailable ||
-            outcome == CharacterFootResolvedOutcome.SupportTargetUnavailable ||
-            outcome ==
-            CharacterFootResolvedOutcome.RotationProjectionUnavailable;
 
         internal ulong FrameSequence { get; }
         internal ulong CompletionIdentity { get; }
@@ -289,26 +324,54 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         internal CharacterResolvedFootResult Right { get; }
     }
 
+    internal static class CharacterFootPlacementContract
+    {
+        internal static void RequirePair(
+            in CharacterFootPlacementIdentity left,
+            in CharacterFootPlacementIdentity right,
+            CharacterFootResolvedOutcome leftOutcome,
+            CharacterFootResolvedOutcome rightOutcome)
+        {
+            if (!ValidOutcome(leftOutcome) || !ValidOutcome(rightOutcome) ||
+                left.FrameSequence == 0 ||
+                left.FrameSequence != right.FrameSequence ||
+                left.CompletionIdentity == 0 ||
+                left.CompletionIdentity != right.CompletionIdentity ||
+                !left.RigId.Equals(right.RigId) ||
+                !left.RigRevision.Equals(right.RigRevision))
+            {
+                throw new InvalidOperationException(
+                    "Foot Placement Pair lineage is inconsistent.");
+            }
+        }
+
+        static bool ValidOutcome(CharacterFootResolvedOutcome outcome) =>
+            outcome == CharacterFootResolvedOutcome.Ready ||
+            outcome == CharacterFootResolvedOutcome.CurrentSupportUnavailable ||
+            outcome == CharacterFootResolvedOutcome.SupportTargetUnavailable ||
+            outcome == CharacterFootResolvedOutcome.RotationProjectionUnavailable;
+    }
+
     public readonly struct CharacterResolvedFootDiagnostics
     {
         internal CharacterResolvedFootDiagnostics(
             in CharacterResolvedFootResult result,
             in CharacterFootPlacementAnimatedFootPose source)
         {
-            FrameSequence = result.FrameSequence;
-            CompletionIdentity = result.CompletionIdentity;
-            RigId = result.RigId.ToString();
-            RigRevision = result.RigRevision.ToString();
-            Side = result.Side;
+            FrameSequence = result.Identity.FrameSequence;
+            CompletionIdentity = result.Identity.CompletionIdentity;
+            RigId = result.Identity.RigId.ToString();
+            RigRevision = result.Identity.RigRevision.ToString();
+            Side = result.Identity.Side;
             Outcome = result.Outcome;
-            FinalSole = result.FinalSole;
-            EffectiveSole = result.EffectiveSole;
-            GoalTargetAnkle = result.FinalAnkle;
-            GoalTargetRotation = result.FinalRotation;
-            EffectiveAnkle = result.EffectiveAnkle;
-            EffectiveRotation = result.EffectiveRotation;
-            Vector3 effectiveAnkle = result.EffectiveAnkle;
-            Quaternion effectiveRotation = result.EffectiveRotation;
+            FinalSole = result.Pose.FinalSole;
+            EffectiveSole = result.Pose.EffectiveSole;
+            GoalTargetAnkle = result.Pose.FinalAnkle;
+            GoalTargetRotation = result.Pose.FinalRotation;
+            EffectiveAnkle = result.Pose.EffectiveAnkle;
+            EffectiveRotation = result.Pose.EffectiveRotation;
+            Vector3 effectiveAnkle = result.Pose.EffectiveAnkle;
+            Quaternion effectiveRotation = result.Pose.EffectiveRotation;
             CharacterFootPlacementSoleContactPose contacts =
                 source.ResolveSoleContacts(
                     effectiveAnkle,
@@ -320,28 +383,28 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             SourceSoleForward = source.SoleForward;
             SourceSoleFrameLocalRotation =
                 source.SoleFrameLocalRotation;
-            GoalTargetCorrection = result.GoalTargetCorrection;
+            GoalTargetCorrection = result.Pose.GoalTargetCorrection;
             EffectiveSoleCorrection =
                 EffectiveSoleFromContacts -
                 (source.HeelPosition + source.ToePosition) * 0.5f;
-            PositionWeight = result.GoalWeight;
-            RotationWeight = result.RotationWeight;
-            CharacterFootSupportTarget supportTarget = result.SupportTarget;
+            PositionWeight = result.Pose.GoalWeight;
+            RotationWeight = result.Pose.RotationWeight;
+            CharacterFootSupportTarget supportTarget = result.Support.Target;
             SupportTarget = new CharacterFootSupportTargetDiagnostics(
                 in supportTarget);
-            ContactAvailable = result.ContactReference.IsAvailable;
-            ContactEventIdentity = result.ContactReference.EventIdentity;
-            ContactPoint = result.ContactReference.Point;
-            ContactOwnership = result.ContactOwnership;
-            SupportEligibility = result.SupportEligibility;
-            SupportWeight = result.SupportWeight;
-            SupportIntentWeight = result.SupportIntentWeight;
-            SupportHorizontalError = result.SupportHorizontalError;
-            SupportEventIdentity = result.SupportEventIdentity;
-            PelvisReachAvailable = result.PelvisReachReference.IsAvailable;
+            ContactAvailable = result.Support.Contact.IsAvailable;
+            ContactEventIdentity = result.Support.Contact.EventIdentity;
+            ContactPoint = result.Support.Contact.Point;
+            ContactOwnership = result.Support.ContactOwnership;
+            SupportEligibility = result.Support.Eligibility;
+            SupportWeight = result.Support.Weight;
+            SupportIntentWeight = result.Support.Weight;
+            SupportHorizontalError = result.Support.HorizontalError;
+            SupportEventIdentity = result.Support.EventIdentity;
+            PelvisReachAvailable = result.Support.ReachReference.IsAvailable;
             PelvisReachEventIdentity =
-                result.PelvisReachReference.EventIdentity;
-            PelvisReachPoint = result.PelvisReachReference.Point;
+                result.Support.ReachReference.EventIdentity;
+            PelvisReachPoint = result.Support.ReachReference.Point;
             LandingReachAvailable = result.LandingReachRequest.IsAvailable;
             LandingReachEventIdentity =
                 result.LandingReachRequest.EventIdentity;

@@ -1158,7 +1158,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             s_TargetRootHierarchy = null;
         }
 
-        static IReadOnlyList<AnimationPoseWatchIdentity> BuildPoseWatches(
+        internal static IReadOnlyList<AnimationPoseWatchIdentity> BuildPoseWatches(
             AnimationPresentationRuntimeSnapshot snapshot)
         {
             var result = new List<AnimationPoseWatchIdentity>(4);

@@ -498,7 +498,9 @@ namespace ThirdPersonCharacter.Pipeline
 			float facingError,
 			CharacterPresentationMotionPhase motionPhase,
 			IReadOnlyList<PoseParameterId> directParameterIds = null,
-			IReadOnlyList<float> directParameterValues = null)
+			IReadOnlyList<float> directParameterValues = null,
+			Guid poseWatchOwnerId = default,
+			IReadOnlyList<AnimationPoseWatchIdentity> poseWatchInterests = null)
 		{
 			if (sessionId == Guid.Empty || !CanPreviewPoseGraph)
 			{
@@ -520,7 +522,9 @@ namespace ThirdPersonCharacter.Pipeline
 				facingError,
 				motionPhase,
 				directParameterIds,
-				directParameterValues);
+				directParameterValues,
+				poseWatchOwnerId,
+				poseWatchInterests);
 		}
 
 		public void ClearPoseGraphPreview(Guid sessionId)

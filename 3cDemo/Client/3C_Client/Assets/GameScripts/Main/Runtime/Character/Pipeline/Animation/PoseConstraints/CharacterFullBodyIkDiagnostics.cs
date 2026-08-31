@@ -11,6 +11,13 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         RightLeg = 4
     }
 
+    public enum CharacterFullBodyIkBendDirectionSource : byte
+    {
+        Reference = 1,
+        StableHistory = 2,
+        Animated = 3
+    }
+
     public readonly struct CharacterFullBodyIkEffectorDiagnostics
     {
         internal CharacterFullBodyIkEffectorDiagnostics(
@@ -96,7 +103,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             float animatedBendDirectionPreviousDot,
             float effectiveBendDirectionPreviousDot,
             float stabilizationWeight,
-            bool retainedPreviousBendDirection)
+            bool retainedPreviousBendDirection,
+            bool hadStableBendDirection,
+            bool hadAppliedBendDirection,
+            CharacterFullBodyIkBendDirectionSource bendDirectionSource)
         {
             OriginalHip = originalHip;
             OriginalKnee = originalKnee;
@@ -118,6 +128,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             EffectiveBendDirectionPreviousDot = effectiveBendDirectionPreviousDot;
             StabilizationWeight = stabilizationWeight;
             RetainedPreviousBendDirection = retainedPreviousBendDirection;
+            HadStableBendDirection = hadStableBendDirection;
+            HadAppliedBendDirection = hadAppliedBendDirection;
+            BendDirectionSource = bendDirectionSource;
             IsAvailable = true;
         }
 
@@ -141,6 +154,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         public float EffectiveBendDirectionPreviousDot { get; }
         public float StabilizationWeight { get; }
         public bool RetainedPreviousBendDirection { get; }
+        public bool HadStableBendDirection { get; }
+        public bool HadAppliedBendDirection { get; }
+        public CharacterFullBodyIkBendDirectionSource BendDirectionSource { get; }
         public bool IsAvailable { get; }
     }
 
@@ -155,6 +171,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             string rigRevision,
             string profileId,
             string profileRevision,
+            ulong bendResetGeneration,
             int iterations,
             bool fabrikPass,
             Vector3 pelvisPreSolveTranslation,
@@ -170,6 +187,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             RigRevision = rigRevision ?? string.Empty;
             ProfileId = profileId ?? string.Empty;
             ProfileRevision = profileRevision ?? string.Empty;
+            BendResetGeneration = bendResetGeneration;
             Iterations = iterations;
             FabrikPass = fabrikPass;
             PelvisPreSolveTranslation = pelvisPreSolveTranslation;
@@ -189,6 +207,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         public string RigRevision { get; }
         public string ProfileId { get; }
         public string ProfileRevision { get; }
+        public ulong BendResetGeneration { get; }
         public int Iterations { get; }
         public bool FabrikPass { get; }
         public Vector3 PelvisPreSolveTranslation { get; }

@@ -220,7 +220,9 @@ namespace ThirdPersonCharacter.Pipeline
             float facingError,
             CharacterPresentationMotionPhase motionPhase,
             IReadOnlyList<PoseParameterId> directParameterIds = null,
-            IReadOnlyList<float> directParameterValues = null)
+            IReadOnlyList<float> directParameterValues = null,
+            Guid poseWatchOwnerId = default,
+            IReadOnlyList<AnimationPoseWatchIdentity> poseWatchInterests = null)
         {
             if (sessionId == Guid.Empty || evaluationTick == 0)
                 throw new ArgumentException("Pose Graph Preview identity is incomplete.");
@@ -229,6 +231,11 @@ namespace ThirdPersonCharacter.Pipeline
                     $"Animation preview target '{m_Host.name}' is already owned by session '{m_SessionId}'.");
 
             bool created = EnsureSession(sessionId, null);
+
+            if (poseWatchOwnerId != Guid.Empty)
+                m_Session.Engine.SetPoseWatchInterests(
+                    poseWatchOwnerId,
+                    poseWatchInterests ?? Array.Empty<AnimationPoseWatchIdentity>());
 
             if (resetLifecycle && !created)
             {

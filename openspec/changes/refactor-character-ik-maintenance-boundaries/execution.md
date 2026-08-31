@@ -375,8 +375,14 @@ PredictionMotion、BodyTrajectory及其Tick/Generation/ResetSequence/AuthorityTi
 
 ## 当前诊断格式identity集中
 
-状态：实现完成，Unity与Editor构建0错误，build server已关闭，严格校验通过；等待实际回放。
+状态：候选a7d2406已完成实际Replay和全部正式消费者验证；任务5.4、5.5完成。
 
 - 新增唯一`CharacterFootDiagnosticFormatIdentity`，分别保存Facts Schema、Analyzer Version、Diagnosis Schema和Quality Score Schema。Analyzer、Publisher、Store、Diagnosis Writer和MCP Query统一读取该定义。
 - 四个identity保持原字符串和数字，未新增外部字段或升级ABI。Facts Schema与Analyzer Version虽然同为71，仍是两个独立常量；Manifest/Index存储Schema继续由Store原Owner持有，不误并入业务格式。
 - 删除各消费者中的重复字面量，不引入旧版本reader、别名或fallback。回放通过并完成最终全链对账后再判断任务5.4、5.5。
+
+## 诊断identity与任务5最终验证封口
+
+- 原包：`Diagnostics/FootPlacementRuns/20260901-064609-635-84645f6c7cc04880b2a6aaf944695c7d`。对063845及固定233436，1191业务列逐值相同，23身份列映射无冲突；几何、42Target、20447明细及索引、六次1215列查询和其它正式查询保持。
+- Analysis继续发布Facts/71与Analyzer71，42份Diagnosis继续/40，Quality Score继续/3；Publisher、Store、Diagnosis Writer和MCP Query均成功消费同一产物。Proof matched1044、DivergentFrameCount0，输入/Body/时钟及帧数组一致。
+- Unity已归还、failure空、Console0。结合1215列、根Schema、Runtime Motion/Resolved/Pelvis分组和本次identity对账，任务5.4、5.5完成；Reset和收尾任务仍独立未完成。

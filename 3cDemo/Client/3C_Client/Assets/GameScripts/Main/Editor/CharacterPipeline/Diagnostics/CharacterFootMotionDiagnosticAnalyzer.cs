@@ -236,8 +236,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 FootFrame current = frames[i];
                 FootFrame previous = i > 0 &&
                                      Continuous(frames[i - 1], current) &&
-                                     frames[i - 1].BodyResetSequence ==
-                                     current.BodyResetSequence &&
+                                     frames[i - 1].BodyCorrection.ResetSequence ==
+                                     current.BodyCorrection.ResetSequence &&
                                      frames[i - 1].ProgramIdentity ==
                                      current.ProgramIdentity &&
                                      frames[i - 1].ProjectionRevision ==
@@ -525,7 +525,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     frame.Lifecycle.CurrentContactAnchorNormal),
                 formalFootPlacementWeight = frame.Lifecycle.FormalFootPlacementWeight,
                 lockWeight = frame.Lifecycle.CurrentLockRequestWeight,
-                deltaSeconds = frame.DeltaSeconds,
+                deltaSeconds = frame.Timing.DeltaSeconds,
                 currentSupportAvailable = frame.CurrentSupport.Available,
                 currentSupportRejectReason = frame.CurrentSupport.RejectReason,
                 currentSupportSurfaceIdentity = frame.CurrentSupport.Target.Surface,
@@ -622,8 +622,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     double delta = fact.wholeFootGapMeters.Value -
                         frames[i - 1].ContactSupportGap.wholeFootGapMeters.Value;
                     fact.previousGapDeltaMeters = delta;
-                    fact.gapVelocityMetersPerSecond = frame.DeltaSeconds > 0f
-                        ? (double?)(delta / frame.DeltaSeconds) : null;
+                    fact.gapVelocityMetersPerSecond = frame.Timing.DeltaSeconds > 0f
+                        ? (double?)(delta / frame.Timing.DeltaSeconds) : null;
                     fact.gapMotion = fact.wholeFootGapMeters <= ContactSupportTouchToleranceMeters ? "Touching" :
                         fact.wholeFootGapMeters <= ContactSupportGapThresholdMeters ? "WithinGapThreshold" :
                         delta < -PositionNoiseFloor ? "Closing" :
@@ -754,7 +754,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     peak = i;
                 if (i > start)
                 {
-                    double dt = frames[i].DeltaSeconds;
+                    double dt = frames[i].Timing.DeltaSeconds;
                     duration += dt;
                     double previousGap = frames[i - 1].ContactSupportGap.wholeFootGapMeters.Value;
                     excessIntegral += (Math.Max(0d, previousGap - ContactSupportGapThresholdMeters) +
@@ -767,7 +767,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 {
                     firstGapTime ??= duration;
                     gapFrames++;
-                    if (previousAbove) runDuration += frames[i].DeltaSeconds;
+                    if (previousAbove) runDuration += frames[i].Timing.DeltaSeconds;
                     runMaximum = Math.Max(runMaximum, gap);
                 }
                 else if (previousAbove)
@@ -1336,10 +1336,10 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                         current.Response.PlantOutputDistance,
                     ["PlantPenetrationDepth"] =
                         current.Response.PlantPenetrationDepth,
-                    ["PresentationDeltaSeconds"] = current.DeltaSeconds,
-                    ["BodyTickSpan"] = current.CurrentBodyTick >=
-                                       previous.CurrentBodyTick
-                        ? current.CurrentBodyTick - previous.CurrentBodyTick
+                    ["PresentationDeltaSeconds"] = current.Timing.DeltaSeconds,
+                    ["BodyTickSpan"] = current.Timing.CurrentBodyTick >=
+                                       previous.Timing.CurrentBodyTick
+                        ? current.Timing.CurrentBodyTick - previous.Timing.CurrentBodyTick
                         : 0d
                 };
                 ApplyResponseDomainMetrics(current, metrics);
@@ -1970,7 +1970,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                             ? current.OutputStages.SafetyFloorClampMeters
                             : 0d,
                     ["FootPlacementOutputOffsetStep"] = visibleStep,
-                    ["PresentationDeltaSeconds"] = current.DeltaSeconds
+                    ["PresentationDeltaSeconds"] = current.Timing.DeltaSeconds
                 };
                 var evidence = new SortedDictionary<string, bool>(
                     StringComparer.Ordinal)
@@ -2120,12 +2120,12 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     Math.Max(
                         kinematics.Heel.SpeedMetersPerSecond,
                         kinematics.Toe.SpeedMetersPerSecond));
-                ulong bodyTickSpan = current.CurrentBodyTick >=
-                                     previous.CurrentBodyTick
-                    ? current.CurrentBodyTick - previous.CurrentBodyTick
+                ulong bodyTickSpan = current.Timing.CurrentBodyTick >=
+                                     previous.Timing.CurrentBodyTick
+                    ? current.Timing.CurrentBodyTick - previous.Timing.CurrentBodyTick
                     : 0;
                 bool lowPresentationCadence =
-                    current.DeltaSeconds >=
+                    current.Timing.DeltaSeconds >=
                     LowPresentationSamplingDeltaSeconds ||
                     bodyTickSpan > 1;
                 bool outputSpeedAnomaly =
@@ -2323,7 +2323,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                             current.Response.PlantEffectiveCorrectionAfter),
                     plantOutputDistance = current.Response.PlantOutputDistance,
                     plantPenetrationDepth = current.Response.PlantPenetrationDepth,
-                    presentationDeltaSeconds = current.DeltaSeconds,
+                    presentationDeltaSeconds = current.Timing.DeltaSeconds,
                     bodyTickSpan = bodyTickSpan,
                     presentationSamplingClassification =
                         presentationSamplingClassification,
@@ -2393,7 +2393,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     ["ObservedSwingTargetDelta"] =
                         counterfactual?.observedSwingTargetDelta ?? 0d,
                     ["PresentationDeltaSeconds"] =
-                        current.DeltaSeconds,
+                        current.Timing.DeltaSeconds,
                     ["BodyTickSpan"] = detail.bodyTickSpan
                 };
                 if (contactOutputPair)
@@ -2994,7 +2994,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                         current.SelectedLandingEventIdentity,
                         current.SourceIdentity,
                         current.SourceCycle,
-                        current.DeltaSeconds,
+                        current.Timing.DeltaSeconds,
                         metrics,
                         evidence));
                 }
@@ -3903,8 +3903,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             (frame.Solver.PhysicalHeelWorld + frame.Solver.PhysicalToeWorld) * 0.5f;
 
         static Vector3 FinalPhysicalAnkleWorld(FootFrame frame) =>
-            frame.PoseRootWorldPosition +
-            frame.PoseRootWorldRotation *
+            frame.RootHierarchy.PoseRootWorldPosition +
+            frame.RootHierarchy.PoseRootWorldRotation *
             frame.Solver.PhysicalAnkleComponentPosition;
 
         static void AnalyzeLockedEvents(
@@ -4675,7 +4675,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                                       currentState
                                           .PathContinuity.SwingFilteredTargetHeightBefore;
             float maximumHeightDelta = ResolveVerticalHistoryDelta(
-                currentState.DeltaSeconds,
+                currentState.Timing.DeltaSeconds,
                 currentState.PathContinuity.SwingTargetMaximumVerticalSpeed);
             float filteredTargetHeight =
                 currentState.PathContinuity.SwingFilteredTargetHeightBefore +
@@ -5331,8 +5331,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 FootFrame current = left[frames[i]];
                 if (!Continuous(previous, current))
                     continue;
-                bool changed = previous.PrimarySupportSide != current.PrimarySupportSide ||
-                               previous.PrimarySupportEventIdentity != current.PrimarySupportEventIdentity;
+                bool changed = previous.PrimarySupport.Side != current.PrimarySupport.Side ||
+                               previous.PrimarySupport.LandingEventIdentity != current.PrimarySupport.LandingEventIdentity;
                 if (!changed)
                     continue;
                 FootFrame previousRight = right[frames[i - 1]];
@@ -5355,16 +5355,16 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 var evidence = new SortedDictionary<string, bool>(StringComparer.Ordinal)
                 {
                     ["grounded"] = current.Grounded,
-                    ["newSupportAvailable"] = current.PrimarySupportEventIdentity != 0,
-                    ["supportSideChanged"] = previous.PrimarySupportSide != current.PrimarySupportSide
+                    ["newSupportAvailable"] = current.PrimarySupport.LandingEventIdentity != 0,
+                    ["supportSideChanged"] = previous.PrimarySupport.Side != current.PrimarySupport.Side
                 };
                 EventFact fact = new EventFact(
                     "SupportChange",
-                    current.PrimarySupportSide,
+                    current.PrimarySupport.Side,
                     previous.Frame,
                     current.Frame,
                     current.Frame,
-                    current.PrimarySupportEventIdentity,
+                    current.PrimarySupport.LandingEventIdentity,
                     current.SourceIdentity,
                     current.SourceCycle,
                     DeltaSeconds(current),
@@ -5521,16 +5521,16 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                         value => value.kind == "CurrentSupportQuery"),
                     predictionMotionCount = capture.Left.Count,
                     predictionMotionUnavailableCount = capture.Left.Count(
-                        value => !value.PredictionMotionAvailable),
+                        value => !value.PredictionMotion.Available),
                     predictionMotionResetCount = capture.Left.Count(
-                        value => value.PredictionMotionResetReason != "None"),
+                        value => value.PredictionMotion.ResetReason != "None"),
                     predictionCurrentResponseCount = capture.Left.Count(
-                        value => value.PredictionCurrentResponseApplied),
+                        value => value.PredictionMotion.CurrentResponseApplied),
                     predictionContinuationResponseCount = capture.Left.Count(
-                        value => value.PredictionContinuationResponseApplied),
+                        value => value.PredictionMotion.ContinuationResponseApplied),
                     predictionMaximumSpeedClampCount = capture.Left.Count(
-                        value => value.PredictionCurrentMaximumSpeedClamped ||
-                                 value.PredictionContinuationMaximumSpeedClamped),
+                        value => value.PredictionMotion.CurrentMaximumSpeedClamped ||
+                                 value.PredictionMotion.ContinuationMaximumSpeedClamped),
                     leftFootFrameCount = capture.Left.Count,
                     rightFootFrameCount = capture.Right.Count,
                     frameGapCount = capture.FrameGapCount,
@@ -5741,7 +5741,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 sourceIndices);
             int frameGapCount = CountTransitions(left, (previous, current) => current.Frame != previous.Frame + 1) +
                                 CountTransitions(right, (previous, current) => current.Frame != previous.Frame + 1);
-            int bodyResetCount = CountTransitions(left, (previous, current) => current.BodyResetSequence != previous.BodyResetSequence);
+            int bodyResetCount = CountTransitions(left, (previous, current) => current.BodyCorrection.ResetSequence != previous.BodyCorrection.ResetSequence);
             int sourceChangeCount = CountTransitions(left, (previous, current) => previous.SourceIdentity != current.SourceIdentity) +
                                     CountTransitions(right, (previous, current) => previous.SourceIdentity != current.SourceIdentity);
             return new CsvCapture(
@@ -5767,53 +5767,53 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             FootFrame right)
         {
             if (left.Frame != right.Frame ||
-                left.PredictionMotionAvailable !=
-                right.PredictionMotionAvailable ||
+                left.PredictionMotion.Available !=
+                right.PredictionMotion.Available ||
                 !string.Equals(
-                    left.PredictionMotionRejectReason,
-                    right.PredictionMotionRejectReason,
+                    left.PredictionMotion.RejectReason,
+                    right.PredictionMotion.RejectReason,
                     StringComparison.Ordinal) ||
                 !string.Equals(
-                    left.PredictionMotionResetReason,
-                    right.PredictionMotionResetReason,
+                    left.PredictionMotion.ResetReason,
+                    right.PredictionMotion.ResetReason,
                     StringComparison.Ordinal) ||
                 !string.Equals(
-                    left.PredictionMotionSourceIdentity,
-                    right.PredictionMotionSourceIdentity,
+                    left.PredictionMotion.SourceIdentity,
+                    right.PredictionMotion.SourceIdentity,
                     StringComparison.Ordinal) ||
-                left.PredictionRawCurrentVelocity !=
-                right.PredictionRawCurrentVelocity ||
-                left.PredictionRawContinuationVelocity !=
-                right.PredictionRawContinuationVelocity ||
-                left.PredictionPreviousStableCurrentVelocity !=
-                right.PredictionPreviousStableCurrentVelocity ||
-                left.PredictionPreviousStableContinuationVelocity !=
-                right.PredictionPreviousStableContinuationVelocity ||
-                left.PredictionStableCurrentVelocity !=
-                right.PredictionStableCurrentVelocity ||
-                left.PredictionStableContinuationVelocity !=
-                right.PredictionStableContinuationVelocity ||
-                left.PredictionCurrentVelocityDelta !=
-                right.PredictionCurrentVelocityDelta ||
-                left.PredictionContinuationVelocityDelta !=
-                right.PredictionContinuationVelocityDelta ||
-                left.PredictionVelocityResponseAlpha !=
-                right.PredictionVelocityResponseAlpha ||
-                left.PredictionVelocityDeltaThreshold !=
-                right.PredictionVelocityDeltaThreshold ||
-                left.PredictionVelocitySmoothSpeed !=
-                right.PredictionVelocitySmoothSpeed ||
-                left.PredictionMaximumSpeed != right.PredictionMaximumSpeed ||
-                left.PredictionCurrentResponseApplied !=
-                right.PredictionCurrentResponseApplied ||
-                left.PredictionContinuationResponseApplied !=
-                right.PredictionContinuationResponseApplied ||
-                left.PredictionCurrentMaximumSpeedClamped !=
-                right.PredictionCurrentMaximumSpeedClamped ||
-                left.PredictionContinuationMaximumSpeedClamped !=
-                right.PredictionContinuationMaximumSpeedClamped ||
-                left.PredictionMotionRevision !=
-                right.PredictionMotionRevision)
+                left.PredictionMotion.RawCurrentVelocity !=
+                right.PredictionMotion.RawCurrentVelocity ||
+                left.PredictionMotion.RawContinuationVelocity !=
+                right.PredictionMotion.RawContinuationVelocity ||
+                left.PredictionMotion.PreviousStableCurrentVelocity !=
+                right.PredictionMotion.PreviousStableCurrentVelocity ||
+                left.PredictionMotion.PreviousStableContinuationVelocity !=
+                right.PredictionMotion.PreviousStableContinuationVelocity ||
+                left.PredictionMotion.StableCurrentVelocity !=
+                right.PredictionMotion.StableCurrentVelocity ||
+                left.PredictionMotion.StableContinuationVelocity !=
+                right.PredictionMotion.StableContinuationVelocity ||
+                left.PredictionMotion.CurrentVelocityDelta !=
+                right.PredictionMotion.CurrentVelocityDelta ||
+                left.PredictionMotion.ContinuationVelocityDelta !=
+                right.PredictionMotion.ContinuationVelocityDelta ||
+                left.PredictionMotion.VelocityResponseAlpha !=
+                right.PredictionMotion.VelocityResponseAlpha ||
+                left.PredictionMotion.VelocityDeltaThreshold !=
+                right.PredictionMotion.VelocityDeltaThreshold ||
+                left.PredictionMotion.VelocitySmoothSpeed !=
+                right.PredictionMotion.VelocitySmoothSpeed ||
+                left.PredictionMotion.MaximumSpeed != right.PredictionMotion.MaximumSpeed ||
+                left.PredictionMotion.CurrentResponseApplied !=
+                right.PredictionMotion.CurrentResponseApplied ||
+                left.PredictionMotion.ContinuationResponseApplied !=
+                right.PredictionMotion.ContinuationResponseApplied ||
+                left.PredictionMotion.CurrentMaximumSpeedClamped !=
+                right.PredictionMotion.CurrentMaximumSpeedClamped ||
+                left.PredictionMotion.ContinuationMaximumSpeedClamped !=
+                right.PredictionMotion.ContinuationMaximumSpeedClamped ||
+                left.PredictionMotion.Revision !=
+                right.PredictionMotion.Revision)
             {
                 throw new InvalidDataException(
                     $"Foot Prediction Motion Frame {left.Frame} differs between feet.");
@@ -6093,64 +6093,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     Ulong("PlantTargetTrajectoryGeneration"),
                 PreparedTargetFutureBodySource =
                     Cell("PlantTargetFutureBodyTranslationSourceIdentity"),
-                DeltaSeconds = Float("PresentationDeltaSeconds"),
-                BodyResetSequence = Ulong("BodyResetSequence"),
-                CurrentBodyTick = Ulong("CurrentBodyTick"),
-                BodyTargetVelocity = Vector("TargetBodyVelocity"),
-                TimelineCurrentVelocity = new Vector2(
-                    Float("TimelineCurrentVelocityX"),
-                    Float("TimelineCurrentVelocityZ")),
-                TimelineContinuationVelocity = new Vector2(
-                    Float("TimelineContinuationVelocityX"),
-                    Float("TimelineContinuationVelocityZ")),
-                PredictionMotionAvailable =
-                    Int("PredictionMotionAvailable") != 0,
-                PredictionMotionRejectReason =
-                    Cell("PredictionMotionRejectReason"),
-                PredictionMotionResetReason =
-                    Cell("PredictionMotionResetReason"),
-                PredictionMotionSourceIdentity =
-                    Cell("PredictionMotionSourceIdentity"),
-                PredictionRawCurrentVelocity = new Vector2(
-                    Float("PredictionRawCurrentVelocityX"),
-                    Float("PredictionRawCurrentVelocityZ")),
-                PredictionRawContinuationVelocity = new Vector2(
-                    Float("PredictionRawContinuationVelocityX"),
-                    Float("PredictionRawContinuationVelocityZ")),
-                PredictionPreviousStableCurrentVelocity = new Vector2(
-                    Float("PredictionPreviousStableCurrentVelocityX"),
-                    Float("PredictionPreviousStableCurrentVelocityZ")),
-                PredictionPreviousStableContinuationVelocity = new Vector2(
-                    Float("PredictionPreviousStableContinuationVelocityX"),
-                    Float("PredictionPreviousStableContinuationVelocityZ")),
-                PredictionStableCurrentVelocity = new Vector2(
-                    Float("PredictionStableCurrentVelocityX"),
-                    Float("PredictionStableCurrentVelocityZ")),
-                PredictionStableContinuationVelocity = new Vector2(
-                    Float("PredictionStableContinuationVelocityX"),
-                    Float("PredictionStableContinuationVelocityZ")),
-                PredictionCurrentVelocityDelta = new Vector2(
-                    Float("PredictionCurrentVelocityDeltaX"),
-                    Float("PredictionCurrentVelocityDeltaZ")),
-                PredictionContinuationVelocityDelta = new Vector2(
-                    Float("PredictionContinuationVelocityDeltaX"),
-                    Float("PredictionContinuationVelocityDeltaZ")),
-                PredictionVelocityResponseAlpha =
-                    Float("PredictionVelocityResponseAlpha"),
-                PredictionVelocityDeltaThreshold =
-                    Float("PredictionVelocityDeltaThreshold"),
-                PredictionVelocitySmoothSpeed =
-                    Float("PredictionVelocitySmoothSpeed"),
-                PredictionMaximumSpeed = Float("PredictionMaximumSpeed"),
-                PredictionCurrentResponseApplied =
-                    Int("PredictionCurrentResponseApplied") != 0,
-                PredictionContinuationResponseApplied =
-                    Int("PredictionContinuationResponseApplied") != 0,
-                PredictionCurrentMaximumSpeedClamped =
-                    Int("PredictionCurrentMaximumSpeedClamped") != 0,
-                PredictionContinuationMaximumSpeedClamped =
-                    Int("PredictionContinuationMaximumSpeedClamped") != 0,
-                PredictionMotionRevision = Ulong("PredictionMotionRevision"),
                 Grounded = Int("Grounded") != 0,
                 ActionInstanceIdentity = Ulong(
                     side == "Left"
@@ -6164,8 +6106,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 FormalOutputObservationAvailable =
                     Int("FormalStepObservationAvailable") != 0,
                 FormalFootHeight = Float("FormalFootHeight"),
-                PoseRootWorldPosition = Vector("PoseRootWorldPosition"),
-                PoseRootWorldRotation = Rotation("PoseRootWorldRotation"),
                 StepSelectionMaximumPredictionTimeSeconds =
                     Float("StepSelectionMaximumPredictionTimeSeconds"),
                 StepSelectionLastLandingEventIdentity =
@@ -6355,13 +6295,14 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 SourceToe = Vector("FootMotionSourceToe"),
                 HasAnchor = Ulong("FootMotionLandingEventIdentity") != 0 &&
                             Cell("FootMotionConstraintState") != "Swing",
-                PrimarySupportAvailable =
-                    Int("PrimarySupportHasValue") != 0,
-                PrimarySupportSide = Cell("PrimarySupportSide"),
-                PrimarySupportEventIdentity = Ulong("PrimarySupportLandingEventIdentity"),
                 PathContinuity = bindings.PathContinuity.Read(cells),
                 Lifecycle = bindings.Lifecycle.Read(cells),
                 OutputStages = bindings.OutputStages.Read(cells),
+                Timing = bindings.Timing.Read(cells),
+                PredictionMotion = bindings.PredictionMotion.Read(cells),
+                PrimarySupport = bindings.PrimarySupport.Read(cells),
+                RootHierarchy = bindings.RootHierarchy.Read(cells),
+                BodyCorrection = bindings.BodyCorrection.Read(cells),
                 GroundPath = bindings.GroundPath.Read(cells),
                 Response = bindings.Response.Read(cells),
                 Solver = bindings.Solver.Read(cells),
@@ -6553,7 +6494,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     "ForceRefreshDistanceExceeded";
                 float targetBudget =
                     frame.Response.PlantTargetMaximumVerticalSpeed *
-                    frame.DeltaSeconds;
+                    frame.Timing.DeltaSeconds;
                 bool targetClampExpected =
                     frame.Response.PlantTargetHeightUpdateReason == "RateLimited";
                 bool targetHeightConsistent = Math.Abs(
@@ -6610,7 +6551,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     frame.Response.PlantWorldResidualCapturedBeforeDecay.sqrMagnitude >
                     RuntimeGeometryEpsilon * RuntimeGeometryEpsilon;
                 bool residualDecayRequired = residualActiveBeforeDecay &&
-                                             frame.DeltaSeconds > 0f;
+                                             frame.Timing.DeltaSeconds > 0f;
                 bool residualDeadlineConsistent =
                     frame.Response.PlantWorldResidualDeadlineHalfLifeAvailable
                     ? float.IsFinite(
@@ -6638,7 +6579,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                               frame.Response.PlantWorldResidualAppliedHalfLifeSeconds -
                               expectedAppliedHalfLife) <= TimeEpsilon &&
                           residualActiveBeforeDecay &&
-                          frame.DeltaSeconds > 0f
+                          frame.Timing.DeltaSeconds > 0f
                         : Math.Abs(
                               frame.Response.PlantWorldResidualAppliedHalfLifeSeconds) <=
                           TimeEpsilon);
@@ -6646,7 +6587,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     frame.Response.PlantWorldResidualDecayApplied
                         ? AdvanceResidual(
                             frame.Response.PlantWorldResidualCapturedBeforeDecay,
-                            frame.DeltaSeconds,
+                            frame.Timing.DeltaSeconds,
                             frame.Response.PlantWorldResidualAppliedHalfLifeSeconds)
                         : frame.Response.PlantWorldResidualCapturedBeforeDecay;
                 bool expectedClearedAtCompletionTolerance =
@@ -6917,7 +6858,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                         frame.PathContinuity.SwingRawTargetHeightAlongUp -
                         frame.PathContinuity.SwingFilteredTargetHeightBefore;
                     float maximumHeightDelta = ResolveVerticalHistoryDelta(
-                        frame.DeltaSeconds,
+                        frame.Timing.DeltaSeconds,
                         frame.PathContinuity.SwingTargetMaximumVerticalSpeed);
                     float expectedAppliedHeightDelta =
                         frame.PathContinuity.SwingTargetHeightUpdateHeld
@@ -7002,55 +6943,55 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         static void RequirePredictionMotion(FootFrame frame)
         {
             RequireEnum<CharacterFootPredictionMotionRejectReason>(
-                frame.PredictionMotionRejectReason,
+                frame.PredictionMotion.RejectReason,
                 "PredictionMotionRejectReason");
             RequireEnum<CharacterFootPredictionMotionResetReason>(
-                frame.PredictionMotionResetReason,
+                frame.PredictionMotion.ResetReason,
                 "PredictionMotionResetReason");
-            if (!FiniteVector(frame.BodyTargetVelocity) ||
-                !FiniteVector(frame.TimelineCurrentVelocity) ||
-                !FiniteVector(frame.TimelineContinuationVelocity) ||
-                !FiniteVector(frame.PredictionRawCurrentVelocity) ||
-                !FiniteVector(frame.PredictionRawContinuationVelocity) ||
-                !FiniteVector(frame.PredictionPreviousStableCurrentVelocity) ||
-                !FiniteVector(frame.PredictionPreviousStableContinuationVelocity) ||
-                !FiniteVector(frame.PredictionStableCurrentVelocity) ||
-                !FiniteVector(frame.PredictionStableContinuationVelocity) ||
-                !FiniteVector(frame.PredictionCurrentVelocityDelta) ||
-                !FiniteVector(frame.PredictionContinuationVelocityDelta) ||
-                !float.IsFinite(frame.PredictionVelocityResponseAlpha) ||
-                !float.IsFinite(frame.PredictionVelocityDeltaThreshold) ||
-                frame.PredictionVelocityDeltaThreshold <= 0f ||
-                !float.IsFinite(frame.PredictionVelocitySmoothSpeed) ||
-                frame.PredictionVelocitySmoothSpeed <= 0f ||
-                !float.IsFinite(frame.PredictionMaximumSpeed) ||
-                frame.PredictionMaximumSpeed <=
-                frame.PredictionVelocityDeltaThreshold)
+            if (!FiniteVector(frame.BodyCorrection.TargetVelocity) ||
+                !FiniteVector(frame.Timing.TimelineCurrentVelocity) ||
+                !FiniteVector(frame.Timing.TimelineContinuationVelocity) ||
+                !FiniteVector(frame.PredictionMotion.RawCurrentVelocity) ||
+                !FiniteVector(frame.PredictionMotion.RawContinuationVelocity) ||
+                !FiniteVector(frame.PredictionMotion.PreviousStableCurrentVelocity) ||
+                !FiniteVector(frame.PredictionMotion.PreviousStableContinuationVelocity) ||
+                !FiniteVector(frame.PredictionMotion.StableCurrentVelocity) ||
+                !FiniteVector(frame.PredictionMotion.StableContinuationVelocity) ||
+                !FiniteVector(frame.PredictionMotion.CurrentVelocityDelta) ||
+                !FiniteVector(frame.PredictionMotion.ContinuationVelocityDelta) ||
+                !float.IsFinite(frame.PredictionMotion.VelocityResponseAlpha) ||
+                !float.IsFinite(frame.PredictionMotion.VelocityDeltaThreshold) ||
+                frame.PredictionMotion.VelocityDeltaThreshold <= 0f ||
+                !float.IsFinite(frame.PredictionMotion.VelocitySmoothSpeed) ||
+                frame.PredictionMotion.VelocitySmoothSpeed <= 0f ||
+                !float.IsFinite(frame.PredictionMotion.MaximumSpeed) ||
+                frame.PredictionMotion.MaximumSpeed <=
+                frame.PredictionMotion.VelocityDeltaThreshold)
             {
                 throw new InvalidDataException(
                     "Foot Prediction Motion facts are non-finite or invalid.");
             }
             float expectedAlpha = Mathf.Clamp01(
-                frame.PredictionVelocitySmoothSpeed * frame.DeltaSeconds);
+                frame.PredictionMotion.VelocitySmoothSpeed * frame.Timing.DeltaSeconds);
             Vector2 bodyTargetCurrent = new Vector2(
-                frame.BodyTargetVelocity.x,
-                frame.BodyTargetVelocity.z);
+                frame.BodyCorrection.TargetVelocity.x,
+                frame.BodyCorrection.TargetVelocity.z);
             if (Vector2.Distance(
-                    frame.PredictionRawCurrentVelocity,
+                    frame.PredictionMotion.RawCurrentVelocity,
                     bodyTargetCurrent) > PositionNoiseFloor ||
                 Vector2.Distance(
-                    frame.PredictionRawContinuationVelocity,
-                    frame.TimelineContinuationVelocity) > PositionNoiseFloor)
+                    frame.PredictionMotion.RawContinuationVelocity,
+                    frame.Timing.TimelineContinuationVelocity) > PositionNoiseFloor)
             {
                 throw new InvalidDataException(
                     "Foot Prediction Motion input facts are inconsistent.");
             }
-            if (!frame.PredictionMotionAvailable)
+            if (!frame.PredictionMotion.Available)
             {
-                if (frame.PredictionMotionRejectReason == "None" ||
-                    frame.PredictionMotionResetReason != "None" ||
-                    frame.PredictionMotionRevision != 0 ||
-                    Math.Abs(frame.PredictionVelocityResponseAlpha) >
+                if (frame.PredictionMotion.RejectReason == "None" ||
+                    frame.PredictionMotion.ResetReason != "None" ||
+                    frame.PredictionMotion.Revision != 0 ||
+                    Math.Abs(frame.PredictionMotion.VelocityResponseAlpha) >
                     TimeEpsilon)
                 {
                     throw new InvalidDataException(
@@ -7058,71 +6999,71 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 }
                 return;
             }
-            if (frame.PredictionMotionRejectReason != "None" ||
-                frame.PredictionMotionRevision == 0 ||
+            if (frame.PredictionMotion.RejectReason != "None" ||
+                frame.PredictionMotion.Revision == 0 ||
                 string.IsNullOrWhiteSpace(
-                    frame.PredictionMotionSourceIdentity) ||
+                    frame.PredictionMotion.SourceIdentity) ||
                 Math.Abs(
-                    frame.PredictionVelocityResponseAlpha - expectedAlpha) >
+                    frame.PredictionMotion.VelocityResponseAlpha - expectedAlpha) >
                 TimeEpsilon)
             {
                 throw new InvalidDataException(
                     "Available Foot Prediction Motion lineage is invalid.");
             }
             Vector2 expectedCurrentDelta =
-                frame.PredictionRawCurrentVelocity -
-                frame.PredictionPreviousStableCurrentVelocity;
+                frame.PredictionMotion.RawCurrentVelocity -
+                frame.PredictionMotion.PreviousStableCurrentVelocity;
             Vector2 expectedContinuationDelta =
-                frame.PredictionRawContinuationVelocity -
-                frame.PredictionPreviousStableContinuationVelocity;
-            bool reset = frame.PredictionMotionResetReason != "None";
+                frame.PredictionMotion.RawContinuationVelocity -
+                frame.PredictionMotion.PreviousStableContinuationVelocity;
+            bool reset = frame.PredictionMotion.ResetReason != "None";
             bool expectedCurrentResponse = !reset &&
                 expectedCurrentDelta.magnitude >
-                frame.PredictionVelocityDeltaThreshold;
+                frame.PredictionMotion.VelocityDeltaThreshold;
             bool expectedContinuationResponse = !reset &&
                 expectedContinuationDelta.magnitude >
-                frame.PredictionVelocityDeltaThreshold;
+                frame.PredictionMotion.VelocityDeltaThreshold;
             Vector2 currentCandidate = reset
-                ? frame.PredictionRawCurrentVelocity
+                ? frame.PredictionMotion.RawCurrentVelocity
                 : expectedCurrentResponse
-                    ? frame.PredictionPreviousStableCurrentVelocity +
+                    ? frame.PredictionMotion.PreviousStableCurrentVelocity +
                       expectedCurrentDelta * expectedAlpha
-                    : frame.PredictionPreviousStableCurrentVelocity;
+                    : frame.PredictionMotion.PreviousStableCurrentVelocity;
             Vector2 continuationCandidate = reset
-                ? frame.PredictionRawContinuationVelocity
+                ? frame.PredictionMotion.RawContinuationVelocity
                 : expectedContinuationResponse
-                    ? frame.PredictionPreviousStableContinuationVelocity +
+                    ? frame.PredictionMotion.PreviousStableContinuationVelocity +
                       expectedContinuationDelta * expectedAlpha
-                    : frame.PredictionPreviousStableContinuationVelocity;
+                    : frame.PredictionMotion.PreviousStableContinuationVelocity;
             bool expectedCurrentClamped =
-                currentCandidate.magnitude > frame.PredictionMaximumSpeed;
+                currentCandidate.magnitude > frame.PredictionMotion.MaximumSpeed;
             bool expectedContinuationClamped =
-                continuationCandidate.magnitude > frame.PredictionMaximumSpeed;
+                continuationCandidate.magnitude > frame.PredictionMotion.MaximumSpeed;
             Vector2 expectedCurrent = Vector2.ClampMagnitude(
                 currentCandidate,
-                frame.PredictionMaximumSpeed);
+                frame.PredictionMotion.MaximumSpeed);
             Vector2 expectedContinuation = Vector2.ClampMagnitude(
                 continuationCandidate,
-                frame.PredictionMaximumSpeed);
+                frame.PredictionMotion.MaximumSpeed);
             if (Vector2.Distance(
-                    frame.PredictionCurrentVelocityDelta,
+                    frame.PredictionMotion.CurrentVelocityDelta,
                     expectedCurrentDelta) > PositionNoiseFloor ||
                 Vector2.Distance(
-                    frame.PredictionContinuationVelocityDelta,
+                    frame.PredictionMotion.ContinuationVelocityDelta,
                     expectedContinuationDelta) > PositionNoiseFloor ||
-                frame.PredictionCurrentResponseApplied !=
+                frame.PredictionMotion.CurrentResponseApplied !=
                 expectedCurrentResponse ||
-                frame.PredictionContinuationResponseApplied !=
+                frame.PredictionMotion.ContinuationResponseApplied !=
                 expectedContinuationResponse ||
-                frame.PredictionCurrentMaximumSpeedClamped !=
+                frame.PredictionMotion.CurrentMaximumSpeedClamped !=
                 expectedCurrentClamped ||
-                frame.PredictionContinuationMaximumSpeedClamped !=
+                frame.PredictionMotion.ContinuationMaximumSpeedClamped !=
                 expectedContinuationClamped ||
                 Vector2.Distance(
-                    frame.PredictionStableCurrentVelocity,
+                    frame.PredictionMotion.StableCurrentVelocity,
                     expectedCurrent) > PositionNoiseFloor ||
                 Vector2.Distance(
-                    frame.PredictionStableContinuationVelocity,
+                    frame.PredictionMotion.StableContinuationVelocity,
                     expectedContinuation) > PositionNoiseFloor)
             {
                 throw new InvalidDataException(
@@ -7885,8 +7826,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     string direction = !advance || delta == 0f ? "None" : delta > 0f ? "Increase" : "Decrease";
                     float speed = direction == "None" ? 0f : direction == "Increase"
                         ? ExpectedCorrectionResponseIncreaseSpeed : ExpectedCorrectionResponseDecreaseSpeed;
-                    float applied = advance ? Mathf.Clamp(delta, -speed * frame.DeltaSeconds,
-                        speed * frame.DeltaSeconds) : 0f;
+                    float applied = advance ? Mathf.Clamp(delta, -speed * frame.Timing.DeltaSeconds,
+                        speed * frame.Timing.DeltaSeconds) : 0f;
                     valid &= (!frame.Response.CorrectionResponseVisibleOutputTransferred || frame.Response.PreviousResponseOutputAvailable) &&
                         Math.Abs(frame.Response.CorrectionResponseDesired - desired) <= PositionNoiseFloor &&
                         Math.Abs(frame.Response.CorrectionResponsePrevious - previous) <= PositionNoiseFloor &&
@@ -7899,7 +7840,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     {
                         Vector3 captured = frame.Response.PreviousResponseOutputPoint - frame.OriginalSole - frame.OutputStages.StateTargetCorrection;
                         Vector3 expectedDesired = frame.OriginalSole + frame.OutputStages.StateTargetCorrection +
-                            AdvanceResidual(captured, frame.DeltaSeconds, frame.PathContinuity.ResidualBaseHalfLifeSeconds);
+                            AdvanceResidual(captured, frame.Timing.DeltaSeconds, frame.PathContinuity.ResidualBaseHalfLifeSeconds);
                         valid &= frame.Response.PreviousResponseOutputAvailable && !frame.Response.CorrectionResponseVisibleOutputTransferred &&
                             frame.Response.CorrectionResponseBeforeRebase == 0f && frame.Response.CorrectionResponseAppliedDelta == 0f &&
                             frame.Response.CorrectionResponseSelectedSpeed == 0f &&
@@ -8091,7 +8032,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                             : CharacterFootContactEdge.None;
             float expectedSeconds = expectedEdge ==
                                     CharacterFootContactEdge.None
-                ? frame.Lifecycle.PreviousContactEdgeSeconds + frame.DeltaSeconds
+                ? frame.Lifecycle.PreviousContactEdgeSeconds + frame.Timing.DeltaSeconds
                 : 0f;
             ulong expectedLatestContact =
                 frame.Lifecycle.PreviousLatestContactEventIdentity;
@@ -8664,10 +8605,10 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     PelvisClose(leg.MinimumCompressionReserve, frame.Resolved.LandingReachMinimumCompressionReserve), frame, "Foot request lineage");
             if (leg.PrimarySupport)
             {
-                RequirePelvis(frame.Pelvis.HeightTarget.Available && frame.PrimarySupportAvailable &&
-                    frame.PrimarySupportSide == frame.Side && frame.Pelvis.SupportSide == frame.Side, frame, "primary lineage");
+                RequirePelvis(frame.Pelvis.HeightTarget.Available && frame.PrimarySupport.HasValue &&
+                    frame.PrimarySupport.Side == frame.Side && frame.Pelvis.SupportSide == frame.Side, frame, "primary lineage");
                 if (!leg.FootTarget)
-                    RequirePelvis(leg.EventIdentity == frame.PrimarySupportEventIdentity &&
+                    RequirePelvis(leg.EventIdentity == frame.PrimarySupport.LandingEventIdentity &&
                         Vector3.Distance(leg.Hip, frame.Pelvis.Posture.Hip) <= RuntimeGeometryEpsilon &&
                         Vector3.Distance(leg.TargetAnkle, frame.Pelvis.Posture.TargetAnkle) <= RuntimeGeometryEpsilon &&
                         PelvisClose(leg.LegLength, frame.Pelvis.Posture.LegLength), frame, "primary-only input");
@@ -8771,14 +8712,14 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 Math.Abs(direction) > RuntimeGeometryEpsilon && response.PreviousVelocity * direction < 0f;
             float inputVelocity = reset ? 0f : response.PreviousVelocity;
             float output = response.PreviousOutput, velocity = inputVelocity;
-            if (frame.DeltaSeconds > 0f)
+            if (frame.Timing.DeltaSeconds > 0f)
             {
                 float omega = response.Frequency * 2f * Mathf.PI;
                 float x = response.PreviousOutput - target;
                 float j = inputVelocity + omega * x;
-                float decay = Mathf.Exp(-omega * frame.DeltaSeconds);
-                output = target + (x + j * frame.DeltaSeconds) * decay;
-                velocity = (inputVelocity - omega * j * frame.DeltaSeconds) * decay;
+                float decay = Mathf.Exp(-omega * frame.Timing.DeltaSeconds);
+                output = target + (x + j * frame.Timing.DeltaSeconds) * decay;
+                velocity = (inputVelocity - omega * j * frame.Timing.DeltaSeconds) * decay;
             }
             float integrated = output;
             bool completed = releasing && Math.Abs(output) <= RuntimeGeometryEpsilon &&
@@ -8835,11 +8776,11 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 CharacterFootPelvisResponseSample response = current.Pelvis.Response, prior = previous.Pelvis.Response;
                 if (!Continuous(previous, current) || !response.Evaluated || !response.HadPreviousState ||
                     previous.ProgramIdentity != current.ProgramIdentity || previous.ProfileRevision != current.ProfileRevision ||
-                    previous.BodyResetSequence != current.BodyResetSequence)
+                    previous.BodyCorrection.ResetSequence != current.BodyCorrection.ResetSequence)
                     continue;
                 bool supportChanged = !current.Pelvis.HeightTarget.Available || !previous.Pelvis.HeightTarget.Available ||
                     previous.Pelvis.SupportSide != current.Pelvis.SupportSide ||
-                    previous.PrimarySupportEventIdentity != current.PrimarySupportEventIdentity;
+                    previous.PrimarySupport.LandingEventIdentity != current.PrimarySupport.LandingEventIdentity;
                 RequirePelvis(prior.Evaluated && !prior.Completed &&
                     PelvisClose(response.PreviousTarget, prior.Target) && PelvisClose(response.PreviousOutput, prior.Output) &&
                     PelvisClose(response.PreviousVelocity, prior.Velocity) && response.SupportChanged == supportChanged &&
@@ -8993,48 +8934,11 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 "SampleIdentity", "ProgramIdentity", "ProjectionRevision",
                 "PoseGraphId", "PoseGraphRevision", "PosePlanHash",
                 "FrameSequence", "CompletionIdentity", "Side",
-                "PresentationDeltaSeconds", "BodyResetSequence", "Grounded",
+                "Grounded",
                 "LeftActionInstanceIdentity", "LeftActionFootWeight",
                 "RightActionInstanceIdentity", "RightActionFootWeight",
-                "CurrentBodyTick",
-                "TimelineCurrentVelocityX", "TimelineCurrentVelocityZ",
-                "TimelineContinuationVelocityX",
-                "TimelineContinuationVelocityZ",
-                "PredictionMotionAvailable",
-                "PredictionMotionRejectReason", "PredictionMotionResetReason",
-                "PredictionMotionSourceIdentity",
-                "PredictionRawCurrentVelocityX",
-                "PredictionRawCurrentVelocityZ",
-                "PredictionRawContinuationVelocityX",
-                "PredictionRawContinuationVelocityZ",
-                "PredictionPreviousStableCurrentVelocityX",
-                "PredictionPreviousStableCurrentVelocityZ",
-                "PredictionPreviousStableContinuationVelocityX",
-                "PredictionPreviousStableContinuationVelocityZ",
-                "PredictionStableCurrentVelocityX",
-                "PredictionStableCurrentVelocityZ",
-                "PredictionStableContinuationVelocityX",
-                "PredictionStableContinuationVelocityZ",
-                "PredictionCurrentVelocityDeltaX",
-                "PredictionCurrentVelocityDeltaZ",
-                "PredictionContinuationVelocityDeltaX",
-                "PredictionContinuationVelocityDeltaZ",
-                "PredictionVelocityResponseAlpha",
-                "PredictionVelocityDeltaThreshold",
-                "PredictionVelocitySmoothSpeed", "PredictionMaximumSpeed",
-                "PredictionCurrentResponseApplied",
-                "PredictionContinuationResponseApplied",
-                "PredictionCurrentMaximumSpeedClamped",
-                "PredictionContinuationMaximumSpeedClamped",
-                "PredictionMotionRevision",
-                "TargetBodyVelocityX", "TargetBodyVelocityY",
-                "TargetBodyVelocityZ",
                 "TimeToLandingSeconds", "FormalStepObservationAvailable",
                 "FormalFootHeight",
-                "PoseRootWorldPositionX", "PoseRootWorldPositionY",
-                "PoseRootWorldPositionZ", "PoseRootWorldRotationX",
-                "PoseRootWorldRotationY", "PoseRootWorldRotationZ",
-                "PoseRootWorldRotationW",
                 "InputFormalStepSourceIdentity", "InputFormalStepSourceCycle",
                 "InputFormalStepContributionContinuityIdentity",
                 "InputFormalStepSourceNormalizedTime", "InputFormalStepTimeSeconds",
@@ -9144,8 +9048,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 "FinalGoalPositionX", "FinalGoalPositionY", "FinalGoalPositionZ",
                 "FootMotionSourceHeelX", "FootMotionSourceHeelY", "FootMotionSourceHeelZ",
                 "FootMotionSourceToeX", "FootMotionSourceToeY", "FootMotionSourceToeZ",
-                "PrimarySupportHasValue", "PrimarySupportSide",
-                "PrimarySupportLandingEventIdentity",
                 "PelvisPositionWeight", };
             foreach (string name in required)
             {
@@ -9185,10 +9087,10 @@ namespace ThirdPersonCharacter.Pipeline.Editor
 
         static bool Continuous(FootFrame previous, FootFrame current) =>
             current.Frame == previous.Frame + 1 &&
-            current.BodyResetSequence == previous.BodyResetSequence;
+            current.BodyCorrection.ResetSequence == previous.BodyCorrection.ResetSequence;
 
         static double DeltaSeconds(FootFrame frame) =>
-            Math.Max(frame.DeltaSeconds, 0.000001f);
+            Math.Max(frame.Timing.DeltaSeconds, 0.000001f);
 
         static double Duration(IReadOnlyList<FootFrame> frames)
         {
@@ -9521,41 +9423,12 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             internal Vector3 PreparedTargetNormal;
             internal ulong PreparedTargetTrajectoryGeneration;
             internal string PreparedTargetFutureBodySource;
-            internal float DeltaSeconds;
-            internal ulong BodyResetSequence;
-            internal ulong CurrentBodyTick;
-            internal Vector3 BodyTargetVelocity;
-            internal Vector2 TimelineCurrentVelocity;
-            internal Vector2 TimelineContinuationVelocity;
-            internal bool PredictionMotionAvailable;
-            internal string PredictionMotionRejectReason;
-            internal string PredictionMotionResetReason;
-            internal string PredictionMotionSourceIdentity;
-            internal Vector2 PredictionRawCurrentVelocity;
-            internal Vector2 PredictionRawContinuationVelocity;
-            internal Vector2 PredictionPreviousStableCurrentVelocity;
-            internal Vector2 PredictionPreviousStableContinuationVelocity;
-            internal Vector2 PredictionStableCurrentVelocity;
-            internal Vector2 PredictionStableContinuationVelocity;
-            internal Vector2 PredictionCurrentVelocityDelta;
-            internal Vector2 PredictionContinuationVelocityDelta;
-            internal float PredictionVelocityResponseAlpha;
-            internal float PredictionVelocityDeltaThreshold;
-            internal float PredictionVelocitySmoothSpeed;
-            internal float PredictionMaximumSpeed;
-            internal bool PredictionCurrentResponseApplied;
-            internal bool PredictionContinuationResponseApplied;
-            internal bool PredictionCurrentMaximumSpeedClamped;
-            internal bool PredictionContinuationMaximumSpeedClamped;
-            internal ulong PredictionMotionRevision;
             internal bool Grounded;
             internal ulong ActionInstanceIdentity;
             internal float ActionFootWeight;
             internal float TimeToLandingSeconds;
             internal bool FormalOutputObservationAvailable;
             internal float FormalFootHeight;
-            internal Vector3 PoseRootWorldPosition;
-            internal Quaternion PoseRootWorldRotation;
             internal float StepSelectionMaximumPredictionTimeSeconds;
             internal ulong StepSelectionLastLandingEventIdentity;
             internal string SelectedStepSource;
@@ -9682,13 +9555,15 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 (ConstraintState == "Landing" || ConstraintState == "Locked") &&
                 PenetrationAvailability ==
                 CharacterFootContactPlanePenetrationAvailability.Available.ToString();
-            internal bool PrimarySupportAvailable;
-            internal string PrimarySupportSide;
-            internal ulong PrimarySupportEventIdentity;
             internal CharacterFootPelvisSample Pelvis;
             internal CharacterFootSolverSample Solver;
             internal CharacterFootResponseSample Response;
             internal CharacterFootGroundPathSample GroundPath;
+            internal CharacterFootBodyCorrectionSample BodyCorrection;
+            internal CharacterFootRootHierarchySample RootHierarchy;
+            internal CharacterFootPrimarySupportSample PrimarySupport;
+            internal CharacterFootPredictionMotionSample PredictionMotion;
+            internal CharacterFootTimingSample Timing;
             internal CharacterFootOutputStagesSample OutputStages;
             internal CharacterFootLifecycleSample Lifecycle;
             internal CharacterFootPathContinuitySample PathContinuity;
@@ -9704,8 +9579,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 strideState = frame.Pelvis.State,
                 strideRejectReason = frame.Pelvis.RejectReason.ToString(),
                 formalFootPlacementWeight = frame.Lifecycle.FormalFootPlacementWeight,
-                primarySupportSide = frame.PrimarySupportSide,
-                primarySupportEventIdentity = frame.PrimarySupportEventIdentity.ToString(CultureInfo.InvariantCulture),
+                primarySupportSide = frame.PrimarySupport.Side,
+                primarySupportEventIdentity = frame.PrimarySupport.LandingEventIdentity.ToString(CultureInfo.InvariantCulture),
                 observation = BuildPelvisObservationFact(frame),
                 motion = BuildPelvisMotionFact(previous, frame),
                 heightTarget = BuildPelvisHeightTargetFact(frame),
@@ -9746,7 +9621,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             {
                 previousFrameAvailable = continuous,
                 previousFrame = continuous ? (int?)previous.Frame : null,
-                presentationDeltaSeconds = frame.DeltaSeconds,
+                presentationDeltaSeconds = frame.Timing.DeltaSeconds,
                 physicalStepAvailable = physicalAvailable,
                 physicalWorldDelta = physicalAvailable
                     ? CharacterFootVectorFact.From(frame.Pelvis.Observation.PhysicalWorldPosition - previous.Pelvis.Observation.PhysicalWorldPosition) : null,
@@ -9985,10 +9860,10 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     resolvedReachMinimumCompressionReserveMeters =
                         frame.Resolved.LandingReachMinimumCompressionReserve,
                     primarySupportAvailable =
-                        frame.PrimarySupportAvailable,
-                    primarySupportSide = frame.PrimarySupportSide,
+                        frame.PrimarySupport.HasValue,
+                    primarySupportSide = frame.PrimarySupport.Side,
                     primarySupportLandingEventIdentity =
-                        frame.PrimarySupportEventIdentity.ToString(
+                        frame.PrimarySupport.LandingEventIdentity.ToString(
                             CultureInfo.InvariantCulture),
                     strideState = frame.Pelvis.State,
                     strideSupportSide = frame.Pelvis.SupportSide,

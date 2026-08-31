@@ -155,9 +155,9 @@ PredictionMotion、BodyTrajectory及其Tick/Generation/ResetSequence/AuthorityTi
 - 42个Target、规则／统计／coverage／quality对象保持；20447条明细索引与全部2086 samples段、1787 geometry段字节校验通过。正式summary、events、detail3033、六个222列帧查询与geometry92L查询均与原始数据一致。
 - 原始包及字节一致的同目录Proof已保留，无重复报告或Git数据提交；测试已回Edit/Idle、Console0并归还Unity。仅确认本Record合法输入范围，Reset4.4与坏CSV等未覆盖项保持未完成。
 
-## 当前接续点
+## CurrentSupport闭环后的接续记录
 
-运行与Editor普通Record的上一通过提交为a9105e3；总基线仍为ad3527e。剩余工作为：完成其余993列的唯一绑定和诊断分组、统一现有格式identity、清理文件与剩余旧字段并逐闭环回放；Reset取证扩展等待用户决定。第一阶段未完成前不启动Pose Graph。工作区原有.gitignore、ProjectSettings、project.md与stabilize提案的未提交变更继续保留，不夹带提交。
+此处记录a9105e3完成时的接续范围；之后的提交与验证按下方各节记录，总基线始终为ad3527e。尚需完成全部列绑定、Runtime诊断分组、格式identity及旧字段清理。Reset取证现按reset-observation-gap.md沿正式观察接口补全，不再单纯等待确认。第一阶段未完成前不启动Pose Graph，工作区原有无关改动继续保留，不夹带提交。
 
 ## 脚步候选、阶段与正式事件列
 
@@ -236,8 +236,23 @@ PredictionMotion、BodyTrajectory及其Tick/Generation/ResetSequence/AuthorityTi
 
 ## Ground Path当前格式绑定
 
-状态：Unity与最终Editor构建通过，0错误，build server已关闭；严格校验通过，等待实际回放。
+状态：候选0dc139f已通过实际Replay及GroundSurface/几何完整关联对账。
 
 - 将Ground Path主表61列收进41个typed绑定，包含原查询、路径输入、Surface摘要、无效边段及包络数量。补齐以前仅写出但未读取的26项原始值，不增加分析规则或世界查询。
 - 删除主表Surface整组缺失时补默认值、以及几何表整组缺失时补-1的旧格式兼容分支。当前主表绑定与原几何读取入口分别要求正式字段完整；已存在但本帧不可用的事实继续保留原State和原值，缺列直接报错。
 - 原列名、顺序、1215列布局、27列几何布局及格式identity不变。累计832/1215列迁入绑定，剩余383列、主行统一定义与Runtime证据分组仍待完成。比较点为上一6ba9bc34/042437和固定ad3527e/233436。
+
+## Ground Path列的验证封口
+
+- 原包：`Diagnostics/FootPlacementRuns/20260901-043356-512-06b6244f5a29437294e2f42531c2d804`，唯一原Record完成1044输入、1043输出帧和2086脚行。对042437及固定233436，1191业务列精确相同，23主表身份列双向映射无冲突；新61列为58精确及3既有身份列，累计832列为818精确及14身份列。
+- 67186行几何全部按Frame/Side关联，Sample/Path/Completion身份一致；60280个Surface段及7078个Envelope顶点无重复索引，逐脚数量与主表摘要相同。27列几何中的22业务列精确相同、5身份列映射无冲突。
+- 42项诊断及完整20447明细保持，只有原有身份叶路径换代；全部索引和六次832列实际帧查询、其它正式查询保持。Proof为matched1044、DivergentFrameCount0，输入/Body/时钟和帧数组一致。
+- Unity已归还、Edit/Idle、Console0。本次证明合法Record保持，不冒充坏CSV矩阵或Reset4.4已覆盖。
+
+## 时钟、预测运动、主支撑与Body观察列
+
+状态：最终Unity与Editor构建通过，0错误；build server已关闭，严格校验通过。等待实际回放。
+
+- 帧时钟17列、预测运动29列、主支撑4列、根层级35列、Body修正35列分别使用同一typed定义驱动读写。预测与Timeline的X/Z列仍分别填入原Vector2的x/y，不改变方向、平滑或限速数学。
+- 根层级捕获仍由原RootHierarchyCapture生产；Pelvis的同名PoseRootWorldPosition仍来自Pelvis Observation，不用根层级位置代替它求值时的输入事实。
+- 按实际公式注明角速度DegreesPerSecond和预测响应速率PerSecond；仅增加Editor单位元数据，原CSV布局与版本不变。旧映射和对应平铺解析字段删除，累计952/1215列迁入绑定，剩余263列及主行组合、Runtime证据分组未完成。

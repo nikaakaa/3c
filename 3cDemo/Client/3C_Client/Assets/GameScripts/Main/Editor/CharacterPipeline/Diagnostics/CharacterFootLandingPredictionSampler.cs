@@ -109,34 +109,12 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             "InputFormalContact,InputFormalLockMode,InputFormalLockWeight,InputFormalSupport," +
             CharacterFootEventColumns.Input.Header + "," +
             "RootLocalLandingX,RootLocalLandingY,RootLocalLandingZ," +
-            "PresentationDeltaSeconds,PreviousBodyTick,CurrentBodyTick,BodySampleAlpha,BodySampleAgeSeconds," +
-            "MotionTimelineAvailable,TimelineGeneration,TimelineAuthorityTick,TimelineTickRate," +
-            "TimelineCurrentVelocityX,TimelineCurrentVelocityZ,TimelineContinuationVelocityX,TimelineContinuationVelocityZ," +
-            "TimelineHasContinuation,TimelineBodyYawVelocityDegreesPerSecond,TimelineMaximumBodyYawVelocityDegreesPerSecond,CurrentSegmentRemainingSeconds," +
-            "PredictionMotionAvailable,PredictionMotionRejectReason,PredictionMotionResetReason,PredictionMotionSourceIdentity," +
-            "PredictionRawCurrentVelocityX,PredictionRawCurrentVelocityZ,PredictionRawContinuationVelocityX,PredictionRawContinuationVelocityZ," +
-            "PredictionPreviousStableCurrentVelocityX,PredictionPreviousStableCurrentVelocityZ,PredictionPreviousStableContinuationVelocityX,PredictionPreviousStableContinuationVelocityZ," +
-            "PredictionStableCurrentVelocityX,PredictionStableCurrentVelocityZ,PredictionStableContinuationVelocityX,PredictionStableContinuationVelocityZ," +
-            "PredictionCurrentVelocityDeltaX,PredictionCurrentVelocityDeltaZ,PredictionContinuationVelocityDeltaX,PredictionContinuationVelocityDeltaZ," +
-            "PredictionVelocityResponseAlpha,PredictionVelocityDeltaThreshold,PredictionVelocitySmoothSpeed,PredictionMaximumSpeed," +
-            "PredictionCurrentResponseApplied,PredictionContinuationResponseApplied,PredictionCurrentMaximumSpeedClamped,PredictionContinuationMaximumSpeedClamped,PredictionMotionRevision," +
+            CharacterFootTimingColumns.Schema.Header + "," +
+            CharacterFootPredictionMotionColumns.Schema.Header + "," +
             "Grounded,HorizontalSpeed,LeftActionInstanceIdentity,LeftActionFootWeight,RightActionInstanceIdentity,RightActionFootWeight," +
-            "PrimarySupportHasValue,PrimarySupportSide,PrimarySupportLandingEventIdentity,PrimarySupportRetained," +
-            "LogicRootPositionX,LogicRootPositionY,LogicRootPositionZ,LogicRootRotationX,LogicRootRotationY,LogicRootRotationZ,LogicRootRotationW," +
-            "VisualRootLocalPositionX,VisualRootLocalPositionY,VisualRootLocalPositionZ,VisualRootLocalRotationX,VisualRootLocalRotationY,VisualRootLocalRotationZ,VisualRootLocalRotationW," +
-            "VisualRootWorldPositionX,VisualRootWorldPositionY,VisualRootWorldPositionZ,VisualRootWorldRotationX,VisualRootWorldRotationY,VisualRootWorldRotationZ,VisualRootWorldRotationW," +
-            "PoseRootLocalPositionX,PoseRootLocalPositionY,PoseRootLocalPositionZ,PoseRootLocalRotationX,PoseRootLocalRotationY,PoseRootLocalRotationZ,PoseRootLocalRotationW," +
-            "PoseRootWorldPositionX,PoseRootWorldPositionY,PoseRootWorldPositionZ,PoseRootWorldRotationX,PoseRootWorldRotationY,PoseRootWorldRotationZ,PoseRootWorldRotationW," +
-            "VisibleBodyPositionX,VisibleBodyPositionY,VisibleBodyPositionZ," +
-            "VisibleBodyRotationX,VisibleBodyRotationY,VisibleBodyRotationZ,VisibleBodyRotationW," +
-            "VisibleBodyVelocityX,VisibleBodyVelocityY,VisibleBodyVelocityZ,VisibleBodyYawVelocityDegreesPerSecond," +
-            "TargetBodyPositionX,TargetBodyPositionY,TargetBodyPositionZ," +
-            "TargetBodyRotationX,TargetBodyRotationY,TargetBodyRotationZ,TargetBodyRotationW," +
-            "TargetBodyVelocityX,TargetBodyVelocityY,TargetBodyVelocityZ,TargetBodyYawVelocityDegreesPerSecond," +
-            "BodyPositionError,BodyRotationError," +
-            "CorrectionPositionErrorX,CorrectionPositionErrorY,CorrectionPositionErrorZ," +
-            "CorrectionPositionVelocityX,CorrectionPositionVelocityY,CorrectionPositionVelocityZ," +
-            "CorrectionYawVelocityDegreesPerSecond,CorrectionActive,CorrectionClamped,CorrectionSettled,BodyResetSequence," +
+            CharacterFootPrimarySupportColumns.Schema.Header + "," +
+            CharacterFootRootHierarchyColumns.Schema.Header + "," +
+            CharacterFootBodyCorrectionColumns.Schema.Header + "," +
             "FutureBodyTranslationAvailable,FutureBodyRelativeTranslationX,FutureBodyRelativeTranslationY,FutureBodyRelativeTranslationZ," +
             "FutureBodyTranslationVelocityX,FutureBodyTranslationVelocityY,FutureBodyTranslationVelocityZ," +
             "CurrentAnimatedSoleX,CurrentAnimatedSoleY,CurrentAnimatedSoleZ," +
@@ -631,7 +609,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             internal CharacterFootLandingPredictionDiagnostics Diagnostics { get; }
         }
 
-        readonly struct RootHierarchyCapture
+        internal readonly struct RootHierarchyCapture
         {
             internal RootHierarchyCapture(CharacterRootHierarchyBinding binding)
             {
@@ -1713,89 +1691,18 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             var inputEvents = new CharacterFootEventCsvSource(hasInputObservedStep, inputObservedStep.Events);
             CharacterFootEventColumns.Input.Write(row, in inputEvents);
             Add(row, foot.RootLocalLanding);
-            Add(row, input.PresentationDeltaSeconds);
-            Add(row, input.PreviousBodyTick);
-            Add(row, input.CurrentBodyTick);
-            Add(row, input.BodySampleAlpha);
-            Add(row, input.BodySampleAgeSeconds);
-            Add(row, input.MotionTimelineAvailable);
-            Add(row, input.TimelineGeneration);
-            Add(row, input.TimelineAuthorityTick);
-            Add(row, input.TimelineTickRate);
-            Add(row, input.TimelineCurrentVelocityX);
-            Add(row, input.TimelineCurrentVelocityZ);
-            Add(row, input.TimelineContinuationVelocityX);
-            Add(row, input.TimelineContinuationVelocityZ);
-            Add(row, input.TimelineHasContinuation);
-            Add(row, input.TimelineBodyYawVelocityDegreesPerSecond);
-            Add(row, input.TimelineMaximumBodyYawVelocityDegreesPerSecond);
-            Add(row, input.CurrentSegmentRemainingSeconds);
-            Add(row, input.PredictionMotionAvailable);
-            Add(row, input.PredictionMotionRejectReason);
-            Add(row, input.PredictionMotionResetReason);
-            Add(row, input.PredictionMotionSourceIdentity);
-            Add(row, input.PredictionRawCurrentVelocityX);
-            Add(row, input.PredictionRawCurrentVelocityZ);
-            Add(row, input.PredictionRawContinuationVelocityX);
-            Add(row, input.PredictionRawContinuationVelocityZ);
-            Add(row, input.PredictionPreviousStableCurrentVelocityX);
-            Add(row, input.PredictionPreviousStableCurrentVelocityZ);
-            Add(row, input.PredictionPreviousStableContinuationVelocityX);
-            Add(row, input.PredictionPreviousStableContinuationVelocityZ);
-            Add(row, input.PredictionStableCurrentVelocityX);
-            Add(row, input.PredictionStableCurrentVelocityZ);
-            Add(row, input.PredictionStableContinuationVelocityX);
-            Add(row, input.PredictionStableContinuationVelocityZ);
-            Add(row, input.PredictionCurrentVelocityDeltaX);
-            Add(row, input.PredictionCurrentVelocityDeltaZ);
-            Add(row, input.PredictionContinuationVelocityDeltaX);
-            Add(row, input.PredictionContinuationVelocityDeltaZ);
-            Add(row, input.PredictionVelocityResponseAlpha);
-            Add(row, input.PredictionVelocityDeltaThreshold);
-            Add(row, input.PredictionVelocitySmoothSpeed);
-            Add(row, input.PredictionMaximumSpeed);
-            Add(row, input.PredictionCurrentResponseApplied);
-            Add(row, input.PredictionContinuationResponseApplied);
-            Add(row, input.PredictionCurrentMaximumSpeedClamped);
-            Add(row, input.PredictionContinuationMaximumSpeedClamped);
-            Add(row, input.PredictionMotionRevision);
+            CharacterFootTimingColumns.Schema.Write(row, in input);
+            CharacterFootPredictionMotionColumns.Schema.Write(row, in input);
             Add(row, input.Grounded);
             Add(row, input.HorizontalSpeed);
             Add(row, input.LeftActionInstanceIdentity);
             Add(row, input.LeftActionFootWeight);
             Add(row, input.RightActionInstanceIdentity);
             Add(row, input.RightActionFootWeight);
-            Add(row, frame.PrimarySupport.HasValue);
-            Add(row, frame.PrimarySupport.Side.ToString());
-            Add(row, frame.PrimarySupport.LandingEventIdentity);
-            Add(row, frame.PrimarySupport.Retained);
-            Add(row, roots.LogicRootPosition);
-            Add(row, roots.LogicRootRotation);
-            Add(row, roots.VisualRootLocalPosition);
-            Add(row, roots.VisualRootLocalRotation);
-            Add(row, roots.VisualRootWorldPosition);
-            Add(row, roots.VisualRootWorldRotation);
-            Add(row, roots.PoseRootLocalPosition);
-            Add(row, roots.PoseRootLocalRotation);
-            Add(row, roots.PoseRootWorldPosition);
-            Add(row, roots.PoseRootWorldRotation);
-            Add(row, input.VisibleBodyPosition);
-            Add(row, input.VisibleBodyRotation);
-            Add(row, input.VisibleBodyVelocity);
-            Add(row, input.VisibleBodyYawVelocityDegreesPerSecond);
-            Add(row, input.TargetBodyPosition);
-            Add(row, input.TargetBodyRotation);
-            Add(row, input.TargetBodyVelocity);
-            Add(row, input.TargetBodyYawVelocityDegreesPerSecond);
-            Add(row, input.BodyPositionError);
-            Add(row, input.BodyRotationError);
-            Add(row, input.CorrectionPositionError);
-            Add(row, input.CorrectionPositionVelocity);
-            Add(row, input.CorrectionYawVelocityDegreesPerSecond);
-            Add(row, input.CorrectionActive);
-            Add(row, input.CorrectionClamped);
-            Add(row, input.CorrectionSettled);
-            Add(row, input.BodyResetSequence);
+            CharacterFootPrimarySupportDiagnostics primarySupport = frame.PrimarySupport;
+            CharacterFootPrimarySupportColumns.Schema.Write(row, in primarySupport);
+            CharacterFootRootHierarchyColumns.Schema.Write(row, in roots);
+            CharacterFootBodyCorrectionColumns.Schema.Write(row, in input);
             Add(row, foot.FutureBodyTranslationAvailable);
             Add(row, foot.FutureBodyRelativeTranslation);
             Add(row, foot.FutureBodyTranslationVelocity);

@@ -21,7 +21,12 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         NoEnvelopeContact = 7,
         EnvelopeCapacityExceeded = 8,
         UnreachableEdge = 9,
-        EdgeCapacityExceeded = 10
+        EdgeCapacityExceeded = 10,
+        SurfaceGeometryUnavailable = 11,
+        SurfaceGeometryUnsupported = 12,
+        SurfaceGeometryChanged = 13,
+        SurfaceCoverageCapacityExceeded = 14,
+        SurfaceCoverageUnavailable = 15
     }
 
     public readonly struct CharacterFootGroundPathQueryRequest
@@ -126,8 +131,10 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             if (capacity < 4 || capacity > 64)
                 throw new ArgumentOutOfRangeException(nameof(capacity));
             m_Contacts = new CharacterFootGroundContact[capacity];
+            SurfaceCoverage = new CharacterFootGroundSurfacePage(capacity);
         }
 
+        internal CharacterFootGroundSurfacePage SurfaceCoverage { get; }
         internal int Capacity => m_Contacts.Length;
         internal int Count { get; private set; }
 
@@ -142,6 +149,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         {
             Array.Clear(m_Contacts, 0, Count);
             Count = 0;
+            SurfaceCoverage.Clear();
         }
 
         internal bool Contains(int segmentIndex, int surfaceIdentity)
@@ -573,7 +581,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         internal CharacterFootGroundPathPage(int contactCapacity)
         {
             Contacts = new CharacterFootGroundContactPage(contactCapacity);
-            Edges = new CharacterFootGroundEdgePage(contactCapacity);
+            Edges = new CharacterFootGroundEdgeSummary(contactCapacity);
             Envelope = new CharacterFootGroundEnvelopePage(contactCapacity);
         }
 
@@ -584,7 +592,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         internal CharacterFootGroundPathInput Input { get; private set; }
         internal CharacterFootGroundInvalidSegment InvalidSegment { get; private set; }
         internal CharacterFootGroundContactPage Contacts { get; }
-        internal CharacterFootGroundEdgePage Edges { get; }
+        internal CharacterFootGroundEdgeSummary Edges { get; }
         internal CharacterFootGroundEnvelopePage Envelope { get; }
         internal bool HasInput => Input.IsValid;
 
@@ -618,7 +626,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             int segmentCount,
             in CharacterFootGroundPathInput input)
         {
-            if (!input.IsValid || Contacts.Count <= 0 || Edges.Count <= 0 ||
+            if (!input.IsValid || Contacts.Count <= 0 ||
+                !Contacts.SurfaceCoverage.IsReady || Contacts.SurfaceCoverage.Count <= 0 ||
                 Envelope.Count < 2 || InvalidSegment.HasValue ||
                 segmentCount <= 0)
                 throw new ArgumentException("Ground Path accepted page is invalid.");
@@ -1246,6 +1255,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             FirstInvalidSegmentVerticalDistance = page.InvalidSegment.HasValue
                 ? page.InvalidSegment.VerticalDistance
                 : 0f;
+            SurfaceCoverage = new CharacterFootGroundSurfaceDiagnostics(page.Contacts.SurfaceCoverage);
             m_Contacts = new CharacterFootGroundPathDiagnosticContacts(page.Contacts);
             m_Envelope = new CharacterFootGroundEnvelopeDiagnosticVertices(page.Envelope);
         }
@@ -1278,6 +1288,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         public Vector3 FirstInvalidSegmentBottom { get; }
         public Vector3 FirstInvalidSegmentTop { get; }
         public float FirstInvalidSegmentVerticalDistance { get; }
+        public CharacterFootGroundSurfaceDiagnostics SurfaceCoverage { get; }
         public int ContactCount => m_Contacts.Count;
         public int EnvelopeVertexCount => m_Envelope.Count;
         public bool Accepted => State == CharacterFootGroundPathState.Accepted;

@@ -56,37 +56,25 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         internal float VerticalDistance { get; }
     }
 
-    internal sealed class CharacterFootGroundEdgePage
+    internal sealed class CharacterFootGroundEdgeSummary
     {
-        readonly CharacterFootGroundEdge[] m_Edges;
+        readonly int m_Capacity;
 
-        internal CharacterFootGroundEdgePage(int contactCapacity)
+        internal CharacterFootGroundEdgeSummary(int contactCapacity)
         {
             if (contactCapacity < 4 || contactCapacity > 64)
                 throw new ArgumentOutOfRangeException(nameof(contactCapacity));
-            m_Edges = new CharacterFootGroundEdge[contactCapacity + 3];
+            m_Capacity = checked(contactCapacity * CharacterFootGroundSurfacePage.SegmentsPerContact * 4 + 4);
         }
 
         internal int Count { get; private set; }
-
-        internal CharacterFootGroundEdge EdgeAt(int index)
-        {
-            if ((uint)index >= (uint)Count)
-                throw new ArgumentOutOfRangeException(nameof(index));
-            return m_Edges[index];
-        }
-
-        internal void Clear()
-        {
-            Array.Clear(m_Edges, 0, Count);
-            Count = 0;
-        }
+        internal void Clear() => Count = 0;
 
         internal bool TryAdd(in CharacterFootGroundEdge edge)
         {
-            if (Count >= m_Edges.Length || edge.Index != Count)
+            if (Count >= m_Capacity || edge.Index != Count)
                 return false;
-            m_Edges[Count++] = edge;
+            Count++;
             return true;
         }
     }
@@ -128,8 +116,10 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 throw new ArgumentOutOfRangeException(nameof(contactCapacity));
             m_Contacts = new CharacterFootGroundEnvelopeCandidate[contactCapacity];
             m_Profile = new CharacterFootGroundEnvelopeCandidate[contactCapacity + 4];
+            SurfaceVisibility = new CharacterFootGroundSurfaceVisibility(contactCapacity);
         }
 
+        internal CharacterFootGroundSurfaceVisibility SurfaceVisibility { get; }
         internal int ContactCount { get; private set; }
         internal int ProfileCount { get; private set; }
 
@@ -258,7 +248,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             in CharacterFootGroundPathInput input,
             CharacterFootGroundContactPage contacts,
             CharacterFootGroundEnvelopeWorkspace workspace,
-            CharacterFootGroundEdgePage edges,
+            CharacterFootGroundEdgeSummary edges,
             CharacterFootGroundEnvelopePage output,
             out CharacterFootGroundPathRejectReason rejectReason,
             out CharacterFootGroundInvalidSegment invalidSegment)
@@ -318,21 +308,10 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 rejectReason = CharacterFootGroundPathRejectReason.EnvelopeCapacityExceeded;
                 return false;
             }
-            if (!TryBuildEdges(
-                    in input,
-                    workspace,
-                    forward,
-                    up,
-                    edges,
-                    out invalidSegment))
+            if (!workspace.SurfaceVisibility.TryBuildEdges(
+                    in input, contacts.SurfaceCoverage, edges,
+                    out rejectReason, out invalidSegment))
             {
-                rejectReason = CharacterFootGroundPathRejectReason.EdgeCapacityExceeded;
-                invalidSegment = default;
-                return false;
-            }
-            if (invalidSegment.HasValue)
-            {
-                rejectReason = CharacterFootGroundPathRejectReason.UnreachableEdge;
                 return false;
             }
             if (!TryCollapseDistances(workspace, pathLength))
@@ -507,78 +486,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 first.Identity ^ RotateLeft(second.Identity, 29),
                 0);
             return true;
-        }
-
-        static bool TryBuildEdges(
-            in CharacterFootGroundPathInput input,
-            CharacterFootGroundEnvelopeWorkspace workspace,
-            Vector3 forward,
-            Vector3 up,
-            CharacterFootGroundEdgePage edges,
-            out CharacterFootGroundInvalidSegment invalidSegment)
-        {
-            invalidSegment = default;
-            for (int i = 0; i + 1 < workspace.ProfileCount; i++)
-            {
-                CharacterFootGroundEnvelopeCandidate first = workspace.ProfileAt(i);
-                CharacterFootGroundEnvelopeCandidate second = workspace.ProfileAt(i + 1);
-                Vector3 firstPosition = ResolvePosition(in input, in first, forward, up);
-                Vector3 secondPosition = ResolvePosition(in input, in second, forward, up);
-                Vector3 bottom = first.Height <= second.Height
-                    ? firstPosition
-                    : secondPosition;
-                Vector3 top = first.Height <= second.Height
-                    ? secondPosition
-                    : firstPosition;
-                float verticalDistance = Mathf.Abs(Vector3.Dot(top - bottom, up));
-                var edge = new CharacterFootGroundEdge(
-                    i,
-                    BuildEdgeIdentity(i, first.Identity, second.Identity),
-                    bottom,
-                    top,
-                    verticalDistance);
-                if (!edges.TryAdd(in edge))
-                    return false;
-                if (!invalidSegment.HasValue &&
-                    verticalDistance > input.MaximumReachableVerticalEdge)
-                    invalidSegment = new CharacterFootGroundInvalidSegment(in edge);
-            }
-            return true;
-        }
-
-        static Vector3 ResolvePosition(
-            in CharacterFootGroundPathInput input,
-            in CharacterFootGroundEnvelopeCandidate candidate,
-            Vector3 forward,
-            Vector3 up) =>
-            candidate.Endpoint == 1
-                ? input.LastLanding
-                : candidate.Endpoint == 2
-                    ? input.NextSwingLanding
-                    : input.LastLanding +
-                      forward * candidate.Distance +
-                      up * candidate.Height;
-
-        static ulong BuildEdgeIdentity(
-            int index,
-            ulong firstIdentity,
-            ulong secondIdentity)
-        {
-            ulong identity = 14695981039346656037UL;
-            Add(ref identity, unchecked((ulong)(uint)index));
-            Add(ref identity, firstIdentity);
-            Add(ref identity, secondIdentity);
-            return identity != 0 ? identity : 1UL;
-        }
-
-        static void Add(ref ulong hash, ulong value)
-        {
-            for (int i = 0; i < 8; i++)
-            {
-                hash ^= (byte)value;
-                hash *= 1099511628211UL;
-                value >>= 8;
-            }
         }
 
         static bool TryCollapseDistances(

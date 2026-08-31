@@ -99,14 +99,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             CharacterFootStepColumns.SelectedPhase.Header + "," +
             CharacterFootStepColumns.Current.Header + "," +
             CharacterFootStepColumns.Incoming.Header + "," +
-            "FormalStepObservationAvailable,FormalStepSourceIdentity,FormalStepSourceWeight,FormalStepSourceNormalizedTime,FormalStepTimeSeconds,FormalStepDistance," +
-            "FormalFootHeight,FormalToeHeight,FormalToeSpeed,FormalPositionError,FormalRotationError," +
-            "FormalContact,FormalLockMode,FormalLockWeight,FormalSupport," +
+            CharacterFootFormalObservationColumns.Output.Header + "," +
             CharacterFootEventColumns.Output.Header + "," +
-            "InputFormalStepObservationAvailable,InputFormalStepSourceId,InputFormalStepSourceIdentity,InputFormalStepSourceWeight,InputFormalStepSourceNormalizedTime," +
-            "InputFormalStepClipBindingIndex,InputFormalStepSourceCycle,InputFormalStepContributionContinuityIdentity,InputFormalStepCompletionIdentity,InputFormalStepTimeSeconds,InputFormalStepDistance," +
-            "InputFormalFootHeight,InputFormalToeHeight,InputFormalToeSpeed,InputFormalPositionError,InputFormalRotationError," +
-            "InputFormalContact,InputFormalLockMode,InputFormalLockWeight,InputFormalSupport," +
+            CharacterFootFormalObservationColumns.Input.Header + "," +
             CharacterFootEventColumns.Input.Header + "," +
             "RootLocalLandingX,RootLocalLandingY,RootLocalLandingZ," +
             CharacterFootTimingColumns.Schema.Header + "," +
@@ -115,24 +110,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             CharacterFootPrimarySupportColumns.Schema.Header + "," +
             CharacterFootRootHierarchyColumns.Schema.Header + "," +
             CharacterFootBodyCorrectionColumns.Schema.Header + "," +
-            "FutureBodyTranslationAvailable,FutureBodyRelativeTranslationX,FutureBodyRelativeTranslationY,FutureBodyRelativeTranslationZ," +
-            "FutureBodyTranslationVelocityX,FutureBodyTranslationVelocityY,FutureBodyTranslationVelocityZ," +
-            "CurrentAnimatedSoleX,CurrentAnimatedSoleY,CurrentAnimatedSoleZ," +
-            "RawLandingAvailable,RawLandingCandidateX,RawLandingCandidateY,RawLandingCandidateZ," +
-            "LandingObservationIdentity,LandingObservationWorldRevision,LandingObservationSourceSampleIdentity,LandingObservationSourceSampleCycle," +
-            "LandingObservationCacheState,LandingObservationQueryExecuted,LandingObservationQueryPurpose,LandingObservationRefreshMode,LandingObservationQueryReason," +
-            "LandingObservationCanonicalRawX,LandingObservationCanonicalRawY,LandingObservationCanonicalRawZ," +
-            "LandingObservationCanonicalComponentUpX,LandingObservationCanonicalComponentUpY,LandingObservationCanonicalComponentUpZ," +
-            "LandingObservationCandidateRawX,LandingObservationCandidateRawY,LandingObservationCandidateRawZ," +
-            "LandingObservationCandidateComponentUpX,LandingObservationCandidateComponentUpY,LandingObservationCandidateComponentUpZ," +
-            "LandingObservationQueryInputDistance,LandingObservationQueryComponentUpAngleDegrees," +
-            "LandingObservationPredictionInputAccumulationDistance,LandingObservationComponentUpChangeAngleDegrees," +
-            "QueryShape,QueryPurpose,QueryFootIndex,QueryOriginX,QueryOriginY,QueryOriginZ," +
-            "QueryDirectionX,QueryDirectionY,QueryDirectionZ,QueryMaximumDistance,QueryRadius,QueryLayerMask,QueryMinimumGroundNormalDot," +
-            "QueryCandidateSelectionState,QueryValidCandidateCount," +
-            "QuerySelectedCandidateAvailable,QuerySelectedSurfaceIdentity,QuerySelectedPointX,QuerySelectedPointY,QuerySelectedPointZ,QuerySelectedDistance," +
-            "Accepted,SurfaceIdentity,LandingPointX,LandingPointY,LandingPointZ," +
-            "LandingNormalX,LandingNormalY,LandingNormalZ,QueryDistance," +
+            CharacterFootLandingObservationColumns.Schema.Header + "," +
             CharacterFootGroundPathColumns.Schema.Header + "," +
             "FootMotionState,FootMotionRejectReason,FootMotionLandingEventIdentity,FootMotionGroundPathInputIdentity," +
             "FootMotionDistance,FootMotionProgress," +
@@ -1582,7 +1560,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         {
             row.Clear();
             CharacterFootLandingPredictionInputDiagnostics input = frame.Input;
-            CharacterFootPlacementQueryRequest query = foot.Query;
             Add(row, session.SampleIdentity.ToString("N"));
             Add(row, session.StartedUtc.ToString("O", CultureInfo.InvariantCulture));
             Add(row, session.Program.ProgramIdentity);
@@ -1642,21 +1619,11 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     ? footStepObservation.Left
                     : footStepObservation.Right;
             bool hasObservedStep = footStepObservation.IsValid && observedStep.IsValid;
-            Add(row, hasObservedStep);
-            Add(row, hasObservedStep ? footStepObservation.SourceIdentity : string.Empty);
-            Add(row, hasObservedStep ? footStepObservation.Weight : 0f);
-            Add(row, hasObservedStep ? footStepObservation.NormalizedTime : 0f);
-            Add(row, hasObservedStep ? observedStep.TimeToLandingSeconds : 0f);
-            Add(row, hasObservedStep ? observedStep.Distance : 0f);
-            Add(row, hasObservedStep ? observedStep.FootHeight : 0f);
-            Add(row, hasObservedStep ? observedStep.ToeHeight : 0f);
-            Add(row, hasObservedStep ? observedStep.ToeSpeed : 0f);
-            Add(row, hasObservedStep ? observedStep.PositionError : 0f);
-            Add(row, hasObservedStep ? observedStep.RotationError : 0f);
-            Add(row, hasObservedStep ? observedStep.Contact : 0f);
-            Add(row, hasObservedStep ? observedStep.LockMode.ToString() : string.Empty);
-            Add(row, hasObservedStep ? observedStep.LockWeight : 0f);
-            Add(row, hasObservedStep ? observedStep.Support : 0f);
+            var formalOutputSource = new CharacterFootFormalObservationCsvSource(
+                hasObservedStep, footStepObservation.SourceIdentity,
+                footStepObservation.Weight, footStepObservation.NormalizedTime,
+                in observedStep);
+            CharacterFootFormalObservationColumns.Output.Write(row, in formalOutputSource);
             var outputEvents = new CharacterFootEventCsvSource(hasObservedStep, observedStep.Events);
             CharacterFootEventColumns.Output.Write(row, in outputEvents);
             CharacterFootStepObservationInputDiagnostics inputObservation =
@@ -1666,28 +1633,13 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     ? inputObservation.Left
                     : inputObservation.Right;
             bool hasInputObservedStep = inputObservation.IsValid && inputObservedStep.IsValid;
-            Add(row, hasInputObservedStep);
-            Add(row, hasInputObservedStep ? inputObservation.SourceId : string.Empty);
-            Add(row, hasInputObservedStep ? inputObservation.SourceIdentity : string.Empty);
-            Add(row, hasInputObservedStep ? inputObservation.SourceWeight : 0f);
-            Add(row, hasInputObservedStep ? inputObservation.NormalizedTime : 0f);
-            Add(row, hasInputObservedStep ? inputObservation.ClipBindingIndex : -1);
-            Add(row, hasInputObservedStep ? inputObservation.Cycle : 0);
-            Add(row, hasInputObservedStep
-                ? inputObservation.ContributionContinuityIdentity
-                : 0UL);
-            Add(row, hasInputObservedStep ? inputObservation.CompletionIdentity : 0UL);
-            Add(row, hasInputObservedStep ? inputObservedStep.TimeToLandingSeconds : 0f);
-            Add(row, hasInputObservedStep ? inputObservedStep.Distance : 0f);
-            Add(row, hasInputObservedStep ? inputObservedStep.FootHeight : 0f);
-            Add(row, hasInputObservedStep ? inputObservedStep.ToeHeight : 0f);
-            Add(row, hasInputObservedStep ? inputObservedStep.ToeSpeed : 0f);
-            Add(row, hasInputObservedStep ? inputObservedStep.PositionError : 0f);
-            Add(row, hasInputObservedStep ? inputObservedStep.RotationError : 0f);
-            Add(row, hasInputObservedStep ? inputObservedStep.Contact : 0f);
-            Add(row, hasInputObservedStep ? inputObservedStep.LockMode.ToString() : string.Empty);
-            Add(row, hasInputObservedStep ? inputObservedStep.LockWeight : 0f);
-            Add(row, hasInputObservedStep ? inputObservedStep.Support : 0f);
+            var formalInputObservation = new CharacterFootFormalObservationCsvSource(
+                hasInputObservedStep, inputObservation.SourceIdentity,
+                inputObservation.SourceWeight, inputObservation.NormalizedTime,
+                in inputObservedStep);
+            var formalInputSource = new CharacterFootFormalInputCsvSource(
+                in formalInputObservation, in inputObservation);
+            CharacterFootFormalObservationColumns.Input.Write(row, in formalInputSource);
             var inputEvents = new CharacterFootEventCsvSource(hasInputObservedStep, inputObservedStep.Events);
             CharacterFootEventColumns.Input.Write(row, in inputEvents);
             Add(row, foot.RootLocalLanding);
@@ -1703,55 +1655,10 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             CharacterFootPrimarySupportColumns.Schema.Write(row, in primarySupport);
             CharacterFootRootHierarchyColumns.Schema.Write(row, in roots);
             CharacterFootBodyCorrectionColumns.Schema.Write(row, in input);
-            Add(row, foot.FutureBodyTranslationAvailable);
-            Add(row, foot.FutureBodyRelativeTranslation);
-            Add(row, foot.FutureBodyTranslationVelocity);
-            Add(row, foot.CurrentAnimatedSole);
-            Add(row, foot.RawLandingAvailable);
-            Add(row, foot.RawLandingCandidate);
-            CharacterFootLandingObservationDiagnostics observation =
-                foot.Observation;
-            Add(row, observation.Identity);
-            Add(row, observation.WorldRevision);
-            Add(row, observation.SourceSampleIdentity);
-            Add(row, observation.SourceSampleCycle);
-            Add(row, observation.CacheState.ToString());
-            Add(row, observation.QueryExecutedThisFrame);
-            Add(row, observation.QueryPurpose.ToString());
-            Add(row, observation.RefreshMode.ToString());
-            Add(row, observation.QueryReason.ToString());
-            Add(row, observation.CanonicalRawLanding);
-            Add(row, observation.CanonicalComponentUp);
-            Add(row, observation.CandidateRawLanding);
-            Add(row, observation.CandidateComponentUp);
-            Add(row, observation.QueryInputDistance);
-            Add(row, observation.QueryComponentUpAngleDegrees);
-            Add(row, observation.PredictionInputAccumulationDistance);
-            Add(row, observation.ComponentUpChangeAngleDegrees);
-            Add(row, query.Shape.ToString());
-            Add(row, query.Purpose.ToString());
-            Add(row, query.FootIndex);
-            Add(row, query.Origin);
-            Add(row, query.Direction);
-            Add(row, query.MaximumDistance);
-            Add(row, query.Radius);
-            Add(row, query.LayerMask);
-            Add(row, query.MinimumGroundNormalDot);
-            CharacterFootLandingQuerySelectionDiagnostics querySelection =
-                foot.QuerySelection;
-            CharacterFootLandingQueryCandidateDiagnostics selectedCandidate =
-                querySelection.Selected;
-            Add(row, querySelection.State.ToString());
-            Add(row, querySelection.ValidCandidateCount);
-            Add(row, selectedCandidate.IsAvailable);
-            Add(row, selectedCandidate.SurfaceIdentity);
-            Add(row, selectedCandidate.Point);
-            Add(row, selectedCandidate.Distance);
-            Add(row, foot.Accepted);
-            Add(row, foot.SurfaceIdentity);
-            Add(row, foot.LandingPoint);
-            Add(row, foot.LandingNormal);
-            Add(row, foot.QueryDistance);
+            var landingObservationSource =
+                new CharacterFootLandingObservationCsvSource(in foot);
+            CharacterFootLandingObservationColumns.Schema.Write(
+                row, in landingObservationSource);
             CharacterFootGroundPathDiagnostics ground = foot.GroundPath;
             CharacterFootGroundPathColumns.Schema.Write(row, in ground);
             CharacterFootSwingMotionDiagnostics motion = foot.FootMotion;

@@ -54,9 +54,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor
 
     internal static class CharacterFootMotionDiagnosticAnalyzer
     {
-        const string Schema = "character-foot-motion-facts/71";
+        const string Schema = "character-foot-motion-facts/72";
         const string AnalyzerId = "character-foot-motion-fact-analyzer";
-        const int AnalyzerVersion = 71;
+        const int AnalyzerVersion = 72;
         const float RuntimeGeometryEpsilon = 0.0001f;
         const float ExpectedCorrectionResponseIncreaseSpeed = 1.8f;
         const float ExpectedCorrectionResponseDecreaseSpeed = 1.5f;
@@ -903,7 +903,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     ordinarySwingDomain &&
                     (!current.SelectedSupportTarget.Available ||
                      current.SelectedSupportTarget.PositionSource !=
-                     "SwingMotion" ||
+                     "SwingCurrentSupport" ||
                      current.SelectedSupportTarget.NormalSource !=
                      "CurrentSupport");
                 bool ownershipConsistent = progressMonotonic &&
@@ -985,9 +985,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     ["goalWeightChanged"] = goalWeightChanged,
                     ["goalWeightAttributionAvailable"] = true,
                     ["formalWeightPolicyConsistent"] = true,
-                    ["selectedPositionFromSwingMotion"] =
+                    ["selectedPositionFromSwingCurrentSupport"] =
                         current.SelectedSupportTarget.PositionSource ==
-                        "SwingMotion",
+                        "SwingCurrentSupport",
                     ["selectedDirectionFromCurrentSupport"] =
                         current.SelectedSupportTarget.NormalSource ==
                         "CurrentSupport"
@@ -1724,6 +1724,12 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 float currentFormalHeightDelta =
                     current.SwingFormalFootHeight -
                     previous.SwingFormalFootHeight;
+                float previousSupportHeightDelta = Vector3.Dot(previous.SwingHeightReference.Position,
+                    previous.ComponentUp.normalized) - Vector3.Dot(first.SwingHeightReference.Position,
+                    first.ComponentUp.normalized);
+                float currentSupportHeightDelta = Vector3.Dot(current.SwingHeightReference.Position,
+                    current.ComponentUp.normalized) - Vector3.Dot(previous.SwingHeightReference.Position,
+                    previous.ComponentUp.normalized);
                 float previousEnvelopeStep = Vector3.Distance(
                     first.SwingEnvelopeSample,
                     previous.SwingEnvelopeSample);
@@ -1758,8 +1764,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 bool useCurrentStep = holdToAdvance || !advanceToHold;
                 string firstLargeStepStage = ResolveFirstLargeCadenceStage(
                     useCurrentStep
-                        ? Math.Abs(currentFormalHeightDelta)
-                        : Math.Abs(previousFormalHeightDelta),
+                        ? Math.Abs(current.SwingRawFormalTargetHeight - previous.SwingRawFormalTargetHeight)
+                        : Math.Abs(previous.SwingRawFormalTargetHeight - first.SwingRawFormalTargetHeight),
                     useCurrentStep
                         ? Math.Abs(currentDesiredDelta)
                         : Math.Abs(previousDesiredDelta),
@@ -1806,6 +1812,12 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                         previousFormalHeightDelta,
                     ["CurrentFormalFootHeightDelta"] =
                         currentFormalHeightDelta,
+                    ["PreviousSupportHeightAlongUpDelta"] = previousSupportHeightDelta,
+                    ["CurrentSupportHeightAlongUpDelta"] = currentSupportHeightDelta,
+                    ["PreviousRawFormalTargetHeightDelta"] =
+                        previous.SwingRawFormalTargetHeight - first.SwingRawFormalTargetHeight,
+                    ["CurrentRawFormalTargetHeightDelta"] =
+                        current.SwingRawFormalTargetHeight - previous.SwingRawFormalTargetHeight,
                     ["PreviousEnvelopeSampleStep"] = previousEnvelopeStep,
                     ["CurrentEnvelopeSampleStep"] = currentEnvelopeStep,
                     ["PreviousEnvelopeSampleAlongUpDelta"] =
@@ -1814,9 +1826,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                         currentEnvelopeAlongUpDelta,
                     ["PreviousOriginalSoleStep"] = previousOriginalSoleStep,
                     ["CurrentOriginalSoleStep"] = currentOriginalSoleStep,
-                    ["PreviousEnvelopeDirectionContribution"] =
+                    ["PreviousPlanningEnvelopeAlongResponseDirectionDelta"] =
                         previousEnvelopeDirectionContribution,
-                    ["CurrentEnvelopeDirectionContribution"] =
+                    ["CurrentPlanningEnvelopeAlongResponseDirectionDelta"] =
                         currentEnvelopeDirectionContribution,
                     ["PreviousOriginalSoleDirectionContribution"] =
                         previousOriginalSoleDirectionContribution,
@@ -1884,13 +1896,13 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         }
 
         static string ResolveFirstLargeCadenceStage(
-            float formalHeightDelta,
+            float rawTargetHeightDelta,
             float desiredResponseDelta,
             float appliedResponseDelta,
             float finalCorrectionStep)
         {
-            if (formalHeightDelta > CorrectionAdvanceMinimumMeters)
-                return "FormalFootHeight";
+            if (rawTargetHeightDelta > CorrectionAdvanceMinimumMeters)
+                return "SwingRawTargetHeight";
             if (desiredResponseDelta > CorrectionAdvanceMinimumMeters)
                 return "DesiredResponse";
             if (appliedResponseDelta > CorrectionAdvanceMinimumMeters)
@@ -1964,8 +1976,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                         current.ActualEnvelopeCandidateCount,
                     ["ActualEnvelopeHeightSpan"] =
                         current.ActualEnvelopeHeightSpan,
-                    ["GroundEnvelopeHardClamp"] =
-                        current.SafetyFloorOwner == "GroundPathEnvelope"
+                    ["CurrentSupportHardClamp"] =
+                        current.SafetyFloorOwner == "CurrentSupport"
                             ? current.SafetyFloorClampMeters
                             : 0d,
                     ["FootPlacementOutputOffsetStep"] = visibleStep,
@@ -1987,8 +1999,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     ["counterfactualUnavailable"] =
                         current.ActualEnvelopeCounterfactualState ==
                         "Unavailable",
-                    ["groundEnvelopeOwner"] =
-                        current.SafetyFloorOwner == "GroundPathEnvelope",
+                    ["currentSupportFloorOwner"] =
+                        current.SafetyFloorOwner == "CurrentSupport",
                     ["actualProgressCorrectionAvailable"] =
                         current.ActualProgressEnvelopeCorrectionAvailable,
                     ["visibleOutputAboveTwoCentimeters"] =
@@ -2065,9 +2077,13 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     acceptedUnanchoredSwingPair
                         ? AnalyzeSwingTargetCounterfactual(previous, current)
                         : null;
+                CharacterFootPlanningPathCounterfactual planningCounterfactual =
+                    acceptedUnanchoredSwingPair
+                        ? AnalyzePlanningPathCounterfactual(previous, current)
+                        : null;
                 bool counterfactualPathRevision =
-                    counterfactual?.available == true &&
-                    counterfactual.pathRevisionDelta > pathNoiseFloor;
+                    planningCounterfactual?.available == true &&
+                    planningCounterfactual.pathRevisionDelta > pathNoiseFloor;
                 bool semanticPathRevision = pathAvailabilityChanged ||
                     landingEventChanged ||
                     endpointTreadChanged ||
@@ -2359,7 +2375,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     counterfactualPathRevision =
                         counterfactualPathRevision,
                     pathResidualRebuilt = current.PathResidualRebuilt,
-                    swingTargetCounterfactual = counterfactual
+                    swingTargetCounterfactual = counterfactual,
+                    planningPathCounterfactual = planningCounterfactual
                 };
                 var metrics = new SortedDictionary<string, double>(
                     StringComparer.Ordinal)
@@ -2385,10 +2402,12 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     ["LandingPointDelta"] =
                         current.PathLandingPointDelta,
                     ["TargetDelta"] = current.PathTargetDelta,
-                    ["PathRevisionDelta"] =
-                        counterfactual?.pathRevisionDelta ?? 0d,
-                    ["PhaseAdvanceDelta"] =
-                        counterfactual?.phaseAdvanceDelta ?? 0d,
+                    ["PlanningPathRevisionDelta"] =
+                        planningCounterfactual?.pathRevisionDelta ?? 0d,
+                    ["CurrentSupportRevisionDelta"] =
+                        counterfactual?.supportRevisionDelta ?? 0d,
+                    ["SwingInputAdvanceDelta"] =
+                        counterfactual?.inputAdvanceDelta ?? 0d,
                     ["ObservedSwingTargetDelta"] =
                         counterfactual?.observedSwingTargetDelta ?? 0d,
                     ["PresentationDeltaSeconds"] =
@@ -2433,8 +2452,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                         landingPointRevised,
                     ["counterfactualPathRevisionAboveNoiseFloor"] =
                         counterfactualPathRevision,
-                    ["safetyFloorOwnerGroundPathEnvelope"] =
-                        current.SafetyFloorOwner == "GroundPathEnvelope",
+                    ["safetyFloorOwnerCurrentSupport"] =
+                        current.SafetyFloorOwner == "CurrentSupport",
                     ["safetyFloorOwnerContactAnchor"] =
                         current.SafetyFloorOwner == "ContactAnchor"
                 };
@@ -4328,30 +4347,14 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 CharacterFootPathStageNames.All.Length)
             {
                 Stage(
-                    CharacterFootPathStageNames.RawLandingToPathTarget,
-                    previous.RawLandingAvailable && current.RawLandingAvailable &&
-                    previous.GroundPathTargetAvailable &&
-                    current.GroundPathTargetAvailable,
-                    "RawLandingOrPathTargetUnavailable",
-                    previous.RawLanding,
-                    current.RawLanding,
-                    previous.NextLanding,
-                    current.NextLanding,
-                    previous.Frame,
-                    current.Frame,
-                    missing,
-                    previous.RawLandingAvailable || current.RawLandingAvailable ||
-                    previous.GroundPathTargetAvailable ||
-                    current.GroundPathTargetAvailable),
-                Stage(
-                    CharacterFootPathStageNames.PathTargetToSwingTarget,
-                    previous.GroundPathTargetAvailable &&
-                    current.GroundPathTargetAvailable &&
+                    CharacterFootPathStageNames.CurrentSupportToSwingTarget,
+                    previous.SwingHeightReference.Available &&
+                    current.SwingHeightReference.Available &&
                     previous.BuilderSwingTargetAvailable &&
                     current.BuilderSwingTargetAvailable,
-                    "PathTargetOrSwingTargetUnavailable",
-                    previous.NextLanding,
-                    current.NextLanding,
+                    "CurrentSupportOrSwingTargetUnavailable",
+                    previous.SwingHeightReference.Position,
+                    current.SwingHeightReference.Position,
                     previous.BuilderSwingTargetCorrection,
                     current.BuilderSwingTargetCorrection,
                     previous.Frame,
@@ -4373,7 +4376,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     previous.Frame,
                     current.Frame,
                     missing,
-                    current.PathResidualRebuilt),
+                    current.PathResidualRebuilt || current.TargetTrackingApplied),
                 Stage(
                     CharacterFootPathStageNames.CapturedResidualToDecayedResidual,
                     previous.PathContinuityEvaluated &&
@@ -4410,7 +4413,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     current.OutputStagesAvailable &&
                     previous.SafetyFloorOwner != "None" &&
                     current.SafetyFloorOwner != "None",
-                    "StateOutputOrGroundEnvelopeUnavailable",
+                    "StateOutputOrSafetyFloorUnavailable",
                     previous.CorrectionBeforeSafetyFloor,
                     current.CorrectionBeforeSafetyFloor,
                     previous.SafetyFloorOutputCorrection,
@@ -4526,12 +4529,12 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                         previous.SwingResidualBeforeDecay),
                     capturedResidual = StageVector(
                         current.SwingResidualBeforeDecay),
-                    groundEnvelopeSafetyCorrectionAvailable =
-                        previous.SafetyFloorOwner == "GroundPathEnvelope" &&
-                        current.SafetyFloorOwner == "GroundPathEnvelope",
-                    groundEnvelopeSafetyCorrectionPrevious = StageVector(
+                    currentSupportSafetyCorrectionAvailable =
+                        previous.SafetyFloorOwner == "CurrentSupport" &&
+                        current.SafetyFloorOwner == "CurrentSupport",
+                    currentSupportSafetyCorrectionPrevious = StageVector(
                         previous.SafetyFloorMinimumCorrection),
-                    groundEnvelopeSafetyCorrection = StageVector(
+                    currentSupportSafetyCorrection = StageVector(
                         current.SafetyFloorMinimumCorrection),
                     physicalFootAvailable =
                         previous.FinalPhysicalWriteAvailable &&
@@ -4551,152 +4554,131 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         }
 
         static CharacterFootSwingTargetCounterfactual
-            AnalyzeSwingTargetCounterfactual(
-                FootFrame previous,
-                FootFrame current)
+            AnalyzeSwingTargetCounterfactual(FootFrame previous, FootFrame current)
         {
             if (!previous.BuilderSwingTargetAvailable ||
-                !TryReconstructSwingTarget(
-                    current,
-                    previous,
-                    out Vector3 phaseOnlyTarget) ||
-                !TryReconstructSwingTarget(
-                    current,
-                    current,
-                    out Vector3 pathRevisedTarget))
+                !TryReconstructSwingTarget(current, previous.SwingHeightReference,
+                    out Vector3 frozenSupportTarget) ||
+                !TryReconstructSwingTarget(current, current.SwingHeightReference,
+                    out Vector3 supportRevisedTarget))
             {
                 return new CharacterFootSwingTargetCounterfactual
                 {
                     available = false,
-                    unavailableReason =
-                        "SwingTargetReconstructionInputUnavailable"
+                    unavailableReason = "CurrentSupportTargetReconstructionInputUnavailable"
                 };
             }
-            Vector3 actualTarget =
-                current.BuilderSwingTargetCorrection;
-            double reconstructionError = Vector3.Distance(
-                pathRevisedTarget,
-                actualTarget);
-            double phaseDelta = Vector3.Distance(
-                previous.BuilderSwingTargetCorrection,
-                phaseOnlyTarget);
-            double pathDelta = Vector3.Distance(
-                phaseOnlyTarget,
-                pathRevisedTarget);
-            double observedDelta = Vector3.Distance(
-                previous.BuilderSwingTargetCorrection,
-                actualTarget);
-            double totalCounterfactualDelta =
-                phaseDelta + pathDelta;
-            double phaseContribution =
-                totalCounterfactualDelta > PositionNoiseFloor
-                    ? phaseDelta / totalCounterfactualDelta
-                    : 0d;
-            double pathContribution =
-                totalCounterfactualDelta > PositionNoiseFloor
-                    ? pathDelta / totalCounterfactualDelta
-                    : 0d;
-            bool reconstructed =
-                reconstructionError <= PositionNoiseFloor;
-            string classification = !reconstructed
-                ? string.Empty
-                : pathDelta > PositionNoiseFloor
-                    ? "PathRevision"
-                    : phaseDelta > PositionNoiseFloor
-                        ? "SwingPhaseAdvance"
-                        : "SwingTargetStable";
+            Vector3 actual = current.BuilderSwingTargetCorrection;
+            double error = Vector3.Distance(supportRevisedTarget, actual);
+            double sourceDelta = Vector3.Distance(previous.BuilderSwingTargetCorrection, frozenSupportTarget);
+            double supportDelta = Vector3.Distance(frozenSupportTarget, supportRevisedTarget);
+            double total = sourceDelta + supportDelta;
+            bool reconstructed = error <= PositionNoiseFloor;
             return new CharacterFootSwingTargetCounterfactual
             {
                 available = reconstructed,
-                unavailableReason = reconstructed
-                    ? string.Empty
-                    : "ActualSwingTargetReconstructionMismatch",
-                classification = classification,
-                phaseOnlyTarget = StageVector(phaseOnlyTarget),
-                pathRevisedTarget = StageVector(pathRevisedTarget),
-                actualSwingTarget = StageVector(actualTarget),
-                actualReconstructionError = reconstructionError,
-                phaseAdvanceDelta = phaseDelta,
-                pathRevisionDelta = pathDelta,
-                observedSwingTargetDelta = observedDelta,
-                pathRevisionContribution = pathContribution,
-                phaseContribution = phaseContribution
+                unavailableReason = reconstructed ? string.Empty : "ActualSwingTargetReconstructionMismatch",
+                classification = !reconstructed ? string.Empty
+                    : supportDelta > PositionNoiseFloor ? "CurrentSupportHeightRevision"
+                    : sourceDelta > PositionNoiseFloor ? "SwingInputAdvance"
+                    : "SwingTargetStable",
+                frozenSupportTarget = StageVector(frozenSupportTarget),
+                supportRevisedTarget = StageVector(supportRevisedTarget),
+                actualSwingTarget = StageVector(actual),
+                actualReconstructionError = error,
+                inputAdvanceDelta = sourceDelta,
+                supportRevisionDelta = supportDelta,
+                observedSwingTargetDelta = Vector3.Distance(previous.BuilderSwingTargetCorrection, actual),
+                supportRevisionContribution = total > PositionNoiseFloor ? supportDelta / total : 0d,
+                inputContribution = total > PositionNoiseFloor ? sourceDelta / total : 0d
             };
         }
 
         static bool TryReconstructSwingTarget(
-            FootFrame currentState,
-            FootFrame path,
-            out Vector3 target)
+            FootFrame currentState, SupportTargetFrame reference, out Vector3 target)
+        {
+            target = default;
+            if (!currentState.BuilderSwingTargetAvailable || !reference.Available ||
+                !currentState.FormalOutputObservationAvailable ||
+                !float.IsFinite(currentState.SwingFormalFootHeight) ||
+                !FiniteVector(reference.Position) ||
+                currentState.ComponentUp.sqrMagnitude <= PositionNoiseFloor * PositionNoiseFloor)
+                return false;
+            float rawHeight = Vector3.Dot(reference.Position, currentState.ComponentUp.normalized) +
+                              currentState.SwingFormalFootHeight;
+            return TryApplySwingHeightResponse(currentState, rawHeight, out target);
+        }
+
+        static CharacterFootPlanningPathCounterfactual AnalyzePlanningPathCounterfactual(
+            FootFrame previous, FootFrame current)
+        {
+            if (!previous.BuilderSwingTargetAvailable ||
+                !TryReconstructPlanningTarget(current, previous, out Vector3 frozenPathTarget) ||
+                !TryReconstructPlanningTarget(current, current, out Vector3 revisedPathTarget))
+            {
+                return new CharacterFootPlanningPathCounterfactual
+                {
+                    available = false,
+                    unavailableReason = "PlanningEnvelopeUnavailable"
+                };
+            }
+            float sampledHeight = Vector3.Dot(current.SwingEnvelopeSample,
+                current.ComponentUp.normalized) + current.SwingFormalFootHeight;
+            bool sampled = TryApplySwingHeightResponse(current, sampledHeight,
+                out Vector3 sampledPlanningTarget);
+            double error = sampled ? Vector3.Distance(revisedPathTarget, sampledPlanningTarget) : double.NaN;
+            bool reconstructed = sampled && error <= PositionNoiseFloor;
+            return new CharacterFootPlanningPathCounterfactual
+            {
+                available = reconstructed,
+                unavailableReason = reconstructed ? string.Empty : "PlanningEnvelopeReconstructionMismatch",
+                frozenPathTarget = StageVector(frozenPathTarget),
+                revisedPathTarget = StageVector(revisedPathTarget),
+                planningReconstructionError = sampled ? error : (double?)null,
+                pathRevisionDelta = Vector3.Distance(frozenPathTarget, revisedPathTarget)
+            };
+        }
+
+        static bool TryReconstructPlanningTarget(
+            FootFrame currentState, FootFrame path, out Vector3 target)
         {
             target = default;
             if (currentState.FootMotionState != "Accepted" ||
                 !currentState.BuilderSwingTargetAvailable ||
-                path.GroundPathState != "Accepted" ||
-                path.GroundEnvelopeVertices.Count < 2 ||
+                path.GroundPathState != "Accepted" || path.GroundEnvelopeVertices.Count < 2 ||
                 !float.IsFinite(currentState.SwingProgress) ||
                 !currentState.FormalOutputObservationAvailable ||
-                !float.IsFinite(
-                    currentState.SwingFormalFootHeight) ||
-                currentState.ComponentUp.sqrMagnitude <=
-                PositionNoiseFloor * PositionNoiseFloor ||
-                path.GroundPathComponentUp.sqrMagnitude <=
-                PositionNoiseFloor * PositionNoiseFloor)
-            {
+                !float.IsFinite(currentState.SwingFormalFootHeight) ||
+                currentState.ComponentUp.sqrMagnitude <= PositionNoiseFloor * PositionNoiseFloor ||
+                path.GroundPathComponentUp.sqrMagnitude <= PositionNoiseFloor * PositionNoiseFloor)
                 return false;
-            }
-            Vector3 up = currentState.ComponentUp.normalized;
-            Vector3 groundPathUp = path.GroundPathComponentUp.normalized;
-            Vector3 horizontal = Vector3.ProjectOnPlane(
-                path.NextLanding - path.LastLanding,
-                groundPathUp);
-            float pathLength = horizontal.magnitude;
-            if (!float.IsFinite(pathLength) ||
-                pathLength <= 0.0001f)
-            {
+            float length = Vector3.ProjectOnPlane(path.NextLanding - path.LastLanding,
+                path.GroundPathComponentUp.normalized).magnitude;
+            if (!float.IsFinite(length) || length <= 0.0001f ||
+                !TrySampleEnvelope(path.GroundEnvelopeVertices.Values,
+                    currentState.SwingProgress, out Vector3 sample))
                 return false;
-            }
-            float progress = currentState.SwingProgress;
-            if (!TrySampleEnvelope(
-                    path.GroundEnvelopeVertices.Values,
-                    progress,
-                    out Vector3 envelopeSample))
-            {
+            float height = Vector3.Dot(sample, currentState.ComponentUp.normalized) +
+                           currentState.SwingFormalFootHeight;
+            return TryApplySwingHeightResponse(currentState, height, out target);
+        }
+
+        static bool TryApplySwingHeightResponse(
+            FootFrame frame, float rawHeight, out Vector3 target)
+        {
+            target = default;
+            float delta = rawHeight - frame.SwingFilteredTargetHeightBefore;
+            float maximumDelta = ResolveVerticalHistoryDelta(
+                frame.DeltaSeconds, frame.SwingTargetMaximumVerticalSpeed);
+            float height = frame.SwingFilteredTargetHeightBefore +
+                (frame.SwingTargetHeightUpdateHeld ? 0f
+                    : frame.SwingTargetHeightForceRefreshed ? delta
+                    : frame.SwingTargetHeightRateLimited
+                        ? Mathf.Clamp(delta, -maximumDelta, maximumDelta) : delta);
+            float originalHeight = Vector3.Dot(frame.OriginalSole, frame.ComponentUp.normalized);
+            if (!float.IsFinite(rawHeight) || !float.IsFinite(height) || !float.IsFinite(originalHeight))
                 return false;
-            }
-            float originalSoleHeight = Vector3.Dot(
-                currentState.OriginalSole,
-                up);
-            float rawTargetHeight = Vector3.Dot(
-                envelopeSample,
-                up) + currentState.SwingFormalFootHeight;
-            float targetHeightDelta = rawTargetHeight -
-                                      currentState
-                                          .SwingFilteredTargetHeightBefore;
-            float maximumHeightDelta = ResolveVerticalHistoryDelta(
-                currentState.DeltaSeconds,
-                currentState.SwingTargetMaximumVerticalSpeed);
-            float filteredTargetHeight =
-                currentState.SwingFilteredTargetHeightBefore +
-                (currentState.SwingTargetHeightUpdateHeld
-                    ? 0f
-                    : currentState.SwingTargetHeightForceRefreshed
-                    ? targetHeightDelta
-                    : currentState.SwingTargetHeightRateLimited
-                    ? Mathf.Clamp(
-                        targetHeightDelta,
-                        -maximumHeightDelta,
-                        maximumHeightDelta)
-                    : targetHeightDelta);
-            if (!float.IsFinite(rawTargetHeight) ||
-                !float.IsFinite(filteredTargetHeight) ||
-                !float.IsFinite(originalSoleHeight))
-            {
-                return false;
-            }
-            target = up * Mathf.Max(
-                0f,
-                filteredTargetHeight - originalSoleHeight);
+            target = frame.ComponentUp.normalized * Mathf.Max(0f, height - originalHeight);
             return FiniteVector(target);
         }
 
@@ -5001,7 +4983,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         {
             if (first?.available != true ||
                 first.stage !=
-                CharacterFootPathStageNames.PathTargetToSwingTarget)
+                CharacterFootPathStageNames.CurrentSupportToSwingTarget)
             {
                 return;
             }
@@ -5015,9 +4997,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 return;
             }
             if (counterfactual.classification ==
-                "SwingPhaseAdvance")
+                "SwingInputAdvance")
             {
-                first.stage = "SwingPhaseAdvance";
+                first.stage = "SwingInputAdvance";
             }
             else if (counterfactual.classification ==
                      "SwingTargetStable")
@@ -5157,6 +5139,14 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 bool inputIdentityChanged = continuous &&
                     previous.FootMotionGroundPathInputIdentity !=
                     current.FootMotionGroundPathInputIdentity;
+                bool previousSupportSampleComparable = continuous && current.PathContinuityEvaluated &&
+                    current.PathAvailableBefore && previous.PathContinuityEvaluated && previous.PathAvailableAfter;
+                if (previousSupportSampleComparable &&
+                    !current.PreviousSwingHeightReference.SameAs(previous.SwingHeightReference))
+                {
+                    throw new InvalidDataException(
+                        $"Foot Motion previous Swing support history disagrees with committed sample Frame={current.Frame} Side={current.Side}.");
+                }
                 bool availabilityChanged =
                     current.PathAvailableBefore != current.PathAvailableAfter;
                 bool comparablePath = current.PathAvailableBefore &&
@@ -5164,25 +5154,30 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 bool eventChanged = comparablePath &&
                     current.PathPreviousLandingEventIdentity !=
                     current.PathCurrentLandingEventIdentity;
-                bool landingPointChanged = comparablePath &&
-                    current.PathLandingPointDelta > current.PathRevisionDistance;
+                bool supportSurfaceChanged = comparablePath &&
+                    current.PreviousSwingHeightReference.Surface !=
+                    current.SwingHeightReference.Surface;
+                float supportHeightDelta = comparablePath
+                    ? Mathf.Abs(Vector3.Dot(current.SwingHeightReference.Position -
+                        current.PreviousSwingHeightReference.Position, current.ComponentUp.normalized))
+                    : 0f;
                 bool revisionExpected = availabilityChanged || eventChanged ||
-                                        landingPointChanged;
+                                        supportSurfaceChanged;
                 bool reasonAvailability = HasRevisionReason(
                     current.PathRevisionReason,
                     "PathAvailabilityChanged");
                 bool reasonEvent = HasRevisionReason(
                     current.PathRevisionReason,
                     "LandingEventChanged");
-                bool reasonLandingPoint = HasRevisionReason(
+                bool reasonSupportSurface = HasRevisionReason(
                     current.PathRevisionReason,
-                    "LandingPointChanged");
+                    "SupportSurfaceChanged");
                 bool reasonAvailable = reasonAvailability || reasonEvent ||
-                                       reasonLandingPoint;
+                                       reasonSupportSurface;
                 bool reasonMatchesExpected =
                     reasonAvailability == availabilityChanged &&
                     reasonEvent == eventChanged &&
-                    reasonLandingPoint == landingPointChanged;
+                    reasonSupportSurface == supportSurfaceChanged;
                 double residualBeforeRevision =
                     current.SwingResidualBeforeRevision.magnitude;
                 double residualBeforeDecay =
@@ -5232,6 +5227,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                         current.SafetyFloorClearanceBeforeMeters,
                     ["landingPointDeltaMeters"] =
                         current.PathLandingPointDelta,
+                    ["supportHeightDeltaMeters"] = supportHeightDelta,
                     ["pathRevisionDistanceMeters"] =
                         current.PathRevisionDistance,
                     ["swingResidualToleranceMeters"] =
@@ -5253,12 +5249,15 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     ["deadlineReached"] = deadlineReached,
                     ["safetyFloorAvailable"] = current.SafetyFloorAvailable,
                     ["expectedLandingEventRevision"] = eventChanged,
-                    ["expectedLandingPointRevision"] = landingPointChanged,
+                    ["expectedSupportSurfaceRevision"] = supportSurfaceChanged,
+                    ["expectedSupportHeightTracking"] = comparablePath &&
+                        !eventChanged && supportHeightDelta > current.PathRevisionDistance,
                     ["expectedPathAvailabilityRevision"] = availabilityChanged,
                     ["identityOnlyInputChange"] = identityOnlyInputChange,
                     ["pathContinuityEvaluated"] =
                         current.PathContinuityEvaluated,
                     ["pathInputIdentityChanged"] = inputIdentityChanged,
+                    ["previousSupportSampleComparable"] = previousSupportSampleComparable,
                     ["pathResidualRebuilt"] = current.PathResidualRebuilt,
                     ["targetTrackingApplied"] =
                         current.TargetTrackingApplied,
@@ -5266,15 +5265,15 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     ["pathRevisionReasonMatchesExpected"] =
                         reasonMatchesExpected,
                     ["reasonLandingEventChanged"] = reasonEvent,
-                    ["reasonLandingPointChanged"] = reasonLandingPoint,
+                    ["reasonSupportSurfaceChanged"] = reasonSupportSurface,
                     ["reasonPathAvailabilityChanged"] = reasonAvailability,
                     ["releasingCompletedToSwing"] =
                         current.ReleasingCompletedToSwing,
                     ["residualGrewWithoutRevision"] =
                         residualGrewWithoutRevision,
                     ["safetyFloorClamped"] = current.SafetyFloorClamped,
-                    ["safetyFloorOwnerGroundPathEnvelope"] =
-                        current.SafetyFloorOwner == "GroundPathEnvelope",
+                    ["safetyFloorOwnerCurrentSupport"] =
+                        current.SafetyFloorOwner == "CurrentSupport",
                     ["safetyFloorOwnerContactAnchor"] =
                         current.SafetyFloorOwner == "ContactAnchor",
                     ["stateAfterSwing"] =
@@ -5295,7 +5294,14 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     current.SourceCycle,
                     DeltaSeconds(current),
                     metrics,
-                    evidence));
+                    evidence,
+                    swingHeightReference: new
+                    {
+                        current = SupportTargetFact(current.SwingHeightReference),
+                        previous = SupportTargetFact(current.PreviousSwingHeightReference),
+                        previousSampleComparable = previousSupportSampleComparable,
+                        futureLandingDeltaIsPlanningOnly = true
+                    }));
             }
         }
 
@@ -6437,8 +6443,10 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     Float("FootMotionFormalFootHeight"),
                 SwingRawFormalTargetHeight =
                     Float("FootMotionRawFormalTargetHeight"),
-                SwingEnvelopeMinimumCorrection =
-                    Float("FootMotionEnvelopeMinimumCorrection"),
+                SwingSupportMinimumCorrection =
+                    Float("FootMotionSupportMinimumCorrection"),
+                SwingHeightReference = SupportTarget("FootMotionSwingHeightReference"),
+                PreviousSwingHeightReference = SupportTarget("FootMotionPreviousSwingHeightReference"),
                 SwingBuilderSelectedCorrection =
                     Float("FootMotionBuilderSelectedCorrection"),
                 BuilderSwingTargetAvailable =
@@ -7204,9 +7212,21 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 "None" => !frame.SafetyFloorAvailable &&
                           frame.SafetyFloorOwnerSurfaceIdentity == 0 &&
                           frame.SafetyFloorOwnerPathIdentity == 0,
-                "GroundPathEnvelope" => frame.SafetyFloorAvailable &&
-                                        frame.SafetyFloorOwnerSurfaceIdentity == 0 &&
-                                        frame.SafetyFloorOwnerPathIdentity != 0,
+                "CurrentSupport" => frame.SafetyFloorAvailable &&
+                                    frame.SwingHeightReference.Available &&
+                                    frame.CurrentSupportAvailable &&
+                                    frame.SafetyFloorOwnerSurfaceIdentity ==
+                                        frame.SwingHeightReference.Surface &&
+                                    frame.SafetyFloorOwnerPathIdentity == 0 &&
+                                    !frame.ApproachPlantTargetPrepared &&
+                                    (frame.ConstraintState == "Swing" ||
+                                     frame.ConstraintState == "UnlockedSupport") &&
+                                    Vector3.Distance(
+                                        frame.SafetyFloorMinimumCorrection,
+                                        frame.ComponentUp.normalized *
+                                        Vector3.Dot(frame.SwingHeightReference.Position -
+                                            frame.OriginalSole, frame.ComponentUp.normalized)) <=
+                                        PositionNoiseFloor,
                 "ContactAnchor" => frame.SafetyFloorAvailable &&
                                    frame.SafetyFloorOwnerSurfaceIdentity != 0 &&
                                    frame.SafetyFloorOwnerPathIdentity == 0 &&
@@ -7558,9 +7578,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             RequireEnum<CharacterFootActualEnvelopeCounterfactualState>(
                 frame.ActualEnvelopeCounterfactualState,
                 "FootMotionActualEnvelopeCounterfactualState");
-            if (frame.FootMotionState == "Accepted" &&
-                frame.ComponentUp.sqrMagnitude >
-                TimeEpsilon * TimeEpsilon)
+            RequireSwingHeightReference(frame);
+            if (frame.SwingHeightReference.Available)
             {
                 Vector3 up = frame.ComponentUp.normalized;
                 float originalSoleAlongUp = Vector3.Dot(
@@ -7572,10 +7591,11 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 float envelopeAlongUp = Vector3.Dot(
                     frame.SwingEnvelopeSample,
                     up);
+                float supportAlongUp = Vector3.Dot(frame.SwingHeightReference.Position, up);
                 float expectedRawFormalTargetHeight =
-                    envelopeAlongUp + frame.SwingFormalFootHeight;
-                float expectedEnvelopeMinimumCorrection =
-                    envelopeAlongUp - originalSoleAlongUp;
+                    supportAlongUp + frame.SwingFormalFootHeight;
+                float expectedSupportMinimumCorrection =
+                    supportAlongUp - originalSoleAlongUp;
                 float expectedBuilderSelectedCorrection = Mathf.Max(
                     0f,
                     expectedRawFormalTargetHeight - originalSoleAlongUp);
@@ -7592,8 +7612,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                         expectedRawFormalTargetHeight) >
                     PositionNoiseFloor ||
                     Math.Abs(
-                        frame.SwingEnvelopeMinimumCorrection -
-                        expectedEnvelopeMinimumCorrection) >
+                        frame.SwingSupportMinimumCorrection -
+                        expectedSupportMinimumCorrection) >
                     PositionNoiseFloor ||
                     Math.Abs(
                         frame.SwingBuilderSelectedCorrection -
@@ -8338,6 +8358,60 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             }
         }
 
+        static void RequireSwingHeightReference(FootFrame frame)
+        {
+            SupportTargetFrame current = frame.SwingHeightReference;
+            SupportTargetFrame previous = frame.PreviousSwingHeightReference;
+            RequireSupportTarget(current, frame.Side, "SwingHeightReference");
+            RequireSupportTarget(previous, frame.Side, "PreviousSwingHeightReference");
+            if (!float.IsFinite(frame.SwingRawFormalTargetHeight) ||
+                !float.IsFinite(frame.SwingSupportMinimumCorrection) ||
+                !float.IsFinite(frame.SwingBuilderSelectedCorrection) ||
+                !current.Available &&
+                    (frame.SwingSupportMinimumCorrection != 0f ||
+                     frame.SwingBuilderSelectedCorrection != 0f) ||
+                current.Available &&
+                (!frame.CurrentSupportAvailable ||
+                 !current.SameAs(frame.CurrentSupportTarget) ||
+                 current.Frame != (ulong)frame.Frame ||
+                 current.Completion != frame.CompletionIdentity ||
+                 current.Kind != "CurrentSupport" || current.PositionPath != 0 ||
+                 !FiniteVector(frame.ComponentUp) ||
+                 frame.ComponentUp.sqrMagnitude <= TimeEpsilon * TimeEpsilon) ||
+                frame.BuilderSwingTargetAvailable &&
+                    (!current.Available || !frame.PathContinuityEvaluated ||
+                     !frame.PathAvailableAfter) ||
+                frame.PathAvailableAfter && !current.Available ||
+                frame.PathContinuityEvaluated &&
+                    frame.PathAvailableBefore != previous.Available ||
+                !frame.PathContinuityEvaluated && previous.Available)
+            {
+                throw new InvalidDataException(
+                    $"Foot Motion Swing height reference is inconsistent Frame={frame.Frame} Side={frame.Side}.");
+            }
+            if (!frame.PathContinuityEvaluated)
+                return;
+            bool comparable = frame.PathAvailableBefore && frame.PathAvailableAfter;
+            bool availabilityChanged = frame.PathAvailableBefore != frame.PathAvailableAfter;
+            bool eventChanged = comparable && frame.PathPreviousLandingEventIdentity !=
+                                frame.PathCurrentLandingEventIdentity;
+            bool supportChanged = comparable && previous.Surface != current.Surface;
+            float heightDelta = comparable
+                ? Mathf.Abs(Vector3.Dot(current.Position - previous.Position,
+                    frame.ComponentUp.normalized))
+                : 0f;
+            bool tracking = comparable && !eventChanged && heightDelta > frame.PathRevisionDistance;
+            bool revised = availabilityChanged || eventChanged || supportChanged;
+            if (frame.PathResidualRebuilt != revised || frame.TargetTrackingApplied != tracking ||
+                HasRevisionReason(frame.PathRevisionReason, "PathAvailabilityChanged") != availabilityChanged ||
+                HasRevisionReason(frame.PathRevisionReason, "LandingEventChanged") != eventChanged ||
+                HasRevisionReason(frame.PathRevisionReason, "SupportSurfaceChanged") != supportChanged)
+            {
+                throw new InvalidDataException(
+                    $"Foot Motion Swing support revision is inconsistent Frame={frame.Frame} Side={frame.Side}.");
+            }
+        }
+
         static void RequireCurrentSupportProbe(
             CurrentSupportProbeFrame probe,
             string kind,
@@ -8481,6 +8555,14 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             {
                 throw new InvalidDataException(
                     "Foot Motion evaluated interpolation lacks a selected Support Target.");
+            }
+            if (frame.SelectedSupportTarget.Available &&
+                (frame.SelectedSupportTarget.PositionSource == "SwingCurrentSupport" ||
+                 frame.SelectedSupportTarget.PositionSource == "ReleasingSwing") &&
+                frame.SelectedSupportTarget.PositionPath != 0)
+            {
+                throw new InvalidDataException(
+                    "Foot Motion visible Swing or Release position retains planning Path ownership.");
             }
         }
 
@@ -9691,7 +9773,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 bool valid = reason == "None" ||
                              reason == "PathAvailabilityChanged" ||
                              reason == "LandingEventChanged" ||
-                             reason == "LandingPointChanged";
+                             reason == "SupportSurfaceChanged";
                 if (!valid)
                 {
                     throw new InvalidDataException(
@@ -9932,7 +10014,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 "FootMotionEnvelopeSampleAlongUp",
                 "FootMotionFormalFootHeight",
                 "FootMotionRawFormalTargetHeight",
-                "FootMotionEnvelopeMinimumCorrection",
+                "FootMotionSupportMinimumCorrection",
                 "FootMotionBuilderSelectedCorrection",
                 "FootMotionBuilderSwingTargetAvailable",
                 "FootMotionBuilderSwingTargetCorrectionX",
@@ -10269,6 +10351,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 indices,
                 "CurrentSupportFrameSequence,CurrentSupportCompletionIdentity,CurrentSupportWorldRevision,CurrentSupportIsSpecified,CurrentSupportAvailable,CurrentSupportRejectReason,CurrentSupportHeelPurpose,CurrentSupportHeelKind,CurrentSupportHeelState,CurrentSupportHeelRejectReason,CurrentSupportHeelProbePositionX,CurrentSupportHeelProbePositionY,CurrentSupportHeelProbePositionZ,CurrentSupportHeelComponentUpX,CurrentSupportHeelComponentUpY,CurrentSupportHeelComponentUpZ,CurrentSupportHeelOriginX,CurrentSupportHeelOriginY,CurrentSupportHeelOriginZ,CurrentSupportHeelDirectionX,CurrentSupportHeelDirectionY,CurrentSupportHeelDirectionZ,CurrentSupportHeelMaximumDistance,CurrentSupportHeelRadius,CurrentSupportHeelLayerMask,CurrentSupportHeelMinimumGroundNormalDot,CurrentSupportHeelHitCapacity,CurrentSupportHeelCandidateCount,CurrentSupportHeelSurfaceIdentity,CurrentSupportHeelPointX,CurrentSupportHeelPointY,CurrentSupportHeelPointZ,CurrentSupportHeelNormalX,CurrentSupportHeelNormalY,CurrentSupportHeelNormalZ,CurrentSupportHeelDistance,CurrentSupportHeelWorldRevision,CurrentSupportHeelSphereCastExecuted,CurrentSupportHeelAccepted,CurrentSupportToePurpose,CurrentSupportToeKind,CurrentSupportToeState,CurrentSupportToeRejectReason,CurrentSupportToeProbePositionX,CurrentSupportToeProbePositionY,CurrentSupportToeProbePositionZ,CurrentSupportToeComponentUpX,CurrentSupportToeComponentUpY,CurrentSupportToeComponentUpZ,CurrentSupportToeOriginX,CurrentSupportToeOriginY,CurrentSupportToeOriginZ,CurrentSupportToeDirectionX,CurrentSupportToeDirectionY,CurrentSupportToeDirectionZ,CurrentSupportToeMaximumDistance,CurrentSupportToeRadius,CurrentSupportToeLayerMask,CurrentSupportToeMinimumGroundNormalDot,CurrentSupportToeHitCapacity,CurrentSupportToeCandidateCount,CurrentSupportToeSurfaceIdentity,CurrentSupportToePointX,CurrentSupportToePointY,CurrentSupportToePointZ,CurrentSupportToeNormalX,CurrentSupportToeNormalY,CurrentSupportToeNormalZ,CurrentSupportToeDistance,CurrentSupportToeWorldRevision,CurrentSupportToeSphereCastExecuted,CurrentSupportToeAccepted,CurrentSupportHeelRequiredDisplacement,CurrentSupportToeRequiredDisplacement,CurrentSupportSelectedProbe,CurrentSupportSelectionReason,CurrentSupportSelectionEpsilon,CurrentSupportSelectedSupportNormalBeforeNormalizationX,CurrentSupportSelectedSupportNormalBeforeNormalizationY,CurrentSupportSelectedSupportNormalBeforeNormalizationZ");
             RequireColumnGroup(indices, SupportTargetColumns("CurrentSupportTarget"));
+            RequireColumnGroup(indices, SupportTargetColumns("FootMotionSwingHeightReference"));
+            RequireColumnGroup(indices, SupportTargetColumns("FootMotionPreviousSwingHeightReference"));
             RequireColumnGroup(indices, SupportTargetColumns("ResolvedSupportTarget"));
             RequireColumnGroup(
                 indices,
@@ -10679,6 +10763,18 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             internal ulong NormalFrame;
             internal ulong NormalCompletion;
             internal ulong NormalEvent;
+
+            internal bool SameAs(SupportTargetFrame other) =>
+                Available == other.Available && Frame == other.Frame &&
+                Completion == other.Completion && Side == other.Side &&
+                Surface == other.Surface && WorldRevision == other.WorldRevision &&
+                Kind == other.Kind && PositionSource == other.PositionSource &&
+                PositionFrame == other.PositionFrame && PositionCompletion == other.PositionCompletion &&
+                PositionEvent == other.PositionEvent && PositionPath == other.PositionPath &&
+                NormalSource == other.NormalSource && NormalFrame == other.NormalFrame &&
+                NormalCompletion == other.NormalCompletion && NormalEvent == other.NormalEvent &&
+                Vector3.Distance(Position, other.Position) <= PositionNoiseFloor &&
+                Vector3.Distance(Normal, other.Normal) <= RuntimeGeometryEpsilon;
         }
 
         sealed class CurrentSupportProbeFrame
@@ -10863,7 +10959,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             internal float SwingEnvelopeSampleAlongUp;
             internal float SwingFormalFootHeight;
             internal float SwingRawFormalTargetHeight;
-            internal float SwingEnvelopeMinimumCorrection;
+            internal float SwingSupportMinimumCorrection;
+            internal SupportTargetFrame SwingHeightReference;
+            internal SupportTargetFrame PreviousSwingHeightReference;
             internal float SwingBuilderSelectedCorrection;
             internal bool BuilderSwingTargetAvailable;
             internal Vector3 BuilderSwingTargetCorrection;
@@ -12273,7 +12371,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     contactAcquisitionContinuity = null,
                 CharacterFootLockWeightCompletionAnalysis
                     lockWeightCompletion = null,
-                CharacterFootContactSupportGapSequence contactSupportGap = null)
+                CharacterFootContactSupportGapSequence contactSupportGap = null,
+                object swingHeightReference = null)
             {
                 this.kind = kind;
                 this.side = side;
@@ -12298,6 +12397,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     contactAcquisitionContinuity;
                 this.lockWeightCompletion = lockWeightCompletion;
                 this.contactSupportGap = contactSupportGap;
+                this.swingHeightReference = swingHeightReference;
             }
 
             public string kind;
@@ -12325,6 +12425,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             public CharacterFootLockWeightCompletionAnalysis
                 lockWeightCompletion;
             public CharacterFootContactSupportGapSequence contactSupportGap;
+            public object swingHeightReference;
 
             internal static int Compare(EventFact left, EventFact right)
             {

@@ -207,7 +207,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             CharacterFootDiagnosticManifest manifest =
                 JsonConvert.DeserializeObject<CharacterFootDiagnosticManifest>(File.ReadAllText(manifestPath, s_Utf8));
             if (manifest == null || manifest.schema != ManifestSchema ||
-                manifest.factsSchema != "character-foot-motion-facts/71" ||
+                manifest.factsSchema != "character-foot-motion-facts/72" ||
                 manifest.sample == null || manifest.index == null || manifest.details == null ||
                 manifest.index.file != IndexFileName || manifest.details.file != DetailFileName)
                 throw new InvalidDataException("Foot diagnostic manifest contract is invalid.");

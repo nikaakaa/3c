@@ -146,9 +146,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     frame.SwingMotion.Accepted
                         ? frame.SwingMotion.LandingEventIdentity
                         : 0,
-                    frame.SwingMotion.Accepted
-                        ? frame.SwingMotion.GroundPathInputIdentity
-                        : 0,
+                    0,
                     CharacterFootSupportNormalSource.RetainedContactAnchor,
                     context.Contact.AcquiredFrameSequence,
                     context.Contact.AcquiredCompletionIdentity,
@@ -382,11 +380,11 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 current.SurfaceIdentity,
                 current.WorldRevision,
                 CharacterFootSupportTargetKind.SwingGround,
-                CharacterFootSupportPositionSource.SwingMotion,
+                CharacterFootSupportPositionSource.SwingCurrentSupport,
                 frame.FrameSequence,
                 frame.CompletionIdentity,
                 frame.SwingMotion.LandingEventIdentity,
-                frame.SwingMotion.GroundPathInputIdentity,
+                0,
                 CharacterFootSupportNormalSource.CurrentSupport,
                 current.NormalFrameSequence,
                 current.NormalCompletionIdentity,

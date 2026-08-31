@@ -590,8 +590,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             bool pathAvailableBefore = state.HasSwingPath;
             ulong previousLandingEventIdentity =
                 state.SwingLandingEventIdentity;
-            ulong previousGroundPathInputIdentity =
-                state.SwingGroundPathInputIdentity;
+            CharacterFootSupportTarget previousHeightReference =
+                state.SwingHeightReference;
             Vector3 previousLandingPoint = state.SwingLandingPoint;
             Vector3 previousTargetCorrection =
                 state.PreviousSwingTargetCorrection;
@@ -599,9 +599,12 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             CharacterFootSwingMotionResult swing = frame.SwingMotion;
             CharacterFootSwingPathReference swingPath =
                 swing.SwingPathReference;
+            CharacterFootSupportTarget heightReference =
+                swing.SwingHeightReference;
             bool hasPath = target.SupportTarget.Kind ==
                            CharacterFootSupportTargetKind.SwingGround &&
                            swing.Accepted &&
+                           heightReference.IsValid &&
                            swingPath.IsAvailable &&
                            swingPath.LandingEventIdentity ==
                            swing.LandingEventIdentity;
@@ -614,8 +617,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             float rawTargetHeightAlongUp = hasPath
                 ? swing.FormalTargetHeightAlongUp
                 : 0f;
-            float currentLandingHeightAlongUp = hasPath
-                ? Vector3.Dot(swingPath.LandingPoint, up)
+            float currentSupportHeightAlongUp = hasPath
+                ? Vector3.Dot(heightReference.Position, up)
                 : 0f;
             float rawTargetCorrectionAlongUp = hasPath
                 ? Mathf.Max(0f, rawTargetHeightAlongUp - originalSoleHeight)
@@ -625,17 +628,17 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     previousLandingPoint,
                     swingPath.LandingPoint)
                 : 0f;
-            float landingHeightDelta = comparablePath
+            float supportHeightDelta = comparablePath
                 ? Mathf.Abs(Vector3.Dot(
-                    swingPath.LandingPoint - previousLandingPoint,
+                    heightReference.Position - previousHeightReference.Position,
                     up))
                 : 0f;
             bool sameEvent = comparablePath &&
                              previousLandingEventIdentity ==
                              swing.LandingEventIdentity;
-            bool groundPathInputChanged = sameEvent &&
-                                          previousGroundPathInputIdentity !=
-                                          swing.GroundPathInputIdentity;
+            bool supportSurfaceChanged = comparablePath &&
+                                         previousHeightReference.SurfaceIdentity !=
+                                         heightReference.SurfaceIdentity;
             bool sameHeightTarget = hasPath &&
                                     state.HasTargetHeight &&
                                     state.TargetHeightEventIdentity ==
@@ -661,7 +664,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 state.TargetHeightEventIdentity =
                     swing.LandingEventIdentity;
                 state.FilteredTargetHeightAlongUp =
-                    currentLandingHeightAlongUp;
+                    currentSupportHeightAlongUp;
                 state.TargetHeightRetargetActive = false;
             }
             if (hasPath && ownsSwingTargetHeight)
@@ -669,7 +672,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 filteredTargetHeightBefore = rawTargetHeightAlongUp +
                                              state
                                                  .FilteredTargetHeightAlongUp -
-                                             currentLandingHeightAlongUp;
+                                             currentSupportHeightAlongUp;
             }
             else if (hasPath)
             {
@@ -677,25 +680,25 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             }
             if (hasPath && ownsSwingTargetHeight)
             {
-                float targetHeightDelta = currentLandingHeightAlongUp -
+                float targetHeightDelta = currentSupportHeightAlongUp -
                                           state.FilteredTargetHeightAlongUp;
                 if (directTargetHeightAdoption)
                 {
                     state.FilteredTargetHeightAlongUp =
-                        currentLandingHeightAlongUp;
+                        currentSupportHeightAlongUp;
                     state.TargetHeightRetargetActive = false;
                 }
                 else
                 {
-                    bool retargetRequested = groundPathInputChanged &&
-                                             landingHeightDelta >
+                    bool retargetRequested = supportSurfaceChanged ||
+                                             supportHeightDelta >
                                              frame.Settings.PathRevisionDistance;
                     if (retargetRequested &&
                         Mathf.Abs(targetHeightDelta) >=
                         frame.Settings.TargetHeightForceRefreshDistance)
                     {
                         state.FilteredTargetHeightAlongUp =
-                            currentLandingHeightAlongUp;
+                            currentSupportHeightAlongUp;
                         state.TargetHeightRetargetActive = false;
                         targetHeightForceRefreshed = true;
                     }
@@ -737,7 +740,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 ? ownsSwingTargetHeight
                     ? rawTargetHeightAlongUp +
                       state.FilteredTargetHeightAlongUp -
-                      currentLandingHeightAlongUp
+                      currentSupportHeightAlongUp
                     : rawTargetHeightAlongUp
                 : 0f;
             Vector3 swingTargetCorrection = hasPath
@@ -763,16 +766,15 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 revisionReason |=
                     CharacterFootPathRevisionReason.LandingEventChanged;
             }
-            if (comparablePath &&
-                landingPointDelta > frame.Settings.PathRevisionDistance)
+            if (supportSurfaceChanged)
             {
                 revisionReason |=
-                    CharacterFootPathRevisionReason.LandingPointChanged;
+                    CharacterFootPathRevisionReason.SupportSurfaceChanged;
             }
             bool revised = revisionReason !=
                            CharacterFootPathRevisionReason.None;
-            bool targetTrackingApplied = groundPathInputChanged &&
-                targetDelta > frame.Settings.PathRevisionDistance;
+            bool targetTrackingApplied = sameEvent &&
+                supportHeightDelta > frame.Settings.PathRevisionDistance;
             if (revised || targetTrackingApplied)
             {
                 state.SwingResidual =
@@ -783,9 +785,9 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             state.SwingLandingEventIdentity = hasPath
                 ? swing.LandingEventIdentity
                 : 0;
-            state.SwingGroundPathInputIdentity = hasPath
-                ? swing.GroundPathInputIdentity
-                : 0;
+            state.SwingHeightReference = hasPath
+                ? heightReference
+                : default;
             state.SwingLandingPoint = hasPath
                 ? swingPath.LandingPoint
                 : default;
@@ -869,7 +871,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 hasPath
                     ? filteredTargetHeightAlongUp
                     : 0f,
-                up);
+                up,
+                previousHeightReference);
             return new CharacterFootInterpolationResult(
                 state.Policy == CharacterFootInterpolationPolicy.SwingResidual
                     ? state.EffectiveCorrection

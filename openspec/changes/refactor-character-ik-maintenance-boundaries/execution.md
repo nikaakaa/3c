@@ -107,10 +107,17 @@ PredictionMotion、BodyTrajectory及其Tick/Generation/ResetSequence/AuthorityTi
 
 ## 第四个闭环：独立修正Solver空历史方向
 
-状态：候选实现及Runtime/Editor编译通过、0错误；正常回放与完全Reset配对尚未验证，任务4不提前勾选。
+状态：候选fc00789的实现及Runtime/Editor编译、普通Record回归已通过；完全Reset配对尚未验证，4.4保持未完成。
 
 - 在现有Rig参考姿态`PrepareReferencePose → Prepare → SetToIndexedReferences`中，Vendor已经按原`IKConstraintBend.Initiate`算法生成精确方向后，捕获只读`CharacterFullBodyIkBendReference`。它携带Rig Id/Revision与左右方向，替代原分散的Rig身份字段；初始化合法性只在此处检查。
 - `ResetLegBendState`统一从正式参考记录恢复Vendor方向及原权重，初始化、Reset与清历史调参共用该入口；不重新构造第二个Solver，不新增默认轴、方向估算或Profile配置。
 - 空Stable历史时只用传入的正式参考方向；每帧计算后再写Vendor工作字段。可靠动画的有符号方向运输、Stable/Applied含义、退化投影、历史翻号条件和Bend权重表达式保持。
 - 参考记录不设置任何BendHistory Has标志。没有改变Root清历史的触发范围，也没有把Foot Reset扩大为Solver Reset。未消费的public Prepare入口收回私有，参考准备只从同一Rig入口发生。
 - 已知验证缺口：现有Record只新建Runtime，BodyReset为0；现成MCP没有同一Solver预热→完整Reset→同一完整Pose/Goal输入配对能力。已有Preview Seek会走正式Reset，正在核对其Watch/Trace能否证明完整输入与空历史，未增加测试、反射或第二驱动。正常回放通过也不代表该边界已覆盖。
+
+## 第四个闭环的普通帧回归与未完成边界
+
+- 原包：`Diagnostics/FootPlacementRuns/20260901-021236-922-e66abf5ba5c347168d24274f131593c9`，同目录Proof已原字节保留。
+- 官方Proof对015751匹配1044输入；独立对015751、233436、205014输入、起始Body、runtime identity、时序及全部1044帧相同。CSV1191业务列逐格相同、23身份列双向映射无冲突、StartedUtc归元数据；几何22业务列相同、5身份列映射无冲突。42个Target及全部规则／统计／coverage和七维评分对象保持，总分61.9。
+- 此结论仅证明fc00789没有改变原Record所覆盖的普通帧；没有执行额外Reset/调参/Preview。4.4仍未完成，原有未覆盖限制不变。测试任务已回Edit/Idle并归还Unity。
+- 输入取证审计已更正：已有Pose Watch可以读取完整FBBIK前Pose与正式GoalSet，不需要重复生产它们。缺少Bend入口before标记、参考来源和Reset代次，以及现有Preview观察组合的操作/导出接入。通用脚本工具Roslyn不可用、CodeDom命令过长，未做替代编译或私有反射。待决定方案见reset-observation-gap.md。

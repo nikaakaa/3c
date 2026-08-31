@@ -1,0 +1,16 @@
+# Reset边界的取证缺口与待决定扩展
+
+当前三个结构闭环已逐格通过固定基线回放。独立Reset候选`fc00789`也通过普通Record回归，但BodyReset为0，不能证明使用后完全Reset与新建等价。
+
+现有正式链已经生产所需的完整输入：FBBIK的实际上游Producer可由Pose Watch复制全量Component Position/Rotation/Scale；Goal Assembler Watch可复制同Completion的完整GoalSet。公开接口是RuntimeTarget.SetPoseWatchInterests/TryGetDebugView及CharacterPipelineHost.TrySetPreviewPoseWatchInterests，读取后必须在下一次发布或Reset使lease失效前保存值。不能拿Foot Contribution子集、FBBIK输出或同动画时间代替完整输入。
+
+真正缺少的是SolvePrepared入口两腿HasStable/HasApplied的before值、采用动画／历史／正式参考的来源、正式Reset的代次与第一次求值身份。现有Retained=false和dot=1不能证明空历史。Preview Seek已有正式Reset链，但当前UI没有接上述观察组合，现成MCP也没有Preview控制与快照读取命令。通用execute_code的Roslyn后端未安装，CodeDom因命令行过长无法运行；不安装临时编译器或反射取得私有Solver。
+
+| 方案 | 业务收益与代价 |
+|---|---|
+| 扩展现有Preview/Watch的正式取证接口 | 沿实际Solver入口增加只读Bend输入／Reset事实，复用现有完整Pose与Goal Watch页，通过正式桥接调用现有Preview Seek并导出读数。可完成Reset对照，之后也可解释角色重置与调参问题；需要维护一个正式Editor诊断入口，并纳入第二阶段Owner迁移。没有第二Solver、另一个回放驱动或测试专用运行链 |
+| 把Reset行为修正独立延后，两个重构先完成纯结构范围 | 精确撤销fc00789的行为修正，保留已通过的结构成果，再继续诊断与Pose Graph重构。减少本轮诊断扩展，但旧Vendor空历史风险仍保留，必须明确调整Goal范围，不能把原Reset任务标成已验证 |
+
+选择第一项时，最小实施边界为：只读事实由现有Solver计算时捕获；Preview控制仍由现有Host/Controller/Engine拥有；快照只读已有lease页并保存实际值。对照必须证明同一使用后的实例发生Reset，首次历史确为空，两次完整Pose/Goal实际相等；输入不相等时明确报告不可比较，不改动画、Goal或配置凑出一致。普通Record继续对ad3527e和上一通过提交回归。不得新增测试代码、私有反射、旁路Solver、兼容配置或另一采样器。
+
+该扩展尚未实施，等待用户决定；其它已批准的诊断整理与清理继续进行。第二阶段仍不能在第一阶段要求未完成时假称已通过而启动。

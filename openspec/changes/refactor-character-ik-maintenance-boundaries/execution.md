@@ -121,3 +121,12 @@ PredictionMotion、BodyTrajectory及其Tick/Generation/ResetSequence/AuthorityTi
 - 官方Proof对015751匹配1044输入；独立对015751、233436、205014输入、起始Body、runtime identity、时序及全部1044帧相同。CSV1191业务列逐格相同、23身份列双向映射无冲突、StartedUtc归元数据；几何22业务列相同、5身份列映射无冲突。42个Target及全部规则／统计／coverage和七维评分对象保持，总分61.9。
 - 此结论仅证明fc00789没有改变原Record所覆盖的普通帧；没有执行额外Reset/调参/Preview。4.4仍未完成，原有未覆盖限制不变。测试任务已回Edit/Idle并归还Unity。
 - 输入取证审计已更正：已有Pose Watch可以读取完整FBBIK前Pose与正式GoalSet，不需要重复生产它们。缺少Bend入口before标记、参考来源和Reset代次，以及现有Preview观察组合的操作/导出接入。通用脚本工具Roslyn不可用、CodeDom命令过长，未做替代编译或私有反射。待决定方案见reset-observation-gap.md。
+
+## 第五个闭环：先统一Resolved字段组的读写绑定
+
+状态：Unity刷新／编译与规定参数Editor构建通过、0错误，等待原Record回放；没有改Runtime、列格式或版本。
+
+- 新建唯一Editor typed列绑定基础，字段声明同时提供原始列名、CLR值类型、单位、业务组、可用性引用、Runtime证据getter和解析记录setter。标量／Vector／Quaternion沿同一CSV codec读写；配置完整性在初始化检查，文件列索引在读文件时绑定一次。
+- Resolved Foot先迁移57个typed binding／98个原始CSV列，静态逐项核对顺序与原Header完全一致。删除该组旧Header字面量、AddResolvedFoot写行、ParseFrame赋值与RequireColumns清单；没有同组新旧读写并存。
+- Editor解析记录将Resolved聚合为一份CharacterFootResolvedSample，SupportTarget记录提取为共享typed记录；诊断公式只改字段路径，规则／评分表达式不动。全部字符串转义、数值R格式和解析失败规则从原实现原样迁入唯一共享CSV Values。
+- 仍使用原Sampler/Analyzer/Publisher和原始帧字节索引；几何仍为独立表，未恢复facts.json。facts71/Analyzer71/d40保持。其它尚未迁移字段组仍在原位置，后续逐组替换并删除各自旧映射；任务5整体尚未完成。

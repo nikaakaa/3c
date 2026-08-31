@@ -16,21 +16,37 @@
 - **THEN** 系统 MUST保持原零权重/不可用语义
 - **AND** MUST不使用上一目标、默认点或第二Goal补全
 
-### Requirement: 共同Pelvis目标必须来自同帧双脚高度需求
+### Requirement: 共同Pelvis目标必须来自同帧双脚几何候选
 
-在现有Pelvis生产资格内，共同期望偏移 MUST由同帧原动画双脚Sole与Resolved有效目标Sole沿同一Component Up的最低高度差产生：`min(targetL,targetR)-min(animatedL,animatedR)`。该偏移 MUST保留正负号，替换旧地形相对高度加正向抬脚补偿，不与其叠加。目标 MUST不读取上一帧最终Physical脚底反推，也不得产生第二目标Owner。
+在现有Pelvis生产资格内，共同期望偏移 MUST由同帧原动画Ankle A、既有Foot Goal编码及PositionWeight产生的预Reach有效Ankle X、原动画Pelvis B、单位Component Up U与正式PelvisFootProximityRadius r生成。全部几何 MUST在同一表现世界米制域，脚修正 MUST为c=dot(X-A,U)。r MUST独立显式配置、有限且大于零，不得替代LegLength或CompressionReserve。系统 MUST删除旧两个Sole最低高度差及其字段，不保留旧目标开关，也不得读取最终Physical Pose或Foot内部状态补输入。
 
-#### Scenario: 较低目标脚位于较低动画脚之下
+每脚 MUST按以下互斥条件生成typed候选：|A-B|<r取OriginalWithinRadius且value=c；否则C=|B-X|²-r²，C>=0取TargetOutsideRadius且无几何候选；C<0时令b=2dot(B-X,U)，b<=0取TargetAtOrAboveReference且value=c，b>0取TargetBelowReference且value=(-b+sqrt(b²-4C))/2。共同选择 MUST优先取OriginalWithinRadius项的MAX；不存在此类且恰一项几何候选可用时取该项；其余取MIN(cL,cR)。候选无独立历史，不使用匿名哨兵代替typed可用性。
 
-- **WHEN** 有效目标脚最低高度小于原动画脚最低高度
-- **THEN** 共同期望偏移 MUST为负值，并交给同一Pelvis响应
-- **AND** MUST不因旧正向max门丢弃下降需求
+项目c是实际加权脚踝修正，不声明等价ZZZ的post-g/k标量。系统 MUST不为本候选单独在Pelvis乘g、修改Contact Anchor/Residual或改变Foot Goal权重。原Support准入、Release首选0、中性软偏好和唯一响应 MUST保持，不在目标迁移中同时更改末端Reach投影。
 
-#### Scenario: 最低脚身份不同
+#### Scenario: 原动画脚靠近共同参考点
 
-- **WHEN** 原动画最低脚与有效目标最低脚属于不同Side
-- **THEN** 系统 MUST分别取各对双脚的最低高度后相减
-- **AND** MUST不暗改为同脚修正最小值、平均值或旧Stride地形高度
+- **WHEN** 一脚或两脚的原动画Ankle与B距离严格小于正式r
+- **THEN** 共同目标 MUST只从这些OriginalWithinRadius项取最大c
+- **AND** MUST不借此修改脚目标、Root或另一响应
+
+#### Scenario: 只有一项目标几何候选
+
+- **WHEN** 没有OriginalWithinRadius项且只有一脚产生合法目标几何候选
+- **THEN** 系统 MUST选取该项value并发布SingleTargetCandidate
+- **AND** MUST不改用两脚平均或旧双Sole最低差
+
+#### Scenario: 没有原动画近邻且两脚目标候选可用性相同
+
+- **WHEN** 没有OriginalWithinRadius项且两脚都产生几何候选或都未产生几何候选
+- **THEN** 系统 MUST使用两脚正式c的最小值并发布CorrectionMinimum
+- **AND** 无几何候选的value占位 MUST不作为实际零测量
+
+#### Scenario: 本帧未消费共同高度
+
+- **WHEN** 原Pelvis资格进入Release或明确不求值
+- **THEN** HeightTarget MUST发布Available=false、Kind及Selection为None，其余占位不作为测量
+- **AND** MUST不沿用上次候选、补默认参考点或生成第二套目标
 
 ### Requirement: 骨盆可达硬边界必须与姿态偏好分责
 
@@ -93,3 +109,17 @@ Pelvis MUST从同帧typed Reach Request的真实腿长与正式安全余量形�
 - **WHEN** Root、原动画和Pelvis修正同时变化
 - **THEN** Diagnostics MUST分别表达最终世界点、组件点和相对修正，不把其中一项直接命名成另一项的跳变
 - **AND** 必要阶段缺失 MUST标Unavailable，不改质量规则或用占位零值宣布通过
+
+## MODIFIED Requirements
+
+### Requirement: Pelvis必须只消费Resolved Foot Pair
+
+Primary Support MUST只读取Resolved Pair公开的Support Eligibility、Support Intent、Support Error、Event lineage和Pelvis Reach Reference。Stride与Pelvis MUST只消费这些正式下游结果、同帧原动画Pose与Component Up，以及由Resolved Foot编码为Goal后按正式权重解析的有效Sole/Ankle；不得读取Foot State、Transition Decision、Anchor、Path或Interpolation内部状态。
+
+Pelvis与Foot Goal发生可达冲突时，决定依据、限制结果和失败原因 MUST通过明确typed Reach合同表达；系统不得通过降低未授权Goal权重、修改内部Foot状态或让FBBIK隐式夹紧来补全缺失政策。原动画几何 MUST来自本帧Pose输入，不能使用已被骨盆平移后的Solver Original或最终Physical结果反推。
+
+#### Scenario: Pelvis处理本帧目标与Reach输入
+
+- **WHEN** Resolved Pair、原Pose和有效Goal输入具有相同Frame、Completion与Rig来源
+- **THEN** Pelvis MUST在唯一模块内生成一个共同Target及一份响应结果
+- **AND** MUST不反向改变Foot State、Transition或Interpolation，也不得另行查询世界

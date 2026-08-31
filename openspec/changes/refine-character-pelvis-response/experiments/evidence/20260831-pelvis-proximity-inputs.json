@@ -1,0 +1,942 @@
+{
+  "kind": "read-only-pelvis-selector-input-audit/1",
+  "contracts": {
+    "rows": 2086,
+    "poseInputUnavailable": 0,
+    "notReady": 0,
+    "nonUnitWeight": 0,
+    "reachPairs": 2023,
+    "reachAnkleMaxDifference": 0,
+    "pelvisSharedMismatch": 0,
+    "heightPairs": 910,
+    "heightSoleMaxDifference": 0.000005714726592739073,
+    "upMaxDifference": 0
+  },
+  "frames": 1043,
+  "radiusWorldMeters": 0.2,
+  "branches": {
+    "all": {
+      "BothOutsideCorrectionsMinimum": 995,
+      "SingleGeometricCandidate": 48
+    },
+    "eligible": {
+      "BothOutsideCorrectionsMinimum": 412,
+      "SingleGeometricCandidate": 43
+    }
+  },
+  "feet": {
+    "TargetOutsideSphere": 2038,
+    "InsideUsesPositiveRoot": 42,
+    "InsideUsesCorrection": 6
+  },
+  "eligible": 455,
+  "changedRequestOver01mm": 337,
+  "maxRequestDifference": {
+    "frame": 825,
+    "eligible": true,
+    "sourceRequest": -0.000741243362,
+    "A": [
+      [
+        45.26352,
+        3.38954329,
+        9.280421
+      ],
+      [
+        45.0033646,
+        3.575257,
+        9.442988
+      ]
+    ],
+    "X": [
+      [
+        45.26147,
+        3.388802,
+        9.256645
+      ],
+      [
+        45.0033836,
+        4.0162034,
+        9.443011
+      ]
+    ],
+    "B": [
+      44.9295845,
+      3.98392916,
+      9.405449
+    ],
+    "U": [
+      0,
+      1,
+      0
+    ],
+    "c": [
+      -0.0007412900000001166,
+      0.44094640000000007
+    ],
+    "left": {
+      "tag": false,
+      "valid": false,
+      "value": null,
+      "branch": "TargetOutsideSphere",
+      "sourceDistance": 0.6931374188426915,
+      "targetDistance": 0.6974718288905434
+    },
+    "right": {
+      "tag": false,
+      "valid": true,
+      "value": 0.44094640000000007,
+      "branch": "InsideUsesCorrection",
+      "sourceDistance": 0.41697195833302225,
+      "targetDistance": 0.08887540476638002
+    },
+    "q": 0.44094640000000007,
+    "branch": "SingleGeometricCandidate"
+  },
+  "nonMinCount": 48,
+  "nonMinFrames": [
+    211,
+    212,
+    213,
+    214,
+    373,
+    409,
+    445,
+    446,
+    447,
+    448,
+    449,
+    553,
+    554,
+    555,
+    661,
+    662,
+    663,
+    664,
+    680,
+    681,
+    682,
+    716,
+    717,
+    718,
+    769,
+    770,
+    824,
+    825,
+    826,
+    827,
+    877,
+    878,
+    949,
+    976,
+    977,
+    978,
+    981,
+    982,
+    983,
+    984,
+    985,
+    986,
+    1002,
+    1003,
+    1004,
+    1005,
+    1020,
+    1021
+  ],
+  "windows": [
+    {
+      "frame": 3,
+      "eligible": false,
+      "sourceRequest": 0,
+      "A": [
+        [
+          39.7396126,
+          0.09091481,
+          -2.875916
+        ],
+        [
+          40.1836662,
+          0.09073665,
+          -2.941906
+        ]
+      ],
+      "X": [
+        [
+          39.74119,
+          0.08158116,
+          -2.87440372
+        ],
+        [
+          40.18531,
+          0.0811622441,
+          -2.94093728
+        ]
+      ],
+      "B": [
+        40.0000038,
+        0.7494777,
+        -2.99999952
+      ],
+      "U": [
+        0,
+        1,
+        0
+      ],
+      "c": [
+        -0.009333649999999999,
+        -0.0095744059
+      ],
+      "left": {
+        "tag": false,
+        "valid": false,
+        "value": null,
+        "branch": "TargetOutsideSphere",
+        "sourceDistance": 0.718961318193255,
+        "targetDistance": 0.7272170763891967
+      },
+      "right": {
+        "tag": false,
+        "valid": false,
+        "value": null,
+        "branch": "TargetOutsideSphere",
+        "sourceDistance": 0.6863282780090381,
+        "targetDistance": 0.6960404331266125
+      },
+      "q": -0.0095744059,
+      "branch": "BothOutsideCorrectionsMinimum"
+    },
+    {
+      "frame": 90,
+      "eligible": false,
+      "sourceRequest": 0,
+      "A": [
+        [
+          40.3238335,
+          0.0875760242,
+          -2.69545865
+        ],
+        [
+          40.503582,
+          0.08711677,
+          -3.132468
+        ]
+      ],
+      "X": [
+        [
+          40.2764359,
+          0.0859169438,
+          -2.71443224
+        ],
+        [
+          40.4278526,
+          0.08474158,
+          -3.097185
+        ]
+      ],
+      "B": [
+        40.3821831,
+        0.7253377,
+        -2.98159814
+      ],
+      "U": [
+        0,
+        1,
+        0
+      ],
+      "c": [
+        -0.0016590803999999987,
+        -0.0023751899999999992
+      ],
+      "left": {
+        "tag": false,
+        "valid": false,
+        "value": null,
+        "branch": "TargetOutsideSphere",
+        "sourceDistance": 0.7014416858704966,
+        "targetDistance": 0.701012832899676
+      },
+      "right": {
+        "tag": false,
+        "valid": false,
+        "value": null,
+        "branch": "TargetOutsideSphere",
+        "sourceDistance": 0.6669522944466831,
+        "targetDistance": 0.652540737727511
+      },
+      "q": -0.0023751899999999992,
+      "branch": "BothOutsideCorrectionsMinimum"
+    },
+    {
+      "frame": 175,
+      "eligible": true,
+      "sourceRequest": 0.003900122,
+      "A": [
+        [
+          45.7729759,
+          0.09285012,
+          -0.8925569
+        ],
+        [
+          45.8098831,
+          0.4029832,
+          -0.864249945
+        ]
+      ],
+      "X": [
+        [
+          45.84114,
+          0.0970684662,
+          -0.878665566
+        ],
+        [
+          45.8103943,
+          0.471631348,
+          -0.863891542
+        ]
+      ],
+      "B": [
+        45.6235237,
+        0.6768034,
+        -0.7963613
+      ],
+      "U": [
+        0,
+        1,
+        0
+      ],
+      "c": [
+        0.0042183462000000005,
+        0.06864814800000002
+      ],
+      "left": {
+        "tag": false,
+        "valid": false,
+        "value": null,
+        "branch": "TargetOutsideSphere",
+        "sourceDistance": 0.6104023154993419,
+        "targetDistance": 0.6246786691536542
+      },
+      "right": {
+        "tag": false,
+        "valid": false,
+        "value": null,
+        "branch": "TargetOutsideSphere",
+        "sourceDistance": 0.33810678197329364,
+        "targetDistance": 0.2856160458567215
+      },
+      "q": 0.0042183462000000005,
+      "branch": "BothOutsideCorrectionsMinimum"
+    },
+    {
+      "frame": 278,
+      "eligible": true,
+      "sourceRequest": 0.293375015,
+      "A": [
+        [
+          42.930603,
+          2.67747355,
+          7.74266052
+        ],
+        [
+          42.98793,
+          3.10558414,
+          6.99424171
+        ]
+      ],
+      "X": [
+        [
+          42.9407921,
+          2.97084856,
+          7.704677
+        ],
+        [
+          42.98956,
+          3.09992552,
+          6.99537849
+        ]
+      ],
+      "B": [
+        42.9593925,
+        3.29669476,
+        7.424056
+      ],
+      "U": [
+        0,
+        1,
+        0
+      ],
+      "c": [
+        0.29337500999999966,
+        -0.0056586199999997255
+      ],
+      "left": {
+        "tag": false,
+        "valid": false,
+        "value": null,
+        "branch": "TargetOutsideSphere",
+        "sourceDistance": 0.6969738749684555,
+        "targetDistance": 0.43042986255091537
+      },
+      "right": {
+        "tag": false,
+        "valid": false,
+        "value": null,
+        "branch": "TargetOutsideSphere",
+        "sourceDistance": 0.4712515059617727,
+        "targetDistance": 0.47264428426272903
+      },
+      "q": -0.0056586199999997255,
+      "branch": "BothOutsideCorrectionsMinimum"
+    },
+    {
+      "frame": 322,
+      "eligible": true,
+      "sourceRequest": -0.138661385,
+      "A": [
+        [
+          43.01331,
+          4.180339,
+          11.1625824
+        ],
+        [
+          42.98968,
+          4.274338,
+          11.6102648
+        ]
+      ],
+      "X": [
+        [
+          42.95465,
+          4.04167747,
+          11.19157
+        ],
+        [
+          42.98972,
+          4.41614,
+          11.6103153
+        ]
+      ],
+      "B": [
+        42.9416924,
+        4.74316549,
+        11.5663166
+      ],
+      "U": [
+        0,
+        1,
+        0
+      ],
+      "c": [
+        -0.13866153000000025,
+        0.1418020000000002
+      ],
+      "left": {
+        "tag": false,
+        "valid": false,
+        "value": null,
+        "branch": "TargetOutsideSphere",
+        "sourceDistance": 0.6963505171428538,
+        "targetDistance": 0.7954170954994875
+      },
+      "right": {
+        "tag": false,
+        "valid": false,
+        "value": null,
+        "branch": "TargetOutsideSphere",
+        "sourceDistance": 0.4733217398521853,
+        "targetDistance": 0.3334489572231252
+      },
+      "q": -0.13866153000000025,
+      "branch": "BothOutsideCorrectionsMinimum"
+    },
+    {
+      "frame": 414,
+      "eligible": false,
+      "sourceRequest": 0,
+      "A": [
+        [
+          42.1538467,
+          1.45594525,
+          3.47705054
+        ],
+        [
+          41.9916,
+          1.48906553,
+          4.037422
+        ]
+      ],
+      "X": [
+        [
+          42.1538467,
+          1.53415179,
+          3.477027
+        ],
+        [
+          41.9732971,
+          1.751317,
+          4.0316577
+        ]
+      ],
+      "B": [
+        42.08746,
+        1.98595166,
+        3.56923223
+      ],
+      "U": [
+        0,
+        1,
+        0
+      ],
+      "c": [
+        0.07820653999999982,
+        0.26225147000000004
+      ],
+      "left": {
+        "tag": false,
+        "valid": false,
+        "value": null,
+        "branch": "TargetOutsideSphere",
+        "sourceDistance": 0.5420437736467733,
+        "targetDistance": 0.4658670635581144
+      },
+      "right": {
+        "tag": false,
+        "valid": false,
+        "value": null,
+        "branch": "TargetOutsideSphere",
+        "sourceDistance": 0.6894103469770602,
+        "targetDistance": 0.5309650710870217
+      },
+      "q": 0.07820653999999982,
+      "branch": "BothOutsideCorrectionsMinimum"
+    },
+    {
+      "frame": 418,
+      "eligible": false,
+      "sourceRequest": 0,
+      "A": [
+        [
+          42.2867546,
+          1.28921211,
+          2.93012834
+        ],
+        [
+          42.04137,
+          1.54440808,
+          3.72835827
+        ]
+      ],
+      "X": [
+        [
+          42.2867546,
+          1.30597115,
+          2.93012333
+        ],
+        [
+          42.03745,
+          1.87897515,
+          3.72712278
+        ]
+      ],
+      "B": [
+        42.1770668,
+        1.85889745,
+        3.20094
+      ],
+      "U": [
+        0,
+        1,
+        0
+      ],
+      "c": [
+        0.016759039999999947,
+        0.3345670700000001
+      ],
+      "left": {
+        "tag": false,
+        "valid": false,
+        "value": null,
+        "branch": "TargetOutsideSphere",
+        "sourceDistance": 0.6402435124792065,
+        "targetDistance": 0.6253803446307054
+      },
+      "right": {
+        "tag": false,
+        "valid": false,
+        "value": null,
+        "branch": "TargetOutsideSphere",
+        "sourceDistance": 0.6288777440035777,
+        "targetDistance": 0.544760757441336
+      },
+      "q": 0.016759039999999947,
+      "branch": "BothOutsideCorrectionsMinimum"
+    },
+    {
+      "frame": 419,
+      "eligible": false,
+      "sourceRequest": 0,
+      "A": [
+        [
+          42.3201141,
+          1.25619459,
+          2.78776121
+        ],
+        [
+          42.0655823,
+          1.55287182,
+          3.62570429
+        ]
+      ],
+      "X": [
+        [
+          42.3201141,
+          1.26759732,
+          2.78775787
+        ],
+        [
+          42.062912,
+          1.89067924,
+          3.62486362
+        ]
+      ],
+      "B": [
+        42.20324,
+        1.82524085,
+        3.10973334
+      ],
+      "U": [
+        0,
+        1,
+        0
+      ],
+      "c": [
+        0.011402729999999917,
+        0.3378074200000001
+      ],
+      "left": {
+        "tag": false,
+        "valid": false,
+        "value": null,
+        "branch": "TargetOutsideSphere",
+        "sourceDistance": 0.6641831477593613,
+        "targetDistance": 0.6544417965590148
+      },
+      "right": {
+        "tag": false,
+        "valid": false,
+        "value": null,
+        "branch": "TargetOutsideSphere",
+        "sourceDistance": 0.5994668899249839,
+        "targetDistance": 0.5378971424377263
+      },
+      "q": 0.011402729999999917,
+      "branch": "BothOutsideCorrectionsMinimum"
+    },
+    {
+      "frame": 420,
+      "eligible": false,
+      "sourceRequest": 0,
+      "A": [
+        [
+          42.3587,
+          1.19708681,
+          2.66647
+        ],
+        [
+          42.0855331,
+          1.5540998,
+          3.50346184
+        ]
+      ],
+      "X": [
+        [
+          42.3587,
+          1.20484519,
+          2.66646767
+        ],
+        [
+          42.0837173,
+          1.8895309,
+          3.50288987
+        ]
+      ],
+      "B": [
+        42.23145,
+        1.78877449,
+        3.01907229
+      ],
+      "U": [
+        0,
+        1,
+        0
+      ],
+      "c": [
+        0.007758379999999843,
+        0.3354311000000001
+      ],
+      "left": {
+        "tag": false,
+        "valid": false,
+        "value": null,
+        "branch": "TargetOutsideSphere",
+        "sourceDistance": 0.7004393250503756,
+        "targetDistance": 0.6938991338399506
+      },
+      "right": {
+        "tag": false,
+        "valid": false,
+        "value": null,
+        "branch": "TargetOutsideSphere",
+        "sourceDistance": 0.5576712185341911,
+        "targetDistance": 0.5158064128357017
+      },
+      "q": 0.007758379999999843,
+      "branch": "BothOutsideCorrectionsMinimum"
+    },
+    {
+      "frame": 466,
+      "eligible": true,
+      "sourceRequest": -0.172053933,
+      "A": [
+        [
+          41.29664,
+          0.9737311,
+          2.00067449
+        ],
+        [
+          41.0362663,
+          1.06772685,
+          2.365624
+        ]
+      ],
+      "X": [
+        [
+          41.2228546,
+          0.801677167,
+          2.00296617
+        ],
+        [
+          41.03634,
+          1.27083516,
+          2.365723
+        ]
+      ],
+      "B": [
+        41.0193939,
+        1.53655624,
+        2.30277753
+      ],
+      "U": [
+        0,
+        1,
+        0
+      ],
+      "c": [
+        -0.17205393299999994,
+        0.20310831000000018
+      ],
+      "left": {
+        "tag": false,
+        "valid": false,
+        "value": null,
+        "branch": "TargetOutsideSphere",
+        "sourceDistance": 0.6963503320588501,
+        "targetDistance": 0.8193475208743108
+      },
+      "right": {
+        "tag": false,
+        "valid": false,
+        "value": null,
+        "branch": "TargetOutsideSphere",
+        "sourceDistance": 0.47332373023227253,
+        "targetDistance": 0.27360006369717343
+      },
+      "q": -0.17205393299999994,
+      "branch": "BothOutsideCorrectionsMinimum"
+    },
+    {
+      "frame": 985,
+      "eligible": true,
+      "sourceRequest": 0.446037769,
+      "A": [
+        [
+          47.76021,
+          1.5466007,
+          4.3544426
+        ],
+        [
+          47.66284,
+          1.66984367,
+          3.957754
+        ]
+      ],
+      "X": [
+        [
+          47.7602921,
+          2.07475853,
+          4.354546
+        ],
+        [
+          47.6631126,
+          1.98973262,
+          3.95832562
+        ]
+      ],
+      "B": [
+        47.7218323,
+        2.11000824,
+        3.94904041
+      ],
+      "U": [
+        0,
+        1,
+        0
+      ],
+      "c": [
+        0.52815783,
+        0.31988895000000017
+      ],
+      "left": {
+        "tag": false,
+        "valid": false,
+        "value": null,
+        "branch": "TargetOutsideSphere",
+        "sourceDistance": 0.6951631748323105,
+        "targetDistance": 0.40884774891439996
+      },
+      "right": {
+        "tag": false,
+        "valid": true,
+        "value": 0.07068453738149516,
+        "branch": "InsideUsesPositiveRoot",
+        "sourceDistance": 0.4441856220019543,
+        "targetDistance": 0.13416572982404643
+      },
+      "q": 0.07068453738149516,
+      "branch": "SingleGeometricCandidate"
+    },
+    {
+      "frame": 986,
+      "eligible": false,
+      "sourceRequest": 0,
+      "A": [
+        [
+          47.753212,
+          1.56205392,
+          4.324019
+        ],
+        [
+          47.6593933,
+          1.61258936,
+          3.84292746
+        ]
+      ],
+      "X": [
+        [
+          47.75327,
+          2.114823,
+          4.32408953
+        ],
+        [
+          47.6595764,
+          1.90747833,
+          3.84331632
+        ]
+      ],
+      "B": [
+        47.7162666,
+        2.09626436,
+        3.876903
+      ],
+      "U": [
+        0,
+        1,
+        0
+      ],
+      "c": [
+        0.5527690799999998,
+        0.2948889699999999
+      ],
+      "left": {
+        "tag": false,
+        "valid": false,
+        "value": null,
+        "branch": "TargetOutsideSphere",
+        "sourceDistance": 0.6976091127860599,
+        "targetDistance": 0.44909850516746425
+      },
+      "right": {
+        "tag": false,
+        "valid": true,
+        "value": 0.000047643243247935674,
+        "branch": "InsideUsesPositiveRoot",
+        "sourceDistance": 0.48819096181328636,
+        "targetDistance": 0.19995501737296612
+      },
+      "q": 0.000047643243247935674,
+      "branch": "SingleGeometricCandidate"
+    },
+    {
+      "frame": 989,
+      "eligible": false,
+      "sourceRequest": 0,
+      "A": [
+        [
+          47.7357178,
+          1.61146808,
+          4.212722
+        ],
+        [
+          47.648037,
+          1.4698348,
+          3.464475
+        ]
+      ],
+      "X": [
+        [
+          47.7357368,
+          2.2384882,
+          4.212744
+        ],
+        [
+          47.6480942,
+          1.68972373,
+          3.46459746
+        ]
+      ],
+      "B": [
+        47.703598,
+        2.028461,
+        3.66025233
+      ],
+      "U": [
+        0,
+        1,
+        0
+      ],
+      "c": [
+        0.6270201199999998,
+        0.21988892999999998
+      ],
+      "left": {
+        "tag": false,
+        "valid": false,
+        "value": null,
+        "branch": "TargetOutsideSphere",
+        "sourceDistance": 0.6929195574899555,
+        "targetDistance": 0.5919386561331068
+      },
+      "right": {
+        "tag": false,
+        "valid": false,
+        "value": null,
+        "branch": "TargetOutsideSphere",
+        "sourceDistance": 0.5945410153970612,
+        "targetDistance": 0.39510054170579106
+      },
+      "q": 0.21988892999999998,
+      "branch": "BothOutsideCorrectionsMinimum"
+    }
+  ],
+  "maxRssBytes": 84537344
+}

@@ -221,8 +221,23 @@ PredictionMotion、BodyTrajectory及其Tick/Generation/ResetSequence/AuthorityTi
 
 ## 路径连续性、状态转换与输出阶段列
 
-状态：Unity与Editor构建通过，0错误；build server已关闭，OpenSpec严格校验通过。等待实际回放。
+状态：候选6ba9bc34已通过实际Replay及全部正式明细对账。
 
 - 路径连续性51列、Contact状态转换64列、插值与地面约束输出44列分别进入独立typed组，共121个绑定、159列。采样读取原本帧证据，Analyzer按组读取，不变更路径更新、Contact边沿、残差、状态准入或约束数学。
 - 删除对应旧Header、手工写行、解析和必需列清单，保留原数据顺序与原始无效值。当前ComponentUp读取只迁移FootFrame所拥有的目标高度方向；探针与Pelvis各自的ComponentUp保持原来源。
 - 累计771/1215列迁入绑定。还需完成剩余字段、主行统一排序定义和Runtime证据分组，任务5不提前勾选。下一回放对40dbf7f/041556及固定ad3527e/233436。
+
+## 三组159列的验证封口
+
+- 原包：`Diagnostics/FootPlacementRuns/20260901-042437-512-ebec234ab7af4a98b2fbeb0a66e3dce7`。唯一一次原Record完成1044输入、1043输出帧、2086脚行；正式Proof matched1044、aggregate空、DivergentFrameCount0。
+- 对上一041556与固定233436：全部1191业务列逐值相同，23主表及5几何身份列映射无冲突。新增159列为155精确及4既有Anchor/Floor身份列，累计771列为760精确及11既有身份列。
+- 42项诊断规则、计数、测量、coverage与quality不变。20447明细仅原21个身份叶路径变化；ComponentUp、Pelvis、Support/探针及方向相关明细全部精确相同。完整索引、六次771列帧查询和其它正式查询保持。
+- Unity已归还、Edit/Idle、Console0；Reset4.4及原有未覆盖限制不变。
+
+## Ground Path当前格式绑定
+
+状态：Unity与最终Editor构建通过，0错误，build server已关闭；严格校验通过，等待实际回放。
+
+- 将Ground Path主表61列收进41个typed绑定，包含原查询、路径输入、Surface摘要、无效边段及包络数量。补齐以前仅写出但未读取的26项原始值，不增加分析规则或世界查询。
+- 删除主表Surface整组缺失时补默认值、以及几何表整组缺失时补-1的旧格式兼容分支。当前主表绑定与原几何读取入口分别要求正式字段完整；已存在但本帧不可用的事实继续保留原State和原值，缺列直接报错。
+- 原列名、顺序、1215列布局、27列几何布局及格式identity不变。累计832/1215列迁入绑定，剩余383列、主行统一定义与Runtime证据分组仍待完成。比较点为上一6ba9bc34/042437和固定ad3527e/233436。

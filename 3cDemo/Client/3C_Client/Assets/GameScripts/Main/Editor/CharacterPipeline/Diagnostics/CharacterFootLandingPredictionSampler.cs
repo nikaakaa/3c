@@ -155,24 +155,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             "QuerySelectedCandidateAvailable,QuerySelectedSurfaceIdentity,QuerySelectedPointX,QuerySelectedPointY,QuerySelectedPointZ,QuerySelectedDistance," +
             "Accepted,SurfaceIdentity,LandingPointX,LandingPointY,LandingPointZ," +
             "LandingNormalX,LandingNormalY,LandingNormalZ,QueryDistance," +
-            "GroundPathState,GroundPathRejectReason,GroundPathInputIdentity,GroundPathQueryExecuted,GroundPathTargetAvailable," +
-            "GroundPathLastLandingEventIdentity,GroundPathNextSwingLandingEventIdentity,GroundPathTrajectoryGeneration,GroundPathAuthorityTick," +
-            "GroundPathLastFutureBodyTranslationSourceIdentity,GroundPathNextSwingFutureBodyTranslationSourceIdentity," +
-            "GroundPathLastLandingX,GroundPathLastLandingY,GroundPathLastLandingZ," +
-            "GroundPathNextSwingLandingX,GroundPathNextSwingLandingY,GroundPathNextSwingLandingZ," +
-            "GroundPathLastLandingNormalX,GroundPathLastLandingNormalY,GroundPathLastLandingNormalZ," +
-            "GroundPathNextSwingLandingNormalX,GroundPathNextSwingLandingNormalY,GroundPathNextSwingLandingNormalZ," +
-            "GroundPathLastLandingSurfaceIdentity,GroundPathNextSwingLandingSurfaceIdentity," +
-            "GroundPathComponentUpX,GroundPathComponentUpY,GroundPathComponentUpZ," +
-            "GroundPathAxisStartX,GroundPathAxisStartY,GroundPathAxisStartZ," +
-            "GroundPathAxisEndX,GroundPathAxisEndY,GroundPathAxisEndZ," +
-            "GroundPathRadius,GroundPathMaximumAxisSegmentLength,GroundPathDirectionX,GroundPathDirectionY,GroundPathDirectionZ," +
-            "GroundPathMaximumDistance,GroundPathLayerMask,GroundPathSegmentHitCapacity,GroundPathContactCapacity,GroundPathSegmentCount,GroundPathContactCount," +
-            "GroundSurfaceState,GroundSurfaceWorldRevision,GroundSurfaceSegmentCount," +
-            "GroundPathEdgeCount,GroundPathHasInvalidSegment,GroundPathFirstInvalidSegmentIndex,GroundPathFirstInvalidSegmentIdentity," +
-            "GroundPathFirstInvalidSegmentBottomX,GroundPathFirstInvalidSegmentBottomY,GroundPathFirstInvalidSegmentBottomZ," +
-            "GroundPathFirstInvalidSegmentTopX,GroundPathFirstInvalidSegmentTopY,GroundPathFirstInvalidSegmentTopZ," +
-            "GroundPathFirstInvalidSegmentVerticalDistance,GroundPathMaximumReachableVerticalEdge,GroundEnvelopeVertexCount," +
+            CharacterFootGroundPathColumns.Schema.Header + "," +
             "FootMotionState,FootMotionRejectReason,FootMotionLandingEventIdentity,FootMotionGroundPathInputIdentity," +
             "FootMotionDistance,FootMotionProgress," +
             "FootMotionOriginalSoleX,FootMotionOriginalSoleY,FootMotionOriginalSoleZ," +
@@ -1863,48 +1846,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             Add(row, foot.LandingNormal);
             Add(row, foot.QueryDistance);
             CharacterFootGroundPathDiagnostics ground = foot.GroundPath;
-            CharacterFootGroundPathQueryRequest groundQuery = ground.Query;
-            Add(row, ground.State.ToString());
-            Add(row, ground.RejectReason.ToString());
-            Add(row, ground.InputIdentity);
-            Add(row, ground.QueryExecuted);
-            Add(row, ground.NextSwingLandingEventIdentity != 0);
-            Add(row, ground.LastLandingEventIdentity);
-            Add(row, ground.NextSwingLandingEventIdentity);
-            Add(row, ground.TrajectoryGeneration);
-            Add(row, ground.AuthorityTick);
-            Add(row, ground.LastFutureBodyTranslationSourceIdentity);
-            Add(row, ground.NextSwingFutureBodyTranslationSourceIdentity);
-            Add(row, ground.LastLanding);
-            Add(row, ground.NextSwingLanding);
-            Add(row, ground.LastLandingNormal);
-            Add(row, ground.NextSwingLandingNormal);
-            Add(row, ground.LastLandingSurfaceIdentity);
-            Add(row, ground.NextSwingLandingSurfaceIdentity);
-            Add(row, ground.ComponentUp);
-            Add(row, groundQuery.AxisStart);
-            Add(row, groundQuery.AxisEnd);
-            Add(row, groundQuery.Radius);
-            Add(row, groundQuery.MaximumAxisSegmentLength);
-            Add(row, groundQuery.Direction);
-            Add(row, groundQuery.MaximumDistance);
-            Add(row, groundQuery.LayerMask);
-            Add(row, groundQuery.SegmentHitCapacity);
-            Add(row, groundQuery.ContactCapacity);
-            Add(row, ground.SegmentCount);
-            Add(row, ground.ContactCount);
-            Add(row, ground.SurfaceCoverage.State.ToString());
-            Add(row, ground.SurfaceCoverage.WorldRevision);
-            Add(row, ground.SurfaceCoverage.Count);
-            Add(row, ground.EdgeCount);
-            Add(row, ground.HasInvalidSegment);
-            Add(row, ground.FirstInvalidSegmentIndex);
-            Add(row, ground.FirstInvalidSegmentIdentity);
-            Add(row, ground.FirstInvalidSegmentBottom);
-            Add(row, ground.FirstInvalidSegmentTop);
-            Add(row, ground.FirstInvalidSegmentVerticalDistance);
-            Add(row, ground.MaximumReachableVerticalEdge);
-            Add(row, ground.EnvelopeVertexCount);
+            CharacterFootGroundPathColumns.Schema.Write(row, in ground);
             CharacterFootSwingMotionDiagnostics motion = foot.FootMotion;
             CharacterFullBodyIkGoal footGoal = foot.Goal;
             Add(row, motion.State.ToString());

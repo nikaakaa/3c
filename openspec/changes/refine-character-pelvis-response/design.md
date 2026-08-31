@@ -14,7 +14,7 @@ Ready时PositionWeight取frame.FootPlacementWeight。Correction=0表示本帧目
 
 Runtime不新增字段；已有FormalWeight、ResolvedOutcome、SupportTarget、三层PositionWeight和最终Physical事实足够验证。Diagnostics升级facts59/diagnosis28，不复用历史失败facts58，不向旧包补值。
 
-## 第2步历史：共同高度需求（后续几何候选替换见文末）
+## 第2步：共同高度需求
 
 输入为同一根事务的左右原动画Sole、左右Resolved有效目标Sole和有限单位Component Up。沿Up取高度后计算：
 
@@ -114,15 +114,3 @@ Available/Reserve/Min/Max继续描述原姿态几何，OffsetAlongUp与TargetAdj
 092855真实Replay及独立验收后拒绝该候选：静止/移动平均下压显著减轻，但Knee超过10厘米157→166，R826最大峰增大且954/996旧翻侧后移放大；不能以Foot规则保持或骨盆均值改善采纳。a0aea66只恢复20毫米Profile与匹配产品。最初因并行GroundEnvelope改动暂停恢复回放，协调后已用101451证明1197个非身份CSV列和37项规则／计数／score恢复085223；该包使用2cf6da6的新诊断存储，不是新响应算法。之后7ae5793／a9e5f42的Ground Path提交不在这份恢复证据内。
 
 该实验确定了余量的下压贡献，也说明再次降低余量时必须验证膝盖选边稳定性；它不要求所有骨盆目标／硬边界研究都先改Bend。本change不偷偷增加膝盖修改。完整恢复说明见experiments/20260831-pelvis-restoration-101451.md；实验总索引和未进入Runtime的只读模型分别见experiments/README.md与experiments/20260831-pelvis-response-readonly-screening.md。只读ZZZ普通响应核虽已补齐powf数学，仍不改变本设计已实施的3Hz响应合同。
-
-## 几何候选目标的项目适配
-
-用户批准先对齐并筛选112611，再对有局部价值的候选做真实Replay。本轮唯一变更是目标生产，原资格、Release目标0、软偏好、3Hz、速度门与硬Reach保持。模型减少世界大步但移动平地平均更低约1.85毫米，明确作为有代价的候选，不直接接纳。输入和数据见experiments/20260831-pelvis-proximity-candidate.md。
-
-同帧A为原动画Ankle，X为通过既有Goal编码和PositionWeight得到的预Reach有效Ankle，B为原动画Pelvis，U为Component Up；全部是表现世界域。c=dot(X-A,U)。正式PelvisFootProximityRadius为该域米制半径，Corin配置0.2；它与LegLength/CompressionReserve独立。原始动画点不读取Solver中已被Pelvis预平移的Original，目标不读取最终Physical Pose。
-
-每脚先检查|A-B|<r，成立则OriginalWithinRadius并取c；否则计算C=|B-X|²-r²，C>=0为TargetOutsideRadius且无几何候选；C<0时b=2dot(B-X,U)，b<=0取c，b>0取(-b+sqrt(b²-4C))/2。共同选择先取OriginalWithinRadius项的MAX；无该类且恰一项几何候选可用时取该项；其余取MIN(cL,cR)。没有额外历史、查询、插值或匿名哨兵状态。
-
-这只迁移2F40/97B0有限普通分支的数学。项目c不是ZZZ post-g/k原标量，不移植g到Pelvis、不改变Foot世界锁、也不新增B0模式开关。原HeightTarget的Sole/min字段删除，公开事实改为A/X/B/U/r、双脚Correction、Candidate Kind/Value及Selection。不可用求值保持明确Available=false，不用旧Target或默认点补全。
-
-实现只由现有Foot深模块生产一个目标与一份Pelvis响应。合法权重0的脚对X的贡献为同帧原动画Ankle，保持作者关闭的已有Goal语义。未来若要改末端硬投影，另立独立变量并保留真实Reach.Contains/Foot投影消费，不能在本轮顺手把Available改真。新Replay才能判断Foot/Knee和整体收益。

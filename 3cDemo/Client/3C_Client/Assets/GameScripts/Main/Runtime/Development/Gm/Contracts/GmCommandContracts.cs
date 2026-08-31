@@ -19,6 +19,8 @@ namespace ThirdPerson.Development.Gm
         InvalidArguments,
         Unauthorized,
         TargetEnded,
+        TargetUnavailable,
+        TimedOut,
         VersionMismatch,
         ExecutionFailed
     }
@@ -107,6 +109,8 @@ namespace ThirdPerson.Development.Gm
     [Serializable]
     public sealed class GmServiceDescription
     {
+        public int protocolVersion;
+        public string buildId = string.Empty;
         public string serviceInstanceId = string.Empty;
         public string sessionId = string.Empty;
         public GmCommandDefinition[] commands = Array.Empty<GmCommandDefinition>();

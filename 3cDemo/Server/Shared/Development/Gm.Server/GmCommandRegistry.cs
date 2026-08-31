@@ -3,7 +3,7 @@ namespace ThirdPerson.Development.Gm;
 public interface IGmCommandHandler
 {
     GmCommandDefinition Definition { get; }
-    GmCommandResult Execute(IReadOnlyList<string> arguments);
+    Task<GmCommandResult> ExecuteAsync(IReadOnlyList<string> arguments, CancellationToken cancellation);
 }
 
 public interface IGmCommandCatalog
@@ -24,6 +24,12 @@ public sealed class GmCommandResult
     public GmResultCode Code { get; }
     public string Message { get; }
     public GmResultSection[] Sections { get; }
+}
+
+public sealed class GmCommandFailureException : Exception
+{
+    public GmCommandFailureException(GmResultCode code, string message) : base(message) => Code = code;
+    public GmResultCode Code { get; }
 }
 
 public sealed class GmCommandRegistry : IGmCommandCatalog

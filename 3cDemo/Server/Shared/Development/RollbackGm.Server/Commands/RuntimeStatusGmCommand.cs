@@ -14,9 +14,9 @@ public sealed class RuntimeStatusGmCommand : IGmCommandHandler
         usage = "runtime.status"
     };
 
-    public GmCommandResult Execute(IReadOnlyList<string> arguments)
+    public async Task<GmCommandResult> ExecuteAsync(IReadOnlyList<string> arguments, CancellationToken cancellation)
     {
-        RollbackGmRuntimeSnapshot value = m_Source.CaptureRuntime();
+        RollbackGmRuntimeSnapshot value = await m_Source.CaptureRuntimeAsync(cancellation);
         return new GmCommandResult(GmResultCode.Success, "Relay 运行状态", new GmResultSection
         {
             title = "网络与帧进度",

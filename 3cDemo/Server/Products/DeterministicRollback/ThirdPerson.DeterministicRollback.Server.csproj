@@ -10,6 +10,7 @@
     <PublishAot>false</PublishAot>
   </PropertyGroup>
   <ItemGroup>
+    <ProjectReference Include="../../Shared/Development/RollbackGm.RelayBridge/ThirdPerson.Development.RollbackGm.RelayBridge.csproj" />
     <ProjectReference Include="..\..\Shared\Simulation\Core\ThirdPersonSimulation.Core.Portable.csproj" />
     <ProjectReference Include="..\..\Shared\Simulation\Fixed\ThirdPersonSimulation.Fixed.Portable.csproj" />
     <ProjectReference Include="..\..\Shared\Simulation\DeterministicRollback\ThirdPersonSimulation.DeterministicRollback.Portable.csproj" />

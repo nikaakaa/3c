@@ -4,7 +4,8 @@ public readonly record struct GmOperationRecord(
     string RequestId,
     string CallerId,
     string CommandId,
-    GmResultCode Result);
+    GmResultCode Result,
+    string Stage);
 
 public sealed class GmCommandDispatcher
 {
@@ -14,6 +15,7 @@ public sealed class GmCommandDispatcher
     public GmCommandDispatcher(
         string serviceInstanceId,
         string sessionId,
+        string buildId,
         GmCommandRegistry registry,
         Action<GmOperationRecord> record)
     {
@@ -21,21 +23,26 @@ public sealed class GmCommandDispatcher
             throw new ArgumentException("GM 服务运行身份不完整。");
         ServiceInstanceId = serviceInstanceId;
         SessionId = sessionId;
+        BuildId = buildId;
         m_Registry = registry ?? throw new ArgumentNullException(nameof(registry));
         m_Record = record ?? throw new ArgumentNullException(nameof(record));
     }
 
     public string ServiceInstanceId { get; }
     public string SessionId { get; }
+    public string BuildId { get; }
 
     public GmServiceDescription Describe() => new()
     {
+        protocolVersion = GmHttpProtocol.Version,
+        buildId = BuildId,
         serviceInstanceId = ServiceInstanceId,
         sessionId = SessionId,
         commands = m_Registry.Definitions.ToArray()
     };
 
-    public GmCommandResponse Execute(GmCommandRequest request, string callerId, GmPermission permission)
+    public async Task<GmCommandResponse> ExecuteAsync(
+        GmCommandRequest request, string callerId, GmPermission permission, CancellationToken cancellation)
     {
         ArgumentNullException.ThrowIfNull(request);
         GmCommandResult result;
@@ -58,14 +65,23 @@ public sealed class GmCommandDispatcher
         {
             try
             {
-                result = handler.Execute(request.arguments);
+                m_Record(new GmOperationRecord(request.requestId, callerId, request.commandId, GmResultCode.Unspecified, "accepted"));
+                result = await handler.ExecuteAsync(request.arguments, cancellation);
+            }
+            catch (GmCommandFailureException exception)
+            {
+                result = Reject(exception.Code, exception.Message);
+            }
+            catch (OperationCanceledException)
+            {
+                result = Reject(GmResultCode.TimedOut, "服务端查询超时或请求已取消。");
             }
             catch (Exception exception)
             {
                 result = Reject(GmResultCode.ExecutionFailed, $"命令执行失败：{exception.Message}");
             }
         }
-        m_Record(new GmOperationRecord(request.requestId, callerId, request.commandId, result.Code));
+        m_Record(new GmOperationRecord(request.requestId, callerId, request.commandId, result.Code, "completed"));
         return new GmCommandResponse
         {
             requestId = request.requestId,

@@ -2,13 +2,13 @@ using ThirdPersonSimulation.DeterministicRollback;
 
 namespace ThirdPerson.Development.Gm.Rollback;
 
-public sealed class RollbackGmQuerySource : IRollbackGmQuerySource
+public sealed class RollbackRelayQuerySource
 {
     readonly DeterministicRollbackServerManifest m_Manifest;
     readonly RollbackInputRelayRuntime m_Runtime;
     readonly int m_OwnerThreadId = Environment.CurrentManagedThreadId;
 
-    public RollbackGmQuerySource(DeterministicRollbackServerManifest manifest, RollbackInputRelayRuntime runtime)
+    public RollbackRelayQuerySource(DeterministicRollbackServerManifest manifest, RollbackInputRelayRuntime runtime)
     {
         m_Manifest = manifest ?? throw new ArgumentNullException(nameof(manifest));
         m_Runtime = runtime ?? throw new ArgumentNullException(nameof(runtime));
@@ -31,7 +31,7 @@ public sealed class RollbackGmQuerySource : IRollbackGmQuerySource
             m_Manifest.confirmationDelayTicks);
     }
 
-    public IReadOnlyList<RollbackGmActorSnapshot> CaptureActors()
+    public RollbackGmActorSnapshot[] CaptureActors()
     {
         RequireOwnerThread();
         IReadOnlyList<RollbackRelayPeerStatus> peers = m_Runtime.CapturePeerStatus();

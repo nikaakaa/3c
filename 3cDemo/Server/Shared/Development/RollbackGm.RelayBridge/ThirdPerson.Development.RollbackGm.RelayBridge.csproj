@@ -1,15 +1,12 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <TargetFramework>net8.0</TargetFramework>
-    <AssemblyName>ThirdPerson.Development.RollbackGm.Server</AssemblyName>
-    <RootNamespace>ThirdPerson.Development.Gm.Rollback</RootNamespace>
-    <LangVersion>latest</LangVersion>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
   </PropertyGroup>
   <ItemGroup>
-    <ProjectReference Include="../Gm.Server/ThirdPerson.Development.Gm.Server.csproj" />
     <ProjectReference Include="../RollbackGm.Contracts/ThirdPerson.Development.RollbackGm.Contracts.csproj" />
     <ProjectReference Include="../Gm.Http.Server/ThirdPerson.Development.Gm.Http.Server.csproj" />
+    <ProjectReference Include="../../Simulation/DeterministicRollback.Endpoint/ThirdPersonSimulation.DeterministicRollback.Endpoint.Portable.csproj" />
   </ItemGroup>
 </Project>

@@ -18,18 +18,18 @@ public sealed class HelpGmCommand : IGmCommandHandler
         }
     };
 
-    public GmCommandResult Execute(IReadOnlyList<string> arguments)
+    public Task<GmCommandResult> ExecuteAsync(IReadOnlyList<string> arguments, CancellationToken cancellation)
     {
         if (arguments.Count == 1)
         {
             if (!m_Catalog.TryGetDefinition(arguments[0], out GmCommandDefinition definition))
-                return new GmCommandResult(GmResultCode.UnknownCommand, $"未安装命令：{arguments[0]}");
-            return new GmCommandResult(GmResultCode.Success, "命令用法", Describe(definition));
+                return Task.FromResult(new GmCommandResult(GmResultCode.UnknownCommand, $"未安装命令：{arguments[0]}"));
+            return Task.FromResult(new GmCommandResult(GmResultCode.Success, "命令用法", Describe(definition)));
         }
-        return new GmCommandResult(
+        return Task.FromResult(new GmCommandResult(
             GmResultCode.Success,
             "服务端已安装命令",
-            m_Catalog.Definitions.Select(Describe).ToArray());
+            m_Catalog.Definitions.Select(Describe).ToArray()));
     }
 
     static GmResultSection Describe(GmCommandDefinition definition) => new()

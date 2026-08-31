@@ -14,9 +14,9 @@ public sealed class SessionInfoGmCommand : IGmCommandHandler
         usage = "session.info"
     };
 
-    public GmCommandResult Execute(IReadOnlyList<string> arguments)
+    public async Task<GmCommandResult> ExecuteAsync(IReadOnlyList<string> arguments, CancellationToken cancellation)
     {
-        RollbackGmSessionSnapshot value = m_Source.CaptureSession();
+        RollbackGmSessionSnapshot value = await m_Source.CaptureSessionAsync(cancellation);
         return new GmCommandResult(GmResultCode.Success, "服务端会话", new GmResultSection
         {
             title = value.SessionId,

@@ -14,9 +14,9 @@ public sealed class ActorListGmCommand : IGmCommandHandler
         usage = "actor.list"
     };
 
-    public GmCommandResult Execute(IReadOnlyList<string> arguments)
+    public async Task<GmCommandResult> ExecuteAsync(IReadOnlyList<string> arguments, CancellationToken cancellation)
     {
-        IReadOnlyList<RollbackGmActorSnapshot> actors = m_Source.CaptureActors();
+        IReadOnlyList<RollbackGmActorSnapshot> actors = await m_Source.CaptureActorsAsync(cancellation);
         var sections = new GmResultSection[actors.Count];
         for (int i = 0; i < actors.Count; i++)
         {

@@ -33,23 +33,22 @@
 
 ## 持久字段与Reset清单
 
-以下字段随唯一根Bank由Committed复制到Pending；各业务Owner只写Pending，Root只Seal/Discard，不参与其数学。名称以首个候选`2a6fe33`为准，迁移后同步本表。
+以下字段随唯一根Bank由Committed复制到Pending；各业务Owner只写Pending，Root只Seal/Discard，不参与其数学。下表从`2a6fe33`逐字段盘点，并随当前闭环更新；未验证的变更状态以闭环记录为准。
 
 | 记录与字段 | 唯一写入者 | 运行消费者 | 初始化／清理及证据边界 |
 |---|---|---|---|
 | Landing：LastLanding、NextSwingLanding、PlantTarget、NextSwingReferencePoint、NextSwingPredictionError、TrackedEventIdentity、NextTrackingState、PlantTargetState | LandingRuntime及其Context方法 | 下一帧Prediction、Transition、StateTarget和Support引用 | FootPlacementBank.Reset清空；正式跟踪失效清NextSwing，已Verified的Plant目标不得误清。PromotedLanding、PlantTargetUpdated、PlantVerificationAttempted/Unavailable由BeginFrame清空，是本帧过程证据 |
-| Discrete：State、LockResponse | TransitionRuntime.Apply，决定来自TransitionResolver | StateTarget、Interpolation政策及Foot输出生产 | Bank.Reset清零；Pre/Post转换按原序应用。LastTransitionPhase/Reason说明最近转换，不作为第二个State |
+| Discrete：State、LockResponse | TransitionRuntime.Apply，决定来自TransitionResolver | StateTarget、Interpolation政策及Foot输出生产 | Bank.Reset清零；Pre/Post转换按原序应用。未消费的LastTransitionPhase/Reason已删除，实际转换证据仍由本帧Transition Fact发布 |
 | Contact：HasContact、EventIdentity、AcquiredFrameSequence/CompletionIdentity、WorldRevision、SurfaceIdentity、Anchor、Normal | TransitionRuntime按AnchorCommand创建／释放 | StateTarget、Ground约束、Foot输出和下次Transition | Create从正式ContactLanding取值；Release与Bank.Reset清零，不从诊断或最终骨骼反建 |
-| ContactTransition：HasPreviousRequest、PreviousRequestedLock/EventIdentity/Mode/Weight、SecondsSinceEdge、LatestContactEventIdentity、LatestReleasedContactEventIdentity、CompletedLockWeightEventIdentity | TransitionRuntime.UpdateContactTransition | 下一帧Contact边沿、完成Lock门控 | 首帧为default；边沿重置计时、事件换代清完成标记；Bank.Reset清零。LastEdge是本帧证据 |
+| ContactTransition：HasPreviousRequest、PreviousRequestedLock/EventIdentity/Mode/Weight、SecondsSinceEdge、LatestContactEventIdentity、LatestReleasedContactEventIdentity、CompletedLockWeightEventIdentity | TransitionRuntime.UpdateContactTransition | 下一帧Contact边沿、完成Lock门控 | 首帧为default；边沿重置计时、事件换代清完成标记；Bank.Reset清零。未消费的LastEdge字段已删除，本帧边沿仍从实际Transition Decision发布 |
 | Interpolation路径与连续量：HasOutput、HasSwingPath、SwingLandingEventIdentity、SwingGroundPathInputIdentity、SwingLandingPoint、PreviousTargetCorrection、PreviousSwingTargetCorrection、EffectiveCorrection、SwingResidual、Residual、Progress、StartResidual、Completed、Policy | InterpolationRuntime | 下次插值、HardConstraint读取连续输出、Foot完成资格 | ResetInterpolation与Bank.Reset清空；ApplyPostTransition仅保留原规定的Correction、Response、PreviousOutput与lineage，不增一次推进 |
 | Interpolation高度：HasTargetHeight、TargetHeightEventIdentity、FilteredTargetHeightAlongUp、TargetHeightRetargetActive | InterpolationRuntime的高度求值 | 后续Plant目标与连续输出 | ClearPlant／完整Reset按原政策处理；不得被Pelvis、Goal或Ground约束反写 |
-| Interpolation接触：HasPlantTarget、PlantTargetEventIdentity/Kind、PlantLockResponse、PlantTargetVerified、PlantDirectFollow、PlantDesiredPoint、PlantFilteredPoint、PreviousPlantSelectedWorldTarget、SelectedSupportTarget、PlantWorldResidual、PlantWorldResidualTransitionActive | InterpolationRuntime | 下一帧目标切换、世界残差与响应 | ClearPlant及ResetInterpolation按原分域清理；PlantFact只解释本帧，不能反向控制状态 |
-| Interpolation响应：HasPreviousResponseOutputPoint、PreviousResponseOutputPoint、HasCorrectionResponse、CorrectionResponse、CorrectionResponseDomain、HasCorrectionResponseLineage、CorrectionResponseSourceLineage/ProfileRevision/WorldRevision、PendingCorrectionResponseInitializationReason | InterpolationRuntime | 下一帧响应、lineage失效与初始化 | ClearCorrectionResponse清响应及前输出；UpdateCorrectionResponseLineage清失效域；PostTransition保留指定字段。当前CorrectionResponseFact.Evaluated/ResponseDirection仍被运行读取，后续任务3将其迁为正式方向历史，不能直接删除 |
-| PrimarySupport：HasValue、Side、LandingEventIdentity | StrideHipsBuilder.ResolvePrimarySupport | 下一帧支撑保留及本帧Pelvis准备 | 无候选及Bank.Reset调用Clear；Retained仅解释本帧选择，仍随Result发布 |
+| Interpolation接触：HasPlantTarget、PlantTargetEventIdentity/Kind、PlantLockResponse、PlantTargetVerified、PlantDirectFollow、PlantDesiredPoint、PlantFilteredPoint、PreviousPlantSelectedWorldTarget、SelectedSupportTarget、PlantWorldResidual、PlantWorldResidualTransitionActive | InterpolationRuntime | 下一帧目标切换、世界残差与响应 | ClearPlant及ResetInterpolation按原分域清理；PlantFact已从持久State移出，只随本帧InterpolationResult发布 |
+| Interpolation响应：HasPreviousResponseOutputPoint、PreviousResponseOutputPoint、ResponseHistory.HasValue/Scalar/Domain/AppliedDirection、HasCorrectionResponseLineage、CorrectionResponseSourceLineage/ProfileRevision/WorldRevision、PendingCorrectionResponseInitializationReason | InterpolationRuntime | 下一帧响应、lineage失效与初始化 | ClearCorrectionResponse清响应及前输出；UpdateCorrectionResponseLineage清失效域；PostTransition保留指定字段。方向与标量归ResponseHistory；Fact仅随本帧结果发布，运行不从Fact读取有效性或方向 |
+| PrimarySupport：HasValue、Side、LandingEventIdentity | StrideHipsBuilder.ResolvePrimarySupport | 下一帧支撑保留及本帧Pelvis准备 | 无候选及Bank.Reset调用Clear；Retained已移出持久State，只在本帧Result发布 |
 | PelvisSpring：HasValue、SupportSide、SupportLandingEventIdentity、Slope、TargetAlongUp、OutputAlongUp、VelocityAlongUp | StrideHipsBuilder唯一AdvancePelvisResponse | 下一帧响应、支撑交接和释放回零 | Bank.Reset或不产出Pelvis Goal的既有分支Clear；保持3Hz配置及一次积分。Reach观察不得清速度、夹输出或写Spring |
 | BendHistory：Left/RightStableDirection、Left/RightAppliedDirection及四个Has标记、SourceCompletionIdentity、Revision | FinalIkFullBodySolver正式求值 | 下一帧退化膝向、有效性与lineage | Root初始化／ResetSolvers及原调参清历史路径清零；参考方向准备不得把Has提前置true。当前空历史仍读Vendor bend.direction，是任务4独立修正点 |
-| 帧结果：ResolvedFeet、StrideHips、Pelvis/Left/RightGoal、Diagnostics、FrameSequence、CompletionIdentity | 各阶段唯一生产者，Bank组织发布 | Encoder、Assembler、Solver及Seal后诊断 | Begin清输出，不把前帧结果当新请求。HasFrame当前表达Pending开放；Seal置false，不能复用为Committed有效性 |
-| Visible Sole：HasVisibleFootOutputs、Left/RightVisibleSole | Foot最终GoalTarget几何发布 | 旧PreviousVisibleOutput路径，当前插值实际不接管 | Begin/Reset清；本change不因清理HasFrame而启用旧历史接管，后续删除无消费参数或明确结果有效性 |
+| 帧结果：ResolvedFeet、StrideHips、Pelvis/Left/RightGoal、Diagnostics、FrameSequence、CompletionIdentity | 各阶段唯一生产者，Bank组织发布 | Encoder、Assembler、Solver及Seal后诊断 | Begin清输出，不把前帧结果当新请求。IsPendingFrameOpen只表达Pending开放，Seal置false；Committed可读性继续由根Bank与结果lineage表达 |
 
 PredictionMotion、BodyTrajectory及其Tick/Generation/ResetSequence/AuthorityTick/PredictionMotionRevision/RequestedDuration/Attempt标记继续由既有预测生产者拥有；GroundPath、LandingObservation、CurrentSupport页继续沿正式池Acquire/Release与根事务管理。本次不创建第二缓存、不改变世界查询和Body预测次数。
 
@@ -85,3 +84,14 @@ PredictionMotion、BodyTrajectory及其Tick/Generation/ResetSequence/AuthorityTi
 ## 合同同步
 
 首两个闭环通过后，current Foot的Resolved/Pelvis条款已同步请求→Pelvis→原完成→最终结果顺序，故本change删除重复RENAMED动作而保留同名MODIFIED差量。project与stabilize取消旧硬Reach/夹脚保证，stabilize删除重复的Resolved/Pelvis差量。可靠有符号膝向与其它未完成Contact/Goal Sole工作保留，没有将未完成的Reset或诊断绑定提前写成current事实；也没有自动归档。
+
+## 第三个闭环：运行历史与本帧证据分离
+
+状态：实现与Runtime/Editor编译通过、0错误，等待同输入回放；上一通过为`48d7bbc`，固定总基线不变。
+
+- `CharacterFootCorrectionResponseHistory`只保存HasValue、Scalar、Domain、AppliedDirection。旧HasCorrectionResponse与Fact.Evaluated的所有生产／清理入口原本始终同写同清，现在由一份有效性表达，不新增状态判定或方向限制。
+- `ApplyCorrectionResponse`返回typed位置／方向结果及只读Fact；Plant、Release、Swing只读正式结果的AppliedDirection，不再从解释记录反读。CorrectionResponseFact与PlantFact从Interpolation持久State删除，仅随本帧InterpolationResult返回。
+- PostTransition继续保留同一响应历史、前输出及lineage；ResetInterpolation、ClearCorrectionResponse与根Bank Reset按原边界清空。未执行响应的内部路径只返回未求值证据，仍保留实际历史；原来这些路径携带的旧Fact没有成为正式输出，不新增可见行为。
+- 删除三个调用恒为false的旧VisibleOutputTransfer参数及不可达分支，诊断原有Transferred列仍按原语义为false，不启用Goal Sole历史接管。
+- PrimarySupport改为State命名，只持久化HasValue/Side/Event；Retained只随本帧选择结果发布。删除无任何消费者的LastTransitionPhase/Reason与LastEdge字段。Pending标志改名IsPendingFrameOpen，Root仍只关闭和提交，不新增数学。
+- 本步未触碰FBBIK、Vendor方向、Profile或算法常量，普通Reset语义保持；Solver空历史方向修正仍作为后续独立行为提交。

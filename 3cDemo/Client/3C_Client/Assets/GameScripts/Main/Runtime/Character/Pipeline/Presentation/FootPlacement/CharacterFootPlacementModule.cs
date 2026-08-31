@@ -25,7 +25,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         internal CharacterFootLifecycleContext LeftFoot;
         internal CharacterFootLifecycleContext RightFoot;
         internal CharacterFootPelvisSpringState PelvisSpring;
-        internal CharacterFootPrimarySupportFacts PrimarySupport;
+        internal CharacterFootPrimarySupportState PrimarySupport;
         internal CharacterResolvedFootPair ResolvedFeet;
         internal CharacterFootStrideHipsResult StrideHips;
         internal CharacterFullBodyIkGoal PelvisGoal;
@@ -53,7 +53,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         internal ulong FrameSequence;
         internal ulong CompletionIdentity;
         internal bool RecordDiagnostics;
-        internal bool HasFrame;
+        internal bool IsPendingFrameOpen;
 
         internal void Begin(
             CharacterFootPlacementBank committed,
@@ -96,7 +96,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             FrameSequence = 0;
             CompletionIdentity = 0;
             RecordDiagnostics = recordDiagnostics;
-            HasFrame = true;
+            IsPendingFrameOpen = true;
         }
 
         internal void ClearPending()
@@ -117,7 +117,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             FrameSequence = 0;
             CompletionIdentity = 0;
             RecordDiagnostics = false;
-            HasFrame = false;
+            IsPendingFrameOpen = false;
         }
 
         internal void Reset()
@@ -188,7 +188,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             FrameSequence = 0;
             CompletionIdentity = 0;
             RecordDiagnostics = false;
-            HasFrame = false;
+            IsPendingFrameOpen = false;
         }
     }
 
@@ -271,7 +271,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             CharacterFootPlacementBank bank)
         {
             RequireAlive();
-            if (bank == null || !bank.HasFrame)
+            if (bank == null || !bank.IsPendingFrameOpen)
                 throw new InvalidOperationException("Foot Placement has no open bank.");
             if (bank.FrameSequence != 0)
                 throw new InvalidOperationException("Foot Placement already evaluated the open bank.");
@@ -579,12 +579,11 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             var requestPair = new CharacterFootPlacementRequestPair(
                 in leftRequest,
                 in rightRequest);
-            CharacterFootStrideHipsBuilder.ResolvePrimarySupport(
-                in leftRequest,
-                in rightRequest,
-                ref bank.PrimarySupport);
             CharacterFootPrimarySupportResult primarySupport =
-                bank.PrimarySupport.Result;
+                CharacterFootStrideHipsBuilder.ResolvePrimarySupport(
+                    in leftRequest,
+                    in rightRequest,
+                    ref bank.PrimarySupport);
             CharacterFootStrideIntentResult strideIntent =
                 CharacterFootStrideHipsBuilder.ResolveIntent(
                     in requestPair,
@@ -728,7 +727,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             ulong completionIdentity)
         {
             RequireAlive();
-            if (bank == null || !bank.HasFrame ||
+            if (bank == null || !bank.IsPendingFrameOpen ||
                 bank.FrameSequence != renderFrame ||
                 bank.CompletionIdentity != completionIdentity)
             {

@@ -961,8 +961,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
     {
         internal CharacterFootConstraintState State;
         internal CharacterFootLockResponse LockResponse;
-        internal CharacterFootTransitionPhase LastTransitionPhase;
-        internal CharacterFootTransitionReason LastTransitionReason;
     }
 
     internal readonly struct CharacterFootLockRequest
@@ -1015,7 +1013,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         internal ulong LatestContactEventIdentity;
         internal ulong LatestReleasedContactEventIdentity;
         internal ulong CompletedLockWeightEventIdentity;
-        internal CharacterFootContactEdge LastEdge;
 
         internal bool HasCompletedLockWeight(ulong eventIdentity) =>
             eventIdentity != 0 &&
@@ -1432,6 +1429,42 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         internal float PenetrationDepth { get; }
     }
 
+    internal readonly struct CharacterFootCorrectionResponseHistory
+    {
+        internal CharacterFootCorrectionResponseHistory(
+            float scalar,
+            CharacterFootCorrectionResponseDomain domain,
+            Vector3 appliedDirection)
+        {
+            HasValue = true;
+            Scalar = scalar;
+            Domain = domain;
+            AppliedDirection = appliedDirection;
+        }
+
+        internal bool HasValue { get; }
+        internal float Scalar { get; }
+        internal CharacterFootCorrectionResponseDomain Domain { get; }
+        internal Vector3 AppliedDirection { get; }
+    }
+
+    internal readonly struct CharacterFootCorrectionResponseResult
+    {
+        internal CharacterFootCorrectionResponseResult(
+            Vector3 outputPoint,
+            Vector3 appliedDirection,
+            in CharacterFootCorrectionResponseFact fact)
+        {
+            OutputPoint = outputPoint;
+            AppliedDirection = appliedDirection;
+            Fact = fact;
+        }
+
+        internal Vector3 OutputPoint { get; }
+        internal Vector3 AppliedDirection { get; }
+        internal CharacterFootCorrectionResponseFact Fact { get; }
+    }
+
     internal struct CharacterFootInterpolationState
     {
         internal bool HasOutput;
@@ -1466,17 +1499,13 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         internal Vector3 PreviousResponseOutputPoint;
         internal Vector3 PlantWorldResidual;
         internal bool PlantWorldResidualTransitionActive;
-        internal bool HasCorrectionResponse;
-        internal float CorrectionResponse;
-        internal CharacterFootCorrectionResponseDomain CorrectionResponseDomain;
-        internal CharacterFootCorrectionResponseFact CorrectionResponseFact;
+        internal CharacterFootCorrectionResponseHistory ResponseHistory;
         internal bool HasCorrectionResponseLineage;
         internal FixedString128Bytes CorrectionResponseSourceLineage;
         internal FixedString128Bytes CorrectionResponseProfileRevision;
         internal ulong CorrectionResponseWorldRevision;
         internal CharacterFootCorrectionResponseInitializationReason
             PendingCorrectionResponseInitializationReason;
-        internal CharacterFootPlantInterpolationFact PlantFact;
     }
 
     internal struct CharacterFootLifecycleContext

@@ -16,8 +16,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             }
             context.Discrete.State = decision.TargetState;
             context.Discrete.LockResponse = decision.TargetLockResponse;
-            context.Discrete.LastTransitionPhase = decision.Phase;
-            context.Discrete.LastTransitionReason = decision.Reason;
             switch (decision.AnchorCommand)
             {
                 case CharacterFootAnchorCommand.None:
@@ -84,7 +82,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             context.PreviousEventIdentity = frame.LockRequest.EventIdentity;
             context.PreviousMode = frame.LockRequest.Mode;
             context.PreviousWeight = frame.LockRequest.Weight;
-            context.LastEdge = decision.ContactEdge;
             if (frame.LockRequest.RequestsLock && eventIdentity != 0 &&
                 frame.LockRequest.Weight >=
                 1f - CharacterFootConstraintMath.GeometryEpsilon)

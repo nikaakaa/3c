@@ -43,27 +43,19 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         TargetCrossedOutput = 4
     }
 
-    internal struct CharacterFootPrimarySupportFacts
+    internal struct CharacterFootPrimarySupportState
     {
         internal bool HasValue;
         internal CharacterFootSide Side;
         internal ulong LandingEventIdentity;
-        internal bool Retained;
 
         internal void Clear()
         {
             HasValue = false;
             Side = default;
             LandingEventIdentity = 0;
-            Retained = false;
         }
 
-        internal CharacterFootPrimarySupportResult Result =>
-            new CharacterFootPrimarySupportResult(
-                HasValue,
-                Side,
-                LandingEventIdentity,
-                Retained);
     }
 
     internal readonly struct CharacterFootPrimarySupportResult
@@ -715,10 +707,10 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         const float GeometryEpsilon = 0.0001f;
         const float EndpointTolerance = 0.005f;
 
-        internal static void ResolvePrimarySupport(
+        internal static CharacterFootPrimarySupportResult ResolvePrimarySupport(
             in CharacterFootPlacementRequest leftRequest,
             in CharacterFootPlacementRequest rightRequest,
-            ref CharacterFootPrimarySupportFacts primarySupport)
+            ref CharacterFootPrimarySupportState primarySupport)
         {
             bool leftRetainable = IsRetainablePrimarySupport(in leftRequest);
             bool rightRetainable = IsRetainablePrimarySupport(in rightRequest);
@@ -737,15 +729,15 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                        rightRequest.Support.Weight >= leftRequest.Support.Weight);
                 if (retained)
                 {
-                    primarySupport.Retained = true;
-                    return;
+                    return new CharacterFootPrimarySupportResult(
+                        true, primarySupport.Side, primarySupport.LandingEventIdentity, true);
                 }
             }
 
             if (!leftCandidate && !rightCandidate)
             {
                 primarySupport.Clear();
-                return;
+                return default;
             }
 
             bool selectLeft = leftCandidate &&
@@ -761,7 +753,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             primarySupport.LandingEventIdentity = selectLeft
                 ? leftRequest.Support.EventIdentity
                 : rightRequest.Support.EventIdentity;
-            primarySupport.Retained = false;
+            return new CharacterFootPrimarySupportResult(
+                true, primarySupport.Side, primarySupport.LandingEventIdentity, false);
         }
 
         internal static CharacterFootStrideIntentResult ResolveIntent(

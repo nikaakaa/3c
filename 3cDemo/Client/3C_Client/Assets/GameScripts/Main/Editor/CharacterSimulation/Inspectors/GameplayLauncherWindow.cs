@@ -248,7 +248,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             bool capturing = CharacterFootLandingPredictionSampler.IsCapturing;
             bool starting = CharacterFootLandingPredictionSampler.IsStartPending;
             string samplesPath = CharacterFootLandingPredictionSampler.LastSavedPath;
-            string factsPath = CharacterFootLandingPredictionSampler.LastSavedFactsPath;
+            string analysisPath = CharacterFootLandingPredictionSampler.LastSavedAnalysisPath;
             string diagnosisDirectory =
                 CharacterFootLandingPredictionSampler.LastSavedDiagnosisDirectory;
             string sampleDirectory = CharacterFootLandingPredictionSampler.LastSavedDirectory;
@@ -333,11 +333,11 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                     EditorStyles.textField,
                     GUILayout.Height(EditorGUIUtility.singleLineHeight));
             }
-            if (!string.IsNullOrEmpty(factsPath))
+            if (!string.IsNullOrEmpty(analysisPath))
             {
-                EditorGUILayout.LabelField("Last Facts");
+                EditorGUILayout.LabelField("Last Analysis");
                 EditorGUILayout.SelectableLabel(
-                    factsPath,
+                    analysisPath,
                     EditorStyles.textField,
                     GUILayout.Height(EditorGUIUtility.singleLineHeight));
             }
@@ -664,7 +664,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             Debug.Log(
                 $"Foot Landing Diagnostics " +
                 $"Samples={CharacterFootLandingPredictionSampler.LastSavedPath}, " +
-                $"Facts={CharacterFootLandingPredictionSampler.LastSavedFactsPath}, " +
+                $"Analysis={CharacterFootLandingPredictionSampler.LastSavedAnalysisPath}, " +
                 $"Diagnoses={CharacterFootLandingPredictionSampler.LastSavedDiagnosisDirectory}, " +
                 $"Summary={m_DiagnosticSummary}");
             Repaint();

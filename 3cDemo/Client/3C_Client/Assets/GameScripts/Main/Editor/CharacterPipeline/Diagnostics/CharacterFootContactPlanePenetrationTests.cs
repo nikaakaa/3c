@@ -48,7 +48,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         }
 
         [Test]
-        public void SealedSamplesPublishSixDeterministicDiagnosisFiles()
+        public void SealedSamplesPublishDeterministicIndexedDiagnosisFiles()
         {
             string directory = Path.Combine(
                 Path.GetTempPath(),
@@ -91,8 +91,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     samplesPath,
                     new[] { csvHeader, string.Join(",", row) });
                 CharacterFootMotionDiagnosticAnalysis result =
-                    CharacterFootMotionDiagnosticAnalyzer.Analyze(samplesPath);
-                Assert.That(File.Exists(result.FactsPath), Is.True);
+                    CharacterFootMotionDiagnosticAnalyzer.Analyze(samplesPath, Path.Combine(directory, "first"));
+                Assert.That(File.Exists(result.AnalysisPath), Is.True);
                 string penetrationPath = Path.Combine(
                     result.DiagnosisDirectory,
                     "contact-plane-penetration.json");
@@ -104,21 +104,27 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     penetration["coverage"]?["unavailableReasons"]?
                         .Value<int>("ContactLifecycleUnavailable"),
                     Is.EqualTo(1));
-                string firstFacts = File.ReadAllText(result.FactsPath);
+                JObject firstManifest = JObject.Parse(File.ReadAllText(result.AnalysisPath));
+                firstManifest.Remove("performance");
                 var firstDiagnoses = Directory
                     .GetFiles(result.DiagnosisDirectory, "*.json")
                     .ToDictionary(
                         Path.GetFileName,
                         File.ReadAllText,
                         StringComparer.Ordinal);
-                Assert.That(firstDiagnoses.Count, Is.EqualTo(6));
-                CharacterFootMotionDiagnosticAnalyzer.Analyze(samplesPath);
-                Assert.That(File.ReadAllText(result.FactsPath), Is.EqualTo(firstFacts));
+                Assert.That(firstDiagnoses.Count, Is.EqualTo(11));
+                CharacterFootMotionDiagnosticAnalysis second =
+                    CharacterFootMotionDiagnosticAnalyzer.Analyze(samplesPath, Path.Combine(directory, "second"));
+                JObject secondManifest = JObject.Parse(File.ReadAllText(second.AnalysisPath));
+                secondManifest.Remove("performance");
+                Assert.That(JToken.DeepEquals(firstManifest, secondManifest), Is.True);
                 foreach (KeyValuePair<string, string> entry in firstDiagnoses)
                 {
+                    if (entry.Key == CharacterFootDiagnosticStore.ManifestFileName)
+                        continue;
                     Assert.That(
                         File.ReadAllText(Path.Combine(
-                            result.DiagnosisDirectory,
+                            second.DiagnosisDirectory,
                             entry.Key)),
                         Is.EqualTo(entry.Value));
                 }

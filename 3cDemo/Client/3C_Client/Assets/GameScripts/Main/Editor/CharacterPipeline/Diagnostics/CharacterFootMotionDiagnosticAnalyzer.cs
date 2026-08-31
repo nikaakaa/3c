@@ -1,11 +1,13 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Security.Cryptography;
 using System.Text;
 using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 using ThirdPersonCharacter.Pipeline.Animation;
 using ThirdPersonCharacter.Pipeline.Presentation;
 using UnityEngine;
@@ -17,7 +19,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         internal CharacterFootMotionDiagnosticAnalysis(
             string samplesPath,
             string geometryPath,
-            string factsPath,
+            string analysisPath,
             string diagnosisDirectory,
             int frameCount,
             int footRowCount,
@@ -28,7 +30,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         {
             SamplesPath = samplesPath ?? string.Empty;
             GeometryPath = geometryPath ?? string.Empty;
-            FactsPath = factsPath ?? string.Empty;
+            AnalysisPath = analysisPath ?? string.Empty;
             DiagnosisDirectory = diagnosisDirectory ?? string.Empty;
             FrameCount = frameCount;
             FootRowCount = footRowCount;
@@ -40,7 +42,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
 
         internal string SamplesPath { get; }
         internal string GeometryPath { get; }
-        internal string FactsPath { get; }
+        internal string AnalysisPath { get; }
         internal string DiagnosisDirectory { get; }
         internal int FrameCount { get; }
         internal int FootRowCount { get; }
@@ -52,9 +54,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor
 
     internal static class CharacterFootMotionDiagnosticAnalyzer
     {
-        const string Schema = "character-foot-motion-facts/65";
+        const string Schema = "character-foot-motion-facts/66";
         const string AnalyzerId = "character-foot-motion-fact-analyzer";
-        const int AnalyzerVersion = 65;
+        const int AnalyzerVersion = 66;
         const float RuntimeGeometryEpsilon = 0.0001f;
         const float ExpectedCorrectionResponseIncreaseSpeed = 1.8f;
         const float ExpectedCorrectionResponseDecreaseSpeed = 1.5f;
@@ -74,7 +76,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         internal const double ContactSupportGapPersistentSeconds = 0.1d;
 
         internal static CharacterFootMotionDiagnosticAnalysis Analyze(
-            string samplesPath)
+            string samplesPath,
+            string outputDirectory = null)
         {
             if (string.IsNullOrWhiteSpace(samplesPath) ||
                 !File.Exists(samplesPath))
@@ -101,7 +104,15 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     "Foot Motion ground path geometry file is unavailable.",
                     geometryPath);
             }
+            string destination = Path.GetFullPath(outputDirectory ?? Path.Combine(
+                Path.GetDirectoryName(fullSamplesPath), "diagnoses"));
+            if (Directory.Exists(destination))
+                throw new IOException("Foot diagnostic output already exists; use a new analysis directory.");
+            var performance = new CharacterFootDiagnosticPerformance();
+            var timer = Stopwatch.StartNew();
             CsvCapture capture = ReadCapture(fullSamplesPath, geometryPath);
+            performance.readAndValidateMilliseconds = timer.Elapsed.TotalMilliseconds;
+            timer.Restart();
             var events = new List<EventFact>(256);
             var stepTimeCandidateSelections =
                 new List<StepTimeCandidateSelectionFact>(
@@ -122,12 +133,14 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 capture,
                 stepTimeCandidateSelections,
                 events);
-            string factsPath = Path.Combine(
-                Path.GetDirectoryName(fullSamplesPath) ?? string.Empty,
-                "facts.json");
-            PublishFacts(factsPath, document);
+            document.sample.file = Path.GetRelativePath(destination, fullSamplesPath).Replace('\\', '/');
+            document.sample.geometryFile = Path.GetRelativePath(destination, geometryPath).Replace('\\', '/');
+            var context = new CharacterFootDiagnosisContext(JObject.FromObject(document,
+                JsonSerializer.Create(CharacterFootDiagnosticStore.SerializerSettings())));
+            context.SourceIndices = capture.SourceIndices;
+            performance.analyzeMilliseconds = timer.Elapsed.TotalMilliseconds;
             CharacterFootDiagnosisPublication publication =
-                CharacterFootDiagnosisPublisher.Publish(factsPath);
+                CharacterFootDiagnosisPublisher.Publish(destination, context, performance);
             string summary =
                 $"frames={capture.UniqueFrameCount} footRows={capture.FootRows.Count} " +
                 $"geometryRows={capture.GeometryRowCount} " +
@@ -170,7 +183,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             return new CharacterFootMotionDiagnosticAnalysis(
                 fullSamplesPath,
                 geometryPath,
-                factsPath,
+                Path.Combine(publication.Directory, CharacterFootDiagnosticStore.ManifestFileName),
                 publication.Directory,
                 capture.UniqueFrameCount,
                 capture.FootRows.Count,
@@ -5412,15 +5425,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 landingReaches = capture.FootRows
                     .Select(LandingReachFact.From)
                     .ToList(),
-                predictionMotions = capture.Left
-                    .Select(PredictionMotionFact.From)
-                    .ToList(),
                 pelvisFrames = capture.Left
                     .Select((frame, index) => BuildPelvisFact(
                         frame, index > 0 ? capture.Left[index - 1] : null))
-                    .ToList(),
-                unifiedFootFrames = capture.FootRows
-                    .Select(BuildUnifiedFootFact)
                     .ToList(),
                 stepTimeCandidateSelections =
                     stepTimeCandidateSelections
@@ -5432,267 +5439,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 events = events
             };
         }
-
-        static object BuildUnifiedFootFact(FootFrame frame) => new
-        {
-            frame = frame.Frame,
-            side = frame.Side,
-            completionIdentity = frame.CompletionIdentity.ToString(
-                CultureInfo.InvariantCulture),
-            profileId = frame.ProfileId,
-            profileRevision = frame.ProfileRevision,
-            contactSupportGap = frame.ContactSupportGap,
-            formalApproach = new
-            {
-                observedPhase = frame.FormalEventPhase,
-                observedProgress =
-                    frame.FormalApproachContactToLandingProgress,
-                inputPhase = frame.InputFormalEventPhase,
-                inputProgress =
-                    frame.InputFormalApproachContactToLandingProgress
-            },
-            actionOwnership = new
-            {
-                instanceIdentity = frame.ActionInstanceIdentity.ToString(
-                    CultureInfo.InvariantCulture),
-                footWeight = frame.ActionFootWeight,
-                formalFootPlacementWeight = frame.FormalFootPlacementWeight,
-                grounded = frame.Grounded,
-                currentStepAuthoritative =
-                    frame.CurrentStep.IsAuthoritative,
-                hardOwnershipLoss = frame.HardOwnershipLoss,
-                hardOwnershipLossReason =
-                    frame.HardOwnershipLossReason,
-                preTransitionSuppressOutput =
-                    frame.PreTransitionSuppressOutput,
-                preTransitionResetInterpolation =
-                    frame.PreTransitionResetInterpolation,
-                postTransitionEvaluated = frame.PostTransitionEvaluated,
-                postTransitionSuppressOutput =
-                    frame.PostTransitionSuppressOutput,
-                postTransitionResetInterpolation =
-                    frame.PostTransitionResetInterpolation
-            },
-            contactTransition = new
-            {
-                evaluated = frame.LifecycleTransitionEvaluated,
-                previousRequestAvailable =
-                    frame.PreviousLockRequestAvailable,
-                previousRequestedLock = frame.PreviousLockRequested,
-                previousRequestEventIdentity =
-                    frame.PreviousLockRequestEventIdentity.ToString(
-                        CultureInfo.InvariantCulture),
-                previousRequestMode = frame.PreviousLockRequestMode,
-                previousRequestWeight = frame.PreviousLockRequestWeight,
-                previousEdgeSeconds = frame.PreviousContactEdgeSeconds,
-                previousLatestContactEventIdentity =
-                    frame.PreviousLatestContactEventIdentity.ToString(
-                        CultureInfo.InvariantCulture),
-                previousLatestReleasedContactEventIdentity =
-                    frame.PreviousLatestReleasedContactEventIdentity.ToString(
-                        CultureInfo.InvariantCulture),
-                previousCompletedLockWeightEventIdentity =
-                    frame.PreviousCompletedLockWeightEventIdentity.ToString(
-                        CultureInfo.InvariantCulture),
-                previousAnchor = BuildContactAnchorFact(
-                    ContactAnchorFrame.From(frame, true)),
-                currentRequestedLock = frame.CurrentLockRequested,
-                currentRequestEventIdentity =
-                    frame.CurrentLockRequestEventIdentity.ToString(
-                        CultureInfo.InvariantCulture),
-                currentRequestMode = frame.CurrentLockRequestMode,
-                currentRequestWeight = frame.CurrentLockRequestWeight,
-                currentRequestAvailability =
-                    frame.CurrentLockRequestAvailability,
-                edge = frame.ContactEdge,
-                currentEdgeSeconds = frame.CurrentContactEdgeSeconds,
-                currentLatestContactEventIdentity =
-                    frame.CurrentLatestContactEventIdentity.ToString(
-                        CultureInfo.InvariantCulture),
-                currentLatestReleasedContactEventIdentity =
-                    frame.CurrentLatestReleasedContactEventIdentity.ToString(
-                        CultureInfo.InvariantCulture),
-                currentCompletedLockWeightEventIdentity =
-                    frame.CurrentCompletedLockWeightEventIdentity.ToString(
-                        CultureInfo.InvariantCulture),
-                currentAnchor = BuildContactAnchorFact(
-                    ContactAnchorFrame.From(frame, false)),
-                preTransition = new
-                {
-                    reason = frame.PreTransitionReason,
-                    source = frame.PreTransitionSource,
-                    target = frame.PreTransitionTarget,
-                    anchorCommand = frame.PreTransitionAnchorCommand,
-                    suppressOutput = frame.PreTransitionSuppressOutput,
-                    resetInterpolation = frame.PreTransitionResetInterpolation
-                },
-                postTransitionEvaluated = frame.PostTransitionEvaluated,
-                postTransition = BuildPostTransitionFact(frame),
-                sameEventReentryRefreshed =
-                    frame.SameEventContactReentryRefreshed,
-                sameEventReentryUnavailable =
-                    frame.SameEventContactReentryUnavailable,
-                retainedVerifiedAnchor = frame.RetainedVerifiedAnchor,
-                reentryInterpolationHistoryRetained =
-                    frame.ReentryInterpolationHistoryRetained
-            },
-            preparedTarget = new
-            {
-                prepared = frame.ApproachPlantTargetPrepared,
-                available = frame.PreparedTargetAvailable,
-                eventIdentity = frame.PreparedTargetEventIdentity.ToString(
-                    CultureInfo.InvariantCulture),
-                surfaceIdentity = frame.PreparedTargetSurfaceIdentity,
-                point = CharacterFootVectorFact.From(
-                    frame.PreparedTargetPoint),
-                normal = CharacterFootVectorFact.From(
-                    frame.PreparedTargetNormal),
-                trajectoryGeneration =
-                    frame.PreparedTargetTrajectoryGeneration.ToString(
-                        CultureInfo.InvariantCulture),
-                futureBodySource = frame.PreparedTargetFutureBodySource
-            },
-            selectedSupportTarget = SupportTargetFact(
-                frame.SelectedSupportTarget),
-            targetHeightComponentUp = CharacterFootVectorFact.From(
-                frame.ComponentUp),
-            groundPathComponentUp = CharacterFootVectorFact.From(
-                frame.GroundPathComponentUp),
-            currentSupport = new
-            {
-                specified = frame.CurrentSupportSpecified,
-                available = frame.CurrentSupportAvailable,
-                rejectReason = frame.CurrentSupportRejectReason,
-                frame = frame.CurrentSupportFrame.ToString(
-                    CultureInfo.InvariantCulture),
-                completionIdentity = frame.CurrentSupportCompletion.ToString(
-                    CultureInfo.InvariantCulture),
-                worldRevision = frame.CurrentSupportWorldRevision.ToString(
-                    CultureInfo.InvariantCulture),
-                heel = CurrentSupportProbeFact(frame.CurrentSupportHeel),
-                toe = CurrentSupportProbeFact(frame.CurrentSupportToe),
-                heelRequiredDisplacement =
-                    frame.CurrentSupportHeelRequiredDisplacement,
-                toeRequiredDisplacement =
-                    frame.CurrentSupportToeRequiredDisplacement,
-                selectedProbe = frame.CurrentSupportSelectedProbe,
-                selectionReason = frame.CurrentSupportSelectionReason,
-                selectionEpsilon = frame.CurrentSupportSelectionEpsilon,
-                selectedSupportNormalBeforeNormalization =
-                    CharacterFootVectorFact.From(
-                        frame.CurrentSupportSelectedNormalBeforeNormalization),
-                target = SupportTargetFact(frame.CurrentSupportTarget)
-            },
-            correctionResponse = new
-            {
-                evaluated = frame.CorrectionResponseEvaluated,
-                responseDomain = ResponseDomainFact(frame),
-                initializedBefore =
-                    frame.CorrectionResponseInitializedBefore,
-                initializedThisFrame =
-                    frame.CorrectionResponseInitializedThisFrame,
-                initializationReason =
-                    frame.CorrectionResponseInitializationReason,
-                previousOutputAvailable =
-                    frame.PreviousResponseOutputAvailable,
-                previousOutput = CharacterFootVectorFact.From(
-                    frame.PreviousResponseOutputPoint),
-                desiredOutput = CharacterFootVectorFact.From(
-                    frame.DesiredOutputPoint),
-                responseOutput = CharacterFootVectorFact.From(
-                    frame.ResponseOutputPoint),
-                desired = ScalarResponseValue(frame, frame.CorrectionResponseDesired),
-                requestedDirection = CharacterFootVectorFact.From(
-                    frame.CorrectionResponseRequestedDirection),
-                previousDirection = CharacterFootVectorFact.From(
-                    frame.CorrectionResponsePreviousDirection),
-                directionLimited = frame.CorrectionResponseDirectionLimited,
-                maximumDirectionChangeDegrees =
-                    frame.CorrectionResponseMaximumDirectionChangeDegrees,
-                appliedDirectionChangeDegrees =
-                    frame.CorrectionResponseAppliedDirectionChangeDegrees,
-                visibleOutputTransferred =
-                    frame.CorrectionResponseVisibleOutputTransferred,
-                beforeRebase = ScalarResponseValue(frame, frame.CorrectionResponseBeforeRebase),
-                previous = ScalarResponseValue(frame, frame.CorrectionResponsePrevious),
-                current = ScalarResponseValue(frame, frame.CorrectionResponseCurrent),
-                direction = CharacterFootVectorFact.From(
-                    frame.CorrectionResponseDirection),
-                deltaDirection = frame.CorrectionResponseDeltaDirection,
-                selectedSpeed = ScalarResponseValue(frame, frame.CorrectionResponseSelectedSpeed),
-                appliedDelta = ScalarResponseValue(frame, frame.CorrectionResponseAppliedDelta)
-            },
-            resolved = new
-            {
-                outcome = frame.ResolvedOutcome,
-                rigId = frame.ResolvedRigId,
-                rigRevision = frame.ResolvedRigRevision,
-                finalSole = CharacterFootVectorFact.From(
-                    frame.ResolvedFinalSole),
-                effectiveSole = CharacterFootVectorFact.From(
-                    frame.ResolvedEffectiveSole),
-                goalTargetAnkle = CharacterFootVectorFact.From(
-                    frame.ResolvedGoalTargetAnkle),
-                goalTargetRotation = RotationFact(
-                    frame.ResolvedGoalTargetRotation),
-                effectiveAnkle = CharacterFootVectorFact.From(
-                    frame.ResolvedEffectiveAnkle),
-                effectiveRotation = RotationFact(
-                    frame.ResolvedEffectiveRotation),
-                effectiveHeel = CharacterFootVectorFact.From(
-                    frame.ResolvedEffectiveHeel),
-                effectiveToe = CharacterFootVectorFact.From(
-                    frame.ResolvedEffectiveToe),
-                effectiveSoleFromContacts = CharacterFootVectorFact.From(
-                    frame.ResolvedEffectiveSoleFromContacts),
-                sourceSoleForward = CharacterFootVectorFact.From(
-                    frame.ResolvedSourceSoleForward),
-                sourceSoleFrameLocalRotation = RotationFact(
-                    frame.ResolvedSourceSoleFrameLocalRotation),
-                goalTargetCorrection = CharacterFootVectorFact.From(
-                    frame.ResolvedGoalTargetCorrection),
-                effectiveSoleCorrection = CharacterFootVectorFact.From(
-                    frame.ResolvedEffectiveSoleCorrection),
-                positionWeight = frame.ResolvedPositionWeight,
-                rotationWeight = frame.ResolvedRotationWeight,
-                finalGoalPositionWeight = frame.FinalGoalPositionWeight,
-                finalGoalRotationWeight = frame.FinalGoalRotationWeight,
-                supportTarget = SupportTargetFact(
-                    frame.ResolvedSupportTarget),
-                contactAvailable = frame.ResolvedContactAvailable,
-                contactEventIdentity =
-                    frame.ResolvedContactEventIdentity.ToString(
-                        CultureInfo.InvariantCulture),
-                contactPoint = CharacterFootVectorFact.From(
-                    frame.ResolvedContactPoint),
-                contactOwnership = frame.ResolvedContactOwnership,
-                supportEligibility = frame.ResolvedSupportEligibility,
-                supportWeight = frame.ResolvedSupportWeight,
-                supportIntentWeight = frame.ResolvedSupportIntentWeight,
-                supportHorizontalError =
-                    frame.ResolvedSupportHorizontalError,
-                supportEventIdentity =
-                    frame.ResolvedSupportEventIdentity.ToString(
-                        CultureInfo.InvariantCulture),
-                pelvisReachAvailable = frame.ResolvedPelvisReachAvailable,
-                pelvisReachEventIdentity =
-                    frame.ResolvedPelvisReachEventIdentity.ToString(
-                        CultureInfo.InvariantCulture),
-                pelvisReachPoint = CharacterFootVectorFact.From(
-                    frame.ResolvedPelvisReachPoint),
-                landingReachAvailable = frame.ResolvedLandingReachAvailable,
-                landingReachEventIdentity =
-                    frame.ResolvedLandingReachEventIdentity.ToString(
-                        CultureInfo.InvariantCulture),
-                landingReachHip = CharacterFootVectorFact.From(
-                    frame.ResolvedLandingReachHip),
-                landingReachTargetAnkle = CharacterFootVectorFact.From(
-                    frame.ResolvedLandingReachTargetAnkle),
-                landingReachLegLength = frame.ResolvedLandingReachLegLength,
-                landingReachMinimumCompressionReserve =
-                    frame.ResolvedLandingReachMinimumCompressionReserve
-            }
-        };
 
         static object BuildContactAnchorFact(ContactAnchorFrame anchor) => new
         {
@@ -5789,14 +5535,17 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             string samplesPath,
             string geometryPath)
         {
-            using var reader = new StreamReader(samplesPath, Encoding.UTF8, true, 65536);
+            var sourceIndices = new List<CharacterFootDiagnosticSourceIndex>(2);
+            using var reader = new CharacterFootDiagnosticSourceReader(samplesPath, "samples");
             string header = reader.ReadLine();
             if (string.IsNullOrWhiteSpace(header))
                 throw new InvalidDataException("Foot Motion samples CSV is empty.");
             string[] names = ParseCsvLine(header);
+            reader.SetColumns(names);
             var indices = new Dictionary<string, int>(StringComparer.Ordinal);
             for (int i = 0; i < names.Length; i++)
-                indices[names[i]] = i;
+                if (!indices.TryAdd(names[i], i))
+                    throw new InvalidDataException($"Foot Motion samples CSV has duplicate column '{names[i]}'.");
             RequireColumns(indices);
             var unique = new Dictionary<(int frame, string side), FootFrame>();
             int rawRows = 0;
@@ -5814,6 +5563,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                         $"{cells.Length} columns; expected {names.Length}.");
                 }
                 FootFrame frame = ParseFrame(indices, cells);
+                reader.Include(frame.Frame, frame.Side);
                 var key = (frame.Frame, frame.Side);
                 if (!unique.TryAdd(key, frame))
                 {
@@ -5822,6 +5572,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                         $"Frame={frame.Frame} Side={frame.Side}.");
                 }
             }
+            sourceIndices.Add(reader.Complete());
             if (unique.Count == 0)
                 throw new InvalidDataException("Foot Motion samples CSV has no Foot rows.");
             List<FootFrame> footRows = unique.Values
@@ -5863,7 +5614,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             int geometryRowCount = ReadGeometry(
                 geometryPath,
                 first.SampleIdentity,
-                unique);
+                unique,
+                sourceIndices);
             int frameGapCount = CountTransitions(left, (previous, current) => current.Frame != previous.Frame + 1) +
                                 CountTransitions(right, (previous, current) => current.Frame != previous.Frame + 1);
             int bodyResetCount = CountTransitions(left, (previous, current) => current.BodyResetSequence != previous.BodyResetSequence);
@@ -5883,7 +5635,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 sourceChangeCount,
                 footRows,
                 left,
-                right);
+                right,
+                sourceIndices);
         }
 
         static void RequirePredictionMotionPair(
@@ -5947,18 +5700,16 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         static int ReadGeometry(
             string geometryPath,
             string sampleIdentity,
-            Dictionary<(int frame, string side), FootFrame> footRows)
+            Dictionary<(int frame, string side), FootFrame> footRows,
+            List<CharacterFootDiagnosticSourceIndex> sourceIndices)
         {
-            using var reader = new StreamReader(
-                geometryPath,
-                Encoding.UTF8,
-                true,
-                65536);
+            using var reader = new CharacterFootDiagnosticSourceReader(geometryPath, "geometry");
             string header = reader.ReadLine();
             if (string.IsNullOrWhiteSpace(header))
                 throw new InvalidDataException(
                     "Foot Motion ground path geometry CSV is empty.");
             string[] names = ParseCsvLine(header);
+            reader.SetColumns(names);
             var indices = new Dictionary<string, int>(StringComparer.Ordinal);
             for (int i = 0; i < names.Length; i++)
             {
@@ -6013,6 +5764,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     Cell("FrameSequence"),
                     "FrameSequence");
                 string side = Cell("Side");
+                reader.Include(frame, side);
                 if (!footRows.TryGetValue((frame, side), out FootFrame foot))
                 {
                     throw new InvalidDataException(
@@ -6081,10 +5833,11 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 }
                 RequireActualFootEnvelopeFacts(foot);
             }
+            sourceIndices.Add(reader.Complete());
             return rowCount;
         }
 
-        static string[] ParseCsvLine(string line)
+        internal static string[] ParseCsvLine(string line)
         {
             var cells = new List<string>(HeaderColumnCapacity);
             var cell = new StringBuilder();
@@ -10395,51 +10148,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             }
         }
 
-        static void PublishFacts(string factsPath, FactsDocument document)
-        {
-            string partPath = factsPath + ".part";
-            if (File.Exists(partPath))
-                File.Delete(partPath);
-            try
-            {
-                using (var stream = new FileStream(
-                           partPath,
-                           FileMode.CreateNew,
-                           FileAccess.Write,
-                           FileShare.Read,
-                           65536,
-                           FileOptions.SequentialScan))
-                using (var writer = new StreamWriter(stream, new UTF8Encoding(false)))
-                using (var json = new JsonTextWriter(writer)
-                       {
-                           Formatting = Formatting.Indented,
-                           Culture = CultureInfo.InvariantCulture
-                       })
-                {
-                    JsonSerializer serializer = JsonSerializer.Create(
-                        new JsonSerializerSettings
-                        {
-                            Culture = CultureInfo.InvariantCulture,
-                            NullValueHandling = NullValueHandling.Ignore
-                        });
-                    serializer.Serialize(json, document);
-                    json.Flush();
-                    writer.Flush();
-                    stream.Flush(true);
-                }
-                if (File.Exists(factsPath))
-                    File.Replace(partPath, factsPath, null);
-                else
-                    File.Move(partPath, factsPath);
-            }
-            catch
-            {
-                if (File.Exists(partPath))
-                    File.Delete(partPath);
-                throw;
-            }
-        }
-
         static string ComputeSha256(string path)
         {
             using SHA256 sha = SHA256.Create();
@@ -10742,7 +10450,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 int sourceChangeCount,
                 List<FootFrame> footRows,
                 List<FootFrame> left,
-                List<FootFrame> right)
+                List<FootFrame> right,
+                List<CharacterFootDiagnosticSourceIndex> sourceIndices)
             {
                 SampleIdentity = sampleIdentity;
                 ProgramIdentity = programIdentity;
@@ -10758,6 +10467,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 FootRows = footRows;
                 Left = left;
                 Right = right;
+                SourceIndices = sourceIndices;
             }
 
             internal string SampleIdentity { get; }
@@ -10774,6 +10484,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             internal List<FootFrame> FootRows { get; }
             internal List<FootFrame> Left { get; }
             internal List<FootFrame> Right { get; }
+            internal IReadOnlyList<CharacterFootDiagnosticSourceIndex> SourceIndices { get; }
         }
 
         struct CharacterFootVisibleOutputKinematics
@@ -12286,76 +11997,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         }
 
         [Serializable]
-        sealed class PredictionMotionFact
-        {
-            public int frame;
-            public string completionIdentity;
-            public bool available;
-            public string rejectReason;
-            public string resetReason;
-            public string sourceIdentity;
-            public ScalarVector2Fact rawCurrentVelocity;
-            public ScalarVector2Fact rawContinuationVelocity;
-            public ScalarVector2Fact previousStableCurrentVelocity;
-            public ScalarVector2Fact previousStableContinuationVelocity;
-            public ScalarVector2Fact stableCurrentVelocity;
-            public ScalarVector2Fact stableContinuationVelocity;
-            public ScalarVector2Fact currentVelocityDelta;
-            public ScalarVector2Fact continuationVelocityDelta;
-            public float responseAlpha;
-            public float deltaThreshold;
-            public float smoothSpeed;
-            public float maximumSpeed;
-            public bool currentResponseApplied;
-            public bool continuationResponseApplied;
-            public bool currentMaximumSpeedClamped;
-            public bool continuationMaximumSpeedClamped;
-            public string revision;
-
-            internal static PredictionMotionFact From(FootFrame source) =>
-                new PredictionMotionFact
-                {
-                    frame = source.Frame,
-                    completionIdentity = source.CompletionIdentity.ToString(
-                        CultureInfo.InvariantCulture),
-                    available = source.PredictionMotionAvailable,
-                    rejectReason = source.PredictionMotionRejectReason,
-                    resetReason = source.PredictionMotionResetReason,
-                    sourceIdentity = source.PredictionMotionSourceIdentity,
-                    rawCurrentVelocity = ScalarVector2Fact.From(
-                        source.PredictionRawCurrentVelocity),
-                    rawContinuationVelocity = ScalarVector2Fact.From(
-                        source.PredictionRawContinuationVelocity),
-                    previousStableCurrentVelocity = ScalarVector2Fact.From(
-                        source.PredictionPreviousStableCurrentVelocity),
-                    previousStableContinuationVelocity = ScalarVector2Fact.From(
-                        source.PredictionPreviousStableContinuationVelocity),
-                    stableCurrentVelocity = ScalarVector2Fact.From(
-                        source.PredictionStableCurrentVelocity),
-                    stableContinuationVelocity = ScalarVector2Fact.From(
-                        source.PredictionStableContinuationVelocity),
-                    currentVelocityDelta = ScalarVector2Fact.From(
-                        source.PredictionCurrentVelocityDelta),
-                    continuationVelocityDelta = ScalarVector2Fact.From(
-                        source.PredictionContinuationVelocityDelta),
-                    responseAlpha = source.PredictionVelocityResponseAlpha,
-                    deltaThreshold = source.PredictionVelocityDeltaThreshold,
-                    smoothSpeed = source.PredictionVelocitySmoothSpeed,
-                    maximumSpeed = source.PredictionMaximumSpeed,
-                    currentResponseApplied =
-                        source.PredictionCurrentResponseApplied,
-                    continuationResponseApplied =
-                        source.PredictionContinuationResponseApplied,
-                    currentMaximumSpeedClamped =
-                        source.PredictionCurrentMaximumSpeedClamped,
-                    continuationMaximumSpeedClamped =
-                        source.PredictionContinuationMaximumSpeedClamped,
-                    revision = source.PredictionMotionRevision.ToString(
-                        CultureInfo.InvariantCulture)
-                };
-        }
-
-        [Serializable]
         sealed class FactsDocument
         {
             public string schema;
@@ -12363,26 +12004,10 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             public AnalyzerFact analyzer;
             public CoverageFact coverage;
             public List<LandingReachFact> landingReaches;
-            public List<PredictionMotionFact> predictionMotions;
             public List<CharacterFootPelvisFrameObservation> pelvisFrames;
-            public List<object> unifiedFootFrames;
             public List<StepTimeCandidateSelectionFact>
                 stepTimeCandidateSelections;
             public List<EventFact> events;
-        }
-
-        [Serializable]
-        sealed class ScalarVector2Fact
-        {
-            public float x;
-            public float z;
-
-            internal static ScalarVector2Fact From(Vector2 value) =>
-                new ScalarVector2Fact
-                {
-                    x = value.x,
-                    z = value.y
-                };
         }
 
         [Serializable]

@@ -624,7 +624,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 $"{s_ActiveReplayOperation} completed. " +
                 $"Schedule={s_LastPresentationSchedulePath}, " +
                 $"Samples={CharacterFootLandingPredictionSampler.LastSavedPath}, " +
-                $"Facts={CharacterFootLandingPredictionSampler.LastSavedFactsPath}, " +
+                $"Analysis={CharacterFootLandingPredictionSampler.LastSavedAnalysisPath}, " +
                 $"Diagnoses={CharacterFootLandingPredictionSampler.LastSavedDiagnosisDirectory}.";
             s_ActiveReplayOperation = StandardReplayOperation;
             Debug.Log(s_LastStatus);
@@ -695,7 +695,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     scheduleFrames,
                     in coverage,
                     CharacterFootLandingPredictionSampler.LastSavedPath,
-                    CharacterFootLandingPredictionSampler.LastSavedFactsPath);
+                    CharacterFootLandingPredictionSampler.LastSavedAnalysisPath);
             s_LastReplayProofPath = result.Path;
             s_LastReplayComparison = result.Summary;
             s_ActiveReplayDocument = null;
@@ -822,23 +822,19 @@ namespace ThirdPersonCharacter.Pipeline.Editor
 
         static ReplayFootSampleDocument ReadReplayFootSample()
         {
-            string factsPath =
-                CharacterFootLandingPredictionSampler.LastSavedFactsPath;
+            string analysisPath =
+                CharacterFootLandingPredictionSampler.LastSavedAnalysisPath;
             string samplesPath =
                 CharacterFootLandingPredictionSampler.LastSavedPath;
-            if (string.IsNullOrWhiteSpace(factsPath) ||
+            if (string.IsNullOrWhiteSpace(analysisPath) ||
                 string.IsNullOrWhiteSpace(samplesPath) ||
-                !File.Exists(factsPath) ||
+                !File.Exists(analysisPath) ||
                 !File.Exists(samplesPath))
             {
                 throw new InvalidDataException(
                     "Fixed input replay Foot sample artifacts are unavailable.");
             }
-            JObject facts = JObject.Parse(
-                File.ReadAllText(factsPath, Encoding.UTF8));
-            JObject sample = facts["sample"] as JObject ??
-                throw new InvalidDataException(
-                    "Fixed input replay Foot facts sample is unavailable.");
+            JObject sample = CharacterFootDiagnosticStore.ReadManifest(analysisPath).sample;
             int frameCount = sample.Value<int?>("frameCount") ?? 0;
             if (frameCount <= 0)
                 throw new InvalidDataException(
@@ -848,7 +844,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 sample_identity =
                     sample.Value<string>("identity") ?? string.Empty,
                 samples_path = samplesPath,
-                facts_path = factsPath,
+                facts_path = analysisPath,
                 samples_sha256 =
                     sample.Value<string>("sha256") ?? string.Empty,
                 sampling_relative_frame_count = frameCount

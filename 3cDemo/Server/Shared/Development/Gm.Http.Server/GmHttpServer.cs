@@ -77,7 +77,7 @@ public sealed class GmHttpServer : IAsyncDisposable
                 if (!context.Response.HasStarted)
                     context.Response.StatusCode = StatusCodes.Status504GatewayTimeout;
             }
-            catch (GmRemoteQueryException exception)
+            catch (GmHttpResponseException exception)
             {
                 m_Record($"query=failed status={(int)exception.Status}");
                 if (!context.Response.HasStarted)

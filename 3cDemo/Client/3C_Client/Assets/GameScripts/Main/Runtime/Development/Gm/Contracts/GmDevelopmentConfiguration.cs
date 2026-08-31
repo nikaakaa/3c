@@ -8,7 +8,7 @@ namespace ThirdPerson.Development.Gm
         public const string ServicePath = "/v1/service";
         public const string CommandsPath = "/v1/commands";
         public const string RelayInstanceHeader = "X-Relay-Instance";
-        public const string ClientManifestFileName = "RollbackGmClient.json";
+        public const string ConsoleManifestFileName = "GmConsoleManifest.json";
 
         public static void RequireEndpoint(string endpoint)
         {

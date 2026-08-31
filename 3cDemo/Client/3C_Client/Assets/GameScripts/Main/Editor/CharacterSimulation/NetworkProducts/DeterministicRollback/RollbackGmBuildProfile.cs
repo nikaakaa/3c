@@ -1,11 +1,11 @@
 using System;
 using UnityEngine;
-using UnityEngine.InputSystem;
+using ThirdPerson.Development.Gm;
 
-namespace ThirdPerson.Development.Gm
+namespace ThirdPersonCharacter.Editor.CharacterSimulation
 {
-    [CreateAssetMenu(menuName = "3C/Development/GM Profile")]
-    public sealed class GmDevelopmentProfile : ScriptableObject
+    [CreateAssetMenu(menuName = "3C/Development/Rollback GM Build Profile")]
+    public sealed class RollbackGmBuildProfile : ScriptableObject
     {
         [SerializeField] int m_GmPort = 24200;
         [SerializeField] int m_RelayQueryPort = 24201;
@@ -20,24 +20,14 @@ namespace ThirdPerson.Development.Gm
         [SerializeField] int m_HistoryCapacity = 32;
         [SerializeField] int m_OutputCapacity = 64;
         [SerializeField] int m_MaximumOutputCharacters = 4096;
-        [SerializeField] InputActionAsset m_Actions;
-        [SerializeField] string m_ToggleActionId;
-        [SerializeField] string m_FontFamily = "Microsoft YaHei";
-        [SerializeField] int m_FontSize = 16;
 
         public int GmPort => m_GmPort;
         public int RelayQueryPort => m_RelayQueryPort;
-        public InputActionAsset Actions => m_Actions;
-        public string ToggleActionId => m_ToggleActionId;
-        public string FontFamily => m_FontFamily;
-        public int FontSize => m_FontSize;
 
         public void RequireValid()
         {
-            if (m_GmPort == m_RelayQueryPort || !m_Actions || !Guid.TryParse(m_ToggleActionId, out _) ||
-                m_Actions.FindAction(m_ToggleActionId, false) == null || string.IsNullOrWhiteSpace(m_FontFamily) ||
-                m_FontSize < 10 || m_FontSize > 32 || m_ServerTimeoutMilliseconds >= m_ClientTimeoutMilliseconds)
-                throw new InvalidOperationException("GM Profile 的端口、输入、字体或超时配置无效。");
+            if (m_GmPort == m_RelayQueryPort || m_ServerTimeoutMilliseconds >= m_ClientTimeoutMilliseconds)
+                throw new InvalidOperationException("GM 构建配置中的端口或超时无效。");
         }
 
         public GmServerManifest BuildServerManifest(string buildId, string sessionId, string clientToken, string relayToken)

@@ -5,6 +5,7 @@ using ThirdPersonSimulation.Fixed;
 using UnityEngine;
 using FixedCharacterSimulationInput = ThirdPersonSimulation.Fixed.CharacterSimulationInput;
 using FixedCharacterSimulationProgram = ThirdPersonSimulation.Fixed.CharacterSimulationProgram;
+using FixedProgramConstant = ThirdPersonSimulation.Fixed.ProgramConstant;
 using FixedSimulationInputRequest = ThirdPersonSimulation.Fixed.SimulationInputRequest;
 using FixedSimulationInputValue = ThirdPersonSimulation.Fixed.SimulationInputValue;
 
@@ -41,7 +42,8 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
 
     public sealed class NeutralFixedCharacterSimulationInputAdapter : IUnityFixedCharacterControlSourceRuntime
     {
-        readonly List<FixedSimulationInputValue> m_Values;
+        const string InputPrefix = "input:value:";
+        readonly List<FixedSimulationInputValue> m_Values = new List<FixedSimulationInputValue>();
         readonly ProgramId m_ProgramId;
         readonly ProgramHash m_ProgramHash;
         bool m_Active;
@@ -56,7 +58,17 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
                 throw new ArgumentException("Neutral Fixed Character input requires a FixedQ32.32 Program.", nameof(program));
             m_ProgramId = program.Manifest.ProgramId;
             m_ProgramHash = program.ProgramHash;
-            m_Values = FixedProgramNeutralInputValues.Create(program);
+            for (int i = 0; i < program.CatalogEntries.Count; i++)
+            {
+                ProgramCatalogEntry entry = program.CatalogEntries[i];
+                if (entry.Kind != ProgramCatalogEntryKind.InputValue)
+                    continue;
+                if (!entry.Identity.StartsWith(InputPrefix, StringComparison.Ordinal))
+                    throw new InvalidOperationException($"Fixed Program input catalog identity '{entry.Identity}' is invalid.");
+                string inputId = entry.Identity.Substring(InputPrefix.Length);
+                m_Values.Add(CreateNeutralValue(program, entry, inputId));
+            }
+            m_Values.Sort((left, right) => string.CompareOrdinal(left.InputId, right.InputId));
             SourceIdentity = $"NeutralProgramInputs/FixedQ32.32/{program.ProgramHash}";
         }
 
@@ -134,6 +146,40 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
             Deactivate();
             m_Disposed = true;
             m_Values.Clear();
+        }
+
+        static FixedSimulationInputValue CreateNeutralValue(
+            FixedCharacterSimulationProgram program,
+            ProgramCatalogEntry entry,
+            string inputId)
+        {
+            ProgramCatalogField typeField = null;
+            for (int i = 0; i < entry.Fields.Count; i++)
+            {
+                if (string.Equals(entry.Fields[i].Name, "ValueType", StringComparison.Ordinal))
+                {
+                    typeField = entry.Fields[i];
+                    break;
+                }
+            }
+            if (typeField == null || typeField.Kind != ProgramCatalogFieldKind.Constant)
+                throw new InvalidOperationException($"Fixed Program input '{inputId}' has no ValueType field.");
+            FixedProgramConstant type = program.Constants[typeField.ConstantIndex];
+            if (type.Kind != ThirdPersonSimulation.Fixed.ProgramConstantKind.Int32)
+                throw new InvalidOperationException($"Fixed Program input '{inputId}' ValueType is not Int32.");
+            var kind = (ProgramInputValueKind)type.Int32;
+            return kind switch
+            {
+                ProgramInputValueKind.Boolean => FixedSimulationInputValue.FromBoolean(inputId, false),
+                ProgramInputValueKind.Scalar => FixedSimulationInputValue.FromScalar(inputId, FixedScalar.Zero),
+                ProgramInputValueKind.Vector2 => FixedSimulationInputValue.FromVector2(inputId, FixedVector2.Zero),
+                ProgramInputValueKind.Vector3 => FixedSimulationInputValue.FromVector3(inputId, FixedVector3.Zero),
+                ProgramInputValueKind.Yaw => FixedSimulationInputValue.FromYaw(inputId, FixedYaw.Zero),
+                ProgramInputValueKind.ActionTargetSnapshot => FixedSimulationInputValue.FromActionTargetSnapshot(
+                    inputId,
+                    ThirdPersonSimulation.Fixed.SimulationActionTargetSnapshot.None),
+                _ => throw new InvalidOperationException($"Fixed Program input '{inputId}' has unsupported kind '{kind}'.")
+            };
         }
 
         void RequireAlive()

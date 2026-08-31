@@ -6,6 +6,7 @@
     <ImplicitUsings>enable</ImplicitUsings>
   </PropertyGroup>
   <ItemGroup>
+    <ProjectReference Include="../../Shared/Development/Gm.Client/ThirdPerson.Development.Gm.Client.csproj" />
     <ProjectReference Include="../../Shared/Development/RollbackGm.Server/ThirdPerson.Development.RollbackGm.Server.csproj" />
   </ItemGroup>
 </Project>

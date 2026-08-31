@@ -1,13 +1,10 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <TargetFramework>net8.0</TargetFramework>
-    <AssemblyName>ThirdPerson.Development.Gm.Client</AssemblyName>
-    <RootNamespace>ThirdPerson.Development.Gm</RootNamespace>
+    <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
-    <Nullable>disable</Nullable>
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="../Gm.Contracts/ThirdPerson.Development.Gm.Contracts.csproj" />
-    <ProjectReference Include="../Gm.Http.Transport/ThirdPerson.Development.Gm.Http.Transport.csproj" />
   </ItemGroup>
 </Project>

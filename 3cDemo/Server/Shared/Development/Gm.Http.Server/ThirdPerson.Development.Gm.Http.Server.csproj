@@ -7,5 +7,6 @@
   <ItemGroup>
     <FrameworkReference Include="Microsoft.AspNetCore.App" />
     <ProjectReference Include="../Gm.Contracts/ThirdPerson.Development.Gm.Contracts.csproj" />
+    <ProjectReference Include="../Gm.Http.Transport/ThirdPerson.Development.Gm.Http.Transport.csproj" />
   </ItemGroup>
 </Project>

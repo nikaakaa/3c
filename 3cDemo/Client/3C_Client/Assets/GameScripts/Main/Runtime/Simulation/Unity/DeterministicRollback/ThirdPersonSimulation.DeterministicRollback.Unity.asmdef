@@ -2,9 +2,6 @@
     "name": "ThirdPersonSimulation.DeterministicRollback.Unity",
     "rootNamespace": "ThirdPersonCharacter.Pipeline.Simulation.DeterministicRollback",
     "references": [
-        "ThirdPerson.Development.Gm.Contracts",
-        "ThirdPerson.Development.Gm.Client",
-        "ThirdPerson.Development.Gm.Unity",
         "ThirdPersonSimulation.Core",
         "ThirdPersonSimulation.Fixed",
         "ThirdPersonSimulation.Unity",

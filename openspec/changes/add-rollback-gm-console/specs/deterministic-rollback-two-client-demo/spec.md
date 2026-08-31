@@ -18,7 +18,7 @@ Demo MUST保留两个独立 Unity Client 与一个纯.NET Dedicated Relay Server
 
 #### Scenario: 工具访问四个只读命令
 
-- **WHEN** 任一客户端控制台提交正式查询
+- **WHEN** 作者在独立 GM 进程的文本控制台提交正式查询
 - **THEN** 独立 GM MUST通过 Relay 查询桥获得该会话事实
 - **AND** MUST不修改移动、Offensive 延迟、最大预测领先量或表现链路
 

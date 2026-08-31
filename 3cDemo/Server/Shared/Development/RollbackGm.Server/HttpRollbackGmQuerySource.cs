@@ -4,10 +4,10 @@ namespace ThirdPerson.Development.Gm.Rollback;
 
 public sealed class HttpRollbackGmQuerySource : IRollbackGmQuerySource
 {
-    readonly GmHttpQueryClient m_Client;
+    readonly GmHttpClient m_Client;
     readonly RollbackRelayQueryIdentity m_Target;
 
-    public HttpRollbackGmQuerySource(GmHttpQueryClient client, RollbackRelayQueryIdentity target)
+    public HttpRollbackGmQuerySource(GmHttpClient client, RollbackRelayQueryIdentity target)
     {
         m_Client = client;
         m_Target = target;
@@ -30,7 +30,7 @@ public sealed class HttpRollbackGmQuerySource : IRollbackGmQuerySource
                 throw new GmCommandFailureException(GmResultCode.TargetEnded, "Relay 查询响应属于其它运行实例。");
             return result.Value;
         }
-        catch (GmRemoteQueryException exception)
+        catch (GmHttpResponseException exception)
         {
             throw new GmCommandFailureException(
                 exception.Status == HttpStatusCode.Conflict ? GmResultCode.TargetEnded : GmResultCode.TargetUnavailable,

@@ -2,7 +2,7 @@
 
 ### Requirement: Rollback GM 控制台必须形成服务端执行闭环
 
-控制台 MUST 将命令名与参数提交给明确连接的 GM 服务，由服务端最终校验、分发和执行并返回结构化结果。客户端 MUST 只拥有输入、连接和结果展示，不得自行授权、直接执行受控命令或在服务不可用时本地 fallback。本轮 MUST 只装配到 Rollback Development 产品。
+文本控制台 MUST在额外 GM 进程的可见终端窗口运行，通过统一 GM HTTP API 提交命令，由服务端校验、分发、执行并返回结构化结果。前端 MUST只负责输入、连接和结果展示，不得自行授权、直接执行处理器或本地 fallback。本轮 MUST只作为 Rollback Development 产品的独立工具，Unity Player MUST不安装游戏内控制台、GM 专用输入焦点或工具凭据。
 
 #### Scenario: 查询会话
 
@@ -52,13 +52,13 @@
 
 ### Requirement: GM 查询必须保持 Relay 模型和产品边界
 
-查询 MUST 通过独立 GM 模块和窄只读端口执行，不进入 canonical input、rollback history、replay/hash 或角色 Pipeline。GM 模块不得让 Relay 加载 Program、KCC、Unity、Fantasy 或 Presentation。服务宿主选定后 MUST 先补齐对应产品、配置与拓扑合同，不得在未声明的 executable、目录或 Run 脚本中临时增加服务。
+查询 MUST 通过独立 GM 服务和 Relay 窄只读查询桥执行，不进入 canonical input、rollback history、replay/hash 或角色 Pipeline。GM 服务不得让 Relay 加载 Program、KCC、Unity、Fantasy、Presentation 或 GM 命令处理器。产品 MUST声明独立 GM executable、工具 manifest 及四进程 topology；新增的产品启动辅助脚本 MUST随 GM artifact 发布并进入 exact closure，不得运行未校验的替代脚本。
 
-#### Scenario: 在现有服务端进程内安装 GM 模块
+#### Scenario: 安装独立 GM 服务
 
-- **WHEN** 用户选择同进程独立模块方案
-- **THEN** 产品 MUST 明确声明模块、依赖与工具 endpoint，并保持 Relay Runtime 的非 Gameplay 职责
-- **AND** MUST 不因 GM 位于服务端就将其声明为角色模拟权威
+- **WHEN** Build 发布 GM 服务、Relay 和 Player
+- **THEN** GM MUST通过单独认证的 HTTP 查询入口获取 Relay 运行线程生成的快照
+- **AND** MUST保持 Relay Runtime 的非 Gameplay 职责，不安装同进程 GM 处理器作为另一条执行路径
 
 ### Requirement: 首版不得捆绑后续业务采样和诊断实现
 

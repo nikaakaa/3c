@@ -2,7 +2,6 @@
     "name": "ThirdPersonGameplay.Lab.Editor",
     "rootNamespace": "ThirdPersonGameplay.Editor.Lab",
     "references": [
-        "ThirdPerson.Development.Gm.Unity",
         "ThirdPersonClient.Editor",
         "ThirdPersonClient.Runtime",
         "ThirdPersonSimulation.Core",

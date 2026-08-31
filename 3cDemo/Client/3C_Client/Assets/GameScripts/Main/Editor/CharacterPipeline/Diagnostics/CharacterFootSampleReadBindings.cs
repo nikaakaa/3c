@@ -16,6 +16,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             InputEvents = CharacterFootEventColumns.Input.Bind(indices);
             Pelvis = CharacterFootPelvisColumns.Schema.Bind(indices);
             Solver = CharacterFootSolverColumns.Schema.Bind(indices);
+            Identity = CharacterFootIdentityColumns.Schema.Bind(indices);
+            RootLanding = CharacterFootRootLandingColumns.Schema.Bind(indices);
+            Action = CharacterFootActionColumns.Schema.Bind(indices);
             MotionCore = CharacterFootMotionCoreColumns.Schema.Bind(indices);
             Goal = CharacterFootGoalColumns.Schema.Bind(indices);
             PathContinuity = CharacterFootPathContinuityColumns.Schema.Bind(indices);
@@ -57,6 +60,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         internal CharacterFootCsvReader<CharacterFootLifecycleSample> Lifecycle { get; }
         internal CharacterFootCsvReader<CharacterFootPathContinuitySample> PathContinuity { get; }
         internal CharacterFootCsvReader<CharacterFootMotionCoreSample> MotionCore { get; }
+        internal CharacterFootCsvReader<CharacterFootIdentitySample> Identity { get; }
+        internal CharacterFootCsvReader<CharacterFootRootLandingSample> RootLanding { get; }
+        internal CharacterFootCsvReader<CharacterFootActionSample> Action { get; }
         internal CharacterFootCsvReader<CharacterFootGoalSample> Goal { get; }
     }
 }

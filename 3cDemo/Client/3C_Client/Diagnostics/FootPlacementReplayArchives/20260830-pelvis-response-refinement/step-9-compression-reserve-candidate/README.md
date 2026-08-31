@@ -6,6 +6,8 @@
 
 ZIP包含原包全部12个文件，每一项解压流的SHA256均与原文件比较相等；Proof为正式原件逐字节副本。原包未删除、未覆盖。官方Proof matched=false仅含7个产品身份字段差异，1044完整输入/Body帧独立逐值一致，不能改写为官方matched。
 
+Git会把可读Proof JSON的CRLF规范化为LF；已逐字确认只有换行差异。为长期保留正式原始字节，另存replay-proof-raw.zip，解压出的replay-proof.json SHA256与原件完全相同。两种文本哈希和原字节ZIP哈希均在manifest中分列，不改官方Proof内容或比较结论。
+
 a0aea66只恢复四个候选资产到20毫米及匹配产品。并行任务随后修改CharacterFootGroundEnvelope.cs，本任务没有覆盖它、没有混跑恢复验证。恢复Replay尚未执行，不把源码恢复等同动态恢复。
 
 完整分析见 openspec/changes/refine-character-pelvis-response/experiments/20260831-pelvis-compression-reserve.md。

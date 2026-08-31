@@ -1,0 +1,146 @@
+{
+  "kind": "independent-same-input-proof-audit/1",
+  "baseline": "D:\\Unity_Project_1\\3C\\3cDemo\\Client\\3C_Client\\Temp\\CharacterInputReplayProofs\\v4\\43357ff3cd384e5cba75d2c31175b116\\20260831-112721-595-e621459f07d94d57aae4d8765464d721.json",
+  "candidate": "D:/Unity_Project_1/3C/3cDemo/Client/3C_Client/Temp/CharacterInputReplayProofs/v4/43357ff3cd384e5cba75d2c31175b116/20260831-132430-844-d6edac678dd743a5939b5c74a93b0e4e.json",
+  "fields": {
+    "trace_id": {
+      "equal": true,
+      "baseline": "43357ff3cd384e5cba75d2c31175b116",
+      "candidate": "43357ff3cd384e5cba75d2c31175b116"
+    },
+    "trace_content_hash": {
+      "equal": true,
+      "baseline": "ebca979bc81ea309495ebfabff6a7ab5d3bdf368d86c42092aebb2add4286647",
+      "candidate": "ebca979bc81ea309495ebfabff6a7ab5d3bdf368d86c42092aebb2add4286647"
+    },
+    "start_body_hash": {
+      "equal": true,
+      "baseline": "f8f969f5f578a13088473352ec28c1c7e94ecb7fbdb9e97378a2adc880631474",
+      "candidate": "f8f969f5f578a13088473352ec28c1c7e94ecb7fbdb9e97378a2adc880631474"
+    },
+    "replay_start_tick": {
+      "equal": true,
+      "baseline": 1,
+      "candidate": 1
+    },
+    "frame_count": {
+      "equal": true,
+      "baseline": 1044,
+      "candidate": 1044
+    },
+    "tick_drive_mode": {
+      "equal": true,
+      "baseline": "one-fixed-tick-per-presentation-frame",
+      "candidate": "one-fixed-tick-per-presentation-frame"
+    },
+    "presentation_clock_mode": {
+      "equal": true,
+      "baseline": "logic-locked",
+      "candidate": "logic-locked"
+    },
+    "input_sequence_hash": {
+      "equal": true,
+      "baseline": "d9fc6dde13574de963eb956e16b23de546906466f20f82f0db286530cb2cbbcb",
+      "candidate": "d9fc6dde13574de963eb956e16b23de546906466f20f82f0db286530cb2cbbcb"
+    },
+    "body_trajectory_hash": {
+      "equal": true,
+      "baseline": "ac161c8e127fd5ed53f62ad472026e9161a2449e9bc476ecb1536ee8b8126a2c",
+      "candidate": "ac161c8e127fd5ed53f62ad472026e9161a2449e9bc476ecb1536ee8b8126a2c"
+    }
+  },
+  "frameCount": 1044,
+  "divergentFrameCount": 0,
+  "firstDifferences": [],
+  "runtimeIdentityDifferences": [
+    {
+      "field": "program_hash",
+      "baseline": "536ae60b262b10d886f87dd67027dd88b31f7cf85f68be408316783a2376c11e",
+      "candidate": "811fe501c8b3e52c5af49f5aa0943d75e8a961122564fa3288e1538ff5cebd9e"
+    },
+    {
+      "field": "source_revision",
+      "baseline": "780ed7ec33f8caadf613d3e27e3c2ca82bbbdc9554875520ad9b708d157f5c99",
+      "candidate": "5f8405d1afb1dec4f7100d35553afed863d46d3d2f4a089c13aef377b07d3826"
+    },
+    {
+      "field": "semantic_hash",
+      "baseline": "797ede990f00f8a0b1018713e74cf50910a0f5e01c51c4b709edaaf534431229",
+      "candidate": "bb91000572639874ae963dc09a1e0ec02f4952b056b8af9084f7c457a4018a5d"
+    },
+    {
+      "field": "projection_revision",
+      "baseline": "557b76d00fb2902d2811095065fd64066014f31232bb744579573b9bfe8cddef",
+      "candidate": "fb865cfa4c73bec9f68c67f2dd230d10cef961df8456c0521bc0c7421e6883c0"
+    },
+    {
+      "field": "projection_source_revision",
+      "baseline": "780ed7ec33f8caadf613d3e27e3c2ca82bbbdc9554875520ad9b708d157f5c99",
+      "candidate": "5f8405d1afb1dec4f7100d35553afed863d46d3d2f4a089c13aef377b07d3826"
+    },
+    {
+      "field": "projection_semantic_hash",
+      "baseline": "797ede990f00f8a0b1018713e74cf50910a0f5e01c51c4b709edaaf534431229",
+      "candidate": "bb91000572639874ae963dc09a1e0ec02f4952b056b8af9084f7c457a4018a5d"
+    },
+    {
+      "field": "projection_contract_hash",
+      "baseline": "e86aef93e3ce3d9576fc79cc6ec686b87b086a18a80b25902d99c776fc6aef3f",
+      "candidate": "9ea260ee3957baf32f6f854643cbe5c316c635ccc102efb9c63f7bc25c094ea3"
+    }
+  ],
+  "officialComparison": {
+    "baseline_available": true,
+    "matched": false,
+    "baseline_path": "D:\\Unity_Project_1\\3C\\3cDemo\\Client\\3C_Client\\Temp\\CharacterInputReplayProofs\\v4\\43357ff3cd384e5cba75d2c31175b116\\20260831-112721-595-e621459f07d94d57aae4d8765464d721.json",
+    "compared_frame_count": 1044,
+    "aggregate_mismatches": [
+      {
+        "field": "program_hash",
+        "baseline": "536ae60b262b10d886f87dd67027dd88b31f7cf85f68be408316783a2376c11e",
+        "candidate": "811fe501c8b3e52c5af49f5aa0943d75e8a961122564fa3288e1538ff5cebd9e"
+      },
+      {
+        "field": "source_revision",
+        "baseline": "780ed7ec33f8caadf613d3e27e3c2ca82bbbdc9554875520ad9b708d157f5c99",
+        "candidate": "5f8405d1afb1dec4f7100d35553afed863d46d3d2f4a089c13aef377b07d3826"
+      },
+      {
+        "field": "semantic_hash",
+        "baseline": "797ede990f00f8a0b1018713e74cf50910a0f5e01c51c4b709edaaf534431229",
+        "candidate": "bb91000572639874ae963dc09a1e0ec02f4952b056b8af9084f7c457a4018a5d"
+      },
+      {
+        "field": "projection_revision",
+        "baseline": "557b76d00fb2902d2811095065fd64066014f31232bb744579573b9bfe8cddef",
+        "candidate": "fb865cfa4c73bec9f68c67f2dd230d10cef961df8456c0521bc0c7421e6883c0"
+      },
+      {
+        "field": "projection_source_revision",
+        "baseline": "780ed7ec33f8caadf613d3e27e3c2ca82bbbdc9554875520ad9b708d157f5c99",
+        "candidate": "5f8405d1afb1dec4f7100d35553afed863d46d3d2f4a089c13aef377b07d3826"
+      },
+      {
+        "field": "projection_semantic_hash",
+        "baseline": "797ede990f00f8a0b1018713e74cf50910a0f5e01c51c4b709edaaf534431229",
+        "candidate": "bb91000572639874ae963dc09a1e0ec02f4952b056b8af9084f7c457a4018a5d"
+      },
+      {
+        "field": "projection_contract_hash",
+        "baseline": "e86aef93e3ce3d9576fc79cc6ec686b87b086a18a80b25902d99c776fc6aef3f",
+        "candidate": "9ea260ee3957baf32f6f854643cbe5c316c635ccc102efb9c63f7bc25c094ea3"
+      }
+    ],
+    "divergent_frame_count": 0,
+    "first_divergent_relative_frame": -1,
+    "first_frame_mismatches": []
+  },
+  "footSample": {
+    "sample_identity": "d30ebd7be545423dbc29995a645beb92",
+    "samples_path": "D:\\Unity_Project_1\\3C\\3cDemo\\Client\\3C_Client\\Diagnostics\\FootPlacementRuns\\20260831-132307-889-d30ebd7be545423dbc29995a645beb92\\samples.csv",
+    "facts_path": "D:\\Unity_Project_1\\3C\\3cDemo\\Client\\3C_Client\\Diagnostics\\FootPlacementRuns\\20260831-132307-889-d30ebd7be545423dbc29995a645beb92\\diagnoses\\analysis.json",
+    "samples_sha256": "81d1708ca47202a2ed875841c26366d71a6b05cfcaa0ef285da9859341b0ab83",
+    "sampling_relative_frame_count": 1043
+  },
+  "proofFileSha256": "1eab08f5aedafc7ea1eca6e80275b4353080bd6746aa718ca7087d77450cf199"
+}

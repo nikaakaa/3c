@@ -138,7 +138,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         internal ActionPresentationSamplingFrameTransaction
             SamplingTransaction { get; private set; }
         internal AnimationSlotMutationLease SlotLease { get; private set; }
-        internal PosePlanFrameLease PoseLease { get; private set; }
+        internal CharacterPoseProgramFrameLease PoseLease { get; private set; }
         internal MotionMatchingFrameMutationLease MotionMatchingLease
         {
             get;
@@ -182,7 +182,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             CharacterActionPlaybackFrameTransaction actionTransaction,
             ActionPresentationSamplingFrameTransaction samplingTransaction,
             AnimationSlotMutationLease slotLease,
-            PosePlanFrameLease poseLease,
+            CharacterPoseProgramFrameLease poseLease,
             MotionMatchingFrameMutationLease motionMatchingLease,
             bool hasMotionMatchingLease)
         {
@@ -224,15 +224,19 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             Closed = false;
         }
 
-        internal void BindCompletion(ulong completionIdentity)
+        internal void BindCompletion(
+            in CharacterPoseFrameLineage completedLineage)
         {
             RequirePhase(AnimationPresentationFramePhase.Prepare);
-            if (Lineage.CompletionIdentity != 0 || completionIdentity == 0)
+            if (Lineage.CompletionIdentity != 0 ||
+                !completedLineage.IsValid ||
+                Lineage.WithCompletion(completedLineage.CompletionIdentity) !=
+                completedLineage)
             {
                 throw new InvalidOperationException(
                     "Character Pose frame completion identity is invalid.");
             }
-            Lineage = Lineage.WithCompletion(completionIdentity);
+            Lineage = completedLineage;
         }
 
         internal void BeginPrepare()

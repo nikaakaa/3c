@@ -151,7 +151,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     "residualAfterDecayMeters"),
                 context.Target(
                     "releasing-to-swing-envelope-violation",
-                    "Releasing完成进入Swing的同帧脚底是否仍低于真实Envelope",
+                    "Releasing完成进入Swing的同帧脚底是否仍低于正式CurrentSupport下限",
                     new[] { "PathContinuity" },
                     new[] { "safetyFloorClearanceAfterMeters<-0.0001" },
                     releasingToSwing,

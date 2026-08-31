@@ -191,7 +191,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             "FootMotionSourceToeX,FootMotionSourceToeY,FootMotionSourceToeZ," +
             "FootMotionBaselineSampleX,FootMotionBaselineSampleY,FootMotionBaselineSampleZ,FootMotionBaselineSampleAlongUp," +
             "FootMotionEnvelopeSampleX,FootMotionEnvelopeSampleY,FootMotionEnvelopeSampleZ,FootMotionEnvelopeSampleAlongUp," +
-            "FootMotionFormalFootHeight,FootMotionRawFormalTargetHeight,FootMotionEnvelopeMinimumCorrection,FootMotionBuilderSelectedCorrection," +
+            "FootMotionFormalFootHeight,FootMotionRawFormalTargetHeight,FootMotionSupportMinimumCorrection,FootMotionBuilderSelectedCorrection," +
+            "FootMotionSwingHeightReferenceAvailable,FootMotionSwingHeightReferenceFrameSequence,FootMotionSwingHeightReferenceCompletionIdentity,FootMotionSwingHeightReferenceSide,FootMotionSwingHeightReferencePositionX,FootMotionSwingHeightReferencePositionY,FootMotionSwingHeightReferencePositionZ,FootMotionSwingHeightReferenceNormalX,FootMotionSwingHeightReferenceNormalY,FootMotionSwingHeightReferenceNormalZ,FootMotionSwingHeightReferenceSurfaceIdentity,FootMotionSwingHeightReferenceWorldRevision,FootMotionSwingHeightReferenceKind,FootMotionSwingHeightReferencePositionSource,FootMotionSwingHeightReferencePositionFrameSequence,FootMotionSwingHeightReferencePositionCompletionIdentity,FootMotionSwingHeightReferencePositionEventIdentity,FootMotionSwingHeightReferencePositionPathIdentity,FootMotionSwingHeightReferenceNormalSource,FootMotionSwingHeightReferenceNormalFrameSequence,FootMotionSwingHeightReferenceNormalCompletionIdentity,FootMotionSwingHeightReferenceNormalEventIdentity," +
+            "FootMotionPreviousSwingHeightReferenceAvailable,FootMotionPreviousSwingHeightReferenceFrameSequence,FootMotionPreviousSwingHeightReferenceCompletionIdentity,FootMotionPreviousSwingHeightReferenceSide,FootMotionPreviousSwingHeightReferencePositionX,FootMotionPreviousSwingHeightReferencePositionY,FootMotionPreviousSwingHeightReferencePositionZ,FootMotionPreviousSwingHeightReferenceNormalX,FootMotionPreviousSwingHeightReferenceNormalY,FootMotionPreviousSwingHeightReferenceNormalZ,FootMotionPreviousSwingHeightReferenceSurfaceIdentity,FootMotionPreviousSwingHeightReferenceWorldRevision,FootMotionPreviousSwingHeightReferenceKind,FootMotionPreviousSwingHeightReferencePositionSource,FootMotionPreviousSwingHeightReferencePositionFrameSequence,FootMotionPreviousSwingHeightReferencePositionCompletionIdentity,FootMotionPreviousSwingHeightReferencePositionEventIdentity,FootMotionPreviousSwingHeightReferencePositionPathIdentity,FootMotionPreviousSwingHeightReferenceNormalSource,FootMotionPreviousSwingHeightReferenceNormalFrameSequence,FootMotionPreviousSwingHeightReferenceNormalCompletionIdentity,FootMotionPreviousSwingHeightReferenceNormalEventIdentity," +
             "FootMotionBuilderSwingTargetAvailable,FootMotionBuilderSwingTargetCorrectionX,FootMotionBuilderSwingTargetCorrectionY,FootMotionBuilderSwingTargetCorrectionZ," +
             "FootMotionSwingPathHorizontalAxisState,FootMotionActualFootHorizontalDistanceMeters,FootMotionBaselineHorizontalDistanceMeters," +
             "FootMotionEnvelopeHorizontalDistanceMeters,FootMotionActualMinusEnvelopeHorizontalDistanceMeters," +
@@ -2029,8 +2031,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             Add(row, foot.SourceToePosition);
             Add(row, motion.BaselineSample);
             Vector3 motionUp =
-                motion.TargetHeightComponentUp.sqrMagnitude > 0.000001f
-                ? motion.TargetHeightComponentUp.normalized
+                motion.InterpolationComponentUp.sqrMagnitude > 0.000001f
+                ? motion.InterpolationComponentUp.normalized
                 : default;
             Vector3 groundPathUp = ground.ComponentUp.sqrMagnitude > 0.000001f
                 ? ground.ComponentUp.normalized
@@ -2049,13 +2051,14 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             float motionFormalFootHeight = hasInputObservedStep
                 ? inputObservedStep.FootHeight
                 : 0f;
-            float rawFormalTargetHeight =
-                envelopeSampleAlongUp + motionFormalFootHeight;
-            float envelopeMinimumCorrection =
-                envelopeSampleAlongUp - originalSoleAlongUp;
-            float builderSelectedCorrection = Mathf.Max(
-                0f,
-                rawFormalTargetHeight - originalSoleAlongUp);
+            float rawFormalTargetHeight = motion.FormalTargetHeightAlongUp;
+            float supportMinimumCorrection = motion.SwingHeightReference.Available
+                ? Vector3.Dot(motion.SwingHeightReference.Position, motionUp) -
+                  originalSoleAlongUp
+                : 0f;
+            float builderSelectedCorrection = motion.SwingHeightReference.Available
+                ? Mathf.Max(0f, rawFormalTargetHeight - originalSoleAlongUp)
+                : 0f;
             bool builderSwingTargetAvailable =
                 motion.PathContinuityEvaluated &&
                 motion.PathAvailableAfter &&
@@ -2068,8 +2071,10 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             Add(row, envelopeSampleAlongUp);
             Add(row, motionFormalFootHeight);
             Add(row, rawFormalTargetHeight);
-            Add(row, envelopeMinimumCorrection);
+            Add(row, supportMinimumCorrection);
             Add(row, builderSelectedCorrection);
+            AddSupportTarget(row, motion.SwingHeightReference);
+            AddSupportTarget(row, motion.PreviousSwingHeightReference);
             Add(row, builderSwingTargetAvailable);
             Add(row, builderSwingTargetCorrection);
             CharacterFootActualEnvelopeIntersectionFact actualEnvelope =

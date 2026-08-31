@@ -107,7 +107,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 ["visibleOutputJump"] = new JObject
                 {
                     ["primaryProbe"] = "Ankle",
-                    ["safetyFloorOwner"] = "GroundPathEnvelope",
+                    ["safetyFloorOwner"] = "CurrentSupport",
                     ["pathRevisionReason"] = "None"
                 }
             };

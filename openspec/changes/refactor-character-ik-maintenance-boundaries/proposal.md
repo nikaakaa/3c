@@ -78,7 +78,7 @@
 | active `consolidate-foot-diagnostic-scoring` | 统一评分与本次统一字段映射不同 | 保留唯一评分Owner、维度、权重、分母、缺失语义和原始历史包 |
 | active `refactor-character-pose-graph-architecture` | 已计划外层Module、Program、Publication与Diagnostics Projector迁移 | 本次仅处理Foot内部和采样映射，不创建第二套外层协调器；后续重构消费本次收口后的合同 |
 
-本轮只更新本提案六份文档，不修改current specs、`project.md`或其它active文件，不把尚未实施的结构设计写成已安装事实。`project.md`与stabilize仍有旧硬Reach保证，已与用户后续决定及当前源码不一致；实施/归档时必须沿唯一合同清除这些过期要求，不能据此恢复硬夹紧。旧“Pelvis读取最终Resolved”的输入阶段表述也须统一替换，防止后归档的delta覆盖当前决定。
+原提案阶段仅更新本提案六份文档。用户现已通过Goal授权串行实施本change与后续Pose Graph重构，具体候选与验证见execution.md；尚未实施或验证的部分仍不写成已安装事实。`project.md`与stabilize仍有旧硬Reach保证，已与用户后续决定及当前源码不一致；实施/归档时必须沿唯一合同清除这些过期要求，不能据此恢复硬夹紧。旧“Pelvis读取最终Resolved”的输入阶段表述也须统一替换，防止后归档的delta覆盖当前决定。
 
 ## Impact
 

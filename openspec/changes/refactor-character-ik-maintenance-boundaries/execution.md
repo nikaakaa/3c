@@ -104,3 +104,13 @@ PredictionMotion、BodyTrajectory及其Tick/Generation/ResetSequence/AuthorityTi
 - Response初始化／分域／Previous／Current／方向／连续历史，以及Foot、Pelvis、Knee、Goal、全部已采Solved/Physical和时序状态均无差异；facts71/Analyzer71/d40、42个Target的规则和统计、coverage与quality保持，61.9不变。
 - Action/reentry/BodyReset零覆盖、窄Landing仅2、未采最终Physical Knee及完全Reset配对未覆盖的限制继续保留。此次只证明历史分型不改变已覆盖行为，不证明后续Solver Reset修正。
 - 测试任务已回Edit/Idle、未暂停、非编译、Console0并归还Unity；下一小步的上一通过提交为514d9b5。
+
+## 第四个闭环：独立修正Solver空历史方向
+
+状态：候选实现及Runtime/Editor编译通过、0错误；正常回放与完全Reset配对尚未验证，任务4不提前勾选。
+
+- 在现有Rig参考姿态`PrepareReferencePose → Prepare → SetToIndexedReferences`中，Vendor已经按原`IKConstraintBend.Initiate`算法生成精确方向后，捕获只读`CharacterFullBodyIkBendReference`。它携带Rig Id/Revision与左右方向，替代原分散的Rig身份字段；初始化合法性只在此处检查。
+- `ResetLegBendState`统一从正式参考记录恢复Vendor方向及原权重，初始化、Reset与清历史调参共用该入口；不重新构造第二个Solver，不新增默认轴、方向估算或Profile配置。
+- 空Stable历史时只用传入的正式参考方向；每帧计算后再写Vendor工作字段。可靠动画的有符号方向运输、Stable/Applied含义、退化投影、历史翻号条件和Bend权重表达式保持。
+- 参考记录不设置任何BendHistory Has标志。没有改变Root清历史的触发范围，也没有把Foot Reset扩大为Solver Reset。未消费的public Prepare入口收回私有，参考准备只从同一Rig入口发生。
+- 已知验证缺口：现有Record只新建Runtime，BodyReset为0；现成MCP没有同一Solver预热→完整Reset→同一完整Pose/Goal输入配对能力。已有Preview Seek会走正式Reset，正在核对其Watch/Trace能否证明完整输入与空历史，未增加测试、反射或第二驱动。正常回放通过也不代表该边界已覆盖。

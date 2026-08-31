@@ -43,7 +43,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         public string currentSupportRejectReason;
         public int currentSupportSurfaceIdentity;
         public bool landingReachAvailable;
-        public bool landingReachGoalClamped;
         public double? heelClearanceMeters;
         public double? toeClearanceMeters;
         public double? soleClearanceMeters;

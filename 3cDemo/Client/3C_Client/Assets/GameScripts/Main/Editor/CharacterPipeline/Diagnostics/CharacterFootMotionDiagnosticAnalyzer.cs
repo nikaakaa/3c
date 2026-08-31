@@ -54,9 +54,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor
 
     internal static class CharacterFootMotionDiagnosticAnalyzer
     {
-        const string Schema = "character-foot-motion-facts/68";
+        const string Schema = "character-foot-motion-facts/69";
         const string AnalyzerId = "character-foot-motion-fact-analyzer";
-        const int AnalyzerVersion = 68;
+        const int AnalyzerVersion = 69;
         const float RuntimeGeometryEpsilon = 0.0001f;
         const float ExpectedCorrectionResponseIncreaseSpeed = 1.8f;
         const float ExpectedCorrectionResponseDecreaseSpeed = 1.5f;
@@ -520,7 +520,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 currentSupportRejectReason = frame.CurrentSupportRejectReason,
                 currentSupportSurfaceIdentity = frame.CurrentSupportTarget.Surface,
                 landingReachAvailable = frame.LandingReachAvailable,
-                landingReachGoalClamped = frame.LandingReachGoalClamped,
                 gapMotion = "Unavailable"
             };
             CharacterFootContactSupportGapAvailability availability =
@@ -3201,22 +3200,20 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                             landingReach.minimumCorrectionMeters,
                         ["landingReachSignedCorrectionAlongUpMeters"] =
                             landingReach.signedCorrectionAlongUpMeters,
-                        ["landingReachPelvisHardMinimumAlongUpMeters"] =
-                            landingReach.pelvisHardReachMinimumAlongUpMeters,
-                        ["landingReachPelvisHardMaximumAlongUpMeters"] =
-                            landingReach.pelvisHardReachMaximumAlongUpMeters,
+                        ["landingReachPelvisObservationMinimumAlongUpMeters"] =
+                            landingReach.pelvisReachObservationMinimumAlongUpMeters,
+                        ["landingReachPelvisObservationMaximumAlongUpMeters"] =
+                            landingReach.pelvisReachObservationMaximumAlongUpMeters,
                         ["landingReachIntersectionMinimumAlongUpMeters"] =
                             landingReach.intersectionMinimumAlongUpMeters,
                         ["landingReachIntersectionMaximumAlongUpMeters"] =
                             landingReach.intersectionMaximumAlongUpMeters,
                         ["landingReachSupportConflictGapMeters"] =
-                            landingReach.pelvisHardReachConflictGapMeters,
+                            landingReach.pelvisReachObservationConflictGapMeters,
                         ["landingReachActualTargetCompressionReserveMeters"] =
                             landingReach.actualTargetCompressionReserveMeters,
                         ["landingReachSolvedCompressionReserveMeters"] =
                             landingReach.solvedCompressionReserveMeters,
-                        ["landingReachRuntimeGoalClampDistanceMeters"] =
-                            landingReach.runtimeGoalClampDistanceMeters
                     },
                     new SortedDictionary<string, bool>(StringComparer.Ordinal)
                     {
@@ -3235,27 +3232,25 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                             landingReach.correctionDirection == "None",
                         ["landingReachPrimarySupportAvailable"] =
                             landingReach.primarySupportAvailable,
-                        ["landingReachPelvisHardReachAvailable"] =
-                            landingReach.pelvisHardReachAvailable,
+                        ["landingReachPelvisReachObservationAvailable"] =
+                            landingReach.pelvisReachObservationEvaluated,
                         ["landingReachSupportIntersectionExists"] =
-                            landingReach.pelvisHardReachIntersectionExists,
+                            landingReach.pelvisReachObservationIntersectionExists,
                         ["landingReachRuntimeEvaluated"] =
                             landingReach.runtimeReachEvaluated,
                         ["landingReachRuntimeAvailable"] =
                             landingReach.runtimeReachAvailable,
-                        ["landingReachRuntimeGoalClamped"] =
-                            landingReach.runtimeGoalClamped,
                         ["landingReachResolvedRequestAvailable"] =
                             landingReach.resolvedReachRequestAvailable,
-                        ["landingReachNoPelvisHardReachLandingOnly"] =
+                        ["landingReachNoPelvisReachObservationLandingOnly"] =
                             landingReach.classification ==
-                            "NoPelvisHardReachLandingOnly",
+                            "NoPelvisReachObservationLandingOnly",
                         ["landingReachSupportIntersection"] =
                             landingReach.classification ==
-                            "PelvisHardReachIntersection",
+                            "PelvisReachObservationIntersection",
                         ["landingReachSupportConflict"] =
                             landingReach.classification ==
-                            "PelvisHardReachConflict",
+                            "PelvisReachObservationConflict",
                         ["landingReachUnavailable"] =
                             landingReach.classification ==
                             "LandingReachUnavailable"
@@ -6385,10 +6380,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     Int("FootMotionLandingReachEvaluated") != 0,
                 LandingReachAvailable =
                     Int("FootMotionLandingReachAvailable") != 0,
-                LandingReachGoalClamped =
-                    Int("FootMotionLandingReachGoalClamped") != 0,
-                LandingReachGoalClampDistance =
-                    Float("FootMotionLandingReachGoalClampDistance"),
                 ContactSurfaceIdentity = Int("FootMotionContactSurfaceIdentity"),
                 ContactNormal = Vector("FootMotionContactPlaneNormal"),
                 PathContinuityEvaluated =
@@ -6907,13 +6898,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     {
                         ComponentUp = Vector("PelvisReachComponentUp"),
                         Status = EnumField<CharacterFootPelvisReachStatus>("PelvisReachStatus"),
-                        Selection = EnumField<CharacterFootPelvisBoundarySelection>("PelvisReachSelection"),
                         IntersectionEvaluated = Int("PelvisReachIntersectionEvaluated") != 0,
                         IntersectionMinimumAlongUp = Float("PelvisReachIntersectionMinimumAlongUp"),
                         IntersectionMaximumAlongUp = Float("PelvisReachIntersectionMaximumAlongUp"),
-                        Available = Int("PelvisReachAvailable") != 0,
-                        MinimumAlongUp = Float("PelvisReachMinimumAlongUp"),
-                        MaximumAlongUp = Float("PelvisReachMaximumAlongUp"),
                         Left = PelvisLeg("PelvisReachLeft"),
                         Right = PelvisLeg("PelvisReachRight")
                     },
@@ -6921,10 +6908,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     {
                         Evaluated = Int("PelvisResponseEvaluated") != 0,
                         Completed = Int("PelvisSpringCompleted") != 0,
-                        UnconstrainedOutput = Float("PelvisSpringUnconstrainedOutput"),
-                        TargetClamped = Int("PelvisHardReachTargetClamped") != 0,
-                        OutputClamped = Int("PelvisHardReachOutputClamped") != 0,
-                        VelocityCleared = Int("PelvisHardReachVelocityCleared") != 0,
+                        IntegratedOutput = Float("PelvisSpringIntegratedOutput"),
                         HadPreviousState = Int("StrideHadPreviousState") != 0,
                         SupportChanged = Int("StrideSupportChanged") != 0,
                         VelocityReset = Int("StrideSpringVelocityReset") != 0,
@@ -7080,11 +7064,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             RequireLegReachFacts(frame);
             frame.PelvisHeightTarget.RequireValid(frame);
             RequirePelvisFacts(frame);
-            if (!float.IsFinite(frame.LandingReachGoalClampDistance) ||
-                frame.LandingReachGoalClampDistance < 0f ||
-                frame.LandingReachGoalClamped !=
-                (frame.LandingReachGoalClampDistance > PositionNoiseFloor) ||
-                frame.LandingReachAvailable &&
+            if (frame.LandingReachAvailable &&
                 !frame.LandingReachEvaluated ||
                 frame.PostTransitionReason == "LandingCompleted" &&
                 (!frame.LandingReachEvaluated ||
@@ -9167,10 +9147,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     $"Foot Motion Pelvis {part} facts are inconsistent Frame={frame.Frame} Side={frame.Side}.");
         }
 
-        static bool PelvisContains(PelvisReachFrame reach, float value, float tolerance) =>
-            reach.Available && value >= reach.MinimumAlongUp - tolerance &&
-            value <= reach.MaximumAlongUp + tolerance;
-
         static void RequirePelvisLeg(PelvisLegFrame leg, Vector3 up, FootFrame frame)
         {
             bool requested = leg.Role != CharacterFootPelvisLegReachRole.None;
@@ -9216,9 +9192,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             RequirePelvisLeg(reach.Right, reach.ComponentUp, frame);
             RequirePelvis(!(reach.Left.PrimarySupport && reach.Right.PrimarySupport), frame, "primary role");
             CharacterFootPelvisReachStatus status = CharacterFootPelvisReachStatus.NotRequested;
-            CharacterFootPelvisBoundarySelection selection = CharacterFootPelvisBoundarySelection.None;
             bool intersectionEvaluated = false;
-            float intersectionMinimum = 0f, intersectionMaximum = 0f, minimum = 0f, maximum = 0f;
+            float intersectionMinimum = 0f, intersectionMaximum = 0f;
             if (reach.Left.Requested || reach.Right.Requested)
             {
                 if (reach.Left.Requested && !reach.Left.Available || reach.Right.Requested && !reach.Right.Available)
@@ -9237,24 +9212,15 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     status = intersectionMinimum <= intersectionMaximum
                         ? CharacterFootPelvisReachStatus.Available : CharacterFootPelvisReachStatus.NoCommonInterval;
                 }
-                PelvisLegFrame primary = reach.Left.PrimarySupport ? reach.Left : reach.Right;
-                if (primary.PrimarySupport && primary.Available)
-                {
-                    selection = CharacterFootPelvisBoundarySelection.PrimarySupport;
-                    minimum = primary.MinimumAlongUp;
-                    maximum = primary.MaximumAlongUp;
-                }
             }
-            RequirePelvis(reach.Status == status && reach.Selection == selection &&
+            RequirePelvis(reach.Status == status &&
                 reach.IntersectionEvaluated == intersectionEvaluated &&
-                reach.Available == (selection != CharacterFootPelvisBoundarySelection.None) &&
                 PelvisClose(reach.IntersectionMinimumAlongUp, intersectionMinimum) &&
-                PelvisClose(reach.IntersectionMaximumAlongUp, intersectionMaximum) &&
-                PelvisClose(reach.MinimumAlongUp, minimum) && PelvisClose(reach.MaximumAlongUp, maximum), frame, "shared boundary");
+                PelvisClose(reach.IntersectionMaximumAlongUp, intersectionMaximum), frame, "reach observation");
             PelvisLegFrame leg = frame.Side == "Left" ? reach.Left : reach.Right;
             bool primaryExpected = frame.StrideState == "Accepted" && frame.StrideSupportSide == frame.Side &&
                 frame.ResolvedPositionWeight > RuntimeGeometryEpsilon;
-            RequirePelvis(leg.PrimarySupport == primaryExpected, frame, "primary execution role");
+            RequirePelvis(leg.PrimarySupport == primaryExpected, frame, "primary observation role");
             if (leg.FootTarget)
                 RequirePelvis(frame.ResolvedLandingReachAvailable &&
                     leg.EventIdentity == frame.ResolvedLandingReachEventIdentity &&
@@ -9278,8 +9244,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 applied <= leg.MaximumAlongUp + RuntimeGeometryEpsilon;
             RequirePelvis(frame.LandingReachEvaluated == leg.FootTarget && frame.LandingReachAvailable == footAvailable,
                 frame, "weighted Foot reach result");
-            RequirePelvis(!frame.LandingReachGoalClamped || leg.FootTarget && leg.PrimarySupport && !footAvailable,
-                frame, "Foot Goal clamp authority");
         }
 
         static void RequirePelvisPosture(FootFrame frame)
@@ -9343,25 +9307,17 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             if (!response.Evaluated)
             {
                 RequirePelvis(response.SameAs(new PelvisResponseFrame()) && !frame.PelvisHeightTarget.Available &&
-                    frame.StrideState != "Releasing" && !reach.Available &&
+                    frame.StrideState != "Releasing" &&
                     frame.StridePelvisDelta.Equals(Vector3.zero) && frame.PelvisWeight == 0f, frame, "unevaluated response");
                 return;
             }
             bool releasing = !frame.PelvisHeightTarget.Available;
             RequirePelvis(releasing
-                ? response.HadPreviousState && !reach.Available &&
+                ? response.HadPreviousState &&
                   frame.StrideState == (response.Completed ? "Rejected" : "Releasing")
                 : !response.Completed, frame, "response execution");
             float preferred = releasing ? 0f : frame.Pelvis.Posture.OffsetAlongUp;
-            float target = preferred, minimum = 0f, maximum = 0f;
-            if (reach.Available)
-            {
-                RequirePelvis(frame.FormalFootPlacementWeight > 0f, frame, "hard reach author weight");
-                minimum = reach.MinimumAlongUp / frame.FormalFootPlacementWeight;
-                maximum = reach.MaximumAlongUp / frame.FormalFootPlacementWeight;
-                RequirePelvis(float.IsFinite(minimum) && float.IsFinite(maximum), frame, "weighted hard interval");
-                target = Mathf.Clamp(target, minimum, maximum);
-            }
+            float target = preferred;
             RequirePelvis(float.IsFinite(response.Frequency) && response.Frequency > 0f &&
                 PelvisClose(response.Input, response.PreviousOutput) &&
                 (response.HadPreviousState || response.PreviousTarget == 0f && response.PreviousOutput == 0f &&
@@ -9390,25 +9346,17 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 output = target + (x + j * frame.DeltaSeconds) * decay;
                 velocity = (inputVelocity - omega * j * frame.DeltaSeconds) * decay;
             }
-            float unconstrained = output;
-            if (reach.Available) output = Mathf.Clamp(output, minimum, maximum);
-            bool outputClamped = Math.Abs(output - unconstrained) > RuntimeGeometryEpsilon;
-            bool velocityCleared = reach.Available &&
-                (output <= minimum && velocity < 0f || output >= maximum && velocity > 0f);
-            if (velocityCleared) velocity = 0f;
+            float integrated = output;
             bool completed = releasing && Math.Abs(output) <= RuntimeGeometryEpsilon &&
-                Math.Abs(velocity) <= RuntimeGeometryEpsilon && (!reach.Available || PelvisContains(reach, 0f, 0f));
+                Math.Abs(velocity) <= RuntimeGeometryEpsilon;
             if (completed) { output = 0f; velocity = 0f; }
-            bool hardTranslation = reach.Available && !PelvisContains(reach, 0f, 0f);
             float visibleTolerance = reach.Left.FootTarget || reach.Right.FootTarget ? RuntimeGeometryEpsilon : 0.005f;
-            float weight = !completed && (hardTranslation || Math.Abs(output) > visibleTolerance)
+            float weight = !completed && Math.Abs(output) > visibleTolerance
                 ? frame.FormalFootPlacementWeight : 0f;
             RequirePelvis(response.Handoff == handoff && response.VelocityReset == reset &&
                 PelvisClose(response.InputVelocity, inputVelocity) && PelvisClose(response.Target, target) &&
-                PelvisClose(response.UnconstrainedOutput, unconstrained) && PelvisClose(response.Output, output) &&
+                PelvisClose(response.IntegratedOutput, integrated) && PelvisClose(response.Output, output) &&
                 PelvisClose(response.Velocity, velocity) && response.Completed == completed &&
-                response.TargetClamped == (Math.Abs(target - preferred) > RuntimeGeometryEpsilon) &&
-                response.OutputClamped == outputClamped && response.VelocityCleared == velocityCleared &&
                 PelvisClose(response.PositionWeight, weight) && PelvisClose(frame.PelvisWeight, weight) &&
                 Vector3.Distance(frame.StridePelvisDelta, reach.ComponentUp * output) <= RuntimeGeometryEpsilon,
                 frame, "single spring response");
@@ -9546,15 +9494,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                      frame.ResolvedLandingReachLegLength - legLength) <=
                  PositionNoiseFloor) &&
                 (!frame.LandingReachEvaluated ||
-                 frame.ResolvedLandingReachAvailable) &&
-                (!frame.LandingReachGoalClamped ||
-                 frame.LandingReachEvaluated &&
-                 !frame.LandingReachAvailable) &&
-                (!frame.Pelvis.Reach.Available ||
-                 float.IsFinite(frame.Pelvis.Reach.MinimumAlongUp) &&
-                 float.IsFinite(frame.Pelvis.Reach.MaximumAlongUp) &&
-                 frame.Pelvis.Reach.MinimumAlongUp <=
-                 frame.Pelvis.Reach.MaximumAlongUp);
+                 frame.ResolvedLandingReachAvailable);
             if (!resolvedReachConsistent)
             {
                 throw new InvalidDataException(
@@ -9904,8 +9844,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 "FootMotionContactOwnership",
                 "FootMotionLandingReachEvaluated",
                 "FootMotionLandingReachAvailable",
-                "FootMotionLandingReachGoalClamped",
-                "FootMotionLandingReachGoalClampDistance",
                 "FootMotionContactPlaneAvailable", "FootMotionContactSurfaceIdentity",
                 "FootMotionContactPlaneNormalX", "FootMotionContactPlaneNormalY", "FootMotionContactPlaneNormalZ",
                 "FootContactPlanePenetrationAvailability",
@@ -10119,13 +10057,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 "PelvisReachComponentUpY",
                 "PelvisReachComponentUpZ",
                 "PelvisReachStatus",
-                "PelvisReachSelection",
                 "PelvisReachIntersectionEvaluated",
                 "PelvisReachIntersectionMinimumAlongUp",
                 "PelvisReachIntersectionMaximumAlongUp",
-                "PelvisReachAvailable",
-                "PelvisReachMinimumAlongUp",
-                "PelvisReachMaximumAlongUp",
                 "PelvisReachLeftRole",
                 "PelvisReachLeftStatus",
                 "PelvisReachLeftEventIdentity",
@@ -10160,10 +10094,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 "PelvisReachRightAvailable",
                 "PelvisResponseEvaluated",
                 "PelvisSpringCompleted",
-                "PelvisSpringUnconstrainedOutput",
-                "PelvisHardReachTargetClamped",
-                "PelvisHardReachOutputClamped",
-                "PelvisHardReachVelocityCleared",
+                "PelvisSpringIntegratedOutput",
                 "StrideHadPreviousState",
                 "StrideSupportChanged",
                 "StrideSpringVelocityReset",
@@ -10845,8 +10776,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             internal float ContactOwnership;
             internal bool LandingReachEvaluated;
             internal bool LandingReachAvailable;
-            internal bool LandingReachGoalClamped;
-            internal float LandingReachGoalClampDistance;
             internal int ContactSurfaceIdentity;
             internal Vector3 ContactNormal;
             internal bool PathContinuityEvaluated;
@@ -11235,13 +11164,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             {
                 componentUp = reach.ComponentUp.Equals(Vector3.zero) ? null : CharacterFootVectorFact.From(reach.ComponentUp),
                 status = reach.Status.ToString(),
-                selection = reach.Selection.ToString(),
                 intersectionEvaluated = reach.IntersectionEvaluated,
                 intersectionMinimumAlongUp = reach.IntersectionEvaluated ? (double?)reach.IntersectionMinimumAlongUp : null,
                 intersectionMaximumAlongUp = reach.IntersectionEvaluated ? (double?)reach.IntersectionMaximumAlongUp : null,
-                available = reach.Available,
-                minimumAlongUp = reach.Available ? (double?)reach.MinimumAlongUp : null,
-                maximumAlongUp = reach.Available ? (double?)reach.MaximumAlongUp : null,
                 left = BuildPelvisLegFact(reach.Left),
                 right = BuildPelvisLegFact(reach.Right)
             };
@@ -11251,10 +11176,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             {
                 evaluated = response.Evaluated,
                 completed = response.Completed,
-                unconstrainedOutput = response.Evaluated ? (double?)response.UnconstrainedOutput : null,
-                targetClamped = response.TargetClamped,
-                outputClamped = response.OutputClamped,
-                velocityCleared = response.VelocityCleared,
+                integratedOutput = response.Evaluated ? (double?)response.IntegratedOutput : null,
                 hadPreviousState = response.HadPreviousState,
                 supportChanged = response.SupportChanged,
                 velocityReset = response.VelocityReset,
@@ -11367,25 +11289,17 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         {
             internal Vector3 ComponentUp;
             internal CharacterFootPelvisReachStatus Status;
-            internal CharacterFootPelvisBoundarySelection Selection;
             internal bool IntersectionEvaluated;
             internal float IntersectionMinimumAlongUp;
             internal float IntersectionMaximumAlongUp;
-            internal bool Available;
-            internal float MinimumAlongUp;
-            internal float MaximumAlongUp;
             internal PelvisLegFrame Left;
             internal PelvisLegFrame Right;
             internal bool SameAs(PelvisReachFrame other) =>
                 ComponentUp.Equals(other.ComponentUp) &&
                 Status == other.Status &&
-                Selection == other.Selection &&
                 IntersectionEvaluated == other.IntersectionEvaluated &&
                 IntersectionMinimumAlongUp == other.IntersectionMinimumAlongUp &&
                 IntersectionMaximumAlongUp == other.IntersectionMaximumAlongUp &&
-                Available == other.Available &&
-                MinimumAlongUp == other.MinimumAlongUp &&
-                MaximumAlongUp == other.MaximumAlongUp &&
                 Left.SameAs(other.Left) &&
                 Right.SameAs(other.Right);
         }
@@ -11394,10 +11308,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         {
             internal bool Evaluated;
             internal bool Completed;
-            internal float UnconstrainedOutput;
-            internal bool TargetClamped;
-            internal bool OutputClamped;
-            internal bool VelocityCleared;
+            internal float IntegratedOutput;
             internal bool HadPreviousState;
             internal bool SupportChanged;
             internal bool VelocityReset;
@@ -11416,10 +11327,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             internal bool SameAs(PelvisResponseFrame other) =>
                 Evaluated == other.Evaluated &&
                 Completed == other.Completed &&
-                UnconstrainedOutput == other.UnconstrainedOutput &&
-                TargetClamped == other.TargetClamped &&
-                OutputClamped == other.OutputClamped &&
-                VelocityCleared == other.VelocityCleared &&
+                IntegratedOutput == other.IntegratedOutput &&
                 HadPreviousState == other.HadPreviousState &&
                 SupportChanged == other.SupportChanged &&
                 VelocityReset == other.VelocityReset &&
@@ -11553,8 +11461,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             public double solvedCompressionReserveMeters;
             public bool runtimeReachEvaluated;
             public bool runtimeReachAvailable;
-            public bool runtimeGoalClamped;
-            public double runtimeGoalClampDistanceMeters;
             public bool resolvedReachRequestAvailable;
             public string resolvedReachEventIdentity;
             public double resolvedReachLegLengthMeters;
@@ -11564,13 +11470,13 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             public string primarySupportLandingEventIdentity;
             public string strideState;
             public string strideSupportSide;
-            public bool pelvisHardReachAvailable;
-            public double pelvisHardReachMinimumAlongUpMeters;
-            public double pelvisHardReachMaximumAlongUpMeters;
-            public bool pelvisHardReachIntersectionExists;
+            public bool pelvisReachObservationEvaluated;
+            public double pelvisReachObservationMinimumAlongUpMeters;
+            public double pelvisReachObservationMaximumAlongUpMeters;
+            public bool pelvisReachObservationIntersectionExists;
             public double intersectionMinimumAlongUpMeters;
             public double intersectionMaximumAlongUpMeters;
-            public double pelvisHardReachConflictGapMeters;
+            public double pelvisReachObservationConflictGapMeters;
 
             internal static LandingReachFact From(FootFrame frame)
             {
@@ -11607,9 +11513,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                         frame.SolvedCompressionReserve,
                     runtimeReachEvaluated = frame.LandingReachEvaluated,
                     runtimeReachAvailable = frame.LandingReachAvailable,
-                    runtimeGoalClamped = frame.LandingReachGoalClamped,
-                    runtimeGoalClampDistanceMeters =
-                        frame.LandingReachGoalClampDistance,
                     resolvedReachRequestAvailable =
                         frame.ResolvedLandingReachAvailable,
                     resolvedReachEventIdentity =
@@ -11627,12 +11530,12 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                             CultureInfo.InvariantCulture),
                     strideState = frame.StrideState,
                     strideSupportSide = frame.StrideSupportSide,
-                    pelvisHardReachAvailable =
-                        frame.Pelvis.Reach.Available,
-                    pelvisHardReachMinimumAlongUpMeters =
-                        frame.Pelvis.Reach.MinimumAlongUp,
-                    pelvisHardReachMaximumAlongUpMeters =
-                        frame.Pelvis.Reach.MaximumAlongUp,
+                    pelvisReachObservationEvaluated =
+                        frame.Pelvis.Reach.IntersectionEvaluated,
+                    pelvisReachObservationMinimumAlongUpMeters =
+                        frame.Pelvis.Reach.IntersectionMinimumAlongUp,
+                    pelvisReachObservationMaximumAlongUpMeters =
+                        frame.Pelvis.Reach.IntersectionMaximumAlongUp,
                     correctionDirection = "Unavailable"
                 };
                 if (!frame.FinalIkLegAvailable)
@@ -11723,29 +11626,29 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     : signedCorrection < 0d
                         ? "Down"
                         : "None";
-                if (!frame.Pelvis.Reach.Available)
+                if (!frame.Pelvis.Reach.IntersectionEvaluated)
                 {
-                    result.classification = "NoPelvisHardReachLandingOnly";
+                    result.classification = "NoPelvisReachObservationLandingOnly";
                     return result;
                 }
                 double intersectionMinimum = Math.Max(
                     minimum,
-                    frame.Pelvis.Reach.MinimumAlongUp);
+                    frame.Pelvis.Reach.IntersectionMinimumAlongUp);
                 double intersectionMaximum = Math.Min(
                     maximum,
-                    frame.Pelvis.Reach.MaximumAlongUp);
+                    frame.Pelvis.Reach.IntersectionMaximumAlongUp);
                 result.intersectionMinimumAlongUpMeters =
                     intersectionMinimum;
                 result.intersectionMaximumAlongUpMeters =
                     intersectionMaximum;
-                result.pelvisHardReachIntersectionExists =
+                result.pelvisReachObservationIntersectionExists =
                     intersectionMinimum <= intersectionMaximum;
-                result.pelvisHardReachConflictGapMeters = Math.Max(
+                result.pelvisReachObservationConflictGapMeters = Math.Max(
                     0d,
                     intersectionMinimum - intersectionMaximum);
-                result.classification = result.pelvisHardReachIntersectionExists
-                    ? "PelvisHardReachIntersection"
-                    : "PelvisHardReachConflict";
+                result.classification = result.pelvisReachObservationIntersectionExists
+                    ? "PelvisReachObservationIntersection"
+                    : "PelvisReachObservationConflict";
                 return result;
             }
         }

@@ -208,7 +208,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             "FootMotionCorrectedAnkleX,FootMotionCorrectedAnkleY,FootMotionCorrectedAnkleZ,FootMotionPositionWeight,FootMotionRotationWeight," +
             "FootMotionConstraintState,FootMotionLockResponse,FootMotionSupportHorizontalError," +
             "FootMotionContactOwnership,FootMotionSupportWeight," +
-            "FootMotionLandingReachEvaluated,FootMotionLandingReachAvailable,FootMotionLandingReachGoalClamped,FootMotionLandingReachGoalClampDistance," +
+            "FootMotionLandingReachEvaluated,FootMotionLandingReachAvailable," +
             "FootMotionSupportContactAnchorX,FootMotionSupportContactAnchorY,FootMotionSupportContactAnchorZ," +
             "FootMotionContactPlaneAvailable,FootMotionContactSurfaceIdentity," +
             "FootMotionContactPlaneNormalX,FootMotionContactPlaneNormalY,FootMotionContactPlaneNormalZ," +
@@ -278,7 +278,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             "CurrentSupportTargetAvailable,CurrentSupportTargetFrameSequence,CurrentSupportTargetCompletionIdentity,CurrentSupportTargetSide,CurrentSupportTargetPositionX,CurrentSupportTargetPositionY,CurrentSupportTargetPositionZ,CurrentSupportTargetNormalX,CurrentSupportTargetNormalY,CurrentSupportTargetNormalZ,CurrentSupportTargetSurfaceIdentity,CurrentSupportTargetWorldRevision,CurrentSupportTargetKind,CurrentSupportTargetPositionSource,CurrentSupportTargetPositionFrameSequence,CurrentSupportTargetPositionCompletionIdentity,CurrentSupportTargetPositionEventIdentity,CurrentSupportTargetPositionPathIdentity,CurrentSupportTargetNormalSource,CurrentSupportTargetNormalFrameSequence,CurrentSupportTargetNormalCompletionIdentity,CurrentSupportTargetNormalEventIdentity," +
             "ResolvedFrameSequence,ResolvedCompletionIdentity,ResolvedRigId,ResolvedRigRevision,ResolvedSide,ResolvedOutcome,ResolvedFinalSoleX,ResolvedFinalSoleY,ResolvedFinalSoleZ,ResolvedEffectiveSoleX,ResolvedEffectiveSoleY,ResolvedEffectiveSoleZ,ResolvedGoalTargetAnkleX,ResolvedGoalTargetAnkleY,ResolvedGoalTargetAnkleZ,ResolvedGoalTargetRotationX,ResolvedGoalTargetRotationY,ResolvedGoalTargetRotationZ,ResolvedGoalTargetRotationW,ResolvedEffectiveAnkleX,ResolvedEffectiveAnkleY,ResolvedEffectiveAnkleZ,ResolvedEffectiveRotationX,ResolvedEffectiveRotationY,ResolvedEffectiveRotationZ,ResolvedEffectiveRotationW,ResolvedEffectiveHeelX,ResolvedEffectiveHeelY,ResolvedEffectiveHeelZ,ResolvedEffectiveToeX,ResolvedEffectiveToeY,ResolvedEffectiveToeZ,ResolvedEffectiveSoleFromContactsX,ResolvedEffectiveSoleFromContactsY,ResolvedEffectiveSoleFromContactsZ,ResolvedSourceSoleForwardX,ResolvedSourceSoleForwardY,ResolvedSourceSoleForwardZ,ResolvedSourceSoleFrameLocalRotationX,ResolvedSourceSoleFrameLocalRotationY,ResolvedSourceSoleFrameLocalRotationZ,ResolvedSourceSoleFrameLocalRotationW,ResolvedGoalTargetCorrectionX,ResolvedGoalTargetCorrectionY,ResolvedGoalTargetCorrectionZ,ResolvedEffectiveSoleCorrectionX,ResolvedEffectiveSoleCorrectionY,ResolvedEffectiveSoleCorrectionZ,ResolvedPositionWeight,ResolvedRotationWeight," +
             "ResolvedSupportTargetAvailable,ResolvedSupportTargetFrameSequence,ResolvedSupportTargetCompletionIdentity,ResolvedSupportTargetSide,ResolvedSupportTargetPositionX,ResolvedSupportTargetPositionY,ResolvedSupportTargetPositionZ,ResolvedSupportTargetNormalX,ResolvedSupportTargetNormalY,ResolvedSupportTargetNormalZ,ResolvedSupportTargetSurfaceIdentity,ResolvedSupportTargetWorldRevision,ResolvedSupportTargetKind,ResolvedSupportTargetPositionSource,ResolvedSupportTargetPositionFrameSequence,ResolvedSupportTargetPositionCompletionIdentity,ResolvedSupportTargetPositionEventIdentity,ResolvedSupportTargetPositionPathIdentity,ResolvedSupportTargetNormalSource,ResolvedSupportTargetNormalFrameSequence,ResolvedSupportTargetNormalCompletionIdentity,ResolvedSupportTargetNormalEventIdentity," +
-            "ResolvedContactAvailable,ResolvedContactEventIdentity,ResolvedContactPointX,ResolvedContactPointY,ResolvedContactPointZ,ResolvedContactOwnership,ResolvedSupportEligibility,ResolvedSupportWeight,ResolvedSupportIntentWeight,ResolvedSupportHorizontalError,ResolvedSupportEventIdentity,ResolvedPelvisReachAvailable,ResolvedPelvisReachEventIdentity,ResolvedPelvisReachPointX,ResolvedPelvisReachPointY,ResolvedPelvisReachPointZ,ResolvedLandingReachAvailable,ResolvedLandingReachEventIdentity,ResolvedLandingReachHipX,ResolvedLandingReachHipY,ResolvedLandingReachHipZ,ResolvedLandingReachTargetAnkleX,ResolvedLandingReachTargetAnkleY,ResolvedLandingReachTargetAnkleZ,ResolvedLandingReachLegLength,ResolvedLandingReachMinimumCompressionReserve," +
+            "ResolvedContactAvailable,ResolvedContactEventIdentity,ResolvedContactPointX,ResolvedContactPointY,ResolvedContactPointZ,ResolvedContactOwnership,ResolvedSupportEligibility,ResolvedSupportWeight,ResolvedSupportIntentWeight,ResolvedSupportHorizontalError,ResolvedSupportEventIdentity,ResolvedResolvedPelvisReachEventIdentity,ResolvedPelvisReachPointX,ResolvedPelvisReachPointY,ResolvedPelvisReachPointZ,ResolvedLandingReachAvailable,ResolvedLandingReachEventIdentity,ResolvedLandingReachHipX,ResolvedLandingReachHipY,ResolvedLandingReachHipZ,ResolvedLandingReachTargetAnkleX,ResolvedLandingReachTargetAnkleY,ResolvedLandingReachTargetAnkleZ,ResolvedLandingReachLegLength,ResolvedLandingReachMinimumCompressionReserve," +
             "FootMotionEncodedGoalAvailable,FootMotionEncodedGoalCorrectionX,FootMotionEncodedGoalCorrectionY,FootMotionEncodedGoalCorrectionZ," +
             "FinalGoalPositionX,FinalGoalPositionY,FinalGoalPositionZ,FinalGoalRotationX,FinalGoalRotationY,FinalGoalRotationZ,FinalGoalRotationW,FinalGoalPositionWeight,FinalGoalRotationWeight,PelvisPositionWeight,PelvisRotationWeight," +
             "StrideState,StrideRejectReason,StrideSupportSide,StrideSwingSide,StrideProgress,StrideSlope," +
@@ -294,10 +294,10 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             "StridePreviousSlope,StrideSpringHandoffReason,StrideSpringVelocityReset," +
             "StridePreviousSpringTarget,StridePreviousSpringOutput,StridePreviousSpringVelocity,StrideSpringInput,StrideSpringInputVelocity,StrideSpringFrequency," +
             "PelvisPosturePreferenceEvaluated,PelvisPosturePreferenceAvailable,PelvisPosturePreferenceHipX,PelvisPosturePreferenceHipY,PelvisPosturePreferenceHipZ,PelvisPosturePreferenceAnimatedAnkleX,PelvisPosturePreferenceAnimatedAnkleY,PelvisPosturePreferenceAnimatedAnkleZ,PelvisPosturePreferenceTargetAnkleX,PelvisPosturePreferenceTargetAnkleY,PelvisPosturePreferenceTargetAnkleZ,PelvisPosturePreferenceLegLength,PelvisPosturePreferenceCompressionReserve,PelvisPosturePreferenceUsableLegLength,PelvisPosturePreferenceMinimumAlongUp,PelvisPosturePreferenceMaximumAlongUp,PelvisPosturePreferenceOffsetAlongUp,PelvisPosturePreferenceTargetAdjusted," +
-            "PelvisReachComponentUpX,PelvisReachComponentUpY,PelvisReachComponentUpZ,PelvisReachStatus,PelvisReachSelection,PelvisReachIntersectionEvaluated,PelvisReachIntersectionMinimumAlongUp,PelvisReachIntersectionMaximumAlongUp,PelvisReachAvailable,PelvisReachMinimumAlongUp,PelvisReachMaximumAlongUp," +
+            "PelvisReachComponentUpX,PelvisReachComponentUpY,PelvisReachComponentUpZ,PelvisReachStatus,PelvisReachIntersectionEvaluated,PelvisReachIntersectionMinimumAlongUp,PelvisReachIntersectionMaximumAlongUp," +
             "PelvisReachLeftRole,PelvisReachLeftStatus,PelvisReachLeftEventIdentity,PelvisReachLeftHipX,PelvisReachLeftHipY,PelvisReachLeftHipZ,PelvisReachLeftTargetAnkleX,PelvisReachLeftTargetAnkleY,PelvisReachLeftTargetAnkleZ,PelvisReachLeftLegLength,PelvisReachLeftMinimumCompressionReserve,PelvisReachLeftUsableLegLength,PelvisReachLeftMinimumAlongUp,PelvisReachLeftMaximumAlongUp,PelvisReachLeftRequested,PelvisReachLeftAvailable," +
             "PelvisReachRightRole,PelvisReachRightStatus,PelvisReachRightEventIdentity,PelvisReachRightHipX,PelvisReachRightHipY,PelvisReachRightHipZ,PelvisReachRightTargetAnkleX,PelvisReachRightTargetAnkleY,PelvisReachRightTargetAnkleZ,PelvisReachRightLegLength,PelvisReachRightMinimumCompressionReserve,PelvisReachRightUsableLegLength,PelvisReachRightMinimumAlongUp,PelvisReachRightMaximumAlongUp,PelvisReachRightRequested,PelvisReachRightAvailable," +
-            "PelvisResponseEvaluated,PelvisSpringCompleted,PelvisSpringUnconstrainedOutput,PelvisHardReachTargetClamped,PelvisHardReachOutputClamped,PelvisHardReachVelocityCleared," +
+            "PelvisResponseEvaluated,PelvisSpringCompleted,PelvisSpringIntegratedOutput," +
             "StrideSpringTarget,StrideSpringOutput,StrideSpringVelocity," +
             "StridePelvisDeltaX,StridePelvisDeltaY,StridePelvisDeltaZ,StridePositionWeight," +
             "FinalPelvisGoalX,FinalPelvisGoalY,FinalPelvisGoalZ," +
@@ -2148,8 +2148,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             Add(row, motion.SupportWeight);
             Add(row, motion.LandingReachEvaluated);
             Add(row, motion.LandingReachAvailable);
-            Add(row, motion.LandingReachGoalClamped);
-            Add(row, motion.LandingReachGoalClampDistance);
             Add(row, motion.SupportContactAnchor);
             Add(row, motion.ContactPlaneAvailable);
             Add(row, motion.ContactSurfaceIdentity);
@@ -2398,13 +2396,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             Add(row, stride.PosturePreferenceTargetAdjusted);
             Add(row, stride.Reach.ComponentUp);
             Add(row, stride.Reach.Status.ToString());
-            Add(row, stride.Reach.Selection.ToString());
             Add(row, stride.Reach.IntersectionEvaluated);
             Add(row, stride.Reach.IntersectionMinimumAlongUp);
             Add(row, stride.Reach.IntersectionMaximumAlongUp);
-            Add(row, stride.Reach.Available);
-            Add(row, stride.Reach.MinimumAlongUp);
-            Add(row, stride.Reach.MaximumAlongUp);
             Add(row, stride.Reach.Left.Role.ToString());
             Add(row, stride.Reach.Left.Status.ToString());
             Add(row, stride.Reach.Left.EventIdentity);
@@ -2431,10 +2425,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             Add(row, stride.Reach.Right.Available);
             Add(row, stride.ResponseEvaluated);
             Add(row, stride.SpringCompleted);
-            Add(row, stride.SpringUnconstrainedOutput);
-            Add(row, stride.HardReachTargetClamped);
-            Add(row, stride.HardReachOutputClamped);
-            Add(row, stride.HardReachVelocityCleared);
+            Add(row, stride.SpringIntegratedOutput);
             Add(row, stride.SpringTarget);
             Add(row, stride.SpringOutput);
             Add(row, stride.SpringVelocity);

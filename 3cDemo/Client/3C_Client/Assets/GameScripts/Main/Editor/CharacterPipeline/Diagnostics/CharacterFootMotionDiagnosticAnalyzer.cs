@@ -52,9 +52,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor
 
     internal static class CharacterFootMotionDiagnosticAnalyzer
     {
-        const string Schema = "character-foot-motion-facts/64";
+        const string Schema = "character-foot-motion-facts/65";
         const string AnalyzerId = "character-foot-motion-fact-analyzer";
-        const int AnalyzerVersion = 64;
+        const int AnalyzerVersion = 65;
         const float RuntimeGeometryEpsilon = 0.0001f;
         const float ExpectedCorrectionResponseIncreaseSpeed = 1.8f;
         const float ExpectedCorrectionResponseDecreaseSpeed = 1.5f;
@@ -9488,6 +9488,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             }
             float requested = frame.PelvisHeightTarget.RequestedOffsetAlongUp;
             float preferred = available ? Mathf.Clamp(requested, minimum, maximum) : requested;
+            preferred = Mathf.Clamp(preferred, Mathf.Min(0f, requested), Mathf.Max(0f, requested));
             RequirePelvis(posture.Available == available && PelvisClose(posture.UsableLegLength, usable) &&
                 PelvisClose(posture.MinimumAlongUp, minimum) && PelvisClose(posture.MaximumAlongUp, maximum) &&
                 PelvisClose(posture.OffsetAlongUp, preferred) &&

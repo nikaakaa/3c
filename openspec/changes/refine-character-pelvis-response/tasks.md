@@ -82,6 +82,6 @@
 
 - [x] 14.1 闭合112611同帧Ankle/Pelvis输入与2F40/97B0候选数学，保存完整选择器与仅MIN控制模型；减少主要突降但平地加深的代价单列，不当真实Replay
 - [x] 14.2 以唯一几何候选替换旧两个Sole最低高度差，新增正式Corin半径0.2米，删除Runtime旧字段/公式并保持Foot、3Hz、资格与硬Reach不变；Runtime规定flags构建27既有警告0错误、52.79秒并shutdown，匹配Diagnostics与真实效果待14.3/14.4
-- [ ] 14.3 由唯一Diagnostics迁移A/X/B/U/r、Correction、Kind/Value、Selection及严格重算，保持37项质量规则，不给旧包补字段
+- [x] 14.3 676fd5c独立迁移唯一Diagnostics为67/36，目标19→28标量、CSV1233列；A/X/B/U/r、Kind/Value与选择完整重算，37质量规则不变，旧112611缺字段明确拒绝；正常restore及完整Editor构建57既有警告0错误、112.67秒并shutdown
 - [ ] 14.4 正式构建加载并同Record Replay，核对几何分支、985退高、420/全包突降、平地下压、Foot和Knee，保存实际取舍
 - [ ] 14.5 按真实结果保留或精确撤销本步及匹配产品/诊断，保留原始和必要恢复证据，不以局部模型收益宣布通过

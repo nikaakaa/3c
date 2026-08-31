@@ -19,6 +19,11 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             PathContinuity = CharacterFootPathContinuityColumns.Schema.Bind(indices);
             Lifecycle = CharacterFootLifecycleColumns.Schema.Bind(indices);
             OutputStages = CharacterFootOutputStagesColumns.Schema.Bind(indices);
+            Timing = CharacterFootTimingColumns.Schema.Bind(indices);
+            PredictionMotion = CharacterFootPredictionMotionColumns.Schema.Bind(indices);
+            PrimarySupport = CharacterFootPrimarySupportColumns.Schema.Bind(indices);
+            RootHierarchy = CharacterFootRootHierarchyColumns.Schema.Bind(indices);
+            BodyCorrection = CharacterFootBodyCorrectionColumns.Schema.Bind(indices);
             GroundPath = CharacterFootGroundPathColumns.Schema.Bind(indices);
             Response = CharacterFootResponseColumns.Schema.Bind(indices);
         }
@@ -35,6 +40,11 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         internal CharacterFootCsvReader<CharacterFootSolverSample> Solver { get; }
         internal CharacterFootCsvReader<CharacterFootResponseSample> Response { get; }
         internal CharacterFootCsvReader<CharacterFootGroundPathSample> GroundPath { get; }
+        internal CharacterFootCsvReader<CharacterFootBodyCorrectionSample> BodyCorrection { get; }
+        internal CharacterFootCsvReader<CharacterFootRootHierarchySample> RootHierarchy { get; }
+        internal CharacterFootCsvReader<CharacterFootPrimarySupportSample> PrimarySupport { get; }
+        internal CharacterFootCsvReader<CharacterFootPredictionMotionSample> PredictionMotion { get; }
+        internal CharacterFootCsvReader<CharacterFootTimingSample> Timing { get; }
         internal CharacterFootCsvReader<CharacterFootOutputStagesSample> OutputStages { get; }
         internal CharacterFootCsvReader<CharacterFootLifecycleSample> Lifecycle { get; }
         internal CharacterFootCsvReader<CharacterFootPathContinuitySample> PathContinuity { get; }

@@ -47,13 +47,13 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             CharacterFootDiagnosisTarget stable = BuildTarget(
                 context,
                 "stable-swing-output-jump",
-                "按规划Path稳定条件分组的普通Swing中，Foot Placement相对原动画新增的最终可见输出是否逐帧跳变；规划分组不代表当前支撑因果",
+                "稳定Path的普通Swing中，Foot Placement相对原动画新增的最终可见输出是否逐帧跳变",
                 "StableSwingOutputJump",
                 "ContinuousAcceptedUnanchoredStableSwingFramePair");
             CharacterFootDiagnosisTarget revision = BuildTarget(
                 context,
                 "path-revision-output-jump",
-                "按规划Path语义修订分组的当帧，Foot Placement相对原动画新增的最终可见输出是否跳变；实际高度与换代来源另按CurrentSupport对账",
+                "Path语义修订当帧，Foot Placement相对原动画新增的最终可见输出是否跳变",
                 "PathRevisionOutputJump",
                 "ContinuousAcceptedUnanchoredPathRevisionSwingFramePair");
             CharacterFootDiagnosisTarget revisionEvidence = BuildTarget(
@@ -134,18 +134,14 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 "CurrentFinalEffectiveCorrectionStep",
                 "PreviousFormalFootHeightDelta",
                 "CurrentFormalFootHeightDelta",
-                "PreviousSupportHeightAlongUpDelta",
-                "CurrentSupportHeightAlongUpDelta",
-                "PreviousRawFormalTargetHeightDelta",
-                "CurrentRawFormalTargetHeightDelta",
                 "PreviousEnvelopeSampleStep",
                 "CurrentEnvelopeSampleStep",
                 "PreviousEnvelopeSampleAlongUpDelta",
                 "CurrentEnvelopeSampleAlongUpDelta",
                 "PreviousOriginalSoleStep",
                 "CurrentOriginalSoleStep",
-                "PreviousPlanningEnvelopeAlongResponseDirectionDelta",
-                "CurrentPlanningEnvelopeAlongResponseDirectionDelta",
+                "PreviousEnvelopeDirectionContribution",
+                "CurrentEnvelopeDirectionContribution",
                 "PreviousOriginalSoleDirectionContribution",
                 "CurrentOriginalSoleDirectionContribution");
             target.scorePolicy = "Informational";
@@ -217,7 +213,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 "ActualFootCrossTrackDistance",
                 "ActualEnvelopeCandidateCount",
                 "ActualEnvelopeHeightSpan",
-                "CurrentSupportHardClamp",
+                "GroundEnvelopeHardClamp",
                 "FootPlacementOutputOffsetStep",
                 "PresentationDeltaSeconds");
             target.scorePolicy = "Informational";
@@ -236,11 +232,11 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 ["CounterfactualState"] = CategoryCounts(
                     events,
                     CounterfactualState),
-                ["CurrentSupportFloorOwner"] = CategoryCounts(
+                ["GroundEnvelopeOwner"] = CategoryCounts(
                     events,
                     value => CharacterFootDiagnosisContext.Evidence(
                         value,
-                        "currentSupportFloorOwner")
+                        "groundEnvelopeOwner")
                         ? "Consumed"
                         : "NotConsumed")
             };
@@ -286,9 +282,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 "EndpointDelta",
                 "LandingPointDelta",
                 "TargetDelta",
-                "PlanningPathRevisionDelta",
-                "CurrentSupportRevisionDelta",
-                "SwingInputAdvanceDelta",
+                "PathRevisionDelta",
+                "PhaseAdvanceDelta",
                 "ObservedSwingTargetDelta",
                 "PresentationDeltaSeconds",
                 "BodyTickSpan");
@@ -619,6 +614,5 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         public bool pathResidualRebuilt;
         public CharacterFootSwingTargetCounterfactual
             swingTargetCounterfactual;
-        public CharacterFootPlanningPathCounterfactual planningPathCounterfactual;
     }
 }

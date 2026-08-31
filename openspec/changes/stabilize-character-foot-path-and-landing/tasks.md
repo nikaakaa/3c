@@ -133,7 +133,6 @@
 - [x] 8.5 发布Target/Solved Extension Ratio、Compression Reserve、Reach区间、交集和Goal夹紧量诊断事实
 - [x] 8.6 在唯一FBBIK中让可靠的本帧动画弯曲向量保留符号，按本帧原腿轴到Target腿轴的旋转运输请求；Stable保存运输前动画方向，Applied保存实际请求，历史只在现有动画退化分支沿原投影与保留政策接管。保持权重、根Bank、Goal与Vendor算法，发布真实相邻方向dot；零Target腿轴明确拒绝，不补匿名方向
 - [x] 8.7 以160901认可行为、192218恢复包及同值203023新诊断基线，用既有Record对账有符号动画腿轴运输候选、Solved Knee与全部Foot/Pelvis质量，单列大腿轴角、零权重、退化输入与未覆盖边界，记录保留或拒绝结论（a40b71f／205014：已录15次强镜像翻侧归零，42项Foot诊断发生数不变；保留本步，R825–827零BendWeight深折叠未解决，见同一实验记录）
-- [ ] 8.8 沿现有Swing链以同帧CurrentSupport零净空Sole参考统一Raw Height、Height History、Target Tracking与安全下限，保留正式FootHeight、动画XZ、预测规划准入、Contact世界残差与已通过的膝向；迁移唯一Diagnostics，固定205014和原Record自动回放，按真实Foot/Pelvis与深折叠输出裁决保留或撤销，只在既有膝向实验MD记录
 
 ## 9. 单独接入Contact与Lock
 

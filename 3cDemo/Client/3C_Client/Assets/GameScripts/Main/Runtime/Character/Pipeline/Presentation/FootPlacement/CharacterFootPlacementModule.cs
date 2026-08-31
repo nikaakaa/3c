@@ -487,7 +487,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     footPlacementWeight,
                     componentUp,
                     in leftGroundPath,
-                    in leftCurrentSupport,
                     true,
                     formalFootFrame.Left.FootHeight,
                     leftLanding.NextSwingPredictionError);
@@ -498,7 +497,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     footPlacementWeight,
                     componentUp,
                     in rightGroundPath,
-                    in rightCurrentSupport,
                     true,
                     formalFootFrame.Right.FootHeight,
                     rightLanding.NextSwingPredictionError);

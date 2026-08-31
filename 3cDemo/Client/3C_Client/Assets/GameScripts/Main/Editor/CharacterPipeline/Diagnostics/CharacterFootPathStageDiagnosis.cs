@@ -7,8 +7,10 @@ namespace ThirdPersonCharacter.Pipeline.Editor
 {
     internal static class CharacterFootPathStageNames
     {
-        internal const string CurrentSupportToSwingTarget =
-            "CurrentSupportToSwingTarget";
+        internal const string RawLandingToPathTarget =
+            "RawLandingToPathTarget";
+        internal const string PathTargetToSwingTarget =
+            "PathTargetToSwingTarget";
         internal const string SwingTargetToCapturedResidual =
             "SwingTargetToCapturedResidual";
         internal const string CapturedResidualToDecayedResidual =
@@ -24,7 +26,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
 
         internal static readonly string[] All =
         {
-            CurrentSupportToSwingTarget,
+            RawLandingToPathTarget,
+            PathTargetToSwingTarget,
             SwingTargetToCapturedResidual,
             CapturedResidualToDecayedResidual,
             ResidualOutputToStateOutput,
@@ -201,9 +204,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         public CharacterFootPathStageVector3 residualBeforeRevision;
         public CharacterFootPathStageVector3 capturedResidualPrevious;
         public CharacterFootPathStageVector3 capturedResidual;
-        public bool currentSupportSafetyCorrectionAvailable;
-        public CharacterFootPathStageVector3 currentSupportSafetyCorrectionPrevious;
-        public CharacterFootPathStageVector3 currentSupportSafetyCorrection;
+        public bool groundEnvelopeSafetyCorrectionAvailable;
+        public CharacterFootPathStageVector3 groundEnvelopeSafetyCorrectionPrevious;
+        public CharacterFootPathStageVector3 groundEnvelopeSafetyCorrection;
         public bool physicalFootAvailable;
         public CharacterFootPathStageVector3 physicalFootPrevious;
         public CharacterFootPathStageVector3 physicalFoot;
@@ -214,8 +217,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             residualBeforeRevision?.RequireValid();
             capturedResidualPrevious?.RequireValid();
             capturedResidual?.RequireValid();
-            currentSupportSafetyCorrectionPrevious?.RequireValid();
-            currentSupportSafetyCorrection?.RequireValid();
+            groundEnvelopeSafetyCorrectionPrevious?.RequireValid();
+            groundEnvelopeSafetyCorrection?.RequireValid();
             physicalFootPrevious?.RequireValid();
             physicalFoot?.RequireValid();
         }
@@ -238,55 +241,43 @@ namespace ThirdPersonCharacter.Pipeline.Editor
     }
 
     [Serializable]
-    internal sealed class CharacterFootPlanningPathCounterfactual
-    {
-        public bool available;
-        public string unavailableReason;
-        public readonly bool controlsVisibleHeight = false;
-        public CharacterFootPathStageVector3 frozenPathTarget;
-        public CharacterFootPathStageVector3 revisedPathTarget;
-        public double? planningReconstructionError;
-        public double? pathRevisionDelta;
-    }
-
-    [Serializable]
     internal sealed class CharacterFootSwingTargetCounterfactual
     {
         public bool available;
         public string unavailableReason;
         public string classification;
-        public CharacterFootPathStageVector3 frozenSupportTarget;
-        public CharacterFootPathStageVector3 supportRevisedTarget;
+        public CharacterFootPathStageVector3 phaseOnlyTarget;
+        public CharacterFootPathStageVector3 pathRevisedTarget;
         public CharacterFootPathStageVector3 actualSwingTarget;
         public double? actualReconstructionError;
-        public double? inputAdvanceDelta;
-        public double? supportRevisionDelta;
+        public double? phaseAdvanceDelta;
+        public double? pathRevisionDelta;
         public double? observedSwingTargetDelta;
-        public double? supportRevisionContribution;
-        public double? inputContribution;
+        public double? pathRevisionContribution;
+        public double? phaseContribution;
 
         internal void RequireValid()
         {
-            frozenSupportTarget?.RequireValid();
-            supportRevisedTarget?.RequireValid();
+            phaseOnlyTarget?.RequireValid();
+            pathRevisedTarget?.RequireValid();
             actualSwingTarget?.RequireValid();
             RequireFinite(actualReconstructionError);
-            RequireFinite(inputAdvanceDelta);
-            RequireFinite(supportRevisionDelta);
+            RequireFinite(phaseAdvanceDelta);
+            RequireFinite(pathRevisionDelta);
             RequireFinite(observedSwingTargetDelta);
-            RequireFinite(supportRevisionContribution);
-            RequireFinite(inputContribution);
+            RequireFinite(pathRevisionContribution);
+            RequireFinite(phaseContribution);
             if (available &&
                 (string.IsNullOrWhiteSpace(classification) ||
-                 frozenSupportTarget == null ||
-                 supportRevisedTarget == null ||
+                 phaseOnlyTarget == null ||
+                 pathRevisedTarget == null ||
                  actualSwingTarget == null ||
                  !actualReconstructionError.HasValue ||
-                 !inputAdvanceDelta.HasValue ||
-                 !supportRevisionDelta.HasValue ||
+                 !phaseAdvanceDelta.HasValue ||
+                 !pathRevisionDelta.HasValue ||
                  !observedSwingTargetDelta.HasValue ||
-                 !supportRevisionContribution.HasValue ||
-                 !inputContribution.HasValue))
+                 !pathRevisionContribution.HasValue ||
+                 !phaseContribution.HasValue))
             {
                 throw new InvalidOperationException(
                     "Swing target counterfactual is incomplete.");

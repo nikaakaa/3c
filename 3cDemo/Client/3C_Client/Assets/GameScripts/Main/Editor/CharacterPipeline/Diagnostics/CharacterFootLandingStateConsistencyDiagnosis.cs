@@ -1108,7 +1108,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 return "FloorCompensationDropped";
             if (floor)
                 return "PreviousGroundEnvelopeOwned";
-            return "NoPreviousSafetyFloorOwnership";
+            return "NoPreviousGroundEnvelopeOwnership";
         }
 
         static string PlantDriver(JObject value)

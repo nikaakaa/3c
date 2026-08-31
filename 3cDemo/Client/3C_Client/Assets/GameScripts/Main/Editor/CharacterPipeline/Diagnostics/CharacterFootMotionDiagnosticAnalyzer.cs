@@ -9516,13 +9516,13 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     solvedLength / legLength) <= PositionNoiseFloor &&
                 Math.Abs(
                     frame.OriginalCompressionReserve -
-                    (legLength - originalLength)) <= PositionNoiseFloor &&
+                    Math.Max(0d, legLength - originalLength)) <= PositionNoiseFloor &&
                 Math.Abs(
                     frame.TargetCompressionReserve -
-                    (legLength - targetLength)) <= PositionNoiseFloor &&
+                    Math.Max(0d, legLength - targetLength)) <= PositionNoiseFloor &&
                 Math.Abs(
                     frame.SolvedCompressionReserve -
-                    (legLength - solvedLength)) <= PositionNoiseFloor;
+                    Math.Max(0d, legLength - solvedLength)) <= PositionNoiseFloor;
             if (!consistent)
             {
                 throw new InvalidDataException(

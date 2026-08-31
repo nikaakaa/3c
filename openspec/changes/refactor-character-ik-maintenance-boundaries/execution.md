@@ -304,8 +304,15 @@ PredictionMotion、BodyTrajectory及其Tick/Generation/ResetSequence/AuthorityTi
 
 ## 身份、Root Landing与Action输入列
 
-状态：最后55列实现完成，Unity与Editor最终构建0错误，build server已关闭；等待实际回放。
+状态：候选c1a8b32已完成实际Replay和全1215列验证。
 
 - 将样本、Program、Frame、Foot状态、Plant Target和Step选择46列收进Identity绑定；FrameSequence保持当前Int32 ABI并在写入边界显式检查Runtime ulong可表示，身份与阶段字段不再散落在FootFrame。
 - RootLocalLanding三列进入独立Root Landing绑定。Grounded、HorizontalSpeed及左右Action身份/权重六列进入Action绑定；Analyzer按Identity.Side选择本脚Action，不在CSV解析器复制一份选中状态。
 - 删除最后的手工Header、逐项写行、局部Cell/Float/Int/Ulong/Vector解析和必需列清单。HasAnchor只由已读取的MotionCore身份与Constraint State派生，不按列名旁路读取。1215/1215列均进入typed绑定；主行统一组合、格式identity集中、Runtime证据分组和Reset取证仍待完成，任务5不提前勾选。
+
+## 全1215列typed绑定的验证封口
+
+- 原包：`Diagnostics/FootPlacementRuns/20260901-055234-157-88fc13f1616d4d3d825451f181d7cb5a`，唯一原Record完成1044输入/Body、1043采样帧和2086脚行。对052946及固定233436，1191业务列逐值相同，23身份列双向映射无冲突；最后55列为49精确及6个身份/UTC字段。
+- Identity中的Foot状态、Reject、Plant Target、Step选择、RootLocalLanding和HasAnchor非身份事实保持；左右Action原始列及按Side选择的结果保持。FrameSequence3–1045符合原Int32 ABI，越界拒绝及非零Action分支未动态覆盖。
+- 42项诊断及完整20447明细、索引、几何和正式查询保持。六次查询各返回全部1215列；除UTC解析后的等值规范化外，业务单元格与原CSV相同。Proof matched1044、aggregate空、DivergentFrameCount0，输入/Body/时钟及1044帧数组一致。
+- Unity已归还、Edit/Idle、failure空、Console0。此处证明当前Record下1215列迁移保持，不代表主行组合、格式identity、Runtime分组、Reset或既有覆盖缺口已经完成。

@@ -1632,11 +1632,11 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             var goalSource = new CharacterFootGoalCsvSource(
                 in footGoal, motion.Core.OriginalAnkle, frame.PelvisGoal);
             CharacterFootStrideHipsDiagnostics stride = frame.StrideHips;
-            Vector3 expectedPhysicalPelvis = stride.AnimatedPelvisComponentPosition +
+            Vector3 expectedPhysicalPelvis = stride.Observation.AnimatedPelvisComponentPosition +
                 frame.PelvisGoal.ComponentPosition * frame.PelvisGoal.PositionWeight;
             bool pelvisGoalResidualAvailable = ik.PhysicalWriteAvailable &&
                 ik.PhysicalWriteCompletionIdentity == frame.CompletionIdentity &&
-                stride.PoseInputAvailable && frame.PelvisGoal.PositionWeight > 0f;
+                stride.Observation.PoseInputAvailable && frame.PelvisGoal.PositionWeight > 0f;
             float pelvisGoalResidual = pelvisGoalResidualAvailable
                 ? Vector3.Distance(ik.PhysicalPelvisComponentPosition, expectedPhysicalPelvis)
                 : 0f;

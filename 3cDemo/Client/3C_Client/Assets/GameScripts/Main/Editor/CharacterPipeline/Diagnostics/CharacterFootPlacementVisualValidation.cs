@@ -244,10 +244,10 @@ namespace ThirdPersonCharacter.Pipeline.Editor
 
         static void DrawStride(in CharacterFootStrideHipsDiagnostics stride)
         {
-            if (!stride.Accepted)
+            if (!stride.Core.Accepted)
                 return;
-            Line(stride.StrideStart, stride.StrideEnd, new Color(1f, 0.8f, 0.1f, 0.95f));
-            Marker(stride.AnimatedPelvis + stride.PelvisDelta, Vector3.up, new Color(1f, 0.8f, 0.1f, 1f), 0.09f);
+            Line(stride.Core.StrideStart, stride.Core.StrideEnd, new Color(1f, 0.8f, 0.1f, 0.95f));
+            Marker(stride.Observation.AnimatedPelvis + stride.Core.PelvisDelta, Vector3.up, new Color(1f, 0.8f, 0.1f, 1f), 0.09f);
         }
 
         static void DrawFinalPose(CharacterWorldAwarePresentationBinding binding)

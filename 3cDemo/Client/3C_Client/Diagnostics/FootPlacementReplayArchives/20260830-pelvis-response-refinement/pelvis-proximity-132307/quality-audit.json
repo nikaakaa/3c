@@ -1,0 +1,1947 @@
+{
+  "kind": "read-only-pelvis-candidate-quality-audit/1",
+  "baseline": "20260831-112611-018-2429691288e6434a8588a55de100efc2",
+  "candidate": "20260831-132307-889-d30ebd7be545423dbc29995a645beb92",
+  "targetCount": 37,
+  "rulesAndPoliciesUnchanged": true,
+  "allCountsUnchanged": true,
+  "allScoresUnchanged": true,
+  "scoringVersion": [
+    "foot-quality-seven-dimensions/1",
+    "foot-quality-seven-dimensions/1"
+  ],
+  "totalScore": [
+    61.9,
+    61.9
+  ],
+  "evidenceScore": [
+    86.9,
+    86.9
+  ],
+  "targets": [
+    {
+      "id": "action-hard-ownership",
+      "file": "landing-state-consistency.json",
+      "rulesSame": true,
+      "policySame": true,
+      "countsSame": true,
+      "scoreSame": true,
+      "baseline": {
+        "eligible": 0,
+        "matched": 0,
+        "score": {
+          "policy": "Informational",
+          "healthAvailable": false,
+          "healthRating": "Unavailable",
+          "evidenceAvailable": false,
+          "evidenceRating": "Unavailable",
+          "unavailableReason": "NoEligibleEvents",
+          "evidenceFullSampleEventCount": 50,
+          "severityBands": []
+        }
+      },
+      "candidate": {
+        "eligible": 0,
+        "matched": 0,
+        "score": {
+          "policy": "Informational",
+          "healthAvailable": false,
+          "healthRating": "Unavailable",
+          "evidenceAvailable": false,
+          "evidenceRating": "Unavailable",
+          "unavailableReason": "NoEligibleEvents",
+          "evidenceFullSampleEventCount": 50,
+          "severityBands": []
+        }
+      }
+    },
+    {
+      "id": "approach-progress-ownership",
+      "file": "landing-state-consistency.json",
+      "rulesSame": true,
+      "policySame": true,
+      "countsSame": true,
+      "scoreSame": true,
+      "baseline": {
+        "eligible": 376,
+        "matched": 0,
+        "score": {
+          "policy": "Informational",
+          "healthAvailable": false,
+          "healthRating": "Unavailable",
+          "evidenceAvailable": true,
+          "evidenceScore": 100,
+          "evidenceRating": "Strong",
+          "unavailableReason": "InformationalTarget",
+          "evidenceFullSampleEventCount": 50,
+          "severityBands": []
+        }
+      },
+      "candidate": {
+        "eligible": 376,
+        "matched": 0,
+        "score": {
+          "policy": "Informational",
+          "healthAvailable": false,
+          "healthRating": "Unavailable",
+          "evidenceAvailable": true,
+          "evidenceScore": 100,
+          "evidenceRating": "Strong",
+          "unavailableReason": "InformationalTarget",
+          "evidenceFullSampleEventCount": 50,
+          "severityBands": []
+        }
+      }
+    },
+    {
+      "id": "contact-acquisition-continuity",
+      "file": "landing-state-consistency.json",
+      "rulesSame": true,
+      "policySame": true,
+      "countsSame": true,
+      "scoreSame": true,
+      "baseline": {
+        "eligible": 54,
+        "matched": 50,
+        "score": {
+          "policy": "Informational",
+          "healthAvailable": false,
+          "healthRating": "Unavailable",
+          "evidenceAvailable": true,
+          "evidenceScore": 100,
+          "evidenceRating": "Strong",
+          "unavailableReason": "InformationalTarget",
+          "evidenceFullSampleEventCount": 50,
+          "severityBands": []
+        }
+      },
+      "candidate": {
+        "eligible": 54,
+        "matched": 50,
+        "score": {
+          "policy": "Informational",
+          "healthAvailable": false,
+          "healthRating": "Unavailable",
+          "evidenceAvailable": true,
+          "evidenceScore": 100,
+          "evidenceRating": "Strong",
+          "unavailableReason": "InformationalTarget",
+          "evidenceFullSampleEventCount": 50,
+          "severityBands": []
+        }
+      }
+    },
+    {
+      "id": "contact-plane-penetration-contribution",
+      "file": "contact-plane-penetration.json",
+      "rulesSame": true,
+      "policySame": true,
+      "countsSame": true,
+      "scoreSame": true,
+      "baseline": {
+        "eligible": 90,
+        "matched": 84,
+        "score": {
+          "policy": "Informational",
+          "healthAvailable": false,
+          "healthRating": "Unavailable",
+          "evidenceAvailable": true,
+          "evidenceScore": 100,
+          "evidenceRating": "Strong",
+          "unavailableReason": "InformationalTarget",
+          "evidenceFullSampleEventCount": 50,
+          "severityBands": []
+        }
+      },
+      "candidate": {
+        "eligible": 90,
+        "matched": 84,
+        "score": {
+          "policy": "Informational",
+          "healthAvailable": false,
+          "healthRating": "Unavailable",
+          "evidenceAvailable": true,
+          "evidenceScore": 100,
+          "evidenceRating": "Strong",
+          "unavailableReason": "InformationalTarget",
+          "evidenceFullSampleEventCount": 50,
+          "severityBands": []
+        }
+      }
+    },
+    {
+      "id": "contact-reentry-output-geometry",
+      "file": "landing-state-consistency.json",
+      "rulesSame": true,
+      "policySame": true,
+      "countsSame": true,
+      "scoreSame": true,
+      "baseline": {
+        "eligible": 0,
+        "matched": 0,
+        "score": {
+          "policy": "Informational",
+          "healthAvailable": false,
+          "healthRating": "Unavailable",
+          "evidenceAvailable": false,
+          "evidenceRating": "Unavailable",
+          "unavailableReason": "NoEligibleEvents",
+          "evidenceFullSampleEventCount": 50,
+          "severityBands": []
+        }
+      },
+      "candidate": {
+        "eligible": 0,
+        "matched": 0,
+        "score": {
+          "policy": "Informational",
+          "healthAvailable": false,
+          "healthRating": "Unavailable",
+          "evidenceAvailable": false,
+          "evidenceRating": "Unavailable",
+          "unavailableReason": "NoEligibleEvents",
+          "evidenceFullSampleEventCount": 50,
+          "severityBands": []
+        }
+      }
+    },
+    {
+      "id": "contact-state-output-jump",
+      "file": "landing-state-consistency.json",
+      "rulesSame": true,
+      "policySame": true,
+      "countsSame": true,
+      "scoreSame": true,
+      "baseline": {
+        "eligible": 1051,
+        "matched": 433,
+        "score": {
+          "policy": "Health",
+          "healthAvailable": true,
+          "healthScore": 49,
+          "healthRating": "Severe",
+          "evidenceAvailable": true,
+          "evidenceScore": 100,
+          "evidenceRating": "Strong",
+          "evidenceFullSampleEventCount": 50,
+          "frequencyBurden": 0.2,
+          "frequencyHealthScore": 81,
+          "worstSeverityBand": "AboveLastThreshold",
+          "tailScoreCeiling": 49,
+          "severityBands": [
+            {
+              "id": "AtOrBelowFirstThreshold",
+              "upperInclusive": 0.01,
+              "eventCount": 337,
+              "eventRate": 0.3206470028544244,
+              "penaltyWeight": 0
+            },
+            {
+              "id": "ThresholdBand1",
+              "lowerExclusive": 0.01,
+              "upperInclusive": 0.02,
+              "eventCount": 281,
+              "eventRate": 0.26736441484300666,
+              "penaltyWeight": 0.1
+            },
+            {
+              "id": "ThresholdBand2",
+              "lowerExclusive": 0.02,
+              "upperInclusive": 0.05,
+              "eventCount": 377,
+              "eventRate": 0.3587059942911513,
+              "penaltyWeight": 0.35
+            },
+            {
+              "id": "ThresholdBand3",
+              "lowerExclusive": 0.05,
+              "upperInclusive": 0.1,
+              "eventCount": 53,
+              "eventRate": 0.05042816365366318,
+              "penaltyWeight": 0.7
+            },
+            {
+              "id": "AboveLastThreshold",
+              "lowerExclusive": 0.1,
+              "eventCount": 3,
+              "eventRate": 0.0028544243577545195,
+              "penaltyWeight": 1
+            }
+          ]
+        }
+      },
+      "candidate": {
+        "eligible": 1051,
+        "matched": 433,
+        "score": {
+          "policy": "Health",
+          "healthAvailable": true,
+          "healthScore": 49,
+          "healthRating": "Severe",
+          "evidenceAvailable": true,
+          "evidenceScore": 100,
+          "evidenceRating": "Strong",
+          "evidenceFullSampleEventCount": 50,
+          "frequencyBurden": 0.2,
+          "frequencyHealthScore": 81,
+          "worstSeverityBand": "AboveLastThreshold",
+          "tailScoreCeiling": 49,
+          "severityBands": [
+            {
+              "id": "AtOrBelowFirstThreshold",
+              "upperInclusive": 0.01,
+              "eventCount": 337,
+              "eventRate": 0.3206470028544244,
+              "penaltyWeight": 0
+            },
+            {
+              "id": "ThresholdBand1",
+              "lowerExclusive": 0.01,
+              "upperInclusive": 0.02,
+              "eventCount": 281,
+              "eventRate": 0.26736441484300666,
+              "penaltyWeight": 0.1
+            },
+            {
+              "id": "ThresholdBand2",
+              "lowerExclusive": 0.02,
+              "upperInclusive": 0.05,
+              "eventCount": 377,
+              "eventRate": 0.3587059942911513,
+              "penaltyWeight": 0.35
+            },
+            {
+              "id": "ThresholdBand3",
+              "lowerExclusive": 0.05,
+              "upperInclusive": 0.1,
+              "eventCount": 53,
+              "eventRate": 0.05042816365366318,
+              "penaltyWeight": 0.7
+            },
+            {
+              "id": "AboveLastThreshold",
+              "lowerExclusive": 0.1,
+              "eventCount": 3,
+              "eventRate": 0.0028544243577545195,
+              "penaltyWeight": 1
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "contact-support-gap",
+      "file": "landing-state-consistency.json",
+      "rulesSame": true,
+      "policySame": true,
+      "countsSame": true,
+      "scoreSame": true,
+      "baseline": {
+        "eligible": 60,
+        "matched": 3,
+        "score": {
+          "policy": "Health",
+          "healthAvailable": true,
+          "healthScore": 49,
+          "healthRating": "Severe",
+          "evidenceAvailable": true,
+          "evidenceScore": 100,
+          "evidenceRating": "Strong",
+          "evidenceFullSampleEventCount": 50,
+          "frequencyBurden": 0.1,
+          "frequencyHealthScore": 95,
+          "worstSeverityBand": "AboveLastThreshold",
+          "tailScoreCeiling": 49,
+          "severityBands": [
+            {
+              "id": "AtOrBelowFirstThreshold",
+              "upperInclusive": 0.01,
+              "eventCount": 57,
+              "eventRate": 0.95,
+              "penaltyWeight": 0
+            },
+            {
+              "id": "ThresholdBand1",
+              "lowerExclusive": 0.01,
+              "upperInclusive": 0.02,
+              "eventCount": 0,
+              "eventRate": 0,
+              "penaltyWeight": 0.1
+            },
+            {
+              "id": "ThresholdBand2",
+              "lowerExclusive": 0.02,
+              "upperInclusive": 0.05,
+              "eventCount": 0,
+              "eventRate": 0,
+              "penaltyWeight": 0.35
+            },
+            {
+              "id": "ThresholdBand3",
+              "lowerExclusive": 0.05,
+              "upperInclusive": 0.1,
+              "eventCount": 0,
+              "eventRate": 0,
+              "penaltyWeight": 0.7
+            },
+            {
+              "id": "AboveLastThreshold",
+              "lowerExclusive": 0.1,
+              "eventCount": 3,
+              "eventRate": 0.05,
+              "penaltyWeight": 1
+            }
+          ]
+        }
+      },
+      "candidate": {
+        "eligible": 60,
+        "matched": 3,
+        "score": {
+          "policy": "Health",
+          "healthAvailable": true,
+          "healthScore": 49,
+          "healthRating": "Severe",
+          "evidenceAvailable": true,
+          "evidenceScore": 100,
+          "evidenceRating": "Strong",
+          "evidenceFullSampleEventCount": 50,
+          "frequencyBurden": 0.1,
+          "frequencyHealthScore": 95,
+          "worstSeverityBand": "AboveLastThreshold",
+          "tailScoreCeiling": 49,
+          "severityBands": [
+            {
+              "id": "AtOrBelowFirstThreshold",
+              "upperInclusive": 0.01,
+              "eventCount": 57,
+              "eventRate": 0.95,
+              "penaltyWeight": 0
+            },
+            {
+              "id": "ThresholdBand1",
+              "lowerExclusive": 0.01,
+              "upperInclusive": 0.02,
+              "eventCount": 0,
+              "eventRate": 0,
+              "penaltyWeight": 0.1
+            },
+            {
+              "id": "ThresholdBand2",
+              "lowerExclusive": 0.02,
+              "upperInclusive": 0.05,
+              "eventCount": 0,
+              "eventRate": 0,
+              "penaltyWeight": 0.35
+            },
+            {
+              "id": "ThresholdBand3",
+              "lowerExclusive": 0.05,
+              "upperInclusive": 0.1,
+              "eventCount": 0,
+              "eventRate": 0,
+              "penaltyWeight": 0.7
+            },
+            {
+              "id": "AboveLastThreshold",
+              "lowerExclusive": 0.1,
+              "eventCount": 3,
+              "eventRate": 0.05,
+              "penaltyWeight": 1
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "contact-transition-context",
+      "file": "landing-state-consistency.json",
+      "rulesSame": true,
+      "policySame": true,
+      "countsSame": true,
+      "scoreSame": true,
+      "baseline": {
+        "eligible": 2086,
+        "matched": 0,
+        "score": {
+          "policy": "Informational",
+          "healthAvailable": false,
+          "healthRating": "Unavailable",
+          "evidenceAvailable": true,
+          "evidenceScore": 100,
+          "evidenceRating": "Strong",
+          "unavailableReason": "InformationalTarget",
+          "evidenceFullSampleEventCount": 50,
+          "severityBands": []
+        }
+      },
+      "candidate": {
+        "eligible": 2086,
+        "matched": 0,
+        "score": {
+          "policy": "Informational",
+          "healthAvailable": false,
+          "healthRating": "Unavailable",
+          "evidenceAvailable": true,
+          "evidenceScore": 100,
+          "evidenceRating": "Strong",
+          "unavailableReason": "InformationalTarget",
+          "evidenceFullSampleEventCount": 50,
+          "severityBands": []
+        }
+      }
+    },
+    {
+      "id": "early-landing-entry",
+      "file": "landing-state-consistency.json",
+      "rulesSame": true,
+      "policySame": true,
+      "countsSame": true,
+      "scoreSame": true,
+      "baseline": {
+        "eligible": 60,
+        "matched": 6,
+        "score": {
+          "policy": "Informational",
+          "healthAvailable": false,
+          "healthRating": "Unavailable",
+          "evidenceAvailable": true,
+          "evidenceScore": 100,
+          "evidenceRating": "Strong",
+          "unavailableReason": "InformationalTarget",
+          "evidenceFullSampleEventCount": 50,
+          "severityBands": []
+        }
+      },
+      "candidate": {
+        "eligible": 60,
+        "matched": 6,
+        "score": {
+          "policy": "Informational",
+          "healthAvailable": false,
+          "healthRating": "Unavailable",
+          "evidenceAvailable": true,
+          "evidenceScore": 100,
+          "evidenceRating": "Strong",
+          "unavailableReason": "InformationalTarget",
+          "evidenceFullSampleEventCount": 50,
+          "severityBands": []
+        }
+      }
+    },
+    {
+      "id": "final-contact-plane-penetration",
+      "file": "contact-plane-penetration.json",
+      "rulesSame": true,
+      "policySame": true,
+      "countsSame": true,
+      "scoreSame": true,
+      "baseline": {
+        "eligible": 90,
+        "matched": 34,
+        "score": {
+          "policy": "Health",
+          "healthAvailable": true,
+          "healthScore": 49,
+          "healthRating": "Severe",
+          "evidenceAvailable": true,
+          "evidenceScore": 100,
+          "evidenceRating": "Strong",
+          "evidenceFullSampleEventCount": 50,
+          "frequencyBurden": 0.1,
+          "frequencyHealthScore": 86.4,
+          "worstSeverityBand": "AboveLastThreshold",
+          "tailScoreCeiling": 49,
+          "severityBands": [
+            {
+              "id": "AtOrBelowFirstThreshold",
+              "upperInclusive": 0.01,
+              "eventCount": 56,
+              "eventRate": 0.6222222222222222,
+              "penaltyWeight": 0
+            },
+            {
+              "id": "ThresholdBand1",
+              "lowerExclusive": 0.01,
+              "upperInclusive": 0.02,
+              "eventCount": 4,
+              "eventRate": 0.044444444444444446,
+              "penaltyWeight": 0.1
+            },
+            {
+              "id": "ThresholdBand2",
+              "lowerExclusive": 0.02,
+              "upperInclusive": 0.05,
+              "eventCount": 27,
+              "eventRate": 0.3,
+              "penaltyWeight": 0.35
+            },
+            {
+              "id": "ThresholdBand3",
+              "lowerExclusive": 0.05,
+              "upperInclusive": 0.1,
+              "eventCount": 2,
+              "eventRate": 0.022222222222222223,
+              "penaltyWeight": 0.7
+            },
+            {
+              "id": "AboveLastThreshold",
+              "lowerExclusive": 0.1,
+              "eventCount": 1,
+              "eventRate": 0.011111111111111112,
+              "penaltyWeight": 1
+            }
+          ]
+        }
+      },
+      "candidate": {
+        "eligible": 90,
+        "matched": 34,
+        "score": {
+          "policy": "Health",
+          "healthAvailable": true,
+          "healthScore": 49,
+          "healthRating": "Severe",
+          "evidenceAvailable": true,
+          "evidenceScore": 100,
+          "evidenceRating": "Strong",
+          "evidenceFullSampleEventCount": 50,
+          "frequencyBurden": 0.1,
+          "frequencyHealthScore": 86.4,
+          "worstSeverityBand": "AboveLastThreshold",
+          "tailScoreCeiling": 49,
+          "severityBands": [
+            {
+              "id": "AtOrBelowFirstThreshold",
+              "upperInclusive": 0.01,
+              "eventCount": 56,
+              "eventRate": 0.6222222222222222,
+              "penaltyWeight": 0
+            },
+            {
+              "id": "ThresholdBand1",
+              "lowerExclusive": 0.01,
+              "upperInclusive": 0.02,
+              "eventCount": 4,
+              "eventRate": 0.044444444444444446,
+              "penaltyWeight": 0.1
+            },
+            {
+              "id": "ThresholdBand2",
+              "lowerExclusive": 0.02,
+              "upperInclusive": 0.05,
+              "eventCount": 27,
+              "eventRate": 0.3,
+              "penaltyWeight": 0.35
+            },
+            {
+              "id": "ThresholdBand3",
+              "lowerExclusive": 0.05,
+              "upperInclusive": 0.1,
+              "eventCount": 2,
+              "eventRate": 0.022222222222222223,
+              "penaltyWeight": 0.7
+            },
+            {
+              "id": "AboveLastThreshold",
+              "lowerExclusive": 0.1,
+              "eventCount": 1,
+              "eventRate": 0.011111111111111112,
+              "penaltyWeight": 1
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "formal-goal-weight-policy",
+      "file": "landing-state-consistency.json",
+      "rulesSame": true,
+      "policySame": true,
+      "countsSame": true,
+      "scoreSame": true,
+      "baseline": {
+        "eligible": 2086,
+        "matched": 0,
+        "score": {
+          "policy": "Informational",
+          "healthAvailable": false,
+          "healthRating": "Unavailable",
+          "evidenceAvailable": true,
+          "evidenceScore": 100,
+          "evidenceRating": "Strong",
+          "unavailableReason": "InformationalTarget",
+          "evidenceFullSampleEventCount": 50,
+          "severityBands": []
+        }
+      },
+      "candidate": {
+        "eligible": 2086,
+        "matched": 0,
+        "score": {
+          "policy": "Informational",
+          "healthAvailable": false,
+          "healthRating": "Unavailable",
+          "evidenceAvailable": true,
+          "evidenceScore": 100,
+          "evidenceRating": "Strong",
+          "unavailableReason": "InformationalTarget",
+          "evidenceFullSampleEventCount": 50,
+          "severityBands": []
+        }
+      }
+    },
+    {
+      "id": "identity-only-residual-rebuild",
+      "file": "landing-path-continuity.json",
+      "rulesSame": true,
+      "policySame": true,
+      "countsSame": true,
+      "scoreSame": true,
+      "baseline": {
+        "eligible": 230,
+        "matched": 0,
+        "score": {
+          "policy": "Informational",
+          "healthAvailable": false,
+          "healthRating": "Unavailable",
+          "evidenceAvailable": true,
+          "evidenceScore": 100,
+          "evidenceRating": "Strong",
+          "unavailableReason": "InformationalTarget",
+          "evidenceFullSampleEventCount": 50,
+          "severityBands": []
+        }
+      },
+      "candidate": {
+        "eligible": 230,
+        "matched": 0,
+        "score": {
+          "policy": "Informational",
+          "healthAvailable": false,
+          "healthRating": "Unavailable",
+          "evidenceAvailable": true,
+          "evidenceScore": 100,
+          "evidenceRating": "Strong",
+          "unavailableReason": "InformationalTarget",
+          "evidenceFullSampleEventCount": 50,
+          "severityBands": []
+        }
+      }
+    },
+    {
+      "id": "landing-exit-jump",
+      "file": "landing-state-consistency.json",
+      "rulesSame": true,
+      "policySame": true,
+      "countsSame": true,
+      "scoreSame": true,
+      "baseline": {
+        "eligible": 60,
+        "matched": 53,
+        "score": {
+          "policy": "Informational",
+          "healthAvailable": false,
+          "healthRating": "Unavailable",
+          "evidenceAvailable": true,
+          "evidenceScore": 100,
+          "evidenceRating": "Strong",
+          "unavailableReason": "InformationalTarget",
+          "evidenceFullSampleEventCount": 50,
+          "severityBands": []
+        }
+      },
+      "candidate": {
+        "eligible": 60,
+        "matched": 53,
+        "score": {
+          "policy": "Informational",
+          "healthAvailable": false,
+          "healthRating": "Unavailable",
+          "evidenceAvailable": true,
+          "evidenceScore": 100,
+          "evidenceRating": "Strong",
+          "unavailableReason": "InformationalTarget",
+          "evidenceFullSampleEventCount": 50,
+          "severityBands": []
+        }
+      }
+    },
+    {
+      "id": "landing-leg-extension",
+      "file": "landing-leg-extension.json",
+      "rulesSame": true,
+      "policySame": true,
+      "countsSame": true,
+      "scoreSame": true,
+      "baseline": {
+        "eligible": 2,
+        "matched": 0,
+        "score": {
+          "policy": "Health",
+          "healthAvailable": true,
+          "healthScore": 100,
+          "healthRating": "Stable",
+          "evidenceAvailable": true,
+          "evidenceScore": 4,
+          "evidenceRating": "Limited",
+          "evidenceFullSampleEventCount": 50,
+          "frequencyBurden": 0,
+          "frequencyHealthScore": 100,
+          "worstSeverityBand": "NoMatchedViolation",
+          "severityBands": []
+        }
+      },
+      "candidate": {
+        "eligible": 2,
+        "matched": 0,
+        "score": {
+          "policy": "Health",
+          "healthAvailable": true,
+          "healthScore": 100,
+          "healthRating": "Stable",
+          "evidenceAvailable": true,
+          "evidenceScore": 4,
+          "evidenceRating": "Limited",
+          "evidenceFullSampleEventCount": 50,
+          "frequencyBurden": 0,
+          "frequencyHealthScore": 100,
+          "worstSeverityBand": "NoMatchedViolation",
+          "severityBands": []
+        }
+      }
+    },
+    {
+      "id": "landing-not-closing",
+      "file": "landing-state-consistency.json",
+      "rulesSame": true,
+      "policySame": true,
+      "countsSame": true,
+      "scoreSame": true,
+      "baseline": {
+        "eligible": 60,
+        "matched": 2,
+        "score": {
+          "policy": "Informational",
+          "healthAvailable": false,
+          "healthRating": "Unavailable",
+          "evidenceAvailable": true,
+          "evidenceScore": 100,
+          "evidenceRating": "Strong",
+          "unavailableReason": "InformationalTarget",
+          "evidenceFullSampleEventCount": 50,
+          "severityBands": []
+        }
+      },
+      "candidate": {
+        "eligible": 60,
+        "matched": 2,
+        "score": {
+          "policy": "Informational",
+          "healthAvailable": false,
+          "healthRating": "Unavailable",
+          "evidenceAvailable": true,
+          "evidenceScore": 100,
+          "evidenceRating": "Strong",
+          "unavailableReason": "InformationalTarget",
+          "evidenceFullSampleEventCount": 50,
+          "severityBands": []
+        }
+      }
+    },
+    {
+      "id": "landing-observation-reuse-contract",
+      "file": "landing-observation-reuse.json",
+      "rulesSame": true,
+      "policySame": true,
+      "countsSame": true,
+      "scoreSame": true,
+      "baseline": {
+        "eligible": 1841,
+        "matched": 0,
+        "score": {
+          "policy": "Informational",
+          "healthAvailable": false,
+          "healthRating": "Unavailable",
+          "evidenceAvailable": true,
+          "evidenceScore": 100,
+          "evidenceRating": "Strong",
+          "unavailableReason": "InformationalTarget",
+          "evidenceFullSampleEventCount": 50,
+          "severityBands": []
+        }
+      },
+      "candidate": {
+        "eligible": 1841,
+        "matched": 0,
+        "score": {
+          "policy": "Informational",
+          "healthAvailable": false,
+          "healthRating": "Unavailable",
+          "evidenceAvailable": true,
+          "evidenceScore": 100,
+          "evidenceRating": "Strong",
+          "unavailableReason": "InformationalTarget",
+          "evidenceFullSampleEventCount": 50,
+          "severityBands": []
+        }
+      }
+    },
+    {
+      "id": "landing-persists-after-formal-unlock",
+      "file": "landing-state-consistency.json",
+      "rulesSame": true,
+      "policySame": true,
+      "countsSame": true,
+      "scoreSame": true,
+      "baseline": {
+        "eligible": 60,
+        "matched": 0,
+        "score": {
+          "policy": "Informational",
+          "healthAvailable": false,
+          "healthRating": "Unavailable",
+          "evidenceAvailable": true,
+          "evidenceScore": 100,
+          "evidenceRating": "Strong",
+          "unavailableReason": "InformationalTarget",
+          "evidenceFullSampleEventCount": 50,
+          "severityBands": []
+        }
+      },
+      "candidate": {
+        "eligible": 60,
+        "matched": 0,
+        "score": {
+          "policy": "Informational",
+          "healthAvailable": false,
+          "healthRating": "Unavailable",
+          "evidenceAvailable": true,
+          "evidenceScore": 100,
+          "evidenceRating": "Strong",
+          "unavailableReason": "InformationalTarget",
+          "evidenceFullSampleEventCount": 50,
+          "severityBands": []
+        }
+      }
+    },
+    {
+      "id": "landing-without-contact-plane",
+      "file": "landing-state-consistency.json",
+      "rulesSame": true,
+      "policySame": true,
+      "countsSame": true,
+      "scoreSame": true,
+      "baseline": {
+        "eligible": 60,
+        "matched": 0,
+        "score": {
+          "policy": "Informational",
+          "healthAvailable": false,
+          "healthRating": "Unavailable",
+          "evidenceAvailable": true,
+          "evidenceScore": 100,
+          "evidenceRating": "Strong",
+          "unavailableReason": "InformationalTarget",
+          "evidenceFullSampleEventCount": 50,
+          "severityBands": []
+        }
+      },
+      "candidate": {
+        "eligible": 60,
+        "matched": 0,
+        "score": {
+          "policy": "Informational",
+          "healthAvailable": false,
+          "healthRating": "Unavailable",
+          "evidenceAvailable": true,
+          "evidenceScore": 100,
+          "evidenceRating": "Strong",
+          "unavailableReason": "InformationalTarget",
+          "evidenceFullSampleEventCount": 50,
+          "severityBands": []
+        }
+      }
+    },
+    {
+      "id": "landing-wrong-exit",
+      "file": "landing-state-consistency.json",
+      "rulesSame": true,
+      "policySame": true,
+      "countsSame": true,
+      "scoreSame": true,
+      "baseline": {
+        "eligible": 60,
+        "matched": 0,
+        "score": {
+          "policy": "Informational",
+          "healthAvailable": false,
+          "healthRating": "Unavailable",
+          "evidenceAvailable": true,
+          "evidenceScore": 100,
+          "evidenceRating": "Strong",
+          "unavailableReason": "InformationalTarget",
+          "evidenceFullSampleEventCount": 50,
+          "severityBands": []
+        }
+      },
+      "candidate": {
+        "eligible": 60,
+        "matched": 0,
+        "score": {
+          "policy": "Informational",
+          "healthAvailable": false,
+          "healthRating": "Unavailable",
+          "evidenceAvailable": true,
+          "evidenceScore": 100,
+          "evidenceRating": "Strong",
+          "unavailableReason": "InformationalTarget",
+          "evidenceFullSampleEventCount": 50,
+          "severityBands": []
+        }
+      }
+    },
+    {
+      "id": "late-approach-landing-revision",
+      "file": "landing-path-continuity.json",
+      "rulesSame": true,
+      "policySame": true,
+      "countsSame": true,
+      "scoreSame": true,
+      "baseline": {
+        "eligible": 325,
+        "matched": 179,
+        "score": {
+          "policy": "Informational",
+          "healthAvailable": false,
+          "healthRating": "Unavailable",
+          "evidenceAvailable": true,
+          "evidenceScore": 100,
+          "evidenceRating": "Strong",
+          "unavailableReason": "InformationalTarget",
+          "evidenceFullSampleEventCount": 50,
+          "severityBands": []
+        }
+      },
+      "candidate": {
+        "eligible": 325,
+        "matched": 179,
+        "score": {
+          "policy": "Informational",
+          "healthAvailable": false,
+          "healthRating": "Unavailable",
+          "evidenceAvailable": true,
+          "evidenceScore": 100,
+          "evidenceRating": "Strong",
+          "unavailableReason": "InformationalTarget",
+          "evidenceFullSampleEventCount": 50,
+          "severityBands": []
+        }
+      }
+    },
+    {
+      "id": "lock-weight-completion-by-contact-event",
+      "file": "landing-state-consistency.json",
+      "rulesSame": true,
+      "policySame": true,
+      "countsSame": true,
+      "scoreSame": true,
+      "baseline": {
+        "eligible": 60,
+        "matched": 20,
+        "score": {
+          "policy": "Informational",
+          "healthAvailable": false,
+          "healthRating": "Unavailable",
+          "evidenceAvailable": true,
+          "evidenceScore": 100,
+          "evidenceRating": "Strong",
+          "unavailableReason": "InformationalTarget",
+          "evidenceFullSampleEventCount": 50,
+          "severityBands": []
+        }
+      },
+      "candidate": {
+        "eligible": 60,
+        "matched": 20,
+        "score": {
+          "policy": "Informational",
+          "healthAvailable": false,
+          "healthRating": "Unavailable",
+          "evidenceAvailable": true,
+          "evidenceScore": 100,
+          "evidenceRating": "Strong",
+          "unavailableReason": "InformationalTarget",
+          "evidenceFullSampleEventCount": 50,
+          "severityBands": []
+        }
+      }
+    },
+    {
+      "id": "locked-horizontal-drift",
+      "file": "locked-sole-motion.json",
+      "rulesSame": true,
+      "policySame": true,
+      "countsSame": true,
+      "scoreSame": true,
+      "baseline": {
+        "eligible": 15,
+        "matched": 0,
+        "score": {
+          "policy": "Health",
+          "healthAvailable": true,
+          "healthScore": 100,
+          "healthRating": "Stable",
+          "evidenceAvailable": true,
+          "evidenceScore": 30,
+          "evidenceRating": "Limited",
+          "evidenceFullSampleEventCount": 50,
+          "frequencyBurden": 0,
+          "frequencyHealthScore": 100,
+          "worstSeverityBand": "AtOrBelowFirstThreshold",
+          "tailScoreCeiling": 100,
+          "severityBands": [
+            {
+              "id": "AtOrBelowFirstThreshold",
+              "upperInclusive": 0.01,
+              "eventCount": 15,
+              "eventRate": 1,
+              "penaltyWeight": 0
+            },
+            {
+              "id": "ThresholdBand1",
+              "lowerExclusive": 0.01,
+              "upperInclusive": 0.02,
+              "eventCount": 0,
+              "eventRate": 0,
+              "penaltyWeight": 0.1
+            },
+            {
+              "id": "ThresholdBand2",
+              "lowerExclusive": 0.02,
+              "upperInclusive": 0.05,
+              "eventCount": 0,
+              "eventRate": 0,
+              "penaltyWeight": 0.35
+            },
+            {
+              "id": "ThresholdBand3",
+              "lowerExclusive": 0.05,
+              "upperInclusive": 0.1,
+              "eventCount": 0,
+              "eventRate": 0,
+              "penaltyWeight": 0.7
+            },
+            {
+              "id": "AboveLastThreshold",
+              "lowerExclusive": 0.1,
+              "eventCount": 0,
+              "eventRate": 0,
+              "penaltyWeight": 1
+            }
+          ]
+        }
+      },
+      "candidate": {
+        "eligible": 15,
+        "matched": 0,
+        "score": {
+          "policy": "Health",
+          "healthAvailable": true,
+          "healthScore": 100,
+          "healthRating": "Stable",
+          "evidenceAvailable": true,
+          "evidenceScore": 30,
+          "evidenceRating": "Limited",
+          "evidenceFullSampleEventCount": 50,
+          "frequencyBurden": 0,
+          "frequencyHealthScore": 100,
+          "worstSeverityBand": "AtOrBelowFirstThreshold",
+          "tailScoreCeiling": 100,
+          "severityBands": [
+            {
+              "id": "AtOrBelowFirstThreshold",
+              "upperInclusive": 0.01,
+              "eventCount": 15,
+              "eventRate": 1,
+              "penaltyWeight": 0
+            },
+            {
+              "id": "ThresholdBand1",
+              "lowerExclusive": 0.01,
+              "upperInclusive": 0.02,
+              "eventCount": 0,
+              "eventRate": 0,
+              "penaltyWeight": 0.1
+            },
+            {
+              "id": "ThresholdBand2",
+              "lowerExclusive": 0.02,
+              "upperInclusive": 0.05,
+              "eventCount": 0,
+              "eventRate": 0,
+              "penaltyWeight": 0.35
+            },
+            {
+              "id": "ThresholdBand3",
+              "lowerExclusive": 0.05,
+              "upperInclusive": 0.1,
+              "eventCount": 0,
+              "eventRate": 0,
+              "penaltyWeight": 0.7
+            },
+            {
+              "id": "AboveLastThreshold",
+              "lowerExclusive": 0.1,
+              "eventCount": 0,
+              "eventRate": 0,
+              "penaltyWeight": 1
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "locked-vertical-anchor-evidence",
+      "file": "locked-sole-motion.json",
+      "rulesSame": true,
+      "policySame": true,
+      "countsSame": true,
+      "scoreSame": true,
+      "baseline": {
+        "eligible": 44,
+        "matched": 0,
+        "score": {
+          "policy": "Informational",
+          "healthAvailable": false,
+          "healthRating": "Unavailable",
+          "evidenceAvailable": true,
+          "evidenceScore": 88,
+          "evidenceRating": "Moderate",
+          "unavailableReason": "InformationalTarget",
+          "evidenceFullSampleEventCount": 50,
+          "severityBands": []
+        }
+      },
+      "candidate": {
+        "eligible": 44,
+        "matched": 0,
+        "score": {
+          "policy": "Informational",
+          "healthAvailable": false,
+          "healthRating": "Unavailable",
+          "evidenceAvailable": true,
+          "evidenceScore": 88,
+          "evidenceRating": "Moderate",
+          "unavailableReason": "InformationalTarget",
+          "evidenceFullSampleEventCount": 50,
+          "severityBands": []
+        }
+      }
+    },
+    {
+      "id": "missed-landing-entry",
+      "file": "landing-state-consistency.json",
+      "rulesSame": true,
+      "policySame": true,
+      "countsSame": true,
+      "scoreSame": true,
+      "baseline": {
+        "eligible": 54,
+        "matched": 0,
+        "score": {
+          "policy": "Informational",
+          "healthAvailable": false,
+          "healthRating": "Unavailable",
+          "evidenceAvailable": true,
+          "evidenceScore": 100,
+          "evidenceRating": "Strong",
+          "unavailableReason": "InformationalTarget",
+          "evidenceFullSampleEventCount": 50,
+          "severityBands": []
+        }
+      },
+      "candidate": {
+        "eligible": 54,
+        "matched": 0,
+        "score": {
+          "policy": "Informational",
+          "healthAvailable": false,
+          "healthRating": "Unavailable",
+          "evidenceAvailable": true,
+          "evidenceScore": 100,
+          "evidenceRating": "Strong",
+          "unavailableReason": "InformationalTarget",
+          "evidenceFullSampleEventCount": 50,
+          "severityBands": []
+        }
+      }
+    },
+    {
+      "id": "path-revision-amplification-evidence",
+      "file": "swing-path-jitter.json",
+      "rulesSame": true,
+      "policySame": true,
+      "countsSame": true,
+      "scoreSame": true,
+      "baseline": {
+        "eligible": 668,
+        "matched": 199,
+        "score": {
+          "policy": "Informational",
+          "healthAvailable": false,
+          "healthRating": "Unavailable",
+          "evidenceAvailable": true,
+          "evidenceScore": 92.2,
+          "evidenceRating": "Strong",
+          "unavailableReason": "InformationalTarget",
+          "evidenceFullSampleEventCount": 50,
+          "severityBands": []
+        }
+      },
+      "candidate": {
+        "eligible": 668,
+        "matched": 199,
+        "score": {
+          "policy": "Informational",
+          "healthAvailable": false,
+          "healthRating": "Unavailable",
+          "evidenceAvailable": true,
+          "evidenceScore": 92.2,
+          "evidenceRating": "Strong",
+          "unavailableReason": "InformationalTarget",
+          "evidenceFullSampleEventCount": 50,
+          "severityBands": []
+        }
+      }
+    },
+    {
+      "id": "path-revision-contract-mismatch",
+      "file": "landing-path-continuity.json",
+      "rulesSame": true,
+      "policySame": true,
+      "countsSame": true,
+      "scoreSame": true,
+      "baseline": {
+        "eligible": 718,
+        "matched": 0,
+        "score": {
+          "policy": "Informational",
+          "healthAvailable": false,
+          "healthRating": "Unavailable",
+          "evidenceAvailable": true,
+          "evidenceScore": 100,
+          "evidenceRating": "Strong",
+          "unavailableReason": "InformationalTarget",
+          "evidenceFullSampleEventCount": 50,
+          "severityBands": []
+        }
+      },
+      "candidate": {
+        "eligible": 718,
+        "matched": 0,
+        "score": {
+          "policy": "Informational",
+          "healthAvailable": false,
+          "healthRating": "Unavailable",
+          "evidenceAvailable": true,
+          "evidenceScore": 100,
+          "evidenceRating": "Strong",
+          "unavailableReason": "InformationalTarget",
+          "evidenceFullSampleEventCount": 50,
+          "severityBands": []
+        }
+      }
+    },
+    {
+      "id": "path-revision-output-jump",
+      "file": "swing-path-jitter.json",
+      "rulesSame": true,
+      "policySame": true,
+      "countsSame": true,
+      "scoreSame": true,
+      "baseline": {
+        "eligible": 668,
+        "matched": 199,
+        "score": {
+          "policy": "Health",
+          "healthAvailable": true,
+          "healthScore": 49,
+          "healthRating": "Severe",
+          "evidenceAvailable": true,
+          "evidenceScore": 100,
+          "evidenceRating": "Strong",
+          "evidenceFullSampleEventCount": 50,
+          "frequencyBurden": 0.1,
+          "frequencyHealthScore": 87.6,
+          "worstSeverityBand": "AboveLastThreshold",
+          "tailScoreCeiling": 49,
+          "severityBands": [
+            {
+              "id": "AtOrBelowFirstThreshold",
+              "upperInclusive": 0.01,
+              "eventCount": 370,
+              "eventRate": 0.5538922155688623,
+              "penaltyWeight": 0
+            },
+            {
+              "id": "ThresholdBand1",
+              "lowerExclusive": 0.01,
+              "upperInclusive": 0.02,
+              "eventCount": 99,
+              "eventRate": 0.14820359281437126,
+              "penaltyWeight": 0.1
+            },
+            {
+              "id": "ThresholdBand2",
+              "lowerExclusive": 0.02,
+              "upperInclusive": 0.05,
+              "eventCount": 192,
+              "eventRate": 0.2874251497005988,
+              "penaltyWeight": 0.35
+            },
+            {
+              "id": "ThresholdBand3",
+              "lowerExclusive": 0.05,
+              "upperInclusive": 0.1,
+              "eventCount": 5,
+              "eventRate": 0.0074850299401197605,
+              "penaltyWeight": 0.7
+            },
+            {
+              "id": "AboveLastThreshold",
+              "lowerExclusive": 0.1,
+              "eventCount": 2,
+              "eventRate": 0.0029940119760479044,
+              "penaltyWeight": 1
+            }
+          ]
+        }
+      },
+      "candidate": {
+        "eligible": 668,
+        "matched": 199,
+        "score": {
+          "policy": "Health",
+          "healthAvailable": true,
+          "healthScore": 49,
+          "healthRating": "Severe",
+          "evidenceAvailable": true,
+          "evidenceScore": 100,
+          "evidenceRating": "Strong",
+          "evidenceFullSampleEventCount": 50,
+          "frequencyBurden": 0.1,
+          "frequencyHealthScore": 87.6,
+          "worstSeverityBand": "AboveLastThreshold",
+          "tailScoreCeiling": 49,
+          "severityBands": [
+            {
+              "id": "AtOrBelowFirstThreshold",
+              "upperInclusive": 0.01,
+              "eventCount": 370,
+              "eventRate": 0.5538922155688623,
+              "penaltyWeight": 0
+            },
+            {
+              "id": "ThresholdBand1",
+              "lowerExclusive": 0.01,
+              "upperInclusive": 0.02,
+              "eventCount": 99,
+              "eventRate": 0.14820359281437126,
+              "penaltyWeight": 0.1
+            },
+            {
+              "id": "ThresholdBand2",
+              "lowerExclusive": 0.02,
+              "upperInclusive": 0.05,
+              "eventCount": 192,
+              "eventRate": 0.2874251497005988,
+              "penaltyWeight": 0.35
+            },
+            {
+              "id": "ThresholdBand3",
+              "lowerExclusive": 0.05,
+              "upperInclusive": 0.1,
+              "eventCount": 5,
+              "eventRate": 0.0074850299401197605,
+              "penaltyWeight": 0.7
+            },
+            {
+              "id": "AboveLastThreshold",
+              "lowerExclusive": 0.1,
+              "eventCount": 2,
+              "eventRate": 0.0029940119760479044,
+              "penaltyWeight": 1
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "plant-interpolation-output-jump",
+      "file": "landing-state-consistency.json",
+      "rulesSame": true,
+      "policySame": true,
+      "countsSame": true,
+      "scoreSame": true,
+      "baseline": {
+        "eligible": 523,
+        "matched": 307,
+        "score": {
+          "policy": "Informational",
+          "healthAvailable": false,
+          "healthRating": "Unavailable",
+          "evidenceAvailable": true,
+          "evidenceScore": 100,
+          "evidenceRating": "Strong",
+          "unavailableReason": "InformationalTarget",
+          "evidenceFullSampleEventCount": 50,
+          "severityBands": []
+        }
+      },
+      "candidate": {
+        "eligible": 523,
+        "matched": 307,
+        "score": {
+          "policy": "Informational",
+          "healthAvailable": false,
+          "healthRating": "Unavailable",
+          "evidenceAvailable": true,
+          "evidenceScore": 100,
+          "evidenceRating": "Strong",
+          "unavailableReason": "InformationalTarget",
+          "evidenceFullSampleEventCount": 50,
+          "severityBands": []
+        }
+      }
+    },
+    {
+      "id": "release-flyback",
+      "file": "landing-state-consistency.json",
+      "rulesSame": true,
+      "policySame": true,
+      "countsSame": true,
+      "scoreSame": true,
+      "baseline": {
+        "eligible": 59,
+        "matched": 1,
+        "score": {
+          "policy": "Informational",
+          "healthAvailable": false,
+          "healthRating": "Unavailable",
+          "evidenceAvailable": true,
+          "evidenceScore": 100,
+          "evidenceRating": "Strong",
+          "unavailableReason": "InformationalTarget",
+          "evidenceFullSampleEventCount": 50,
+          "severityBands": []
+        }
+      },
+      "candidate": {
+        "eligible": 59,
+        "matched": 1,
+        "score": {
+          "policy": "Informational",
+          "healthAvailable": false,
+          "healthRating": "Unavailable",
+          "evidenceAvailable": true,
+          "evidenceScore": 100,
+          "evidenceRating": "Strong",
+          "unavailableReason": "InformationalTarget",
+          "evidenceFullSampleEventCount": 50,
+          "severityBands": []
+        }
+      }
+    },
+    {
+      "id": "releasing-to-swing-envelope-violation",
+      "file": "landing-path-continuity.json",
+      "rulesSame": true,
+      "policySame": true,
+      "countsSame": true,
+      "scoreSame": true,
+      "baseline": {
+        "eligible": 53,
+        "matched": 1,
+        "score": {
+          "policy": "Informational",
+          "healthAvailable": false,
+          "healthRating": "Unavailable",
+          "evidenceAvailable": true,
+          "evidenceScore": 100,
+          "evidenceRating": "Strong",
+          "unavailableReason": "InformationalTarget",
+          "evidenceFullSampleEventCount": 50,
+          "severityBands": []
+        }
+      },
+      "candidate": {
+        "eligible": 53,
+        "matched": 1,
+        "score": {
+          "policy": "Informational",
+          "healthAvailable": false,
+          "healthRating": "Unavailable",
+          "evidenceAvailable": true,
+          "evidenceScore": 100,
+          "evidenceRating": "Strong",
+          "unavailableReason": "InformationalTarget",
+          "evidenceFullSampleEventCount": 50,
+          "severityBands": []
+        }
+      }
+    },
+    {
+      "id": "residual-deadline-miss",
+      "file": "landing-path-continuity.json",
+      "rulesSame": true,
+      "policySame": true,
+      "countsSame": true,
+      "scoreSame": true,
+      "baseline": {
+        "eligible": 48,
+        "matched": 0,
+        "score": {
+          "policy": "Informational",
+          "healthAvailable": false,
+          "healthRating": "Unavailable",
+          "evidenceAvailable": true,
+          "evidenceScore": 96,
+          "evidenceRating": "Strong",
+          "unavailableReason": "InformationalTarget",
+          "evidenceFullSampleEventCount": 50,
+          "severityBands": []
+        }
+      },
+      "candidate": {
+        "eligible": 48,
+        "matched": 0,
+        "score": {
+          "policy": "Informational",
+          "healthAvailable": false,
+          "healthRating": "Unavailable",
+          "evidenceAvailable": true,
+          "evidenceScore": 96,
+          "evidenceRating": "Strong",
+          "unavailableReason": "InformationalTarget",
+          "evidenceFullSampleEventCount": 50,
+          "severityBands": []
+        }
+      }
+    },
+    {
+      "id": "residual-growth-without-revision",
+      "file": "landing-path-continuity.json",
+      "rulesSame": true,
+      "policySame": true,
+      "countsSame": true,
+      "scoreSame": true,
+      "baseline": {
+        "eligible": 253,
+        "matched": 0,
+        "score": {
+          "policy": "Informational",
+          "healthAvailable": false,
+          "healthRating": "Unavailable",
+          "evidenceAvailable": true,
+          "evidenceScore": 100,
+          "evidenceRating": "Strong",
+          "unavailableReason": "InformationalTarget",
+          "evidenceFullSampleEventCount": 50,
+          "severityBands": []
+        }
+      },
+      "candidate": {
+        "eligible": 253,
+        "matched": 0,
+        "score": {
+          "policy": "Informational",
+          "healthAvailable": false,
+          "healthRating": "Unavailable",
+          "evidenceAvailable": true,
+          "evidenceScore": 100,
+          "evidenceRating": "Strong",
+          "unavailableReason": "InformationalTarget",
+          "evidenceFullSampleEventCount": 50,
+          "severityBands": []
+        }
+      }
+    },
+    {
+      "id": "stable-swing-correction-response-cadence",
+      "file": "swing-path-jitter.json",
+      "rulesSame": true,
+      "policySame": true,
+      "countsSame": true,
+      "scoreSame": true,
+      "baseline": {
+        "eligible": 180,
+        "matched": 8,
+        "score": {
+          "policy": "Informational",
+          "healthAvailable": false,
+          "healthRating": "Unavailable",
+          "evidenceAvailable": true,
+          "evidenceScore": 100,
+          "evidenceRating": "Strong",
+          "unavailableReason": "InformationalTarget",
+          "evidenceFullSampleEventCount": 50,
+          "severityBands": []
+        }
+      },
+      "candidate": {
+        "eligible": 180,
+        "matched": 8,
+        "score": {
+          "policy": "Informational",
+          "healthAvailable": false,
+          "healthRating": "Unavailable",
+          "evidenceAvailable": true,
+          "evidenceScore": 100,
+          "evidenceRating": "Strong",
+          "unavailableReason": "InformationalTarget",
+          "evidenceFullSampleEventCount": 50,
+          "severityBands": []
+        }
+      }
+    },
+    {
+      "id": "stable-swing-output-jump",
+      "file": "swing-path-jitter.json",
+      "rulesSame": true,
+      "policySame": true,
+      "countsSame": true,
+      "scoreSame": true,
+      "baseline": {
+        "eligible": 344,
+        "matched": 143,
+        "score": {
+          "policy": "Health",
+          "healthAvailable": true,
+          "healthScore": 84.1,
+          "healthRating": "Attention",
+          "evidenceAvailable": true,
+          "evidenceScore": 100,
+          "evidenceRating": "Strong",
+          "evidenceFullSampleEventCount": 50,
+          "frequencyBurden": 0.2,
+          "frequencyHealthScore": 84.1,
+          "worstSeverityBand": "ThresholdBand2",
+          "tailScoreCeiling": 89,
+          "severityBands": [
+            {
+              "id": "AtOrBelowFirstThreshold",
+              "upperInclusive": 0.01,
+              "eventCount": 156,
+              "eventRate": 0.45348837209302323,
+              "penaltyWeight": 0
+            },
+            {
+              "id": "ThresholdBand1",
+              "lowerExclusive": 0.01,
+              "upperInclusive": 0.02,
+              "eventCount": 45,
+              "eventRate": 0.1308139534883721,
+              "penaltyWeight": 0.1
+            },
+            {
+              "id": "ThresholdBand2",
+              "lowerExclusive": 0.02,
+              "upperInclusive": 0.05,
+              "eventCount": 143,
+              "eventRate": 0.41569767441860467,
+              "penaltyWeight": 0.35
+            },
+            {
+              "id": "ThresholdBand3",
+              "lowerExclusive": 0.05,
+              "upperInclusive": 0.1,
+              "eventCount": 0,
+              "eventRate": 0,
+              "penaltyWeight": 0.7
+            },
+            {
+              "id": "AboveLastThreshold",
+              "lowerExclusive": 0.1,
+              "eventCount": 0,
+              "eventRate": 0,
+              "penaltyWeight": 1
+            }
+          ]
+        }
+      },
+      "candidate": {
+        "eligible": 344,
+        "matched": 143,
+        "score": {
+          "policy": "Health",
+          "healthAvailable": true,
+          "healthScore": 84.1,
+          "healthRating": "Attention",
+          "evidenceAvailable": true,
+          "evidenceScore": 100,
+          "evidenceRating": "Strong",
+          "evidenceFullSampleEventCount": 50,
+          "frequencyBurden": 0.2,
+          "frequencyHealthScore": 84.1,
+          "worstSeverityBand": "ThresholdBand2",
+          "tailScoreCeiling": 89,
+          "severityBands": [
+            {
+              "id": "AtOrBelowFirstThreshold",
+              "upperInclusive": 0.01,
+              "eventCount": 156,
+              "eventRate": 0.45348837209302323,
+              "penaltyWeight": 0
+            },
+            {
+              "id": "ThresholdBand1",
+              "lowerExclusive": 0.01,
+              "upperInclusive": 0.02,
+              "eventCount": 45,
+              "eventRate": 0.1308139534883721,
+              "penaltyWeight": 0.1
+            },
+            {
+              "id": "ThresholdBand2",
+              "lowerExclusive": 0.02,
+              "upperInclusive": 0.05,
+              "eventCount": 143,
+              "eventRate": 0.41569767441860467,
+              "penaltyWeight": 0.35
+            },
+            {
+              "id": "ThresholdBand3",
+              "lowerExclusive": 0.05,
+              "upperInclusive": 0.1,
+              "eventCount": 0,
+              "eventRate": 0,
+              "penaltyWeight": 0.7
+            },
+            {
+              "id": "AboveLastThreshold",
+              "lowerExclusive": 0.1,
+              "eventCount": 0,
+              "eventRate": 0,
+              "penaltyWeight": 1
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "step-time-candidate-selection-observations",
+      "file": "step-time-candidate-selection.json",
+      "rulesSame": true,
+      "policySame": true,
+      "countsSame": true,
+      "scoreSame": true,
+      "baseline": {
+        "eligible": 2086,
+        "matched": 0,
+        "score": {
+          "policy": "Informational",
+          "healthAvailable": false,
+          "healthRating": "Unavailable",
+          "evidenceAvailable": true,
+          "evidenceScore": 100,
+          "evidenceRating": "Strong",
+          "unavailableReason": "InformationalTarget",
+          "evidenceFullSampleEventCount": 50,
+          "severityBands": []
+        }
+      },
+      "candidate": {
+        "eligible": 2086,
+        "matched": 0,
+        "score": {
+          "policy": "Informational",
+          "healthAvailable": false,
+          "healthRating": "Unavailable",
+          "evidenceAvailable": true,
+          "evidenceScore": 100,
+          "evidenceRating": "Strong",
+          "unavailableReason": "InformationalTarget",
+          "evidenceFullSampleEventCount": 50,
+          "severityBands": []
+        }
+      }
+    },
+    {
+      "id": "swing-actual-foot-envelope-counterfactual",
+      "file": "swing-path-jitter.json",
+      "rulesSame": true,
+      "policySame": true,
+      "countsSame": true,
+      "scoreSame": true,
+      "baseline": {
+        "eligible": 344,
+        "matched": 8,
+        "score": {
+          "policy": "Informational",
+          "healthAvailable": false,
+          "healthRating": "Unavailable",
+          "evidenceAvailable": true,
+          "evidenceScore": 100,
+          "evidenceRating": "Strong",
+          "unavailableReason": "InformationalTarget",
+          "evidenceFullSampleEventCount": 50,
+          "severityBands": []
+        }
+      },
+      "candidate": {
+        "eligible": 344,
+        "matched": 8,
+        "score": {
+          "policy": "Informational",
+          "healthAvailable": false,
+          "healthRating": "Unavailable",
+          "evidenceAvailable": true,
+          "evidenceScore": 100,
+          "evidenceRating": "Strong",
+          "unavailableReason": "InformationalTarget",
+          "evidenceFullSampleEventCount": 50,
+          "severityBands": []
+        }
+      }
+    },
+    {
+      "id": "swing-to-landing-floor-handoff",
+      "file": "landing-state-consistency.json",
+      "rulesSame": true,
+      "policySame": true,
+      "countsSame": true,
+      "scoreSame": true,
+      "baseline": {
+        "eligible": 53,
+        "matched": 17,
+        "score": {
+          "policy": "Informational",
+          "healthAvailable": false,
+          "healthRating": "Unavailable",
+          "evidenceAvailable": true,
+          "evidenceScore": 100,
+          "evidenceRating": "Strong",
+          "unavailableReason": "InformationalTarget",
+          "evidenceFullSampleEventCount": 50,
+          "severityBands": []
+        }
+      },
+      "candidate": {
+        "eligible": 53,
+        "matched": 17,
+        "score": {
+          "policy": "Informational",
+          "healthAvailable": false,
+          "healthRating": "Unavailable",
+          "evidenceAvailable": true,
+          "evidenceScore": 100,
+          "evidenceRating": "Strong",
+          "unavailableReason": "InformationalTarget",
+          "evidenceFullSampleEventCount": 50,
+          "severityBands": []
+        }
+      }
+    }
+  ]
+}

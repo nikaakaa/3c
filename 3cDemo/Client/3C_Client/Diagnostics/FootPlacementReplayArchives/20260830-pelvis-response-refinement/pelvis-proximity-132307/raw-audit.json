@@ -1,0 +1,1702 @@
+{
+  "kind": "read-only-pelvis-geometric-candidate-audit/1",
+  "before": "20260831-112611-018-2429691288e6434a8588a55de100efc2",
+  "after": "20260831-132307-889-d30ebd7be545423dbc29995a645beb92",
+  "rows": 2086,
+  "beforeColumns": 1224,
+  "afterColumns": 1233,
+  "commonColumns": 1210,
+  "addedColumns": [
+    "PelvisHeightTargetReferencePointX",
+    "PelvisHeightTargetReferencePointY",
+    "PelvisHeightTargetReferencePointZ",
+    "PelvisHeightTargetFootProximityRadius",
+    "PelvisHeightTargetLeftAnimatedAnkleX",
+    "PelvisHeightTargetLeftAnimatedAnkleY",
+    "PelvisHeightTargetLeftAnimatedAnkleZ",
+    "PelvisHeightTargetRightAnimatedAnkleX",
+    "PelvisHeightTargetRightAnimatedAnkleY",
+    "PelvisHeightTargetRightAnimatedAnkleZ",
+    "PelvisHeightTargetLeftTargetAnkleX",
+    "PelvisHeightTargetLeftTargetAnkleY",
+    "PelvisHeightTargetLeftTargetAnkleZ",
+    "PelvisHeightTargetRightTargetAnkleX",
+    "PelvisHeightTargetRightTargetAnkleY",
+    "PelvisHeightTargetRightTargetAnkleZ",
+    "PelvisHeightTargetLeftCorrectionAlongUp",
+    "PelvisHeightTargetRightCorrectionAlongUp",
+    "PelvisHeightTargetLeftCandidateKind",
+    "PelvisHeightTargetRightCandidateKind",
+    "PelvisHeightTargetLeftCandidateValue",
+    "PelvisHeightTargetRightCandidateValue",
+    "PelvisHeightTargetSelection"
+  ],
+  "removedColumns": [
+    "PelvisHeightTargetLeftAnimatedSoleX",
+    "PelvisHeightTargetLeftAnimatedSoleY",
+    "PelvisHeightTargetLeftAnimatedSoleZ",
+    "PelvisHeightTargetRightAnimatedSoleX",
+    "PelvisHeightTargetRightAnimatedSoleY",
+    "PelvisHeightTargetRightAnimatedSoleZ",
+    "PelvisHeightTargetLeftTargetSoleX",
+    "PelvisHeightTargetLeftTargetSoleY",
+    "PelvisHeightTargetLeftTargetSoleZ",
+    "PelvisHeightTargetRightTargetSoleX",
+    "PelvisHeightTargetRightTargetSoleY",
+    "PelvisHeightTargetRightTargetSoleZ",
+    "PelvisHeightTargetAnimatedMinimumAlongUp",
+    "PelvisHeightTargetMinimumAlongUp"
+  ],
+  "exactCommonColumns": 1098,
+  "identityDifferences": [
+    {
+      "column": "SampleIdentity",
+      "identity": true,
+      "count": 2086,
+      "maxNumericDifference": 0,
+      "first": {
+        "frame": "3",
+        "side": "Left",
+        "before": "2429691288e6434a8588a55de100efc2",
+        "after": "d30ebd7be545423dbc29995a645beb92"
+      }
+    },
+    {
+      "column": "SampleStartedUtc",
+      "identity": true,
+      "count": 2086,
+      "maxNumericDifference": 0,
+      "first": {
+        "frame": "3",
+        "side": "Left",
+        "before": "2026-08-31T03:26:11.0180688Z",
+        "after": "2026-08-31T05:23:07.8896859Z"
+      }
+    },
+    {
+      "column": "TargetRuntimeInstanceId",
+      "identity": true,
+      "count": 2086,
+      "maxNumericDifference": 0,
+      "first": {
+        "frame": "3",
+        "side": "Left",
+        "before": "a197d54e608f48d9849d0fa75ee7aea6",
+        "after": "66dd9a926c1a4de080eb02aad5710533"
+      }
+    },
+    {
+      "column": "TargetHostInstanceId",
+      "identity": true,
+      "count": 2086,
+      "maxNumericDifference": 0,
+      "first": {
+        "frame": "3",
+        "side": "Left",
+        "before": "-16204",
+        "after": "-27756"
+      }
+    },
+    {
+      "column": "RootInstanceId",
+      "identity": true,
+      "count": 2086,
+      "maxNumericDifference": 0,
+      "first": {
+        "frame": "3",
+        "side": "Left",
+        "before": "-16208",
+        "after": "-27760"
+      }
+    },
+    {
+      "column": "PlantTargetSurfaceIdentity",
+      "identity": true,
+      "count": 2086,
+      "maxNumericDifference": 0,
+      "first": {
+        "frame": "3",
+        "side": "Left",
+        "before": "-14542",
+        "after": "-26946"
+      }
+    },
+    {
+      "column": "FootMotionContactSurfaceIdentity",
+      "identity": true,
+      "count": 1000,
+      "maxNumericDifference": 0,
+      "first": {
+        "frame": "3",
+        "side": "Left",
+        "before": "-14542",
+        "after": "-26946"
+      }
+    },
+    {
+      "column": "FootMotionPreviousContactAnchorSurfaceIdentity",
+      "identity": true,
+      "count": 1000,
+      "maxNumericDifference": 0,
+      "first": {
+        "frame": "3",
+        "side": "Left",
+        "before": "-14542",
+        "after": "-26946"
+      }
+    },
+    {
+      "column": "FootMotionCurrentContactAnchorSurfaceIdentity",
+      "identity": true,
+      "count": 1000,
+      "maxNumericDifference": 0,
+      "first": {
+        "frame": "3",
+        "side": "Left",
+        "before": "-14542",
+        "after": "-26946"
+      }
+    },
+    {
+      "column": "FootMotionSafetyFloorOwnerSurfaceIdentity",
+      "identity": true,
+      "count": 902,
+      "maxNumericDifference": 0,
+      "first": {
+        "frame": "3",
+        "side": "Left",
+        "before": "-14542",
+        "after": "-26946"
+      }
+    },
+    {
+      "column": "FootMotionSelectedSupportTargetSurfaceIdentity",
+      "identity": true,
+      "count": 2086,
+      "maxNumericDifference": 0,
+      "first": {
+        "frame": "3",
+        "side": "Left",
+        "before": "-14542",
+        "after": "-26946"
+      }
+    },
+    {
+      "column": "CurrentSupportHeelSurfaceIdentity",
+      "identity": true,
+      "count": 2086,
+      "maxNumericDifference": 0,
+      "first": {
+        "frame": "3",
+        "side": "Left",
+        "before": "-14542",
+        "after": "-26946"
+      }
+    },
+    {
+      "column": "CurrentSupportToeSurfaceIdentity",
+      "identity": true,
+      "count": 2086,
+      "maxNumericDifference": 0,
+      "first": {
+        "frame": "3",
+        "side": "Left",
+        "before": "-14542",
+        "after": "-26946"
+      }
+    },
+    {
+      "column": "CurrentSupportTargetSurfaceIdentity",
+      "identity": true,
+      "count": 2086,
+      "maxNumericDifference": 0,
+      "first": {
+        "frame": "3",
+        "side": "Left",
+        "before": "-14542",
+        "after": "-26946"
+      }
+    },
+    {
+      "column": "ResolvedSupportTargetSurfaceIdentity",
+      "identity": true,
+      "count": 2086,
+      "maxNumericDifference": 0,
+      "first": {
+        "frame": "3",
+        "side": "Left",
+        "before": "-14542",
+        "after": "-26946"
+      }
+    },
+    {
+      "column": "QuerySelectedSurfaceIdentity",
+      "identity": true,
+      "count": 1841,
+      "maxNumericDifference": 0,
+      "first": {
+        "frame": "91",
+        "side": "Left",
+        "before": "-14542",
+        "after": "-26946"
+      }
+    },
+    {
+      "column": "SurfaceIdentity",
+      "identity": true,
+      "count": 1841,
+      "maxNumericDifference": 0,
+      "first": {
+        "frame": "91",
+        "side": "Left",
+        "before": "-14542",
+        "after": "-26946"
+      }
+    },
+    {
+      "column": "GroundPathInputIdentity",
+      "identity": true,
+      "count": 1787,
+      "maxNumericDifference": 0,
+      "first": {
+        "frame": "92",
+        "side": "Left",
+        "before": "18105474512898272061",
+        "after": "6471708500086494900"
+      }
+    },
+    {
+      "column": "GroundPathLastLandingSurfaceIdentity",
+      "identity": true,
+      "count": 1787,
+      "maxNumericDifference": 0,
+      "first": {
+        "frame": "92",
+        "side": "Left",
+        "before": "-14542",
+        "after": "-26946"
+      }
+    },
+    {
+      "column": "GroundPathNextSwingLandingSurfaceIdentity",
+      "identity": true,
+      "count": 1787,
+      "maxNumericDifference": 0,
+      "first": {
+        "frame": "92",
+        "side": "Left",
+        "before": "-14542",
+        "after": "-26946"
+      }
+    },
+    {
+      "column": "FootMotionGroundPathInputIdentity",
+      "identity": true,
+      "count": 1787,
+      "maxNumericDifference": 0,
+      "first": {
+        "frame": "92",
+        "side": "Left",
+        "before": "18105474512898272061",
+        "after": "6471708500086494900"
+      }
+    },
+    {
+      "column": "FootMotionSelectedSupportTargetPositionPathIdentity",
+      "identity": true,
+      "count": 1511,
+      "maxNumericDifference": 0,
+      "first": {
+        "frame": "94",
+        "side": "Left",
+        "before": "4690371173639822894",
+        "after": "11543313012018256631"
+      }
+    },
+    {
+      "column": "ResolvedSupportTargetPositionPathIdentity",
+      "identity": true,
+      "count": 1511,
+      "maxNumericDifference": 0,
+      "first": {
+        "frame": "94",
+        "side": "Left",
+        "before": "4690371173639822894",
+        "after": "11543313012018256631"
+      }
+    },
+    {
+      "column": "FootMotionSafetyFloorOwnerPathIdentity",
+      "identity": true,
+      "count": 694,
+      "maxNumericDifference": 0,
+      "first": {
+        "frame": "103",
+        "side": "Right",
+        "before": "10481103627396970214",
+        "after": "12947845425100598367"
+      }
+    },
+    {
+      "column": "ProgramIdentity",
+      "identity": true,
+      "count": 2086,
+      "first": {
+        "frame": "3",
+        "side": "Left",
+        "before": "557b76d00fb2902d2811095065fd64066014f31232bb744579573b9bfe8cddef|9884a71baf0ae369f36d2a60ab6a19573aba83bdf40489355602d266cb262270",
+        "after": "fb865cfa4c73bec9f68c67f2dd230d10cef961df8456c0521bc0c7421e6883c0|836c3997524f8937b797a8f4c838f4c2bfad74c11b5f49925078aa9d2d5aa9f5"
+      }
+    },
+    {
+      "column": "ProjectionRevision",
+      "identity": true,
+      "count": 2086,
+      "first": {
+        "frame": "3",
+        "side": "Left",
+        "before": "557b76d00fb2902d2811095065fd64066014f31232bb744579573b9bfe8cddef",
+        "after": "fb865cfa4c73bec9f68c67f2dd230d10cef961df8456c0521bc0c7421e6883c0"
+      }
+    },
+    {
+      "column": "PosePlanHash",
+      "identity": true,
+      "count": 2086,
+      "first": {
+        "frame": "3",
+        "side": "Left",
+        "before": "9884a71baf0ae369f36d2a60ab6a19573aba83bdf40489355602d266cb262270",
+        "after": "836c3997524f8937b797a8f4c838f4c2bfad74c11b5f49925078aa9d2d5aa9f5"
+      }
+    },
+    {
+      "column": "FootProfileRevision",
+      "identity": true,
+      "count": 2086,
+      "first": {
+        "frame": "3",
+        "side": "Left",
+        "before": "ea6bd72f336d67a952d6f183d5d43c44c629594d2956efb3fa975e217bb5c29d",
+        "after": "7f93db11dc2f0ce9ba932783c39439cb26210972f1a7878ab98b90a0125f5d54"
+      }
+    },
+    {
+      "column": "LandingObservationIdentity",
+      "identity": true,
+      "count": 1841,
+      "first": {
+        "frame": "91",
+        "side": "Left",
+        "before": "20902096770557405",
+        "after": "4287065025114671040"
+      }
+    }
+  ],
+  "nonIdentityDifferences": [
+    {
+      "column": "PelvisRequestedOffsetAlongUp",
+      "identity": false,
+      "count": 732,
+      "maxNumericDifference": 0.441687584362,
+      "first": {
+        "frame": "104",
+        "side": "Left",
+        "before": "-0.000416351482",
+        "after": "-0.000749461353"
+      }
+    },
+    {
+      "column": "PelvisPosturePreferenceOffsetAlongUp",
+      "identity": false,
+      "count": 614,
+      "maxNumericDifference": 0.376118317,
+      "first": {
+        "frame": "104",
+        "side": "Left",
+        "before": "-0.000416351482",
+        "after": "-0.000749461353"
+      }
+    },
+    {
+      "column": "PelvisSpringUnconstrainedOutput",
+      "identity": false,
+      "count": 1392,
+      "maxNumericDifference": 0.20126958199999997,
+      "first": {
+        "frame": "104",
+        "side": "Left",
+        "before": "-0.00170608528",
+        "after": "-0.00171945454"
+      }
+    },
+    {
+      "column": "StrideSpringTarget",
+      "identity": false,
+      "count": 596,
+      "maxNumericDifference": 0.37535319899999997,
+      "first": {
+        "frame": "104",
+        "side": "Left",
+        "before": "-0.000416351482",
+        "after": "-0.000749461353"
+      }
+    },
+    {
+      "column": "StrideSpringOutput",
+      "identity": false,
+      "count": 1198,
+      "maxNumericDifference": 0.20126958199999997,
+      "first": {
+        "frame": "104",
+        "side": "Left",
+        "before": "-0.00170608528",
+        "after": "-0.00171945454"
+      }
+    },
+    {
+      "column": "StrideSpringVelocity",
+      "identity": false,
+      "count": 1392,
+      "maxNumericDifference": 2.064361561,
+      "first": {
+        "frame": "104",
+        "side": "Left",
+        "before": "0.0248803329",
+        "after": "0.0234395433"
+      }
+    },
+    {
+      "column": "StridePelvisDeltaY",
+      "identity": false,
+      "count": 1198,
+      "maxNumericDifference": 0.20126958199999997,
+      "first": {
+        "frame": "104",
+        "side": "Left",
+        "before": "-0.00170608528",
+        "after": "-0.00171945454"
+      }
+    },
+    {
+      "column": "FinalPelvisGoalY",
+      "identity": false,
+      "count": 1198,
+      "maxNumericDifference": 0.20126958199999997,
+      "first": {
+        "frame": "104",
+        "side": "Left",
+        "before": "-0.00170608528",
+        "after": "-0.00171945454"
+      }
+    },
+    {
+      "column": "FinalPhysicalPelvisComponentPositionY",
+      "identity": false,
+      "count": 1160,
+      "maxNumericDifference": 0.20126962999999998,
+      "first": {
+        "frame": "104",
+        "side": "Left",
+        "before": "0.589544535",
+        "after": "0.589531"
+      }
+    },
+    {
+      "column": "FinalPhysicalPelvisWorldPositionY",
+      "identity": false,
+      "count": 1160,
+      "maxNumericDifference": 0.20126962000000015,
+      "first": {
+        "frame": "104",
+        "side": "Left",
+        "before": "0.5995445",
+        "after": "0.599531"
+      }
+    },
+    {
+      "column": "FinalPhysicalPelvisGoalResidual",
+      "identity": false,
+      "count": 782,
+      "maxNumericDifference": 3.57627869e-7,
+      "first": {
+        "frame": "104",
+        "side": "Left",
+        "before": "0",
+        "after": "1.1920929E-07"
+      }
+    },
+    {
+      "column": "FinalIkSolvedPositionX",
+      "identity": false,
+      "count": 1114,
+      "maxNumericDifference": 1.8510000000804272e-7,
+      "first": {
+        "frame": "104",
+        "side": "Left",
+        "before": "-0.0149301393",
+        "after": "-0.0149301775"
+      }
+    },
+    {
+      "column": "FinalIkSolvedPositionY",
+      "identity": false,
+      "count": 904,
+      "maxNumericDifference": 2.6899999999718816e-7,
+      "first": {
+        "frame": "104",
+        "side": "Left",
+        "before": "0.08111122",
+        "after": "0.08111125"
+      }
+    },
+    {
+      "column": "FinalIkSolvedPositionZ",
+      "identity": false,
+      "count": 1002,
+      "maxNumericDifference": 3.000000000086267e-7,
+      "first": {
+        "frame": "104",
+        "side": "Left",
+        "before": "-0.0131808817",
+        "after": "-0.0131807774"
+      }
+    },
+    {
+      "column": "FinalIkPositionResidual",
+      "identity": false,
+      "count": 1159,
+      "maxNumericDifference": 3.097672267e-7,
+      "first": {
+        "frame": "104",
+        "side": "Left",
+        "before": "9.51272057E-08",
+        "after": "2.4710781E-08"
+      }
+    },
+    {
+      "column": "FinalIkLegOriginalHipY",
+      "identity": false,
+      "count": 1164,
+      "maxNumericDifference": 0.20126965299999988,
+      "first": {
+        "frame": "104",
+        "side": "Left",
+        "before": "0.589865446",
+        "after": "0.589852035"
+      }
+    },
+    {
+      "column": "FinalIkLegOriginalKneeY",
+      "identity": false,
+      "count": 1164,
+      "maxNumericDifference": 0.20126962599999998,
+      "first": {
+        "frame": "104",
+        "side": "Left",
+        "before": "0.348057628",
+        "after": "0.348044217"
+      }
+    },
+    {
+      "column": "FinalIkLegOriginalAnkleY",
+      "identity": false,
+      "count": 1164,
+      "maxNumericDifference": 0.20126966500000004,
+      "first": {
+        "frame": "104",
+        "side": "Left",
+        "before": "0.08015466",
+        "after": "0.08014125"
+      }
+    },
+    {
+      "column": "FinalIkLegSolvedHipY",
+      "identity": false,
+      "count": 1162,
+      "maxNumericDifference": 0.20126965299999988,
+      "first": {
+        "frame": "104",
+        "side": "Left",
+        "before": "0.589865446",
+        "after": "0.589852"
+      }
+    },
+    {
+      "column": "FinalIkLegSolvedHipZ",
+      "identity": false,
+      "count": 1110,
+      "maxNumericDifference": 3.091999999996209e-7,
+      "first": {
+        "frame": "104",
+        "side": "Left",
+        "before": "0.0167789366",
+        "after": "0.0167789459"
+      }
+    },
+    {
+      "column": "FinalIkLegSolvedKneeX",
+      "identity": false,
+      "count": 1164,
+      "maxNumericDifference": 0.0787003663,
+      "first": {
+        "frame": "104",
+        "side": "Left",
+        "before": "-0.0122293383",
+        "after": "-0.0122284032"
+      }
+    },
+    {
+      "column": "FinalIkLegSolvedKneeY",
+      "identity": false,
+      "count": 1161,
+      "maxNumericDifference": 0.205250561,
+      "first": {
+        "frame": "104",
+        "side": "Left",
+        "before": "0.346221268",
+        "after": "0.3462146"
+      }
+    },
+    {
+      "column": "FinalIkLegSolvedKneeZ",
+      "identity": false,
+      "count": 1162,
+      "maxNumericDifference": 0.445820629,
+      "first": {
+        "frame": "104",
+        "side": "Left",
+        "before": "0.23482956",
+        "after": "0.2348368"
+      }
+    },
+    {
+      "column": "FinalIkLegSolvedAnkleX",
+      "identity": false,
+      "count": 1114,
+      "maxNumericDifference": 1.8510000000804272e-7,
+      "first": {
+        "frame": "104",
+        "side": "Left",
+        "before": "-0.0149301393",
+        "after": "-0.0149301775"
+      }
+    },
+    {
+      "column": "FinalIkLegSolvedAnkleY",
+      "identity": false,
+      "count": 904,
+      "maxNumericDifference": 2.6899999999718816e-7,
+      "first": {
+        "frame": "104",
+        "side": "Left",
+        "before": "0.08111122",
+        "after": "0.08111125"
+      }
+    },
+    {
+      "column": "FinalIkLegSolvedAnkleZ",
+      "identity": false,
+      "count": 1002,
+      "maxNumericDifference": 3.000000000086267e-7,
+      "first": {
+        "frame": "104",
+        "side": "Left",
+        "before": "-0.0131808817",
+        "after": "-0.0131807774"
+      }
+    },
+    {
+      "column": "FinalIkLegSolvedBendDegrees",
+      "identity": false,
+      "count": 1161,
+      "maxNumericDifference": 49.379407,
+      "first": {
+        "frame": "104",
+        "side": "Left",
+        "before": "85.07869",
+        "after": "85.081955"
+      }
+    },
+    {
+      "column": "FinalIkLegTargetExtensionRatio",
+      "identity": false,
+      "count": 1161,
+      "maxNumericDifference": 0.289177244,
+      "first": {
+        "frame": "104",
+        "side": "Left",
+        "before": "0.737415552",
+        "after": "0.737396359"
+      }
+    },
+    {
+      "column": "FinalIkLegSolvedExtensionRatio",
+      "identity": false,
+      "count": 1161,
+      "maxNumericDifference": 0.289177334,
+      "first": {
+        "frame": "104",
+        "side": "Left",
+        "before": "0.7374156",
+        "after": "0.73739624"
+      }
+    },
+    {
+      "column": "FinalIkLegTargetCompressionReserve",
+      "identity": false,
+      "count": 1161,
+      "maxNumericDifference": 0.201103836,
+      "first": {
+        "frame": "104",
+        "side": "Left",
+        "before": "0.182610273",
+        "after": "0.182623625"
+      }
+    },
+    {
+      "column": "FinalIkLegSolvedCompressionReserve",
+      "identity": false,
+      "count": 1161,
+      "maxNumericDifference": 0.201103891,
+      "first": {
+        "frame": "104",
+        "side": "Left",
+        "before": "0.182610214",
+        "after": "0.182623684"
+      }
+    },
+    {
+      "column": "FinalIkLegEffectiveBendDirectionX",
+      "identity": false,
+      "count": 1160,
+      "maxNumericDifference": 0.12523149999999994,
+      "first": {
+        "frame": "104",
+        "side": "Left",
+        "before": "0.143195987",
+        "after": "0.143196166"
+      }
+    },
+    {
+      "column": "FinalIkLegEffectiveBendDirectionY",
+      "identity": false,
+      "count": 1160,
+      "maxNumericDifference": 0.22149056699999997,
+      "first": {
+        "frame": "104",
+        "side": "Left",
+        "before": "-0.0421575457",
+        "after": "-0.04215864"
+      }
+    },
+    {
+      "column": "FinalIkLegEffectiveBendDirectionZ",
+      "identity": false,
+      "count": 1158,
+      "maxNumericDifference": 0.3255576539999999,
+      "first": {
+        "frame": "104",
+        "side": "Left",
+        "before": "0.988796055",
+        "after": "0.988796"
+      }
+    },
+    {
+      "column": "FinalIkLegEffectiveBendDirectionPreviousDot",
+      "identity": false,
+      "count": 1219,
+      "maxNumericDifference": 0.1961754,
+      "first": {
+        "frame": "104",
+        "side": "Left",
+        "before": "0.99419266",
+        "after": "0.994192541"
+      }
+    },
+    {
+      "column": "FinalIkPelvisTargetPositionY",
+      "identity": false,
+      "count": 1198,
+      "maxNumericDifference": 0.20126958199999997,
+      "first": {
+        "frame": "104",
+        "side": "Left",
+        "before": "-0.00170608528",
+        "after": "-0.00171945454"
+      }
+    },
+    {
+      "column": "FinalIkPelvisSolvedPositionX",
+      "identity": false,
+      "count": 1148,
+      "maxNumericDifference": 1.66706744e-7,
+      "first": {
+        "frame": "104",
+        "side": "Left",
+        "before": "8.84756446E-09",
+        "after": "1.44355E-08"
+      }
+    },
+    {
+      "column": "FinalIkPelvisSolvedPositionY",
+      "identity": false,
+      "count": 1162,
+      "maxNumericDifference": 0.20126962999999998,
+      "first": {
+        "frame": "104",
+        "side": "Left",
+        "before": "0.589544535",
+        "after": "0.589531"
+      }
+    },
+    {
+      "column": "FinalIkPelvisSolvedPositionZ",
+      "identity": false,
+      "count": 1124,
+      "maxNumericDifference": 2.27242709e-7,
+      "first": {
+        "frame": "104",
+        "side": "Left",
+        "before": "-1.11758709E-08",
+        "after": "-4.09781933E-08"
+      }
+    },
+    {
+      "column": "FinalPhysicalAnkleComponentRotationZ",
+      "identity": false,
+      "count": 730,
+      "maxNumericDifference": 1.3550092,
+      "first": {
+        "frame": "104",
+        "side": "Left",
+        "before": "-0.467484921",
+        "after": "-0.46748504"
+      }
+    },
+    {
+      "column": "FinalPhysicalAnkleWorldRotationX",
+      "identity": false,
+      "count": 767,
+      "maxNumericDifference": 1.804835041,
+      "first": {
+        "frame": "104",
+        "side": "Left",
+        "before": "-0.704528451",
+        "after": "-0.7045285"
+      }
+    },
+    {
+      "column": "FinalPhysicalAnkleWorldRotationZ",
+      "identity": false,
+      "count": 772,
+      "maxNumericDifference": 1.4640138,
+      "first": {
+        "frame": "104",
+        "side": "Left",
+        "before": "0.09236452",
+        "after": "0.09236444"
+      }
+    },
+    {
+      "column": "FinalIkLegBendWeight",
+      "identity": false,
+      "count": 307,
+      "maxNumericDifference": 0.8542936,
+      "first": {
+        "frame": "104",
+        "side": "Right",
+        "before": "0.03078864",
+        "after": "0.0307194758"
+      }
+    },
+    {
+      "column": "FinalIkLegStabilizationWeight",
+      "identity": false,
+      "count": 307,
+      "maxNumericDifference": 0.8542936,
+      "first": {
+        "frame": "104",
+        "side": "Right",
+        "before": "0.03078864",
+        "after": "0.0307194758"
+      }
+    },
+    {
+      "column": "FinalIkLegSolvedHipX",
+      "identity": false,
+      "count": 990,
+      "maxNumericDifference": 1.7000000000766402e-7,
+      "first": {
+        "frame": "104",
+        "side": "Right",
+        "before": "0.0720283538",
+        "after": "0.07202837"
+      }
+    },
+    {
+      "column": "FinalPhysicalAnkleComponentRotationY",
+      "identity": false,
+      "count": 954,
+      "maxNumericDifference": 0.917205426,
+      "first": {
+        "frame": "104",
+        "side": "Right",
+        "before": "-0.0544075556",
+        "after": "-0.0544075444"
+      }
+    },
+    {
+      "column": "FinalPhysicalAnkleWorldRotationY",
+      "identity": false,
+      "count": 968,
+      "maxNumericDifference": 1.1769570649999999,
+      "first": {
+        "frame": "104",
+        "side": "Right",
+        "before": "0.00158958032",
+        "after": "0.00158958766"
+      }
+    },
+    {
+      "column": "FinalPhysicalAnkleWorldRotationW",
+      "identity": false,
+      "count": 989,
+      "maxNumericDifference": 1.251949853,
+      "first": {
+        "frame": "104",
+        "side": "Right",
+        "before": "0.07392258",
+        "after": "0.0739225745"
+      }
+    },
+    {
+      "column": "FinalPhysicalHeelWorldY",
+      "identity": false,
+      "count": 537,
+      "maxNumericDifference": 7.20000000065113e-7,
+      "first": {
+        "frame": "104",
+        "side": "Right",
+        "before": "0.156359211",
+        "after": "0.156359226"
+      }
+    },
+    {
+      "column": "StridePreviousSpringTarget",
+      "identity": false,
+      "count": 596,
+      "maxNumericDifference": 0.37535319899999997,
+      "first": {
+        "frame": "105",
+        "side": "Left",
+        "before": "-0.000416351482",
+        "after": "-0.000749461353"
+      }
+    },
+    {
+      "column": "StridePreviousSpringOutput",
+      "identity": false,
+      "count": 1198,
+      "maxNumericDifference": 0.20126958199999997,
+      "first": {
+        "frame": "105",
+        "side": "Left",
+        "before": "-0.00170608528",
+        "after": "-0.00171945454"
+      }
+    },
+    {
+      "column": "StridePreviousSpringVelocity",
+      "identity": false,
+      "count": 1392,
+      "maxNumericDifference": 2.064361561,
+      "first": {
+        "frame": "105",
+        "side": "Left",
+        "before": "0.0248803329",
+        "after": "0.0234395433"
+      }
+    },
+    {
+      "column": "StrideSpringInput",
+      "identity": false,
+      "count": 1198,
+      "maxNumericDifference": 0.20126958199999997,
+      "first": {
+        "frame": "105",
+        "side": "Left",
+        "before": "-0.00170608528",
+        "after": "-0.00171945454"
+      }
+    },
+    {
+      "column": "StrideSpringInputVelocity",
+      "identity": false,
+      "count": 1254,
+      "maxNumericDifference": 2.22868419,
+      "first": {
+        "frame": "105",
+        "side": "Left",
+        "before": "0.0248803329",
+        "after": "0.0234395433"
+      }
+    },
+    {
+      "column": "FinalPhysicalAnkleComponentPositionY",
+      "identity": false,
+      "count": 541,
+      "maxNumericDifference": 4.999999999588667e-7,
+      "first": {
+        "frame": "105",
+        "side": "Left",
+        "before": "0.0806991458",
+        "after": "0.0806990862"
+      }
+    },
+    {
+      "column": "FinalPhysicalAnkleWorldPositionY",
+      "identity": false,
+      "count": 541,
+      "maxNumericDifference": 6.800000003082118e-7,
+      "first": {
+        "frame": "105",
+        "side": "Left",
+        "before": "0.09069913",
+        "after": "0.09069907"
+      }
+    },
+    {
+      "column": "FinalPhysicalToeWorldY",
+      "identity": false,
+      "count": 556,
+      "maxNumericDifference": 9.499999995554731e-7,
+      "first": {
+        "frame": "105",
+        "side": "Left",
+        "before": "0.008798875",
+        "after": "0.008798815"
+      }
+    },
+    {
+      "column": "FinalPhysicalAnkleGoalResidual",
+      "identity": false,
+      "count": 574,
+      "maxNumericDifference": 9.948129e-7,
+      "first": {
+        "frame": "105",
+        "side": "Left",
+        "before": "7.4505806E-08",
+        "after": "1.34110451E-07"
+      }
+    },
+    {
+      "column": "FinalPhysicalAnkleComponentRotationW",
+      "identity": false,
+      "count": 973,
+      "maxNumericDifference": 0.908744216,
+      "first": {
+        "frame": "105",
+        "side": "Right",
+        "before": "0.11003314",
+        "after": "0.110033154"
+      }
+    },
+    {
+      "column": "StrideSpringVelocityReset",
+      "identity": false,
+      "count": 124,
+      "maxNumericDifference": 1,
+      "first": {
+        "frame": "106",
+        "side": "Left",
+        "before": "0",
+        "after": "1"
+      }
+    },
+    {
+      "column": "FinalPhysicalAnkleComponentRotationX",
+      "identity": false,
+      "count": 743,
+      "maxNumericDifference": 1.2365286,
+      "first": {
+        "frame": "107",
+        "side": "Left",
+        "before": "-0.5335732",
+        "after": "-0.533573151"
+      }
+    },
+    {
+      "column": "FinalPhysicalAnkleComponentPositionX",
+      "identity": false,
+      "count": 138,
+      "maxNumericDifference": 4.779999999999368e-7,
+      "first": {
+        "frame": "108",
+        "side": "Right",
+        "before": "0.06519741",
+        "after": "0.0651971847"
+      }
+    },
+    {
+      "column": "FinalPhysicalAnkleComponentPositionZ",
+      "identity": false,
+      "count": 130,
+      "maxNumericDifference": 9.559999999964042e-7,
+      "first": {
+        "frame": "108",
+        "side": "Right",
+        "before": "-0.152296215",
+        "after": "-0.152296275"
+      }
+    },
+    {
+      "column": "FinalPhysicalAnkleWorldPositionZ",
+      "identity": false,
+      "count": 133,
+      "maxNumericDifference": 0.0000010000000010279564,
+      "first": {
+        "frame": "108",
+        "side": "Right",
+        "before": "-3.100231",
+        "after": "-3.10023069"
+      }
+    },
+    {
+      "column": "FinalPhysicalHeelWorldZ",
+      "identity": false,
+      "count": 136,
+      "maxNumericDifference": 0.0000010000000010279564,
+      "first": {
+        "frame": "108",
+        "side": "Right",
+        "before": "-3.08642745",
+        "after": "-3.08642721"
+      }
+    },
+    {
+      "column": "FinalPhysicalToeWorldZ",
+      "identity": false,
+      "count": 136,
+      "maxNumericDifference": 0.0000010000000010279564,
+      "first": {
+        "frame": "108",
+        "side": "Right",
+        "before": "-3.10148764",
+        "after": "-3.1014874"
+      }
+    },
+    {
+      "column": "FinalIkLegAnimatedBendDirectionPreviousDot",
+      "identity": false,
+      "count": 158,
+      "maxNumericDifference": 7.150000000955004e-7,
+      "first": {
+        "frame": "119",
+        "side": "Left",
+        "before": "0.998559058",
+        "after": "0.998559"
+      }
+    },
+    {
+      "column": "PelvisPosturePreferenceTargetAdjusted",
+      "identity": false,
+      "count": 202,
+      "maxNumericDifference": 1,
+      "first": {
+        "frame": "125",
+        "side": "Left",
+        "before": "1",
+        "after": "0"
+      }
+    },
+    {
+      "column": "StrideSpringHandoffReason",
+      "identity": false,
+      "count": 58,
+      "maxNumericDifference": 0,
+      "first": {
+        "frame": "148",
+        "side": "Left",
+        "before": "None",
+        "after": "TargetCrossedOutput"
+      }
+    },
+    {
+      "column": "PelvisHardReachTargetClamped",
+      "identity": false,
+      "count": 42,
+      "maxNumericDifference": 1,
+      "first": {
+        "frame": "158",
+        "side": "Left",
+        "before": "1",
+        "after": "0"
+      }
+    },
+    {
+      "column": "FinalPhysicalPelvisComponentPositionX",
+      "identity": false,
+      "count": 36,
+      "maxNumericDifference": 2.19242139e-7,
+      "first": {
+        "frame": "160",
+        "side": "Left",
+        "before": "0",
+        "after": "-8.568162E-08"
+      }
+    },
+    {
+      "column": "FinalPhysicalPelvisComponentPositionZ",
+      "identity": false,
+      "count": 36,
+      "maxNumericDifference": 2.388323e-7,
+      "first": {
+        "frame": "160",
+        "side": "Left",
+        "before": "0",
+        "after": "8.195644E-08"
+      }
+    },
+    {
+      "column": "FinalPhysicalPelvisWorldPositionZ",
+      "identity": false,
+      "count": 36,
+      "maxNumericDifference": 2.400000003177638e-7,
+      "first": {
+        "frame": "160",
+        "side": "Left",
+        "before": "-1.87453032",
+        "after": "-1.8745302"
+      }
+    },
+    {
+      "column": "FinalIkLegOriginalExtensionRatio",
+      "identity": false,
+      "count": 25,
+      "maxNumericDifference": 1.3799999998287404e-7,
+      "first": {
+        "frame": "209",
+        "side": "Right",
+        "before": "0.469845355",
+        "after": "0.469845384"
+      }
+    },
+    {
+      "column": "FinalIkLegOriginalCompressionReserve",
+      "identity": false,
+      "count": 28,
+      "maxNumericDifference": 8.900000003642106e-8,
+      "first": {
+        "frame": "209",
+        "side": "Right",
+        "before": "0.3686878",
+        "after": "0.368687779"
+      }
+    },
+    {
+      "column": "PelvisHardReachOutputClamped",
+      "identity": false,
+      "count": 54,
+      "maxNumericDifference": 1,
+      "first": {
+        "frame": "213",
+        "side": "Left",
+        "before": "1",
+        "after": "0"
+      }
+    },
+    {
+      "column": "FinalIkLegOriginalBendDegrees",
+      "identity": false,
+      "count": 34,
+      "maxNumericDifference": 0.00047301999999999067,
+      "first": {
+        "frame": "282",
+        "side": "Right",
+        "before": "126.922928",
+        "after": "126.92292"
+      }
+    },
+    {
+      "column": "FinalIkRotationResidualDegrees",
+      "identity": false,
+      "count": 18,
+      "maxNumericDifference": 0.00005439999999978795,
+      "first": {
+        "frame": "342",
+        "side": "Right",
+        "before": "84.19391",
+        "after": "84.1939"
+      }
+    },
+    {
+      "column": "PelvisHardReachVelocityCleared",
+      "identity": false,
+      "count": 2,
+      "maxNumericDifference": 1,
+      "first": {
+        "frame": "483",
+        "side": "Left",
+        "before": "0",
+        "after": "1"
+      }
+    },
+    {
+      "column": "PelvisPositionWeight",
+      "identity": false,
+      "count": 4,
+      "maxNumericDifference": 1,
+      "first": {
+        "frame": "778",
+        "side": "Left",
+        "before": "0",
+        "after": "1"
+      }
+    },
+    {
+      "column": "StridePositionWeight",
+      "identity": false,
+      "count": 4,
+      "maxNumericDifference": 1,
+      "first": {
+        "frame": "778",
+        "side": "Left",
+        "before": "0",
+        "after": "1"
+      }
+    },
+    {
+      "column": "FinalPhysicalPelvisGoalResidualAvailable",
+      "identity": false,
+      "count": 4,
+      "maxNumericDifference": 1,
+      "first": {
+        "frame": "778",
+        "side": "Left",
+        "before": "0",
+        "after": "1"
+      }
+    },
+    {
+      "column": "FinalPhysicalHeelWorldX",
+      "identity": false,
+      "count": 1,
+      "maxNumericDifference": 0.000003800000001774606,
+      "first": {
+        "frame": "979",
+        "side": "Left",
+        "before": "47.7905159",
+        "after": "47.7905121"
+      }
+    }
+  ],
+  "baseline": {
+    "flat": {
+      "count": 179,
+      "movingCount": 96,
+      "stationaryCount": 83,
+      "mean": -0.01856510490475419,
+      "movingMean": -0.01535523010157292,
+      "stationaryMean": -0.02227773118313252,
+      "movingBelow20": 32,
+      "movingMin": -0.04895699
+    },
+    "negativeArea": 0.33813423491226097,
+    "samples": 1043,
+    "worldOver50": 33,
+    "worldDownOver50": 24,
+    "worldDownOver50HardClamped": 17,
+    "correctionOver50": 28,
+    "maxWorldStep": {
+      "frame": 420,
+      "worldDelta": -0.08020991999999993,
+      "correctionDelta": -0.043743610380000006,
+      "hardClamped": true
+    },
+    "maxCorrectionStep": {
+      "frame": 322,
+      "worldDelta": -0.04587698000000007,
+      "correctionDelta": -0.0893616679,
+      "hardClamped": true
+    },
+    "kneeActualOver50": 686,
+    "kneeActualOver100": 157,
+    "kneeExtraOver100": 89,
+    "maxKnee": {
+      "side": "Right",
+      "frame": 826,
+      "actual": 0.6282357525568935,
+      "extra": 0.6046531960365575
+    },
+    "windows": [
+      {
+        "frame": 175,
+        "worldDelta": 0.007802444999999936,
+        "correctionDelta": 0.0023765667000000008,
+        "hardClamped": false
+      },
+      {
+        "frame": 278,
+        "worldDelta": 0.04895000000000005,
+        "correctionDelta": 0.025640375199999996,
+        "hardClamped": false
+      },
+      {
+        "frame": 322,
+        "worldDelta": -0.04587698000000007,
+        "correctionDelta": -0.0893616679,
+        "hardClamped": true
+      },
+      {
+        "frame": 402,
+        "worldDelta": -0.06581425999999979,
+        "correctionDelta": -0.0290300247,
+        "hardClamped": true
+      },
+      {
+        "frame": 414,
+        "worldDelta": -0.03950016000000023,
+        "correctionDelta": -0.011253037000000007,
+        "hardClamped": false
+      },
+      {
+        "frame": 418,
+        "worldDelta": -0.04420865000000007,
+        "correctionDelta": -0.011894772599999999,
+        "hardClamped": false
+      },
+      {
+        "frame": 419,
+        "worldDelta": -0.04565028999999998,
+        "correctionDelta": -0.011993531099999996,
+        "hardClamped": true
+      },
+      {
+        "frame": 420,
+        "worldDelta": -0.08020991999999993,
+        "correctionDelta": -0.043743610380000006,
+        "hardClamped": true
+      },
+      {
+        "frame": 466,
+        "worldDelta": -0.04660581999999991,
+        "correctionDelta": -0.079741838,
+        "hardClamped": true
+      },
+      {
+        "frame": 675,
+        "worldDelta": -0.0074661599999998884,
+        "correctionDelta": -0.0110532487,
+        "hardClamped": true
+      },
+      {
+        "frame": 711,
+        "worldDelta": 0.018845079999999736,
+        "correctionDelta": -0.0005813352999999993,
+        "hardClamped": false
+      },
+      {
+        "frame": 824,
+        "worldDelta": 0.05180834999999995,
+        "correctionDelta": 0.006098394299999997,
+        "hardClamped": false
+      },
+      {
+        "frame": 825,
+        "worldDelta": 0.05211235000000025,
+        "correctionDelta": 0.004608857500000001,
+        "hardClamped": false
+      },
+      {
+        "frame": 826,
+        "worldDelta": 0.04115413999999973,
+        "correctionDelta": -0.0014788285000000012,
+        "hardClamped": true
+      },
+      {
+        "frame": 968,
+        "worldDelta": -0.052235840000000255,
+        "correctionDelta": -0.000145090045,
+        "hardClamped": false
+      },
+      {
+        "frame": 985,
+        "worldDelta": 0.022566789999999948,
+        "correctionDelta": 0.033226743999999975,
+        "hardClamped": false
+      },
+      {
+        "frame": 986,
+        "worldDelta": -0.02688264000000018,
+        "correctionDelta": -0.013138919999999998,
+        "hardClamped": false
+      },
+      {
+        "frame": 989,
+        "worldDelta": -0.06325624999999979,
+        "correctionDelta": -0.037532434,
+        "hardClamped": false
+      }
+    ],
+    "surfaceCounts": {
+      "None": 299,
+      "Ready": 1787
+    }
+  },
+  "current": {
+    "flat": {
+      "count": 179,
+      "movingCount": 96,
+      "stationaryCount": 83,
+      "mean": -0.019558539856256982,
+      "movingMean": -0.017207572354895843,
+      "stationaryMean": -0.02227773118313252,
+      "movingBelow20": 33,
+      "movingMin": -0.04895699
+    },
+    "negativeArea": 0.36144744821010427,
+    "samples": 1043,
+    "worldOver50": 24,
+    "worldDownOver50": 13,
+    "worldDownOver50HardClamped": 12,
+    "correctionOver50": 18,
+    "maxWorldStep": {
+      "frame": 402,
+      "worldDelta": -0.06581425999999979,
+      "correctionDelta": -0.0290300247,
+      "hardClamped": true
+    },
+    "maxCorrectionStep": {
+      "frame": 322,
+      "worldDelta": -0.04587698000000007,
+      "correctionDelta": -0.0893616679,
+      "hardClamped": true
+    },
+    "kneeActualOver50": 707,
+    "kneeActualOver100": 174,
+    "kneeExtraOver100": 84,
+    "maxKnee": {
+      "side": "Right",
+      "frame": 826,
+      "actual": 0.6284448998316468,
+      "extra": 0.6051251568549812
+    },
+    "windows": [
+      {
+        "frame": 175,
+        "worldDelta": 0.007802444999999936,
+        "correctionDelta": 0.0023765667000000008,
+        "hardClamped": false
+      },
+      {
+        "frame": 278,
+        "worldDelta": 0.03694856999999985,
+        "correctionDelta": 0.013638810000000001,
+        "hardClamped": false
+      },
+      {
+        "frame": 322,
+        "worldDelta": -0.04587698000000007,
+        "correctionDelta": -0.0893616679,
+        "hardClamped": true
+      },
+      {
+        "frame": 402,
+        "worldDelta": -0.06581425999999979,
+        "correctionDelta": -0.0290300247,
+        "hardClamped": true
+      },
+      {
+        "frame": 414,
+        "worldDelta": -0.03445387000000011,
+        "correctionDelta": -0.006206795500000001,
+        "hardClamped": false
+      },
+      {
+        "frame": 418,
+        "worldDelta": -0.03887462000000008,
+        "correctionDelta": -0.006560750300000001,
+        "hardClamped": false
+      },
+      {
+        "frame": 419,
+        "worldDelta": -0.03932416999999999,
+        "correctionDelta": -0.005667422000000002,
+        "hardClamped": false
+      },
+      {
+        "frame": 420,
+        "worldDelta": -0.062292449999999944,
+        "correctionDelta": -0.025826115179999998,
+        "hardClamped": true
+      },
+      {
+        "frame": 466,
+        "worldDelta": -0.04660581999999991,
+        "correctionDelta": -0.079741838,
+        "hardClamped": true
+      },
+      {
+        "frame": 675,
+        "worldDelta": -0.0074661599999998884,
+        "correctionDelta": -0.0110532487,
+        "hardClamped": true
+      },
+      {
+        "frame": 711,
+        "worldDelta": 0.019395360000000306,
+        "correctionDelta": -0.00003089315399999997,
+        "hardClamped": false
+      },
+      {
+        "frame": 824,
+        "worldDelta": 0.051970729999999854,
+        "correctionDelta": 0.006260516200000003,
+        "hardClamped": false
+      },
+      {
+        "frame": 825,
+        "worldDelta": 0.05228946999999984,
+        "correctionDelta": 0.004786163399999998,
+        "hardClamped": false
+      },
+      {
+        "frame": 826,
+        "worldDelta": 0.04088402000000002,
+        "correctionDelta": -0.001749014400000002,
+        "hardClamped": true
+      },
+      {
+        "frame": 968,
+        "worldDelta": -0.05229019999999984,
+        "correctionDelta": -0.000199628457,
+        "hardClamped": false
+      },
+      {
+        "frame": 985,
+        "worldDelta": -0.01297731000000013,
+        "correctionDelta": -0.002317161000000012,
+        "hardClamped": false
+      },
+      {
+        "frame": 986,
+        "worldDelta": -0.021844869999999794,
+        "correctionDelta": -0.008100994,
+        "hardClamped": false
+      },
+      {
+        "frame": 989,
+        "worldDelta": -0.04005384000000012,
+        "correctionDelta": -0.014330226200000004,
+        "hardClamped": false
+      }
+    ],
+    "surfaceCounts": {
+      "None": 299,
+      "Ready": 1787
+    }
+  },
+  "maxRssBytes": 120057856,
+  "classificationNote": "产品/Projection/Profile/观察身份单列；64位identity未作为数值差评估。"
+}

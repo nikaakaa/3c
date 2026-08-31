@@ -1,0 +1,1739 @@
+{
+  "kind": "independent-geometric-candidate-contract-and-knee/1",
+  "before": "20260831-112611-018-2429691288e6434a8588a55de100efc2",
+  "after": "20260831-132307-889-d30ebd7be545423dbc29995a645beb92",
+  "physicalFootMaxDifferences": {
+    "heel": 0.000003800000001774606,
+    "toe": 0.0000010000000010279564,
+    "ankle": 0.0000010000000010279564,
+    "rotationDegrees": 0.00003908754410569609,
+    "rotationSignFlips": 16
+  },
+  "candidates": {
+    "eligibleFrames": 455,
+    "selectionCounts": {
+      "CorrectionMinimum": 412,
+      "SingleTargetCandidate": 43
+    },
+    "footKinds": {
+      "TargetOutsideRadius": 867,
+      "TargetBelowReference": 37,
+      "TargetAtOrAboveReference": 6
+    },
+    "radii": [
+      0.2
+    ],
+    "sameFramePairMismatch": 0,
+    "branchMismatch": 0,
+    "selectionMismatch": 0,
+    "maxCorrectionError": 3.109999997807922e-7,
+    "maxValueError": 0.000003182963288402181,
+    "maxRequestError": 0.000003182963288402181,
+    "maxOriginalAnkleInputError": 0,
+    "maxGoalInputError": 3.500000000933312e-7,
+    "maxReferenceInputError": 0
+  },
+  "knee": {
+    "stepPairs": 2084,
+    "actualAddedOver100": 30,
+    "actualRemovedOver100": 13,
+    "extraAddedOver100": 5,
+    "extraRemovedOver100": 10,
+    "temporalPoleReversalsBefore": 18,
+    "temporalPoleReversalsAfter": 16,
+    "temporalPoleOnlyAfter": [
+      {
+        "frame": 939,
+        "side": "Right",
+        "before": {
+          "actual": 0.041529912384941706,
+          "relativeHip": 0.030720725712193083,
+          "extra": 0.03834442619633685,
+          "poleDot": 0.9998326743883602,
+          "poleMinRadius": 0.08270731738696671
+        },
+        "after": {
+          "actual": 0.27361509689194524,
+          "relativeHip": 0.2714892007651337,
+          "extra": 0.26283349600406836,
+          "poleDot": -0.9998325675055493,
+          "poleMinRadius": 0.12032033689970838
+        },
+        "delta": 0.23208518450700355,
+        "offsetDelta": 0.2244890698077315,
+        "axisDegrees": 0.9455098509289644,
+        "crossVersionPoleDot": 0.9999999991190511,
+        "hipVersionDifference": 0.025528459000017628,
+        "ankleVersionDifference": 9.708243920274729e-8,
+        "weights": [
+          0.6833103,
+          0.277034163
+        ]
+      },
+      {
+        "frame": 995,
+        "side": "Right",
+        "before": {
+          "actual": 0.0383523947332953,
+          "relativeHip": 0.009166129798581814,
+          "extra": 0.04597979648573686,
+          "poleDot": 0.9999866151300502,
+          "poleMinRadius": 0.08270570954721312
+        },
+        "after": {
+          "actual": 0.2722411399700901,
+          "relativeHip": 0.2661559883476213,
+          "extra": 0.22780518905140448,
+          "poleDot": -0.9999850538634385,
+          "poleMinRadius": 0.11147994815155769
+        },
+        "delta": 0.2338887452367948,
+        "offsetDelta": 0.18182539256566763,
+        "axisDegrees": 0.8440691807544747,
+        "crossVersionPoleDot": 0.9999999996810516,
+        "hipVersionDifference": 0.019455462000017406,
+        "ankleVersionDifference": 1.2339773095439546e-7,
+        "weights": [
+          0.68334043,
+          0.0546946339
+        ]
+      }
+    ],
+    "added": [
+      {
+        "frame": 213,
+        "side": "Left",
+        "before": {
+          "actual": 0.09179572634208992,
+          "relativeHip": 0.0881009962295059,
+          "extra": 0.03646065159913554,
+          "poleDot": 0.9979117262428562,
+          "poleMinRadius": 0.08270648515984619
+        },
+        "after": {
+          "actual": 0.11167456884176576,
+          "relativeHip": 0.10749910284550085,
+          "extra": 0.03902069711801819,
+          "poleDot": 0.9978849390977598,
+          "poleMinRadius": 0.08901709233775154
+        },
+        "delta": 0.019878842499675836,
+        "offsetDelta": 0.002560045518882649,
+        "axisDegrees": 0.1339876459264457,
+        "crossVersionPoleDot": 0.9999999978210764,
+        "hipVersionDifference": 0.0035880700032977324,
+        "ankleVersionDifference": 1.3801084159265435e-7,
+        "weights": [
+          0.68332535,
+          0.548085749
+        ]
+      },
+      {
+        "frame": 229,
+        "side": "Left",
+        "before": {
+          "actual": 0.0941127805386839,
+          "relativeHip": 0.08618246635753553,
+          "extra": 0.0034953665530923802,
+          "poleDot": 0.996868787007956,
+          "poleMinRadius": 0.3014885737474843
+        },
+        "after": {
+          "actual": 0.12005868686625147,
+          "relativeHip": 0.10743591863122769,
+          "extra": 0.01939487422481875,
+          "poleDot": 0.9968893827164923,
+          "poleMinRadius": 0.3151076093801151
+        },
+        "delta": 0.025945906327567575,
+        "offsetDelta": 0.01589950767172637,
+        "axisDegrees": 8.816636392698737,
+        "crossVersionPoleDot": 0.9999999927121437,
+        "hipVersionDifference": 0.07598735900020034,
+        "ankleVersionDifference": 6.163148545170235e-8,
+        "weights": [
+          0,
+          0
+        ]
+      },
+      {
+        "frame": 231,
+        "side": "Right",
+        "before": {
+          "actual": 0.06327276215229415,
+          "relativeHip": 0.039643524435029096,
+          "extra": 0.09427859482649761,
+          "poleDot": 0.9970417442169837,
+          "poleMinRadius": 0.08270615925347406
+        },
+        "after": {
+          "actual": 0.11382353399134398,
+          "relativeHip": 0.11252520770567982,
+          "extra": 0.03363174801970444,
+          "poleDot": 0.9970996403420098,
+          "poleMinRadius": 0.08270615925347406
+        },
+        "delta": 0.05055077183904984,
+        "offsetDelta": -0.06064684680679317,
+        "axisDegrees": 0,
+        "crossVersionPoleDot": 0.9999999999999998,
+        "hipVersionDifference": 0,
+        "ankleVersionDifference": 0,
+        "weights": [
+          0.683332,
+          0.683332
+        ]
+      },
+      {
+        "frame": 266,
+        "side": "Right",
+        "before": {
+          "actual": 0.0957885612622103,
+          "relativeHip": 0.08744624787339228,
+          "extra": 0.025125006311049695,
+          "poleDot": 0.9954109827149586,
+          "poleMinRadius": 0.08270620135120904
+        },
+        "after": {
+          "actual": 0.130200083280174,
+          "relativeHip": 0.1298124402468412,
+          "extra": 0.01884526413993514,
+          "poleDot": 0.9954166661061925,
+          "poleMinRadius": 0.08270620135120904
+        },
+        "delta": 0.034411522017963686,
+        "offsetDelta": -0.006279742171114554,
+        "axisDegrees": 0.0000017075472925031877,
+        "crossVersionPoleDot": 0.9999999999999998,
+        "hipVersionDifference": 0,
+        "ankleVersionDifference": 0,
+        "weights": [
+          0.6833287,
+          0.6833287
+        ]
+      },
+      {
+        "frame": 284,
+        "side": "Right",
+        "before": {
+          "actual": 0.06244105958722371,
+          "relativeHip": 0.047461536544281514,
+          "extra": 0.0008932887093919185,
+          "poleDot": 0.9991820197457822,
+          "poleMinRadius": 0.2931191703973314
+        },
+        "after": {
+          "actual": 0.10468962133282417,
+          "relativeHip": 0.07953655293199305,
+          "extra": 0.031782809070704604,
+          "poleDot": 0.9991637769635224,
+          "poleMinRadius": 0.31617246142588795
+        },
+        "delta": 0.04224856174560046,
+        "offsetDelta": 0.030889520361312685,
+        "axisDegrees": 6.480898341123875,
+        "crossVersionPoleDot": 0.9999999997588406,
+        "hipVersionDifference": 0.09706853800003305,
+        "ankleVersionDifference": 1.4567086188401182e-7,
+        "weights": [
+          0.0192257874,
+          0
+        ]
+      },
+      {
+        "frame": 285,
+        "side": "Left",
+        "before": {
+          "actual": 0.07927960541405281,
+          "relativeHip": 0.06907981065409298,
+          "extra": 0.041153861744309295,
+          "poleDot": 0.9972796307339173,
+          "poleMinRadius": 0.08270579519618268
+        },
+        "after": {
+          "actual": 0.1095060933100496,
+          "relativeHip": 0.10595309102976823,
+          "extra": 0.047041988836581984,
+          "poleDot": 0.9973482038383009,
+          "poleMinRadius": 0.1303312370490599
+        },
+        "delta": 0.030226487895996787,
+        "offsetDelta": 0.005888127092272689,
+        "axisDegrees": 1.4250890454932792,
+        "crossVersionPoleDot": 0.9999996370503924,
+        "hipVersionDifference": 0.034915444000484346,
+        "ankleVersionDifference": 9.783537192901724e-8,
+        "weights": [
+          0.683338761,
+          0
+        ]
+      },
+      {
+        "frame": 285,
+        "side": "Right",
+        "before": {
+          "actual": 0.06119858530088293,
+          "relativeHip": 0.0790312893621721,
+          "extra": 0.04006956155719521,
+          "poleDot": 0.9996488703335126,
+          "poleMinRadius": 0.2931191703973314
+        },
+        "after": {
+          "actual": 0.10219270296864556,
+          "relativeHip": 0.07496330679727001,
+          "extra": 0.036441466965095246,
+          "poleDot": 0.9995990532726546,
+          "poleMinRadius": 0.3079055958766912
+        },
+        "delta": 0.04099411766776263,
+        "offsetDelta": -0.0036280945920999647,
+        "axisDegrees": 0.8452389548694941,
+        "crossVersionPoleDot": 0.9999999999988094,
+        "hipVersionDifference": 0.0349153590000696,
+        "ankleVersionDifference": 1.2999999999989515e-7,
+        "weights": [
+          0,
+          0
+        ]
+      },
+      {
+        "frame": 301,
+        "side": "Left",
+        "before": {
+          "actual": 0.09806553197157107,
+          "relativeHip": 0.0901862281652389,
+          "extra": 0.0018630468663185043,
+          "poleDot": 0.996875530360772,
+          "poleMinRadius": 0.3046090280659608
+        },
+        "after": {
+          "actual": 0.12394906999618015,
+          "relativeHip": 0.11133419840515449,
+          "extra": 0.02367922357571757,
+          "poleDot": 0.9968964135583193,
+          "poleMinRadius": 0.31652648022861263
+        },
+        "delta": 0.025883538024609076,
+        "offsetDelta": 0.021816176709399067,
+        "axisDegrees": 8.991295714229336,
+        "crossVersionPoleDot": 0.9999999926616835,
+        "hipVersionDifference": 0.07148400000001139,
+        "ankleVersionDifference": 7.000000001470116e-8,
+        "weights": [
+          0,
+          0
+        ]
+      },
+      {
+        "frame": 303,
+        "side": "Right",
+        "before": {
+          "actual": 0.06409849992280513,
+          "relativeHip": 0.03958116309917605,
+          "extra": 0.09256102500107616,
+          "poleDot": 0.9968366058921155,
+          "poleMinRadius": 0.08270595275572613
+        },
+        "after": {
+          "actual": 0.10893631364099839,
+          "relativeHip": 0.10808733520826673,
+          "extra": 0.03393938484814293,
+          "poleDot": 0.9969086743067622,
+          "poleMinRadius": 0.08270674043603762
+        },
+        "delta": 0.04483781371819326,
+        "offsetDelta": -0.05862164015293323,
+        "axisDegrees": 0,
+        "crossVersionPoleDot": 0.9999999999999998,
+        "hipVersionDifference": 0,
+        "ankleVersionDifference": 0,
+        "weights": [
+          0.6833203,
+          0.6833203
+        ]
+      },
+      {
+        "frame": 337,
+        "side": "Left",
+        "before": {
+          "actual": 0.09590377538995695,
+          "relativeHip": 0.07544599638841269,
+          "extra": 0.013591268361299954,
+          "poleDot": 0.9968438895689613,
+          "poleMinRadius": 0.29235400367876957
+        },
+        "after": {
+          "actual": 0.10524796417089048,
+          "relativeHip": 0.0950632826125093,
+          "extra": 0.006413811383819527,
+          "poleDot": 0.9968686203308723,
+          "poleMinRadius": 0.3087662445956195
+        },
+        "delta": 0.00934418878093353,
+        "offsetDelta": -0.007177456977480427,
+        "axisDegrees": 5.581120432452578,
+        "crossVersionPoleDot": 0.9999999799874999,
+        "hipVersionDifference": 0.06809056400000654,
+        "ankleVersionDifference": 4.791659417762258e-8,
+        "weights": [
+          0.125473738,
+          0
+        ]
+      },
+      {
+        "frame": 483,
+        "side": "Right",
+        "before": {
+          "actual": 0.0775298291311812,
+          "relativeHip": 0.0760093440688046,
+          "extra": 0.06079432612776296,
+          "poleDot": 0.9971104450150828,
+          "poleMinRadius": 0.0827068127196347
+        },
+        "after": {
+          "actual": 0.11680524292313356,
+          "relativeHip": 0.1132213266717969,
+          "extra": 0.033734234013349365,
+          "poleDot": 0.9969769530214084,
+          "poleMinRadius": 0.0827068127196347
+        },
+        "delta": 0.03927541379195236,
+        "offsetDelta": -0.027060092114413598,
+        "axisDegrees": 0.0000012074182697257333,
+        "crossVersionPoleDot": 0.9999999999999998,
+        "hipVersionDifference": 0,
+        "ankleVersionDifference": 0,
+        "weights": [
+          0.6833203,
+          0.6833203
+        ]
+      },
+      {
+        "frame": 500,
+        "side": "Right",
+        "before": {
+          "actual": 0.07219930380256348,
+          "relativeHip": 0.06879947706472031,
+          "extra": 0.020940765658362018,
+          "poleDot": 0.9991454014676485,
+          "poleMinRadius": 0.31418481409158605
+        },
+        "after": {
+          "actual": 0.10792146610236626,
+          "relativeHip": 0.08647182373955786,
+          "extra": 0.03876635726003087,
+          "poleDot": 0.9991294002333326,
+          "poleMinRadius": 0.3211278438782499
+        },
+        "delta": 0.03572216229980278,
+        "offsetDelta": 0.017825591601668855,
+        "axisDegrees": 3.1221893934371407,
+        "crossVersionPoleDot": 0.9999999994413111,
+        "hipVersionDifference": 0.032977600000036404,
+        "ankleVersionDifference": 1.0649488253519185e-7,
+        "weights": [
+          0,
+          0
+        ]
+      },
+      {
+        "frame": 517,
+        "side": "Left",
+        "before": {
+          "actual": 0.08531299352778655,
+          "relativeHip": 0.0654466064394065,
+          "extra": 0.0238456077471416,
+          "poleDot": 0.9968667873087482,
+          "poleMinRadius": 0.28330433044106157
+        },
+        "after": {
+          "actual": 0.10395591482555613,
+          "relativeHip": 0.09402650532175148,
+          "extra": 0.00530303607073053,
+          "poleDot": 0.9969073217232856,
+          "poleMinRadius": 0.30836950647635936
+        },
+        "delta": 0.01864292129776958,
+        "offsetDelta": -0.01854257167641107,
+        "axisDegrees": 7.326561646992191,
+        "crossVersionPoleDot": 0.9999998900630517,
+        "hipVersionDifference": 0.09657465700000535,
+        "ankleVersionDifference": 4.887739761367284e-8,
+        "weights": [
+          0.2000726,
+          0
+        ]
+      },
+      {
+        "frame": 532,
+        "side": "Left",
+        "before": {
+          "actual": 0.09442427753581764,
+          "relativeHip": 0.11320834967059028,
+          "extra": 0.1012532227501733,
+          "poleDot": 0.9976788137822038,
+          "poleMinRadius": 0.26693914850954564
+        },
+        "after": {
+          "actual": 0.10263094301712926,
+          "relativeHip": 0.10621218957645188,
+          "extra": 0.09569641307821475,
+          "poleDot": 0.9968171800585391,
+          "poleMinRadius": 0.28162027069115886
+        },
+        "delta": 0.008206665481311617,
+        "offsetDelta": -0.005556809671958554,
+        "axisDegrees": 2.537024883003098,
+        "crossVersionPoleDot": 0.9999880951643163,
+        "hipVersionDifference": 0.04798045200000399,
+        "ankleVersionDifference": 8.544003746667725e-8,
+        "weights": [
+          0,
+          0
+        ]
+      },
+      {
+        "frame": 534,
+        "side": "Left",
+        "before": {
+          "actual": 0.08982305812328195,
+          "relativeHip": 0.09816515649982578,
+          "extra": 0.052417035188596285,
+          "poleDot": 0.9983784906001589,
+          "poleMinRadius": 0.2505675855474865
+        },
+        "after": {
+          "actual": 0.10149895907915014,
+          "relativeHip": 0.10214830014266475,
+          "extra": 0.05802990558575951,
+          "poleDot": 0.9969958363618431,
+          "poleMinRadius": 0.28294510718321697
+        },
+        "delta": 0.011675900955868193,
+        "offsetDelta": 0.005612870397163225,
+        "axisDegrees": 3.7863190356047283,
+        "crossVersionPoleDot": 0.9999801514807903,
+        "hipVersionDifference": 0.08437195800007036,
+        "ankleVersionDifference": 7.06399320727319e-8,
+        "weights": [
+          0,
+          0
+        ]
+      },
+      {
+        "frame": 535,
+        "side": "Left",
+        "before": {
+          "actual": 0.0946201084657682,
+          "relativeHip": 0.0972615598603808,
+          "extra": 0.0282964915165713,
+          "poleDot": 0.9999693289155314,
+          "poleMinRadius": 0.2203263819721531
+        },
+        "after": {
+          "actual": 0.10052780841579775,
+          "relativeHip": 0.0983625236460305,
+          "extra": 0.03375046181141269,
+          "poleDot": 0.9997935602188117,
+          "poleMinRadius": 0.266208538705622
+        },
+        "delta": 0.005907699950029557,
+        "offsetDelta": 0.00545397029484139,
+        "axisDegrees": 6.296940840932338,
+        "crossVersionPoleDot": 0.9999732405465698,
+        "hipVersionDifference": 0.10615914700000711,
+        "ankleVersionDifference": 8.933644274753616e-8,
+        "weights": [
+          0,
+          0
+        ]
+      },
+      {
+        "frame": 554,
+        "side": "Left",
+        "before": {
+          "actual": 0.0972800666450077,
+          "relativeHip": 0.082217458577996,
+          "extra": 0.043304601287277214,
+          "poleDot": 0.9996997080797907,
+          "poleMinRadius": 0.323716202597374
+        },
+        "after": {
+          "actual": 0.10190243746226162,
+          "relativeHip": 0.09398600651050283,
+          "extra": 0.05525462470818373,
+          "poleDot": 0.9996904382424758,
+          "poleMinRadius": 0.3281416700613566
+        },
+        "delta": 0.004622370817253918,
+        "offsetDelta": 0.011950023420906515,
+        "axisDegrees": 5.563384821566069,
+        "crossVersionPoleDot": 0.999999999998393,
+        "hipVersionDifference": 0.03823490000002644,
+        "ankleVersionDifference": 1.52239975048407e-7,
+        "weights": [
+          0,
+          0
+        ]
+      },
+      {
+        "frame": 555,
+        "side": "Right",
+        "before": {
+          "actual": 0.0647269321495078,
+          "relativeHip": 0.06172225040493756,
+          "extra": 0.06884061627336886,
+          "poleDot": 0.9964956188802805,
+          "poleMinRadius": 0.0827061863636324
+        },
+        "after": {
+          "actual": 0.10278907264694476,
+          "relativeHip": 0.1010835640135639,
+          "extra": 0.031241903068377243,
+          "poleDot": 0.9963219221780174,
+          "poleMinRadius": 0.0827061863636324
+        },
+        "delta": 0.03806214049743696,
+        "offsetDelta": -0.03759871320499162,
+        "axisDegrees": 0,
+        "crossVersionPoleDot": 1,
+        "hipVersionDifference": 0,
+        "ankleVersionDifference": 0,
+        "weights": [
+          0.6833337,
+          0.6833337
+        ]
+      },
+      {
+        "frame": 588,
+        "side": "Left",
+        "before": {
+          "actual": 0.09891883462639883,
+          "relativeHip": 0.08922878341656029,
+          "extra": 0.010811066470252593,
+          "poleDot": 0.9980383680447981,
+          "poleMinRadius": 0.2938517386660249
+        },
+        "after": {
+          "actual": 0.1066302649573152,
+          "relativeHip": 0.10080947572567153,
+          "extra": 0.0030569344054755558,
+          "poleDot": 0.998149486224121,
+          "poleMinRadius": 0.30278085981062786
+        },
+        "delta": 0.007711430330916369,
+        "offsetDelta": -0.007754132064777037,
+        "axisDegrees": 8.649850592020533,
+        "crossVersionPoleDot": 0.999999999570947,
+        "hipVersionDifference": 0.07121843100006,
+        "ankleVersionDifference": 1.2882546330486492e-7,
+        "weights": [
+          0.09203496,
+          0
+        ]
+      },
+      {
+        "frame": 589,
+        "side": "Left",
+        "before": {
+          "actual": 0.09037241784282765,
+          "relativeHip": 0.07707608809476506,
+          "extra": 0.012234842288318011,
+          "poleDot": 0.9969121952465448,
+          "poleMinRadius": 0.2965504699692866
+        },
+        "after": {
+          "actual": 0.106441547413736,
+          "relativeHip": 0.09585964934755248,
+          "extra": 0.007107072402712385,
+          "poleDot": 0.9969324346218402,
+          "poleMinRadius": 0.3099408666986128
+        },
+        "delta": 0.01606912957090835,
+        "offsetDelta": -0.005127769885605626,
+        "axisDegrees": 6.927905752461463,
+        "crossVersionPoleDot": 0.9999999999988491,
+        "hipVersionDifference": 0.07525680000001962,
+        "ankleVersionDifference": 7.80343514084966e-8,
+        "weights": [
+          0.0804800838,
+          0
+        ]
+      },
+      {
+        "frame": 696,
+        "side": "Left",
+        "before": {
+          "actual": 0.09345239364605303,
+          "relativeHip": 0.07877255134940858,
+          "extra": 0.02119308380042688,
+          "poleDot": 0.9979077535341515,
+          "poleMinRadius": 0.2812546471282163
+        },
+        "after": {
+          "actual": 0.10595634171958777,
+          "relativeHip": 0.10077370035877836,
+          "extra": 0.0017981776447552867,
+          "poleDot": 0.9980858389643985,
+          "poleMinRadius": 0.30112802075485257
+        },
+        "delta": 0.012503948073534749,
+        "offsetDelta": -0.019394906155671594,
+        "axisDegrees": 11.454671519669292,
+        "crossVersionPoleDot": 0.9999994994787313,
+        "hipVersionDifference": 0.11086950000000177,
+        "ankleVersionDifference": 8.652866576454345e-8,
+        "weights": [
+          0.219461143,
+          0
+        ]
+      },
+      {
+        "frame": 698,
+        "side": "Right",
+        "before": {
+          "actual": 0.09925606586263389,
+          "relativeHip": 0.1030499270861919,
+          "extra": 0.025563347217538317,
+          "poleDot": 0.9921814244124174,
+          "poleMinRadius": 0.19839474001686072
+        },
+        "after": {
+          "actual": 0.10646785484900395,
+          "relativeHip": 0.11094009802108275,
+          "extra": 0.03805325776413394,
+          "poleDot": 0.9892616508584574,
+          "poleMinRadius": 0.26484933451141857
+        },
+        "delta": 0.007211788986370066,
+        "offsetDelta": 0.01248991054659562,
+        "axisDegrees": 10.241814270756032,
+        "crossVersionPoleDot": 0.9999998766034018,
+        "hipVersionDifference": 0.15149466300000355,
+        "ankleVersionDifference": 7.70778826888528e-8,
+        "weights": [
+          0,
+          0
+        ]
+      },
+      {
+        "frame": 733,
+        "side": "Left",
+        "before": {
+          "actual": 0.09456891399325643,
+          "relativeHip": 0.07699666275383382,
+          "extra": 0.012125530661273538,
+          "poleDot": 0.9968790521467537,
+          "poleMinRadius": 0.29535624755100504
+        },
+        "after": {
+          "actual": 0.10308626632050642,
+          "relativeHip": 0.09380081424918416,
+          "extra": 0.0050062582555945425,
+          "poleDot": 0.9968995222863014,
+          "poleMinRadius": 0.30852777968771394
+        },
+        "delta": 0.008517352327249997,
+        "offsetDelta": -0.007119272405678996,
+        "axisDegrees": 5.646182830853867,
+        "crossVersionPoleDot": 0.9999999961468754,
+        "hipVersionDifference": 0.06554153800004264,
+        "ankleVersionDifference": 2.070422420559879e-7,
+        "weights": [
+          0.09880834,
+          0
+        ]
+      },
+      {
+        "frame": 750,
+        "side": "Left",
+        "before": {
+          "actual": 0.09600224458760243,
+          "relativeHip": 0.10087970176577299,
+          "extra": 0.04750116654654991,
+          "poleDot": 0.9989177217699146,
+          "poleMinRadius": 0.20848292452020045
+        },
+        "after": {
+          "actual": 0.10009458912061191,
+          "relativeHip": 0.10321236256888033,
+          "extra": 0.05299231218073854,
+          "poleDot": 0.9983978304423001,
+          "poleMinRadius": 0.24329033019484333
+        },
+        "delta": 0.0040923445330094815,
+        "offsetDelta": 0.005491145634188635,
+        "axisDegrees": 2.709329609302351,
+        "crossVersionPoleDot": 0.9999992326608489,
+        "hipVersionDifference": 0.065072142000072,
+        "ankleVersionDifference": 1.6753805536997347e-7,
+        "weights": [
+          0,
+          0
+        ]
+      },
+      {
+        "frame": 840,
+        "side": "Left",
+        "before": {
+          "actual": 0.09547200440652671,
+          "relativeHip": 0.08743772147453659,
+          "extra": 0.012623769114131973,
+          "poleDot": 0.9979875156411941,
+          "poleMinRadius": 0.2920829893772268
+        },
+        "after": {
+          "actual": 0.10547580515184159,
+          "relativeHip": 0.10035905934211499,
+          "extra": 0.001352832906565414,
+          "poleDot": 0.9980894134688597,
+          "poleMinRadius": 0.30095362859520436
+        },
+        "delta": 0.010003800745314873,
+        "offsetDelta": -0.011270936207566558,
+        "axisDegrees": 7.3685525782726495,
+        "crossVersionPoleDot": 0.9999999651326248,
+        "hipVersionDifference": 0.06552516700000983,
+        "ankleVersionDifference": 9.75348142842543e-8,
+        "weights": [
+          0.1240969,
+          0
+        ]
+      },
+      {
+        "frame": 913,
+        "side": "Left",
+        "before": {
+          "actual": 0.09999354033795273,
+          "relativeHip": 0.08464813825722349,
+          "extra": 0.004483401430619666,
+          "poleDot": 0.9968995716064051,
+          "poleMinRadius": 0.3027495995082834
+        },
+        "after": {
+          "actual": 0.10601018444233495,
+          "relativeHip": 0.09555264136423822,
+          "extra": 0.006812726471627335,
+          "poleDot": 0.9969156674104722,
+          "poleMinRadius": 0.3097633014747203
+        },
+        "delta": 0.006016644104382227,
+        "offsetDelta": 0.0023293250410076688,
+        "axisDegrees": 4.763437321903491,
+        "crossVersionPoleDot": 0.9999999999437003,
+        "hipVersionDifference": 0.04805575400000614,
+        "ankleVersionDifference": 7.782030584056312e-8,
+        "weights": [
+          0.0140981581,
+          0
+        ]
+      },
+      {
+        "frame": 939,
+        "side": "Right",
+        "before": {
+          "actual": 0.041529912384941706,
+          "relativeHip": 0.030720725712193083,
+          "extra": 0.03834442619633685,
+          "poleDot": 0.9998326743883602,
+          "poleMinRadius": 0.08270731738696671
+        },
+        "after": {
+          "actual": 0.27361509689194524,
+          "relativeHip": 0.2714892007651337,
+          "extra": 0.26283349600406836,
+          "poleDot": -0.9998325675055493,
+          "poleMinRadius": 0.12032033689970838
+        },
+        "delta": 0.23208518450700355,
+        "offsetDelta": 0.2244890698077315,
+        "axisDegrees": 0.9455098509289644,
+        "crossVersionPoleDot": 0.9999999991190511,
+        "hipVersionDifference": 0.025528459000017628,
+        "ankleVersionDifference": 9.708243920274729e-8,
+        "weights": [
+          0.6833103,
+          0.277034163
+        ]
+      },
+      {
+        "frame": 983,
+        "side": "Right",
+        "before": {
+          "actual": 0.08706647931013979,
+          "relativeHip": 0.03034517728998657,
+          "extra": 0.005488315961935639,
+          "poleDot": 0.999885486936228,
+          "poleMinRadius": 0.31016960001525185
+        },
+        "after": {
+          "actual": 0.12000749792076383,
+          "relativeHip": 0.09076764171004141,
+          "extra": 0.06052025171410684,
+          "poleDot": 0.999800534536403,
+          "poleMinRadius": 0.33110859786913777
+        },
+        "delta": 0.03294101861062404,
+        "offsetDelta": 0.055031935752171204,
+        "axisDegrees": 8.731863624078692,
+        "crossVersionPoleDot": 0.9999999991997166,
+        "hipVersionDifference": 0.134895300000005,
+        "ankleVersionDifference": 5.830951897250193e-8,
+        "weights": [
+          0,
+          0
+        ]
+      },
+      {
+        "frame": 995,
+        "side": "Right",
+        "before": {
+          "actual": 0.0383523947332953,
+          "relativeHip": 0.009166129798581814,
+          "extra": 0.04597979648573686,
+          "poleDot": 0.9999866151300502,
+          "poleMinRadius": 0.08270570954721312
+        },
+        "after": {
+          "actual": 0.2722411399700901,
+          "relativeHip": 0.2661559883476213,
+          "extra": 0.22780518905140448,
+          "poleDot": -0.9999850538634385,
+          "poleMinRadius": 0.11147994815155769
+        },
+        "delta": 0.2338887452367948,
+        "offsetDelta": 0.18182539256566763,
+        "axisDegrees": 0.8440691807544747,
+        "crossVersionPoleDot": 0.9999999996810516,
+        "hipVersionDifference": 0.019455462000017406,
+        "ankleVersionDifference": 1.2339773095439546e-7,
+        "weights": [
+          0.68334043,
+          0.0546946339
+        ]
+      },
+      {
+        "frame": 1019,
+        "side": "Right",
+        "before": {
+          "actual": 0.09966783652613324,
+          "relativeHip": 0.09322597058847824,
+          "extra": 0.033917939651930594,
+          "poleDot": 0.9972566858270833,
+          "poleMinRadius": 0.3233597432262262
+        },
+        "after": {
+          "actual": 0.10999343702528082,
+          "relativeHip": 0.10013805358858646,
+          "extra": 0.041120872488996436,
+          "poleDot": 0.9972656895724628,
+          "poleMinRadius": 0.3238927886224774
+        },
+        "delta": 0.010325600499147575,
+        "offsetDelta": 0.007202932837065842,
+        "axisDegrees": 0.009410632721864917,
+        "crossVersionPoleDot": 0.9999999999999627,
+        "hipVersionDifference": 0.000049174061569530765,
+        "ankleVersionDifference": 4.214273364529089e-8,
+        "weights": [
+          0,
+          0
+        ]
+      }
+    ],
+    "removed": [
+      {
+        "frame": 265,
+        "side": "Right",
+        "before": {
+          "actual": 0.10065949784454162,
+          "relativeHip": 0.09718367355011714,
+          "extra": 0.03311940555720232,
+          "poleDot": 0.9988027039297221,
+          "poleMinRadius": 0.12236643903886515
+        },
+        "after": {
+          "actual": 0.09338170826602347,
+          "relativeHip": 0.09078720934241527,
+          "extra": 0.026337359486962336,
+          "poleDot": 0.9987332851017281,
+          "poleMinRadius": 0.16449477526913314
+        },
+        "delta": -0.007277789578518143,
+        "offsetDelta": -0.00678204607023998,
+        "axisDegrees": 0.7206317806294321,
+        "crossVersionPoleDot": 0.9999998967502884,
+        "hipVersionDifference": 0.03918693800000659,
+        "ankleVersionDifference": 4.822084610895839e-8,
+        "weights": [
+          0.453148246,
+          0
+        ]
+      },
+      {
+        "frame": 284,
+        "side": "Left",
+        "before": {
+          "actual": 0.10612926515261141,
+          "relativeHip": 0.10436939814451746,
+          "extra": 0.030053750035302612,
+          "poleDot": 0.9962098601260686,
+          "poleMinRadius": 0.1158637903524854
+        },
+        "after": {
+          "actual": 0.0927525139105099,
+          "relativeHip": 0.09683037770576486,
+          "extra": 0.05502887796922852,
+          "poleDot": 0.9959023342532834,
+          "poleMinRadius": 0.20135592961957446
+        },
+        "delta": -0.013376751242101512,
+        "offsetDelta": 0.02497512793392591,
+        "axisDegrees": 3.6315538413918635,
+        "crossVersionPoleDot": 0.9999986131808715,
+        "hipVersionDifference": 0.09706860000006369,
+        "ankleVersionDifference": 1.2461095459162837e-7,
+        "weights": [
+          0.008573021,
+          0
+        ]
+      },
+      {
+        "frame": 319,
+        "side": "Left",
+        "before": {
+          "actual": 0.10301325195606933,
+          "relativeHip": 0.10003906809987723,
+          "extra": 0.021062359432424065,
+          "poleDot": 0.9999136058165071,
+          "poleMinRadius": 0.1410552910557775
+        },
+        "after": {
+          "actual": 0.09789750529594772,
+          "relativeHip": 0.09857631197435719,
+          "extra": 0.026677345663995333,
+          "poleDot": 0.9998729023031234,
+          "poleMinRadius": 0.1941168148615575
+        },
+        "delta": -0.0051157466601216145,
+        "offsetDelta": 0.005614986231571268,
+        "axisDegrees": 1.4280696356366447,
+        "crossVersionPoleDot": 0.9999992471165363,
+        "hipVersionDifference": 0.060791700000032846,
+        "ankleVersionDifference": 8.0192019560175e-8,
+        "weights": [
+          0.204752773,
+          0
+        ]
+      },
+      {
+        "frame": 519,
+        "side": "Right",
+        "before": {
+          "actual": 0.10174207561874819,
+          "relativeHip": 0.09645448686529857,
+          "extra": 0.042517801119985356,
+          "poleDot": 0.99670225807642,
+          "poleMinRadius": 0.11311863004169868
+        },
+        "after": {
+          "actual": 0.08068838371501107,
+          "relativeHip": 0.08074760445163055,
+          "extra": 0.0679063363233239,
+          "poleDot": 0.9965554471962949,
+          "poleMinRadius": 0.20681493911610632
+        },
+        "delta": -0.021053691903737126,
+        "offsetDelta": 0.025388535203338537,
+        "axisDegrees": 5.8735630097528055,
+        "crossVersionPoleDot": 0.9999870462716351,
+        "hipVersionDifference": 0.11680664100000474,
+        "ankleVersionDifference": 9.153491140283525e-8,
+        "weights": [
+          0.03343541,
+          0
+        ]
+      },
+      {
+        "frame": 536,
+        "side": "Left",
+        "before": {
+          "actual": 0.10810011397231947,
+          "relativeHip": 0.10360846800825299,
+          "extra": 0.025681455377225024,
+          "poleDot": 0.9975210749657136,
+          "poleMinRadius": 0.16559673095979519
+        },
+        "after": {
+          "actual": 0.09497798498123415,
+          "relativeHip": 0.0931377928229834,
+          "extra": 0.039596795969731646,
+          "poleDot": 0.9978220970480784,
+          "poleMinRadius": 0.23444660941211456
+        },
+        "delta": -0.013122128991085322,
+        "offsetDelta": 0.013915340592506622,
+        "axisDegrees": 7.973665720782908,
+        "crossVersionPoleDot": 0.999984502368769,
+        "hipVersionDifference": 0.12552540000000814,
+        "ankleVersionDifference": 4.7833147516231065e-8,
+        "weights": [
+          0,
+          0
+        ]
+      },
+      {
+        "frame": 572,
+        "side": "Left",
+        "before": {
+          "actual": 0.10136940668835025,
+          "relativeHip": 0.09880142757235116,
+          "extra": 0.029594381832998833,
+          "poleDot": 0.9960309024499332,
+          "poleMinRadius": 0.10733884333050314
+        },
+        "after": {
+          "actual": 0.0956453450216729,
+          "relativeHip": 0.09396654773160612,
+          "extra": 0.03711434414209103,
+          "poleDot": 0.9960168147119118,
+          "poleMinRadius": 0.1344185943901726
+        },
+        "delta": -0.005724061666677341,
+        "offsetDelta": 0.007519962309092194,
+        "axisDegrees": 0.8131197303148263,
+        "crossVersionPoleDot": 0.9999999959592648,
+        "hipVersionDifference": 0.022171967000130428,
+        "ankleVersionDifference": 6.471444969383728e-8,
+        "weights": [
+          0.1249965,
+          0
+        ]
+      },
+      {
+        "frame": 590,
+        "side": "Right",
+        "before": {
+          "actual": 0.11466794973067321,
+          "relativeHip": 0.11409885308327344,
+          "extra": 0.007417778656796449,
+          "poleDot": 0.9924709000115777,
+          "poleMinRadius": 0.08391837742516352
+        },
+        "after": {
+          "actual": 0.09398525113832198,
+          "relativeHip": 0.09731773995465144,
+          "extra": 0.023331966538528093,
+          "poleDot": 0.9920825285297097,
+          "poleMinRadius": 0.16395836206911632
+        },
+        "delta": -0.020682698592351223,
+        "offsetDelta": 0.015914187881731642,
+        "axisDegrees": 2.5939244703278947,
+        "crossVersionPoleDot": 0.9999992749787758,
+        "hipVersionDifference": 0.06830170000000342,
+        "ankleVersionDifference": 6.73071318551134e-8,
+        "weights": [
+          0.658862531,
+          0
+        ]
+      },
+      {
+        "frame": 918,
+        "side": "Right",
+        "before": {
+          "actual": 0.25688908881014655,
+          "relativeHip": 0.25831741684456494,
+          "extra": 0.2579784369242026,
+          "poleDot": -0.9999985085516616,
+          "poleMinRadius": 0.10932750086169057
+        },
+        "after": {
+          "actual": 0.051413222934178056,
+          "relativeHip": 0.04944146149520528,
+          "extra": 0.04879002965751515,
+          "poleDot": 0.9999974348729993,
+          "poleMinRadius": 0.1499982258913524
+        },
+        "delta": -0.2054758658759685,
+        "offsetDelta": -0.20918840726668742,
+        "axisDegrees": 2.8742925090242126,
+        "crossVersionPoleDot": -0.9999984194166159,
+        "hipVersionDifference": 0.04605903300006454,
+        "ankleVersionDifference": 1.707706356201992e-7,
+        "weights": [
+          0.08862582,
+          0
+        ]
+      },
+      {
+        "frame": 919,
+        "side": "Right",
+        "before": {
+          "actual": 0.20042311217547595,
+          "relativeHip": 0.1953653423167634,
+          "extra": 0.19245342972749901,
+          "poleDot": -0.9999977276500024,
+          "poleMinRadius": 0.10932750086169057
+        },
+        "after": {
+          "actual": 0.035640112118598785,
+          "relativeHip": 0.03460200074985572,
+          "extra": 0.0375563562658577,
+          "poleDot": 0.9999989329837624,
+          "poleMinRadius": 0.1480117196640983
+        },
+        "delta": -0.16478300005687718,
+        "offsetDelta": -0.1548970734616413,
+        "axisDegrees": 2.744306269032807,
+        "crossVersionPoleDot": 0.9999992222073159,
+        "hipVersionDifference": 0.040132353000035134,
+        "ankleVersionDifference": 1.8633102264550372e-7,
+        "weights": [
+          0.00354322116,
+          0
+        ]
+      },
+      {
+        "frame": 932,
+        "side": "Left",
+        "before": {
+          "actual": 0.10611872690073038,
+          "relativeHip": 0.10339081648606603,
+          "extra": 0.028207900823247346,
+          "poleDot": 0.9974950733901573,
+          "poleMinRadius": 0.1666772723168001
+        },
+        "after": {
+          "actual": 0.09812842379111722,
+          "relativeHip": 0.09694869078719302,
+          "extra": 0.0369916459118542,
+          "poleDot": 0.9975802617159502,
+          "poleMinRadius": 0.20005230191438467
+        },
+        "delta": -0.007990303109613156,
+        "offsetDelta": 0.008783745088606854,
+        "axisDegrees": 2.6349472305212456,
+        "crossVersionPoleDot": 0.9999983166468914,
+        "hipVersionDifference": 0.04972156600006311,
+        "ankleVersionDifference": 2.1383594179286067e-7,
+        "weights": [
+          0,
+          0
+        ]
+      },
+      {
+        "frame": 934,
+        "side": "Right",
+        "before": {
+          "actual": 0.416283337194881,
+          "relativeHip": 0.4203429056848276,
+          "extra": 0.43544040247742327,
+          "poleDot": -0.9999096467295324,
+          "poleMinRadius": 0.2078849675571889
+        },
+        "after": {
+          "actual": 0.0263663946008886,
+          "relativeHip": 0.014975745384927555,
+          "extra": 0.0068810651265735,
+          "poleDot": 0.9999133260238958,
+          "poleMinRadius": 0.24671942846817344
+        },
+        "delta": -0.3899169425939924,
+        "offsetDelta": -0.4285593373508498,
+        "axisDegrees": 0.6170799503601194,
+        "crossVersionPoleDot": -0.999999999304211,
+        "hipVersionDifference": 0.06815620000000179,
+        "ankleVersionDifference": 1.0278132123800253e-7,
+        "weights": [
+          0.3571521,
+          0.041752588
+        ]
+      },
+      {
+        "frame": 980,
+        "side": "Right",
+        "before": {
+          "actual": 0.10830677579825278,
+          "relativeHip": 0.07194206824494094,
+          "extra": 0.02778868035208514,
+          "poleDot": 0.9994224185165168,
+          "poleMinRadius": 0.32033138639489467
+        },
+        "after": {
+          "actual": 0.08715475390680164,
+          "relativeHip": 0.06259133598086303,
+          "extra": 0.024133222932851132,
+          "poleDot": 0.9992877982836958,
+          "poleMinRadius": 0.324351316392976
+        },
+        "delta": -0.021152021891451142,
+        "offsetDelta": -0.003655457419234006,
+        "axisDegrees": 17.49963658378929,
+        "crossVersionPoleDot": 0.9999999001900263,
+        "hipVersionDifference": 0.07319593400001352,
+        "ankleVersionDifference": 1.0346057225991942e-7,
+        "weights": [
+          0,
+          0
+        ]
+      },
+      {
+        "frame": 994,
+        "side": "Right",
+        "before": {
+          "actual": 0.22839637946961536,
+          "relativeHip": 0.21278002921178418,
+          "extra": 0.16969167345644162,
+          "poleDot": -0.9999888293737175,
+          "poleMinRadius": 0.09087020233060825
+        },
+        "after": {
+          "actual": 0.05008060211551379,
+          "relativeHip": 0.03622206407076131,
+          "extra": 0.015838778829284465,
+          "poleDot": 0.9999905383503557,
+          "poleMinRadius": 0.1467599048827643
+        },
+        "delta": -0.17831577735410156,
+        "offsetDelta": -0.15385289462715715,
+        "axisDegrees": 2.175109889265329,
+        "crossVersionPoleDot": -0.9999999999599657,
+        "hipVersionDifference": 0.047793241000209694,
+        "ankleVersionDifference": 1.497731618130505e-7,
+        "weights": [
+          0.5052401,
+          0
+        ]
+      }
+    ],
+    "largestStepIncreases": [
+      {
+        "frame": 995,
+        "side": "Right",
+        "before": {
+          "actual": 0.0383523947332953,
+          "relativeHip": 0.009166129798581814,
+          "extra": 0.04597979648573686,
+          "poleDot": 0.9999866151300502,
+          "poleMinRadius": 0.08270570954721312
+        },
+        "after": {
+          "actual": 0.2722411399700901,
+          "relativeHip": 0.2661559883476213,
+          "extra": 0.22780518905140448,
+          "poleDot": -0.9999850538634385,
+          "poleMinRadius": 0.11147994815155769
+        },
+        "delta": 0.2338887452367948,
+        "offsetDelta": 0.18182539256566763,
+        "axisDegrees": 0.8440691807544747,
+        "crossVersionPoleDot": 0.9999999996810516,
+        "hipVersionDifference": 0.019455462000017406,
+        "ankleVersionDifference": 1.2339773095439546e-7,
+        "weights": [
+          0.68334043,
+          0.0546946339
+        ]
+      },
+      {
+        "frame": 939,
+        "side": "Right",
+        "before": {
+          "actual": 0.041529912384941706,
+          "relativeHip": 0.030720725712193083,
+          "extra": 0.03834442619633685,
+          "poleDot": 0.9998326743883602,
+          "poleMinRadius": 0.08270731738696671
+        },
+        "after": {
+          "actual": 0.27361509689194524,
+          "relativeHip": 0.2714892007651337,
+          "extra": 0.26283349600406836,
+          "poleDot": -0.9998325675055493,
+          "poleMinRadius": 0.12032033689970838
+        },
+        "delta": 0.23208518450700355,
+        "offsetDelta": 0.2244890698077315,
+        "axisDegrees": 0.9455098509289644,
+        "crossVersionPoleDot": 0.9999999991190511,
+        "hipVersionDifference": 0.025528459000017628,
+        "ankleVersionDifference": 9.708243920274729e-8,
+        "weights": [
+          0.6833103,
+          0.277034163
+        ]
+      },
+      {
+        "frame": 231,
+        "side": "Right",
+        "before": {
+          "actual": 0.06327276215229415,
+          "relativeHip": 0.039643524435029096,
+          "extra": 0.09427859482649761,
+          "poleDot": 0.9970417442169837,
+          "poleMinRadius": 0.08270615925347406
+        },
+        "after": {
+          "actual": 0.11382353399134398,
+          "relativeHip": 0.11252520770567982,
+          "extra": 0.03363174801970444,
+          "poleDot": 0.9970996403420098,
+          "poleMinRadius": 0.08270615925347406
+        },
+        "delta": 0.05055077183904984,
+        "offsetDelta": -0.06064684680679317,
+        "axisDegrees": 0,
+        "crossVersionPoleDot": 0.9999999999999998,
+        "hipVersionDifference": 0,
+        "ankleVersionDifference": 0,
+        "weights": [
+          0.683332,
+          0.683332
+        ]
+      },
+      {
+        "frame": 591,
+        "side": "Right",
+        "before": {
+          "actual": 0.049328634757951795,
+          "relativeHip": 0.026174773946102268,
+          "extra": 0.1061290479289763,
+          "poleDot": 0.9948094087732773,
+          "poleMinRadius": 0.08270636042490061
+        },
+        "after": {
+          "actual": 0.09646918898271405,
+          "relativeHip": 0.09352202452016974,
+          "extra": 0.04581881295115898,
+          "poleDot": 0.9948297127186204,
+          "poleMinRadius": 0.08883455639458335
+        },
+        "delta": 0.04714055422476225,
+        "offsetDelta": -0.060310234977817324,
+        "axisDegrees": 0.13653510536400892,
+        "crossVersionPoleDot": 0.9999999997164648,
+        "hipVersionDifference": 0.003515170000177344,
+        "ankleVersionDifference": 1.6075447116245176e-7,
+        "weights": [
+          0.6833287,
+          0.552237
+        ]
+      },
+      {
+        "frame": 952,
+        "side": "Right",
+        "before": {
+          "actual": 0.2589452374149471,
+          "relativeHip": 0.24872850882048075,
+          "extra": 0.19413702738757393,
+          "poleDot": -0.9998187914664743,
+          "poleMinRadius": 0.08293936429869588
+        },
+        "after": {
+          "actual": 0.30554518727679325,
+          "relativeHip": 0.2948993418332642,
+          "extra": 0.24025311220806367,
+          "poleDot": -0.9998067415010651,
+          "poleMinRadius": 0.11131597506979944
+        },
+        "delta": 0.046599949861846124,
+        "offsetDelta": 0.04611608482048973,
+        "axisDegrees": 0.99420508064173,
+        "crossVersionPoleDot": 0.9999999999817881,
+        "hipVersionDifference": 0.020208200000014807,
+        "ankleVersionDifference": 1.1390285159760492e-7,
+        "weights": [
+          0.6786879,
+          0.0570532866
+        ]
+      },
+      {
+        "frame": 303,
+        "side": "Right",
+        "before": {
+          "actual": 0.06409849992280513,
+          "relativeHip": 0.03958116309917605,
+          "extra": 0.09256102500107616,
+          "poleDot": 0.9968366058921155,
+          "poleMinRadius": 0.08270595275572613
+        },
+        "after": {
+          "actual": 0.10893631364099839,
+          "relativeHip": 0.10808733520826673,
+          "extra": 0.03393938484814293,
+          "poleDot": 0.9969086743067622,
+          "poleMinRadius": 0.08270674043603762
+        },
+        "delta": 0.04483781371819326,
+        "offsetDelta": -0.05862164015293323,
+        "axisDegrees": 0,
+        "crossVersionPoleDot": 0.9999999999999998,
+        "hipVersionDifference": 0,
+        "ankleVersionDifference": 0,
+        "weights": [
+          0.6833203,
+          0.6833203
+        ]
+      },
+      {
+        "frame": 996,
+        "side": "Right",
+        "before": {
+          "actual": 0.16835736560124773,
+          "relativeHip": 0.17756107598247503,
+          "extra": 0.14164870963402068,
+          "poleDot": -0.999388601019113,
+          "poleMinRadius": 0.08270570954721312
+        },
+        "after": {
+          "actual": 0.2112090588338452,
+          "relativeHip": 0.21607620187497095,
+          "extra": 0.18018147315510558,
+          "poleDot": -0.9993926124971648,
+          "poleMinRadius": 0.11147994815155769
+        },
+        "delta": 0.042851693232597465,
+        "offsetDelta": 0.038532763521084895,
+        "axisDegrees": 0.38930440762726887,
+        "crossVersionPoleDot": 0.9999998949682605,
+        "hipVersionDifference": 0.009887500000159137,
+        "ankleVersionDifference": 3.005760467923458e-8,
+        "weights": [
+          0.028472973,
+          0
+        ]
+      },
+      {
+        "frame": 284,
+        "side": "Right",
+        "before": {
+          "actual": 0.06244105958722371,
+          "relativeHip": 0.047461536544281514,
+          "extra": 0.0008932887093919185,
+          "poleDot": 0.9991820197457822,
+          "poleMinRadius": 0.2931191703973314
+        },
+        "after": {
+          "actual": 0.10468962133282417,
+          "relativeHip": 0.07953655293199305,
+          "extra": 0.031782809070704604,
+          "poleDot": 0.9991637769635224,
+          "poleMinRadius": 0.31617246142588795
+        },
+        "delta": 0.04224856174560046,
+        "offsetDelta": 0.030889520361312685,
+        "axisDegrees": 6.480898341123875,
+        "crossVersionPoleDot": 0.9999999997588406,
+        "hipVersionDifference": 0.09706853800003305,
+        "ankleVersionDifference": 1.4567086188401182e-7,
+        "weights": [
+          0.0192257874,
+          0
+        ]
+      },
+      {
+        "frame": 285,
+        "side": "Right",
+        "before": {
+          "actual": 0.06119858530088293,
+          "relativeHip": 0.0790312893621721,
+          "extra": 0.04006956155719521,
+          "poleDot": 0.9996488703335126,
+          "poleMinRadius": 0.2931191703973314
+        },
+        "after": {
+          "actual": 0.10219270296864556,
+          "relativeHip": 0.07496330679727001,
+          "extra": 0.036441466965095246,
+          "poleDot": 0.9995990532726546,
+          "poleMinRadius": 0.3079055958766912
+        },
+        "delta": 0.04099411766776263,
+        "offsetDelta": -0.0036280945920999647,
+        "axisDegrees": 0.8452389548694941,
+        "crossVersionPoleDot": 0.9999999999988094,
+        "hipVersionDifference": 0.0349153590000696,
+        "ankleVersionDifference": 1.2999999999989515e-7,
+        "weights": [
+          0,
+          0
+        ]
+      },
+      {
+        "frame": 483,
+        "side": "Right",
+        "before": {
+          "actual": 0.0775298291311812,
+          "relativeHip": 0.0760093440688046,
+          "extra": 0.06079432612776296,
+          "poleDot": 0.9971104450150828,
+          "poleMinRadius": 0.0827068127196347
+        },
+        "after": {
+          "actual": 0.11680524292313356,
+          "relativeHip": 0.1132213266717969,
+          "extra": 0.033734234013349365,
+          "poleDot": 0.9969769530214084,
+          "poleMinRadius": 0.0827068127196347
+        },
+        "delta": 0.03927541379195236,
+        "offsetDelta": -0.027060092114413598,
+        "axisDegrees": 0.0000012074182697257333,
+        "crossVersionPoleDot": 0.9999999999999998,
+        "hipVersionDifference": 0,
+        "ankleVersionDifference": 0,
+        "weights": [
+          0.6833203,
+          0.6833203
+        ]
+      },
+      {
+        "frame": 610,
+        "side": "Left",
+        "before": {
+          "actual": 0.04540057888161996,
+          "relativeHip": 0.03413519199369083,
+          "extra": 0.004451787149731868,
+          "poleDot": 0.9993071372833129,
+          "poleMinRadius": 0.0827055724259297
+        },
+        "after": {
+          "actual": 0.08401733322421454,
+          "relativeHip": 0.07683324426213245,
+          "extra": 0.04436714867621496,
+          "poleDot": 0.9996657515942164,
+          "poleMinRadius": 0.08628072586730043
+        },
+        "delta": 0.038616754342594574,
+        "offsetDelta": 0.03991536152648309,
+        "axisDegrees": 0.163690536028302,
+        "crossVersionPoleDot": 0.9999999946578272,
+        "hipVersionDifference": 0.0026337510001871955,
+        "ankleVersionDifference": 5.3749418584059586e-8,
+        "weights": [
+          0.68334043,
+          0.6090031
+        ]
+      },
+      {
+        "frame": 555,
+        "side": "Right",
+        "before": {
+          "actual": 0.0647269321495078,
+          "relativeHip": 0.06172225040493756,
+          "extra": 0.06884061627336886,
+          "poleDot": 0.9964956188802805,
+          "poleMinRadius": 0.0827061863636324
+        },
+        "after": {
+          "actual": 0.10278907264694476,
+          "relativeHip": 0.1010835640135639,
+          "extra": 0.031241903068377243,
+          "poleDot": 0.9963219221780174,
+          "poleMinRadius": 0.0827061863636324
+        },
+        "delta": 0.03806214049743696,
+        "offsetDelta": -0.03759871320499162,
+        "axisDegrees": 0,
+        "crossVersionPoleDot": 1,
+        "hipVersionDifference": 0,
+        "ankleVersionDifference": 0,
+        "weights": [
+          0.6833337,
+          0.6833337
+        ]
+      },
+      {
+        "frame": 266,
+        "side": "Left",
+        "before": {
+          "actual": 0.04780982452368078,
+          "relativeHip": 0.05970628394874924,
+          "extra": 0.020606082109166788,
+          "poleDot": 0.9997027437476291,
+          "poleMinRadius": 0.3217635482302997
+        },
+        "after": {
+          "actual": 0.08456741750170134,
+          "relativeHip": 0.0778645238723917,
+          "extra": 0.038916460074127204,
+          "poleDot": 0.9996987986772102,
+          "poleMinRadius": 0.3261201594731144
+        },
+        "delta": 0.03675759297802056,
+        "offsetDelta": 0.018310377964960416,
+        "axisDegrees": 0.0000014787793334710982,
+        "crossVersionPoleDot": 1,
+        "hipVersionDifference": 0,
+        "ankleVersionDifference": 0,
+        "weights": [
+          0,
+          0
+        ]
+      },
+      {
+        "frame": 500,
+        "side": "Right",
+        "before": {
+          "actual": 0.07219930380256348,
+          "relativeHip": 0.06879947706472031,
+          "extra": 0.020940765658362018,
+          "poleDot": 0.9991454014676485,
+          "poleMinRadius": 0.31418481409158605
+        },
+        "after": {
+          "actual": 0.10792146610236626,
+          "relativeHip": 0.08647182373955786,
+          "extra": 0.03876635726003087,
+          "poleDot": 0.9991294002333326,
+          "poleMinRadius": 0.3211278438782499
+        },
+        "delta": 0.03572216229980278,
+        "offsetDelta": 0.017825591601668855,
+        "axisDegrees": 3.1221893934371407,
+        "crossVersionPoleDot": 0.9999999994413111,
+        "hipVersionDifference": 0.032977600000036404,
+        "ankleVersionDifference": 1.0649488253519185e-7,
+        "weights": [
+          0,
+          0
+        ]
+      },
+      {
+        "frame": 555,
+        "side": "Left",
+        "before": {
+          "actual": 0.058974789849221644,
+          "relativeHip": 0.08129803083975373,
+          "extra": 0.05376246168935994,
+          "poleDot": 0.9999327419487813,
+          "poleMinRadius": 0.323716202597374
+        },
+        "after": {
+          "actual": 0.09389544219102758,
+          "relativeHip": 0.08979732807460579,
+          "extra": 0.062141327409352215,
+          "poleDot": 0.9999248125837398,
+          "poleMinRadius": 0.32661836396030697
+        },
+        "delta": 0.034920652341805934,
+        "offsetDelta": 0.008378865719992273,
+        "axisDegrees": 0,
+        "crossVersionPoleDot": 0.9999999999999997,
+        "hipVersionDifference": 0,
+        "ankleVersionDifference": 0,
+        "weights": [
+          0,
+          0
+        ]
+      }
+    ]
+  },
+  "methods": {
+    "physicalRotation": "Normalize quaternion and compare absolute dot; q and -q are same orientation.",
+    "kneeDomain": "FinalIK Solved Hip/Knee/Ankle in Component space; not final Physical Knee.",
+    "temporalPole": "Shortest source-axis to target-axis transport of previous solved radial knee vector; dot < -0.5 with both radial lengths > 0.01m. Read-only descriptive screen, not a quality-rule change.",
+    "thresholdsAreDiagnosticOnly": true
+  }
+}

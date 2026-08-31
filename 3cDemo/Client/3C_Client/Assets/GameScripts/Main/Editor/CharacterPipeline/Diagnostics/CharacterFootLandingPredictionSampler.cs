@@ -288,9 +288,10 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             "StrideAnimatedPelvisX,StrideAnimatedPelvisY,StrideAnimatedPelvisZ," +
             "StrideAnimatedPelvisComponentPositionX,StrideAnimatedPelvisComponentPositionY,StrideAnimatedPelvisComponentPositionZ," +
             "PelvisHeightTargetAvailable,PelvisHeightTargetComponentUpX,PelvisHeightTargetComponentUpY,PelvisHeightTargetComponentUpZ," +
-            "PelvisHeightTargetLeftAnimatedSoleX,PelvisHeightTargetLeftAnimatedSoleY,PelvisHeightTargetLeftAnimatedSoleZ,PelvisHeightTargetRightAnimatedSoleX,PelvisHeightTargetRightAnimatedSoleY,PelvisHeightTargetRightAnimatedSoleZ," +
-            "PelvisHeightTargetLeftTargetSoleX,PelvisHeightTargetLeftTargetSoleY,PelvisHeightTargetLeftTargetSoleZ,PelvisHeightTargetRightTargetSoleX,PelvisHeightTargetRightTargetSoleY,PelvisHeightTargetRightTargetSoleZ," +
-            "PelvisHeightTargetAnimatedMinimumAlongUp,PelvisHeightTargetMinimumAlongUp,PelvisRequestedOffsetAlongUp,StrideHadPreviousState,StrideSupportChanged," +
+            "PelvisHeightTargetReferencePointX,PelvisHeightTargetReferencePointY,PelvisHeightTargetReferencePointZ,PelvisHeightTargetFootProximityRadius," +
+            "PelvisHeightTargetLeftAnimatedAnkleX,PelvisHeightTargetLeftAnimatedAnkleY,PelvisHeightTargetLeftAnimatedAnkleZ,PelvisHeightTargetRightAnimatedAnkleX,PelvisHeightTargetRightAnimatedAnkleY,PelvisHeightTargetRightAnimatedAnkleZ," +
+            "PelvisHeightTargetLeftTargetAnkleX,PelvisHeightTargetLeftTargetAnkleY,PelvisHeightTargetLeftTargetAnkleZ,PelvisHeightTargetRightTargetAnkleX,PelvisHeightTargetRightTargetAnkleY,PelvisHeightTargetRightTargetAnkleZ," +
+            "PelvisHeightTargetLeftCorrectionAlongUp,PelvisHeightTargetRightCorrectionAlongUp,PelvisHeightTargetLeftCandidateKind,PelvisHeightTargetRightCandidateKind,PelvisHeightTargetLeftCandidateValue,PelvisHeightTargetRightCandidateValue,PelvisHeightTargetSelection,PelvisRequestedOffsetAlongUp,StrideHadPreviousState,StrideSupportChanged," +
             "StridePreviousSlope,StrideSpringHandoffReason,StrideSpringVelocityReset," +
             "StridePreviousSpringTarget,StridePreviousSpringOutput,StridePreviousSpringVelocity,StrideSpringInput,StrideSpringInputVelocity,StrideSpringFrequency," +
             "PelvisPosturePreferenceEvaluated,PelvisPosturePreferenceAvailable,PelvisPosturePreferenceHipX,PelvisPosturePreferenceHipY,PelvisPosturePreferenceHipZ,PelvisPosturePreferenceAnimatedAnkleX,PelvisPosturePreferenceAnimatedAnkleY,PelvisPosturePreferenceAnimatedAnkleZ,PelvisPosturePreferenceTargetAnkleX,PelvisPosturePreferenceTargetAnkleY,PelvisPosturePreferenceTargetAnkleZ,PelvisPosturePreferenceLegLength,PelvisPosturePreferenceCompressionReserve,PelvisPosturePreferenceUsableLegLength,PelvisPosturePreferenceMinimumAlongUp,PelvisPosturePreferenceMaximumAlongUp,PelvisPosturePreferenceOffsetAlongUp,PelvisPosturePreferenceTargetAdjusted," +
@@ -2366,12 +2367,19 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             Add(row, stride.AnimatedPelvisComponentPosition);
             Add(row, stride.HeightTargetAvailable);
             Add(row, stride.HeightTargetComponentUp);
-            Add(row, stride.HeightTargetLeftAnimatedSole);
-            Add(row, stride.HeightTargetRightAnimatedSole);
-            Add(row, stride.HeightTargetLeftTargetSole);
-            Add(row, stride.HeightTargetRightTargetSole);
-            Add(row, stride.HeightTargetAnimatedMinimumAlongUp);
-            Add(row, stride.HeightTargetMinimumAlongUp);
+            Add(row, stride.HeightTargetReferencePoint);
+            Add(row, stride.HeightTargetFootProximityRadius);
+            Add(row, stride.HeightTargetLeftAnimatedAnkle);
+            Add(row, stride.HeightTargetRightAnimatedAnkle);
+            Add(row, stride.HeightTargetLeftTargetAnkle);
+            Add(row, stride.HeightTargetRightTargetAnkle);
+            Add(row, stride.HeightTargetLeftCorrectionAlongUp);
+            Add(row, stride.HeightTargetRightCorrectionAlongUp);
+            Add(row, stride.HeightTargetLeftCandidateKind.ToString());
+            Add(row, stride.HeightTargetRightCandidateKind.ToString());
+            Add(row, stride.HeightTargetLeftCandidateValue);
+            Add(row, stride.HeightTargetRightCandidateValue);
+            Add(row, stride.HeightTargetSelection.ToString());
             Add(row, stride.RequestedOffsetAlongUp);
             Add(row, stride.HadPreviousState);
             Add(row, stride.SupportChanged);

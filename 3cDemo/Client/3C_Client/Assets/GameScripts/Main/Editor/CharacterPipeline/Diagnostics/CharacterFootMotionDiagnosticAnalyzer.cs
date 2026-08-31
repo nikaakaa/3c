@@ -54,9 +54,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor
 
     internal static class CharacterFootMotionDiagnosticAnalyzer
     {
-        const string Schema = "character-foot-motion-facts/69";
+        const string Schema = "character-foot-motion-facts/70";
         const string AnalyzerId = "character-foot-motion-fact-analyzer";
-        const int AnalyzerVersion = 69;
+        const int AnalyzerVersion = 70;
         const float RuntimeGeometryEpsilon = 0.0001f;
         const float ExpectedCorrectionResponseIncreaseSpeed = 1.8f;
         const float ExpectedCorrectionResponseDecreaseSpeed = 1.5f;
@@ -5280,6 +5280,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 {
                     id = AnalyzerId,
                     version = AnalyzerVersion,
+                    kneeAngleUnit = "radians",
+                    kneeAngleOutputSpace = "Component",
+                    kneeAngleMotionAndDisplacementSpace = "World",
                     segmentationPositionEpsilonMeters = PositionNoiseFloor,
                     landingReachCandidateCompressionReserveMeters =
                         LandingReachCompressionReserveMeters,
@@ -5292,6 +5295,12 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 },
                 coverage = new CoverageFact
                 {
+                    kneeAngleResponseFrameCount = capture.FootRows.Count(value => value.KneeAngle.Evaluated),
+                    kneeAngleResponseInitializedFrameCount = capture.FootRows.Count(
+                        value => value.KneeAngle.Evaluated && !value.KneeAngle.HistoryAvailable),
+                    kneeAngleResponseLimitedFrameCount = capture.FootRows.Count(
+                        value => value.KneeAngle.Evaluated &&
+                            !KneeAngleClose(value.KneeAngle.CurrentExtraAngle, value.KneeAngle.DesiredExtraAngle)),
                     contactSupportRequestedFrameCount = events.Count(
                         value => value.kind == "ContactSupportGapObservation"),
                     contactSupportGapAvailableFrameCount = capture.FootRows.Count(
@@ -5586,6 +5595,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             for (int i = 0; i < left.Count; i++)
             {
                 RequirePredictionMotionPair(left[i], right[i]);
+                RequireKneeAngleMotionPair(left[i], right[i]);
                 if (left[i].CompletionIdentity != right[i].CompletionIdentity ||
                     left[i].StrideState != right[i].StrideState ||
                     !left[i].PelvisHeightTarget.SameAs(right[i].PelvisHeightTarget) ||
@@ -5605,6 +5615,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             RequireResponseDomainHistory(left);
             RequireResponseDomainHistory(right);
             RequirePelvisHistory(left);
+            RequireKneeAngleHistory(left);
+            RequireKneeAngleHistory(right);
             FootFrame first = footRows[0];
             int geometryRowCount = ReadGeometry(
                 geometryPath,
@@ -6849,6 +6861,37 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 FinalIkLegSolvedHip = Vector("FinalIkLegSolvedHip"),
                 FinalIkLegSolvedKnee = Vector("FinalIkLegSolvedKnee"),
                 FinalIkLegSolvedAnkle = Vector("FinalIkLegSolvedAnkle"),
+                KneeAngle = new KneeAngleFrame
+                {
+                    Evaluated = Int("KneeAngleResponseEvaluated") != 0,
+                    HistoryAvailable = Int("KneeAngleResponseHistoryAvailable") != 0,
+                    MotionSampleAvailable = Int("KneeAngleResponseMotionSampleAvailable") != 0,
+                    RootPosition = Vector("KneeAngleResponseRootPosition"),
+                    RootForward = Vector("KneeAngleResponseRootForward"),
+                    Velocity = Vector("KneeAngleResponseVelocity"),
+                    PreviousForwardSpeed = Float("KneeAngleResponsePreviousForwardSpeed"),
+                    PreviousDownSpeed = Float("KneeAngleResponsePreviousDownSpeed"),
+                    ForwardSpeed = Float("KneeAngleResponseForwardSpeed"),
+                    DownSpeed = Float("KneeAngleResponseDownSpeed"),
+                    DownStairWeight = Float("KneeAngleResponseDownStairWeight"),
+                    UpstairRate = Float("KneeAngleResponseUpstairRate"),
+                    DownstairRate = Float("KneeAngleResponseDownstairRate"),
+                    Rate = Float("KneeAngleResponseRate"),
+                    MaximumStep = Float("KneeAngleResponseMaximumStep"),
+                    AnimationAngle = Float("KneeAngleResponseAnimationAngle"),
+                    InputAngle = Float("KneeAngleResponseInputAngle"),
+                    DesiredExtraAngle = Float("KneeAngleResponseDesiredExtraAngle"),
+                    PreviousExtraAngle = Float("KneeAngleResponsePreviousExtraAngle"),
+                    CurrentExtraAngle = Float("KneeAngleResponseCurrentExtraAngle"),
+                    AppliedExtraAngle = Float("KneeAngleResponseAppliedExtraAngle"),
+                    CompensationAngle = Float("KneeAngleResponseCompensationAngle"),
+                    OutputAngle = Float("KneeAngleResponseOutputAngle"),
+                    OutputHip = Vector("KneeAngleResponseOutputHip"),
+                    OutputKnee = Vector("KneeAngleResponseOutputKnee"),
+                    OutputAnkle = Vector("KneeAngleResponseOutputAnkle"),
+                    FootDisplacement = Vector("KneeAngleResponseFootDisplacement"),
+                    FootRotationErrorDegrees = Float("KneeAngleResponseFootRotationErrorDegrees"),
+                },
                 PrimarySupportAvailable =
                     Int("PrimarySupportHasValue") != 0,
                 PrimarySupportSide = Cell("PrimarySupportSide"),
@@ -7062,6 +7105,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             RequireFormalGoalWeights(frame);
             RequireFootGoalComponentFacts(frame);
             RequireLegReachFacts(frame);
+            RequireKneeAngleResponse(frame);
             frame.PelvisHeightTarget.RequireValid(frame);
             RequirePelvisFacts(frame);
             if (frame.LandingReachAvailable &&
@@ -9414,6 +9458,116 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             }
         }
 
+        static void RequireKneeAngleResponse(FootFrame frame)
+        {
+            KneeAngleFrame value = frame.KneeAngle;
+            if (!value.Evaluated)
+            {
+                bool empty = !value.Evaluated &&
+                    !value.HistoryAvailable &&
+                    !value.MotionSampleAvailable &&
+                    value.RootPosition.Equals(Vector3.zero) &&
+                    value.RootForward.Equals(Vector3.zero) &&
+                    value.Velocity.Equals(Vector3.zero) &&
+                    value.PreviousForwardSpeed == 0f &&
+                    value.PreviousDownSpeed == 0f &&
+                    value.ForwardSpeed == 0f &&
+                    value.DownSpeed == 0f &&
+                    value.DownStairWeight == 0f &&
+                    value.UpstairRate == 0f &&
+                    value.DownstairRate == 0f &&
+                    value.Rate == 0f &&
+                    value.MaximumStep == 0f &&
+                    value.AnimationAngle == 0f &&
+                    value.InputAngle == 0f &&
+                    value.DesiredExtraAngle == 0f &&
+                    value.PreviousExtraAngle == 0f &&
+                    value.CurrentExtraAngle == 0f &&
+                    value.AppliedExtraAngle == 0f &&
+                    value.CompensationAngle == 0f &&
+                    value.OutputAngle == 0f &&
+                    value.OutputHip.Equals(Vector3.zero) &&
+                    value.OutputKnee.Equals(Vector3.zero) &&
+                    value.OutputAnkle.Equals(Vector3.zero) &&
+                    value.FootDisplacement.Equals(Vector3.zero) &&
+                    value.FootRotationErrorDegrees == 0f;
+                if (!empty)
+                    throw new InvalidDataException($"Unevaluated Knee angle response carries values Frame={frame.Frame} Side={frame.Side}.");
+                return;
+            }
+            float rate = Mathf.Lerp(value.UpstairRate, value.DownstairRate, value.DownStairWeight);
+            float step = rate * frame.DeltaSeconds;
+            float expected = Mathf.MoveTowards(value.PreviousExtraAngle, value.DesiredExtraAngle, step);
+            float forward = value.PreviousForwardSpeed;
+            float down = value.PreviousDownSpeed;
+            if (value.MotionSampleAvailable)
+            {
+                forward += (Vector3.Dot(value.Velocity, value.RootForward) - forward) * 0.25f;
+                down += (-value.Velocity.y - down) * 0.25f;
+            }
+            float weight = value.ForwardSpeed == 0f
+                ? (value.DownSpeed > 0f ? 1f : 0f)
+                : Mathf.Clamp01(3f * value.DownSpeed / value.ForwardSpeed);
+            bool valid = value.UpstairRate >= 0f && value.DownstairRate >= 0f &&
+                value.DownStairWeight >= 0f && value.DownStairWeight <= 1f &&
+                value.AnimationAngle >= 0f && value.AnimationAngle <= Mathf.PI &&
+                value.InputAngle >= 0f && value.InputAngle <= Mathf.PI &&
+                value.OutputAngle >= 0f && value.OutputAngle <= Mathf.PI &&
+                Mathf.Abs(value.RootForward.sqrMagnitude - 1f) <= 0.00001f &&
+                KneeAngleClose(value.Rate, rate) && KneeAngleClose(value.MaximumStep, step) &&
+                KneeAngleClose(value.DesiredExtraAngle, value.InputAngle - value.AnimationAngle) &&
+                KneeAngleClose(value.CurrentExtraAngle, expected) &&
+                KneeAngleClose(value.AppliedExtraAngle, value.CurrentExtraAngle - value.PreviousExtraAngle) &&
+                KneeAngleClose(value.CompensationAngle, value.CurrentExtraAngle - value.DesiredExtraAngle) &&
+                KneeAngleClose(value.ForwardSpeed, forward) && KneeAngleClose(value.DownSpeed, down) &&
+                KneeAngleClose(value.DownStairWeight, weight) &&
+                value.FootRotationErrorDegrees >= 0f && value.FootRotationErrorDegrees <= RotationNoiseFloorDegrees &&
+                value.MotionSampleAvailable == (value.HistoryAvailable && frame.DeltaSeconds > 0f) &&
+                (value.MotionSampleAvailable || value.Velocity.Equals(Vector3.zero)) &&
+                (value.HistoryAvailable || value.PreviousExtraAngle == 0f &&
+                    value.PreviousForwardSpeed == 0f && value.PreviousDownSpeed == 0f) &&
+                (!frame.FinalIkLegAvailable ||
+                    Vector3.Distance(value.OutputHip, frame.FinalIkLegSolvedHip) <= PositionNoiseFloor);
+            if (!valid)
+                throw new InvalidDataException($"Knee angle response facts are inconsistent Frame={frame.Frame} Side={frame.Side}.");
+        }
+
+        static bool KneeAngleClose(float left, float right) => Mathf.Abs(left - right) <= 0.00001f;
+
+        static void RequireKneeAngleHistory(List<FootFrame> frames)
+        {
+            for (int i = 1; i < frames.Count; i++)
+            {
+                FootFrame previous = frames[i - 1], current = frames[i];
+                KneeAngleFrame before = previous.KneeAngle, after = current.KneeAngle;
+                if (current.Frame != previous.Frame + 1 || !after.Evaluated || !after.HistoryAvailable)
+                    continue;
+                bool valid = before.Evaluated && after.PreviousExtraAngle == before.CurrentExtraAngle &&
+                    after.PreviousForwardSpeed == before.ForwardSpeed && after.PreviousDownSpeed == before.DownSpeed;
+                if (after.MotionSampleAvailable && previous.DeltaSeconds > 0f)
+                {
+                    Vector3 velocity = (after.RootPosition - before.RootPosition) / current.DeltaSeconds;
+                    valid &= Vector3.Distance(after.Velocity, velocity) <= PositionNoiseFloor;
+                }
+                if (!valid)
+                    throw new InvalidDataException($"Knee angle response committed history differs Frame={current.Frame} Side={current.Side}.");
+            }
+        }
+
+        static void RequireKneeAngleMotionPair(FootFrame left, FootFrame right)
+        {
+            KneeAngleFrame a = left.KneeAngle, b = right.KneeAngle;
+            if (a.Evaluated != b.Evaluated || a.HistoryAvailable != b.HistoryAvailable ||
+                a.MotionSampleAvailable != b.MotionSampleAvailable ||
+                !a.RootPosition.Equals(b.RootPosition) || !a.RootForward.Equals(b.RootForward) ||
+                !a.Velocity.Equals(b.Velocity) || a.PreviousForwardSpeed != b.PreviousForwardSpeed ||
+                a.PreviousDownSpeed != b.PreviousDownSpeed || a.ForwardSpeed != b.ForwardSpeed ||
+                a.DownSpeed != b.DownSpeed || a.DownStairWeight != b.DownStairWeight ||
+                a.Rate != b.Rate || a.MaximumStep != b.MaximumStep ||
+                a.UpstairRate != b.UpstairRate || a.DownstairRate != b.DownstairRate)
+                throw new InvalidDataException($"Knee angle response motion input differs between legs Frame={left.Frame}.");
+        }
+
         static void RequireLegReachFacts(FootFrame frame)
         {
             if (!frame.FinalIkLegAvailable)
@@ -10009,6 +10163,20 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 "FinalPhysicalHeelWorldX", "FinalPhysicalHeelWorldY", "FinalPhysicalHeelWorldZ",
                 "FinalPhysicalToeWorldX", "FinalPhysicalToeWorldY", "FinalPhysicalToeWorldZ",
                 "FinalIkLegAvailable",
+                "KneeAngleResponseEvaluated", "KneeAngleResponseHistoryAvailable", "KneeAngleResponseMotionSampleAvailable",
+                "KneeAngleResponseRootPositionX", "KneeAngleResponseRootPositionY", "KneeAngleResponseRootPositionZ",
+                "KneeAngleResponseRootForwardX", "KneeAngleResponseRootForwardY", "KneeAngleResponseRootForwardZ",
+                "KneeAngleResponseVelocityX", "KneeAngleResponseVelocityY", "KneeAngleResponseVelocityZ",
+                "KneeAngleResponsePreviousForwardSpeed", "KneeAngleResponsePreviousDownSpeed", "KneeAngleResponseForwardSpeed",
+                "KneeAngleResponseDownSpeed", "KneeAngleResponseDownStairWeight", "KneeAngleResponseUpstairRate",
+                "KneeAngleResponseDownstairRate", "KneeAngleResponseRate", "KneeAngleResponseMaximumStep",
+                "KneeAngleResponseAnimationAngle", "KneeAngleResponseInputAngle", "KneeAngleResponseDesiredExtraAngle",
+                "KneeAngleResponsePreviousExtraAngle", "KneeAngleResponseCurrentExtraAngle", "KneeAngleResponseAppliedExtraAngle",
+                "KneeAngleResponseCompensationAngle", "KneeAngleResponseOutputAngle", "KneeAngleResponseOutputHipX",
+                "KneeAngleResponseOutputHipY", "KneeAngleResponseOutputHipZ", "KneeAngleResponseOutputKneeX",
+                "KneeAngleResponseOutputKneeY", "KneeAngleResponseOutputKneeZ", "KneeAngleResponseOutputAnkleX",
+                "KneeAngleResponseOutputAnkleY", "KneeAngleResponseOutputAnkleZ", "KneeAngleResponseFootDisplacementX",
+                "KneeAngleResponseFootDisplacementY", "KneeAngleResponseFootDisplacementZ", "KneeAngleResponseFootRotationErrorDegrees",
                 "FinalIkLegOriginalHipX", "FinalIkLegOriginalHipY",
                 "FinalIkLegOriginalHipZ",
                 "FinalIkLegOriginalKneeX", "FinalIkLegOriginalKneeY",
@@ -11047,6 +11215,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             internal Vector3 FinalIkLegSolvedHip;
             internal Vector3 FinalIkLegSolvedKnee;
             internal Vector3 FinalIkLegSolvedAnkle;
+            internal KneeAngleFrame KneeAngle;
             internal bool PrimarySupportAvailable;
             internal string PrimarySupportSide;
             internal ulong PrimarySupportEventIdentity;
@@ -11994,6 +12163,39 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         }
 
         [Serializable]
+        sealed class KneeAngleFrame
+        {
+            internal bool Evaluated;
+            internal bool HistoryAvailable;
+            internal bool MotionSampleAvailable;
+            internal Vector3 RootPosition;
+            internal Vector3 RootForward;
+            internal Vector3 Velocity;
+            internal float PreviousForwardSpeed;
+            internal float PreviousDownSpeed;
+            internal float ForwardSpeed;
+            internal float DownSpeed;
+            internal float DownStairWeight;
+            internal float UpstairRate;
+            internal float DownstairRate;
+            internal float Rate;
+            internal float MaximumStep;
+            internal float AnimationAngle;
+            internal float InputAngle;
+            internal float DesiredExtraAngle;
+            internal float PreviousExtraAngle;
+            internal float CurrentExtraAngle;
+            internal float AppliedExtraAngle;
+            internal float CompensationAngle;
+            internal float OutputAngle;
+            internal Vector3 OutputHip;
+            internal Vector3 OutputKnee;
+            internal Vector3 OutputAnkle;
+            internal Vector3 FootDisplacement;
+            internal float FootRotationErrorDegrees;
+        }
+
+        [Serializable]
         sealed class FactsDocument
         {
             public string schema;
@@ -12046,6 +12248,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         [Serializable]
         sealed class AnalyzerFact
         {
+            public string kneeAngleUnit;
+            public string kneeAngleOutputSpace;
+            public string kneeAngleMotionAndDisplacementSpace;
             public string id;
             public int version;
             public double segmentationPositionEpsilonMeters;
@@ -12059,6 +12264,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         [Serializable]
         sealed class CoverageFact
         {
+            public int kneeAngleResponseFrameCount;
+            public int kneeAngleResponseInitializedFrameCount;
+            public int kneeAngleResponseLimitedFrameCount;
             public int contactSupportRequestedFrameCount;
             public int contactSupportGapAvailableFrameCount;
             public int contactSupportGapNotApplicableFrameCount;

@@ -56,7 +56,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             float reach,
             float bendWeight,
             float bendClamp,
-            CharacterFullBodyIkLegPoseDiagnostics legPose)
+            CharacterFullBodyIkLegPoseDiagnostics legPose,
+            CharacterKneeAngleResponseDiagnostics kneeAngleResponse = default)
         {
             Limb = limb;
             Pull = pull;
@@ -64,6 +65,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             BendWeight = bendWeight;
             BendClamp = bendClamp;
             LegPose = legPose;
+            KneeAngleResponse = kneeAngleResponse;
         }
 
         public CharacterFullBodyIkLimbSlot Limb { get; }
@@ -72,6 +74,12 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         public float BendWeight { get; }
         public float BendClamp { get; }
         public CharacterFullBodyIkLegPoseDiagnostics LegPose { get; }
+        public CharacterKneeAngleResponseDiagnostics KneeAngleResponse { get; }
+
+        internal CharacterFullBodyIkLimbDiagnostics WithKneeAngleResponse(
+            CharacterKneeAngleResponseDiagnostics response) =>
+            new CharacterFullBodyIkLimbDiagnostics(
+                Limb, Pull, Reach, BendWeight, BendClamp, LegPose, response);
     }
 
     public readonly struct CharacterFullBodyIkLegPoseDiagnostics

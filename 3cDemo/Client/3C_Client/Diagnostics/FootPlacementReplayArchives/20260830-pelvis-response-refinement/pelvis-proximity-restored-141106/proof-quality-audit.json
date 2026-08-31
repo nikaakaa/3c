@@ -1,0 +1,428 @@
+{
+  "kind": "pelvis-proximity-restoration-proof-quality/1",
+  "baseline": "20260831-112611-018-2429691288e6434a8588a55de100efc2",
+  "restored": "20260831-141106-877-437b93da1dd04804b2191935bdda390b",
+  "proof": {
+    "baselinePath": "D:\\Unity_Project_1\\3C\\3cDemo\\Client\\3C_Client\\Temp\\CharacterInputReplayProofs\\v4\\43357ff3cd384e5cba75d2c31175b116\\20260831-112721-595-e621459f07d94d57aae4d8765464d721.json",
+    "restoredPath": "D:/Unity_Project_1/3C/3cDemo/Client/3C_Client/Temp/CharacterInputReplayProofs/v4/43357ff3cd384e5cba75d2c31175b116/20260831-141218-377-fc90643279b448609b59e777d98ea97a.json",
+    "frameCount": 1044,
+    "divergentFrameCount": 0,
+    "firstDifferences": [],
+    "equalFields": {
+      "trace_id": true,
+      "trace_content_hash": true,
+      "start_body_hash": true,
+      "replay_start_tick": true,
+      "frame_count": true,
+      "tick_drive_mode": true,
+      "presentation_clock_mode": true,
+      "input_sequence_hash": true,
+      "body_trajectory_hash": true,
+      "runtime_identity": true
+    },
+    "officialComparison": {
+      "baseline_available": true,
+      "matched": false,
+      "baseline_path": "D:\\Unity_Project_1\\3C\\3cDemo\\Client\\3C_Client\\Temp\\CharacterInputReplayProofs\\v4\\43357ff3cd384e5cba75d2c31175b116\\20260831-132430-844-d6edac678dd743a5939b5c74a93b0e4e.json",
+      "compared_frame_count": 1044,
+      "aggregate_mismatches": [
+        {
+          "field": "program_hash",
+          "baseline": "811fe501c8b3e52c5af49f5aa0943d75e8a961122564fa3288e1538ff5cebd9e",
+          "candidate": "536ae60b262b10d886f87dd67027dd88b31f7cf85f68be408316783a2376c11e"
+        },
+        {
+          "field": "source_revision",
+          "baseline": "5f8405d1afb1dec4f7100d35553afed863d46d3d2f4a089c13aef377b07d3826",
+          "candidate": "780ed7ec33f8caadf613d3e27e3c2ca82bbbdc9554875520ad9b708d157f5c99"
+        },
+        {
+          "field": "semantic_hash",
+          "baseline": "bb91000572639874ae963dc09a1e0ec02f4952b056b8af9084f7c457a4018a5d",
+          "candidate": "797ede990f00f8a0b1018713e74cf50910a0f5e01c51c4b709edaaf534431229"
+        },
+        {
+          "field": "projection_revision",
+          "baseline": "fb865cfa4c73bec9f68c67f2dd230d10cef961df8456c0521bc0c7421e6883c0",
+          "candidate": "557b76d00fb2902d2811095065fd64066014f31232bb744579573b9bfe8cddef"
+        },
+        {
+          "field": "projection_source_revision",
+          "baseline": "5f8405d1afb1dec4f7100d35553afed863d46d3d2f4a089c13aef377b07d3826",
+          "candidate": "780ed7ec33f8caadf613d3e27e3c2ca82bbbdc9554875520ad9b708d157f5c99"
+        },
+        {
+          "field": "projection_semantic_hash",
+          "baseline": "bb91000572639874ae963dc09a1e0ec02f4952b056b8af9084f7c457a4018a5d",
+          "candidate": "797ede990f00f8a0b1018713e74cf50910a0f5e01c51c4b709edaaf534431229"
+        },
+        {
+          "field": "projection_contract_hash",
+          "baseline": "9ea260ee3957baf32f6f854643cbe5c316c635ccc102efb9c63f7bc25c094ea3",
+          "candidate": "e86aef93e3ce3d9576fc79cc6ec686b87b086a18a80b25902d99c776fc6aef3f"
+        }
+      ],
+      "divergent_frame_count": 0,
+      "first_divergent_relative_frame": -1,
+      "first_frame_mismatches": []
+    },
+    "proofOriginalSha256": "fc102def8cd2c3c8024f00a4c87efe65e3dbd29cec2893fe8a56ac0a754b4523",
+    "footSample": {
+      "sample_identity": "437b93da1dd04804b2191935bdda390b",
+      "samples_path": "D:\\Unity_Project_1\\3C\\3cDemo\\Client\\3C_Client\\Diagnostics\\FootPlacementRuns\\20260831-141106-877-437b93da1dd04804b2191935bdda390b\\samples.csv",
+      "facts_path": "D:\\Unity_Project_1\\3C\\3cDemo\\Client\\3C_Client\\Diagnostics\\FootPlacementRuns\\20260831-141106-877-437b93da1dd04804b2191935bdda390b\\diagnoses\\analysis.json",
+      "samples_sha256": "340b543b0254f3ccf30bab0a8c3ebdc97040af50695510a976eada3e5cd9d587",
+      "sampling_relative_frame_count": 1043
+    },
+    "samplesShaMatches": true
+  },
+  "quality": {
+    "targetCount": 37,
+    "rulesAndPoliciesUnchanged": true,
+    "countsUnchanged": true,
+    "scoresUnchanged": true,
+    "totalScore": [
+      61.9,
+      61.9
+    ],
+    "evidence": [
+      86.9,
+      86.9
+    ],
+    "targets": [
+      {
+        "id": "action-hard-ownership",
+        "rulesSame": true,
+        "policySame": true,
+        "countsSame": true,
+        "scoreSame": true,
+        "eligible": 0,
+        "matched": 0
+      },
+      {
+        "id": "approach-progress-ownership",
+        "rulesSame": true,
+        "policySame": true,
+        "countsSame": true,
+        "scoreSame": true,
+        "eligible": 376,
+        "matched": 0
+      },
+      {
+        "id": "contact-acquisition-continuity",
+        "rulesSame": true,
+        "policySame": true,
+        "countsSame": true,
+        "scoreSame": true,
+        "eligible": 54,
+        "matched": 50
+      },
+      {
+        "id": "contact-plane-penetration-contribution",
+        "rulesSame": true,
+        "policySame": true,
+        "countsSame": true,
+        "scoreSame": true,
+        "eligible": 90,
+        "matched": 84
+      },
+      {
+        "id": "contact-reentry-output-geometry",
+        "rulesSame": true,
+        "policySame": true,
+        "countsSame": true,
+        "scoreSame": true,
+        "eligible": 0,
+        "matched": 0
+      },
+      {
+        "id": "contact-state-output-jump",
+        "rulesSame": true,
+        "policySame": true,
+        "countsSame": true,
+        "scoreSame": true,
+        "eligible": 1051,
+        "matched": 433
+      },
+      {
+        "id": "contact-support-gap",
+        "rulesSame": true,
+        "policySame": true,
+        "countsSame": true,
+        "scoreSame": true,
+        "eligible": 60,
+        "matched": 3
+      },
+      {
+        "id": "contact-transition-context",
+        "rulesSame": true,
+        "policySame": true,
+        "countsSame": true,
+        "scoreSame": true,
+        "eligible": 2086,
+        "matched": 0
+      },
+      {
+        "id": "early-landing-entry",
+        "rulesSame": true,
+        "policySame": true,
+        "countsSame": true,
+        "scoreSame": true,
+        "eligible": 60,
+        "matched": 6
+      },
+      {
+        "id": "final-contact-plane-penetration",
+        "rulesSame": true,
+        "policySame": true,
+        "countsSame": true,
+        "scoreSame": true,
+        "eligible": 90,
+        "matched": 34
+      },
+      {
+        "id": "formal-goal-weight-policy",
+        "rulesSame": true,
+        "policySame": true,
+        "countsSame": true,
+        "scoreSame": true,
+        "eligible": 2086,
+        "matched": 0
+      },
+      {
+        "id": "identity-only-residual-rebuild",
+        "rulesSame": true,
+        "policySame": true,
+        "countsSame": true,
+        "scoreSame": true,
+        "eligible": 230,
+        "matched": 0
+      },
+      {
+        "id": "landing-exit-jump",
+        "rulesSame": true,
+        "policySame": true,
+        "countsSame": true,
+        "scoreSame": true,
+        "eligible": 60,
+        "matched": 53
+      },
+      {
+        "id": "landing-leg-extension",
+        "rulesSame": true,
+        "policySame": true,
+        "countsSame": true,
+        "scoreSame": true,
+        "eligible": 2,
+        "matched": 0
+      },
+      {
+        "id": "landing-not-closing",
+        "rulesSame": true,
+        "policySame": true,
+        "countsSame": true,
+        "scoreSame": true,
+        "eligible": 60,
+        "matched": 2
+      },
+      {
+        "id": "landing-observation-reuse-contract",
+        "rulesSame": true,
+        "policySame": true,
+        "countsSame": true,
+        "scoreSame": true,
+        "eligible": 1841,
+        "matched": 0
+      },
+      {
+        "id": "landing-persists-after-formal-unlock",
+        "rulesSame": true,
+        "policySame": true,
+        "countsSame": true,
+        "scoreSame": true,
+        "eligible": 60,
+        "matched": 0
+      },
+      {
+        "id": "landing-without-contact-plane",
+        "rulesSame": true,
+        "policySame": true,
+        "countsSame": true,
+        "scoreSame": true,
+        "eligible": 60,
+        "matched": 0
+      },
+      {
+        "id": "landing-wrong-exit",
+        "rulesSame": true,
+        "policySame": true,
+        "countsSame": true,
+        "scoreSame": true,
+        "eligible": 60,
+        "matched": 0
+      },
+      {
+        "id": "late-approach-landing-revision",
+        "rulesSame": true,
+        "policySame": true,
+        "countsSame": true,
+        "scoreSame": true,
+        "eligible": 325,
+        "matched": 179
+      },
+      {
+        "id": "lock-weight-completion-by-contact-event",
+        "rulesSame": true,
+        "policySame": true,
+        "countsSame": true,
+        "scoreSame": true,
+        "eligible": 60,
+        "matched": 20
+      },
+      {
+        "id": "locked-horizontal-drift",
+        "rulesSame": true,
+        "policySame": true,
+        "countsSame": true,
+        "scoreSame": true,
+        "eligible": 15,
+        "matched": 0
+      },
+      {
+        "id": "locked-vertical-anchor-evidence",
+        "rulesSame": true,
+        "policySame": true,
+        "countsSame": true,
+        "scoreSame": true,
+        "eligible": 44,
+        "matched": 0
+      },
+      {
+        "id": "missed-landing-entry",
+        "rulesSame": true,
+        "policySame": true,
+        "countsSame": true,
+        "scoreSame": true,
+        "eligible": 54,
+        "matched": 0
+      },
+      {
+        "id": "path-revision-amplification-evidence",
+        "rulesSame": true,
+        "policySame": true,
+        "countsSame": true,
+        "scoreSame": true,
+        "eligible": 668,
+        "matched": 199
+      },
+      {
+        "id": "path-revision-contract-mismatch",
+        "rulesSame": true,
+        "policySame": true,
+        "countsSame": true,
+        "scoreSame": true,
+        "eligible": 718,
+        "matched": 0
+      },
+      {
+        "id": "path-revision-output-jump",
+        "rulesSame": true,
+        "policySame": true,
+        "countsSame": true,
+        "scoreSame": true,
+        "eligible": 668,
+        "matched": 199
+      },
+      {
+        "id": "plant-interpolation-output-jump",
+        "rulesSame": true,
+        "policySame": true,
+        "countsSame": true,
+        "scoreSame": true,
+        "eligible": 523,
+        "matched": 307
+      },
+      {
+        "id": "release-flyback",
+        "rulesSame": true,
+        "policySame": true,
+        "countsSame": true,
+        "scoreSame": true,
+        "eligible": 59,
+        "matched": 1
+      },
+      {
+        "id": "releasing-to-swing-envelope-violation",
+        "rulesSame": true,
+        "policySame": true,
+        "countsSame": true,
+        "scoreSame": true,
+        "eligible": 53,
+        "matched": 1
+      },
+      {
+        "id": "residual-deadline-miss",
+        "rulesSame": true,
+        "policySame": true,
+        "countsSame": true,
+        "scoreSame": true,
+        "eligible": 48,
+        "matched": 0
+      },
+      {
+        "id": "residual-growth-without-revision",
+        "rulesSame": true,
+        "policySame": true,
+        "countsSame": true,
+        "scoreSame": true,
+        "eligible": 253,
+        "matched": 0
+      },
+      {
+        "id": "stable-swing-correction-response-cadence",
+        "rulesSame": true,
+        "policySame": true,
+        "countsSame": true,
+        "scoreSame": true,
+        "eligible": 180,
+        "matched": 8
+      },
+      {
+        "id": "stable-swing-output-jump",
+        "rulesSame": true,
+        "policySame": true,
+        "countsSame": true,
+        "scoreSame": true,
+        "eligible": 344,
+        "matched": 143
+      },
+      {
+        "id": "step-time-candidate-selection-observations",
+        "rulesSame": true,
+        "policySame": true,
+        "countsSame": true,
+        "scoreSame": true,
+        "eligible": 2086,
+        "matched": 0
+      },
+      {
+        "id": "swing-actual-foot-envelope-counterfactual",
+        "rulesSame": true,
+        "policySame": true,
+        "countsSame": true,
+        "scoreSame": true,
+        "eligible": 344,
+        "matched": 8
+      },
+      {
+        "id": "swing-to-landing-floor-handoff",
+        "rulesSame": true,
+        "policySame": true,
+        "countsSame": true,
+        "scoreSame": true,
+        "eligible": 53,
+        "matched": 17
+      }
+    ]
+  }
+}

@@ -1,0 +1,89 @@
+{
+  "kind": "pelvis-proximity-restoration-evidence/1",
+  "testedCommit": "1b10e81",
+  "diagnosticsRevert": "ccb14e1",
+  "baseline": "20260831-112611-018-2429691288e6434a8588a55de100efc2",
+  "run": "20260831-141106-877-437b93da1dd04804b2191935bdda390b",
+  "sourceDirectory": "D:/Unity_Project_1/3C/3cDemo/Client/3C_Client/Diagnostics/FootPlacementRuns/20260831-141106-877-437b93da1dd04804b2191935bdda390b",
+  "archiveDirectory": "D:/Unity_Project_1/3C/3cDemo/Client/3C_Client/Diagnostics/FootPlacementReplayArchives/20260830-pelvis-response-refinement/pelvis-proximity-restored-141106",
+  "sourceFilesPreserved": true,
+  "verifiedFileCount": 14,
+  "zipFile": "20260831-141106-877-437b93da1dd04804b2191935bdda390b.zip",
+  "zipSha256": "da37090de09688ac50ec462be67c6095aaae371135245e765018d46e59659082",
+  "proofOriginalPath": "D:/Unity_Project_1/3C/3cDemo/Client/3C_Client/Temp/CharacterInputReplayProofs/v4/43357ff3cd384e5cba75d2c31175b116/20260831-141218-377-fc90643279b448609b59e777d98ea97a.json",
+  "proofOriginalSha256": "fc102def8cd2c3c8024f00a4c87efe65e3dbd29cec2893fe8a56ac0a754b4523",
+  "proofZipFile": "replay-proof-raw.zip",
+  "proofZipSha256": "96a1c85b78b0dd2adc7c9e7192548f4515fb6d143b8cd12b5e470aedb47b6cf5",
+  "files": [
+    {
+      "path": "diagnoses/analysis.json",
+      "bytes": 4436,
+      "sha256": "6288aa78d2ce2a1d9ff0ab7a6773f6d87e3f0b34ecc2cfa91f909e9207bb9ff3"
+    },
+    {
+      "path": "diagnoses/contact-plane-penetration.json",
+      "bytes": 37517,
+      "sha256": "97770ce35da0de5b50be4b0e19ea57d5a22ced482eab1d5efb4ef36a57a8ad33"
+    },
+    {
+      "path": "diagnoses/details-index.json",
+      "bytes": 4866083,
+      "sha256": "af8902427229b5f1de9ce35368d1eb21ca14a36f99354a4f41aa19440d669ec7"
+    },
+    {
+      "path": "diagnoses/details.jsonl",
+      "bytes": 59332741,
+      "sha256": "3a012b6e455d2ee3b0eeb83411664fe53108eec8d97579486cf13c4254f261bb"
+    },
+    {
+      "path": "diagnoses/landing-leg-extension.json",
+      "bytes": 9758,
+      "sha256": "0a7b8a32d11eba83b92f1cf0f63e81bd8aa9f444cf3b2558c0d649c39b893300"
+    },
+    {
+      "path": "diagnoses/landing-observation-reuse.json",
+      "bytes": 6019,
+      "sha256": "f7e7ad7f093e3502ea50de54b2a5e3bcb471a4be517ea3ee7328ddf69d7b6792"
+    },
+    {
+      "path": "diagnoses/landing-path-continuity.json",
+      "bytes": 31003,
+      "sha256": "a22278831b52939f38ea2ba9ebf6f0bb05319520c3cd673d29712d8ebe2000db"
+    },
+    {
+      "path": "diagnoses/landing-state-consistency.json",
+      "bytes": 211468,
+      "sha256": "eb5b271606dad4263ed57af32d2c8a71840b98deb3574ee21a6094a7221f8734"
+    },
+    {
+      "path": "diagnoses/locked-sole-motion.json",
+      "bytes": 10606,
+      "sha256": "ae822b317a19eea090604a95547a61e351029157e5a371ff7b4dc58d77f72167"
+    },
+    {
+      "path": "diagnoses/quality-score.json",
+      "bytes": 24926,
+      "sha256": "212dc2b77613b8f6d0f39de2d8d15800e092a5d90329b160879d3566a380634c"
+    },
+    {
+      "path": "diagnoses/step-time-candidate-selection.json",
+      "bytes": 8909,
+      "sha256": "f583192a83f6ac816105b067e3fbbc5fe28de78f82672596fffd316770c90384"
+    },
+    {
+      "path": "diagnoses/swing-path-jitter.json",
+      "bytes": 120502,
+      "sha256": "2fde267330c33cf9d750a6df6a144b4796d9e3dd3eb29a3de58aab13f7461104"
+    },
+    {
+      "path": "ground-path-geometry.csv",
+      "bytes": 12964434,
+      "sha256": "308344e2dd2dbc4a9b17e9b7f784f9d78c16edd16430810b99f308770bc0fa32"
+    },
+    {
+      "path": "samples.csv",
+      "bytes": 19288482,
+      "sha256": "340b543b0254f3ccf30bab0a8c3ebdc97040af50695510a976eada3e5cd9d587"
+    }
+  ]
+}

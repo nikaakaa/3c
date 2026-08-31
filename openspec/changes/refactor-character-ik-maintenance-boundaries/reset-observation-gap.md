@@ -1,6 +1,6 @@
 # Reset边界的正式取证补全
 
-当前三个结构闭环已逐格通过固定基线回放。独立Reset候选`fc00789`也通过普通Record回归，但BodyReset为0，不能证明使用后完全Reset与新建等价。
+前三个结构闭环已逐格通过固定基线回放。独立Reset实现`fc00789`也通过普通Record回归；后续候选`5b551cb`补齐正式Preview/Watch观测并再次通过普通Record，现已保存使用后完全Reset与新建的配对证据。
 
 现有正式链已经生产所需的完整输入：FBBIK的实际上游Producer可由Pose Watch复制全量Component Position/Rotation/Scale；Goal Assembler Watch可复制同Completion的完整GoalSet。公开接口是RuntimeTarget.SetPoseWatchInterests/TryGetDebugView及CharacterPipelineHost.TrySetPreviewPoseWatchInterests，读取后必须在下一次发布或Reset使lease失效前保存值。不能拿Foot Contribution子集、FBBIK输出或同动画时间代替完整输入。
 
@@ -15,4 +15,8 @@
 
 当前Goal已明确要求完成Reset独立验证；补齐现有Preview/Watch的正式只读证据是该目标的实施内容。按第一项继续，不再将正常诊断实现留为等待确认。第二项会缩减Goal范围，没有采用授权，不实施该撤销。
 
-扩展尚未实施，任务4.4仍未完成。先完成当前列映射闭环，再沿上述正式入口补齐取证；不新增回放器、Solver、采样器或临时驱动。若发现必须绕过现有执行链或改变正常帧行为，停止相关修改并报告具体冲突。第二阶段不能在第一阶段要求未完成时假称已通过而启动。
+实现沿既有`CharacterPipelineHost -> AuthoringPreviewController -> AnimationPreviewEngine`入口，在首次正式求值前登记Pose Watch interest；隔离Fixture使用Editor Preview Scene，不创建第二Solver、第二驱动或第二采样器。Solver只增加进入求解前的Stable/Applied事实、方向来源和Reset代次，正常运行仍由原GoalSet与同一FBBIK求解。
+
+Corin正式Fixture在`time=0.5`、`speed=3`下得到203个Pose值。FBBIK Watch的直接Goal子页为空，但正式Solver记录`AppliedGoalCount=3`、`EffectorCount=3`，三个实际目标的Slot、Source、Application、目标姿态、权重和求解结果都进入同一输出哈希。新建、连续使用和完全Reset三次的Pose、Goal页与完整Solver输出哈希一致；连续使用帧左右腿进入时Stable/Applied均为true，新建和Reset均为false，Reset代次从1推进到2，两次来源均为Animated。该证据证明正式Reset清空两类历史且不改变本输入下的实际Goal、姿态和求解输出。
+
+普通Record候选`5b551cb`在`20260901-070946-569-c14830f966ee465c887849cfc66b1f2a`再次通过1044帧回放。此配对没有动态覆盖无可靠动画方向时的Reference来源或其它调参Reset输入；这些未覆盖项明确保留，不把Animated来源的通过扩大为全部退化分支。任务4.4按“正式初始化／完全Reset配对加普通历史帧回归”的原范围完成。

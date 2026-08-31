@@ -57,6 +57,23 @@ CharacterPresentationPosePlanCompiler.CompilationState
 
 本change以删除测试作为Module深度标准：删除一个Module后，如果其复杂度只是消失而不会重新散到调用方，它是浅包装；如果删除后调用方必须重新实现大量顺序、不变量和业务知识，它才提供足够Depth。本change不以文件数或类数作为架构结果。
 
+## Current Implementation Baseline
+
+用户指定行为基线为`ad3527e103cc3235a63e8a1c1dbd26df5155e0ba`，不是实施时最新HEAD或任意较晚IK版本。已核对该提交对应动画时钟、Pose混合、Foot输入与Lifecycle、Pelvis、Goal、FBBIK、Writer和Bank链路；具体入口与保护项见[行为保护清单](behavior-baseline.md)。2026-09-01检查时动画／IK、Corin配置及相关诊断目录与该提交无差异；后续相关差异必须单独报告，不自动吸收或回退。Foot／IK未完成和未归档不阻塞本change，已知问题不伪装成已通过。
+
+| 对象 | 本次允许变化 | 必须保持 |
+|---|---|---|
+| Foot／Pelvis／Goal／FBBIK | 外层typed调用、存储归属与Result封装 | 内部算法、数值顺序、准入、权重、Profile值、正常初始化／Reset结果 |
+| 根Bank与Frame事务 | 统一lineage、Pending页所有权、Seal／Discard连接 | 当前连续历史与提交／丢弃后的业务结果 |
+| PoseGraph／Compiler／ABI | Program Image、节点定义、Pass、执行布局与单一调度Owner | 节点业务语义、source时间、最终Pose |
+| Runtime诊断投影 | 从内部页读取改为消费同帧Result | 已有采样、Analyzer、Publisher、明细存储和评分政策 |
+
+Foot输入继续是同帧Component Pose、正式Foot Motion、Body／World事实、Rig和Profile，输出继续是当前Foot结果、Pelvis Result及三个Goal Contribution；后续Goal Set、FBBIK与Physical Pose必须保持相同业务结果。Foot当前由Lifecycle使用Transition、State Target、Interpolation与Post Constraint，并在Pelvis后完成Landing；这里只记录已存在链路，不把这些内部阶段重新设计成PoseGraph公开合同。
+
+当前保留的Reach观察／Landing资格与已经撤除的业务层硬挪骨盆、末端夹脚必须区分。不得依据旧spec恢复夹紧，不迁入被否决的SmoothKnee。当前未解决的抖动、穿透、离面或反弯保留为已知问题，不能在同一架构提交中修算法或改评分掩盖。
+
+`refactor-character-ik-maintenance-boundaries`中的Foot请求／结果重排、Interpolation运行历史分型、Solver Reset方向修正和诊断列绑定统一不在本次范围；未实施不阻塞本change，也不自动变成本change任务。其以后实施必须适配本次形成的唯一外部边界，不形成第二Owner。
+
 ## Goals
 
 - 外层Animation Runtime只编排帧阶段，不理解节点、source资源、Constraint数学、Workspace布局或Writer细节。
@@ -330,7 +347,7 @@ Clip、Blend Space、Motion Matching和有限Action是Source Module内部的真�
 
 ## Decision 5: Pose Constraint是Program调用的深Module，不是Program布局的一部分
 
-前置Foot change完成后，`CharacterPoseConstraintRuntime`已经拥有Foot、Goal、Assembler、FBBIK和BendHistory。本change只收紧其外部Interface，并保持Graph中的Constraint Operation仍由Program Runtime逐个调度：
+当前`CharacterPoseConstraintRuntime`已经拥有Foot、Goal、Assembler、FBBIK和BendHistory；这些已保留IK实现直接作为本次输入，不要求其它Foot／IK change先完成。本change只收紧其外部Interface，并保持Graph中的Constraint Operation仍由Program Runtime逐个调度：
 
 ```text
 BeginFrame(FrameLineage, ConstraintFrameFacts)
@@ -356,7 +373,7 @@ Diagnostics页
 
 Program Image中的Constraint Operation Payload只保存上述typed编译Handle。Program Runtime遇到每个Constraint Family Operation时调用对应Constraint入口一次，并把返回的per-operation Result映射到Program Value；Constraint Module不得扫描Program或维护第二份Stage Schedule，外层Runtime不得提前执行，Executor不得再次验证业务算法。
 
-Foot行为、Support、Pelvis、Goal编码和Bend策略以依赖change归档结果为Oracle，本change不调整公式或阈值。
+Foot行为、Support、Pelvis、Goal编码、Bend策略、连续状态和正常Reset以`ad3527e103cc3235a63e8a1c1dbd26df5155e0ba`为基线。只移动根Bank的外部持有关系、typed入口和结果发布，不重排Foot内部流程、不引入新的脚请求／最终结果模型、不修复Solver Reset方向，不调整公式、阈值或配置。发现同输入差异先定位外层迁移，不能修改已保留IK来适配新架构。
 
 ## Decision 6: 每个Operation只有Program Runtime一个执行Owner
 
@@ -623,7 +640,7 @@ Constraint Tuning
 
 根Runtime在新Frame开始前接收Pending Tuning Block，依次请求三个Module构造不可变Candidate Snapshot并完成容量、identity与值域预验证。全部成功后根Runtime一次提升TuningGeneration并让三个Module切换到同generation；任一失败时三个Committed Snapshot保持不变。模块不得通过“先修改、失败后反向Apply旧值”的方式回滚，也不得把调参写入Program Image、Execution View或其它Actor。
 
-`resetOwnerState`继续按现行作者语义作用于对应Module的Actor状态，但必须作为同一Candidate Tuning事务的一部分预声明。调参生效时机、Preview入口与Runtime结果保持不变；如果未来决定删除在线调参，必须建立独立行为change，不能在本架构迁移中顺手删除。
+`resetOwnerState`继续按冻结基线的作者语义作用于对应Module的Actor状态，但必须作为同一Candidate Tuning事务的一部分预声明。这里只改Tuning失败时的原子提交边界，不顺手修复IK初始化、BendHistory清空或Vendor方向政策；相同成功调参必须保持同一IK结果。调参生效时机、Preview入口与Runtime结果保持不变；如果未来决定删除在线调参，必须建立独立行为change，不能在本架构迁移中顺手删除。
 
 ## Decision 13: Diagnostics只投影Committed Result
 
@@ -650,6 +667,10 @@ Physical Transform反推
 ```
 
 Pose Watch所需Pose、Goal和Contribution在运行帧完成时按interest冻结，Watch只读取这些Committed页，不重跑source、world query或FBBIK。
+
+Runtime Projector与离线诊断Publisher不是同一个职责。新的Committed Result继续提供给现有`CharacterFootLandingPredictionSampler -> CharacterFootMotionDiagnosticAnalyzer -> CharacterFootDiagnosisPublisher`及唯一明细存储，不另造采样器、Analyzer、Publisher或列映射系统。保留Sealed CSV、geometry、manifest／明细索引、小报告、完整事件枚举和七维评分的现行语义；不能恢复展开facts.json读写往返。
+
+字段在模块间搬家不等于评分规则改变。目标／实际Foot、Pelvis、Goal、Solved和Physical事实仍按现有版本与分母解释；不得改阈值、权重、资格或总分来证明重构等价。确实需要改变外部采样字段含义时先报告冲突，不在本change擅自升级评分政策；历史原包保持。
 
 ## Decision 14: Preview与Runtime只使用Adapter差异
 
@@ -728,13 +749,32 @@ Editor/CharacterSimulation/Compilation/Presentation/PoseGraph/
 
 本change不因为目录建议创建新程序集。只有现有程序集依赖无法表达上述方向时才调整asmdef；不得建立循环引用或为了“模块化”复制合同。
 
+## Behavior Preservation
+
+[行为保护清单](behavior-baseline.md)是本次迁移的输入合同，不是另外一条运行链。拆Module、改Family布局、复用Workspace和集中Diagnostics都不得改变source推进次数、Transition／Slot时机、混合数值顺序、Foot dominant contribution选择、IK内部调用顺序或Writer根骨策略。State字段按实际消费者分类，名称中包含Fact／Diagnostics不意味着可删除；凡被下一帧读取的值都按基线保留。
+
+每个代码小步须同时比较指定基线和上一保留小步的已有正式输入／输出；只复用现有Replay、Proof、Sampler、Analyzer与Publisher，不新增测试工程或临时验证链。先对账输入、Body、时钟和IK输入，再对账中间量和最终骨骼，不能只比较最终总分。纯生成身份差异要按稳定Node／call-site／Source／Event证明一一映射，不能用重标身份掩盖额外Reset或额外查询。可见业务数值差异、成功Reset差异或覆盖缺口必须报告，未解释前不继续堆叠迁移或调参。
+
+已有真实失败／初始化行为也不能因“清理旧路径”被默改：Physical Writer的根骨排除与Committed／Reference选择、无有效Goal时跳过Vendor Update、错误后停止与提交边界需要分别保留。若现有代码与目标的no-throw Seal／诊断发布顺序存在无法证明等价的冲突，必须先报告，不能把错误处理重设计伪装为纯迁移。
+
+## Decision 17: 验证只由对应边界负责
+
+| 边界 | 唯一负责的检查 | 下游不再重复 |
+|---|---|---|
+| Character Build | typed拓扑、静态写冲突、Operation Family、Value／Workspace布局与schema | Runtime不重新扫描Graph或证明同一静态布局 |
+| Runtime创建／替换 | 已发布产物身份、实际Rig／资源绑定、固定容量 | 普通帧不重复整份资产和Profile检查 |
+| 根Frame／跨Owner交接 | 当前lease、source readiness、generation、动态容量使用与completion | 成功的typed交接结果向下传递，不逐层重新解析全部identity和payload |
+| Final Publication | 当前Output完成状态、最终Pose有效性与Physical binding仍可写 | 不重算上游Foot／Goal／FBBIK，也不重做Build拓扑证明 |
+
+不删除当前算法必要的动态检查，也不改变原Fault边界；这里只防止迁移时把同一检查复制到根Runtime、Module、Executor和每个Result中。业务失败在拥有对应输入的边界报告，下游传播typed失败，不再检查一遍后生成第二原因。
+
 ## Migration
 
 迁移在同一change中顺序完成，但不保留并行运行路径：
 
-1. 等待`stabilize-character-foot-path-and-landing`完成归档，以current Clip/Blend Space合同和最终Foot typed边界固定动画行为与Projection Oracle；独立Blend Space演示内容不作为前置。
+1. 对照指定提交`ad3527e103cc3235a63e8a1c1dbd26df5155e0ba`及behavior-baseline.md核对当前动画／IK源码、配置、节点行为、产物与已有诊断证据；后续差异单独报告，不等待Foot／IK全部归档，不并入未实施IK维护或已撤销实验。
 2. 建立根Frame lineage、typed Result、Module lease与Owner规则，让现有单一路径先携带新身份；根事务只保存阶段和typed lease/result，不提前创建共享页、空壳Module或第二Frame事务。
-3. 将`CharacterPoseConstraintRuntime`移入正式目录并按每个Constraint Family Operation收窄typed Handle/Result Interface；删除布局泄露调用。
+3. 保留当前Foot、Pelvis、Goal与FBBIK内部实现，只迁移`CharacterPoseConstraintRuntime`及根Bank外部归属，并按各Constraint Operation收窄typed Handle/Result；删除布局泄露调用，不重排IK算法。
 4. 提取`CharacterPoseSourceModule`，原子迁移provider、有限Action sample、Animancer、Physical Source和release所有权；从旧Runtime删除对应字段与方法。
 5. 建立Projection内部唯一`CharacterPoseProgramImage`与`PoseProgramImageHash`，让每个Program Runtime最多建立一份identity精确匹配的actor-local只读Execution View；把旧Native Program可变状态分别迁入Actor State、Program Frame Pages和对应Module Owner。
 6. 建立持久`CharacterPoseProgramRuntime`和Executor，迁移PoseState、Player、ActionPlaybackInput lifecycle、Slot、Blend、Inertialization与Operation调度；删除外层World-aware Operation扫描和旧Staged Executor双Owner。
@@ -744,7 +784,7 @@ Editor/CharacterSimulation/Compilation/Presentation/PoseGraph/
 10. 建立Node Definition Module，一次性迁移Capability、Port Shape Projector、Authoring、Document v4 Exporter/strict parser/Target Mapper/Reconciler、Clipboard、Mutation preflight、local validation、Graph dependency和typed lowering；保留唯一Document Transaction Service，删除旧Handler Registry与重复switch。
 11. 将Compiler拆成`Graph Dependency -> Symbolic Family -> Schedule -> Value Lifetime -> Workspace -> Bind Payload`固定Pass，删除中央`CompilationState`和pass-through入口。
 12. 完成全部现行Operation Code到Family/Owner/Domain映射后，原子切换分段Operation ABI、Projection内Program Image schema和Runtime reader；提升PoseProgramImageHash但保持Gameplay ContractHash不变，删除万能Operation、旧Native Program语义容器与旧reader。
-13. 将Diagnostics改为Committed Result Projector；删除对内部Program/Workspace/Constraint的读取。
+13. 将Runtime Diagnostics改为Committed Result Projector并接回现有采样／分析／发布／明细存储链；删除跨Owner内部读取，不重做离线诊断或七维评分。
 14. 迁移Preview到同一Factory、Program Image、actor-local Execution View规则、Tuning Snapshot和根Frame Transaction，删除简化或重复执行路径。
 15. 搜索并删除旧类、旧字段、旧codec、旧validator知识、兼容版本和未引用路径，更新project truth并完成编译与严格校验。
 
@@ -798,6 +838,10 @@ Program Runtime内部仍会包含多种节点Implementation和大量Native页；
 
 删除运行时调参可以简化不可变Program，但会降低Pose Graph作者迭代效率，而且属于行为变化。继续直接修改Native Operation会破坏共享Image与跨Actor隔离。本change保留调参业务，通过actor-local不可变Snapshot和一次Tuning Generation提升完成迁移；代价是Program、Source与Constraint都要实现Candidate预验证。
 
+### 11. 冻结当前IK还是等待全部IK工作完成
+
+等待全部IK工作完成可以得到更晚的统一行为基线，但会把剩余效果改进与PoseGraph结构迁移绑定。冻结当前保留实现允许立即开展结构迁移，代价是保留已知效果问题，后续IK工作需适配新外部边界。用户已选择后者，并指定`ad3527e103cc3235a63e8a1c1dbd26df5155e0ba`；本change不再要求Foot／IK全部归档，也不借迁移继续做效果实验。
+
 ## Rejected Alternatives
 
 - **只拆分大文件**：不改变Owner和Interface，调用方仍理解全部内部字段。
@@ -810,7 +854,10 @@ Program Runtime内部仍会包含多种节点Implementation和大量Native页；
 
 ## Spec Conflicts And Resolution
 
-- active Foot change与本change都会修改`character-animation-pipeline`和`character-presentation-pose-graph`。通过明确顺序解决：先归档Foot架构与行为change，本change delta以归档后的Goal Contribution/Assembler/FBBIK合同为基线。
+- 本change旧前置要求Foot完成并归档，用户2026-09-01已明确改为冻结当前保留IK后开始PoseGraph重构。Foot／IK未完成状态不阻塞，重叠的后续行为修改不能与本次同Owner迁移混写；出现实际冲突才由用户裁决。
+- current Foot spec已不固定中央状态机类名，旧PoseGraph delta仍写`CharacterFootStateMachine`，本次删除该过期条款，保留现有Lifecycle内部实现。
+- 当前保留实现已撤除业务层骨盆Reach硬夹紧与末端夹脚，SmoothKnee候选已撤销；部分旧current／active文字尚未同步。本change明确按用户当前保留行为迁移，不借旧文档恢复政策，也不实施IK维护提案的请求／结果或Reset修正。
+- 已落地诊断存储与评分change继续作为现有实现输入，是否归档不影响本次接线；Runtime事实来源可以迁移，Sampler、Analyzer、Publisher、明细存储、评分规则与历史证据不重做。
 - active Blend Space change的通用Clip/Blend Space能力已经进入current specs，剩余任务只建立独立演示内容。本change直接迁移current节点Definition与Source Adapter，不依赖该演示归档；两者不得并行修改通用Runtime或Compiler合同。
 - current `character-presentation-pose-graph`仍写明`compiler handler`，而current `graph-authoring-domain-framework`已经要求唯一Pose Node Definition并禁止第二Handler；现行代码仍保留Handler Registry。本change以Framework current requirement为方向修改Pose Graph requirement并删除旧实现，明确这是current specs之间的冲突，不把代码现状误写成current truth。
 - current `graph-authoring-domain-framework`已经固定Definition、共享Capability、Reconciler与Document Transaction Service边界。本change补足唯一`GraphAuthoringNodePortShapeProjector`、Document v4 Exporter/strict parser/Target Mapper/Mutation preflight调用链，以及Graph Closure读取Definition dependency的边界；Definition不得接管Document事务或五个MCP生命周期。

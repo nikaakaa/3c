@@ -1,5 +1,15 @@
 ## ADDED Requirements
 
+### Requirement: 架构迁移必须保护当前保留的IK行为基线
+
+本change MUST以用户指定提交`ad3527e103cc3235a63e8a1c1dbd26df5155e0ba`中的动画与Corin IK代码、配置和行为为唯一基线，并使用本change的behavior-baseline.md保护清单，不要求Foot／IK所有待办完成或归档。实施前 MUST对照该提交检查当前源码、Profile／Rig／作者数据、产物与已有输入／诊断证据；后续相关差异必须报告，不自动吸收、回退或更换基线。Constraint内的Foot、Pelvis、Goal、FBBIK公式、数值顺序、准入、权重、连续历史与正常初始化／Reset结果 MUST保持；只允许外层调用、存储归属、事务和结果发布迁移。未实施IK维护任务与已撤销实验 MUST不自动并入，已撤除Reach硬夹紧与末端夹脚、已撤销SmoothKnee与CurrentSupport替代Swing包络候选 MUST不恢复；该提交已经保留的有符号膝向运输 MUST保持。动画与IK的具体计算顺序、source时间、混合、跨帧历史和根骨写入政策 MUST按behavior-baseline.md保持，不得仅凭最终总分或编译通过声明等价。
+
+#### Scenario: 重构遇到基线已有IK问题
+
+- **WHEN** 当前保留IK存在已知抖动、穿透、离面或反弯，且本次请求只重构PoseGraph架构
+- **THEN** 该问题 MUST记录为基线限制，结构迁移保持对应业务结果
+- **AND** 实现不得为使回归数据通过而改IK公式、配置、评分或扩大到未实施行为任务
+
 ### Requirement: 动画表现根必须只编排typed Pose Frame结果
 
 唯一`CharacterAnimationPresentationRuntime` MUST拥有根`CharacterPoseFrameTransaction`、表现Frame Lease、固定Module调用顺序、Animancer Evaluate Barrier、统一Seal/Discard/Fault、actor-local Tuning协调和外部输入输出装配。根Transaction MUST只保存lineage、阶段、Program/Source/Constraint/Publication typed lease/result与统一Outcome，不得保存或索引任一Module内部Workspace。根Runtime MUST通过typed Demand、Prepared、Result和Publication合同调用各Module；MUST不保存Node业务状态、不解释Operation Payload，也 MUST不实现source选择、Action lifecycle、blend、Foot、Goal、FBBIK或Writer数学。
@@ -65,6 +75,16 @@
 - **WHEN** 下游收到不同Frame、Completion、Program、Projection或Rig的Result View
 - **THEN** 当前Frame MUST在写入Final Pose前失败
 - **AND** 系统 MUST不重标身份、复制到当前页或使用上一帧结果补洞
+
+### Requirement: 校验必须按输入边界唯一分责
+
+Build MUST负责typed拓扑、静态写冲突、Family／Value／Workspace布局与schema证明；Runtime创建或替换 MUST负责实际产物／Rig／资源绑定和固定容量。根Frame及对应跨Owner交接 MUST只校验当前lease、readiness、generation、动态使用量与completion；Final Publication MUST负责最终Pose有效性和Physical binding仍可写。下游 MUST消费已成功的typed合同并传播失败，不得在每层重新扫描静态Program、重复完整identity／payload检查或重新计算Foot／Goal／FBBIK。现有算法必要动态检查与Fault边界 MUST保持。
+
+#### Scenario: Build已经证明静态布局
+
+- **WHEN** Runtime已加载并绑定同identity的Program Image且本帧未更换产物
+- **THEN** Operation执行 MUST直接使用该固定布局，只检查自己接收的本帧变化事实
+- **AND** 根Runtime、Module与Executor MUST不分别重跑同一静态拓扑／布局验证
 
 ### Requirement: Pose Program Runtime必须是唯一Operation执行Owner
 
@@ -168,6 +188,8 @@ Program Image与actor-local Execution View MUST只保存Build默认值。每个A
 
 系统 MUST在Frame开始冻结Diagnostics interest和容量，并只在有interest时从Module Pending Result向预分配诊断页深冻结允许观察的数据。成功Seal后，`CharacterPoseDiagnosticsProjector` MUST只读取匹配同一lineage与Tuning Generation的Committed Source、Program、Constraint和Final Publication Result；MUST不持有Runtime Module引用、不读取Pending Workspace、Actor State私有页、Foot Context、FBBIK Vendor对象或Physical Transform反推结果，也 MUST不参与任何运行决定。
 
+现有Sampler、Analyzer、Publisher、小报告／明细存储与七维评分 MUST继续使用同一实现；Runtime Projector只替换其上游事实来源，不拥有离线分析或评分。字段存储归属变化 MUST不改变现有字段的业务含义、评分规则或历史证据。
+
 #### Scenario: 同时观察Player、Foot和FBBIK
 
 - **WHEN** 当前Frame开始时存在对应Pose Watch和detail interest且Frame成功Seal
@@ -193,6 +215,8 @@ Pose Graph Preview与正式Runtime MUST使用同一Program Image schema、actor-
 ### Requirement: Reset、Replacement与Dispose必须按Owner清理状态
 
 Program replacement、Projection revision变化、Preview非连续seek、Actor reset、Fault和Dispose MUST由根Runtime生成typed reset reason，并按固定顺序让Program Runtime、Source Module、Constraint Module和Final Publication各自清理Owned状态。Reset MUST提升相关generation并使旧Frame lease、Tuning Candidate、source completion、constraint result和diagnostics失效；Projection replacement MUST由Program Runtime释放自己的旧Execution View并只按新Image/hash建立一份新View。系统 MUST不由一个Module直接清空另一Module内部页，也 MUST不保留旧Program reader、旧Execution View或source资源fallback。
+
+Constraint的成功Reset MUST保持当前冻结基线的IK初始化结果，不得借外层Reset协议迁移实施未批准的BendHistory／Vendor方向修正。
 
 #### Scenario: Projection被显式重建
 

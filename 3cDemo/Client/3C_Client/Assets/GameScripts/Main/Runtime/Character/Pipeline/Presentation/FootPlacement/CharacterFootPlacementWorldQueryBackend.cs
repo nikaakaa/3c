@@ -58,6 +58,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         readonly RaycastHit[] m_LandingHits;
         readonly RaycastHit[] m_GroundPathHits;
         readonly RaycastHit[] m_CurrentSupportHits;
+        readonly CharacterFootGroundGeometrySource m_GroundGeometry;
 
         internal CharacterFootPlacementWorldQueryBackend(
             PhysicsScene physicsScene,
@@ -76,6 +77,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             m_LandingHits = new RaycastHit[landingHitCapacity];
             m_GroundPathHits = new RaycastHit[groundPathSegmentHitCapacity];
             m_CurrentSupportHits = new RaycastHit[landingHitCapacity];
+            m_GroundGeometry = new CharacterFootGroundGeometrySource(physicsScene, rig);
         }
 
         internal PhysicsScene PhysicsScene => m_PhysicsScene;
@@ -283,10 +285,48 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     segmentCount);
             }
             output.SortCanonical();
+            CharacterFootGroundSurfacePage surfaces = output.SurfaceCoverage;
+            if (!surfaces.Begin(in request, WorldRevision))
+            {
+                return new CharacterFootGroundPathQueryResult(
+                    CharacterFootGroundPathRejectReason.SurfaceGeometryUnavailable, segmentCount);
+            }
+            for (int i = 0; i < output.Count; i++)
+            {
+                CharacterFootGroundSurfaceState state =
+                    m_GroundGeometry.Validate(output.ContactAt(i).SurfaceIdentity);
+                if (state != CharacterFootGroundSurfaceState.Ready)
+                {
+                    surfaces.Fail(state);
+                    return new CharacterFootGroundPathQueryResult(
+                        SurfaceFailure(state), segmentCount);
+                }
+            }
+            CharacterFootGroundSurfaceState geometryState =
+                m_GroundGeometry.Query(in request, surfaces);
+            if (geometryState != CharacterFootGroundSurfaceState.Ready)
+            {
+                surfaces.Fail(geometryState);
+                return new CharacterFootGroundPathQueryResult(
+                    SurfaceFailure(geometryState), segmentCount);
+            }
+            surfaces.Complete();
             return new CharacterFootGroundPathQueryResult(
                 CharacterFootGroundPathRejectReason.None,
                 segmentCount);
         }
+
+        static CharacterFootGroundPathRejectReason SurfaceFailure(
+            CharacterFootGroundSurfaceState state) => state switch
+        {
+            CharacterFootGroundSurfaceState.UnsupportedGeometry =>
+                CharacterFootGroundPathRejectReason.SurfaceGeometryUnsupported,
+            CharacterFootGroundSurfaceState.GeometryChanged =>
+                CharacterFootGroundPathRejectReason.SurfaceGeometryChanged,
+            CharacterFootGroundSurfaceState.CapacityExceeded =>
+                CharacterFootGroundPathRejectReason.SurfaceCoverageCapacityExceeded,
+            _ => CharacterFootGroundPathRejectReason.SurfaceGeometryUnavailable
+        };
 
         public CharacterFootCurrentSupportProbeResult Query(
             in CharacterFootCurrentSupportProbeRequest request)

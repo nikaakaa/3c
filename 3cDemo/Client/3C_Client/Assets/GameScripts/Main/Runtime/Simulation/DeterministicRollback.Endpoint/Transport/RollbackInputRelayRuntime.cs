@@ -18,6 +18,32 @@ namespace ThirdPersonSimulation.DeterministicRollback
         public ulong Tick { get; }
     }
 
+    public readonly struct RollbackRelayPeerStatus
+    {
+        public RollbackRelayPeerStatus(
+            string peerId,
+            string playerId,
+            ActorId actorId,
+            bool handshakeAccepted,
+            bool hasInputFrontier,
+            ulong inputFrontier)
+        {
+            PeerId = peerId;
+            PlayerId = playerId;
+            ActorId = actorId;
+            HandshakeAccepted = handshakeAccepted;
+            HasInputFrontier = hasInputFrontier;
+            InputFrontier = inputFrontier;
+        }
+
+        public string PeerId { get; }
+        public string PlayerId { get; }
+        public ActorId ActorId { get; }
+        public bool HandshakeAccepted { get; }
+        public bool HasInputFrontier { get; }
+        public ulong InputFrontier { get; }
+    }
+
     public sealed class RollbackInputRelayRuntime : IDisposable
     {
         sealed class PeerState
@@ -113,6 +139,34 @@ namespace ThirdPersonSimulation.DeterministicRollback
                     result = checked(result + peer.Channel.PendingReliableCount);
                 return result;
             }
+        }
+
+        public IReadOnlyList<RollbackRelayPeerStatus> CapturePeerStatus()
+        {
+            IReadOnlyList<RollbackRelayPeerInputFrontier> frontiers = CapturePeerInputFrontiers();
+            var result = new RollbackRelayPeerStatus[m_Roster.Entries.Count];
+            for (int i = 0; i < result.Length; i++)
+            {
+                RollbackRosterEntry roster = m_Roster.Entries[i];
+                bool hasFrontier = false;
+                ulong frontier = 0;
+                for (int j = 0; j < frontiers.Count; j++)
+                {
+                    if (!frontiers[j].ActorId.Equals(roster.ActorId))
+                        continue;
+                    hasFrontier = true;
+                    frontier = frontiers[j].Tick;
+                    break;
+                }
+                result[i] = new RollbackRelayPeerStatus(
+                    roster.PeerId,
+                    roster.PlayerId,
+                    roster.ActorId,
+                    m_Peers.TryGetValue(roster.PeerId, out PeerState peer) && peer.HandshakeAccepted,
+                    hasFrontier,
+                    frontier);
+            }
+            return result;
         }
 
         public IReadOnlyList<RollbackRelayPeerInputFrontier> CapturePeerInputFrontiers()

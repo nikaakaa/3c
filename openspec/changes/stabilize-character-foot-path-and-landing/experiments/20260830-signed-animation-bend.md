@@ -69,4 +69,31 @@ AnimatedPreviousDot继续记录本帧动画方向与上一Stable方向的真实d
 
 本候选仅改`ApplyLegBendStabilization`：可靠动画保留本帧膝向符号，按原腿轴到加权目标腿轴旋转请求；Stable仍保存运输前动画方向，Applied保存实际请求。几何退化分支继续原历史与Target投影；权重、脚目标、骨盆、查询、Vendor、Goal和Writer不变。零目标腿轴明确报错，不生成匿名方向；严格反平行轴没有本包动态覆盖。此前SmoothKnee后处理会移动脚位置的失败不在本轮恢复，也不靠调高BendWeight或恢复Reach掩盖。
 
-业务取舍是让可靠动画决定膝盖侧向，而不以历史dot非负强压到另一侧。预期223行倒置请求消失并减少原动画未翻侧时的Solved Knee镜像；不承诺解决R825–827零权重深折叠或全部大步。验收须同时看真正Knee侧向、位移、全部Foot/Pelvis与四个退化帧，不以dot变负或总分单独判决。当前状态：候选已实现，尚未加载/回放，任务8.6/8.7未勾。
+业务取舍是让可靠动画决定膝盖侧向，而不以历史dot非负强压到另一侧。预期223行倒置请求消失并减少原动画未翻侧时的Solved Knee镜像；不承诺解决R825–827零BendWeight深折叠或全部大步。验收须同时看真正Knee侧向、位移、全部Foot/Pelvis与四个退化帧，不以dot变负或总分单独判决。候选提交a40b71f已通过以下同输入验证并保留，任务8.6/8.7完成；整个角色质量并未宣布达标。
+
+### 205014实际回放与保留结论
+
+实际运行目录为`3cDemo/Client/3C_Client/Diagnostics/FootPlacementRuns/20260831-205014-114-dc157fde9c004846a72e9cd1fa1b5b01`，固定比较上面的203023，不覆盖任一旧包。两版都是facts71／diagnosis40／quality-score3，1043输出帧、2086脚行、1215列、67186几何行。正式Proof对203023的1044输入帧matched；samples和geometry各自符合正式analysis中的SHA。Runtime只有FBBIK一个文件改动，脚/骨盆作者配置与Program/Projection未改；采用Unity正常Refresh编译，Console错误0，没有额外.NET build或打开IDE。
+
+| 同输入指标 | 203023 | 205014 |
+| --- | --- | --- |
+| 可靠动画下请求与原Target投影近反向 | 223行 | 0行 |
+| 请求与独立腿轴运输方向反向 | 222行 | 0行 |
+| 动画未翻侧时Solved Knee强镜像翻侧 | 15次 | 0次 |
+| R934 Solved Knee单帧位移 | 414.751毫米 | 17.869毫米 |
+| Solved Knee单帧位移超过100毫米 | 160／2084 | 145／2084 |
+| 相对输入动画的Knee额外offset步超过100毫米 | 62／2084 | 44／2084 |
+| Contact间隙 | 13／60 | 13／60 |
+| Contact平面穿透 | 19／84 | 19／84 |
+| 最大Contact整脚间隙 | 349.378毫米 | 349.378毫米 |
+| 最大Contact平面穿透 | 142.815毫米 | 142.815毫米 |
+
+以上强镜像事件使用现有腿长1%可靠门，比较连续帧Solver膝向在腿轴运输后的有符号侧，dot小于−0.5；原15窗动画对应dot均大于0.995。它不是窄Landing腿部Health，也不是最终Physical Knee观测。2082可靠输入的请求与独立运输方向dot最小0.999999071，无反向；不声称独立解析旋转与Unity原生FromToRotation逐分量bit-exact。相邻实际请求dot复算最大差8.8e−8。四个退化帧L113／114／986／987的请求与Solved Knee逐值不变；其上一dot因前一帧可靠请求改变可以不同。
+
+全42项诊断的rules、scorePolicy与eligible／matched均一致，七维分数仍61.9，不能以未变总分否定膝侧收益。Foot目标、权重、原动画、Path/Anchor几何、Interpolation、所有Pelvis/Stride输入输出及最终物理骨盆逐值不变。63个变化列中24个是采样/实例/Surface/Path身份，余下只在Bend请求、Solver腿结果与最终脚的数值表示；几何表只差5个身份列。真实Heel/Toe最大版本位移差约0.0845毫米（R1038），不称绝对零位移；脚踝旋转按归一化四元数半球对账，最大角差约0.0000281度，24次四元数符号改变不算旋转翻面。没有新增厘米级踏空、穿透或骨盆回归。
+
+FullAnchor新分项0／15段对应21脚帧，其中15帧还是VerifiedAnchor完成帧；严格消费LockedFullAnchor目标仍只有6帧且gap0，不把21帧冒充固定目标动态覆盖。Sliding仍9／23段，Landing持续间隙仍4／60；这些已有瑕疵没有被本步修好或删去。
+
+R825–827的Foot PositionWeight均1，但BendWeight均0，新请求未被Vendor采用，Solved Knee逐值不变；R826仍单步648.299毫米，整体最大步未下降。它是脚目标近髋、腿轴快速改变的深折叠问题，需要后续独立研究目标/髋协调，不恢复Reach强压、不加后处理或猜权重来隐藏。零目标轴与严格反平行轴未有动态覆盖；最终Physical Knee、其它路线与真实非固定帧率未在本次证明。
+
+结论：保留a40b71f这一小步，保住认可的Foot/Pelvis链，未宣称反弯与所有腿部大步全部消失。编译后Unity留下的单个闲置Roslyn进程已按PID/启动身份核实并清理，之后复查.NET/MSBuild残留为0；以后不能仅把shutdown成功当作清理完成。

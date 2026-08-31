@@ -2,7 +2,7 @@
 
 ### Requirement: 可靠动画膝盖方向必须保留有符号侧向
 
-唯一FBBIK的Animation Bend Direction Owner MUST从本帧同一Component Pose的Hip、Knee、Ankle判断可靠弯曲方向。动画几何可靠时，运行时 MUST保留该方向的符号，并按本帧原Hip-Ankle轴到加权Target Hip-Ankle轴的`FromToRotation`运输实际请求，不得只为使它与上一Stable或Applied方向的dot非负而取反。Stable MUST保存运输前的可靠动画方向，Applied MUST保存本帧实际请求，两者仍属于同一Pending BendHistory。零Target腿轴 MUST明确拒绝，不用默认Up、旧Goal或匿名轴补齐。动画几何退化时 MUST保留原Stable历史、Target平面投影与Applied保留政策，不用当前退化腿轴冒充旧Stable方向的来源轴。不得新增第二pole owner、Solver、Frame后膝盖修正或平滑器。
+唯一FBBIK的Animation Bend Direction Owner MUST从本帧同一Component Pose的Hip、Knee、Ankle判断可靠弯曲方向。动画几何可靠时，运行时 MUST保留该方向的符号，并按本帧原Hip-Ankle轴到加权Target Hip-Ankle轴的`FromToRotation`运输实际请求，不得只为使它与上一Stable或Applied方向的dot非负而取反。Stable MUST保存运输前的可靠动画方向，Applied MUST保存本帧实际请求，两者仍属于同一Pending BendHistory。可靠动画运输分支的零Target腿轴 MUST明确拒绝，不用默认Up、旧Goal或匿名轴补齐。动画几何退化时 MUST保留原Stable历史、Target平面投影与Applied保留政策，不用当前退化腿轴冒充旧Stable方向的来源轴。不得新增第二pole owner、Solver、Frame后膝盖修正或平滑器。
 
 方向与其反向 MUST视为不同膝盖侧。相邻方向dot MUST反映实际向量，不得以Abs隐藏变化。Profile权重、Goal、Reach与Vendor求解保持各自职责；请求方向变化不等于实际Solved Knee翻侧，零权重也不得被宣称为方向约束已参与。
 

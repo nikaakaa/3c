@@ -266,28 +266,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             CharacterFootResolvedColumns.Schema.Header + "," +
             "FootMotionEncodedGoalAvailable,FootMotionEncodedGoalCorrectionX,FootMotionEncodedGoalCorrectionY,FootMotionEncodedGoalCorrectionZ," +
             "FinalGoalPositionX,FinalGoalPositionY,FinalGoalPositionZ,FinalGoalRotationX,FinalGoalRotationY,FinalGoalRotationZ,FinalGoalRotationW,FinalGoalPositionWeight,FinalGoalRotationWeight,PelvisPositionWeight,PelvisRotationWeight," +
-            "StrideState,StrideRejectReason,StrideSupportSide,StrideSwingSide,StrideProgress,StrideSlope," +
-            "StrideStartX,StrideStartY,StrideStartZ,StrideEndX,StrideEndY,StrideEndZ," +
-            "StrideSampledGroundX,StrideSampledGroundY,StrideSampledGroundZ," +
-            "PelvisPoseInputAvailable,StridePoseRootPositionX,StridePoseRootPositionY,StridePoseRootPositionZ," +
-            "StrideAnimatedPelvisX,StrideAnimatedPelvisY,StrideAnimatedPelvisZ," +
-            "StrideAnimatedPelvisComponentPositionX,StrideAnimatedPelvisComponentPositionY,StrideAnimatedPelvisComponentPositionZ," +
-            "PelvisHeightTargetAvailable,PelvisHeightTargetComponentUpX,PelvisHeightTargetComponentUpY,PelvisHeightTargetComponentUpZ," +
-            "PelvisHeightTargetLeftAnimatedSoleX,PelvisHeightTargetLeftAnimatedSoleY,PelvisHeightTargetLeftAnimatedSoleZ,PelvisHeightTargetRightAnimatedSoleX,PelvisHeightTargetRightAnimatedSoleY,PelvisHeightTargetRightAnimatedSoleZ," +
-            "PelvisHeightTargetLeftTargetSoleX,PelvisHeightTargetLeftTargetSoleY,PelvisHeightTargetLeftTargetSoleZ,PelvisHeightTargetRightTargetSoleX,PelvisHeightTargetRightTargetSoleY,PelvisHeightTargetRightTargetSoleZ," +
-            "PelvisHeightTargetAnimatedMinimumAlongUp,PelvisHeightTargetMinimumAlongUp,PelvisRequestedOffsetAlongUp,StrideHadPreviousState,StrideSupportChanged," +
-            "StridePreviousSlope,StrideSpringHandoffReason,StrideSpringVelocityReset," +
-            "StridePreviousSpringTarget,StridePreviousSpringOutput,StridePreviousSpringVelocity,StrideSpringInput,StrideSpringInputVelocity,StrideSpringFrequency," +
-            "PelvisPosturePreferenceEvaluated,PelvisPosturePreferenceAvailable,PelvisPosturePreferenceHipX,PelvisPosturePreferenceHipY,PelvisPosturePreferenceHipZ,PelvisPosturePreferenceAnimatedAnkleX,PelvisPosturePreferenceAnimatedAnkleY,PelvisPosturePreferenceAnimatedAnkleZ,PelvisPosturePreferenceTargetAnkleX,PelvisPosturePreferenceTargetAnkleY,PelvisPosturePreferenceTargetAnkleZ,PelvisPosturePreferenceLegLength,PelvisPosturePreferenceCompressionReserve,PelvisPosturePreferenceUsableLegLength,PelvisPosturePreferenceMinimumAlongUp,PelvisPosturePreferenceMaximumAlongUp,PelvisPosturePreferenceOffsetAlongUp,PelvisPosturePreferenceTargetAdjusted," +
-            "PelvisReachComponentUpX,PelvisReachComponentUpY,PelvisReachComponentUpZ,PelvisReachStatus,PelvisReachIntersectionEvaluated,PelvisReachIntersectionMinimumAlongUp,PelvisReachIntersectionMaximumAlongUp," +
-            "PelvisReachLeftRole,PelvisReachLeftStatus,PelvisReachLeftEventIdentity,PelvisReachLeftHipX,PelvisReachLeftHipY,PelvisReachLeftHipZ,PelvisReachLeftTargetAnkleX,PelvisReachLeftTargetAnkleY,PelvisReachLeftTargetAnkleZ,PelvisReachLeftLegLength,PelvisReachLeftMinimumCompressionReserve,PelvisReachLeftUsableLegLength,PelvisReachLeftMinimumAlongUp,PelvisReachLeftMaximumAlongUp,PelvisReachLeftRequested,PelvisReachLeftAvailable," +
-            "PelvisReachRightRole,PelvisReachRightStatus,PelvisReachRightEventIdentity,PelvisReachRightHipX,PelvisReachRightHipY,PelvisReachRightHipZ,PelvisReachRightTargetAnkleX,PelvisReachRightTargetAnkleY,PelvisReachRightTargetAnkleZ,PelvisReachRightLegLength,PelvisReachRightMinimumCompressionReserve,PelvisReachRightUsableLegLength,PelvisReachRightMinimumAlongUp,PelvisReachRightMaximumAlongUp,PelvisReachRightRequested,PelvisReachRightAvailable," +
-            "PelvisResponseEvaluated,PelvisSpringCompleted,PelvisSpringIntegratedOutput," +
-            "StrideSpringTarget,StrideSpringOutput,StrideSpringVelocity," +
-            "StridePelvisDeltaX,StridePelvisDeltaY,StridePelvisDeltaZ,StridePositionWeight," +
-            "FinalPelvisGoalX,FinalPelvisGoalY,FinalPelvisGoalZ," +
-            "FinalPhysicalPelvisComponentPositionX,FinalPhysicalPelvisComponentPositionY,FinalPhysicalPelvisComponentPositionZ," +
-            "FinalPhysicalPelvisWorldPositionX,FinalPhysicalPelvisWorldPositionY,FinalPhysicalPelvisWorldPositionZ,FinalPhysicalPelvisGoalResidualAvailable,FinalPhysicalPelvisGoalResidual," +
+            CharacterFootPelvisColumns.Schema.Header + "," +
             "FinalIkSolverAvailable,FinalIkSucceeded,FinalIkFrameSequence,FinalIkInputCompletionIdentity,FinalIkOutputCompletionIdentity," +
             "FinalIkBackendIdentity,FinalIkRigId,FinalIkRigRevision,FinalIkProfileId,FinalIkProfileRevision,FinalIkFailure,FinalIkAppliedGoalCount," +
             "FinalIkEffectorAvailable,FinalIkEffectorSlot,FinalIkTargetPositionX,FinalIkTargetPositionY,FinalIkTargetPositionZ," +
@@ -2341,104 +2320,20 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             Add(row, frame.PelvisGoal.PositionWeight);
             Add(row, frame.PelvisGoal.RotationWeight);
             CharacterFootStrideHipsDiagnostics stride = frame.StrideHips;
-            Add(row, stride.State.ToString());
-            Add(row, stride.RejectReason.ToString());
-            Add(row, stride.SupportSide.ToString());
-            Add(row, stride.SwingSide.ToString());
-            Add(row, stride.Progress);
-            Add(row, stride.Slope.ToString());
-            Add(row, stride.StrideStart);
-            Add(row, stride.StrideEnd);
-            Add(row, stride.SampledGround);
-            Add(row, stride.PoseInputAvailable);
-            Add(row, stride.PoseRootPosition);
-            Add(row, stride.AnimatedPelvis);
-            Add(row, stride.AnimatedPelvisComponentPosition);
-            Add(row, stride.HeightTargetAvailable);
-            Add(row, stride.HeightTargetComponentUp);
-            Add(row, stride.HeightTargetLeftAnimatedSole);
-            Add(row, stride.HeightTargetRightAnimatedSole);
-            Add(row, stride.HeightTargetLeftTargetSole);
-            Add(row, stride.HeightTargetRightTargetSole);
-            Add(row, stride.HeightTargetAnimatedMinimumAlongUp);
-            Add(row, stride.HeightTargetMinimumAlongUp);
-            Add(row, stride.RequestedOffsetAlongUp);
-            Add(row, stride.HadPreviousState);
-            Add(row, stride.SupportChanged);
-            Add(row, stride.PreviousSlope.ToString());
-            Add(row, stride.SpringHandoffReason.ToString().Replace(", ", "|"));
-            Add(row, stride.SpringVelocityReset);
-            Add(row, stride.PreviousSpringTarget);
-            Add(row, stride.PreviousSpringOutput);
-            Add(row, stride.PreviousSpringVelocity);
-            Add(row, stride.SpringInput);
-            Add(row, stride.SpringInputVelocity);
-            Add(row, stride.SpringFrequency);
-            Add(row, stride.PosturePreferenceEvaluated);
-            Add(row, stride.PosturePreferenceAvailable);
-            Add(row, stride.PosturePreferenceHip);
-            Add(row, stride.PosturePreferenceAnimatedAnkle);
-            Add(row, stride.PosturePreferenceTargetAnkle);
-            Add(row, stride.PosturePreferenceLegLength);
-            Add(row, stride.PosturePreferenceCompressionReserve);
-            Add(row, stride.PosturePreferenceUsableLegLength);
-            Add(row, stride.PosturePreferenceMinimumAlongUp);
-            Add(row, stride.PosturePreferenceMaximumAlongUp);
-            Add(row, stride.PosturePreferenceOffsetAlongUp);
-            Add(row, stride.PosturePreferenceTargetAdjusted);
-            Add(row, stride.Reach.ComponentUp);
-            Add(row, stride.Reach.Status.ToString());
-            Add(row, stride.Reach.IntersectionEvaluated);
-            Add(row, stride.Reach.IntersectionMinimumAlongUp);
-            Add(row, stride.Reach.IntersectionMaximumAlongUp);
-            Add(row, stride.Reach.Left.Role.ToString());
-            Add(row, stride.Reach.Left.Status.ToString());
-            Add(row, stride.Reach.Left.EventIdentity);
-            Add(row, stride.Reach.Left.Hip);
-            Add(row, stride.Reach.Left.TargetAnkle);
-            Add(row, stride.Reach.Left.LegLength);
-            Add(row, stride.Reach.Left.MinimumCompressionReserve);
-            Add(row, stride.Reach.Left.UsableLegLength);
-            Add(row, stride.Reach.Left.MinimumAlongUp);
-            Add(row, stride.Reach.Left.MaximumAlongUp);
-            Add(row, stride.Reach.Left.Requested);
-            Add(row, stride.Reach.Left.Available);
-            Add(row, stride.Reach.Right.Role.ToString());
-            Add(row, stride.Reach.Right.Status.ToString());
-            Add(row, stride.Reach.Right.EventIdentity);
-            Add(row, stride.Reach.Right.Hip);
-            Add(row, stride.Reach.Right.TargetAnkle);
-            Add(row, stride.Reach.Right.LegLength);
-            Add(row, stride.Reach.Right.MinimumCompressionReserve);
-            Add(row, stride.Reach.Right.UsableLegLength);
-            Add(row, stride.Reach.Right.MinimumAlongUp);
-            Add(row, stride.Reach.Right.MaximumAlongUp);
-            Add(row, stride.Reach.Right.Requested);
-            Add(row, stride.Reach.Right.Available);
-            Add(row, stride.ResponseEvaluated);
-            Add(row, stride.SpringCompleted);
-            Add(row, stride.SpringIntegratedOutput);
-            Add(row, stride.SpringTarget);
-            Add(row, stride.SpringOutput);
-            Add(row, stride.SpringVelocity);
-            Add(row, stride.PelvisDelta);
-            Add(row, stride.PositionWeight);
-            Add(row, frame.PelvisGoal.ComponentPosition);
-            Add(row, ik.PhysicalPelvisComponentPosition);
-            Add(row, ik.PhysicalPelvisWorldPosition);
             Vector3 expectedPhysicalPelvis = stride.AnimatedPelvisComponentPosition +
                 frame.PelvisGoal.ComponentPosition * frame.PelvisGoal.PositionWeight;
             bool pelvisGoalResidualAvailable = ik.PhysicalWriteAvailable &&
                 ik.PhysicalWriteCompletionIdentity == frame.CompletionIdentity &&
                 stride.PoseInputAvailable && frame.PelvisGoal.PositionWeight > 0f;
-            Add(row, pelvisGoalResidualAvailable);
-            Add(
-                row,
-                pelvisGoalResidualAvailable
-                    ? Vector3.Distance(
-                        ik.PhysicalPelvisComponentPosition,
-                        expectedPhysicalPelvis)
-                    : 0f);
+            float pelvisGoalResidual = pelvisGoalResidualAvailable
+                ? Vector3.Distance(ik.PhysicalPelvisComponentPosition, expectedPhysicalPelvis)
+                : 0f;
+            var pelvisSource = new CharacterFootPelvisCsvSource(
+                in stride, frame.PelvisGoal.ComponentPosition,
+                ik.PhysicalPelvisComponentPosition, ik.PhysicalPelvisWorldPosition,
+                pelvisGoalResidualAvailable, pelvisGoalResidual);
+            CharacterFootPelvisColumns.Schema.Write(row, in pelvisSource);
+
             CharacterFullBodyIkSolverDiagnostics solver = ik.Solver;
             CharacterFullBodyIkEffectorDiagnostics effector = ik.Effector;
             Add(row, ik.SolverAvailable);

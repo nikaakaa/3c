@@ -116,5 +116,48 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             }
             return result;
         }
+        internal static void RequireEnum<T>(string value, string field)
+            where T : struct, Enum
+        {
+            if (!Enum.TryParse(value, false, out T parsed) ||
+                !Enum.IsDefined(typeof(T), parsed))
+            {
+                throw new InvalidDataException(
+                    $"Foot Motion Foot row {field} '{value}' is invalid.");
+            }
+        }
+
+        internal static void RequireFlags<T>(string value, string field)
+            where T : struct, Enum
+        {
+            if (!Enum.TryParse(value, false, out T parsed))
+            {
+                throw new InvalidDataException(
+                    $"Foot Motion Foot row {field} '{value}' is invalid.");
+            }
+            ulong allowed = 0;
+            foreach (T candidate in Enum.GetValues(typeof(T)))
+                allowed |= Convert.ToUInt64(candidate);
+            ulong actual = Convert.ToUInt64(parsed);
+            if ((actual & ~allowed) != 0)
+            {
+                throw new InvalidDataException(
+                    $"Foot Motion Foot row {field} '{value}' is invalid.");
+            }
+        }
+
+        internal static T ParseEnumValue<T>(string value, string field) where T : struct, Enum
+        {
+            RequireEnum<T>(value, field);
+            return Enum.Parse<T>(value);
+        }
+
+        internal static T ParseFlagsValue<T>(string value, string field, char separator = ',') where T : struct, Enum
+        {
+            value = value.Replace(separator, ',');
+            RequireFlags<T>(value, field);
+            return Enum.Parse<T>(value);
+        }
+
     }
 }

@@ -10,7 +10,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 8055ae7b37be4e81aba2cd9c55d01f81, type: 3}
-  m_Name: RollbackGmDevelopmentProfile
+  m_Name: RollbackGmBuildProfile
   m_EditorClassIdentifier:
   m_GmPort: 24200
   m_RelayQueryPort: 24201
@@ -25,7 +25,3 @@ MonoBehaviour:
   m_HistoryCapacity: 32
   m_OutputCapacity: 64
   m_MaximumOutputCharacters: 4096
-  m_Actions: {fileID: -944628639613478452, guid: 3d8fb29a74cb46bb843e38f5eec3484a, type: 3}
-  m_ToggleActionId: a464f304-8408-4474-bdb4-6c4b0a455e48
-  m_FontFamily: Microsoft YaHei
-  m_FontSize: 16

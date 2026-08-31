@@ -1,55 +1,28 @@
-# Change: 建立 Rollback 服务端 GM 控制台
+# Change: 建立独立进程的 Rollback GM 文本控制台
 
 ## Why
 
-用户已将下一步收窄为：先做 Rollback GM 控制台，跑通命令到服务端的完整链路，之后再做玩法 GM、采样和诊断工具。本变更只保留已确认的控制台范围，也不把本地诊断面板当作 GM 服务。
-
-当前纯.NET Relay 已保存会话配置、角色名单、输入与确认前沿、网络计数，但这些信息主要通过日志查看。首版用这些已有服务端事实实现真实可用的查询命令，建立清晰的命令扩展边界。
+用户确认首版是额外进程里的文本控制台，之后再做图形 UI。GM 命令在独立 .NET 工具进程执行，通过正式只读连接查询 Relay；Unity 客户端不安装游戏内控制台。
 
 ## What Changes
 
-- 唯一调用链固定为：`控制台输入 -> 命令名/参数解析 -> GM 请求 -> 服务端校验 -> 命令分发 -> 独立处理器 -> 结构化结果 -> 控制台展示`。
-- 客户端控制台负责打开/关闭、输入、历史、连接状态和结果展示；GM 命令目录、最终参数校验、权限及分发归服务端。
-- 首批只安装四类只读命令：`help [command]`、`session.info`、`actor.list`、`runtime.status`，具体结果字段见 design。
-- 每条命令以独立处理器显式注册。控制台不包含具体业务逻辑，分发器不通过越来越大的业务 switch 扩展。
-- 明确开发连接身份、服务/会话运行身份、请求关联、结果状态、容量与超时，失败不能回退为本地执行。
-- 游戏内输入焦点在正式设备适配边界处理，输入命令不能触发 Attack/Dodge 或相机旋转，不暂停 Rollback Session。
-- 只接入当前 Rollback 开发产品。Local Float32/Fixed、Unity Authority、DotRecast Authority 和商业启动不在本轮范围。
+- 唯一链路：独立 GM 窗口输入 → 文本解析 → GM HTTP API → 服务端校验和独立处理器 → Relay 查询桥 → Relay 线程快照 → 结果展示。
+- 文本前端和 HTTP 服务位于同一个额外进程，未来图形 UI 复用同一 API。
+- 显式安装 help、session.info、actor.list、runtime.status 四个只读命令，不反射或执行任意脚本。
+- 提供请求身份、开发访问令牌、容量、超时、历史、翻页、清屏和重连。
+- 正式产品包含 Player、Relay Server、GM Server 三个 artifact，Run 启动两个 Player、一个 Relay 和一个可交互 GM 控制台，共四个进程。
+- 删除误装的 Unity 窗口、InputAction、Prefab 引用和专门输入焦点改动；恢复原 Player HTTP 设置，不保留另一入口。
 
 ## Scope
 
-本轮交付的是能连到服务端、执行四类查询并展示真实结果的 GM 控制台，不是空输入框，也不提前实现后续工具。
-
-以下内容明确不做：
-
-- 改血量、传送、刷角色、强制切动作等玩法状态修改。
-- GM 命令进入 canonical Tick、rollback history 或 replay/hash 的新合同。
-- 采样开始/停止、联合录制、数据上传、Analyzer、评分与诊断查询界面。
-- 移动现有 Foot 采样器、改变 RuntimeDebugSession 所有权或修改已封存数据。
-- 修复当前 Action、IK、骨骼或网络算法；已有最大预测领先量 8 Tick 保持不变。
-- 任意 C# 执行、反射方法调用、完整运营权限平台或未安装的占位命令。
+本轮只管理当前一场双端测试。多场目录、四端启动、图形业务面板、玩法 GM、canonical GM 帧命令、采样和 Analyzer 不在范围内。Action、Foot、IK、骨骼及网络算法不修改，最大预测领先量保持 8 Tick。不新增测试代码，不跑 Unity batchmode，不自动归档。
 
 ## Impact
 
-- 新增能力：`rollback-gm-console`。
-- 新增输入合同：开发版 Rollback 控制台焦点，不改已有输入历史和请求消费语义。
-- 预期实现涉及客户端控制台、GM 命令合同/处理器、服务端查询适配、开发配置及正式 Build/Run 装配。
-- 不修改当前 specs 或用户正在编辑的 `openspec/project.md`；只提交本 change 的增量，不能将提案描述为已安装能力。
-- 原草案中 `development-gm-console`、`runtime-diagnostic-capture`、`runtime-diagnostic-query` 以及 BTSMTL 诊断和 Foot 存储的修改增量均删除；本轮不再依赖未归档的 Foot 存储/评分 change。
-- 不新增测试代码，不跑 Unity batchmode，不在实施任务中写人工验证清单。
+新增 rollback-gm-console，产品 delta 涉及 deterministic-rollback-relay-product、network-test-runtime-product-boundary、deterministic-rollback-two-client-demo。删除 character-input-pipeline delta；不修改用户正在编辑的 project.md 或其它 active change。
 
 ## 与现行规格的对比
 
-| 对比项 | 当前口径 | 本轮处理 |
-| --- | --- | --- |
-| 服务端职责 | Relay 只转发/确认输入，不执行 Program、KCC 或 Presentation | 查询只读 Relay 已有事实；GM 服务模块不取得 Gameplay 权威，也不向 Relay Runtime 塞业务逻辑 |
-| 产品闭包和启动 | Relay 产品依赖受限，Rollback Run 原固定一个 Relay 加两个客户端 | 已选择独立 GM 服务；本 change 增加 GM artifact、Relay 查询桥及四进程 topology delta，拒绝旧 topology 产物 |
-| 运行状态 | Relay 拥有网络计数、名单和前沿，不拥有客户端骨骼或角色完整状态 | `runtime.status` 明确查询服务端事实；不伪造客户端 FPS、Pose、生命值或 Action 生命周期 |
-| 输入 | 正式 Input Adapter 产出 portable input，Program 管请求历史 | 焦点只影响此后设备采集；不改已提交请求、历史或网络队列 |
-| 诊断和采样 | 已有独立 Trace、Foot Writer/Analyzer 与 Editor 工作流 | 本轮保持原样；删除旧提案对这些合同的修改 |
+现行三进程拓扑和 Player/Relay 精确清单需要增加独立 GM artifact。Relay 只增加纯 .NET 查询桥，不增加角色模拟权威。共享 GameplayLab Variant 入口保持原样。
 
-## 已选择的部署项
-
-用户已选择独立 GM 工具服务。客户端通过本机 HTTP/JSON 请求 GM，GM 通过单独认证的 HTTP 查询桥读取 Relay 运行线程生成的快照。正式产品包含 Player、Relay Server、GM Server 三个 artifact，Run 启动四个进程。具体身份、容量、凭据交付与失效语义见 design。
-
-本轮仍只管理当前一个双端会话。未来图形业务 UI、多场调度和四端启动不作为本轮完成条件。
+GM 不加载 Relay runtime、Unity、Character Program、KCC 或 Presentation；Relay 不安装 GM 命令处理器。原游戏内控制台方案已被用户纠正，全部移除。

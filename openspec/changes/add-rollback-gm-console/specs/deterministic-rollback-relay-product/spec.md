@@ -12,7 +12,7 @@
 
 ### Requirement: Rollback Network Test Product必须包含精确Server Closure
 
-Rollback adapter MUST通过公共 artifact 合同发布 Unity Player、Dedicated Relay Server 和独立 GM Server。ProductRoot MUST包含`Player`、`Server`和`Gm`，全部 executable、依赖和配置 MUST进入 schema v2 exact closure。Relay gameplay manifest 保持现有身份语义，新增 Relay 查询 manifest、GM manifest、Player 工具连接 manifest MUST精确绑定同一 BuildId 和 SessionId，不将工具访问配置纳入 Gameplay hash。
+Rollback adapter MUST通过公共 artifact 合同发布 Unity Player、Dedicated Relay Server 和独立 GM Server。ProductRoot MUST包含`Player`、`Server`和`Gm`，全部 executable、依赖和配置 MUST进入 schema v2 exact closure。Relay gameplay manifest 保持现有身份语义；Relay 查询、GM 服务和 GM 控制台 manifest MUST绑定同一 BuildId 和 SessionId，不纳入 Gameplay hash，也不向 Player 下发工具配置或凭据。
 
 #### Scenario: 构建包含 GM 的产品
 
@@ -33,5 +33,5 @@ Rollback Development Run MUST启动一个 Dedicated Relay Server、一个独立 
 #### Scenario: 运行中 GM 退出
 
 - **WHEN** Gameplay 已运行而 GM 服务退出
-- **THEN** 控制台 MUST报告连接不可用
+- **THEN** GM 文本窗口随进程退出，MUST不由 Player 接管控制台
 - **AND** Relay 和客户端 MUST继续按既有模型推进，不把工具断线当成 Gameplay 断线

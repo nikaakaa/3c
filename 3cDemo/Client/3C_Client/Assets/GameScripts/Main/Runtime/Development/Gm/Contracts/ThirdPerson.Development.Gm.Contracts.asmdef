@@ -2,7 +2,7 @@
     "name": "ThirdPerson.Development.Gm.Contracts",
     "rootNamespace": "ThirdPerson.Development.Gm",
     "references": [],
-    "includePlatforms": [],
+    "includePlatforms": ["Editor"],
     "excludePlatforms": [],
     "allowUnsafeCode": false,
     "overrideReferences": false,

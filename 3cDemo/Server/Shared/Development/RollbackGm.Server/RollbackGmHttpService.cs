@@ -6,7 +6,7 @@ namespace ThirdPerson.Development.Gm.Rollback;
 public sealed class RollbackGmHttpService : IAsyncDisposable
 {
     readonly GmServerManifest m_Manifest;
-    readonly GmHttpQueryClient m_Relay;
+    readonly GmHttpClient m_Relay;
     readonly GmHttpServer m_Server;
     readonly Action<GmOperationRecord> m_Record;
     readonly string m_InstanceId = Guid.NewGuid().ToString("N");
@@ -16,7 +16,7 @@ public sealed class RollbackGmHttpService : IAsyncDisposable
         manifest.RequireValid();
         m_Manifest = manifest;
         m_Record = operationLog;
-        m_Relay = new GmHttpQueryClient(manifest.relayQueryEndpoint, manifest.relayQueryToken,
+        m_Relay = new GmHttpClient(manifest.relayQueryEndpoint, manifest.relayQueryToken,
             manifest.http.maximumMessageBytes, manifest.relayQueryTimeoutMilliseconds);
         m_Server = new GmHttpServer(manifest.http, serviceLog);
         m_Server.Get(GmHttpProtocol.ServicePath, async context =>

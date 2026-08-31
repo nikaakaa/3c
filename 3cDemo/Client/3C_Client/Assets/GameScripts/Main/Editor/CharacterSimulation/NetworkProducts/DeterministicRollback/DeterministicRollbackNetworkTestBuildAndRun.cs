@@ -370,11 +370,12 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                 ProgramIdentity(program),
                 closure.Pipeline.BuildPortableDescriptor().PipelineId.Value,
                 model.ModelIdentity.ToString(),
-                "thirdperson.runtime-topology.deterministic-rollback.relay-two-peers.v1",
+                RollbackGmProductBuild.Topology,
                 "unity-client-player",
                 "thirdperson.network-test.deterministic-rollback.player",
                 new[]
                 {
+                    NetworkTestProductAdapterUtility.Field("gmProfileHash", AssetDatabase.GetAssetDependencyHash(RollbackGmProductBuild.ProfilePath).ToString()),
                     NetworkTestProductAdapterUtility.Field("collisionWorldHash", closure.Collision.ContentHash),
                     NetworkTestProductAdapterUtility.Field("contractHash", closure.Projection.ContractHash),
                     NetworkTestProductAdapterUtility.Field(
@@ -488,6 +489,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             string executable = "ThirdPerson.DeterministicRollback.Server.exe";
             if (!File.Exists(Path.Combine(serverDirectory, executable)))
                 throw new InvalidOperationException("Deterministic Rollback Relay Server publish output is missing.");
+            NetworkTestRuntimeArtifactResult gm = RollbackGmProductBuild.Publish(context, productRoot, buildId, endpoint.SessionId);
             return new[]
             {
                 new NetworkTestRuntimeArtifactResult(
@@ -504,7 +506,8 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                         NetworkTestProductAdapterUtility.Field("endpoint", $"{endpoint.Address}:{endpoint.Port}"),
                         NetworkTestProductAdapterUtility.Field("protocol", model.Handshake.Protocol.ToString()),
                         NetworkTestProductAdapterUtility.Field("maximumPredictionLeadTicks", policy.MaximumPredictionLeadTicks.ToString())
-                    })
+                    }),
+                gm
             };
         }
 
@@ -535,6 +538,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                     File.ReadAllText(serverManifestPath, System.Text.Encoding.UTF8));
             serverManifest.RequireValidHash();
             RollbackRoster expectedRoster = closure.Endpoint.BuildRoster();
+            RollbackGmProductBuild.Validate(context, manifest, serverManifest.sessionId);
             RollbackRoster actualRoster = serverManifest.BuildRoster();
             if (!string.Equals(serverManifest.programId, closure.ProgramAsset.ProgramId, StringComparison.Ordinal) ||
                 !string.Equals(serverManifest.sourceRevision, closure.ProgramAsset.SourceRevision, StringComparison.Ordinal) ||

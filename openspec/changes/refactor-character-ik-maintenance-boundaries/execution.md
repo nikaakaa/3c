@@ -141,8 +141,20 @@ PredictionMotion、BodyTrajectory及其Tick/Generation/ResetSequence/AuthorityTi
 
 ## 下一组：Current Support与共享支撑目标
 
-状态：实现、Unity刷新／编译与Editor构建通过、0错误，等待回放。
+状态：候选a9105e3已通过Unity／Editor编译与原Record回放。
 
 - Current Support新增102列完整typed绑定，脚掌两Probe复用同一形状；Selected Support Target的22列也改由同一绑定读写，三个SupportTarget场景共享一个字段定义。
 - 增加静态typed投影来组合父记录与子记录，不复制字段清单、不重新查询或生成支撑决定。删除相应旧Header、写入helper、局部解析函数和必需列字符串。
 - Analyzer的Current Support聚合为一个记录，诊断规则只改读取路径。全局共222列已迁入唯一绑定，剩余字段仍按组继续迁移；不提前完成任务5。Runtime、格式identity、规则与评分未变。
+
+## Current Support列绑定的验证封口
+
+- 原包：`Diagnostics/FootPlacementRuns/20260901-030817-973-b2daa7ebff2746e4918c8360da6edbc9`，候选`a9105e3dd6d8a82bf484e74092bd389e343e0606`，上一通过bb25738/024845，固定总基线不变。
+- 官方Proof对024845匹配1044 Tick；独立对024845与233436的runtime identity、起始Body、输入／Body hash、时钟及全部1044帧无差异。
+- CSV2086×1215列名与顺序保持，1191业务列逐格一致、23身份映射无冲突、StartedUtc归元数据；几何67186×27的22业务列一致、5身份映射无冲突。CurrentSupport102、SelectedSupportTarget22与Resolved98合计222列保持。
+- 42个Target、规则／统计／coverage／quality对象保持；20447条明细索引与全部2086 samples段、1787 geometry段字节校验通过。正式summary、events、detail3033、六个222列帧查询与geometry92L查询均与原始数据一致。
+- 原始包及字节一致的同目录Proof已保留，无重复报告或Git数据提交；测试已回Edit/Idle、Console0并归还Unity。仅确认本Record合法输入范围，Reset4.4与坏CSV等未覆盖项保持未完成。
+
+## 当前接续点
+
+运行与Editor普通Record的上一通过提交为a9105e3；总基线仍为ad3527e。剩余工作为：完成其余993列的唯一绑定和诊断分组、统一现有格式identity、清理文件与剩余旧字段并逐闭环回放；Reset取证扩展等待用户决定。第一阶段未完成前不启动Pose Graph。工作区原有.gitignore、ProjectSettings、project.md与stabilize提案的未提交变更继续保留，不夹带提交。

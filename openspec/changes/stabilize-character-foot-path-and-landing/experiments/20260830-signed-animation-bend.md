@@ -34,4 +34,4 @@ AnimatedPreviousDot继续记录本帧动画方向与上一Stable方向的真实d
 
 全部37项Foot诊断、真实Heel/Toe、Contact间隙/穿透、Anchor、Reach、Pelvis和Goal残差仍须对账。CSV只公开Solved Knee而非最终Physical Knee，不扩大测量结论。仅在已覆盖范围内决定保留或撤销；不凭方向dot变正或总分上升宣布膝盖全部稳定。
 
-当前尚未实现或Replay，不发布效果结论。若候选失败，精确撤销本Runtime文件，保留原始包、Proof及失败解释，并原Record确认恢复。
+本记录对应61615d4的文档提案；该提交不含Runtime代码。随后用户要求优先处理踏空，此路线停止，临时Runtime尝试没有形成正式候选Replay，也没有保留为运行修改。故不发布效果结论，不把“有界静态准入”写成修复通过或真实Replay失败。后续signed pole运输讨论同样不应凭此文档宣称已运行，独立证据出现前保持未验证。

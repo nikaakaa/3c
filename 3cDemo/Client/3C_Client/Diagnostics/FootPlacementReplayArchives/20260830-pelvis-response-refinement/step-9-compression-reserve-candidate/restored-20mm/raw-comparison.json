@@ -1,0 +1,404 @@
+{
+  "kind": "read-only-restoration-raw-comparison/1",
+  "before": "20260831-085223-610-d02f3b0109c14331be7100a45a6d1a07",
+  "after": "20260831-101451-028-2cb22b36c1da429b9de78728fe923d9f",
+  "samples": {
+    "file": "samples.csv",
+    "rows": 2086,
+    "columns": 1221,
+    "frameCount": 1043,
+    "sideCounts": {
+      "Left": 1043,
+      "Right": 1043
+    },
+    "exactColumns": 1197,
+    "differences": [
+      {
+        "column": "SampleIdentity",
+        "count": 2086,
+        "first": {
+          "frame": "3",
+          "side": "Left",
+          "before": "d02f3b0109c14331be7100a45a6d1a07",
+          "after": "2cb22b36c1da429b9de78728fe923d9f"
+        },
+        "bijection": true,
+        "numericMax": 0,
+        "distinctMappingCount": 1
+      },
+      {
+        "column": "SampleStartedUtc",
+        "count": 2086,
+        "first": {
+          "frame": "3",
+          "side": "Left",
+          "before": "2026-08-31T00:52:23.6109027Z",
+          "after": "2026-08-31T02:14:51.0287537Z"
+        },
+        "bijection": true,
+        "numericMax": 0,
+        "distinctMappingCount": 1
+      },
+      {
+        "column": "TargetRuntimeInstanceId",
+        "count": 2086,
+        "first": {
+          "frame": "3",
+          "side": "Left",
+          "before": "0e02bd324aaa47babc5ea6030ee8e07f",
+          "after": "ad886370a47b494c8a8d05957952f5ed"
+        },
+        "bijection": true,
+        "numericMax": 0,
+        "distinctMappingCount": 1
+      },
+      {
+        "column": "TargetHostInstanceId",
+        "count": 2086,
+        "first": {
+          "frame": "3",
+          "side": "Left",
+          "before": "-177714",
+          "after": "-203512"
+        },
+        "bijection": true,
+        "numericMax": 25798,
+        "distinctMappingCount": 1
+      },
+      {
+        "column": "RootInstanceId",
+        "count": 2086,
+        "first": {
+          "frame": "3",
+          "side": "Left",
+          "before": "-177718",
+          "after": "-203516"
+        },
+        "bijection": true,
+        "numericMax": 25798,
+        "distinctMappingCount": 1
+      },
+      {
+        "column": "PlantTargetSurfaceIdentity",
+        "count": 2086,
+        "first": {
+          "frame": "3",
+          "side": "Left",
+          "before": "-176052",
+          "after": "-202702"
+        },
+        "bijection": true,
+        "numericMax": 0,
+        "distinctMappingCount": 25
+      },
+      {
+        "column": "FootMotionContactSurfaceIdentity",
+        "count": 1000,
+        "first": {
+          "frame": "3",
+          "side": "Left",
+          "before": "-176052",
+          "after": "-202702"
+        },
+        "bijection": true,
+        "numericMax": 0,
+        "distinctMappingCount": 23
+      },
+      {
+        "column": "FootMotionPreviousContactAnchorSurfaceIdentity",
+        "count": 1000,
+        "first": {
+          "frame": "3",
+          "side": "Left",
+          "before": "-176052",
+          "after": "-202702"
+        },
+        "bijection": true,
+        "numericMax": 0,
+        "distinctMappingCount": 23
+      },
+      {
+        "column": "FootMotionCurrentContactAnchorSurfaceIdentity",
+        "count": 1000,
+        "first": {
+          "frame": "3",
+          "side": "Left",
+          "before": "-176052",
+          "after": "-202702"
+        },
+        "bijection": true,
+        "numericMax": 0,
+        "distinctMappingCount": 23
+      },
+      {
+        "column": "FootMotionSafetyFloorOwnerSurfaceIdentity",
+        "count": 902,
+        "first": {
+          "frame": "3",
+          "side": "Left",
+          "before": "-176052",
+          "after": "-202702"
+        },
+        "bijection": true,
+        "numericMax": 0,
+        "distinctMappingCount": 25
+      },
+      {
+        "column": "FootMotionSelectedSupportTargetSurfaceIdentity",
+        "count": 2086,
+        "first": {
+          "frame": "3",
+          "side": "Left",
+          "before": "-176052",
+          "after": "-202702"
+        },
+        "bijection": true,
+        "numericMax": 0,
+        "distinctMappingCount": 25
+      },
+      {
+        "column": "CurrentSupportHeelSurfaceIdentity",
+        "count": 2086,
+        "first": {
+          "frame": "3",
+          "side": "Left",
+          "before": "-176052",
+          "after": "-202702"
+        },
+        "bijection": true,
+        "numericMax": 0,
+        "distinctMappingCount": 24
+      },
+      {
+        "column": "CurrentSupportToeSurfaceIdentity",
+        "count": 2086,
+        "first": {
+          "frame": "3",
+          "side": "Left",
+          "before": "-176052",
+          "after": "-202702"
+        },
+        "bijection": true,
+        "numericMax": 0,
+        "distinctMappingCount": 25
+      },
+      {
+        "column": "CurrentSupportTargetSurfaceIdentity",
+        "count": 2086,
+        "first": {
+          "frame": "3",
+          "side": "Left",
+          "before": "-176052",
+          "after": "-202702"
+        },
+        "bijection": true,
+        "numericMax": 0,
+        "distinctMappingCount": 25
+      },
+      {
+        "column": "ResolvedSupportTargetSurfaceIdentity",
+        "count": 2086,
+        "first": {
+          "frame": "3",
+          "side": "Left",
+          "before": "-176052",
+          "after": "-202702"
+        },
+        "bijection": true,
+        "numericMax": 0,
+        "distinctMappingCount": 25
+      },
+      {
+        "column": "QuerySelectedSurfaceIdentity",
+        "count": 1841,
+        "first": {
+          "frame": "91",
+          "side": "Left",
+          "before": "-176052",
+          "after": "-202702"
+        },
+        "bijection": true,
+        "numericMax": 0,
+        "distinctMappingCount": 26
+      },
+      {
+        "column": "SurfaceIdentity",
+        "count": 1841,
+        "first": {
+          "frame": "91",
+          "side": "Left",
+          "before": "-176052",
+          "after": "-202702"
+        },
+        "bijection": true,
+        "numericMax": 0,
+        "distinctMappingCount": 26
+      },
+      {
+        "column": "GroundPathInputIdentity",
+        "count": 1787,
+        "first": {
+          "frame": "92",
+          "side": "Left",
+          "before": "3507127178370600557",
+          "after": "11196567306217474729"
+        },
+        "bijection": true,
+        "numericMax": 0,
+        "distinctMappingCount": 1281
+      },
+      {
+        "column": "GroundPathLastLandingSurfaceIdentity",
+        "count": 1787,
+        "first": {
+          "frame": "92",
+          "side": "Left",
+          "before": "-176052",
+          "after": "-202702"
+        },
+        "bijection": true,
+        "numericMax": 0,
+        "distinctMappingCount": 22
+      },
+      {
+        "column": "GroundPathNextSwingLandingSurfaceIdentity",
+        "count": 1787,
+        "first": {
+          "frame": "92",
+          "side": "Left",
+          "before": "-176052",
+          "after": "-202702"
+        },
+        "bijection": true,
+        "numericMax": 0,
+        "distinctMappingCount": 26
+      },
+      {
+        "column": "FootMotionGroundPathInputIdentity",
+        "count": 1787,
+        "first": {
+          "frame": "92",
+          "side": "Left",
+          "before": "3507127178370600557",
+          "after": "11196567306217474729"
+        },
+        "bijection": true,
+        "numericMax": 0,
+        "distinctMappingCount": 1281
+      },
+      {
+        "column": "FootMotionSelectedSupportTargetPositionPathIdentity",
+        "count": 1511,
+        "first": {
+          "frame": "94",
+          "side": "Left",
+          "before": "37336828417283998",
+          "after": "7151504009967871402"
+        },
+        "bijection": true,
+        "numericMax": 0,
+        "distinctMappingCount": 1056
+      },
+      {
+        "column": "ResolvedSupportTargetPositionPathIdentity",
+        "count": 1511,
+        "first": {
+          "frame": "94",
+          "side": "Left",
+          "before": "37336828417283998",
+          "after": "7151504009967871402"
+        },
+        "bijection": true,
+        "numericMax": 0,
+        "distinctMappingCount": 1056
+      },
+      {
+        "column": "FootMotionSafetyFloorOwnerPathIdentity",
+        "count": 694,
+        "first": {
+          "frame": "103",
+          "side": "Right",
+          "before": "6522749659566794902",
+          "after": "8703581121776076834"
+        },
+        "bijection": true,
+        "numericMax": 0,
+        "distinctMappingCount": 494
+      }
+    ],
+    "sha256": {
+      "before": "632151d6ee15180379d70e638732176d16f5f5bb6927a9c3d6a7898900116afc",
+      "after": "e25fd3651bc1aa0d3f7e294e61263a75ed8634313ff645f5f7e4b20b7c6bb78e"
+    }
+  },
+  "geometry": {
+    "file": "ground-path-geometry.csv",
+    "rows": 50195,
+    "columns": 20,
+    "frameCount": 933,
+    "sideCounts": {
+      "Left": 25007,
+      "Right": 25188
+    },
+    "exactColumns": 16,
+    "differences": [
+      {
+        "column": "SampleIdentity",
+        "count": 50195,
+        "first": {
+          "frame": "92",
+          "side": "Left",
+          "before": "d02f3b0109c14331be7100a45a6d1a07",
+          "after": "2cb22b36c1da429b9de78728fe923d9f"
+        },
+        "bijection": true,
+        "numericMax": 0,
+        "distinctMappingCount": 1
+      },
+      {
+        "column": "GroundPathInputIdentity",
+        "count": 50195,
+        "first": {
+          "frame": "92",
+          "side": "Left",
+          "before": "3507127178370600557",
+          "after": "11196567306217474729"
+        },
+        "bijection": true,
+        "numericMax": 0,
+        "distinctMappingCount": 1281
+      },
+      {
+        "column": "GroundContactSurfaceIdentity",
+        "count": 50194,
+        "first": {
+          "frame": "92",
+          "side": "Left",
+          "before": "-176052",
+          "after": "-202702"
+        },
+        "bijection": true,
+        "numericMax": 0,
+        "distinctMappingCount": 26
+      },
+      {
+        "column": "GroundContactCandidateIdentity",
+        "count": 50194,
+        "first": {
+          "frame": "92",
+          "side": "Left",
+          "before": "8589758540",
+          "after": "8589731890"
+        },
+        "bijection": true,
+        "numericMax": 0,
+        "distinctMappingCount": 588
+      }
+    ],
+    "sha256": {
+      "before": "8c129958fec161110dcca641dcc0c9eaae3df9a1534103bea1915f5a0242089a",
+      "after": "9af750cecebfe9e36e49df339c4ac0df01932aab111f3c3f3f65b5dd8d9c19a5"
+    }
+  },
+  "maxRssBytes": 103084032
+}

@@ -1,0 +1,249 @@
+{
+  "kind": "foot-pelvis-restoration-evidence/1",
+  "run": "20260831-101451-028-2cb22b36c1da429b9de78728fe923d9f",
+  "sourceDirectory": "D:/Unity_Project_1/3C/3cDemo/Client/3C_Client/Diagnostics/FootPlacementRuns/20260831-101451-028-2cb22b36c1da429b9de78728fe923d9f",
+  "archiveDirectory": "D:/Unity_Project_1/3C/3cDemo/Client/3C_Client/Diagnostics/FootPlacementReplayArchives/20260830-pelvis-response-refinement/step-9-compression-reserve-candidate/restored-20mm",
+  "sourceFilesPreserved": true,
+  "verifiedEntryCount": 14,
+  "zipFile": "20260831-101451-028-2cb22b36c1da429b9de78728fe923d9f.zip",
+  "zipSha256": "78d9485495553728baa8262e8cfef15c41d81c097b26820f88f747d40eb0d7f3",
+  "proofOriginalPath": "D:/Unity_Project_1/3C/3cDemo/Client/3C_Client/Temp/CharacterInputReplayProofs/v4/43357ff3cd384e5cba75d2c31175b116/20260831-102012-641-18c3eefada4e42efa78e85ca6b9e8e9e.json",
+  "proofOriginalSha256": "832347b107ec8686539dfee1d61ad6c6b7b84e18440617e5aad31299c8548881",
+  "proofZipFile": "replay-proof-raw.zip",
+  "proofZipSha256": "0b6b89bbe779b96e78ebc2c96aa9c6d49f7d2eed22fcdf4ddd787cfc2968032c",
+  "files": [
+    {
+      "path": "diagnoses/analysis.json",
+      "bytes": 4434,
+      "sha256": "3f3afc9c56f18e7fe0b036ca07f0ba63fab991220dbc27064a9e624c945bab9b"
+    },
+    {
+      "path": "diagnoses/contact-plane-penetration.json",
+      "bytes": 37527,
+      "sha256": "c45ebd4482aacf5c03b27edb5b7f61fbea536507fa197e1da5cf101481c278b4"
+    },
+    {
+      "path": "diagnoses/details-index.json",
+      "bytes": 4864883,
+      "sha256": "2cdcdf0408172a1c9c068c680d3e48785829774b86df67a3e24630d387d36fde"
+    },
+    {
+      "path": "diagnoses/details.jsonl",
+      "bytes": 59339609,
+      "sha256": "1498061c42837810b5f452fc8c7555fd07d87a86a777c696e7eead5f72a2ef7f"
+    },
+    {
+      "path": "diagnoses/landing-leg-extension.json",
+      "bytes": 9758,
+      "sha256": "eac69042ae295121c94ee454ead420e6c53194eec9c8dcb5be05564ab18675c3"
+    },
+    {
+      "path": "diagnoses/landing-observation-reuse.json",
+      "bytes": 6019,
+      "sha256": "846669530f57a96b5df3caefbe06518f66b51f568f47803dff9728ae0a340756"
+    },
+    {
+      "path": "diagnoses/landing-path-continuity.json",
+      "bytes": 31003,
+      "sha256": "03a1d25f14090fbc86e908e7e9fef88a3636ae497abe0389e9fff6f617630644"
+    },
+    {
+      "path": "diagnoses/landing-state-consistency.json",
+      "bytes": 211471,
+      "sha256": "99d7197f3bd3f78d238869f4921b7e77e0570f3edbaed5e24be2efc3d5cbb94c"
+    },
+    {
+      "path": "diagnoses/locked-sole-motion.json",
+      "bytes": 10606,
+      "sha256": "55b4065ba2f0590fa3fb2b9abd7ce9110bea4568fe86f467dc6f2207116a006b"
+    },
+    {
+      "path": "diagnoses/quality-score.json",
+      "bytes": 24929,
+      "sha256": "474054da70b0455ac6bc04e8a964b77c1b0843add1122c59eeed879e78cf5f4c"
+    },
+    {
+      "path": "diagnoses/step-time-candidate-selection.json",
+      "bytes": 8909,
+      "sha256": "a6bd9aec9224ac94d91f1add5683d548c695dc4029157f23d34affd192511e0b"
+    },
+    {
+      "path": "diagnoses/swing-path-jitter.json",
+      "bytes": 120502,
+      "sha256": "5bef3a143735b7d7d7e2b2daf5897fde8b4cfd5183ce607c178d0e7ef5cba944"
+    },
+    {
+      "path": "ground-path-geometry.csv",
+      "bytes": 7891903,
+      "sha256": "9af750cecebfe9e36e49df339c4ac0df01932aab111f3c3f3f65b5dd8d9c19a5"
+    },
+    {
+      "path": "samples.csv",
+      "bytes": 19296435,
+      "sha256": "e25fd3651bc1aa0d3f7e294e61263a75ed8634313ff645f5f7e4b20b7c6bb78e"
+    }
+  ],
+  "baselineRun": "20260831-085223-610-d02f3b0109c14331be7100a45a6d1a07",
+  "fixedEffectReference": "20260830-193957-489-9f55422ed479473682fc01f0583625db",
+  "restoredAssetsCommit": "a0aea666f71e0c52a62d7648ba7563239f71e755",
+  "loadedDiagnosticsCommit": "2cf6da61526d3294a9ac30efb6239e63e88bf11d",
+  "decision": "20毫米配置及原行为已恢复；不是新骨盆修法。",
+  "factsSchema": "character-foot-motion-facts/66",
+  "analysisSchema": "character-foot-diagnostic-analysis/1",
+  "diagnosisSchema": "character-foot-diagnosis-file/35",
+  "qualitySchema": "character-foot-quality-score/2",
+  "scoringVersion": "foot-quality-seven-dimensions/1",
+  "proofAudit": {
+    "proofFrameCount": 1044,
+    "frames": 1044,
+    "fullFramesEqual": true,
+    "runtimeIdentityEqual": true,
+    "sample": {
+      "sample_identity": "2cb22b36c1da429b9de78728fe923d9f",
+      "samples_path": "D:\\Unity_Project_1\\3C\\3cDemo\\Client\\3C_Client\\Diagnostics\\FootPlacementRuns\\20260831-101451-028-2cb22b36c1da429b9de78728fe923d9f\\samples.csv",
+      "facts_path": "D:\\Unity_Project_1\\3C\\3cDemo\\Client\\3C_Client\\Diagnostics\\FootPlacementRuns\\20260831-101451-028-2cb22b36c1da429b9de78728fe923d9f\\diagnoses\\analysis.json",
+      "samples_sha256": "e25fd3651bc1aa0d3f7e294e61263a75ed8634313ff645f5f7e4b20b7c6bb78e",
+      "sampling_relative_frame_count": 1043
+    },
+    "comparison": {
+      "baseline_available": true,
+      "matched": false,
+      "baseline_path": "D:\\Unity_Project_1\\3C\\3cDemo\\Client\\3C_Client\\Temp\\CharacterInputReplayProofs\\v4\\43357ff3cd384e5cba75d2c31175b116\\20260831-093153-977-aa13632aaa12458ea2852d8bb7e2b3a6.json",
+      "compared_frame_count": 1044,
+      "aggregate_mismatches": [
+        {
+          "field": "program_hash",
+          "baseline": "de1f803e9b81946b5af448cd5a0d6bcbb9bec91089780c02cbe69b39c9e7dc0c",
+          "candidate": "536ae60b262b10d886f87dd67027dd88b31f7cf85f68be408316783a2376c11e"
+        },
+        {
+          "field": "source_revision",
+          "baseline": "fc2e0667f3a41fc80f4fadd65e4dc73c1ae15b41f2580127bcd713205527f0ef",
+          "candidate": "780ed7ec33f8caadf613d3e27e3c2ca82bbbdc9554875520ad9b708d157f5c99"
+        },
+        {
+          "field": "semantic_hash",
+          "baseline": "71a9d2809b1a860dad564bbcdb1adcf8e51ebf776868812c4aa13567f40a74fa",
+          "candidate": "797ede990f00f8a0b1018713e74cf50910a0f5e01c51c4b709edaaf534431229"
+        },
+        {
+          "field": "projection_revision",
+          "baseline": "442d4390e9121d6e52d63b62ec73ae89fed2f4f9ad479f1ed48e2e173650e938",
+          "candidate": "557b76d00fb2902d2811095065fd64066014f31232bb744579573b9bfe8cddef"
+        },
+        {
+          "field": "projection_source_revision",
+          "baseline": "fc2e0667f3a41fc80f4fadd65e4dc73c1ae15b41f2580127bcd713205527f0ef",
+          "candidate": "780ed7ec33f8caadf613d3e27e3c2ca82bbbdc9554875520ad9b708d157f5c99"
+        },
+        {
+          "field": "projection_semantic_hash",
+          "baseline": "71a9d2809b1a860dad564bbcdb1adcf8e51ebf776868812c4aa13567f40a74fa",
+          "candidate": "797ede990f00f8a0b1018713e74cf50910a0f5e01c51c4b709edaaf534431229"
+        },
+        {
+          "field": "projection_contract_hash",
+          "baseline": "38ea14f9e9dfdfc70e847997c4180f675654ab820f4acd15c4c2d16bbbf42b8c",
+          "candidate": "e86aef93e3ce3d9576fc79cc6ec686b87b086a18a80b25902d99c776fc6aef3f"
+        }
+      ],
+      "divergent_frame_count": 0,
+      "first_divergent_relative_frame": -1,
+      "first_frame_mismatches": []
+    },
+    "manifestKeys": [
+      "schema",
+      "factsSchema",
+      "sample",
+      "analyzer",
+      "coverage",
+      "details",
+      "index",
+      "performance"
+    ],
+    "sampleMetadata": {
+      "identity": "2cb22b36c1da429b9de78728fe923d9f",
+      "file": "../samples.csv",
+      "sha256": "e25fd3651bc1aa0d3f7e294e61263a75ed8634313ff645f5f7e4b20b7c6bb78e",
+      "geometryFile": "../ground-path-geometry.csv",
+      "geometrySha256": "9af750cecebfe9e36e49df339c4ac0df01932aab111f3c3f3f65b5dd8d9c19a5",
+      "programIdentity": "557b76d00fb2902d2811095065fd64066014f31232bb744579573b9bfe8cddef|9884a71baf0ae369f36d2a60ab6a19573aba83bdf40489355602d266cb262270",
+      "projectionRevision": "557b76d00fb2902d2811095065fd64066014f31232bb744579573b9bfe8cddef",
+      "poseGraphId": "ed8ff472330e4057a900af3eae5dfb8f",
+      "poseGraphRevision": "6fd7c97a2d6d44889dd6b51efa834448",
+      "posePlanHash": "9884a71baf0ae369f36d2a60ab6a19573aba83bdf40489355602d266cb262270",
+      "profileId": "corin.foot-placement",
+      "profileRevision": "ea6bd72f336d67a952d6f183d5d43c44c629594d2956efb3fa975e217bb5c29d",
+      "frameCount": 1043,
+      "footRowCount": 2086,
+      "geometryRowCount": 50195
+    },
+    "coverage": {
+      "contactSupportRequestedFrameCount": 705,
+      "contactSupportGapAvailableFrameCount": 525,
+      "contactSupportGapNotApplicableFrameCount": 176,
+      "contactSupportGapUnavailableFrameCount": 4,
+      "contactSupportGapIntervalCount": 60,
+      "landingEventCount": 2,
+      "landingStateBoundaryCount": 54,
+      "landingStateSpanCount": 60,
+      "lockedEventCount": 44,
+      "lockedFullAnchorEventCount": 15,
+      "lockedSlidingEventCount": 29,
+      "releaseEventCount": 59,
+      "pathRevisionOutputJumpCount": 668,
+      "pathContinuityEventCount": 1382,
+      "stableSwingOutputJumpCount": 344,
+      "contactStateOutputJumpCount": 1051,
+      "swingToLandingFloorHandoffCount": 53,
+      "plantInterpolationOutputJumpCount": 523,
+      "contactAcquisitionContinuityCount": 54,
+      "lockWeightCompletionEventCount": 60,
+      "approachProgressOwnershipCount": 376,
+      "actionHardOwnershipCount": 0,
+      "contactTransitionContextCount": 2086,
+      "formalGoalWeightPolicyCount": 2086,
+      "contactReentryOutputGeometryCount": 0,
+      "postTransitionUnevaluatedCount": 0,
+      "reentryOutputFactsUnavailableCount": 0,
+      "stableSwingCorrectionResponseCadenceCount": 180,
+      "actualFootEnvelopeCounterfactualCount": 344,
+      "lateApproachLandingRevisionCount": 325,
+      "supportChangeCount": 112,
+      "contactPlanePenetrationEventCount": 90,
+      "stepTimeCandidateSelectionCount": 2086,
+      "stepTimeCandidateRepresentativeEventCount": 142,
+      "normalizedTimeWrapCount": 44,
+      "landingObservationCount": 1841,
+      "futureLandingQueryCount": 1783,
+      "currentContactVerificationQueryCount": 58,
+      "currentSupportQueryCount": 2086,
+      "predictionMotionCount": 1043,
+      "predictionMotionUnavailableCount": 99,
+      "predictionMotionResetCount": 2,
+      "predictionCurrentResponseCount": 846,
+      "predictionContinuationResponseCount": 106,
+      "predictionMaximumSpeedClampCount": 0,
+      "leftFootFrameCount": 1043,
+      "rightFootFrameCount": 1043,
+      "frameGapCount": 0,
+      "bodyResetCount": 0,
+      "sourceChangeCount": 12,
+      "contactPlaneAvailableFootRowCount": 525,
+      "contactPlaneUnavailableFootRowCount": 1561,
+      "contactPlanePenetrationAvailability": {
+        "Available": 525,
+        "ContactLifecycleUnavailable": 1561
+      },
+      "groundPathRejectedFootRowCount": 299
+    }
+  },
+  "rawComparisonFile": "raw-comparison.json",
+  "diagnosticComparisonFile": "diagnostic-comparison.json",
+  "subsequentUncoveredCommits": [
+    "730879128c035bb517a141a883e9505f7aefbfcd",
+    "7ae5793522401bc8f315dd9d5c24185147e6fa24",
+    "a9e5f42ff6f327f377f053bc3d2f39924a3f9f75",
+    "902019b044c68ab30b774ab83e9e95fbf7c3fdcb"
+  ]
+}

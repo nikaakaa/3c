@@ -1,0 +1,114 @@
+{
+  "kind": "read-only-restored-diagnostic-comparison/1",
+  "before": "20260831-085223-610-d02f3b0109c14331be7100a45a6d1a07",
+  "after": "20260831-101451-028-2cb22b36c1da429b9de78728fe923d9f",
+  "comparedTargetFields": [
+    "id",
+    "question",
+    "eventKinds",
+    "rules",
+    "eligibleEventCount",
+    "matchedEventCount",
+    "matchedEventRateAvailable",
+    "matchedEventRate",
+    "scorePolicy",
+    "score"
+  ],
+  "totalTargets": 37,
+  "targetDifferences": [],
+  "qualityDifferencesExcludingArtifactIdentity": [
+    "contactSupportCoverage"
+  ],
+  "totalScores": [
+    61.9,
+    61.9
+  ],
+  "evidenceScores": [
+    86.9,
+    86.9
+  ],
+  "files": [
+    {
+      "file": "contact-plane-penetration.json",
+      "targets": 2,
+      "schemas": [
+        "character-foot-diagnosis-file/34",
+        "character-foot-diagnosis-file/35"
+      ]
+    },
+    {
+      "file": "landing-leg-extension.json",
+      "targets": 1,
+      "schemas": [
+        "character-foot-diagnosis-file/34",
+        "character-foot-diagnosis-file/35"
+      ]
+    },
+    {
+      "file": "landing-observation-reuse.json",
+      "targets": 1,
+      "schemas": [
+        "character-foot-diagnosis-file/34",
+        "character-foot-diagnosis-file/35"
+      ]
+    },
+    {
+      "file": "landing-path-continuity.json",
+      "targets": 6,
+      "schemas": [
+        "character-foot-diagnosis-file/34",
+        "character-foot-diagnosis-file/35"
+      ]
+    },
+    {
+      "file": "landing-state-consistency.json",
+      "targets": 19,
+      "schemas": [
+        "character-foot-diagnosis-file/34",
+        "character-foot-diagnosis-file/35"
+      ]
+    },
+    {
+      "file": "locked-sole-motion.json",
+      "targets": 2,
+      "schemas": [
+        "character-foot-diagnosis-file/34",
+        "character-foot-diagnosis-file/35"
+      ]
+    },
+    {
+      "file": "step-time-candidate-selection.json",
+      "targets": 1,
+      "schemas": [
+        "character-foot-diagnosis-file/34",
+        "character-foot-diagnosis-file/35"
+      ]
+    },
+    {
+      "file": "swing-path-jitter.json",
+      "targets": 5,
+      "schemas": [
+        "character-foot-diagnosis-file/34",
+        "character-foot-diagnosis-file/35"
+      ]
+    }
+  ],
+  "maxRssBytes": 61075456,
+  "qualityLeafDifferencesExcludingArtifactIdentity": [
+    {
+      "path": "$.contactSupportCoverage.unavailableExamples.0.currentSupportSurfaceIdentity",
+      "before": -176052,
+      "after": -202702
+    },
+    {
+      "path": "$.contactSupportCoverage.unavailableExamples.1.currentSupportSurfaceIdentity",
+      "before": -176052,
+      "after": -202702
+    },
+    {
+      "path": "$.contactSupportCoverage.unavailableExamples.2.currentSupportSurfaceIdentity",
+      "before": -176288,
+      "after": -202938
+    }
+  ]
+}

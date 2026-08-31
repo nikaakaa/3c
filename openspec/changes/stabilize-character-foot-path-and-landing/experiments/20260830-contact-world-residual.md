@@ -1,5 +1,13 @@
 # 接触位置仅由完整世界残差接管实验
 
+## 最终处置补记
+
+后续193957采样及用户反馈已将eb5fb05／5d858bc选为Landing／Swing的固定比较版本，不是本文件末尾18:20时点的“仍待加载”。20260830-193957-489-9f55422ed479473682fc01f0583625db为facts57／diagnosis26，1043帧／2086脚行，完整12文件ZIP在Diagnostics/FootPlacementReplayArchives/20260830-contact-world-residual，保存提交7f7b66d。
+
+持久归档README及retention-manifest记录：持续Gap12/60降至3/60、Landing未闭合11/60降至2/60、普通Swing最大额外步98.285降至36.401毫米。没有找到绑定193957的官方Replay Proof，不补造matched；历史可比性按已核对的原始Body／动画／Foot输入及表现时钟限定。骨盆硬夹紧、膝盖翻侧及部分端点平面负距仍存在，不把该参照叫全身合格。
+
+之后212054提前卸载候选被拒绝，3436cf6／27dbef4撤销，221050的1119个非身份CSV列对193957逐值相同，37项规则／计数／score恢复。脚目标有效性及骨盆三步属于后续独立change，索引见[骨盆实验历史](../../refine-character-pelvis-response/experiments/README.md)。本段只补齐最终处置，不重写193957原数据或把后续改进记到本实验。
+
 ## 用户范围与对照
 
 用户要求先处理贴出的历史回溯：Contact目标已在地面，但世界残差保留旧高位，随后相对动画scalar又把输出抬高。只修改这条位置历史链，不改Swing目标、脚掌倾斜、Rotation Weight、膝盖、查询、Anchor、作者曲线或数值配置。
@@ -32,7 +40,7 @@ Runtime与唯一公开DTO已经完成：Contact位置不再消费scalar，原Pla
 
 历史可比性边界：03:54与155326共同Body/时钟字段相同，但Foot Motion已跨迁移；Step Time有1182行变化，Step Distance432行，Contact Event availability/ordinal/位置与Phase各206行变化，Foot Height129行变化且最大0.313毫米。不能声称历史版所有正式Foot输入与当前完全相同，也不能把旧696列/旧规则评分与当前规则直接比成单变量收益。当前候选仍须与155326同一正式输入控制核对。
 
-## 当前交付状态
+## 当时的交付等待状态（18:20，后续结果见开头）
 
 Runtime候选`eb5fb05`，Diagnostics独立提交`5d858bc`，唯一版本facts57/Analyzer57/diagnosis26。Editor规定flags构建57个既有警告、0错误，构建后shutdown完成；change与全量strict为94/94。删除12个SlidingResponse列，只保留3个Domain事实，旧56废弃列与旧52缺列均按typed拒绝，不覆写旧证据。原37项质量与七维评分不变。
 

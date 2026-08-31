@@ -266,7 +266,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             var list = targets.ToList();
             var document = new CharacterFootDiagnosisDocument
             {
-                schema = "character-foot-diagnosis-file/38",
+                schema = "character-foot-diagnosis-file/40",
                 diagnosticId = diagnosticId,
                 facts = new CharacterFootDiagnosisFactsReference
                 {
@@ -346,6 +346,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     sourceIdentity = value.Value<string>("sourceIdentity") ?? string.Empty,
                     sourceCycle = value.Value<int?>("sourceCycle") ?? 0,
                     matchedRules = rules,
+                    contactSupportGap = value["contactSupportGap"]?.ToObject<CharacterFootContactSupportGapSequence>(),
                     metrics = ReadDoubleMap(value["metrics"] as JObject),
                     evidence = ReadBoolMap(value["evidence"] as JObject)
                 });
@@ -470,6 +471,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         public bool matchedEventRateAvailable;
         public double? matchedEventRate;
         public string scorePolicy = "Informational";
+        public int requiredFactMissingCount;
         public CharacterFootDiagnosisScore score;
         public CharacterFootDiagnosisOccurrenceProfile occurrence;
         public List<CharacterFootDiagnosisOccurrenceProfile>
@@ -538,8 +540,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
     [Serializable]
     internal sealed class CharacterFootQualityScorecard
     {
-        public string schema = "character-foot-quality-score/2";
-        public string scoringVersion = "foot-quality-seven-dimensions/1";
+        public string schema = "character-foot-quality-score/3";
+        public string scoringVersion = "foot-quality-seven-dimensions/2";
         public string purpose = "ProvisionalReference";
         public bool isShallowReference = true;
         public string notice = "总分仅为浅层参考，不代表通过，不替代逐项证据与用户观感。";
@@ -661,7 +663,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     "权值为首版业务取舍，不宣称客观最优；不同评分版本不能直接解释成行为改善。",
                     "总分不代替具体帧、幅度、持续时间、最差项与Evidence；没有全局Pass/Fail。",
                     "位移按表现帧统计，比较必须使用相同输入与Presentation Schedule；速度和加速度仍在分项报告。",
-                    "接触未贴合只证明与Verified Anchor平面的间隙，不证明有限Surface脚下有地；正常Swing与Releasing不纳入。",
+                    "接触未贴合只证明与Verified Anchor平面的间隙，不证明有限Surface脚下有地；满位置权重接触过程只计一次，FullAnchor/Sliding/Landing分项展示，Release及部分权重仅作证据。",
+                    "接触分项没有独立Health，不重复扣分；须查看各域脚帧/过程次数、持续时间与重新离面，少量FullAnchor样本不能证明保持质量，短暂大间隙不因不足100ms而隐藏。",
                     "腿部目前只覆盖正式Landing诊断域；Sliding缺少正式水平上限时不按FullAnchor漂移计分。",
                     "缺失维度不补0或100，不重分配权重；分数区间只表示未知项的数学上下界。"
                 },
@@ -720,7 +723,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 {
                     completeEvidence = false;
                 }
-                if (!score.evidenceAvailable || score.evidenceScore.Value < 100d)
+                if (!score.evidenceAvailable || score.evidenceScore.Value < 100d ||
+                    definition.Id == "contact-fit" && result.contactSupportCoverage.domains.Any(value =>
+                        value.domain != "Release" && value.eligibleSegmentCount < FullEvidenceEventCount))
                     result.incompleteEvidenceDimensions.Add(definition.Id);
                 result.dimensions.Add(dimension);
             }
@@ -806,6 +811,11 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             if (target.eligibleEventCount <= 0)
             {
                 score.unavailableReason = "NoEligibleEvents";
+                return score;
+            }
+            if (target.requiredFactMissingCount > 0)
+            {
+                score.unavailableReason = "RequiredQualityFactsUnavailable";
                 return score;
             }
             if (string.Equals(
@@ -1011,6 +1021,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         public string sourceIdentity;
         public int sourceCycle;
         public List<string> matchedRules;
+        public CharacterFootContactSupportGapSequence contactSupportGap;
         public SortedDictionary<string, double> metrics;
         public SortedDictionary<string, bool> evidence;
         public CharacterFootPathStageAnalysis pathStageAnalysis;

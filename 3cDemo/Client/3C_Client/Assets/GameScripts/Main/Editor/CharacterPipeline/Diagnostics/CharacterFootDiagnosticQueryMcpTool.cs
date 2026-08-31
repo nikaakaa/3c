@@ -54,7 +54,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     CharacterFootDiagnosticManifest manifest = CharacterFootDiagnosticStore.ReadManifest(path);
                     JObject score = JObject.Parse(File.ReadAllText(Path.Combine(
                         Path.GetDirectoryName(Path.GetFullPath(path)), "quality-score.json"), Encoding.UTF8));
-                    if (score.Value<string>("schema") != "character-foot-quality-score/2" ||
+                    if (score.Value<string>("schema") != "character-foot-quality-score/3" ||
                         score["facts"]?.Value<string>("indexSha256") != manifest.index.sha256 ||
                         score["facts"]?.Value<string>("sampleIdentity") != manifest.sample.Value<string>("identity"))
                         throw new InvalidDataException("Foot quality report belongs to another analysis.");

@@ -2031,8 +2031,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             Add(row, foot.SourceToePosition);
             Add(row, motion.BaselineSample);
             Vector3 motionUp =
-                motion.InterpolationComponentUp.sqrMagnitude > 0.000001f
-                ? motion.InterpolationComponentUp.normalized
+                motion.TargetHeightComponentUp.sqrMagnitude > 0.000001f
+                ? motion.TargetHeightComponentUp.normalized
                 : default;
             Vector3 groundPathUp = ground.ComponentUp.sqrMagnitude > 0.000001f
                 ? ground.ComponentUp.normalized

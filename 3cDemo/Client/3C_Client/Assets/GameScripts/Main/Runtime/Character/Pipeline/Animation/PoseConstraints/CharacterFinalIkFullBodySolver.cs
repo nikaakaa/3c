@@ -21,6 +21,31 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         internal void Clear() => this = default;
     }
 
+    internal readonly struct CharacterFullBodyIkBendReference
+    {
+        internal CharacterFullBodyIkBendReference(
+            FixedString64Bytes rigId,
+            FixedString64Bytes rigRevision,
+            Vector3 leftDirection,
+            Vector3 rightDirection)
+        {
+            if (!CharacterPoseConstraintMath.IsFinite(leftDirection) ||
+                !CharacterPoseConstraintMath.IsFinite(rightDirection) ||
+                leftDirection.sqrMagnitude <= CharacterPoseConstraintMath.Epsilon ||
+                rightDirection.sqrMagnitude <= CharacterPoseConstraintMath.Epsilon)
+                throw new ArgumentException("FBBIK reference bend directions are invalid.");
+            RigId = rigId;
+            RigRevision = rigRevision;
+            LeftDirection = leftDirection;
+            RightDirection = rightDirection;
+        }
+
+        internal FixedString64Bytes RigId { get; }
+        internal FixedString64Bytes RigRevision { get; }
+        internal Vector3 LeftDirection { get; }
+        internal Vector3 RightDirection { get; }
+    }
+
     public enum CharacterFullBodyIkFailure : byte
     {
         None = 0,
@@ -156,8 +181,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         readonly CharacterFinalIkPoseBufferBackend m_Backend;
         readonly IndexedBipedReferences m_References;
         readonly IKSolverFullBodyBiped m_Solver = new IKSolverFullBodyBiped();
-        readonly FixedString64Bytes m_RigId;
-        readonly FixedString64Bytes m_RigRevision;
+        CharacterFullBodyIkBendReference m_BendReference;
         readonly CharacterFullBodyIkEffectorDiagnostics[] m_DiagnosticEffectors =
             new CharacterFullBodyIkEffectorDiagnostics[CharacterFullBodyIkGoalSetHeader.MaximumGoalCount];
         readonly CharacterFullBodyIkLimbDiagnostics[] m_DiagnosticLimbs =
@@ -183,8 +207,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             m_Profile.RequireValid();
             m_Backend = new CharacterFinalIkPoseBufferBackend(rig, parentIndices, virtualBones);
             m_References = CharacterFinalIkPoseBufferBackend.CreateBipedReferences(rig);
-            m_RigId = new FixedString64Bytes(rig.RigId);
-            m_RigRevision = new FixedString64Bytes(rig.RigRevision);
             m_ActiveTuning = ActiveTuning.FromProfile(m_Profile);
             PrepareReferencePose(parentIndices);
         }
@@ -247,7 +269,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             }
         }
 
-        public CharacterFullBodyIkResult Prepare(
+        CharacterFullBodyIkResult Prepare(
             NativeSlice<AnimationLocalBonePose> referenceComponentPose)
         {
             if (!IsValidPosePage(referenceComponentPose))
@@ -257,6 +279,15 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 m_Backend.Bind(referenceComponentPose);
                 m_Solver.SetToIndexedReferences(m_Backend, m_References);
                 ApplyProfile();
+                IKConstraintBend left = m_Solver.GetBendConstraint(FullBodyBipedChain.LeftLeg);
+                IKConstraintBend right = m_Solver.GetBendConstraint(FullBodyBipedChain.RightLeg);
+                if (!left.initiated || !right.initiated)
+                    throw new InvalidOperationException("FBBIK reference bend constraints were not initialized.");
+                m_BendReference = new CharacterFullBodyIkBendReference(
+                    new FixedString64Bytes(m_Rig.RigId),
+                    new FixedString64Bytes(m_Rig.RigRevision),
+                    left.direction,
+                    right.direction);
                 ResetEffectorsToPose();
                 ResetLegBendState();
                 m_Prepared = true;
@@ -429,8 +460,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             if (!header.IsValid ||
                 header.FrameSequence != frameSequence ||
                 header.CompletionIdentity != completionIdentity ||
-                !header.RigId.Equals(m_RigId) ||
-                !header.RigRevision.Equals(m_RigRevision) ||
+                !header.RigId.Equals(m_BendReference.RigId) ||
+                !header.RigRevision.Equals(m_BendReference.RigRevision) ||
                 header.GoalOffset > goalWorkspace.Length - header.GoalCount)
             {
                 return CharacterFullBodyIkResult.Fail(
@@ -667,6 +698,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 m_ActiveTuning.LeftLeg,
                 hasLeftGoal,
                 in leftGoal,
+                m_BendReference.LeftDirection,
                 ref bendHistory.LeftStableDirection,
                 ref bendHistory.HasLeftStableDirection,
                 ref bendHistory.LeftAppliedDirection,
@@ -677,6 +709,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 m_ActiveTuning.RightLeg,
                 hasRightGoal,
                 in rightGoal,
+                m_BendReference.RightDirection,
                 ref bendHistory.RightStableDirection,
                 ref bendHistory.HasRightStableDirection,
                 ref bendHistory.RightAppliedDirection,
@@ -689,6 +722,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             ActiveLimb settings,
             bool hasFootPlacementGoal,
             in CharacterFullBodyIkGoal goal,
+            Vector3 referenceDirection,
             ref Vector3 stableBendDirection,
             ref bool hasStableBendDirection,
             ref Vector3 appliedBendDirection,
@@ -733,7 +767,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             IKConstraintBend bend = m_Solver.GetBendConstraint(chainId);
             Vector3 effectiveDirection = hasStableBendDirection
                 ? stableBendDirection
-                : bend.direction;
+                : referenceDirection;
             Vector3 targetAxis = targetAnkle - originalHip;
             if (hasAnimatedDirection)
             {
@@ -943,10 +977,12 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         {
             m_LeftLegSolveFrame = default;
             m_RightLegSolveFrame = default;
-            m_Solver.GetBendConstraint(FullBodyBipedChain.LeftLeg).weight =
-                m_ActiveTuning.LeftLeg.BendConstraintWeight;
-            m_Solver.GetBendConstraint(FullBodyBipedChain.RightLeg).weight =
-                m_ActiveTuning.RightLeg.BendConstraintWeight;
+            IKConstraintBend left = m_Solver.GetBendConstraint(FullBodyBipedChain.LeftLeg);
+            IKConstraintBend right = m_Solver.GetBendConstraint(FullBodyBipedChain.RightLeg);
+            left.direction = m_BendReference.LeftDirection;
+            right.direction = m_BendReference.RightDirection;
+            left.weight = m_ActiveTuning.LeftLeg.BendConstraintWeight;
+            right.weight = m_ActiveTuning.RightLeg.BendConstraintWeight;
         }
 
         CharacterFullBodyIkResult ValidateSolvedFootGoals(

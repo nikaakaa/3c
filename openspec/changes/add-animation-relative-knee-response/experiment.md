@@ -8,7 +8,7 @@
 
 候选Replay为20260831-183002-949-5b2fb1f3f4c647d18c7a88fc180e34f7，1043采样帧／2086脚行，facts70／diagnosis39。原始CSV、diagnoses与必要的replay-proof.json原地保留。官方Proof因7个产品身份字段变化为matched=false，但1044条逐帧记录完全一致，输入内容、起始Body、输入序列与Body轨迹hash均相同。没有修改比较器或伪造matched。
 
-用户已明确拒绝本次踏空回归并要求回退。已精确撤销f2c3ec0的14个Runtime／Corin Profile／Diagnostics文件改动，恢复160901对应的正式代码及facts69／diagnosis38；未恢复Reach，未修改Foot／Pelvis、评分或用户并行文档。新增模块及其meta随候选删除，可由f2c3ec0恢复；本目录设计和183002原始证据继续保留。正式产品重建与恢复Replay正在执行，完成前不把源码回退等同为已运行恢复。
+用户已明确拒绝本次踏空回归并要求回退。5a476e7精确撤销f2c3ec0的14个Runtime／Corin Profile／Diagnostics文件改动，恢复160901对应的正式代码及facts69／diagnosis38；未恢复Reach，未修改Foot／Pelvis、评分或用户并行文档。新增模块及其meta随候选删除，可由f2c3ec0恢复；本目录设计和183002原始证据继续保留。正式产品重建与192218恢复Replay已完成，核对结果如下。
 
 ## 实际移植与适配
 
@@ -35,3 +35,12 @@ OpenSpec全量98／98、列对账与编译通过。2086行均实际执行角差�
 - 原R934反侧未消失：Solver膝步414.751毫米未变，响应后为419.020毫米。同一可靠膝侧判据下强反侧15→27，但可靠弯曲覆盖也变化，不能简单把差值当作12个同严重度新增事件。另有16行animationAngle+currentExtra<0，局部旋转跨过伸直姿态；其实际无符号角与负目标绝对值吻合，说明角差历史也没有自动保证膝侧合法。
 
 裁决：否决当前Forced后处理组合。它限制的是额外角差，不是脚位置；在髋和已求解Foot端点之外旋转腿，会重新移动脚。仅保存脚旋转不能保持Anchor。此次没有迁移ZZZ普通kneeState时序，也没有证明关闭Force就能修复；不能把本次回归归咎为ZZZ原算法无效，更不能调大速度、追加贴地或重解IK掩盖。后续应先精确撤销本候选并恢复160901，再决定独立的膝侧修复或完整启停／位置协调方案。
+
+## 撤销后的恢复验证
+
+- 恢复包：`3cDemo/Client/3C_Client/Diagnostics/FootPlacementRuns/20260831-192218-091-d49c63ee8a074a279d28d02704f5b74c`。仍用原43357ff3cd384e5cba75d2c31175b116输入，1043采样帧／2086脚行、1215列，facts69／diagnosis38。原160901和失败183002包未覆盖；新Proof已按原字节保留在恢复包的replay-proof.json。
+- 源码及Corin FullBodyIK Profile相对fa656b2无diff；规定参数.NET编译57既有警告／0错误并立即shutdown，Unity加载无错误。Corin Float32、Fixed顺序正式重建，共享SourceRevision、SemanticHash、ContractHash与ProjectionRevision；最终生成Projection相对旧产物的变化只涉及版本／layout身份，不改既有参数值、曲线或PosePlanHash。
+- 与160901逐帧对齐后，1189／1215列逐字符串相同，包含全部动画输入、Foot目标／插值／Anchor几何、FBBIK、实际Heel／Toe和Pelvis。其余26列仅采样／产品／实例及Surface／Path身份变化；19个Surface／Path字段逐项双向映射无冲突。67186行查询几何也只有5个身份字段变化。
+- 全37个Target的规则、scorePolicy、eligible、matched、score、分布及分层发生率逐项相同。接触未贴合恢复13／60、穿透19／84、锁脚水平漂移0／15、接触输出大步418／1052，总分61.9；R229与L247回到原物理脚位。本次只证明恢复已认可版本，不把基线原有瑕疵或反弯称作解决。
+- 新Proof对最近183002因7个产品身份变化保持官方matched=false，DivergentFrameCount=0；独立对160901的1044条frames完全一致，未修改比较器或Proof。新增后处理已无运行路径，恢复结束后退出本次Play。
+- 旧版13段间隙命中中，9段只在末端Sliding、Lock Weight为0时离面1～3个采样帧，下一帧均Releasing；另4段是100～133毫秒的Landing追赶。不能把该总数直接当成13次明显视觉踏空，更不能用它掩盖候选在FullAnchor上重新抬脚的回归。

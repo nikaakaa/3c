@@ -386,3 +386,24 @@ PredictionMotion、BodyTrajectory及其Tick/Generation/ResetSequence/AuthorityTi
 - 原包：`Diagnostics/FootPlacementRuns/20260901-064609-635-84645f6c7cc04880b2a6aaf944695c7d`。对063845及固定233436，1191业务列逐值相同，23身份列映射无冲突；几何、42Target、20447明细及索引、六次1215列查询和其它正式查询保持。
 - Analysis继续发布Facts/71与Analyzer71，42份Diagnosis继续/40，Quality Score继续/3；Publisher、Store、Diagnosis Writer和MCP Query均成功消费同一产物。Proof matched1044、DivergentFrameCount0，输入/Body/时钟及帧数组一致。
 - Unity已归还、failure空、Console0。结合1215列、根Schema、Runtime Motion/Resolved/Pelvis分组和本次identity对账，任务5.4、5.5完成；Reset和收尾任务仍独立未完成。
+
+## Solver Reset正式观测与验证封口
+
+状态：候选`5b551cb`已完成隔离Reset配对、Runtime/Editor编译和固定Record回放；任务4.4完成。
+
+- Solver在每腿求解入口冻结`HadStableBendDirection`、`HadAppliedBendDirection`与`BendDirectionSource`，并发布只随正式清历史入口递增的`BendResetGeneration`。这些字段只解释本次求解，不参与运行判断。
+- Preview调用可在新Session首次求值前登记正式Pose Watch interest。Editor Fixture改用正式Preview Scene创建和关闭入口；观测工具复用同一个Host、Engine、Goal Assembler和FBBIK，依次执行新建、连续使用和完全Reset，不构造旁路Solver或第二回放驱动。
+- Corin Fixture在time0.5、speed3下保存203个Component Pose值。FBBIK Watch直接Goal子页为0项，但Solver实际应用3个Goal并发布3个Effector；Goal目标、权重、Application、Source以及求解后姿态都进入完整输出哈希。新建与完全Reset的Pose、Goal页和Solver输出哈希相同。
+- 新建和Reset帧左右腿进入时Stable/Applied均为false，连续使用帧均为true；Reset代次从1推进到2。新建和Reset的方向来源均为Animated，证明本次输入下Reset清除正式历史而不改变目标、姿态和输出。无可靠动画方向时的Reference来源、StableHistory退化来源及调参Reset组合没有动态覆盖，不能由此冒称全部分支通过。
+
+普通Record新包为`Diagnostics/FootPlacementRuns/20260901-070946-569-c14830f966ee465c887849cfc66b1f2a`。正式Proof对上一通过点`a7d2406`匹配1044输入、aggregate mismatch 0、divergent frame 0；对064609和固定233436均有2086行、1215列，1191业务列逐值相同，24列只含运行时间与实例身份变化且映射无冲突。Body41、Formal43、Pelvis149、Goal30、Knee15、Solver/Physical101和Time19分组均无业务差异；几何67186行中的22个业务列也完全相同。
+
+facts71、42个Target、20447条detail、索引、summary/events/detail/frame查询和quality-score均保持，总分61.9只作为辅助。Action ownership、Contact reentry和BodyReset仍为0覆盖，Landing腿窗口仍只有2，CSV仍没有最终Physical Knee；这些限制与R825–827深折叠、接触间隙和穿透问题继续保留。
+
+## 最终清理与合同对账
+
+- 权威读取迁移清单已逐项对代码：Reach准入只由Foot请求生产，Pelvis只读typed请求与最小输入，完成凭据只在Lifecycle内部消费，Goal只从最终Resolved与Pelvis结果编码。Correction Response下一帧方向只在typed历史中，过程Fact与公开Diagnostics不参与运行决定。
+- 当前运行链只有一个Foot Placement Module、一个根Bank生命周期、一个Goal Assembler、一个FBBIK Solver和一个Physical Writer。Editor只有一个主Sampler与一个根列Schema；Reset观测只读取正式Preview/Watch页，不发布第二采样格式或业务Goal后处理。
+- 旧初步Resolved类型、临时Goal反解、未消费字段、旧Sample Read Bindings、手写列清单和分散格式identity均已删除；不存在兼容reader、fallback配置或保留旧字段的双路径。
+- 受影响Runtime与Editor按规定参数构建成功，0 warning、0 error，随后立即关闭build server。此次没有正式产品依赖变化，不执行Corin产品Build。
+- current `character-foot-placement-presentation`已明确请求→Pelvis→原Landing完成→最终Resolved→Goal顺序、Reach只作观察和完成资格；current `character-animation-pipeline`已明确根事务与BendHistory所有权。active change中没有与之竞争的旧Resolved/Pelvis正式差量；历史archive与实验记录只保留追溯，不作为当前合同。

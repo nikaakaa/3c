@@ -21,7 +21,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             CharacterFootContactPlanePenetrationAvailability penetrationAvailability)
         {
             Foot = foot;
-            Motion = motion;
+            Core = motion.Core;
             BaselineSampleAlongUp = baselineSampleAlongUp;
             EnvelopeSampleAlongUp = envelopeSampleAlongUp;
             FormalFootHeight = formalFootHeight;
@@ -38,7 +38,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             PenetrationAvailability = penetrationAvailability;
         }
         internal CharacterFootLandingPredictionFootDiagnostics Foot { get; }
-        internal CharacterFootSwingMotionDiagnostics Motion { get; }
+        internal CharacterFootSwingCoreDiagnostics Core { get; }
         internal float BaselineSampleAlongUp { get; }
         internal float EnvelopeSampleAlongUp { get; }
         internal float FormalFootHeight { get; }

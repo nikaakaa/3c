@@ -1,8 +1,8 @@
 using UnityEngine;
 using ThirdPersonCharacter.Pipeline.Presentation;
 using static ThirdPersonCharacter.Pipeline.Editor.CharacterFootCsvValues;
-using Source = ThirdPersonCharacter.Pipeline.Presentation.CharacterFootSwingMotionDiagnostics;
-using Column = ThirdPersonCharacter.Pipeline.Editor.CharacterFootCsvColumn<ThirdPersonCharacter.Pipeline.Presentation.CharacterFootSwingMotionDiagnostics, ThirdPersonCharacter.Pipeline.Editor.CharacterFootResponseSample>;
+using Source = ThirdPersonCharacter.Pipeline.Presentation.CharacterFootCorrectionResponseDiagnostics;
+using Column = ThirdPersonCharacter.Pipeline.Editor.CharacterFootCsvColumn<ThirdPersonCharacter.Pipeline.Presentation.CharacterFootCorrectionResponseDiagnostics, ThirdPersonCharacter.Pipeline.Editor.CharacterFootResponseSample>;
 using Codecs = ThirdPersonCharacter.Pipeline.Editor.CharacterFootCsvCodecs;
 using Unit = ThirdPersonCharacter.Pipeline.Editor.CharacterFootCsvUnit;
 

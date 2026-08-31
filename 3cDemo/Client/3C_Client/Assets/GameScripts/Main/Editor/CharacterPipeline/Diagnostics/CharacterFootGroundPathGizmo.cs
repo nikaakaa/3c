@@ -86,34 +86,34 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             CharacterFootLandingPredictionFootDiagnostics foot)
         {
             CharacterFootSwingMotionDiagnostics motion = foot.FootMotion;
-            if (motion.State == CharacterFootSwingMotionState.None)
+            if (motion.Core.State == CharacterFootSwingMotionState.None)
                 return;
 
             Gizmos.color = Color.white;
-            Gizmos.DrawSphere(motion.OriginalSole, 0.025f);
+            Gizmos.DrawSphere(motion.Core.OriginalSole, 0.025f);
             if (motion.Accepted)
             {
                 Color color = SupportColor(
-                    motion.ConstraintState,
-                    motion.LockResponse,
+                    motion.Core.ConstraintState,
+                    motion.Core.LockResponse,
                     foot.Side);
                 Gizmos.color = color;
-                Gizmos.DrawSphere(motion.CorrectedSole, 0.035f);
+                Gizmos.DrawSphere(motion.Core.CorrectedSole, 0.035f);
                 Handles.color = color;
                 Handles.DrawLine(
-                    motion.OriginalSole,
-                    motion.CorrectedSole,
+                    motion.Core.OriginalSole,
+                    motion.Core.CorrectedSole,
                     1f);
                 return;
             }
-            if (motion.RejectReason == CharacterFootSwingMotionRejectReason.StepUnavailable ||
-                motion.RejectReason == CharacterFootSwingMotionRejectReason.StepNotSwing)
+            if (motion.Core.RejectReason == CharacterFootSwingMotionRejectReason.StepUnavailable ||
+                motion.Core.RejectReason == CharacterFootSwingMotionRejectReason.StepNotSwing)
             {
                 return;
             }
             Handles.color = Color.red;
             Handles.DrawWireDisc(
-                motion.OriginalSole,
+                motion.Core.OriginalSole,
                 Vector3.up,
                 0.06f);
         }

@@ -721,8 +721,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                     animatedPreviousDot = Vector3.Dot(
                         animatedDirection,
                         stableBendDirection);
-                    if (animatedPreviousDot < 0f)
-                        animatedDirection = -animatedDirection;
                 }
                 stableBendDirection = animatedDirection;
                 hasStableBendDirection = true;
@@ -737,17 +735,27 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 ? stableBendDirection
                 : bend.direction;
             Vector3 targetAxis = targetAnkle - originalHip;
-            Vector3 projectedDirection = Vector3.ProjectOnPlane(
-                effectiveDirection,
-                targetAxis);
-            if (projectedDirection.sqrMagnitude > CharacterPoseConstraintMath.Epsilon)
-                effectiveDirection = projectedDirection.normalized;
-            else if (hasAnimatedDirection)
-                effectiveDirection = animatedDirection;
+            if (hasAnimatedDirection)
+            {
+                if (targetAxis.sqrMagnitude <= CharacterPoseConstraintMath.Epsilon)
+                    throw new InvalidOperationException(
+                        "Reliable animation bend direction requires a nonzero target leg axis.");
+                effectiveDirection = (Quaternion.FromToRotation(
+                    originalAnkle - originalHip,
+                    targetAxis) * animatedDirection).normalized;
+            }
+            else
+            {
+                Vector3 projectedDirection = Vector3.ProjectOnPlane(
+                    effectiveDirection,
+                    targetAxis);
+                if (projectedDirection.sqrMagnitude > CharacterPoseConstraintMath.Epsilon)
+                    effectiveDirection = projectedDirection.normalized;
+            }
             float effectivePreviousDot = hasAppliedBendDirection
                 ? Vector3.Dot(effectiveDirection, appliedBendDirection)
                 : 1f;
-            if (effectivePreviousDot < 0f)
+            if (!hasAnimatedDirection && effectivePreviousDot < 0f)
             {
                 effectiveDirection = -effectiveDirection;
                 effectivePreviousDot = -effectivePreviousDot;

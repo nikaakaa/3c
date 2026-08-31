@@ -62,3 +62,11 @@ AnimatedPreviousDot继续记录本帧动画方向与上一Stable方向的真实d
 4. 验收需以实际Solved膝侧、步长和已有Foot／Pelvis输出对160901，不使用已被取绝对值的EffectivePreviousDot或只有2个Landing事件的腿部Health代替。完整GetDir还经过LimitBend、effectorRotation和rotationOffset，未有逐入口动态覆盖；ZZZ SmoothKnee开关及其最终权重仍未闭合，不称为复刻。
 
 后续实现仍需独立加载及同输入Replay。本轮只完成原因与修复范围调研，没有宣布反弯已修复。
+
+## 2026-08-31：有符号腿轴运输候选
+
+用户已批准继续实验，且明确禁止再次引入踏空。160901认可行为已经由192218恢复包证明恢复；新诊断基线`20260831-203023-157-8233177ab72d4291bafb04d0c0af04b1`在1790c7a上完成，使用同一43357ff3cd384e5cba75d2c31175b116输入。2086脚行、1215列中1191列逐值相同，其余24列仅采样/实例/Surface/Path身份且映射无冲突；Foot、Pelvis、原动画与Solver业务数值没有变化。新口径facts71/diagnosis40/quality-score3不能与旧评分版本直接解释为行为改善；后续候选固定对这份新规则基线比较。
+
+本候选仅改`ApplyLegBendStabilization`：可靠动画保留本帧膝向符号，按原腿轴到加权目标腿轴旋转请求；Stable仍保存运输前动画方向，Applied保存实际请求。几何退化分支继续原历史与Target投影；权重、脚目标、骨盆、查询、Vendor、Goal和Writer不变。零目标腿轴明确报错，不生成匿名方向；严格反平行轴没有本包动态覆盖。此前SmoothKnee后处理会移动脚位置的失败不在本轮恢复，也不靠调高BendWeight或恢复Reach掩盖。
+
+业务取舍是让可靠动画决定膝盖侧向，而不以历史dot非负强压到另一侧。预期223行倒置请求消失并减少原动画未翻侧时的Solved Knee镜像；不承诺解决R825–827零权重深折叠或全部大步。验收须同时看真正Knee侧向、位移、全部Foot/Pelvis与四个退化帧，不以dot变负或总分单独判决。当前状态：候选已实现，尚未加载/回放，任务8.6/8.7未勾。

@@ -251,8 +251,17 @@ PredictionMotion、BodyTrajectory及其Tick/Generation/ResetSequence/AuthorityTi
 
 ## 时钟、预测运动、主支撑与Body观察列
 
-状态：最终Unity与Editor构建通过，0错误；build server已关闭，严格校验通过。等待实际回放。
+状态：候选53bfca7的原始采样保持，但正式分析发布失败，不能接纳；修复见下节。
 
 - 帧时钟17列、预测运动29列、主支撑4列、根层级35列、Body修正35列分别使用同一typed定义驱动读写。预测与Timeline的X/Z列仍分别填入原Vector2的x/y，不改变方向、平滑或限速数学。
 - 根层级捕获仍由原RootHierarchyCapture生产；Pelvis的同名PoseRootWorldPosition仍来自Pelvis Observation，不用根层级位置代替它求值时的输入事实。
 - 按实际公式注明角速度DegreesPerSecond和预测响应速率PerSecond；仅增加Editor单位元数据，原CSV布局与版本不变。旧映射和对应平铺解析字段删除，累计952/1215列迁入绑定，剩余263列及主行组合、Runtime证据分组未完成。
+
+## 非负剩余时长的解析合同修复
+
+状态：本列codec已修复，Unity与Editor构建0错误，build server已关闭，严格校验通过；等待重新回放。上一完整通过提交仍为0dc139f。
+
+- 失败原包：`Diagnostics/FootPlacementRuns/20260901-044732-164-8626964bd84a4e889e1863f74dc8c785`。1044输入及Body消费完成，2086行主表和67186行几何完整；Finalizer因`CurrentSegmentRemainingSeconds 'Infinity' is invalid`失败，没有diagnoses或Proof，不能借旧包代替。
+- CSV第302行、Frame153 Left、BodyTick152为首次失败。1620个Infinity位于两脚Frame153–957及1026–1030；上一043356和固定233436相同行同值。全部1191业务列与新增120列原始值相同，但42项诊断、明细、查询及Proof因发布失败未完成验证。
+- `CharacterFootPlacementModule.ResolveCurrentSegmentRemainingSeconds`在CurrentSegmentDurationTicks为0时正式返回PositiveInfinity，有限分支保证非负；`CharacterFutureBodyTranslationRequest`也明确接受该值。原来只写不读的字段被错误接到有限浮点codec，属于本次诊断映射缺陷，不改变Runtime事实。
+- 仅本列改用NonNegativeDuration codec：保留当前写入器的Infinity字面值，有限值继续通过原ParseFloat并要求非负；NaN、负无穷、负时长仍拒绝。通用浮点解析、评分、阈值与格式identity不变。根任务另扫失败原始主表，非有限值只有本列这1620项；失败包原地保留。

@@ -89,6 +89,16 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             return result;
         }
 
+        internal static float ParseNonNegativeDuration(string value, string field)
+        {
+            if (value == float.PositiveInfinity.ToString("R", CultureInfo.InvariantCulture))
+                return float.PositiveInfinity;
+            float result = ParseFloat(value, field);
+            if (result < 0f)
+                throw new InvalidDataException($"Foot Motion Foot row {field} '{value}' is invalid.");
+            return result;
+        }
+
         internal static int ParseInt(string value, string field)
         {
             if (!int.TryParse(

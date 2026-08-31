@@ -1,0 +1,19 @@
+{
+  "kind": "read-only-quality-comparison/1",
+  "baseline": "20260831-101451-028-2cb22b36c1da429b9de78728fe923d9f",
+  "current": "20260831-112611-018-2429691288e6434a8588a55de100efc2",
+  "targetCount": 37,
+  "fields": [
+    "id",
+    "question",
+    "eventKinds",
+    "rules",
+    "eligibleEventCount",
+    "matchedEventCount",
+    "matchedEventRateAvailable",
+    "matchedEventRate",
+    "scorePolicy",
+    "score"
+  ],
+  "differences": []
+}

@@ -1,0 +1,145 @@
+{
+  "kind": "current-integration-replay-evidence/1",
+  "testedCommit": "721b69f684cf0b653b29860695754de20310c708",
+  "run": "20260831-112611-018-2429691288e6434a8588a55de100efc2",
+  "sourceDirectory": "D:/Unity_Project_1/3C/3cDemo/Client/3C_Client/Diagnostics/FootPlacementRuns/20260831-112611-018-2429691288e6434a8588a55de100efc2",
+  "archiveDirectory": "D:/Unity_Project_1/3C/3cDemo/Client/3C_Client/Diagnostics/FootPlacementReplayArchives/20260830-pelvis-response-refinement/current-integration-112611",
+  "sourceFilesPreserved": true,
+  "verifiedFileCount": 14,
+  "zipFile": "20260831-112611-018-2429691288e6434a8588a55de100efc2.zip",
+  "zipSha256": "862fe9c0761b2cc2c2e076bd1a0f32a1c2cbd44397ee18bc6b79e6a6e3c9b71a",
+  "proofOriginalPath": "D:/Unity_Project_1/3C/3cDemo/Client/3C_Client/Temp/CharacterInputReplayProofs/v4/43357ff3cd384e5cba75d2c31175b116/20260831-112721-595-e621459f07d94d57aae4d8765464d721.json",
+  "proofOriginalSha256": "990e930defee5f85372f0fac3c04fdf7f507ebde0a002e1dc8db3520c28520f5",
+  "proofZipFile": "replay-proof-raw.zip",
+  "proofZipSha256": "de6286545d0df0648b29328a57eff286b3e2b833ff547870e59b7ff6e6cd6138",
+  "files": [
+    {
+      "path": "diagnoses/analysis.json",
+      "bytes": 4444,
+      "sha256": "03836801dd705ec597a77e0f85bd303ebbea445ad1e1525de95c9a197b03ce7a"
+    },
+    {
+      "path": "diagnoses/contact-plane-penetration.json",
+      "bytes": 37517,
+      "sha256": "89ca41c214b4fd51940fb7f67566fa0c055266db7a436689cf7a3ed01841d533"
+    },
+    {
+      "path": "diagnoses/details-index.json",
+      "bytes": 4866091,
+      "sha256": "8cf7af034c5841ed5dc41b8a17657e26ef02b29acbcc59ab75c7ffb034a16aa0"
+    },
+    {
+      "path": "diagnoses/details.jsonl",
+      "bytes": 59332786,
+      "sha256": "06f60eeff4cdc62a56b973b5ee81540ae31330ef3893b5fe28e932da9ec6d403"
+    },
+    {
+      "path": "diagnoses/landing-leg-extension.json",
+      "bytes": 9758,
+      "sha256": "2887812207cd922fe10a7521b468365e5db6914d4a713e60edaabaae4c6550bd"
+    },
+    {
+      "path": "diagnoses/landing-observation-reuse.json",
+      "bytes": 6019,
+      "sha256": "09d7644324096f662ac77a3761463ec11c20eb4904750a8ad56a09f46f772757"
+    },
+    {
+      "path": "diagnoses/landing-path-continuity.json",
+      "bytes": 31003,
+      "sha256": "8fe76c4600baeb6a154f5633aef368072e3e0c302be16cd41180246de72afed5"
+    },
+    {
+      "path": "diagnoses/landing-state-consistency.json",
+      "bytes": 211468,
+      "sha256": "f72c1ba0387445b24176bb7383ea729d4ee70bcc5c9c7282be2a99e17b1a6352"
+    },
+    {
+      "path": "diagnoses/locked-sole-motion.json",
+      "bytes": 10606,
+      "sha256": "b66364c19bb637c0653b44ebcf29fa500faafafc0234e7369968e7a21b733070"
+    },
+    {
+      "path": "diagnoses/quality-score.json",
+      "bytes": 24926,
+      "sha256": "56b595d6f84fa5039260f854a99c3ed64a9bdf6ef3b391973a88411b3c4d039e"
+    },
+    {
+      "path": "diagnoses/step-time-candidate-selection.json",
+      "bytes": 8909,
+      "sha256": "757ca07a31c0dd44adbb9fd9be3964e2d9dcdffaa4a9550fc8b89cbbc6586032"
+    },
+    {
+      "path": "diagnoses/swing-path-jitter.json",
+      "bytes": 120502,
+      "sha256": "1ff122b648f43b95034eb4040dda5fa1eb98fca618b4a87be205673e397f994b"
+    },
+    {
+      "path": "ground-path-geometry.csv",
+      "bytes": 12966193,
+      "sha256": "54b27182bec1e500ccff2f88b6b6a1e10800ae6dc9159238e2dea7ffcea3cb7c"
+    },
+    {
+      "path": "samples.csv",
+      "bytes": 19288762,
+      "sha256": "958a67ed9883928f075147431049038c1364911fa4479f41d258eb5bc87311c6"
+    }
+  ],
+  "baselineRun": "20260831-101451-028-2cb22b36c1da429b9de78728fe923d9f",
+  "trace": "43357ff3cd384e5cba75d2c31175b116",
+  "factsSchema": "character-foot-motion-facts/66",
+  "diagnosisSchema": "character-foot-diagnosis-file/35",
+  "scope": "当前已提交组合的自动回放；不修改算法、配置或诊断规则。",
+  "decision": "完整运行与发布成功；骨盆运动与101451相同，原下陷未解决，不作质量通过。",
+  "proofAudit": {
+    "kind": "read-only-proof-comparison/1",
+    "baselineProofArchive": "3cDemo/Client/3C_Client/Diagnostics/FootPlacementReplayArchives/20260830-pelvis-response-refinement/step-9-compression-reserve-candidate/restored-20mm/replay-proof-raw.zip",
+    "currentProof": "D:\\Unity_Project_1\\3C\\3cDemo\\Client\\3C_Client\\Temp\\CharacterInputReplayProofs\\v4\\43357ff3cd384e5cba75d2c31175b116\\20260831-112721-595-e621459f07d94d57aae4d8765464d721.json",
+    "frameCount": 1044,
+    "fullFrameArraysEqual": true,
+    "runtimeIdentityEqual": true,
+    "traceContentEqual": true,
+    "inputEqual": true,
+    "startBodyEqual": true,
+    "bodyTrajectoryEqual": true,
+    "clockEqual": true,
+    "officialComparison": {
+      "baseline_available": false,
+      "matched": true,
+      "baseline_path": "",
+      "compared_frame_count": 0,
+      "aggregate_mismatches": [],
+      "divergent_frame_count": 0
+    },
+    "note": "官方为baseline-created，不是官方A/B；完整数组及身份另行只读对照已保存101451。"
+  },
+  "rawAuditFile": "raw-audit.json",
+  "qualityAuditFile": "quality-audit.json",
+  "formalFrameQuery420": {
+    "columns": [
+      "FrameSequence",
+      "Side",
+      "GroundSurfaceState",
+      "GroundSurfaceSegmentCount",
+      "FootMotionConstraintState",
+      "PelvisHardReachOutputClamped",
+      "StrideSpringInput",
+      "StrideSpringOutput",
+      "StrideSpringTarget",
+      "FinalPhysicalPelvisWorldPositionY"
+    ],
+    "rows": [
+      [
+        "420",
+        "Left",
+        "Ready",
+        "56",
+        "Swing",
+        "1",
+        "0.0420692563",
+        "-0.00167435408",
+        "-0.00167435408",
+        "1.78710008"
+      ]
+    ]
+  }
+}

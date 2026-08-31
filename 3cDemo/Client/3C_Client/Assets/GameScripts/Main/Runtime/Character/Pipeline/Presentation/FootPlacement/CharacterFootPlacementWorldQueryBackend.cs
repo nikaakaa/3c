@@ -58,7 +58,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         readonly RaycastHit[] m_LandingHits;
         readonly RaycastHit[] m_GroundPathHits;
         readonly RaycastHit[] m_CurrentSupportHits;
-        readonly CharacterFootGroundGeometrySource m_GroundGeometry;
+        CharacterFootGroundGeometrySource m_GroundGeometry;
 
         internal CharacterFootPlacementWorldQueryBackend(
             PhysicsScene physicsScene,
@@ -77,7 +77,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             m_LandingHits = new RaycastHit[landingHitCapacity];
             m_GroundPathHits = new RaycastHit[groundPathSegmentHitCapacity];
             m_CurrentSupportHits = new RaycastHit[landingHitCapacity];
-            m_GroundGeometry = new CharacterFootGroundGeometrySource(physicsScene, rig);
         }
 
         internal PhysicsScene PhysicsScene => m_PhysicsScene;
@@ -291,6 +290,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 return new CharacterFootGroundPathQueryResult(
                     CharacterFootGroundPathRejectReason.SurfaceGeometryUnavailable, segmentCount);
             }
+            m_GroundGeometry ??= new CharacterFootGroundGeometrySource(m_PhysicsScene, m_Rig);
             for (int i = 0; i < output.Count; i++)
             {
                 CharacterFootGroundSurfaceState state =

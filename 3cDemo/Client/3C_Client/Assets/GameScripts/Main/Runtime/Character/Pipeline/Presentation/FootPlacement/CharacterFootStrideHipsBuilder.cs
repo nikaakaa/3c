@@ -687,25 +687,25 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         const float EndpointTolerance = 0.005f;
 
         internal static void ResolvePrimarySupport(
-            in CharacterResolvedFootResult leftMotion,
-            in CharacterResolvedFootResult rightMotion,
+            in CharacterFootPlacementRequest leftRequest,
+            in CharacterFootPlacementRequest rightRequest,
             ref CharacterFootPrimarySupportFacts primarySupport)
         {
-            bool leftRetainable = IsRetainablePrimarySupport(in leftMotion);
-            bool rightRetainable = IsRetainablePrimarySupport(in rightMotion);
-            bool leftCandidate = IsAcquirablePrimarySupport(in leftMotion);
-            bool rightCandidate = IsAcquirablePrimarySupport(in rightMotion);
+            bool leftRetainable = IsRetainablePrimarySupport(in leftRequest);
+            bool rightRetainable = IsRetainablePrimarySupport(in rightRequest);
+            bool leftCandidate = IsAcquirablePrimarySupport(in leftRequest);
+            bool rightCandidate = IsAcquirablePrimarySupport(in rightRequest);
             if (primarySupport.HasValue)
             {
                 bool retained = primarySupport.Side == CharacterFootSide.Left
                     ? leftRetainable &&
-                      leftMotion.SupportEventIdentity == primarySupport.LandingEventIdentity &&
+                      leftRequest.Support.EventIdentity == primarySupport.LandingEventIdentity &&
                       (!rightCandidate ||
-                       leftMotion.SupportWeight >= rightMotion.SupportWeight)
+                       leftRequest.Support.Weight >= rightRequest.Support.Weight)
                     : rightRetainable &&
-                      rightMotion.SupportEventIdentity == primarySupport.LandingEventIdentity &&
+                      rightRequest.Support.EventIdentity == primarySupport.LandingEventIdentity &&
                       (!leftCandidate ||
-                       rightMotion.SupportWeight >= leftMotion.SupportWeight);
+                       rightRequest.Support.Weight >= leftRequest.Support.Weight);
                 if (retained)
                 {
                     primarySupport.Retained = true;
@@ -721,17 +721,17 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
 
             bool selectLeft = leftCandidate &&
                 (!rightCandidate ||
-                 leftMotion.SupportWeight > rightMotion.SupportWeight ||
-                 Mathf.Abs(leftMotion.SupportWeight - rightMotion.SupportWeight) <=
+                 leftRequest.Support.Weight > rightRequest.Support.Weight ||
+                 Mathf.Abs(leftRequest.Support.Weight - rightRequest.Support.Weight) <=
                  GeometryEpsilon &&
-                 leftMotion.SupportHorizontalError <= rightMotion.SupportHorizontalError);
+                 leftRequest.Support.HorizontalError <= rightRequest.Support.HorizontalError);
             primarySupport.HasValue = true;
             primarySupport.Side = selectLeft
                 ? CharacterFootSide.Left
                 : CharacterFootSide.Right;
             primarySupport.LandingEventIdentity = selectLeft
-                ? leftMotion.SupportEventIdentity
-                : rightMotion.SupportEventIdentity;
+                ? leftRequest.Support.EventIdentity
+                : rightRequest.Support.EventIdentity;
             primarySupport.Retained = false;
         }
 
@@ -747,7 +747,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             bool leftGroundPathAccepted,
             bool rightGroundPathAccepted,
             bool grounded,
-            in CharacterResolvedFootPair resolvedPair,
+            in CharacterFootPlacementRequestPair requestPair,
             in CharacterFootPrimarySupportResult primarySupport,
             Vector3 componentUp)
         {
@@ -763,8 +763,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             }
             Vector3 primarySupportContactAnchor = primarySupport.HasValue
                 ? primarySupport.Side == CharacterFootSide.Left
-                    ? resolvedPair.Left.PelvisReachReference.Point
-                    : resolvedPair.Right.PelvisReachReference.Point
+                    ? requestPair.Left.Support.ReachReference.Point
+                    : requestPair.Right.Support.ReachReference.Point
                 : default;
             if (!TryResolveStride(
                     in leftSwingStep,
@@ -966,7 +966,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
 
         internal static CharacterFootStrideHipsResult ResolvePelvis(
             in CharacterFootStrideIntentResult intent,
-            in CharacterResolvedFootPair resolvedPair,
+            in CharacterFootPlacementRequestPair requestPair,
             in CharacterFootPrimarySupportResult primarySupport,
             in CharacterFootPelvisFrame frame,
             in CharacterFootPelvisReachInput reachInput,
@@ -983,14 +983,14 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 return ResolvePelvisRelease(
                     intent.RejectReason, in frame, in reachInput, in settings, ref spring);
             }
-            CharacterResolvedFootResult supportMotion = intent.SupportSide == CharacterFootSide.Left
-                ? resolvedPair.Left
-                : resolvedPair.Right;
-            if (supportMotion.Outcome != CharacterFootResolvedOutcome.Ready ||
-                !supportMotion.PelvisReachReference.IsAvailable ||
-                supportMotion.SupportWeight <= CharacterPoseConstraintMath.Epsilon ||
-                supportMotion.SupportEligibility == CharacterFootSupportEligibility.None ||
-                supportMotion.SupportEventIdentity != primarySupport.LandingEventIdentity)
+            CharacterFootPlacementRequest supportRequest = intent.SupportSide == CharacterFootSide.Left
+                ? requestPair.Left
+                : requestPair.Right;
+            if (supportRequest.Outcome != CharacterFootResolvedOutcome.Ready ||
+                !supportRequest.Support.ReachReference.IsAvailable ||
+                supportRequest.Support.Weight <= CharacterPoseConstraintMath.Epsilon ||
+                supportRequest.Support.Eligibility == CharacterFootSupportEligibility.None ||
+                supportRequest.Support.EventIdentity != primarySupport.LandingEventIdentity)
             {
                 return ResolvePelvisRelease(
                     CharacterFootStrideRejectReason.SupportUnavailable,
@@ -1030,13 +1030,13 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 ? frame.LeftLegLength : frame.RightLegLength;
             if (!float.IsFinite(supportLegLength) || supportLegLength <= EndpointTolerance ||
                 !Finite(supportPose.HipPosition) || !Finite(supportPose.AnklePosition) ||
-                !Finite(supportMotion.EffectiveAnkle))
+                !Finite(supportRequest.Pose.EffectiveAnkle))
                 throw new ArgumentException("Pelvis posture input is invalid.");
             float postureReserve = Mathf.Max(
                 0f, supportLegLength -
                 Vector3.Distance(supportPose.HipPosition, supportPose.AnklePosition));
             bool postureAvailable = TryResolvePostureInterval(
-                supportPose.HipPosition, supportMotion.EffectiveAnkle, up,
+                supportPose.HipPosition, supportRequest.Pose.EffectiveAnkle, up,
                 supportLegLength, postureReserve,
                 out float postureUsableLength,
                 out float postureMinimum, out float postureMaximum);
@@ -1050,7 +1050,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 postureAvailable,
                 supportPose.HipPosition,
                 supportPose.AnklePosition,
-                supportMotion.EffectiveAnkle,
+                supportRequest.Pose.EffectiveAnkle,
                 supportLegLength,
                 postureReserve,
                 postureUsableLength,
@@ -1058,12 +1058,12 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 postureMaximum,
                 preferredTarget,
                 Mathf.Abs(preferredTarget - heightTarget.OffsetAlongUp) > GeometryEpsilon);
-            bool primaryRequired = supportMotion.GoalWeight > GeometryEpsilon;
+            bool primaryRequired = supportRequest.Pose.GoalWeight > GeometryEpsilon;
             CharacterFootLandingReachRequest primaryRequest = primaryRequired
                 ? new CharacterFootLandingReachRequest(
                     primarySupport.LandingEventIdentity,
                     supportPose.HipPosition,
-                    supportMotion.EffectiveAnkle,
+                    supportRequest.Pose.EffectiveAnkle,
                     supportLegLength,
                     settings.MinimumLandingLegCompressionReserve)
                 : default;
@@ -1317,17 +1317,17 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             step.HasConsistentLandingEventIdentity;
 
         static bool IsRetainablePrimarySupport(
-            in CharacterResolvedFootResult motion) =>
-            motion.Outcome == CharacterFootResolvedOutcome.Ready &&
-            motion.PelvisReachReference.IsAvailable &&
-            motion.SupportEventIdentity != 0 &&
-            motion.SupportWeight > GeometryEpsilon &&
-            motion.SupportEligibility != CharacterFootSupportEligibility.None;
+            in CharacterFootPlacementRequest request) =>
+            request.Outcome == CharacterFootResolvedOutcome.Ready &&
+            request.Support.ReachReference.IsAvailable &&
+            request.Support.EventIdentity != 0 &&
+            request.Support.Weight > GeometryEpsilon &&
+            request.Support.Eligibility != CharacterFootSupportEligibility.None;
 
         static bool IsAcquirablePrimarySupport(
-            in CharacterResolvedFootResult motion) =>
-            IsRetainablePrimarySupport(in motion) &&
-            motion.SupportEligibility ==
+            in CharacterFootPlacementRequest request) =>
+            IsRetainablePrimarySupport(in request) &&
+            request.Support.Eligibility ==
             CharacterFootSupportEligibility.AcquireAndRetain;
 
         static CharacterFootSwingMotionResult RejectedPlant(

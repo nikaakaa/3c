@@ -54,9 +54,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor
 
     internal static class CharacterFootMotionDiagnosticAnalyzer
     {
-        const string Schema = "character-foot-motion-facts/67";
+        const string Schema = "character-foot-motion-facts/66";
         const string AnalyzerId = "character-foot-motion-fact-analyzer";
-        const int AnalyzerVersion = 67;
+        const int AnalyzerVersion = 66;
         const float RuntimeGeometryEpsilon = 0.0001f;
         const float ExpectedCorrectionResponseIncreaseSpeed = 1.8f;
         const float ExpectedCorrectionResponseDecreaseSpeed = 1.5f;
@@ -6866,19 +6866,12 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 {
                     Available = Int("PelvisHeightTargetAvailable") != 0,
                     ComponentUp = Vector("PelvisHeightTargetComponentUp"),
-                    ReferencePoint = Vector("PelvisHeightTargetReferencePoint"),
-                    FootProximityRadius = Float("PelvisHeightTargetFootProximityRadius"),
-                    LeftAnimatedAnkle = Vector("PelvisHeightTargetLeftAnimatedAnkle"),
-                    RightAnimatedAnkle = Vector("PelvisHeightTargetRightAnimatedAnkle"),
-                    LeftTargetAnkle = Vector("PelvisHeightTargetLeftTargetAnkle"),
-                    RightTargetAnkle = Vector("PelvisHeightTargetRightTargetAnkle"),
-                    LeftCorrectionAlongUp = Float("PelvisHeightTargetLeftCorrectionAlongUp"),
-                    RightCorrectionAlongUp = Float("PelvisHeightTargetRightCorrectionAlongUp"),
-                    LeftCandidateKind = EnumField<CharacterFootPelvisFootCandidateKind>("PelvisHeightTargetLeftCandidateKind"),
-                    RightCandidateKind = EnumField<CharacterFootPelvisFootCandidateKind>("PelvisHeightTargetRightCandidateKind"),
-                    LeftCandidateValue = Float("PelvisHeightTargetLeftCandidateValue"),
-                    RightCandidateValue = Float("PelvisHeightTargetRightCandidateValue"),
-                    Selection = EnumField<CharacterFootPelvisTargetSelection>("PelvisHeightTargetSelection"),
+                    LeftAnimatedSole = Vector("PelvisHeightTargetLeftAnimatedSole"),
+                    RightAnimatedSole = Vector("PelvisHeightTargetRightAnimatedSole"),
+                    LeftTargetSole = Vector("PelvisHeightTargetLeftTargetSole"),
+                    RightTargetSole = Vector("PelvisHeightTargetRightTargetSole"),
+                    AnimatedMinimumAlongUp = Float("PelvisHeightTargetAnimatedMinimumAlongUp"),
+                    TargetMinimumAlongUp = Float("PelvisHeightTargetMinimumAlongUp"),
                     RequestedOffsetAlongUp = Float("PelvisRequestedOffsetAlongUp")
                 },
                 StrideSupportSide = Cell("StrideSupportSide"),
@@ -10073,16 +10066,11 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 "StrideState", "StrideSupportSide",
                 "PelvisHeightTargetAvailable",
                 "PelvisHeightTargetComponentUpX", "PelvisHeightTargetComponentUpY", "PelvisHeightTargetComponentUpZ",
-                "PelvisHeightTargetReferencePointX", "PelvisHeightTargetReferencePointY", "PelvisHeightTargetReferencePointZ",
-                "PelvisHeightTargetFootProximityRadius",
-                "PelvisHeightTargetLeftAnimatedAnkleX", "PelvisHeightTargetLeftAnimatedAnkleY", "PelvisHeightTargetLeftAnimatedAnkleZ",
-                "PelvisHeightTargetRightAnimatedAnkleX", "PelvisHeightTargetRightAnimatedAnkleY", "PelvisHeightTargetRightAnimatedAnkleZ",
-                "PelvisHeightTargetLeftTargetAnkleX", "PelvisHeightTargetLeftTargetAnkleY", "PelvisHeightTargetLeftTargetAnkleZ",
-                "PelvisHeightTargetRightTargetAnkleX", "PelvisHeightTargetRightTargetAnkleY", "PelvisHeightTargetRightTargetAnkleZ",
-                "PelvisHeightTargetLeftCorrectionAlongUp", "PelvisHeightTargetRightCorrectionAlongUp",
-                "PelvisHeightTargetLeftCandidateKind", "PelvisHeightTargetRightCandidateKind",
-                "PelvisHeightTargetLeftCandidateValue", "PelvisHeightTargetRightCandidateValue",
-                "PelvisHeightTargetSelection", "PelvisRequestedOffsetAlongUp",
+                "PelvisHeightTargetLeftAnimatedSoleX", "PelvisHeightTargetLeftAnimatedSoleY", "PelvisHeightTargetLeftAnimatedSoleZ",
+                "PelvisHeightTargetRightAnimatedSoleX", "PelvisHeightTargetRightAnimatedSoleY", "PelvisHeightTargetRightAnimatedSoleZ",
+                "PelvisHeightTargetLeftTargetSoleX", "PelvisHeightTargetLeftTargetSoleY", "PelvisHeightTargetLeftTargetSoleZ",
+                "PelvisHeightTargetRightTargetSoleX", "PelvisHeightTargetRightTargetSoleY", "PelvisHeightTargetRightTargetSoleZ",
+                "PelvisHeightTargetAnimatedMinimumAlongUp", "PelvisHeightTargetMinimumAlongUp", "PelvisRequestedOffsetAlongUp",
                 "PelvisPosturePreferenceEvaluated",
                 "PelvisPosturePreferenceAvailable",
                 "PelvisPosturePreferenceHipX",
@@ -11427,106 +11415,51 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         {
             internal bool Available;
             internal Vector3 ComponentUp;
-            internal Vector3 ReferencePoint;
-            internal float FootProximityRadius;
-            internal Vector3 LeftAnimatedAnkle;
-            internal Vector3 RightAnimatedAnkle;
-            internal Vector3 LeftTargetAnkle;
-            internal Vector3 RightTargetAnkle;
-            internal float LeftCorrectionAlongUp;
-            internal float RightCorrectionAlongUp;
-            internal CharacterFootPelvisFootCandidateKind LeftCandidateKind;
-            internal CharacterFootPelvisFootCandidateKind RightCandidateKind;
-            internal float LeftCandidateValue;
-            internal float RightCandidateValue;
-            internal CharacterFootPelvisTargetSelection Selection;
+            internal Vector3 LeftAnimatedSole;
+            internal Vector3 RightAnimatedSole;
+            internal Vector3 LeftTargetSole;
+            internal Vector3 RightTargetSole;
+            internal float AnimatedMinimumAlongUp;
+            internal float TargetMinimumAlongUp;
             internal float RequestedOffsetAlongUp;
 
             internal void RequireValid(FootFrame frame)
             {
-                RequirePelvis(Available == (frame.StrideState == "Accepted"), frame, "height target execution");
                 if (!Available)
                 {
-                    RequirePelvis(SameAs(new PelvisHeightTargetFrame()), frame, "unevaluated height target");
+                    if (!ComponentUp.Equals(Vector3.zero) ||
+                        !LeftAnimatedSole.Equals(Vector3.zero) || !RightAnimatedSole.Equals(Vector3.zero) ||
+                        !LeftTargetSole.Equals(Vector3.zero) || !RightTargetSole.Equals(Vector3.zero) ||
+                        AnimatedMinimumAlongUp != 0f || TargetMinimumAlongUp != 0f || RequestedOffsetAlongUp != 0f)
+                        throw new InvalidDataException(
+                            $"Foot Motion unavailable Pelvis height target is not default Frame={frame.Frame} Side={frame.Side}.");
                     return;
                 }
-                RequirePelvis(FiniteVector(ComponentUp) &&
-                    Math.Abs(ComponentUp.sqrMagnitude - 1f) <= RuntimeGeometryEpsilon &&
-                    FiniteVector(ReferencePoint) && float.IsFinite(FootProximityRadius) && FootProximityRadius > 0f &&
-                    FiniteVector(LeftAnimatedAnkle) && FiniteVector(RightAnimatedAnkle) &&
-                    FiniteVector(LeftTargetAnkle) && FiniteVector(RightTargetAnkle), frame, "height target geometry");
-                float weight = frame.FinalGoalPositionWeight;
-                Vector3 expectedAnkle = weight > 0f
-                    ? Vector3.LerpUnclamped(frame.OriginalAnkle, frame.ResolvedGoalTargetAnkle, weight)
-                    : frame.OriginalAnkle;
-                Vector3 animatedAnkle = frame.Side == "Left" ? LeftAnimatedAnkle : RightAnimatedAnkle;
-                Vector3 targetAnkle = frame.Side == "Left" ? LeftTargetAnkle : RightTargetAnkle;
-                RequirePelvis(frame.Pelvis.Observation.PoseInputAvailable &&
-                    Vector3.Distance(ReferencePoint, frame.Pelvis.Observation.AnimatedWorldPosition) <= PositionNoiseFloor &&
-                    Vector3.Distance(animatedAnkle, frame.OriginalAnkle) <= PositionNoiseFloor &&
-                    Vector3.Distance(targetAnkle, expectedAnkle) <= PositionNoiseFloor,
-                    frame, "height target pre-Pelvis input lineage");
-                var left = Candidate(LeftAnimatedAnkle, LeftTargetAnkle);
-                var right = Candidate(RightAnimatedAnkle, RightTargetAnkle);
-                bool leftTag = left.kind == CharacterFootPelvisFootCandidateKind.OriginalWithinRadius;
-                bool rightTag = right.kind == CharacterFootPelvisFootCandidateKind.OriginalWithinRadius;
-                CharacterFootPelvisTargetSelection expectedSelection;
-                float expected;
-                if (leftTag || rightTag)
-                {
-                    expectedSelection = CharacterFootPelvisTargetSelection.OriginalProximityMaximum;
-                    expected = leftTag && rightTag ? Mathf.Max(left.value, right.value) : leftTag ? left.value : right.value;
-                }
-                else if (CandidateAvailable(left.kind) != CandidateAvailable(right.kind))
-                {
-                    expectedSelection = CharacterFootPelvisTargetSelection.SingleTargetCandidate;
-                    expected = CandidateAvailable(left.kind) ? left.value : right.value;
-                }
-                else
-                {
-                    expectedSelection = CharacterFootPelvisTargetSelection.CorrectionMinimum;
-                    expected = Mathf.Min(left.correction, right.correction);
-                }
-                if (LeftCandidateKind != left.kind || RightCandidateKind != right.kind ||
-                    Selection != expectedSelection || !PelvisClose(LeftCorrectionAlongUp, left.correction) ||
-                    !PelvisClose(RightCorrectionAlongUp, right.correction) ||
-                    !PelvisClose(LeftCandidateValue, left.value) || !PelvisClose(RightCandidateValue, right.value) ||
-                    !PelvisClose(RequestedOffsetAlongUp, expected))
+                float animatedMinimum = Mathf.Min(Vector3.Dot(LeftAnimatedSole, ComponentUp),
+                    Vector3.Dot(RightAnimatedSole, ComponentUp));
+                float targetMinimum = Mathf.Min(Vector3.Dot(LeftTargetSole, ComponentUp),
+                    Vector3.Dot(RightTargetSole, ComponentUp));
+                if (!FiniteVector(ComponentUp) || Math.Abs(ComponentUp.sqrMagnitude - 1f) > RuntimeGeometryEpsilon ||
+                    !FiniteVector(LeftAnimatedSole) || !FiniteVector(RightAnimatedSole) ||
+                    !FiniteVector(LeftTargetSole) || !FiniteVector(RightTargetSole) ||
+                    !float.IsFinite(AnimatedMinimumAlongUp) || !float.IsFinite(TargetMinimumAlongUp) ||
+                    !float.IsFinite(RequestedOffsetAlongUp) || !float.IsFinite(animatedMinimum) ||
+                    !float.IsFinite(targetMinimum) ||
+                    Math.Abs(AnimatedMinimumAlongUp - animatedMinimum) > RuntimeGeometryEpsilon ||
+                    Math.Abs(TargetMinimumAlongUp - targetMinimum) > RuntimeGeometryEpsilon ||
+                    Math.Abs(RequestedOffsetAlongUp - (targetMinimum - animatedMinimum)) > RuntimeGeometryEpsilon)
                     throw new InvalidDataException(
-                        $"Foot Motion Pelvis candidates are inconsistent Frame={frame.Frame} Side={frame.Side} " +
-                        $"Left={LeftCandidateKind}/{left.kind} Right={RightCandidateKind}/{right.kind} " +
-                        $"Selection={Selection}/{expectedSelection} Requested={RequestedOffsetAlongUp:R}/{expected:R}.");
+                        $"Foot Motion Pelvis height target is inconsistent Frame={frame.Frame} Side={frame.Side} " +
+                        $"AnimatedMinimum={AnimatedMinimumAlongUp:R}/{animatedMinimum:R} " +
+                        $"TargetMinimum={TargetMinimumAlongUp:R}/{targetMinimum:R} RequestedOffset={RequestedOffsetAlongUp:R}.");
             }
-
-            (CharacterFootPelvisFootCandidateKind kind, float correction, float value) Candidate(Vector3 animated, Vector3 target)
-            {
-                float correction = Vector3.Dot(target - animated, ComponentUp);
-                float radiusSquare = FootProximityRadius * FootProximityRadius;
-                if ((animated - ReferencePoint).sqrMagnitude < radiusSquare)
-                    return (CharacterFootPelvisFootCandidateKind.OriginalWithinRadius, correction, correction);
-                Vector3 difference = ReferencePoint - target;
-                float c = difference.sqrMagnitude - radiusSquare;
-                if (c >= 0f)
-                    return (CharacterFootPelvisFootCandidateKind.TargetOutsideRadius, correction, 0f);
-                float b = 2f * Vector3.Dot(difference, ComponentUp);
-                return b <= 0f
-                    ? (CharacterFootPelvisFootCandidateKind.TargetAtOrAboveReference, correction, correction)
-                    : (CharacterFootPelvisFootCandidateKind.TargetBelowReference, correction,
-                        (-b + Mathf.Sqrt(b * b - 4f * c)) * 0.5f);
-            }
-
-            static bool CandidateAvailable(CharacterFootPelvisFootCandidateKind kind) =>
-                kind != CharacterFootPelvisFootCandidateKind.None && kind != CharacterFootPelvisFootCandidateKind.TargetOutsideRadius;
 
             internal bool SameAs(PelvisHeightTargetFrame other) =>
                 Available == other.Available && ComponentUp.Equals(other.ComponentUp) &&
-                ReferencePoint.Equals(other.ReferencePoint) && FootProximityRadius == other.FootProximityRadius &&
-                LeftAnimatedAnkle.Equals(other.LeftAnimatedAnkle) && RightAnimatedAnkle.Equals(other.RightAnimatedAnkle) &&
-                LeftTargetAnkle.Equals(other.LeftTargetAnkle) && RightTargetAnkle.Equals(other.RightTargetAnkle) &&
-                LeftCorrectionAlongUp == other.LeftCorrectionAlongUp && RightCorrectionAlongUp == other.RightCorrectionAlongUp &&
-                LeftCandidateKind == other.LeftCandidateKind && RightCandidateKind == other.RightCandidateKind &&
-                LeftCandidateValue == other.LeftCandidateValue && RightCandidateValue == other.RightCandidateValue &&
-                Selection == other.Selection && RequestedOffsetAlongUp == other.RequestedOffsetAlongUp;
+                LeftAnimatedSole.Equals(other.LeftAnimatedSole) && RightAnimatedSole.Equals(other.RightAnimatedSole) &&
+                LeftTargetSole.Equals(other.LeftTargetSole) && RightTargetSole.Equals(other.RightTargetSole) &&
+                AnimatedMinimumAlongUp == other.AnimatedMinimumAlongUp &&
+                TargetMinimumAlongUp == other.TargetMinimumAlongUp && RequestedOffsetAlongUp == other.RequestedOffsetAlongUp;
 
             internal CharacterFootPelvisHeightTargetObservation ToFact(FootFrame frame) =>
                 new CharacterFootPelvisHeightTargetObservation
@@ -11536,21 +11469,12 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     strideState = frame.StrideState,
                     available = Available,
                     componentUp = Available ? CharacterFootVectorFact.From(ComponentUp) : null,
-                    referencePoint = Available ? CharacterFootVectorFact.From(ReferencePoint) : null,
-                    footProximityRadius = Available ? (double?)FootProximityRadius : null,
-                    leftAnimatedAnkle = Available ? CharacterFootVectorFact.From(LeftAnimatedAnkle) : null,
-                    rightAnimatedAnkle = Available ? CharacterFootVectorFact.From(RightAnimatedAnkle) : null,
-                    leftTargetAnkle = Available ? CharacterFootVectorFact.From(LeftTargetAnkle) : null,
-                    rightTargetAnkle = Available ? CharacterFootVectorFact.From(RightTargetAnkle) : null,
-                    leftCorrectionAlongUp = Available ? (double?)LeftCorrectionAlongUp : null,
-                    rightCorrectionAlongUp = Available ? (double?)RightCorrectionAlongUp : null,
-                    leftCandidateKind = LeftCandidateKind.ToString(),
-                    rightCandidateKind = RightCandidateKind.ToString(),
-                    leftCandidateAvailable = CandidateAvailable(LeftCandidateKind),
-                    rightCandidateAvailable = CandidateAvailable(RightCandidateKind),
-                    leftCandidateValue = CandidateAvailable(LeftCandidateKind) ? (double?)LeftCandidateValue : null,
-                    rightCandidateValue = CandidateAvailable(RightCandidateKind) ? (double?)RightCandidateValue : null,
-                    selection = Selection.ToString(),
+                    leftAnimatedSole = Available ? CharacterFootVectorFact.From(LeftAnimatedSole) : null,
+                    rightAnimatedSole = Available ? CharacterFootVectorFact.From(RightAnimatedSole) : null,
+                    leftTargetSole = Available ? CharacterFootVectorFact.From(LeftTargetSole) : null,
+                    rightTargetSole = Available ? CharacterFootVectorFact.From(RightTargetSole) : null,
+                    animatedMinimumAlongUp = Available ? (double?)AnimatedMinimumAlongUp : null,
+                    targetMinimumAlongUp = Available ? (double?)TargetMinimumAlongUp : null,
                     requestedOffsetAlongUp = Available ? (double?)RequestedOffsetAlongUp : null
                 };
         }

@@ -6,11 +6,120 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
 {
     internal static class CharacterFootLifecycle
     {
+        internal readonly struct Completion
+        {
+            internal Completion(
+                in CharacterFootStateEvaluation evaluation,
+                in CharacterFootTransitionDecision preTransition,
+                in CharacterFootStateTarget target,
+                in CharacterFootInterpolationResult interpolation,
+                in CharacterFootSwingMotionResult outputSwing,
+                in CharacterFootPlacementRequest request,
+                in CharacterFootSwingMotionResult preliminaryMotion,
+                in CharacterFootLifecycleTransitionFact lifecycleTransition,
+                bool landingCompletionPending)
+            {
+                Evaluation = evaluation;
+                PreTransition = preTransition;
+                Target = target;
+                Interpolation = interpolation;
+                OutputSwing = outputSwing;
+                Request = request;
+                PreliminaryMotion = preliminaryMotion;
+                LifecycleTransition = lifecycleTransition;
+                LandingCompletionPending = landingCompletionPending;
+            }
+
+            CharacterFootStateEvaluation Evaluation { get; }
+            CharacterFootTransitionDecision PreTransition { get; }
+            CharacterFootStateTarget Target { get; }
+            CharacterFootInterpolationResult Interpolation { get; }
+            CharacterFootSwingMotionResult OutputSwing { get; }
+            CharacterFootPlacementRequest Request { get; }
+            CharacterFootSwingMotionResult PreliminaryMotion { get; }
+            CharacterFootLifecycleTransitionFact LifecycleTransition { get; }
+            bool LandingCompletionPending { get; }
+
+            internal CharacterResolvedFootResult Complete(
+                ref CharacterFootLifecycleContext context,
+                bool landingReachAvailable,
+                out CharacterFootSwingMotionResult result)
+            {
+                if (!LandingCompletionPending)
+                {
+                    result = PreliminaryMotion;
+                    CharacterFootPlacementRequest request = Request;
+                    return Publish(in request);
+                }
+                CharacterFootStateFrame frame = Evaluation.Frame;
+                CharacterFootInterpolationResult interpolation =
+                    Interpolation;
+                CharacterFootTransitionDecision preTransition =
+                    PreTransition;
+                CharacterFootStateTarget target = Target;
+                CharacterFootPathContinuityFact interpolationContinuity =
+                    interpolation.ContinuityFact;
+                CharacterFootSwingMotionResult outputSwing = OutputSwing;
+                CharacterFootTransitionDecision postTransition =
+                    CharacterFootTransitionResolver.ResolvePostInterpolation(
+                        in context,
+                        in frame,
+                        interpolation.Completed,
+                        landingReachAvailable);
+                CharacterFootTransitionRuntime.Apply(
+                    ref context,
+                    in postTransition,
+                    in frame);
+                CharacterFootInterpolationRuntime.ApplyPostTransition(
+                    ref context.Interpolation,
+                    in postTransition);
+                CharacterFootHardConstraintResult hardConstraint =
+                    CharacterFootHardConstraintResolver.Resolve(
+                        in context,
+                        in frame,
+                        context.Interpolation.EffectiveCorrection);
+                CharacterFootPathContinuityFact continuityFact =
+                    CompleteContinuity(
+                        in interpolationContinuity,
+                        in preTransition,
+                        in postTransition,
+                        in target,
+                        in interpolation,
+                        in hardConstraint,
+                        frame.ComponentUp);
+                CharacterFootLifecycleTransitionFact lifecycleTransition =
+                    LifecycleTransition.Complete(
+                        in context,
+                        in preTransition,
+                        in postTransition);
+                Vector3 desiredCorrection = ResolveDiagnosticDesiredCorrection(
+                    in context,
+                    in target,
+                    in frame);
+                CharacterFootSupportIntent supportIntent =
+                    target.SupportIntent;
+                CharacterFootSupportTarget selectedSupportTarget =
+                    interpolation.SupportTarget;
+                CharacterFootStateEvaluation evaluation = Evaluation;
+                CharacterFootPlacementRequest completed = BuildRequest(
+                    in context,
+                    in evaluation,
+                    in outputSwing,
+                    desiredCorrection,
+                    hardConstraint.OutputCorrection,
+                    in selectedSupportTarget,
+                    in supportIntent,
+                    in continuityFact,
+                    in lifecycleTransition,
+                    out result);
+                return Publish(in completed);
+            }
+        }
+
         internal static CharacterFootPlacementRequest Evaluate(
             ref CharacterFootLifecycleContext context,
             in CharacterFootStateEvaluation evaluation,
-            out CharacterFootSwingMotionResult result,
-            out CharacterFootLifecycleEvaluationReceipt receipt)
+            out Completion receipt)
         {
             CharacterFootStateFrame frame = evaluation.Frame;
             var formalFootMotion = evaluation.FormalFootMotion;
@@ -24,7 +133,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             return Resolve(
                 ref context,
                 in evaluation,
-                out result,
+                out _,
                 out receipt);
         }
 
@@ -32,7 +141,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             ref CharacterFootLifecycleContext context,
             in CharacterFootStateEvaluation evaluation,
             out CharacterFootSwingMotionResult result,
-            out CharacterFootLifecycleEvaluationReceipt receipt)
+            out Completion receipt)
         {
             CharacterFootStateFrame frame = evaluation.Frame;
             AnimationFootMotionRuntimeSample formalFootMotion = evaluation.FormalFootMotion;
@@ -98,7 +207,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                             .SupportTargetUnavailable;
                 CharacterFootPlacementRequest unavailable =
                     BuildUnavailableRequest(in evaluation, unavailableOutcome);
-                receipt = new CharacterFootLifecycleEvaluationReceipt(
+                receipt = new Completion(
                     in evaluation,
                     in preTransition,
                     in target,
@@ -187,7 +296,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             bool landingCompletionPending =
                 context.Discrete.State == CharacterFootConstraintState.Landing &&
                 interpolation.Completed;
-            receipt = new CharacterFootLifecycleEvaluationReceipt(
+            receipt = new Completion(
                 in evaluation,
                 in preTransition,
                 in target,
@@ -198,82 +307,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 in lifecycleTransition,
                 landingCompletionPending);
             return request;
-        }
-
-        internal static CharacterResolvedFootResult FinalizeLanding(
-            ref CharacterFootLifecycleContext context,
-            in CharacterFootLifecycleEvaluationReceipt receipt,
-            bool landingReachAvailable,
-            out CharacterFootSwingMotionResult result)
-        {
-            if (!receipt.LandingCompletionPending)
-            {
-                result = receipt.PreliminaryMotion;
-                CharacterFootPlacementRequest request = receipt.Request;
-                return Publish(in request);
-            }
-            CharacterFootStateFrame frame = receipt.Evaluation.Frame;
-            CharacterFootInterpolationResult interpolation =
-                receipt.Interpolation;
-            CharacterFootTransitionDecision preTransition =
-                receipt.PreTransition;
-            CharacterFootStateTarget target = receipt.Target;
-            CharacterFootPathContinuityFact interpolationContinuity =
-                interpolation.ContinuityFact;
-            CharacterFootSwingMotionResult outputSwing = receipt.OutputSwing;
-            CharacterFootTransitionDecision postTransition =
-                CharacterFootTransitionResolver.ResolvePostInterpolation(
-                    in context,
-                    in frame,
-                    interpolation.Completed,
-                    landingReachAvailable);
-            CharacterFootTransitionRuntime.Apply(
-                ref context,
-                in postTransition,
-                in frame);
-            CharacterFootInterpolationRuntime.ApplyPostTransition(
-                ref context.Interpolation,
-                in postTransition);
-            CharacterFootHardConstraintResult hardConstraint =
-                CharacterFootHardConstraintResolver.Resolve(
-                    in context,
-                    in frame,
-                    context.Interpolation.EffectiveCorrection);
-            CharacterFootPathContinuityFact continuityFact =
-                CompleteContinuity(
-                    in interpolationContinuity,
-                    in preTransition,
-                    in postTransition,
-                    in target,
-                    in interpolation,
-                    in hardConstraint,
-                    frame.ComponentUp);
-            CharacterFootLifecycleTransitionFact lifecycleTransition =
-                receipt.LifecycleTransition.Complete(
-                    in context,
-                    in preTransition,
-                    in postTransition);
-            Vector3 desiredCorrection = ResolveDiagnosticDesiredCorrection(
-                in context,
-                in target,
-                in frame);
-            CharacterFootSupportIntent supportIntent =
-                target.SupportIntent;
-            CharacterFootSupportTarget selectedSupportTarget =
-                interpolation.SupportTarget;
-            CharacterFootStateEvaluation evaluation = receipt.Evaluation;
-            CharacterFootPlacementRequest completed = BuildRequest(
-                in context,
-                in evaluation,
-                in outputSwing,
-                desiredCorrection,
-                hardConstraint.OutputCorrection,
-                in selectedSupportTarget,
-                in supportIntent,
-                in continuityFact,
-                in lifecycleTransition,
-                out result);
-            return Publish(in completed);
         }
 
         static Vector3 ResolveDiagnosticDesiredCorrection(
@@ -516,7 +549,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             CharacterFootGoalTarget goalTarget = ResolveGoalTarget(
                 in animatedFoot, evaluation.GoalRoot, in pose,
                 CharacterFootResolvedOutcome.Ready);
-            AnimationFootMotionRuntimeSample selectedStep = evaluation.SelectedFootMotion;
+            AnimationFootMotionRuntimeSample selectedStep = evaluation.FormalFootMotion;
             bool landingReachAdmitted = evaluation.Grounded && AdmitLandingReach(
                 in selectedStep, context.Discrete.State,
                 outputState == CharacterFootSwingMotionState.Accepted,
@@ -524,7 +557,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 in contactReference, in landingReachRequest);
             return new CharacterFootPlacementRequest(
                 identity, pose, support, landingReachRequest, goalTarget,
-                CharacterFootResolvedOutcome.Ready, landingReachAdmitted);
+                CharacterFootResolvedOutcome.Ready, landingReachAdmitted, evaluation.Stride);
         }
 
         static CharacterResolvedFootResult Publish(in CharacterFootPlacementRequest request) =>
@@ -548,7 +581,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             CharacterFootGoalTarget goal = ResolveGoalTarget(
                 in foot, evaluation.GoalRoot, in pose, outcome);
             return new CharacterFootPlacementRequest(
-                identity, pose, default, default, goal, outcome, false);
+                identity, pose, default, default, goal, outcome, false, evaluation.Stride);
         }
 
         static bool AdmitLandingReach(
@@ -572,14 +605,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                    step.HasConsistentLandingEventIdentity &&
                    step.HasPredictiveLanding && accepted &&
                    landingEventIdentity == step.LandingEventIdentity;
-        }
-
-        internal static CharacterFootGoalTarget ResolveInactiveGoalTarget(
-            in CharacterFootPlacementAnimatedFootPose foot,
-            Transform root)
-        {
-            CharacterFootPlacementPose pose = default;
-            return ResolveGoalTarget(in foot, root, in pose, default);
         }
 
         static CharacterFootGoalTarget ResolveGoalTarget(
@@ -808,9 +833,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 frame.CurrentSupport.Side != frame.Side ||
                 frame.CurrentSupport.Available &&
                 frame.CurrentSupport.Target.WorldRevision != frame.WorldRevision ||
-                frame.PreviousVisibleOutputAvailable &&
-                !CharacterFootConstraintMath.Finite(
-                    frame.PreviousVisibleOutputPoint) ||
                 frame.PreparedPlantActive &&
                 (frame.PreparedPlantTarget.LandingEventIdentity == 0 ||
                  !CharacterFootConstraintMath.Finite(

@@ -1507,8 +1507,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             bool preparedPlantActive,
             in CharacterFootGroundPathLanding preparedPlantTarget,
             in CharacterFootCurrentSupportObservation currentSupport,
-            bool previousVisibleOutputAvailable,
-            Vector3 previousVisibleOutputPoint,
             in CharacterFootLockRequest lockRequest,
             float formalSupport,
             ulong formalSupportEventIdentity,
@@ -1535,8 +1533,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             PreparedPlantActive = preparedPlantActive;
             PreparedPlantTarget = preparedPlantTarget;
             CurrentSupport = currentSupport;
-            PreviousVisibleOutputAvailable = previousVisibleOutputAvailable;
-            PreviousVisibleOutputPoint = previousVisibleOutputPoint;
             LockRequest = lockRequest;
             FormalSupport = formalSupport;
             FormalSupportEventIdentity = formalSupportEventIdentity;
@@ -1564,8 +1560,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         internal bool PreparedPlantActive { get; }
         internal CharacterFootGroundPathLanding PreparedPlantTarget { get; }
         internal CharacterFootCurrentSupportObservation CurrentSupport { get; }
-        internal bool PreviousVisibleOutputAvailable { get; }
-        internal Vector3 PreviousVisibleOutputPoint { get; }
         internal CharacterFootLockRequest LockRequest { get; }
         internal float FormalSupport { get; }
         internal ulong FormalSupportEventIdentity { get; }
@@ -1588,7 +1582,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             in AnimationFootMotionRuntimeSample formalFootMotion,
             in CharacterFootLandingPredictionResult landingPrediction,
             in CharacterFootStateFrame frame,
-            in AnimationFootMotionRuntimeSample selectedFootMotion,
+            in CharacterFootStrideRequest stride,
             bool grounded,
             Transform goalRoot)
         {
@@ -1596,7 +1590,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             FormalFootMotion = formalFootMotion;
             LandingPrediction = landingPrediction;
             Frame = frame;
-            SelectedFootMotion = selectedFootMotion;
+            Stride = stride;
             Grounded = grounded;
             GoalRoot = goalRoot;
         }
@@ -1605,44 +1599,9 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         internal AnimationFootMotionRuntimeSample FormalFootMotion { get; }
         internal CharacterFootLandingPredictionResult LandingPrediction { get; }
         internal CharacterFootStateFrame Frame { get; }
-        internal AnimationFootMotionRuntimeSample SelectedFootMotion { get; }
+        internal CharacterFootStrideRequest Stride { get; }
         internal bool Grounded { get; }
         internal Transform GoalRoot { get; }
-    }
-
-    internal readonly struct CharacterFootLifecycleEvaluationReceipt
-    {
-        internal CharacterFootLifecycleEvaluationReceipt(
-            in CharacterFootStateEvaluation evaluation,
-            in CharacterFootTransitionDecision preTransition,
-            in CharacterFootStateTarget target,
-            in CharacterFootInterpolationResult interpolation,
-            in CharacterFootSwingMotionResult outputSwing,
-            in CharacterFootPlacementRequest request,
-            in CharacterFootSwingMotionResult preliminaryMotion,
-            in CharacterFootLifecycleTransitionFact lifecycleTransition,
-            bool landingCompletionPending)
-        {
-            Evaluation = evaluation;
-            PreTransition = preTransition;
-            Target = target;
-            Interpolation = interpolation;
-            OutputSwing = outputSwing;
-            Request = request;
-            PreliminaryMotion = preliminaryMotion;
-            LifecycleTransition = lifecycleTransition;
-            LandingCompletionPending = landingCompletionPending;
-        }
-
-        internal CharacterFootStateEvaluation Evaluation { get; }
-        internal CharacterFootTransitionDecision PreTransition { get; }
-        internal CharacterFootStateTarget Target { get; }
-        internal CharacterFootInterpolationResult Interpolation { get; }
-        internal CharacterFootSwingMotionResult OutputSwing { get; }
-        internal CharacterFootPlacementRequest Request { get; }
-        internal CharacterFootSwingMotionResult PreliminaryMotion { get; }
-        internal CharacterFootLifecycleTransitionFact LifecycleTransition { get; }
-        internal bool LandingCompletionPending { get; }
     }
 
     internal readonly struct CharacterFootTransitionDecision

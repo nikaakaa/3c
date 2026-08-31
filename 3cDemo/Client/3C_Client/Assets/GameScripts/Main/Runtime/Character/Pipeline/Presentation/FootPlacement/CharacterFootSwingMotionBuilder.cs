@@ -217,6 +217,34 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         internal Vector3 EffectiveSole { get; }
     }
 
+    internal readonly struct CharacterFootStrideRequest
+    {
+        internal CharacterFootStrideRequest(
+            in AnimationFootMotionRuntimeSample step,
+            bool landingAvailable,
+            in CharacterFootGroundPathLanding landing,
+            bool pathAccepted)
+        {
+            AuthoritativeSwing = IsAuthoritativeSwing(in step);
+            StepEventIdentity = step.LandingEventIdentity;
+            LandingAvailable = landingAvailable;
+            LandingPoint = landingAvailable ? landing.Point : default;
+            LandingEventIdentity = landingAvailable ? landing.LandingEventIdentity : 0;
+            PathAccepted = pathAccepted;
+        }
+
+        internal bool AuthoritativeSwing { get; }
+        internal ulong StepEventIdentity { get; }
+        internal bool LandingAvailable { get; }
+        internal Vector3 LandingPoint { get; }
+        internal ulong LandingEventIdentity { get; }
+        internal bool PathAccepted { get; }
+
+        internal static bool IsAuthoritativeSwing(in AnimationFootMotionRuntimeSample step) =>
+            step.IsValid && step.IsAuthoritative && step.IsSwing &&
+            step.HasConsistentLandingEventIdentity;
+    }
+
     internal readonly struct CharacterFootPlacementRequest
     {
         internal CharacterFootPlacementRequest(
@@ -226,7 +254,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             CharacterFootLandingReachRequest landingReachRequest,
             CharacterFootGoalTarget goalTarget,
             CharacterFootResolvedOutcome outcome,
-            bool landingReachAdmitted)
+            bool landingReachAdmitted,
+            CharacterFootStrideRequest stride)
         {
             Identity = identity;
             Pose = pose;
@@ -235,6 +264,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             GoalTarget = goalTarget;
             Outcome = outcome;
             LandingReachAdmitted = landingReachAdmitted;
+            Stride = stride;
         }
 
         internal CharacterFootPlacementIdentity Identity { get; }
@@ -244,6 +274,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         internal CharacterFootGoalTarget GoalTarget { get; }
         internal CharacterFootResolvedOutcome Outcome { get; }
         internal bool LandingReachAdmitted { get; }
+        internal CharacterFootStrideRequest Stride { get; }
     }
 
     internal readonly struct CharacterResolvedFootResult

@@ -11,7 +11,7 @@
 ## What Changes
 
 1. 合法Ready Foot目标的PositionWeight只取正式FootPlacementWeight，不以Correction长度或是否恰好为零决定有效性。Unavailable、Suppress和作者零权重保留原语义；旋转政策不变。
-2. 在现有Pelvis生产资格内，以同帧原动画双脚Sole与Resolved有效目标Sole形成有符号期望偏移：`min(targetL,targetR)-min(animatedL,animatedR)`，高度均沿同一Component Up。替换旧地形相对高度加正向脚补偿，不叠加两套公式。
+2. 共同目标先前已由双脚最低Sole高度差取代旧地形相对高度加项。用户随后批准几何候选适配实验：在原生产资格内，以同帧原动画Ankle、预Reach有效Goal Ankle、原动画Pelvis、Component Up与正式PelvisFootProximityRadius选择共同高度。完整条件选择替换旧两个min公式，不保留并行开关；这是ZZZ候选数学的项目输入适配，不声明post-g/k脚标量已完整复刻。
 3. 真实腿长及正式安全余量形成统一硬区间；原动画弯曲程度只影响目标偏好，不再构成另一份输出硬夹紧。现有单一骨盆响应消费完整边界，外部不再二次改写其输出。不可达与Foot安全继续通过现有typed Reach与Goal链表达。
 
 ## 与现有规格的关系
@@ -24,7 +24,9 @@
 
 ## 范围与验证
 
-只面向Corin，TrainingEnemy、KCC/Body、动画曲线、骨盆前视、卸载规则、膝盖策略、额外滤波和匿名ZZZ参数均不在范围。
+只面向Corin，TrainingEnemy、KCC/Body、动画曲线、骨盆前视、卸载规则、膝盖策略、额外滤波和未定义输入的匿名ZZZ字段映射均不在范围。新增半径明确为项目世界米制候选选择范围，不冒称腿长或旧余量。
+
+本轮与现行规格的冲突显式收口：旧“分别取最低Sole后相减”的增量要求由唯一几何候选替换；current spec的Pelvis下游输入列表补入有效Ankle和同帧只读原动画Pose，不开放Foot内部状态或诊断反读。3Hz、20毫米硬Reach和Foot/Goal政策本步不变，只为隔离目标变量；不把它们认定为未来不可替换。
 
 三步独立提交、加载、同Record Replay，分别对上一小步和固定193957比较；不能一次改完再归因。原始采样、Proof与失败证据不删除、不覆盖。真实回归先停在该步裁决，不通过改评分、阈值或分母隐藏。Diagnostics仍由既有专门任务负责，Unity构建/回放只由主任务顺序执行。
 

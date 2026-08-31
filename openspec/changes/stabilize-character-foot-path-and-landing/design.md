@@ -4,7 +4,7 @@
 
 ### 当前单步：Locked Sliding世界误差响应
 
-用户已停止膝盖实验，并批准仅修正Locked内部Sliding的再次离地。以155326已恢复行为为对照，Response在实际TargetKind为LockedSliding时持久保存完整E=O-D；其余状态保留原scalar。进入/正式Target Capture接住完整上一O并同帧推进，持续Sliding不随动画或法线重捕；退出由原Plant/Release完整残差接管后同步scalar，不以单scalar投影丢失XYZ。两域属于同一Interpolation、同一活动历史与根Bank，不新增状态机或输出路径。速度数值不调，世界误差按ComponentUp正/负/纯横向选择既有Increase/Decrease/较小预算，所有分支公开事实。当前Pending位置basis设计和已拒绝Goal参考不在本实验恢复。具体合同见[Sliding世界误差实验](experiments/20260830-sliding-world-response.md)。
+当前用户批准继续反弯独立实验，保留160901认可行为及192218恢复结果；203023仅加载新诊断规则，原始Foot、Pelvis和Solver数值与恢复包一致。本轮只修改唯一FBBIK内可靠动画膝向的有符号腿轴运输，保留退化历史、全部权重、Foot/Pelvis目标和唯一Writer，不恢复已拒绝的SmoothKnee后处理或Reach强压。以下Sliding及高度响应条款保留各阶段历史，不能据其早期草案改动当前已认可脚链。具体实验和同输入验收见[有符号动画Bend实验](experiments/20260830-signed-animation-bend.md)。
 
 ### 2026-08-30位置响应坐标候选
 
@@ -254,7 +254,7 @@ Current Support Target进入State Target选择，但当前Final Component Pose�
 
 ### 有效动画Bend方向的独立实验
 
-e6ca016已证明155326恢复到c519865/130545。接下来只处理现有FBBIK中可靠动画方向被历史取反的问题：方向d与-d会选到不同膝盖侧，不是等价平面表示。有效动画直接更新Stable方向，Target投影后的方向不再被Applied历史翻号；动画几何退化时仍使用既有历史政策，全部权重与Foot位置链保持不变。原327行请求倒置是靶点，不等于327次物理镜像；6个大腿轴角下投影与旋转运输反向的旧样本不在本次修复承诺内。现行current spec要求唯一Goal/Solver与根Bank归属，没有要求有效方向与历史dot非负；本修正不改变该架构。具体假设、业务取舍与Replay门见[有符号动画Bend实验](experiments/20260830-signed-animation-bend.md)。
+2026-08-31以160901认可行为、192218恢复包和同值203023新诊断基线重新实验，不沿用130545的327行旧计数。当前2082个可靠动画脚行中223行请求被Applied历史倒置；方向d与-d会选到不同膝盖侧，不是等价平面表示。可靠动画直接更新运输前Stable方向，并用本帧原腿轴到加权Target腿轴的FromToRotation生成实际请求，不再由Stable或Applied历史翻号。退化时继续使用原Stable方向、Target平面投影与Applied保留政策，既有四个退化样本不得改义；Stable不能保存已运输方向，亦不新增sourceAxis历史。全部权重、Foot/Pelvis目标、Vendor和Writer保持不变。此项目修正不冒称ZZZ SmoothKnee，零权重深折叠及Vendor内部ReadPose/LimitBend边界仍由真实回放裁决。现行current spec要求唯一Goal/Solver与根Bank归属，没有要求有效方向与历史dot非负，与本轮合同不冲突。具体假设、业务取舍与Replay门见[有符号动画Bend实验](experiments/20260830-signed-animation-bend.md)。
 
 Foot Motion Profile新增必须显式序列化的米制`MinimumLandingLegCompressionReserve`并纳入Profile Revision。缺失、非有限或越界时整项typed invalid，不提供代码默认值或旧配置补全。State Target Resolver与Resolved Foot为预测Landing脚，以及仍持有同Event Contact Goal的Landing、Locked、Releasing脚发布typed Reach Request：Hip、目标Ankle、Leg Length、最小压缩余量、Landing Event和有效世界Reference。Releasing必须继续参与直到其Goal权重归零，避免Pelvis在释放期间单独上提并把接触腿拉到近伸直奇异区。它不是第二Support、第二Anchor或第二状态机。
 

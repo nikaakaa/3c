@@ -50,6 +50,8 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.DeterministicRollback
         public ActorId SimulationActorId => ActorId;
         public bool IsLocalActor => m_Endpoint && m_Endpoint.ResolvePeerProfile().ActorId == ActorId;
         public SimulationSessionHost SessionHost => m_SessionHost;
+        public CharacterDeviceInputFocus DeviceInputFocus =>
+            (m_Registration?.RollbackInput as UnityFixedCharacterInputAdapter)?.DeviceInputFocus;
         public CharacterRootHierarchyBinding RootHierarchy => m_RootHierarchy;
         public Vector3 VisualPosition => m_RootHierarchy
             ? m_RootHierarchy.VisualRoot.position

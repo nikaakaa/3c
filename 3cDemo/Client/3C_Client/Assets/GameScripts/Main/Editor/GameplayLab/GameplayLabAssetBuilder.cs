@@ -550,6 +550,9 @@ namespace ThirdPersonGameplay.Editor.Lab
                 DeterministicRollbackDemoStatusOverlay overlay =
                     diagnosticsObject.AddComponent<DeterministicRollbackDemoStatusOverlay>();
                 overlay.SetActors(actorA, actorB);
+                root.AddComponent<RollbackGmConsoleBootstrap>().Configure(
+                    LoadRequired<ThirdPerson.Development.Gm.GmDevelopmentProfile>(
+                        "Assets/Configs/Development/Gm/RollbackGmDevelopmentProfile.asset"), actorA, actorB);
                 GameObject saved = SavePrefab(root, RollbackRootPath);
                 Object.DestroyImmediate(root);
                 return saved;

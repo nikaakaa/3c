@@ -1087,6 +1087,7 @@ GameObject:
   m_Component:
   - component: {fileID: 810032168737561493}
   - component: {fileID: 9022229919811958773}
+  - component: {fileID: 719380220491354611}
   m_Layer: 0
   m_Name: GameplayLabDeterministicRollback
   m_TagString: Untagged
@@ -1115,6 +1116,22 @@ Transform:
   - {fileID: 2774483028295667589}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &719380220491354611
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7126019970263781612}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7920f698ff7643358d64fb613d7b4b15, type: 3}
+  m_Name:
+  m_EditorClassIdentifier:
+  m_Profile: {fileID: 11400000, guid: d5084c5ee6c441429bcb4b3c03156979, type: 2}
+  m_Actors:
+  - {fileID: 8528499472957018398}
+  - {fileID: 2307733639094273578}
 --- !u!114 &9022229919811958773
 MonoBehaviour:
   m_ObjectHideFlags: 0

@@ -30,6 +30,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
         readonly Dictionary<string, InputValueBinding> m_ValueBindings =
             new Dictionary<string, InputValueBinding>(StringComparer.Ordinal);
         readonly List<RequestBinding> m_RequestBindings = new List<RequestBinding>();
+        readonly HashSet<InputAction> m_FocusBlockedRequests = new HashSet<InputAction>();
         readonly HashSet<string> m_CameraRelativeVector2Ids = new HashSet<string>(StringComparer.Ordinal);
         readonly HashSet<string> m_WorldVector2Ids = new HashSet<string>(StringComparer.Ordinal);
         readonly Dictionary<string, LatchedInputValue> m_LatchedValues =
@@ -39,12 +40,14 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
         readonly List<FixedSimulationInputRequest> m_InputRequests = new List<FixedSimulationInputRequest>();
         readonly List<string> m_ActionTargetInputIds = new List<string>();
         readonly bool m_RequiresCameraBasis;
+        readonly List<FixedSimulationInputValue> m_NeutralValues;
 
         ulong m_RenderFrame;
         ulong m_RequestSequence;
         CameraBasisSnapshot m_LatchedCameraBasis;
         bool m_Active;
         bool m_Disposed;
+        bool m_LatchedInputSuppressed;
 
         public UnityFixedCharacterInputAdapter(
             CharacterInputProfile profile,
@@ -87,6 +90,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
             ValidateProgramInputs();
             ResolveDirectionSpaces();
             m_RequiresCameraBasis = RequiresCameraBasis(program);
+            m_NeutralValues = FixedProgramNeutralInputValues.Create(program);
         }
 
         public string SourceIdentity =>
@@ -94,6 +98,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
         public ProgramId CharacterProgramId => m_Program.Manifest.ProgramId;
         public ProgramHash CharacterProgramHash => m_Program.ProgramHash;
         public InputActionAsset Actions => m_Profile.SourceAsset;
+        public CharacterDeviceInputFocus DeviceInputFocus { get; } = new CharacterDeviceInputFocus();
 
         public void Activate()
         {
@@ -115,6 +120,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
             Actions.Disable();
             m_LatchedValues.Clear();
             m_PendingRequests.Clear();
+            m_FocusBlockedRequests.Clear();
             m_InputValues.Clear();
             m_InputRequests.Clear();
             m_LatchedCameraBasis = default;
@@ -131,6 +137,17 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
                 throw new InvalidOperationException("Unity Fixed Input Adapter requires a strictly increasing render frame.");
             m_RenderFrame = renderFrame;
             m_LatchedValues.Clear();
+            m_LatchedInputSuppressed = DeviceInputFocus.IsGameplaySuppressed;
+            if (m_LatchedInputSuppressed)
+            {
+                for (int i = 0; i < m_RequestBindings.Count; i++)
+                {
+                    InputAction action = m_RequestBindings[i].Action;
+                    if (action.IsPressed() || action.WasPressedThisFrame() || action.triggered)
+                        m_FocusBlockedRequests.Add(action);
+                }
+                return;
+            }
             foreach (KeyValuePair<string, InputValueBinding> pair in m_ValueBindings)
                 m_LatchedValues.Add(pair.Key, ReadValue(pair.Value));
             if (m_RequiresCameraBasis || m_CameraRelativeVector2Ids.Count != 0)
@@ -138,6 +155,12 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
             for (int i = 0; i < m_RequestBindings.Count; i++)
             {
                 RequestBinding binding = m_RequestBindings[i];
+                if (m_FocusBlockedRequests.Contains(binding.Action))
+                {
+                    if (!binding.Action.IsPressed())
+                        m_FocusBlockedRequests.Remove(binding.Action);
+                    continue;
+                }
                 if (binding.Action.WasPressedThisFrame() || binding.Action.triggered)
                 {
                     m_PendingRequests.Add(new PendingRequest(
@@ -157,17 +180,24 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
             if (!m_Active || m_RenderFrame == 0)
                 throw new InvalidOperationException("Unity Fixed Input Adapter has no captured render frame.");
             m_InputValues.Clear();
-            foreach (KeyValuePair<string, LatchedInputValue> pair in m_LatchedValues)
-                m_InputValues.Add(ToSimulationValue(pair.Key, pair.Value));
-            if (m_RequiresCameraBasis)
-                AppendCameraBasis(m_InputValues, m_LatchedCameraBasis);
-            for (int i = 0; i < m_ActionTargetInputIds.Count; i++)
+            if (m_LatchedInputSuppressed || DeviceInputFocus.IsGameplaySuppressed)
             {
-                m_InputValues.Add(FixedSimulationInputValue.FromActionTargetSnapshot(
-                    m_ActionTargetInputIds[i],
-                    string.Equals(m_ActionTargetInputIds[i], m_ActionTargetInputValueId, StringComparison.Ordinal)
-                        ? ResolveActionTarget(context)
-                        : ThirdPersonSimulation.Fixed.SimulationActionTargetSnapshot.None));
+                m_InputValues.AddRange(m_NeutralValues);
+            }
+            else
+            {
+                foreach (KeyValuePair<string, LatchedInputValue> pair in m_LatchedValues)
+                    m_InputValues.Add(ToSimulationValue(pair.Key, pair.Value));
+                if (m_RequiresCameraBasis)
+                    AppendCameraBasis(m_InputValues, m_LatchedCameraBasis);
+                for (int i = 0; i < m_ActionTargetInputIds.Count; i++)
+                {
+                    m_InputValues.Add(FixedSimulationInputValue.FromActionTargetSnapshot(
+                        m_ActionTargetInputIds[i],
+                        string.Equals(m_ActionTargetInputIds[i], m_ActionTargetInputValueId, StringComparison.Ordinal)
+                            ? ResolveActionTarget(context)
+                            : ThirdPersonSimulation.Fixed.SimulationActionTargetSnapshot.None));
+                }
             }
 
             if (m_PendingRequests.Count > context.MaximumPendingRequests)
@@ -311,6 +341,8 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
         public bool TryGetLatchedVector2(string inputId, out Vector2 value)
         {
             value = Vector2.zero;
+            if (!string.IsNullOrEmpty(inputId) && (m_LatchedInputSuppressed || DeviceInputFocus.IsGameplaySuppressed))
+                return m_ValueBindings.TryGetValue(inputId, out InputValueBinding binding) && binding.Kind == CharacterInputValueType.Vector2;
             if (string.IsNullOrEmpty(inputId) ||
                 !m_LatchedValues.TryGetValue(inputId, out LatchedInputValue input) ||
                 input.Kind != CharacterInputValueType.Vector2)

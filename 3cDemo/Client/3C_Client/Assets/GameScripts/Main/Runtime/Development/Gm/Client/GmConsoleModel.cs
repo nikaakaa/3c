@@ -95,14 +95,18 @@ namespace ThirdPerson.Development.Gm
                 if (!m_Pending.TryGetValue(response.requestId, out PendingRequest pending))
                     continue;
                 if (!string.Equals(response.serviceInstanceId, pending.Request.serviceInstanceId, StringComparison.Ordinal) ||
-                    !string.Equals(response.sessionId, pending.Request.sessionId, StringComparison.Ordinal))
+                    !string.Equals(response.sessionId, pending.Request.sessionId, StringComparison.Ordinal) ||
+                    response.code == GmResultCode.TargetEnded)
                 {
                     Complete(response.requestId, pending.Output, GmConsoleOutputState.TargetEnded, "响应不属于请求指定的服务实例和会话。");
                     m_Pending.Remove(response.requestId);
-                    continue;
+                    m_Connection.Disconnect();
+                    FailPending(GmConsoleOutputState.TargetEnded, "目标运行实例已结束，请显式重新连接。");
+                    break;
                 }
                 Complete(response.requestId, pending.Output,
-                    response.code == GmResultCode.Success ? GmConsoleOutputState.Succeeded : GmConsoleOutputState.Rejected,
+                    response.code == GmResultCode.Success ? GmConsoleOutputState.Succeeded :
+                    response.code == GmResultCode.TimedOut ? GmConsoleOutputState.TimedOut : GmConsoleOutputState.Rejected,
                     GmResultTextFormatter.Format(response, m_Options.MaximumOutputCharacters));
                 m_Pending.Remove(response.requestId);
             }

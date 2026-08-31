@@ -320,6 +320,17 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             "FinalIkLegOriginalCompressionReserve,FinalIkLegTargetCompressionReserve,FinalIkLegSolvedCompressionReserve," +
             "FinalIkLegEffectiveBendDirectionX,FinalIkLegEffectiveBendDirectionY,FinalIkLegEffectiveBendDirectionZ," +
             "FinalIkLegAnimatedBendDirectionPreviousDot,FinalIkLegEffectiveBendDirectionPreviousDot," +
+            "KneeAngleResponseEvaluated,KneeAngleResponseHistoryAvailable,KneeAngleResponseMotionSampleAvailable,KneeAngleResponseRootPositionX," +
+            "KneeAngleResponseRootPositionY,KneeAngleResponseRootPositionZ,KneeAngleResponseRootForwardX,KneeAngleResponseRootForwardY," +
+            "KneeAngleResponseRootForwardZ,KneeAngleResponseVelocityX,KneeAngleResponseVelocityY,KneeAngleResponseVelocityZ," +
+            "KneeAngleResponsePreviousForwardSpeed,KneeAngleResponsePreviousDownSpeed,KneeAngleResponseForwardSpeed,KneeAngleResponseDownSpeed," +
+            "KneeAngleResponseDownStairWeight,KneeAngleResponseUpstairRate,KneeAngleResponseDownstairRate,KneeAngleResponseRate," +
+            "KneeAngleResponseMaximumStep,KneeAngleResponseAnimationAngle,KneeAngleResponseInputAngle,KneeAngleResponseDesiredExtraAngle," +
+            "KneeAngleResponsePreviousExtraAngle,KneeAngleResponseCurrentExtraAngle,KneeAngleResponseAppliedExtraAngle,KneeAngleResponseCompensationAngle," +
+            "KneeAngleResponseOutputAngle,KneeAngleResponseOutputHipX,KneeAngleResponseOutputHipY,KneeAngleResponseOutputHipZ," +
+            "KneeAngleResponseOutputKneeX,KneeAngleResponseOutputKneeY,KneeAngleResponseOutputKneeZ,KneeAngleResponseOutputAnkleX," +
+            "KneeAngleResponseOutputAnkleY,KneeAngleResponseOutputAnkleZ,KneeAngleResponseFootDisplacementX,KneeAngleResponseFootDisplacementY," +
+            "KneeAngleResponseFootDisplacementZ,KneeAngleResponseFootRotationErrorDegrees," +
             "FinalIkPelvisAvailable,FinalIkPelvisTargetPositionX,FinalIkPelvisTargetPositionY,FinalIkPelvisTargetPositionZ," +
             "FinalIkPelvisSolvedPositionX,FinalIkPelvisSolvedPositionY,FinalIkPelvisSolvedPositionZ,FinalIkPelvisPositionResidual,FinalIkPelvisRotationResidualDegrees," +
             "FinalPhysicalWriteAvailable,FinalPhysicalWriteCompletionIdentity," +
@@ -2492,6 +2503,35 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             Add(row, legPose.EffectiveBendDirection);
             Add(row, legPose.AnimatedBendDirectionPreviousDot);
             Add(row, legPose.EffectiveBendDirectionPreviousDot);
+            CharacterKneeAngleResponseDiagnostics kneeResponse = limb.KneeAngleResponse;
+            Add(row, kneeResponse.Evaluated);
+            Add(row, kneeResponse.HistoryAvailable);
+            Add(row, kneeResponse.MotionSampleAvailable);
+            Add(row, kneeResponse.RootPosition);
+            Add(row, kneeResponse.RootForward);
+            Add(row, kneeResponse.Velocity);
+            Add(row, kneeResponse.PreviousForwardSpeed);
+            Add(row, kneeResponse.PreviousDownSpeed);
+            Add(row, kneeResponse.ForwardSpeed);
+            Add(row, kneeResponse.DownSpeed);
+            Add(row, kneeResponse.DownStairWeight);
+            Add(row, kneeResponse.UpstairRate);
+            Add(row, kneeResponse.DownstairRate);
+            Add(row, kneeResponse.Rate);
+            Add(row, kneeResponse.MaximumStep);
+            Add(row, kneeResponse.AnimationAngle);
+            Add(row, kneeResponse.InputAngle);
+            Add(row, kneeResponse.DesiredExtraAngle);
+            Add(row, kneeResponse.PreviousExtraAngle);
+            Add(row, kneeResponse.CurrentExtraAngle);
+            Add(row, kneeResponse.AppliedExtraAngle);
+            Add(row, kneeResponse.CompensationAngle);
+            Add(row, kneeResponse.OutputAngle);
+            Add(row, kneeResponse.OutputHip);
+            Add(row, kneeResponse.OutputKnee);
+            Add(row, kneeResponse.OutputAnkle);
+            Add(row, kneeResponse.FootDisplacement);
+            Add(row, kneeResponse.FootRotationErrorDegrees);
             CharacterFullBodyIkEffectorDiagnostics pelvis = ik.Pelvis;
             Add(row, ik.PelvisAvailable);
             Add(row, pelvis.TargetComponentPosition);

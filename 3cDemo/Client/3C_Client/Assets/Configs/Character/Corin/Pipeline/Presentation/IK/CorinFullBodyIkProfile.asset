@@ -12,15 +12,18 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 724f4c0677f34cdba7920522907106b0, type: 3}
   m_Name: CorinFullBodyIkProfile
   m_EditorClassIdentifier: 
-  m_Schema: character-full-body-ik-profile/v1
+  m_Schema: character-full-body-ik-profile/v2
   m_ProfileId: corin.full-body-ik
-  m_Revision: e83001ccbfd6c20cf4c6da5290d24fde36e9d2a51e71d862411d4eb360f357cb
+  m_Revision: 434a81d2e6d6adfe8cb11ca63ceb2e1cfd2ea04891af7574dd4e0ac46112da14
   m_Iterations: 4
   m_FabrikPass: 1
   m_SpineStiffness: 1
   m_PullBodyVertical: 0
   m_PullBodyHorizontal: 0
   m_NodeWeight: 1
+  m_KneeAngleResponsePolicy: 1
+  m_KneeAngleUpstairRate: 7
+  m_KneeAngleDownstairRate: 4
   m_LeftArm:
     m_Pin: 0
     m_Pull: 1

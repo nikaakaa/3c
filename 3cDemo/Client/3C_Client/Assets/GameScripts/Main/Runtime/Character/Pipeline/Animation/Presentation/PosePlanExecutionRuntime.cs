@@ -574,6 +574,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                     footPlacement,
                     fullBodyIkSolver,
                     finalWriter,
+                    rigBinding.Animator.transform,
                     poseProgram.FullBodyIkGoalContributionCount,
                     poseProgram.FullBodyIkContributionGoalCount,
                     projection.Rig.RigId,

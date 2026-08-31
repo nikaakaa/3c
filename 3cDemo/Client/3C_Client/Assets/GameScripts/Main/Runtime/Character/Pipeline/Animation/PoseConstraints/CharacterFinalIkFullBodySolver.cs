@@ -154,6 +154,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         readonly CharacterAnimationRigPayload m_Rig;
         readonly CharacterFullBodyIkProfile m_Profile;
         readonly CharacterFinalIkPoseBufferBackend m_Backend;
+        readonly CharacterAnimationRelativeKneeResponse m_KneeAngleResponse;
         readonly IndexedBipedReferences m_References;
         readonly IKSolverFullBodyBiped m_Solver = new IKSolverFullBodyBiped();
         readonly FixedString64Bytes m_RigId;
@@ -187,6 +188,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             m_RigRevision = new FixedString64Bytes(rig.RigRevision);
             m_ActiveTuning = ActiveTuning.FromProfile(m_Profile);
             PrepareReferencePose(parentIndices);
+            m_KneeAngleResponse = new CharacterAnimationRelativeKneeResponse(m_Backend, m_Rig, m_Profile);
         }
 
         public string BackendIdentity => CharacterFinalIkPoseBufferBackend.SourceIdentity;
@@ -274,6 +276,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             in CharacterFullBodyIkGoalSetHeader goalSet,
             NativeArray<CharacterFullBodyIkGoal> goalWorkspace,
             ref CharacterFullBodyIkBendHistory bendHistory,
+            ref CharacterKneeAngleResponseHistory kneeAngleHistory,
+            in CharacterKneeAngleResponseFrame kneeAngleFrame,
             ulong frameSequence,
             ulong completionIdentity,
             bool recordDiagnostics)
@@ -302,6 +306,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             try
             {
                 m_Backend.Bind(pendingOutputComponentPose);
+                float leftAnimationAngle = 0f;
+                float rightAnimationAngle = 0f;
+                if (m_KneeAngleResponse.Enabled)
+                    m_KneeAngleResponse.CaptureAnimation(out leftAnimationAngle, out rightAnimationAngle);
                 CharacterFullBodyIkResult goalResult = ApplyGoals(
                     in goalSet,
                     goalWorkspace,
@@ -321,12 +329,15 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 {
                     bendHistory.SourceCompletionIdentity = completionIdentity;
                     bendHistory.Revision++;
-                    return CompleteResult(
+                    CharacterFullBodyIkResult unchanged = CompleteResult(
                         goalResult,
                         in goalSet,
                         goalWorkspace,
                         completionIdentity,
                         recordDiagnostics);
+                    return ApplyKneeAngleResponse(
+                        unchanged, in kneeAngleFrame, leftAnimationAngle, rightAnimationAngle,
+                        ref kneeAngleHistory, pendingOutputComponentPose, recordDiagnostics);
                 }
                 m_Solver.Update();
                 m_Backend.RebuildVirtualBones();
@@ -345,12 +356,15 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                     goalWorkspace);
                 bendHistory.SourceCompletionIdentity = completionIdentity;
                 bendHistory.Revision++;
-                return CompleteResult(
+                CharacterFullBodyIkResult completed = CompleteResult(
                     solvedResult,
                     in goalSet,
                     goalWorkspace,
                     completionIdentity,
                     recordDiagnostics);
+                return ApplyKneeAngleResponse(
+                    completed, in kneeAngleFrame, leftAnimationAngle, rightAnimationAngle,
+                    ref kneeAngleHistory, pendingOutputComponentPose, recordDiagnostics);
             }
             catch (Exception exception)
             {
@@ -382,6 +396,33 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             m_DiagnosticEffectorCount = 0;
             Array.Clear(m_DiagnosticEffectors, 0, m_DiagnosticEffectors.Length);
             Array.Clear(m_DiagnosticLimbs, 0, m_DiagnosticLimbs.Length);
+        }
+
+        CharacterFullBodyIkResult ApplyKneeAngleResponse(
+            CharacterFullBodyIkResult result,
+            in CharacterKneeAngleResponseFrame frame,
+            float leftAnimationAngle,
+            float rightAnimationAngle,
+            ref CharacterKneeAngleResponseHistory history,
+            NativeSlice<AnimationLocalBonePose> outputPose,
+            bool recordDiagnostics)
+        {
+            if (!result.Succeeded || !m_KneeAngleResponse.Enabled)
+                return result;
+            m_KneeAngleResponse.Apply(
+                in frame, leftAnimationAngle, rightAnimationAngle, ref history,
+                recordDiagnostics,
+                out CharacterKneeAngleResponseDiagnostics left,
+                out CharacterKneeAngleResponseDiagnostics right);
+            m_Backend.RebuildVirtualBones();
+            if (!IsValidPosePage(outputPose))
+                return CharacterFullBodyIkResult.Fail(CharacterFullBodyIkFailure.NonFiniteOutput);
+            if (recordDiagnostics)
+            {
+                m_DiagnosticLimbs[2] = m_DiagnosticLimbs[2].WithKneeAngleResponse(left);
+                m_DiagnosticLimbs[3] = m_DiagnosticLimbs[3].WithKneeAngleResponse(right);
+            }
+            return result;
         }
 
         void PrepareReferencePose(NativeArray<int> parentIndices)

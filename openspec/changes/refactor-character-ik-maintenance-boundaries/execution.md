@@ -316,3 +316,12 @@ PredictionMotion、BodyTrajectory及其Tick/Generation/ResetSequence/AuthorityTi
 - Identity中的Foot状态、Reject、Plant Target、Step选择、RootLocalLanding和HasAnchor非身份事实保持；左右Action原始列及按Side选择的结果保持。FrameSequence3–1045符合原Int32 ABI，越界拒绝及非零Action分支未动态覆盖。
 - 42项诊断及完整20447明细、索引、几何和正式查询保持。六次查询各返回全部1215列；除UTC解析后的等值规范化外，业务单元格与原CSV相同。Proof matched1044、aggregate空、DivergentFrameCount0，输入/Body/时钟及1044帧数组一致。
 - Unity已归还、Edit/Idle、failure空、Console0。此处证明当前Record下1215列迁移保持，不代表主行组合、格式identity、Runtime分组、Reset或既有覆盖缺口已经完成。
+
+## 唯一主行Schema与根读写
+
+状态：实现完成，Unity与Editor构建0错误，build server已关闭；等待实际回放。
+
+- 新增唯一`CharacterFootSampleColumns.Schema`，按Identity、Step、Formal、Body、Observation、Ground、Motion、Support、Goal、Pelvis、Solver的正式列顺序组合28个业务分组。子分组的业务Group、类型、单位和有效性元数据在根Schema中保留。
+- Sampler先按原顺序计算全部typed源，再构造一次完整Sample Source并由根Schema写整行；Header只读取根Schema。根组合按分组提取一次源结构，不按1215列重复复制大Foot诊断结构。
+- Analyzer由同一根Schema一次绑定并直接读取完整FootFrame，删除旧`CharacterFootSampleReadBindings`和空的必需列清单。旧Sliding Response列仍在唯一读取边界显式拒绝；HasAnchor等派生事实在typed读取后计算。
+- 本步不改变列名、顺序、格式identity、公式、规则或Runtime。回放通过后可确认任务5.2和5.3完成；格式identity集中、Runtime证据分组、最终清理与Reset仍待完成。

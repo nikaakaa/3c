@@ -5668,8 +5668,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             for (int i = 0; i < names.Length; i++)
                 if (!indices.TryAdd(names[i], i))
                     throw new InvalidDataException($"Foot Motion samples CSV has duplicate column '{names[i]}'.");
-            RequireColumns(indices);
-            var bindings = new CharacterFootSampleReadBindings(indices);
+            RejectRetiredColumns(indices);
+            CharacterFootCsvReader<FootFrame> bindings = CharacterFootSampleColumns.Schema.Bind(indices);
             var unique = new Dictionary<(int frame, string side), FootFrame>();
             int rawRows = 0;
             string line;
@@ -5685,7 +5685,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                         $"Foot Motion samples CSV row {rawRows + 1} has " +
                         $"{cells.Length} columns; expected {names.Length}.");
                 }
-                FootFrame frame = ParseFrame(indices, cells, bindings);
+                FootFrame frame = ParseFrame(cells, bindings);
                 reader.Include(frame.Identity.FrameSequence, frame.Identity.Side);
                 var key = (frame.Identity.FrameSequence, frame.Identity.Side);
                 if (!unique.TryAdd(key, frame))
@@ -6045,41 +6045,10 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         }
 
         static FootFrame ParseFrame(
-            Dictionary<string, int> indices,
             string[] cells,
-            CharacterFootSampleReadBindings bindings)
+            CharacterFootCsvReader<FootFrame> bindings)
         {
-            var frame = new FootFrame
-            {
-                OutputEvents = bindings.OutputEvents.Read(cells),
-                InputEvents = bindings.InputEvents.Read(cells),
-                SelectedPhase = bindings.SelectedPhase.Read(cells),
-                CurrentStep = bindings.CurrentStep.Read(cells),
-                IncomingStep = bindings.IncomingStep.Read(cells),
-                SelectedSupportTarget = bindings.SelectedTarget.Read(cells),
-                CurrentSupport = bindings.CurrentSupport.Read(cells),
-                Resolved = bindings.Resolved.Read(cells),
-                Identity = bindings.Identity.Read(cells),
-                RootLanding = bindings.RootLanding.Read(cells),
-                Action = bindings.Action.Read(cells),
-                MotionCore = bindings.MotionCore.Read(cells),
-                Goal = bindings.Goal.Read(cells),
-                PathContinuity = bindings.PathContinuity.Read(cells),
-                Lifecycle = bindings.Lifecycle.Read(cells),
-                OutputStages = bindings.OutputStages.Read(cells),
-                Timing = bindings.Timing.Read(cells),
-                PredictionMotion = bindings.PredictionMotion.Read(cells),
-                PrimarySupport = bindings.PrimarySupport.Read(cells),
-                RootHierarchy = bindings.RootHierarchy.Read(cells),
-                BodyCorrection = bindings.BodyCorrection.Read(cells),
-                LandingObservation = bindings.LandingObservation.Read(cells),
-                FormalOutput = bindings.FormalOutput.Read(cells),
-                FormalInput = bindings.FormalInput.Read(cells),
-                GroundPath = bindings.GroundPath.Read(cells),
-                Response = bindings.Response.Read(cells),
-                Solver = bindings.Solver.Read(cells),
-                Pelvis = bindings.Pelvis.Read(cells),
-            };
+            FootFrame frame = bindings.Read(cells);
             frame.HasAnchor = frame.MotionCore.LandingEventIdentity != 0 &&
                               frame.MotionCore.ConstraintState != "Swing";
             RequireValidFrame(frame);
@@ -8698,33 +8667,10 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             }
         }
 
-        static void RequireColumns(Dictionary<string, int> indices)
+        static void RejectRetiredColumns(Dictionary<string, int> indices)
         {
             if (indices.Keys.Any(name => name.StartsWith("FootMotionSlidingResponse", StringComparison.Ordinal)))
                 throw new InvalidDataException("Foot Motion samples contain retired response-history columns.");
-            string[] required =
-            {
-                };
-            foreach (string name in required)
-            {
-                if (!indices.ContainsKey(name))
-                    throw new InvalidDataException($"Foot Motion samples CSV is missing '{name}'.");
-            }
-        }
-
-        static void RequireColumnGroup(
-            Dictionary<string, int> indices,
-            string columns)
-        {
-            string[] values = columns.Split(',');
-            for (int i = 0; i < values.Length; i++)
-            {
-                if (!indices.ContainsKey(values[i]))
-                {
-                    throw new InvalidDataException(
-                        $"Foot Motion samples CSV is missing '{values[i]}'.");
-                }
-            }
         }
 
         static string ComputeSha256(string path)
@@ -9050,7 +8996,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             internal double JerkMetersPerSecondCubed;
         }
 
-        sealed class FootFrame
+        internal sealed class FootFrame
         {
             internal CharacterFootResolvedSample Resolved;
             internal CharacterFootCurrentSupportSample CurrentSupport;

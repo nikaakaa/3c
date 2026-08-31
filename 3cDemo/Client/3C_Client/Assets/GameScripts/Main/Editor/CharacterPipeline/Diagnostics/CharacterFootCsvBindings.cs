@@ -156,6 +156,27 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     return (cells, record) => target(record, codec.Read(cells, bound, names));
                 });
         }
+
+        internal static CharacterFootCsvColumn<TSource, TRecord> Compose<TValueSource, TValueRecord>(
+            CharacterFootCsvGroup<TValueSource, TValueRecord> group,
+            CharacterFootCsvGetter<TSource, TValueSource> source,
+            Action<TRecord, TValueRecord> target)
+        {
+            var columns = new CharacterFootCsvColumnInfo[group.Columns.Count];
+            group.Columns.CopyTo(columns, 0);
+            return new CharacterFootCsvColumn<TSource, TRecord>(
+                columns,
+                (StringBuilder row, in TSource parent) =>
+                {
+                    TValueSource value = source(in parent);
+                    group.Write(row, in value);
+                },
+                indices =>
+                {
+                    CharacterFootCsvReader<TValueRecord> reader = group.Bind(indices);
+                    return (cells, record) => target(record, reader.Read(cells));
+                });
+        }
     }
 
     internal sealed class CharacterFootCsvReader<TRecord>
@@ -202,7 +223,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     names.Add(info.Name);
                     metadata.Add(new CharacterFootCsvColumnInfo(
                         info.Name, info.Kind, info.Unit,
-                        info.AvailabilityColumn, info.AvailabilityValue, group));
+                        info.AvailabilityColumn, info.AvailabilityValue,
+                        string.IsNullOrEmpty(info.Group) ? group : info.Group));
                 }
             foreach (CharacterFootCsvColumnInfo info in metadata)
                 if (!string.IsNullOrEmpty(info.AvailabilityColumn) && !unique.Contains(info.AvailabilityColumn))

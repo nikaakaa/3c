@@ -89,35 +89,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         const string StopMenu =
             "Tools/3C/Diagnostics/Foot Landing Sampling/Stop and Save";
         const string GeometryFileName = "ground-path-geometry.csv";
-        static readonly string Header =
-            CharacterFootIdentityColumns.Schema.Header + "," +
-            CharacterFootStepColumns.SelectedPhase.Header + "," +
-            CharacterFootStepColumns.Current.Header + "," +
-            CharacterFootStepColumns.Incoming.Header + "," +
-            CharacterFootFormalObservationColumns.Output.Header + "," +
-            CharacterFootEventColumns.Output.Header + "," +
-            CharacterFootFormalObservationColumns.Input.Header + "," +
-            CharacterFootEventColumns.Input.Header + "," +
-            CharacterFootRootLandingColumns.Schema.Header + "," +
-            CharacterFootTimingColumns.Schema.Header + "," +
-            CharacterFootPredictionMotionColumns.Schema.Header + "," +
-            CharacterFootActionColumns.Schema.Header + "," +
-            CharacterFootPrimarySupportColumns.Schema.Header + "," +
-            CharacterFootRootHierarchyColumns.Schema.Header + "," +
-            CharacterFootBodyCorrectionColumns.Schema.Header + "," +
-            CharacterFootLandingObservationColumns.Schema.Header + "," +
-            CharacterFootGroundPathColumns.Schema.Header + "," +
-            CharacterFootMotionCoreColumns.Schema.Header + "," +
-            CharacterFootPathContinuityColumns.Schema.Header + "," +
-            CharacterFootLifecycleColumns.Schema.Header + "," +
-            CharacterFootOutputStagesColumns.Schema.Header + "," +
-            CharacterFootSupportTargetColumns.Selected.Header + "," +
-            CharacterFootResponseColumns.Schema.Header + "," +
-            CharacterFootCurrentSupportColumns.Schema.Header + "," +
-            CharacterFootResolvedColumns.Schema.Header + "," +
-            CharacterFootGoalColumns.Schema.Header + "," +
-            CharacterFootPelvisColumns.Schema.Header + "," +
-            CharacterFootSolverColumns.Schema.Header;
+        static readonly string Header = CharacterFootSampleColumns.Schema.Header;
         const string GeometryHeader =
             "SampleIdentity,FrameSequence,CompletionIdentity,Side,GroundPathInputIdentity," +
             "GroundContactIndex,GroundContactSegmentIndex,GroundContactSurfaceIdentity,GroundContactCandidateIdentity," +
@@ -1533,17 +1505,13 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 session.Program.PosePlanHash, in frame,
                 targetRuntimeInstanceId.ToString("N"), targetHostInstanceId,
                 in foot, in stepSelection);
-            CharacterFootIdentityColumns.Schema.Write(row, in identitySource);
             CharacterFootStepCandidateDiagnostics selectedStep =
                 stepSelection.SelectedSource ==
                 CharacterFootLandingStepSource.FormalNextLanding
                     ? stepSelection.Current
                     : default;
-            CharacterFootStepColumns.SelectedPhase.Write(row, in selectedStep);
             CharacterFootStepCandidateDiagnostics currentCandidate = stepSelection.Current;
-            CharacterFootStepColumns.Current.Write(row, in currentCandidate);
             CharacterFootStepCandidateDiagnostics incomingCandidate = stepSelection.Incoming;
-            CharacterFootStepColumns.Incoming.Write(row, in incomingCandidate);
             AnimationFootMotionRuntimeSample observedStep =
                 foot.Side == CharacterFootSide.Left
                     ? footStepObservation.Left
@@ -1553,9 +1521,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 hasObservedStep, footStepObservation.SourceIdentity,
                 footStepObservation.Weight, footStepObservation.NormalizedTime,
                 in observedStep);
-            CharacterFootFormalObservationColumns.Output.Write(row, in formalOutputSource);
             var outputEvents = new CharacterFootEventCsvSource(hasObservedStep, observedStep.Events);
-            CharacterFootEventColumns.Output.Write(row, in outputEvents);
             CharacterFootStepObservationInputDiagnostics inputObservation =
                 input.FootStepObservation;
             AnimationFootMotionRuntimeSample inputObservedStep =
@@ -1569,24 +1535,12 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 in inputObservedStep);
             var formalInputSource = new CharacterFootFormalInputCsvSource(
                 in formalInputObservation, in inputObservation);
-            CharacterFootFormalObservationColumns.Input.Write(row, in formalInputSource);
             var inputEvents = new CharacterFootEventCsvSource(hasInputObservedStep, inputObservedStep.Events);
-            CharacterFootEventColumns.Input.Write(row, in inputEvents);
             Vector3 rootLocalLanding = foot.RootLocalLanding;
-            CharacterFootRootLandingColumns.Schema.Write(row, in rootLocalLanding);
-            CharacterFootTimingColumns.Schema.Write(row, in input);
-            CharacterFootPredictionMotionColumns.Schema.Write(row, in input);
-            CharacterFootActionColumns.Schema.Write(row, in input);
             CharacterFootPrimarySupportDiagnostics primarySupport = frame.PrimarySupport;
-            CharacterFootPrimarySupportColumns.Schema.Write(row, in primarySupport);
-            CharacterFootRootHierarchyColumns.Schema.Write(row, in roots);
-            CharacterFootBodyCorrectionColumns.Schema.Write(row, in input);
             var landingObservationSource =
                 new CharacterFootLandingObservationCsvSource(in foot);
-            CharacterFootLandingObservationColumns.Schema.Write(
-                row, in landingObservationSource);
             CharacterFootGroundPathDiagnostics ground = foot.GroundPath;
-            CharacterFootGroundPathColumns.Schema.Write(row, in ground);
             CharacterFootSwingMotionDiagnostics motion = foot.FootMotion;
             CharacterFullBodyIkGoal footGoal = foot.Goal;
 
@@ -1672,20 +1626,11 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 horizontalAxisState, in actualEnvelope,
                 actualEnvelopeCorrectionAvailable, actualEnvelopeMinimumCorrection,
                 actualEnvelopeAdvanceAboveBuilderTarget, penetrationAvailability);
-            CharacterFootMotionCoreColumns.Schema.Write(row, in motionCoreSource);
-            CharacterFootPathContinuityColumns.Schema.Write(row, in motion);
-            CharacterFootLifecycleColumns.Schema.Write(row, in motion);
-            CharacterFootOutputStagesColumns.Schema.Write(row, in motion);
             CharacterFootSupportTargetDiagnostics selectedTarget = motion.SelectedSupportTarget;
-            CharacterFootSupportTargetColumns.Selected.Write(row, in selectedTarget);
-            CharacterFootResponseColumns.Schema.Write(row, in motion);
             CharacterFootCurrentSupportDiagnostics currentSupport = foot.CurrentSupport;
-            CharacterFootCurrentSupportColumns.Schema.Write(row, in currentSupport);
             CharacterResolvedFootDiagnostics resolved = foot.Resolved;
-            CharacterFootResolvedColumns.Schema.Write(row, in resolved);
             var goalSource = new CharacterFootGoalCsvSource(
                 in footGoal, motion.OriginalAnkle, frame.PelvisGoal);
-            CharacterFootGoalColumns.Schema.Write(row, in goalSource);
             CharacterFootStrideHipsDiagnostics stride = frame.StrideHips;
             Vector3 expectedPhysicalPelvis = stride.AnimatedPelvisComponentPosition +
                 frame.PelvisGoal.ComponentPosition * frame.PelvisGoal.PositionWeight;
@@ -1699,7 +1644,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 in stride, frame.PelvisGoal.ComponentPosition,
                 ik.PhysicalPelvisComponentPosition, ik.PhysicalPelvisWorldPosition,
                 pelvisGoalResidualAvailable, pelvisGoalResidual);
-            CharacterFootPelvisColumns.Schema.Write(row, in pelvisSource);
 
             CharacterFullBodyIkLegPoseDiagnostics legPose = ik.Limb.LegPose;
             Vector3 finalAnkleWorldPosition = default;
@@ -1730,7 +1674,15 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             var solverSource = new CharacterFootSolverCsvSource(
                 in ik, finalAnkleWorldPosition, finalAnkleWorldRotation,
                 finalContacts.HeelPosition, finalContacts.ToePosition, physicalGoalResidual);
-            CharacterFootSolverColumns.Schema.Write(row, in solverSource);
+            var sampleSource = new CharacterFootSampleCsvSource(
+                in identitySource, in selectedStep, in currentCandidate,
+                in incomingCandidate, in formalOutputSource, in outputEvents,
+                in formalInputSource, in inputEvents, rootLocalLanding, in input,
+                in primarySupport, in roots, in landingObservationSource,
+                in ground, in motionCoreSource, in motion, in selectedTarget,
+                in currentSupport, in resolved, in goalSource, in pelvisSource,
+                in solverSource);
+            CharacterFootSampleColumns.Schema.Write(row, in sampleSource);
             writer.WriteLine(row);
         }
 

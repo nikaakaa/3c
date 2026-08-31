@@ -332,3 +332,12 @@ PredictionMotion、BodyTrajectory及其Tick/Generation/ResetSequence/AuthorityTi
 - 对055234及固定233436，1191业务列逐值相同，23身份列映射无冲突；几何22业务列精确、5身份列映射无冲突。六次查询均返回完整1215列且所有单元格与原CSV字符串一致。
 - 42项诊断、20447明细及索引、其它正式查询保持；Proof matched1044、aggregate空、DivergentFrameCount0，输入/Body/时钟及1044帧数组一致。Unity已归还、Edit/Idle、failure空、Console0。
 - 此证据完成Editor typed列绑定及统一主行读写；Runtime证据分组、格式identity、最终全链对账、Reset及既有覆盖限制不冒称完成。
+
+## Runtime Foot Motion证据分组
+
+状态：实现完成，Runtime与Editor构建0错误，build server已关闭；等待实际回放。
+
+- 将原`CharacterFootSwingMotionDiagnostics`的203个平铺属性拆成Core27、Lifecycle56、PathContinuity37、OutputStages28和CorrectionResponse55五个只读分组；SelectedSupportTarget继续作为独立typed子记录。父记录只组合分组，不再转抄每个字段。
+- Core直接读取本帧Swing Motion结果；Lifecycle只读取Lifecycle Transition Fact；Path、Output和Response只读取同一Path Continuity Fact，其中ConstraintStateBefore和LockResponseBefore明确来自Lifecycle入口。删除公开诊断中没有消费者的FormalTargetHeightAlongUp与VerticalCorrection副本，运行算法仍使用原Swing Motion Result字段。
+- Editor列绑定、Gizmo和Visual Validation改为读取对应分组；Sampler根Source提取分组，不恢复平铺别名。Runtime没有消费者读取公开Diagnostics控制业务，迁移只改变只读证据组织。
+- 本步不改变CSV、格式identity、公式、状态或权重。回放通过后继续核对Resolved Contact/Support/Reach与Pelvis证据，任务5.1暂不勾选。

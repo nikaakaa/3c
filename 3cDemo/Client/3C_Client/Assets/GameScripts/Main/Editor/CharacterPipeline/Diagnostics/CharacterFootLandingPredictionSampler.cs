@@ -1545,20 +1545,20 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             CharacterFullBodyIkGoal footGoal = foot.Goal;
 
             Vector3 motionUp =
-                motion.TargetHeightComponentUp.sqrMagnitude > 0.000001f
-                ? motion.TargetHeightComponentUp.normalized
+                motion.PathContinuity.TargetHeightComponentUp.sqrMagnitude > 0.000001f
+                ? motion.PathContinuity.TargetHeightComponentUp.normalized
                 : default;
             Vector3 groundPathUp = ground.ComponentUp.sqrMagnitude > 0.000001f
                 ? ground.ComponentUp.normalized
                 : default;
             float originalSoleAlongUp = Vector3.Dot(
-                motion.OriginalSole,
+                motion.Core.OriginalSole,
                 motionUp);
             float baselineSampleAlongUp = Vector3.Dot(
-                motion.BaselineSample,
+                motion.Core.BaselineSample,
                 motionUp);
             float envelopeSampleAlongUp = Vector3.Dot(
-                motion.EnvelopeSample,
+                motion.Core.EnvelopeSample,
                 motionUp);
             float motionFormalFootHeight = hasInputObservedStep
                 ? inputObservedStep.FootHeight
@@ -1571,13 +1571,13 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 0f,
                 rawFormalTargetHeight - originalSoleAlongUp);
             bool builderSwingTargetAvailable =
-                motion.PathContinuityEvaluated &&
-                motion.PathAvailableAfter &&
-                motion.PathCurrentLandingEventIdentity ==
-                motion.LandingEventIdentity;
+                motion.PathContinuity.PathContinuityEvaluated &&
+                motion.PathContinuity.PathAvailableAfter &&
+                motion.PathContinuity.PathCurrentLandingEventIdentity ==
+                motion.Core.LandingEventIdentity;
             Vector3 builderSwingTargetCorrection =
                 builderSwingTargetAvailable
-                    ? motion.PathCurrentTargetCorrection
+                    ? motion.PathContinuity.PathCurrentTargetCorrection
                     : default;
             CharacterFootActualEnvelopeIntersectionFact actualEnvelope =
                 ResolveActualFootEnvelopeIntersection(
@@ -1630,7 +1630,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             CharacterFootCurrentSupportDiagnostics currentSupport = foot.CurrentSupport;
             CharacterResolvedFootDiagnostics resolved = foot.Resolved;
             var goalSource = new CharacterFootGoalCsvSource(
-                in footGoal, motion.OriginalAnkle, frame.PelvisGoal);
+                in footGoal, motion.Core.OriginalAnkle, frame.PelvisGoal);
             CharacterFootStrideHipsDiagnostics stride = frame.StrideHips;
             Vector3 expectedPhysicalPelvis = stride.AnimatedPelvisComponentPosition +
                 frame.PelvisGoal.ComponentPosition * frame.PelvisGoal.PositionWeight;
@@ -1697,8 +1697,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 State = CharacterFootActualEnvelopeIntersectionState.Unavailable
             };
             if (!ground.Accepted ||
-                motion.State != CharacterFootSwingMotionState.Accepted ||
-                motion.ConstraintState != CharacterFootConstraintState.Swing ||
+                motion.Core.State != CharacterFootSwingMotionState.Accepted ||
+                motion.Core.ConstraintState != CharacterFootConstraintState.Swing ||
                 ground.EnvelopeVertexCount < 2)
             {
                 return result;
@@ -1727,16 +1727,16 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             Vector3 direction = horizontalAxis.normalized;
             float pathLength = horizontalAxis.magnitude;
             Vector3 actualHorizontalOffset = Vector3.ProjectOnPlane(
-                motion.OriginalSole - ground.LastLanding,
+                motion.Core.OriginalSole - ground.LastLanding,
                 up);
             result.ActualFootHorizontalDistance = Vector3.Dot(
                 actualHorizontalOffset,
                 direction);
             result.BaselineHorizontalDistance = Vector3.Dot(
-                motion.BaselineSample - ground.LastLanding,
+                motion.Core.BaselineSample - ground.LastLanding,
                 direction);
             result.EnvelopeHorizontalDistance = Vector3.Dot(
-                motion.EnvelopeSample - ground.LastLanding,
+                motion.Core.EnvelopeSample - ground.LastLanding,
                 direction);
             float rawPathParameter =
                 result.ActualFootHorizontalDistance / pathLength;
@@ -1952,28 +1952,28 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 return CharacterFootContactPlanePenetrationAvailability
                     .FinalPhysicalPoseUnavailable;
             }
-            if (motion.ConstraintState != CharacterFootConstraintState.Landing &&
-                motion.ConstraintState != CharacterFootConstraintState.Locked)
+            if (motion.Core.ConstraintState != CharacterFootConstraintState.Landing &&
+                motion.Core.ConstraintState != CharacterFootConstraintState.Locked)
             {
                 return CharacterFootContactPlanePenetrationAvailability
                     .ContactLifecycleUnavailable;
             }
-            if (!motion.ContactPlaneAvailable)
+            if (!motion.Core.ContactPlaneAvailable)
             {
                 return CharacterFootContactPlanePenetrationAvailability
                     .ContactPlaneUnavailable;
             }
-            if (motion.LandingEventIdentity == 0)
+            if (motion.Core.LandingEventIdentity == 0)
             {
                 return CharacterFootContactPlanePenetrationAvailability
                     .EventLineageMismatch;
             }
-            if (motion.ContactSurfaceIdentity == 0)
+            if (motion.Core.ContactSurfaceIdentity == 0)
             {
                 return CharacterFootContactPlanePenetrationAvailability
                     .SurfaceLineageMismatch;
             }
-            Vector3 normal = motion.ContactPlaneNormal;
+            Vector3 normal = motion.Core.ContactPlaneNormal;
             if (!float.IsFinite(normal.x) ||
                 !float.IsFinite(normal.y) ||
                 !float.IsFinite(normal.z) ||

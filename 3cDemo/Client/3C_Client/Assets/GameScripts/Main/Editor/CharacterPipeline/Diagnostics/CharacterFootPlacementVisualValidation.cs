@@ -230,16 +230,16 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             CharacterFootSwingMotionDiagnostics motion = foot.FootMotion;
             if (!motion.Accepted)
                 return;
-            Marker(motion.OriginalSole, path.ComponentUp, Color.white, 0.05f);
+            Marker(motion.Core.OriginalSole, path.ComponentUp, Color.white, 0.05f);
             Marker(
-                motion.CorrectedSole,
+                motion.Core.CorrectedSole,
                 path.ComponentUp,
-                SupportColor(motion.ConstraintState, motion.LockResponse),
+                SupportColor(motion.Core.ConstraintState, motion.Core.LockResponse),
                 0.065f);
-            if (motion.BaselineSample != default)
-                Line(motion.OriginalSole, motion.BaselineSample, new Color(0.2f, 1f, 0.25f, 0.8f));
-            if (motion.EnvelopeSample != default)
-                Line(motion.OriginalSole, motion.EnvelopeSample, new Color(1f, 0.8f, 0.1f, 0.8f));
+            if (motion.Core.BaselineSample != default)
+                Line(motion.Core.OriginalSole, motion.Core.BaselineSample, new Color(0.2f, 1f, 0.25f, 0.8f));
+            if (motion.Core.EnvelopeSample != default)
+                Line(motion.Core.OriginalSole, motion.Core.EnvelopeSample, new Color(1f, 0.8f, 0.1f, 0.8f));
         }
 
         static void DrawStride(in CharacterFootStrideHipsDiagnostics stride)

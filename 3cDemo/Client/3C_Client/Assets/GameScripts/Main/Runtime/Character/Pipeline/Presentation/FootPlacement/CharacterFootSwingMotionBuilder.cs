@@ -645,10 +645,9 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         public bool Accepted => State == CharacterFootSwingMotionState.Accepted;
     }
 
-    public readonly struct CharacterFootSwingMotionDiagnostics
+    public readonly struct CharacterFootSwingCoreDiagnostics
     {
-        internal CharacterFootSwingMotionDiagnostics(
-            in CharacterFootSwingMotionResult result)
+        internal CharacterFootSwingCoreDiagnostics(in CharacterFootSwingMotionResult result)
         {
             State = result.State;
             RejectReason = result.RejectReason;
@@ -660,8 +659,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             Progress = result.Progress;
             BaselineSample = result.BaselineSample;
             EnvelopeSample = result.EnvelopeSample;
-            FormalTargetHeightAlongUp = result.FormalTargetHeightAlongUp;
-            VerticalCorrection = result.VerticalCorrection;
             LandingPredictionError = result.LandingPredictionError;
             CorrectedSole = result.CorrectedSole;
             CorrectedAnkle = result.CorrectedAnkle;
@@ -679,8 +676,42 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             ContactPlaneNormal = result.ContactPlaneNormal;
             LandingReachEvaluated = result.LandingReachEvaluated;
             LandingReachAvailable = result.LandingReachAvailable;
-            CharacterFootLifecycleTransitionFact lifecycle =
-                result.LifecycleTransition;
+        }
+
+        public CharacterFootSwingMotionState State { get; }
+        public CharacterFootSwingMotionRejectReason RejectReason { get; }
+        public ulong LandingEventIdentity { get; }
+        public ulong GroundPathInputIdentity { get; }
+        public Vector3 OriginalSole { get; }
+        public Vector3 OriginalAnkle { get; }
+        public float Distance { get; }
+        public float Progress { get; }
+        public Vector3 BaselineSample { get; }
+        public Vector3 EnvelopeSample { get; }
+        public float LandingPredictionError { get; }
+        public Vector3 CorrectedSole { get; }
+        public Vector3 CorrectedAnkle { get; }
+        public float PositionWeight { get; }
+        public float RotationWeight { get; }
+        public CharacterFootConstraintState ConstraintState { get; }
+        public CharacterFootLockResponse LockResponse { get; }
+        public float SupportHorizontalError { get; }
+        public float ContactOwnership { get; }
+        public float SupportWeight { get; }
+        public Vector3 SupportContactAnchor { get; }
+        public Vector3 DesiredCorrection { get; }
+        public bool ContactPlaneAvailable { get; }
+        public int ContactSurfaceIdentity { get; }
+        public Vector3 ContactPlaneNormal { get; }
+        public bool LandingReachEvaluated { get; }
+        public bool LandingReachAvailable { get; }
+        public bool Accepted => State == CharacterFootSwingMotionState.Accepted;
+    }
+
+    public readonly struct CharacterFootLifecycleTransitionDiagnostics
+    {
+        internal CharacterFootLifecycleTransitionDiagnostics(in CharacterFootLifecycleTransitionFact lifecycle)
+        {
             CharacterFootContactHistoryFact previousContext =
                 lifecycle.PreviousContext;
             CharacterFootContactHistoryFact currentContext =
@@ -764,9 +795,70 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             PostTransitionAnchorCommand = postTransition.AnchorCommand.ToString();
             PostTransitionSuppressOutput = postTransition.SuppressOutput;
             PostTransitionResetInterpolation = postTransition.ResetInterpolation;
-            ConstraintStateBefore = preTransition.SourceState;
-            LockResponseBefore = lifecycle.LockResponseBefore;
-            CharacterFootPathContinuityFact path = result.PathContinuity;
+        }
+
+        public bool LifecycleTransitionEvaluated { get; }
+        public bool PreviousLockRequestAvailable { get; }
+        public bool PreviousLockRequested { get; }
+        public ulong PreviousLockRequestEventIdentity { get; }
+        public string PreviousLockRequestMode { get; }
+        public float PreviousLockRequestWeight { get; }
+        public float PreviousContactEdgeSeconds { get; }
+        public ulong PreviousLatestContactEventIdentity { get; }
+        public ulong PreviousLatestReleasedContactEventIdentity { get; }
+        public ulong PreviousCompletedLockWeightEventIdentity { get; }
+        public bool PreviousContactAnchorAvailable { get; }
+        public ulong PreviousContactAnchorEventIdentity { get; }
+        public ulong PreviousContactAnchorAcquiredFrameSequence { get; }
+        public ulong PreviousContactAnchorAcquiredCompletionIdentity { get; }
+        public ulong PreviousContactAnchorWorldRevision { get; }
+        public int PreviousContactAnchorSurfaceIdentity { get; }
+        public Vector3 PreviousContactAnchorPoint { get; }
+        public Vector3 PreviousContactAnchorNormal { get; }
+        public bool CurrentLockRequested { get; }
+        public ulong CurrentLockRequestEventIdentity { get; }
+        public string CurrentLockRequestMode { get; }
+        public float CurrentLockRequestWeight { get; }
+        public string CurrentLockRequestAvailability { get; }
+        public string ContactEdge { get; }
+        public float CurrentContactEdgeSeconds { get; }
+        public ulong CurrentLatestContactEventIdentity { get; }
+        public ulong CurrentLatestReleasedContactEventIdentity { get; }
+        public ulong CurrentCompletedLockWeightEventIdentity { get; }
+        public bool CurrentContactAnchorAvailable { get; }
+        public ulong CurrentContactAnchorEventIdentity { get; }
+        public ulong CurrentContactAnchorAcquiredFrameSequence { get; }
+        public ulong CurrentContactAnchorAcquiredCompletionIdentity { get; }
+        public ulong CurrentContactAnchorWorldRevision { get; }
+        public int CurrentContactAnchorSurfaceIdentity { get; }
+        public Vector3 CurrentContactAnchorPoint { get; }
+        public Vector3 CurrentContactAnchorNormal { get; }
+        public bool SameEventContactReentryRefreshed { get; }
+        public bool SameEventContactReentryUnavailable { get; }
+        public bool RetainedVerifiedAnchor { get; }
+        public bool ReentryInterpolationHistoryRetained { get; }
+        public float FormalFootPlacementWeight { get; }
+        public bool HardOwnershipLoss { get; }
+        public string HardOwnershipLossReason { get; }
+        public bool PreTransitionSuppressOutput { get; }
+        public bool PreTransitionResetInterpolation { get; }
+        public bool PostTransitionEvaluated { get; }
+        public bool PostTransitionSuppressOutput { get; }
+        public bool PostTransitionResetInterpolation { get; }
+        public string PreTransitionReason { get; }
+        public CharacterFootConstraintState PreTransitionSource { get; }
+        public CharacterFootConstraintState PreTransitionTarget { get; }
+        public string PreTransitionAnchorCommand { get; }
+        public string PostTransitionReason { get; }
+        public CharacterFootConstraintState PostTransitionSource { get; }
+        public CharacterFootConstraintState PostTransitionTarget { get; }
+        public string PostTransitionAnchorCommand { get; }
+    }
+
+    public readonly struct CharacterFootPathContinuityDiagnostics
+    {
+        internal CharacterFootPathContinuityDiagnostics(in CharacterFootPathContinuityFact path)
+        {
             PathContinuityEvaluated = path.Evaluated;
             PathRevisionReason = path.RevisionReason.ToString();
             PathResidualRebuilt = path.ResidualRebuilt;
@@ -813,6 +905,55 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             SwingFilteredTargetHeightAlongUp =
                 path.SwingFilteredTargetHeightAlongUp;
             TargetHeightComponentUp = path.TargetHeightComponentUp;
+        }
+
+        public bool PathContinuityEvaluated { get; }
+        public string PathRevisionReason { get; }
+        public bool PathResidualRebuilt { get; }
+        public bool TargetTrackingApplied { get; }
+        public bool PathAvailableBefore { get; }
+        public bool PathAvailableAfter { get; }
+        public ulong PathPreviousLandingEventIdentity { get; }
+        public ulong PathCurrentLandingEventIdentity { get; }
+        public Vector3 PathPreviousTargetCorrection { get; }
+        public Vector3 PathCurrentTargetCorrection { get; }
+        public float PathLandingPointDelta { get; }
+        public float PathTargetDelta { get; }
+        public Vector3 SwingResidualBeforeRevision { get; }
+        public Vector3 SwingResidualBeforeDecay { get; }
+        public Vector3 SwingResidualAfterDecay { get; }
+        public Vector3 ResidualOutputCorrection { get; }
+        public float LandingAcceptanceDistance { get; }
+        public float PathRevisionDistance { get; }
+        public float SwingResidualTolerance { get; }
+        public float ResidualTimeToLandingSeconds { get; }
+        public float ResidualBaseHalfLifeSeconds { get; }
+        public bool ResidualDeadlineHalfLifeAvailable { get; }
+        public float ResidualDeadlineHalfLifeSeconds { get; }
+        public float ResidualAppliedHalfLifeSeconds { get; }
+        public float SwingRawTargetHeightAlongUp { get; }
+        public float SwingFilteredTargetHeightBefore { get; }
+        public float SwingTargetHeightDelta { get; }
+        public float SwingTargetHeightAppliedDelta { get; }
+        public bool SwingTargetHeightUpdateHeld { get; }
+        public bool SwingTargetHeightForceRefreshed { get; }
+        public bool SwingTargetHeightRateLimited { get; }
+        public bool SwingTargetHeightClamped { get; }
+        public float SwingTargetHeightForceRefreshDistance { get; }
+        public float SwingTargetMaximumVerticalSpeed { get; }
+        public string SwingTargetHeightAdoptionMode { get; }
+        public float SwingFilteredTargetHeightAlongUp { get; }
+        public Vector3 TargetHeightComponentUp { get; }
+    }
+
+    public readonly struct CharacterFootOutputStagesDiagnostics
+    {
+        internal CharacterFootOutputStagesDiagnostics(
+            in CharacterFootLifecycleTransitionFact lifecycle,
+            in CharacterFootPathContinuityFact path)
+        {
+            ConstraintStateBefore = lifecycle.PreTransition.SourceState;
+            LockResponseBefore = lifecycle.LockResponseBefore;
             StateTargetCorrection = path.StateTargetCorrection;
             InterpolationPolicy = path.InterpolationPolicy.ToString();
             InterpolationOutputCorrection =
@@ -845,11 +986,42 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             PlantLockWeightCompleted = path.PlantLockWeightCompleted;
             PlantDesiredPoint = path.PlantDesiredPoint;
             PlantFilteredPoint = path.PlantFilteredPoint;
-            CharacterFootSupportTarget selectedSupportTarget =
-                path.SelectedSupportTarget;
-            SelectedSupportTarget =
-                new CharacterFootSupportTargetDiagnostics(
-                    in selectedSupportTarget);
+        }
+
+        public Vector3 StateTargetCorrection { get; }
+        public string InterpolationPolicy { get; }
+        public Vector3 InterpolationOutputCorrection { get; }
+        public bool InterpolationCompleted { get; }
+        public CharacterFootConstraintState ConstraintStateBefore { get; }
+        public CharacterFootLockResponse LockResponseBefore { get; }
+        public bool OutputStagesAvailable { get; }
+        public bool ReleasingCompletedToSwing { get; }
+        public bool SafetyFloorAvailable { get; }
+        public CharacterFootSafetyFloorOwner SafetyFloorOwner { get; }
+        public int SafetyFloorOwnerSurfaceIdentity { get; }
+        public ulong SafetyFloorOwnerPathIdentity { get; }
+        public Vector3 CorrectionBeforeSafetyFloor { get; }
+        public Vector3 SafetyFloorMinimumCorrection { get; }
+        public Vector3 SafetyFloorOutputCorrection { get; }
+        public Vector3 FinalEffectiveCorrection { get; }
+        public bool SafetyFloorClamped { get; }
+        public float SafetyFloorClampMeters { get; }
+        public float SafetyFloorClearanceBeforeMeters { get; }
+        public float SafetyFloorClearanceAfterMeters { get; }
+        public bool PlantInterpolationEvaluated { get; }
+        public ulong PlantTargetEventIdentity { get; }
+        public bool PlantTargetVerified { get; }
+        public string PlantTargetKind { get; }
+        public CharacterFootLockResponse PlantLockResponse { get; }
+        public bool PlantLockWeightCompleted { get; }
+        public Vector3 PlantDesiredPoint { get; }
+        public Vector3 PlantFilteredPoint { get; }
+    }
+
+    public readonly struct CharacterFootCorrectionResponseDiagnostics
+    {
+        internal CharacterFootCorrectionResponseDiagnostics(in CharacterFootPathContinuityFact path)
+        {
             PlantTargetHeightAdoptionMode =
                 path.PlantTargetHeightAdoptionMode.ToString();
             PlantTargetMaximumVerticalSpeed =
@@ -949,160 +1121,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             PlantPenetrationDepth = path.PlantPenetrationDepth;
         }
 
-        public CharacterFootSwingMotionState State { get; }
-        public CharacterFootSwingMotionRejectReason RejectReason { get; }
-        public ulong LandingEventIdentity { get; }
-        public ulong GroundPathInputIdentity { get; }
-        public Vector3 OriginalSole { get; }
-        public Vector3 OriginalAnkle { get; }
-        public float Distance { get; }
-        public float Progress { get; }
-        public Vector3 BaselineSample { get; }
-        public Vector3 EnvelopeSample { get; }
-        public float FormalTargetHeightAlongUp { get; }
-        public float VerticalCorrection { get; }
-        public float LandingPredictionError { get; }
-        public Vector3 CorrectedSole { get; }
-        public Vector3 CorrectedAnkle { get; }
-        public float PositionWeight { get; }
-        public float RotationWeight { get; }
-        public CharacterFootConstraintState ConstraintState { get; }
-        public CharacterFootLockResponse LockResponse { get; }
-        public float SupportHorizontalError { get; }
-        public float ContactOwnership { get; }
-        public float SupportWeight { get; }
-        public Vector3 SupportContactAnchor { get; }
-        public Vector3 DesiredCorrection { get; }
-        public bool ContactPlaneAvailable { get; }
-        public int ContactSurfaceIdentity { get; }
-        public Vector3 ContactPlaneNormal { get; }
-        public bool LandingReachEvaluated { get; }
-        public bool LandingReachAvailable { get; }
-        public bool LifecycleTransitionEvaluated { get; }
-        public bool PreviousLockRequestAvailable { get; }
-        public bool PreviousLockRequested { get; }
-        public ulong PreviousLockRequestEventIdentity { get; }
-        public string PreviousLockRequestMode { get; }
-        public float PreviousLockRequestWeight { get; }
-        public float PreviousContactEdgeSeconds { get; }
-        public ulong PreviousLatestContactEventIdentity { get; }
-        public ulong PreviousLatestReleasedContactEventIdentity { get; }
-        public ulong PreviousCompletedLockWeightEventIdentity { get; }
-        public bool PreviousContactAnchorAvailable { get; }
-        public ulong PreviousContactAnchorEventIdentity { get; }
-        public ulong PreviousContactAnchorAcquiredFrameSequence { get; }
-        public ulong PreviousContactAnchorAcquiredCompletionIdentity { get; }
-        public ulong PreviousContactAnchorWorldRevision { get; }
-        public int PreviousContactAnchorSurfaceIdentity { get; }
-        public Vector3 PreviousContactAnchorPoint { get; }
-        public Vector3 PreviousContactAnchorNormal { get; }
-        public bool CurrentLockRequested { get; }
-        public ulong CurrentLockRequestEventIdentity { get; }
-        public string CurrentLockRequestMode { get; }
-        public float CurrentLockRequestWeight { get; }
-        public string CurrentLockRequestAvailability { get; }
-        public string ContactEdge { get; }
-        public float CurrentContactEdgeSeconds { get; }
-        public ulong CurrentLatestContactEventIdentity { get; }
-        public ulong CurrentLatestReleasedContactEventIdentity { get; }
-        public ulong CurrentCompletedLockWeightEventIdentity { get; }
-        public bool CurrentContactAnchorAvailable { get; }
-        public ulong CurrentContactAnchorEventIdentity { get; }
-        public ulong CurrentContactAnchorAcquiredFrameSequence { get; }
-        public ulong CurrentContactAnchorAcquiredCompletionIdentity { get; }
-        public ulong CurrentContactAnchorWorldRevision { get; }
-        public int CurrentContactAnchorSurfaceIdentity { get; }
-        public Vector3 CurrentContactAnchorPoint { get; }
-        public Vector3 CurrentContactAnchorNormal { get; }
-        public bool SameEventContactReentryRefreshed { get; }
-        public bool SameEventContactReentryUnavailable { get; }
-        public bool RetainedVerifiedAnchor { get; }
-        public bool ReentryInterpolationHistoryRetained { get; }
-        public float FormalFootPlacementWeight { get; }
-        public bool HardOwnershipLoss { get; }
-        public string HardOwnershipLossReason { get; }
-        public bool PreTransitionSuppressOutput { get; }
-        public bool PreTransitionResetInterpolation { get; }
-        public bool PostTransitionEvaluated { get; }
-        public bool PostTransitionSuppressOutput { get; }
-        public bool PostTransitionResetInterpolation { get; }
-        public bool PathContinuityEvaluated { get; }
-        public string PathRevisionReason { get; }
-        public bool PathResidualRebuilt { get; }
-        public bool TargetTrackingApplied { get; }
-        public bool PathAvailableBefore { get; }
-        public bool PathAvailableAfter { get; }
-        public ulong PathPreviousLandingEventIdentity { get; }
-        public ulong PathCurrentLandingEventIdentity { get; }
-        public Vector3 PathPreviousTargetCorrection { get; }
-        public Vector3 PathCurrentTargetCorrection { get; }
-        public float PathLandingPointDelta { get; }
-        public float PathTargetDelta { get; }
-        public Vector3 SwingResidualBeforeRevision { get; }
-        public Vector3 SwingResidualBeforeDecay { get; }
-        public Vector3 SwingResidualAfterDecay { get; }
-        public Vector3 ResidualOutputCorrection { get; }
-        public float LandingAcceptanceDistance { get; }
-        public float PathRevisionDistance { get; }
-        public float SwingResidualTolerance { get; }
-        public float ResidualTimeToLandingSeconds { get; }
-        public float ResidualBaseHalfLifeSeconds { get; }
-        public bool ResidualDeadlineHalfLifeAvailable { get; }
-        public float ResidualDeadlineHalfLifeSeconds { get; }
-        public float ResidualAppliedHalfLifeSeconds { get; }
-        public float SwingRawTargetHeightAlongUp { get; }
-        public float SwingFilteredTargetHeightBefore { get; }
-        public float SwingTargetHeightDelta { get; }
-        public float SwingTargetHeightAppliedDelta { get; }
-        public bool SwingTargetHeightUpdateHeld { get; }
-        public bool SwingTargetHeightForceRefreshed { get; }
-        public bool SwingTargetHeightRateLimited { get; }
-        public bool SwingTargetHeightClamped { get; }
-        public float SwingTargetHeightForceRefreshDistance { get; }
-        public float SwingTargetMaximumVerticalSpeed { get; }
-        public string SwingTargetHeightAdoptionMode { get; }
-        public float SwingFilteredTargetHeightAlongUp { get; }
-        public Vector3 TargetHeightComponentUp { get; }
-        public string PreTransitionReason { get; }
-        public CharacterFootConstraintState PreTransitionSource { get; }
-        public CharacterFootConstraintState PreTransitionTarget { get; }
-        public string PreTransitionAnchorCommand { get; }
-        public string PostTransitionReason { get; }
-        public CharacterFootConstraintState PostTransitionSource { get; }
-        public CharacterFootConstraintState PostTransitionTarget { get; }
-        public string PostTransitionAnchorCommand { get; }
-        public Vector3 StateTargetCorrection { get; }
-        public string InterpolationPolicy { get; }
-        public Vector3 InterpolationOutputCorrection { get; }
-        public bool InterpolationCompleted { get; }
-        public CharacterFootConstraintState ConstraintStateBefore { get; }
-        public CharacterFootLockResponse LockResponseBefore { get; }
-        public bool OutputStagesAvailable { get; }
-        public bool ReleasingCompletedToSwing { get; }
-        public bool SafetyFloorAvailable { get; }
-        public CharacterFootSafetyFloorOwner SafetyFloorOwner { get; }
-        public int SafetyFloorOwnerSurfaceIdentity { get; }
-        public ulong SafetyFloorOwnerPathIdentity { get; }
-        public Vector3 CorrectionBeforeSafetyFloor { get; }
-        public Vector3 SafetyFloorMinimumCorrection { get; }
-        public Vector3 SafetyFloorOutputCorrection { get; }
-        public Vector3 FinalEffectiveCorrection { get; }
-        public bool SafetyFloorClamped { get; }
-        public float SafetyFloorClampMeters { get; }
-        public float SafetyFloorClearanceBeforeMeters { get; }
-        public float SafetyFloorClearanceAfterMeters { get; }
-        public bool PlantInterpolationEvaluated { get; }
-        public ulong PlantTargetEventIdentity { get; }
-        public bool PlantTargetVerified { get; }
-        public string PlantTargetKind { get; }
-        public CharacterFootLockResponse PlantLockResponse { get; }
-        public bool PlantLockWeightCompleted { get; }
-        public Vector3 PlantDesiredPoint { get; }
-        public Vector3 PlantFilteredPoint { get; }
-        public CharacterFootSupportTargetDiagnostics SelectedSupportTarget
-        {
-            get;
-        }
         public string PlantTargetHeightAdoptionMode { get; }
         public float PlantTargetMaximumVerticalSpeed { get; }
         public float PlantTargetHeightBefore { get; }
@@ -1158,7 +1176,32 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         public Vector3 PlantEffectiveCorrectionAfter { get; }
         public float PlantOutputDistance { get; }
         public float PlantPenetrationDepth { get; }
-        public bool Accepted => State == CharacterFootSwingMotionState.Accepted;
+    }
+
+    public readonly struct CharacterFootSwingMotionDiagnostics
+    {
+        internal CharacterFootSwingMotionDiagnostics(in CharacterFootSwingMotionResult result)
+        {
+            Core = new CharacterFootSwingCoreDiagnostics(in result);
+            CharacterFootLifecycleTransitionFact lifecycle =
+                result.LifecycleTransition;
+            Lifecycle = new CharacterFootLifecycleTransitionDiagnostics(in lifecycle);
+            CharacterFootPathContinuityFact path = result.PathContinuity;
+            PathContinuity = new CharacterFootPathContinuityDiagnostics(in path);
+            OutputStages = new CharacterFootOutputStagesDiagnostics(
+                in lifecycle, in path);
+            Response = new CharacterFootCorrectionResponseDiagnostics(in path);
+            CharacterFootSupportTarget selectedSupportTarget = path.SelectedSupportTarget;
+            SelectedSupportTarget = new CharacterFootSupportTargetDiagnostics(in selectedSupportTarget);
+        }
+
+        public CharacterFootSwingCoreDiagnostics Core { get; }
+        public CharacterFootLifecycleTransitionDiagnostics Lifecycle { get; }
+        public CharacterFootPathContinuityDiagnostics PathContinuity { get; }
+        public CharacterFootOutputStagesDiagnostics OutputStages { get; }
+        public CharacterFootCorrectionResponseDiagnostics Response { get; }
+        public CharacterFootSupportTargetDiagnostics SelectedSupportTarget { get; }
+        public bool Accepted => Core.Accepted;
     }
 
     internal static class CharacterFootSwingMotionBuilder

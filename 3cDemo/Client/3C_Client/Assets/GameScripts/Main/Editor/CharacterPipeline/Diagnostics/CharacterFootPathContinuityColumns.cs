@@ -1,6 +1,6 @@
 using UnityEngine;
-using Source = ThirdPersonCharacter.Pipeline.Presentation.CharacterFootSwingMotionDiagnostics;
-using Column = ThirdPersonCharacter.Pipeline.Editor.CharacterFootCsvColumn<ThirdPersonCharacter.Pipeline.Presentation.CharacterFootSwingMotionDiagnostics, ThirdPersonCharacter.Pipeline.Editor.CharacterFootPathContinuitySample>;
+using Source = ThirdPersonCharacter.Pipeline.Presentation.CharacterFootPathContinuityDiagnostics;
+using Column = ThirdPersonCharacter.Pipeline.Editor.CharacterFootCsvColumn<ThirdPersonCharacter.Pipeline.Presentation.CharacterFootPathContinuityDiagnostics, ThirdPersonCharacter.Pipeline.Editor.CharacterFootPathContinuitySample>;
 using Codecs = ThirdPersonCharacter.Pipeline.Editor.CharacterFootCsvCodecs;
 using Unit = ThirdPersonCharacter.Pipeline.Editor.CharacterFootCsvUnit;
 

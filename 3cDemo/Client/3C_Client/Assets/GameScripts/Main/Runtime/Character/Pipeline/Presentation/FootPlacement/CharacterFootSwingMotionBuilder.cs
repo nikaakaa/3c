@@ -383,9 +383,9 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             outcome == CharacterFootResolvedOutcome.RotationProjectionUnavailable;
     }
 
-    public readonly struct CharacterResolvedFootDiagnostics
+    public readonly struct CharacterResolvedFootCoreDiagnostics
     {
-        internal CharacterResolvedFootDiagnostics(
+        internal CharacterResolvedFootCoreDiagnostics(
             in CharacterResolvedFootResult result,
             in CharacterFootPlacementAnimatedFootPose source)
         {
@@ -401,49 +401,20 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             GoalTargetRotation = result.Pose.FinalRotation;
             EffectiveAnkle = result.Pose.EffectiveAnkle;
             EffectiveRotation = result.Pose.EffectiveRotation;
-            Vector3 effectiveAnkle = result.Pose.EffectiveAnkle;
-            Quaternion effectiveRotation = result.Pose.EffectiveRotation;
             CharacterFootPlacementSoleContactPose contacts =
-                source.ResolveSoleContacts(
-                    effectiveAnkle,
-                    effectiveRotation);
+                source.ResolveSoleContacts(EffectiveAnkle, EffectiveRotation);
             EffectiveHeel = contacts.HeelPosition;
             EffectiveToe = contacts.ToePosition;
             EffectiveSoleFromContacts =
                 (contacts.HeelPosition + contacts.ToePosition) * 0.5f;
             SourceSoleForward = source.SoleForward;
-            SourceSoleFrameLocalRotation =
-                source.SoleFrameLocalRotation;
+            SourceSoleFrameLocalRotation = source.SoleFrameLocalRotation;
             GoalTargetCorrection = result.Pose.GoalTargetCorrection;
             EffectiveSoleCorrection =
                 EffectiveSoleFromContacts -
                 (source.HeelPosition + source.ToePosition) * 0.5f;
             PositionWeight = result.Pose.GoalWeight;
             RotationWeight = result.Pose.RotationWeight;
-            CharacterFootSupportTarget supportTarget = result.Support.Target;
-            SupportTarget = new CharacterFootSupportTargetDiagnostics(
-                in supportTarget);
-            ContactAvailable = result.Support.Contact.IsAvailable;
-            ContactEventIdentity = result.Support.Contact.EventIdentity;
-            ContactPoint = result.Support.Contact.Point;
-            ContactOwnership = result.Support.ContactOwnership;
-            SupportEligibility = result.Support.Eligibility;
-            SupportWeight = result.Support.Weight;
-            SupportIntentWeight = result.Support.Weight;
-            SupportHorizontalError = result.Support.HorizontalError;
-            SupportEventIdentity = result.Support.EventIdentity;
-            PelvisReachAvailable = result.Support.ReachReference.IsAvailable;
-            PelvisReachEventIdentity =
-                result.Support.ReachReference.EventIdentity;
-            PelvisReachPoint = result.Support.ReachReference.Point;
-            LandingReachAvailable = result.LandingReachRequest.IsAvailable;
-            LandingReachEventIdentity =
-                result.LandingReachRequest.EventIdentity;
-            LandingReachHip = result.LandingReachRequest.Hip;
-            LandingReachTargetAnkle = result.LandingReachRequest.TargetAnkle;
-            LandingReachLegLength = result.LandingReachRequest.LegLength;
-            LandingReachMinimumCompressionReserve =
-                result.LandingReachRequest.MinimumCompressionReserve;
         }
 
         public ulong FrameSequence { get; }
@@ -467,25 +438,87 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         public Vector3 EffectiveSoleCorrection { get; }
         public float PositionWeight { get; }
         public float RotationWeight { get; }
+    }
+
+    public readonly struct CharacterResolvedFootContactDiagnostics
+    {
+        internal CharacterResolvedFootContactDiagnostics(in CharacterFootSupportFacts support)
+        {
+            Available = support.Contact.IsAvailable;
+            EventIdentity = support.Contact.EventIdentity;
+            Point = support.Contact.Point;
+            Ownership = support.ContactOwnership;
+        }
+
+        public bool Available { get; }
+        public ulong EventIdentity { get; }
+        public Vector3 Point { get; }
+        public float Ownership { get; }
+    }
+
+    public readonly struct CharacterResolvedFootSupportDiagnostics
+    {
+        internal CharacterResolvedFootSupportDiagnostics(in CharacterFootSupportFacts support)
+        {
+            Eligibility = support.Eligibility;
+            Weight = support.Weight;
+            HorizontalError = support.HorizontalError;
+            EventIdentity = support.EventIdentity;
+        }
+
+        public CharacterFootSupportEligibility Eligibility { get; }
+        public float Weight { get; }
+        public float HorizontalError { get; }
+        public ulong EventIdentity { get; }
+    }
+
+    public readonly struct CharacterResolvedFootReachDiagnostics
+    {
+        internal CharacterResolvedFootReachDiagnostics(in CharacterResolvedFootResult result)
+        {
+            PelvisAvailable = result.Support.ReachReference.IsAvailable;
+            PelvisEventIdentity = result.Support.ReachReference.EventIdentity;
+            PelvisPoint = result.Support.ReachReference.Point;
+            LandingAvailable = result.LandingReachRequest.IsAvailable;
+            LandingEventIdentity = result.LandingReachRequest.EventIdentity;
+            LandingHip = result.LandingReachRequest.Hip;
+            LandingTargetAnkle = result.LandingReachRequest.TargetAnkle;
+            LandingLegLength = result.LandingReachRequest.LegLength;
+            LandingMinimumCompressionReserve =
+                result.LandingReachRequest.MinimumCompressionReserve;
+        }
+
+        public bool PelvisAvailable { get; }
+        public ulong PelvisEventIdentity { get; }
+        public Vector3 PelvisPoint { get; }
+        public bool LandingAvailable { get; }
+        public ulong LandingEventIdentity { get; }
+        public Vector3 LandingHip { get; }
+        public Vector3 LandingTargetAnkle { get; }
+        public float LandingLegLength { get; }
+        public float LandingMinimumCompressionReserve { get; }
+    }
+
+    public readonly struct CharacterResolvedFootDiagnostics
+    {
+        internal CharacterResolvedFootDiagnostics(
+            in CharacterResolvedFootResult result,
+            in CharacterFootPlacementAnimatedFootPose source)
+        {
+            Core = new CharacterResolvedFootCoreDiagnostics(in result, in source);
+            CharacterFootSupportFacts support = result.Support;
+            Contact = new CharacterResolvedFootContactDiagnostics(in support);
+            Support = new CharacterResolvedFootSupportDiagnostics(in support);
+            Reach = new CharacterResolvedFootReachDiagnostics(in result);
+            CharacterFootSupportTarget supportTarget = support.Target;
+            SupportTarget = new CharacterFootSupportTargetDiagnostics(in supportTarget);
+        }
+
+        public CharacterResolvedFootCoreDiagnostics Core { get; }
         public CharacterFootSupportTargetDiagnostics SupportTarget { get; }
-        public bool ContactAvailable { get; }
-        public ulong ContactEventIdentity { get; }
-        public Vector3 ContactPoint { get; }
-        public float ContactOwnership { get; }
-        public CharacterFootSupportEligibility SupportEligibility { get; }
-        public float SupportWeight { get; }
-        public float SupportIntentWeight { get; }
-        public float SupportHorizontalError { get; }
-        public ulong SupportEventIdentity { get; }
-        public bool PelvisReachAvailable { get; }
-        public ulong PelvisReachEventIdentity { get; }
-        public Vector3 PelvisReachPoint { get; }
-        public bool LandingReachAvailable { get; }
-        public ulong LandingReachEventIdentity { get; }
-        public Vector3 LandingReachHip { get; }
-        public Vector3 LandingReachTargetAnkle { get; }
-        public float LandingReachLegLength { get; }
-        public float LandingReachMinimumCompressionReserve { get; }
+        public CharacterResolvedFootContactDiagnostics Contact { get; }
+        public CharacterResolvedFootSupportDiagnostics Support { get; }
+        public CharacterResolvedFootReachDiagnostics Reach { get; }
     }
 
     public enum CharacterFootSwingMotionState : byte

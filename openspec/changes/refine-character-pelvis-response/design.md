@@ -102,3 +102,13 @@ ae10348只将Corin现有正式频率从3Hz改2Hz，并显式重建匹配的Float
 Available/Reserve/Min/Max继续描述原姿态几何，OffsetAlongUp与TargetAdjusted描述实际采用的软目标；不要求软目标必须满足姿态区间，只要求真正硬Reach仍有效。既有事实足够重算，不新增CSV列。该步可能少保留一部分原动画弯腿程度，必须由同Record检查脚部、膝盖和台阶，不能用175单窗改善宣布平地整体修好。详细分解与模型边界见experiments/20260831-pelvis-neutral-posture-preference.md。
 
 085223已完成正式Replay与独立验收并保留该局部修正：移动平地平均额外下压约减少1毫米，175减少21.515毫米，Foot及37质量计数保持；静止83帧、最深值和主要硬约束问题不变，R826峰与部分Knee步长略增。该结果不替代193957质量基线，不宣称平地下陷全部修复，也不取消后续原目标/硬边界排查。
+
+## 平地下压第二步：正式压缩余量单变量候选
+
+以09094b3/085223为直接前驱，2023条有效脚行的正式Rig腿长与实际两段骨长最大差不足0.4微米，排除厘米级长度缩短。平地原动画可只剩约12毫米弯曲余量，固定20毫米硬余量本身会要求额外下蹲；贴地目标与世界锁的几何需求仍须独立保留。
+
+本轮只将Corin既有MinimumLandingLegCompressionReserve从0.02米试验为0.01米，保留唯一LegLength-reserve硬区间及Foot Reach保护。它不改真实腿长、脚目标、Bend、3Hz、软目标或速度门，也不把余量改成状态开关或软约束。10毫米是项目实验参数，不是ZZZ值或质量阈值；取舍是允许腿更直以减少不必要下压，是否引入反弯和脚部回归须由同Record裁决。
+
+现有Diagnostics从实际Request/每行reserve复算，保持facts65/Analyzer65/diagnosis34、37项质量规则及独立2厘米只读反事实不变。Profile与Float32/Fixed/Projection身份通过正式构建同步，不能沿用旧产品或改Proof放行。冻结输入模型只作为准入，真实结果及保留/撤销记录见experiments/20260831-pelvis-compression-reserve.md。
+
+092855真实Replay及独立验收后拒绝该候选：静止/移动平均下压显著减轻，但Knee超过10厘米157→166，R826最大峰增大且954/996旧翻侧后移放大；不能以Foot规则保持或骨盆均值改善采纳。a0aea66已只恢复20毫米Profile与匹配产品，唯一Runtime算法及Diagnostics不变。并行GroundEnvelope改动尚未隔离，恢复Replay未执行，不声称动态恢复完成。该实验确定了余量贡献，也说明降低下压前需独立解决膝盖选边稳定性；不在本change偷偷加Bend修改。

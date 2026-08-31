@@ -175,7 +175,7 @@ Foot Hard Ownership Loss只由`!Grounded || !CurrentStep.IsAuthoritative`形成�
 
 根`CharacterFootStateContext`收敛为一组分型数据块：`Discrete State Context`只存当前State与最近Transition，`Contact Context`只存Anchor和Lock响应，`Contact Transition Context`只存边沿与已消费Event历史，`Interpolation State`只存上一目标、Target Height、换代Residual、Correction Response、Effective Correction与完成事实，Landing与Observation继续使用各自typed Page。所有数据块仍由同一个Pending/Committed根事务一次Seal或Discard，不建立独立生命周期。
 
-Post Constraint只在插值后消费结果，但按状态承担两种明确责任。Swing/UnlockedSupport必须继续把Accepted Ground Path Envelope作为硬最低约束，防止一个仍可到达的Swing因为Residual或目标采用政策落到地形下；这项约束不参与Landing/Lock垂直接管。Landing/Locked的Verified Anchor部分只测量连续输出的穿透深度、判断是否位于`GroundPenetrationTolerance`内并发布`GroundCatchup`与Full Lock门控，不得调用`RaiseToMinimum`、修改Effective Correction或写回Interpolation历史。Contact接管允许不超过容差的轻微穿透；若状态交接继承超预算Contact误差，输出必须继续由同一Correction Response向Verified Anchor收敛，期间不得Full Lock。Landing Reach和有限值边界仍可硬夹紧不可达Goal。Ground测量与Reach夹紧都不得回写State Target、Residual或Transition。
+Post Constraint只在插值后消费结果，但按状态承担两种明确责任。Swing/UnlockedSupport必须继续把Accepted Ground Path Envelope作为硬最低约束，防止一个仍可到达的Swing因为Residual或目标采用政策落到地形下；这项约束不参与Landing/Lock垂直接管。Landing/Locked的Verified Anchor部分只测量连续输出的穿透深度、判断是否位于`GroundPenetrationTolerance`内并发布`GroundCatchup`与Full Lock门控，不得调用`RaiseToMinimum`、修改Effective Correction或写回Interpolation历史。Contact接管允许不超过容差的轻微穿透；若状态交接继承超预算Contact误差，输出必须继续由同一Correction Response向Verified Anchor收敛，期间不得Full Lock。Landing Reach只发布不可达观察及原完成资格，有限值非法仍明确拒绝。Ground测量与Reach观察不得回写State Target、Residual或直接写Transition。
 
 ## Decision 4: 先定位Path同帧放大，再分离连续目标与Envelope安全
 
@@ -230,7 +230,7 @@ Resolved Foot把正式Support写入`SupportIntentWeight`。Primary Support的Acq
 
 `ContactReference`继续只属于脚锁；`PelvisReachReference`可以来自同Event已经Accepted的Landing/Ground事实。这样Sliding或暂时不可锁的承重脚可以协调Pelvis，但不能因此把脚固定到世界Anchor。
 
-Primary Support只消费Resolved字段，不读取Foot State、Lock Mode或Context。Support的Pelvis Reach Reference按同Event冻结Anchor、Verified Landing、Prepared Plant Landing、Accepted Swing Landing的正式优先级取得，Contact Anchor不可用时不得把Formal Support强制清零。Support曲线为0时不得由相对大小归一成1；双脚都无正式Support时Pelvis进入现有typed Release，而不是猜一只脚承重。
+Primary Support只消费typed脚请求字段，不读取Foot State、Lock Mode或Context。Support的Pelvis Reach Reference按同Event冻结Anchor、Verified Landing、Prepared Plant Landing、Accepted Swing Landing的正式优先级取得，Contact Anchor不可用时不得把Formal Support强制清零。Support曲线为0时不得由相对大小归一成1；双脚都无正式Support时Pelvis进入现有typed Release，而不是猜一只脚承重。
 
 ### Current Support由Foot/Toe脚掌几何解析唯一位置与法线
 
@@ -248,27 +248,21 @@ CharacterFootSupportTarget
 
 当前双SphereCast以最近命中、纯Up最大位移和selected raw Normal组成Target的实现只属于022607失败经验，不得成为最终设计：球半径会把台阶边缘接触偏移写入命中点，纯Up Position又与斜Direction不在同一几何域。正式Current Support必须在同一固定容量事务内从Foot/Toe多点记录解析一个完整XYZ Position与一个Direction，并为各自来源保留明确记录lineage；不得调低Slope阈值、偏好Up、平均多法线或把SphereCast hit point直接当Foot Target。任一必需记录无效或容量溢出时发布typed unavailable，不以旧Support、Animated Up、单点降级或默认地面冒充成功。准确查询形状与Position组合仍属待闭合项，实施前必须由现有Rig几何与项目Backend形成明确typed合同，不复制匿名六次调用常量。
 
-Current Support Target进入State Target选择，但当前Final Component Pose已经完成Pose Graph混合，Foot Placement不再补造第二状态权重。Position Source与Requested Direction Source必须分别发布Event、Path、Frame、Completion和World lineage，不能伪装成同一Observation。Verified/Retained Anchor同时拥有冻结Position与Direction，实时Current Support拒绝不得反向释放Anchor。Requested Direction归一化后进入唯一Direction History，Applied Direction与Rig Sole Forward只生成Foot Rotation，位置响应使用独立PoseRoot basis；Target Height仍独立沿Component Up计算。位置、旋转、Applied Direction、分型lineage、Goal Weight和Writer汇入同一Resolved Foot，Toe不生成第二Goal。Rotation与Ankle Position必须按FBBIK本帧实际Position/Rotation Weight联合反解，零Rotation Weight不得改变Swing动画XZ。Direction变化只由Interpolation内每次10度历史推进，不执行世界投影、不在FBBIK或Final Pose之后增加Rotation低通。Pelvis仍只消费Resolved Foot Pair，不读取原始多点记录。
+Current Support Target进入State Target选择，但当前Final Component Pose已经完成Pose Graph混合，Foot Placement不再补造第二状态权重。Position Source与Requested Direction Source必须分别发布Event、Path、Frame、Completion和World lineage，不能伪装成同一Observation。Verified/Retained Anchor同时拥有冻结Position与Direction，实时Current Support拒绝不得反向释放Anchor。Requested Direction归一化后进入唯一Direction History，Applied Direction与Rig Sole Forward只生成Foot Rotation，位置响应使用独立PoseRoot basis；Target Height仍独立沿Component Up计算。位置、旋转、Applied Direction、分型lineage、Goal Weight和Writer汇入同一Resolved Foot，Toe不生成第二Goal。Rotation与Ankle Position必须按FBBIK本帧实际Position/Rotation Weight联合反解，零Rotation Weight不得改变Swing动画XZ。Direction变化只由Interpolation内每次10度历史推进，不执行世界投影、不在FBBIK或Final Pose之后增加Rotation低通。Pelvis只消费typed脚请求及准备结果，不读取原始多点记录。
 
-## Decision 7: Landing Reach先协调Pelvis，再限制Foot Goal
+## Decision 7: Landing Reach保留观察与原完成资格
 
 ### 有效动画Bend方向的独立实验
 
 2026-08-31以160901认可行为、192218恢复包和同值203023新诊断基线重新实验，不沿用130545的327行旧计数。当前2082个可靠动画脚行中223行请求被Applied历史倒置；方向d与-d会选到不同膝盖侧，不是等价平面表示。可靠动画直接更新运输前Stable方向，并用本帧原腿轴到加权Target腿轴的FromToRotation生成实际请求，不再由Stable或Applied历史翻号。退化时继续使用原Stable方向、Target平面投影与Applied保留政策，既有四个退化样本不得改义；Stable不能保存已运输方向，亦不新增sourceAxis历史。全部权重、Foot/Pelvis目标、Vendor和Writer保持不变。此项目修正不冒称ZZZ SmoothKnee，零权重深折叠及Vendor内部ReadPose/LimitBend边界仍由真实回放裁决。现行current spec要求唯一Goal/Solver与根Bank归属，没有要求有效方向与历史dot非负，与本轮合同不冲突。具体假设、业务取舍与Replay门见[有符号动画Bend实验](experiments/20260830-signed-animation-bend.md)。
 
-Foot Motion Profile新增必须显式序列化的米制`MinimumLandingLegCompressionReserve`并纳入Profile Revision。缺失、非有限或越界时整项typed invalid，不提供代码默认值或旧配置补全。State Target Resolver与Resolved Foot为预测Landing脚，以及仍持有同Event Contact Goal的Landing、Locked、Releasing脚发布typed Reach Request：Hip、目标Ankle、Leg Length、最小压缩余量、Landing Event和有效世界Reference。Releasing必须继续参与直到其Goal权重归零，避免Pelvis在释放期间单独上提并把接触腿拉到近伸直奇异区。它不是第二Support、第二Anchor或第二状态机。
+Foot Motion Profile的`MinimumLandingLegCompressionReserve`继续参与真实腿长下的可达几何观察，缺失、非有限或越界仍由现有准备入口拒绝。Foot请求生产者按原事件、状态与权重政策发布本腿Reach准入；Releasing仍按原同Event且有效Goal条件参与，不能把删除硬执行扩大为删除观察或修改准入。
 
-Pelvis Builder同时计算Primary Support腿和正式Foot Reach允许的Pelvis沿Up硬区间；两者都严格使用真实腿长减正式最小安全余量。原动画额外弯曲余量独立生成PosturePreference，仅影响目标：
+`refine-character-pelvis-response`已在9da24a5删除业务Reach硬执行和末端Foot径向夹紧，ad3527e及233436/205014是当前保留行为。Pelvis使用共同较低脚掌高度差、只影响目标的原动画软姿态偏好和一次现有Critical Spring；Reach不夹取目标或输出、不清边界速度、不强开权重、不阻止Release归零，也不为Primary Support保留例外。原Handoff及背向速度处理保持。
 
-```text
-HardPelvisInterval = LeftRequestedLegHardInterval ∩ RightRequestedLegHardInterval
-```
+逐腿区间和交集只说明几何可达性；原Landing完成资格仍用本腿请求与实际加权Pelvis位移判断。Foot Transition决定是否完成，观察端不直接写State，也不改Foot目标或Goal权重。业务取舍是保留当前目标与响应行为，同时如实暴露不可达及求解误差；不通过额外目标夹紧把已知问题伪装成成功。可靠动画膝向运输继续遵循上面的已接受独立修正。
 
-交集存在时，preferred target先受完整硬区间约束，原Critical Spring按现有频率求值一次，积分后的Output仅对硬区间夹紧一次并清除朝外速度；Module不再调用后置ApplyLandingReach改写输出。原动画姿态余量不得作为第二份输出区间。未加权Spring区间按正式Pelvis Goal权重换算，Reach资格最终核对实际加权位移。只要非零位移是安全余量所必需，即使小于5毫米也必须写出；不得一边发布Reach Available一边把实际Goal权重清零。Support换代、坡度变化和Target跨越Output保留显式Handoff与Velocity Reset。本次用户批准的三步路线保持既有频率，不采用旧草案PelvisMaximumUpVelocity/DownVelocity，也不加另一平滑器。
-
-交集不存在时，系统先保持Primary Support安全，再把Landing Foot Goal夹紧到保留最小压缩余量的最大可达点，发布`LandingReachUnavailable`，并禁止该脚进入Full Lock。它可以保持Landing、Sliding或进入Releasing，但不得把超长目标交给FBBIK后仅靠腿伸直夹紧。
-
-该政策的业务取舍是：不可同时满足双腿时显式保Primary安全，并用既有Foot Goal可达保护处理其余目标。必要的硬边界调整仍可能突变，不能保证不变脚目标、Body和腿长时骨盆也绝对连续；这不是允许默默撤销有效脚约束。
+请求／最终结果与Pelvis准备接口统一由`refactor-character-ik-maintenance-boundaries`维护；本change不再保留一份旧Resolved输入或硬Reach合同。其它尚未覆盖的Contact与Goal Sole历史任务仍独立记录，不能因此自动启用。
 
 ## Decision 8: 正式Contact与Lock驱动Transition与统一插值
 
@@ -292,7 +286,7 @@ Residual基础/截止半衰期与剩余距离
 Ground Path identity、Envelope/Anchor穿透、容差、Ground Catchup与Full Lock门控
 Formal Step/Foot Height/Contact/Lock/Support输入
 Support与Landing Reach区间及交集
-Foot Goal夹紧量与LandingReachUnavailable
+原请求、最终Goal、求解误差与LandingReachUnavailable
 Target/Solved Extension Ratio与Compression Reserve
 ```
 
@@ -361,8 +355,8 @@ Prediction诊断必须补齐`Raw Body Target Current + Raw移动计划Continuati
 8. 让PreSwing、Swing与Approach Contact保持Landing Tracking，并由统一Interpolation持续准备Plant目标；首次正式Contact Rising执行一次Plant Verification并建立冻结Anchor。
 9. 保留已经完成的旧`MaximumVerticalCorrectionSpeed`单档后置链删除，在同一Interpolation中分离Plant Target Height、完整Vector Plant World Residual与新的标量Correction Response History；Current/Target Position与Support Normal按同一状态权重混合并归一化，Correction Response沿PoseRoot局部Y对应世界轴使用双档速率，Target Height仍沿Component Up独立处理；安装初始化/重置和Action/攻击/同Event不清零政策，使`Desired Output -> Response Output -> Existing Goal Baseline Mix`只有一条正式链。
 10. 从Final Animation Pose与Rig Calibration取得Heel/Toe脚掌几何，在现有World Query Backend内生成固定容量Current Support Observation，解析唯一Position+SupportNormal并生成同一Foot Goal Rotation；删除任何单点降级、Toe Goal、第二Writer或Pose后Rotation低通。
-11. 让Support进入Resolved Foot、Primary Support和Pelvis，保持Lock生命周期不变；原动画弯曲余量只影响目标，完整硬Reach交给一次既有Pelvis Spring，不增非对称速度配置。
-12. 增加双腿Reach交集、最小Landing压缩余量、Goal夹紧与typed拒绝。
+11. 让Support进入Resolved Foot、Primary Support和Pelvis，保持Lock生命周期不变；原动画弯曲余量只影响目标，Reach只观察一次既有Pelvis Spring的实际加权位移，不增非对称速度配置。
+12. 保留双腿Reach交集、最小Landing压缩余量、原Landing完成资格与typed观察；不恢复Goal夹紧。
 13. 用Contact、Lock Mode与Lock Weight替换旧PlantConfidence生命周期并删除旧字段。
 14. 显式重建Corin Projection、Float32与Fixed产品，完成编译、诊断重放和严格OpenSpec校验。
 

@@ -65,7 +65,7 @@ PredictionMotion、BodyTrajectory及其Tick/Generation/ResetSequence/AuthorityTi
 
 ## 第二个闭环：收窄Pelvis输入并清除阶段混用
 
-状态：候选实现及Runtime/Editor编译完成，等待正式回放；上一通过为`2a6fe33`，总基线不变。
+状态：候选`48d7bbcf2d321e4983269f8d40ca828468ae814f`已通过Runtime/Editor编译和本Record正式回放；上一通过为`2a6fe33`，总基线不变。
 
 - `CharacterFootStrideRequest`只保存正式Swing资格、Step Event、可用Landing的点／Event和Path接受事实；原始Step与GroundPathLanding不再进入Stride求值。删除恒等于CurrentStep的SelectedStep副本，Reach仍读取同一正式CurrentStep。
 - `PreparePelvis`只投影原有Support可用条件、加权踝点、位置权重、两腿Reach和既有帧输入；`ResolvePelvis`仅接收`CharacterFootPelvisInput`，不再访问完整脚请求。拒绝顺序、支撑选择、姿态区间和唯一Spring数学不变。
@@ -73,3 +73,15 @@ PredictionMotion、BodyTrajectory及其Tick/Generation/ResetSequence/AuthorityTi
 - Prediction结果不再携带Goal或最终Motion。删除无消费者的WithLiveStep及重复WithFootMotion拷贝；诊断分别读取同一帧的Prediction、最终Motion、Resolved与正式Goal。只读记录的GroundPath更新用值复制，保留原内容。
 - 删除初始零权重Foot/Pelvis Goal及其跨PredictFootPair/PredictEvent/RejectedEvent的传递；Encoder只在Foot完成后从最终Resolved编码。删除未进入插值的PreviousVisibleOutput参数、可见Sole Bank字段及其读取函数，不启用旧Goal Sole接管。
 - Editor及其Runtime依赖按规定构建成功、0错误，build server立即关闭；包及既有工程警告不在本次范围。未改Profile、Solver、历史响应、世界查询、诊断列或评分。
+
+## 第二个闭环的验证封口
+
+- 原包：`Diagnostics/FootPlacementRuns/20260901-014135-409-d6745dcc70e54adb87ec807c6594b566`，正式输出与同目录字节一致的`replay-proof.json`已保留，数据未提交Git。
+- 官方proof/4直接对012513匹配1044输入；独立对012513、233436、205014的输入、起始Body、runtime identity、时序及全部1044帧均无差异。
+- 三组对照均2086×1215：1191业务列逐格字符串相同，23身份列双向映射无冲突、StartedUtc归运行元数据。67186×27几何的22业务列相同，5身份列双向映射无冲突；Foot/Pelvis/Knee/Goal/动画时序和实际采到的Solved/Physical无业务差异。
+- facts71/Analyzer71/d40、42个Target的规则/eligible/matched/occurrence/measurements/coverage及七维评分保持，61.9不变；没有调整容差、评分或列。Action/reentry/BodyReset零覆盖、窄Landing腿窗口仅2、未采最终Physical Knee的限制不变。
+- 测试任务已退出Play并交回Unity，Edit/Idle、未暂停、非编译。下一步以48d7bbc作为上一通过提交，固定总基线仍是ad3527e。
+
+## 合同同步
+
+首两个闭环通过后，current Foot的Resolved/Pelvis条款已同步请求→Pelvis→原完成→最终结果顺序，故本change删除重复RENAMED动作而保留同名MODIFIED差量。project与stabilize取消旧硬Reach/夹脚保证，stabilize删除重复的Resolved/Pelvis差量。可靠有符号膝向与其它未完成Contact/Goal Sole工作保留，没有将未完成的Reset或诊断绑定提前写成current事实；也没有自动归档。

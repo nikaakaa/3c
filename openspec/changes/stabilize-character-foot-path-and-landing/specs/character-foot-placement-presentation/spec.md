@@ -1,3 +1,5 @@
+基于已保留提交`ad3527e103cc3235a63e8a1c1dbd26df5155e0ba`，业务Reach硬执行与末端夹脚已删除；这里不再重复修改Resolved/Pelvis接口，统一由`refactor-character-ik-maintenance-boundaries`及current Foot合同拥有，避免后归档恢复旧结构。其余未完成行为任务不能据此视为通过。
+
 ## MODIFIED Requirements
 
 ### Requirement: Landing Prediction必须形成独立世界事实
@@ -170,11 +172,11 @@ Swing MUST先以`Runtime Ground Envelope + Formal Foot Height`生成Raw Target H
 
 State Target MUST从Swing Ground/Current Support或Verified Anchor中选择一个同时携带Position、SupportNormal及分型来源lineage的正式Target；Swing Ground的Position可以来自Ground Path/Foot Height而Normal来自本帧Current Support，但Target MUST分别发布Position Source与Normal Source，不得伪装成同一Observation。两路来源 MUST属于同Frame、Side与World Revision。Support Normal MUST在有限检查后归一化为同Frame唯一Requested Support Direction。当前Final Component Pose已经完成Pose Graph动画混合；没有Pose Graph明确发布的同一StandardBlend source/target Foot骨骼实际贡献与双Support lineage时，Runtime MUST不再执行第二次Current/Target状态混合。Runtime在Target Event、Target Kind、Lock Response、Verification、Direct Follow、State/Response边沿、Target Point Revision或Target Height Force Refresh时，以持久上一实际Response Output Point为基准捕获完整WorldResidual。Approach Progress变化 MUST不Capture。稳定且Target Height delta为0的Locked帧 MUST发布`TargetHeightUpdateReason=None`。`DesiredOutputPoint` MUST等于`SelectedWorldTarget + ResidualAfterDecay`。
 
-Correction Response Stage MUST在Swing、UnlockedSupport、Landing、Locked与Releasing每个合法可见帧恰好执行一次。每脚 MUST分别保存Applied Direction History与标量Previous Response。Requested Direction MUST来自本帧归一化Selected Support Direction；无效、缺失或lineage不匹配时当前Foot结果 MUST typed unavailable，不得回退Component Up、Animated Up、上一法线或默认Up。首次合法输入 MUST直接采用Requested Direction；后续 MUST计算Previous Applied到Requested的夹角，并以Profile显式`SupportDirectionMaximumChangeDegrees`让本次Applied Direction最多朝Requested转该角度。Runtime MUST发布Requested、Previous、Applied、是否受限、角上限和实际变化角。Direction变化 MUST保留上一Correction scalar，严禁把上一世界输出相对当前Original Sole投影到新Direction；旧`BasisTransferred`及其投影事实 MUST删除。随后 MUST计算`DesiredResponse = dot(DesiredOutputPoint - OriginalSole, PositionResponseHeightProjection)`；首次合法输入以及Reset、Retarget、Source/Profile/World lineage失效后的首次合法输入 MUST同步标量，普通动画目标变化、同Event Prediction换点、Contact Verification、Action Pose Contribution、攻击、Lock Response换代、Direction变化、Release完成和Same-Event Reentry MUST继续上一标量History。只有正式Position Target Capture且上一Committed根Bank存在有效Weighted Goal Sole参考时，完整Vector Residual与标量Response MUST以该Post Constraint/Post Reach加权Goal参考发布一次`WeightedGoalSoleTransferred`；该参考不是最终物理Sole，零Goal权重不得据此推断最终骨骼位置。已初始化时 MUST按Desired Response相对Previous Response的增减方向选择Profile显式`CorrectionResponseIncreaseSpeed`或`CorrectionResponseDecreaseSpeed`，把单帧标量变化限制在所选速率乘Presentation Delta内，并以`ResponseOutputPoint = DesiredOutputPoint + PositionResponseWorldAxis × (CurrentResponse - DesiredResponse)`生成唯一Response Output。Effective Correction MUST等于`ResponseOutputPoint - OriginalSole`，同一Applied Direction MUST生成Foot Rotation。
+Correction Response Stage MUST在Swing、UnlockedSupport、Landing、Locked与Releasing每个合法可见帧恰好执行一次。每脚 MUST分别保存Applied Direction History与标量Previous Response。Requested Direction MUST来自本帧归一化Selected Support Direction；无效、缺失或lineage不匹配时当前Foot结果 MUST typed unavailable，不得回退Component Up、Animated Up、上一法线或默认Up。首次合法输入 MUST直接采用Requested Direction；后续 MUST计算Previous Applied到Requested的夹角，并以Profile显式`SupportDirectionMaximumChangeDegrees`让本次Applied Direction最多朝Requested转该角度。Runtime MUST发布Requested、Previous、Applied、是否受限、角上限和实际变化角。Direction变化 MUST保留上一Correction scalar，严禁把上一世界输出相对当前Original Sole投影到新Direction；旧`BasisTransferred`及其投影事实 MUST删除。随后 MUST计算`DesiredResponse = dot(DesiredOutputPoint - OriginalSole, PositionResponseHeightProjection)`；首次合法输入以及Reset、Retarget、Source/Profile/World lineage失效后的首次合法输入 MUST同步标量，普通动画目标变化、同Event Prediction换点、Contact Verification、Action Pose Contribution、攻击、Lock Response换代、Direction变化、Release完成和Same-Event Reentry MUST继续上一标量History。只有正式Position Target Capture且上一Committed根Bank存在有效Weighted Goal Sole参考时，完整Vector Residual与标量Response MUST以该Post Constraint后按正式权重得到的Goal参考发布一次`WeightedGoalSoleTransferred`；该参考不是最终物理Sole，零Goal权重不得据此推断最终骨骼位置。已初始化时 MUST按Desired Response相对Previous Response的增减方向选择Profile显式`CorrectionResponseIncreaseSpeed`或`CorrectionResponseDecreaseSpeed`，把单帧标量变化限制在所选速率乘Presentation Delta内，并以`ResponseOutputPoint = DesiredOutputPoint + PositionResponseWorldAxis × (CurrentResponse - DesiredResponse)`生成唯一Response Output。Effective Correction MUST等于`ResponseOutputPoint - OriginalSole`，同一Applied Direction MUST生成Foot Rotation。
 
 Target Height、Plant World Residual与Correction Response MUST分别发布Owner、Before、Target、Applied Delta、After和Reset Reason，不得合并、互相覆盖或由同一无类型Reset清空。旧单档`MaximumVerticalCorrectionSpeed`、稳定帧逐帧上一世界输出重表达、无条件全Plant限速、“World Residual取代Correction历史”的Disposition与“上一Animated Sole + Previous Correction”伪基准 MUST保持删除；173条所述正式换代一次性重基不属于旧链。Swing/UnlockedSupport MUST继续以Accepted Ground Envelope作为硬下界，Release MUST继续使用统一Residual。`AcquireByWeight`进入帧不得对Contact Anchor立即`RaiseToMinimum`，正式Weight达到1时也不得清除尚未收敛的Residual或Correction Response。Residual大于`SwingResidualTolerance`时，Interpolation Runtime MUST按正式Step Time计算Landing截止收敛；Releasing完成 MUST只读取独立`ReleaseCompletionTolerance`。Step Time只决定Residual衰减，不得改变Raw Target、重选State或掩盖同帧不连续。既有Foot Goal/Position Weight MUST只在Response Output之后与动画基线混合一次；FBBIK与Final Pose之后 MUST没有常驻Foot低通。
 
-Ground Path Envelope、Contact Anchor与Reach MUST在Interpolation之后由唯一Post Constraint消费。Ground部分 MUST复用本帧Accepted Swing Motion已经采样的同一Envelope Point或冻结的同Event Anchor，不得执行Raycast、SphereCast或读取另一Surface。Swing/UnlockedSupport MUST继续把Accepted Ground Envelope作为硬最低约束，防止可达Swing穿入地形；Landing/Locked的Contact Anchor部分 MUST只测量穿透、分类`GroundPenetrationTolerance`内外并发布Ground Catchup与Full Lock门控，不得立即Clamp、修改Effective Correction、触发Residual Revision或写回Interpolation历史。某次交接继承的超预算Contact穿透 MUST继续由同一Correction Response向Anchor收敛，期间 MUST禁止Full Lock。Reach部分 MAY硬夹紧已知不可达Goal，但 MUST不反向修改State、Transition Decision、Target或Residual。全部分型状态 MUST由同一根Bank统一Seal或Discard，不得形成第二状态机、第二生命周期或第二输出路径。
+Ground Path Envelope与Contact Anchor MUST在Interpolation之后由唯一Ground Constraint消费；Reach只在脚请求与Pelvis观察链计算。Ground部分 MUST复用本帧Accepted Swing Motion已经采样的同一Envelope Point或冻结的同Event Anchor，不得执行Raycast、SphereCast或读取另一Surface。Swing/UnlockedSupport MUST继续把Accepted Ground Envelope作为硬最低约束，防止可达Swing穿入地形；Landing/Locked的Contact Anchor部分 MUST只测量穿透、分类`GroundPenetrationTolerance`内外并发布Ground Catchup与Full Lock门控，不得立即Clamp、修改Effective Correction、触发Residual Revision或写回Interpolation历史。某次交接继承的超预算Contact穿透 MUST继续由同一Correction Response向Anchor收敛，期间 MUST禁止Full Lock。Reach MUST只发布几何观察及原Landing完成资格，不夹紧Goal或Pelvis；它不得反向修改Target、Residual或直接写State。全部分型状态 MUST由同一根Bank统一Seal或Discard，不得形成第二状态机、第二生命周期或第二输出路径。
 
 Foot Hard Ownership Loss MUST只由`Grounded=false`或当前正式Step不具备Authoritative lineage触发。Action Slot Live Pose Contribution、`SourceActionInstanceId`及左右脚Pose Contribution Weight MUST只作为动画基线与provenance，不得触发Ownership Lost、Anchor Release、Suppress+Reset特殊路径或Interpolation清零。`animation.foot-placement-weight` MAY把最终Foot Goal可见权重降到0，但在Grounded且Step权威时，Foot Target Height、World Residual、Correction Response、Contact Context与Reach事实 MUST继续沿同一根事务推进。Landing Reach准入 MUST只读取Grounded、正式Reach Request与实际Goal Weight，不得因Action occupancy跳过；全身Action中的Stride/Pelvis停用若仍需要，MUST由独立显式作者Policy表达且不得影响Foot Goal ownership。
 
@@ -252,59 +254,6 @@ Releasing期间同Event再次出现Sliding或Locked请求，且原Verified Ancho
 - **THEN** Transition Runtime MUST在同帧应用Swing，随后按新State执行Ground穿透测量和最终输出分类
 - **AND** 发布为Swing的Corrected Sole MUST立即遵守同一Accepted Ground Envelope硬最低约束并记录Clamp事实，不得沿用Landing/Locked的Contact竖直限速政策
 
-### Requirement: Resolved Foot必须形成紧凑下游合同
-
-`CharacterResolvedFootResult` MUST继续包含Frame、Completion、Rig、Side、Final Sole/Ankle、Effective Correction、Goal Weight、Contact Reference/Ownership、Support Eligibility、Support Weight、Support Intent Weight、Support Horizontal Error、Support Event lineage、Pelvis Reach Reference与Outcome，并新增typed Landing Reach Request及其Event lineage。
-
-Support Intent Weight MUST逐值来自正式Support，不得从Lock Mode、Lock Weight、Contact Ownership或Foot State复制。Support Eligibility MUST由正式Support Intent、稳定Event lineage与有效Pelvis Reach Reference生成：可获取且可保留时发布`AcquireAndRetain`，只能延续已选Primary时发布`RetainOnly`，没有正式Support或Reach时发布`None`。Landing或Sliding MAY在未Full Lock时参与Pelvis Support，但 MUST不因此建立Foot Contact Anchor或增加Foot Goal锁定权重。
-
-Contact Reference MUST只属于脚锁；Pelvis Reach Reference MUST只属于Support/Pelvis；Landing Reach Request MUST只表达目标腿可达。三者不得互相作为默认值或让下游读取Foot State、Lock Mode、Path Residual与Context内部字段。
-
-#### Scenario: Landing脚具有正式Support但尚未Full Lock
-
-- **WHEN** Landing脚Support Intent非零、Event匹配且具有合法Pelvis Reach Reference，但Lock Mode仍为Sliding
-- **THEN** Resolved Foot MAY发布`AcquireAndRetain`供Primary Support与Pelvis消费
-- **AND** Foot Contact Ownership和Goal Lock Weight MUST继续只由正式Contact/Lock决定
-
-#### Scenario: 无正式Support
-
-- **WHEN** 双脚正式Support均为0或没有合法Pelvis Reach Reference
-- **THEN** Resolved Foot MUST发布Support Eligibility None和零Support Intent
-- **AND** MUST不把相对更高的一只脚归一成Support 1
-
-### Requirement: Pelvis必须只消费Resolved Foot Pair并保持双腿可达
-
-Primary Support MUST只读取Resolved Pair中的Support Eligibility、Support Intent Weight、Support Event lineage、Support Horizontal Error和Pelvis Reach Reference。Selector MUST不读取Foot State、Lock Mode、Contact Ownership或Context；正式Support为0时不得按相对大小生成支撑。Resolved Foot MUST按同Event Anchor、Verified Landing、Prepared Plant Landing、Accepted Swing Landing的正式优先级解析Pelvis Reach Reference；Contact Anchor缺失 MUST不自动抹掉仍有正式Event与Ground Reference的Support。
-
-Pelvis Builder MUST同时读取Primary Support腿Reach与Landing Reach Request，并严格使用真实腿长减Foot Motion Profile显式米制最小压缩余量形成沿Component Up的硬区间。预测Landing脚以及仍持有同Event Contact Goal且Position Weight非零的Landing、Locked、Releasing脚 MUST发布Reach Request；Releasing MUST持续参与到Goal权重归零。原动画额外弯曲余量 MUST只影响PosturePreference目标，不得另行硬夹紧输出。完整双腿边界 MUST在唯一Critical Spring求值前形成，目标先受硬边界约束，原频率积分后仅对硬区间夹紧一次；Output在边界且Velocity继续朝外时 MUST清除对应方向速度。Module MUST不在其后再次改写Pelvis。Support换代、坡度变化和目标跨越 MUST保持显式Handoff与Velocity Reset事实。本轮不引入旧草案的PelvisMaximumUpVelocity/DownVelocity，缺失或非法的现有正式配置仍 MUST typed拒绝，无默认参数补全。
-
-交集不存在时，系统 MUST优先保持Primary Support腿安全，把Landing Foot Goal夹紧到保留最小压缩余量的最大可达点，发布`LandingReachUnavailable`并禁止该脚进入Full Lock。PreSwing、Swing、Approach、UnlockedSupport、Landing、Locked与仍有非零Goal Weight的Releasing只要发布同Event typed Landing Reach Request，均 MUST进入同一Reach准入，不得再由`IsSwing`或内部State旁路。FBBIK MUST不接收已知超出可达区间的Landing目标后仅靠膝盖完全伸直夹紧。
-
-#### Scenario: 双腿Reach存在交集
-
-- **WHEN** Primary Support腿和Landing腿沿Up可达区间存在交集
-- **THEN** Pelvis Target与Spring Output MUST位于该交集内
-- **AND** Landing Foot Goal MUST保持至少Profile声明的最小压缩余量
-- **AND** 为满足该余量所需的非零Pelvis Output即使小于5毫米也 MUST通过正式Pelvis Goal写出，不得发布Reach Available后把Position Weight清零
-
-#### Scenario: 双腿Reach没有交集
-
-- **WHEN** 保持Primary Support安全与Landing腿最小压缩余量无法同时满足
-- **THEN** Runtime MUST夹紧Landing Foot Goal并发布`LandingReachUnavailable`
-- **AND** 该脚 MUST保持Landing、Sliding或进入Releasing，不得进入Full Lock或输出已知超长Goal
-
-#### Scenario: 动画姿态偏好不强压骨盆输出
-
-- **WHEN** 原动画额外弯曲余量要求比真实安全边界更低的骨盆
-- **THEN** 该余量 MUST只生成姿态偏好目标，不直接把最终Output压到姿态区间
-- **AND** 唯一Spring MUST使用现有频率响应，最终只能由真实腿长与正式安全余量硬夹紧，不新增后置低通或速度配置
-
-#### Scenario: Pelvis撞到Reach边界
-
-- **WHEN** Pelvis Spring Output到达可行交集上界或下界且Velocity仍朝区间外
-- **THEN** Runtime MUST把Output限制在边界并清除继续向外的Velocity分量
-- **AND** 后续Target回到区间内时 MUST从同一唯一Spring State继续响应，不建立第二Pelvis平滑器
-
 ## ADDED Requirements
 
 ### Requirement: Foot位置响应必须使用同帧PoseRoot坐标basis
@@ -367,7 +316,7 @@ Foot根Bank MUST在最终Foot Goal完成Constraint、Reach与Position/Rotation W
 
 每个Probe MUST分别保存Accepted/Rejected/NotExecuted、是否实际执行查询、完整命中记录、距离、Surface identity、World Revision和拒绝原因。任一必需Probe没有合法命中或容量溢出时，Current Support MUST发布typed unavailable；不得用上一结果、Animated Up、单点降级、默认地面或另一脚结果冒充本帧成功。全部必需记录合法时，Runtime MUST在同一事务内解析一个完整XYZ Foot Target Position与一个Requested Support Direction，并为两者分别保留确定的记录lineage。`CharacterFootSupportTarget.Position`在本项目中 MUST明确表示Sole Center，不得因ZZZ匿名Foot writer改名为Ankle。022607使用的`OriginalSole + ComponentUp × max displacement`与同一selected SphereCast raw Normal组合 MUST删除；不得把带Sphere半径偏移的hit point直接当Foot Position，也不得调低Slope阈值、偏好Up或平均多法线规避。Resolved阶段 MUST使用同一Applied Direction生成Final Sole Rotation，并以Rig Calibration按实际Position/Rotation Weight把Sole Center唯一反解为Ankle Goal，对账加权后Heel/Toe中点仍等于加权目标Sole。
 
-State Target MUST从Swing Ground/Current Support或Verified Anchor中选择一个完整`CharacterFootSupportTarget`；Target Kind、Position Source与Requested Direction Source MUST显式发布，两路来源 MUST分别保留Event、Path、Frame、Completion与World lineage。Requested Direction MUST归一化后进入唯一Direction History，Applied Direction MUST只服务Foot Rotation方向；位置响应轴 MUST来自同帧实际PoseRoot basis。Runtime MUST以动画Sole Forward在Applied Direction平面的有限投影生成同一个Final Sole Rotation，再结合`SoleFrameLocalRotation`生成Ankle Rotation与唯一Foot Goal；投影退化时该脚 MUST typed unavailable，不得使用World Forward、上一Rotation或默认方向。Target Height继续沿Component Up处理，Correction Response标量只沿PoseRoot局部Y对应世界轴作用。Position、Rotation、Applied Direction、Goal Weight、分型lineage与Writer MUST属于同一Resolved Foot。当前Final Component Pose已经完成Pose Graph动画混合；没有正式双Support lineage时不得在Foot Placement内补造第二State Blend。Toe MUST没有独立Goal、Direction/Correction History、IK、Writer或Pose后Rotation低通。Pelvis、Primary Support与下游Goal Assembler MUST只消费Resolved Foot Pair，不得读取原始多点命中或执行第二次查询。
+State Target MUST从Swing Ground/Current Support或Verified Anchor中选择一个完整`CharacterFootSupportTarget`；Target Kind、Position Source与Requested Direction Source MUST显式发布，两路来源 MUST分别保留Event、Path、Frame、Completion与World lineage。Requested Direction MUST归一化后进入唯一Direction History，Applied Direction MUST只服务Foot Rotation方向；位置响应轴 MUST来自同帧实际PoseRoot basis。Runtime MUST以动画Sole Forward在Applied Direction平面的有限投影生成同一个Final Sole Rotation，再结合`SoleFrameLocalRotation`生成Ankle Rotation与唯一Foot Goal；投影退化时该脚 MUST typed unavailable，不得使用World Forward、上一Rotation或默认方向。Target Height继续沿Component Up处理，Correction Response标量只沿PoseRoot局部Y对应世界轴作用。Position、Rotation、Applied Direction、Goal Weight、分型lineage与Writer MUST属于同一Resolved Foot。当前Final Component Pose已经完成Pose Graph动画混合；没有正式双Support lineage时不得在Foot Placement内补造第二State Blend。Toe MUST没有独立Goal、Direction/Correction History、IK、Writer或Pose后Rotation低通。Pelvis与Primary Support MUST只消费typed脚请求及准备结果，下游Goal Assembler MUST只消费最终结果编码的Goal Contribution，不得读取原始多点命中或执行第二次查询。
 
 #### Scenario: Foot与Toe多点记录跨越台阶边缘
 
@@ -387,7 +336,7 @@ State Target MUST从Swing Ground/Current Support或Verified Anchor中选择一�
 - **THEN** Current Support MUST提交本帧Rejected Observation并让该脚发布typed unavailable、零Support Correction与零Foot Goal Position/Rotation Weight，使动画基准保持可见；不得把它误报成Animation Frame或Source失权
 - **AND** Target Height与Swing Residual等不依赖Support Normal的历史 MUST继续推进，Correction Response因本帧没有合法Direction只发布typed未执行并保留原History；不得冻结或回滚整份Foot Lifecycle Context
 - **AND** 已持有Verified/Retained Anchor的Landing、Locked与Releasing MUST继续使用冻结Anchor Target；Rejected Current Support只记录事实，不得释放Anchor、回滚Landing Context或重置Interpolation
-- **AND** 另一脚 MAY在同一根Pending事务内继续形成自己的typed结果，但Pelvis与Primary Support MUST只消费本帧Ready Resolved Foot；MUST不退化为单点支撑、上一帧法线、默认Up、旧Goal或独立Toe Goal
+- **AND** 另一脚 MAY在同一根Pending事务内继续形成自己的typed结果，但Pelvis与Primary Support MUST只消费本帧合法typed脚请求；MUST不退化为单点支撑、上一帧法线、默认Up、旧Goal或独立Toe Goal
 
 #### Scenario: 攻击动画产生大幅脚目标变化
 
@@ -419,7 +368,7 @@ Diagnostics MUST保留当前/上一域、移交、完整Plant Capture/Decay/Comp
 
 ### Requirement: Foot诊断必须证明Path安全与Landing可达责任
 
-封口Foot诊断 MUST在同Frame、Completion、Program、Projection、Rig、Event与Surface lineage下同时记录正式Step/Foot Height/Contact/Lock/Support输入、正式`ApproachContactToLandingProgress`、Approach Target Preparation与Selected Target Kind、上一与当前Lock请求、Contact Rising/Falling、距最近边沿秒数、最近与最近释放Contact Event、Same-Event Reentry Refresh/Unavailable结果、Retained Verified Anchor与连续接管事实、Raw Body Target当前速度、移动计划Current对照与Continuation、稳定Prediction速度、速度差阈值、EMA响应、最大速度Clamp、Prediction状态初始化/重置原因、KCC Future Translation、Prediction Candidate与上次查询快照、累计位移、Up夹角、两个查询阈值、Query Purpose、Refresh Mode、Query Reason、Landing Tracking状态、Approach Plant Target Preparation、Contact Verification Frame/Reason、稳定Plant候选忽略原因、Path Revision原因、Raw Landing/Path Target、Foot/Toe多点Pose输入与Current Support记录、唯一Support Position/Requested Direction及Rotation Goal、Pre/Post Transition Decision、State Target、Interpolation Policy/Residual/Completion、Plant Target Kind与Lock Response、Target Height Component Up、Requested/Previous/Applied Direction、是否受限、最大/实际变化角、Target Height Mode/Before/Target/Applied/After与Update Reason、Previous/Current Selected World Target、Previous/Current Response Output Point、Residual Capture Reason、World Residual捕获前/后/衰减后、Desired/Previous/Current Correction Response、Selected Rate、Applied Delta、初始化/重置原因、Continuity Owner、Effective Correction前后、Action occupancy、实际Goal Weight与Hard Ownership Loss原因、Ground Path Component Up、既有Goal基准混合权重、Ground Envelope/Anchor穿透深度、容差内外、Ground Catchup、Full Lock门控、Post Constraint输入输出、Encoded Goal、Residual基础与截止HalfLife、Support与Landing Reach区间、Pelvis上下速度边界、Goal夹紧量、Target/Solved Extension Ratio、Compression Reserve和Physical结果。Ground Path Component Up、Target Height Component Up、Requested Direction与Applied Direction MUST分列且不得互相补值。诊断 MUST先重算Direction History，再以`DesiredOutputPoint = SelectedWorldTarget + ResidualAfterDecay`、`DesiredResponse = dot(DesiredOutputPoint - OriginalSole, PositionResponseHeightProjection)`、`ResponseOutputPoint = DesiredOutputPoint + PositionResponseWorldAxis × (CurrentResponse - DesiredResponse)`和`EffectiveCorrection = ResponseOutputPoint - OriginalSole`对账唯一输出；旧`BasisTransferred`、旧单档`MaximumVerticalCorrectionSpeed`和“World Residual取代Correction历史”的Disposition MUST不存在。
+封口Foot诊断 MUST在同Frame、Completion、Program、Projection、Rig、Event与Surface lineage下同时记录正式Step/Foot Height/Contact/Lock/Support输入、正式`ApproachContactToLandingProgress`、Approach Target Preparation与Selected Target Kind、上一与当前Lock请求、Contact Rising/Falling、距最近边沿秒数、最近与最近释放Contact Event、Same-Event Reentry Refresh/Unavailable结果、Retained Verified Anchor与连续接管事实、Raw Body Target当前速度、移动计划Current对照与Continuation、稳定Prediction速度、速度差阈值、EMA响应、最大速度Clamp、Prediction状态初始化/重置原因、KCC Future Translation、Prediction Candidate与上次查询快照、累计位移、Up夹角、两个查询阈值、Query Purpose、Refresh Mode、Query Reason、Landing Tracking状态、Approach Plant Target Preparation、Contact Verification Frame/Reason、稳定Plant候选忽略原因、Path Revision原因、Raw Landing/Path Target、Foot/Toe多点Pose输入与Current Support记录、唯一Support Position/Requested Direction及Rotation Goal、Pre/Post Transition Decision、State Target、Interpolation Policy/Residual/Completion、Plant Target Kind与Lock Response、Target Height Component Up、Requested/Previous/Applied Direction、是否受限、最大/实际变化角、Target Height Mode/Before/Target/Applied/After与Update Reason、Previous/Current Selected World Target、Previous/Current Response Output Point、Residual Capture Reason、World Residual捕获前/后/衰减后、Desired/Previous/Current Correction Response、Selected Rate、Applied Delta、初始化/重置原因、Continuity Owner、Effective Correction前后、Action occupancy、实际Goal Weight与Hard Ownership Loss原因、Ground Path Component Up、既有Goal基准混合权重、Ground Envelope/Anchor穿透深度、容差内外、Ground Catchup、Full Lock门控、Post Constraint输入输出、Encoded Goal、Residual基础与截止HalfLife、Support与Landing Reach区间、Pelvis上下速度边界、最终Goal与求解结果的差异、Target/Solved Extension Ratio、Compression Reserve和Physical结果。Ground Path Component Up、Target Height Component Up、Requested Direction与Applied Direction MUST分列且不得互相补值。诊断 MUST先重算Direction History，再以`DesiredOutputPoint = SelectedWorldTarget + ResidualAfterDecay`、`DesiredResponse = dot(DesiredOutputPoint - OriginalSole, PositionResponseHeightProjection)`、`ResponseOutputPoint = DesiredOutputPoint + PositionResponseWorldAxis × (CurrentResponse - DesiredResponse)`和`EffectiveCorrection = ResponseOutputPoint - OriginalSole`对账唯一输出；旧`BasisTransferred`、旧单档`MaximumVerticalCorrectionSpeed`和“World Residual取代Correction历史”的Disposition MUST不存在。
 
 Diagnostics MUST只读取Committed Source、Path、Context、Resolved、Goal、Solved与Final Publication结果，不得创建Anchor、选择Support、修改Reach、Clamp Goal或执行第二次World Query。
 
@@ -427,7 +376,7 @@ Diagnostics MUST只读取Committed Source、Path、Context、Resolved、Goal、S
 
 - **WHEN** Accepted Ground Path Envelope高于连续Swing输出
 - **THEN** 诊断 MUST记录Path identity、Envelope Point、穿透深度、正式容差、限速前后Correction和预计追赶时间
-- **AND** MUST区分容差内轻微穿透、容差外连续追赶与Reach硬夹紧，不得记录不存在的同帧Safety Floor抬升
+- **AND** MUST区分容差内轻微穿透、容差外连续追赶与Reach不可达观察，不得记录不存在的同帧Safety Floor抬升
 
 #### Scenario: Prediction速度稳定阻止晚期Landing甩动
 
@@ -444,7 +393,7 @@ Diagnostics MUST只读取Committed Source、Path、Context、Resolved、Goal、S
 #### Scenario: Landing Goal不可达
 
 - **WHEN** Landing Reach与Primary Support Reach没有交集
-- **THEN** 诊断 MUST记录两侧区间、最小压缩余量、Goal夹紧量和`LandingReachUnavailable`
+- **THEN** 诊断 MUST记录两侧区间、最小压缩余量、最终Goal与求解结果的差异和`LandingReachUnavailable`
 - **AND** MUST能区分动画Source已伸直、Foot Placement引入超长目标与FBBIK最终夹紧
 
 #### Scenario: 诊断分数保持事实可解释

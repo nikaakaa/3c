@@ -349,8 +349,21 @@ PredictionMotion、BodyTrajectory及其Tick/Generation/ResetSequence/AuthorityTi
 
 ## Runtime Resolved Contact、Support与Reach分组
 
-状态：实现完成，Runtime与Editor构建0错误，build server已关闭；等待实际回放。
+状态：候选9c03eba已完成实际Replay和全部Resolved分组验证。
 
 - 将`CharacterResolvedFootDiagnostics`拆成Core几何、Contact、Support和Reach四个只读分组，SupportTarget继续独立。父记录只组合正式Result投影，不再平铺40余项事实。
 - Contact只读取正式Contact与Ownership；Support只读取Eligibility、Weight、HorizontalError和Event；Reach分别保存Pelvis参考与Landing请求。CSV的SupportWeight和SupportIntentWeight仍保持两列，但都映射唯一正式Support Weight，不在Runtime DTO存第二份同值。
 - Editor Resolved绑定直接读取新分组，不保留旧平铺属性。本步不改变Resolved Result、Goal、权重、Reach资格或格式identity；回放通过后继续Pelvis证据分组。
+
+## Runtime Resolved分组的验证封口
+
+- 原包：`Diagnostics/FootPlacementRuns/20260901-063151-215-c7c81e8e6d7f4e1bbcbecf46ec163647`。对062212及固定233436，1191业务列逐值相同，23身份列映射无冲突；Core、Contact、Support、Pelvis Reach、Landing Reach、SupportTarget及两个Support语义列全部保持。
+- 42项诊断、20447明细及索引、几何、六次1215列查询和其它正式查询一致；Proof matched1044、DivergentFrameCount0，输入/Body/时钟及帧数组一致。Unity已归还、failure空、Console0。
+
+## Runtime Pelvis证据分组
+
+状态：实现完成，Runtime与Editor构建0错误，build server已关闭；等待实际回放。
+
+- `CharacterFootStrideHipsDiagnostics`父记录只保留正式Result，并按需公开Core、Observation、HeightTarget、Posture、Reach和Response六个只读分组；删除原来的59项平铺访问面，不增加第二份Pelvis状态。
+- Core保存Stride状态、两脚侧、区间、进度、Slope、Sampled Ground、最终Delta及是否产出Goal；Observation保存Pose输入与动画Pelvis；HeightTarget、Posture、Reach分别读取对应子结果；Response统一Spring前值、输入、积分结果、目标、输出、速度及位置权重。
+- Editor Pelvis列、Gizmo和Visual Validation直接读取分组；Sampler中期望Physical Pelvis和Goal residual仍用Observation与Response的正式值。本步不改变Pelvis Result、Spring、目标、权重、Reach或CSV identity。回放通过后据此判断任务5.1。

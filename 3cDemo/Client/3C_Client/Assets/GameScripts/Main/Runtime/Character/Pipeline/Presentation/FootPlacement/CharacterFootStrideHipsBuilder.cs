@@ -586,12 +586,11 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
 
     }
 
-    public readonly struct CharacterFootStrideHipsDiagnostics
+    public readonly struct CharacterFootStrideCoreDiagnostics
     {
         readonly CharacterFootStrideHipsResult m_Result;
-
-        internal CharacterFootStrideHipsDiagnostics(
-            in CharacterFootStrideHipsResult result) => m_Result = result;
+        internal CharacterFootStrideCoreDiagnostics(in CharacterFootStrideHipsResult result) =>
+            m_Result = result;
 
         public CharacterFootStrideState State => m_Result.State;
         public CharacterFootStrideRejectReason RejectReason => m_Result.RejectReason;
@@ -602,53 +601,103 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         public float Progress => m_Result.Progress;
         public CharacterFootStrideSlope Slope => m_Result.Slope;
         public Vector3 SampledGround => m_Result.SampledGround;
+        public Vector3 PelvisDelta => m_Result.PelvisDelta;
+        public bool Accepted => m_Result.Accepted;
+        public bool ProducesPelvisGoal => m_Result.ProducesPelvisGoal;
+    }
+
+    public readonly struct CharacterFootPelvisObservationDiagnostics
+    {
+        readonly CharacterFootStrideHipsResult m_Result;
+        internal CharacterFootPelvisObservationDiagnostics(
+            in CharacterFootStrideHipsResult result) => m_Result = result;
+
         public bool PoseInputAvailable => m_Result.PoseInputAvailable;
         public Vector3 PoseRootPosition => m_Result.PoseRootPosition;
         public Vector3 AnimatedPelvis => m_Result.AnimatedPelvis;
-        public Vector3 AnimatedPelvisComponentPosition => m_Result.AnimatedPelvisComponentPosition;
-        public float SpringTarget => m_Result.SpringTarget;
-        public float SpringOutput => m_Result.SpringOutput;
-        public float SpringVelocity => m_Result.SpringVelocity;
-        public Vector3 PelvisDelta => m_Result.PelvisDelta;
-        public float PositionWeight => m_Result.PositionWeight;
-        public bool Accepted => m_Result.Accepted;
-        public bool ProducesPelvisGoal => m_Result.ProducesPelvisGoal;
-        public bool HeightTargetAvailable => m_Result.HeightTarget.Available;
-        public Vector3 HeightTargetComponentUp => m_Result.HeightTarget.ComponentUp;
-        public Vector3 HeightTargetLeftAnimatedSole => m_Result.HeightTarget.LeftAnimatedSole;
-        public Vector3 HeightTargetRightAnimatedSole => m_Result.HeightTarget.RightAnimatedSole;
-        public Vector3 HeightTargetLeftTargetSole => m_Result.HeightTarget.LeftTargetSole;
-        public Vector3 HeightTargetRightTargetSole => m_Result.HeightTarget.RightTargetSole;
-        public float HeightTargetAnimatedMinimumAlongUp => m_Result.HeightTarget.AnimatedMinimumAlongUp;
-        public float HeightTargetMinimumAlongUp => m_Result.HeightTarget.TargetMinimumAlongUp;
-        public float RequestedOffsetAlongUp => m_Result.HeightTarget.OffsetAlongUp;
-        public CharacterFootPelvisReachDiagnostics Reach => new(m_Result.Reach);
-        public bool PosturePreferenceEvaluated => m_Result.PosturePreference.Evaluated;
-        public bool PosturePreferenceAvailable => m_Result.PosturePreference.Available;
-        public Vector3 PosturePreferenceHip => m_Result.PosturePreference.Hip;
-        public Vector3 PosturePreferenceAnimatedAnkle => m_Result.PosturePreference.AnimatedAnkle;
-        public Vector3 PosturePreferenceTargetAnkle => m_Result.PosturePreference.TargetAnkle;
-        public float PosturePreferenceLegLength => m_Result.PosturePreference.LegLength;
-        public float PosturePreferenceCompressionReserve => m_Result.PosturePreference.CompressionReserve;
-        public float PosturePreferenceUsableLegLength => m_Result.PosturePreference.UsableLegLength;
-        public float PosturePreferenceMinimumAlongUp => m_Result.PosturePreference.MinimumAlongUp;
-        public float PosturePreferenceMaximumAlongUp => m_Result.PosturePreference.MaximumAlongUp;
-        public float PosturePreferenceOffsetAlongUp => m_Result.PosturePreference.OffsetAlongUp;
-        public bool PosturePreferenceTargetAdjusted => m_Result.PosturePreference.TargetAdjusted;
-        public bool ResponseEvaluated => m_Result.Response.Evaluated;
-        public bool SpringCompleted => m_Result.Response.Completed;
+        public Vector3 AnimatedPelvisComponentPosition =>
+            m_Result.AnimatedPelvisComponentPosition;
+    }
+
+    public readonly struct CharacterFootPelvisHeightTargetDiagnostics
+    {
+        readonly CharacterFootPelvisHeightTarget m_Target;
+        internal CharacterFootPelvisHeightTargetDiagnostics(
+            in CharacterFootPelvisHeightTarget target) => m_Target = target;
+
+        public bool Available => m_Target.Available;
+        public Vector3 ComponentUp => m_Target.ComponentUp;
+        public Vector3 LeftAnimatedSole => m_Target.LeftAnimatedSole;
+        public Vector3 RightAnimatedSole => m_Target.RightAnimatedSole;
+        public Vector3 LeftTargetSole => m_Target.LeftTargetSole;
+        public Vector3 RightTargetSole => m_Target.RightTargetSole;
+        public float AnimatedMinimumAlongUp => m_Target.AnimatedMinimumAlongUp;
+        public float MinimumAlongUp => m_Target.TargetMinimumAlongUp;
+        public float RequestedOffsetAlongUp => m_Target.OffsetAlongUp;
+    }
+
+    public readonly struct CharacterFootPelvisPostureDiagnostics
+    {
+        readonly CharacterFootPelvisPosturePreference m_Posture;
+        internal CharacterFootPelvisPostureDiagnostics(
+            in CharacterFootPelvisPosturePreference posture) => m_Posture = posture;
+
+        public bool Evaluated => m_Posture.Evaluated;
+        public bool Available => m_Posture.Available;
+        public Vector3 Hip => m_Posture.Hip;
+        public Vector3 AnimatedAnkle => m_Posture.AnimatedAnkle;
+        public Vector3 TargetAnkle => m_Posture.TargetAnkle;
+        public float LegLength => m_Posture.LegLength;
+        public float CompressionReserve => m_Posture.CompressionReserve;
+        public float UsableLegLength => m_Posture.UsableLegLength;
+        public float MinimumAlongUp => m_Posture.MinimumAlongUp;
+        public float MaximumAlongUp => m_Posture.MaximumAlongUp;
+        public float OffsetAlongUp => m_Posture.OffsetAlongUp;
+        public bool TargetAdjusted => m_Posture.TargetAdjusted;
+    }
+
+    public readonly struct CharacterFootPelvisResponseDiagnostics
+    {
+        readonly CharacterFootStrideHipsResult m_Result;
+        internal CharacterFootPelvisResponseDiagnostics(
+            in CharacterFootStrideHipsResult result) => m_Result = result;
+
+        public bool Evaluated => m_Result.Response.Evaluated;
+        public bool Completed => m_Result.Response.Completed;
         public bool HadPreviousState => m_Result.Response.HadPreviousState;
         public bool SupportChanged => m_Result.Response.SupportChanged;
-        public CharacterFootStrideSlope PreviousSlope => m_Result.Response.PreviousSlope;
-        public CharacterFootPelvisSpringHandoffReason SpringHandoffReason => m_Result.Response.HandoffReason;
-        public bool SpringVelocityReset => m_Result.Response.VelocityReset;
-        public float PreviousSpringTarget => m_Result.Response.PreviousTarget;
-        public float PreviousSpringOutput => m_Result.Response.PreviousOutput;
-        public float PreviousSpringVelocity => m_Result.Response.PreviousVelocity;
-        public float SpringInput => m_Result.Response.Input;
-        public float SpringInputVelocity => m_Result.Response.InputVelocity;
-        public float SpringFrequency => m_Result.Response.Frequency;
-        public float SpringIntegratedOutput => m_Result.Response.IntegratedOutput;
+        public CharacterFootStrideSlope PreviousSlope =>
+            m_Result.Response.PreviousSlope;
+        public CharacterFootPelvisSpringHandoffReason HandoffReason =>
+            m_Result.Response.HandoffReason;
+        public bool VelocityReset => m_Result.Response.VelocityReset;
+        public float PreviousTarget => m_Result.Response.PreviousTarget;
+        public float PreviousOutput => m_Result.Response.PreviousOutput;
+        public float PreviousVelocity => m_Result.Response.PreviousVelocity;
+        public float Input => m_Result.Response.Input;
+        public float InputVelocity => m_Result.Response.InputVelocity;
+        public float Frequency => m_Result.Response.Frequency;
+        public float IntegratedOutput => m_Result.Response.IntegratedOutput;
+        public float Target => m_Result.SpringTarget;
+        public float Output => m_Result.SpringOutput;
+        public float Velocity => m_Result.SpringVelocity;
+        public float PositionWeight => m_Result.PositionWeight;
+    }
+
+    public readonly struct CharacterFootStrideHipsDiagnostics
+    {
+        readonly CharacterFootStrideHipsResult m_Result;
+        internal CharacterFootStrideHipsDiagnostics(
+            in CharacterFootStrideHipsResult result) => m_Result = result;
+
+        public CharacterFootStrideCoreDiagnostics Core => new(m_Result);
+        public CharacterFootPelvisObservationDiagnostics Observation => new(m_Result);
+        public CharacterFootPelvisHeightTargetDiagnostics HeightTarget =>
+            new(m_Result.HeightTarget);
+        public CharacterFootPelvisPostureDiagnostics Posture =>
+            new(m_Result.PosturePreference);
+        public CharacterFootPelvisReachDiagnostics Reach => new(m_Result.Reach);
+        public CharacterFootPelvisResponseDiagnostics Response => new(m_Result);
     }
 
     internal readonly struct CharacterFootPelvisInput

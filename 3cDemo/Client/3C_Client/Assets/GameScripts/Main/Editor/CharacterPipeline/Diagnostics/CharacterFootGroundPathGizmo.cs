@@ -31,12 +31,12 @@ namespace ThirdPersonCharacter.Pipeline.Editor
 
         static void DrawStrideHips(in CharacterFootStrideHipsDiagnostics stride)
         {
-            if (!stride.Accepted)
+            if (!stride.Core.Accepted)
                 return;
             Handles.color = new Color(1f, 0.85f, 0.2f);
-            Handles.DrawLine(stride.StrideStart, stride.StrideEnd, 1.5f);
+            Handles.DrawLine(stride.Core.StrideStart, stride.Core.StrideEnd, 1.5f);
             Gizmos.color = new Color(1f, 0.7f, 0.1f);
-            Gizmos.DrawSphere(stride.AnimatedPelvis + stride.PelvisDelta, 0.04f);
+            Gizmos.DrawSphere(stride.Observation.AnimatedPelvis + stride.Core.PelvisDelta, 0.04f);
         }
 
         static void DrawGroundPath(

@@ -4,9 +4,9 @@
 
 用户指定提交：`ad3527e103cc3235a63e8a1c1dbd26df5155e0ba`。这是动画和IK行为的唯一比较起点，不自动跟随HEAD、其它active change或新的实验结果。
 
-该提交记录“233436回放恢复205014脚部与膝盖结果”。2026-09-01代码检查时，当前动画Runtime、Presentation／Foot、Corin配置、PoseGraph作者代码、Presentation编译器和相关Diagnostics目录与该提交无差异。Input Focus等无关后续改动不属于IK重构目标，不回退；实际回放输入仍必须与基线一致。
+该提交记录“233436回放恢复205014脚部与膝盖结果”。第一阶段IK维护重构已在`f32e419`完成，最后实现候选为`5b551cb`，正式回放包为`20260901-070946-569-c14830f966ee465c887849cfc66b1f2a`。它相对本总基线只改变Foot内部typed请求／最终结果边界、Interpolation历史Owner、Solver Reset行为和诊断组织；Corin Profile、Rig、作者数据、generated Projection与动画Compiler没有变化。第二阶段以`f32e419`作为上一通过接入点，同时继续对本总基线比较，不把接入点改称新总基线。
 
-本文件记录的是代码检查和既有证据，不是本轮重新运行的Replay，更不是已经完成重构的等价证明。尚未运行的节点、初始化／Reset边界和非固定帧率不能由已有样本推断为全部通过。
+本文件记录的是代码检查、第一阶段通过证据和第二阶段保护范围，不是已经完成PoseGraph重构的等价证明。尚未运行的节点、Reference／StableHistory退化Reset来源、其它路线和非固定帧率不能由已有样本推断为全部通过。
 
 ## 已有输入与回放证据
 
@@ -15,6 +15,7 @@
 - 恢复结果：`3cDemo/Client/3C_Client/Diagnostics/FootPlacementRuns/20260831-233436-894-d1564c7fa0b442f6aef02bb470ca0b1b`。
 - 两个原包均保留`samples.csv`、`ground-path-geometry.csv`与`replay-proof.json`，不得覆盖或删除。
 - 指定提交中的实验记录报告：1044输入帧，1043输出帧，2086脚行，1215列，67186几何行；相对205014，1191业务列逐值一致，仅24个采样／实例／Surface／Path身份列变化且映射无冲突。
+- 第一阶段接入包同样完成1044输入、2086脚行与1215列；相对233436和上一通过包均有1191业务列逐值一致，Body、Formal、Pelvis、Goal、Knee、Solver／Physical和Time分组无业务差异。隔离Reset观测保存203个Pose值、3个实际Goal／Effector、Stable／Applied进入事实与Reset代次1→2。
 - 既有口径为facts71／diagnosis40／quality-score3；42项规则、计数与覆盖恢复。61.9总分是已有粗略参考，不是重构通过门槛。
 - 完整裁决见[有符号膝向与恢复记录](../stabilize-character-foot-path-and-landing/experiments/20260830-signed-animation-bend.md)，以本文件指定提交中的版本为证据，后续追加记录不自动更换基线。
 
@@ -29,11 +30,11 @@
 | Pose混合 | `Animation/Presentation/PosePlanExecutionRuntime.cs::Advance/FinalizePoseStateFrame`、`Animation/PoseGraph/CharacterPoseGraphStagedExecutor.cs::EvaluateStateMachineStandardBlend` | State／relevance／readiness裁决与source推进顺序；edge曲线、Duration、GlobalDurationMultiplier、逐骨骼Profile、Parameter、左右脚feature与Contribution混合；不得改变累加顺序或增加Foot专用第二混合 |
 | Native执行 | `PosePlanExecutionRuntime.cs::PrepareEvaluation/ExecuteEvaluateBarrier` | 一次Animancer Evaluate后按现有依赖执行捕获Pose、Local／Component转换、控制、Contribution、Assembler、FBBIK与Output。改Family布局不等于允许提前采样、重复求值或改变数值顺序 |
 | Foot来源 | `PosePlanExecutionRuntime.cs::BuildFootPlacementInput/ResolveFootStepObservationFrame/RequireFootStepObservationContribution` | 当前Foot Motion选取最大Weight的Live Contribution；相同Weight保留遍历中首项，排除Stored。然后使用该source实际dominant Clip sample的continuous／normalized time、cycle和曲线。当前正式分支为Timeline／Clip，重构不补造其它来源 |
-| Foot主链 | `Presentation/FootPlacement/CharacterFootPlacementModule.cs::EvaluateFrame` | 捕获真实Foot／Toe／Heel，当前Support查询、Prediction、Plant Verification、GroundPath与Swing目标形成后调用每脚Lifecycle；随后Primary Support／Pelvis，FinalizeLanding，再编码Goal并记录Visible Sole。不得重排内部阶段 |
-| Foot状态 | `CharacterFootLifecycle.cs::Evaluate/FinalizeLanding` | Pre Transition、Contact Verification、State Target、Interpolation、Post Transition和Post Constraint保持；Landing完成仍由Pelvis后的既有Reach可用性参与第二次收口，不擅自引入新的请求／最终Resolved流程 |
-| 连续历史 | `CharacterFootInterpolationRuntime.cs::ApplyCorrectionResponse` | AnimationRelativeScalar与ContactWorldResidual分域、target height、world residual、退出接触时的接管规则和初始化条件保持。方向上限当前按每次调用施加，scalar最大变化为选定速度乘dt；不得把前者改为度／秒或合并两种历史 |
+| Foot主链 | `Presentation/FootPlacement/CharacterFootPlacementModule.cs::EvaluateFrame` | 捕获真实Foot／Toe／Heel，当前Support查询、Prediction、Plant Verification、GroundPath与Swing目标形成后调用每脚Lifecycle并得到typed Request；随后Primary Support／Pelvis与本腿Reach观察，Completion收口Landing，再编码最终Resolved Goal。不得重排内部阶段 |
+| Foot状态 | `CharacterFootLifecycle.cs::Evaluate`与私有`Completion.Complete` | Pre Transition、Contact Verification、State Target、Interpolation、Post Transition和Post Constraint保持；Request与最终Resolved严格分型，Landing完成仍由Pelvis后的既有Reach可用性参与收口，不恢复初步Resolved或公共完成凭据 |
+| 连续历史 | `CharacterFootInterpolationRuntime.cs::ApplyCorrectionResponse` | AnimationRelativeScalar与ContactWorldResidual分域、target height、world residual、退出接触时的接管规则和初始化条件保持。方向只从typed ResponseHistory读取，过程Fact不参与下一帧；方向上限仍按每次调用施加，scalar最大变化为选定速度乘dt |
 | Pelvis | `CharacterFootStrideHipsBuilder.cs::ResolvePelvis/AdvancePelvisResponse` | 双脚目标与动画Sole最低高度差、当前软姿态偏好范围、Support／Slope／TargetCrossedOutput与反向速度清零条件、同一Critical Spring及频率保持。Reach保留观察／Landing资格，不恢复业务层骨盆或末端脚硬夹紧 |
-| Goal | `CharacterFootPlacementModule.cs::CreateFootGoal/CreatePelvisGoal`、`Animation/PoseConstraints/CharacterFullBodyIkGoalAssembler.cs::Assemble` | Ready与Position／Rotation Weight资格、零Correction仍有效、world到component转换、Pelvis pre-solve translation、Contribution既有顺序和同Slot拒绝保持；不重新排序或降低权重补偿误差 |
+| Goal | `CharacterFootPlacementModule.cs::EncodeFootGoal/CreatePelvisGoal`、`Animation/PoseConstraints/CharacterFullBodyIkGoalAssembler.cs::Assemble` | Encoder只读最终Resolved与Pelvis Result；Ready与Position／Rotation Weight资格、零Correction仍有效、world到component转换、Pelvis pre-solve translation、Contribution既有顺序和同Slot拒绝保持 |
 | FBBIK | `Animation/PoseConstraints/CharacterFinalIkFullBodySolver.cs::SolvePrepared/ApplyGoals/ApplyLegBendStabilization` | 绑定同一Component Pose后，先Pelvis translation，再Foot pre-solve rotation、identity PoseBone Slot识别、ResetEffectors、Effector Goal、腿弯曲方向；有有效Goal才Vendor Update，随后Virtual Bone重建与原结果验证。Operation一次不意味着无有效Goal也强制Update |
 | 膝盖方向 | 同一Solver的`ApplyLegBendStabilization` | 保留a40b71f已确认的可靠动画有符号方向及FromToRotation腿轴运输；退化时保留原历史／投影／符号策略和Bend权重公式，不当作SmoothKnee删除，第一阶段独立验证的Reset方向修正作为接入成果保留，本阶段不再改方向政策 |
 | Physical写入 | `Presentation/Animancer/AnimationFinalPosePhysicalWriter.cs::Write/ResolvePose` | 整Rig预检后按现有bone顺序写Local Position／Rotation／Scale；ExcludeSourceRoot仍用Rig reference root pose。OutputPose数据与实际Physical写入结果不能合并成错误的同一事实；保留原Committed／Reference选择和Fault语义 |
@@ -42,7 +43,7 @@
 
 ## 不能按名字删除的状态
 
-`CharacterFootInterpolationState.CorrectionResponseFact.ResponseDirection`当前会被下一帧读取。它虽然名为Fact，却不是可随诊断关闭而删除的冗余；迁移必须保留其真实消费者和时序。第一阶段将该消费者迁入正式Interpolation历史后，本阶段沿用新的唯一历史，不能恢复从Fact反读的路径。
+旧`CharacterFootInterpolationState.CorrectionResponseFact.ResponseDirection`曾被下一帧读取。第一阶段已经把真实消费者迁入typed`CharacterFootCorrectionResponseHistory.AppliedDirection`，Fact只保留本帧解释证据。本阶段必须迁移新的历史Owner与时序，不能恢复从Fact反读，也不能因Fact不再持久化而误删正式History。
 
 同理，BendHistory、Stable／Applied方向、Movement clock、Continuation anchor、Phase游标、Slot／BlendStack时钟、Inertialization history／residual、source generation和retirement handshake都需要逐字段列出初始化、写入、下一帧消费者及Reset。不能只保留最终Pose而丢掉影响下一帧的值。
 

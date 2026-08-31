@@ -1,16 +1,16 @@
 ## 1. 冻结当前保留IK与完整迁移清单
 
-- [ ] 1.1 对照用户指定提交`ad3527e103cc3235a63e8a1c1dbd26df5155e0ba`与behavior-baseline.md核对当前动画／IK源码、Profile／Rig／作者数据、generated artifact及已有正式输入／诊断证据；后续相关差异单独报告，不等待Foot／IK全部归档
-- [ ] 1.2 记录当前Foot Motion实际输入、输出、lineage、Curve消费与未完成行为，不按旧spec补实现剩余Foot能力
-- [ ] 1.3 对账当前保留Foot、Support、Pelvis、Goal、FBBIK与Physical结果，列明已知问题、未覆盖输入、已撤除Reach硬夹紧和已撤销SmoothKnee，不把它们改成重构修复目标
-- [ ] 1.4 从current外部合同与当前已存在实现固定Clip、Blend Space、Linked Pose、Motion Matching、Transition Routing、Blend Stack和Inertialization迁移目录，不接入未配置内容
-- [ ] 1.5 盘点`PosePlanExecutionRuntime`、根`AnimationPresentationFrameTransaction`、Native Program、Staged Executor、Workspace、Action lifecycle、Source backend、Constraint、Writer、在线调参、Diagnostics和Compiler全部状态、页、索引、生命周期与调用顺序
-- [ ] 1.6 为每项现有字段标注唯一目标Owner、寿命类别、写入阶段、读取者和删除位置，分别识别静态Program、actor-local Execution View、Actor State、Program Frame Page、Module Pending页与根事务，拒绝无法归属的共享可变字段
-- [ ] 1.7 为全部现行Operation Code建立`新Family / 跨帧状态Owner / Frame页Owner / Execution Domain / Workspace需求 / 删除字段`迁移表，覆盖Parameter、ActionPlaybackInput lifecycle、Motion Matching、Pose History与Tuning读取
-- [ ] 1.8 固定本change不修改PoseState选择、source时间、Action lifecycle、生效中的Tuning值、Blend权重、Transition、Slot、Inertialization、Foot、Goal、FBBIK和Physical Pose结果
+- [x] 1.1 对照用户指定提交`ad3527e103cc3235a63e8a1c1dbd26df5155e0ba`与behavior-baseline.md核对当前动画／IK源码、Profile／Rig／作者数据、generated artifact及已有正式输入／诊断证据；后续相关差异单独报告，不等待Foot／IK全部归档
+- [x] 1.2 记录当前Foot Motion实际输入、输出、lineage、Curve消费与未完成行为，不按旧spec补实现剩余Foot能力
+- [x] 1.3 对账当前保留Foot、Support、Pelvis、Goal、FBBIK与Physical结果，列明已知问题、未覆盖输入、已撤除Reach硬夹紧和已撤销SmoothKnee，不把它们改成重构修复目标
+- [x] 1.4 从current外部合同与当前已存在实现固定Clip、Blend Space、Linked Pose、Motion Matching、Transition Routing、Blend Stack和Inertialization迁移目录，不接入未配置内容
+- [x] 1.5 盘点`PosePlanExecutionRuntime`、根`AnimationPresentationFrameTransaction`、Native Program、Staged Executor、Workspace、Action lifecycle、Source backend、Constraint、Writer、在线调参、Diagnostics和Compiler全部状态、页、索引、生命周期与调用顺序
+- [x] 1.6 为每项现有字段标注唯一目标Owner、寿命类别、写入阶段、读取者和删除位置，分别识别静态Program、actor-local Execution View、Actor State、Program Frame Page、Module Pending页与根事务，拒绝无法归属的共享可变字段
+- [x] 1.7 为全部现行Operation Code建立`新Family / 跨帧状态Owner / Frame页Owner / Execution Domain / Workspace需求 / 删除字段`迁移表，覆盖Parameter、ActionPlaybackInput lifecycle、Motion Matching、Pose History与Tuning读取
+- [x] 1.8 固定本change不修改PoseState选择、source时间、Action lifecycle、生效中的Tuning值、Blend权重、Transition、Slot、Inertialization、Foot、Goal、FBBIK和Physical Pose结果
 
-- [ ] 1.9 记录第一阶段IK维护重构通过提交和证据作为串行接入点，保留其Foot请求／最终结果、Interpolation历史、独立Reset修正与诊断列绑定，不恢复旧结构；总基线仍为ad3527e，实际冲突单独报告
-- [ ] 1.10 按behavior-baseline.md逐项核对动画时钟、Transition／Blend／Slot顺序、Foot source选择、IK计算与持久状态、Root Bone写入政策；被下一帧消费的内部Fact不得当诊断冗余删除
+- [x] 1.9 记录第一阶段IK维护重构通过提交和证据作为串行接入点，保留其Foot请求／最终结果、Interpolation历史、独立Reset修正与诊断列绑定，不恢复旧结构；总基线仍为ad3527e，实际冲突单独报告
+- [x] 1.10 按behavior-baseline.md逐项核对动画时钟、Transition／Blend／Slot顺序、Foot source选择、IK计算与持久状态、Root Bone写入政策；被下一帧消费的内部Fact不得当诊断冗余删除
 
 ## 2. 建立统一lineage、根事务与typed Result合同
 

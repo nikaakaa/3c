@@ -419,8 +419,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         NegativeVerticalCorrection = 13,
         InvalidSwingPhase = 14,
         UnselectedSwing = 15,
-        FormalFootHeightUnavailable = 16,
-        CurrentSupportUnavailable = 17
+        FormalFootHeightUnavailable = 16
     }
 
     internal readonly struct CharacterFootSwingPathReference
@@ -481,15 +480,13 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             CharacterFootPathContinuityFact pathContinuity = default,
             bool landingReachEvaluated = false,
             bool landingReachAvailable = false,
-            CharacterFootLifecycleTransitionFact lifecycleTransition = default,
-            CharacterFootSupportTarget swingHeightReference = default)
+            CharacterFootLifecycleTransitionFact lifecycleTransition = default)
         {
             State = state;
             RejectReason = rejectReason;
             LandingEventIdentity = landingEventIdentity;
             GroundPathInputIdentity = groundPathInputIdentity;
             SwingPathReference = swingPathReference;
-            SwingHeightReference = swingHeightReference;
             OriginalSole = originalSole;
             OriginalAnkle = originalAnkle;
             Distance = distance;
@@ -524,7 +521,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         public ulong LandingEventIdentity { get; }
         public ulong GroundPathInputIdentity { get; }
         internal CharacterFootSwingPathReference SwingPathReference { get; }
-        internal CharacterFootSupportTarget SwingHeightReference { get; }
         public Vector3 OriginalSole { get; }
         public Vector3 OriginalAnkle { get; }
         public float Distance { get; }
@@ -564,9 +560,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             RejectReason = result.RejectReason;
             LandingEventIdentity = result.LandingEventIdentity;
             GroundPathInputIdentity = result.GroundPathInputIdentity;
-            CharacterFootSupportTarget swingHeightReference = result.SwingHeightReference;
-            SwingHeightReference = new CharacterFootSupportTargetDiagnostics(
-                in swingHeightReference);
             OriginalSole = result.OriginalSole;
             OriginalAnkle = result.OriginalAnkle;
             Distance = result.Distance;
@@ -680,10 +673,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             ConstraintStateBefore = preTransition.SourceState;
             LockResponseBefore = lifecycle.LockResponseBefore;
             CharacterFootPathContinuityFact path = result.PathContinuity;
-            CharacterFootSupportTarget previousSwingHeightReference =
-                path.PreviousSwingHeightReference;
-            PreviousSwingHeightReference = new CharacterFootSupportTargetDiagnostics(
-                in previousSwingHeightReference);
             PathContinuityEvaluated = path.Evaluated;
             PathRevisionReason = path.RevisionReason.ToString();
             PathResidualRebuilt = path.ResidualRebuilt;
@@ -870,8 +859,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         public CharacterFootSwingMotionRejectReason RejectReason { get; }
         public ulong LandingEventIdentity { get; }
         public ulong GroundPathInputIdentity { get; }
-        public CharacterFootSupportTargetDiagnostics SwingHeightReference { get; }
-        public CharacterFootSupportTargetDiagnostics PreviousSwingHeightReference { get; }
         public Vector3 OriginalSole { get; }
         public Vector3 OriginalAnkle { get; }
         public float Distance { get; }
@@ -1091,7 +1078,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             float footPlacementWeight,
             Vector3 componentUp,
             in CharacterFootGroundPathResult groundPath,
-            in CharacterFootCurrentSupportObservation currentSupport,
             bool formalFootHeightAvailable,
             float formalFootHeight,
             float landingPredictionError)
@@ -1138,7 +1124,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 footPlacementWeight,
                 componentUp,
                 in groundPath,
-                in currentSupport,
                 formalFootHeight,
                 landingPredictionError);
         }
@@ -1150,7 +1135,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             float footPlacementWeight,
             Vector3 componentUp,
             in CharacterFootGroundPathResult groundPath,
-            in CharacterFootCurrentSupportObservation currentSupport,
             float formalFootHeight,
             float landingPredictionError)
         {
@@ -1181,13 +1165,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             if (!TryResolveSwingPhaseWeight(in step, out float trajectoryProgress))
                 return Rejected(
                     CharacterFootSwingMotionRejectReason.InvalidSwingPhase,
-                    landingEventIdentity,
-                    groundPath.InputIdentity,
-                    originalSole,
-                    originalAnkle);
-            if (!currentSupport.Available)
-                return Rejected(
-                    CharacterFootSwingMotionRejectReason.CurrentSupportUnavailable,
                     landingEventIdentity,
                     groundPath.InputIdentity,
                     originalSole,
@@ -1265,15 +1242,15 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     baselineSample);
 
             float originalSoleHeight = Vector3.Dot(originalSole, up);
-            float supportMinimumCorrection = Vector3.Dot(
-                currentSupport.Target.Position,
+            float envelopeMinimumCorrection = Vector3.Dot(
+                envelopeSample,
                 up) - originalSoleHeight;
             float formalTargetHeightAlongUp = Vector3.Dot(
-                currentSupport.Target.Position,
+                envelopeSample,
                 up) + formalFootHeight;
             float formalTargetCorrection =
                 formalTargetHeightAlongUp - originalSoleHeight;
-            if (!float.IsFinite(supportMinimumCorrection) ||
+            if (!float.IsFinite(envelopeMinimumCorrection) ||
                 !float.IsFinite(formalTargetCorrection))
                 return Rejected(
                     CharacterFootSwingMotionRejectReason.NegativeVerticalCorrection,
@@ -1311,8 +1288,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 correctedSole,
                 correctedAnkle,
                 positionWeight,
-                0f,
-                swingHeightReference: currentSupport.Target);
+                0f);
         }
 
         internal static CharacterFootSwingMotionResult SuppressUnselected(
@@ -1377,8 +1353,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 motion.PathContinuity,
                 evaluated,
                 available,
-                motion.LifecycleTransition,
-                motion.SwingHeightReference);
+                motion.LifecycleTransition);
 
         internal static CharacterFootSwingMotionResult WithPathContinuity(
             in CharacterFootSwingMotionResult motion,
@@ -1415,8 +1390,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 continuity,
                 motion.LandingReachEvaluated,
                 motion.LandingReachAvailable,
-                motion.LifecycleTransition,
-                motion.SwingHeightReference);
+                motion.LifecycleTransition);
 
         internal static CharacterFootSwingMotionResult WithLifecycleTransition(
             in CharacterFootSwingMotionResult motion,
@@ -1453,8 +1427,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 motion.PathContinuity,
                 motion.LandingReachEvaluated,
                 motion.LandingReachAvailable,
-                lifecycleTransition,
-                motion.SwingHeightReference);
+                lifecycleTransition);
 
         static bool TryResolveSwingPhaseWeight(
             in AnimationFootMotionRuntimeSample step,

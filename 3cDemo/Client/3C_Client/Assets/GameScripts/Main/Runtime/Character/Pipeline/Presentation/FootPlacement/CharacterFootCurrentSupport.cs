@@ -193,7 +193,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
     public enum CharacterFootSupportPositionSource : byte
     {
         CurrentSupport = 1,
-        SwingCurrentSupport = 2,
+        SwingMotion = 2,
         ContactAnchor = 3,
         ReleasingSwing = 4
     }

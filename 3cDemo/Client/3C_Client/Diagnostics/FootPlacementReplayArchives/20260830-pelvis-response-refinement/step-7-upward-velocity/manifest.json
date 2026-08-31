@@ -1,0 +1,73 @@
+{
+  "runtimeCommit": "0ae8bb5844507efecebf1789f79ad48e669be0ee",
+  "diagnosticsCommit": "805468a887a9d1456d0941ff1c9a8e4610e1b17d",
+  "baselineRun": "20260831-035643-027-7f16a02676e741caa94d1f3bc3c6cbd9",
+  "fixedQualityBaseline": "20260830-193957-489-9f55422ed479473682fc01f0583625db",
+  "run": "20260831-075917-333-7d4ccb494b4b47a68b8efa81b64a5ca6",
+  "record": "43357ff3cd384e5cba75d2c31175b116",
+  "zipBytes": 16731679,
+  "zipSha256": "F1CE9C6A964C6EC6C3D96C69B988F01B404439D8F3DC9228F9D8EA482B853457",
+  "proofSha256": "275056098EED42764F95C04066CE4E06E516F21B9A869E2BDE5905CF414FA593",
+  "files": [
+    {
+      "path": "facts.json",
+      "bytes": 122118935,
+      "sha256": "1BC22EC1AFF4C8D161A457204D00DB0001BDB262CF1B8520DB678864D0EBCC7D"
+    },
+    {
+      "path": "ground-path-geometry.csv",
+      "bytes": 7891105,
+      "sha256": "2B5C97B94D2BD564F60853629F5E59209F4364FE2DC2BC9D83733F1C443EE3A5"
+    },
+    {
+      "path": "samples.csv",
+      "bytes": 19298005,
+      "sha256": "D28EB9A248B32AA41B4BF2CD51B7673638011F64E02722B6C40506D5CC059F66"
+    },
+    {
+      "path": "diagnoses/contact-plane-penetration.json",
+      "bytes": 51389,
+      "sha256": "0AB1E7DE3C83D2293D281445E8401FE4F5347A9C856B0FCE3D3D9E08D29DF051"
+    },
+    {
+      "path": "diagnoses/landing-leg-extension.json",
+      "bytes": 6507912,
+      "sha256": "A78B933A461CBB40979088BADFCAC7FBEFA0B87A63AB264C0EFA9A09871DD912"
+    },
+    {
+      "path": "diagnoses/landing-observation-reuse.json",
+      "bytes": 5779,
+      "sha256": "66E89FD44F1C9A7B1BCBA29D2D8B951C9344903F68628AE01620096195AEC42F"
+    },
+    {
+      "path": "diagnoses/landing-path-continuity.json",
+      "bytes": 61001,
+      "sha256": "4CE074E0A716256DB72A65051DC6A118964231B6B4C3A0B43F4A3C7A8F51D491"
+    },
+    {
+      "path": "diagnoses/landing-state-consistency.json",
+      "bytes": 733798,
+      "sha256": "09FFB1B3925C866A068A26FC536AA5344827EFD74DC2FEBEB0C496FC106AD925"
+    },
+    {
+      "path": "diagnoses/locked-sole-motion.json",
+      "bytes": 10248,
+      "sha256": "DAE733FFF9615C53B6328B9EB498EC8EF1082E76784BCA4C4C519CA07E700B36"
+    },
+    {
+      "path": "diagnoses/quality-score.json",
+      "bytes": 24821,
+      "sha256": "5C29B3D40834201022B6721AF1E084A7C4B1A812EDF4FE813849191E604152B7"
+    },
+    {
+      "path": "diagnoses/step-time-candidate-selection.json",
+      "bytes": 7783010,
+      "sha256": "09BC542ABB26CE3693CA5C06957C7C286429FA4E00B49EB82A83F596FDF7BEA3"
+    },
+    {
+      "path": "diagnoses/swing-path-jitter.json",
+      "bytes": 1745223,
+      "sha256": "F3EA789F75EEB57912FC69357B3C5109B813906C654D891079EF355FA1FCDDED"
+    }
+  ]
+}

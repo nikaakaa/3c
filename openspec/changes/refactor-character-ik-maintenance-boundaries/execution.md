@@ -11,7 +11,7 @@
 
 ## 第一个闭环：请求生产与最终发布
 
-状态：Runtime与Editor均已编译通过，正式回放待完成，不宣称行为通过。Editor第一次使用no-restore时因GM新增工程缺少project.assets.json失败；按正式构建完成依赖还原后成功。最终构建只有既有InputValueNodes未使用字段警告，0错误；每次均按规则关闭build server。
+状态：候选`2a6fe3309ddbaf2906ee88ef6758aa077aa47da8`已通过本Record范围的编译与正式回放对账，可作为下一小步对照；不代表整体IK质量通过。Editor第一次使用no-restore时因GM新增工程缺少project.assets.json失败；按正式构建完成依赖还原后成功。最终构建只有既有InputValueNodes未使用字段警告，0错误；每次均按规则关闭build server。
 
 | 原读取或决定 | 当前唯一位置 | 保持的业务语义 |
 |---|---|---|
@@ -30,3 +30,35 @@
 每个闭环由“采样数据自动测试”任务读取候选提交、上一通过提交和固定总基线，使用同一正式Record。先核对输入、Body、时序与版本身份，再对比实际Foot、Pelvis、Knee、Goal、动画状态、Solved和可用Physical输出；规则及总分只作辅助。不提高容差、改评分、删差异列或重造数据。原包未覆盖的输入、最终Physical Knee和Reset边界不能称为通过。
 
 共享Unity、构建和回放一次只交给一个任务。测试期间停止相关代码写入；另一个产品任务使用Unity时等待明确释放，不抢占或并发Refresh。只提交本任务文件，原始证据不随代码提交。
+
+## 持久字段与Reset清单
+
+以下字段随唯一根Bank由Committed复制到Pending；各业务Owner只写Pending，Root只Seal/Discard，不参与其数学。名称以首个候选`2a6fe33`为准，迁移后同步本表。
+
+| 记录与字段 | 唯一写入者 | 运行消费者 | 初始化／清理及证据边界 |
+|---|---|---|---|
+| Landing：LastLanding、NextSwingLanding、PlantTarget、NextSwingReferencePoint、NextSwingPredictionError、TrackedEventIdentity、NextTrackingState、PlantTargetState | LandingRuntime及其Context方法 | 下一帧Prediction、Transition、StateTarget和Support引用 | FootPlacementBank.Reset清空；正式跟踪失效清NextSwing，已Verified的Plant目标不得误清。PromotedLanding、PlantTargetUpdated、PlantVerificationAttempted/Unavailable由BeginFrame清空，是本帧过程证据 |
+| Discrete：State、LockResponse | TransitionRuntime.Apply，决定来自TransitionResolver | StateTarget、Interpolation政策及Foot输出生产 | Bank.Reset清零；Pre/Post转换按原序应用。LastTransitionPhase/Reason说明最近转换，不作为第二个State |
+| Contact：HasContact、EventIdentity、AcquiredFrameSequence/CompletionIdentity、WorldRevision、SurfaceIdentity、Anchor、Normal | TransitionRuntime按AnchorCommand创建／释放 | StateTarget、Ground约束、Foot输出和下次Transition | Create从正式ContactLanding取值；Release与Bank.Reset清零，不从诊断或最终骨骼反建 |
+| ContactTransition：HasPreviousRequest、PreviousRequestedLock/EventIdentity/Mode/Weight、SecondsSinceEdge、LatestContactEventIdentity、LatestReleasedContactEventIdentity、CompletedLockWeightEventIdentity | TransitionRuntime.UpdateContactTransition | 下一帧Contact边沿、完成Lock门控 | 首帧为default；边沿重置计时、事件换代清完成标记；Bank.Reset清零。LastEdge是本帧证据 |
+| Interpolation路径与连续量：HasOutput、HasSwingPath、SwingLandingEventIdentity、SwingGroundPathInputIdentity、SwingLandingPoint、PreviousTargetCorrection、PreviousSwingTargetCorrection、EffectiveCorrection、SwingResidual、Residual、Progress、StartResidual、Completed、Policy | InterpolationRuntime | 下次插值、HardConstraint读取连续输出、Foot完成资格 | ResetInterpolation与Bank.Reset清空；ApplyPostTransition仅保留原规定的Correction、Response、PreviousOutput与lineage，不增一次推进 |
+| Interpolation高度：HasTargetHeight、TargetHeightEventIdentity、FilteredTargetHeightAlongUp、TargetHeightRetargetActive | InterpolationRuntime的高度求值 | 后续Plant目标与连续输出 | ClearPlant／完整Reset按原政策处理；不得被Pelvis、Goal或Ground约束反写 |
+| Interpolation接触：HasPlantTarget、PlantTargetEventIdentity/Kind、PlantLockResponse、PlantTargetVerified、PlantDirectFollow、PlantDesiredPoint、PlantFilteredPoint、PreviousPlantSelectedWorldTarget、SelectedSupportTarget、PlantWorldResidual、PlantWorldResidualTransitionActive | InterpolationRuntime | 下一帧目标切换、世界残差与响应 | ClearPlant及ResetInterpolation按原分域清理；PlantFact只解释本帧，不能反向控制状态 |
+| Interpolation响应：HasPreviousResponseOutputPoint、PreviousResponseOutputPoint、HasCorrectionResponse、CorrectionResponse、CorrectionResponseDomain、HasCorrectionResponseLineage、CorrectionResponseSourceLineage/ProfileRevision/WorldRevision、PendingCorrectionResponseInitializationReason | InterpolationRuntime | 下一帧响应、lineage失效与初始化 | ClearCorrectionResponse清响应及前输出；UpdateCorrectionResponseLineage清失效域；PostTransition保留指定字段。当前CorrectionResponseFact.Evaluated/ResponseDirection仍被运行读取，后续任务3将其迁为正式方向历史，不能直接删除 |
+| PrimarySupport：HasValue、Side、LandingEventIdentity | StrideHipsBuilder.ResolvePrimarySupport | 下一帧支撑保留及本帧Pelvis准备 | 无候选及Bank.Reset调用Clear；Retained仅解释本帧选择，仍随Result发布 |
+| PelvisSpring：HasValue、SupportSide、SupportLandingEventIdentity、Slope、TargetAlongUp、OutputAlongUp、VelocityAlongUp | StrideHipsBuilder唯一AdvancePelvisResponse | 下一帧响应、支撑交接和释放回零 | Bank.Reset或不产出Pelvis Goal的既有分支Clear；保持3Hz配置及一次积分。Reach观察不得清速度、夹输出或写Spring |
+| BendHistory：Left/RightStableDirection、Left/RightAppliedDirection及四个Has标记、SourceCompletionIdentity、Revision | FinalIkFullBodySolver正式求值 | 下一帧退化膝向、有效性与lineage | Root初始化／ResetSolvers及原调参清历史路径清零；参考方向准备不得把Has提前置true。当前空历史仍读Vendor bend.direction，是任务4独立修正点 |
+| 帧结果：ResolvedFeet、StrideHips、Pelvis/Left/RightGoal、Diagnostics、FrameSequence、CompletionIdentity | 各阶段唯一生产者，Bank组织发布 | Encoder、Assembler、Solver及Seal后诊断 | Begin清输出，不把前帧结果当新请求。HasFrame当前表达Pending开放；Seal置false，不能复用为Committed有效性 |
+| Visible Sole：HasVisibleFootOutputs、Left/RightVisibleSole | Foot最终GoalTarget几何发布 | 旧PreviousVisibleOutput路径，当前插值实际不接管 | Begin/Reset清；本change不因清理HasFrame而启用旧历史接管，后续删除无消费参数或明确结果有效性 |
+
+PredictionMotion、BodyTrajectory及其Tick/Generation/ResetSequence/AuthorityTick/PredictionMotionRevision/RequestedDuration/Attempt标记继续由既有预测生产者拥有；GroundPath、LandingObservation、CurrentSupport页继续沿正式池Acquire/Release与根事务管理。本次不创建第二缓存、不改变世界查询和Body预测次数。
+
+## 第一个闭环的验证封口
+
+- 候选与下一步接入：`2a6fe3309ddbaf2906ee88ef6758aa077aa47da8`；上一通过／总基线：`ad3527e103cc3235a63e8a1c1dbd26df5155e0ba`。
+- 原包：`Diagnostics/FootPlacementRuns/20260901-012513-283-0a4830a755b64a5b9a57fbcd6e8fb32b`。正式samples、geometry、diagnoses沿原发布；仅将会被Temp清理的Proof复制为同目录`replay-proof.json`并核对原字节。
+- 官方proof/4直接对233436匹配1044输入；独立对233436与205014的runtime identity、起始Body、Trace/input/body hash、调度和全部1044输入帧均相同。Profile与Program/Projection identity未改变。
+- 对两个基线各比较2086×1215：1191业务列逐格字符串完全相同，无浮点容差放宽；23身份列均双向映射无冲突，StartedUtc单列归运行元数据。67186×27几何中22业务列完全相同，5身份列双向映射无冲突。
+- Body、正式输入、Foot、Resolved、Pelvis/Stride、Goal、Knee/Bend、实际采到的Solved/Physical及动画时序状态无业务差异。facts71/Analyzer71/d40和42个Target的规则、eligible、matched、occurrence、measurements、coverage与七维评分对象保持，总分仍为61.9，既有问题未被掩盖。
+- 覆盖限制：此Record的Action ownership、Contact reentry geometry、BodyReset均为0 eligible，窄Landing腿窗口仅2。CSV有Solved Knee，没有最终Physical Knee；未覆盖入口、路线、调度及最终Physical Knee不能冒充已通过。Reset独立修正尚未实施。
+- 测试任务已退出Play，Edit/Idle、未暂停、非编译、Console0，并明确交回Unity独占。共享HEAD后来出现的其它提交不替换候选与总基线；测试确认相关Runtime/Character与Diagnostics仍与候选一致。

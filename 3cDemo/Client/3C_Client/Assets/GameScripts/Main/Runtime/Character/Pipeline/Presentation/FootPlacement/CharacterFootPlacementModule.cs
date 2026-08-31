@@ -706,7 +706,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 in rightResolved);
             float leftReachClampDistance = 0f;
             float rightReachClampDistance = 0f;
-            if (leftLandingReach && !leftReachAvailable)
+            if (leftLandingReach && strideHips.LeftLandingReachEnforced && !leftReachAvailable)
             {
                 leftGoal = ClampFootGoalToReach(
                     in leftGoal,
@@ -718,7 +718,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     goalRoot,
                     out leftReachClampDistance);
             }
-            if (rightLandingReach && !rightReachAvailable)
+            if (rightLandingReach && strideHips.RightLandingReachEnforced && !rightReachAvailable)
             {
                 rightGoal = ClampFootGoalToReach(
                     in rightGoal,

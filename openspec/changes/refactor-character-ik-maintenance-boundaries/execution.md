@@ -319,9 +319,16 @@ PredictionMotion、BodyTrajectory及其Tick/Generation/ResetSequence/AuthorityTi
 
 ## 唯一主行Schema与根读写
 
-状态：实现完成，Unity与Editor构建0错误，build server已关闭；等待实际回放。
+状态：候选8a55fd7已完成实际Replay和唯一根Schema验证；任务5.2、5.3完成。
 
 - 新增唯一`CharacterFootSampleColumns.Schema`，按Identity、Step、Formal、Body、Observation、Ground、Motion、Support、Goal、Pelvis、Solver的正式列顺序组合28个业务分组。子分组的业务Group、类型、单位和有效性元数据在根Schema中保留。
 - Sampler先按原顺序计算全部typed源，再构造一次完整Sample Source并由根Schema写整行；Header只读取根Schema。根组合按分组提取一次源结构，不按1215列重复复制大Foot诊断结构。
 - Analyzer由同一根Schema一次绑定并直接读取完整FootFrame，删除旧`CharacterFootSampleReadBindings`和空的必需列清单。旧Sliding Response列仍在唯一读取边界显式拒绝；HasAnchor等派生事实在typed读取后计算。
 - 本步不改变列名、顺序、格式identity、公式、规则或Runtime。回放通过后可确认任务5.2和5.3完成；格式identity集中、Runtime证据分组、最终清理与Reset仍待完成。
+
+## 唯一根Schema的验证封口
+
+- 原包：`Diagnostics/FootPlacementRuns/20260901-060941-648-30c8d66942024fe99628c2123bea58d6`。静态确认根Schema组合28分组，Sampler仅使用根Header/Write，Analyzer仅使用根Bind，旧SampleReadBindings无文件及引用；Finalizer成功读取1215列。
+- 对055234及固定233436，1191业务列逐值相同，23身份列映射无冲突；几何22业务列精确、5身份列映射无冲突。六次查询均返回完整1215列且所有单元格与原CSV字符串一致。
+- 42项诊断、20447明细及索引、其它正式查询保持；Proof matched1044、aggregate空、DivergentFrameCount0，输入/Body/时钟及1044帧数组一致。Unity已归还、Edit/Idle、failure空、Console0。
+- 此证据完成Editor typed列绑定及统一主行读写；Runtime证据分组、格式identity、最终全链对账、Reset及既有覆盖限制不冒称完成。

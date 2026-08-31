@@ -1,0 +1,89 @@
+{
+  "kind": "foot-replay-evidence-archive",
+  "candidateCommit": "94106f5aacff54a566af47a5f64b0ba594b5862c",
+  "restoreCommit": "a0aea666f71e0c52a62d7648ba7563239f71e755",
+  "decision": "rejected",
+  "baseline": "20260831-085223-610-d02f3b0109c14331be7100a45a6d1a07",
+  "fixedEffectBaseline": "20260830-193957-489-9f55422ed479473682fc01f0583625db",
+  "run": "20260831-092855-825-6211bdaf960f461a8d4e96a533d38f58",
+  "sourceDirectory": "D:\\Unity_Project_1\\3C\\3cDemo\\Client\\3C_Client\\Diagnostics\\FootPlacementRuns\\20260831-092855-825-6211bdaf960f461a8d4e96a533d38f58",
+  "zipFile": "20260831-092855-825-6211bdaf960f461a8d4e96a533d38f58.zip",
+  "zipSha256": "BB0F0C8B05D14827F621ED063ACC2CA72CD9E8975FE77EA02ED990F9A97E2315",
+  "proofFile": "replay-proof.json",
+  "proofSha256": "8ECC1EBC6F0E3144A71385066A57C2DA8B4573B62381F22A29B497AB771CFBD2",
+  "traceId": "43357ff3cd384e5cba75d2c31175b116",
+  "officialProofMatched": false,
+  "comparedFrameCount": 1044,
+  "divergentFrameCount": 0,
+  "fullInputFramesEqual": true,
+  "factsSchema": "character-foot-motion-facts/65",
+  "diagnosisSchema": "character-foot-diagnosis-file/34",
+  "sourceFilesPreserved": true,
+  "zipEntriesComparedToSource": true,
+  "restorationReplay": {
+    "status": "not-run",
+    "reason": "Parallel CharacterFootGroundEnvelope.cs changes; awaiting shared workspace coordination"
+  },
+  "files": [
+    {
+      "path": "diagnoses/contact-plane-penetration.json",
+      "bytes": 51377,
+      "sha256": "A977632FB6E8E50EBE3AEF09DDBF2F7967AC16374629D3BECDDE60FFCE3CA4C4"
+    },
+    {
+      "path": "diagnoses/landing-leg-extension.json",
+      "bytes": 6509224,
+      "sha256": "DE5B03F23384780B1B62280F4ED17152935C4C94C172C441C30F3B4884E13519"
+    },
+    {
+      "path": "diagnoses/landing-observation-reuse.json",
+      "bytes": 5779,
+      "sha256": "14F6BDBAA2947972AA5D91F38072F13CF3F35E5C0399C61372CC8441BA41C09A"
+    },
+    {
+      "path": "diagnoses/landing-path-continuity.json",
+      "bytes": 61009,
+      "sha256": "2681AA6FD095760CC9B791689F3C85BA47D3497CD31B24CEFAEF07F303313A9B"
+    },
+    {
+      "path": "diagnoses/landing-state-consistency.json",
+      "bytes": 733793,
+      "sha256": "A01D0BFB2B0BCE8CEDFBF0B01951DD8D8553D462C9586EBA174333DF0B14CDCD"
+    },
+    {
+      "path": "diagnoses/locked-sole-motion.json",
+      "bytes": 10248,
+      "sha256": "A6495B6CE81077C68D67892330A7312870676D48F4BF5D06A20622245E38FCF5"
+    },
+    {
+      "path": "diagnoses/quality-score.json",
+      "bytes": 24821,
+      "sha256": "E96C928FBDBD80EFEE250FCBE5F807C816BAA7106AC7EFF97E3345A9F6CAD94C"
+    },
+    {
+      "path": "diagnoses/step-time-candidate-selection.json",
+      "bytes": 7783010,
+      "sha256": "485FF3B4EC1CD590FDC5F4EDF3895EE9C9B1DDC5C3E2A498DC993E0A968037C7"
+    },
+    {
+      "path": "diagnoses/swing-path-jitter.json",
+      "bytes": 1745382,
+      "sha256": "BA00F052A6A91673EE2E67AA79AF845992BE5FB8BAE2B14410A6A1AD2B52DF6F"
+    },
+    {
+      "path": "facts.json",
+      "bytes": 122130660,
+      "sha256": "3986C03D46D046EC7CAEE7C4C77D86613519CFD1E60270BB75B43FB684775605"
+    },
+    {
+      "path": "ground-path-geometry.csv",
+      "bytes": 7889794,
+      "sha256": "252536EA96758CC63961E062778D634AEF1BAC68349761FF79A784B0D3C7B6F4"
+    },
+    {
+      "path": "samples.csv",
+      "bytes": 19290120,
+      "sha256": "7AC865D163D2D0DEF2B073F6B7FD3897AB7F44712E8B4B581AA964AE31D6389C"
+    }
+  ]
+}

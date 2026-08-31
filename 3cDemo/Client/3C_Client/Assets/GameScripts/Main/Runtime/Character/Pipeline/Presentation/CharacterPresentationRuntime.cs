@@ -63,7 +63,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             m_ProviderSourceSamples;
         readonly FixedCapacityFrameBuffer<AnimationPlaybackId>
             m_RetiredThisFrame;
-        readonly AnimationPresentationFrameTransaction m_FrameTransaction;
+        readonly CharacterPoseFrameTransaction m_FrameTransaction;
         readonly Action m_EnterEvaluateBarrier;
         readonly AnimationPresentationRuntimeCapacityMetrics
             m_CapacityMetrics;
@@ -72,6 +72,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         CharacterPoseTuningRuntimeBinding m_TuningBinding;
         CharacterPoseTuningTargetIdentity m_TuningTarget;
 
+        ulong m_TuningGeneration = 1;
         ulong m_NextFrameTransactionIdentity;
         ulong m_NextPresentationRequestSequence;
         AnimationPresentationDebugView m_DebugView;
@@ -151,7 +152,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 new List<ActionBackendReleaseCompletion>(
                     releaseCompletionCapacity);
             m_FrameTransaction =
-                new AnimationPresentationFrameTransaction(
+                new CharacterPoseFrameTransaction(
                     frameCapacity,
                     releaseCompletionCapacity);
             m_EnterEvaluateBarrier =
@@ -481,7 +482,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 ClearPublishedDiagnostics();
             }
 
-            AnimationPresentationFrameTransaction transaction;
+            CharacterPoseFrameTransaction transaction;
             using (TransactionBeginMarker.Auto())
             {
                 transaction = BeginFrameTransaction(
@@ -576,6 +577,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                         m_ProviderSourceSamples,
                         diagnosticsInterest !=
                             AnimationPresentationDiagnosticsInterest.None);
+                transaction.BindCompletion(
+                    preparedPose.CompletionIdentity);
                 if (hasMotionMatchingResolution)
                 {
                     m_PoseRuntime
@@ -761,7 +764,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 return;
             CharacterPoseTuningParameterBlock previous =
                 m_TuningBinding.ActiveBlock;
-            m_TuningBinding.TryApplyPending(
+            bool applied = m_TuningBinding.TryApplyPending(
                 m_TuningTarget,
                 presentationFrame,
                 activation: m_PoseRuntime.CanApplyNextActivation,
@@ -782,6 +785,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                         : $"{error} Rollback failed: {rollbackError}";
                 },
                 out _);
+            if (applied)
+                m_TuningGeneration++;
         }
 
         public void Reset()
@@ -861,7 +866,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 throw failure;
         }
 
-        AnimationPresentationFrameTransaction BeginFrameTransaction(
+        CharacterPoseFrameTransaction BeginFrameTransaction(
             ulong presentationFrame,
             ulong bodyTick,
             bool captureDiagnostics,
@@ -910,10 +915,20 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     presentationFrame,
                     diagnosticsInterest,
                     linkedPose);
-                m_FrameTransaction.Begin(
+                var lineage = new CharacterPoseFrameLineage(
+                    m_ActorId,
                     frameIdentity,
+                    0,
                     presentationFrame,
                     bodyTick,
+                    m_Bindings.Projection.ProgramId,
+                    m_Bindings.Projection.PosePlan.PlanHash,
+                    m_Bindings.Projection.ProjectionRevision,
+                    m_Bindings.Projection.Rig.RigId,
+                    m_Bindings.Projection.Rig.RigRevision,
+                    m_TuningGeneration);
+                m_FrameTransaction.Begin(
+                    in lineage,
                     workspaceLease,
                     action,
                     sampling,
@@ -988,7 +1003,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         }
 
         void ConsumeBackendReleaseCompletions(
-            AnimationPresentationFrameTransaction transaction)
+            CharacterPoseFrameTransaction transaction)
         {
             m_PoseRuntime.CopyActionBackendReleaseCompletions(
                 m_BackendReleaseCompletions);
@@ -1012,7 +1027,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         }
 
         void RebaseRetiredMarkerSources(
-            AnimationPresentationFrameTransaction transaction,
+            CharacterPoseFrameTransaction transaction,
             IReadOnlyList<ActionAnimationPlaybackLifecycleFrame>
                 lifecycle)
         {
@@ -1049,7 +1064,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         }
 
         MotionMatchingFrameResolution ResolveMotionMatching(
-            AnimationPresentationFrameTransaction transaction,
+            CharacterPoseFrameTransaction transaction,
             ulong presentationFrame,
             float presentationDeltaSeconds,
             in CharacterBodyPresentationFrame bodyFrame,
@@ -1154,7 +1169,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         }
 
         void CompleteSlotSourceReleases(
-            AnimationPresentationFrameTransaction transaction)
+            CharacterPoseFrameTransaction transaction)
         {
             m_PoseRuntime.CopyActionSlotReleaseCompletions(
                 m_SlotReleaseCompletions);
@@ -1172,7 +1187,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         }
 
         void PublishActionUsageAndRetirement(
-            AnimationPresentationFrameTransaction transaction)
+            CharacterPoseFrameTransaction transaction)
         {
             m_AnimationSlots.PublishActionUsages(
                 transaction.SlotLease,
@@ -1230,7 +1245,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         }
 
         void BuildCommittedSnapshots(
-            AnimationPresentationFrameTransaction transaction)
+            CharacterPoseFrameTransaction transaction)
         {
             CopyActionSnapshots(
                 m_ActionPlayback.BuildCommittedLifecycleSnapshot(),
@@ -1258,7 +1273,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         }
 
         void PublishCommittedSnapshots(
-            AnimationPresentationFrameTransaction transaction)
+            CharacterPoseFrameTransaction transaction)
         {
             CopyActionSnapshots(
                 transaction.ActionSnapshots,
@@ -1330,7 +1345,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
               AnimationPresentationDiagnosticsInterest.Capture)) != 0;
 
         void CommitFrameTransaction(
-            AnimationPresentationFrameTransaction transaction,
+            CharacterPoseFrameTransaction transaction,
             CharacterLinkedPoseRuntimeSession linkedPose)
         {
             if (transaction == null ||
@@ -1359,7 +1374,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         }
 
         Exception DiscardFrameTransaction(
-            AnimationPresentationFrameTransaction transaction,
+            CharacterPoseFrameTransaction transaction,
             CharacterLinkedPoseRuntimeSession linkedPose)
         {
             if (transaction == null ||
@@ -1534,7 +1549,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         }
 
         void MarkFaulted(
-            AnimationPresentationFrameTransaction transaction)
+            CharacterPoseFrameTransaction transaction)
         {
             if (m_Faulted)
                 return;
@@ -1542,8 +1557,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 transaction.Phase;
             m_Fault = new AnimationPresentationFault(
                 m_ActorId,
-                transaction.PresentationFrame,
-                transaction.BodyTick,
+                transaction.Lineage.PresentationFrame,
+                transaction.Lineage.BodyTick,
                 phase,
                 m_PoseRuntime.FrameCompletionContext);
             m_Faulted = true;

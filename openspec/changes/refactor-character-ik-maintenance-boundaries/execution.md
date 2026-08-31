@@ -158,3 +158,12 @@ PredictionMotion、BodyTrajectory及其Tick/Generation/ResetSequence/AuthorityTi
 ## 当前接续点
 
 运行与Editor普通Record的上一通过提交为a9105e3；总基线仍为ad3527e。剩余工作为：完成其余993列的唯一绑定和诊断分组、统一现有格式identity、清理文件与剩余旧字段并逐闭环回放；Reset取证扩展等待用户决定。第一阶段未完成前不启动Pose Graph。工作区原有.gitignore、ProjectSettings、project.md与stabilize提案的未提交变更继续保留，不夹带提交。
+
+## 脚步候选、阶段与正式事件列
+
+状态：实现、Unity编译与规定参数Editor构建通过，0错误，等待正式回放。
+
+- Current/Incoming候选各19列及Selected Phase的5列由共享阶段定义驱动；保留原Selected Source条件，没有改变选择规则。
+- 输入与输出Formal Event各20列共用一次正式事件准备和同一事件字段形状。保留原available与IsValid条件、未绑定Event的零Identity和无效时的空/零输出；以前未被规则使用的列也具备typed读写绑定。
+- 删除这83列的旧Header、写入helper、局部解析函数和必需列清单。读取端用按文件创建的CharacterFootSampleReadBindings汇聚一次列索引绑定，不再随分组增加ParseFrame参数。
+- 累计305/1215列已迁移，Runtime、格式identity和评分规则未改。下一验证同时比较a9105e3/030817与固定ad3527e/233436；Reset4.4继续未完成。

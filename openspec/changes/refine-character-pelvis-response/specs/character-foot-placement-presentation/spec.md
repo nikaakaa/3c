@@ -34,9 +34,9 @@
 
 ### Requirement: 骨盆可达硬边界必须与姿态偏好分责
 
-Pelvis MUST从同帧typed Reach Request的真实腿长与正式安全余量形成唯一双腿硬区间。原动画额外弯曲余量 MUST只属于目标姿态偏好，不得再形成另一份输出硬夹紧。完整边界 MUST交给同一骨盆响应阶段，外部Module不得在其后再次改写Pelvis输出。
+Pelvis MUST从同帧typed Reach Request的真实腿长与正式安全余量形成逐腿及交集观察。当前Primary准入实验 MUST仅以Accepted且Goal有效的主支撑腿形成唯一硬区间；非主脚观察 MUST不参与目标或输出硬夹紧。原动画额外弯曲余量 MUST只属于目标姿态偏好，不得再形成另一份输出硬夹紧。完整硬边界 MUST交给同一骨盆响应阶段，外部Module不得在其后再次改写Pelvis输出。
 
-系统 MUST继续只持有一份根Bank内Spring状态、使用现有正式响应配置和Handoff规则。输出触界时 MUST保留腿长安全并处理朝外速度；几何不可达 MUST通过既有typed Reach/Goal保护表达，不得以悬空、默认目标、未授权降权或FBBIK完全伸直代替明确政策。
+系统 MUST继续只持有一份根Bank内Spring状态、使用现有正式响应配置和Handoff规则。主支撑输出触界时 MUST保留腿长安全并处理朝外速度。末端Foot Goal径向投影 MUST只允许具有同一主支撑角色的请求；非主脚MUST保留原Goal及作者权重，不得隐式夹脚。每脚Landing完成 MUST独立检查该腿在实际加权骨盆位移后的可达性，不得把无执行权解释为必然可达或不可达。非主脚真实求解不足 MUST保留正式测量，不能以Solver成功、默认目标、降权或完全伸直冒充安全通过。
 
 当前下降响应候选 MUST保持原Handoff事件判定与原清速度分支。当旧速度沿Component Up向上且本帧合法目标低于旧输出超过GeometryEpsilon时，MUST在同一次Spring积分前清除该背向速度，不再要求Handoff。旧向下速度 MUST仍按原Handoff门处理。MUST不重置输出位置、扩大真实硬边界或修改下游Foot/Bend来补偿该变化。
 
@@ -50,9 +50,21 @@ Pelvis MUST从同帧typed Reach Request的真实腿长与正式安全余量形�
 
 #### Scenario: 当前几何要求必要下蹲
 
-- **WHEN** 双脚目标与身体位置使当前骨盆输出超过真实硬可达边界
+- **WHEN** 主支撑目标与身体位置使当前骨盆输出超过该腿真实硬可达边界
 - **THEN** 唯一Pelvis响应阶段 MUST保持腿长安全并发布必要的边界调整
 - **AND** MUST不承诺在不变脚目标、身体和腿长的同时绝对连续，也不得另加后置平滑绕过限制
+
+#### Scenario: 无主支撑的骨盆释放
+
+- **WHEN** Pelvis进入Releasing且没有本次Accepted主支撑
+- **THEN** MUST保留真实ComponentUp与逐腿测量，原Spring只追零，不用观察区间夹目标、夹输出、清边界速度或阻止完成
+- **AND** 无上一Spring时 MUST直接Rejected，不建立仅由Foot Reach启动的骨盆状态；非主脚Goal不得被后置径向投影
+
+#### Scenario: 非主脚真实可达性与硬执行权不同
+
+- **WHEN** 非主脚仍有合法Foot Reach Request
+- **THEN** MUST按本腿区间和实际加权Pelvis位移发布LandingReachAvailable并用于原Landing完成门
+- **AND** 全腿交集仅作观察，不得改变主支撑硬边界或通过挪动非主脚Goal补齐观察冲突
 
 #### Scenario: 姿态偏好试图把抬升请求反转为下压
 
@@ -80,7 +92,7 @@ Pelvis MUST从同帧typed Reach Request的真实腿长与正式安全余量形�
 
 ### Requirement: 骨盆观测必须区分原Pose、修正量和最终世界写回
 
-最终Physical Pelvis世界点 MUST由唯一Physical Writer完成本次骨骼写入后取得，并与组件点及同一Completion一起冻结。Sampler MUST只消费这份正式结果，不通过采样时live Root变换冒充同Completion世界事实。原Pose输入有效性 MUST与HeightTarget/Posture求值有效性分离；产生合法Pelvis Goal的Releasing或仅LandingReach也 MUST发布真实源Pose。
+最终Physical Pelvis世界点 MUST由唯一Physical Writer完成本次骨骼写入后取得，并与组件点及同一Completion一起冻结。Sampler MUST只消费这份正式结果，不通过采样时live Root变换冒充同Completion世界事实。原Pose输入有效性 MUST与HeightTarget/Posture求值有效性分离；产生合法Pelvis Goal的Releasing也 MUST发布真实源Pose。
 
 #### Scenario: Release阶段检查最终骨盆Goal残差
 

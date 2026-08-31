@@ -28,21 +28,23 @@ Runtime用不可变`CharacterFootPelvisHeightTarget`保存本次真正消费的C
 
 ## 第3步：一次处理可达性与响应
 
-同帧typed Reach Request提供Hip、有效Ankle目标、真实腿长、正式安全余量和lineage。所有实际参与的腿先形成唯一硬区间，进入现有Pelvis模块后一次用于目标和响应合法性。原动画弯曲余量可形成目标偏好，但不再缩小另一份最终输出硬区间。
+同帧typed Reach Request提供Hip、有效Ankle目标、真实腿长、正式安全余量和lineage。全部请求腿继续形成逐腿及交集观察。第15步实验仅由Accepted且Goal有效的Primary Support提供硬区间，进入现有Pelvis模块后一次用于目标和响应合法性。原动画弯曲余量可形成目标偏好，但不再缩小另一份最终输出硬区间。
 
-保留一份根Bank内的Spring状态、原频率与Handoff/Velocity Reset业务。不增加第二响应或新速率参数。最终输出若因几何必须触界，统一阶段记录夹紧并清除继续向外的速度；之后Module只消费结果，不再次改写Pelvis输出。无交集、横向本已不可达等情况继续使用明确typed拒绝及既有Foot Reach保护，不以FBBIK伸直或降低未授权权重掩盖。
+保留一份根Bank内的Spring状态、原频率与Handoff/Velocity Reset业务。不增加第二响应或新速率参数。最终输出若触及主支撑硬边界，统一阶段记录夹紧并清除继续向外的速度；之后Module只消费结果，不再次改写Pelvis输出。无交集、横向本已不可达等情况继续发布明确typed观察；主支撑保留原Foot Reach保护，非主脚则实测原Goal与最终骨骼差，不能以FBBIK伸直或降低未授权权重掩盖。
 
 此结构不能保证所有几何冲突都无突降；它先减少不必要目标上抬与动画姿态偏好造成的硬压，再用Replay评估剩余真实约束。
 
 ### 第3步的实际输入、数学和事实
 
-Module只把原有IsLandingReachCandidate准入结果、Resolved的左右typed Reach Request、Primary Support、原Pose和第2步有效目标交给一次ResolvePelvis；不再调用ApplyLandingReach或另写Spring Output。Foot FinalizeLanding、不可达Goal夹紧、唯一Goal编码和FBBIK顺序保持。
+Module只把原有IsLandingReachCandidate准入结果、Resolved的左右typed Reach Request、Primary Support、原Pose和第2步有效目标交给一次ResolvePelvis；不再调用ApplyLandingReach或另写Spring Output。Foot FinalizeLanding、唯一Goal编码和FBBIK顺序保持；末端Goal夹紧与骨盆硬约束使用同一Primary角色授权，不因非主脚观测不可达而挪Goal。
 
 每腿硬半径严格为`LegLength-MinimumCompressionReserve`，不沿用旧辅助函数按水平距离放宽安全余量的做法。令`v=Hip-TargetAnkle`、`y=dot(v,up)`、`h2=|v-up*y|²`，若`radius²-h2<0`则为HorizontalUnreachable，否则沿Up的合法平移区间为`[-y-sqrt(radius²-h2), -y+sqrt(radius²-h2)]`。Primary只在原Accepted资格且Goal有效时参与；有同侧正式Foot Request则复用其几何，无第二份同腿硬区间。
 
 Reach Role可同时为FootTarget与PrimarySupport，后者只标该腿的优先角色，不改写输入来源。复用Foot Request时EventIdentity属于该Request，公共Primary Event独立保留；两者不能强制同值。只有独立Primary输入才以其正式Event构造几何，不能把它反报成Foot Motion已请求的Landing Reach。
 
-所有已请求腿可达且交集非空时选择AllRequestedLegs；否则明确发布LegUnreachable或NoCommonInterval，在原Primary存在且硬几何合法时选择PrimarySupportOnly。不存在合法Primary时不造可达区间；相关Foot Request继续Unavailable并走原Goal Reach保护。它是既有支撑优先政策的显式裁决，不是默认点/旧缓存或另一响应。正常交集Available后还核对实际加权Pelvis位移，不能只检查未乘权重的数值。
+Status与Intersection仅报告全部请求腿的几何观察；Selection只允许None或PrimarySupport。合法主支撑区间不再与非主脚相交，也不受非主脚HorizontalUnreachable否决。每脚LandingReachAvailable独立检查本腿区间是否包含Response.Output×PositionWeight，不能从公共Status、Selection或另一腿推断。末端Goal投影权限取Primary角色而非区间Available，因此主脚横向不可达时原保护仍可执行。
+
+Pelvis Release保留真实ComponentUp、全部逐腿观察与原Spring回零，但无硬区间；目标夹紧、输出夹紧、边界清速度、完成阻拦及强制可见权重均不执行。无上一Spring时直接Rejected，不再建立LandingReach骨盆状态。HasLandingRequests仍只按真实请求决定原0.1毫米／5毫米可见门，不能通过删观察顺带改权重。非主脚目标与权重保持原值；若真实腿长不足，按Physical Ankle、Heel/Toe、骨长及现有质量规则裁决，而非假称Solver必能达到。
 
 原动画压缩量仍为`LegLength-distance(AnimatedHip,AnimatedAnkle)`，原姿态区间计算只生成PosturePreference目标。它不可达时发布Evaluated=true/Available=false，共同HeightTarget仍是独立合法需求；不产生另一份输出夹紧。未消费姿态偏好的Release/Rejected帧为Evaluated=false，零字段不是测量。
 

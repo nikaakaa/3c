@@ -18,9 +18,9 @@ using Unity.Profiling;
 
 namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
 {
-    internal readonly struct PosePlanFrameLease
+    internal readonly struct CharacterPoseProgramFrameLease
     {
-        internal PosePlanFrameLease(
+        internal CharacterPoseProgramFrameLease(
             ulong frameIdentity)
         {
             FrameIdentity = frameIdentity;
@@ -30,10 +30,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
         internal bool IsValid => FrameIdentity != 0;
     }
 
-    internal readonly struct PosePlanPreparedEvaluation
+    internal readonly struct CharacterPoseProgramPrepared
     {
-        internal PosePlanPreparedEvaluation(
-            ulong completionIdentity,
+        internal CharacterPoseProgramPrepared(
+            in CharacterPoseFrameLineage lineage,
             float presentationDeltaSeconds,
             in CharacterPoseGraphNativeBinding frame,
             in CharacterPoseGraphStagedExecutor poseExecutor,
@@ -41,7 +41,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             bool hasCommittedFinal,
             in AnimationFinalPoseNativeReadBinding committedFinalRead)
         {
-            CompletionIdentity = completionIdentity;
+            Lineage = lineage;
             PresentationDeltaSeconds = presentationDeltaSeconds;
             Frame = frame;
             PoseExecutor = poseExecutor;
@@ -50,7 +50,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             CommittedFinalRead = committedFinalRead;
         }
 
-        internal ulong CompletionIdentity { get; }
+        internal CharacterPoseFrameLineage Lineage { get; }
         internal float PresentationDeltaSeconds { get; }
         internal CharacterPoseGraphNativeBinding Frame { get; }
         internal CharacterPoseGraphStagedExecutor PoseExecutor { get; }
@@ -58,11 +58,11 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
         internal bool HasCommittedFinal { get; }
         internal AnimationFinalPoseNativeReadBinding CommittedFinalRead { get; }
         internal bool IsValid =>
-            CompletionIdentity != 0 &&
+            Lineage.IsValid &&
             float.IsFinite(PresentationDeltaSeconds) &&
             PresentationDeltaSeconds >= 0f &&
-            Frame.CompletionIdentity == CompletionIdentity &&
-            FinalRead.CompletionIdentity == CompletionIdentity;
+            Frame.CompletionIdentity == Lineage.CompletionIdentity &&
+            FinalRead.CompletionIdentity == Lineage.CompletionIdentity;
     }
 
     internal sealed class PosePlanExecutionRuntime :
@@ -324,7 +324,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
         int m_MotionMatchingHistoryCompletionCount;
         CharacterPoseGraphNativeBinding m_LastCompletedFrame;
         CharacterPoseGraphNativeBinding m_PendingCompletedFrame;
-        PosePlanFrameLease m_ActiveFrameLease;
+        CharacterPoseProgramFrameLease m_ActiveFrameLease;
         bool m_CommitValidated;
         bool m_HasCompletedFrame;
         bool m_HasPendingCompletedFrame;
@@ -920,7 +920,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                 destination);
         }
 
-        internal PosePlanFrameLease BeginPendingFrame(
+        internal CharacterPoseProgramFrameLease BeginPendingFrame(
             ulong frameIdentity,
             ulong presentationFrame,
             AnimationPresentationDiagnosticsInterest diagnosticsInterest,
@@ -984,7 +984,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                 ApplyLinkedPoseGenerationResets();
                 m_HasOpenFrame = true;
                 m_ActiveFrameLease =
-                    new PosePlanFrameLease(frameIdentity);
+                    new CharacterPoseProgramFrameLease(frameIdentity);
                 return m_ActiveFrameLease;
             }
             catch
@@ -1018,7 +1018,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
         }
 
         internal void SealFrame(
-            PosePlanFrameLease lease)
+            CharacterPoseProgramFrameLease lease)
         {
             RequireMutation(lease);
             if (!m_CommitValidated)
@@ -1060,7 +1060,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
         }
 
         internal void ValidatePendingSeal(
-            PosePlanFrameLease lease)
+            CharacterPoseProgramFrameLease lease)
         {
             RequireMutation(lease);
             m_PhysicalSources.ValidateFrame();
@@ -1224,7 +1224,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
         }
 
         internal void DiscardPendingFrame(
-            PosePlanFrameLease lease)
+            CharacterPoseProgramFrameLease lease)
         {
             RequireMutation(lease);
             Exception failure = null;
@@ -2331,7 +2331,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             }
         }
 
-        internal PosePlanPreparedEvaluation PrepareEvaluation(
+        internal CharacterPoseProgramPrepared PrepareEvaluation(
+            in CharacterPoseFrameLineage openLineage,
             float presentationDeltaSeconds,
             IReadOnlyDictionary<AnimationPlayerSourceSampleKey,
                 AnimationResolvedPoseSourceSample> actionSourceSamples,
@@ -2341,6 +2342,14 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
         {
             RequireAlive();
             RequireOpenMutation();
+            if (!openLineage.IsOpenValid ||
+                openLineage.CompletionIdentity != 0 ||
+                openLineage.FrameIdentity != m_ActiveFrameLease.FrameIdentity)
+            {
+                throw new ArgumentException(
+                    "Pose Program open lineage is invalid.",
+                    nameof(openLineage));
+            }
             if (!float.IsFinite(presentationDeltaSeconds) || presentationDeltaSeconds < 0f)
                 throw new ArgumentOutOfRangeException(nameof(presentationDeltaSeconds));
             if (actionSourceSamples == null)
@@ -2524,8 +2533,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                     in committedFinalRead);
             }
 
-            return new PosePlanPreparedEvaluation(
-                completionIdentity,
+            CharacterPoseFrameLineage lineage =
+                openLineage.WithCompletion(completionIdentity);
+            return new CharacterPoseProgramPrepared(
+                in lineage,
                 presentationDeltaSeconds,
                 in frame,
                 in poseExecutor,
@@ -2534,16 +2545,16 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                 in committedFinalRead);
         }
 
-        internal void ExecuteEvaluateBarrier(
-            ActorId actorId,
-            ulong renderFrame,
+        internal CharacterPoseProgramResult ExecuteEvaluateBarrier(
             in CharacterBodyPresentationFrame bodyFrame,
             in CharacterPresentationFactFrame factFrame,
-            in PosePlanPreparedEvaluation prepared,
+            in CharacterPoseProgramPrepared prepared,
             Action enterEvaluateBarrier)
         {
             RequireAlive();
             RequireOpenMutation();
+            ActorId actorId = prepared.Lineage.ActorId;
+            ulong renderFrame = prepared.Lineage.PresentationFrame;
             if (!actorId.IsValid)
                 throw new ArgumentException(
                     "Pose Plan Actor identity is invalid.",
@@ -2559,9 +2570,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                     "Pose Plan Presentation Fact frame is invalid.",
                     nameof(factFrame));
             if (!prepared.IsValid ||
-                prepared.CompletionIdentity != m_FrameCompletionContext ||
+                prepared.Lineage.CompletionIdentity != m_FrameCompletionContext ||
                 !m_Workspace.HasPendingFrame ||
-                m_Workspace.PendingCompletionIdentity != prepared.CompletionIdentity)
+                m_Workspace.PendingCompletionIdentity != prepared.Lineage.CompletionIdentity)
             {
                 throw new ArgumentException(
                     "Pose Plan prepared evaluation is not the active Pending frame.",
@@ -2570,7 +2581,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             if (enterEvaluateBarrier == null)
                 throw new ArgumentNullException(nameof(enterEvaluateBarrier));
 
-            ulong completionIdentity = prepared.CompletionIdentity;
+            ulong completionIdentity = prepared.Lineage.CompletionIdentity;
             float presentationDeltaSeconds =
                 prepared.PresentationDeltaSeconds;
             CharacterPoseGraphNativeBinding frame = prepared.Frame;
@@ -2658,7 +2669,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             if (m_PendingFrameOutcome !=
                 AnimationPresentationFrameOutcome.Committed)
             {
-                return;
+                return CreateProgramResult(in prepared);
             }
 
             using (SealMarker.Auto())
@@ -2685,6 +2696,22 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                 m_PendingCompletedFrame = frame;
                 m_HasPendingCompletedFrame = true;
             }
+            return CreateProgramResult(in prepared);
+        }
+
+        CharacterPoseProgramResult CreateProgramResult(
+            in CharacterPoseProgramPrepared prepared)
+        {
+            AnimationFinalPoseNativeReadBinding finalRead =
+                prepared.FinalRead;
+            CharacterPoseFrameLineage lineage = prepared.Lineage;
+            return new CharacterPoseProgramResult(
+                in lineage,
+                m_PendingFrameOutcome,
+                finalRead.Availability[0],
+                finalRead.OutputInvalidReason[0],
+                finalRead.PoseGraphInvalidReason[0],
+                finalRead.PoseGraphInvalidOperationIndex[0]);
         }
 
         CharacterPoseWorldAwareStageInput BuildWorldAwareStageInput(
@@ -4182,7 +4209,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
         }
 
         void RequireMutation(
-            PosePlanFrameLease lease)
+            CharacterPoseProgramFrameLease lease)
         {
             RequireAlive();
             if (!lease.IsValid ||

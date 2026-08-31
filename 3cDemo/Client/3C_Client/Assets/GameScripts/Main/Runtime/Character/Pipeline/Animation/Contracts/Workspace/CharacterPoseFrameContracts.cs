@@ -110,4 +110,37 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             CharacterPoseFrameLineage left,
             CharacterPoseFrameLineage right) => !left.Equals(right);
     }
+
+    internal readonly struct CharacterPoseProgramResult
+    {
+        internal CharacterPoseProgramResult(
+            in CharacterPoseFrameLineage lineage,
+            AnimationPresentationFrameOutcome outcome,
+            AnimationPoseAvailability outputAvailability,
+            AnimationPoseNativeInvalidReason outputInvalidReason,
+            AnimationPoseNativeInvalidReason graphInvalidReason,
+            int invalidOperationIndex)
+        {
+            Lineage = lineage;
+            Outcome = outcome;
+            OutputAvailability = outputAvailability;
+            OutputInvalidReason = outputInvalidReason;
+            GraphInvalidReason = graphInvalidReason;
+            InvalidOperationIndex = invalidOperationIndex;
+        }
+
+        internal CharacterPoseFrameLineage Lineage { get; }
+        internal AnimationPresentationFrameOutcome Outcome { get; }
+        internal AnimationPoseAvailability OutputAvailability { get; }
+        internal AnimationPoseNativeInvalidReason OutputInvalidReason { get; }
+        internal AnimationPoseNativeInvalidReason GraphInvalidReason { get; }
+        internal int InvalidOperationIndex { get; }
+        internal bool IsCommitted =>
+            Lineage.IsValid &&
+            Outcome == AnimationPresentationFrameOutcome.Committed &&
+            OutputAvailability == AnimationPoseAvailability.Pose &&
+            OutputInvalidReason == AnimationPoseNativeInvalidReason.None &&
+            GraphInvalidReason == AnimationPoseNativeInvalidReason.None &&
+            InvalidOperationIndex == -1;
+    }
 }

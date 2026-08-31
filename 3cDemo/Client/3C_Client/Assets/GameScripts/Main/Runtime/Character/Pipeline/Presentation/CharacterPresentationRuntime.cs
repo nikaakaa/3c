@@ -570,24 +570,28 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     PublishActionSources();
                     PublishSlotTargets();
                 }
-                PosePlanPreparedEvaluation preparedPose =
+                CharacterPoseFrameLineage openLineage =
+                    transaction.Lineage;
+                CharacterPoseProgramPrepared preparedPose =
                     m_PoseRuntime.PrepareEvaluation(
+                        in openLineage,
                         presentationDeltaSeconds,
                         m_ActionSourceSamples,
                         m_ProviderSourceSamples,
                         diagnosticsInterest !=
                             AnimationPresentationDiagnosticsInterest.None);
-                transaction.BindCompletion(
-                    preparedPose.CompletionIdentity);
+                CharacterPoseFrameLineage completedLineage =
+                    preparedPose.Lineage;
+                transaction.BindCompletion(in completedLineage);
                 if (hasMotionMatchingResolution)
                 {
                     m_PoseRuntime
                         .PrepareMotionMatchingPosePlanCompletion(
                             in motionMatchingResolution,
-                            preparedPose.CompletionIdentity);
+                            preparedPose.Lineage.CompletionIdentity);
                     m_MotionMatching.PrepareFrameCompletion(
                         in motionMatchingResolution,
-                        preparedPose.CompletionIdentity);
+                        preparedPose.Lineage.CompletionIdentity);
                 }
                 using (ReleaseProtocolMarker.Auto())
                 {
@@ -604,27 +608,24 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 }
 
                 frameStage = "EvaluateBarrier";
-                m_PoseRuntime.ExecuteEvaluateBarrier(
-                    m_ActorId,
-                    presentationFrame,
+                CharacterPoseProgramResult programResult =
+                    m_PoseRuntime.ExecuteEvaluateBarrier(
                     in bodyFrame,
                     in factFrame,
                     in preparedPose,
                     m_EnterEvaluateBarrier);
                 AnimationPresentationFrameOutcome poseOutcome =
-                    m_PoseRuntime.PendingFrameOutcome;
-                if (poseOutcome !=
-                    AnimationPresentationFrameOutcome.Committed)
+                    programResult.Outcome;
+                if (!programResult.IsCommitted)
                 {
-                    AnimationFinalPoseNativeReadBinding finalRead =
-                        preparedPose.FinalRead;
-                    int invalidOperation = finalRead.PoseGraphInvalidOperationIndex[0];
+                    int invalidOperation =
+                        programResult.InvalidOperationIndex;
                     string solverFailure =
-                        finalRead.PoseGraphInvalidReason[0] ==
+                        programResult.GraphInvalidReason ==
                             AnimationPoseNativeInvalidReason.FullBodyIkSolverInvalid &&
                         m_PoseRuntime.TryGetFullBodyIkFailure(
                             invalidOperation,
-                            preparedPose.CompletionIdentity,
+                            preparedPose.Lineage.CompletionIdentity,
                             out CharacterFullBodyIkResult fullBodyIkResult)
                             ? $", solverFailure={fullBodyIkResult.Failure}, " +
                               $"failedGoalSet={fullBodyIkResult.FailedGoalSetIndex}, " +
@@ -634,11 +635,11 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                             : string.Empty;
                     throw new InvalidOperationException(
                         $"Animation Presentation frame produced '{poseOutcome}' after the Evaluate Barrier: " +
-                        $"availability={finalRead.Availability[0]}, " +
-                        $"outputReason={finalRead.OutputInvalidReason[0]}, " +
-                        $"graphReason={finalRead.PoseGraphInvalidReason[0]}, " +
+                        $"availability={programResult.OutputAvailability}, " +
+                        $"outputReason={programResult.OutputInvalidReason}, " +
+                        $"graphReason={programResult.GraphInvalidReason}, " +
                         $"operation={invalidOperation}, " +
-                        $"completion={preparedPose.CompletionIdentity}{solverFailure}.");
+                        $"completion={preparedPose.Lineage.CompletionIdentity}{solverFailure}.");
                 }
                 ComposedAnimationPoseFrame composedPose;
                 using (FrameCommitMarker.Auto())
@@ -877,7 +878,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             CharacterActionPlaybackFrameTransaction action = null;
             ActionPresentationSamplingFrameTransaction sampling = null;
             AnimationSlotMutationLease slot = default;
-            PosePlanFrameLease pose = default;
+            CharacterPoseProgramFrameLease pose = default;
             MotionMatchingFrameMutationLease motionMatching =
                 default;
             m_NextFrameTransactionIdentity++;

@@ -1,0 +1,14 @@
+{
+    "name": "ThirdPerson.Development.Gm.Contracts",
+    "rootNamespace": "ThirdPerson.Development.Gm",
+    "references": [],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": true
+}

@@ -1,46 +1,47 @@
+本差量的源码与行为对照固定为用户指定提交`ad3527e103cc3235a63e8a1c1dbd26df5155e0ba`；233436仅是对应回放证据，不能用当前HEAD或采样目录替代源码基线。
+
 ## RENAMED Requirements
 
 - FROM: `### Requirement: Pelvis必须只消费Resolved Foot Pair`
-- TO: `### Requirement: Pelvis必须只消费typed脚需求并返回可达裁决`
+- TO: `### Requirement: Pelvis必须只消费typed脚需求并保留可达观察`
 
 ## MODIFIED Requirements
 
 ### Requirement: Resolved Foot必须形成紧凑下游合同
 
-`CharacterResolvedFootResult` MUST只表示当前Foot流程完成既有Landing判定与Reach限制后的最终Goal输入。它 MUST发布下游实际消费的Frame、Completion、Rig、Side、Final Sole/Ankle/Rotation、有效Sole/Ankle/Rotation、最终Correction、作者位置/旋转权重、Contact Reference与Ownership、Support Eligibility、Support Intent与Weight、Support Error、Event lineage、typed Reach Outcome和Outcome。未完成Pelvis及Foot Reach裁决的需求 MUST使用不同的内部typed请求，不得复用最终Resolved类型或名字。
+`CharacterResolvedFootResult` MUST只表示当前Foot流程完成既有Landing资格判断后的最终Goal输入。它 MUST发布下游实际消费的Frame、Completion、Rig、Side、Final Sole/Ankle/Rotation、有效Sole/Ankle/Rotation、Correction、作者位置/旋转权重、Contact Reference与Ownership、Support Eligibility、Support Intent与Weight、Support Error、Event lineage、所需typed Reach观察和Outcome。提供给Pelvis的初步需求 MUST使用不同的内部类型，不得把初步Resolved当作最终结果；迁移 MUST不复制两套同义字段或为已删除的夹脚建立受限输出合同。
 
-最终Resolved Pair MUST只组合同Frame、Completion与Rig的两脚结果，不重新选择State、Support、Reach或Goal。内部State、Transition Decision、Path、Anchor历史与Interpolation过程 MUST不进入最终下游合同。Primary Support与Pelvis MUST只消费本模块内部的typed请求视图；Goal编码 MUST只读取最终Resolved与Pelvis Result，不得在编码后再夹紧业务目标。
+最终Resolved Pair MUST只组合同Frame、Completion与Rig的两脚结果，不重新选择State、Support、Reach或Goal。内部State、Transition Decision、Path、Anchor历史与Interpolation过程 MUST不进入最终下游合同。Primary Support与Pelvis MUST只消费本模块内部的初步请求视图；Goal编码 MUST只读取最终Resolved与Pelvis Result，不得新增业务层Reach夹紧。必要的身份和数值检查 MUST复用现有生产/消费边界，不在每个内部阶段重复验证相同字段。
 
-最终Sole、Ankle、Rotation、有效目标与Correction MUST来自同一最终目标，复用正式Foot/Heel/Toe几何和权重规则。未加权Goal、加权目标与实际Solved/Physical Pose MUST保持不同含义，不得把最终Goal输入称为已写入的物理脚底。原请求因Reach不可达而被限制时 MUST保留请求和裁决证据，不以最终合法位置掩盖原请求失败。
+最终Sole、Ankle、Rotation、有效目标与Correction MUST保持当前Foot/Heel/Toe几何和权重规则。未加权Goal、加权目标与实际Solved/Physical Pose MUST保持不同含义，不得把最终Goal输入称为已写入的物理脚底或保证它必然可达。原目标不可达时 MUST保留真实观察和原Landing资格结果，不硬改目标、权重或骨盆来制造成功。
 
-#### Scenario: 脚需求尚未完成骨盆裁决
+#### Scenario: 初步脚结果尚未完成Landing判断
 
-- **WHEN** Foot已完成本帧目标与Interpolation但Pelvis及Reach尚未处理
+- **WHEN** Foot已完成本帧目标与Interpolation但Pelvis响应及其后的原Landing完成判断尚未结束
 - **THEN** Foot MUST只产生内部typed脚需求和完成凭据，不发布最终Resolved
 - **AND** 根Runtime与Goal消费者 MUST不能取得这份未完成结果作为正式输出
 
-#### Scenario: 原目标不可达而最终输出被夹紧
+#### Scenario: 原Landing资格不满足但目标保持
 
-- **WHEN** 既有政策要求保护Primary Support并限制另一脚的输出位置
-- **THEN** 唯一Foot收口 MUST完成限制并由同一目标生成最终Resolved的关联几何字段
-- **AND** Goal编码 MUST直接表达这个最终目标，不再修改它
-- **AND** 原请求未满足的Outcome MUST继续阻止该脚进入Full Lock
+- **WHEN** Foot进入原Landing完成检查且本腿在当前加权Pelvis位移下不满足可达资格
+- **THEN** 现有Transition MUST保留原未完成结果，不因此允许Full Lock
+- **AND** Foot目标、作者权重和Pelvis响应 MUST保持原行为，不补回末端夹脚或硬压骨盆
 
 #### Scenario: 正常输出保持
 
-- **WHEN** 原Foot请求已被既有Pelvis和Reach政策满足
+- **WHEN** 相同输入进入基于233436保留行为整理后的内部阶段
 - **THEN** 分型迁移 MUST保持Goal的位置、旋转、权重和原连续性处理
 - **AND** MUST不新增一次Interpolation、Pelvis响应或FBBIK
 
-### Requirement: Pelvis必须只消费typed脚需求并返回可达裁决
+### Requirement: Pelvis必须只消费typed脚需求并保留可达观察
 
 Primary Support MUST只读取同Frame、Completion、Rig与Side的typed请求中正式Support Eligibility、Support Intent、Support Error、Event lineage与Pelvis Reach Reference。正式Support为零或Reference无效时 MUST按现有业务发布不可用，不得按相对权重归一制造支撑。Contact Reference、Pelvis Reach Reference和Landing Reach Request MUST保持独立含义。
 
 Pelvis MUST只消费请求中所需的目标与Reach视图、Primary Support Result、同帧动画/Body输入和显式设置，不得读取Foot State、Lock Mode、Anchor历史、Path Residual、Interpolation内部状态或Diagnostics。请求的未加权与有效目标 MUST明确分型，权重不得重复应用。
 
-Pelvis MUST继续使用用户接受的唯一目标、姿态偏好、双腿硬区间和一次Response实现，返回Pelvis Result与每脚typed Reach Outcome。最终Foot Lifecycle仍 MUST拥有状态写入，Foot收口仍 MUST拥有既有脚目标限制；Pelvis不得直接修改Foot状态或提前发布最终Resolved。已采用的Primary安全政策、不可达处理、作者权重与Full Lock准入 MUST保持不变，不增加第二种响应或自动调参。
+Pelvis MUST继续使用233436组合中用户已接受的共同目标、软姿态偏好、一次Spring及Handoff/背向速度规则，并保留逐腿和交集的typed Reach观察。Reach MUST不夹取骨盆目标或输出、不清边界速度、不阻止Release回零、不强开骨盆权重；Primary Support不得作为例外。末端Foot径向夹脚和公共硬执行边界 MUST保持删除，不以重构之名恢复。
 
-Reach Outcome MUST只作为现有Transition Resolver的准入输入，State仍由唯一Transition Runtime更新。Pelvis和Hard Constraint MUST不能直接反写离散State或形成第二份Transition判定。
+原Landing完成可达资格 MUST继续使用本腿请求与当前实际加权Pelvis位移判断。该结果只作为现有Transition Resolver的准入输入，State仍由唯一Transition Runtime更新；Pelvis和Ground Constraint MUST不能直接反写离散State。删除硬Reach MUST不被扩大为删除原完成资格、改变作者权重或新增一个状态选择器。
 
 #### Scenario: 下游选择Support
 
@@ -48,16 +49,22 @@ Reach Outcome MUST只作为现有Transition Resolver的准入输入，State仍�
 - **THEN** 它 MUST仅按请求的正式Support与Event字段执行原有获取/保留选择
 - **AND** MUST不读取Foot State、Lock Mode或Interpolation历史
 
-#### Scenario: 双腿可达裁决返回Foot
+#### Scenario: 可达观察参与原Landing完成
 
-- **WHEN** 唯一Pelvis处理完成本帧双腿可达性判断
-- **THEN** 它 MUST返回与原请求身份一致的每脚Outcome，区分请求满足与请求不可达
-- **AND** Foot Lifecycle MUST按原政策消费该Outcome完成准入，随后发布最终结果
+- **WHEN** 唯一Pelvis响应已产生本帧实际加权位移，原Foot流程请求检查Landing完成
+- **THEN** 本腿typed观察 MUST按当前位移计算原可达资格
+- **AND** Foot Lifecycle MUST按原政策消费该结果完成准入，不修改骨盆响应或脚目标
+
+#### Scenario: 主支撑观察不可达
+
+- **WHEN** Primary Support腿的几何观察范围不包含当前Pelvis输出
+- **THEN** 系统 MUST保留真实不可达事实，不以Primary身份强制夹取骨盆或脚目标
+- **AND** MUST不新增公共硬区间、边界清速度或权重补偿
 
 #### Scenario: 请求身份混杂
 
-- **WHEN** 请求、Primary Result或Reach Outcome来自不同Frame、Completion、Rig、Side或Event
-- **THEN** 本帧 MUST在正式发布前拒绝
+- **WHEN** 请求与其对应观察或结果的Frame、Completion、Rig、Side或Event不匹配
+- **THEN** 现有唯一交接校验入口 MUST在正式发布前拒绝，不将同一检查复制到每个内部方法
 - **AND** MUST不借用上一帧结果、默认脚需求或另一只脚的裁决补全
 
 ### Requirement: Foot Placement诊断必须只显示正式结果
@@ -65,6 +72,8 @@ Reach Outcome MUST只作为现有Transition Resolver的准入输入，State仍�
 Runtime运行历史、内部typed请求、最终结果与只读过程证据 MUST严格分型。运行Owner MUST在计算时捕获本帧实际发生的证据；Diagnostics MUST在唯一根事务内从同一Pending的Observation、请求、最终Foot/Pelvis结果与后续阶段结果完成固定容量冻结和验证。Writer成功时 MUST仅补入同Completion的实际写入事实，Seal后消费者 MUST只读取Committed页，不延迟重算Foot业务。
 
 响应、Contact、Support与Reach过程证据 MAY按业务分组保存，但 MUST不在多份记录中维护同义平铺真相。Gizmo、CSV、Trace与Pose Watch MUST不得查询世界、选择Support、生成Goal、执行FBBIK或改写运行历史。Diagnostics布局与显示兴趣 MUST不改变Runtime输出，公开Diagnostics不得被读取为下一帧状态。
+
+已经完成的紧凑发布 MUST保留单次解析、Analyzer到Publisher的内存事实交接、`analysis.json`小清单、`details.jsonl`唯一明细、`details-index.json`及原始帧字节索引查询。记录分组 MUST不恢复展开facts.json、全量报告复制、磁盘全文重读或第二条Reader链。
 
 #### Scenario: 捕获正式Foot事实
 
@@ -79,6 +88,49 @@ Runtime运行历史、内部typed请求、最终结果与只读过程证据 MUST
 - **AND** MUST不要求修改Goal Assembler、Solver算法或质量评分政策
 
 ## ADDED Requirements
+
+### Requirement: Foot阶段数据必须具有唯一权威来源和消费权限
+
+正式Pose/Foot Motion/Body输入、世界Observation、选中Target、Interpolation输出、Ground Constraint输出、初步脚请求、Pelvis结果、Landing完成后的Resolved、Goal、Solved Pose和Physical写入 MUST按阶段分型，明确空间、权重是否已应用、生产Owner及合法消费者。中间事实可以是本阶段权威，但 MUST不冒充后续已完成结果，不得从同名诊断值、临时编码或另一阶段的近似值补齐。
+
+唯一Foot请求生产者 MUST按基线实际规则发布Support事实、Landing Reach观察准入、正式权重及加权脚几何。Module与Pelvis消费者 MUST不混读过程Motion.State、Step和Resolved再次决定同一准入，不通过临时Goal编码后反算另一份Pelvis脚底输入。Stride/Pelvis所需的步态、落点与可用性 MUST通过最小typed请求视图进入唯一准备阶段，不直接取得Foot Context、完整Path页或原始Landing历史。
+
+迁移 MUST以用户指定源码基线中实际被Pelvis、Goal和Writer消费的条件与数值为依据，保持空间换算、权重及数值顺序。同义字段不一致时 MUST明确唯一生产者并报告差异，不凭名字认定权威，不保留两份可选择的正式真相。
+
+实际消费链 MUST只作为回归对照，不能替代正式业务Owner定义。纠正非权威来源若产生行为变化，MUST独立记录来源、数值和业务影响并交由用户决策；不得为保留旧结果建立双读，也不得将行为修正伪装成机械迁移。
+
+#### Scenario: 下游需要判断本腿是否进入可达观察
+
+- **WHEN** Foot请求已发布正式Reach观察准入
+- **THEN** Module与Pelvis准备 MUST只消费该决定，不读取过程Motion.State或原始Step重判
+- **AND** 请求生产者 MUST保留基线的全部实际权重、事件和可用性条件
+
+#### Scenario: Pelvis需要有效脚底
+
+- **WHEN** 请求已包含按正式权重和空间规则得到的有效Sole
+- **THEN** Pelvis MUST直接读取，不建立临时Goal再反解另一份脚底
+- **AND** 迁移 MUST保持原来真正被消费的求值顺序，不直接采用未经对账的同义字段
+
+### Requirement: Foot业务控制权必须由唯一Owner执行
+
+Transition Resolver MUST拥有离散变化判定，Transition Runtime MUST唯一应用State、Contact边沿与Anchor命令，Landing Runtime MUST拥有正式Landing记录。State Target MUST只选择请求目标，Interpolation MUST唯一推进残差、响应和Applied Direction历史，Ground Constraint MUST只发布原阶段输出，不倒写Interpolation历史。
+
+Foot输出Owner MUST按作者输入和既有Ready/Suppress/Contact规则解析权重；Primary Selector MUST唯一选择主支撑并写入其历史；Pelvis Owner MUST唯一产生目标、响应和Pelvis权重。本腿可达观察到原Landing完成资格 MUST是唯一反馈，不允许反复重算Foot/Pelvis、反写Spring或建立另一份权重控制器。
+
+Root MUST只调度和提交，不执行业务数学；Encoder、Assembler、Solver和Diagnostics MUST不反写Foot状态、请求、权重或已发布Goal数据。权限 MUST通过收窄输入视图、职责和可变状态可见性落实，不能以多层重复检查代替所有权分离。
+
+#### Scenario: 当前Pelvis位移使Landing不能完成
+
+- **WHEN** 本腿可达观察不满足原Landing完成条件
+- **THEN** 现有Foot Transition MUST决定并应用未完成状态
+- **AND** Pelvis、Module、Goal层 MUST不另写State、不夹脚、不再次积分或修改原权重
+
+#### Scenario: 诊断读取过程事实
+
+- **WHEN** CSV、Trace或Watch读取目标、权重、Primary或可达性证据
+- **THEN** 它们 MUST只展示生产Owner已经作出的决定
+- **AND** 运行Owner MUST不反读这些证据控制下一帧
+
 
 ### Requirement: Foot运行历史不得借用过程证据保存
 
@@ -102,9 +154,11 @@ Runtime运行历史、内部typed请求、最终结果与只读过程证据 MUST
 
 当前Foot采样格式 MUST由Editor唯一有序typed列绑定声明名称、类型、单位、业务分组、有效性和读写映射；Header、写行、Analyzer读取和必需列校验 MUST使用同一绑定。相同列名不得重复声明，位置写入与列名解释不得分别维护互不关联的清单。格式identity MUST来自唯一正式定义。
 
-绑定及索引 MUST在明确初始化阶段验证和缓存，不在OnInspectorGUI进行重操作。Runtime MUST不读取列名、反射或采样Dictionary。原始主行与大几何表 MUST继续沿唯一采样链分别发布；搬运映射不得执行第二份Foot数学或生成评分。
+绑定及索引 MUST在明确初始化入口验证和缓存；原始文件校验 MUST沿现有唯一解析入口执行，不在每次字段搬运或记录转交时重复重检，也不在OnInspectorGUI进行重操作。Runtime MUST不读取列名、反射或采样Dictionary。原始主行与大几何表 MUST继续沿唯一采样链分别发布，保留紧凑明细和随机查询；搬运映射不得执行第二份Foot数学或生成评分。
 
 字段布局或含义变化 MUST显式升级版本，缺列、重复列、非法类型或不匹配版本 MUST拒绝，不建立旧reader、别名或默认值补全。历史原包及其旧结果 MUST保留为证据，不自动覆盖或用新语义重新解释。现有评分维度、权重、分母和Unavailable规则 MUST保持原Owner。
+
+仅修改内部记录组织或采样映射且列名、顺序、类型和含义均不变时，版本 MUST保持；不得为已经删除的Reach夹紧虚构一组新旧字段或强制ABI迁移。
 
 #### Scenario: 新增普通证据列
 
@@ -118,8 +172,8 @@ Runtime运行历史、内部typed请求、最终结果与只读过程证据 MUST
 - **THEN** 初始化 MUST明确失败，不开始生成看似合法的采样文件
 - **AND** MUST不靠空值、零值或忽略该列继续运行
 
-#### Scenario: 读取旧语义Resolved列
+#### Scenario: 仅统一读写映射
 
-- **WHEN** 原包的Resolved字段表示Reach裁决前请求，而当前合同要求裁决后最终目标
-- **THEN** 当前读取器 MUST报告版本或语义不匹配
-- **AND** MUST不把旧列改名补成最终结果，原包保持不变
+- **WHEN** 内部多处手工映射改为同一typed列绑定，但原采样列含义未变
+- **THEN** Header、逐字段值、有效性和格式版本 MUST保持不变
+- **AND** 原有紧凑分析存储和只读查询 MUST继续工作，不重新生成另一种存储格式

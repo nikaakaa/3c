@@ -1,0 +1,15 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <AssemblyName>ThirdPerson.Development.Gm.Client</AssemblyName>
+    <RootNamespace>ThirdPerson.Development.Gm</RootNamespace>
+    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <Nullable>disable</Nullable>
+    <LangVersion>9.0</LangVersion>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="../../../../Client/3C_Client/Assets/GameScripts/Main/Runtime/Development/Gm/Client/**/*.cs" />
+    <ProjectReference Include="../Gm.Contracts/ThirdPerson.Development.Gm.Contracts.csproj" />
+  </ItemGroup>
+</Project>

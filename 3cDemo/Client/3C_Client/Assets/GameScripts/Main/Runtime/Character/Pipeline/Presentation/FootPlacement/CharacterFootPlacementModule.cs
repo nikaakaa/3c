@@ -704,46 +704,10 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 CharacterFootSide.Right,
                 pose.Right,
                 in rightResolved);
-            float leftReachClampDistance = 0f;
-            float rightReachClampDistance = 0f;
-            if (leftLandingReach && strideHips.LeftLandingReachEnforced && !leftReachAvailable)
-            {
-                leftGoal = ClampFootGoalToReach(
-                    in leftGoal,
-                    leftReachRequest.Hip +
-                    strideHips.PelvisDelta * strideHips.PositionWeight,
-                    pose.Left.AnklePosition,
-                    leftReachRequest.LegLength,
-                    leftReachRequest.MinimumCompressionReserve,
-                    goalRoot,
-                    out leftReachClampDistance);
-            }
-            if (rightLandingReach && strideHips.RightLandingReachEnforced && !rightReachAvailable)
-            {
-                rightGoal = ClampFootGoalToReach(
-                    in rightGoal,
-                    rightReachRequest.Hip +
-                    strideHips.PelvisDelta * strideHips.PositionWeight,
-                    pose.Right.AnklePosition,
-                    rightReachRequest.LegLength,
-                    rightReachRequest.MinimumCompressionReserve,
-                    goalRoot,
-                    out rightReachClampDistance);
-            }
             leftFootMotion = CharacterFootSwingMotionBuilder.WithLandingReach(
-                in leftFootMotion,
-                leftLandingReach,
-                leftReachAvailable,
-                leftReachClampDistance >
-                CharacterPoseConstraintMath.Epsilon,
-                leftReachClampDistance);
+                in leftFootMotion, leftLandingReach, leftReachAvailable);
             rightFootMotion = CharacterFootSwingMotionBuilder.WithLandingReach(
-                in rightFootMotion,
-                rightLandingReach,
-                rightReachAvailable,
-                rightReachClampDistance >
-                CharacterPoseConstraintMath.Epsilon,
-                rightReachClampDistance);
+                in rightFootMotion, rightLandingReach, rightReachAvailable);
             pelvisGoal = CreatePelvisGoal(in strideHips, m_Rig.PoseRoot);
             bank.StrideHips = strideHips;
             if (!strideHips.ProducesPelvisGoal)
@@ -1691,55 +1655,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                    step.HasPredictiveLanding &&
                    motion.Accepted &&
                    motion.LandingEventIdentity == step.LandingEventIdentity;
-        }
-
-        static CharacterFullBodyIkGoal ClampFootGoalToReach(
-            in CharacterFullBodyIkGoal goal,
-            Vector3 hipPosition,
-            Vector3 originalAnklePosition,
-            float legLength,
-            float compressionReserve,
-            Transform root,
-            out float clampDistance)
-        {
-            clampDistance = 0f;
-            if (goal.PositionWeight <= CharacterPoseConstraintMath.Epsilon)
-                return goal;
-            float usableLength = legLength - compressionReserve;
-            if (root == null || usableLength <=
-                CharacterPoseConstraintMath.Epsilon)
-            {
-                throw new InvalidOperationException(
-                    "Landing Reach clamp input is invalid.");
-            }
-            Vector3 target = root.TransformPoint(goal.ComponentPosition);
-            Vector3 effectiveTarget = Vector3.LerpUnclamped(
-                originalAnklePosition,
-                target,
-                goal.PositionWeight);
-            Vector3 hipToTarget = effectiveTarget - hipPosition;
-            float distance = hipToTarget.magnitude;
-            if (distance <= usableLength)
-                return goal;
-            Vector3 clampedEffectiveTarget = hipPosition +
-                                             hipToTarget / distance *
-                                             usableLength;
-            Vector3 clampedTarget = originalAnklePosition +
-                                    (clampedEffectiveTarget -
-                                     originalAnklePosition) /
-                                    goal.PositionWeight;
-            clampDistance = Vector3.Distance(
-                effectiveTarget,
-                clampedEffectiveTarget);
-            return new CharacterFullBodyIkGoal(
-                goal.Slot,
-                root.InverseTransformPoint(clampedTarget),
-                goal.ComponentRotation,
-                goal.PositionWeight,
-                goal.RotationWeight,
-                goal.Application,
-                goal.SourceKind,
-                goal.DiagnosticMetadataIndex);
         }
 
         static CharacterFullBodyIkGoal CreatePelvisGoal() =>

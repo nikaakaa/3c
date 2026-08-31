@@ -24,6 +24,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             PrimarySupport = CharacterFootPrimarySupportColumns.Schema.Bind(indices);
             RootHierarchy = CharacterFootRootHierarchyColumns.Schema.Bind(indices);
             BodyCorrection = CharacterFootBodyCorrectionColumns.Schema.Bind(indices);
+            LandingObservation = CharacterFootLandingObservationColumns.Schema.Bind(indices);
+            FormalOutput = CharacterFootFormalObservationColumns.Output.Bind(indices);
+            FormalInput = CharacterFootFormalObservationColumns.Input.Bind(indices);
             GroundPath = CharacterFootGroundPathColumns.Schema.Bind(indices);
             Response = CharacterFootResponseColumns.Schema.Bind(indices);
         }
@@ -40,6 +43,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         internal CharacterFootCsvReader<CharacterFootSolverSample> Solver { get; }
         internal CharacterFootCsvReader<CharacterFootResponseSample> Response { get; }
         internal CharacterFootCsvReader<CharacterFootGroundPathSample> GroundPath { get; }
+        internal CharacterFootCsvReader<CharacterFootLandingObservationSample> LandingObservation { get; }
+        internal CharacterFootCsvReader<CharacterFootFormalObservationSample> FormalOutput { get; }
+        internal CharacterFootCsvReader<CharacterFootFormalInputSample> FormalInput { get; }
         internal CharacterFootCsvReader<CharacterFootBodyCorrectionSample> BodyCorrection { get; }
         internal CharacterFootCsvReader<CharacterFootRootHierarchySample> RootHierarchy { get; }
         internal CharacterFootCsvReader<CharacterFootPrimarySupportSample> PrimarySupport { get; }

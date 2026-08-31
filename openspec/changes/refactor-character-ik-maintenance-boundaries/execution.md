@@ -273,3 +273,11 @@ PredictionMotion、BodyTrajectory及其Tick/Generation/ResetSequence/AuthorityTi
 - 42项诊断的规则、测量、计数、coverage与quality保持；20447明细只有原21个身份叶路径换代，Timeline/Prediction二维值、Root/Body以及Pelvis自身根位置来源均一致。所有索引及六次952列真实帧查询、其它正式查询保持；476R与746L的正式查询仍返回原Infinity文本，没有补值或跳过。
 - 正式Proof matched1044、aggregate空、DivergentFrameCount0，与两基线的输入/Body/时钟及1044帧数组一致。原包与持久Proof保留，Unity已归还，Edit/Idle、failure空、Console0。
 - 本次覆盖合法无结束时长与列迁移；负时长/NaN/负无穷的动态输入矩阵、Reset4.4及既有未覆盖范围不冒称通过。下一步完成剩余263列，再统一主行排序定义、格式identity、Runtime证据分组与Reset正式取证；不提前启动第二阶段。
+
+## 落点观察与正式动画输入输出列
+
+状态：104列实现完成，Unity与Editor构建0错误，build server已关闭；等待实际回放。
+
+- 将Future Body、当前动画脚、Raw Landing、缓存Observation、本次Query、候选选择与最终命中的69列收进43个typed绑定。缓存观察的QueryPurpose继续与本次Query Request分开，Selected Candidate与最终Accepted Landing也不互相补值。
+- 正式动画采样输出15列与运行输入20列复用同一动画字段定义；输入独有SourceId、ClipBindingIndex、Cycle、Contribution Continuity和Completion仍由Input源拥有。原有可用性条件、无效时的空值/零值和事件采样顺序保持。
+- 删除对应旧Header、手工写行、解析字段和必需列清单。累计1056/1215列迁入绑定，剩余159列及主行组合、格式identity、Runtime证据分组和Reset取证仍待完成。下一比较点为6531023/045658与固定ad3527e/233436。

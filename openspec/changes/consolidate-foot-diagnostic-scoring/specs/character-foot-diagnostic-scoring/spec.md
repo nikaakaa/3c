@@ -34,10 +34,32 @@ Foot Diagnostics MUST只将下陷穿透20%、接触未贴合20%、普通Swing平
 
 ### Requirement: Foot评分必须只消费正式事实且保留版本证据
 
-采样、Analyzer、Publisher MUST保持一条链。接触未贴合 MUST使用同Event已验证Anchor与最终物理Heel/Toe；Releasing不适用，缺接触面不得补默认值。FullAnchor水平与Sliding政策 MUST分型。质量规则升级 MUST保留历史原包，不兼容伪造新列，不把换规则后的分差解释成行为改善。
+采样、Analyzer、Publisher MUST保持一条链。接触未贴合 MUST使用同Event已验证Anchor与最终物理Heel/Toe；Releasing只作退出测量，不参与保持贴合评分，缺接触面不得补默认值。FullAnchor与Sliding政策 MUST分型。质量规则升级 MUST保留历史原包，不兼容伪造新列，不把换规则后的分差解释成行为改善。
 
 #### Scenario: 回算同一旧原始样本
 
 - **WHEN** 当前CSV包含新规则所需的全部正式事实
 - **THEN** Analyzer MAY在独立副本生成新版本结果
 - **AND** 原包及原评分 MUST保持不变，比较 MUST明确规则版本差异
+
+### Requirement: 接触间隙必须区分职责与可观察过程
+
+接触间隙 MUST按实际FullAnchor、Sliding、Landing及Releasing分段并发布明确PositionWeight资格。LockWeight为零或随后Release MUST不能单独免除当前Contact职责。contact-support-gap MUST保持唯一20%质量入口，同Anchor连续满位置权重接触过程只计一次；子域脚帧与子段发生率、闭合、重新离面和短暂大间隙 MUST只作为不重复扣分的分项证据。子域零覆盖 MUST发布不可用而非0%或100分，必要事实缺失 MUST使该质量维度不可用。
+
+#### Scenario: 已固定的脚重新离面
+
+- **WHEN** 同Anchor有效接触曾在既有位置噪声地板内触面，随后FullAnchor段整脚离面超过1厘米
+- **THEN** Diagnostics MUST独立发布重新离面、脚帧和子段分母、峰值及代表帧
+- **AND** MUST不与Sliding末端或Landing追赶合称完全固定接触失败，也不得被总分掩盖
+
+#### Scenario: Landing追赶与短暂大间隙
+
+- **WHEN** Landing中存在逐渐缩小的间隙，或不足100毫秒但超过10厘米的间隙
+- **THEN** Diagnostics MUST分别发布入口/峰值/出口、真实Delta累计时长、已观察闭合与未闭合原因，并单列短暂大幅峰
+- **AND** MUST不把有缩小直接称为已贴合，也不得把短暂直接称为轻微
+
+#### Scenario: 分域结果不重复入分
+
+- **WHEN** 同一连续接触过程依次经过Landing、FullAnchor及Sliding
+- **THEN** 唯一质量Target MUST按过程去重，子域以各自脚帧及子段为分母发布Evidence
+- **AND** 退出及部分作者权重 MUST独立报告，不稀释保持贴合分母，原始逐帧事实不得重复复制到各区间

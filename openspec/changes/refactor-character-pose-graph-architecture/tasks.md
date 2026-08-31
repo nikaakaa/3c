@@ -19,7 +19,7 @@
 - [x] 2.3 建立由`CharacterAnimationPresentationRuntime`唯一拥有的根`CharacterPoseFrameTransaction`，只保存lineage、阶段、Module lease/result与统一Outcome，不保存任一Module内部Workspace
 - [ ] 2.4 为Program、Source、Constraint与Final Publication分别建立Owned Pending页和typed lease，明确唯一写入Owner、只读下游view与根Seal/Discard权限
 - [x] 2.5 让现有单一运行路径先携带统一lineage、root lease和typed Result，不提前创建空壳Module、wrapper、第二Frame事务或第二执行路径
-- [ ] 2.6 对齐现有Animancer Evaluate Barrier，固定Barrier前验证、Barrier内执行、Writer后no-throw Seal和Fault语义
+- [x] 2.6 对齐现有Animancer Evaluate Barrier，固定Barrier前验证、Barrier内执行、Writer后no-throw Seal和Fault语义
 
 - [ ] 2.7 按Build、Runtime创建、根Frame／跨Owner交接和Writer分配检查责任，删除迁移新增的重复静态扫描与多层完整校验，保留必要动态检查和原Fault政策
 

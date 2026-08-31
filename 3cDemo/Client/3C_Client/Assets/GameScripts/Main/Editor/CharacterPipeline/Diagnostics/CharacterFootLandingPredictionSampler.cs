@@ -243,25 +243,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             "FootMotionPlantDesiredPointX,FootMotionPlantDesiredPointY,FootMotionPlantDesiredPointZ," +
             "FootMotionPlantFilteredPointX,FootMotionPlantFilteredPointY,FootMotionPlantFilteredPointZ," +
             CharacterFootSupportTargetColumns.Selected.Header + "," +
-            "FootMotionPlantTargetHeightAdoptionMode,FootMotionPlantTargetMaximumVerticalSpeed," +
-            "FootMotionPlantTargetHeightBefore,FootMotionPlantTargetHeightTarget,FootMotionPlantTargetVerticalDelta,FootMotionPlantTargetAppliedVerticalDelta,FootMotionPlantTargetHeightAfter,FootMotionPlantTargetHeightEventIdentity,FootMotionPlantTargetHeightUpdateReason,FootMotionPlantTargetForceRefreshed,FootMotionPlantTargetForceRefreshDistance,FootMotionPlantTargetVerticalClamped," +
-            "FootMotionPlantPreviousSelectedWorldTargetX,FootMotionPlantPreviousSelectedWorldTargetY,FootMotionPlantPreviousSelectedWorldTargetZ," +
-            "FootMotionPlantSelectedWorldTargetX,FootMotionPlantSelectedWorldTargetY,FootMotionPlantSelectedWorldTargetZ," +
-            "FootMotionPreviousResponseOutputAvailable,FootMotionPreviousResponseOutputPointX,FootMotionPreviousResponseOutputPointY,FootMotionPreviousResponseOutputPointZ," +
-            "FootMotionDesiredOutputPointX,FootMotionDesiredOutputPointY,FootMotionDesiredOutputPointZ," +
-            "FootMotionResponseOutputPointX,FootMotionResponseOutputPointY,FootMotionResponseOutputPointZ,FootMotionPlantResidualCaptureReason," +
-            "FootMotionPlantWorldResidualBeforeCaptureX,FootMotionPlantWorldResidualBeforeCaptureY,FootMotionPlantWorldResidualBeforeCaptureZ," +
-            "FootMotionPlantWorldResidualCapturedBeforeDecayX,FootMotionPlantWorldResidualCapturedBeforeDecayY,FootMotionPlantWorldResidualCapturedBeforeDecayZ," +
-            "FootMotionPlantWorldResidualDecayApplied,FootMotionPlantWorldResidualBaseHalfLifeSeconds,FootMotionPlantWorldResidualDeadlineHalfLifeAvailable,FootMotionPlantWorldResidualDeadlineHalfLifeSeconds,FootMotionPlantWorldResidualAppliedHalfLifeSeconds," +
-            "FootMotionPlantWorldResidualAfterDecayX,FootMotionPlantWorldResidualAfterDecayY,FootMotionPlantWorldResidualAfterDecayZ," +
-            "FootMotionPlantWorldResidualCompletionTolerance,FootMotionPlantWorldResidualClearedAtCompletionTolerance," +
-            "FootMotionCorrectionResponseDomain,FootMotionCorrectionResponsePreviousDomain,FootMotionCorrectionResponseDomainTransferred," +
-            "FootMotionCorrectionResponseEvaluated,FootMotionCorrectionResponseInitializedBefore,FootMotionCorrectionResponseInitializedThisFrame,FootMotionCorrectionResponseInitializationReason," +
-            "FootMotionCorrectionResponseDesired,FootMotionCorrectionResponseRequestedDirectionX,FootMotionCorrectionResponseRequestedDirectionY,FootMotionCorrectionResponseRequestedDirectionZ,FootMotionCorrectionResponsePreviousDirectionX,FootMotionCorrectionResponsePreviousDirectionY,FootMotionCorrectionResponsePreviousDirectionZ,FootMotionCorrectionResponseDirectionLimited,FootMotionCorrectionResponseMaximumDirectionChangeDegrees,FootMotionCorrectionResponseAppliedDirectionChangeDegrees,FootMotionCorrectionResponseVisibleOutputTransferred,FootMotionCorrectionResponseBeforeRebase,FootMotionCorrectionResponsePrevious,FootMotionCorrectionResponseCurrent,FootMotionCorrectionResponseDirectionX,FootMotionCorrectionResponseDirectionY,FootMotionCorrectionResponseDirectionZ,FootMotionCorrectionResponseDeltaDirection,FootMotionCorrectionResponseSelectedSpeed,FootMotionCorrectionResponseAppliedDelta," +
-            "FootMotionPlantVerticalContinuityOwners," +
-            "FootMotionPlantEffectiveCorrectionBeforeX,FootMotionPlantEffectiveCorrectionBeforeY,FootMotionPlantEffectiveCorrectionBeforeZ," +
-            "FootMotionPlantEffectiveCorrectionAfterX,FootMotionPlantEffectiveCorrectionAfterY,FootMotionPlantEffectiveCorrectionAfterZ," +
-            "FootMotionPlantOutputDistance,FootMotionPlantPenetrationDepth," +
+            CharacterFootResponseColumns.Schema.Header + "," +
             CharacterFootCurrentSupportColumns.Schema.Header + "," +
             CharacterFootResolvedColumns.Schema.Header + "," +
             "FootMotionEncodedGoalAvailable,FootMotionEncodedGoalCorrectionX,FootMotionEncodedGoalCorrectionY,FootMotionEncodedGoalCorrectionZ," +
@@ -2223,61 +2205,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             Add(row, motion.PlantFilteredPoint);
             CharacterFootSupportTargetDiagnostics selectedTarget = motion.SelectedSupportTarget;
             CharacterFootSupportTargetColumns.Selected.Write(row, in selectedTarget);
-            Add(row, motion.PlantTargetHeightAdoptionMode);
-            Add(row, motion.PlantTargetMaximumVerticalSpeed);
-            Add(row, motion.PlantTargetHeightBefore);
-            Add(row, motion.PlantTargetHeightTarget);
-            Add(row, motion.PlantTargetVerticalDelta);
-            Add(row, motion.PlantTargetAppliedVerticalDelta);
-            Add(row, motion.PlantTargetHeightAfter);
-            Add(row, motion.PlantTargetHeightEventIdentity);
-            Add(row, motion.PlantTargetHeightUpdateReason);
-            Add(row, motion.PlantTargetForceRefreshed);
-            Add(row, motion.PlantTargetForceRefreshDistance);
-            Add(row, motion.PlantTargetVerticalClamped);
-            Add(row, motion.PlantPreviousSelectedWorldTarget);
-            Add(row, motion.PlantSelectedWorldTarget);
-            Add(row, motion.PreviousResponseOutputAvailable);
-            Add(row, motion.PreviousResponseOutputPoint);
-            Add(row, motion.DesiredOutputPoint);
-            Add(row, motion.ResponseOutputPoint);
-            Add(row, motion.PlantResidualCaptureReason);
-            Add(row, motion.PlantWorldResidualBeforeCapture);
-            Add(row, motion.PlantWorldResidualCapturedBeforeDecay);
-            Add(row, motion.PlantWorldResidualDecayApplied);
-            Add(row, motion.PlantWorldResidualBaseHalfLifeSeconds);
-            Add(row, motion.PlantWorldResidualDeadlineHalfLifeAvailable);
-            Add(row, motion.PlantWorldResidualDeadlineHalfLifeSeconds);
-            Add(row, motion.PlantWorldResidualAppliedHalfLifeSeconds);
-            Add(row, motion.PlantWorldResidualAfterDecay);
-            Add(row, motion.PlantWorldResidualCompletionTolerance);
-            Add(row, motion.PlantWorldResidualClearedAtCompletionTolerance);
-            Add(row, motion.CorrectionResponseDomain);
-            Add(row, motion.CorrectionResponsePreviousDomain);
-            Add(row, motion.CorrectionResponseDomainTransferred);
-            Add(row, motion.CorrectionResponseEvaluated);
-            Add(row, motion.CorrectionResponseInitializedBefore);
-            Add(row, motion.CorrectionResponseInitializedThisFrame);
-            Add(row, motion.CorrectionResponseInitializationReason);
-            Add(row, motion.CorrectionResponseDesired);
-            Add(row, motion.CorrectionResponseRequestedDirection);
-            Add(row, motion.CorrectionResponsePreviousDirection);
-            Add(row, motion.CorrectionResponseDirectionLimited);
-            Add(row, motion.CorrectionResponseMaximumDirectionChangeDegrees);
-            Add(row, motion.CorrectionResponseAppliedDirectionChangeDegrees);
-            Add(row, motion.CorrectionResponseVisibleOutputTransferred);
-            Add(row, motion.CorrectionResponseBeforeRebase);
-            Add(row, motion.CorrectionResponsePrevious);
-            Add(row, motion.CorrectionResponseCurrent);
-            Add(row, motion.CorrectionResponseDirection);
-            Add(row, motion.CorrectionResponseDeltaDirection);
-            Add(row, motion.CorrectionResponseSelectedSpeed);
-            Add(row, motion.CorrectionResponseAppliedDelta);
-            Add(row, motion.PlantVerticalContinuityOwners);
-            Add(row, motion.PlantEffectiveCorrectionBefore);
-            Add(row, motion.PlantEffectiveCorrectionAfter);
-            Add(row, motion.PlantOutputDistance);
-            Add(row, motion.PlantPenetrationDepth);
+            CharacterFootResponseColumns.Schema.Write(row, in motion);
             CharacterFootCurrentSupportDiagnostics currentSupport = foot.CurrentSupport;
             CharacterFootCurrentSupportColumns.Schema.Write(row, in currentSupport);
             CharacterResolvedFootDiagnostics resolved = foot.Resolved;

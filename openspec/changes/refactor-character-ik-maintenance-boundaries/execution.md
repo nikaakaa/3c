@@ -192,8 +192,22 @@ PredictionMotion、BodyTrajectory及其Tick/Generation/ResetSequence/AuthorityTi
 
 ## Solver与Physical列绑定
 
-状态：实现、Unity与Editor构建通过，0错误，build server已关闭；尚未回放。
+状态：候选ee0d95b已完成实际Replay与全部正式明细投影对账。
 
 - 将尾部Solver/Physical的93列接入55项typed绑定；捕获来源仍是原FootIkCapture与原世界坐标/Heel/Toe/残差计算。代码只改变数据投影与读写位置，不新增求解、查询或骨骼写入。
 - 解析记录独立保存Solver要求／求解结果和Physical实际写入字段，原有规则只调整读取路径；以前仅写入而未参与规则的原始列也保留typed解析，不新增评分规则。
 - 删除对应旧Header、写行和解析/必需列映射。累计531/1215列迁入绑定，格式identity不变，任务5仍未完成。
+
+## Solver与Physical列的验证封口
+
+- 原包：`Diagnostics/FootPlacementRuns/20260901-040120-840-fb1fb97ba68148b09864a59c80b8eed8`。测试任务明确通过并归还Unity；1044输入、2086脚行和1215列保持，对上一6ba9ec3/034923与固定233436比较。
+- 新93列全部精确相同，累计531列为524精确列及7既有身份列。全部1191业务列、几何业务列、42项诊断、覆盖与评分保持；20447条明细仅21条既有身份字段路径换代，实际帧与明细查询保持一致。Reset4.4及原有未覆盖项不变。
+- 根任务另读040120与233436原始CSV核对：只有原23身份列和UTC不同；samples SHA256为`16bbe67187b2e7e412868237b4e427e50febcd8f7fcd5a777592c45f0b29986a`，geometry为`dd50143eddfa258079bfacf458fc32ccac7b8faf7f3dc3d5fe6a0e358acb1e8b`。
+
+## 响应与接触列绑定
+
+状态：实现、Unity与Editor构建通过，0错误，build server已关闭；等待实际回放。
+
+- 将81个响应与接触列收进55个typed绑定，包含Plant目标高度、前后输出、世界残差及方向响应。过去的本帧证据读取改为同一Response记录，未修改运行历史、算法、规则或格式identity。
+- Header、CSV写入、解析和必需列检查共用该组；PreviousResponseOutput和DeadlineHalfLife明确关联原有效性列，读写不屏蔽原值。
+- 累计612/1215列迁入绑定；比较点为上一ee0d95b/040120和固定ad3527e/233436，任务5尚未完成。

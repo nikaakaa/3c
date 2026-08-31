@@ -5735,6 +5735,24 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     throw new InvalidDataException(
                         $"Foot Motion geometry CSV is missing '{required[i]}'.");
             }
+            string[] surfaceColumns =
+            {
+                "GroundSurfaceSegmentIndex", "GroundSurfaceIdentity", "GroundSurfaceFaceIndex",
+                "GroundSurfaceStartDistance", "GroundSurfaceStartHeight",
+                "GroundSurfaceEndDistance", "GroundSurfaceEndHeight"
+            };
+            bool hasSurfaceGeometry = indices.ContainsKey(surfaceColumns[0]);
+            foreach (string column in surfaceColumns)
+            {
+                if (indices.ContainsKey(column) != hasSurfaceGeometry)
+                    throw new InvalidDataException("Foot Motion surface geometry columns are incomplete.");
+            }
+            foreach (FootFrame foot in footRows.Values)
+            {
+                if (foot.GroundSurfaceFactsAvailable != hasSurfaceGeometry)
+                    throw new InvalidDataException("Foot Motion surface geometry schema does not match samples.");
+            }
+            var surfaceSegments = new HashSet<(int frame, string side, int index)>();
             var contacts = new HashSet<(int frame, string side, int index)>();
             var envelope = new HashSet<(int frame, string side, int index)>();
             int rowCount = 0;
@@ -5788,10 +5806,33 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 int envelopeIndex = ParseInt(
                     Cell("GroundEnvelopeVertexIndex"),
                     "GroundEnvelopeVertexIndex");
-                if (contactIndex < 0 && envelopeIndex < 0)
+                int surfaceIndex = hasSurfaceGeometry
+                    ? ParseInt(Cell("GroundSurfaceSegmentIndex"), "GroundSurfaceSegmentIndex")
+                    : -1;
+                if (contactIndex < 0 && envelopeIndex < 0 && surfaceIndex < 0)
                 {
                     throw new InvalidDataException(
                         $"Foot Motion geometry CSV row {rowCount + 1} has no geometry payload.");
+                }
+                if (surfaceIndex >= 0)
+                {
+                    int surfaceIdentity = ParseInt(Cell("GroundSurfaceIdentity"), "GroundSurfaceIdentity");
+                    int faceIndex = ParseInt(Cell("GroundSurfaceFaceIndex"), "GroundSurfaceFaceIndex");
+                    float startDistance = ParseFloat(Cell("GroundSurfaceStartDistance"), "GroundSurfaceStartDistance");
+                    float endDistance = ParseFloat(Cell("GroundSurfaceEndDistance"), "GroundSurfaceEndDistance");
+                    float startHeight = ParseFloat(Cell("GroundSurfaceStartHeight"), "GroundSurfaceStartHeight");
+                    float endHeight = ParseFloat(Cell("GroundSurfaceEndHeight"), "GroundSurfaceEndHeight");
+                    if (surfaceIndex >= foot.GroundSurfaceSegmentCount ||
+                        surfaceIdentity == 0 || faceIndex < 0 ||
+                        !float.IsFinite(startDistance) || !float.IsFinite(endDistance) ||
+                        !float.IsFinite(startHeight) || !float.IsFinite(endHeight) ||
+                        startDistance < 0f || endDistance < startDistance ||
+                        !surfaceSegments.Add((frame, side, surfaceIndex)))
+                    {
+                        throw new InvalidDataException(
+                            $"Foot Motion surface geometry is invalid Frame={frame} Side={side} Index={surfaceIndex}.");
+                    }
+                    foot.GroundSurfaceObservedCount++;
                 }
                 if (contactIndex >= 0 &&
                     !contacts.Add((frame, side, contactIndex)))
@@ -5830,6 +5871,17 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     throw new InvalidDataException(
                         $"Foot Motion Envelope geometry count mismatch " +
                         $"Frame={foot.Frame} Side={foot.Side}.");
+                }
+                if (foot.GroundSurfaceFactsAvailable &&
+                    (foot.GroundSurfaceSegmentCount < 0 ||
+                     foot.GroundSurfaceSegmentCount != foot.GroundSurfaceObservedCount ||
+                     foot.GroundSurfaceSegmentCount > 0 && foot.GroundSurfaceWorldRevision == 0 ||
+                     foot.GroundPathState == "Accepted" &&
+                     (foot.GroundSurfaceState != CharacterFootGroundSurfaceState.Ready ||
+                      foot.GroundSurfaceSegmentCount == 0)))
+                {
+                    throw new InvalidDataException(
+                        $"Foot Motion surface geometry facts mismatch Frame={foot.Frame} Side={foot.Side}.");
                 }
                 RequireActualFootEnvelopeFacts(foot);
             }
@@ -6013,6 +6065,10 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     Accepted = Int(prefix + "Accepted") != 0
                 };
             string side = Cell("Side");
+            bool hasSurfaceFacts = indices.ContainsKey("GroundSurfaceState");
+            if (indices.ContainsKey("GroundSurfaceWorldRevision") != hasSurfaceFacts ||
+                indices.ContainsKey("GroundSurfaceSegmentCount") != hasSurfaceFacts)
+                throw new InvalidDataException("Foot Motion surface fact columns are incomplete.");
             var frame = new FootFrame
             {
                 SampleIdentity = Cell("SampleIdentity"),
@@ -6218,6 +6274,12 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 GroundPathState = Cell("GroundPathState"),
                 GroundPathRejectReason = Cell("GroundPathRejectReason"),
                 GroundPathInputIdentity = Ulong("GroundPathInputIdentity"),
+                GroundSurfaceFactsAvailable = hasSurfaceFacts,
+                GroundSurfaceState = hasSurfaceFacts
+                    ? EnumField<CharacterFootGroundSurfaceState>("GroundSurfaceState")
+                    : default,
+                GroundSurfaceWorldRevision = hasSurfaceFacts ? Ulong("GroundSurfaceWorldRevision") : 0,
+                GroundSurfaceSegmentCount = hasSurfaceFacts ? Int("GroundSurfaceSegmentCount") : 0,
                 GroundPathTargetAvailable =
                     Int("GroundPathTargetAvailable") != 0,
                 LastLandingEventIdentity = Ulong("GroundPathLastLandingEventIdentity"),
@@ -10686,6 +10748,11 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             internal string GroundPathRejectReason;
             internal ulong GroundPathInputIdentity;
             internal bool GroundPathTargetAvailable;
+            internal bool GroundSurfaceFactsAvailable;
+            internal CharacterFootGroundSurfaceState GroundSurfaceState;
+            internal ulong GroundSurfaceWorldRevision;
+            internal int GroundSurfaceSegmentCount;
+            internal int GroundSurfaceObservedCount;
             internal ulong LastLandingEventIdentity;
             internal ulong NextLandingEventIdentity;
             internal int NextLandingSurfaceIdentity;

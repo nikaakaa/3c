@@ -177,6 +177,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             "GroundPathAxisEndX,GroundPathAxisEndY,GroundPathAxisEndZ," +
             "GroundPathRadius,GroundPathMaximumAxisSegmentLength,GroundPathDirectionX,GroundPathDirectionY,GroundPathDirectionZ," +
             "GroundPathMaximumDistance,GroundPathLayerMask,GroundPathSegmentHitCapacity,GroundPathContactCapacity,GroundPathSegmentCount,GroundPathContactCount," +
+            "GroundSurfaceState,GroundSurfaceWorldRevision,GroundSurfaceSegmentCount," +
             "GroundPathEdgeCount,GroundPathHasInvalidSegment,GroundPathFirstInvalidSegmentIndex,GroundPathFirstInvalidSegmentIdentity," +
             "GroundPathFirstInvalidSegmentBottomX,GroundPathFirstInvalidSegmentBottomY,GroundPathFirstInvalidSegmentBottomZ," +
             "GroundPathFirstInvalidSegmentTopX,GroundPathFirstInvalidSegmentTopY,GroundPathFirstInvalidSegmentTopZ," +
@@ -333,7 +334,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             "GroundContactIndex,GroundContactSegmentIndex,GroundContactSurfaceIdentity,GroundContactCandidateIdentity," +
             "GroundContactPositionX,GroundContactPositionY,GroundContactPositionZ," +
             "GroundContactNormalX,GroundContactNormalY,GroundContactNormalZ,GroundContactQueryDistance," +
-            "GroundEnvelopeVertexIndex,GroundEnvelopeVertexX,GroundEnvelopeVertexY,GroundEnvelopeVertexZ";
+            "GroundEnvelopeVertexIndex,GroundEnvelopeVertexX,GroundEnvelopeVertexY,GroundEnvelopeVertexZ," +
+            "GroundSurfaceSegmentIndex,GroundSurfaceIdentity,GroundSurfaceFaceIndex," +
+            "GroundSurfaceStartDistance,GroundSurfaceStartHeight,GroundSurfaceEndDistance,GroundSurfaceEndHeight";
 
         readonly struct SamplingProgramIdentity
         {
@@ -1999,6 +2002,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             Add(row, groundQuery.ContactCapacity);
             Add(row, ground.SegmentCount);
             Add(row, ground.ContactCount);
+            Add(row, ground.SurfaceCoverage.State.ToString());
+            Add(row, ground.SurfaceCoverage.WorldRevision);
+            Add(row, ground.SurfaceCoverage.Count);
             Add(row, ground.EdgeCount);
             Add(row, ground.HasInvalidSegment);
             Add(row, ground.FirstInvalidSegmentIndex);
@@ -2735,9 +2741,10 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             in CharacterFootLandingPredictionFootDiagnostics foot)
         {
             CharacterFootGroundPathDiagnostics ground = foot.GroundPath;
+            CharacterFootGroundSurfaceDiagnostics surfaces = ground.SurfaceCoverage;
             int rowCount = Math.Max(
-                ground.ContactCount,
-                ground.EnvelopeVertexCount);
+                surfaces.Count,
+                Math.Max(ground.ContactCount, ground.EnvelopeVertexCount));
             for (int index = 0; index < rowCount; index++)
             {
                 row.Clear();
@@ -2763,6 +2770,17 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     : default;
                 Add(row, hasEnvelopeVertex ? index : -1);
                 Add(row, envelopeVertex.Position);
+                bool hasSurface = index < surfaces.Count;
+                CharacterFootGroundSurfaceSegment surface = hasSurface
+                    ? surfaces.SegmentAt(index)
+                    : default;
+                Add(row, hasSurface ? index : -1);
+                Add(row, surface.SurfaceIdentity);
+                Add(row, hasSurface ? surface.FaceIdentity : -1);
+                Add(row, surface.Start.x);
+                Add(row, surface.Start.y);
+                Add(row, surface.End.x);
+                Add(row, surface.End.y);
                 writer.WriteLine(row);
             }
         }

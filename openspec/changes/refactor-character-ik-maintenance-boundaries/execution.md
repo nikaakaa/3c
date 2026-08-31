@@ -259,9 +259,17 @@ PredictionMotion、BodyTrajectory及其Tick/Generation/ResetSequence/AuthorityTi
 
 ## 非负剩余时长的解析合同修复
 
-状态：本列codec已修复，Unity与Editor构建0错误，build server已关闭，严格校验通过；等待重新回放。上一完整通过提交仍为0dc139f。
+状态：修复候选6531023已完成重新回放、正式分析发布及全部952列迁移验证，成为新的完整通过点；固定总基线仍为ad3527e。
 
 - 失败原包：`Diagnostics/FootPlacementRuns/20260901-044732-164-8626964bd84a4e889e1863f74dc8c785`。1044输入及Body消费完成，2086行主表和67186行几何完整；Finalizer因`CurrentSegmentRemainingSeconds 'Infinity' is invalid`失败，没有diagnoses或Proof，不能借旧包代替。
 - CSV第302行、Frame153 Left、BodyTick152为首次失败。1620个Infinity位于两脚Frame153–957及1026–1030；上一043356和固定233436相同行同值。全部1191业务列与新增120列原始值相同，但42项诊断、明细、查询及Proof因发布失败未完成验证。
 - `CharacterFootPlacementModule.ResolveCurrentSegmentRemainingSeconds`在CurrentSegmentDurationTicks为0时正式返回PositiveInfinity，有限分支保证非负；`CharacterFutureBodyTranslationRequest`也明确接受该值。原来只写不读的字段被错误接到有限浮点codec，属于本次诊断映射缺陷，不改变Runtime事实。
 - 仅本列改用NonNegativeDuration codec：保留当前写入器的Infinity字面值，有限值继续通过原ParseFloat并要求非负；NaN、负无穷、负时长仍拒绝。通用浮点解析、评分、阈值与格式identity不变。根任务另扫失败原始主表，非有限值只有本列这1620项；失败包原地保留。
+
+## 修复及120列迁移的验证封口
+
+- 新原包：`Diagnostics/FootPlacementRuns/20260901-045658-983-e4cd45e445594c6181a2bd0101af3024`。6531023唯一一次原Record完成1044输入及Body，2086行完整分析发布；1620个Infinity及466个有限时长原值、位置不变，失败044732原包未覆盖或补造产物。
+- 对上一043356及固定233436：全部1191业务列和新120列逐值相同；累计952列为938精确及14既有身份列，23主表身份列映射无冲突。几何22业务列精确、5身份列映射无冲突。
+- 42项诊断的规则、测量、计数、coverage与quality保持；20447明细只有原21个身份叶路径换代，Timeline/Prediction二维值、Root/Body以及Pelvis自身根位置来源均一致。所有索引及六次952列真实帧查询、其它正式查询保持；476R与746L的正式查询仍返回原Infinity文本，没有补值或跳过。
+- 正式Proof matched1044、aggregate空、DivergentFrameCount0，与两基线的输入/Body/时钟及1044帧数组一致。原包与持久Proof保留，Unity已归还，Edit/Idle、failure空、Console0。
+- 本次覆盖合法无结束时长与列迁移；负时长/NaN/负无穷的动态输入矩阵、Reset4.4及既有未覆盖范围不冒称通过。下一步完成剩余263列，再统一主行排序定义、格式identity、Runtime证据分组与Reset正式取证；不提前启动第二阶段。

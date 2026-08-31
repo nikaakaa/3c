@@ -2,7 +2,7 @@
 
 ## 当前状态与授权
 
-用户批准从112611开始对齐输入、筛选ZZZ共同候选，并在候选有实际价值时进入独立实现与同输入回放。当前已完成只读输入/数学筛选及Runtime候选，正在同步Diagnostics；尚未运行新的Runtime Replay，不称可用修复。
+用户批准从112611开始对齐输入、筛选ZZZ共同候选，并在候选有实际价值时进入独立实现与同输入回放。当前已完成只读输入/数学筛选及Runtime候选，Diagnostics迁移及Unity编译已完成，正在生成匹配产品；尚未运行新的Runtime Replay，不称可用修复。
 
 固定Foot效果参照为193957，直接前驱d51e247／20260831-112611-018-2429691288e6434a8588a55de100efc2。原样保留3Hz、20毫米硬Reach、原Handoff和正速度清理、中性软姿态偏好、Support资格及Release首选0。此步暂不改末端硬投影是隔离目标变量，不是将Reach认定为永久正确。
 
@@ -62,7 +62,7 @@ ZZZ的c经过自身Foot高度缩放、基准及位移构造，本项目保留世
 - 414：模型输出107.213→59.135毫米；419为42.069→24.152毫米。420仍触同一−1.674毫米硬上界，世界下降80.210→62.292毫米，不是硬边界消失。
 - 985：请求446.038→70.685毫米，输出327.372→126.103毫米；986仍按原资格退出转0，989输出210.258→76.252毫米。没有借此改Support准入。
 - 322／466最终仍在原硬上界，主要几何冲突未解。
-- 原774个“目标非负且硬区间允许0”帧中，新目标有56帧变负；不能将220→293全称为迟滞增加。双方仍非负的718帧需单独比较，模型候选其中243帧低于−5毫米。
+- 原774个“目标非负且硬区间允许0”帧中，新目标有56帧变负；不能将220→293全称为迟滞增加。双方仍非负的718帧独立复核，低于−5毫米为原199→候选243；其中45帧新增、1帧消失。这是同域模型下的真实额外下压风险，不能用大步次数下降掩盖，也不当作已运行的Knee/Foot结果。
 
 ## 实现及验收边界
 
@@ -81,3 +81,7 @@ CharacterFootPlacementModule在原Pre-Pelvis阶段从唯一Foot Goal解析有效
 Corin正式Profile新增PelvisFootProximityRadius=0.2，Schema迁移到character-foot-placement-profile/v37-pelvis-foot-candidates，其他参数保持原值。该字段经现有JsonUtility/Profile Revision进入产品身份，不手写生成产物。TrainingEnemy不在本次范围，未修改或构建。
 
 Runtime通过规定flags构建：27个既有依赖/字段警告、0错误，用时52.79秒；finally立即执行build-server shutdown成功。此结果只证明Runtime编译，完整Editor、正式产品和新Replay仍待后续步骤。
+
+独立ZZZ窗口已对c3166ff完成有界静态审查：选择优先级、typed unavailable与Module本帧输入符合声明，未发现阻止本次Replay的静态矛盾。Up沿用Body.VisibleRotation生成的既有ComponentUp，不是新采样PoseRoot轴。原始接近判断的平方距离比较与ZZZ开方比较在实数规则上一致，浮点恰贴边界时可能有ULP级分支差；本步不声称逐位复刻。静态通过不代表视觉效果通过。
+
+676fd5c独立完成六文件Diagnostics迁移：facts67／Analyzer67／diagnosis36，CSV1224→1233，仅目标19→28标量，其余列和37项质量规则保持。旧112611由正式Analyzer在缺ReferencePointX时明确拒绝，没有补列或重发旧包。首次外部构建缺Temp的project.assets及31个Editor依赖DLL，正常restore和完整项目依赖构建解决；最终57个既有警告、0错误、112.67秒并shutdown，没有修改源码绕过。Unity显式Refresh经历一次域重载断开后自行恢复，随后Console零错误、Edit态；正式Corin产品构建继续进行。

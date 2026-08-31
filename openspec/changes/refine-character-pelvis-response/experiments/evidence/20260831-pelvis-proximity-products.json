@@ -1,0 +1,57 @@
+{
+  "kind": "character-pelvis-geometric-candidate-products/1",
+  "runtimeCommit": "c3166ff",
+  "diagnosticsCommit": "676fd5c",
+  "float32": {
+    "definitionAssetPath": "Assets/Configs/Character/Corin/Pipeline/Definition/CorinCharacterPipelineDefinition.asset",
+    "wrapperAssetPath": "Assets/Configs/Character/Corin/Pipeline/Definition/Generated/CorinCharacterPipelineDefinition.SimulationProgram.asset",
+    "projectionAssetPath": "Assets/Configs/Character/Corin/Pipeline/Definition/Generated/CorinCharacterPipelineDefinition.PresentationProjection.asset",
+    "numericProfileId": "float32-ieee754",
+    "targetAbiVersion": 8,
+    "programId": "character:c7a7c1e3f7e64d81b5a04a90cbeb8d4e",
+    "sourceRevision": "5f8405d1afb1dec4f7100d35553afed863d46d3d2f4a089c13aef377b07d3826",
+    "semanticHash": "bb91000572639874ae963dc09a1e0ec02f4952b056b8af9084f7c457a4018a5d",
+    "programHash": "13e4f882ac767c02634c41c4558476471b217f9cd3dc004ef363f69aed281023",
+    "layoutHash": "e393a861bb22ac4d3132d7f368ca687835f36b8c413e7fa739275ea296e93f71",
+    "canonicalBytesHash": "782aacfae233c2de76599ae69664dec2065a62a0cf3f45dd8c5159271faa4d98",
+    "canonicalByteLength": 3079259,
+    "projection": {
+      "ProgramId": "character:c7a7c1e3f7e64d81b5a04a90cbeb8d4e",
+      "SourceRevision": "5f8405d1afb1dec4f7100d35553afed863d46d3d2f4a089c13aef377b07d3826",
+      "SemanticHash": "bb91000572639874ae963dc09a1e0ec02f4952b056b8af9084f7c457a4018a5d",
+      "ContractHash": "9ea260ee3957baf32f6f854643cbe5c316c635ccc102efb9c63f7bc25c094ea3",
+      "ProjectionRevision": "fb865cfa4c73bec9f68c67f2dd230d10cef961df8456c0521bc0c7421e6883c0"
+    },
+    "diagnostics": [
+      {
+        "stage": "TargetLowering",
+        "severity": "Information",
+        "Code": "float32_state_abi",
+        "SourceIdentity": "character:c7a7c1e3f7e64d81b5a04a90cbeb8d4e",
+        "Message": "ABI=8 Codec=character-state/float32/v8 StateSlots=1396 TypedPartitions=15 MotionTransientSlots=0 GameplayEffectAggregateSlots=1."
+      }
+    ]
+  },
+  "fixed": {
+    "definitionAssetPath": "Assets/Configs/Character/Corin/Pipeline/Definition/CorinCharacterPipelineDefinition.asset",
+    "wrapperAssetPath": "Assets/Configs/Simulation/DeterministicRollback/Programs/CorinFixedProgram.asset",
+    "projectionAssetPath": "Assets/Configs/Character/Corin/Pipeline/Definition/Generated/CorinCharacterPipelineDefinition.PresentationProjection.asset",
+    "numericProfileId": "fixed-q32.32",
+    "targetAbiVersion": 7,
+    "programId": "character:c7a7c1e3f7e64d81b5a04a90cbeb8d4e",
+    "sourceRevision": "5f8405d1afb1dec4f7100d35553afed863d46d3d2f4a089c13aef377b07d3826",
+    "semanticHash": "bb91000572639874ae963dc09a1e0ec02f4952b056b8af9084f7c457a4018a5d",
+    "programHash": "811fe501c8b3e52c5af49f5aa0943d75e8a961122564fa3288e1538ff5cebd9e",
+    "layoutHash": "40139ba56271af586179ca32574c8c8c938bd3010a69c9c1465fa258b0c032dc",
+    "canonicalBytesHash": "55a2003eb6eb09158e2e511d8f0b4b047bdd63d9845e43f4732db20c1e9e8930",
+    "canonicalByteLength": 3234949,
+    "projection": {
+      "ProgramId": "character:c7a7c1e3f7e64d81b5a04a90cbeb8d4e",
+      "SourceRevision": "5f8405d1afb1dec4f7100d35553afed863d46d3d2f4a089c13aef377b07d3826",
+      "SemanticHash": "bb91000572639874ae963dc09a1e0ec02f4952b056b8af9084f7c457a4018a5d",
+      "ContractHash": "9ea260ee3957baf32f6f854643cbe5c316c635ccc102efb9c63f7bc25c094ea3",
+      "ProjectionRevision": "fb865cfa4c73bec9f68c67f2dd230d10cef961df8456c0521bc0c7421e6883c0"
+    },
+    "diagnostics": []
+  }
+}

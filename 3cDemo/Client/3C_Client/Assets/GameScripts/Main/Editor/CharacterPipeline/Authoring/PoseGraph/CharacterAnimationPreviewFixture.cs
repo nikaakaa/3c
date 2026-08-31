@@ -112,9 +112,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             if (!CanCreate)
                 throw new InvalidOperationException("Animation Preview Fixture is available only in Edit Mode.");
             fixture.RequireValid();
-            Scene scene = SceneManager.CreateScene(
-                $"CharacterAnimationPreview/{fixture.name}/{Guid.NewGuid():N}",
-                new CreateSceneParameters(LocalPhysicsMode.Physics3D));
+            Scene scene = EditorSceneManager.NewPreviewScene();
             GameObject rigInstance = null;
             GameObject environmentInstance = null;
             GameObject keyLightInstance = null;
@@ -216,7 +214,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 if (rigInstance)
                     UnityEngine.Object.DestroyImmediate(rigInstance);
                 if (scene.IsValid() && scene.isLoaded)
-                    SceneManager.UnloadSceneAsync(scene);
+                    EditorSceneManager.ClosePreviewScene(scene);
                 throw;
             }
         }
@@ -242,7 +240,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             if (m_RigInstance)
                 UnityEngine.Object.DestroyImmediate(m_RigInstance);
             if (m_Scene.IsValid() && m_Scene.isLoaded)
-                SceneManager.UnloadSceneAsync(m_Scene);
+                EditorSceneManager.ClosePreviewScene(m_Scene);
         }
 
         internal void RenderPreview()

@@ -191,6 +191,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         Vector3 m_DiagnosticPelvisTranslation;
         LegSolveFrame m_LeftLegSolveFrame;
         LegSolveFrame m_RightLegSolveFrame;
+        ulong m_BendResetGeneration;
         ulong m_DiagnosticFrameSequence;
         int m_DiagnosticEffectorCount;
         bool m_Prepared;
@@ -728,6 +729,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             ref Vector3 appliedBendDirection,
             ref bool hasAppliedBendDirection)
         {
+            bool hadStableBendDirection = hasStableBendDirection;
+            bool hadAppliedBendDirection = hasAppliedBendDirection;
             var hip = new IndexedBoneHandle(leg.HipPhysicalBoneIndex);
             var knee = new IndexedBoneHandle(leg.KneePhysicalBoneIndex);
             var ankle = new IndexedBoneHandle(leg.AnklePhysicalBoneIndex);
@@ -746,6 +749,12 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 originalAnkle,
                 legLength * ReliableBendHeightRatio,
                 out Vector3 animatedDirection);
+            CharacterFullBodyIkBendDirectionSource bendDirectionSource =
+                hasAnimatedDirection
+                    ? CharacterFullBodyIkBendDirectionSource.Animated
+                    : hadStableBendDirection
+                        ? CharacterFullBodyIkBendDirectionSource.StableHistory
+                        : CharacterFullBodyIkBendDirectionSource.Reference;
             float animatedPreviousDot = 1f;
             bool retainedPreviousDirection = false;
             if (hasAnimatedDirection)
@@ -826,7 +835,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 effectivePreviousDot,
                 stabilizationWeight,
                 effectiveBendWeight,
-                retainedPreviousDirection);
+                retainedPreviousDirection,
+                hadStableBendDirection,
+                hadAppliedBendDirection,
+                bendDirectionSource);
         }
 
         static bool TryFindFootPlacementGoal(
@@ -950,7 +962,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 frame.AnimatedBendDirectionPreviousDot,
                 frame.EffectiveBendDirectionPreviousDot,
                 frame.StabilizationWeight,
-                frame.RetainedPreviousBendDirection);
+                frame.RetainedPreviousBendDirection,
+                frame.HadStableBendDirection,
+                frame.HadAppliedBendDirection,
+                frame.BendDirectionSource);
         }
 
         static float ResolveKneeBendDegrees(
@@ -975,6 +990,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
 
         void ResetLegBendState()
         {
+            m_BendResetGeneration++;
             m_LeftLegSolveFrame = default;
             m_RightLegSolveFrame = default;
             IKConstraintBend left = m_Solver.GetBendConstraint(FullBodyBipedChain.LeftLeg);
@@ -1140,6 +1156,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 m_Rig.RigRevision,
                 ProfileId,
                 ProfileRevision,
+                m_BendResetGeneration,
                 m_ActiveTuning.Iterations,
                 m_ActiveTuning.FabrikPass,
                 m_DiagnosticPelvisTranslation,
@@ -1266,7 +1283,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 float effectiveBendDirectionPreviousDot,
                 float stabilizationWeight,
                 float effectiveBendWeight,
-                bool retainedPreviousBendDirection)
+                bool retainedPreviousBendDirection,
+                bool hadStableBendDirection,
+                bool hadAppliedBendDirection,
+                CharacterFullBodyIkBendDirectionSource bendDirectionSource)
             {
                 OriginalHip = originalHip;
                 OriginalKnee = originalKnee;
@@ -1279,6 +1299,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 StabilizationWeight = stabilizationWeight;
                 EffectiveBendWeight = effectiveBendWeight;
                 RetainedPreviousBendDirection = retainedPreviousBendDirection;
+                HadStableBendDirection = hadStableBendDirection;
+                HadAppliedBendDirection = hadAppliedBendDirection;
+                BendDirectionSource = bendDirectionSource;
                 IsAvailable = true;
             }
 
@@ -1293,6 +1316,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             internal float StabilizationWeight { get; }
             internal float EffectiveBendWeight { get; }
             internal bool RetainedPreviousBendDirection { get; }
+            internal bool HadStableBendDirection { get; }
+            internal bool HadAppliedBendDirection { get; }
+            internal CharacterFullBodyIkBendDirectionSource BendDirectionSource { get; }
             internal bool IsAvailable { get; }
         }
 

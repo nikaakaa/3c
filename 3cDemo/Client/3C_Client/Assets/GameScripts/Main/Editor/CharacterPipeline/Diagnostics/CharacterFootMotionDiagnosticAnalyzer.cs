@@ -5338,11 +5338,11 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 FootFrame previousRight = right[frames[i - 1]];
                 FootFrame currentRight = right[frames[i]];
                 double goalStep = Vector3.Distance(
-                    previous.FinalPelvisGoal,
-                    current.FinalPelvisGoal);
+                    previous.Pelvis.FinalGoal,
+                    current.Pelvis.FinalGoal);
                 double physicalStep = Vector3.Distance(
-                    previous.PhysicalPelvis,
-                    current.PhysicalPelvis);
+                    previous.Pelvis.PhysicalComponent,
+                    current.Pelvis.PhysicalComponent);
                 double extensionChange = Math.Max(
                     Math.Abs(current.TargetExtensionRatio - previous.TargetExtensionRatio),
                     Math.Abs(currentRight.TargetExtensionRatio - previousRight.TargetExtensionRatio));
@@ -5715,13 +5715,13 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             {
                 RequirePredictionMotionPair(left[i], right[i]);
                 if (left[i].CompletionIdentity != right[i].CompletionIdentity ||
-                    left[i].StrideState != right[i].StrideState ||
-                    !left[i].PelvisHeightTarget.SameAs(right[i].PelvisHeightTarget) ||
+                    left[i].Pelvis.State != right[i].Pelvis.State ||
+                    !left[i].Pelvis.HeightTarget.SameAs(right[i].Pelvis.HeightTarget) ||
                     !left[i].Pelvis.SameAs(right[i].Pelvis) ||
-                    left[i].StrideSlope != right[i].StrideSlope ||
-                    !left[i].StridePelvisDelta.Equals(right[i].StridePelvisDelta) ||
-                    !left[i].PhysicalPelvis.Equals(right[i].PhysicalPelvis) ||
-                    !left[i].FinalPelvisGoal.Equals(right[i].FinalPelvisGoal) ||
+                    left[i].Pelvis.Slope != right[i].Pelvis.Slope ||
+                    !left[i].Pelvis.Delta.Equals(right[i].Pelvis.Delta) ||
+                    !left[i].Pelvis.PhysicalComponent.Equals(right[i].Pelvis.PhysicalComponent) ||
+                    !left[i].Pelvis.FinalGoal.Equals(right[i].Pelvis.FinalGoal) ||
                     left[i].PelvisWeight != right[i].PelvisWeight ||
                     left[i].FinalPhysicalWriteAvailable != right[i].FinalPhysicalWriteAvailable ||
                     left[i].FinalPhysicalWriteCompletionIdentity != right[i].FinalPhysicalWriteCompletionIdentity)
@@ -6083,27 +6083,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 RequireEnum<T>(value, name);
                 return Enum.Parse<T>(value);
             }
-            T FlagsField<T>(string name, char separator = ',') where T : struct, Enum
-            {
-                string value = Cell(name).Replace(separator, ',');
-                RequireFlags<T>(value, name);
-                return Enum.Parse<T>(value);
-            }
-            PelvisLegFrame PelvisLeg(string prefix) => new PelvisLegFrame
-            {
-                Role = FlagsField<CharacterFootPelvisLegReachRole>(prefix + "Role"),
-                Status = EnumField<CharacterFootPelvisLegReachStatus>(prefix + "Status"),
-                EventIdentity = Ulong(prefix + "EventIdentity"),
-                Hip = Vector(prefix + "Hip"),
-                TargetAnkle = Vector(prefix + "TargetAnkle"),
-                LegLength = Float(prefix + "LegLength"),
-                MinimumCompressionReserve = Float(prefix + "MinimumCompressionReserve"),
-                UsableLegLength = Float(prefix + "UsableLegLength"),
-                MinimumAlongUp = Float(prefix + "MinimumAlongUp"),
-                MaximumAlongUp = Float(prefix + "MaximumAlongUp"),
-                Requested = Int(prefix + "Requested") != 0,
-                Available = Int(prefix + "Available") != 0,
-            };
+
 
             string side = Cell("Side");
             bool hasSurfaceFacts = indices.ContainsKey("GroundSurfaceState");
@@ -6790,86 +6770,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     Int("PrimarySupportHasValue") != 0,
                 PrimarySupportSide = Cell("PrimarySupportSide"),
                 PrimarySupportEventIdentity = Ulong("PrimarySupportLandingEventIdentity"),
-                StrideState = Cell("StrideState"),
-                PelvisHeightTarget = new PelvisHeightTargetFrame
-                {
-                    Available = Int("PelvisHeightTargetAvailable") != 0,
-                    ComponentUp = Vector("PelvisHeightTargetComponentUp"),
-                    LeftAnimatedSole = Vector("PelvisHeightTargetLeftAnimatedSole"),
-                    RightAnimatedSole = Vector("PelvisHeightTargetRightAnimatedSole"),
-                    LeftTargetSole = Vector("PelvisHeightTargetLeftTargetSole"),
-                    RightTargetSole = Vector("PelvisHeightTargetRightTargetSole"),
-                    AnimatedMinimumAlongUp = Float("PelvisHeightTargetAnimatedMinimumAlongUp"),
-                    TargetMinimumAlongUp = Float("PelvisHeightTargetMinimumAlongUp"),
-                    RequestedOffsetAlongUp = Float("PelvisRequestedOffsetAlongUp")
-                },
-                StrideSupportSide = Cell("StrideSupportSide"),
-                Pelvis = new PelvisFrame
-                {
-                    Observation = new PelvisObservationFrame
-                    {
-                        PoseInputAvailable = Int("PelvisPoseInputAvailable") != 0,
-                        PoseRootWorldPosition = Vector("StridePoseRootPosition"),
-                        AnimatedWorldPosition = Vector("StrideAnimatedPelvis"),
-                        AnimatedComponentPosition = Vector("StrideAnimatedPelvisComponentPosition"),
-                        PhysicalWorldPosition = Vector("FinalPhysicalPelvisWorldPosition"),
-                        GoalResidualAvailable = Int("FinalPhysicalPelvisGoalResidualAvailable") != 0,
-                        GoalResidual = Float("FinalPhysicalPelvisGoalResidual")
-                    },
-                    Posture = new PelvisPostureFrame
-                    {
-                        Evaluated = Int("PelvisPosturePreferenceEvaluated") != 0,
-                        Available = Int("PelvisPosturePreferenceAvailable") != 0,
-                        Hip = Vector("PelvisPosturePreferenceHip"),
-                        AnimatedAnkle = Vector("PelvisPosturePreferenceAnimatedAnkle"),
-                        TargetAnkle = Vector("PelvisPosturePreferenceTargetAnkle"),
-                        LegLength = Float("PelvisPosturePreferenceLegLength"),
-                        CompressionReserve = Float("PelvisPosturePreferenceCompressionReserve"),
-                        UsableLegLength = Float("PelvisPosturePreferenceUsableLegLength"),
-                        MinimumAlongUp = Float("PelvisPosturePreferenceMinimumAlongUp"),
-                        MaximumAlongUp = Float("PelvisPosturePreferenceMaximumAlongUp"),
-                        OffsetAlongUp = Float("PelvisPosturePreferenceOffsetAlongUp"),
-                        TargetAdjusted = Int("PelvisPosturePreferenceTargetAdjusted") != 0,
-                    },
-                    Reach = new PelvisReachFrame
-                    {
-                        ComponentUp = Vector("PelvisReachComponentUp"),
-                        Status = EnumField<CharacterFootPelvisReachStatus>("PelvisReachStatus"),
-                        IntersectionEvaluated = Int("PelvisReachIntersectionEvaluated") != 0,
-                        IntersectionMinimumAlongUp = Float("PelvisReachIntersectionMinimumAlongUp"),
-                        IntersectionMaximumAlongUp = Float("PelvisReachIntersectionMaximumAlongUp"),
-                        Left = PelvisLeg("PelvisReachLeft"),
-                        Right = PelvisLeg("PelvisReachRight")
-                    },
-                    Response = new PelvisResponseFrame
-                    {
-                        Evaluated = Int("PelvisResponseEvaluated") != 0,
-                        Completed = Int("PelvisSpringCompleted") != 0,
-                        IntegratedOutput = Float("PelvisSpringIntegratedOutput"),
-                        HadPreviousState = Int("StrideHadPreviousState") != 0,
-                        SupportChanged = Int("StrideSupportChanged") != 0,
-                        VelocityReset = Int("StrideSpringVelocityReset") != 0,
-                        PreviousTarget = Float("StridePreviousSpringTarget"),
-                        PreviousOutput = Float("StridePreviousSpringOutput"),
-                        PreviousVelocity = Float("StridePreviousSpringVelocity"),
-                        Input = Float("StrideSpringInput"),
-                        InputVelocity = Float("StrideSpringInputVelocity"),
-                        Frequency = Float("StrideSpringFrequency"),
-                        Target = Float("StrideSpringTarget"),
-                        Output = Float("StrideSpringOutput"),
-                        Velocity = Float("StrideSpringVelocity"),
-                        PositionWeight = Float("StridePositionWeight"),
-                        PreviousSlope = EnumField<CharacterFootStrideSlope>("StridePreviousSlope"),
-                        Handoff = FlagsField<CharacterFootPelvisSpringHandoffReason>("StrideSpringHandoffReason", '|')
-                    }
-                },
-                StrideSlope = EnumField<CharacterFootStrideSlope>("StrideSlope"),
-                StrideRejectReason = EnumField<CharacterFootStrideRejectReason>("StrideRejectReason"),
-                StridePelvisDelta = Vector("StridePelvisDelta"),
-                StrideSpringOutput = Float("StrideSpringOutput"),
-                PelvisWeight = Float("PelvisPositionWeight"),
-                FinalPelvisGoal = Vector("FinalPelvisGoal"),
-                PhysicalPelvis = Vector("FinalPhysicalPelvisComponentPosition")
+                Pelvis = bindings.Pelvis.Read(cells),
+                PelvisWeight = Float("PelvisPositionWeight")
             };
             RequireValidFrame(frame);
             frame.ContactSupportGap = ResolveContactSupportGap(frame);
@@ -6999,7 +6901,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             RequireFormalGoalWeights(frame);
             RequireFootGoalComponentFacts(frame);
             RequireLegReachFacts(frame);
-            frame.PelvisHeightTarget.RequireValid(frame);
+            RequirePelvisHeightTarget(frame);
             RequirePelvisFacts(frame);
             if (frame.LandingReachAvailable &&
                 !frame.LandingReachEvaluated ||
@@ -9084,14 +8986,14 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     $"Foot Motion Pelvis {part} facts are inconsistent Frame={frame.Frame} Side={frame.Side}.");
         }
 
-        static void RequirePelvisLeg(PelvisLegFrame leg, Vector3 up, FootFrame frame)
+        static void RequirePelvisLeg(CharacterFootPelvisLegSample leg, Vector3 up, FootFrame frame)
         {
             bool requested = leg.Role != CharacterFootPelvisLegReachRole.None;
             RequirePelvis(leg.Requested == requested &&
                 leg.Available == (leg.Status == CharacterFootPelvisLegReachStatus.Available), frame, "leg availability");
             if (!requested)
             {
-                RequirePelvis(leg.SameAs(new PelvisLegFrame()), frame, "unrequested leg");
+                RequirePelvis(leg.SameAs(new CharacterFootPelvisLegSample()), frame, "unrequested leg");
                 return;
             }
             RequirePelvis(leg.EventIdentity != 0 && FiniteVector(leg.Hip) && FiniteVector(leg.TargetAnkle) &&
@@ -9119,11 +9021,11 @@ namespace ThirdPersonCharacter.Pipeline.Editor
 
         static void RequirePelvisReach(FootFrame frame)
         {
-            PelvisReachFrame reach = frame.Pelvis.Reach;
+            CharacterFootPelvisReachSample reach = frame.Pelvis.Reach;
             bool specified = !reach.ComponentUp.Equals(Vector3.zero);
             RequirePelvis(FiniteVector(reach.ComponentUp) &&
                 (!specified || Math.Abs(reach.ComponentUp.sqrMagnitude - 1f) <= RuntimeGeometryEpsilon) &&
-                (specified || !frame.Pelvis.Response.Evaluated && !frame.PelvisHeightTarget.Available &&
+                (specified || !frame.Pelvis.Response.Evaluated && !frame.Pelvis.HeightTarget.Available &&
                     !reach.Left.Requested && !reach.Right.Requested), frame, "reach axis");
             RequirePelvisLeg(reach.Left, reach.ComponentUp, frame);
             RequirePelvisLeg(reach.Right, reach.ComponentUp, frame);
@@ -9137,7 +9039,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     status = CharacterFootPelvisReachStatus.LegUnreachable;
                 else
                 {
-                    PelvisLegFrame first = reach.Left.Requested ? reach.Left : reach.Right;
+                    CharacterFootPelvisLegSample first = reach.Left.Requested ? reach.Left : reach.Right;
                     intersectionMinimum = first.MinimumAlongUp;
                     intersectionMaximum = first.MaximumAlongUp;
                     if (reach.Left.Requested && reach.Right.Requested)
@@ -9154,8 +9056,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 reach.IntersectionEvaluated == intersectionEvaluated &&
                 PelvisClose(reach.IntersectionMinimumAlongUp, intersectionMinimum) &&
                 PelvisClose(reach.IntersectionMaximumAlongUp, intersectionMaximum), frame, "reach observation");
-            PelvisLegFrame leg = frame.Side == "Left" ? reach.Left : reach.Right;
-            bool primaryExpected = frame.StrideState == "Accepted" && frame.StrideSupportSide == frame.Side &&
+            CharacterFootPelvisLegSample leg = frame.Side == "Left" ? reach.Left : reach.Right;
+            bool primaryExpected = frame.Pelvis.State == "Accepted" && frame.Pelvis.SupportSide == frame.Side &&
                 frame.Resolved.PositionWeight > RuntimeGeometryEpsilon;
             RequirePelvis(leg.PrimarySupport == primaryExpected, frame, "primary observation role");
             if (leg.FootTarget)
@@ -9167,8 +9069,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     PelvisClose(leg.MinimumCompressionReserve, frame.Resolved.LandingReachMinimumCompressionReserve), frame, "Foot request lineage");
             if (leg.PrimarySupport)
             {
-                RequirePelvis(frame.PelvisHeightTarget.Available && frame.PrimarySupportAvailable &&
-                    frame.PrimarySupportSide == frame.Side && frame.StrideSupportSide == frame.Side, frame, "primary lineage");
+                RequirePelvis(frame.Pelvis.HeightTarget.Available && frame.PrimarySupportAvailable &&
+                    frame.PrimarySupportSide == frame.Side && frame.Pelvis.SupportSide == frame.Side, frame, "primary lineage");
                 if (!leg.FootTarget)
                     RequirePelvis(leg.EventIdentity == frame.PrimarySupportEventIdentity &&
                         Vector3.Distance(leg.Hip, frame.Pelvis.Posture.Hip) <= RuntimeGeometryEpsilon &&
@@ -9186,15 +9088,15 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         static void RequirePelvisPosture(FootFrame frame)
         {
             const float endpoint = 0.005f;
-            PelvisPostureFrame posture = frame.Pelvis.Posture;
-            RequirePelvis(posture.Evaluated == frame.PelvisHeightTarget.Available, frame, "posture execution");
+            CharacterFootPelvisPostureSample posture = frame.Pelvis.Posture;
+            RequirePelvis(posture.Evaluated == frame.Pelvis.HeightTarget.Available, frame, "posture execution");
             if (!posture.Evaluated)
             {
-                RequirePelvis(posture.SameAs(new PelvisPostureFrame()), frame, "unevaluated posture");
+                RequirePelvis(posture.SameAs(new CharacterFootPelvisPostureSample()), frame, "unevaluated posture");
                 return;
             }
             Vector3 up = frame.Pelvis.Reach.ComponentUp;
-            RequirePelvis(up.Equals(frame.PelvisHeightTarget.ComponentUp) &&
+            RequirePelvis(up.Equals(frame.Pelvis.HeightTarget.ComponentUp) &&
                 FiniteVector(posture.Hip) && FiniteVector(posture.AnimatedAnkle) && FiniteVector(posture.TargetAnkle) &&
                 float.IsFinite(posture.LegLength) && posture.LegLength > endpoint &&
                 PelvisClose(posture.CompressionReserve, Mathf.Max(0f,
@@ -9222,7 +9124,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 else
                     usable = 0f;
             }
-            float requested = frame.PelvisHeightTarget.RequestedOffsetAlongUp;
+            float requested = frame.Pelvis.HeightTarget.RequestedOffsetAlongUp;
             float preferred = available ? Mathf.Clamp(requested, minimum, maximum) : requested;
             preferred = Mathf.Clamp(preferred, Mathf.Min(0f, requested), Mathf.Max(0f, requested));
             RequirePelvis(posture.Available == available && PelvisClose(posture.UsableLegLength, usable) &&
@@ -9233,25 +9135,25 @@ namespace ThirdPersonCharacter.Pipeline.Editor
 
         static void RequirePelvisFacts(FootFrame frame)
         {
-            RequireEnum<CharacterFootStrideState>(frame.StrideState, "StrideState");
-            RequirePelvis(frame.PelvisHeightTarget.Available == (frame.StrideState == "Accepted"),
+            RequireEnum<CharacterFootStrideState>(frame.Pelvis.State, "StrideState");
+            RequirePelvis(frame.Pelvis.HeightTarget.Available == (frame.Pelvis.State == "Accepted"),
                 frame, "height target execution");
             RequirePelvisObservation(frame);
             RequirePelvisReach(frame);
             RequirePelvisPosture(frame);
-            PelvisResponseFrame response = frame.Pelvis.Response;
-            PelvisReachFrame reach = frame.Pelvis.Reach;
+            CharacterFootPelvisResponseSample response = frame.Pelvis.Response;
+            CharacterFootPelvisReachSample reach = frame.Pelvis.Reach;
             if (!response.Evaluated)
             {
-                RequirePelvis(response.SameAs(new PelvisResponseFrame()) && !frame.PelvisHeightTarget.Available &&
-                    frame.StrideState != "Releasing" &&
-                    frame.StridePelvisDelta.Equals(Vector3.zero) && frame.PelvisWeight == 0f, frame, "unevaluated response");
+                RequirePelvis(response.SameAs(new CharacterFootPelvisResponseSample()) && !frame.Pelvis.HeightTarget.Available &&
+                    frame.Pelvis.State != "Releasing" &&
+                    frame.Pelvis.Delta.Equals(Vector3.zero) && frame.PelvisWeight == 0f, frame, "unevaluated response");
                 return;
             }
-            bool releasing = !frame.PelvisHeightTarget.Available;
+            bool releasing = !frame.Pelvis.HeightTarget.Available;
             RequirePelvis(releasing
                 ? response.HadPreviousState &&
-                  frame.StrideState == (response.Completed ? "Rejected" : "Releasing")
+                  frame.Pelvis.State == (response.Completed ? "Rejected" : "Releasing")
                 : !response.Completed, frame, "response execution");
             float preferred = releasing ? 0f : frame.Pelvis.Posture.OffsetAlongUp;
             float target = preferred;
@@ -9265,7 +9167,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             bool crossed = !releasing && response.HadPreviousState && Math.Abs(previousDirection) > 0.005f &&
                 Math.Abs(direction) > 0.005f && previousDirection * direction < 0f;
             bool slopeChanged = response.HadPreviousState && response.PreviousSlope !=
-                (releasing ? CharacterFootStrideSlope.Flat : frame.StrideSlope);
+                (releasing ? CharacterFootStrideSlope.Flat : frame.Pelvis.Slope);
             CharacterFootPelvisSpringHandoffReason handoff = CharacterFootPelvisSpringHandoffReason.None;
             if (response.SupportChanged) handoff |= CharacterFootPelvisSpringHandoffReason.SupportChanged;
             if (slopeChanged) handoff |= CharacterFootPelvisSpringHandoffReason.SlopeChanged;
@@ -9295,7 +9197,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 PelvisClose(response.IntegratedOutput, integrated) && PelvisClose(response.Output, output) &&
                 PelvisClose(response.Velocity, velocity) && response.Completed == completed &&
                 PelvisClose(response.PositionWeight, weight) && PelvisClose(frame.PelvisWeight, weight) &&
-                Vector3.Distance(frame.StridePelvisDelta, reach.ComponentUp * output) <= RuntimeGeometryEpsilon,
+                Vector3.Distance(frame.Pelvis.Delta, reach.ComponentUp * output) <= RuntimeGeometryEpsilon,
                 frame, "single spring response");
         }
 
@@ -9305,14 +9207,14 @@ namespace ThirdPersonCharacter.Pipeline.Editor
 
         static void RequirePelvisObservation(FootFrame frame)
         {
-            PelvisObservationFrame observation = frame.Pelvis.Observation;
-            bool poseExpected = frame.StrideState == "Accepted" || frame.StrideState == "Releasing";
+            CharacterFootPelvisObservationSample observation = frame.Pelvis.Observation;
+            bool poseExpected = frame.Pelvis.State == "Accepted" || frame.Pelvis.State == "Releasing";
             RequirePelvis(observation.PoseInputAvailable == poseExpected &&
                 FiniteVector(observation.PoseRootWorldPosition) &&
                 FiniteVector(observation.AnimatedWorldPosition) &&
                 FiniteVector(observation.AnimatedComponentPosition) &&
-                FiniteVector(observation.PhysicalWorldPosition) && FiniteVector(frame.PhysicalPelvis) &&
-                FiniteVector(frame.FinalPelvisGoal) && float.IsFinite(frame.PelvisWeight) &&
+                FiniteVector(observation.PhysicalWorldPosition) && FiniteVector(frame.Pelvis.PhysicalComponent) &&
+                FiniteVector(frame.Pelvis.FinalGoal) && float.IsFinite(frame.PelvisWeight) &&
                 frame.PelvisWeight >= 0f && frame.PelvisWeight <= 1f,
                 frame, "physical observation input");
             if (!observation.PoseInputAvailable)
@@ -9322,8 +9224,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             bool residualAvailable = PelvisPhysicalAvailable(frame) &&
                 observation.PoseInputAvailable && frame.PelvisWeight > 0f;
             float expectedResidual = residualAvailable
-                ? Vector3.Distance(frame.PhysicalPelvis,
-                    observation.AnimatedComponentPosition + frame.FinalPelvisGoal * frame.PelvisWeight)
+                ? Vector3.Distance(frame.Pelvis.PhysicalComponent,
+                    observation.AnimatedComponentPosition + frame.Pelvis.FinalGoal * frame.PelvisWeight)
                 : 0f;
             RequirePelvis(observation.GoalResidualAvailable == residualAvailable &&
                 observation.GoalResidual >= 0f && PelvisClose(observation.GoalResidual, expectedResidual) &&
@@ -9335,18 +9237,18 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             for (int i = 1; i < frames.Count; i++)
             {
                 FootFrame previous = frames[i - 1], current = frames[i];
-                PelvisResponseFrame response = current.Pelvis.Response, prior = previous.Pelvis.Response;
+                CharacterFootPelvisResponseSample response = current.Pelvis.Response, prior = previous.Pelvis.Response;
                 if (!Continuous(previous, current) || !response.Evaluated || !response.HadPreviousState ||
                     previous.ProgramIdentity != current.ProgramIdentity || previous.ProfileRevision != current.ProfileRevision ||
                     previous.BodyResetSequence != current.BodyResetSequence)
                     continue;
-                bool supportChanged = !current.PelvisHeightTarget.Available || !previous.PelvisHeightTarget.Available ||
-                    previous.StrideSupportSide != current.StrideSupportSide ||
+                bool supportChanged = !current.Pelvis.HeightTarget.Available || !previous.Pelvis.HeightTarget.Available ||
+                    previous.Pelvis.SupportSide != current.Pelvis.SupportSide ||
                     previous.PrimarySupportEventIdentity != current.PrimarySupportEventIdentity;
                 RequirePelvis(prior.Evaluated && !prior.Completed &&
                     PelvisClose(response.PreviousTarget, prior.Target) && PelvisClose(response.PreviousOutput, prior.Output) &&
                     PelvisClose(response.PreviousVelocity, prior.Velocity) && response.SupportChanged == supportChanged &&
-                    response.PreviousSlope == (previous.PelvisHeightTarget.Available ? previous.StrideSlope : CharacterFootStrideSlope.Flat),
+                    response.PreviousSlope == (previous.Pelvis.HeightTarget.Available ? previous.Pelvis.Slope : CharacterFootStrideSlope.Flat),
                     current, "committed spring carry");
             }
         }
@@ -9459,36 +9361,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             {
                 throw new InvalidDataException(
                     $"Foot Motion {field} Phase facts are inconsistent.");
-            }
-        }
-
-        static void RequireEnum<T>(string value, string field)
-            where T : struct, Enum
-        {
-            if (!Enum.TryParse(value, false, out T parsed) ||
-                !Enum.IsDefined(typeof(T), parsed))
-            {
-                throw new InvalidDataException(
-                    $"Foot Motion Foot row {field} '{value}' is invalid.");
-            }
-        }
-
-        static void RequireFlags<T>(string value, string field)
-            where T : struct, Enum
-        {
-            if (!Enum.TryParse(value, false, out T parsed))
-            {
-                throw new InvalidDataException(
-                    $"Foot Motion Foot row {field} '{value}' is invalid.");
-            }
-            ulong allowed = 0;
-            foreach (T candidate in Enum.GetValues(typeof(T)))
-                allowed |= Convert.ToUInt64(candidate);
-            ulong actual = Convert.ToUInt64(parsed);
-            if ((actual & ~allowed) != 0)
-            {
-                throw new InvalidDataException(
-                    $"Foot Motion Foot row {field} '{value}' is invalid.");
             }
         }
 
@@ -9925,104 +9797,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 "FinalIkLegEffectiveBendDirectionPreviousDot",
                 "PrimarySupportHasValue", "PrimarySupportSide",
                 "PrimarySupportLandingEventIdentity",
-                "StrideState", "StrideSupportSide",
-                "PelvisHeightTargetAvailable",
-                "PelvisHeightTargetComponentUpX", "PelvisHeightTargetComponentUpY", "PelvisHeightTargetComponentUpZ",
-                "PelvisHeightTargetLeftAnimatedSoleX", "PelvisHeightTargetLeftAnimatedSoleY", "PelvisHeightTargetLeftAnimatedSoleZ",
-                "PelvisHeightTargetRightAnimatedSoleX", "PelvisHeightTargetRightAnimatedSoleY", "PelvisHeightTargetRightAnimatedSoleZ",
-                "PelvisHeightTargetLeftTargetSoleX", "PelvisHeightTargetLeftTargetSoleY", "PelvisHeightTargetLeftTargetSoleZ",
-                "PelvisHeightTargetRightTargetSoleX", "PelvisHeightTargetRightTargetSoleY", "PelvisHeightTargetRightTargetSoleZ",
-                "PelvisHeightTargetAnimatedMinimumAlongUp", "PelvisHeightTargetMinimumAlongUp", "PelvisRequestedOffsetAlongUp",
-                "PelvisPosturePreferenceEvaluated",
-                "PelvisPosturePreferenceAvailable",
-                "PelvisPosturePreferenceHipX",
-                "PelvisPosturePreferenceHipY",
-                "PelvisPosturePreferenceHipZ",
-                "PelvisPosturePreferenceAnimatedAnkleX",
-                "PelvisPosturePreferenceAnimatedAnkleY",
-                "PelvisPosturePreferenceAnimatedAnkleZ",
-                "PelvisPosturePreferenceTargetAnkleX",
-                "PelvisPosturePreferenceTargetAnkleY",
-                "PelvisPosturePreferenceTargetAnkleZ",
-                "PelvisPosturePreferenceLegLength",
-                "PelvisPosturePreferenceCompressionReserve",
-                "PelvisPosturePreferenceUsableLegLength",
-                "PelvisPosturePreferenceMinimumAlongUp",
-                "PelvisPosturePreferenceMaximumAlongUp",
-                "PelvisPosturePreferenceOffsetAlongUp",
-                "PelvisPosturePreferenceTargetAdjusted",
-                "PelvisReachComponentUpX",
-                "PelvisReachComponentUpY",
-                "PelvisReachComponentUpZ",
-                "PelvisReachStatus",
-                "PelvisReachIntersectionEvaluated",
-                "PelvisReachIntersectionMinimumAlongUp",
-                "PelvisReachIntersectionMaximumAlongUp",
-                "PelvisReachLeftRole",
-                "PelvisReachLeftStatus",
-                "PelvisReachLeftEventIdentity",
-                "PelvisReachLeftHipX",
-                "PelvisReachLeftHipY",
-                "PelvisReachLeftHipZ",
-                "PelvisReachLeftTargetAnkleX",
-                "PelvisReachLeftTargetAnkleY",
-                "PelvisReachLeftTargetAnkleZ",
-                "PelvisReachLeftLegLength",
-                "PelvisReachLeftMinimumCompressionReserve",
-                "PelvisReachLeftUsableLegLength",
-                "PelvisReachLeftMinimumAlongUp",
-                "PelvisReachLeftMaximumAlongUp",
-                "PelvisReachLeftRequested",
-                "PelvisReachLeftAvailable",
-                "PelvisReachRightRole",
-                "PelvisReachRightStatus",
-                "PelvisReachRightEventIdentity",
-                "PelvisReachRightHipX",
-                "PelvisReachRightHipY",
-                "PelvisReachRightHipZ",
-                "PelvisReachRightTargetAnkleX",
-                "PelvisReachRightTargetAnkleY",
-                "PelvisReachRightTargetAnkleZ",
-                "PelvisReachRightLegLength",
-                "PelvisReachRightMinimumCompressionReserve",
-                "PelvisReachRightUsableLegLength",
-                "PelvisReachRightMinimumAlongUp",
-                "PelvisReachRightMaximumAlongUp",
-                "PelvisReachRightRequested",
-                "PelvisReachRightAvailable",
-                "PelvisResponseEvaluated",
-                "PelvisSpringCompleted",
-                "PelvisSpringIntegratedOutput",
-                "StrideHadPreviousState",
-                "StrideSupportChanged",
-                "StrideSpringVelocityReset",
-                "StridePreviousSpringTarget",
-                "StridePreviousSpringOutput",
-                "StridePreviousSpringVelocity",
-                "StrideSpringInput",
-                "StrideSpringInputVelocity",
-                "StrideSpringFrequency",
-                "StrideSpringTarget",
-                "StrideSpringVelocity",
-                "StridePositionWeight",
-                "StridePreviousSlope",
-                "StrideSpringHandoffReason",
-                "StrideSlope",
-                "StrideRejectReason",
-                "StridePelvisDeltaX",
-                "StridePelvisDeltaY",
-                "StridePelvisDeltaZ",
-                "StrideSpringOutput",
-                "PelvisPositionWeight", "FinalPelvisGoalX", "FinalPelvisGoalY", "FinalPelvisGoalZ",
-                "FinalPhysicalPelvisComponentPositionX", "FinalPhysicalPelvisComponentPositionY",
-                "FinalPhysicalPelvisComponentPositionZ",
-                "PelvisPoseInputAvailable",
-                "StridePoseRootPositionX", "StridePoseRootPositionY", "StridePoseRootPositionZ",
-                "StrideAnimatedPelvisX", "StrideAnimatedPelvisY", "StrideAnimatedPelvisZ",
-                "StrideAnimatedPelvisComponentPositionX", "StrideAnimatedPelvisComponentPositionY", "StrideAnimatedPelvisComponentPositionZ",
-                "FinalPhysicalPelvisWorldPositionX", "FinalPhysicalPelvisWorldPositionY", "FinalPhysicalPelvisWorldPositionZ",
-                "FinalPhysicalPelvisGoalResidualAvailable", "FinalPhysicalPelvisGoalResidual"
-            };
+                "PelvisPositionWeight", };
             foreach (string name in required)
             {
                 if (!indices.ContainsKey(name))
@@ -10781,17 +10556,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             internal bool PrimarySupportAvailable;
             internal string PrimarySupportSide;
             internal ulong PrimarySupportEventIdentity;
-            internal string StrideState;
-            internal PelvisHeightTargetFrame PelvisHeightTarget;
-            internal string StrideSupportSide;
-            internal PelvisFrame Pelvis;
-            internal CharacterFootStrideSlope StrideSlope;
-            internal CharacterFootStrideRejectReason StrideRejectReason;
-            internal Vector3 StridePelvisDelta;
-            internal float StrideSpringOutput;
+            internal CharacterFootPelvisSample Pelvis;
             internal float PelvisWeight;
-            internal Vector3 FinalPelvisGoal;
-            internal Vector3 PhysicalPelvis;
             internal Vector3 EffectiveCorrection => CorrectedAnkle - OriginalAnkle;
         }
 
@@ -10800,14 +10566,14 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             {
                 frame = frame.Frame,
                 completionIdentity = frame.CompletionIdentity.ToString(CultureInfo.InvariantCulture),
-                strideState = frame.StrideState,
-                strideRejectReason = frame.StrideRejectReason.ToString(),
+                strideState = frame.Pelvis.State,
+                strideRejectReason = frame.Pelvis.RejectReason.ToString(),
                 formalFootPlacementWeight = frame.FormalFootPlacementWeight,
                 primarySupportSide = frame.PrimarySupportSide,
                 primarySupportEventIdentity = frame.PrimarySupportEventIdentity.ToString(CultureInfo.InvariantCulture),
                 observation = BuildPelvisObservationFact(frame),
                 motion = BuildPelvisMotionFact(previous, frame),
-                heightTarget = frame.PelvisHeightTarget.ToFact(frame),
+                heightTarget = BuildPelvisHeightTargetFact(frame),
                 posturePreference = BuildPelvisPostureFact(frame.Pelvis.Posture),
                 reach = BuildPelvisReachFact(frame.Pelvis.Reach),
                 response = BuildPelvisResponseFact(frame.Pelvis.Response)
@@ -10815,7 +10581,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
 
         static CharacterFootPelvisOutputObservation BuildPelvisObservationFact(FootFrame frame)
         {
-            PelvisObservationFrame observation = frame.Pelvis.Observation;
+            CharacterFootPelvisObservationSample observation = frame.Pelvis.Observation;
             bool physicalAvailable = PelvisPhysicalAvailable(frame);
             return new CharacterFootPelvisOutputObservation
             {
@@ -10826,13 +10592,13 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 physicalWriteAvailable = physicalAvailable,
                 physicalWriteCompletionIdentity = frame.FinalPhysicalWriteCompletionIdentity.ToString(CultureInfo.InvariantCulture),
                 physicalWorldPosition = physicalAvailable ? CharacterFootVectorFact.From(observation.PhysicalWorldPosition) : null,
-                physicalComponentPosition = physicalAvailable ? CharacterFootVectorFact.From(frame.PhysicalPelvis) : null,
-                goalCorrectionComponent = CharacterFootVectorFact.From(frame.FinalPelvisGoal),
+                physicalComponentPosition = physicalAvailable ? CharacterFootVectorFact.From(frame.Pelvis.PhysicalComponent) : null,
+                goalCorrectionComponent = CharacterFootVectorFact.From(frame.Pelvis.FinalGoal),
                 positionWeight = frame.PelvisWeight,
-                weightedCorrectionComponent = CharacterFootVectorFact.From(frame.FinalPelvisGoal * frame.PelvisWeight),
+                weightedCorrectionComponent = CharacterFootVectorFact.From(frame.Pelvis.FinalGoal * frame.PelvisWeight),
                 goalResidualAvailable = observation.GoalResidualAvailable,
                 expectedPhysicalComponentPosition = observation.GoalResidualAvailable
-                    ? CharacterFootVectorFact.From(observation.AnimatedComponentPosition + frame.FinalPelvisGoal * frame.PelvisWeight) : null,
+                    ? CharacterFootVectorFact.From(observation.AnimatedComponentPosition + frame.Pelvis.FinalGoal * frame.PelvisWeight) : null,
                 goalResidualComponentUnits = observation.GoalResidualAvailable ? (double?)observation.GoalResidual : null
             };
         }
@@ -10850,13 +10616,13 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 physicalWorldDelta = physicalAvailable
                     ? CharacterFootVectorFact.From(frame.Pelvis.Observation.PhysicalWorldPosition - previous.Pelvis.Observation.PhysicalWorldPosition) : null,
                 physicalComponentDelta = physicalAvailable
-                    ? CharacterFootVectorFact.From(frame.PhysicalPelvis - previous.PhysicalPelvis) : null,
+                    ? CharacterFootVectorFact.From(frame.Pelvis.PhysicalComponent - previous.Pelvis.PhysicalComponent) : null,
                 weightedCorrectionComponentDelta = continuous
-                    ? CharacterFootVectorFact.From(frame.FinalPelvisGoal * frame.PelvisWeight - previous.FinalPelvisGoal * previous.PelvisWeight) : null
+                    ? CharacterFootVectorFact.From(frame.Pelvis.FinalGoal * frame.PelvisWeight - previous.Pelvis.FinalGoal * previous.PelvisWeight) : null
             };
         }
 
-        static CharacterFootPelvisPostureObservation BuildPelvisPostureFact(PelvisPostureFrame posture) =>
+        static CharacterFootPelvisPostureObservation BuildPelvisPostureFact(CharacterFootPelvisPostureSample posture) =>
             new CharacterFootPelvisPostureObservation
             {
                 evaluated = posture.Evaluated,
@@ -10873,7 +10639,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 targetAdjusted = posture.TargetAdjusted,
             };
 
-        static CharacterFootPelvisLegReachObservation BuildPelvisLegFact(PelvisLegFrame leg) =>
+        static CharacterFootPelvisLegReachObservation BuildPelvisLegFact(CharacterFootPelvisLegSample leg) =>
             new CharacterFootPelvisLegReachObservation
             {
                 role = leg.Role.ToString(),
@@ -10890,7 +10656,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 available = leg.Available,
             };
 
-        static CharacterFootPelvisReachObservation BuildPelvisReachFact(PelvisReachFrame reach) =>
+        static CharacterFootPelvisReachObservation BuildPelvisReachFact(CharacterFootPelvisReachSample reach) =>
             new CharacterFootPelvisReachObservation
             {
                 componentUp = reach.ComponentUp.Equals(Vector3.zero) ? null : CharacterFootVectorFact.From(reach.ComponentUp),
@@ -10902,7 +10668,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 right = BuildPelvisLegFact(reach.Right)
             };
 
-        static CharacterFootPelvisResponseObservation BuildPelvisResponseFact(PelvisResponseFrame response) =>
+        static CharacterFootPelvisResponseObservation BuildPelvisResponseFact(CharacterFootPelvisResponseSample response) =>
             new CharacterFootPelvisResponseObservation
             {
                 evaluated = response.Evaluated,
@@ -10926,222 +10692,54 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 appliedOffsetAlongUp = response.Evaluated ? (double?)(response.Output * response.PositionWeight) : null
             };
 
-        sealed class PelvisFrame
+        static void RequirePelvisHeightTarget(FootFrame frame)
         {
-            internal PelvisObservationFrame Observation;
-            internal PelvisPostureFrame Posture;
-            internal PelvisReachFrame Reach;
-            internal PelvisResponseFrame Response;
-            internal bool SameAs(PelvisFrame other) =>
-                Observation.SameAs(other.Observation) && Posture.SameAs(other.Posture) &&
-                Reach.SameAs(other.Reach) && Response.SameAs(other.Response);
-        }
-
-        sealed class PelvisObservationFrame
-        {
-            internal bool PoseInputAvailable;
-            internal Vector3 PoseRootWorldPosition;
-            internal Vector3 AnimatedWorldPosition;
-            internal Vector3 AnimatedComponentPosition;
-            internal Vector3 PhysicalWorldPosition;
-            internal bool GoalResidualAvailable;
-            internal float GoalResidual;
-            internal bool SameAs(PelvisObservationFrame other) =>
-                PoseInputAvailable == other.PoseInputAvailable &&
-                PoseRootWorldPosition.Equals(other.PoseRootWorldPosition) &&
-                AnimatedWorldPosition.Equals(other.AnimatedWorldPosition) &&
-                AnimatedComponentPosition.Equals(other.AnimatedComponentPosition) &&
-                PhysicalWorldPosition.Equals(other.PhysicalWorldPosition) &&
-                GoalResidualAvailable == other.GoalResidualAvailable && GoalResidual.Equals(other.GoalResidual);
-        }
-
-        sealed class PelvisPostureFrame
-        {
-            internal bool Evaluated;
-            internal bool Available;
-            internal Vector3 Hip;
-            internal Vector3 AnimatedAnkle;
-            internal Vector3 TargetAnkle;
-            internal float LegLength;
-            internal float CompressionReserve;
-            internal float UsableLegLength;
-            internal float MinimumAlongUp;
-            internal float MaximumAlongUp;
-            internal float OffsetAlongUp;
-            internal bool TargetAdjusted;
-            internal bool SameAs(PelvisPostureFrame other) =>
-                Evaluated == other.Evaluated &&
-                Available == other.Available &&
-                Hip.Equals(other.Hip) &&
-                AnimatedAnkle.Equals(other.AnimatedAnkle) &&
-                TargetAnkle.Equals(other.TargetAnkle) &&
-                LegLength == other.LegLength &&
-                CompressionReserve == other.CompressionReserve &&
-                UsableLegLength == other.UsableLegLength &&
-                MinimumAlongUp == other.MinimumAlongUp &&
-                MaximumAlongUp == other.MaximumAlongUp &&
-                OffsetAlongUp == other.OffsetAlongUp &&
-                TargetAdjusted == other.TargetAdjusted;
-        }
-
-        sealed class PelvisLegFrame
-        {
-            internal CharacterFootPelvisLegReachRole Role;
-            internal CharacterFootPelvisLegReachStatus Status;
-            internal ulong EventIdentity;
-            internal Vector3 Hip;
-            internal Vector3 TargetAnkle;
-            internal float LegLength;
-            internal float MinimumCompressionReserve;
-            internal float UsableLegLength;
-            internal float MinimumAlongUp;
-            internal float MaximumAlongUp;
-            internal bool Requested;
-            internal bool Available;
-            internal bool FootTarget => (Role & CharacterFootPelvisLegReachRole.FootTarget) != 0;
-            internal bool PrimarySupport => (Role & CharacterFootPelvisLegReachRole.PrimarySupport) != 0;
-            internal bool SameAs(PelvisLegFrame other) =>
-                Role == other.Role &&
-                Status == other.Status &&
-                EventIdentity == other.EventIdentity &&
-                Hip.Equals(other.Hip) &&
-                TargetAnkle.Equals(other.TargetAnkle) &&
-                LegLength == other.LegLength &&
-                MinimumCompressionReserve == other.MinimumCompressionReserve &&
-                UsableLegLength == other.UsableLegLength &&
-                MinimumAlongUp == other.MinimumAlongUp &&
-                MaximumAlongUp == other.MaximumAlongUp &&
-                Requested == other.Requested &&
-                Available == other.Available;
-        }
-
-        sealed class PelvisReachFrame
-        {
-            internal Vector3 ComponentUp;
-            internal CharacterFootPelvisReachStatus Status;
-            internal bool IntersectionEvaluated;
-            internal float IntersectionMinimumAlongUp;
-            internal float IntersectionMaximumAlongUp;
-            internal PelvisLegFrame Left;
-            internal PelvisLegFrame Right;
-            internal bool SameAs(PelvisReachFrame other) =>
-                ComponentUp.Equals(other.ComponentUp) &&
-                Status == other.Status &&
-                IntersectionEvaluated == other.IntersectionEvaluated &&
-                IntersectionMinimumAlongUp == other.IntersectionMinimumAlongUp &&
-                IntersectionMaximumAlongUp == other.IntersectionMaximumAlongUp &&
-                Left.SameAs(other.Left) &&
-                Right.SameAs(other.Right);
-        }
-
-        sealed class PelvisResponseFrame
-        {
-            internal bool Evaluated;
-            internal bool Completed;
-            internal float IntegratedOutput;
-            internal bool HadPreviousState;
-            internal bool SupportChanged;
-            internal bool VelocityReset;
-            internal float PreviousTarget;
-            internal float PreviousOutput;
-            internal float PreviousVelocity;
-            internal float Input;
-            internal float InputVelocity;
-            internal float Frequency;
-            internal float Target;
-            internal float Output;
-            internal float Velocity;
-            internal float PositionWeight;
-            internal CharacterFootStrideSlope PreviousSlope;
-            internal CharacterFootPelvisSpringHandoffReason Handoff;
-            internal bool SameAs(PelvisResponseFrame other) =>
-                Evaluated == other.Evaluated &&
-                Completed == other.Completed &&
-                IntegratedOutput == other.IntegratedOutput &&
-                HadPreviousState == other.HadPreviousState &&
-                SupportChanged == other.SupportChanged &&
-                VelocityReset == other.VelocityReset &&
-                PreviousTarget == other.PreviousTarget &&
-                PreviousOutput == other.PreviousOutput &&
-                PreviousVelocity == other.PreviousVelocity &&
-                Input == other.Input &&
-                InputVelocity == other.InputVelocity &&
-                Frequency == other.Frequency &&
-                Target == other.Target &&
-                Output == other.Output &&
-                Velocity == other.Velocity &&
-                PositionWeight == other.PositionWeight &&
-                PreviousSlope == other.PreviousSlope &&
-                Handoff == other.Handoff;
-        }
-
-        sealed class PelvisHeightTargetFrame
-        {
-            internal bool Available;
-            internal Vector3 ComponentUp;
-            internal Vector3 LeftAnimatedSole;
-            internal Vector3 RightAnimatedSole;
-            internal Vector3 LeftTargetSole;
-            internal Vector3 RightTargetSole;
-            internal float AnimatedMinimumAlongUp;
-            internal float TargetMinimumAlongUp;
-            internal float RequestedOffsetAlongUp;
-
-            internal void RequireValid(FootFrame frame)
+            CharacterFootPelvisHeightTargetSample target = frame.Pelvis.HeightTarget;
+            if (!target.Available)
             {
-                if (!Available)
-                {
-                    if (!ComponentUp.Equals(Vector3.zero) ||
-                        !LeftAnimatedSole.Equals(Vector3.zero) || !RightAnimatedSole.Equals(Vector3.zero) ||
-                        !LeftTargetSole.Equals(Vector3.zero) || !RightTargetSole.Equals(Vector3.zero) ||
-                        AnimatedMinimumAlongUp != 0f || TargetMinimumAlongUp != 0f || RequestedOffsetAlongUp != 0f)
-                        throw new InvalidDataException(
-                            $"Foot Motion unavailable Pelvis height target is not default Frame={frame.Frame} Side={frame.Side}.");
-                    return;
-                }
-                float animatedMinimum = Mathf.Min(Vector3.Dot(LeftAnimatedSole, ComponentUp),
-                    Vector3.Dot(RightAnimatedSole, ComponentUp));
-                float targetMinimum = Mathf.Min(Vector3.Dot(LeftTargetSole, ComponentUp),
-                    Vector3.Dot(RightTargetSole, ComponentUp));
-                if (!FiniteVector(ComponentUp) || Math.Abs(ComponentUp.sqrMagnitude - 1f) > RuntimeGeometryEpsilon ||
-                    !FiniteVector(LeftAnimatedSole) || !FiniteVector(RightAnimatedSole) ||
-                    !FiniteVector(LeftTargetSole) || !FiniteVector(RightTargetSole) ||
-                    !float.IsFinite(AnimatedMinimumAlongUp) || !float.IsFinite(TargetMinimumAlongUp) ||
-                    !float.IsFinite(RequestedOffsetAlongUp) || !float.IsFinite(animatedMinimum) ||
-                    !float.IsFinite(targetMinimum) ||
-                    Math.Abs(AnimatedMinimumAlongUp - animatedMinimum) > RuntimeGeometryEpsilon ||
-                    Math.Abs(TargetMinimumAlongUp - targetMinimum) > RuntimeGeometryEpsilon ||
-                    Math.Abs(RequestedOffsetAlongUp - (targetMinimum - animatedMinimum)) > RuntimeGeometryEpsilon)
+                if (!target.ComponentUp.Equals(Vector3.zero) ||
+                    !target.LeftAnimatedSole.Equals(Vector3.zero) || !target.RightAnimatedSole.Equals(Vector3.zero) ||
+                    !target.LeftTargetSole.Equals(Vector3.zero) || !target.RightTargetSole.Equals(Vector3.zero) ||
+                    target.AnimatedMinimumAlongUp != 0f || target.TargetMinimumAlongUp != 0f || target.RequestedOffsetAlongUp != 0f)
                     throw new InvalidDataException(
-                        $"Foot Motion Pelvis height target is inconsistent Frame={frame.Frame} Side={frame.Side} " +
-                        $"AnimatedMinimum={AnimatedMinimumAlongUp:R}/{animatedMinimum:R} " +
-                        $"TargetMinimum={TargetMinimumAlongUp:R}/{targetMinimum:R} RequestedOffset={RequestedOffsetAlongUp:R}.");
+                        $"Foot Motion unavailable Pelvis height target is not default Frame={frame.Frame} Side={frame.Side}.");
+                return;
             }
-
-            internal bool SameAs(PelvisHeightTargetFrame other) =>
-                Available == other.Available && ComponentUp.Equals(other.ComponentUp) &&
-                LeftAnimatedSole.Equals(other.LeftAnimatedSole) && RightAnimatedSole.Equals(other.RightAnimatedSole) &&
-                LeftTargetSole.Equals(other.LeftTargetSole) && RightTargetSole.Equals(other.RightTargetSole) &&
-                AnimatedMinimumAlongUp == other.AnimatedMinimumAlongUp &&
-                TargetMinimumAlongUp == other.TargetMinimumAlongUp && RequestedOffsetAlongUp == other.RequestedOffsetAlongUp;
-
-            internal CharacterFootPelvisHeightTargetObservation ToFact(FootFrame frame) =>
-                new CharacterFootPelvisHeightTargetObservation
-                {
-                    frame = frame.Frame,
-                    completionIdentity = frame.CompletionIdentity.ToString(CultureInfo.InvariantCulture),
-                    strideState = frame.StrideState,
-                    available = Available,
-                    componentUp = Available ? CharacterFootVectorFact.From(ComponentUp) : null,
-                    leftAnimatedSole = Available ? CharacterFootVectorFact.From(LeftAnimatedSole) : null,
-                    rightAnimatedSole = Available ? CharacterFootVectorFact.From(RightAnimatedSole) : null,
-                    leftTargetSole = Available ? CharacterFootVectorFact.From(LeftTargetSole) : null,
-                    rightTargetSole = Available ? CharacterFootVectorFact.From(RightTargetSole) : null,
-                    animatedMinimumAlongUp = Available ? (double?)AnimatedMinimumAlongUp : null,
-                    targetMinimumAlongUp = Available ? (double?)TargetMinimumAlongUp : null,
-                    requestedOffsetAlongUp = Available ? (double?)RequestedOffsetAlongUp : null
-                };
+            float animatedMinimum = Mathf.Min(Vector3.Dot(target.LeftAnimatedSole, target.ComponentUp),
+                Vector3.Dot(target.RightAnimatedSole, target.ComponentUp));
+            float targetMinimum = Mathf.Min(Vector3.Dot(target.LeftTargetSole, target.ComponentUp),
+                Vector3.Dot(target.RightTargetSole, target.ComponentUp));
+            if (!FiniteVector(target.ComponentUp) || Math.Abs(target.ComponentUp.sqrMagnitude - 1f) > RuntimeGeometryEpsilon ||
+                !FiniteVector(target.LeftAnimatedSole) || !FiniteVector(target.RightAnimatedSole) ||
+                !FiniteVector(target.LeftTargetSole) || !FiniteVector(target.RightTargetSole) ||
+                !float.IsFinite(target.AnimatedMinimumAlongUp) || !float.IsFinite(target.TargetMinimumAlongUp) ||
+                !float.IsFinite(target.RequestedOffsetAlongUp) || !float.IsFinite(animatedMinimum) ||
+                !float.IsFinite(targetMinimum) ||
+                Math.Abs(target.AnimatedMinimumAlongUp - animatedMinimum) > RuntimeGeometryEpsilon ||
+                Math.Abs(target.TargetMinimumAlongUp - targetMinimum) > RuntimeGeometryEpsilon ||
+                Math.Abs(target.RequestedOffsetAlongUp - (targetMinimum - animatedMinimum)) > RuntimeGeometryEpsilon)
+                throw new InvalidDataException(
+                    $"Foot Motion Pelvis height target is inconsistent Frame={frame.Frame} Side={frame.Side} " +
+                    $"AnimatedMinimum={target.AnimatedMinimumAlongUp:R}/{animatedMinimum:R} " +
+                    $"TargetMinimum={target.TargetMinimumAlongUp:R}/{targetMinimum:R} RequestedOffset={target.RequestedOffsetAlongUp:R}.");
         }
+
+        static CharacterFootPelvisHeightTargetObservation BuildPelvisHeightTargetFact(FootFrame frame) =>
+            new CharacterFootPelvisHeightTargetObservation
+            {
+                frame = frame.Frame,
+                completionIdentity = frame.CompletionIdentity.ToString(CultureInfo.InvariantCulture),
+                strideState = frame.Pelvis.State,
+                available = frame.Pelvis.HeightTarget.Available,
+                componentUp = frame.Pelvis.HeightTarget.Available ? CharacterFootVectorFact.From(frame.Pelvis.HeightTarget.ComponentUp) : null,
+                leftAnimatedSole = frame.Pelvis.HeightTarget.Available ? CharacterFootVectorFact.From(frame.Pelvis.HeightTarget.LeftAnimatedSole) : null,
+                rightAnimatedSole = frame.Pelvis.HeightTarget.Available ? CharacterFootVectorFact.From(frame.Pelvis.HeightTarget.RightAnimatedSole) : null,
+                leftTargetSole = frame.Pelvis.HeightTarget.Available ? CharacterFootVectorFact.From(frame.Pelvis.HeightTarget.LeftTargetSole) : null,
+                rightTargetSole = frame.Pelvis.HeightTarget.Available ? CharacterFootVectorFact.From(frame.Pelvis.HeightTarget.RightTargetSole) : null,
+                animatedMinimumAlongUp = frame.Pelvis.HeightTarget.Available ? (double?)frame.Pelvis.HeightTarget.AnimatedMinimumAlongUp : null,
+                targetMinimumAlongUp = frame.Pelvis.HeightTarget.Available ? (double?)frame.Pelvis.HeightTarget.TargetMinimumAlongUp : null,
+                requestedOffsetAlongUp = frame.Pelvis.HeightTarget.Available ? (double?)frame.Pelvis.HeightTarget.RequestedOffsetAlongUp : null
+            };
 
         static bool RevisionReasonIncludes(
             string value,
@@ -11230,7 +10828,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     baselineHipBeforePelvisOutput =
                         ScalarVector3Fact.From(
                             frame.FinalIkLegOriginalHip),
-                    strideSpringOutputMeters = frame.StrideSpringOutput,
+                    strideSpringOutputMeters = frame.Pelvis.Response.Output,
                     originalExtensionRatio = frame.OriginalExtensionRatio,
                     targetExtensionRatio = frame.TargetExtensionRatio,
                     solvedExtensionRatio = frame.SolvedExtensionRatio,
@@ -11257,8 +10855,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     primarySupportLandingEventIdentity =
                         frame.PrimarySupportEventIdentity.ToString(
                             CultureInfo.InvariantCulture),
-                    strideState = frame.StrideState,
-                    strideSupportSide = frame.StrideSupportSide,
+                    strideState = frame.Pelvis.State,
+                    strideSupportSide = frame.Pelvis.SupportSide,
                     pelvisReachObservationEvaluated =
                         frame.Pelvis.Reach.IntersectionEvaluated,
                     pelvisReachObservationMinimumAlongUpMeters =
@@ -11299,7 +10897,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     return result;
                 }
                 double appliedPelvisAlongUp = Vector3.Dot(
-                    frame.FinalPelvisGoal,
+                    frame.Pelvis.FinalGoal,
                     up) * frame.PelvisWeight;
                 Vector3 baselineHip = frame.FinalIkLegOriginalHip -
                     up * (float)appliedPelvisAlongUp;

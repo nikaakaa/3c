@@ -11,7 +11,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
     internal enum CharacterFootCsvUnit
     {
         None, Identity, Frame, Category, Metres, Seconds, Degrees,
-        MetresPerSecond, Unitless, Direction, Count, Bitmask
+        MetresPerSecond, Unitless, Direction, Count, Bitmask, Hertz
     }
 
     internal enum CharacterFootCsvKind

@@ -161,9 +161,24 @@ PredictionMotion、BodyTrajectory及其Tick/Generation/ResetSequence/AuthorityTi
 
 ## 脚步候选、阶段与正式事件列
 
-状态：实现、Unity编译与规定参数Editor构建通过，0错误，等待正式回放。
+状态：候选8026fcb已完成实际Replay及全部列／查询验证；最初问答中断后的turn完成不算通过，以下033553才是本候选真实证据。
 
 - Current/Incoming候选各19列及Selected Phase的5列由共享阶段定义驱动；保留原Selected Source条件，没有改变选择规则。
 - 输入与输出Formal Event各20列共用一次正式事件准备和同一事件字段形状。保留原available与IsValid条件、未绑定Event的零Identity和无效时的空/零输出；以前未被规则使用的列也具备typed读写绑定。
 - 删除这83列的旧Header、写入helper、局部解析函数和必需列清单。读取端用按文件创建的CharacterFootSampleReadBindings汇聚一次列索引绑定，不再随分组增加ParseFrame参数。
 - 累计305/1215列已迁移，Runtime、格式identity和评分规则未改。下一验证同时比较a9105e3/030817与固定ad3527e/233436；Reset4.4继续未完成。
+
+## 候选／正式事件列的验证封口
+
+- 原包：`Diagnostics/FootPlacementRuns/20260901-033553-950-371118784cce4c25812efa74b4b15a57`，候选8026fcb；一次精确Record回放完成1044输入。最初验证任务因诊断问答结束时尚未发出Replay，已显式纠正，没有借用旧包。
+- 对上一a9105e3/030817与固定233436：全部1215列顺序一致，1191业务列逐格一致、23身份列双向映射无冲突、UTC独列；新83列全部值一致，累计305列为298精确列和7既有身份列。几何22业务列及5身份映射保持，Proof输入／Body／时钟及1044帧一致。
+- 42Target、规则／统计／coverage与quality保持；305列的六个实际帧查询、geometry查询及全部20447明细索引、原始分段校验通过。普通Record下没有非身份差异，未补Reset4.4或其它未覆盖输入。
+- 测试任务已明确归还Unity；下一闭环普通行为对照为8026fcb，固定总基线仍是ad3527e。
+
+## Pelvis字段组
+
+状态：实现、Unity与Editor编译通过，0错误；已删除迁移后未再使用的局部FlagsField，尚未回放。
+
+- 将Pelvis的133列收进87个typed绑定，包含原Height Target、Posture、Reach、Response及对应Goal/Physical观察；额外保留过去未供规则使用的五个原始Stride字段，没有新增业务规则。
+- 原解析记录移出巨型Analyzer并保持分组，Height Target的语义检查和事实投影仍由Analyzer执行，原公式、顺序与容差不变。StrideSpringOutput的重复解析存储已删除，全部消费者读取同一Response.Output。
+- 字符串枚举／flags检查由共享CSV Values提供，保留原ToString、分隔符及失败语义。累计438/1215列迁入绑定，仍不代表任务5完成。

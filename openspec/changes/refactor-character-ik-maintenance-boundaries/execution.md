@@ -177,8 +177,23 @@ PredictionMotion、BodyTrajectory及其Tick/Generation/ResetSequence/AuthorityTi
 
 ## Pelvis字段组
 
-状态：实现、Unity与Editor编译通过，0错误；已删除迁移后未再使用的局部FlagsField，尚未回放。
+状态：候选6ba9ec3已通过实际Replay、133列及1043个完整Pelvis事实投影对账。
 
 - 将Pelvis的133列收进87个typed绑定，包含原Height Target、Posture、Reach、Response及对应Goal/Physical观察；额外保留过去未供规则使用的五个原始Stride字段，没有新增业务规则。
 - 原解析记录移出巨型Analyzer并保持分组，Height Target的语义检查和事实投影仍由Analyzer执行，原公式、顺序与容差不变。StrideSpringOutput的重复解析存储已删除，全部消费者读取同一Response.Output。
 - 字符串枚举／flags检查由共享CSV Values提供，保留原ToString、分隔符及失败语义。累计438/1215列迁入绑定，仍不代表任务5完成。
+
+## Pelvis列绑定的验证封口
+
+- 原包：`Diagnostics/FootPlacementRuns/20260901-034923-038-6b0960f4ec434f93b0ae44f2f91f4ab0`，候选6ba9ec3；一次原Record完成1044输入，独立对033553和固定233436的输入／Body／时钟及帧数组无差异。
+- CSV1215列顺序相同、1191业务列逐格相同，身份映射无冲突。133个Pelvis列全部精确一致，累计438列为431精确与7身份列。几何22业务列、5身份映射保持。
+- 特别对账1043个pelvisFrames的完整Observation/HeightTarget/Posture/Reach/Response JSON，两个基线均differentFrames=0。42Target、规则、统计、coverage与quality保持，61.9不变。
+- 六个438列真实帧查询、geometry查询、20447条明细索引、原始文件全部分段校验通过。原始数据与持久Proof保留，测试已归还Unity。Reset与原有未覆盖限制不变。
+
+## Solver与Physical列绑定
+
+状态：实现、Unity与Editor构建通过，0错误，build server已关闭；尚未回放。
+
+- 将尾部Solver/Physical的93列接入55项typed绑定；捕获来源仍是原FootIkCapture与原世界坐标/Heel/Toe/残差计算。代码只改变数据投影与读写位置，不新增求解、查询或骨骼写入。
+- 解析记录独立保存Solver要求／求解结果和Physical实际写入字段，原有规则只调整读取路径；以前仅写入而未参与规则的原始列也保留typed解析，不新增评分规则。
+- 删除对应旧Header、写行和解析/必需列映射。累计531/1215列迁入绑定，格式identity不变，任务5仍未完成。

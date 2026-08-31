@@ -267,32 +267,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             "FootMotionEncodedGoalAvailable,FootMotionEncodedGoalCorrectionX,FootMotionEncodedGoalCorrectionY,FootMotionEncodedGoalCorrectionZ," +
             "FinalGoalPositionX,FinalGoalPositionY,FinalGoalPositionZ,FinalGoalRotationX,FinalGoalRotationY,FinalGoalRotationZ,FinalGoalRotationW,FinalGoalPositionWeight,FinalGoalRotationWeight,PelvisPositionWeight,PelvisRotationWeight," +
             CharacterFootPelvisColumns.Schema.Header + "," +
-            "FinalIkSolverAvailable,FinalIkSucceeded,FinalIkFrameSequence,FinalIkInputCompletionIdentity,FinalIkOutputCompletionIdentity," +
-            "FinalIkBackendIdentity,FinalIkRigId,FinalIkRigRevision,FinalIkProfileId,FinalIkProfileRevision,FinalIkFailure,FinalIkAppliedGoalCount," +
-            "FinalIkEffectorAvailable,FinalIkEffectorSlot,FinalIkTargetPositionX,FinalIkTargetPositionY,FinalIkTargetPositionZ," +
-            "FinalIkSolvedPositionX,FinalIkSolvedPositionY,FinalIkSolvedPositionZ,FinalIkPositionResidual,FinalIkRotationResidualDegrees," +
-            "FinalIkLegAvailable,FinalIkLegSlot,FinalIkLegBendWeight,FinalIkLegStabilizationWeight,FinalIkLegRetainedPreviousBendDirection," +
-            "FinalIkLegOriginalHipX,FinalIkLegOriginalHipY,FinalIkLegOriginalHipZ," +
-            "FinalIkLegOriginalKneeX,FinalIkLegOriginalKneeY,FinalIkLegOriginalKneeZ," +
-            "FinalIkLegOriginalAnkleX,FinalIkLegOriginalAnkleY,FinalIkLegOriginalAnkleZ," +
-            "FinalIkLegTargetAnkleX,FinalIkLegTargetAnkleY,FinalIkLegTargetAnkleZ," +
-            "FinalIkLegSolvedHipX,FinalIkLegSolvedHipY,FinalIkLegSolvedHipZ," +
-            "FinalIkLegSolvedKneeX,FinalIkLegSolvedKneeY,FinalIkLegSolvedKneeZ," +
-            "FinalIkLegSolvedAnkleX,FinalIkLegSolvedAnkleY,FinalIkLegSolvedAnkleZ," +
-            "FinalIkLegOriginalBendDegrees,FinalIkLegSolvedBendDegrees," +
-            "FinalIkLegOriginalExtensionRatio,FinalIkLegTargetExtensionRatio,FinalIkLegSolvedExtensionRatio," +
-            "FinalIkLegOriginalCompressionReserve,FinalIkLegTargetCompressionReserve,FinalIkLegSolvedCompressionReserve," +
-            "FinalIkLegEffectiveBendDirectionX,FinalIkLegEffectiveBendDirectionY,FinalIkLegEffectiveBendDirectionZ," +
-            "FinalIkLegAnimatedBendDirectionPreviousDot,FinalIkLegEffectiveBendDirectionPreviousDot," +
-            "FinalIkPelvisAvailable,FinalIkPelvisTargetPositionX,FinalIkPelvisTargetPositionY,FinalIkPelvisTargetPositionZ," +
-            "FinalIkPelvisSolvedPositionX,FinalIkPelvisSolvedPositionY,FinalIkPelvisSolvedPositionZ,FinalIkPelvisPositionResidual,FinalIkPelvisRotationResidualDegrees," +
-            "FinalPhysicalWriteAvailable,FinalPhysicalWriteCompletionIdentity," +
-            "FinalPhysicalAnkleComponentPositionX,FinalPhysicalAnkleComponentPositionY,FinalPhysicalAnkleComponentPositionZ," +
-            "FinalPhysicalAnkleComponentRotationX,FinalPhysicalAnkleComponentRotationY,FinalPhysicalAnkleComponentRotationZ,FinalPhysicalAnkleComponentRotationW," +
-            "FinalPhysicalAnkleWorldPositionX,FinalPhysicalAnkleWorldPositionY,FinalPhysicalAnkleWorldPositionZ," +
-            "FinalPhysicalAnkleWorldRotationX,FinalPhysicalAnkleWorldRotationY,FinalPhysicalAnkleWorldRotationZ,FinalPhysicalAnkleWorldRotationW," +
-            "FinalPhysicalHeelWorldX,FinalPhysicalHeelWorldY,FinalPhysicalHeelWorldZ," +
-            "FinalPhysicalToeWorldX,FinalPhysicalToeWorldY,FinalPhysicalToeWorldZ,FinalPhysicalAnkleGoalResidual";
+            CharacterFootSolverColumns.Schema.Header;
         const string GeometryHeader =
             "SampleIdentity,FrameSequence,CompletionIdentity,Side,GroundPathInputIdentity," +
             "GroundContactIndex,GroundContactSegmentIndex,GroundContactSurfaceIdentity,GroundContactCandidateIdentity," +
@@ -674,7 +649,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             }
         }
 
-        readonly struct FootIkCapture
+        internal readonly struct FootIkCapture
         {
             internal FootIkCapture(
                 CharacterFullBodyIkSolverDiagnostics solver,
@@ -2334,61 +2309,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 pelvisGoalResidualAvailable, pelvisGoalResidual);
             CharacterFootPelvisColumns.Schema.Write(row, in pelvisSource);
 
-            CharacterFullBodyIkSolverDiagnostics solver = ik.Solver;
-            CharacterFullBodyIkEffectorDiagnostics effector = ik.Effector;
-            Add(row, ik.SolverAvailable);
-            Add(row, solver.Succeeded);
-            Add(row, solver.FrameSequence);
-            Add(row, solver.InputCompletionIdentity);
-            Add(row, solver.OutputCompletionIdentity);
-            Add(row, solver.BackendIdentity);
-            Add(row, solver.RigId);
-            Add(row, solver.RigRevision);
-            Add(row, solver.ProfileId);
-            Add(row, solver.ProfileRevision);
-            Add(row, solver.Failure.ToString());
-            Add(row, solver.AppliedGoalCount);
-            Add(row, ik.EffectorAvailable);
-            Add(row, effector.Slot.ToString());
-            Add(row, effector.TargetComponentPosition);
-            Add(row, effector.SolvedComponentPosition);
-            Add(row, effector.PositionResidual);
-            Add(row, effector.RotationResidualDegrees);
-            CharacterFullBodyIkLimbDiagnostics limb = ik.Limb;
-            CharacterFullBodyIkLegPoseDiagnostics legPose = limb.LegPose;
-            Add(row, legPose.IsAvailable);
-            Add(row, limb.Limb.ToString());
-            Add(row, limb.BendWeight);
-            Add(row, legPose.StabilizationWeight);
-            Add(row, legPose.RetainedPreviousBendDirection);
-            Add(row, legPose.OriginalHip);
-            Add(row, legPose.OriginalKnee);
-            Add(row, legPose.OriginalAnkle);
-            Add(row, legPose.TargetAnkle);
-            Add(row, legPose.SolvedHip);
-            Add(row, legPose.SolvedKnee);
-            Add(row, legPose.SolvedAnkle);
-            Add(row, legPose.OriginalBendDegrees);
-            Add(row, legPose.SolvedBendDegrees);
-            Add(row, legPose.OriginalExtensionRatio);
-            Add(row, legPose.TargetExtensionRatio);
-            Add(row, legPose.SolvedExtensionRatio);
-            Add(row, legPose.OriginalCompressionReserve);
-            Add(row, legPose.TargetCompressionReserve);
-            Add(row, legPose.SolvedCompressionReserve);
-            Add(row, legPose.EffectiveBendDirection);
-            Add(row, legPose.AnimatedBendDirectionPreviousDot);
-            Add(row, legPose.EffectiveBendDirectionPreviousDot);
-            CharacterFullBodyIkEffectorDiagnostics pelvis = ik.Pelvis;
-            Add(row, ik.PelvisAvailable);
-            Add(row, pelvis.TargetComponentPosition);
-            Add(row, pelvis.SolvedComponentPosition);
-            Add(row, pelvis.PositionResidual);
-            Add(row, pelvis.RotationResidualDegrees);
-            Add(row, ik.PhysicalWriteAvailable);
-            Add(row, ik.PhysicalWriteCompletionIdentity);
-            Add(row, ik.PhysicalAnkleComponentPosition);
-            Add(row, ik.PhysicalAnkleComponentRotation);
+            CharacterFullBodyIkLegPoseDiagnostics legPose = ik.Limb.LegPose;
             Vector3 finalAnkleWorldPosition = default;
             Quaternion finalAnkleWorldRotation = Quaternion.identity;
             CharacterFootPlacementSoleContactPose finalContacts = default;
@@ -2408,20 +2329,16 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     finalAnkleWorldPosition,
                     finalAnkleWorldRotation);
             }
-            Add(row, finalAnkleWorldPosition);
-            Add(row, finalAnkleWorldRotation);
-            Add(row, finalContacts.HeelPosition);
-            Add(row, finalContacts.ToePosition);
-            Add(
-                row,
-                ik.PhysicalWriteAvailable && legPose.IsAvailable &&
-                foot.Goal.PositionWeight > 0f
+            float physicalGoalResidual =
+                ik.PhysicalWriteAvailable && legPose.IsAvailable && foot.Goal.PositionWeight > 0f
                     ? Vector3.Distance(
                         ik.PhysicalAnkleComponentPosition,
-                        ResolveWeightedAnkleComponentPosition(
-                            legPose.OriginalAnkle,
-                            in footGoal))
-                    : 0f);
+                        ResolveWeightedAnkleComponentPosition(legPose.OriginalAnkle, in footGoal))
+                    : 0f;
+            var solverSource = new CharacterFootSolverCsvSource(
+                in ik, finalAnkleWorldPosition, finalAnkleWorldRotation,
+                finalContacts.HeelPosition, finalContacts.ToePosition, physicalGoalResidual);
+            CharacterFootSolverColumns.Schema.Write(row, in solverSource);
             writer.WriteLine(row);
         }
 

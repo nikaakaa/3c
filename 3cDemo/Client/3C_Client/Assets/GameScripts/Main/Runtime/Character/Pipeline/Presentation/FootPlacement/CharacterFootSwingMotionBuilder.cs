@@ -480,8 +480,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             CharacterFootPathContinuityFact pathContinuity = default,
             bool landingReachEvaluated = false,
             bool landingReachAvailable = false,
-            bool landingReachGoalClamped = false,
-            float landingReachGoalClampDistance = 0f,
             CharacterFootLifecycleTransitionFact lifecycleTransition = default)
         {
             State = state;
@@ -515,8 +513,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             PathContinuity = pathContinuity;
             LandingReachEvaluated = landingReachEvaluated;
             LandingReachAvailable = landingReachAvailable;
-            LandingReachGoalClamped = landingReachGoalClamped;
-            LandingReachGoalClampDistance = landingReachGoalClampDistance;
             LifecycleTransition = lifecycleTransition;
         }
 
@@ -550,8 +546,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         public Vector3 ContactPlaneNormal { get; }
         public bool LandingReachEvaluated { get; }
         public bool LandingReachAvailable { get; }
-        public bool LandingReachGoalClamped { get; }
-        public float LandingReachGoalClampDistance { get; }
         internal CharacterFootPathContinuityFact PathContinuity { get; }
         internal CharacterFootLifecycleTransitionFact LifecycleTransition { get; }
         public bool Accepted => State == CharacterFootSwingMotionState.Accepted;
@@ -591,9 +585,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             ContactPlaneNormal = result.ContactPlaneNormal;
             LandingReachEvaluated = result.LandingReachEvaluated;
             LandingReachAvailable = result.LandingReachAvailable;
-            LandingReachGoalClamped = result.LandingReachGoalClamped;
-            LandingReachGoalClampDistance =
-                result.LandingReachGoalClampDistance;
             CharacterFootLifecycleTransitionFact lifecycle =
                 result.LifecycleTransition;
             CharacterFootContactHistoryFact previousContext =
@@ -893,8 +884,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         public Vector3 ContactPlaneNormal { get; }
         public bool LandingReachEvaluated { get; }
         public bool LandingReachAvailable { get; }
-        public bool LandingReachGoalClamped { get; }
-        public float LandingReachGoalClampDistance { get; }
         public bool LifecycleTransitionEvaluated { get; }
         public bool PreviousLockRequestAvailable { get; }
         public bool PreviousLockRequested { get; }
@@ -1331,9 +1320,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         internal static CharacterFootSwingMotionResult WithLandingReach(
             in CharacterFootSwingMotionResult motion,
             bool evaluated,
-            bool available,
-            bool goalClamped,
-            float goalClampDistance) =>
+            bool available) =>
             new CharacterFootSwingMotionResult(
                 motion.State,
                 motion.RejectReason,
@@ -1366,8 +1353,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 motion.PathContinuity,
                 evaluated,
                 available,
-                goalClamped,
-                goalClampDistance,
                 motion.LifecycleTransition);
 
         internal static CharacterFootSwingMotionResult WithPathContinuity(
@@ -1405,8 +1390,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 continuity,
                 motion.LandingReachEvaluated,
                 motion.LandingReachAvailable,
-                motion.LandingReachGoalClamped,
-                motion.LandingReachGoalClampDistance,
                 motion.LifecycleTransition);
 
         internal static CharacterFootSwingMotionResult WithLifecycleTransition(
@@ -1444,8 +1427,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 motion.PathContinuity,
                 motion.LandingReachEvaluated,
                 motion.LandingReachAvailable,
-                motion.LandingReachGoalClamped,
-                motion.LandingReachGoalClampDistance,
                 lifecycleTransition);
 
         static bool TryResolveSwingPhaseWeight(

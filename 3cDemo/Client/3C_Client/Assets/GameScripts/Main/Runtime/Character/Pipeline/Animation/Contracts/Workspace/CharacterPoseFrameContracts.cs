@@ -135,12 +135,145 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         internal AnimationPoseNativeInvalidReason OutputInvalidReason { get; }
         internal AnimationPoseNativeInvalidReason GraphInvalidReason { get; }
         internal int InvalidOperationIndex { get; }
-        internal bool IsCommitted =>
+        internal bool IsValid =>
             Lineage.IsValid &&
-            Outcome == AnimationPresentationFrameOutcome.Committed &&
-            OutputAvailability == AnimationPoseAvailability.Pose &&
-            OutputInvalidReason == AnimationPoseNativeInvalidReason.None &&
-            GraphInvalidReason == AnimationPoseNativeInvalidReason.None &&
-            InvalidOperationIndex == -1;
+            (Outcome == AnimationPresentationFrameOutcome.Committed
+                ? OutputAvailability == AnimationPoseAvailability.Pose &&
+                  OutputInvalidReason == AnimationPoseNativeInvalidReason.None &&
+                  GraphInvalidReason == AnimationPoseNativeInvalidReason.None &&
+                  InvalidOperationIndex == -1
+                : Outcome == AnimationPresentationFrameOutcome.TypedInvalid &&
+                  (OutputAvailability != AnimationPoseAvailability.Pose ||
+                   OutputInvalidReason != AnimationPoseNativeInvalidReason.None ||
+                   GraphInvalidReason != AnimationPoseNativeInvalidReason.None ||
+                   InvalidOperationIndex >= 0));
+        internal bool IsCompleted =>
+            IsValid &&
+            Outcome == AnimationPresentationFrameOutcome.Committed;
+    }
+
+    internal readonly struct CharacterPoseConstraintResult
+    {
+        internal CharacterPoseConstraintResult(
+            in CharacterPoseFrameLineage lineage,
+            AnimationPresentationFrameOutcome outcome,
+            AnimationPoseAvailability availability,
+            AnimationPoseNativeInvalidReason invalidReason,
+            int goalCount,
+            bool solverProduced,
+            in CharacterFullBodyIkResult fullBodyIk)
+        {
+            Lineage = lineage;
+            Outcome = outcome;
+            Availability = availability;
+            InvalidReason = invalidReason;
+            GoalCount = goalCount;
+            SolverProduced = solverProduced;
+            FullBodyIk = fullBodyIk;
+        }
+
+        internal CharacterPoseFrameLineage Lineage { get; }
+        internal AnimationPresentationFrameOutcome Outcome { get; }
+        internal AnimationPoseAvailability Availability { get; }
+        internal AnimationPoseNativeInvalidReason InvalidReason { get; }
+        internal int GoalCount { get; }
+        internal bool SolverProduced { get; }
+        internal CharacterFullBodyIkResult FullBodyIk { get; }
+        internal bool IsValid =>
+            Lineage.IsValid &&
+            (Outcome == AnimationPresentationFrameOutcome.Committed
+                ? Availability == AnimationPoseAvailability.Pose &&
+                  InvalidReason == AnimationPoseNativeInvalidReason.None &&
+                  GoalCount >= 0 &&
+                  SolverProduced &&
+                  FullBodyIk.Succeeded
+                : Outcome == AnimationPresentationFrameOutcome.TypedInvalid &&
+                  Availability != AnimationPoseAvailability.Pose &&
+                  InvalidReason != AnimationPoseNativeInvalidReason.None &&
+                  GoalCount >= -1 &&
+                  (!SolverProduced || !FullBodyIk.Succeeded));
+        internal bool IsCompleted =>
+            IsValid &&
+            Outcome == AnimationPresentationFrameOutcome.Committed;
+    }
+
+    internal readonly struct CharacterFinalPosePublicationResult
+    {
+        internal CharacterFinalPosePublicationResult(
+            in CharacterPoseFrameLineage lineage,
+            AnimationPresentationFrameOutcome outcome,
+            AnimationFinalPoseWriteOutcome writeOutcome,
+            AnimationPoseAvailability availability,
+            AnimationPoseNativeInvalidReason outputInvalidReason,
+            AnimationPoseNativeInvalidReason graphInvalidReason,
+            int invalidOperationIndex,
+            ulong appliedCompletionIdentity)
+        {
+            Lineage = lineage;
+            Outcome = outcome;
+            WriteOutcome = writeOutcome;
+            Availability = availability;
+            OutputInvalidReason = outputInvalidReason;
+            GraphInvalidReason = graphInvalidReason;
+            InvalidOperationIndex = invalidOperationIndex;
+            AppliedCompletionIdentity = appliedCompletionIdentity;
+        }
+
+        internal CharacterPoseFrameLineage Lineage { get; }
+        internal AnimationPresentationFrameOutcome Outcome { get; }
+        internal AnimationFinalPoseWriteOutcome WriteOutcome { get; }
+        internal AnimationPoseAvailability Availability { get; }
+        internal AnimationPoseNativeInvalidReason OutputInvalidReason { get; }
+        internal AnimationPoseNativeInvalidReason GraphInvalidReason { get; }
+        internal int InvalidOperationIndex { get; }
+        internal ulong AppliedCompletionIdentity { get; }
+        internal bool IsValid =>
+            Lineage.IsValid &&
+            (Outcome == AnimationPresentationFrameOutcome.Committed
+                ? WriteOutcome == AnimationFinalPoseWriteOutcome.Committed &&
+                  Availability == AnimationPoseAvailability.Pose &&
+                  OutputInvalidReason == AnimationPoseNativeInvalidReason.None &&
+                  GraphInvalidReason == AnimationPoseNativeInvalidReason.None &&
+                  InvalidOperationIndex == -1 &&
+                  AppliedCompletionIdentity == Lineage.CompletionIdentity
+                : Outcome == AnimationPresentationFrameOutcome.TypedInvalid &&
+                  WriteOutcome == AnimationFinalPoseWriteOutcome.TypedInvalid &&
+                  AppliedCompletionIdentity == 0 &&
+                  (Availability != AnimationPoseAvailability.Pose ||
+                   OutputInvalidReason != AnimationPoseNativeInvalidReason.None ||
+                   GraphInvalidReason != AnimationPoseNativeInvalidReason.None ||
+                   InvalidOperationIndex >= 0));
+        internal bool IsPublished =>
+            IsValid &&
+            Outcome == AnimationPresentationFrameOutcome.Committed;
+    }
+
+    internal readonly struct CharacterPoseFrameExecutionResult
+    {
+        internal CharacterPoseFrameExecutionResult(
+            in CharacterPoseProgramResult program,
+            in CharacterPoseConstraintResult constraint,
+            in CharacterFinalPosePublicationResult publication)
+        {
+            Program = program;
+            Constraint = constraint;
+            Publication = publication;
+        }
+
+        internal CharacterPoseProgramResult Program { get; }
+        internal CharacterPoseConstraintResult Constraint { get; }
+        internal CharacterFinalPosePublicationResult Publication { get; }
+        internal CharacterPoseFrameLineage Lineage => Program.Lineage;
+        internal bool IsValid =>
+            Program.IsValid &&
+            Constraint.IsValid &&
+            Publication.IsValid &&
+            Program.Lineage == Constraint.Lineage &&
+            Program.Lineage == Publication.Lineage;
+        internal bool IsPublished =>
+            IsValid &&
+            Program.IsCompleted &&
+            Constraint.IsCompleted &&
+            Publication.IsPublished;
     }
 }

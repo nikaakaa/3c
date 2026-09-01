@@ -608,25 +608,28 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 }
 
                 frameStage = "EvaluateBarrier";
-                CharacterPoseProgramResult programResult =
+                CharacterPoseFrameExecutionResult executionResult =
                     m_PoseRuntime.ExecuteEvaluateBarrier(
                     in bodyFrame,
                     in factFrame,
                     in preparedPose,
                     m_EnterEvaluateBarrier);
+                transaction.BindExecutionResults(in executionResult);
+                CharacterPoseProgramResult programResult =
+                    executionResult.Program;
+                CharacterPoseConstraintResult constraintResult =
+                    executionResult.Constraint;
                 AnimationPresentationFrameOutcome poseOutcome =
-                    programResult.Outcome;
-                if (!programResult.IsCommitted)
+                    executionResult.Publication.Outcome;
+                if (!executionResult.IsPublished)
                 {
                     int invalidOperation =
                         programResult.InvalidOperationIndex;
+                    CharacterFullBodyIkResult fullBodyIkResult =
+                        constraintResult.FullBodyIk;
                     string solverFailure =
-                        programResult.GraphInvalidReason ==
-                            AnimationPoseNativeInvalidReason.FullBodyIkSolverInvalid &&
-                        m_PoseRuntime.TryGetFullBodyIkFailure(
-                            invalidOperation,
-                            preparedPose.Lineage.CompletionIdentity,
-                            out CharacterFullBodyIkResult fullBodyIkResult)
+                        constraintResult.SolverProduced &&
+                        !constraintResult.FullBodyIk.Succeeded
                             ? $", solverFailure={fullBodyIkResult.Failure}, " +
                               $"failedGoalSet={fullBodyIkResult.FailedGoalSetIndex}, " +
                               $"failedSlot={fullBodyIkResult.FailedSlot}, " +

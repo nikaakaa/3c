@@ -139,6 +139,18 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             SamplingTransaction { get; private set; }
         internal AnimationSlotMutationLease SlotLease { get; private set; }
         internal CharacterPoseProgramFrameLease PoseLease { get; private set; }
+        internal CharacterPoseProgramResult ProgramResult { get; private set; }
+        internal CharacterPoseConstraintResult ConstraintResult
+        {
+            get;
+            private set;
+        }
+        internal CharacterFinalPosePublicationResult PublicationResult
+        {
+            get;
+            private set;
+        }
+        internal bool HasExecutionResults { get; private set; }
         internal MotionMatchingFrameMutationLease MotionMatchingLease
         {
             get;
@@ -171,6 +183,13 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             SlotLease.FrameIdentity == Lineage.FrameIdentity &&
             PoseLease.IsValid &&
             PoseLease.FrameIdentity == Lineage.FrameIdentity &&
+            HasExecutionResults &&
+            ProgramResult.IsCompleted &&
+            ConstraintResult.IsCompleted &&
+            PublicationResult.IsPublished &&
+            ProgramResult.Lineage == Lineage &&
+            ConstraintResult.Lineage == Lineage &&
+            PublicationResult.Lineage == Lineage &&
             HasMotionMatchingLease == MotionMatchingLease.IsValid &&
             (!HasMotionMatchingLease ||
              MotionMatchingLease.FrameIdentity == Lineage.FrameIdentity) &&
@@ -219,6 +238,10 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             PoseLease = poseLease;
             MotionMatchingLease = motionMatchingLease;
             HasMotionMatchingLease = hasMotionMatchingLease;
+            ProgramResult = default;
+            ConstraintResult = default;
+            PublicationResult = default;
+            HasExecutionResults = false;
             Outcome = AnimationPresentationFrameOutcome.None;
             Phase = AnimationPresentationFramePhase.Begin;
             Closed = false;
@@ -237,6 +260,23 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     "Character Pose frame completion identity is invalid.");
             }
             Lineage = completedLineage;
+        }
+
+        internal void BindExecutionResults(
+            in CharacterPoseFrameExecutionResult results)
+        {
+            RequirePhase(AnimationPresentationFramePhase.EvaluateBarrier);
+            if (HasExecutionResults ||
+                !results.IsValid ||
+                results.Lineage != Lineage)
+            {
+                throw new InvalidOperationException(
+                    "Character Pose frame execution results are invalid.");
+            }
+            ProgramResult = results.Program;
+            ConstraintResult = results.Constraint;
+            PublicationResult = results.Publication;
+            HasExecutionResults = true;
         }
 
         internal void BeginPrepare()
@@ -272,7 +312,11 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
 
         internal void MarkSealed()
         {
-            if (Phase != AnimationPresentationFramePhase.EvaluateBarrier)
+            if (Phase != AnimationPresentationFramePhase.EvaluateBarrier ||
+                !HasExecutionResults ||
+                !ProgramResult.IsCompleted ||
+                !ConstraintResult.IsCompleted ||
+                !PublicationResult.IsPublished)
             {
                 throw new InvalidOperationException(
                     "Animation Presentation frame cannot seal before Evaluate barrier.");
@@ -308,6 +352,10 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             SamplingTransaction = null;
             SlotLease = default;
             PoseLease = default;
+            ProgramResult = default;
+            ConstraintResult = default;
+            PublicationResult = default;
+            HasExecutionResults = false;
             MotionMatchingLease = default;
             HasMotionMatchingLease = false;
             Outcome = AnimationPresentationFrameOutcome.None;

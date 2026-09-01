@@ -98,3 +98,16 @@ A/B的1215列Foot CSV中1191个业务列逐值相同，24个Run／实例／Surfa
 A完成后已原样恢复HEAD合同位置，全仓仍只有`CharacterPoseFrameContracts.cs`中的一份`CharacterPoseProgramPrepared`定义，Runtime文件只保留其它任务未提交的Performance Marker差异。由于旧A完成后Foot与Network窗口重建过正式产品和诊断基线，本步没有把跨源码状态的旧A硬接到B，而是在二者明确冻结Unity写入后重新建立同状态隔离对：A临时只反向移动`4a570788`的合同定义，包为`Diagnostics/FootPlacementRuns/20260901-125139-634-d1ccc86b44b2482f984ddc88b0b91c00`，Proof为`Temp/CharacterInputReplayProofs/v4/43357ff3cd384e5cba75d2c31175b116/20260901-125245-959-c0a9359062294e55b51318c6a0aa4516.json`；B恢复HEAD合同位置后执行，包为`Diagnostics/FootPlacementRuns/20260901-125338-003-e15cbcfa576045d68a62b71b5095bb84`，Proof为`Temp/CharacterInputReplayProofs/v4/43357ff3cd384e5cba75d2c31175b116/20260901-125437-102-198c4580f3a84dea9600ef3e848ce9bc.json`。B Proof对A报告`matched=true`、`compared_frame_count=1044`、`aggregate_mismatches=[]`、`divergent_frame_count=0`、`first_divergent_relative_frame=-1`和空`first_frame_mismatches`。
 
 A/B均封存1043表现帧、2086脚行和67186几何行。1215列Foot CSV中1191个业务列逐值相同，24个Run／实例／Surface／Path identity列全部一一映射；27列Geometry中22个业务列逐值相同，5个identity列全部一一映射，没有其它差异。`analysis.json`、`quality-score.json`及八份规则报告在排除Sample／Surface identity、文件hash、detail／index大小与分析耗时后全部相同，七维分项与总分84.2不变。由此确认合同物理归位没有改变Source采样、动画时钟、Foot、Pelvis、Goal、FBBIK、Physical Pose或诊断业务事实；当前B可作为下一项Operation Completion迁移的正式A基线。
+
+## Typed Operation Completion页
+
+状态：提交`7c0d9d00`已将旧`NativeArray<ulong> FrameCacheCompletedAt`原子替换为typed Operation Completion entry/page。`ThirdPersonClient.Runtime.csproj`按规定参数编译成功，0错误、0警告，build server已关闭；固定Trace回放、Foot诊断与Replay Proof均完成，任务2.2的全部typed合同已建立。
+
+- 新`CharacterPoseOperationCompletion`同时保存Completion identity与`Completed / Skipped / TypedInvalid` Outcome；默认值只表示尚未完成。`CharacterPoseOperationCompletionPage`唯一接受首次合法完成，第二次写同一Operation返回失败且不覆盖第一次结果。
+- `AnimationPoseNativeWorkspace`的Committed/Pending页不再分配或暴露裸`ulong`完成数组，而是分配固定Operation Count的typed entry；Binding只暴露typed page。Stage完成与最终Program完成仍保持各自现行合同，本步不提前迁移5.5的完整Program Frame Pages。
+- Staged Executor在执行Operation前先拒绝已有completion；重复执行会记录`PoseGraphOperationInvalid`与对应Operation index，使整帧Invalid并阻止正常Final Publication。正常Operation按原执行顺序写`Completed`，非活动Linked Pose分支写`Skipped`，原有typed失败写`TypedInvalid`；Preview同样填充typed completion，不再批量伪写裸identity。
+- Diagnostics只从typed completion读取既有Completion identity和完成匹配结果，未获得Outcome写权限，也不把Outcome送回任何Runtime决策；现有Snapshot、Pose Watch、Sampler、Analyzer和评分字段语义保持不变。
+
+A为上一步HEAD合同状态的`Diagnostics/FootPlacementRuns/20260901-125338-003-e15cbcfa576045d68a62b71b5095bb84`，Proof为`Temp/CharacterInputReplayProofs/v4/43357ff3cd384e5cba75d2c31175b116/20260901-125437-102-198c4580f3a84dea9600ef3e848ce9bc.json`。B为typed Completion状态的`Diagnostics/FootPlacementRuns/20260901-130336-194-9e188a814d0b4271a5eef0b9baf04778`，Proof为`Temp/CharacterInputReplayProofs/v4/43357ff3cd384e5cba75d2c31175b116/20260901-130437-539-13dbb6d69362418ab8f045f5ea139e7f.json`。B Proof对A报告`matched=true`、`compared_frame_count=1044`、空aggregate/frame差异和`divergent_frame_count=0`。
+
+A/B均封存1043表现帧、2086脚行和67186几何行。1215列Foot CSV中1191个业务列逐值相同，24个Run／实例／Surface／Path identity列全部一一映射；27列Geometry中22个业务列逐值相同，5个identity列全部一一映射，没有其它差异。十份诊断报告在排除运行identity、文件hash、detail／index大小与分析耗时后全部相同，七维分项与总分84.2不变。由此确认typed完成页没有改变动画时钟、Operation顺序、Foot、Pelvis、Goal、FBBIK、Physical Pose或诊断业务事实；该B成为下一项Owned Pending页／typed lease迁移的正式A基线。

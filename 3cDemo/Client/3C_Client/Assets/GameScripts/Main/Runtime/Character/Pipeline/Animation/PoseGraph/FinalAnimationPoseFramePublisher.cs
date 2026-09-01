@@ -8,19 +8,11 @@ namespace ThirdPersonCharacter.Pipeline.Animation
     {
         sealed class CharacterFinalPosePublicationPendingPage
         {
-            internal CharacterFinalPosePublicationFrameLease Lease
-            {
-                get;
-                private set;
-            }
-            internal int BufferPage { get; private set; } = -1;
-            internal CharacterFinalPosePublicationResult Result
-            {
-                get;
-                private set;
-            }
-            internal ComposedAnimationPoseFrame Frame { get; private set; }
-            internal bool HasValue { get; private set; }
+            internal CharacterFinalPosePublicationFrameLease Lease;
+            internal int BufferPage = -1;
+            internal CharacterFinalPosePublicationResult Result;
+            internal ComposedAnimationPoseFrame Frame;
+            internal bool HasValue;
             internal bool IsOpen => Lease.IsValid;
 
             internal void Begin(

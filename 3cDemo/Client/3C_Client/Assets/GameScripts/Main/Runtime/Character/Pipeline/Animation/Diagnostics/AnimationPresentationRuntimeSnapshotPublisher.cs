@@ -20,8 +20,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
 
         readonly CharacterPresentationProjection m_Projection;
         readonly CharacterPresentationPosePlan m_Program;
-        readonly CharacterPoseGraphNativeProgram m_NativeProgram;
-        readonly AnimationPoseNativeWorkspace m_Workspace;
         readonly Page[] m_Pages;
         readonly Guid[] m_InterestOwnerIds = new Guid[InterestOwnerCapacity];
         readonly AnimationPresentationDiagnosticsInterest[] m_OwnerInterests =
@@ -44,20 +42,15 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
 
         internal AnimationPresentationRuntimeSnapshotPublisher(
             CharacterPresentationProjection projection,
-            CharacterPoseGraphNativeProgram nativeProgram,
-            in CharacterPoseGraphNativeBinding initialFrame,
-            AnimationPoseNativeWorkspace workspace,
+            in AnimationPoseNativeAggregateLayout layout,
             int physicalSourceCapacity)
         {
             m_Projection = projection ?? throw new ArgumentNullException(nameof(projection));
             m_Program = projection.PosePlan ?? throw new ArgumentException("Animation Pose Program is missing.", nameof(projection));
-            m_NativeProgram = nativeProgram ?? throw new ArgumentNullException(nameof(nativeProgram));
-            m_Workspace = workspace ?? throw new ArgumentNullException(nameof(workspace));
             m_Program.RequireValid();
-            m_NativeProgram.RequireValid();
             if (m_Program.FullBodyIks.Count != 1)
                 throw new ArgumentException("FullBodyIK diagnostics solver layout is inconsistent.", nameof(projection));
-            initialFrame.RequireValid();
+            layout.RequireValid();
             if (physicalSourceCapacity <= 0)
                 throw new ArgumentOutOfRangeException(nameof(physicalSourceCapacity));
             int entryCapacity = 0;
@@ -75,8 +68,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
             }
             m_Pages = new[]
             {
-                new Page(m_Program, projection.Rig, initialFrame.Layout, entryCapacity, physicalSourceCapacity, blendSpacePlayerCapacity, blendSpaceSampleCapacity, projection.LinkedPose.Groups.Count),
-                new Page(m_Program, projection.Rig, initialFrame.Layout, entryCapacity, physicalSourceCapacity, blendSpacePlayerCapacity, blendSpaceSampleCapacity, projection.LinkedPose.Groups.Count)
+                new Page(m_Program, projection.Rig, layout, entryCapacity, physicalSourceCapacity, blendSpacePlayerCapacity, blendSpaceSampleCapacity, projection.LinkedPose.Groups.Count),
+                new Page(m_Program, projection.Rig, layout, entryCapacity, physicalSourceCapacity, blendSpacePlayerCapacity, blendSpaceSampleCapacity, projection.LinkedPose.Groups.Count)
             };
         }
 
@@ -138,11 +131,11 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
         internal void BeginFrame(
             in CharacterPoseFrameExecutionResult executionResult,
             in CharacterPoseSourceCommittedDiagnosticsView sourceDiagnostics,
+            in CharacterPoseProgramCommittedDiagnosticsView programDiagnostics,
             in CharacterPoseConstraintCommittedDiagnosticsView
                 constraintDiagnostics,
             in CharacterFinalPoseCommittedDiagnosticsView
                 publicationDiagnostics,
-            in CharacterPoseGraphNativeBinding frame,
             IReadOnlyList<AnimationBlendStackRuntime> stacks,
             IReadOnlyList<CharacterAnimationTransitionRouteRuntime> routes,
             IReadOnlyList<CharacterPoseStateMachineRuntime> stateMachines,
@@ -153,12 +146,14 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
         {
             RequireAlive();
             RequireValidFrameInterest(interest);
-            frame.RequireValid();
             ComposedAnimationPoseFrame finalFrame =
                 publicationDiagnostics.Frame;
             if (!executionResult.IsPublished ||
                 !sourceDiagnostics.IsValid ||
                 sourceDiagnostics.Result.Lineage !=
+                executionResult.Lineage ||
+                !programDiagnostics.IsValid ||
+                programDiagnostics.Result.Lineage !=
                 executionResult.Lineage ||
                 !constraintDiagnostics.IsValid ||
                 constraintDiagnostics.Result.Lineage !=
@@ -166,8 +161,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
                 !publicationDiagnostics.IsValid ||
                 publicationDiagnostics.Result.Lineage !=
                 executionResult.Lineage ||
-                executionResult.Lineage.CompletionIdentity !=
-                frame.CompletionIdentity ||
                 executionResult.Lineage.CompletionIdentity !=
                 finalFrame.CompletionIdentity || stacks == null ||
                 routes == null || routes.Count != stacks.Count || stateMachines == null ||
@@ -205,12 +198,15 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
                 page.StackCount = stacks.Count;
                 page.EntryCount = entryOffset;
                 CopyAnimationSlots(page, routes);
-                CopyPoseStateMachines(page, stateMachines, m_NativeProgram);
+                CopyPoseStateMachines(
+                    page,
+                    stateMachines,
+                    in programDiagnostics);
                 CopyRootOrientationWarps(page, rootOrientationWarps);
                 CopyInertializations(page, inertializations);
                 CopySlotContributions(
                     page,
-                    in frame,
+                    in programDiagnostics,
                     in sourceDiagnostics);
                 CopyFootPlacement(
                     page,
@@ -220,13 +216,16 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
             if (RequiresOperationDetail(interest))
                 CopyOperations(
                     page,
-                    in frame,
+                    in programDiagnostics,
                     in sourceDiagnostics);
-            CopyLinkedPose(page, in frame, linkedPose);
+            CopyLinkedPose(
+                page,
+                in programDiagnostics,
+                linkedPose);
             if ((interest & AnimationPresentationDiagnosticsInterest.PoseWatch) != 0)
                 CopyPoseWatches(
                     page,
-                    in frame,
+                    in programDiagnostics,
                     in sourceDiagnostics,
                     in constraintDiagnostics);
             CopyFinalSummary(
@@ -242,7 +241,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
 
         void CopyLinkedPose(
             Page page,
-            in CharacterPoseGraphNativeBinding frame,
+            in CharacterPoseProgramCommittedDiagnosticsView
+                programDiagnostics,
             CharacterLinkedPoseRuntimeSession linkedPose)
         {
             if (linkedPose.GroupCount != page.LinkedPoseGroups.Length ||
@@ -262,15 +262,18 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
                     RequireLinkedPoseFragment(call, group.ImplementationId);
                 CharacterPresentationPoseOperation callOperation = RequireLinkedPoseCallOperation(call.Index);
                 CharacterPoseOperationCompletion completion =
-                    frame.OperationCompletions[callOperation.Index];
+                    programDiagnostics.GetOperationCompletion(
+                        callOperation.Index);
                 ulong completionIdentity = completion.CompletionIdentity;
-                bool completed = completion.Matches(frame.CompletionIdentity);
+                bool completed = completion.Matches(
+                    programDiagnostics.Result.Lineage.CompletionIdentity);
                 for (int operationIndex = fragment.OperationStart;
                      completed && operationIndex < fragment.OperationStart + fragment.OperationCount;
                      operationIndex++)
                 {
-                    completed = frame.OperationCompletions[
-                        operationIndex].Matches(frame.CompletionIdentity);
+                    completed = programDiagnostics.GetOperationCompletion(
+                        operationIndex).Matches(
+                        programDiagnostics.Result.Lineage.CompletionIdentity);
                 }
 
                 page.LinkedPoseEntries[callIndex] = new AnimationLinkedPoseEntryRuntimeSnapshot(
@@ -377,7 +380,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
         static void CopyPoseStateMachines(
             Page page,
             IReadOnlyList<CharacterPoseStateMachineRuntime> stateMachines,
-            CharacterPoseGraphNativeProgram nativeProgram)
+            in CharacterPoseProgramCommittedDiagnosticsView programDiagnostics)
         {
             if (stateMachines.Count != page.PoseStateMachines.Length)
                 throw new InvalidOperationException("Pose StateMachine diagnostics coverage is incomplete.");
@@ -388,7 +391,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
                 {
                     page.PoseStateMachineBoneWeights[
                         i * page.PoseBoneCount + bone] =
-                        nativeProgram.GetStateMachineBoneWeight(i, bone);
+                        programDiagnostics.GetStateMachineBoneWeight(i, bone);
                 }
             }
             page.PoseStateMachineCount = stateMachines.Count;
@@ -825,28 +828,41 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
 
         void CopySlotContributions(
             Page page,
-            in CharacterPoseGraphNativeBinding frame,
+            in CharacterPoseProgramCommittedDiagnosticsView programDiagnostics,
             in CharacterPoseSourceCommittedDiagnosticsView sourceDiagnostics)
         {
             int destinationIndex = 0;
-            for (int slotIndex = 0; slotIndex < frame.Layout.PlayerCount; slotIndex++)
+            for (int slotIndex = 0;
+                 slotIndex < programDiagnostics.PlayerCount;
+                 slotIndex++)
             {
-                AnimationPlayerPoseNativeRange range = frame.SlotRanges[slotIndex];
-                int count = frame.SlotContributionCounts[slotIndex];
+                AnimationPlayerPoseNativeRange range =
+                    programDiagnostics.GetSlotRange(slotIndex);
+                int count =
+                    programDiagnostics.GetSlotContributionCount(slotIndex);
                 if (count < 0 || count > range.ContributionCapacity)
                     throw new InvalidOperationException($"Pose Slot #{slotIndex} contribution count is invalid.");
                 for (int i = 0; i < count; i++)
                 {
-                    AnimationPrimitivePoseContribution primitive = frame.SlotContributions[range.ContributionOffset + i];
+                    int flatContributionIndex =
+                        range.ContributionOffset + i;
+                    AnimationPrimitivePoseContribution primitive =
+                        programDiagnostics.GetSlotContribution(
+                            flatContributionIndex);
                     page.SlotContributions[destinationIndex] =
                         ConvertContribution(
                             primitive,
                             in sourceDiagnostics);
-                    for (int boneIndex = 0; boneIndex < frame.Layout.BoneCount; boneIndex++)
+                    for (int boneIndex = 0;
+                         boneIndex < programDiagnostics.BoneCount;
+                         boneIndex++)
                     {
-                        page.SlotContributionBoneWeights[destinationIndex * frame.Layout.BoneCount + boneIndex] =
-                            frame.SlotDenseContributionWeights[
-                                range.DenseContributionWeightOffset + i * frame.Layout.BoneCount + boneIndex];
+                        page.SlotContributionBoneWeights[
+                            destinationIndex * programDiagnostics.BoneCount +
+                            boneIndex] =
+                            programDiagnostics.GetSlotContributionBoneWeight(
+                                flatContributionIndex,
+                                boneIndex);
                     }
                     destinationIndex++;
                 }
@@ -856,7 +872,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
 
         void CopyOperations(
             Page page,
-            in CharacterPoseGraphNativeBinding frame,
+            in CharacterPoseProgramCommittedDiagnosticsView programDiagnostics,
             in CharacterPoseSourceCommittedDiagnosticsView sourceDiagnostics)
         {
             int contributionOffset = 0;
@@ -868,8 +884,11 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
                     continue;
                 CharacterPresentationPoseSourceMapEntry source = m_Program.SourceMap[i];
                 int valueIndex = operation.OutputValueIndex;
-                int contributionCount = frame.ValueContributionCounts[valueIndex];
-                if (contributionCount < 0 || contributionCount > frame.Layout.PoseValueContributionStride)
+                int contributionCount =
+                    programDiagnostics.GetValueContributionCount(valueIndex);
+                if (contributionCount < 0 ||
+                    contributionCount >
+                    programDiagnostics.PoseValueContributionStride)
                     throw new InvalidOperationException($"Animation Pose operation #{i} contribution count is invalid.");
                 page.Operations[operationCount++] = new AnimationPoseOperationSnapshot(
                     i,
@@ -877,26 +896,33 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
                     source.NodeId,
                     source.CallSite,
                     operation.Code,
-                    frame.ValueAvailability[valueIndex],
-                    frame.ValueInvalidReasons[valueIndex],
-                    frame.ValueOutputWeights[valueIndex],
-                    frame.ValueContinuityIdentities[valueIndex],
-                    frame.OperationCompletions[
-                        operation.Index].CompletionIdentity,
+                    programDiagnostics.GetValueAvailability(valueIndex),
+                    programDiagnostics.GetValueInvalidReason(valueIndex),
+                    programDiagnostics.GetValueOutputWeight(valueIndex),
+                    programDiagnostics.GetValueContinuityIdentity(valueIndex),
+                    programDiagnostics.GetOperationCompletion(
+                        operation.Index).CompletionIdentity,
                     contributionOffset,
                     contributionCount);
-                int sourceOffset = checked(valueIndex * frame.Layout.PoseValueContributionStride);
                 for (int contributionIndex = 0; contributionIndex < contributionCount; contributionIndex++)
                 {
                     int destinationIndex = contributionOffset + contributionIndex;
                     page.OperationContributions[destinationIndex] = ConvertContribution(
-                        frame.ValueContributions[sourceOffset + contributionIndex],
+                        programDiagnostics.GetValueContribution(
+                            valueIndex,
+                            contributionIndex),
                         in sourceDiagnostics);
-                    for (int boneIndex = 0; boneIndex < frame.Layout.BoneCount; boneIndex++)
+                    for (int boneIndex = 0;
+                         boneIndex < programDiagnostics.BoneCount;
+                         boneIndex++)
                     {
-                        page.OperationContributionBoneWeights[destinationIndex * frame.Layout.BoneCount + boneIndex] =
-                            frame.ValueDenseContributionWeights[
-                                (sourceOffset + contributionIndex) * frame.Layout.BoneCount + boneIndex];
+                        page.OperationContributionBoneWeights[
+                            destinationIndex * programDiagnostics.BoneCount +
+                            boneIndex] =
+                            programDiagnostics.GetValueContributionBoneWeight(
+                                valueIndex,
+                                contributionIndex,
+                                boneIndex);
                     }
                 }
                 contributionOffset = checked(contributionOffset + contributionCount);
@@ -907,15 +933,18 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
 
         void CopyPoseWatches(
             Page page,
-            in CharacterPoseGraphNativeBinding frame,
+            in CharacterPoseProgramCommittedDiagnosticsView programDiagnostics,
             in CharacterPoseSourceCommittedDiagnosticsView sourceDiagnostics,
             in CharacterPoseConstraintCommittedDiagnosticsView
                 constraintDiagnostics)
         {
             CharacterFootLandingPredictionDiagnostics footLandingPrediction =
                 constraintDiagnostics.FootLandingPrediction;
-            int boneCount = frame.Layout.BoneCount;
-            int stride = frame.Layout.PoseValueContributionStride;
+            int boneCount = programDiagnostics.BoneCount;
+            int stride =
+                programDiagnostics.PoseValueContributionStride;
+            ulong frameCompletion =
+                programDiagnostics.Result.Lineage.CompletionIdentity;
             for (int watchIndex = 0; watchIndex < m_MergedPoseWatchInterestCount; watchIndex++)
             {
                 AnimationPoseWatchIdentity identity = m_MergedPoseWatchInterests[watchIndex];
@@ -966,15 +995,15 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
                 }
                 AnimationLinkedPoseEntryRuntimeSnapshot linkedPoseEntry =
                     FindLinkedPoseEntry(page, operation);
-                ulong completion = frame.OperationCompletions[
-                    operation.Index].CompletionIdentity;
+                ulong completion = programDiagnostics.GetOperationCompletion(
+                    operation.Index).CompletionIdentity;
                 if (operation.OutputFullBodyIkGoalContributionValueIndex >= 0)
                 {
                     int contributionValueIndex =
                         operation.OutputFullBodyIkGoalContributionValueIndex;
                     AnimationFullBodyIkGoalContributionSnapshot contribution = default;
                     AnimationPoseWatchAvailability goalAvailability =
-                        completion != frame.CompletionIdentity
+                        completion != frameCompletion
                             ? AnimationPoseWatchAvailability.NotCompleted
                             : AnimationPoseWatchAvailability.Invalid;
                     if ((uint)contributionValueIndex <
@@ -1042,7 +1071,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
                         0,
                         goalAvailability,
                         goalAvailability == AnimationPoseWatchAvailability.Invalid
-                            ? frame.PoseGraphInvalidReason[0]
+                            ? programDiagnostics.PoseGraphInvalidReason
                             : AnimationPoseNativeInvalidReason.None,
                         operation.Weight,
                         0,
@@ -1054,7 +1083,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
                     int goalSetIndex = operation.OutputFullBodyIkGoalSetValueIndex;
                     AnimationFullBodyIkGoalSetSnapshot goalSet = default;
                     AnimationPoseWatchAvailability goalAvailability =
-                        completion != frame.CompletionIdentity
+                        completion != frameCompletion
                             ? AnimationPoseWatchAvailability.NotCompleted
                             : AnimationPoseWatchAvailability.Invalid;
                     if ((uint)goalSetIndex <
@@ -1106,7 +1135,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
                         0,
                         goalAvailability,
                         goalAvailability == AnimationPoseWatchAvailability.Invalid
-                            ? frame.PoseGraphInvalidReason[0]
+                            ? programDiagnostics.PoseGraphInvalidReason
                             : AnimationPoseNativeInvalidReason.None,
                         operation.Weight,
                         0,
@@ -1114,9 +1143,12 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
                     continue;
                 }
                 int valueIndex = operation.OutputValueIndex;
-                AnimationPoseAvailability availability = frame.ValueAvailability[valueIndex];
-                AnimationPoseNativeInvalidReason invalidReason = frame.ValueInvalidReasons[valueIndex];
-                AnimationPoseWatchAvailability watchAvailability = completion != frame.CompletionIdentity
+                AnimationPoseAvailability availability =
+                    programDiagnostics.GetValueAvailability(valueIndex);
+                AnimationPoseNativeInvalidReason invalidReason =
+                    programDiagnostics.GetValueInvalidReason(valueIndex);
+                AnimationPoseWatchAvailability watchAvailability =
+                    completion != frameCompletion
                     ? AnimationPoseWatchAvailability.NotCompleted
                     : availability == AnimationPoseAvailability.Pose
                         ? AnimationPoseWatchAvailability.Pose
@@ -1126,9 +1158,13 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
                 int contributionCount = 0;
                 if (watchAvailability == AnimationPoseWatchAvailability.Pose)
                 {
-                    int sourcePoseOffset = valueIndex * boneCount;
                     for (int boneIndex = 0; boneIndex < boneCount; boneIndex++)
-                        page.PoseWatchLocalPoses[poseOffset + boneIndex] = frame.ValueDenseLocalPoses[sourcePoseOffset + boneIndex];
+                    {
+                        page.PoseWatchLocalPoses[poseOffset + boneIndex] =
+                            programDiagnostics.GetValuePose(
+                                valueIndex,
+                                boneIndex);
+                    }
                     for (int boneIndex = 0; boneIndex < boneCount; boneIndex++)
                     {
                         AnimationLocalBonePose stored = page.PoseWatchLocalPoses[poseOffset + boneIndex];
@@ -1149,14 +1185,16 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
                         }
                         page.PoseWatchComponentPoses[poseOffset + boneIndex] = component;
                     }
-                    contributionCount = frame.ValueContributionCounts[valueIndex];
+                    contributionCount =
+                        programDiagnostics.GetValueContributionCount(valueIndex);
                     if (contributionCount < 0 || contributionCount > stride)
                         throw new InvalidOperationException($"Pose Watch operation #{operation.Index} contribution count is invalid.");
-                    int sourceContributionOffset = valueIndex * stride;
                     for (int contributionIndex = 0; contributionIndex < contributionCount; contributionIndex++)
                     {
                         page.PoseWatchContributions[contributionOffset + contributionIndex] = ConvertContribution(
-                            frame.ValueContributions[sourceContributionOffset + contributionIndex],
+                            programDiagnostics.GetValueContribution(
+                                valueIndex,
+                                contributionIndex),
                             in sourceDiagnostics);
                     }
                 }
@@ -1204,8 +1242,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
                     contributionCount,
                     watchAvailability,
                     invalidReason,
-                    frame.ValueOutputWeights[valueIndex],
-                    frame.ValueContinuityIdentities[valueIndex],
+                    programDiagnostics.GetValueOutputWeight(valueIndex),
+                    programDiagnostics.GetValueContinuityIdentity(valueIndex),
                     completion);
             }
             page.PoseWatchCount = m_MergedPoseWatchInterestCount;
@@ -1466,7 +1504,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
             in CharacterPoseSourceCommittedDiagnosticsView sourceDiagnostics)
         {
             AnimationPoseSourceId sourceId = default;
-            PoseNodeId playerNodeId = m_Workspace.RequirePoseNodeId(primitive.PhysicalPlayerIndex);
+            PoseNodeId playerNodeId =
+                RequirePlayerNodeId(primitive.PhysicalPlayerIndex);
             if (primitive.Kind == AnimationPoseContributionKind.Live)
             {
                 var physical = new AnimationPhysicalSourceIdentity(
@@ -1489,6 +1528,39 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
                 primitive.Weight,
                 primitive.LeftFootWeight,
                 primitive.RightFootWeight);
+        }
+
+        PoseNodeId RequirePlayerNodeId(int playerIndex)
+        {
+            PoseNodeId result = default;
+            for (int i = 0; i < m_Program.Operations.Count; i++)
+            {
+                CharacterPresentationPoseOperation operation =
+                    m_Program.Operations[i];
+                if (operation.PlayerIndex != playerIndex ||
+                    operation.Code !=
+                        CharacterPoseOperationCode.SelectedPosePlayer &&
+                    operation.Code != CharacterPoseOperationCode.BlendStack &&
+                    operation.Code !=
+                        CharacterPoseOperationCode.BlendSpacePlayer &&
+                    operation.Code != CharacterPoseOperationCode.ClipPlayer &&
+                    operation.Code != CharacterPoseOperationCode.AnimationSlot)
+                {
+                    continue;
+                }
+                if (!operation.NodeId.IsValid || result.IsValid)
+                {
+                    throw new InvalidOperationException(
+                        "Animation diagnostic Player identity is ambiguous.");
+                }
+                result = operation.NodeId;
+            }
+            if (!result.IsValid)
+            {
+                throw new InvalidOperationException(
+                    $"Animation diagnostic Player #{playerIndex} is missing.");
+            }
+            return result;
         }
 
         static bool RequiresBasicState(AnimationPresentationDiagnosticsInterest interest) =>

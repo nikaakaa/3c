@@ -1,5 +1,6 @@
 using System;
 using System.Linq;
+using ThirdPersonCharacter.Pipeline.Animation.Diagnostics;
 using ThirdPersonCharacter.Pipeline.Animation.Presentation;
 using Unity.Collections;
 using UnityEngine;
@@ -493,6 +494,243 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                                  (Active != 0 || YawOffsetDegrees == 0f);
     }
 
+    internal readonly struct CharacterPoseProgramCommittedDiagnosticsView
+    {
+        internal CharacterPoseProgramCommittedDiagnosticsView(
+            CharacterPoseGraphNativeProgram.CommittedDiagnosticsPage page)
+        {
+            m_Page = page ?? throw new ArgumentNullException(nameof(page));
+            m_Identity = page.Identity;
+            if (!IsValid)
+            {
+                throw new ArgumentException(
+                    "Pose Program committed diagnostics are invalid.",
+                    nameof(page));
+            }
+        }
+
+        readonly CharacterPoseGraphNativeProgram.CommittedDiagnosticsPage m_Page;
+        readonly ulong m_Identity;
+        internal bool IsValid =>
+            m_Page != null &&
+            m_Identity != 0 &&
+            m_Page.Identity == m_Identity &&
+            m_Page.Result.IsCompleted;
+        internal CharacterPoseProgramResult Result
+        {
+            get
+            {
+                RequireValid();
+                return m_Page.Result;
+            }
+        }
+        internal AnimationPresentationDiagnosticsInterest Interest
+        {
+            get
+            {
+                RequireValid();
+                return m_Page.Interest;
+            }
+        }
+        internal int PlayerCount => RequireLayout().PlayerCount;
+        internal int BoneCount => RequireLayout().BoneCount;
+        internal int PoseValueCount => RequireLayout().PoseValueCount;
+        internal int PoseValueContributionStride =>
+            RequireLayout().PoseValueContributionStride;
+        internal AnimationPoseNativeInvalidReason PoseGraphInvalidReason
+        {
+            get
+            {
+                RequireValid();
+                return m_Page.PoseGraphInvalidReason;
+            }
+        }
+
+        internal CharacterPoseOperationCompletion GetOperationCompletion(
+            int operationIndex)
+        {
+            RequireValid();
+            if ((uint)operationIndex >=
+                (uint)m_Page.OperationCompletions.Length)
+            {
+                throw new ArgumentOutOfRangeException(nameof(operationIndex));
+            }
+            return m_Page.OperationCompletions[operationIndex];
+        }
+
+        internal float GetStateMachineBoneWeight(
+            int stateMachineIndex,
+            int boneIndex)
+        {
+            RequireInterest(
+                AnimationPresentationDiagnosticsInterest.LiveState |
+                AnimationPresentationDiagnosticsInterest.Capture);
+            if ((uint)stateMachineIndex >=
+                    (uint)m_Page.StateMachineCount ||
+                (uint)boneIndex >= (uint)m_Page.Layout.BoneCount)
+            {
+                throw new ArgumentOutOfRangeException();
+            }
+            return m_Page.StateMachineBoneWeights[
+                stateMachineIndex * m_Page.Layout.BoneCount + boneIndex];
+        }
+
+        internal AnimationPlayerPoseNativeRange GetSlotRange(int slotIndex)
+        {
+            RequireInterest(
+                AnimationPresentationDiagnosticsInterest.LiveState |
+                AnimationPresentationDiagnosticsInterest.Capture);
+            if ((uint)slotIndex >= (uint)m_Page.Layout.PlayerCount)
+                throw new ArgumentOutOfRangeException(nameof(slotIndex));
+            return m_Page.SlotRanges[slotIndex];
+        }
+
+        internal int GetSlotContributionCount(int slotIndex)
+        {
+            GetSlotRange(slotIndex);
+            return m_Page.SlotContributionCounts[slotIndex];
+        }
+
+        internal AnimationPrimitivePoseContribution GetSlotContribution(
+            int flatContributionIndex)
+        {
+            RequireInterest(
+                AnimationPresentationDiagnosticsInterest.LiveState |
+                AnimationPresentationDiagnosticsInterest.Capture);
+            if ((uint)flatContributionIndex >=
+                (uint)m_Page.SlotContributions.Length)
+            {
+                throw new ArgumentOutOfRangeException(
+                    nameof(flatContributionIndex));
+            }
+            return m_Page.SlotContributions[flatContributionIndex];
+        }
+
+        internal float GetSlotContributionBoneWeight(
+            int flatContributionIndex,
+            int boneIndex)
+        {
+            GetSlotContribution(flatContributionIndex);
+            if ((uint)boneIndex >= (uint)m_Page.Layout.BoneCount)
+                throw new ArgumentOutOfRangeException(nameof(boneIndex));
+            return m_Page.SlotDenseContributionWeights[
+                flatContributionIndex * m_Page.Layout.BoneCount +
+                boneIndex];
+        }
+
+        internal AnimationPoseAvailability GetValueAvailability(int valueIndex)
+        {
+            RequireValueIndex(valueIndex);
+            return m_Page.ValueAvailability[valueIndex];
+        }
+
+        internal AnimationPoseNativeInvalidReason GetValueInvalidReason(
+            int valueIndex)
+        {
+            RequireValueIndex(valueIndex);
+            return m_Page.ValueInvalidReasons[valueIndex];
+        }
+
+        internal float GetValueOutputWeight(int valueIndex)
+        {
+            RequireValueIndex(valueIndex);
+            return m_Page.ValueOutputWeights[valueIndex];
+        }
+
+        internal ulong GetValueContinuityIdentity(int valueIndex)
+        {
+            RequireValueIndex(valueIndex);
+            return m_Page.ValueContinuityIdentities[valueIndex];
+        }
+
+        internal int GetValueContributionCount(int valueIndex)
+        {
+            RequireValueIndex(valueIndex);
+            return m_Page.ValueContributionCounts[valueIndex];
+        }
+
+        internal AnimationPrimitivePoseContribution GetValueContribution(
+            int valueIndex,
+            int contributionIndex)
+        {
+            RequireValueIndex(valueIndex);
+            if ((uint)contributionIndex >=
+                (uint)m_Page.Layout.PoseValueContributionStride)
+            {
+                throw new ArgumentOutOfRangeException(
+                    nameof(contributionIndex));
+            }
+            return m_Page.ValueContributions[
+                valueIndex * m_Page.Layout.PoseValueContributionStride +
+                contributionIndex];
+        }
+
+        internal float GetValueContributionBoneWeight(
+            int valueIndex,
+            int contributionIndex,
+            int boneIndex)
+        {
+            RequireInterest(
+                AnimationPresentationDiagnosticsInterest.Capture |
+                AnimationPresentationDiagnosticsInterest.OperationDetail);
+            GetValueContribution(valueIndex, contributionIndex);
+            if ((uint)boneIndex >= (uint)m_Page.Layout.BoneCount)
+                throw new ArgumentOutOfRangeException(nameof(boneIndex));
+            int flatContributionIndex =
+                valueIndex * m_Page.Layout.PoseValueContributionStride +
+                contributionIndex;
+            return m_Page.ValueDenseContributionWeights[
+                flatContributionIndex * m_Page.Layout.BoneCount + boneIndex];
+        }
+
+        internal AnimationLocalBonePose GetValuePose(
+            int valueIndex,
+            int boneIndex)
+        {
+            RequireInterest(AnimationPresentationDiagnosticsInterest.PoseWatch);
+            RequireValueIndex(valueIndex);
+            if ((uint)boneIndex >= (uint)m_Page.Layout.BoneCount)
+                throw new ArgumentOutOfRangeException(nameof(boneIndex));
+            return m_Page.ValueDenseLocalPoses[
+                valueIndex * m_Page.Layout.BoneCount + boneIndex];
+        }
+
+        AnimationPoseNativeAggregateLayout RequireLayout()
+        {
+            RequireValid();
+            return m_Page.Layout;
+        }
+
+        void RequireValueIndex(int valueIndex)
+        {
+            RequireInterest(
+                AnimationPresentationDiagnosticsInterest.Capture |
+                AnimationPresentationDiagnosticsInterest.OperationDetail |
+                AnimationPresentationDiagnosticsInterest.PoseWatch);
+            if ((uint)valueIndex >= (uint)m_Page.Layout.PoseValueCount)
+                throw new ArgumentOutOfRangeException(nameof(valueIndex));
+        }
+
+        void RequireInterest(AnimationPresentationDiagnosticsInterest mask)
+        {
+            RequireValid();
+            if ((m_Page.Interest & mask) == 0)
+            {
+                throw new InvalidOperationException(
+                    "Pose Program committed diagnostics group was not frozen.");
+            }
+        }
+
+        void RequireValid()
+        {
+            if (!IsValid)
+            {
+                throw new InvalidOperationException(
+                    "Pose Program committed diagnostics lease is stale.");
+            }
+        }
+    }
+
     internal sealed class CharacterPoseGraphNativeProgram : IDisposable
     {
         sealed class Page
@@ -507,6 +745,71 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 LinkedPoseCallControls;
             internal NativeArray<byte>
                 LinkedPoseActiveFragments;
+        }
+
+        internal sealed class CommittedDiagnosticsPage
+        {
+            internal CommittedDiagnosticsPage(
+                in AnimationPoseNativeAggregateLayout layout,
+                int stateMachineCount)
+            {
+                layout.RequireValid();
+                if (stateMachineCount < 0)
+                    throw new ArgumentOutOfRangeException(nameof(stateMachineCount));
+                Layout = layout;
+                StateMachineCount = stateMachineCount;
+                OperationCompletions =
+                    new CharacterPoseOperationCompletion[layout.OperationCount];
+                StateMachineBoneWeights =
+                    new float[checked(stateMachineCount * layout.BoneCount)];
+                SlotRanges =
+                    new AnimationPlayerPoseNativeRange[layout.PlayerCount];
+                SlotContributions =
+                    new AnimationPrimitivePoseContribution[
+                        layout.TotalPlayerContributionCapacity];
+                SlotDenseContributionWeights =
+                    new float[layout.PlayerDenseContributionWeightCapacity];
+                SlotContributionCounts = new int[layout.PlayerCount];
+                ValueDenseLocalPoses =
+                    new AnimationLocalBonePose[layout.PoseValuePoseCapacity];
+                ValueContributions =
+                    new AnimationPrimitivePoseContribution[
+                        layout.PoseValueContributionCapacity];
+                ValueDenseContributionWeights =
+                    new float[layout.PoseValueDenseContributionWeightCapacity];
+                ValueContributionCounts = new int[layout.PoseValueCount];
+                ValueOutputWeights = new float[layout.PoseValueCount];
+                ValueAvailability =
+                    new AnimationPoseAvailability[layout.PoseValueCount];
+                ValueContinuityIdentities = new ulong[layout.PoseValueCount];
+                ValueInvalidReasons =
+                    new AnimationPoseNativeInvalidReason[layout.PoseValueCount];
+            }
+
+            internal ulong Identity;
+            internal CharacterPoseProgramResult Result;
+            internal AnimationPresentationDiagnosticsInterest Interest;
+            internal readonly AnimationPoseNativeAggregateLayout Layout;
+            internal readonly int StateMachineCount;
+            internal readonly CharacterPoseOperationCompletion[]
+                OperationCompletions;
+            internal readonly float[] StateMachineBoneWeights;
+            internal readonly AnimationPlayerPoseNativeRange[] SlotRanges;
+            internal readonly AnimationPrimitivePoseContribution[]
+                SlotContributions;
+            internal readonly float[] SlotDenseContributionWeights;
+            internal readonly int[] SlotContributionCounts;
+            internal readonly AnimationLocalBonePose[] ValueDenseLocalPoses;
+            internal readonly AnimationPrimitivePoseContribution[]
+                ValueContributions;
+            internal readonly float[] ValueDenseContributionWeights;
+            internal readonly int[] ValueContributionCounts;
+            internal readonly float[] ValueOutputWeights;
+            internal readonly AnimationPoseAvailability[] ValueAvailability;
+            internal readonly ulong[] ValueContinuityIdentities;
+            internal readonly AnimationPoseNativeInvalidReason[]
+                ValueInvalidReasons;
+            internal AnimationPoseNativeInvalidReason PoseGraphInvalidReason;
         }
 
         NativeArray<AnimationPoseGraphNativeOperation> m_Operations;
@@ -535,6 +838,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         LinkedPoseImplementationId[] m_LinkedPoseCandidateImplementationIds;
         NativeArray<CharacterPoseStateMachineNativeControl> m_StateMachineControls;
         NativeArray<CharacterAnimationSlotNativeControl> m_AnimationSlotControls;
+        CommittedDiagnosticsPage m_CommittedDiagnostics;
         Page m_CommittedPage;
         Page m_PendingPage;
         CharacterPoseBoneCounts m_BoneCounts;
@@ -558,6 +862,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         AnimationPoseGraphNativeLegChain m_RightLeg;
         FixedString64Bytes m_RigId;
         FixedString64Bytes m_RigRevision;
+        ulong m_NextDiagnosticsIdentity = 1;
         bool m_FrameOpen;
         bool m_Disposed;
 
@@ -565,7 +870,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             CharacterPresentationPosePlan program,
             CharacterAnimationRigPayload rig,
             AnimationBlendCurveCatalogPayload curves,
-            AnimationBlendProfileCatalogPayload profiles)
+            AnimationBlendProfileCatalogPayload profiles,
+            in AnimationPoseNativeAggregateLayout layout)
         {
             try
             {
@@ -581,10 +887,19 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 rig.RequireValid();
                 curves.RequireValid();
                 profiles.RequireValid(program.PoseBoneCount, rig.RigId, rig.RigRevision);
+                layout.RequireValid();
                 if (!string.Equals(program.RigId, rig.RigId, StringComparison.Ordinal) ||
                     !string.Equals(program.RigRevision, rig.RigRevision, StringComparison.Ordinal) ||
                     program.PoseBoneCount != rig.PoseBoneCount || program.Parameters.Count <= 0 ||
-                    program.ContributionWorkspaceCount % program.PoseValueWorkspaceCount != 0)
+                    program.ContributionWorkspaceCount % program.PoseValueWorkspaceCount != 0 ||
+                    layout.BoneCount != program.PoseBoneCount ||
+                    layout.ParameterCount != program.Parameters.Count ||
+                    layout.PoseValueCount != program.PoseValueWorkspaceCount ||
+                    layout.PoseValueContributionStride !=
+                    program.ContributionWorkspaceCount /
+                    program.PoseValueWorkspaceCount ||
+                    layout.OperationCount != program.Operations.Count ||
+                    layout.StageCount != program.Stages.Count)
                     throw new InvalidOperationException("Animation Pose Graph Program and Rig payload do not match.");
 
                 m_BoneCount = program.PoseBoneCount;
@@ -655,6 +970,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                     m_LinkedPoseCallControls[i] = AnimationPoseGraphNativeLinkedPoseCallControl.Inactive;
                 m_StateMachineControls = Allocate<CharacterPoseStateMachineNativeControl>(program.StateMachines.Count);
                 m_AnimationSlotControls = Allocate<CharacterAnimationSlotNativeControl>(program.AnimationSlots.Count);
+                m_CommittedDiagnostics = new CommittedDiagnosticsPage(
+                    in layout,
+                    program.StateMachines.Count);
 
                 CompileRig(program, rig);
                 CompileBlendCatalogs(curves, profiles);
@@ -755,6 +1073,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             RequireAlive();
             if (m_FrameOpen)
                 throw new InvalidOperationException("Character Pose Graph frame is already open.");
+            m_CommittedDiagnostics.Identity = 0;
             BindPage(m_PendingPage);
             for (int i = 0; i < m_LinkedPoseCallControls.Length; i++)
                 m_LinkedPoseCallControls[i] = AnimationPoseGraphNativeLinkedPoseCallControl.Inactive;
@@ -771,6 +1090,101 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             m_CommittedPage = m_PendingPage;
             m_PendingPage = previousCommitted;
             m_FrameOpen = false;
+        }
+
+        internal CharacterPoseProgramCommittedDiagnosticsView
+            CaptureCommittedDiagnostics(
+            in CharacterPoseProgramResult result,
+            in CharacterPoseGraphNativeBinding frame,
+            AnimationPresentationDiagnosticsInterest interest)
+        {
+            RequireAlive();
+            if (m_FrameOpen ||
+                !result.IsCompleted ||
+                interest == AnimationPresentationDiagnosticsInterest.None ||
+                result.Lineage.CompletionIdentity !=
+                frame.CompletionIdentity)
+            {
+                throw new InvalidOperationException(
+                    "Pose Program committed diagnostics request is invalid.");
+            }
+            frame.RequireValid();
+            CommittedDiagnosticsPage page = m_CommittedDiagnostics;
+            AnimationPoseNativeAggregateLayout frameLayout = frame.Layout;
+            RequireDiagnosticsLayout(in frameLayout, in page.Layout);
+            page.Identity = 0;
+            page.Result = result;
+            page.Interest = interest;
+            page.PoseGraphInvalidReason = frame.PoseGraphInvalidReason[0];
+            for (int i = 0; i < page.OperationCompletions.Length; i++)
+                page.OperationCompletions[i] = frame.OperationCompletions[i];
+
+            bool basic = RequiresBasicDiagnostics(interest);
+            bool operationDetail = RequiresOperationDiagnostics(interest);
+            bool poseWatch =
+                (interest &
+                 AnimationPresentationDiagnosticsInterest.PoseWatch) != 0;
+            if (basic)
+            {
+                for (int i = 0; i < page.SlotRanges.Length; i++)
+                {
+                    page.SlotRanges[i] = frame.SlotRanges[i];
+                    page.SlotContributionCounts[i] =
+                        frame.SlotContributionCounts[i];
+                }
+                for (int i = 0; i < page.SlotContributions.Length; i++)
+                    page.SlotContributions[i] = frame.SlotContributions[i];
+                for (int i = 0;
+                     i < page.SlotDenseContributionWeights.Length;
+                     i++)
+                {
+                    page.SlotDenseContributionWeights[i] =
+                        frame.SlotDenseContributionWeights[i];
+                }
+                for (int stateMachine = 0;
+                     stateMachine < page.StateMachineCount;
+                     stateMachine++)
+                {
+                    for (int bone = 0; bone < page.Layout.BoneCount; bone++)
+                    {
+                        page.StateMachineBoneWeights[
+                            stateMachine * page.Layout.BoneCount + bone] =
+                            GetStateMachineBoneWeight(stateMachine, bone);
+                    }
+                }
+            }
+            if (operationDetail || poseWatch)
+            {
+                for (int i = 0; i < page.Layout.PoseValueCount; i++)
+                {
+                    page.ValueContributionCounts[i] =
+                        frame.ValueContributionCounts[i];
+                    page.ValueOutputWeights[i] = frame.ValueOutputWeights[i];
+                    page.ValueAvailability[i] = frame.ValueAvailability[i];
+                    page.ValueContinuityIdentities[i] =
+                        frame.ValueContinuityIdentities[i];
+                    page.ValueInvalidReasons[i] = frame.ValueInvalidReasons[i];
+                }
+                for (int i = 0; i < page.ValueContributions.Length; i++)
+                    page.ValueContributions[i] = frame.ValueContributions[i];
+            }
+            if (operationDetail)
+            {
+                for (int i = 0;
+                     i < page.ValueDenseContributionWeights.Length;
+                     i++)
+                {
+                    page.ValueDenseContributionWeights[i] =
+                        frame.ValueDenseContributionWeights[i];
+                }
+            }
+            if (poseWatch)
+            {
+                for (int i = 0; i < page.ValueDenseLocalPoses.Length; i++)
+                    page.ValueDenseLocalPoses[i] = frame.ValueDenseLocalPoses[i];
+            }
+            page.Identity = m_NextDiagnosticsIdentity++;
+            return new CharacterPoseProgramCommittedDiagnosticsView(page);
         }
 
         internal void DiscardFrame()
@@ -1415,6 +1829,12 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             if (m_Disposed)
                 return;
             m_Disposed = true;
+            if (m_CommittedDiagnostics != null)
+            {
+                m_CommittedDiagnostics.Identity = 0;
+                m_CommittedDiagnostics.Result = default;
+                m_CommittedDiagnostics = null;
+            }
             if (m_CommittedPage != null)
                 DisposePage(m_CommittedPage);
             else
@@ -1450,6 +1870,38 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             if (m_Disposed)
                 throw new ObjectDisposedException(nameof(CharacterPoseGraphNativeProgram));
         }
+
+        static void RequireDiagnosticsLayout(
+            in AnimationPoseNativeAggregateLayout frame,
+            in AnimationPoseNativeAggregateLayout page)
+        {
+            if (frame.PlayerCount != page.PlayerCount ||
+                frame.BoneCount != page.BoneCount ||
+                frame.ParameterCount != page.ParameterCount ||
+                frame.TotalPlayerContributionCapacity !=
+                page.TotalPlayerContributionCapacity ||
+                frame.PoseValueCount != page.PoseValueCount ||
+                frame.PoseValueContributionStride !=
+                page.PoseValueContributionStride ||
+                frame.OperationCount != page.OperationCount ||
+                frame.StageCount != page.StageCount)
+            {
+                throw new InvalidOperationException(
+                    "Pose Program committed diagnostics layout is inconsistent.");
+            }
+        }
+
+        static bool RequiresBasicDiagnostics(
+            AnimationPresentationDiagnosticsInterest interest) =>
+            (interest &
+             (AnimationPresentationDiagnosticsInterest.LiveState |
+              AnimationPresentationDiagnosticsInterest.Capture)) != 0;
+
+        static bool RequiresOperationDiagnostics(
+            AnimationPresentationDiagnosticsInterest interest) =>
+            (interest &
+             (AnimationPresentationDiagnosticsInterest.Capture |
+              AnimationPresentationDiagnosticsInterest.OperationDetail)) != 0;
 
         void RequireOpenFrame()
         {

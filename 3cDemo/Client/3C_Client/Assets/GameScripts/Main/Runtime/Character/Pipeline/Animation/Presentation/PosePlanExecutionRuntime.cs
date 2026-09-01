@@ -481,10 +481,13 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                 workspace = new AnimationPoseNativeWorkspace(projection);
                 CharacterPoseGraphNativeBinding initialFrame = workspace.BeginFrame(m_CompletionIdentity);
                 poseProgram = new CharacterPoseGraphNativeProgram(
+                AnimationPoseNativeAggregateLayout initialLayout =
+                    initialFrame.Layout;
                     projection.PosePlan,
                     projection.Rig,
                     projection.BlendCurveCatalog,
-                    projection.BlendProfileCatalog);
+                    projection.BlendProfileCatalog,
+                    in initialLayout);
                 if (projection.PosePlan.FullBodyIks.Count != 1)
                     throw new InvalidOperationException(
                         "Pose Plan requires exactly one Full Body IK descriptor.");
@@ -660,9 +663,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                     projection.Rig.RigRevision);
                 diagnosticsPublisher = new AnimationPresentationRuntimeSnapshotPublisher(
                     projection,
-                    poseProgram,
-                    in initialFrame,
-                    workspace,
+                    in initialLayout,
                     physicalSources.Capacity);
 
                 PlayableGraph graph = animancer.Graph.PlayableGraph;
@@ -1728,9 +1729,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
         internal void BeginCommittedDiagnostics(
             AnimationPresentationDiagnosticsInterest interest,
             CharacterLinkedPoseRuntimeSession linkedPose,
-            in CharacterPoseFrameExecutionResult executionResult)
             in CharacterPoseSourceFrameResult sourceFrame,
         {
+            in CharacterPoseFrameExecutionResult executionResult)
             RequireAlive();
             RequireNoOpenMutation();
             if (linkedPose == null)
@@ -1760,17 +1761,24 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                     .RequiresFullBodyIkDiagnostics(interest);
                 bool requiresPhysical = ComposedAnimationPoseFramePublisher
                     .RequiresPhysicalDiagnostics(interest);
-                CharacterPoseConstraintResult committedConstraintResult =
                 CharacterPoseSourceCommittedDiagnosticsView sourceDiagnostics =
                     m_PhysicalSources.CaptureCommittedDiagnostics(
                         in sourceFrame);
                     executionResult.Constraint;
+                CharacterPoseProgramResult committedProgramResult =
+                    executionResult.Program;
+                CharacterPoseProgramCommittedDiagnosticsView
+                    programDiagnostics =
+                        m_PosePlan.CaptureCommittedDiagnostics(
+                            in committedProgramResult,
+                            in m_LastCompletedFrame,
+                            interest);
+                CharacterPoseConstraintResult committedConstraintResult =
                 CharacterPoseConstraintCommittedDiagnosticsView
                     constraintDiagnostics =
                         m_PoseConstraints.CaptureCommittedDiagnostics(
                             in committedConstraintResult,
                             interest);
-                CharacterFootLandingPredictionDiagnostics footDiagnostics =
                 CharacterFinalPosePublicationResult committedPublicationResult =
                     executionResult.Publication;
                 CharacterFinalPoseCommittedDiagnosticsView
@@ -1780,19 +1788,23 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                 AnimationPhysicalBoneWriteDiagnostics physicalWrite =
                     publicationDiagnostics.PhysicalWrite;
                     constraintDiagnostics.FootLandingPrediction;
+                CharacterFootLandingPredictionDiagnostics footDiagnostics =
                 CharacterFullBodyIkSolverDiagnostics solverDiagnostics =
                     constraintDiagnostics.Solver;
                 if (!sourceDiagnostics.IsValid ||
                     sourceDiagnostics.Result.Lineage !=
                     executionResult.Lineage ||
                     !constraintDiagnostics.IsValid ||
+                    !programDiagnostics.IsValid ||
+                    programDiagnostics.Result.Lineage !=
+                    executionResult.Lineage ||
                     constraintDiagnostics.Result.Lineage !=
                     executionResult.Lineage ||
-                    executionResult.Constraint.Lineage !=
                     !publicationDiagnostics.IsValid ||
                     publicationDiagnostics.Result.Lineage !=
                     executionResult.Lineage ||
                     executionResult.Lineage ||
+                    executionResult.Constraint.Lineage !=
                     executionResult.Publication.Lineage !=
                     executionResult.Lineage ||
                     requiresFoot &&
@@ -1814,15 +1826,14 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                 }
                 m_DiagnosticsPublisher.BeginFrame(
                     in executionResult,
-                    in constraintDiagnostics,
                     in sourceDiagnostics,
                     in publicationDiagnostics,
-                    in m_LastCompletedFrame,
+                    in programDiagnostics,
+                    in constraintDiagnostics,
                     m_Stacks,
                     m_StackRoutes,
                     m_PoseStateSources.StateMachines,
                     m_InertializationPlan,
-                    m_PhysicalSources,
                     m_RootOrientationWarps,
                     linkedPose,
                     interest);

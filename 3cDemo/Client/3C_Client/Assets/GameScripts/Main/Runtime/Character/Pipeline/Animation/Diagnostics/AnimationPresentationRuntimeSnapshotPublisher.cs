@@ -142,7 +142,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
             in CharacterFinalPoseCommittedDiagnosticsView
                 publicationDiagnostics,
             in CharacterPoseGraphNativeBinding frame,
-            in AnimationFinalPoseNativeReadBinding finalRead,
             IReadOnlyList<AnimationBlendStackRuntime> stacks,
             IReadOnlyList<CharacterAnimationTransitionRouteRuntime> routes,
             IReadOnlyList<CharacterPoseStateMachineRuntime> stateMachines,
@@ -155,6 +154,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
             RequireAlive();
             RequireValidFrameInterest(interest);
             frame.RequireValid();
+            ComposedAnimationPoseFrame finalFrame =
+                publicationDiagnostics.Frame;
             if (!executionResult.IsPublished ||
                 !constraintDiagnostics.IsValid ||
                 constraintDiagnostics.Result.Lineage !=
@@ -165,7 +166,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
                 executionResult.Lineage.CompletionIdentity !=
                 frame.CompletionIdentity ||
                 executionResult.Lineage.CompletionIdentity !=
-                finalRead.CompletionIdentity || stacks == null ||
+                finalFrame.CompletionIdentity || stacks == null ||
                 routes == null || routes.Count != stacks.Count || stateMachines == null ||
                 inertializations == null || physicalSources == null || rootOrientationWarps == null ||
                 linkedPose == null)
@@ -222,9 +223,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
             CopyFinalSummary(
                 page,
                 in executionResult,
-                in finalRead);
+                in finalFrame);
             if (RequiresFinalPoseDetail(interest))
-                CopyFinalDetail(page, in finalRead, physicalSources);
+                CopyFinalDetail(page, in finalFrame);
             m_PendingPageIndex = pageIndex;
             m_PendingCompletionIdentity =
                 executionResult.Lineage.CompletionIdentity;
@@ -1380,7 +1381,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
         static void CopyFinalSummary(
             Page page,
             in CharacterPoseFrameExecutionResult executionResult,
-            in AnimationFinalPoseNativeReadBinding finalRead)
+            in ComposedAnimationPoseFrame finalFrame)
         {
             CharacterPoseProgramResult program = executionResult.Program;
             CharacterFinalPosePublicationResult publication =
@@ -1395,10 +1396,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
             page.PoseGraphCompletedAt =
                 executionResult.Lineage.CompletionIdentity;
             page.FinalAppliedAt = publication.AppliedCompletionIdentity;
-            page.ContinuityIdentity = finalRead.ContinuityIdentity[0];
-            page.HasFootFeatures = finalRead.HasFootFeatures[0] == 1;
-            AnimationFootFeatureSample left = finalRead.LeftFootFeatures[0];
-            AnimationFootFeatureSample right = finalRead.RightFootFeatures[0];
+            page.ContinuityIdentity = finalFrame.ContinuityIdentity;
+            page.HasFootFeatures = finalFrame.HasFootFeatures;
+            AnimationFootFeatureSample left = finalFrame.LeftFootFeatures;
+            AnimationFootFeatureSample right = finalFrame.RightFootFeatures;
             page.LeftFootSteps = page.HasFootFeatures
                 ? new AnimationBiomechanicalStepReadPage(
                     in left,
@@ -1413,26 +1414,35 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
 
         void CopyFinalDetail(
             Page page,
-            in AnimationFinalPoseNativeReadBinding finalRead,
-            PhysicalPoseSourceRegistry physicalSources)
+            in ComposedAnimationPoseFrame finalFrame)
         {
-            int contributionCount = finalRead.ContributionCount[0];
-            if (contributionCount < 0 || contributionCount > finalRead.Contributions.Length)
+            AnimationReadOnlyBuffer<float> parameters =
+                finalFrame.PoseParameters;
+            AnimationReadOnlyBuffer<byte> parameterAvailability =
+                finalFrame.PoseParameterAvailability;
+            AnimationReadOnlyBuffer<AnimationPoseSourceContribution>
+                contributions = finalFrame.Contributions;
+            int contributionCount = contributions.Count;
+            if (parameters.Count != m_Program.Parameters.Count ||
+                parameterAvailability.Count != parameters.Count ||
+                finalFrame.PoseBoneCount != page.BoneIds.Length ||
+                contributionCount <= 0 ||
+                contributionCount > page.FinalContributions.Length)
                 throw new InvalidOperationException("Final Animation Pose contribution count is invalid.");
             for (int i = 0; i < m_Program.Parameters.Count; i++)
             {
                 page.Parameters[i] = new AnimationPoseParameterSnapshot(
                     m_Program.Parameters[i].ParameterId,
-                    finalRead.PoseParameters[i],
-                    finalRead.PoseParameterAvailability[i] != 0);
+                    parameters[i],
+                    parameterAvailability[i] != 0);
             }
             for (int i = 0; i < contributionCount; i++)
             {
-                page.FinalContributions[i] = ConvertContribution(finalRead.Contributions[i], physicalSources);
+                page.FinalContributions[i] = contributions[i];
                 for (int boneIndex = 0; boneIndex < page.BoneIds.Length; boneIndex++)
                 {
                     page.FinalContributionBoneWeights[i * page.BoneIds.Length + boneIndex] =
-                        finalRead.DenseContributionWeights[i * page.BoneIds.Length + boneIndex];
+                        finalFrame.GetContributionBoneWeight(i, boneIndex);
                 }
             }
             page.ParameterCount = m_Program.Parameters.Count;

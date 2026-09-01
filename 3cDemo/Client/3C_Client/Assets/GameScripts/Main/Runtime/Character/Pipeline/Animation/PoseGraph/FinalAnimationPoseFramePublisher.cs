@@ -44,6 +44,14 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 return m_Page.PhysicalWrite;
             }
         }
+        internal ComposedAnimationPoseFrame Frame
+        {
+            get
+            {
+                RequireValid();
+                return m_Page.Frame;
+            }
+        }
 
         void RequireValid()
         {
@@ -159,6 +167,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             internal ulong Identity;
             internal CharacterFinalPosePublicationResult Result;
             internal AnimationPhysicalBoneWriteDiagnostics PhysicalWrite;
+            internal ComposedAnimationPoseFrame Frame;
         }
 
         readonly string m_PoseGraphId;
@@ -416,6 +425,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 m_CommittedResult.Lineage != result.Lineage ||
                 !m_CommittedPhysicalWrite.IsAvailable ||
                 m_CommittedPhysicalWrite.CompletionIdentity !=
+                result.Lineage.CompletionIdentity ||
+                m_CommittedFrame.CompletionIdentity !=
                 result.Lineage.CompletionIdentity)
             {
                 throw new InvalidOperationException(
@@ -425,6 +436,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             page.Identity = 0;
             page.Result = result;
             page.PhysicalWrite = m_CommittedPhysicalWrite;
+            page.Frame = m_CommittedFrame;
             page.Identity = m_NextDiagnosticsIdentity++;
             return new CharacterFinalPoseCommittedDiagnosticsView(page);
         }
@@ -468,6 +480,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             m_CommittedDiagnostics.Identity = 0;
             m_CommittedDiagnostics.Result = default;
             m_CommittedDiagnostics.PhysicalWrite = default;
+            m_CommittedDiagnostics.Frame = default;
             m_Pending.Clear();
             m_CommittedFrame = default;
         }

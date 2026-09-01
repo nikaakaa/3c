@@ -1809,7 +1809,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                     in publicationDiagnostics,
                     in m_LastCompletedFrame,
                     m_Stacks,
-                    in finalRead,
                     m_StackRoutes,
                     m_PoseStateSources.StateMachines,
                     m_InertializationPlan,

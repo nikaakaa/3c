@@ -3,7 +3,7 @@
 - [x] 1.1 已同步`refactor-character-pose-graph-architecture` proposal/design/spec/tasks：PoseGraph唯一拥有Committed Result Projector、具体`CharacterFootIkCommittedCaptureViewLease`的interest冻结、生产与寿命，`add-generated-diagnostic-sampling-framework`拥有通用生成／packet／Capability生命周期，本change只拥有消费租约的Foot Bridge、Definitions与Host Adapter
 - [x] 1.2 已同步未归档`add-gameplay-performance-capture-workflow`的Build Request、Player/Run/Capture manifest、握手与Comparer合同：同一Performance入口通过通用Diagnostic Capability Set承载`character-foot-ik` Disabled/Capture身份，不建立Foot专属Build字段、第二Player或Controller
 - [x] 1.3 对账`consolidate-foot-diagnostic-scoring`剩余5.3与当前工作区Analyzer/Publisher差异，输出唯一Owner清单；若同字段或同规则仍在修改则停止并报告具体冲突，不覆盖已改对实现
-- [ ] 1.4 建立现行主行、geometry、Runtime来源、派生字段、availability、Analyzer消费与评分消费的字段迁移清单；以当前唯一Schema展开结果和全部诊断Required Field集合核对零遗漏、零重复
+- [x] 1.4 建立现行主行、geometry、Runtime来源、派生字段、availability、Analyzer消费与评分消费的字段迁移清单；以当前唯一Schema展开结果和全部诊断Required Field集合核对零遗漏、零重复
 
 ## 2. 验收PoseGraph唯一Committed Foot IK Capture合同
 

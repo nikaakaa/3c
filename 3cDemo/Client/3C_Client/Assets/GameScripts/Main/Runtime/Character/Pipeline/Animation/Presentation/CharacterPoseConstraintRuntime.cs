@@ -217,14 +217,17 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             internal ulong Identity;
             internal CharacterPoseConstraintFrameLease Lease;
             internal AnimationPresentationDiagnosticsInterest DiagnosticsInterest;
+            internal CharacterFootIkCaptureInterest FootIkCaptureInterest;
 
             internal void Begin(
                 in CharacterPoseConstraintFrameLease lease,
                 AnimationPresentationDiagnosticsInterest diagnosticsInterest,
+                CharacterFootIkCaptureInterest footIkCaptureInterest,
                 Bank committed)
             {
                 Lease = lease;
                 DiagnosticsInterest = diagnosticsInterest;
+                FootIkCaptureInterest = footIkCaptureInterest;
                 SolverOutcome = default;
                 SolverDiagnostics = default;
                 SolverEffectorCount = 0;
@@ -244,13 +247,15 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                     BendHistory = committed.BendHistory;
                 FootPlacement?.Begin(
                     committed?.FootPlacement,
-                    RequiresFootDiagnostics(diagnosticsInterest));
+                    RequiresFootDiagnostics(diagnosticsInterest) ||
+                    footIkCaptureInterest.IsEnabled);
             }
 
             internal void ClearPending()
             {
                 Lease = default;
                 DiagnosticsInterest = AnimationPresentationDiagnosticsInterest.None;
+                FootIkCaptureInterest = default;
                 SolverOutcome = default;
                 SolverDiagnostics = default;
                 SolverEffectorCount = 0;
@@ -407,12 +412,16 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
         internal CharacterPoseConstraintCommittedDiagnosticsView
             CaptureCommittedDiagnostics(
             in CharacterPoseConstraintResult result,
-            AnimationPresentationDiagnosticsInterest interest)
+            AnimationPresentationDiagnosticsInterest interest,
+            CharacterFootIkCaptureInterest footIkCaptureInterest)
         {
             RequireAlive();
-            if (interest == AnimationPresentationDiagnosticsInterest.None ||
+            if (interest == AnimationPresentationDiagnosticsInterest.None &&
+                    !footIkCaptureInterest.IsEnabled ||
                 !MatchesCommittedResult(in result) ||
-                (interest & ~m_Committed.DiagnosticsInterest) != 0)
+                (interest & ~m_Committed.DiagnosticsInterest) != 0 ||
+                footIkCaptureInterest.IsEnabled &&
+                !m_Committed.FootIkCaptureInterest.IsEnabled)
             {
                 throw new InvalidOperationException(
                     "Pose Constraint committed diagnostics request is invalid.");
@@ -428,7 +437,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             page.Solver = default;
             page.SolverEffectorCount = 0;
             page.SolverLimbCount = 0;
-            if (RequiresFootDiagnostics(interest) &&
+            if ((RequiresFootDiagnostics(interest) ||
+                 footIkCaptureInterest.IsEnabled) &&
                 m_Committed.FootPlacement?.Diagnostics.HasValue == true)
             {
                 page.FootLandingPrediction =
@@ -461,7 +471,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                         page.GoalSet.GoalOffset + i];
                 }
             }
-            if (RequiresFullBodyIkDiagnostics(interest))
+            if (RequiresFullBodyIkDiagnostics(interest) ||
+                footIkCaptureInterest.IsEnabled)
             {
                 page.Solver = m_Committed.SolverDiagnostics;
                 page.SolverEffectorCount =
@@ -477,7 +488,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
         }
         internal CharacterPoseConstraintFrameLease BeginFrame(
             in CharacterPoseFrameLineage lineage,
-            AnimationPresentationDiagnosticsInterest diagnosticsInterest)
+            AnimationPresentationDiagnosticsInterest diagnosticsInterest,
+            CharacterFootIkCaptureInterest footIkCaptureInterest)
         {
             RequireAlive();
             if (m_HasPending)
@@ -489,6 +501,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             m_Pending.Begin(
                 in lease,
                 diagnosticsInterest,
+                footIkCaptureInterest,
                 m_HasCommitted ? m_Committed : null);
             m_PendingResult = default;
             m_HasPending = true;
@@ -656,7 +669,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             if (!handle.IsValid || handle.FullBodyIkIndex != 0)
                 throw new ArgumentOutOfRangeException(nameof(handle));
             bool recordDiagnostics =
-                RequiresFullBodyIkDiagnostics(m_Pending.DiagnosticsInterest);
+                RequiresFullBodyIkDiagnostics(
+                    m_Pending.DiagnosticsInterest) ||
+                m_Pending.FootIkCaptureInterest.IsEnabled;
             if (!m_Pending.GoalSet.IsValid)
                 throw new InvalidOperationException("Full Body IK requires the unique assembled Goal Set.");
             CharacterFullBodyIkResult result = m_Solver.SolvePrepared(

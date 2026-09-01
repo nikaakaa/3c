@@ -454,7 +454,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
             IReadOnlyList<AnimationBlendSpacePlayerRuntime>
                 blendSpacePlayers,
             IReadOnlyList<RootOrientationWarpRuntime> rootOrientationWarps,
-            AnimationPresentationDiagnosticsInterest interest)
+            AnimationPresentationDiagnosticsInterest interest,
+            bool includeFootCapture)
         {
             if (!result.IsCompleted || m_Page.Identity != 0)
             {
@@ -552,18 +553,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
                 }
                 m_Page.RootOrientationWarpCount =
                     rootOrientationWarps.Count;
-                int clipFootObservationCount = 0;
-                for (int i = 0; i < clipPlayers.Count; i++)
-                {
-                    AnimationClipPlayerRuntime player = clipPlayers[i];
-                    if (!player.IsRelevant || !player.HasCompletedFrame)
-                        continue;
-                    m_Page.ClipFootObservations[
-                            clipFootObservationCount++] =
-                        player.CreateFootStepObservationSnapshot(0f);
-                }
-                m_Page.ClipFootObservationCount =
-                    clipFootObservationCount;
+                CaptureClipFootObservations(clipPlayers);
                 int blendSpaceSampleCount = 0;
                 int blendSpacePlayerCount = 0;
                 for (int i = 0; i < blendSpacePlayers.Count; i++)
@@ -583,8 +573,38 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
                 m_Page.BlendSpaceSampleCount =
                     blendSpaceSampleCount;
             }
+            else if (includeFootCapture)
+            {
+                if (clipPlayers == null ||
+                    clipPlayers.Count !=
+                    m_Page.ClipFootObservations.Length)
+                {
+                    throw new InvalidOperationException(
+                        "Foot IK observation diagnostics layout is inconsistent.");
+                }
+                CaptureClipFootObservations(clipPlayers);
+            }
             m_Page.Identity = m_NextIdentity++;
             return new CharacterPoseActorCommittedDiagnosticsView(m_Page);
+        }
+
+        void CaptureClipFootObservations(
+            IReadOnlyList<AnimationClipPlayerRuntime> clipPlayers)
+        {
+            int count = 0;
+            for (int i = 0; i < clipPlayers.Count; i++)
+            {
+                AnimationClipPlayerRuntime player = clipPlayers[i];
+                if (!player.IsRelevant || !player.HasCompletedFrame)
+                    continue;
+                m_Page.ClipFootObservations[count++] =
+                    player.CreateFootStepObservationSnapshot(0f);
+            }
+            Array.Clear(
+                m_Page.ClipFootObservations,
+                count,
+                m_Page.ClipFootObservations.Length - count);
+            m_Page.ClipFootObservationCount = count;
         }
 
         void CaptureInertializations(

@@ -144,7 +144,7 @@
 ## 13. 收口Diagnostics、Pose Watch与Preview
 
 - [x] 13.1 建立Source、Program、Constraint和Final Publication Committed Result诊断投影合同
-- [ ] 13.2 在Frame开始分别冻结Live、Pose Watch、detail interest以及具体`CharacterFootIkCaptureInterest`和View固定容量；PoseGraph不得读取Sampler Set、Schema、Program或packet容量解释interest
+- [x] 13.2 在Frame开始分别冻结Live、Pose Watch、detail interest以及具体`CharacterFootIkCaptureInterest`和View固定容量；PoseGraph不得读取Sampler Set、Schema、Program或packet容量解释interest
 - [ ] 13.3 在各Module Pending Result完成时按interest深冻结Pose、Value、Contribution、Goal、Constraint、Operation和Physical结果
 - [x] 13.4 让Foot/Goal/FBBIK diagnostics只进入Constraint Committed Result，Physical diagnostics只进入Final Publication Committed Result
 - [x] 13.5 让Diagnostics Projector只按同lineage组合Committed Result并发布PoseGraph-owned短租约`CharacterFootIkCommittedCaptureViewLease`，唯一控制其生产、有效期与失效；确认不存在万能Committed View、第二Snapshot，也不持有Program Runtime、Workspace、Constraint Module、Physical Transform、Diagnostic Capability、Sampler Definition、Schema Compiler、Generated Program、typed packet、Host、CSV或Analyzer知识

@@ -723,8 +723,13 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                         .ApplyValidatedActionBackendReleaseCompletionAcknowledgements();
                     m_PoseRuntime
                         .ExecutePreparedActionBackendReleaseRequests();
-                    if (diagnosticsInterest !=
-                        AnimationPresentationDiagnosticsInterest.None)
+                    bool publishRuntimeDiagnostics =
+                        diagnosticsInterest !=
+                        AnimationPresentationDiagnosticsInterest.None;
+                    CharacterFootIkCaptureBinding footIkCapture =
+                        transaction.FootIkCaptureBinding;
+                    if (publishRuntimeDiagnostics ||
+                        footIkCapture.IsValid)
                     {
                         if (publishStateDiagnostics)
                             BuildCommittedSnapshots(transaction);
@@ -732,29 +737,38 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                             transaction.SourceFrame;
                         m_PoseRuntime.BeginCommittedDiagnostics(
                             diagnosticsInterest,
+                            footIkCapture.Interest,
                             linkedPose,
                             in committedSourceFrame,
                             in executionResult);
                         CharacterFootIkCommittedCaptureViewLease
                             footIkCaptureView =
                                 m_PoseRuntime.PublishDiagnostics();
-                        if (publishStateDiagnostics)
-                            PublishCommittedSnapshots(transaction);
-                        else
-                            ClearCommittedStateSnapshots();
-                        PublishCommittedDebugView(
-                            publishStateDiagnostics);
-                        AnimationPresentationTracePublisher.PublishCompletedFootPlacement(
-                            m_ActorId,
-                            footIkCaptureView);
-                        if (traceInterest !=
-                            AnimationPresentationDiagnosticsInterest.None)
+                        if (publishRuntimeDiagnostics)
                         {
-                            AnimationPresentationTracePublisher.Publish(
-                                diagnostics,
-                                m_DebugView,
-                                m_RetiredPlaybacks);
+                            if (publishStateDiagnostics)
+                                PublishCommittedSnapshots(transaction);
+                            else
+                                ClearCommittedStateSnapshots();
+                            PublishCommittedDebugView(
+                                publishStateDiagnostics);
+                            AnimationPresentationTracePublisher
+                                .PublishCompletedFootPlacement(
+                                    m_ActorId,
+                                    footIkCaptureView);
+                            if (traceInterest !=
+                                AnimationPresentationDiagnosticsInterest.None)
+                            {
+                                AnimationPresentationTracePublisher.Publish(
+                                    diagnostics,
+                                    m_DebugView,
+                                    m_RetiredPlaybacks);
+                            }
                         }
+                        if (footIkCapture.IsValid)
+                            PublishFootIkCapture(
+                                in footIkCapture,
+                                in footIkCaptureView);
                     }
                     else
                     {
@@ -1006,6 +1020,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 pose = m_PoseRuntime.BeginPendingFrame(
                     in lineage,
                     diagnosticsInterest,
+                    footIkCaptureBinding.Interest,
                     linkedPose,
                     out source,
                     out constraint,
@@ -1465,6 +1480,26 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 transaction.PublicationLease);
             linkedPose.Seal();
             transaction.MarkSealed();
+        }
+
+        static void PublishFootIkCapture(
+            in CharacterFootIkCaptureBinding binding,
+            in CharacterFootIkCommittedCaptureViewLease view)
+        {
+            try
+            {
+                binding.Consumer.TryCapture(in view);
+            }
+            catch (Exception failure)
+            {
+                try
+                {
+                    binding.Consumer.CaptureFault(failure);
+                }
+                catch
+                {
+                }
+            }
         }
 
         Exception DiscardFrameTransaction(

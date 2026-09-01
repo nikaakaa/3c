@@ -99,6 +99,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
     {
         bool TryCapture(
             in CharacterFootIkCommittedCaptureViewLease view);
+        void CaptureFault(Exception failure);
     }
 
     internal readonly struct CharacterFootIkCaptureBinding

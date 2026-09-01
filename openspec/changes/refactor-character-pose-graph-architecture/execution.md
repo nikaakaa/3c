@@ -581,3 +581,11 @@ A/B均为2086脚行、1222列，其中1198业务列逐值相同、24 identity列
 本步不勾选任务13.2：Constraint、Final Publication与独立Foot Projector尚未改为消费该specific interest，当前未登记时只冻结default值，也不触发consumer。Runtime工程用显式保留build退出码的规定命令构建成功、0错误；1个warning为既有未使用字段，构建后立即关闭build server。首次Unity增量导入出现一次SourceAssetDB修改时间不一致，文件稳定后force refresh消失，清空Console后为0。
 
 正式A为`Diagnostics/FootPlacementRuns/20260902-030456-895-95d26ff9b1cb422693202d73c63036ec`，候选B为`Diagnostics/FootPlacementRuns/20260902-031403-657-15e34fd7f366452493b4ac159f321244`；B Proof为`Temp/CharacterInputReplayProofs/v4/43357ff3cd384e5cba75d2c31175b116/20260902-031459-554-babcde41dc0048fe88fbc7ec03c4ef44.json`，工具报告`matched:1044`，无failure且Foot Finalizing结束。A/B主表1198业务列和Geometry 22业务列逐值相同，identity列一一映射，0冲突；总分84.2与weighted evidence 96.5保持。`031403`成为specific interest向各Owner传播的正式A。
+
+## specific Foot interest只开启Foot所需Committed页
+
+状态：根Frame冻结的`CharacterFootIkCaptureBinding`现在随`BeginPendingFrame`进入Constraint Owner。Constraint Bank分别保存general diagnostics与specific Foot interest；Foot Placement页和FBBIK诊断只在general需要或specific Foot开启时冻结，Foot-only不打开Pose Watch Goal页。Actor Committed Projector在Foot-only时只冻结相关Clip Foot Step Observation，不复制Stack、StateMachine、Inertialization、Blend Space或Warp页面。Post-Seal入口在Foot-only时只取得Actor、Constraint与Final Publication Committed View并发布具体Foot租约，不捕获Source、Program、Linked或万能Runtime Snapshot。
+
+`CharacterAnimationPresentationRuntime`只在general或specific任一存在时进入Post-Seal diagnostics；旧Trace与Debug View仍只响应general interest，specific Foot租约只同步交给帧开始冻结的唯一consumer。consumer返回false由其自身Capability Session处理；若consumer违反`TryCapture`合同抛错，Runtime只调用`CaptureFault`并隔离其二次错误，不改变已Seal表现帧或下一帧事实。由此完成任务13.2；PoseGraph只看到容量1的typed interest和领域consumer，不读取Capability、Sampler、Schema、Generated Program或packet容量。
+
+Runtime工程用显式保留build退出码的规定命令构建成功、0错误，27个warning来自既有Unity／第三方依赖与未使用字段，构建后立即关闭build server。Unity编译无错误，退出仅有既有FinalIK日志并清空。正式A为`Diagnostics/FootPlacementRuns/20260902-031403-657-15e34fd7f366452493b4ac159f321244`，候选B为`Diagnostics/FootPlacementRuns/20260902-032312-398-b58a9d6e91894276b0610ca19a27affa`；B Proof为`Temp/CharacterInputReplayProofs/v4/43357ff3cd384e5cba75d2c31175b116/20260902-032408-358-0e43d95f5b2e425fb360e7ea276a84c8.json`，工具报告`matched:1044`。A/B主表1198业务列、Geometry 22业务列逐值相同，identity列一一映射、0冲突；总分84.2、weighted evidence 96.5不变。`032312`成为Final Publication世界事实扩展前的正式A。

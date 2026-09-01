@@ -33,3 +33,7 @@ PoseGraph已新增唯一`CharacterFootIkCommittedCaptureViewProjector`并把Foot
 固定Record `030456`相对`024336`的Proof为`matched:1044`；主表1198业务列和Geometry 22业务列逐值一致，其余identity列一一映射且0冲突，评分84.2、weighted evidence 96.5不变。旧Foot Sampler仍等待Foot事件并读取Snapshot外层metadata，任务2.4、4.2与7.1继续待迁。
 
 PoseGraph已建立`CharacterFootIkCaptureInterest`、单一owner consumer登记和`CharacterPoseFrameTransaction`帧开始冻结合同；Foot插件后续只需把已编译Program descriptor归一化为容量1的typed interest，不把Sampler或packet传给PoseGraph。默认未登记固定回放`031403`相对`030456`为`matched:1044`，Foot／Geometry业务列0冲突、评分不变。任务2.1、2.2与2.5仍等待specific interest真正传播到Constraint、Final Publication与独立Projector后统一验收。
+
+specific Foot interest现已传播到Actor foot observation、Constraint Foot／FBBIK诊断页与独立Foot Projector；Foot-only不创建Source、Program、Linked、Operation、Pose Watch或万能Snapshot页面，并在成功Seal后把唯一租约同步交给冻结consumer。结合完整lineage、容量1 interest、独立View Lease及Foot插件只有`typeof(CharacterFootIkCommittedCaptureViewLease)`引用且没有第二View，完成任务2.1与PoseGraph任务13.2。任务2.2仍等待Final Publication世界空间扩展事实改为specific-interest gated后勾选，任务2.5仍等待正式Foot Program Definition。
+
+默认未登记固定回放`032312`相对`031403`为`matched:1044`；主表与Geometry业务列0冲突，评分84.2、weighted evidence 96.5保持。该证据确认新增specific路径没有改变Disabled／旧general链的Foot、Goal、FBBIK、Final Pose或Physical结果。

@@ -781,7 +781,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
         public bool Completed { get; }
     }
 
-    internal sealed class AnimationFootPlacementRuntimeSnapshotPage
+    internal sealed class CharacterFootIkCommittedCaptureViewPage
     {
         internal CharacterFootLandingPredictionDiagnostics LandingPrediction;
         internal CharacterFullBodyIkSolverDiagnostics Solver;
@@ -812,12 +812,12 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
         static readonly CharacterFullBodyIkEffectorDiagnostics s_DefaultEffector;
         static readonly CharacterFullBodyIkLimbDiagnostics s_DefaultLimb;
 
-        readonly AnimationFootPlacementRuntimeSnapshotPage m_Page;
+        readonly CharacterFootIkCommittedCaptureViewPage m_Page;
         readonly FinalAnimationPoseFramePageLease m_Lease;
         readonly ulong m_LeaseIdentity;
 
         internal AnimationFootPlacementRuntimeSnapshot(
-            AnimationFootPlacementRuntimeSnapshotPage page,
+            CharacterFootIkCommittedCaptureViewPage page,
             FinalAnimationPoseFramePageLease lease,
             ulong leaseIdentity)
         {

@@ -2358,7 +2358,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
                 OperationContributionBoneWeights = new float[
                     checked(program.Operations.Count * layout.PoseValueContributionStride * layout.BoneCount)];
                 FinalContributionBoneWeights = new float[checked(layout.PoseValueContributionStride * layout.BoneCount)];
-                FootPlacement = new AnimationFootPlacementRuntimeSnapshotPage();
+                FootPlacement = new CharacterFootIkCommittedCaptureViewPage();
                 PhysicalBoneCount = rig.PhysicalBoneCount;
                 VirtualBoneCount = rig.VirtualBoneCount;
                 PoseBoneCount = rig.PoseBoneCount;
@@ -2454,7 +2454,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
             internal AnimationBiomechanicalStepReadPage RightFootSteps;
             internal bool HasFootFeatures;
             internal AnimationFootStepObservationRuntimeSnapshot FootStepObservation;
-            internal readonly AnimationFootPlacementRuntimeSnapshotPage FootPlacement;
+            internal readonly CharacterFootIkCommittedCaptureViewPage FootPlacement;
 
             internal void ClearCounts()
             {

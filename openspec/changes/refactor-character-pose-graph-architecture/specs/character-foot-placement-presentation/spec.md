@@ -8,7 +8,7 @@
 
 Foot Placement MUST继续由当前保留的深`CharacterFootPlacementModule`接收同帧不可变Frame Input并发布一个`CharacterFootPlacementResult`。调用方 MUST不知道或编排Landing Prediction、Ground Path、左右脚状态、Support、Pelvis与Goal编码顺序。本change MUST整体保留当前Lifecycle、Transition、State Target、Interpolation、Pelvis及Landing收口的算法、配置和执行顺序，不固定或恢复旧中央状态机类名，不引入新的Foot请求／最终结果流程。输入保持相同Pose、Foot Motion、Body／World、Rig与Profile时，Foot、Pelvis和三个Goal Contribution MUST保持指定提交ad3527e103cc3235a63e8a1c1dbd26df5155e0ba的结果；不得发布第二Goal Set、第二Pelvis、第二FBBIK、第二Final Pose页或第二Physical Writer。
 
-#### Scenario: 正常生成并消费Foot Placement结果
+#### Scenario: 正常生成Foot Placement结果
 
 - **WHEN** 同一表现帧具有合法Component Pose、Step、Body、World Query、Profile、Program Operation与Pending Constraint Bank
 - **THEN** Foot Placement Operation MUST生成同lineage的Resolved Foot Pair、Pelvis Result、三个Goal Contribution和唯一operation completion
@@ -38,7 +38,7 @@ Runtime Result MUST与Diagnostics严格分型。Constraint Module MAY按Frame开
 
 Gizmo、CSV、Trace与Pose Watch MUST只由Runtime Diagnostics Projector按相同Frame、Completion、Program、Projection、Rig和Actor lineage组合Source、Program、Constraint与Final Publication的Committed Result，再接入现有唯一Sampler、Analyzer、Publisher和明细存储。既有采样字段业务含义、七维评分权重／资格／分母、报告与历史原包 MUST保持；本change不得重写离线列映射、重算另一套评分或恢复展开facts.json读写往返。Diagnostics MUST不查询世界、修改Context、选择Support、生成Goal、执行FBBIK、读取Physical Transform反推结果或把Constraint与Physical事实写回同一业务Bank。
 
-#### Scenario: 捕获重构后基线事实
+#### Scenario: 捕获正式Foot事实
 
 - **WHEN** Foot、Pelvis、Goal、FBBIK、Pending Pose与Physical Writer均成功提交
 - **THEN** Diagnostics Projector MUST从同一lineage的Constraint与Final Publication Committed Result发布可对账当前冻结基线的正式事实

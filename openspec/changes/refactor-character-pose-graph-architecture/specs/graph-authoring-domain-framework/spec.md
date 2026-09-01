@@ -8,7 +8,7 @@ BTSMTL、AI与其它Graph领域 MAY通过各自正式Definition Adapter向同一
 
 Pose Node Definition只拥有节点局部作者语义、直接Graph dependency与lowering语义，MUST不接管Document package路径、文件闭包、diff、Undo、rollback、save、reverse export或五个MCP生命周期；现有Reconciler与Document Transaction Service MUST继续分别拥有唯一对账和事务生命周期。Definition变化如果改变Agent能看到、创建、连接或必须验证的语义，MUST同步Document v4模型、Presentation codec/exporter、Target Mapper、唯一Reconciler、typed Presentation Mutation、Validator与`btsmtl-agent-authoring`当前合同。
 
-#### Scenario: FootPlacement声明双输出
+#### Scenario: FootPlacement声明Goal Contribution输出
 
 - **WHEN** FootPlacement Pose Definition声明`pose.component`与`component.full-body-ik-goal-contribution`两个输出
 - **THEN** Capability与唯一Port Shape Projector MUST让Canvas、Document、Reconciler、Mutation、Validator与Compiler识别两个稳定port及其lineage规则
@@ -26,7 +26,7 @@ Pose Node Definition只拥有节点局部作者语义、直接Graph dependency�
 - **THEN** 唯一Pose Definition MUST声明其Component Pose端口、execution domain、typed payload、Operation Family、Graph dependency与typed lowering
 - **AND** Capability、人工创建菜单、Document、Validator和Compiler MUST同时识别该能力而不得注册第二Compiler Handler
 
-#### Scenario: Definition未声明字段
+#### Scenario: capability未声明字段
 
 - **WHEN** UI或Document尝试写入当前node Definition未声明的字段
 - **THEN** Mutation MUST拒绝该命令并返回稳定诊断

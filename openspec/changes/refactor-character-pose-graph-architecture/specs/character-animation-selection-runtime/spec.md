@@ -18,6 +18,12 @@ PoseState Transition MUST按state relevance保留共同可见source；ActionPlay
 - **THEN** Source Module MUST执行唯一deferred physical release并在后续正式结果中发布completion
 - **AND** Program Runtime MUST不在收到匹配completion前复用逻辑slot或伪造释放成功
 
+#### Scenario: Start State已经切出
+
+- **WHEN** Start到Locomotion transition仍需要Start Pose
+- **THEN** State relevance MUST保留Start provider source
+- **AND** Action lifecycle MUST不创建对应PlaybackId
+
 ### Requirement: Animancer必须只负责source采样
 
 唯一`CharacterPoseSourceModule`内部的Animancer source backend MUST只按完整Action playback或Presentation Pose source identity创建或复用Clip/ManualMixer Playable，应用compiled effective sample、loop、play rate和source-local clip weight，安装source capture binding并管理物理source寿命。Program Runtime MUST拥有PoseState、Player endpoint、ActionPlaybackInput lifecycle、Transition、Slot、Blend Stack和Inertialization逻辑；Source Module与Animancer MUST不仲裁State或Action winner、不推进Action lifecycle、不解析AnimationClip Curve、不选择Phase leader、不拥有跨source weight、不执行AnimationSlot、Layer composition、Foot Placement、Goal Assembly、FBBIK或Final Publication。

@@ -40,6 +40,12 @@ Editor MUST允许按稳定PoseNodeId与call-site订阅Pose Watch，并允许Goal
 - **THEN** 当前正式结果 MUST保持不变且新详情 MAY从下一成功Frame开始
 - **AND** Diagnostics MUST不读取Pending Workspace补齐半帧结果
 
+#### Scenario: 同时观察State Player和FootPlacement
+
+- **WHEN** 两个节点都启用Pose Watch
+- **THEN** diagnostics MUST从同一frame lineage发布Local State Player Pose、FootPlacement Goal与FullBodyIK输出Pose
+- **AND** MUST不额外Evaluate PlayableGraph或读取Transform反推结果
+
 ### Requirement: Preview、Runtime与Live Debug必须复用同一固定Pose Plan
 
 Projection Compiler MUST把Pose Graph降低为`CharacterPresentationProjection`内部唯一不可变`CharacterPoseProgramImage`，并由同一Factory装配actor-local Execution View、`CharacterPoseProgramRuntime`、`CharacterPoseSourceModule`、`CharacterPoseConstraintRuntime`、`CharacterFinalPosePublication`、根Frame Transaction和actor-local Tuning Snapshot。正式Runtime与Preview MUST直接读取同一Projection内Program Image并让各自Program Runtime遵守同一Execution View materialization/Dispose规则，不得创建第二语义Program；二者 MUST使用同一Program Image schema、Stage Schedule、Operation Family evaluator、source backend、world-query Adapter、FinalIK Pose Buffer backend、Final Writer和completion语义；Live Debug MUST只读取对应Committed Result。每帧每个source、Player、Action lifecycle、Transition、Slot、composition、转换、Goal Source、Assembler、FBBIK和Writer MUST只执行一次正式计划。Graph mutation或Stale Projection时Preview MUST停止并等待显式Build。

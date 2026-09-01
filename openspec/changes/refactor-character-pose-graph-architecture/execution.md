@@ -164,3 +164,19 @@ A/B均封存1043表现帧、2086脚行和67186几何行。1215列Foot CSV中1191
 正式A为Constraint lease状态的`Diagnostics/FootPlacementRuns/20260901-142115-026-3d661384834a42669887b2d1a51022b6`，Proof为`Temp/CharacterInputReplayProofs/v4/43357ff3cd384e5cba75d2c31175b116/20260901-142225-539-a238d21b26944e57875927593ad9886f.json`。修正后的B为`Diagnostics/FootPlacementRuns/20260901-145615-867-82e9a3802a6a4b2ba49e3b70c64c75d4`，Proof为`Temp/CharacterInputReplayProofs/v4/43357ff3cd384e5cba75d2c31175b116/20260901-145714-058-456b2612adfd4f90ae75c8b1bd02992b.json`；B对A报告`matched=true`、`compared_frame_count=1044`、空aggregate/frame差异、`divergent_frame_count=0`、`first_divergent_relative_frame=-1`和空首帧差异，二者`sampling_relative_frame_count`均为1043。
 
 A/B均封存2086脚行和67186几何行。1215列Foot CSV中1191个业务列逐值相同、24个运行／实例／Surface／Path identity列一一映射、0个其它差异；27列Geometry中22个业务列逐值相同、5个identity列一一映射、0个其它差异。十份诊断报告排除运行identity、文件hash、detail／index大小与分析耗时后全部相同，七维分项与总分84.2不变。由此确认Publication Pending所有权和lease收口没有改变动画时钟、Source采样、Operation、Foot、Pelvis、Goal、Assembler、Bend、FBBIK或Physical Pose业务事实；B成为下一项外层重构的正式A基线。
+
+## Pose帧合同校验责任分层
+
+状态：提交`0c7e51c6c`已收敛任务2阶段新增的重复静态身份检查与多层Result完整校验。`ThirdPersonClient.Runtime.csproj`按规定参数编译成功，0错误；唯一警告为既有`PipelineBlackboardValueInfoNode.m_ReportedSourceError`未使用字段，build server已关闭。固定Trace、Foot、Geometry、十份诊断报告与Replay Proof全部通过，Unity Console 0错误，任务2.7完成。
+
+- Character Build已有的typed拓扑、静态写冲突、Operation／Value／Workspace布局与schema证明保持原Owner；本步没有在Runtime、Module或Executor新增Graph／Program静态扫描，也不提前处理后续Compiler Pass任务。
+- Runtime创建继续由`CharacterPresentationRuntimeFactory`与`PosePlanExecutionRuntime`一次验证Projection、Rig、资源绑定和固定容量。`CharacterPoseConstraintRuntime.BeginFrame`不再每帧把Rig字符串转换为`FixedString`后重复核对；Final Publisher也不再每帧重复比较Pose Program、Rig与Rig Revision。它们只接收由当前Runtime装配链生成的typed lease。
+- Program、Source、Constraint与Publication四种lease只在构造时验证完整open lineage并冻结合法性；后续`IsValid`不再重新扫描Actor、Program、Projection、Rig与Tuning字符串，`Matches`只比较同一完整lineage并忽略尚未分配／已经分配的Completion项。根事务删除`IsValid + Matches`双重调用，只保留当前lease匹配、阶段和Completion交接检查。
+- Program Result、Constraint Result、Publication Result与组合Execution Result在Owner构造结果时冻结一次合同合法性；根`CharacterPoseFrameTransaction`后续只读取冻结结果、同lineage和Published Outcome，不在Owner、组合Result与根Seal三层重新计算同一完整合法性。
+- Source readiness、动态容量、release闭包、Goal／FBBIK闭包、Operation completion、Final Pose availability、continuity、Write Outcome和Physical binding仍由拥有当前动态输入的边界检查。全仓仍只有一处`new AnimationFinalPosePhysicalWriter`分配；Writer在Evaluate前验证全部Transform binding并保持原Fault政策。本步没有删除任何算法必要动态检查，也没有改变Writer、Foot、Goal或FBBIK执行顺序。
+
+正式A为Final Publication lease状态的`Diagnostics/FootPlacementRuns/20260901-145615-867-82e9a3802a6a4b2ba49e3b70c64c75d4`，Proof为`Temp/CharacterInputReplayProofs/v4/43357ff3cd384e5cba75d2c31175b116/20260901-145714-058-456b2612adfd4f90ae75c8b1bd02992b.json`。B为校验责任分层状态的`Diagnostics/FootPlacementRuns/20260901-153824-053-e3bd86ceb07d4741aa12ca1a856e4fae`，Proof为`Temp/CharacterInputReplayProofs/v4/43357ff3cd384e5cba75d2c31175b116/20260901-153939-043-da8cbb1602604e0c83b6544619be66c2.json`；B对A报告`matched=true`、`compared_frame_count=1044`、空aggregate/frame差异、`divergent_frame_count=0`、`first_divergent_relative_frame=-1`和空首帧差异，二者`sampling_relative_frame_count`均为1043。
+
+A/B之间主线另有提交`7534b6bf0`把GM／NetworkTest Editor工具合同迁入仓库级本地UPM包；该提交不包含Pose Runtime、产品Program或诊断语义修改。B Proof中的Program、Projection、Source Revision、Semantic／Contract、World、Trace、Start Body、Tick／Presentation Clock、Input和Body identity均与A相同，Foot与Geometry也没有出现第三类差异，因此该Editor-only目录迁移未污染本次Pose行为结论。
+
+A/B均封存2086脚行和67186几何行。1215列Foot CSV中1191个业务列逐值相同、24个运行／实例／Surface／Path identity列一一映射、0个其它差异；27列Geometry中22个业务列逐值相同、5个identity列一一映射、0个其它差异。十份诊断报告排除运行identity、文件hash、detail／index大小与分析耗时后全部相同，七维分项与总分84.2不变。由此确认校验责任分层没有改变动画时钟、Source采样、Operation、Foot、Pelvis、Goal、Assembler、Bend、FBBIK、Physical Pose或原Fault外的正常业务事实；B成为Constraint外层边界迁移的正式A基线。

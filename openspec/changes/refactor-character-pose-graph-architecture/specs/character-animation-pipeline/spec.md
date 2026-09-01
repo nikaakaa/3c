@@ -46,6 +46,12 @@ Diagnostics Projector MUST不持有Program Runtime、Source Module、Constraint 
 - **THEN** Diagnostics MUST不发布该Pending结果
 - **AND** Projector MUST继续只见上一Committed Snapshot或Actor Fault事实
 
+#### Scenario: Diagnostics interest中途变化
+
+- **WHEN** Editor在当前表现帧中途打开Foot Placement或FBBIK detail interest
+- **THEN** 本帧运行Result MUST保持不变且完整诊断 MAY从下一成功帧开始
+- **AND** Runtime MUST不读取Pending页补齐半帧Snapshot
+
 ### Requirement: 动画表现帧必须使用预分配暂存事务
 
 `CharacterAnimationPresentationRuntime` MUST为每个Actor使用唯一`Apply Pending Tuning -> Prepare -> Validate -> Animancer Evaluate Barrier -> Seal`表现帧事务。Runtime创建时 MUST从Projection内部不可变`CharacterPoseProgramImage`的Capacity Manifest建立该Program Runtime唯一的actor-local只读Execution View，并一次分配`CharacterPoseActorState`、`CharacterPoseProgramFramePages`、根`CharacterPoseFrameTransaction`、Source页、Constraint Bank、Final Publication唯一Committed/Pending Pose物理页、actor-local Tuning Snapshot、pending scalar state、mutation journal、prepared/deferred source命令与interest-gated Diagnostics页。Program Image、Execution View与Program Workspace MUST不再分配第二Final Pose buffer。
@@ -64,6 +70,24 @@ Diagnostics Projector MUST不持有Program Runtime、Source Module、Constraint 
 - **THEN** 根事务 MUST Discard全部Module Pending页、journal和prepared resource
 - **AND** Program Image、Committed Actor State、Source ownership、Constraint Bank、Final Pose和Physical Bones MUST保持不变
 
+#### Scenario: FBBIK后续阶段失败
+
+- **WHEN** FBBIK已经更新Pending BendHistory但后续Pose stage或Writer验证失败
+- **THEN** Committed Foot、Pelvis、Goal与BendHistory MUST全部保持上一成功帧
+- **AND** 下一帧FBBIK MUST从上一Committed BendHistory重建Vendor状态
+
+#### Scenario: Vendor存在未建模跨帧状态
+
+- **WHEN** FBBIK Vendor对象中任一字段会影响下一帧结果但不能从Committed BendHistory、Profile和当前Goal精确重建
+- **THEN** BendHistory迁移 MUST阻止实施完成并报告该状态所有权
+- **AND** Runtime MUST不使用默认值、近似初始化或视觉相似结果替代8fc行为
+
+#### Scenario: 正常提交Pose Constraint Bank
+
+- **WHEN** Foot Placement、Goal Assembler、FBBIK和Final Writer全部通过同一Completion验证
+- **THEN** Seal MUST只发布一个新的Committed Bank identity
+- **AND** 任一正式读者 MUST不观察到左右脚、盆骨或BendHistory的部分提交
+
 ### Requirement: Dense状态与稀疏生命周期必须使用不同暂存策略
 
 每帧完整生成的Pose、velocity、weight、parameter、Value、Operation completion、Inertialization next state、Constraint Result和Final Pose MUST直接写各Owner固定Committed/Pending页。PoseState、Player、ActionPlaybackInput lifecycle、Slot与Transition的小型状态 MUST使用Program Image固定布局的Program pending state。Action command cursor、source ownership、usage、retirement与release handshake MUST使用固定容量mutation journal或prepared/deferred resource命令。在线调参 MUST使用Frame外的actor-local Program/Source/Constraint Candidate Snapshot并一次提升Tuning Generation，不得写入Program Image或混入Frame journal。系统 MUST不为了统一Interface复制完整Registry，也 MUST不把Dense Pose、Goal或Operation结果降低为逐项托管mutation。
@@ -79,6 +103,18 @@ Diagnostics Projector MUST不持有Program Runtime、Source Module、Constraint 
 - **WHEN** Program Runtime执行当前Frame全部Pose Operation
 - **THEN** MUST把Value与completion直接写入Program Runtime自有Frame Pending页并只向根Transaction返回typed lease/result
 - **AND** MUST不先复制上一Committed Value Workspace或通过旧Native Program持有两种寿命
+
+#### Scenario: 本帧只有一个Action生命周期变化
+
+- **WHEN** 当前帧只新增或推进一个Action playback而其它Registry entry不变
+- **THEN** Runtime MUST只在固定journal中记录对应mutation
+- **AND** MUST不复制完整Action registry或全部source ownership集合
+
+#### Scenario: Pose Graph生成下一帧结果
+
+- **WHEN** Native Pose Graph为当前帧求值全部PoseBone
+- **THEN** Job MUST把结果直接写入Pending Native/Pose页
+- **AND** MUST不先把Committed Pose页复制为Pending页
 
 ### Requirement: Animancer Evaluate必须是唯一不可逆提交门槛
 
@@ -104,6 +140,18 @@ Barrier内 MUST按唯一Program Stage Schedule完成source capture、Pose Operat
 - **THEN** 根Seal MUST只执行预验证的no-throw页切换、journal、acknowledgement与deferred release
 - **AND** Writer成功后 MUST不再运行可能失败的动画业务逻辑
 
+#### Scenario: Barrier前Foot Placement静态准备失败
+
+- **WHEN** Foot Placement的Profile、Rig、World Context、编译容量、静态Goal Slot或binding在进入Barrier前Invalid
+- **THEN** Runtime MUST不执行FBBIK或Physical Writer
+- **AND** 根Pending Bank MUST被Discard
+
+#### Scenario: Barrier内Foot Placement运行结果失败
+
+- **WHEN** Animancer Evaluate已经产生Component Pose，但Foot Placement Patch、运行时Goal lineage、Goal Assembler或FBBIK outcome在Barrier内Invalid
+- **THEN** Runtime MUST阻断后续Pose stage与Physical Writer并Discard根Pending Bank
+- **AND** 同一Actor Animation Runtime MUST进入Faulted，不得把该失败降级成可恢复的Barrier前Discard
+
 ### Requirement: Final Pose写入必须在整Rig验证后原子选择Committed或Pending结果
 
 唯一`CharacterFinalPosePublication` MUST同时拥有当前Committed Final Pose物理页、本帧Pending Final Pose物理页、完整Physical Bone binding、Final Writer binding和Publication Result。Program Image的Output Family MUST只保存稳定`CharacterFinalPosePublicationLayoutHandle`，不得包含Actor页指针；Actor Runtime创建时 MUST由Final Publication把它绑定到唯一Pending页，Program Runtime通过actor-local binding写入Output Pose并发布只读Result，不得在Program Workspace保存第二Final Pose页。Compiler MUST只证明唯一Output与Publication requirement；具体Writer唯一性 MUST由Runtime Factory与Final Publication构造验证。Final Publication MUST在写任何Physical Bone前验证PhysicalBoneCount、Pose availability、continuity、Program completion、Constraint completion、Rig与Frame lineage；全部合法时一次写入完整Pending Physical Pose，Invalid时保持Committed Pose并阻止所有Pending Module Result提交。Source Module、Constraint Module、Diagnostics和外层Runtime MUST不写Physical Transform或保存第二Final Pose真相。
@@ -119,3 +167,9 @@ Barrier内 MUST按唯一Program Stage Schedule完成source capture、Pose Operat
 - **WHEN** OutputPose、completion或任一Physical binding在Apply前无效
 - **THEN** Final Publication MUST不留下部分Pending Physical Pose且根事务 MUST不提交任何Pending Module页
 - **AND** Actor Runtime MUST进入现有Faulted路径，不得切换第二Writer、恢复Transform后继续或自动重建Runtime
+
+#### Scenario: Writer成功后发布根Bank
+
+- **WHEN** Writer已经完整写入匹配Completion的Pending Pose
+- **THEN** Runtime MUST发布同Completion的Foot、Pelvis、Goal与BendHistory根Bank
+- **AND** MUST不在发布前后执行新的业务查询或重新选择Goal

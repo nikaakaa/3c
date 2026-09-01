@@ -21,7 +21,7 @@
 - [x] 2.5 让现有单一运行路径先携带统一lineage、root lease和typed Result，不提前创建空壳Module、wrapper、第二Frame事务或第二执行路径
 - [x] 2.6 对齐现有Animancer Evaluate Barrier，固定Barrier前验证、Barrier内执行、Writer后no-throw Seal和Fault语义
 
-- [ ] 2.7 按Build、Runtime创建、根Frame／跨Owner交接和Writer分配检查责任，删除迁移新增的重复静态扫描与多层完整校验，保留必要动态检查和原Fault政策
+- [x] 2.7 按Build、Runtime创建、根Frame／跨Owner交接和Writer分配检查责任，删除迁移新增的重复静态扫描与多层完整校验，保留必要动态检查和原Fault政策
 
 ## 3. 收紧Pose Constraint外部边界并保留内部IK
 

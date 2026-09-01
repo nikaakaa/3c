@@ -63,6 +63,14 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
                 return m_Page.AnimationSlotCount;
             }
         }
+        internal int PoseStateMachineCount
+        {
+            get
+            {
+                RequireValid();
+                return m_Page.PoseStateMachineCount;
+            }
+        }
         internal int RootOrientationWarpCount
         {
             get
@@ -127,6 +135,24 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
                 m_Page.AnimationSlotCount);
         }
 
+        internal void CopyPoseStateMachines(
+            PoseStateMachineRuntimeSnapshot[] stateMachines)
+        {
+            RequireValid();
+            if (stateMachines == null ||
+                stateMachines.Length < m_Page.PoseStateMachineCount)
+            {
+                throw new ArgumentException(
+                    "Pose actor StateMachine diagnostics destination is invalid.");
+            }
+            Array.Copy(
+                m_Page.PoseStateMachines,
+                0,
+                stateMachines,
+                0,
+                m_Page.PoseStateMachineCount);
+        }
+
         internal RootOrientationWarpRuntimeSnapshot GetRootOrientationWarp(
             int index)
         {
@@ -175,6 +201,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
                 AnimationSlots =
                     new AnimationSlotRuntimeSnapshot[
                         program.AnimationSlots.Count];
+                PoseStateMachines =
+                    new PoseStateMachineRuntimeSnapshot[
+                        program.StateMachines.Count];
                 RootOrientationWarps =
                     new RootOrientationWarpRuntimeSnapshot[
                         program.RootOrientationWarps.Count];
@@ -185,6 +214,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
             internal int StackCount;
             internal int EntryCount;
             internal int AnimationSlotCount;
+            internal int PoseStateMachineCount;
             internal int RootOrientationWarpCount;
             internal readonly int BoneCount;
             internal readonly AnimationBlendStackSnapshot[] Stacks;
@@ -192,6 +222,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
             internal readonly float[] EntryBoneWeights;
             internal readonly float[] StoredBoneWeights;
             internal readonly AnimationSlotRuntimeSnapshot[] AnimationSlots;
+            internal readonly PoseStateMachineRuntimeSnapshot[]
+                PoseStateMachines;
             internal readonly RootOrientationWarpRuntimeSnapshot[]
                 RootOrientationWarps;
         }
@@ -217,6 +249,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
             m_Page.StackCount = 0;
             m_Page.EntryCount = 0;
             m_Page.AnimationSlotCount = 0;
+            m_Page.PoseStateMachineCount = 0;
             m_Page.RootOrientationWarpCount = 0;
         }
 
@@ -224,6 +257,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
             in CharacterPoseProgramResult result,
             IReadOnlyList<AnimationBlendStackRuntime> stacks,
             IReadOnlyList<CharacterAnimationTransitionRouteRuntime> routes,
+            IReadOnlyList<CharacterPoseStateMachineRuntime> stateMachines,
             IReadOnlyList<RootOrientationWarpRuntime> rootOrientationWarps,
             AnimationPresentationDiagnosticsInterest interest)
         {
@@ -240,6 +274,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
                 if (stacks == null ||
                     stacks.Count != m_Page.Stacks.Length ||
                     routes == null || routes.Count != stacks.Count ||
+                    stateMachines == null ||
+                    stateMachines.Count !=
+                    m_Page.PoseStateMachines.Length ||
                     rootOrientationWarps == null ||
                     rootOrientationWarps.Count !=
                     m_Page.RootOrientationWarps.Length)
@@ -298,6 +335,12 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
                         "Animation Slot diagnostics coverage is incomplete.");
                 }
                 m_Page.AnimationSlotCount = animationSlotCount;
+                for (int i = 0; i < stateMachines.Count; i++)
+                {
+                    m_Page.PoseStateMachines[i] =
+                        stateMachines[i].CreateSnapshot();
+                }
+                m_Page.PoseStateMachineCount = stateMachines.Count;
                 for (int i = 0; i < rootOrientationWarps.Count; i++)
                 {
                     m_Page.RootOrientationWarps[i] =
@@ -328,6 +371,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
                 m_Page.AnimationSlots,
                 0,
                 m_Page.AnimationSlots.Length);
+            Array.Clear(
+                m_Page.PoseStateMachines,
+                0,
+                m_Page.PoseStateMachines.Length);
             Array.Clear(
                 m_Page.RootOrientationWarps,
                 0,
@@ -465,7 +512,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
                 constraintDiagnostics,
             in CharacterFinalPoseCommittedDiagnosticsView
                 publicationDiagnostics,
-            IReadOnlyList<CharacterPoseStateMachineRuntime> stateMachines,
             PoseInertializationNativeProgram inertializations,
             AnimationPresentationDiagnosticsInterest interest)
         {
@@ -493,7 +539,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
                 publicationDiagnostics.Result.Lineage !=
                 executionResult.Lineage ||
                 executionResult.Lineage.CompletionIdentity !=
-                finalFrame.CompletionIdentity || stateMachines == null ||
+                finalFrame.CompletionIdentity ||
                 inertializations == null)
                 throw new ArgumentException("Animation runtime diagnostics frame inputs are inconsistent.");
             AnimationPhysicalBoneWriteDiagnostics physicalWrite =
@@ -514,7 +560,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
                 CopyBlendStacks(page, in actorDiagnostics);
                 CopyPoseStateMachines(
                     page,
-                    stateMachines,
+                    in actorDiagnostics,
                     in programDiagnostics);
                 CopyRootOrientationWarps(page, in actorDiagnostics);
                 CopyInertializations(page, inertializations);
@@ -697,14 +743,17 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
 
         static void CopyPoseStateMachines(
             Page page,
-            IReadOnlyList<CharacterPoseStateMachineRuntime> stateMachines,
+            in CharacterPoseActorCommittedDiagnosticsView actorDiagnostics,
             in CharacterPoseProgramCommittedDiagnosticsView programDiagnostics)
         {
-            if (stateMachines.Count != page.PoseStateMachines.Length)
+            if (actorDiagnostics.PoseStateMachineCount !=
+                page.PoseStateMachines.Length)
                 throw new InvalidOperationException("Pose StateMachine diagnostics coverage is incomplete.");
-            for (int i = 0; i < stateMachines.Count; i++)
+            actorDiagnostics.CopyPoseStateMachines(page.PoseStateMachines);
+            for (int i = 0;
+                 i < actorDiagnostics.PoseStateMachineCount;
+                 i++)
             {
-                page.PoseStateMachines[i] = stateMachines[i].CreateSnapshot();
                 for (int bone = 0; bone < page.PoseBoneCount; bone++)
                 {
                     page.PoseStateMachineBoneWeights[
@@ -712,7 +761,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
                         programDiagnostics.GetStateMachineBoneWeight(i, bone);
                 }
             }
-            page.PoseStateMachineCount = stateMachines.Count;
+            page.PoseStateMachineCount =
+                actorDiagnostics.PoseStateMachineCount;
         }
 
         static void CopyRootOrientationWarps(

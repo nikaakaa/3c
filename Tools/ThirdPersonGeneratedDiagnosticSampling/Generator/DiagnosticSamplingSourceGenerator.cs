@@ -204,6 +204,7 @@ namespace ThirdPerson.GeneratedDiagnosticSampling.Generator
                         NamedString(attribute, "AvailabilityFieldId"),
                         NamedInt64(attribute, "AvailabilityValue", 1),
                         NamedBoolean(attribute, "Derived"),
+                        NamedStrings(attribute, "Dependencies"),
                         method);
                     if (!model.IsValid)
                     {
@@ -482,33 +483,83 @@ namespace ThirdPerson.GeneratedDiagnosticSampling.Generator
                 changed = false;
                 foreach (FieldModel field in selectedFields.ToArray())
                 {
-                    if (string.IsNullOrWhiteSpace(field.AvailabilityFieldId) ||
-                        selectedFields.Any(value => string.Equals(
-                            value.Id,
-                            field.AvailabilityFieldId,
-                            StringComparison.Ordinal)))
+                    IEnumerable<string> dependencyIds = field.Dependencies;
+                    if (!string.IsNullOrWhiteSpace(field.AvailabilityFieldId))
+                        dependencyIds = dependencyIds.Concat(new[] { field.AvailabilityFieldId });
+                    foreach (string dependencyId in dependencyIds.Distinct(StringComparer.Ordinal))
                     {
-                        continue;
+                        if (selectedFields.Any(value => string.Equals(
+                                value.Id,
+                                dependencyId,
+                                StringComparison.Ordinal)))
+                        {
+                            continue;
+                        }
+                        FieldModel dependency = allFields.SingleOrDefault(value =>
+                            string.Equals(value.CapabilityId, field.CapabilityId, StringComparison.Ordinal) &&
+                            string.Equals(value.Id, dependencyId, StringComparison.Ordinal));
+                        if (dependency == null)
+                        {
+                            Report(
+                                context,
+                                s_InvalidProgram,
+                                programType,
+                                $"Program '{programId}' has unknown dependency field '{dependencyId}'.");
+                            return false;
+                        }
+                        selectedFields.Add(dependency);
+                        changed = true;
                     }
-                    FieldModel dependency = allFields.SingleOrDefault(value =>
-                        string.Equals(value.CapabilityId, field.CapabilityId, StringComparison.Ordinal) &&
-                        string.Equals(value.Id, field.AvailabilityFieldId, StringComparison.Ordinal));
-                    if (dependency == null)
-                    {
-                        Report(
-                            context,
-                            s_InvalidProgram,
-                            programType,
-                            $"Program '{programId}' has unknown availability field '{field.AvailabilityFieldId}'.");
-                        return false;
-                    }
-                    selectedFields.Add(dependency);
-                    changed = true;
                 }
             }
             while (changed);
             selectedFields.Sort((left, right) => StringComparer.Ordinal.Compare(left.Id, right.Id));
+            if (HasDependencyCycle(selectedFields))
+            {
+                Report(
+                    context,
+                    s_InvalidProgram,
+                    programType,
+                    $"Program '{programId}' has a derived field dependency cycle.");
+                return false;
+            }
             return true;
+        }
+
+        static bool HasDependencyCycle(IReadOnlyList<FieldModel> fields)
+        {
+            Dictionary<string, FieldModel> map = fields.ToDictionary(value => value.Id, StringComparer.Ordinal);
+            var visiting = new HashSet<string>(StringComparer.Ordinal);
+            var visited = new HashSet<string>(StringComparer.Ordinal);
+            foreach (FieldModel field in fields)
+            {
+                if (Visit(field, map, visiting, visited))
+                    return true;
+            }
+            return false;
+        }
+
+        static bool Visit(
+            FieldModel field,
+            IReadOnlyDictionary<string, FieldModel> fields,
+            ISet<string> visiting,
+            ISet<string> visited)
+        {
+            if (visited.Contains(field.Id))
+                return false;
+            if (!visiting.Add(field.Id))
+                return true;
+            foreach (string dependencyId in field.Dependencies)
+            {
+                if (fields.TryGetValue(dependencyId, out FieldModel dependency) &&
+                    Visit(dependency, fields, visiting, visited))
+                {
+                    return true;
+                }
+            }
+            visiting.Remove(field.Id);
+            visited.Add(field.Id);
+            return false;
         }
 
         static string GenerateSource(
@@ -903,6 +954,7 @@ namespace ThirdPerson.GeneratedDiagnosticSampling.Generator
                 string availabilityFieldId,
                 long availabilityValue,
                 bool derived,
+                string[] dependencies,
                 IMethodSymbol method)
             {
                 CapabilityId = capabilityId;
@@ -915,6 +967,7 @@ namespace ThirdPerson.GeneratedDiagnosticSampling.Generator
                 AvailabilityFieldId = availabilityFieldId;
                 AvailabilityValue = availabilityValue;
                 Derived = derived;
+                Dependencies = dependencies;
                 Method = method;
             }
 
@@ -928,6 +981,7 @@ namespace ThirdPerson.GeneratedDiagnosticSampling.Generator
             public string AvailabilityFieldId { get; }
             public long AvailabilityValue { get; }
             public bool Derived { get; }
+            public string[] Dependencies { get; }
             public IMethodSymbol Method { get; }
             public bool IsValid =>
                 !string.IsNullOrWhiteSpace(CapabilityId) &&
@@ -949,6 +1003,7 @@ namespace ThirdPerson.GeneratedDiagnosticSampling.Generator
                 AvailabilityFieldId,
                 AvailabilityValue.ToString(),
                 Derived.ToString(),
+                string.Join(",", Dependencies.OrderBy(value => value, StringComparer.Ordinal)),
                 Method.ToDisplayString()
             });
         }

@@ -85,6 +85,7 @@ namespace ThirdPerson.GeneratedDiagnosticSampling
         public string AvailabilityFieldId { get; set; } = string.Empty;
         public long AvailabilityValue { get; set; } = 1;
         public bool Derived { get; set; }
+        public string[] Dependencies { get; set; } = Array.Empty<string>();
     }
 
     [AttributeUsage(AttributeTargets.Class | AttributeTargets.Struct, Inherited = false)]

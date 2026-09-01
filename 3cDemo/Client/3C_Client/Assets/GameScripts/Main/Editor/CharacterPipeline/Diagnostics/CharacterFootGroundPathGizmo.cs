@@ -127,7 +127,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             Animator animator = binding.GetComponentInChildren<Animator>();
             if (!animator)
                 return;
-            AnimationFootPlacementRuntimeSnapshot foot = debugView.PosePlan.FootPlacement;
+            CharacterFootIkCommittedCaptureViewLease foot =
+                debugView.PosePlan.FootIkCommittedCaptureView;
             if (!foot.IsAvailable || !foot.PhysicalWriteAvailable)
                 return;
             DrawFinalEffector(animator.transform, foot.LeftGoal, foot.LeftFoot, foot.LeftPhysicalAnkleComponentPosition, Color.cyan);

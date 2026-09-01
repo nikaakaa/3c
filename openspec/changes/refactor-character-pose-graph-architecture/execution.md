@@ -523,3 +523,13 @@ A/B均为2086脚行、1222列，其中1198个业务列逐值相同、24个运行
 正式A为`Diagnostics/FootPlacementRuns/20260902-012614-285-9e69b176ff8e45108b947330ca3927d3`，候选B为`Diagnostics/FootPlacementRuns/20260902-013455-708-d230b17fe48240658b668d27e5ec1741`；B Proof为`Temp/CharacterInputReplayProofs/v4/43357ff3cd384e5cba75d2c31175b116/20260902-013550-868-1924e050c6e946e08584db38174c3a73.json`，工具对A Proof正式报告`matched:1044`，无failure且Foot Finalizing已结束。
 
 A/B均为2086脚行、1222列，其中1198个业务列逐值相同、24个运行／实例／Surface／Path identity列一一映射且0冲突；Geometry均为67186行、27列，其中22个业务列逐值相同、5个identity列一一映射且0冲突。正式报告规则、七维分项、总分84.2和weighted evidence 96.5保持。由此确认Foot Motion／Observation存储归位没有改变Foot、Pelvis、Goal、FBBIK、Final Pose、Physical或诊断业务；`013455`成为具体View Lease建立的正式A。
+
+## 发布具体CharacterFootIkCommittedCaptureViewLease合同
+
+状态：候选已删除`AnimationFootPlacementRuntimeSnapshot`旧类型名，唯一替换为公开`CharacterFootIkCommittedCaptureViewLease`。具体页在同一Committed Result投影中保存完整`CharacterPoseFrameLineage`，View继续通过同一`FinalAnimationPoseFramePageLease`验证有效期，并公开Foot Motion、FootStep Observation、Foot／Pelvis／Goal、FBBIK与Physical只读事实。通用`AnimationPresentationRuntimeSnapshot`只保留`FootIkCommittedCaptureView`这一具体属性；Trace、Overlay、Gizmo、Visual Validation和旧Sampler都已编译切换到该类型，不保留旧类型别名或wrapper。
+
+本步不勾选任务13.5：Pose Runtime的`PublishDiagnostics`尚未把具体View作为独立Post-Seal结果交给领域Bridge，旧Sampler仍从Debug View取得它并进行二次join。Runtime与Editor工程均按规定参数编译成功、0错误，构建后立即关闭build server；警告只来自既有Unity／第三方依赖与未使用字段。Unity刷新、回放和退出Play只出现同一条FinalIK Domain Reload序列化深度日志，单独记录后清空，3C Console为0。
+
+正式A为`Diagnostics/FootPlacementRuns/20260902-013455-708-d230b17fe48240658b668d27e5ec1741`，候选B为`Diagnostics/FootPlacementRuns/20260902-014359-013-28fb4dea2ad6400cac2a3a4c3ded43a7`；B Proof为`Temp/CharacterInputReplayProofs/v4/43357ff3cd384e5cba75d2c31175b116/20260902-014455-432-8ad76a8566f74f2b814e23afa5297708.json`，工具对A Proof正式报告`matched:1044`，无failure且Foot Finalizing已结束。
+
+A/B均为2086脚行、1222列，其中1198个业务列逐值相同、24个运行／实例／Surface／Path identity列一一映射且0冲突；Geometry均为67186行、27列，其中22个业务列逐值相同、5个identity列一一映射且0冲突。正式报告规则、七维分项、总分84.2和weighted evidence 96.5保持。由此确认具体View类型与完整lineage合同没有改变Foot、Pelvis、Goal、FBBIK、Final Pose、Physical或诊断业务；`014359`成为独立Post-Seal交付的正式A。

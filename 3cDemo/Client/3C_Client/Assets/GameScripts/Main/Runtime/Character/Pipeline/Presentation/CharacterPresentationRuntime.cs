@@ -707,7 +707,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                             publishStateDiagnostics);
                         AnimationPresentationTracePublisher.PublishCompletedFootPlacement(
                             m_ActorId,
-                            m_DebugView.PosePlan.FootPlacement);
+                            m_DebugView.PosePlan
+                                .FootIkCommittedCaptureView);
                         if (traceInterest !=
                             AnimationPresentationDiagnosticsInterest.None)
                         {

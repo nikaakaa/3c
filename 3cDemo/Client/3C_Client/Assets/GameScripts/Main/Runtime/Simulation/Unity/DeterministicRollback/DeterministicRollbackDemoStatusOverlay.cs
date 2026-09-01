@@ -225,7 +225,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.DeterministicRollback
                             break;
                     }
                 }
-                CaptureFootPlacement(snapshot.FootPlacement);
+                CaptureFootPlacement(snapshot.FootIkCommittedCaptureView);
                 if (IsAmplifiedJump())
                 {
                     Debug.Log(
@@ -274,7 +274,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.DeterministicRollback
             }
 
             void CaptureFootPlacement(
-                AnimationFootPlacementRuntimeSnapshot footPlacement)
+                CharacterFootIkCommittedCaptureViewLease footPlacement)
             {
                 if (!footPlacement.IsAvailable)
                     return;

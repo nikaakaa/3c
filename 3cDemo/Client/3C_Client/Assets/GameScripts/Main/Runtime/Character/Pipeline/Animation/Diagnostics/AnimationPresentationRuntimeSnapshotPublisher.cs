@@ -925,6 +925,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
             page.CompletionIdentity =
                 executionResult.Lineage.CompletionIdentity;
             page.Interest = interest;
+            page.FootIkCaptureView.Lineage = executionResult.Lineage;
 
             if (RequiresBasicState(interest))
             {
@@ -969,7 +970,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
             if (RequiresBasicState(interest))
             {
                 CopyBlendSpaces(page, in actorDiagnostics);
-                page.FootPlacement.FootStepObservation =
+                page.FootIkCaptureView.FootStepObservation =
                     ResolveFootStepObservation(
                         page,
                         in actorDiagnostics);
@@ -2020,14 +2021,14 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
                     solverDiagnostics = candidate;
                 }
             }
-            page.FootPlacement.LandingPrediction = footLandingPrediction;
-            page.FootPlacement.Solver = solverDiagnostics;
-            page.FootPlacement.Pelvis = pelvis;
-            page.FootPlacement.LeftFoot = leftFoot;
-            page.FootPlacement.RightFoot = rightFoot;
-            page.FootPlacement.LeftLeg = leftLeg;
-            page.FootPlacement.RightLeg = rightLeg;
-            page.FootPlacement.PhysicalWrite =
+            page.FootIkCaptureView.LandingPrediction = footLandingPrediction;
+            page.FootIkCaptureView.Solver = solverDiagnostics;
+            page.FootIkCaptureView.Pelvis = pelvis;
+            page.FootIkCaptureView.LeftFoot = leftFoot;
+            page.FootIkCaptureView.RightFoot = rightFoot;
+            page.FootIkCaptureView.LeftLeg = leftLeg;
+            page.FootIkCaptureView.RightLeg = rightLeg;
+            page.FootIkCaptureView.PhysicalWrite =
                 physicalWrite.IsAvailable &&
                 physicalWrite.CompletionIdentity == page.CompletionIdentity
                     ? physicalWrite
@@ -2156,7 +2157,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
             page.FinalAppliedAt = publication.AppliedCompletionIdentity;
             page.ContinuityIdentity = finalFrame.ContinuityIdentity;
             CharacterFootIkCommittedCaptureViewPage foot =
-                page.FootPlacement;
+                page.FootIkCaptureView;
             foot.HasFootFeatures = finalFrame.HasFootFeatures;
             AnimationFootFeatureSample left = finalFrame.LeftFootFeatures;
             AnimationFootFeatureSample right = finalFrame.RightFootFeatures;
@@ -2360,7 +2361,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
                 OperationContributionBoneWeights = new float[
                     checked(program.Operations.Count * layout.PoseValueContributionStride * layout.BoneCount)];
                 FinalContributionBoneWeights = new float[checked(layout.PoseValueContributionStride * layout.BoneCount)];
-                FootPlacement = new CharacterFootIkCommittedCaptureViewPage();
+                FootIkCaptureView =
+                    new CharacterFootIkCommittedCaptureViewPage();
                 PhysicalBoneCount = rig.PhysicalBoneCount;
                 VirtualBoneCount = rig.VirtualBoneCount;
                 PoseBoneCount = rig.PoseBoneCount;
@@ -2452,7 +2454,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
             internal ulong PoseGraphCompletedAt;
             internal ulong FinalAppliedAt;
             internal ulong ContinuityIdentity;
-            internal readonly CharacterFootIkCommittedCaptureViewPage FootPlacement;
+            internal readonly CharacterFootIkCommittedCaptureViewPage
+                FootIkCaptureView;
 
             internal void ClearCounts()
             {
@@ -2473,7 +2476,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
                 LinkedPoseGroupCount = 0;
                 LinkedPoseEntryCount = 0;
                 PoseWatchCount = 0;
-                FootPlacement.Clear();
+                FootIkCaptureView.Clear();
             }
 
             internal AnimationPresentationRuntimeSnapshot CreateSnapshot(
@@ -2495,8 +2498,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
                     PoseGraphCompletedAt,
                     FinalAppliedAt,
                     ContinuityIdentity,
-                    new AnimationFootPlacementRuntimeSnapshot(
-                        FootPlacement,
+                    new CharacterFootIkCommittedCaptureViewLease(
+                        FootIkCaptureView,
                         Lease,
                         leaseIdentity),
                     PhysicalBoneCount,

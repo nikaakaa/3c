@@ -260,7 +260,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     out AnimationPresentationRuntimeTarget target,
                     out AnimationPresentationDebugView debugView))
                 return;
-            AnimationFootPlacementRuntimeSnapshot foot = debugView.PosePlan.FootPlacement;
+            CharacterFootIkCommittedCaptureViewLease foot =
+                debugView.PosePlan.FootIkCommittedCaptureView;
             if (!foot.IsAvailable)
                 return;
             Transform root = host.AnimationRigBinding.Animator.transform;
@@ -287,8 +288,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             for (int i = 0; i < targets.Count; i++)
             {
                 if (!targets[i].TryGetDebugView(out debugView) ||
-                    !debugView.PosePlan.FootPlacement.IsAvailable ||
-                    debugView.PosePlan.FootPlacement.LandingPrediction.RootInstanceId != rootInstanceId)
+                    !debugView.PosePlan.FootIkCommittedCaptureView.IsAvailable ||
+                    debugView.PosePlan.FootIkCommittedCaptureView
+                        .LandingPrediction.RootInstanceId != rootInstanceId)
                     continue;
                 target = targets[i];
                 return true;

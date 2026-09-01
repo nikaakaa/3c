@@ -47,12 +47,14 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
                 diagnostics,
                 debugView.PoseStateSourceSyncRelations);
             PublishRetirements(diagnostics, retiredPlaybacks);
-            PublishFootPlacement(diagnostics, debugView.PosePlan.FootPlacement);
+            PublishFootPlacement(
+                diagnostics,
+                debugView.PosePlan.FootIkCommittedCaptureView);
         }
 
         static void PublishFootPlacement(
             RuntimeDiagnosticsContext diagnostics,
-            AnimationFootPlacementRuntimeSnapshot snapshot)
+            CharacterFootIkCommittedCaptureViewLease snapshot)
         {
             if (!snapshot.IsAvailable ||
                 !diagnostics.ShouldPublish(
@@ -90,7 +92,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
 
         internal static void PublishCompletedFootPlacement(
             ActorId actorId,
-            AnimationFootPlacementRuntimeSnapshot snapshot)
+            CharacterFootIkCommittedCaptureViewLease snapshot)
         {
             if (!snapshot.IsAvailable)
             {
@@ -111,7 +113,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
         }
 
         static RuntimeFootPlacementTraceSnapshot BuildFootPlacementSnapshot(
-            AnimationFootPlacementRuntimeSnapshot snapshot)
+            CharacterFootIkCommittedCaptureViewLease snapshot)
         {
             ref readonly CharacterFootLandingPredictionDiagnostics landing =
                 ref snapshot.LandingPrediction;

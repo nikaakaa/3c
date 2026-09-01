@@ -940,7 +940,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     continue;
                 if (!target.TryGetDebugView(out AnimationPresentationDebugView debugView))
                     continue;
-                AnimationFootPlacementRuntimeSnapshot placement = debugView.PosePlan.FootPlacement;
+                CharacterFootIkCommittedCaptureViewLease placement =
+                    debugView.PosePlan.FootIkCommittedCaptureView;
                 if (!placement.IsAvailable ||
                     placement.LandingPrediction.RootInstanceId != pending.RootInstanceId)
                 {
@@ -1044,7 +1045,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             }
             if (!target.TryGetDebugView(out AnimationPresentationDebugView debugView))
                 return;
-            AnimationFootPlacementRuntimeSnapshot footPlacement = debugView.PosePlan.FootPlacement;
+            CharacterFootIkCommittedCaptureViewLease footPlacement =
+                debugView.PosePlan.FootIkCommittedCaptureView;
             if (footPlacement.IsAvailable &&
                 footPlacement.LandingPrediction.RootInstanceId != 0)
             {

@@ -783,6 +783,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
 
     internal sealed class CharacterFootIkCommittedCaptureViewPage
     {
+        internal CharacterPoseFrameLineage Lineage;
         internal AnimationBiomechanicalStepReadPage LeftFootSteps;
         internal AnimationBiomechanicalStepReadPage RightFootSteps;
         internal bool HasFootFeatures;
@@ -798,6 +799,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
 
         internal void Clear()
         {
+            Lineage = default;
             LeftFootSteps = default;
             RightFootSteps = default;
             HasFootFeatures = false;
@@ -813,7 +815,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
         }
     }
 
-    public readonly struct AnimationFootPlacementRuntimeSnapshot
+    public readonly struct CharacterFootIkCommittedCaptureViewLease
     {
         static readonly CharacterFootLandingPredictionDiagnostics s_DefaultLandingPrediction;
         static readonly CharacterFullBodyIkSolverDiagnostics s_DefaultSolver;
@@ -824,7 +826,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
         readonly FinalAnimationPoseFramePageLease m_Lease;
         readonly ulong m_LeaseIdentity;
 
-        internal AnimationFootPlacementRuntimeSnapshot(
+        internal CharacterFootIkCommittedCaptureViewLease(
             CharacterFootIkCommittedCaptureViewPage page,
             FinalAnimationPoseFramePageLease lease,
             ulong leaseIdentity)
@@ -990,6 +992,17 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
             }
         }
 
+        public CharacterPoseFrameLineage Lineage
+        {
+            get
+            {
+                if (m_Page == null)
+                    return default;
+                RequireValid();
+                return m_Page.Lineage;
+            }
+        }
+
         public AnimationBiomechanicalStepReadPage LeftFootSteps
         {
             get
@@ -1120,7 +1133,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
         readonly float[] m_SlotContributionBoneWeights;
         readonly float[] m_OperationContributionBoneWeights;
         readonly float[] m_FinalContributionBoneWeights;
-        readonly AnimationFootPlacementRuntimeSnapshot m_FootPlacement;
+        readonly CharacterFootIkCommittedCaptureViewLease
+            m_FootIkCommittedCaptureView;
         readonly int m_StackCount;
         readonly int m_InertializationCount;
         readonly int m_EntryCount;
@@ -1153,7 +1167,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
             ulong poseGraphCompletedAt,
             ulong finalAppliedAt,
             ulong continuityIdentity,
-            AnimationFootPlacementRuntimeSnapshot footPlacement,
+            CharacterFootIkCommittedCaptureViewLease footIkCommittedCaptureView,
             int physicalBoneCount,
             int virtualBoneCount,
             int poseBoneCount,
@@ -1227,7 +1241,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
             PoseGraphCompletedAt = poseGraphCompletedAt;
             FinalAppliedAt = finalAppliedAt;
             ContinuityIdentity = continuityIdentity;
-            m_FootPlacement = footPlacement;
+            m_FootIkCommittedCaptureView = footIkCommittedCaptureView;
             PhysicalBoneCount = physicalBoneCount;
             VirtualBoneCount = virtualBoneCount;
             PoseBoneCount = poseBoneCount;
@@ -1304,13 +1318,15 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
         public ulong FinalAppliedAt { get; }
         public ulong ContinuityIdentity { get; }
         public AnimationBiomechanicalStepReadPage LeftFootSteps =>
-            m_FootPlacement.LeftFootSteps;
+            m_FootIkCommittedCaptureView.LeftFootSteps;
         public AnimationBiomechanicalStepReadPage RightFootSteps =>
-            m_FootPlacement.RightFootSteps;
-        public bool HasFootFeatures => m_FootPlacement.HasFootFeatures;
+            m_FootIkCommittedCaptureView.RightFootSteps;
+        public bool HasFootFeatures =>
+            m_FootIkCommittedCaptureView.HasFootFeatures;
         public AnimationFootStepObservationRuntimeSnapshot FootStepObservation =>
-            m_FootPlacement.FootStepObservation;
-        public AnimationFootPlacementRuntimeSnapshot FootPlacement => m_FootPlacement;
+            m_FootIkCommittedCaptureView.FootStepObservation;
+        public CharacterFootIkCommittedCaptureViewLease
+            FootIkCommittedCaptureView => m_FootIkCommittedCaptureView;
         public int PhysicalBoneCount { get; }
         public int VirtualBoneCount { get; }
         public int PoseBoneCount { get; }

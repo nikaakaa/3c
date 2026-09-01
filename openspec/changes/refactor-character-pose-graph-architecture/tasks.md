@@ -30,7 +30,7 @@
 - [x] 3.3 为Foot Placement、PoseBone Contribution、Goal Assembler和FBBIK建立各自typed编译Handle与per-operation Result
 - [x] 3.4 让Program Runtime在每个Constraint Family Operation位置恰好调用一次对应入口并写入唯一completion
 - [x] 3.5 让Constraint `Complete`只验证完整闭包并发布一个Constraint Result，不扫描Program、不维护第二Stage Schedule也不重新执行Operation
-- [ ] 3.6 删除调用方可见的NativeSlice、Goal offset/count、Operation index、Callsite index、内部Bank页和Diagnostics页
+- [x] 3.6 删除调用方可见的NativeSlice、Goal offset/count、Operation index、Callsite index、内部Bank页和Diagnostics页
 - [ ] 3.7 让Constraint内部Pending页只响应根Frame lineage和唯一Seal/Discard，不再拥有可与根事务分离的完成身份
 - [ ] 3.8 将Foot Placement与FBBIK调参接入Constraint-owned Candidate Tuning Snapshot，保持当前字段、值域、成功resetOwnerState结果和生效时机，保留第一阶段独立验证的Vendor方向与BendHistory Reset结果，本阶段不另改行为
 - [ ] 3.9 对账Foot、Support、Pelvis、Goal、Assembler、Bend与最终骨骼保持冻结基线；发现差异定位外层迁移，不修改已保留IK公式或配置
@@ -146,7 +146,7 @@
 - [ ] 13.1 建立Source、Program、Constraint和Final Publication Committed Result诊断投影合同
 - [ ] 13.2 在Frame开始冻结Live、Capture、Pose Watch和detail interest及固定容量
 - [ ] 13.3 在各Module Pending Result完成时按interest深冻结Pose、Value、Contribution、Goal、Constraint、Operation和Physical结果
-- [ ] 13.4 让Foot/Goal/FBBIK diagnostics只进入Constraint Committed Result，Physical diagnostics只进入Final Publication Committed Result
+- [x] 13.4 让Foot/Goal/FBBIK diagnostics只进入Constraint Committed Result，Physical diagnostics只进入Final Publication Committed Result
 - [ ] 13.5 让Diagnostics Projector只按同lineage组合Committed Result，不持有Program Runtime、Workspace、Constraint Module或Physical Transform引用
 - [ ] 13.6 删除Snapshot Publisher从Native Program、Pending Workspace、Foot Context、FBBIK Vendor对象和多个Owner反推同一事实的路径
 - [ ] 13.7 让Pose Watch只读取已冻结Committed页，不重新采样source、执行world query、运行FBBIK或推导Physical结果

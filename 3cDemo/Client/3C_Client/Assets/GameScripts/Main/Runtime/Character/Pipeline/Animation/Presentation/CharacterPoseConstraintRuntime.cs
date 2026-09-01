@@ -70,6 +70,14 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                 return m_Page.Result;
             }
         }
+        internal CharacterFootLandingPredictionDiagnostics FootLandingPrediction
+        {
+            get
+            {
+                RequireValid();
+                return m_Page.FootLandingPrediction;
+            }
+        }
         internal int FullBodyIkGoalContributionCount
         {
             get
@@ -299,6 +307,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
 
             internal ulong Identity;
             internal CharacterPoseConstraintResult Result;
+            internal CharacterFootLandingPredictionDiagnostics
+                FootLandingPrediction;
             internal CharacterFullBodyIkGoalContributionHeader[]
                 GoalContributions;
             internal CharacterFullBodyIkGoal[] ContributionGoals;
@@ -322,8 +332,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
         readonly AnimationFinalPosePhysicalWriter m_FinalWriter;
         readonly FixedString64Bytes m_RigId;
         readonly FixedString64Bytes m_RigRevision;
-        readonly CharacterFootPlacementDiagnosticsPage m_EmptyFootDiagnostics =
-            new CharacterFootPlacementDiagnosticsPage();
         readonly Bank m_First;
         readonly Bank m_Second;
         readonly CommittedDiagnosticsPage m_CommittedDiagnostics;
@@ -422,6 +430,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             CommittedDiagnosticsPage page = m_CommittedDiagnostics;
             page.Identity = 0;
             page.Result = result;
+            page.FootLandingPrediction = default;
             page.GoalContributionCount = 0;
             page.ContributionGoalCount = 0;
             page.GoalSet = default;
@@ -429,6 +438,12 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             page.Solver = default;
             page.SolverEffectorCount = 0;
             page.SolverLimbCount = 0;
+            if (RequiresFootDiagnostics(interest) &&
+                m_Committed.FootPlacement?.Diagnostics.HasValue == true)
+            {
+                page.FootLandingPrediction =
+                    m_Committed.FootPlacement.Diagnostics.Value;
+            }
             if ((interest &
                  AnimationPresentationDiagnosticsInterest.PoseWatch) != 0)
             {
@@ -470,13 +485,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             page.Identity = m_NextDiagnosticsIdentity++;
             return new CharacterPoseConstraintCommittedDiagnosticsView(page);
         }
-        internal bool HasCommittedFootDiagnostics =>
-            m_HasCommitted &&
-            m_Committed.FootPlacement?.Diagnostics.HasValue == true;
-        internal CharacterFootPlacementDiagnosticsPage CommittedFootDiagnostics =>
-            HasCommittedFootDiagnostics
-                ? m_Committed.FootPlacement.Diagnostics
-                : m_EmptyFootDiagnostics;
         internal AnimationPhysicalBoneWriteDiagnostics PhysicalWriteDiagnostics =>
             m_HasCommitted ? m_Committed.PhysicalWrite : default;
 

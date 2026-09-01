@@ -1757,7 +1757,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                     .RequiresPhysicalDiagnostics(interest);
                 AnimationPhysicalBoneWriteDiagnostics physicalWrite =
                     m_PoseConstraints.PhysicalWriteDiagnostics;
-                CharacterFootPlacementDiagnosticsPage footPage =
                 CharacterPoseConstraintResult committedConstraintResult =
                     executionResult.Constraint;
                 CharacterPoseConstraintCommittedDiagnosticsView
@@ -1765,9 +1764,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                         m_PoseConstraints.CaptureCommittedDiagnostics(
                             in committedConstraintResult,
                             interest);
-                    m_PoseConstraints.CommittedFootDiagnostics;
-                ref readonly CharacterFootLandingPredictionDiagnostics footDiagnostics =
-                    ref footPage.Value;
+                CharacterFootLandingPredictionDiagnostics footDiagnostics =
+                    constraintDiagnostics.FootLandingPrediction;
                 CharacterFullBodyIkSolverDiagnostics solverDiagnostics =
                     constraintDiagnostics.Solver;
                 if (!constraintDiagnostics.IsValid ||
@@ -1778,7 +1776,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                     executionResult.Publication.Lineage !=
                     executionResult.Lineage ||
                     requiresFoot &&
-                    (!m_PoseConstraints.HasCommittedFootDiagnostics ||
+                    (!footDiagnostics.IsCompleted ||
                      footDiagnostics.FrameSequence !=
                      executionResult.Lineage.PresentationFrame ||
                      footDiagnostics.CompletionIdentity !=
@@ -1796,9 +1794,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                 }
                 m_DiagnosticsPublisher.BeginFrame(
                     in executionResult,
-                    in m_LastCompletedFrame,
                     in constraintDiagnostics,
                     in finalRead,
+                    in m_LastCompletedFrame,
                     m_Stacks,
                     m_StackRoutes,
                     m_PoseStateSources.StateMachines,
@@ -1806,7 +1804,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                     m_PhysicalSources,
                     m_RootOrientationWarps,
                     linkedPose,
-                    in footDiagnostics,
                     in physicalWrite,
                     interest);
             }

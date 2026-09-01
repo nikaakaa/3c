@@ -148,7 +148,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
             PhysicalPoseSourceRegistry physicalSources,
             IReadOnlyList<RootOrientationWarpRuntime> rootOrientationWarps,
             CharacterLinkedPoseRuntimeSession linkedPose,
-            in CharacterFootLandingPredictionDiagnostics footLandingPrediction,
             in AnimationPhysicalBoneWriteDiagnostics physicalWrite,
             AnimationPresentationDiagnosticsInterest interest)
         {
@@ -203,7 +202,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
                 CopyFootPlacement(
                     page,
                     in constraintDiagnostics,
-                    in footLandingPrediction,
                     in physicalWrite);
             }
             if (RequiresOperationDetail(interest))
@@ -214,8 +212,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
                     page,
                     in frame,
                     physicalSources,
-                    in constraintDiagnostics,
-                    in footLandingPrediction);
+                    in constraintDiagnostics);
             CopyFinalSummary(
                 page,
                 in executionResult,
@@ -894,9 +891,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
             in CharacterPoseGraphNativeBinding frame,
             PhysicalPoseSourceRegistry physicalSources,
             in CharacterPoseConstraintCommittedDiagnosticsView
-                constraintDiagnostics,
-            in CharacterFootLandingPredictionDiagnostics footLandingPrediction)
+                constraintDiagnostics)
         {
+            CharacterFootLandingPredictionDiagnostics footLandingPrediction =
+                constraintDiagnostics.FootLandingPrediction;
             int boneCount = frame.Layout.BoneCount;
             int stride = frame.Layout.PoseValueContributionStride;
             for (int watchIndex = 0; watchIndex < m_MergedPoseWatchInterestCount; watchIndex++)
@@ -1198,9 +1196,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
             Page page,
             in CharacterPoseConstraintCommittedDiagnosticsView
                 constraintDiagnostics,
-            in CharacterFootLandingPredictionDiagnostics footLandingPrediction,
             in AnimationPhysicalBoneWriteDiagnostics physicalWrite)
         {
+            CharacterFootLandingPredictionDiagnostics footLandingPrediction =
+                constraintDiagnostics.FootLandingPrediction;
             if (!footLandingPrediction.IsCompleted ||
                 footLandingPrediction.CompletionIdentity != page.CompletionIdentity)
                 return;

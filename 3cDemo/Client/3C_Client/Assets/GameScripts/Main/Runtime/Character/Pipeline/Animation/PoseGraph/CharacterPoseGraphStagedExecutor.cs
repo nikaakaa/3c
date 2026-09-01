@@ -11,34 +11,34 @@ namespace ThirdPersonCharacter.Pipeline.Animation
     internal readonly struct CharacterPoseWorldAwareStageInput
     {
         internal CharacterPoseWorldAwareStageInput(
-            int operationIndex,
-            int contributionGoalOffset,
+            CharacterFootPlacementConstraintHandle constraint,
             in CharacterFootPlacementFrameInput footPlacement)
         {
-            if (operationIndex < 0 || contributionGoalOffset < 0)
-                throw new ArgumentOutOfRangeException(nameof(operationIndex));
-            OperationIndex = operationIndex;
-            ContributionGoalOffset = contributionGoalOffset;
+            if (!constraint.IsValid)
+                throw new ArgumentException(
+                    "Foot Placement Constraint handle is invalid.",
+                    nameof(constraint));
+            FootPlacementConstraint = constraint;
             FootPlacement = footPlacement;
             HasFootPlacement = true;
             WorldContextAvailable = true;
         }
 
         internal CharacterPoseWorldAwareStageInput(
-            int operationIndex,
-            int contributionGoalOffset)
+            CharacterFootPlacementConstraintHandle constraint)
         {
-            if (operationIndex < 0 || contributionGoalOffset < 0)
-                throw new ArgumentOutOfRangeException(nameof(operationIndex));
-            OperationIndex = operationIndex;
-            ContributionGoalOffset = contributionGoalOffset;
+            if (!constraint.IsValid)
+                throw new ArgumentException(
+                    "Foot Placement Constraint handle is invalid.",
+                    nameof(constraint));
+            FootPlacementConstraint = constraint;
             FootPlacement = default;
             HasFootPlacement = true;
             WorldContextAvailable = false;
         }
 
-        internal int OperationIndex { get; }
-        internal int ContributionGoalOffset { get; }
+        internal CharacterFootPlacementConstraintHandle
+            FootPlacementConstraint { get; }
         internal CharacterFootPlacementFrameInput FootPlacement { get; }
         internal bool HasFootPlacement { get; }
         internal bool WorldContextAvailable { get; }
@@ -2290,53 +2290,43 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             AnimationPoseGraphNativeOperation operation,
             in CharacterPoseWorldAwareStageInput worldInput)
         {
-            int output = operation.OutputFullBodyIkGoalContributionValueIndex;
-            bool descriptorValid = operation.Code == CharacterPoseOperationCode.FootPlacement &&
-                                   (uint)operation.FootPlacementIndex < (uint)m_FootPlacementCount;
+            CharacterFootPlacementConstraintHandle handle =
+                operation.FootPlacementConstraint;
+            bool descriptorValid =
+                operation.Code == CharacterPoseOperationCode.FootPlacement &&
+                handle.IsValid &&
+                (uint)handle.FootPlacementIndex <
+                (uint)m_FootPlacementCount;
             if (!descriptorValid ||
                 !worldInput.HasFootPlacement ||
-                worldInput.OperationIndex != operation.Index ||
-                (uint)output >=
+                !worldInput.FootPlacementConstraint.Equals(handle) ||
+                (uint)handle.ContributionValueIndex >=
                 (uint)m_PoseConstraints.FullBodyIkGoalContributionCount)
             {
                 return false;
             }
-            CharacterFullBodyIkGoalContributionHeader header;
+            CharacterFootPlacementConstraintOperationResult result;
             if (worldInput.WorldContextAvailable)
             {
                 CharacterFootPlacementFrameInput footPlacement =
                     worldInput.FootPlacement;
-                header = m_PoseConstraints.PrepareFootPlacement(
-                    in footPlacement,
-                    output,
-                    worldInput.ContributionGoalOffset,
-                    operation.Index,
-                    operation.FrameCacheIndex);
+                result = m_PoseConstraints.EvaluateFootPlacement(
+                    in handle,
+                    in footPlacement);
             }
             else
             {
-                header = new CharacterFullBodyIkGoalContributionHeader(
+                result = m_PoseConstraints.RecordUnavailableFootPlacement(
+                    in handle,
                     m_FrameSequence,
-                    m_CompletionIdentity,
-                    m_RigId,
-                    m_RigRevision,
-                    operation.Index,
-                    operation.FrameCacheIndex,
-                    worldInput.ContributionGoalOffset,
-                    0,
-                    CharacterFullBodyIkGoalContributionAvailability
-                        .WorldContextUnavailable);
-                m_PoseConstraints.RecordUnavailableGoalContribution(
-                    output,
-                    in header);
+                    m_CompletionIdentity);
             }
-            return header.IsValid &&
-                   header.FrameSequence == m_FrameSequence &&
-                   header.CompletionIdentity == m_CompletionIdentity &&
-                   header.ProducerOperationIndex == operation.Index &&
-                   header.ProducerCallSiteIndex == operation.FrameCacheIndex &&
-                   header.RigId.Equals(m_RigId) &&
-                   header.RigRevision.Equals(m_RigRevision) &&
+            CharacterFullBodyIkGoalContributionHeader header =
+                result.Contribution;
+            return result.Matches(
+                       in handle,
+                       m_FrameSequence,
+                       m_CompletionIdentity) &&
                    header.GoalOffset <=
                        m_PoseConstraints.FullBodyIkContributionGoalCount -
                        header.GoalCount &&
@@ -4227,8 +4217,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                         operation.OutputFullBodyIkGoalSetValueIndex == -1 &&
                         operation.InputFullBodyIkGoalSetValueIndex == -1 &&
                         operation.FullBodyIkGoalContributionInputCount == 0 &&
-                        operation.FootPlacementIndex >= 0 &&
-                        operation.FootPlacementIndex < program.FootPlacementCount,
+                        operation.FootPlacementConstraint.IsValid &&
+                        operation.FootPlacementConstraint.FootPlacementIndex <
+                        program.FootPlacementCount,
                     CharacterPoseOperationCode.FullBodyIkGoalAssembler =>
                         operation.OutputValueIndex == -1 &&
                         operation.InputValueIndexA == -1 &&

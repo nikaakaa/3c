@@ -288,29 +288,29 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             return lease;
         }
 
-        internal CharacterFullBodyIkGoalContributionHeader PrepareFootPlacement(
-            in CharacterFootPlacementFrameInput frame,
-            int contributionIndex,
-            int goalOffset,
-            int producerOperationIndex,
-            int producerCallSiteIndex)
+        internal CharacterFootPlacementConstraintOperationResult
+            EvaluateFootPlacement(
+                in CharacterFootPlacementConstraintHandle handle,
+                in CharacterFootPlacementFrameInput frame)
         {
             RequireRenderFrame(frame.RenderFrame, frame.Pose.CompletionIdentity);
             if (m_FootPlacement == null)
                 throw new InvalidOperationException("Pose Constraint Foot Placement module is unavailable.");
-            if ((uint)contributionIndex >=
+            if (!handle.IsValid ||
+                (uint)handle.ContributionValueIndex >=
                     (uint)m_Pending.GoalContributions.Length ||
-                goalOffset < 0 ||
-                goalOffset > m_Pending.ContributionGoals.Length -
+                handle.ContributionGoalOffset >
+                m_Pending.ContributionGoals.Length -
                 CharacterPresentationFootPlacementDescriptor.GoalCount)
             {
-                throw new ArgumentOutOfRangeException(nameof(contributionIndex));
+                throw new ArgumentOutOfRangeException(nameof(handle));
             }
             CharacterFootPlacementResult result =
                 m_FootPlacement.EvaluateFrame(
                     in frame,
                     m_HasCommitted ? m_Committed.FootPlacement : null,
                     m_Pending.FootPlacement);
+            int goalOffset = handle.ContributionGoalOffset;
             m_Pending.ContributionGoals[goalOffset] = result.PelvisGoal;
             m_Pending.ContributionGoals[goalOffset + 1] = result.LeftGoal;
             m_Pending.ContributionGoals[goalOffset + 2] = result.RightGoal;
@@ -319,35 +319,53 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                 result.CompletionIdentity,
                 result.RigId,
                 result.RigRevision,
-                producerOperationIndex,
-                producerCallSiteIndex,
+                handle.OperationIndex,
+                handle.CallSiteIndex,
                 goalOffset,
                 CharacterPresentationFootPlacementDescriptor.GoalCount,
                 CharacterFullBodyIkGoalContributionAvailability.Ready);
-            m_Pending.GoalContributions[contributionIndex] = contribution;
-            return contribution;
+            m_Pending.GoalContributions[
+                handle.ContributionValueIndex] = contribution;
+            return new CharacterFootPlacementConstraintOperationResult(
+                in handle,
+                in contribution);
         }
 
-        internal void RecordUnavailableGoalContribution(
-            int contributionIndex,
-            in CharacterFullBodyIkGoalContributionHeader contribution)
+        internal CharacterFootPlacementConstraintOperationResult
+            RecordUnavailableFootPlacement(
+                in CharacterFootPlacementConstraintHandle handle,
+                ulong frameSequence,
+                ulong completionIdentity)
         {
             RequireRenderFrame(
-                contribution.FrameSequence,
-                contribution.CompletionIdentity);
-            if ((uint)contributionIndex >=
-                    (uint)m_Pending.GoalContributions.Length ||
-                !contribution.IsValid ||
-                contribution.Availability !=
-                CharacterFullBodyIkGoalContributionAvailability.WorldContextUnavailable ||
-                contribution.GoalCount != 0 ||
-                !contribution.RigId.Equals(m_RigId) ||
-                !contribution.RigRevision.Equals(m_RigRevision))
+                frameSequence,
+                completionIdentity);
+            if (!handle.IsValid ||
+                (uint)handle.ContributionValueIndex >=
+                (uint)m_Pending.GoalContributions.Length ||
+                handle.ContributionGoalOffset >
+                m_Pending.ContributionGoals.Length)
             {
                 throw new ArgumentException(
-                    "Unavailable Goal Contribution is invalid.");
+                    "Unavailable Foot Placement Constraint handle is invalid.");
             }
-            m_Pending.GoalContributions[contributionIndex] = contribution;
+            var contribution =
+                new CharacterFullBodyIkGoalContributionHeader(
+                    frameSequence,
+                    completionIdentity,
+                    m_RigId,
+                    m_RigRevision,
+                    handle.OperationIndex,
+                    handle.CallSiteIndex,
+                    handle.ContributionGoalOffset,
+                    0,
+                    CharacterFullBodyIkGoalContributionAvailability
+                        .WorldContextUnavailable);
+            m_Pending.GoalContributions[
+                handle.ContributionValueIndex] = contribution;
+            return new CharacterFootPlacementConstraintOperationResult(
+                in handle,
+                in contribution);
         }
 
         internal CharacterFullBodyIkGoalContributionHeader ProducePoseBoneIkGoals(

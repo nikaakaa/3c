@@ -59,7 +59,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             int modifyBoneIndex,
             int rootOrientationWarpIndex,
             int poseBoneIkGoalsIndex,
-            int footPlacementIndex,
+            CharacterFootPlacementConstraintHandle
+                footPlacementConstraint,
             int fullBodyIkIndex,
             int stateMachineIndex,
             int animationSlotIndex,
@@ -68,6 +69,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             int frameCacheIndex,
             float weight)
         {
+            bool isFootPlacement =
+                code == CharacterPoseOperationCode.FootPlacement;
             if (index < 0 ||
                 !Enum.IsDefined(typeof(CharacterPoseOperationCode), code) ||
                 outputPoseValueIndex < -1 ||
@@ -77,13 +80,21 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 fullBodyIkGoalContributionInputStart < -1 ||
                 fullBodyIkGoalContributionInputCount < 0 ||
                 frameCacheIndex != index ||
+                isFootPlacement != footPlacementConstraint.IsValid ||
+                isFootPlacement &&
+                (footPlacementConstraint.OperationIndex != index ||
+                 footPlacementConstraint.CallSiteIndex != frameCacheIndex ||
+                 footPlacementConstraint.ContributionValueIndex !=
+                 outputFullBodyIkGoalContributionValueIndex) ||
                 !float.IsFinite(weight) || weight < 0f || weight > 1f)
                 throw new ArgumentException("Animation Pose Graph Native operation header is invalid.");
             Index = index;
             Code = code;
             OutputValueIndex = outputPoseValueIndex;
-            OutputFullBodyIkGoalContributionValueIndex =
-                outputFullBodyIkGoalContributionValueIndex;
+            m_OutputFullBodyIkGoalContributionValueIndex =
+                isFootPlacement
+                    ? -1
+                    : outputFullBodyIkGoalContributionValueIndex;
             OutputFullBodyIkGoalSetValueIndex = outputFullBodyIkGoalSetValueIndex;
             InputFullBodyIkGoalSetValueIndex = inputFullBodyIkGoalSetValueIndex;
             InputValueIndexA = inputPoseValueIndexA;
@@ -104,7 +115,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             ModifyBoneIndex = modifyBoneIndex;
             RootOrientationWarpIndex = rootOrientationWarpIndex;
             PoseBoneIkGoalsIndex = poseBoneIkGoalsIndex;
-            FootPlacementIndex = footPlacementIndex;
+            FootPlacementConstraint = footPlacementConstraint;
             FullBodyIkIndex = fullBodyIkIndex;
             StateMachineIndex = stateMachineIndex;
             AnimationSlotIndex = animationSlotIndex;
@@ -117,7 +128,11 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         internal int Index { get; }
         internal CharacterPoseOperationCode Code { get; }
         internal int OutputValueIndex { get; }
-        internal int OutputFullBodyIkGoalContributionValueIndex { get; }
+        readonly int m_OutputFullBodyIkGoalContributionValueIndex;
+        internal int OutputFullBodyIkGoalContributionValueIndex =>
+            FootPlacementConstraint.IsValid
+                ? FootPlacementConstraint.ContributionValueIndex
+                : m_OutputFullBodyIkGoalContributionValueIndex;
         internal int OutputFullBodyIkGoalSetValueIndex { get; }
         internal int InputFullBodyIkGoalSetValueIndex { get; }
         internal int InputValueIndexA { get; }
@@ -136,7 +151,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         internal int ModifyBoneIndex { get; }
         internal int RootOrientationWarpIndex { get; }
         internal int PoseBoneIkGoalsIndex { get; }
-        internal int FootPlacementIndex { get; }
+        internal CharacterFootPlacementConstraintHandle
+            FootPlacementConstraint { get; }
         internal int FullBodyIkIndex { get; }
         internal int StateMachineIndex { get; }
         internal int AnimationSlotIndex { get; }
@@ -168,7 +184,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             ModifyBoneIndex,
             RootOrientationWarpIndex,
             PoseBoneIkGoalsIndex,
-            FootPlacementIndex,
+            FootPlacementConstraint,
             FullBodyIkIndex,
             StateMachineIndex,
             AnimationSlotIndex,
@@ -203,7 +219,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             ModifyBoneIndex,
             RootOrientationWarpIndex,
             PoseBoneIkGoalsIndex,
-            FootPlacementIndex,
+            default,
             FullBodyIkIndex,
             StateMachineIndex,
             AnimationSlotIndex,
@@ -1081,6 +1097,23 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                     referenceSpace = reference.Space;
                     scalePolicy = reference.ScalePolicy;
                 }
+                CharacterFootPlacementConstraintHandle
+                    footPlacementConstraint = default;
+                if (operation.Code ==
+                    CharacterPoseOperationCode.FootPlacement)
+                {
+                    CharacterPresentationFootPlacementDescriptor descriptor =
+                        program.FootPlacements[
+                            operation.FootPlacementIndex];
+                    footPlacementConstraint =
+                        new CharacterFootPlacementConstraintHandle(
+                            operation.Index,
+                            operation.Index,
+                            operation.FootPlacementIndex,
+                            operation
+                                .OutputFullBodyIkGoalContributionValueIndex,
+                            descriptor.ContributionGoalWorkspaceOffset);
+                }
                 m_Operations[nativeIndex] = new AnimationPoseGraphNativeOperation(
                     operation.Index,
                     operation.Code,
@@ -1104,7 +1137,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                     operation.ModifyBoneIndex,
                     operation.RootOrientationWarpIndex,
                     operation.PoseBoneIkGoalsIndex,
-                    operation.FootPlacementIndex,
+                    footPlacementConstraint,
                     operation.FullBodyIkIndex,
                     operation.StateMachineIndex,
                     operation.AnimationSlotIndex,

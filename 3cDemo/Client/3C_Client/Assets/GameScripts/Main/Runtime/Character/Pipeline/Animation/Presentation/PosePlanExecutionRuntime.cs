@@ -2954,13 +2954,12 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             ulong completionIdentity,
             in AnimationPoseGraphNativeOperation operation)
         {
-            CharacterPresentationFootPlacementDescriptor descriptor =
-                m_Projection.PosePlan.FootPlacements[operation.FootPlacementIndex];
+            CharacterFootPlacementConstraintHandle constraint =
+                operation.FootPlacementConstraint;
             if (!m_PoseConstraints.HasFootPlacement)
             {
                 return new CharacterPoseWorldAwareStageInput(
-                    operation.Index,
-                    descriptor.ContributionGoalWorkspaceOffset);
+                    constraint);
             }
             AnimationPoseValueNativeReadBinding inputBinding =
                 m_Workspace.RequirePoseValueReadBinding(
@@ -3001,8 +3000,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                 in factFrame,
                 in input);
             return new CharacterPoseWorldAwareStageInput(
-                operation.Index,
-                descriptor.ContributionGoalWorkspaceOffset,
+                constraint,
                 in planningFrame);
         }
 

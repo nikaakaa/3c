@@ -32,6 +32,108 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             PoseBoneCount == PhysicalBoneCount + VirtualBoneCount;
     }
 
+    internal readonly struct CharacterFootPlacementConstraintHandle :
+        IEquatable<CharacterFootPlacementConstraintHandle>
+    {
+        internal CharacterFootPlacementConstraintHandle(
+            int operationIndex,
+            int callSiteIndex,
+            int footPlacementIndex,
+            int contributionValueIndex,
+            int contributionGoalOffset)
+        {
+            if (operationIndex < 0 ||
+                callSiteIndex < 0 ||
+                footPlacementIndex < 0 ||
+                contributionValueIndex < 0 ||
+                contributionGoalOffset < 0)
+            {
+                throw new ArgumentOutOfRangeException(nameof(operationIndex));
+            }
+            OperationIndex = operationIndex;
+            CallSiteIndex = callSiteIndex;
+            FootPlacementIndex = footPlacementIndex;
+            ContributionValueIndex = contributionValueIndex;
+            ContributionGoalOffset = contributionGoalOffset;
+            m_IsValid = true;
+        }
+
+        readonly bool m_IsValid;
+        internal int OperationIndex { get; }
+        internal int CallSiteIndex { get; }
+        internal int FootPlacementIndex { get; }
+        internal int ContributionValueIndex { get; }
+        internal int ContributionGoalOffset { get; }
+        internal bool IsValid => m_IsValid;
+
+        public bool Equals(
+            CharacterFootPlacementConstraintHandle other) =>
+            OperationIndex == other.OperationIndex &&
+            CallSiteIndex == other.CallSiteIndex &&
+            FootPlacementIndex == other.FootPlacementIndex &&
+            ContributionValueIndex == other.ContributionValueIndex &&
+            ContributionGoalOffset == other.ContributionGoalOffset &&
+            m_IsValid == other.m_IsValid;
+
+        public override bool Equals(object obj) =>
+            obj is CharacterFootPlacementConstraintHandle other &&
+            Equals(other);
+
+        public override int GetHashCode() => HashCode.Combine(
+            OperationIndex,
+            CallSiteIndex,
+            FootPlacementIndex,
+            ContributionValueIndex,
+            ContributionGoalOffset,
+            m_IsValid);
+    }
+
+    internal readonly struct CharacterFootPlacementConstraintOperationResult
+    {
+        internal CharacterFootPlacementConstraintOperationResult(
+            in CharacterFootPlacementConstraintHandle handle,
+            in CharacterFullBodyIkGoalContributionHeader contribution)
+        {
+            Handle = handle;
+            Contribution = contribution;
+            bool ready =
+                contribution.Availability ==
+                CharacterFullBodyIkGoalContributionAvailability.Ready &&
+                contribution.GoalCount > 0;
+            bool unavailable =
+                contribution.Availability ==
+                CharacterFullBodyIkGoalContributionAvailability
+                    .WorldContextUnavailable &&
+                contribution.GoalCount == 0;
+            m_IsValid =
+                handle.IsValid &&
+                contribution.IsValid &&
+                contribution.ProducerOperationIndex ==
+                handle.OperationIndex &&
+                contribution.ProducerCallSiteIndex ==
+                handle.CallSiteIndex &&
+                contribution.GoalOffset ==
+                handle.ContributionGoalOffset &&
+                (ready || unavailable);
+        }
+
+        readonly bool m_IsValid;
+        internal CharacterFootPlacementConstraintHandle Handle { get; }
+        internal CharacterFullBodyIkGoalContributionHeader Contribution
+        {
+            get;
+        }
+        internal bool IsValid => m_IsValid;
+        internal bool Matches(
+            in CharacterFootPlacementConstraintHandle handle,
+            ulong frameSequence,
+            ulong completionIdentity) =>
+            m_IsValid &&
+            Handle.Equals(handle) &&
+            Contribution.FrameSequence == frameSequence &&
+            Contribution.CompletionIdentity == completionIdentity;
+    }
+
     public readonly struct CharacterPoseBoneRuntimeId : IEquatable<CharacterPoseBoneRuntimeId>
     {
         public CharacterPoseBoneRuntimeId(string value)

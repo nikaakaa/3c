@@ -223,3 +223,15 @@ A/B的1222列Foot CSV中1198个业务列逐值相同、24个运行／实例／Su
 正式A为`Diagnostics/FootPlacementRuns/20260901-184047-794-d3be6ac77c254b32a23077ef35ca71cb`，Proof为`Temp/CharacterInputReplayProofs/v4/43357ff3cd384e5cba75d2c31175b116/20260901-184146-483-295b0755a82644c9bf365d4421b7a12d.json`。候选B为`Diagnostics/FootPlacementRuns/20260901-185755-638-046be3a0a7474c458df6df3e59202359`，Proof为`Temp/CharacterInputReplayProofs/v4/43357ff3cd384e5cba75d2c31175b116/20260901-185856-535-aa40943181f94445a406f230c2117421.json`；工具对A正式报告`matched:1044`，无failure且Foot Finalizing已结束。
 
 A/B均为2086脚行、1222列，其中1198个业务列逐值相同，24个运行／实例／Surface／Path identity列全部一一映射且0冲突；Geometry均为67186行、27列，其中22个业务列逐值相同，5个identity列全部一一映射且0冲突。十份正式报告在排除Sample／文件hash、detail／index大小与hash和分析耗时，并按已证明的Surface identity映射归一化后全部相同。退出Play后的Console为0错误；editor-state最后一份快照为`is_playing=false`、Idle，但之后遥测标记`stale_status`，因此不把`ready_for_tools`作为本步通过证据。由此确认当前固定Trace覆盖的动画时钟、Foot、Pelvis、PoseBone Goal、Assembler、FBBIK和Physical结果未因PoseBone typed入口迁移改变；`185755`成为Goal Assembler typed入口迁移的正式A。
+
+## Goal Assembler typed Handle
+
+状态：提交`ea2ece645`已为Full Body IK Goal Assembler建立独立编译Handle、Contribution输入Catalog和per-operation Result。`ThirdPersonClient.Runtime.csproj`按规定参数编译成功，0错误；警告均来自既有依赖和未使用字段，build server已关闭。Unity Refresh完成Domain Reload并返回ready，Console为0错误；任务3.3还剩FBBIK Family，暂不整体勾选。
+
+- Native Operation中的Goal Set输出Value和Contribution输入range现在由`CharacterFullBodyIkGoalAssemblerConstraintHandle`承载；非Assembler Operation保持无效Handle。Program仍唯一持有Contribution Value索引数组，只把验证过Goal Set容量的typed Catalog交给Constraint Runtime。
+- Staged Executor删除了Contribution索引NativeArray字段、range校验和NativeSlice构造，只在原Operation位置传Handle并验证typed Result。Constraint Runtime是唯一Catalog解析者，并继续按原输入顺序调用同一个`CharacterFullBodyIkGoalAssembler.Assemble`；Goal冲突规则、Goal排序、Goal Set写入、Producer身份和Frame／Completion没有改。
+- 失败仍沿原`CharacterFullBodyIkResult`返回并使当前Operation失败；没有吞错、默认Goal、兼容入口或第二Assembler路径。Handle不嵌套Native Container，Catalog只借用Program拥有的只读数组。
+
+正式A为`Diagnostics/FootPlacementRuns/20260901-185755-638-046be3a0a7474c458df6df3e59202359`，Proof为`Temp/CharacterInputReplayProofs/v4/43357ff3cd384e5cba75d2c31175b116/20260901-185856-535-aa40943181f94445a406f230c2117421.json`。候选B为`Diagnostics/FootPlacementRuns/20260901-191034-951-23c75316aae14fa5849ef2aa6179f84e`，Proof为`Temp/CharacterInputReplayProofs/v4/43357ff3cd384e5cba75d2c31175b116/20260901-191131-417-22e056a627a245688aea35a1664481d6.json`；工具对A正式报告`matched:1044`，无failure且Foot Finalizing已结束。
+
+A/B均为2086脚行、1222列，其中1198个业务列逐值相同，24个运行／实例／Surface／Path identity列全部一一映射且0冲突；Geometry均为67186行、27列，其中22个业务列逐值相同，5个identity列全部一一映射且0冲突。十份正式报告按既定Sample／文件hash、detail／index大小与hash、分析耗时和Surface identity规则归一化后0差异；退出Play后的Console为0错误。由此确认当前固定Trace覆盖的Contribution输入顺序、Goal Set、Foot、Pelvis、PoseBone Goal、FBBIK和Physical结果未因Goal Assembler typed入口迁移改变；`191034`成为FBBIK typed入口迁移的正式A。

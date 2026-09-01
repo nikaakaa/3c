@@ -876,37 +876,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
 
         internal void RecordNoDiagnosticsInterest() =>
             m_DiagnosticsPublisher.RecordNoInterestSkip();
-        internal AnimationPresentationFrameOutcome PendingFrameOutcome
-        {
-            get
-            {
-                RequireOpenMutation();
-                if (m_PendingFrameOutcome == AnimationPresentationFrameOutcome.None)
-                    throw new InvalidOperationException("Animation Presentation frame outcome is not available.");
-                return m_PendingFrameOutcome;
-            }
-        }
-
-        internal bool TryGetFullBodyIkFailure(
-            int operationIndex,
-            ulong completionIdentity,
-            out CharacterFullBodyIkResult result)
-        {
-            result = default;
-            for (int i = 0; i < m_PosePlan.Operations.Length; i++)
-            {
-                AnimationPoseGraphNativeOperation operation = m_PosePlan.Operations[i];
-                if (operation.Index != operationIndex ||
-                    operation.Code != CharacterPoseOperationCode.FullBodyIK)
-                {
-                    continue;
-                }
-                return m_PoseConstraints.TryGetFullBodyIkFailure(
-                    completionIdentity,
-                    out result);
-            }
-            return false;
-        }
         internal ulong FrameCompletionContext =>
             m_FrameCompletionContext;
 
@@ -2545,7 +2514,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                 in committedFinalRead);
         }
 
-        internal CharacterPoseProgramResult ExecuteEvaluateBarrier(
+        internal CharacterPoseFrameExecutionResult ExecuteEvaluateBarrier(
             in CharacterBodyPresentationFrame bodyFrame,
             in CharacterPresentationFactFrame factFrame,
             in CharacterPoseProgramPrepared prepared,
@@ -2637,15 +2606,19 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                 }
                 m_Workspace.RequireStagesCompleted(completionIdentity);
             }
+            CharacterPoseFrameLineage completedLineage =
+                prepared.Lineage;
+            CharacterPoseProgramResult programResult =
+                CreateProgramResult(in prepared);
+            CharacterPoseConstraintResult constraintResult =
+                m_PoseConstraints.CompleteFrame(
+                    in completedLineage,
+                    programResult.OutputAvailability,
+                    programResult.OutputInvalidReason,
+                    programResult.GraphInvalidReason);
+            CharacterFinalPosePublicationResult publicationResult;
             using (FinalWriteMarker.Auto())
             {
-                if (finalRead.Availability[0] == AnimationPoseAvailability.Pose)
-                {
-                    m_PoseConstraints.ValidateCompletedFrameBeforeWrite(
-                        m_ActiveFrameLease.FrameIdentity,
-                        renderFrame,
-                        completionIdentity);
-                }
                 m_PoseConstraints.WritePhysicalPose(
                     in finalRead,
                     hasCommittedFinal,
@@ -2662,14 +2635,26 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                     _ => throw new InvalidOperationException(
                         $"Unsupported final animation pose writer outcome '{finalWriteOutcome}'.")
                 };
+                publicationResult = CreatePublicationResult(
+                    in prepared,
+                    finalWriteOutcome);
                 m_FramePublisher.PreparePending(
                     in finalRead,
                     m_PhysicalSources);
             }
+            var executionResult = new CharacterPoseFrameExecutionResult(
+                in programResult,
+                in constraintResult,
+                in publicationResult);
+            if (!executionResult.IsValid)
+            {
+                throw new InvalidOperationException(
+                    "Pose frame typed execution results are inconsistent.");
+            }
             if (m_PendingFrameOutcome !=
                 AnimationPresentationFrameOutcome.Committed)
             {
-                return CreateProgramResult(in prepared);
+                return executionResult;
             }
 
             using (SealMarker.Auto())
@@ -2696,7 +2681,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                 m_PendingCompletedFrame = frame;
                 m_HasPendingCompletedFrame = true;
             }
-            return CreateProgramResult(in prepared);
+            return executionResult;
         }
 
         CharacterPoseProgramResult CreateProgramResult(
@@ -2705,13 +2690,49 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             AnimationFinalPoseNativeReadBinding finalRead =
                 prepared.FinalRead;
             CharacterPoseFrameLineage lineage = prepared.Lineage;
+            bool completed =
+                finalRead.Availability[0] == AnimationPoseAvailability.Pose &&
+                finalRead.OutputInvalidReason[0] ==
+                    AnimationPoseNativeInvalidReason.None &&
+                finalRead.PoseGraphInvalidReason[0] ==
+                    AnimationPoseNativeInvalidReason.None &&
+                finalRead.PoseGraphInvalidOperationIndex[0] == -1;
             return new CharacterPoseProgramResult(
                 in lineage,
-                m_PendingFrameOutcome,
+                completed
+                    ? AnimationPresentationFrameOutcome.Committed
+                    : AnimationPresentationFrameOutcome.TypedInvalid,
                 finalRead.Availability[0],
                 finalRead.OutputInvalidReason[0],
                 finalRead.PoseGraphInvalidReason[0],
                 finalRead.PoseGraphInvalidOperationIndex[0]);
+        }
+
+        static CharacterFinalPosePublicationResult CreatePublicationResult(
+            in CharacterPoseProgramPrepared prepared,
+            AnimationFinalPoseWriteOutcome writeOutcome)
+        {
+            AnimationFinalPoseNativeReadBinding finalRead =
+                prepared.FinalRead;
+            CharacterPoseFrameLineage lineage = prepared.Lineage;
+            AnimationPresentationFrameOutcome outcome = writeOutcome switch
+            {
+                AnimationFinalPoseWriteOutcome.Committed =>
+                    AnimationPresentationFrameOutcome.Committed,
+                AnimationFinalPoseWriteOutcome.TypedInvalid =>
+                    AnimationPresentationFrameOutcome.TypedInvalid,
+                _ => throw new InvalidOperationException(
+                    $"Unsupported final Pose publication outcome '{writeOutcome}'.")
+            };
+            return new CharacterFinalPosePublicationResult(
+                in lineage,
+                outcome,
+                writeOutcome,
+                finalRead.Availability[0],
+                finalRead.OutputInvalidReason[0],
+                finalRead.PoseGraphInvalidReason[0],
+                finalRead.PoseGraphInvalidOperationIndex[0],
+                finalRead.AppliedAt[0]);
         }
 
         CharacterPoseWorldAwareStageInput BuildWorldAwareStageInput(

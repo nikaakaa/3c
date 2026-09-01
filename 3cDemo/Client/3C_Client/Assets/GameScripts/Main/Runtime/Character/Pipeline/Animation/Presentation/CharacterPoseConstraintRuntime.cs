@@ -501,28 +501,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             return m_FootPlacement?.ApplyTuning(layout, block, resetOwnerState) ?? string.Empty;
         }
 
-        internal bool TryGetFullBodyIkFailure(
-            ulong completionIdentity,
-            out CharacterFullBodyIkResult result)
-        {
-            RequireAlive();
-            result = default;
-            Bank bank = m_HasPending &&
-                        m_Pending.CompletionIdentity == completionIdentity
-                ? m_Pending
-                : m_HasCommitted &&
-                  m_Committed.CompletionIdentity == completionIdentity
-                    ? m_Committed
-                    : null;
-            if (bank == null)
-                return false;
-            CharacterFullBodyIkSolverOutcome outcome = bank.SolverOutcome;
-            if (!outcome.Produced || outcome.CompletionIdentity != completionIdentity)
-                return false;
-            result = outcome.Result;
-            return !result.Succeeded;
-        }
-
         internal void ValidateWriterBeforeEvaluate(
             in AnimationFinalPoseNativeReadBinding pending,
             bool hasCommitted,
@@ -544,38 +522,85 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             m_Pending.PhysicalWrite = m_FinalWriter.Diagnostics;
         }
 
-        internal void ValidateCompletedFrameBeforeWrite(
-            ulong frameIdentity,
-            ulong renderFrame,
-            ulong completionIdentity)
+        internal CharacterPoseConstraintResult CompleteFrame(
+            in CharacterPoseFrameLineage lineage,
+            AnimationPoseAvailability programAvailability,
+            AnimationPoseNativeInvalidReason outputInvalidReason,
+            AnimationPoseNativeInvalidReason graphInvalidReason)
         {
-            RequireRenderFrame(renderFrame, completionIdentity);
-            if (m_Pending.FrameIdentity != frameIdentity)
-                throw new InvalidOperationException(
-                    "Pose Constraint transaction identity is inconsistent before the Physical Writer.");
-            if (!m_Pending.GoalSet.IsValid ||
-                m_Pending.GoalSet.FrameSequence != renderFrame ||
-                m_Pending.GoalSet.CompletionIdentity != completionIdentity ||
-                !m_Pending.GoalSet.RigId.Equals(m_RigId) ||
-                !m_Pending.GoalSet.RigRevision.Equals(m_RigRevision))
+            RequireAlive();
+            var lineageRigId = new FixedString64Bytes(lineage.RigId);
+            var lineageRigRevision =
+                new FixedString64Bytes(lineage.RigRevision);
+            if (!lineage.IsValid ||
+                !m_HasPending ||
+                m_Pending.FrameIdentity != lineage.FrameIdentity ||
+                m_Pending.RenderFrame != lineage.PresentationFrame ||
+                !m_Pending.RigId.Equals(lineageRigId) ||
+                !m_Pending.RigRevision.Equals(lineageRigRevision))
             {
                 throw new InvalidOperationException(
-                    "Pose Constraint Goal Set is incomplete before the Physical Writer.");
+                    "Pose Constraint lineage is inconsistent at completion.");
             }
-            if (!m_Pending.SolverOutcome.Matches(
-                    renderFrame,
-                    completionIdentity,
-                    m_RigId,
-                    m_RigRevision) ||
-                !m_Pending.SolverOutcome.Result.Succeeded)
+            BindCompletion(lineage.CompletionIdentity);
+            bool goalSetCompleted =
+                m_Pending.GoalSet.IsValid &&
+                m_Pending.GoalSet.FrameSequence ==
+                    lineage.PresentationFrame &&
+                m_Pending.GoalSet.CompletionIdentity ==
+                    lineage.CompletionIdentity &&
+                m_Pending.GoalSet.RigId.Equals(m_RigId) &&
+                m_Pending.GoalSet.RigRevision.Equals(m_RigRevision);
+            bool solverProduced = m_Pending.SolverOutcome.Matches(
+                lineage.PresentationFrame,
+                lineage.CompletionIdentity,
+                m_RigId,
+                m_RigRevision);
+            CharacterFullBodyIkResult solverResult = solverProduced
+                ? m_Pending.SolverOutcome.Result
+                : default;
+            if (goalSetCompleted &&
+                solverProduced &&
+                solverResult.Succeeded)
+            {
+                m_FootPlacement?.ValidateFrame(
+                    m_Pending.FootPlacement,
+                    lineage.PresentationFrame,
+                    lineage.CompletionIdentity);
+                return new CharacterPoseConstraintResult(
+                    in lineage,
+                    AnimationPresentationFrameOutcome.Committed,
+                    AnimationPoseAvailability.Pose,
+                    AnimationPoseNativeInvalidReason.None,
+                    m_Pending.GoalSet.GoalCount,
+                    true,
+                    in solverResult);
+            }
+            if (solverProduced && solverResult.Succeeded)
             {
                 throw new InvalidOperationException(
-                    "Pose Constraint Solver Outcome is invalid before the Physical Writer.");
+                    "Pose Constraint Goal Set is incomplete at completion.");
             }
-            m_FootPlacement?.ValidateFrame(
-                m_Pending.FootPlacement,
-                renderFrame,
-                completionIdentity);
+            AnimationPoseNativeInvalidReason invalidReason =
+                solverProduced
+                    ? AnimationPoseNativeInvalidReason.FullBodyIkSolverInvalid
+                    : graphInvalidReason != AnimationPoseNativeInvalidReason.None
+                        ? graphInvalidReason
+                        : outputInvalidReason !=
+                          AnimationPoseNativeInvalidReason.None
+                            ? outputInvalidReason
+                            : AnimationPoseNativeInvalidReason.PoseConstraintInvalid;
+            return new CharacterPoseConstraintResult(
+                in lineage,
+                AnimationPresentationFrameOutcome.TypedInvalid,
+                programAvailability == AnimationPoseAvailability.NoPose &&
+                !solverProduced
+                    ? AnimationPoseAvailability.NoPose
+                    : AnimationPoseAvailability.Invalid,
+                invalidReason,
+                goalSetCompleted ? m_Pending.GoalSet.GoalCount : -1,
+                solverProduced,
+                in solverResult);
         }
 
         internal void SealFrame()

@@ -1726,7 +1726,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
 
         internal void BeginCommittedDiagnostics(
             AnimationPresentationDiagnosticsInterest interest,
-            CharacterLinkedPoseRuntimeSession linkedPose)
+            CharacterLinkedPoseRuntimeSession linkedPose,
+            in CharacterPoseFrameExecutionResult executionResult)
         {
             RequireAlive();
             RequireNoOpenMutation();
@@ -1734,8 +1735,11 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                 throw new ArgumentNullException(nameof(linkedPose));
             if (interest == AnimationPresentationDiagnosticsInterest.None)
                 return;
-            if (!m_HasCompletedFrame ||
+            if (!executionResult.IsPublished ||
+                !m_HasCompletedFrame ||
                 m_LastCompletedFrame.CompletionIdentity == 0 ||
+                executionResult.Lineage.CompletionIdentity !=
+                m_LastCompletedFrame.CompletionIdentity ||
                 !m_Workspace.TryGetCommittedFinalReadBinding(
                     out AnimationFinalPoseNativeReadBinding finalRead) ||
                 finalRead.CompletionIdentity != m_LastCompletedFrame.CompletionIdentity)
@@ -1761,6 +1765,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                 CharacterFullBodyIkSolverDiagnostics solverDiagnostics =
                     m_PoseConstraints.GetSolverDiagnostics();
                 if (m_PoseConstraints.CommittedBankIdentity == 0 ||
+                    executionResult.Constraint.Lineage !=
+                    executionResult.Lineage ||
+                    executionResult.Publication.Lineage !=
+                    executionResult.Lineage ||
                     requiresFoot &&
                     (!m_PoseConstraints.HasCommittedFootDiagnostics ||
                      footDiagnostics.FrameSequence !=
@@ -1779,6 +1787,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                         "Animation diagnostics Pose Constraint Bank lineage is inconsistent.");
                 }
                 m_DiagnosticsPublisher.BeginFrame(
+                    in executionResult,
                     in m_LastCompletedFrame,
                     in finalRead,
                     m_Stacks,

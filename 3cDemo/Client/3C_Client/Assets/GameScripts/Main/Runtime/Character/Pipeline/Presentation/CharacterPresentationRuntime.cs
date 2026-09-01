@@ -693,7 +693,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                             BuildCommittedSnapshots(transaction);
                         m_PoseRuntime.BeginCommittedDiagnostics(
                             diagnosticsInterest,
-                            linkedPose);
+                            linkedPose,
+                            in executionResult);
                         m_PoseRuntime.PublishDiagnostics();
                         if (publishStateDiagnostics)
                             PublishCommittedSnapshots(transaction);

@@ -139,6 +139,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
         }
 
         internal void BeginFrame(
+            in CharacterPoseFrameExecutionResult executionResult,
             in CharacterPoseGraphNativeBinding frame,
             in AnimationFinalPoseNativeReadBinding finalRead,
             IReadOnlyList<AnimationBlendStackRuntime> stacks,
@@ -155,7 +156,11 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
             RequireAlive();
             RequireValidFrameInterest(interest);
             frame.RequireValid();
-            if (frame.CompletionIdentity != finalRead.CompletionIdentity || stacks == null ||
+            if (!executionResult.IsPublished ||
+                executionResult.Lineage.CompletionIdentity !=
+                frame.CompletionIdentity ||
+                executionResult.Lineage.CompletionIdentity !=
+                finalRead.CompletionIdentity || stacks == null ||
                 routes == null || routes.Count != stacks.Count || stateMachines == null ||
                 inertializations == null || physicalSources == null || rootOrientationWarps == null ||
                 linkedPose == null)
@@ -167,7 +172,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
             Page page = m_Pages[pageIndex];
             page.Lease.Invalidate();
             page.ClearCounts();
-            page.CompletionIdentity = frame.CompletionIdentity;
+            page.CompletionIdentity =
+                executionResult.Lineage.CompletionIdentity;
             page.Interest = interest;
 
             if (RequiresBasicState(interest))
@@ -206,11 +212,15 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
                     in frame,
                     physicalSources,
                     in footLandingPrediction);
-            CopyFinalSummary(page, in finalRead);
+            CopyFinalSummary(
+                page,
+                in executionResult,
+                in finalRead);
             if (RequiresFinalPoseDetail(interest))
                 CopyFinalDetail(page, in finalRead, physicalSources);
             m_PendingPageIndex = pageIndex;
-            m_PendingCompletionIdentity = frame.CompletionIdentity;
+            m_PendingCompletionIdentity =
+                executionResult.Lineage.CompletionIdentity;
         }
 
         void CopyLinkedPose(
@@ -1356,15 +1366,22 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
 
         static void CopyFinalSummary(
             Page page,
+            in CharacterPoseFrameExecutionResult executionResult,
             in AnimationFinalPoseNativeReadBinding finalRead)
         {
-            page.FinalAvailability = finalRead.Availability[0];
-            page.FinalInvalidReason = finalRead.PoseGraphInvalidReason[0] != AnimationPoseNativeInvalidReason.None
-                ? finalRead.PoseGraphInvalidReason[0]
-                : finalRead.OutputInvalidReason[0];
-            page.InvalidOperationIndex = finalRead.PoseGraphInvalidOperationIndex[0];
-            page.PoseGraphCompletedAt = finalRead.PoseGraphCompletedAt[0];
-            page.FinalAppliedAt = finalRead.AppliedAt[0];
+            CharacterPoseProgramResult program = executionResult.Program;
+            CharacterFinalPosePublicationResult publication =
+                executionResult.Publication;
+            page.FinalAvailability = publication.Availability;
+            page.FinalInvalidReason =
+                program.GraphInvalidReason !=
+                AnimationPoseNativeInvalidReason.None
+                    ? program.GraphInvalidReason
+                    : program.OutputInvalidReason;
+            page.InvalidOperationIndex = program.InvalidOperationIndex;
+            page.PoseGraphCompletedAt =
+                executionResult.Lineage.CompletionIdentity;
+            page.FinalAppliedAt = publication.AppliedCompletionIdentity;
             page.ContinuityIdentity = finalRead.ContinuityIdentity[0];
             page.HasFootFeatures = finalRead.HasFootFeatures[0] == 1;
             AnimationFootFeatureSample left = finalRead.LeftFootFeatures[0];

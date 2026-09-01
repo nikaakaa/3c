@@ -42,6 +42,130 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             RigRevision.Equals(rigRevision);
     }
 
+    internal readonly struct CharacterPoseConstraintCommittedDiagnosticsView
+    {
+        internal CharacterPoseConstraintCommittedDiagnosticsView(
+            CharacterPoseConstraintRuntime.CommittedDiagnosticsPage page)
+        {
+            m_Page = page ?? throw new ArgumentNullException(nameof(page));
+            m_Identity = page.Identity;
+            if (!IsValid)
+                throw new ArgumentException(
+                    "Pose Constraint committed diagnostics are invalid.",
+                    nameof(page));
+        }
+
+        readonly CharacterPoseConstraintRuntime.CommittedDiagnosticsPage m_Page;
+        readonly ulong m_Identity;
+        internal bool IsValid =>
+            m_Page != null &&
+            m_Identity != 0 &&
+            m_Page.Identity == m_Identity &&
+            m_Page.Result.IsCompleted;
+        internal CharacterPoseConstraintResult Result
+        {
+            get
+            {
+                RequireValid();
+                return m_Page.Result;
+            }
+        }
+        internal int FullBodyIkGoalContributionCount
+        {
+            get
+            {
+                RequireValid();
+                return m_Page.GoalContributionCount;
+            }
+        }
+        internal int FullBodyIkContributionGoalCount
+        {
+            get
+            {
+                RequireValid();
+                return m_Page.ContributionGoalCount;
+            }
+        }
+        internal CharacterFullBodyIkGoalContributionHeader
+            GetGoalContribution(int index)
+        {
+            RequireValid();
+            if ((uint)index >= (uint)m_Page.GoalContributionCount)
+                throw new ArgumentOutOfRangeException(nameof(index));
+            return m_Page.GoalContributions[index];
+        }
+        internal CharacterFullBodyIkGoal GetContributionGoal(int index)
+        {
+            RequireValid();
+            if ((uint)index >= (uint)m_Page.ContributionGoalCount)
+                throw new ArgumentOutOfRangeException(nameof(index));
+            return m_Page.ContributionGoals[index];
+        }
+        internal CharacterFullBodyIkGoalSetHeader GoalSet
+        {
+            get
+            {
+                RequireValid();
+                return m_Page.GoalSet;
+            }
+        }
+        internal CharacterFullBodyIkGoal GetGoal(int index)
+        {
+            RequireValid();
+            if ((uint)index >= (uint)m_Page.GoalCount)
+                throw new ArgumentOutOfRangeException(nameof(index));
+            return m_Page.Goals[index];
+        }
+        internal CharacterFullBodyIkSolverDiagnostics Solver
+        {
+            get
+            {
+                RequireValid();
+                return m_Page.Solver;
+            }
+        }
+        internal int SolverEffectorCount
+        {
+            get
+            {
+                RequireValid();
+                return m_Page.SolverEffectorCount;
+            }
+        }
+        internal CharacterFullBodyIkEffectorDiagnostics GetSolverEffector(
+            int index)
+        {
+            RequireValid();
+            if ((uint)index >= (uint)m_Page.SolverEffectorCount)
+                throw new ArgumentOutOfRangeException(nameof(index));
+            return m_Page.SolverEffectors[index];
+        }
+        internal int SolverLimbCount
+        {
+            get
+            {
+                RequireValid();
+                return m_Page.SolverLimbCount;
+            }
+        }
+        internal CharacterFullBodyIkLimbDiagnostics GetSolverLimb(int index)
+        {
+            RequireValid();
+            if ((uint)index >= (uint)m_Page.SolverLimbCount)
+                throw new ArgumentOutOfRangeException(nameof(index));
+            return m_Page.SolverLimbs[index];
+        }
+
+        void RequireValid()
+        {
+            if (!IsValid)
+            {
+                throw new InvalidOperationException(
+                    "Pose Constraint committed diagnostics lease is stale.");
+            }
+        }
+    }
+
     internal sealed class CharacterPoseConstraintRuntime : IDisposable
     {
         sealed class Bank
@@ -154,6 +278,42 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             }
         }
 
+        internal sealed class CommittedDiagnosticsPage
+        {
+            internal CommittedDiagnosticsPage(
+                int contributionCount,
+                int contributionGoalCount)
+            {
+                GoalContributions =
+                    new CharacterFullBodyIkGoalContributionHeader[
+                        contributionCount];
+                ContributionGoals = new CharacterFullBodyIkGoal[
+                    contributionGoalCount];
+                Goals = new CharacterFullBodyIkGoal[
+                    CharacterFullBodyIkGoalSetHeader.MaximumGoalCount];
+                SolverEffectors =
+                    new CharacterFullBodyIkEffectorDiagnostics[
+                        CharacterFullBodyIkGoalSetHeader.MaximumGoalCount];
+                SolverLimbs = new CharacterFullBodyIkLimbDiagnostics[4];
+            }
+
+            internal ulong Identity;
+            internal CharacterPoseConstraintResult Result;
+            internal CharacterFullBodyIkGoalContributionHeader[]
+                GoalContributions;
+            internal CharacterFullBodyIkGoal[] ContributionGoals;
+            internal int GoalContributionCount;
+            internal int ContributionGoalCount;
+            internal CharacterFullBodyIkGoalSetHeader GoalSet;
+            internal CharacterFullBodyIkGoal[] Goals;
+            internal int GoalCount;
+            internal CharacterFullBodyIkSolverDiagnostics Solver;
+            internal CharacterFullBodyIkEffectorDiagnostics[] SolverEffectors;
+            internal int SolverEffectorCount;
+            internal CharacterFullBodyIkLimbDiagnostics[] SolverLimbs;
+            internal int SolverLimbCount;
+        }
+
         readonly CharacterFootPlacementModule m_FootPlacement;
         readonly CharacterPoseBoneContributionCatalog m_PoseBoneContributions;
         readonly CharacterFullBodyIkGoalAssemblerCatalog m_GoalAssemblers;
@@ -166,12 +326,14 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             new CharacterFootPlacementDiagnosticsPage();
         readonly Bank m_First;
         readonly Bank m_Second;
+        readonly CommittedDiagnosticsPage m_CommittedDiagnostics;
 
         Bank m_Committed;
         Bank m_Pending;
         CharacterPoseConstraintResult m_CommittedResult;
         CharacterPoseConstraintResult m_PendingResult;
         ulong m_NextBankIdentity = 1;
+        ulong m_NextDiagnosticsIdentity = 1;
         bool m_HasCommitted;
         bool m_HasPending;
         bool m_Disposed;
@@ -215,14 +377,13 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                 contributionCount,
                 contributionGoalCount,
                 m_FootPlacement);
+            m_CommittedDiagnostics = new CommittedDiagnosticsPage(
+                contributionCount,
+                contributionGoalCount);
         }
 
         internal bool HasFootPlacement => m_FootPlacement != null;
         internal bool IsFullBodyIkPrepared => m_Solver.IsPrepared;
-        internal int FullBodyIkGoalContributionCount =>
-            m_First.GoalContributions.Length;
-        internal int FullBodyIkContributionGoalCount =>
-            m_First.ContributionGoals.Length;
         internal bool MatchesCompiledLayout(
             int contributionCount,
             int contributionGoalCount) =>
@@ -232,47 +393,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             m_Second.GoalContributions.Length == contributionCount &&
             m_First.ContributionGoals.Length == contributionGoalCount &&
             m_Second.ContributionGoals.Length == contributionGoalCount;
-        internal CharacterFullBodyIkSolverDiagnostics GetSolverDiagnostics() =>
-            m_HasCommitted
-                ? m_Committed.SolverDiagnostics
-                : default;
-        internal int GetSolverEffectorCount() =>
-            m_HasCommitted
-                ? m_Committed.SolverEffectorCount
-                : 0;
-        internal CharacterFullBodyIkEffectorDiagnostics GetSolverEffector(
-            int effectorIndex) => m_Committed.SolverEffectors[effectorIndex];
-        internal int GetSolverLimbCount() =>
-            m_HasCommitted
-                ? m_Committed.SolverLimbCount
-                : 0;
-        internal CharacterFullBodyIkLimbDiagnostics GetSolverLimb(
-            int limbIndex) => m_Committed.SolverLimbs[limbIndex];
-        internal CharacterFullBodyIkGoalSetHeader GetCommittedAssembledGoalSet() =>
-            m_HasCommitted
-                ? m_Committed.GoalSet
-                : default;
-        internal CharacterFullBodyIkGoal GetCommittedAssembledGoal(
-            int goalIndex)
-        {
-            CharacterFullBodyIkGoalSetHeader header =
-                GetCommittedAssembledGoalSet();
-            if ((uint)goalIndex >= (uint)header.GoalCount)
-                throw new ArgumentOutOfRangeException(nameof(goalIndex));
-            return m_Committed.Goals[header.GoalOffset + goalIndex];
-        }
-        internal CharacterFullBodyIkGoalContributionHeader
-            GetCommittedGoalContribution(int index) =>
-            m_HasCommitted && (uint)index < (uint)m_Committed.GoalContributions.Length
-                ? m_Committed.GoalContributions[index]
-                : default;
-        internal CharacterFullBodyIkGoal GetCommittedContributionGoal(int index)
-        {
-            if (!m_HasCommitted ||
-                (uint)index >= (uint)m_Committed.ContributionGoals.Length)
-                throw new ArgumentOutOfRangeException(nameof(index));
-            return m_Committed.ContributionGoals[index];
-        }
         internal bool HasPendingFrame => m_HasPending;
         internal bool HasPendingAssembledGoalSet =>
             m_HasPending && m_Pending.GoalSet.IsValid;
@@ -286,6 +406,70 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             m_CommittedResult.SolverProduced == result.SolverProduced &&
             m_CommittedResult.FullBodyIk.AppliedGoalCount ==
             result.FullBodyIk.AppliedGoalCount;
+        internal CharacterPoseConstraintCommittedDiagnosticsView
+            CaptureCommittedDiagnostics(
+            in CharacterPoseConstraintResult result,
+            AnimationPresentationDiagnosticsInterest interest)
+        {
+            RequireAlive();
+            if (interest == AnimationPresentationDiagnosticsInterest.None ||
+                !MatchesCommittedResult(in result) ||
+                (interest & ~m_Committed.DiagnosticsInterest) != 0)
+            {
+                throw new InvalidOperationException(
+                    "Pose Constraint committed diagnostics request is invalid.");
+            }
+            CommittedDiagnosticsPage page = m_CommittedDiagnostics;
+            page.Identity = 0;
+            page.Result = result;
+            page.GoalContributionCount = 0;
+            page.ContributionGoalCount = 0;
+            page.GoalSet = default;
+            page.GoalCount = 0;
+            page.Solver = default;
+            page.SolverEffectorCount = 0;
+            page.SolverLimbCount = 0;
+            if ((interest &
+                 AnimationPresentationDiagnosticsInterest.PoseWatch) != 0)
+            {
+                page.GoalContributionCount =
+                    m_Committed.GoalContributions.Length;
+                for (int i = 0; i < page.GoalContributionCount; i++)
+                {
+                    page.GoalContributions[i] =
+                        m_Committed.GoalContributions[i];
+                }
+                page.ContributionGoalCount =
+                    m_Committed.ContributionGoals.Length;
+                for (int i = 0; i < page.ContributionGoalCount; i++)
+                {
+                    page.ContributionGoals[i] =
+                        m_Committed.ContributionGoals[i];
+                }
+                page.GoalSet = m_Committed.GoalSet;
+                page.GoalCount = page.GoalSet.IsValid
+                    ? page.GoalSet.GoalCount
+                    : 0;
+                for (int i = 0; i < page.GoalCount; i++)
+                {
+                    page.Goals[i] = m_Committed.Goals[
+                        page.GoalSet.GoalOffset + i];
+                }
+            }
+            if (RequiresFullBodyIkDiagnostics(interest))
+            {
+                page.Solver = m_Committed.SolverDiagnostics;
+                page.SolverEffectorCount =
+                    m_Committed.SolverEffectorCount;
+                for (int i = 0; i < page.SolverEffectorCount; i++)
+                    page.SolverEffectors[i] = m_Committed.SolverEffectors[i];
+                page.SolverLimbCount = m_Committed.SolverLimbCount;
+                for (int i = 0; i < page.SolverLimbCount; i++)
+                    page.SolverLimbs[i] = m_Committed.SolverLimbs[i];
+            }
+            page.Identity = m_NextDiagnosticsIdentity++;
+            return new CharacterPoseConstraintCommittedDiagnosticsView(page);
+        }
         internal bool HasCommittedFootDiagnostics =>
             m_HasCommitted &&
             m_Committed.FootPlacement?.Diagnostics.HasValue == true;

@@ -21,7 +21,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
         readonly CharacterPresentationProjection m_Projection;
         readonly CharacterPresentationPosePlan m_Program;
         readonly CharacterPoseGraphNativeProgram m_NativeProgram;
-        readonly CharacterPoseConstraintRuntime m_PoseConstraints;
         readonly AnimationPoseNativeWorkspace m_Workspace;
         readonly Page[] m_Pages;
         readonly Guid[] m_InterestOwnerIds = new Guid[InterestOwnerCapacity];
@@ -46,7 +45,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
         internal AnimationPresentationRuntimeSnapshotPublisher(
             CharacterPresentationProjection projection,
             CharacterPoseGraphNativeProgram nativeProgram,
-            CharacterPoseConstraintRuntime poseConstraints,
             in CharacterPoseGraphNativeBinding initialFrame,
             AnimationPoseNativeWorkspace workspace,
             int physicalSourceCapacity)
@@ -54,12 +52,11 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
             m_Projection = projection ?? throw new ArgumentNullException(nameof(projection));
             m_Program = projection.PosePlan ?? throw new ArgumentException("Animation Pose Program is missing.", nameof(projection));
             m_NativeProgram = nativeProgram ?? throw new ArgumentNullException(nameof(nativeProgram));
-            m_PoseConstraints = poseConstraints ?? throw new ArgumentNullException(nameof(poseConstraints));
             m_Workspace = workspace ?? throw new ArgumentNullException(nameof(workspace));
             m_Program.RequireValid();
             m_NativeProgram.RequireValid();
             if (m_Program.FullBodyIks.Count != 1)
-                throw new ArgumentException("FullBodyIK diagnostics solver layout is inconsistent.", nameof(poseConstraints));
+                throw new ArgumentException("FullBodyIK diagnostics solver layout is inconsistent.", nameof(projection));
             initialFrame.RequireValid();
             if (physicalSourceCapacity <= 0)
                 throw new ArgumentOutOfRangeException(nameof(physicalSourceCapacity));
@@ -140,6 +137,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
 
         internal void BeginFrame(
             in CharacterPoseFrameExecutionResult executionResult,
+            in CharacterPoseConstraintCommittedDiagnosticsView
+                constraintDiagnostics,
             in CharacterPoseGraphNativeBinding frame,
             in AnimationFinalPoseNativeReadBinding finalRead,
             IReadOnlyList<AnimationBlendStackRuntime> stacks,
@@ -157,6 +156,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
             RequireValidFrameInterest(interest);
             frame.RequireValid();
             if (!executionResult.IsPublished ||
+                !constraintDiagnostics.IsValid ||
+                constraintDiagnostics.Result.Lineage !=
+                executionResult.Lineage ||
                 executionResult.Lineage.CompletionIdentity !=
                 frame.CompletionIdentity ||
                 executionResult.Lineage.CompletionIdentity !=
@@ -200,6 +202,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
                 CopySlotContributions(page, in frame, physicalSources);
                 CopyFootPlacement(
                     page,
+                    in constraintDiagnostics,
                     in footLandingPrediction,
                     in physicalWrite);
             }
@@ -211,6 +214,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
                     page,
                     in frame,
                     physicalSources,
+                    in constraintDiagnostics,
                     in footLandingPrediction);
             CopyFinalSummary(
                 page,
@@ -889,6 +893,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
             Page page,
             in CharacterPoseGraphNativeBinding frame,
             PhysicalPoseSourceRegistry physicalSources,
+            in CharacterPoseConstraintCommittedDiagnosticsView
+                constraintDiagnostics,
             in CharacterFootLandingPredictionDiagnostics footLandingPrediction)
         {
             int boneCount = frame.Layout.BoneCount;
@@ -955,16 +961,16 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
                             ? AnimationPoseWatchAvailability.NotCompleted
                             : AnimationPoseWatchAvailability.Invalid;
                     if ((uint)contributionValueIndex <
-                        (uint)m_PoseConstraints.FullBodyIkGoalContributionCount)
+                        (uint)constraintDiagnostics.FullBodyIkGoalContributionCount)
                     {
                         CharacterFullBodyIkGoalContributionHeader header =
-                            m_PoseConstraints.GetCommittedGoalContribution(
+                            constraintDiagnostics.GetGoalContribution(
                                 contributionValueIndex);
                         if (header.IsValid &&
                             header.CompletionIdentity == completion &&
                             header.ProducerOperationIndex == operation.Index &&
                             header.GoalOffset <=
-                            m_PoseConstraints.FullBodyIkContributionGoalCount -
+                            constraintDiagnostics.FullBodyIkContributionGoalCount -
                             header.GoalCount)
                         {
                             contribution =
@@ -980,7 +986,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
                                 {
                                     page.PoseWatchFullBodyIkGoals[
                                             goalOffset + goalIndex] =
-                                        m_PoseConstraints.GetCommittedContributionGoal(
+                                        constraintDiagnostics.GetContributionGoal(
                                             header.GoalOffset + goalIndex);
                                 }
                                 goalAvailability =
@@ -1040,7 +1046,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
                         CharacterPoseOperationCode.FullBodyIkGoalAssembler)
                     {
                         CharacterFullBodyIkGoalSetHeader header =
-                            m_PoseConstraints.GetCommittedAssembledGoalSet();
+                            constraintDiagnostics.GoalSet;
                         if (header.IsValid &&
                             header.CompletionIdentity == completion &&
                             header.ProducerOperationIndex == operation.Index)
@@ -1053,7 +1059,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
                                  goalIndex++)
                             {
                                 page.PoseWatchFullBodyIkGoals[goalOffset + goalIndex] =
-                                    m_PoseConstraints.GetCommittedAssembledGoal(
+                                    constraintDiagnostics.GetGoal(
                                         goalIndex);
                             }
                             goalAvailability = AnimationPoseWatchAvailability.Targets;
@@ -1141,26 +1147,26 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
                     operation.FullBodyIkIndex == 0)
                 {
                     CharacterFullBodyIkSolverDiagnostics diagnostics =
-                        m_PoseConstraints.GetSolverDiagnostics();
+                        constraintDiagnostics.Solver;
                     if (diagnostics.IsCompleted &&
                         diagnostics.InputCompletionIdentity == completion)
                     {
                         page.PoseWatchFullBodyIkSolvers[watchIndex] = diagnostics;
                         for (int effectorIndex = 0;
                              effectorIndex <
-                             m_PoseConstraints.GetSolverEffectorCount();
+                             constraintDiagnostics.SolverEffectorCount;
                              effectorIndex++)
                         {
                             page.PoseWatchFullBodyIkEffectors[effectorOffset + effectorIndex] =
-                                m_PoseConstraints.GetSolverEffector(
+                                constraintDiagnostics.GetSolverEffector(
                                     effectorIndex);
                         }
                         for (int limbIndex = 0;
-                             limbIndex < m_PoseConstraints.GetSolverLimbCount();
+                             limbIndex < constraintDiagnostics.SolverLimbCount;
                              limbIndex++)
                         {
                             page.PoseWatchFullBodyIkLimbs[limbOffset + limbIndex] =
-                                m_PoseConstraints.GetSolverLimb(
+                                constraintDiagnostics.GetSolverLimb(
                                     limbIndex);
                         }
                     }
@@ -1190,6 +1196,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
 
         void CopyFootPlacement(
             Page page,
+            in CharacterPoseConstraintCommittedDiagnosticsView
+                constraintDiagnostics,
             in CharacterFootLandingPredictionDiagnostics footLandingPrediction,
             in AnimationPhysicalBoneWriteDiagnostics physicalWrite)
         {
@@ -1203,18 +1211,18 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
             CharacterFullBodyIkLimbDiagnostics leftLeg = default;
             CharacterFullBodyIkLimbDiagnostics rightLeg = default;
             CharacterFullBodyIkSolverDiagnostics candidate =
-                m_PoseConstraints.GetSolverDiagnostics();
+                constraintDiagnostics.Solver;
             if (candidate.IsCompleted &&
                 candidate.InputCompletionIdentity == page.CompletionIdentity &&
                 candidate.FrameSequence == footLandingPrediction.FrameSequence)
             {
                 bool containsFoot = false;
                 for (int effectorIndex = 0;
-                     effectorIndex < m_PoseConstraints.GetSolverEffectorCount();
+                     effectorIndex < constraintDiagnostics.SolverEffectorCount;
                      effectorIndex++)
                 {
                     CharacterFullBodyIkEffectorDiagnostics effector =
-                        m_PoseConstraints.GetSolverEffector(
+                        constraintDiagnostics.GetSolverEffector(
                             effectorIndex);
                     if (effector.Slot == CharacterFullBodyIkEffectorSlot.PelvisPreSolveTranslation)
                     {
@@ -1235,11 +1243,11 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
                 if (containsFoot)
                 {
                     for (int limbIndex = 0;
-                         limbIndex < m_PoseConstraints.GetSolverLimbCount();
+                         limbIndex < constraintDiagnostics.SolverLimbCount;
                          limbIndex++)
                     {
                         CharacterFullBodyIkLimbDiagnostics limb =
-                            m_PoseConstraints.GetSolverLimb(limbIndex);
+                            constraintDiagnostics.GetSolverLimb(limbIndex);
                         if (limb.Limb == CharacterFullBodyIkLimbSlot.LeftLeg)
                             leftLeg = limb;
                         else if (limb.Limb == CharacterFullBodyIkLimbSlot.RightLeg)

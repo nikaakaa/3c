@@ -662,7 +662,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                 diagnosticsPublisher = new AnimationPresentationRuntimeSnapshotPublisher(
                     projection,
                     poseProgram,
-                    poseConstraints,
                     in initialFrame,
                     workspace,
                     physicalSources.Capacity);
@@ -1759,15 +1758,21 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                 AnimationPhysicalBoneWriteDiagnostics physicalWrite =
                     m_PoseConstraints.PhysicalWriteDiagnostics;
                 CharacterFootPlacementDiagnosticsPage footPage =
+                CharacterPoseConstraintResult committedConstraintResult =
+                    executionResult.Constraint;
+                CharacterPoseConstraintCommittedDiagnosticsView
+                    constraintDiagnostics =
+                        m_PoseConstraints.CaptureCommittedDiagnostics(
+                            in committedConstraintResult,
+                            interest);
                     m_PoseConstraints.CommittedFootDiagnostics;
                 ref readonly CharacterFootLandingPredictionDiagnostics footDiagnostics =
                     ref footPage.Value;
                 CharacterFullBodyIkSolverDiagnostics solverDiagnostics =
-                    m_PoseConstraints.GetSolverDiagnostics();
-                CharacterPoseConstraintResult committedConstraintResult =
-                    executionResult.Constraint;
-                if (!m_PoseConstraints.MatchesCommittedResult(
-                        in committedConstraintResult) ||
+                    constraintDiagnostics.Solver;
+                if (!constraintDiagnostics.IsValid ||
+                    constraintDiagnostics.Result.Lineage !=
+                    executionResult.Lineage ||
                     executionResult.Constraint.Lineage !=
                     executionResult.Lineage ||
                     executionResult.Publication.Lineage !=
@@ -1792,6 +1797,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                 m_DiagnosticsPublisher.BeginFrame(
                     in executionResult,
                     in m_LastCompletedFrame,
+                    in constraintDiagnostics,
                     in finalRead,
                     m_Stacks,
                     m_StackRoutes,

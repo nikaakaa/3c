@@ -275,3 +275,13 @@ A/B均为2086脚行、1222列，其中1198个业务列逐值相同，24个运行
 正式A为`Diagnostics/FootPlacementRuns/20260901-193623-780-a483ca530d484c69abd2208ef698c394`，Proof为`Temp/CharacterInputReplayProofs/v4/43357ff3cd384e5cba75d2c31175b116/20260901-193724-165-1ddd495782e2425f8be587bdb9c9ba05.json`。候选B为`Diagnostics/FootPlacementRuns/20260901-200151-618-05e4e2bbaf264900b9e4916ca41089af`，Proof为`Temp/CharacterInputReplayProofs/v4/43357ff3cd384e5cba75d2c31175b116/20260901-200300-335-62d17c8ab95346c380b1459c47dc9e6f.json`；工具对A正式报告`matched:1044`，无failure且Foot Finalizing已结束。
 
 A/B均为2086脚行、1222列，其中1198个业务列逐值相同、24个运行／实例／Surface／Path identity列一一映射且0冲突；Geometry均为67186行、27列，其中22个业务列逐值相同、5个identity列一一映射且0冲突；十份正式报告归一化后0差异，退出Play后的Console为0错误。由此确认Final Summary来源迁移没有改变Foot、Pelvis、Goal、FBBIK、Physical或正式诊断产物；`200151`成为Constraint Committed Diagnostics View迁移的正式A。任务13.1只完成根Execution Result接线，Source／Constraint／Final Publication的完整Committed诊断投影合同仍未闭合，不提前勾选。
+
+## Constraint Result随Bank原子提交
+
+状态：提交`8732331ce`让`CharacterPoseConstraintRuntime.CompleteFrame`产生的typed Result进入Pending状态，并在`SealFrame`与同一Bank一起提升为Committed Result；Discard同时清除Pending Result。Post-Seal诊断改为匹配根Execution中的Constraint Result，不再读取`CommittedBankIdentity`或`CommittedRenderFrame`。
+
+第一次候选run为`Diagnostics/FootPlacementRuns/20260901-202209-561-eb7ae2d705544428bf4459712ab17f08`，在第1个Replay Tick后于Frame Commit失败，Console明确报告`Pose Constraint result is incomplete at seal`。原因是候选把Begin阶段Completion为0的lease lineage与完成后的Result lineage直接全等比较；这违反既有lease合同。失败run原样保留，不作为A/B通过证据。提交`700b29347`改为调用现有`lease.Matches(completedLineage)`，只修正完成身份匹配，不改变Constraint数据或执行顺序；修正后`ThirdPersonClient.Runtime.csproj`按规定参数编译成功，0错误，build server已关闭。
+
+正式A为`Diagnostics/FootPlacementRuns/20260901-200151-618-05e4e2bbaf264900b9e4916ca41089af`，Proof为`Temp/CharacterInputReplayProofs/v4/43357ff3cd384e5cba75d2c31175b116/20260901-200300-335-62d17c8ab95346c380b1459c47dc9e6f.json`。修正后的候选B为`Diagnostics/FootPlacementRuns/20260901-202513-054-4eb0ef66f0504dfc9a4bddfb0063eadf`，Proof为`Temp/CharacterInputReplayProofs/v4/43357ff3cd384e5cba75d2c31175b116/20260901-202615-147-3f76faf457604e078d9bb63b24c618da.json`；工具对A正式报告`matched:1044`，无failure且Foot Finalizing已结束。
+
+A/B均为2086脚行、1222列，其中1198个业务列逐值相同、24个运行／实例／Surface／Path identity列一一映射且0冲突；Geometry均为67186行、27列，其中22个业务列逐值相同、5个identity列一一映射且0冲突。十份正式报告排除既定identity、hash、分析耗时和文件大小后0差异；本轮`analysis.performance.reportBytes`增加10，精确来自十个代表事件的Surface实例ID由5位变6位，使`contact-plane-penetration.json`增加10字节，Surface映射后的报告业务内容完全相同。退出Play后的Console为0错误。由此确认Constraint Result原子提交没有改变Foot、Pelvis、Goal、FBBIK、Physical或诊断业务；`202513`成为Constraint详细Committed Diagnostics View迁移的正式A。

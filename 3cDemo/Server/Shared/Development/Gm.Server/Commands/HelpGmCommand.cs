@@ -12,6 +12,7 @@ public sealed class HelpGmCommand : IGmCommandHandler
         id = "help",
         description = "查看已安装命令或指定命令的用法。",
         usage = "help [command]",
+        resultContract = "thirdperson.gm.result.help/1",
         arguments = new[]
         {
             new GmCommandArgument { name = "command", description = "命令名称", optional = true }
@@ -39,6 +40,7 @@ public sealed class HelpGmCommand : IGmCommandHandler
         {
             GmResultField.Text("description", "说明", definition.description),
             GmResultField.Text("usage", "用法", definition.usage),
+            GmResultField.Text("resultContract", "结果合同", definition.resultContract),
             GmResultField.Signed("version", "版本", definition.version)
         }
     };

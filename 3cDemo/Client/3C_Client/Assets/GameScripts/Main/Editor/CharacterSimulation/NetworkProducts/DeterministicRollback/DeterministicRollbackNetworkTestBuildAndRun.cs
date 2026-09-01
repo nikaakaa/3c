@@ -387,6 +387,25 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                         "sourceRevision",
                         closure.ProgramAsset.SourceRevision)
                 },
+                new[]
+                {
+                    NetworkTestProductAdapterUtility.SessionRole(
+                        "relay", "RuntimeArtifact", "deterministic-relay-server", true,
+                        "Hidden", "adapter:udp-http-identity", Array.Empty<string>(),
+                        new[] { "rollback-relay", "rollback-relay-query" }),
+                    NetworkTestProductAdapterUtility.SessionRole(
+                        "gm", "ToolBundle", RollbackGmProductBuild.ToolId, false,
+                        "Visible", "adapter:http-identity", new[] { "relay" },
+                        new[] { "rollback-gm", "rollback-relay-query" }),
+                    NetworkTestProductAdapterUtility.SessionRole(
+                        "peer-a", "RuntimeArtifact", "unity-client-player", true,
+                        "Visible", "adapter:process-alive", new[] { "relay" },
+                        new[] { "rollback-relay", "rollback-peer-a" }, "peer-a"),
+                    NetworkTestProductAdapterUtility.SessionRole(
+                        "peer-b", "RuntimeArtifact", "unity-client-player", true,
+                        "Visible", "adapter:process-alive", new[] { "peer-a" },
+                        new[] { "rollback-relay", "rollback-peer-b" }, "peer-b")
+                },
                 new[] { "rollback-a", "rollback-b" },
                 RollbackGmProductBuild.BuildToolBundles);
         }

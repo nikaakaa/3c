@@ -57,6 +57,23 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
         public string adapterPath = string.Empty;
         public string adapterHash = string.Empty;
         public string[] supportedSlotIds = Array.Empty<string>();
+        public string[] allowedRunFields = Array.Empty<string>();
+        public NetworkTestSessionRoleManifest[] roles = Array.Empty<NetworkTestSessionRoleManifest>();
+        public string[] cleanupRoleIds = Array.Empty<string>();
+    }
+
+    [Serializable]
+    internal sealed class NetworkTestSessionRoleManifest
+    {
+        public string roleId = string.Empty;
+        public string launchSourceKind = string.Empty;
+        public string launchSourceId = string.Empty;
+        public bool required = false;
+        public string visibility = string.Empty;
+        public string readyCondition = string.Empty;
+        public string[] dependsOnRoleIds = Array.Empty<string>();
+        public string[] endpointKeys = Array.Empty<string>();
+        public string windowRoleId = string.Empty;
     }
 
     [Serializable]
@@ -108,6 +125,8 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
         public NetworkTestSessionEndpointDocument[] endpoints = Array.Empty<NetworkTestSessionEndpointDocument>();
         public NetworkTestSessionWindowDocument[] windows = Array.Empty<NetworkTestSessionWindowDocument>();
         public NetworkTestToolBundleManifest[] toolBundles = Array.Empty<NetworkTestToolBundleManifest>();
+        public NetworkTestProductManifestFile[] configFiles = Array.Empty<NetworkTestProductManifestFile>();
+        public NetworkTestRunProcessDocument[] processes = Array.Empty<NetworkTestRunProcessDocument>();
         public string runRoot = string.Empty;
     }
 

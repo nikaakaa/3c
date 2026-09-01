@@ -69,6 +69,8 @@ public sealed class GmCommandDispatcher
                  !string.Equals(request.serviceInstanceId, ServiceInstanceId, StringComparison.Ordinal) ||
                  !string.Equals(request.sessionId, SessionId, StringComparison.Ordinal))
             result = Reject(GmResultCode.TargetEnded, "目标服务运行实例或会话已改变，请重新连接。");
+        else if (!SameTool(request.tool, Tool))
+            result = Reject(GmResultCode.ToolVersionMismatch, "GM工具版本、协议或命令目录与服务端不匹配。");
         else if (!m_Registry.TryGetHandler(request.commandId, out IGmCommandHandler handler))
             result = Reject(GmResultCode.UnknownCommand, $"未安装命令：{request.commandId}");
         else if (request.commandVersion != handler.Definition.version)
@@ -105,6 +107,7 @@ public sealed class GmCommandDispatcher
             runId = RunId,
             serviceInstanceId = ServiceInstanceId,
             sessionId = SessionId,
+            tool = Tool,
             code = result.Code,
             completedAtUtc = DateTimeOffset.UtcNow.ToString("O", System.Globalization.CultureInfo.InvariantCulture),
             message = result.Message,
@@ -113,6 +116,11 @@ public sealed class GmCommandDispatcher
     }
 
     static GmCommandResult Reject(GmResultCode code, string message) => new(code, message);
+
+    static bool SameTool(GmToolIdentity left, GmToolIdentity right) =>
+        left != null && right != null && left.toolId == right.toolId && left.toolVersion == right.toolVersion &&
+        left.protocolVersion == right.protocolVersion && left.commandCatalogHash == right.commandCatalogHash &&
+        left.bundleHash == right.bundleHash;
 
     static bool ValidArguments(GmCommandDefinition definition, string[] arguments)
     {

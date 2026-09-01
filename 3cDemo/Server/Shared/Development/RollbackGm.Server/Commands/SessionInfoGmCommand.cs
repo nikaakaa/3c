@@ -11,7 +11,8 @@ public sealed class SessionInfoGmCommand : IGmCommandHandler
     {
         id = "session.info",
         description = "查看当前 Relay 会话和已发布内容身份。",
-        usage = "session.info"
+        usage = "session.info",
+        resultContract = "thirdperson.rollback-gm.result.session-info/1"
     };
 
     public async Task<GmCommandResult> ExecuteAsync(IReadOnlyList<string> arguments, CancellationToken cancellation)

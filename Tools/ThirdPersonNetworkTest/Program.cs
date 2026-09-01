@@ -64,7 +64,7 @@ static class Program
             throw new InvalidDataException($"Session Slot '{slotId}' is not installed.");
         if (!(candidate.sessionPlan?.supportedSlotIds ?? Array.Empty<string>()).Contains(slotId, StringComparer.Ordinal))
             throw new InvalidDataException($"Candidate does not support Session Slot '{slotId}'.");
-        RequireSlot(slot);
+        RequireSlot(slot, candidate.sessionPlan.roles);
 
         string networkRoot = RequireNetworkRoot(candidateRoot);
         string productDirectory = new DirectoryInfo(Path.GetDirectoryName(candidateRoot) ?? string.Empty).Name;
@@ -121,14 +121,30 @@ static class Program
                 processes = File.Exists(processPath)
                     ? Read<NetworkTestRunProcessDocument[]>(processPath)
                     : Array.Empty<NetworkTestRunProcessDocument>();
-                RequireProcesses(processes);
-                Write(statusPath, Status(runId, "Running", string.Empty, processes));
-                while (!File.Exists(stopPath))
+                RequireProcesses(processes, candidate.sessionPlan.roles);
+                run.processes = processes;
+                run.configFiles = BuildFileClosure(Path.Combine(runRoot, "Config"));
+                Write(runManifestPath, run);
+                string runningMessage = OptionalRoleMessage(processes, candidate.sessionPlan.roles);
+                Write(statusPath, Status(runId, "Running", runningMessage, processes));
+                while (true)
                 {
-                    if (processes.All(HasExited))
+                    if (File.Exists(stopPath))
+                        break;
+                    string[] stoppedRequired = candidate.sessionPlan.roles
+                        .Where(role => role.required)
+                        .Join(processes, role => role.roleId, process => process.roleId, (role, process) => process)
+                        .Where(HasExited)
+                        .Select(value => value.roleId)
+                        .ToArray();
+                    if (stoppedRequired.Length > 0)
+                        throw new InvalidOperationException(
+                            $"Required Session roles exited: {string.Join(", ", stoppedRequired)}.");
+                    string message = OptionalRoleMessage(processes, candidate.sessionPlan.roles);
+                    if (!string.Equals(message, runningMessage, StringComparison.Ordinal))
                     {
-                        Write(statusPath, Status(runId, "Completed", string.Empty, processes));
-                        return;
+                        runningMessage = message;
+                        Write(statusPath, Status(runId, "Running", runningMessage, processes));
                     }
                     await Task.Delay(500);
                 }
@@ -280,6 +296,7 @@ static class Program
         if (adapterBundle.toolVersion != adapterIdentity[1] || adapterBundle.entryPoint != candidate.sessionPlan.adapterPath ||
             Sha256(RequireContained(candidateRoot, candidate.sessionPlan.adapterPath)) != candidate.sessionPlan.adapterHash)
             throw new InvalidDataException("Candidate Session adapter identity is invalid.");
+        RequireSessionPlan(candidate);
 
         NetworkTestToolBundleManifest orchestrator = RequireTool(candidate, "thirdperson.network-test-orchestrator");
         string catalogPath = RequireContained(candidateRoot, Path.Combine(orchestrator.root, "SessionSlots.json"));
@@ -300,7 +317,9 @@ static class Program
         return values.Length == 1 ? values[0] : throw new InvalidDataException($"Candidate requires tool '{toolId}'.");
     }
 
-    static void RequireSlot(NetworkTestSessionSlotDocument slot)
+    static void RequireSlot(
+        NetworkTestSessionSlotDocument slot,
+        NetworkTestSessionRoleManifest[] roles)
     {
         var keys = new HashSet<string>(StringComparer.Ordinal);
         var ports = new HashSet<int>();
@@ -309,6 +328,21 @@ static class Program
             if (endpoint == null || string.IsNullOrWhiteSpace(endpoint.key) || endpoint.address != "127.0.0.1" ||
                 endpoint.port is <= 0 or > 65535 || !keys.Add(endpoint.key) || !ports.Add(endpoint.port))
                 throw new InvalidDataException($"Session Slot '{slot.slotId}' endpoint catalog is invalid.");
+        }
+        var windowRoles = new HashSet<string>(
+            (slot.windows ?? Array.Empty<NetworkTestSessionWindowDocument>()).Select(value => value.roleId),
+            StringComparer.Ordinal);
+        foreach (NetworkTestSessionWindowDocument window in slot.windows ?? Array.Empty<NetworkTestSessionWindowDocument>())
+        {
+            if (window == null || string.IsNullOrWhiteSpace(window.roleId) ||
+                window.width <= 0 || window.height <= 0)
+                throw new InvalidDataException($"Session Slot '{slot.slotId}' window catalog is invalid.");
+        }
+        foreach (NetworkTestSessionRoleManifest role in roles)
+        {
+            if (role.endpointKeys.Any(value => !keys.Contains(value)) ||
+                role.windowRoleId.Length > 0 && !windowRoles.Contains(role.windowRoleId))
+                throw new InvalidDataException($"Session Slot '{slot.slotId}' does not satisfy role '{role.roleId}'.");
         }
     }
 
@@ -325,13 +359,92 @@ static class Program
         }
     }
 
-    static void RequireProcesses(NetworkTestRunProcessDocument[] processes)
+    static void RequireProcesses(
+        NetworkTestRunProcessDocument[] processes,
+        NetworkTestSessionRoleManifest[] roles)
     {
         if (processes.Length == 0 || processes.Any(value => value == null || string.IsNullOrWhiteSpace(value.roleId) ||
             value.processId <= 0 || value.processStartTimeUtcTicks <= 0) ||
-            processes.Select(value => value.roleId).Distinct(StringComparer.Ordinal).Count() != processes.Length)
+            processes.Select(value => value.roleId).Distinct(StringComparer.Ordinal).Count() != processes.Length ||
+            processes.Select(value => value.processId).Distinct().Count() != processes.Length)
             throw new InvalidDataException("Session adapter process ownership is invalid.");
+        var actual = new HashSet<string>(processes.Select(value => value.roleId), StringComparer.Ordinal);
+        if (roles.Any(value => value.required && !actual.Contains(value.roleId)) ||
+            processes.Any(value => roles.All(role => role.roleId != value.roleId)))
+            throw new InvalidDataException("Session adapter process roster does not match the Session Plan.");
+        string[] expectedOrder = roles.Where(value => actual.Contains(value.roleId)).Select(value => value.roleId).ToArray();
+        if (!expectedOrder.SequenceEqual(processes.Select(value => value.roleId), StringComparer.Ordinal))
+            throw new InvalidDataException("Session adapter process order does not match the Session Plan.");
     }
+
+    static void RequireSessionPlan(NetworkTestProductBuildManifest candidate)
+    {
+        NetworkTestSessionPlanManifest plan = candidate.sessionPlan;
+        string[] expectedRunFields =
+        {
+            "candidateId", "candidateManifestHash", "candidateManifestPath", "candidateRoot",
+            "endpoints", "productId", "runId", "runRoot", "runtimeTopologyIdentity",
+            "sessionId", "slotId", "toolBundles", "windows"
+        };
+        if (plan.roles == null || plan.roles.Length == 0 || plan.allowedRunFields == null ||
+            !expectedRunFields.SequenceEqual(plan.allowedRunFields, StringComparer.Ordinal) ||
+            plan.cleanupRoleIds == null)
+            throw new InvalidDataException("Candidate Session Plan contract is invalid.");
+        var artifactIds = new HashSet<string>(
+            (candidate.artifacts ?? Array.Empty<NetworkTestRuntimeArtifactManifest>()).Select(value => value.roleId),
+            StringComparer.Ordinal);
+        var toolIds = new HashSet<string>(
+            (candidate.toolBundles ?? Array.Empty<NetworkTestToolBundleManifest>()).Select(value => value.toolId),
+            StringComparer.Ordinal);
+        var roleIds = new HashSet<string>(StringComparer.Ordinal);
+        foreach (NetworkTestSessionRoleManifest role in plan.roles)
+        {
+            if (role == null || string.IsNullOrWhiteSpace(role.roleId) || !roleIds.Add(role.roleId) ||
+                role.launchSourceKind is not ("RuntimeArtifact" or "ToolBundle") ||
+                string.IsNullOrWhiteSpace(role.launchSourceId) ||
+                role.visibility is not ("Visible" or "Hidden") ||
+                string.IsNullOrWhiteSpace(role.readyCondition) ||
+                role.dependsOnRoleIds == null || role.endpointKeys == null ||
+                role.dependsOnRoleIds.Any(value => !roleIds.Contains(value)) ||
+                role.dependsOnRoleIds.Distinct(StringComparer.Ordinal).Count() != role.dependsOnRoleIds.Length ||
+                role.endpointKeys.Distinct(StringComparer.Ordinal).Count() != role.endpointKeys.Length ||
+                role.launchSourceKind == "RuntimeArtifact" && !artifactIds.Contains(role.launchSourceId) ||
+                role.launchSourceKind == "ToolBundle" && !toolIds.Contains(role.launchSourceId))
+                throw new InvalidDataException("Candidate Session role contract is invalid.");
+        }
+        if (!plan.roles.Reverse().Select(value => value.roleId)
+                .SequenceEqual(plan.cleanupRoleIds, StringComparer.Ordinal))
+            throw new InvalidDataException("Candidate Session cleanup order is invalid.");
+    }
+
+    static string OptionalRoleMessage(
+        NetworkTestRunProcessDocument[] processes,
+        NetworkTestSessionRoleManifest[] roles)
+    {
+        var processByRole = processes.ToDictionary(value => value.roleId, StringComparer.Ordinal);
+        string[] unavailable = roles
+            .Where(value => !value.required &&
+                (!processByRole.TryGetValue(value.roleId, out NetworkTestRunProcessDocument process) || HasExited(process)))
+            .Select(value => value.roleId)
+            .ToArray();
+        return unavailable.Length == 0 ? string.Empty :
+            $"Optional Session roles unavailable: {string.Join(", ", unavailable)}.";
+    }
+
+    static NetworkTestProductManifestFile[] BuildFileClosure(string root) =>
+        Directory.GetFiles(root, "*", SearchOption.AllDirectories)
+            .Select(path =>
+            {
+                var info = new FileInfo(path);
+                return new NetworkTestProductManifestFile
+                {
+                    path = Path.GetRelativePath(root, path).Replace('\\', '/'),
+                    length = info.Length,
+                    sha256 = Sha256(path)
+                };
+            })
+            .OrderBy(value => value.path, StringComparer.Ordinal)
+            .ToArray();
 
     static FileStream AcquireSlotLease(string path, string runId, string candidateId, string slotId)
     {

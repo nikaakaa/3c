@@ -24,8 +24,17 @@ namespace ThirdPerson.Development.Gm
         {
             if (!Guid.TryParseExact(request.requestId, "N", out _) || string.IsNullOrWhiteSpace(request.candidateId) ||
                 string.IsNullOrWhiteSpace(request.runId) || !IsValidCommandId(request.commandId) ||
-                request.arguments == null || request.arguments.Length > GmCommandLineParser.MaximumArguments)
+                request.tool == null || request.arguments == null ||
+                request.arguments.Length > GmCommandLineParser.MaximumArguments)
                 return false;
+            try
+            {
+                request.tool.RequireValid();
+            }
+            catch
+            {
+                return false;
+            }
             int length = request.commandId.Length;
             foreach (string argument in request.arguments)
             {

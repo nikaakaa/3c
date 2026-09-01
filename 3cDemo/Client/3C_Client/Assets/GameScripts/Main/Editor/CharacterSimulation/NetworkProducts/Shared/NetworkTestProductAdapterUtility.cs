@@ -14,6 +14,28 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
         public static NetworkTestProductManifestField Field(string key, string value) =>
             new NetworkTestProductManifestField { key = key, value = value };
 
+        public static NetworkTestSessionRoleManifest SessionRole(
+            string roleId,
+            string launchSourceKind,
+            string launchSourceId,
+            bool required,
+            string visibility,
+            string readyCondition,
+            string[] dependsOnRoleIds,
+            string[] endpointKeys,
+            string windowRoleId = "") => new NetworkTestSessionRoleManifest
+        {
+            roleId = roleId,
+            launchSourceKind = launchSourceKind,
+            launchSourceId = launchSourceId,
+            required = required,
+            visibility = visibility,
+            readyCondition = readyCondition,
+            dependsOnRoleIds = dependsOnRoleIds ?? Array.Empty<string>(),
+            endpointKeys = endpointKeys ?? Array.Empty<string>(),
+            windowRoleId = windowRoleId ?? string.Empty
+        };
+
         public static T RequireAsset<T>(string path) where T : UnityEngine.Object
         {
             T value = AssetDatabase.LoadAssetAtPath<T>(path);

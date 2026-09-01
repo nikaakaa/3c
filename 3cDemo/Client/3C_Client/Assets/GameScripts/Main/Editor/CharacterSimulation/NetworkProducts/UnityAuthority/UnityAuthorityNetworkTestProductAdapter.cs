@@ -94,6 +94,21 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                     NetworkTestProductAdapterUtility.Field("controlPort", controlPort.ToString(CultureInfo.InvariantCulture)),
                     NetworkTestProductAdapterUtility.Field("authorityDataPort", dataPort.ToString(CultureInfo.InvariantCulture))
                 },
+                new[]
+                {
+                    NetworkTestProductAdapterUtility.SessionRole(
+                        "fantasy-server", "RuntimeArtifact", "unity-authority-gate-server", true,
+                        "Hidden", "adapter:process-alive", Array.Empty<string>(), Array.Empty<string>()),
+                    NetworkTestProductAdapterUtility.SessionRole(
+                        "authority", "RuntimeArtifact", "unity-player", true,
+                        "Visible", "adapter:udp-ready", new[] { "fantasy-server" }, Array.Empty<string>(), "authority"),
+                    NetworkTestProductAdapterUtility.SessionRole(
+                        "client-a", "RuntimeArtifact", "unity-player", true,
+                        "Visible", "adapter:udp-ready", new[] { "authority" }, Array.Empty<string>(), "client-a"),
+                    NetworkTestProductAdapterUtility.SessionRole(
+                        "client-b", "RuntimeArtifact", "unity-player", true,
+                        "Visible", "adapter:udp-ready", new[] { "client-a" }, Array.Empty<string>(), "client-b")
+                },
                 new[] { "default" },
                 null);
         }

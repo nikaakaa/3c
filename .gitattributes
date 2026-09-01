@@ -34,7 +34,6 @@
 *.mp4 binary
 *.mov binary
 *.dll binary
-3cDemo/Client/3C_Client/Assets/_HoaxGames/iStep/iStep_Demo_HDRP.unitypackage filter=lfs diff=lfs merge=lfs -text
 3cDemo/Client/3C_Client/Assets/AssetArt/ArtRes/RockyDesert/RockyDesert_HDRP.unitypackage filter=lfs diff=lfs merge=lfs -text
 3cDemo/Client/3C_Client/Assets/AssetArt/ArtRes/RockyDesert/RockyDesert_URP.unitypackage filter=lfs diff=lfs merge=lfs -text
 3cDemo/Client/3C_Client/Assets/Configs/Character/Corin/Pipeline/Definition/Generated/CorinCharacterPipelineDefinition.PresentationProjection.asset filter=lfs diff=lfs merge=lfs -text

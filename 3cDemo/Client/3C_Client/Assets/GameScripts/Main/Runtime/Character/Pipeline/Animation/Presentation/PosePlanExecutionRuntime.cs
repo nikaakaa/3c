@@ -671,7 +671,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                     physicalSources.Capacity);
                 actorDiagnosticsProjector =
                     new CharacterPoseActorCommittedDiagnosticsProjector(
-                        projection.PosePlan.RootOrientationWarps.Count);
+                        projection.PosePlan,
+                        in initialLayout);
 
                 PlayableGraph graph = animancer.Graph.PlayableGraph;
                 if (!graph.IsValid())
@@ -1788,6 +1789,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                 CharacterPoseActorCommittedDiagnosticsView actorDiagnostics =
                     m_ActorDiagnosticsProjector.Capture(
                         in committedProgramResult,
+                        m_Stacks,
+                        m_StackRoutes,
                         m_RootOrientationWarps,
                         interest);
                 CharacterPoseConstraintResult committedConstraintResult =
@@ -1856,8 +1859,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                     in actorDiagnostics,
                     in constraintDiagnostics,
                     in publicationDiagnostics,
-                    m_Stacks,
-                    m_StackRoutes,
                     m_PoseStateSources.StateMachines,
                     m_InertializationPlan,
                     interest);

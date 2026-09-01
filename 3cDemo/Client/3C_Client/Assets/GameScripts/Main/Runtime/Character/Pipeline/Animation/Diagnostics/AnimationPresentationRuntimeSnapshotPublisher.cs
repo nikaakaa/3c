@@ -39,6 +39,30 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
                 return m_Page.Result;
             }
         }
+        internal int StackCount
+        {
+            get
+            {
+                RequireValid();
+                return m_Page.StackCount;
+            }
+        }
+        internal int EntryCount
+        {
+            get
+            {
+                RequireValid();
+                return m_Page.EntryCount;
+            }
+        }
+        internal int AnimationSlotCount
+        {
+            get
+            {
+                RequireValid();
+                return m_Page.AnimationSlotCount;
+            }
+        }
         internal int RootOrientationWarpCount
         {
             get
@@ -46,6 +70,61 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
                 RequireValid();
                 return m_Page.RootOrientationWarpCount;
             }
+        }
+
+        internal void CopyBlendStacks(
+            AnimationBlendStackSnapshot[] stacks,
+            AnimationBlendStackEntrySnapshot[] entries,
+            float[] entryBoneWeights,
+            float[] storedBoneWeights)
+        {
+            RequireValid();
+            int entryBoneWeightCount =
+                checked(m_Page.EntryCount * m_Page.BoneCount);
+            int storedBoneWeightCount =
+                checked(m_Page.StackCount * m_Page.BoneCount);
+            if (stacks == null || stacks.Length < m_Page.StackCount ||
+                entries == null || entries.Length < m_Page.EntryCount ||
+                entryBoneWeights == null ||
+                entryBoneWeights.Length < entryBoneWeightCount ||
+                storedBoneWeights == null ||
+                storedBoneWeights.Length < storedBoneWeightCount)
+            {
+                throw new ArgumentException(
+                    "Pose actor Blend Stack diagnostics destination is invalid.");
+            }
+            Array.Copy(m_Page.Stacks, 0, stacks, 0, m_Page.StackCount);
+            Array.Copy(m_Page.Entries, 0, entries, 0, m_Page.EntryCount);
+            Array.Copy(
+                m_Page.EntryBoneWeights,
+                0,
+                entryBoneWeights,
+                0,
+                entryBoneWeightCount);
+            Array.Copy(
+                m_Page.StoredBoneWeights,
+                0,
+                storedBoneWeights,
+                0,
+                storedBoneWeightCount);
+        }
+
+        internal void CopyAnimationSlots(
+            AnimationSlotRuntimeSnapshot[] animationSlots)
+        {
+            RequireValid();
+            if (animationSlots == null ||
+                animationSlots.Length < m_Page.AnimationSlotCount)
+            {
+                throw new ArgumentException(
+                    "Pose actor Animation Slot diagnostics destination is invalid.");
+            }
+            Array.Copy(
+                m_Page.AnimationSlots,
+                0,
+                animationSlots,
+                0,
+                m_Page.AnimationSlotCount);
         }
 
         internal RootOrientationWarpRuntimeSnapshot GetRootOrientationWarp(
@@ -71,16 +150,48 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
     {
         internal sealed class Page
         {
-            internal Page(int rootOrientationWarpCount)
+            internal Page(
+                CharacterPresentationPosePlan program,
+                in AnimationPoseNativeAggregateLayout layout)
             {
+                int entryCapacity = 0;
+                for (int i = 0; i < program.BlendNodes.Count; i++)
+                {
+                    entryCapacity = checked(
+                        entryCapacity +
+                        program.BlendNodes[i]
+                            .StackPolicy.MaxActiveSourceEntries);
+                }
+                BoneCount = layout.BoneCount;
+                Stacks =
+                    new AnimationBlendStackSnapshot[
+                        program.BlendNodes.Count];
+                Entries =
+                    new AnimationBlendStackEntrySnapshot[entryCapacity];
+                EntryBoneWeights =
+                    new float[checked(entryCapacity * BoneCount)];
+                StoredBoneWeights =
+                    new float[checked(Stacks.Length * BoneCount)];
+                AnimationSlots =
+                    new AnimationSlotRuntimeSnapshot[
+                        program.AnimationSlots.Count];
                 RootOrientationWarps =
                     new RootOrientationWarpRuntimeSnapshot[
-                        rootOrientationWarpCount];
+                        program.RootOrientationWarps.Count];
             }
 
             internal ulong Identity;
             internal CharacterPoseProgramResult Result;
+            internal int StackCount;
+            internal int EntryCount;
+            internal int AnimationSlotCount;
             internal int RootOrientationWarpCount;
+            internal readonly int BoneCount;
+            internal readonly AnimationBlendStackSnapshot[] Stacks;
+            internal readonly AnimationBlendStackEntrySnapshot[] Entries;
+            internal readonly float[] EntryBoneWeights;
+            internal readonly float[] StoredBoneWeights;
+            internal readonly AnimationSlotRuntimeSnapshot[] AnimationSlots;
             internal readonly RootOrientationWarpRuntimeSnapshot[]
                 RootOrientationWarps;
         }
@@ -89,25 +200,30 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
         ulong m_NextIdentity = 1;
 
         internal CharacterPoseActorCommittedDiagnosticsProjector(
-            int rootOrientationWarpCount)
+            CharacterPresentationPosePlan program,
+            in AnimationPoseNativeAggregateLayout layout)
         {
-            if (rootOrientationWarpCount < 0)
-            {
-                throw new ArgumentOutOfRangeException(
-                    nameof(rootOrientationWarpCount));
-            }
-            m_Page = new Page(rootOrientationWarpCount);
+            if (program == null)
+                throw new ArgumentNullException(nameof(program));
+            program.RequireValid();
+            layout.RequireValid();
+            m_Page = new Page(program, in layout);
         }
 
         internal void BeginFrame()
         {
             m_Page.Identity = 0;
             m_Page.Result = default;
+            m_Page.StackCount = 0;
+            m_Page.EntryCount = 0;
+            m_Page.AnimationSlotCount = 0;
             m_Page.RootOrientationWarpCount = 0;
         }
 
         internal CharacterPoseActorCommittedDiagnosticsView Capture(
             in CharacterPoseProgramResult result,
+            IReadOnlyList<AnimationBlendStackRuntime> stacks,
+            IReadOnlyList<CharacterAnimationTransitionRouteRuntime> routes,
             IReadOnlyList<RootOrientationWarpRuntime> rootOrientationWarps,
             AnimationPresentationDiagnosticsInterest interest)
         {
@@ -121,13 +237,67 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
                  (AnimationPresentationDiagnosticsInterest.LiveState |
                   AnimationPresentationDiagnosticsInterest.Capture)) != 0)
             {
-                if (rootOrientationWarps == null ||
+                if (stacks == null ||
+                    stacks.Count != m_Page.Stacks.Length ||
+                    routes == null || routes.Count != stacks.Count ||
+                    rootOrientationWarps == null ||
                     rootOrientationWarps.Count !=
                     m_Page.RootOrientationWarps.Length)
                 {
                     throw new InvalidOperationException(
-                        "Root Orientation Warp diagnostics layout is inconsistent.");
+                        "Pose actor diagnostics layout is inconsistent.");
                 }
+                int entryOffset = 0;
+                for (int stackIndex = 0;
+                     stackIndex < stacks.Count;
+                     stackIndex++)
+                {
+                    AnimationBlendStackRuntime stack = stacks[stackIndex];
+                    stack.CopyDiagnostics(
+                        stackIndex,
+                        m_Page.Stacks,
+                        m_Page.Entries,
+                        entryOffset,
+                        m_Page.EntryBoneWeights,
+                        m_Page.StoredBoneWeights);
+                    entryOffset = checked(entryOffset + stack.EntryCount);
+                }
+                m_Page.StackCount = stacks.Count;
+                m_Page.EntryCount = entryOffset;
+                Array.Clear(
+                    m_Page.AnimationSlots,
+                    0,
+                    m_Page.AnimationSlots.Length);
+                int animationSlotCount = 0;
+                for (int routeIndex = 0;
+                     routeIndex < routes.Count;
+                     routeIndex++)
+                {
+                    CharacterAnimationTransitionRouteRuntime route =
+                        routes[routeIndex];
+                    if (!route.IsAnimationSlot)
+                        continue;
+                    int slotIndex = route.AnimationSlotIndex;
+                    if ((uint)slotIndex >=
+                            (uint)m_Page.AnimationSlots.Length ||
+                        m_Page.Stacks[routeIndex].PoseNodeId !=
+                        route.NodeId)
+                    {
+                        throw new InvalidOperationException(
+                            "Animation Slot diagnostics layout is inconsistent.");
+                    }
+                    m_Page.AnimationSlots[slotIndex] =
+                        route.CreateSlotSnapshot(
+                            in m_Page.Stacks[routeIndex]);
+                    animationSlotCount++;
+                }
+                if (animationSlotCount !=
+                    m_Page.AnimationSlots.Length)
+                {
+                    throw new InvalidOperationException(
+                        "Animation Slot diagnostics coverage is incomplete.");
+                }
+                m_Page.AnimationSlotCount = animationSlotCount;
                 for (int i = 0; i < rootOrientationWarps.Count; i++)
                 {
                     m_Page.RootOrientationWarps[i] =
@@ -144,6 +314,20 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
         internal void Reset()
         {
             BeginFrame();
+            Array.Clear(m_Page.Stacks, 0, m_Page.Stacks.Length);
+            Array.Clear(m_Page.Entries, 0, m_Page.Entries.Length);
+            Array.Clear(
+                m_Page.EntryBoneWeights,
+                0,
+                m_Page.EntryBoneWeights.Length);
+            Array.Clear(
+                m_Page.StoredBoneWeights,
+                0,
+                m_Page.StoredBoneWeights.Length);
+            Array.Clear(
+                m_Page.AnimationSlots,
+                0,
+                m_Page.AnimationSlots.Length);
             Array.Clear(
                 m_Page.RootOrientationWarps,
                 0,
@@ -281,8 +465,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
                 constraintDiagnostics,
             in CharacterFinalPoseCommittedDiagnosticsView
                 publicationDiagnostics,
-            IReadOnlyList<AnimationBlendStackRuntime> stacks,
-            IReadOnlyList<CharacterAnimationTransitionRouteRuntime> routes,
             IReadOnlyList<CharacterPoseStateMachineRuntime> stateMachines,
             PoseInertializationNativeProgram inertializations,
             AnimationPresentationDiagnosticsInterest interest)
@@ -311,8 +493,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
                 publicationDiagnostics.Result.Lineage !=
                 executionResult.Lineage ||
                 executionResult.Lineage.CompletionIdentity !=
-                finalFrame.CompletionIdentity || stacks == null ||
-                routes == null || routes.Count != stacks.Count || stateMachines == null ||
+                finalFrame.CompletionIdentity || stateMachines == null ||
                 inertializations == null)
                 throw new ArgumentException("Animation runtime diagnostics frame inputs are inconsistent.");
             AnimationPhysicalBoneWriteDiagnostics physicalWrite =
@@ -330,22 +511,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
 
             if (RequiresBasicState(interest))
             {
-                int entryOffset = 0;
-                for (int stackIndex = 0; stackIndex < stacks.Count; stackIndex++)
-                {
-                    AnimationBlendStackRuntime stack = stacks[stackIndex];
-                    stack.CopyDiagnostics(
-                        stackIndex,
-                        page.Stacks,
-                        page.Entries,
-                        entryOffset,
-                        page.EntryBoneWeights,
-                        page.StoredBoneWeights);
-                    entryOffset = checked(entryOffset + stack.EntryCount);
-                }
-                page.StackCount = stacks.Count;
-                page.EntryCount = entryOffset;
-                CopyAnimationSlots(page, routes);
+                CopyBlendStacks(page, in actorDiagnostics);
                 CopyPoseStateMachines(
                     page,
                     stateMachines,
@@ -506,30 +672,27 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
             m_PendingCompletionIdentity = 0;
         }
 
-        void CopyAnimationSlots(
+        static void CopyBlendStacks(
             Page page,
-            IReadOnlyList<CharacterAnimationTransitionRouteRuntime> routes)
+            in CharacterPoseActorCommittedDiagnosticsView actorDiagnostics)
         {
-            Array.Clear(page.AnimationSlots, 0, page.AnimationSlots.Length);
-            int count = 0;
-            for (int routeIndex = 0; routeIndex < routes.Count; routeIndex++)
+            if (actorDiagnostics.StackCount > page.Stacks.Length ||
+                actorDiagnostics.EntryCount > page.Entries.Length ||
+                actorDiagnostics.AnimationSlotCount !=
+                page.AnimationSlots.Length)
             {
-                CharacterAnimationTransitionRouteRuntime route = routes[routeIndex];
-                if (!route.IsAnimationSlot)
-                    continue;
-                int slotIndex = route.AnimationSlotIndex;
-                if ((uint)slotIndex >= (uint)page.AnimationSlots.Length ||
-                    page.Stacks[routeIndex].PoseNodeId != route.NodeId)
-                {
-                    throw new InvalidOperationException("Animation Slot diagnostics layout is inconsistent.");
-                }
-                page.AnimationSlots[slotIndex] =
-                    route.CreateSlotSnapshot(in page.Stacks[routeIndex]);
-                count++;
+                throw new InvalidOperationException(
+                    "Pose actor Blend Stack diagnostics coverage is incomplete.");
             }
-            if (count != page.AnimationSlots.Length)
-                throw new InvalidOperationException("Animation Slot diagnostics coverage is incomplete.");
-            page.AnimationSlotCount = count;
+            actorDiagnostics.CopyBlendStacks(
+                page.Stacks,
+                page.Entries,
+                page.EntryBoneWeights,
+                page.StoredBoneWeights);
+            actorDiagnostics.CopyAnimationSlots(page.AnimationSlots);
+            page.StackCount = actorDiagnostics.StackCount;
+            page.EntryCount = actorDiagnostics.EntryCount;
+            page.AnimationSlotCount = actorDiagnostics.AnimationSlotCount;
         }
 
         static void CopyPoseStateMachines(

@@ -335,3 +335,13 @@ Snapshot Publisher已删除`CharacterPoseGraphNativeBinding`、`CharacterPoseGra
 `ThirdPersonClient.Runtime.csproj`按规定参数修正一次`in frame.Layout`属性局部值后编译成功，0错误、1个既有Input Value未使用字段警告，build server已关闭。Unity每次调用前均重新固定`3C_Client@e852139597e42532`。正式A为`Diagnostics/FootPlacementRuns/20260901-212326-424-516539050652496690b232e9e080844e`，候选B为`Diagnostics/FootPlacementRuns/20260901-214438-507-584a118b94b54a6b925bd47eb128147f`；B Proof为`Temp/CharacterInputReplayProofs/v4/43357ff3cd384e5cba75d2c31175b116/20260901-214536-991-ea955085cc19405d8d9de586e73ebe7f.json`，工具对A Proof正式报告`matched:1044`。
 
 A/B均为2086脚行、1222列，其中1198个业务列逐值相同、24个运行identity列一一映射且0冲突；Geometry均为67186行、27列，其中22个业务列逐值相同、5个identity列一一映射且0冲突；十份正式报告归一化后0差异。诊断封存完成后立即停止3C，没有再出现上一包自由运行阶段的opposing landing pair错误；Console只记录同一条`RootMotion.FinalIK::FBIKChain.reachSmoothing`Domain Reload日志，清空后为0。由此确认Program冻结页与Projector消费切换没有改变Slot、Operation、Value、Pose Watch、Foot、Pelvis、Goal、FBBIK、Final Pose或Physical业务；`214438`成为Actor Runtime诊断投影收口的正式A。
+
+## LinkedPose Committed Diagnostics短租约
+
+状态：提交`64200fb54`已让`CharacterLinkedPoseRuntimeSession`拥有预分配、代际校验的`CharacterLinkedPoseCommittedDiagnosticsView`。LinkedPose仍按原顺序执行Selector、Group写入与Seal；Seal后才把同一Program Result和各Group已提交快照冻结进唯一诊断页。下一次Prepare或Reset会使旧View失效。Snapshot Publisher不再持有LinkedPose Runtime，也不再现场调用`CreateCommittedSnapshot`，只消费与根`CharacterPoseFrameExecutionResult`同lineage的短租约。提交同时修正前序精确暂存遗留在提交树中的构造器和`BeginCommittedDiagnostics`错位行，使提交本身不再依赖工作区残留。Stack、Route、StateMachine、Inertialization和RootWarp仍待迁移，所以任务13.5和13.6保持未完成。
+
+`ThirdPersonClient.Runtime.csproj`按规定参数编译成功，0警告、0错误，build server已关闭。Unity首次重连刷新出现一次SourceAssetDB文件时间戳不同步，强制全量刷新后消失；回放和退出Play期间只有同一条`RootMotion.FinalIK::FBIKChain.reachSmoothing`Domain Reload序列化深度日志，没有PoseGraph、LinkedPose、IK或采样异常，清空后Console为0。
+
+正式A为`Diagnostics/FootPlacementRuns/20260901-214438-507-584a118b94b54a6b925bd47eb128147f`，候选B为`Diagnostics/FootPlacementRuns/20260901-215843-383-9b8dbac4d3c646b58e10695f2287f1d9`；B Proof为`Temp/CharacterInputReplayProofs/v4/43357ff3cd384e5cba75d2c31175b116/20260901-215943-008-0835d958c03e4e41b4a2424c17ce3ba2.json`，工具对A Proof正式报告`matched:1044`。
+
+A/B均为2086脚行、1222列，其中1198个业务列逐值相同、24个运行identity列一一映射且0冲突；Geometry均为67186行、27列，其中22个业务列逐值相同、5个identity列一一映射且0冲突；十份正式报告按既定Sample identity、文件hash、detail／index大小与hash、分析耗时和Surface identity规则归一化后10／10相同，七维分项与总分84.2不变。由此确认LinkedPose诊断读取边界迁移没有改变Linked Pose Group、Slot、Operation、Foot、Pelvis、Goal、FBBIK、Final Pose、Physical或正式诊断业务；`215843`成为剩余Actor Runtime诊断投影收口的正式A。

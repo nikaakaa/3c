@@ -896,6 +896,18 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             if (m_NextFrameTransactionIdentity == 0)
                 m_NextFrameTransactionIdentity++;
             ulong frameIdentity = m_NextFrameTransactionIdentity;
+            var lineage = new CharacterPoseFrameLineage(
+                m_ActorId,
+                frameIdentity,
+                0,
+                presentationFrame,
+                bodyTick,
+                m_Bindings.Projection.ProgramId,
+                m_Bindings.Projection.PosePlan.PlanHash,
+                m_Bindings.Projection.ProjectionRevision,
+                m_Bindings.Projection.Rig.RigId,
+                m_Bindings.Projection.Rig.RigRevision,
+                m_TuningGeneration);
             bool linkedPosePrepared = false;
             try
             {
@@ -923,22 +935,9 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                             frameIdentity);
                 }
                 pose = m_PoseRuntime.BeginPendingFrame(
-                    frameIdentity,
-                    presentationFrame,
+                    in lineage,
                     diagnosticsInterest,
                     linkedPose);
-                var lineage = new CharacterPoseFrameLineage(
-                    m_ActorId,
-                    frameIdentity,
-                    0,
-                    presentationFrame,
-                    bodyTick,
-                    m_Bindings.Projection.ProgramId,
-                    m_Bindings.Projection.PosePlan.PlanHash,
-                    m_Bindings.Projection.ProjectionRevision,
-                    m_Bindings.Projection.Rig.RigId,
-                    m_Bindings.Projection.Rig.RigRevision,
-                    m_TuningGeneration);
                 m_FrameTransaction.Begin(
                     in lineage,
                     workspaceLease,

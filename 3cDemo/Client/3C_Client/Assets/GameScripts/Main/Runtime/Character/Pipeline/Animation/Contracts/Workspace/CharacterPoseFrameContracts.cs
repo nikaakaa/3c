@@ -112,6 +112,27 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             CharacterPoseFrameLineage right) => !left.Equals(right);
     }
 
+    internal readonly struct CharacterPoseProgramFrameLease
+    {
+        internal CharacterPoseProgramFrameLease(
+            in CharacterPoseFrameLineage lineage)
+        {
+            if (!lineage.IsOpenValid || lineage.CompletionIdentity != 0)
+                throw new ArgumentException("Pose Program Frame Lease lineage is invalid.", nameof(lineage));
+            Lineage = lineage;
+        }
+
+        internal CharacterPoseFrameLineage Lineage { get; }
+        internal ulong FrameIdentity => Lineage.FrameIdentity;
+        internal bool IsValid =>
+            Lineage.IsOpenValid &&
+            Lineage.CompletionIdentity == 0;
+        internal bool Matches(CharacterPoseFrameLineage lineage) =>
+            IsValid &&
+            lineage.IsOpenValid &&
+            lineage.WithCompletion(0) == Lineage;
+    }
+
     internal readonly struct CharacterPoseSourceDemand
     {
         internal CharacterPoseSourceDemand(

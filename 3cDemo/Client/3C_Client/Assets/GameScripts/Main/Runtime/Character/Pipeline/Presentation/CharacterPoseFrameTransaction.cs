@@ -140,6 +140,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         internal AnimationSlotMutationLease SlotLease { get; private set; }
         internal CharacterPoseProgramFrameLease PoseLease { get; private set; }
         internal CharacterPoseSourceFrameLease SourceLease { get; private set; }
+        internal CharacterPoseConstraintFrameLease ConstraintLease { get; private set; }
         internal CharacterPoseSourceDemand SourceDemand { get; private set; }
         internal CharacterPoseSourceFrameResult SourceFrame { get; private set; }
         internal bool HasSourceFrame { get; private set; }
@@ -189,6 +190,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             PoseLease.Matches(Lineage) &&
             SourceLease.IsValid &&
             SourceLease.Matches(Lineage) &&
+            ConstraintLease.IsValid &&
+            ConstraintLease.Matches(Lineage) &&
             HasSourceFrame &&
             SourceDemand.IsValid &&
             SourceFrame.IsReady &&
@@ -214,6 +217,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             AnimationSlotMutationLease slotLease,
             CharacterPoseProgramFrameLease poseLease,
             CharacterPoseSourceFrameLease sourceLease,
+            CharacterPoseConstraintFrameLease constraintLease,
             MotionMatchingFrameMutationLease motionMatchingLease,
             bool hasMotionMatchingLease)
         {
@@ -236,6 +240,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 !poseLease.Matches(lineage) ||
                 !sourceLease.IsValid ||
                 !sourceLease.Matches(lineage) ||
+                !constraintLease.IsValid ||
+                !constraintLease.Matches(lineage) ||
                 hasMotionMatchingLease != motionMatchingLease.IsValid ||
                 hasMotionMatchingLease &&
                 motionMatchingLease.FrameIdentity != lineage.FrameIdentity)
@@ -251,6 +257,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             SlotLease = slotLease;
             PoseLease = poseLease;
             SourceLease = sourceLease;
+            ConstraintLease = constraintLease;
             MotionMatchingLease = motionMatchingLease;
             HasMotionMatchingLease = hasMotionMatchingLease;
             SourceDemand = default;
@@ -379,6 +386,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             SlotLease = default;
             PoseLease = default;
             SourceLease = default;
+            ConstraintLease = default;
             SourceDemand = default;
             SourceFrame = default;
             HasSourceFrame = false;

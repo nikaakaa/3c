@@ -692,9 +692,12 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                         if (publishStateDiagnostics)
                             BuildCommittedSnapshots(transaction);
                         m_PoseRuntime.BeginCommittedDiagnostics(
+                        CharacterPoseSourceFrameResult committedSourceFrame =
+                            transaction.SourceFrame;
                             diagnosticsInterest,
                             linkedPose,
                             in executionResult);
+                            in committedSourceFrame,
                         m_PoseRuntime.PublishDiagnostics();
                         if (publishStateDiagnostics)
                             PublishCommittedSnapshots(transaction);

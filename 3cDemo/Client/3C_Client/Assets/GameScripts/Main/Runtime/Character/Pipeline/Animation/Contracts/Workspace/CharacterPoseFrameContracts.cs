@@ -340,6 +340,34 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             Availability == PresentationPoseSourceAvailability.Ready;
     }
 
+    internal readonly struct CharacterPoseSourceCommittedResult
+    {
+        internal CharacterPoseSourceCommittedResult(
+            in CharacterPoseSourceFrameResult sourceFrame)
+        {
+            if (!sourceFrame.IsReady)
+            {
+                throw new ArgumentException(
+                    "Character Pose source frame cannot publish a committed result.",
+                    nameof(sourceFrame));
+            }
+            Lineage = sourceFrame.Lineage;
+            Availability = sourceFrame.Availability;
+            Outcome = sourceFrame.Outcome;
+            FailureReason = sourceFrame.FailureReason;
+        }
+
+        internal CharacterPoseFrameLineage Lineage { get; }
+        internal PresentationPoseSourceAvailability Availability { get; }
+        internal CharacterPoseSourceFrameOutcome Outcome { get; }
+        internal PresentationPoseSourceFailureReason FailureReason { get; }
+        internal bool IsCommitted =>
+            Lineage.IsValid &&
+            Availability == PresentationPoseSourceAvailability.Ready &&
+            Outcome == CharacterPoseSourceFrameOutcome.Prepared &&
+            FailureReason == PresentationPoseSourceFailureReason.None;
+    }
+
     internal readonly struct CharacterPoseProgramPrepared
     {
         internal CharacterPoseProgramPrepared(

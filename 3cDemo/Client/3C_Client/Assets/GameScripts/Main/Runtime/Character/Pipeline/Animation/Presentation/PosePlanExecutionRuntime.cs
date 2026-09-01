@@ -1729,6 +1729,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             AnimationPresentationDiagnosticsInterest interest,
             CharacterLinkedPoseRuntimeSession linkedPose,
             in CharacterPoseFrameExecutionResult executionResult)
+            in CharacterPoseSourceFrameResult sourceFrame,
         {
             RequireAlive();
             RequireNoOpenMutation();
@@ -1736,7 +1737,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                 throw new ArgumentNullException(nameof(linkedPose));
             if (interest == AnimationPresentationDiagnosticsInterest.None)
                 return;
-            if (!executionResult.IsPublished ||
+            if (!sourceFrame.IsReady ||
+                sourceFrame.Lineage != executionResult.Lineage ||
+                !executionResult.IsPublished ||
                 !m_HasCompletedFrame ||
                 m_LastCompletedFrame.CompletionIdentity == 0 ||
                 executionResult.Lineage.CompletionIdentity !=
@@ -1758,6 +1761,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                 bool requiresPhysical = ComposedAnimationPoseFramePublisher
                     .RequiresPhysicalDiagnostics(interest);
                 CharacterPoseConstraintResult committedConstraintResult =
+                CharacterPoseSourceCommittedDiagnosticsView sourceDiagnostics =
+                    m_PhysicalSources.CaptureCommittedDiagnostics(
+                        in sourceFrame);
                     executionResult.Constraint;
                 CharacterPoseConstraintCommittedDiagnosticsView
                     constraintDiagnostics =
@@ -1776,7 +1782,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                     constraintDiagnostics.FootLandingPrediction;
                 CharacterFullBodyIkSolverDiagnostics solverDiagnostics =
                     constraintDiagnostics.Solver;
-                if (!constraintDiagnostics.IsValid ||
+                if (!sourceDiagnostics.IsValid ||
+                    sourceDiagnostics.Result.Lineage !=
+                    executionResult.Lineage ||
+                    !constraintDiagnostics.IsValid ||
                     constraintDiagnostics.Result.Lineage !=
                     executionResult.Lineage ||
                     executionResult.Constraint.Lineage !=
@@ -1806,6 +1815,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                 m_DiagnosticsPublisher.BeginFrame(
                     in executionResult,
                     in constraintDiagnostics,
+                    in sourceDiagnostics,
                     in publicationDiagnostics,
                     in m_LastCompletedFrame,
                     m_Stacks,

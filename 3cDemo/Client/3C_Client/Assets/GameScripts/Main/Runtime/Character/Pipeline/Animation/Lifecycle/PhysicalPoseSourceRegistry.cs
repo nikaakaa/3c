@@ -70,8 +70,120 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
         internal bool IsValid => SourceIndex.IsValid && Generation != 0 && SourceId.IsValid;
     }
 
+    internal readonly struct CharacterPoseSourceCommittedIdentity
+    {
+        internal CharacterPoseSourceCommittedIdentity(
+            AnimationPhysicalSourceIdentity physicalIdentity,
+            AnimationPoseSourceId sourceId,
+            PoseNodeId poseNodeId,
+            int sourceOwnerIndex)
+        {
+            PhysicalIdentity = physicalIdentity;
+            SourceId = sourceId;
+            PoseNodeId = poseNodeId;
+            SourceOwnerIndex = sourceOwnerIndex;
+        }
+
+        internal AnimationPhysicalSourceIdentity PhysicalIdentity { get; }
+        internal AnimationPoseSourceId SourceId { get; }
+        internal PoseNodeId PoseNodeId { get; }
+        internal int SourceOwnerIndex { get; }
+        internal bool IsValid =>
+            PhysicalIdentity.IsValid &&
+            SourceId.IsValid &&
+            PoseNodeId.IsValid &&
+            SourceOwnerIndex >= 0;
+    }
+
+    internal readonly struct CharacterPoseSourceCommittedDiagnosticsView
+    {
+        internal CharacterPoseSourceCommittedDiagnosticsView(
+            PhysicalPoseSourceRegistry.CommittedDiagnosticsPage page)
+        {
+            m_Page = page ?? throw new ArgumentNullException(nameof(page));
+            m_Identity = page.Identity;
+            if (!IsValid)
+            {
+                throw new ArgumentException(
+                    "Pose Source committed diagnostics are invalid.",
+                    nameof(page));
+            }
+        }
+
+        readonly PhysicalPoseSourceRegistry.CommittedDiagnosticsPage m_Page;
+        readonly ulong m_Identity;
+        internal bool IsValid =>
+            m_Page != null &&
+            m_Identity != 0 &&
+            m_Page.Identity == m_Identity &&
+            m_Page.Result.IsCommitted;
+        internal CharacterPoseSourceCommittedResult Result
+        {
+            get
+            {
+                RequireValid();
+                return m_Page.Result;
+            }
+        }
+
+        internal CharacterPoseSourceCommittedIdentity Resolve(
+            AnimationPhysicalSourceIdentity identity)
+        {
+            RequireValid();
+            if (!identity.IsValid ||
+                (uint)identity.Index.Value >=
+                (uint)m_Page.Generations.Length)
+            {
+                throw new ArgumentOutOfRangeException(nameof(identity));
+            }
+            int index = identity.Index.Value;
+            if (m_Page.Generations[index] != identity.Generation ||
+                !m_Page.SourceIds[index].IsValid ||
+                !m_Page.PoseNodeIds[index].IsValid ||
+                m_Page.SourceOwnerIndices[index] < 0)
+            {
+                throw new InvalidOperationException(
+                    "Pose Source committed physical identity is stale.");
+            }
+            return new CharacterPoseSourceCommittedIdentity(
+                identity,
+                m_Page.SourceIds[index],
+                m_Page.PoseNodeIds[index],
+                m_Page.SourceOwnerIndices[index]);
+        }
+
+        void RequireValid()
+        {
+            if (!IsValid)
+            {
+                throw new InvalidOperationException(
+                    "Pose Source committed diagnostics lease is stale.");
+            }
+        }
+    }
+
     internal sealed class PhysicalPoseSourceRegistry : IDisposable
     {
+        internal sealed class CommittedDiagnosticsPage
+        {
+            internal CommittedDiagnosticsPage(int capacity)
+            {
+                SourceIds = new AnimationPoseSourceId[capacity];
+                PoseNodeIds = new PoseNodeId[capacity];
+                SourceOwnerIndices = new int[capacity];
+                Generations = new ulong[capacity];
+                for (int i = 0; i < SourceOwnerIndices.Length; i++)
+                    SourceOwnerIndices[i] = -1;
+            }
+
+            internal ulong Identity;
+            internal CharacterPoseSourceCommittedResult Result;
+            internal readonly AnimationPoseSourceId[] SourceIds;
+            internal readonly PoseNodeId[] PoseNodeIds;
+            internal readonly int[] SourceOwnerIndices;
+            internal readonly ulong[] Generations;
+        }
+
         AnimationPoseSourceId[] m_SourceIds;
         PoseNodeId[] m_PoseNodeIds;
         int[] m_SourceOwnerIndices;
@@ -81,10 +193,12 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
         int[] m_PendingSourceOwnerIndices;
         ulong[] m_PendingGenerations;
         byte[] m_PreparedReleaseSlots;
+        readonly CommittedDiagnosticsPage m_CommittedDiagnostics;
         int m_Count;
         int m_PendingCount;
         int m_PreparedReleaseCount;
         ulong m_LastGeneration;
+        ulong m_NextDiagnosticsIdentity = 1;
         bool m_FrameOpen;
         bool m_FrameValidated;
         bool m_Disposed;
@@ -102,6 +216,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
             m_PendingSourceOwnerIndices = new int[capacity];
             m_PendingGenerations = new ulong[capacity];
             m_PreparedReleaseSlots = new byte[capacity];
+            m_CommittedDiagnostics = new CommittedDiagnosticsPage(capacity);
             for (int i = 0; i < m_SourceOwnerIndices.Length; i++)
             {
                 m_SourceOwnerIndices[i] = -1;
@@ -146,6 +261,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
             if (m_PreparedReleaseCount != 0)
                 throw new InvalidOperationException("Physical Pose Source prepared releases were not applied.");
             ClearPending();
+            m_CommittedDiagnostics.Identity = 0;
             m_FrameOpen = true;
             m_FrameValidated = false;
         }
@@ -252,6 +368,33 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
             return CreateIdentity(index);
         }
 
+        internal CharacterPoseSourceCommittedDiagnosticsView
+            CaptureCommittedDiagnostics(
+            in CharacterPoseSourceFrameResult sourceFrame)
+        {
+            RequireAlive();
+            if (m_FrameOpen ||
+                m_PreparedReleaseCount != 0 ||
+                !sourceFrame.IsReady)
+            {
+                throw new InvalidOperationException(
+                    "Pose Source committed diagnostics request is invalid.");
+            }
+            CommittedDiagnosticsPage page = m_CommittedDiagnostics;
+            page.Identity = 0;
+            page.Result = new CharacterPoseSourceCommittedResult(
+                in sourceFrame);
+            Array.Copy(m_SourceIds, page.SourceIds, m_SourceIds.Length);
+            Array.Copy(m_PoseNodeIds, page.PoseNodeIds, m_PoseNodeIds.Length);
+            Array.Copy(
+                m_SourceOwnerIndices,
+                page.SourceOwnerIndices,
+                m_SourceOwnerIndices.Length);
+            Array.Copy(m_Generations, page.Generations, m_Generations.Length);
+            page.Identity = m_NextDiagnosticsIdentity++;
+            return new CharacterPoseSourceCommittedDiagnosticsView(page);
+        }
+
         internal AnimationPoseSourceId RequireSourceId(AnimationPhysicalSourceIdentity identity)
         {
             int value = RequireOccupied(identity);
@@ -340,6 +483,26 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
             m_Count = 0;
             ClearPending();
             ClearPreparedReleases();
+            m_CommittedDiagnostics.Identity = 0;
+            m_CommittedDiagnostics.Result = default;
+            Array.Clear(
+                m_CommittedDiagnostics.SourceIds,
+                0,
+                m_CommittedDiagnostics.SourceIds.Length);
+            Array.Clear(
+                m_CommittedDiagnostics.PoseNodeIds,
+                0,
+                m_CommittedDiagnostics.PoseNodeIds.Length);
+            Array.Clear(
+                m_CommittedDiagnostics.Generations,
+                0,
+                m_CommittedDiagnostics.Generations.Length);
+            for (int i = 0;
+                 i < m_CommittedDiagnostics.SourceOwnerIndices.Length;
+                 i++)
+            {
+                m_CommittedDiagnostics.SourceOwnerIndices[i] = -1;
+            }
         }
 
         AnimationPhysicalSourceIdentity CreateIdentity(int index)

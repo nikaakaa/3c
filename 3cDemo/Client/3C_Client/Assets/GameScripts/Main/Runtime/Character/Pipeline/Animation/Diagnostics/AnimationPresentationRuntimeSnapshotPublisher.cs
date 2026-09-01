@@ -137,6 +137,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
 
         internal void BeginFrame(
             in CharacterPoseFrameExecutionResult executionResult,
+            in CharacterPoseSourceCommittedDiagnosticsView sourceDiagnostics,
             in CharacterPoseConstraintCommittedDiagnosticsView
                 constraintDiagnostics,
             in CharacterFinalPoseCommittedDiagnosticsView
@@ -146,7 +147,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
             IReadOnlyList<CharacterAnimationTransitionRouteRuntime> routes,
             IReadOnlyList<CharacterPoseStateMachineRuntime> stateMachines,
             PoseInertializationNativeProgram inertializations,
-            PhysicalPoseSourceRegistry physicalSources,
             IReadOnlyList<RootOrientationWarpRuntime> rootOrientationWarps,
             CharacterLinkedPoseRuntimeSession linkedPose,
             AnimationPresentationDiagnosticsInterest interest)
@@ -157,6 +157,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
             ComposedAnimationPoseFrame finalFrame =
                 publicationDiagnostics.Frame;
             if (!executionResult.IsPublished ||
+                !sourceDiagnostics.IsValid ||
+                sourceDiagnostics.Result.Lineage !=
+                executionResult.Lineage ||
                 !constraintDiagnostics.IsValid ||
                 constraintDiagnostics.Result.Lineage !=
                 executionResult.Lineage ||
@@ -168,7 +171,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
                 executionResult.Lineage.CompletionIdentity !=
                 finalFrame.CompletionIdentity || stacks == null ||
                 routes == null || routes.Count != stacks.Count || stateMachines == null ||
-                inertializations == null || physicalSources == null || rootOrientationWarps == null ||
+                inertializations == null || rootOrientationWarps == null ||
                 linkedPose == null)
                 throw new ArgumentException("Animation runtime diagnostics frame inputs are inconsistent.");
             AnimationPhysicalBoneWriteDiagnostics physicalWrite =
@@ -205,20 +208,26 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
                 CopyPoseStateMachines(page, stateMachines, m_NativeProgram);
                 CopyRootOrientationWarps(page, rootOrientationWarps);
                 CopyInertializations(page, inertializations);
-                CopySlotContributions(page, in frame, physicalSources);
+                CopySlotContributions(
+                    page,
+                    in frame,
+                    in sourceDiagnostics);
                 CopyFootPlacement(
                     page,
                     in constraintDiagnostics,
                     in physicalWrite);
             }
             if (RequiresOperationDetail(interest))
-                CopyOperations(page, in frame, physicalSources);
+                CopyOperations(
+                    page,
+                    in frame,
+                    in sourceDiagnostics);
             CopyLinkedPose(page, in frame, linkedPose);
             if ((interest & AnimationPresentationDiagnosticsInterest.PoseWatch) != 0)
                 CopyPoseWatches(
                     page,
                     in frame,
-                    physicalSources,
+                    in sourceDiagnostics,
                     in constraintDiagnostics);
             CopyFinalSummary(
                 page,
@@ -817,7 +826,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
         void CopySlotContributions(
             Page page,
             in CharacterPoseGraphNativeBinding frame,
-            PhysicalPoseSourceRegistry physicalSources)
+            in CharacterPoseSourceCommittedDiagnosticsView sourceDiagnostics)
         {
             int destinationIndex = 0;
             for (int slotIndex = 0; slotIndex < frame.Layout.PlayerCount; slotIndex++)
@@ -829,7 +838,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
                 for (int i = 0; i < count; i++)
                 {
                     AnimationPrimitivePoseContribution primitive = frame.SlotContributions[range.ContributionOffset + i];
-                    page.SlotContributions[destinationIndex] = ConvertContribution(primitive, physicalSources);
+                    page.SlotContributions[destinationIndex] =
+                        ConvertContribution(
+                            primitive,
+                            in sourceDiagnostics);
                     for (int boneIndex = 0; boneIndex < frame.Layout.BoneCount; boneIndex++)
                     {
                         page.SlotContributionBoneWeights[destinationIndex * frame.Layout.BoneCount + boneIndex] =
@@ -845,7 +857,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
         void CopyOperations(
             Page page,
             in CharacterPoseGraphNativeBinding frame,
-            PhysicalPoseSourceRegistry physicalSources)
+            in CharacterPoseSourceCommittedDiagnosticsView sourceDiagnostics)
         {
             int contributionOffset = 0;
             int operationCount = 0;
@@ -879,7 +891,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
                     int destinationIndex = contributionOffset + contributionIndex;
                     page.OperationContributions[destinationIndex] = ConvertContribution(
                         frame.ValueContributions[sourceOffset + contributionIndex],
-                        physicalSources);
+                        in sourceDiagnostics);
                     for (int boneIndex = 0; boneIndex < frame.Layout.BoneCount; boneIndex++)
                     {
                         page.OperationContributionBoneWeights[destinationIndex * frame.Layout.BoneCount + boneIndex] =
@@ -896,7 +908,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
         void CopyPoseWatches(
             Page page,
             in CharacterPoseGraphNativeBinding frame,
-            PhysicalPoseSourceRegistry physicalSources,
+            in CharacterPoseSourceCommittedDiagnosticsView sourceDiagnostics,
             in CharacterPoseConstraintCommittedDiagnosticsView
                 constraintDiagnostics)
         {
@@ -1145,7 +1157,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
                     {
                         page.PoseWatchContributions[contributionOffset + contributionIndex] = ConvertContribution(
                             frame.ValueContributions[sourceContributionOffset + contributionIndex],
-                            physicalSources);
+                            in sourceDiagnostics);
                     }
                 }
                 if (operation.Code == CharacterPoseOperationCode.FullBodyIK &&
@@ -1451,7 +1463,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
 
         AnimationPoseSourceContribution ConvertContribution(
             AnimationPrimitivePoseContribution primitive,
-            PhysicalPoseSourceRegistry physicalSources)
+            in CharacterPoseSourceCommittedDiagnosticsView sourceDiagnostics)
         {
             AnimationPoseSourceId sourceId = default;
             PoseNodeId playerNodeId = m_Workspace.RequirePoseNodeId(primitive.PhysicalPlayerIndex);
@@ -1460,10 +1472,12 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
                 var physical = new AnimationPhysicalSourceIdentity(
                     new AnimationPhysicalSourceIndex(primitive.PhysicalSourceIndex),
                     primitive.PhysicalSourceGeneration);
-                sourceId = physicalSources.RequireSourceId(physical);
-                if (physicalSources.RequirePoseNodeId(physical) != playerNodeId)
+                CharacterPoseSourceCommittedIdentity source =
+                    sourceDiagnostics.Resolve(physical);
+                sourceId = source.SourceId;
+                if (source.PoseNodeId != playerNodeId)
                     throw new InvalidOperationException("Animation diagnostic contribution Player identity is inconsistent.");
-                if (physicalSources.RequireSourceOwnerIndex(physical) != primitive.SourceOwnerIndex)
+                if (source.SourceOwnerIndex != primitive.SourceOwnerIndex)
                     throw new InvalidOperationException("Animation diagnostic contribution producer identity is inconsistent.");
             }
             return new AnimationPoseSourceContribution(

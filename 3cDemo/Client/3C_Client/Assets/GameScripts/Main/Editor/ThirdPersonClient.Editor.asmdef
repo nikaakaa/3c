@@ -3,6 +3,7 @@
     "rootNamespace": "ThirdPersonCharacter.Editor",
     "references": [
         "ThirdPerson.Development.Gm.Contracts",
+        "ThirdPerson.NetworkTest.Contracts",
         "ThirdPersonClient.Runtime",
         "ThirdPersonSimulation.Core",
         "ThirdPersonSimulation.Float32",

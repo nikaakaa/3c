@@ -1,9 +1,9 @@
 using System;
 
-namespace ThirdPersonCharacter.Editor.CharacterSimulation
+namespace ThirdPerson.NetworkTest.Contracts
 {
     [Serializable]
-    internal sealed class NetworkTestProductBuildManifest
+    public sealed class NetworkTestProductBuildManifest
     {
         public int schemaVersion = -1;
         public string candidateId = string.Empty;
@@ -24,7 +24,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
     }
 
     [Serializable]
-    internal sealed class NetworkTestRuntimeArtifactManifest
+    public sealed class NetworkTestRuntimeArtifactManifest
     {
         public string roleId = string.Empty;
         public string kind = string.Empty;
@@ -38,7 +38,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
     }
 
     [Serializable]
-    internal sealed class NetworkTestToolBundleManifest
+    public sealed class NetworkTestToolBundleManifest
     {
         public string toolId = string.Empty;
         public string toolVersion = string.Empty;
@@ -50,7 +50,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
     }
 
     [Serializable]
-    internal sealed class NetworkTestSessionPlanManifest
+    public sealed class NetworkTestSessionPlanManifest
     {
         public int schemaVersion = -1;
         public string adapterId = string.Empty;
@@ -63,7 +63,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
     }
 
     [Serializable]
-    internal sealed class NetworkTestSessionRoleManifest
+    public sealed class NetworkTestSessionRoleManifest
     {
         public string roleId = string.Empty;
         public string launchSourceKind = string.Empty;
@@ -77,14 +77,14 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
     }
 
     [Serializable]
-    internal sealed class NetworkTestSessionSlotCatalogDocument
+    public sealed class NetworkTestSessionSlotCatalogDocument
     {
         public int schemaVersion = -1;
         public NetworkTestSessionSlotDocument[] slots = Array.Empty<NetworkTestSessionSlotDocument>();
     }
 
     [Serializable]
-    internal sealed class NetworkTestSessionSlotDocument
+    public sealed class NetworkTestSessionSlotDocument
     {
         public string slotId = string.Empty;
         public NetworkTestSessionEndpointDocument[] endpoints = Array.Empty<NetworkTestSessionEndpointDocument>();
@@ -92,7 +92,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
     }
 
     [Serializable]
-    internal sealed class NetworkTestSessionEndpointDocument
+    public sealed class NetworkTestSessionEndpointDocument
     {
         public string key = string.Empty;
         public string address = string.Empty;
@@ -100,7 +100,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
     }
 
     [Serializable]
-    internal sealed class NetworkTestSessionWindowDocument
+    public sealed class NetworkTestSessionWindowDocument
     {
         public string roleId = string.Empty;
         public int x = -1;
@@ -110,7 +110,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
     }
 
     [Serializable]
-    internal sealed class NetworkTestRunManifestDocument
+    public sealed class NetworkTestRunManifestDocument
     {
         public int schemaVersion = -1;
         public string runId = string.Empty;
@@ -131,7 +131,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
     }
 
     [Serializable]
-    internal sealed class NetworkTestRunStatusDocument
+    public sealed class NetworkTestRunStatusDocument
     {
         public int schemaVersion = -1;
         public string runId = string.Empty;
@@ -142,7 +142,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
     }
 
     [Serializable]
-    internal sealed class NetworkTestRunProcessDocument
+    public sealed class NetworkTestRunProcessDocument
     {
         public string roleId = string.Empty;
         public int processId = -1;
@@ -150,14 +150,14 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
     }
 
     [Serializable]
-    internal sealed class NetworkTestProductManifestField
+    public sealed class NetworkTestProductManifestField
     {
         public string key = string.Empty;
         public string value = string.Empty;
     }
 
     [Serializable]
-    internal sealed class NetworkTestProductManifestFile
+    public sealed class NetworkTestProductManifestFile
     {
         public string path = string.Empty;
         public long length = -1;

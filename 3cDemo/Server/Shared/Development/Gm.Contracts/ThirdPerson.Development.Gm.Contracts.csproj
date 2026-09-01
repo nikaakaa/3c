@@ -9,6 +9,6 @@
     <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
   </PropertyGroup>
   <ItemGroup>
-    <Compile Include="../../../../Client/3C_Client/Assets/GameScripts/Main/Runtime/Development/Gm/Contracts/**/*.cs" />
+    <Compile Include="../../../../Shared/UnityPackages/com.thirdperson.tooling-contracts/Editor/Gm/**/*.cs" />
   </ItemGroup>
 </Project>

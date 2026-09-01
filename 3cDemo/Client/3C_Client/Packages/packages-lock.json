@@ -58,6 +58,12 @@
       "source": "embedded",
       "dependencies": {}
     },
+    "com.thirdperson.tooling-contracts": {
+      "version": "file:../../../Shared/UnityPackages/com.thirdperson.tooling-contracts",
+      "depth": 0,
+      "source": "local",
+      "dependencies": {}
+    },
     "com.tuyoogame.yooasset": {
       "version": "file:YooAsset",
       "depth": 0,

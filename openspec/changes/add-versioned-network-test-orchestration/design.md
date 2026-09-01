@@ -113,6 +113,8 @@ Deterministic Rollback另外发布`thirdperson.rollback-gm/1`。GM Tool Identity
 
 Launcher或Orchestrator发现ToolVersion、ContractVersion、BundleHash、entry point或Candidate引用不匹配时直接拒绝。系统不从全局Tools目录找最新版、不下载旧版本、不加载兼容adapter，也不拿仓库当前脚本替换Candidate工具。
 
+GM与Network Test的纯合同Module唯一源码位于仓库级`3cDemo/Shared/UnityPackages/com.thirdperson.tooling-contracts`。Unity Editor通过正式local UPM dependency消费Editor-only asmdef，外部.NET工程直接编译同一源码；不得在Unity客户端`Assets`与Server/Tools之间复制合同。Unity Player不引用该Package。
+
 ## Candidate-owned Session Plan
 
 每个Product adapter在Build阶段输出类型化Session Plan，显式声明：
@@ -225,4 +227,3 @@ UnityAuthority与DotRecastAuthority同步迁移CandidateId、SourceCommit、Tool
 - 选择显式Slot而不是动态找空闲端口，保证窗口和连接可预测，代价是作者需要管理有限Slot且占用时必须先停止对应Session。
 - 选择普通.NET Orchestrator而不是Editor直接管理进程，避免域重载和Inspector重活中断Session，代价是新增一个受版本控制的工具工程和进程合同。
 - 选择公共Candidate/Tool合同覆盖三个Network Product，避免Rollback建立第二套Build目录；多场并行只先在Rollback闭合，Authority endpoint运行化留给其独立业务change。
-

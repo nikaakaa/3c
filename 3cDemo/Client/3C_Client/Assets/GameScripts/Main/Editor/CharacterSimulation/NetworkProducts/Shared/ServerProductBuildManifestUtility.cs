@@ -1,4 +1,5 @@
 using System;
+using ThirdPerson.NetworkTest.Contracts;
 using System.IO;
 using System.Text;
 using UnityEngine;

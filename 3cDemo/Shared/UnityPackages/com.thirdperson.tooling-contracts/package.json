@@ -1,0 +1,10 @@
+{
+  "name": "com.thirdperson.tooling-contracts",
+  "version": "1.0.0",
+  "displayName": "Third Person Tooling Contracts",
+  "description": "Editor-only contracts shared by Unity tooling and external .NET development tools.",
+  "unity": "2022.3",
+  "author": {
+    "name": "Third Person"
+  }
+}

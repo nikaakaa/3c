@@ -3,7 +3,7 @@ using System.Net.NetworkInformation;
 using System.Runtime.InteropServices;
 using System.Security.Cryptography;
 using System.Text.Json;
-using ThirdPersonCharacter.Editor.CharacterSimulation;
+using ThirdPerson.NetworkTest.Contracts;
 
 namespace ThirdPerson.NetworkTest.Orchestrator;
 

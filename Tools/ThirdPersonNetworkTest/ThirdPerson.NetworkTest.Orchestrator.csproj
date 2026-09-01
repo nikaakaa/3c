@@ -9,6 +9,6 @@
     <RootNamespace>ThirdPerson.NetworkTest.Orchestrator</RootNamespace>
   </PropertyGroup>
   <ItemGroup>
-    <Compile Include="../../3cDemo/Client/3C_Client/Assets/GameScripts/Main/Editor/CharacterSimulation/NetworkProducts/Shared/NetworkTestOrchestrationContracts.cs" Link="Shared/NetworkTestOrchestrationContracts.cs" />
+    <Compile Include="../../3cDemo/Shared/UnityPackages/com.thirdperson.tooling-contracts/Editor/NetworkTest/NetworkTestContracts.cs" Link="Contracts/NetworkTestContracts.cs" />
   </ItemGroup>
 </Project>

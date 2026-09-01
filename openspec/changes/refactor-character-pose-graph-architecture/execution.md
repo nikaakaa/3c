@@ -101,7 +101,7 @@ A/B均封存1043表现帧、2086脚行和67186几何行。1215列Foot CSV中1191
 
 ## Typed Operation Completion页
 
-状态：提交`7c0d9d00`已将旧`NativeArray<ulong> FrameCacheCompletedAt`原子替换为typed Operation Completion entry/page。`ThirdPersonClient.Runtime.csproj`按规定参数编译成功，0错误、0警告，build server已关闭；固定Trace回放、Foot诊断与Replay Proof均完成，任务2.2的全部typed合同已建立。
+状态：提交`f70ad67de`已将旧`NativeArray<ulong> FrameCacheCompletedAt`原子替换为typed Operation Completion entry/page。`ThirdPersonClient.Runtime.csproj`按规定参数编译成功，0错误、0警告，build server已关闭；固定Trace回放、Foot诊断与Replay Proof均完成，任务2.2的全部typed合同已建立。
 
 - 新`CharacterPoseOperationCompletion`同时保存Completion identity与`Completed / Skipped / TypedInvalid` Outcome；默认值只表示尚未完成。`CharacterPoseOperationCompletionPage`唯一接受首次合法完成，第二次写同一Operation返回失败且不覆盖第一次结果。
 - `AnimationPoseNativeWorkspace`的Committed/Pending页不再分配或暴露裸`ulong`完成数组，而是分配固定Operation Count的typed entry；Binding只暴露typed page。Stage完成与最终Program完成仍保持各自现行合同，本步不提前迁移5.5的完整Program Frame Pages。
@@ -111,3 +111,15 @@ A/B均封存1043表现帧、2086脚行和67186几何行。1215列Foot CSV中1191
 A为上一步HEAD合同状态的`Diagnostics/FootPlacementRuns/20260901-125338-003-e15cbcfa576045d68a62b71b5095bb84`，Proof为`Temp/CharacterInputReplayProofs/v4/43357ff3cd384e5cba75d2c31175b116/20260901-125437-102-198c4580f3a84dea9600ef3e848ce9bc.json`。B为typed Completion状态的`Diagnostics/FootPlacementRuns/20260901-130336-194-9e188a814d0b4271a5eef0b9baf04778`，Proof为`Temp/CharacterInputReplayProofs/v4/43357ff3cd384e5cba75d2c31175b116/20260901-130437-539-13dbb6d69362418ab8f045f5ea139e7f.json`。B Proof对A报告`matched=true`、`compared_frame_count=1044`、空aggregate/frame差异和`divergent_frame_count=0`。
 
 A/B均封存1043表现帧、2086脚行和67186几何行。1215列Foot CSV中1191个业务列逐值相同，24个Run／实例／Surface／Path identity列全部一一映射；27列Geometry中22个业务列逐值相同，5个identity列全部一一映射，没有其它差异。十份诊断报告在排除运行identity、文件hash、detail／index大小与分析耗时后全部相同，七维分项与总分84.2不变。由此确认typed完成页没有改变动画时钟、Operation顺序、Foot、Pelvis、Goal、FBBIK、Physical Pose或诊断业务事实；该B成为下一项Owned Pending页／typed lease迁移的正式A基线。
+
+## Program Owned Pending Lineage Lease候选
+
+状态：提交`95c5e3644`已将Program Frame Lease从实现文件中的裸Frame identity提升为统一合同目录中的完整open lineage。`ThirdPersonClient.Runtime.csproj`按规定参数编译成功，0错误；唯一警告为既有`PipelineBlackboardValueInfoNode.m_ReportedSourceError`未使用字段，build server已关闭。固定Trace回放、Foot诊断与Replay Proof均完成。本步只完成Program lease，Source、Constraint与Final Publication的Owned Pending页／lease仍待后续，因此任务2.4保持未完成。
+
+- `CharacterPoseProgramFrameLease`现在绑定Actor、Frame、Presentation Frame、Body Tick、Program、Pose Program、Projection、Rig和Tuning Generation，只允许Completion identity尚未分配的open lineage；合同不再定义在`PosePlanExecutionRuntime.cs`实现内部。
+- 根Runtime先建立一次open lineage，再把同一个lineage同时交给Program `BeginPendingFrame`与根`CharacterPoseFrameTransaction.Begin`。Program Runtime保存该typed lease，后续Seal／Discard／Mutation必须与活动lease完整lineage相同，不再只比较Frame number。
+- Source准备完成后根Transaction仍按现行顺序补入Completion identity；`PoseLease.Matches`只把这一项归零后比较其余完整lineage，因此不会建立第二身份或改变Completion生成时机。Program Pending内部Workspace、Source Backend、Constraint与Final Publisher本步均未搬移。
+
+A为typed Operation Completion状态的`Diagnostics/FootPlacementRuns/20260901-130336-194-9e188a814d0b4271a5eef0b9baf04778`，Proof为`Temp/CharacterInputReplayProofs/v4/43357ff3cd384e5cba75d2c31175b116/20260901-130437-539-13dbb6d69362418ab8f045f5ea139e7f.json`。B为Program lineage lease状态的`Diagnostics/FootPlacementRuns/20260901-131316-839-a9253d4b1afe4d07874492e537b81e6e`，Proof为`Temp/CharacterInputReplayProofs/v4/43357ff3cd384e5cba75d2c31175b116/20260901-131413-452-22929101ca0648f394536dce3633b66a.json`。B Proof对A报告`matched=true`、`compared_frame_count=1044`、空aggregate/frame差异和`divergent_frame_count=0`。
+
+A/B均封存1043表现帧、2086脚行和67186几何行。1215列Foot CSV中1191个业务列逐值相同，24个运行identity列全部一一映射；27列Geometry中22个业务列逐值相同，5个identity列全部一一映射，没有其它差异。十份诊断报告在排除运行identity、文件hash、detail／index大小与分析耗时后全部相同，七维分项与总分84.2不变。由此确认完整Program lease没有改变Source准备、动画时钟、Operation、Foot、Pelvis、Goal、FBBIK、Physical Pose或诊断业务事实；该B成为Source Owned Pending lease迁移的正式A基线。

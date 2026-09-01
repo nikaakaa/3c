@@ -9,7 +9,7 @@
 
 - [ ] 2.1 验收PoseGraph change定义的`CharacterFootIkCaptureInterest`、完整Frame/Completion/Program/Projection/Rig/Tuning lineage和`CharacterFootIkCommittedCaptureViewLease`合同；用构造校验和编译确认本change没有第二View类型，合同不暴露Module、Bank、Workspace、Vendor或Transform引用
 - [ ] 2.2 验收Foot、Constraint/FBBIK与Final Publication只在PoseGraph于Frame开始冻结的interest要求下，把允许观察的Pending Result写入各自Owned诊断页；用代码搜索确认无interest分支不构造Foot IK payload
-- [ ] 2.3 验收`CharacterPoseDiagnosticsProjector`只在根Frame成功Seal后按同lineage组合并交付唯一Foot IK View租约；用Frame/Completion校验入口确认Discard、Fault和租约失效后均不可读取
+- [x] 2.3 验收`CharacterPoseDiagnosticsProjector`只在根Frame成功Seal后按同lineage组合并交付唯一Foot IK View租约；用Frame/Completion校验入口确认Discard、Fault和租约失效后均不可读取
 - [ ] 2.4 验收Root/Physical空间事实归入Final Publication Committed Result并由PoseGraph具体View读取；用全文搜索确认新链不读取场景Transform、RootHierarchy或Physical Bone反推结果
 - [ ] 2.5 让Foot Capability把框架Program descriptor归一化为单一`CharacterFootIkCaptureInterest`请求并交给PoseGraph冻结，确认PoseGraph不引用具体Sampler identity、框架packet或Host类型
 

@@ -563,3 +563,13 @@ A/B均为2086脚行、1222列，其中1198个业务列逐值相同、24个运行
 正式A为`Diagnostics/FootPlacementRuns/20260902-020333-815-08bc7f3b04b44d2daa27b8a4919ce442`，候选B为`Diagnostics/FootPlacementRuns/20260902-024336-767-aae40504baa6455e88eeed312795f33f`；B Proof为`Temp/CharacterInputReplayProofs/v4/43357ff3cd384e5cba75d2c31175b116/20260902-024433-867-aeefd9a688ca4f64bac1a6de2c56cf58.json`，工具对A Proof正式报告`matched:1044`，无failure且Foot Finalizing已结束。
 
 A/B均为2086脚行、1222列，其中1198个业务列逐值相同、24个运行／实例／Surface／Path identity列一一映射且0冲突；Geometry均为67186行、27列，其中22个业务列逐值相同、5个identity列一一映射且0冲突。`character-foot-quality-score/4`七维分项、总分84.2和weighted evidence 96.5保持。由此确认根lineage身份闭合没有改变任何运行或诊断业务；`024336`成为specific Foot interest接入前的正式A。
+
+## Foot IK具体View脱离万能Snapshot Publisher
+
+状态：新增独立`CharacterFootIkCommittedCaptureViewProjector`，唯一拥有两份预分配`CharacterFootIkCommittedCaptureViewPage`、独立Lease、Pending／Active切换和失效。Projector只接收同lineage的Actor、Constraint与Final Publication Committed diagnostics及根Execution Result，在成功Seal后的`BeginCommittedDiagnostics`内组合Foot Feature、Foot Step Observation、Landing／Motion、Goal、FBBIK与Physical事实；Observation直接读取Final Publication Frame的正式Contribution，不再依赖Snapshot页先复制Final Contribution。
+
+`AnimationPresentationRuntimeSnapshotPublisher.Page`已删除Foot页分配、Lineage写入、Foot／Solver／Physical复制、Foot Step Observation解析和Clear；`CreateSnapshot`只接收独立Projector发布的同一短租约，供尚未迁走的Overlay／Gizmo／Visual Validation读取，不产生第二事实页。若任一Publisher失败，Pending页会丢弃或独立Lease整体失效；Reset、显式Invalidate与Dispose同时失效两边。任务13.6仍不勾选，因为万能Snapshot对非Foot的Operation／Pose／Linked等旧读取还在，旧Foot Sampler的事件等待与外层Snapshot join也尚未删除。
+
+Runtime工程使用显式保留build退出码的规定命令构建成功、0错误；1个warning为既有未使用字段，构建后立即关闭build server。3C Unity编译无Projector错误。正式A为`Diagnostics/FootPlacementRuns/20260902-024336-767-aae40504baa6455e88eeed312795f33f`，候选B为`Diagnostics/FootPlacementRuns/20260902-030456-895-95d26ff9b1cb422693202d73c63036ec`；B Proof为`Temp/CharacterInputReplayProofs/v4/43357ff3cd384e5cba75d2c31175b116/20260902-030553-686-4f82add68b76439baafa50be2de960f3.json`，工具对A Proof报告`matched:1044`，无failure且Foot Finalizing结束。
+
+A/B均为2086脚行、1222列，其中1198业务列逐值相同、24 identity列一一映射、0冲突；Geometry均为67186行、27列，其中22业务列逐值相同、5 identity列一一映射、0冲突。七维分项、总分84.2与weighted evidence 96.5保持。由此确认Foot View Owner拆分没有改变Foot、Pelvis、Goal、FBBIK、Final Pose、Physical或诊断业务；`030456`成为specific Foot interest接入的正式A。

@@ -300,6 +300,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
         readonly AnimationPoseSourceContribution[]
             m_FootPlacementContributions;
         readonly AnimationPresentationRuntimeSnapshotPublisher m_DiagnosticsPublisher;
+        readonly CharacterFootIkCommittedCaptureViewProjector
+            m_FootIkDiagnosticsProjector =
+                new CharacterFootIkCommittedCaptureViewProjector();
         readonly CharacterPoseActorCommittedDiagnosticsProjector
             m_ActorDiagnosticsProjector;
         readonly AnimationBlendStackRuntime[] m_Stacks;
@@ -1284,6 +1287,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                     .DiscardPendingFrame,
                 ref failure);
             DiscardStep(
+                m_FootIkDiagnosticsProjector.DiscardPendingFrame,
+                ref failure);
+            DiscardStep(
                 DiscardPendingReleasePreparation,
                 ref failure);
             m_SourceModule.ClearReleaseValidation();
@@ -1422,7 +1428,13 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             m_DiagnosticsPublisher.ResolveFrameInterest(transientInterest);
 
         internal void InvalidateDiagnosticsSnapshot() =>
+            InvalidateDiagnostics();
+
+        void InvalidateDiagnostics()
+        {
             m_DiagnosticsPublisher.Invalidate();
+            m_FootIkDiagnosticsProjector.Invalidate();
+        }
 
         internal MotionMatchingPoseStateDemandBatch BuildMotionMatchingDemandBatch(
             ulong presentationFrame,
@@ -1720,15 +1732,34 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                     throw new InvalidOperationException(
                         "Animation diagnostics committed lineage is inconsistent.");
                 }
-                m_DiagnosticsPublisher.BeginFrame(
+                bool includeFootBasicState =
+                    (interest &
+                     (AnimationPresentationDiagnosticsInterest.LiveState |
+                      AnimationPresentationDiagnosticsInterest.Capture)) != 0;
+                m_FootIkDiagnosticsProjector.BeginFrame(
                     in executionResult,
-                    in sourceDiagnostics,
-                    in programDiagnostics,
-                    in linkedPoseDiagnostics,
                     in actorDiagnostics,
                     in constraintDiagnostics,
                     in publicationDiagnostics,
-                    interest);
+                    includeFootBasicState);
+                try
+                {
+                    m_DiagnosticsPublisher.BeginFrame(
+                        in executionResult,
+                        in sourceDiagnostics,
+                        in programDiagnostics,
+                        in linkedPoseDiagnostics,
+                        in actorDiagnostics,
+                        in constraintDiagnostics,
+                        in publicationDiagnostics,
+                        interest);
+                }
+                catch
+                {
+                    m_FootIkDiagnosticsProjector
+                        .DiscardPendingFrame();
+                    throw;
+                }
             }
         }
 
@@ -1736,12 +1767,35 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
         {
             if (!m_DiagnosticsPublisher.HasPendingFrame)
                 return default;
+            if (!m_FootIkDiagnosticsProjector.HasPendingFrame)
+            {
+                throw new InvalidOperationException(
+                    "Foot IK committed capture view is not pending.");
+            }
+            CharacterFootIkCommittedCaptureViewLease footIkCaptureView;
             AnimationPresentationRuntimeSnapshot snapshot;
             using (DiagnosticsMarker.Auto())
             {
-                snapshot = m_DiagnosticsPublisher.Publish();
+                footIkCaptureView =
+                    m_FootIkDiagnosticsProjector.Publish();
+                try
+                {
+                    snapshot = m_DiagnosticsPublisher.Publish(
+                        footIkCaptureView);
+                }
+                catch
+                {
+                    m_FootIkDiagnosticsProjector.Invalidate();
+                    throw;
+                }
             }
-            return snapshot.FootIkCommittedCaptureView;
+            if (!snapshot.FootIkCommittedCaptureView.Lineage.Equals(
+                    footIkCaptureView.Lineage))
+            {
+                throw new InvalidOperationException(
+                    "Animation diagnostics Foot IK view was not preserved.");
+            }
+            return footIkCaptureView;
         }
 
         internal void CopyActionSlotReleaseCompletions(
@@ -3092,7 +3146,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             if (reason == PoseDiscontinuityResetReason.None)
                 throw new ArgumentOutOfRangeException(nameof(reason));
             m_FramePublisher.Invalidate();
-            m_DiagnosticsPublisher.Invalidate();
+            InvalidateDiagnostics();
             m_ActorDiagnosticsProjector.Reset();
             m_SourceModule.CancelReleaseDiagnostics();
             m_ActionSlotReleaseCompletions.Clear();
@@ -3139,6 +3193,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                 return;
             m_Disposed = true;
             m_FramePublisher.Invalidate();
+            m_FootIkDiagnosticsProjector.Invalidate();
             m_LastCompletedFrame = default;
             m_PendingCompletedFrame = default;
             m_HasCompletedFrame = false;

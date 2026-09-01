@@ -25,3 +25,9 @@ PoseGraph提交候选已把`PoseGraphId`与`PoseGraphRevision`补入唯一`Chara
 `CharacterFootIkDiagnosticCapability`已登记PoseGraph-owned `CharacterFootIkCommittedCaptureViewLease`与Foot-owned `CharacterFootIkCaptureMetadata`两个不同输入类型。metadata只在Capture开始构造一次，保存Sample identity、UTC ticks、Target Runtime identity、Host identity及组合Program identity；它不保存View、Module、Workspace、Vendor或Transform。首批11个Field Extractor覆盖上述metadata以及View lineage中的Projection、PoseGraph、PlanHash、Frame和Completion，全部使用框架Attribute与`(in View, in Metadata)`普通静态签名。
 
 通用Generator Probe已验证生成ABI为`Capture(in View, in Metadata, ref Packet)`；Foot插件用同一Generator实际编译成功，27个既有warning、0错误并关闭build server。3C Unity force refresh确认新Analyzer、`DiagnosticCompilationClosure`、Foot metadata type与双输入Field签名均无编译错误。字段清单同时把103个Category文本列收紧为领域枚举Int32、把`SampleStartedUtc`收紧为UTC ticks Int64；Host后续负责恢复稳定Category文本与`O`格式，不让Player逐帧格式化字符串。任务3.2仍等待其余868个typed字段及Geometry表全部声明后统一勾选。
+
+## 验收独立Post-Seal Foot View Projector
+
+PoseGraph已新增唯一`CharacterFootIkCommittedCaptureViewProjector`并把Foot页、独立Lease、Foot／Solver／Physical组合与Foot Step Observation解析全部移出万能Snapshot Publisher。Projector只在成功Seal后的Committed diagnostics入口运行，逐项核对根Execution、Actor、Constraint与Final Publication lineage；Discard／Reset／Fault发布失败和双页复用都会使对应Lease失效。万能Snapshot只引用同一Lease供旧UI读取，不再保存或复制Foot事实页。由此完成任务2.3。
+
+固定Record `030456`相对`024336`的Proof为`matched:1044`；主表1198业务列和Geometry 22业务列逐值一致，其余identity列一一映射且0冲突，评分84.2、weighted evidence 96.5不变。旧Foot Sampler仍等待Foot事件并读取Snapshot外层metadata，任务2.4、4.2与7.1继续待迁。

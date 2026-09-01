@@ -12,7 +12,7 @@ Foot IK采样 MUST只接收PoseGraph在根表现帧成功Seal后交付的一份`
 
 - **WHEN** Foot、Goal、FBBIK与Final Publication在同一根表现帧成功完成并Seal
 - **THEN** PoseGraph MUST向Foot Bridge交付一份同lineage的`CharacterFootIkCommittedCaptureViewLease`
-- **AND** Generated Program MUST在该租约内一次提取全部已选Sampler字段而不得重新执行查询、求解或物理读取
+- **AND** Generated Program MUST在该租约内按Left、Right各提取一次全部已选Sampler字段并提交共享同一Frame／Completion lineage、携带不同Side metadata的两个主packet，而不得重新执行查询、求解或物理读取
 
 #### Scenario: 表现帧被丢弃或Fault
 
@@ -60,7 +60,7 @@ Foot插件 MUST声明一个或多个稳定Capture Program Definition，每个Def
 
 ### Requirement: 多套Sampler必须可同时组合且共享唯一上游采样
 
-每个Foot Sampler Definition MUST声明稳定Sampler identity、revision、字段集合、派生事实、表集合、Analyzer与发布物。作者 MUST通过Foot Capture Program Definition显式组合一套或多套Sampler；该Program MUST在Editor Capture编译或Player Build前冻结。全部选中Sampler MUST通过一个Generated Program消费同一`CharacterFootIkCommittedCaptureViewLease`并各自发布带Schema identity的产物。新增Sampler Definition MUST不要求修改既有Sampler Implementation、通用框架或Foot/FBBIK Runtime。多个Sampler同时启用 MUST不增加Foot查询次数、FBBIK执行次数、Final Publication次数或上游View数量。
+每个Foot Sampler Definition MUST声明稳定Sampler identity、revision、字段集合、派生事实、表集合、Analyzer与发布物。作者 MUST通过Foot Capture Program Definition显式组合一套或多套Sampler；该Program MUST在Editor Capture编译或Player Build前冻结。全部选中Sampler MUST通过一个Generated Program消费同一`CharacterFootIkCommittedCaptureViewLease`，按Left、Right固定顺序各提交一个携带Side metadata的主packet，并各自发布带Schema identity的产物。新增Sampler Definition MUST不要求修改既有Sampler Implementation、通用框架或Foot/FBBIK Runtime。多个Sampler同时启用 MUST不增加Foot查询次数、FBBIK执行次数、Final Publication次数或上游View数量。
 
 #### Scenario: 同时运行Full与Solver Sampler
 

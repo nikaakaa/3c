@@ -47,6 +47,13 @@ namespace ThirdPersonCharacter.Pipeline.Diagnostics.FootIkSampling
             in CharacterFootIkCaptureMetadata metadata) =>
             metadata.TargetHostInstanceId;
 
+        [DiagnosticField(Capability, "character-foot-ik/main/side", 1,
+            DiagnosticValueKind.Int32, "category", Main, IdentityGroup)]
+        internal static int Side(
+            in CharacterFootIkCommittedCaptureViewLease view,
+            in CharacterFootIkCaptureMetadata metadata) =>
+            (int)metadata.Side;
+
         [DiagnosticField(Capability, "character-foot-ik/main/projection-revision", 1,
             DiagnosticValueKind.Identity, "identity", Main, IdentityGroup)]
         internal static string ProjectionRevision(

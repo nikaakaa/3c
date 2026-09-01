@@ -26,7 +26,7 @@
 ## 4. 实现多Sampler组合Capture生命周期
 
 - [ ] 4.1 将选中Foot Program Definition的Sampler Set合并为Runtime唯一typed interest，确认同时选择多个Sampler时Foot查询、Goal Assembly、FBBIK、Final Writer与Capture View数量不增加
-- [ ] 4.2 实现Foot领域Bridge：只在Post-Seal短租约View内取得框架packet lease、调用匹配Generated Program并提交，检查调用图确认Bridge不持有packet池、队列、Writer或Host生命周期
+- [ ] 4.2 实现Foot领域Bridge：只在Post-Seal短租约View内按Left、Right固定顺序取得两个框架packet lease，以同一Frame／Completion lineage和各自Side metadata调用匹配Generated Program并提交，检查调用图确认Bridge不持有packet池、队列、Writer或Host生命周期
 - [ ] 4.3 将Foot Capture生命周期装配到框架Session，确认过期Program／Schema、Overflow、Sequence、Writer与Host fault沿框架统一状态传播且Foot不实现第二状态机
 - [ ] 4.4 实现Foot Host Adapter按固定Sampler顺序消费框架sealed view、生成CSV、运行Analyzer／Publisher并闭合逐Sampler manifest；任一Foot插件失败必须只使Foot Capability Faulted，再由Performance顶层编排决定Capture状态
 - [ ] 4.5 将现有Start、Controlled Capture Window、Stop、Finalizing、状态和产物打开入口迁移到框架Session与Foot Program选择；用Launcher状态与菜单/MCP调用图确认只有一个Capture生命周期Owner

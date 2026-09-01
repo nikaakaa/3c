@@ -2,6 +2,7 @@ using System;
 using ThirdPerson.GeneratedDiagnosticSampling;
 using ThirdPersonCharacter.Pipeline.Animation;
 using ThirdPersonCharacter.Pipeline.Animation.Diagnostics;
+using ThirdPersonCharacter.Pipeline.Presentation;
 
 namespace ThirdPersonCharacter.Pipeline.Diagnostics.FootIkSampling
 {
@@ -48,13 +49,16 @@ namespace ThirdPersonCharacter.Pipeline.Diagnostics.FootIkSampling
             DateTime startedUtc,
             in AnimationPresentationProgramIdentity program,
             Guid targetRuntimeInstanceId,
-            int targetHostInstanceId)
+            int targetHostInstanceId,
+            CharacterFootSide side)
         {
             if (sampleIdentity == Guid.Empty ||
                 startedUtc.Kind != DateTimeKind.Utc ||
                 !program.IsValid ||
                 targetRuntimeInstanceId == Guid.Empty ||
-                targetHostInstanceId == 0)
+                targetHostInstanceId == 0 ||
+                (side != CharacterFootSide.Left &&
+                 side != CharacterFootSide.Right))
             {
                 throw new ArgumentException(
                     "Foot IK capture metadata is invalid.");
@@ -66,6 +70,7 @@ namespace ThirdPersonCharacter.Pipeline.Diagnostics.FootIkSampling
             TargetRuntimeInstanceId =
                 targetRuntimeInstanceId.ToString("N");
             TargetHostInstanceId = targetHostInstanceId;
+            Side = side;
         }
 
         internal string SampleIdentity { get; }
@@ -73,5 +78,6 @@ namespace ThirdPersonCharacter.Pipeline.Diagnostics.FootIkSampling
         internal string ProgramIdentity { get; }
         internal string TargetRuntimeInstanceId { get; }
         internal int TargetHostInstanceId { get; }
+        internal CharacterFootSide Side { get; }
     }
 }

@@ -553,3 +553,13 @@ A/B均为2086脚行、1222列，其中1198个业务列逐值相同、24个运行
 正式A为`Diagnostics/FootPlacementRuns/20260902-015216-834-ccd49fe20da6479b91b0913c7c96627e`，候选B为`Diagnostics/FootPlacementRuns/20260902-020333-815-08bc7f3b04b44d2daa27b8a4919ce442`；B Proof为`Temp/CharacterInputReplayProofs/v4/43357ff3cd384e5cba75d2c31175b116/20260902-020430-968-69ab7492738548ec83425931c993bc4d.json`，工具对A Proof正式报告`matched:1044`，无failure且Foot Finalizing已结束。
 
 A/B均为2086脚行、1222列，其中1198个业务列逐值相同、24个运行／实例／Surface／Path identity列一一映射且0冲突；Geometry均为67186行、27列，其中22个业务列逐值相同、5个identity列一一映射且0冲突。正式评分版本`foot-quality-seven-dimensions/3`、七维分项、总分84.2和weighted evidence 96.5保持。由此确认Source失败清理归位没有改变成功帧的Source、Foot、Pelvis、Goal、FBBIK、Final Pose、Physical或诊断业务；`020333`成为下一Source外层清理小步的正式A。
+
+## 根Frame lineage补齐PoseGraph identity
+
+状态：`CharacterPoseFrameLineage`现在除Actor、Frame、Completion、Presentation Frame、Body Tick、Program、PlanHash、Projection、Rig与Tuning Generation外，显式携带`PoseGraphId`和`PoseGraphRevision`。唯一根Frame在`CharacterAnimationPresentationRuntime.BeginFrameTransaction`开始时从同一Projection写入这两个值；`WithCompletion`、有效性、等价和hash均保留完整身份，因此Source、Program、Constraint、Final Publication及具体Foot IK View不再需要从Runtime Target或通用Snapshot补查PoseGraph identity。
+
+本步不勾选Foot任务2.1：具体`CharacterFootIkCaptureInterest`尚未接入Frame开始冻结。Runtime工程按规定参数构建成功、0错误，27个警告只来自既有Unity／第三方依赖与未使用字段，构建后立即关闭build server。3C Unity force refresh同时验收通用框架`d633e83c1` codec小步和本次lineage改动，未出现Generated Sampling、codec或Character编译错误；回放退出只出现既有FinalIK Domain Reload日志，已清空。
+
+正式A为`Diagnostics/FootPlacementRuns/20260902-020333-815-08bc7f3b04b44d2daa27b8a4919ce442`，候选B为`Diagnostics/FootPlacementRuns/20260902-024336-767-aae40504baa6455e88eeed312795f33f`；B Proof为`Temp/CharacterInputReplayProofs/v4/43357ff3cd384e5cba75d2c31175b116/20260902-024433-867-aeefd9a688ca4f64bac1a6de2c56cf58.json`，工具对A Proof正式报告`matched:1044`，无failure且Foot Finalizing已结束。
+
+A/B均为2086脚行、1222列，其中1198个业务列逐值相同、24个运行／实例／Surface／Path identity列一一映射且0冲突；Geometry均为67186行、27列，其中22个业务列逐值相同、5个identity列一一映射且0冲突。`character-foot-quality-score/4`七维分项、总分84.2和weighted evidence 96.5保持。由此确认根lineage身份闭合没有改变任何运行或诊断业务；`024336`成为specific Foot interest接入前的正式A。

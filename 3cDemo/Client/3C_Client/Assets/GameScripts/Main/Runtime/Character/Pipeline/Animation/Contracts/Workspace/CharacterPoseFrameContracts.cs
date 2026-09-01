@@ -14,6 +14,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             ulong presentationFrame,
             ulong bodyTick,
             string programId,
+            string poseGraphId,
+            string poseGraphRevision,
             string poseProgramIdentity,
             string projectionRevision,
             string rigId,
@@ -26,6 +28,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             PresentationFrame = presentationFrame;
             BodyTick = bodyTick;
             ProgramId = programId ?? string.Empty;
+            PoseGraphId = poseGraphId ?? string.Empty;
+            PoseGraphRevision = poseGraphRevision ?? string.Empty;
             PoseProgramIdentity = poseProgramIdentity ?? string.Empty;
             ProjectionRevision = projectionRevision ?? string.Empty;
             RigId = rigId ?? string.Empty;
@@ -39,6 +43,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         public ulong PresentationFrame { get; }
         public ulong BodyTick { get; }
         public string ProgramId { get; }
+        public string PoseGraphId { get; }
+        public string PoseGraphRevision { get; }
         public string PoseProgramIdentity { get; }
         public string ProjectionRevision { get; }
         public string RigId { get; }
@@ -50,6 +56,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             PresentationFrame != 0 &&
             BodyTick != 0 &&
             !string.IsNullOrEmpty(ProgramId) &&
+            !string.IsNullOrEmpty(PoseGraphId) &&
+            !string.IsNullOrEmpty(PoseGraphRevision) &&
             !string.IsNullOrEmpty(PoseProgramIdentity) &&
             !string.IsNullOrEmpty(ProjectionRevision) &&
             !string.IsNullOrEmpty(RigId) &&
@@ -66,6 +74,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 PresentationFrame,
                 BodyTick,
                 ProgramId,
+                PoseGraphId,
+                PoseGraphRevision,
                 PoseProgramIdentity,
                 ProjectionRevision,
                 RigId,
@@ -79,6 +89,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             PresentationFrame == other.PresentationFrame &&
             BodyTick == other.BodyTick &&
             string.Equals(ProgramId, other.ProgramId, StringComparison.Ordinal) &&
+            string.Equals(PoseGraphId, other.PoseGraphId, StringComparison.Ordinal) &&
+            string.Equals(PoseGraphRevision, other.PoseGraphRevision, StringComparison.Ordinal) &&
             string.Equals(PoseProgramIdentity, other.PoseProgramIdentity, StringComparison.Ordinal) &&
             string.Equals(ProjectionRevision, other.ProjectionRevision, StringComparison.Ordinal) &&
             string.Equals(RigId, other.RigId, StringComparison.Ordinal) &&
@@ -97,11 +109,14 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 HashCode.Combine(
                     BodyTick,
                     ProgramId,
+                    PoseGraphId,
+                    PoseGraphRevision,
                     PoseProgramIdentity,
                     ProjectionRevision,
                     RigId,
-                    RigRevision,
-                    TuningGeneration));
+                    HashCode.Combine(
+                        RigRevision,
+                        TuningGeneration)));
 
         public static bool operator ==(
             CharacterPoseFrameLineage left,

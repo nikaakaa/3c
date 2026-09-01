@@ -931,6 +931,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 presentationFrame,
                 bodyTick,
                 m_Bindings.Projection.ProgramId,
+                m_Bindings.Projection.PosePlan.PoseGraphId,
+                m_Bindings.Projection.PosePlan.ContentRevision,
                 m_Bindings.Projection.PosePlan.PlanHash,
                 m_Bindings.Projection.ProjectionRevision,
                 m_Bindings.Projection.Rig.RigId,

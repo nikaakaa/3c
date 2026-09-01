@@ -180,3 +180,16 @@ A/B均封存2086脚行和67186几何行。1215列Foot CSV中1191个业务列逐�
 A/B之间主线另有提交`7534b6bf0`把GM／NetworkTest Editor工具合同迁入仓库级本地UPM包；该提交不包含Pose Runtime、产品Program或诊断语义修改。B Proof中的Program、Projection、Source Revision、Semantic／Contract、World、Trace、Start Body、Tick／Presentation Clock、Input和Body identity均与A相同，Foot与Geometry也没有出现第三类差异，因此该Editor-only目录迁移未污染本次Pose行为结论。
 
 A/B均封存2086脚行和67186几何行。1215列Foot CSV中1191个业务列逐值相同、24个运行／实例／Surface／Path identity列一一映射、0个其它差异；27列Geometry中22个业务列逐值相同、5个identity列一一映射、0个其它差异。十份诊断报告排除运行identity、文件hash、detail／index大小与分析耗时后全部相同，七维分项与总分84.2不变。由此确认校验责任分层没有改变动画时钟、Source采样、Operation、Foot、Pelvis、Goal、Assembler、Bend、FBBIK、Physical Pose或原Fault外的正常业务事实；B成为Constraint外层边界迁移的正式A基线。
+
+## Constraint根Bank生命周期外层归属
+
+状态：提交`6045f40f0`已把现有`CharacterPoseConstraintRuntime`与其双Bank生命周期所有权从旧`PosePlanExecutionRuntime`提升到唯一帧协调根`CharacterAnimationPresentationRuntime`。`ThirdPersonClient.Runtime.csproj`按规定参数编译成功，0警告、0错误，build server已关闭。固定Trace、Foot、Geometry、十份诊断报告、Replay Proof、退出Play后的Dispose和Unity Console均通过，任务3.1完成。
+
+- `CharacterAnimationPresentationRuntime`现在保存唯一`m_PoseConstraints`引用并负责最终Dispose；`PosePlanExecutionRuntime`只借用同一实例执行现有Constraint调用，不再在自身Dispose中销毁Bank。根Runtime构造失败时按`Pose Runtime -> Constraint`顺序清理，正常销毁也先结束Pose Runtime使用，再销毁Constraint与Foot内部资源。
+- 全仓仍只有`PosePlanExecutionRuntime`构造链中的一处`new CharacterPoseConstraintRuntime`，没有第二Factory、wrapper、可选实现或兼容路径。构造成功后同一实例的生命周期所有权立即交给帧协调根；Program执行侧和根Owner没有复制Bank、Foot页、Goal页、BendHistory或Solver状态。
+- `CharacterPoseConstraintRuntime`内部Bank类型、双页选择、Foot Placement Bank、Pelvis、Goal Contribution、Goal Set、BendHistory、FBBIK Solver与Diagnostics布局均未修改；Foot Module仍只随Constraint Owner销毁一次。Physical Writer暂时仍由Constraint持有，按任务7整体迁入Final Publication，本步不建立中间Writer Owner。
+- Program执行侧仍通过现有入口调用同一Constraint实例；typed编译Handle、per-operation Result以及NativeSlice／offset／Operation字段收窄属于任务3.3至3.6，本步不借生命周期迁移提前改调用公式或数据布局，因此任务3.2及后续任务不提前勾选。
+
+正式A为校验责任分层状态的`Diagnostics/FootPlacementRuns/20260901-153824-053-e3bd86ceb07d4741aa12ca1a856e4fae`，Proof为`Temp/CharacterInputReplayProofs/v4/43357ff3cd384e5cba75d2c31175b116/20260901-153939-043-da8cbb1602604e0c83b6544619be66c2.json`。B为Constraint外层生命周期Owner状态的`Diagnostics/FootPlacementRuns/20260901-155530-797-513d233becd14a5c8ab066a33eecf972`，Proof为`Temp/CharacterInputReplayProofs/v4/43357ff3cd384e5cba75d2c31175b116/20260901-155637-385-7ce395f427fa4b9c8b851cbd466cffa5.json`；B对A报告`matched=true`、`compared_frame_count=1044`、空aggregate/frame差异、`divergent_frame_count=0`、`first_divergent_relative_frame=-1`和空首帧差异，二者`sampling_relative_frame_count`均为1043。退出Play触发新Owner Dispose链后Console仍为0错误，确认没有双Dispose、漏Dispose或悬空Bank访问。
+
+A/B之间性能任务把其独立IPC源码从Named Pipe迁向Loopback TCP，但没有修改Pose Program、Constraint、Foot／IK、产品Program或诊断字段；B Proof中的Runtime identity、Trace、Start Body、Tick／Presentation Clock、Input与Body identity全部与A相同。A/B均封存2086脚行和67186几何行：1215列Foot CSV中1191个业务列逐值相同、24个运行／实例／Surface／Path identity列一一映射、0个其它差异；27列Geometry中22个业务列逐值相同、5个identity列一一映射、0个其它差异。十份诊断报告归一化后全部相同，七维分项与总分84.2不变。由此确认Constraint生命周期Owner提升没有改变动画时钟、Source采样、Operation、Foot、Pelvis、Goal、Assembler、Bend、FBBIK、Physical Pose或正常销毁行为；B成为Constraint typed入口收窄的正式A基线。

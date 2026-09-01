@@ -71,6 +71,14 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
                 return m_Page.PoseStateMachineCount;
             }
         }
+        internal int InertializationCount
+        {
+            get
+            {
+                RequireValid();
+                return m_Page.InertializationCount;
+            }
+        }
         internal int RootOrientationWarpCount
         {
             get
@@ -153,6 +161,62 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
                 m_Page.PoseStateMachineCount);
         }
 
+        internal void CopyInertializations(
+            PoseInertializationSnapshot[] inertializations,
+            Vector3[] positionResiduals,
+            Vector3[] rotationResiduals,
+            Vector3[] scaleResiduals,
+            float[] boneEnvelopes)
+        {
+            RequireValid();
+            int boneValueCount =
+                checked(m_Page.InertializationCount * m_Page.BoneCount);
+            if (inertializations == null ||
+                inertializations.Length < m_Page.InertializationCount ||
+                positionResiduals == null ||
+                positionResiduals.Length < boneValueCount ||
+                rotationResiduals == null ||
+                rotationResiduals.Length < boneValueCount ||
+                scaleResiduals == null ||
+                scaleResiduals.Length < boneValueCount ||
+                boneEnvelopes == null ||
+                boneEnvelopes.Length < boneValueCount)
+            {
+                throw new ArgumentException(
+                    "Pose actor Inertialization diagnostics destination is invalid.");
+            }
+            Array.Copy(
+                m_Page.Inertializations,
+                0,
+                inertializations,
+                0,
+                m_Page.InertializationCount);
+            Array.Copy(
+                m_Page.InertialPositionResiduals,
+                0,
+                positionResiduals,
+                0,
+                boneValueCount);
+            Array.Copy(
+                m_Page.InertialRotationResiduals,
+                0,
+                rotationResiduals,
+                0,
+                boneValueCount);
+            Array.Copy(
+                m_Page.InertialScaleResiduals,
+                0,
+                scaleResiduals,
+                0,
+                boneValueCount);
+            Array.Copy(
+                m_Page.InertialBoneEnvelopes,
+                0,
+                boneEnvelopes,
+                0,
+                boneValueCount);
+        }
+
         internal RootOrientationWarpRuntimeSnapshot GetRootOrientationWarp(
             int index)
         {
@@ -204,6 +268,19 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
                 PoseStateMachines =
                     new PoseStateMachineRuntimeSnapshot[
                         program.StateMachines.Count];
+                Inertializations =
+                    new PoseInertializationSnapshot[
+                        program.Inertializations.Count];
+                int inertialBoneValueCount = checked(
+                    program.Inertializations.Count * BoneCount);
+                InertialPositionResiduals =
+                    new Vector3[inertialBoneValueCount];
+                InertialRotationResiduals =
+                    new Vector3[inertialBoneValueCount];
+                InertialScaleResiduals =
+                    new Vector3[inertialBoneValueCount];
+                InertialBoneEnvelopes =
+                    new float[inertialBoneValueCount];
                 RootOrientationWarps =
                     new RootOrientationWarpRuntimeSnapshot[
                         program.RootOrientationWarps.Count];
@@ -215,6 +292,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
             internal int EntryCount;
             internal int AnimationSlotCount;
             internal int PoseStateMachineCount;
+            internal int InertializationCount;
             internal int RootOrientationWarpCount;
             internal readonly int BoneCount;
             internal readonly AnimationBlendStackSnapshot[] Stacks;
@@ -224,11 +302,17 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
             internal readonly AnimationSlotRuntimeSnapshot[] AnimationSlots;
             internal readonly PoseStateMachineRuntimeSnapshot[]
                 PoseStateMachines;
+            internal readonly PoseInertializationSnapshot[] Inertializations;
+            internal readonly Vector3[] InertialPositionResiduals;
+            internal readonly Vector3[] InertialRotationResiduals;
+            internal readonly Vector3[] InertialScaleResiduals;
+            internal readonly float[] InertialBoneEnvelopes;
             internal readonly RootOrientationWarpRuntimeSnapshot[]
                 RootOrientationWarps;
         }
 
         readonly Page m_Page;
+        readonly CharacterPresentationPosePlan m_Program;
         ulong m_NextIdentity = 1;
 
         internal CharacterPoseActorCommittedDiagnosticsProjector(
@@ -239,6 +323,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
                 throw new ArgumentNullException(nameof(program));
             program.RequireValid();
             layout.RequireValid();
+            m_Program = program;
             m_Page = new Page(program, in layout);
         }
 
@@ -250,6 +335,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
             m_Page.EntryCount = 0;
             m_Page.AnimationSlotCount = 0;
             m_Page.PoseStateMachineCount = 0;
+            m_Page.InertializationCount = 0;
             m_Page.RootOrientationWarpCount = 0;
         }
 
@@ -258,6 +344,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
             IReadOnlyList<AnimationBlendStackRuntime> stacks,
             IReadOnlyList<CharacterAnimationTransitionRouteRuntime> routes,
             IReadOnlyList<CharacterPoseStateMachineRuntime> stateMachines,
+            PoseInertializationNativeProgram inertializations,
             IReadOnlyList<RootOrientationWarpRuntime> rootOrientationWarps,
             AnimationPresentationDiagnosticsInterest interest)
         {
@@ -277,6 +364,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
                     stateMachines == null ||
                     stateMachines.Count !=
                     m_Page.PoseStateMachines.Length ||
+                    inertializations == null ||
                     rootOrientationWarps == null ||
                     rootOrientationWarps.Count !=
                     m_Page.RootOrientationWarps.Length)
@@ -341,6 +429,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
                         stateMachines[i].CreateSnapshot();
                 }
                 m_Page.PoseStateMachineCount = stateMachines.Count;
+                CaptureInertializations(inertializations);
                 for (int i = 0; i < rootOrientationWarps.Count; i++)
                 {
                     m_Page.RootOrientationWarps[i] =
@@ -352,6 +441,114 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
             }
             m_Page.Identity = m_NextIdentity++;
             return new CharacterPoseActorCommittedDiagnosticsView(m_Page);
+        }
+
+        void CaptureInertializations(
+            PoseInertializationNativeProgram program)
+        {
+            if (program.SlotNodeOffset != m_Program.Inertializations.Count ||
+                program.Nodes.Length !=
+                checked(
+                    m_Program.Inertializations.Count +
+                    m_Program.AnimationSlots.Count) ||
+                program.BoneCount != m_Page.BoneCount)
+            {
+                throw new InvalidOperationException(
+                    "Pose Inertialization diagnostics layout is inconsistent.");
+            }
+            for (int nodeIndex = 0;
+                 nodeIndex < m_Program.Inertializations.Count;
+                 nodeIndex++)
+            {
+                CharacterPresentationInertializationDescriptor descriptor =
+                    m_Program.Inertializations[nodeIndex];
+                PoseInertializationNativeState state =
+                    program.States[nodeIndex];
+                PoseInertializationMode mode = default;
+                float duration = 0f;
+                int sourceEndpointIndex = -1;
+                int targetEndpointIndex = -1;
+                int curveIndex = -1;
+                int profileIndex = -1;
+                if ((uint)state.ActiveRuleIndex <
+                        (uint)program.Rules.Length &&
+                    state.RuntimeState != 0 &&
+                    state.RuntimeState !=
+                    PoseInertializationRuntimeState.Reset &&
+                    state.RuntimeState !=
+                    PoseInertializationRuntimeState.Invalid)
+                {
+                    PoseInertializationNativeRule rule =
+                        program.Rules[state.ActiveRuleIndex];
+                    mode = rule.Mode;
+                    duration = state.ActiveDurationSeconds;
+                    sourceEndpointIndex = rule.SourceEndpointIndex;
+                    targetEndpointIndex = rule.TargetEndpointIndex;
+                    PoseInertializationNativeNode node =
+                        program.Nodes[nodeIndex];
+                    int descriptorRuleIndex =
+                        state.ActiveRuleIndex - node.RuleOffset;
+                    if ((uint)descriptorRuleIndex >=
+                        (uint)descriptor.Rules.Count)
+                    {
+                        throw new InvalidOperationException(
+                            "Pose Inertialization diagnostic rule layout is inconsistent.");
+                    }
+                    CharacterPresentationInertializationRuleDescriptor
+                        descriptorRule =
+                            descriptor.Rules[descriptorRuleIndex];
+                    curveIndex = descriptorRule.CurveIndex;
+                    profileIndex = descriptorRule.ProfileIndex;
+                }
+                m_Page.Inertializations[nodeIndex] =
+                    new PoseInertializationSnapshot(
+                        descriptor.NodeId,
+                        descriptor.TemporalOwnerKind,
+                        descriptor.InputOwnerNodeId,
+                        descriptor.InputOwnerIndex,
+                        state.RuntimeState,
+                        state.LastEventIdentity,
+                        state.LastReason,
+                        state.LastResetReason,
+                        state.LastResetSequence,
+                        descriptor.PolicyId,
+                        descriptor.PolicyRevision,
+                        sourceEndpointIndex,
+                        targetEndpointIndex,
+                        curveIndex,
+                        profileIndex,
+                        state.PreviousEndpoint.IsValid
+                            ? state.PreviousEndpoint.ToManaged()
+                            : default,
+                        state.CurrentEndpoint.IsValid
+                            ? state.CurrentEndpoint.ToManaged()
+                            : default,
+                        state.PreviousContinuityIdentity,
+                        state.CurrentContinuityIdentity,
+                        mode,
+                        state.ElapsedSeconds,
+                        duration,
+                        state.AccumulatorGeneration,
+                        state.HistoryCompletionIdentity,
+                        state.OutputCompletionIdentity);
+                int offset = nodeIndex * m_Page.BoneCount;
+                for (int boneIndex = 0;
+                     boneIndex < m_Page.BoneCount;
+                     boneIndex++)
+                {
+                    int index = offset + boneIndex;
+                    m_Page.InertialPositionResiduals[index] =
+                        program.PositionResiduals[index];
+                    m_Page.InertialRotationResiduals[index] =
+                        program.RotationResiduals[index];
+                    m_Page.InertialScaleResiduals[index] =
+                        program.ScaleResiduals[index];
+                    m_Page.InertialBoneEnvelopes[index] =
+                        program.GetBoneEnvelope(nodeIndex, boneIndex);
+                }
+            }
+            m_Page.InertializationCount =
+                m_Program.Inertializations.Count;
         }
 
         internal void Reset()
@@ -375,6 +572,26 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
                 m_Page.PoseStateMachines,
                 0,
                 m_Page.PoseStateMachines.Length);
+            Array.Clear(
+                m_Page.Inertializations,
+                0,
+                m_Page.Inertializations.Length);
+            Array.Clear(
+                m_Page.InertialPositionResiduals,
+                0,
+                m_Page.InertialPositionResiduals.Length);
+            Array.Clear(
+                m_Page.InertialRotationResiduals,
+                0,
+                m_Page.InertialRotationResiduals.Length);
+            Array.Clear(
+                m_Page.InertialScaleResiduals,
+                0,
+                m_Page.InertialScaleResiduals.Length);
+            Array.Clear(
+                m_Page.InertialBoneEnvelopes,
+                0,
+                m_Page.InertialBoneEnvelopes.Length);
             Array.Clear(
                 m_Page.RootOrientationWarps,
                 0,
@@ -512,7 +729,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
                 constraintDiagnostics,
             in CharacterFinalPoseCommittedDiagnosticsView
                 publicationDiagnostics,
-            PoseInertializationNativeProgram inertializations,
             AnimationPresentationDiagnosticsInterest interest)
         {
             RequireAlive();
@@ -539,8 +755,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
                 publicationDiagnostics.Result.Lineage !=
                 executionResult.Lineage ||
                 executionResult.Lineage.CompletionIdentity !=
-                finalFrame.CompletionIdentity ||
-                inertializations == null)
+                finalFrame.CompletionIdentity)
                 throw new ArgumentException("Animation runtime diagnostics frame inputs are inconsistent.");
             AnimationPhysicalBoneWriteDiagnostics physicalWrite =
                 publicationDiagnostics.PhysicalWrite;
@@ -563,7 +778,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
                     in actorDiagnostics,
                     in programDiagnostics);
                 CopyRootOrientationWarps(page, in actorDiagnostics);
-                CopyInertializations(page, inertializations);
+                CopyInertializations(page, in actorDiagnostics);
                 CopySlotContributions(
                     page,
                     in programDiagnostics,
@@ -1118,87 +1333,24 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
                 throw new InvalidOperationException("Animation diagnostics interest cannot change while a committed frame copy is pending publication.");
         }
 
-        void CopyInertializations(Page page, PoseInertializationNativeProgram program)
+        static void CopyInertializations(
+            Page page,
+            in CharacterPoseActorCommittedDiagnosticsView actorDiagnostics)
         {
-            if (program.SlotNodeOffset != m_Program.Inertializations.Count ||
-                program.Nodes.Length !=
-                checked(m_Program.Inertializations.Count + m_Program.AnimationSlots.Count) ||
-                program.BoneCount != page.BoneIds.Length)
-                throw new InvalidOperationException("Pose Inertialization diagnostics layout is inconsistent.");
-            for (int nodeIndex = 0; nodeIndex < m_Program.Inertializations.Count; nodeIndex++)
+            if (actorDiagnostics.InertializationCount !=
+                page.Inertializations.Length)
             {
-                CharacterPresentationInertializationDescriptor descriptor =
-                    m_Program.Inertializations[nodeIndex];
-                PoseInertializationNativeState state = program.States[nodeIndex];
-                PoseInertializationMode mode = default;
-                float duration = 0f;
-                int sourceEndpointIndex = -1;
-                int targetEndpointIndex = -1;
-                int curveIndex = -1;
-                int profileIndex = -1;
-                if ((uint)state.ActiveRuleIndex < (uint)program.Rules.Length &&
-                    state.RuntimeState != 0 &&
-                    state.RuntimeState != PoseInertializationRuntimeState.Reset &&
-                    state.RuntimeState != PoseInertializationRuntimeState.Invalid)
-                {
-                    PoseInertializationNativeRule rule = program.Rules[state.ActiveRuleIndex];
-                    mode = rule.Mode;
-                    duration = state.ActiveDurationSeconds;
-                    sourceEndpointIndex = rule.SourceEndpointIndex;
-                    targetEndpointIndex = rule.TargetEndpointIndex;
-                    PoseInertializationNativeNode node = program.Nodes[nodeIndex];
-                    int descriptorRuleIndex = state.ActiveRuleIndex - node.RuleOffset;
-                    if ((uint)descriptorRuleIndex >= (uint)descriptor.Rules.Count)
-                    {
-                        throw new InvalidOperationException(
-                            "Pose Inertialization diagnostic rule layout is inconsistent.");
-                    }
-                    CharacterPresentationInertializationRuleDescriptor descriptorRule =
-                        descriptor.Rules[descriptorRuleIndex];
-                    curveIndex = descriptorRule.CurveIndex;
-                    profileIndex = descriptorRule.ProfileIndex;
-                }
-                page.Inertializations[nodeIndex] = new PoseInertializationSnapshot(
-                    descriptor.NodeId,
-                    descriptor.TemporalOwnerKind,
-                    descriptor.InputOwnerNodeId,
-                    descriptor.InputOwnerIndex,
-                    state.RuntimeState,
-                    state.LastEventIdentity,
-                    state.LastReason,
-                    state.LastResetReason,
-                    state.LastResetSequence,
-                    descriptor.PolicyId,
-                    descriptor.PolicyRevision,
-                    sourceEndpointIndex,
-                    targetEndpointIndex,
-                    curveIndex,
-                    profileIndex,
-                    state.PreviousEndpoint.IsValid
-                        ? state.PreviousEndpoint.ToManaged()
-                        : default,
-                    state.CurrentEndpoint.IsValid
-                        ? state.CurrentEndpoint.ToManaged()
-                        : default,
-                    state.PreviousContinuityIdentity,
-                    state.CurrentContinuityIdentity,
-                    mode,
-                    state.ElapsedSeconds,
-                    duration,
-                    state.AccumulatorGeneration,
-                    state.HistoryCompletionIdentity,
-                    state.OutputCompletionIdentity);
-                int offset = nodeIndex * program.BoneCount;
-                for (int boneIndex = 0; boneIndex < program.BoneCount; boneIndex++)
-                {
-                    int index = offset + boneIndex;
-                    page.InertialPositionResiduals[index] = program.PositionResiduals[index];
-                    page.InertialRotationResiduals[index] = program.RotationResiduals[index];
-                    page.InertialScaleResiduals[index] = program.ScaleResiduals[index];
-                    page.InertialBoneEnvelopes[index] = program.GetBoneEnvelope(nodeIndex, boneIndex);
-                }
+                throw new InvalidOperationException(
+                    "Pose Inertialization diagnostics coverage is incomplete.");
             }
-            page.InertializationCount = m_Program.Inertializations.Count;
+            actorDiagnostics.CopyInertializations(
+                page.Inertializations,
+                page.InertialPositionResiduals,
+                page.InertialRotationResiduals,
+                page.InertialScaleResiduals,
+                page.InertialBoneEnvelopes);
+            page.InertializationCount =
+                actorDiagnostics.InertializationCount;
         }
 
         void CopySlotContributions(

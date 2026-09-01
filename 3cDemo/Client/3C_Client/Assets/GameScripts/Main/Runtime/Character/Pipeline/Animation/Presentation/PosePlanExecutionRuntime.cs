@@ -1792,6 +1792,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                         m_Stacks,
                         m_StackRoutes,
                         m_PoseStateSources.StateMachines,
+                        m_InertializationPlan,
                         m_RootOrientationWarps,
                         interest);
                 CharacterPoseConstraintResult committedConstraintResult =
@@ -1860,7 +1861,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                     in actorDiagnostics,
                     in constraintDiagnostics,
                     in publicationDiagnostics,
-                    m_InertializationPlan,
                     interest);
             }
         }

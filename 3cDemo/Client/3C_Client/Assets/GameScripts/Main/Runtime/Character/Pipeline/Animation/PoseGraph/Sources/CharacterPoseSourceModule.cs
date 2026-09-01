@@ -11,6 +11,134 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Sources
 {
     internal sealed class CharacterPoseSourceModule : IDisposable
     {
+        struct SourceFramePage
+        {
+            CharacterPoseSourceFrameLease m_Lease;
+            CharacterPoseSourceDemand m_Demand;
+            CharacterPoseSourceFrameResult m_Result;
+            bool m_HasDemand;
+            bool m_HasResult;
+
+            internal bool HasOpenFrame => m_Lease.IsValid;
+
+            internal CharacterPoseSourceFrameLease Begin(
+                in CharacterPoseFrameLineage lineage)
+            {
+                if (HasOpenFrame)
+                {
+                    throw new InvalidOperationException(
+                        "Pose Source Pending page is already open.");
+                }
+                m_Lease = new CharacterPoseSourceFrameLease(
+                    in lineage);
+                m_Demand = default;
+                m_Result = default;
+                m_HasDemand = false;
+                m_HasResult = false;
+                return m_Lease;
+            }
+
+            internal void BindDemand(
+                CharacterPoseSourceFrameLease lease,
+                in CharacterPoseSourceDemand demand)
+            {
+                RequireLease(lease);
+                if (m_HasDemand ||
+                    !demand.IsValid ||
+                    !lease.Matches(demand.Lineage))
+                {
+                    throw new ArgumentException(
+                        "Pose Source Demand does not match the Pending lease.",
+                        nameof(demand));
+                }
+                m_Demand = demand;
+                m_HasDemand = true;
+            }
+
+            internal CharacterPoseSourceDemand RequireDemand(
+                CharacterPoseSourceFrameLease lease)
+            {
+                RequireLease(lease);
+                if (!m_HasDemand)
+                {
+                    throw new InvalidOperationException(
+                        "Pose Source Demand is not prepared.");
+                }
+                return m_Demand;
+            }
+
+            internal void BindResult(
+                CharacterPoseSourceFrameLease lease,
+                in CharacterPoseSourceFrameResult result)
+            {
+                RequireLease(lease);
+                if (!m_HasDemand ||
+                    m_HasResult ||
+                    !result.IsReady ||
+                    result.Lineage != m_Demand.Lineage)
+                {
+                    throw new ArgumentException(
+                        "Pose Source Result does not match the Pending demand.",
+                        nameof(result));
+                }
+                m_Result = result;
+                m_HasResult = true;
+            }
+
+            internal void RequireOpen(
+                CharacterPoseSourceFrameLease lease) =>
+                RequireLease(lease);
+
+            internal void RequireReady(
+                CharacterPoseSourceFrameLease lease)
+            {
+                RequireLease(lease);
+                if (!m_HasDemand ||
+                    !m_HasResult ||
+                    !m_Result.IsReady ||
+                    m_Result.Lineage != m_Demand.Lineage)
+                {
+                    throw new InvalidOperationException(
+                        "Pose Source Pending page is incomplete.");
+                }
+            }
+
+            internal void Seal(
+                CharacterPoseSourceFrameLease lease)
+            {
+                RequireReady(lease);
+                Clear();
+            }
+
+            internal void Discard(
+                CharacterPoseSourceFrameLease lease)
+            {
+                RequireLease(lease);
+                Clear();
+            }
+
+            internal void Clear()
+            {
+                m_Lease = default;
+                m_Demand = default;
+                m_Result = default;
+                m_HasDemand = false;
+                m_HasResult = false;
+            }
+
+            void RequireLease(
+                CharacterPoseSourceFrameLease lease)
+            {
+                if (!lease.IsValid ||
+                    !m_Lease.IsValid ||
+                    lease.Lineage != m_Lease.Lineage)
+                {
+                    throw new InvalidOperationException(
+                        "Pose Source Pending lease is stale.");
+                }
+            }
+        }
+
         internal readonly struct ReleasePreparation
         {
             internal ReleasePreparation(
@@ -76,6 +204,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Sources
             m_ReleaseValidationIdentities;
         readonly Playable m_PreviousOutputSource;
         readonly float m_PreviousOutputWeight;
+        SourceFramePage m_FramePage;
         AnimationMixerPlayable m_SourceFanIn;
         int m_ReleasePreparationCount;
         ulong m_NextReleasePreparationGeneration;
@@ -165,7 +294,18 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Sources
                 throw new InvalidOperationException(
                     "Pose source release preparations were not applied.");
             }
-            return m_Backend.BeginFrame(in lineage);
+            CharacterPoseSourceFrameLease lease =
+                m_FramePage.Begin(in lineage);
+            try
+            {
+                m_Backend.BeginFrame(lease);
+                return lease;
+            }
+            catch
+            {
+                m_FramePage.Discard(lease);
+                throw;
+            }
         }
 
         internal void BeginPhysicalFrame() =>
@@ -174,24 +314,30 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Sources
         internal void BindDemand(
             CharacterPoseSourceFrameLease lease,
             in CharacterPoseSourceDemand demand) =>
-            m_Backend.BindDemand(lease, in demand);
+            m_FramePage.BindDemand(lease, in demand);
 
         internal CharacterPoseSourceDemand RequireDemand(
             CharacterPoseSourceFrameLease lease) =>
-            m_Backend.RequireDemand(lease);
+            m_FramePage.RequireDemand(lease);
 
         internal void BindResult(
             CharacterPoseSourceFrameLease lease,
             in CharacterPoseSourceFrameResult result) =>
-            m_Backend.BindResult(lease, in result);
+            m_FramePage.BindResult(lease, in result);
 
         internal void RequirePendingOpen(
-            CharacterPoseSourceFrameLease lease) =>
-            m_Backend.RequirePendingOpen(lease);
+            CharacterPoseSourceFrameLease lease)
+        {
+            m_FramePage.RequireOpen(lease);
+            m_Backend.RequireOpenFrame(lease);
+        }
 
         internal void RequirePendingReady(
-            CharacterPoseSourceFrameLease lease) =>
-            m_Backend.RequirePendingReady(lease);
+            CharacterPoseSourceFrameLease lease)
+        {
+            m_FramePage.RequireReady(lease);
+            m_Backend.RequireOpenFrame(lease);
+        }
 
         internal bool ContainsCommitted(
             AnimationPoseSourceId sourceId,
@@ -249,23 +395,35 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Sources
             m_PhysicalSources.ValidateFrame();
 
         internal void ValidateFrame(
-            CharacterPoseSourceFrameLease lease) =>
+            CharacterPoseSourceFrameLease lease)
+        {
+            m_FramePage.RequireReady(lease);
             m_Backend.ValidateFrame(lease);
+        }
 
         internal void EnterEvaluateBarrier(
-            CharacterPoseSourceFrameLease lease) =>
+            CharacterPoseSourceFrameLease lease)
+        {
+            m_FramePage.RequireReady(lease);
             m_Backend.EnterEvaluateBarrier(lease);
+        }
 
         internal void CommitFrame(
             CharacterPoseSourceFrameLease lease)
         {
+            m_FramePage.RequireReady(lease);
             m_Backend.CommitFrame(lease);
+            m_FramePage.Seal(lease);
             m_PhysicalSources.CommitFrame();
         }
 
         internal void DiscardBackendFrame(
-            CharacterPoseSourceFrameLease lease) =>
+            CharacterPoseSourceFrameLease lease)
+        {
+            m_FramePage.RequireOpen(lease);
             m_Backend.DiscardFrame(lease);
+            m_FramePage.Discard(lease);
+        }
 
         internal void DiscardPhysicalFrame()
         {
@@ -473,6 +631,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Sources
         internal void Clear()
         {
             m_Backend.Clear();
+            m_FramePage.Clear();
             m_PhysicalSources.Reset();
             for (int port = 1;
                  port < m_SourceFanIn.GetInputCount();
@@ -552,6 +711,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Sources
             RequireAlive();
             Exception failure = null;
             DisposeStep(m_Backend.Dispose, ref failure);
+            m_FramePage.Clear();
             DisposeStep(RestoreOutputAndDestroyFanIn, ref failure);
             DisposeStep(m_PhysicalSources.Dispose, ref failure);
             m_ReleaseValidationIdentities.Clear();

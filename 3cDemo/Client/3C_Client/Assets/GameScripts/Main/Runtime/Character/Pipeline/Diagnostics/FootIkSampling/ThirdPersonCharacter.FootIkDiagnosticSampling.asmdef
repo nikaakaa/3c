@@ -1,0 +1,17 @@
+{
+    "name": "ThirdPersonCharacter.FootIkDiagnosticSampling",
+    "rootNamespace": "ThirdPersonCharacter.Pipeline.Diagnostics.FootIkSampling",
+    "references": [
+        "ThirdPersonClient.Runtime",
+        "ThirdPerson.GeneratedDiagnosticSampling"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

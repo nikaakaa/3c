@@ -169,6 +169,13 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         internal float Output;
         internal float Velocity;
         internal float PositionWeight;
+        internal bool SameLevelWorldDownLimitEvaluated;
+        internal bool SameLevelWorldDownLimitApplied;
+        internal float PairTargetHeightSpread;
+        internal float PreviousGoalWorldAlongUp;
+        internal float RequestedGoalWorldAlongUp;
+        internal float LimitedGoalWorldAlongUp;
+        internal float SameLevelMaximumDownVelocity;
         internal CharacterFootStrideSlope PreviousSlope;
         internal CharacterFootPelvisSpringHandoffReason Handoff;
         internal bool SameAs(CharacterFootPelvisResponseSample other) =>
@@ -188,6 +195,16 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             Output == other.Output &&
             Velocity == other.Velocity &&
             PositionWeight == other.PositionWeight &&
+            SameLevelWorldDownLimitEvaluated ==
+                other.SameLevelWorldDownLimitEvaluated &&
+            SameLevelWorldDownLimitApplied ==
+                other.SameLevelWorldDownLimitApplied &&
+            PairTargetHeightSpread == other.PairTargetHeightSpread &&
+            PreviousGoalWorldAlongUp == other.PreviousGoalWorldAlongUp &&
+            RequestedGoalWorldAlongUp == other.RequestedGoalWorldAlongUp &&
+            LimitedGoalWorldAlongUp == other.LimitedGoalWorldAlongUp &&
+            SameLevelMaximumDownVelocity ==
+                other.SameLevelMaximumDownVelocity &&
             PreviousSlope == other.PreviousSlope &&
             Handoff == other.Handoff;
     }
@@ -372,6 +389,20 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                         (in Source source) => source.Stride.Reach.Right.Available, (target, value) => target.Reach.Right.Available = value),
                     Column.Create("PelvisResponseEvaluated", Codecs.Boolean, Unit.None,
                         (in Source source) => source.Stride.Response.Evaluated, (target, value) => target.Response.Evaluated = value),
+                    Column.Create("PelvisSameLevelWorldDownLimitEvaluated", Codecs.Boolean, Unit.None,
+                        (in Source source) => source.Stride.Response.SameLevelWorldDownLimitEvaluated, (target, value) => target.Response.SameLevelWorldDownLimitEvaluated = value),
+                    Column.Create("PelvisSameLevelWorldDownLimitApplied", Codecs.Boolean, Unit.None,
+                        (in Source source) => source.Stride.Response.SameLevelWorldDownLimitApplied, (target, value) => target.Response.SameLevelWorldDownLimitApplied = value),
+                    Column.Create("PelvisSameLevelPairTargetHeightSpread", Codecs.Float32, Unit.Metres,
+                        (in Source source) => source.Stride.Response.PairTargetHeightSpread, (target, value) => target.Response.PairTargetHeightSpread = value),
+                    Column.Create("PelvisSameLevelPreviousGoalWorldAlongUp", Codecs.Float32, Unit.Metres,
+                        (in Source source) => source.Stride.Response.PreviousGoalWorldAlongUp, (target, value) => target.Response.PreviousGoalWorldAlongUp = value),
+                    Column.Create("PelvisSameLevelRequestedGoalWorldAlongUp", Codecs.Float32, Unit.Metres,
+                        (in Source source) => source.Stride.Response.RequestedGoalWorldAlongUp, (target, value) => target.Response.RequestedGoalWorldAlongUp = value),
+                    Column.Create("PelvisSameLevelLimitedGoalWorldAlongUp", Codecs.Float32, Unit.Metres,
+                        (in Source source) => source.Stride.Response.LimitedGoalWorldAlongUp, (target, value) => target.Response.LimitedGoalWorldAlongUp = value),
+                    Column.Create("PelvisSameLevelMaximumDownVelocity", Codecs.Float32, Unit.MetresPerSecond,
+                        (in Source source) => source.Stride.Response.SameLevelMaximumDownVelocity, (target, value) => target.Response.SameLevelMaximumDownVelocity = value),
                     Column.Create("PelvisSpringCompleted", Codecs.Boolean, Unit.None,
                         (in Source source) => source.Stride.Response.Completed, (target, value) => target.Response.Completed = value),
                     Column.Create("PelvisSpringIntegratedOutput", Codecs.Float32, Unit.Metres,

@@ -465,7 +465,14 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             float target,
             float output,
             float velocity,
-            float positionWeight)
+            float positionWeight,
+            bool sameLevelWorldDownLimitEvaluated,
+            bool sameLevelWorldDownLimitApplied,
+            float pairTargetHeightSpread,
+            float previousGoalWorldAlongUp,
+            float requestedGoalWorldAlongUp,
+            float limitedGoalWorldAlongUp,
+            float sameLevelMaximumDownVelocity)
         {
             Evaluated = evaluated;
             Completed = completed;
@@ -485,6 +492,14 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             Output = output;
             Velocity = velocity;
             PositionWeight = positionWeight;
+            SameLevelWorldDownLimitEvaluated =
+                sameLevelWorldDownLimitEvaluated;
+            SameLevelWorldDownLimitApplied = sameLevelWorldDownLimitApplied;
+            PairTargetHeightSpread = pairTargetHeightSpread;
+            PreviousGoalWorldAlongUp = previousGoalWorldAlongUp;
+            RequestedGoalWorldAlongUp = requestedGoalWorldAlongUp;
+            LimitedGoalWorldAlongUp = limitedGoalWorldAlongUp;
+            SameLevelMaximumDownVelocity = sameLevelMaximumDownVelocity;
         }
 
         internal bool Evaluated { get; }
@@ -505,6 +520,13 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         internal float Output { get; }
         internal float Velocity { get; }
         internal float PositionWeight { get; }
+        internal bool SameLevelWorldDownLimitEvaluated { get; }
+        internal bool SameLevelWorldDownLimitApplied { get; }
+        internal float PairTargetHeightSpread { get; }
+        internal float PreviousGoalWorldAlongUp { get; }
+        internal float RequestedGoalWorldAlongUp { get; }
+        internal float LimitedGoalWorldAlongUp { get; }
+        internal float SameLevelMaximumDownVelocity { get; }
 
     }
 
@@ -682,6 +704,20 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         public float Output => m_Result.SpringOutput;
         public float Velocity => m_Result.SpringVelocity;
         public float PositionWeight => m_Result.PositionWeight;
+        public bool SameLevelWorldDownLimitEvaluated =>
+            m_Result.Response.SameLevelWorldDownLimitEvaluated;
+        public bool SameLevelWorldDownLimitApplied =>
+            m_Result.Response.SameLevelWorldDownLimitApplied;
+        public float PairTargetHeightSpread =>
+            m_Result.Response.PairTargetHeightSpread;
+        public float PreviousGoalWorldAlongUp =>
+            m_Result.Response.PreviousGoalWorldAlongUp;
+        public float RequestedGoalWorldAlongUp =>
+            m_Result.Response.RequestedGoalWorldAlongUp;
+        public float LimitedGoalWorldAlongUp =>
+            m_Result.Response.LimitedGoalWorldAlongUp;
+        public float SameLevelMaximumDownVelocity =>
+            m_Result.Response.SameLevelMaximumDownVelocity;
     }
 
     public readonly struct CharacterFootStrideHipsDiagnostics
@@ -707,6 +743,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             in CharacterFootPrimarySupportResult primarySupport,
             in CharacterFootPelvisFrame frame,
             in CharacterFootPelvisReachInput reach,
+            bool pairTargetsAvailable,
+            float pairTargetHeightSpread,
             bool supportAvailable,
             Vector3 supportAnkle,
             float supportGoalWeight)
@@ -715,6 +753,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             PrimarySupport = primarySupport;
             Frame = frame;
             Reach = reach;
+            PairTargetsAvailable = pairTargetsAvailable;
+            PairTargetHeightSpread = pairTargetHeightSpread;
             SupportAvailable = supportAvailable;
             SupportAnkle = supportAnkle;
             SupportGoalWeight = supportGoalWeight;
@@ -724,6 +764,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         internal CharacterFootPrimarySupportResult PrimarySupport { get; }
         internal CharacterFootPelvisFrame Frame { get; }
         internal CharacterFootPelvisReachInput Reach { get; }
+        internal bool PairTargetsAvailable { get; }
+        internal float PairTargetHeightSpread { get; }
         internal bool SupportAvailable { get; }
         internal Vector3 SupportAnkle { get; }
         internal float SupportGoalWeight { get; }
@@ -738,6 +780,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         internal float TargetAlongUp;
         internal float OutputAlongUp;
         internal float VelocityAlongUp;
+        internal bool HasGoalWorldPosition;
+        internal Vector3 GoalWorldPosition;
 
         internal void Clear()
         {
@@ -748,6 +792,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             TargetAlongUp = 0f;
             OutputAlongUp = 0f;
             VelocityAlongUp = 0f;
+            HasGoalWorldPosition = false;
+            GoalWorldPosition = default;
         }
     }
 
@@ -1027,8 +1073,23 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             var reach = new CharacterFootPelvisReachInput(
                 requests.Left.LandingReachAdmitted, in leftReach,
                 requests.Right.LandingReachAdmitted, in rightReach);
+            bool pairTargetsAvailable =
+                requests.Left.Outcome == CharacterFootResolvedOutcome.Ready &&
+                requests.Right.Outcome == CharacterFootResolvedOutcome.Ready &&
+                requests.Left.Pose.GoalWeight > GeometryEpsilon &&
+                requests.Right.Pose.GoalWeight > GeometryEpsilon &&
+                Finite(frame.ComponentUp) &&
+                frame.ComponentUp.sqrMagnitude > GeometryEpsilon &&
+                Finite(frame.LeftCorrectedSole) &&
+                Finite(frame.RightCorrectedSole);
+            float pairTargetHeightSpread = pairTargetsAvailable
+                ? Mathf.Abs(Vector3.Dot(
+                    frame.LeftCorrectedSole - frame.RightCorrectedSole,
+                    frame.ComponentUp.normalized))
+                : 0f;
             return new CharacterFootPelvisInput(
                 in intent, in primarySupport, in frame, in reach,
+                pairTargetsAvailable, pairTargetHeightSpread,
                 supportAvailable, support.Pose.EffectiveAnkle, support.Pose.GoalWeight);
         }
 
@@ -1041,6 +1102,9 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             CharacterFootPrimarySupportResult primarySupport = input.PrimarySupport;
             CharacterFootPelvisFrame frame = input.Frame;
             CharacterFootPelvisReachInput reachInput = input.Reach;
+            bool sameLevelWorldDownLimit = input.PairTargetsAvailable &&
+                input.PairTargetHeightSpread <=
+                settings.PelvisSameLevelTargetTolerance;
             if (!intent.Accepted)
             {
                 if (!intent.ReleasePelvis)
@@ -1049,13 +1113,24 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     return BuildRejected(intent.RejectReason);
                 }
                 return ResolvePelvisRelease(
-                    intent.RejectReason, in frame, in reachInput, in settings, ref spring);
+                    intent.RejectReason,
+                    sameLevelWorldDownLimit,
+                    input.PairTargetHeightSpread,
+                    in frame,
+                    in reachInput,
+                    in settings,
+                    ref spring);
             }
             if (!input.SupportAvailable)
             {
                 return ResolvePelvisRelease(
                     CharacterFootStrideRejectReason.SupportUnavailable,
-                    in frame, in reachInput, in settings, ref spring);
+                    sameLevelWorldDownLimit,
+                    input.PairTargetHeightSpread,
+                    in frame,
+                    in reachInput,
+                    in settings,
+                    ref spring);
             }
             ValidatePelvisFrame(in frame);
             Vector3 up = frame.ComponentUp.normalized;
@@ -1066,7 +1141,12 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             {
                 return ResolvePelvisRelease(
                     CharacterFootStrideRejectReason.DegenerateStride,
-                    in frame, in reachInput, in settings, ref spring);
+                    sameLevelWorldDownLimit,
+                    input.PairTargetHeightSpread,
+                    in frame,
+                    in reachInput,
+                    in settings,
+                    ref spring);
             }
             float progress = Mathf.Clamp01(
                 Vector3.Dot(
@@ -1133,6 +1213,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             CharacterFootPelvisSpringStep response = AdvancePelvisResponse(
                 preferredTarget, false, intent.SupportSide,
                 primarySupport.LandingEventIdentity, slope, in frame, reach.HasLandingRequests,
+                sameLevelWorldDownLimit, input.PairTargetHeightSpread,
                 in settings, ref spring);
             return new CharacterFootStrideHipsResult(
                 CharacterFootStrideState.Accepted,
@@ -1155,6 +1236,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
 
         static CharacterFootStrideHipsResult ResolvePelvisRelease(
             CharacterFootStrideRejectReason reason,
+            bool sameLevelWorldDownLimit,
+            float pairTargetHeightSpread,
             in CharacterFootPelvisFrame frame,
             in CharacterFootPelvisReachInput reachInput,
             in CharacterFootMotionSettings settings,
@@ -1169,7 +1252,9 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 return BuildRejected(reason, reach);
             CharacterFootPelvisSpringStep response = AdvancePelvisResponse(
                 0f, true, default, 0, CharacterFootStrideSlope.Flat,
-                in frame, reach.HasLandingRequests, in settings, ref spring);
+                in frame, reach.HasLandingRequests,
+                sameLevelWorldDownLimit, pairTargetHeightSpread,
+                in settings, ref spring);
             if (response.Completed)
                 return BuildRejected(reason, reach, response);
             return new CharacterFootStrideHipsResult(
@@ -1241,6 +1326,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             CharacterFootStrideSlope slope,
             in CharacterFootPelvisFrame frame,
             bool hasFootTargets,
+            bool sameLevelWorldDownLimit,
+            float pairTargetHeightSpread,
             in CharacterFootMotionSettings settings,
             ref CharacterFootPelvisSpringState spring)
         {
@@ -1289,11 +1376,55 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 velocity = (inputVelocity - omega * j0 * frame.DeltaSeconds) * decay;
             }
             float integratedOutput = output;
+            Vector3 up = frame.ComponentUp.normalized;
+            float animatedGoalWorldAlongUp = Vector3.Dot(
+                frame.AnimatedPelvis,
+                up);
+            bool sameLevelWorldDownLimitEvaluated =
+                sameLevelWorldDownLimit &&
+                hadPreviousState &&
+                spring.HasGoalWorldPosition &&
+                frame.DeltaSeconds > 0f &&
+                frame.FootPlacementWeight > GeometryEpsilon;
+            float previousGoalWorldAlongUp =
+                sameLevelWorldDownLimitEvaluated
+                    ? Vector3.Dot(spring.GoalWorldPosition, up)
+                    : 0f;
+            float requestedGoalWorldAlongUp =
+                sameLevelWorldDownLimitEvaluated
+                    ? animatedGoalWorldAlongUp +
+                      output * frame.FootPlacementWeight
+                    : 0f;
+            float limitedGoalWorldAlongUp = requestedGoalWorldAlongUp;
+            bool sameLevelWorldDownLimitApplied = false;
+            if (sameLevelWorldDownLimitEvaluated)
+            {
+                float minimumGoalWorldAlongUp =
+                    previousGoalWorldAlongUp -
+                    settings.PelvisSameLevelMaximumDownVelocity *
+                    frame.DeltaSeconds;
+                if (limitedGoalWorldAlongUp < minimumGoalWorldAlongUp)
+                {
+                    limitedGoalWorldAlongUp = minimumGoalWorldAlongUp;
+                    output =
+                        (limitedGoalWorldAlongUp - animatedGoalWorldAlongUp) /
+                        frame.FootPlacementWeight;
+                    velocity = 0f;
+                    sameLevelWorldDownLimitApplied = true;
+                }
+            }
             if (!float.IsFinite(output) || !float.IsFinite(velocity))
                 throw new InvalidOperationException("Pelvis spring response is non-finite.");
             bool completed = releasing &&
                 Mathf.Abs(output) <= GeometryEpsilon &&
                 Mathf.Abs(velocity) <= GeometryEpsilon;
+            float visibleTolerance = hasFootTargets
+                ? GeometryEpsilon
+                : EndpointTolerance;
+            float positionWeight = !completed &&
+                Mathf.Abs(output) > visibleTolerance
+                    ? frame.FootPlacementWeight
+                    : 0f;
             if (completed)
             {
                 output = 0f;
@@ -1309,17 +1440,23 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 spring.TargetAlongUp = target;
                 spring.OutputAlongUp = output;
                 spring.VelocityAlongUp = velocity;
+                spring.HasGoalWorldPosition = true;
+                spring.GoalWorldPosition = frame.AnimatedPelvis +
+                    up * (output * positionWeight);
             }
-            float visibleTolerance = hasFootTargets ? GeometryEpsilon : EndpointTolerance;
-            float positionWeight = !completed && Mathf.Abs(output) > visibleTolerance
-                ? frame.FootPlacementWeight
-                : 0f;
             return new CharacterFootPelvisSpringStep(
                 true, completed, hadPreviousState, supportChanged, previousSlope,
                 handoff, velocityReset, previousTarget, previousOutput, previousVelocity,
                 previousOutput, inputVelocity, settings.PelvisSpringFrequency,
                 integratedOutput,
-                target, output, velocity, positionWeight);
+                target, output, velocity, positionWeight,
+                sameLevelWorldDownLimitEvaluated,
+                sameLevelWorldDownLimitApplied,
+                pairTargetHeightSpread,
+                previousGoalWorldAlongUp,
+                requestedGoalWorldAlongUp,
+                limitedGoalWorldAlongUp,
+                settings.PelvisSameLevelMaximumDownVelocity);
         }
 
         static bool TryResolvePostureInterval(

@@ -62,6 +62,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         const string GeometryFileName = "ground-path-geometry.csv";
         const int HeaderColumnCapacity = 1280;
         const float PositionNoiseFloor = 0.001f;
+        const float ExpectedPelvisSameLevelTargetToleranceMeters = 0.01f;
+        const float ExpectedPelvisSameLevelMaximumDownVelocity = 0.6f;
         const float RotationNoiseFloorDegrees = 0.1f;
         const float DirectionComparisonEpsilonDegrees = 0.0001f;
         const float TimeEpsilon = 0.000001f;
@@ -126,6 +128,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 events,
                 stepTimeCandidateSelections);
             AnalyzeSupportChanges(capture, events);
+            AnalyzeSameLevelFeetPelvisMotion(capture, events);
             events.Sort(EventFact.Compare);
             FactsDocument document = BuildDocument(
                 fullSamplesPath,
@@ -168,6 +171,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 $"actualEnvelopeCounterfactuals={document.coverage.actualFootEnvelopeCounterfactualCount} " +
                 $"lateApproachLandingRevisions={document.coverage.lateApproachLandingRevisionCount} " +
                 $"supportChanges={document.coverage.supportChangeCount} " +
+                $"sameLevelFeetPelvisMotion={document.coverage.sameLevelFeetPelvisMotionCount} " +
                 $"penetrationEvents={document.coverage.contactPlanePenetrationEventCount} " +
                 $"stepTimeCandidateSelections={document.coverage.stepTimeCandidateSelectionCount} " +
                 $"stepTimeRepresentativeEvents={document.coverage.stepTimeCandidateRepresentativeEventCount} " +
@@ -5389,6 +5393,220 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             }
         }
 
+        static void AnalyzeSameLevelFeetPelvisMotion(
+            CsvCapture capture,
+            List<EventFact> events)
+        {
+            Dictionary<int, FootFrame> left = capture.Left.ToDictionary(
+                frame => frame.Identity.FrameSequence);
+            Dictionary<int, FootFrame> right = capture.Right.ToDictionary(
+                frame => frame.Identity.FrameSequence);
+            List<int> frames = left.Keys.Intersect(right.Keys)
+                .OrderBy(value => value)
+                .ToList();
+            for (int i = 1; i < frames.Count; i++)
+            {
+                FootFrame previousLeft = left[frames[i - 1]];
+                FootFrame previousRight = right[frames[i - 1]];
+                FootFrame currentLeft = left[frames[i]];
+                FootFrame currentRight = right[frames[i]];
+                if (!Continuous(previousLeft, currentLeft) ||
+                    !Continuous(previousRight, currentRight) ||
+                    !previousLeft.Solver.PhysicalWriteAvailable ||
+                    !previousRight.Solver.PhysicalWriteAvailable ||
+                    !currentLeft.Solver.PhysicalWriteAvailable ||
+                    !currentRight.Solver.PhysicalWriteAvailable ||
+                    !previousLeft.Pelvis.Observation.PoseInputAvailable ||
+                    !currentLeft.Pelvis.Observation.PoseInputAvailable ||
+                    !previousLeft.Pelvis.Response.Evaluated ||
+                    !currentLeft.Pelvis.Response.Evaluated)
+                {
+                    continue;
+                }
+                Vector3 componentUp = currentLeft.Pelvis.HeightTarget.Available
+                    ? currentLeft.Pelvis.HeightTarget.ComponentUp
+                    : currentLeft.Pelvis.Reach.ComponentUp;
+                if (!FiniteVector(componentUp) ||
+                    Math.Abs(componentUp.sqrMagnitude - 1f) >
+                    RuntimeGeometryEpsilon)
+                {
+                    continue;
+                }
+                float physicalLeftHeight = Vector3.Dot(
+                    FinalSole(currentLeft),
+                    componentUp);
+                float physicalRightHeight = Vector3.Dot(
+                    FinalSole(currentRight),
+                    componentUp);
+                double physicalFootSpread = Math.Abs(
+                    physicalLeftHeight - physicalRightHeight);
+                if (physicalFootSpread > 0.01d)
+                    continue;
+                double resolvedTargetSpread = Math.Abs(Vector3.Dot(
+                    currentLeft.Resolved.EffectiveSole -
+                    currentRight.Resolved.EffectiveSole,
+                    componentUp));
+                double animatedFootSpread = Math.Abs(Vector3.Dot(
+                    currentLeft.MotionCore.OriginalSole -
+                    currentRight.MotionCore.OriginalSole,
+                    componentUp));
+                double physicalPelvisStep = Vector3.Dot(
+                    currentLeft.Pelvis.Observation.PhysicalWorldPosition -
+                    previousLeft.Pelvis.Observation.PhysicalWorldPosition,
+                    componentUp);
+                double animatedPelvisStep = Vector3.Dot(
+                    currentLeft.Pelvis.Observation.AnimatedWorldPosition -
+                    previousLeft.Pelvis.Observation.AnimatedWorldPosition,
+                    componentUp);
+                double rootStep = Vector3.Dot(
+                    currentLeft.Pelvis.Observation.PoseRootWorldPosition -
+                    previousLeft.Pelvis.Observation.PoseRootWorldPosition,
+                    componentUp);
+                CharacterFootPelvisResponseSample response =
+                    currentLeft.Pelvis.Response;
+                double correctionStep = response.Output -
+                    previousLeft.Pelvis.Response.Output;
+                double physicalDownwardStep = Math.Max(
+                    0d,
+                    -physicalPelvisStep);
+                double correctionDownwardStep = Math.Max(
+                    0d,
+                    -correctionStep);
+                double animatedDownwardStep = Math.Max(
+                    0d,
+                    -animatedPelvisStep);
+                double rootDownwardStep = Math.Max(0d, -rootStep);
+                bool heightTargetAvailable =
+                    currentLeft.Pelvis.HeightTarget.Available;
+                double requestedOffset = heightTargetAvailable
+                    ? currentLeft.Pelvis.HeightTarget.RequestedOffsetAlongUp
+                    : 0d;
+                double postureOffset = currentLeft.Pelvis.Posture.Available
+                    ? currentLeft.Pelvis.Posture.OffsetAlongUp
+                    : 0d;
+                bool releaseToAnimation =
+                    currentLeft.Pelvis.State == "Releasing" &&
+                    Math.Abs(response.Target) <= PositionNoiseFloor &&
+                    correctionStep < -PositionNoiseFloor;
+                bool responseHistoryDown =
+                    correctionStep < -PositionNoiseFloor &&
+                    response.Target >=
+                    response.PreviousOutput - PositionNoiseFloor;
+                var metrics = new SortedDictionary<string, double>(
+                    StringComparer.Ordinal)
+                {
+                    ["PhysicalFootHeightSpreadMeters"] = physicalFootSpread,
+                    ["ResolvedTargetFootHeightSpreadMeters"] =
+                        resolvedTargetSpread,
+                    ["AnimatedFootHeightSpreadMeters"] = animatedFootSpread,
+                    ["RequestedPelvisOffsetAlongUpMeters"] = requestedOffset,
+                    ["PosturePreferenceOffsetAlongUpMeters"] = postureOffset,
+                    ["ResponsePreviousTargetMeters"] = response.PreviousTarget,
+                    ["ResponsePreviousOutputMeters"] = response.PreviousOutput,
+                    ["ResponsePreviousVelocityMetersPerSecond"] =
+                        response.PreviousVelocity,
+                    ["ResponseTargetMeters"] = response.Target,
+                    ["ResponseOutputMeters"] = response.Output,
+                    ["ResponseVelocityMetersPerSecond"] = response.Velocity,
+                    ["PairTargetHeightSpreadMeters"] =
+                        response.PairTargetHeightSpread,
+                    ["PreviousGoalWorldAlongUpMeters"] =
+                        response.PreviousGoalWorldAlongUp,
+                    ["RequestedGoalWorldAlongUpMeters"] =
+                        response.RequestedGoalWorldAlongUp,
+                    ["LimitedGoalWorldAlongUpMeters"] =
+                        response.LimitedGoalWorldAlongUp,
+                    ["SameLevelMaximumDownVelocityMetersPerSecond"] =
+                        response.SameLevelMaximumDownVelocity,
+                    ["SameLevelWorldDownBudgetMeters"] =
+                        response.SameLevelMaximumDownVelocity *
+                        currentLeft.Timing.DeltaSeconds,
+                    ["RequestedGoalWorldDownwardStepMeters"] =
+                        response.SameLevelWorldDownLimitEvaluated
+                            ? Math.Max(
+                                0d,
+                                response.PreviousGoalWorldAlongUp -
+                                response.RequestedGoalWorldAlongUp)
+                            : 0d,
+                    ["LimitedGoalWorldDownwardStepMeters"] =
+                        response.SameLevelWorldDownLimitEvaluated
+                            ? Math.Max(
+                                0d,
+                                response.PreviousGoalWorldAlongUp -
+                                response.LimitedGoalWorldAlongUp)
+                            : 0d,
+                    ["PelvisCorrectionStepAlongUpMeters"] = correctionStep,
+                    ["PelvisCorrectionDownwardStepMeters"] =
+                        correctionDownwardStep,
+                    ["AnimatedPelvisStepAlongUpMeters"] = animatedPelvisStep,
+                    ["AnimatedPelvisDownwardStepMeters"] =
+                        animatedDownwardStep,
+                    ["PoseRootStepAlongUpMeters"] = rootStep,
+                    ["PoseRootDownwardStepMeters"] = rootDownwardStep,
+                    ["PhysicalPelvisStepAlongUpMeters"] = physicalPelvisStep,
+                    ["PhysicalPelvisDownwardStepMeters"] =
+                        physicalDownwardStep,
+                    ["PhysicalMinusAnimatedAndCorrectionStepMeters"] =
+                        physicalPelvisStep - animatedPelvisStep -
+                        correctionStep,
+                    ["ReachIntersectionMinimumAlongUpMeters"] =
+                        currentLeft.Pelvis.Reach.IntersectionMinimumAlongUp,
+                    ["ReachIntersectionMaximumAlongUpMeters"] =
+                        currentLeft.Pelvis.Reach.IntersectionMaximumAlongUp
+                };
+                var evidence = new SortedDictionary<string, bool>(
+                    StringComparer.Ordinal)
+                {
+                    ["physicalFeetSameLevel"] = true,
+                    ["resolvedTargetsSameLevel"] =
+                        resolvedTargetSpread <= 0.01d,
+                    ["heightTargetAvailable"] = heightTargetAvailable,
+                    ["commonHeightRequestDown"] =
+                        heightTargetAvailable &&
+                        requestedOffset < -PositionNoiseFloor,
+                    ["posturePreferenceDown"] =
+                        currentLeft.Pelvis.Posture.Available &&
+                        postureOffset < -PositionNoiseFloor,
+                    ["releaseToAnimation"] = releaseToAnimation,
+                    ["responseHistoryDown"] = responseHistoryDown,
+                    ["sameLevelWorldDownLimitEvaluated"] =
+                        response.SameLevelWorldDownLimitEvaluated,
+                    ["sameLevelWorldDownLimitApplied"] =
+                        response.SameLevelWorldDownLimitApplied,
+                    ["correctionMovedDown"] =
+                        correctionDownwardStep > PositionNoiseFloor,
+                    ["animatedPelvisMovedDown"] =
+                        animatedDownwardStep > PositionNoiseFloor,
+                    ["poseRootMovedDown"] =
+                        rootDownwardStep > PositionNoiseFloor,
+                    ["physicalPelvisMovedDown"] =
+                        physicalDownwardStep > PositionNoiseFloor,
+                    ["physicalPelvisDownOverOneCentimeter"] =
+                        physicalDownwardStep > 0.01d,
+                    ["supportChanged"] = response.SupportChanged,
+                    ["handoffApplied"] =
+                        response.Handoff != CharacterFootPelvisSpringHandoffReason.None,
+                    ["reachObservationAvailable"] =
+                        currentLeft.Pelvis.Reach.Left.Available ||
+                        currentLeft.Pelvis.Reach.Right.Available,
+                    ["reachIntersectionEvaluated"] =
+                        currentLeft.Pelvis.Reach.IntersectionEvaluated
+                };
+                events.Add(new EventFact(
+                    "SameLevelFeetPelvisMotion",
+                    "Both",
+                    previousLeft.Identity.FrameSequence,
+                    currentLeft.Identity.FrameSequence,
+                    currentLeft.Identity.FrameSequence,
+                    currentLeft.PrimarySupport.LandingEventIdentity,
+                    currentLeft.FormalInput.SourceIdentity,
+                    currentLeft.FormalInput.SourceCycle,
+                    DeltaSeconds(currentLeft),
+                    metrics,
+                    evidence));
+            }
+        }
+
         static FactsDocument BuildDocument(
             string samplesPath,
             string geometryPath,
@@ -5509,6 +5727,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                         value => value.kind ==
                                  "LateApproachLandingRevision"),
                     supportChangeCount = events.Count(value => value.kind == "SupportChange"),
+                    sameLevelFeetPelvisMotionCount = events.Count(
+                        value => value.kind == "SameLevelFeetPelvisMotion"),
                     contactPlanePenetrationEventCount = events.Count(
                         value => value.kind == "ContactPlanePenetration"),
                     stepTimeCandidateSelectionCount =
@@ -5747,7 +5967,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             }
             RequireResponseDomainHistory(left);
             RequireResponseDomainHistory(right);
-            RequirePelvisHistory(left);
+            RequirePelvisHistory(left, right);
             FootFrame first = footRows[0];
             int geometryRowCount = ReadGeometry(
                 geometryPath,
@@ -8479,6 +8699,70 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 velocity = (inputVelocity - omega * j * frame.Timing.DeltaSeconds) * decay;
             }
             float integrated = output;
+            RequirePelvis(
+                float.IsFinite(response.PairTargetHeightSpread) &&
+                response.PairTargetHeightSpread >= 0f &&
+                PelvisClose(
+                    response.SameLevelMaximumDownVelocity,
+                    ExpectedPelvisSameLevelMaximumDownVelocity) &&
+                (!response.SameLevelWorldDownLimitEvaluated ||
+                 response.HadPreviousState &&
+                 response.PairTargetHeightSpread <=
+                 ExpectedPelvisSameLevelTargetToleranceMeters +
+                 RuntimeGeometryEpsilon &&
+                 frame.Timing.DeltaSeconds > 0f &&
+                 frame.Lifecycle.FormalFootPlacementWeight >
+                 RuntimeGeometryEpsilon),
+                frame,
+                "same-level world limit inputs");
+            if (response.SameLevelWorldDownLimitEvaluated)
+            {
+                float requestedGoalWorldAlongUp = Vector3.Dot(
+                    frame.Pelvis.Observation.AnimatedWorldPosition,
+                    reach.ComponentUp) +
+                    integrated *
+                    frame.Lifecycle.FormalFootPlacementWeight;
+                float minimumGoalWorldAlongUp =
+                    response.PreviousGoalWorldAlongUp -
+                    response.SameLevelMaximumDownVelocity *
+                    frame.Timing.DeltaSeconds;
+                bool applied = requestedGoalWorldAlongUp <
+                    minimumGoalWorldAlongUp;
+                float limitedGoalWorldAlongUp = applied
+                    ? minimumGoalWorldAlongUp
+                    : requestedGoalWorldAlongUp;
+                RequirePelvis(
+                    float.IsFinite(response.PreviousGoalWorldAlongUp) &&
+                    PelvisClose(
+                        response.RequestedGoalWorldAlongUp,
+                        requestedGoalWorldAlongUp) &&
+                    response.SameLevelWorldDownLimitApplied == applied &&
+                    PelvisClose(
+                        response.LimitedGoalWorldAlongUp,
+                        limitedGoalWorldAlongUp),
+                    frame,
+                    "same-level world limit");
+                if (applied)
+                {
+                    output =
+                        (limitedGoalWorldAlongUp -
+                         Vector3.Dot(
+                             frame.Pelvis.Observation.AnimatedWorldPosition,
+                             reach.ComponentUp)) /
+                        frame.Lifecycle.FormalFootPlacementWeight;
+                    velocity = 0f;
+                }
+            }
+            else
+            {
+                RequirePelvis(
+                    !response.SameLevelWorldDownLimitApplied &&
+                    response.PreviousGoalWorldAlongUp == 0f &&
+                    response.RequestedGoalWorldAlongUp == 0f &&
+                    response.LimitedGoalWorldAlongUp == 0f,
+                    frame,
+                    "unevaluated same-level world limit");
+            }
             bool completed = releasing && Math.Abs(output) <= RuntimeGeometryEpsilon &&
                 Math.Abs(velocity) <= RuntimeGeometryEpsilon;
             if (completed) { output = 0f; velocity = 0f; }
@@ -8525,11 +8809,14 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 (residualAvailable || observation.GoalResidual == 0f), frame, "physical goal residual");
         }
 
-        static void RequirePelvisHistory(List<FootFrame> frames)
+        static void RequirePelvisHistory(
+            List<FootFrame> frames,
+            List<FootFrame> otherFrames)
         {
             for (int i = 1; i < frames.Count; i++)
             {
                 FootFrame previous = frames[i - 1], current = frames[i];
+                FootFrame other = otherFrames[i];
                 CharacterFootPelvisResponseSample response = current.Pelvis.Response, prior = previous.Pelvis.Response;
                 if (!Continuous(previous, current) || !response.Evaluated || !response.HadPreviousState ||
                     previous.Identity.ProgramIdentity != current.Identity.ProgramIdentity || previous.Identity.ProfileRevision != current.Identity.ProfileRevision ||
@@ -8543,6 +8830,46 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     PelvisClose(response.PreviousVelocity, prior.Velocity) && response.SupportChanged == supportChanged &&
                     response.PreviousSlope == (previous.Pelvis.HeightTarget.Available ? previous.Pelvis.Slope : CharacterFootStrideSlope.Flat),
                     current, "committed spring carry");
+                bool pairTargetsAvailable =
+                    current.Resolved.Outcome == "Ready" &&
+                    other.Resolved.Outcome == "Ready" &&
+                    current.Resolved.PositionWeight > RuntimeGeometryEpsilon &&
+                    other.Resolved.PositionWeight > RuntimeGeometryEpsilon;
+                float pairTargetHeightSpread = pairTargetsAvailable
+                    ? Mathf.Abs(Vector3.Dot(
+                        current.Resolved.EffectiveSole -
+                        other.Resolved.EffectiveSole,
+                        current.Pelvis.Reach.ComponentUp))
+                    : 0f;
+                bool sameLevelEvaluated = pairTargetsAvailable &&
+                    pairTargetHeightSpread <=
+                    ExpectedPelvisSameLevelTargetToleranceMeters &&
+                    !prior.Completed &&
+                    current.Timing.DeltaSeconds > 0f &&
+                    current.Lifecycle.FormalFootPlacementWeight >
+                    RuntimeGeometryEpsilon;
+                RequirePelvis(
+                    PelvisClose(
+                        response.PairTargetHeightSpread,
+                        pairTargetHeightSpread) &&
+                    response.SameLevelWorldDownLimitEvaluated ==
+                    sameLevelEvaluated,
+                    current,
+                    "same-level world limit admission");
+                if (!sameLevelEvaluated)
+                    continue;
+                Vector3 previousGoalWorld =
+                    previous.Pelvis.Observation.AnimatedWorldPosition +
+                    previous.Pelvis.Reach.ComponentUp *
+                    (prior.Output * prior.PositionWeight);
+                RequirePelvis(
+                    PelvisClose(
+                        response.PreviousGoalWorldAlongUp,
+                        Vector3.Dot(
+                            previousGoalWorld,
+                            current.Pelvis.Reach.ComponentUp)),
+                    current,
+                    "same-level previous world goal");
             }
         }
 
@@ -9166,6 +9493,18 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             new CharacterFootPelvisResponseObservation
             {
                 evaluated = response.Evaluated,
+                sameLevelWorldDownLimitEvaluated =
+                    response.SameLevelWorldDownLimitEvaluated,
+                sameLevelWorldDownLimitApplied =
+                    response.SameLevelWorldDownLimitApplied,
+                pairTargetHeightSpread = response.PairTargetHeightSpread,
+                previousGoalWorldAlongUp =
+                    response.PreviousGoalWorldAlongUp,
+                requestedGoalWorldAlongUp =
+                    response.RequestedGoalWorldAlongUp,
+                limitedGoalWorldAlongUp = response.LimitedGoalWorldAlongUp,
+                sameLevelMaximumDownVelocity =
+                    response.SameLevelMaximumDownVelocity,
                 completed = response.Completed,
                 integratedOutput = response.Evaluated ? (double?)response.IntegratedOutput : null,
                 hadPreviousState = response.HadPreviousState,
@@ -9891,6 +10230,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             public int actualFootEnvelopeCounterfactualCount;
             public int lateApproachLandingRevisionCount;
             public int supportChangeCount;
+            public int sameLevelFeetPelvisMotionCount;
             public int contactPlanePenetrationEventCount;
             public int stepTimeCandidateSelectionCount;
             public int stepTimeCandidateRepresentativeEventCount;

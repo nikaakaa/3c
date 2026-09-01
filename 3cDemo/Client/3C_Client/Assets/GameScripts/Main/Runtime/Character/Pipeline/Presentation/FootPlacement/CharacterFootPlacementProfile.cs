@@ -293,6 +293,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         [SerializeField] float m_LockDistance = 0.08f;
         [SerializeField] float m_SlideDistance = 0.2f;
         [SerializeField] float m_PelvisSpringFrequency = 3f;
+        [SerializeField] float m_PelvisSameLevelTargetTolerance;
+        [SerializeField] float m_PelvisSameLevelMaximumDownVelocity;
         [SerializeField] float m_MinimumLandingLegCompressionReserve;
 
         internal CharacterFootMotionSettings Build() =>
@@ -313,6 +315,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 m_LockDistance,
                 m_SlideDistance,
                 m_PelvisSpringFrequency,
+                m_PelvisSameLevelTargetTolerance,
+                m_PelvisSameLevelMaximumDownVelocity,
                 m_MinimumLandingLegCompressionReserve);
     }
 
@@ -335,6 +339,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             float lockDistance,
             float slideDistance,
             float pelvisSpringFrequency,
+            float pelvisSameLevelTargetTolerance,
+            float pelvisSameLevelMaximumDownVelocity,
             float minimumLandingLegCompressionReserve)
         {
             LandingAcceptanceDistance = landingAcceptanceDistance;
@@ -355,6 +361,9 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             LockDistance = lockDistance;
             SlideDistance = slideDistance;
             PelvisSpringFrequency = pelvisSpringFrequency;
+            PelvisSameLevelTargetTolerance = pelvisSameLevelTargetTolerance;
+            PelvisSameLevelMaximumDownVelocity =
+                pelvisSameLevelMaximumDownVelocity;
             MinimumLandingLegCompressionReserve =
                 minimumLandingLegCompressionReserve;
             RequireValid();
@@ -376,6 +385,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         internal float LockDistance { get; }
         internal float SlideDistance { get; }
         internal float PelvisSpringFrequency { get; }
+        internal float PelvisSameLevelTargetTolerance { get; }
+        internal float PelvisSameLevelMaximumDownVelocity { get; }
         internal float MinimumLandingLegCompressionReserve { get; }
 
         internal void RequireValid()
@@ -419,6 +430,10 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 !float.IsFinite(SlideDistance) ||
                 SlideDistance <= LockDistance ||
                 !float.IsFinite(PelvisSpringFrequency) || PelvisSpringFrequency <= 0f ||
+                !float.IsFinite(PelvisSameLevelTargetTolerance) ||
+                PelvisSameLevelTargetTolerance <= 0f ||
+                !float.IsFinite(PelvisSameLevelMaximumDownVelocity) ||
+                PelvisSameLevelMaximumDownVelocity <= 0f ||
                 !float.IsFinite(MinimumLandingLegCompressionReserve) ||
                 MinimumLandingLegCompressionReserve <= 0f)
             {
@@ -434,7 +449,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
     public sealed class CharacterFootPlacementProfile : ScriptableObject
     {
         public const string SchemaVersion =
-            "character-foot-placement-profile/v36-current-support-query";
+            "character-foot-placement-profile/v37-pelvis-same-level-down-limit";
 
         [SerializeField] string m_ProfileId = string.Empty;
         [SerializeField] CharacterFootCurrentSupportQueryAuthoringSettings

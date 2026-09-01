@@ -80,13 +80,131 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 "landingReachMinimumAlongUpMeters",
                 "landingReachMaximumAlongUpMeters");
             target.scorePolicy = "Health";
+            List<JObject> sameLevelPelvis = context.Events(
+                "SameLevelFeetPelvisMotion");
+            CharacterFootDiagnosisTarget sameLevelTarget = context.Target(
+                "same-level-feet-pelvis-descent",
+                "最终物理双脚沿Pelvis Component Up高度差不超过1厘米时，实际Physical Pelvis是否单帧下降超过1厘米；区分同高目标世界下降限速、共同高度请求、Release回动画、响应历史、动画或Root运动，Reach只作观察不归因",
+                new[] { "SameLevelFeetPelvisMotion" },
+                new[] { "PhysicalPelvisDownwardStepMeters>0.01" },
+                sameLevelPelvis,
+                value => CharacterFootDiagnosisContext.Evidence(
+                    value,
+                    "physicalPelvisDownOverOneCentimeter")
+                    ? new List<string>
+                    {
+                        "PhysicalPelvisDownwardStepMeters>0.01"
+                    }
+                    : new List<string>(),
+                value => CharacterFootDiagnosisContext.Metric(
+                    value,
+                    "PhysicalPelvisDownwardStepMeters"),
+                "PhysicalFootHeightSpreadMeters",
+                "ResolvedTargetFootHeightSpreadMeters",
+                "AnimatedFootHeightSpreadMeters",
+                "RequestedPelvisOffsetAlongUpMeters",
+                "PosturePreferenceOffsetAlongUpMeters",
+                "ResponsePreviousTargetMeters",
+                "ResponsePreviousOutputMeters",
+                "ResponsePreviousVelocityMetersPerSecond",
+                "ResponseTargetMeters",
+                "ResponseOutputMeters",
+                "ResponseVelocityMetersPerSecond",
+                "PairTargetHeightSpreadMeters",
+                "PreviousGoalWorldAlongUpMeters",
+                "RequestedGoalWorldAlongUpMeters",
+                "LimitedGoalWorldAlongUpMeters",
+                "SameLevelMaximumDownVelocityMetersPerSecond",
+                "SameLevelWorldDownBudgetMeters",
+                "RequestedGoalWorldDownwardStepMeters",
+                "LimitedGoalWorldDownwardStepMeters",
+                "PelvisCorrectionStepAlongUpMeters",
+                "PelvisCorrectionDownwardStepMeters",
+                "AnimatedPelvisStepAlongUpMeters",
+                "AnimatedPelvisDownwardStepMeters",
+                "PoseRootStepAlongUpMeters",
+                "PoseRootDownwardStepMeters",
+                "PhysicalPelvisStepAlongUpMeters",
+                "PhysicalPelvisDownwardStepMeters",
+                "PhysicalMinusAnimatedAndCorrectionStepMeters",
+                "ReachIntersectionMinimumAlongUpMeters",
+                "ReachIntersectionMaximumAlongUpMeters");
+            sameLevelTarget.scorePolicy = "Informational";
+            sameLevelTarget.occurrence = context.Occurrence(
+                "ContinuousSameLevelPhysicalFeetFramePair",
+                "PhysicalPelvisDownwardStepMeters",
+                "Meters",
+                sameLevelPelvis,
+                0.01d,
+                CharacterFootDiagnosisScoring.MeterSeverityThresholds);
+            sameLevelTarget.categoricalMeasurements =
+                new SortedDictionary<
+                    string,
+                    List<CharacterFootDiagnosisCategoryCount>>(
+                    StringComparer.Ordinal)
+                {
+                    ["PrimaryCause"] = sameLevelPelvis
+                        .Where(value => CharacterFootDiagnosisContext.Evidence(
+                            value,
+                            "physicalPelvisDownOverOneCentimeter"))
+                        .GroupBy(SameLevelPelvisCause)
+                        .OrderBy(value => value.Key, StringComparer.Ordinal)
+                        .Select(value => new CharacterFootDiagnosisCategoryCount
+                        {
+                            value = value.Key,
+                            count = value.Count()
+                        })
+                        .ToList()
+                };
             CharacterFootDiagnosisDocument document = context.Document(
                 DiagnosticId,
-                target);
+                target,
+                sameLevelTarget);
             document.landingReach = CharacterFootLandingReachReport.Create(
                 context.LandingReaches(),
                 events);
             return document;
+        }
+
+        static string SameLevelPelvisCause(JObject value)
+        {
+            bool request = CharacterFootDiagnosisContext.Evidence(
+                value,
+                "commonHeightRequestDown");
+            bool release = CharacterFootDiagnosisContext.Evidence(
+                value,
+                "releaseToAnimation");
+            bool history = CharacterFootDiagnosisContext.Evidence(
+                value,
+                "responseHistoryDown");
+            bool animation = CharacterFootDiagnosisContext.Evidence(
+                value,
+                "animatedPelvisMovedDown");
+            if (CharacterFootDiagnosisContext.Evidence(
+                    value,
+                    "sameLevelWorldDownLimitApplied"))
+                return animation
+                    ? "SameLevelWorldDownLimitAndAnimationMotion"
+                    : "SameLevelWorldDownLimit";
+            if (request)
+                return animation
+                    ? "CommonHeightRequestAndAnimationMotion"
+                    : "CommonHeightRequest";
+            if (release)
+                return animation
+                    ? "ReleaseToAnimationAndAnimationMotion"
+                    : "ReleaseToAnimation";
+            if (history)
+                return animation
+                    ? "ResponseHistoryAndAnimationMotion"
+                    : "ResponseHistory";
+            if (animation)
+                return "AnimationOrRootMotion";
+            if (CharacterFootDiagnosisContext.Evidence(
+                    value,
+                    "correctionMovedDown"))
+                return "PelvisResponse";
+            return "Unavailable";
         }
     }
 
@@ -189,6 +307,13 @@ namespace ThirdPersonCharacter.Pipeline.Editor
     internal sealed class CharacterFootPelvisResponseObservation
     {
         public bool evaluated;
+        public bool sameLevelWorldDownLimitEvaluated;
+        public bool sameLevelWorldDownLimitApplied;
+        public double pairTargetHeightSpread;
+        public double previousGoalWorldAlongUp;
+        public double requestedGoalWorldAlongUp;
+        public double limitedGoalWorldAlongUp;
+        public double sameLevelMaximumDownVelocity;
         public bool completed;
         public double? integratedOutput;
         public bool hadPreviousState;

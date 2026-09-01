@@ -18,18 +18,6 @@ using Unity.Profiling;
 
 namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
 {
-    internal readonly struct CharacterPoseProgramFrameLease
-    {
-        internal CharacterPoseProgramFrameLease(
-            ulong frameIdentity)
-        {
-            FrameIdentity = frameIdentity;
-        }
-
-        internal ulong FrameIdentity { get; }
-        internal bool IsValid => FrameIdentity != 0;
-    }
-
     internal sealed class PosePlanExecutionRuntime :
         IDisposable,
         IPoseStateSourceSelectionSink
@@ -982,16 +970,17 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
         }
 
         internal CharacterPoseProgramFrameLease BeginPendingFrame(
-            ulong frameIdentity,
-            ulong presentationFrame,
+            in CharacterPoseFrameLineage lineage,
             AnimationPresentationDiagnosticsInterest diagnosticsInterest,
             CharacterLinkedPoseRuntimeSession linkedPose)
         {
             RequireAlive();
-            if (frameIdentity == 0)
-                throw new ArgumentOutOfRangeException(nameof(frameIdentity));
+            if (!lineage.IsOpenValid || lineage.CompletionIdentity != 0)
+                throw new ArgumentException("Pose Program frame lineage is invalid.", nameof(lineage));
             if (linkedPose == null)
                 throw new ArgumentNullException(nameof(linkedPose));
+            ulong frameIdentity = lineage.FrameIdentity;
+            ulong presentationFrame = lineage.PresentationFrame;
             if (m_ActiveFrameLease.IsValid)
             {
                 throw new InvalidOperationException(
@@ -1051,7 +1040,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                 ApplyLinkedPoseGenerationResets();
                 m_HasOpenFrame = true;
                 m_ActiveFrameLease =
-                    new CharacterPoseProgramFrameLease(frameIdentity);
+                    new CharacterPoseProgramFrameLease(in lineage);
                 return m_ActiveFrameLease;
             }
             catch
@@ -4391,8 +4380,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             RequireAlive();
             if (!lease.IsValid ||
                 !m_ActiveFrameLease.IsValid ||
-                lease.FrameIdentity !=
-                    m_ActiveFrameLease.FrameIdentity ||
+                lease.Lineage != m_ActiveFrameLease.Lineage ||
                 !m_HasOpenFrame)
             {
                 throw new InvalidOperationException(

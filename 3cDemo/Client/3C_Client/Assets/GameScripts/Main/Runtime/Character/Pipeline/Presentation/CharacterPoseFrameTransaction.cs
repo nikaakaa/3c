@@ -185,7 +185,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             SlotLease.IsValid &&
             SlotLease.FrameIdentity == Lineage.FrameIdentity &&
             PoseLease.IsValid &&
-            PoseLease.FrameIdentity == Lineage.FrameIdentity &&
+            PoseLease.Matches(Lineage) &&
             HasSourceFrame &&
             SourceDemand.IsValid &&
             SourceFrame.IsReady &&
@@ -229,7 +229,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 !slotLease.IsValid ||
                 slotLease.FrameIdentity != lineage.FrameIdentity ||
                 !poseLease.IsValid ||
-                poseLease.FrameIdentity != lineage.FrameIdentity ||
+                !poseLease.Matches(lineage) ||
                 hasMotionMatchingLease != motionMatchingLease.IsValid ||
                 hasMotionMatchingLease &&
                 motionMatchingLease.FrameIdentity != lineage.FrameIdentity)

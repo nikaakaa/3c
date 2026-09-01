@@ -441,3 +441,15 @@ A/B均为2086脚行、1222列，其中1198个业务列逐值相同、24个运行
 正式A为`Diagnostics/FootPlacementRuns/20260901-234825-639-d86985e088c8402d9d0f7c6315a4223d`，候选B为`Diagnostics/FootPlacementRuns/20260901-235713-270-10be4886ce4a48f0ab7eedb009127664`；B Proof为`Temp/CharacterInputReplayProofs/v4/43357ff3cd384e5cba75d2c31175b116/20260901-235813-753-468dd009d8d240e587fd65dad221fb24.json`，工具对A Proof正式报告`matched:1044`，无failure且Foot Finalizing已结束。
 
 A/B均为2086脚行、1222列，其中1198个业务列逐值相同、24个运行identity列一一映射且0冲突；Geometry均为67186行、27列，其中22个业务列逐值相同、5个identity列一一映射且0冲突。十份正式报告只在既定Sample identity、文件／index hash、detail／index字节、分析耗时和一一Surface identity上变化；其中`analysis.index.bytes`及`performance.indexBytes`仅少1字节，排除既定index大小字段后10／10相同，七维分项、总分84.2和weighted evidence 96.5不变。由此确认Source Frame页所有权迁移没有改变Demand消费、Source采样、Barrier时机、动画时钟、Foot、Pelvis、Goal、FBBIK、Final Pose或Physical业务；`235713`成为Source Binding／Usage页迁移的下一A。
+
+## Direct／Clip／BlendSpace Source Binding页
+
+状态：提交`358647863`已在`CharacterPoseSourceModule`内建立固定容量Direct、Clip和Blend Space Binding页。每个Prepare阶段按同一Completion identity清空并打开页；物理source注册、backend prepare、capture binding安装和fan-in连接完成后，Module把`AnimationPhysicalSourceIdentity + capture SourceIndex`作为typed `SourceBinding`写入对应Player槽位。Program侧准备Player Job时只按当前Completion读取Binding；未激活Player读取默认无效Physical identity与`SourceIndex=-1`，保持原行为。
+
+`PosePlanExecutionRuntime`已删除`m_DirectPhysicalSources`、`m_SequencePhysicalSources`、`m_BlendSpacePhysicalSources`和三组SourceIndex数组，以及对应构造、每帧清空和写入代码。Player的Relevant判断、Clip／BlendSpace时钟、source-local sample、continuity、PrepareCapture与PrepareJob仍由原逻辑Owner执行；Source Module不选择Player、State或跨source权重。旧Runtime仍保存release pool、usage和其它source控制journal，因此任务4.1与4.6均未整体完成。
+
+`ThirdPersonClient.Runtime.csproj`按规定参数编译成功，0错误；警告只来自既有Unity／第三方依赖和Input Value未使用字段，build server已立即关闭。Unity刷新、回放和退出Play期间只出现同一条FinalIK Domain Reload序列化深度日志，没有Source Binding、Completion、Player Job、PoseGraph或IK异常；单独记录后清空，3C Console为0。
+
+正式A为`Diagnostics/FootPlacementRuns/20260901-235713-270-10be4886ce4a48f0ab7eedb009127664`，候选B为`Diagnostics/FootPlacementRuns/20260902-000722-129-1675f4cae70142a1a4c177739208b7bd`；B Proof为`Temp/CharacterInputReplayProofs/v4/43357ff3cd384e5cba75d2c31175b116/20260902-000845-600-5dd258f8bc9c4492b4e44f76922fc0a1.json`，工具对A Proof正式报告`matched:1044`，无failure且Foot Finalizing已结束。
+
+A/B均为2086脚行、1222列，其中1198个业务列逐值相同、24个运行identity列一一映射且0冲突；Geometry均为67186行、27列，其中22个业务列逐值相同、5个identity列一一映射且0冲突；十份正式报告按既定Sample identity、文件／index hash与大小、分析耗时和Surface identity规则归一化后10／10相同，七维分项、总分84.2和weighted evidence 96.5不变。由此确认physical identity scratch迁入Source Binding页没有改变Direct／Clip／BlendSpace绑定、Source时间、动画时钟、Foot、Pelvis、Goal、FBBIK、Final Pose或Physical业务；`000722`成为Source Usage／Adapter迁移的下一A。

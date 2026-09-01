@@ -382,6 +382,7 @@ namespace ThirdPersonCharacter.Editor.MotionMatching
                 projection,
                 target.Animancer,
                 target.AnimationRigBinding,
+                target.RootHierarchy,
                 CharacterPresentationBodyState.FromFloat32(target.WorldBodyBinding.InitialBody),
                 target.WorldAwarePresentation,
                 target.gameObject.scene.GetPhysicsScene(),

@@ -405,6 +405,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
         internal PosePlanExecutionRuntime(
             AnimancerComponent animancer,
             CharacterAnimationRigBinding rigBinding,
+            CharacterRootHierarchyBinding rootHierarchy,
             CharacterPresentationProjection projection,
             CharacterFootPlacementModule footPlacement,
             bool managesGraphClock)
@@ -626,7 +627,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                         m_LinkedPoseResetFragments);
                 finalWriter = new AnimationFinalPosePhysicalWriter(
                     rigBinding,
-                    projection.Rig);
+                    projection.Rig,
+                    rootHierarchy);
                 poseConstraints = new CharacterPoseConstraintRuntime(
                     footPlacement,
                     poseProgram.PoseBoneContributions,
@@ -1004,7 +1006,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                     m_PendingActionBackendReleases.Count;
                 sourceLease = m_SourceModule.BeginFrame(in lineage);
                 sourceOpen = true;
-                publicationLease = m_FramePublisher.BeginFrame(in lineage);
+                publicationLease = m_FramePublisher.BeginFrame(
+                    in lineage,
+                    footIkCaptureInterest);
                 publicationOpen = true;
                 m_PendingCompletedFrame = default;
                 m_HasPendingCompletedFrame = false;

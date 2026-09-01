@@ -311,6 +311,7 @@ namespace ThirdPersonCharacter.Pipeline
                 m_Projection,
                 m_Animancer,
                 m_AnimationRigBinding,
+                m_Host.RootHierarchy,
                 m_BodyFixture,
                 m_WorldAwareBinding,
                 m_PhysicsScene,

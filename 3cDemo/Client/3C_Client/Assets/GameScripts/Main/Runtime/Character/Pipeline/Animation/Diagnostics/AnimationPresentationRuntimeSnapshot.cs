@@ -7,6 +7,83 @@ using UnityEngine;
 
 namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
 {
+    internal readonly struct CharacterFootIkPhysicalCapture
+    {
+        internal CharacterFootIkPhysicalCapture(
+            Vector3 logicRootWorldPosition,
+            Quaternion logicRootWorldRotation,
+            Vector3 visualRootLocalPosition,
+            Quaternion visualRootLocalRotation,
+            Vector3 visualRootWorldPosition,
+            Quaternion visualRootWorldRotation,
+            Vector3 poseRootLocalPosition,
+            Quaternion poseRootLocalRotation,
+            Vector3 poseRootWorldPosition,
+            Quaternion poseRootWorldRotation,
+            Vector3 leftAnkleWorldPosition,
+            Quaternion leftAnkleWorldRotation,
+            Vector3 rightAnkleWorldPosition,
+            Quaternion rightAnkleWorldRotation)
+        {
+            LogicRootWorldPosition = logicRootWorldPosition;
+            LogicRootWorldRotation = logicRootWorldRotation;
+            VisualRootLocalPosition = visualRootLocalPosition;
+            VisualRootLocalRotation = visualRootLocalRotation;
+            VisualRootWorldPosition = visualRootWorldPosition;
+            VisualRootWorldRotation = visualRootWorldRotation;
+            PoseRootLocalPosition = poseRootLocalPosition;
+            PoseRootLocalRotation = poseRootLocalRotation;
+            PoseRootWorldPosition = poseRootWorldPosition;
+            PoseRootWorldRotation = poseRootWorldRotation;
+            LeftAnkleWorldPosition = leftAnkleWorldPosition;
+            LeftAnkleWorldRotation = leftAnkleWorldRotation;
+            RightAnkleWorldPosition = rightAnkleWorldPosition;
+            RightAnkleWorldRotation = rightAnkleWorldRotation;
+        }
+
+        internal Vector3 LogicRootWorldPosition { get; }
+        internal Quaternion LogicRootWorldRotation { get; }
+        internal Vector3 VisualRootLocalPosition { get; }
+        internal Quaternion VisualRootLocalRotation { get; }
+        internal Vector3 VisualRootWorldPosition { get; }
+        internal Quaternion VisualRootWorldRotation { get; }
+        internal Vector3 PoseRootLocalPosition { get; }
+        internal Quaternion PoseRootLocalRotation { get; }
+        internal Vector3 PoseRootWorldPosition { get; }
+        internal Quaternion PoseRootWorldRotation { get; }
+        internal Vector3 LeftAnkleWorldPosition { get; }
+        internal Quaternion LeftAnkleWorldRotation { get; }
+        internal Vector3 RightAnkleWorldPosition { get; }
+        internal Quaternion RightAnkleWorldRotation { get; }
+        internal bool IsAvailable =>
+            IsFinite(LogicRootWorldPosition) &&
+            IsFinite(LogicRootWorldRotation) &&
+            IsFinite(VisualRootLocalPosition) &&
+            IsFinite(VisualRootLocalRotation) &&
+            IsFinite(VisualRootWorldPosition) &&
+            IsFinite(VisualRootWorldRotation) &&
+            IsFinite(PoseRootLocalPosition) &&
+            IsFinite(PoseRootLocalRotation) &&
+            IsFinite(PoseRootWorldPosition) &&
+            IsFinite(PoseRootWorldRotation) &&
+            IsFinite(LeftAnkleWorldPosition) &&
+            IsFinite(LeftAnkleWorldRotation) &&
+            IsFinite(RightAnkleWorldPosition) &&
+            IsFinite(RightAnkleWorldRotation);
+
+        static bool IsFinite(Vector3 value) =>
+            float.IsFinite(value.x) &&
+            float.IsFinite(value.y) &&
+            float.IsFinite(value.z);
+
+        static bool IsFinite(Quaternion value) =>
+            float.IsFinite(value.x) &&
+            float.IsFinite(value.y) &&
+            float.IsFinite(value.z) &&
+            float.IsFinite(value.w) &&
+            Quaternion.Dot(value, value) > 0.000001f;
+    }
+
     internal readonly struct AnimationPhysicalBoneWriteDiagnostics
     {
         internal AnimationPhysicalBoneWriteDiagnostics(
@@ -16,7 +93,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
             Vector3 rightAnkleComponentPosition,
             Quaternion rightAnkleComponentRotation,
             Vector3 pelvisComponentPosition,
-            Vector3 pelvisWorldPosition)
+            Vector3 pelvisWorldPosition,
+            in CharacterFootIkPhysicalCapture footIkCapture)
         {
             CompletionIdentity = completionIdentity;
             LeftAnkleComponentPosition = leftAnkleComponentPosition;
@@ -25,6 +103,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
             RightAnkleComponentRotation = rightAnkleComponentRotation;
             PelvisComponentPosition = pelvisComponentPosition;
             PelvisWorldPosition = pelvisWorldPosition;
+            FootIkCapture = footIkCapture;
         }
 
         internal ulong CompletionIdentity { get; }
@@ -34,6 +113,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
         internal Quaternion RightAnkleComponentRotation { get; }
         internal Vector3 PelvisComponentPosition { get; }
         internal Vector3 PelvisWorldPosition { get; }
+        internal CharacterFootIkPhysicalCapture FootIkCapture { get; }
         internal bool IsAvailable =>
             CompletionIdentity != 0 &&
             IsFinite(LeftAnkleComponentPosition) &&
@@ -992,6 +1072,46 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
             }
         }
 
+        public bool WorldPhysicalAvailable
+        {
+            get
+            {
+                if (m_Page == null)
+                    return false;
+                RequireValid();
+                return m_Page.PhysicalWrite.FootIkCapture.IsAvailable;
+            }
+        }
+
+        public Vector3 LogicRootWorldPosition =>
+            ReadWorldPhysical().LogicRootWorldPosition;
+        public Quaternion LogicRootWorldRotation =>
+            ReadWorldPhysical().LogicRootWorldRotation;
+        public Vector3 VisualRootLocalPosition =>
+            ReadWorldPhysical().VisualRootLocalPosition;
+        public Quaternion VisualRootLocalRotation =>
+            ReadWorldPhysical().VisualRootLocalRotation;
+        public Vector3 VisualRootWorldPosition =>
+            ReadWorldPhysical().VisualRootWorldPosition;
+        public Quaternion VisualRootWorldRotation =>
+            ReadWorldPhysical().VisualRootWorldRotation;
+        public Vector3 PoseRootLocalPosition =>
+            ReadWorldPhysical().PoseRootLocalPosition;
+        public Quaternion PoseRootLocalRotation =>
+            ReadWorldPhysical().PoseRootLocalRotation;
+        public Vector3 PoseRootWorldPosition =>
+            ReadWorldPhysical().PoseRootWorldPosition;
+        public Quaternion PoseRootWorldRotation =>
+            ReadWorldPhysical().PoseRootWorldRotation;
+        public Vector3 LeftPhysicalAnkleWorldPosition =>
+            ReadWorldPhysical().LeftAnkleWorldPosition;
+        public Quaternion LeftPhysicalAnkleWorldRotation =>
+            ReadWorldPhysical().LeftAnkleWorldRotation;
+        public Vector3 RightPhysicalAnkleWorldPosition =>
+            ReadWorldPhysical().RightAnkleWorldPosition;
+        public Quaternion RightPhysicalAnkleWorldRotation =>
+            ReadWorldPhysical().RightAnkleWorldRotation;
+
         public CharacterPoseFrameLineage Lineage
         {
             get
@@ -1087,6 +1207,21 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
                 RequireValid();
                 return m_Page.LandingPrediction.IsCompleted;
             }
+        }
+
+        CharacterFootIkPhysicalCapture ReadWorldPhysical()
+        {
+            if (m_Page == null)
+                return default;
+            RequireValid();
+            CharacterFootIkPhysicalCapture result =
+                m_Page.PhysicalWrite.FootIkCapture;
+            if (!result.IsAvailable)
+            {
+                throw new InvalidOperationException(
+                    "Foot IK world physical capture is unavailable.");
+            }
+            return result;
         }
 
         void RequireValid() => m_Lease.RequireValid(m_LeaseIdentity);

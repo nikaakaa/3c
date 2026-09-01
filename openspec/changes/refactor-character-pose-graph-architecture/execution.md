@@ -589,3 +589,11 @@ A/B均为2086脚行、1222列，其中1198业务列逐值相同、24 identity列
 `CharacterAnimationPresentationRuntime`只在general或specific任一存在时进入Post-Seal diagnostics；旧Trace与Debug View仍只响应general interest，specific Foot租约只同步交给帧开始冻结的唯一consumer。consumer返回false由其自身Capability Session处理；若consumer违反`TryCapture`合同抛错，Runtime只调用`CaptureFault`并隔离其二次错误，不改变已Seal表现帧或下一帧事实。由此完成任务13.2；PoseGraph只看到容量1的typed interest和领域consumer，不读取Capability、Sampler、Schema、Generated Program或packet容量。
 
 Runtime工程用显式保留build退出码的规定命令构建成功、0错误，27个warning来自既有Unity／第三方依赖与未使用字段，构建后立即关闭build server。Unity编译无错误，退出仅有既有FinalIK日志并清空。正式A为`Diagnostics/FootPlacementRuns/20260902-031403-657-15e34fd7f366452493b4ac159f321244`，候选B为`Diagnostics/FootPlacementRuns/20260902-032312-398-b58a9d6e91894276b0610ca19a27affa`；B Proof为`Temp/CharacterInputReplayProofs/v4/43357ff3cd384e5cba75d2c31175b116/20260902-032408-358-0e43d95f5b2e425fb360e7ea276a84c8.json`，工具报告`matched:1044`。A/B主表1198业务列、Geometry 22业务列逐值相同，identity列一一映射、0冲突；总分84.2、weighted evidence 96.5不变。`032312`成为Final Publication世界事实扩展前的正式A。
+
+## Final Publication按specific interest封存Root与Physical世界事实
+
+状态：唯一`AnimationFinalPosePhysicalWriter`现在接收正式`CharacterRootHierarchyBinding`，构造时确认其Animator根就是`PoseRoot`。根Frame冻结的`CharacterFootIkCaptureInterest`随Final Publication Pending页保存；只有specific Foot interest开启时，Physical Writer才在完成最终骨骼写入的同一位置一次读取LogicRoot、VisualRoot、PoseRoot以及左右脚踝的最终世界／局部空间事实，写入`CharacterFootIkPhysicalCapture`。未登记Foot Capability的正式运行只保留既有Physical诊断，不构造这组Foot payload。
+
+`CharacterFootIkCommittedCaptureViewLease`只从Final Publication Committed页公开这些值；具体Foot Projector与Foot插件目录全文搜索均不包含`Transform`、`RootHierarchy`、`PhysicalBones`或Animator骨骼查询，因此后续Bridge和Generated Program不再反向读取场景。Runtime与Editor工程按规定参数构建成功、0错误；Editor的30个warning只来自既有第三方包，构建后立即关闭build server。Unity只刷新改动脚本，回放与退出Play仅出现既有FinalIK序列化深度日志，已清空。
+
+正式A为`Diagnostics/FootPlacementRuns/20260902-032312-398-b58a9d6e91894276b0610ca19a27affa`，候选B为`Diagnostics/FootPlacementRuns/20260902-033516-613-1591907a78214a389ab18cdc9835fe66`；B Proof为`Temp/CharacterInputReplayProofs/v4/43357ff3cd384e5cba75d2c31175b116/20260902-033613-172-f30d20daa7554b24b89ed641ecc21a3d.json`，工具报告`matched:1044`。A/B均为2086脚行、1222列，其中1198业务列逐值相同、24个运行身份列一一映射且0冲突；Geometry均为67186行、27列，其中22业务列逐值相同、5个身份列一一映射且0冲突；总分84.2与weighted evidence 96.5不变。由此完成Foot采样重构任务2.2与2.4；`033516`成为Foot Generated Field继续迁移的正式A。

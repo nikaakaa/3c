@@ -72,12 +72,14 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             internal int BufferPage = -1;
             internal CharacterFinalPosePublicationResult Result;
             internal AnimationPhysicalBoneWriteDiagnostics PhysicalWrite;
+            internal CharacterFootIkCaptureInterest FootIkCaptureInterest;
             internal ComposedAnimationPoseFrame Frame;
             internal bool HasValue;
             internal bool IsOpen => Lease.IsValid;
 
             internal void Begin(
-                CharacterFinalPosePublicationFrameLease lease)
+                CharacterFinalPosePublicationFrameLease lease,
+                CharacterFootIkCaptureInterest footIkCaptureInterest)
             {
                 if (IsOpen || !lease.IsValid)
                 {
@@ -88,6 +90,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 BufferPage = -1;
                 Result = default;
                 PhysicalWrite = default;
+                FootIkCaptureInterest = footIkCaptureInterest;
                 Frame = default;
                 HasValue = false;
             }
@@ -158,6 +161,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 BufferPage = -1;
                 Result = default;
                 PhysicalWrite = default;
+                FootIkCaptureInterest = default;
                 Frame = default;
                 HasValue = false;
             }
@@ -286,11 +290,14 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             m_DenseDoublePageResidentPayloadBytes;
 
         internal CharacterFinalPosePublicationFrameLease BeginFrame(
-            in CharacterPoseFrameLineage lineage)
+            in CharacterPoseFrameLineage lineage,
+            CharacterFootIkCaptureInterest footIkCaptureInterest)
         {
             var lease =
                 new CharacterFinalPosePublicationFrameLease(in lineage);
-            m_Pending.Begin(lease);
+            m_Pending.Begin(
+                lease,
+                footIkCaptureInterest);
             return lease;
         }
 
@@ -313,7 +320,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             m_PhysicalWriter.Write(
                 in pending,
                 hasCommitted,
-                in committed);
+                in committed,
+                m_Pending.FootIkCaptureInterest);
             m_Pending.PhysicalWrite = m_PhysicalWriter.Diagnostics;
         }
 

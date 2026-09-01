@@ -49,6 +49,7 @@ namespace ThirdPersonCharacter.Pipeline
             CharacterPresentationProjection projection,
             AnimancerComponent animancer,
             CharacterAnimationRigBinding animationRigBinding,
+            CharacterRootHierarchyBinding rootHierarchy,
             CharacterPresentationBodyState bodyFixture,
             CharacterWorldAwarePresentationBinding worldAwareBinding,
             PhysicsScene physicsScene,
@@ -62,6 +63,9 @@ namespace ThirdPersonCharacter.Pipeline
                 throw new InvalidOperationException("Animation preview requires compiled Program and Presentation Projection data.");
             if (previewSessionId == Guid.Empty)
                 throw new ArgumentException("Animation preview identity is incomplete.");
+            if (!rootHierarchy)
+                throw new ArgumentNullException(nameof(rootHierarchy));
+            rootHierarchy.RequireValid();
             m_Projection = projection;
             CharacterPresentationSemanticContract contract =
                 Float32CharacterPresentationContractAdapter.Create(program);
@@ -136,6 +140,7 @@ namespace ThirdPersonCharacter.Pipeline
                     motionMatching,
                     animancer,
                     animationRigBinding,
+                    rootHierarchy,
                     footPlacement,
                     false);
                 footPlacement = null;

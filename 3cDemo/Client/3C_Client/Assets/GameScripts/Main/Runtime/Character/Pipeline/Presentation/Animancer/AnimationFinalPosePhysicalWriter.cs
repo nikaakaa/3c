@@ -10,6 +10,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation.Animancer
     internal sealed class AnimationFinalPosePhysicalWriter
     {
         readonly CharacterAnimationRigPayload m_Rig;
+        readonly CharacterRootHierarchyBinding m_RootHierarchy;
         readonly IReadOnlyList<Transform> m_Bones;
         readonly Transform m_ComponentRoot;
         readonly int m_RootBoneIndex;
@@ -23,14 +24,25 @@ namespace ThirdPersonCharacter.Pipeline.Presentation.Animancer
 
         internal AnimationFinalPosePhysicalWriter(
             CharacterAnimationRigBinding binding,
-            CharacterAnimationRigPayload rig)
+            CharacterAnimationRigPayload rig,
+            CharacterRootHierarchyBinding rootHierarchy)
         {
             if (!binding)
                 throw new ArgumentNullException(nameof(binding));
             m_Rig = rig ?? throw new ArgumentNullException(nameof(rig));
+            m_RootHierarchy = rootHierarchy
+                ? rootHierarchy
+                : throw new ArgumentNullException(nameof(rootHierarchy));
+            m_RootHierarchy.RequireValid();
             binding.RequireValid(rig);
             m_Bones = binding.PhysicalBones;
             m_ComponentRoot = binding.Animator.transform;
+            if (m_ComponentRoot != m_RootHierarchy.PoseRoot)
+            {
+                throw new ArgumentException(
+                    "Final Pose writer must use the formal PoseRoot.",
+                    nameof(rootHierarchy));
+            }
             m_RootBoneIndex = rig.RootPhysicalBoneIndex;
             m_LeftAnkleBoneIndex = rig.LeftLeg.AnklePhysicalBoneIndex;
             m_RightAnkleBoneIndex = rig.RightLeg.AnklePhysicalBoneIndex;
@@ -64,7 +76,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation.Animancer
         internal void Write(
             in AnimationFinalPoseNativeReadBinding pending,
             bool hasCommitted,
-            in AnimationFinalPoseNativeReadBinding committed)
+            in AnimationFinalPoseNativeReadBinding committed,
+            CharacterFootIkCaptureInterest footIkCaptureInterest)
         {
             bool pendingValid = HeaderIsValid(in pending);
             bool committedValid =
@@ -116,6 +129,10 @@ namespace ThirdPersonCharacter.Pipeline.Presentation.Animancer
             if (pendingValid)
             {
                 Vector3 pelvisWorldPosition = m_Bones[m_PelvisBoneIndex].position;
+                CharacterFootIkPhysicalCapture footIkCapture =
+                    footIkCaptureInterest.IsEnabled
+                        ? CaptureFootIkPhysical()
+                        : default;
                 m_Diagnostics = new AnimationPhysicalBoneWriteDiagnostics(
                     pending.CompletionIdentity,
                     CaptureComponentPosition(m_LeftAnkleBoneIndex),
@@ -123,8 +140,33 @@ namespace ThirdPersonCharacter.Pipeline.Presentation.Animancer
                     CaptureComponentPosition(m_RightAnkleBoneIndex),
                     CaptureComponentRotation(m_RightAnkleBoneIndex),
                     m_ComponentRoot.InverseTransformPoint(pelvisWorldPosition),
-                    pelvisWorldPosition);
+                    pelvisWorldPosition,
+                    in footIkCapture);
             }
+        }
+
+        CharacterFootIkPhysicalCapture CaptureFootIkPhysical()
+        {
+            Transform logicRoot = m_RootHierarchy.LogicRoot;
+            Transform visualRoot = m_RootHierarchy.VisualRoot;
+            Transform poseRoot = m_RootHierarchy.PoseRoot;
+            Transform leftAnkle = m_Bones[m_LeftAnkleBoneIndex];
+            Transform rightAnkle = m_Bones[m_RightAnkleBoneIndex];
+            return new CharacterFootIkPhysicalCapture(
+                logicRoot.position,
+                logicRoot.rotation,
+                visualRoot.localPosition,
+                visualRoot.localRotation,
+                visualRoot.position,
+                visualRoot.rotation,
+                poseRoot.localPosition,
+                poseRoot.localRotation,
+                poseRoot.position,
+                poseRoot.rotation,
+                leftAnkle.position,
+                leftAnkle.rotation,
+                rightAnkle.position,
+                rightAnkle.rotation);
         }
 
         Vector3 CaptureComponentPosition(int boneIndex) =>

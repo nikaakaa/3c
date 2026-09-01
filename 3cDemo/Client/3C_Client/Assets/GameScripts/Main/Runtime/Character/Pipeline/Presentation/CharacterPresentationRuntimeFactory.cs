@@ -342,6 +342,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     motionMatching,
                     animancer,
                     animationRigBinding,
+                    rootHierarchy,
                     footPlacement,
                     true);
                 footPlacement = null;

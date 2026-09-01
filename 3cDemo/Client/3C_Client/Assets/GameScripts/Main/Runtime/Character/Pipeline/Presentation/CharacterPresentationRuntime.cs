@@ -90,6 +90,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             CharacterMotionMatchingPresentationModule motionMatching,
             AnimancerComponent animancer,
             CharacterAnimationRigBinding rigBinding,
+            CharacterRootHierarchyBinding rootHierarchy,
             CharacterFootPlacementModule footPlacement,
             bool ownsGraphClock)
         {
@@ -165,6 +166,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     new PosePlanExecutionRuntime(
                         animancer,
                         rigBinding,
+                        rootHierarchy,
                         bindings.Projection,
                         footPlacement,
                         ownsGraphClock);

@@ -437,6 +437,63 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         }
     }
 
+    internal readonly struct CharacterPoseOperationCompletionPage
+    {
+        readonly NativeArray<CharacterPoseOperationCompletion> m_Entries;
+
+        internal CharacterPoseOperationCompletionPage(
+            NativeArray<CharacterPoseOperationCompletion> entries)
+        {
+            if (!entries.IsCreated || entries.Length == 0)
+                throw new ArgumentException("Pose Operation Completion Page is invalid.", nameof(entries));
+            m_Entries = entries;
+        }
+
+        internal int Count => m_Entries.IsCreated ? m_Entries.Length : 0;
+
+        internal CharacterPoseOperationCompletion this[int operationIndex]
+        {
+            get
+            {
+                RequireIndex(operationIndex);
+                return m_Entries[operationIndex];
+            }
+        }
+
+        internal void Clear()
+        {
+            NativeArray<CharacterPoseOperationCompletion> entries = m_Entries;
+            for (int i = 0; i < entries.Length; i++)
+                entries[i] = default;
+        }
+
+        internal bool TryComplete(
+            int operationIndex,
+            in CharacterPoseOperationCompletion completion)
+        {
+            RequireIndex(operationIndex);
+            if (!completion.IsValid)
+                throw new ArgumentException("Pose Operation Completion is invalid.", nameof(completion));
+            NativeArray<CharacterPoseOperationCompletion> entries = m_Entries;
+            if (!entries[operationIndex].IsEmpty)
+                return false;
+            entries[operationIndex] = completion;
+            return true;
+        }
+
+        internal void RequireLength(int expectedLength)
+        {
+            if (!m_Entries.IsCreated || m_Entries.Length != expectedLength)
+                throw new ArgumentException("Pose Operation Completion Page length is invalid.");
+        }
+
+        void RequireIndex(int operationIndex)
+        {
+            if ((uint)operationIndex >= (uint)Count)
+                throw new ArgumentOutOfRangeException(nameof(operationIndex));
+        }
+    }
+
     internal readonly struct CharacterPoseGraphNativeBinding
     {
         internal CharacterPoseGraphNativeBinding(
@@ -474,7 +531,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             NativeArray<ulong> valueContinuityIdentities,
             NativeArray<PoseDiscontinuityNative> valueDiscontinuities,
             NativeArray<AnimationPoseNativeInvalidReason> valueInvalidReasons,
-            NativeArray<ulong> frameCacheCompletedAt,
+            NativeArray<CharacterPoseOperationCompletion> operationCompletions,
             NativeArray<ulong> stageCompletedAt,
             NativeArray<int> stageInvalidOperationIndex,
             NativeArray<AnimationPoseNativeInvalidReason> poseGraphInvalidReason,
@@ -520,7 +577,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             ValueContinuityIdentities = valueContinuityIdentities;
             ValueDiscontinuities = valueDiscontinuities;
             ValueInvalidReasons = valueInvalidReasons;
-            FrameCacheCompletedAt = frameCacheCompletedAt;
+            OperationCompletions = new CharacterPoseOperationCompletionPage(
+                operationCompletions);
             StageCompletedAt = stageCompletedAt;
             StageInvalidOperationIndex = stageInvalidOperationIndex;
             PoseGraphInvalidReason = poseGraphInvalidReason;
@@ -565,7 +623,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         internal NativeArray<ulong> ValueContinuityIdentities { get; }
         internal NativeArray<PoseDiscontinuityNative> ValueDiscontinuities { get; }
         internal NativeArray<AnimationPoseNativeInvalidReason> ValueInvalidReasons { get; }
-        internal NativeArray<ulong> FrameCacheCompletedAt { get; }
+        internal CharacterPoseOperationCompletionPage OperationCompletions { get; }
         internal NativeArray<ulong> StageCompletedAt { get; }
         internal NativeArray<int> StageInvalidOperationIndex { get; }
         internal NativeArray<AnimationPoseNativeInvalidReason> PoseGraphInvalidReason { get; }
@@ -611,7 +669,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             RequireLength(ValueContinuityIdentities, Layout.PoseValueCount);
             RequireLength(ValueDiscontinuities, Layout.PoseValueCount);
             RequireLength(ValueInvalidReasons, Layout.PoseValueCount);
-            RequireLength(FrameCacheCompletedAt, Layout.FrameCacheCount);
+            OperationCompletions.RequireLength(Layout.OperationCount);
             RequireLength(StageCompletedAt, Layout.StageCount);
             RequireLength(StageInvalidOperationIndex, Layout.StageCount);
             RequireLength(PoseGraphInvalidReason, 1);

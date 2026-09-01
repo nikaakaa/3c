@@ -234,13 +234,16 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
                 CharacterLinkedPoseEntryFragmentPlanDescriptor fragment =
                     RequireLinkedPoseFragment(call, group.ImplementationId);
                 CharacterPresentationPoseOperation callOperation = RequireLinkedPoseCallOperation(call.Index);
-                ulong completionIdentity = frame.FrameCacheCompletedAt[callOperation.Index];
-                bool completed = completionIdentity == frame.CompletionIdentity;
+                CharacterPoseOperationCompletion completion =
+                    frame.OperationCompletions[callOperation.Index];
+                ulong completionIdentity = completion.CompletionIdentity;
+                bool completed = completion.Matches(frame.CompletionIdentity);
                 for (int operationIndex = fragment.OperationStart;
                      completed && operationIndex < fragment.OperationStart + fragment.OperationCount;
                      operationIndex++)
                 {
-                    completed = frame.FrameCacheCompletedAt[operationIndex] == frame.CompletionIdentity;
+                    completed = frame.OperationCompletions[
+                        operationIndex].Matches(frame.CompletionIdentity);
                 }
 
                 page.LinkedPoseEntries[callIndex] = new AnimationLinkedPoseEntryRuntimeSnapshot(
@@ -848,7 +851,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
                     frame.ValueInvalidReasons[valueIndex],
                     frame.ValueOutputWeights[valueIndex],
                     frame.ValueContinuityIdentities[valueIndex],
-                    frame.FrameCacheCompletedAt[operation.Index],
+                    frame.OperationCompletions[
+                        operation.Index].CompletionIdentity,
                     contributionOffset,
                     contributionCount);
                 int sourceOffset = checked(valueIndex * frame.Layout.PoseValueContributionStride);
@@ -929,7 +933,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
                 }
                 AnimationLinkedPoseEntryRuntimeSnapshot linkedPoseEntry =
                     FindLinkedPoseEntry(page, operation);
-                ulong completion = frame.FrameCacheCompletedAt[operation.Index];
+                ulong completion = frame.OperationCompletions[
+                    operation.Index].CompletionIdentity;
                 if (operation.OutputFullBodyIkGoalContributionValueIndex >= 0)
                 {
                     int contributionValueIndex =

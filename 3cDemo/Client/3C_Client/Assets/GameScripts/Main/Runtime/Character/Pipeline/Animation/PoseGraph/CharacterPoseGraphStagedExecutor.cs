@@ -238,7 +238,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         NativeArray<ulong> m_ValueContinuityIdentities;
         NativeArray<PoseDiscontinuityNative> m_ValueDiscontinuities;
         NativeArray<AnimationPoseNativeInvalidReason> m_ValueInvalidReasons;
-        NativeArray<ulong> m_FrameCacheCompletedAt;
+        CharacterPoseOperationCompletionPage m_OperationCompletions;
         NativeArray<ulong> m_StageCompletedAt;
         NativeArray<int> m_StageInvalidOperationIndex;
         NativeArray<AnimationPoseNativeInvalidReason> m_PoseGraphInvalidReason;
@@ -375,7 +375,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             m_ValueContinuityIdentities = binding.ValueContinuityIdentities;
             m_ValueDiscontinuities = binding.ValueDiscontinuities;
             m_ValueInvalidReasons = binding.ValueInvalidReasons;
-            m_FrameCacheCompletedAt = binding.FrameCacheCompletedAt;
+            m_OperationCompletions = binding.OperationCompletions;
             m_StageCompletedAt = binding.StageCompletedAt;
             m_StageInvalidOperationIndex = binding.StageInvalidOperationIndex;
             m_PoseGraphInvalidReason = binding.PoseGraphInvalidReason;
@@ -404,8 +404,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             if (frameSequence == 0)
                 throw new ArgumentOutOfRangeException(nameof(frameSequence));
             m_FrameSequence = frameSequence;
-            for (int i = 0; i < m_FrameCacheCompletedAt.Length; i++)
-                m_FrameCacheCompletedAt[i] = 0;
+            m_OperationCompletions.Clear();
             m_PoseGraphInvalidReason[0] = AnimationPoseNativeInvalidReason.None;
             m_PoseGraphInvalidOperationIndex[0] = -1;
             m_PoseGraphCompletedAt[0] = 0;
@@ -433,6 +432,13 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 operationIndex++)
             {
                 AnimationPoseGraphNativeOperation operation = m_Operations[operationIndex];
+                if (!m_OperationCompletions[operation.FrameCacheIndex].IsEmpty)
+                {
+                    RecordDuplicateOperation(
+                        operation.Index,
+                        stage.DiagnosticIndex);
+                    return false;
+                }
                 bool producesPose = operation.OutputValueIndex >= 0;
                 if (operation.LinkedPoseFragmentIndex >= 0 &&
                     !IsLinkedPoseFragmentActive(operation.LinkedPoseFragmentIndex))
@@ -442,7 +448,13 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                         using (ValueResetMarker.Auto())
                             ResetValue(operation.OutputValueIndex);
                     }
-                    m_FrameCacheCompletedAt[operation.FrameCacheIndex] = m_CompletionIdentity;
+                    if (!TryCompleteOperation(
+                            in operation,
+                            CharacterPoseOperationOutcome.Skipped,
+                            stage.DiagnosticIndex))
+                    {
+                        return false;
+                    }
                     continue;
                 }
                 if (producesPose)
@@ -581,13 +593,55 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                     m_StageInvalidOperationIndex[stage.DiagnosticIndex] = operation.Index;
                     stop = true;
                 }
-                m_FrameCacheCompletedAt[operation.FrameCacheIndex] = m_CompletionIdentity;
+                if (!TryCompleteOperation(
+                        in operation,
+                        valueValid
+                            ? CharacterPoseOperationOutcome.Completed
+                            : CharacterPoseOperationOutcome.TypedInvalid,
+                        stage.DiagnosticIndex))
+                {
+                    return false;
+                }
                 if (stop)
                     break;
             }
             if (!stop)
                 m_StageCompletedAt[stage.CompletionIndex] = m_CompletionIdentity;
             return !stop;
+        }
+
+        bool TryCompleteOperation(
+            in AnimationPoseGraphNativeOperation operation,
+            CharacterPoseOperationOutcome outcome,
+            int stageDiagnosticIndex)
+        {
+            var completion = new CharacterPoseOperationCompletion(
+                m_CompletionIdentity,
+                outcome);
+            if (m_OperationCompletions.TryComplete(
+                    operation.FrameCacheIndex,
+                    in completion))
+            {
+                return true;
+            }
+
+            RecordDuplicateOperation(operation.Index, stageDiagnosticIndex);
+            return false;
+        }
+
+        void RecordDuplicateOperation(
+            int operationIndex,
+            int stageDiagnosticIndex)
+        {
+            m_PoseGraphInvalidReason[0] =
+                AnimationPoseNativeInvalidReason.PoseGraphOperationInvalid;
+            m_PoseGraphInvalidOperationIndex[0] = operationIndex;
+            if ((uint)stageDiagnosticIndex <
+                (uint)m_StageInvalidOperationIndex.Length)
+            {
+                m_StageInvalidOperationIndex[stageDiagnosticIndex] =
+                    operationIndex;
+            }
         }
 
         internal void ExecuteSequencePreview(int sourceOperationIndex)
@@ -608,7 +662,17 @@ namespace ThirdPersonCharacter.Pipeline.Animation
 
             ResetValue(sourceOperation.OutputValueIndex);
             EvaluatePlayerInput(sourceOperation);
-            m_FrameCacheCompletedAt[sourceOperation.FrameCacheIndex] = m_CompletionIdentity;
+            if (!TryCompleteOperation(
+                    in sourceOperation,
+                    m_ValueAvailability[sourceOperation.OutputValueIndex] ==
+                    AnimationPoseAvailability.Pose
+                        ? CharacterPoseOperationOutcome.Completed
+                        : CharacterPoseOperationOutcome.TypedInvalid,
+                    -1))
+            {
+                CompleteStagedEvaluation();
+                return;
+            }
             if (m_ValueAvailability[sourceOperation.OutputValueIndex] == AnimationPoseAvailability.Pose &&
                 sourceOperation.OutputValueIndex != m_OutputValueIndex)
             {
@@ -625,8 +689,20 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                         sourceOperation.Index);
                 }
             }
-            for (int i = 0; i < m_FrameCacheCompletedAt.Length; i++)
-                m_FrameCacheCompletedAt[i] = m_CompletionIdentity;
+            for (int i = 0; i < m_OperationCompletions.Count; i++)
+            {
+                if (!m_OperationCompletions[i].IsEmpty)
+                    continue;
+                AnimationPoseGraphNativeOperation operation = m_Operations[i];
+                if (!TryCompleteOperation(
+                        in operation,
+                        CharacterPoseOperationOutcome.Skipped,
+                        -1))
+                {
+                    CompleteStagedEvaluation();
+                    return;
+                }
+            }
             for (int i = 0; i < m_StageCompletedAt.Length; i++)
                 m_StageCompletedAt[i] = m_CompletionIdentity;
             CompleteStagedEvaluation();
@@ -3489,7 +3565,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             {
                 AnimationPoseGraphNativeOperation candidate = m_Operations[i];
                 if (candidate.Index < operationIndex && candidate.OutputValueIndex == value)
-                    return m_FrameCacheCompletedAt[candidate.FrameCacheIndex] == m_CompletionIdentity;
+                    return m_OperationCompletions[
+                        candidate.FrameCacheIndex].Matches(
+                        m_CompletionIdentity);
             }
             return false;
         }

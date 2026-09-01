@@ -55,7 +55,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             internal NativeArray<PoseDiscontinuityNative> ValueDiscontinuities;
             internal NativeArray<AnimationPoseNativeInvalidReason>
                 ValueInvalidReasons;
-            internal NativeArray<ulong> FrameCacheCompletedAt;
+            internal NativeArray<CharacterPoseOperationCompletion>
+                OperationCompletions;
             internal NativeArray<ulong> StageCompletedAt;
             internal NativeArray<int> StageInvalidOperationIndex;
             internal NativeArray<AnimationPoseNativeInvalidReason>
@@ -100,7 +101,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         NativeArray<ulong> m_ValueContinuityIdentities;
         NativeArray<PoseDiscontinuityNative> m_ValueDiscontinuities;
         NativeArray<AnimationPoseNativeInvalidReason> m_ValueInvalidReasons;
-        NativeArray<ulong> m_FrameCacheCompletedAt;
+        NativeArray<CharacterPoseOperationCompletion> m_OperationCompletions;
         NativeArray<ulong> m_StageCompletedAt;
         NativeArray<int> m_StageInvalidOperationIndex;
         NativeArray<AnimationPoseNativeInvalidReason> m_PoseGraphInvalidReason;
@@ -244,7 +245,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 m_ValueContinuityIdentities = Allocate<ulong>(m_Layout.PoseValueCount);
                 m_ValueDiscontinuities = Allocate<PoseDiscontinuityNative>(m_Layout.PoseValueCount);
                 m_ValueInvalidReasons = Allocate<AnimationPoseNativeInvalidReason>(m_Layout.PoseValueCount);
-                m_FrameCacheCompletedAt = Allocate<ulong>(m_Layout.FrameCacheCount);
+                m_OperationCompletions =
+                    Allocate<CharacterPoseOperationCompletion>(
+                        m_Layout.OperationCount);
                 m_StageCompletedAt = Allocate<ulong>(m_Layout.StageCount);
                 m_StageInvalidOperationIndex = Allocate<int>(m_Layout.StageCount);
                 m_PoseGraphInvalidReason = Allocate<AnimationPoseNativeInvalidReason>(1);
@@ -297,8 +300,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 m_ValueDiscontinuities[i] = default;
                 m_ValueInvalidReasons[i] = AnimationPoseNativeInvalidReason.PoseGraphInputIncomplete;
             }
-            for (int i = 0; i < m_FrameCacheCompletedAt.Length; i++)
-                m_FrameCacheCompletedAt[i] = 0;
+            for (int i = 0; i < m_OperationCompletions.Length; i++)
+                m_OperationCompletions[i] = default;
             for (int i = 0; i < m_StageCompletedAt.Length; i++)
             {
                 m_StageCompletedAt[i] = 0;
@@ -491,7 +494,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 m_ValueContinuityIdentities,
                 m_ValueDiscontinuities,
                 m_ValueInvalidReasons,
-                m_FrameCacheCompletedAt,
+                m_OperationCompletions,
                 m_StageCompletedAt,
                 m_StageInvalidOperationIndex,
                 m_PoseGraphInvalidReason,
@@ -560,7 +563,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 PayloadBytes(page.ValueContinuityIdentities) +
                 PayloadBytes(page.ValueDiscontinuities) +
                 PayloadBytes(page.ValueInvalidReasons) +
-                PayloadBytes(page.FrameCacheCompletedAt) +
+                PayloadBytes(page.OperationCompletions) +
                 PayloadBytes(page.StageCompletedAt) +
                 PayloadBytes(page.StageInvalidOperationIndex) +
                 PayloadBytes(page.PoseGraphInvalidReason) +
@@ -607,7 +610,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             ValueContinuityIdentities = m_ValueContinuityIdentities,
             ValueDiscontinuities = m_ValueDiscontinuities,
             ValueInvalidReasons = m_ValueInvalidReasons,
-            FrameCacheCompletedAt = m_FrameCacheCompletedAt,
+            OperationCompletions = m_OperationCompletions,
             StageCompletedAt = m_StageCompletedAt,
             StageInvalidOperationIndex = m_StageInvalidOperationIndex,
             PoseGraphInvalidReason = m_PoseGraphInvalidReason,
@@ -654,7 +657,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 page.ValueContinuityIdentities = Allocate<ulong>(m_Layout.PoseValueCount);
                 page.ValueDiscontinuities = Allocate<PoseDiscontinuityNative>(m_Layout.PoseValueCount);
                 page.ValueInvalidReasons = Allocate<AnimationPoseNativeInvalidReason>(m_Layout.PoseValueCount);
-                page.FrameCacheCompletedAt = Allocate<ulong>(m_Layout.FrameCacheCount);
+                page.OperationCompletions =
+                    Allocate<CharacterPoseOperationCompletion>(
+                        m_Layout.OperationCount);
                 page.StageCompletedAt = Allocate<ulong>(m_Layout.StageCount);
                 page.StageInvalidOperationIndex = Allocate<int>(m_Layout.StageCount);
                 page.PoseGraphInvalidReason = Allocate<AnimationPoseNativeInvalidReason>(1);
@@ -706,7 +711,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             m_ValueContinuityIdentities = page.ValueContinuityIdentities;
             m_ValueDiscontinuities = page.ValueDiscontinuities;
             m_ValueInvalidReasons = page.ValueInvalidReasons;
-            m_FrameCacheCompletedAt = page.FrameCacheCompletedAt;
+            m_OperationCompletions = page.OperationCompletions;
             m_StageCompletedAt = page.StageCompletedAt;
             m_StageInvalidOperationIndex = page.StageInvalidOperationIndex;
             m_PoseGraphInvalidReason = page.PoseGraphInvalidReason;
@@ -733,7 +738,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             DisposeArray(ref page.PoseGraphInvalidReason);
             DisposeArray(ref page.StageInvalidOperationIndex);
             DisposeArray(ref page.StageCompletedAt);
-            DisposeArray(ref page.FrameCacheCompletedAt);
+            DisposeArray(ref page.OperationCompletions);
             DisposeArray(ref page.ValueInvalidReasons);
             DisposeArray(ref page.ValueDiscontinuities);
             DisposeArray(ref page.ValueContinuityIdentities);

@@ -326,10 +326,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Sources
         }
 
         internal int Capacity => m_PhysicalSources.Capacity;
-        internal bool HasBackendFrame => m_Backend.HasOpenFrame;
-        internal bool HasPhysicalFrame => m_PhysicalSources.HasOpenFrame;
-        internal int PendingRegistrationCount =>
-            m_PhysicalSources.PendingRegistrationCount;
 
         internal CharacterPoseSourceFrameLease BeginFrame(
             in CharacterPoseFrameLineage lineage)
@@ -582,24 +578,44 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Sources
             m_PhysicalSources.CommitFrame();
         }
 
-        internal void DiscardBackendFrame(
+        internal void DiscardFrame(
             CharacterPoseSourceFrameLease lease)
         {
             m_FramePage.RequireOpen(lease);
-            m_Backend.DiscardFrame(lease);
-            m_FramePage.Discard(lease);
-        }
-
-        internal void DiscardPhysicalFrame()
-        {
-            m_PhysicalSources.DiscardFrame();
+            Exception failure = null;
+            int pendingRegistrationCount = 0;
+            DiscardStep(
+                () => pendingRegistrationCount =
+                    m_PhysicalSources.PendingRegistrationCount,
+                ref failure);
+            for (int i = pendingRegistrationCount - 1; i >= 0; i--)
+            {
+                AnimationPhysicalSourceIdentity physical = default;
+                DiscardStep(
+                    () => physical =
+                        m_PhysicalSources.GetPendingRegistration(i),
+                    ref failure);
+                if (physical.IsValid)
+                    DiscardStep(() => Disconnect(physical), ref failure);
+            }
+            DiscardStep(
+                () => m_Backend.DiscardFrame(lease),
+                ref failure);
+            DiscardStep(
+                () => m_FramePage.Discard(lease),
+                ref failure);
+            DiscardStep(
+                m_PhysicalSources.DiscardFrame,
+                ref failure);
             ClearBindings();
             ClearReleasePreparations();
+            if (failure != null)
+            {
+                throw new AggregateException(
+                    "Pose Source Pending discard failed.",
+                    failure);
+            }
         }
-
-        internal AnimationPhysicalSourceIdentity GetPendingRegistration(
-            int ordinal) =>
-            m_PhysicalSources.GetPendingRegistration(ordinal);
 
         internal AnimationPhysicalSourceIdentity RequireIdentity(
             AnimationPoseSourceId sourceId,
@@ -726,7 +742,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Sources
             m_ReleasePreparationCount--;
         }
 
-        internal void Disconnect(
+        void Disconnect(
             AnimationPhysicalSourceIdentity physical)
         {
             int port = checked(physical.Index.Value + 1);
@@ -939,6 +955,22 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Sources
         }
 
         static void DisposeStep(
+            Action action,
+            ref Exception failure)
+        {
+            try
+            {
+                action();
+            }
+            catch (Exception exception)
+            {
+                failure = failure == null
+                    ? exception
+                    : new AggregateException(failure, exception);
+            }
+        }
+
+        static void DiscardStep(
             Action action,
             ref Exception failure)
         {

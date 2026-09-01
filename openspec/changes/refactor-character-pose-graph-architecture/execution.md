@@ -543,3 +543,13 @@ A/B均为2086脚行、1222列，其中1198个业务列逐值相同、24个运行
 正式A为`Diagnostics/FootPlacementRuns/20260902-014359-013-28fb4dea2ad6400cac2a3a4c3ded43a7`，候选B为`Diagnostics/FootPlacementRuns/20260902-015216-834-ccd49fe20da6479b91b0913c7c96627e`；B Proof为`Temp/CharacterInputReplayProofs/v4/43357ff3cd384e5cba75d2c31175b116/20260902-015313-475-06524d6bc7d546b3a2b9e4a2d2981ab2.json`，工具对A Proof正式报告`matched:1044`，无failure且Foot Finalizing已结束。
 
 A/B均为2086脚行、1222列，其中1198个业务列逐值相同、24个运行／实例／Surface／Path identity列一一映射且0冲突；Geometry均为67186行、27列，其中22个业务列逐值相同、5个identity列一一映射且0冲突。正式报告的Analyzer版本75、coverage、规则、eligible／matched、七维分项、总分84.2和weighted evidence 96.5保持；只允许既定运行identity、文件／index hash与大小和分析耗时变化。由此确认Post-Seal直接交付没有改变Foot、Pelvis、Goal、FBBIK、Final Pose、Physical或诊断业务；`015216`成为Foot Bridge接入前的正式A。
+
+## Source Module原子丢弃完整内部帧
+
+状态：`CharacterPoseSourceModule.DiscardFrame`现在一次接收唯一`CharacterPoseSourceFrameLease`，在Module内部逆序断开本帧pending physical registration，并尽量完成Backend页、Source Frame页、Physical Registry页、Binding与Release Preparation清理，最后统一抛出聚合故障。`PosePlanExecutionRuntime`无论Begin失败还是正式Discard都只请求Source Module丢弃自己的帧，不再读取`HasBackendFrame`、`HasPhysicalFrame`、`PendingRegistrationCount`，也不再取得physical identity后手动断Fan-In端口。旧分裂Discard入口和外层`DiscardPreparedPhysicalSource`已删除。
+
+任务4.6仍不勾选：外层尚有Standalone／Action release journal及Clip、Blend Space、Motion Matching控制集合需要继续归入对应Program或Source Owner。本步Runtime工程按规定参数编译成功、0错误；27个警告只来自既有Unity／第三方依赖与未使用字段，构建后立即关闭build server。Unity刷新恢复连接后编译成功；回放与退出Play只出现既有FinalIK Domain Reload序列化深度日志，单独记录后清空，3C Console为0。
+
+正式A为`Diagnostics/FootPlacementRuns/20260902-015216-834-ccd49fe20da6479b91b0913c7c96627e`，候选B为`Diagnostics/FootPlacementRuns/20260902-020333-815-08bc7f3b04b44d2daa27b8a4919ce442`；B Proof为`Temp/CharacterInputReplayProofs/v4/43357ff3cd384e5cba75d2c31175b116/20260902-020430-968-69ab7492738548ec83425931c993bc4d.json`，工具对A Proof正式报告`matched:1044`，无failure且Foot Finalizing已结束。
+
+A/B均为2086脚行、1222列，其中1198个业务列逐值相同、24个运行／实例／Surface／Path identity列一一映射且0冲突；Geometry均为67186行、27列，其中22个业务列逐值相同、5个identity列一一映射且0冲突。正式评分版本`foot-quality-seven-dimensions/3`、七维分项、总分84.2和weighted evidence 96.5保持。由此确认Source失败清理归位没有改变成功帧的Source、Foot、Pelvis、Goal、FBBIK、Final Pose、Physical或诊断业务；`020333`成为下一Source外层清理小步的正式A。

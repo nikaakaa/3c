@@ -987,6 +987,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             }
             bool modulesOpen = false;
             bool poseConstraintsOpen = false;
+            bool sourceOpen = false;
             bool publicationOpen = false;
             try
             {
@@ -997,6 +998,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                 m_PendingActionBackendReleaseFrameStartCount =
                     m_PendingActionBackendReleases.Count;
                 sourceLease = m_SourceModule.BeginFrame(in lineage);
+                sourceOpen = true;
                 publicationLease = m_FramePublisher.BeginFrame(in lineage);
                 publicationOpen = true;
                 m_PendingCompletedFrame = default;
@@ -1039,10 +1041,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                     m_InertializationPlan.DiscardFrame();
                 if (m_PosePlan.HasOpenFrame)
                     m_PosePlan.DiscardFrame();
-                if (m_SourceModule.HasPhysicalFrame)
-                    m_SourceModule.DiscardPhysicalFrame();
-                if (m_SourceModule.HasBackendFrame)
-                    m_SourceModule.DiscardBackendFrame(sourceLease);
+                if (sourceOpen)
+                    m_SourceModule.DiscardFrame(sourceLease);
                 m_PendingActionBackendReleaseFrameStartCount = 0;
                 ClearLinkedPoseFrameSelection();
                 throw;
@@ -1237,28 +1237,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             DiscardStep(
                 () => m_PoseConstraints.DiscardFrame(constraintLease),
                 ref failure);
-            if (m_SourceModule.HasPhysicalFrame)
-            {
-                for (int i = m_SourceModule.PendingRegistrationCount - 1; i >= 0; i--)
-                {
-                    AnimationPhysicalSourceIdentity physical = default;
-                    DiscardStep(
-                        () => physical = m_SourceModule.GetPendingRegistration(i),
-                        ref failure);
-                    if (!physical.IsValid)
-                        continue;
-                    DiscardStep(
-                        () => DiscardPreparedPhysicalSource(physical),
-                        ref failure);
-                }
-            }
-            if (m_SourceModule.HasBackendFrame)
-            {
-                DiscardStep(
-                    () => m_SourceModule.DiscardBackendFrame(
-                        sourceLease),
-                    ref failure);
-            }
+            DiscardStep(
+                () => m_SourceModule.DiscardFrame(sourceLease),
+                ref failure);
             for (int i = m_StackRoutes.Length - 1; i >= 0; i--)
             {
                 CharacterAnimationTransitionRouteRuntime route = m_StackRoutes[i];
@@ -1293,12 +1274,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             {
                 DiscardStep(
                     m_PosePlan.DiscardFrame,
-                    ref failure);
-            }
-            if (m_SourceModule.HasPhysicalFrame)
-            {
-                DiscardStep(
-                    m_SourceModule.DiscardPhysicalFrame,
                     ref failure);
             }
             DiscardStep(
@@ -4309,10 +4284,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                     PlayerRelease = playerRelease
                 };
         }
-
-        void DiscardPreparedPhysicalSource(
-            AnimationPhysicalSourceIdentity physical) =>
-            m_SourceModule.Disconnect(physical);
 
         void RestoreGraphClock()
         {

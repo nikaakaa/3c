@@ -473,3 +473,13 @@ A/B均为2086脚行、1222列，其中1198个业务列逐值相同、24个运行
 正式A为`Diagnostics/FootPlacementRuns/20260902-001521-259-0a58993b2ae64106b5e93e82413de6b7`，候选B为`Diagnostics/FootPlacementRuns/20260902-004806-171-217a25ba6e794a92b95a49f903d35030`；B Proof为`Temp/CharacterInputReplayProofs/v4/43357ff3cd384e5cba75d2c31175b116/20260902-004904-251-bce67b695be34b298b17e657414381fb.json`，工具对A Proof正式报告`matched:1044`，无failure且Foot Finalizing已结束。
 
 A/B均为2086脚行、1222列，其中1198个业务列逐值相同、24个运行／实例／Surface／Path identity列一一映射且0冲突；Geometry均为67186行、27列，其中22个业务列逐值相同、5个identity列一一映射且0冲突。十份正式报告除Sample／文件／index hash、detail字节与分析耗时外归一化后10／10相同；七维分项、总分84.2和weighted evidence 96.5不变。由此确认删除Constraint Pending的第二Completion身份没有改变Foot、Pelvis、Goal、Assembler、Bend、FBBIK、Final Pose、Physical或正式诊断业务；任务3.7完成，`004806`成为下一PoseGraph小步的正式A。
+
+## Source release成对Owner收口
+
+状态：候选已删除`CharacterPoseSourceModule`对外暴露的原始`AnimationPhysicalSourceReleaseToken`准备／应用入口。Blend Stack正常retirement以及Direct、Clip、Blend Space清理现在全部取得Module-owned `ReleasePreparation`；该token在同一固定页中成对保存backend与physical release，并由Source Module唯一执行fan-in断开、backend release和Physical Registry release。Player／Stack仍只提交自己的逻辑release，不接触Playable或Physical资源。
+
+本步没有勾选任务4.4：prepared source创建、slot reuse、retirement permission和全部release completion还需继续从旧Runtime迁入Source Module；这里只关闭了已确认的physical-only旁路。`ThirdPersonClient.Runtime.csproj`按规定参数编译成功，0错误；27个警告只来自既有Unity／第三方依赖和Input Value未使用字段，build server已立即关闭。Unity刷新、回放和退出Play只出现同一条FinalIK Domain Reload序列化深度日志，单独记录后清空，3C Console为0。
+
+正式A为`Diagnostics/FootPlacementRuns/20260902-004806-171-217a25ba6e794a92b95a49f903d35030`，候选B为`Diagnostics/FootPlacementRuns/20260902-005827-531-c0d4c41e222548d4b3f49b20e40662ef`；B Proof为`Temp/CharacterInputReplayProofs/v4/43357ff3cd384e5cba75d2c31175b116/20260902-005923-994-17e8b72516ff4cbaac3c542ab77a5b1d.json`，工具对A Proof正式报告`matched:1044`，无failure且Foot Finalizing已结束。
+
+A/B均为2086脚行、1222列，其中1198个业务列逐值相同、24个运行／实例／Surface／Path identity列一一映射且0冲突；Geometry均为67186行、27列，其中22个业务列逐值相同、5个identity列一一映射且0冲突。十份正式报告在排除既定运行identity、文件／index hash与大小和分析耗时后逐字段语义对账10／10相同；七维分项、总分84.2和weighted evidence 96.5不变。由此确认成对release Owner收口没有改变source retirement时机、动画时钟、Foot、Pelvis、Goal、FBBIK、Final Pose、Physical或正式诊断业务；`005827`成为下一Source生命周期小步的正式A。

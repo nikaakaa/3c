@@ -3550,19 +3550,15 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                             completionIdentity);
                     AnimationBlendStackRelease release =
                         stackRelease.Release;
-                    AnimationPhysicalSourceIdentity physical =
-                        m_SourceModule.RequireIdentity(
-                            release.SourceId,
-                            release.PoseNodeId);
-                    AnimationPhysicalSourceReleaseToken physicalRelease =
+                    CharacterPoseSourceModule.ReleasePreparation sourceRelease =
                         m_SourceModule.PrepareRelease(
-                            physical,
-                            release.SourceId);
-                    m_SourceModule.Disconnect(physical);
+                            release.SourceId,
+                            release.PoseNodeId,
+                            default);
+                    m_SourceModule.ApplyPreparedRelease(
+                        in sourceRelease);
                     stack.ApplyPreparedRelease(
                         in stackRelease);
-                    m_SourceModule.ApplyPreparedRelease(
-                        in physicalRelease);
                     releasedAny = true;
                 }
                 if (releasedAny)
@@ -4371,14 +4367,13 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                         player.PrepareRelease(releaseIndex);
                     AnimationPoseSourceId sourceId =
                         playerRelease.SourceId;
-                    AnimationPhysicalSourceIdentity physical = m_SourceModule.RequireIdentity(sourceId, player.NodeId);
-                    AnimationPhysicalSourceReleaseToken physicalRelease =
+                    CharacterPoseSourceModule.ReleasePreparation sourceRelease =
                         m_SourceModule.PrepareRelease(
-                            physical,
-                            sourceId);
-                    m_SourceModule.Disconnect(physical);
+                            sourceId,
+                            player.NodeId,
+                            default);
                     m_SourceModule.ApplyPreparedRelease(
-                        in physicalRelease);
+                        in sourceRelease);
                     player.ApplyPreparedRelease(
                         in playerRelease);
                 }
@@ -4404,15 +4399,13 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                         player.PrepareRelease(releaseIndex);
                     AnimationPoseSourceId sourceId =
                         playerRelease.SourceId;
-                    AnimationPhysicalSourceIdentity physical =
-                        m_SourceModule.RequireIdentity(sourceId, player.NodeId);
-                    AnimationPhysicalSourceReleaseToken physicalRelease =
+                    CharacterPoseSourceModule.ReleasePreparation sourceRelease =
                         m_SourceModule.PrepareRelease(
-                            physical,
-                            sourceId);
-                    m_SourceModule.Disconnect(physical);
+                            sourceId,
+                            player.NodeId,
+                            default);
                     m_SourceModule.ApplyPreparedRelease(
-                        in physicalRelease);
+                        in sourceRelease);
                     player.ApplyPreparedRelease(
                         in playerRelease);
                 }
@@ -4438,17 +4431,13 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                         player.PrepareRelease(releaseIndex);
                     AnimationPoseSourceId sourceId =
                         playerRelease.SourceId;
-                    AnimationPhysicalSourceIdentity physical =
-                        m_SourceModule.RequireIdentity(
-                            sourceId,
-                            player.NodeId);
-                    AnimationPhysicalSourceReleaseToken physicalRelease =
+                    CharacterPoseSourceModule.ReleasePreparation sourceRelease =
                         m_SourceModule.PrepareRelease(
-                            physical,
-                            sourceId);
-                    m_SourceModule.Disconnect(physical);
+                            sourceId,
+                            player.NodeId,
+                            default);
                     m_SourceModule.ApplyPreparedRelease(
-                        in physicalRelease);
+                        in sourceRelease);
                     player.ApplyPreparedRelease(
                         in playerRelease);
                 }

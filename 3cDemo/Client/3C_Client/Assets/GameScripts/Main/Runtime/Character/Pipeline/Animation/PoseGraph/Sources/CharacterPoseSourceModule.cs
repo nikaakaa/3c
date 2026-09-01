@@ -638,11 +638,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Sources
         internal void ClearReleaseValidation() =>
             m_ReleaseValidationIdentities.Clear();
 
-        internal AnimationPhysicalSourceReleaseToken PrepareRelease(
-            AnimationPhysicalSourceIdentity physical,
-            AnimationPoseSourceId sourceId) =>
-            m_PhysicalSources.PrepareRelease(physical, sourceId);
-
         internal ReleasePreparation PrepareRelease(
             AnimationPoseSourceId sourceId,
             PoseNodeId poseNodeId,
@@ -686,10 +681,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Sources
                 sourceId,
                 poseNodeId);
         }
-
-        internal void ApplyPreparedRelease(
-            in AnimationPhysicalSourceReleaseToken release) =>
-            m_PhysicalSources.ApplyPreparedRelease(in release);
 
         internal void ApplyPreparedRelease(
             in ReleasePreparation release)

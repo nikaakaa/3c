@@ -8602,7 +8602,10 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         {
             const float endpoint = 0.005f;
             CharacterFootPelvisPostureSample posture = frame.Pelvis.Posture;
-            RequirePelvis(posture.Evaluated == frame.Pelvis.HeightTarget.Available, frame, "posture execution");
+            RequirePelvis(
+                posture.Evaluated == (frame.Pelvis.State == "Accepted"),
+                frame,
+                "posture execution");
             if (!posture.Evaluated)
             {
                 RequirePelvis(posture.SameAs(new CharacterFootPelvisPostureSample()), frame, "unevaluated posture");
@@ -8649,8 +8652,27 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         static void RequirePelvisFacts(FootFrame frame)
         {
             RequireEnum<CharacterFootStrideState>(frame.Pelvis.State, "StrideState");
-            RequirePelvis(frame.Pelvis.HeightTarget.Available == (frame.Pelvis.State == "Accepted"),
+            bool bilateralSupport = frame.Pelvis.State == "BilateralSupport";
+            RequirePelvis(
+                frame.Pelvis.HeightTarget.Available ==
+                (frame.Pelvis.State == "Accepted" || bilateralSupport),
                 frame, "height target execution");
+            if (bilateralSupport)
+            {
+                RequirePelvis(
+                    frame.Pelvis.RejectReason ==
+                    CharacterFootStrideRejectReason.None &&
+                    frame.Pelvis.SupportSide == "0" &&
+                    frame.Pelvis.SwingSide == "0" &&
+                    frame.Pelvis.Slope == CharacterFootStrideSlope.Flat &&
+                    frame.Pelvis.HeightTarget.RequestedOffsetAlongUp >
+                    RuntimeGeometryEpsilon &&
+                    frame.Resolved.SupportTarget.Available &&
+                    frame.Resolved.SupportTarget.PositionSource ==
+                    CharacterFootSupportPositionSource.ContactAnchor.ToString(),
+                    frame,
+                    "bilateral support admission");
+            }
             RequirePelvisObservation(frame);
             RequirePelvisReach(frame);
             RequirePelvisPosture(frame);
@@ -8668,7 +8690,13 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 ? response.HadPreviousState &&
                   frame.Pelvis.State == (response.Completed ? "Rejected" : "Releasing")
                 : !response.Completed, frame, "response execution");
-            float preferred = releasing ? 0f : frame.Pelvis.Posture.OffsetAlongUp;
+            float preferred = releasing
+                ? 0f
+                : bilateralSupport
+                    ? Mathf.Max(
+                        0f,
+                        frame.Pelvis.HeightTarget.RequestedOffsetAlongUp)
+                    : frame.Pelvis.Posture.OffsetAlongUp;
             float target = preferred;
             RequirePelvis(float.IsFinite(response.Frequency) && response.Frequency > 0f &&
                 PelvisClose(response.Input, response.PreviousOutput) &&
@@ -8785,7 +8813,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         static void RequirePelvisObservation(FootFrame frame)
         {
             CharacterFootPelvisObservationSample observation = frame.Pelvis.Observation;
-            bool poseExpected = frame.Pelvis.State == "Accepted" || frame.Pelvis.State == "Releasing";
+            bool poseExpected = frame.Pelvis.State == "Accepted" ||
+                frame.Pelvis.State == "Releasing" ||
+                frame.Pelvis.State == "BilateralSupport";
             RequirePelvis(observation.PoseInputAvailable == poseExpected &&
                 FiniteVector(observation.PoseRootWorldPosition) &&
                 FiniteVector(observation.AnimatedWorldPosition) &&
@@ -8822,14 +8852,37 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     previous.Identity.ProgramIdentity != current.Identity.ProgramIdentity || previous.Identity.ProfileRevision != current.Identity.ProfileRevision ||
                     previous.BodyCorrection.ResetSequence != current.BodyCorrection.ResetSequence)
                     continue;
-                bool supportChanged = !current.Pelvis.HeightTarget.Available || !previous.Pelvis.HeightTarget.Available ||
-                    previous.Pelvis.SupportSide != current.Pelvis.SupportSide ||
-                    previous.PrimarySupport.LandingEventIdentity != current.PrimarySupport.LandingEventIdentity;
+                bool previousUsesPrimary = previous.Pelvis.State == "Accepted";
+                bool currentUsesPrimary = current.Pelvis.State == "Accepted";
+                bool supportChanged = !current.Pelvis.HeightTarget.Available ||
+                    previousUsesPrimary != currentUsesPrimary ||
+                    currentUsesPrimary &&
+                    (previous.Pelvis.SupportSide != current.Pelvis.SupportSide ||
+                     previous.PrimarySupport.LandingEventIdentity !=
+                     current.PrimarySupport.LandingEventIdentity);
                 RequirePelvis(prior.Evaluated && !prior.Completed &&
                     PelvisClose(response.PreviousTarget, prior.Target) && PelvisClose(response.PreviousOutput, prior.Output) &&
                     PelvisClose(response.PreviousVelocity, prior.Velocity) && response.SupportChanged == supportChanged &&
-                    response.PreviousSlope == (previous.Pelvis.HeightTarget.Available ? previous.Pelvis.Slope : CharacterFootStrideSlope.Flat),
+                    response.PreviousSlope ==
+                    (previousUsesPrimary
+                        ? previous.Pelvis.Slope
+                        : CharacterFootStrideSlope.Flat),
                     current, "committed spring carry");
+                if (current.Pelvis.State == "BilateralSupport")
+                {
+                    RequirePelvis(
+                        other.Pelvis.State == "BilateralSupport" &&
+                        current.Resolved.SupportTarget.Available &&
+                        other.Resolved.SupportTarget.Available &&
+                        current.Resolved.SupportTarget.PositionSource ==
+                        CharacterFootSupportPositionSource.ContactAnchor.ToString() &&
+                        other.Resolved.SupportTarget.PositionSource ==
+                        CharacterFootSupportPositionSource.ContactAnchor.ToString() &&
+                        current.Pelvis.HeightTarget.RequestedOffsetAlongUp >
+                        RuntimeGeometryEpsilon,
+                        current,
+                        "bilateral support pair");
+                }
                 bool pairTargetsAvailable =
                     current.Resolved.Outcome == "Ready" &&
                     other.Resolved.Outcome == "Ready" &&

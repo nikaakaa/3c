@@ -9,7 +9,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         None = 0,
         Rejected = 1,
         Accepted = 2,
-        Releasing = 3
+        Releasing = 3,
+        BilateralSupport = 4
     }
 
     public enum CharacterFootStrideRejectReason : byte
@@ -591,7 +592,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         internal bool Accepted => State == CharacterFootStrideState.Accepted;
         internal bool ProducesPelvisGoal =>
             State == CharacterFootStrideState.Accepted ||
-            State == CharacterFootStrideState.Releasing;
+            State == CharacterFootStrideState.Releasing ||
+            State == CharacterFootStrideState.BilateralSupport;
         internal float SpringTarget => Response.Target;
         internal float SpringOutput => Response.Output;
         internal float SpringVelocity => Response.Velocity;
@@ -745,6 +747,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             in CharacterFootPelvisReachInput reach,
             bool pairTargetsAvailable,
             float pairTargetHeightSpread,
+            bool bilateralSupportAvailable,
             bool supportAvailable,
             Vector3 supportAnkle,
             float supportGoalWeight)
@@ -755,6 +758,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             Reach = reach;
             PairTargetsAvailable = pairTargetsAvailable;
             PairTargetHeightSpread = pairTargetHeightSpread;
+            BilateralSupportAvailable = bilateralSupportAvailable;
             SupportAvailable = supportAvailable;
             SupportAnkle = supportAnkle;
             SupportGoalWeight = supportGoalWeight;
@@ -766,6 +770,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         internal CharacterFootPelvisReachInput Reach { get; }
         internal bool PairTargetsAvailable { get; }
         internal float PairTargetHeightSpread { get; }
+        internal bool BilateralSupportAvailable { get; }
         internal bool SupportAvailable { get; }
         internal Vector3 SupportAnkle { get; }
         internal float SupportGoalWeight { get; }
@@ -1087,11 +1092,24 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     frame.LeftCorrectedSole - frame.RightCorrectedSole,
                     frame.ComponentUp.normalized))
                 : 0f;
+            CharacterFootPlacementRequest leftRequest = requests.Left;
+            CharacterFootPlacementRequest rightRequest = requests.Right;
+            bool bilateralSupportAvailable = pairTargetsAvailable &&
+                OwnsContactSupport(in leftRequest) &&
+                OwnsContactSupport(in rightRequest);
             return new CharacterFootPelvisInput(
                 in intent, in primarySupport, in frame, in reach,
                 pairTargetsAvailable, pairTargetHeightSpread,
+                bilateralSupportAvailable,
                 supportAvailable, support.Pose.EffectiveAnkle, support.Pose.GoalWeight);
         }
+
+        static bool OwnsContactSupport(in CharacterFootPlacementRequest request) =>
+            request.Support.Target.PositionSource ==
+            CharacterFootSupportPositionSource.ContactAnchor &&
+            request.Support.Eligibility != CharacterFootSupportEligibility.None &&
+            request.Support.Weight > GeometryEpsilon &&
+            request.Support.EventIdentity != 0;
 
         internal static CharacterFootStrideHipsResult ResolvePelvis(
             in CharacterFootPelvisInput input,
@@ -1107,6 +1125,22 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 settings.PelvisSameLevelTargetTolerance;
             if (!intent.Accepted)
             {
+                if (input.BilateralSupportAvailable && sameLevelWorldDownLimit)
+                {
+                    ValidatePelvisFrame(in frame);
+                    CharacterFootPelvisHeightTarget bilateralTarget =
+                        BuildHeightTarget(in frame);
+                    if (bilateralTarget.OffsetAlongUp > GeometryEpsilon)
+                    {
+                        return ResolvePelvisBilateralSupport(
+                            in bilateralTarget,
+                            input.PairTargetHeightSpread,
+                            in frame,
+                            in reachInput,
+                            in settings,
+                            ref spring);
+                    }
+                }
                 if (!intent.ReleasePelvis)
                 {
                     spring.Clear();
@@ -1159,12 +1193,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 : rise < -EndpointTolerance
                     ? CharacterFootStrideSlope.Descending
                     : CharacterFootStrideSlope.Flat;
-            var heightTarget = new CharacterFootPelvisHeightTarget(
-                up,
-                frame.Pose.Left.HeelPosition * 0.5f + frame.Pose.Left.ToePosition * 0.5f,
-                frame.Pose.Right.HeelPosition * 0.5f + frame.Pose.Right.ToePosition * 0.5f,
-                frame.LeftCorrectedSole,
-                frame.RightCorrectedSole);
+            CharacterFootPelvisHeightTarget heightTarget =
+                BuildHeightTarget(in frame);
             CharacterFootPlacementAnimatedFootPose supportPose =
                 intent.SupportSide == CharacterFootSide.Left ? frame.Pose.Left : frame.Pose.Right;
             float supportLegLength = intent.SupportSide == CharacterFootSide.Left
@@ -1233,6 +1263,61 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 default, default, default, default, 0f,
                 CharacterFootStrideSlope.Flat, default, false, default, default, default,
                 default, default, reach, response);
+
+        static CharacterFootPelvisHeightTarget BuildHeightTarget(
+            in CharacterFootPelvisFrame frame) =>
+            new(
+                frame.ComponentUp.normalized,
+                frame.Pose.Left.HeelPosition * 0.5f +
+                frame.Pose.Left.ToePosition * 0.5f,
+                frame.Pose.Right.HeelPosition * 0.5f +
+                frame.Pose.Right.ToePosition * 0.5f,
+                frame.LeftCorrectedSole,
+                frame.RightCorrectedSole);
+
+        static CharacterFootStrideHipsResult ResolvePelvisBilateralSupport(
+            in CharacterFootPelvisHeightTarget heightTarget,
+            float pairTargetHeightSpread,
+            in CharacterFootPelvisFrame frame,
+            in CharacterFootPelvisReachInput reachInput,
+            in CharacterFootMotionSettings settings,
+            ref CharacterFootPelvisSpringState spring)
+        {
+            Vector3 up = frame.ComponentUp.normalized;
+            CharacterFootLandingReachRequest noPrimary = default;
+            CharacterFootPelvisReachObservation reach = ResolveReachObservation(
+                up, in reachInput, false, default, in noPrimary);
+            CharacterFootPelvisSpringStep response = AdvancePelvisResponse(
+                heightTarget.OffsetAlongUp,
+                false,
+                default,
+                0,
+                CharacterFootStrideSlope.Flat,
+                in frame,
+                reach.HasLandingRequests,
+                true,
+                pairTargetHeightSpread,
+                in settings,
+                ref spring);
+            return new CharacterFootStrideHipsResult(
+                CharacterFootStrideState.BilateralSupport,
+                CharacterFootStrideRejectReason.None,
+                default,
+                default,
+                default,
+                default,
+                0f,
+                CharacterFootStrideSlope.Flat,
+                default,
+                true,
+                frame.PoseRootPosition,
+                frame.AnimatedPelvis,
+                frame.AnimatedPelvisComponentPosition,
+                heightTarget,
+                default,
+                reach,
+                response);
+        }
 
         static CharacterFootStrideHipsResult ResolvePelvisRelease(
             CharacterFootStrideRejectReason reason,

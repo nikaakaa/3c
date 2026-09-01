@@ -846,8 +846,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
         internal void RetargetFootPlacement(ulong resetSequence) =>
             m_PoseConstraints.RetargetFootPlacement(resetSequence);
 
-        internal void DiscardPoseConstraintsAfterBarrier() =>
-            m_PoseConstraints.DiscardFrame();
+        internal void DiscardPoseConstraintsAfterBarrier(
+            CharacterPoseConstraintFrameLease constraintLease) =>
+            m_PoseConstraints.DiscardFrame(constraintLease);
 
         internal string ApplyTuning(
             CharacterPoseTuningLayout layout,
@@ -972,9 +973,11 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             in CharacterPoseFrameLineage lineage,
             AnimationPresentationDiagnosticsInterest diagnosticsInterest,
             CharacterLinkedPoseRuntimeSession linkedPose,
-            out CharacterPoseSourceFrameLease sourceLease)
+            out CharacterPoseSourceFrameLease sourceLease,
+            out CharacterPoseConstraintFrameLease constraintLease)
         {
             sourceLease = default;
+            constraintLease = default;
             RequireAlive();
             if (!lineage.IsOpenValid || lineage.CompletionIdentity != 0)
                 throw new ArgumentException("Pose Program frame lineage is invalid.", nameof(lineage));
@@ -1016,9 +1019,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             bool poseConstraintsOpen = false;
             try
             {
-                m_PoseConstraints.BeginFrame(
-                    frameIdentity,
-                    presentationFrame,
+                constraintLease = m_PoseConstraints.BeginFrame(
+                    in lineage,
                     diagnosticsInterest);
                 poseConstraintsOpen = true;
                 m_PendingActionBackendReleaseFrameStartCount =
@@ -1046,7 +1048,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             catch
             {
                 if (poseConstraintsOpen)
-                    m_PoseConstraints.DiscardFrame();
+                    m_PoseConstraints.DiscardFrame(constraintLease);
                 if (modulesOpen)
                     DiscardPendingModuleFrames();
                 for (int i = m_StackRoutes.Length - 1; i >= 0; i--)
@@ -1075,7 +1077,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
 
         internal void SealFrame(
             CharacterPoseProgramFrameLease lease,
-            CharacterPoseSourceFrameLease sourceLease)
+            CharacterPoseSourceFrameLease sourceLease,
+            CharacterPoseConstraintFrameLease constraintLease)
         {
             RequireMutation(lease);
             m_SourceBackend.RequirePendingReady(sourceLease);
@@ -1106,7 +1109,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             for (int i = 0; i < m_DirectPlayers.Length; i++)
                 m_DirectPlayers[i].CommitFrame();
             m_PoseStateSources.CommitFrame();
-            m_PoseConstraints.SealFrame();
+            m_PoseConstraints.SealFrame(constraintLease);
             m_LastCompletedFrame = m_PendingCompletedFrame;
             m_HasCompletedFrame = true;
             m_PendingCompletedFrame = default;
@@ -1284,13 +1287,14 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
 
         internal void DiscardPendingFrame(
             CharacterPoseProgramFrameLease lease,
-            CharacterPoseSourceFrameLease sourceLease)
+            CharacterPoseSourceFrameLease sourceLease,
+            CharacterPoseConstraintFrameLease constraintLease)
         {
             RequireMutation(lease);
             m_SourceBackend.RequirePendingOpen(sourceLease);
             Exception failure = null;
             DiscardStep(
-                m_PoseConstraints.DiscardFrame,
+                () => m_PoseConstraints.DiscardFrame(constraintLease),
                 ref failure);
             if (m_PhysicalSources.HasOpenFrame)
             {
@@ -2672,6 +2676,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             in CharacterBodyPresentationFrame bodyFrame,
             in CharacterPresentationFactFrame factFrame,
             CharacterPoseSourceFrameLease sourceLease,
+            CharacterPoseConstraintFrameLease constraintLease,
             in CharacterPoseProgramPrepared prepared,
             Action enterEvaluateBarrier)
         {
@@ -2773,6 +2778,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                     in finalRead);
             CharacterPoseConstraintResult constraintResult =
                 m_PoseConstraints.CompleteFrame(
+                    constraintLease,
                     in completedLineage,
                     programResult.OutputAvailability,
                     programResult.OutputInvalidReason,

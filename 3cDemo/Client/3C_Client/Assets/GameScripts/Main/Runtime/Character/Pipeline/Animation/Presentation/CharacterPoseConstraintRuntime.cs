@@ -84,28 +84,19 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             internal NativeArray<CharacterFullBodyIkGoal> ContributionGoals;
             internal readonly CharacterFootPlacementBank FootPlacement;
             internal ulong Identity;
-            internal ulong FrameIdentity;
-            internal ulong RenderFrame;
+            internal CharacterPoseConstraintFrameLease Lease;
             internal ulong CompletionIdentity;
-            internal FixedString64Bytes RigId;
-            internal FixedString64Bytes RigRevision;
             internal AnimationPhysicalBoneWriteDiagnostics PhysicalWrite;
             internal AnimationPresentationDiagnosticsInterest DiagnosticsInterest;
 
             internal void Begin(
-                ulong frameIdentity,
-                ulong renderFrame,
+                in CharacterPoseConstraintFrameLease lease,
                 AnimationPresentationDiagnosticsInterest diagnosticsInterest,
-                Bank committed,
-                FixedString64Bytes rigId,
-                FixedString64Bytes rigRevision)
+                Bank committed)
             {
-                FrameIdentity = frameIdentity;
-                RenderFrame = renderFrame;
+                Lease = lease;
                 CompletionIdentity = 0;
                 DiagnosticsInterest = diagnosticsInterest;
-                RigId = rigId;
-                RigRevision = rigRevision;
                 PhysicalWrite = default;
                 SolverOutcome = default;
                 SolverDiagnostics = default;
@@ -131,12 +122,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
 
             internal void ClearPending()
             {
-                FrameIdentity = 0;
-                RenderFrame = 0;
+                Lease = default;
                 CompletionIdentity = 0;
                 DiagnosticsInterest = AnimationPresentationDiagnosticsInterest.None;
-                RigId = default;
-                RigRevision = default;
                 PhysicalWrite = default;
                 SolverOutcome = default;
                 SolverDiagnostics = default;
@@ -270,7 +258,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             m_HasPending && m_Pending.GoalSet.IsValid;
         internal ulong CommittedBankIdentity => m_HasCommitted ? m_Committed.Identity : 0;
         internal ulong CommittedRenderFrame =>
-            m_HasCommitted ? m_Committed.RenderFrame : 0;
+            m_HasCommitted ? m_Committed.Lease.PresentationFrame : 0;
         internal bool HasCommittedFootDiagnostics =>
             m_HasCommitted &&
             m_Committed.FootPlacement?.Diagnostics.HasValue == true;
@@ -281,27 +269,33 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
         internal AnimationPhysicalBoneWriteDiagnostics PhysicalWriteDiagnostics =>
             m_HasCommitted ? m_Committed.PhysicalWrite : default;
 
-        internal void BeginFrame(
-            ulong frameIdentity,
-            ulong renderFrame,
+        internal CharacterPoseConstraintFrameLease BeginFrame(
+            in CharacterPoseFrameLineage lineage,
             AnimationPresentationDiagnosticsInterest diagnosticsInterest)
         {
             RequireAlive();
-            if (frameIdentity == 0 || renderFrame == 0)
-                throw new ArgumentOutOfRangeException(nameof(frameIdentity));
+            var lineageRigId = new FixedString64Bytes(lineage.RigId);
+            var lineageRigRevision =
+                new FixedString64Bytes(lineage.RigRevision);
+            if (!lineage.IsOpenValid ||
+                lineage.CompletionIdentity != 0 ||
+                !lineageRigId.Equals(m_RigId) ||
+                !lineageRigRevision.Equals(m_RigRevision))
+            {
+                throw new ArgumentException("Pose Constraint lineage is invalid.", nameof(lineage));
+            }
             if (m_HasPending)
                 throw new InvalidOperationException("Pose Constraint frame is already open.");
+            var lease = new CharacterPoseConstraintFrameLease(in lineage);
             m_Pending = m_HasCommitted && ReferenceEquals(m_Committed, m_First)
                 ? m_Second
                 : m_First;
             m_Pending.Begin(
-                frameIdentity,
-                renderFrame,
+                in lease,
                 diagnosticsInterest,
-                m_HasCommitted ? m_Committed : null,
-                m_RigId,
-                m_RigRevision);
+                m_HasCommitted ? m_Committed : null);
             m_HasPending = true;
+            return lease;
         }
 
         internal CharacterFullBodyIkGoalContributionHeader PrepareFootPlacement(
@@ -523,21 +517,17 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
         }
 
         internal CharacterPoseConstraintResult CompleteFrame(
+            CharacterPoseConstraintFrameLease lease,
             in CharacterPoseFrameLineage lineage,
             AnimationPoseAvailability programAvailability,
             AnimationPoseNativeInvalidReason outputInvalidReason,
             AnimationPoseNativeInvalidReason graphInvalidReason)
         {
             RequireAlive();
-            var lineageRigId = new FixedString64Bytes(lineage.RigId);
-            var lineageRigRevision =
-                new FixedString64Bytes(lineage.RigRevision);
             if (!lineage.IsValid ||
                 !m_HasPending ||
-                m_Pending.FrameIdentity != lineage.FrameIdentity ||
-                m_Pending.RenderFrame != lineage.PresentationFrame ||
-                !m_Pending.RigId.Equals(lineageRigId) ||
-                !m_Pending.RigRevision.Equals(lineageRigRevision))
+                m_Pending.Lease.Lineage != lease.Lineage ||
+                !lease.Matches(lineage))
             {
                 throw new InvalidOperationException(
                     "Pose Constraint lineage is inconsistent at completion.");
@@ -603,8 +593,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                 in solverResult);
         }
 
-        internal void SealFrame()
+        internal void SealFrame(
+            CharacterPoseConstraintFrameLease lease)
         {
+            RequirePendingLease(lease);
             if (m_Pending.FootPlacement != null)
                 m_Pending.FootPlacement.IsPendingFrameOpen = false;
             m_Pending.Identity = m_NextBankIdentity++;
@@ -615,11 +607,16 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             m_FootPlacement?.PublishCommittedDiagnostics(m_Committed.FootPlacement);
         }
 
-        internal void DiscardFrame()
+        internal void DiscardFrame(
+            CharacterPoseConstraintFrameLease lease)
         {
             RequireAlive();
-            if (!m_HasPending)
-                return;
+            RequirePendingLease(lease);
+            DiscardPending();
+        }
+
+        void DiscardPending()
+        {
             m_FootPlacement?.ReleasePendingPages(
                 m_HasCommitted ? m_Committed.FootPlacement : null,
                 m_Pending.FootPlacement);
@@ -641,7 +638,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             if (m_FootPlacement == null)
                 return;
             if (m_HasPending)
-                DiscardFrame();
+                DiscardPending();
             m_First.FootPlacement.Reset(
                 CharacterFootCorrectionResponseInitializationReason
                     .FootPlacementReset);
@@ -657,7 +654,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             if (m_FootPlacement == null)
                 return;
             if (m_HasPending)
-                DiscardFrame();
+                DiscardPending();
             m_First.FootPlacement.Reset(
                 CharacterFootCorrectionResponseInitializationReason.Retarget);
             m_Second.FootPlacement.Reset(
@@ -668,15 +665,31 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
         void RequireRenderFrame(ulong renderFrame, ulong completionIdentity)
         {
             RequireAlive();
-            if (!m_HasPending || m_Pending.RenderFrame != renderFrame)
+            if (!m_HasPending ||
+                m_Pending.Lease.PresentationFrame != renderFrame)
                 throw new InvalidOperationException("Pose Constraint pending frame identity is inconsistent.");
             BindCompletion(completionIdentity);
+        }
+
+        void RequirePendingLease(
+            CharacterPoseConstraintFrameLease lease)
+        {
+            RequireAlive();
+            if (!m_HasPending ||
+                !lease.IsValid ||
+                !m_Pending.Lease.IsValid ||
+                m_Pending.Lease.Lineage != lease.Lineage)
+            {
+                throw new InvalidOperationException(
+                    "Pose Constraint Pending lease is stale.");
+            }
         }
 
         void RequireTransactionFrame(ulong frameIdentity, ulong completionIdentity)
         {
             RequireAlive();
-            if (!m_HasPending || m_Pending.FrameIdentity != frameIdentity)
+            if (!m_HasPending ||
+                m_Pending.Lease.FrameIdentity != frameIdentity)
                 throw new InvalidOperationException("Pose Constraint pending transaction identity is inconsistent.");
             BindCompletion(completionIdentity);
         }

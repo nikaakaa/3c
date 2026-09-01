@@ -622,6 +622,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     in bodyFrame,
                     in factFrame,
                     transaction.SourceLease,
+                    transaction.ConstraintLease,
                     in preparedPose,
                     m_EnterEvaluateBarrier);
                 transaction.BindExecutionResults(in executionResult);
@@ -742,7 +743,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 }
                 else
                 {
-                    m_PoseRuntime.DiscardPoseConstraintsAfterBarrier();
+                    m_PoseRuntime.DiscardPoseConstraintsAfterBarrier(
+                        transaction.ConstraintLease);
                     MarkFaulted(transaction);
                     linkedPose.Discard();
                 }
@@ -893,6 +895,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             AnimationSlotMutationLease slot = default;
             CharacterPoseProgramFrameLease pose = default;
             CharacterPoseSourceFrameLease source = default;
+            CharacterPoseConstraintFrameLease constraint = default;
             MotionMatchingFrameMutationLease motionMatching =
                 default;
             m_NextFrameTransactionIdentity++;
@@ -941,7 +944,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     in lineage,
                     diagnosticsInterest,
                     linkedPose,
-                    out source);
+                    out source,
+                    out constraint);
                 m_FrameTransaction.Begin(
                     in lineage,
                     workspaceLease,
@@ -950,6 +954,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     slot,
                     pose,
                     source,
+                    constraint,
                     motionMatching,
                     m_MotionMatching != null);
                 m_FrameTransaction.BeginPrepare();
@@ -963,7 +968,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     DiscardStep(
                         () => m_PoseRuntime.DiscardPendingFrame(
                             pose,
-                            source),
+                            source,
+                            constraint),
                         ref discardFailure);
                 }
                 if (motionMatching.IsValid)
@@ -1387,7 +1393,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             }
             m_PoseRuntime.SealFrame(
                 transaction.PoseLease,
-                transaction.SourceLease);
+                transaction.SourceLease,
+                transaction.ConstraintLease);
             linkedPose.Seal();
             transaction.MarkSealed();
         }
@@ -1405,7 +1412,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             DiscardStep(
                 () => m_PoseRuntime.DiscardPendingFrame(
                     transaction.PoseLease,
-                    transaction.SourceLease),
+                    transaction.SourceLease,
+                    transaction.ConstraintLease),
                 ref failure);
             if (transaction.HasMotionMatchingLease)
             {

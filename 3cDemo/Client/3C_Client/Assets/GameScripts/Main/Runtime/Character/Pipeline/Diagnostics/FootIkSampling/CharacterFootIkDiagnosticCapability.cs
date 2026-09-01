@@ -16,7 +16,8 @@ namespace ThirdPersonCharacter.Pipeline.Diagnostics.FootIkSampling
     [DiagnosticCapability(
         CharacterFootIkDiagnosticIdentity.CapabilityId,
         CharacterFootIkDiagnosticIdentity.CapabilityRevision,
-        typeof(CharacterFootIkCommittedCaptureViewLease))]
+        typeof(CharacterFootIkCommittedCaptureViewLease),
+        typeof(CharacterFootIkCaptureMetadata))]
     internal static class CharacterFootIkDiagnosticCapability
     {
         internal static DiagnosticSampleKey CreateSampleKey(
@@ -38,5 +39,39 @@ namespace ThirdPersonCharacter.Pipeline.Diagnostics.FootIkSampling
                 sequence,
                 in diagnosticLineage);
         }
+    }
+
+    internal readonly struct CharacterFootIkCaptureMetadata
+    {
+        internal CharacterFootIkCaptureMetadata(
+            Guid sampleIdentity,
+            DateTime startedUtc,
+            in AnimationPresentationProgramIdentity program,
+            Guid targetRuntimeInstanceId,
+            int targetHostInstanceId)
+        {
+            if (sampleIdentity == Guid.Empty ||
+                startedUtc.Kind != DateTimeKind.Utc ||
+                !program.IsValid ||
+                targetRuntimeInstanceId == Guid.Empty ||
+                targetHostInstanceId == 0)
+            {
+                throw new ArgumentException(
+                    "Foot IK capture metadata is invalid.");
+            }
+            SampleIdentity = sampleIdentity.ToString("N");
+            StartedUtcTicks = startedUtc.Ticks;
+            ProgramIdentity =
+                $"{program.ProjectionRevision}|{program.PosePlanHash}";
+            TargetRuntimeInstanceId =
+                targetRuntimeInstanceId.ToString("N");
+            TargetHostInstanceId = targetHostInstanceId;
+        }
+
+        internal string SampleIdentity { get; }
+        internal long StartedUtcTicks { get; }
+        internal string ProgramIdentity { get; }
+        internal string TargetRuntimeInstanceId { get; }
+        internal int TargetHostInstanceId { get; }
     }
 }

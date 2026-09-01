@@ -19,3 +19,9 @@ Unity导入新程序集并生成正式meta与csproj；`ThirdPersonCharacter.Foot
 现行Analyzer 75仍通过唯一Schema绑定完整主表与Geometry，因此1249列全部登记为`required:facts/75`；每行同时登记当前来源Owner、运行／派生／格式化／旧Transform分类和七维评分消费者。清单明确发现35个`RootHierarchy`列与93个`SolverPhysical`混合列仍经过旧场景Transform，不能直接接入新Sampler；它们先由PoseGraph Final Publication补齐世界空间Physical事实，随后旧Transform输入整体删除。由此完成任务1.4，并给任务2.4、3.2、3.6、3.7、5.1至5.4提供同一零遗漏迁移真相。
 
 PoseGraph提交候选已把`PoseGraphId`与`PoseGraphRevision`补入唯一`CharacterPoseFrameLineage`，具体Foot View因此能随同Frame／Completion／Program／PlanHash／Projection／Rig／Tuning读取完整上游身份，不再从Runtime Target补查。固定Record `024336`相对`020333`的Proof为`matched:1044`，Foot与Geometry业务列0冲突、评分不变。任务2.1仍等待specific `CharacterFootIkCaptureInterest`冻结后统一验收，不在此提前勾选。
+
+## 建立View与Capture metadata双输入字段边界
+
+`CharacterFootIkDiagnosticCapability`已登记PoseGraph-owned `CharacterFootIkCommittedCaptureViewLease`与Foot-owned `CharacterFootIkCaptureMetadata`两个不同输入类型。metadata只在Capture开始构造一次，保存Sample identity、UTC ticks、Target Runtime identity、Host identity及组合Program identity；它不保存View、Module、Workspace、Vendor或Transform。首批11个Field Extractor覆盖上述metadata以及View lineage中的Projection、PoseGraph、PlanHash、Frame和Completion，全部使用框架Attribute与`(in View, in Metadata)`普通静态签名。
+
+通用Generator Probe已验证生成ABI为`Capture(in View, in Metadata, ref Packet)`；Foot插件用同一Generator实际编译成功，27个既有warning、0错误并关闭build server。3C Unity force refresh确认新Analyzer、`DiagnosticCompilationClosure`、Foot metadata type与双输入Field签名均无编译错误。字段清单同时把103个Category文本列收紧为领域枚举Int32、把`SampleStartedUtc`收紧为UTC ticks Int64；Host后续负责恢复稳定Category文本与`O`格式，不让Player逐帧格式化字符串。任务3.2仍等待其余868个typed字段及Geometry表全部声明后统一勾选。

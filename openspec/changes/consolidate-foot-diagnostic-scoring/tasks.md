@@ -23,4 +23,4 @@
 
 - [x] 5.1 把腿部eligible迁移为Runtime实际Landing状态段与同Event结束交接，删除Formal LockMode加TimeToLanding等于0的窄资格
 - [x] 5.2 把米制质量严重度扩为1/2/5/10/20/30厘米七档，删除最差单样本硬封顶并拒绝少于10个eligible的伪满分
-- [ ] 5.3 升级唯一facts、diagnosis与quality schema，构建、严格校验并用固定Record生成新规则基线
+- [x] 5.3 升级唯一facts、diagnosis与quality schema，构建、严格校验并用固定Record生成新规则基线

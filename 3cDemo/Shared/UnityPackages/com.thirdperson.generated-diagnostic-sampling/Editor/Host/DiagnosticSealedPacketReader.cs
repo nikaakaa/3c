@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Security.Cryptography;
 using System.Text;
 
 namespace ThirdPerson.GeneratedDiagnosticSampling.Host
@@ -13,7 +12,7 @@ namespace ThirdPerson.GeneratedDiagnosticSampling.Host
         readonly BinaryReader m_Reader;
 
         public DiagnosticSealedPacketReader(
-            DiagnosticSealedPacketArtifact artifact,
+            DiagnosticSealedArtifact artifact,
             DiagnosticCapabilityBuildDescriptor capability,
             DiagnosticPacketLayout expectedLayout)
         {
@@ -31,7 +30,7 @@ namespace ThirdPerson.GeneratedDiagnosticSampling.Host
             {
                 if (m_Stream.Length != artifact.Size)
                     throw new InvalidDataException("Diagnostic packet size does not match the manifest.");
-                string sha256 = ComputeSha256(m_Stream);
+                string sha256 = DiagnosticArtifactIntegrity.ComputeSha256(m_Stream);
                 if (!string.Equals(sha256, artifact.Sha256, StringComparison.Ordinal))
                     throw new InvalidDataException("Diagnostic packet hash does not match the manifest.");
                 m_Stream.Position = 0;
@@ -216,16 +215,5 @@ namespace ThirdPerson.GeneratedDiagnosticSampling.Host
             for (int i = 0; i < packet.QuaternionValues.Length; i++) packet.QuaternionValues[i] = new DiagnosticQuaternion(m_Reader.ReadSingle(), m_Reader.ReadSingle(), m_Reader.ReadSingle(), m_Reader.ReadSingle());
         }
 
-        static string ComputeSha256(Stream stream)
-        {
-            using (SHA256 sha = SHA256.Create())
-            {
-                byte[] hash = sha.ComputeHash(stream);
-                var builder = new StringBuilder(hash.Length * 2);
-                foreach (byte value in hash)
-                    builder.Append(value.ToString("x2"));
-                return builder.ToString();
-            }
-        }
     }
 }

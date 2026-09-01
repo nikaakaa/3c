@@ -75,6 +75,8 @@ namespace ThirdPerson.GeneratedDiagnosticSampling
                 throw new ArgumentOutOfRangeException(nameof(capacity));
             Capacity = capacity;
             RowLayout = rowLayout ?? throw new ArgumentNullException(nameof(rowLayout));
+            if (rowLayout.Tables.Count != 0)
+                throw new ArgumentException("Nested diagnostic tables are not supported.", nameof(rowLayout));
         }
 
         public string Id { get; }

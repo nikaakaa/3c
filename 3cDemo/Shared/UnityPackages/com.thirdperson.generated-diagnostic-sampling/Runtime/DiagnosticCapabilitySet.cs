@@ -38,6 +38,7 @@ namespace ThirdPerson.GeneratedDiagnosticSampling
                 LineageTypeIdentity = string.Empty;
                 PacketCapacity = 0;
                 WriterTransportIdentity = string.Empty;
+                Identity = DiagnosticIdentity.Hash(new[] { CanonicalIdentity });
                 return;
             }
             ProgramId = DiagnosticIdentity.RequireId(programId, nameof(programId));
@@ -63,6 +64,7 @@ namespace ThirdPerson.GeneratedDiagnosticSampling
             WriterTransportIdentity = DiagnosticIdentity.RequireId(
                 writerTransportIdentity,
                 nameof(writerTransportIdentity));
+            Identity = DiagnosticIdentity.Hash(new[] { CanonicalIdentity });
         }
 
         public string CapabilityId { get; }
@@ -77,6 +79,7 @@ namespace ThirdPerson.GeneratedDiagnosticSampling
         public string LineageTypeIdentity { get; }
         public int PacketCapacity { get; }
         public string WriterTransportIdentity { get; }
+        public string Identity { get; }
 
         internal string CanonicalIdentity => string.Join("|", new[]
         {

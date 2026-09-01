@@ -31,56 +31,121 @@ namespace ThirdPerson.GeneratedDiagnosticSampling.Host
             new DiagnosticSamplerPacketSeries(Schema.RequireSampler(samplerId), m_Packets);
     }
 
+    public sealed class DiagnosticHostFinalizationResult
+    {
+        public DiagnosticHostFinalizationResult(
+            DiagnosticCapabilityManifest manifest,
+            DiagnosticEncodedDocument encodedManifest)
+        {
+            Manifest = manifest ?? throw new ArgumentNullException(nameof(manifest));
+            EncodedManifest = encodedManifest ?? throw new ArgumentNullException(nameof(encodedManifest));
+        }
+
+        public DiagnosticCapabilityManifest Manifest { get; }
+        public DiagnosticEncodedDocument EncodedManifest { get; }
+    }
+
     public sealed class DiagnosticHostFinalizer
     {
-        public DiagnosticCapabilityManifest Finalize(
+        public DiagnosticHostFinalizationResult Finalize(
             DiagnosticCapabilityBuildDescriptor capability,
+            DiagnosticEncodedDocument encodedRuntimeManifest,
             DiagnosticSchemaLayout schema,
-            DiagnosticSealedPacketArtifact artifact,
             IEnumerable<IDiagnosticHostAdapter> adapters)
         {
             if (capability == null)
                 throw new ArgumentNullException(nameof(capability));
+            if (encodedRuntimeManifest == null)
+                throw new ArgumentNullException(nameof(encodedRuntimeManifest));
             if (schema == null)
                 throw new ArgumentNullException(nameof(schema));
-            if (artifact == null)
-                throw new ArgumentNullException(nameof(artifact));
-            schema.Require(capability);
-            IDiagnosticHostAdapter[] orderedAdapters = (adapters ??
-                    throw new ArgumentNullException(nameof(adapters)))
-                .OrderBy(value => value.SamplerId, StringComparer.Ordinal)
-                .ToArray();
-            if (orderedAdapters.Length == 0)
-                throw new ArgumentException("Diagnostic host adapters are required.", nameof(adapters));
-            if (orderedAdapters.Length != schema.Samplers.Count)
-                throw new ArgumentException("Diagnostic host adapter set does not match the schema.", nameof(adapters));
-            for (int i = 0; i < orderedAdapters.Length; i++)
+            DiagnosticRuntimeManifest runtime;
+            try
             {
-                DiagnosticSamplerLayout sampler = schema.Samplers[i];
-                IDiagnosticHostAdapter adapter = orderedAdapters[i];
-                if (!string.Equals(adapter.SamplerId, sampler.Id, StringComparison.Ordinal) ||
-                    !string.Equals(adapter.Id, sampler.HostAdapterId, StringComparison.Ordinal))
+                runtime = DiagnosticCapabilityCodec.DecodeRuntimeManifest(encodedRuntimeManifest);
+                if (!string.Equals(
+                        runtime.Capability.Identity,
+                        capability.Identity,
+                        StringComparison.Ordinal))
                 {
-                    throw new ArgumentException("Diagnostic host adapter set does not match the schema.", nameof(adapters));
+                    throw new InvalidOperationException("Diagnostic runtime capability does not match the request.");
                 }
+                schema.Require(capability);
+            }
+            catch (Exception exception)
+            {
+                return Fault(
+                    capability,
+                    null,
+                    null,
+                    DiagnosticCaptureFailureStage.Preflight,
+                    string.Empty,
+                    exception.Message);
+            }
+
+            if (runtime.Status == DiagnosticCaptureStatus.Faulted ||
+                runtime.Status == DiagnosticCaptureStatus.Cancelled)
+            {
+                return FinalizeManifest(new DiagnosticCapabilityManifest(
+                    capability,
+                    runtime.Status,
+                    runtime.SampleCount,
+                    runtime.Schema,
+                    runtime.Packet,
+                    Array.Empty<DiagnosticSamplerManifest>(),
+                    runtime.Failure));
+            }
+
+            try
+            {
+                RequireSchemaArtifact(schema, runtime.Schema);
+            }
+            catch (Exception exception)
+            {
+                return Fault(
+                    capability,
+                    runtime.Schema,
+                    runtime.Packet,
+                    DiagnosticCaptureFailureStage.Reader,
+                    string.Empty,
+                    exception.Message);
+            }
+
+            IDiagnosticHostAdapter[] orderedAdapters;
+            try
+            {
+                orderedAdapters = RequireAdapters(schema, adapters);
+            }
+            catch (Exception exception)
+            {
+                return Fault(
+                    capability,
+                    runtime.Schema,
+                    runtime.Packet,
+                    DiagnosticCaptureFailureStage.Preflight,
+                    string.Empty,
+                    exception.Message);
             }
 
             DiagnosticCapturePacket[] packets;
             try
             {
                 using (var reader = new DiagnosticSealedPacketReader(
-                    artifact,
+                    runtime.Packet,
                     capability,
                     schema.PacketLayout))
                 {
                     packets = reader.ReadAll().ToArray();
                 }
+                if ((ulong)packets.Length != runtime.SampleCount)
+                    throw new InvalidOperationException("Diagnostic packet count does not match the runtime manifest.");
             }
             catch (Exception exception)
             {
                 return Fault(
                     capability,
-                    artifact,
+                    runtime.Schema,
+                    runtime.Packet,
                     DiagnosticCaptureFailureStage.Reader,
                     string.Empty,
                     exception.Message);
@@ -102,30 +167,73 @@ namespace ThirdPerson.GeneratedDiagnosticSampling.Host
                     {
                         throw new InvalidOperationException("Diagnostic sampler manifest identity is invalid.");
                     }
+                    foreach (DiagnosticSealedArtifact artifact in manifest.Artifacts)
+                        DiagnosticArtifactStore.Require(artifact);
                     samplers.Add(manifest);
                 }
                 catch (Exception exception)
                 {
                     return Fault(
                         capability,
-                        artifact,
+                        runtime.Schema,
+                        runtime.Packet,
                         DiagnosticCaptureFailureStage.Host,
                         adapter.SamplerId,
                         exception.Message);
                 }
             }
-            return new DiagnosticCapabilityManifest(
+            return FinalizeManifest(new DiagnosticCapabilityManifest(
                 capability,
                 DiagnosticCaptureStatus.Completed,
-                (ulong)packets.Length,
-                artifact,
+                runtime.SampleCount,
+                runtime.Schema,
+                runtime.Packet,
                 samplers,
-                null);
+                null));
         }
 
-        static DiagnosticCapabilityManifest Fault(
+        static IDiagnosticHostAdapter[] RequireAdapters(
+            DiagnosticSchemaLayout schema,
+            IEnumerable<IDiagnosticHostAdapter> adapters)
+        {
+            IDiagnosticHostAdapter[] ordered = (adapters ??
+                    throw new ArgumentNullException(nameof(adapters)))
+                .OrderBy(value => value.SamplerId, StringComparer.Ordinal)
+                .ToArray();
+            if (ordered.Length != schema.Samplers.Count)
+                throw new ArgumentException("Diagnostic host adapter set does not match the schema.", nameof(adapters));
+            for (int i = 0; i < ordered.Length; i++)
+            {
+                DiagnosticSamplerLayout sampler = schema.Samplers[i];
+                IDiagnosticHostAdapter adapter = ordered[i];
+                if (!string.Equals(adapter.SamplerId, sampler.Id, StringComparison.Ordinal) ||
+                    !string.Equals(adapter.Id, sampler.HostAdapterId, StringComparison.Ordinal))
+                {
+                    throw new ArgumentException("Diagnostic host adapter set does not match the schema.", nameof(adapters));
+                }
+            }
+            return ordered;
+        }
+
+        static void RequireSchemaArtifact(
+            DiagnosticSchemaLayout schema,
+            DiagnosticSealedArtifact artifact)
+        {
+            if (artifact == null)
+                throw new InvalidOperationException("Diagnostic runtime manifest has no schema artifact.");
+            DiagnosticEncodedDocument expected = DiagnosticCapabilityCodec.EncodeSchema(schema);
+            if (artifact.Size != expected.Length ||
+                !string.Equals(artifact.Sha256, expected.Sha256, StringComparison.Ordinal))
+            {
+                throw new InvalidOperationException("Diagnostic schema artifact does not match the generated schema.");
+            }
+            DiagnosticArtifactStore.Require(artifact);
+        }
+
+        static DiagnosticHostFinalizationResult Fault(
             DiagnosticCapabilityBuildDescriptor capability,
-            DiagnosticSealedPacketArtifact artifact,
+            DiagnosticSealedArtifact schema,
+            DiagnosticSealedArtifact packet,
             DiagnosticCaptureFailureStage stage,
             string samplerId,
             string message)
@@ -137,13 +245,20 @@ namespace ThirdPerson.GeneratedDiagnosticSampling.Host
                 samplerId,
                 string.Empty,
                 message);
-            return new DiagnosticCapabilityManifest(
+            return FinalizeManifest(new DiagnosticCapabilityManifest(
                 capability,
                 DiagnosticCaptureStatus.Faulted,
                 0,
-                artifact,
+                schema,
+                packet,
                 Array.Empty<DiagnosticSamplerManifest>(),
-                failure);
+                failure));
         }
+
+        static DiagnosticHostFinalizationResult FinalizeManifest(
+            DiagnosticCapabilityManifest manifest) =>
+            new DiagnosticHostFinalizationResult(
+                manifest,
+                DiagnosticCapabilityCodec.EncodeCapabilityManifest(manifest));
     }
 }

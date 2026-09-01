@@ -6,6 +6,7 @@ namespace ThirdPerson.GeneratedDiagnosticSampling
 {
     public interface IDiagnosticPacketWriter : IDisposable
     {
+        DiagnosticSealedArtifact Artifact { get; }
         void Begin(
             DiagnosticCapabilityBuildDescriptor capability,
             DiagnosticPacketLayout layout);
@@ -178,10 +179,48 @@ namespace ThirdPerson.GeneratedDiagnosticSampling
                 m_Signal.Set();
             }
             m_WriterThread.Join();
+        }
+
+        public DiagnosticRuntimeManifest CreateRuntimeManifest(
+            DiagnosticSealedArtifact schemaArtifact)
+        {
+            if (schemaArtifact == null)
+                throw new ArgumentNullException(nameof(schemaArtifact));
             lock (m_Gate)
             {
+                if (m_WriterThread.IsAlive)
+                    throw new InvalidOperationException("Diagnostic writer is still running.");
                 if (Status == DiagnosticCaptureStatus.Finalizing)
-                    Status = DiagnosticCaptureStatus.Completed;
+                {
+                    return new DiagnosticRuntimeManifest(
+                        Capability,
+                        Status,
+                        m_SubmittedSampleCount,
+                        schemaArtifact,
+                        m_Writer.Artifact,
+                        null);
+                }
+                if (Status == DiagnosticCaptureStatus.Faulted)
+                {
+                    return new DiagnosticRuntimeManifest(
+                        Capability,
+                        Status,
+                        m_SubmittedSampleCount,
+                        schemaArtifact,
+                        m_Writer.Artifact,
+                        Failure);
+                }
+                if (Status == DiagnosticCaptureStatus.Cancelled)
+                {
+                    return new DiagnosticRuntimeManifest(
+                        Capability,
+                        Status,
+                        m_SubmittedSampleCount,
+                        schemaArtifact,
+                        m_Writer.Artifact,
+                        null);
+                }
+                throw new InvalidOperationException("Diagnostic session has not reached a terminal runtime state.");
             }
         }
 
@@ -189,6 +228,8 @@ namespace ThirdPerson.GeneratedDiagnosticSampling
         {
             lock (m_Gate)
             {
+                if (Status == DiagnosticCaptureStatus.Finalizing && !m_WriterThread.IsAlive)
+                    return;
                 if (Status != DiagnosticCaptureStatus.Prepared &&
                     Status != DiagnosticCaptureStatus.Capturing &&
                     Status != DiagnosticCaptureStatus.Finalizing)

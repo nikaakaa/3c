@@ -91,6 +91,31 @@ namespace ThirdPerson.GeneratedDiagnosticSampling.Probe
                     4,
                     "probe-binary/1");
             schema.Require(capability);
+            DiagnosticEncodedDocument schemaDocument =
+                DiagnosticCapabilityCodec.EncodeSchema(schema);
+            DiagnosticSchemaLayout decodedSchema =
+                DiagnosticCapabilityCodec.DecodeSchema(schemaDocument);
+            decodedSchema.Require(capability);
+            var capabilitySet = new DiagnosticCapabilitySet(new[] { capability });
+            DiagnosticCapabilityCodec.DecodeCapabilitySet(
+                DiagnosticCapabilityCodec.EncodeCapabilitySet(capabilitySet));
+            var schemaArtifact = new DiagnosticSealedArtifact(
+                "probe.schema",
+                schemaDocument.Length,
+                schemaDocument.Sha256);
+            var packetArtifact = new DiagnosticSealedArtifact(
+                "probe.packet",
+                1,
+                schemaDocument.Sha256);
+            var runtimeManifest = new DiagnosticRuntimeManifest(
+                capability,
+                DiagnosticCaptureStatus.Finalizing,
+                1,
+                schemaArtifact,
+                packetArtifact,
+                null);
+            DiagnosticCapabilityCodec.DecodeRuntimeManifest(
+                DiagnosticCapabilityCodec.EncodeRuntimeManifest(runtimeManifest));
             DiagnosticPacketLayout layout = schema.PacketLayout;
             var packet = new DiagnosticCapturePacket(layout);
             var lineage = new DiagnosticLineageKey("probe-lineage/1", 0, 1);

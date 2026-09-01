@@ -1,6 +1,5 @@
 using System;
 using System.IO;
-using System.Security.Cryptography;
 using System.Text;
 
 namespace ThirdPerson.GeneratedDiagnosticSampling
@@ -15,11 +14,12 @@ namespace ThirdPerson.GeneratedDiagnosticSampling
 
         public DiagnosticBinaryPacketWriter(string path)
         {
-            m_FinalPath = DiagnosticIdentity.RequireText(path, nameof(path));
+            m_FinalPath = Path.GetFullPath(
+                DiagnosticIdentity.RequireText(path, nameof(path)));
             m_StagingPath = m_FinalPath + ".staging";
         }
 
-        public DiagnosticSealedPacketArtifact Artifact { get; private set; }
+        public DiagnosticSealedArtifact Artifact { get; private set; }
 
         public void Begin(
             DiagnosticCapabilityBuildDescriptor capability,
@@ -122,10 +122,12 @@ namespace ThirdPerson.GeneratedDiagnosticSampling
             m_Writer.Flush();
             m_Stream.Flush(true);
             Dispose();
-            string hash = ComputeHash(m_StagingPath);
+            string hash;
+            using (FileStream stream = File.OpenRead(m_StagingPath))
+                hash = DiagnosticArtifactIntegrity.ComputeSha256(stream);
             long size = new FileInfo(m_StagingPath).Length;
             File.Move(m_StagingPath, m_FinalPath);
-            Artifact = new DiagnosticSealedPacketArtifact(m_FinalPath, size, hash);
+            Artifact = new DiagnosticSealedArtifact(m_FinalPath, size, hash);
         }
 
         public void Fault(in DiagnosticCaptureFailure failure)
@@ -200,33 +202,5 @@ namespace ThirdPerson.GeneratedDiagnosticSampling
             }
         }
 
-        static string ComputeHash(string path)
-        {
-            using (FileStream stream = File.OpenRead(path))
-            using (SHA256 sha = SHA256.Create())
-            {
-                byte[] hash = sha.ComputeHash(stream);
-                var builder = new StringBuilder(hash.Length * 2);
-                foreach (byte value in hash)
-                    builder.Append(value.ToString("x2"));
-                return builder.ToString();
-            }
-        }
-    }
-
-    public sealed class DiagnosticSealedPacketArtifact
-    {
-        public DiagnosticSealedPacketArtifact(string path, long size, string sha256)
-        {
-            Path = DiagnosticIdentity.RequireText(path, nameof(path));
-            if (size <= 0)
-                throw new ArgumentOutOfRangeException(nameof(size));
-            Size = size;
-            Sha256 = DiagnosticIdentity.RequireId(sha256, nameof(sha256));
-        }
-
-        public string Path { get; }
-        public long Size { get; }
-        public string Sha256 { get; }
     }
 }

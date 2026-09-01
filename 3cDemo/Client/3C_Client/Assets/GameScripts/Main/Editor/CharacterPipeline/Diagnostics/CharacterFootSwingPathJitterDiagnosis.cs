@@ -30,13 +30,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         ICharacterFootDiagnosis
     {
         const double PrimaryThresholdMeters = 0.02d;
-        static readonly double[] s_Thresholds =
-        {
-            0.01d,
-            0.02d,
-            0.05d,
-            0.10d
-        };
 
         public string DiagnosticId => "swing-path-jitter";
         public string FileName => "swing-path-jitter.json";
@@ -151,7 +144,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 "Meters",
                 events,
                 PrimaryThresholdMeters,
-                s_Thresholds);
+                CharacterFootDiagnosisScoring.MeterSeverityThresholds);
             target.categoricalMeasurements = new SortedDictionary<
                 string,
                 List<CharacterFootDiagnosisCategoryCount>>(
@@ -223,7 +216,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 "Meters",
                 unique,
                 PrimaryThresholdMeters,
-                s_Thresholds);
+                CharacterFootDiagnosisScoring.MeterSeverityThresholds);
             target.categoricalMeasurements = new SortedDictionary<
                 string,
                 List<CharacterFootDiagnosisCategoryCount>>(
@@ -293,7 +286,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 "Meters",
                 events,
                 PrimaryThresholdMeters,
-                s_Thresholds);
+                CharacterFootDiagnosisScoring.MeterSeverityThresholds);
             target.scorePolicy = "Health";
             target.supplementalOccurrences = new List<
                 CharacterFootDiagnosisOccurrenceProfile>
@@ -304,21 +297,21 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     "Meters",
                     events,
                     PrimaryThresholdMeters,
-                    s_Thresholds),
+                    CharacterFootDiagnosisScoring.MeterSeverityThresholds),
                 context.Occurrence(
                     sampleUnit,
                     "HeelOutputOffsetStep",
                     "Meters",
                     events,
                     PrimaryThresholdMeters,
-                    s_Thresholds),
+                    CharacterFootDiagnosisScoring.MeterSeverityThresholds),
                 context.Occurrence(
                     sampleUnit,
                     "ToeOutputOffsetStep",
                     "Meters",
                     events,
                     PrimaryThresholdMeters,
-                    s_Thresholds)
+                    CharacterFootDiagnosisScoring.MeterSeverityThresholds)
             };
             target.measurements[
                     "FootPlacementOutputOffsetAcceleration"] =

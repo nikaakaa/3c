@@ -18,3 +18,9 @@
 - [x] 4.1 用实际State/LockResponse/PositionWeight切分FullAnchor、Sliding、Landing与Release，保留唯一过程去重计分
 - [x] 4.2 实现闭合、重新离面、短暂大间隙和各域覆盖发布；删除旧Locked混合解释与区间帧数组重复，动态计数由新规则基线继续验证
 - [x] 4.3 同步facts71/Analyzer71、diagnosis40及评分规则2，保留20%权重与旧采样结果；主任务统一正式工程后完成完整Editor构建57警告/0错误、finally shutdown及Unity编译零错误，本任务完成diff与change/all严格校验
+
+## 5. 腿部资格与严重度细分
+
+- [x] 5.1 把腿部eligible迁移为Runtime实际Landing状态段与同Event结束交接，删除Formal LockMode加TimeToLanding等于0的窄资格
+- [x] 5.2 把米制质量严重度扩为1/2/5/10/20/30厘米七档，删除最差单样本硬封顶并拒绝少于10个eligible的伪满分
+- [ ] 5.3 升级唯一facts、diagnosis与quality schema，构建、严格校验并用固定Record生成新规则基线

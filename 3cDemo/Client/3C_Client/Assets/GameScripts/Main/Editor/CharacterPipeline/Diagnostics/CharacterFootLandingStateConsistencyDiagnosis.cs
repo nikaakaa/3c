@@ -170,13 +170,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor
     {
         const double ExitJumpMeters = 0.01d;
         const double PrimaryOutputJumpMeters = 0.02d;
-        static readonly double[] s_OutputThresholds =
-        {
-            0.01d,
-            0.02d,
-            0.05d,
-            0.10d
-        };
         public string DiagnosticId => "landing-state-consistency";
         public string FileName => "landing-state-consistency.json";
 
@@ -277,7 +270,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 "Meters",
                 handoffs,
                 PrimaryOutputJumpMeters,
-                s_OutputThresholds);
+                CharacterFootDiagnosisScoring.MeterSeverityThresholds);
             handoffTarget.supplementalOccurrences = new List<
                 CharacterFootDiagnosisOccurrenceProfile>
             {
@@ -287,14 +280,14 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     "Meters",
                     handoffs,
                     PrimaryOutputJumpMeters,
-                    s_OutputThresholds),
+                    CharacterFootDiagnosisScoring.MeterSeverityThresholds),
                 context.Occurrence(
                     "ContinuousSwingToLandingFramePair",
                     "entryPhysicalSoleStepMeters",
                     "Meters",
                     handoffs,
                     PrimaryOutputJumpMeters,
-                    s_OutputThresholds)
+                    CharacterFootDiagnosisScoring.MeterSeverityThresholds)
             };
             handoffTarget.categoricalMeasurements =
                 new SortedDictionary<
@@ -354,7 +347,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 "Meters",
                 plantInterpolation,
                 PrimaryOutputJumpMeters,
-                s_OutputThresholds);
+                CharacterFootDiagnosisScoring.MeterSeverityThresholds);
             plantTarget.categoricalMeasurements =
                 new SortedDictionary<
                     string,
@@ -426,7 +419,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 "Meters",
                 contactAcquisitions,
                 PrimaryOutputJumpMeters,
-                s_OutputThresholds);
+                CharacterFootDiagnosisScoring.MeterSeverityThresholds);
             contactAcquisitionTarget.supplementalOccurrences = new List<
                 CharacterFootDiagnosisOccurrenceProfile>
             {
@@ -436,14 +429,14 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     "Meters",
                     contactAcquisitions,
                     PrimaryOutputJumpMeters,
-                    s_OutputThresholds),
+                    CharacterFootDiagnosisScoring.MeterSeverityThresholds),
                 context.Occurrence(
                     "NonIdleFormalContactAcquisitionFramePair",
                     "FinalOutputToAnchorHorizontalMeters",
                     "Meters",
                     contactAcquisitions,
                     PrimaryOutputJumpMeters,
-                    s_OutputThresholds)
+                    CharacterFootDiagnosisScoring.MeterSeverityThresholds)
             };
             contactAcquisitionTarget.categoricalMeasurements =
                 new SortedDictionary<
@@ -700,12 +693,12 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             contactGapTarget.occurrence = context.Occurrence(
                 "ContinuousFullyWeightedContactEpisode", "ScoredGapMaximumMeters", "Meters",
                 contactGapIntervals, CharacterFootMotionDiagnosticAnalyzer.ContactSupportGapThresholdMeters,
-                s_OutputThresholds);
+                CharacterFootDiagnosisScoring.MeterSeverityThresholds);
             contactGapTarget.supplementalOccurrences = new List<CharacterFootDiagnosisOccurrenceProfile>
             {
                 context.Occurrence("FullyWeightedContactPhysicalFootFrame", "WholeFootGapMeters", "Meters",
                     qualityGapFrames, CharacterFootMotionDiagnosticAnalyzer.ContactSupportGapThresholdMeters,
-                    s_OutputThresholds)
+                    CharacterFootDiagnosisScoring.MeterSeverityThresholds)
             };
             foreach (string metric in new[] { "WholeFootGapMeters", "HeelClearanceMeters",
                 "ToeClearanceMeters", "SoleClearanceMeters", "InPlaneAnchorDistanceMeters" })
@@ -751,7 +744,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 "EntryWholeFootGapMeters", "ExitWholeFootGapMeters");
             transientGapTarget.occurrence = context.Occurrence(
                 "ObservedShortGapSpanFullyWeightedContactPolicySegment", "MaximumWholeFootGapMeters", "Meters",
-                transientSegments, 0.1d, s_OutputThresholds);
+                transientSegments, 0.1d,
+                CharacterFootDiagnosisScoring.MeterSeverityThresholds);
             CharacterFootDiagnosisTarget contactOutput =
                 CharacterFootSwingPathJitterDiagnosis.BuildTarget(
                     context, "contact-state-output-jump",
@@ -1023,7 +1017,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 "ExcessGapIntegralMeterSeconds", "EntryLockWeight", "ExitLockWeight");
             target.occurrence = context.Occurrence("SameContactPolicySegment:" + domain,
                 metric, "Meters", eligible,
-                CharacterFootMotionDiagnosticAnalyzer.ContactSupportGapThresholdMeters, s_OutputThresholds);
+                CharacterFootMotionDiagnosticAnalyzer.ContactSupportGapThresholdMeters,
+                CharacterFootDiagnosisScoring.MeterSeverityThresholds);
             List<JObject> footFrames = frames.Where(value =>
                 value["contactSupportGap"].Value<string>("domain") == domain &&
                 (release || CharacterFootDiagnosisContext.Evidence(value, "qualityEligible"))).ToList();
@@ -1031,7 +1026,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             {
                 context.Occurrence("PhysicalFootFrame:" + domain, "WholeFootGapMeters", "Meters",
                     footFrames, CharacterFootMotionDiagnosticAnalyzer.ContactSupportGapThresholdMeters,
-                    s_OutputThresholds)
+                    CharacterFootDiagnosisScoring.MeterSeverityThresholds)
             };
             target.measurements["GapVelocityMetersPerSecond"] = CharacterFootDiagnosisDistribution.Create(
                 footFrames.Select(value => value["metrics"]?["GapVelocityMetersPerSecond"]?.Value<double?>())

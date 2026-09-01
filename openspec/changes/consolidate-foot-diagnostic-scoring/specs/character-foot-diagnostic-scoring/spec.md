@@ -20,11 +20,23 @@ Foot Diagnostics MUST只将下陷穿透20%、接触未贴合20%、普通Swing平
 - **THEN** 总分 MUST等于各分项Health乘固定权重之和
 - **AND** 低样本维度 MUST仍显式出现在弱证据列表，Evidence不得改变Health权重
 
-#### Scenario: 缺事实或零样本
+#### Scenario: 米制严重尾部只有少量事件
 
-- **WHEN** 任一维度缺少必需可见事实或eligible为零
+- **WHEN** 某个米制质量Target在1、2、5、10、20或30厘米阈值上存在不同数量的事件
+- **THEN** Health MUST按七个互斥严重度档位的发生率与0、0.1、0.35、0.7、0.85、0.95、1负担计算
+- **AND** MUST发布每档次数、比例、最差档位与严重度加权负担，不得因单个最差事件把整个维度硬封顶为固定49分
+
+#### Scenario: 缺事实或样本不足
+
+- **WHEN** 任一维度缺少必需可见事实或eligible少于10
 - **THEN** 该项及完整总分 MUST发布Unavailable而非0或100
 - **AND** 摘要 MUST保留原权重，发布可计算权重、已知贡献、分数可能区间及缺失原因
+
+#### Scenario: 腿部Landing资格来自实际状态段
+
+- **WHEN** Runtime同Side进入新的Landing Event状态段且存在连续前帧
+- **THEN** 腿部姿态质量 MUST以进入前最后一帧为基线，覆盖该Landing段和同Event首个Locked或Releasing交接帧
+- **AND** MUST不再要求Formal LockMode在TimeToLanding恰好为0时从Unlocked切到Sliding；采样窗口起点缺少连续前帧时不得伪造基线
 
 #### Scenario: 只有Path归因阶段缺失
 

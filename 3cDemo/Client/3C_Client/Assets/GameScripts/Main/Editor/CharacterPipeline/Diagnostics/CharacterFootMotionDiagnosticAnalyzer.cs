@@ -3241,37 +3241,53 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 FootFrame previous = frames[i - 1];
                 FootFrame current = frames[i];
                 if (!Continuous(previous, current) ||
-                    previous.FormalInput.LockMode != "Unlocked" ||
-                    current.FormalInput.LockMode != "Sliding" ||
-                    current.FormalInput.TimeToLandingSeconds > TimeEpsilon)
+                    current.MotionCore.ConstraintState != "Landing" ||
+                    previous.MotionCore.ConstraintState == "Landing" &&
+                    previous.MotionCore.LandingEventIdentity ==
+                    current.MotionCore.LandingEventIdentity)
                 {
                     continue;
                 }
-                int end = i;
-                while (end + 1 < frames.Count &&
-                       Continuous(frames[end], frames[end + 1]) &&
-                       frames[end + 1].FormalInput.LockMode != "Unlocked")
+                int landingEnd = i;
+                while (landingEnd + 1 < frames.Count &&
+                       Continuous(frames[landingEnd], frames[landingEnd + 1]) &&
+                       frames[landingEnd + 1].MotionCore.ConstraintState == "Landing" &&
+                       frames[landingEnd + 1].MotionCore.LandingEventIdentity ==
+                       current.MotionCore.LandingEventIdentity)
                 {
-                    end++;
-                    if (frames[end].FormalInput.LockMode == "Locked")
-                        break;
+                    landingEnd++;
                 }
+                int terminalEnd = landingEnd;
+                if (terminalEnd + 1 < frames.Count &&
+                    Continuous(frames[terminalEnd], frames[terminalEnd + 1]) &&
+                    frames[terminalEnd + 1].MotionCore.LandingEventIdentity ==
+                    current.MotionCore.LandingEventIdentity &&
+                    (frames[terminalEnd + 1].MotionCore.ConstraintState == "Locked" ||
+                     frames[terminalEnd + 1].MotionCore.ConstraintState == "Releasing"))
+                    terminalEnd++;
                 IReadOnlyList<FootFrame> window = frames.GetRange(
-                    Math.Max(0, i - 1),
-                    end - Math.Max(0, i - 1) + 1);
+                    i - 1,
+                    terminalEnd - i + 2);
+                IReadOnlyList<FootFrame> landingWindow = frames.GetRange(
+                    i,
+                    terminalEnd - i + 1);
                 double correctionStep = MaximumCorrectionStep(window);
-                double originalExtensionPeak = window.Max(
+                double originalExtensionPeak = landingWindow.Max(
                     frame => frame.Solver.IkLegOriginalExtensionRatio);
-                double targetExtensionPeak = window.Max(frame => frame.Solver.IkLegTargetExtensionRatio);
-                double solvedExtensionPeak = window.Max(frame => frame.Solver.IkLegSolvedExtensionRatio);
-                double bendMinimum = window.Min(frame => frame.Solver.IkLegSolvedBendDegrees);
-                double originalCompressionMinimum = window.Min(
+                double targetExtensionPeak = landingWindow.Max(
+                    frame => frame.Solver.IkLegTargetExtensionRatio);
+                double solvedExtensionPeak = landingWindow.Max(
+                    frame => frame.Solver.IkLegSolvedExtensionRatio);
+                double bendMinimum = landingWindow.Min(
+                    frame => frame.Solver.IkLegSolvedBendDegrees);
+                double originalCompressionMinimum = landingWindow.Min(
                     frame => frame.Solver.IkLegOriginalCompressionReserve);
-                double targetCompressionMinimum = window.Min(
+                double targetCompressionMinimum = landingWindow.Min(
                     frame => frame.Solver.IkLegTargetCompressionReserve);
-                double solvedCompressionMinimum = window.Min(
+                double solvedCompressionMinimum = landingWindow.Min(
                     frame => frame.Solver.IkLegSolvedCompressionReserve);
-                double bendDirectionMinimum = window.Min(frame => frame.Solver.IkLegEffectiveBendDirectionPreviousDot);
+                double bendDirectionMinimum = landingWindow.Min(
+                    frame => frame.Solver.IkLegEffectiveBendDirectionPreviousDot);
                 double targetExtensionDelta =
                     targetExtensionPeak - previous.Solver.IkLegTargetExtensionRatio;
                 double bendDrop = previous.Solver.IkLegSolvedBendDegrees - bendMinimum;
@@ -3284,12 +3300,12 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     "Landing",
                     current.Identity.Side,
                     current.Identity.FrameSequence,
-                    frames[end].Identity.FrameSequence,
+                    frames[terminalEnd].Identity.FrameSequence,
                     peakFrame,
                     current.MotionCore.LandingEventIdentity,
                     current.FormalInput.SourceIdentity,
                     current.FormalInput.SourceCycle,
-                    Duration(window),
+                    Duration(landingWindow),
                     new SortedDictionary<string, double>(StringComparer.Ordinal)
                     {
                         ["bendDirectionPreviousDotMinimum"] = bendDirectionMinimum,
@@ -3342,7 +3358,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     new SortedDictionary<string, bool>(StringComparer.Ordinal)
                     {
                         ["bendDirectionReversed"] = bendDirectionMinimum < 0d,
-                        ["contactAnchorAvailable"] = window.Any(frame => frame.HasAnchor),
+                        ["contactAnchorAvailable"] = landingWindow.Any(
+                            frame => frame.HasAnchor),
                         ["grounded"] = current.Action.Grounded,
                         ["landingReachAvailable"] =
                             landingReach.landingReachAvailable,
@@ -3380,7 +3397,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                             "LandingReachUnavailable"
                     });
                 events.Add(fact);
-                i = Math.Max(i, end - 1);
+                i = landingEnd;
             }
         }
 

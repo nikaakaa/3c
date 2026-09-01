@@ -18,7 +18,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             List<JObject> events = context.Events("Landing");
             CharacterFootDiagnosisTarget target = context.Target(
                 DiagnosticId,
-                "Landing阶段是否出现腿继续伸直或弯曲方向反转",
+                "Runtime实际进入Landing的同Event状态段及其Locked/Releasing交接边界，是否相对进入前最后一帧继续伸直、弯曲角骤降或弯曲方向反转",
                 new[] { "Landing" },
                 new[]
                 {

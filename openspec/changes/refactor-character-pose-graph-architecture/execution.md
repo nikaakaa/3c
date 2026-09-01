@@ -137,3 +137,15 @@ A/B均封存1043表现帧、2086脚行和67186几何行。1215列Foot CSV中1191
 同状态补跑B2为`Diagnostics/FootPlacementRuns/20260901-140725-120-fb6a3adfe8284cddbbaeed32fc97b59a`，Proof为`Temp/CharacterInputReplayProofs/v4/43357ff3cd384e5cba75d2c31175b116/20260901-140831-534-f31eba0e0aca44298f216a8860849200.json`。B2直接对正式A的schema、Trace、Runtime、Start Body、Tick／Presentation Clock、1044个frames、Input hash、Body hash和`sampling_relative_frame_count=1043`全部相同。两包均为2086脚行、1215列，其中1191个业务列逐值相同、24个运行identity列一一映射；Geometry均为67186行、27列，其中22个业务列逐值相同、5个identity列一一映射。十份诊断报告排除运行identity、文件hash、detail／index大小与分析耗时后全部相同，七维分项和总分84.2不变。
 
 为让工具自己的链式基线也闭合，最终B3为`Diagnostics/FootPlacementRuns/20260901-141357-584-1f1b11082a7245f9b9c31dd07e123429`，Proof为`Temp/CharacterInputReplayProofs/v4/43357ff3cd384e5cba75d2c31175b116/20260901-141501-810-0e4583d4cb2843ec9a8ee50189c671a1.json`；它对B2正式报告`matched=true`、`compared_frame_count=1044`、空aggregate/frame差异和`divergent_frame_count=0`。由此确认Source Pending页所有权收口没有改变动画时钟、Source采样、Operation、Foot、Pelvis、Goal、FBBIK、Physical Pose或诊断业务事实；B3成为Constraint Owned Pending lease迁移的正式A基线。
+
+## Constraint双Bank Lineage Lease候选
+
+状态：提交`0fb3cb432`已让现有`CharacterPoseConstraintRuntime`双Bank绑定完整typed Constraint lease，并由根事务持有其Seal／Discard权限。`ThirdPersonClient.Runtime.csproj`按规定参数编译成功，0错误；27个警告均来自既有Unity包、第三方包或既有Input字段，build server已关闭。固定Trace、Foot、Geometry与诊断对账全部完成。本步不移动Foot／Goal／FBBIK内部页，也不提前拆Final Publication；任务2.4仍只差Final Publication lease。
+
+- 新`CharacterPoseConstraintFrameLease`绑定完整open lineage。Constraint `BeginFrame`一次创建lease并把它写入唯一Pending Bank；旧Bank中的Frame identity、Render Frame、Rig Id和Rig Revision重复字段已删除，所有帧／Rig判断只读lease lineage。
+- 根`CharacterPoseFrameTransaction`单独保存Constraint Lease。Program在Begin、Complete、Barrier后Fault、Seal和Discard时必须交回同一个lease；Constraint Result补入Completion identity后仍按除Completion外的完整lineage匹配，不建立第二完成身份。
+- 双Bank选择、Foot Placement Bank、Pelvis、Goal Contribution、Goal Set、BendHistory、FBBIK Solver、Physical Writer调用和诊断发布顺序均保持原实现；本步只收紧Bank外部生命周期与身份，不改变任何IK公式、参数、准入或数值顺序。
+
+A为Source lease最终状态的`Diagnostics/FootPlacementRuns/20260901-141357-584-1f1b11082a7245f9b9c31dd07e123429`，Proof为`Temp/CharacterInputReplayProofs/v4/43357ff3cd384e5cba75d2c31175b116/20260901-141501-810-0e4583d4cb2843ec9a8ee50189c671a1.json`。B为Constraint lease状态的`Diagnostics/FootPlacementRuns/20260901-142115-026-3d661384834a42669887b2d1a51022b6`，Proof为`Temp/CharacterInputReplayProofs/v4/43357ff3cd384e5cba75d2c31175b116/20260901-142225-539-a238d21b26944e57875927593ad9886f.json`；B对A报告`matched=true`、`compared_frame_count=1044`、空aggregate/frame差异和`divergent_frame_count=0`。
+
+A/B均封存1043表现帧、2086脚行和67186几何行。1215列Foot CSV中1191个业务列逐值相同、24个运行identity列一一映射；27列Geometry中22个业务列逐值相同、5个identity列一一映射，没有其它差异。十份诊断报告排除运行identity、文件hash、detail／index大小与分析耗时后全部相同，七维分项和总分84.2不变。由此确认Constraint Bank lineage收口没有改变动画时钟、Foot、Pelvis、Goal、Assembler、Bend、FBBIK、Physical Pose或诊断业务事实；B成为Final Publication lease迁移的正式A基线。

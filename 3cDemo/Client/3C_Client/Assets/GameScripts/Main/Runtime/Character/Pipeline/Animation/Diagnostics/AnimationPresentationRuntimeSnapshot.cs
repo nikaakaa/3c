@@ -783,6 +783,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
 
     internal sealed class CharacterFootIkCommittedCaptureViewPage
     {
+        internal AnimationBiomechanicalStepReadPage LeftFootSteps;
+        internal AnimationBiomechanicalStepReadPage RightFootSteps;
+        internal bool HasFootFeatures;
+        internal AnimationFootStepObservationRuntimeSnapshot FootStepObservation;
         internal CharacterFootLandingPredictionDiagnostics LandingPrediction;
         internal CharacterFullBodyIkSolverDiagnostics Solver;
         internal CharacterFullBodyIkEffectorDiagnostics Pelvis;
@@ -794,6 +798,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
 
         internal void Clear()
         {
+            LeftFootSteps = default;
+            RightFootSteps = default;
+            HasFootFeatures = false;
+            FootStepObservation = default;
             LandingPrediction = default;
             Solver = default;
             Pelvis = default;
@@ -982,6 +990,50 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
             }
         }
 
+        public AnimationBiomechanicalStepReadPage LeftFootSteps
+        {
+            get
+            {
+                if (m_Page == null)
+                    return default;
+                RequireValid();
+                return m_Page.LeftFootSteps;
+            }
+        }
+
+        public AnimationBiomechanicalStepReadPage RightFootSteps
+        {
+            get
+            {
+                if (m_Page == null)
+                    return default;
+                RequireValid();
+                return m_Page.RightFootSteps;
+            }
+        }
+
+        public bool HasFootFeatures
+        {
+            get
+            {
+                if (m_Page == null)
+                    return false;
+                RequireValid();
+                return m_Page.HasFootFeatures;
+            }
+        }
+
+        public AnimationFootStepObservationRuntimeSnapshot FootStepObservation
+        {
+            get
+            {
+                if (m_Page == null)
+                    return default;
+                RequireValid();
+                return m_Page.FootStepObservation;
+            }
+        }
+
         public Vector3 PhysicalPelvisWorldPosition
         {
             get
@@ -1101,10 +1153,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
             ulong poseGraphCompletedAt,
             ulong finalAppliedAt,
             ulong continuityIdentity,
-            AnimationBiomechanicalStepReadPage leftFootSteps,
-            AnimationBiomechanicalStepReadPage rightFootSteps,
-            bool hasFootFeatures,
-            AnimationFootStepObservationRuntimeSnapshot footStepObservation,
             AnimationFootPlacementRuntimeSnapshot footPlacement,
             int physicalBoneCount,
             int virtualBoneCount,
@@ -1179,10 +1227,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
             PoseGraphCompletedAt = poseGraphCompletedAt;
             FinalAppliedAt = finalAppliedAt;
             ContinuityIdentity = continuityIdentity;
-            LeftFootSteps = leftFootSteps;
-            RightFootSteps = rightFootSteps;
-            HasFootFeatures = hasFootFeatures;
-            FootStepObservation = footStepObservation;
             m_FootPlacement = footPlacement;
             PhysicalBoneCount = physicalBoneCount;
             VirtualBoneCount = virtualBoneCount;
@@ -1259,10 +1303,13 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
         public ulong PoseGraphCompletedAt { get; }
         public ulong FinalAppliedAt { get; }
         public ulong ContinuityIdentity { get; }
-        public AnimationBiomechanicalStepReadPage LeftFootSteps { get; }
-        public AnimationBiomechanicalStepReadPage RightFootSteps { get; }
-        public bool HasFootFeatures { get; }
-        public AnimationFootStepObservationRuntimeSnapshot FootStepObservation { get; }
+        public AnimationBiomechanicalStepReadPage LeftFootSteps =>
+            m_FootPlacement.LeftFootSteps;
+        public AnimationBiomechanicalStepReadPage RightFootSteps =>
+            m_FootPlacement.RightFootSteps;
+        public bool HasFootFeatures => m_FootPlacement.HasFootFeatures;
+        public AnimationFootStepObservationRuntimeSnapshot FootStepObservation =>
+            m_FootPlacement.FootStepObservation;
         public AnimationFootPlacementRuntimeSnapshot FootPlacement => m_FootPlacement;
         public int PhysicalBoneCount { get; }
         public int VirtualBoneCount { get; }

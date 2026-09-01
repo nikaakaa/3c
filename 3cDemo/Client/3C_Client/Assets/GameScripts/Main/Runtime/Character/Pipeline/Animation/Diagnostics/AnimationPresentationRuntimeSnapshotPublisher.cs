@@ -969,7 +969,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
             if (RequiresBasicState(interest))
             {
                 CopyBlendSpaces(page, in actorDiagnostics);
-                page.FootStepObservation =
+                page.FootPlacement.FootStepObservation =
                     ResolveFootStepObservation(
                         page,
                         in actorDiagnostics);
@@ -2155,15 +2155,17 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
                 executionResult.Lineage.CompletionIdentity;
             page.FinalAppliedAt = publication.AppliedCompletionIdentity;
             page.ContinuityIdentity = finalFrame.ContinuityIdentity;
-            page.HasFootFeatures = finalFrame.HasFootFeatures;
+            CharacterFootIkCommittedCaptureViewPage foot =
+                page.FootPlacement;
+            foot.HasFootFeatures = finalFrame.HasFootFeatures;
             AnimationFootFeatureSample left = finalFrame.LeftFootFeatures;
             AnimationFootFeatureSample right = finalFrame.RightFootFeatures;
-            page.LeftFootSteps = page.HasFootFeatures
+            foot.LeftFootSteps = foot.HasFootFeatures
                 ? new AnimationBiomechanicalStepReadPage(
                     in left,
                     global::ThirdPersonCharacter.Pipeline.Presentation.CharacterFootSide.Left)
                 : default;
-            page.RightFootSteps = page.HasFootFeatures
+            foot.RightFootSteps = foot.HasFootFeatures
                 ? new AnimationBiomechanicalStepReadPage(
                     in right,
                     global::ThirdPersonCharacter.Pipeline.Presentation.CharacterFootSide.Right)
@@ -2450,10 +2452,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
             internal ulong PoseGraphCompletedAt;
             internal ulong FinalAppliedAt;
             internal ulong ContinuityIdentity;
-            internal AnimationBiomechanicalStepReadPage LeftFootSteps;
-            internal AnimationBiomechanicalStepReadPage RightFootSteps;
-            internal bool HasFootFeatures;
-            internal AnimationFootStepObservationRuntimeSnapshot FootStepObservation;
             internal readonly CharacterFootIkCommittedCaptureViewPage FootPlacement;
 
             internal void ClearCounts()
@@ -2475,7 +2473,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
                 LinkedPoseGroupCount = 0;
                 LinkedPoseEntryCount = 0;
                 PoseWatchCount = 0;
-                FootStepObservation = default;
                 FootPlacement.Clear();
             }
 
@@ -2498,10 +2495,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
                     PoseGraphCompletedAt,
                     FinalAppliedAt,
                     ContinuityIdentity,
-                    LeftFootSteps,
-                    RightFootSteps,
-                    HasFootFeatures,
-                    FootStepObservation,
                     new AnimationFootPlacementRuntimeSnapshot(
                         FootPlacement,
                         Lease,

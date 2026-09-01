@@ -513,3 +513,13 @@ A/B均为2086脚行、1222列，其中1198个业务列逐值相同、24个运行
 正式A为`Diagnostics/FootPlacementRuns/20260902-011531-535-ebf6e24df7c048589d9fc5d797ab68f4`，候选B为`Diagnostics/FootPlacementRuns/20260902-012614-285-9e69b176ff8e45108b947330ca3927d3`；B Proof为`Temp/CharacterInputReplayProofs/v4/43357ff3cd384e5cba75d2c31175b116/20260902-012710-474-40cf684b38ff434eaf4f96f818c5f7ba.json`，工具对A Proof正式报告`matched:1044`，无failure且Foot Finalizing已结束。
 
 A/B均为2086脚行、1222列，其中1198个业务列逐值相同、24个运行／实例／Surface／Path identity列一一映射且0冲突；Geometry均为67186行、27列，其中22个业务列逐值相同、5个identity列一一映射且0冲突。正式报告规则、七维分项、总分84.2和weighted evidence 96.5保持。由此确认具体Foot IK页命名收口没有改变任何Foot、Pelvis、Goal、FBBIK、Final Pose、Physical或诊断业务；`012614`成为具体View内容迁移的正式A。
+
+## Foot Motion与Observation归入具体View页
+
+状态：候选把`LeftFootSteps`、`RightFootSteps`、`HasFootFeatures`与`FootStepObservation`从通用Snapshot根页迁入唯一`CharacterFootIkCommittedCaptureViewPage`。旧`AnimationPresentationRuntimeSnapshot`不再保存这些字段的独立值，其公开属性只通过同一`AnimationFootPlacementRuntimeSnapshot`租约读取具体Foot页；Foot／FBBIK／Physical数据仍在同一页，未增加复制或第二事实源。
+
+本步不勾选任务13.5：具体`CharacterFootIkCommittedCaptureViewLease`和完整lineage仍待发布，旧Sampler也尚未切换。`ThirdPersonClient.Runtime.csproj`按规定参数编译成功，0错误；27个警告只来自既有Unity／第三方依赖和Input Value未使用字段，build server已立即关闭。Unity刷新、回放和退出Play只出现同一条FinalIK Domain Reload序列化深度日志，单独记录后清空，3C Console为0。
+
+正式A为`Diagnostics/FootPlacementRuns/20260902-012614-285-9e69b176ff8e45108b947330ca3927d3`，候选B为`Diagnostics/FootPlacementRuns/20260902-013455-708-d230b17fe48240658b668d27e5ec1741`；B Proof为`Temp/CharacterInputReplayProofs/v4/43357ff3cd384e5cba75d2c31175b116/20260902-013550-868-1924e050c6e946e08584db38174c3a73.json`，工具对A Proof正式报告`matched:1044`，无failure且Foot Finalizing已结束。
+
+A/B均为2086脚行、1222列，其中1198个业务列逐值相同、24个运行／实例／Surface／Path identity列一一映射且0冲突；Geometry均为67186行、27列，其中22个业务列逐值相同、5个identity列一一映射且0冲突。正式报告规则、七维分项、总分84.2和weighted evidence 96.5保持。由此确认Foot Motion／Observation存储归位没有改变Foot、Pelvis、Goal、FBBIK、Final Pose、Physical或诊断业务；`013455`成为具体View Lease建立的正式A。

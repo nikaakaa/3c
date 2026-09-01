@@ -623,6 +623,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     in factFrame,
                     transaction.SourceLease,
                     transaction.ConstraintLease,
+                    transaction.PublicationLease,
                     in preparedPose,
                     m_EnterEvaluateBarrier);
                 transaction.BindExecutionResults(in executionResult);
@@ -671,7 +672,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                         transaction,
                         linkedPose);
                     composedPose =
-                        m_PoseRuntime.FinalizeCommittedFrame();
+                        m_PoseRuntime.FinalizeCommittedFrame(
+                            transaction.PublicationLease);
                 }
 
                 using (PostCommitMarker.Auto())
@@ -743,8 +745,9 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 }
                 else
                 {
-                    m_PoseRuntime.DiscardPoseConstraintsAfterBarrier(
-                        transaction.ConstraintLease);
+                    m_PoseRuntime.DiscardPoseFrameAfterBarrier(
+                        transaction.ConstraintLease,
+                        transaction.PublicationLease);
                     MarkFaulted(transaction);
                     linkedPose.Discard();
                 }
@@ -896,6 +899,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             CharacterPoseProgramFrameLease pose = default;
             CharacterPoseSourceFrameLease source = default;
             CharacterPoseConstraintFrameLease constraint = default;
+            CharacterFinalPosePublicationFrameLease publication = default;
             MotionMatchingFrameMutationLease motionMatching =
                 default;
             m_NextFrameTransactionIdentity++;
@@ -945,7 +949,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     diagnosticsInterest,
                     linkedPose,
                     out source,
-                    out constraint);
+                    out constraint,
+                    out publication);
                 m_FrameTransaction.Begin(
                     in lineage,
                     workspaceLease,
@@ -955,6 +960,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     pose,
                     source,
                     constraint,
+                    publication,
                     motionMatching,
                     m_MotionMatching != null);
                 m_FrameTransaction.BeginPrepare();
@@ -969,7 +975,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                         () => m_PoseRuntime.DiscardPendingFrame(
                             pose,
                             source,
-                            constraint),
+                            constraint,
+                            publication),
                         ref discardFailure);
                 }
                 if (motionMatching.IsValid)
@@ -1394,7 +1401,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             m_PoseRuntime.SealFrame(
                 transaction.PoseLease,
                 transaction.SourceLease,
-                transaction.ConstraintLease);
+                transaction.ConstraintLease,
+                transaction.PublicationLease);
             linkedPose.Seal();
             transaction.MarkSealed();
         }
@@ -1413,7 +1421,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 () => m_PoseRuntime.DiscardPendingFrame(
                     transaction.PoseLease,
                     transaction.SourceLease,
-                    transaction.ConstraintLease),
+                    transaction.ConstraintLease,
+                    transaction.PublicationLease),
                 ref failure);
             if (transaction.HasMotionMatchingLease)
             {

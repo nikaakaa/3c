@@ -6,8 +6,108 @@ namespace ThirdPersonCharacter.Pipeline.Animation
 {
     internal sealed class ComposedAnimationPoseFramePublisher
     {
+        sealed class CharacterFinalPosePublicationPendingPage
+        {
+            internal CharacterFinalPosePublicationFrameLease Lease
+            {
+                get;
+                private set;
+            }
+            internal int BufferPage { get; private set; } = -1;
+            internal CharacterFinalPosePublicationResult Result
+            {
+                get;
+                private set;
+            }
+            internal ComposedAnimationPoseFrame Frame { get; private set; }
+            internal bool HasValue { get; private set; }
+            internal bool IsOpen => Lease.IsValid;
+
+            internal void Begin(
+                CharacterFinalPosePublicationFrameLease lease)
+            {
+                if (IsOpen || !lease.IsValid)
+                {
+                    throw new InvalidOperationException(
+                        "Final Pose Publication Pending page is already open or its lease is invalid.");
+                }
+                Lease = lease;
+                BufferPage = -1;
+                Result = default;
+                Frame = default;
+                HasValue = false;
+            }
+
+            internal void BeginWrite(
+                CharacterFinalPosePublicationFrameLease lease,
+                int bufferPage)
+            {
+                RequireLease(lease);
+                if (HasValue || BufferPage >= 0 ||
+                    bufferPage < 0 || bufferPage > 1)
+                {
+                    throw new InvalidOperationException(
+                        "Final Pose Publication Pending page cannot begin its write.");
+                }
+                BufferPage = bufferPage;
+            }
+
+            internal void Complete(
+                CharacterFinalPosePublicationFrameLease lease,
+                in CharacterFinalPosePublicationResult result,
+                in ComposedAnimationPoseFrame frame)
+            {
+                RequireLease(lease);
+                if (HasValue || BufferPage < 0 ||
+                    !result.IsValid ||
+                    !lease.Matches(result.Lineage) ||
+                    frame.CompletionIdentity !=
+                    result.Lineage.CompletionIdentity)
+                {
+                    throw new InvalidOperationException(
+                        "Final Pose Publication Pending result is invalid.");
+                }
+                Result = result;
+                Frame = frame;
+                HasValue = true;
+            }
+
+            internal void RequireReady(
+                CharacterFinalPosePublicationFrameLease lease)
+            {
+                RequireLease(lease);
+                if (!HasValue || BufferPage < 0 || !Result.IsValid)
+                {
+                    throw new InvalidOperationException(
+                        "Final Pose Publication Pending page is incomplete.");
+                }
+            }
+
+            internal void RequireLease(
+                CharacterFinalPosePublicationFrameLease lease)
+            {
+                if (!IsOpen || !lease.IsValid ||
+                    Lease.Lineage != lease.Lineage)
+                {
+                    throw new InvalidOperationException(
+                        "Final Pose Publication Pending lease is stale.");
+                }
+            }
+
+            internal void Clear()
+            {
+                Lease = default;
+                BufferPage = -1;
+                Result = default;
+                Frame = default;
+                HasValue = false;
+            }
+        }
+
         readonly string m_PoseGraphId;
         readonly string m_PosePlanHash;
+        readonly string m_RigId;
+        readonly string m_RigRevision;
         readonly PoseNodeId[] m_PoseNodeIds;
         readonly float[] m_ParameterDefaults;
         readonly AnimationLocalBonePose[] m_DenseLocalPoses;
@@ -24,11 +124,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         readonly int m_PhysicalBoneCount;
         readonly int m_VirtualBoneCount;
         readonly long m_DenseDoublePageResidentPayloadBytes;
+        readonly CharacterFinalPosePublicationPendingPage m_Pending =
+            new CharacterFinalPosePublicationPendingPage();
         int m_CommittedPage = -1;
         ulong m_LastCommittedCompletionIdentity;
-        int m_PendingPage = -1;
-        ulong m_PendingCompletionIdentity;
-        ComposedAnimationPoseFrame m_PendingFrame;
         ComposedAnimationPoseFrame m_CommittedFrame;
 
         internal ComposedAnimationPoseFramePublisher(
@@ -58,6 +157,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 throw new InvalidOperationException("Final Animation Pose Frame contribution capacity is invalid.");
             m_PoseGraphId = program.PoseGraphId;
             m_PosePlanHash = program.PlanHash;
+            m_RigId = rig.RigId;
+            m_RigRevision = rig.RigRevision;
             m_OperationCount = program.Operations.Count;
             m_PoseNodeIds = new PoseNodeId[program.PlayerCount];
             for (int i = 0; i < program.Operations.Count; i++)
@@ -112,17 +213,57 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         internal long DenseDoublePageResidentPayloadBytes =>
             m_DenseDoublePageResidentPayloadBytes;
 
-        internal void PreparePending(
+        internal CharacterFinalPosePublicationFrameLease BeginFrame(
+            in CharacterPoseFrameLineage lineage)
+        {
+            if (!lineage.IsOpenValid ||
+                lineage.CompletionIdentity != 0 ||
+                !string.Equals(
+                    lineage.PoseProgramIdentity,
+                    m_PosePlanHash,
+                    StringComparison.Ordinal) ||
+                !string.Equals(
+                    lineage.RigId,
+                    m_RigId,
+                    StringComparison.Ordinal) ||
+                !string.Equals(
+                    lineage.RigRevision,
+                    m_RigRevision,
+                    StringComparison.Ordinal))
+            {
+                throw new ArgumentException(
+                    "Final Pose Publication lineage is invalid.",
+                    nameof(lineage));
+            }
+            var lease =
+                new CharacterFinalPosePublicationFrameLease(in lineage);
+            m_Pending.Begin(lease);
+            return lease;
+        }
+
+        internal CharacterFinalPosePublicationResult PreparePending(
+            CharacterFinalPosePublicationFrameLease lease,
+            in CharacterPoseFrameLineage lineage,
             in AnimationFinalPoseNativeReadBinding binding,
-            PhysicalPoseSourceRegistry sourceRegistry)
+            PhysicalPoseSourceRegistry sourceRegistry,
+            AnimationFinalPoseWriteOutcome writeOutcome)
         {
             if (sourceRegistry == null)
                 throw new ArgumentNullException(nameof(sourceRegistry));
-            if (m_PendingPage >= 0)
+            m_Pending.RequireLease(lease);
+            if (!lineage.IsValid ||
+                !lease.Matches(lineage) ||
+                binding.CompletionIdentity != lineage.CompletionIdentity)
             {
-                throw new InvalidOperationException(
-                    "Final Animation Pose Frame already has a pending frame.");
+                throw new ArgumentException(
+                    "Final Pose Publication completed lineage is invalid.",
+                    nameof(lineage));
             }
+            CharacterFinalPosePublicationResult result =
+                CreatePublicationResult(
+                    in lineage,
+                    in binding,
+                    writeOutcome);
             RequireBinding(in binding);
             ulong completionIdentity = binding.CompletionIdentity;
             if (completionIdentity <= m_LastCommittedCompletionIdentity)
@@ -139,14 +280,13 @@ namespace ThirdPersonCharacter.Pipeline.Animation
 
             int page = (m_CommittedPage + 1) & 1;
             FinalAnimationPoseFramePageLease pageLease = m_PageLeases[page];
+            m_Pending.BeginWrite(lease, page);
             pageLease.BeginWrite(completionIdentity);
             ComposedAnimationPoseFrame frame = availability == AnimationPoseAvailability.Invalid
                 ? PublishInvalid(in binding, page, pageLease)
                 : PublishPose(in binding, sourceRegistry, page, pageLease);
-            m_PendingPage = page;
-            m_PendingCompletionIdentity =
-                completionIdentity;
-            m_PendingFrame = frame;
+            m_Pending.Complete(lease, in result, in frame);
+            return result;
         }
 
         internal int ResolveContributions(
@@ -180,34 +320,43 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         }
 
         internal ComposedAnimationPoseFrame
-            CommitPending()
+            CommitPending(
+                CharacterFinalPosePublicationFrameLease lease)
         {
-            if (m_PendingPage < 0 ||
-                m_PendingCompletionIdentity == 0)
+            m_Pending.RequireReady(lease);
+            if (!m_Pending.Result.IsPublished)
             {
                 throw new InvalidOperationException(
-                    "Final Animation Pose Frame has no pending frame.");
+                    "Final Pose Publication Pending result cannot commit.");
             }
-            m_CommittedPage = m_PendingPage;
+            m_CommittedPage = m_Pending.BufferPage;
             m_LastCommittedCompletionIdentity =
-                m_PendingCompletionIdentity;
+                m_Pending.Result.Lineage.CompletionIdentity;
             ComposedAnimationPoseFrame result =
-                m_PendingFrame;
+                m_Pending.Frame;
             m_CommittedFrame = result;
-            m_PendingPage = -1;
-            m_PendingCompletionIdentity = 0;
-            m_PendingFrame = default;
+            m_Pending.Clear();
             return result;
         }
 
-        internal void DiscardPending()
+        internal void ValidatePendingSeal(
+            CharacterFinalPosePublicationFrameLease lease)
         {
-            if (m_PendingPage < 0)
-                return;
-            m_PageLeases[m_PendingPage].Invalidate();
-            m_PendingPage = -1;
-            m_PendingCompletionIdentity = 0;
-            m_PendingFrame = default;
+            m_Pending.RequireReady(lease);
+            if (!m_Pending.Result.IsPublished)
+            {
+                throw new InvalidOperationException(
+                    "Final Pose Publication Pending result cannot seal.");
+            }
+        }
+
+        internal void DiscardPending(
+            CharacterFinalPosePublicationFrameLease lease)
+        {
+            m_Pending.RequireLease(lease);
+            if (m_Pending.BufferPage >= 0)
+                m_PageLeases[m_Pending.BufferPage].Invalidate();
+            m_Pending.Clear();
         }
 
         internal void Invalidate()
@@ -216,9 +365,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 m_PageLeases[i].Invalidate();
             m_CommittedPage = -1;
             m_LastCommittedCompletionIdentity = 0;
-            m_PendingPage = -1;
-            m_PendingCompletionIdentity = 0;
-            m_PendingFrame = default;
+            m_Pending.Clear();
             m_CommittedFrame = default;
         }
 
@@ -436,6 +583,31 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 primitive.Weight,
                 primitive.LeftFootWeight,
                 primitive.RightFootWeight);
+        }
+
+        static CharacterFinalPosePublicationResult CreatePublicationResult(
+            in CharacterPoseFrameLineage lineage,
+            in AnimationFinalPoseNativeReadBinding binding,
+            AnimationFinalPoseWriteOutcome writeOutcome)
+        {
+            AnimationPresentationFrameOutcome outcome = writeOutcome switch
+            {
+                AnimationFinalPoseWriteOutcome.Committed =>
+                    AnimationPresentationFrameOutcome.Committed,
+                AnimationFinalPoseWriteOutcome.TypedInvalid =>
+                    AnimationPresentationFrameOutcome.TypedInvalid,
+                _ => throw new InvalidOperationException(
+                    $"Unsupported final Pose publication outcome '{writeOutcome}'.")
+            };
+            return new CharacterFinalPosePublicationResult(
+                in lineage,
+                outcome,
+                writeOutcome,
+                binding.Availability[0],
+                binding.OutputInvalidReason[0],
+                binding.PoseGraphInvalidReason[0],
+                binding.PoseGraphInvalidOperationIndex[0],
+                binding.AppliedAt[0]);
         }
 
         void RequireBinding(in AnimationFinalPoseNativeReadBinding binding)

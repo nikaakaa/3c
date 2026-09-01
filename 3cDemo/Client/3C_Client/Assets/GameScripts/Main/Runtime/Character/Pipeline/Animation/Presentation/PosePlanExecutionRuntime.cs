@@ -846,9 +846,24 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
         internal void RetargetFootPlacement(ulong resetSequence) =>
             m_PoseConstraints.RetargetFootPlacement(resetSequence);
 
-        internal void DiscardPoseConstraintsAfterBarrier(
-            CharacterPoseConstraintFrameLease constraintLease) =>
-            m_PoseConstraints.DiscardFrame(constraintLease);
+        internal void DiscardPoseFrameAfterBarrier(
+            CharacterPoseConstraintFrameLease constraintLease,
+            CharacterFinalPosePublicationFrameLease publicationLease)
+        {
+            Exception failure = null;
+            DiscardStep(
+                () => m_FramePublisher.DiscardPending(publicationLease),
+                ref failure);
+            DiscardStep(
+                () => m_PoseConstraints.DiscardFrame(constraintLease),
+                ref failure);
+            if (failure != null)
+            {
+                throw new AggregateException(
+                    "Pose frame post-barrier Pending discard failed.",
+                    failure);
+            }
+        }
 
         internal string ApplyTuning(
             CharacterPoseTuningLayout layout,
@@ -974,10 +989,12 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             AnimationPresentationDiagnosticsInterest diagnosticsInterest,
             CharacterLinkedPoseRuntimeSession linkedPose,
             out CharacterPoseSourceFrameLease sourceLease,
-            out CharacterPoseConstraintFrameLease constraintLease)
+            out CharacterPoseConstraintFrameLease constraintLease,
+            out CharacterFinalPosePublicationFrameLease publicationLease)
         {
             sourceLease = default;
             constraintLease = default;
+            publicationLease = default;
             RequireAlive();
             if (!lineage.IsOpenValid || lineage.CompletionIdentity != 0)
                 throw new ArgumentException("Pose Program frame lineage is invalid.", nameof(lineage));
@@ -1017,6 +1034,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             }
             bool modulesOpen = false;
             bool poseConstraintsOpen = false;
+            bool publicationOpen = false;
             try
             {
                 constraintLease = m_PoseConstraints.BeginFrame(
@@ -1026,6 +1044,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                 m_PendingActionBackendReleaseFrameStartCount =
                     m_PendingActionBackendReleases.Count;
                 sourceLease = m_SourceBackend.BeginFrame(in lineage);
+                publicationLease = m_FramePublisher.BeginFrame(in lineage);
+                publicationOpen = true;
                 m_PendingCompletedFrame = default;
                 m_HasPendingCompletedFrame = false;
                 m_PendingFrameOutcome = AnimationPresentationFrameOutcome.None;
@@ -1047,6 +1067,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             }
             catch
             {
+                if (publicationOpen)
+                    m_FramePublisher.DiscardPending(publicationLease);
                 if (poseConstraintsOpen)
                     m_PoseConstraints.DiscardFrame(constraintLease);
                 if (modulesOpen)
@@ -1078,10 +1100,12 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
         internal void SealFrame(
             CharacterPoseProgramFrameLease lease,
             CharacterPoseSourceFrameLease sourceLease,
-            CharacterPoseConstraintFrameLease constraintLease)
+            CharacterPoseConstraintFrameLease constraintLease,
+            CharacterFinalPosePublicationFrameLease publicationLease)
         {
             RequireMutation(lease);
             m_SourceBackend.RequirePendingReady(sourceLease);
+            m_FramePublisher.ValidatePendingSeal(publicationLease);
             if (!m_CommitValidated)
             {
                 throw new InvalidOperationException(
@@ -1288,7 +1312,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
         internal void DiscardPendingFrame(
             CharacterPoseProgramFrameLease lease,
             CharacterPoseSourceFrameLease sourceLease,
-            CharacterPoseConstraintFrameLease constraintLease)
+            CharacterPoseConstraintFrameLease constraintLease,
+            CharacterFinalPosePublicationFrameLease publicationLease)
         {
             RequireMutation(lease);
             m_SourceBackend.RequirePendingOpen(sourceLease);
@@ -1361,7 +1386,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                     ref failure);
             }
             DiscardStep(
-                m_FramePublisher.DiscardPending,
+                () => m_FramePublisher.DiscardPending(publicationLease),
                 ref failure);
             DiscardStep(
                 m_DiagnosticsPublisher
@@ -1396,7 +1421,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
         }
 
         internal ComposedAnimationPoseFrame
-            FinalizeCommittedFrame()
+            FinalizeCommittedFrame(
+                CharacterFinalPosePublicationFrameLease publicationLease)
         {
             RequireAlive();
             if (m_ActiveFrameLease.IsValid)
@@ -1412,7 +1438,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             ExecutePreparedStandaloneSourceReleases();
             ExecutePendingPoseSourceReleases();
             ComposedAnimationPoseFrame result =
-                m_FramePublisher.CommitPending();
+                m_FramePublisher.CommitPending(publicationLease);
             m_CommitValidated = false;
             m_PendingFrameOutcome = AnimationPresentationFrameOutcome.None;
             return result;
@@ -2677,6 +2703,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             in CharacterPresentationFactFrame factFrame,
             CharacterPoseSourceFrameLease sourceLease,
             CharacterPoseConstraintFrameLease constraintLease,
+            CharacterFinalPosePublicationFrameLease publicationLease,
             in CharacterPoseProgramPrepared prepared,
             Action enterEvaluateBarrier)
         {
@@ -2802,13 +2829,12 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                     _ => throw new InvalidOperationException(
                         $"Unsupported final animation pose writer outcome '{finalWriteOutcome}'.")
                 };
-                publicationResult = CreatePublicationResult(
+                publicationResult = m_FramePublisher.PreparePending(
+                    publicationLease,
                     in completedLineage,
                     in finalRead,
+                    m_PhysicalSources,
                     finalWriteOutcome);
-                m_FramePublisher.PreparePending(
-                    in finalRead,
-                    m_PhysicalSources);
             }
             var executionResult = new CharacterPoseFrameExecutionResult(
                 in programResult,
@@ -2872,31 +2898,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                 finalRead.OutputInvalidReason[0],
                 finalRead.PoseGraphInvalidReason[0],
                 finalRead.PoseGraphInvalidOperationIndex[0]);
-        }
-
-        static CharacterFinalPosePublicationResult CreatePublicationResult(
-            in CharacterPoseFrameLineage lineage,
-            in AnimationFinalPoseNativeReadBinding finalRead,
-            AnimationFinalPoseWriteOutcome writeOutcome)
-        {
-            AnimationPresentationFrameOutcome outcome = writeOutcome switch
-            {
-                AnimationFinalPoseWriteOutcome.Committed =>
-                    AnimationPresentationFrameOutcome.Committed,
-                AnimationFinalPoseWriteOutcome.TypedInvalid =>
-                    AnimationPresentationFrameOutcome.TypedInvalid,
-                _ => throw new InvalidOperationException(
-                    $"Unsupported final Pose publication outcome '{writeOutcome}'.")
-            };
-            return new CharacterFinalPosePublicationResult(
-                in lineage,
-                outcome,
-                writeOutcome,
-                finalRead.Availability[0],
-                finalRead.OutputInvalidReason[0],
-                finalRead.PoseGraphInvalidReason[0],
-                finalRead.PoseGraphInvalidOperationIndex[0],
-                finalRead.AppliedAt[0]);
         }
 
         CharacterPoseWorldAwareStageInput BuildWorldAwareStageInput(

@@ -691,14 +691,16 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     {
                         if (publishStateDiagnostics)
                             BuildCommittedSnapshots(transaction);
-                        m_PoseRuntime.BeginCommittedDiagnostics(
                         CharacterPoseSourceFrameResult committedSourceFrame =
                             transaction.SourceFrame;
+                        m_PoseRuntime.BeginCommittedDiagnostics(
                             diagnosticsInterest,
                             linkedPose,
-                            in executionResult);
                             in committedSourceFrame,
-                        m_PoseRuntime.PublishDiagnostics();
+                            in executionResult);
+                        CharacterFootIkCommittedCaptureViewLease
+                            footIkCaptureView =
+                                m_PoseRuntime.PublishDiagnostics();
                         if (publishStateDiagnostics)
                             PublishCommittedSnapshots(transaction);
                         else
@@ -707,8 +709,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                             publishStateDiagnostics);
                         AnimationPresentationTracePublisher.PublishCompletedFootPlacement(
                             m_ActorId,
-                            m_DebugView.PosePlan
-                                .FootIkCommittedCaptureView);
+                            footIkCaptureView);
                         if (traceInterest !=
                             AnimationPresentationDiagnosticsInterest.None)
                         {

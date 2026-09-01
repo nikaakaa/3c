@@ -533,3 +533,13 @@ A/B均为2086脚行、1222列，其中1198个业务列逐值相同、24个运行
 正式A为`Diagnostics/FootPlacementRuns/20260902-013455-708-d230b17fe48240658b668d27e5ec1741`，候选B为`Diagnostics/FootPlacementRuns/20260902-014359-013-28fb4dea2ad6400cac2a3a4c3ded43a7`；B Proof为`Temp/CharacterInputReplayProofs/v4/43357ff3cd384e5cba75d2c31175b116/20260902-014455-432-8ad76a8566f74f2b814e23afa5297708.json`，工具对A Proof正式报告`matched:1044`，无failure且Foot Finalizing已结束。
 
 A/B均为2086脚行、1222列，其中1198个业务列逐值相同、24个运行／实例／Surface／Path identity列一一映射且0冲突；Geometry均为67186行、27列，其中22个业务列逐值相同、5个identity列一一映射且0冲突。正式报告规则、七维分项、总分84.2和weighted evidence 96.5保持。由此确认具体View类型与完整lineage合同没有改变Foot、Pelvis、Goal、FBBIK、Final Pose、Physical或诊断业务；`014359`成为独立Post-Seal交付的正式A。
+
+## 由PoseGraph直接交付Post-Seal Foot IK View
+
+状态：`PosePlanExecutionRuntime.PublishDiagnostics`不再只返回是否发布的布尔值，而是在唯一Diagnostics页成功发布后直接返回同页、同`FinalAnimationPoseFramePageLease`的`CharacterFootIkCommittedCaptureViewLease`。`CharacterAnimationPresentationRuntime`把这个Post-Seal结果串行交给现有Foot Trace入口，不再从`m_DebugView.PosePlan`注册结果回读同一View。具体View仍只由Committed Source、Program、Actor、Constraint与Final Publication诊断投影组成，完整核对`CharacterPoseFrameLineage`；它不持有Program Runtime、Workspace、Constraint Module或Physical Transform，也不知道Capability、Sampler、Schema、Generated Program、packet、Host、CSV和Analyzer。通用Snapshot只引用同一具体页租约，没有第二Foot事实页或第二Snapshot。
+
+由此完成任务13.5。任务13.6与13.10仍不勾选：旧Sampler仍在Foot事件后把这份View与旧Snapshot外层信息二次join，尚未由Foot Bridge在租约内调用生成Program并提交typed packet。`ThirdPersonClient.Runtime.csproj`按规定参数编译成功、0错误；27个警告只来自既有Unity／第三方依赖与未使用字段，构建后立即关闭build server。Unity回放与退出Play只出现既有FinalIK Domain Reload序列化深度日志，单独记录后清空，3C Console为0。
+
+正式A为`Diagnostics/FootPlacementRuns/20260902-014359-013-28fb4dea2ad6400cac2a3a4c3ded43a7`，候选B为`Diagnostics/FootPlacementRuns/20260902-015216-834-ccd49fe20da6479b91b0913c7c96627e`；B Proof为`Temp/CharacterInputReplayProofs/v4/43357ff3cd384e5cba75d2c31175b116/20260902-015313-475-06524d6bc7d546b3a2b9e4a2d2981ab2.json`，工具对A Proof正式报告`matched:1044`，无failure且Foot Finalizing已结束。
+
+A/B均为2086脚行、1222列，其中1198个业务列逐值相同、24个运行／实例／Surface／Path identity列一一映射且0冲突；Geometry均为67186行、27列，其中22个业务列逐值相同、5个identity列一一映射且0冲突。正式报告的Analyzer版本75、coverage、规则、eligible／matched、七维分项、总分84.2和weighted evidence 96.5保持；只允许既定运行identity、文件／index hash与大小和分析耗时变化。由此确认Post-Seal直接交付没有改变Foot、Pelvis、Goal、FBBIK、Final Pose、Physical或诊断业务；`015216`成为Foot Bridge接入前的正式A。

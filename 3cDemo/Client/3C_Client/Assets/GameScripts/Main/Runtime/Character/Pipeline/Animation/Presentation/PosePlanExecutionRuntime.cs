@@ -1757,15 +1757,16 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             }
         }
 
-        internal bool PublishDiagnostics()
+        internal CharacterFootIkCommittedCaptureViewLease PublishDiagnostics()
         {
             if (!m_DiagnosticsPublisher.HasPendingFrame)
-                return false;
+                return default;
+            AnimationPresentationRuntimeSnapshot snapshot;
             using (DiagnosticsMarker.Auto())
             {
-                m_DiagnosticsPublisher.Publish();
+                snapshot = m_DiagnosticsPublisher.Publish();
             }
-            return true;
+            return snapshot.FootIkCommittedCaptureView;
         }
 
         internal void CopyActionSlotReleaseCompletions(

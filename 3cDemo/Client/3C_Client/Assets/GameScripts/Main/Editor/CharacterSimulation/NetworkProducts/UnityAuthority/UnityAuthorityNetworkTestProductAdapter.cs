@@ -93,14 +93,16 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                 {
                     NetworkTestProductAdapterUtility.Field("controlPort", controlPort.ToString(CultureInfo.InvariantCulture)),
                     NetworkTestProductAdapterUtility.Field("authorityDataPort", dataPort.ToString(CultureInfo.InvariantCulture))
-                });
+                },
+                new[] { "default" },
+                null);
         }
 
         public IReadOnlyList<NetworkTestRuntimeArtifactResult> PublishAdditionalArtifacts(
             NetworkTestProductContext context,
             NetworkTestProductDescriptor descriptor,
             string productRoot,
-            string buildId)
+            string candidateId)
         {
             string serverDirectory = Path.Combine(productRoot, "Server");
             string project = Path.Combine(
@@ -119,7 +121,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             return new[] { ServerProductBuildManifestUtility.Write(
                 context,
                 serverDirectory,
-                buildId,
+                candidateId,
                 "unity-authority-gate-server",
                 ServerConfiguration,
                 UnityAuthorityHostProduct.ServerProductId,
@@ -141,10 +143,10 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
 
     public static class UnityAuthorityNetworkTestBuildAndRun
     {
-        public static void Build() => NetworkTestProductBuildWorkflow.Build(
-            new NetworkTestProductBuildRequest(NetworkTestProductAdapters.UnityAuthority));
+        public static void Build(string candidateLabel) => NetworkTestProductBuildWorkflow.Build(
+            new NetworkTestProductBuildRequest(NetworkTestProductAdapters.UnityAuthority, candidateLabel));
 
-        public static void Run() => NetworkTestProductBuildWorkflow.Run(
-            new NetworkTestProductRunRequest(NetworkTestProductAdapters.UnityAuthority, true));
+        public static void Run(string candidateId) => NetworkTestProductBuildWorkflow.Run(
+            new NetworkTestProductRunRequest(NetworkTestProductAdapters.UnityAuthority, candidateId, "default"));
     }
 }

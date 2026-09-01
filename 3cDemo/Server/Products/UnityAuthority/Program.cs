@@ -56,7 +56,7 @@ try
         string.Equals(args[0], "--write-server-product-manifest", StringComparison.Ordinal))
     {
         if (args.Length != 2)
-            throw new InvalidOperationException("Unity Authority Server manifest command requires exactly one BuildId.");
+            throw new InvalidOperationException("Unity Authority Server manifest command requires exactly one CandidateId.");
         Console.WriteLine(ServerProductBuildManifestWriter.Write(AppContext.BaseDirectory, args[1], product));
         return;
     }

@@ -78,7 +78,8 @@ public sealed class GmHttpConsoleConnection : IGmCommandConnection
 
     static GmCommandResponse Failure(GmCommandRequest request, GmResultCode code, string message) => new()
     {
-        requestId = request.requestId, serviceInstanceId = request.serviceInstanceId,
+        requestId = request.requestId, candidateId = request.candidateId, runId = request.runId,
+        serviceInstanceId = request.serviceInstanceId,
         sessionId = request.sessionId, code = code, message = message
     };
 
@@ -90,8 +91,10 @@ public sealed class GmHttpConsoleConnection : IGmCommandConnection
             {
                 GmServiceDescription service = m_Description.GetAwaiter().GetResult();
                 m_Description = null;
-                if (service.protocolVersion != GmHttpProtocol.Version || service.buildId != m_Manifest.buildId ||
-                    service.sessionId != m_Manifest.sessionId || string.IsNullOrWhiteSpace(service.serviceInstanceId) ||
+                if (service.protocolVersion != GmHttpProtocol.Version ||
+                    service.candidateId != m_Manifest.candidateId || service.runId != m_Manifest.runId ||
+                    service.sessionId != m_Manifest.sessionId || !SameTool(service.tool, m_Manifest.tool) ||
+                    string.IsNullOrWhiteSpace(service.serviceInstanceId) ||
                     service.commands == null || service.commands.Length == 0 || service.commands.Length > 64)
                     throw new InvalidDataException("GM 服务协议、构建或目标会话不匹配。");
                 var ids = new HashSet<string>(StringComparer.Ordinal);
@@ -136,6 +139,11 @@ public sealed class GmHttpConsoleConnection : IGmCommandConnection
         Disconnect();
         m_Client.Dispose();
     }
+
+    static bool SameTool(GmToolIdentity left, GmToolIdentity right) =>
+        left != null && right != null && left.toolId == right.toolId && left.toolVersion == right.toolVersion &&
+        left.protocolVersion == right.protocolVersion && left.commandCatalogHash == right.commandCatalogHash &&
+        left.bundleHash == right.bundleHash;
 
     sealed record PendingRequest(GmCommandRequest Request, Task<GmCommandResponse> Result);
 }

@@ -6,15 +6,15 @@ namespace ThirdPerson.Server.Host;
 
 public static class ServerProductBuildManifestWriter
 {
-    public static string Write(string publishRoot, string buildId, ServerHostProductDefinition product)
+    public static string Write(string publishRoot, string candidateId, ServerHostProductDefinition product)
     {
         string root = Path.GetFullPath(publishRoot);
-        if (string.IsNullOrWhiteSpace(buildId))
-            throw new ArgumentException("Server product BuildId is required.", nameof(buildId));
+        if (string.IsNullOrWhiteSpace(candidateId))
+            throw new ArgumentException("Server product CandidateId is required.", nameof(candidateId));
         var manifest = new ServerProductBuildManifest
         {
             SchemaVersion = ServerProductBuildManifestReader.SchemaVersion,
-            BuildId = buildId.Trim(),
+            CandidateId = candidateId.Trim(),
             ServerProductId = product.ProductId,
             AuthorityHost = product.AuthorityHost == null
                 ? null

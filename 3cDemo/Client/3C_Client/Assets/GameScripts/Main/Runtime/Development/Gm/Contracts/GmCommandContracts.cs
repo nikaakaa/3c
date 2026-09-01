@@ -22,6 +22,7 @@ namespace ThirdPerson.Development.Gm
         TargetUnavailable,
         TimedOut,
         VersionMismatch,
+        ToolVersionMismatch,
         ExecutionFailed
     }
 
@@ -56,6 +57,8 @@ namespace ThirdPerson.Development.Gm
     public sealed class GmCommandRequest
     {
         public string requestId = string.Empty;
+        public string candidateId = string.Empty;
+        public string runId = string.Empty;
         public string serviceInstanceId = string.Empty;
         public string sessionId = string.Empty;
         public string commandId = string.Empty;
@@ -98,6 +101,8 @@ namespace ThirdPerson.Development.Gm
     public sealed class GmCommandResponse
     {
         public string requestId = string.Empty;
+        public string candidateId = string.Empty;
+        public string runId = string.Empty;
         public string serviceInstanceId = string.Empty;
         public string sessionId = string.Empty;
         public GmResultCode code;
@@ -110,9 +115,11 @@ namespace ThirdPerson.Development.Gm
     public sealed class GmServiceDescription
     {
         public int protocolVersion;
-        public string buildId = string.Empty;
+        public string candidateId = string.Empty;
+        public string runId = string.Empty;
         public string serviceInstanceId = string.Empty;
         public string sessionId = string.Empty;
+        public GmToolIdentity tool = new GmToolIdentity();
         public GmCommandDefinition[] commands = Array.Empty<GmCommandDefinition>();
     }
 }

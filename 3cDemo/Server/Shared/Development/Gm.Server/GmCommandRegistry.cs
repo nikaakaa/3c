@@ -1,3 +1,6 @@
+using System.Security.Cryptography;
+using System.Text;
+
 namespace ThirdPerson.Development.Gm;
 
 public interface IGmCommandHandler
@@ -42,6 +45,28 @@ public sealed class GmCommandRegistry : IGmCommandCatalog
     public GmCommandRegistry() => m_View = m_Definitions.AsReadOnly();
 
     public IReadOnlyList<GmCommandDefinition> Definitions => m_View;
+
+    public string CommandCatalogHash
+    {
+        get
+        {
+            if (!m_Sealed)
+                throw new InvalidOperationException("GM 命令目录尚未锁定。");
+            var builder = new StringBuilder("gm-command-catalog/1");
+            foreach (GmCommandDefinition definition in m_Definitions)
+            {
+                builder.Append('\u001f').Append(definition.id)
+                    .Append('\u001f').Append(definition.version)
+                    .Append('\u001f').Append((int)definition.permission)
+                    .Append('\u001f').Append(definition.usage)
+                    .Append('\u001f').Append(definition.description);
+                foreach (GmCommandArgument argument in definition.arguments)
+                    builder.Append('\u001f').Append(argument.name).Append('\u001f').Append(argument.optional)
+                        .Append('\u001f').Append(argument.description);
+            }
+            return Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(builder.ToString()))).ToLowerInvariant();
+        }
+    }
 
     public void Register(IGmCommandHandler handler)
     {

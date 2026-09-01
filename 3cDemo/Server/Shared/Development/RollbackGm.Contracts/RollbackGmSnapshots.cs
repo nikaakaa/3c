@@ -1,10 +1,24 @@
+using ThirdPerson.Development.Gm;
+
 namespace ThirdPerson.Development.Gm.Rollback;
 
-public sealed record RollbackRelayQueryIdentity(int ProtocolVersion, string BuildId, string SessionId, string InstanceId);
-public sealed record RollbackRelayQueryResult<T>(string RelayInstanceId, string SessionId, T Value);
+public sealed record RollbackRelayQueryIdentity(
+    int ProtocolVersion,
+    string CandidateId,
+    string RunId,
+    string SessionId,
+    GmToolIdentity Tool,
+    string InstanceId);
+public sealed record RollbackRelayQueryResult<T>(
+    string RelayInstanceId,
+    string CandidateId,
+    string RunId,
+    string SessionId,
+    T Value);
 
 public sealed record RollbackGmSessionSnapshot(
-    string BuildId,
+    string CandidateId,
+    string RunId,
     string SessionId,
     string RelayPeerId,
     string Endpoint,

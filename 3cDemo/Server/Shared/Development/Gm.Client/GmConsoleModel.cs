@@ -57,6 +57,8 @@ namespace ThirdPerson.Development.Gm
             var request = new GmCommandRequest
             {
                 requestId = Guid.NewGuid().ToString("N"),
+                candidateId = Service.candidateId,
+                runId = Service.runId,
                 serviceInstanceId = Service.serviceInstanceId,
                 sessionId = Service.sessionId,
                 commandId = parsed.CommandId,
@@ -82,7 +84,11 @@ namespace ThirdPerson.Development.Gm
                 PendingRequest pending = pair.Value;
                 if (ConnectionState != GmConnectionState.Connected)
                     Complete(pair.Key, pending.Output, GmConsoleOutputState.Disconnected, "服务连接中断，执行结果未知。");
-                else if (!MatchesService(pending.Request.serviceInstanceId, pending.Request.sessionId))
+                else if (!MatchesService(
+                             pending.Request.candidateId,
+                             pending.Request.runId,
+                             pending.Request.serviceInstanceId,
+                             pending.Request.sessionId))
                     Complete(pair.Key, pending.Output, GmConsoleOutputState.TargetEnded, "服务运行实例已改变，旧请求不会转交新实例。");
                 else if (nowSeconds >= pending.Deadline)
                     Complete(pair.Key, pending.Output, GmConsoleOutputState.TimedOut, "请求超时，执行结果未知；不会自动重发。");
@@ -94,7 +100,9 @@ namespace ThirdPerson.Development.Gm
                     break;
                 if (!m_Pending.TryGetValue(response.requestId, out PendingRequest pending))
                     continue;
-                if (!string.Equals(response.serviceInstanceId, pending.Request.serviceInstanceId, StringComparison.Ordinal) ||
+                if (!string.Equals(response.candidateId, pending.Request.candidateId, StringComparison.Ordinal) ||
+                    !string.Equals(response.runId, pending.Request.runId, StringComparison.Ordinal) ||
+                    !string.Equals(response.serviceInstanceId, pending.Request.serviceInstanceId, StringComparison.Ordinal) ||
                     !string.Equals(response.sessionId, pending.Request.sessionId, StringComparison.Ordinal) ||
                     response.code == GmResultCode.TargetEnded)
                 {
@@ -169,7 +177,9 @@ namespace ThirdPerson.Development.Gm
             return 0;
         }
 
-        bool MatchesService(string instanceId, string sessionId) =>
+        bool MatchesService(string candidateId, string runId, string instanceId, string sessionId) =>
+            string.Equals(Service.candidateId, candidateId, StringComparison.Ordinal) &&
+            string.Equals(Service.runId, runId, StringComparison.Ordinal) &&
             string.Equals(Service.serviceInstanceId, instanceId, StringComparison.Ordinal) &&
             string.Equals(Service.sessionId, sessionId, StringComparison.Ordinal);
 

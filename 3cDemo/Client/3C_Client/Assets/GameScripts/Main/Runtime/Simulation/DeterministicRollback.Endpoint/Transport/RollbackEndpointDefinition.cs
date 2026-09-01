@@ -38,15 +38,11 @@ namespace ThirdPersonSimulation.DeterministicRollback
             MaximumQueuedMessages = maximumQueuedMessages;
             MaximumFragmentsPerMessage = maximumFragmentsPerMessage;
             ReliableResendMilliseconds = reliableResendMilliseconds;
-            ConfigurationHash = StableHash.Compute(
-                "deterministic-rollback-endpoint/2",
-                parsed.ToString(),
-                port.ToString(),
-                SessionId,
-                maximumDatagramBytes.ToString(),
-                maximumQueuedMessages.ToString(),
-                maximumFragmentsPerMessage.ToString(),
-                reliableResendMilliseconds.ToString());
+            ConfigurationHash = ComputeConfigurationHash(
+                maximumDatagramBytes,
+                maximumQueuedMessages,
+                maximumFragmentsPerMessage,
+                reliableResendMilliseconds);
             Identity = new SimulationComponentIdentity(
                 SimulationComponentRole.Endpoint,
                 DeterministicRollbackModelIdentity.EndpointId,
@@ -63,5 +59,16 @@ namespace ThirdPersonSimulation.DeterministicRollback
         public int ReliableResendMilliseconds { get; }
         public StableHash ConfigurationHash { get; }
         public SimulationComponentIdentity Identity { get; }
+
+        public static StableHash ComputeConfigurationHash(
+            int maximumDatagramBytes,
+            int maximumQueuedMessages,
+            int maximumFragmentsPerMessage,
+            int reliableResendMilliseconds) => StableHash.Compute(
+            "deterministic-rollback-endpoint/3",
+            maximumDatagramBytes.ToString(),
+            maximumQueuedMessages.ToString(),
+            maximumFragmentsPerMessage.ToString(),
+            reliableResendMilliseconds.ToString());
     }
 }

@@ -18,17 +18,18 @@ public sealed class RollbackRelayQuerySource
     {
         RequireOwnerThread();
         return new RollbackGmSessionSnapshot(
-            m_Manifest.buildId,
+            m_Manifest.candidate.candidateId,
+            m_Manifest.runId,
             m_Manifest.sessionId,
-            m_Manifest.relayServerPeerId,
+            m_Manifest.candidate.relayServerPeerId,
             m_Runtime.LocalEndPoint.ToString(),
-            $"{m_Manifest.modelId}@{m_Manifest.modelVersion}/{m_Manifest.modelConfigurationHash}",
-            $"{m_Manifest.protocolId}@{m_Manifest.protocolVersion}/{m_Manifest.protocolSchemaHash}",
-            m_Manifest.programId,
-            m_Manifest.fixedProgramHash,
-            m_Manifest.tickRate,
-            m_Manifest.maximumPredictionLeadTicks,
-            m_Manifest.confirmationDelayTicks);
+            $"{m_Manifest.candidate.modelId}@{m_Manifest.candidate.modelVersion}/{m_Manifest.candidate.modelConfigurationHash}",
+            $"{m_Manifest.candidate.protocolId}@{m_Manifest.candidate.protocolVersion}/{m_Manifest.candidate.protocolSchemaHash}",
+            m_Manifest.candidate.programId,
+            m_Manifest.candidate.fixedProgramHash,
+            m_Manifest.candidate.tickRate,
+            m_Manifest.candidate.maximumPredictionLeadTicks,
+            m_Manifest.candidate.confirmationDelayTicks);
     }
 
     public RollbackGmActorSnapshot[] CaptureActors()

@@ -26,7 +26,9 @@ public sealed class HttpRollbackGmQuerySource : IRollbackGmQuerySource
         {
             RollbackRelayQueryResult<T> result = await m_Client.GetAsync<RollbackRelayQueryResult<T>>(
                 path, m_Target.InstanceId, cancellation);
-            if (result.RelayInstanceId != m_Target.InstanceId || result.SessionId != m_Target.SessionId)
+            if (result.RelayInstanceId != m_Target.InstanceId ||
+                result.CandidateId != m_Target.CandidateId || result.RunId != m_Target.RunId ||
+                result.SessionId != m_Target.SessionId)
                 throw new GmCommandFailureException(GmResultCode.TargetEnded, "Relay 查询响应属于其它运行实例。");
             return result.Value;
         }

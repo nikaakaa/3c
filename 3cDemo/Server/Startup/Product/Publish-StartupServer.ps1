@@ -1,6 +1,6 @@
 param(
     [Parameter(Mandatory = $true)]
-    [string]$BuildId,
+    [string]$CandidateId,
     [string]$Configuration = "Release"
 )
 
@@ -23,7 +23,7 @@ try {
         throw "Startup Server publish failed."
     }
 
-    & (Join-Path $stagingRoot "ThirdPerson.Startup.Server.exe") --write-server-product-manifest $BuildId
+    & (Join-Path $stagingRoot "ThirdPerson.Startup.Server.exe") --write-server-product-manifest $CandidateId
     if ($LASTEXITCODE -ne 0) {
         throw "Startup Server manifest generation failed."
     }

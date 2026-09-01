@@ -64,7 +64,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 footPlacementConstraint,
             CharacterFullBodyIkGoalAssemblerConstraintHandle
                 goalAssemblerConstraint,
-            int fullBodyIkIndex,
+            CharacterFullBodyIkConstraintHandle fullBodyIkConstraint,
             int stateMachineIndex,
             int animationSlotIndex,
             int linkedPoseCallIndex,
@@ -79,6 +79,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             bool isGoalAssembler =
                 code ==
                 CharacterPoseOperationCode.FullBodyIkGoalAssembler;
+            bool isFullBodyIk =
+                code == CharacterPoseOperationCode.FullBodyIK;
             if (index < 0 ||
                 !Enum.IsDefined(typeof(CharacterPoseOperationCode), code) ||
                 outputPoseValueIndex < -1 ||
@@ -112,6 +114,16 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                  fullBodyIkGoalContributionInputStart ||
                  goalAssemblerConstraint.ContributionInputCount !=
                  fullBodyIkGoalContributionInputCount) ||
+                isFullBodyIk != fullBodyIkConstraint.IsValid ||
+                isFullBodyIk &&
+                (fullBodyIkConstraint.OperationIndex != index ||
+                 fullBodyIkConstraint.CallSiteIndex != frameCacheIndex ||
+                 fullBodyIkConstraint.InputPoseValueIndex !=
+                 inputPoseValueIndexA ||
+                 fullBodyIkConstraint.OutputPoseValueIndex !=
+                 outputPoseValueIndex ||
+                 fullBodyIkConstraint.InputGoalSetValueIndex !=
+                 inputFullBodyIkGoalSetValueIndex) ||
                 !float.IsFinite(weight) || weight < 0f || weight > 1f)
                 throw new ArgumentException("Animation Pose Graph Native operation header is invalid.");
             Index = index;
@@ -123,7 +135,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                     : outputFullBodyIkGoalContributionValueIndex;
             m_OutputFullBodyIkGoalSetValueIndex =
                 isGoalAssembler ? -1 : outputFullBodyIkGoalSetValueIndex;
-            InputFullBodyIkGoalSetValueIndex = inputFullBodyIkGoalSetValueIndex;
+            m_InputFullBodyIkGoalSetValueIndex = isFullBodyIk
+                ? -1
+                : inputFullBodyIkGoalSetValueIndex;
             InputValueIndexA = inputPoseValueIndexA;
             InputValueIndexB = inputPoseValueIndexB;
             m_FullBodyIkGoalContributionInputStart = isGoalAssembler
@@ -146,7 +160,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             PoseBoneContribution = poseBoneContribution;
             FootPlacementConstraint = footPlacementConstraint;
             GoalAssemblerConstraint = goalAssemblerConstraint;
-            FullBodyIkIndex = fullBodyIkIndex;
+            FullBodyIkConstraint = fullBodyIkConstraint;
             StateMachineIndex = stateMachineIndex;
             AnimationSlotIndex = animationSlotIndex;
             LinkedPoseCallIndex = linkedPoseCallIndex;
@@ -170,7 +184,11 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             GoalAssemblerConstraint.IsValid
                 ? GoalAssemblerConstraint.GoalSetValueIndex
                 : m_OutputFullBodyIkGoalSetValueIndex;
-        internal int InputFullBodyIkGoalSetValueIndex { get; }
+        readonly int m_InputFullBodyIkGoalSetValueIndex;
+        internal int InputFullBodyIkGoalSetValueIndex =>
+            FullBodyIkConstraint.IsValid
+                ? FullBodyIkConstraint.InputGoalSetValueIndex
+                : m_InputFullBodyIkGoalSetValueIndex;
         internal int InputValueIndexA { get; }
         internal int InputValueIndexB { get; }
         readonly int m_FullBodyIkGoalContributionInputStart;
@@ -200,7 +218,12 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             FootPlacementConstraint { get; }
         internal CharacterFullBodyIkGoalAssemblerConstraintHandle
             GoalAssemblerConstraint { get; }
-        internal int FullBodyIkIndex { get; }
+        internal CharacterFullBodyIkConstraintHandle
+            FullBodyIkConstraint { get; }
+        internal int FullBodyIkIndex =>
+            FullBodyIkConstraint.IsValid
+                ? FullBodyIkConstraint.FullBodyIkIndex
+                : -1;
         internal int StateMachineIndex { get; }
         internal int AnimationSlotIndex { get; }
         internal int LinkedPoseCallIndex { get; }
@@ -233,7 +256,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             PoseBoneContribution,
             FootPlacementConstraint,
             GoalAssemblerConstraint,
-            FullBodyIkIndex,
+            FullBodyIkConstraint,
             StateMachineIndex,
             AnimationSlotIndex,
             LinkedPoseCallIndex,
@@ -269,7 +292,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             default,
             default,
             default,
-            FullBodyIkIndex,
+            default,
             StateMachineIndex,
             AnimationSlotIndex,
             LinkedPoseCallIndex,
@@ -707,6 +730,12 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             new CharacterFullBodyIkGoalAssemblerCatalog(
                 m_FullBodyIkGoalContributionInputValueIndices,
                 m_FullBodyIkGoalSetValueCount);
+        internal bool ContainsFullBodyIkConstraint(
+            in CharacterFullBodyIkConstraintHandle handle) =>
+            handle.IsValid &&
+            (uint)handle.FullBodyIkIndex < (uint)m_FullBodyIkCount &&
+            (uint)handle.InputGoalSetValueIndex <
+            (uint)m_FullBodyIkGoalSetValueCount;
         internal int FullBodyIkGoalContributionCount =>
             m_FullBodyIkGoalContributionCount;
         internal int FullBodyIkContributionGoalCount =>
@@ -1184,6 +1213,19 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                             operation
                                 .FullBodyIkGoalContributionInputCount);
                 }
+                CharacterFullBodyIkConstraintHandle
+                    fullBodyIkConstraint = default;
+                if (operation.Code == CharacterPoseOperationCode.FullBodyIK)
+                {
+                    fullBodyIkConstraint =
+                        new CharacterFullBodyIkConstraintHandle(
+                            operation.Index,
+                            operation.Index,
+                            operation.FullBodyIkIndex,
+                            operation.InputValueIndexA,
+                            operation.OutputValueIndex,
+                            operation.InputFullBodyIkGoalSetValueIndex);
+                }
                 m_Operations[nativeIndex] = new AnimationPoseGraphNativeOperation(
                     operation.Index,
                     operation.Code,
@@ -1209,7 +1251,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                     poseBoneContribution,
                     footPlacementConstraint,
                     goalAssemblerConstraint,
-                    operation.FullBodyIkIndex,
+                    fullBodyIkConstraint,
                     operation.StateMachineIndex,
                     operation.AnimationSlotIndex,
                     operation.LinkedPoseCallIndex,

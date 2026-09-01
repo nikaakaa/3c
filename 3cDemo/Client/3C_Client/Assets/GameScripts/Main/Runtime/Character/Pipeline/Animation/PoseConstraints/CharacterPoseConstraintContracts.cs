@@ -422,6 +422,102 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             GoalSet.CompletionIdentity == completionIdentity;
     }
 
+    internal readonly struct CharacterFullBodyIkConstraintHandle :
+        IEquatable<CharacterFullBodyIkConstraintHandle>
+    {
+        internal CharacterFullBodyIkConstraintHandle(
+            int operationIndex,
+            int callSiteIndex,
+            int fullBodyIkIndex,
+            int inputPoseValueIndex,
+            int outputPoseValueIndex,
+            int inputGoalSetValueIndex)
+        {
+            if (operationIndex < 0 ||
+                callSiteIndex < 0 ||
+                fullBodyIkIndex < 0 ||
+                inputPoseValueIndex < 0 ||
+                outputPoseValueIndex < 0 ||
+                inputGoalSetValueIndex < 0)
+            {
+                throw new ArgumentOutOfRangeException(nameof(operationIndex));
+            }
+            OperationIndex = operationIndex;
+            CallSiteIndex = callSiteIndex;
+            FullBodyIkIndex = fullBodyIkIndex;
+            InputPoseValueIndex = inputPoseValueIndex;
+            OutputPoseValueIndex = outputPoseValueIndex;
+            InputGoalSetValueIndex = inputGoalSetValueIndex;
+            m_IsValid = true;
+        }
+
+        readonly bool m_IsValid;
+        internal int OperationIndex { get; }
+        internal int CallSiteIndex { get; }
+        internal int FullBodyIkIndex { get; }
+        internal int InputPoseValueIndex { get; }
+        internal int OutputPoseValueIndex { get; }
+        internal int InputGoalSetValueIndex { get; }
+        internal bool IsValid => m_IsValid;
+
+        public bool Equals(CharacterFullBodyIkConstraintHandle other) =>
+            OperationIndex == other.OperationIndex &&
+            CallSiteIndex == other.CallSiteIndex &&
+            FullBodyIkIndex == other.FullBodyIkIndex &&
+            InputPoseValueIndex == other.InputPoseValueIndex &&
+            OutputPoseValueIndex == other.OutputPoseValueIndex &&
+            InputGoalSetValueIndex == other.InputGoalSetValueIndex &&
+            m_IsValid == other.m_IsValid;
+
+        public override bool Equals(object obj) =>
+            obj is CharacterFullBodyIkConstraintHandle other &&
+            Equals(other);
+
+        public override int GetHashCode() => HashCode.Combine(
+            OperationIndex,
+            CallSiteIndex,
+            FullBodyIkIndex,
+            InputPoseValueIndex,
+            OutputPoseValueIndex,
+            InputGoalSetValueIndex,
+            m_IsValid);
+    }
+
+    internal readonly struct CharacterFullBodyIkConstraintOperationResult
+    {
+        internal CharacterFullBodyIkConstraintOperationResult(
+            in CharacterFullBodyIkConstraintHandle handle,
+            in CharacterFullBodyIkResult solve,
+            ulong frameSequence,
+            ulong completionIdentity)
+        {
+            Handle = handle;
+            Solve = solve;
+            FrameSequence = frameSequence;
+            CompletionIdentity = completionIdentity;
+            m_IsValid =
+                handle.IsValid &&
+                solve.Succeeded &&
+                frameSequence != 0 &&
+                completionIdentity != 0;
+        }
+
+        readonly bool m_IsValid;
+        internal CharacterFullBodyIkConstraintHandle Handle { get; }
+        internal CharacterFullBodyIkResult Solve { get; }
+        internal ulong FrameSequence { get; }
+        internal ulong CompletionIdentity { get; }
+        internal bool IsValid => m_IsValid;
+        internal bool Matches(
+            in CharacterFullBodyIkConstraintHandle handle,
+            ulong frameSequence,
+            ulong completionIdentity) =>
+            m_IsValid &&
+            Handle.Equals(handle) &&
+            FrameSequence == frameSequence &&
+            CompletionIdentity == completionIdentity;
+    }
+
     public readonly struct CharacterPoseBoneRuntimeId : IEquatable<CharacterPoseBoneRuntimeId>
     {
         public CharacterPoseBoneRuntimeId(string value)

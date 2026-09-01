@@ -453,14 +453,15 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                 in m_Pending.GoalSet);
         }
 
-        internal CharacterFullBodyIkResult SolveFullBodyIk(
+        internal CharacterFullBodyIkConstraintOperationResult ExecuteFullBodyIk(
+            in CharacterFullBodyIkConstraintHandle handle,
             NativeSlice<AnimationLocalBonePose> pendingOutputComponentPose,
-            int producerOperationIndex,
-            int producerCallSiteIndex,
             ulong frameSequence,
             ulong completionIdentity)
         {
             RequireRenderFrame(frameSequence, completionIdentity);
+            if (!handle.IsValid || handle.FullBodyIkIndex != 0)
+                throw new ArgumentOutOfRangeException(nameof(handle));
             bool recordDiagnostics =
                 RequiresFullBodyIkDiagnostics(m_Pending.DiagnosticsInterest);
             if (!m_Pending.GoalSet.IsValid)
@@ -498,7 +499,11 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                 for (int i = 0; i < limbCount; i++)
                     m_Pending.SolverLimbs[i] = m_Solver.GetDiagnosticLimb(i);
             }
-            return result;
+            return new CharacterFullBodyIkConstraintOperationResult(
+                in handle,
+                in result,
+                frameSequence,
+                completionIdentity);
         }
 
         internal string ApplyTuning(

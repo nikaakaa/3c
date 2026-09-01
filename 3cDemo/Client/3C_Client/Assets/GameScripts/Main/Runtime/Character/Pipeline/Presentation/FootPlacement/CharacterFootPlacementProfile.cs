@@ -6,6 +6,65 @@ using UnityEngine;
 namespace ThirdPersonCharacter.Pipeline.Presentation
 {
     [Serializable]
+    public sealed class CharacterFootCurrentSupportQueryAuthoringSettings
+    {
+        [SerializeField] LayerMask m_GroundLayerMask;
+        [SerializeField] int m_HitCapacity;
+        [SerializeField] float m_CastAbove;
+        [SerializeField] float m_CastBelow;
+        [SerializeField] float m_MaximumSurfaceSlopeDegrees;
+
+        internal CharacterFootCurrentSupportQuerySettings Build() =>
+            new CharacterFootCurrentSupportQuerySettings(
+                m_GroundLayerMask.value,
+                m_HitCapacity,
+                m_CastAbove,
+                m_CastBelow,
+                m_MaximumSurfaceSlopeDegrees);
+    }
+
+    internal readonly struct CharacterFootCurrentSupportQuerySettings
+    {
+        internal CharacterFootCurrentSupportQuerySettings(
+            int groundLayerMask,
+            int hitCapacity,
+            float castAbove,
+            float castBelow,
+            float maximumSurfaceSlopeDegrees)
+        {
+            GroundLayerMask = groundLayerMask;
+            HitCapacity = hitCapacity;
+            CastAbove = castAbove;
+            CastBelow = castBelow;
+            MaximumSurfaceSlopeDegrees = maximumSurfaceSlopeDegrees;
+            RequireValid();
+        }
+
+        internal int GroundLayerMask { get; }
+        internal int HitCapacity { get; }
+        internal float CastAbove { get; }
+        internal float CastBelow { get; }
+        internal float MaximumDistance => CastAbove + CastBelow;
+        internal float MaximumSurfaceSlopeDegrees { get; }
+        internal float MinimumGroundNormalDot =>
+            Mathf.Cos(MaximumSurfaceSlopeDegrees * Mathf.Deg2Rad);
+
+        internal void RequireValid()
+        {
+            if (GroundLayerMask == 0 || HitCapacity < 4 || HitCapacity > 32 ||
+                !float.IsFinite(CastAbove) || CastAbove <= 0f ||
+                !float.IsFinite(CastBelow) || CastBelow <= 0f ||
+                !float.IsFinite(MaximumSurfaceSlopeDegrees) ||
+                MaximumSurfaceSlopeDegrees <= 0f ||
+                MaximumSurfaceSlopeDegrees >= 90f)
+            {
+                throw new InvalidOperationException(
+                    "Foot Current Support query settings are invalid.");
+            }
+        }
+    }
+
+    [Serializable]
     public sealed class CharacterFootLandingPredictionAuthoringSettings
     {
         [SerializeField] LayerMask m_GroundLayerMask;
@@ -374,9 +433,13 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         menuName = "Third Person/Character/Pipeline/Presentation/Foot Placement Profile")]
     public sealed class CharacterFootPlacementProfile : ScriptableObject
     {
-        public const string SchemaVersion = "character-foot-placement-profile/v35-direction-history";
+        public const string SchemaVersion =
+            "character-foot-placement-profile/v36-current-support-query";
 
         [SerializeField] string m_ProfileId = string.Empty;
+        [SerializeField] CharacterFootCurrentSupportQueryAuthoringSettings
+            m_CurrentSupportQuery =
+                new CharacterFootCurrentSupportQueryAuthoringSettings();
         [SerializeField] CharacterFootLandingPredictionAuthoringSettings m_LandingPrediction =
             new CharacterFootLandingPredictionAuthoringSettings();
         [SerializeField] CharacterFootGroundDetectionAuthoringSettings m_GroundDetection =
@@ -386,6 +449,9 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
 
         public string ProfileId => RequireIdentity(m_ProfileId, nameof(m_ProfileId));
         public string Revision => ComputeRevision();
+        public CharacterFootCurrentSupportQueryAuthoringSettings CurrentSupportQuery =>
+            m_CurrentSupportQuery ?? throw new InvalidOperationException(
+                "Foot Placement Profile has no Current Support query settings.");
         public CharacterFootLandingPredictionAuthoringSettings LandingPrediction =>
             m_LandingPrediction ?? throw new InvalidOperationException(
                 "Foot Placement Profile has no Landing Prediction settings.");
@@ -399,6 +465,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         public string ComputeRevision() => StableHash.Compute(
             SchemaVersion,
             ProfileId,
+            JsonUtility.ToJson(m_CurrentSupportQuery),
             JsonUtility.ToJson(m_LandingPrediction),
             JsonUtility.ToJson(m_GroundDetection),
             JsonUtility.ToJson(m_FootMotion)).ToString();
@@ -406,6 +473,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         public void RequireValid()
         {
             _ = ProfileId;
+            CurrentSupportQuery.Build().RequireValid();
             LandingPrediction.Build().RequireValid();
             GroundDetection.Build().RequireValid();
             FootMotion.Build().RequireValid();
@@ -446,6 +514,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 ProfileId,
                 Revision,
                 projection.PosePlan.PlanHash,
+                CurrentSupportQuery.Build(),
                 LandingPrediction.Build(),
                 GroundDetection.Build(),
                 FootMotion.Build());
@@ -469,6 +538,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             string profileId,
             string profileRevision,
             string posePlanHash,
+            CharacterFootCurrentSupportQuerySettings currentSupportQuery,
             CharacterFootLandingPredictionSettings landingPrediction,
             CharacterFootGroundDetectionSettings groundDetection,
             CharacterFootMotionSettings footMotion)
@@ -476,6 +546,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             ProfileId = profileId;
             ProfileRevision = profileRevision;
             PosePlanHash = posePlanHash;
+            CurrentSupportQuery = currentSupportQuery;
             LandingPrediction = landingPrediction;
             GroundDetection = groundDetection;
             FootMotion = footMotion;
@@ -485,6 +556,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             {
                 throw new ArgumentException("Foot Placement runtime identity is invalid.");
             }
+            CurrentSupportQuery.RequireValid();
             LandingPrediction.RequireValid();
             GroundDetection.RequireValid();
             FootMotion.RequireValid();
@@ -493,6 +565,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         internal string ProfileId { get; }
         internal string ProfileRevision { get; }
         internal string PosePlanHash { get; }
+        internal CharacterFootCurrentSupportQuerySettings CurrentSupportQuery { get; }
         internal CharacterFootLandingPredictionSettings LandingPrediction { get; }
         internal CharacterFootGroundDetectionSettings GroundDetection { get; }
         internal CharacterFootMotionSettings FootMotion { get; }

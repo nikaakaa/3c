@@ -113,6 +113,7 @@
 - [x] 6.43 完成满锁后Source抬脚滑动组合卸载的独立实验及拒绝记录；212054准入合同成立但骨盆与Swing质量未通过，已按用户要求撤销Runtime政策、历史和相应delta，完整证据保留，不进入正式实现
 - [x] 6.44 发布卸载历史Before/After到唯一Diagnostics并核对原始固定Contact帧，使用同Record验证骨盆下拉与脚部收益，保留193957和候选证据；212054骨盆改善但固定Contact间隙增加且新增3个同域Swing尖峰，不升格为已通过基线，详见experiments/20260830-source-lift-unloading.md
 - [x] 6.45 重新加载193957对应Runtime与facts57诊断，使用原Record回放核对脚部、骨盆及输入逐帧恢复，持久保存恢复Proof与对账结果，不覆盖193957或212054原包；221050的1119列逐值相同，24列仅身份一一换代，37项规则与结果恢复，原骨盆问题不冒称解决
+- [x] 6.46 将已闭合的Corin Current Support五点Foot/Toe局部布局接入通用Rig Calibration编辑器，将独立Ray查询范围接入Foot Placement Profile并迁移Corin资产；只完成正式数据、校验和PoseRig传递，不在六记录聚合未闭合前改变Current Support运行行为
 
 ## 7. 单独接入Support与Pelvis
 

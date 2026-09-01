@@ -312,7 +312,7 @@ Foot根Bank MUST在最终Foot Goal完成Constraint、Reach与Position/Rotation W
 
 ### Requirement: Current Support必须由Foot/Toe脚掌查询解析唯一位置与法线
 
-每个表现帧 MUST从与Foot Placement相同的`FinalAnimationPoseFrame`和Rig Calibration取得真实Foot、Toe、Heel接触几何、Foot Rotation、Sole Forward、Component Up与脚掌尺寸，并在现有World Query Backend内建立固定容量`CurrentSupportObservation`。所有必需Probe MUST使用Profile正式声明的查询距离、半径、坡度、Layer、自身Collider排除、有限值与World Revision合同；查询形状、Probe布局和Position组合 MUST由项目Backend与Rig Calibration形成typed合同，不得从ZZZ未恢复名字的外部函数猜测Unity重载、硬编码匿名六次常量或复制对象偏移。
+每个表现帧 MUST从与Foot Placement相同的`FinalAnimationPoseFrame`和Rig Calibration取得真实Foot、Toe、Heel接触几何、Foot Rotation、Sole Forward、Component Up与脚掌尺寸，并在现有World Query Backend内建立固定容量`CurrentSupportObservation`。Rig Calibration MUST显式保存Current Support的Base、Heel、正负Lateral四个Foot-local点及一个以实时Toe为原点、由Foot轴定向的Toe Tip点；Profile MUST独立保存Current Support查询的Layer、容量、上下范围与坡度。条件Foot Pivot第六点使用实时Foot原点，不得复制成另一份校准常量。所有必需Probe MUST使用这些正式数据、自身Collider排除、有限值与World Revision合同；查询形状、Probe布局和Position组合 MUST由项目Backend与Rig Calibration形成typed合同，不得硬编码对象偏移、混用另一角色实例数据或把Landing Prediction的Sphere半径冒充Current Support脚宽。
 
 每个Probe MUST分别保存Accepted/Rejected/NotExecuted、是否实际执行查询、完整命中记录、距离、Surface identity、World Revision和拒绝原因。任一必需Probe没有合法命中或容量溢出时，Current Support MUST发布typed unavailable；不得用上一结果、Animated Up、单点降级、默认地面或另一脚结果冒充本帧成功。全部必需记录合法时，Runtime MUST在同一事务内解析一个完整XYZ Foot Target Position与一个Requested Support Direction，并为两者分别保留确定的记录lineage。`CharacterFootSupportTarget.Position`在本项目中 MUST明确表示Sole Center，不得因ZZZ匿名Foot writer改名为Ankle。022607使用的`OriginalSole + ComponentUp × max displacement`与同一selected SphereCast raw Normal组合 MUST删除；不得把带Sphere半径偏移的hit point直接当Foot Position，也不得调低Slope阈值、偏好Up或平均多法线规避。Resolved阶段 MUST使用同一Applied Direction生成Final Sole Rotation，并以Rig Calibration按实际Position/Rotation Weight把Sole Center唯一反解为Ankle Goal，对账加权后Heel/Toe中点仍等于加权目标Sole。
 
@@ -323,6 +323,12 @@ State Target MUST从Swing Ground/Current Support或Verified Anchor中选择一�
 - **WHEN** 同一Current Support事务的必需多点记录同时覆盖不同高度或Surface
 - **THEN** Runtime MUST按正式Rig/Backend几何合同解析一个完整XYZ Position和一个Requested Direction，并保留各输入记录及选择lineage
 - **AND** MUST不退化为纯Up最大位移、同一selected raw Normal、Slope调参或多法线平均，只写一个Foot Goal
+
+#### Scenario: Corin Current Support脚印配置
+
+- **WHEN** Corin Rig Calibration和Foot Placement Profile发布Current Support输入
+- **THEN** 五个校准点 MUST分别为Foot-local `(0,-0.08,0)`、`(-0.01,-0.08,0)`、`(0,-0.08,+0.005)`、`(0,-0.08,-0.005)`及Toe原点加Foot轴`(0,+0.01,0)`，查询上下范围 MUST各为`0.5m`
+- **AND** MUST不使用其它角色实例的`.03m` Offset或`.04m`完整宽度，不把条件Foot Pivot第六点改名为第一个Base点
 
 #### Scenario: Requested Support Direction发生大角度换代
 

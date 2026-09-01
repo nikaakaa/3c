@@ -654,7 +654,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                     poseProgram.PoseBoneContributions,
                     poseProgram.GoalAssemblers,
                     fullBodyIkSolver,
-                    finalWriter,
                     poseProgram.FullBodyIkGoalContributionCount,
                     poseProgram.FullBodyIkContributionGoalCount,
                     projection.Rig.RigId,
@@ -771,7 +770,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             m_BlendSpaceSourceIndices = new int[blendSpacePlayers.Length];
             m_ClipCatalogScratch =
                 new AnimationPoseSourceClipBinding[clipCatalogCapacity];
-            m_FramePublisher = new ComposedAnimationPoseFramePublisher(projection.PosePlan, projection.Rig);
+            m_FramePublisher = new ComposedAnimationPoseFramePublisher(
+                projection.PosePlan,
+                projection.Rig,
+                finalWriter);
             m_FootPlacementContributions =
                 new AnimationPoseSourceContribution[
                     projection.PosePlan.ContributionWorkspaceCount /
@@ -1753,10 +1755,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                                         .RequiresFootDiagnostics(interest);
                 bool requiresSolver = CharacterPoseConstraintRuntime
                     .RequiresFullBodyIkDiagnostics(interest);
-                bool requiresPhysical = CharacterPoseConstraintRuntime
+                bool requiresPhysical = ComposedAnimationPoseFramePublisher
                     .RequiresPhysicalDiagnostics(interest);
-                AnimationPhysicalBoneWriteDiagnostics physicalWrite =
-                    m_PoseConstraints.PhysicalWriteDiagnostics;
                 CharacterPoseConstraintResult committedConstraintResult =
                     executionResult.Constraint;
                 CharacterPoseConstraintCommittedDiagnosticsView
@@ -1765,6 +1765,14 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                             in committedConstraintResult,
                             interest);
                 CharacterFootLandingPredictionDiagnostics footDiagnostics =
+                CharacterFinalPosePublicationResult committedPublicationResult =
+                    executionResult.Publication;
+                CharacterFinalPoseCommittedDiagnosticsView
+                    publicationDiagnostics =
+                        m_FramePublisher.CaptureCommittedDiagnostics(
+                            in committedPublicationResult);
+                AnimationPhysicalBoneWriteDiagnostics physicalWrite =
+                    publicationDiagnostics.PhysicalWrite;
                     constraintDiagnostics.FootLandingPrediction;
                 CharacterFullBodyIkSolverDiagnostics solverDiagnostics =
                     constraintDiagnostics.Solver;
@@ -1772,6 +1780,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                     constraintDiagnostics.Result.Lineage !=
                     executionResult.Lineage ||
                     executionResult.Constraint.Lineage !=
+                    !publicationDiagnostics.IsValid ||
+                    publicationDiagnostics.Result.Lineage !=
+                    executionResult.Lineage ||
                     executionResult.Lineage ||
                     executionResult.Publication.Lineage !=
                     executionResult.Lineage ||
@@ -1790,21 +1801,21 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                      m_LastCompletedFrame.CompletionIdentity))
                 {
                     throw new InvalidOperationException(
-                        "Animation diagnostics Pose Constraint Bank lineage is inconsistent.");
+                        "Animation diagnostics committed lineage is inconsistent.");
                 }
                 m_DiagnosticsPublisher.BeginFrame(
                     in executionResult,
                     in constraintDiagnostics,
-                    in finalRead,
+                    in publicationDiagnostics,
                     in m_LastCompletedFrame,
                     m_Stacks,
+                    in finalRead,
                     m_StackRoutes,
                     m_PoseStateSources.StateMachines,
                     m_InertializationPlan,
                     m_PhysicalSources,
                     m_RootOrientationWarps,
                     linkedPose,
-                    in physicalWrite,
                     interest);
             }
         }
@@ -2686,7 +2697,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                 finalRead =
                     m_Workspace.RequireFinalReadBinding(completionIdentity);
                 InstallOrUpdateJobs();
-                m_PoseConstraints.ValidateWriterBeforeEvaluate(
+                m_FramePublisher.ValidateWriterBeforeEvaluate(
                     in finalRead,
                     hasCommittedFinal,
                     in committedFinalRead);
@@ -2831,7 +2842,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             CharacterFinalPosePublicationResult publicationResult;
             using (FinalWriteMarker.Auto())
             {
-                m_PoseConstraints.WritePhysicalPose(
+                m_FramePublisher.WritePhysicalPose(
+                    publicationLease,
                     in finalRead,
                     hasCommittedFinal,
                     in committedFinalRead);

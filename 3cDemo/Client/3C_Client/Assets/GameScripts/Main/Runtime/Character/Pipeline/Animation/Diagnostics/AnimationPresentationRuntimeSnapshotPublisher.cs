@@ -139,6 +139,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
             in CharacterPoseFrameExecutionResult executionResult,
             in CharacterPoseConstraintCommittedDiagnosticsView
                 constraintDiagnostics,
+            in CharacterFinalPoseCommittedDiagnosticsView
+                publicationDiagnostics,
             in CharacterPoseGraphNativeBinding frame,
             in AnimationFinalPoseNativeReadBinding finalRead,
             IReadOnlyList<AnimationBlendStackRuntime> stacks,
@@ -148,7 +150,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
             PhysicalPoseSourceRegistry physicalSources,
             IReadOnlyList<RootOrientationWarpRuntime> rootOrientationWarps,
             CharacterLinkedPoseRuntimeSession linkedPose,
-            in AnimationPhysicalBoneWriteDiagnostics physicalWrite,
             AnimationPresentationDiagnosticsInterest interest)
         {
             RequireAlive();
@@ -158,6 +159,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
                 !constraintDiagnostics.IsValid ||
                 constraintDiagnostics.Result.Lineage !=
                 executionResult.Lineage ||
+                !publicationDiagnostics.IsValid ||
+                publicationDiagnostics.Result.Lineage !=
+                executionResult.Lineage ||
                 executionResult.Lineage.CompletionIdentity !=
                 frame.CompletionIdentity ||
                 executionResult.Lineage.CompletionIdentity !=
@@ -166,6 +170,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
                 inertializations == null || physicalSources == null || rootOrientationWarps == null ||
                 linkedPose == null)
                 throw new ArgumentException("Animation runtime diagnostics frame inputs are inconsistent.");
+            AnimationPhysicalBoneWriteDiagnostics physicalWrite =
+                publicationDiagnostics.PhysicalWrite;
             if (m_PendingPageIndex >= 0)
                 throw new InvalidOperationException("Animation runtime diagnostics has an unpublished frame.");
 

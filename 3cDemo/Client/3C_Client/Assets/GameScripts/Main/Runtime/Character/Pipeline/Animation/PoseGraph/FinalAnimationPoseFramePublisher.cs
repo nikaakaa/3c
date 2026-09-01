@@ -1,9 +1,60 @@
 using System;
+using ThirdPersonCharacter.Pipeline.Animation.Diagnostics;
 using ThirdPersonCharacter.Pipeline.Animation.Lifecycle;
+using ThirdPersonCharacter.Pipeline.Presentation.Animancer;
 using Unity.Collections.LowLevel.Unsafe;
 
 namespace ThirdPersonCharacter.Pipeline.Animation
 {
+    internal readonly struct CharacterFinalPoseCommittedDiagnosticsView
+    {
+        internal CharacterFinalPoseCommittedDiagnosticsView(
+            ComposedAnimationPoseFramePublisher.CommittedDiagnosticsPage page)
+        {
+            m_Page = page ?? throw new ArgumentNullException(nameof(page));
+            m_Identity = page.Identity;
+            if (!IsValid)
+                throw new ArgumentException(
+                    "Final Pose committed diagnostics are invalid.",
+                    nameof(page));
+        }
+
+        readonly ComposedAnimationPoseFramePublisher.CommittedDiagnosticsPage
+            m_Page;
+        readonly ulong m_Identity;
+        internal bool IsValid =>
+            m_Page != null &&
+            m_Identity != 0 &&
+            m_Page.Identity == m_Identity &&
+            m_Page.Result.IsPublished &&
+            m_Page.PhysicalWrite.IsAvailable;
+        internal CharacterFinalPosePublicationResult Result
+        {
+            get
+            {
+                RequireValid();
+                return m_Page.Result;
+            }
+        }
+        internal AnimationPhysicalBoneWriteDiagnostics PhysicalWrite
+        {
+            get
+            {
+                RequireValid();
+                return m_Page.PhysicalWrite;
+            }
+        }
+
+        void RequireValid()
+        {
+            if (!IsValid)
+            {
+                throw new InvalidOperationException(
+                    "Final Pose committed diagnostics lease is stale.");
+            }
+        }
+    }
+
     internal sealed class ComposedAnimationPoseFramePublisher
     {
         sealed class CharacterFinalPosePublicationPendingPage
@@ -11,6 +62,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             internal CharacterFinalPosePublicationFrameLease Lease;
             internal int BufferPage = -1;
             internal CharacterFinalPosePublicationResult Result;
+            internal AnimationPhysicalBoneWriteDiagnostics PhysicalWrite;
             internal ComposedAnimationPoseFrame Frame;
             internal bool HasValue;
             internal bool IsOpen => Lease.IsValid;
@@ -26,6 +78,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 Lease = lease;
                 BufferPage = -1;
                 Result = default;
+                PhysicalWrite = default;
                 Frame = default;
                 HasValue = false;
             }
@@ -53,6 +106,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 if (HasValue || BufferPage < 0 ||
                     !result.IsValid ||
                     !lease.Matches(result.Lineage) ||
+                    result.IsPublished &&
+                    (!PhysicalWrite.IsAvailable ||
+                     PhysicalWrite.CompletionIdentity !=
+                     result.Lineage.CompletionIdentity) ||
                     frame.CompletionIdentity !=
                     result.Lineage.CompletionIdentity)
                 {
@@ -91,9 +148,17 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 Lease = default;
                 BufferPage = -1;
                 Result = default;
+                PhysicalWrite = default;
                 Frame = default;
                 HasValue = false;
             }
+        }
+
+        internal sealed class CommittedDiagnosticsPage
+        {
+            internal ulong Identity;
+            internal CharacterFinalPosePublicationResult Result;
+            internal AnimationPhysicalBoneWriteDiagnostics PhysicalWrite;
         }
 
         readonly string m_PoseGraphId;
@@ -107,6 +172,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         readonly float[] m_DenseContributionWeights;
         readonly CharacterPoseBoneKind[] m_BoneKinds;
         readonly FinalAnimationPoseFramePageLease[] m_PageLeases;
+        readonly AnimationFinalPosePhysicalWriter m_PhysicalWriter;
+        readonly CommittedDiagnosticsPage m_CommittedDiagnostics =
+            new CommittedDiagnosticsPage();
         readonly int m_OperationCount;
         readonly int m_BoneCount;
         readonly int m_ParameterCount;
@@ -118,16 +186,22 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             new CharacterFinalPosePublicationPendingPage();
         int m_CommittedPage = -1;
         ulong m_LastCommittedCompletionIdentity;
+        ulong m_NextDiagnosticsIdentity = 1;
+        CharacterFinalPosePublicationResult m_CommittedResult;
+        AnimationPhysicalBoneWriteDiagnostics m_CommittedPhysicalWrite;
         ComposedAnimationPoseFrame m_CommittedFrame;
 
         internal ComposedAnimationPoseFramePublisher(
             CharacterPresentationPosePlan program,
-            CharacterAnimationRigPayload rig)
+            CharacterAnimationRigPayload rig,
+            AnimationFinalPosePhysicalWriter physicalWriter)
         {
             if (program == null)
                 throw new ArgumentNullException(nameof(program));
             if (rig == null)
                 throw new ArgumentNullException(nameof(rig));
+            m_PhysicalWriter = physicalWriter ??
+                throw new ArgumentNullException(nameof(physicalWriter));
             program.RequireValid();
             rig.RequireValid();
             if (!string.Equals(program.RigId, rig.RigId, StringComparison.Ordinal) ||
@@ -208,6 +282,29 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 new CharacterFinalPosePublicationFrameLease(in lineage);
             m_Pending.Begin(lease);
             return lease;
+        }
+
+        internal void ValidateWriterBeforeEvaluate(
+            in AnimationFinalPoseNativeReadBinding pending,
+            bool hasCommitted,
+            in AnimationFinalPoseNativeReadBinding committed) =>
+            m_PhysicalWriter.ValidateBindingsBeforeEvaluate(
+                in pending,
+                hasCommitted,
+                in committed);
+
+        internal void WritePhysicalPose(
+            CharacterFinalPosePublicationFrameLease lease,
+            in AnimationFinalPoseNativeReadBinding pending,
+            bool hasCommitted,
+            in AnimationFinalPoseNativeReadBinding committed)
+        {
+            m_Pending.RequireLease(lease);
+            m_PhysicalWriter.Write(
+                in pending,
+                hasCommitted,
+                in committed);
+            m_Pending.PhysicalWrite = m_PhysicalWriter.Diagnostics;
         }
 
         internal CharacterFinalPosePublicationResult PreparePending(
@@ -301,12 +398,44 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             m_CommittedPage = m_Pending.BufferPage;
             m_LastCommittedCompletionIdentity =
                 m_Pending.Result.Lineage.CompletionIdentity;
+            m_CommittedResult = m_Pending.Result;
+            m_CommittedPhysicalWrite = m_Pending.PhysicalWrite;
             ComposedAnimationPoseFrame result =
                 m_Pending.Frame;
             m_CommittedFrame = result;
             m_Pending.Clear();
             return result;
         }
+
+        internal CharacterFinalPoseCommittedDiagnosticsView
+            CaptureCommittedDiagnostics(
+            in CharacterFinalPosePublicationResult result)
+        {
+            if (!m_CommittedResult.IsPublished ||
+                !result.IsPublished ||
+                m_CommittedResult.Lineage != result.Lineage ||
+                !m_CommittedPhysicalWrite.IsAvailable ||
+                m_CommittedPhysicalWrite.CompletionIdentity !=
+                result.Lineage.CompletionIdentity)
+            {
+                throw new InvalidOperationException(
+                    "Final Pose committed diagnostics request is invalid.");
+            }
+            CommittedDiagnosticsPage page = m_CommittedDiagnostics;
+            page.Identity = 0;
+            page.Result = result;
+            page.PhysicalWrite = m_CommittedPhysicalWrite;
+            page.Identity = m_NextDiagnosticsIdentity++;
+            return new CharacterFinalPoseCommittedDiagnosticsView(page);
+        }
+
+        internal static bool RequiresPhysicalDiagnostics(
+            AnimationPresentationDiagnosticsInterest interest) =>
+            (interest &
+             (AnimationPresentationDiagnosticsInterest.LiveState |
+              AnimationPresentationDiagnosticsInterest.Capture |
+              AnimationPresentationDiagnosticsInterest.FinalPoseDetail |
+              AnimationPresentationDiagnosticsInterest.PoseWatch)) != 0;
 
         internal void ValidatePendingSeal(
             CharacterFinalPosePublicationFrameLease lease)
@@ -334,6 +463,11 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 m_PageLeases[i].Invalidate();
             m_CommittedPage = -1;
             m_LastCommittedCompletionIdentity = 0;
+            m_CommittedResult = default;
+            m_CommittedPhysicalWrite = default;
+            m_CommittedDiagnostics.Identity = 0;
+            m_CommittedDiagnostics.Result = default;
+            m_CommittedDiagnostics.PhysicalWrite = default;
             m_Pending.Clear();
             m_CommittedFrame = default;
         }

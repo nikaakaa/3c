@@ -1,7 +1,6 @@
 using System;
 using ThirdPersonCharacter.Pipeline.Animation.Diagnostics;
 using ThirdPersonCharacter.Pipeline.Presentation;
-using ThirdPersonCharacter.Pipeline.Presentation.Animancer;
 using Unity.Collections;
 
 namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
@@ -218,7 +217,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             internal ulong Identity;
             internal CharacterPoseConstraintFrameLease Lease;
             internal ulong CompletionIdentity;
-            internal AnimationPhysicalBoneWriteDiagnostics PhysicalWrite;
             internal AnimationPresentationDiagnosticsInterest DiagnosticsInterest;
 
             internal void Begin(
@@ -229,7 +227,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                 Lease = lease;
                 CompletionIdentity = 0;
                 DiagnosticsInterest = diagnosticsInterest;
-                PhysicalWrite = default;
                 SolverOutcome = default;
                 SolverDiagnostics = default;
                 SolverEffectorCount = 0;
@@ -257,7 +254,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                 Lease = default;
                 CompletionIdentity = 0;
                 DiagnosticsInterest = AnimationPresentationDiagnosticsInterest.None;
-                PhysicalWrite = default;
                 SolverOutcome = default;
                 SolverDiagnostics = default;
                 SolverEffectorCount = 0;
@@ -329,7 +325,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
         readonly CharacterFullBodyIkGoalAssemblerCatalog m_GoalAssemblers;
         readonly CharacterFinalIkFullBodySolver m_Solver;
         readonly CharacterFullBodyIkGoalAssembler m_GoalAssembler;
-        readonly AnimationFinalPosePhysicalWriter m_FinalWriter;
         readonly FixedString64Bytes m_RigId;
         readonly FixedString64Bytes m_RigRevision;
         readonly Bank m_First;
@@ -351,7 +346,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             CharacterPoseBoneContributionCatalog poseBoneContributions,
             CharacterFullBodyIkGoalAssemblerCatalog goalAssemblers,
             CharacterFinalIkFullBodySolver solver,
-            AnimationFinalPosePhysicalWriter finalWriter,
             int contributionCount,
             int contributionGoalCount,
             string rigId,
@@ -362,7 +356,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             m_GoalAssemblers = goalAssemblers;
             m_Solver = solver ?? throw new ArgumentNullException(nameof(solver));
             m_GoalAssembler = new CharacterFullBodyIkGoalAssembler();
-            m_FinalWriter = finalWriter ?? throw new ArgumentNullException(nameof(finalWriter));
             m_RigId = new FixedString64Bytes(rigId ?? string.Empty);
             m_RigRevision = new FixedString64Bytes(rigRevision ?? string.Empty);
             if (m_RigId.Length == 0 || m_RigRevision.Length == 0)
@@ -485,9 +478,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             page.Identity = m_NextDiagnosticsIdentity++;
             return new CharacterPoseConstraintCommittedDiagnosticsView(page);
         }
-        internal AnimationPhysicalBoneWriteDiagnostics PhysicalWriteDiagnostics =>
-            m_HasCommitted ? m_Committed.PhysicalWrite : default;
-
         internal CharacterPoseConstraintFrameLease BeginFrame(
             in CharacterPoseFrameLineage lineage,
             AnimationPresentationDiagnosticsInterest diagnosticsInterest)
@@ -727,27 +717,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             if (resetOwnerState)
                 ClearBendHistories();
             return m_FootPlacement?.ApplyTuning(layout, block, resetOwnerState) ?? string.Empty;
-        }
-
-        internal void ValidateWriterBeforeEvaluate(
-            in AnimationFinalPoseNativeReadBinding pending,
-            bool hasCommitted,
-            in AnimationFinalPoseNativeReadBinding committed) =>
-            m_FinalWriter.ValidateBindingsBeforeEvaluate(
-                in pending,
-                hasCommitted,
-                in committed);
-
-        internal void WritePhysicalPose(
-            in AnimationFinalPoseNativeReadBinding pending,
-            bool hasCommitted,
-            in AnimationFinalPoseNativeReadBinding committed)
-        {
-            m_FinalWriter.Write(
-                in pending,
-                hasCommitted,
-                in committed);
-            m_Pending.PhysicalWrite = m_FinalWriter.Diagnostics;
         }
 
         internal CharacterPoseConstraintResult CompleteFrame(
@@ -991,14 +960,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
              (AnimationPresentationDiagnosticsInterest.LiveState |
               AnimationPresentationDiagnosticsInterest.Capture |
               AnimationPresentationDiagnosticsInterest.OperationDetail |
-              AnimationPresentationDiagnosticsInterest.PoseWatch)) != 0;
-
-        internal static bool RequiresPhysicalDiagnostics(
-            AnimationPresentationDiagnosticsInterest interest) =>
-            (interest &
-             (AnimationPresentationDiagnosticsInterest.LiveState |
-              AnimationPresentationDiagnosticsInterest.Capture |
-              AnimationPresentationDiagnosticsInterest.FinalPoseDetail |
               AnimationPresentationDiagnosticsInterest.PoseWatch)) != 0;
 
         void RequireAlive()

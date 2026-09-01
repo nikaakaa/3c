@@ -385,3 +385,13 @@ A/B均为2086脚行、1222列，其中1198个业务列逐值相同、24个运行
 正式A为`Diagnostics/FootPlacementRuns/20260901-222523-572-cc193515ef1c401893575fb46a03b060`，候选B为`Diagnostics/FootPlacementRuns/20260901-223152-465-a85a2c8b60e241cba07a6f2177d34128`；B Proof为`Temp/CharacterInputReplayProofs/v4/43357ff3cd384e5cba75d2c31175b116/20260901-223250-104-0d890701c71549b4b4a0d7108b69a43d.json`，工具对A Proof正式报告`matched:1044`。
 
 A/B均为2086脚行、1222列，其中1198个业务列逐值相同、24个运行identity列一一映射且0冲突；Geometry均为67186行、27列，其中22个业务列逐值相同、5个identity列一一映射且0冲突；十份正式报告归一化后10／10相同，七维分项与总分84.2不变。由此确认Inertialization诊断读取边界迁移没有改变过渡连续性、Residual、Envelope、Foot、Pelvis、Goal、FBBIK、Final Pose、Physical或正式诊断业务；`223152`成为Source Release／Clip／BlendSpace诊断投影收口的正式A。任务13.5和13.6仍不勾选，因为Snapshot `Publish`尚直接读取Source Runtime。
+
+## Clip与BlendSpace并入Actor Committed Diagnostics页
+
+状态：提交`99e2af1fc`已把Clip Player的Foot Step observation和Blend Space Player／Sample深冻结进现有`CharacterPoseActorCommittedDiagnosticsView`。Clip／BlendSpace的选择、时钟和Player状态继续属于Program Actor State，没有被塞进Physical Source Registry或新建第二Source owner。Clip在Owner Capture时按原SampleTime、Cycle、Duration、loop flag和曲线生成零权重observation，Snapshot再用同页已冻结Final Contribution的dominant source weight构造最终值；Blend Space在下一Begin／Advance覆盖前深拷贝Player与Sample，并继续用已冻结Operation Result补Availability。`AnimationPresentationRuntimeSnapshotPublisher.Publish`删除Clip／BlendSpace Runtime参数，只剩release数组尚待迁移。
+
+`ThirdPersonClient.Runtime.csproj`按规定参数编译成功，0错误；警告只来自既有Unity包、第三方包和既有Input字段，build server已关闭。Unity全量刷新、回放与退出Play期间只有同一条`RootMotion.FinalIK::FBIKChain.reachSmoothing`Domain Reload序列化深度日志，没有Clip、BlendSpace、PoseGraph、IK或采样异常，清空后Console为0。
+
+正式A为`Diagnostics/FootPlacementRuns/20260901-223152-465-a85a2c8b60e241cba07a6f2177d34128`，候选B为`Diagnostics/FootPlacementRuns/20260901-225118-668-312b83f59ad84af8a3119303602e15ce`；B Proof为`Temp/CharacterInputReplayProofs/v4/43357ff3cd384e5cba75d2c31175b116/20260901-225216-854-00387762475341d8bea73b427587e7c1.json`，工具对A Proof正式报告`matched:1044`。
+
+A/B均为2086脚行、1222列，其中1198个业务列逐值相同、24个运行identity列一一映射且0冲突；Geometry均为67186行、27列，其中22个业务列逐值相同、5个identity列一一映射且0冲突；十份正式报告归一化后10／10相同，七维分项与总分84.2不变。由此确认Clip observation与Blend Space诊断读取时机迁移没有改变source时间、曲线采样、Blend权重、Foot、Pelvis、Goal、FBBIK、Final Pose、Physical或正式诊断业务；`225118`成为release completion迁入Source committed view的正式A。任务13.5和13.6只剩Snapshot `Publish`的release数组旁路。

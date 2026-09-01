@@ -264,3 +264,14 @@ A/B均为2086脚行、1222列，其中1198个业务列逐值相同，24个运行
 正式A为`Diagnostics/FootPlacementRuns/20260901-192117-923-ad1dd64ee4e24e4ea8d0576f406fb253`，Proof为`Temp/CharacterInputReplayProofs/v4/43357ff3cd384e5cba75d2c31175b116/20260901-192220-365-11c3b45ab4f54c568b06188339f5727f.json`。候选B为`Diagnostics/FootPlacementRuns/20260901-193623-780-a483ca530d484c69abd2208ef698c394`，Proof为`Temp/CharacterInputReplayProofs/v4/43357ff3cd384e5cba75d2c31175b116/20260901-193724-165-1ddd495782e2425f8be587bdb9c9ba05.json`；工具对A正式报告`matched:1044`，无failure且Foot Finalizing已结束。
 
 A/B均为2086脚行、1222列，其中1198个业务列逐值相同，24个运行／实例／Surface／Path identity列一一映射且0冲突；Geometry均为67186行、27列，其中22个业务列逐值相同，5个identity列一一映射且0冲突；十份正式报告归一化后0差异，退出Play后的Console为0错误。由此确认错误来源收窄没有改变World Context缺失政策、Foot、Pelvis、Goal、FBBIK或Physical业务；`193623`成为下一项Constraint外层可见面收窄的正式A。任务3.6仍未完成，因为Committed Goal／Foot／Solver／Physical Diagnostics页仍由外层与Snapshot Publisher直接读取，必须接入唯一Committed Diagnostics链后再删除，不能在本步伪装完成。
+
+## 根执行Result接入Post-Seal诊断入口
+
+状态：提交`b79b40c05`已让根`CharacterAnimationPresentationRuntime`在成功Seal后把同一`CharacterPoseFrameExecutionResult`直接交给Pose诊断入口。`ThirdPersonClient.Runtime.csproj`按规定参数编译成功，0错误；警告均来自既有依赖和未使用字段，build server已关闭。
+
+- `BeginCommittedDiagnostics`现在要求Execution Result已Published，并核对Program／Constraint／Publication lineage、Committed Native页、Final Read和Constraint Bank属于同一Completion。旧入口不能再只凭Native Binding自行认定本帧已提交。
+- `AnimationPresentationRuntimeSnapshotPublisher`的Final Summary已从typed Program／Publication Result读取Availability、Invalid Reason、Invalid Operation、PoseGraph Completion和Final Applied Completion。Native Final Read暂时只提供尚未迁移的Continuity、Foot Feature和Pose／Contribution明细，没有建立第二Snapshot或Sampler路径。
+
+正式A为`Diagnostics/FootPlacementRuns/20260901-193623-780-a483ca530d484c69abd2208ef698c394`，Proof为`Temp/CharacterInputReplayProofs/v4/43357ff3cd384e5cba75d2c31175b116/20260901-193724-165-1ddd495782e2425f8be587bdb9c9ba05.json`。候选B为`Diagnostics/FootPlacementRuns/20260901-200151-618-05e4e2bbaf264900b9e4916ca41089af`，Proof为`Temp/CharacterInputReplayProofs/v4/43357ff3cd384e5cba75d2c31175b116/20260901-200300-335-62d17c8ab95346c380b1459c47dc9e6f.json`；工具对A正式报告`matched:1044`，无failure且Foot Finalizing已结束。
+
+A/B均为2086脚行、1222列，其中1198个业务列逐值相同、24个运行／实例／Surface／Path identity列一一映射且0冲突；Geometry均为67186行、27列，其中22个业务列逐值相同、5个identity列一一映射且0冲突；十份正式报告归一化后0差异，退出Play后的Console为0错误。由此确认Final Summary来源迁移没有改变Foot、Pelvis、Goal、FBBIK、Physical或正式诊断产物；`200151`成为Constraint Committed Diagnostics View迁移的正式A。任务13.1只完成根Execution Result接线，Source／Constraint／Final Publication的完整Committed诊断投影合同仍未闭合，不提前勾选。

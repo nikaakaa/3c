@@ -275,6 +275,44 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             Lineage.IsValid;
     }
 
+    internal enum CharacterPoseOperationOutcome : byte
+    {
+        None = 0,
+        Completed = 1,
+        Skipped = 2,
+        TypedInvalid = 3
+    }
+
+    internal readonly struct CharacterPoseOperationCompletion
+    {
+        internal CharacterPoseOperationCompletion(
+            ulong completionIdentity,
+            CharacterPoseOperationOutcome outcome)
+        {
+            if (completionIdentity == 0 ||
+                outcome < CharacterPoseOperationOutcome.Completed ||
+                outcome > CharacterPoseOperationOutcome.TypedInvalid)
+            {
+                throw new ArgumentOutOfRangeException(nameof(outcome));
+            }
+
+            CompletionIdentity = completionIdentity;
+            Outcome = outcome;
+        }
+
+        internal ulong CompletionIdentity { get; }
+        internal CharacterPoseOperationOutcome Outcome { get; }
+        internal bool IsEmpty =>
+            CompletionIdentity == 0 &&
+            Outcome == CharacterPoseOperationOutcome.None;
+        internal bool IsValid =>
+            CompletionIdentity != 0 &&
+            Outcome >= CharacterPoseOperationOutcome.Completed &&
+            Outcome <= CharacterPoseOperationOutcome.TypedInvalid;
+        internal bool Matches(ulong completionIdentity) =>
+            IsValid && CompletionIdentity == completionIdentity;
+    }
+
     internal readonly struct CharacterPoseProgramResult
     {
         internal CharacterPoseProgramResult(

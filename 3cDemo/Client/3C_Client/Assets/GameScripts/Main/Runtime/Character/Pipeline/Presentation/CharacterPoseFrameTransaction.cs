@@ -191,13 +191,9 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             SamplingTransaction.PresentationFrame == Lineage.PresentationFrame &&
             SlotLease.IsValid &&
             SlotLease.FrameIdentity == Lineage.FrameIdentity &&
-            PoseLease.IsValid &&
             PoseLease.Matches(Lineage) &&
-            SourceLease.IsValid &&
             SourceLease.Matches(Lineage) &&
-            ConstraintLease.IsValid &&
             ConstraintLease.Matches(Lineage) &&
-            PublicationLease.IsValid &&
             PublicationLease.Matches(Lineage) &&
             HasSourceFrame &&
             SourceDemand.IsValid &&
@@ -230,7 +226,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             bool hasMotionMatchingLease)
         {
             if (!Closed ||
-                !lineage.IsOpenValid ||
+                lineage.CompletionIdentity != 0 ||
                 !workspaceLease.IsValid ||
                 workspaceLease.Identity != lineage.FrameIdentity ||
                 workspaceLease.PresentationFrame != lineage.PresentationFrame ||
@@ -244,13 +240,9 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 samplingTransaction.PresentationFrame != lineage.PresentationFrame ||
                 !slotLease.IsValid ||
                 slotLease.FrameIdentity != lineage.FrameIdentity ||
-                !poseLease.IsValid ||
                 !poseLease.Matches(lineage) ||
-                !sourceLease.IsValid ||
                 !sourceLease.Matches(lineage) ||
-                !constraintLease.IsValid ||
                 !constraintLease.Matches(lineage) ||
-                !publicationLease.IsValid ||
                 !publicationLease.Matches(lineage) ||
                 hasMotionMatchingLease != motionMatchingLease.IsValid ||
                 hasMotionMatchingLease &&

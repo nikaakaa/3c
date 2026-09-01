@@ -362,7 +362,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Sources
             }
         }
 
-        internal void BeginBindingFrame(ulong completionIdentity)
+        void BeginBindingFrame(ulong completionIdentity)
         {
             if (completionIdentity == 0)
                 throw new ArgumentOutOfRangeException(
@@ -373,8 +373,11 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Sources
 
         internal void BindDemand(
             CharacterPoseSourceFrameLease lease,
-            in CharacterPoseSourceDemand demand) =>
+            in CharacterPoseSourceDemand demand)
+        {
+            BeginBindingFrame(demand.Lineage.CompletionIdentity);
             m_FramePage.BindDemand(lease, in demand);
+        }
 
         internal CharacterPoseSourceDemand RequireDemand(
             CharacterPoseSourceFrameLease lease) =>

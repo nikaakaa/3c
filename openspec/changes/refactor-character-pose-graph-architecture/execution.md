@@ -493,3 +493,13 @@ A/B均为2086脚行、1222列，其中1198个业务列逐值相同、24个运行
 正式A为`Diagnostics/FootPlacementRuns/20260902-005827-531-c0d4c41e222548d4b3f49b20e40662ef`，候选B为`Diagnostics/FootPlacementRuns/20260902-010730-937-b4dbbc29df944f31919080c7110ccd6a`；B Proof为`Temp/CharacterInputReplayProofs/v4/43357ff3cd384e5cba75d2c31175b116/20260902-010827-022-5beb8a8de1404acd9eca3428001c3237.json`，工具对A Proof正式报告`matched:1044`，无failure且Foot Finalizing已结束。
 
 A/B均为2086脚行、1222列，其中1198个业务列逐值相同、24个运行／实例／Surface／Path identity列一一映射且0冲突；Geometry均为67186行、27列，其中22个业务列逐值相同、5个identity列一一映射且0冲突。十份正式报告排除既定运行identity、文件／index hash与大小和分析耗时后逐字段语义对账10／10相同；七维分项、总分84.2和weighted evidence 96.5不变。由此确认Source三页原子打开没有改变source准备、动画时钟、Foot、Pelvis、Goal、FBBIK、Final Pose、Physical或正式诊断业务；`010730`成为下一Source生命周期小步的正式A。
+
+## Source Binding页由Demand唯一开启
+
+状态：候选已把`BeginBindingFrame`收为`CharacterPoseSourceModule`私有方法，并在`BindDemand`内直接使用唯一`CharacterPoseSourceDemand.Lineage.CompletionIdentity`清空并开启Direct、Clip与Blend Space Binding页。`PosePlanExecutionRuntime.PrepareEvaluation`不再单独解释Source Binding页的Completion；它继续只负责Program Workspace和各逻辑Player自己的Frame页。
+
+本步仍不勾选任务4.4；Source usage、retirement permission和release completion还需继续内聚。`ThirdPersonClient.Runtime.csproj`按规定参数编译成功，0错误；27个警告只来自既有Unity／第三方依赖和Input Value未使用字段，build server已立即关闭。Unity刷新、回放和退出Play只出现同一条FinalIK Domain Reload序列化深度日志，单独记录后清空，3C Console为0。
+
+正式A为`Diagnostics/FootPlacementRuns/20260902-010730-937-b4dbbc29df944f31919080c7110ccd6a`，候选B为`Diagnostics/FootPlacementRuns/20260902-011531-535-ebf6e24df7c048589d9fc5d797ab68f4`；B Proof为`Temp/CharacterInputReplayProofs/v4/43357ff3cd384e5cba75d2c31175b116/20260902-011629-347-466ed65576c148058206b4e506426714.json`，工具对A Proof正式报告`matched:1044`，无failure且Foot Finalizing已结束。
+
+A/B均为2086脚行、1222列，其中1198个业务列逐值相同、24个运行／实例／Surface／Path identity列一一映射且0冲突；Geometry均为67186行、27列，其中22个业务列逐值相同、5个identity列一一映射且0冲突。正式报告的规则、eligible／matched、七维分项、总分84.2和weighted evidence 96.5保持；只允许既定运行identity、文件／index hash与大小和分析耗时变化。由此确认Binding页Owner迁移没有改变source绑定、动画时钟、Foot、Pelvis、Goal、FBBIK、Final Pose、Physical或正式诊断业务；`011531`成为下一Source生命周期小步的正式A。

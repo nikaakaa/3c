@@ -2459,8 +2459,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                 using (PrepareWorkspaceMarker.Auto())
                 {
                     frame = m_Workspace.BeginFrame(completionIdentity);
-                    m_SourceModule.BeginBindingFrame(
-                        completionIdentity);
                     for (int i = 0; i < m_Stacks.Length; i++)
                         m_Stacks[i].BeginSourceFrame(completionIdentity);
                     for (int i = 0; i < m_DirectPlayers.Length; i++)

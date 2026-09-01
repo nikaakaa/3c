@@ -395,3 +395,13 @@ A/B均为2086脚行、1222列，其中1198个业务列逐值相同、24个运行
 正式A为`Diagnostics/FootPlacementRuns/20260901-223152-465-a85a2c8b60e241cba07a6f2177d34128`，候选B为`Diagnostics/FootPlacementRuns/20260901-225118-668-312b83f59ad84af8a3119303602e15ce`；B Proof为`Temp/CharacterInputReplayProofs/v4/43357ff3cd384e5cba75d2c31175b116/20260901-225216-854-00387762475341d8bea73b427587e7c1.json`，工具对A Proof正式报告`matched:1044`。
 
 A/B均为2086脚行、1222列，其中1198个业务列逐值相同、24个运行identity列一一映射且0冲突；Geometry均为67186行、27列，其中22个业务列逐值相同、5个identity列一一映射且0冲突；十份正式报告归一化后10／10相同，七维分项与总分84.2不变。由此确认Clip observation与Blend Space诊断读取时机迁移没有改变source时间、曲线采样、Blend权重、Foot、Pelvis、Goal、FBBIK、Final Pose、Physical或正式诊断业务；`225118`成为release completion迁入Source committed view的正式A。任务13.5和13.6只剩Snapshot `Publish`的release数组旁路。
+
+## Release completion归还Source Committed Diagnostics页
+
+状态：提交`23bc1279b`已把release diagnostics interest、固定容量journal、三类release记录、Discard／Reset取消和最终冻结归还`PhysicalPoseSourceRegistry`的`CharacterPoseSourceCommittedDiagnosticsView`。Prepare阶段在真实release发生前冻结是否记录；Stack、Standalone和Action release继续在原调用点、原completion identity记录；全部deferred release执行完成后关闭journal，Capture才把它与当前物理source mapping冻结进同一Source committed页。旧`PosePlanExecutionRuntime.m_ReleasedSources`、count和record flag全部删除；`AnimationPresentationRuntimeSnapshotPublisher.Publish()`变为零参数，只提升`BeginFrame`已经按同lineage组合好的页。
+
+`ThirdPersonClient.Runtime.csproj`按规定参数编译成功，0错误；警告只来自既有Unity包、第三方包和既有Input字段，build server已关闭。Unity全量刷新、回放与退出Play期间只有同一条`RootMotion.FinalIK::FBIKChain.reachSmoothing`Domain Reload序列化深度日志，没有release lifecycle、PoseGraph、IK或采样异常，清空后Console为0。
+
+正式A为`Diagnostics/FootPlacementRuns/20260901-225118-668-312b83f59ad84af8a3119303602e15ce`，候选B为`Diagnostics/FootPlacementRuns/20260901-230258-692-d855ef3956c74e8290b94323219372a5`；B Proof为`Temp/CharacterInputReplayProofs/v4/43357ff3cd384e5cba75d2c31175b116/20260901-230359-450-847a166b52ea4caab319436325cad50a.json`，工具对A Proof正式报告`matched:1044`。
+
+A/B均为2086脚行、1222列，其中1198个业务列逐值相同、24个运行identity列一一映射且0冲突；Geometry均为67186行、27列，其中22个业务列逐值相同、5个identity列一一映射且0冲突；十份正式报告归一化后10／10相同，七维分项与总分84.2不变。由此确认release journal Owner迁移没有改变source释放时机、slot复用、Action completion、Foot、Pelvis、Goal、FBBIK、Final Pose、Physical或正式诊断业务；`230258`成为正式Source Module提取的下一A。Snapshot对象本身已不持有Runtime参数，但Actor capture仍由外层读取多个运行Implementation，任务13.5和13.6继续不勾选，待Program Runtime／Source Module内聚后闭合。

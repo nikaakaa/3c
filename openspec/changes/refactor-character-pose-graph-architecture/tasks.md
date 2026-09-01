@@ -144,16 +144,16 @@
 ## 13. 收口Diagnostics、Pose Watch与Preview
 
 - [x] 13.1 建立Source、Program、Constraint和Final Publication Committed Result诊断投影合同
-- [ ] 13.2 在Frame开始冻结Live、Capture、Pose Watch和detail interest及固定容量
+- [ ] 13.2 在Frame开始分别冻结Live、Pose Watch、detail interest以及具体`CharacterFootIkCaptureInterest`和View固定容量；PoseGraph不得读取Sampler Set、Schema、Program或packet容量解释interest
 - [ ] 13.3 在各Module Pending Result完成时按interest深冻结Pose、Value、Contribution、Goal、Constraint、Operation和Physical结果
 - [x] 13.4 让Foot/Goal/FBBIK diagnostics只进入Constraint Committed Result，Physical diagnostics只进入Final Publication Committed Result
-- [ ] 13.5 让Diagnostics Projector只按同lineage组合Committed Result，不持有Program Runtime、Workspace、Constraint Module或Physical Transform引用
+- [ ] 13.5 让Diagnostics Projector只按同lineage组合Committed Result并发布PoseGraph-owned短租约`CharacterFootIkCommittedCaptureViewLease`，唯一控制其生产、有效期与失效；确认不存在万能Committed View、第二Snapshot，也不持有Program Runtime、Workspace、Constraint Module、Physical Transform、Diagnostic Capability、Sampler Definition、Schema Compiler、Generated Program、typed packet、Host、CSV或Analyzer知识
 - [ ] 13.6 删除Snapshot Publisher从Native Program、Pending Workspace、Foot Context、FBBIK Vendor对象和多个Owner反推同一事实的路径
 - [x] 13.7 让Pose Watch只读取已冻结Committed页，不重新采样source、执行world query、运行FBBIK或推导Physical结果
 - [ ] 13.8 让正式Runtime与Preview通过同一Factory装配Projection内Program Image、actor-local Execution View、Program Runtime、Source Module、Constraint Module、Final Publication、根Frame Transaction与Tuning Snapshot
 - [ ] 13.9 删除Preview简化Executor、逐Preview第二Native Program、临时Program、默认World Context和Stale Projection fallback
-- [ ] 13.10 将新Runtime Result接回现有Sampler、Analyzer、Publisher、小报告／明细存储及七维评分，不新增第二列映射、采样或离线发布链
-- [ ] 13.11 对账诊断字段含义、原始输入／几何引用、评分权重／资格／分母保持；保留历史原包，不用总分变化替代行为对账
+- [ ] 13.10 将具体`CharacterFootIkCommittedCaptureViewLease`串行交给`character-foot-ik`领域Bridge，使Bridge只在租约内取得框架packet lease、调用匹配AOT Program并提交；PoseGraph不得引用框架或Foot插件的Generator、Generated Program、packet、Host或Build类型，也不给旧Sampler增加表达式／反射路径、临时DTO、兼容Adapter、第二Snapshot或双写链
+- [ ] 13.11 对账框架sealed packet经Foot Full Host Adapter生成的字段业务含义、原始输入／几何引用、评分权重／资格／分母保持；保留历史原包，不要求保留旧Sampler／手写Column Implementation，也不用总分变化替代行为对账
 
 ## 14. 激进清理与最终一致性
 

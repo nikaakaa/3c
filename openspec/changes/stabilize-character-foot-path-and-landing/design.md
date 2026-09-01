@@ -298,11 +298,11 @@ Diagnostics不得创建Anchor、选择Support、改变Reach、Clamp Goal或执�
 
 Prediction诊断必须补齐`Raw Body Target Current + Raw移动计划Continuation -> Stable Prediction Velocity -> KCC Future Translation -> Raw Landing -> Observation -> Tracking -> Approach Plant Target Preparation -> Contact Verification`，并把移动计划Current作为对照列记录，连同速度差、阈值、EMA响应、最大速度Clamp、状态初始化/重置原因、Tracking状态、Verification Frame/Reason和稳定Plant候选忽略事实。这样实现阶段必须先证明Prediction稳定，再判断Interpolation或Post Constraint，不得把所有抖动归到最终Pose。
 
-采样包固定由同一Recorder发布`每Frame/Side一行的samples.csv + 只保存Ground Contact/Envelope数组项的ground-path-geometry.csv`。几何表必须按Sample、Frame、Completion、Side与Ground Path identity连接主表，不得为每个几何项重复整套Source、State、Goal和Solver列。
+本change只固定Foot Full Sampler的业务投影：每Frame/Side一份主记录，以及只保存Ground Contact/Envelope数组项的Geometry子表；Geometry必须按Sample、Frame、Completion、Side与Ground Path identity连接主记录，不得为每个几何项重复整套Source、State、Goal和Solver字段。具体运行链固定为`PoseGraph具体CharacterFootIkCommittedCaptureViewLease -> Foot Generated Program -> framework typed packet -> framework Writer/Reader -> Foot Full Host Adapter -> samples.csv / ground-path-geometry.csv / Analyzer / Publisher`，不得再由领域Recorder直接写CSV。
 
-每次采样固定写入项目本地持久目录`Diagnostics/FootPlacementRuns/<run-id>/`，不得写入Unity会清理的`Temp`。该目录只承载本地原始诊断，不自动复制、晋升或加入版本控制；需要对账的基线由作者明确选择后再单独归档。
+Editor本地Foot Capture的最终产物 MAY继续落入`Diagnostics/FootPlacementRuns/<run-id>/`，Performance Capture则 MUST落入其顶层staging的`character-foot-ik` Capability子闭包；精确路径只由对应manifest声明，不得由Foot插件扫描“最新”目录。历史目录只作为不可变证据，不自动迁移、覆盖、兼容读取或加入版本控制；需要对账的基线由作者明确选择后再单独归档。
 
-停止录制必须进入唯一`Finalizing`生命周期。Unity主线程只停止捕获并冻结最后一批不可变Frame；后台Finalizer继续排空同一Writer、先封存几何表再以`samples.csv`作为包完成标志、运行同一C# Analyzer与Publisher，最后把Completed或Failed状态发布回Editor。不得增加Python Reporter、同步停止分析路径或仅扩大队列掩盖持续吞吐不足。
+停止录制必须进入框架为`character-foot-ik`唯一拥有的Capability `Finalizing`生命周期。Unity主线程只停止捕获；框架后台Writer封存typed packet流与runtime manifest，Host Finalizer经框架Reader调用Foot Full Host Adapter生成双表、运行同一C# Analyzer与Publisher，并原子发布Capability manifest。`samples.csv`不得再作为完成标志，Foot插件不得拥有第二Session、Writer或Finalizer；Performance只根据Capability manifest编排顶层Capture结果。不得增加Python Reporter、同步停止分析路径或仅扩大队列掩盖持续吞吐不足。
 
 ## 后续能力的ZZZ补证边界
 

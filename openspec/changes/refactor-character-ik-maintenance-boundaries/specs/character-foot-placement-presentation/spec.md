@@ -66,9 +66,9 @@ Pelvis MUST继续使用233436组合中用户已接受的共同目标、软姿态
 
 Runtime运行历史、内部typed请求、最终结果与只读过程证据 MUST严格分型。运行Owner MUST在计算时捕获本帧实际发生的证据；Diagnostics MUST在唯一根事务内从同一Pending的Observation、请求、最终Foot/Pelvis结果与后续阶段结果完成固定容量冻结和验证。Writer成功时 MUST仅补入同Completion的实际写入事实，Seal后消费者 MUST只读取Committed页，不延迟重算Foot业务。
 
-响应、Contact、Support与Reach过程证据 MAY按业务分组保存，但 MUST不在多份记录中维护同义平铺真相。Gizmo、CSV、Trace与Pose Watch MUST不得查询世界、选择Support、生成Goal、执行FBBIK或改写运行历史。Diagnostics布局与显示兴趣 MUST不改变Runtime输出，公开Diagnostics不得被读取为下一帧状态。
+响应、Contact、Support与Reach过程证据 MAY按业务分组保存，但 MUST不在多份记录中维护同义平铺真相。Gizmo、Trace与Pose Watch MUST只读各自允许的Committed页；Foot采样 MUST只消费PoseGraph-owned具体短租约View。任何诊断消费者不得查询世界、选择Support、生成Goal、执行FBBIK或改写运行历史。Diagnostics布局与显示兴趣 MUST不改变Runtime输出，公开Diagnostics不得被读取为下一帧状态。
 
-已经完成的紧凑发布 MUST保留单次解析、Analyzer到Publisher的内存事实交接、`analysis.json`小清单、`details.jsonl`唯一明细、`details-index.json`及原始帧字节索引查询。记录分组 MUST不恢复展开facts.json、全量报告复制、磁盘全文重读或第二条Reader链。
+已经完成的紧凑发布 MUST保留Analyzer到Publisher的内存事实交接、`analysis.json`小清单、`details.jsonl`唯一明细、`details-index.json`及按正式source index的随机查询业务。Generated Sampling迁移后，这些能力 MUST消费同一次框架Reader产生的typed事实，不得恢复展开facts.json、全量报告复制、磁盘全文重读、旧CSV字节范围事实读取或第二条Reader链。
 
 #### Scenario: 捕获正式Foot事实
 
@@ -145,30 +145,30 @@ Root MUST只调度和提交，不执行业务数学；Encoder、Assembler、Solv
 - **THEN** 新历史与过程证据 MUST共同丢弃，Committed历史保持上一成功帧
 - **AND** 任一内部记录 MUST不能单独提交或从未提交Fact恢复状态
 
-### Requirement: Foot采样读写必须由唯一typed列绑定描述
+### Requirement: Foot诊断字段与分析消费必须只有一个Schema Owner
 
-当前Foot采样格式 MUST由Editor唯一有序typed列绑定声明名称、类型、单位、业务分组、有效性和读写映射；Header、写行、Analyzer读取和必需列校验 MUST使用同一绑定。相同列名不得重复声明，位置写入与列名解释不得分别维护互不关联的清单。格式identity MUST来自唯一正式定义。
+每个Foot诊断字段 MUST只声明一次稳定identity、类型、单位、业务分组、availability与提取语义；主记录与Geometry表 MUST分别拥有明确布局。Runtime Result与Committed View MUST不引用列名、CSV、Analyzer或Publisher。采样迁移 MAY把已验证typed列绑定替换为通用Attribute、Schema descriptor、Generated Capture Program和Host typed view，但 MUST同时删除被替换的Header、Column getter/setter、CSV Reader与必需列手工清单，不得让二者并存为两份Schema真相。
 
-绑定及索引 MUST在明确初始化入口验证和缓存；原始文件校验 MUST沿现有唯一解析入口执行，不在每次字段搬运或记录转交时重复重检，也不在OnInspectorGUI进行重操作。Runtime MUST不读取列名、反射或采样Dictionary。原始主行与大几何表 MUST继续沿唯一采样链分别发布，保留紧凑明细和随机查询；搬运映射不得执行第二份Foot数学或生成评分。
+Schema MUST在编译或明确初始化入口完成闭包校验；sealed输入 MUST只在框架Reader边界核对identity、布局与hash，不在每次字段搬运或记录转交时重复重检，也不在OnInspectorGUI进行重操作。主记录与Geometry表 MUST沿同一Foot Capability packet流分别投影，保留紧凑明细和随机查询业务；Extractor、Reader与Host Adapter不得执行第二份Foot数学或生成评分。
 
 字段布局或含义变化 MUST显式升级版本，缺列、重复列、非法类型或不匹配版本 MUST拒绝，不建立旧reader、别名或默认值补全。历史原包及其旧结果 MUST保留为证据，不自动覆盖或用新语义重新解释。现有评分维度、权重、分母和Unavailable规则 MUST保持原Owner。
 
 仅修改内部记录组织或采样映射且列名、顺序、类型和含义均不变时，版本 MUST保持；不得为已经删除的Reach夹紧虚构一组新旧字段或强制ABI迁移。
 
-#### Scenario: 新增普通证据列
+#### Scenario: 新增普通证据字段
 
 - **WHEN** 当前版本新增一个正式响应证据字段
-- **THEN** 列名、写值位置、typed读取和必需列校验 MUST由同一绑定得到
+- **THEN** 字段identity、Generated写入位置、Host typed读取和必需字段校验 MUST由同一Schema descriptor得到
 - **AND** 不改变质量规则时 MUST不新增评分Target或修改Publisher业务规则
 
-#### Scenario: 列绑定不完整或重复
+#### Scenario: Schema字段不完整或重复
 
-- **WHEN** 当前格式存在重名、缺失typed读写绑定或类型不一致
-- **THEN** 初始化 MUST明确失败，不开始生成看似合法的采样文件
+- **WHEN** 当前Schema存在重复identity、缺失Extractor／Host typed view或类型不一致
+- **THEN** 编译或Capability preflight MUST明确失败，不开始生成看似合法的packet或采样文件
 - **AND** MUST不靠空值、零值或忽略该列继续运行
 
-#### Scenario: 仅统一读写映射
+#### Scenario: 从旧typed列绑定迁移到Generated Schema
 
-- **WHEN** 内部多处手工映射改为同一typed列绑定，但原采样列含义未变
-- **THEN** Header、逐字段值、有效性和格式版本 MUST保持不变
-- **AND** 原有紧凑分析存储和只读查询 MUST继续工作，不重新生成另一种存储格式
+- **WHEN** 已验证的旧typed列绑定被Generated Schema与Host typed view整体替换且字段业务含义未变
+- **THEN** 新Schema MUST使用新的正式identity，逐字段业务值、availability、Analyzer规则和评分语义 MUST保持
+- **AND** 原有紧凑分析存储和只读查询业务 MUST由唯一Foot Host Adapter继续提供，旧Reader MUST不兼容解释新Schema

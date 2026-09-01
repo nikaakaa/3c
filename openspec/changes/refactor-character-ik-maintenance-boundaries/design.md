@@ -84,7 +84,7 @@ flowchart TD
     Pelvis -.本帧只读证据.-> Evidence
     Goals -.正式求解要求.-> Evidence
     Physical -.实际结果.-> Evidence
-    Evidence --> Diagnostics[Seal后诊断、CSV与查询]
+    Evidence --> Diagnostics[Seal后具体View、Host分析与查询]
 ```
 
 图表示数据依赖，不增加运行时Pass。原Pre/Post Transition、Interpolation和Ground Constraint先后保持基线，Foot完成阶段不再次推进时间。唯一完成反馈是“当前Pelvis位移上的本腿可达性 -> 原Landing完成检查”；不扩展成Foot/Pelvis反复迭代，不重新积分，不反向修改原Pose或Body。
@@ -186,19 +186,19 @@ Solver每次求解只从当前Pose、Goal、Profile、正式准备结果与根Ba
 
 该项与已保留的`a40b71f`膝向运输不同。本change必须保留可靠动画分支的有符号腿轴旋转、Stable/Applied含义及退化分支现有选择；不能恢复旧可靠动画半球翻转，也不增加SmoothKnee尾段。普通已建立历史的帧应保持原行为；完全Reset后退化输入不再继承旧Vendor方向是本次允许且必须单列的行为变化。205014/233436中的四个退化帧已有运行历史，不能拿它们冒充空历史Reset覆盖。
 
-### 4. 诊断按业务分组，采样列绑定只声明一次
+### 4. 诊断按业务分组，字段Schema只能有一个Owner
 
-`compact-foot-diagnostic-publication`已完成单次解析、Analyzer向Publisher直接传递内存事实，以及`diagnoses/analysis.json`、`details.jsonl`、`details-index.json`和按原CSV字节范围读取的查询链。本change必须复用这些实现，不再输出展开的`facts.json`、复制全量报告对象、增加第二Reader或重新设计存储格式。
+`compact-foot-diagnostic-publication`已完成Analyzer向Publisher直接传递内存事实，以及`diagnoses/analysis.json`、`details.jsonl`、`details-index.json`和查询链。本change实现时复用了当时唯一CSV解析入口完成字段级行为对账；后续Generated Sampling迁移必须保留这些领域产物语义，但不得把旧CSV Reader或原始字节索引实现保留成第二采样事实源。
 
 运行Owner在计算时产生不可变证据，按接触、插值响应、支撑、Reach/Pelvis组织。不再把同一组响应字段先平铺进一个过程记录，再逐项平铺到第二个过程记录和公开Diagnostics。
 
-Root Pending Diagnostics页继续固定容量冻结同帧证据，Writer只补入它实际拥有的骨骼写入事实。Seal后的Gizmo、CSV、Trace与Watch读取Committed页，不重算业务。这不改变外层Frame Transaction及PostCommit Fault政策；相关外层审查风险不因本change完成而被宣称已修复。
+Root Pending Diagnostics页继续固定容量冻结同帧证据，Writer只补入它实际拥有的骨骼写入事实。Seal后的Gizmo、Trace与Watch读取各自允许的Committed页；Foot Capture由后续PoseGraph具体短租约View单向交付，不重算业务。这不改变外层Frame Transaction及PostCommit Fault政策；相关外层审查风险不因本change完成而被宣称已修复。
 
-Editor建立一份当前版本的typed采样列绑定。每个绑定声明稳定列名、数据类型、单位、所属业务组、有效性条件、typed写入与读取映射。同一有序绑定产生Header、单行写值、Analyzer读取及必需列校验；保留现有单次CSV解析和字节索引生成。定义检查只在明确初始化入口完成，原始文件检查只在现有唯一读取边界完成，不在每个字段/记录转交时再做同义校验，不在OnInspectorGUI做重操作。
+本change已用一份当前版本的typed采样列绑定完成1215列迁移验证：每个绑定声明稳定列名、数据类型、单位、所属业务组、有效性条件、typed写入与读取映射，同一有序绑定产生Header、单行写值、Analyzer读取及必需列校验。这是已经验证的历史Implementation，不是后续必须保留的架构。`add-generated-diagnostic-sampling-framework`必须把同一字段业务真相迁入唯一Attribute／Schema descriptor／Generated Program／Host view，并在新链闭合时删除旧Column、Header、CSV Reader与字节范围事实读取。
 
-Runtime不读取列名、Dictionary或反射。Editor可以缓存解析索引与typed委托；解析仍沿唯一Sampler/Analyzer/Publisher，没有另一个“通用导出器”。大几何页保持独立紧凑表，不摊进每脚主行；没有语义变化的几何列不借机改格式。
+Runtime不读取列名、Dictionary或反射。新链的Runtime只在PoseGraph具体View租约内调用AOT Generated Program并提交typed packet；Host Adapter从框架Reader取得typed字段视图后运行唯一Analyzer／Publisher。大Geometry页保持独立固定容量表，不摊进每脚主记录；不得保留旧Sampler/Analyzer CSV往返或另一个“通用导出器”。
 
-列绑定只统一搬运，不统一或复制业务数学。运行公式仍由Runtime拥有，质量判断仍由既有Analyzer/Diagnosis拥有。普通新增证据字段不要求修改评分规则或Publisher；格式identity由一个正式定义提供给当前写入器、读取器和Publisher。
+Schema只统一搬运，不统一或复制业务数学。运行公式仍由Runtime拥有，质量判断仍由既有Analyzer/Diagnosis拥有。普通新增证据字段不要求修改评分规则或Publisher；Schema与格式identity分别由通用框架descriptor和Foot领域正式定义提供，不得在Writer、Reader和Publisher重复。
 
 只有布局或语义真实变化时升级当前格式版本。当前已不存在“夹紧前转成夹紧后”的迁移，不能为此凭空升级ABI或制造一组旧/新列。若初步/最终阶段的字段含义确实改变，明确改名或升级版本；若只是内部记录和列映射整理，保持现有列名、顺序、值与版本。被实际替换的reader、别名和补零路径删除，历史原包及结果保留；不会因旧包版本不同就删除原始证据，也不新增兼容reader。
 

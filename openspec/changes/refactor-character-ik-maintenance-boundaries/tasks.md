@@ -45,3 +45,4 @@
 - [x] 6.2 按规定参数编译受影响Runtime与Editor并立即关闭build server；仅在正式依赖确实变化时通过精确Corin Build发布匹配产物
 - [x] 6.3 对账正常帧行为保持与Reset边界行为修正，分别记录结果、已知限制和未覆盖输入，不以同一总分替代
 - [x] 6.4 更新本change真实任务状态与最终合同，核对current和active条款不存在旧Resolved/Pelvis含义覆盖，完成严格校验和差异检查
+- [x] 6.5 对齐后续Generated Sampling与PoseGraph诊断重构：保留本change已经验证的字段业务含义、Analyzer／Publisher规则和历史证据，明确旧Sampler、typed Column、CSV Reader与Snapshot join可被整体删除且不得成为第二Schema

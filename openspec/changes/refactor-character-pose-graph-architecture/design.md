@@ -66,7 +66,7 @@ CharacterPresentationPosePlanCompiler.CompilationState
 | Foot／Pelvis／Goal／FBBIK | 外层typed调用、存储归属与Result封装 | 内部算法、数值顺序、准入、权重、Profile值、正常初始化／Reset结果 |
 | 根Bank与Frame事务 | 统一lineage、Pending页所有权、Seal／Discard连接 | 当前连续历史与提交／丢弃后的业务结果 |
 | PoseGraph／Compiler／ABI | Program Image、节点定义、Pass、执行布局与单一调度Owner | 节点业务语义、source时间、最终Pose |
-| Runtime诊断投影 | 从内部页读取改为消费同帧Result | 已有采样、Analyzer、Publisher、明细存储和评分政策 |
+| Runtime诊断投影 | 从内部页读取改为消费同帧Result，并发布PoseGraph-owned具体`CharacterFootIkCommittedCaptureView`短租约 | 通用AOT生成、typed packet与Host生命周期由`add-generated-diagnostic-sampling-framework`拥有；Foot Bridge、字段、Sampler、Analyzer、Publisher和评分由`refactor-foot-ik-diagnostic-sampling`拥有 |
 
 Foot输入继续是同帧Component Pose、正式Foot Motion、Body／World事实、Rig和Profile，输出继续是当前Foot结果、Pelvis Result及三个Goal Contribution；后续Goal Set、FBBIK与Physical Pose必须保持相同业务结果。Foot当前由Lifecycle使用Transition、State Target、Interpolation与Post Constraint，并在Pelvis后完成Landing；这里只记录已存在链路，不把这些内部阶段重新设计成PoseGraph公开合同。
 
@@ -642,9 +642,9 @@ Constraint Tuning
 
 `resetOwnerState`继续按冻结基线的作者语义作用于对应Module的Actor状态，但必须作为同一Candidate Tuning事务的一部分预声明。这里只改Tuning失败时的原子提交边界，不顺手修复IK初始化、BendHistory清空或Vendor方向政策；相同成功调参必须保持同一IK结果。调参生效时机、Preview入口与Runtime结果保持不变；如果未来决定删除在线调参，必须建立独立行为change，不能在本架构迁移中顺手删除。
 
-## Decision 13: Diagnostics只投影Committed Result
+## Decision 13: PoseGraph只从Committed Result发布具体Foot IK短租约View
 
-Frame开始冻结Diagnostics interest和容量。存在interest时，各Module在自己的Pending结果完成后向预分配诊断页深冻结允许观察的数据；不存在interest时不生成大页。
+Frame开始由PoseGraph冻结`CharacterFootIkCaptureInterest`与该View所需固定容量。存在interest时，各Module在自己的Pending结果完成后向各自预分配诊断页深冻结允许观察的数据；不存在interest时不生成Foot IK capture payload。这里的容量只属于PoseGraph Owner页，不是框架packet容量。
 
 成功Seal后Projector只读取：
 
@@ -668,7 +668,11 @@ Physical Transform反推
 
 Pose Watch所需Pose、Goal和Contribution在运行帧完成时按interest冻结，Watch只读取这些Committed页，不重跑source、world query或FBBIK。
 
-Runtime Projector与离线诊断Publisher不是同一个职责。新的Committed Result继续提供给现有`CharacterFootLandingPredictionSampler -> CharacterFootMotionDiagnosticAnalyzer -> CharacterFootDiagnosisPublisher`及唯一明细存储，不另造采样器、Analyzer、Publisher或列映射系统。保留Sealed CSV、geometry、manifest／明细索引、小报告、完整事件枚举和七维评分的现行语义；不能恢复展开facts.json读写往返。
+Runtime Projector与Generated Diagnostic Sampling Framework、Foot IK插件、离线Analyzer和Publisher不是同一个职责。Projector只在成功Seal后组合上述Owner Result，发布同lineage的具体`CharacterFootIkCommittedCaptureViewLease`，并唯一决定租约何时有效、何时失效。该View只保存Foot IK采样所需的typed值和availability，不是通用DTO、万能Committed View或第二Snapshot。Projector不知道Capability、字段Attribute、Sampler Definition、Schema Compiler、Generated Program、typed packet、CSV、geometry、manifest、Analyzer或评分。
+
+`add-generated-diagnostic-sampling-framework`提供通用Attribute、Schema Compiler、Source Generator、Generated Program ABI、typed packet、Capability Session、Writer、Host Reader／Finalizer和`DiagnosticCapabilitySet`身份合同；`refactor-foot-ik-diagnostic-sampling`只提供首个`character-foot-ik` Capability、Foot Bridge、字段／Sampler／Program Definitions与Host业务插件。Foot Bridge在PoseGraph租约内取得框架packet lease并调用匹配的具体Generated Program，把Foot字段并集只提取一次后提交；框架Session从不索取或持有View，Host再运行Foot Adapter生成CSV、Analyzer与Publisher产物。Foot change一次删除现有`CharacterFootLandingPredictionSampler`事件/Snapshot二次join与手写Column链。PoseGraph不得引用框架或Foot插件的Generator、Generated Program、packet、Host或Build类型，也不得为了维持旧Sampler先增加临时DTO、表达式委托、反射路径、兼容Adapter或第二Snapshot Publisher。
+
+框架sealed packet经Foot Host Adapter生成的CSV、geometry、manifest／明细索引、小报告、完整事件枚举和七维评分继续保持现行业务语义；Foot Sampler schema可以由领域change破坏性升级，但不能恢复展开facts.json读写往返、运行时表达式编译或修改评分数学。
 
 字段在模块间搬家不等于评分规则改变。目标／实际Foot、Pelvis、Goal、Solved和Physical事实仍按现有版本与分母解释；不得改阈值、权重、资格或总分来证明重构等价。确实需要改变外部采样字段含义时先报告冲突，不在本change擅自升级评分政策；历史原包保持。
 
@@ -753,7 +757,7 @@ Editor/CharacterSimulation/Compilation/Presentation/PoseGraph/
 
 [行为保护清单](behavior-baseline.md)是本次迁移的输入合同，不是另外一条运行链。拆Module、改Family布局、复用Workspace和集中Diagnostics都不得改变source推进次数、Transition／Slot时机、混合数值顺序、Foot dominant contribution选择、IK内部调用顺序或Writer根骨策略。State字段按实际消费者分类，名称中包含Fact／Diagnostics不意味着可删除；凡被下一帧读取的值都按基线保留。
 
-每个代码小步须同时比较指定基线和上一保留小步的已有正式输入／输出；只复用现有Replay、Proof、Sampler、Analyzer与Publisher，不新增测试工程或临时验证链。先对账输入、Body、时钟和IK输入，再对账中间量和最终骨骼，不能只比较最终总分。纯生成身份差异要按稳定Node／call-site／Source／Event证明一一映射，不能用重标身份掩盖额外Reset或额外查询。可见业务数值差异、成功Reset差异或覆盖缺口必须报告，未解释前不继续堆叠迁移或调参。
+每个代码小步须同时比较指定基线和上一保留小步的已有正式输入／输出；只复用现有Replay、Proof、Analyzer、Publisher以及`refactor-foot-ik-diagnostic-sampling`迁移后的内建Full Adapter，不新增测试工程或临时验证链。先对账输入、Body、时钟和IK输入，再对账中间量和最终骨骼，不能只比较最终总分。纯生成身份差异要按稳定Node／call-site／Source／Event证明一一映射，不能用重标身份掩盖额外Reset或额外查询。可见业务数值差异、成功Reset差异或覆盖缺口必须报告，未解释前不继续堆叠迁移或调参。
 
 已有真实失败／初始化行为也不能因“清理旧路径”被默改：Physical Writer的根骨排除与Committed／Reference选择、无有效Goal时跳过Vendor Update、错误后停止与提交边界需要分别保留。若现有代码与目标的no-throw Seal／诊断发布顺序存在无法证明等价的冲突，必须先报告，不能把错误处理重设计伪装为纯迁移。
 
@@ -784,7 +788,7 @@ Editor/CharacterSimulation/Compilation/Presentation/PoseGraph/
 10. 建立Node Definition Module，一次性迁移Capability、Port Shape Projector、Authoring、Document v4 Exporter/strict parser/Target Mapper/Reconciler、Clipboard、Mutation preflight、local validation、Graph dependency和typed lowering；保留唯一Document Transaction Service，删除旧Handler Registry与重复switch。
 11. 将Compiler拆成`Graph Dependency -> Symbolic Family -> Schedule -> Value Lifetime -> Workspace -> Bind Payload`固定Pass，删除中央`CompilationState`和pass-through入口。
 12. 完成全部现行Operation Code到Family/Owner/Domain映射后，原子切换分段Operation ABI、Projection内Program Image schema和Runtime reader；提升PoseProgramImageHash但保持Gameplay ContractHash不变，删除万能Operation、旧Native Program语义容器与旧reader。
-13. 将Runtime Diagnostics改为Committed Result Projector并接回现有采样／分析／发布／明细存储链；删除跨Owner内部读取，不重做离线诊断或七维评分。
+13. 将Runtime Diagnostics改为Committed Result Projector并发布PoseGraph-owned具体`CharacterFootIkCommittedCaptureViewLease`；与`add-generated-diagnostic-sampling-framework`的通用AOT生成／packet合同分别闭合后，再串行接入`refactor-foot-ik-diagnostic-sampling`的首个Foot Capability Bridge／Definitions／Full Host Adapter，删除跨Owner内部读取、运行时表达式／反射路径和旧Sampler二次join，不修改离线诊断业务含义或七维评分数学。
 14. 迁移Preview到同一Factory、Program Image、actor-local Execution View规则、Tuning Snapshot和根Frame Transaction，删除简化或重复执行路径。
 15. 搜索并删除旧类、旧字段、旧codec、旧validator知识、兼容版本和未引用路径，更新project truth并完成编译与严格校验。
 
@@ -857,7 +861,7 @@ Program Runtime内部仍会包含多种节点Implementation和大量Native页；
 - 本change旧前置要求Foot完成并归档，用户2026-09-01已明确改为冻结当前保留IK后开始PoseGraph重构。Foot／IK未完成状态不阻塞，重叠的后续行为修改不能与本次同Owner迁移混写；出现实际冲突才由用户裁决。
 - current Foot spec已不固定中央状态机类名，旧PoseGraph delta仍写`CharacterFootStateMachine`，本次删除该过期条款，保留现有Lifecycle内部实现。
 - 当前保留实现已撤除业务层骨盆Reach硬夹紧与末端夹脚，SmoothKnee候选已撤销；部分旧current／active文字尚未同步。本change明确按用户当前保留行为迁移，不借旧文档恢复政策，并保留第一阶段已经验证的请求／结果边界及独立Reset修正，本阶段不另改其业务行为。
-- 已落地诊断存储与评分change继续作为现有实现输入，是否归档不影响本次接线；Runtime事实来源可以迁移，Sampler、Analyzer、Publisher、明细存储、评分规则与历史证据不重做。
+- 已落地诊断存储与评分change继续作为业务语义输入，是否归档不影响本次接线；Runtime事实来源由PoseGraph Projector迁移，通用生成／packet／Host生命周期由`add-generated-diagnostic-sampling-framework`承接，Foot字段／Sampler／Analyzer／Publisher由`refactor-foot-ik-diagnostic-sampling`承接，明细存储、评分规则含义与历史证据不重做。
 - active Blend Space change的通用Clip/Blend Space能力已经进入current specs，剩余任务只建立独立演示内容。本change直接迁移current节点Definition与Source Adapter，不依赖该演示归档；两者不得并行修改通用Runtime或Compiler合同。
 - current `character-presentation-pose-graph`仍写明`compiler handler`，而current `graph-authoring-domain-framework`已经要求唯一Pose Node Definition并禁止第二Handler；现行代码仍保留Handler Registry。本change以Framework current requirement为方向修改Pose Graph requirement并删除旧实现，明确这是current specs之间的冲突，不把代码现状误写成current truth。
 - current `graph-authoring-domain-framework`已经固定Definition、共享Capability、Reconciler与Document Transaction Service边界。本change补足唯一`GraphAuthoringNodePortShapeProjector`、Document v4 Exporter/strict parser/Target Mapper/Mutation preflight调用链，以及Graph Closure读取Definition dependency的边界；Definition不得接管Document事务或五个MCP生命周期。
@@ -866,5 +870,5 @@ Program Runtime内部仍会包含多种节点Implementation和大量Native页；
 - current动画事务允许各Module拥有内部Pending页，但没有明确Program Image、Actor State、根Frame Transaction和Module Owned Frame Pages。新增runtime architecture spec把静态、Actor、Program Frame、Module Frame与根事务分型，同时保留现有Barrier和Dense/Journal政策。
 - current实现允许actor-local在线调参并在失败时反向Apply旧值，但current spec没有给共享不可变Program下的调参值安排Owner。本change把它固定为actor-local Tuning Snapshot与原子Generation，不改变调参能力或生效时机。
 - current Presentation Projection只在Gameplay producer语义变化时改变`CharacterPresentationSemanticContract.ContractHash`。本change只提升ProjectionRevision与PoseProgramImageHash，明确禁止Pose ABI迁移改变Gameplay ContractHash、Float32/Fixed ProgramHash或Network identity。
-- current Diagnostics允许从完成workspace复制。本change收紧为运行帧内按interest冻结、Seal后只读取Committed Result，避免跨Owner读取；可观察字段不减少。
+- current Diagnostics允许从完成workspace复制。本change收紧为运行帧内按interest冻结、Seal后只读取Committed Result并发布短租约View，避免跨Owner读取；通用框架只处理View之后的AOT生成与packet，Foot插件只处理领域字段与Sampler，可观察业务含义不减少，PoseGraph不取得任一下游编译器、packet、Host或Performance Build身份。
 - archived设计曾表达Module分层，但archive不作为current truth。本change不依赖archive实现，只把仍有价值且与current spec一致的职责重新形成正式delta。

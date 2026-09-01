@@ -33,8 +33,8 @@
 - 把Foot内部的“初步脚需求”“完成凭据”“最终脚结果”严格分型。Primary Support与Pelvis消费同帧typed脚需求；既有Pelvis响应、逐腿可达观察及Landing完成判断之后发布最终Resolved Pair，Goal只编码该结果。
 - 保留`ResolvePelvis -> AdvancePelvisResponse`、共同目标、软姿态偏好、现有速度/Handoff规则、权重和配置。Reach不取得骨盆或脚目标的硬修改权，不恢复已经删除的夹紧API、公共执行边界或恒值兼容字段。
 - 将下一帧真正使用的方向与数值放进最小typed运行状态，过程Fact只记录本帧变化。正式清空Solver历史时，从同一Rig参考姿态准备结果重新建立方向，不读取重置前的Vendor工作字段。
-- 过程证据按响应、接触、支撑与可达职责分组，删除同义平铺副本；Editor为当前采样格式建立唯一typed列绑定，由同一绑定驱动列名、写值、读取和必需列校验。
-- 继续使用唯一Sampler、Analyzer、Publisher、紧凑明细存储和当前评分政策；删除被替换的类型、字段和手写映射，不新增旧格式reader、自动补列或并行实现。复用现有输入/发布边界校验，不在每个内部方法重复检查同一组身份和数值。
+- 过程证据按响应、接触、支撑与可达职责分组，删除同义平铺副本；本change已用当前唯一typed列绑定完成历史迁移和行为对账。后续`add-generated-diagnostic-sampling-framework`与`refactor-foot-ik-diagnostic-sampling`只把这份字段业务真相迁入Attribute／Schema／Generated Program，不保留旧列绑定作为第二Schema。
+- 继续保留唯一Analyzer、Publisher、紧凑明细存储和当前评分政策；旧Sampler、CSV Writer／Reader、typed Column和Snapshot join属于后续诊断重构的删除对象，不是本change必须永久保留的架构。新链不得增加旧格式reader、自动补列或并行实现。
 
 ## 范围
 
@@ -76,7 +76,7 @@
 | active `add-animation-relative-knee-response` | 明确为已否决、已撤销的SmoothKnee实验 | 不作为实施依赖，不恢复其配置、尾段或角差历史；保护stabilize中已保留的膝向运输 |
 | active `compact-foot-diagnostic-publication` | 小报告、analysis清单、details与索引已完成 | 保留单次解析、内存事实交接和只读查询；本change只统一字段搬运，不复建大型facts.json |
 | active `consolidate-foot-diagnostic-scoring` | 统一评分与本次统一字段映射不同 | 保留唯一评分Owner、维度、权重、分母、缺失语义和原始历史包 |
-| active `refactor-character-pose-graph-architecture` | 已计划外层Module、Program、Publication与Diagnostics Projector迁移 | 本次仅处理Foot内部和采样映射，不创建第二套外层协调器；后续重构消费本次收口后的合同 |
+| active `refactor-character-pose-graph-architecture` | 已计划外层Module、Program、Publication与PoseGraph-owned具体Foot IK View迁移 | 本次只保留Foot内部字段业务真相和既有行为证据，不创建第二套外层协调器；后续诊断重构消费本次收口后的合同并删除旧采样实现 |
 
 原提案阶段仅更新本提案六份文档。用户现已通过Goal授权串行实施本change与后续Pose Graph重构，具体候选与验证见execution.md；尚未实施或验证的部分仍不写成已安装事实。`project.md`与stabilize的旧硬Reach保证、夹脚任务和“Pelvis读取最终Resolved”表述已随首两个闭环对齐；stabilize的重复接口差量已删除，防止后归档覆盖当前决定。既有未提交文档改动保留，没有将其夹带入本次提交；余下历史/Reset/诊断要求只有实施验证后才进入current。
 
@@ -84,6 +84,6 @@
 
 - 规格差量：`character-foot-placement-presentation`、`character-animation-pipeline`、`character-presentation-pose-graph`。
 - Runtime：Foot内部合同、Lifecycle收口、Pelvis请求适配、Goal编码、Interpolation历史、FBBIK方向准备和重置。
-- Editor：Foot过程诊断投影、Sampler列绑定、Analyzer解析与共享格式identity。
+- Editor：Foot过程诊断字段业务分组、Analyzer输入与共享格式identity；当前Sampler列绑定只作为已验证迁移历史，后续由Generated Schema替换。
 - 不改变Pose Graph端口、Goal Contribution/Goal Set ABI、Rig作者数据或Profile字段。若实现发现必须改变这些外部合同，应报告超出范围，不自行扩大迁移。
 - 诊断语义或布局确实变化时升级唯一格式版本；历史原包保留，不建立兼容运行路径。

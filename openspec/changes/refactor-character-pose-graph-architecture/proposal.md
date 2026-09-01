@@ -30,7 +30,7 @@
 - 保留当前`CharacterPoseConstraintRuntime`及其内部IK实现，仅收紧外部接口和存储归属，唯一拥有Foot Placement、PoseBone Goal、Goal Contribution、Goal Assembler、唯一Goal Set、FBBIK、BendHistory和Solver Result。Program Runtime在每个Constraint Family Operation的编译位置通过typed编译Handle恰好调用一次对应入口并写入该Operation唯一completion；Constraint Module不扫描Program、不拥有第二份Stage Schedule，并在完整闭包结束后发布一个typed Constraint Result。其Interface不得暴露NativeSlice、Goal offset、Operation index、Callsite index或内部Bank页。
 - 新增具体`CharacterFinalPosePublication` Module，唯一拥有Committed/Pending Final Pose物理页、完整Final Pose验证、Physical Writer binding、一次整Rig写入与Publication Result；Program Image中的Final Output只保存稳定Publication layout handle，Actor Runtime创建时将其绑定到当前Final Publication Pending页，不在共享Program Image中保存Actor页引用，也不分配第二Final Pose页。Topology只证明唯一Output与Publication requirement，具体Writer唯一性由Runtime Factory和Final Publication构造验证。当前只有一个Writer Implementation，不建立假设性可替换接口。
 - 将`CharacterAnimationPresentationRuntime`收窄为帧级协调根：`Apply Pending Tuning -> Begin Root Transaction -> Plan Control/Demand -> Prepare Sources -> Prepare Program -> Validate Barrier -> Animancer Evaluate -> Complete Program/Constraints -> Publish Final Pose -> Seal`。它拥有唯一根Frame Transaction，只交换typed Lease/Result，不保存节点业务状态、不理解Operation字段、不执行Foot/Goal/FBBIK数学。现有在线调参必须通过actor-local `CharacterPoseTuningSnapshot`按Program、Source与Constraint Owner分区预验证并原子提升Tuning Generation；Program Image只保存Build默认值，任何调参不得修改共享Image或Execution View。
-- 将Runtime Diagnostics改为单向Projector，只从同一成功Frame提交的`Source Result + Program Result + Constraint Result + Final Publication Result`及interest-gated冻结页生成Snapshot。删除跨Module内部页读取；后续仍接现有Sampler、Analyzer、Publisher、小报告／明细存储与七维评分，不重新实现它们。
+- 将Runtime Diagnostics改为单向Projector。PoseGraph在Frame开始冻结Foot IK typed interest与View容量，只从同一成功Frame提交的`Source Result + Program Result + Constraint Result + Final Publication Result`及interest-gated冻结页生成具体`CharacterFootIkCommittedCaptureView`，并唯一拥有其Post-Seal短租约的生产、有效期与失效。删除跨Module内部页读取和万能Committed View；PoseGraph不拥有Diagnostic Capability、Sampler、Schema、Generated Program、typed packet、CSV、Analyzer或Publisher。下游`refactor-foot-ik-diagnostic-sampling`只在该具体租约内调用框架生成的Foot Capture Program并声明字段／Sampler／Host业务；`add-generated-diagnostic-sampling-framework`只拥有通用生成、packet、Session、Writer／Reader和manifest生命周期。现有诊断与七维评分业务语义保持不变。
 - Runtime与Preview继续使用同一Program Image schema、actor-local Execution View规则、Module Factory、根Frame事务、Source backend、World Context Adapter和FinalIK Pose Buffer backend；Preview不得保留简化Executor或临时Program。
 - 迁移完成后删除旧`PosePlanExecutionRuntime`巨型Implementation、旧`CharacterPoseGraphNativeProgram`混合容器、旧`CharacterPoseGraphStagedExecutor`巨型构造、旧`CharacterPresentationPoseOperation`万能ABI、旧Compiler Handler Registry、旧中央CompilationState、重复Validator/Codec知识和Diagnostics内部读取，不保留wrapper、开关、fallback或双运行链。actor-local Execution View只能是Program Image的只读物理视图，不得保留旧Native Program的Actor状态、Frame页、运行时Compile或独立schema。
 
@@ -51,7 +51,7 @@
 2. `build-character-foot-motion-data-foundation`已归档；`stabilize-character-foot-path-and-landing`未完成或未归档不再阻塞本change。其已保留实现属于基线，剩余行为任务不自动接管、不要求先做完。
 3. 用户本次Goal明确将`refactor-character-ik-maintenance-boundaries`列为本change的已验证接入前置。Foot请求／最终结果、Interpolation历史、独立验证的Solver Reset修正及诊断列绑定由第一阶段完成；本change保留其通过成果，只迁移外部架构，不恢复第一阶段删除的旧结构。
 4. ClipPlayer与BlendSpacePlayer通用能力已进入current specs；独立Blend Space演示内容不作为前置。Linked Pose、Motion Matching、Transition Routing、Blend Stack与Inertialization只迁移已存在的正式节点和source生命周期，不补装未运行内容。
-5. `compact-foot-diagnostic-publication`与`consolidate-foot-diagnostic-scoring`已落地的采样、分析、明细存储和评分链继续使用，不要求为PoseGraph迁移重新实现或先归档。
+5. `compact-foot-diagnostic-publication`与`consolidate-foot-diagnostic-scoring`已落地的分析、明细存储和评分业务语义继续使用，不要求先归档；PoseGraph与`add-generated-diagnostic-sampling-framework`可分别完成具体Foot IK短租约View和通用AOT生成／packet合同，两个接口严格闭合后，`refactor-foot-ik-diagnostic-sampling`再以首个领域插件替换现有Foot Sampler、手写Column和二次join。不得先给旧Sampler增加临时Adapter、Foot专属Generator、表达式委托、反射路径或第二Snapshot。
 6. 本次按指定提交冻结动画与IK算法、时钟和配置。若其它任务改动同一Owner、同一字段或同一行为基线，必须先报告具体冲突由用户决定，不覆盖已经改对的内容；无关任务不构成本change的全局等待条件。
 
 ## Impact
@@ -78,7 +78,7 @@
 
 - current Foot spec已不固定内部状态机类名，而本change旧delta仍要求`CharacterFootStateMachine`；本次删除该过期约束，只保留当前Foot输入、结果与唯一事务边界，不重做已经完成的Lifecycle拆分。
 - 部分current／active文字仍按旧Reach夹紧与“Pelvis先读最终Resolved”描述；当前保留代码和用户最新裁决已撤除业务层骨盆／末端夹脚。这里明确保护已保留行为，不利用旧文字恢复政策，并在第一阶段通过后保留其内部请求／最终结果边界。
-- 已落地诊断已有唯一Sampler、Analyzer、Publisher、版本化小报告／明细存储和七维评分。本change只迁移Runtime事实来源；不新增第二采样、重新评分或旧格式兼容路径。
+- 已落地诊断已有唯一Analyzer、Publisher、版本化小报告／明细存储和七维评分业务语义。本change只迁移Runtime事实来源；通用AOT生成与packet链由`add-generated-diagnostic-sampling-framework`唯一拥有，Foot字段／Sampler／Host业务由`refactor-foot-ik-diagnostic-sampling`拥有，不新增第二采样、重新评分或旧格式兼容路径。
 
 ## Non-Goals
 
@@ -126,6 +126,6 @@ Diagnostics只读取Committed Result，不读取内部Workspace或重新执行�
 既有动画、Foot Placement、Goal、FBBIK和Final Pose业务结果保持ad3527e103cc3235a63e8a1c1dbd26df5155e0ba基线
 IK维护重构通过后串行接入；其它Foot待办与归档状态不是开工前置
 保留第一阶段已通过的IK成果；不吸收其余未实施或已撤销方案，不掩盖基线已有问题
-既有Sampler、Analyzer、Publisher、明细存储与七维评分保持原链路和数学
+Foot诊断字段业务含义、Analyzer、Publisher、明细存储与七维评分数学保持；通用AOT生成、typed packet与Host生命周期由`add-generated-diagnostic-sampling-framework`拥有，Foot插件由`refactor-foot-ik-diagnostic-sampling`拥有
 Gameplay ContractHash、Float32/Fixed ProgramHash与Network identity不因Pose ABI重构改变
 ```

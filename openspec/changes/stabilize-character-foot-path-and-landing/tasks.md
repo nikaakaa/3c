@@ -22,8 +22,8 @@
 - [x] 3.5 拆分Accepted Swing Path Landing与Promoted Contact Landing所有权，消除Event交接帧错误的Path不可用，不用更短HalfLife、Step Time截止、Goal低通或Solver后处理掩盖同帧跳变
 - [x] 3.6 把Swing硬Floor收敛为同一Accepted Ground Path Envelope，删除逐帧CurrentSwingFloor Query，并区分普通目标追踪与Envelope Clamp
 - [x] 3.7 扩展正式诊断事实，记录Revision原因、逐阶段Correction、Envelope clearance和Releasing到Swing转换结果
-- [x] 3.8 把采样包迁移为项目本地持久`Diagnostics/FootPlacementRuns/<run-id>/`下的每Frame/Side唯一主行与独立Ground Path几何表，删除Unity Temp写入和每个Contact/Envelope重复整套阶段列的旧展开行
-- [x] 3.9 让停止与队列失败统一进入后台Finalizing，排空Writer、封存双表并运行唯一Analyzer/Publisher后再发布结果
+- [x] 3.8 把采样包迁移为项目本地持久`Diagnostics/FootPlacementRuns/<run-id>/`下的每Frame/Side唯一主行与独立Ground Path几何表，删除Unity Temp写入和每个Contact/Envelope重复整套阶段列的旧展开行；该项记录历史旧Recorder成果，后续基础设施替换由10.9负责
+- [x] 3.9 让停止与队列失败统一进入后台Finalizing，排空Writer、封存双表并运行唯一Analyzer/Publisher后再发布结果；该项记录历史旧Sampler成果，后续唯一Capability生命周期由10.9负责
 - [x] 3.10 为每脚建立根事务所有的Landing Observation Key、Committed/Pending Page与双页Pool，相同Key复用已提交Accepted或Rejected结果
 - [x] 3.11 让超过正式累计阈值或Source/Cycle/Event/Profile/World lineage变化只执行一次canonical SphereCast并删除PreferredSurfaceIdentity选择行为
 - [x] 3.12 把Observation identity、World revision、cache state、query executed与canonical Raw Landing接入唯一facts/diagnosis链并删除Preferred旧口径
@@ -158,3 +158,4 @@
 - [ ] 10.6 按design中的ZZZ P0/P1精确结论、37个CSV全量复盘、最新Raw、可琳楼梯/攻击Trace与P2/P3边界逐项核对实现，分别记录直接采用、项目输入差异、Replay否决、后续补证和明确不照搬；必须核对`0x60/0x64`方向、`f54`下降沿从属、`f58`比较、`arr230=arr228+arr130×arr128`与`0x278→0x274`的138次`5×dt`响应，不得把匿名B/D/`0x54`/`0x58`/`0x64`/`0x199`输入或`0x274`外部触发猜成正式业务状态、算法开关与默认值
 - [ ] 10.7 确认新增Prediction、Observation、Landing、Interpolation与Pelvis路径具有固定容量、有限值校验、数组边界、确定性tie-break和typed容量失败，且热路径没有每帧托管分配
 - [ ] 10.8 确认不存在独立PIK组件、预测/普通fallback、全局Foot缓存、第二Landing生命周期、第二Interpolation、第二IK、第二Writer、Action专用Foot链、LateUpdate骨骼旁路或常驻Final Pose低通
+- [ ] 10.9 在`add-generated-diagnostic-sampling-framework`与PoseGraph具体`CharacterFootIkCommittedCaptureViewLease`接口闭合后，把本change的全部字段语义、Geometry表、Analyzer与Publisher接入`refactor-foot-ik-diagnostic-sampling`首个插件；删除旧Recorder、CSV Writer、Foot Session／Finalizer和Snapshot join，不保留兼容reader或第二完成标志

@@ -74,6 +74,18 @@ Tracking阶段超过任一累计阈值，或Landing Event、Source Sample、Sour
 - **THEN** Projection Build或当前Foot帧 MUST发布typed invalid
 - **AND** MUST不读取旧隐藏Step Event或重新编号继续预测
 
+#### Scenario: 相同Landing Observation Key
+
+- **WHEN** 当前帧生成的canonical Landing Observation Key与上一Committed Page相同
+- **THEN** Runtime MUST复用相同Observation identity、Surface、点、法线或Reject结果
+- **AND** MUST不执行SphereCast或读取上一Surface重新选择候选
+
+#### Scenario: 新Landing Observation Key
+
+- **WHEN** canonical Raw Landing、Component Up、Event、Profile Revision或World Revision产生新Key
+- **THEN** Runtime MUST执行一次SphereCast并产生canonical最近合法候选或typed拒绝
+- **AND** Pending事务失败时 MUST丢弃该Observation，不得污染上一Committed Page
+
 ### Requirement: Ground Path必须使用上一已提交落点与下一事件落点
 
 每只脚 MUST在同一Landing Context中维护可并存的`NextSwing Empty/Tracking`与`Verified LastLanding`两个typed槽位，不得把Prediction Event与已接触Plant Event压成互斥状态或形成第二状态机。PreSwing、Swing与Approach Contact MUST保持NextSwing Tracking并重新投影Raw Landing Candidate；只有累计输入或强制lineage触发Query Admission时 MUST执行一次正式Landing SphereCast，其余帧 MUST复用Committed Observation。Tracking中新Observation命中不同Surface时 MUST无条件提交新的NextSwingLanding；同Surface新点与NextSwingLanding的距离小于正式`LandingAcceptanceDistance`时 MUST保留原落点并复用Ground Path，达到阈值时 MUST提交新点。
@@ -155,6 +167,18 @@ Ground Path MUST只使用LastLanding与NextSwingLanding构造查询输入。没�
 - **WHEN** NextSwingLanding对应的事件首次产生正式Contact Rising
 - **THEN** Runtime MUST通过一次Plant Verification建立新的LastLanding，不得直接晋级Prediction点
 - **AND** MUST只为新的PreSwing、Swing或Approach Contact Event维护新的NextSwingLanding
+
+#### Scenario: 相同Observation持续多个表现帧
+
+- **WHEN** PreSwing或Swing连续帧产生相同canonical Observation Key
+- **THEN** Runtime MUST复用Committed Observation、NextSwingLanding与Committed Ground Path
+- **AND** MUST不执行新的SphereCast或Capsule Ground Detection
+
+#### Scenario: 新Observation达到更新死区
+
+- **WHEN** 新Key产生的Accepted Observation与同Event NextSwingLanding距离达到正式更新死区
+- **THEN** Runtime MUST提交新NextSwingLanding并重建同一Foot事务中的Ground Path
+- **AND** Ground Path MUST消费该Observation，不得执行第二次Landing查询
 
 ### Requirement: Foot Lifecycle必须生成唯一权威结果
 
@@ -253,6 +277,18 @@ Releasing期间同Event再次出现Sliding或Locked请求，且原Verified Ancho
 - **WHEN** Post-Interpolation Transition判定Releasing完成且当前帧具有合法Swing Envelope
 - **THEN** Transition Runtime MUST在同帧应用Swing，随后按新State执行Ground穿透测量和最终输出分类
 - **AND** 发布为Swing的Corrected Sole MUST立即遵守同一Accepted Ground Envelope硬最低约束并记录Clamp事实，不得沿用Landing/Locked的Contact竖直限速政策
+
+#### Scenario: 内部责任拆分
+
+- **WHEN** Foot实现把Transition、Target和时间连续化拆成独立组件
+- **THEN** 相同Frame Input和上一Committed状态 MUST只产生一份离散State、一份Effective Correction和一个Resolved Foot
+- **AND** 任一内部组件 MUST不能独立提交或绕过根事务
+
+#### Scenario: 整帧Discard
+
+- **WHEN** Foot内部Pending状态已经更新但后续Goal或Solver阶段失败
+- **THEN** 上一Committed Foot状态、Correction、Anchor和Path MUST保持不变
+- **AND** 下一帧 MUST不读取被丢弃的内部结果
 
 ## ADDED Requirements
 
@@ -414,24 +450,26 @@ Diagnostics MUST只读取Committed Source、Path、Context、Resolved、Goal、S
 - **THEN** 唯一Publisher MUST分别发布对应Target，并区分可见输出变化、阶段责任、走廊/歧义资格、低表现采样与速度异常
 - **AND** Sampler MUST只消费正式Runtime已发布事实，不得为了补诊断执行第二次World Query或建立第二Reporter
 
-### Requirement: Foot诊断采样必须正规化并由后台唯一封口
+### Requirement: Foot诊断业务投影必须通过唯一Generated Capability链封口
 
-Foot诊断Recorder MUST为每个Frame、Completion与Side只写一条包含Source、Path、State、Goal、Solved和Physical阶段事实的`samples.csv`主行。一对多Ground Contact与Envelope顶点 MUST写入同目录唯一`ground-path-geometry.csv`，并通过Sample、Frame、Completion、Side与Ground Path identity连接主行；不得为每个几何项重复整套主行列。
+本change MUST只定义Foot Full Sampler的业务字段与产物语义：每个Frame、Completion与Side一份包含Source、Path、State、Goal、Solved和Physical阶段事实的主记录，以及只保存一对多Ground Contact与Envelope顶点的Geometry子表；Geometry MUST通过Sample、Frame、Completion、Side与Ground Path identity连接主记录，不得为每个几何项重复整套主字段。
 
-每个Foot诊断包 MUST写入项目本地持久目录`Diagnostics/FootPlacementRuns/<run-id>/`，MUST NOT写入Unity `Temp`。该目录 MUST只保存本地原始诊断，Recorder MUST NOT自动复制、晋升或加入版本控制；需要提交的诊断基线由作者明确选择后另行归档。
+正式采样 MUST只走`PoseGraph具体CharacterFootIkCommittedCaptureViewLease -> Foot Generated Capture Program -> framework typed packet -> framework Writer/Reader -> Foot Full Host Adapter -> Analyzer/Publisher`。PoseGraph MUST唯一拥有View生产与短租约，通用框架 MUST唯一拥有`character-foot-ik` Capability Session、packet、Writer／Reader与Capability manifest，Foot插件 MUST只拥有Extractor、Sampler／Program Definition、Geometry layout、Host Adapter、Analyzer与Publisher。本change MUST不建立Recorder、CSV Writer、Session、Finalizer、Snapshot join或第二完成标志。
 
-停止采样与捕获队列失败 MUST统一进入`Finalizing`。Unity主线程 MUST停止捕获并立即返回；唯一后台Finalizer MUST排空现有Writer、封存双表、运行同一Analyzer与Publisher并原子发布facts和diagnoses。程序集重载 MAY等待同一Finalizer完成以保护包完整性，但不得建立同步Analyzer、Python Reporter、第二输出schema或仅扩大队列的替代路径。
+Editor本地Capture MAY由manifest把Full Host Adapter产物声明在`Diagnostics/FootPlacementRuns/<run-id>/`；Performance Capture MUST把同一Capability产物放入当前Performance staging的显式子闭包。消费者 MUST只按manifest精确路径打开，不扫描“最新”目录。历史Foot诊断包 MUST保持不可变且不得迁移、覆盖或由新Reader兼容解释；需要提交的基线由作者明确选择后另行归档。
+
+停止采样与packet队列失败 MUST统一进入框架Capability `Finalizing`。Unity主线程 MUST停止捕获并立即返回；框架Writer MUST封存typed packet流与runtime manifest，Host Finalizer MUST经框架Reader调用Foot Full Host Adapter生成主表、Geometry、facts和diagnoses，并原子发布Capability manifest。任一Foot Host阶段失败 MUST只使该Capability Faulted，Performance再据此决定顶层Capture状态。不得建立同步Analyzer、Python Reporter、第二输出schema或仅扩大队列的替代路径。
 
 #### Scenario: Unity清理临时目录后保留诊断包
 
 - **WHEN** 一次Foot诊断已经完成且Unity随后清理项目临时目录或重新启动
-- **THEN** 完整诊断包 MUST仍保留在`Diagnostics/FootPlacementRuns/<run-id>/`
-- **AND** Recorder查找最近一次采样 MUST只使用该持久目录
-- **AND** 系统 MUST NOT自动移动、覆盖或删除已有诊断包
+- **THEN** 完整Editor Foot诊断包 MUST仍保留在manifest声明的`Diagnostics/FootPlacementRuns/<run-id>/`
+- **AND** 消费者 MUST通过显式manifest路径打开，不得扫描最近目录
+- **AND** 系统 MUST NOT自动移动、覆盖、删除或兼容解释已有诊断包
 
 #### Scenario: 停止包含大量Ground Path几何的录制
 
 - **WHEN** 当前录制已经积累大量Ground Contact与Envelope顶点且作者点击停止
-- **THEN** Editor MUST进入Finalizing而不在停止回调中等待Writer或扫描CSV
-- **AND** `samples.csv` MUST保持每Frame/Side一条主行，几何表 MUST只保存紧凑几何记录
-- **AND** Finalizer完成后 MUST由同一Analyzer与Publisher生成facts和独立diagnoses
+- **THEN** `character-foot-ik` Capability MUST进入Finalizing，Editor不得在停止回调中等待Writer或扫描CSV
+- **AND** Foot Full Host Adapter生成的`samples.csv` MUST保持每Frame/Side一条主行，Geometry表 MUST只保存紧凑几何记录
+- **AND** Host Finalizer完成后 MUST由同一Analyzer与Publisher生成facts和独立diagnoses，并只以Capability manifest声明完成

@@ -36,7 +36,7 @@ Foot Placement MUST继续由当前保留的深`CharacterFootPlacementModule`接�
 
 Runtime Result MUST与Diagnostics严格分型。Constraint Module MAY按Frame开始冻结的interest，从Pending Context、Observation、Resolved Result和Constraint阶段Result单向深冻结Phase Progress、Baseline、Envelope、Swing Correction、Residual、Anchor、Contact Progress、Ownership、Support Eligibility、Support、Pelvis、Goal与Solved结果；这些事实只能进入`CharacterPoseConstraintCommittedResult`。Physical Write与最终Physical Bone结果 MUST只由Final Publication冻结进`CharacterFinalPosePublicationCommittedResult`。
 
-Gizmo、CSV、Trace与Pose Watch MUST只由Runtime Diagnostics Projector按相同Frame、Completion、Program、Projection、Rig和Actor lineage组合Source、Program、Constraint与Final Publication的Committed Result，再接入现有唯一Sampler、Analyzer、Publisher和明细存储。既有采样字段业务含义、七维评分权重／资格／分母、报告与历史原包 MUST保持；本change不得重写离线列映射、重算另一套评分或恢复展开facts.json读写往返。Diagnostics MUST不查询世界、修改Context、选择Support、生成Goal、执行FBBIK、读取Physical Transform反推结果或把Constraint与Physical事实写回同一业务Bank。
+Gizmo、Trace与Pose Watch MUST只读取各自允许的Committed页；Foot CSV采样 MUST只由Runtime Diagnostics Projector按相同Frame、Completion、Program、Projection、Rig和Actor lineage组合Source、Program、Constraint与Final Publication的Committed Result，并发布PoseGraph-owned具体`CharacterFootIkCommittedCaptureViewLease`。`character-foot-ik-diagnostic-sampling`只提供消费该租约的Foot Bridge、字段／Sampler／Program Definitions与Host业务插件，`generated-diagnostic-sampling-framework`只拥有生成程序、typed packet、Capability Session与Writer／Reader，不索取或持有View；PoseGraph与Constraint不得拥有任一下游编译器、packet或Host知识。既有采样字段业务含义、七维评分权重／资格／分母、报告与历史原包 MUST保持；本change不得重写领域Schema、重算另一套评分或恢复展开facts.json读写往返。Diagnostics MUST不查询世界、修改Context、选择Support、生成Goal、执行FBBIK、读取Physical Transform反推结果或把Constraint与Physical事实写回同一业务Bank。
 
 #### Scenario: 捕获正式Foot事实
 
@@ -48,4 +48,4 @@ Gizmo、CSV、Trace与Pose Watch MUST只由Runtime Diagnostics Projector按相�
 
 - **WHEN** Constraint Result已经完成但Final Publication在Physical Writer前或Writer中失败
 - **THEN** Diagnostics MUST不发布本帧Pending Constraint或Physical结果
-- **AND** Projector MUST只保留上一Committed Snapshot或正式Actor Fault事实
+- **AND** Projector MUST不为Foot Capture借用上一帧或发布第二Snapshot；Live／Pose Watch只能按各自既有合同保留上一Committed事实或正式Actor Fault

@@ -188,7 +188,7 @@ Program Image与actor-local Execution View MUST只保存Build默认值。每个A
 
 系统 MUST在Frame开始冻结Diagnostics interest和容量，并只在有interest时从Module Pending Result向预分配诊断页深冻结允许观察的数据。成功Seal后，`CharacterPoseDiagnosticsProjector` MUST只读取匹配同一lineage与Tuning Generation的Committed Source、Program、Constraint和Final Publication Result；MUST不持有Runtime Module引用、不读取Pending Workspace、Actor State私有页、Foot Context、FBBIK Vendor对象或Physical Transform反推结果，也 MUST不参与任何运行决定。
 
-现有Sampler、Analyzer、Publisher、小报告／明细存储与七维评分 MUST继续使用同一实现；Runtime Projector只替换其上游事实来源，不拥有离线分析或评分。字段存储归属变化 MUST不改变现有字段的业务含义、评分规则或历史证据。
+Runtime Projector MUST在Frame开始冻结Foot IK typed interest与View固定容量，并只在成功Seal后发布同lineage、短租约的具体`CharacterFootIkCommittedCaptureViewLease`。PoseGraph MUST唯一拥有该View的生产、有效期与失效；该View MUST只包含Foot IK采样允许观察的typed值与availability，不得成为通用DTO、万能Committed View或第二Snapshot。PoseGraph不拥有Diagnostic Capability、字段Attribute、Sampler Definition、Schema Compiler、AOT Generated Capture Program、typed packet、Host Adapter、CSV、geometry、Analyzer、Publisher或评分。独立`character-foot-ik-diagnostic-sampling`能力 MAY在租约内通过Foot Bridge调用`generated-diagnostic-sampling-framework`生成的具体Foot Capture Program；框架Session MUST不索取、保存或解释该View。三者 MUST保持现有Foot字段业务含义、Analyzer／Publisher规则、评分数学与历史证据。PoseGraph Runtime MUST不引用框架或领域插件的Generator、Generated Program、packet、Host或Build类型，也 MUST不为旧Sampler建立表达式／反射路径、兼容DTO、第二Snapshot或临时Adapter。
 
 #### Scenario: 同时观察Player、Foot和FBBIK
 
@@ -201,6 +201,12 @@ Program Image与actor-local Execution View MUST只保存Build默认值。每个A
 - **WHEN** Editor在当前Frame开始之后增加detail interest
 - **THEN** 当前运行结果 MUST保持不变且完整详情 MAY从下一成功Frame开始
 - **AND** Projector MUST不读取Pending页补齐半帧Snapshot
+
+#### Scenario: Foot IK AOT Capture消费Projector结果
+
+- **WHEN** 匹配Sampler Set与Schema identity的Foot IK Capture Session在Frame开始前声明detail interest且当前Frame成功Seal
+- **THEN** Projector MUST发布一份同lineage的短租约`CharacterFootIkCommittedCaptureViewLease`
+- **AND** Foot Bridge MAY在租约内调用通用框架为该Program Definition生成的Editor／IL2CPP AOT Capture Program写入预分配packet，但PoseGraph Runtime MUST不解释Sampler字段、执行生成程序、生成CSV或保留旧事件/Snapshot二次join
 
 ### Requirement: Preview与正式Runtime必须复用同一Module Factory和Program Image
 

@@ -6,11 +6,11 @@
 
 ### Requirement: 采样框架必须与领域语义解耦
 
-框架 MUST只定义Diagnostic Capability、Sampler Set、Field／Group／Table descriptor、Capture Program Request、Schema identity、Generated Capture Program ABI、typed packet、Capability Session、Writer／Reader、Host Finalizer和manifest合同。每个领域正式Runtime Owner MUST自行定义并发布具体只读Committed Capture View及其lineage、availability与租约语义；领域插件 MUST只声明该具体输入类型、Extractor、Sampler、Analyzer与Publisher语义。框架 MUST不定义通用Committed View接口、基类或DTO，不识别Foot、PoseGraph、Presentation Frame、Simulation Tick、Camera、AI或其它具体领域identity，也 MUST不决定领域Frame／Tick何时成功、哪些事实允许冻结或如何评分。
+框架 MUST只定义Diagnostic Capability、Sampler Set、Field／Group／Table descriptor、Capture Program Request、Schema identity、Generated Capture Program ABI、typed packet、Capability Session、Writer／Reader、Host Finalizer和manifest合同。每个领域正式Runtime Owner MUST自行定义并发布具体只读Committed Capture View及其lineage、availability与租约语义；领域插件 MUST另行定义具体Capture Metadata保存Sample identity、采样时间、目标实例等固定上下文，并声明双输入Extractor、Sampler、Analyzer与Publisher语义。框架 MUST不定义通用Committed View／Capture Metadata接口、基类或DTO，不把Metadata塞回View，不识别Foot、PoseGraph、Presentation Frame、Simulation Tick、Camera、AI或其它具体领域identity，也 MUST不决定领域Frame／Tick何时成功、哪些事实允许冻结或如何评分。
 
 #### Scenario: Foot IK成为首个领域插件
 
-- **WHEN** Foot IK插件注册PoseGraph-owned具体Committed View类型、字段、表和Sampler Set
+- **WHEN** Foot IK插件分别注册PoseGraph-owned具体Committed View类型、领域具体Capture Metadata类型、字段、表和Sampler Set
 - **THEN** 框架 MUST只按通用descriptor生成和运行采样程序
 - **AND** 通用框架 MUST不增加Foot、FBBIK、Goal、Geometry或七维评分专用分支
 
@@ -22,7 +22,7 @@
 
 ### Requirement: 字段与Sampler必须通过唯一编译期声明形成Schema
 
-每个领域字段 MUST通过唯一Attribute声明稳定Field identity、revision、codec、单位、availability、表归属和可复用字段分组；每个Sampler MUST声明稳定Sampler identity、revision、字段分组、专项派生字段、表、Host Analyzer与发布物。Capture Program Request MUST显式选择一个Capability及一套或多套Sampler。编译期Schema MUST拒绝重复identity、未知分组、断裂availability、非法codec、AOT非法Extractor签名、派生依赖环和Host必需字段缺失，并按稳定identity排序形成canonical Schema descriptor。
+每个Capability MUST在Attribute中同时注册两个不同的具体值输入类型：Committed View与Capture Metadata。每个领域字段 MUST通过唯一Attribute声明稳定Field identity、revision、codec、单位、availability、表归属和可复用字段分组；主字段Extractor MUST使用`(in View, in Metadata)`，Table Count MUST使用相同双输入，Table Field MUST再接收row index。每个Sampler MUST声明稳定Sampler identity、revision、字段分组、专项派生字段、表、Host Analyzer与发布物。Capture Program Request MUST显式选择一个Capability及一套或多套Sampler。编译期Schema MUST拒绝重复identity、未知分组、断裂availability、非法codec、AOT非法Extractor签名、派生依赖环和Host必需字段缺失，并按稳定identity排序形成canonical Schema descriptor。
 
 #### Scenario: 多个Sampler复用同一字段
 
@@ -38,7 +38,7 @@
 
 ### Requirement: Capture执行必须是编译期生成的AOT静态程序
 
-框架 MUST按Capability与Sampler Set的字段并集生成普通C#具体静态Capture Program。生成程序 MUST直接调用AOT-safe Extractor并按dense typed handle写入预分配主表与固定容量子表；相同Field identity在一个sample中 MUST只求值一次。Editor与IL2CPP Capture Player MUST执行相同Generated Program identity和packet layout。运行时 MUST不构造或编译表达式树、不反射成员、不使用`DynamicInvoke`／`MethodInfo.Invoke`、不解析字符串路径，也 MUST不以解释器或手写第二提取链补齐缺失程序。
+框架 MUST按Capability与Sampler Set的字段并集生成普通C#具体静态`Capture(in ConcreteView, in ConcreteMetadata, ref Packet)`。生成程序 MUST直接调用AOT-safe双输入Extractor并按dense typed handle写入预分配主表与固定容量子表；相同Field identity在一个sample中 MUST只求值一次。Editor与IL2CPP Capture Player MUST执行相同Generated Program identity和packet layout。运行时 MUST不构造或编译表达式树、不反射成员、不使用`DynamicInvoke`／`MethodInfo.Invoke`、不解析字符串路径，也 MUST不以解释器、Host手写列或第二提取链补齐缺失程序。
 
 #### Scenario: Editor与IL2CPP执行同一程序
 
@@ -70,7 +70,7 @@
 
 ### Requirement: Capture生命周期必须有界、非阻塞且原子
 
-每个Capability Session MUST在开始前独立冻结Sampler Set、Schema、Generated Program、packet容量、Writer transport和全部Host输出闭包。领域插件Bridge MUST只在正式Runtime Owner交付的具体Committed View租约内同步调用一次生成程序；主线程 MUST只取得该Capability的预分配packet并提交到其单一有界队列，不得等待文件IO、格式化、Analyzer或Publisher。各Capability MUST拥有独立cadence、opaque typed lineage、sample key、packet流、Writer和Capability manifest；框架 MUST不解释Presentation Frame、Simulation Tick或跨Capability对齐关系。任一生成错误、队列溢出、sample序列断裂、Writer故障、Host插件故障或hash不闭合 MUST只使对应Capability Session与manifest成为Faulted，并保留已有证据但不得发布该Capability的部分Completed身份。Performance工作流 MAY依据所选Capability结果决定顶层Capture状态，框架 MUST不拥有该顶层状态机。
+每个Capability Session MUST在开始前独立冻结Sampler Set、Schema、Generated Program、cadence identity、packet容量、Writer transport和全部Host输出闭包。领域插件Bridge MUST只在正式Runtime Owner交付的具体Committed View租约内构造一次具体Capture Metadata、取得预分配struct packet lease并同步调用一次生成程序；lease MUST以version防止复制后重复提交或过期使用。主线程 MUST只消费式提交到该Capability的单一有界队列，Finalize MUST只发布非阻塞请求，不得等待文件IO、格式化、Analyzer或Publisher。各Capability MUST拥有独立cadence、opaque typed lineage、sample key、packet流、Writer、Runtime manifest和Capability manifest；框架 MUST不解释Presentation Frame、Simulation Tick或跨Capability对齐关系。任一生成错误、非法状态转换、队列溢出、sample序列断裂、Writer故障、Host插件故障或hash不闭合 MUST只使对应Capability Session与manifest成为Faulted，并保留已有证据但不得发布该Capability的部分Completed身份。Performance工作流 MAY依据所选Capability结果决定顶层Capture状态，框架 MUST不拥有该顶层状态机。
 
 #### Scenario: 多Sampler正常完成
 
@@ -102,7 +102,7 @@ Capture Player MUST只执行Generated Program、提交typed packet并通过声�
 
 ### Requirement: Player构建必须显式声明通用`DiagnosticCapabilitySet`
 
-Player Build Request MUST保存canonical、稳定排序的`DiagnosticCapabilitySet`，每项`DiagnosticCapabilityDescriptor` MUST显式保存CapabilityId、Mode、Sampler Set identity、Schema identity、Program identity、packet capacity与transport identity；Program identity MUST闭合Generated Program hash、Generator revision与packet layout revision。Disabled MUST在编译期排除该领域诊断定义、Bridge、Generated Program、capture页、队列和interest；Capture MUST把匹配程序纳入AOT闭包。Player manifest、Run Request、握手与Capture manifest MUST保存同一Set identity。比较器 MUST拒绝任一Capability模式或Capture身份不同的性能差值。
+Player Build Request MUST保存canonical、稳定排序的`DiagnosticCapabilitySet`，每项`DiagnosticCapabilityDescriptor` MUST显式保存CapabilityId、Mode、Sampler Set identity、Schema identity、Program identity、cadence identity、packet capacity与transport identity；Program identity MUST闭合Generated Program hash、Generator binary identity、程序集binding与packet layout revision。领域 MUST声明Capability专属Capture程序集与scripting define，`DiagnosticCompilationClosureProof` MUST让Disabled进入排除闭包、Capture进入包含闭包。Disabled MUST在编译期排除该领域诊断定义、Bridge、Generated Program、capture页、队列和interest；Capture MUST把匹配程序纳入AOT闭包。Player manifest、Run Request、握手、Runtime／Capability manifest与Comparer MUST使用同一Capability Set codec和identity。比较器 MUST拒绝任一Capability模式或Capture身份不同的性能差值。
 
 #### Scenario: 全部Capability关闭的性能基线
 
@@ -118,7 +118,7 @@ Player Build Request MUST保存canonical、稳定排序的`DiagnosticCapabilityS
 
 ### Requirement: 采样不得反向驱动领域运行结果
 
-Generated Program与领域插件Bridge MUST只读取正式Runtime Owner明确发布的具体Committed View与Capture metadata；框架Session、Writer／Reader和Host插件 MUST只读取packet、Schema与manifest，不得持有Runtime View。任何采样组件不得创建第二业务Tick、查询世界、调用求解器、写Gameplay／Presentation状态、改变权重、目标、配置、随机数、时钟或下一帧事实。Disabled与Capture构建在相同业务输入下 MUST遵守同一正式运行算法；Capture开销属于独立BuildIdentity，不得伪装为零成本或与Disabled直接比较。
+Generated Program与领域插件Bridge MUST只读取正式Runtime Owner明确发布的具体Committed View与领域具体Capture Metadata；Capture Metadata MUST只承载采样固定上下文，领域Runtime MUST不读取它，框架Session、Writer／Reader和Host插件 MUST只读取packet、Schema与manifest，不得持有Runtime View或Metadata。任何采样组件不得创建第二业务Tick、查询世界、调用求解器、写Gameplay／Presentation状态、改变权重、目标、配置、随机数、时钟或下一帧事实。Disabled与Capture构建在相同业务输入下 MUST遵守同一正式运行算法；Capture开销属于独立BuildIdentity，不得伪装为零成本或与Disabled直接比较。
 
 #### Scenario: Sampler派生诊断字段
 

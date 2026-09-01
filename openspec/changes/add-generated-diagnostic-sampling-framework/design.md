@@ -9,7 +9,7 @@
 **Goals:**
 
 - 形成不依赖Character、PoseGraph或Foot程序集的通用采样contracts、编译器、Runtime packet和Host生命周期。
-- 让领域正式Runtime Owner提供具体Committed View，领域插件只声明该具体输入类型、字段／Sampler定义及Host业务插件，新增领域不修改框架中央代码。
+- 让领域正式Runtime Owner提供具体Committed View，领域插件另行提供具体Capture Metadata，字段／Sampler定义通过两个具体输入类型编译，新增领域不修改框架中央代码。
 - 让每个Capture Program在编译期形成具体静态函数，Editor与IL2CPP执行相同程序。
 - 让BuildIdentity、packet和Host产物拥有可闭合的统一identity，同时保持不同领域Schema和lineage隔离。
 - 以Foot IK作为首个完整纵向插件验证框架深度，完成后删除Foot专属通用基础设施命名。
@@ -43,13 +43,13 @@ Generated Diagnostic Sampling Contracts
 
 Contracts保存Capability、Field、Group、Table、Sampler、Program Definition、Schema、packet、manifest和failure identity，不引用`UnityEditor`或具体领域。Generator只在编译期间运行，不进入Player。Runtime只处理预生成程序、packet lease、固定容量队列、Writer和状态机。Host只处理sealed packet、格式化、Analyzer和Publisher编排。
 
-领域Definitions可以引用正式Runtime Owner发布的具体Committed View合同和通用Attribute，但正式领域Runtime Result不得引用CSV、Sampler或Generator。Domain Capture Bridge位于领域合法Post-Commit／Post-Seal边界，在短租约内取得packet lease、调用生成的具体函数并提交；框架Runtime不定义共同View接口／基类／DTO，也不索取、保存或解释领域View，从而避免`object`、boxing、未知泛型和生命周期泄露。
+领域Definitions可以引用正式Runtime Owner发布的具体Committed View合同和通用Attribute，并自行定义只保存采样固定上下文的具体Capture Metadata；正式领域Runtime Result不得引用Capture Metadata、CSV、Sampler或Generator。Domain Capture Bridge位于领域合法Post-Commit／Post-Seal边界，在短租约内取得struct packet lease、调用生成的双输入具体函数并提交；框架Runtime不定义共同View／Metadata接口、基类或DTO，也不索取、保存或解释这两个领域输入，从而避免`object`、boxing、未知泛型和生命周期泄露。
 
 选择四层而不是一个`DiagnosticSamplerManager`，是因为编译期发现、Player热路径、后台传输和Host分析拥有不同依赖与寿命。选择领域Bridge而不是框架主动拉取数据，是为了让正式Runtime Owner继续唯一决定何时存在合法具体Committed View，插件只在租约内消费。
 
 ### Decision 2: 编译输入使用显式Capability与Capture Program Definition
 
-每个领域通过稳定Capability Definition声明CapabilityId、revision、由正式Runtime Owner提供的具体Committed View类型，以及只供该Capability packet验证的typed lineage descriptor。该descriptor不成为框架通用Frame／Tick模型，框架也不解释其业务字段。每个Sampler Definition声明字段组、专项Extractor、表以及Host插件identity。一个Capture Program Definition以稳定ProgramId显式列出同一Capability下的一套或多套Sampler；它是编译期Sampler Set真相。
+每个领域通过稳定Capability Definition声明CapabilityId、revision、由正式Runtime Owner提供的具体Committed View类型、领域具体Capture Metadata类型，以及只供该Capability packet验证的typed lineage与cadence descriptor。Capture Metadata用于Sample identity、采样时间、目标实例等采样固定上下文，不得回填进Committed View；这些descriptor都不成为框架通用Frame／Tick模型，框架也不解释其业务字段。每个Sampler Definition声明字段组、双输入专项Extractor、表以及Host插件identity。一个Capture Program Definition以稳定ProgramId显式列出同一Capability下的一套或多套Sampler；它是编译期Sampler Set真相。
 
 Source Generator从Roslyn compilation symbols读取这些定义，构造normalized descriptor并依次执行：
 
@@ -80,10 +80,10 @@ GeneratedDiagnosticCaptureSchema_<SchemaHash>
 生成Capture函数使用领域具体Committed View和通用具体packet layout：
 
 ```text
-Capture(in DomainCommittedView source, ref GeneratedPacketLayout output)
+Capture(in DomainCommittedView source, in DomainCaptureMetadata metadata, ref DiagnosticCapturePacket output)
 ```
 
-函数体直接调用静态Extractor并写入dense typed页。相同FieldId只生成一次求值；Sampler列视图只保存handle，不复制值。生成代码不得构造表达式树、反射成员、生成每列Delegate或调用领域中央switch。
+函数体直接调用`Extractor(in View, in Metadata)`；Table Count使用同样双输入，Table Field再接收row index，并写入dense typed页。相同FieldId只生成一次求值；Sampler列视图只引用Schema拥有的canonical handle，不复制值或第二份字段descriptor。生成代码不得构造表达式树、反射成员、生成每列Delegate或调用领域中央switch。
 
 选择生成具体函数而不是`ICaptureSource<object>`、反射getter或开放运行时泛型，是为了让IL2CPP看到完整调用图和类型闭包，并使Editor／Player执行身份可比较。生成类型名不成为外部API，外部只依赖Program与Schema identity。
 
@@ -97,9 +97,9 @@ Capture(in DomainCommittedView source, ref GeneratedPacketLayout output)
 
 ### Decision 5: Runtime Session只管理容量、packet和状态，不拥有领域选择
 
-每个Capability Session的状态固定为`Prepared -> Capturing -> Finalizing -> Completed/Faulted/Cancelled`。Prepare只冻结该Capability的Program／Schema identity、packet pool、queue容量、Writer transport、输出闭包和Host插件identity。领域Bridge按自己的采样时机取得对应Session的typed packet lease，在具体Committed View租约内调用生成程序并提交；Session只验证该Capability的identity、opaque typed lineage、sample顺序、容量和状态，不知道Presentation Frame、Simulation Tick或其它领域时钟。
+每个Capability Session的状态固定为`Prepared -> Capturing -> Finalizing -> Completed/Faulted/Cancelled`。Prepare只冻结该Capability的Program／Schema identity、cadence identity、packet pool、queue容量、Writer transport、输出闭包和Host插件identity。领域Bridge按自己的采样时机取得对应Session的预分配struct packet lease，在具体Committed View租约内构造一次具体Capture Metadata、调用生成程序并消费式提交lease；复制、重复提交或过期lease会被version拒绝。Session只验证该Capability的identity、opaque typed lineage、sample顺序、容量和状态，不知道Presentation Frame、Simulation Tick或其它领域时钟。
 
-主线程不得等待Writer、格式化或Host。队列溢出、table溢出、sequence断裂或Writer失败会停止接收新sample并使该Capability Session进入Faulted。不同Capability各自拥有独立Program、Schema、lineage、packet流与Capability manifest；框架不组合顶层Capture，也不把它们合并为万能行。
+主线程不得等待Writer、格式化或Host。Finalize只发布非阻塞请求，由外部轮询sealed Runtime manifest；队列溢出、table溢出、sequence断裂、非法状态转换或Writer失败会发布typed failure、停止接收新sample并使该Capability Session进入Faulted。不同Capability各自拥有独立Program、Schema、cadence、lineage、packet流与Capability manifest；框架不组合顶层Capture，也不把它们合并为万能行。
 
 选择每Capability独立packet流而不是跨领域共享一张Union表，是因为Presentation Frame、Simulation Tick、Camera sample和AI event没有共同sample key。Performance工作流只在顶层编排身份和完成结果，不重新对齐不同领域事实；框架不拥有该顶层编排。
 
@@ -113,7 +113,7 @@ Host插件不得重新调用Extractor、访问Player进程、查询世界或持�
 
 ### Decision 7: Performance工作流消费通用Diagnostic Capability Set
 
-框架提供canonical `DiagnosticCapabilityDescriptor`与稳定排序`DiagnosticCapabilitySet`。每项保存CapabilityId、Mode、Sampler Set identity、Schema identity、Program identity、packet capacity和transport identity；Program identity闭合Generated Program hash、Generator revision与packet layout revision。现有Performance Build Request保存该Set并把Capture程序选择转成Player专属编译输入；Player manifest、Run Request、握手、Capture manifest与Comparer复用同一Set identity。
+框架提供canonical `DiagnosticCapabilityDescriptor`与稳定排序`DiagnosticCapabilitySet`。每项保存CapabilityId、Mode、Sampler Set identity、Schema identity、Program identity、cadence identity、packet capacity和transport identity；Program identity闭合Generated Program hash、Generator binary identity、程序集binding与packet layout revision。框架同时提供Capability Set codec与`DiagnosticCompilationClosureProof`：领域插件声明Capture程序集和scripting define闭包，Disabled进入排除证明，Capture进入包含证明。现有Performance Build Request保存该Set并把proof转成Player专属编译输入；Player manifest、Run Request、握手、Capture manifest与Comparer复用同一Set codec和identity。
 
 `Disabled`不编译该Capability的Definitions、Bridge、Generated Program、page、queue或interest。`Capture`只包含选中Program Definition的AOT闭包。Performance工作流继续唯一拥有Build、Player、Controller、Gate、Capture根和Comparer；框架不启动Player、不实现第二Controller或另建产物根。
 
@@ -123,7 +123,7 @@ Host插件不得重新调用Extractor、访问Player进程、查询世界或持�
 
 Foot IK插件拥有：
 
-- `character-foot-ik` Capability Definition与消费PoseGraph-owned具体View的Capture Bridge；
+- `character-foot-ik` Capability Definition、领域具体Capture Metadata与消费PoseGraph-owned具体View的Capture Bridge；
 - Foot、Pelvis、Goal、Solver、Physical与Geometry字段／表Extractor；
 - Full、Solver、Landing等Sampler Definition与Program Definition；
 - Full Host Adapter、Analyzer、Publisher、评分和历史产物政策。

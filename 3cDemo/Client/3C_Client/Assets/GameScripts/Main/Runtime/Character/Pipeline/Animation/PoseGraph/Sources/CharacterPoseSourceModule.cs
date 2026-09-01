@@ -139,6 +139,32 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Sources
             }
         }
 
+        internal readonly struct SourceBinding
+        {
+            internal SourceBinding(
+                AnimationPhysicalSourceIdentity physicalIdentity,
+                int sourceIndex)
+            {
+                if (!physicalIdentity.IsValid || sourceIndex < 0)
+                {
+                    throw new ArgumentException(
+                        "Pose source binding is invalid.");
+                }
+                PhysicalIdentity = physicalIdentity;
+                m_EncodedSourceIndex = checked(sourceIndex + 1);
+            }
+
+            readonly int m_EncodedSourceIndex;
+            internal AnimationPhysicalSourceIdentity PhysicalIdentity
+            {
+                get;
+            }
+            internal int SourceIndex => m_EncodedSourceIndex - 1;
+            internal bool IsValid =>
+                PhysicalIdentity.IsValid &&
+                m_EncodedSourceIndex > 0;
+        }
+
         internal readonly struct ReleasePreparation
         {
             internal ReleasePreparation(
@@ -199,6 +225,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Sources
         readonly AnimancerComponent m_Animancer;
         readonly AnimancerPoseSamplingBackend m_Backend;
         readonly PhysicalPoseSourceRegistry m_PhysicalSources;
+        readonly SourceBinding[] m_DirectBindings;
+        readonly SourceBinding[] m_ClipBindings;
+        readonly SourceBinding[] m_BlendSpaceBindings;
         readonly ReleaseEntry[] m_ReleasePreparations;
         readonly HashSet<AnimationPhysicalSourceIdentity>
             m_ReleaseValidationIdentities;
@@ -206,6 +235,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Sources
         readonly float m_PreviousOutputWeight;
         SourceFramePage m_FramePage;
         AnimationMixerPlayable m_SourceFanIn;
+        ulong m_BindingCompletionIdentity;
         int m_ReleasePreparationCount;
         ulong m_NextReleasePreparationGeneration;
         bool m_Disposed;
@@ -215,7 +245,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Sources
             CharacterAnimationRigBinding rigBinding,
             CharacterAnimationRigPayload rig,
             int sourceCapacity,
-            int clipCapacity)
+            int clipCapacity,
+            int directBindingCapacity,
+            int clipBindingCapacity,
+            int blendSpaceBindingCapacity)
         {
             m_Animancer = animancer
                 ? animancer
@@ -271,6 +304,18 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Sources
 
             m_Backend = backend;
             m_PhysicalSources = physicalSources;
+            m_DirectBindings = new SourceBinding[
+                RequireBindingCapacity(
+                    directBindingCapacity,
+                    nameof(directBindingCapacity))];
+            m_ClipBindings = new SourceBinding[
+                RequireBindingCapacity(
+                    clipBindingCapacity,
+                    nameof(clipBindingCapacity))];
+            m_BlendSpaceBindings = new SourceBinding[
+                RequireBindingCapacity(
+                    blendSpaceBindingCapacity,
+                    nameof(blendSpaceBindingCapacity))];
             m_ReleasePreparations = new ReleaseEntry[sourceCapacity];
             m_ReleaseValidationIdentities =
                 new HashSet<AnimationPhysicalSourceIdentity>(
@@ -311,6 +356,15 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Sources
         internal void BeginPhysicalFrame() =>
             m_PhysicalSources.BeginFrame();
 
+        internal void BeginBindingFrame(ulong completionIdentity)
+        {
+            if (completionIdentity == 0)
+                throw new ArgumentOutOfRangeException(
+                    nameof(completionIdentity));
+            ClearBindings();
+            m_BindingCompletionIdentity = completionIdentity;
+        }
+
         internal void BindDemand(
             CharacterPoseSourceFrameLease lease,
             in CharacterPoseSourceDemand demand) =>
@@ -344,7 +398,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Sources
             PoseNodeId poseNodeId) =>
             m_Backend.ContainsCommitted(sourceId, poseNodeId);
 
-        internal AnimationPhysicalSourceIdentity PrepareAndConnect(
+        internal void PrepareAndConnect(
             in AnimationPoseSampleRequest request,
             AnimationReadOnlyBuffer<AnimationPoseSourceClipBinding>
                 clipCatalog,
@@ -363,10 +417,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Sources
                     in capture,
                     poseNodeId);
             Connect(physical, prepared);
-            return physical;
         }
 
-        internal AnimationPhysicalSourceIdentity PrepareAndConnect(
+        internal void PrepareDirectAndConnect(
+            int bindingIndex,
             AnimationPoseSourceId sourceId,
             int sourceOwnerIndex,
             AnimationReadOnlyBuffer<ClipSamplePlan> clips,
@@ -375,6 +429,70 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Sources
             in AnimationPoseSourceCaptureBinding capture,
             PoseNodeId poseNodeId)
         {
+            m_DirectBindings[bindingIndex] = PreparePlayerAndConnect(
+                sourceId,
+                sourceOwnerIndex,
+                clips,
+                clipCatalog,
+                in capture,
+                poseNodeId);
+        }
+
+        internal void PrepareClipAndConnect(
+            int bindingIndex,
+            AnimationPoseSourceId sourceId,
+            int sourceOwnerIndex,
+            AnimationReadOnlyBuffer<ClipSamplePlan> clips,
+            AnimationReadOnlyBuffer<AnimationPoseSourceClipBinding>
+                clipCatalog,
+            in AnimationPoseSourceCaptureBinding capture,
+            PoseNodeId poseNodeId)
+        {
+            m_ClipBindings[bindingIndex] = PreparePlayerAndConnect(
+                sourceId,
+                sourceOwnerIndex,
+                clips,
+                clipCatalog,
+                in capture,
+                poseNodeId);
+        }
+
+        internal void PrepareBlendSpaceAndConnect(
+            int bindingIndex,
+            AnimationPoseSourceId sourceId,
+            int sourceOwnerIndex,
+            AnimationReadOnlyBuffer<ClipSamplePlan> clips,
+            AnimationReadOnlyBuffer<AnimationPoseSourceClipBinding>
+                clipCatalog,
+            in AnimationPoseSourceCaptureBinding capture,
+            PoseNodeId poseNodeId)
+        {
+            m_BlendSpaceBindings[bindingIndex] =
+                PreparePlayerAndConnect(
+                    sourceId,
+                    sourceOwnerIndex,
+                    clips,
+                    clipCatalog,
+                    in capture,
+                    poseNodeId);
+        }
+
+        SourceBinding PreparePlayerAndConnect(
+            AnimationPoseSourceId sourceId,
+            int sourceOwnerIndex,
+            AnimationReadOnlyBuffer<ClipSamplePlan> clips,
+            AnimationReadOnlyBuffer<AnimationPoseSourceClipBinding>
+                clipCatalog,
+            in AnimationPoseSourceCaptureBinding capture,
+            PoseNodeId poseNodeId)
+        {
+            if (m_BindingCompletionIdentity == 0 ||
+                capture.CompletionIdentity !=
+                    m_BindingCompletionIdentity)
+            {
+                throw new InvalidOperationException(
+                    "Pose source binding frame is stale.");
+            }
             AnimationPhysicalSourceIdentity physical =
                 m_PhysicalSources.Register(
                     sourceId,
@@ -388,8 +506,34 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Sources
                     in capture,
                     poseNodeId);
             Connect(physical, prepared);
-            return physical;
+            return new SourceBinding(
+                physical,
+                capture.SourceIndex);
         }
+
+        internal SourceBinding ReadDirectBinding(
+            int bindingIndex,
+            ulong completionIdentity) =>
+            ReadBinding(
+                m_DirectBindings,
+                bindingIndex,
+                completionIdentity);
+
+        internal SourceBinding ReadClipBinding(
+            int bindingIndex,
+            ulong completionIdentity) =>
+            ReadBinding(
+                m_ClipBindings,
+                bindingIndex,
+                completionIdentity);
+
+        internal SourceBinding ReadBlendSpaceBinding(
+            int bindingIndex,
+            ulong completionIdentity) =>
+            ReadBinding(
+                m_BlendSpaceBindings,
+                bindingIndex,
+                completionIdentity);
 
         internal void ValidatePhysicalFrame() =>
             m_PhysicalSources.ValidateFrame();
@@ -428,6 +572,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Sources
         internal void DiscardPhysicalFrame()
         {
             m_PhysicalSources.DiscardFrame();
+            ClearBindings();
             ClearReleasePreparations();
         }
 
@@ -633,6 +778,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Sources
             m_Backend.Clear();
             m_FramePage.Clear();
             m_PhysicalSources.Reset();
+            ClearBindings();
             for (int port = 1;
                  port < m_SourceFanIn.GetInputCount();
                  port++)
@@ -674,6 +820,47 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Sources
                 0,
                 m_ReleasePreparations.Length);
             m_ReleasePreparationCount = 0;
+        }
+
+        SourceBinding ReadBinding(
+            SourceBinding[] bindings,
+            int bindingIndex,
+            ulong completionIdentity)
+        {
+            if ((uint)bindingIndex >= (uint)bindings.Length ||
+                completionIdentity == 0 ||
+                completionIdentity != m_BindingCompletionIdentity)
+            {
+                throw new InvalidOperationException(
+                    "Pose source binding request is stale.");
+            }
+            return bindings[bindingIndex];
+        }
+
+        void ClearBindings()
+        {
+            Array.Clear(
+                m_DirectBindings,
+                0,
+                m_DirectBindings.Length);
+            Array.Clear(
+                m_ClipBindings,
+                0,
+                m_ClipBindings.Length);
+            Array.Clear(
+                m_BlendSpaceBindings,
+                0,
+                m_BlendSpaceBindings.Length);
+            m_BindingCompletionIdentity = 0;
+        }
+
+        static int RequireBindingCapacity(
+            int capacity,
+            string parameterName)
+        {
+            if (capacity < 0)
+                throw new ArgumentOutOfRangeException(parameterName);
+            return capacity;
         }
 
         void Connect(

@@ -311,12 +311,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
         readonly AnimationSelectedPosePlayerJob[] m_DirectPlayerJobs;
         readonly AnimationSelectedPosePlayerJob[] m_ClipPlayerJobs;
         readonly AnimationSelectedPosePlayerJob[] m_BlendSpacePlayerJobs;
-        readonly AnimationPhysicalSourceIdentity[] m_DirectPhysicalSources;
-        readonly AnimationPhysicalSourceIdentity[] m_SequencePhysicalSources;
-        readonly AnimationPhysicalSourceIdentity[] m_BlendSpacePhysicalSources;
-        readonly int[] m_DirectSourceIndices;
-        readonly int[] m_SequenceSourceIndices;
-        readonly int[] m_BlendSpaceSourceIndices;
         readonly AnimationPoseSourceClipBinding[] m_ClipCatalogScratch;
         readonly PreparedStandaloneSourceRelease[]
             m_PreparedStandaloneSourceReleases;
@@ -653,7 +647,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                     rigBinding,
                     projection.Rig,
                     physicalSourceCapacity,
-                    clipCatalogCapacity);
+                    clipCatalogCapacity,
+                    directPlayers.Length,
+                    clipPlayers.Length,
+                    blendSpacePlayers.Length);
                 if (managesGraphClock)
                     animancer.Graph.PauseGraph();
                 workspace.DiscardFrame(initialFrame.CompletionIdentity);
@@ -724,13 +721,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             m_ClipPlayerJobs = new AnimationSelectedPosePlayerJob[clipPlayers.Length];
             m_BlendSpacePlayerJobs =
                 new AnimationSelectedPosePlayerJob[blendSpacePlayers.Length];
-            m_DirectPhysicalSources = new AnimationPhysicalSourceIdentity[directPlayers.Length];
-            m_SequencePhysicalSources = new AnimationPhysicalSourceIdentity[clipPlayers.Length];
-            m_BlendSpacePhysicalSources =
-                new AnimationPhysicalSourceIdentity[blendSpacePlayers.Length];
-            m_DirectSourceIndices = new int[directPlayers.Length];
-            m_SequenceSourceIndices = new int[clipPlayers.Length];
-            m_BlendSpaceSourceIndices = new int[blendSpacePlayers.Length];
             m_ClipCatalogScratch =
                 new AnimationPoseSourceClipBinding[clipCatalogCapacity];
             m_FramePublisher = new ComposedAnimationPoseFramePublisher(
@@ -2470,32 +2460,22 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                 using (PrepareWorkspaceMarker.Auto())
                 {
                     frame = m_Workspace.BeginFrame(completionIdentity);
+                    m_SourceModule.BeginBindingFrame(
+                        completionIdentity);
                     for (int i = 0; i < m_Stacks.Length; i++)
                         m_Stacks[i].BeginSourceFrame(completionIdentity);
                     for (int i = 0; i < m_DirectPlayers.Length; i++)
-                    {
                         m_DirectPlayers[i].BeginFrame(completionIdentity);
-                        m_DirectPhysicalSources[i] = default;
-                        m_DirectSourceIndices[i] = -1;
-                    }
                     for (int i = 0;
                          i < m_PoseStateSources.ClipPlayers.Length;
                          i++)
-                    {
                         m_PoseStateSources.ClipPlayers[i]
                             .BeginFrame(completionIdentity);
-                        m_SequencePhysicalSources[i] = default;
-                        m_SequenceSourceIndices[i] = -1;
-                    }
                     for (int i = 0;
                          i < m_PoseStateSources.BlendSpacePlayers.Length;
                          i++)
-                    {
                         m_PoseStateSources.BlendSpacePlayers[i]
                             .BeginFrame(completionIdentity);
-                        m_BlendSpacePhysicalSources[i] = default;
-                        m_BlendSpaceSourceIndices[i] = -1;
-                    }
                 }
                 using (PrepareStackMarker.Auto())
                 {
@@ -2570,11 +2550,15 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                     AnimationSelectedPosePlayerRuntime player = m_DirectPlayers[playerIndex];
                     AnimationPlayerPoseNativeWriteBinding write =
                         m_Workspace.RequirePlayerWriteBinding(player.PlayerIndex, completionIdentity);
+                    CharacterPoseSourceModule.SourceBinding sourceBinding =
+                        m_SourceModule.ReadDirectBinding(
+                            playerIndex,
+                            completionIdentity);
                     m_DirectPlayerJobs[playerIndex] = player.PrepareJob(
                         completionIdentity,
                         in write,
-                        m_DirectPhysicalSources[playerIndex],
-                        m_DirectSourceIndices[playerIndex]);
+                        sourceBinding.PhysicalIdentity,
+                        sourceBinding.SourceIndex);
                 }
                 for (int playerIndex = 0;
                      playerIndex <
@@ -2586,11 +2570,15 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                             playerIndex];
                     AnimationPlayerPoseNativeWriteBinding write =
                         m_Workspace.RequirePlayerWriteBinding(player.PlayerIndex, completionIdentity);
+                    CharacterPoseSourceModule.SourceBinding sourceBinding =
+                        m_SourceModule.ReadClipBinding(
+                            playerIndex,
+                            completionIdentity);
                     m_ClipPlayerJobs[playerIndex] = player.PrepareJob(
                         completionIdentity,
                         in write,
-                        m_SequencePhysicalSources[playerIndex],
-                        m_SequenceSourceIndices[playerIndex]);
+                        sourceBinding.PhysicalIdentity,
+                        sourceBinding.SourceIndex);
                 }
                 for (int playerIndex = 0;
                      playerIndex <
@@ -2604,11 +2592,15 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                         m_Workspace.RequirePlayerWriteBinding(
                             player.PlayerIndex,
                             completionIdentity);
+                    CharacterPoseSourceModule.SourceBinding sourceBinding =
+                        m_SourceModule.ReadBlendSpaceBinding(
+                            playerIndex,
+                            completionIdentity);
                     m_BlendSpacePlayerJobs[playerIndex] = player.PrepareJob(
                         completionIdentity,
                         in write,
-                        m_BlendSpacePhysicalSources[playerIndex],
-                        m_BlendSpaceSourceIndices[playerIndex]);
+                        sourceBinding.PhysicalIdentity,
+                        sourceBinding.SourceIndex);
                 }
                 StageCompletedSources(completionIdentity);
                 poseExecutor = new CharacterPoseGraphStagedExecutor(
@@ -3328,16 +3320,14 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             AnimationReadOnlyBuffer<AnimationPoseSourceClipBinding> clipCatalog = default;
             if (!m_SourceModule.ContainsCommitted(player.SourceId, player.NodeId))
                 clipCatalog = BuildMotionMatchingClipCatalog(sample);
-            AnimationPhysicalSourceIdentity physical =
-                m_SourceModule.PrepareAndConnect(
+            m_SourceModule.PrepareDirectAndConnect(
+                playerIndex,
                 player.SourceId,
                 player.SourceOwnerIndex,
                 sample.Clips,
                 clipCatalog,
                 in capture,
                 player.NodeId);
-            m_DirectPhysicalSources[playerIndex] = physical;
-            m_DirectSourceIndices[playerIndex] = capture.SourceIndex;
         }
 
         static AnimationResolvedPoseSourceSample
@@ -3394,16 +3384,14 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             AnimationReadOnlyBuffer<AnimationPoseSourceClipBinding> clipCatalog = default;
             if (!m_SourceModule.ContainsCommitted(player.SourceId, player.NodeId))
                 clipCatalog = BuildSequenceClipCatalog(player.SourceId);
-            AnimationPhysicalSourceIdentity physical =
-                m_SourceModule.PrepareAndConnect(
+            m_SourceModule.PrepareClipAndConnect(
+                playerIndex,
                 player.SourceId,
                 player.PlayerIndex,
                 player.ClipSamples,
                 clipCatalog,
                 in capture,
                 player.NodeId);
-            m_SequencePhysicalSources[playerIndex] = physical;
-            m_SequenceSourceIndices[playerIndex] = capture.SourceIndex;
         }
 
         internal void SetSequencePreview(
@@ -3472,16 +3460,14 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             AnimationReadOnlyBuffer<AnimationPoseSourceClipBinding> clipCatalog = default;
             if (!m_SourceModule.ContainsCommitted(player.SourceId, player.NodeId))
                 clipCatalog = BuildBlendSpaceClipCatalog(playerIndex);
-            AnimationPhysicalSourceIdentity physical =
-                m_SourceModule.PrepareAndConnect(
+            m_SourceModule.PrepareBlendSpaceAndConnect(
+                    playerIndex,
                     player.SourceId,
                     player.PlayerIndex,
                     player.ClipSamples,
                     clipCatalog,
                     in capture,
                     player.NodeId);
-            m_BlendSpacePhysicalSources[playerIndex] = physical;
-            m_BlendSpaceSourceIndices[playerIndex] = capture.SourceIndex;
         }
 
         static bool HasEarlierSource(

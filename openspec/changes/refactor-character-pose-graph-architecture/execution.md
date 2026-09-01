@@ -405,3 +405,15 @@ A/B均为2086脚行、1222列，其中1198个业务列逐值相同、24个运行
 正式A为`Diagnostics/FootPlacementRuns/20260901-225118-668-312b83f59ad84af8a3119303602e15ce`，候选B为`Diagnostics/FootPlacementRuns/20260901-230258-692-d855ef3956c74e8290b94323219372a5`；B Proof为`Temp/CharacterInputReplayProofs/v4/43357ff3cd384e5cba75d2c31175b116/20260901-230359-450-847a166b52ea4caab319436325cad50a.json`，工具对A Proof正式报告`matched:1044`。
 
 A/B均为2086脚行、1222列，其中1198个业务列逐值相同、24个运行identity列一一映射且0冲突；Geometry均为67186行、27列，其中22个业务列逐值相同、5个identity列一一映射且0冲突；十份正式报告归一化后10／10相同，七维分项与总分84.2不变。由此确认release journal Owner迁移没有改变source释放时机、slot复用、Action completion、Foot、Pelvis、Goal、FBBIK、Final Pose、Physical或正式诊断业务；`230258`成为正式Source Module提取的下一A。Snapshot对象本身已不持有Runtime参数，但Actor capture仍由外层读取多个运行Implementation，任务13.5和13.6继续不勾选，待Program Runtime／Source Module内聚后闭合。
+
+## CharacterPoseSourceModule物理资源唯一Owner
+
+状态：提交`625074c30`已建立真实`CharacterPoseSourceModule`，由它唯一构造、持有和销毁`AnimancerPoseSamplingBackend`、`PhysicalPoseSourceRegistry`与source fan-in Playable，并在同一Module内完成物理source注册、capture binding安装、fan-in连接、release identity验证、物理断连、deferred release封口和Committed Source diagnostics冻结。`PosePlanExecutionRuntime`已删除backend、registry、fan-in、previous output和release identity set所有权；Blend Stack与Final Publication只通过Source Module解析物理identity，不再接收Registry实现对象。全仓搜索确认上述三个物理资源各只有Source Module一处构造，因此任务4.3完成。
+
+本步没有把Clip／Blend Space Player时钟、PoseState、Action lifecycle、Slot或Blend逻辑迁入Source Module。它们继续留在现有逻辑Owner，Source Module只接收已经解析的request、capture binding与release许可。Clip／Blend／Action Adapter装配、Source-owned固定页、完整release journal迁移及旧Runtime数组删除仍属于4.1、4.2、4.4至4.8，均未提前勾选。
+
+`ThirdPersonClient.Runtime.csproj`按规定参数编译成功，0错误；唯一工程警告为既有`PipelineBlackboardValueInfoNode.m_ReportedSourceError`未使用字段，build server已立即关闭。Unity脚本刷新、回放和退出Play期间只出现同一条`RootMotion.FinalIK::FBIKChain.reachSmoothing`Domain Reload序列化深度日志，没有Source Module、Playable、release、PoseGraph或IK异常；单独记录后清空，3C Console为0。
+
+正式A为`Diagnostics/FootPlacementRuns/20260901-230258-692-d855ef3956c74e8290b94323219372a5`，候选B为`Diagnostics/FootPlacementRuns/20260901-233212-574-ed0f12eb26024a79906148a33263ab74`；B Proof为`Temp/CharacterInputReplayProofs/v4/43357ff3cd384e5cba75d2c31175b116/20260901-233313-409-4bbe705712294d1ea4f42adc6a1f2474.json`，工具对A Proof正式报告`matched:1044`、`divergent_frame_count=0`和`first_divergent_relative_frame=-1`，Runtime identity、Trace、Start Body、Tick／Presentation Clock、Input hash、Body trajectory hash与1043个表现采样帧均保持一致。
+
+A/B均为2086脚行、1222列，其中1198个业务列逐值相同、24个运行／实例／Surface／Path identity列一一映射且0冲突；Geometry均为67186行、27列，其中22个业务列逐值相同、5个identity列一一映射且0冲突。十份正式报告只在Sample identity、文件／index hash、detail字节与分析耗时以及已证明的一一Surface identity上变化，归一化后10／10相同；七维分项、总分84.2和weighted evidence 96.5不变。由此确认本Trace覆盖的source采样与释放时机、slot复用、动画时钟、Foot、Pelvis、Goal、FBBIK、Final Pose和Physical业务没有因物理Source所有权迁移改变；`233212`成为Source Adapter与Owned页迁移的下一A。

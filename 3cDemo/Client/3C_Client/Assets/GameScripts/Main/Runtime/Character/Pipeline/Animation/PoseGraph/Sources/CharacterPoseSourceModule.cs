@@ -11,14 +11,74 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Sources
 {
     internal sealed class CharacterPoseSourceModule : IDisposable
     {
+        internal readonly struct ReleasePreparation
+        {
+            internal ReleasePreparation(
+                int releaseIndex,
+                ulong generation,
+                AnimationPhysicalSourceIdentity physicalIdentity,
+                AnimationPoseSourceId sourceId,
+                PoseNodeId poseNodeId)
+            {
+                if (releaseIndex < 0 ||
+                    generation == 0 ||
+                    !physicalIdentity.IsValid ||
+                    !sourceId.IsValid ||
+                    !poseNodeId.IsValid)
+                {
+                    throw new ArgumentException(
+                        "Pose source release preparation is invalid.");
+                }
+                m_EncodedReleaseIndex = checked(releaseIndex + 1);
+                Generation = generation;
+                PhysicalIdentity = physicalIdentity;
+                SourceId = sourceId;
+                PoseNodeId = poseNodeId;
+            }
+
+            readonly int m_EncodedReleaseIndex;
+            internal int ReleaseIndex => m_EncodedReleaseIndex - 1;
+            internal ulong Generation { get; }
+            internal AnimationPhysicalSourceIdentity PhysicalIdentity { get; }
+            internal AnimationPoseSourceId SourceId { get; }
+            internal PoseNodeId PoseNodeId { get; }
+            internal bool IsValid =>
+                m_EncodedReleaseIndex > 0 &&
+                Generation != 0 &&
+                PhysicalIdentity.IsValid &&
+                SourceId.IsValid &&
+                PoseNodeId.IsValid;
+        }
+
+        struct ReleaseEntry
+        {
+            internal ulong Generation;
+            internal AnimationPhysicalSourceIdentity PhysicalIdentity;
+            internal AnimationPoseSourceId SourceId;
+            internal PoseNodeId PoseNodeId;
+            internal AnimationPhysicalSourceReleaseToken PhysicalRelease;
+            internal AnimationPoseSourceReleaseToken BackendRelease;
+
+            internal bool IsValid =>
+                Generation != 0 &&
+                PhysicalIdentity.IsValid &&
+                SourceId.IsValid &&
+                PoseNodeId.IsValid &&
+                PhysicalRelease.IsValid &&
+                BackendRelease.IsValid;
+        }
+
         readonly AnimancerComponent m_Animancer;
         readonly AnimancerPoseSamplingBackend m_Backend;
         readonly PhysicalPoseSourceRegistry m_PhysicalSources;
+        readonly ReleaseEntry[] m_ReleasePreparations;
         readonly HashSet<AnimationPhysicalSourceIdentity>
             m_ReleaseValidationIdentities;
         readonly Playable m_PreviousOutputSource;
         readonly float m_PreviousOutputWeight;
         AnimationMixerPlayable m_SourceFanIn;
+        int m_ReleasePreparationCount;
+        ulong m_NextReleasePreparationGeneration;
         bool m_Disposed;
 
         internal CharacterPoseSourceModule(
@@ -82,6 +142,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Sources
 
             m_Backend = backend;
             m_PhysicalSources = physicalSources;
+            m_ReleasePreparations = new ReleaseEntry[sourceCapacity];
             m_ReleaseValidationIdentities =
                 new HashSet<AnimationPhysicalSourceIdentity>(
                     sourceCapacity);
@@ -97,8 +158,15 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Sources
             m_PhysicalSources.PendingRegistrationCount;
 
         internal CharacterPoseSourceFrameLease BeginFrame(
-            in CharacterPoseFrameLineage lineage) =>
-            m_Backend.BeginFrame(in lineage);
+            in CharacterPoseFrameLineage lineage)
+        {
+            if (m_ReleasePreparationCount != 0)
+            {
+                throw new InvalidOperationException(
+                    "Pose source release preparations were not applied.");
+            }
+            return m_Backend.BeginFrame(in lineage);
+        }
 
         internal void BeginPhysicalFrame() =>
             m_PhysicalSources.BeginFrame();
@@ -199,8 +267,11 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Sources
             CharacterPoseSourceFrameLease lease) =>
             m_Backend.DiscardFrame(lease);
 
-        internal void DiscardPhysicalFrame() =>
+        internal void DiscardPhysicalFrame()
+        {
             m_PhysicalSources.DiscardFrame();
+            ClearReleasePreparations();
+        }
 
         internal AnimationPhysicalSourceIdentity GetPendingRegistration(
             int ordinal) =>
@@ -223,7 +294,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Sources
             AnimationPhysicalSourceIdentity physical) =>
             m_PhysicalSources.RequireSourceOwnerIndex(physical);
 
-        internal AnimationPhysicalSourceIdentity ValidateRelease(
+        AnimationPhysicalSourceIdentity ValidateRelease(
             AnimationPoseSourceId sourceId,
             PoseNodeId poseNodeId,
             AnimationPhysicalSourceIdentity expected)
@@ -257,18 +328,88 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Sources
             AnimationPoseSourceId sourceId) =>
             m_PhysicalSources.PrepareRelease(physical, sourceId);
 
-        internal AnimationPoseSourceReleaseToken StageRelease(
+        internal ReleasePreparation PrepareRelease(
             AnimationPoseSourceId sourceId,
-            PoseNodeId poseNodeId) =>
-            m_Backend.StageRelease(sourceId, poseNodeId);
-
-        internal void Release(
-            in AnimationPoseSourceReleaseToken release) =>
-            m_Backend.Release(in release);
+            PoseNodeId poseNodeId,
+            AnimationPhysicalSourceIdentity expected)
+        {
+            if (m_ReleasePreparationCount >=
+                m_ReleasePreparations.Length)
+            {
+                throw new InvalidOperationException(
+                    "Pose source release preparation capacity was exceeded.");
+            }
+            AnimationPhysicalSourceIdentity physical =
+                ValidateRelease(
+                    sourceId,
+                    poseNodeId,
+                    expected);
+            AnimationPhysicalSourceReleaseToken physicalRelease =
+                m_PhysicalSources.PrepareRelease(
+                    physical,
+                    sourceId);
+            AnimationPoseSourceReleaseToken backendRelease =
+                m_Backend.StageRelease(
+                    sourceId,
+                    poseNodeId);
+            int releaseIndex = FindFreeReleasePreparation();
+            ulong generation = NextReleasePreparationGeneration();
+            m_ReleasePreparations[releaseIndex] = new ReleaseEntry
+            {
+                Generation = generation,
+                PhysicalIdentity = physical,
+                SourceId = sourceId,
+                PoseNodeId = poseNodeId,
+                PhysicalRelease = physicalRelease,
+                BackendRelease = backendRelease
+            };
+            m_ReleasePreparationCount++;
+            return new ReleasePreparation(
+                releaseIndex,
+                generation,
+                physical,
+                sourceId,
+                poseNodeId);
+        }
 
         internal void ApplyPreparedRelease(
             in AnimationPhysicalSourceReleaseToken release) =>
             m_PhysicalSources.ApplyPreparedRelease(in release);
+
+        internal void ApplyPreparedRelease(
+            in ReleasePreparation release)
+        {
+            if (!release.IsValid)
+            {
+                throw new ArgumentException(
+                    "Pose source release preparation is invalid.",
+                    nameof(release));
+            }
+            int releaseIndex = release.ReleaseIndex;
+            if ((uint)releaseIndex >=
+                    (uint)m_ReleasePreparations.Length ||
+                !m_ReleasePreparations[releaseIndex].IsValid ||
+                m_ReleasePreparations[releaseIndex].Generation !=
+                    release.Generation ||
+                m_ReleasePreparations[releaseIndex].PhysicalIdentity !=
+                    release.PhysicalIdentity ||
+                !m_ReleasePreparations[releaseIndex].SourceId.Equals(
+                    release.SourceId) ||
+                m_ReleasePreparations[releaseIndex].PoseNodeId !=
+                    release.PoseNodeId)
+            {
+                throw new InvalidOperationException(
+                    "Pose source release preparation is stale.");
+            }
+            ReleaseEntry prepared =
+                m_ReleasePreparations[releaseIndex];
+            Disconnect(prepared.PhysicalIdentity);
+            m_Backend.Release(in prepared.BackendRelease);
+            m_PhysicalSources.ApplyPreparedRelease(
+                in prepared.PhysicalRelease);
+            m_ReleasePreparations[releaseIndex] = default;
+            m_ReleasePreparationCount--;
+        }
 
         internal void Disconnect(
             AnimationPhysicalSourceIdentity physical)
@@ -302,6 +443,11 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Sources
 
         internal void CompleteDeferredReleases()
         {
+            if (m_ReleasePreparationCount != 0)
+            {
+                throw new InvalidOperationException(
+                    "Pose source release preparations were not fully applied.");
+            }
             m_Backend.ExecuteDeferredReleases();
             m_PhysicalSources.CompleteReleaseDiagnostics();
         }
@@ -337,6 +483,38 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Sources
                 m_SourceFanIn.SetInputWeight(port, 0f);
             }
             m_ReleaseValidationIdentities.Clear();
+            ClearReleasePreparations();
+        }
+
+        int FindFreeReleasePreparation()
+        {
+            for (int i = 0; i < m_ReleasePreparations.Length; i++)
+            {
+                if (!m_ReleasePreparations[i].IsValid)
+                    return i;
+            }
+            throw new InvalidOperationException(
+                "Pose source release preparation capacity was exceeded.");
+        }
+
+        ulong NextReleasePreparationGeneration()
+        {
+            m_NextReleasePreparationGeneration++;
+            if (m_NextReleasePreparationGeneration == 0)
+            {
+                throw new InvalidOperationException(
+                    "Pose source release preparation generation was exhausted.");
+            }
+            return m_NextReleasePreparationGeneration;
+        }
+
+        void ClearReleasePreparations()
+        {
+            Array.Clear(
+                m_ReleasePreparations,
+                0,
+                m_ReleasePreparations.Length);
+            m_ReleasePreparationCount = 0;
         }
 
         void Connect(

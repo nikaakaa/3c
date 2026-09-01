@@ -345,3 +345,13 @@ A/B均为2086脚行、1222列，其中1198个业务列逐值相同、24个运行
 正式A为`Diagnostics/FootPlacementRuns/20260901-214438-507-584a118b94b54a6b925bd47eb128147f`，候选B为`Diagnostics/FootPlacementRuns/20260901-215843-383-9b8dbac4d3c646b58e10695f2287f1d9`；B Proof为`Temp/CharacterInputReplayProofs/v4/43357ff3cd384e5cba75d2c31175b116/20260901-215943-008-0835d958c03e4e41b4a2424c17ce3ba2.json`，工具对A Proof正式报告`matched:1044`。
 
 A/B均为2086脚行、1222列，其中1198个业务列逐值相同、24个运行identity列一一映射且0冲突；Geometry均为67186行、27列，其中22个业务列逐值相同、5个identity列一一映射且0冲突；十份正式报告按既定Sample identity、文件hash、detail／index大小与hash、分析耗时和Surface identity规则归一化后10／10相同，七维分项与总分84.2不变。由此确认LinkedPose诊断读取边界迁移没有改变Linked Pose Group、Slot、Operation、Foot、Pelvis、Goal、FBBIK、Final Pose、Physical或正式诊断业务；`215843`成为剩余Actor Runtime诊断投影收口的正式A。
+
+## Root Orientation Warp并入Actor Committed Diagnostics页
+
+状态：提交`92ebd3984`已建立预分配、代际校验的`CharacterPoseActorCommittedDiagnosticsView`并先接入Root Orientation Warp。每个Pose帧开始会立即使上一代View失效；只有已完成Program Result且Live／Capture确实需要基础状态时，Projector才从各Warp的Committed页复制只读快照。Snapshot Publisher删除RootWarp Runtime列表参数和现场`CreateDiagnosticsSnapshot`调用，只消费与根Execution Result同lineage的Actor View。RootWarp的Begin、Prepare、Commit、曲线采样、Facing Error与Yaw Offset公式均未改。Stack、Route、StateMachine与Inertialization仍由Snapshot现场读取，所以任务13.5和13.6保持未完成。
+
+`ThirdPersonClient.Runtime.csproj`按规定参数编译成功，0错误；警告只来自既有Unity包、第三方包和既有Input字段，build server已关闭。Unity脚本刷新重连时出现一次Snapshot Publisher文件时间戳不同步，强制全量刷新后消失；回放和退出Play期间只有同一条`RootMotion.FinalIK::FBIKChain.reachSmoothing`Domain Reload序列化深度日志，没有RootWarp、PoseGraph、IK或采样异常，清空后Console为0。
+
+正式A为`Diagnostics/FootPlacementRuns/20260901-215843-383-9b8dbac4d3c646b58e10695f2287f1d9`，候选B为`Diagnostics/FootPlacementRuns/20260901-221205-709-14169caf31c54ac9941f5f68c966f9d6`；B Proof为`Temp/CharacterInputReplayProofs/v4/43357ff3cd384e5cba75d2c31175b116/20260901-221307-811-afa95c8ad09d4e58b73d3d55708eb85f.json`，工具对A Proof正式报告`matched:1044`。
+
+A/B均为2086脚行、1222列，其中1198个业务列逐值相同、24个运行identity列一一映射且0冲突；Geometry均为67186行、27列，其中22个业务列逐值相同、5个identity列一一映射且0冲突；十份正式报告归一化后10／10相同，七维分项与总分84.2不变。由此确认Root Orientation Warp诊断读取边界迁移没有改变Warp输出、动画时钟、Foot、Pelvis、Goal、FBBIK、Final Pose、Physical或正式诊断业务；`221205`成为Stack／Route诊断投影收口的正式A。

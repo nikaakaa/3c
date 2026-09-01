@@ -130,12 +130,17 @@ namespace ThirdPerson.GeneratedDiagnosticSampling.Generator
             foreach (INamedTypeSymbol type in types)
             {
                 AttributeData attribute = FindAttribute(type, attributeType);
-                if (attribute == null || attribute.ConstructorArguments.Length < 3)
+                if (attribute == null || attribute.ConstructorArguments.Length < 4)
                     continue;
                 string id = attribute.ConstructorArguments[0].Value as string;
                 int revision = (int)attribute.ConstructorArguments[1].Value;
                 INamedTypeSymbol viewType = attribute.ConstructorArguments[2].Value as INamedTypeSymbol;
-                if (string.IsNullOrWhiteSpace(id) || revision <= 0 || viewType == null)
+                INamedTypeSymbol metadataType = attribute.ConstructorArguments[3].Value as INamedTypeSymbol;
+                if (string.IsNullOrWhiteSpace(id) ||
+                    revision <= 0 ||
+                    viewType == null ||
+                    metadataType == null ||
+                    SymbolEqualityComparer.Default.Equals(viewType, metadataType))
                 {
                     Report(context, s_InvalidProgram, type, $"Capability '{type.Name}' is invalid.");
                     continue;
@@ -145,7 +150,7 @@ namespace ThirdPerson.GeneratedDiagnosticSampling.Generator
                     Report(context, s_DuplicateIdentity, type, $"Capability '{id}' is duplicated.");
                     continue;
                 }
-                result.Add(id, new CapabilityModel(id, revision, viewType));
+                result.Add(id, new CapabilityModel(id, revision, viewType, metadataType));
             }
             return result;
         }
@@ -355,7 +360,10 @@ namespace ThirdPerson.GeneratedDiagnosticSampling.Generator
             foreach (string tableId in selectedTableIds)
             {
                 if (!tables.TryGetValue(capabilityId + "|" + tableId, out TableModel table) ||
-                    !ValidateTableCount(table, capability.ViewType))
+                    !ValidateTableCount(
+                        table,
+                        capability.ViewType,
+                        capability.MetadataType))
                 {
                     Report(
                         context,
@@ -434,7 +442,10 @@ namespace ThirdPerson.GeneratedDiagnosticSampling.Generator
                 .ToList();
             foreach (FieldModel field in selectedFields)
             {
-                if (!ValidateExtractor(field, capability.ViewType))
+                if (!ValidateExtractor(
+                        field,
+                        capability.ViewType,
+                        capability.MetadataType))
                 {
                     Report(
                         context,
@@ -457,7 +468,8 @@ namespace ThirdPerson.GeneratedDiagnosticSampling.Generator
                     .ToArray();
                 if (values.Length == 0 || values.Any(value => !ValidateTableExtractor(
                         value,
-                        capability.ViewType)) ||
+                        capability.ViewType,
+                        capability.MetadataType)) ||
                     !ValidateClosedDependencies(
                         context,
                         programType,
@@ -487,6 +499,8 @@ namespace ThirdPerson.GeneratedDiagnosticSampling.Generator
                     assemblyIdentity,
                     capability.Id,
                     capability.Revision.ToString(),
+                    capability.ViewType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat),
+                    capability.MetadataType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat),
                     programId,
                     samplerSetIdentity
                 }
@@ -855,6 +869,7 @@ namespace ThirdPerson.GeneratedDiagnosticSampling.Generator
             builder.AppendLine("    }");
             builder.AppendLine();
             builder.AppendLine("    public static global::ThirdPerson.GeneratedDiagnosticSampling.DiagnosticCapabilityBuildDescriptor CreateDiagnosticCapabilityBuildDescriptor(");
+            builder.AppendLine("        string cadenceIdentity,");
             builder.AppendLine("        string lineageTypeIdentity,");
             builder.AppendLine("        int packetCapacity,");
             builder.AppendLine("        string writerTransportIdentity) =>");
@@ -868,13 +883,16 @@ namespace ThirdPerson.GeneratedDiagnosticSampling.Generator
             builder.AppendLine("            DiagnosticGeneratedProgramHash,");
             builder.AppendLine("            DiagnosticGeneratorIdentity,");
             builder.AppendLine("            DiagnosticPacketLayoutIdentity,");
+            builder.AppendLine("            cadenceIdentity,");
             builder.AppendLine("            lineageTypeIdentity,");
             builder.AppendLine("            packetCapacity,");
             builder.AppendLine("            writerTransportIdentity);");
             builder.AppendLine();
             builder.Append("    public static void Capture(in ")
                 .Append(capability.ViewType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat))
-                .AppendLine(" source, ref global::ThirdPerson.GeneratedDiagnosticSampling.DiagnosticCapturePacket packet)");
+                .Append(" source, in ")
+                .Append(capability.MetadataType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat))
+                .AppendLine(" metadata, ref global::ThirdPerson.GeneratedDiagnosticSampling.DiagnosticCapturePacket packet)");
             builder.AppendLine("    {");
             builder.AppendLine("        if (packet == null) throw new global::System.ArgumentNullException(nameof(packet));");
             builder.AppendLine("        if (!global::System.String.Equals(packet.Layout.Identity, DiagnosticPacketLayoutIdentity, global::System.StringComparison.Ordinal)) throw new global::System.InvalidOperationException(\"Diagnostic packet layout does not match generated program.\");");
@@ -883,14 +901,14 @@ namespace ThirdPerson.GeneratedDiagnosticSampling.Generator
                 builder.Append("        packet.").Append(Setter(field.ValueKind)).Append('(')
                     .Append(handles[field]).Append(", ")
                     .Append(field.Method.ContainingType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat))
-                    .Append('.').Append(field.Method.Name).AppendLine("(in source));");
+                    .Append('.').Append(field.Method.Name).AppendLine("(in source, in metadata));");
             }
             for (int tableIndex = 0; tableIndex < tables.Count; tableIndex++)
             {
                 TableModel table = tables[tableIndex];
                 builder.Append("        int tableCount").Append(tableIndex).Append(" = ")
                     .Append(table.CountMethod.ContainingType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat))
-                    .Append('.').Append(table.CountMethod.Name).AppendLine("(in source);");
+                    .Append('.').Append(table.CountMethod.Name).AppendLine("(in source, in metadata);");
                 builder.Append("        packet.Tables[").Append(tableIndex).Append("]")
                     .Append(".Begin(tableCount").Append(tableIndex).AppendLine(", packet.SampleKey);");
                 builder.Append("        for (int row = 0; row < tableCount").Append(tableIndex)
@@ -903,7 +921,7 @@ namespace ThirdPerson.GeneratedDiagnosticSampling.Generator
                     builder.Append("            tableRow.").Append(Setter(field.ValueKind)).Append('(')
                         .Append(tableHandles[table][field]).Append(", ")
                         .Append(field.Method.ContainingType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat))
-                        .Append('.').Append(field.Method.Name).AppendLine("(in source, row));");
+                        .Append('.').Append(field.Method.Name).AppendLine("(in source, in metadata, row));");
                 }
                 builder.AppendLine("        }");
             }
@@ -995,14 +1013,20 @@ namespace ThirdPerson.GeneratedDiagnosticSampling.Generator
             }
         }
 
-        static bool ValidateExtractor(FieldModel field, INamedTypeSymbol viewType)
+        static bool ValidateExtractor(
+            FieldModel field,
+            INamedTypeSymbol viewType,
+            INamedTypeSymbol metadataType)
         {
             IMethodSymbol method = field.Method;
-            if (!method.IsStatic || method.Parameters.Length != 1)
+            if (!method.IsStatic || method.Parameters.Length != 2)
                 return false;
-            IParameterSymbol parameter = method.Parameters[0];
-            if (parameter.RefKind != RefKind.In ||
-                !SymbolEqualityComparer.Default.Equals(parameter.Type, viewType))
+            IParameterSymbol view = method.Parameters[0];
+            IParameterSymbol metadata = method.Parameters[1];
+            if (view.RefKind != RefKind.In ||
+                !SymbolEqualityComparer.Default.Equals(view.Type, viewType) ||
+                metadata.RefKind != RefKind.In ||
+                !SymbolEqualityComparer.Default.Equals(metadata.Type, metadataType))
             {
                 return false;
             }
@@ -1013,24 +1037,36 @@ namespace ThirdPerson.GeneratedDiagnosticSampling.Generator
                 StringComparison.Ordinal);
         }
 
-        static bool ValidateTableCount(TableModel table, INamedTypeSymbol viewType) =>
+        static bool ValidateTableCount(
+            TableModel table,
+            INamedTypeSymbol viewType,
+            INamedTypeSymbol metadataType) =>
             table.CountMethod.IsStatic &&
-            table.CountMethod.Parameters.Length == 1 &&
+            table.CountMethod.Parameters.Length == 2 &&
             table.CountMethod.Parameters[0].RefKind == RefKind.In &&
             SymbolEqualityComparer.Default.Equals(
                 table.CountMethod.Parameters[0].Type,
                 viewType) &&
+            table.CountMethod.Parameters[1].RefKind == RefKind.In &&
+            SymbolEqualityComparer.Default.Equals(
+                table.CountMethod.Parameters[1].Type,
+                metadataType) &&
             table.CountMethod.ReturnType.SpecialType == SpecialType.System_Int32;
 
-        static bool ValidateTableExtractor(FieldModel field, INamedTypeSymbol viewType)
+        static bool ValidateTableExtractor(
+            FieldModel field,
+            INamedTypeSymbol viewType,
+            INamedTypeSymbol metadataType)
         {
             IMethodSymbol method = field.Method;
             return method.IsStatic &&
-                method.Parameters.Length == 2 &&
+                method.Parameters.Length == 3 &&
                 method.Parameters[0].RefKind == RefKind.In &&
                 SymbolEqualityComparer.Default.Equals(method.Parameters[0].Type, viewType) &&
-                method.Parameters[1].RefKind == RefKind.None &&
-                method.Parameters[1].Type.SpecialType == SpecialType.System_Int32 &&
+                method.Parameters[1].RefKind == RefKind.In &&
+                SymbolEqualityComparer.Default.Equals(method.Parameters[1].Type, metadataType) &&
+                method.Parameters[2].RefKind == RefKind.None &&
+                method.Parameters[2].Type.SpecialType == SpecialType.System_Int32 &&
                 string.Equals(
                     method.ReturnType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat),
                     ExpectedType(field.ValueKind),
@@ -1171,16 +1207,22 @@ namespace ThirdPerson.GeneratedDiagnosticSampling.Generator
 
         sealed class CapabilityModel
         {
-            public CapabilityModel(string id, int revision, INamedTypeSymbol viewType)
+            public CapabilityModel(
+                string id,
+                int revision,
+                INamedTypeSymbol viewType,
+                INamedTypeSymbol metadataType)
             {
                 Id = id;
                 Revision = revision;
                 ViewType = viewType;
+                MetadataType = metadataType;
             }
 
             public string Id { get; }
             public int Revision { get; }
             public INamedTypeSymbol ViewType { get; }
+            public INamedTypeSymbol MetadataType { get; }
         }
 
         sealed class SamplerModel

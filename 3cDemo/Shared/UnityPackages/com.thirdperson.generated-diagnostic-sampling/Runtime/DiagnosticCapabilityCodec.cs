@@ -292,6 +292,7 @@ namespace ThirdPerson.GeneratedDiagnosticSampling
             writer.Write(capability.GeneratedProgramHash);
             writer.Write(capability.GeneratorIdentity);
             writer.Write(capability.PacketLayoutIdentity);
+            writer.Write(capability.CadenceIdentity);
             writer.Write(capability.LineageTypeIdentity);
             writer.Write(capability.PacketCapacity);
             writer.Write(capability.WriterTransportIdentity);
@@ -302,6 +303,7 @@ namespace ThirdPerson.GeneratedDiagnosticSampling
                 reader.ReadString(),
                 reader.ReadInt32(),
                 ReadEnum<DiagnosticCapabilityMode>(reader),
+                reader.ReadString(),
                 reader.ReadString(),
                 reader.ReadString(),
                 reader.ReadString(),

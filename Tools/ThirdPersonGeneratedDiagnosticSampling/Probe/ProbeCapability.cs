@@ -1,3 +1,4 @@
+using System;
 using ThirdPerson.GeneratedDiagnosticSampling;
 
 namespace ThirdPerson.GeneratedDiagnosticSampling.Probe
@@ -12,7 +13,25 @@ namespace ThirdPerson.GeneratedDiagnosticSampling.Probe
         internal int Value { get; }
     }
 
-    [DiagnosticCapability("probe-capability", 1, typeof(ProbeCommittedView))]
+    internal readonly struct ProbeCaptureMetadata
+    {
+        internal ProbeCaptureMetadata(bool enabled, int offset, int tableCount)
+        {
+            Enabled = enabled;
+            Offset = offset;
+            TableCount = tableCount;
+        }
+
+        internal bool Enabled { get; }
+        internal int Offset { get; }
+        internal int TableCount { get; }
+    }
+
+    [DiagnosticCapability(
+        "probe-capability",
+        1,
+        typeof(ProbeCommittedView),
+        typeof(ProbeCaptureMetadata))]
     internal static class ProbeCapabilityDefinition
     {
     }
@@ -27,7 +46,9 @@ namespace ThirdPerson.GeneratedDiagnosticSampling.Probe
             "flag",
             "main",
             "probe.core")]
-        internal static bool Available(in ProbeCommittedView view) => true;
+        internal static bool Available(
+            in ProbeCommittedView view,
+            in ProbeCaptureMetadata metadata) => metadata.Enabled;
 
         [DiagnosticField(
             "probe-capability",
@@ -39,14 +60,18 @@ namespace ThirdPerson.GeneratedDiagnosticSampling.Probe
             "probe.core",
             AvailabilityFieldId = "probe.available",
             Dependencies = new[] { "probe.available" })]
-        internal static int Value(in ProbeCommittedView view) => view.Value;
+        internal static int Value(
+            in ProbeCommittedView view,
+            in ProbeCaptureMetadata metadata) => view.Value + metadata.Offset;
     }
 
     [DiagnosticTable("probe-capability", "probe.table", 1, 2)]
     internal static class ProbeTable
     {
         [DiagnosticTableCount("probe-capability", "probe.table")]
-        internal static int Count(in ProbeCommittedView view) => 1;
+        internal static int Count(
+            in ProbeCommittedView view,
+            in ProbeCaptureMetadata metadata) => metadata.TableCount;
 
         [DiagnosticField(
             "probe-capability",
@@ -56,7 +81,10 @@ namespace ThirdPerson.GeneratedDiagnosticSampling.Probe
             "count",
             "probe.table",
             "probe.table")]
-        internal static int Value(in ProbeCommittedView view, int row) => view.Value + row;
+        internal static int Value(
+            in ProbeCommittedView view,
+            in ProbeCaptureMetadata metadata,
+            int row) => view.Value + metadata.Offset + row;
     }
 
     [DiagnosticSampler(
@@ -87,6 +115,7 @@ namespace ThirdPerson.GeneratedDiagnosticSampling.Probe
                 ProbeProgramDefinition.CreateDiagnosticSchemaLayout();
             DiagnosticCapabilityBuildDescriptor capability =
                 ProbeProgramDefinition.CreateDiagnosticCapabilityBuildDescriptor(
+                    "probe-cadence/1",
                     "probe-lineage/1",
                     4,
                     "probe-binary/1");
@@ -97,6 +126,16 @@ namespace ThirdPerson.GeneratedDiagnosticSampling.Probe
                 DiagnosticCapabilityCodec.DecodeSchema(schemaDocument);
             decodedSchema.Require(capability);
             var capabilitySet = new DiagnosticCapabilitySet(new[] { capability });
+            var closure = new DiagnosticCapabilityCompilationClosureDescriptor(
+                "probe-capability",
+                1,
+                new[] { "Probe.Capture" },
+                new[] { "PROBE_CAPTURE" });
+            var proof = new DiagnosticCompilationClosureProof(
+                capabilitySet,
+                new[] { closure });
+            if (proof.AssemblyNames.Count != 1)
+                throw new InvalidOperationException("Probe compilation closure is invalid.");
             DiagnosticCapabilityCodec.DecodeCapabilitySet(
                 DiagnosticCapabilityCodec.EncodeCapabilitySet(capabilitySet));
             var schemaArtifact = new DiagnosticSealedArtifact(
@@ -122,7 +161,8 @@ namespace ThirdPerson.GeneratedDiagnosticSampling.Probe
             var sampleKey = new DiagnosticSampleKey(1, lineage);
             packet.Begin(sampleKey);
             var view = new ProbeCommittedView(value);
-            ProbeProgramDefinition.Capture(in view, ref packet);
+            var metadata = new ProbeCaptureMetadata(true, 0, 1);
+            ProbeProgramDefinition.Capture(in view, in metadata, ref packet);
             return packet.Int32Values[0];
         }
     }

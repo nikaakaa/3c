@@ -118,6 +118,9 @@ namespace ThirdPerson.GeneratedDiagnosticSampling
 
     public sealed class DiagnosticCapturePacket
     {
+        int m_LeaseVersion;
+        bool m_IsLeased;
+
         public DiagnosticCapturePacket(DiagnosticPacketLayout layout)
         {
             Layout = layout ?? throw new ArgumentNullException(nameof(layout));
@@ -169,6 +172,33 @@ namespace ThirdPerson.GeneratedDiagnosticSampling
             Array.Clear(QuaternionValues, 0, QuaternionValues.Length);
             for (int i = 0; i < Tables.Length; i++)
                 Tables[i].Begin(0, sampleKey);
+        }
+
+        internal int BeginLease(in DiagnosticSampleKey sampleKey)
+        {
+            if (m_IsLeased)
+                throw new InvalidOperationException("Diagnostic packet is already leased.");
+            m_LeaseVersion++;
+            if (m_LeaseVersion == 0)
+                m_LeaseVersion = 1;
+            m_IsLeased = true;
+            Begin(sampleKey);
+            return m_LeaseVersion;
+        }
+
+        internal void RequireLease(int version)
+        {
+            if (!m_IsLeased || version != m_LeaseVersion)
+                throw new InvalidOperationException("Diagnostic packet lease is invalid.");
+        }
+
+        internal bool IsLeaseValid(int version) =>
+            m_IsLeased && version == m_LeaseVersion;
+
+        internal void EndLease(int version)
+        {
+            RequireLease(version);
+            m_IsLeased = false;
         }
 
         public void SetBoolean(int index, bool value) => BooleanValues[index] = value;

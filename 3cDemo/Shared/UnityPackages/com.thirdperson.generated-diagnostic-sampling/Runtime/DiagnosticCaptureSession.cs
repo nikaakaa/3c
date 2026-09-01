@@ -4,6 +4,48 @@ using System.Threading;
 
 namespace ThirdPerson.GeneratedDiagnosticSampling
 {
+    public struct DiagnosticPacketLease
+    {
+        DiagnosticCaptureSession m_Owner;
+        DiagnosticCapturePacket m_Packet;
+        int m_Version;
+
+        internal DiagnosticPacketLease(
+            DiagnosticCaptureSession owner,
+            DiagnosticCapturePacket packet,
+            int version)
+        {
+            m_Owner = owner;
+            m_Packet = packet;
+            m_Version = version;
+        }
+
+        public bool IsValid => m_Owner != null && m_Packet.IsLeaseValid(m_Version);
+
+        public DiagnosticCapturePacket Packet
+        {
+            get
+            {
+                if (m_Owner == null)
+                    throw new InvalidOperationException("Diagnostic packet lease is not active.");
+                m_Packet.RequireLease(m_Version);
+                return m_Packet;
+            }
+        }
+
+        internal DiagnosticCapturePacket Consume(DiagnosticCaptureSession owner)
+        {
+            if (!ReferenceEquals(m_Owner, owner))
+                throw new InvalidOperationException("Diagnostic packet lease belongs to another session.");
+            m_Packet.EndLease(m_Version);
+            DiagnosticCapturePacket packet = m_Packet;
+            m_Owner = null;
+            m_Packet = null;
+            m_Version = 0;
+            return packet;
+        }
+    }
+
     public interface IDiagnosticPacketWriter : IDisposable
     {
         DiagnosticSealedArtifact Artifact { get; }
@@ -26,6 +68,8 @@ namespace ThirdPerson.GeneratedDiagnosticSampling
         readonly Thread m_WriterThread;
         bool m_StopRequested;
         bool m_Disposed;
+        DiagnosticCaptureStatus m_Status;
+        DiagnosticCaptureFailure? m_Failure;
         ulong m_LastSubmittedSequence;
         ulong m_SubmittedSampleCount;
 
@@ -49,6 +93,8 @@ namespace ThirdPerson.GeneratedDiagnosticSampling
             }
             if (packetCapacity <= 0)
                 throw new ArgumentOutOfRangeException(nameof(packetCapacity));
+            if (packetCapacity != capability.PacketCapacity)
+                throw new ArgumentException("Session packet capacity does not match the capability.", nameof(packetCapacity));
             if (queueCapacity <= 0 || queueCapacity >= packetCapacity)
                 throw new ArgumentOutOfRangeException(nameof(queueCapacity));
             m_QueueCapacity = queueCapacity;
@@ -67,28 +113,72 @@ namespace ThirdPerson.GeneratedDiagnosticSampling
 
         public DiagnosticCapabilityBuildDescriptor Capability { get; }
         public DiagnosticPacketLayout Layout { get; }
-        public DiagnosticCaptureStatus Status { get; private set; }
-        public DiagnosticCaptureFailure? Failure { get; private set; }
-        public ulong SubmittedSampleCount => m_SubmittedSampleCount;
-
-        public void Start()
+        public DiagnosticCaptureStatus Status
         {
-            lock (m_Gate)
+            get
             {
-                RequireStatus(DiagnosticCaptureStatus.Prepared);
-                m_Writer.Begin(Capability, Layout);
-                Status = DiagnosticCaptureStatus.Capturing;
-                m_WriterThread.Start();
+                lock (m_Gate)
+                    return m_Status;
+            }
+            private set => m_Status = value;
+        }
+        public DiagnosticCaptureFailure? Failure
+        {
+            get
+            {
+                lock (m_Gate)
+                    return m_Failure;
+            }
+            private set => m_Failure = value;
+        }
+        public ulong SubmittedSampleCount
+        {
+            get
+            {
+                lock (m_Gate)
+                    return m_SubmittedSampleCount;
             }
         }
 
-        public bool TryRent(in DiagnosticSampleKey sampleKey, out DiagnosticCapturePacket packet)
+        public bool TryStart(out DiagnosticCaptureFailure failure)
+        {
+            lock (m_Gate)
+            {
+                if (Status != DiagnosticCaptureStatus.Prepared)
+                {
+                    failure = TransitionFailure(
+                        DiagnosticCaptureFailureStage.Preflight,
+                        "Diagnostic session is not prepared.");
+                    SetFaultLocked(failure);
+                    return false;
+                }
+                try
+                {
+                    m_Writer.Begin(Capability, Layout);
+                    Status = DiagnosticCaptureStatus.Capturing;
+                    m_WriterThread.Start();
+                    failure = default;
+                    return true;
+                }
+                catch (Exception exception)
+                {
+                    failure = TransitionFailure(
+                        DiagnosticCaptureFailureStage.Writer,
+                        exception.Message);
+                    SetFaultLocked(failure);
+                    m_Writer.Fault(failure);
+                    return false;
+                }
+            }
+        }
+
+        public bool TryRent(in DiagnosticSampleKey sampleKey, out DiagnosticPacketLease lease)
         {
             lock (m_Gate)
             {
                 if (Status != DiagnosticCaptureStatus.Capturing)
                 {
-                    packet = null;
+                    lease = default;
                     return false;
                 }
                 if (!string.Equals(
@@ -96,7 +186,7 @@ namespace ThirdPerson.GeneratedDiagnosticSampling
                         Capability.LineageTypeIdentity,
                         StringComparison.Ordinal))
                 {
-                    packet = null;
+                    lease = default;
                     SetFaultLocked(new DiagnosticCaptureFailure(
                         DiagnosticCaptureFailureStage.Capture,
                         Capability.CapabilityId,
@@ -108,7 +198,7 @@ namespace ThirdPerson.GeneratedDiagnosticSampling
                 }
                 if (m_Available.Count == 0)
                 {
-                    packet = null;
+                    lease = default;
                     SetFaultLocked(new DiagnosticCaptureFailure(
                         DiagnosticCaptureFailureStage.Queue,
                         Capability.CapabilityId,
@@ -118,18 +208,18 @@ namespace ThirdPerson.GeneratedDiagnosticSampling
                         "Diagnostic packet pool is exhausted."));
                     return false;
                 }
-                packet = m_Available.Dequeue();
-                packet.Begin(sampleKey);
+                DiagnosticCapturePacket packet = m_Available.Dequeue();
+                int version = packet.BeginLease(sampleKey);
+                lease = new DiagnosticPacketLease(this, packet, version);
                 return true;
             }
         }
 
-        public bool Submit(DiagnosticCapturePacket packet)
+        public bool Submit(ref DiagnosticPacketLease lease)
         {
-            if (packet == null)
-                throw new ArgumentNullException(nameof(packet));
             lock (m_Gate)
             {
+                DiagnosticCapturePacket packet = lease.Consume(this);
                 if (Status != DiagnosticCaptureStatus.Capturing)
                 {
                     ReturnLocked(packet);
@@ -169,62 +259,99 @@ namespace ThirdPerson.GeneratedDiagnosticSampling
             }
         }
 
-        public void Complete()
+        public void Fault(
+            ref DiagnosticPacketLease lease,
+            in DiagnosticCaptureFailure failure)
         {
             lock (m_Gate)
             {
-                RequireStatus(DiagnosticCaptureStatus.Capturing);
+                DiagnosticRuntimeManifest.RequireFailure(Capability, failure);
+                DiagnosticCapturePacket packet = lease.Consume(this);
+                ReturnLocked(packet);
+                SetFaultLocked(failure);
+            }
+        }
+
+        public bool RequestFinalize(out DiagnosticCaptureFailure failure)
+        {
+            lock (m_Gate)
+            {
+                if (Status != DiagnosticCaptureStatus.Capturing)
+                {
+                    failure = TransitionFailure(
+                        DiagnosticCaptureFailureStage.Capture,
+                        "Diagnostic session is not capturing.");
+                    SetFaultLocked(failure);
+                    return false;
+                }
+                if (m_SubmittedSampleCount == 0)
+                {
+                    failure = TransitionFailure(
+                        DiagnosticCaptureFailureStage.Capture,
+                        "Diagnostic session captured no samples.");
+                    SetFaultLocked(failure);
+                    return false;
+                }
                 Status = DiagnosticCaptureStatus.Finalizing;
                 m_StopRequested = true;
                 m_Signal.Set();
+                failure = default;
+                return true;
             }
-            m_WriterThread.Join();
         }
 
-        public DiagnosticRuntimeManifest CreateRuntimeManifest(
-            DiagnosticSealedArtifact schemaArtifact)
+        public bool TryCreateRuntimeManifest(
+            DiagnosticSealedArtifact schemaArtifact,
+            out DiagnosticRuntimeManifest manifest)
         {
             if (schemaArtifact == null)
                 throw new ArgumentNullException(nameof(schemaArtifact));
             lock (m_Gate)
             {
                 if (m_WriterThread.IsAlive)
-                    throw new InvalidOperationException("Diagnostic writer is still running.");
+                {
+                    manifest = null;
+                    return false;
+                }
                 if (Status == DiagnosticCaptureStatus.Finalizing)
                 {
-                    return new DiagnosticRuntimeManifest(
+                    manifest = new DiagnosticRuntimeManifest(
                         Capability,
                         Status,
                         m_SubmittedSampleCount,
                         schemaArtifact,
                         m_Writer.Artifact,
                         null);
+                    return true;
                 }
                 if (Status == DiagnosticCaptureStatus.Faulted)
                 {
-                    return new DiagnosticRuntimeManifest(
+                    manifest = new DiagnosticRuntimeManifest(
                         Capability,
                         Status,
                         m_SubmittedSampleCount,
                         schemaArtifact,
                         m_Writer.Artifact,
                         Failure);
+                    return true;
                 }
                 if (Status == DiagnosticCaptureStatus.Cancelled)
                 {
-                    return new DiagnosticRuntimeManifest(
+                    manifest = new DiagnosticRuntimeManifest(
                         Capability,
                         Status,
                         m_SubmittedSampleCount,
                         schemaArtifact,
                         m_Writer.Artifact,
                         null);
+                    return true;
                 }
-                throw new InvalidOperationException("Diagnostic session has not reached a terminal runtime state.");
+                manifest = null;
+                return false;
             }
         }
 
-        public void Cancel()
+        public void RequestCancel()
         {
             lock (m_Gate)
             {
@@ -240,15 +367,15 @@ namespace ThirdPerson.GeneratedDiagnosticSampling
                 m_StopRequested = true;
                 m_Signal.Set();
             }
-            if (m_WriterThread.IsAlive)
-                m_WriterThread.Join();
         }
 
         public void Dispose()
         {
             if (m_Disposed)
                 return;
-            Cancel();
+            RequestCancel();
+            if (m_WriterThread.IsAlive)
+                m_WriterThread.Join();
             m_Writer.Dispose();
             m_Signal.Dispose();
             m_Disposed = true;
@@ -320,10 +447,14 @@ namespace ThirdPerson.GeneratedDiagnosticSampling
 
         void ReturnLocked(DiagnosticCapturePacket packet) => m_Available.Enqueue(packet);
 
-        void RequireStatus(DiagnosticCaptureStatus expected)
-        {
-            if (Status != expected)
-                throw new InvalidOperationException($"Expected diagnostic status {expected}, got {Status}.");
-        }
+        DiagnosticCaptureFailure TransitionFailure(
+            DiagnosticCaptureFailureStage stage,
+            string message) => new DiagnosticCaptureFailure(
+                stage,
+                Capability.CapabilityId,
+                Capability.ProgramId,
+                string.Empty,
+                string.Empty,
+                message);
     }
 }

@@ -16,6 +16,7 @@ namespace ThirdPerson.GeneratedDiagnosticSampling
             string generatedProgramHash,
             string generatorIdentity,
             string packetLayoutIdentity,
+            string cadenceIdentity,
             string lineageTypeIdentity,
             int packetCapacity,
             string writerTransportIdentity)
@@ -35,6 +36,7 @@ namespace ThirdPerson.GeneratedDiagnosticSampling
                 GeneratedProgramHash = string.Empty;
                 GeneratorIdentity = string.Empty;
                 PacketLayoutIdentity = string.Empty;
+                CadenceIdentity = string.Empty;
                 LineageTypeIdentity = string.Empty;
                 PacketCapacity = 0;
                 WriterTransportIdentity = string.Empty;
@@ -55,6 +57,9 @@ namespace ThirdPerson.GeneratedDiagnosticSampling
             PacketLayoutIdentity = DiagnosticIdentity.RequireId(
                 packetLayoutIdentity,
                 nameof(packetLayoutIdentity));
+            CadenceIdentity = DiagnosticIdentity.RequireId(
+                cadenceIdentity,
+                nameof(cadenceIdentity));
             LineageTypeIdentity = DiagnosticIdentity.RequireId(
                 lineageTypeIdentity,
                 nameof(lineageTypeIdentity));
@@ -76,6 +81,7 @@ namespace ThirdPerson.GeneratedDiagnosticSampling
         public string GeneratedProgramHash { get; }
         public string GeneratorIdentity { get; }
         public string PacketLayoutIdentity { get; }
+        public string CadenceIdentity { get; }
         public string LineageTypeIdentity { get; }
         public int PacketCapacity { get; }
         public string WriterTransportIdentity { get; }
@@ -92,6 +98,7 @@ namespace ThirdPerson.GeneratedDiagnosticSampling
             GeneratedProgramHash,
             GeneratorIdentity,
             PacketLayoutIdentity,
+            CadenceIdentity,
             LineageTypeIdentity,
             PacketCapacity.ToString(),
             WriterTransportIdentity

@@ -8,16 +8,19 @@ namespace ThirdPerson.GeneratedDiagnosticSampling
         public DiagnosticCapabilityAttribute(
             string id,
             int revision,
-            Type committedViewType)
+            Type committedViewType,
+            Type captureMetadataType)
         {
             Id = id;
             Revision = revision;
             CommittedViewType = committedViewType;
+            CaptureMetadataType = captureMetadataType;
         }
 
         public string Id { get; }
         public int Revision { get; }
         public Type CommittedViewType { get; }
+        public Type CaptureMetadataType { get; }
     }
 
     [AttributeUsage(AttributeTargets.Class | AttributeTargets.Struct, Inherited = false)]

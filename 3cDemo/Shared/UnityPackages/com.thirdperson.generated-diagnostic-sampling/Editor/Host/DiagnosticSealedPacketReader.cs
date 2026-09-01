@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Security.Cryptography;
 using System.Text;
 
 namespace ThirdPerson.GeneratedDiagnosticSampling.Host
@@ -11,20 +12,48 @@ namespace ThirdPerson.GeneratedDiagnosticSampling.Host
         readonly FileStream m_Stream;
         readonly BinaryReader m_Reader;
 
-        public DiagnosticSealedPacketReader(string path)
+        public DiagnosticSealedPacketReader(
+            DiagnosticSealedPacketArtifact artifact,
+            DiagnosticCapabilityBuildDescriptor capability,
+            DiagnosticPacketLayout expectedLayout)
         {
-            m_Stream = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read);
-            m_Reader = new BinaryReader(m_Stream, new UTF8Encoding(false), true);
-            string magic = m_Reader.ReadString();
-            if (!string.Equals(magic, Magic, StringComparison.Ordinal))
-                throw new InvalidDataException("Diagnostic packet magic is invalid.");
-            CapabilityId = m_Reader.ReadString();
-            CapabilityRevision = m_Reader.ReadInt32();
-            ProgramId = m_Reader.ReadString();
-            SchemaIdentity = m_Reader.ReadString();
-            GeneratedProgramHash = m_Reader.ReadString();
-            LineageTypeIdentity = m_Reader.ReadString();
-            Layout = ReadLayout(true);
+            if (artifact == null)
+                throw new ArgumentNullException(nameof(artifact));
+            if (capability == null)
+                throw new ArgumentNullException(nameof(capability));
+            Layout = expectedLayout ?? throw new ArgumentNullException(nameof(expectedLayout));
+            m_Stream = new FileStream(
+                artifact.Path,
+                FileMode.Open,
+                FileAccess.Read,
+                FileShare.Read);
+            try
+            {
+                if (m_Stream.Length != artifact.Size)
+                    throw new InvalidDataException("Diagnostic packet size does not match the manifest.");
+                string sha256 = ComputeSha256(m_Stream);
+                if (!string.Equals(sha256, artifact.Sha256, StringComparison.Ordinal))
+                    throw new InvalidDataException("Diagnostic packet hash does not match the manifest.");
+                m_Stream.Position = 0;
+                m_Reader = new BinaryReader(m_Stream, new UTF8Encoding(false), true);
+                string magic = m_Reader.ReadString();
+                if (!string.Equals(magic, Magic, StringComparison.Ordinal))
+                    throw new InvalidDataException("Diagnostic packet magic is invalid.");
+                CapabilityId = m_Reader.ReadString();
+                CapabilityRevision = m_Reader.ReadInt32();
+                ProgramId = m_Reader.ReadString();
+                SchemaIdentity = m_Reader.ReadString();
+                GeneratedProgramHash = m_Reader.ReadString();
+                LineageTypeIdentity = m_Reader.ReadString();
+                RequireHeader(capability);
+                RequireLayout(Layout, true);
+            }
+            catch
+            {
+                m_Reader?.Dispose();
+                m_Stream.Dispose();
+                throw;
+            }
         }
 
         public string CapabilityId { get; }
@@ -37,29 +66,21 @@ namespace ThirdPerson.GeneratedDiagnosticSampling.Host
 
         public IEnumerable<DiagnosticCapturePacket> ReadAll()
         {
+            ulong previousSequence = 0;
             while (m_Stream.Position < m_Stream.Length)
-                yield return ReadPacket();
-        }
-
-        public void Require(
-            string capabilityId,
-            string programId,
-            string schemaIdentity,
-            string generatedProgramHash,
-            string layoutIdentity,
-            string lineageTypeIdentity)
-        {
-            if (!string.Equals(CapabilityId, capabilityId, StringComparison.Ordinal) ||
-                !string.Equals(ProgramId, programId, StringComparison.Ordinal) ||
-                !string.Equals(SchemaIdentity, schemaIdentity, StringComparison.Ordinal) ||
-                !string.Equals(GeneratedProgramHash, generatedProgramHash, StringComparison.Ordinal) ||
-                !string.Equals(Layout.Identity, layoutIdentity, StringComparison.Ordinal) ||
-                !string.Equals(
-                    LineageTypeIdentity,
-                    lineageTypeIdentity,
-                    StringComparison.Ordinal))
             {
-                throw new InvalidDataException("Diagnostic packet identity does not match the manifest.");
+                DiagnosticCapturePacket packet = ReadPacket();
+                if (!string.Equals(
+                        packet.SampleKey.Lineage.TypeIdentity,
+                        LineageTypeIdentity,
+                        StringComparison.Ordinal))
+                {
+                    throw new InvalidDataException("Diagnostic packet lineage does not match the manifest.");
+                }
+                if (packet.SampleKey.Sequence <= previousSequence)
+                    throw new InvalidDataException("Diagnostic packet sequence is not strictly increasing.");
+                previousSequence = packet.SampleKey.Sequence;
+                yield return packet;
             }
         }
 
@@ -105,7 +126,26 @@ namespace ThirdPerson.GeneratedDiagnosticSampling.Host
             return packet;
         }
 
-        DiagnosticPacketLayout ReadLayout(bool readTables)
+        void RequireHeader(DiagnosticCapabilityBuildDescriptor capability)
+        {
+            if (!string.Equals(CapabilityId, capability.CapabilityId, StringComparison.Ordinal) ||
+                CapabilityRevision != capability.CapabilityRevision ||
+                !string.Equals(ProgramId, capability.ProgramId, StringComparison.Ordinal) ||
+                !string.Equals(SchemaIdentity, capability.SchemaIdentity, StringComparison.Ordinal) ||
+                !string.Equals(
+                    GeneratedProgramHash,
+                    capability.GeneratedProgramHash,
+                    StringComparison.Ordinal) ||
+                !string.Equals(
+                    LineageTypeIdentity,
+                    capability.LineageTypeIdentity,
+                    StringComparison.Ordinal))
+            {
+                throw new InvalidDataException("Diagnostic packet identity does not match the manifest.");
+            }
+        }
+
+        void RequireLayout(DiagnosticPacketLayout expected, bool readTables)
         {
             string identity = m_Reader.ReadString();
             int booleanCount = m_Reader.ReadInt32();
@@ -120,32 +160,44 @@ namespace ThirdPerson.GeneratedDiagnosticSampling.Host
             int vector3Count = m_Reader.ReadInt32();
             int vector4Count = m_Reader.ReadInt32();
             int quaternionCount = m_Reader.ReadInt32();
-            var tables = new List<DiagnosticTableLayout>();
+            if (!string.Equals(identity, expected.Identity, StringComparison.Ordinal) ||
+                booleanCount != expected.BooleanCount ||
+                int32Count != expected.Int32Count ||
+                uint32Count != expected.UInt32Count ||
+                int64Count != expected.Int64Count ||
+                uint64Count != expected.UInt64Count ||
+                float32Count != expected.Float32Count ||
+                float64Count != expected.Float64Count ||
+                identityCount != expected.IdentityCount ||
+                vector2Count != expected.Vector2Count ||
+                vector3Count != expected.Vector3Count ||
+                vector4Count != expected.Vector4Count ||
+                quaternionCount != expected.QuaternionCount)
+            {
+                throw new InvalidDataException("Diagnostic packet layout does not match the schema.");
+            }
             if (readTables)
             {
                 int tableCount = m_Reader.ReadInt32();
+                if (tableCount != expected.Tables.Count)
+                    throw new InvalidDataException("Diagnostic packet table count does not match the schema.");
                 for (int i = 0; i < tableCount; i++)
                 {
                     string tableId = m_Reader.ReadString();
                     int capacity = m_Reader.ReadInt32();
-                    tables.Add(new DiagnosticTableLayout(tableId, capacity, ReadLayout(false)));
+                    DiagnosticTableLayout table = expected.Tables[i];
+                    if (!string.Equals(tableId, table.Id, StringComparison.Ordinal) ||
+                        capacity != table.Capacity)
+                    {
+                        throw new InvalidDataException("Diagnostic packet table layout does not match the schema.");
+                    }
+                    RequireLayout(table.RowLayout, false);
                 }
             }
-            return new DiagnosticPacketLayout(
-                identity,
-                booleanCount,
-                int32Count,
-                uint32Count,
-                int64Count,
-                uint64Count,
-                float32Count,
-                float64Count,
-                identityCount,
-                vector2Count,
-                vector3Count,
-                vector4Count,
-                quaternionCount,
-                tables);
+            else if (expected.Tables.Count != 0)
+            {
+                throw new InvalidDataException("Nested diagnostic tables are not supported.");
+            }
         }
 
         void ReadValues(DiagnosticCapturePacket packet)
@@ -162,6 +214,18 @@ namespace ThirdPerson.GeneratedDiagnosticSampling.Host
             for (int i = 0; i < packet.Vector3Values.Length; i++) packet.Vector3Values[i] = new DiagnosticVector3(m_Reader.ReadSingle(), m_Reader.ReadSingle(), m_Reader.ReadSingle());
             for (int i = 0; i < packet.Vector4Values.Length; i++) packet.Vector4Values[i] = new DiagnosticVector4(m_Reader.ReadSingle(), m_Reader.ReadSingle(), m_Reader.ReadSingle(), m_Reader.ReadSingle());
             for (int i = 0; i < packet.QuaternionValues.Length; i++) packet.QuaternionValues[i] = new DiagnosticQuaternion(m_Reader.ReadSingle(), m_Reader.ReadSingle(), m_Reader.ReadSingle(), m_Reader.ReadSingle());
+        }
+
+        static string ComputeSha256(Stream stream)
+        {
+            using (SHA256 sha = SHA256.Create())
+            {
+                byte[] hash = sha.ComputeHash(stream);
+                var builder = new StringBuilder(hash.Length * 2);
+                foreach (byte value in hash)
+                    builder.Append(value.ToString("x2"));
+                return builder.ToString();
+            }
         }
     }
 }

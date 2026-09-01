@@ -28,7 +28,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             horizontal.scorePolicy = "Health";
             horizontal.occurrence = context.Occurrence(
                 "ContinuousFullAnchorPhysicalSoleInterval", metric, "Meters", physical,
-                0.01d, 0.01d, 0.02d, 0.05d, 0.1d);
+                0.01d, CharacterFootDiagnosisScoring.MeterSeverityThresholds);
             var locked = new List<JObject>(fullAnchor);
             locked.AddRange(context.Events("LockedSliding"));
             CharacterFootDiagnosisTarget vertical = context.Target(

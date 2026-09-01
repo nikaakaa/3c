@@ -20,13 +20,13 @@ ContactState计分进一步使用真实物理位移P到动画位移线段`[0,S]`
 
 最终穿透以同一ContactPlanePenetration段的Heel/Toe最大深度计一次，Heel/Toe细分及新增/加重归因不再次扣分。接触未贴合只读取同Frame/Completion的实际Heel/Toe与已验证Anchor平面，整脚间隙为`max(0,min(heelClearance,toeClearance))`，不能证明有限Surface脚下有地。当前分域规则见Decision 4，不再把所有Locked统称完全固定接触。
 
-锁脚质量只消费FullAnchor最终物理Sole相对Anchor的水平偏差；Sliding水平移动不按固定Anchor漂移判错，垂直问题只作为穿透链相关证据，不重复增加权重。腿部继续使用现有Landing域，不扩大为未经验证的全时段膝盖判定；样本量不足必须显示。
+锁脚质量只消费FullAnchor最终物理Sole相对Anchor的水平偏差；Sliding水平移动不按固定Anchor漂移判错，垂直问题只作为穿透链相关证据，不重复增加权重。腿部以Runtime实际进入Landing的同Event状态段为eligible，用进入前最后一帧作为基线并覆盖Landing及同Event Locked/Releasing交接边界；不再以Formal LockMode恰好在TimeToLanding为0时从Unlocked进入Sliding作为资格。普通Swing膝盖连续性仍作为独立Solver与Physical证据，不伪装成Landing质量。
 
 ## Decision 3: 透明而浅层的评分
 
-沿用单项公开发生率和互斥严重度档位；米制主项使用1/2/5/10厘米，档位负担为0/0.1/0.35/0.7/1，严重尾部单项上限为100/95/89/74/49。腿部使用既有明确规则发生率。每项保留原始次数、分母、幅度/时间分布、扣分与代表帧，不把分数命名为Pass/Fail。
+沿用单项公开发生率和互斥严重度档位；米制主项使用1/2/5/10/20/30厘米，七档负担为0/0.1/0.35/0.7/0.85/0.95/1。Health为各互斥档位发生率乘档位负担后的严重度加权结果，不再因单个最差样本把整个维度硬封顶为49。腿部使用实际Landing状态段上的既有伸直、弯曲角下降与方向反转规则发生率。每项保留原始次数、分母、幅度/时间分布、最差档位、扣分与代表帧，不把分数命名为Pass/Fail。
 
-总分为7个单项Health按固定权重加权和，只作`ProvisionalReference`。不把Evidence乘进Health，不重分配缺失项权重。零eligible或必需可见事实缺失时该维度Unavailable；总分为空，同时发布可计算权重、已知贡献、可能区间与缺失维度。低样本维度可以保留观测分，但必须同时显示Evidence及弱证据列表，不能把少量零命中描述为质量已经证明。
+总分为7个单项Health按固定权重加权和，只作`ProvisionalReference`。不把Evidence乘进Health，不重分配缺失项权重。eligible少于10、为0或必需可见事实缺失时该维度Unavailable；总分为空，同时发布可计算权重、已知贡献、可能区间与缺失维度。10到49个eligible仍显示Health与弱Evidence，但不能描述为质量已经充分证明。
 
 Path最终可见跳变质量和首个放大阶段归因分离：可见事实完整即可统计质量，阶段缺失只使原因证据Unavailable，不凭未知原因否认已经观测到的跳变。
 

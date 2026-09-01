@@ -27,7 +27,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             final.scorePolicy = "Health";
             final.occurrence = context.Occurrence(
                 "ContactPlanePenetrationInterval", "finalDepthMaximumMeters", "Meters",
-                events, 0.01d, 0.01d, 0.02d, 0.05d, 0.1d);
+                events, 0.01d,
+                CharacterFootDiagnosisScoring.MeterSeverityThresholds);
             CharacterFootDiagnosisTarget contribution = context.Target(
                 "contact-plane-penetration-contribution",
                 "穿透来自原动画残留、Foot新增还是Foot加重；这些证据不与最终穿透重复扣分",

@@ -519,10 +519,11 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         public string evidenceRating;
         public string unavailableReason;
         public int evidenceFullSampleEventCount;
-        public double? frequencyBurden;
-        public double? frequencyHealthScore;
+        public int minimumHealthEligibleEventCount;
+        public bool healthCoverageSatisfied;
+        public double? severityWeightedBurden;
+        public double? severityWeightedHealthScore;
         public string worstSeverityBand;
-        public double? tailScoreCeiling;
         public List<CharacterFootDiagnosisScoreBand> severityBands;
     }
 
@@ -541,7 +542,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
     internal sealed class CharacterFootQualityScorecard
     {
         public string schema = CharacterFootDiagnosticFormatIdentity.QualityScoreSchema;
-        public string scoringVersion = "foot-quality-seven-dimensions/2";
+        public string scoringVersion = "foot-quality-seven-dimensions/3";
         public string purpose = "ProvisionalReference";
         public bool isShallowReference = true;
         public string notice = "总分仅为浅层参考，不代表通过，不替代逐项证据与用户观感。";
@@ -629,21 +630,25 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         };
 
         const int FullEvidenceEventCount = 50;
-        static readonly double[] s_FiveBandPenalties =
+        internal const int MinimumHealthEligibleEventCount = 10;
+        internal static readonly double[] MeterSeverityThresholds =
+        {
+            0.01d,
+            0.02d,
+            0.05d,
+            0.10d,
+            0.20d,
+            0.30d
+        };
+        static readonly double[] s_MeterSeverityPenalties =
         {
             0d,
             0.1d,
             0.35d,
             0.7d,
+            0.85d,
+            0.95d,
             1d
-        };
-        static readonly double[] s_FiveBandCeilings =
-        {
-            100d,
-            95d,
-            89d,
-            74d,
-            49d
         };
 
         internal static CharacterFootQualityScorecard BuildQualityScorecard(
@@ -660,12 +665,14 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 evidenceTargets = new List<CharacterFootQualityEvidenceReference>(),
                 limitations = new List<string>
                 {
-                    "权值为首版业务取舍，不宣称客观最优；不同评分版本不能直接解释成行为改善。",
+                    "权值和严重度权重为当前业务取舍，不宣称客观最优；不同评分版本不能直接解释成行为改善。",
                     "总分不代替具体帧、幅度、持续时间、最差项与Evidence；没有全局Pass/Fail。",
                     "位移按表现帧统计，比较必须使用相同输入与Presentation Schedule；速度和加速度仍在分项报告。",
                     "接触未贴合只证明与Verified Anchor平面的间隙，不证明有限Surface脚下有地；满位置权重接触过程只计一次，FullAnchor/Sliding/Landing分项展示，Release及部分权重仅作证据。",
                     "接触分项没有独立Health，不重复扣分；须查看各域脚帧/过程次数、持续时间与重新离面，少量FullAnchor样本不能证明保持质量，短暂大间隙不因不足100ms而隐藏。",
-                    "腿部目前只覆盖正式Landing诊断域；Sliding缺少正式水平上限时不按FullAnchor漂移计分。",
+                    "腿部按Runtime实际Landing状态段计分；普通Swing膝盖连续性仍须查看独立Solver与Physical证据。",
+                    "Health至少需要10个eligible；10到49个样本仍列为弱Evidence，不用少量零命中冒充充分证明。",
+                    "米制严重度按1/2/5/10/20/30厘米互斥分档加权，不再由单个最差样本把整个维度硬封顶。",
                     "缺失维度不补0或100，不重分配权重；分数区间只表示未知项的数学上下界。"
                 },
                 contactSupportCoverage = documents["landing-state-consistency.json"]
@@ -826,6 +833,11 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 score.unavailableReason = "InformationalTarget";
                 return score;
             }
+            if (target.eligibleEventCount < MinimumHealthEligibleEventCount)
+            {
+                score.unavailableReason = "InsufficientEligibleEvents";
+                return score;
+            }
             if (target.pathStageAnalysis != null &&
                 target.pathStageAnalysis.availableEventCount <
                 target.pathStageAnalysis.eligibleEventCount)
@@ -842,10 +854,10 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             {
                 double rate = target.matchedEventRate ?? 0d;
                 RequireRate(rate);
-                score.frequencyBurden = rate;
-                score.frequencyHealthScore = Round(
+                score.severityWeightedBurden = rate;
+                score.severityWeightedHealthScore = Round(
                     100d * (1d - rate));
-                score.healthScore = score.frequencyHealthScore;
+                score.healthScore = score.severityWeightedHealthScore;
                 score.worstSeverityBand = target.matchedEventCount > 0
                     ? "MatchedViolation"
                     : "NoMatchedViolation";
@@ -869,6 +881,12 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 throw new InvalidOperationException(
                     $"Foot diagnosis target '{target.id}' occurrence score input is invalid.");
             }
+            if (!occurrence.configuredThresholds.SequenceEqual(
+                    MeterSeverityThresholds))
+            {
+                throw new InvalidOperationException(
+                    $"Foot diagnosis target '{target.id}' severity thresholds are invalid.");
+            }
             var bands = new List<CharacterFootDiagnosisScoreBand>(
                 thresholdCount + 1);
             int previousMatched = occurrence.eligibleEventCount;
@@ -887,7 +905,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 int count = previousMatched - matched;
                 double rate = (double)count / occurrence.eligibleEventCount;
                 RequireRate(rate);
-                double penalty = Penalty(i, thresholdCount + 1);
+                double penalty = s_MeterSeverityPenalties[i];
                 burden += rate * penalty;
                 if (count > 0)
                     worstBand = i;
@@ -906,12 +924,10 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 });
                 previousMatched = matched;
             }
-            double ceiling = Ceiling(worstBand, thresholdCount + 1);
-            double health = Math.Min(100d * (1d - burden), ceiling);
-            score.frequencyBurden = Round(burden);
-            score.frequencyHealthScore = Round(100d * (1d - burden));
+            double health = 100d * (1d - burden);
+            score.severityWeightedBurden = Round(burden);
+            score.severityWeightedHealthScore = Round(health);
             score.worstSeverityBand = bands[worstBand].id;
-            score.tailScoreCeiling = ceiling;
             score.severityBands = bands;
             score.healthScore = Round(health);
         }
@@ -925,6 +941,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             {
                 policy = policy,
                 evidenceFullSampleEventCount = FullEvidenceEventCount,
+                minimumHealthEligibleEventCount = MinimumHealthEligibleEventCount,
+                healthCoverageSatisfied =
+                    eligibleEventCount >= MinimumHealthEligibleEventCount,
                 healthRating = "Unavailable",
                 evidenceRating = "Unavailable",
                 severityBands = new List<CharacterFootDiagnosisScoreBand>()
@@ -948,31 +967,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             return score;
         }
 
-
-        static double Penalty(int index, int bandCount)
-        {
-            if (bandCount == s_FiveBandPenalties.Length)
-                return s_FiveBandPenalties[index];
-            return bandCount <= 1
-                ? 0d
-                : (double)index / (bandCount - 1);
-        }
-
-        static double Ceiling(int index, int bandCount)
-        {
-            if (bandCount == s_FiveBandCeilings.Length)
-                return s_FiveBandCeilings[index];
-            if (index <= 0)
-                return 100d;
-            double normalized = (double)index / (bandCount - 1);
-            return normalized >= 1d
-                ? 49d
-                : normalized >= 0.75d
-                    ? 74d
-                    : normalized >= 0.5d
-                        ? 89d
-                        : 95d;
-        }
 
         static string BandId(List<double> thresholds, int index)
         {

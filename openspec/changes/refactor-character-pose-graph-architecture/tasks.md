@@ -143,13 +143,13 @@
 
 ## 13. 收口Diagnostics、Pose Watch与Preview
 
-- [ ] 13.1 建立Source、Program、Constraint和Final Publication Committed Result诊断投影合同
+- [x] 13.1 建立Source、Program、Constraint和Final Publication Committed Result诊断投影合同
 - [ ] 13.2 在Frame开始冻结Live、Capture、Pose Watch和detail interest及固定容量
 - [ ] 13.3 在各Module Pending Result完成时按interest深冻结Pose、Value、Contribution、Goal、Constraint、Operation和Physical结果
 - [x] 13.4 让Foot/Goal/FBBIK diagnostics只进入Constraint Committed Result，Physical diagnostics只进入Final Publication Committed Result
 - [ ] 13.5 让Diagnostics Projector只按同lineage组合Committed Result，不持有Program Runtime、Workspace、Constraint Module或Physical Transform引用
 - [ ] 13.6 删除Snapshot Publisher从Native Program、Pending Workspace、Foot Context、FBBIK Vendor对象和多个Owner反推同一事实的路径
-- [ ] 13.7 让Pose Watch只读取已冻结Committed页，不重新采样source、执行world query、运行FBBIK或推导Physical结果
+- [x] 13.7 让Pose Watch只读取已冻结Committed页，不重新采样source、执行world query、运行FBBIK或推导Physical结果
 - [ ] 13.8 让正式Runtime与Preview通过同一Factory装配Projection内Program Image、actor-local Execution View、Program Runtime、Source Module、Constraint Module、Final Publication、根Frame Transaction与Tuning Snapshot
 - [ ] 13.9 删除Preview简化Executor、逐Preview第二Native Program、临时Program、默认World Context和Stale Projection fallback
 - [ ] 13.10 将新Runtime Result接回现有Sampler、Analyzer、Publisher、小报告／明细存储及七维评分，不新增第二列映射、采样或离线发布链

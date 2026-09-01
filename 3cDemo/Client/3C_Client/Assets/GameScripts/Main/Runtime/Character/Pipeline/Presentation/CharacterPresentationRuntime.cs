@@ -76,6 +76,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         ulong m_TuningGeneration = 1;
         ulong m_NextFrameTransactionIdentity;
         ulong m_NextPresentationRequestSequence;
+        CharacterFootIkCaptureBinding m_FootIkCaptureBinding;
         AnimationPresentationDebugView m_DebugView;
         AnimationPresentationFault m_Fault;
         AnimationPresentationFrameOutcome m_LastFrameOutcome;
@@ -208,6 +209,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             m_MotionMatching.Enabled;
         public AnimationPresentationDiagnosticsInterest DiagnosticsInterest =>
             m_PoseRuntime.DiagnosticsInterest;
+        public CharacterFootIkCaptureInterest FootIkCaptureInterest =>
+            m_FootIkCaptureBinding.Interest;
         internal bool HasFootPlacement => m_PoseRuntime.HasFootPlacement;
 
         internal void ResetFootPlacement(in CharacterFootPlacementReset reset) =>
@@ -248,6 +251,37 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
 
         public void RemoveDiagnosticsInterest(Guid ownerId) =>
             m_PoseRuntime.RemoveDiagnosticsInterest(ownerId);
+
+        internal void SetFootIkCapture(
+            Guid ownerId,
+            CharacterFootIkCaptureInterest interest,
+            ICharacterFootIkCommittedCaptureConsumer consumer)
+        {
+            RequireAlive();
+            if (m_FootIkCaptureBinding.IsValid &&
+                m_FootIkCaptureBinding.OwnerId != ownerId)
+            {
+                throw new InvalidOperationException(
+                    "Foot IK capture already has a different owner.");
+            }
+            m_FootIkCaptureBinding = new CharacterFootIkCaptureBinding(
+                ownerId,
+                in interest,
+                consumer);
+        }
+
+        internal void RemoveFootIkCapture(Guid ownerId)
+        {
+            if (!m_FootIkCaptureBinding.IsValid)
+                return;
+            if (ownerId == Guid.Empty ||
+                m_FootIkCaptureBinding.OwnerId != ownerId)
+            {
+                throw new InvalidOperationException(
+                    "Foot IK capture owner does not match.");
+            }
+            m_FootIkCaptureBinding = default;
+        }
 
         internal void SetTuningBinding(CharacterPoseTuningRuntimeBinding binding)
         {
@@ -477,6 +511,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             AnimationPresentationDiagnosticsInterest diagnosticsInterest =
                 m_PoseRuntime.ResolveDiagnosticsInterest(
                     traceInterest);
+            CharacterFootIkCaptureBinding footIkCaptureBinding =
+                m_FootIkCaptureBinding;
             bool publishStateDiagnostics =
                 RequiresStateDiagnostics(diagnosticsInterest);
             if (diagnosticsInterest ==
@@ -493,6 +529,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     latestSimulationTick,
                     publishStateDiagnostics,
                     diagnosticsInterest,
+                    in footIkCaptureBinding,
                     linkedPose);
             }
             string frameStage = "ActionLifecycle";
@@ -870,6 +907,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         {
             if (m_Disposed)
                 return;
+            m_FootIkCaptureBinding = default;
             m_Disposed = true;
             Exception failure = null;
             try
@@ -908,6 +946,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             ulong bodyTick,
             bool captureDiagnostics,
             AnimationPresentationDiagnosticsInterest diagnosticsInterest,
+            in CharacterFootIkCaptureBinding footIkCaptureBinding,
             CharacterLinkedPoseRuntimeSession linkedPose)
         {
             PresentationFrameWorkspaceLease workspaceLease = default;
@@ -982,7 +1021,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     constraint,
                     publication,
                     motionMatching,
-                    m_MotionMatching != null);
+                    m_MotionMatching != null,
+                    in footIkCaptureBinding);
                 m_FrameTransaction.BeginPrepare();
                 return m_FrameTransaction;
             }

@@ -93,6 +93,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         public bool MotionMatchingRuntimeEnabled => m_Animation.MotionMatchingRuntimeEnabled;
         public AnimationPresentationDiagnosticsInterest DiagnosticsInterest =>
             m_Animation.DiagnosticsInterest;
+        public CharacterFootIkCaptureInterest FootIkCaptureInterest =>
+            m_Animation.FootIkCaptureInterest;
         internal CharacterPoseTuningLayout TuningLayout =>
             m_Animation.TuningLayout;
         internal CharacterPoseTuningParameterBlock ActiveTuningBlock =>
@@ -162,6 +164,24 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         {
             if (!m_Disposed)
                 m_Animation.RemoveDiagnosticsInterest(ownerId);
+        }
+
+        public void SetFootIkCapture(
+            Guid ownerId,
+            CharacterFootIkCaptureInterest interest,
+            ICharacterFootIkCommittedCaptureConsumer consumer)
+        {
+            RequireAlive();
+            m_Animation.SetFootIkCapture(
+                ownerId,
+                interest,
+                consumer);
+        }
+
+        public void RemoveFootIkCapture(Guid ownerId)
+        {
+            if (!m_Disposed)
+                m_Animation.RemoveFootIkCapture(ownerId);
         }
 
         public void CaptureEquipmentSelections(IReadOnlyList<EquipmentVisualSelection> selections)

@@ -573,3 +573,11 @@ A/B均为2086脚行、1222列，其中1198个业务列逐值相同、24个运行
 Runtime工程使用显式保留build退出码的规定命令构建成功、0错误；1个warning为既有未使用字段，构建后立即关闭build server。3C Unity编译无Projector错误。正式A为`Diagnostics/FootPlacementRuns/20260902-024336-767-aae40504baa6455e88eeed312795f33f`，候选B为`Diagnostics/FootPlacementRuns/20260902-030456-895-95d26ff9b1cb422693202d73c63036ec`；B Proof为`Temp/CharacterInputReplayProofs/v4/43357ff3cd384e5cba75d2c31175b116/20260902-030553-686-4f82add68b76439baafa50be2de960f3.json`，工具对A Proof报告`matched:1044`，无failure且Foot Finalizing结束。
 
 A/B均为2086脚行、1222列，其中1198业务列逐值相同、24 identity列一一映射、0冲突；Geometry均为67186行、27列，其中22业务列逐值相同、5 identity列一一映射、0冲突。七维分项、总分84.2与weighted evidence 96.5保持。由此确认Foot View Owner拆分没有改变Foot、Pelvis、Goal、FBBIK、Final Pose、Physical或诊断业务；`030456`成为specific Foot interest接入的正式A。
+
+## 建立specific Foot IK interest登记与根帧冻结合同
+
+状态：新增只包含固定View容量的`CharacterFootIkCaptureInterest`与同步`ICharacterFootIkCommittedCaptureConsumer`合同。`AnimationPresentationRuntimeTarget`通过唯一owner成对登记interest和consumer；`CharacterAnimationPresentationRuntime`拒绝第二owner，并在每个`Present`开始把当前绑定复制为`CharacterFootIkCaptureBinding`，随唯一`CharacterPoseFrameTransaction.Begin`冻结，Reset后保持会话登记、Dispose时释放consumer引用。该合同不引用Capability、Sampler、Schema、Generated Program、packet、Session、Writer或Host类型。
+
+本步不勾选任务13.2：Constraint、Final Publication与独立Foot Projector尚未改为消费该specific interest，当前未登记时只冻结default值，也不触发consumer。Runtime工程用显式保留build退出码的规定命令构建成功、0错误；1个warning为既有未使用字段，构建后立即关闭build server。首次Unity增量导入出现一次SourceAssetDB修改时间不一致，文件稳定后force refresh消失，清空Console后为0。
+
+正式A为`Diagnostics/FootPlacementRuns/20260902-030456-895-95d26ff9b1cb422693202d73c63036ec`，候选B为`Diagnostics/FootPlacementRuns/20260902-031403-657-15e34fd7f366452493b4ac159f321244`；B Proof为`Temp/CharacterInputReplayProofs/v4/43357ff3cd384e5cba75d2c31175b116/20260902-031459-554-babcde41dc0048fe88fbc7ec03c4ef44.json`，工具报告`matched:1044`，无failure且Foot Finalizing结束。A/B主表1198业务列和Geometry 22业务列逐值相同，identity列一一映射，0冲突；总分84.2与weighted evidence 96.5保持。`031403`成为specific interest向各Owner传播的正式A。

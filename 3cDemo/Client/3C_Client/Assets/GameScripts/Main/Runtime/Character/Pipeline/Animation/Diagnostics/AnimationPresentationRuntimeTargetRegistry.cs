@@ -73,10 +73,67 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
         PoseWatch = 1 << 4
     }
 
+    public readonly struct CharacterFootIkCaptureInterest :
+        IEquatable<CharacterFootIkCaptureInterest>
+    {
+        public CharacterFootIkCaptureInterest(int viewCapacity)
+        {
+            if (viewCapacity != 1)
+                throw new ArgumentOutOfRangeException(nameof(viewCapacity));
+            ViewCapacity = viewCapacity;
+        }
+
+        public int ViewCapacity { get; }
+        public bool IsEnabled => ViewCapacity == 1;
+
+        public bool Equals(CharacterFootIkCaptureInterest other) =>
+            ViewCapacity == other.ViewCapacity;
+
+        public override bool Equals(object obj) =>
+            obj is CharacterFootIkCaptureInterest other && Equals(other);
+
+        public override int GetHashCode() => ViewCapacity;
+    }
+
+    public interface ICharacterFootIkCommittedCaptureConsumer
+    {
+        bool TryCapture(
+            in CharacterFootIkCommittedCaptureViewLease view);
+    }
+
+    internal readonly struct CharacterFootIkCaptureBinding
+    {
+        internal CharacterFootIkCaptureBinding(
+            Guid ownerId,
+            in CharacterFootIkCaptureInterest interest,
+            ICharacterFootIkCommittedCaptureConsumer consumer)
+        {
+            if (ownerId == Guid.Empty ||
+                !interest.IsEnabled ||
+                consumer == null)
+            {
+                throw new ArgumentException(
+                    "Foot IK capture binding is invalid.");
+            }
+            OwnerId = ownerId;
+            Interest = interest;
+            Consumer = consumer;
+        }
+
+        internal Guid OwnerId { get; }
+        internal CharacterFootIkCaptureInterest Interest { get; }
+        internal ICharacterFootIkCommittedCaptureConsumer Consumer { get; }
+        internal bool IsValid =>
+            OwnerId != Guid.Empty &&
+            Interest.IsEnabled &&
+            Consumer != null;
+    }
+
     public interface IAnimationPresentationRuntimeSnapshotProvider
     {
         bool MotionMatchingRuntimeEnabled { get; }
         AnimationPresentationDiagnosticsInterest DiagnosticsInterest { get; }
+        CharacterFootIkCaptureInterest FootIkCaptureInterest { get; }
         bool TryGetAnimationPresentationDebugView(
             out AnimationPresentationDebugView debugView);
         bool TryGetPosePlanStages(out CharacterPosePlanStageSnapshot snapshot);
@@ -87,6 +144,11 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
             Guid ownerId,
             AnimationPresentationDiagnosticsInterest interest);
         void RemoveDiagnosticsInterest(Guid ownerId);
+        void SetFootIkCapture(
+            Guid ownerId,
+            CharacterFootIkCaptureInterest interest,
+            ICharacterFootIkCommittedCaptureConsumer consumer);
+        void RemoveFootIkCapture(Guid ownerId);
         void SetPoseWatchInterests(Guid ownerId, IReadOnlyList<AnimationPoseWatchIdentity> interests);
         void RemovePoseWatchInterests(Guid ownerId);
     }
@@ -122,6 +184,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
         public bool MotionMatchingRuntimeEnabled => m_Provider.MotionMatchingRuntimeEnabled;
         public AnimationPresentationDiagnosticsInterest DiagnosticsInterest =>
             m_Provider.DiagnosticsInterest;
+        public CharacterFootIkCaptureInterest FootIkCaptureInterest =>
+            m_Provider.FootIkCaptureInterest;
 
         public bool TryGetDebugView(
             out AnimationPresentationDebugView debugView)
@@ -161,6 +225,18 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
 
         public void RemoveDiagnosticsInterest(Guid ownerId) =>
             m_Provider.RemoveDiagnosticsInterest(ownerId);
+
+        public void SetFootIkCapture(
+            Guid ownerId,
+            CharacterFootIkCaptureInterest interest,
+            ICharacterFootIkCommittedCaptureConsumer consumer) =>
+            m_Provider.SetFootIkCapture(
+                ownerId,
+                interest,
+                consumer);
+
+        public void RemoveFootIkCapture(Guid ownerId) =>
+            m_Provider.RemoveFootIkCapture(ownerId);
 
         public void SetPoseWatchInterests(Guid ownerId, IReadOnlyList<AnimationPoseWatchIdentity> interests) =>
             m_Provider.SetPoseWatchInterests(ownerId, interests);

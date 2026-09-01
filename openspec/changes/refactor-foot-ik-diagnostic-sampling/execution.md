@@ -31,3 +31,5 @@ PoseGraph提交候选已把`PoseGraphId`与`PoseGraphRevision`补入唯一`Chara
 PoseGraph已新增唯一`CharacterFootIkCommittedCaptureViewProjector`并把Foot页、独立Lease、Foot／Solver／Physical组合与Foot Step Observation解析全部移出万能Snapshot Publisher。Projector只在成功Seal后的Committed diagnostics入口运行，逐项核对根Execution、Actor、Constraint与Final Publication lineage；Discard／Reset／Fault发布失败和双页复用都会使对应Lease失效。万能Snapshot只引用同一Lease供旧UI读取，不再保存或复制Foot事实页。由此完成任务2.3。
 
 固定Record `030456`相对`024336`的Proof为`matched:1044`；主表1198业务列和Geometry 22业务列逐值一致，其余identity列一一映射且0冲突，评分84.2、weighted evidence 96.5不变。旧Foot Sampler仍等待Foot事件并读取Snapshot外层metadata，任务2.4、4.2与7.1继续待迁。
+
+PoseGraph已建立`CharacterFootIkCaptureInterest`、单一owner consumer登记和`CharacterPoseFrameTransaction`帧开始冻结合同；Foot插件后续只需把已编译Program descriptor归一化为容量1的typed interest，不把Sampler或packet传给PoseGraph。默认未登记固定回放`031403`相对`030456`为`matched:1044`，Foot／Geometry业务列0冲突、评分不变。任务2.1、2.2与2.5仍等待specific interest真正传播到Constraint、Final Publication与独立Projector后统一验收。

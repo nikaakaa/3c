@@ -453,3 +453,13 @@ A/B均为2086脚行、1222列，其中1198个业务列逐值相同、24个运行
 正式A为`Diagnostics/FootPlacementRuns/20260901-235713-270-10be4886ce4a48f0ab7eedb009127664`，候选B为`Diagnostics/FootPlacementRuns/20260902-000722-129-1675f4cae70142a1a4c177739208b7bd`；B Proof为`Temp/CharacterInputReplayProofs/v4/43357ff3cd384e5cba75d2c31175b116/20260902-000845-600-5dd258f8bc9c4492b4e44f76922fc0a1.json`，工具对A Proof正式报告`matched:1044`，无failure且Foot Finalizing已结束。
 
 A/B均为2086脚行、1222列，其中1198个业务列逐值相同、24个运行identity列一一映射且0冲突；Geometry均为67186行、27列，其中22个业务列逐值相同、5个identity列一一映射且0冲突；十份正式报告按既定Sample identity、文件／index hash与大小、分析耗时和Surface identity规则归一化后10／10相同，七维分项、总分84.2和weighted evidence 96.5不变。由此确认physical identity scratch迁入Source Binding页没有改变Direct／Clip／BlendSpace绑定、Source时间、动画时钟、Foot、Pelvis、Goal、FBBIK、Final Pose或Physical业务；`000722`成为Source Usage／Adapter迁移的下一A。
+
+## CharacterPoseSourceFrameResult唯一Publisher
+
+状态：提交`a8422da09`已让`CharacterPoseSourceModule`从自己的Pending Demand页读取唯一Demand，构造、校验并绑定`CharacterPoseSourceFrameResult`后把typed Result返回Program侧。`PosePlanExecutionRuntime`不再直接`new CharacterPoseSourceFrameResult`或调用Source页`BindResult`，只保留原`IsReady`失败政策并把成功Result交给后续Program Prepared合同。Action／provider sample字典、availability判断、字段顺序和Source Adapter数学均未改变。
+
+`ThirdPersonClient.Runtime.csproj`按规定参数编译成功，0错误；警告只来自既有Unity／第三方依赖与Input Value未使用字段，build server已立即关闭。Unity刷新、回放和退出Play期间只出现同一条FinalIK Domain Reload序列化深度日志，没有Source Result、Pending page、PoseGraph或IK异常；单独记录后清空，3C Console为0。
+
+正式A为`Diagnostics/FootPlacementRuns/20260902-000722-129-1675f4cae70142a1a4c177739208b7bd`，候选B为`Diagnostics/FootPlacementRuns/20260902-001521-259-0a58993b2ae64106b5e93e82413de6b7`；B Proof为`Temp/CharacterInputReplayProofs/v4/43357ff3cd384e5cba75d2c31175b116/20260902-001644-239-6ae2ea944e0e404db45e61069be963dc.json`，工具对A Proof正式报告`matched:1044`，无failure且Foot Finalizing已结束。
+
+A/B均为2086脚行、1222列，其中1198个业务列逐值相同、24个运行identity列一一映射且0冲突；Geometry均为67186行、27列，其中22个业务列逐值相同、5个identity列一一映射且0冲突；十份正式报告按既定Sample identity、文件／index hash与大小、分析耗时和Surface identity规则归一化后10／10相同，七维分项、总分84.2和weighted evidence 96.5不变。由此确认Source Frame Result唯一写入Owner迁移没有改变sample readiness、Source时间、动画时钟、Foot、Pelvis、Goal、FBBIK、Final Pose或Physical业务；`001521`成为新诊断架构文档对账后的下一PoseGraph实现基线。

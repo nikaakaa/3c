@@ -365,3 +365,13 @@ A/B均为2086脚行、1222列，其中1198个业务列逐值相同、24个运行
 正式A为`Diagnostics/FootPlacementRuns/20260901-221205-709-14169caf31c54ac9941f5f68c966f9d6`，候选B为`Diagnostics/FootPlacementRuns/20260901-221941-106-77c66c8fd22b46898deb7876a8598bc4`；B Proof为`Temp/CharacterInputReplayProofs/v4/43357ff3cd384e5cba75d2c31175b116/20260901-222039-293-2dac8b71bd0947eda9374049ba410aff.json`，工具对A Proof正式报告`matched:1044`。
 
 A/B均为2086脚行、1222列，其中1198个业务列逐值相同、24个运行identity列一一映射且0冲突；Geometry均为67186行、27列，其中22个业务列逐值相同、5个identity列一一映射且0冲突；十份正式报告归一化后10／10相同，七维分项与总分84.2不变。由此确认Stack／Route诊断读取边界迁移没有改变动画选择、过渡、Stored Pose、Foot、Pelvis、Goal、FBBIK、Final Pose、Physical或正式诊断业务；`221941`成为StateMachine／Inertialization诊断投影收口的正式A。
+
+## Pose StateMachine并入Actor Committed Diagnostics页
+
+状态：提交`cda8bbbcc`已把Pose StateMachine的Committed header并入同一`CharacterPoseActorCommittedDiagnosticsView`。Projector在基础状态Interest下复制现有`CreateSnapshot`结果；StateMachine动态骨骼权重继续只来自已验证的Program Committed Diagnostics页。Snapshot Publisher删除StateMachine Runtime列表参数和现场快照调用，用Actor header与Program权重组合最终诊断页。State选择、Transition、权重生成、Source准备、StateMachine Commit和Linked Pose关系均未改。当前Actor运行对象中只剩Inertialization仍由Snapshot现场读取，所以任务13.5和13.6继续保持未完成。
+
+`ThirdPersonClient.Runtime.csproj`按规定参数编译成功，0错误；警告只来自既有Unity包、第三方包和既有Input字段，build server已关闭。Unity全量刷新、回放与退出Play期间只有同一条`RootMotion.FinalIK::FBIKChain.reachSmoothing`Domain Reload序列化深度日志，没有StateMachine、PoseGraph、IK或采样异常，清空后Console为0。
+
+正式A为`Diagnostics/FootPlacementRuns/20260901-221941-106-77c66c8fd22b46898deb7876a8598bc4`，候选B为`Diagnostics/FootPlacementRuns/20260901-222523-572-cc193515ef1c401893575fb46a03b060`；B Proof为`Temp/CharacterInputReplayProofs/v4/43357ff3cd384e5cba75d2c31175b116/20260901-222620-545-d5077e9ee35649258985d39c37dba17f.json`，工具对A Proof正式报告`matched:1044`。
+
+A/B均为2086脚行、1222列，其中1198个业务列逐值相同、24个运行identity列一一映射且0冲突；Geometry均为67186行、27列，其中22个业务列逐值相同、5个identity列一一映射且0冲突；十份正式报告归一化后10／10相同，七维分项与总分84.2不变。由此确认StateMachine诊断读取边界迁移没有改变状态选择、过渡、骨骼权重、Foot、Pelvis、Goal、FBBIK、Final Pose、Physical或正式诊断业务；`222523`成为Inertialization诊断投影收口的正式A。

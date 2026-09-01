@@ -139,6 +139,9 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             SamplingTransaction { get; private set; }
         internal AnimationSlotMutationLease SlotLease { get; private set; }
         internal CharacterPoseProgramFrameLease PoseLease { get; private set; }
+        internal CharacterPoseSourceDemand SourceDemand { get; private set; }
+        internal CharacterPoseSourceFrameResult SourceFrame { get; private set; }
+        internal bool HasSourceFrame { get; private set; }
         internal CharacterPoseProgramResult ProgramResult { get; private set; }
         internal CharacterPoseConstraintResult ConstraintResult
         {
@@ -183,6 +186,11 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             SlotLease.FrameIdentity == Lineage.FrameIdentity &&
             PoseLease.IsValid &&
             PoseLease.FrameIdentity == Lineage.FrameIdentity &&
+            HasSourceFrame &&
+            SourceDemand.IsValid &&
+            SourceFrame.IsReady &&
+            SourceDemand.Lineage == Lineage &&
+            SourceFrame.Lineage == Lineage &&
             HasExecutionResults &&
             ProgramResult.IsCompleted &&
             ConstraintResult.IsCompleted &&
@@ -238,6 +246,9 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             PoseLease = poseLease;
             MotionMatchingLease = motionMatchingLease;
             HasMotionMatchingLease = hasMotionMatchingLease;
+            SourceDemand = default;
+            SourceFrame = default;
+            HasSourceFrame = false;
             ProgramResult = default;
             ConstraintResult = default;
             PublicationResult = default;
@@ -247,19 +258,26 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             Closed = false;
         }
 
-        internal void BindCompletion(
-            in CharacterPoseFrameLineage completedLineage)
+        internal void BindSourceResults(
+            in CharacterPoseSourceDemand demand,
+            in CharacterPoseSourceFrameResult sourceFrame)
         {
             RequirePhase(AnimationPresentationFramePhase.Prepare);
             if (Lineage.CompletionIdentity != 0 ||
-                !completedLineage.IsValid ||
-                Lineage.WithCompletion(completedLineage.CompletionIdentity) !=
-                completedLineage)
+                HasSourceFrame ||
+                !demand.IsValid ||
+                !sourceFrame.IsReady ||
+                demand.Lineage != sourceFrame.Lineage ||
+                Lineage.WithCompletion(
+                    demand.Lineage.CompletionIdentity) != demand.Lineage)
             {
                 throw new InvalidOperationException(
-                    "Character Pose frame completion identity is invalid.");
+                    "Character Pose source results are invalid.");
             }
-            Lineage = completedLineage;
+            Lineage = demand.Lineage;
+            SourceDemand = demand;
+            SourceFrame = sourceFrame;
+            HasSourceFrame = true;
         }
 
         internal void BindExecutionResults(
@@ -352,6 +370,9 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             SamplingTransaction = null;
             SlotLease = default;
             PoseLease = default;
+            SourceDemand = default;
+            SourceFrame = default;
+            HasSourceFrame = false;
             ProgramResult = default;
             ConstraintResult = default;
             PublicationResult = default;

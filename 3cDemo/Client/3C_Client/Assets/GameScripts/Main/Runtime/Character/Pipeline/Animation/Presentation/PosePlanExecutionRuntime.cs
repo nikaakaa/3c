@@ -33,7 +33,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
     internal readonly struct CharacterPoseProgramPrepared
     {
         internal CharacterPoseProgramPrepared(
-            in CharacterPoseFrameLineage lineage,
+            in CharacterPoseSourceFrameResult sourceFrame,
             float presentationDeltaSeconds,
             in CharacterPoseGraphNativeBinding frame,
             in CharacterPoseGraphStagedExecutor poseExecutor,
@@ -41,7 +41,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             bool hasCommittedFinal,
             in AnimationFinalPoseNativeReadBinding committedFinalRead)
         {
-            Lineage = lineage;
+            SourceFrame = sourceFrame;
+            Lineage = sourceFrame.Lineage;
             PresentationDeltaSeconds = presentationDeltaSeconds;
             Frame = frame;
             PoseExecutor = poseExecutor;
@@ -50,6 +51,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             CommittedFinalRead = committedFinalRead;
         }
 
+        internal CharacterPoseSourceFrameResult SourceFrame { get; }
         internal CharacterPoseFrameLineage Lineage { get; }
         internal float PresentationDeltaSeconds { get; }
         internal CharacterPoseGraphNativeBinding Frame { get; }
@@ -58,6 +60,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
         internal bool HasCommittedFinal { get; }
         internal AnimationFinalPoseNativeReadBinding CommittedFinalRead { get; }
         internal bool IsValid =>
+            SourceFrame.IsReady &&
+            SourceFrame.Lineage == Lineage &&
             Lineage.IsValid &&
             float.IsFinite(PresentationDeltaSeconds) &&
             PresentationDeltaSeconds >= 0f &&
@@ -307,6 +311,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
         AnimationScriptPlayable[] m_BlendSpacePlayerPlayables;
         ulong m_CompletionIdentity = 1;
         ulong m_FrameCompletionContext;
+        CharacterPoseSourceDemand m_PendingSourceDemand;
         ulong m_ActionBackendReleaseRequestIdentity;
         ulong m_ActionBackendReleaseCompletionIdentity;
         int m_ReleasedSourceCount;
@@ -925,6 +930,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                 throw new InvalidOperationException(
                     "Pose Plan Motion Matching completion from the previous frame was not consumed.");
             }
+            m_PendingSourceDemand = default;
             bool modulesOpen = false;
             bool poseConstraintsOpen = false;
             try
@@ -1024,6 +1030,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             m_HasPendingCompletedFrame = false;
             m_HasOpenFrame = false;
             m_ActiveFrameLease = default;
+            m_PendingSourceDemand = default;
             m_PendingActionBackendReleaseFrameStartCount = 0;
             ClearLinkedPoseFrameSelection();
         }
@@ -1284,6 +1291,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             ClearPreparedMotionMatchingPoseCompletion();
             m_HasOpenFrame = false;
             m_ActiveFrameLease = default;
+            m_PendingSourceDemand = default;
             m_CommitValidated = false;
             m_PendingCompletedFrame = default;
             m_HasPendingCompletedFrame = false;
@@ -2300,8 +2308,38 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             }
         }
 
-        internal CharacterPoseProgramPrepared PrepareEvaluation(
+        internal CharacterPoseSourceDemand CreateSourceDemand(
             in CharacterPoseFrameLineage openLineage,
+            IReadOnlyList<PoseSourceProviderDemand> providerDemands,
+            int actionSourceCount,
+            int providerSourceCount)
+        {
+            RequireAlive();
+            RequireOpenMutation();
+            if (!openLineage.IsOpenValid ||
+                openLineage.CompletionIdentity != 0 ||
+                openLineage.FrameIdentity !=
+                    m_ActiveFrameLease.FrameIdentity ||
+                m_PendingSourceDemand.IsValid)
+            {
+                throw new ArgumentException(
+                    "Pose Program source demand lineage is invalid.",
+                    nameof(openLineage));
+            }
+            ulong completionIdentity = NextCompletionIdentity();
+            m_FrameCompletionContext = completionIdentity;
+            CharacterPoseFrameLineage lineage =
+                openLineage.WithCompletion(completionIdentity);
+            m_PendingSourceDemand = new CharacterPoseSourceDemand(
+                in lineage,
+                providerDemands,
+                actionSourceCount,
+                providerSourceCount);
+            return m_PendingSourceDemand;
+        }
+
+        internal CharacterPoseProgramPrepared PrepareEvaluation(
+            in CharacterPoseSourceDemand sourceDemand,
             float presentationDeltaSeconds,
             IReadOnlyDictionary<AnimationPlayerSourceSampleKey,
                 AnimationResolvedPoseSourceSample> actionSourceSamples,
@@ -2311,13 +2349,17 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
         {
             RequireAlive();
             RequireOpenMutation();
-            if (!openLineage.IsOpenValid ||
-                openLineage.CompletionIdentity != 0 ||
-                openLineage.FrameIdentity != m_ActiveFrameLease.FrameIdentity)
+            if (!sourceDemand.IsValid ||
+                !m_PendingSourceDemand.IsValid ||
+                sourceDemand.Lineage != m_PendingSourceDemand.Lineage ||
+                sourceDemand.Lineage.FrameIdentity !=
+                    m_ActiveFrameLease.FrameIdentity ||
+                sourceDemand.Lineage.CompletionIdentity !=
+                    m_FrameCompletionContext)
             {
                 throw new ArgumentException(
-                    "Pose Program open lineage is invalid.",
-                    nameof(openLineage));
+                    "Pose Program source demand is not active.",
+                    nameof(sourceDemand));
             }
             if (!float.IsFinite(presentationDeltaSeconds) || presentationDeltaSeconds < 0f)
                 throw new ArgumentOutOfRangeException(nameof(presentationDeltaSeconds));
@@ -2332,12 +2374,11 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                 m_Workspace.TryGetCommittedFinalReadBinding(
                     out AnimationFinalPoseNativeReadBinding committedFinalRead);
 
-            ulong completionIdentity;
+            ulong completionIdentity =
+                sourceDemand.Lineage.CompletionIdentity;
             CharacterPoseGraphNativeBinding frame;
             using (PrepareMarker.Auto())
             {
-                completionIdentity = NextCompletionIdentity();
-                m_FrameCompletionContext = completionIdentity;
                 m_ReleasedSourceCount = 0;
                 m_RecordReleaseDiagnostics = recordDiagnostics;
                 m_ActionSlotReleaseCompletions.Clear();
@@ -2502,10 +2543,17 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                     in committedFinalRead);
             }
 
-            CharacterPoseFrameLineage lineage =
-                openLineage.WithCompletion(completionIdentity);
+            var sourceFrame = new CharacterPoseSourceFrameResult(
+                in sourceDemand,
+                actionSourceSamples,
+                providerSourceSamples);
+            if (!sourceFrame.IsReady)
+            {
+                throw new InvalidOperationException(
+                    $"Pose source frame ended as '{sourceFrame.Outcome}'.");
+            }
             return new CharacterPoseProgramPrepared(
-                in lineage,
+                in sourceFrame,
                 presentationDeltaSeconds,
                 in frame,
                 in poseExecutor,
@@ -3022,6 +3070,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             m_PendingCompletedFrame = default;
             m_HasCompletedFrame = false;
             m_HasPendingCompletedFrame = false;
+            m_PendingSourceDemand = default;
             m_PendingFrameOutcome = AnimationPresentationFrameOutcome.None;
             m_RecordReleaseDiagnostics = false;
             m_InertializationPlan.Reset();
@@ -3070,6 +3119,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             m_PendingCompletedFrame = default;
             m_HasCompletedFrame = false;
             m_HasPendingCompletedFrame = false;
+            m_PendingSourceDemand = default;
             m_PendingFrameOutcome = AnimationPresentationFrameOutcome.None;
             Exception failure = null;
             DisposeStep(m_DiagnosticsPublisher.Dispose, ref failure);

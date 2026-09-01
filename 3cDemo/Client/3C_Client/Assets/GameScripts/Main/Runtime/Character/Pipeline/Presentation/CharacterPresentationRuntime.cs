@@ -572,17 +572,25 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 }
                 CharacterPoseFrameLineage openLineage =
                     transaction.Lineage;
+                CharacterPoseSourceDemand sourceDemand =
+                    m_PoseRuntime.CreateSourceDemand(
+                        in openLineage,
+                        m_FrameWorkspace.ProviderDemands,
+                        m_ActionSourceSamples.Count,
+                        m_ProviderSourceSamples.Count);
                 CharacterPoseProgramPrepared preparedPose =
                     m_PoseRuntime.PrepareEvaluation(
-                        in openLineage,
+                        in sourceDemand,
                         presentationDeltaSeconds,
                         m_ActionSourceSamples,
                         m_ProviderSourceSamples,
                         diagnosticsInterest !=
                             AnimationPresentationDiagnosticsInterest.None);
-                CharacterPoseFrameLineage completedLineage =
-                    preparedPose.Lineage;
-                transaction.BindCompletion(in completedLineage);
+                CharacterPoseSourceFrameResult sourceFrame =
+                    preparedPose.SourceFrame;
+                transaction.BindSourceResults(
+                    in sourceDemand,
+                    in sourceFrame);
                 if (hasMotionMatchingResolution)
                 {
                     m_PoseRuntime

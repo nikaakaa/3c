@@ -417,3 +417,15 @@ A/B均为2086脚行、1222列，其中1198个业务列逐值相同、24个运行
 正式A为`Diagnostics/FootPlacementRuns/20260901-230258-692-d855ef3956c74e8290b94323219372a5`，候选B为`Diagnostics/FootPlacementRuns/20260901-233212-574-ed0f12eb26024a79906148a33263ab74`；B Proof为`Temp/CharacterInputReplayProofs/v4/43357ff3cd384e5cba75d2c31175b116/20260901-233313-409-4bbe705712294d1ea4f42adc6a1f2474.json`，工具对A Proof正式报告`matched:1044`、`divergent_frame_count=0`和`first_divergent_relative_frame=-1`，Runtime identity、Trace、Start Body、Tick／Presentation Clock、Input hash、Body trajectory hash与1043个表现采样帧均保持一致。
 
 A/B均为2086脚行、1222列，其中1198个业务列逐值相同、24个运行／实例／Surface／Path identity列一一映射且0冲突；Geometry均为67186行、27列，其中22个业务列逐值相同、5个identity列一一映射且0冲突。十份正式报告只在Sample identity、文件／index hash、detail字节与分析耗时以及已证明的一一Surface identity上变化，归一化后10／10相同；七维分项、总分84.2和weighted evidence 96.5不变。由此确认本Trace覆盖的source采样与释放时机、slot复用、动画时钟、Foot、Pelvis、Goal、FBBIK、Final Pose和Physical业务没有因物理Source所有权迁移改变；`233212`成为Source Adapter与Owned页迁移的下一A。
+
+## Source-owned Release Preparation页
+
+状态：提交`4f54a06ab`已在`CharacterPoseSourceModule`内新增固定容量、单调generation的release preparation页。每次release validation后，Module把Physical Registry token与Animancer backend token成对写入自己的私有槽位，只向旧协调Runtime签发包含槽位、generation、physical identity、Source和Node identity的typed `ReleasePreparation`。Standalone、Stack和Action三类外层journal不再分别保存两个Implementation token；成功帧后的断连、backend release与Registry apply统一由Source Module按同一handle执行，重复、过期或未消费handle直接拒绝。Discard会随Physical Source页一起清空Pending preparation，下一Frame和deferred release封口都会拒绝残留handle。
+
+本步没有改变谁决定retirement、Stack／Slot何时允许释放、Action completion identity、Route notification或release diagnostics记录时机；这些逻辑仍在原调用位置按原顺序执行。外层三类journal、Action request／acknowledgement与release completion尚未整体迁入Source-owned页，因此任务4.1和4.4继续保持未完成。
+
+`ThirdPersonClient.Runtime.csproj`按规定参数编译成功，0错误；唯一工程警告为既有Input Value未使用字段，build server已立即关闭。Unity全量刷新、回放和退出Play期间只出现同一条FinalIK Domain Reload序列化深度日志，没有release generation、capacity、stale handle、Source lifecycle、PoseGraph或IK异常；单独记录后清空，3C Console为0。
+
+正式A为`Diagnostics/FootPlacementRuns/20260901-233212-574-ed0f12eb26024a79906148a33263ab74`，候选B为`Diagnostics/FootPlacementRuns/20260901-234825-639-d86985e088c8402d9d0f7c6315a4223d`；B Proof为`Temp/CharacterInputReplayProofs/v4/43357ff3cd384e5cba75d2c31175b116/20260901-234924-881-6531da2c29b149e9a57d163b87218989.json`，工具对A Proof正式报告`matched:1044`，无failure且Foot Finalizing已结束。
+
+A/B均为2086脚行、1222列，其中1198个业务列逐值相同、24个运行identity列一一映射且0冲突；Geometry均为67186行、27列，其中22个业务列逐值相同、5个identity列一一映射且0冲突；十份正式报告按既定Sample identity、文件／index hash、detail字节、分析耗时与Surface identity规则归一化后10／10相同，七维分项、总分84.2和weighted evidence 96.5不变。由此确认release token成对所有权迁移没有改变source释放时机、slot复用、Action completion、动画时钟、Foot、Pelvis、Goal、FBBIK、Final Pose或Physical业务；`234825`成为完整release journal迁移的下一A。

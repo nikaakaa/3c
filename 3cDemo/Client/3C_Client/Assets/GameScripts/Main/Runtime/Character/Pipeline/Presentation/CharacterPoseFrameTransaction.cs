@@ -139,6 +139,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             SamplingTransaction { get; private set; }
         internal AnimationSlotMutationLease SlotLease { get; private set; }
         internal CharacterPoseProgramFrameLease PoseLease { get; private set; }
+        internal CharacterPoseSourceFrameLease SourceLease { get; private set; }
         internal CharacterPoseSourceDemand SourceDemand { get; private set; }
         internal CharacterPoseSourceFrameResult SourceFrame { get; private set; }
         internal bool HasSourceFrame { get; private set; }
@@ -186,6 +187,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             SlotLease.FrameIdentity == Lineage.FrameIdentity &&
             PoseLease.IsValid &&
             PoseLease.Matches(Lineage) &&
+            SourceLease.IsValid &&
+            SourceLease.Matches(Lineage) &&
             HasSourceFrame &&
             SourceDemand.IsValid &&
             SourceFrame.IsReady &&
@@ -210,6 +213,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             ActionPresentationSamplingFrameTransaction samplingTransaction,
             AnimationSlotMutationLease slotLease,
             CharacterPoseProgramFrameLease poseLease,
+            CharacterPoseSourceFrameLease sourceLease,
             MotionMatchingFrameMutationLease motionMatchingLease,
             bool hasMotionMatchingLease)
         {
@@ -230,6 +234,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 slotLease.FrameIdentity != lineage.FrameIdentity ||
                 !poseLease.IsValid ||
                 !poseLease.Matches(lineage) ||
+                !sourceLease.IsValid ||
+                !sourceLease.Matches(lineage) ||
                 hasMotionMatchingLease != motionMatchingLease.IsValid ||
                 hasMotionMatchingLease &&
                 motionMatchingLease.FrameIdentity != lineage.FrameIdentity)
@@ -244,6 +250,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             SamplingTransaction = samplingTransaction;
             SlotLease = slotLease;
             PoseLease = poseLease;
+            SourceLease = sourceLease;
             MotionMatchingLease = motionMatchingLease;
             HasMotionMatchingLease = hasMotionMatchingLease;
             SourceDemand = default;
@@ -267,6 +274,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 HasSourceFrame ||
                 !demand.IsValid ||
                 !sourceFrame.IsReady ||
+                !SourceLease.Matches(demand.Lineage) ||
                 demand.Lineage != sourceFrame.Lineage ||
                 Lineage.WithCompletion(
                     demand.Lineage.CompletionIdentity) != demand.Lineage)
@@ -370,6 +378,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             SamplingTransaction = null;
             SlotLease = default;
             PoseLease = default;
+            SourceLease = default;
             SourceDemand = default;
             SourceFrame = default;
             HasSourceFrame = false;

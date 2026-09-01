@@ -92,6 +92,118 @@ namespace ThirdPersonCharacter.Pipeline.Presentation.Animancer
             EvaluateBarrier = 3
         }
 
+        struct CharacterPoseSourcePendingPage
+        {
+            CharacterPoseSourceFrameLease m_Lease;
+            CharacterPoseSourceDemand m_Demand;
+            CharacterPoseSourceFrameResult m_Result;
+            bool m_HasDemand;
+            bool m_HasResult;
+
+            internal bool HasOpenFrame => m_Lease.IsValid;
+
+            internal CharacterPoseSourceFrameLease Begin(
+                in CharacterPoseFrameLineage lineage)
+            {
+                if (HasOpenFrame)
+                    throw new InvalidOperationException("Pose Source Pending page is already open.");
+                m_Lease = new CharacterPoseSourceFrameLease(in lineage);
+                m_Demand = default;
+                m_Result = default;
+                m_HasDemand = false;
+                m_HasResult = false;
+                return m_Lease;
+            }
+
+            internal void BindDemand(
+                CharacterPoseSourceFrameLease lease,
+                in CharacterPoseSourceDemand demand)
+            {
+                RequireLease(lease);
+                if (m_HasDemand ||
+                    !demand.IsValid ||
+                    !lease.Matches(demand.Lineage))
+                {
+                    throw new ArgumentException("Pose Source Demand does not match the Pending lease.", nameof(demand));
+                }
+                m_Demand = demand;
+                m_HasDemand = true;
+            }
+
+            internal CharacterPoseSourceDemand RequireDemand(
+                CharacterPoseSourceFrameLease lease)
+            {
+                RequireLease(lease);
+                if (!m_HasDemand)
+                    throw new InvalidOperationException("Pose Source Demand is not prepared.");
+                return m_Demand;
+            }
+
+            internal void RequireOpen(
+                CharacterPoseSourceFrameLease lease) =>
+                RequireLease(lease);
+
+            internal void BindResult(
+                CharacterPoseSourceFrameLease lease,
+                in CharacterPoseSourceFrameResult result)
+            {
+                RequireLease(lease);
+                if (!m_HasDemand ||
+                    m_HasResult ||
+                    !result.IsReady ||
+                    result.Lineage != m_Demand.Lineage)
+                {
+                    throw new ArgumentException("Pose Source Result does not match the Pending demand.", nameof(result));
+                }
+                m_Result = result;
+                m_HasResult = true;
+            }
+
+            internal void RequireReady(
+                CharacterPoseSourceFrameLease lease)
+            {
+                RequireLease(lease);
+                if (!m_HasDemand ||
+                    !m_HasResult ||
+                    !m_Result.IsReady ||
+                    m_Result.Lineage != m_Demand.Lineage)
+                {
+                    throw new InvalidOperationException("Pose Source Pending page is incomplete.");
+                }
+            }
+
+            internal void Seal(CharacterPoseSourceFrameLease lease)
+            {
+                RequireReady(lease);
+                Clear();
+            }
+
+            internal void Discard(CharacterPoseSourceFrameLease lease)
+            {
+                RequireLease(lease);
+                Clear();
+            }
+
+            internal void Clear()
+            {
+                m_Lease = default;
+                m_Demand = default;
+                m_Result = default;
+                m_HasDemand = false;
+                m_HasResult = false;
+            }
+
+            void RequireLease(CharacterPoseSourceFrameLease lease)
+            {
+                if (!lease.IsValid ||
+                    !m_Lease.IsValid ||
+                    lease.Lineage != m_Lease.Lineage)
+                {
+                    throw new InvalidOperationException("Pose Source Pending lease is stale.");
+                }
+            }
+        }
+
         struct SourceFrameMutation
         {
             internal AnimationPlayerSourceKey Key;
@@ -175,6 +287,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation.Animancer
         ulong m_LastReleasePermissionGeneration;
         ulong m_FrameIdentity;
         SourceFramePhase m_FramePhase;
+        CharacterPoseSourcePendingPage m_PendingPage;
         bool m_Disposed;
 
         internal AnimancerPoseSamplingBackend(
@@ -326,19 +439,69 @@ namespace ThirdPersonCharacter.Pipeline.Presentation.Animancer
         internal int ClipCapacity => m_ClipCapacity;
         internal bool HasOpenFrame => m_FramePhase != SourceFramePhase.Closed;
 
-        internal void BeginFrame(ulong frameIdentity)
+        internal CharacterPoseSourceFrameLease BeginFrame(
+            in CharacterPoseFrameLineage lineage)
         {
             RequireAvailable();
-            if (frameIdentity == 0)
-                throw new ArgumentOutOfRangeException(nameof(frameIdentity));
-            if (m_FramePhase != SourceFramePhase.Closed)
+            if (!lineage.IsOpenValid || lineage.CompletionIdentity != 0)
+                throw new ArgumentException("Animancer pose source lineage is invalid.", nameof(lineage));
+            if (m_FramePhase != SourceFramePhase.Closed ||
+                m_PendingPage.HasOpenFrame)
                 throw new InvalidOperationException("Animancer pose source frame is already open.");
             if (m_ReleasePermissionEntryCount != 0 ||
                 m_UnconsumedReleasePermissionCount != 0 ||
                 m_DeferredReleaseCount != 0)
                 throw new InvalidOperationException("Animancer pose source lifecycle from the committed frame is not finalized.");
-            m_FrameIdentity = frameIdentity;
+            CharacterPoseSourceFrameLease lease =
+                m_PendingPage.Begin(in lineage);
+            m_FrameIdentity = lineage.FrameIdentity;
             m_FramePhase = SourceFramePhase.Preparing;
+            return lease;
+        }
+
+        internal void BindDemand(
+            CharacterPoseSourceFrameLease lease,
+            in CharacterPoseSourceDemand demand)
+        {
+            RequireAvailable();
+            RequireFrame(lease.FrameIdentity, SourceFramePhase.Preparing);
+            m_PendingPage.BindDemand(lease, in demand);
+        }
+
+        internal CharacterPoseSourceDemand RequireDemand(
+            CharacterPoseSourceFrameLease lease)
+        {
+            RequireAvailable();
+            RequireFrame(lease.FrameIdentity, SourceFramePhase.Preparing);
+            return m_PendingPage.RequireDemand(lease);
+        }
+
+        internal void BindResult(
+            CharacterPoseSourceFrameLease lease,
+            in CharacterPoseSourceFrameResult result)
+        {
+            RequireAvailable();
+            RequireFrame(lease.FrameIdentity, SourceFramePhase.Preparing);
+            m_PendingPage.BindResult(lease, in result);
+        }
+
+        internal void RequirePendingOpen(
+            CharacterPoseSourceFrameLease lease)
+        {
+            RequireAvailable();
+            if (m_FramePhase == SourceFramePhase.Closed ||
+                m_FrameIdentity != lease.FrameIdentity)
+            {
+                throw new InvalidOperationException("Animancer pose source Pending frame is not open.");
+            }
+            m_PendingPage.RequireOpen(lease);
+        }
+
+        internal void RequirePendingReady(
+            CharacterPoseSourceFrameLease lease)
+        {
+            RequirePendingOpen(lease);
+            m_PendingPage.RequireReady(lease);
         }
 
         internal AnimationPoseSourcePrepareResult PrepareOrUpdate(
@@ -490,10 +653,12 @@ namespace ThirdPersonCharacter.Pipeline.Presentation.Animancer
                 generation);
         }
 
-        internal void ValidateFrame(ulong frameIdentity)
+        internal void ValidateFrame(
+            CharacterPoseSourceFrameLease lease)
         {
             RequireAvailable();
-            RequireFrame(frameIdentity, SourceFramePhase.Preparing);
+            m_PendingPage.RequireReady(lease);
+            RequireFrame(lease.FrameIdentity, SourceFramePhase.Preparing);
             int preparedCount = CountPreparedResources();
             if (checked(m_CommittedSourceCount + preparedCount) > m_SourceCapacity ||
                 checked(m_ReleasePermissionEntryCount + preparedCount) > m_SourceCapacity)
@@ -573,10 +738,12 @@ namespace ThirdPersonCharacter.Pipeline.Presentation.Animancer
             m_FramePhase = SourceFramePhase.Validated;
         }
 
-        internal void EnterEvaluateBarrier(ulong frameIdentity)
+        internal void EnterEvaluateBarrier(
+            CharacterPoseSourceFrameLease lease)
         {
             RequireAvailable();
-            RequireFrame(frameIdentity, SourceFramePhase.Validated);
+            m_PendingPage.RequireReady(lease);
+            RequireFrame(lease.FrameIdentity, SourceFramePhase.Validated);
             m_FramePhase = SourceFramePhase.EvaluateBarrier;
             for (int mutationIndex = 0; mutationIndex < m_FrameMutationCount; mutationIndex++)
             {
@@ -604,10 +771,12 @@ namespace ThirdPersonCharacter.Pipeline.Presentation.Animancer
             }
         }
 
-        internal void CommitFrame(ulong frameIdentity)
+        internal void CommitFrame(
+            CharacterPoseSourceFrameLease lease)
         {
             RequireAvailable();
-            RequireFrame(frameIdentity, SourceFramePhase.EvaluateBarrier);
+            m_PendingPage.RequireReady(lease);
+            RequireFrame(lease.FrameIdentity, SourceFramePhase.EvaluateBarrier);
             for (int i = 0; i < m_FrameMutationCount; i++)
             {
                 SourceFrameMutation mutation = m_FrameMutations[i];
@@ -625,22 +794,26 @@ namespace ThirdPersonCharacter.Pipeline.Presentation.Animancer
             ClearFrameMutations(false);
             m_FrameIdentity = 0;
             m_FramePhase = SourceFramePhase.Closed;
+            m_PendingPage.Seal(lease);
         }
 
-        internal void DiscardFrame(ulong frameIdentity)
+        internal void DiscardFrame(
+            CharacterPoseSourceFrameLease lease)
         {
             RequireAvailable();
+            m_PendingPage.RequireOpen(lease);
             if (m_FramePhase != SourceFramePhase.Preparing &&
                 m_FramePhase != SourceFramePhase.Validated)
             {
                 throw new InvalidOperationException("Animancer pose source frame cannot be discarded after the Evaluate Barrier.");
             }
-            if (m_FrameIdentity != frameIdentity || frameIdentity == 0)
+            if (m_FrameIdentity != lease.FrameIdentity)
                 throw new InvalidOperationException("Animancer pose source frame identity is stale.");
             ClearFrameMutations(true);
             ClearReleasePermissions();
             m_FrameIdentity = 0;
             m_FramePhase = SourceFramePhase.Closed;
+            m_PendingPage.Discard(lease);
         }
 
         internal void Release(in AnimationPoseSourceReleaseToken token)
@@ -731,6 +904,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation.Animancer
             ClearReleasePermissions();
             DestroyDeferredReleases();
             DestroyCommittedSources();
+            m_PendingPage.Clear();
         }
 
         public void Dispose()
@@ -743,6 +917,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation.Animancer
                 ClearReleasePermissions();
                 DestroyDeferredReleases();
                 DestroyCommittedSources();
+                m_PendingPage.Clear();
             }
             finally
             {

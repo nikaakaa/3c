@@ -570,16 +570,16 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     PublishActionSources();
                     PublishSlotTargets();
                 }
-                CharacterPoseFrameLineage openLineage =
-                    transaction.Lineage;
                 CharacterPoseSourceDemand sourceDemand =
                     m_PoseRuntime.CreateSourceDemand(
-                        in openLineage,
+                        transaction.PoseLease,
+                        transaction.SourceLease,
                         m_FrameWorkspace.ProviderDemands,
                         m_ActionSourceSamples.Count,
                         m_ProviderSourceSamples.Count);
                 CharacterPoseProgramPrepared preparedPose =
                     m_PoseRuntime.PrepareEvaluation(
+                        transaction.SourceLease,
                         in sourceDemand,
                         presentationDeltaSeconds,
                         m_ActionSourceSamples,
@@ -611,7 +611,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     m_ActionPlayback.ValidateFrame(
                         transaction.ActionTransaction);
                     m_PoseRuntime.ValidatePendingSeal(
-                        transaction.PoseLease);
+                        transaction.PoseLease,
+                        transaction.SourceLease);
                     transaction.MarkValidated();
                 }
 
@@ -620,6 +621,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     m_PoseRuntime.ExecuteEvaluateBarrier(
                     in bodyFrame,
                     in factFrame,
+                    transaction.SourceLease,
                     in preparedPose,
                     m_EnterEvaluateBarrier);
                 transaction.BindExecutionResults(in executionResult);
@@ -890,6 +892,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             ActionPresentationSamplingFrameTransaction sampling = null;
             AnimationSlotMutationLease slot = default;
             CharacterPoseProgramFrameLease pose = default;
+            CharacterPoseSourceFrameLease source = default;
             MotionMatchingFrameMutationLease motionMatching =
                 default;
             m_NextFrameTransactionIdentity++;
@@ -937,7 +940,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 pose = m_PoseRuntime.BeginPendingFrame(
                     in lineage,
                     diagnosticsInterest,
-                    linkedPose);
+                    linkedPose,
+                    out source);
                 m_FrameTransaction.Begin(
                     in lineage,
                     workspaceLease,
@@ -945,6 +949,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     sampling,
                     slot,
                     pose,
+                    source,
                     motionMatching,
                     m_MotionMatching != null);
                 m_FrameTransaction.BeginPrepare();
@@ -956,7 +961,9 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 if (pose.IsValid)
                 {
                     DiscardStep(
-                        () => m_PoseRuntime.DiscardPendingFrame(pose),
+                        () => m_PoseRuntime.DiscardPendingFrame(
+                            pose,
+                            source),
                         ref discardFailure);
                 }
                 if (motionMatching.IsValid)
@@ -1379,7 +1386,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     transaction.MotionMatchingLease);
             }
             m_PoseRuntime.SealFrame(
-                transaction.PoseLease);
+                transaction.PoseLease,
+                transaction.SourceLease);
             linkedPose.Seal();
             transaction.MarkSealed();
         }
@@ -1396,7 +1404,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             Exception failure = null;
             DiscardStep(
                 () => m_PoseRuntime.DiscardPendingFrame(
-                    transaction.PoseLease),
+                    transaction.PoseLease,
+                    transaction.SourceLease),
                 ref failure);
             if (transaction.HasMotionMatchingLease)
             {

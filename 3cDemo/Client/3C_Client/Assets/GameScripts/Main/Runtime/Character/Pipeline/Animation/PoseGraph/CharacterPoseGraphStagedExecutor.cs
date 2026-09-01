@@ -106,10 +106,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         [ReadOnly]
         readonly NativeArray<CharacterRootOrientationWarpNativeControl> m_RootOrientationWarpControls;
         [ReadOnly]
-        readonly NativeArray<AnimationPoseGraphNativePoseBoneIkGoalRange> m_PoseBoneIkGoalRanges;
-        [ReadOnly]
-        readonly NativeArray<CharacterPoseBoneIkGoalDescriptor> m_PoseBoneIkGoalDescriptors;
-        [ReadOnly]
         readonly NativeArray<int> m_FullBodyIkGoalContributionInputValueIndices;
         readonly int m_FullBodyIkGoalSetValueCount;
         [ReadOnly]
@@ -287,8 +283,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             m_ModifyBones = program.ModifyBones;
             m_RootOrientationWarps = program.RootOrientationWarps;
             m_RootOrientationWarpControls = program.RootOrientationWarpControls;
-            m_PoseBoneIkGoalRanges = program.PoseBoneIkGoalRanges;
-            m_PoseBoneIkGoalDescriptors = program.PoseBoneIkGoalDescriptors;
             m_FullBodyIkGoalContributionInputValueIndices =
                 program.FullBodyIkGoalContributionInputValueIndices;
             m_FullBodyIkGoalSetValueCount = program.FullBodyIkGoalSetValueCount;
@@ -2209,22 +2203,12 @@ namespace ThirdPersonCharacter.Pipeline.Animation
 
         bool EvaluatePoseBoneIkGoals(AnimationPoseGraphNativeOperation operation)
         {
-            int input = operation.InputValueIndexA;
-            int output = operation.OutputFullBodyIkGoalContributionValueIndex;
-            if (!IsInputReady(input, operation.Index) ||
-                (uint)operation.PoseBoneIkGoalsIndex >= (uint)m_PoseBoneIkGoalRanges.Length ||
-                (uint)output >=
-                (uint)m_PoseConstraints.FullBodyIkGoalContributionCount ||
+            CharacterPoseBoneContributionConstraintHandle handle =
+                operation.PoseBoneContribution;
+            int input = handle.InputPoseValueIndex;
+            if (!handle.IsValid ||
+                !IsInputReady(input, operation.Index) ||
                 m_ValueAvailability[input] != AnimationPoseAvailability.Pose)
-            {
-                return false;
-            }
-            AnimationPoseGraphNativePoseBoneIkGoalRange range =
-                m_PoseBoneIkGoalRanges[operation.PoseBoneIkGoalsIndex];
-            if (range.DescriptorOffset > m_PoseBoneIkGoalDescriptors.Length - range.DescriptorCount ||
-                range.ContributionGoalWorkspaceOffset >
-                m_PoseConstraints.FullBodyIkContributionGoalCount -
-                range.DescriptorCount)
             {
                 return false;
             }
@@ -2232,22 +2216,16 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 m_ValueDenseLocalPoses,
                 PoseOffset(input),
                 m_BoneCount);
-            NativeSlice<CharacterPoseBoneIkGoalDescriptor> descriptors =
-                new NativeSlice<CharacterPoseBoneIkGoalDescriptor>(
-                    m_PoseBoneIkGoalDescriptors,
-                    range.DescriptorOffset,
-                    range.DescriptorCount);
-            CharacterFullBodyIkGoalContributionHeader contribution =
-                m_PoseConstraints.ProducePoseBoneIkGoals(
-                    output,
-                    range.ContributionGoalWorkspaceOffset,
+            CharacterPoseBoneContributionOperationResult result =
+                m_PoseConstraints.ExecutePoseBoneContribution(
+                    in handle,
                     componentPose,
-                    descriptors,
-                    operation.Index,
-                    operation.FrameCacheIndex,
                     m_FrameSequence,
                     m_CompletionIdentity);
-            return contribution.IsValid;
+            return result.Matches(
+                in handle,
+                m_FrameSequence,
+                m_CompletionIdentity);
         }
 
         bool RebuildComponentDescendants(int inputOffset, int outputOffset, int rootIndex)
@@ -4208,8 +4186,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                         operation.OutputFullBodyIkGoalSetValueIndex == -1 &&
                         operation.InputFullBodyIkGoalSetValueIndex == -1 &&
                         operation.FullBodyIkGoalContributionInputCount == 0 &&
-                        operation.PoseBoneIkGoalsIndex >= 0 &&
-                        operation.PoseBoneIkGoalsIndex < program.PoseBoneIkGoalRanges.Length,
+                        operation.PoseBoneContribution.IsValid,
                     CharacterPoseOperationCode.FootPlacement =>
                         operation.OutputValueIndex == -1 && validPoseInputA &&
                         operation.InputValueIndexB == -1 &&

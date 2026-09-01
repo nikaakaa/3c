@@ -58,7 +58,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             int parameterPolicyOffset,
             int modifyBoneIndex,
             int rootOrientationWarpIndex,
-            int poseBoneIkGoalsIndex,
+            CharacterPoseBoneContributionConstraintHandle
+                poseBoneContribution,
             CharacterFootPlacementConstraintHandle
                 footPlacementConstraint,
             int fullBodyIkIndex,
@@ -69,6 +70,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             int frameCacheIndex,
             float weight)
         {
+            bool isPoseBoneContribution =
+                code == CharacterPoseOperationCode.PoseBoneIKGoals;
             bool isFootPlacement =
                 code == CharacterPoseOperationCode.FootPlacement;
             if (index < 0 ||
@@ -80,6 +83,14 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 fullBodyIkGoalContributionInputStart < -1 ||
                 fullBodyIkGoalContributionInputCount < 0 ||
                 frameCacheIndex != index ||
+                isPoseBoneContribution != poseBoneContribution.IsValid ||
+                isPoseBoneContribution &&
+                (poseBoneContribution.OperationIndex != index ||
+                 poseBoneContribution.CallSiteIndex != frameCacheIndex ||
+                 poseBoneContribution.InputPoseValueIndex !=
+                 inputPoseValueIndexA ||
+                 poseBoneContribution.ContributionValueIndex !=
+                 outputFullBodyIkGoalContributionValueIndex) ||
                 isFootPlacement != footPlacementConstraint.IsValid ||
                 isFootPlacement &&
                 (footPlacementConstraint.OperationIndex != index ||
@@ -92,7 +103,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             Code = code;
             OutputValueIndex = outputPoseValueIndex;
             m_OutputFullBodyIkGoalContributionValueIndex =
-                isFootPlacement
+                isPoseBoneContribution || isFootPlacement
                     ? -1
                     : outputFullBodyIkGoalContributionValueIndex;
             OutputFullBodyIkGoalSetValueIndex = outputFullBodyIkGoalSetValueIndex;
@@ -114,7 +125,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             ParameterPolicyOffset = parameterPolicyOffset;
             ModifyBoneIndex = modifyBoneIndex;
             RootOrientationWarpIndex = rootOrientationWarpIndex;
-            PoseBoneIkGoalsIndex = poseBoneIkGoalsIndex;
+            PoseBoneContribution = poseBoneContribution;
             FootPlacementConstraint = footPlacementConstraint;
             FullBodyIkIndex = fullBodyIkIndex;
             StateMachineIndex = stateMachineIndex;
@@ -130,7 +141,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         internal int OutputValueIndex { get; }
         readonly int m_OutputFullBodyIkGoalContributionValueIndex;
         internal int OutputFullBodyIkGoalContributionValueIndex =>
-            FootPlacementConstraint.IsValid
+            PoseBoneContribution.IsValid
+                ? PoseBoneContribution.ContributionValueIndex
+                : FootPlacementConstraint.IsValid
                 ? FootPlacementConstraint.ContributionValueIndex
                 : m_OutputFullBodyIkGoalContributionValueIndex;
         internal int OutputFullBodyIkGoalSetValueIndex { get; }
@@ -150,7 +163,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         internal int ParameterPolicyOffset { get; }
         internal int ModifyBoneIndex { get; }
         internal int RootOrientationWarpIndex { get; }
-        internal int PoseBoneIkGoalsIndex { get; }
+        internal CharacterPoseBoneContributionConstraintHandle
+            PoseBoneContribution { get; }
         internal CharacterFootPlacementConstraintHandle
             FootPlacementConstraint { get; }
         internal int FullBodyIkIndex { get; }
@@ -183,7 +197,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             ParameterPolicyOffset,
             ModifyBoneIndex,
             RootOrientationWarpIndex,
-            PoseBoneIkGoalsIndex,
+            PoseBoneContribution,
             FootPlacementConstraint,
             FullBodyIkIndex,
             StateMachineIndex,
@@ -218,7 +232,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             ParameterPolicyOffset,
             ModifyBoneIndex,
             RootOrientationWarpIndex,
-            PoseBoneIkGoalsIndex,
+            default,
             default,
             FullBodyIkIndex,
             StateMachineIndex,
@@ -421,26 +435,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                                  (Active != 0 || YawOffsetDegrees == 0f);
     }
 
-    internal readonly struct AnimationPoseGraphNativePoseBoneIkGoalRange
-    {
-        internal AnimationPoseGraphNativePoseBoneIkGoalRange(
-            int descriptorOffset,
-            int descriptorCount,
-            int contributionGoalWorkspaceOffset)
-        {
-            if (descriptorOffset < 0 || descriptorCount <= 0 ||
-                contributionGoalWorkspaceOffset < 0)
-                throw new ArgumentException("Pose Bone IK Goal native range is invalid.");
-            DescriptorOffset = descriptorOffset;
-            DescriptorCount = descriptorCount;
-            ContributionGoalWorkspaceOffset = contributionGoalWorkspaceOffset;
-        }
-
-        internal int DescriptorOffset { get; }
-        internal int DescriptorCount { get; }
-        internal int ContributionGoalWorkspaceOffset { get; }
-    }
-
     internal sealed class CharacterPoseGraphNativeProgram : IDisposable
     {
         sealed class Page
@@ -472,7 +466,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         NativeArray<AnimationPoseGraphNativeRootOrientationWarp> m_RootOrientationWarps;
         NativeArray<CharacterRootOrientationWarpNativeControl> m_RootOrientationWarpControls;
         NativeArray<CharacterVirtualBoneDescriptor> m_VirtualBones;
-        NativeArray<AnimationPoseGraphNativePoseBoneIkGoalRange> m_PoseBoneIkGoalRanges;
         NativeArray<CharacterPoseBoneIkGoalDescriptor> m_PoseBoneIkGoalDescriptors;
         NativeArray<int> m_FullBodyIkGoalContributionInputValueIndices;
         NativeArray<AnimationPoseGraphNativeLinkedPoseCall> m_LinkedPoseCalls;
@@ -588,7 +581,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 m_RootOrientationWarps = Allocate<AnimationPoseGraphNativeRootOrientationWarp>(program.RootOrientationWarps.Count);
                 m_RootOrientationWarpControls = AllocateClear<CharacterRootOrientationWarpNativeControl>(program.RootOrientationWarps.Count);
                 m_VirtualBones = Allocate<CharacterVirtualBoneDescriptor>(rig.VirtualBoneCount);
-                m_PoseBoneIkGoalRanges = Allocate<AnimationPoseGraphNativePoseBoneIkGoalRange>(program.PoseBoneIkGoalSources.Count);
                 int poseBoneGoalCount = program.PoseBoneIkGoalSources.Sum(value => value.GoalCount);
                 m_PoseBoneIkGoalDescriptors = Allocate<CharacterPoseBoneIkGoalDescriptor>(poseBoneGoalCount);
                 m_FullBodyIkGoalContributionInputValueIndices = Allocate<int>(
@@ -673,8 +665,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         internal NativeArray<AnimationPoseGraphNativeRootOrientationWarp> RootOrientationWarps => m_RootOrientationWarps;
         internal NativeArray<CharacterRootOrientationWarpNativeControl> RootOrientationWarpControls => m_RootOrientationWarpControls;
         internal NativeArray<CharacterVirtualBoneDescriptor> VirtualBones => m_VirtualBones;
-        internal NativeArray<AnimationPoseGraphNativePoseBoneIkGoalRange> PoseBoneIkGoalRanges => m_PoseBoneIkGoalRanges;
-        internal NativeArray<CharacterPoseBoneIkGoalDescriptor> PoseBoneIkGoalDescriptors => m_PoseBoneIkGoalDescriptors;
+        internal CharacterPoseBoneContributionCatalog PoseBoneContributions =>
+            new CharacterPoseBoneContributionCatalog(
+                m_PoseBoneIkGoalDescriptors);
         internal NativeArray<int> FullBodyIkGoalContributionInputValueIndices =>
             m_FullBodyIkGoalContributionInputValueIndices;
         internal int FullBodyIkGoalContributionCount =>
@@ -928,10 +921,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             for (int sourceIndex = 0; sourceIndex < program.PoseBoneIkGoalSources.Count; sourceIndex++)
             {
                 CharacterPresentationPoseBoneIkGoalsDescriptor source = program.PoseBoneIkGoalSources[sourceIndex];
-                m_PoseBoneIkGoalRanges[sourceIndex] = new AnimationPoseGraphNativePoseBoneIkGoalRange(
-                    poseBoneGoalOffset,
-                    source.GoalCount,
-                    source.ContributionGoalWorkspaceOffset);
                 for (int goalIndex = 0; goalIndex < source.GoalCount; goalIndex++)
                 {
                     CharacterPresentationPoseBoneIkGoalBindingDescriptor binding = source.Bindings[goalIndex];
@@ -1097,6 +1086,35 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                     referenceSpace = reference.Space;
                     scalePolicy = reference.ScalePolicy;
                 }
+                CharacterPoseBoneContributionConstraintHandle
+                    poseBoneContribution = default;
+                if (operation.Code ==
+                    CharacterPoseOperationCode.PoseBoneIKGoals)
+                {
+                    int sourceIndex = operation.PoseBoneIkGoalsIndex;
+                    CharacterPresentationPoseBoneIkGoalsDescriptor source =
+                        program.PoseBoneIkGoalSources[sourceIndex];
+                    int descriptorOffset = 0;
+                    for (int precedingSourceIndex = 0;
+                         precedingSourceIndex < sourceIndex;
+                         precedingSourceIndex++)
+                    {
+                        descriptorOffset = checked(
+                            descriptorOffset +
+                            program.PoseBoneIkGoalSources[
+                                precedingSourceIndex].GoalCount);
+                    }
+                    poseBoneContribution =
+                        new CharacterPoseBoneContributionConstraintHandle(
+                            operation.Index,
+                            operation.Index,
+                            operation.InputValueIndexA,
+                            operation
+                                .OutputFullBodyIkGoalContributionValueIndex,
+                            source.ContributionGoalWorkspaceOffset,
+                            descriptorOffset,
+                            source.GoalCount);
+                }
                 CharacterFootPlacementConstraintHandle
                     footPlacementConstraint = default;
                 if (operation.Code ==
@@ -1136,7 +1154,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                     operationPolicyOffset,
                     operation.ModifyBoneIndex,
                     operation.RootOrientationWarpIndex,
-                    operation.PoseBoneIkGoalsIndex,
+                    poseBoneContribution,
                     footPlacementConstraint,
                     operation.FullBodyIkIndex,
                     operation.StateMachineIndex,
@@ -1197,7 +1215,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 !m_RootOrientationWarps.IsCreated || !m_RootOrientationWarpControls.IsCreated ||
                 m_RootOrientationWarps.Length != m_RootOrientationWarpControls.Length ||
                 !m_VirtualBones.IsCreated || m_VirtualBones.Length != m_BoneCounts.VirtualBoneCount ||
-                !m_PoseBoneIkGoalRanges.IsCreated || !m_PoseBoneIkGoalDescriptors.IsCreated ||
+                !m_PoseBoneIkGoalDescriptors.IsCreated ||
                 !m_FullBodyIkGoalContributionInputValueIndices.IsCreated ||
                 m_FullBodyIkGoalContributionCount < 0 ||
                 m_FullBodyIkContributionGoalCount < 0 ||
@@ -1316,7 +1334,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             DisposeArray(ref m_LinkedPoseCalls);
             DisposeArray(ref m_FullBodyIkGoalContributionInputValueIndices);
             DisposeArray(ref m_PoseBoneIkGoalDescriptors);
-            DisposeArray(ref m_PoseBoneIkGoalRanges);
             DisposeArray(ref m_VirtualBones);
             DisposeArray(ref m_RootOrientationWarps);
             DisposeArray(ref m_ModifyBones);

@@ -651,6 +651,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                     projection.Rig);
                 poseConstraints = new CharacterPoseConstraintRuntime(
                     footPlacement,
+                    poseProgram.PoseBoneContributions,
                     fullBodyIkSolver,
                     finalWriter,
                     poseProgram.FullBodyIkGoalContributionCount,

@@ -155,6 +155,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
         }
 
         readonly CharacterFootPlacementModule m_FootPlacement;
+        readonly CharacterPoseBoneContributionCatalog m_PoseBoneContributions;
         readonly CharacterFinalIkFullBodySolver m_Solver;
         readonly CharacterFullBodyIkGoalAssembler m_GoalAssembler;
         readonly AnimationFinalPosePhysicalWriter m_FinalWriter;
@@ -174,6 +175,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
 
         internal CharacterPoseConstraintRuntime(
             CharacterFootPlacementModule footPlacement,
+            CharacterPoseBoneContributionCatalog poseBoneContributions,
             CharacterFinalIkFullBodySolver solver,
             AnimationFinalPosePhysicalWriter finalWriter,
             int contributionCount,
@@ -182,6 +184,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             string rigRevision)
         {
             m_FootPlacement = footPlacement;
+            m_PoseBoneContributions = poseBoneContributions;
             m_Solver = solver ?? throw new ArgumentNullException(nameof(solver));
             m_GoalAssembler = new CharacterFullBodyIkGoalAssembler();
             m_FinalWriter = finalWriter ?? throw new ArgumentNullException(nameof(finalWriter));
@@ -189,6 +192,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             m_RigRevision = new FixedString64Bytes(rigRevision ?? string.Empty);
             if (m_RigId.Length == 0 || m_RigRevision.Length == 0)
                 throw new ArgumentException("Pose Constraint Rig lineage is invalid.");
+            if (!m_PoseBoneContributions.IsValid)
+                throw new ArgumentException(
+                    "Pose Bone Contribution catalog is invalid.",
+                    nameof(poseBoneContributions));
             if (contributionCount < 0 || contributionGoalCount < 0)
                 throw new ArgumentOutOfRangeException(nameof(contributionCount));
             m_First = new Bank(
@@ -368,24 +375,25 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                 in contribution);
         }
 
-        internal CharacterFullBodyIkGoalContributionHeader ProducePoseBoneIkGoals(
-            int contributionIndex,
-            int goalOffset,
+        internal CharacterPoseBoneContributionOperationResult
+            ExecutePoseBoneContribution(
+            in CharacterPoseBoneContributionConstraintHandle handle,
             NativeSlice<AnimationLocalBonePose> componentPose,
-            NativeSlice<CharacterPoseBoneIkGoalDescriptor> descriptors,
-            int producerOperationIndex,
-            int producerCallSiteIndex,
             ulong frameSequence,
             ulong completionIdentity)
         {
             RequireRenderFrame(frameSequence, completionIdentity);
-            if ((uint)contributionIndex >=
+            if (!handle.IsValid ||
+                (uint)handle.ContributionValueIndex >=
                     (uint)m_Pending.GoalContributions.Length ||
-                goalOffset < 0 ||
-                goalOffset > m_Pending.ContributionGoals.Length - descriptors.Length)
+                handle.ContributionGoalOffset >
+                m_Pending.ContributionGoals.Length - handle.GoalCount)
             {
-                throw new ArgumentOutOfRangeException(nameof(contributionIndex));
+                throw new ArgumentOutOfRangeException(nameof(handle));
             }
+            int goalOffset = handle.ContributionGoalOffset;
+            NativeSlice<CharacterPoseBoneIkGoalDescriptor> descriptors =
+                m_PoseBoneContributions.Resolve(in handle);
             var goals = new NativeSlice<CharacterFullBodyIkGoal>(
                 m_Pending.ContributionGoals,
                 goalOffset,
@@ -400,10 +408,13 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                     completionIdentity,
                     m_RigId,
                     m_RigRevision,
-                    producerOperationIndex,
-                    producerCallSiteIndex);
-            m_Pending.GoalContributions[contributionIndex] = contribution;
-            return contribution;
+                    handle.OperationIndex,
+                    handle.CallSiteIndex);
+            m_Pending.GoalContributions[
+                handle.ContributionValueIndex] = contribution;
+            return new CharacterPoseBoneContributionOperationResult(
+                in handle,
+                in contribution);
         }
 
         internal CharacterFullBodyIkResult AssembleFullBodyIkGoals(

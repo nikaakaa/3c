@@ -134,6 +134,147 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             Contribution.CompletionIdentity == completionIdentity;
     }
 
+    internal readonly struct CharacterPoseBoneContributionConstraintHandle :
+        IEquatable<CharacterPoseBoneContributionConstraintHandle>
+    {
+        internal CharacterPoseBoneContributionConstraintHandle(
+            int operationIndex,
+            int callSiteIndex,
+            int inputPoseValueIndex,
+            int contributionValueIndex,
+            int contributionGoalOffset,
+            int descriptorOffset,
+            int descriptorCount)
+        {
+            if (operationIndex < 0 ||
+                callSiteIndex < 0 ||
+                inputPoseValueIndex < 0 ||
+                contributionValueIndex < 0 ||
+                contributionGoalOffset < 0 ||
+                descriptorOffset < 0 ||
+                descriptorCount <= 0)
+            {
+                throw new ArgumentOutOfRangeException(nameof(operationIndex));
+            }
+            OperationIndex = operationIndex;
+            CallSiteIndex = callSiteIndex;
+            InputPoseValueIndex = inputPoseValueIndex;
+            ContributionValueIndex = contributionValueIndex;
+            ContributionGoalOffset = contributionGoalOffset;
+            DescriptorOffset = descriptorOffset;
+            GoalCount = descriptorCount;
+            m_IsValid = true;
+        }
+
+        readonly bool m_IsValid;
+        internal int OperationIndex { get; }
+        internal int CallSiteIndex { get; }
+        internal int InputPoseValueIndex { get; }
+        internal int ContributionValueIndex { get; }
+        internal int ContributionGoalOffset { get; }
+        internal int DescriptorOffset { get; }
+        internal int GoalCount { get; }
+        internal bool IsValid => m_IsValid;
+
+        public bool Equals(
+            CharacterPoseBoneContributionConstraintHandle other) =>
+            OperationIndex == other.OperationIndex &&
+            CallSiteIndex == other.CallSiteIndex &&
+            InputPoseValueIndex == other.InputPoseValueIndex &&
+            ContributionValueIndex == other.ContributionValueIndex &&
+            ContributionGoalOffset == other.ContributionGoalOffset &&
+            DescriptorOffset == other.DescriptorOffset &&
+            GoalCount == other.GoalCount &&
+            m_IsValid == other.m_IsValid;
+
+        public override bool Equals(object obj) =>
+            obj is CharacterPoseBoneContributionConstraintHandle other &&
+            Equals(other);
+
+        public override int GetHashCode() => HashCode.Combine(
+            OperationIndex,
+            CallSiteIndex,
+            InputPoseValueIndex,
+            ContributionValueIndex,
+            ContributionGoalOffset,
+            DescriptorOffset,
+            GoalCount,
+            m_IsValid);
+    }
+
+    internal readonly struct CharacterPoseBoneContributionCatalog
+    {
+        internal CharacterPoseBoneContributionCatalog(
+            NativeArray<CharacterPoseBoneIkGoalDescriptor> descriptors)
+        {
+            if (!descriptors.IsCreated)
+                throw new ArgumentException(
+                    "Pose Bone Contribution catalog is invalid.",
+                    nameof(descriptors));
+            m_Descriptors = descriptors;
+        }
+
+        readonly NativeArray<CharacterPoseBoneIkGoalDescriptor> m_Descriptors;
+        internal bool IsValid => m_Descriptors.IsCreated;
+
+        internal NativeSlice<CharacterPoseBoneIkGoalDescriptor> Resolve(
+            in CharacterPoseBoneContributionConstraintHandle handle)
+        {
+            if (!IsValid ||
+                !handle.IsValid ||
+                handle.DescriptorOffset >
+                m_Descriptors.Length - handle.GoalCount)
+            {
+                throw new ArgumentException(
+                    "Pose Bone Contribution handle is outside its catalog.",
+                    nameof(handle));
+            }
+            return new NativeSlice<CharacterPoseBoneIkGoalDescriptor>(
+                m_Descriptors,
+                handle.DescriptorOffset,
+                handle.GoalCount);
+        }
+    }
+
+    internal readonly struct CharacterPoseBoneContributionOperationResult
+    {
+        internal CharacterPoseBoneContributionOperationResult(
+            in CharacterPoseBoneContributionConstraintHandle handle,
+            in CharacterFullBodyIkGoalContributionHeader contribution)
+        {
+            Handle = handle;
+            Contribution = contribution;
+            m_IsValid =
+                handle.IsValid &&
+                contribution.IsValid &&
+                contribution.Availability ==
+                CharacterFullBodyIkGoalContributionAvailability.Ready &&
+                contribution.ProducerOperationIndex ==
+                handle.OperationIndex &&
+                contribution.ProducerCallSiteIndex ==
+                handle.CallSiteIndex &&
+                contribution.GoalOffset ==
+                handle.ContributionGoalOffset &&
+                contribution.GoalCount == handle.GoalCount;
+        }
+
+        readonly bool m_IsValid;
+        internal CharacterPoseBoneContributionConstraintHandle Handle { get; }
+        internal CharacterFullBodyIkGoalContributionHeader Contribution
+        {
+            get;
+        }
+        internal bool IsValid => m_IsValid;
+        internal bool Matches(
+            in CharacterPoseBoneContributionConstraintHandle handle,
+            ulong frameSequence,
+            ulong completionIdentity) =>
+            m_IsValid &&
+            Handle.Equals(handle) &&
+            Contribution.FrameSequence == frameSequence &&
+            Contribution.CompletionIdentity == completionIdentity;
+    }
+
     public readonly struct CharacterPoseBoneRuntimeId : IEquatable<CharacterPoseBoneRuntimeId>
     {
         public CharacterPoseBoneRuntimeId(string value)

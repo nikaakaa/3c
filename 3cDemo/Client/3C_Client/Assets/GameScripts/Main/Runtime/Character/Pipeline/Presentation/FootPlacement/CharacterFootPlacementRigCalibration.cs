@@ -32,6 +32,69 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
     }
 
     [Serializable]
+    public readonly struct CharacterFootPlacementCurrentSupportFootprintPose
+    {
+        internal CharacterFootPlacementCurrentSupportFootprintPose(
+            Vector3 footPivot,
+            Vector3 basePoint,
+            Vector3 heelPoint,
+            Vector3 positiveLateralPoint,
+            Vector3 negativeLateralPoint,
+            Vector3 toeTipPoint)
+        {
+            FootPivot = footPivot;
+            BasePoint = basePoint;
+            HeelPoint = heelPoint;
+            PositiveLateralPoint = positiveLateralPoint;
+            NegativeLateralPoint = negativeLateralPoint;
+            ToeTipPoint = toeTipPoint;
+        }
+
+        public Vector3 FootPivot { get; }
+        public Vector3 BasePoint { get; }
+        public Vector3 HeelPoint { get; }
+        public Vector3 PositiveLateralPoint { get; }
+        public Vector3 NegativeLateralPoint { get; }
+        public Vector3 ToeTipPoint { get; }
+    }
+
+    [Serializable]
+    public readonly struct CharacterFootPlacementCurrentSupportFootprintCalibration
+    {
+        public CharacterFootPlacementCurrentSupportFootprintCalibration(
+            Vector3 baseFootLocalOffset,
+            Vector3 heelFootLocalOffset,
+            Vector3 positiveLateralFootLocalOffset,
+            Vector3 negativeLateralFootLocalOffset,
+            Vector3 toeTipOffsetInFootAxes)
+        {
+            BaseFootLocalOffset = baseFootLocalOffset;
+            HeelFootLocalOffset = heelFootLocalOffset;
+            PositiveLateralFootLocalOffset = positiveLateralFootLocalOffset;
+            NegativeLateralFootLocalOffset = negativeLateralFootLocalOffset;
+            ToeTipOffsetInFootAxes = toeTipOffsetInFootAxes;
+        }
+
+        public Vector3 BaseFootLocalOffset { get; }
+        public Vector3 HeelFootLocalOffset { get; }
+        public Vector3 PositiveLateralFootLocalOffset { get; }
+        public Vector3 NegativeLateralFootLocalOffset { get; }
+        public Vector3 ToeTipOffsetInFootAxes { get; }
+
+        public CharacterFootPlacementCurrentSupportFootprintPose Resolve(
+            Vector3 footPosition,
+            Quaternion footRotation,
+            Vector3 toePosition) =>
+            new CharacterFootPlacementCurrentSupportFootprintPose(
+                footPosition,
+                footPosition + footRotation * BaseFootLocalOffset,
+                footPosition + footRotation * HeelFootLocalOffset,
+                footPosition + footRotation * PositiveLateralFootLocalOffset,
+                footPosition + footRotation * NegativeLateralFootLocalOffset,
+                toePosition + footRotation * ToeTipOffsetInFootAxes);
+    }
+
+    [Serializable]
     public readonly struct CharacterFootPlacementFootCalibration
     {
         public CharacterFootPlacementFootCalibration(
@@ -57,13 +120,18 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         menuName = "3C/Presentation/Foot Placement Rig Calibration")]
     public sealed class CharacterFootPlacementRigCalibration : ScriptableObject
     {
-        public const int CurrentSchemaVersion = 4;
+        public const int CurrentSchemaVersion = 5;
 
         [SerializeField] string m_CalibrationId = string.Empty;
         [SerializeField] int m_SchemaVersion = CurrentSchemaVersion;
         [SerializeField] string m_ContentRevision = string.Empty;
         [SerializeField] string m_RigId = string.Empty;
         [SerializeField] string m_RigRevision = string.Empty;
+        [SerializeField] Vector3 m_CurrentSupportBaseFootLocalOffset;
+        [SerializeField] Vector3 m_CurrentSupportHeelFootLocalOffset;
+        [SerializeField] Vector3 m_CurrentSupportPositiveLateralFootLocalOffset;
+        [SerializeField] Vector3 m_CurrentSupportNegativeLateralFootLocalOffset;
+        [SerializeField] Vector3 m_CurrentSupportToeTipOffsetInFootAxes;
         [SerializeField] Vector3 m_LeftHeelContactLocalOffset;
         [SerializeField] Vector3 m_LeftToeContactLocalOffset;
         [SerializeField] Quaternion m_LeftSoleFrameLocalRotation;
@@ -79,6 +147,13 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         public string RigId => m_RigId ?? string.Empty;
         public string RigRevision => m_RigRevision ?? string.Empty;
         public CharacterFootPlacementRigGeometryValidationIdentity GeometryValidation => m_GeometryValidation;
+        public CharacterFootPlacementCurrentSupportFootprintCalibration CurrentSupportFootprint =>
+            new CharacterFootPlacementCurrentSupportFootprintCalibration(
+                m_CurrentSupportBaseFootLocalOffset,
+                m_CurrentSupportHeelFootLocalOffset,
+                m_CurrentSupportPositiveLateralFootLocalOffset,
+                m_CurrentSupportNegativeLateralFootLocalOffset,
+                m_CurrentSupportToeTipOffsetInFootAxes);
         public CharacterFootPlacementFootCalibration Left => new CharacterFootPlacementFootCalibration(
             m_LeftHeelContactLocalOffset,
             m_LeftToeContactLocalOffset,
@@ -100,17 +175,26 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         public void Configure(
             CharacterFootPlacementRigCalibrationId calibrationId,
             CharacterAnimationRigDefinition rig,
+            CharacterFootPlacementCurrentSupportFootprintCalibration currentSupportFootprint,
             CharacterFootPlacementFootCalibration left,
             CharacterFootPlacementFootCalibration right)
         {
             if (!rig)
                 throw new ArgumentNullException(nameof(rig));
             rig.RequireValid();
-            RequireValidDraft(left, right);
+            RequireValidDraft(currentSupportFootprint, left, right);
             m_CalibrationId = calibrationId.Value;
             m_SchemaVersion = CurrentSchemaVersion;
             m_RigId = rig.RigId;
             m_RigRevision = rig.Revision;
+            m_CurrentSupportBaseFootLocalOffset = currentSupportFootprint.BaseFootLocalOffset;
+            m_CurrentSupportHeelFootLocalOffset = currentSupportFootprint.HeelFootLocalOffset;
+            m_CurrentSupportPositiveLateralFootLocalOffset =
+                currentSupportFootprint.PositiveLateralFootLocalOffset;
+            m_CurrentSupportNegativeLateralFootLocalOffset =
+                currentSupportFootprint.NegativeLateralFootLocalOffset;
+            m_CurrentSupportToeTipOffsetInFootAxes =
+                currentSupportFootprint.ToeTipOffsetInFootAxes;
             m_LeftHeelContactLocalOffset = left.HeelContactLocalOffset;
             m_LeftToeContactLocalOffset = left.ToeContactLocalOffset;
             m_LeftSoleFrameLocalRotation = Normalize(left.SoleFrameLocalRotation);
@@ -155,6 +239,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 throw new InvalidOperationException("Foot Placement calibration Rig identity is missing.");
             RequireFoot(Left, "Left");
             RequireFoot(Right, "Right");
+            RequireCurrentSupportFootprint(CurrentSupportFootprint);
             string computed = ComputeContentRevision();
             if (string.IsNullOrEmpty(m_ContentRevision) ||
                 !string.Equals(m_ContentRevision, computed, StringComparison.Ordinal))
@@ -186,9 +271,11 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         }
 
         public static void RequireValidDraft(
+            CharacterFootPlacementCurrentSupportFootprintCalibration currentSupportFootprint,
             CharacterFootPlacementFootCalibration left,
             CharacterFootPlacementFootCalibration right)
         {
+            RequireCurrentSupportFootprint(currentSupportFootprint);
             RequireFoot(left, "Left");
             RequireFoot(right, "Right");
         }
@@ -196,11 +283,16 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         public string ComputeContentRevision()
         {
             return StableHash.Compute(
-                "character-foot-placement-rig-calibration/v4",
+                "character-foot-placement-rig-calibration/v5-current-support-footprint",
                 m_CalibrationId ?? string.Empty,
                 m_SchemaVersion.ToString(CultureInfo.InvariantCulture),
                 RigId,
                 RigRevision,
+                Format(m_CurrentSupportBaseFootLocalOffset),
+                Format(m_CurrentSupportHeelFootLocalOffset),
+                Format(m_CurrentSupportPositiveLateralFootLocalOffset),
+                Format(m_CurrentSupportNegativeLateralFootLocalOffset),
+                Format(m_CurrentSupportToeTipOffsetInFootAxes),
                 Format(m_LeftHeelContactLocalOffset),
                 Format(m_LeftToeContactLocalOffset),
                 Format(m_LeftSoleFrameLocalRotation),
@@ -224,6 +316,30 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 value.ToeContactLocalOffset.sqrMagnitude <= 0.00000001f)
                 throw new InvalidOperationException($"Foot Placement calibration '{side}' contact offsets are not configured.");
             RequireUnit(value.SoleFrameLocalRotation, $"{side}SoleFrameLocalRotation");
+        }
+
+        static void RequireCurrentSupportFootprint(
+            CharacterFootPlacementCurrentSupportFootprintCalibration value)
+        {
+            RequireFinite(value.BaseFootLocalOffset, nameof(value.BaseFootLocalOffset));
+            RequireFinite(value.HeelFootLocalOffset, nameof(value.HeelFootLocalOffset));
+            RequireFinite(
+                value.PositiveLateralFootLocalOffset,
+                nameof(value.PositiveLateralFootLocalOffset));
+            RequireFinite(
+                value.NegativeLateralFootLocalOffset,
+                nameof(value.NegativeLateralFootLocalOffset));
+            RequireFinite(value.ToeTipOffsetInFootAxes, nameof(value.ToeTipOffsetInFootAxes));
+            if ((value.HeelFootLocalOffset - value.BaseFootLocalOffset).sqrMagnitude <= 0.00000001f ||
+                (value.PositiveLateralFootLocalOffset - value.BaseFootLocalOffset).sqrMagnitude <= 0.00000001f ||
+                (value.NegativeLateralFootLocalOffset - value.BaseFootLocalOffset).sqrMagnitude <= 0.00000001f ||
+                (value.PositiveLateralFootLocalOffset -
+                 value.NegativeLateralFootLocalOffset).sqrMagnitude <= 0.00000001f ||
+                value.ToeTipOffsetInFootAxes.sqrMagnitude <= 0.00000001f)
+            {
+                throw new InvalidOperationException(
+                    "Foot Placement Current Support footprint is degenerate.");
+            }
         }
 
         static Quaternion Normalize(Quaternion value)

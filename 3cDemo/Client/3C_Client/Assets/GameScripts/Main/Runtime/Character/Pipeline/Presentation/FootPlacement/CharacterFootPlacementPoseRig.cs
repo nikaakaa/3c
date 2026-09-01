@@ -61,6 +61,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
 
             CharacterFootPlacementFootCalibration left = Calibration.Left;
             CharacterFootPlacementFootCalibration right = Calibration.Right;
+            CurrentSupportFootprint = Calibration.CurrentSupportFootprint;
             LeftHeelContactOffset = left.HeelContactLocalOffset;
             LeftToeContactOffset = left.ToeContactLocalOffset;
             RightHeelContactOffset = right.HeelContactLocalOffset;
@@ -95,6 +96,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         public CharacterFootPlacementRigCalibrationId CalibrationId => Calibration.CalibrationId;
         public int CalibrationSchemaVersion => Calibration.SchemaVersion;
         public string CalibrationRevision => Calibration.ContentRevision;
+        public CharacterFootPlacementCurrentSupportFootprintCalibration CurrentSupportFootprint { get; }
         public Transform VisualRoot => World.PresentationRoot;
         public Transform PoseRoot => Binding.Animator.transform;
         public Transform SelfColliderRoot => World.SelfColliderRoot;
@@ -159,6 +161,14 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         }
 
         public bool IsSelfCollider(Collider collider) => World.IsSelfCollider(collider);
+
+        internal CharacterFootPlacementCurrentSupportFootprintPose
+            ResolveCurrentSupportFootprint(
+                in CharacterFootPlacementAnimatedFootPose foot) =>
+            CurrentSupportFootprint.Resolve(
+                foot.AnklePosition,
+                foot.AnkleRotation,
+                foot.ToePosition);
 
         public void RequireValid()
         {

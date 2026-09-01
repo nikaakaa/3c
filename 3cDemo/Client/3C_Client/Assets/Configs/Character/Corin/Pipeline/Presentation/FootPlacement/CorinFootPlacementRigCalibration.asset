@@ -13,24 +13,29 @@ MonoBehaviour:
   m_Name: CorinFootPlacementRigCalibration
   m_EditorClassIdentifier: 
   m_CalibrationId: Corin.FootPlacementRig
-  m_SchemaVersion: 4
-  m_ContentRevision: 2997edf1c34f13f7e2a3033372226eb399379f30c4303fddfe3e97ec1e4bf38d
+  m_SchemaVersion: 5
+  m_ContentRevision: b4c646c77e349d0f4a25f68efe4729f654945696197b7dbc6779cd3234efe21e
   m_RigId: corin.animation-rig
   m_RigRevision: 87731f0d0ca14844bbf861368b9847b3
+  m_CurrentSupportBaseFootLocalOffset: {x: 0, y: -0.08, z: 0}
+  m_CurrentSupportHeelFootLocalOffset: {x: -0.01, y: -0.08, z: 0}
+  m_CurrentSupportPositiveLateralFootLocalOffset: {x: 0, y: -0.08, z: 0.005}
+  m_CurrentSupportNegativeLateralFootLocalOffset: {x: 0, y: -0.08, z: -0.005}
+  m_CurrentSupportToeTipOffsetInFootAxes: {x: 0, y: 0.01, z: 0}
   m_LeftHeelContactLocalOffset: {x: -0.08124063, y: -0.00005460252, z: -0.000029267168}
   m_LeftToeContactLocalOffset: {x: 0.00004123005, y: -0.0051994864, z: -0.000010182891}
   m_LeftSoleFrameLocalRotation: {x: 0.5018886, y: 0.4979625, z: 0.5029893, w: -0.49713477}
   m_RightHeelContactLocalOffset: {x: -0.08114601, y: 0.0014590034, z: -0.00019665039}
   m_RightToeContactLocalOffset: {x: -0.008352402, y: -0.0044627907, z: 0.0012893939}
-  m_RightSoleFrameLocalRotation: {x: 0.49782547, y: 0.4928122, z: 0.50724554, w: -0.5020041}
+  m_RightSoleFrameLocalRotation: {x: 0.4978254, y: 0.49281213, z: 0.5072455, w: -0.502004}
   m_GeometryValidation:
     m_SchemaVersion: 2
-    m_IdentityHash: 1b9ea95b7dc7ee84d4dd027c4927b006c39cefd465d7b30452c445eed8fe713d
-    m_GeometryContentHash: 9996f30d90702cc7d2aa0f54d41501f6c2c38fdede3d8eff4e0ae1387b50325a
+    m_IdentityHash: 1873abee9b005e59cee6f0b3caac5b3ca55a1f7880a98e66868f771bfb795ba6
+    m_GeometryContentHash: 2e7f37998d1d35ddd48e58437baedcbfb269c0f0b51bd821953bc2b224ef0371
     m_RigId: corin.animation-rig
     m_RigRevision: 87731f0d0ca14844bbf861368b9847b3
     m_CalibrationId: Corin.FootPlacementRig
-    m_CalibrationRevision: 2997edf1c34f13f7e2a3033372226eb399379f30c4303fddfe3e97ec1e4bf38d
+    m_CalibrationRevision: b4c646c77e349d0f4a25f68efe4729f654945696197b7dbc6779cd3234efe21e
     m_SamplingRigAssetGuid: 846373e25bc0479cb06bd295c0103817
     m_SamplingRigDependencyHash: 009b549f30a1784de1a9be266d071a39931e19948179544bc101e7799c054631
     m_PreviewClipAssetGuid: 7dbd59f643bcfbe4495990d45ad359ef

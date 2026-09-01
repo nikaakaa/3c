@@ -13,6 +13,14 @@ MonoBehaviour:
   m_Name: CorinFootPlacementProfile
   m_EditorClassIdentifier: 
   m_ProfileId: corin.foot-placement
+  m_CurrentSupportQuery:
+    m_GroundLayerMask:
+      serializedVersion: 2
+      m_Bits: 4608
+    m_HitCapacity: 16
+    m_CastAbove: 0.5
+    m_CastBelow: 0.5
+    m_MaximumSurfaceSlopeDegrees: 55
   m_LandingPrediction:
     m_GroundLayerMask:
       serializedVersion: 2

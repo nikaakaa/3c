@@ -17,7 +17,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         enum AuthoringPage : byte
         {
             RigMapping = 0,
-            Calibration = 1
+            SoleCalibration = 1,
+            CurrentSupportFootprint = 2
         }
 
         enum RigSemanticSlot : byte
@@ -39,6 +40,15 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             ToeContact = 1
         }
 
+        enum CurrentSupportFootprintEditMode : byte
+        {
+            Base = 0,
+            Heel = 1,
+            PositiveLateral = 2,
+            NegativeLateral = 3,
+            ToeTip = 4
+        }
+
         static CharacterFootPlacementAnalysisSource s_Source;
         static CharacterFootPlacementPoseRig s_Rig;
         static CharacterAnimationRigBinding s_RigBinding;
@@ -46,8 +56,11 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         static PrefabStage s_Stage;
         static CharacterFootPlacementFootCalibration s_Left;
         static CharacterFootPlacementFootCalibration s_Right;
+        static CharacterFootPlacementCurrentSupportFootprintCalibration
+            s_CurrentSupportFootprint;
         static CharacterFootSide s_Side = CharacterFootSide.Left;
         static CalibrationEditMode s_EditMode;
+        static CurrentSupportFootprintEditMode s_CurrentSupportFootprintEditMode;
         static CharacterFootPlacementRigGeometryReport s_Report;
         static string s_Error = string.Empty;
         static readonly Dictionary<int, string> s_LastValidation = new Dictionary<int, string>();
@@ -133,7 +146,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             EditorGUILayout.LabelField("Sampling Rig Authoring", EditorStyles.boldLabel);
             s_Page = (AuthoringPage)GUILayout.Toolbar(
                 (int)s_Page,
-                new[] { "Rig Mapping", "Calibration" });
+                new[] { "Rig Mapping", "Sole Calibration", "Support Footprint" });
             using (new EditorGUI.DisabledScope(true))
             {
                 EditorGUILayout.ObjectField(
@@ -152,7 +165,86 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 DrawRigMappingPage();
                 return;
             }
-            DrawCalibrationPage();
+            if (s_Page == AuthoringPage.SoleCalibration)
+            {
+                DrawCalibrationPage();
+                return;
+            }
+            DrawCurrentSupportFootprintPage();
+        }
+
+        static void DrawCurrentSupportFootprintPage()
+        {
+            using (new EditorGUILayout.HorizontalScope())
+            {
+                if (GUILayout.Toggle(
+                        s_Side == CharacterFootSide.Left,
+                        "Left Foot",
+                        EditorStyles.miniButtonLeft))
+                {
+                    s_Side = CharacterFootSide.Left;
+                }
+                if (GUILayout.Toggle(
+                        s_Side == CharacterFootSide.Right,
+                        "Right Foot",
+                        EditorStyles.miniButtonRight))
+                {
+                    s_Side = CharacterFootSide.Right;
+                }
+            }
+            s_CurrentSupportFootprintEditMode =
+                (CurrentSupportFootprintEditMode)GUILayout.Toolbar(
+                    (int)s_CurrentSupportFootprintEditMode,
+                    new[] { "Base", "Heel", "+Lateral", "-Lateral", "Toe Tip" });
+            if (GUILayout.Button("Frame Active Support Point"))
+                FrameActiveCurrentSupportPoint();
+
+            EditorGUI.BeginChangeCheck();
+            Vector3 baseOffset = EditorGUILayout.Vector3Field(
+                "Base · Foot Local",
+                s_CurrentSupportFootprint.BaseFootLocalOffset);
+            Vector3 heelOffset = EditorGUILayout.Vector3Field(
+                "Heel · Foot Local",
+                s_CurrentSupportFootprint.HeelFootLocalOffset);
+            Vector3 positiveLateralOffset = EditorGUILayout.Vector3Field(
+                "+Lateral · Foot Local",
+                s_CurrentSupportFootprint.PositiveLateralFootLocalOffset);
+            Vector3 negativeLateralOffset = EditorGUILayout.Vector3Field(
+                "-Lateral · Foot Local",
+                s_CurrentSupportFootprint.NegativeLateralFootLocalOffset);
+            Vector3 toeTipOffset = EditorGUILayout.Vector3Field(
+                "Toe Tip · Foot Axes",
+                s_CurrentSupportFootprint.ToeTipOffsetInFootAxes);
+            if (EditorGUI.EndChangeCheck())
+            {
+                s_CurrentSupportFootprint =
+                    new CharacterFootPlacementCurrentSupportFootprintCalibration(
+                        baseOffset,
+                        heelOffset,
+                        positiveLateralOffset,
+                        negativeLateralOffset,
+                        toeTipOffset);
+                EvaluateDraft();
+                SceneView.RepaintAll();
+            }
+
+            EditorGUILayout.HelpBox(
+                "Base, Heel and Lateral points use the live Foot pivot and Foot axes. Toe Tip uses the live Toe pivot with the same Foot axes. The conditional sixth point is the live Foot pivot. Query shape and distance belong to the Foot Placement Profile.",
+                MessageType.None);
+            if (!string.IsNullOrEmpty(s_Error))
+                EditorGUILayout.HelpBox(s_Error, MessageType.Error);
+            else if (s_Report != null)
+                DrawDraftDiagnostics();
+            using (new EditorGUILayout.HorizontalScope())
+            {
+                if (GUILayout.Button("Discard Unapplied Changes"))
+                    LoadDraft();
+                using (new EditorGUI.DisabledScope(s_Report == null || !s_Report.IsValid))
+                {
+                    if (GUILayout.Button("Apply Calibration Asset"))
+                        Apply();
+                }
+            }
         }
 
         static void DrawCalibrationPage()
@@ -200,7 +292,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 }
             }
             EditorGUILayout.HelpBox(
-                "Apply writes Calibration v4 Heel, Toe and Sole geometry only. Foot-analysis artifacts and Presentation Projection are rebuilt by their explicit Build commands.",
+                "Apply writes Calibration v5 Sole and Current Support footprint geometry. Foot-analysis artifacts and Presentation Projection are rebuilt by their explicit Build commands.",
                 MessageType.None);
         }
 
@@ -479,7 +571,12 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                         new AnimationBoneId(s_RightAnkleBoneId),
                         new AnimationBoneId(s_RightToeBoneId)),
                     definition.HeadBoneId);
-                calibration.Configure(calibration.CalibrationId, definition, s_Left, s_Right);
+                calibration.Configure(
+                    calibration.CalibrationId,
+                    definition,
+                    s_CurrentSupportFootprint,
+                    s_Left,
+                    s_Right);
                 var physicalTransforms = new Transform[s_RigBinding.PhysicalBones.Count];
                 for (int i = 0; i < physicalTransforms.Length; i++)
                     physicalTransforms[i] = s_RigBinding.PhysicalBones[i];
@@ -493,7 +590,12 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 EvaluateDraft();
                 if (s_Report == null || !s_Report.IsValid)
                     throw new InvalidOperationException("Updated Rig mapping does not produce valid Foot Placement geometry.");
-                calibration.Configure(calibration.CalibrationId, definition, s_Left, s_Right);
+                calibration.Configure(
+                    calibration.CalibrationId,
+                    definition,
+                    s_CurrentSupportFootprint,
+                    s_Left,
+                    s_Right);
                 CharacterFootPlacementRigGeometryValidationPublisher.Publish(s_Source, s_Report);
                 EditorUtility.SetDirty(definition);
                 EditorUtility.SetDirty(calibration);
@@ -626,6 +728,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 return;
             s_Left = s_Source.RigCalibration.Left;
             s_Right = s_Source.RigCalibration.Right;
+            s_CurrentSupportFootprint =
+                s_Source.RigCalibration.CurrentSupportFootprint;
             DeriveSoleFrames();
             EvaluateDraft();
             SceneView.RepaintAll();
@@ -639,7 +743,12 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 return;
             CharacterFootPlacementRigCalibration calibration = s_Source.RigCalibration;
             Undo.RecordObject(calibration, "Apply Foot Placement Rig Calibration");
-            calibration.Configure(calibration.CalibrationId, s_Source.RigDefinition, s_Left, s_Right);
+            calibration.Configure(
+                calibration.CalibrationId,
+                s_Source.RigDefinition,
+                s_CurrentSupportFootprint,
+                s_Left,
+                s_Right);
             CharacterFootPlacementRigGeometryValidationPublisher.Publish(s_Source, s_Report);
             EditorUtility.SetDirty(calibration);
             AssetDatabase.SaveAssetIfDirty(calibration);
@@ -656,6 +765,11 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             if (s_Page == AuthoringPage.RigMapping)
             {
                 DrawRigMappingScene();
+                return;
+            }
+            if (s_Page == AuthoringPage.CurrentSupportFootprint)
+            {
+                DrawCurrentSupportFootprintScene();
                 return;
             }
             CharacterFootPlacementFootCalibration draft = s_Side == CharacterFootSide.Left ? s_Left : s_Right;
@@ -755,6 +869,125 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 ? heelPosition
                 : toePosition;
             SceneView.lastActiveSceneView.LookAt(position, SceneView.lastActiveSceneView.rotation, Mathf.Max(0.25f, legLength * 0.65f));
+        }
+
+        static void DrawCurrentSupportFootprintScene()
+        {
+            Transform foot = s_Side == CharacterFootSide.Left
+                ? s_Rig.LeftAnkle
+                : s_Rig.RightAnkle;
+            Transform toe = s_Side == CharacterFootSide.Left
+                ? s_Rig.LeftToe
+                : s_Rig.RightToe;
+            CharacterFootPlacementCurrentSupportFootprintPose footprint =
+                s_CurrentSupportFootprint.Resolve(
+                    foot.position,
+                    foot.rotation,
+                    toe.position);
+            Vector3[] points =
+            {
+                footprint.BasePoint,
+                footprint.HeelPoint,
+                footprint.PositiveLateralPoint,
+                footprint.NegativeLateralPoint,
+                footprint.ToeTipPoint
+            };
+            Color color = s_Side == CharacterFootSide.Left
+                ? new Color(0.2f, 0.75f, 1f)
+                : new Color(1f, 0.55f, 0.2f);
+            Handles.color = color;
+            Handles.DrawAAPolyLine(
+                3f,
+                footprint.HeelPoint,
+                footprint.BasePoint,
+                footprint.ToeTipPoint);
+            Handles.DrawAAPolyLine(
+                3f,
+                footprint.NegativeLateralPoint,
+                footprint.BasePoint,
+                footprint.PositiveLateralPoint);
+            for (int i = 0; i < points.Length; i++)
+            {
+                bool active = i == (int)s_CurrentSupportFootprintEditMode;
+                DrawContact(points[i], active, color);
+            }
+            DrawContact(footprint.FootPivot, false, Color.gray);
+            Handles.Label(footprint.FootPivot, "Conditional Foot Pivot");
+
+            int activeIndex = (int)s_CurrentSupportFootprintEditMode;
+            EditorGUI.BeginChangeCheck();
+            Vector3 next = Handles.PositionHandle(points[activeIndex], Quaternion.identity);
+            if (!EditorGUI.EndChangeCheck())
+                return;
+            Vector3 baseOffset = s_CurrentSupportFootprint.BaseFootLocalOffset;
+            Vector3 heelOffset = s_CurrentSupportFootprint.HeelFootLocalOffset;
+            Vector3 positiveLateralOffset =
+                s_CurrentSupportFootprint.PositiveLateralFootLocalOffset;
+            Vector3 negativeLateralOffset =
+                s_CurrentSupportFootprint.NegativeLateralFootLocalOffset;
+            Vector3 toeTipOffset = s_CurrentSupportFootprint.ToeTipOffsetInFootAxes;
+            switch (s_CurrentSupportFootprintEditMode)
+            {
+                case CurrentSupportFootprintEditMode.Base:
+                    baseOffset = foot.InverseTransformPoint(next);
+                    break;
+                case CurrentSupportFootprintEditMode.Heel:
+                    heelOffset = foot.InverseTransformPoint(next);
+                    break;
+                case CurrentSupportFootprintEditMode.PositiveLateral:
+                    positiveLateralOffset = foot.InverseTransformPoint(next);
+                    break;
+                case CurrentSupportFootprintEditMode.NegativeLateral:
+                    negativeLateralOffset = foot.InverseTransformPoint(next);
+                    break;
+                case CurrentSupportFootprintEditMode.ToeTip:
+                    toeTipOffset = Quaternion.Inverse(foot.rotation) *
+                                   (next - toe.position);
+                    break;
+            }
+            s_CurrentSupportFootprint =
+                new CharacterFootPlacementCurrentSupportFootprintCalibration(
+                    baseOffset,
+                    heelOffset,
+                    positiveLateralOffset,
+                    negativeLateralOffset,
+                    toeTipOffset);
+            EvaluateDraft();
+            SceneView.RepaintAll();
+        }
+
+        static void FrameActiveCurrentSupportPoint()
+        {
+            if (s_Rig == null || SceneView.lastActiveSceneView == null)
+                return;
+            Transform foot = s_Side == CharacterFootSide.Left
+                ? s_Rig.LeftAnkle
+                : s_Rig.RightAnkle;
+            Transform toe = s_Side == CharacterFootSide.Left
+                ? s_Rig.LeftToe
+                : s_Rig.RightToe;
+            CharacterFootPlacementCurrentSupportFootprintPose footprint =
+                s_CurrentSupportFootprint.Resolve(
+                    foot.position,
+                    foot.rotation,
+                    toe.position);
+            Vector3 point = s_CurrentSupportFootprintEditMode switch
+            {
+                CurrentSupportFootprintEditMode.Base => footprint.BasePoint,
+                CurrentSupportFootprintEditMode.Heel => footprint.HeelPoint,
+                CurrentSupportFootprintEditMode.PositiveLateral =>
+                    footprint.PositiveLateralPoint,
+                CurrentSupportFootprintEditMode.NegativeLateral =>
+                    footprint.NegativeLateralPoint,
+                _ => footprint.ToeTipPoint
+            };
+            float legLength = s_Side == CharacterFootSide.Left
+                ? s_Rig.LeftLegLength
+                : s_Rig.RightLegLength;
+            SceneView.lastActiveSceneView.LookAt(
+                point,
+                SceneView.lastActiveSceneView.rotation,
+                Mathf.Max(0.25f, legLength * 0.65f));
         }
 
         static CharacterFootPlacementFootCalibration DeriveSoleFrame(
@@ -877,7 +1110,10 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         {
             try
             {
-                CharacterFootPlacementRigCalibration.RequireValidDraft(s_Left, s_Right);
+                CharacterFootPlacementRigCalibration.RequireValidDraft(
+                    s_CurrentSupportFootprint,
+                    s_Left,
+                    s_Right);
                 s_Report = CharacterFootPlacementRigGeometryValidator.Evaluate(s_Rig, s_Left, s_Right);
                 s_Error = string.Empty;
                 s_LastValidation[s_Source.RigCalibration.GetInstanceID()] = FormatAuthoringDiagnostics(s_Report);
@@ -1007,6 +1243,23 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 EditorGUILayout.TextField("Calibration Id", calibration.CalibrationId.Value);
                 EditorGUILayout.IntField("Schema Version", calibration.SchemaVersion);
                 EditorGUILayout.TextField("Content Revision", calibration.ContentRevision);
+                CharacterFootPlacementCurrentSupportFootprintCalibration footprint =
+                    calibration.CurrentSupportFootprint;
+                EditorGUILayout.Vector3Field(
+                    "Support Base · Foot Local",
+                    footprint.BaseFootLocalOffset);
+                EditorGUILayout.Vector3Field(
+                    "Support Heel · Foot Local",
+                    footprint.HeelFootLocalOffset);
+                EditorGUILayout.Vector3Field(
+                    "Support +Lateral · Foot Local",
+                    footprint.PositiveLateralFootLocalOffset);
+                EditorGUILayout.Vector3Field(
+                    "Support -Lateral · Foot Local",
+                    footprint.NegativeLateralFootLocalOffset);
+                EditorGUILayout.Vector3Field(
+                    "Support Toe Tip · Foot Axes",
+                    footprint.ToeTipOffsetInFootAxes);
             }
             CharacterFootPlacementRigGeometryValidationIdentity geometry = calibration.GeometryValidation;
             if (geometry == null)

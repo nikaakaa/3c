@@ -33,7 +33,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                 throw new InvalidOperationException($"Server product did not write its manifest: {path}");
             ServerProductManifestIdentity read = JsonUtility.FromJson<ServerProductManifestIdentity>(
                 File.ReadAllText(path, Encoding.UTF8));
-            if (read == null || read.schemaVersion != 2 ||
+            if (read == null || read.schemaVersion != 3 ||
                 !string.Equals(read.candidateId, candidateId, StringComparison.Ordinal) ||
                 !string.Equals(read.serverProductId, productId, StringComparison.Ordinal))
                 throw new InvalidOperationException("Server product manifest identity validation failed.");

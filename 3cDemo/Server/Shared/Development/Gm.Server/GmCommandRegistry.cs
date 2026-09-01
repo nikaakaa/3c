@@ -59,6 +59,7 @@ public sealed class GmCommandRegistry : IGmCommandCatalog
                     .Append('\u001f').Append(definition.version)
                     .Append('\u001f').Append((int)definition.permission)
                     .Append('\u001f').Append(definition.usage)
+                    .Append('\u001f').Append(definition.resultContract)
                     .Append('\u001f').Append(definition.description);
                 foreach (GmCommandArgument argument in definition.arguments)
                     builder.Append('\u001f').Append(argument.name).Append('\u001f').Append(argument.optional)
@@ -75,7 +76,8 @@ public sealed class GmCommandRegistry : IGmCommandCatalog
             throw new InvalidOperationException("GM 命令目录已锁定。");
         GmCommandDefinition definition = handler.Definition;
         if (!GmCommandSyntax.IsValidCommandId(definition.id) || definition.version <= 0 ||
-            string.IsNullOrWhiteSpace(definition.usage) || definition.permission == GmPermission.None)
+            string.IsNullOrWhiteSpace(definition.usage) || string.IsNullOrWhiteSpace(definition.resultContract) ||
+            definition.permission == GmPermission.None)
             throw new ArgumentException("GM 命令描述不完整。", nameof(handler));
         bool optional = false;
         foreach (GmCommandArgument argument in definition.arguments)

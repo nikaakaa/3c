@@ -77,6 +77,18 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                         "authorityDataPort",
                         dataPort.ToString(CultureInfo.InvariantCulture))
                 },
+                new[]
+                {
+                    NetworkTestProductAdapterUtility.SessionRole(
+                        "fantasy-server", "RuntimeArtifact", "dotrecast-authority-server", true,
+                        "Hidden", "adapter:udp-ready", Array.Empty<string>(), Array.Empty<string>()),
+                    NetworkTestProductAdapterUtility.SessionRole(
+                        "client-a", "RuntimeArtifact", "unity-client-player", true,
+                        "Visible", "adapter:udp-ready", new[] { "fantasy-server" }, Array.Empty<string>(), "client-a"),
+                    NetworkTestProductAdapterUtility.SessionRole(
+                        "client-b", "RuntimeArtifact", "unity-client-player", true,
+                        "Visible", "adapter:udp-ready", new[] { "client-a" }, Array.Empty<string>(), "client-b")
+                },
                 new[] { "default" },
                 null);
         }

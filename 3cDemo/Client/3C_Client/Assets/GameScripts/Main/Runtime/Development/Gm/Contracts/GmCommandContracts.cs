@@ -49,6 +49,7 @@ namespace ThirdPerson.Development.Gm
         public int version = 1;
         public string description = string.Empty;
         public string usage = string.Empty;
+        public string resultContract = string.Empty;
         public GmPermission permission = GmPermission.Read;
         public GmCommandArgument[] arguments = Array.Empty<GmCommandArgument>();
     }
@@ -61,6 +62,7 @@ namespace ThirdPerson.Development.Gm
         public string runId = string.Empty;
         public string serviceInstanceId = string.Empty;
         public string sessionId = string.Empty;
+        public GmToolIdentity tool = new GmToolIdentity();
         public string commandId = string.Empty;
         public int commandVersion;
         public string[] arguments = Array.Empty<string>();
@@ -105,6 +107,7 @@ namespace ThirdPerson.Development.Gm
         public string runId = string.Empty;
         public string serviceInstanceId = string.Empty;
         public string sessionId = string.Empty;
+        public GmToolIdentity tool = new GmToolIdentity();
         public GmResultCode code;
         public string completedAtUtc = string.Empty;
         public string message = string.Empty;

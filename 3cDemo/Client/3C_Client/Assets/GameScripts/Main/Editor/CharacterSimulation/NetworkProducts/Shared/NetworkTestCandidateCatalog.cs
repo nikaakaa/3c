@@ -28,8 +28,15 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
     {
         public static NetworkTestCandidateCatalogEntry[] Read(INetworkTestProductBuildAdapter adapter)
         {
+            return Read(adapter, ClientBuildArtifactLayout.NetworkRoot);
+        }
+
+        public static NetworkTestCandidateCatalogEntry[] Read(
+            INetworkTestProductBuildAdapter adapter,
+            string networkRoot)
+        {
             string productRoot = NetworkTestProductBuildWorkflow.RequireProductRoot(
-                ClientBuildArtifactLayout.NetworkRoot,
+                networkRoot,
                 adapter.OutputDirectoryName);
             if (!Directory.Exists(productRoot))
                 return Array.Empty<NetworkTestCandidateCatalogEntry>();
@@ -52,8 +59,16 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
 
         public static void Remove(INetworkTestProductBuildAdapter adapter, string candidateId)
         {
+            Remove(adapter, candidateId, ClientBuildArtifactLayout.NetworkRoot);
+        }
+
+        public static void Remove(
+            INetworkTestProductBuildAdapter adapter,
+            string candidateId,
+            string networkRoot)
+        {
             string productRoot = NetworkTestProductBuildWorkflow.RequireProductRoot(
-                ClientBuildArtifactLayout.NetworkRoot,
+                networkRoot,
                 adapter.OutputDirectoryName);
             string candidateRoot = NetworkTestProductBuildWorkflow.RequireCandidateRoot(productRoot, candidateId);
             string manifestPath = Path.Combine(candidateRoot, adapter.ManifestFileName);
@@ -63,7 +78,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                 adapter.ProductId,
                 candidateId);
             string runRoot = Path.Combine(
-                ClientBuildArtifactLayout.NetworkRoot,
+                networkRoot,
                 "RunLogs",
                 adapter.OutputDirectoryName);
             if (Directory.Exists(runRoot))

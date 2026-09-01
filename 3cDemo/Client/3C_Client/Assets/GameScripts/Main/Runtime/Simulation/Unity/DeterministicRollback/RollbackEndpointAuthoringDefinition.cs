@@ -14,8 +14,8 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.DeterministicRollback
         [SerializeField] string m_PeerId = string.Empty;
         [SerializeField] string m_PlayerId = string.Empty;
         [SerializeField] string m_ActorId = string.Empty;
-        [SerializeField] string m_LocalAddress = "127.0.0.1";
-        [SerializeField] int m_LocalPort;
+        string m_LocalAddress = string.Empty;
+        int m_LocalPort;
 
         public string ProfileId => Require(m_ProfileId, nameof(m_ProfileId));
         public string PeerId => Require(m_PeerId, nameof(m_PeerId));

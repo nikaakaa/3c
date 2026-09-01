@@ -61,6 +61,7 @@ namespace ThirdPerson.Development.Gm
                 runId = Service.runId,
                 serviceInstanceId = Service.serviceInstanceId,
                 sessionId = Service.sessionId,
+                tool = Service.tool,
                 commandId = parsed.CommandId,
                 commandVersion = FindVersion(parsed.CommandId),
                 arguments = parsed.Arguments

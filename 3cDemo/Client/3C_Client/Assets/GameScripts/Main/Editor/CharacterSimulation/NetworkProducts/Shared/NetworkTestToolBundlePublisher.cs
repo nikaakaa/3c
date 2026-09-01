@@ -4,6 +4,7 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using ThirdPersonSimulation;
+using UnityEditor;
 using UnityEngine;
 
 namespace ThirdPersonCharacter.Editor.CharacterSimulation
@@ -26,6 +27,8 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
     {
         public const string OrchestratorToolId = "thirdperson.network-test-orchestrator";
         public const string OrchestratorToolVersion = "1";
+        public const string SlotProfilePath =
+            "Assets/Configs/Development/NetworkTest/NetworkTestSessionSlotProfile.asset";
         const string OrchestratorRoot = "Tools/Orchestrator";
         const string AdapterRoot = "Tools/Adapter";
         const string OrchestratorExecutable = "ThirdPerson.NetworkTest.Orchestrator.exe";
@@ -48,10 +51,16 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             if (!File.Exists(executable))
                 throw new InvalidOperationException("Network Test Orchestrator executable was not published.");
 
+            NetworkTestSessionSlotProfile slotProfile =
+                AssetDatabase.LoadAssetAtPath<NetworkTestSessionSlotProfile>(SlotProfilePath);
+            if (!slotProfile)
+                throw new InvalidOperationException($"Network Test Session Slot Profile is missing: {SlotProfilePath}");
+            NetworkTestSessionSlotCatalogDocument slotCatalog = slotProfile.BuildCatalog();
+            RequireSlotContract(descriptor, slotCatalog);
             string slotCatalogPath = Path.Combine(orchestratorRoot, "SessionSlots.json");
             File.WriteAllText(
                 slotCatalogPath,
-                JsonUtility.ToJson(BuildSlotCatalog(), true),
+                JsonUtility.ToJson(slotCatalog, true),
                 new UTF8Encoding(false));
 
             string sourceAdapter = Path.Combine(
@@ -110,7 +119,25 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                     adapterId = descriptor.ProductId + ".session-adapter/1",
                     adapterPath = $"{AdapterRoot}/{adapterName}",
                     adapterHash = NetworkTestArtifactFileUtility.Sha256(adapterPath),
-                    supportedSlotIds = descriptor.SupportedSlotIds.ToArray()
+                    supportedSlotIds = descriptor.SupportedSlotIds.ToArray(),
+                    allowedRunFields = new[]
+                    {
+                        "candidateId",
+                        "candidateManifestHash",
+                        "candidateManifestPath",
+                        "candidateRoot",
+                        "endpoints",
+                        "productId",
+                        "runId",
+                        "runRoot",
+                        "runtimeTopologyIdentity",
+                        "sessionId",
+                        "slotId",
+                        "toolBundles",
+                        "windows"
+                    },
+                    roles = descriptor.SessionRoles.ToArray(),
+                    cleanupRoleIds = descriptor.SessionRoles.Reverse().Select(value => value.roleId).ToArray()
                 });
         }
 
@@ -149,67 +176,31 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             return values;
         }
 
-        static NetworkTestSessionSlotCatalogDocument BuildSlotCatalog() => new NetworkTestSessionSlotCatalogDocument
+        static void RequireSlotContract(
+            NetworkTestProductDescriptor descriptor,
+            NetworkTestSessionSlotCatalogDocument catalog)
         {
-            schemaVersion = 1,
-            slots = new[]
+            NetworkTestSessionSlotDocument[] slots = catalog.slots ?? Array.Empty<NetworkTestSessionSlotDocument>();
+            foreach (string slotId in descriptor.SupportedSlotIds)
             {
-                new NetworkTestSessionSlotDocument
+                NetworkTestSessionSlotDocument slot = slots.SingleOrDefault(value =>
+                    value != null && string.Equals(value.slotId, slotId, StringComparison.Ordinal)) ??
+                    throw new InvalidOperationException($"Network Test Session Slot ''{slotId}'' is not installed.");
+                var endpointKeys = new HashSet<string>(
+                    (slot.endpoints ?? Array.Empty<NetworkTestSessionEndpointDocument>()).Select(value => value.key),
+                    StringComparer.Ordinal);
+                var windowRoles = new HashSet<string>(
+                    (slot.windows ?? Array.Empty<NetworkTestSessionWindowDocument>()).Select(value => value.roleId),
+                    StringComparer.Ordinal);
+                foreach (NetworkTestSessionRoleManifest role in descriptor.SessionRoles)
                 {
-                    slotId = "default",
-                    endpoints = Array.Empty<NetworkTestSessionEndpointDocument>(),
-                    windows = BuildWindows(0)
-                },
-                new NetworkTestSessionSlotDocument
-                {
-                    slotId = "rollback-a",
-                    endpoints = BuildRollbackEndpoints(24100, 24200),
-                    windows = BuildWindows(0)
-                },
-                new NetworkTestSessionSlotDocument
-                {
-                    slotId = "rollback-b",
-                    endpoints = BuildRollbackEndpoints(24300, 24400),
-                    windows = BuildWindows(620)
+                    if (role.endpointKeys.Any(key => !endpointKeys.Contains(key)) ||
+                        role.windowRoleId.Length > 0 && !windowRoles.Contains(role.windowRoleId))
+                        throw new InvalidOperationException(
+                            $"Network Test Session Slot ''{slotId}'' does not satisfy role ''{role.roleId}''.");
                 }
             }
-        };
-
-        static NetworkTestSessionEndpointDocument[] BuildRollbackEndpoints(int gameplayBase, int toolBase) => new[]
-        {
-            Endpoint("rollback-relay", gameplayBase),
-            Endpoint("rollback-peer-a", gameplayBase + 1),
-            Endpoint("rollback-peer-b", gameplayBase + 2),
-            Endpoint("rollback-gm", toolBase),
-            Endpoint("rollback-relay-query", toolBase + 1)
-        };
-
-        static NetworkTestSessionEndpointDocument Endpoint(string key, int port) => new NetworkTestSessionEndpointDocument
-        {
-            key = key,
-            address = "127.0.0.1",
-            port = port
-        };
-
-        static NetworkTestSessionWindowDocument[] BuildWindows(int y) => new[]
-        {
-            new NetworkTestSessionWindowDocument
-            {
-                roleId = "peer-a",
-                x = 0,
-                y = y,
-                width = 900,
-                height = 600
-            },
-            new NetworkTestSessionWindowDocument
-            {
-                roleId = "peer-b",
-                x = 920,
-                y = y,
-                width = 900,
-                height = 600
-            }
-        };
+        }
 
         internal static string ComputeDirectoryHash(string candidateRoot, string relativeRoot)
         {

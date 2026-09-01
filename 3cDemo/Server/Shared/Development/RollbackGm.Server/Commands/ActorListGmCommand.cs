@@ -11,7 +11,8 @@ public sealed class ActorListGmCommand : IGmCommandHandler
     {
         id = "actor.list",
         description = "列出预期角色、实际握手状态和输入前沿。",
-        usage = "actor.list"
+        usage = "actor.list",
+        resultContract = "thirdperson.rollback-gm.result.actor-list/1"
     };
 
     public async Task<GmCommandResult> ExecuteAsync(IReadOnlyList<string> arguments, CancellationToken cancellation)

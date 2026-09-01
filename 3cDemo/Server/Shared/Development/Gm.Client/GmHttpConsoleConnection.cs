@@ -80,7 +80,7 @@ public sealed class GmHttpConsoleConnection : IGmCommandConnection
     {
         requestId = request.requestId, candidateId = request.candidateId, runId = request.runId,
         serviceInstanceId = request.serviceInstanceId,
-        sessionId = request.sessionId, code = code, message = message
+        sessionId = request.sessionId, tool = request.tool, code = code, message = message
     };
 
     public void Pump()
@@ -115,6 +115,7 @@ public sealed class GmHttpConsoleConnection : IGmCommandConnection
                 m_Pending.RemoveAt(i);
                 GmCommandResponse response = pending.Result.GetAwaiter().GetResult();
                 if (response.requestId != pending.Request.requestId || response.code == GmResultCode.Unspecified ||
+                    !SameTool(response.tool, pending.Request.tool) ||
                     !Enum.IsDefined(typeof(GmResultCode), response.code) || response.sections == null || response.sections.Length > 64)
                     throw new InvalidDataException("GM 请求关联或结果格式无效。");
                 foreach (GmResultSection section in response.sections)

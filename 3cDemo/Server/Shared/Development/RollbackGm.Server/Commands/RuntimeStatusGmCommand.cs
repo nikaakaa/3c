@@ -11,7 +11,8 @@ public sealed class RuntimeStatusGmCommand : IGmCommandHandler
     {
         id = "runtime.status",
         description = "查看 Relay 的网络计数与 canonical/confirmed 前沿。",
-        usage = "runtime.status"
+        usage = "runtime.status",
+        resultContract = "thirdperson.rollback-gm.result.runtime-status/1"
     };
 
     public async Task<GmCommandResult> ExecuteAsync(IReadOnlyList<string> arguments, CancellationToken cancellation)

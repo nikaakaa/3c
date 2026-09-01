@@ -1,0 +1,89 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4a6b764df6f74e35a793cf7379f15001, type: 3}
+  m_Name: NetworkTestSessionSlotProfile
+  m_EditorClassIdentifier:
+  m_Slots:
+  - m_SlotId: default
+    m_Endpoints: []
+    m_Windows:
+    - m_RoleId: authority
+      m_X: 0
+      m_Y: 0
+      m_Width: 900
+      m_Height: 600
+    - m_RoleId: client-a
+      m_X: 920
+      m_Y: 0
+      m_Width: 900
+      m_Height: 600
+    - m_RoleId: client-b
+      m_X: 0
+      m_Y: 620
+      m_Width: 900
+      m_Height: 600
+  - m_SlotId: rollback-a
+    m_Endpoints:
+    - m_Key: rollback-relay
+      m_Address: 127.0.0.1
+      m_Port: 24100
+    - m_Key: rollback-peer-a
+      m_Address: 127.0.0.1
+      m_Port: 24101
+    - m_Key: rollback-peer-b
+      m_Address: 127.0.0.1
+      m_Port: 24102
+    - m_Key: rollback-gm
+      m_Address: 127.0.0.1
+      m_Port: 24200
+    - m_Key: rollback-relay-query
+      m_Address: 127.0.0.1
+      m_Port: 24201
+    m_Windows:
+    - m_RoleId: peer-a
+      m_X: 0
+      m_Y: 0
+      m_Width: 900
+      m_Height: 600
+    - m_RoleId: peer-b
+      m_X: 920
+      m_Y: 0
+      m_Width: 900
+      m_Height: 600
+  - m_SlotId: rollback-b
+    m_Endpoints:
+    - m_Key: rollback-relay
+      m_Address: 127.0.0.1
+      m_Port: 24300
+    - m_Key: rollback-peer-a
+      m_Address: 127.0.0.1
+      m_Port: 24301
+    - m_Key: rollback-peer-b
+      m_Address: 127.0.0.1
+      m_Port: 24302
+    - m_Key: rollback-gm
+      m_Address: 127.0.0.1
+      m_Port: 24400
+    - m_Key: rollback-relay-query
+      m_Address: 127.0.0.1
+      m_Port: 24401
+    m_Windows:
+    - m_RoleId: peer-a
+      m_X: 0
+      m_Y: 620
+      m_Width: 900
+      m_Height: 600
+    - m_RoleId: peer-b
+      m_X: 920
+      m_Y: 620
+      m_Width: 900
+      m_Height: 600

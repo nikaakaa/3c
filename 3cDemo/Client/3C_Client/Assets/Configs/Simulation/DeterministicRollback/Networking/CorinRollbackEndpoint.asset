@@ -24,11 +24,7 @@ MonoBehaviour:
     m_PeerId: rollback-peer-a
     m_PlayerId: rollback-player-a
     m_ActorId: rollback-actor-a
-    m_LocalAddress: 127.0.0.1
-    m_LocalPort: 24101
   - m_ProfileId: peer-b
     m_PeerId: rollback-peer-b
     m_PlayerId: rollback-player-b
     m_ActorId: rollback-actor-b
-    m_LocalAddress: 127.0.0.1
-    m_LocalPort: 24102

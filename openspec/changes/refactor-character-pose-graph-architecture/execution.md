@@ -87,7 +87,7 @@ A/B的1215列Foot CSV中1191个业务列逐值相同，24个Run／实例／Surfa
 
 ## Program Prepared合同归位候选
 
-状态：`ThirdPersonClient.Runtime.csproj`按规定参数静态编译成功，0错误；27个警告均来自既有包或既有Input Value未使用字段，build server已关闭。后续`ThirdPersonClient.Editor.csproj`也以规定参数编译成功，0错误，build server已关闭。提交前结构的隔离A已完成，HEAD合同状态已恢复；B仍等待Foot Owner释放同一Unity与项目custom-tool bridge恢复，候选继续禁止叠加下一项代码。
+状态：`ThirdPersonClient.Runtime.csproj`按规定参数静态编译成功，0错误；27个警告均来自既有包或既有Input Value未使用字段，build server已关闭。后续`ThirdPersonClient.Editor.csproj`也以规定参数编译成功，0错误，build server已关闭。Foot Owner释放Unity后，已在其它Unity源码写入冻结窗口内重新完成同状态隔离A/B；HEAD合同状态已恢复，Replay Proof、Foot CSV、Ground Path Geometry和全部诊断报告均已对账，候选验证完成。
 
 - 将跨Owner使用的`CharacterPoseProgramPrepared`从`PosePlanExecutionRuntime.cs`移入统一`CharacterPoseFrameContracts.cs`，与Source Demand、Source Frame、Program Result、Constraint Result和Publication Result使用同一合同目录及`ThirdPersonCharacter.Pipeline.Animation`命名空间。
 - Runtime文件中的旧定义直接删除；全仓搜索只保留一个正式Prepared合同，不保留别名、转发类型或兼容namespace。现有Program-owned Pending Page继续消费同一typed合同，字段、构造校验和调用顺序均未改变。
@@ -95,4 +95,6 @@ A/B的1215列Foot CSV中1191个业务列逐值相同，24个Run／实例／Surfa
 
 固定Record仍为`43357ff3cd384e5cba75d2c31175b116`。A通过临时反向应用`4a570788`恢复提交前合同位置后执行，包为`Diagnostics/FootPlacementRuns/20260901-122052-732-2960e8c0f0c04f75980af233629242f3`，Proof为`Temp/CharacterInputReplayProofs/v4/43357ff3cd384e5cba75d2c31175b116/20260901-122151-505-6f2fb5d9e32f4949bb8d32148a1293da.json`。A完整封存1043表现帧、2086脚行和67186几何行；相对旧Proof只报告Program／Projection七个aggregate identity字段变化，`DivergentFrameCount=0`、`FirstDivergentRelativeFrame=-1`、`FirstFrameFields=[]`，因此它是当前Foot／Network身份更新后的正式提交前基线。
 
-A完成后已原样恢复HEAD合同位置，全仓仍只有`CharacterPoseFrameContracts.cs`中的一份`CharacterPoseProgramPrepared`定义，Runtime文件只保留其它任务未提交的Performance Marker差异。B尚未实际启动；项目custom-tool与Editor内存执行命令当前会断开MCP session，且Foot Owner正在使用同一Unity重建自己的基线。必须从上述A继续补B并完成Proof、Foot CSV、Geometry与诊断对账；在此之前，本候选不能作为下一小步基线。
+A完成后已原样恢复HEAD合同位置，全仓仍只有`CharacterPoseFrameContracts.cs`中的一份`CharacterPoseProgramPrepared`定义，Runtime文件只保留其它任务未提交的Performance Marker差异。由于旧A完成后Foot与Network窗口重建过正式产品和诊断基线，本步没有把跨源码状态的旧A硬接到B，而是在二者明确冻结Unity写入后重新建立同状态隔离对：A临时只反向移动`4a570788`的合同定义，包为`Diagnostics/FootPlacementRuns/20260901-125139-634-d1ccc86b44b2482f984ddc88b0b91c00`，Proof为`Temp/CharacterInputReplayProofs/v4/43357ff3cd384e5cba75d2c31175b116/20260901-125245-959-c0a9359062294e55b51318c6a0aa4516.json`；B恢复HEAD合同位置后执行，包为`Diagnostics/FootPlacementRuns/20260901-125338-003-e15cbcfa576045d68a62b71b5095bb84`，Proof为`Temp/CharacterInputReplayProofs/v4/43357ff3cd384e5cba75d2c31175b116/20260901-125437-102-198c4580f3a84dea9600ef3e848ce9bc.json`。B Proof对A报告`matched=true`、`compared_frame_count=1044`、`aggregate_mismatches=[]`、`divergent_frame_count=0`、`first_divergent_relative_frame=-1`和空`first_frame_mismatches`。
+
+A/B均封存1043表现帧、2086脚行和67186几何行。1215列Foot CSV中1191个业务列逐值相同，24个Run／实例／Surface／Path identity列全部一一映射；27列Geometry中22个业务列逐值相同，5个identity列全部一一映射，没有其它差异。`analysis.json`、`quality-score.json`及八份规则报告在排除Sample／Surface identity、文件hash、detail／index大小与分析耗时后全部相同，七维分项与总分84.2不变。由此确认合同物理归位没有改变Source采样、动画时钟、Foot、Pelvis、Goal、FBBIK、Physical Pose或诊断业务事实；当前B可作为下一项Operation Completion迁移的正式A基线。

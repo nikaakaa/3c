@@ -654,7 +654,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
         {
             RequirePendingLease(lease);
             if (!m_PendingResult.IsCompleted ||
-                m_PendingResult.Lineage != lease.Lineage)
+                !lease.Matches(m_PendingResult.Lineage))
             {
                 throw new InvalidOperationException(
                     "Pose Constraint result is incomplete at seal.");

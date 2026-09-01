@@ -9,6 +9,148 @@ using UnityEngine;
 
 namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
 {
+    internal readonly struct CharacterPoseActorCommittedDiagnosticsView
+    {
+        internal CharacterPoseActorCommittedDiagnosticsView(
+            CharacterPoseActorCommittedDiagnosticsProjector.Page page)
+        {
+            m_Page = page ?? throw new ArgumentNullException(nameof(page));
+            m_Identity = page.Identity;
+            if (!IsValid)
+            {
+                throw new ArgumentException(
+                    "Pose actor committed diagnostics are invalid.",
+                    nameof(page));
+            }
+        }
+
+        readonly CharacterPoseActorCommittedDiagnosticsProjector.Page m_Page;
+        readonly ulong m_Identity;
+        internal bool IsValid =>
+            m_Page != null &&
+            m_Identity != 0 &&
+            m_Page.Identity == m_Identity &&
+            m_Page.Result.IsCompleted;
+        internal CharacterPoseProgramResult Result
+        {
+            get
+            {
+                RequireValid();
+                return m_Page.Result;
+            }
+        }
+        internal int RootOrientationWarpCount
+        {
+            get
+            {
+                RequireValid();
+                return m_Page.RootOrientationWarpCount;
+            }
+        }
+
+        internal RootOrientationWarpRuntimeSnapshot GetRootOrientationWarp(
+            int index)
+        {
+            RequireValid();
+            if ((uint)index >= (uint)m_Page.RootOrientationWarpCount)
+                throw new ArgumentOutOfRangeException(nameof(index));
+            return m_Page.RootOrientationWarps[index];
+        }
+
+        void RequireValid()
+        {
+            if (!IsValid)
+            {
+                throw new InvalidOperationException(
+                    "Pose actor committed diagnostics lease is stale.");
+            }
+        }
+    }
+
+    internal sealed class CharacterPoseActorCommittedDiagnosticsProjector
+    {
+        internal sealed class Page
+        {
+            internal Page(int rootOrientationWarpCount)
+            {
+                RootOrientationWarps =
+                    new RootOrientationWarpRuntimeSnapshot[
+                        rootOrientationWarpCount];
+            }
+
+            internal ulong Identity;
+            internal CharacterPoseProgramResult Result;
+            internal int RootOrientationWarpCount;
+            internal readonly RootOrientationWarpRuntimeSnapshot[]
+                RootOrientationWarps;
+        }
+
+        readonly Page m_Page;
+        ulong m_NextIdentity = 1;
+
+        internal CharacterPoseActorCommittedDiagnosticsProjector(
+            int rootOrientationWarpCount)
+        {
+            if (rootOrientationWarpCount < 0)
+            {
+                throw new ArgumentOutOfRangeException(
+                    nameof(rootOrientationWarpCount));
+            }
+            m_Page = new Page(rootOrientationWarpCount);
+        }
+
+        internal void BeginFrame()
+        {
+            m_Page.Identity = 0;
+            m_Page.Result = default;
+            m_Page.RootOrientationWarpCount = 0;
+        }
+
+        internal CharacterPoseActorCommittedDiagnosticsView Capture(
+            in CharacterPoseProgramResult result,
+            IReadOnlyList<RootOrientationWarpRuntime> rootOrientationWarps,
+            AnimationPresentationDiagnosticsInterest interest)
+        {
+            if (!result.IsCompleted || m_Page.Identity != 0)
+            {
+                throw new InvalidOperationException(
+                    "Pose actor committed diagnostics request is invalid.");
+            }
+            m_Page.Result = result;
+            if ((interest &
+                 (AnimationPresentationDiagnosticsInterest.LiveState |
+                  AnimationPresentationDiagnosticsInterest.Capture)) != 0)
+            {
+                if (rootOrientationWarps == null ||
+                    rootOrientationWarps.Count !=
+                    m_Page.RootOrientationWarps.Length)
+                {
+                    throw new InvalidOperationException(
+                        "Root Orientation Warp diagnostics layout is inconsistent.");
+                }
+                for (int i = 0; i < rootOrientationWarps.Count; i++)
+                {
+                    m_Page.RootOrientationWarps[i] =
+                        rootOrientationWarps[i]
+                            .CreateDiagnosticsSnapshot();
+                }
+                m_Page.RootOrientationWarpCount =
+                    rootOrientationWarps.Count;
+            }
+            m_Page.Identity = m_NextIdentity++;
+            return new CharacterPoseActorCommittedDiagnosticsView(m_Page);
+        }
+
+        internal void Reset()
+        {
+            BeginFrame();
+            Array.Clear(
+                m_Page.RootOrientationWarps,
+                0,
+                m_Page.RootOrientationWarps.Length);
+        }
+    }
+
     internal sealed class AnimationPresentationRuntimeSnapshotPublisher : IDisposable
     {
         const int InterestOwnerCapacity = 16;
@@ -134,6 +276,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
             in CharacterPoseProgramCommittedDiagnosticsView programDiagnostics,
             in CharacterLinkedPoseCommittedDiagnosticsView
                 linkedPoseDiagnostics,
+            in CharacterPoseActorCommittedDiagnosticsView actorDiagnostics,
             in CharacterPoseConstraintCommittedDiagnosticsView
                 constraintDiagnostics,
             in CharacterFinalPoseCommittedDiagnosticsView
@@ -142,7 +285,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
             IReadOnlyList<CharacterAnimationTransitionRouteRuntime> routes,
             IReadOnlyList<CharacterPoseStateMachineRuntime> stateMachines,
             PoseInertializationNativeProgram inertializations,
-            IReadOnlyList<RootOrientationWarpRuntime> rootOrientationWarps,
             AnimationPresentationDiagnosticsInterest interest)
         {
             RequireAlive();
@@ -159,6 +301,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
                 !linkedPoseDiagnostics.IsValid ||
                 linkedPoseDiagnostics.Result.Lineage !=
                 executionResult.Lineage ||
+                !actorDiagnostics.IsValid ||
+                actorDiagnostics.Result.Lineage !=
+                executionResult.Lineage ||
                 !constraintDiagnostics.IsValid ||
                 constraintDiagnostics.Result.Lineage !=
                 executionResult.Lineage ||
@@ -168,7 +313,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
                 executionResult.Lineage.CompletionIdentity !=
                 finalFrame.CompletionIdentity || stacks == null ||
                 routes == null || routes.Count != stacks.Count || stateMachines == null ||
-                inertializations == null || rootOrientationWarps == null)
+                inertializations == null)
                 throw new ArgumentException("Animation runtime diagnostics frame inputs are inconsistent.");
             AnimationPhysicalBoneWriteDiagnostics physicalWrite =
                 publicationDiagnostics.PhysicalWrite;
@@ -205,7 +350,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
                     page,
                     stateMachines,
                     in programDiagnostics);
-                CopyRootOrientationWarps(page, rootOrientationWarps);
+                CopyRootOrientationWarps(page, in actorDiagnostics);
                 CopyInertializations(page, inertializations);
                 CopySlotContributions(
                     page,
@@ -409,13 +554,20 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
 
         static void CopyRootOrientationWarps(
             Page page,
-            IReadOnlyList<RootOrientationWarpRuntime> rootOrientationWarps)
+            in CharacterPoseActorCommittedDiagnosticsView actorDiagnostics)
         {
-            if (rootOrientationWarps.Count != page.RootOrientationWarps.Length)
+            if (actorDiagnostics.RootOrientationWarpCount !=
+                page.RootOrientationWarps.Length)
                 throw new InvalidOperationException("Root Orientation Warp diagnostics coverage is incomplete.");
-            for (int i = 0; i < rootOrientationWarps.Count; i++)
-                page.RootOrientationWarps[i] = rootOrientationWarps[i].CreateDiagnosticsSnapshot();
-            page.RootOrientationWarpCount = rootOrientationWarps.Count;
+            for (int i = 0;
+                 i < actorDiagnostics.RootOrientationWarpCount;
+                 i++)
+            {
+                page.RootOrientationWarps[i] =
+                    actorDiagnostics.GetRootOrientationWarp(i);
+            }
+            page.RootOrientationWarpCount =
+                actorDiagnostics.RootOrientationWarpCount;
         }
 
         internal AnimationPresentationRuntimeSnapshot Publish(

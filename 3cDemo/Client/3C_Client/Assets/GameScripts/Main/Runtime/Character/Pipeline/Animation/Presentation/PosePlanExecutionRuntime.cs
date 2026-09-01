@@ -307,6 +307,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
         readonly AnimationPoseSourceContribution[]
             m_FootPlacementContributions;
         readonly AnimationPresentationRuntimeSnapshotPublisher m_DiagnosticsPublisher;
+        readonly CharacterPoseActorCommittedDiagnosticsProjector
+            m_ActorDiagnosticsProjector;
         readonly AnimationBlendStackRuntime[] m_Stacks;
         readonly CharacterAnimationTransitionRouteRuntime[] m_StackRoutes;
         readonly AnimationSelectedPosePlayerRuntime[] m_DirectPlayers;
@@ -472,6 +474,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             AnimationBlendSpacePlayerRuntime[] blendSpacePlayers = null;
             PoseStateAndSourceRuntime poseStateSources = null;
             AnimationPresentationRuntimeSnapshotPublisher diagnosticsPublisher = null;
+            CharacterPoseActorCommittedDiagnosticsProjector
+                actorDiagnosticsProjector = null;
             AnimationFinalPosePhysicalWriter finalWriter = null;
             AnimationMixerPlayable sourceFanIn = default;
             Playable previousOutputSource = default;
@@ -665,6 +669,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                     projection,
                     in initialLayout,
                     physicalSources.Capacity);
+                actorDiagnosticsProjector =
+                    new CharacterPoseActorCommittedDiagnosticsProjector(
+                        projection.PosePlan.RootOrientationWarps.Count);
 
                 PlayableGraph graph = animancer.Graph.PlayableGraph;
                 if (!graph.IsValid())
@@ -780,6 +787,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                     projection.PosePlan.ContributionWorkspaceCount /
                     projection.PosePlan.PoseValueWorkspaceCount];
             m_DiagnosticsPublisher = diagnosticsPublisher;
+            m_ActorDiagnosticsProjector = actorDiagnosticsProjector;
             m_ReleasedSources = new AnimationReleasedPoseSourceSnapshot[physicalSources.Capacity];
             int releaseCapacity = physicalSources.Capacity;
             m_PreparedStandaloneSourceReleases =
@@ -1056,6 +1064,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                 m_HasPendingCompletedFrame = false;
                 m_PendingFrameOutcome = AnimationPresentationFrameOutcome.None;
                 m_PosePlan.BeginFrame();
+                m_ActorDiagnosticsProjector.BeginFrame();
                 PrepareLinkedPoseSelection(linkedPose);
                 m_InertializationPlan.BeginFrame();
                 m_PhysicalSources.BeginFrame();
@@ -1776,6 +1785,11 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                     linkedPoseDiagnostics =
                         linkedPose.CaptureCommittedDiagnostics(
                             in committedProgramResult);
+                CharacterPoseActorCommittedDiagnosticsView actorDiagnostics =
+                    m_ActorDiagnosticsProjector.Capture(
+                        in committedProgramResult,
+                        m_RootOrientationWarps,
+                        interest);
                 CharacterPoseConstraintResult committedConstraintResult =
                     executionResult.Constraint;
                 CharacterPoseConstraintCommittedDiagnosticsView
@@ -1803,6 +1817,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                     executionResult.Lineage ||
                     !linkedPoseDiagnostics.IsValid ||
                     linkedPoseDiagnostics.Result.Lineage !=
+                    executionResult.Lineage ||
+                    !actorDiagnostics.IsValid ||
+                    actorDiagnostics.Result.Lineage !=
                     executionResult.Lineage ||
                     !constraintDiagnostics.IsValid ||
                     constraintDiagnostics.Result.Lineage !=
@@ -1836,13 +1853,13 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                     in sourceDiagnostics,
                     in programDiagnostics,
                     in linkedPoseDiagnostics,
+                    in actorDiagnostics,
                     in constraintDiagnostics,
                     in publicationDiagnostics,
                     m_Stacks,
                     m_StackRoutes,
                     m_PoseStateSources.StateMachines,
                     m_InertializationPlan,
-                    m_RootOrientationWarps,
                     interest);
             }
         }
@@ -3234,6 +3251,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                 throw new ArgumentOutOfRangeException(nameof(reason));
             m_FramePublisher.Invalidate();
             m_DiagnosticsPublisher.Invalidate();
+            m_ActorDiagnosticsProjector.Reset();
             m_ReleasedSourceCount = 0;
             m_ActionSlotReleaseCompletions.Clear();
             ClearReleaseJournals();

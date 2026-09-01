@@ -2,6 +2,7 @@ using System;
 using System.Text;
 using ThirdPersonCharacter.Pipeline.Animation.Lifecycle;
 using ThirdPersonCharacter.Pipeline.Animation.Diagnostics;
+using ThirdPersonCharacter.Pipeline.Animation.Sources;
 using ThirdPersonSimulation;
 using UnityEngine;
 
@@ -886,12 +887,12 @@ namespace ThirdPersonCharacter.Pipeline.Animation.BlendStack
         internal AnimationSlotBlendJob PrepareSlotJob(
             ulong completionIdentity,
             in AnimationPlayerPoseNativeWriteBinding finalWriteBinding,
-            PhysicalPoseSourceRegistry physicalSources)
+            CharacterPoseSourceModule sourceModule)
         {
             RequireAlive();
             RequireNoPreparedPlan();
-            if (physicalSources == null)
-                throw new ArgumentNullException(nameof(physicalSources));
+            if (sourceModule == null)
+                throw new ArgumentNullException(nameof(sourceModule));
             if (completionIdentity == 0 || completionIdentity != m_SourceFrameCompletionIdentity ||
                 finalWriteBinding.CompletionIdentity != completionIdentity ||
                 finalWriteBinding.DenseLocalPoses.Length != m_Rig.PoseBoneCount)
@@ -910,7 +911,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.BlendStack
             {
                 kind = ResolvePlanKind();
                 ClearPlannedWeights();
-                PrepareCrossFadePlan(in finalWriteBinding, physicalSources, kind);
+                PrepareCrossFadePlan(in finalWriteBinding, sourceModule, kind);
             }
 
             AnimationSlotBlendPoseWorkspaceBinding workspaceBinding = m_SlotWorkspace.RequireActiveBinding();
@@ -1275,7 +1276,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.BlendStack
 
         void PrepareCrossFadePlan(
             in AnimationPlayerPoseNativeWriteBinding finalWriteBinding,
-            PhysicalPoseSourceRegistry physicalSources,
+            CharacterPoseSourceModule sourceModule,
             AnimationSlotBlendFramePlanKind kind)
         {
             bool capturesStored = kind == AnimationSlotBlendFramePlanKind.StoredCapture;
@@ -1368,7 +1369,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.BlendStack
             try
             {
                 if (availability == AnimationPoseAvailability.Pose)
-                    WriteCrossFadePlan(preparation, physicalSources, usesStored, capturesStored, storedScalarWeight, storedBoneWeights);
+            WriteCrossFadePlan(preparation, sourceModule, usesStored, capturesStored, storedScalarWeight, storedBoneWeights);
                 m_SlotWorkspace.ValidateInactivePage(preparation);
                 m_SlotWorkspace.CommitInactivePage(preparation);
             }
@@ -1406,7 +1407,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.BlendStack
 
         void WriteCrossFadePlan(
             AnimationSlotBlendFramePlanPreparation preparation,
-            PhysicalPoseSourceRegistry physicalSources,
+            CharacterPoseSourceModule sourceModule,
             bool usesStored,
             bool capturesStored,
             float storedScalarWeight,
@@ -1449,7 +1450,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.BlendStack
                 if (entry.IsSourcePose)
                     continue;
                 int captureIndex = RequireSourceCaptureIndex(i);
-                AnimationPhysicalSourceIdentity physical = RequirePhysicalSource(physicalSources, entry);
+                    AnimationPhysicalSourceIdentity physical = RequirePhysicalSource(sourceModule, entry);
                 m_SlotWorkspace.SetPreparedEntry(
                     preparation,
                     contributionIndex,
@@ -1694,12 +1695,12 @@ namespace ThirdPersonCharacter.Pipeline.Animation.BlendStack
              AnimationPoseAvailability.NoPose);
 
         AnimationPhysicalSourceIdentity RequirePhysicalSource(
-            PhysicalPoseSourceRegistry physicalSources,
+            CharacterPoseSourceModule sourceModule,
             AnimationBlendEntryState entry)
         {
-            AnimationPhysicalSourceIdentity identity = physicalSources.RequireIdentity(entry.SourceId, m_Slot.NodeId);
-            if (physicalSources.RequirePoseNodeId(identity) != m_Slot.NodeId ||
-                physicalSources.RequireSourceOwnerIndex(identity) != entry.SourceOwnerIndex)
+            AnimationPhysicalSourceIdentity identity = sourceModule.RequireIdentity(entry.SourceId, m_Slot.NodeId);
+            if (sourceModule.RequirePoseNodeId(identity) != m_Slot.NodeId ||
+                sourceModule.RequireSourceOwnerIndex(identity) != entry.SourceOwnerIndex)
             {
                 throw new InvalidOperationException("Animation physical source is routed to the wrong Blend Stack entry.");
             }

@@ -1,6 +1,7 @@
 using System;
 using ThirdPersonCharacter.Pipeline.Animation.Diagnostics;
 using ThirdPersonCharacter.Pipeline.Animation.Lifecycle;
+using ThirdPersonCharacter.Pipeline.Animation.Sources;
 using ThirdPersonCharacter.Pipeline.Presentation.Animancer;
 using Unity.Collections.LowLevel.Unsafe;
 
@@ -320,11 +321,11 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             CharacterFinalPosePublicationFrameLease lease,
             in CharacterPoseFrameLineage lineage,
             in AnimationFinalPoseNativeReadBinding binding,
-            PhysicalPoseSourceRegistry sourceRegistry,
+            CharacterPoseSourceModule sourceModule,
             AnimationFinalPoseWriteOutcome writeOutcome)
         {
-            if (sourceRegistry == null)
-                throw new ArgumentNullException(nameof(sourceRegistry));
+            if (sourceModule == null)
+                throw new ArgumentNullException(nameof(sourceModule));
             m_Pending.RequireLease(lease);
             if (!lineage.IsValid ||
                 !lease.Matches(lineage) ||
@@ -359,18 +360,18 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             pageLease.BeginWrite(completionIdentity);
             ComposedAnimationPoseFrame frame = availability == AnimationPoseAvailability.Invalid
                 ? PublishInvalid(in binding, page, pageLease)
-                : PublishPose(in binding, sourceRegistry, page, pageLease);
+                : PublishPose(in binding, sourceModule, page, pageLease);
             m_Pending.Complete(lease, in result, in frame);
             return result;
         }
 
         internal int ResolveContributions(
             in AnimationPoseValueNativeReadBinding binding,
-            PhysicalPoseSourceRegistry sourceRegistry,
+            CharacterPoseSourceModule sourceModule,
             AnimationPoseSourceContribution[] destination)
         {
-            if (sourceRegistry == null)
-                throw new ArgumentNullException(nameof(sourceRegistry));
+            if (sourceModule == null)
+                throw new ArgumentNullException(nameof(sourceModule));
             int count = binding.ContributionCount[0];
             if (binding.CompletionIdentity == 0 ||
                 binding.Contributions.Length != m_ContributionCapacity ||
@@ -389,7 +390,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             {
                 destination[i] = ExpandContribution(
                     binding.Contributions[i],
-                    sourceRegistry);
+                    sourceModule);
             }
             return count;
         }
@@ -487,7 +488,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
 
         ComposedAnimationPoseFrame PublishPose(
             in AnimationFinalPoseNativeReadBinding binding,
-            PhysicalPoseSourceRegistry sourceRegistry,
+            CharacterPoseSourceModule sourceModule,
             int page,
             FinalAnimationPoseFramePageLease pageLease)
         {
@@ -536,7 +537,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             for (int contribution = 0; contribution < contributionCount; contribution++)
             {
                 AnimationPrimitivePoseContribution primitive = binding.Contributions[contribution];
-                m_Contributions[contributionOffset + contribution] = ExpandContribution(primitive, sourceRegistry);
+                m_Contributions[contributionOffset + contribution] = ExpandContribution(primitive, sourceModule);
                 for (int bone = 0; bone < m_BoneCount; bone++)
                 {
                     float weight = binding.DenseContributionWeights[
@@ -656,7 +657,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
 
         AnimationPoseSourceContribution ExpandContribution(
             AnimationPrimitivePoseContribution primitive,
-            PhysicalPoseSourceRegistry sourceRegistry)
+            CharacterPoseSourceModule sourceModule)
         {
             if (primitive.PhysicalPlayerIndex < 0 || primitive.PhysicalPlayerIndex >= m_PoseNodeIds.Length ||
                 !IsContributionKind(primitive.Kind) ||
@@ -677,9 +678,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 var physicalIdentity = new AnimationPhysicalSourceIdentity(
                     new AnimationPhysicalSourceIndex(primitive.PhysicalSourceIndex),
                     primitive.PhysicalSourceGeneration);
-                sourceId = sourceRegistry.RequireSourceId(physicalIdentity);
-                if (!sourceRegistry.RequirePoseNodeId(physicalIdentity).Equals(playerNodeId) ||
-                    sourceRegistry.RequireSourceOwnerIndex(physicalIdentity) != primitive.SourceOwnerIndex)
+                sourceId = sourceModule.RequireSourceId(physicalIdentity);
+                if (!sourceModule.RequirePoseNodeId(physicalIdentity).Equals(playerNodeId) ||
+                    sourceModule.RequireSourceOwnerIndex(physicalIdentity) != primitive.SourceOwnerIndex)
                 {
                     throw new InvalidOperationException("Final Animation Pose Graph Live contribution metadata does not match its physical identity.");
                 }

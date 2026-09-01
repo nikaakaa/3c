@@ -1,0 +1,15 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>netstandard2.1</TargetFramework>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <Nullable>disable</Nullable>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <LangVersion>9.0</LangVersion>
+    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
+    <AssemblyName>ThirdPerson.GeneratedDiagnosticSampling</AssemblyName>
+    <RootNamespace>ThirdPerson.GeneratedDiagnosticSampling</RootNamespace>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="../../3cDemo/Shared/UnityPackages/com.thirdperson.generated-diagnostic-sampling/Runtime/*.cs" Link="Runtime/%(Filename)%(Extension)" />
+  </ItemGroup>
+</Project>

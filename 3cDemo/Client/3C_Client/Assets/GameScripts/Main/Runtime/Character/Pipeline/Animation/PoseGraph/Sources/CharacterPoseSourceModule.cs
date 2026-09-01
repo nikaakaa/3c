@@ -344,6 +344,15 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Sources
             try
             {
                 m_Backend.BeginFrame(lease);
+                try
+                {
+                    m_PhysicalSources.BeginFrame();
+                }
+                catch
+                {
+                    m_Backend.DiscardFrame(lease);
+                    throw;
+                }
                 return lease;
             }
             catch
@@ -352,9 +361,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Sources
                 throw;
             }
         }
-
-        internal void BeginPhysicalFrame() =>
-            m_PhysicalSources.BeginFrame();
 
         internal void BeginBindingFrame(ulong completionIdentity)
         {

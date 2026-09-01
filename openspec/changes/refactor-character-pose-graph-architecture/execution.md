@@ -483,3 +483,13 @@ A/B均为2086脚行、1222列，其中1198个业务列逐值相同、24个运行
 正式A为`Diagnostics/FootPlacementRuns/20260902-004806-171-217a25ba6e794a92b95a49f903d35030`，候选B为`Diagnostics/FootPlacementRuns/20260902-005827-531-c0d4c41e222548d4b3f49b20e40662ef`；B Proof为`Temp/CharacterInputReplayProofs/v4/43357ff3cd384e5cba75d2c31175b116/20260902-005923-994-17e8b72516ff4cbaac3c542ab77a5b1d.json`，工具对A Proof正式报告`matched:1044`，无failure且Foot Finalizing已结束。
 
 A/B均为2086脚行、1222列，其中1198个业务列逐值相同、24个运行／实例／Surface／Path identity列一一映射且0冲突；Geometry均为67186行、27列，其中22个业务列逐值相同、5个identity列一一映射且0冲突。十份正式报告在排除既定运行identity、文件／index hash与大小和分析耗时后逐字段语义对账10／10相同；七维分项、总分84.2和weighted evidence 96.5不变。由此确认成对release Owner收口没有改变source retirement时机、动画时钟、Foot、Pelvis、Goal、FBBIK、Final Pose、Physical或正式诊断业务；`005827`成为下一Source生命周期小步的正式A。
+
+## Source Frame原子打开backend与physical页
+
+状态：候选已把Physical Source页的`BeginFrame`归入`CharacterPoseSourceModule.BeginFrame`。Source Module现在原子打开自己的Frame页、backend页与physical registry页；physical页打开失败时由Module先Discard backend，再丢弃自己的Frame页。`PosePlanExecutionRuntime`不再知道Source Frame还需要第二次`BeginPhysicalFrame`，正常帧中的页面打开顺序和后续Source准备顺序保持。
+
+本步仍不勾选任务4.4；完整Discard、retirement permission、slot reuse和release completion还未全部藏入Source Module。`ThirdPersonClient.Runtime.csproj`按规定参数编译成功，0错误；27个警告只来自既有Unity／第三方依赖和Input Value未使用字段，build server已立即关闭。Unity刷新、回放和退出Play只出现同一条FinalIK Domain Reload序列化深度日志，单独记录后清空，3C Console为0。
+
+正式A为`Diagnostics/FootPlacementRuns/20260902-005827-531-c0d4c41e222548d4b3f49b20e40662ef`，候选B为`Diagnostics/FootPlacementRuns/20260902-010730-937-b4dbbc29df944f31919080c7110ccd6a`；B Proof为`Temp/CharacterInputReplayProofs/v4/43357ff3cd384e5cba75d2c31175b116/20260902-010827-022-5beb8a8de1404acd9eca3428001c3237.json`，工具对A Proof正式报告`matched:1044`，无failure且Foot Finalizing已结束。
+
+A/B均为2086脚行、1222列，其中1198个业务列逐值相同、24个运行／实例／Surface／Path identity列一一映射且0冲突；Geometry均为67186行、27列，其中22个业务列逐值相同、5个identity列一一映射且0冲突。十份正式报告排除既定运行identity、文件／index hash与大小和分析耗时后逐字段语义对账10／10相同；七维分项、总分84.2和weighted evidence 96.5不变。由此确认Source三页原子打开没有改变source准备、动画时钟、Foot、Pelvis、Goal、FBBIK、Final Pose、Physical或正式诊断业务；`010730`成为下一Source生命周期小步的正式A。

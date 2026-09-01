@@ -1006,7 +1006,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                 m_ActorDiagnosticsProjector.BeginFrame();
                 PrepareLinkedPoseSelection(linkedPose);
                 m_InertializationPlan.BeginFrame();
-                m_SourceModule.BeginPhysicalFrame();
                 for (int i = 0; i < m_StackRoutes.Length; i++)
                     m_StackRoutes[i].BeginFrame();
                 for (int i = 0; i < m_RootOrientationWarps.Length; i++)

@@ -246,4 +246,10 @@ A/B均为2086脚行、1222列，其中1198个业务列逐值相同，24个运行
 
 正式A为`Diagnostics/FootPlacementRuns/20260901-191034-951-23c75316aae14fa5849ef2aa6179f84e`，Proof为`Temp/CharacterInputReplayProofs/v4/43357ff3cd384e5cba75d2c31175b116/20260901-191131-417-22e056a627a245688aea35a1664481d6.json`。候选B为`Diagnostics/FootPlacementRuns/20260901-192117-923-ad1dd64ee4e24e4ea8d0576f406fb253`，Proof为`Temp/CharacterInputReplayProofs/v4/43357ff3cd384e5cba75d2c31175b116/20260901-192220-365-11c3b45ab4f54c568b06188339f5727f.json`；工具对A正式报告`matched:1044`，无failure且Foot Finalizing已结束。
 
-A/B均为2086脚行、1222列，其中1198个业务列逐值相同，24个运行／实例／Surface／Path identity列全部一一映射且0冲突；Geometry均为67186行、27列，其中22个业务列逐值相同，5个identity列全部一一映射且0冲突。十份正式报告按既定规则归一化后0差异；退出Play后的Console为0错误。由此确认当前固定Trace覆盖的Goal Set消费、Solver、BendHistory、Foot、Pelvis、PoseBone Goal、FBBIK和Physical结果未因FBBIK typed入口迁移改变；`192117`成为后续Constraint Operation completion收口的正式A。任务3.4至3.6仍未完成，不因四个Handle存在而提前勾选。
+A/B均为2086脚行、1222列，其中1198个业务列逐值相同，24个运行／实例／Surface／Path identity列全部一一映射且0冲突；Geometry均为67186行、27列，其中22个业务列逐值相同，5个identity列全部一一映射且0冲突。十份正式报告按既定规则归一化后0差异；退出Play后的Console为0错误。由此确认当前固定Trace覆盖的Goal Set消费、Solver、BendHistory、Foot、Pelvis、PoseBone Goal、FBBIK和Physical结果未因FBBIK typed入口迁移改变；`192117`成为后续Constraint Operation completion收口的正式A。该次提交只据此完成任务3.3，任务3.4至3.6留待独立代码对账。
+
+## Constraint Operation调用与Complete闭包对账
+
+四个Family完成typed入口后重新全仓核对调用点：PoseBone、Goal Assembler和FBBIK各只有Staged Executor原Operation分支中的一次调用；Foot同一Operation分支按World Context在`EvaluateFootPlacement`与`RecordUnavailableFootPlacement`之间互斥选择一次，不存在外层预执行、Constraint扫描Program、Diagnostics重放或第二Stage调度。`ExecuteStage`在调用前要求对应`CharacterPoseOperationCompletionPage`槽为空，调用后统一通过`TryCompleteOperation`写入一次`Completed`或`TypedInvalid`；`TryComplete`拒绝非空槽并记录重复Operation，因此任务3.4完成。
+
+`CharacterPoseConstraintRuntime.CompleteFrame`只绑定同一Completion，核对Pending lease／lineage、Goal Set闭包、Solver Outcome和Foot pending frame，再构造唯一`CharacterPoseConstraintResult`。它不读取Operation数组、不维护Stage Schedule、不调用四个Execute入口、不重新运行Goal Assembler或Solver；任务3.5完成。连续三段`184047 -> 185755 -> 191034 -> 192117`固定Trace又证明内部Foot Placement、Pelvis、PoseBone Goal、Contribution、Assembler、Goal Set、FBBIK和BendHistory业务结果保持，因此任务3.2完成。任务3.6仍有调用方可见的Handle内部地址和Constraint诊断页访问，需要下一步实际收窄，不能由本次代码审计代替。

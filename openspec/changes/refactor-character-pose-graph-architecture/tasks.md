@@ -26,10 +26,10 @@
 ## 3. 收紧Pose Constraint外部边界并保留内部IK
 
 - [x] 3.1 迁移当前`CharacterPoseConstraintRuntime`及根Bank外部归属并保留唯一构造路径，不重做Foot内部阶段或状态布局
-- [ ] 3.2 在Constraint内部整体保留当前Foot Placement、Pelvis、PoseBone Goal、Goal Contribution、Assembler、Goal Set、FBBIK和历史状态；只替换外部依赖，不改变公式、参数、准入、权重或数值顺序
+- [x] 3.2 在Constraint内部整体保留当前Foot Placement、Pelvis、PoseBone Goal、Goal Contribution、Assembler、Goal Set、FBBIK和历史状态；只替换外部依赖，不改变公式、参数、准入、权重或数值顺序
 - [x] 3.3 为Foot Placement、PoseBone Contribution、Goal Assembler和FBBIK建立各自typed编译Handle与per-operation Result
-- [ ] 3.4 让Program Runtime在每个Constraint Family Operation位置恰好调用一次对应入口并写入唯一completion
-- [ ] 3.5 让Constraint `Complete`只验证完整闭包并发布一个Constraint Result，不扫描Program、不维护第二Stage Schedule也不重新执行Operation
+- [x] 3.4 让Program Runtime在每个Constraint Family Operation位置恰好调用一次对应入口并写入唯一completion
+- [x] 3.5 让Constraint `Complete`只验证完整闭包并发布一个Constraint Result，不扫描Program、不维护第二Stage Schedule也不重新执行Operation
 - [ ] 3.6 删除调用方可见的NativeSlice、Goal offset/count、Operation index、Callsite index、内部Bank页和Diagnostics页
 - [ ] 3.7 让Constraint内部Pending页只响应根Frame lineage和唯一Seal/Discard，不再拥有可与根事务分离的完成身份
 - [ ] 3.8 将Foot Placement与FBBIK调参接入Constraint-owned Candidate Tuning Snapshot，保持当前字段、值域、成功resetOwnerState结果和生效时机，保留第一阶段独立验证的Vendor方向与BendHistory Reset结果，本阶段不另改行为

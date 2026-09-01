@@ -463,3 +463,13 @@ A/B均为2086脚行、1222列，其中1198个业务列逐值相同、24个运行
 正式A为`Diagnostics/FootPlacementRuns/20260902-000722-129-1675f4cae70142a1a4c177739208b7bd`，候选B为`Diagnostics/FootPlacementRuns/20260902-001521-259-0a58993b2ae64106b5e93e82413de6b7`；B Proof为`Temp/CharacterInputReplayProofs/v4/43357ff3cd384e5cba75d2c31175b116/20260902-001644-239-6ae2ea944e0e404db45e61069be963dc.json`，工具对A Proof正式报告`matched:1044`，无failure且Foot Finalizing已结束。
 
 A/B均为2086脚行、1222列，其中1198个业务列逐值相同、24个运行identity列一一映射且0冲突；Geometry均为67186行、27列，其中22个业务列逐值相同、5个identity列一一映射且0冲突；十份正式报告按既定Sample identity、文件／index hash与大小、分析耗时和Surface identity规则归一化后10／10相同，七维分项、总分84.2和weighted evidence 96.5不变。由此确认Source Frame Result唯一写入Owner迁移没有改变sample readiness、Source时间、动画时钟、Foot、Pelvis、Goal、FBBIK、Final Pose或Physical业务；`001521`成为新诊断架构文档对账后的下一PoseGraph实现基线。
+
+## Constraint Pending页删除独立Completion身份
+
+状态：候选已删除`CharacterPoseConstraintRuntime.Bank.CompletionIdentity`及`BindCompletion`。Constraint Pending页现在只保存根`CharacterPoseConstraintFrameLease`的开放lineage，并只响应根Seal／Discard；Foot、PoseBone Contribution、Goal Set、Solver Outcome和最终`CharacterPoseConstraintResult`仍各自携带并验证原Completion identity，`CompleteFrame`继续以根完成lineage核对全部typed结果。正常执行顺序、公式、Goal、BendHistory与Fault政策均未改变。
+
+`ThirdPersonClient.Runtime.csproj`按规定参数编译成功，0错误；27个警告只来自既有Unity／第三方依赖和Input Value未使用字段，build server已立即关闭。Unity刷新、回放和退出Play只出现同一条FinalIK Domain Reload序列化深度日志，单独记录后清空，3C Console为0。
+
+正式A为`Diagnostics/FootPlacementRuns/20260902-001521-259-0a58993b2ae64106b5e93e82413de6b7`，候选B为`Diagnostics/FootPlacementRuns/20260902-004806-171-217a25ba6e794a92b95a49f903d35030`；B Proof为`Temp/CharacterInputReplayProofs/v4/43357ff3cd384e5cba75d2c31175b116/20260902-004904-251-bce67b695be34b298b17e657414381fb.json`，工具对A Proof正式报告`matched:1044`，无failure且Foot Finalizing已结束。
+
+A/B均为2086脚行、1222列，其中1198个业务列逐值相同、24个运行／实例／Surface／Path identity列一一映射且0冲突；Geometry均为67186行、27列，其中22个业务列逐值相同、5个identity列一一映射且0冲突。十份正式报告除Sample／文件／index hash、detail字节与分析耗时外归一化后10／10相同；七维分项、总分84.2和weighted evidence 96.5不变。由此确认删除Constraint Pending的第二Completion身份没有改变Foot、Pelvis、Goal、Assembler、Bend、FBBIK、Final Pose、Physical或正式诊断业务；任务3.7完成，`004806`成为下一PoseGraph小步的正式A。

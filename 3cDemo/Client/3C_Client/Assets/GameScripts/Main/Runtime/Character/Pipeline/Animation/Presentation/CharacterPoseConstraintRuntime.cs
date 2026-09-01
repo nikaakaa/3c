@@ -216,7 +216,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             internal readonly CharacterFootPlacementBank FootPlacement;
             internal ulong Identity;
             internal CharacterPoseConstraintFrameLease Lease;
-            internal ulong CompletionIdentity;
             internal AnimationPresentationDiagnosticsInterest DiagnosticsInterest;
 
             internal void Begin(
@@ -225,7 +224,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                 Bank committed)
             {
                 Lease = lease;
-                CompletionIdentity = 0;
                 DiagnosticsInterest = diagnosticsInterest;
                 SolverOutcome = default;
                 SolverDiagnostics = default;
@@ -252,7 +250,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             internal void ClearPending()
             {
                 Lease = default;
-                CompletionIdentity = 0;
                 DiagnosticsInterest = AnimationPresentationDiagnosticsInterest.None;
                 SolverOutcome = default;
                 SolverDiagnostics = default;
@@ -735,7 +732,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                 throw new InvalidOperationException(
                     "Pose Constraint lineage is inconsistent at completion.");
             }
-            BindCompletion(lineage.CompletionIdentity);
             bool goalSetCompleted =
                 m_Pending.GoalSet.IsValid &&
                 m_Pending.GoalSet.FrameSequence ==
@@ -892,9 +888,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
         {
             RequireAlive();
             if (!m_HasPending ||
-                m_Pending.Lease.PresentationFrame != renderFrame)
+                m_Pending.Lease.PresentationFrame != renderFrame ||
+                completionIdentity == 0)
                 throw new InvalidOperationException("Pose Constraint pending frame identity is inconsistent.");
-            BindCompletion(completionIdentity);
         }
 
         void RequirePendingLease(
@@ -909,25 +905,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                 throw new InvalidOperationException(
                     "Pose Constraint Pending lease is stale.");
             }
-        }
-
-        void RequireTransactionFrame(ulong frameIdentity, ulong completionIdentity)
-        {
-            RequireAlive();
-            if (!m_HasPending ||
-                m_Pending.Lease.FrameIdentity != frameIdentity)
-                throw new InvalidOperationException("Pose Constraint pending transaction identity is inconsistent.");
-            BindCompletion(completionIdentity);
-        }
-
-        void BindCompletion(ulong completionIdentity)
-        {
-            if (completionIdentity == 0)
-                throw new ArgumentOutOfRangeException(nameof(completionIdentity));
-            if (m_Pending.CompletionIdentity == 0)
-                m_Pending.CompletionIdentity = completionIdentity;
-            else if (m_Pending.CompletionIdentity != completionIdentity)
-                throw new InvalidOperationException("Pose Constraint pending completion identity is inconsistent.");
         }
 
         void ClearBendHistories()

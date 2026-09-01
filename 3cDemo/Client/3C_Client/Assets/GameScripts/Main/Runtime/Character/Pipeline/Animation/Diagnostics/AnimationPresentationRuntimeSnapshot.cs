@@ -433,6 +433,18 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
         public AnimationFootMotionRuntimeSample Left { get; }
         public AnimationFootMotionRuntimeSample Right { get; }
         public bool IsValid => m_IsSpecified != 0;
+
+        internal AnimationFootStepObservationRuntimeSnapshot WithSourceWeight(
+            float sourceWeight) =>
+            new AnimationFootStepObservationRuntimeSnapshot(
+                NodeId,
+                SourceIndex,
+                SourceId,
+                SourceIdentity,
+                sourceWeight,
+                NormalizedTime,
+                Left,
+                Right);
     }
 
     public readonly struct AnimationBlendSpaceSampleRuntimeSnapshot

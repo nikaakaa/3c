@@ -671,7 +671,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                     physicalSources.Capacity);
                 actorDiagnosticsProjector =
                     new CharacterPoseActorCommittedDiagnosticsProjector(
-                        projection.PosePlan,
+                        projection,
                         in initialLayout);
 
                 PlayableGraph graph = animancer.Graph.PlayableGraph;
@@ -1793,6 +1793,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                         m_StackRoutes,
                         m_PoseStateSources.StateMachines,
                         m_InertializationPlan,
+                        m_PoseStateSources.ClipPlayers,
+                        m_PoseStateSources.BlendSpacePlayers,
                         m_RootOrientationWarps,
                         interest);
                 CharacterPoseConstraintResult committedConstraintResult =
@@ -1873,9 +1875,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             {
                 m_DiagnosticsPublisher.Publish(
                     m_ReleasedSources,
-                    m_ReleasedSourceCount,
-                    m_PoseStateSources.ClipPlayers,
-                    m_PoseStateSources.BlendSpacePlayers);
+                    m_ReleasedSourceCount);
             }
             return true;
         }

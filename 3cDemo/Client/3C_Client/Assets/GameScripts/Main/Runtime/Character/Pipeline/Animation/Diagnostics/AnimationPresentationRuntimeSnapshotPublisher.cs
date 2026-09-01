@@ -79,6 +79,22 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
                 return m_Page.InertializationCount;
             }
         }
+        internal int BlendSpacePlayerCount
+        {
+            get
+            {
+                RequireValid();
+                return m_Page.BlendSpacePlayerCount;
+            }
+        }
+        internal int BlendSpaceSampleCount
+        {
+            get
+            {
+                RequireValid();
+                return m_Page.BlendSpaceSampleCount;
+            }
+        }
         internal int RootOrientationWarpCount
         {
             get
@@ -217,6 +233,55 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
                 boneValueCount);
         }
 
+        internal AnimationFootStepObservationRuntimeSnapshot
+            ResolveFootStepObservation(
+            AnimationPoseSourceId sourceId,
+            float sourceWeight)
+        {
+            RequireValid();
+            if (!sourceId.IsValid)
+                return default;
+            for (int i = 0;
+                 i < m_Page.ClipFootObservationCount;
+                 i++)
+            {
+                AnimationFootStepObservationRuntimeSnapshot observation =
+                    m_Page.ClipFootObservations[i];
+                if (observation.SourceId.Equals(sourceId))
+                {
+                    return observation.WithSourceWeight(sourceWeight);
+                }
+            }
+            return default;
+        }
+
+        internal void CopyBlendSpaces(
+            AnimationBlendSpacePlayerRuntimeSnapshot[] players,
+            AnimationBlendSpaceSampleRuntimeSnapshot[] samples)
+        {
+            RequireValid();
+            if (players == null ||
+                players.Length < m_Page.BlendSpacePlayerCount ||
+                samples == null ||
+                samples.Length < m_Page.BlendSpaceSampleCount)
+            {
+                throw new ArgumentException(
+                    "Pose actor Blend Space diagnostics destination is invalid.");
+            }
+            Array.Copy(
+                m_Page.BlendSpacePlayers,
+                0,
+                players,
+                0,
+                m_Page.BlendSpacePlayerCount);
+            Array.Copy(
+                m_Page.BlendSpaceSamples,
+                0,
+                samples,
+                0,
+                m_Page.BlendSpaceSampleCount);
+        }
+
         internal RootOrientationWarpRuntimeSnapshot GetRootOrientationWarp(
             int index)
         {
@@ -241,9 +306,11 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
         internal sealed class Page
         {
             internal Page(
-                CharacterPresentationPosePlan program,
+                CharacterPresentationProjection projection,
                 in AnimationPoseNativeAggregateLayout layout)
             {
+                CharacterPresentationPosePlan program =
+                    projection.PosePlan;
                 int entryCapacity = 0;
                 for (int i = 0; i < program.BlendNodes.Count; i++)
                 {
@@ -281,6 +348,28 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
                     new Vector3[inertialBoneValueCount];
                 InertialBoneEnvelopes =
                     new float[inertialBoneValueCount];
+                ClipFootObservations =
+                    new AnimationFootStepObservationRuntimeSnapshot[
+                        program.ClipPlayers.Count];
+                BlendSpacePlayers =
+                    new AnimationBlendSpacePlayerRuntimeSnapshot[
+                        projection.BlendSpacePlayers.Count];
+                int blendSpaceSampleCapacity = 0;
+                for (int i = 0;
+                     i < projection.BlendSpacePlayers.Count;
+                     i++)
+                {
+                    int planIndex =
+                        projection.BlendSpacePlayers[i]
+                            .BlendSpacePlanIndex;
+                    blendSpaceSampleCapacity = checked(
+                        blendSpaceSampleCapacity +
+                        projection.BlendSpaces[planIndex]
+                            .Samples.Count);
+                }
+                BlendSpaceSamples =
+                    new AnimationBlendSpaceSampleRuntimeSnapshot[
+                        blendSpaceSampleCapacity];
                 RootOrientationWarps =
                     new RootOrientationWarpRuntimeSnapshot[
                         program.RootOrientationWarps.Count];
@@ -293,6 +382,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
             internal int AnimationSlotCount;
             internal int PoseStateMachineCount;
             internal int InertializationCount;
+            internal int ClipFootObservationCount;
+            internal int BlendSpacePlayerCount;
+            internal int BlendSpaceSampleCount;
             internal int RootOrientationWarpCount;
             internal readonly int BoneCount;
             internal readonly AnimationBlendStackSnapshot[] Stacks;
@@ -307,6 +399,12 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
             internal readonly Vector3[] InertialRotationResiduals;
             internal readonly Vector3[] InertialScaleResiduals;
             internal readonly float[] InertialBoneEnvelopes;
+            internal readonly AnimationFootStepObservationRuntimeSnapshot[]
+                ClipFootObservations;
+            internal readonly AnimationBlendSpacePlayerRuntimeSnapshot[]
+                BlendSpacePlayers;
+            internal readonly AnimationBlendSpaceSampleRuntimeSnapshot[]
+                BlendSpaceSamples;
             internal readonly RootOrientationWarpRuntimeSnapshot[]
                 RootOrientationWarps;
         }
@@ -316,15 +414,19 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
         ulong m_NextIdentity = 1;
 
         internal CharacterPoseActorCommittedDiagnosticsProjector(
-            CharacterPresentationPosePlan program,
+            CharacterPresentationProjection projection,
             in AnimationPoseNativeAggregateLayout layout)
         {
+            if (projection == null)
+                throw new ArgumentNullException(nameof(projection));
+            CharacterPresentationPosePlan program =
+                projection.PosePlan;
             if (program == null)
                 throw new ArgumentNullException(nameof(program));
             program.RequireValid();
             layout.RequireValid();
             m_Program = program;
-            m_Page = new Page(program, in layout);
+            m_Page = new Page(projection, in layout);
         }
 
         internal void BeginFrame()
@@ -336,6 +438,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
             m_Page.AnimationSlotCount = 0;
             m_Page.PoseStateMachineCount = 0;
             m_Page.InertializationCount = 0;
+            m_Page.ClipFootObservationCount = 0;
+            m_Page.BlendSpacePlayerCount = 0;
+            m_Page.BlendSpaceSampleCount = 0;
             m_Page.RootOrientationWarpCount = 0;
         }
 
@@ -345,6 +450,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
             IReadOnlyList<CharacterAnimationTransitionRouteRuntime> routes,
             IReadOnlyList<CharacterPoseStateMachineRuntime> stateMachines,
             PoseInertializationNativeProgram inertializations,
+            IReadOnlyList<AnimationClipPlayerRuntime> clipPlayers,
+            IReadOnlyList<AnimationBlendSpacePlayerRuntime>
+                blendSpacePlayers,
             IReadOnlyList<RootOrientationWarpRuntime> rootOrientationWarps,
             AnimationPresentationDiagnosticsInterest interest)
         {
@@ -365,6 +473,12 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
                     stateMachines.Count !=
                     m_Page.PoseStateMachines.Length ||
                     inertializations == null ||
+                    clipPlayers == null ||
+                    clipPlayers.Count !=
+                    m_Page.ClipFootObservations.Length ||
+                    blendSpacePlayers == null ||
+                    blendSpacePlayers.Count !=
+                    m_Page.BlendSpacePlayers.Length ||
                     rootOrientationWarps == null ||
                     rootOrientationWarps.Count !=
                     m_Page.RootOrientationWarps.Length)
@@ -438,6 +552,36 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
                 }
                 m_Page.RootOrientationWarpCount =
                     rootOrientationWarps.Count;
+                int clipFootObservationCount = 0;
+                for (int i = 0; i < clipPlayers.Count; i++)
+                {
+                    AnimationClipPlayerRuntime player = clipPlayers[i];
+                    if (!player.IsRelevant || !player.HasCompletedFrame)
+                        continue;
+                    m_Page.ClipFootObservations[
+                            clipFootObservationCount++] =
+                        player.CreateFootStepObservationSnapshot(0f);
+                }
+                m_Page.ClipFootObservationCount =
+                    clipFootObservationCount;
+                int blendSpaceSampleCount = 0;
+                int blendSpacePlayerCount = 0;
+                for (int i = 0; i < blendSpacePlayers.Count; i++)
+                {
+                    AnimationBlendSpacePlayerRuntime player =
+                        blendSpacePlayers[i];
+                    if (!player.IsRelevant || !player.HasCompletedFrame)
+                        continue;
+                    m_Page.BlendSpacePlayers[
+                            blendSpacePlayerCount++] =
+                        player.CreateDiagnosticsSnapshot(
+                            m_Page.BlendSpaceSamples,
+                            ref blendSpaceSampleCount);
+                }
+                m_Page.BlendSpacePlayerCount =
+                    blendSpacePlayerCount;
+                m_Page.BlendSpaceSampleCount =
+                    blendSpaceSampleCount;
             }
             m_Page.Identity = m_NextIdentity++;
             return new CharacterPoseActorCommittedDiagnosticsView(m_Page);
@@ -592,6 +736,18 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
                 m_Page.InertialBoneEnvelopes,
                 0,
                 m_Page.InertialBoneEnvelopes.Length);
+            Array.Clear(
+                m_Page.ClipFootObservations,
+                0,
+                m_Page.ClipFootObservations.Length);
+            Array.Clear(
+                m_Page.BlendSpacePlayers,
+                0,
+                m_Page.BlendSpacePlayers.Length);
+            Array.Clear(
+                m_Page.BlendSpaceSamples,
+                0,
+                m_Page.BlendSpaceSamples.Length);
             Array.Clear(
                 m_Page.RootOrientationWarps,
                 0,
@@ -809,6 +965,14 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
                 in finalFrame);
             if (RequiresFinalPoseDetail(interest))
                 CopyFinalDetail(page, in finalFrame);
+            if (RequiresBasicState(interest))
+            {
+                CopyBlendSpaces(page, in actorDiagnostics);
+                page.FootStepObservation =
+                    ResolveFootStepObservation(
+                        page,
+                        in actorDiagnostics);
+            }
             m_PendingPageIndex = pageIndex;
             m_PendingCompletionIdentity =
                 executionResult.Lineage.CompletionIdentity;
@@ -998,21 +1162,68 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
                 actorDiagnostics.RootOrientationWarpCount;
         }
 
+        static void CopyBlendSpaces(
+            Page page,
+            in CharacterPoseActorCommittedDiagnosticsView actorDiagnostics)
+        {
+            if (actorDiagnostics.BlendSpacePlayerCount >
+                    page.BlendSpacePlayers.Length ||
+                actorDiagnostics.BlendSpaceSampleCount >
+                    page.BlendSpaceSamples.Length)
+            {
+                throw new InvalidOperationException(
+                    "Animation Blend Space diagnostics fixed capacity was exceeded.");
+            }
+            actorDiagnostics.CopyBlendSpaces(
+                page.BlendSpacePlayers,
+                page.BlendSpaceSamples);
+            for (int i = 0;
+                 i < actorDiagnostics.BlendSpacePlayerCount;
+                 i++)
+            {
+                AnimationBlendSpacePlayerRuntimeSnapshot player =
+                    page.BlendSpacePlayers[i];
+                for (int operationIndex = 0;
+                     operationIndex < page.OperationCount;
+                     operationIndex++)
+                {
+                    AnimationPoseOperationSnapshot operation =
+                        page.Operations[operationIndex];
+                    if (operation.Code !=
+                            CharacterPoseOperationCode.BlendSpacePlayer ||
+                        !operation.NodeId.Equals(player.NodeId))
+                        continue;
+                    player = player.WithPoseResult(
+                        operation.Availability,
+                        operation.InvalidReason);
+                    break;
+                }
+                page.BlendSpacePlayers[i] = player;
+            }
+            Array.Clear(
+                page.BlendSpacePlayers,
+                actorDiagnostics.BlendSpacePlayerCount,
+                page.BlendSpacePlayers.Length -
+                actorDiagnostics.BlendSpacePlayerCount);
+            Array.Clear(
+                page.BlendSpaceSamples,
+                actorDiagnostics.BlendSpaceSampleCount,
+                page.BlendSpaceSamples.Length -
+                actorDiagnostics.BlendSpaceSampleCount);
+            page.BlendSpacePlayerCount =
+                actorDiagnostics.BlendSpacePlayerCount;
+            page.BlendSpaceSampleCount =
+                actorDiagnostics.BlendSpaceSampleCount;
+        }
+
         internal AnimationPresentationRuntimeSnapshot Publish(
             AnimationReleasedPoseSourceSnapshot[] releases,
-            int releaseCount,
-            IReadOnlyList<AnimationClipPlayerRuntime> clipPlayers,
-            IReadOnlyList<AnimationBlendSpacePlayerRuntime> blendSpacePlayers)
+            int releaseCount)
         {
             RequireAlive();
             if (m_PendingPageIndex < 0 || m_PendingCompletionIdentity == 0)
                 throw new InvalidOperationException("Animation runtime diagnostics has no completed native frame.");
             Page page = m_Pages[m_PendingPageIndex];
-            page.FootStepObservation = RequiresBasicState(page.Interest)
-                ? ResolveFootStepObservation(page, clipPlayers)
-                : default;
-            int blendSpacePlayerCount = 0;
-            int blendSpaceSampleCount = 0;
             if (RequiresBasicState(page.Interest))
             {
                 if (releases == null || releaseCount < 0 || releaseCount > releases.Length || releaseCount > page.Releases.Length)
@@ -1020,40 +1231,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
                 Array.Copy(releases, 0, page.Releases, 0, releaseCount);
                 Array.Clear(page.Releases, releaseCount, page.Releases.Length - releaseCount);
                 page.ReleaseCount = releaseCount;
-                int runtimeBlendSpacePlayerCount =
-                    blendSpacePlayers?.Count ?? 0;
-                if (runtimeBlendSpacePlayerCount >
-                    page.BlendSpacePlayers.Length)
-                {
-                    throw new InvalidOperationException(
-                        "Animation Blend Space diagnostics fixed capacity was exceeded.");
-                }
-                for (int i = 0; i < runtimeBlendSpacePlayerCount; i++)
-                {
-                    AnimationBlendSpacePlayerRuntime runtime =
-                        blendSpacePlayers[i];
-                    if (!runtime.IsRelevant || !runtime.HasCompletedFrame)
-                        continue;
-                    AnimationBlendSpacePlayerRuntimeSnapshot player =
-                        runtime.CreateDiagnosticsSnapshot(
-                            page.BlendSpaceSamples,
-                            ref blendSpaceSampleCount);
-                    for (int operationIndex = 0; operationIndex < page.OperationCount; operationIndex++)
-                    {
-                        AnimationPoseOperationSnapshot operation = page.Operations[operationIndex];
-                        if (operation.Code != CharacterPoseOperationCode.BlendSpacePlayer ||
-                            !operation.NodeId.Equals(player.NodeId))
-                            continue;
-                        player = player.WithPoseResult(operation.Availability, operation.InvalidReason);
-                        break;
-                    }
-                    page.BlendSpacePlayers[blendSpacePlayerCount++] = player;
-                }
             }
-            Array.Clear(page.BlendSpacePlayers, blendSpacePlayerCount, page.BlendSpacePlayers.Length - blendSpacePlayerCount);
-            Array.Clear(page.BlendSpaceSamples, blendSpaceSampleCount, page.BlendSpaceSamples.Length - blendSpaceSampleCount);
-            page.BlendSpacePlayerCount = blendSpacePlayerCount;
-            page.BlendSpaceSampleCount = blendSpaceSampleCount;
             page.Lease.BeginWrite(m_PendingCompletionIdentity);
             m_Current = page.CreateSnapshot(m_Projection, m_Program, m_PendingCompletionIdentity);
             m_ActivePageIndex = m_PendingPageIndex;
@@ -1064,7 +1242,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
 
         static AnimationFootStepObservationRuntimeSnapshot ResolveFootStepObservation(
             Page page,
-            IReadOnlyList<AnimationClipPlayerRuntime> clipPlayers)
+            in CharacterPoseActorCommittedDiagnosticsView actorDiagnostics)
         {
             AnimationPoseSourceId sourceId = default;
             float sourceWeight = -1f;
@@ -1079,16 +1257,11 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
                 sourceId = contribution.SourceId;
                 sourceWeight = contribution.Weight;
             }
-            if (!sourceId.IsValid || clipPlayers == null)
+            if (!sourceId.IsValid)
                 return default;
-            for (int i = 0; i < clipPlayers.Count; i++)
-            {
-                AnimationClipPlayerRuntime player = clipPlayers[i];
-                if (!player.SourceId.Equals(sourceId))
-                    continue;
-                return player.CreateFootStepObservationSnapshot(sourceWeight);
-            }
-            return default;
+            return actorDiagnostics.ResolveFootStepObservation(
+                sourceId,
+                sourceWeight);
         }
 
         internal void Invalidate()

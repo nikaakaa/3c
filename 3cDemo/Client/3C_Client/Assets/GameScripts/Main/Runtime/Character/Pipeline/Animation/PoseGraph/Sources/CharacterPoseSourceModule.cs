@@ -374,10 +374,22 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Sources
             CharacterPoseSourceFrameLease lease) =>
             m_FramePage.RequireDemand(lease);
 
-        internal void BindResult(
+        internal CharacterPoseSourceFrameResult PrepareFrameResult(
             CharacterPoseSourceFrameLease lease,
-            in CharacterPoseSourceFrameResult result) =>
+            IReadOnlyDictionary<AnimationPlayerSourceSampleKey,
+                AnimationResolvedPoseSourceSample> actionSources,
+            IReadOnlyDictionary<AnimationPlayerSourceSampleKey,
+                PresentationPoseSourceSample> providerSources)
+        {
+            CharacterPoseSourceDemand demand =
+                m_FramePage.RequireDemand(lease);
+            var result = new CharacterPoseSourceFrameResult(
+                in demand,
+                actionSources,
+                providerSources);
             m_FramePage.BindResult(lease, in result);
+            return result;
+        }
 
         internal void RequirePendingOpen(
             CharacterPoseSourceFrameLease lease)

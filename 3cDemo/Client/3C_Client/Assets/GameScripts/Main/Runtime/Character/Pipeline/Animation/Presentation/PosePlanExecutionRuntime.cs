@@ -2618,8 +2618,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                     in committedFinalRead);
             }
 
-            var sourceFrame = new CharacterPoseSourceFrameResult(
-                in sourceDemand,
+            CharacterPoseSourceFrameResult sourceFrame =
+                m_SourceModule.PrepareFrameResult(
+                sourceLease,
                 actionSourceSamples,
                 providerSourceSamples);
             if (!sourceFrame.IsReady)
@@ -2627,9 +2628,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                 throw new InvalidOperationException(
                     $"Pose source frame ended as '{sourceFrame.Outcome}'.");
             }
-            m_SourceModule.BindResult(
-                sourceLease,
-                in sourceFrame);
             var prepared = new CharacterPoseProgramPrepared(in sourceFrame);
             m_PreparedPage.Prepare(
                 in prepared,

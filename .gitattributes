@@ -17,7 +17,6 @@
 *.mat text
 *.meta text
 *.controller text
-*.anim text
 *.overrideController text
 *.png filter=lfs diff=lfs merge=lfs -text
 *.jpg binary

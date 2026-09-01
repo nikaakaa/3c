@@ -90,6 +90,65 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         public CharacterLinkedPoseRuntimeCapacity ActiveCapacity { get; }
     }
 
+    internal readonly struct CharacterLinkedPoseCommittedDiagnosticsView
+    {
+        internal CharacterLinkedPoseCommittedDiagnosticsView(
+            CharacterLinkedPoseRuntimeSession.CommittedDiagnosticsPage page)
+        {
+            m_Page = page ?? throw new ArgumentNullException(nameof(page));
+            m_Identity = page.Identity;
+            if (!IsValid)
+            {
+                throw new ArgumentException(
+                    "Linked Pose committed diagnostics are invalid.",
+                    nameof(page));
+            }
+        }
+
+        readonly CharacterLinkedPoseRuntimeSession.CommittedDiagnosticsPage
+            m_Page;
+        readonly ulong m_Identity;
+        internal bool IsValid =>
+            m_Page != null &&
+            m_Identity != 0 &&
+            m_Page.Identity == m_Identity &&
+            m_Page.Result.IsCompleted;
+        internal CharacterPoseProgramResult Result
+        {
+            get
+            {
+                RequireValid();
+                return m_Page.Result;
+            }
+        }
+        internal int GroupCount
+        {
+            get
+            {
+                RequireValid();
+                return m_Page.Groups.Length;
+            }
+        }
+
+        internal CharacterLinkedPoseRuntimeGroupSnapshot GetGroup(
+            int groupIndex)
+        {
+            RequireValid();
+            if ((uint)groupIndex >= (uint)m_Page.Groups.Length)
+                throw new ArgumentOutOfRangeException(nameof(groupIndex));
+            return m_Page.Groups[groupIndex];
+        }
+
+        void RequireValid()
+        {
+            if (!IsValid)
+            {
+                throw new InvalidOperationException(
+                    "Linked Pose committed diagnostics lease is stale.");
+            }
+        }
+    }
+
     sealed class CharacterLinkedPoseGroupRuntimeState
     {
         readonly CharacterLinkedPoseGroupProjectionDescriptor m_Group;
@@ -276,9 +335,26 @@ namespace ThirdPersonCharacter.Pipeline.Animation
 
     public sealed class CharacterLinkedPoseRuntimeSession
     {
+        internal sealed class CommittedDiagnosticsPage
+        {
+            internal CommittedDiagnosticsPage(int groupCount)
+            {
+                if (groupCount < 0)
+                    throw new ArgumentOutOfRangeException(nameof(groupCount));
+                Groups =
+                    new CharacterLinkedPoseRuntimeGroupSnapshot[groupCount];
+            }
+
+            internal ulong Identity;
+            internal CharacterPoseProgramResult Result;
+            internal readonly CharacterLinkedPoseRuntimeGroupSnapshot[] Groups;
+        }
+
         readonly CharacterLinkedPoseGroupRuntimeState[] m_Groups;
         readonly ICharacterLinkedPoseRuntimeSelectorAdapter[] m_Selectors;
         readonly CharacterLinkedPoseRuntimeLayoutCatalog m_Layouts;
+        readonly CommittedDiagnosticsPage m_CommittedDiagnostics;
+        ulong m_NextDiagnosticsIdentity = 1;
         bool m_Prepared;
 
         public CharacterLinkedPoseRuntimeSession(
@@ -297,6 +373,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             for (int i = 0; i < selectors.Count; i++)
                 m_Selectors[i] = selectors[i] ?? throw new InvalidOperationException($"Linked Pose runtime selector #{i} is missing.");
             m_Groups = new CharacterLinkedPoseGroupRuntimeState[linkedPose.Groups.Count];
+            m_CommittedDiagnostics =
+                new CommittedDiagnosticsPage(linkedPose.Groups.Count);
             for (int groupIndex = 0; groupIndex < linkedPose.Groups.Count; groupIndex++)
             {
                 CharacterLinkedPoseGroupProjectionDescriptor group = linkedPose.Groups[groupIndex];
@@ -334,6 +412,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         {
             if (m_Prepared)
                 throw new InvalidOperationException("Linked Pose runtime session is already prepared.");
+            m_CommittedDiagnostics.Identity = 0;
             int preparedCount = 0;
             try
             {
@@ -393,6 +472,24 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             m_Prepared = false;
         }
 
+        internal CharacterLinkedPoseCommittedDiagnosticsView
+            CaptureCommittedDiagnostics(
+            in CharacterPoseProgramResult result)
+        {
+            if (m_Prepared || !result.IsCompleted)
+            {
+                throw new InvalidOperationException(
+                    "Linked Pose committed diagnostics request is invalid.");
+            }
+            CommittedDiagnosticsPage page = m_CommittedDiagnostics;
+            page.Identity = 0;
+            page.Result = result;
+            for (int i = 0; i < m_Groups.Length; i++)
+                page.Groups[i] = m_Groups[i].CreateCommittedSnapshot();
+            page.Identity = m_NextDiagnosticsIdentity++;
+            return new CharacterLinkedPoseCommittedDiagnosticsView(page);
+        }
+
         public void Discard()
         {
             for (int i = 0; i < m_Groups.Length; i++)
@@ -403,6 +500,12 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         public void Reset()
         {
             Discard();
+            m_CommittedDiagnostics.Identity = 0;
+            m_CommittedDiagnostics.Result = default;
+            Array.Clear(
+                m_CommittedDiagnostics.Groups,
+                0,
+                m_CommittedDiagnostics.Groups.Length);
             for (int i = 0; i < m_Groups.Length; i++)
                 m_Groups[i].Reset();
             for (int i = 0; i < m_Selectors.Length; i++)

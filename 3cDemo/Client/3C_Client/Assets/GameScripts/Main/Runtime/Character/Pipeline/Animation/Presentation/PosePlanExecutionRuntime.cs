@@ -480,9 +480,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             {
                 workspace = new AnimationPoseNativeWorkspace(projection);
                 CharacterPoseGraphNativeBinding initialFrame = workspace.BeginFrame(m_CompletionIdentity);
-                poseProgram = new CharacterPoseGraphNativeProgram(
                 AnimationPoseNativeAggregateLayout initialLayout =
                     initialFrame.Layout;
+                poseProgram = new CharacterPoseGraphNativeProgram(
                     projection.PosePlan,
                     projection.Rig,
                     projection.BlendCurveCatalog,
@@ -1730,8 +1730,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             AnimationPresentationDiagnosticsInterest interest,
             CharacterLinkedPoseRuntimeSession linkedPose,
             in CharacterPoseSourceFrameResult sourceFrame,
-        {
             in CharacterPoseFrameExecutionResult executionResult)
+        {
             RequireAlive();
             RequireNoOpenMutation();
             if (linkedPose == null)
@@ -1764,7 +1764,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                 CharacterPoseSourceCommittedDiagnosticsView sourceDiagnostics =
                     m_PhysicalSources.CaptureCommittedDiagnostics(
                         in sourceFrame);
-                    executionResult.Constraint;
                 CharacterPoseProgramResult committedProgramResult =
                     executionResult.Program;
                 CharacterPoseProgramCommittedDiagnosticsView
@@ -1773,7 +1772,12 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                             in committedProgramResult,
                             in m_LastCompletedFrame,
                             interest);
+                CharacterLinkedPoseCommittedDiagnosticsView
+                    linkedPoseDiagnostics =
+                        linkedPose.CaptureCommittedDiagnostics(
+                            in committedProgramResult);
                 CharacterPoseConstraintResult committedConstraintResult =
+                    executionResult.Constraint;
                 CharacterPoseConstraintCommittedDiagnosticsView
                     constraintDiagnostics =
                         m_PoseConstraints.CaptureCommittedDiagnostics(
@@ -1787,24 +1791,27 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                             in committedPublicationResult);
                 AnimationPhysicalBoneWriteDiagnostics physicalWrite =
                     publicationDiagnostics.PhysicalWrite;
-                    constraintDiagnostics.FootLandingPrediction;
                 CharacterFootLandingPredictionDiagnostics footDiagnostics =
+                    constraintDiagnostics.FootLandingPrediction;
                 CharacterFullBodyIkSolverDiagnostics solverDiagnostics =
                     constraintDiagnostics.Solver;
                 if (!sourceDiagnostics.IsValid ||
                     sourceDiagnostics.Result.Lineage !=
                     executionResult.Lineage ||
-                    !constraintDiagnostics.IsValid ||
                     !programDiagnostics.IsValid ||
                     programDiagnostics.Result.Lineage !=
                     executionResult.Lineage ||
+                    !linkedPoseDiagnostics.IsValid ||
+                    linkedPoseDiagnostics.Result.Lineage !=
+                    executionResult.Lineage ||
+                    !constraintDiagnostics.IsValid ||
                     constraintDiagnostics.Result.Lineage !=
                     executionResult.Lineage ||
                     !publicationDiagnostics.IsValid ||
                     publicationDiagnostics.Result.Lineage !=
                     executionResult.Lineage ||
-                    executionResult.Lineage ||
                     executionResult.Constraint.Lineage !=
+                    executionResult.Lineage ||
                     executionResult.Publication.Lineage !=
                     executionResult.Lineage ||
                     requiresFoot &&
@@ -1827,15 +1834,15 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                 m_DiagnosticsPublisher.BeginFrame(
                     in executionResult,
                     in sourceDiagnostics,
-                    in publicationDiagnostics,
                     in programDiagnostics,
+                    in linkedPoseDiagnostics,
                     in constraintDiagnostics,
+                    in publicationDiagnostics,
                     m_Stacks,
                     m_StackRoutes,
                     m_PoseStateSources.StateMachines,
                     m_InertializationPlan,
                     m_RootOrientationWarps,
-                    linkedPose,
                     interest);
             }
         }

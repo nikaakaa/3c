@@ -132,6 +132,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
             in CharacterPoseFrameExecutionResult executionResult,
             in CharacterPoseSourceCommittedDiagnosticsView sourceDiagnostics,
             in CharacterPoseProgramCommittedDiagnosticsView programDiagnostics,
+            in CharacterLinkedPoseCommittedDiagnosticsView
+                linkedPoseDiagnostics,
             in CharacterPoseConstraintCommittedDiagnosticsView
                 constraintDiagnostics,
             in CharacterFinalPoseCommittedDiagnosticsView
@@ -141,7 +143,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
             IReadOnlyList<CharacterPoseStateMachineRuntime> stateMachines,
             PoseInertializationNativeProgram inertializations,
             IReadOnlyList<RootOrientationWarpRuntime> rootOrientationWarps,
-            CharacterLinkedPoseRuntimeSession linkedPose,
             AnimationPresentationDiagnosticsInterest interest)
         {
             RequireAlive();
@@ -155,6 +156,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
                 !programDiagnostics.IsValid ||
                 programDiagnostics.Result.Lineage !=
                 executionResult.Lineage ||
+                !linkedPoseDiagnostics.IsValid ||
+                linkedPoseDiagnostics.Result.Lineage !=
+                executionResult.Lineage ||
                 !constraintDiagnostics.IsValid ||
                 constraintDiagnostics.Result.Lineage !=
                 executionResult.Lineage ||
@@ -164,8 +168,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
                 executionResult.Lineage.CompletionIdentity !=
                 finalFrame.CompletionIdentity || stacks == null ||
                 routes == null || routes.Count != stacks.Count || stateMachines == null ||
-                inertializations == null || rootOrientationWarps == null ||
-                linkedPose == null)
+                inertializations == null || rootOrientationWarps == null)
                 throw new ArgumentException("Animation runtime diagnostics frame inputs are inconsistent.");
             AnimationPhysicalBoneWriteDiagnostics physicalWrite =
                 publicationDiagnostics.PhysicalWrite;
@@ -221,7 +224,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
             CopyLinkedPose(
                 page,
                 in programDiagnostics,
-                linkedPose);
+                in linkedPoseDiagnostics);
             if ((interest & AnimationPresentationDiagnosticsInterest.PoseWatch) != 0)
                 CopyPoseWatches(
                     page,
@@ -243,16 +246,23 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
             Page page,
             in CharacterPoseProgramCommittedDiagnosticsView
                 programDiagnostics,
-            CharacterLinkedPoseRuntimeSession linkedPose)
+            in CharacterLinkedPoseCommittedDiagnosticsView
+                linkedPoseDiagnostics)
         {
-            if (linkedPose.GroupCount != page.LinkedPoseGroups.Length ||
+            if (linkedPoseDiagnostics.GroupCount !=
+                    page.LinkedPoseGroups.Length ||
                 m_Program.LinkedPoseCalls.Count != page.LinkedPoseEntries.Length)
             {
                 throw new InvalidOperationException("Linked Pose diagnostics layout is inconsistent.");
             }
-            for (int groupIndex = 0; groupIndex < linkedPose.GroupCount; groupIndex++)
-                page.LinkedPoseGroups[groupIndex] = linkedPose.CreateCommittedSnapshot(groupIndex);
-            page.LinkedPoseGroupCount = linkedPose.GroupCount;
+            for (int groupIndex = 0;
+                 groupIndex < linkedPoseDiagnostics.GroupCount;
+                 groupIndex++)
+            {
+                page.LinkedPoseGroups[groupIndex] =
+                    linkedPoseDiagnostics.GetGroup(groupIndex);
+            }
+            page.LinkedPoseGroupCount = linkedPoseDiagnostics.GroupCount;
 
             for (int callIndex = 0; callIndex < m_Program.LinkedPoseCalls.Count; callIndex++)
             {

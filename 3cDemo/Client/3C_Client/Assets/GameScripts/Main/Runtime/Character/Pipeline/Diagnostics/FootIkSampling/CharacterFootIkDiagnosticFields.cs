@@ -1,5 +1,6 @@
 using ThirdPerson.GeneratedDiagnosticSampling;
 using ThirdPersonCharacter.Pipeline.Animation.Diagnostics;
+using ThirdPersonCharacter.Pipeline.Presentation;
 
 namespace ThirdPersonCharacter.Pipeline.Diagnostics.FootIkSampling
 {
@@ -83,11 +84,11 @@ namespace ThirdPersonCharacter.Pipeline.Diagnostics.FootIkSampling
             view.Lineage.PoseProgramIdentity;
 
         [DiagnosticField(Capability, "character-foot-ik/main/frame-sequence", 1,
-            DiagnosticValueKind.UInt64, "frame", Main, IdentityGroup)]
-        internal static ulong FrameSequence(
+            DiagnosticValueKind.Int32, "frame", Main, IdentityGroup)]
+        internal static int FrameSequence(
             in CharacterFootIkCommittedCaptureViewLease view,
             in CharacterFootIkCaptureMetadata metadata) =>
-            view.Lineage.PresentationFrame;
+            checked((int)view.Lineage.PresentationFrame);
 
         [DiagnosticField(Capability, "character-foot-ik/main/completion-identity", 1,
             DiagnosticValueKind.UInt64, "identity", Main, IdentityGroup)]
@@ -95,6 +96,222 @@ namespace ThirdPersonCharacter.Pipeline.Diagnostics.FootIkSampling
             in CharacterFootIkCommittedCaptureViewLease view,
             in CharacterFootIkCaptureMetadata metadata) =>
             view.Lineage.CompletionIdentity;
+
+        [DiagnosticField(Capability, "character-foot-ik/main/root-instance-id", 1,
+            DiagnosticValueKind.Int32, "identity", Main, IdentityGroup)]
+        internal static int RootInstanceId(
+            in CharacterFootIkCommittedCaptureViewLease view,
+            in CharacterFootIkCaptureMetadata metadata) =>
+            view.LandingPrediction.RootInstanceId;
+
+        [DiagnosticField(Capability, "character-foot-ik/main/foot-profile-id", 1,
+            DiagnosticValueKind.Identity, "identity", Main, IdentityGroup)]
+        internal static string FootProfileId(
+            in CharacterFootIkCommittedCaptureViewLease view,
+            in CharacterFootIkCaptureMetadata metadata) =>
+            view.LandingPrediction.ProfileId;
+
+        [DiagnosticField(Capability, "character-foot-ik/main/foot-profile-revision", 1,
+            DiagnosticValueKind.Identity, "identity", Main, IdentityGroup)]
+        internal static string FootProfileRevision(
+            in CharacterFootIkCommittedCaptureViewLease view,
+            in CharacterFootIkCaptureMetadata metadata) =>
+            view.LandingPrediction.ProfileRevision;
+
+        [DiagnosticField(Capability, "character-foot-ik/main/state", 1,
+            DiagnosticValueKind.Int32, "category", Main, IdentityGroup)]
+        internal static int State(
+            in CharacterFootIkCommittedCaptureViewLease view,
+            in CharacterFootIkCaptureMetadata metadata) =>
+            (int)Foot(in view, in metadata).State;
+
+        [DiagnosticField(Capability, "character-foot-ik/main/reject-reason", 1,
+            DiagnosticValueKind.Int32, "category", Main, IdentityGroup)]
+        internal static int RejectReason(
+            in CharacterFootIkCommittedCaptureViewLease view,
+            in CharacterFootIkCaptureMetadata metadata) =>
+            (int)Foot(in view, in metadata).RejectReason;
+
+        [DiagnosticField(Capability, "character-foot-ik/main/step-source", 1,
+            DiagnosticValueKind.Int32, "category", Main, IdentityGroup)]
+        internal static int StepSource(
+            in CharacterFootIkCommittedCaptureViewLease view,
+            in CharacterFootIkCaptureMetadata metadata) =>
+            (int)Foot(in view, in metadata).StepSource;
+
+        [DiagnosticField(Capability, "character-foot-ik/main/landing-event-identity", 1,
+            DiagnosticValueKind.UInt64, "identity", Main, IdentityGroup)]
+        internal static ulong LandingEventIdentity(
+            in CharacterFootIkCommittedCaptureViewLease view,
+            in CharacterFootIkCaptureMetadata metadata) =>
+            Foot(in view, in metadata).LandingEventIdentity;
+
+        [DiagnosticField(Capability, "character-foot-ik/main/trajectory-generation", 1,
+            DiagnosticValueKind.UInt64, "identity", Main, IdentityGroup)]
+        internal static ulong TrajectoryGeneration(
+            in CharacterFootIkCommittedCaptureViewLease view,
+            in CharacterFootIkCaptureMetadata metadata) =>
+            Foot(in view, in metadata).TrajectoryGeneration;
+
+        [DiagnosticField(Capability, "character-foot-ik/main/landing-confidence", 1,
+            DiagnosticValueKind.Float32, "unitless", Main, IdentityGroup)]
+        internal static float LandingConfidence(
+            in CharacterFootIkCommittedCaptureViewLease view,
+            in CharacterFootIkCaptureMetadata metadata) =>
+            Foot(in view, in metadata).LandingConfidence;
+
+        [DiagnosticField(Capability, "character-foot-ik/main/time-to-landing-seconds", 1,
+            DiagnosticValueKind.Float32, "seconds", Main, IdentityGroup)]
+        internal static float TimeToLandingSeconds(
+            in CharacterFootIkCommittedCaptureViewLease view,
+            in CharacterFootIkCaptureMetadata metadata) =>
+            Foot(in view, in metadata).TimeToLandingSeconds;
+
+        [DiagnosticField(Capability, "character-foot-ik/main/next-landing-tracking-state", 1,
+            DiagnosticValueKind.Int32, "category", Main, IdentityGroup)]
+        internal static int NextLandingTrackingState(
+            in CharacterFootIkCommittedCaptureViewLease view,
+            in CharacterFootIkCaptureMetadata metadata) =>
+            (int)Foot(in view, in metadata).NextLandingTrackingState;
+
+        [DiagnosticField(Capability, "character-foot-ik/main/next-landing-tracking-event-identity", 1,
+            DiagnosticValueKind.UInt64, "identity", Main, IdentityGroup)]
+        internal static ulong NextLandingTrackingEventIdentity(
+            in CharacterFootIkCommittedCaptureViewLease view,
+            in CharacterFootIkCaptureMetadata metadata) =>
+            Foot(in view, in metadata).NextLandingTrackingEventIdentity;
+
+        [DiagnosticField(Capability, "character-foot-ik/main/verified-last-landing-available", 1,
+            DiagnosticValueKind.Boolean, "none", Main, IdentityGroup)]
+        internal static bool VerifiedLastLandingAvailable(
+            in CharacterFootIkCommittedCaptureViewLease view,
+            in CharacterFootIkCaptureMetadata metadata) =>
+            Foot(in view, in metadata).VerifiedLastLandingAvailable;
+
+        [DiagnosticField(Capability, "character-foot-ik/main/verified-last-landing-event-identity", 1,
+            DiagnosticValueKind.UInt64, "identity", Main, IdentityGroup)]
+        internal static ulong VerifiedLastLandingEventIdentity(
+            in CharacterFootIkCommittedCaptureViewLease view,
+            in CharacterFootIkCaptureMetadata metadata) =>
+            Foot(in view, in metadata).VerifiedLastLandingEventIdentity;
+
+        [DiagnosticField(Capability, "character-foot-ik/main/plant-target-state", 1,
+            DiagnosticValueKind.Int32, "category", Main, IdentityGroup)]
+        internal static int PlantTargetState(
+            in CharacterFootIkCommittedCaptureViewLease view,
+            in CharacterFootIkCaptureMetadata metadata) =>
+            (int)Foot(in view, in metadata).PlantTargetState;
+
+        [DiagnosticField(Capability, "character-foot-ik/main/plant-target-available", 1,
+            DiagnosticValueKind.Boolean, "none", Main, IdentityGroup)]
+        internal static bool PlantTargetAvailable(
+            in CharacterFootIkCommittedCaptureViewLease view,
+            in CharacterFootIkCaptureMetadata metadata) =>
+            Foot(in view, in metadata).PlantTargetAvailable;
+
+        [DiagnosticField(Capability, "character-foot-ik/main/plant-target-event-identity", 1,
+            DiagnosticValueKind.UInt64, "identity", Main, IdentityGroup,
+            AvailabilityFieldId = "character-foot-ik/main/plant-target-available")]
+        internal static ulong PlantTargetEventIdentity(
+            in CharacterFootIkCommittedCaptureViewLease view,
+            in CharacterFootIkCaptureMetadata metadata) =>
+            Foot(in view, in metadata).PlantTargetEventIdentity;
+
+        [DiagnosticField(Capability, "character-foot-ik/main/plant-target-surface-identity", 1,
+            DiagnosticValueKind.Int32, "count", Main, IdentityGroup,
+            AvailabilityFieldId = "character-foot-ik/main/plant-target-available")]
+        internal static int PlantTargetSurfaceIdentity(
+            in CharacterFootIkCommittedCaptureViewLease view,
+            in CharacterFootIkCaptureMetadata metadata) =>
+            Foot(in view, in metadata).PlantTargetSurfaceIdentity;
+
+        [DiagnosticField(Capability, "character-foot-ik/main/plant-target-point", 1,
+            DiagnosticValueKind.Vector3, "metres", Main, IdentityGroup,
+            AvailabilityFieldId = "character-foot-ik/main/plant-target-available")]
+        internal static DiagnosticVector3 PlantTargetPoint(
+            in CharacterFootIkCommittedCaptureViewLease view,
+            in CharacterFootIkCaptureMetadata metadata) =>
+            Vector3(Foot(in view, in metadata).PlantTargetPoint);
+
+        [DiagnosticField(Capability, "character-foot-ik/main/plant-target-normal", 1,
+            DiagnosticValueKind.Vector3, "direction", Main, IdentityGroup,
+            AvailabilityFieldId = "character-foot-ik/main/plant-target-available")]
+        internal static DiagnosticVector3 PlantTargetNormal(
+            in CharacterFootIkCommittedCaptureViewLease view,
+            in CharacterFootIkCaptureMetadata metadata) =>
+            Vector3(Foot(in view, in metadata).PlantTargetNormal);
+
+        [DiagnosticField(Capability, "character-foot-ik/main/plant-target-trajectory-generation", 1,
+            DiagnosticValueKind.UInt64, "identity", Main, IdentityGroup,
+            AvailabilityFieldId = "character-foot-ik/main/plant-target-available")]
+        internal static ulong PlantTargetTrajectoryGeneration(
+            in CharacterFootIkCommittedCaptureViewLease view,
+            in CharacterFootIkCaptureMetadata metadata) =>
+            Foot(in view, in metadata).PlantTargetTrajectoryGeneration;
+
+        [DiagnosticField(Capability, "character-foot-ik/main/plant-target-future-body-translation-source-identity", 1,
+            DiagnosticValueKind.Identity, "identity", Main, IdentityGroup,
+            AvailabilityFieldId = "character-foot-ik/main/plant-target-available")]
+        internal static string PlantTargetFutureBodyTranslationSourceIdentity(
+            in CharacterFootIkCommittedCaptureViewLease view,
+            in CharacterFootIkCaptureMetadata metadata) =>
+            Foot(in view, in metadata).PlantTargetFutureBodyTranslationSourceIdentity;
+
+        [DiagnosticField(Capability, "character-foot-ik/main/plant-target-updated", 1,
+            DiagnosticValueKind.Boolean, "none", Main, IdentityGroup)]
+        internal static bool PlantTargetUpdated(
+            in CharacterFootIkCommittedCaptureViewLease view,
+            in CharacterFootIkCaptureMetadata metadata) =>
+            Foot(in view, in metadata).PlantTargetUpdated;
+
+        [DiagnosticField(Capability, "character-foot-ik/main/plant-verification-attempted", 1,
+            DiagnosticValueKind.Boolean, "none", Main, IdentityGroup)]
+        internal static bool PlantVerificationAttempted(
+            in CharacterFootIkCommittedCaptureViewLease view,
+            in CharacterFootIkCaptureMetadata metadata) =>
+            Foot(in view, in metadata).PlantVerificationAttempted;
+
+        [DiagnosticField(Capability, "character-foot-ik/main/plant-verification-unavailable", 1,
+            DiagnosticValueKind.Boolean, "none", Main, IdentityGroup)]
+        internal static bool PlantVerificationUnavailable(
+            in CharacterFootIkCommittedCaptureViewLease view,
+            in CharacterFootIkCaptureMetadata metadata) =>
+            Foot(in view, in metadata).PlantVerificationUnavailable;
+
+        [DiagnosticField(Capability, "character-foot-ik/main/approach-plant-target-prepared", 1,
+            DiagnosticValueKind.Boolean, "none", Main, IdentityGroup)]
+        internal static bool ApproachPlantTargetPrepared(
+            in CharacterFootIkCommittedCaptureViewLease view,
+            in CharacterFootIkCaptureMetadata metadata) =>
+            Foot(in view, in metadata).ApproachPlantTargetPrepared;
+
+        [DiagnosticField(Capability, "character-foot-ik/main/step-selection-maximum-prediction-time-seconds", 1,
+            DiagnosticValueKind.Float32, "seconds", Main, IdentityGroup)]
+        internal static float StepSelectionMaximumPredictionTimeSeconds(
+            in CharacterFootIkCommittedCaptureViewLease view,
+            in CharacterFootIkCaptureMetadata metadata) =>
+            Foot(in view, in metadata).StepCandidateSelection.MaximumPredictionTimeSeconds;
+
+        [DiagnosticField(Capability, "character-foot-ik/main/step-selection-last-landing-event-identity", 1,
+            DiagnosticValueKind.UInt64, "identity", Main, IdentityGroup)]
+        internal static ulong StepSelectionLastLandingEventIdentity(
+            in CharacterFootIkCommittedCaptureViewLease view,
+            in CharacterFootIkCaptureMetadata metadata) =>
+            Foot(in view, in metadata).StepCandidateSelection.LastLandingEventIdentity;
+
+        [DiagnosticField(Capability, "character-foot-ik/main/selected-step-source", 1,
+            DiagnosticValueKind.Int32, "category", Main, IdentityGroup)]
+        internal static int SelectedStepSource(
+            in CharacterFootIkCommittedCaptureViewLease view,
+            in CharacterFootIkCaptureMetadata metadata) =>
+            (int)Foot(in view, in metadata).StepCandidateSelection.SelectedSource;
+
+        [DiagnosticField(Capability, "character-foot-ik/main/selected-landing-event-identity", 1,
+            DiagnosticValueKind.UInt64, "identity", Main, IdentityGroup)]
+        internal static ulong SelectedLandingEventIdentity(
+            in CharacterFootIkCommittedCaptureViewLease view,
+            in CharacterFootIkCaptureMetadata metadata) =>
+            Foot(in view, in metadata).StepCandidateSelection.SelectedLandingEventIdentity;
 
         [DiagnosticField(Capability, "character-foot-ik/main/logic-root-position", 1,
             DiagnosticValueKind.Vector3, "metres", Main, RootHierarchyGroup)]
@@ -171,5 +388,16 @@ namespace ThirdPersonCharacter.Pipeline.Diagnostics.FootIkSampling
 
         static DiagnosticQuaternion Quaternion(UnityEngine.Quaternion value) =>
             new DiagnosticQuaternion(value.x, value.y, value.z, value.w);
+
+        static CharacterFootLandingPredictionFootDiagnostics Foot(
+            in CharacterFootIkCommittedCaptureViewLease view,
+            in CharacterFootIkCaptureMetadata metadata)
+        {
+            ref readonly CharacterFootLandingPredictionDiagnostics frame =
+                ref view.LandingPrediction;
+            return metadata.Side == CharacterFootSide.Left
+                ? frame.Left
+                : frame.Right;
+        }
     }
 }

@@ -598,13 +598,13 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             SourceHeelPosition = sourcePose.HeelPosition;
             SourceToePosition = sourcePose.ToePosition;
             StepCandidateSelection = stepCandidateSelection;
-            NextLandingTrackingState = landing.NextTrackingState.ToString();
+            NextLandingTrackingState = landing.NextTrackingState;
             NextLandingTrackingEventIdentity =
                 landing.NextTrackingEventIdentity;
             VerifiedLastLandingAvailable = landing.HasVerifiedLastLanding;
             VerifiedLastLandingEventIdentity =
                 landing.VerifiedLastLandingEventIdentity;
-            PlantTargetState = landing.PlantTargetState.ToString();
+            PlantTargetState = landing.PlantTargetState;
             PlantTargetAvailable = landing.HasPlantTarget;
             PlantTargetEventIdentity = landing.HasPlantTarget
                 ? landing.PlantTarget.LandingEventIdentity
@@ -670,11 +670,11 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         public Vector3 SourceHeelPosition { get; }
         public Vector3 SourceToePosition { get; }
         public CharacterFootStepCandidateSelectionDiagnostics StepCandidateSelection { get; }
-        public string NextLandingTrackingState { get; }
+        public CharacterFootNextLandingTrackingState NextLandingTrackingState { get; }
         public ulong NextLandingTrackingEventIdentity { get; }
         public bool VerifiedLastLandingAvailable { get; }
         public ulong VerifiedLastLandingEventIdentity { get; }
-        public string PlantTargetState { get; }
+        public CharacterFootPlantTargetState PlantTargetState { get; }
         public bool PlantTargetAvailable { get; }
         public ulong PlantTargetEventIdentity { get; }
         public int PlantTargetSurfaceIdentity { get; }

@@ -5,13 +5,13 @@ using UnityEngine;
 
 namespace ThirdPersonCharacter.Pipeline.Presentation
 {
-    internal enum CharacterFootNextLandingTrackingState : byte
+    public enum CharacterFootNextLandingTrackingState : byte
     {
         Empty = 0,
         Tracking = 1
     }
 
-    internal enum CharacterFootPlantTargetState : byte
+    public enum CharacterFootPlantTargetState : byte
     {
         Empty = 0,
         Tracking = 1,

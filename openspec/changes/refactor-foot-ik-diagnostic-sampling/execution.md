@@ -49,3 +49,13 @@ Final Publication Pending页现保存根Frame冻结的specific Foot interest。�
 对账旧CSV的每帧Left／Right两条主行与框架单主区ABI后，Foot Capture正式采用每脚一个主packet：PoseGraph每帧仍只发布一个同lineage短租约，Bridge在租约内按Left、Right固定顺序调用同一个Generated Program两次，两个packet共享Frame／Completion lineage并由各自固定`CharacterFootIkCaptureMetadata.Side`区分。`Side`已成为第22个typed Field，由Host恢复稳定Category文本。
 
 不把两脚塞进容量2的万能Foot表，因为框架Table按Sampler整体选择，那会让Landing／Solver无法独立组合主字段，也会与每脚Ground Geometry子表冲突；不复制Left／Right两套Field identity，因为会翻倍Schema并破坏多Sampler字段并集。Foot插件工程按规定参数构建成功、0错误，27个warning仍只来自既有Unity／第三方依赖，build server已关闭。Proposal、Design、Spec和任务4.2已同步这一正式调用模型。
+
+## 迁移完整Identity组并生成首个Full Program
+
+Identity组42个typed字段已全部声明。每脚状态、Reject、Step来源、Landing／Trajectory、Tracking、Plant Target、Verification与Step Selection直接读取同一Foot Committed View；Plant Target的5个条件字段通过`plant-target-available`形成生成器校验的availability闭包。`FrameSequence`按现行CSV合同保持Int32，Side及全部Category按领域枚举写入Int32，Host后续统一恢复文本。
+
+`CharacterFootNextLandingTrackingState`与`CharacterFootPlantTargetState`已从Runtime诊断中的提前`ToString()`改回公开typed枚举；旧Editor CSV列只在Host写出时格式化，因此当前旧链字节语义不变，Capture Player热路径不再制造这两个类别字符串。新增稳定`character-foot-ik/full` Sampler和`character-foot-ik/full-program` Program Definition，当前组合`capture-metadata`、`identity`、`root-hierarchy`三组；随着其余正式字段组迁入，Full Definition继续扩展，不建立过渡Program或第二Generator。
+
+实际Source Generator输出52个唯一Field Handle和52次packet写入，没有重复求值。当前生成身份为Schema `f12081aaab9717213d60fe4569b41070dbc77eabfafcb366e4b6cc01a6070129`、Program hash `d807398b9ce8a1faf8ccfa8d69a0022864d5929a2130098d09c8f328ea21cf4e`、layout `9b3d5f885eef6d8c1f66dab306140c0f6f0beedffcaa995e53a1c0c18eca66fe`；它们属于当前已迁移字段快照，后续字段增加会按框架合同产生新身份。Foot插件和Editor工程均0错误，build server已关闭。
+
+正式A为`Diagnostics/FootPlacementRuns/20260902-033516-613-1591907a78214a389ab18cdc9835fe66`，候选B为`Diagnostics/FootPlacementRuns/20260902-035606-012-6b24b5d5d7814554aacea6862bccdbf1`；B Proof为`Temp/CharacterInputReplayProofs/v4/43357ff3cd384e5cba75d2c31175b116/20260902-035702-488-cdc651d7a5c64075871564fe6c71e821.json`，工具报告`matched:1044`。A/B主表2086行、1222列，1198业务列逐值相同、24 identity列一一映射且0冲突；Geometry 67186行、27列，22业务列逐值相同、5 identity列一一映射且0冲突；总分84.2、weighted evidence 96.5不变。`035606`成为下一字段组迁移的正式A。

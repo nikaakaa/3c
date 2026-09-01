@@ -498,7 +498,7 @@ A/B均为2086脚行、1222列，其中1198个业务列逐值相同、24个运行
 
 状态：候选已把`BeginBindingFrame`收为`CharacterPoseSourceModule`私有方法，并在`BindDemand`内直接使用唯一`CharacterPoseSourceDemand.Lineage.CompletionIdentity`清空并开启Direct、Clip与Blend Space Binding页。`PosePlanExecutionRuntime.PrepareEvaluation`不再单独解释Source Binding页的Completion；它继续只负责Program Workspace和各逻辑Player自己的Frame页。
 
-本步仍不勾选任务4.4；Source usage、retirement permission和release completion还需继续内聚。`ThirdPersonClient.Runtime.csproj`按规定参数编译成功，0错误；27个警告只来自既有Unity／第三方依赖和Input Value未使用字段，build server已立即关闭。Unity刷新、回放和退出Play只出现同一条FinalIK Domain Reload序列化深度日志，单独记录后清空，3C Console为0。
+结合前两步的成对ReleasePreparation与三页原子Begin，本步完成任务4.4：全文审计确认`AnimancerPoseSamplingBackend`、`PhysicalPoseSourceRegistry`、backend／physical release token、Source slot reuse、精确retirement校验和deferred release completion只在`CharacterPoseSourceModule`内部；外层只保留Program-owned Player／Stack逻辑release token和不透明Module `ReleasePreparation`。任务4.5与4.6仍未完成，Source Demand／Usage装配和旧Runtime控制journal继续后续迁移。`ThirdPersonClient.Runtime.csproj`按规定参数编译成功，0错误；27个警告只来自既有Unity／第三方依赖和Input Value未使用字段，build server已立即关闭。Unity刷新、回放和退出Play只出现同一条FinalIK Domain Reload序列化深度日志，单独记录后清空，3C Console为0。
 
 正式A为`Diagnostics/FootPlacementRuns/20260902-010730-937-b4dbbc29df944f31919080c7110ccd6a`，候选B为`Diagnostics/FootPlacementRuns/20260902-011531-535-ebf6e24df7c048589d9fc5d797ab68f4`；B Proof为`Temp/CharacterInputReplayProofs/v4/43357ff3cd384e5cba75d2c31175b116/20260902-011629-347-466ed65576c148058206b4e506426714.json`，工具对A Proof正式报告`matched:1044`，无failure且Foot Finalizing已结束。
 

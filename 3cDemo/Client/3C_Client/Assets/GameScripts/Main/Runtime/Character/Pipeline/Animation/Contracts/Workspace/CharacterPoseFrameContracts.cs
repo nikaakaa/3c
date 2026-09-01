@@ -255,6 +255,26 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             Availability == PresentationPoseSourceAvailability.Ready;
     }
 
+    internal readonly struct CharacterPoseProgramPrepared
+    {
+        internal CharacterPoseProgramPrepared(
+            in CharacterPoseSourceFrameResult sourceFrame)
+        {
+            SourceFrame = sourceFrame;
+            Lineage = sourceFrame.Lineage;
+        }
+
+        internal CharacterPoseSourceFrameResult SourceFrame { get; }
+        internal CharacterPoseFrameLineage Lineage { get; }
+        internal CharacterPoseSourceFrameOutcome Outcome =>
+            SourceFrame.Outcome;
+        internal bool IsValid =>
+            SourceFrame.IsReady &&
+            Outcome == CharacterPoseSourceFrameOutcome.Prepared &&
+            SourceFrame.Lineage == Lineage &&
+            Lineage.IsValid;
+    }
+
     internal readonly struct CharacterPoseProgramResult
     {
         internal CharacterPoseProgramResult(

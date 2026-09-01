@@ -30,26 +30,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
         internal bool IsValid => FrameIdentity != 0;
     }
 
-    internal readonly struct CharacterPoseProgramPrepared
-    {
-        internal CharacterPoseProgramPrepared(
-            in CharacterPoseSourceFrameResult sourceFrame)
-        {
-            SourceFrame = sourceFrame;
-            Lineage = sourceFrame.Lineage;
-        }
-
-        internal CharacterPoseSourceFrameResult SourceFrame { get; }
-        internal CharacterPoseFrameLineage Lineage { get; }
-        internal CharacterPoseSourceFrameOutcome Outcome =>
-            SourceFrame.Outcome;
-        internal bool IsValid =>
-            SourceFrame.IsReady &&
-            Outcome == CharacterPoseSourceFrameOutcome.Prepared &&
-            SourceFrame.Lineage == Lineage &&
-            Lineage.IsValid;
-    }
-
     internal sealed class PosePlanExecutionRuntime :
         IDisposable,
         IPoseStateSourceSelectionSink

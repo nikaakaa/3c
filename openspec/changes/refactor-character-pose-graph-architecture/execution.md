@@ -84,3 +84,13 @@ A包为`Diagnostics/FootPlacementRuns/20260901-110537-059-6498a7fef1cc44319a37d7
 A包为`Diagnostics/FootPlacementRuns/20260901-111208-798-b1a8446ff183468d9eb63f531a00f08d`，B1包为`Diagnostics/FootPlacementRuns/20260901-112222-563-5270427812e2458d8ec0fd886437271e`，输入Record均为`43357ff3cd384e5cba75d2c31175b116`。回放状态在封存前已报告1044输入帧执行完成；Editor日志随后记录B1封存1043表现帧、1个既有Pending丢弃帧、2086脚行、67186几何行和完整9份诊断，紧接着出现`Reloading assemblies after forced synchronous recompile`，因此没有生成新的Proof文件。
 
 A/B的1215列Foot CSV中1191个业务列逐值相同，24个Run／实例／Surface／Path identity列变化且全部一一映射；27列Geometry中22个业务列逐值相同，5个identity列变化且全部一一映射。排除Sample／文件hash、detail／index大小与hash和分析耗时后，`analysis.json`完全相同；排除Sample identity与index hash后，`quality-score.json`完全相同且总分均为84.2。由此把运行数据一致与Proof发布器受外部domain reload中断明确分开；并行Foot源文件已在B1封存后变化，必须等其Owner闭合并重建新A，不能继续叠加下一小步。
+
+## Program Prepared合同归位候选
+
+状态：`ThirdPersonClient.Runtime.csproj`按规定参数静态编译成功，0错误；27个警告均来自既有包或既有Input Value未使用字段，build server已关闭。Network Orchestrator仍在连续修改GM／Network源码并触发Unity domain reload，因此本步尚未执行固定Record A/B，只作为独立候选提交，提交后不得继续叠加下一项代码。
+
+- 将跨Owner使用的`CharacterPoseProgramPrepared`从`PosePlanExecutionRuntime.cs`移入统一`CharacterPoseFrameContracts.cs`，与Source Demand、Source Frame、Program Result、Constraint Result和Publication Result使用同一合同目录及`ThirdPersonCharacter.Pipeline.Animation`命名空间。
+- Runtime文件中的旧定义直接删除；全仓搜索只保留一个正式Prepared合同，不保留别名、转发类型或兼容namespace。现有Program-owned Pending Page继续消费同一typed合同，字段、构造校验和调用顺序均未改变。
+- 本步只修正抽象与实现的物理归属，不改变Source采样、Native Workspace、Executor、Constraint、Foot／Pelvis／Goal／FBBIK、Writer或Seal／Discard生命周期。任务2.2仍因per-operation completion未建立而保持未完成。
+
+固定Record仍为`43357ff3cd384e5cba75d2c31175b116`。正式A/B必须等并行Network／Foot源码写入收口、Unity编译稳定后，以临时还原本候选得到的A和恢复候选后的B隔离执行；在Proof、Foot CSV、Geometry与诊断对账完成前，本候选不能作为下一小步基线。

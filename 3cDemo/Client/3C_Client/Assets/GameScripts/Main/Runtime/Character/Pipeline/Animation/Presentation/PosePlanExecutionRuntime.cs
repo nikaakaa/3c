@@ -325,7 +325,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
         readonly int[] m_SequenceSourceIndices;
         readonly int[] m_BlendSpaceSourceIndices;
         readonly AnimationPoseSourceClipBinding[] m_ClipCatalogScratch;
-        readonly AnimationReleasedPoseSourceSnapshot[] m_ReleasedSources;
         readonly PreparedStandaloneSourceRelease[]
             m_PreparedStandaloneSourceReleases;
         readonly List<PendingActionBackendRelease>
@@ -390,7 +389,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
         CharacterPoseProgramPreparedPage m_PreparedPage;
         ulong m_ActionBackendReleaseRequestIdentity;
         ulong m_ActionBackendReleaseCompletionIdentity;
-        int m_ReleasedSourceCount;
         int m_PreparedStandaloneSourceReleaseCount;
         int m_PendingActionBackendReleaseFrameStartCount;
         int m_MotionMatchingSourceUsageCount;
@@ -410,7 +408,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
         bool m_HasCompletedFrame;
         bool m_HasPendingCompletedFrame;
         bool m_HasOpenFrame;
-        bool m_RecordReleaseDiagnostics;
         AnimationPresentationFrameOutcome m_PendingFrameOutcome;
         int m_SequencePreviewPlayerIndex = -1;
         int m_SequencePreviewOperationIndex = -1;
@@ -789,7 +786,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                     projection.PosePlan.PoseValueWorkspaceCount];
             m_DiagnosticsPublisher = diagnosticsPublisher;
             m_ActorDiagnosticsProjector = actorDiagnosticsProjector;
-            m_ReleasedSources = new AnimationReleasedPoseSourceSnapshot[physicalSources.Capacity];
             int releaseCapacity = physicalSources.Capacity;
             m_PreparedStandaloneSourceReleases =
                 new PreparedStandaloneSourceRelease[releaseCapacity];
@@ -1306,7 +1302,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                     standaloneReleaseCount +
                     m_PendingPoseSourceReleases.Count +
                     preparedActionReleaseCount) >
-                m_ReleasedSources.Length)
+                m_PhysicalSources.ReleaseDiagnosticsCapacity)
             {
                 throw new InvalidOperationException(
                     "Animation diagnostics release capacity was exceeded.");
@@ -1425,7 +1421,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             m_PendingCompletedFrame = default;
             m_HasPendingCompletedFrame = false;
             m_PendingFrameOutcome = AnimationPresentationFrameOutcome.None;
-            m_RecordReleaseDiagnostics = false;
+            m_PhysicalSources.CancelReleaseDiagnostics();
             ClearLinkedPoseFrameSelection();
             if (failure != null)
             {
@@ -1499,14 +1495,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                         throw new InvalidOperationException(
                             "Standalone pose source release owner is invalid.");
                 }
-                if (m_RecordReleaseDiagnostics)
-                {
-                    m_ReleasedSources[m_ReleasedSourceCount++] =
-                        new AnimationReleasedPoseSourceSnapshot(
-                            release.NodeId,
-                            release.SourceId,
-                            m_CompletionIdentity);
-                }
+                m_PhysicalSources.RecordRelease(
+                    release.NodeId,
+                    release.SourceId,
+                    m_CompletionIdentity);
                 m_PreparedStandaloneSourceReleases[i] = default;
             }
             m_PreparedStandaloneSourceReleaseCount = 0;
@@ -1873,9 +1865,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                 return false;
             using (DiagnosticsMarker.Auto())
             {
-                m_DiagnosticsPublisher.Publish(
-                    m_ReleasedSources,
-                    m_ReleasedSourceCount);
+                m_DiagnosticsPublisher.Publish();
             }
             return true;
         }
@@ -2133,7 +2123,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             m_PreparedActionBackendReleases.Clear();
             m_PendingActionBackendReleases.Clear();
             m_SourceBackend.ExecuteDeferredReleases();
-            m_RecordReleaseDiagnostics = false;
+            m_PhysicalSources.CompleteReleaseDiagnostics();
         }
 
         void ExecuteActionBackendReleaseRequest(
@@ -2161,14 +2151,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                     in release.StackRelease);
                 if (release.NotifyRouteAfterApply)
                     release.Route.NotifySourcesReleased();
-                if (m_RecordReleaseDiagnostics)
-                {
-                    m_ReleasedSources[m_ReleasedSourceCount++] =
-                        new AnimationReleasedPoseSourceSnapshot(
-                            release.Release.PoseNodeId,
-                            release.Release.SourceId,
-                            release.Release.CompletionIdentity);
-                }
+                m_PhysicalSources.RecordRelease(
+                    release.Release.PoseNodeId,
+                    release.Release.SourceId,
+                    release.Release.CompletionIdentity);
                 AddActionBackendReleaseCompletion(
                     new ActionBackendReleaseCompletion(
                         request.RequestIdentity,
@@ -2584,8 +2570,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             CharacterPoseGraphNativeBinding frame;
             using (PrepareMarker.Auto())
             {
-                m_ReleasedSourceCount = 0;
-                m_RecordReleaseDiagnostics = recordDiagnostics;
+                m_PhysicalSources.BeginReleaseDiagnostics(
+                    recordDiagnostics);
                 m_ActionSlotReleaseCompletions.Clear();
                 using (PrepareWorkspaceMarker.Auto())
                 {
@@ -2730,9 +2716,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                         m_BlendSpacePhysicalSources[playerIndex],
                         m_BlendSpaceSourceIndices[playerIndex]);
                 }
-                StageCompletedSources(
-                    completionIdentity,
-                    recordDiagnostics);
+                StageCompletedSources(completionIdentity);
                 poseExecutor = new CharacterPoseGraphStagedExecutor(
                     m_PosePlan,
                     m_InertializationPlan,
@@ -3253,7 +3237,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             m_FramePublisher.Invalidate();
             m_DiagnosticsPublisher.Invalidate();
             m_ActorDiagnosticsProjector.Reset();
-            m_ReleasedSourceCount = 0;
+            m_PhysicalSources.CancelReleaseDiagnostics();
             m_ActionSlotReleaseCompletions.Clear();
             ClearReleaseJournals();
             m_ActionBackendReleaseCompletions.Clear();
@@ -3263,7 +3247,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             m_HasPendingCompletedFrame = false;
             m_PreparedPage.Clear();
             m_PendingFrameOutcome = AnimationPresentationFrameOutcome.None;
-            m_RecordReleaseDiagnostics = false;
             m_InertializationPlan.Reset();
             m_PoseConstraints.ResetSolvers();
             ulong completionIdentity = NextCompletionIdentity();
@@ -3789,9 +3772,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             return m_CompletionIdentity;
         }
 
-        void StageCompletedSources(
-            ulong completionIdentity,
-            bool recordDiagnostics)
+        void StageCompletedSources(ulong completionIdentity)
         {
             if (m_PendingPoseSourceReleases.Count != 0)
             {
@@ -3843,20 +3824,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                                 release.CompletionIdentity));
                         continue;
                     }
-                    if (recordDiagnostics)
-                    {
-                        if (m_ReleasedSourceCount >=
-                            m_ReleasedSources.Length)
-                        {
-                            throw new InvalidOperationException(
-                                "Animation diagnostics release capacity was exceeded.");
-                        }
-                        m_ReleasedSources[m_ReleasedSourceCount++] =
-                            new AnimationReleasedPoseSourceSnapshot(
-                                release.PoseNodeId,
-                                release.SourceId,
-                                release.CompletionIdentity);
-                    }
+                    m_PhysicalSources.RecordRelease(
+                        release.PoseNodeId,
+                        release.SourceId,
+                        release.CompletionIdentity);
                     PendingPoseSourceRelease pending =
                         RentPendingPoseSourceRelease();
                     pending.Stack = stack;
@@ -4464,7 +4435,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                 m_Stacks[i].DiscardFrame();
             m_PoseStateSources.DiscardFrame();
             m_ActionSlotReleaseCompletions.Clear();
-            m_ReleasedSourceCount = 0;
+            m_PhysicalSources.CancelReleaseDiagnostics();
             m_MotionMatchingSourceUsageCount = 0;
             m_MotionMatchingHistoryCompletionCount = 0;
         }

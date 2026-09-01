@@ -1,4 +1,5 @@
 using System;
+using ThirdPersonCharacter.Pipeline.Animation.Diagnostics;
 
 namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
 {
@@ -125,6 +126,31 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
                 return m_Page.Result;
             }
         }
+        internal int ReleaseCount
+        {
+            get
+            {
+                RequireValid();
+                return m_Page.ReleaseCount;
+            }
+        }
+
+        internal void CopyReleases(
+            AnimationReleasedPoseSourceSnapshot[] releases)
+        {
+            RequireValid();
+            if (releases == null || releases.Length < m_Page.ReleaseCount)
+            {
+                throw new ArgumentException(
+                    "Pose Source release diagnostics destination is invalid.");
+            }
+            Array.Copy(
+                m_Page.Releases,
+                0,
+                releases,
+                0,
+                m_Page.ReleaseCount);
+        }
 
         internal CharacterPoseSourceCommittedIdentity Resolve(
             AnimationPhysicalSourceIdentity identity)
@@ -172,16 +198,20 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
                 PoseNodeIds = new PoseNodeId[capacity];
                 SourceOwnerIndices = new int[capacity];
                 Generations = new ulong[capacity];
+                Releases =
+                    new AnimationReleasedPoseSourceSnapshot[capacity];
                 for (int i = 0; i < SourceOwnerIndices.Length; i++)
                     SourceOwnerIndices[i] = -1;
             }
 
             internal ulong Identity;
             internal CharacterPoseSourceCommittedResult Result;
+            internal int ReleaseCount;
             internal readonly AnimationPoseSourceId[] SourceIds;
             internal readonly PoseNodeId[] PoseNodeIds;
             internal readonly int[] SourceOwnerIndices;
             internal readonly ulong[] Generations;
+            internal readonly AnimationReleasedPoseSourceSnapshot[] Releases;
         }
 
         AnimationPoseSourceId[] m_SourceIds;
@@ -193,14 +223,19 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
         int[] m_PendingSourceOwnerIndices;
         ulong[] m_PendingGenerations;
         byte[] m_PreparedReleaseSlots;
+        readonly AnimationReleasedPoseSourceSnapshot[]
+            m_ReleaseDiagnostics;
         readonly CommittedDiagnosticsPage m_CommittedDiagnostics;
         int m_Count;
         int m_PendingCount;
         int m_PreparedReleaseCount;
+        int m_ReleaseDiagnosticsCount;
         ulong m_LastGeneration;
         ulong m_NextDiagnosticsIdentity = 1;
         bool m_FrameOpen;
         bool m_FrameValidated;
+        bool m_RecordReleaseDiagnostics;
+        bool m_ReleaseDiagnosticsOpen;
         bool m_Disposed;
 
         internal PhysicalPoseSourceRegistry(int capacity)
@@ -216,6 +251,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
             m_PendingSourceOwnerIndices = new int[capacity];
             m_PendingGenerations = new ulong[capacity];
             m_PreparedReleaseSlots = new byte[capacity];
+            m_ReleaseDiagnostics =
+                new AnimationReleasedPoseSourceSnapshot[capacity];
             m_CommittedDiagnostics = new CommittedDiagnosticsPage(capacity);
             for (int i = 0; i < m_SourceOwnerIndices.Length; i++)
             {
@@ -232,6 +269,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
                 return m_SourceIds.Length;
             }
         }
+        internal int ReleaseDiagnosticsCapacity =>
+            m_ReleaseDiagnostics.Length;
 
         internal int Count
         {
@@ -256,14 +295,81 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
         internal void BeginFrame()
         {
             RequireAlive();
-            if (m_FrameOpen)
+            if (m_FrameOpen || m_ReleaseDiagnosticsOpen)
                 throw new InvalidOperationException("Physical Pose Source frame is already open.");
             if (m_PreparedReleaseCount != 0)
                 throw new InvalidOperationException("Physical Pose Source prepared releases were not applied.");
             ClearPending();
             m_CommittedDiagnostics.Identity = 0;
+            m_ReleaseDiagnosticsCount = 0;
             m_FrameOpen = true;
             m_FrameValidated = false;
+        }
+
+        internal void BeginReleaseDiagnostics(bool recordDiagnostics)
+        {
+            RequireAlive();
+            RequireOpenFrame();
+            if (m_ReleaseDiagnosticsOpen || m_ReleaseDiagnosticsCount != 0)
+            {
+                throw new InvalidOperationException(
+                    "Pose Source release diagnostics are already open.");
+            }
+            m_RecordReleaseDiagnostics = recordDiagnostics;
+            m_ReleaseDiagnosticsOpen = true;
+        }
+
+        internal void RecordRelease(
+            PoseNodeId poseNodeId,
+            AnimationPoseSourceId sourceId,
+            ulong completionIdentity)
+        {
+            RequireAlive();
+            if (!m_ReleaseDiagnosticsOpen)
+            {
+                throw new InvalidOperationException(
+                    "Pose Source release diagnostics are not open.");
+            }
+            if (!m_RecordReleaseDiagnostics)
+                return;
+            if (!poseNodeId.IsValid ||
+                !sourceId.IsValid ||
+                completionIdentity == 0)
+            {
+                throw new ArgumentException(
+                    "Pose Source release diagnostics are invalid.");
+            }
+            if (m_ReleaseDiagnosticsCount >=
+                m_ReleaseDiagnostics.Length)
+            {
+                throw new InvalidOperationException(
+                    "Animation diagnostics release capacity was exceeded.");
+            }
+            m_ReleaseDiagnostics[m_ReleaseDiagnosticsCount++] =
+                new AnimationReleasedPoseSourceSnapshot(
+                    poseNodeId,
+                    sourceId,
+                    completionIdentity);
+        }
+
+        internal void CompleteReleaseDiagnostics()
+        {
+            RequireAlive();
+            if (!m_ReleaseDiagnosticsOpen)
+            {
+                throw new InvalidOperationException(
+                    "Pose Source release diagnostics are not open.");
+            }
+            m_RecordReleaseDiagnostics = false;
+            m_ReleaseDiagnosticsOpen = false;
+        }
+
+        internal void CancelReleaseDiagnostics()
+        {
+            RequireAlive();
+            m_RecordReleaseDiagnostics = false;
+            m_ReleaseDiagnosticsOpen = false;
+            m_ReleaseDiagnosticsCount = 0;
         }
 
         internal void ValidateFrame()
@@ -302,6 +408,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
             RequireOpenFrame();
             ClearPending();
             ClearPreparedReleases();
+            CancelReleaseDiagnostics();
             m_FrameOpen = false;
             m_FrameValidated = false;
         }
@@ -375,6 +482,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
             RequireAlive();
             if (m_FrameOpen ||
                 m_PreparedReleaseCount != 0 ||
+                m_ReleaseDiagnosticsOpen ||
                 !sourceFrame.IsReady)
             {
                 throw new InvalidOperationException(
@@ -391,6 +499,17 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
                 page.SourceOwnerIndices,
                 m_SourceOwnerIndices.Length);
             Array.Copy(m_Generations, page.Generations, m_Generations.Length);
+            Array.Copy(
+                m_ReleaseDiagnostics,
+                0,
+                page.Releases,
+                0,
+                m_ReleaseDiagnosticsCount);
+            Array.Clear(
+                page.Releases,
+                m_ReleaseDiagnosticsCount,
+                page.Releases.Length - m_ReleaseDiagnosticsCount);
+            page.ReleaseCount = m_ReleaseDiagnosticsCount;
             page.Identity = m_NextDiagnosticsIdentity++;
             return new CharacterPoseSourceCommittedDiagnosticsView(page);
         }
@@ -475,6 +594,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
             RequireAlive();
             if (m_FrameOpen)
                 throw new InvalidOperationException("Physical Pose Source frame is open.");
+            CancelReleaseDiagnostics();
             Array.Clear(m_SourceIds, 0, m_SourceIds.Length);
             Array.Clear(m_PoseNodeIds, 0, m_PoseNodeIds.Length);
             Array.Clear(m_Generations, 0, m_Generations.Length);
@@ -485,6 +605,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
             ClearPreparedReleases();
             m_CommittedDiagnostics.Identity = 0;
             m_CommittedDiagnostics.Result = default;
+            m_CommittedDiagnostics.ReleaseCount = 0;
             Array.Clear(
                 m_CommittedDiagnostics.SourceIds,
                 0,
@@ -497,6 +618,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
                 m_CommittedDiagnostics.Generations,
                 0,
                 m_CommittedDiagnostics.Generations.Length);
+            Array.Clear(
+                m_CommittedDiagnostics.Releases,
+                0,
+                m_CommittedDiagnostics.Releases.Length);
             for (int i = 0;
                  i < m_CommittedDiagnostics.SourceOwnerIndices.Length;
                  i++)

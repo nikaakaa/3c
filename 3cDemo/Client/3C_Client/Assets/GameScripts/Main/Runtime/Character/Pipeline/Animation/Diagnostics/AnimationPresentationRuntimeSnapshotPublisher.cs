@@ -928,6 +928,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
 
             if (RequiresBasicState(interest))
             {
+                CopySourceReleases(page, in sourceDiagnostics);
                 CopyBlendStacks(page, in actorDiagnostics);
                 CopyPoseStateMachines(
                     page,
@@ -1216,22 +1217,29 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
                 actorDiagnostics.BlendSpaceSampleCount;
         }
 
-        internal AnimationPresentationRuntimeSnapshot Publish(
-            AnimationReleasedPoseSourceSnapshot[] releases,
-            int releaseCount)
+        static void CopySourceReleases(
+            Page page,
+            in CharacterPoseSourceCommittedDiagnosticsView sourceDiagnostics)
+        {
+            if (sourceDiagnostics.ReleaseCount > page.Releases.Length)
+            {
+                throw new InvalidOperationException(
+                    "Animation diagnostics release capacity was exceeded.");
+            }
+            sourceDiagnostics.CopyReleases(page.Releases);
+            Array.Clear(
+                page.Releases,
+                sourceDiagnostics.ReleaseCount,
+                page.Releases.Length - sourceDiagnostics.ReleaseCount);
+            page.ReleaseCount = sourceDiagnostics.ReleaseCount;
+        }
+
+        internal AnimationPresentationRuntimeSnapshot Publish()
         {
             RequireAlive();
             if (m_PendingPageIndex < 0 || m_PendingCompletionIdentity == 0)
                 throw new InvalidOperationException("Animation runtime diagnostics has no completed native frame.");
             Page page = m_Pages[m_PendingPageIndex];
-            if (RequiresBasicState(page.Interest))
-            {
-                if (releases == null || releaseCount < 0 || releaseCount > releases.Length || releaseCount > page.Releases.Length)
-                    throw new InvalidOperationException("Animation runtime diagnostics fixed capacity was exceeded.");
-                Array.Copy(releases, 0, page.Releases, 0, releaseCount);
-                Array.Clear(page.Releases, releaseCount, page.Releases.Length - releaseCount);
-                page.ReleaseCount = releaseCount;
-            }
             page.Lease.BeginWrite(m_PendingCompletionIdentity);
             m_Current = page.CreateSnapshot(m_Projection, m_Program, m_PendingCompletionIdentity);
             m_ActivePageIndex = m_PendingPageIndex;

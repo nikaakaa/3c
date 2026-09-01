@@ -429,3 +429,15 @@ A/B均为2086脚行、1222列，其中1198个业务列逐值相同、24个运行
 正式A为`Diagnostics/FootPlacementRuns/20260901-233212-574-ed0f12eb26024a79906148a33263ab74`，候选B为`Diagnostics/FootPlacementRuns/20260901-234825-639-d86985e088c8402d9d0f7c6315a4223d`；B Proof为`Temp/CharacterInputReplayProofs/v4/43357ff3cd384e5cba75d2c31175b116/20260901-234924-881-6531da2c29b149e9a57d163b87218989.json`，工具对A Proof正式报告`matched:1044`，无failure且Foot Finalizing已结束。
 
 A/B均为2086脚行、1222列，其中1198个业务列逐值相同、24个运行identity列一一映射且0冲突；Geometry均为67186行、27列，其中22个业务列逐值相同、5个identity列一一映射且0冲突；十份正式报告按既定Sample identity、文件／index hash、detail字节、分析耗时与Surface identity规则归一化后10／10相同，七维分项、总分84.2和weighted evidence 96.5不变。由此确认release token成对所有权迁移没有改变source释放时机、slot复用、Action completion、动画时钟、Foot、Pelvis、Goal、FBBIK、Final Pose或Physical业务；`234825`成为完整release journal迁移的下一A。
+
+## Source-owned Frame Demand与Result页
+
+状态：提交`d938f7a96`已把唯一`CharacterPoseSourceFrameLease`、Demand、Result、ready、Seal和Discard状态从`AnimancerPoseSamplingBackend`迁入`CharacterPoseSourceModule.SourceFramePage`。Source Module现在先创建同lineage lease，再让backend只按该lease的Frame identity打开物理mutation；Demand与Source Frame Result只写Source-owned页，Validate和Evaluate Barrier前由Module验证ready，Commit按原顺序先关闭backend、Seal页，再提交Physical Registry；Barrier前Discard仍先丢backend mutation和页，之后按原顺序丢Physical Registry页。
+
+`AnimancerPoseSamplingBackend`已删除`CharacterPoseSourcePendingPage`、Demand／Result字段、lease创建、Bind／Require接口与Seal／Discard业务页调用，只保留SourceVisual、owner slot、clip plan、release permission、deferred resource和Playable capture mutation。全仓搜索确认`new CharacterPoseSourceFrameLease`及Demand／Result Pending字段只剩Source Module一处。Source Binding、Prepared Resource、Usage、Release completion完整页以及只消费Program Demand／Usage的最终窄Interface仍未全部闭合，因此任务4.1和4.5保持未完成。
+
+`ThirdPersonClient.Runtime.csproj`按规定参数编译成功，0错误；依赖警告和既有Input Value未使用字段不属于本步，build server已立即关闭。Unity刷新、回放和退出Play期间只出现同一条FinalIK Domain Reload序列化深度日志，没有Source lease、Pending page、Barrier、Playable、PoseGraph或IK异常；单独记录后清空，3C Console为0。
+
+正式A为`Diagnostics/FootPlacementRuns/20260901-234825-639-d86985e088c8402d9d0f7c6315a4223d`，候选B为`Diagnostics/FootPlacementRuns/20260901-235713-270-10be4886ce4a48f0ab7eedb009127664`；B Proof为`Temp/CharacterInputReplayProofs/v4/43357ff3cd384e5cba75d2c31175b116/20260901-235813-753-468dd009d8d240e587fd65dad221fb24.json`，工具对A Proof正式报告`matched:1044`，无failure且Foot Finalizing已结束。
+
+A/B均为2086脚行、1222列，其中1198个业务列逐值相同、24个运行identity列一一映射且0冲突；Geometry均为67186行、27列，其中22个业务列逐值相同、5个identity列一一映射且0冲突。十份正式报告只在既定Sample identity、文件／index hash、detail／index字节、分析耗时和一一Surface identity上变化；其中`analysis.index.bytes`及`performance.indexBytes`仅少1字节，排除既定index大小字段后10／10相同，七维分项、总分84.2和weighted evidence 96.5不变。由此确认Source Frame页所有权迁移没有改变Demand消费、Source采样、Barrier时机、动画时钟、Foot、Pelvis、Goal、FBBIK、Final Pose或Physical业务；`235713`成为Source Binding／Usage页迁移的下一A。

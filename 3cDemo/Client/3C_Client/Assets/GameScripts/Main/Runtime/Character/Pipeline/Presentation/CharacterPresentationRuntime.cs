@@ -38,6 +38,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         readonly AnimationSlotRuntime m_AnimationSlots;
         readonly PresentationFrameWorkspace m_FrameWorkspace;
         readonly PosePlanExecutionRuntime m_PoseRuntime;
+        readonly CharacterPoseConstraintRuntime m_PoseConstraints;
         readonly CharacterMotionMatchingPresentationModule m_MotionMatching;
         readonly List<ActionAnimationPlaybackLifecycleSnapshot>
             m_ActionSnapshots;
@@ -166,6 +167,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                         bindings.Projection,
                         footPlacement,
                         ownsGraphClock);
+                m_PoseConstraints = m_PoseRuntime.PoseConstraints;
                 m_CapacityMetrics =
                     m_PoseRuntime.CreateCapacityMetrics(
                         m_ActionPlayback.JournalCapacity,
@@ -177,6 +179,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             {
                 motionMatching?.Dispose();
                 m_PoseRuntime?.Dispose();
+                m_PoseConstraints?.Dispose();
                 throw;
             }
         }
@@ -870,6 +873,15 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             catch (Exception exception)
             {
                 failure = exception;
+            }
+            try
+            {
+                m_PoseConstraints.Dispose();
+            }
+            catch (Exception exception)
+            {
+                if (failure == null)
+                    failure = exception;
             }
             try
             {

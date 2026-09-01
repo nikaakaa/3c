@@ -839,6 +839,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
         internal ulong DiagnosticsNoInterestSkipCount =>
             m_DiagnosticsPublisher.NoInterestSkipCount;
         internal bool HasFootPlacement => m_PoseConstraints.HasFootPlacement;
+        internal CharacterPoseConstraintRuntime PoseConstraints =>
+            m_PoseConstraints;
 
         internal void ResetFootPlacement(in CharacterFootPlacementReset reset) =>
             m_PoseConstraints.ResetFootPlacement(in reset);
@@ -3276,7 +3278,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                     DisposeStep(player.Dispose, ref failure);
             }
             DisposeStep(m_PhysicalSources.Dispose, ref failure);
-            DisposeStep(m_PoseConstraints.Dispose, ref failure);
             DisposeStep(m_PosePlan.Dispose, ref failure);
             DisposeStep(m_InertializationPlan.Dispose, ref failure);
             DisposeStep(m_Workspace.Dispose, ref failure);

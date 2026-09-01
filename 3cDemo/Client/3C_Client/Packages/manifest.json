@@ -17,6 +17,7 @@
     "com.fantasy.unity": "2026.0.1020",
     "com.inspiaaa.unityhfsm": "https://github.com/Inspiaaa/UnityHFSM.git#upm",
     "com.thirdperson.dotrecast": "file:com.thirdperson.dotrecast",
+    "com.thirdperson.tooling-contracts": "file:../../../Shared/UnityPackages/com.thirdperson.tooling-contracts",
     "com.tuyoogame.yooasset": "file:YooAsset",
     "com.unity.burst": "1.8.29",
     "com.unity.cinemachine": "2.10.7",

@@ -100,7 +100,8 @@ public sealed class GmHttpConsoleConnection : IGmCommandConnection
                 var ids = new HashSet<string>(StringComparer.Ordinal);
                 foreach (GmCommandDefinition command in service.commands)
                 {
-                    if (command == null || !GmCommandSyntax.IsValidCommandId(command.id) || command.version <= 0 || !ids.Add(command.id))
+                    if (command == null || !GmCommandSyntax.IsValidCommandId(command.id) || command.version <= 0 ||
+                        string.IsNullOrWhiteSpace(command.resultContract) || !ids.Add(command.id))
                         throw new InvalidDataException("GM 命令目录无效。");
                 }
                 Service = service;

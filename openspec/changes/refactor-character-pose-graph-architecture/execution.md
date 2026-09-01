@@ -235,3 +235,15 @@ A/B均为2086脚行、1222列，其中1198个业务列逐值相同，24个运行
 正式A为`Diagnostics/FootPlacementRuns/20260901-185755-638-046be3a0a7474c458df6df3e59202359`，Proof为`Temp/CharacterInputReplayProofs/v4/43357ff3cd384e5cba75d2c31175b116/20260901-185856-535-aa40943181f94445a406f230c2117421.json`。候选B为`Diagnostics/FootPlacementRuns/20260901-191034-951-23c75316aae14fa5849ef2aa6179f84e`，Proof为`Temp/CharacterInputReplayProofs/v4/43357ff3cd384e5cba75d2c31175b116/20260901-191131-417-22e056a627a245688aea35a1664481d6.json`；工具对A正式报告`matched:1044`，无failure且Foot Finalizing已结束。
 
 A/B均为2086脚行、1222列，其中1198个业务列逐值相同，24个运行／实例／Surface／Path identity列全部一一映射且0冲突；Geometry均为67186行、27列，其中22个业务列逐值相同，5个identity列全部一一映射且0冲突。十份正式报告按既定Sample／文件hash、detail／index大小与hash、分析耗时和Surface identity规则归一化后0差异；退出Play后的Console为0错误。由此确认当前固定Trace覆盖的Contribution输入顺序、Goal Set、Foot、Pelvis、PoseBone Goal、FBBIK和Physical结果未因Goal Assembler typed入口迁移改变；`191034`成为FBBIK typed入口迁移的正式A。
+
+## FBBIK typed Handle与Constraint Family合同闭合
+
+状态：提交`2f9642805`已为FBBIK建立独立编译Handle和per-operation Result。`ThirdPersonClient.Runtime.csproj`按规定参数编译成功，0错误；警告均来自既有依赖和未使用字段，build server已关闭。Unity Refresh完成Domain Reload并返回ready，Console为0错误；Foot Placement、PoseBone Contribution、Goal Assembler和FBBIK四个Family现在都具备typed编译Handle与per-operation Result，任务3.3完成。
+
+- `CharacterFullBodyIkConstraintHandle`把Solver、输入／输出Pose Value、输入Goal Set Value、Operation和Callsite固定为同一编译合同；Native Operation不再保存独立FBBIK索引，既有Diagnostics只通过Handle派生只读身份。
+- Pose workspace仍由Program执行侧拥有：Staged Executor按原顺序验证输入并把Input Pose复制到Output Pose，只把Output Component Pose写View和Handle交给`ExecuteFullBodyIk`。Constraint Runtime继续调用原`SolvePrepared`，并保持Goal Set、BendHistory、Solver Outcome、Effector／Limb诊断采集及失败返回顺序不变。
+- typed Result冻结Handle、Solve结果、Frame和Completion；Solver失败仍把同一Output Value标记为`FullBodyIkSolverInvalid`。没有复制Solver、默认Goal、兼容入口、fallback或第二Pose写入路径。
+
+正式A为`Diagnostics/FootPlacementRuns/20260901-191034-951-23c75316aae14fa5849ef2aa6179f84e`，Proof为`Temp/CharacterInputReplayProofs/v4/43357ff3cd384e5cba75d2c31175b116/20260901-191131-417-22e056a627a245688aea35a1664481d6.json`。候选B为`Diagnostics/FootPlacementRuns/20260901-192117-923-ad1dd64ee4e24e4ea8d0576f406fb253`，Proof为`Temp/CharacterInputReplayProofs/v4/43357ff3cd384e5cba75d2c31175b116/20260901-192220-365-11c3b45ab4f54c568b06188339f5727f.json`；工具对A正式报告`matched:1044`，无failure且Foot Finalizing已结束。
+
+A/B均为2086脚行、1222列，其中1198个业务列逐值相同，24个运行／实例／Surface／Path identity列全部一一映射且0冲突；Geometry均为67186行、27列，其中22个业务列逐值相同，5个identity列全部一一映射且0冲突。十份正式报告按既定规则归一化后0差异；退出Play后的Console为0错误。由此确认当前固定Trace覆盖的Goal Set消费、Solver、BendHistory、Foot、Pelvis、PoseBone Goal、FBBIK和Physical结果未因FBBIK typed入口迁移改变；`192117`成为后续Constraint Operation completion收口的正式A。任务3.4至3.6仍未完成，不因四个Handle存在而提前勾选。

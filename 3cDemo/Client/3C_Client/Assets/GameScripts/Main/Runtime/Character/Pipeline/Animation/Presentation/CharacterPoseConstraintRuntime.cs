@@ -156,6 +156,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
 
         readonly CharacterFootPlacementModule m_FootPlacement;
         readonly CharacterPoseBoneContributionCatalog m_PoseBoneContributions;
+        readonly CharacterFullBodyIkGoalAssemblerCatalog m_GoalAssemblers;
         readonly CharacterFinalIkFullBodySolver m_Solver;
         readonly CharacterFullBodyIkGoalAssembler m_GoalAssembler;
         readonly AnimationFinalPosePhysicalWriter m_FinalWriter;
@@ -176,6 +177,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
         internal CharacterPoseConstraintRuntime(
             CharacterFootPlacementModule footPlacement,
             CharacterPoseBoneContributionCatalog poseBoneContributions,
+            CharacterFullBodyIkGoalAssemblerCatalog goalAssemblers,
             CharacterFinalIkFullBodySolver solver,
             AnimationFinalPosePhysicalWriter finalWriter,
             int contributionCount,
@@ -185,6 +187,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
         {
             m_FootPlacement = footPlacement;
             m_PoseBoneContributions = poseBoneContributions;
+            m_GoalAssemblers = goalAssemblers;
             m_Solver = solver ?? throw new ArgumentNullException(nameof(solver));
             m_GoalAssembler = new CharacterFullBodyIkGoalAssembler();
             m_FinalWriter = finalWriter ?? throw new ArgumentNullException(nameof(finalWriter));
@@ -196,6 +199,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                 throw new ArgumentException(
                     "Pose Bone Contribution catalog is invalid.",
                     nameof(poseBoneContributions));
+            if (!m_GoalAssemblers.IsValid)
+                throw new ArgumentException(
+                    "Full Body IK Goal Assembler catalog is invalid.",
+                    nameof(goalAssemblers));
             if (contributionCount < 0 || contributionGoalCount < 0)
                 throw new ArgumentOutOfRangeException(nameof(contributionCount));
             m_First = new Bank(
@@ -417,17 +424,17 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                 in contribution);
         }
 
-        internal CharacterFullBodyIkResult AssembleFullBodyIkGoals(
-            NativeSlice<int> contributionValueIndices,
-            int producerOperationIndex,
-            int producerCallSiteIndex,
+        internal CharacterFullBodyIkGoalAssemblerOperationResult
+            ExecuteGoalAssembler(
+            in CharacterFullBodyIkGoalAssemblerConstraintHandle handle,
             ulong frameSequence,
-            ulong completionIdentity,
-            out CharacterFullBodyIkGoalSetHeader goalSet)
+            ulong completionIdentity)
         {
             RequireRenderFrame(frameSequence, completionIdentity);
             if (m_Pending.GoalSet.IsValid)
                 throw new InvalidOperationException("Full Body IK Goals were already assembled for this frame.");
+            NativeSlice<int> contributionValueIndices =
+                m_GoalAssemblers.Resolve(in handle);
             CharacterFullBodyIkResult result = m_GoalAssembler.Assemble(
                 contributionValueIndices,
                 m_Pending.GoalContributions,
@@ -436,17 +443,14 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                 completionIdentity,
                 m_RigId,
                 m_RigRevision,
-                producerOperationIndex,
-                producerCallSiteIndex,
+                handle.OperationIndex,
+                handle.CallSiteIndex,
                 m_Pending.Goals,
                 out m_Pending.GoalSet);
-            if (!result.Succeeded)
-            {
-                goalSet = default;
-                return result;
-            }
-            goalSet = m_Pending.GoalSet;
-            return result;
+            return new CharacterFullBodyIkGoalAssemblerOperationResult(
+                in handle,
+                in result,
+                in m_Pending.GoalSet);
         }
 
         internal CharacterFullBodyIkResult SolveFullBodyIk(

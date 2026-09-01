@@ -275,6 +275,153 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             Contribution.CompletionIdentity == completionIdentity;
     }
 
+    internal readonly struct CharacterFullBodyIkGoalAssemblerConstraintHandle :
+        IEquatable<CharacterFullBodyIkGoalAssemblerConstraintHandle>
+    {
+        internal CharacterFullBodyIkGoalAssemblerConstraintHandle(
+            int operationIndex,
+            int callSiteIndex,
+            int goalSetValueIndex,
+            int contributionInputStart,
+            int contributionInputCount)
+        {
+            if (operationIndex < 0 ||
+                callSiteIndex < 0 ||
+                goalSetValueIndex < 0 ||
+                contributionInputStart < -1 ||
+                contributionInputCount < 0 ||
+                (contributionInputCount == 0) !=
+                (contributionInputStart == -1))
+            {
+                throw new ArgumentOutOfRangeException(nameof(operationIndex));
+            }
+            OperationIndex = operationIndex;
+            CallSiteIndex = callSiteIndex;
+            GoalSetValueIndex = goalSetValueIndex;
+            ContributionInputStart = contributionInputStart;
+            ContributionInputCount = contributionInputCount;
+            m_IsValid = true;
+        }
+
+        readonly bool m_IsValid;
+        internal int OperationIndex { get; }
+        internal int CallSiteIndex { get; }
+        internal int GoalSetValueIndex { get; }
+        internal int ContributionInputStart { get; }
+        internal int ContributionInputCount { get; }
+        internal bool IsValid => m_IsValid;
+
+        public bool Equals(
+            CharacterFullBodyIkGoalAssemblerConstraintHandle other) =>
+            OperationIndex == other.OperationIndex &&
+            CallSiteIndex == other.CallSiteIndex &&
+            GoalSetValueIndex == other.GoalSetValueIndex &&
+            ContributionInputStart == other.ContributionInputStart &&
+            ContributionInputCount == other.ContributionInputCount &&
+            m_IsValid == other.m_IsValid;
+
+        public override bool Equals(object obj) =>
+            obj is CharacterFullBodyIkGoalAssemblerConstraintHandle other &&
+            Equals(other);
+
+        public override int GetHashCode() => HashCode.Combine(
+            OperationIndex,
+            CallSiteIndex,
+            GoalSetValueIndex,
+            ContributionInputStart,
+            ContributionInputCount,
+            m_IsValid);
+    }
+
+    internal readonly struct CharacterFullBodyIkGoalAssemblerCatalog
+    {
+        internal CharacterFullBodyIkGoalAssemblerCatalog(
+            NativeArray<int> contributionValueIndices,
+            int goalSetValueCount)
+        {
+            if (!contributionValueIndices.IsCreated || goalSetValueCount < 0)
+            {
+                throw new ArgumentException(
+                    "Full Body IK Goal Assembler catalog is invalid.",
+                    nameof(contributionValueIndices));
+            }
+            m_ContributionValueIndices = contributionValueIndices;
+            m_GoalSetValueCount = goalSetValueCount;
+        }
+
+        readonly NativeArray<int> m_ContributionValueIndices;
+        readonly int m_GoalSetValueCount;
+        internal bool IsValid =>
+            m_ContributionValueIndices.IsCreated &&
+            m_GoalSetValueCount >= 0;
+
+        internal NativeSlice<int> Resolve(
+            in CharacterFullBodyIkGoalAssemblerConstraintHandle handle)
+        {
+            if (!Contains(in handle))
+            {
+                throw new ArgumentException(
+                    "Full Body IK Goal Assembler handle is outside its catalog.",
+                    nameof(handle));
+            }
+            return new NativeSlice<int>(
+                m_ContributionValueIndices,
+                handle.ContributionInputCount == 0
+                    ? 0
+                    : handle.ContributionInputStart,
+                handle.ContributionInputCount);
+        }
+
+        internal bool Contains(
+            in CharacterFullBodyIkGoalAssemblerConstraintHandle handle) =>
+            IsValid &&
+            handle.IsValid &&
+            (uint)handle.GoalSetValueIndex <
+            (uint)m_GoalSetValueCount &&
+            (handle.ContributionInputCount == 0 ||
+             handle.ContributionInputStart <=
+             m_ContributionValueIndices.Length -
+             handle.ContributionInputCount);
+    }
+
+    internal readonly struct CharacterFullBodyIkGoalAssemblerOperationResult
+    {
+        internal CharacterFullBodyIkGoalAssemblerOperationResult(
+            in CharacterFullBodyIkGoalAssemblerConstraintHandle handle,
+            in CharacterFullBodyIkResult assembly,
+            in CharacterFullBodyIkGoalSetHeader goalSet)
+        {
+            Handle = handle;
+            Assembly = assembly;
+            GoalSet = goalSet;
+            m_IsValid =
+                handle.IsValid &&
+                assembly.Succeeded &&
+                goalSet.IsValid &&
+                goalSet.Availability ==
+                CharacterFullBodyIkGoalSetAvailability.Ready &&
+                goalSet.ProducerOperationIndex == handle.OperationIndex &&
+                goalSet.ProducerCallSiteIndex == handle.CallSiteIndex;
+        }
+
+        readonly bool m_IsValid;
+        internal CharacterFullBodyIkGoalAssemblerConstraintHandle Handle
+        {
+            get;
+        }
+        internal CharacterFullBodyIkResult Assembly { get; }
+        internal CharacterFullBodyIkGoalSetHeader GoalSet { get; }
+        internal bool IsValid => m_IsValid;
+        internal bool Matches(
+            in CharacterFullBodyIkGoalAssemblerConstraintHandle handle,
+            ulong frameSequence,
+            ulong completionIdentity) =>
+            m_IsValid &&
+            Handle.Equals(handle) &&
+            GoalSet.FrameSequence == frameSequence &&
+            GoalSet.CompletionIdentity == completionIdentity;
+    }
+
     public readonly struct CharacterPoseBoneRuntimeId : IEquatable<CharacterPoseBoneRuntimeId>
     {
         public CharacterPoseBoneRuntimeId(string value)

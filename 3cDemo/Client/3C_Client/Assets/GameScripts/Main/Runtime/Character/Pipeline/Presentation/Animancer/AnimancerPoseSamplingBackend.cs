@@ -443,8 +443,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation.Animancer
             in CharacterPoseFrameLineage lineage)
         {
             RequireAvailable();
-            if (!lineage.IsOpenValid || lineage.CompletionIdentity != 0)
-                throw new ArgumentException("Animancer pose source lineage is invalid.", nameof(lineage));
             if (m_FramePhase != SourceFramePhase.Closed ||
                 m_PendingPage.HasOpenFrame)
                 throw new InvalidOperationException("Animancer pose source frame is already open.");

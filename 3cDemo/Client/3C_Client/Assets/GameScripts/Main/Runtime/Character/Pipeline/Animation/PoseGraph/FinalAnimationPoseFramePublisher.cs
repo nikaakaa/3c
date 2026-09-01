@@ -98,8 +98,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation
 
         readonly string m_PoseGraphId;
         readonly string m_PosePlanHash;
-        readonly string m_RigId;
-        readonly string m_RigRevision;
         readonly PoseNodeId[] m_PoseNodeIds;
         readonly float[] m_ParameterDefaults;
         readonly AnimationLocalBonePose[] m_DenseLocalPoses;
@@ -149,8 +147,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 throw new InvalidOperationException("Final Animation Pose Frame contribution capacity is invalid.");
             m_PoseGraphId = program.PoseGraphId;
             m_PosePlanHash = program.PlanHash;
-            m_RigId = rig.RigId;
-            m_RigRevision = rig.RigRevision;
             m_OperationCount = program.Operations.Count;
             m_PoseNodeIds = new PoseNodeId[program.PlayerCount];
             for (int i = 0; i < program.Operations.Count; i++)
@@ -208,25 +204,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         internal CharacterFinalPosePublicationFrameLease BeginFrame(
             in CharacterPoseFrameLineage lineage)
         {
-            if (!lineage.IsOpenValid ||
-                lineage.CompletionIdentity != 0 ||
-                !string.Equals(
-                    lineage.PoseProgramIdentity,
-                    m_PosePlanHash,
-                    StringComparison.Ordinal) ||
-                !string.Equals(
-                    lineage.RigId,
-                    m_RigId,
-                    StringComparison.Ordinal) ||
-                !string.Equals(
-                    lineage.RigRevision,
-                    m_RigRevision,
-                    StringComparison.Ordinal))
-            {
-                throw new ArgumentException(
-                    "Final Pose Publication lineage is invalid.",
-                    nameof(lineage));
-            }
             var lease =
                 new CharacterFinalPosePublicationFrameLease(in lineage);
             m_Pending.Begin(lease);

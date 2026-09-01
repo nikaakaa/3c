@@ -274,16 +274,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             AnimationPresentationDiagnosticsInterest diagnosticsInterest)
         {
             RequireAlive();
-            var lineageRigId = new FixedString64Bytes(lineage.RigId);
-            var lineageRigRevision =
-                new FixedString64Bytes(lineage.RigRevision);
-            if (!lineage.IsOpenValid ||
-                lineage.CompletionIdentity != 0 ||
-                !lineageRigId.Equals(m_RigId) ||
-                !lineageRigRevision.Equals(m_RigRevision))
-            {
-                throw new ArgumentException("Pose Constraint lineage is invalid.", nameof(lineage));
-            }
             if (m_HasPending)
                 throw new InvalidOperationException("Pose Constraint frame is already open.");
             var lease = new CharacterPoseConstraintFrameLease(in lineage);

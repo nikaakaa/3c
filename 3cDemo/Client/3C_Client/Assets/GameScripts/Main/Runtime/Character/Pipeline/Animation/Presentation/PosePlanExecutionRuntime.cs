@@ -996,8 +996,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             constraintLease = default;
             publicationLease = default;
             RequireAlive();
-            if (!lineage.IsOpenValid || lineage.CompletionIdentity != 0)
-                throw new ArgumentException("Pose Program frame lineage is invalid.", nameof(lineage));
+            var programLease =
+                new CharacterPoseProgramFrameLease(in lineage);
             if (linkedPose == null)
                 throw new ArgumentNullException(nameof(linkedPose));
             ulong frameIdentity = lineage.FrameIdentity;
@@ -1061,8 +1061,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                 modulesOpen = true;
                 ApplyLinkedPoseGenerationResets();
                 m_HasOpenFrame = true;
-                m_ActiveFrameLease =
-                    new CharacterPoseProgramFrameLease(in lineage);
+                m_ActiveFrameLease = programLease;
                 return m_ActiveFrameLease;
             }
             catch

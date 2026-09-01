@@ -94,8 +94,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             in CharacterFootPlacementConstraintHandle handle,
             in CharacterFullBodyIkGoalContributionHeader contribution)
         {
-            Handle = handle;
-            Contribution = contribution;
+            m_Handle = handle;
+            m_Contribution = contribution;
             bool ready =
                 contribution.Availability ==
                 CharacterFullBodyIkGoalContributionAvailability.Ready &&
@@ -118,20 +118,19 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         }
 
         readonly bool m_IsValid;
-        internal CharacterFootPlacementConstraintHandle Handle { get; }
-        internal CharacterFullBodyIkGoalContributionHeader Contribution
-        {
-            get;
-        }
+        readonly CharacterFootPlacementConstraintHandle m_Handle;
+        readonly CharacterFullBodyIkGoalContributionHeader m_Contribution;
         internal bool IsValid => m_IsValid;
+        internal CharacterFullBodyIkGoalContributionAvailability Availability =>
+            m_Contribution.Availability;
         internal bool Matches(
             in CharacterFootPlacementConstraintHandle handle,
             ulong frameSequence,
             ulong completionIdentity) =>
             m_IsValid &&
-            Handle.Equals(handle) &&
-            Contribution.FrameSequence == frameSequence &&
-            Contribution.CompletionIdentity == completionIdentity;
+            m_Handle.Equals(handle) &&
+            m_Contribution.FrameSequence == frameSequence &&
+            m_Contribution.CompletionIdentity == completionIdentity;
     }
 
     internal readonly struct CharacterPoseBoneContributionConstraintHandle :
@@ -242,8 +241,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             in CharacterPoseBoneContributionConstraintHandle handle,
             in CharacterFullBodyIkGoalContributionHeader contribution)
         {
-            Handle = handle;
-            Contribution = contribution;
+            m_Handle = handle;
+            m_Contribution = contribution;
             m_IsValid =
                 handle.IsValid &&
                 contribution.IsValid &&
@@ -259,20 +258,17 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         }
 
         readonly bool m_IsValid;
-        internal CharacterPoseBoneContributionConstraintHandle Handle { get; }
-        internal CharacterFullBodyIkGoalContributionHeader Contribution
-        {
-            get;
-        }
+        readonly CharacterPoseBoneContributionConstraintHandle m_Handle;
+        readonly CharacterFullBodyIkGoalContributionHeader m_Contribution;
         internal bool IsValid => m_IsValid;
         internal bool Matches(
             in CharacterPoseBoneContributionConstraintHandle handle,
             ulong frameSequence,
             ulong completionIdentity) =>
             m_IsValid &&
-            Handle.Equals(handle) &&
-            Contribution.FrameSequence == frameSequence &&
-            Contribution.CompletionIdentity == completionIdentity;
+            m_Handle.Equals(handle) &&
+            m_Contribution.FrameSequence == frameSequence &&
+            m_Contribution.CompletionIdentity == completionIdentity;
     }
 
     internal readonly struct CharacterFullBodyIkGoalAssemblerConstraintHandle :
@@ -391,9 +387,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             in CharacterFullBodyIkResult assembly,
             in CharacterFullBodyIkGoalSetHeader goalSet)
         {
-            Handle = handle;
-            Assembly = assembly;
-            GoalSet = goalSet;
+            m_Handle = handle;
+            m_Assembly = assembly;
+            m_GoalSet = goalSet;
             m_IsValid =
                 handle.IsValid &&
                 assembly.Succeeded &&
@@ -405,21 +401,19 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         }
 
         readonly bool m_IsValid;
-        internal CharacterFullBodyIkGoalAssemblerConstraintHandle Handle
-        {
-            get;
-        }
-        internal CharacterFullBodyIkResult Assembly { get; }
-        internal CharacterFullBodyIkGoalSetHeader GoalSet { get; }
+        readonly CharacterFullBodyIkGoalAssemblerConstraintHandle m_Handle;
+        readonly CharacterFullBodyIkResult m_Assembly;
+        readonly CharacterFullBodyIkGoalSetHeader m_GoalSet;
         internal bool IsValid => m_IsValid;
         internal bool Matches(
             in CharacterFullBodyIkGoalAssemblerConstraintHandle handle,
             ulong frameSequence,
             ulong completionIdentity) =>
             m_IsValid &&
-            Handle.Equals(handle) &&
-            GoalSet.FrameSequence == frameSequence &&
-            GoalSet.CompletionIdentity == completionIdentity;
+            m_Assembly.Succeeded &&
+            m_Handle.Equals(handle) &&
+            m_GoalSet.FrameSequence == frameSequence &&
+            m_GoalSet.CompletionIdentity == completionIdentity;
     }
 
     internal readonly struct CharacterFullBodyIkConstraintHandle :
@@ -491,10 +485,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             ulong frameSequence,
             ulong completionIdentity)
         {
-            Handle = handle;
-            Solve = solve;
-            FrameSequence = frameSequence;
-            CompletionIdentity = completionIdentity;
+            m_Handle = handle;
+            m_Solve = solve;
+            m_FrameSequence = frameSequence;
+            m_CompletionIdentity = completionIdentity;
             m_IsValid =
                 handle.IsValid &&
                 solve.Succeeded &&
@@ -503,19 +497,20 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         }
 
         readonly bool m_IsValid;
-        internal CharacterFullBodyIkConstraintHandle Handle { get; }
-        internal CharacterFullBodyIkResult Solve { get; }
-        internal ulong FrameSequence { get; }
-        internal ulong CompletionIdentity { get; }
+        readonly CharacterFullBodyIkConstraintHandle m_Handle;
+        readonly CharacterFullBodyIkResult m_Solve;
+        readonly ulong m_FrameSequence;
+        readonly ulong m_CompletionIdentity;
         internal bool IsValid => m_IsValid;
         internal bool Matches(
             in CharacterFullBodyIkConstraintHandle handle,
             ulong frameSequence,
             ulong completionIdentity) =>
             m_IsValid &&
-            Handle.Equals(handle) &&
-            FrameSequence == frameSequence &&
-            CompletionIdentity == completionIdentity;
+            m_Solve.Succeeded &&
+            m_Handle.Equals(handle) &&
+            m_FrameSequence == frameSequence &&
+            m_CompletionIdentity == completionIdentity;
     }
 
     public readonly struct CharacterPoseBoneRuntimeId : IEquatable<CharacterPoseBoneRuntimeId>

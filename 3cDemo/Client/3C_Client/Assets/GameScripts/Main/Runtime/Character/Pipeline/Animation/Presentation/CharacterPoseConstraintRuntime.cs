@@ -221,6 +221,15 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             m_First.GoalContributions.Length;
         internal int FullBodyIkContributionGoalCount =>
             m_First.ContributionGoals.Length;
+        internal bool MatchesCompiledLayout(
+            int contributionCount,
+            int contributionGoalCount) =>
+            contributionCount >= 0 &&
+            contributionGoalCount >= 0 &&
+            m_First.GoalContributions.Length == contributionCount &&
+            m_Second.GoalContributions.Length == contributionCount &&
+            m_First.ContributionGoals.Length == contributionGoalCount &&
+            m_Second.ContributionGoals.Length == contributionGoalCount;
         internal CharacterFullBodyIkSolverDiagnostics GetSolverDiagnostics() =>
             m_HasCommitted
                 ? m_Committed.SolverDiagnostics
@@ -250,11 +259,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                 throw new ArgumentOutOfRangeException(nameof(goalIndex));
             return m_Committed.Goals[header.GoalOffset + goalIndex];
         }
-        internal CharacterFullBodyIkGoalContributionHeader
-            GetPendingGoalContribution(int index) =>
-            m_HasPending && (uint)index < (uint)m_Pending.GoalContributions.Length
-                ? m_Pending.GoalContributions[index]
-                : default;
         internal CharacterFullBodyIkGoalContributionHeader
             GetCommittedGoalContribution(int index) =>
             m_HasCommitted && (uint)index < (uint)m_Committed.GoalContributions.Length

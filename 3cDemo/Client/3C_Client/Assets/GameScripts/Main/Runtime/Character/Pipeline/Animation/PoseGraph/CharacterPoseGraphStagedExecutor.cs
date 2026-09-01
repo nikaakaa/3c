@@ -242,7 +242,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         readonly int m_BoneCount;
         readonly int m_ParameterCount;
         readonly int m_PoseValueCount;
-        readonly int m_FootPlacementCount;
         readonly int m_ContributionStride;
         readonly int m_OutputOperationIndex;
         readonly int m_OutputValueIndex;
@@ -280,7 +279,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             m_ModifyBones = program.ModifyBones;
             m_RootOrientationWarps = program.RootOrientationWarps;
             m_RootOrientationWarpControls = program.RootOrientationWarpControls;
-            m_FootPlacementCount = program.FootPlacementCount;
             m_LinkedPoseCalls = program.LinkedPoseCalls;
             m_LinkedPoseCandidates = program.LinkedPoseCandidates;
             m_LinkedPoseCallControls = program.LinkedPoseCallControls;
@@ -451,6 +449,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                         ResetValue(operation.OutputValueIndex);
                 }
                 bool valueOperationValid = true;
+                AnimationPoseNativeInvalidReason typedInvalidReason =
+                    AnimationPoseNativeInvalidReason.None;
                 switch (operation.Code)
                 {
                     case CharacterPoseOperationCode.SelectedPosePlayer:
@@ -508,7 +508,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                         using (IkGoalMarker.Auto())
                             valueOperationValid = EvaluateWorldAwareFootGoal(
                                 operation,
-                                in worldInput);
+                                in worldInput,
+                                out typedInvalidReason);
                         break;
                     case CharacterPoseOperationCode.FullBodyIkGoalAssembler:
                         using (IkGoalMarker.Auto())
@@ -553,7 +554,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 bool valueValid = valueOperationValid;
                 AnimationPoseNativeInvalidReason reason = valueOperationValid
                     ? AnimationPoseNativeInvalidReason.None
-                    : ValueOperationInvalidReason(operation);
+                    : typedInvalidReason !=
+                      AnimationPoseNativeInvalidReason.None
+                        ? typedInvalidReason
+                        : ValueOperationInvalidReason(operation);
                 if (producesPose)
                 {
                     using (ValueValidationMarker.Auto())
@@ -2260,20 +2264,16 @@ namespace ThirdPersonCharacter.Pipeline.Animation
 
         bool EvaluateWorldAwareFootGoal(
             AnimationPoseGraphNativeOperation operation,
-            in CharacterPoseWorldAwareStageInput worldInput)
+            in CharacterPoseWorldAwareStageInput worldInput,
+            out AnimationPoseNativeInvalidReason invalidReason)
         {
+            invalidReason =
+                AnimationPoseNativeInvalidReason.FootPlacementInvalid;
             CharacterFootPlacementConstraintHandle handle =
                 operation.FootPlacementConstraint;
-            bool descriptorValid =
-                operation.Code == CharacterPoseOperationCode.FootPlacement &&
-                handle.IsValid &&
-                (uint)handle.FootPlacementIndex <
-                (uint)m_FootPlacementCount;
-            if (!descriptorValid ||
+            if (!handle.IsValid ||
                 !worldInput.HasFootPlacement ||
-                !worldInput.FootPlacementConstraint.Equals(handle) ||
-                (uint)handle.ContributionValueIndex >=
-                (uint)m_PoseConstraints.FullBodyIkGoalContributionCount)
+                !worldInput.FootPlacementConstraint.Equals(handle))
             {
                 return false;
             }
@@ -2293,17 +2293,27 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                     m_FrameSequence,
                     m_CompletionIdentity);
             }
-            CharacterFullBodyIkGoalContributionHeader header =
-                result.Contribution;
-            return result.Matches(
-                       in handle,
-                       m_FrameSequence,
-                       m_CompletionIdentity) &&
-                   header.GoalOffset <=
-                       m_PoseConstraints.FullBodyIkContributionGoalCount -
-                       header.GoalCount &&
-                   header.Availability ==
-                       CharacterFullBodyIkGoalContributionAvailability.Ready;
+            if (!result.Matches(
+                    in handle,
+                    m_FrameSequence,
+                    m_CompletionIdentity))
+            {
+                return false;
+            }
+            if (result.Availability ==
+                CharacterFullBodyIkGoalContributionAvailability.Ready)
+            {
+                invalidReason = AnimationPoseNativeInvalidReason.None;
+                return true;
+            }
+            if (result.Availability ==
+                CharacterFullBodyIkGoalContributionAvailability
+                    .WorldContextUnavailable)
+            {
+                invalidReason =
+                    AnimationPoseNativeInvalidReason.WorldContextUnavailable;
+            }
+            return false;
         }
 
         bool EvaluateGoalAssembler(AnimationPoseGraphNativeOperation operation)
@@ -2427,16 +2437,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         AnimationPoseNativeInvalidReason ValueOperationInvalidReason(
             AnimationPoseGraphNativeOperation operation)
         {
-            if (operation.Code == CharacterPoseOperationCode.FootPlacement &&
-                (uint)operation.OutputFullBodyIkGoalContributionValueIndex <
-                (uint)m_PoseConstraints.FullBodyIkGoalContributionCount &&
-                m_PoseConstraints.GetPendingGoalContribution(
-                        operation.OutputFullBodyIkGoalContributionValueIndex)
-                    .Availability ==
-                CharacterFullBodyIkGoalContributionAvailability.WorldContextUnavailable)
-            {
-                return AnimationPoseNativeInvalidReason.WorldContextUnavailable;
-            }
             return operation.Code == CharacterPoseOperationCode.FootPlacement
                 ? AnimationPoseNativeInvalidReason.FootPlacementInvalid
                 : operation.Code == CharacterPoseOperationCode.PoseBoneIKGoals ||
@@ -4010,10 +4010,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             program.RequireValid();
             if (poseConstraints == null ||
                 program.FullBodyIkCount != 1 ||
-                poseConstraints.FullBodyIkGoalContributionCount !=
-                program.FullBodyIkGoalContributionCount ||
-                poseConstraints.FullBodyIkContributionGoalCount !=
-                program.FullBodyIkContributionGoalCount)
+                !poseConstraints.MatchesCompiledLayout(
+                    program.FullBodyIkGoalContributionCount,
+                    program.FullBodyIkContributionGoalCount))
             {
                 throw new ArgumentException("FinalIK Full Body solver layout is invalid.", nameof(poseConstraints));
             }
@@ -4079,7 +4078,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                     operation.OutputValueIndex >= program.PoseValueCount ||
                     operation.OutputFullBodyIkGoalContributionValueIndex < -1 ||
                     operation.OutputFullBodyIkGoalContributionValueIndex >=
-                    poseConstraints.FullBodyIkGoalContributionCount ||
+                    program.FullBodyIkGoalContributionCount ||
                     operation.OutputFullBodyIkGoalSetValueIndex < -1 ||
                     operation.OutputFullBodyIkGoalSetValueIndex >=
                     program.FullBodyIkGoalSetValueCount ||

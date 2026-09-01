@@ -36,7 +36,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             NetworkTestProductContext context,
             NetworkTestProductDescriptor descriptor,
             string productRoot,
-            string buildId);
+            string candidateId);
         void ValidateProduct(
             NetworkTestProductContext context,
             NetworkTestProductDescriptor descriptor,
@@ -45,24 +45,37 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
 
     internal sealed class NetworkTestProductBuildRequest
     {
-        public NetworkTestProductBuildRequest(INetworkTestProductBuildAdapter adapter)
+        public NetworkTestProductBuildRequest(INetworkTestProductBuildAdapter adapter, string candidateLabel)
         {
             Adapter = adapter ?? throw new ArgumentNullException(nameof(adapter));
+            CandidateLabel = string.IsNullOrWhiteSpace(candidateLabel)
+                ? throw new ArgumentException("Network Test CandidateLabel is required.", nameof(candidateLabel))
+                : candidateLabel;
         }
 
         public INetworkTestProductBuildAdapter Adapter { get; }
+        public string CandidateLabel { get; }
     }
 
     internal sealed class NetworkTestProductRunRequest
     {
-        public NetworkTestProductRunRequest(INetworkTestProductBuildAdapter adapter, bool stopExisting)
+        public NetworkTestProductRunRequest(
+            INetworkTestProductBuildAdapter adapter,
+            string candidateId,
+            string slotId)
         {
             Adapter = adapter ?? throw new ArgumentNullException(nameof(adapter));
-            StopExisting = stopExisting;
+            CandidateId = string.IsNullOrWhiteSpace(candidateId)
+                ? throw new ArgumentException("Network Test CandidateId is required.", nameof(candidateId))
+                : candidateId;
+            SlotId = string.IsNullOrWhiteSpace(slotId)
+                ? throw new ArgumentException("Network Test SlotId is required.", nameof(slotId))
+                : slotId;
         }
 
         public INetworkTestProductBuildAdapter Adapter { get; }
-        public bool StopExisting { get; }
+        public string CandidateId { get; }
+        public string SlotId { get; }
     }
 
     internal sealed class NetworkTestProductContext
@@ -71,18 +84,21 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             string projectRoot,
             string repositoryRoot,
             string productRoot,
-            NetworkTestExternalProcessExecutor processes)
+            NetworkTestExternalProcessExecutor processes,
+            NetworkTestCandidateIdentity candidate)
         {
             ProjectRoot = Path.GetFullPath(projectRoot);
             RepositoryRoot = Path.GetFullPath(repositoryRoot);
             ProductRoot = Path.GetFullPath(productRoot);
             Processes = processes ?? throw new ArgumentNullException(nameof(processes));
+            Candidate = candidate ?? throw new ArgumentNullException(nameof(candidate));
         }
 
         public string ProjectRoot { get; }
         public string RepositoryRoot { get; }
         public string ProductRoot { get; }
         public NetworkTestExternalProcessExecutor Processes { get; }
+        public NetworkTestCandidateIdentity Candidate { get; }
     }
 
     internal sealed class NetworkTestProductDescriptor
@@ -105,7 +121,9 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             string runtimeTopologyIdentity,
             string playerRoleId,
             string playerProductId,
-            NetworkTestProductManifestField[] fields)
+            NetworkTestProductManifestField[] fields,
+            string[] supportedSlotIds,
+            Func<NetworkTestProductContext, IReadOnlyList<NetworkTestToolBundleManifest>> additionalToolBundles)
         {
             ProductId = Require(productId, nameof(productId));
             DisplayName = Require(displayName, nameof(displayName));
@@ -128,6 +146,8 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             PlayerRoleId = Require(playerRoleId, nameof(playerRoleId));
             PlayerProductId = Require(playerProductId, nameof(playerProductId));
             Fields = FreezeFields(fields);
+            SupportedSlotIds = FreezeSlots(supportedSlotIds);
+            AdditionalToolBundles = additionalToolBundles;
         }
 
         public string ProductId { get; }
@@ -148,6 +168,18 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
         public string PlayerRoleId { get; }
         public string PlayerProductId { get; }
         public NetworkTestProductManifestField[] Fields { get; }
+        public string[] SupportedSlotIds { get; }
+        public Func<NetworkTestProductContext, IReadOnlyList<NetworkTestToolBundleManifest>> AdditionalToolBundles { get; }
+
+        static string[] FreezeSlots(string[] source)
+        {
+            string[] values = source?.ToArray() ?? Array.Empty<string>();
+            if (values.Length == 0 || values.Any(string.IsNullOrWhiteSpace) ||
+                values.Distinct(StringComparer.Ordinal).Count() != values.Length)
+                throw new ArgumentException("Network Test Product requires explicit unique Session Slots.", nameof(source));
+            Array.Sort(values, StringComparer.Ordinal);
+            return values;
+        }
 
         static NetworkTestProductManifestField[] FreezeFields(NetworkTestProductManifestField[] fields)
         {
@@ -346,6 +378,26 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                 string.Empty);
         }
 
+        public int StartDetached(
+            string executable,
+            string arguments,
+            string workingDirectory)
+        {
+            var startInfo = new ProcessStartInfo
+            {
+                FileName = executable,
+                Arguments = arguments ?? string.Empty,
+                WorkingDirectory = Path.GetFullPath(workingDirectory),
+                UseShellExecute = false,
+                CreateNoWindow = true
+            };
+            Process process = Process.Start(startInfo) ??
+                throw new InvalidOperationException($"Failed to start process: {executable}");
+            int processId = process.Id;
+            process.Dispose();
+            return processId;
+        }
+
         public string ExecuteDotNetBuild(string productId, string arguments, string workingDirectory)
         {
             NetworkTestExternalProcessResult build = null;
@@ -466,7 +518,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
 
     internal static class NetworkTestProductBuildWorkflow
     {
-        const int ManifestSchemaVersion = 2;
+        const int ManifestSchemaVersion = 3;
 
         public static void Build(NetworkTestProductBuildRequest request)
         {
@@ -476,14 +528,26 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             string repositoryRoot = Path.GetFullPath(Path.Combine(projectRoot, "..", "..", ".."));
             string networkRoot = ClientBuildArtifactLayout.NetworkRoot;
             ValidateProductCatalog(networkRoot);
-            string finalRoot = RequireProductRoot(networkRoot, request.Adapter.OutputDirectoryName);
+            var processes = new NetworkTestExternalProcessExecutor();
+            NetworkTestCandidateIdentity candidate = NetworkTestCandidateIdentity.Capture(
+                repositoryRoot,
+                request.CandidateLabel,
+                processes);
+            string productRoot = RequireProductRoot(networkRoot, request.Adapter.OutputDirectoryName);
+            string finalRoot = RequireCandidateRoot(productRoot, candidate.CandidateId);
+            if (Directory.Exists(finalRoot) || File.Exists(finalRoot))
+                throw new InvalidOperationException($"Network Test Candidate already exists: {candidate.CandidateId}");
             string playerBuildWorkspaceRoot = RequirePlayerBuildWorkspaceRoot(
                 networkRoot,
                 request.Adapter.PlayerBuildWorkspaceDirectoryName);
             string stagingRoot = CreateTransientRoot(networkRoot, "s");
-            var processes = new NetworkTestExternalProcessExecutor();
-            var stagingContext = new NetworkTestProductContext(projectRoot, repositoryRoot, stagingRoot, processes);
-            string buildId = DateTime.UtcNow.ToString("yyyyMMdd-HHmmss", CultureInfo.InvariantCulture);
+            var stagingContext = new NetworkTestProductContext(
+                projectRoot,
+                repositoryRoot,
+                stagingRoot,
+                processes,
+                candidate);
+            string builtAtUtc = DateTime.UtcNow.ToString("O", CultureInfo.InvariantCulture);
             try
             {
                 NetworkTestProductDescriptor descriptor = NetworkTestEditorSceneSetup.Preserve(
@@ -494,6 +558,10 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                         return request.Adapter.CreateDescriptor(stagingContext);
                     });
                 RequireAdapterDescriptor(request.Adapter, descriptor);
+                candidate.RequireSame(NetworkTestCandidateIdentity.Capture(
+                    repositoryRoot,
+                    request.CandidateLabel,
+                    processes));
                 RequireCleanDirectory(stagingRoot);
                 string playerDirectory = Path.Combine(stagingRoot, "Player");
                 string playerExecutable = Path.Combine(playerDirectory, "3C_Client.exe");
@@ -534,22 +602,36 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                     stagingContext,
                     descriptor,
                     stagingRoot,
-                    buildId);
+                    candidate.CandidateId);
                 if (additional != null)
                     artifacts.AddRange(additional);
                 NetworkTestRuntimeArtifactResult[] validatedArtifacts = RequireArtifacts(stagingRoot, artifacts);
+                NetworkTestToolPublication tools = NetworkTestToolBundlePublisher.Publish(stagingContext, descriptor);
                 NetworkTestProductBuildManifest manifest = CreateManifest(
                     stagingContext,
                     descriptor,
                     validatedArtifacts,
-                    buildId);
+                    tools,
+                    builtAtUtc);
                 string manifestPath = Path.Combine(stagingRoot, descriptor.ManifestFileName);
                 File.WriteAllText(manifestPath, JsonUtility.ToJson(manifest, true), new UTF8Encoding(false));
-                NetworkTestProductBuildManifest loaded = ValidateCandidate(stagingContext, descriptor, request.Adapter);
-                CommitCandidate(stagingRoot, finalRoot, descriptor, request.Adapter, projectRoot, repositoryRoot, processes);
+                NetworkTestProductBuildManifest loaded = ValidateCandidate(
+                    stagingContext,
+                    descriptor,
+                    request.Adapter,
+                    false);
+                CommitCandidate(
+                    stagingRoot,
+                    finalRoot,
+                    descriptor,
+                    request.Adapter,
+                    projectRoot,
+                    repositoryRoot,
+                    processes,
+                    candidate);
                 Debug.Log(
-                    $"{descriptor.DisplayName} built. BuildId={loaded.buildId}\n" +
-                    $"ProductRoot={finalRoot}\nArtifacts={string.Join(", ", validatedArtifacts.Select(value => value.RoleId))}");
+                    $"{descriptor.DisplayName} built. CandidateId={loaded.candidateId}\n" +
+                    $"CandidateRoot={finalRoot}\nArtifacts={string.Join(", ", validatedArtifacts.Select(value => value.RoleId))}");
             }
             finally
             {
@@ -566,48 +648,51 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             string repositoryRoot = Path.GetFullPath(Path.Combine(projectRoot, "..", "..", ".."));
             string networkRoot = ClientBuildArtifactLayout.NetworkRoot;
             ValidateProductCatalog(networkRoot);
-            string finalRoot = RequireProductRoot(networkRoot, request.Adapter.OutputDirectoryName);
+            string productRoot = RequireProductRoot(networkRoot, request.Adapter.OutputDirectoryName);
+            string candidateRoot = RequireCandidateRoot(productRoot, request.CandidateId);
+            string manifestPath = Path.Combine(candidateRoot, request.Adapter.ManifestFileName);
             var processes = new NetworkTestExternalProcessExecutor();
-            var context = new NetworkTestProductContext(projectRoot, repositoryRoot, finalRoot, processes);
-            NetworkTestProductDescriptor descriptor = request.Adapter.CreateDescriptor(context);
-            RequireAdapterDescriptor(request.Adapter, descriptor);
-            NetworkTestProductBuildManifest manifest = ValidateCandidate(context, descriptor, request.Adapter);
-            string script = Path.Combine(repositoryRoot, descriptor.LaunchScriptRelativePath.Replace('/', Path.DirectorySeparatorChar));
+            NetworkTestProductBuildManifest manifest = ReadCandidate(
+                candidateRoot,
+                manifestPath,
+                request.Adapter.ProductId,
+                request.CandidateId);
+            NetworkTestToolBundleManifest orchestrator = RequireToolBundle(
+                manifest,
+                NetworkTestToolBundlePublisher.OrchestratorToolId);
+            string executable = RequireContainedPath(candidateRoot, orchestrator.entryPoint);
             string arguments =
-                $"-NoProfile -ExecutionPolicy Bypass -File {NetworkTestExternalProcessExecutor.Quote(script)} " +
-                $"-ProductRoot {NetworkTestExternalProcessExecutor.Quote(finalRoot)}" +
-                (request.StopExisting ? " -StopExisting" : string.Empty);
-            processes.ExecuteLauncher("powershell.exe", arguments, repositoryRoot).RequireSuccess(descriptor.ProductId);
+                $"start --candidate {NetworkTestExternalProcessExecutor.Quote(manifestPath)} " +
+                $"--slot {NetworkTestExternalProcessExecutor.Quote(request.SlotId)}";
+            int processId = processes.StartDetached(executable, arguments, candidateRoot);
             Debug.Log(
-                $"{descriptor.DisplayName} started. BuildId={manifest.buildId}\nProductRoot={finalRoot}");
+                $"{request.Adapter.DisplayName} Orchestrator started. CandidateId={manifest.candidateId}; " +
+                $"Slot={request.SlotId}; PID={processId}");
         }
 
         static NetworkTestProductBuildManifest CreateManifest(
             NetworkTestProductContext context,
             NetworkTestProductDescriptor descriptor,
             IReadOnlyList<NetworkTestRuntimeArtifactResult> artifacts,
-            string buildId)
+            NetworkTestToolPublication tools,
+            string builtAtUtc)
         {
-            string script = Path.Combine(
-                context.RepositoryRoot,
-                descriptor.LaunchScriptRelativePath.Replace('/', Path.DirectorySeparatorChar));
-            if (!File.Exists(script))
-                throw new InvalidOperationException($"Network Test Product launch script is missing: {script}");
             return new NetworkTestProductBuildManifest
             {
                 schemaVersion = ManifestSchemaVersion,
-                buildId = buildId,
+                candidateId = context.Candidate.CandidateId,
+                candidateLabel = context.Candidate.Label,
+                sourceCommit = context.Candidate.SourceCommit,
+                sourceTreeHash = context.Candidate.SourceTreeHash,
+                builtAtUtc = builtAtUtc,
                 productId = descriptor.ProductId,
                 programIdentity = descriptor.ProgramIdentity,
                 pipelineIdentity = descriptor.PipelineIdentity,
                 networkModelIdentity = descriptor.NetworkModelIdentity,
                 runtimeTopologyIdentity = descriptor.RuntimeTopologyIdentity,
                 artifacts = artifacts.Select(ToManifest).ToArray(),
-                launch = new NetworkTestLaunchManifest
-                {
-                    scriptPath = descriptor.LaunchScriptRelativePath,
-                    scriptHash = NetworkTestArtifactFileUtility.Sha256(script)
-                },
+                toolBundles = tools.ToolBundles,
+                sessionPlan = tools.SessionPlan,
                 fields = descriptor.Fields,
                 files = BuildFileClosure(context.ProductRoot, descriptor.ManifestFileName)
             };
@@ -621,7 +706,8 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
         static NetworkTestProductBuildManifest ValidateCandidate(
             NetworkTestProductContext context,
             NetworkTestProductDescriptor descriptor,
-            INetworkTestProductBuildAdapter adapter)
+            INetworkTestProductBuildAdapter adapter,
+            bool requireCandidateDirectory)
         {
             string manifestPath = Path.Combine(context.ProductRoot, descriptor.ManifestFileName);
             if (!File.Exists(manifestPath))
@@ -635,8 +721,19 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                 identityMismatches.Add("schemaVersion");
             if (!string.Equals(manifest.productId, descriptor.ProductId, StringComparison.Ordinal))
                 identityMismatches.Add("productId");
-            if (string.IsNullOrWhiteSpace(manifest.buildId))
-                identityMismatches.Add("buildId");
+            if (!string.Equals(manifest.candidateId, context.Candidate.CandidateId, StringComparison.Ordinal))
+                identityMismatches.Add("candidateId");
+            if (!string.Equals(manifest.candidateLabel, context.Candidate.Label, StringComparison.Ordinal))
+                identityMismatches.Add("candidateLabel");
+            if (!string.Equals(manifest.sourceCommit, context.Candidate.SourceCommit, StringComparison.Ordinal))
+                identityMismatches.Add("sourceCommit");
+            if (!string.Equals(manifest.sourceTreeHash, context.Candidate.SourceTreeHash, StringComparison.Ordinal))
+                identityMismatches.Add("sourceTreeHash");
+            if (string.IsNullOrWhiteSpace(manifest.builtAtUtc))
+                identityMismatches.Add("builtAtUtc");
+            if (requireCandidateDirectory &&
+                !string.Equals(Path.GetFileName(context.ProductRoot), manifest.candidateId, StringComparison.Ordinal))
+                identityMismatches.Add("candidateDirectory");
             if (!string.Equals(manifest.programIdentity, descriptor.ProgramIdentity, StringComparison.Ordinal))
                 identityMismatches.Add("programIdentity");
             if (!string.Equals(manifest.pipelineIdentity, descriptor.PipelineIdentity, StringComparison.Ordinal))
@@ -658,20 +755,93 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                 throw new InvalidOperationException($"{descriptor.DisplayName} Player artifact does not match its adapter.");
             RequirePlayerArtifactFields(player, descriptor);
             RequireExpectedFields(descriptor.Fields, manifest.fields);
-            if (manifest.launch == null ||
-                !string.Equals(manifest.launch.scriptPath, descriptor.LaunchScriptRelativePath, StringComparison.Ordinal))
-                throw new InvalidOperationException($"{descriptor.DisplayName} launch script identity is invalid.");
-            string script = Path.Combine(
-                context.RepositoryRoot,
-                descriptor.LaunchScriptRelativePath.Replace('/', Path.DirectorySeparatorChar));
-            if (!File.Exists(script) || !string.Equals(
-                    manifest.launch.scriptHash,
-                    NetworkTestArtifactFileUtility.Sha256(script),
-                    StringComparison.Ordinal))
-                throw new InvalidOperationException($"{descriptor.DisplayName} launch script changed after Build.");
+            RequireToolBundles(context.ProductRoot, manifest.toolBundles);
+            RequireSessionPlan(context.ProductRoot, manifest.sessionPlan, descriptor.SupportedSlotIds);
             RequireExactClosure(context.ProductRoot, descriptor.ManifestFileName, manifest.files);
             adapter.ValidateProduct(context, descriptor, manifest);
             return manifest;
+        }
+
+        internal static NetworkTestProductBuildManifest ReadCandidate(
+            string candidateRoot,
+            string manifestPath,
+            string expectedProductId,
+            string expectedCandidateId)
+        {
+            if (!File.Exists(manifestPath))
+                throw new InvalidOperationException("Network Test Candidate manifest is missing.");
+            NetworkTestProductBuildManifest manifest = JsonUtility.FromJson<NetworkTestProductBuildManifest>(
+                File.ReadAllText(manifestPath, Encoding.UTF8));
+            if (manifest == null || manifest.schemaVersion != ManifestSchemaVersion ||
+                !string.Equals(manifest.productId, expectedProductId, StringComparison.Ordinal) ||
+                !string.Equals(manifest.candidateId, expectedCandidateId, StringComparison.Ordinal) ||
+                !string.Equals(Path.GetFileName(candidateRoot), expectedCandidateId, StringComparison.Ordinal) ||
+                string.IsNullOrWhiteSpace(manifest.candidateLabel) || manifest.sourceCommit?.Length != 40 ||
+                manifest.sourceTreeHash?.Length != 40 || string.IsNullOrWhiteSpace(manifest.builtAtUtc))
+                throw new InvalidOperationException("Network Test Candidate identity is invalid.");
+            RequireManifestArtifacts(candidateRoot, manifest.artifacts);
+            RequireToolBundles(candidateRoot, manifest.toolBundles);
+            RequireSessionPlan(candidateRoot, manifest.sessionPlan, manifest.sessionPlan?.supportedSlotIds);
+            RequireExactClosure(candidateRoot, Path.GetFileName(manifestPath), manifest.files);
+            return manifest;
+        }
+
+        static NetworkTestToolBundleManifest RequireToolBundle(
+            NetworkTestProductBuildManifest manifest,
+            string toolId)
+        {
+            NetworkTestToolBundleManifest[] matches = (manifest.toolBundles ?? Array.Empty<NetworkTestToolBundleManifest>())
+                .Where(value => value != null && string.Equals(value.toolId, toolId, StringComparison.Ordinal))
+                .ToArray();
+            return matches.Length == 1
+                ? matches[0]
+                : throw new InvalidOperationException($"Network Test Candidate requires exactly one Tool Bundle '{toolId}'.");
+        }
+
+        static void RequireToolBundles(string candidateRoot, NetworkTestToolBundleManifest[] source)
+        {
+            NetworkTestToolBundleManifest[] values = source ?? Array.Empty<NetworkTestToolBundleManifest>();
+            if (values.Length < 2)
+                throw new InvalidOperationException("Network Test Candidate requires Orchestrator and Session adapter Tool Bundles.");
+            var ids = new HashSet<string>(StringComparer.Ordinal);
+            string previous = null;
+            foreach (NetworkTestToolBundleManifest value in values)
+            {
+                if (value == null || string.IsNullOrWhiteSpace(value.toolId) ||
+                    string.IsNullOrWhiteSpace(value.toolVersion) || value.contractVersion <= 0 ||
+                    !ids.Add(value.toolId) ||
+                    (previous != null && string.CompareOrdinal(previous, value.toolId) >= 0) ||
+                    !File.Exists(RequireContainedPath(candidateRoot, value.entryPoint)) ||
+                    !string.Equals(
+                        value.bundleHash,
+                        NetworkTestToolBundlePublisher.ComputeDirectoryHash(candidateRoot, value.root),
+                        StringComparison.Ordinal))
+                    throw new InvalidOperationException("Network Test Candidate Tool Bundle identity is invalid.");
+                previous = value.toolId;
+            }
+            RequireToolBundle(new NetworkTestProductBuildManifest { toolBundles = values },
+                NetworkTestToolBundlePublisher.OrchestratorToolId);
+        }
+
+        static void RequireSessionPlan(
+            string candidateRoot,
+            NetworkTestSessionPlanManifest plan,
+            IReadOnlyCollection<string> expectedSlots)
+        {
+            if (plan == null || plan.schemaVersion != 1 || string.IsNullOrWhiteSpace(plan.adapterId) ||
+                string.IsNullOrWhiteSpace(plan.adapterPath) || string.IsNullOrWhiteSpace(plan.adapterHash) ||
+                plan.supportedSlotIds == null || plan.supportedSlotIds.Length == 0)
+                throw new InvalidOperationException("Network Test Candidate Session Plan is invalid.");
+            string adapter = RequireContainedPath(candidateRoot, plan.adapterPath);
+            if (!File.Exists(adapter) || !string.Equals(
+                    plan.adapterHash,
+                    NetworkTestArtifactFileUtility.Sha256(adapter),
+                    StringComparison.Ordinal))
+                throw new InvalidOperationException("Network Test Candidate Session adapter hash is invalid.");
+            string[] expected = expectedSlots?.OrderBy(value => value, StringComparer.Ordinal).ToArray() ?? Array.Empty<string>();
+            string[] actual = plan.supportedSlotIds.OrderBy(value => value, StringComparer.Ordinal).ToArray();
+            if (expected.Length == 0 || !expected.SequenceEqual(actual, StringComparer.Ordinal))
+                throw new InvalidOperationException("Network Test Candidate Session Slot contract is invalid.");
         }
 
         static void CommitCandidate(
@@ -681,28 +851,26 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             INetworkTestProductBuildAdapter adapter,
             string projectRoot,
             string repositoryRoot,
-            NetworkTestExternalProcessExecutor processes)
+            NetworkTestExternalProcessExecutor processes,
+            NetworkTestCandidateIdentity candidate)
         {
-            string networkRoot = Path.GetDirectoryName(finalRoot) ??
-                throw new InvalidOperationException("Network Test Product output root has no parent directory.");
-            string backupRoot = CreateTransientRoot(networkRoot, "p");
-            bool hadPrevious = Directory.Exists(finalRoot);
-            processes.StopProcessesUnder(finalRoot);
-            if (hadPrevious)
-                Directory.Move(finalRoot, backupRoot);
+            if (Directory.Exists(finalRoot) || File.Exists(finalRoot))
+                throw new InvalidOperationException($"Network Test Candidate already exists: {candidate.CandidateId}");
             try
             {
                 Directory.Move(candidateRoot, finalRoot);
-                var finalContext = new NetworkTestProductContext(projectRoot, repositoryRoot, finalRoot, processes);
-                ValidateCandidate(finalContext, descriptor, adapter);
-                DeleteDirectoryIfPresent(backupRoot);
+                var finalContext = new NetworkTestProductContext(
+                    projectRoot,
+                    repositoryRoot,
+                    finalRoot,
+                    processes,
+                    candidate);
+                ValidateCandidate(finalContext, descriptor, adapter, true);
             }
             catch
             {
                 if (Directory.Exists(finalRoot))
                     Directory.Move(finalRoot, candidateRoot);
-                if (hadPrevious && Directory.Exists(backupRoot))
-                    Directory.Move(backupRoot, finalRoot);
                 throw;
             }
         }
@@ -920,7 +1088,6 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             var productIds = new HashSet<string>(StringComparer.Ordinal);
             var outputRoots = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
             var workspaceRoots = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-            var manifests = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
             for (int i = 0; i < NetworkTestProductAdapters.All.Length; i++)
             {
                 INetworkTestProductBuildAdapter adapter = NetworkTestProductAdapters.All[i] ??
@@ -929,21 +1096,30 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                 string workspaceRoot = RequirePlayerBuildWorkspaceRoot(
                     networkRoot,
                     adapter.PlayerBuildWorkspaceDirectoryName);
-                string manifest = Path.GetFullPath(Path.Combine(root, adapter.ManifestFileName));
-                if (!string.Equals(Path.GetDirectoryName(manifest), root, StringComparison.OrdinalIgnoreCase))
-                    throw new InvalidOperationException("Network Test Product manifest escaped its formal Product output root.");
                 if (!productIds.Add(adapter.ProductId) || !outputRoots.Add(root) ||
-                    !workspaceRoots.Add(workspaceRoot) || !manifests.Add(manifest))
+                    !workspaceRoots.Add(workspaceRoot))
                     throw new InvalidOperationException("Network Test Product catalog contains shared identity or output paths.");
             }
         }
 
-        static string RequireProductRoot(string networkRoot, string directoryName)
+        internal static string RequireProductRoot(string networkRoot, string directoryName)
         {
             string root = Path.GetFullPath(Path.Combine(networkRoot, directoryName));
             string parent = Path.GetDirectoryName(root) ?? string.Empty;
             if (!string.Equals(parent, Path.GetFullPath(networkRoot), StringComparison.OrdinalIgnoreCase))
                 throw new InvalidOperationException("Network Test Product output root escaped the formal Network build directory.");
+            return root;
+        }
+
+        internal static string RequireCandidateRoot(string productRoot, string candidateId)
+        {
+            if (string.IsNullOrWhiteSpace(candidateId) ||
+                candidateId.IndexOfAny(Path.GetInvalidFileNameChars()) >= 0 ||
+                candidateId.Contains('/') || candidateId.Contains('\\'))
+                throw new InvalidOperationException("Network Test CandidateId is invalid.");
+            string root = Path.GetFullPath(Path.Combine(productRoot, candidateId));
+            if (!string.Equals(Path.GetDirectoryName(root), Path.GetFullPath(productRoot), StringComparison.OrdinalIgnoreCase))
+                throw new InvalidOperationException("Network Test Candidate root escaped its Product root.");
             return root;
         }
 
@@ -1053,55 +1229,4 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
         }
     }
 
-    [Serializable]
-    internal sealed class NetworkTestProductBuildManifest
-    {
-        public int schemaVersion;
-        public string buildId = string.Empty;
-        public string productId = string.Empty;
-        public string programIdentity = string.Empty;
-        public string pipelineIdentity = string.Empty;
-        public string networkModelIdentity = string.Empty;
-        public string runtimeTopologyIdentity = string.Empty;
-        public NetworkTestRuntimeArtifactManifest[] artifacts = Array.Empty<NetworkTestRuntimeArtifactManifest>();
-        public NetworkTestLaunchManifest launch;
-        public NetworkTestProductManifestField[] fields = Array.Empty<NetworkTestProductManifestField>();
-        public NetworkTestProductManifestFile[] files = Array.Empty<NetworkTestProductManifestFile>();
-    }
-
-    [Serializable]
-    internal sealed class NetworkTestRuntimeArtifactManifest
-    {
-        public string roleId = string.Empty;
-        public string kind = string.Empty;
-        public string productId = string.Empty;
-        public string root = string.Empty;
-        public string entryPoint = string.Empty;
-        public string configurationIdentity = string.Empty;
-        public string manifestPath = string.Empty;
-        public string manifestHash = string.Empty;
-        public NetworkTestProductManifestField[] fields = Array.Empty<NetworkTestProductManifestField>();
-    }
-
-    [Serializable]
-    internal sealed class NetworkTestLaunchManifest
-    {
-        public string scriptPath = string.Empty;
-        public string scriptHash = string.Empty;
-    }
-
-    [Serializable]
-    internal sealed class NetworkTestProductManifestField
-    {
-        public string key = string.Empty;
-        public string value = string.Empty;
-    }
-
-    [Serializable]
-    internal sealed class NetworkTestProductManifestFile
-    {
-        public string path = string.Empty;
-        public long length;
-        public string sha256 = string.Empty;
-    }
 }

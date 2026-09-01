@@ -10,9 +10,28 @@ static class Program
     const int InvalidArguments = 2;
     const int InvalidManifest = 3;
     const int RuntimeFailure = 4;
+    static readonly JsonSerializerOptions JsonOptions = new()
+    {
+        IncludeFields = true,
+        PropertyNameCaseInsensitive = false,
+        WriteIndented = true
+    };
 
     static int Main(string[] args)
     {
+        if (args.Length == 4 && args[0] == "--write-run-manifest")
+        {
+            try
+            {
+                WriteRunManifest(args[1], args[2], args[3]);
+                return 0;
+            }
+            catch (Exception exception)
+            {
+                Console.Error.WriteLine(exception);
+                return InvalidManifest;
+            }
+        }
         ServerArguments arguments;
         try
         {
@@ -29,15 +48,14 @@ static class Program
         try
         {
             string json = File.ReadAllText(arguments.ManifestPath);
-            manifest = JsonSerializer.Deserialize<DeterministicRollbackServerManifest>(json, new JsonSerializerOptions
-            {
-                IncludeFields = true,
-                PropertyNameCaseInsensitive = false
-            }) ?? throw new InvalidDataException("Deterministic Rollback Server manifest is empty.");
+            manifest = JsonSerializer.Deserialize<DeterministicRollbackServerManifest>(json, JsonOptions) ??
+                throw new InvalidDataException("Deterministic Rollback Server manifest is empty.");
             manifest.RequireValidHash();
             queryManifest = GmHttpJson.ReadManifest<RelayQueryManifest>(arguments.QueryManifestPath);
             queryManifest.RequireValid();
-            if (queryManifest.buildId != manifest.buildId || queryManifest.sessionId != manifest.sessionId)
+            if (queryManifest.candidateId != manifest.candidate.candidateId ||
+                queryManifest.runId != manifest.runId || queryManifest.sessionId != manifest.sessionId ||
+                arguments.RunId != manifest.runId)
                 throw new InvalidDataException("Relay 查询配置与 Gameplay manifest 身份不同。");
         }
         catch (Exception exception)
@@ -62,12 +80,12 @@ static class Program
                 manifest.BuildEndpointDefinition(),
                 manifest.BuildPolicy(),
                 manifest.BuildHandshake(),
-                manifest.relayServerPeerId,
+                manifest.candidate.relayServerPeerId,
                 manifest.BuildRoster(),
-                manifest.inputRedundancyCount);
+                manifest.candidate.inputRedundancyCount);
             using var query = new RollbackRelayQueryBridge(queryManifest, manifest, runtime, message => Write(log, message));
             query.Start(cancellation.Token);
-            Write(log, $"READY run={arguments.RunId} endpoint={runtime.LocalEndPoint} session={manifest.sessionId} peers={manifest.peers.Length}");
+            Write(log, $"READY run={arguments.RunId} endpoint={runtime.LocalEndPoint} session={manifest.sessionId} peers={manifest.candidate.peers.Length}");
             long nextDiagnostics = Environment.TickCount64 + 1000;
             while (!cancellation.IsCancellationRequested)
             {
@@ -98,6 +116,32 @@ static class Program
             Console.Error.WriteLine(exception);
             return RuntimeFailure;
         }
+    }
+
+    static void WriteRunManifest(string candidatePath, string requestPath, string outputPath)
+    {
+        DeterministicRollbackServerCandidateManifest candidate =
+            JsonSerializer.Deserialize<DeterministicRollbackServerCandidateManifest>(
+                File.ReadAllText(candidatePath),
+                JsonOptions) ?? throw new InvalidDataException("Rollback Candidate manifest is empty.");
+        candidate.RequireValidHash();
+        DeterministicRollbackServerRunRequest request =
+            JsonSerializer.Deserialize<DeterministicRollbackServerRunRequest>(
+                File.ReadAllText(requestPath),
+                JsonOptions) ?? throw new InvalidDataException("Rollback Run request is empty.");
+        request.RequireValid();
+        var manifest = new DeterministicRollbackServerManifest
+        {
+            schemaVersion = DeterministicRollbackServerManifest.CurrentSchemaVersion,
+            runId = request.runId,
+            sessionId = request.sessionId,
+            candidateManifestHash = request.candidateManifestHash,
+            listenAddress = request.listenAddress,
+            listenPort = request.listenPort,
+            candidate = candidate
+        };
+        manifest.manifestHash = manifest.ValidateAndComputeHash().Value;
+        File.WriteAllText(outputPath, JsonSerializer.Serialize(manifest, JsonOptions));
     }
 
     static void Write(StreamWriter log, string message)

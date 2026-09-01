@@ -5,17 +5,14 @@ using ThirdPersonSimulation.Fixed;
 namespace ThirdPersonSimulation.DeterministicRollback
 {
     [Serializable]
-    public sealed class DeterministicRollbackServerManifest
+    public sealed class DeterministicRollbackServerCandidateManifest
     {
-        public const int CurrentSchemaVersion = 3;
+        public const int CurrentSchemaVersion = 1;
 
         public int schemaVersion;
-        public string buildId = string.Empty;
+        public string candidateId = string.Empty;
         public string productId = string.Empty;
         public string manifestHash = string.Empty;
-        public string sessionId = string.Empty;
-        public string listenAddress = string.Empty;
-        public int listenPort;
         public string relayServerPeerId = string.Empty;
         public DeterministicRollbackServerPeerManifest[] peers = Array.Empty<DeterministicRollbackServerPeerManifest>();
         public string modelId = string.Empty;
@@ -52,21 +49,16 @@ namespace ThirdPersonSimulation.DeterministicRollback
 
         public StableHash ValidateAndComputeHash()
         {
-            if (schemaVersion != CurrentSchemaVersion || string.IsNullOrWhiteSpace(buildId) ||
-                string.IsNullOrWhiteSpace(productId) || string.IsNullOrWhiteSpace(sessionId) ||
-                string.IsNullOrWhiteSpace(relayServerPeerId) || tickRate <= 0 ||
-                string.IsNullOrWhiteSpace(programId) ||
-                string.IsNullOrWhiteSpace(sourceRevision) ||
+            if (schemaVersion != CurrentSchemaVersion || string.IsNullOrWhiteSpace(candidateId) ||
+                string.IsNullOrWhiteSpace(productId) || string.IsNullOrWhiteSpace(relayServerPeerId) || tickRate <= 0 ||
+                string.IsNullOrWhiteSpace(programId) || string.IsNullOrWhiteSpace(sourceRevision) ||
                 string.IsNullOrWhiteSpace(projectionRevision) ||
                 !string.Equals(modelId, DeterministicRollbackModelIdentity.ModelId, StringComparison.Ordinal) ||
                 !string.Equals(modelVersion, DeterministicRollbackModelIdentity.SemanticVersion, StringComparison.Ordinal) ||
                 !string.Equals(protocolId, DeterministicRollbackModelIdentity.ProtocolId, StringComparison.Ordinal) ||
                 !string.Equals(protocolVersion, DeterministicRollbackModelIdentity.ProtocolVersion.ToString(), StringComparison.Ordinal))
-            {
-                throw new InvalidOperationException("Deterministic Rollback Server manifest identity is invalid.");
-            }
+                throw new InvalidOperationException("Deterministic Rollback Server Candidate identity is invalid.");
 
-            RollbackEndpointDefinition endpoint = BuildEndpointDefinition();
             DeterministicRollbackModelPolicy policy = BuildPolicy();
             RollbackRoster roster = BuildRoster();
             RollbackHandshake handshake = BuildHandshake();
@@ -77,29 +69,23 @@ namespace ThirdPersonSimulation.DeterministicRollback
                 handshake.FixedLayoutHash,
                 handshake.CollisionWorldHash,
                 handshake.KccIdentityHash);
-            if (!string.Equals(endpoint.SessionId, sessionId, StringComparison.Ordinal) ||
-                roster.Entries.Count == 0 || policy.HistoryLengthTicks <= 0 ||
+            if (roster.Entries.Count == 0 || policy.HistoryLengthTicks <= 0 ||
                 !handshake.Model.Equals(expectedModel) ||
                 !handshake.Protocol.Equals(DeterministicRollbackModelIdentity.Protocol))
-            {
-                throw new InvalidOperationException("Deterministic Rollback Server manifest configuration is inconsistent.");
-            }
+                throw new InvalidOperationException("Deterministic Rollback Server Candidate configuration is inconsistent.");
 
             var values = new List<string>
             {
-                "deterministic-rollback-server-manifest/3",
-                schemaVersion.ToString(), buildId, productId, sessionId, listenAddress, listenPort.ToString(),
-                relayServerPeerId, modelId, modelVersion, modelConfigurationHash, protocolId, protocolVersion,
-                protocolSchemaHash, tickRate.ToString(), programId, sourceRevision, projectionRevision,
-                semanticHash, fixedProgramHash, fixedLayoutHash,
+                "deterministic-rollback-server-candidate/1",
+                schemaVersion.ToString(), candidateId, productId, relayServerPeerId, modelId, modelVersion,
+                modelConfigurationHash, protocolId, protocolVersion, protocolSchemaHash, tickRate.ToString(),
+                programId, sourceRevision, projectionRevision, semanticHash, fixedProgramHash, fixedLayoutHash,
                 collisionWorldHash, kccIdentityHash, offensiveRequestDelayTicks.ToString(),
                 confirmationDelayTicks.ToString(), historyLengthTicks.ToString(), hashCadenceTicks.ToString(),
-                maximumRollbackDepthTicks.ToString(), maximumQueuedBundles.ToString(),
-                maximumPredictionLeadTicks.ToString(),
-                maximumQueuedSnapshots.ToString(), maximumOutputRecords.ToString(), missingInputPolicy,
-                snapshotAuthority, maximumDatagramBytes.ToString(), maximumQueuedMessages.ToString(),
-                maximumFragmentsPerMessage.ToString(), reliableResendMilliseconds.ToString(),
-                inputRedundancyCount.ToString()
+                maximumRollbackDepthTicks.ToString(), maximumPredictionLeadTicks.ToString(),
+                maximumQueuedBundles.ToString(), maximumQueuedSnapshots.ToString(), maximumOutputRecords.ToString(),
+                missingInputPolicy, snapshotAuthority, maximumDatagramBytes.ToString(), maximumQueuedMessages.ToString(),
+                maximumFragmentsPerMessage.ToString(), reliableResendMilliseconds.ToString(), inputRedundancyCount.ToString()
             };
             for (int i = 0; i < peers.Length; i++)
                 values.Add(peers[i].CanonicalIdentity());
@@ -110,17 +96,8 @@ namespace ThirdPersonSimulation.DeterministicRollback
         {
             StableHash computed = ValidateAndComputeHash();
             if (!string.Equals(manifestHash, computed.Value, StringComparison.Ordinal))
-                throw new InvalidOperationException("Deterministic Rollback Server manifest hash is stale or invalid.");
+                throw new InvalidOperationException("Deterministic Rollback Server Candidate hash is stale or invalid.");
         }
-
-        public RollbackEndpointDefinition BuildEndpointDefinition() => new RollbackEndpointDefinition(
-            listenAddress,
-            listenPort,
-            sessionId,
-            maximumDatagramBytes,
-            maximumQueuedMessages,
-            maximumFragmentsPerMessage,
-            reliableResendMilliseconds);
 
         public DeterministicRollbackModelPolicy BuildPolicy() => new DeterministicRollbackModelPolicy(
             offensiveRequestDelayTicks,
@@ -139,15 +116,15 @@ namespace ThirdPersonSimulation.DeterministicRollback
         {
             DeterministicRollbackServerPeerManifest[] source = peers ?? Array.Empty<DeterministicRollbackServerPeerManifest>();
             if (source.Length == 0)
-                throw new InvalidOperationException("Deterministic Rollback Server manifest requires a Peer roster.");
+                throw new InvalidOperationException("Deterministic Rollback Server Candidate requires a Peer roster.");
             var entries = new RollbackRosterEntry[source.Length];
             string previous = null;
             for (int i = 0; i < source.Length; i++)
             {
                 DeterministicRollbackServerPeerManifest peer = source[i] ??
-                    throw new InvalidOperationException("Deterministic Rollback Server manifest contains a missing Peer.");
+                    throw new InvalidOperationException("Deterministic Rollback Server Candidate contains a missing Peer.");
                 if (previous != null && string.CompareOrdinal(previous, peer.peerId) >= 0)
-                    throw new InvalidOperationException("Deterministic Rollback Server Peer roster must use stable PeerId order.");
+                    throw new InvalidOperationException("Deterministic Rollback Server Candidate roster must use stable PeerId order.");
                 entries[i] = new RollbackRosterEntry(peer.peerId, peer.playerId, new ActorId(peer.actorId));
                 previous = peer.peerId;
             }
@@ -172,8 +149,78 @@ namespace ThirdPersonSimulation.DeterministicRollback
         static T RequireEnum<T>(string value) where T : struct
         {
             if (!Enum.TryParse(value, false, out T result) || !Enum.IsDefined(typeof(T), result))
-                throw new InvalidOperationException($"Deterministic Rollback Server manifest enum '{typeof(T).Name}' is invalid.");
+                throw new InvalidOperationException($"Deterministic Rollback Server Candidate enum '{typeof(T).Name}' is invalid.");
             return result;
+        }
+    }
+
+    [Serializable]
+    public sealed class DeterministicRollbackServerManifest
+    {
+        public const int CurrentSchemaVersion = 1;
+
+        public int schemaVersion;
+        public string runId = string.Empty;
+        public string sessionId = string.Empty;
+        public string candidateManifestHash = string.Empty;
+        public string listenAddress = string.Empty;
+        public int listenPort;
+        public DeterministicRollbackServerCandidateManifest candidate = new DeterministicRollbackServerCandidateManifest();
+        public string manifestHash = string.Empty;
+
+        public StableHash ValidateAndComputeHash()
+        {
+            if (schemaVersion != CurrentSchemaVersion || string.IsNullOrWhiteSpace(runId) ||
+                string.IsNullOrWhiteSpace(sessionId) || string.IsNullOrWhiteSpace(candidateManifestHash) ||
+                candidate == null)
+                throw new InvalidOperationException("Deterministic Rollback Server Run identity is invalid.");
+            candidate.RequireValidHash();
+            RollbackEndpointDefinition endpoint = BuildEndpointDefinition();
+            if (!string.Equals(endpoint.SessionId, sessionId, StringComparison.Ordinal))
+                throw new InvalidOperationException("Deterministic Rollback Server Run endpoint is inconsistent.");
+            return StableHash.Compute(
+                "deterministic-rollback-server-run/1",
+                schemaVersion.ToString(), runId, sessionId, candidateManifestHash,
+                listenAddress, listenPort.ToString(), candidate.manifestHash);
+        }
+
+        public void RequireValidHash()
+        {
+            StableHash computed = ValidateAndComputeHash();
+            if (!string.Equals(manifestHash, computed.Value, StringComparison.Ordinal))
+                throw new InvalidOperationException("Deterministic Rollback Server Run hash is stale or invalid.");
+        }
+
+        public RollbackEndpointDefinition BuildEndpointDefinition() => new RollbackEndpointDefinition(
+            listenAddress,
+            listenPort,
+            sessionId,
+            candidate.maximumDatagramBytes,
+            candidate.maximumQueuedMessages,
+            candidate.maximumFragmentsPerMessage,
+            candidate.reliableResendMilliseconds);
+
+        public DeterministicRollbackModelPolicy BuildPolicy() => candidate.BuildPolicy();
+        public RollbackRoster BuildRoster() => candidate.BuildRoster();
+        public RollbackHandshake BuildHandshake() => candidate.BuildHandshake();
+    }
+
+    [Serializable]
+    public sealed class DeterministicRollbackServerRunRequest
+    {
+        public int schemaVersion;
+        public string runId = string.Empty;
+        public string sessionId = string.Empty;
+        public string candidateManifestHash = string.Empty;
+        public string listenAddress = string.Empty;
+        public int listenPort;
+
+        public void RequireValid()
+        {
+            if (schemaVersion != 1 || string.IsNullOrWhiteSpace(runId) || string.IsNullOrWhiteSpace(sessionId) ||
+                string.IsNullOrWhiteSpace(candidateManifestHash) ||
+                !System.Net.IPAddress.TryParse(listenAddress, out _) || listenPort <= 0 || listenPort > 65535)
+                throw new InvalidOperationException("Deterministic Rollback Server Run Request is invalid.");
         }
     }
 

@@ -57,7 +57,6 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.DeterministicRollback
                 throw new InvalidOperationException($"Rollback Source '{name}' TickRate does not match its Fixed Program.");
             DeterministicRollbackPipelineDefinition pipeline = Pipeline;
             DeterministicKccWorldSolverDefinition solver = WorldSolver;
-            RollbackEndpointDefinition endpoint = RequireEndpoint().Build();
             return new DeterministicRollbackModelDefinition(
                 pipeline.BuildPolicy(),
                 program.Manifest.SemanticHash,
@@ -66,7 +65,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.DeterministicRollback
                 RequireTickRate(),
                 solver.LoadCollisionWorld().ContentHash,
                 solver.BuildKccIdentityHash(RequireTickRate()),
-                endpoint.ConfigurationHash);
+                RequireEndpoint().BuildConfigurationHash());
         }
 
         int RequireTickRate()

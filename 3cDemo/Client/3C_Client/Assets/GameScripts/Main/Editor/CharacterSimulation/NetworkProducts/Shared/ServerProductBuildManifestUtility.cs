@@ -12,7 +12,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
         public static NetworkTestRuntimeArtifactResult Write(
             NetworkTestProductContext context,
             string serverDirectory,
-            string buildId,
+            string candidateId,
             string roleId,
             string configurationIdentity,
             string productId,
@@ -25,7 +25,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                 throw new InvalidOperationException($"Server product executable is missing: {executablePath}");
             context.Processes.Execute(
                     executablePath,
-                    $"--write-server-product-manifest {NetworkTestExternalProcessExecutor.Quote(buildId)}",
+                    $"--write-server-product-manifest {NetworkTestExternalProcessExecutor.Quote(candidateId)}",
                     root)
                 .RequireSuccess(productId);
             string path = Path.Combine(root, ManifestFileName);
@@ -34,7 +34,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             ServerProductManifestIdentity read = JsonUtility.FromJson<ServerProductManifestIdentity>(
                 File.ReadAllText(path, Encoding.UTF8));
             if (read == null || read.schemaVersion != 2 ||
-                !string.Equals(read.buildId, buildId, StringComparison.Ordinal) ||
+                !string.Equals(read.candidateId, candidateId, StringComparison.Ordinal) ||
                 !string.Equals(read.serverProductId, productId, StringComparison.Ordinal))
                 throw new InvalidOperationException("Server product manifest identity validation failed.");
             return new NetworkTestRuntimeArtifactResult(
@@ -61,7 +61,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
         sealed class ServerProductManifestIdentity
         {
             public int schemaVersion = -1;
-            public string buildId = string.Empty;
+            public string candidateId = string.Empty;
             public string serverProductId = string.Empty;
         }
     }

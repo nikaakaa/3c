@@ -1,174 +1,233 @@
 [CmdletBinding()]
 param(
-    [switch]$StopExisting,
-    [switch]$CharacterPipelineTrace,
-    [int]$RunSeconds = 0,
-    [string]$ProductRoot
+    [Parameter(Mandatory = $true)]
+    [string]$RunManifest
 )
 
 $ErrorActionPreference = "Stop"
-$repositoryRoot = [System.IO.Path]::GetFullPath((Join-Path $PSScriptRoot "..\..\.."))
-if ([string]::IsNullOrWhiteSpace($ProductRoot)) {
-    $ProductRoot = Join-Path $repositoryRoot "3cDemo\Client\3C_Client\Build\Network\DeterministicRollback"
+$runManifestPath = [System.IO.Path]::GetFullPath($RunManifest)
+$run = Get-Content -LiteralPath $runManifestPath -Raw -Encoding UTF8 | ConvertFrom-Json
+$candidateRoot = [System.IO.Path]::GetFullPath($run.candidateRoot)
+$runRoot = [System.IO.Path]::GetFullPath($run.runRoot)
+if ($run.schemaVersion -ne 1 -or $runRoot -ne [System.IO.Path]::GetFullPath((Split-Path $runManifestPath -Parent)) -or
+    $candidateRoot -ne [System.IO.Path]::GetFullPath((Split-Path $run.candidateManifestPath -Parent))) {
+    throw "Rollback Run manifest path identity is invalid."
 }
-$ProductRoot = [System.IO.Path]::GetFullPath($ProductRoot)
-$player = Join-Path $ProductRoot "Player\3C_Client.exe"
-$server = Join-Path $ProductRoot "Server\ThirdPerson.DeterministicRollback.Server.exe"
-$serverManifestPath = Join-Path $ProductRoot "Server\DeterministicRollbackServerManifest.json"
-$gmServer = Join-Path $ProductRoot 'Gm\ThirdPerson.Development.Gm.Service.exe'
-$gmManifestPath = Join-Path $ProductRoot 'Gm\GmServerManifest.json'
-$gmConsoleManifestPath = Join-Path $ProductRoot 'Gm\GmConsoleManifest.json'
-$queryManifestPath = Join-Path $ProductRoot 'Server\RelayQueryManifest.json'
-$runId = Get-Date -Format "yyyyMMdd-HHmmss"
-$logDirectory = Join-Path $repositoryRoot "3cDemo\Client\3C_Client\Build\Network\RunLogs\DeterministicRollback\$runId"
 
-foreach ($required in @($player, $server, $serverManifestPath, $gmServer, $gmManifestPath, $gmConsoleManifestPath, $queryManifestPath)) {
-    if (!(Test-Path -LiteralPath $required -PathType Leaf)) {
-        throw "Deterministic Rollback product file does not exist: $required"
+function Require-Endpoint([string]$Key) {
+    $matches = @($run.endpoints | Where-Object { $_.key -eq $Key })
+    if ($matches.Count -ne 1 -or $matches[0].address -ne '127.0.0.1' -or $matches[0].port -le 0) {
+        throw "Rollback Run endpoint '$Key' is missing or invalid."
     }
+    return $matches[0]
 }
-$serverManifest = Get-Content -LiteralPath $serverManifestPath -Raw -Encoding UTF8 | ConvertFrom-Json
-$expectedModelIdentity = "Model:$($serverManifest.modelId)@$($serverManifest.modelVersion)/$($serverManifest.modelConfigurationHash)"
 
-. (Join-Path $repositoryRoot "3cDemo\Tools\NetworkTest\Assert-NetworkTestProductBuild.ps1")
-$manifest = Assert-NetworkTestProductBuild `
-    -Root $ProductRoot `
-    -RepositoryRoot $repositoryRoot `
-    -ExpectedProductId "thirdperson.network-test.deterministic-rollback" `
-    -ExpectedNetworkModelIdentity $expectedModelIdentity `
-    -ExpectedRuntimeTopologyIdentity "thirdperson.runtime-topology.deterministic-rollback.gm-relay-two-peers.v1" `
-    -ExpectedPlayerRoleId "unity-client-player" `
-    -ExpectedAdditionalArtifactRoleIds @("deterministic-relay-server", "development-gm-server") `
-    -ExpectedScenes @("Assets/Scenes/GameplayLab/GameplayLab.unity") `
-    -ExpectedBuildOptions "Development, StrictMode" `
-    -ExpectedScriptingBackend "IL2CPP"
-
-$relayArtifact = Get-NetworkTestProductArtifact $manifest "deterministic-relay-server"
-if ($relayArtifact.kind -ne "ManagedExecutable" -or
-    $relayArtifact.productId -ne "thirdperson.server-product.deterministic-rollback-relay" -or
-    $relayArtifact.entryPoint -ne "Server/ThirdPerson.DeterministicRollback.Server.exe" -or
-    $relayArtifact.manifestPath -ne "Server/DeterministicRollbackServerManifest.json" -or
-    $relayArtifact.configurationIdentity -ne $serverManifest.manifestHash -or
-    (Get-NetworkTestProductSha256 $serverManifestPath) -ne $relayArtifact.manifestHash) {
-    throw "Deterministic Rollback Relay artifact does not match its Server manifest."
-}
-. (Join-Path $ProductRoot 'Gm\RollbackGmProductRuntime.ps1')
-$gmConfiguration = Assert-RollbackGmProduct -Product $manifest -RelayManifest $serverManifest -Root $ProductRoot
-
-if ($StopExisting) {
-    Get-CimInstance Win32_Process | Where-Object {
-        ($_.ExecutablePath -eq $player -and $_.CommandLine -match "--deterministic-rollback-profile=") -or
-        ($_.ExecutablePath -eq $server -and $_.CommandLine -match [regex]::Escape($serverManifestPath)) -or
-        ($_.ExecutablePath -eq $gmServer -and $_.CommandLine -match [regex]::Escape($gmManifestPath))
-    } | ForEach-Object {
-        Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue
+function Require-Window([string]$RoleId) {
+    $matches = @($run.windows | Where-Object { $_.roleId -eq $RoleId })
+    if ($matches.Count -ne 1 -or $matches[0].width -le 0 -or $matches[0].height -le 0) {
+        throw "Rollback Run window '$RoleId' is missing or invalid."
     }
-    Start-Sleep -Milliseconds 500
+    return $matches[0]
 }
 
-$occupied = @(Get-NetUDPEndpoint -ErrorAction SilentlyContinue | Where-Object {
-    $_.LocalPort -in @([int]$serverManifest.listenPort, 24101, 24102)
-})
-if ($occupied.Count -ne 0) {
-    $owners = ($occupied | ForEach-Object { "$($_.LocalAddress):$($_.LocalPort) PID=$($_.OwningProcess)" }) -join ", "
-    throw "Deterministic Rollback required UDP ports are occupied: $owners"
-}
-$toolPorts = @([int]$gmConfiguration.Gm.http.listenPort, [int]$gmConfiguration.Relay.http.listenPort)
-$occupiedTools = @(Get-NetTCPConnection -State Listen -ErrorAction SilentlyContinue | Where-Object { $_.LocalPort -in $toolPorts })
-if ($occupiedTools.Count -ne 0) { throw 'GM or Relay query TCP port is occupied; no alternate endpoint will be selected.' }
-
-New-Item -ItemType Directory -Force -Path $logDirectory | Out-Null
-$serverOutput = Join-Path $logDirectory "$runId-relay-stdout.log"
-$serverError = Join-Path $logDirectory "$runId-relay-stderr.log"
-$serverArguments = @(
-    "--manifest", $serverManifestPath,
-    "--query-manifest", $queryManifestPath,
-    "--run-id", $runId,
-    "--log-directory", $logDirectory
-)
-$started = [System.Collections.Generic.List[System.Diagnostics.Process]]::new()
-try {
-$relay = Start-Process -FilePath $server -ArgumentList $serverArguments -WindowStyle Hidden -PassThru `
-    -RedirectStandardOutput $serverOutput -RedirectStandardError $serverError
-$started.Add($relay)
-
-$readyDeadline = (Get-Date).AddSeconds(8)
-do {
-    if ($relay.HasExited) {
-        throw "Deterministic Rollback Relay exited during startup with code $($relay.ExitCode). Logs: $logDirectory"
-    }
-    $ready = @(Get-NetUDPEndpoint -ErrorAction SilentlyContinue | Where-Object {
-        $_.LocalPort -eq [int]$serverManifest.listenPort -and $_.OwningProcess -eq $relay.Id
-    }).Count -eq 1
-    if (!$ready) {
-        Start-Sleep -Milliseconds 100
-    }
-} while (!$ready -and (Get-Date) -lt $readyDeadline)
-if (!$ready) {
-    throw "Deterministic Rollback Relay UDP endpoint did not become ready. Logs: $logDirectory"
-}
-$null = Wait-RollbackToolService -Process $relay -Uri ($gmConfiguration.Gm.relayQueryEndpoint + 'v1/identity') `
-    -Token $gmConfiguration.Gm.relayQueryToken -BuildId $manifest.buildId -SessionId $serverManifest.sessionId
-$gmArguments = @('--manifest', $gmManifestPath, '--console-manifest', $gmConsoleManifestPath, '--run-id', $runId, '--log-directory', $logDirectory)
-$gm = Start-Process -FilePath $gmServer -ArgumentList $gmArguments -WindowStyle Normal -PassThru
-$started.Add($gm)
-$null = Wait-RollbackToolService -Process $gm -Uri ($gmConfiguration.Client.endpoint + 'v1/service') `
-    -Token $gmConfiguration.Client.accessToken -BuildId $manifest.buildId -SessionId $serverManifest.sessionId
-
-$common = @("-screen-fullscreen", "0", "-screen-width", "900", "-screen-height", "600")
-if ($CharacterPipelineTrace) {
-    $common += "--character-pipeline-trace"
-}
-$peerAArguments = @(
-    "--deterministic-rollback-profile=peer-a",
-    "-screen-position-x", "0",
-    "-screen-position-y", "0",
-    "-logFile", (Join-Path $logDirectory "$runId-peer-a.log")
-) + $common
-$peerBArguments = @(
-    "--deterministic-rollback-profile=peer-b",
-    "-screen-position-x", "920",
-    "-screen-position-y", "0",
-    "-logFile", (Join-Path $logDirectory "$runId-peer-b.log")
-) + $common
-
-$peerA = Start-Process -FilePath $player -ArgumentList $peerAArguments -WindowStyle Normal -PassThru
-$started.Add($peerA)
-Start-Sleep -Milliseconds 500
-$peerB = Start-Process -FilePath $player -ArgumentList $peerBArguments -WindowStyle Normal -PassThru
-$started.Add($peerB)
-Start-Sleep -Seconds 5
-
-$processes = @($relay, $gm, $peerA, $peerB)
-$names = @("Dedicated Relay Server", "GM Server", "Peer A", "Peer B")
-for ($i = 0; $i -lt $processes.Count; $i++) {
-    $processes[$i].Refresh()
-    if ($processes[$i].HasExited) {
-        throw "$($names[$i]) exited during startup with code $($processes[$i].ExitCode). Logs: $logDirectory"
-    }
+function Require-Tool([string]$ToolId) {
+    $matches = @($run.toolBundles | Where-Object { $_.toolId -eq $ToolId })
+    if ($matches.Count -ne 1) { throw "Rollback Run tool '$ToolId' is missing." }
+    return $matches[0]
 }
 
-Write-Host "Deterministic Rollback DS demo started."
-Write-Host "Dedicated Relay Server PID: $($relay.Id) UDP $($serverManifest.listenPort)"
-Write-Host "GM Server PID: $($gm.Id) HTTP $($gmConfiguration.Client.endpoint)"
-Write-Host "Peer A PID: $($peerA.Id) UDP 24101"
-Write-Host "Peer B PID: $($peerB.Id) UDP 24102"
-Write-Host "Logs: $logDirectory"
+function Wait-Udp([System.Diagnostics.Process]$Process, [int]$Port) {
+    $deadline = (Get-Date).AddSeconds(8)
+    do {
+        $Process.Refresh()
+        if ($Process.HasExited) { throw "Process $($Process.Id) exited during UDP startup." }
+        $ready = @(Get-NetUDPEndpoint -ErrorAction SilentlyContinue | Where-Object {
+            $_.LocalPort -eq $Port -and $_.OwningProcess -eq $Process.Id
+        }).Count -eq 1
+        if (!$ready) { Start-Sleep -Milliseconds 100 }
+    } while (!$ready -and (Get-Date) -lt $deadline)
+    if (!$ready) { throw "Process $($Process.Id) did not bind UDP $Port." }
+}
 
-if ($RunSeconds -gt 0) {
-    Start-Sleep -Seconds $RunSeconds
-    for ($i = 0; $i -lt $processes.Count; $i++) {
-        $processes[$i].Refresh()
-        if ($processes[$i].HasExited) {
-            throw "$($names[$i]) exited before the requested run duration completed. Logs: $logDirectory"
+function Wait-HttpIdentity(
+    [System.Diagnostics.Process]$Process,
+    [string]$Uri,
+    [string]$Token,
+    [string]$CandidateId,
+    [string]$RunId,
+    [string]$SessionId) {
+    $deadline = (Get-Date).AddSeconds(8)
+    $headers = @{ Authorization = "Bearer $Token" }
+    do {
+        $Process.Refresh()
+        if ($Process.HasExited) { throw "Process $($Process.Id) exited during HTTP startup." }
+        try {
+            $identity = Invoke-RestMethod -Method Get -Uri $Uri -Headers $headers -TimeoutSec 1
+            $ready = $identity.candidateId -eq $CandidateId -and $identity.runId -eq $RunId -and
+                $identity.sessionId -eq $SessionId
+        } catch {
+            $ready = $false
         }
-    }
-    Write-Host "GM Server, Relay Server and both Rollback Peers remained alive for $RunSeconds seconds."
+        if (!$ready) { Start-Sleep -Milliseconds 100 }
+    } while (!$ready -and (Get-Date) -lt $deadline)
+    if (!$ready) { throw "Process $($Process.Id) HTTP identity did not become ready." }
 }
+
+$relayEndpoint = Require-Endpoint 'rollback-relay'
+$peerAEndpoint = Require-Endpoint 'rollback-peer-a'
+$peerBEndpoint = Require-Endpoint 'rollback-peer-b'
+$gmEndpoint = Require-Endpoint 'rollback-gm'
+$queryEndpoint = Require-Endpoint 'rollback-relay-query'
+$peerAWindow = Require-Window 'peer-a'
+$peerBWindow = Require-Window 'peer-b'
+$gmTool = Require-Tool 'thirdperson.rollback-gm'
+
+$player = Join-Path $candidateRoot 'Player\3C_Client.exe'
+$relay = Join-Path $candidateRoot 'Server\ThirdPerson.DeterministicRollback.Server.exe'
+$relayCandidate = Join-Path $candidateRoot 'Server\DeterministicRollbackCandidateManifest.json'
+$gm = Join-Path $candidateRoot 'Gm\ThirdPerson.Development.Gm.Service.exe'
+$gmToolManifest = Join-Path $candidateRoot 'Gm\GmToolManifest.json'
+$gmToolPolicy = Join-Path $candidateRoot 'Gm\GmToolPolicy.json'
+$configRoot = Join-Path $runRoot 'Config'
+$logs = Join-Path $runRoot 'Logs'
+$processManifestPath = Join-Path $runRoot 'Processes.json'
+New-Item -ItemType Directory -Force -Path $configRoot, $logs | Out-Null
+foreach ($path in @($player, $relay, $relayCandidate, $gm, $gmToolManifest, $gmToolPolicy)) {
+    if (!(Test-Path -LiteralPath $path -PathType Leaf)) { throw "Rollback Candidate file is missing: $path" }
+}
+
+$relayRequestPath = Join-Path $configRoot 'RelayRunRequest.json'
+$relayRunManifestPath = Join-Path $configRoot 'DeterministicRollbackServerRunManifest.json'
+[ordered]@{
+    schemaVersion = 1
+    runId = $run.runId
+    sessionId = $run.sessionId
+    candidateManifestHash = $run.candidateManifestHash
+    listenAddress = $relayEndpoint.address
+    listenPort = [int]$relayEndpoint.port
+} | ConvertTo-Json | Set-Content -LiteralPath $relayRequestPath -Encoding UTF8
+& $relay --write-run-manifest $relayCandidate $relayRequestPath $relayRunManifestPath
+if ($LASTEXITCODE -ne 0) { throw "Rollback Relay Run Manifest generation failed with exit code $LASTEXITCODE." }
+
+$gmRequestPath = Join-Path $configRoot 'GmRunRequest.json'
+[ordered]@{
+    schemaVersion = 1
+    candidateId = $run.candidateId
+    runId = $run.runId
+    sessionId = $run.sessionId
+    slotId = $run.slotId
+    gmAddress = $gmEndpoint.address
+    gmPort = [int]$gmEndpoint.port
+    relayQueryAddress = $queryEndpoint.address
+    relayQueryPort = [int]$queryEndpoint.port
+    toolBundleHash = $gmTool.bundleHash
+} | ConvertTo-Json | Set-Content -LiteralPath $gmRequestPath -Encoding UTF8
+& $gm --write-run-manifests $gmToolManifest $gmToolPolicy $gmRequestPath $configRoot
+if ($LASTEXITCODE -ne 0) { throw "Rollback GM Run Manifest generation failed with exit code $LASTEXITCODE." }
+
+$gmServerManifest = Join-Path $configRoot 'GmServerRunManifest.json'
+$gmConsoleManifest = Join-Path $configRoot 'GmConsoleRunManifest.json'
+$relayQueryManifest = Join-Path $configRoot 'RelayQueryRunManifest.json'
+$gmServerConfig = Get-Content -LiteralPath $gmServerManifest -Raw -Encoding UTF8 | ConvertFrom-Json
+$gmConsoleConfig = Get-Content -LiteralPath $gmConsoleManifest -Raw -Encoding UTF8 | ConvertFrom-Json
+$relayQueryConfig = Get-Content -LiteralPath $relayQueryManifest -Raw -Encoding UTF8 | ConvertFrom-Json
+
+function Write-PeerManifest(
+    [string]$Path,
+    [string]$ProfileId,
+    $LocalEndpoint) {
+    [ordered]@{
+        schemaVersion = 1
+        candidateId = $run.candidateId
+        runId = $run.runId
+        sessionId = $run.sessionId
+        profileId = $ProfileId
+        relayAddress = $relayEndpoint.address
+        relayPort = [int]$relayEndpoint.port
+        localAddress = $LocalEndpoint.address
+        localPort = [int]$LocalEndpoint.port
+    } | ConvertTo-Json | Set-Content -LiteralPath $Path -Encoding UTF8
+}
+
+$peerAManifest = Join-Path $configRoot 'PeerA.json'
+$peerBManifest = Join-Path $configRoot 'PeerB.json'
+Write-PeerManifest $peerAManifest 'peer-a' $peerAEndpoint
+Write-PeerManifest $peerBManifest 'peer-b' $peerBEndpoint
+
+$started = [System.Collections.Generic.List[object]]::new()
+try {
+    $relayStdout = Join-Path $logs 'relay.stdout.log'
+    $relayStderr = Join-Path $logs 'relay.stderr.log'
+    $relayProcess = Start-Process -FilePath $relay -ArgumentList @(
+        '--manifest', $relayRunManifestPath,
+        '--query-manifest', $relayQueryManifest,
+        '--run-id', $run.runId,
+        '--log-directory', $logs
+    ) -WindowStyle Hidden -PassThru -RedirectStandardOutput $relayStdout -RedirectStandardError $relayStderr
+    $started.Add([pscustomobject]@{ roleId = 'relay'; process = $relayProcess })
+    Wait-Udp $relayProcess ([int]$relayEndpoint.port)
+    Wait-HttpIdentity $relayProcess "http://$($queryEndpoint.address):$($queryEndpoint.port)/v1/identity" `
+        $relayQueryConfig.http.accessToken $run.candidateId $run.runId $run.sessionId
+
+    $gmProcess = $null
+    try {
+        $gmProcess = Start-Process -FilePath $gm -ArgumentList @(
+            '--manifest', $gmServerManifest,
+            '--console-manifest', $gmConsoleManifest,
+            '--run-id', $run.runId,
+            '--log-directory', $logs
+        ) -WindowStyle Normal -PassThru
+        Wait-HttpIdentity $gmProcess "http://$($gmEndpoint.address):$($gmEndpoint.port)/v1/service" `
+            $gmConsoleConfig.accessToken $run.candidateId $run.runId $run.sessionId
+        $started.Add([pscustomobject]@{ roleId = 'gm'; process = $gmProcess })
+    } catch {
+        if ($null -ne $gmProcess) {
+            $gmProcess.Refresh()
+            if (!$gmProcess.HasExited) { Stop-Process -Id $gmProcess.Id -Force -ErrorAction SilentlyContinue }
+        }
+        $_ | Out-String | Set-Content -LiteralPath (Join-Path $logs 'gm-startup-failure.log') -Encoding UTF8
+    }
+
+    $common = @('-screen-fullscreen', '0')
+    $peerAArguments = @(
+        '--deterministic-rollback-profile=peer-a',
+        "--deterministic-rollback-run-manifest=$peerAManifest",
+        '-screen-position-x', $peerAWindow.x,
+        '-screen-position-y', $peerAWindow.y,
+        '-screen-width', $peerAWindow.width,
+        '-screen-height', $peerAWindow.height,
+        '-logFile', (Join-Path $logs 'peer-a.log')
+    ) + $common
+    $peerAProcess = Start-Process -FilePath $player -ArgumentList $peerAArguments -WindowStyle Normal -PassThru
+    $started.Add([pscustomobject]@{ roleId = 'peer-a'; process = $peerAProcess })
+    Start-Sleep -Milliseconds 500
+    $peerBArguments = @(
+        '--deterministic-rollback-profile=peer-b',
+        "--deterministic-rollback-run-manifest=$peerBManifest",
+        '-screen-position-x', $peerBWindow.x,
+        '-screen-position-y', $peerBWindow.y,
+        '-screen-width', $peerBWindow.width,
+        '-screen-height', $peerBWindow.height,
+        '-logFile', (Join-Path $logs 'peer-b.log')
+    ) + $common
+    $peerBProcess = Start-Process -FilePath $player -ArgumentList $peerBArguments -WindowStyle Normal -PassThru
+    $started.Add([pscustomobject]@{ roleId = 'peer-b'; process = $peerBProcess })
+    Start-Sleep -Seconds 5
+    foreach ($item in $started) {
+        $item.process.Refresh()
+        if ($item.process.HasExited) { throw "Rollback role '$($item.roleId)' exited during startup." }
+    }
+    @($started | ForEach-Object {
+        [ordered]@{
+            roleId = $_.roleId
+            processId = $_.process.Id
+            processStartTimeUtcTicks = $_.process.StartTime.ToUniversalTime().Ticks
+        }
+    }) | ConvertTo-Json | Set-Content -LiteralPath $processManifestPath -Encoding UTF8
 } catch {
-    foreach ($process in $started) {
-        $process.Refresh()
-        if (!$process.HasExited) { Stop-Process -Id $process.Id -Force -ErrorAction SilentlyContinue }
+    foreach ($item in $started) {
+        $item.process.Refresh()
+        if (!$item.process.HasExited) { Stop-Process -Id $item.process.Id -Force -ErrorAction SilentlyContinue }
     }
     throw
 }

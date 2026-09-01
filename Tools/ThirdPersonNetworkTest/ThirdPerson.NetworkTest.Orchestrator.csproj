@@ -1,0 +1,14 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>disable</Nullable>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <AssemblyName>ThirdPerson.NetworkTest.Orchestrator</AssemblyName>
+    <RootNamespace>ThirdPerson.NetworkTest.Orchestrator</RootNamespace>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="../../3cDemo/Client/3C_Client/Assets/GameScripts/Main/Editor/CharacterSimulation/NetworkProducts/Shared/NetworkTestOrchestrationContracts.cs" Link="Shared/NetworkTestOrchestrationContracts.cs" />
+  </ItemGroup>
+</Project>

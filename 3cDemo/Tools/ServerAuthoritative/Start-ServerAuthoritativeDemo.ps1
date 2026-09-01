@@ -1,16 +1,18 @@
 [CmdletBinding()]
 param(
-    [switch]$StopExisting,
-    [string]$ResultPath,
-    [string]$ProductRoot
+    [Parameter(Mandatory = $true)]
+    [string]$RunManifest
 )
 
 $ErrorActionPreference = "Stop"
-$root = [System.IO.Path]::GetFullPath((Join-Path $PSScriptRoot "..\..\.."))
-if ([string]::IsNullOrWhiteSpace($ProductRoot)) {
-    $ProductRoot = Join-Path $root "3cDemo\Client\3C_Client\Build\Network\UnityAuthority"
+$runManifestPath = [System.IO.Path]::GetFullPath($RunManifest)
+$run = Get-Content -LiteralPath $runManifestPath -Raw -Encoding UTF8 | ConvertFrom-Json
+$clientBuildRoot = [System.IO.Path]::GetFullPath($run.candidateRoot)
+$logs = Join-Path ([System.IO.Path]::GetFullPath($run.runRoot)) "Logs"
+if ($run.schemaVersion -ne 1 -or $run.slotId -ne 'default' -or
+    $clientBuildRoot -ne [System.IO.Path]::GetFullPath((Split-Path $run.candidateManifestPath -Parent))) {
+    throw "Unity Authority Run manifest identity is invalid."
 }
-$clientBuildRoot = [System.IO.Path]::GetFullPath($ProductRoot)
 $serverBuildRoot = Join-Path $clientBuildRoot "Server"
 $manifestPath = Join-Path $clientBuildRoot "NetworkTestProduct.json"
 $client = Join-Path $clientBuildRoot "Player\3C_Client.exe"
@@ -19,8 +21,7 @@ $clientContent = Join-Path $clientBuildRoot "Player\3C_Client_Data\globalgameman
 $server = Join-Path $serverBuildRoot "ThirdPerson.UnityAuthority.Server.exe"
 $serverConfig = Join-Path $serverBuildRoot "Fantasy.config"
 $serverProductManifest = Join-Path $serverBuildRoot "ServerProductBuild.json"
-$runId = Get-Date -Format "yyyyMMdd-HHmmss"
-$logs = Join-Path $root "3cDemo\Client\3C_Client\Build\Network\RunLogs\UnityAuthority\$runId"
+$runId = $run.runId
 $authorityOutput = Join-Path $logs "authority-output.log"
 $authorityError = Join-Path $logs "authority-error.log"
 $clientAOutput = Join-Path $logs "client-a-output.log"
@@ -31,18 +32,8 @@ $serverLogRoot = Join-Path $logs "server"
 $serverOutput = Join-Path $logs "server-output.log"
 $serverError = Join-Path $logs "server-error.log"
 
-function Write-LauncherResult([string]$value) {
-    if (![string]::IsNullOrWhiteSpace($ResultPath)) {
-        [System.IO.File]::WriteAllText(
-            [System.IO.Path]::GetFullPath($ResultPath),
-            $value,
-            [System.Text.UTF8Encoding]::new($false))
-    }
-}
-
 trap {
     $failure = $_ | Out-String
-    Write-LauncherResult $failure
     [Console]::Error.Write($failure)
     exit 1
 }
@@ -50,17 +41,6 @@ trap {
 function Assert-Exists([string]$path, [string]$label) {
     if (!(Test-Path -LiteralPath $path)) {
         throw "$label does not exist: $path"
-    }
-}
-
-function Get-OwnedProcess {
-    $dotRecastServerRoot = Join-Path $root "3cDemo\Client\3C_Client\Build\Network\DotRecastAuthority\Server"
-    $unityServerRoot = Join-Path $root "3cDemo\Client\3C_Client\Build\Network\UnityAuthority\Server"
-    Get-CimInstance Win32_Process | Where-Object {
-        ($_.Name -eq "3C_Client.exe" -and $_.CommandLine -match "--network-test-scenario=") -or
-        (($_.Name -eq "ThirdPerson.UnityAuthority.Server.exe" -or $_.Name -eq "ThirdPerson.DotRecastAuthority.Server.exe") -and $_.ExecutablePath -and
-            ($_.ExecutablePath.StartsWith($dotRecastServerRoot, [System.StringComparison]::OrdinalIgnoreCase) -or
-             $_.ExecutablePath.StartsWith($unityServerRoot, [System.StringComparison]::OrdinalIgnoreCase)))
     }
 }
 
@@ -74,10 +54,23 @@ function Assert-PortsAvailable {
     }
 }
 
-. (Join-Path $root "3cDemo\Tools\NetworkTest\Assert-NetworkTestProductBuild.ps1")
+function Get-WindowArguments([string]$RoleId) {
+    $matches = @($run.windows | Where-Object { $_.roleId -eq $RoleId })
+    if ($matches.Count -ne 1 -or $matches[0].width -le 0 -or $matches[0].height -le 0) {
+        throw "Unity Authority Run window '$RoleId' is missing or invalid."
+    }
+    $window = $matches[0]
+    return @(
+        "-screen-fullscreen", "0",
+        "-screen-position-x", $window.x,
+        "-screen-position-y", $window.y,
+        "-screen-width", $window.width,
+        "-screen-height", $window.height)
+}
+
+. (Join-Path $PSScriptRoot "Assert-NetworkTestProductBuild.ps1")
 $manifest = Assert-NetworkTestProductBuild `
     -Root $clientBuildRoot `
-    -RepositoryRoot $root `
     -ExpectedProductId "thirdperson.network-test.unity-authority" `
     -ExpectedNetworkModelIdentity "thirdperson.network-model.server-authoritative-hybrid" `
     -ExpectedRuntimeTopologyIdentity "thirdperson.runtime-topology.unity-authority.four-process.v1" `
@@ -128,47 +121,25 @@ if ($controlPort -le 0 -or $controlPort -gt 65535 -or
     throw "Unity Authority build manifest contains invalid control/data ports."
 }
 
-$existing = @(Get-OwnedProcess)
-if ($existing.Count -gt 0 -and !$StopExisting) {
-    throw "Existing Unity Authority test processes are still running. Close them or use -StopExisting."
-}
-if ($StopExisting) {
-    foreach ($process in $existing) {
-        Stop-Process -Id $process.ProcessId -Force
-    }
-    if ($existing.Count -gt 0) {
-        $releaseDeadline = (Get-Date).AddSeconds(5)
-        do {
-            $occupied = @(Get-NetUDPEndpoint -ErrorAction SilentlyContinue | Where-Object {
-                $_.LocalPort -eq $controlPort -or $_.LocalPort -eq $authorityDataPort
-            })
-            if ($occupied.Count -eq 0) {
-                break
-            }
-            Start-Sleep -Milliseconds 100
-        } while ((Get-Date) -lt $releaseDeadline)
-    }
-}
 Assert-PortsAvailable
 
 New-Item -ItemType Directory -Force -Path $logs | Out-Null
 New-Item -ItemType Directory -Force -Path $serverLogRoot | Out-Null
-$window = @("-screen-fullscreen", "0", "-screen-width", "900", "-screen-height", "600")
 $authorityArguments = @(
     "--network-test-scenario=unity-authority-worker",
     "--server-authoritative-role=authority",
     "-logFile", (Join-Path $logs "authority.log")
-) + $window
+) + (Get-WindowArguments "authority")
 $clientAArguments = @(
     "--network-test-scenario=server-authoritative-client",
     "--server-authoritative-role=client-a",
     "-logFile", (Join-Path $logs "client-a.log")
-) + $window
+) + (Get-WindowArguments "client-a")
 $clientBArguments = @(
     "--network-test-scenario=server-authoritative-client",
     "--server-authoritative-role=client-b",
     "-logFile", (Join-Path $logs "client-b.log")
-) + $window
+) + (Get-WindowArguments "client-b")
 
 $started = [System.Collections.Generic.List[object]]::new()
 try {
@@ -181,19 +152,19 @@ try {
     finally {
         [Environment]::SetEnvironmentVariable($serverLogRootEnvironmentVariable, $previousServerLogRoot, [EnvironmentVariableTarget]::Process)
     }
-    $started.Add([pscustomobject]@{ Label = "Fantasy Server"; Path = $server; Process = $serverProcess })
+    $started.Add([pscustomobject]@{ RoleId = "fantasy-server"; Label = "Fantasy Server"; Path = $server; Process = $serverProcess })
     Start-Sleep -Seconds 3
 
     $authorityProcess = Start-Process -FilePath $client -ArgumentList $authorityArguments -RedirectStandardOutput $authorityOutput -RedirectStandardError $authorityError -PassThru
-    $started.Add([pscustomobject]@{ Label = "Unity Authority Worker"; Path = $client; Process = $authorityProcess })
+    $started.Add([pscustomobject]@{ RoleId = "authority"; Label = "Unity Authority Worker"; Path = $client; Process = $authorityProcess })
     Start-Sleep -Seconds 2
 
     $clientAProcess = Start-Process -FilePath $client -ArgumentList $clientAArguments -RedirectStandardOutput $clientAOutput -RedirectStandardError $clientAError -PassThru
-    $started.Add([pscustomobject]@{ Label = "Client A"; Path = $client; Process = $clientAProcess })
+    $started.Add([pscustomobject]@{ RoleId = "client-a"; Label = "Client A"; Path = $client; Process = $clientAProcess })
     Start-Sleep -Seconds 1
 
     $clientBProcess = Start-Process -FilePath $client -ArgumentList $clientBArguments -RedirectStandardOutput $clientBOutput -RedirectStandardError $clientBError -PassThru
-    $started.Add([pscustomobject]@{ Label = "Client B"; Path = $client; Process = $clientBProcess })
+    $started.Add([pscustomobject]@{ RoleId = "client-b"; Label = "Client B"; Path = $client; Process = $clientBProcess })
     $readyDeadline = (Get-Date).AddSeconds(30)
     $allEndpointsReady = $false
     do {
@@ -228,7 +199,7 @@ try {
     }
 
     $result = @(
-        "BuildId: $($manifest.buildId)",
+        "CandidateId: $($manifest.candidateId)",
         "Fantasy Server PID: $($serverProcess.Id)",
         "Authority PID: $($authorityProcess.Id)",
         "Client A PID: $($clientAProcess.Id)",
@@ -237,7 +208,13 @@ try {
         "Authority gameplay data port: $authorityDataPort",
         "Log directory: $logs"
     ) -join [Environment]::NewLine
-    Write-LauncherResult $result
+    @($started | ForEach-Object {
+        [ordered]@{
+            roleId = $_.RoleId
+            processId = $_.Process.Id
+            processStartTimeUtcTicks = $_.Process.StartTime.ToUniversalTime().Ticks
+        }
+    }) | ConvertTo-Json | Set-Content -LiteralPath (Join-Path $run.runRoot 'Processes.json') -Encoding UTF8
     Write-Output $result
 }
 catch {

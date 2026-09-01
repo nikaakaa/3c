@@ -1,86 +1,122 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
-using System.Security.Cryptography;
 using System.Text;
 using ThirdPerson.Development.Gm;
-using UnityEditor;
+using ThirdPersonSimulation;
 using UnityEngine;
 
 namespace ThirdPersonCharacter.Editor.CharacterSimulation
 {
     internal static class RollbackGmProductBuild
     {
-        public const string ProfilePath = "Assets/Configs/Development/Gm/RollbackGmBuildProfile.asset";
+        public const string ProfilePath = "Assets/Configs/Development/Gm/RollbackGmToolProfile.asset";
         public const string Topology = "thirdperson.runtime-topology.deterministic-rollback.gm-relay-two-peers.v1";
         public const string RoleId = "development-gm-server";
         public const string ProductId = "thirdperson.server-product.development-gm";
         public const string Executable = "ThirdPerson.Development.Gm.Service.exe";
-        public const string GmManifestPath = "Gm/GmServerManifest.json";
-        public const string RelayManifestPath = "Server/RelayQueryManifest.json";
-        public const string ConsoleManifestPath = "Gm/GmConsoleManifest.json";
+        public const string ToolId = GmToolCatalog.ToolId;
+        public const string ToolVersion = GmToolCatalog.ToolVersion;
+        public const string ToolManifestPath = "Gm/GmToolManifest.json";
+        public const string ToolPolicyPath = "Gm/GmToolPolicy.json";
 
-        public static RollbackGmBuildProfile RequireProfile()
+        public static RollbackGmToolProfile RequireProfile()
         {
-            RollbackGmBuildProfile profile = NetworkTestProductAdapterUtility.RequireAsset<RollbackGmBuildProfile>(ProfilePath);
+            RollbackGmToolProfile profile =
+                NetworkTestProductAdapterUtility.RequireAsset<RollbackGmToolProfile>(ProfilePath);
             profile.RequireValid();
             return profile;
         }
 
-        public static NetworkTestRuntimeArtifactResult Publish(NetworkTestProductContext context, string root, string buildId, string sessionId)
+        public static NetworkTestRuntimeArtifactResult Publish(NetworkTestProductContext context, string root)
         {
-            RollbackGmBuildProfile profile = RequireProfile();
-            string clientToken = CreateToken();
-            string relayToken = CreateToken();
-            GmServerManifest gm = profile.BuildServerManifest(buildId, sessionId, clientToken, relayToken);
-            RelayQueryManifest relay = profile.BuildRelayManifest(buildId, sessionId, relayToken);
-            GmClientManifest client = profile.BuildClientManifest(buildId, sessionId, clientToken);
+            RollbackGmToolProfile profile = RequireProfile();
             string directory = Path.Combine(root, "Gm");
             Directory.CreateDirectory(directory);
-            string project = Path.Combine(context.RepositoryRoot, "3cDemo", "Server", "Products", "DevelopmentGm",
+            string project = Path.Combine(
+                context.RepositoryRoot,
+                "3cDemo",
+                "Server",
+                "Products",
+                "DevelopmentGm",
                 "ThirdPerson.Development.Gm.Service.csproj");
-            context.Processes.ExecuteDotNetBuild(ProductId,
+            context.Processes.ExecuteDotNetBuild(
+                ProductId,
                 $"publish {NetworkTestExternalProcessExecutor.Quote(project)} --configuration Debug --output {NetworkTestExternalProcessExecutor.Quote(directory)}",
                 context.RepositoryRoot);
-            File.Copy(Path.Combine(context.RepositoryRoot, "3cDemo", "Tools", "DeterministicRollback", "RollbackGmProductRuntime.ps1"),
-                Path.Combine(directory, "RollbackGmProductRuntime.ps1"), true);
-            Write(root, GmManifestPath, gm);
-            Write(root, RelayManifestPath, relay);
-            Write(root, ConsoleManifestPath, client);
-            if (!File.Exists(Path.Combine(directory, Executable)))
-                throw new InvalidOperationException("GM 服务 executable 未发布。");
-            string hash = NetworkTestArtifactFileUtility.Sha256(Path.Combine(root, GmManifestPath));
-            return new NetworkTestRuntimeArtifactResult(RoleId, NetworkTestRuntimeArtifactKind.ManagedExecutable,
-                ProductId, "Gm", Executable, hash, GmManifestPath, hash, new[]
+            string executable = Path.Combine(directory, Executable);
+            if (!File.Exists(executable))
+                throw new InvalidOperationException("GM Service executable was not published.");
+            string toolManifest = Path.Combine(root, ToolManifestPath.Replace('/', Path.DirectorySeparatorChar));
+            context.Processes.Execute(
+                    executable,
+                    $"--write-tool-manifest {NetworkTestExternalProcessExecutor.Quote(toolManifest)}",
+                    directory)
+                .RequireSuccess(ProductId);
+            GmToolManifest tool = Read<GmToolManifest>(toolManifest);
+            tool.RequireValid();
+            GmToolPolicy policy = profile.BuildPolicy();
+            policy.RequireValid();
+            Write(root, ToolPolicyPath, policy);
+            string toolHash = NetworkTestArtifactFileUtility.Sha256(toolManifest);
+            string policyHash = NetworkTestArtifactFileUtility.Sha256(Path.Combine(root, ToolPolicyPath));
+            string configuration = StableHash.Compute(
+                "rollback-gm-tool-configuration/1",
+                toolHash,
+                policyHash).Value;
+            return new NetworkTestRuntimeArtifactResult(
+                RoleId,
+                NetworkTestRuntimeArtifactKind.ManagedExecutable,
+                ProductId,
+                "Gm",
+                Executable,
+                configuration,
+                ToolManifestPath,
+                toolHash,
+                new[]
                 {
-                    NetworkTestProductAdapterUtility.Field("endpoint", gm.http.Endpoint),
-                    NetworkTestProductAdapterUtility.Field("relayQueryManifestHash", NetworkTestArtifactFileUtility.Sha256(Path.Combine(root, RelayManifestPath))),
-                    NetworkTestProductAdapterUtility.Field("consoleManifestHash", NetworkTestArtifactFileUtility.Sha256(Path.Combine(root, ConsoleManifestPath)))
+                    NetworkTestProductAdapterUtility.Field("toolManifestHash", toolHash),
+                    NetworkTestProductAdapterUtility.Field("toolPolicyHash", policyHash),
+                    NetworkTestProductAdapterUtility.Field("commandCatalogHash", tool.commandCatalogHash)
                 });
         }
 
-        public static void Validate(NetworkTestProductContext context, NetworkTestProductBuildManifest product, string sessionId)
+        public static IReadOnlyList<NetworkTestToolBundleManifest> BuildToolBundles(NetworkTestProductContext context)
         {
-            RollbackGmBuildProfile profile = RequireProfile();
+            string toolManifestPath = Path.Combine(context.ProductRoot, ToolManifestPath.Replace('/', Path.DirectorySeparatorChar));
+            GmToolManifest tool = Read<GmToolManifest>(toolManifestPath);
+            tool.RequireValid();
+            return new[]
+            {
+                NetworkTestToolBundlePublisher.BuildBundle(
+                    context.ProductRoot,
+                    ToolId,
+                    ToolVersion,
+                    "Gm",
+                    "Gm/" + Executable,
+                    NetworkTestArtifactFileUtility.Sha256(toolManifestPath))
+            };
+        }
+
+        public static void Validate(NetworkTestProductContext context, NetworkTestProductBuildManifest product)
+        {
             NetworkTestRuntimeArtifactManifest artifact = NetworkTestProductAdapterUtility.RequireManagedArtifact(
-                product, RoleId, ProductId, context.ProductRoot);
-            if (artifact.entryPoint != "Gm/" + Executable || artifact.manifestPath != GmManifestPath ||
-                artifact.configurationIdentity != artifact.manifestHash || product.artifacts.Length != 3)
-                throw new InvalidOperationException("Rollback GM artifact 身份或产品数量不匹配。");
-            GmServerManifest gm = Read<GmServerManifest>(context.ProductRoot, GmManifestPath);
-            RelayQueryManifest relay = Read<RelayQueryManifest>(context.ProductRoot, RelayManifestPath);
-            GmClientManifest client = Read<GmClientManifest>(context.ProductRoot, ConsoleManifestPath);
-            NetworkTestArtifactFileUtility.RequireExactFile(
-                Path.Combine(context.RepositoryRoot, "3cDemo", "Tools", "DeterministicRollback", "RollbackGmProductRuntime.ps1"),
-                Path.Combine(context.ProductRoot, "Gm", "RollbackGmProductRuntime.ps1"));
-            gm.RequireValid();
-            relay.RequireValid();
-            client.RequireValid();
-            RequireEqual(gm, profile.BuildServerManifest(product.buildId, sessionId, gm.http.accessToken, gm.relayQueryToken));
-            RequireEqual(relay, profile.BuildRelayManifest(product.buildId, sessionId, gm.relayQueryToken));
-            RequireEqual(client, profile.BuildClientManifest(product.buildId, sessionId, gm.http.accessToken));
-            RequireField(artifact, "relayQueryManifestHash", NetworkTestArtifactFileUtility.Sha256(Path.Combine(context.ProductRoot, RelayManifestPath)));
-            RequireField(artifact, "consoleManifestHash", NetworkTestArtifactFileUtility.Sha256(Path.Combine(context.ProductRoot, ConsoleManifestPath)));
-            RequireField(artifact, "endpoint", gm.http.Endpoint);
+                product,
+                RoleId,
+                ProductId,
+                context.ProductRoot);
+            if (artifact.entryPoint != "Gm/" + Executable || artifact.manifestPath != ToolManifestPath ||
+                product.artifacts.Length != 3)
+                throw new InvalidOperationException("Rollback GM artifact identity or product count is invalid.");
+            string toolPath = Path.Combine(context.ProductRoot, ToolManifestPath.Replace('/', Path.DirectorySeparatorChar));
+            string policyPath = Path.Combine(context.ProductRoot, ToolPolicyPath.Replace('/', Path.DirectorySeparatorChar));
+            GmToolManifest tool = Read<GmToolManifest>(toolPath);
+            GmToolPolicy policy = Read<GmToolPolicy>(policyPath);
+            tool.RequireValid();
+            policy.RequireValid();
+            RequireField(artifact, "toolManifestHash", NetworkTestArtifactFileUtility.Sha256(toolPath));
+            RequireField(artifact, "toolPolicyHash", NetworkTestArtifactFileUtility.Sha256(policyPath));
+            RequireField(artifact, "commandCatalogHash", tool.commandCatalogHash);
         }
 
         static void RequireField(NetworkTestRuntimeArtifactManifest artifact, string name, string expected)
@@ -90,30 +126,16 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                 if (field.key == name && field.value == expected)
                     return;
             }
-            throw new InvalidOperationException($"GM artifact 字段 '{name}' 不匹配。");
-        }
-
-        static void RequireEqual<T>(T actual, T expected)
-        {
-            if (!string.Equals(JsonUtility.ToJson(actual), JsonUtility.ToJson(expected), StringComparison.Ordinal))
-                throw new InvalidOperationException("GM 发布配置与正式 Profile、Build 或 Session 不匹配。");
+            throw new InvalidOperationException($"GM artifact field '{name}' is invalid.");
         }
 
         static void Write(string root, string path, object value)
         {
-            string target = Path.Combine(root, path);
+            string target = Path.Combine(root, path.Replace('/', Path.DirectorySeparatorChar));
             Directory.CreateDirectory(Path.GetDirectoryName(target));
             File.WriteAllText(target, JsonUtility.ToJson(value, true), new UTF8Encoding(false));
         }
 
-        static T Read<T>(string root, string path) => JsonUtility.FromJson<T>(File.ReadAllText(Path.Combine(root, path), Encoding.UTF8));
-
-        static string CreateToken()
-        {
-            var bytes = new byte[32];
-            using (RandomNumberGenerator generator = RandomNumberGenerator.Create())
-                generator.GetBytes(bytes);
-            return BitConverter.ToString(bytes).Replace("-", string.Empty).ToLowerInvariant();
-        }
+        static T Read<T>(string path) => JsonUtility.FromJson<T>(File.ReadAllText(path, Encoding.UTF8));
     }
 }

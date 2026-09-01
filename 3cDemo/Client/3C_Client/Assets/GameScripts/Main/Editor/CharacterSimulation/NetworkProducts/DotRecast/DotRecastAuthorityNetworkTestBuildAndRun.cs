@@ -76,14 +76,16 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                     NetworkTestProductAdapterUtility.Field(
                         "authorityDataPort",
                         dataPort.ToString(CultureInfo.InvariantCulture))
-                });
+                },
+                new[] { "default" },
+                null);
         }
 
         public IReadOnlyList<NetworkTestRuntimeArtifactResult> PublishAdditionalArtifacts(
             NetworkTestProductContext context,
             NetworkTestProductDescriptor descriptor,
             string productRoot,
-            string buildId)
+            string candidateId)
         {
             string serverDirectory = Path.Combine(productRoot, "Server");
             string project = Path.Combine(
@@ -106,7 +108,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             NetworkTestRuntimeArtifactResult server = ServerProductBuildManifestUtility.Write(
                 context,
                 serverDirectory,
-                buildId,
+                candidateId,
                 "dotrecast-authority-server",
                 ServerConfiguration,
                 DotRecastAuthorityHostProduct.ServerProductId,
@@ -177,10 +179,10 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
 
     public static class DotRecastAuthorityNetworkTestBuildAndRun
     {
-        public static void Build() => NetworkTestProductBuildWorkflow.Build(
-            new NetworkTestProductBuildRequest(NetworkTestProductAdapters.DotRecastAuthority));
+        public static void Build(string candidateLabel) => NetworkTestProductBuildWorkflow.Build(
+            new NetworkTestProductBuildRequest(NetworkTestProductAdapters.DotRecastAuthority, candidateLabel));
 
-        public static void Run() => NetworkTestProductBuildWorkflow.Run(
-            new NetworkTestProductRunRequest(NetworkTestProductAdapters.DotRecastAuthority, true));
+        public static void Run(string candidateId) => NetworkTestProductBuildWorkflow.Run(
+            new NetworkTestProductRunRequest(NetworkTestProductAdapters.DotRecastAuthority, candidateId, "default"));
     }
 }

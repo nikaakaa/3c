@@ -13,31 +13,45 @@ public sealed class GmCommandDispatcher
     readonly Action<GmOperationRecord> m_Record;
 
     public GmCommandDispatcher(
+        string candidateId,
+        string runId,
         string serviceInstanceId,
         string sessionId,
-        string buildId,
+        GmToolIdentity tool,
         GmCommandRegistry registry,
         Action<GmOperationRecord> record)
     {
-        if (string.IsNullOrWhiteSpace(serviceInstanceId) || string.IsNullOrWhiteSpace(sessionId))
+        if (string.IsNullOrWhiteSpace(candidateId) || string.IsNullOrWhiteSpace(runId) ||
+            string.IsNullOrWhiteSpace(serviceInstanceId) || string.IsNullOrWhiteSpace(sessionId))
             throw new ArgumentException("GM 服务运行身份不完整。");
+        if (tool == null)
+            throw new ArgumentNullException(nameof(tool));
+        tool.RequireValid();
         ServiceInstanceId = serviceInstanceId;
+        CandidateId = candidateId;
+        RunId = runId;
         SessionId = sessionId;
-        BuildId = buildId;
+        Tool = tool;
         m_Registry = registry ?? throw new ArgumentNullException(nameof(registry));
+        if (!string.Equals(m_Registry.CommandCatalogHash, tool.commandCatalogHash, StringComparison.Ordinal))
+            throw new ArgumentException("GM Tool Identity与命令目录不匹配。", nameof(tool));
         m_Record = record ?? throw new ArgumentNullException(nameof(record));
     }
 
     public string ServiceInstanceId { get; }
+    public string CandidateId { get; }
+    public string RunId { get; }
     public string SessionId { get; }
-    public string BuildId { get; }
+    public GmToolIdentity Tool { get; }
 
     public GmServiceDescription Describe() => new()
     {
         protocolVersion = GmHttpProtocol.Version,
-        buildId = BuildId,
+        candidateId = CandidateId,
+        runId = RunId,
         serviceInstanceId = ServiceInstanceId,
         sessionId = SessionId,
+        tool = Tool,
         commands = m_Registry.Definitions.ToArray()
     };
 
@@ -50,7 +64,9 @@ public sealed class GmCommandDispatcher
             result = Reject(GmResultCode.InvalidRequest, "请求身份、命令或参数格式无效。");
         else if (string.IsNullOrWhiteSpace(callerId) || permission == GmPermission.None)
             result = Reject(GmResultCode.Unauthorized, "没有 GM 查询权限。");
-        else if (!string.Equals(request.serviceInstanceId, ServiceInstanceId, StringComparison.Ordinal) ||
+        else if (!string.Equals(request.candidateId, CandidateId, StringComparison.Ordinal) ||
+                 !string.Equals(request.runId, RunId, StringComparison.Ordinal) ||
+                 !string.Equals(request.serviceInstanceId, ServiceInstanceId, StringComparison.Ordinal) ||
                  !string.Equals(request.sessionId, SessionId, StringComparison.Ordinal))
             result = Reject(GmResultCode.TargetEnded, "目标服务运行实例或会话已改变，请重新连接。");
         else if (!m_Registry.TryGetHandler(request.commandId, out IGmCommandHandler handler))
@@ -85,6 +101,8 @@ public sealed class GmCommandDispatcher
         return new GmCommandResponse
         {
             requestId = request.requestId,
+            candidateId = CandidateId,
+            runId = RunId,
             serviceInstanceId = ServiceInstanceId,
             sessionId = SessionId,
             code = result.Code,

@@ -60,20 +60,14 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                 $"KCC={closure.KccIdentityHash}");
         }
 
-        public static void Build() => NetworkTestProductBuildWorkflow.Build(
-            new NetworkTestProductBuildRequest(NetworkTestProductAdapters.DeterministicRollback));
+        public static void Build(string candidateLabel) => NetworkTestProductBuildWorkflow.Build(
+            new NetworkTestProductBuildRequest(NetworkTestProductAdapters.DeterministicRollback, candidateLabel));
 
-        public static void Run() => NetworkTestProductBuildWorkflow.Run(
-            new NetworkTestProductRunRequest(NetworkTestProductAdapters.DeterministicRollback, true));
+        public static void Run(string candidateId, string slotId) => NetworkTestProductBuildWorkflow.Run(
+            new NetworkTestProductRunRequest(NetworkTestProductAdapters.DeterministicRollback, candidateId, slotId));
 
         [MenuItem("Tools/3C/Internal/Prepare Deterministic Rollback")]
         static void PrepareFromInternalMenu() => PrepareAssetsAndScenes();
-
-        [MenuItem("Tools/3C/Internal/Build Deterministic Rollback")]
-        static void BuildFromInternalMenu() => Build();
-
-        [MenuItem("Tools/3C/Internal/Run Deterministic Rollback")]
-        static void RunFromInternalMenu() => Run();
 
         internal static DeterministicRollbackProductClosure RequireProductClosure()
         {
@@ -383,7 +377,6 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                         $"{solverIdentity.Identity.ComponentId}@{closure.KccIdentityHash}"),
                     NetworkTestProductAdapterUtility.Field("kccIdentityHash", closure.KccIdentityHash),
                     NetworkTestProductAdapterUtility.Field("transport", "UDP"),
-                    NetworkTestProductAdapterUtility.Field("ports", "24100,24101,24102"),
                     NetworkTestProductAdapterUtility.Field("programHash", closure.ProgramAsset.ProgramHash),
                     NetworkTestProductAdapterUtility.Field("programId", closure.ProgramAsset.ProgramId),
                     NetworkTestProductAdapterUtility.Field(
@@ -393,17 +386,19 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                     NetworkTestProductAdapterUtility.Field(
                         "sourceRevision",
                         closure.ProgramAsset.SourceRevision)
-                });
+                },
+                new[] { "rollback-a", "rollback-b" },
+                RollbackGmProductBuild.BuildToolBundles);
         }
 
         public IReadOnlyList<NetworkTestRuntimeArtifactResult> PublishAdditionalArtifacts(
             NetworkTestProductContext context,
             NetworkTestProductDescriptor descriptor,
             string productRoot,
-            string buildId)
+            string candidateId)
         {
             const string serverProductId = "thirdperson.server-product.deterministic-rollback-relay";
-            const string serverManifestFileName = "DeterministicRollbackServerManifest.json";
+            const string serverManifestFileName = "DeterministicRollbackCandidateManifest.json";
             string serverDirectory = Path.Combine(productRoot, "Server");
             string project = Path.Combine(
                 context.RepositoryRoot,
@@ -422,7 +417,6 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                 DeterministicRollbackNetworkTestBuildAndRun.RequireProductClosure();
             RollbackEndpointAuthoringDefinition endpointAuthoring = closure.Endpoint;
             DeterministicRollbackModelDefinition model = closure.Model;
-            RollbackEndpointDefinition endpoint = endpointAuthoring.Build();
             RollbackRoster roster = endpointAuthoring.BuildRoster();
             DeterministicRollbackModelPolicy policy = model.Policy;
             var peerManifests = roster.Entries
@@ -434,14 +428,11 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                     actorId = value.ActorId.Value
                 })
                 .ToArray();
-            var serverManifest = new DeterministicRollbackServerManifest
+            var serverManifest = new DeterministicRollbackServerCandidateManifest
             {
-                schemaVersion = DeterministicRollbackServerManifest.CurrentSchemaVersion,
-                buildId = buildId,
+                schemaVersion = DeterministicRollbackServerCandidateManifest.CurrentSchemaVersion,
+                candidateId = candidateId,
                 productId = serverProductId,
-                sessionId = endpoint.SessionId,
-                listenAddress = endpoint.Address.ToString(),
-                listenPort = endpoint.Port,
                 relayServerPeerId = endpointAuthoring.RelayServerPeerId,
                 peers = peerManifests,
                 modelId = model.ModelIdentity.ComponentId,
@@ -470,10 +461,10 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                 maximumOutputRecords = policy.MaximumOutputRecords,
                 missingInputPolicy = policy.MissingInputPolicy.ToString(),
                 snapshotAuthority = policy.SnapshotAuthority.ToString(),
-                maximumDatagramBytes = endpoint.MaximumDatagramBytes,
-                maximumQueuedMessages = endpoint.MaximumQueuedMessages,
-                maximumFragmentsPerMessage = endpoint.MaximumFragmentsPerMessage,
-                reliableResendMilliseconds = endpoint.ReliableResendMilliseconds,
+                maximumDatagramBytes = endpointAuthoring.MaximumDatagramBytes,
+                maximumQueuedMessages = endpointAuthoring.MaximumQueuedMessages,
+                maximumFragmentsPerMessage = endpointAuthoring.MaximumFragmentsPerMessage,
+                reliableResendMilliseconds = endpointAuthoring.ReliableResendMilliseconds,
                 inputRedundancyCount = endpointAuthoring.InputRedundancyCount
             };
             serverManifest.manifestHash = serverManifest.ValidateAndComputeHash().Value;
@@ -482,14 +473,14 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                 manifestPath,
                 JsonUtility.ToJson(serverManifest, true),
                 new System.Text.UTF8Encoding(false));
-            serverManifest = JsonUtility.FromJson<DeterministicRollbackServerManifest>(
+            serverManifest = JsonUtility.FromJson<DeterministicRollbackServerCandidateManifest>(
                 File.ReadAllText(manifestPath, System.Text.Encoding.UTF8));
             serverManifest.RequireValidHash();
 
             string executable = "ThirdPerson.DeterministicRollback.Server.exe";
             if (!File.Exists(Path.Combine(serverDirectory, executable)))
                 throw new InvalidOperationException("Deterministic Rollback Relay Server publish output is missing.");
-            NetworkTestRuntimeArtifactResult gm = RollbackGmProductBuild.Publish(context, productRoot, buildId, endpoint.SessionId);
+            NetworkTestRuntimeArtifactResult gm = RollbackGmProductBuild.Publish(context, productRoot);
             return new[]
             {
                 new NetworkTestRuntimeArtifactResult(
@@ -503,7 +494,6 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                     NetworkTestArtifactFileUtility.Sha256(manifestPath),
                     new[]
                     {
-                        NetworkTestProductAdapterUtility.Field("endpoint", $"{endpoint.Address}:{endpoint.Port}"),
                         NetworkTestProductAdapterUtility.Field("protocol", model.Handshake.Protocol.ToString()),
                         NetworkTestProductAdapterUtility.Field("maximumPredictionLeadTicks", policy.MaximumPredictionLeadTicks.ToString())
                     }),
@@ -533,12 +523,12 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             string serverManifestPath = Path.Combine(
                 context.ProductRoot,
                 relay.manifestPath.Replace('/', Path.DirectorySeparatorChar));
-            DeterministicRollbackServerManifest serverManifest =
-                JsonUtility.FromJson<DeterministicRollbackServerManifest>(
+            DeterministicRollbackServerCandidateManifest serverManifest =
+                JsonUtility.FromJson<DeterministicRollbackServerCandidateManifest>(
                     File.ReadAllText(serverManifestPath, System.Text.Encoding.UTF8));
             serverManifest.RequireValidHash();
             RollbackRoster expectedRoster = closure.Endpoint.BuildRoster();
-            RollbackGmProductBuild.Validate(context, manifest, serverManifest.sessionId);
+            RollbackGmProductBuild.Validate(context, manifest);
             RollbackRoster actualRoster = serverManifest.BuildRoster();
             if (!string.Equals(serverManifest.programId, closure.ProgramAsset.ProgramId, StringComparison.Ordinal) ||
                 !string.Equals(serverManifest.sourceRevision, closure.ProgramAsset.SourceRevision, StringComparison.Ordinal) ||

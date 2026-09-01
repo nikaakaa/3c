@@ -40,7 +40,6 @@ function Resolve-NetworkTestProductPath([string]$Root, [string]$RelativePath) {
 function Assert-NetworkTestProductBuild {
     param(
         [Parameter(Mandatory = $true)][string]$Root,
-        [Parameter(Mandatory = $true)][string]$RepositoryRoot,
         [Parameter(Mandatory = $true)][string]$ExpectedProductId,
         [Parameter(Mandatory = $true)][string]$ExpectedNetworkModelIdentity,
         [Parameter(Mandatory = $true)][string]$ExpectedRuntimeTopologyIdentity,
@@ -57,8 +56,12 @@ function Assert-NetworkTestProductBuild {
         throw "Network Test Product manifest does not exist: $manifestPath"
     }
     $manifest = Get-Content -LiteralPath $manifestPath -Raw -Encoding UTF8 | ConvertFrom-Json
-    if ($manifest.schemaVersion -ne 2 -or $manifest.productId -ne $ExpectedProductId -or
-        [string]::IsNullOrWhiteSpace($manifest.buildId) -or
+    if ($manifest.schemaVersion -ne 3 -or $manifest.productId -ne $ExpectedProductId -or
+        [string]::IsNullOrWhiteSpace($manifest.candidateId) -or
+        [System.IO.Path]::GetFileName($fullRoot) -ne $manifest.candidateId -or
+        [string]::IsNullOrWhiteSpace($manifest.candidateLabel) -or
+        $manifest.sourceCommit.Length -ne 40 -or $manifest.sourceTreeHash.Length -ne 40 -or
+        [string]::IsNullOrWhiteSpace($manifest.builtAtUtc) -or
         [string]::IsNullOrWhiteSpace($manifest.programIdentity) -or
         [string]::IsNullOrWhiteSpace($manifest.pipelineIdentity) -or
         $manifest.networkModelIdentity -ne $ExpectedNetworkModelIdentity -or
@@ -118,9 +121,34 @@ function Assert-NetworkTestProductBuild {
         throw "Network Test Product Unity Player compile options or scenes are incompatible."
     }
 
-    $scriptPath = Resolve-NetworkTestProductPath $RepositoryRoot $manifest.launch.scriptPath
-    if ((Get-NetworkTestProductSha256 $scriptPath) -ne $manifest.launch.scriptHash) {
-        throw "Network Test Product launch script hash is stale."
+    $tools = @($manifest.toolBundles)
+    if ($tools.Count -lt 2 -or @($tools | Where-Object { $_.toolId -eq 'thirdperson.network-test-orchestrator' }).Count -ne 1) {
+        throw "Network Test Product Tool Bundle roster is invalid."
+    }
+    $toolIds = @{}
+    foreach ($tool in $tools) {
+        if ($null -eq $tool -or [string]::IsNullOrWhiteSpace($tool.toolId) -or
+            [string]::IsNullOrWhiteSpace($tool.toolVersion) -or $tool.contractVersion -le 0 -or
+            [string]::IsNullOrWhiteSpace($tool.bundleHash) -or $toolIds.ContainsKey($tool.toolId)) {
+            throw "Network Test Product Tool Bundle identity is invalid or duplicated."
+        }
+        $toolIds.Add([string]$tool.toolId, $true)
+        $toolRoot = Resolve-NetworkTestProductPath $fullRoot $tool.root
+        $toolEntryPoint = Resolve-NetworkTestProductPath $fullRoot $tool.entryPoint
+        if (!(Test-Path -LiteralPath $toolRoot -PathType Container) -or
+            !(Test-Path -LiteralPath $toolEntryPoint -PathType Leaf) -or
+            !$toolEntryPoint.StartsWith($toolRoot + [System.IO.Path]::DirectorySeparatorChar, [System.StringComparison]::OrdinalIgnoreCase)) {
+            throw "Network Test Product Tool Bundle closure is invalid: $($tool.toolId)"
+        }
+    }
+    if ($manifest.sessionPlan.schemaVersion -ne 1 -or
+        [string]::IsNullOrWhiteSpace($manifest.sessionPlan.adapterId) -or
+        @($manifest.sessionPlan.supportedSlotIds).Count -eq 0) {
+        throw "Network Test Product Session Plan is invalid."
+    }
+    $adapterPath = Resolve-NetworkTestProductPath $fullRoot $manifest.sessionPlan.adapterPath
+    if ((Get-NetworkTestProductSha256 $adapterPath) -ne $manifest.sessionPlan.adapterHash) {
+        throw "Network Test Product Session adapter hash is stale."
     }
 
     $declared = @{}

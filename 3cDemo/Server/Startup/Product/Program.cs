@@ -58,7 +58,7 @@ internal static class Program
                 if (args.Length != 2)
                 {
                     throw new InvalidOperationException(
-                        "Startup Server manifest command requires exactly one BuildId.");
+                        "Startup Server manifest command requires exactly one CandidateId.");
                 }
 
                 Console.WriteLine(ServerProductBuildManifestWriter.Write(AppContext.BaseDirectory, args[1], product));

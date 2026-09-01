@@ -22,7 +22,8 @@ public sealed class SessionInfoGmCommand : IGmCommandHandler
             title = value.SessionId,
             fields = new[]
             {
-                GmResultField.Text("buildId", "构建", value.BuildId),
+                GmResultField.Text("candidateId", "Candidate", value.CandidateId),
+                GmResultField.Text("runId", "Run", value.RunId),
                 GmResultField.Text("relayPeerId", "Relay", value.RelayPeerId),
                 GmResultField.Text("endpoint", "Gameplay UDP", value.Endpoint),
                 GmResultField.Text("modelIdentity", "模型", value.ModelIdentity),

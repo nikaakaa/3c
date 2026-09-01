@@ -22,7 +22,8 @@ namespace ThirdPerson.Development.Gm
 
         public static bool IsValidRequest(GmCommandRequest request)
         {
-            if (!Guid.TryParseExact(request.requestId, "N", out _) || !IsValidCommandId(request.commandId) ||
+            if (!Guid.TryParseExact(request.requestId, "N", out _) || string.IsNullOrWhiteSpace(request.candidateId) ||
+                string.IsNullOrWhiteSpace(request.runId) || !IsValidCommandId(request.commandId) ||
                 request.arguments == null || request.arguments.Length > GmCommandLineParser.MaximumArguments)
                 return false;
             int length = request.commandId.Length;

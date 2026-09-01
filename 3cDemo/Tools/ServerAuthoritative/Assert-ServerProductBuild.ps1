@@ -77,8 +77,8 @@ function Assert-ServerProductBuild {
         [string[]]$ForbiddenModuleIds = @()
     )
     $manifest = Get-Content -LiteralPath $ManifestPath -Raw -Encoding UTF8 | ConvertFrom-Json
-    if ($manifest.schemaVersion -ne 2 -or $manifest.serverProductId -ne $ExpectedProductId -or
-        [string]::IsNullOrWhiteSpace($manifest.buildId)) {
+    if ($manifest.schemaVersion -ne 3 -or $manifest.serverProductId -ne $ExpectedProductId -or
+        [string]::IsNullOrWhiteSpace($manifest.candidateId)) {
         throw "Server product manifest identity is invalid."
     }
     if ($manifest.authorityHost.hostProductId -ne $ExpectedHostProductId -or

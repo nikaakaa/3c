@@ -13,9 +13,16 @@ public sealed class RollbackRelayQueryBridge : IDisposable
         RollbackInputRelayRuntime runtime, Action<string> record)
     {
         configuration.RequireValid();
-        if (configuration.buildId != manifest.buildId || configuration.sessionId != manifest.sessionId)
+        if (configuration.candidateId != manifest.candidate.candidateId ||
+            configuration.runId != manifest.runId || configuration.sessionId != manifest.sessionId)
             throw new ArgumentException("Relay 查询配置与 Gameplay manifest 身份不同。");
-        m_Identity = new RollbackRelayQueryIdentity(GmHttpProtocol.Version, manifest.buildId, manifest.sessionId, Guid.NewGuid().ToString("N"));
+        m_Identity = new RollbackRelayQueryIdentity(
+            GmHttpProtocol.Version,
+            manifest.candidate.candidateId,
+            manifest.runId,
+            manifest.sessionId,
+            configuration.tool,
+            Guid.NewGuid().ToString("N"));
         var source = new RollbackRelayQuerySource(manifest, runtime);
         m_Queue = new RelayQueryQueue(configuration.maximumQueuedQueries, configuration.maximumQueriesPerPump);
         m_Server = new GmHttpServer(configuration.http, record);
@@ -34,7 +41,12 @@ public sealed class RollbackRelayQueryBridge : IDisposable
             if (context.Request.Headers[GmHttpProtocol.RelayInstanceHeader].ToString() != m_Identity.InstanceId)
                 throw new BadHttpRequestException("Relay 运行实例已经改变。", StatusCodes.Status409Conflict);
             T value = await m_Queue.ReadAsync(read, context.RequestAborted);
-            return new RollbackRelayQueryResult<T>(m_Identity.InstanceId, m_Identity.SessionId, value);
+            return new RollbackRelayQueryResult<T>(
+                m_Identity.InstanceId,
+                m_Identity.CandidateId,
+                m_Identity.RunId,
+                m_Identity.SessionId,
+                value);
         });
     }
 

@@ -18,7 +18,7 @@ public sealed class ServerProductFileRecord
 public sealed class ServerProductBuildManifest
 {
     public int SchemaVersion { get; set; }
-    public string BuildId { get; set; } = string.Empty;
+    public string CandidateId { get; set; } = string.Empty;
     public string ServerProductId { get; set; } = string.Empty;
     public ServerAuthorityHostProductManifest? AuthorityHost { get; set; }
     public ServerProductFileRecord Executable { get; set; } = new();
@@ -69,8 +69,8 @@ internal static class ServerProductBuildManifestReader
             throw new InvalidDataException("Server product build manifest identity is incompatible.");
         }
         ValidateAuthorityHost(manifest.AuthorityHost, product.AuthorityHost);
-        if (string.IsNullOrWhiteSpace(manifest.BuildId))
-            throw new InvalidDataException("Server product BuildId is missing.");
+        if (string.IsNullOrWhiteSpace(manifest.CandidateId))
+            throw new InvalidDataException("Server product CandidateId is missing.");
         ValidateRecord(publishRoot, manifest.Executable, product.ExecutableName);
         ValidateRecord(publishRoot, manifest.Configuration, product.ConfigurationFileName);
         if (!string.Equals(manifest.Executable.ModuleId, "server.executable", StringComparison.Ordinal) ||

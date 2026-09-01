@@ -4,7 +4,7 @@ namespace ThirdPerson.Development.Gm
 {
     public static class GmHttpProtocol
     {
-        public const int Version = 1;
+        public const int Version = 2;
         public const string ServicePath = "/v1/service";
         public const string CommandsPath = "/v1/commands";
         public const string RelayInstanceHeader = "X-Relay-Instance";
@@ -27,6 +27,121 @@ namespace ThirdPerson.Development.Gm
                 if (!(value >= '0' && value <= '9') && !(value >= 'a' && value <= 'f'))
                     throw new ArgumentException("GM 开发访问凭据格式无效。");
             }
+        }
+    }
+
+    public static class GmToolCatalog
+    {
+        public const string ToolId = "thirdperson.rollback-gm";
+        public const string ToolVersion = "1";
+    }
+
+    [Serializable]
+    public sealed class GmToolIdentity
+    {
+        public string toolId = string.Empty;
+        public string toolVersion = string.Empty;
+        public int protocolVersion;
+        public string commandCatalogHash = string.Empty;
+        public string bundleHash = string.Empty;
+
+        public void RequireValid()
+        {
+            if (toolId != GmToolCatalog.ToolId || toolVersion != GmToolCatalog.ToolVersion ||
+                protocolVersion != GmHttpProtocol.Version || !IsHash(commandCatalogHash) || !IsHash(bundleHash))
+                throw new ArgumentException("GM Tool Identity不完整或版本无效。");
+        }
+
+        static bool IsHash(string value)
+        {
+            if (value == null || value.Length != 64)
+                return false;
+            foreach (char item in value)
+            {
+                if (!(item >= '0' && item <= '9') && !(item >= 'a' && item <= 'f'))
+                    return false;
+            }
+            return true;
+        }
+    }
+
+    [Serializable]
+    public sealed class GmToolPolicy
+    {
+        public int maximumMessageBytes;
+        public int maximumServerRequests;
+        public int maximumQueuedQueries;
+        public int maximumQueriesPerPump;
+        public int relayTimeoutMilliseconds;
+        public int serverTimeoutMilliseconds;
+        public int clientTimeoutMilliseconds;
+        public int maximumClientRequests;
+        public int historyCapacity;
+        public int outputCapacity;
+        public int maximumOutputCharacters;
+
+        public void RequireValid()
+        {
+            if (maximumMessageBytes < 1024 || maximumMessageBytes > 65536 ||
+                maximumServerRequests <= 0 || maximumServerRequests > 64 ||
+                maximumQueuedQueries <= 0 || maximumQueuedQueries > 64 ||
+                maximumQueriesPerPump <= 0 || maximumQueriesPerPump > maximumQueuedQueries ||
+                relayTimeoutMilliseconds < 100 || serverTimeoutMilliseconds <= relayTimeoutMilliseconds ||
+                clientTimeoutMilliseconds <= serverTimeoutMilliseconds || clientTimeoutMilliseconds > 10000 ||
+                maximumClientRequests <= 0 || maximumClientRequests > 16 ||
+                historyCapacity <= 0 || historyCapacity > 128 || outputCapacity <= 0 || outputCapacity > 128 ||
+                maximumOutputCharacters < 256 || maximumOutputCharacters > 16384)
+                throw new ArgumentException("GM Tool Policy容量或超时无效。");
+        }
+    }
+
+    [Serializable]
+    public sealed class GmToolManifest
+    {
+        public int schemaVersion;
+        public string toolId = string.Empty;
+        public string toolVersion = string.Empty;
+        public int protocolVersion;
+        public string commandCatalogHash = string.Empty;
+
+        public void RequireValid()
+        {
+            var identity = new GmToolIdentity
+            {
+                toolId = toolId,
+                toolVersion = toolVersion,
+                protocolVersion = protocolVersion,
+                commandCatalogHash = commandCatalogHash,
+                bundleHash = new string('0', 64)
+            };
+            identity.RequireValid();
+            if (schemaVersion != 1)
+                throw new ArgumentException("GM Tool Manifest schema无效。");
+        }
+    }
+
+    [Serializable]
+    public sealed class GmRunRequest
+    {
+        public int schemaVersion;
+        public string candidateId = string.Empty;
+        public string runId = string.Empty;
+        public string sessionId = string.Empty;
+        public string slotId = string.Empty;
+        public string gmAddress = string.Empty;
+        public int gmPort;
+        public string relayQueryAddress = string.Empty;
+        public int relayQueryPort;
+        public string toolBundleHash = string.Empty;
+
+        public void RequireValid()
+        {
+            if (schemaVersion != 1 || string.IsNullOrWhiteSpace(candidateId) || string.IsNullOrWhiteSpace(runId) ||
+                string.IsNullOrWhiteSpace(sessionId) || string.IsNullOrWhiteSpace(slotId) ||
+                gmAddress != "127.0.0.1" || relayQueryAddress != "127.0.0.1" ||
+                gmPort <= 0 || gmPort > 65535 || relayQueryPort <= 0 || relayQueryPort > 65535 ||
+                gmPort == relayQueryPort || toolBundleHash == null || toolBundleHash.Length != 64)
+                throw new ArgumentException("GM Run Request不完整或endpoint无效。");
         }
     }
 
@@ -57,8 +172,11 @@ namespace ThirdPerson.Development.Gm
     public sealed class GmServerManifest
     {
         public int schemaVersion;
-        public string buildId = string.Empty;
+        public string candidateId = string.Empty;
+        public string runId = string.Empty;
         public string sessionId = string.Empty;
+        public string slotId = string.Empty;
+        public GmToolIdentity tool = new GmToolIdentity();
         public GmHttpServerConfiguration http;
         public string relayQueryEndpoint = string.Empty;
         public string relayQueryToken = string.Empty;
@@ -66,10 +184,12 @@ namespace ThirdPerson.Development.Gm
 
         public void RequireValid()
         {
-            if (schemaVersion != GmHttpProtocol.Version || string.IsNullOrWhiteSpace(buildId) ||
-                string.IsNullOrWhiteSpace(sessionId) || http == null || relayQueryTimeoutMilliseconds < 100 ||
+            if (schemaVersion != GmHttpProtocol.Version || string.IsNullOrWhiteSpace(candidateId) ||
+                string.IsNullOrWhiteSpace(runId) || string.IsNullOrWhiteSpace(sessionId) ||
+                string.IsNullOrWhiteSpace(slotId) || tool == null || http == null || relayQueryTimeoutMilliseconds < 100 ||
                 relayQueryTimeoutMilliseconds >= http.requestTimeoutMilliseconds)
                 throw new ArgumentException("GM 服务 manifest 不完整或版本无效。");
+            tool.RequireValid();
             http.RequireValid();
             GmHttpProtocol.RequireEndpoint(relayQueryEndpoint);
             GmHttpProtocol.RequireToken(relayQueryToken);
@@ -82,18 +202,23 @@ namespace ThirdPerson.Development.Gm
     public sealed class RelayQueryManifest
     {
         public int schemaVersion;
-        public string buildId = string.Empty;
+        public string candidateId = string.Empty;
+        public string runId = string.Empty;
         public string sessionId = string.Empty;
+        public string slotId = string.Empty;
+        public GmToolIdentity tool = new GmToolIdentity();
         public GmHttpServerConfiguration http;
         public int maximumQueuedQueries;
         public int maximumQueriesPerPump;
 
         public void RequireValid()
         {
-            if (schemaVersion != GmHttpProtocol.Version || string.IsNullOrWhiteSpace(buildId) ||
-                string.IsNullOrWhiteSpace(sessionId) || http == null || maximumQueuedQueries <= 0 ||
+            if (schemaVersion != GmHttpProtocol.Version || string.IsNullOrWhiteSpace(candidateId) ||
+                string.IsNullOrWhiteSpace(runId) || string.IsNullOrWhiteSpace(sessionId) ||
+                string.IsNullOrWhiteSpace(slotId) || tool == null || http == null || maximumQueuedQueries <= 0 ||
                 maximumQueuedQueries > 64 || maximumQueriesPerPump <= 0 || maximumQueriesPerPump > maximumQueuedQueries)
                 throw new ArgumentException("Relay 查询 manifest 不完整或容量无效。");
+            tool.RequireValid();
             http.RequireValid();
         }
     }
@@ -102,8 +227,11 @@ namespace ThirdPerson.Development.Gm
     public sealed class GmClientManifest
     {
         public int schemaVersion;
-        public string buildId = string.Empty;
+        public string candidateId = string.Empty;
+        public string runId = string.Empty;
         public string sessionId = string.Empty;
+        public string slotId = string.Empty;
+        public GmToolIdentity tool = new GmToolIdentity();
         public string endpoint = string.Empty;
         public string accessToken = string.Empty;
         public int maximumMessageBytes;
@@ -115,12 +243,14 @@ namespace ThirdPerson.Development.Gm
 
         public void RequireValid()
         {
-            if (schemaVersion != GmHttpProtocol.Version || string.IsNullOrWhiteSpace(buildId) ||
-                string.IsNullOrWhiteSpace(sessionId) || maximumMessageBytes < 1024 || maximumMessageBytes > 65536 ||
+            if (schemaVersion != GmHttpProtocol.Version || string.IsNullOrWhiteSpace(candidateId) ||
+                string.IsNullOrWhiteSpace(runId) || string.IsNullOrWhiteSpace(sessionId) ||
+                string.IsNullOrWhiteSpace(slotId) || tool == null || maximumMessageBytes < 1024 || maximumMessageBytes > 65536 ||
                 maximumPendingRequests <= 0 || maximumPendingRequests > 16 || requestTimeoutMilliseconds < 100 ||
                 requestTimeoutMilliseconds > 10000 || historyCapacity <= 0 || historyCapacity > 128 ||
                 outputCapacity <= 0 || outputCapacity > 128 || maximumOutputCharacters < 256 || maximumOutputCharacters > 16384)
                 throw new ArgumentException("GM 客户端 manifest 不完整或容量无效。");
+            tool.RequireValid();
             GmHttpProtocol.RequireEndpoint(endpoint);
             GmHttpProtocol.RequireToken(accessToken);
         }

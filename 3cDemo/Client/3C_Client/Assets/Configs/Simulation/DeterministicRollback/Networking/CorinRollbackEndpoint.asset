@@ -12,10 +12,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 9e1eb701bb01455db09dff1110fa615b, type: 3}
   m_Name: CorinRollbackEndpoint
   m_EditorClassIdentifier: 
-  m_RelayServerAddress: 127.0.0.1
-  m_RelayServerPort: 24100
   m_RelayServerPeerId: rollback-input-relay
-  m_SessionId: corin-deterministic-rollback-demo
   m_MaximumDatagramBytes: 1200
   m_MaximumQueuedMessages: 512
   m_MaximumFragmentsPerMessage: 512

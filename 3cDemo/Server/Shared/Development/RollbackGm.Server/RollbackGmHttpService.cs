@@ -42,13 +42,26 @@ public sealed class RollbackGmHttpService : IAsyncDisposable
     async Task<GmCommandDispatcher> CreateDispatcherAsync(CancellationToken cancellation)
     {
         RollbackRelayQueryIdentity target = await m_Relay.GetAsync<RollbackRelayQueryIdentity>("/v1/identity", null, cancellation);
-        if (target.ProtocolVersion != GmHttpProtocol.Version || target.BuildId != m_Manifest.buildId ||
-            target.SessionId != m_Manifest.sessionId || !Guid.TryParseExact(target.InstanceId, "N", out _))
-            throw new InvalidDataException("GM 服务连接的 Relay 版本、构建或会话身份不匹配。");
+        if (target.ProtocolVersion != GmHttpProtocol.Version || target.CandidateId != m_Manifest.candidateId ||
+            target.RunId != m_Manifest.runId || target.SessionId != m_Manifest.sessionId ||
+            !SameTool(target.Tool, m_Manifest.tool) || !Guid.TryParseExact(target.InstanceId, "N", out _))
+            throw new InvalidDataException("GM 服务连接的 Relay工具、Candidate、Run或会话身份不匹配。");
         var source = new HttpRollbackGmQuerySource(m_Relay, target);
         GmCommandRegistry commands = RollbackGmCommandModule.CreateRegistry(source);
-        return new GmCommandDispatcher($"{m_InstanceId}.{target.InstanceId}", target.SessionId, target.BuildId, commands, m_Record);
+        return new GmCommandDispatcher(
+            target.CandidateId,
+            target.RunId,
+            $"{m_InstanceId}.{target.InstanceId}",
+            target.SessionId,
+            target.Tool,
+            commands,
+            m_Record);
     }
+
+    static bool SameTool(GmToolIdentity left, GmToolIdentity right) =>
+        left != null && right != null && left.toolId == right.toolId && left.toolVersion == right.toolVersion &&
+        left.protocolVersion == right.protocolVersion && left.commandCatalogHash == right.commandCatalogHash &&
+        left.bundleHash == right.bundleHash;
 
     public async ValueTask DisposeAsync()
     {

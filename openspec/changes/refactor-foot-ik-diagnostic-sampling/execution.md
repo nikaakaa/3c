@@ -59,3 +59,9 @@ Identity组42个typed字段已全部声明。每脚状态、Reject、Step来源�
 实际Source Generator输出52个唯一Field Handle和52次packet写入，没有重复求值。当前生成身份为Schema `f12081aaab9717213d60fe4569b41070dbc77eabfafcb366e4b6cc01a6070129`、Program hash `d807398b9ce8a1faf8ccfa8d69a0022864d5929a2130098d09c8f328ea21cf4e`、layout `9b3d5f885eef6d8c1f66dab306140c0f6f0beedffcaa995e53a1c0c18eca66fe`；它们属于当前已迁移字段快照，后续字段增加会按框架合同产生新身份。Foot插件和Editor工程均0错误，build server已关闭。
 
 正式A为`Diagnostics/FootPlacementRuns/20260902-033516-613-1591907a78214a389ab18cdc9835fe66`，候选B为`Diagnostics/FootPlacementRuns/20260902-035606-012-6b24b5d5d7814554aacea6862bccdbf1`；B Proof为`Temp/CharacterInputReplayProofs/v4/43357ff3cd384e5cba75d2c31175b116/20260902-035702-488-cdc651d7a5c64075871564fe6c71e821.json`，工具报告`matched:1044`。A/B主表2086行、1222列，1198业务列逐值相同、24 identity列一一映射且0冲突；Geometry 67186行、27列，22业务列逐值相同、5 identity列一一映射且0冲突；总分84.2、weighted evidence 96.5不变。`035606`成为下一字段组迁移的正式A。
+
+## 迁移Step候选与Root Landing字段组
+
+新增独立partial字段模块，迁移SelectedStep 5项、CurrentStep 17项、IncomingStep 17项与RootLanding 1项，共40个typed字段。SelectedStep保持旧链正式选择语义：只有`FormalNextLanding`选择当前候选，否则返回default；Current与Incoming直接读取`CharacterFootStepCandidateSelectionDiagnostics`，没有重新解释事件或查询动画。Root Landing直接读取当前脚的Committed结果。
+
+Full Sampler已加入`selected-step`、`current-step`、`incoming-step`和`root-landing`四个正式组。实际Source Generator输出由52增长到92个唯一Field Handle和92次packet写入，Schema为`0870b0cae80ed7f3a22201901545a8093dc6e628c13a98ded946b00b4d786101`，Program hash为`b147701d119fcfa9286d871ee3a4aa105a9a10545ab52d5f4556b57304af5548`，layout为`442c90d1f3e2d88be01df7e33c849bbc8ea91e5c95980509e7f8ba121c185c8f`。Foot插件工程0错误，build server已关闭；本步只扩展尚未接入Runtime Session的生成程序，不改变运行与旧采样链，因此沿用`035606`作为行为A。

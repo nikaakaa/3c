@@ -10,6 +10,10 @@ namespace ThirdPersonCharacter.Pipeline.Diagnostics.FootIkSampling
         "character-foot-ik-full/1",
         "capture-metadata",
         "identity",
+        "selected-step",
+        "current-step",
+        "incoming-step",
+        "root-landing",
         "root-hierarchy")]
     internal static class CharacterFootIkFullSamplerDefinition
     {

@@ -4,7 +4,7 @@ using ThirdPersonCharacter.Pipeline.Presentation;
 
 namespace ThirdPersonCharacter.Pipeline.Diagnostics.FootIkSampling
 {
-    internal static class CharacterFootIkDiagnosticFields
+    internal static partial class CharacterFootIkDiagnosticFields
     {
         const string Capability =
             CharacterFootIkDiagnosticIdentity.CapabilityId;

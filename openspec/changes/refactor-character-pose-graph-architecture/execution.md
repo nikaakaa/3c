@@ -253,3 +253,14 @@ A/B均为2086脚行、1222列，其中1198个业务列逐值相同，24个运行
 四个Family完成typed入口后重新全仓核对调用点：PoseBone、Goal Assembler和FBBIK各只有Staged Executor原Operation分支中的一次调用；Foot同一Operation分支按World Context在`EvaluateFootPlacement`与`RecordUnavailableFootPlacement`之间互斥选择一次，不存在外层预执行、Constraint扫描Program、Diagnostics重放或第二Stage调度。`ExecuteStage`在调用前要求对应`CharacterPoseOperationCompletionPage`槽为空，调用后统一通过`TryCompleteOperation`写入一次`Completed`或`TypedInvalid`；`TryComplete`拒绝非空槽并记录重复Operation，因此任务3.4完成。
 
 `CharacterPoseConstraintRuntime.CompleteFrame`只绑定同一Completion，核对Pending lease／lineage、Goal Set闭包、Solver Outcome和Foot pending frame，再构造唯一`CharacterPoseConstraintResult`。它不读取Operation数组、不维护Stage Schedule、不调用四个Execute入口、不重新运行Goal Assembler或Solver；任务3.5完成。连续三段`184047 -> 185755 -> 191034 -> 192117`固定Trace又证明内部Foot Placement、Pelvis、PoseBone Goal、Contribution、Assembler、Goal Set、FBBIK和BendHistory业务结果保持，因此任务3.2完成。任务3.6仍有调用方可见的Handle内部地址和Constraint诊断页访问，需要下一步实际收窄，不能由本次代码审计代替。
+
+## Constraint Result与Pending Bank读取收窄
+
+状态：提交`02ccb1b4d`已让四个per-operation Result把Handle、Contribution Header、Goal Set和Solve明细改为私有，只向Program执行侧提供身份匹配；Foot额外只公开业务Availability。`ThirdPersonClient.Runtime.csproj`按规定参数编译成功，0错误；警告均来自既有依赖和未使用字段，build server已关闭。
+
+- Staged Executor不再读取Foot Handle中的Foot Descriptor／Contribution Value容量，也不再从Result读取Goal offset/count或回读Constraint Pending Goal Contribution。Ready与World Context Unavailable现在由同一次Foot typed Result直接映射到原`None`或`WorldContextUnavailable`结果，Constraint Runtime继续独占Contribution槽和Goal workspace范围校验。
+- Executor初始化只通过`MatchesCompiledLayout`核对Program与Constraint容量，不再分别读取Constraint内部两个Bank数组长度；Operation ABI范围继续由Program自身容量验证。旧`GetPendingGoalContribution`入口已删除，没有保留诊断fallback或第二错误来源。
+
+正式A为`Diagnostics/FootPlacementRuns/20260901-192117-923-ad1dd64ee4e24e4ea8d0576f406fb253`，Proof为`Temp/CharacterInputReplayProofs/v4/43357ff3cd384e5cba75d2c31175b116/20260901-192220-365-11c3b45ab4f54c568b06188339f5727f.json`。候选B为`Diagnostics/FootPlacementRuns/20260901-193623-780-a483ca530d484c69abd2208ef698c394`，Proof为`Temp/CharacterInputReplayProofs/v4/43357ff3cd384e5cba75d2c31175b116/20260901-193724-165-1ddd495782e2425f8be587bdb9c9ba05.json`；工具对A正式报告`matched:1044`，无failure且Foot Finalizing已结束。
+
+A/B均为2086脚行、1222列，其中1198个业务列逐值相同，24个运行／实例／Surface／Path identity列一一映射且0冲突；Geometry均为67186行、27列，其中22个业务列逐值相同，5个identity列一一映射且0冲突；十份正式报告归一化后0差异，退出Play后的Console为0错误。由此确认错误来源收窄没有改变World Context缺失政策、Foot、Pelvis、Goal、FBBIK或Physical业务；`193623`成为下一项Constraint外层可见面收窄的正式A。任务3.6仍未完成，因为Committed Goal／Foot／Solver／Physical Diagnostics页仍由外层与Snapshot Publisher直接读取，必须接入唯一Committed Diagnostics链后再删除，不能在本步伪装完成。

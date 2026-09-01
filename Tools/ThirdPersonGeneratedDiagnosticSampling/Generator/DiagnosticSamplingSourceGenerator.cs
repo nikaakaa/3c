@@ -14,6 +14,8 @@ namespace ThirdPerson.GeneratedDiagnosticSampling.Generator
     [Generator]
     public sealed class DiagnosticSamplingSourceGenerator : ISourceGenerator
     {
+        const string GeneratorIdentityValue =
+            "thirdperson.generated-diagnostic-sampling.generator/1";
         const string CapabilityAttribute =
             "ThirdPerson.GeneratedDiagnosticSampling.DiagnosticCapabilityAttribute";
         const string FieldAttribute =
@@ -365,42 +367,71 @@ namespace ThirdPerson.GeneratedDiagnosticSampling.Generator
                 selectedTables.Add(table);
             }
 
-            var groups = new HashSet<string>(
-                selectedSamplers.SelectMany(value => value.Groups),
-                StringComparer.Ordinal);
-            var explicitFields = new HashSet<string>(
-                selectedSamplers.SelectMany(value => value.Fields),
-                StringComparer.Ordinal);
-            List<FieldModel> selectedFields = fields
+            FieldModel[] capabilityMainFields = fields
                 .Where(value => string.Equals(
                     value.CapabilityId,
                     capabilityId,
                     StringComparison.Ordinal))
                 .Where(value => string.Equals(value.TableId, "main", StringComparison.Ordinal))
-                .Where(value =>
-                    explicitFields.Contains(value.Id) ||
-                    value.Groups.Any(groups.Contains))
-                .OrderBy(value => value.Id, StringComparer.Ordinal)
-                .ToList();
-            if (!CloseAvailability(context, programType, programId, fields, selectedFields))
-                return;
-            if (selectedFields.Count == 0)
+                .ToArray();
+            var samplerFields = new Dictionary<SamplerModel, IReadOnlyList<FieldModel>>();
+            foreach (SamplerModel sampler in selectedSamplers)
             {
-                Report(context, s_InvalidProgram, programType, $"Program '{programId}' selects no fields.");
-                return;
-            }
-            foreach (string field in explicitFields)
-            {
-                if (selectedFields.All(value => !string.Equals(value.Id, field, StringComparison.Ordinal)))
+                foreach (string group in sampler.Groups)
+                {
+                    if (capabilityMainFields.All(value => !value.Groups.Contains(
+                            group,
+                            StringComparer.Ordinal)))
+                    {
+                        Report(
+                            context,
+                            s_InvalidSampler,
+                            programType,
+                            $"Sampler '{sampler.Id}' references unknown group '{group}'.");
+                        return;
+                    }
+                }
+                var groups = new HashSet<string>(sampler.Groups, StringComparer.Ordinal);
+                var explicitFields = new HashSet<string>(sampler.Fields, StringComparer.Ordinal);
+                List<FieldModel> values = capabilityMainFields
+                    .Where(value =>
+                        explicitFields.Contains(value.Id) ||
+                        value.Groups.Any(groups.Contains))
+                    .OrderBy(value => value.Id, StringComparer.Ordinal)
+                    .ToList();
+                foreach (string fieldId in explicitFields)
+                {
+                    if (values.All(value => !string.Equals(
+                            value.Id,
+                            fieldId,
+                            StringComparison.Ordinal)))
+                    {
+                        Report(
+                            context,
+                            s_InvalidSampler,
+                            programType,
+                            $"Sampler '{sampler.Id}' references unknown field '{fieldId}'.");
+                        return;
+                    }
+                }
+                if (!CloseDependencies(context, programType, programId, capabilityMainFields, values))
+                    return;
+                if (values.Count == 0 && sampler.Tables.Length == 0)
                 {
                     Report(
                         context,
-                        s_InvalidProgram,
+                        s_InvalidSampler,
                         programType,
-                        $"Program '{programId}' references unknown field '{field}'.");
+                        $"Sampler '{sampler.Id}' selects no fields or tables.");
                     return;
                 }
+                samplerFields.Add(sampler, values);
             }
+            List<FieldModel> selectedFields = samplerFields.Values
+                .SelectMany(value => value)
+                .Distinct()
+                .OrderBy(value => value.Id, StringComparer.Ordinal)
+                .ToList();
             foreach (FieldModel field in selectedFields)
             {
                 if (!ValidateExtractor(field, capability.ViewType))
@@ -426,7 +457,12 @@ namespace ThirdPerson.GeneratedDiagnosticSampling.Generator
                     .ToArray();
                 if (values.Length == 0 || values.Any(value => !ValidateTableExtractor(
                         value,
-                        capability.ViewType)))
+                        capability.ViewType)) ||
+                    !ValidateClosedDependencies(
+                        context,
+                        programType,
+                        programId,
+                        values))
                 {
                     Report(
                         context,
@@ -441,8 +477,14 @@ namespace ThirdPerson.GeneratedDiagnosticSampling.Generator
             string samplerSetIdentity = Hash(selectedSamplers
                 .OrderBy(value => value.Id, StringComparer.Ordinal)
                 .Select(value => value.Canonical));
+            string assemblyIdentity = programType.ContainingAssembly.Identity.ToString();
+            string generatorIdentity = GeneratorIdentityValue + "/" +
+                typeof(DiagnosticSamplingSourceGenerator).Assembly.ManifestModule.ModuleVersionId
+                    .ToString("N");
             string schemaIdentity = Hash(new[]
                 {
+                    generatorIdentity,
+                    assemblyIdentity,
                     capability.Id,
                     capability.Revision.ToString(),
                     programId,
@@ -451,17 +493,30 @@ namespace ThirdPerson.GeneratedDiagnosticSampling.Generator
                 .Concat(selectedFields.Select(value => value.Canonical))
                 .Concat(selectedTables.Select(value => value.Canonical))
                 .Concat(tableFields.SelectMany(value => value.Value.Select(field => field.Canonical))));
-            string programHash = Hash(new[] { "generated-diagnostic-program/1", schemaIdentity }
-                .Concat(selectedFields.Select(value => value.Method.ToDisplayString())));
+            string programHash = Hash(new[]
+                {
+                    "generated-diagnostic-program/1",
+                    generatorIdentity,
+                    assemblyIdentity,
+                    schemaIdentity
+                }
+                .Concat(selectedFields.Select(value => MethodSource(value.Method)))
+                .Concat(selectedTables.Select(value => MethodSource(value.CountMethod)))
+                .Concat(tableFields.SelectMany(value => value.Value.Select(
+                    field => MethodSource(field.Method)))));
             string layoutIdentity = Hash(new[] { "diagnostic-packet-layout/1", schemaIdentity });
             string source = GenerateSource(
                 programType,
                 capability,
                 programId,
+                assemblyIdentity,
+                generatorIdentity,
                 samplerSetIdentity,
                 schemaIdentity,
                 programHash,
                 layoutIdentity,
+                selectedSamplers,
+                samplerFields,
                 selectedFields,
                 selectedTables,
                 tableFields);
@@ -470,7 +525,7 @@ namespace ThirdPerson.GeneratedDiagnosticSampling.Generator
                 SourceText.From(source, Encoding.UTF8));
         }
 
-        static bool CloseAvailability(
+        static bool CloseDependencies(
             GeneratorExecutionContext context,
             INamedTypeSymbol programType,
             string programId,
@@ -497,6 +552,7 @@ namespace ThirdPerson.GeneratedDiagnosticSampling.Generator
                         }
                         FieldModel dependency = allFields.SingleOrDefault(value =>
                             string.Equals(value.CapabilityId, field.CapabilityId, StringComparison.Ordinal) &&
+                            string.Equals(value.TableId, field.TableId, StringComparison.Ordinal) &&
                             string.Equals(value.Id, dependencyId, StringComparison.Ordinal));
                         if (dependency == null)
                         {
@@ -514,7 +570,58 @@ namespace ThirdPerson.GeneratedDiagnosticSampling.Generator
             }
             while (changed);
             selectedFields.Sort((left, right) => StringComparer.Ordinal.Compare(left.Id, right.Id));
-            if (HasDependencyCycle(selectedFields))
+            return ValidateClosedDependencies(
+                context,
+                programType,
+                programId,
+                selectedFields);
+        }
+
+        static bool ValidateClosedDependencies(
+            GeneratorExecutionContext context,
+            INamedTypeSymbol programType,
+            string programId,
+            IReadOnlyList<FieldModel> fields)
+        {
+            foreach (FieldModel field in fields)
+            {
+                foreach (string dependencyId in field.Dependencies)
+                {
+                    if (fields.All(value => !string.Equals(
+                            value.Id,
+                            dependencyId,
+                            StringComparison.Ordinal)))
+                    {
+                        Report(
+                            context,
+                            s_InvalidProgram,
+                            programType,
+                            $"Program '{programId}' has unknown dependency field '{dependencyId}'.");
+                        return false;
+                    }
+                }
+                if (string.IsNullOrWhiteSpace(field.AvailabilityFieldId))
+                    continue;
+                FieldModel availability = fields.SingleOrDefault(value => string.Equals(
+                    value.Id,
+                    field.AvailabilityFieldId,
+                    StringComparison.Ordinal));
+                if (availability == null ||
+                    availability.ValueKind < 1 ||
+                    availability.ValueKind > 5 ||
+                    !IsAvailabilityValueValid(
+                        availability.ValueKind,
+                        field.AvailabilityValue))
+                {
+                    Report(
+                        context,
+                        s_InvalidProgram,
+                        programType,
+                        $"Program '{programId}' has invalid availability field '{field.AvailabilityFieldId}'.");
+                    return false;
+                }
+            }
+            if (HasDependencyCycle(fields))
             {
                 Report(
                     context,
@@ -524,6 +631,19 @@ namespace ThirdPerson.GeneratedDiagnosticSampling.Generator
                 return false;
             }
             return true;
+        }
+
+        static bool IsAvailabilityValueValid(int valueKind, long value)
+        {
+            switch (valueKind)
+            {
+                case 1: return value == 0 || value == 1;
+                case 2: return value >= int.MinValue && value <= int.MaxValue;
+                case 3: return value >= 0 && value <= uint.MaxValue;
+                case 4: return true;
+                case 5: return value >= 0;
+                default: return false;
+            }
         }
 
         static bool HasDependencyCycle(IReadOnlyList<FieldModel> fields)
@@ -566,10 +686,14 @@ namespace ThirdPerson.GeneratedDiagnosticSampling.Generator
             INamedTypeSymbol programType,
             CapabilityModel capability,
             string programId,
+            string assemblyIdentity,
+            string generatorIdentity,
             string samplerSetIdentity,
             string schemaIdentity,
             string programHash,
             string layoutIdentity,
+            IReadOnlyList<SamplerModel> samplers,
+            IReadOnlyDictionary<SamplerModel, IReadOnlyList<FieldModel>> samplerFields,
             IReadOnlyList<FieldModel> fields,
             IReadOnlyList<TableModel> tables,
             IReadOnlyDictionary<TableModel, IReadOnlyList<FieldModel>> tableFields)
@@ -578,6 +702,21 @@ namespace ThirdPerson.GeneratedDiagnosticSampling.Generator
             var handles = new Dictionary<FieldModel, int>();
             foreach (FieldModel field in fields)
                 handles.Add(field, counts[field.ValueKind]++);
+            var fieldPositions = new Dictionary<FieldModel, int>();
+            for (int i = 0; i < fields.Count; i++)
+                fieldPositions.Add(fields[i], i);
+            var tableHandles = new Dictionary<TableModel, IReadOnlyDictionary<FieldModel, int>>();
+            var tablePositions = new Dictionary<string, int>(StringComparer.Ordinal);
+            for (int tableIndex = 0; tableIndex < tables.Count; tableIndex++)
+            {
+                TableModel table = tables[tableIndex];
+                tablePositions.Add(table.Id, tableIndex);
+                var rowCounts = new int[13];
+                var rowHandles = new Dictionary<FieldModel, int>();
+                foreach (FieldModel field in tableFields[table])
+                    rowHandles.Add(field, rowCounts[field.ValueKind]++);
+                tableHandles.Add(table, rowHandles);
+            }
 
             string namespaceName = programType.ContainingNamespace.IsGlobalNamespace
                 ? string.Empty
@@ -597,6 +736,10 @@ namespace ThirdPerson.GeneratedDiagnosticSampling.Generator
                 .Append(capability.Revision).AppendLine(";");
             builder.Append("    public const string DiagnosticProgramId = \"")
                 .Append(Escape(programId)).AppendLine("\";");
+            builder.Append("    public const string DiagnosticAssemblyIdentity = \"")
+                .Append(Escape(assemblyIdentity)).AppendLine("\";");
+            builder.Append("    public const string DiagnosticGeneratorIdentity = \"")
+                .Append(generatorIdentity).AppendLine("\";");
             builder.Append("    public const string DiagnosticSamplerSetIdentity = \"")
                 .Append(samplerSetIdentity).AppendLine("\";");
             builder.Append("    public const string DiagnosticSchemaIdentity = \"")
@@ -641,9 +784,97 @@ namespace ThirdPerson.GeneratedDiagnosticSampling.Generator
                 builder.AppendLine("            });");
             }
             builder.AppendLine();
+            builder.AppendLine("    public static global::ThirdPerson.GeneratedDiagnosticSampling.DiagnosticSchemaLayout CreateDiagnosticSchemaLayout()");
+            builder.AppendLine("    {");
+            builder.AppendLine("        var fields = new global::ThirdPerson.GeneratedDiagnosticSampling.DiagnosticFieldHandle[]");
+            builder.AppendLine("        {");
+            foreach (FieldModel field in fields)
+            {
+                builder.Append("            ")
+                    .Append(FieldHandleExpression(field, handles, fields))
+                    .AppendLine(",");
+            }
+            builder.AppendLine("        };");
+            builder.AppendLine("        var tables = new global::ThirdPerson.GeneratedDiagnosticSampling.DiagnosticTableSchema[]");
+            builder.AppendLine("        {");
+            for (int tableIndex = 0; tableIndex < tables.Count; tableIndex++)
+            {
+                TableModel table = tables[tableIndex];
+                builder.Append("            new global::ThirdPerson.GeneratedDiagnosticSampling.DiagnosticTableSchema(\"")
+                    .Append(Escape(table.Id)).Append("\", ")
+                    .Append(table.Revision).Append(", ")
+                    .Append(tableIndex).Append(", ")
+                    .Append(table.Capacity)
+                    .AppendLine(", new global::ThirdPerson.GeneratedDiagnosticSampling.DiagnosticFieldHandle[]");
+                builder.AppendLine("            {");
+                foreach (FieldModel field in tableFields[table])
+                {
+                    builder.Append("                ")
+                        .Append(FieldHandleExpression(
+                            field,
+                            tableHandles[table],
+                            tableFields[table]))
+                        .AppendLine(",");
+                }
+                builder.AppendLine("            }),");
+            }
+            builder.AppendLine("        };");
+            builder.AppendLine("        var samplers = new global::ThirdPerson.GeneratedDiagnosticSampling.DiagnosticSamplerLayout[]");
+            builder.AppendLine("        {");
+            foreach (SamplerModel sampler in samplers.OrderBy(value => value.Id, StringComparer.Ordinal))
+            {
+                builder.Append("            new global::ThirdPerson.GeneratedDiagnosticSampling.DiagnosticSamplerLayout(\"")
+                    .Append(Escape(sampler.Id)).Append("\", ")
+                    .Append(sampler.Revision).Append(", \"")
+                    .Append(Escape(sampler.HostAdapterId)).Append("\", \"")
+                    .Append(Escape(sampler.OutputSchema)).AppendLine("\",");
+                AppendReferences(
+                    builder,
+                    "fields",
+                    samplerFields[sampler].Select(value => fieldPositions[value]),
+                    16);
+                builder.AppendLine(",");
+                AppendReferences(
+                    builder,
+                    "tables",
+                    sampler.Tables.Select(value => tablePositions[value]),
+                    16);
+                builder.AppendLine("),");
+            }
+            builder.AppendLine("        };");
+            builder.AppendLine("        return new global::ThirdPerson.GeneratedDiagnosticSampling.DiagnosticSchemaLayout(");
+            builder.AppendLine("            DiagnosticCapabilityId,");
+            builder.AppendLine("            DiagnosticCapabilityRevision,");
+            builder.AppendLine("            DiagnosticProgramId,");
+            builder.AppendLine("            DiagnosticSamplerSetIdentity,");
+            builder.AppendLine("            DiagnosticSchemaIdentity,");
+            builder.AppendLine("            CreateDiagnosticPacketLayout(),");
+            builder.AppendLine("            fields,");
+            builder.AppendLine("            tables,");
+            builder.AppendLine("            samplers);");
+            builder.AppendLine("    }");
+            builder.AppendLine();
+            builder.AppendLine("    public static global::ThirdPerson.GeneratedDiagnosticSampling.DiagnosticCapabilityBuildDescriptor CreateDiagnosticCapabilityBuildDescriptor(");
+            builder.AppendLine("        string lineageTypeIdentity,");
+            builder.AppendLine("        int packetCapacity,");
+            builder.AppendLine("        string writerTransportIdentity) =>");
+            builder.AppendLine("        new global::ThirdPerson.GeneratedDiagnosticSampling.DiagnosticCapabilityBuildDescriptor(");
+            builder.AppendLine("            DiagnosticCapabilityId,");
+            builder.AppendLine("            DiagnosticCapabilityRevision,");
+            builder.AppendLine("            global::ThirdPerson.GeneratedDiagnosticSampling.DiagnosticCapabilityMode.Capture,");
+            builder.AppendLine("            DiagnosticProgramId,");
+            builder.AppendLine("            DiagnosticSamplerSetIdentity,");
+            builder.AppendLine("            DiagnosticSchemaIdentity,");
+            builder.AppendLine("            DiagnosticGeneratedProgramHash,");
+            builder.AppendLine("            DiagnosticGeneratorIdentity,");
+            builder.AppendLine("            DiagnosticPacketLayoutIdentity,");
+            builder.AppendLine("            lineageTypeIdentity,");
+            builder.AppendLine("            packetCapacity,");
+            builder.AppendLine("            writerTransportIdentity);");
+            builder.AppendLine();
             builder.Append("    public static void Capture(in ")
                 .Append(capability.ViewType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat))
-                .AppendLine(" source, global::ThirdPerson.GeneratedDiagnosticSampling.DiagnosticCapturePacket packet)");
+                .AppendLine(" source, ref global::ThirdPerson.GeneratedDiagnosticSampling.DiagnosticCapturePacket packet)");
             builder.AppendLine("    {");
             builder.AppendLine("        if (packet == null) throw new global::System.ArgumentNullException(nameof(packet));");
             builder.AppendLine("        if (!global::System.String.Equals(packet.Layout.Identity, DiagnosticPacketLayoutIdentity, global::System.StringComparison.Ordinal)) throw new global::System.InvalidOperationException(\"Diagnostic packet layout does not match generated program.\");");
@@ -667,11 +898,10 @@ namespace ThirdPerson.GeneratedDiagnosticSampling.Generator
                 builder.AppendLine("        {");
                 builder.Append("            global::ThirdPerson.GeneratedDiagnosticSampling.DiagnosticCapturePacket tableRow = packet.Tables[")
                     .Append(tableIndex).AppendLine("].Row(row);");
-                int[] rowHandles = new int[13];
                 foreach (FieldModel field in tableFields[table])
                 {
                     builder.Append("            tableRow.").Append(Setter(field.ValueKind)).Append('(')
-                        .Append(rowHandles[field.ValueKind]++).Append(", ")
+                        .Append(tableHandles[table][field]).Append(", ")
                         .Append(field.Method.ContainingType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat))
                         .Append('.').Append(field.Method.Name).AppendLine("(in source, row));");
                 }
@@ -682,6 +912,59 @@ namespace ThirdPerson.GeneratedDiagnosticSampling.Generator
             if (namespaceName.Length > 0)
                 builder.AppendLine("}");
             return builder.ToString();
+        }
+
+        static string FieldHandleExpression(
+            FieldModel field,
+            IReadOnlyDictionary<FieldModel, int> handles,
+            IReadOnlyList<FieldModel> fields)
+        {
+            string availability =
+                "default(global::ThirdPerson.GeneratedDiagnosticSampling.DiagnosticFieldAvailability)";
+            if (!string.IsNullOrWhiteSpace(field.AvailabilityFieldId))
+            {
+                FieldModel source = fields.Single(value => string.Equals(
+                    value.Id,
+                    field.AvailabilityFieldId,
+                    StringComparison.Ordinal));
+                availability =
+                    "new global::ThirdPerson.GeneratedDiagnosticSampling.DiagnosticFieldAvailability(" +
+                    "(global::ThirdPerson.GeneratedDiagnosticSampling.DiagnosticValueKind)" +
+                    source.ValueKind + ", " + handles[source] + ", " +
+                    field.AvailabilityValue + "L)";
+            }
+            return
+                "new global::ThirdPerson.GeneratedDiagnosticSampling.DiagnosticFieldHandle(\"" +
+                Escape(field.Id) + "\", " + field.Revision + ", " +
+                "(global::ThirdPerson.GeneratedDiagnosticSampling.DiagnosticValueKind)" +
+                field.ValueKind + ", \"" + Escape(field.Unit) + "\", " +
+                handles[field] + ", " + availability + ", " +
+                (field.Derived ? "true" : "false") + ")";
+        }
+
+        static void AppendReferences(
+            StringBuilder builder,
+            string variable,
+            IEnumerable<int> sourceIndices,
+            int indent)
+        {
+            int[] indices = sourceIndices.OrderBy(value => value).ToArray();
+            string padding = new string(' ', indent);
+            string type = string.Equals(variable, "fields", StringComparison.Ordinal)
+                ? "global::ThirdPerson.GeneratedDiagnosticSampling.DiagnosticFieldHandle"
+                : "global::ThirdPerson.GeneratedDiagnosticSampling.DiagnosticTableSchema";
+            if (indices.Length == 0)
+            {
+                builder.Append(padding).Append("global::System.Array.Empty<")
+                    .Append(type).Append(">()");
+                return;
+            }
+            builder.Append(padding).Append("new ").Append(type).AppendLine("[]");
+            builder.Append(padding).AppendLine("{");
+            foreach (int index in indices)
+                builder.Append(padding).Append("    ").Append(variable).Append('[')
+                    .Append(index).AppendLine("],");
+            builder.Append(padding).Append('}');
         }
 
         static int[] Counts(IEnumerable<FieldModel> fields)
@@ -861,6 +1144,15 @@ namespace ThirdPerson.GeneratedDiagnosticSampling.Generator
         static Location Location(ISymbol symbol) =>
             symbol.Locations.FirstOrDefault(value => value.IsInSource) ??
             Microsoft.CodeAnalysis.Location.None;
+
+        static string MethodSource(IMethodSymbol method)
+        {
+            string source = string.Join(
+                "\n",
+                method.DeclaringSyntaxReferences
+                    .Select(value => value.GetSyntax().NormalizeWhitespace().ToFullString()));
+            return source.Length == 0 ? method.ToDisplayString() : source;
+        }
 
         static string Hash(IEnumerable<string> values)
         {

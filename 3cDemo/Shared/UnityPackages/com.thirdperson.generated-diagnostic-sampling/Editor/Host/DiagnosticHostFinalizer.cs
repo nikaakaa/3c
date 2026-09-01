@@ -6,6 +6,7 @@ namespace ThirdPerson.GeneratedDiagnosticSampling.Host
 {
     public interface IDiagnosticHostAdapter
     {
+        string Id { get; }
         string SamplerId { get; }
         DiagnosticSamplerManifest Finalize(DiagnosticHostContext context);
     }
@@ -14,47 +15,53 @@ namespace ThirdPerson.GeneratedDiagnosticSampling.Host
     {
         public DiagnosticHostContext(
             DiagnosticCapabilityBuildDescriptor capability,
-            DiagnosticPacketLayout layout,
+            DiagnosticSchemaLayout schema,
             IReadOnlyList<DiagnosticCapturePacket> packets)
         {
-            Capability = capability;
-            Layout = layout;
-            Packets = packets;
+            Capability = capability ?? throw new ArgumentNullException(nameof(capability));
+            Schema = schema ?? throw new ArgumentNullException(nameof(schema));
+            m_Packets = packets ?? throw new ArgumentNullException(nameof(packets));
         }
 
+        readonly IReadOnlyList<DiagnosticCapturePacket> m_Packets;
         public DiagnosticCapabilityBuildDescriptor Capability { get; }
-        public DiagnosticPacketLayout Layout { get; }
-        public IReadOnlyList<DiagnosticCapturePacket> Packets { get; }
+        public DiagnosticSchemaLayout Schema { get; }
+
+        public DiagnosticSamplerPacketSeries GetSampler(string samplerId) =>
+            new DiagnosticSamplerPacketSeries(Schema.RequireSampler(samplerId), m_Packets);
     }
 
     public sealed class DiagnosticHostFinalizer
     {
         public DiagnosticCapabilityManifest Finalize(
             DiagnosticCapabilityBuildDescriptor capability,
-            DiagnosticPacketLayout layout,
+            DiagnosticSchemaLayout schema,
             DiagnosticSealedPacketArtifact artifact,
             IEnumerable<IDiagnosticHostAdapter> adapters)
         {
             if (capability == null)
                 throw new ArgumentNullException(nameof(capability));
-            if (layout == null)
-                throw new ArgumentNullException(nameof(layout));
+            if (schema == null)
+                throw new ArgumentNullException(nameof(schema));
             if (artifact == null)
                 throw new ArgumentNullException(nameof(artifact));
+            schema.Require(capability);
             IDiagnosticHostAdapter[] orderedAdapters = (adapters ??
                     throw new ArgumentNullException(nameof(adapters)))
                 .OrderBy(value => value.SamplerId, StringComparer.Ordinal)
                 .ToArray();
             if (orderedAdapters.Length == 0)
                 throw new ArgumentException("Diagnostic host adapters are required.", nameof(adapters));
-            for (int i = 1; i < orderedAdapters.Length; i++)
+            if (orderedAdapters.Length != schema.Samplers.Count)
+                throw new ArgumentException("Diagnostic host adapter set does not match the schema.", nameof(adapters));
+            for (int i = 0; i < orderedAdapters.Length; i++)
             {
-                if (string.Equals(
-                        orderedAdapters[i - 1].SamplerId,
-                        orderedAdapters[i].SamplerId,
-                        StringComparison.Ordinal))
+                DiagnosticSamplerLayout sampler = schema.Samplers[i];
+                IDiagnosticHostAdapter adapter = orderedAdapters[i];
+                if (!string.Equals(adapter.SamplerId, sampler.Id, StringComparison.Ordinal) ||
+                    !string.Equals(adapter.Id, sampler.HostAdapterId, StringComparison.Ordinal))
                 {
-                    throw new ArgumentException("Diagnostic host adapter identity is duplicated.", nameof(adapters));
+                    throw new ArgumentException("Diagnostic host adapter set does not match the schema.", nameof(adapters));
                 }
             }
 
@@ -64,7 +71,7 @@ namespace ThirdPerson.GeneratedDiagnosticSampling.Host
                 using (var reader = new DiagnosticSealedPacketReader(
                     artifact,
                     capability,
-                    layout))
+                    schema.PacketLayout))
                 {
                     packets = reader.ReadAll().ToArray();
                 }
@@ -79,7 +86,7 @@ namespace ThirdPerson.GeneratedDiagnosticSampling.Host
                     exception.Message);
             }
 
-            var context = new DiagnosticHostContext(capability, layout, packets);
+            var context = new DiagnosticHostContext(capability, schema, packets);
             var samplers = new List<DiagnosticSamplerManifest>(orderedAdapters.Length);
             foreach (IDiagnosticHostAdapter adapter in orderedAdapters)
             {

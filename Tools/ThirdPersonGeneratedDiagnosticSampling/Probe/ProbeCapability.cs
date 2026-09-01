@@ -21,13 +21,42 @@ namespace ThirdPerson.GeneratedDiagnosticSampling.Probe
     {
         [DiagnosticField(
             "probe-capability",
+            "probe.available",
+            1,
+            DiagnosticValueKind.Boolean,
+            "flag",
+            "main",
+            "probe.core")]
+        internal static bool Available(in ProbeCommittedView view) => true;
+
+        [DiagnosticField(
+            "probe-capability",
             "probe.value",
             1,
             DiagnosticValueKind.Int32,
             "count",
             "main",
-            "probe.core")]
+            "probe.core",
+            AvailabilityFieldId = "probe.available",
+            Dependencies = new[] { "probe.available" })]
         internal static int Value(in ProbeCommittedView view) => view.Value;
+    }
+
+    [DiagnosticTable("probe-capability", "probe.table", 1, 2)]
+    internal static class ProbeTable
+    {
+        [DiagnosticTableCount("probe-capability", "probe.table")]
+        internal static int Count(in ProbeCommittedView view) => 1;
+
+        [DiagnosticField(
+            "probe-capability",
+            "probe.table.value",
+            1,
+            DiagnosticValueKind.Int32,
+            "count",
+            "probe.table",
+            "probe.table")]
+        internal static int Value(in ProbeCommittedView view, int row) => view.Value + row;
     }
 
     [DiagnosticSampler(
@@ -36,7 +65,8 @@ namespace ThirdPerson.GeneratedDiagnosticSampling.Probe
         1,
         "probe-host",
         "probe-output/1",
-        "probe.core")]
+        "probe.core",
+        Tables = new[] { "probe.table" })]
     internal static class ProbeSamplerDefinition
     {
     }
@@ -53,14 +83,21 @@ namespace ThirdPerson.GeneratedDiagnosticSampling.Probe
     {
         internal static int Capture(int value)
         {
-            DiagnosticPacketLayout layout =
-                ProbeProgramDefinition.CreateDiagnosticPacketLayout();
+            DiagnosticSchemaLayout schema =
+                ProbeProgramDefinition.CreateDiagnosticSchemaLayout();
+            DiagnosticCapabilityBuildDescriptor capability =
+                ProbeProgramDefinition.CreateDiagnosticCapabilityBuildDescriptor(
+                    "probe-lineage/1",
+                    4,
+                    "probe-binary/1");
+            schema.Require(capability);
+            DiagnosticPacketLayout layout = schema.PacketLayout;
             var packet = new DiagnosticCapturePacket(layout);
             var lineage = new DiagnosticLineageKey("probe-lineage/1", 0, 1);
             var sampleKey = new DiagnosticSampleKey(1, lineage);
             packet.Begin(sampleKey);
             var view = new ProbeCommittedView(value);
-            ProbeProgramDefinition.Capture(in view, packet);
+            ProbeProgramDefinition.Capture(in view, ref packet);
             return packet.Int32Values[0];
         }
     }

@@ -355,3 +355,13 @@ A/B均为2086脚行、1222列，其中1198个业务列逐值相同、24个运行
 正式A为`Diagnostics/FootPlacementRuns/20260901-215843-383-9b8dbac4d3c646b58e10695f2287f1d9`，候选B为`Diagnostics/FootPlacementRuns/20260901-221205-709-14169caf31c54ac9941f5f68c966f9d6`；B Proof为`Temp/CharacterInputReplayProofs/v4/43357ff3cd384e5cba75d2c31175b116/20260901-221307-811-afa95c8ad09d4e58b73d3d55708eb85f.json`，工具对A Proof正式报告`matched:1044`。
 
 A/B均为2086脚行、1222列，其中1198个业务列逐值相同、24个运行identity列一一映射且0冲突；Geometry均为67186行、27列，其中22个业务列逐值相同、5个identity列一一映射且0冲突；十份正式报告归一化后10／10相同，七维分项与总分84.2不变。由此确认Root Orientation Warp诊断读取边界迁移没有改变Warp输出、动画时钟、Foot、Pelvis、Goal、FBBIK、Final Pose、Physical或正式诊断业务；`221205`成为Stack／Route诊断投影收口的正式A。
+
+## Blend Stack与Transition Route并入Actor Committed Diagnostics页
+
+状态：提交`03a86742d`已把Blend Stack、Entry、Entry／Stored骨骼权重与Animation Slot Route快照并入同一`CharacterPoseActorCommittedDiagnosticsView`。Projector只在Program Result已完成且Live／Capture需要基础状态时调用现有Stack／Route快照入口，把结果写进构造期预分配的固定容量页；Snapshot Publisher删除Stack与Route Runtime参数、现场`CopyDiagnostics`和`CreateSlotSnapshot`调用，只复制短租约中的已冻结数组。Stack Advance、Source更新、Entry权重、Stored Pose、Route决策、Release权限、Inertialization请求和Commit顺序均未改。StateMachine与Inertialization仍由Snapshot现场读取，所以任务13.5和13.6保持未完成。
+
+`ThirdPersonClient.Runtime.csproj`按规定参数编译成功，0错误；警告只来自既有Unity包、第三方包和既有Input字段，build server已关闭。Unity全量刷新后只有既有FinalIK序列化深度日志。回放封存和A/B完成后读取Console时，另一个MCP观察请求在`MCPForUnity.Editor.Resources.Scene.GameObjectComponentsResource`中反射Animator属性，产生两条OnAnimatorIK限制、三条无AnimatorController和一条非Playback状态错误；调用栈全部位于用户目录下的MCPForUnity `GameObjectSerializer`，没有项目Runtime、Pose、Stack、Route或IK调用栈。该外部观察干扰单独记录，清空后Console为0，不计作运行逻辑回归。
+
+正式A为`Diagnostics/FootPlacementRuns/20260901-221205-709-14169caf31c54ac9941f5f68c966f9d6`，候选B为`Diagnostics/FootPlacementRuns/20260901-221941-106-77c66c8fd22b46898deb7876a8598bc4`；B Proof为`Temp/CharacterInputReplayProofs/v4/43357ff3cd384e5cba75d2c31175b116/20260901-222039-293-2dac8b71bd0947eda9374049ba410aff.json`，工具对A Proof正式报告`matched:1044`。
+
+A/B均为2086脚行、1222列，其中1198个业务列逐值相同、24个运行identity列一一映射且0冲突；Geometry均为67186行、27列，其中22个业务列逐值相同、5个identity列一一映射且0冲突；十份正式报告归一化后10／10相同，七维分项与总分84.2不变。由此确认Stack／Route诊断读取边界迁移没有改变动画选择、过渡、Stored Pose、Foot、Pelvis、Goal、FBBIK、Final Pose、Physical或正式诊断业务；`221941`成为StateMachine／Inertialization诊断投影收口的正式A。

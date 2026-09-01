@@ -1764,7 +1764,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                     ref footPage.Value;
                 CharacterFullBodyIkSolverDiagnostics solverDiagnostics =
                     m_PoseConstraints.GetSolverDiagnostics();
-                if (m_PoseConstraints.CommittedBankIdentity == 0 ||
+                CharacterPoseConstraintResult committedConstraintResult =
+                    executionResult.Constraint;
+                if (!m_PoseConstraints.MatchesCommittedResult(
+                        in committedConstraintResult) ||
                     executionResult.Constraint.Lineage !=
                     executionResult.Lineage ||
                     executionResult.Publication.Lineage !=
@@ -1772,7 +1775,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                     requiresFoot &&
                     (!m_PoseConstraints.HasCommittedFootDiagnostics ||
                      footDiagnostics.FrameSequence !=
-                     m_PoseConstraints.CommittedRenderFrame ||
+                     executionResult.Lineage.PresentationFrame ||
                      footDiagnostics.CompletionIdentity !=
                      m_LastCompletedFrame.CompletionIdentity) ||
                     requiresSolver &&

@@ -169,6 +169,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
 
         Bank m_Committed;
         Bank m_Pending;
+        CharacterPoseConstraintResult m_CommittedResult;
+        CharacterPoseConstraintResult m_PendingResult;
         ulong m_NextBankIdentity = 1;
         bool m_HasCommitted;
         bool m_HasPending;
@@ -274,9 +276,16 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
         internal bool HasPendingFrame => m_HasPending;
         internal bool HasPendingAssembledGoalSet =>
             m_HasPending && m_Pending.GoalSet.IsValid;
-        internal ulong CommittedBankIdentity => m_HasCommitted ? m_Committed.Identity : 0;
-        internal ulong CommittedRenderFrame =>
-            m_HasCommitted ? m_Committed.Lease.PresentationFrame : 0;
+        internal bool MatchesCommittedResult(
+            in CharacterPoseConstraintResult result) =>
+            m_HasCommitted &&
+            m_CommittedResult.IsCompleted &&
+            result.IsCompleted &&
+            m_CommittedResult.Lineage == result.Lineage &&
+            m_CommittedResult.GoalCount == result.GoalCount &&
+            m_CommittedResult.SolverProduced == result.SolverProduced &&
+            m_CommittedResult.FullBodyIk.AppliedGoalCount ==
+            result.FullBodyIk.AppliedGoalCount;
         internal bool HasCommittedFootDiagnostics =>
             m_HasCommitted &&
             m_Committed.FootPlacement?.Diagnostics.HasValue == true;
@@ -302,6 +311,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                 in lease,
                 diagnosticsInterest,
                 m_HasCommitted ? m_Committed : null);
+            m_PendingResult = default;
             m_HasPending = true;
             return lease;
         }
@@ -589,14 +599,15 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                     m_Pending.FootPlacement,
                     lineage.PresentationFrame,
                     lineage.CompletionIdentity);
-                return new CharacterPoseConstraintResult(
-                    in lineage,
-                    AnimationPresentationFrameOutcome.Committed,
-                    AnimationPoseAvailability.Pose,
-                    AnimationPoseNativeInvalidReason.None,
-                    m_Pending.GoalSet.GoalCount,
-                    true,
-                    in solverResult);
+                return StorePendingResult(
+                    new CharacterPoseConstraintResult(
+                        in lineage,
+                        AnimationPresentationFrameOutcome.Committed,
+                        AnimationPoseAvailability.Pose,
+                        AnimationPoseNativeInvalidReason.None,
+                        m_Pending.GoalSet.GoalCount,
+                        true,
+                        in solverResult));
             }
             if (solverProduced && solverResult.Succeeded)
             {
@@ -612,29 +623,50 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                           AnimationPoseNativeInvalidReason.None
                             ? outputInvalidReason
                             : AnimationPoseNativeInvalidReason.PoseConstraintInvalid;
-            return new CharacterPoseConstraintResult(
-                in lineage,
-                AnimationPresentationFrameOutcome.TypedInvalid,
-                programAvailability == AnimationPoseAvailability.NoPose &&
-                !solverProduced
-                    ? AnimationPoseAvailability.NoPose
-                    : AnimationPoseAvailability.Invalid,
-                invalidReason,
-                goalSetCompleted ? m_Pending.GoalSet.GoalCount : -1,
-                solverProduced,
-                in solverResult);
+            return StorePendingResult(
+                new CharacterPoseConstraintResult(
+                    in lineage,
+                    AnimationPresentationFrameOutcome.TypedInvalid,
+                    programAvailability == AnimationPoseAvailability.NoPose &&
+                    !solverProduced
+                        ? AnimationPoseAvailability.NoPose
+                        : AnimationPoseAvailability.Invalid,
+                    invalidReason,
+                    goalSetCompleted ? m_Pending.GoalSet.GoalCount : -1,
+                    solverProduced,
+                    in solverResult));
+        }
+
+        CharacterPoseConstraintResult StorePendingResult(
+            in CharacterPoseConstraintResult result)
+        {
+            if (!result.IsValid || m_PendingResult.IsValid)
+            {
+                throw new InvalidOperationException(
+                    "Pose Constraint result was already completed.");
+            }
+            m_PendingResult = result;
+            return result;
         }
 
         internal void SealFrame(
             CharacterPoseConstraintFrameLease lease)
         {
             RequirePendingLease(lease);
+            if (!m_PendingResult.IsCompleted ||
+                m_PendingResult.Lineage != lease.Lineage)
+            {
+                throw new InvalidOperationException(
+                    "Pose Constraint result is incomplete at seal.");
+            }
             if (m_Pending.FootPlacement != null)
                 m_Pending.FootPlacement.IsPendingFrameOpen = false;
             m_Pending.Identity = m_NextBankIdentity++;
             m_Committed = m_Pending;
+            m_CommittedResult = m_PendingResult;
             m_HasCommitted = true;
             m_Pending = null;
+            m_PendingResult = default;
             m_HasPending = false;
             m_FootPlacement?.PublishCommittedDiagnostics(m_Committed.FootPlacement);
         }
@@ -654,6 +686,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                 m_Pending.FootPlacement);
             m_Pending.ClearPending();
             m_Pending = null;
+            m_PendingResult = default;
             m_HasPending = false;
         }
 

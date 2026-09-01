@@ -87,10 +87,12 @@ A/B的1215列Foot CSV中1191个业务列逐值相同，24个Run／实例／Surfa
 
 ## Program Prepared合同归位候选
 
-状态：`ThirdPersonClient.Runtime.csproj`按规定参数静态编译成功，0错误；27个警告均来自既有包或既有Input Value未使用字段，build server已关闭。Network Orchestrator仍在连续修改GM／Network源码并触发Unity domain reload，因此本步尚未执行固定Record A/B，只作为独立候选提交，提交后不得继续叠加下一项代码。
+状态：`ThirdPersonClient.Runtime.csproj`按规定参数静态编译成功，0错误；27个警告均来自既有包或既有Input Value未使用字段，build server已关闭。后续`ThirdPersonClient.Editor.csproj`也以规定参数编译成功，0错误，build server已关闭。提交前结构的隔离A已完成，HEAD合同状态已恢复；B仍等待Foot Owner释放同一Unity与项目custom-tool bridge恢复，候选继续禁止叠加下一项代码。
 
 - 将跨Owner使用的`CharacterPoseProgramPrepared`从`PosePlanExecutionRuntime.cs`移入统一`CharacterPoseFrameContracts.cs`，与Source Demand、Source Frame、Program Result、Constraint Result和Publication Result使用同一合同目录及`ThirdPersonCharacter.Pipeline.Animation`命名空间。
 - Runtime文件中的旧定义直接删除；全仓搜索只保留一个正式Prepared合同，不保留别名、转发类型或兼容namespace。现有Program-owned Pending Page继续消费同一typed合同，字段、构造校验和调用顺序均未改变。
 - 本步只修正抽象与实现的物理归属，不改变Source采样、Native Workspace、Executor、Constraint、Foot／Pelvis／Goal／FBBIK、Writer或Seal／Discard生命周期。任务2.2仍因per-operation completion未建立而保持未完成。
 
-固定Record仍为`43357ff3cd384e5cba75d2c31175b116`。正式A/B必须等并行Network／Foot源码写入收口、Unity编译稳定后，以临时还原本候选得到的A和恢复候选后的B隔离执行；在Proof、Foot CSV、Geometry与诊断对账完成前，本候选不能作为下一小步基线。
+固定Record仍为`43357ff3cd384e5cba75d2c31175b116`。A通过临时反向应用`4a570788`恢复提交前合同位置后执行，包为`Diagnostics/FootPlacementRuns/20260901-122052-732-2960e8c0f0c04f75980af233629242f3`，Proof为`Temp/CharacterInputReplayProofs/v4/43357ff3cd384e5cba75d2c31175b116/20260901-122151-505-6f2fb5d9e32f4949bb8d32148a1293da.json`。A完整封存1043表现帧、2086脚行和67186几何行；相对旧Proof只报告Program／Projection七个aggregate identity字段变化，`DivergentFrameCount=0`、`FirstDivergentRelativeFrame=-1`、`FirstFrameFields=[]`，因此它是当前Foot／Network身份更新后的正式提交前基线。
+
+A完成后已原样恢复HEAD合同位置，全仓仍只有`CharacterPoseFrameContracts.cs`中的一份`CharacterPoseProgramPrepared`定义，Runtime文件只保留其它任务未提交的Performance Marker差异。B尚未实际启动；项目custom-tool与Editor内存执行命令当前会断开MCP session，且Foot Owner正在使用同一Unity重建自己的基线。必须从上述A继续补B并完成Proof、Foot CSV、Geometry与诊断对账；在此之前，本候选不能作为下一小步基线。

@@ -37,3 +37,9 @@ PoseGraph已建立`CharacterFootIkCaptureInterest`、单一owner consumer登记�
 specific Foot interest现已传播到Actor foot observation、Constraint Foot／FBBIK诊断页与独立Foot Projector；Foot-only不创建Source、Program、Linked、Operation、Pose Watch或万能Snapshot页面，并在成功Seal后把唯一租约同步交给冻结consumer。结合完整lineage、容量1 interest、独立View Lease及Foot插件只有`typeof(CharacterFootIkCommittedCaptureViewLease)`引用且没有第二View，完成任务2.1与PoseGraph任务13.2。任务2.2仍等待Final Publication世界空间扩展事实改为specific-interest gated后勾选，任务2.5仍等待正式Foot Program Definition。
 
 默认未登记固定回放`032312`相对`031403`为`matched:1044`；主表与Geometry业务列0冲突，评分84.2、weighted evidence 96.5保持。该证据确认新增specific路径没有改变Disabled／旧general链的Foot、Goal、FBBIK、Final Pose或Physical结果。
+
+## 封存Root世界事实并迁移RootHierarchy字段
+
+Final Publication Pending页现保存根Frame冻结的specific Foot interest。唯一Physical Writer只在该interest开启时，于最终骨骼写入完成后一次封存LogicRoot世界姿态、VisualRoot局部／世界姿态、PoseRoot局部／世界姿态及双脚踝最终世界姿态；具体Foot View从Committed页公开这些只读值。Foot Projector与Foot插件目录搜索均不含`Transform`、`RootHierarchy`、`PhysicalBones`或Animator骨骼查询，因此完成任务2.2与2.4。固定回放`033516`相对`032312`为`matched:1044`，主表1198业务列与Geometry 22业务列逐值一致，identity一一映射且0冲突，总分84.2、weighted evidence 96.5不变。
+
+`CharacterFootIkDiagnosticFields`已按字段迁移清单新增10个RootHierarchy typed Extractor：LogicRoot世界位置／旋转、VisualRoot局部与世界位置／旋转、PoseRoot局部与世界位置／旋转。Extractor只把View中的Unity值投影为框架`DiagnosticVector3`／`DiagnosticQuaternion`，不接触场景对象，也不重新计算空间变换。Foot插件工程通过实际Source Generator构建，27个warning均来自既有Unity／第三方依赖，0错误并已关闭build server。当前共21个已迁移typed字段；任务3.2仍等待其余858个typed字段和Geometry表完成后统一勾选。

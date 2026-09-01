@@ -10,6 +10,7 @@ namespace ThirdPersonCharacter.Pipeline.Diagnostics.FootIkSampling
         const string Main = "main";
         const string IdentityGroup = "identity";
         const string CaptureMetadataGroup = "capture-metadata";
+        const string RootHierarchyGroup = "root-hierarchy";
 
         [DiagnosticField(Capability, "character-foot-ik/main/sample-identity", 1,
             DiagnosticValueKind.Identity, "identity", Main, CaptureMetadataGroup)]
@@ -87,5 +88,81 @@ namespace ThirdPersonCharacter.Pipeline.Diagnostics.FootIkSampling
             in CharacterFootIkCommittedCaptureViewLease view,
             in CharacterFootIkCaptureMetadata metadata) =>
             view.Lineage.CompletionIdentity;
+
+        [DiagnosticField(Capability, "character-foot-ik/main/logic-root-position", 1,
+            DiagnosticValueKind.Vector3, "metres", Main, RootHierarchyGroup)]
+        internal static DiagnosticVector3 LogicRootPosition(
+            in CharacterFootIkCommittedCaptureViewLease view,
+            in CharacterFootIkCaptureMetadata metadata) =>
+            Vector3(view.LogicRootWorldPosition);
+
+        [DiagnosticField(Capability, "character-foot-ik/main/logic-root-rotation", 1,
+            DiagnosticValueKind.Quaternion, "unitless", Main, RootHierarchyGroup)]
+        internal static DiagnosticQuaternion LogicRootRotation(
+            in CharacterFootIkCommittedCaptureViewLease view,
+            in CharacterFootIkCaptureMetadata metadata) =>
+            Quaternion(view.LogicRootWorldRotation);
+
+        [DiagnosticField(Capability, "character-foot-ik/main/visual-root-local-position", 1,
+            DiagnosticValueKind.Vector3, "metres", Main, RootHierarchyGroup)]
+        internal static DiagnosticVector3 VisualRootLocalPosition(
+            in CharacterFootIkCommittedCaptureViewLease view,
+            in CharacterFootIkCaptureMetadata metadata) =>
+            Vector3(view.VisualRootLocalPosition);
+
+        [DiagnosticField(Capability, "character-foot-ik/main/visual-root-local-rotation", 1,
+            DiagnosticValueKind.Quaternion, "unitless", Main, RootHierarchyGroup)]
+        internal static DiagnosticQuaternion VisualRootLocalRotation(
+            in CharacterFootIkCommittedCaptureViewLease view,
+            in CharacterFootIkCaptureMetadata metadata) =>
+            Quaternion(view.VisualRootLocalRotation);
+
+        [DiagnosticField(Capability, "character-foot-ik/main/visual-root-world-position", 1,
+            DiagnosticValueKind.Vector3, "metres", Main, RootHierarchyGroup)]
+        internal static DiagnosticVector3 VisualRootWorldPosition(
+            in CharacterFootIkCommittedCaptureViewLease view,
+            in CharacterFootIkCaptureMetadata metadata) =>
+            Vector3(view.VisualRootWorldPosition);
+
+        [DiagnosticField(Capability, "character-foot-ik/main/visual-root-world-rotation", 1,
+            DiagnosticValueKind.Quaternion, "unitless", Main, RootHierarchyGroup)]
+        internal static DiagnosticQuaternion VisualRootWorldRotation(
+            in CharacterFootIkCommittedCaptureViewLease view,
+            in CharacterFootIkCaptureMetadata metadata) =>
+            Quaternion(view.VisualRootWorldRotation);
+
+        [DiagnosticField(Capability, "character-foot-ik/main/pose-root-local-position", 1,
+            DiagnosticValueKind.Vector3, "metres", Main, RootHierarchyGroup)]
+        internal static DiagnosticVector3 PoseRootLocalPosition(
+            in CharacterFootIkCommittedCaptureViewLease view,
+            in CharacterFootIkCaptureMetadata metadata) =>
+            Vector3(view.PoseRootLocalPosition);
+
+        [DiagnosticField(Capability, "character-foot-ik/main/pose-root-local-rotation", 1,
+            DiagnosticValueKind.Quaternion, "unitless", Main, RootHierarchyGroup)]
+        internal static DiagnosticQuaternion PoseRootLocalRotation(
+            in CharacterFootIkCommittedCaptureViewLease view,
+            in CharacterFootIkCaptureMetadata metadata) =>
+            Quaternion(view.PoseRootLocalRotation);
+
+        [DiagnosticField(Capability, "character-foot-ik/main/pose-root-world-position", 1,
+            DiagnosticValueKind.Vector3, "metres", Main, RootHierarchyGroup)]
+        internal static DiagnosticVector3 PoseRootWorldPosition(
+            in CharacterFootIkCommittedCaptureViewLease view,
+            in CharacterFootIkCaptureMetadata metadata) =>
+            Vector3(view.PoseRootWorldPosition);
+
+        [DiagnosticField(Capability, "character-foot-ik/main/pose-root-world-rotation", 1,
+            DiagnosticValueKind.Quaternion, "unitless", Main, RootHierarchyGroup)]
+        internal static DiagnosticQuaternion PoseRootWorldRotation(
+            in CharacterFootIkCommittedCaptureViewLease view,
+            in CharacterFootIkCaptureMetadata metadata) =>
+            Quaternion(view.PoseRootWorldRotation);
+
+        static DiagnosticVector3 Vector3(UnityEngine.Vector3 value) =>
+            new DiagnosticVector3(value.x, value.y, value.z);
+
+        static DiagnosticQuaternion Quaternion(UnityEngine.Quaternion value) =>
+            new DiagnosticQuaternion(value.x, value.y, value.z, value.w);
     }
 }

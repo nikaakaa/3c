@@ -1045,3 +1045,9 @@ Foot world input、Goal workspace、FBBIK输出Pose、invalid reason、completio
 状态：新增`CharacterPoseLinkedOperationModule`与`CharacterPoseOutputOperationModule`。Linked模块唯一消费编译后的Call／Candidate、活动Fragment页和Call control，把选中Fragment的Pose与discontinuity写回同一Value页；Output模块唯一完成最终输入检查、deep validation和Final Publication binding写入。
 
 Stage对非活动Fragment的跳过仍查询同一个Linked模块，candidate范围、generation合并、Branch Replacement discontinuity、Final invalid保持及Output continuity顺序均未改变。两个模块不分配第二Value或Final页，旧Executor只做调度；6.8继续推进，3C MCP对Linked、Output模块与Executor错误筛选均为0，不单独运行回放。
+
+## 拆出Player与Inertialization Operation模块
+
+状态：新增`CharacterPosePlayerOperationModule`，迁移Selected／Clip／Blend Space／Blend Stack输入投影和完整Animation Slot合成；新增`CharacterPoseInertializationOperationModule`，迁移普通Inertialization与Slot共享的History、Residual、Envelope、Parameter、Foot Feature和Commit逻辑。Player模块只组合调用同一Inertialization模块，不复制算法。
+
+Sequence Preview也改为调用唯一Player模块；Player/Slot source range、Contribution、Foot Feature、continuity、selection policy、Inertial rule、History写入、delta与completion顺序保持不变。旧Executor从2598行降到1535行，只余Stage协调、StateMachine和静态配置验证；6.8继续推进，3C MCP对Player、Inertialization模块和Executor错误筛选均为0，不单独运行回放。

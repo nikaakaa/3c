@@ -1027,3 +1027,9 @@ Frame Begin仍只清理Actor projector的帧内投影页，Discard、Reset、Inv
 状态：旧Staged Executor的Program常量、Actor控制、Inertialization、Slot、Value、Completion与Frame binding字段，以及通用Value复制／缩放／参数／Contribution／Foot Feature／空间数学／Invalid传播原语，整体迁入`CharacterPoseExecutionContext`。Executor只继承同一上下文，不再重复声明或持有第二份页引用。
 
 新增`CharacterPoseCompositionOperationModule`并迁移Blend Pose、Layered Bone Blend、Additive Pose与Pose Parameter Resolve四类实际执行；唯一Operation dispatch在原Stage位置调用该组合模块，使用相同Context页和原辅助原语，没有委托分配、第二执行路径或结果复制。6.8继续推进，待其余Family迁出后直接删除旧Staged Executor类型；3C MCP对Context、Composition模块和Executor错误筛选均为0，不单独运行回放。
+
+## 拆出Transform Operation模块
+
+状态：新增`CharacterPoseTransformOperationModule`，整体迁移Modify Bone、Root Orientation Warp、Local-to-Component、Component-to-Local及其Component descendant重建逻辑。模块直接消费同一`CharacterPoseExecutionContext`的已绑定Value与Rig parent页，仍由唯一Stage dispatch在原Operation位置调用。
+
+Bone遍历顺序、Local／Component数学、Root yaw乘法顺序、Invalid reason、continuity和完成页写入均未改变；没有复制Pose页、Transform写入或额外空间转换。旧Executor进一步缩减但仍保留Player、State、Inertialization、Constraint、Linked与Output Family，6.8暂不勾选；3C MCP对Transform模块与Executor错误筛选均为0，不单独运行回放。

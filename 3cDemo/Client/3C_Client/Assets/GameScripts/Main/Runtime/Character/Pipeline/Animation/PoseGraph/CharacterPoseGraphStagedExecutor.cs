@@ -102,6 +102,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             new ProfilerMarker("ThirdPerson.Presentation.Animation.PoseGraph.ValueValidation");
         readonly CharacterPoseCompositionOperationModule
             m_CompositionOperations;
+        readonly CharacterPoseTransformOperationModule
+            m_TransformOperations;
 
         internal CharacterPoseGraphStagedExecutor(
             CharacterPoseProgramExecutionView program,
@@ -156,6 +158,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             m_FrameSequence = 0;
             m_CompositionOperations =
                 new CharacterPoseCompositionOperationModule(this);
+            m_TransformOperations =
+                new CharacterPoseTransformOperationModule(this);
         }
 
         internal CharacterPoseGraphStagedExecutor BindFrame(
@@ -431,11 +435,13 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                         break;
                     case CharacterPoseOperationCode.ModifyBone:
                         using (ConstraintMarker.Auto())
-                            EvaluateModifyBone(operation);
+                            m_TransformOperations.EvaluateModifyBone(
+                                operation);
                         break;
                     case CharacterPoseOperationCode.RootOrientationWarp:
                         using (ConstraintMarker.Auto())
-                            EvaluateRootOrientationWarp(operation);
+                            m_TransformOperations
+                                .EvaluateRootOrientationWarp(operation);
                         break;
                     case CharacterPoseOperationCode.PoseBoneIKGoals:
                         using (IkGoalMarker.Auto())
@@ -462,11 +468,13 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                         break;
                     case CharacterPoseOperationCode.LocalToComponentPose:
                         using (SpaceConversionMarker.Auto())
-                            EvaluateLocalToComponentPose(operation);
+                            m_TransformOperations
+                                .EvaluateLocalToComponentPose(operation);
                         break;
                     case CharacterPoseOperationCode.ComponentToLocalPose:
                         using (SpaceConversionMarker.Auto())
-                            EvaluateComponentToLocalPose(operation);
+                            m_TransformOperations
+                                .EvaluateComponentToLocalPose(operation);
                         break;
                     case CharacterPoseOperationCode.OutputPose:
                         using (OutputMarker.Auto())
@@ -2014,117 +2022,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                          (segment.EndTime - segment.StartTime);
         }
 
-        void EvaluateModifyBone(AnimationPoseGraphNativeOperation operation)
-        {
-            int input = operation.InputValueIndexA;
-            int output = operation.OutputValueIndex;
-            if (!IsInputReady(input, operation.Index) ||
-                (uint)operation.ModifyBoneIndex >= (uint)m_ModifyBones.Length ||
-                !TryCopyValue(input, output, operation.Index))
-            {
-                SetInvalid(output, (ulong)operation.Index + 1UL, AnimationPoseNativeInvalidReason.PoseGraphInputIncomplete, operation.Index);
-                return;
-            }
-            if (m_ValueAvailability[output] != AnimationPoseAvailability.Pose)
-                return;
-            AnimationPoseGraphNativeModifyBone modify = m_ModifyBones[operation.ModifyBoneIndex];
-            int inputOffset = PoseOffset(input);
-            int outputOffset = PoseOffset(output);
-            AnimationLocalBonePose current = m_ValueDenseLocalPoses[outputOffset + modify.BoneIndex];
-            CharacterComponentBonePose parentComponent = default;
-            if (modify.ReferenceSpace == ModifyBoneReferenceSpace.Local && modify.ParentBoneIndex >= 0)
-            {
-                parentComponent = AsComponent(m_ValueDenseLocalPoses[outputOffset + modify.ParentBoneIndex]);
-                if (!CharacterPoseConstraintMath.TryCreateLocal(AsComponent(current), parentComponent, out current))
-                {
-                    SetInvalid(output, m_ValueContinuityIdentities[output], AnimationPoseNativeInvalidReason.PoseGraphOperationInvalid, operation.Index);
-                    return;
-                }
-            }
-            Vector3 position = (modify.Operations & ModifyBoneOperationMask.Position) != 0
-                ? current.Position + modify.Position * operation.Weight
-                : current.Position;
-            Quaternion rotation = (modify.Operations & ModifyBoneOperationMask.Rotation) != 0
-                ? Quaternion.SlerpUnclamped(Quaternion.identity, modify.Rotation, operation.Weight) * current.Rotation
-                : current.Rotation;
-            Vector3 scale = (modify.Operations & ModifyBoneOperationMask.Scale) != 0
-                ? Vector3.Scale(current.Scale, Vector3.LerpUnclamped(Vector3.one, modify.Scale, operation.Weight))
-                : current.Scale;
-            var modified = new AnimationLocalBonePose(position, rotation, scale);
-            if (modify.ReferenceSpace == ModifyBoneReferenceSpace.Local && modify.ParentBoneIndex >= 0)
-            {
-                if (!CharacterPoseConstraintMath.TryCreateComponent(
-                        modified,
-                        parentComponent,
-                        out CharacterComponentBonePose component))
-                {
-                    SetInvalid(output, m_ValueContinuityIdentities[output], AnimationPoseNativeInvalidReason.PoseGraphOperationInvalid, operation.Index);
-                    return;
-                }
-                modified = ToPose(component);
-            }
-            m_ValueDenseLocalPoses[outputOffset + modify.BoneIndex] = modified;
-            if (!RebuildComponentDescendants(inputOffset, outputOffset, modify.BoneIndex))
-                SetInvalid(output, m_ValueContinuityIdentities[output], AnimationPoseNativeInvalidReason.PoseGraphOperationInvalid, operation.Index);
-        }
-
-        void EvaluateRootOrientationWarp(
-            AnimationPoseGraphNativeOperation operation)
-        {
-            int input = operation.InputValueIndexA;
-            int output = operation.OutputValueIndex;
-            if (!IsInputReady(input, operation.Index) ||
-                (uint)operation.RootOrientationWarpIndex >=
-                (uint)m_RootOrientationWarps.Length ||
-                (uint)operation.RootOrientationWarpIndex >=
-                (uint)m_RootOrientationWarpControls.Length ||
-                !TryCopyValue(input, output, operation.Index))
-            {
-                SetInvalid(output, (ulong)operation.Index + 1UL,
-                    AnimationPoseNativeInvalidReason.PoseGraphInputIncomplete,
-                    operation.Index);
-                return;
-            }
-            if (m_ValueAvailability[output] !=
-                AnimationPoseAvailability.Pose)
-                return;
-            CharacterRootOrientationWarpNativeControl control =
-                m_RootOrientationWarpControls[
-                    operation.RootOrientationWarpIndex];
-            if (!control.IsValid)
-            {
-                SetInvalid(output,
-                    m_ValueContinuityIdentities[output],
-                    AnimationPoseNativeInvalidReason.PoseGraphOperationInvalid,
-                    operation.Index);
-                return;
-            }
-            if (control.Active == 0 ||
-                Math.Abs(control.YawOffsetDegrees) <= 0.0001f)
-                return;
-            int root = m_RootOrientationWarps[
-                operation.RootOrientationWarpIndex]
-                .RootPhysicalBoneIndex;
-            if ((uint)root >= (uint)m_BoneCount)
-            {
-                SetInvalid(output,
-                    m_ValueContinuityIdentities[output],
-                    AnimationPoseNativeInvalidReason.PoseGraphOperationInvalid,
-                    operation.Index);
-                return;
-            }
-            int offset = PoseOffset(output) + root;
-            AnimationLocalBonePose current =
-                m_ValueDenseLocalPoses[offset];
-            m_ValueDenseLocalPoses[offset] =
-                new AnimationLocalBonePose(
-                    current.Position,
-                    Quaternion.AngleAxis(
-                        control.YawOffsetDegrees,
-                        Vector3.up) * current.Rotation,
-                    current.Scale);
-        }
-
         bool EvaluatePoseBoneIkGoals(AnimationPoseGraphNativeOperation operation)
         {
             CharacterPoseBoneContributionConstraintHandle handle =
@@ -2151,42 +2048,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 m_FrameSequence,
                 m_CompletionIdentity);
         }
-
-        bool RebuildComponentDescendants(int inputOffset, int outputOffset, int rootIndex)
-        {
-            for (int bone = rootIndex + 1; bone < m_BoneCount; bone++)
-            {
-                if (!IsDescendant(bone, rootIndex))
-                    continue;
-                int parent = m_ParentIndices[bone];
-                CharacterComponentBonePose inputBone = AsComponent(m_ValueDenseLocalPoses[inputOffset + bone]);
-                CharacterComponentBonePose inputParent = AsComponent(m_ValueDenseLocalPoses[inputOffset + parent]);
-                CharacterComponentBonePose outputParent = AsComponent(m_ValueDenseLocalPoses[outputOffset + parent]);
-                if (!CharacterPoseConstraintMath.TryCreateLocal(inputBone, inputParent, out AnimationLocalBonePose local) ||
-                    !CharacterPoseConstraintMath.TryCreateComponent(local, outputParent, out CharacterComponentBonePose rebuilt))
-                    return false;
-                m_ValueDenseLocalPoses[outputOffset + bone] = ToPose(rebuilt);
-            }
-            return true;
-        }
-
-        bool IsDescendant(int bone, int ancestor)
-        {
-            int cursor = bone;
-            while (cursor >= 0)
-            {
-                if (cursor == ancestor)
-                    return true;
-                cursor = m_ParentIndices[cursor];
-            }
-            return false;
-        }
-
-        static CharacterComponentBonePose AsComponent(AnimationLocalBonePose value) =>
-            new CharacterComponentBonePose(value.Position, value.Rotation, value.Scale);
-
-        static AnimationLocalBonePose ToPose(CharacterComponentBonePose value) =>
-            new AnimationLocalBonePose(value.Position, value.Rotation, value.Scale);
 
         bool EvaluateWorldAwareFootGoal(
             AnimationPoseGraphNativeOperation operation,
@@ -2376,83 +2237,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                   operation.Code == CharacterPoseOperationCode.FullBodyIkGoalAssembler
                     ? AnimationPoseNativeInvalidReason.FullBodyIkGoalSetInvalid
                     : AnimationPoseNativeInvalidReason.PoseGraphOperationInvalid;
-        }
-
-        void EvaluateLocalToComponentPose(
-            AnimationPoseGraphNativeOperation operation)
-        {
-            int input = operation.InputValueIndexA;
-            int output = operation.OutputValueIndex;
-            if (!IsInputReady(input, operation.Index) ||
-                !TryCopyValueWithoutPose(
-                    input,
-                    output,
-                    operation.Index))
-            {
-                SetInvalid(output, (ulong)operation.Index + 1UL,
-                    AnimationPoseNativeInvalidReason.PoseGraphInputIncomplete,
-                    operation.Index);
-                return;
-            }
-            if (m_ValueAvailability[output] != AnimationPoseAvailability.Pose)
-                return;
-            for (int bone = 0; bone < m_BoneCount; bone++)
-            {
-                int offset = PoseOffset(output) + bone;
-                int parent = m_ParentIndices[bone];
-                AnimationLocalBonePose local =
-                    m_ValueDenseLocalPoses[PoseOffset(input) + bone];
-                if (parent >= 0 &&
-                    !TryToModel(
-                        m_ValueDenseLocalPoses[PoseOffset(output) + parent],
-                        local,
-                        out local))
-                {
-                    SetInvalid(output, m_ValueContinuityIdentities[output],
-                        AnimationPoseNativeInvalidReason.PoseSpaceConversionInvalid,
-                        operation.Index);
-                    return;
-                }
-                m_ValueDenseLocalPoses[offset] = local;
-            }
-        }
-
-        void EvaluateComponentToLocalPose(
-            AnimationPoseGraphNativeOperation operation)
-        {
-            int input = operation.InputValueIndexA;
-            int output = operation.OutputValueIndex;
-            if (!IsInputReady(input, operation.Index) ||
-                !TryCopyValueWithoutPose(
-                    input,
-                    output,
-                    operation.Index))
-            {
-                SetInvalid(output, (ulong)operation.Index + 1UL,
-                    AnimationPoseNativeInvalidReason.PoseGraphInputIncomplete,
-                    operation.Index);
-                return;
-            }
-            if (m_ValueAvailability[output] != AnimationPoseAvailability.Pose)
-                return;
-            for (int bone = 0; bone < m_BoneCount; bone++)
-            {
-                int parent = m_ParentIndices[bone];
-                AnimationLocalBonePose component =
-                    m_ValueDenseLocalPoses[PoseOffset(input) + bone];
-                if (parent >= 0 &&
-                    !TryToLocal(
-                        m_ValueDenseLocalPoses[PoseOffset(input) + parent],
-                        component,
-                        out component))
-                {
-                    SetInvalid(output, m_ValueContinuityIdentities[output],
-                        AnimationPoseNativeInvalidReason.PoseSpaceConversionInvalid,
-                        operation.Index);
-                    return;
-                }
-                m_ValueDenseLocalPoses[PoseOffset(output) + bone] = component;
-            }
         }
 
         bool TryBlendStateMachineParameters(

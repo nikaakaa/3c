@@ -656,7 +656,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 CompilePayloads(program);
                 CompileLinkedPose(program);
                 CompileOperations(program);
-                CompileStages(program);
+                MaterializeStages(program);
                 RequireValid();
             }
             catch
@@ -1102,23 +1102,11 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 throw new InvalidOperationException("Animation Pose Graph Native operation layout is inconsistent.");
         }
 
-        void CompileStages(CharacterPoseProgramImage program)
+        void MaterializeStages(CharacterPoseProgramImage program)
         {
-            int nativeOperationStart = 0;
             for (int stageIndex = 0; stageIndex < program.Stages.Count; stageIndex++)
-            {
-                CharacterPresentationPoseStage stage = program.Stages[stageIndex];
-                if (stage == null || stage.Index != stageIndex ||
-                    stage.NativeOperationStart != nativeOperationStart)
-                {
-                    throw new InvalidOperationException(
-                        $"Animation Pose Graph stage #{stageIndex} is not compact.");
-                }
-                m_Stages[stageIndex] = new AnimationPoseGraphNativeStage(stage);
-                nativeOperationStart += stage.NativeOperationCount;
-            }
-            if (nativeOperationStart != m_Operations.Length)
-                throw new InvalidOperationException("Animation Pose Graph native stages do not close the operation range.");
+                m_Stages[stageIndex] = new AnimationPoseGraphNativeStage(
+                    program.Stages[stageIndex]);
         }
 
         internal void RequireValid()

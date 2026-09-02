@@ -499,6 +499,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Sources
         }
 
         readonly AnimancerComponent m_Animancer;
+        readonly CharacterPoseSourceCatalog m_Catalog;
         readonly AnimancerPoseSamplingBackend m_Backend;
         readonly PhysicalPoseSourceRegistry m_PhysicalSources;
         readonly CharacterPoseSourceBindingPage m_BindingPage;
@@ -515,6 +516,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Sources
 
         internal CharacterPoseSourceModule(
             AnimancerComponent animancer,
+            CharacterPoseSourceCatalog catalog,
             CharacterAnimationRigBinding rigBinding,
             CharacterAnimationRigPayload rig,
             int sourceCapacity,
@@ -526,6 +528,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Sources
             m_Animancer = animancer
                 ? animancer
                 : throw new ArgumentNullException(nameof(animancer));
+            m_Catalog = catalog ??
+                throw new ArgumentNullException(nameof(catalog));
             var physicalSources = new PhysicalPoseSourceRegistry(
                 sourceCapacity);
             AnimancerPoseSamplingBackend backend = null;
@@ -700,11 +704,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Sources
             m_Backend.RequireOpenFrame(lease);
         }
 
-        internal bool ContainsCommitted(
-            AnimationPoseSourceId sourceId,
-            PoseNodeId poseNodeId) =>
-            m_Backend.ContainsCommitted(sourceId, poseNodeId);
-
         internal AnimationResolvedPoseSourceSample ResolveProviderSample(
             in PresentationPoseSourceSample sample,
             int sourceOwnerIndex)
@@ -744,10 +743,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Sources
                 sample.HasFootFeatures);
         }
 
-        internal void PrepareAndConnect(
+        internal void PrepareActionAndConnect(
             in AnimationPoseSampleRequest request,
-            AnimationReadOnlyBuffer<AnimationPoseSourceClipBinding>
-                clipCatalog,
             in AnimationPoseSourceCaptureBinding capture,
             PoseNodeId poseNodeId)
         {
@@ -759,7 +756,37 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Sources
             AnimationPoseSourcePrepareResult prepared =
                 m_Backend.PrepareOrUpdate(
                     in request,
-                    clipCatalog,
+                    m_Backend.ContainsCommitted(
+                        request.SourceId,
+                        poseNodeId)
+                        ? default
+                        : m_Catalog.RequireAction(
+                            request.SourceOwnerIndex),
+                    in capture,
+                    poseNodeId);
+            Connect(physical, prepared);
+        }
+
+        internal void PrepareProviderAndConnect(
+            in AnimationPoseSampleRequest request,
+            in PresentationPoseSourceSample sample,
+            in AnimationPoseSourceCaptureBinding capture,
+            PoseNodeId poseNodeId)
+        {
+            AnimationPhysicalSourceIdentity physical =
+                m_PhysicalSources.Register(
+                    request.SourceId,
+                    poseNodeId,
+                    request.SourceOwnerIndex);
+            AnimationPoseSourcePrepareResult prepared =
+                m_Backend.PrepareOrUpdate(
+                    in request,
+                    m_Backend.ContainsCommitted(
+                        request.SourceId,
+                        poseNodeId)
+                        ? default
+                        : m_Catalog.RequireMotionMatching(
+                            in sample),
                     in capture,
                     poseNodeId);
             Connect(physical, prepared);
@@ -770,8 +797,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Sources
             AnimationPoseSourceId sourceId,
             int sourceOwnerIndex,
             AnimationReadOnlyBuffer<ClipSamplePlan> clips,
-            AnimationReadOnlyBuffer<AnimationPoseSourceClipBinding>
-                clipCatalog,
+            in PresentationPoseSourceSample sample,
             in AnimationPoseSourceCaptureBinding capture,
             PoseNodeId poseNodeId)
         {
@@ -780,7 +806,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Sources
                 sourceId,
                 sourceOwnerIndex,
                 clips,
-                clipCatalog,
+                m_Backend.ContainsCommitted(sourceId, poseNodeId)
+                    ? default
+                    : m_Catalog.RequireMotionMatching(in sample),
                 in capture,
                 poseNodeId);
             m_BindingPage.BindDirect(bindingIndex, in binding);
@@ -791,8 +819,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Sources
             AnimationPoseSourceId sourceId,
             int sourceOwnerIndex,
             AnimationReadOnlyBuffer<ClipSamplePlan> clips,
-            AnimationReadOnlyBuffer<AnimationPoseSourceClipBinding>
-                clipCatalog,
             in AnimationPoseSourceCaptureBinding capture,
             PoseNodeId poseNodeId)
         {
@@ -801,7 +827,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Sources
                 sourceId,
                 sourceOwnerIndex,
                 clips,
-                clipCatalog,
+                m_Backend.ContainsCommitted(sourceId, poseNodeId)
+                    ? default
+                    : m_Catalog.RequireClip(sourceId),
                 in capture,
                 poseNodeId);
             m_BindingPage.BindClip(bindingIndex, in binding);
@@ -812,8 +840,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Sources
             AnimationPoseSourceId sourceId,
             int sourceOwnerIndex,
             AnimationReadOnlyBuffer<ClipSamplePlan> clips,
-            AnimationReadOnlyBuffer<AnimationPoseSourceClipBinding>
-                clipCatalog,
             in AnimationPoseSourceCaptureBinding capture,
             PoseNodeId poseNodeId)
         {
@@ -822,7 +848,11 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Sources
                     sourceId,
                     sourceOwnerIndex,
                     clips,
-                    clipCatalog,
+                    m_Backend.ContainsCommitted(
+                        sourceId,
+                        poseNodeId)
+                        ? default
+                        : m_Catalog.RequireBlendSpace(bindingIndex),
                     in capture,
                     poseNodeId);
             m_BindingPage.BindBlendSpace(

@@ -314,7 +314,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
         readonly AnimationSelectedPosePlayerJob[] m_DirectPlayerJobs;
         readonly AnimationSelectedPosePlayerJob[] m_ClipPlayerJobs;
         readonly AnimationSelectedPosePlayerJob[] m_BlendSpacePlayerJobs;
-        readonly AnimationPoseSourceClipBinding[] m_ClipCatalogScratch;
         readonly PreparedStandaloneSourceRelease[]
             m_PreparedStandaloneSourceReleases;
         readonly List<PendingActionBackendRelease>
@@ -640,6 +639,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
 
                 sourceModule = new CharacterPoseSourceModule(
                     animancer,
+                    new CharacterPoseSourceCatalog(
+                        projection,
+                        clipCatalogCapacity),
                     rigBinding,
                     projection.Rig,
                     physicalSourceCapacity,
@@ -715,8 +717,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             m_ClipPlayerJobs = new AnimationSelectedPosePlayerJob[clipPlayers.Length];
             m_BlendSpacePlayerJobs =
                 new AnimationSelectedPosePlayerJob[blendSpacePlayers.Length];
-            m_ClipCatalogScratch =
-                new AnimationPoseSourceClipBinding[clipCatalogCapacity];
             m_FramePublisher = new ComposedAnimationPoseFramePublisher(
                 projection.PosePlan,
                 projection.Rig,
@@ -3204,51 +3204,51 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                 PresentationPoseSourceSample> providerSourceSamples)
         {
             var key = new AnimationPlayerSourceSampleKey(stack.PoseNodeId, sourceId);
-            AnimationResolvedPoseSourceSample sourceSample;
             if (sourceId.SourceKind ==
                 AnimationPoseSourceKind.Timeline)
             {
                 if (!actionSourceSamples.TryGetValue(
                         key,
-                        out sourceSample))
+                        out AnimationResolvedPoseSourceSample
+                            sourceSample))
                 {
                     throw new InvalidOperationException(
                         $"Action Pose Source '{sourceId}' has no current resolved request.");
                 }
+                AnimationPoseSampleRequest timelineRequest =
+                    sourceSample.Request;
+                AnimationPoseSourceCaptureBinding timelineCapture =
+                    stack.PrepareCapture(
+                        sourceSample,
+                        presentationDeltaSeconds);
+                m_SourceModule.PrepareActionAndConnect(
+                    in timelineRequest,
+                    in timelineCapture,
+                    stack.PoseNodeId);
+                return;
             }
-            else
+            if (!providerSourceSamples.TryGetValue(
+                    key,
+                    out PresentationPoseSourceSample providerSample) ||
+                !m_SourceOwnerIndicesByNode.TryGetValue(
+                    stack.PoseNodeId,
+                    out int sourceOwnerIndex))
             {
-                if (!providerSourceSamples.TryGetValue(
-                        key,
-                        out PresentationPoseSourceSample
-                            providerSample) ||
-                    !m_SourceOwnerIndicesByNode.TryGetValue(
-                        stack.PoseNodeId,
-                        out int sourceOwnerIndex))
-                {
-                    throw new InvalidOperationException(
-                        $"Presentation Pose Source '{sourceId}' has no current resolved request.");
-                }
-                sourceSample =
-                    m_SourceModule.ResolveProviderSample(
-                        in providerSample,
-                        sourceOwnerIndex);
+                throw new InvalidOperationException(
+                    $"Presentation Pose Source '{sourceId}' has no current resolved request.");
             }
+            AnimationResolvedPoseSourceSample resolved =
+                m_SourceModule.ResolveProviderSample(
+                    in providerSample,
+                    sourceOwnerIndex);
             AnimationPoseSampleRequest request =
-                sourceSample.Request;
+                resolved.Request;
             AnimationPoseSourceCaptureBinding capture = stack.PrepareCapture(
-                sourceSample,
+                resolved,
                 presentationDeltaSeconds);
-            AnimationReadOnlyBuffer<AnimationPoseSourceClipBinding> clipCatalog = default;
-            if (!m_SourceModule.ContainsCommitted(sourceId, stack.PoseNodeId))
-            {
-                clipCatalog = sourceId.SourceKind == AnimationPoseSourceKind.Timeline
-                    ? BuildActionClipCatalog(request.SourceOwnerIndex)
-                    : BuildMotionMatchingClipCatalog(providerSourceSamples[key]);
-            }
-            m_SourceModule.PrepareAndConnect(
+            m_SourceModule.PrepareProviderAndConnect(
                 in request,
-                clipCatalog,
+                in providerSample,
                 in capture,
                 stack.PoseNodeId);
         }
@@ -3268,15 +3268,12 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                     out PresentationPoseSourceSample sample))
                 throw new InvalidOperationException($"Animation Pose Source '{player.SourceId}' has no current resolved request.");
             AnimationPoseSourceCaptureBinding capture = player.PrepareCapture(in sample, presentationDeltaSeconds);
-            AnimationReadOnlyBuffer<AnimationPoseSourceClipBinding> clipCatalog = default;
-            if (!m_SourceModule.ContainsCommitted(player.SourceId, player.NodeId))
-                clipCatalog = BuildMotionMatchingClipCatalog(sample);
             m_SourceModule.PrepareDirectAndConnect(
                 playerIndex,
                 player.SourceId,
                 player.SourceOwnerIndex,
                 sample.Clips,
-                clipCatalog,
+                in sample,
                 in capture,
                 player.NodeId);
         }
@@ -3291,15 +3288,11 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                 !player.IsRelevant)
                 return;
             AnimationPoseSourceCaptureBinding capture = player.PrepareCapture(presentationDeltaSeconds);
-            AnimationReadOnlyBuffer<AnimationPoseSourceClipBinding> clipCatalog = default;
-            if (!m_SourceModule.ContainsCommitted(player.SourceId, player.NodeId))
-                clipCatalog = BuildSequenceClipCatalog(player.SourceId);
             m_SourceModule.PrepareClipAndConnect(
                 playerIndex,
                 player.SourceId,
                 player.PlayerIndex,
                 player.ClipSamples,
-                clipCatalog,
                 in capture,
                 player.NodeId);
         }
@@ -3367,15 +3360,11 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                 return;
             AnimationPoseSourceCaptureBinding capture =
                 player.PrepareCapture(presentationDeltaSeconds);
-            AnimationReadOnlyBuffer<AnimationPoseSourceClipBinding> clipCatalog = default;
-            if (!m_SourceModule.ContainsCommitted(player.SourceId, player.NodeId))
-                clipCatalog = BuildBlendSpaceClipCatalog(playerIndex);
             m_SourceModule.PrepareBlendSpaceAndConnect(
                     playerIndex,
                     player.SourceId,
                     player.PlayerIndex,
                     player.ClipSamples,
-                    clipCatalog,
                     in capture,
                     player.NodeId);
         }
@@ -4453,121 +4442,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             }
             return m_DirectPlayersByNode.TryGetValue(playerNodeId, out AnimationSelectedPosePlayerRuntime player) &&
                    player.HasSelection && player.SourceId.Equals(sourceId);
-        }
-
-        AnimationReadOnlyBuffer<AnimationPoseSourceClipBinding>
-            BuildActionClipCatalog(int producerIndex)
-        {
-            if ((uint)producerIndex >= (uint)m_Projection.Producers.Count)
-                throw new ArgumentOutOfRangeException(nameof(producerIndex));
-            CharacterPresentationAnimationBinding animation =
-                m_Projection.Producers[producerIndex]?.Animation ??
-                throw new InvalidOperationException(
-                    $"Animation producer #{producerIndex} has no clip catalog.");
-            if (animation.Clips.Count == 0 ||
-                animation.Clips.Count > m_ClipCatalogScratch.Length)
-            {
-                throw new InvalidOperationException(
-                    $"Animation producer #{producerIndex} clip catalog exceeds its compiled capacity.");
-            }
-            for (int i = 0; i < animation.Clips.Count; i++)
-            {
-                CharacterPresentationAnimationClipBinding binding =
-                    animation.Clips[i] ??
-                    throw new InvalidOperationException(
-                        $"Animation producer #{producerIndex} clip binding #{i} is missing.");
-                m_ClipCatalogScratch[i] =
-                    new AnimationPoseSourceClipBinding(i, binding.Clip);
-            }
-            return new AnimationReadOnlyBuffer<AnimationPoseSourceClipBinding>(
-                m_ClipCatalogScratch,
-                0,
-                animation.Clips.Count);
-        }
-
-        AnimationReadOnlyBuffer<AnimationPoseSourceClipBinding>
-            BuildSequenceClipCatalog(AnimationPoseSourceId sourceId)
-        {
-            if (sourceId.SourceKind != AnimationPoseSourceKind.Clip ||
-                !m_Projection.TryGetPoseSource(
-                    sourceId.PresentationPoseSourceIndex,
-                    out CharacterPresentationPoseSourcePlan source))
-            {
-                throw new InvalidOperationException(
-                    $"Sequence source '{sourceId}' has no compiled clip catalog.");
-            }
-            m_ClipCatalogScratch[0] =
-                new AnimationPoseSourceClipBinding(0, source.Clip);
-            return new AnimationReadOnlyBuffer<AnimationPoseSourceClipBinding>(
-                m_ClipCatalogScratch,
-                0,
-                1);
-        }
-
-        AnimationReadOnlyBuffer<AnimationPoseSourceClipBinding>
-            BuildBlendSpaceClipCatalog(int playerIndex)
-        {
-            CharacterAnimationBlendSpacePlayerPlan player =
-                m_Projection.BlendSpacePlayers[playerIndex];
-            CharacterAnimationBlendSpacePlan plan =
-                m_Projection.BlendSpaces[player.BlendSpacePlanIndex];
-            if (plan.Samples.Count == 0 ||
-                plan.Samples.Count > m_ClipCatalogScratch.Length)
-            {
-                throw new InvalidOperationException(
-                    $"Blend Space Player '{player.NodeId}' clip catalog exceeds its compiled capacity.");
-            }
-            for (int i = 0; i < plan.Samples.Count; i++)
-            {
-                CharacterAnimationBlendSpaceSamplePlan sample =
-                    plan.Samples[i] ??
-                    throw new InvalidOperationException(
-                        $"Blend Space Player '{player.NodeId}' sample #{i} is missing.");
-                m_ClipCatalogScratch[i] =
-                    new AnimationPoseSourceClipBinding(i, sample.Clip);
-            }
-            return new AnimationReadOnlyBuffer<AnimationPoseSourceClipBinding>(
-                m_ClipCatalogScratch,
-                0,
-                plan.Samples.Count);
-        }
-
-        AnimationReadOnlyBuffer<AnimationPoseSourceClipBinding>
-            BuildMotionMatchingClipCatalog(
-                in PresentationPoseSourceSample sample)
-        {
-            MotionMatchingProjectionPayload motionMatching =
-                m_Projection.MotionMatching;
-            if (sample.SourceKind != AnimationPoseSourceKind.MotionMatching ||
-                motionMatching == null ||
-                (uint)sample.ProjectionDatabaseIndex >=
-                (uint)motionMatching.DatabaseCount)
-            {
-                throw new InvalidOperationException(
-                    $"Motion Matching source '{sample.SourceIndex}' has no exact Database catalog.");
-            }
-            MotionMatchingDatabasePayload database =
-                motionMatching.GetDatabase(
-                    sample.ProjectionDatabaseIndex);
-            if (database == null || database.ClipBindingCount == 0 ||
-                database.ClipBindingCount > m_ClipCatalogScratch.Length)
-            {
-                throw new InvalidOperationException(
-                    $"Motion Matching Database #{sample.ProjectionDatabaseIndex} clip catalog exceeds its compiled capacity.");
-            }
-            for (int i = 0; i < database.ClipBindingCount; i++)
-            {
-                MotionMatchingClipBindingPayload binding =
-                    database.GetClipBinding(i) ??
-                    throw new InvalidOperationException(
-                        $"Motion Matching Database #{sample.ProjectionDatabaseIndex} clip binding #{i} is missing.");
-                m_ClipCatalogScratch[i] =
-                    new AnimationPoseSourceClipBinding(i, binding.Clip);
-            }
-            return new AnimationReadOnlyBuffer<AnimationPoseSourceClipBinding>(
-                m_ClipCatalogScratch,
-                0,
-                database.ClipBindingCount);
         }
 
         static int[] BuildPlayerLinkedPoseFragmentIndices(

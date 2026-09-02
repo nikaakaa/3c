@@ -221,23 +221,25 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         }
 
         internal CharacterPoseProgramCommittedDiagnosticsView
-            CaptureCommittedDiagnostics(
+            CapturePendingDiagnostics(
                 in CharacterPoseProgramResult result,
-                in CharacterFinalPoseCommittedDiagnosticsView finalOutput,
+                in CharacterPoseProgramOutputResult output,
+                in ComposedAnimationPoseFrame outputFrame,
                 AnimationPresentationDiagnosticsInterest interest)
         {
-            if (!m_State.HasCommitted)
+            if (!m_State.HasPendingCompleted)
             {
                 throw new InvalidOperationException(
-                    "Character Pose Program has no committed evaluation diagnostics.");
+                    "Character Pose Program has no Pending completed evaluation diagnostics.");
             }
-            CharacterPoseGraphNativeBinding committed =
-                m_State.RequireCommitted();
+            CharacterPoseGraphNativeBinding pending =
+                m_State.RequirePendingCompleted();
             return m_Diagnostics.Capture(
                 m_FramePages,
                 in result,
-                in committed,
-                in finalOutput,
+                in pending,
+                in output,
+                in outputFrame,
                 interest);
         }
 

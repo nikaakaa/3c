@@ -29,6 +29,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             m_ActorDiagnostics;
         CharacterPoseProgramFrameLease m_ActiveFrameLease;
         CharacterPoseProgramFrameLease m_CommittingFrameLease;
+        CharacterPoseProgramCommittedDiagnosticsView
+            m_FrameProgramDiagnostics;
+        CharacterPoseActorCommittedDiagnosticsView m_FrameActorDiagnostics;
+        AnimationPresentationDiagnosticsInterest m_FrameDiagnosticsInterest;
         bool m_Disposed;
 
         internal CharacterPoseProgramRuntime(
@@ -529,6 +533,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 throw new InvalidOperationException(
                     "Character Pose Program frame cannot begin.");
             }
+            m_FrameProgramDiagnostics = default;
+            m_FrameActorDiagnostics = default;
+            m_FrameDiagnosticsInterest =
+                AnimationPresentationDiagnosticsInterest.None;
             FramePages.BeginFrame();
             m_ActorDiagnostics.BeginFrame();
             m_ActiveFrameLease = lease;
@@ -564,6 +572,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             }
             DiscardStep(FramePages.DiscardFrame, ref failure);
             m_Evaluation.DiscardPending();
+            m_FrameProgramDiagnostics = default;
+            m_FrameActorDiagnostics = default;
+            m_FrameDiagnosticsInterest =
+                AnimationPresentationDiagnosticsInterest.None;
             m_ActiveFrameLease = default;
             m_CommittingFrameLease = default;
             m_Action.ClearLeaseState();
@@ -855,6 +867,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             FramePages.ClearSourceDemand();
             ActorState.Inertialization.Reset();
             m_ActorDiagnostics.Reset();
+            m_FrameProgramDiagnostics = default;
+            m_FrameActorDiagnostics = default;
+            m_FrameDiagnosticsInterest =
+                AnimationPresentationDiagnosticsInterest.None;
         }
 
         internal void ResetBlendState(ulong completionIdentity)
@@ -949,14 +965,20 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         internal CharacterPoseProgramCommittedDiagnosticsView
             CaptureCommittedDiagnostics(
                 in CharacterPoseProgramResult result,
-                in CharacterFinalPoseCommittedDiagnosticsView finalOutput,
                 AnimationPresentationDiagnosticsInterest interest)
         {
             RequireAlive();
-            return m_Evaluation.CaptureCommittedDiagnostics(
-                in result,
-                in finalOutput,
-                interest);
+            if (m_ActiveFrameLease.IsValid ||
+                m_CommittingFrameLease.IsValid ||
+                !result.IsCompleted ||
+                !m_FrameProgramDiagnostics.IsValid ||
+                m_FrameProgramDiagnostics.Result.Lineage != result.Lineage ||
+                (interest & ~m_FrameDiagnosticsInterest) != 0)
+            {
+                throw new InvalidOperationException(
+                    "Character Pose Program committed diagnostics are unavailable.");
+            }
+            return m_FrameProgramDiagnostics;
         }
 
         internal CharacterPoseActorCommittedDiagnosticsView
@@ -965,7 +987,35 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 AnimationPresentationDiagnosticsInterest interest)
         {
             RequireAlive();
-            return m_ActorDiagnostics.Capture(
+            if (m_ActiveFrameLease.IsValid ||
+                m_CommittingFrameLease.IsValid ||
+                !result.IsCompleted ||
+                !m_FrameActorDiagnostics.IsValid ||
+                m_FrameActorDiagnostics.Result.Lineage != result.Lineage ||
+                (interest & ~m_FrameDiagnosticsInterest) != 0)
+            {
+                throw new InvalidOperationException(
+                    "Character Pose Actor committed diagnostics are unavailable.");
+            }
+            return m_FrameActorDiagnostics;
+        }
+
+        internal void PreparePendingDiagnostics(
+            CharacterPoseProgramFrameLease lease,
+            in CharacterPoseProgramResult result,
+            in CharacterPoseProgramOutputResult output,
+            in ComposedAnimationPoseFrame outputFrame,
+            AnimationPresentationDiagnosticsInterest interest)
+        {
+            RequireFrame(lease);
+            if (interest == AnimationPresentationDiagnosticsInterest.None ||
+                m_FrameActorDiagnostics.IsValid ||
+                m_FrameProgramDiagnostics.IsValid)
+            {
+                throw new InvalidOperationException(
+                    "Character Pose Program Pending diagnostics request is invalid.");
+            }
+            m_FrameActorDiagnostics = m_ActorDiagnostics.Capture(
                 in result,
                 ActorState.Stacks,
                 ActorState.Routes,
@@ -976,6 +1026,13 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 ActorState.RootOrientationWarps,
                 interest,
                 false);
+            m_FrameProgramDiagnostics =
+                m_Evaluation.CapturePendingDiagnostics(
+                    in result,
+                    in output,
+                    in outputFrame,
+                    interest);
+            m_FrameDiagnosticsInterest = interest;
         }
 
         internal string PrepareTuningCandidate(

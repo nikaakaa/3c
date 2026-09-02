@@ -48,6 +48,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         bool m_CommitValidated;
         bool m_HasOpenFrame;
         AnimationPresentationFrameOutcome m_PendingOutcome;
+        AnimationPresentationDiagnosticsInterest
+            m_PendingDiagnosticsInterest;
 
         internal CharacterPoseFrameCoordinator(
             AnimancerComponent animancer,
@@ -143,6 +145,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                     captureFootIkDiagnostics);
                 publicationOpen = true;
                 m_PendingOutcome = AnimationPresentationFrameOutcome.None;
+                m_PendingDiagnosticsInterest = diagnosticsInterest;
                 m_Program.BeginFrame(programLease);
                 m_Program.BeginActorStateFrame(
                     programLease,
@@ -491,6 +494,18 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 m_Program.CompleteNodeEvaluation(
                     m_ActiveFrameLease,
                     completionIdentity);
+                if (m_PendingDiagnosticsInterest !=
+                    AnimationPresentationDiagnosticsInterest.None)
+                {
+                    ComposedAnimationPoseFrame pendingFrame =
+                        m_Publication.RequirePendingFrame(publicationLease);
+                    m_Program.PreparePendingDiagnostics(
+                        m_ActiveFrameLease,
+                        in programResult,
+                        in programOutput,
+                        in pendingFrame,
+                        m_PendingDiagnosticsInterest);
+                }
             }
             return executionResult;
         }
@@ -600,6 +615,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             m_ActiveFrameLease = default;
             m_CommitValidated = false;
             m_PendingOutcome = AnimationPresentationFrameOutcome.None;
+            m_PendingDiagnosticsInterest =
+                AnimationPresentationDiagnosticsInterest.None;
             m_Source.CancelReleaseDiagnostics();
             m_Program.ClearLinkedPoseFrameSelection();
             if (failure != null)
@@ -648,6 +665,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 m_Publication.CommitPending(publicationLease);
             m_CommitValidated = false;
             m_PendingOutcome = AnimationPresentationFrameOutcome.None;
+            m_PendingDiagnosticsInterest =
+                AnimationPresentationDiagnosticsInterest.None;
             return result;
         }
 
@@ -677,6 +696,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         {
             m_PendingOutcome = AnimationPresentationFrameOutcome.None;
             m_CommitValidated = false;
+            m_PendingDiagnosticsInterest =
+                AnimationPresentationDiagnosticsInterest.None;
         }
 
         internal void RequireMutation(CharacterPoseProgramFrameLease lease)

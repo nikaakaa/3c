@@ -380,13 +380,13 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         internal PoseNodeId RequirePoseNodeId(int physicalSlotIndex) =>
             m_Workspace.RequirePoseNodeId(physicalSlotIndex);
 
-        internal ulong PublishCommittedDiagnostics()
+        internal ulong PublishPendingDiagnostics()
         {
             RequireAlive();
-            if (m_FrameOpen || m_CommittedDiagnostics.Identity != 0)
+            if (!m_FrameOpen || m_CommittedDiagnostics.Identity != 0)
             {
                 throw new InvalidOperationException(
-                    "Character Pose Program committed diagnostics cannot be published.");
+                    "Character Pose Program Pending diagnostics cannot be published.");
             }
             ulong identity = m_NextDiagnosticsIdentity++;
             if (identity == 0)

@@ -1219,3 +1219,9 @@ Motion Matching节点、History边、Entry Graph容量、Blend catalog、Provide
 状态：Actor State与Program Evaluation的Committed Diagnostics Projector已从`CharacterPoseDiagnosticsRuntime`移入唯一`CharacterPoseProgramRuntime`。Program在根Frame打开时失效自己的Actor诊断页、Reset时清理，并只通过两个Committed View入口向外发布；Diagnostics Runtime不再持有Execution View，也不再接收Stack、Route、StateMachine、Inertialization、Clip、BlendSpace或Root Warp集合。
 
 Actor与Program诊断字段、interest条件、快照排序和读取的Committed Evaluation binding保持不变；这里只收紧Owner，尚未改变外部Foot采样链。3C MCP完成全脚本重编且C#错误为0，不单独运行回放。
+
+## 在Program Pending完成时冻结诊断页
+
+状态：Program Evaluation完成全部Stage和节点完成通知后，`CharacterPoseFrameCoordinator`在根Seal之前把同lineage的Program Result、Program Output与Final Publication Pending Frame交回Program。Program-owned Actor与Evaluation projector立即按冻结interest深拷贝State、Operation、Value、Contribution、Pose与最终Output；Post-Commit Diagnostics只取得已准备View，不再读取Actor State或Native Evaluation binding生成新事实。
+
+无diagnostics interest时不执行拷贝；Discard与Reset清除本帧View，成功根提交后才允许读取。原有字段内容、数组容量、排序和短租约有效期保持不变。3C MCP完成全脚本重编且C#错误为0，不单独运行回放。

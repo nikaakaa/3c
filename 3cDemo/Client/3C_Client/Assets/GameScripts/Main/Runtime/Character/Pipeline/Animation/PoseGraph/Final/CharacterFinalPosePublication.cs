@@ -1055,6 +1055,13 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             }
         }
 
+        internal ComposedAnimationPoseFrame RequirePendingFrame(
+            CharacterFinalPosePublicationFrameLease lease)
+        {
+            m_Pending.RequireReady(lease);
+            return m_Pending.Frame;
+        }
+
         internal void DiscardPending(
             CharacterFinalPosePublicationFrameLease lease)
         {

@@ -302,15 +302,17 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             CharacterPoseProgramFramePages framePages,
             in CharacterPoseProgramResult result,
             in CharacterPoseGraphNativeBinding frame,
-            in CharacterFinalPoseCommittedDiagnosticsView finalOutput,
+            in CharacterPoseProgramOutputResult output,
+            in ComposedAnimationPoseFrame outputFrame,
             AnimationPresentationDiagnosticsInterest interest)
         {
             if (framePages == null ||
-                framePages.HasOpenFrame ||
+                !framePages.HasOpenFrame ||
                 !result.IsCompleted ||
-                !finalOutput.IsValid ||
-                !finalOutput.ProgramOutput.IsCompleted ||
-                finalOutput.ProgramOutput.Lineage != result.Lineage ||
+                !output.IsCompleted ||
+                output.Lineage != result.Lineage ||
+                outputFrame.CompletionIdentity !=
+                    result.Lineage.CompletionIdentity ||
                 interest == AnimationPresentationDiagnosticsInterest.None ||
                 result.Lineage.CompletionIdentity !=
                 frame.CompletionIdentity)
@@ -329,9 +331,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 throw new InvalidOperationException(
                     "Pose Program committed Output layout is inconsistent.");
             }
-            CharacterPoseProgramOutputResult output =
-                finalOutput.ProgramOutput;
-            ComposedAnimationPoseFrame outputFrame = finalOutput.Frame;
             page.Identity = 0;
             page.FinalOutputFrame = outputFrame;
             page.Result = result;
@@ -425,7 +424,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 for (int i = 0; i < workspacePoseCount; i++)
                     page.ValueDenseLocalPoses[i] = frame.ValueDenseLocalPoses[i];
             }
-            framePages.PublishCommittedDiagnostics();
+            framePages.PublishPendingDiagnostics();
             return new CharacterPoseProgramCommittedDiagnosticsView(page);
         }
 

@@ -237,7 +237,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
                         programDiagnostics =
                             program.CaptureCommittedDiagnostics(
                                 in programResult,
-                                in publicationDiagnostics,
                                 interest);
                     CharacterLinkedPoseCommittedDiagnosticsView
                         linkedPoseDiagnostics =

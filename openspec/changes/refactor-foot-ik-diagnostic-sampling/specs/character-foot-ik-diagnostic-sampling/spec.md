@@ -20,14 +20,14 @@ Foot IK采样 MUST只接收PoseGraph在根表现帧成功Seal后交付的一份`
 - **THEN** PoseGraph MUST不发布该帧的Foot IK Capture View租约
 - **AND** Sampler MUST不借用上一帧、Pending页或当前Transform补成一条记录
 
-### Requirement: Attribute Schema必须成为采样字段的唯一声明
+### Requirement: Generated Projection Schema必须成为普通采样字段的唯一声明
 
-每个Foot可采样字段 MUST通过`generated-diagnostic-sampling-framework`提供的唯一Attribute在AOT-safe诊断Extractor上声明稳定字段identity、数据类型、单位、availability关系、表归属与一个或多个可组合字段分组。Foot MUST通过Attribute声明Capability ID、Started／CommittedSample／Stopped Event ID、Left／Right封闭样本维度和通用输出格式。每个Foot Sampler Definition MUST只选择字段分组与自己新增的专项派生字段，不得要求已有字段反向登记新Sampler identity。每个业务字段组 MUST使用独立Extractor类型，不得把全部字段挂在中央partial类型或通过跨字段组private成员形成隐式注册表；共享投影 MUST不包含Side分发、Schema注册或Sampler分支。Extractor MUST是只读当前Dimension已配对具体View与Metadata的普通静态函数，不得引用`UnityEditor`、`object`动态调用、运行时成员路径、World Query、Vendor对象或场景Transform。框架唯一Schema Compiler MUST在C#编译期发现全部Foot声明、校验Event／维度／Schema闭包并生成不可变Schema descriptor、静态Capture程序和typed Event Handler；Foot插件 MUST不实现Bridge、第二Compiler、Attribute、codec或identity算法。Schema字段、顺序、Event Set、Program Definition或派生规则变化 MUST生成新的稳定Schema identity与Generated Program hash。
+每个Foot业务字段组 MUST通过`generated-diagnostic-sampling-framework`提供的唯一Generated Projection声明一个强类型来源根，并为成员声明稳定字段identity、数据类型、单位、availability关系、表归属与可组合字段分组。通用Source Generator MUST在编译期遍历标注成员并生成普通Committed字段及表字段的直接访问；Foot插件 MUST不为这些字段手写一字段一getter。只有无法由Committed成员图直接表达的真正派生公式 MAY使用AOT-safe Derived Extractor，并显式声明依赖字段。Foot MUST通过Attribute声明Capability ID、Started／CommittedSample／Stopped Event ID、Left／Right封闭样本维度和通用输出格式。每个Foot Sampler Definition MUST只选择字段分组与自己新增的专项派生字段，不得要求已有字段反向登记新Sampler identity。每个业务字段组 MUST使用独立Projection类型，不得把全部字段挂在中央partial类型或通过跨字段组private成员形成隐式注册表；共享投影 MUST不包含Side分发、Schema注册或Sampler分支。Projection与Derived Extractor MUST只读当前Dimension已配对具体View与Metadata，不得引用`UnityEditor`、`object`动态调用、运行时成员路径执行、World Query、Vendor对象或场景Transform。框架唯一Schema Compiler MUST在C#编译期发现全部Foot声明、校验Event／维度／Schema闭包并生成不可变Schema descriptor、静态Capture程序和typed Event Handler；Foot插件 MUST不实现Bridge、第二Compiler、Attribute、codec或identity算法。Schema字段、顺序、Event Set、Program Definition、Projection成员图或派生规则变化 MUST生成新的稳定Schema identity与Generated Program hash。
 
 #### Scenario: 字段文件仍共享中央partial容器
 
-- **WHEN** 两个业务字段组声明在同一个中央partial类型，或一个字段组调用另一个字段组的private读取方法
-- **THEN** Foot迁移 MUST视为未完成并拆成独立Extractor类型
+- **WHEN** 两个业务字段组声明在同一个中央partial类型、普通字段仍由手写getter读取，或一个字段组调用另一个字段组的private读取方法
+- **THEN** Foot迁移 MUST视为未完成并拆成独立Generated Projection类型
 - **AND** MUST不以文件已经拆分或Generator能够编译为完成依据
 
 #### Scenario: 多个Sampler复用同一字段

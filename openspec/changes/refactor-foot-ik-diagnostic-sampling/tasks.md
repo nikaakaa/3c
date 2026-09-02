@@ -16,7 +16,7 @@
 ## 3. 建立Foot Capability、字段与Program Definitions
 
 - [x] 3.1 定义`character-foot-ik` Capability Definition、领域typed lineage descriptor与PoseGraph-owned具体Committed View类型引用，使用框架构造校验确认Foot插件不重定义View且不暴露Module、Bank、Workspace、Vendor、Transform或Foot写权限
-- [ ] 3.2 使用框架Attribute定义AOT-safe Foot Field、Group、Table与Derived Extractor及稳定identity/revision；每个业务组使用独立Extractor类型，删除中央`partial CharacterFootIkDiagnosticFields`和跨字段组private读取，且Extractor不得引用`UnityEditor`、动态调用、运行时成员路径、World Query、Vendor或Transform
+- [ ] 3.2 使用框架Generated Projection定义AOT-safe Foot Field、Group、Table及稳定identity/revision，每个业务组只声明一个强类型来源根并由Generator生成普通字段直接访问；只为真正派生公式保留Derived Extractor，删除全部手写直接字段getter、中央`partial CharacterFootIkDiagnosticFields`和跨字段组private读取
 - [ ] 3.3 定义Full、Solver、Landing等Foot Sampler Definition、通用输出格式与Left／Right样本维度，不声明Host Adapter／Analyzer identity；通过框架Schema preflight确认Event、维度、重复identity、未知分组、availability、codec、AOT签名和派生环错误在编译期失败
 - [ ] 3.4 定义稳定Foot Capture Program Definition，每个Program显式组合一套或多套Sampler；检查框架生成descriptor确认同Field identity只有一个dense handle和求值位置
 - [ ] 3.5 接入框架为Foot具体View／Metadata与三个生命周期Event生成的typed Handler／Capture Program，核对Editor与IL2CPP Player使用相同Event Set／Schema／Program／packet layout identity且Foot代码中不存在Bridge、第二Source Generator、Expression或反射Catalog
@@ -33,8 +33,8 @@
 
 ## 5. 迁移内建Full Foot Sampler
 
-- [ ] 5.1 按字段迁移清单把现行Identity、Timing、Formal Input/Output、Landing、Ground Path、Lifecycle、Response、Pelvis、Goal、Solver与Physical字段迁入Attribute Extractor分组；用新旧Schema业务字段清单核对含义、单位和availability
-- [ ] 5.2 把Ground Contact、Envelope与Surface geometry迁入Attribute Table Extractor和固定容量packet页；用表manifest核对行identity、Frame/Completion/Side与主行关联完整
+- [ ] 5.1 按字段迁移清单把现行Identity、Timing、Formal Input/Output、Landing、Ground Path、Lifecycle、Response、Pelvis、Goal、Solver与Physical普通字段迁入Generated Projection分组并删除对应手写getter；用新旧Schema业务字段清单核对含义、单位和availability
+- [ ] 5.2 把Ground Contact、Envelope与Surface geometry迁入Generated Table Projection和固定容量packet页，不手写逐列Table getter；用表manifest核对行identity、Frame/Completion/Side与主行关联完整
 - [ ] 5.3 把Envelope交点、穿透、可见输出运动学及其它Sampler派生事实迁入纯Derived Extractor；用依赖清单确认只读取Committed字段且不调用World Query、FBBIK或Transform
 - [ ] 5.4 将现有Analyzer唯一解析入口、Publisher、details/index、七维评分和剩余正式规则接到生成基础CSV／typed artifact／manifest；用Required Field与schema identity核对没有第二Reader、Column binding或规则副本，且下游失败不回写Capability生命周期
 - [ ] 5.5 发布新的Full Sampler、Foot Capability manifest与artifact Schema identity，保留旧采样目录不变；Performance继续唯一发布顶层Capture，路径与reader搜索确认新实现不迁移、不覆盖也不兼容读取旧Schema

@@ -51,9 +51,9 @@ Foot / Constraint / Final Publication Committed Result
              Full     Solver    其它Sampler
 ```
 
-### Decision 2: Attribute标记AOT-safe诊断Extractor，不污染正式Runtime Result
+### Decision 2: Generated Projection生成普通字段访问，只手写真正派生公式
 
-Foot插件使用通用框架Attribute标记独立Foot IK诊断定义中的Extractor成员，而不是放到Foot State、Constraint Result或FBBIK Runtime类型上。诊断定义不得引用`UnityEditor`，每个Extractor必须是可由IL2CPP静态编译的普通纯函数，只接收Committed Capture Context并返回框架支持的基础值或固定容量表记录；Attribute声明：
+Foot插件为每个业务组声明一个强类型Generated Projection来源根，而不是为每个字段手写getter，也不把Attribute放到Foot State、Constraint Result或FBBIK Runtime类型上。通用Source Generator在编译期遍历该来源根的标注成员，生成可由IL2CPP静态编译的普通直接访问、主表字段与固定容量表字段。诊断定义不得引用`UnityEditor`；只有Envelope交点、穿透等不存在于Committed成员图中的真正派生公式才使用普通纯Derived Extractor。唯一声明合同包含：
 
 - 稳定FieldId与Extractor revision；
 - codec kind、单位、availability FieldId/value；
@@ -61,9 +61,9 @@ Foot插件使用通用框架Attribute标记独立Foot IK诊断定义中的Extrac
 - 一个或多个可复用字段分组；
 - 原始正式字段或Sampler派生字段分类。
 
-字段分组使用可发现的稳定定义类型和显式artifact identity。Foot Sampler Definition选择字段分组、自己的专项Extractor和通用输出格式；字段不保存具体Sampler列表。因此新增只复用现有字段的新Sampler只需新增Definition，不修改旧Extractor、框架或Host代码。只有新业务字段或新派生事实才新增对应Extractor。Extractor不得使用`object`、`dynamic`、`MethodInfo.Invoke`、`DynamicInvoke`、运行时成员路径、World Query、Vendor对象或场景Transform；派生Extractor只读同一Committed Capture Context。
+字段分组使用可发现的Generated Projection定义类型和显式artifact identity。Foot Sampler Definition选择字段分组、自己的专项Derived Extractor和通用输出格式；字段不保存具体Sampler列表。因此新增只复用现有字段的新Sampler只需新增Definition，不修改旧Projection、框架或Host代码。普通Committed字段变化只修改强类型成员声明，由Generator生成直接访问；只有新派生事实才新增Derived Extractor。Projection与Derived Extractor不得使用`object`、`dynamic`、`MethodInfo.Invoke`、`DynamicInvoke`、运行时成员路径执行、World Query、Vendor对象或场景Transform。
 
-每个业务字段组使用自己的独立Extractor类型。禁止把全部字段挂在`partial CharacterFootIkDiagnosticFields`一类中央容器上，也禁止依赖另一个字段组的private成员完成读取。可共享代码只限无Attribute的基础值投影，不得承担Left／Right选择、领域分发、Schema注册或Sampler分支；每个Dimension进入Extractor前已经绑定自己的具体View与Metadata。
+每个业务字段组使用自己的独立Generated Projection类型。禁止把全部字段挂在`partial CharacterFootIkDiagnosticFields`一类中央容器上，禁止继续保留一字段一手写方法，也禁止依赖另一个字段组的private成员完成读取。可共享代码只限无Attribute的基础值投影，不得承担Left／Right选择、领域分发、Schema注册或Sampler分支；每个Dimension进入Projection前已经绑定自己的具体View与Metadata。
 
 Foot诊断定义只在`character-foot-ik` Capture构建及Editor诊断编译中存在，Disabled构建由通用Capability编译约束连同typed Event Handler和生成程序一起排除。选择独立诊断Extractor而不在Runtime Result上打Attribute，是为了保持正式运行结果与CSV、单位和插件知识分离；选择普通静态函数和typed Event而不是Editor-only实现，是为了让框架为Editor与IL2CPP Player生成同一调用链。Foot change不复制Attribute、codec、packet或生命周期实现。
 
@@ -123,7 +123,7 @@ Performance workflow继续是唯一Build、Gate、Capture与Comparer Owner，通
 
 ## Risks / Trade-offs
 
-- [Attribute或Extractor修改后忘记升级revision] → Schema identity同时包含Field descriptor、Sampler descriptor、程序集构建identity与显式Extractor revision；preflight拒绝同identity不同闭包。
+- [Projection或Derived公式修改后忘记升级revision] → Schema identity同时包含Field descriptor、Projection成员图、Sampler descriptor、程序集构建identity与显式revision；preflight拒绝同identity不同闭包。
 - [通用框架Generator版本变化] → Foot Program Definition只消费框架发布的Generator revision和identity；版本变化产生新Foot Schema／Program identity，不在Foot插件复制或钉住第二Generator。
 - [生成程序与Foot Attribute声明不一致] → 框架Schema identity闭合Foot descriptor、Sampler Set、Generated Program和assembly identity；Editor Capture、Build与Player握手任一不匹配都在订阅interest前失败，不回退Foot旧程序。
 - [选中Sampler Set变化需要重新构建] → Capture Program Request与Build分离并显式显示当前生成身份；构建只消费已完成且hash匹配的程序，不在Build过程中现场换集合，也不在Player启动后补字段。
@@ -138,7 +138,7 @@ Performance workflow继续是唯一Build、Gate、Capture与Comparer Owner，通
 1. 先完成`add-generated-diagnostic-sampling-framework`的Contracts、Source Generator、Generated Program ABI、packet、Session、Writer、Host Reader／Finalizer和Capability Set合同；本change不得先实现Foot专属副本。
 2. 按已经同步的`refactor-character-pose-graph-architecture`任务13完成Source、Program、Constraint与Final Publication Committed Result、Projector和PoseGraph-owned具体`CharacterFootIkCommittedCaptureViewLease`；本change只从该租约开始。
 3. 在PoseGraph具体View合同与框架Generated Program／packet ABI都闭合后定义Foot CaptureStarted／CommittedSample／CaptureStopped Event与样本维度；不得建立Bridge、第二Capture View或临时Adapter。
-4. 使用框架Attribute建立Foot字段目录、字段分组、Sampler Definition、Program Definition、表record layout和输出格式，不修改框架中央代码。
+4. 使用框架Generated Projection建立Foot字段目录、字段分组、Sampler Definition、Program Definition、表record layout和输出格式；只为真正派生公式保留Derived Extractor，不手写普通字段访问。
 5. 将当前全量Foot Schema迁移为内建Full Sampler和通用Host基础产物，并把现有Analyzer／Publisher／评分接到生成artifact／manifest；保持业务语义，使用新identity。
 6. 通过Generated Event Handler、框架Session、packet Writer和Host Finalizer接入Foot多Sampler Capture及现有Launcher控制面，不建立Foot专属Session、队列、Writer或Orchestrator。
 7. 向Performance通用`DiagnosticCapabilitySet`注册`character-foot-ik` Disabled/Capture descriptor，并确保Disabled排除Foot插件、Capture只包含匹配Program。

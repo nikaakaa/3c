@@ -166,59 +166,18 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Sources
             }
         }
 
-        internal readonly struct ReleasePreparation
-        {
-            internal ReleasePreparation(
-                int releaseIndex,
-                ulong generation,
-                AnimationPhysicalSourceIdentity physicalIdentity,
-                AnimationPoseSourceId sourceId,
-                PoseNodeId poseNodeId)
-            {
-                if (releaseIndex < 0 ||
-                    generation == 0 ||
-                    !physicalIdentity.IsValid ||
-                    !sourceId.IsValid ||
-                    !poseNodeId.IsValid)
-                {
-                    throw new ArgumentException(
-                        "Pose source release preparation is invalid.");
-                }
-                m_EncodedReleaseIndex = checked(releaseIndex + 1);
-                Generation = generation;
-                PhysicalIdentity = physicalIdentity;
-                SourceId = sourceId;
-                PoseNodeId = poseNodeId;
-            }
-
-            readonly int m_EncodedReleaseIndex;
-            internal int ReleaseIndex => m_EncodedReleaseIndex - 1;
-            internal ulong Generation { get; }
-            internal AnimationPhysicalSourceIdentity PhysicalIdentity { get; }
-            internal AnimationPoseSourceId SourceId { get; }
-            internal PoseNodeId PoseNodeId { get; }
-            internal bool IsValid =>
-                m_EncodedReleaseIndex > 0 &&
-                Generation != 0 &&
-                PhysicalIdentity.IsValid &&
-                SourceId.IsValid &&
-                PoseNodeId.IsValid;
-        }
-
         struct ReleaseEntry
         {
             internal ulong Generation;
             internal AnimationPhysicalSourceIdentity PhysicalIdentity;
-            internal AnimationPoseSourceId SourceId;
-            internal PoseNodeId PoseNodeId;
+            internal CharacterPoseSourceRetirementPermission Permission;
             internal AnimationPhysicalSourceReleaseToken PhysicalRelease;
             internal AnimationPoseSourceReleaseToken BackendRelease;
 
             internal bool IsValid =>
                 Generation != 0 &&
                 PhysicalIdentity.IsValid &&
-                SourceId.IsValid &&
-                PoseNodeId.IsValid &&
+                Permission.IsValid &&
                 PhysicalRelease.IsValid &&
                 BackendRelease.IsValid;
         }
@@ -245,10 +204,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Sources
                 }
             }
 
-            internal ReleasePreparation Prepare(
+            internal CharacterPoseSourceRetirementHandle Prepare(
                 AnimationPhysicalSourceIdentity physicalIdentity,
-                AnimationPoseSourceId sourceId,
-                PoseNodeId poseNodeId,
+                in CharacterPoseSourceRetirementPermission permission,
                 in AnimationPhysicalSourceReleaseToken physicalRelease,
                 in AnimationPoseSourceReleaseToken backendRelease)
             {
@@ -263,40 +221,35 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Sources
                 {
                     Generation = generation,
                     PhysicalIdentity = physicalIdentity,
-                    SourceId = sourceId,
-                    PoseNodeId = poseNodeId,
+                    Permission = permission,
                     PhysicalRelease = physicalRelease,
                     BackendRelease = backendRelease
                 };
                 m_Count++;
-                return new ReleasePreparation(
+                return new CharacterPoseSourceRetirementHandle(
                     index,
                     generation,
-                    physicalIdentity,
-                    sourceId,
-                    poseNodeId);
+                    in permission);
             }
 
             internal ReleaseEntry Require(
-                in ReleasePreparation release)
+                in CharacterPoseSourceRetirementHandle retirement)
             {
-                if (!release.IsValid)
+                if (!retirement.IsValid)
                 {
                     throw new ArgumentException(
                         "Pose source release preparation is invalid.",
-                        nameof(release));
+                        nameof(retirement));
                 }
-                int index = release.ReleaseIndex;
+                int index = retirement.Index;
+                CharacterPoseSourceRetirementPermission permission =
+                    retirement.Permission;
                 if ((uint)index >= (uint)m_Entries.Length ||
                     !m_Entries[index].IsValid ||
                     m_Entries[index].Generation !=
-                        release.Generation ||
-                    m_Entries[index].PhysicalIdentity !=
-                        release.PhysicalIdentity ||
-                    !m_Entries[index].SourceId.Equals(
-                        release.SourceId) ||
-                    m_Entries[index].PoseNodeId !=
-                        release.PoseNodeId)
+                        retirement.Generation ||
+                    !m_Entries[index].Permission.Matches(
+                        in permission))
                 {
                     throw new InvalidOperationException(
                         "Pose source release preparation is stale.");
@@ -305,10 +258,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Sources
             }
 
             internal void Complete(
-                in ReleasePreparation release)
+                in CharacterPoseSourceRetirementHandle retirement)
             {
-                Require(in release);
-                m_Entries[release.ReleaseIndex] = default;
+                Require(in retirement);
+                m_Entries[retirement.Index] = default;
                 m_Count--;
             }
 
@@ -1068,16 +1021,21 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Sources
             AnimationPhysicalSourceIdentity physical) =>
             m_PhysicalSources.RequireSourceOwnerIndex(physical);
 
-        AnimationPhysicalSourceIdentity ValidateRelease(
-            AnimationPoseSourceId sourceId,
-            PoseNodeId poseNodeId,
-            AnimationPhysicalSourceIdentity expected)
+        AnimationPhysicalSourceIdentity ValidateRetirement(
+            in CharacterPoseSourceRetirementPermission permission)
         {
+            if (!permission.IsValid)
+            {
+                throw new ArgumentException(
+                    "Character Pose source retirement permission is invalid.",
+                    nameof(permission));
+            }
             AnimationPhysicalSourceIdentity current =
                 m_PhysicalSources.RequireIdentity(
-                    sourceId,
-                    poseNodeId);
-            if (expected.IsValid && current != expected)
+                    permission.SourceId,
+                    permission.PoseNodeId);
+            if (permission.ExpectedPhysicalIdentity.IsValid &&
+                current != permission.ExpectedPhysicalIdentity)
             {
                 throw new InvalidOperationException(
                     "Pose source release physical identity is stale.");
@@ -1085,7 +1043,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Sources
             int port = checked(current.Index.Value + 1);
             if (port <= 0 ||
                 port >= m_SourceFanIn.GetInputCount() ||
-                !m_Backend.ContainsCommitted(sourceId, poseNodeId) ||
+                !m_Backend.ContainsCommitted(
+                    permission.SourceId,
+                    permission.PoseNodeId) ||
                 !m_ReleaseValidationIdentities.Add(current))
             {
                 throw new InvalidOperationException(
@@ -1097,42 +1057,36 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Sources
         internal void ClearReleaseValidation() =>
             m_ReleaseValidationIdentities.Clear();
 
-        internal ReleasePreparation PrepareRelease(
-            AnimationPoseSourceId sourceId,
-            PoseNodeId poseNodeId,
-            AnimationPhysicalSourceIdentity expected)
+        internal CharacterPoseSourceRetirementHandle PrepareRetirement(
+            in CharacterPoseSourceRetirementPermission permission)
         {
             AnimationPhysicalSourceIdentity physical =
-                ValidateRelease(
-                    sourceId,
-                    poseNodeId,
-                    expected);
+                ValidateRetirement(in permission);
             AnimationPhysicalSourceReleaseToken physicalRelease =
                 m_PhysicalSources.PrepareRelease(
                     physical,
-                    sourceId);
+                    permission.SourceId);
             AnimationPoseSourceReleaseToken backendRelease =
                 m_Backend.StageRelease(
-                    sourceId,
-                    poseNodeId);
+                    permission.SourceId,
+                    permission.PoseNodeId);
             return m_ReleasePage.Prepare(
                 physical,
-                sourceId,
-                poseNodeId,
+                in permission,
                 in physicalRelease,
                 in backendRelease);
         }
 
-        internal void ApplyPreparedRelease(
-            in ReleasePreparation release)
+        internal void ApplyRetirement(
+            in CharacterPoseSourceRetirementHandle retirement)
         {
             ReleaseEntry prepared =
-                m_ReleasePage.Require(in release);
+                m_ReleasePage.Require(in retirement);
             Disconnect(prepared.PhysicalIdentity);
             m_Backend.Release(in prepared.BackendRelease);
             m_PhysicalSources.ApplyPreparedRelease(
                 in prepared.PhysicalRelease);
-            m_ReleasePage.Complete(in release);
+            m_ReleasePage.Complete(in retirement);
         }
 
         void Disconnect(

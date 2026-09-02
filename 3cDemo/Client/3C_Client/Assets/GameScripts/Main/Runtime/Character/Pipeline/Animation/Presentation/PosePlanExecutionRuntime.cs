@@ -190,7 +190,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             internal int PlayerIndex;
             internal AnimationPoseSourceId SourceId;
             internal PoseNodeId NodeId;
-            internal CharacterPoseSourceModule.ReleasePreparation SourceRelease;
+            internal CharacterPoseSourceRetirementHandle SourceRelease;
             internal AnimationPlayerReleaseToken PlayerRelease;
         }
 
@@ -210,7 +210,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             internal AnimationBlendStackSourceReleaseToken StackRelease;
             internal AnimationPhysicalSourceIdentity
                 PhysicalSource;
-            internal CharacterPoseSourceModule.ReleasePreparation SourceRelease;
+            internal CharacterPoseSourceRetirementHandle SourceRelease;
             internal bool NotifyRouteAfterApply;
 
             internal AnimationBlendStackRelease Release =>
@@ -236,7 +236,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             internal CharacterAnimationTransitionRouteRuntime Route;
             internal AnimationBlendStackSourceReleaseToken StackRelease;
             internal AnimationPhysicalSourceIdentity PhysicalSource;
-            internal CharacterPoseSourceModule.ReleasePreparation SourceRelease;
+            internal CharacterPoseSourceRetirementHandle SourceRelease;
             internal ActionBackendSourceIdentity PlayableSource;
             internal ActionBackendSourceIdentity StoredPoseSource;
             internal ulong RequestIdentity;
@@ -1117,8 +1117,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                         player.PrepareRelease(releaseIndex);
                     AnimationPoseSourceId sourceId =
                         playerRelease.SourceId;
-                    CharacterPoseSourceModule.ReleasePreparation sourceRelease =
-                        m_SourceModule.PrepareRelease(
+                    CharacterPoseSourceRetirementHandle sourceRelease =
+                        PrepareSourceRetirement(
                             sourceId,
                             player.NodeId,
                             default);
@@ -1147,8 +1147,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                         player.PrepareRelease(releaseIndex);
                     AnimationPoseSourceId sourceId =
                         playerRelease.SourceId;
-                    CharacterPoseSourceModule.ReleasePreparation sourceRelease =
-                        m_SourceModule.PrepareRelease(
+                    CharacterPoseSourceRetirementHandle sourceRelease =
+                        PrepareSourceRetirement(
                             sourceId,
                             player.NodeId,
                             default);
@@ -1177,8 +1177,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                         player.PrepareRelease(releaseIndex);
                     AnimationPoseSourceId sourceId =
                         playerRelease.SourceId;
-                    CharacterPoseSourceModule.ReleasePreparation sourceRelease =
-                        m_SourceModule.PrepareRelease(
+                    CharacterPoseSourceRetirementHandle sourceRelease =
+                        PrepareSourceRetirement(
                             sourceId,
                             player.NodeId,
                             default);
@@ -1196,7 +1196,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                 PendingPoseSourceRelease pending =
                     m_PendingPoseSourceReleases[i];
                 pending.SourceRelease =
-                    m_SourceModule.PrepareRelease(
+                    PrepareSourceRetirement(
                         pending.Release.SourceId,
                         pending.Release.PoseNodeId,
                         pending.PhysicalSource);
@@ -1339,7 +1339,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             {
                 PreparedStandaloneSourceRelease release =
                     m_PreparedStandaloneSourceReleases[i];
-                m_SourceModule.ApplyPreparedRelease(
+                m_SourceModule.ApplyRetirement(
                     in release.SourceRelease);
                 switch (release.Owner)
                 {
@@ -1996,7 +1996,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             {
                 PendingActionBackendRelease release =
                     prepared.Sources[sourceIndex];
-                m_SourceModule.ApplyPreparedRelease(
+                m_SourceModule.ApplyRetirement(
                     in release.SourceRelease);
                 release.Stack.ApplyPreparedRelease(
                     in release.StackRelease);
@@ -2062,7 +2062,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                             "Action backend release request contains a detached or duplicate source.");
                     }
                     candidate.SourceRelease =
-                        m_SourceModule.PrepareRelease(
+                        PrepareSourceRetirement(
                             candidate.Release.SourceId,
                             candidate.Release.PoseNodeId,
                             candidate.PhysicalSource);
@@ -3511,6 +3511,19 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                 m_SlotPlayables[i].SetJobData(m_SlotJobs[i]);
         }
 
+        CharacterPoseSourceRetirementHandle PrepareSourceRetirement(
+            AnimationPoseSourceId sourceId,
+            PoseNodeId poseNodeId,
+            AnimationPhysicalSourceIdentity expectedPhysicalIdentity)
+        {
+            var permission =
+                new CharacterPoseSourceRetirementPermission(
+                    sourceId,
+                    poseNodeId,
+                    expectedPhysicalIdentity);
+            return m_SourceModule.PrepareRetirement(in permission);
+        }
+
         void ReleaseCompletedSources(
             ulong completionIdentity)
         {
@@ -3532,12 +3545,12 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                             completionIdentity);
                     AnimationBlendStackRelease release =
                         stackRelease.Release;
-                    CharacterPoseSourceModule.ReleasePreparation sourceRelease =
-                        m_SourceModule.PrepareRelease(
+                    CharacterPoseSourceRetirementHandle sourceRelease =
+                        PrepareSourceRetirement(
                             release.SourceId,
                             release.PoseNodeId,
                             default);
-                    m_SourceModule.ApplyPreparedRelease(
+                    m_SourceModule.ApplyRetirement(
                         in sourceRelease);
                     stack.ApplyPreparedRelease(
                         in stackRelease);
@@ -3651,7 +3664,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                     m_PendingPoseSourceReleases[releaseIndex];
                 CharacterAnimationTransitionRouteRuntime route =
                     pending.Route;
-                m_SourceModule.ApplyPreparedRelease(
+                m_SourceModule.ApplyRetirement(
                     in pending.SourceRelease);
                 pending.Stack.ApplyPreparedRelease(
                     in pending.StackRelease);
@@ -4262,7 +4275,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
         void AddPreparedStandaloneSourceRelease(
             StandaloneSourceReleaseOwner owner,
             int playerIndex,
-            in CharacterPoseSourceModule.ReleasePreparation sourceRelease,
+            in CharacterPoseSourceRetirementHandle sourceRelease,
             in AnimationPlayerReleaseToken playerRelease)
         {
             if (owner == 0 ||
@@ -4281,8 +4294,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                 {
                     Owner = owner,
                     PlayerIndex = playerIndex,
-                    SourceId = sourceRelease.SourceId,
-                    NodeId = sourceRelease.PoseNodeId,
+                    SourceId = sourceRelease.Permission.SourceId,
+                    NodeId = sourceRelease.Permission.PoseNodeId,
                     SourceRelease = sourceRelease,
                     PlayerRelease = playerRelease
                 };
@@ -4339,12 +4352,12 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                         player.PrepareRelease(releaseIndex);
                     AnimationPoseSourceId sourceId =
                         playerRelease.SourceId;
-                    CharacterPoseSourceModule.ReleasePreparation sourceRelease =
-                        m_SourceModule.PrepareRelease(
+                    CharacterPoseSourceRetirementHandle sourceRelease =
+                        PrepareSourceRetirement(
                             sourceId,
                             player.NodeId,
                             default);
-                    m_SourceModule.ApplyPreparedRelease(
+                    m_SourceModule.ApplyRetirement(
                         in sourceRelease);
                     player.ApplyPreparedRelease(
                         in playerRelease);
@@ -4371,12 +4384,12 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                         player.PrepareRelease(releaseIndex);
                     AnimationPoseSourceId sourceId =
                         playerRelease.SourceId;
-                    CharacterPoseSourceModule.ReleasePreparation sourceRelease =
-                        m_SourceModule.PrepareRelease(
+                    CharacterPoseSourceRetirementHandle sourceRelease =
+                        PrepareSourceRetirement(
                             sourceId,
                             player.NodeId,
                             default);
-                    m_SourceModule.ApplyPreparedRelease(
+                    m_SourceModule.ApplyRetirement(
                         in sourceRelease);
                     player.ApplyPreparedRelease(
                         in playerRelease);
@@ -4403,12 +4416,12 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                         player.PrepareRelease(releaseIndex);
                     AnimationPoseSourceId sourceId =
                         playerRelease.SourceId;
-                    CharacterPoseSourceModule.ReleasePreparation sourceRelease =
-                        m_SourceModule.PrepareRelease(
+                    CharacterPoseSourceRetirementHandle sourceRelease =
+                        PrepareSourceRetirement(
                             sourceId,
                             player.NodeId,
                             default);
-                    m_SourceModule.ApplyPreparedRelease(
+                    m_SourceModule.ApplyRetirement(
                         in sourceRelease);
                     player.ApplyPreparedRelease(
                         in playerRelease);

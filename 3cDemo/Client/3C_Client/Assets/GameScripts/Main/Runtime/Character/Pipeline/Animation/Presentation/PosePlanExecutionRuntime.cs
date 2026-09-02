@@ -117,11 +117,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
         bool m_CommitValidated;
         bool m_HasOpenFrame;
         AnimationPresentationFrameOutcome m_PendingFrameOutcome;
-        int m_SequencePreviewPlayerIndex = -1;
-        int m_SequencePreviewOperationIndex = -1;
-        double m_SequencePreviewTime;
-        bool m_SequencePreviewReset;
-        bool m_HasSequencePreview;
         bool m_JobsInstalled;
         bool m_Disposed;
 
@@ -1837,23 +1832,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             if (!float.IsFinite(presentationDeltaSeconds) || presentationDeltaSeconds < 0f ||
                 !factFrame.IsValid || !parameterFrame.IsValid)
                 throw new ArgumentOutOfRangeException(nameof(presentationDeltaSeconds));
-            if (m_HasSequencePreview)
-            {
-                for (int i = 0; i < m_PoseStateSources.ClipPlayers.Length; i++)
-                {
-                    AnimationClipPlayerRuntime player =
-                        m_PoseStateSources.ClipPlayers[i];
-                    bool selected = i == m_SequencePreviewPlayerIndex;
-                    player.SetRelevant(selected);
-                    if (selected)
-                        player.SetPreviewTime(
-                            m_SequencePreviewTime,
-                            m_SequencePreviewReset);
-                }
-                for (int i = 0; i < m_PoseStateSources.BlendSpacePlayers.Length; i++)
-                    m_PoseStateSources.BlendSpacePlayers[i].SetRelevant(false);
+            if (m_ProgramRuntime.ApplySequencePreview())
                 return;
-            }
             m_PoseStateSources.PrepareFrame(
                 presentationDeltaSeconds,
                 in factFrame);
@@ -1897,7 +1877,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                 throw new ArgumentException(
                     "Pose State frame finalization is invalid.",
                     nameof(factFrame));
-            if (m_HasSequencePreview)
+            if (m_ProgramRuntime.HasSequencePreview)
                 return;
             m_ProgramRuntime.EvaluateTransitions(
                 m_ActiveFrameLease,
@@ -2288,9 +2268,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                     m_ActiveFrameLease,
                     in prepared,
                     in bodyFrame,
-                    in factFrame,
-                    m_HasSequencePreview,
-                    m_SequencePreviewOperationIndex);
+                    in factFrame);
             }
             CharacterPoseFrameLineage completedLineage =
                 prepared.Lineage;
@@ -2605,8 +2583,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
         {
             AnimationClipPlayerRuntime player =
                 m_PoseStateSources.ClipPlayers[playerIndex];
-            bool selectedPreview = m_HasSequencePreview &&
-                                   playerIndex == m_SequencePreviewPlayerIndex;
+            bool selectedPreview =
+                m_ProgramRuntime.IsSequencePreviewPlayer(playerIndex);
             if (!selectedPreview && !IsPlayerActive(player.PlayerIndex) ||
                 !player.IsRelevant)
                 return;
@@ -2634,49 +2612,17 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
         {
             RequireAlive();
             RequireNoOpenMutation();
-            if (!sourceIndex.IsValid || !double.IsFinite(sampleTime) || sampleTime < 0d)
-                throw new ArgumentException("Clip Preview sample is invalid.");
-            int playerIndex = -1;
-            for (int i = 0; i < m_PoseStateSources.ClipPlayers.Length; i++)
-            {
-                if (m_PoseStateSources.ClipPlayers[i].SourceIndex != sourceIndex)
-                    continue;
-                playerIndex = i;
-                break;
-            }
-            if (playerIndex < 0)
-                throw new InvalidOperationException(
-                    $"Clip Preview source #{sourceIndex.Value} has no compiled Clip Player.");
-            int operationIndex = -1;
-            for (int i = 0; i < m_Projection.PosePlan.Operations.Count; i++)
-            {
-                CharacterPresentationPoseOperation operation =
-                    m_Projection.PosePlan.Operations[i];
-                if (operation.Code != CharacterPoseOperationCode.ClipPlayer ||
-                    operation.ClipPlayerIndex != playerIndex)
-                    continue;
-                operationIndex = operation.Index;
-                break;
-            }
-            if (operationIndex < 0)
-                throw new InvalidOperationException(
-                    $"Clip Preview source #{sourceIndex.Value} has no compiled Pose operation.");
-            m_SequencePreviewPlayerIndex = playerIndex;
-            m_SequencePreviewOperationIndex = operationIndex;
-            m_SequencePreviewTime = sampleTime;
-            m_SequencePreviewReset = resetContinuity;
-            m_HasSequencePreview = true;
+            m_ProgramRuntime.SetSequencePreview(
+                sourceIndex,
+                sampleTime,
+                resetContinuity);
         }
 
         internal void ClearSequencePreview()
         {
             RequireAlive();
             RequireNoOpenMutation();
-            m_SequencePreviewPlayerIndex = -1;
-            m_SequencePreviewOperationIndex = -1;
-            m_SequencePreviewTime = 0d;
-            m_SequencePreviewReset = false;
-            m_HasSequencePreview = false;
+            m_ProgramRuntime.ClearSequencePreview();
         }
 
         void PrepareBlendSpaceSource(

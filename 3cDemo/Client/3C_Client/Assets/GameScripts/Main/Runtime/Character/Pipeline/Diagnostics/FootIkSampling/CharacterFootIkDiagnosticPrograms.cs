@@ -26,6 +26,7 @@ namespace ThirdPersonCharacter.Pipeline.Diagnostics.FootIkSampling
         "goal",
         "selected-support-target",
         "output-stages",
+        "ground-path",
         "root-hierarchy")]
     internal static class CharacterFootIkFullSamplerDefinition
     {

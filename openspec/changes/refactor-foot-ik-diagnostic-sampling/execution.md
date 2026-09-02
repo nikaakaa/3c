@@ -159,3 +159,9 @@ Full Sampler加入`current-support`后，Source Generator输出由580增长到63
 Current Support剩余18个Target typed字段已全部迁移，覆盖Target可用性、Frame／Completion／Side、position／normal／surface／world lineage、Target Kind及Position／Normal各自的来源、Frame、Completion、Event和Path identity。position起的14项统一依赖`current-support-target-available`，Frame／Completion／Side保留现行无条件lineage语义；Extractor只读取同一Current Support Committed Target。
 
 Full Sampler加入`current-support-target`后，Source Generator输出由634增长到652个主Field Handle，连同Geometry表共673个Field Handle；Schema为`85c09c9d3c9863bf70909a41a09bfaa0bc41818448a4e1138c5fd80cc4f7bed7`，Program hash为`763a1e1d47066baa346f4aa428866aa53a1fe4e481cde2c4d5c4505df102d25c`，主layout为`e813b79d1b21d209e19e34793c9fcd045914aa9d86bd6480549d9814ed094fb6`。Foot插件及依赖工程0错误，build server已关闭；Current Support 72个typed字段至此完整迁移，现行运行链不变，不单独回放。
+
+## 迁移Resolved Foot Core字段
+
+Resolved Foot 57个typed字段中的21项Core事实已迁移，覆盖Frame／Completion／Rig／Side／Outcome、Final与Effective Sole、Goal Target Ankle／Rotation、Effective Ankle／Rotation／Heel／Toe／Sole from Contacts、Source Sole frame、Goal／Effective correction及最终权重。Extractor逐项读取当前脚Committed Resolved Core，不重新解算Sole contact、Goal或Ankle姿态。
+
+Full Sampler加入`resolved-core`后，Source Generator输出由652增长到673个主Field Handle，连同Geometry表共694个Field Handle；Schema为`1d8ce2d334f120ec230c37b74ddd885f2e8fdcec14ab488b9d62b536aea60554`，Program hash为`2e6b8fd916455cdff3ac528cf723121172d462745deab4827b3930d644f4c067`，主layout为`da4b593ffcbe219d3c607abaec5bd2f741858f5190e194ad17a9184b7b3ffc2a`。Foot插件及依赖工程0错误，build server已关闭；本步不修改运行链，不单独回放。余下Support Target 18项和Contact／Support／Reach 18项分别独立迁移。

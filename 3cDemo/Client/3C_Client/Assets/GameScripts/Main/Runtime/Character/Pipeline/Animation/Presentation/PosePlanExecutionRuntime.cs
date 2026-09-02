@@ -208,16 +208,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
         readonly AnimationSelectedPosePlayerJob[] m_DirectPlayerJobs;
         readonly AnimationSelectedPosePlayerJob[] m_ClipPlayerJobs;
         readonly AnimationSelectedPosePlayerJob[] m_BlendSpacePlayerJobs;
-        readonly Dictionary<PoseNodeId, AnimationBlendStackRuntime> m_StacksByNode =
-            new Dictionary<PoseNodeId, AnimationBlendStackRuntime>();
-        readonly Dictionary<PoseNodeId, CharacterAnimationTransitionRouteRuntime> m_StackRoutesByNode =
-            new Dictionary<PoseNodeId, CharacterAnimationTransitionRouteRuntime>();
-        readonly Dictionary<PoseNodeId, int> m_PlayerIndicesByNode = new Dictionary<PoseNodeId, int>();
-        readonly Dictionary<PoseNodeId, int>
-            m_SourceOwnerIndicesByNode =
-                new Dictionary<PoseNodeId, int>();
-        readonly Dictionary<PoseNodeId, AnimationSelectedPosePlayerRuntime> m_DirectPlayersByNode =
-            new Dictionary<PoseNodeId, AnimationSelectedPosePlayerRuntime>();
+        readonly CharacterPoseProgramNodeRuntimeIndex m_NodeRuntimeIndex =
+            new CharacterPoseProgramNodeRuntimeIndex();
         readonly MotionMatchingPosePlanHistoryCompletion[] m_MotionMatchingHistoryCompletions;
         readonly PreparedMotionMatchingHistoryRead[]
             m_PreparedMotionMatchingHistoryReads;
@@ -401,13 +393,12 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                         in initialWrite);
                     stacks[stackIndex] = stack;
                     stackRoutes[stackIndex] = route;
-                    m_StacksByNode.Add(blendNode.NodeId, stack);
-                    m_StackRoutesByNode.Add(blendNode.NodeId, route);
-                    m_PlayerIndicesByNode.Add(blendNode.NodeId, operation.PlayerIndex);
-                    if (!route.IsAnimationSlot)
-                        m_SourceOwnerIndicesByNode.Add(
-                            blendNode.NodeId,
-                            0);
+                    m_NodeRuntimeIndex.AddStack(
+                        blendNode.NodeId,
+                        stack,
+                        route,
+                        operation.PlayerIndex,
+                        route.IsAnimationSlot ? -1 : 0);
                     if (route.IsAnimationSlot)
                     {
                         CharacterAnimationSlotNativeControl control = route.NativeControl;
@@ -437,11 +428,11 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                         projection.Rig,
                         projection.PosePlan.Parameters.Count);
                     directPlayerList.Add(player);
-                    m_PlayerIndicesByNode.Add(operation.NodeId, operation.PlayerIndex);
-                    m_SourceOwnerIndicesByNode.Add(
+                    m_NodeRuntimeIndex.AddDirect(
                         operation.NodeId,
+                        player,
+                        operation.PlayerIndex,
                         operation.PlayerIndex);
-                    m_DirectPlayersByNode.Add(operation.NodeId, player);
                 }
                 directPlayers = directPlayerList.ToArray();
                 clipPlayers = new AnimationClipPlayerRuntime[projection.PosePlan.ClipPlayers.Count];
@@ -451,7 +442,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                         projection,
                         projection.PosePlan.ClipPlayers[clipPlayerIndex]);
                     clipPlayers[clipPlayerIndex] = clipPlayer;
-                    m_PlayerIndicesByNode.Add(clipPlayer.NodeId, clipPlayer.PlayerIndex);
+                    m_NodeRuntimeIndex.AddPlayer(
+                        clipPlayer.NodeId,
+                        clipPlayer.PlayerIndex);
                 }
                 blendSpacePlayers =
                     new AnimationBlendSpacePlayerRuntime[projection.BlendSpacePlayers.Count];
@@ -470,7 +463,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                         projection.FootAnalysis,
                         projection.ClipPhasePlans);
                     blendSpacePlayers[blendSpaceIndex] = player;
-                    m_PlayerIndicesByNode.Add(player.NodeId, player.PlayerIndex);
+                    m_NodeRuntimeIndex.AddPlayer(
+                        player.NodeId,
+                        player.PlayerIndex);
                 }
                 poseStateSources =
                     new PoseStateAndSourceRuntime(
@@ -1272,7 +1267,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                     continue;
                 if (m_PreparedMotionMatchingHistoryReadCount >=
                     m_PreparedMotionMatchingHistoryReads.Length ||
-                    !m_PlayerIndicesByNode.TryGetValue(
+                    !m_NodeRuntimeIndex.TryGetPlayerIndex(
                         selection.PlayerNodeId,
                         out int playerIndex))
                 {
@@ -1702,11 +1697,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                 !selectionGeneration.IsValid ||
                 presentationRequestSequence == 0 ||
                 sourceSamples == null ||
-                !m_StacksByNode.TryGetValue(
+                !m_NodeRuntimeIndex.TryGetStackRoute(
                     binding.SlotNodeId,
-                    out AnimationBlendStackRuntime stack) ||
-                !m_StackRoutesByNode.TryGetValue(
-                    binding.SlotNodeId,
+                    out AnimationBlendStackRuntime stack,
                     out CharacterAnimationTransitionRouteRuntime route) ||
                 !route.IsAnimationSlot)
             {
@@ -1765,11 +1758,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             if (!slotId.IsValid ||
                 !slotNodeId.IsValid ||
                 presentationRequestSequence == 0 ||
-                !m_StacksByNode.TryGetValue(
+                !m_NodeRuntimeIndex.TryGetStackRoute(
                     slotNodeId,
-                    out AnimationBlendStackRuntime stack) ||
-                !m_StackRoutesByNode.TryGetValue(
-                    slotNodeId,
+                    out AnimationBlendStackRuntime stack,
                     out CharacterAnimationTransitionRouteRuntime route) ||
                 !route.IsAnimationSlot ||
                 route.SlotId != slotId)
@@ -2813,7 +2804,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             if (!providerSourceSamples.TryGetValue(
                     key,
                     out PresentationPoseSourceSample providerSample) ||
-                !m_SourceOwnerIndicesByNode.TryGetValue(
+                !m_NodeRuntimeIndex.TryGetSourceOwnerIndex(
                     stack.PoseNodeId,
                     out int sourceOwnerIndex))
             {
@@ -3567,37 +3558,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                 PoseNodeId playerNodeId,
                 in PresentationPoseSourceSample sample)
         {
-            if (m_StacksByNode.TryGetValue(playerNodeId, out AnimationBlendStackRuntime stack))
-            {
-                if (sample.PlayerNodeId != playerNodeId ||
-                    sample.SourceKind !=
-                        AnimationPoseSourceKind.MotionMatching ||
-                    !m_SourceOwnerIndicesByNode.TryGetValue(
-                        playerNodeId,
-                        out int sourceOwnerIndex))
-                {
-                    throw new InvalidOperationException(
-                        $"Motion Matching Selection does not belong to Pose State Player '{playerNodeId}'.");
-                }
-                AnimationResolvedPoseSourceSample resolved =
-                    m_SourceModule.ResolveProviderSample(
-                        in sample,
-                        sourceOwnerIndex);
-                AnimationPoseSampleRequest request =
-                    resolved.Request;
-                m_StackRoutesByNode[playerNodeId]
-                    .PushSelection(stack, in request);
-                return;
-            }
-            if (m_DirectPlayersByNode.TryGetValue(
-                    playerNodeId,
-                    out AnimationSelectedPosePlayerRuntime player))
-            {
-                player.PushSelection(in sample);
-                return;
-            }
-            throw new InvalidOperationException(
-                $"Motion Matching Pose State Player '{playerNodeId}' is not installed in the active Pose Plan.");
+            m_NodeRuntimeIndex.PushMotionMatchingSelection(
+                m_SourceModule,
+                playerNodeId,
+                in sample);
         }
 
         void AddMotionMatchingSourceUsage(
@@ -3614,18 +3578,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
 
         bool PlayerUsesSource(PoseNodeId playerNodeId, AnimationPoseSourceId sourceId)
         {
-            if (m_StacksByNode.TryGetValue(playerNodeId, out AnimationBlendStackRuntime stack))
-            {
-                for (int i = 0; i < stack.EntryCount; i++)
-                {
-                    AnimationBlendEntryId entry = stack.GetEntryId(i);
-                    if (!entry.SourcePoseTarget && entry.SourceId.Equals(sourceId))
-                        return true;
-                }
-                return false;
-            }
-            return m_DirectPlayersByNode.TryGetValue(playerNodeId, out AnimationSelectedPosePlayerRuntime player) &&
-                   player.HasSelection && player.SourceId.Equals(sourceId);
+            return m_NodeRuntimeIndex.PlayerUsesSource(
+                playerNodeId,
+                sourceId);
         }
 
         static int[] BuildPlayerLinkedPoseFragmentIndices(

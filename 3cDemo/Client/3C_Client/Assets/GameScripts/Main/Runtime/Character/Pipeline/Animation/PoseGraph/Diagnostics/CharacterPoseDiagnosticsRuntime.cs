@@ -8,14 +8,6 @@ using Unity.Profiling;
 
 namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
 {
-    internal interface ICharacterPoseCommittedDiagnosticsEventSink
-    {
-        void PublishCommittedFootDiagnosticEvent(
-            in CharacterPoseFrameLineage frame,
-            in CharacterPoseConstraintResult constraintResult,
-            in CharacterFinalPosePublicationResult publicationResult);
-    }
-
     internal sealed class CharacterPoseDiagnosticsRuntime : IDisposable
     {
         static readonly ProfilerMarker DiagnosticsMarker =
@@ -29,7 +21,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
             m_ActorProjector;
         readonly CharacterPoseProgramCommittedDiagnosticsProjector
             m_ProgramProjector;
-        readonly ICharacterPoseCommittedDiagnosticsEventSink m_EventSink;
+        readonly CharacterPoseCommittedDiagnosticsEventPublisher
+            m_EventPublisher;
         bool m_Disposed;
 
         internal CharacterPoseDiagnosticsRuntime(
@@ -37,10 +30,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
             in AnimationPoseNativeAggregateLayout initialLayout,
             int physicalSourceCapacity,
             CharacterPoseProgramExecutionView executionView,
-            ICharacterPoseCommittedDiagnosticsEventSink eventSink)
+            CharacterPoseCommittedDiagnosticsEventPublisher eventPublisher)
         {
-            m_EventSink = eventSink ??
-                throw new ArgumentNullException(nameof(eventSink));
+            m_EventPublisher = eventPublisher ??
+                throw new ArgumentNullException(nameof(eventPublisher));
             m_Publisher = new AnimationPresentationRuntimeSnapshotPublisher(
                 projection ?? throw new ArgumentNullException(nameof(projection)),
                 in initialLayout,
@@ -182,10 +175,13 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
                 }
                 if (captureFootIk)
                 {
-                    m_EventSink.PublishCommittedFootDiagnosticEvent(
+                    m_EventPublisher.PublishCommittedFootDiagnosticEvent(
                         in frame,
                         in constraintResult,
-                        in publicationResult);
+                        in publicationResult,
+                        program,
+                        constraints,
+                        publication);
                 }
                 if (!publishRuntimeSnapshot)
                     return;

@@ -100,7 +100,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             CharacterFootPlacementModule footPlacement,
             bool managesGraphClock,
             ulong initialCompletionIdentity,
-            ICharacterPoseCommittedDiagnosticsEventSink diagnosticsEventSink)
+            CharacterPoseCommittedDiagnosticsEventPublisher
+                diagnosticsEventPublisher)
         {
             if (!animancer)
                 throw new ArgumentNullException(nameof(animancer));
@@ -377,7 +378,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                     in initialLayout,
                     physicalSourceCapacity,
                     executionView,
-                    diagnosticsEventSink);
+                    diagnosticsEventPublisher);
                 source = new CharacterPoseSourceModule(
                     animancer,
                     projection,

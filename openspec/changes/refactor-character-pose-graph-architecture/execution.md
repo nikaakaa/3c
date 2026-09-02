@@ -1147,3 +1147,9 @@ Begin／Prepare／Evaluate／Final Write／Node Complete／Seal顺序、Barrier�
 状态：新增`CharacterPoseMotionMatchingCoordinator`，统一连接Program-owned Demand／Selection／Pose Completion与Source-owned查询、Frame Completion、Replay capture、Trajectory intent、Preview query及Diagnostics发布。旧Pose外层不再解释Motion Matching frame work或在Program与Source之间拼接completion。
 
 Demand生成、HasFrameWork、Resolve、Selection应用、Pose completion准备与最终Source completion顺序保持不变；Reset与可选模块Unavailable语义未变，也没有接管搜索内部算法。3C MCP全脚本重编且C#错误为0，不单独运行回放。
+
+## 分离Committed诊断事件发布边界
+
+状态：新增`CharacterPoseCommittedDiagnosticsEventPublisher`，只持有Runtime identity，并在调用时接收同一Committed lineage的Program、Constraint与Final Publication事实。`CharacterPoseDiagnosticsRuntime`直接拥有该发布器；旧Pose外层不再实现诊断Event Sink接口，也不再通过partial方法读取Constraint、Publication或Player内部状态。
+
+Foot诊断事件identity、interest查询、字段来源、发布时机和最终Pose对应的Foot Motion解析顺序保持不变；未修改生成采样框架、Foot字段或IK算法。3C MCP完成全脚本重编且C#错误为0，不单独运行回放。

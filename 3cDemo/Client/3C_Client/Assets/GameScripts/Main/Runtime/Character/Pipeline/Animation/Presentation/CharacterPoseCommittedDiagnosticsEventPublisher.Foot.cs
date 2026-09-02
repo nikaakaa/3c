@@ -13,7 +13,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             "character-foot-ik-lineage/1";
     }
 
-    internal sealed partial class PosePlanExecutionRuntime
+    internal sealed partial class
+        CharacterPoseCommittedDiagnosticsEventPublisher
     {
         partial void QueryFootDiagnosticEventInterest(
             ref bool interested)
@@ -26,21 +27,24 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                 ref interested);
         }
 
-        partial void PublishCommittedFootDiagnosticEvent(
+        partial void PublishFootDiagnosticEvent(
             in CharacterPoseFrameLineage frame,
             in CharacterPoseConstraintResult constraintResult,
-            in CharacterFinalPosePublicationResult publicationResult)
+            in CharacterFinalPosePublicationResult publicationResult,
+            CharacterPoseProgramRuntime program,
+            CharacterPoseConstraintRuntime constraints,
+            CharacterFinalPosePublication publication)
         {
-            m_PoseConstraints.RequireCommittedFootIkCapture(
+            constraints.RequireCommittedFootIkCapture(
                 in constraintResult);
             ComposedAnimationPoseFrame finalFrame =
-                m_FinalPublication.RequireCommittedFrame(
+                publication.RequireCommittedFrame(
                     in publicationResult);
             CharacterFootIkPhysicalCapture physical =
-                m_FinalPublication.RequireCommittedFootIkPhysical(
+                publication.RequireCommittedFootIkPhysical(
                     in publicationResult);
             CharacterFootLandingPredictionDiagnostics landing =
-                m_PoseConstraints.CommittedFootLandingPrediction;
+                constraints.CommittedFootLandingPrediction;
             if (!landing.IsCompleted ||
                 landing.FrameSequence != frame.PresentationFrame ||
                 landing.CompletionIdentity != frame.CompletionIdentity)
@@ -55,18 +59,18 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             CharacterFullBodyIkLimbDiagnostics leftLeg = default;
             CharacterFullBodyIkLimbDiagnostics rightLeg = default;
             CharacterFullBodyIkSolverDiagnostics candidate =
-                m_PoseConstraints.CommittedFullBodyIkSolver;
+                constraints.CommittedFullBodyIkSolver;
             if (candidate.IsCompleted &&
                 candidate.InputCompletionIdentity == frame.CompletionIdentity &&
                 candidate.FrameSequence == landing.FrameSequence)
             {
                 bool containsFoot = false;
                 for (int i = 0;
-                     i < m_PoseConstraints.CommittedSolverEffectorCount;
+                     i < constraints.CommittedSolverEffectorCount;
                      i++)
                 {
                     CharacterFullBodyIkEffectorDiagnostics effector =
-                        m_PoseConstraints.GetCommittedSolverEffector(i);
+                        constraints.GetCommittedSolverEffector(i);
                     if (effector.Slot ==
                         CharacterFullBodyIkEffectorSlot.PelvisPreSolveTranslation)
                     {
@@ -89,11 +93,11 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                 if (containsFoot)
                 {
                     for (int i = 0;
-                         i < m_PoseConstraints.CommittedSolverLimbCount;
+                         i < constraints.CommittedSolverLimbCount;
                          i++)
                     {
                         CharacterFullBodyIkLimbDiagnostics limb =
-                            m_PoseConstraints.GetCommittedSolverLimb(i);
+                            constraints.GetCommittedSolverLimb(i);
                         if (limb.Limb == CharacterFullBodyIkLimbSlot.LeftLeg)
                             leftLeg = limb;
                         else if (limb.Limb ==
@@ -117,6 +121,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                 formalInput.Right;
             ResolveCommittedFootMotion(
                 in finalFrame,
+                program,
                 out AnimationFootMotionRuntimeSample leftFormalOutput,
                 out AnimationFootMotionRuntimeSample rightFormalOutput);
             CharacterFullBodyIkGoal pelvisGoal = landing.PelvisGoal;
@@ -189,6 +194,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
 
         void ResolveCommittedFootMotion(
             in ComposedAnimationPoseFrame finalFrame,
+            CharacterPoseProgramRuntime program,
             out AnimationFootMotionRuntimeSample left,
             out AnimationFootMotionRuntimeSample right)
         {
@@ -216,11 +222,11 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                 return;
             }
             for (int i = 0;
-                 i < m_PoseStateSources.ClipPlayers.Length;
+                 i < program.PoseStateSources.ClipPlayers.Length;
                  i++)
             {
                 AnimationClipPlayerRuntime player =
-                    m_PoseStateSources.ClipPlayers[i];
+                    program.PoseStateSources.ClipPlayers[i];
                 if (player.SourceId.Equals(sourceId))
                 {
                     player.CreateFootMotionSamples(

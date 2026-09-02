@@ -12,9 +12,7 @@ using ThirdPersonSimulation;
 
 namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
 {
-    internal sealed partial class PosePlanExecutionRuntime :
-        IDisposable,
-        ICharacterPoseCommittedDiagnosticsEventSink
+    internal sealed class PosePlanExecutionRuntime : IDisposable
     {
         readonly AnimancerComponent m_Animancer;
         readonly CharacterPresentationProjection m_Projection;
@@ -22,6 +20,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
         readonly CharacterPoseTuningCoordinator m_Tuning;
         readonly CharacterPoseFrameCoordinator m_Frame;
         readonly CharacterPoseMotionMatchingCoordinator m_MotionMatching;
+        readonly CharacterPoseCommittedDiagnosticsEventPublisher
+            m_DiagnosticsEvents;
 
         CharacterPoseProgramRuntime m_ProgramRuntime => m_Modules.Program;
         CharacterPoseConstraintRuntime m_PoseConstraints =>
@@ -63,6 +63,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             CharacterPoseRuntimeComposition modules = null;
             try
             {
+                m_DiagnosticsEvents =
+                    new CharacterPoseCommittedDiagnosticsEventPublisher(
+                        runtimeInstanceId);
                 modules = CharacterPoseRuntimeCompositionFactory.Create(
                     animancer,
                     rigBinding,
@@ -75,7 +78,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                     footPlacement,
                     managesGraphClock,
                     1,
-                    this);
+                    m_DiagnosticsEvents);
                 m_Modules = modules;
                 m_Tuning = new CharacterPoseTuningCoordinator(
                     m_ProgramRuntime,
@@ -429,9 +432,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             out CharacterFinalPosePublicationFrameLease publicationLease,
             out bool captureFootIkDiagnostics)
         {
-            captureFootIkDiagnostics = false;
-            QueryFootDiagnosticEventInterest(
-                ref captureFootIkDiagnostics);
+            captureFootIkDiagnostics =
+                m_DiagnosticsEvents.HasFootCaptureInterest;
             RequireAlive();
             return m_Frame.Begin(
                 in lineage,
@@ -606,24 +608,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                 in sourceFrame,
                 in executionResult);
         }
-
-        partial void QueryFootDiagnosticEventInterest(
-            ref bool interested);
-
-        partial void PublishCommittedFootDiagnosticEvent(
-            in CharacterPoseFrameLineage frame,
-            in CharacterPoseConstraintResult constraintResult,
-            in CharacterFinalPosePublicationResult publicationResult);
-
-        void ICharacterPoseCommittedDiagnosticsEventSink
-            .PublishCommittedFootDiagnosticEvent(
-                in CharacterPoseFrameLineage frame,
-                in CharacterPoseConstraintResult constraintResult,
-                in CharacterFinalPosePublicationResult publicationResult) =>
-            PublishCommittedFootDiagnosticEvent(
-                in frame,
-                in constraintResult,
-                in publicationResult);
 
         internal CharacterFootIkCommittedCaptureViewLease
             PublishDiagnostics()

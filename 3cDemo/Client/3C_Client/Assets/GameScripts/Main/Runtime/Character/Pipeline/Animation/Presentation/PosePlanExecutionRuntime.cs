@@ -2207,26 +2207,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
 
             using (SealMarker.Auto())
             {
-                for (int i = 0; i < m_Stacks.Length; i++)
-                    m_Stacks[i].CompleteFrame(completionIdentity);
-                for (int i = 0; i < m_DirectPlayers.Length; i++)
-                    m_DirectPlayers[i].CompleteFrame();
-                for (int i = 0;
-                     i < m_PoseStateSources.ClipPlayers.Length;
-                     i++)
-                    m_PoseStateSources.ClipPlayers[i]
-                        .CompleteFrame();
-                for (int i = 0;
-                     i < m_PoseStateSources.BlendSpacePlayers.Length;
-                     i++)
-                    m_PoseStateSources.BlendSpacePlayers[i]
-                        .CompleteFrame();
-                for (int i = 0; i < m_StackRoutes.Length; i++)
-                    m_StackRoutes[i].NotifyNativeFrameCompleted(m_InertializationPlan, completionIdentity);
-                m_PoseStateSources.NotifyNativeFrameCompleted(
-                    m_InertializationPlan,
-                    completionIdentity);
-                m_ProgramRuntime.MarkEvaluationCompleted(
+                m_ProgramRuntime.CompleteNodeEvaluation(
                     m_ActiveFrameLease,
                     completionIdentity);
             }
@@ -2286,31 +2267,13 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             m_SourceModule.ClearActionSlotReleaseCompletions();
             ClearReleaseJournals();
             m_SourceModule.ClearActionBackendReleaseCompletions();
-            m_ProgramRuntime.ResetEvaluation();
-            m_ProgramRuntime.ClearSourceDemand();
+            m_ProgramRuntime.BeginReset();
             m_PendingFrameOutcome = AnimationPresentationFrameOutcome.None;
-            m_InertializationPlan.Reset();
             m_PoseConstraints.ResetSolvers();
             ulong completionIdentity = NextCompletionIdentity();
-            for (int i = 0; i < m_StackRoutes.Length; i++)
-                m_StackRoutes[i].Reset();
-            for (int i = 0; i < m_Stacks.Length; i++)
-                m_Stacks[i].Reset(completionIdentity);
+            m_ProgramRuntime.ResetBlendState(completionIdentity);
             ReleaseCompletedSources(completionIdentity);
-            for (int i = 0; i < m_DirectPlayers.Length; i++)
-                m_DirectPlayers[i].Reset(reason);
-            m_PoseStateSources.Reset(reason);
-            for (int i = 0; i < m_RootOrientationWarps.Length; i++)
-            {
-                m_RootOrientationWarps[i].Reset();
-                var control =
-                    new CharacterRootOrientationWarpNativeControl(
-                        false,
-                        0f);
-                m_ProgramRuntime.ResetRootOrientationWarpControl(
-                    i,
-                    in control);
-            }
+            m_ProgramRuntime.ResetPoseState(reason);
             ReleaseDirectSources();
             ReleaseSequenceSources();
             ReleaseBlendSpaceSources();

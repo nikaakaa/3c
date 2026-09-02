@@ -751,7 +751,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
 
         internal void ClearSourceDemand() => FramePages.ClearSourceDemand();
 
-        internal void ResetRootOrientationWarpControl(
+        void ResetRootOrientationWarpControl(
             int rootOrientationWarpIndex,
             in CharacterRootOrientationWarpNativeControl control)
         {
@@ -901,7 +901,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             return m_PreparedEvaluation.RequireDeltaSeconds(in prepared);
         }
 
-        internal void MarkEvaluationCompleted(
+        void MarkEvaluationCompleted(
             CharacterPoseProgramFrameLease lease,
             ulong completionIdentity)
         {
@@ -916,6 +916,40 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             m_PendingCompletedEvaluationFrame =
                 FramePages.RequirePoseGraphBinding(completionIdentity);
             m_HasPendingCompletedEvaluationFrame = true;
+        }
+
+        internal void CompleteNodeEvaluation(
+            CharacterPoseProgramFrameLease lease,
+            ulong completionIdentity)
+        {
+            RequireFrame(lease);
+            for (int i = 0; i < ActorState.Stacks.Length; i++)
+                ActorState.Stacks[i].CompleteFrame(completionIdentity);
+            for (int i = 0; i < ActorState.DirectPlayers.Length; i++)
+                ActorState.DirectPlayers[i].CompleteFrame();
+            for (int i = 0;
+                 i < ActorState.PoseStateSources.ClipPlayers.Length;
+                 i++)
+            {
+                ActorState.PoseStateSources.ClipPlayers[i].CompleteFrame();
+            }
+            for (int i = 0;
+                 i < ActorState.PoseStateSources.BlendSpacePlayers.Length;
+                 i++)
+            {
+                ActorState.PoseStateSources.BlendSpacePlayers[i]
+                    .CompleteFrame();
+            }
+            for (int i = 0; i < ActorState.Routes.Length; i++)
+            {
+                ActorState.Routes[i].NotifyNativeFrameCompleted(
+                    ActorState.Inertialization,
+                    completionIdentity);
+            }
+            ActorState.PoseStateSources.NotifyNativeFrameCompleted(
+                ActorState.Inertialization,
+                completionIdentity);
+            MarkEvaluationCompleted(lease, completionIdentity);
         }
 
         internal bool TryCopyPendingPlayerPose(
@@ -968,7 +1002,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             return true;
         }
 
-        internal void ResetEvaluation()
+        void ResetEvaluation()
         {
             RequireAlive();
             if (m_ActiveFrameLease.IsValid)
@@ -981,6 +1015,55 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             m_PendingCompletedEvaluationFrame = default;
             m_HasCommittedEvaluationFrame = false;
             m_HasPendingCompletedEvaluationFrame = false;
+        }
+
+        internal void BeginReset()
+        {
+            ResetEvaluation();
+            FramePages.ClearSourceDemand();
+            ActorState.Inertialization.Reset();
+        }
+
+        internal void ResetBlendState(ulong completionIdentity)
+        {
+            RequireAlive();
+            if (m_ActiveFrameLease.IsValid ||
+                m_CommittingFrameLease.IsValid ||
+                completionIdentity == 0)
+            {
+                throw new InvalidOperationException(
+                    "Character Pose Program Blend reset is invalid.");
+            }
+            for (int i = 0; i < ActorState.Routes.Length; i++)
+                ActorState.Routes[i].Reset();
+            for (int i = 0; i < ActorState.Stacks.Length; i++)
+                ActorState.Stacks[i].Reset(completionIdentity);
+        }
+
+        internal void ResetPoseState(
+            PoseDiscontinuityResetReason reason)
+        {
+            RequireAlive();
+            if (m_ActiveFrameLease.IsValid ||
+                m_CommittingFrameLease.IsValid ||
+                reason == PoseDiscontinuityResetReason.None)
+            {
+                throw new InvalidOperationException(
+                    "Character Pose Program Pose State reset is invalid.");
+            }
+            for (int i = 0; i < ActorState.DirectPlayers.Length; i++)
+                ActorState.DirectPlayers[i].Reset(reason);
+            ActorState.PoseStateSources.Reset(reason);
+            for (int i = 0;
+                 i < ActorState.RootOrientationWarps.Length;
+                 i++)
+            {
+                ActorState.RootOrientationWarps[i].Reset();
+                var control = new CharacterRootOrientationWarpNativeControl(
+                    false,
+                    0f);
+                ResetRootOrientationWarpControl(i, in control);
+            }
         }
 
         internal CharacterPoseProgramTuningView RequireTuning(

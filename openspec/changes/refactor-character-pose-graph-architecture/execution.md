@@ -859,3 +859,9 @@ Linked Group incoming selection、Program Frame call control写入、Entry Fragm
 状态：Program Runtime新增Actor State Frame的Begin、Commit和分阶段Discard入口，整体接管Inertialization、Transition Route、Root Orientation Warp、PoseState Source、Blend Stack与Direct Player的帧打开、提交和回滚循环。Program Frame Commit继续保持Evaluation页、Inertialization、Frame Pages、Source Module、Actor节点、Constraint的原相对顺序；为保留Source提交夹在Program页与Actor节点之间的既有顺序，Program Runtime用typed committing lease验证后一阶段提交，不向外暴露内部对象。
 
 旧Pose Runtime删除`BeginPendingModuleFrames`／`DiscardPendingModuleFrames`及全部节点生命周期循环，只在原Source清理位置调用Program的Node Discard与Root Warp Discard两个阶段。Evaluation、Inertialization和Frame Pages的回滚统一进入Program `DiscardFrame`，并继续聚合失败；Linked selection清理、Source usage清理、Constraint与Publication顺序不变。任务6.2与5.10继续推进但尚未闭合Action／Slot／source preparation及整体Dispose审计。3C MCP对相关Runtime文件错误筛选均为0；不处理并行诊断Attribute迁移错误，也不单独运行回放。
+
+## Program节点完成与Reset阶段收口
+
+状态：成功Output与Physical Publication完成后，Stack、Direct Player、Clip Player、Blend Space Player的Complete以及Route／PoseState的Native completion通知统一进入`CharacterPoseProgramRuntime.CompleteNodeEvaluation`，最后由Program内部标记唯一Pending Evaluation完成。旧Pose Runtime的Seal区段不再遍历任何Program节点。
+
+Reset保持现有三段顺序：Program先清Evaluation／Demand并Reset Inertialization，Constraint按原位置Reset Solver；生成新completion identity后Program Reset Route与Stack，外层完成既有Source release；最后Program Reset Direct Player、PoseState与Root Warp control，再由外层释放物理Source。旧Pose Runtime删除对应节点循环，既有Release插入点、reason、completion identity和Root Warp默认control值不变。任务6.2继续推进但Source preparation与Action／Slot生命周期仍未全部迁入。3C实例Domain Reload重连后两个触碰文件错误筛选均为0；不单独运行回放。

@@ -16,7 +16,7 @@
 ## 3. 建立Foot Capability、字段与Program Definitions
 
 - [x] 3.1 定义`character-foot-ik` Capability Definition、领域typed lineage descriptor与PoseGraph-owned具体Committed View类型引用，使用框架构造校验确认Foot插件不重定义View且不暴露Module、Bank、Workspace、Vendor、Transform或Foot写权限
-- [ ] 3.2 使用框架Attribute定义AOT-safe Foot Field、Group、Table与Derived Extractor及稳定identity/revision；Extractor不得引用`UnityEditor`、动态调用、运行时成员路径、World Query、Vendor或Transform
+- [ ] 3.2 使用框架Attribute定义AOT-safe Foot Field、Group、Table与Derived Extractor及稳定identity/revision；每个业务组使用独立Extractor类型，删除中央`partial CharacterFootIkDiagnosticFields`和跨字段组private读取，且Extractor不得引用`UnityEditor`、动态调用、运行时成员路径、World Query、Vendor或Transform
 - [ ] 3.3 定义Full、Solver、Landing等Foot Sampler Definition、通用输出格式与Left／Right样本维度，不声明Host Adapter／Analyzer identity；通过框架Schema preflight确认Event、维度、重复identity、未知分组、availability、codec、AOT签名和派生环错误在编译期失败
 - [ ] 3.4 定义稳定Foot Capture Program Definition，每个Program显式组合一套或多套Sampler；检查框架生成descriptor确认同Field identity只有一个dense handle和求值位置
 - [ ] 3.5 接入框架为Foot具体View／Metadata与三个生命周期Event生成的typed Handler／Capture Program，核对Editor与IL2CPP Player使用相同Event Set／Schema／Program／packet layout identity且Foot代码中不存在Bridge、第二Source Generator、Expression或反射Catalog

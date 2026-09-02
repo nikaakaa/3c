@@ -63,6 +63,8 @@ Foot插件使用通用框架Attribute标记独立Foot IK诊断定义中的Extrac
 
 字段分组使用可发现的稳定定义类型和显式artifact identity。Foot Sampler Definition选择字段分组、自己的专项Extractor和通用输出格式；字段不保存具体Sampler列表。因此新增只复用现有字段的新Sampler只需新增Definition，不修改旧Extractor、框架或Host代码。只有新业务字段或新派生事实才新增对应Extractor。Extractor不得使用`object`、`dynamic`、`MethodInfo.Invoke`、`DynamicInvoke`、运行时成员路径、World Query、Vendor对象或场景Transform；派生Extractor只读同一Committed Capture Context。
 
+每个业务字段组使用自己的独立Extractor类型。禁止把全部字段挂在`partial CharacterFootIkDiagnosticFields`一类中央容器上，也禁止依赖另一个字段组的private成员完成读取。可共享代码只限无Attribute的基础值投影，不得承担Left／Right选择、领域分发、Schema注册或Sampler分支；每个Dimension进入Extractor前已经绑定自己的具体View与Metadata。
+
 Foot诊断定义只在`character-foot-ik` Capture构建及Editor诊断编译中存在，Disabled构建由通用Capability编译约束连同typed Event Handler和生成程序一起排除。选择独立诊断Extractor而不在Runtime Result上打Attribute，是为了保持正式运行结果与CSV、单位和插件知识分离；选择普通静态函数和typed Event而不是Editor-only实现，是为了让框架为Editor与IL2CPP Player生成同一调用链。Foot change不复制Attribute、codec、packet或生命周期实现。
 
 ### Decision 3: Foot只声明Program Definition，通用Compiler生成AOT程序

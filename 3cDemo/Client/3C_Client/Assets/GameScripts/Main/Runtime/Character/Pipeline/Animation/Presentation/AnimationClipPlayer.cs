@@ -248,7 +248,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
         readonly byte[] m_ParameterAvailability;
         readonly ClipSamplePlan[] m_ClipSamples = new ClipSamplePlan[1];
         readonly AnimationPlayerReleaseJournal m_Releases;
-        float m_PlayRate;
         State m_CommittedState;
         State m_PendingState;
         bool m_FrameOpen;
@@ -299,7 +298,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
         {
             m_Descriptor = descriptor ?? throw new ArgumentNullException(nameof(descriptor));
             m_Source = source ?? throw new ArgumentNullException(nameof(source));
-            m_PlayRate = descriptor.PlayRate;
             if (posePlan == null)
                 throw new ArgumentNullException(nameof(posePlan));
             if (rig == null)
@@ -357,8 +355,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
         internal float RemainingTime => Math.Max(0f, m_Source.Clip.length - m_SampleTime);
         internal float Duration => m_Source.Clip.length;
         internal CharacterClipPlayerClockSource ClockSource => m_Descriptor.ClockSource;
-        internal float PlayRate => m_PlayRate;
-
         internal AnimationFootStepObservationRuntimeSnapshot CreateFootStepObservationSnapshot(
             float sourceWeight)
         {
@@ -391,13 +387,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                     m_Source.Clip.isLooping));
         }
 
-        internal string ApplyTuning(float playRate)
-        {
-            if (!float.IsFinite(playRate) || playRate <= 0f || playRate > 8f)
-                return $"Clip Player '{NodeId}' play rate is outside its published range.";
-            m_PlayRate = playRate;
-            return string.Empty;
-        }
         internal AnimationReadOnlyBuffer<ClipSamplePlan> ClipSamples =>
             new AnimationReadOnlyBuffer<ClipSamplePlan>(m_ClipSamples, 0, 1);
 
@@ -543,7 +532,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
         internal void SynchronizeMovementClock(
             double elapsedSeconds,
             CommittedMovementPlaybackClock clock,
-            float presentationDeltaSeconds)
+            float presentationDeltaSeconds,
+            float playRate)
         {
             RequireAlive();
             RequireOpenFrame();
@@ -554,7 +544,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                 return;
             if (!clock.IsValid)
             {
-                ContinueMovementClock(presentationDeltaSeconds);
+                ContinueMovementClock(presentationDeltaSeconds, playRate);
                 return;
             }
             string ownerIdentity = clock.OwnerIdentity;
@@ -569,7 +559,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             if (changedClock && hadClockOrigin &&
                 m_DemandKind == PoseSourceProviderDemandKind.TransitionSource)
             {
-                ContinueMovementClock(presentationDeltaSeconds);
+                ContinueMovementClock(presentationDeltaSeconds, playRate);
                 return;
             }
             if (changedClock)
@@ -587,19 +577,23 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                 throw new InvalidOperationException($"Clip Player '{NodeId}' Movement clock regressed within one owner generation.");
             m_MovementClockLastElapsedSeconds = elapsedSeconds;
             double stateTime = m_Descriptor.InitialTime +
-                               (elapsedSeconds - m_MovementClockOriginSeconds) * m_PlayRate +
+                               (elapsedSeconds - m_MovementClockOriginSeconds) * playRate +
                                m_MovementClockOffsetSeconds;
             SetRawClock(stateTime);
         }
 
-        void ContinueMovementClock(float presentationDeltaSeconds)
+        void ContinueMovementClock(
+            float presentationDeltaSeconds,
+            float playRate)
         {
             if (presentationDeltaSeconds == 0f)
                 return;
-            SetRawClock(m_RawContinuousTime + presentationDeltaSeconds * m_PlayRate);
+            SetRawClock(m_RawContinuousTime + presentationDeltaSeconds * playRate);
         }
 
-        internal void Advance(float presentationDeltaSeconds)
+        internal void Advance(
+            float presentationDeltaSeconds,
+            float playRate)
         {
             RequireAlive();
             RequireOpenFrame();
@@ -607,7 +601,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                 throw new ArgumentOutOfRangeException(nameof(presentationDeltaSeconds));
             if (!m_Relevant || presentationDeltaSeconds == 0f)
                 return;
-            double next = m_RawContinuousTime + presentationDeltaSeconds * m_PlayRate;
+            double next = m_RawContinuousTime + presentationDeltaSeconds * playRate;
             SetRawClock(next);
         }
 
@@ -649,7 +643,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                 m_SourceWorkspace.DiscardFrame(m_SourceWorkspace.CompletionIdentity);
         }
 
-        internal AnimationPoseSourceCaptureBinding PrepareCapture(float presentationDeltaSeconds)
+        internal AnimationPoseSourceCaptureBinding PrepareCapture(
+            float presentationDeltaSeconds,
+            float playRate)
         {
             RequireAlive();
             RequireOpenFrame();
@@ -670,7 +666,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                 m_SourceId,
                 m_ContinuityIdentity,
                 m_Descriptor.PlayerIndex,
-                m_PlayRate,
+                playRate,
                 new AnimationReadOnlyBuffer<float>(m_Parameters, 0, m_Parameters.Length),
                 new AnimationReadOnlyBuffer<byte>(m_ParameterAvailability, 0, m_ParameterAvailability.Length),
                 SampleAndBindPredictionSource(

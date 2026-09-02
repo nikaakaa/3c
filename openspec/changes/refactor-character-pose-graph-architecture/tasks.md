@@ -43,7 +43,7 @@
 - [x] 4.4 迁移prepared source创建、deferred release、slot reuse、retirement permission与release completion闭包
 - [x] 4.5 让Source Module只消费Program发布的Demand/Usage并只输出Source Frame Result，不读取PoseState、Action winner、Transition、Slot或Blend内部状态
 - [x] 4.6 从旧Pose runtime删除source数组、physical identity scratch、release pool、Dictionary/List控制逻辑和重复Seal/Discard顺序
-- [ ] 4.7 将Clip、Blend Space、Motion Matching与Action sample-local调参改为Source-owned Candidate Tuning Snapshot，不修改Program Image或actor-local Execution View
+- [x] 4.7 将Clip、Blend Space、Motion Matching与Action sample-local调参改为Source-owned Candidate Tuning Snapshot，不修改Program Image或actor-local Execution View
 - [x] 4.8 搜索并消除第二Animancer direct Play、第二Physical Source Registry、第二capture owner和图外source fallback
 
 ## 5. 分离Program Image、Execution View、Actor State、Owned Frame Pages与根事务

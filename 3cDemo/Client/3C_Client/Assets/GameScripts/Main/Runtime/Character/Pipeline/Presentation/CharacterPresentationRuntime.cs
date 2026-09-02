@@ -854,13 +854,13 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     string error = m_PoseRuntime.ApplyTuning(
                         m_Bindings.Projection.TuningLayout,
                         block,
+                        checked(m_TuningGeneration + 1),
                         resetOwnerState);
                     if (string.IsNullOrEmpty(error) || previous == null)
                         return error;
-                    string rollbackError = m_PoseRuntime.ApplyTuning(
+                    string rollbackError = m_PoseRuntime.RestoreMutableTuning(
                         m_Bindings.Projection.TuningLayout,
-                        previous,
-                        false);
+                        previous);
                     return string.IsNullOrEmpty(rollbackError)
                         ? error
                         : $"{error} Rollback failed: {rollbackError}";

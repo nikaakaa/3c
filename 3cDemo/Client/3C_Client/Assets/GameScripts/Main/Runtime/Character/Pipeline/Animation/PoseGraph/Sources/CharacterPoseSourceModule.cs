@@ -480,6 +480,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Sources
 
         readonly AnimancerComponent m_Animancer;
         readonly CharacterPoseSourceCatalog m_Catalog;
+        readonly CharacterPoseSourceTuningState m_Tuning;
         readonly AnimancerPoseSamplingBackend m_Backend;
         readonly PhysicalPoseSourceRegistry m_PhysicalSources;
         readonly CharacterPoseSourceBindingPage m_BindingPage;
@@ -496,7 +497,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Sources
 
         internal CharacterPoseSourceModule(
             AnimancerComponent animancer,
-            CharacterPoseSourceCatalog catalog,
+            CharacterPresentationProjection projection,
             CharacterAnimationRigBinding rigBinding,
             CharacterAnimationRigPayload rig,
             int sourceCapacity,
@@ -508,8 +509,14 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Sources
             m_Animancer = animancer
                 ? animancer
                 : throw new ArgumentNullException(nameof(animancer));
-            m_Catalog = catalog ??
-                throw new ArgumentNullException(nameof(catalog));
+            if (projection == null)
+                throw new ArgumentNullException(nameof(projection));
+            m_Catalog = new CharacterPoseSourceCatalog(
+                projection,
+                clipCapacity);
+            m_Tuning = new CharacterPoseSourceTuningState(
+                projection,
+                1);
             var physicalSources = new PhysicalPoseSourceRegistry(
                 sourceCapacity);
             AnimancerPoseSamplingBackend backend = null;
@@ -580,9 +587,36 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Sources
 
         internal int Capacity => m_PhysicalSources.Capacity;
 
+        internal CharacterPoseSourceTuningView RequireTuning(
+            ulong generation) =>
+            m_Tuning.RequireCommitted(generation);
+
+        internal string PrepareTuningCandidate(
+            CharacterPoseTuningLayout layout,
+            CharacterPoseTuningParameterBlock block,
+            ulong generation)
+        {
+            try
+            {
+                m_Tuning.PrepareCandidate(layout, block, generation);
+                return string.Empty;
+            }
+            catch (Exception exception)
+            {
+                return exception.Message;
+            }
+        }
+
+        internal void CommitTuningCandidate(ulong generation) =>
+            m_Tuning.CommitCandidate(generation);
+
+        internal void DiscardTuningCandidate() =>
+            m_Tuning.DiscardCandidate();
+
         internal CharacterPoseSourceFrameLease BeginFrame(
             in CharacterPoseFrameLineage lineage)
         {
+            m_Tuning.RequireCommitted(lineage.TuningGeneration);
             m_ReleasePage.RequireEmpty();
             m_ReleaseValidationIdentities.Clear();
             CharacterPoseSourceFrameLease lease =

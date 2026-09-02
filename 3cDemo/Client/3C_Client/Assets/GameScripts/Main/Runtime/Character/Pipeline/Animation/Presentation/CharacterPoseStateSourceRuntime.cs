@@ -5,6 +5,7 @@ using ThirdPersonCharacter.Animation.TransitionRouting;
 using ThirdPersonCharacter.Pipeline.Animation.Diagnostics;
 using ThirdPersonCharacter.Pipeline.Animation.Lifecycle;
 using ThirdPersonCharacter.Pipeline.Animation.MotionMatching;
+using ThirdPersonCharacter.Pipeline.Animation.Sources;
 using UnityEngine;
 
 namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
@@ -659,12 +660,14 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             float presentationDeltaSeconds,
             in CharacterPresentationFactFrame factFrame,
             in CharacterPresentationProgramParameterFrame
-                parameterFrame)
+                parameterFrame,
+            in CharacterPoseSourceTuningView sourceTuning)
         {
             if (!float.IsFinite(presentationDeltaSeconds) ||
                 presentationDeltaSeconds < 0f ||
                 !factFrame.IsValid ||
-                !parameterFrame.IsValid)
+                !parameterFrame.IsValid ||
+                !sourceTuning.IsValid)
             {
                 throw new ArgumentOutOfRangeException(
                     nameof(presentationDeltaSeconds));
@@ -683,13 +686,18 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                 {
                     continue;
                 }
+                float playRate =
+                    sourceTuning.RequireClipPlayRate(i);
                 if (player.ClockSource == CharacterClipPlayerClockSource.CommittedMovement)
                     player.SynchronizeMovementClock(
                         factFrame.MovementPlaybackTime,
                         factFrame.MovementPlaybackClock,
-                        presentationDeltaSeconds);
+                        presentationDeltaSeconds,
+                        playRate);
                 else
-                    player.Advance(presentationDeltaSeconds);
+                    player.Advance(
+                        presentationDeltaSeconds,
+                        playRate);
             }
             for (int i = 0;
                  i < m_BlendSpacePlayers.Length;

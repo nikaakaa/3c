@@ -617,3 +617,13 @@ Action、Motion Matching provider、Direct、Clip与Blend Space统一为一个`C
 状态：全仓Runtime搜索确认`PhysicalPoseSourceRegistry`与`AnimancerPoseSamplingBackend`均只有`CharacterPoseSourceModule`一处构造，`InsertOutputPlayable`也只有该Module安装source fan-in的一处调用；Character Runtime不存在直接`.Play(...)`，不存在以Legacy／Default／Fallback命名或语义补洞的source路径。唯一`AnimationScriptPlayable.Create`位于该Backend内部，source物理注册、Playable连接、capture binding安装、断连与销毁仍由同一Module闭合。
 
 Clip、Blend Space、Motion Matching、Action与Blend Stack保留的多个`PrepareCapture`只按各自Program节点语义准备同帧目标缓冲和typed binding；它们不持有Animancer Graph、Physical Registry或capture Playable，也不能自行连接、播放或发布物理source。Source Module消费这些命令后才由唯一Backend创建／更新capture Playable。因此这些入口是Program逻辑Owner到Source物理Owner的正式输入，不是第二capture owner。审计没有发现需删除的旁路，任务4.8完成；本步没有代码或行为变化，不单独运行回放。
+
+## Source-owned Candidate Tuning Snapshot
+
+状态：新增`CharacterPoseSourceTuningState`、不可变`CharacterPoseSourceTuningSnapshot`与只读`CharacterPoseSourceTuningView`，由`CharacterPoseSourceModule`构造和唯一持有。初始Snapshot从已校验Projection的Tuning Layout与Default Block建立，逐项确认Clip Player的默认`play-rate`与编译Descriptor相同；每次在线候选先验证Program、Projection、Pose Plan、Rig与Layout identity，再建立下一连续`TuningGeneration`的完整候选。Program／Constraint现有调参入口成功后Source才一次提升Committed Snapshot，失败时直接丢弃候选，不对Source执行反向Apply。
+
+`AnimationClipPlayerRuntime`已删除可变`m_PlayRate`、`PlayRate`读取和`ApplyTuning`写入口。Program Actor State仍唯一保存连续时间、cycle、movement clock、continuity和relevance；每帧从同generation的Source View读取Clip倍率，继续按原公式推进普通时钟与Committed Movement时钟，并把同一倍率作为capture的`VisualTimeScale`。Source Module在`BeginFrame`验证根lineage的Tuning Generation，Program Image与旧Native Execution存储均未被修改。
+
+当前发布Tuning schema中，Source sample-local可调字段只有Clip的`play-rate`；Blend Space、Motion Matching与Action没有独立sample-local调参字段。本步不为零字段Adapter制造占位配置、默认值或备用路径；以后新增这三类字段时必须扩展同一Source Snapshot。Program／Constraint仍保留旧可变Apply与失败回滚，留待任务8整体迁移，不能把本步误报为全局Tuning原子化完成。
+
+`ThirdPersonClient.Runtime.csproj`按规定参数编译成功，0错误，构建后已关闭MSBuild与编译器服务器。3C Unity普通Assets Refresh后新增文件进入正式工程，改动文件没有编译错误；全局Unity编译仍停在并行Foot Sampling尚未从旧`DiagnosticField` ABI迁到0.3 Generated Projection的已知边界。本步不增加兼容Attribute，也不在该外部阻塞期间伪造Replay证据。任务4.7完成，Source阶段4.1至4.8全部闭合。

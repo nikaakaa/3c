@@ -502,9 +502,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
 
                 sourceModule = new CharacterPoseSourceModule(
                     animancer,
-                    new CharacterPoseSourceCatalog(
-                        projection,
-                        clipCatalogCapacity),
+                    projection,
                     rigBinding,
                     projection.Rig,
                     physicalSourceCapacity,
@@ -640,37 +638,50 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
         internal string ApplyTuning(
             CharacterPoseTuningLayout layout,
             CharacterPoseTuningParameterBlock block,
+            ulong candidateGeneration,
             bool resetOwnerState)
         {
             if (layout == null || block == null)
                 return "Pose tuning payload is missing.";
-            for (int i = 0; i < layout.Entries.Count; i++)
+            string sourceError = m_SourceModule.PrepareTuningCandidate(
+                layout,
+                block,
+                candidateGeneration);
+            if (!string.IsNullOrEmpty(sourceError))
+                return sourceError;
+            string error;
+            try
             {
-                CharacterPoseTuningLayoutEntry entry = layout.Entries[i];
-                if (entry.Interaction != CharacterPoseTuningInteractionPolicy.TunableDefault ||
-                    !entry.FieldId.EndsWith("/play-rate", StringComparison.Ordinal))
-                    continue;
-                CharacterPoseTuningValue value = block.GetValue(entry);
-                string ownerPrefix = "pose-node:";
-                if (!entry.OwnerId.StartsWith(ownerPrefix, StringComparison.Ordinal))
-                    return $"Sequence tuning owner '{entry.OwnerId}' is invalid.";
-                string nodeId = entry.OwnerId.Substring(ownerPrefix.Length);
-                for (int operationIndex = 0;
-                     operationIndex < m_Projection.PosePlan.Operations.Count;
-                     operationIndex++)
-                {
-                    CharacterPresentationPoseOperation operation =
-                        m_Projection.PosePlan.Operations[operationIndex];
-                    if (operation.Code != CharacterPoseOperationCode.ClipPlayer ||
-                        !string.Equals(operation.NodeId.Value, nodeId, StringComparison.Ordinal))
-                        continue;
-                    string error = m_PoseStateSources.ClipPlayers[
-                        operation.ClipPlayerIndex].ApplyTuning(value.FloatValue);
-                    if (!string.IsNullOrEmpty(error))
-                        return error;
-                    break;
-                }
+                error = ApplyMutableTuning(
+                    layout,
+                    block,
+                    resetOwnerState);
             }
+            catch
+            {
+                m_SourceModule.DiscardTuningCandidate();
+                throw;
+            }
+            if (!string.IsNullOrEmpty(error))
+            {
+                m_SourceModule.DiscardTuningCandidate();
+                return error;
+            }
+            m_SourceModule.CommitTuningCandidate(
+                candidateGeneration);
+            return string.Empty;
+        }
+
+        internal string RestoreMutableTuning(
+            CharacterPoseTuningLayout layout,
+            CharacterPoseTuningParameterBlock block) =>
+            ApplyMutableTuning(layout, block, false);
+
+        string ApplyMutableTuning(
+            CharacterPoseTuningLayout layout,
+            CharacterPoseTuningParameterBlock block,
+            bool resetOwnerState)
+        {
             for (int i = 0; i < layout.Entries.Count; i++)
             {
                 CharacterPoseTuningLayoutEntry entry = layout.Entries[i];
@@ -1822,7 +1833,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             m_PoseStateSources.AdvanceSources(
                 presentationDeltaSeconds,
                 in factFrame,
-                in parameterFrame);
+                in parameterFrame,
+                m_SourceModule.RequireTuning(
+                    m_ActiveFrameLease.Lineage.TuningGeneration));
         }
 
         internal void FinalizePoseStateFrame(
@@ -2011,6 +2024,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                 }
                 using (PrepareSequenceMarker.Auto())
                 {
+                    CharacterPoseSourceTuningView sourceTuning =
+                        m_SourceModule.RequireTuning(
+                            sourceDemand.Lineage.TuningGeneration);
                     for (int playerIndex = 0;
                          playerIndex <
                          m_PoseStateSources.ClipPlayers.Length;
@@ -2019,7 +2035,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                             playerIndex,
                             sourceLease,
                             in sourcePreparations,
-                            presentationDeltaSeconds);
+                            presentationDeltaSeconds,
+                            sourceTuning.RequireClipPlayRate(
+                                playerIndex));
                 }
                 using (PrepareBlendSpaceMarker.Auto())
                 {
@@ -2868,7 +2886,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             int playerIndex,
             CharacterPoseSourceFrameLease sourceLease,
             in CharacterPoseSourcePreparationView preparations,
-            float presentationDeltaSeconds)
+            float presentationDeltaSeconds,
+            float playRate)
         {
             AnimationClipPlayerRuntime player =
                 m_PoseStateSources.ClipPlayers[playerIndex];
@@ -2877,7 +2896,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             if (!selectedPreview && !IsPlayerActive(player.PlayerIndex) ||
                 !player.IsRelevant)
                 return;
-            AnimationPoseSourceCaptureBinding capture = player.PrepareCapture(presentationDeltaSeconds);
+            AnimationPoseSourceCaptureBinding capture = player.PrepareCapture(
+                presentationDeltaSeconds,
+                playRate);
             CharacterPoseSourcePreparation preparation =
                 CharacterPoseSourcePreparation.ClipPlayer(
                     playerIndex,

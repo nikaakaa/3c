@@ -6,11 +6,11 @@ using ThirdPersonCharacter.Pipeline.Editor;
 
 namespace ThirdPersonCharacter.Editor.CharacterSimulation
 {
-    internal sealed class CharacterMotionMatchingPoseCompilerHandler :
-        CharacterPoseCompilerHandler<CharacterMotionMatchingPosePayload>
+    internal sealed class CharacterMotionMatchingPoseNodeDefinition :
+        CharacterPoseNodeDefinition<CharacterMotionMatchingPosePayload>
     {
         public override CharacterPoseNodeKind Kind => CharacterPoseNodeKind.MotionMatchingPose;
-        public override CharacterPoseOperationCode Code => CharacterPoseOperationCode.MotionMatchingPose;
+        public override CharacterPoseOperationCode OperationCode => CharacterPoseOperationCode.MotionMatchingPose;
 
         public override CharacterPoseNodePayload CreatePayload(CharacterPoseAuthoringPayloadInput input) =>
             new CharacterMotionMatchingPosePayload(
@@ -32,11 +32,11 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
 
         protected override void Validate(CharacterMotionMatchingPosePayload payload, string sourcePath)
         {
-            CharacterPoseCompilerHandlerValidation.Require(payload.Binding, sourcePath, "Motion Matching Binding is missing.");
-            CharacterPoseCompilerHandlerValidation.Require(payload.JumpBlendPolicy, sourcePath, "Motion Matching Jump Blend Policy is missing.");
-            CharacterPoseCompilerHandlerValidation.Require(payload.EntryGraph != null && payload.EntryGraph.PoseGraphId.IsValid, sourcePath, "Motion Matching entry graph identity is missing.");
-            CharacterPoseCompilerHandlerValidation.Require(Enum.IsDefined(typeof(CharacterMotionMatchingRelevanceResetPolicy), payload.RelevanceResetPolicy), sourcePath, "Motion Matching relevance reset policy is invalid.");
-            CharacterPoseCompilerHandlerValidation.Require(Enum.IsDefined(typeof(CharacterMotionMatchingSearchCadencePolicy), payload.SearchCadencePolicy), sourcePath, "Motion Matching search cadence policy is invalid.");
+            CharacterPoseNodeDefinitionValidation.Require(payload.Binding, sourcePath, "Motion Matching Binding is missing.");
+            CharacterPoseNodeDefinitionValidation.Require(payload.JumpBlendPolicy, sourcePath, "Motion Matching Jump Blend Policy is missing.");
+            CharacterPoseNodeDefinitionValidation.Require(payload.EntryGraph != null && payload.EntryGraph.PoseGraphId.IsValid, sourcePath, "Motion Matching entry graph identity is missing.");
+            CharacterPoseNodeDefinitionValidation.Require(Enum.IsDefined(typeof(CharacterMotionMatchingRelevanceResetPolicy), payload.RelevanceResetPolicy), sourcePath, "Motion Matching relevance reset policy is invalid.");
+            CharacterPoseNodeDefinitionValidation.Require(Enum.IsDefined(typeof(CharacterMotionMatchingSearchCadencePolicy), payload.SearchCadencePolicy), sourcePath, "Motion Matching search cadence policy is invalid.");
         }
 
         protected override IReadOnlyList<CharacterPoseGraphDependency>
@@ -62,11 +62,11 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
         }
     }
 
-    internal sealed class CharacterPoseHistoryCollectorCompilerHandler :
-        CharacterPoseCompilerHandler<CharacterPoseHistoryCollectorPayload>
+    internal sealed class CharacterPoseHistoryCollectorNodeDefinition :
+        CharacterPoseNodeDefinition<CharacterPoseHistoryCollectorPayload>
     {
         public override CharacterPoseNodeKind Kind => CharacterPoseNodeKind.PoseHistoryCollector;
-        public override CharacterPoseOperationCode Code => CharacterPoseOperationCode.PoseHistoryRead;
+        public override CharacterPoseOperationCode OperationCode => CharacterPoseOperationCode.PoseHistoryRead;
 
         public override CharacterPoseNodePayload CreatePayload(CharacterPoseAuthoringPayloadInput input) =>
             new CharacterPoseHistoryCollectorPayload(
@@ -78,14 +78,14 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                 : base.ReadField(payload, field);
 
         protected override void Validate(CharacterPoseHistoryCollectorPayload payload, string sourcePath) =>
-            CharacterPoseCompilerHandlerValidation.Require(
+            CharacterPoseNodeDefinitionValidation.Require(
                 payload.HistoryId.IsValid,
                 sourcePath,
                 "Pose History identity is missing.");
     }
 
-    internal sealed class CharacterEntryPoseInputCompilerHandler :
-        CharacterPoseCompilerHandler<CharacterEntryPoseInputPayload>
+    internal sealed class CharacterEntryPoseInputNodeDefinition :
+        CharacterPoseNodeDefinition<CharacterEntryPoseInputPayload>
     {
         public override CharacterPoseNodeKind Kind => CharacterPoseNodeKind.EntryPoseInput;
         public override CharacterPoseNativeNodeRole NativeRole => CharacterPoseNativeNodeRole.GraphInput;

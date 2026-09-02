@@ -985,3 +985,9 @@ Action sample window、presentation tick、delta、Interpolation／Retention投�
 状态：新增`CharacterPoseMotionMatchingSourceRuntime`，由`CharacterPoseSourceModule`唯一持有Motion Matching查询模块及其Pending lease。独立组合模块负责Trajectory／Preview输入、Demand Resolution、Completion、Commit／Discard、Reset与提交后诊断；Program Runtime持有固定容量Provider sample页并消费Selection，Pose协调层只负责Program与Source之间的typed阶段编排。
 
 根Runtime删除Motion Matching模块、Provider sample字典和容量，根`CharacterPoseFrameTransaction`也删除Motion Matching lease及其索引。Begin、Resolve、Completion、Commit、Discard、Reset和诊断发布仍位于原阶段，Action／Workspace／Slot／Program／Source／Constraint／Publication相对顺序未变。任务5.6完成；3C MCP强制刷新后对新增组合模块、Source、Program、Pose协调层、根Runtime与根Transaction错误筛选均为0；不单独运行回放。
+
+## 删除Pose Compiler Handler层
+
+状态：`CharacterPoseNodeDefinition`改为真正的抽象定义合同，typed泛型Definition直接实现Payload创建／字段读取、局部与Rig校验、Graph dependency、Source Map和Lowering；Definition Module直接登记29个具体Definition，不再先登记Handler再包装一次。Full Body IK、Linked Pose与Motion Matching定义文件同步改名，旧`ICharacterPoseCompilerHandler`、泛型Handler和Handler命名全部删除。
+
+Player、Action Input、Slot、Blend、StateMachine、Inertialization、Additive、Component Control与Clip需求由单一`CharacterPoseNodeRuntimeRequirement`位集表达，Compiler与Symbolic Lowering只消费该typed需求，不再读取逐项布尔矩阵。任务10.9完成；3C MCP强制刷新后所有触碰文件错误筛选均为0，当前唯一全局编译错误来自范围外ASP Local Integration；不单独运行回放。

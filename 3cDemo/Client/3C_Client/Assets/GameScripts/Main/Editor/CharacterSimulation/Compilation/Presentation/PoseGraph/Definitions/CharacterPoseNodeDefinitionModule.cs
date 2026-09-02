@@ -69,58 +69,59 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
         DedicatedSurface = 2
     }
 
-    internal sealed class CharacterPoseNodeDefinition
+    [Flags]
+    internal enum CharacterPoseNodeRuntimeRequirement : ushort
     {
-        readonly ICharacterPoseCompilerHandler m_Adapter;
+        None = 0,
+        PoseSourceSlot = 1 << 0,
+        AnimationChannel = 1 << 1,
+        Player = 1 << 2,
+        ActionPlaybackControl = 1 << 3,
+        BlendPolicy = 1 << 4,
+        StateMachine = 1 << 5,
+        AnimationSlot = 1 << 6,
+        Inertialization = 1 << 7,
+        Additive = 1 << 8,
+        ModifyBone = 1 << 9,
+        RootOrientationWarp = 1 << 10,
+        ClipPlayer = 1 << 11
+    }
+
+    internal abstract class CharacterPoseNodeDefinition
+    {
         GraphAuthoringCapabilityDescriptor m_Capability;
 
-        public CharacterPoseNodeDefinition(
-            ICharacterPoseCompilerHandler adapter)
-        {
-            m_Adapter = adapter ?? throw new ArgumentNullException(nameof(adapter));
-            Kind = adapter.Kind;
-            PayloadType = adapter.PayloadType;
-            NativeRole = adapter.NativeRole;
-            OperationCode = adapter.Code;
-            OperationFamily = ResolveFamily(Kind);
-            CanvasCreation = Kind == CharacterPoseNodeKind.LinkedPoseCall
+        public abstract CharacterPoseNodeKind Kind { get; }
+        public abstract Type PayloadType { get; }
+        public virtual CharacterPoseNativeNodeRole NativeRole =>
+            CharacterPoseNativeNodeRole.Operation;
+        public virtual CharacterPoseOperationCode OperationCode => default;
+        public virtual CharacterPoseNodeRuntimeRequirement
+            RuntimeRequirements =>
+                CharacterPoseNodeRuntimeRequirement.None;
+        public CharacterPoseOperationFamily OperationFamily =>
+            ResolveFamily(Kind);
+        public CharacterPoseCanvasCreationKind CanvasCreation =>
+            Kind == CharacterPoseNodeKind.LinkedPoseCall
                 ? CharacterPoseCanvasCreationKind.DedicatedSurface
                 : CharacterPoseCanvasCreationKind.Direct;
-            Copyable = Kind != CharacterPoseNodeKind.GraphInput &&
-                       Kind != CharacterPoseNodeKind.GraphOutput &&
-                       Kind != CharacterPoseNodeKind.OutputPose &&
-                       Kind != CharacterPoseNodeKind.PoseStateMachine;
-        }
-
-        public CharacterPoseNodeKind Kind { get; }
-        public Type PayloadType { get; }
-        public CharacterPoseNativeNodeRole NativeRole { get; }
-        public CharacterPoseOperationCode OperationCode { get; }
-        public CharacterPoseOperationFamily OperationFamily { get; }
-        public CharacterPoseCanvasCreationKind CanvasCreation { get; }
-        public bool Copyable { get; }
+        public bool Copyable =>
+            Kind != CharacterPoseNodeKind.GraphInput &&
+            Kind != CharacterPoseNodeKind.GraphOutput &&
+            Kind != CharacterPoseNodeKind.OutputPose &&
+            Kind != CharacterPoseNodeKind.PoseStateMachine;
         public bool UsesPoseSourceSlot =>
-            Kind == CharacterPoseNodeKind.SelectedPosePlayer ||
-            Kind == CharacterPoseNodeKind.BlendStack ||
-            Kind == CharacterPoseNodeKind.BlendSpacePlayer ||
-            Kind == CharacterPoseNodeKind.ClipPlayer;
+            Requires(CharacterPoseNodeRuntimeRequirement.PoseSourceSlot);
         public bool UsesAnimationChannel =>
-            Kind == CharacterPoseNodeKind.ActionPlaybackInput ||
-            Kind == CharacterPoseNodeKind.AnimationSlot;
-        public bool Player => m_Adapter.Player;
-        public bool ActionPlaybackControl => m_Adapter.ActionPlaybackControl;
-        public bool BlendPolicy => m_Adapter.BlendPolicy;
-        public bool StateMachine => m_Adapter.StateMachine;
-        public bool AnimationSlot => m_Adapter.AnimationSlot;
-        public bool Inertialization => m_Adapter.Inertialization;
-        public bool Additive => m_Adapter.Additive;
-        public bool ModifyBone => m_Adapter.ModifyBone;
-        public bool RootOrientationWarp => m_Adapter.RootOrientationWarp;
-        public bool ClipPlayer => m_Adapter.ClipPlayer;
+            Requires(CharacterPoseNodeRuntimeRequirement.AnimationChannel);
         public GraphAuthoringCapabilityDescriptor Capability =>
             m_Capability ?? throw new InvalidOperationException(
                 $"Pose Node Definition '{Kind}' has no capability projection.");
         public string CapabilityIdentity => Capability.CapabilityId.Value;
+        public bool Requires(
+            CharacterPoseNodeRuntimeRequirement requirement) =>
+            requirement != CharacterPoseNodeRuntimeRequirement.None &&
+            (RuntimeRequirements & requirement) == requirement;
         public CharacterPoseExecutionDomain ExecutionDomain
         {
             get
@@ -157,9 +158,8 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             m_Capability = capability;
         }
 
-        public CharacterPoseNodePayload CreatePayload(
-            CharacterPoseAuthoringPayloadInput input) =>
-            m_Adapter.CreatePayload(input);
+        public abstract CharacterPoseNodePayload CreatePayload(
+            CharacterPoseAuthoringPayloadInput input);
 
         public CharacterPoseNodePayload CreateDefaultPayload() =>
             (CharacterPoseNodePayload)Activator.CreateInstance(PayloadType);
@@ -198,73 +198,59 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                     : null));
         }
 
-        public object ReadField(
+        public abstract object ReadField(
             CharacterPoseNodePayload payload,
-            string field) =>
-            m_Adapter.ReadField(payload, field);
+            string field);
 
-        public void RequirePayload(CharacterPoseNodePayload payload) =>
-            m_Adapter.RequirePayload(payload);
+        public abstract void RequirePayload(
+            CharacterPoseNodePayload payload);
 
-        public void ValidatePayload(
+        public abstract void ValidatePayload(
             CharacterPoseNodePayload payload,
-            string sourcePath) =>
-            m_Adapter.ValidatePayload(payload, sourcePath);
+            string sourcePath);
 
-        public void ValidateRig(
+        public abstract void ValidateRig(
             CharacterPoseNodePayload payload,
             CharacterAnimationRigDefinition rig,
-            string sourcePath) =>
-            m_Adapter.ValidateRig(payload, rig, sourcePath);
+            string sourcePath);
 
-        public CharacterPoseIrNode Lower(
+        public abstract CharacterPoseIrNode Lower(
             CharacterTypedPoseNode node,
             IReadOnlyList<CharacterPoseIrInput> inputs,
-            string sourcePath) =>
-            m_Adapter.Lower(node, inputs, sourcePath);
+            string sourcePath);
 
-        public CharacterPresentationPoseSourceSlot Source(
-            CharacterPoseNodePayload payload) =>
-            m_Adapter.Source(payload);
+        public abstract CharacterPresentationPoseSourceSlot Source(
+            CharacterPoseNodePayload payload);
 
-        public AnimationChannelId Channel(
-            CharacterPoseNodePayload payload) =>
-            m_Adapter.Channel(payload);
+        public abstract AnimationChannelId Channel(
+            CharacterPoseNodePayload payload);
 
-        public PoseParameterId Parameter(
-            CharacterPoseNodePayload payload) =>
-            m_Adapter.Parameter(payload);
+        public abstract PoseParameterId Parameter(
+            CharacterPoseNodePayload payload);
 
-        public AnimationSelectionAvailabilityPolicy Availability(
+        public abstract AnimationSelectionAvailabilityPolicy Availability(
             CharacterPoseNodePayload payload,
-            bool stateLocal) =>
-            m_Adapter.Availability(payload, stateLocal);
+            bool stateLocal);
 
-        public CharacterAnimationBlendSpaceInputRangePolicy InputRange(
-            CharacterPoseNodePayload payload) =>
-            m_Adapter.InputRange(payload);
+        public abstract CharacterAnimationBlendSpaceInputRangePolicy InputRange(
+            CharacterPoseNodePayload payload);
 
-        public float Weight(CharacterPoseNodePayload payload) =>
-            m_Adapter.Weight(payload);
+        public abstract float Weight(CharacterPoseNodePayload payload);
 
-        public CharacterAnimationBoneMaskAsset BoneMask(
-            CharacterPoseNodePayload payload) =>
-            m_Adapter.BoneMask(payload);
+        public abstract CharacterAnimationBoneMaskAsset BoneMask(
+            CharacterPoseNodePayload payload);
 
-        public IReadOnlyList<CharacterPoseParameterPolicy>
-            ParameterPolicies(CharacterPoseNodePayload payload) =>
-            m_Adapter.ParameterPolicies(payload);
+        public abstract IReadOnlyList<CharacterPoseParameterPolicy>
+            ParameterPolicies(CharacterPoseNodePayload payload);
 
-        public IReadOnlyList<CharacterPoseGraphDependency>
-            ProjectGraphDependencies(CharacterPoseNodePayload payload) =>
-            m_Adapter.ProjectGraphDependencies(payload);
+        public abstract IReadOnlyList<CharacterPoseGraphDependency>
+            ProjectGraphDependencies(CharacterPoseNodePayload payload);
 
-        public string ProjectChildDocumentId(
-            CharacterPoseNodePayload payload) =>
-            m_Adapter.ProjectChildDocumentId(payload);
+        public abstract string ProjectChildDocumentId(
+            CharacterPoseNodePayload payload);
 
-        public string SourceMapName(CharacterPoseNodePayload payload) =>
-            m_Adapter.SourceMapName(payload);
+        public abstract string SourceMapName(
+            CharacterPoseNodePayload payload);
 
         public IReadOnlyList<GraphAuthoringTypedPropertyValue>
             ProjectTypedProperties(CharacterPoseNodePayload payload)
@@ -451,45 +437,44 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
 
         CharacterPoseNodeDefinitionModule()
         {
-            ICharacterPoseCompilerHandler[] adapters =
+            CharacterPoseNodeDefinition[] definitions =
             {
-                new CharacterProgramParameterInputPoseCompilerHandler(),
-                new CharacterActionPlaybackInputPoseCompilerHandler(),
-                new CharacterSelectedPosePlayerCompilerHandler(),
-                new CharacterBlendSpacePlayerPoseCompilerHandler(),
-                new CharacterClipPlayerPoseCompilerHandler(),
-                new CharacterPoseStateMachineNodeCompilerHandler(),
-                new CharacterAnimationSlotPoseCompilerHandler(),
-                new CharacterBlendStackPoseCompilerHandler(),
-                new CharacterInertializationPoseCompilerHandler(),
-                new CharacterBlendPoseCompilerHandler(),
-                new CharacterLayeredBoneBlendPoseCompilerHandler(),
-                new CharacterAdditivePoseCompilerHandler(),
-                new CharacterPoseParameterResolveCompilerHandler(),
-                new CharacterModifyBonePoseCompilerHandler(),
-                new CharacterRootOrientationWarpPoseCompilerHandler(),
-                new CharacterPoseSubgraphCompilerHandler(),
-                new CharacterLocalToComponentPoseCompilerHandler(),
-                new CharacterComponentToLocalPoseCompilerHandler(),
-                new CharacterGraphInputPoseCompilerHandler(),
-                new CharacterGraphOutputPoseCompilerHandler(),
-                new CharacterOutputPoseCompilerHandler(),
-                new CharacterFootPlacementPoseCompilerHandler(),
-                new CharacterPoseBoneIkGoalsCompilerHandler(),
-                new CharacterFullBodyIkPoseCompilerHandler(),
-                new CharacterFullBodyIkGoalAssemblerCompilerHandler(),
-                new CharacterLinkedPoseCallCompilerHandler(),
-                new CharacterMotionMatchingPoseCompilerHandler(),
-                new CharacterPoseHistoryCollectorCompilerHandler(),
-                new CharacterEntryPoseInputCompilerHandler()
+                new CharacterProgramParameterInputPoseNodeDefinition(),
+                new CharacterActionPlaybackInputPoseNodeDefinition(),
+                new CharacterSelectedPosePlayerNodeDefinition(),
+                new CharacterBlendSpacePlayerPoseNodeDefinition(),
+                new CharacterClipPlayerPoseNodeDefinition(),
+                new CharacterPoseStateMachineNodeDefinition(),
+                new CharacterAnimationSlotPoseNodeDefinition(),
+                new CharacterBlendStackPoseNodeDefinition(),
+                new CharacterInertializationPoseNodeDefinition(),
+                new CharacterBlendPoseNodeDefinition(),
+                new CharacterLayeredBoneBlendPoseNodeDefinition(),
+                new CharacterAdditivePoseNodeDefinition(),
+                new CharacterPoseParameterResolveNodeDefinition(),
+                new CharacterModifyBonePoseNodeDefinition(),
+                new CharacterRootOrientationWarpPoseNodeDefinition(),
+                new CharacterPoseSubgraphNodeDefinition(),
+                new CharacterLocalToComponentPoseNodeDefinition(),
+                new CharacterComponentToLocalPoseNodeDefinition(),
+                new CharacterGraphInputPoseNodeDefinition(),
+                new CharacterGraphOutputPoseNodeDefinition(),
+                new CharacterOutputPoseNodeDefinition(),
+                new CharacterFootPlacementPoseNodeDefinition(),
+                new CharacterPoseBoneIkGoalsNodeDefinition(),
+                new CharacterFullBodyIkPoseNodeDefinition(),
+                new CharacterFullBodyIkGoalAssemblerNodeDefinition(),
+                new CharacterLinkedPoseCallNodeDefinition(),
+                new CharacterMotionMatchingPoseNodeDefinition(),
+                new CharacterPoseHistoryCollectorNodeDefinition(),
+                new CharacterEntryPoseInputNodeDefinition()
             };
             m_Definitions = new Dictionary<CharacterPoseNodeKind,
                 CharacterPoseNodeDefinition>();
             m_ByPayloadType = new Dictionary<Type,
                 CharacterPoseNodeDefinition>();
-            foreach (ICharacterPoseCompilerHandler adapter in adapters)
+            foreach (CharacterPoseNodeDefinition definition in definitions)
             {
-                var definition = new CharacterPoseNodeDefinition(adapter);
                 if (m_Definitions.TryGetValue(
                         definition.Kind,
                         out CharacterPoseNodeDefinition duplicateKind))

@@ -6,12 +6,12 @@ using ThirdPersonCharacter.Pipeline.Presentation;
 
 namespace ThirdPersonCharacter.Editor.CharacterSimulation
 {
-    internal sealed class CharacterLinkedPoseCallCompilerHandler :
-        CharacterPoseCompilerHandler<CharacterLinkedPoseCallPayload>
+    internal sealed class CharacterLinkedPoseCallNodeDefinition :
+        CharacterPoseNodeDefinition<CharacterLinkedPoseCallPayload>
     {
         public override CharacterPoseNodeKind Kind =>
             CharacterPoseNodeKind.LinkedPoseCall;
-        public override CharacterPoseOperationCode Code =>
+        public override CharacterPoseOperationCode OperationCode =>
             CharacterPoseOperationCode.LinkedPoseCall;
 
         public override CharacterPoseNodePayload CreatePayload(
@@ -35,7 +35,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
         protected override void Validate(
             CharacterLinkedPoseCallPayload payload,
             string sourcePath) =>
-            CharacterPoseCompilerHandlerValidation.Require(
+            CharacterPoseNodeDefinitionValidation.Require(
                 payload.GroupId.IsValid &&
                 payload.InterfaceId.IsValid &&
                 payload.EntryId.IsValid,

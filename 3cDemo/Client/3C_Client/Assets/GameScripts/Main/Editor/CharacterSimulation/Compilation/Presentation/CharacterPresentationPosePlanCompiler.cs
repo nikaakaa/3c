@@ -516,7 +516,8 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                         callChain,
                         values)
                     : new LinkedPoseCallCompilation(-1, handler.ExecutionDomain);
-                int stateMachineIndex = handler.StateMachine
+                int stateMachineIndex = handler.Requires(
+                    CharacterPoseNodeRuntimeRequirement.StateMachine)
                     ? CompileStateMachine(
                         ownerAsset,
                         RequirePayload<CharacterPoseStateMachineNodePayload>(irNode),
@@ -604,7 +605,8 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                     scope,
                     values);
                 int playerIndex = -1;
-                if (handler.ActionPlaybackControl)
+                if (handler.Requires(
+                        CharacterPoseNodeRuntimeRequirement.ActionPlaybackControl))
                 {
                     CompiledValue selection = RequireInput(
                         node,
@@ -615,7 +617,8 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                         values);
                     controlInputOperationIndex = selection.ProducerOperationIndex;
                 }
-                if (handler.Player)
+                if (handler.Requires(
+                        CharacterPoseNodeRuntimeRequirement.Player))
                     playerIndex = state.PlayerCount++;
                 PoseParameterId declaredParameter = handler.Parameter(irNode.Payload);
                 if (declaredParameter.IsValid)
@@ -648,12 +651,14 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                     }
                 }
 
-                int blendNodeIndex = handler.BlendPolicy
+                int blendNodeIndex = handler.Requires(
+                    CharacterPoseNodeRuntimeRequirement.BlendPolicy)
                     ? state.BlendNodeIndices.TryGetValue(scopedNodeId, out int index)
                         ? index
                         : throw new InvalidOperationException($"Animation transition owner '{scopedNodeId}' has no compiled policy payload.")
                     : -1;
-                int animationSlotIndex = handler.AnimationSlot
+                int animationSlotIndex = handler.Requires(
+                    CharacterPoseNodeRuntimeRequirement.AnimationSlot)
                     ? CompileAnimationSlot(
                         RequirePayload<CharacterAnimationSlotPosePayload>(irNode),
                         scopedNodeId,
@@ -663,25 +668,29 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                         blendNodeIndex,
                         state)
                     : -1;
-                int inertializationIndex = handler.Inertialization
+                int inertializationIndex = handler.Requires(
+                    CharacterPoseNodeRuntimeRequirement.Inertialization)
                     ? CompileInertialization(state)
                     : -1;
                 CharacterAnimationBoneMaskAsset boneMask = handler.BoneMask(irNode.Payload);
                 int maskIndex = boneMask
                     ? CompileMask(boneMask, state.Rig, state.Masks, state.MaskIndices)
                     : -1;
-                int additiveIndex = handler.Additive
+                int additiveIndex = handler.Requires(
+                    CharacterPoseNodeRuntimeRequirement.Additive)
                     ? CompileAdditiveReference(
                         RequirePayload<CharacterAdditivePosePayload>(irNode),
                         state.Rig,
                         state.AdditiveReferences)
                     : -1;
-                int modifyIndex = handler.ModifyBone
+                int modifyIndex = handler.Requires(
+                    CharacterPoseNodeRuntimeRequirement.ModifyBone)
                     ? CompileModifyBone(
                         RequirePayload<CharacterModifyBonePosePayload>(irNode),
                         state)
                     : -1;
-                int rootOrientationWarpIndex = handler.RootOrientationWarp
+                int rootOrientationWarpIndex = handler.Requires(
+                    CharacterPoseNodeRuntimeRequirement.RootOrientationWarp)
                     ? CompileRootOrientationWarp(
                         RequirePayload<CharacterRootOrientationWarpPosePayload>(irNode),
                         scopedNodeId,
@@ -705,7 +714,8 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                         scopedNodeId,
                         state)
                     : -1;
-                int clipPlayerIndex = handler.ClipPlayer
+                int clipPlayerIndex = handler.Requires(
+                    CharacterPoseNodeRuntimeRequirement.ClipPlayer)
                     ? CompileClipPlayer(
                         RequirePayload<CharacterClipPlayerPosePayload>(irNode),
                         scopedNodeId,
@@ -716,7 +726,8 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                     handler.ParameterPolicies(irNode.Payload),
                     state.Parameters,
                     state.ParameterIndices);
-                PresentationPoseSourceProviderId provider = handler.Player
+                PresentationPoseSourceProviderId provider = handler.Requires(
+                    CharacterPoseNodeRuntimeRequirement.Player)
                     ? new PresentationPoseSourceProviderId($"pose-provider/{scopedNodeId}")
                     : default;
                 CharacterPresentationPoseSourceSlot sourceSlot = handler.Source(irNode.Payload);

@@ -7,11 +7,11 @@ using ThirdPersonCharacter.Pipeline.Presentation;
 
 namespace ThirdPersonCharacter.Editor.CharacterSimulation
 {
-    internal sealed class CharacterFootPlacementPoseCompilerHandler :
-        CharacterPoseCompilerHandler<CharacterFootPlacementPosePayload>
+    internal sealed class CharacterFootPlacementPoseNodeDefinition :
+        CharacterPoseNodeDefinition<CharacterFootPlacementPosePayload>
     {
         public override CharacterPoseNodeKind Kind => CharacterPoseNodeKind.FootPlacement;
-        public override CharacterPoseOperationCode Code => CharacterPoseOperationCode.FootPlacement;
+        public override CharacterPoseOperationCode OperationCode => CharacterPoseOperationCode.FootPlacement;
 
         public override CharacterPoseNodePayload CreatePayload(CharacterPoseAuthoringPayloadInput input) =>
             new CharacterFootPlacementPosePayload(
@@ -28,12 +28,12 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
 
         protected override void Validate(CharacterFootPlacementPosePayload payload, string sourcePath)
         {
-            CharacterPoseCompilerHandlerValidation.Require(
+            CharacterPoseNodeDefinitionValidation.Require(
                 payload.Profile && payload.Calibration,
                 sourcePath,
                 "Foot Placement profile or calibration is missing.");
             payload.Profile.RequireValid();
-            CharacterPoseCompilerHandlerValidation.Require(
+            CharacterPoseNodeDefinitionValidation.Require(
                 string.Equals(
                     payload.Profile.Revision,
                     payload.Profile.ComputeRevision(),
@@ -58,11 +58,11 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
         }
     }
 
-    internal sealed class CharacterPoseBoneIkGoalsCompilerHandler :
-        CharacterPoseCompilerHandler<CharacterPoseBoneIkGoalsPayload>
+    internal sealed class CharacterPoseBoneIkGoalsNodeDefinition :
+        CharacterPoseNodeDefinition<CharacterPoseBoneIkGoalsPayload>
     {
         public override CharacterPoseNodeKind Kind => CharacterPoseNodeKind.PoseBoneIKGoals;
-        public override CharacterPoseOperationCode Code => CharacterPoseOperationCode.PoseBoneIKGoals;
+        public override CharacterPoseOperationCode OperationCode => CharacterPoseOperationCode.PoseBoneIKGoals;
 
         public override CharacterPoseNodePayload CreatePayload(CharacterPoseAuthoringPayloadInput input) =>
             new CharacterPoseBoneIkGoalsPayload(
@@ -75,7 +75,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
 
         protected override void Validate(CharacterPoseBoneIkGoalsPayload payload, string sourcePath)
         {
-            CharacterPoseCompilerHandlerValidation.Require(
+            CharacterPoseNodeDefinitionValidation.Require(
                 payload.Bindings.Count > 0 &&
                 payload.Bindings.Count <= CharacterFullBodyIkGoalSetHeader.MaximumGoalCount,
                 sourcePath,
@@ -84,18 +84,18 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             for (int i = 0; i < payload.Bindings.Count; i++)
             {
                 CharacterPoseBoneIkGoalBinding binding = payload.Bindings[i];
-                CharacterPoseCompilerHandlerValidation.Require(
+                CharacterPoseNodeDefinitionValidation.Require(
                     binding != null &&
                     binding.EffectorSlot >= CharacterFullBodyIkEffectorSlot.Body &&
                     binding.EffectorSlot <= CharacterFullBodyIkEffectorSlot.RightFoot &&
                     binding.TargetPoseBoneId.IsValid &&
-                    CharacterPoseCompilerHandlerValidation.Finite(binding.PositionOffset) &&
-                    CharacterPoseCompilerHandlerValidation.Finite(binding.RotationOffset) &&
+                    CharacterPoseNodeDefinitionValidation.Finite(binding.PositionOffset) &&
+                    CharacterPoseNodeDefinitionValidation.Finite(binding.RotationOffset) &&
                     slots.Add(binding.EffectorSlot),
                     sourcePath,
                     $"Pose Bone IK Goal binding #{i} is invalid or duplicates an Effector Slot.");
-                CharacterPoseCompilerHandlerValidation.RequireWeight(binding.PositionWeight, sourcePath);
-                CharacterPoseCompilerHandlerValidation.RequireWeight(binding.RotationWeight, sourcePath);
+                CharacterPoseNodeDefinitionValidation.RequireWeight(binding.PositionWeight, sourcePath);
+                CharacterPoseNodeDefinitionValidation.RequireWeight(binding.RotationWeight, sourcePath);
             }
         }
 
@@ -116,11 +116,11 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
         }
     }
 
-    internal sealed class CharacterFullBodyIkPoseCompilerHandler :
-        CharacterPoseCompilerHandler<CharacterFullBodyIkPosePayload>
+    internal sealed class CharacterFullBodyIkPoseNodeDefinition :
+        CharacterPoseNodeDefinition<CharacterFullBodyIkPosePayload>
     {
         public override CharacterPoseNodeKind Kind => CharacterPoseNodeKind.FullBodyIK;
-        public override CharacterPoseOperationCode Code => CharacterPoseOperationCode.FullBodyIK;
+        public override CharacterPoseOperationCode OperationCode => CharacterPoseOperationCode.FullBodyIK;
 
         public override CharacterPoseNodePayload CreatePayload(CharacterPoseAuthoringPayloadInput input) =>
             new CharacterFullBodyIkPosePayload();
@@ -146,12 +146,12 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
         }
     }
 
-    internal sealed class CharacterFullBodyIkGoalAssemblerCompilerHandler :
-        CharacterPoseCompilerHandler<CharacterFullBodyIkGoalAssemblerPayload>
+    internal sealed class CharacterFullBodyIkGoalAssemblerNodeDefinition :
+        CharacterPoseNodeDefinition<CharacterFullBodyIkGoalAssemblerPayload>
     {
         public override CharacterPoseNodeKind Kind =>
             CharacterPoseNodeKind.FullBodyIkGoalAssembler;
-        public override CharacterPoseOperationCode Code =>
+        public override CharacterPoseOperationCode OperationCode =>
             CharacterPoseOperationCode.FullBodyIkGoalAssembler;
 
         public override CharacterPoseNodePayload CreatePayload(

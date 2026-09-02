@@ -29,86 +29,19 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
         PoseOutput = 5
     }
 
-    internal interface ICharacterPoseCompilerHandler
-    {
-        CharacterPoseNodeKind Kind { get; }
-        string CapabilityIdentity { get; }
-        Type PayloadType { get; }
-        CharacterPoseNativeNodeRole NativeRole { get; }
-        CharacterPoseOperationCode Code { get; }
-        bool Player { get; }
-        bool ActionPlaybackControl { get; }
-        bool BlendPolicy { get; }
-        bool StateMachine { get; }
-        bool AnimationSlot { get; }
-        bool Inertialization { get; }
-        bool Additive { get; }
-        bool ModifyBone { get; }
-        bool RootOrientationWarp { get; }
-        bool ClipPlayer { get; }
-        CharacterPresentationPoseSourceSlot Source(
-            CharacterPoseNodePayload payload);
-        AnimationChannelId Channel(
-            CharacterPoseNodePayload payload);
-        PoseParameterId Parameter(
-            CharacterPoseNodePayload payload);
-        AnimationSelectionAvailabilityPolicy Availability(
-            CharacterPoseNodePayload payload,
-            bool stateLocal);
-        CharacterAnimationBlendSpaceInputRangePolicy InputRange(
-            CharacterPoseNodePayload payload);
-        float Weight(CharacterPoseNodePayload payload);
-        CharacterAnimationBoneMaskAsset BoneMask(
-            CharacterPoseNodePayload payload);
-        IReadOnlyList<CharacterPoseParameterPolicy>
-            ParameterPolicies(CharacterPoseNodePayload payload);
-        void RequirePayload(CharacterPoseNodePayload payload);
-        void ValidatePayload(
-            CharacterPoseNodePayload payload,
-            string sourcePath);
-        void ValidateRig(
-            CharacterPoseNodePayload payload,
-            CharacterAnimationRigDefinition rig,
-            string sourcePath);
-        CharacterPoseNodePayload CreatePayload(
-            CharacterPoseAuthoringPayloadInput input);
-        object ReadField(
-            CharacterPoseNodePayload payload,
-            string field);
-        IReadOnlyList<CharacterPoseGraphDependency>
-            ProjectGraphDependencies(CharacterPoseNodePayload payload);
-        string ProjectChildDocumentId(
-            CharacterPoseNodePayload payload);
-        string SourceMapName(CharacterPoseNodePayload payload);
-        CharacterPoseIrNode Lower(CharacterTypedPoseNode node, IReadOnlyList<CharacterPoseIrInput> inputs, string sourcePath);
-    }
-
-    internal abstract class CharacterPoseCompilerHandler<TPayload> :
-        ICharacterPoseCompilerHandler
+    internal abstract class CharacterPoseNodeDefinition<TPayload> :
+        CharacterPoseNodeDefinition
         where TPayload : CharacterPoseNodePayload, new()
     {
-        public abstract CharacterPoseNodeKind Kind { get; }
-        public string CapabilityIdentity =>
-            CharacterPoseGraphAuthoringCapabilities.Get(Kind).Value;
-        public Type PayloadType => typeof(TPayload);
-        public virtual CharacterPoseNativeNodeRole NativeRole =>
+        public abstract override CharacterPoseNodeKind Kind { get; }
+        public override Type PayloadType => typeof(TPayload);
+        public override CharacterPoseNativeNodeRole NativeRole =>
             CharacterPoseNativeNodeRole.Operation;
-        public virtual CharacterPoseOperationCode Code => default;
-        public virtual bool Player => false;
-        public virtual bool ActionPlaybackControl => false;
-        public virtual bool BlendPolicy => false;
-        public virtual bool StateMachine => false;
-        public virtual bool AnimationSlot => false;
-        public virtual bool Inertialization => false;
-        public virtual bool Additive => false;
-        public virtual bool ModifyBone => false;
-        public virtual bool RootOrientationWarp => false;
-        public virtual bool ClipPlayer => false;
 
-        public CharacterPoseIrNode Lower(CharacterTypedPoseNode node, IReadOnlyList<CharacterPoseIrInput> inputs, string sourcePath)
+        public override CharacterPoseIrNode Lower(CharacterTypedPoseNode node, IReadOnlyList<CharacterPoseIrInput> inputs, string sourcePath)
         {
             if (!(node.Payload is TPayload payload) || node.Kind != Kind)
-                throw new InvalidOperationException($"{sourcePath}: payload does not match compiler handler '{Kind}'.");
+                throw new InvalidOperationException($"{sourcePath}: payload does not match Node Definition '{Kind}'.");
             Validate(payload, sourcePath);
             return new CharacterPoseIrNode(
                 new CharacterPoseIrNodeId(node.NodeId.Value),
@@ -118,51 +51,51 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                 sourcePath);
         }
 
-        public CharacterPresentationPoseSourceSlot Source(
+        public override CharacterPresentationPoseSourceSlot Source(
             CharacterPoseNodePayload payload) =>
             GetSource(Require(payload));
 
-        public AnimationChannelId Channel(
+        public override AnimationChannelId Channel(
             CharacterPoseNodePayload payload) =>
             GetChannel(Require(payload));
 
-        public PoseParameterId Parameter(
+        public override PoseParameterId Parameter(
             CharacterPoseNodePayload payload) =>
             GetParameter(Require(payload));
 
-        public AnimationSelectionAvailabilityPolicy Availability(
+        public override AnimationSelectionAvailabilityPolicy Availability(
             CharacterPoseNodePayload payload,
             bool stateLocal) =>
             GetAvailability(Require(payload), stateLocal);
 
-        public CharacterAnimationBlendSpaceInputRangePolicy InputRange(
+        public override CharacterAnimationBlendSpaceInputRangePolicy InputRange(
             CharacterPoseNodePayload payload) =>
             GetInputRange(Require(payload));
 
-        public float Weight(CharacterPoseNodePayload payload) =>
+        public override float Weight(CharacterPoseNodePayload payload) =>
             GetWeight(Require(payload));
 
-        public CharacterAnimationBoneMaskAsset BoneMask(
+        public override CharacterAnimationBoneMaskAsset BoneMask(
             CharacterPoseNodePayload payload) =>
             GetBoneMask(Require(payload));
 
-        public IReadOnlyList<CharacterPoseParameterPolicy>
+        public override IReadOnlyList<CharacterPoseParameterPolicy>
             ParameterPolicies(CharacterPoseNodePayload payload) =>
             GetParameterPolicies(Require(payload)) ??
             Array.Empty<CharacterPoseParameterPolicy>();
 
-        public void RequirePayload(
+        public override void RequirePayload(
             CharacterPoseNodePayload payload)
         {
             Require(payload);
         }
 
-        public void ValidatePayload(
+        public override void ValidatePayload(
             CharacterPoseNodePayload payload,
             string sourcePath) =>
             Validate(Require(payload), sourcePath);
 
-        public void ValidateRig(
+        public override void ValidateRig(
             CharacterPoseNodePayload payload,
             CharacterAnimationRigDefinition rig,
             string sourcePath) =>
@@ -172,25 +105,25 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                 throw new ArgumentNullException(nameof(rig)),
                 sourcePath);
 
-        public virtual CharacterPoseNodePayload CreatePayload(
+        public override CharacterPoseNodePayload CreatePayload(
             CharacterPoseAuthoringPayloadInput input) =>
             new TPayload();
 
-        public object ReadField(
+        public override object ReadField(
             CharacterPoseNodePayload payload,
             string field) =>
             ReadField(Require(payload), field);
 
-        public IReadOnlyList<CharacterPoseGraphDependency>
+        public override IReadOnlyList<CharacterPoseGraphDependency>
             ProjectGraphDependencies(CharacterPoseNodePayload payload) =>
             GetGraphDependencies(Require(payload)) ??
             Array.Empty<CharacterPoseGraphDependency>();
 
-        public string ProjectChildDocumentId(
+        public override string ProjectChildDocumentId(
             CharacterPoseNodePayload payload) =>
             GetChildDocumentId(Require(payload)) ?? string.Empty;
 
-        public string SourceMapName(CharacterPoseNodePayload payload) =>
+        public override string SourceMapName(CharacterPoseNodePayload payload) =>
             GetSourceMapName(Require(payload));
 
         protected virtual CharacterPresentationPoseSourceSlot GetSource(
@@ -253,10 +186,10 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             payload is TPayload typed
                 ? typed
                 : throw new InvalidOperationException(
-                    $"Pose compiler handler '{CapabilityIdentity}' received payload '{payload?.GetType().Name ?? "<null>"}'.");
+                    $"Pose Node Definition '{CapabilityIdentity}' received payload '{payload?.GetType().Name ?? "<null>"}'.");
     }
 
-    internal static class CharacterPoseCompilerHandlerValidation
+    internal static class CharacterPoseNodeDefinitionValidation
     {
         public static void Require(
             bool condition,
@@ -288,13 +221,13 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
     }
 
     internal sealed class
-        CharacterProgramParameterInputPoseCompilerHandler :
-            CharacterPoseCompilerHandler<
+        CharacterProgramParameterInputPoseNodeDefinition :
+            CharacterPoseNodeDefinition<
                 CharacterProgramParameterInputPosePayload>
     {
         public override CharacterPoseNodeKind Kind =>
             CharacterPoseNodeKind.ProgramParameterInput;
-        public override CharacterPoseOperationCode Code =>
+        public override CharacterPoseOperationCode OperationCode =>
             CharacterPoseOperationCode.ProgramParameterInput;
 
         protected override PoseParameterId GetParameter(
@@ -317,22 +250,25 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
         protected override void Validate(
             CharacterProgramParameterInputPosePayload payload,
             string sourcePath) =>
-            CharacterPoseCompilerHandlerValidation.Require(
+            CharacterPoseNodeDefinitionValidation.Require(
                 payload.ParameterId.IsValid,
                 sourcePath,
                 "Parameter identity is missing.");
     }
 
     internal sealed class
-        CharacterActionPlaybackInputPoseCompilerHandler :
-            CharacterPoseCompilerHandler<
+        CharacterActionPlaybackInputPoseNodeDefinition :
+            CharacterPoseNodeDefinition<
                 CharacterActionPlaybackInputPosePayload>
     {
         public override CharacterPoseNodeKind Kind =>
             CharacterPoseNodeKind.ActionPlaybackInput;
-        public override CharacterPoseOperationCode Code =>
+        public override CharacterPoseOperationCode OperationCode =>
             CharacterPoseOperationCode.ActionPlaybackInput;
-        public override bool ActionPlaybackControl => true;
+        public override CharacterPoseNodeRuntimeRequirement
+            RuntimeRequirements =>
+                CharacterPoseNodeRuntimeRequirement.AnimationChannel |
+                CharacterPoseNodeRuntimeRequirement.ActionPlaybackControl;
 
         protected override AnimationChannelId GetChannel(
             CharacterActionPlaybackInputPosePayload payload) =>
@@ -361,22 +297,25 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
         protected override void Validate(
             CharacterActionPlaybackInputPosePayload payload,
             string sourcePath) =>
-            CharacterPoseCompilerHandlerValidation.Require(
+            CharacterPoseNodeDefinitionValidation.Require(
                 payload.AnimationChannelId.IsValid,
                 sourcePath,
                 "Animation Channel identity is missing.");
     }
 
     internal sealed class
-        CharacterSelectedPosePlayerCompilerHandler :
-            CharacterPoseCompilerHandler<
+        CharacterSelectedPosePlayerNodeDefinition :
+            CharacterPoseNodeDefinition<
                 CharacterSelectedPosePlayerPayload>
     {
         public override CharacterPoseNodeKind Kind =>
             CharacterPoseNodeKind.SelectedPosePlayer;
-        public override CharacterPoseOperationCode Code =>
+        public override CharacterPoseOperationCode OperationCode =>
             CharacterPoseOperationCode.SelectedPosePlayer;
-        public override bool Player => true;
+        public override CharacterPoseNodeRuntimeRequirement
+            RuntimeRequirements =>
+                CharacterPoseNodeRuntimeRequirement.PoseSourceSlot |
+                CharacterPoseNodeRuntimeRequirement.Player;
 
         protected override CharacterPresentationPoseSourceSlot GetSource(
             CharacterSelectedPosePlayerPayload payload) =>
@@ -398,22 +337,25 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
         protected override void Validate(
             CharacterSelectedPosePlayerPayload payload,
             string sourcePath) =>
-            CharacterPoseCompilerHandlerValidation.Require(
+            CharacterPoseNodeDefinitionValidation.Require(
                 payload.SourceSlot,
                 sourcePath,
                 "Selected Pose source binding is incomplete.");
     }
 
     internal sealed class
-        CharacterBlendSpacePlayerPoseCompilerHandler :
-            CharacterPoseCompilerHandler<
+        CharacterBlendSpacePlayerPoseNodeDefinition :
+            CharacterPoseNodeDefinition<
                 CharacterBlendSpacePlayerPosePayload>
     {
         public override CharacterPoseNodeKind Kind =>
             CharacterPoseNodeKind.BlendSpacePlayer;
-        public override CharacterPoseOperationCode Code =>
+        public override CharacterPoseOperationCode OperationCode =>
             CharacterPoseOperationCode.BlendSpacePlayer;
-        public override bool Player => true;
+        public override CharacterPoseNodeRuntimeRequirement
+            RuntimeRequirements =>
+                CharacterPoseNodeRuntimeRequirement.PoseSourceSlot |
+                CharacterPoseNodeRuntimeRequirement.Player;
         protected override CharacterPresentationPoseSourceSlot GetSource(
             CharacterBlendSpacePlayerPosePayload payload) =>
             payload.SourceSlot;
@@ -458,23 +400,26 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
         protected override void Validate(
             CharacterBlendSpacePlayerPosePayload payload,
             string sourcePath) =>
-            CharacterPoseCompilerHandlerValidation.Require(
+            CharacterPoseNodeDefinitionValidation.Require(
                 payload.SourceSlot,
                 sourcePath,
                 "Blend Space source identity is missing.");
     }
 
     internal sealed class
-        CharacterClipPlayerPoseCompilerHandler :
-            CharacterPoseCompilerHandler<
+        CharacterClipPlayerPoseNodeDefinition :
+            CharacterPoseNodeDefinition<
                 CharacterClipPlayerPosePayload>
     {
         public override CharacterPoseNodeKind Kind =>
             CharacterPoseNodeKind.ClipPlayer;
-        public override CharacterPoseOperationCode Code =>
+        public override CharacterPoseOperationCode OperationCode =>
             CharacterPoseOperationCode.ClipPlayer;
-        public override bool Player => true;
-        public override bool ClipPlayer => true;
+        public override CharacterPoseNodeRuntimeRequirement
+            RuntimeRequirements =>
+                CharacterPoseNodeRuntimeRequirement.PoseSourceSlot |
+                CharacterPoseNodeRuntimeRequirement.Player |
+                CharacterPoseNodeRuntimeRequirement.ClipPlayer;
         protected override CharacterPresentationPoseSourceSlot GetSource(
             CharacterClipPlayerPosePayload payload) =>
             payload.SourceSlot;
@@ -515,21 +460,21 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             CharacterClipPlayerPosePayload payload,
             string sourcePath)
         {
-            CharacterPoseCompilerHandlerValidation.Require(
+            CharacterPoseNodeDefinitionValidation.Require(
                 payload.SourceSlot,
                 sourcePath,
                 "Clip source identity is missing.");
-            CharacterPoseCompilerHandlerValidation.Require(
+            CharacterPoseNodeDefinitionValidation.Require(
                 float.IsFinite(payload.PlayRate) &&
                 payload.PlayRate > 0f,
                 sourcePath,
                 "Clip play rate must be finite and positive.");
-            CharacterPoseCompilerHandlerValidation.Require(
+            CharacterPoseNodeDefinitionValidation.Require(
                 float.IsFinite(payload.InitialTime) &&
                 payload.InitialTime >= 0f,
                 sourcePath,
                 "Clip initial time must be finite and non-negative.");
-            CharacterPoseCompilerHandlerValidation.Require(
+            CharacterPoseNodeDefinitionValidation.Require(
                 Enum.IsDefined(typeof(CharacterClipPlayerClockSource), payload.ClockSource),
                 sourcePath,
                 "Clip clock source is invalid.");
@@ -537,20 +482,22 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
     }
 
     internal sealed class
-        CharacterPoseStateMachineNodeCompilerHandler :
-            CharacterPoseCompilerHandler<
+        CharacterPoseStateMachineNodeDefinition :
+            CharacterPoseNodeDefinition<
                 CharacterPoseStateMachineNodePayload>
     {
         public override CharacterPoseNodeKind Kind =>
             CharacterPoseNodeKind.PoseStateMachine;
-        public override CharacterPoseOperationCode Code =>
+        public override CharacterPoseOperationCode OperationCode =>
             CharacterPoseOperationCode.PoseStateMachine;
-        public override bool StateMachine => true;
+        public override CharacterPoseNodeRuntimeRequirement
+            RuntimeRequirements =>
+                CharacterPoseNodeRuntimeRequirement.StateMachine;
 
         protected override void Validate(
             CharacterPoseStateMachineNodePayload payload,
             string sourcePath) =>
-            CharacterPoseCompilerHandlerValidation.Require(
+            CharacterPoseNodeDefinitionValidation.Require(
                 payload.StateMachine != null,
                 sourcePath,
                 "Pose StateMachine is missing.");
@@ -577,18 +524,21 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
     }
 
     internal sealed class
-        CharacterAnimationSlotPoseCompilerHandler :
-            CharacterPoseCompilerHandler<
+        CharacterAnimationSlotPoseNodeDefinition :
+            CharacterPoseNodeDefinition<
                 CharacterAnimationSlotPosePayload>
     {
         public override CharacterPoseNodeKind Kind =>
             CharacterPoseNodeKind.AnimationSlot;
-        public override CharacterPoseOperationCode Code =>
+        public override CharacterPoseOperationCode OperationCode =>
             CharacterPoseOperationCode.AnimationSlot;
-        public override bool Player => true;
-        public override bool ActionPlaybackControl => true;
-        public override bool BlendPolicy => true;
-        public override bool AnimationSlot => true;
+        public override CharacterPoseNodeRuntimeRequirement
+            RuntimeRequirements =>
+                CharacterPoseNodeRuntimeRequirement.AnimationChannel |
+                CharacterPoseNodeRuntimeRequirement.Player |
+                CharacterPoseNodeRuntimeRequirement.ActionPlaybackControl |
+                CharacterPoseNodeRuntimeRequirement.BlendPolicy |
+                CharacterPoseNodeRuntimeRequirement.AnimationSlot;
 
         protected override AnimationChannelId GetChannel(
             CharacterAnimationSlotPosePayload payload) =>
@@ -633,7 +583,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
         protected override void Validate(
             CharacterAnimationSlotPosePayload payload,
             string sourcePath) =>
-            CharacterPoseCompilerHandlerValidation.Require(
+            CharacterPoseNodeDefinitionValidation.Require(
                 payload.SlotId.IsValid &&
                 payload.AnimationChannelId.IsValid &&
                 payload.SelectionAvailability ==
@@ -660,15 +610,18 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
         }
     }
 
-    internal sealed class CharacterBlendStackPoseCompilerHandler :
-        CharacterPoseCompilerHandler<CharacterBlendStackPosePayload>
+    internal sealed class CharacterBlendStackPoseNodeDefinition :
+        CharacterPoseNodeDefinition<CharacterBlendStackPosePayload>
     {
         public override CharacterPoseNodeKind Kind =>
             CharacterPoseNodeKind.BlendStack;
-        public override CharacterPoseOperationCode Code =>
+        public override CharacterPoseOperationCode OperationCode =>
             CharacterPoseOperationCode.BlendStack;
-        public override bool Player => true;
-        public override bool BlendPolicy => true;
+        public override CharacterPoseNodeRuntimeRequirement
+            RuntimeRequirements =>
+                CharacterPoseNodeRuntimeRequirement.PoseSourceSlot |
+                CharacterPoseNodeRuntimeRequirement.Player |
+                CharacterPoseNodeRuntimeRequirement.BlendPolicy;
 
         protected override CharacterPresentationPoseSourceSlot GetSource(
             CharacterBlendStackPosePayload payload) =>
@@ -695,7 +648,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
         protected override void Validate(
             CharacterBlendStackPosePayload payload,
             string sourcePath) =>
-            CharacterPoseCompilerHandlerValidation.Require(
+            CharacterPoseNodeDefinitionValidation.Require(
                 payload.SourceSlot &&
                 payload.BlendPolicy,
                 sourcePath,
@@ -720,15 +673,17 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
     }
 
     internal sealed class
-        CharacterInertializationPoseCompilerHandler :
-            CharacterPoseCompilerHandler<
+        CharacterInertializationPoseNodeDefinition :
+            CharacterPoseNodeDefinition<
                 CharacterInertializationPosePayload>
     {
         public override CharacterPoseNodeKind Kind =>
             CharacterPoseNodeKind.Inertialization;
-        public override CharacterPoseOperationCode Code =>
+        public override CharacterPoseOperationCode OperationCode =>
             CharacterPoseOperationCode.Inertialization;
-        public override bool Inertialization => true;
+        public override CharacterPoseNodeRuntimeRequirement
+            RuntimeRequirements =>
+                CharacterPoseNodeRuntimeRequirement.Inertialization;
 
         public override CharacterPoseNodePayload CreatePayload(
             CharacterPoseAuthoringPayloadInput input) =>
@@ -746,7 +701,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
         protected override void Validate(
             CharacterInertializationPosePayload payload,
             string sourcePath) =>
-            CharacterPoseCompilerHandlerValidation.Require(
+            CharacterPoseNodeDefinitionValidation.Require(
                 payload.Policy,
                 sourcePath,
                 "Inertialization Policy is missing.");
@@ -769,12 +724,12 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
         }
     }
 
-    internal sealed class CharacterBlendPoseCompilerHandler :
-        CharacterPoseCompilerHandler<CharacterBlendPosePayload>
+    internal sealed class CharacterBlendPoseNodeDefinition :
+        CharacterPoseNodeDefinition<CharacterBlendPosePayload>
     {
         public override CharacterPoseNodeKind Kind =>
             CharacterPoseNodeKind.BlendPose;
-        public override CharacterPoseOperationCode Code =>
+        public override CharacterPoseOperationCode OperationCode =>
             CharacterPoseOperationCode.BlendPose;
 
         protected override float GetWeight(
@@ -796,19 +751,19 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
         protected override void Validate(
             CharacterBlendPosePayload payload,
             string sourcePath) =>
-            CharacterPoseCompilerHandlerValidation.RequireWeight(
+            CharacterPoseNodeDefinitionValidation.RequireWeight(
                 payload.Weight,
                 sourcePath);
     }
 
     internal sealed class
-        CharacterLayeredBoneBlendPoseCompilerHandler :
-            CharacterPoseCompilerHandler<
+        CharacterLayeredBoneBlendPoseNodeDefinition :
+            CharacterPoseNodeDefinition<
                 CharacterLayeredBoneBlendPosePayload>
     {
         public override CharacterPoseNodeKind Kind =>
             CharacterPoseNodeKind.LayeredBoneBlend;
-        public override CharacterPoseOperationCode Code =>
+        public override CharacterPoseOperationCode OperationCode =>
             CharacterPoseOperationCode.LayeredBoneBlend;
 
         protected override float GetWeight(
@@ -841,10 +796,10 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             CharacterLayeredBoneBlendPosePayload payload,
             string sourcePath)
         {
-            CharacterPoseCompilerHandlerValidation.RequireWeight(
+            CharacterPoseNodeDefinitionValidation.RequireWeight(
                 payload.Weight,
                 sourcePath);
-            CharacterPoseCompilerHandlerValidation.Require(
+            CharacterPoseNodeDefinitionValidation.Require(
                 payload.BoneMask,
                 sourcePath,
                 "Layered Bone Blend mask is missing.");
@@ -868,14 +823,16 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
         }
     }
 
-    internal sealed class CharacterAdditivePoseCompilerHandler :
-        CharacterPoseCompilerHandler<CharacterAdditivePosePayload>
+    internal sealed class CharacterAdditivePoseNodeDefinition :
+        CharacterPoseNodeDefinition<CharacterAdditivePosePayload>
     {
         public override CharacterPoseNodeKind Kind =>
             CharacterPoseNodeKind.AdditivePose;
-        public override CharacterPoseOperationCode Code =>
+        public override CharacterPoseOperationCode OperationCode =>
             CharacterPoseOperationCode.AdditivePose;
-        public override bool Additive => true;
+        public override CharacterPoseNodeRuntimeRequirement
+            RuntimeRequirements =>
+                CharacterPoseNodeRuntimeRequirement.Additive;
 
         protected override float GetWeight(
             CharacterAdditivePosePayload payload) =>
@@ -912,10 +869,10 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             CharacterAdditivePosePayload payload,
             string sourcePath)
         {
-            CharacterPoseCompilerHandlerValidation.RequireWeight(
+            CharacterPoseNodeDefinitionValidation.RequireWeight(
                 payload.Weight,
                 sourcePath);
-            CharacterPoseCompilerHandlerValidation.Require(
+            CharacterPoseNodeDefinitionValidation.Require(
                 string.Equals(
                     payload.ReferencePoseId,
                     AnimationAdditiveReferencePoseIds.RigReference,
@@ -932,13 +889,13 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
     }
 
     internal sealed class
-        CharacterPoseParameterResolveCompilerHandler :
-            CharacterPoseCompilerHandler<
+        CharacterPoseParameterResolveNodeDefinition :
+            CharacterPoseNodeDefinition<
                 CharacterPoseParameterResolvePayload>
     {
         public override CharacterPoseNodeKind Kind =>
             CharacterPoseNodeKind.PoseParameterResolve;
-        public override CharacterPoseOperationCode Code =>
+        public override CharacterPoseOperationCode OperationCode =>
             CharacterPoseOperationCode.PoseParameterResolve;
 
         protected override IReadOnlyList<
@@ -960,31 +917,33 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                 : base.ReadField(payload, field);
     }
 
-    internal sealed class CharacterModifyBonePoseCompilerHandler :
-        CharacterPoseCompilerHandler<CharacterModifyBonePosePayload>
+    internal sealed class CharacterModifyBonePoseNodeDefinition :
+        CharacterPoseNodeDefinition<CharacterModifyBonePosePayload>
     {
         public override CharacterPoseNodeKind Kind =>
             CharacterPoseNodeKind.ModifyBone;
-        public override CharacterPoseOperationCode Code =>
+        public override CharacterPoseOperationCode OperationCode =>
             CharacterPoseOperationCode.ModifyBone;
-        public override bool ModifyBone => true;
+        public override CharacterPoseNodeRuntimeRequirement
+            RuntimeRequirements =>
+                CharacterPoseNodeRuntimeRequirement.ModifyBone;
 
         protected override void Validate(
             CharacterModifyBonePosePayload payload,
             string sourcePath)
         {
-            CharacterPoseCompilerHandlerValidation.Require(
+            CharacterPoseNodeDefinitionValidation.Require(
                 payload.BoneId.IsValid &&
                 Enum.IsDefined(
                     typeof(ModifyBoneReferenceSpace),
                     payload.ReferenceSpace) &&
                 payload.Operations !=
                 ModifyBoneOperationMask.None &&
-                CharacterPoseCompilerHandlerValidation.Finite(
+                CharacterPoseNodeDefinitionValidation.Finite(
                     payload.Position) &&
-                CharacterPoseCompilerHandlerValidation.Finite(
+                CharacterPoseNodeDefinitionValidation.Finite(
                     payload.Rotation) &&
-                CharacterPoseCompilerHandlerValidation.Finite(
+                CharacterPoseNodeDefinitionValidation.Finite(
                     payload.Scale),
                 sourcePath,
                 "Modify Bone configuration is invalid.");
@@ -1040,14 +999,16 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             };
     }
 
-    internal sealed class CharacterRootOrientationWarpPoseCompilerHandler :
-        CharacterPoseCompilerHandler<CharacterRootOrientationWarpPosePayload>
+    internal sealed class CharacterRootOrientationWarpPoseNodeDefinition :
+        CharacterPoseNodeDefinition<CharacterRootOrientationWarpPosePayload>
     {
         public override CharacterPoseNodeKind Kind =>
             CharacterPoseNodeKind.RootOrientationWarp;
-        public override CharacterPoseOperationCode Code =>
+        public override CharacterPoseOperationCode OperationCode =>
             CharacterPoseOperationCode.RootOrientationWarp;
-        public override bool RootOrientationWarp => true;
+        public override CharacterPoseNodeRuntimeRequirement
+            RuntimeRequirements =>
+                CharacterPoseNodeRuntimeRequirement.RootOrientationWarp;
 
         public override CharacterPoseNodePayload CreatePayload(
             CharacterPoseAuthoringPayloadInput input) =>
@@ -1065,7 +1026,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             CharacterRootOrientationWarpPosePayload payload,
             string sourcePath)
         {
-            CharacterPoseCompilerHandlerValidation.Require(
+            CharacterPoseNodeDefinitionValidation.Require(
                 payload.YawCurve &&
                 payload.YawCurve.TryValidate(out _) &&
                 payload.YawCurve.Duration > 0f &&
@@ -1078,8 +1039,8 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
         }
     }
 
-    internal sealed class CharacterPoseSubgraphCompilerHandler :
-        CharacterPoseCompilerHandler<CharacterPoseSubgraphPayload>
+    internal sealed class CharacterPoseSubgraphNodeDefinition :
+        CharacterPoseNodeDefinition<CharacterPoseSubgraphPayload>
     {
         public override CharacterPoseNodeKind Kind =>
             CharacterPoseNodeKind.PoseSubgraph;
@@ -1107,7 +1068,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
         protected override void Validate(
             CharacterPoseSubgraphPayload payload,
             string sourcePath) =>
-            CharacterPoseCompilerHandlerValidation.Require(
+            CharacterPoseNodeDefinitionValidation.Require(
                 payload.Subgraph?.PoseGraphId.IsValid == true,
                 sourcePath,
                 "Pose Subgraph target is missing.");
@@ -1126,26 +1087,26 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
 
     }
 
-    internal sealed class CharacterLocalToComponentPoseCompilerHandler :
-        CharacterPoseCompilerHandler<CharacterLocalToComponentPosePayload>
+    internal sealed class CharacterLocalToComponentPoseNodeDefinition :
+        CharacterPoseNodeDefinition<CharacterLocalToComponentPosePayload>
     {
         public override CharacterPoseNodeKind Kind =>
             CharacterPoseNodeKind.LocalToComponentPose;
-        public override CharacterPoseOperationCode Code =>
+        public override CharacterPoseOperationCode OperationCode =>
             CharacterPoseOperationCode.LocalToComponentPose;
     }
 
-    internal sealed class CharacterComponentToLocalPoseCompilerHandler :
-        CharacterPoseCompilerHandler<CharacterComponentToLocalPosePayload>
+    internal sealed class CharacterComponentToLocalPoseNodeDefinition :
+        CharacterPoseNodeDefinition<CharacterComponentToLocalPosePayload>
     {
         public override CharacterPoseNodeKind Kind =>
             CharacterPoseNodeKind.ComponentToLocalPose;
-        public override CharacterPoseOperationCode Code =>
+        public override CharacterPoseOperationCode OperationCode =>
             CharacterPoseOperationCode.ComponentToLocalPose;
     }
 
-    internal sealed class CharacterGraphInputPoseCompilerHandler :
-        CharacterPoseCompilerHandler<CharacterGraphInputPosePayload>
+    internal sealed class CharacterGraphInputPoseNodeDefinition :
+        CharacterPoseNodeDefinition<CharacterGraphInputPosePayload>
     {
         public override CharacterPoseNodeKind Kind =>
             CharacterPoseNodeKind.GraphInput;
@@ -1153,8 +1114,8 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             CharacterPoseNativeNodeRole.GraphInput;
     }
 
-    internal sealed class CharacterGraphOutputPoseCompilerHandler :
-        CharacterPoseCompilerHandler<CharacterGraphOutputPosePayload>
+    internal sealed class CharacterGraphOutputPoseNodeDefinition :
+        CharacterPoseNodeDefinition<CharacterGraphOutputPosePayload>
     {
         public override CharacterPoseNodeKind Kind =>
             CharacterPoseNodeKind.GraphOutput;
@@ -1162,14 +1123,14 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             CharacterPoseNativeNodeRole.GraphOutput;
     }
 
-    internal sealed class CharacterOutputPoseCompilerHandler :
-        CharacterPoseCompilerHandler<CharacterOutputPosePayload>
+    internal sealed class CharacterOutputPoseNodeDefinition :
+        CharacterPoseNodeDefinition<CharacterOutputPosePayload>
     {
         public override CharacterPoseNodeKind Kind =>
             CharacterPoseNodeKind.OutputPose;
         public override CharacterPoseNativeNodeRole NativeRole =>
             CharacterPoseNativeNodeRole.PoseOutput;
-        public override CharacterPoseOperationCode Code =>
+        public override CharacterPoseOperationCode OperationCode =>
             CharacterPoseOperationCode.OutputPose;
     }
 

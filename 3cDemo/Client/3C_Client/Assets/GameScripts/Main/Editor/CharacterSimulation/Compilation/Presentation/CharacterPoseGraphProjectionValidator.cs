@@ -197,7 +197,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                         if (dependency.GraphId.IsValid)
                             AddOwner(dependency.GraphId);
                     }
-                    if (!handler.StateMachine)
+                    if (!handler.Requires(
+                            CharacterPoseNodeRuntimeRequirement.StateMachine))
                         continue;
                     CharacterPoseStateMachineDefinition machine =
                         ((CharacterPoseStateMachineNodePayload)
@@ -507,7 +508,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                     handler.Channel(node.Payload);
                 if (channel.IsValid)
                     channelInputs.Add(channel);
-                if (handler.AnimationSlot)
+                if (handler.Requires(
+                        CharacterPoseNodeRuntimeRequirement.AnimationSlot))
                 {
                     AnimationSlotId slotId =
                         ((CharacterAnimationSlotPosePayload)
@@ -534,7 +536,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                          CharacterPoseNativeNodeRole.GraphOutput)
                     graphOutputCount++;
 
-                if (handler.StateMachine)
+                if (handler.Requires(
+                        CharacterPoseNodeRuntimeRequirement.StateMachine))
                 {
                     ValidateStateMachine(
                         ownerAsset,

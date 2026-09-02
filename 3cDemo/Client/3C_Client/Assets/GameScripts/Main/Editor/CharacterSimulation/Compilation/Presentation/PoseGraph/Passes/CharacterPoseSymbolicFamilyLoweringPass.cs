@@ -412,7 +412,8 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                         domain = linked.Domain;
                         hiddenInputs.AddRange(linked.Outputs);
                     }
-                    if (definition.StateMachine)
+                    if (definition.Requires(
+                            CharacterPoseNodeRuntimeRequirement.StateMachine))
                     {
                         hiddenInputs.AddRange(CompileStateGraphs(
                             owner,
@@ -794,10 +795,12 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             {
                 CharacterPoseSymbolicActorStateRequirement result =
                     CharacterPoseSymbolicActorStateRequirement.None;
-                if (definition.StateMachine)
+                if (definition.Requires(
+                        CharacterPoseNodeRuntimeRequirement.StateMachine))
                     result |= CharacterPoseSymbolicActorStateRequirement.PoseState |
                               CharacterPoseSymbolicActorStateRequirement.Transition;
-                if (definition.Player)
+                if (definition.Requires(
+                        CharacterPoseNodeRuntimeRequirement.Player))
                     result |= CharacterPoseSymbolicActorStateRequirement.Player;
                 if (definition.Kind ==
                     CharacterPoseNodeKind.ActionPlaybackInput)
@@ -805,18 +808,22 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                     result |= CharacterPoseSymbolicActorStateRequirement
                         .ActionPlayback;
                 }
-                if (definition.AnimationSlot)
+                if (definition.Requires(
+                        CharacterPoseNodeRuntimeRequirement.AnimationSlot))
                 {
                     result |= CharacterPoseSymbolicActorStateRequirement
                                   .AnimationSlot |
                               CharacterPoseSymbolicActorStateRequirement
                                   .Transition;
                 }
-                if (definition.BlendPolicy)
+                if (definition.Requires(
+                        CharacterPoseNodeRuntimeRequirement.BlendPolicy))
                     result |= CharacterPoseSymbolicActorStateRequirement.BlendStack;
-                if (definition.Inertialization)
+                if (definition.Requires(
+                        CharacterPoseNodeRuntimeRequirement.Inertialization))
                     result |= CharacterPoseSymbolicActorStateRequirement.Inertialization;
-                if (definition.RootOrientationWarp)
+                if (definition.Requires(
+                        CharacterPoseNodeRuntimeRequirement.RootOrientationWarp))
                     result |= CharacterPoseSymbolicActorStateRequirement.RootOrientationWarp;
                 if (definition.Kind == CharacterPoseNodeKind.MotionMatchingPose)
                     result |= CharacterPoseSymbolicActorStateRequirement.MotionMatching;
@@ -835,7 +842,10 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                 CharacterPoseSymbolicFrameRequirement result =
                     CharacterPoseSymbolicFrameRequirement.Completion |
                     CharacterPoseSymbolicFrameRequirement.Diagnostics;
-                if (definition.Player || definition.BlendPolicy)
+                if (definition.Requires(
+                        CharacterPoseNodeRuntimeRequirement.Player) ||
+                    definition.Requires(
+                        CharacterPoseNodeRuntimeRequirement.BlendPolicy))
                 {
                     result |= CharacterPoseSymbolicFrameRequirement.NodeControl |
                               CharacterPoseSymbolicFrameRequirement.SourceDemand;
@@ -868,7 +878,10 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                 CharacterPoseSymbolicWorkspaceRequirement result =
                     CharacterPoseSymbolicWorkspaceRequirement.FrameCache |
                     CharacterPoseSymbolicWorkspaceRequirement.Diagnostics;
-                if (definition.Player || definition.BlendPolicy)
+                if (definition.Requires(
+                        CharacterPoseNodeRuntimeRequirement.Player) ||
+                    definition.Requires(
+                        CharacterPoseNodeRuntimeRequirement.BlendPolicy))
                 {
                     result |= CharacterPoseSymbolicWorkspaceRequirement.Pose |
                               CharacterPoseSymbolicWorkspaceRequirement.Parameter |
@@ -876,9 +889,13 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                               CharacterPoseSymbolicWorkspaceRequirement.Player |
                               CharacterPoseSymbolicWorkspaceRequirement.Source;
                 }
-                if (definition.StateMachine || definition.AnimationSlot)
+                if (definition.Requires(
+                        CharacterPoseNodeRuntimeRequirement.StateMachine) ||
+                    definition.Requires(
+                        CharacterPoseNodeRuntimeRequirement.AnimationSlot))
                     result |= CharacterPoseSymbolicWorkspaceRequirement.Transition;
-                if (definition.Inertialization)
+                if (definition.Requires(
+                        CharacterPoseNodeRuntimeRequirement.Inertialization))
                     result |= CharacterPoseSymbolicWorkspaceRequirement.Inertialization;
                 if (definition.OperationFamily ==
                         CharacterPoseOperationFamily.GoalContribution ||

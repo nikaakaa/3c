@@ -183,3 +183,9 @@ Full Sampler加入`resolved-contact`后，生成主Extractor调用由691增长�
 Pelvis 94个typed字段按业务拆为Input 22、Spring Input 11、Posture 12、Reach 29与Response／Final 20五个独立小步。首批Input 22项已迁移，覆盖Stride状态／拒绝／支撑脚／摆动脚／进度／坡度、Stride起终点与采样地面、Pose Input及Pose Root／Animated Pelvis位置，以及Pelvis Height Target的Component Up、双脚Animated／Target Sole、最小高度和请求偏移。Extractor只读取Committed `StrideHips.Core`、`Observation`与`HeightTarget`，不重新执行Stride或Pelvis求解。
 
 Full Sampler加入`pelvis-input`后，生成主Extractor调用由709增长到731，连同Geometry表共752个typed字段；Schema为`29c831c7c8cf1a7526cd0887425441f9b43f2994d295aaf2903134446767c483`，Program hash为`0ee36a2626e5e4daa3ad08d7d462a15ec40b546795c521b939db967660efd156`，主layout为`e4f431fcd8bd2ee9b742a3a0b7453fd8b0bb65ec822ead5c1daf630da42813ff`。该模块与字段清单对账expected 22、actual 22、missing 0、extra 0；Unity全量Asset refresh后编译无新增错误。Pelvis当前22／94项完成，Generated Lifecycle尚未接入Runtime consumer，本步不单独回放。
+
+## 开放Foot generated lifecycle跨程序集合同
+
+Performance capture作为顶层编排Owner需要直接持有Foot generated lifecycle，而不是通过Bridge或Foot专属Host Adapter。Foot程序集因此只把`CharacterFootIkFullCaptureProgram`、三个typed lifecycle Event、`CharacterFootIkCaptureMetadata`及其构造器提升为public；Generator已生成的嵌套`DiagnosticLifecycle`和`CreateDiagnosticLifecycle()`随public Program成为跨程序集可见。Event payload属性、Capability、Identity、Sampler与全部Field仍保持internal，Performance只能创建正式生命周期输入，不能读取或重写Foot Schema内部。
+
+Unity重编译后使用程序集metadata核对：Program public、Lifecycle nested public、Factory public，Started／Committed／Stopped Event及Metadata type／constructor全部public。没有新增facade、`InternalsVisibleTo`、Bridge或兼容链，Console无相关编译错误；PostCommit／PoseGraph seam未修改。

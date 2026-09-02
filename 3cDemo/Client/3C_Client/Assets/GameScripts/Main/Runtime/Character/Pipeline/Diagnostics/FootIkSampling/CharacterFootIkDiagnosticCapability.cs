@@ -18,9 +18,9 @@ namespace ThirdPersonCharacter.Pipeline.Diagnostics.FootIkSampling
         CharacterFootIkDiagnosticIdentity.CapabilityId,
         "character-foot-ik/capture-started",
         DiagnosticLifecycleEventKind.CaptureStarted)]
-    internal readonly struct CharacterFootIkCaptureStartedEvent
+    public readonly struct CharacterFootIkCaptureStartedEvent
     {
-        internal CharacterFootIkCaptureStartedEvent(
+        public CharacterFootIkCaptureStartedEvent(
             DiagnosticCaptureStartRequest request)
         {
             Request = request ?? throw new ArgumentNullException(nameof(request));
@@ -34,9 +34,9 @@ namespace ThirdPersonCharacter.Pipeline.Diagnostics.FootIkSampling
         CharacterFootIkDiagnosticIdentity.CapabilityId,
         "character-foot-ik/committed-sample",
         DiagnosticLifecycleEventKind.CommittedSample)]
-    internal readonly struct CharacterFootIkCommittedSampleEvent
+    public readonly struct CharacterFootIkCommittedSampleEvent
     {
-        internal CharacterFootIkCommittedSampleEvent(
+        public CharacterFootIkCommittedSampleEvent(
             in CharacterFootIkCommittedCaptureViewLease view,
             in CharacterFootIkCaptureMetadata left,
             in CharacterFootIkCaptureMetadata right)
@@ -74,9 +74,9 @@ namespace ThirdPersonCharacter.Pipeline.Diagnostics.FootIkSampling
         CharacterFootIkDiagnosticIdentity.CapabilityId,
         "character-foot-ik/capture-stopped",
         DiagnosticLifecycleEventKind.CaptureStopped)]
-    internal readonly struct CharacterFootIkCaptureStoppedEvent
+    public readonly struct CharacterFootIkCaptureStoppedEvent
     {
-        internal CharacterFootIkCaptureStoppedEvent(
+        public CharacterFootIkCaptureStoppedEvent(
             in DiagnosticCaptureStopOutcome outcome)
         {
             Outcome = outcome;
@@ -111,9 +111,9 @@ namespace ThirdPersonCharacter.Pipeline.Diagnostics.FootIkSampling
         }
     }
 
-    internal readonly struct CharacterFootIkCaptureMetadata
+    public readonly struct CharacterFootIkCaptureMetadata
     {
-        internal CharacterFootIkCaptureMetadata(
+        public CharacterFootIkCaptureMetadata(
             Guid sampleIdentity,
             DateTime startedUtc,
             in AnimationPresentationProgramIdentity program,

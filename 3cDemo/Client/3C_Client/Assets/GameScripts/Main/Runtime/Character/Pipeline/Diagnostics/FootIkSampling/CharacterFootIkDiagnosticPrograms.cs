@@ -48,7 +48,7 @@ namespace ThirdPersonCharacter.Pipeline.Diagnostics.FootIkSampling
         "character-foot-ik/full-program",
         CharacterFootIkDiagnosticIdentity.CapabilityId,
         typeof(CharacterFootIkFullSamplerDefinition))]
-    internal static partial class CharacterFootIkFullCaptureProgram
+    public static partial class CharacterFootIkFullCaptureProgram
     {
     }
 }

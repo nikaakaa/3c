@@ -1,5 +1,5 @@
 using System;
-using ThirdPerson.GeneratedDiagnosticSampling;
+using KK.GeneratedDiagnosticSampling;
 using ThirdPersonCharacter.Pipeline.Animation;
 using ThirdPersonCharacter.Pipeline.Animation.Diagnostics;
 using ThirdPersonCharacter.Pipeline.Presentation;

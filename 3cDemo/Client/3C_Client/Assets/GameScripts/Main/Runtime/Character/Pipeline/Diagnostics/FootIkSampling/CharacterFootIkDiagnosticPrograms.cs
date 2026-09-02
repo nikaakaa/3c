@@ -1,4 +1,4 @@
-using ThirdPerson.GeneratedDiagnosticSampling;
+using KK.GeneratedDiagnosticSampling;
 
 namespace ThirdPersonCharacter.Pipeline.Diagnostics.FootIkSampling
 {
@@ -6,8 +6,7 @@ namespace ThirdPersonCharacter.Pipeline.Diagnostics.FootIkSampling
         CharacterFootIkDiagnosticIdentity.CapabilityId,
         "character-foot-ik/full",
         1,
-        "character-foot-ik/full-host",
-        "character-foot-ik-full/1",
+        DiagnosticOutputFormat.Csv,
         "capture-metadata",
         "identity",
         "selected-step",

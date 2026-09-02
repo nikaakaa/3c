@@ -3,7 +3,7 @@
     "rootNamespace": "ThirdPersonCharacter.Pipeline.Diagnostics.FootIkSampling",
     "references": [
         "ThirdPersonClient.Runtime",
-        "ThirdPerson.GeneratedDiagnosticSampling"
+        "KK.GeneratedDiagnosticSampling"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

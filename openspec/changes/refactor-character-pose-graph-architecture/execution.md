@@ -781,3 +781,9 @@ Call遍历顺序、Group／Interface／Implementation匹配、重复Control保�
 状态：Compiler只在根Graph lowering时接受一次`OutputPose`并记录唯一`OutputOperationIndex`，Program Image Seal再次要求Output数量为1、位于Final Publication domain且占据记录的index；Compiler和Image均不创建Writer、不读取Rig Binding或Root Hierarchy。Runtime全文只有旧Pose Runtime装配路径一处`new CharacterFinalPosePublication`，而具体`CharacterFinalPosePhysicalWriter`只能在Publication构造内部建立。
 
 Writer构造立即验证完整`CharacterAnimationRigBinding`、正式`CharacterRootHierarchyBinding`、Physical Bone数量、PoseRoot和Root Bone policy；Program Image／Rig payload不匹配也在Publication构造失败。不存在第二Factory、Writer接口或Graph节点，因此任务7.4完成。任务7.2／7.3仍需把Output Family改成正式Publication layout handle。该步只做现有责任审计，不修改代码或运行行为，也不单独运行回放。
+
+## 建立Final Publication稳定布局句柄
+
+状态：`CharacterPoseProgramImage`现在从唯一Output Operation与已编译固定容量产生`CharacterFinalPosePublicationLayoutHandle`，句柄只包含layout slot、Output Operation／Value identity、逻辑Pose Value数量、Bone／Parameter数量和单Value Contribution容量，不包含Actor实例、页引用或Physical Writer。Image Seal同时证明Output Value是最后一个逻辑Pose Value，并把原先散落在Workspace与Publication构造中的Contribution整除检查收回Image边界。
+
+`AnimationPoseNativeWorkspace`与`CharacterFinalPosePublication`不再各自重新查找万能Operation并推算Output布局，二者均消费同一个handle；Workspace仍暂时按旧数量分配Output Value页，Publication仍暂时复制到自身双页，因此本步不提前勾选7.2／7.3／7.8。3C MCP清空后仅存在既有FinalIK序列化深度错误，三个触碰文件的编译错误筛选均为0；不单独运行回放。

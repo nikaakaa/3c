@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using ThirdPersonCharacter.Pipeline.Animation;
+using ThirdPersonCharacter.Pipeline.Simulation.Editor;
 using ThirdPersonSimulation;
 
 namespace ThirdPersonCharacter.Editor.CharacterSimulation

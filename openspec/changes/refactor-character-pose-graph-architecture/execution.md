@@ -1021,3 +1021,9 @@ Frame Begin仍只清理Actor projector的帧内投影页，Discard、Reset、Inv
 状态：新增`CharacterPoseRuntimeCompositionFactory`，在唯一构造入口完整装配Execution View、Program Frame Pages、Tuning、Player／Stack／Route Actor State、Source、Constraint、Final Publication与Diagnostics；`CharacterPoseRuntimeComposition`保存五个正式模块并按原顺序统一销毁。Pose协调层删除350余行具体节点和资源构造、Source容量扫描、Blend Stack Operation查找及逐类型失败清理，只保留组合请求和Frame阶段。
 
 正式Runtime与Preview仍调用同一个`PosePlanExecutionRuntime`构造，因此自动共享该组合工厂；Animator准入、初始Frame layout、Player索引、Slot control、Source容量、Graph Pause、初始Frame discard及正常Dispose顺序不变。构造失败清理继续覆盖Source、全部Player、Diagnostics、Constraint、Execution View、Inertialization、Tuning与Frame Pages，并补齐Graph已Pause后的恢复。任务5.10与14.1继续推进，等待Preview根事务与最终类型替换一起闭合；3C MCP对组合与协调层错误筛选均为0，不单独运行回放。
+
+## 拆出Executor执行上下文与Composition Family模块
+
+状态：旧Staged Executor的Program常量、Actor控制、Inertialization、Slot、Value、Completion与Frame binding字段，以及通用Value复制／缩放／参数／Contribution／Foot Feature／空间数学／Invalid传播原语，整体迁入`CharacterPoseExecutionContext`。Executor只继承同一上下文，不再重复声明或持有第二份页引用。
+
+新增`CharacterPoseCompositionOperationModule`并迁移Blend Pose、Layered Bone Blend、Additive Pose与Pose Parameter Resolve四类实际执行；唯一Operation dispatch在原Stage位置调用该组合模块，使用相同Context页和原辅助原语，没有委托分配、第二执行路径或结果复制。6.8继续推进，待其余Family迁出后直接删除旧Staged Executor类型；3C MCP对Context、Composition模块和Executor错误筛选均为0，不单独运行回放。

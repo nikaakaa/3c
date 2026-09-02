@@ -49,7 +49,11 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             Pass = pass;
             Severity = severity;
             Reason = PoseIdentity.Require(reason, nameof(reason));
-            Message = PoseIdentity.Require(message, nameof(message));
+            Message = string.IsNullOrWhiteSpace(message)
+                ? throw new ArgumentException(
+                    "Pose compilation diagnostic message is required.",
+                    nameof(message))
+                : message.Trim();
             GraphId = graphId;
             NodeId = nodeId;
             PortId = portId;

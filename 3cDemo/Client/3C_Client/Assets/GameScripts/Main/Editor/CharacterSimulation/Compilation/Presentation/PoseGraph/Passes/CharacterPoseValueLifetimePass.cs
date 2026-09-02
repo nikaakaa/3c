@@ -100,12 +100,40 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             int parameterValueCapacity,
             int contributionCapacity,
             int frameCacheCapacity,
+            int rigPoseBoneCount,
+            int rigPhysicalBoneCount,
+            int rigVirtualBoneCount,
+            int playerStateCount,
+            int inertializationStateCount,
+            int stateMachineStateCount,
+            int stateMachineTransitionCount,
+            int blendStackEntryCount,
+            int sourceCatalogCount,
+            int constraintOperationCount,
+            int constraintGoalCapacity,
+            int diagnosticStageCount,
+            int diagnosticOperationCount,
             CharacterPoseValueLifetime valueLifetime)
         {
             if (poseValueCapacity <= 0 ||
                 parameterValueCapacity <= 0 ||
                 contributionCapacity <= 0 ||
-                frameCacheCapacity <= 0)
+                frameCacheCapacity <= 0 ||
+                rigPoseBoneCount <= 0 ||
+                rigPhysicalBoneCount <= 0 ||
+                rigVirtualBoneCount < 0 ||
+                rigPhysicalBoneCount + rigVirtualBoneCount !=
+                    rigPoseBoneCount ||
+                playerStateCount <= 0 ||
+                inertializationStateCount < 0 ||
+                stateMachineStateCount < 0 ||
+                stateMachineTransitionCount < 0 ||
+                blendStackEntryCount < 0 ||
+                sourceCatalogCount <= 0 ||
+                constraintOperationCount <= 0 ||
+                constraintGoalCapacity <= 0 ||
+                diagnosticStageCount <= 0 ||
+                diagnosticOperationCount != frameCacheCapacity)
             {
                 throw new ArgumentOutOfRangeException(
                     nameof(poseValueCapacity));
@@ -114,6 +142,19 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             ParameterValueCapacity = parameterValueCapacity;
             ContributionCapacity = contributionCapacity;
             FrameCacheCapacity = frameCacheCapacity;
+            RigPoseBoneCount = rigPoseBoneCount;
+            RigPhysicalBoneCount = rigPhysicalBoneCount;
+            RigVirtualBoneCount = rigVirtualBoneCount;
+            PlayerStateCount = playerStateCount;
+            InertializationStateCount = inertializationStateCount;
+            StateMachineStateCount = stateMachineStateCount;
+            StateMachineTransitionCount = stateMachineTransitionCount;
+            BlendStackEntryCount = blendStackEntryCount;
+            SourceCatalogCount = sourceCatalogCount;
+            ConstraintOperationCount = constraintOperationCount;
+            ConstraintGoalCapacity = constraintGoalCapacity;
+            DiagnosticStageCount = diagnosticStageCount;
+            DiagnosticOperationCount = diagnosticOperationCount;
             ValueLifetime = valueLifetime ??
                 throw new ArgumentNullException(nameof(valueLifetime));
         }
@@ -122,6 +163,19 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
         internal int ParameterValueCapacity { get; }
         internal int ContributionCapacity { get; }
         internal int FrameCacheCapacity { get; }
+        internal int RigPoseBoneCount { get; }
+        internal int RigPhysicalBoneCount { get; }
+        internal int RigVirtualBoneCount { get; }
+        internal int PlayerStateCount { get; }
+        internal int InertializationStateCount { get; }
+        internal int StateMachineStateCount { get; }
+        internal int StateMachineTransitionCount { get; }
+        internal int BlendStackEntryCount { get; }
+        internal int SourceCatalogCount { get; }
+        internal int ConstraintOperationCount { get; }
+        internal int ConstraintGoalCapacity { get; }
+        internal int DiagnosticStageCount { get; }
+        internal int DiagnosticOperationCount { get; }
         internal CharacterPoseValueLifetime ValueLifetime { get; }
     }
 
@@ -399,18 +453,44 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
     {
         internal static CharacterPoseWorkspacePlan Run(
             CharacterPoseValueLifetime lifetime,
+            CharacterPoseStageSchedule schedule,
+            CharacterAnimationRigDefinition rig,
             IReadOnlyList<CharacterPresentationPoseOperation> operations,
-            IReadOnlyList<AnimationBlendNodePayload> blendNodes)
+            IReadOnlyList<AnimationBlendNodePayload> blendNodes,
+            int playerStateCount,
+            int inertializationStateCount,
+            IReadOnlyList<CharacterPoseStateMachineDescriptor> stateMachines,
+            int sourceCatalogCount,
+            IReadOnlyList<CharacterPresentationPoseBoneIkGoalsDescriptor>
+                poseBoneIkGoals,
+            IReadOnlyList<CharacterPresentationFootPlacementDescriptor>
+                footPlacements,
+            IReadOnlyList<CharacterPresentationFullBodyIkDescriptor>
+                fullBodyIks,
+            int constraintGoalCapacity)
         {
             if (lifetime == null ||
+                schedule == null ||
+                !rig ||
                 operations == null ||
                 operations.Count != lifetime.OperationCount ||
-                blendNodes == null)
+                schedule.OperationCount != operations.Count ||
+                blendNodes == null ||
+                playerStateCount <= 0 ||
+                inertializationStateCount < 0 ||
+                stateMachines == null ||
+                sourceCatalogCount <= 0 ||
+                poseBoneIkGoals == null ||
+                footPlacements == null ||
+                fullBodyIks == null ||
+                constraintGoalCapacity <= 0)
             {
                 throw new ArgumentException(
                     "Pose Workspace Plan input is invalid.");
             }
+            rig.RequireValid();
             int contributionCapacityPerValue = 0;
+            int blendStackEntryCount = 0;
             for (int operationIndex = 0;
                  operationIndex < operations.Count;
                  operationIndex++)
@@ -453,6 +533,9 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                     contributionCapacityPerValue +
                     blendNode.StackPolicy.MaxActiveSourceEntries +
                     1);
+                blendStackEntryCount = checked(
+                    blendStackEntryCount +
+                    blendNode.StackPolicy.MaxActiveSourceEntries);
             }
             if (contributionCapacityPerValue <= 0 ||
                 lifetime.OutputPoseValueIndex <= 0)
@@ -460,12 +543,34 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                 throw new InvalidOperationException(
                     "Pose Workspace requires Player contributions and a non-final Pose Value.");
             }
+            int stateMachineStateCount = stateMachines.Sum(
+                value => value?.StateWorkspaceCount ?? 0);
+            int stateMachineTransitionCount = stateMachines.Sum(
+                value => value?.TransitionWorkspaceCount ?? 0);
+            int constraintOperationCount = checked(
+                poseBoneIkGoals.Count +
+                footPlacements.Count +
+                fullBodyIks.Count +
+                1);
             return new CharacterPoseWorkspacePlan(
                 lifetime.OutputPoseValueIndex,
                 lifetime.ParameterAddresses.Count,
                 checked(
                     lifetime.OutputPoseValueIndex *
                     contributionCapacityPerValue),
+                operations.Count,
+                rig.PoseBoneCount,
+                rig.PhysicalBoneCount,
+                rig.VirtualBoneCount,
+                playerStateCount,
+                inertializationStateCount,
+                stateMachineStateCount,
+                stateMachineTransitionCount,
+                blendStackEntryCount,
+                sourceCatalogCount,
+                constraintOperationCount,
+                constraintGoalCapacity,
+                schedule.Stages.Count,
                 operations.Count,
                 lifetime);
         }

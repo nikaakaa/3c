@@ -300,8 +300,18 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             CharacterPoseWorkspacePlan workspace =
                 CharacterPoseWorkspacePlanPass.Run(
                     valueLifetime,
+                    schedule,
+                    state.Rig,
                     state.Operations,
-                    state.BlendNodes);
+                    state.BlendNodes,
+                    state.PlayerCount,
+                    state.InertializationCount,
+                    state.StateMachines,
+                    state.PoseSources.Count,
+                    state.PoseBoneIkGoalSources,
+                    state.FootPlacements,
+                    state.FullBodyIks,
+                    state.FullBodyIkGoalContributionGoalWorkspaceCount);
             for (int rangeIndex = 0;
                  rangeIndex < schedule.FragmentRanges.Count;
                  rangeIndex++)

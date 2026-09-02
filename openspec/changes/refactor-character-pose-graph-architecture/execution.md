@@ -953,3 +953,9 @@ Compiler路径改为逐闭包Graph执行局部Topology验证，typed edge、Port
 状态：新增`CharacterPoseValueLifetimePass`，只消费固定Stage Schedule和唯一线性Operation页，冻结Pose、Parameter address、Pose Discontinuity、Goal Contribution与Goal Set的producer／last-use页；同时验证每个typed输入只能读取更早的唯一producer、Goal值必须有consumer、Linked Fragment输出必须在Call前完成、最终Output只延长Final Pose寿命而不分配第二Final页。Parameter使用固定schema地址，Discontinuity与对应Pose Value共享同一寿命。
 
 旧Compiler中的producer／last-use临时数组和六组Register辅助方法删除。`CharacterPoseWorkspacePlanPass`开始独立消费Value Lifetime、Player／Blend Stack容量与Parameter schema，保持现有Pose workspace排除唯一Final Output、Contribution stride总量、Parameter stride和Frame cache数值不变。任务11.7完成；11.8仍等待把Rig、节点状态、Source、Constraint、Inertialization与Diagnostics manifest的全部容量收进同一Workspace Plan。3C MCP对新Pass与Compiler入口错误筛选均为0；不单独运行回放。
+
+## 完整Workspace Plan
+
+状态：`CharacterPoseWorkspacePlanPass`现在一次冻结Rig Pose／Physical／Virtual Bone布局，Pose／Parameter／Contribution／Frame cache，Player、Inertialization、StateMachine state／transition、Blend Stack entry、Source catalog、Constraint operation／goal以及Diagnostics stage／operation的全部固定容量。Pass只消费前置Schedule、Value Lifetime、Rig和已编译节点描述，不读取Runtime、Actor或动态资源；任一计数不一致在Program Image发布前失败。
+
+现有Program Image参数仍取同一Plan中的Pose workspace、Parameter stride、Contribution capacity和Frame cache，所以生成数值与Hash输入不变；其余容量先作为后续Family Payload与ABI绑定的唯一计划真相，不再由中央Compiler临时推算。任务11.8完成。3C MCP对Workspace Plan与Compiler入口错误筛选均为0；不单独运行回放。

@@ -763,3 +763,9 @@ Call遍历顺序、Group／Interface／Implementation匹配、重复Control保�
 状态：`AnimationFinalPosePhysicalWriter`直接改名为`CharacterFinalPosePhysicalWriter`并从Presentation／Animancer目录移入PoseGraph Final目录，旧类型与旧文件路径删除。`CharacterFinalPosePublication`现在接收正式Rig Binding与Root Hierarchy Binding并在Module内部唯一构造Writer；旧Pose Runtime删除writer局部变量、构造和传递，只构造Publication。
 
 全仓只有Final Publication一处`new CharacterFinalPosePhysicalWriter`和一处`Write`调用；Physical Transform的position／rotation／scale写入只存在该具体Writer，没有Writer Graph节点、接口、第二Implementation或旁路，因此任务7.9完成。任务7.8暂不勾选：Program Workspace仍保存Output read buffer，Publication仍把结果复制到自己的Committed／Pending双页，必须先用正式Publication layout handle闭合7.2与7.3，不能仅凭唯一Transform写入冒充唯一Final Pose页。3C MCP重连后新旧Writer、Publication和Pose Runtime错误筛选均为0；不单独运行回放。
+
+## Final Physical Write统一前置结果验证
+
+状态：`CharacterFinalPosePublication.WritePhysicalPose`现在同时接收Publication lease、完整lineage、Program Result、Constraint Result与Final read binding，在进入具体Writer前统一核对lease、Program／Constraint有效性及同lineage、两者Outcome、Completion、PoseGraph Completed、成功帧continuity、availability／invalid metadata、invalid operation和Rig identity。TypedInvalid帧不强行要求Pose continuity，继续走既有Committed／reference fallback。
+
+具体Writer仍先遍历全部Physical Bone验证Transform和解析后的Pose，再在第二次唯一循环一次写入全部local position／rotation／scale；任一无效输入在首个物理写之前发布原Fault outcome并抛错，成功Pose用Pending，TypedInvalid用上一Committed或reference。由此任务7.5与7.6完成。任务7.7仍不勾选：Writer之后的Publication frame复制和部分Seal准备仍包含可抛验证，必须继续前移后才能证明Writer后no-throw。3C MCP对Publication和Pose Runtime错误筛选均为0；不单独运行回放。

@@ -2350,6 +2350,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             {
                 m_FinalPublication.WritePhysicalPose(
                     publicationLease,
+                    in completedLineage,
+                    in programResult,
+                    in constraintResult,
                     in finalRead,
                     hasCommittedFinal,
                     in committedFinalRead);

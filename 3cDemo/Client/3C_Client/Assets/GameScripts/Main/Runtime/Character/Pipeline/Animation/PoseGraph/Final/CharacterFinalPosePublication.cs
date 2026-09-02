@@ -177,6 +177,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
 
         readonly string m_PoseGraphId;
         readonly string m_PosePlanHash;
+        readonly string m_RigId;
+        readonly string m_RigRevision;
         readonly PoseNodeId[] m_PoseNodeIds;
         readonly float[] m_ParameterDefaults;
         readonly AnimationLocalBonePose[] m_DenseLocalPoses;
@@ -238,6 +240,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 throw new InvalidOperationException("Final Animation Pose Frame contribution capacity is invalid.");
             m_PoseGraphId = program.PoseGraphId;
             m_PosePlanHash = program.PlanHash;
+            m_RigId = program.RigId;
+            m_RigRevision = program.RigRevision;
             m_OperationCount = program.Operations.Count;
             m_PoseNodeIds = new PoseNodeId[program.PlayerCount];
             for (int i = 0; i < program.Operations.Count; i++)
@@ -315,17 +319,67 @@ namespace ThirdPersonCharacter.Pipeline.Animation
 
         internal void WritePhysicalPose(
             CharacterFinalPosePublicationFrameLease lease,
+            in CharacterPoseFrameLineage lineage,
+            in CharacterPoseProgramResult programResult,
+            in CharacterPoseConstraintResult constraintResult,
             in AnimationFinalPoseNativeReadBinding pending,
             bool hasCommitted,
             in AnimationFinalPoseNativeReadBinding committed)
         {
-            m_Pending.RequireLease(lease);
+            RequirePhysicalWrite(
+                lease,
+                in lineage,
+                in programResult,
+                in constraintResult,
+                in pending);
             m_PhysicalWriter.Write(
                 in pending,
                 hasCommitted,
                 in committed,
                 m_Pending.FootIkCaptureInterest);
             m_Pending.PhysicalWrite = m_PhysicalWriter.Diagnostics;
+        }
+
+        void RequirePhysicalWrite(
+            CharacterFinalPosePublicationFrameLease lease,
+            in CharacterPoseFrameLineage lineage,
+            in CharacterPoseProgramResult programResult,
+            in CharacterPoseConstraintResult constraintResult,
+            in AnimationFinalPoseNativeReadBinding pending)
+        {
+            m_Pending.RequireLease(lease);
+            if (!lineage.IsValid ||
+                !lease.Matches(lineage) ||
+                !programResult.IsValid ||
+                !constraintResult.IsValid ||
+                programResult.Lineage != lineage ||
+                constraintResult.Lineage != lineage ||
+                programResult.Outcome != constraintResult.Outcome ||
+                pending.CompletionIdentity != lineage.CompletionIdentity ||
+                pending.PoseGraphCompletedAt[0] !=
+                    lineage.CompletionIdentity ||
+                programResult.IsCompleted &&
+                (!constraintResult.IsCompleted ||
+                 pending.ContinuityIdentity[0] == 0) ||
+                programResult.OutputAvailability != pending.Availability[0] ||
+                programResult.OutputInvalidReason !=
+                    pending.OutputInvalidReason[0] ||
+                programResult.GraphInvalidReason !=
+                    pending.PoseGraphInvalidReason[0] ||
+                programResult.InvalidOperationIndex !=
+                    pending.PoseGraphInvalidOperationIndex[0] ||
+                !string.Equals(
+                    lineage.RigId,
+                    m_RigId,
+                    StringComparison.Ordinal) ||
+                !string.Equals(
+                    lineage.RigRevision,
+                    m_RigRevision,
+                    StringComparison.Ordinal))
+            {
+                throw new InvalidOperationException(
+                    "Final Pose physical write inputs are inconsistent.");
+            }
         }
 
         internal CharacterFinalPosePublicationResult PreparePending(

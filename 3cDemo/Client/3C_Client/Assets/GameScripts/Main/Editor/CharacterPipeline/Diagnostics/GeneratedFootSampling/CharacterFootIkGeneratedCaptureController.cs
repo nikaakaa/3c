@@ -26,11 +26,21 @@ namespace ThirdPersonCharacter.Pipeline.Diagnostics.FootIkSampling.Editor
 
         public Guid OwnerId => m_OwnerId;
         public DiagnosticCaptureFailure? Failure => m_Capture.Failure;
+        public int CapturedFrameCount => m_Capture.CapturedFrameCount;
 
-        public bool Start()
+        public bool Start(bool attach = true)
         {
             if (!m_Capture.Start(m_Request))
                 return false;
+            if (attach)
+                Attach();
+            return true;
+        }
+
+        public void Attach()
+        {
+            if (m_Registered)
+                return;
             try
             {
                 m_Target.SetFootIkCapture(
@@ -44,16 +54,19 @@ namespace ThirdPersonCharacter.Pipeline.Diagnostics.FootIkSampling.Editor
                 throw;
             }
             m_Registered = true;
-            return true;
+        }
+
+        public void Detach()
+        {
+            if (!m_Registered)
+                return;
+            m_Target.RemoveFootIkCapture(m_OwnerId);
+            m_Registered = false;
         }
 
         public bool Stop(in DiagnosticCaptureStopOutcome outcome)
         {
-            if (m_Registered)
-            {
-                m_Target.RemoveFootIkCapture(m_OwnerId);
-                m_Registered = false;
-            }
+            Detach();
             return m_Capture.Stop(in outcome);
         }
 
@@ -93,11 +106,7 @@ namespace ThirdPersonCharacter.Pipeline.Diagnostics.FootIkSampling.Editor
 
         public void Dispose()
         {
-            if (m_Registered)
-            {
-                m_Target.RemoveFootIkCapture(m_OwnerId);
-                m_Registered = false;
-            }
+            Detach();
             m_Capture.Dispose();
         }
     }

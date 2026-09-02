@@ -80,17 +80,17 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
 
         void OnInspectorUpdate()
         {
-            bool capturing = CharacterFootLandingPredictionSampler.IsCapturing;
-            bool starting = CharacterFootLandingPredictionSampler.IsStartPending;
-            string samplesPath = CharacterFootLandingPredictionSampler.LastSavedPath;
+            bool capturing = CharacterFootDiagnosticSampling.IsCapturing;
+            bool finalizing = CharacterFootDiagnosticSampling.IsFinalizing;
+            string samplesPath = CharacterFootDiagnosticSampling.LastSavedPath;
             if (capturing == m_LastSamplingCapturing &&
-                starting == m_LastSamplingStarting &&
+                finalizing == m_LastSamplingStarting &&
                 string.Equals(samplesPath, m_LastSamplingSavedPath, StringComparison.Ordinal))
             {
                 return;
             }
             m_LastSamplingCapturing = capturing;
-            m_LastSamplingStarting = starting;
+            m_LastSamplingStarting = finalizing;
             m_LastSamplingSavedPath = samplesPath;
             Repaint();
         }
@@ -99,10 +99,9 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
         {
             EditorApplication.update -= TickAutoSample;
             if (m_AutoSampleStopTime != 0d &&
-                (CharacterFootLandingPredictionSampler.IsStartPending ||
-                 CharacterFootLandingPredictionSampler.IsCapturing))
+                CharacterFootDiagnosticSampling.IsCapturing)
             {
-                CharacterFootLandingPredictionSampler.StopAndSaveSampling();
+                CharacterFootDiagnosticSampling.StopAndSaveSampling();
             }
             m_AutoSampleStopTime = 0d;
         }
@@ -245,30 +244,29 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
 
         void DrawFootLandingSampling()
         {
-            bool capturing = CharacterFootLandingPredictionSampler.IsCapturing;
-            bool starting = CharacterFootLandingPredictionSampler.IsStartPending;
-            string samplesPath = CharacterFootLandingPredictionSampler.LastSavedPath;
-            string analysisPath = CharacterFootLandingPredictionSampler.LastSavedAnalysisPath;
-            string diagnosisDirectory =
-                CharacterFootLandingPredictionSampler.LastSavedDiagnosisDirectory;
-            string sampleDirectory = CharacterFootLandingPredictionSampler.LastSavedDirectory;
+            bool capturing = CharacterFootDiagnosticSampling.IsCapturing;
+            bool finalizing = CharacterFootDiagnosticSampling.IsFinalizing;
+            string samplesPath = CharacterFootDiagnosticSampling.LastSavedPath;
+            string manifestPath = CharacterFootDiagnosticSampling.LastManifestPath;
+            string sampleDirectory = CharacterFootDiagnosticSampling.LastSavedDirectory;
             EditorGUILayout.LabelField(
                 "Foot Landing Sampling",
-                capturing ? "Recording" : starting ? "Starting" : "Idle");
+                capturing ? "Recording" : finalizing ? "Finalizing" : "Idle");
             using (new EditorGUILayout.HorizontalScope())
             {
                 using (new EditorGUI.DisabledScope(
                            EditorApplication.isCompiling ||
                            !EditorApplication.isPlaying ||
+                           !CharacterFootDiagnosticSampling.IsAvailable ||
                            capturing ||
-                           starting))
+                           finalizing))
                 {
                     if (GUILayout.Button("Start Sampling"))
                         StartManualSample();
                 }
                 using (new EditorGUI.DisabledScope(
                            EditorApplication.isCompiling ||
-                           !capturing && !starting))
+                           !capturing))
                 {
                     if (GUILayout.Button("Stop and Save"))
                         StopManualSample();
@@ -287,18 +285,11 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                            EditorApplication.isCompiling ||
                            !EditorApplication.isPlaying ||
                            capturing ||
-                           starting ||
+                           finalizing ||
                            m_AutoSampleStopTime > 0d))
                 {
                     if (GUILayout.Button("Auto Sample 8s"))
                         StartAutoSample();
-                }
-                using (new EditorGUI.DisabledScope(
-                           string.IsNullOrEmpty(diagnosisDirectory) ||
-                           !Directory.Exists(diagnosisDirectory)))
-                {
-                    if (GUILayout.Button("Show Last Diagnoses"))
-                        ShowLastDiagnostics();
                 }
             }
             DrawFixedInputTrace();
@@ -333,19 +324,11 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                     EditorStyles.textField,
                     GUILayout.Height(EditorGUIUtility.singleLineHeight));
             }
-            if (!string.IsNullOrEmpty(analysisPath))
+            if (!string.IsNullOrEmpty(manifestPath))
             {
-                EditorGUILayout.LabelField("Last Analysis");
+                EditorGUILayout.LabelField("Last Manifest");
                 EditorGUILayout.SelectableLabel(
-                    analysisPath,
-                    EditorStyles.textField,
-                    GUILayout.Height(EditorGUIUtility.singleLineHeight));
-            }
-            if (!string.IsNullOrEmpty(diagnosisDirectory))
-            {
-                EditorGUILayout.LabelField("Last Diagnoses");
-                EditorGUILayout.SelectableLabel(
-                    diagnosisDirectory,
+                    manifestPath,
                     EditorStyles.textField,
                     GUILayout.Height(EditorGUIUtility.singleLineHeight));
             }
@@ -356,9 +339,8 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             bool recording = CharacterFixedInputTraceWorkflow.IsRecording;
             bool replaying = CharacterFixedInputTraceWorkflow.IsReplaying;
             bool pending = CharacterFixedInputTraceWorkflow.IsPending;
-            bool sampling = CharacterFootLandingPredictionSampler.IsCapturing ||
-                            CharacterFootLandingPredictionSampler.IsStartPending ||
-                            CharacterFootLandingPredictionSampler.IsFinalizing;
+            bool sampling = CharacterFootDiagnosticSampling.IsCapturing ||
+                            CharacterFootDiagnosticSampling.IsFinalizing;
             string state = recording
                 ? "Recording"
                 : replaying
@@ -612,9 +594,11 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
         {
             try
             {
-                CharacterFootLandingPredictionSampler.StartSampling();
-                m_AutoSampleStopTime = -1d;
-                m_DiagnosticSummary = "Waiting for Gameplay Lab player...";
+                CharacterFootDiagnosticSampling.StartSampling();
+                m_AutoSampleStopTime =
+                    EditorApplication.timeSinceStartup + 8d;
+                m_DiagnosticSummary =
+                    "Auto sampling 8s... walk the stairs now.";
                 EditorApplication.update -= TickAutoSample;
                 EditorApplication.update += TickAutoSample;
             }
@@ -629,30 +613,13 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
         {
             if (m_AutoSampleStopTime == 0d)
                 return;
-            if (m_AutoSampleStopTime < 0d)
-            {
-                if (CharacterFootLandingPredictionSampler.IsStartPending)
-                    return;
-                if (!CharacterFootLandingPredictionSampler.IsCapturing)
-                {
-                    EditorApplication.update -= TickAutoSample;
-                    m_AutoSampleStopTime = 0d;
-                    m_DiagnosticSummary = CharacterFootLandingPredictionSampler.LastStartFailure;
-                    Repaint();
-                    return;
-                }
-                m_AutoSampleStopTime = EditorApplication.timeSinceStartup + 8d;
-                m_DiagnosticSummary = "Auto sampling 8s... walk the stairs now.";
-                Repaint();
-                return;
-            }
             if (EditorApplication.timeSinceStartup < m_AutoSampleStopTime)
             {
                 return;
             }
             EditorApplication.update -= TickAutoSample;
             m_AutoSampleStopTime = 0d;
-            ExecuteSampling(CharacterFootLandingPredictionSampler.StopAndSaveSampling);
+            ExecuteSampling(CharacterFootDiagnosticSampling.StopAndSaveSampling);
             ShowLastDiagnostics();
             Repaint();
         }
@@ -660,12 +627,13 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
         void ShowLastDiagnostics()
         {
             m_DiagnosticSummary =
-                CharacterFootLandingPredictionSampler.LastDiagnosticSummary;
+                string.IsNullOrEmpty(CharacterFootDiagnosticSampling.LastFailure)
+                    ? CharacterFootDiagnosticSampling.LastManifestPath
+                    : CharacterFootDiagnosticSampling.LastFailure;
             Debug.Log(
                 $"Foot Landing Diagnostics " +
-                $"Samples={CharacterFootLandingPredictionSampler.LastSavedPath}, " +
-                $"Analysis={CharacterFootLandingPredictionSampler.LastSavedAnalysisPath}, " +
-                $"Diagnoses={CharacterFootLandingPredictionSampler.LastSavedDiagnosisDirectory}, " +
+                $"Samples={CharacterFootDiagnosticSampling.LastSavedPath}, " +
+                $"Manifest={CharacterFootDiagnosticSampling.LastManifestPath}, " +
                 $"Summary={m_DiagnosticSummary}");
             Repaint();
         }
@@ -673,22 +641,22 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
         void StartManualSample()
         {
             m_DiagnosticSummary = string.Empty;
-            ExecuteSampling(CharacterFootLandingPredictionSampler.StartSampling);
+            ExecuteSampling(CharacterFootDiagnosticSampling.StartSampling);
             Repaint();
         }
 
         void StopManualSample()
         {
-            ExecuteSampling(CharacterFootLandingPredictionSampler.StopAndSaveSampling);
-            if (!string.IsNullOrEmpty(CharacterFootLandingPredictionSampler.LastSavedPath))
+            ExecuteSampling(CharacterFootDiagnosticSampling.StopAndSaveSampling);
+            if (!string.IsNullOrEmpty(CharacterFootDiagnosticSampling.LastSavedPath))
                 ShowLastDiagnostics();
         }
 
         void CaptureSamplingUiState()
         {
-            m_LastSamplingCapturing = CharacterFootLandingPredictionSampler.IsCapturing;
-            m_LastSamplingStarting = CharacterFootLandingPredictionSampler.IsStartPending;
-            m_LastSamplingSavedPath = CharacterFootLandingPredictionSampler.LastSavedPath;
+            m_LastSamplingCapturing = CharacterFootDiagnosticSampling.IsCapturing;
+            m_LastSamplingStarting = CharacterFootDiagnosticSampling.IsFinalizing;
+            m_LastSamplingSavedPath = CharacterFootDiagnosticSampling.LastSavedPath;
         }
     }
 }

@@ -111,7 +111,7 @@ Annotations必须在源码编译时可解析，但Disabled Player不得因Attrib
 
 ### Decision 9: 3C只消费独立0.4.0发布
 
-通用Owner固定为独立`com.kk.generated-diagnostic-sampling` 0.4.0。3C只保存package引用、领域Capability／Sampler／Program声明、现有业务成员Attribute、同步Commit调用和下游Analyzer／Publisher。PoseGraph继续生产自己的正式Committed事实，不新增采样View、Event、interest或运行分支。
+通用Owner固定为独立`com.kk.generated-diagnostic-sampling` 0.4.0。3C只保存package引用、领域Capability／Sampler／Program声明、现有业务成员Attribute、同步Commit调用和Editor workflow；当前Foot消费方不再拥有Analyzer／Publisher。PoseGraph继续生产自己的正式Committed事实，不新增采样View、Event、interest或运行分支。
 
 Performance工作流继续唯一拥有Build Request、`DiagnosticCapabilitySet`、Player manifest、Run Request、握手、顶层Capture与Comparer。框架不创建第二Player、第二Controller或第二产物根。
 

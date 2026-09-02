@@ -6,14 +6,16 @@ using ThirdPersonCharacter.Pipeline.Presentation;
 
 namespace ThirdPersonCharacter.Pipeline.Diagnostics.FootIkSampling
 {
-    internal static class CharacterFootIkDiagnosticIdentity
+    public static class CharacterFootIkDiagnosticIdentity
     {
-        internal const string CapabilityId = "character-foot-ik";
-        internal const int CapabilityRevision = 1;
-        internal const string LineageTypeIdentity =
+        public const string CapabilityId = "character-foot-ik";
+        public const int CapabilityRevision = 1;
+        public const string LineageTypeIdentity =
             "character-foot-ik-lineage/1";
-        internal const string LeftDimensionId = "character-foot-ik/left";
-        internal const string RightDimensionId = "character-foot-ik/right";
+        public const string LeftDimensionId = "character-foot-ik/left";
+        public const string RightDimensionId = "character-foot-ik/right";
+        public const string FullSamplerId = "character-foot-ik/full";
+        public const string FullProgramId = "character-foot-ik/full-program";
     }
 
     public readonly struct CharacterFootIkCaptureMetadata

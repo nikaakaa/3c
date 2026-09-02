@@ -15,8 +15,8 @@
 
 - [x] 3.1 删除Started／CommittedSample／Stopped Event DTO、Dimension View、Side Metadata和Bridge，在正式同步Commit点直接以`in`传入Left／Right Fact Root与Metadata并调用generated `HandleCommitted`
 - [x] 3.2 检查generated Lifecycle自动完成Start、左右Dimension packet rent／Capture／submit、Stop与结构化失败传播，领域不直接控制Session或Writer
-- [ ] 3.3 删除Host Adapter、`hostAdapterId`、Column、CsvBinding、Geometry Header、旧Reader和第二CSV映射
-- [ ] 3.4 将Foot Analyzer／Publisher切到Host自动生成的基础CSV、typed artifact和manifest，确认它们只负责评分与报告
+- [x] 3.3 删除Host Adapter、`hostAdapterId`、Column、CsvBinding、Geometry Header、旧Reader和第二CSV映射
+- [x] 3.4 按Foot当前范围删除旧Analyzer／Publisher、评分报告和Diagnosis Store，以Host自动生成的CSV、typed artifact和manifest作为最终诊断产物
 - [ ] 3.5 重建Foot Schema、Program、Capability Set和Player manifest identity，确认0.1至0.3 Request／packet／Reader不能进入0.4链
 
 ## 4. 删除旧Owner与统一文档

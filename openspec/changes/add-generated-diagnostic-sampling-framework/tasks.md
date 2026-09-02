@@ -51,7 +51,7 @@
 - [x] 7.3 把全部普通Foot字段迁到现有readonly field／property／计算getter的单个path-scoped Attribute，将固定集合迁到现有buffer／class page Table，并以搜索确认旧方法式Getter／Extractor为零
 - [x] 7.4 删除Foot运行时公式与无字段root，通过Generator diagnostics确认没有Capture View、Side选择、普通字段转发或未注册Root
 - [ ] 7.5 删除Committed／Dimension View、Started／CommittedSample／Stopped领域Event DTO、Projection／Group根、Bridge、Column／CsvBinding、Host Adapter、旧Reader及全部兼容wrapper，并用程序集与符号搜索确认零残留
-- [ ] 7.6 接通Schema-driven Host基础CSV／manifest和Foot Analyzer／Publisher，确认Analyzer只读取Completed artifact且不重新映射字段或回写Capability状态
+- [x] 7.6 接通Schema-driven Host主表／子表／manifest，并按Foot当前范围删除旧Analyzer／Publisher、评分报告与第二字段映射
 - [ ] 7.7 用3C Capture IL2CPP Player核对multi Fact Root `in`调用、Generated Program／Schema／packet／CSV／manifest identity和左右Dimension数据闭合
 
 ## 8. 收口项目一致性

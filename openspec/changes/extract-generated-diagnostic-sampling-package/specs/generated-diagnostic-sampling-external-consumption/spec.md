@@ -46,7 +46,7 @@ Foot普通成员读取、既有业务计算属性、enum与Unity值类型转换 
 
 ### Requirement: Host必须按Schema自动生成基础产物
 
-KK Host MUST从generated Schema与sealed packet自动生成主表、固定子表、CSV、Sampler manifest和Capability manifest。Foot Analyzer／Publisher MUST只读取Completed基础产物计算评分、报告和发布结果，不得声明Adapter、Column、CsvBinding、第二Schema或回写Capture状态。
+KK Host MUST从generated Schema与sealed packet自动生成主表、固定子表、CSV、Sampler manifest和Capability manifest。Foot消费方 MUST把Completed基础产物作为最终诊断输出，删除旧Analyzer／Publisher、评分报告与Diagnosis Store，不得声明Adapter、Column、CsvBinding、第二Schema或回写Capture状态。
 
 #### Scenario: Host完成Foot基础产物
 

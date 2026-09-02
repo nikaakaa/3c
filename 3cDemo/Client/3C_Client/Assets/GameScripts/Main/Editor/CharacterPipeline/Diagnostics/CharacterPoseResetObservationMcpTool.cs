@@ -140,7 +140,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 if (!host.HasPreviewAnimationDebugView)
                     throw new InvalidOperationException("Preview debug view was not published.");
                 IReadOnlyList<AnimationPoseWatchIdentity> watches =
-                    CharacterFootLandingPredictionSampler.BuildPoseWatches(
+                    CharacterFootPoseWatchDiscovery.Build(
                         host.PreviewAnimationDebugView.PosePlan);
                 if (watches.Count == 0)
                     throw new InvalidOperationException("Preview contains no Foot Placement or Full Body IK watches.");

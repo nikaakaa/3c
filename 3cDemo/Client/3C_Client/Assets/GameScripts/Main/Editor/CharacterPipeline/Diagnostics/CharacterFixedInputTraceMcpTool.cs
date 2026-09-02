@@ -115,11 +115,14 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                         CharacterFixedInputTraceWorkflow.LastReplayProofPath,
                     replay_comparison =
                         CharacterFixedInputTraceWorkflow.LastReplayComparison,
-                    foot_sampling = CharacterFootLandingPredictionSampler.IsCapturing,
-                    foot_sampling_finalizing = CharacterFootLandingPredictionSampler.IsFinalizing,
-                    samples_path = CharacterFootLandingPredictionSampler.LastSavedPath,
-                    analysis_path = CharacterFootLandingPredictionSampler.LastSavedAnalysisPath,
-                    diagnoses_directory = CharacterFootLandingPredictionSampler.LastSavedDiagnosisDirectory,
+                    foot_sampling_available = CharacterFootDiagnosticSampling.IsAvailable,
+                    foot_sampling = CharacterFootDiagnosticSampling.IsCapturing,
+                    foot_sampling_finalizing = CharacterFootDiagnosticSampling.IsFinalizing,
+                    samples_path = CharacterFootDiagnosticSampling.LastSavedPath,
+                    manifest_path = CharacterFootDiagnosticSampling.LastManifestPath,
+                    ground_contacts_path = CharacterFootDiagnosticSampling.GetArtifactPath("ground-contacts"),
+                    ground_envelope_path = CharacterFootDiagnosticSampling.GetArtifactPath("ground-envelope"),
+                    ground_surfaces_path = CharacterFootDiagnosticSampling.GetArtifactPath("ground-surfaces"),
                     traces = traces.Select(value => new
                     {
                         trace_id = value.TraceId,

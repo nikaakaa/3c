@@ -2,7 +2,7 @@
 
 见proposal.md。Foot的正式输入、Landing、Motion、Ground Path、Goal、Pelvis、FBBIK与Frame lineage已经在成功Seal后的同步Commit边界同时可读。旧采样又建立采样专用结构、按Side选择左右脚、逐字段搬运到Column并手写CSV，导致同一事实拥有第二套结构和Schema。
 
-通用Generated Diagnostic Sampling已经提供多Fact Root Capability、path-scoped DiagnosticField、Roslyn Source Generator、typed packet、Lifecycle和Schema-driven Host基础。3C当前已经完成真实字段标记、Foot Program生成与薄Capture编译；Host、Analyzer／Publisher、Performance接线和真实Player剥离门禁尚未闭合。
+通用Generated Diagnostic Sampling已经提供多Fact Root Capability、path-scoped DiagnosticField、Roslyn Source Generator、typed packet、Lifecycle和Schema-driven Host。3C已经完成真实字段标记、Foot Program、薄Capture、Editor workflow与Host封存，并删除旧Foot报告系统；剩余工作只有真实Player剥离门禁和用户端到端采样。
 
 ## Goals / Non-Goals
 
@@ -13,7 +13,7 @@
 - 普通字段只由真实成员上的一个DiagnosticField声明。
 - Ground Contact、Envelope和Surface直接使用真实class page表。
 - 编译期生成直接成员访问和HandleCommitted，运行时不反射、不解释字段路径。
-- 通用Host拥有基础CSV与manifest；Foot只在下游拥有评分、诊断与报告。
+- 通用Host生成的主表、三张子表与manifest就是Foot诊断产物，不再建设Foot专属评分与报告产品。
 - Disabled Player从编译闭包中剥离生成代码、Runtime、Foot Diagnostics和Annotations引用。
 
 **Non-Goals:**
@@ -21,7 +21,7 @@
 - 不修改Foot、Pelvis、Goal、FBBIK或Final Publication业务数学。
 - 不让PoseGraph认识Capability、Sampler、packet、Host或采样状态。
 - 不保留三个领域生命周期Event、Side metadata、Projection、Getter、Column、CsvBinding、领域Host Adapter或旧合成geometry表。
-- 不在Player运行时计算Analyzer评分或报告公式。
+- 不迁移旧Analyzer评分、规则报告、Diagnosis Store或Publisher。
 - 不提供旧Schema兼容reader、fallback或运行时开关。
 
 ## Decisions
@@ -42,7 +42,7 @@ Capability / main或table / Fact Root / 递归成员路径
 
 Generator从成员类型推断Boolean、整数、浮点、Identity、Vector和Quaternion codec。Foot不维护字段常量表、Getter、Extractor、Projection、Column、CsvBinding或第二份单位清单。
 
-本次Foot Schema不保留DiagnosticDerivedField。需要跨字段计算的Envelope统计、穿透、评分与报告属于采集完成后的领域分析，由Analyzer读取生成产物后计算。这样Player只采集已经提交的真实事实，不为报告逻辑增加运行时计算和Fact Root依赖。
+本次Foot Schema不保留DiagnosticDerivedField。原有Envelope统计、穿透、七维评分、规则报告和Diagnosis Store不是当前诊断采样目标，已经连同旧Analyzer／Publisher删除。固定输入回放只保留自己确实需要的楼梯端点覆盖计算，并直接读取生成主表、Contact表和Envelope表。Player只采集已经提交的真实事实，不承担报告公式。
 
 ### Decision 3: Ground Geometry拆成三张真实page表
 
@@ -72,7 +72,7 @@ CharacterFootIkGeneratedCapture是领域内唯一薄接点。Runtime在成功Sea
 
 这里不使用Expression、反射、dynamic、字典或字符串成员路径。生成的是普通C#，由Unity C# Compiler和IL2CPP AOT处理。
 
-### Decision 5: 基础产物与领域分析分层
+### Decision 5: 通用Host产物就是最终诊断输出
 
 通用Host读取sealed packet和生成Schema，自动产生：
 
@@ -81,9 +81,7 @@ CharacterFootIkGeneratedCapture是领域内唯一薄接点。Runtime在成功Sea
 - Schema、Sampler和Capability manifest。
 - 文件hash、Frame范围、Dimension和Program identity。
 
-Host不认识Foot字段。Foot Analyzer／Publisher在Capability基础产物Completed后只读这些文件，计算Foot评分、规则诊断、明细和报告。Analyzer不得维护另一套字段映射，Publisher不得参与Capture状态或回写manifest。
-
-该部分仍未实施完成；当前编译通过只证明字段、Program与Capture入口成立，不代表基础CSV、评分或报告已经闭环。
+Host不认识Foot字段。Foot不再拥有Analyzer、Publisher、七维评分、规则报告、Diagnosis Store或第二manifest。Launcher与MCP只展示通用Host产物；固定输入回放按生成Field ID读取它自己的最小证据，不生成旧samples.csv、旧合成geometry或旧报告。
 
 ### Decision 6: Disabled通过编译闭包剥离
 
@@ -101,8 +99,7 @@ Capture构建同时定义KK_DIAGNOSTIC_SAMPLING与KK_DIAGNOSTIC_FOOT。普通发
 - [真实class page在业务内部可写] → GeneratedCapture只在同步Commit调用栈内调用HandleCommitted，packet提交后不持有page引用。
 - [多个Fact Root左右绑定错位] → Generated HandleCommitted固定左右参数顺序和相同root集合，Program编译与调用编译共同失败，不按Side运行时选择。
 - [path-scoped成员改名改变Field identity] → 把改名视为Schema破坏性变更并生成新Program identity；不提供旧名别名。
-- [三张表改变旧CSV形状] → Analyzer必须按新manifest消费，历史包保持不可变，不兼容读取。
-- [Host或Analyzer尚未接线] → tasks保持未完成，不把字段与Capture编译成功描述为完整采样闭环。
+- [三张表改变旧CSV形状] → 旧Reader与历史包兼容逻辑直接删除，只接受当前Schema identity。
 - [Annotations源码引用被错误保留到发布] → Player Gate同时检查Attribute metadata、AssemblyRef和IL2CPP identity字符串，不依赖Conditional语义推测。
 
 ## Migration Plan
@@ -111,13 +108,13 @@ Capture构建同时定义KK_DIAGNOSTIC_SAMPLING与KK_DIAGNOSTIC_FOOT。普通发
 2. 删除全部旧Getter／Extractor、Projection、领域Derived、Side选择、三个Event、旧合成geometry表及Column／CsvBinding链。
 3. 用薄GeneratedCapture在成功Seal后的同步Commit边界绑定Left／Right根并调用HandleCommitted，不经过Capture View。
 4. 接入通用Host生成主表、三张子表和manifest。
-5. 迁移Analyzer／Publisher，只保留领域公式、评分和报告。
-6. 接入唯一Performance Build、Run、Capture与Comparer身份。
+5. 删除旧Analyzer／Publisher／Diagnosis Store／评分报告，并把固定回放最小证据读取改到生成产物。
+6. 通过唯一Editor workflow registry接入Launcher、固定输入回放和MCP。
 7. 对Disabled和Capture真实Player执行Cecil／IL2CPP硬门禁。
-8. 用户完成端到端验收后再同步current specs并归档；本次文档更新不归档。
+8. 用户完成端到端验收后再归档；本次文档更新不归档。
 
 ## Current Implementation Status
 
-- 已完成并编译：多Fact Root Capability、真实成员单Attribute、三张真实class page表、Full Sampler、Capture Program、Generated Lifecycle、成功Seal后直接事实根绑定、左右HandleCommitted调用和薄GeneratedCapture。
-- 已删除：旧字段Getter／Extractor、Projection、领域Derived、Dimension类型、三个Event、Metadata Side、旧合成Ground Geometry表。
-- 未完成：通用Host在3C中的基础产物闭环、Foot Analyzer／Publisher迁移、Performance工作流接线、Disabled／Capture Player的Cecil与IL2CPP Gate。
+- 已完成并编译：多Fact Root Capability、真实成员单Attribute、三张真实class page表、Full Sampler、Capture Program、Generated Lifecycle、成功Seal后直接事实根绑定、左右HandleCommitted、Editor workflow、Launcher／固定回放／MCP接入和通用Host封存。
+- 已删除：旧字段Getter／Extractor、Projection、领域Derived、Dimension类型、三个Event、Metadata Side、旧合成Ground Geometry表、旧Sampler、Column／CsvBinding、Analyzer／Publisher、Diagnosis Store、规则报告与诊断测试。
+- 未完成：Disabled／Capture真实Player的Cecil与IL2CPP Gate，以及用户端到端采样。

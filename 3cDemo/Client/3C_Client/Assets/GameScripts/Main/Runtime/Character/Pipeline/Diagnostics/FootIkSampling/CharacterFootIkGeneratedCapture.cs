@@ -12,6 +12,7 @@ namespace ThirdPersonCharacter.Pipeline.Diagnostics.FootIkSampling
     {
         readonly CharacterFootIkFullCaptureProgram.DiagnosticLifecycle m_Lifecycle;
         readonly CharacterFootIkCaptureMetadata m_Metadata;
+        int m_CapturedFrameCount;
 
         public CharacterFootIkGeneratedCapture(
             in CharacterFootIkCaptureMetadata metadata)
@@ -22,6 +23,7 @@ namespace ThirdPersonCharacter.Pipeline.Diagnostics.FootIkSampling
         }
 
         public DiagnosticCaptureFailure? Failure => m_Lifecycle.Failure;
+        public int CapturedFrameCount => m_CapturedFrameCount;
 
         public bool Start(DiagnosticCaptureStartRequest request) =>
             m_Lifecycle.Start(request);
@@ -57,7 +59,7 @@ namespace ThirdPersonCharacter.Pipeline.Diagnostics.FootIkSampling
                 CharacterFootIkDiagnosticIdentity.LineageTypeIdentity,
                 frame.PresentationFrame,
                 frame.CompletionIdentity);
-            return m_Lifecycle.HandleCommitted(
+            bool captured = m_Lifecycle.HandleCommitted(
                 in lineage,
                 in leftEffector,
                 in leftFoot,
@@ -85,6 +87,9 @@ namespace ThirdPersonCharacter.Pipeline.Diagnostics.FootIkSampling
                 in solver,
                 in stride,
                 in m_Metadata);
+            if (captured)
+                m_CapturedFrameCount = checked(m_CapturedFrameCount + 1);
+            return captured;
         }
 
         public void CaptureFault(Exception failure)

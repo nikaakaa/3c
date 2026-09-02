@@ -26,7 +26,7 @@ Left与Right MUST使用同一组Fact Root id和同一Schema。公共Pelvis、Sol
 
 每个被采样的现有readonly field或可读成员 MUST只使用一个path-scoped DiagnosticField声明revision、unit、groups和可选availability。Generator MUST从Capability、main或Table、Fact Root id与递归成员路径形成稳定Field identity，并从真实CLR类型推断codec。Foot MUST不再维护字段Getter、Extractor、Projection、Column、CsvBinding、字段类型表、单位表或Sampler到字段的反向登记。
 
-Foot Player Schema MUST不包含DiagnosticDerivedField。无法直接从现有成员读取的跨字段统计、穿透、评分与报告公式 MUST由采集完成后的Analyzer计算，不得进入Generated Capture热路径。
+Foot Player Schema MUST不包含DiagnosticDerivedField。旧跨字段统计、穿透、七维评分、规则报告、Diagnosis Store与Publisher MUST不迁移到新链，也不得进入Generated Capture热路径。固定输入回放 MAY按生成Field ID读取自己确实需要的最小证据，但 MUST不建立第二字段映射或旧CSV格式。
 
 #### Scenario: 新增普通Foot字段
 
@@ -98,23 +98,23 @@ Ground Geometry MUST分别使用ground-contacts、ground-envelope和ground-surfa
 - **THEN** 系统 MUST不创建Foot采样Session、packet、queue或输出
 - **AND** Foot业务结果与PostCommit行为 MUST保持不变
 
-### Requirement: 通用Host必须自动生成基础产物
+### Requirement: 通用Host必须自动生成最终诊断产物
 
 通用Host MUST仅依据Generated Schema和sealed packet自动生成每个Sampler主表、ground-contacts、ground-envelope、ground-surfaces、Sampler manifest和Capability manifest。Host MUST保存Schema／Program identity、Dimension、Frame范围、文件hash、字段类型、单位和availability，不得要求Foot Column、CsvBinding或Host Adapter。
 
-Foot Analyzer／Publisher MUST只在基础产物Completed后读取生成artifact与manifest，并只拥有Foot统计、评分、诊断、明细和报告。Analyzer／Publisher MUST不映射Player字段、不参与Session／packet生命周期，也不得把失败回写成伪Completed基础产物。
+Foot MUST不再拥有Analyzer、Publisher、七维评分、规则报告、Diagnosis Store或第二manifest。Launcher与MCP MUST只展示生成artifact和Capability manifest；固定输入回放 MUST只按生成Field ID读取自己需要的主表、ground-contacts与ground-envelope证据。
 
 #### Scenario: Host完成基础Finalization
 
 - **WHEN** sealed packet流完整且全部文件hash验证通过
 - **THEN** Host MUST发布引用主表与三张子表的Completed Capability manifest
-- **AND** Analyzer MUST只通过manifest中的精确路径和Schema identity读取产物
+- **AND** Launcher、MCP与固定输入回放 MUST只通过当前Capability workflow取得manifest中的精确产物
 
 #### Scenario: Host写入失败
 
 - **WHEN** 任一基础CSV或manifest写入失败
 - **THEN** Capability MUST保持Faulted并保留可诊断staging
-- **AND** Publisher MUST不发布完整Foot报告身份
+- **AND** MUST不发布旧Foot报告、第二manifest或部分Completed身份
 
 ### Requirement: Disabled Player必须从编译闭包剥离采样能力
 
@@ -136,7 +136,7 @@ Foot Analyzer／Publisher MUST只在基础产物Completed后读取生成artifact
 
 ### Requirement: Foot采样必须保持只读且不扫描私有内存
 
-GeneratedCapture、Generated Program、Host、Analyzer和Publisher MUST不修改Foot、Goal、FBBIK、Final Pose、Gameplay或Network状态。Player采样 MUST不重新执行World Query、坐标变换、FBBIK或Physical读取。外部工具 MUST不读取Player私有虚拟地址、解析对象布局、暂停进程、扫描托管堆或按PDB地址重建事实。
+GeneratedCapture、Generated Program、Host与Editor workflow MUST不修改Foot、Goal、FBBIK、Final Pose、Gameplay或Network状态。Player采样 MUST不重新执行World Query、坐标变换、FBBIK或Physical读取。外部工具 MUST不读取Player私有虚拟地址、解析对象布局、暂停进程、扫描托管堆或按PDB地址重建事实。
 
 #### Scenario: 外部工具请求地址扫描
 

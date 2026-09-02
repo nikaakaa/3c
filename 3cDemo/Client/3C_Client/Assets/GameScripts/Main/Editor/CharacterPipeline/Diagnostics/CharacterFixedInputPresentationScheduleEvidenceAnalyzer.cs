@@ -41,12 +41,42 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         const float EndpointDistance = 0.03f;
         const float UpperEdgeHorizontalDistance = 0.25f;
         const float MinimumVerticalSeparation = 0.1f;
+        const string DimensionColumn = "sample.dimension";
+        const string FrameColumn = "sample.lineage.high";
+        const string RowColumn = "sample.row";
+        const string SafetyFloorAvailableColumn =
+            "character-foot-ik/main/foot/foot-motion/output-stages/safety-floor-available";
+        const string ComponentUpColumn =
+            "character-foot-ik/main/foot/ground-path/component-up";
+        const string LastLandingColumn =
+            "character-foot-ik/main/foot/ground-path/last-landing";
+        const string NextLandingColumn =
+            "character-foot-ik/main/foot/ground-path/next-swing-landing";
+        const string OriginalSoleColumn =
+            "character-foot-ik/main/foot-motion-original-sole";
+        const string RadiusColumn =
+            "character-foot-ik/main/foot/ground-path/query/radius";
+        const string SafetyFloorClampColumn =
+            "character-foot-ik/main/foot/foot-motion/output-stages/safety-floor-clamp-meters";
+        const string NextLandingSurfaceColumn =
+            "character-foot-ik/main/foot/ground-path/next-swing-landing-surface-identity";
+        const string ContactSurfaceColumn =
+            "character-foot-ik/ground-contacts/foot/surface-identity";
+        const string ContactCandidateColumn =
+            "character-foot-ik/ground-contacts/foot/candidate-identity";
+        const string ContactPositionColumn =
+            "character-foot-ik/ground-contacts/foot/position";
+        const string ContactNormalColumn =
+            "character-foot-ik/ground-contacts/foot/normal";
+        const string EnvelopePositionColumn =
+            "character-foot-ik/ground-envelope/foot/position";
 
         internal static CharacterFixedInputPresentationScheduleRepresentativeEvidence Analyze(
             string samplesPath,
-            string geometryPath)
+            string contactsPath,
+            string envelopePath)
         {
-            var geometry = ReadGeometry(geometryPath);
+            var geometry = ReadGeometry(contactsPath, envelopePath);
             using var reader = new CsvReader(samplesPath);
             int accepted = 0;
             int outside = 0;
@@ -56,14 +86,14 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             VerticalEndpointEvidence representative = default;
             while (reader.Read())
             {
-                if (!reader.Boolean("FootMotionSafetyFloorAvailable"))
+                if (!reader.Boolean(SafetyFloorAvailableColumn))
                     continue;
                 accepted++;
-                Vector3 up = reader.Vector("GroundPathComponentUp");
-                Vector3 last = reader.Vector("GroundPathLastLanding");
-                Vector3 next = reader.Vector("GroundPathNextSwingLanding");
-                Vector3 sole = reader.Vector("FootMotionOriginalSole");
-                float radius = reader.Single("GroundPathRadius");
+                Vector3 up = reader.Vector(ComponentUpColumn);
+                Vector3 last = reader.Vector(LastLandingColumn);
+                Vector3 next = reader.Vector(NextLandingColumn);
+                Vector3 sole = reader.Vector(OriginalSoleColumn);
+                float radius = reader.Single(RadiusColumn);
                 float corridorDistance = DistanceToHorizontalAxis(
                     sole,
                     last,
@@ -72,7 +102,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 bool corridorOutside =
                     corridorDistance > radius + CorridorEpsilon;
                 float clamp = reader.Single(
-                    "FootMotionSafetyFloorClampMeters");
+                    SafetyFloorClampColumn);
                 if (corridorOutside)
                 {
                     outside++;
@@ -83,15 +113,14 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                         largeOutsideClamp++;
                 }
                 var key = new GeometryKey(
-                    reader.Integer("FrameSequence"),
-                    reader.String("Side"),
-                    reader.UInt64("GroundPathInputIdentity"));
+                    checked((int)reader.UInt64(FrameColumn)),
+                    Side(reader.String(DimensionColumn)));
                 if (!geometry.TryGetValue(key, out GeometryFrame frame) ||
                     !TryFindVerticalEndpoint(
                         frame,
                         next,
                         reader.Integer(
-                            "GroundPathNextSwingLandingSurfaceIdentity"),
+                            NextLandingSurfaceColumn),
                         up,
                         out VerticalEndpointEvidence evidence))
                 {
@@ -148,7 +177,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             using var reader = new CsvReader(samplesPath);
             while (reader.Read())
             {
-                ulong renderFrame = reader.UInt64("FrameSequence");
+                ulong renderFrame = reader.UInt64(FrameColumn);
                 if (!indices.TryGetValue(renderFrame, out int index))
                 {
                     throw new InvalidDataException(
@@ -167,38 +196,52 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         }
 
         static Dictionary<GeometryKey, GeometryFrame> ReadGeometry(
-            string path)
+            string contactsPath,
+            string envelopePath)
         {
             var result = new Dictionary<GeometryKey, GeometryFrame>();
-            using var reader = new CsvReader(path);
-            while (reader.Read())
+            using (var reader = new CsvReader(contactsPath))
             {
-                var key = new GeometryKey(
-                    reader.Integer("FrameSequence"),
-                    reader.String("Side"),
-                    reader.UInt64("GroundPathInputIdentity"));
-                if (!result.TryGetValue(key, out GeometryFrame frame))
+                while (reader.Read())
                 {
-                    frame = new GeometryFrame();
-                    result.Add(key, frame);
+                    var key = new GeometryKey(
+                        checked((int)reader.UInt64(FrameColumn)),
+                        Side(reader.String(DimensionColumn)));
+                    if (!result.TryGetValue(key, out GeometryFrame frame))
+                    {
+                        frame = new GeometryFrame();
+                        result.Add(key, frame);
+                    }
+                    int contactIndex = reader.Integer(RowColumn);
+                    if (frame.ContactIndices.Add(contactIndex))
+                    {
+                        frame.Contacts.Add(new GeometryContact(
+                            reader.Integer(ContactSurfaceColumn),
+                            reader.UInt64(ContactCandidateColumn),
+                            reader.Vector(ContactPositionColumn),
+                            reader.Vector(ContactNormalColumn)));
+                    }
                 }
-                int contactIndex = reader.Integer("GroundContactIndex");
-                if (contactIndex >= 0 &&
-                    frame.ContactIndices.Add(contactIndex))
+            }
+            using (var reader = new CsvReader(envelopePath))
+            {
+                while (reader.Read())
                 {
-                    frame.Contacts.Add(new GeometryContact(
-                        reader.Integer("GroundContactSurfaceIdentity"),
-                        reader.UInt64("GroundContactCandidateIdentity"),
-                        reader.Vector("GroundContactPosition"),
-                        reader.Vector("GroundContactNormal")));
-                }
-                int vertexIndex = reader.Integer("GroundEnvelopeVertexIndex");
-                if (vertexIndex >= 0 &&
-                    frame.VertexIndices.Add(vertexIndex))
-                {
-                    frame.Vertices.Add(new GeometryVertex(
-                        vertexIndex,
-                        reader.Vector("GroundEnvelopeVertex")));
+                    var key = new GeometryKey(
+                        checked((int)reader.UInt64(FrameColumn)),
+                        Side(reader.String(DimensionColumn)));
+                    if (!result.TryGetValue(key, out GeometryFrame frame))
+                    {
+                        frame = new GeometryFrame();
+                        result.Add(key, frame);
+                    }
+                    int vertexIndex = reader.Integer(RowColumn);
+                    if (frame.VertexIndices.Add(vertexIndex))
+                    {
+                        frame.Vertices.Add(new GeometryVertex(
+                            vertexIndex,
+                            reader.Vector(EnvelopePositionColumn)));
+                    }
                 }
             }
             foreach (GeometryFrame frame in result.Values)
@@ -308,25 +351,21 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         {
             internal GeometryKey(
                 int frameSequence,
-                string side,
-                ulong pathIdentity)
+                string side)
             {
                 FrameSequence = frameSequence;
                 Side = side ?? string.Empty;
-                PathIdentity = pathIdentity;
             }
 
             internal int FrameSequence { get; }
             internal string Side { get; }
-            internal ulong PathIdentity { get; }
             public bool Equals(GeometryKey other) =>
                 FrameSequence == other.FrameSequence &&
-                PathIdentity == other.PathIdentity &&
                 string.Equals(Side, other.Side, StringComparison.Ordinal);
             public override bool Equals(object obj) =>
                 obj is GeometryKey other && Equals(other);
             public override int GetHashCode() =>
-                HashCode.Combine(FrameSequence, Side, PathIdentity);
+                HashCode.Combine(FrameSequence, Side);
         }
 
         sealed class GeometryFrame
@@ -464,11 +503,12 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 ulong.Parse(Cell(name), NumberStyles.Integer, CultureInfo.InvariantCulture);
             internal float Single(string name) =>
                 float.Parse(Cell(name), NumberStyles.Float, CultureInfo.InvariantCulture);
-            internal bool Boolean(string name) => Cell(name) == "1";
+            internal bool Boolean(string name) =>
+                bool.Parse(Cell(name));
             internal Vector3 Vector(string prefix) => new Vector3(
-                Single(prefix + "X"),
-                Single(prefix + "Y"),
-                Single(prefix + "Z"));
+                Single(prefix + ".x"),
+                Single(prefix + ".y"),
+                Single(prefix + ".z"));
 
             string Cell(string name)
             {
@@ -516,6 +556,16 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 values.Add(value.ToString());
                 return values.ToArray();
             }
+        }
+
+        static string Side(string dimension)
+        {
+            if (dimension.EndsWith("/left", StringComparison.Ordinal))
+                return "Left";
+            if (dimension.EndsWith("/right", StringComparison.Ordinal))
+                return "Right";
+            throw new InvalidDataException(
+                $"Foot sample dimension is invalid: {dimension}.");
         }
     }
 }

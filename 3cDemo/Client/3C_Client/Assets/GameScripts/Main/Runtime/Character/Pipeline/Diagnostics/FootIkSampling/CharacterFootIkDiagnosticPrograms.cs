@@ -4,7 +4,7 @@ namespace ThirdPersonCharacter.Pipeline.Diagnostics.FootIkSampling
 {
     [DiagnosticSampler(
         CharacterFootIkDiagnosticIdentity.CapabilityId,
-        "character-foot-ik/full",
+        CharacterFootIkDiagnosticIdentity.FullSamplerId,
         1,
         DiagnosticOutputFormat.Csv,
         "capture-metadata",
@@ -44,7 +44,7 @@ namespace ThirdPersonCharacter.Pipeline.Diagnostics.FootIkSampling
     }
 
     [DiagnosticCaptureProgram(
-        "character-foot-ik/full-program",
+        CharacterFootIkDiagnosticIdentity.FullProgramId,
         CharacterFootIkDiagnosticIdentity.CapabilityId,
         new[]
         {

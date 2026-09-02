@@ -4,6 +4,7 @@
     "references": [
         "ThirdPersonCharacter.FootIkDiagnosticSampling",
         "ThirdPersonClient.Runtime",
+        "ThirdPersonClient.Editor",
         "KK.GeneratedDiagnosticSampling",
         "KK.GeneratedDiagnosticSampling.Host"
     ],

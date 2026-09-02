@@ -308,10 +308,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             s_ActiveReplayRuntimeIdentity = default;
             s_LastReplayEvidence = null;
             if (s_ReplayOwnsSampling &&
-                (CharacterFootLandingPredictionSampler.IsCapturing ||
-                 CharacterFootLandingPredictionSampler.IsStartPending))
+                CharacterFootDiagnosticSampling.IsCapturing)
             {
-                CharacterFootLandingPredictionSampler.StopAndSaveSampling();
+                CharacterFootDiagnosticSampling.StopAndSaveSampling();
             }
             ClearReplayOwnership();
             FixedCharacterInputTraceModule.Stop();
@@ -417,23 +416,21 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 s_ActiveReplayRuntimeIdentity =
                     ResolveReplayRuntimeIdentity(host);
                 ResetPendingDeadline();
-                CharacterFootLandingPredictionSampler.StartControlledSampling();
+                CharacterFootDiagnosticSampling.StartControlledSampling();
                 s_ReplayOwnsSampling = true;
                 s_ReplayWaitingForSampling = true;
                 EditorApplication.isPaused = false;
                 s_LastStatus =
                     $"Current canonical start body registered. Waiting for Foot Landing sampling before replaying {trace.Frames.Count} Fixed input frames.";
             }
-            if (CharacterFootLandingPredictionSampler.IsStartPending)
-                return;
-            if (!CharacterFootLandingPredictionSampler.IsCapturing)
+            if (!CharacterFootDiagnosticSampling.IsCapturing)
                 throw new InvalidOperationException(
-                    string.IsNullOrEmpty(CharacterFootLandingPredictionSampler.LastStartFailure)
+                    string.IsNullOrEmpty(CharacterFootDiagnosticSampling.LastFailure)
                         ? "Foot Landing sampling did not start."
-                        : CharacterFootLandingPredictionSampler.LastStartFailure);
+                        : CharacterFootDiagnosticSampling.LastFailure);
             string operation = PendingOperation;
             FixedCharacterInputTraceModule.StartReplay();
-            CharacterFootLandingPredictionSampler.OpenControlledCaptureWindow();
+            CharacterFootDiagnosticSampling.OpenControlledCaptureWindow();
             s_ActiveReplayOperation = operation;
             if (operation == StandardReplayOperation)
             {
@@ -572,16 +569,15 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             s_LastReplayEvidence =
                 FixedCharacterInputTraceModule.CaptureReplayEvidence();
             if (s_ReplayOwnsSampling &&
-                (CharacterFootLandingPredictionSampler.IsCapturing ||
-                 CharacterFootLandingPredictionSampler.IsStartPending))
+                CharacterFootDiagnosticSampling.IsCapturing)
             {
-                CharacterFootLandingPredictionSampler.StopAndSaveSampling();
+                CharacterFootDiagnosticSampling.StopAndSaveSampling();
             }
             s_ReplayOwnsSampling = false;
             s_ReplayWaitingForSampling = false;
             ClearPending();
             FixedCharacterInputTraceModule.Stop();
-            if (CharacterFootLandingPredictionSampler.IsFinalizing)
+            if (CharacterFootDiagnosticSampling.IsFinalizing)
             {
                 s_ReplayFinalizing = true;
                 s_LastStatus =
@@ -593,12 +589,12 @@ namespace ThirdPersonCharacter.Pipeline.Editor
 
         static void TickReplayFinalization()
         {
-            if (!s_ReplayFinalizing || CharacterFootLandingPredictionSampler.IsFinalizing)
+            if (!s_ReplayFinalizing || CharacterFootDiagnosticSampling.IsFinalizing)
                 return;
             s_ReplayFinalizing = false;
-            if (!string.IsNullOrEmpty(CharacterFootLandingPredictionSampler.LastFinalizationFailure))
+            if (!string.IsNullOrEmpty(CharacterFootDiagnosticSampling.LastFailure))
             {
-                s_LastFailure = CharacterFootLandingPredictionSampler.LastFinalizationFailure;
+                s_LastFailure = CharacterFootDiagnosticSampling.LastFailure;
                 s_LastStatus = $"Foot Landing finalization failed: {s_LastFailure}";
                 Debug.LogError(s_LastStatus);
                 return;
@@ -623,9 +619,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             s_LastStatus =
                 $"{s_ActiveReplayOperation} completed. " +
                 $"Schedule={s_LastPresentationSchedulePath}, " +
-                $"Samples={CharacterFootLandingPredictionSampler.LastSavedPath}, " +
-                $"Analysis={CharacterFootLandingPredictionSampler.LastSavedAnalysisPath}, " +
-                $"Diagnoses={CharacterFootLandingPredictionSampler.LastSavedDiagnosisDirectory}.";
+                $"Samples={CharacterFootDiagnosticSampling.LastSavedPath}, " +
+                $"Manifest={CharacterFootDiagnosticSampling.LastManifestPath}.";
             s_ActiveReplayOperation = StandardReplayOperation;
             Debug.Log(s_LastStatus);
         }
@@ -643,8 +638,11 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             }
             var representative =
                 CharacterFixedInputPresentationScheduleEvidenceAnalyzer.Analyze(
-                    CharacterFootLandingPredictionSampler.LastSavedPath,
-                    CharacterFootLandingPredictionSampler.LastSavedGeometryPath);
+                    CharacterFootDiagnosticSampling.LastSavedPath,
+                    CharacterFootDiagnosticSampling.GetArtifactPath(
+                        "ground-contacts"),
+                    CharacterFootDiagnosticSampling.GetArtifactPath(
+                        "ground-envelope"));
             CharacterFixedInputPresentationScheduleBinding binding =
                 BuildPresentationScheduleBinding(trace);
             CharacterFixedInputPresentationSchedule schedule =
@@ -682,7 +680,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             var coverage =
                 CharacterFixedInputPresentationScheduleEvidenceAnalyzer
                     .AnalyzeCoverage(
-                        CharacterFootLandingPredictionSampler.LastSavedPath,
+                        CharacterFootDiagnosticSampling.LastSavedPath,
                         scheduleFrames);
             CharacterFixedInputPresentationScheduleBinding binding =
                 BuildPresentationScheduleBinding(trace);
@@ -694,8 +692,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     evidence,
                     scheduleFrames,
                     in coverage,
-                    CharacterFootLandingPredictionSampler.LastSavedPath,
-                    CharacterFootLandingPredictionSampler.LastSavedAnalysisPath);
+                    CharacterFootDiagnosticSampling.LastSavedPath,
+                    CharacterFootDiagnosticSampling.LastManifestPath);
             s_LastReplayProofPath = result.Path;
             s_LastReplayComparison = result.Summary;
             s_ActiveReplayDocument = null;
@@ -822,31 +820,31 @@ namespace ThirdPersonCharacter.Pipeline.Editor
 
         static ReplayFootSampleDocument ReadReplayFootSample()
         {
-            string analysisPath =
-                CharacterFootLandingPredictionSampler.LastSavedAnalysisPath;
+            string manifestPath =
+                CharacterFootDiagnosticSampling.LastManifestPath;
             string samplesPath =
-                CharacterFootLandingPredictionSampler.LastSavedPath;
-            if (string.IsNullOrWhiteSpace(analysisPath) ||
+                CharacterFootDiagnosticSampling.LastSavedPath;
+            if (string.IsNullOrWhiteSpace(manifestPath) ||
                 string.IsNullOrWhiteSpace(samplesPath) ||
-                !File.Exists(analysisPath) ||
+                !File.Exists(manifestPath) ||
                 !File.Exists(samplesPath))
             {
                 throw new InvalidDataException(
                     "Fixed input replay Foot sample artifacts are unavailable.");
             }
-            JObject sample = CharacterFootDiagnosticStore.ReadManifest(analysisPath).sample;
-            int frameCount = sample.Value<int?>("frameCount") ?? 0;
+            int frameCount =
+                CharacterFootDiagnosticSampling.LastSavedFrameCount;
             if (frameCount <= 0)
                 throw new InvalidDataException(
                     "Fixed input replay Foot sample frame count is invalid.");
             return new ReplayFootSampleDocument
             {
                 sample_identity =
-                    sample.Value<string>("identity") ?? string.Empty,
+                    CharacterFootDiagnosticSampling.LastSavedSampleIdentity,
                 samples_path = samplesPath,
-                facts_path = analysisPath,
+                facts_path = manifestPath,
                 samples_sha256 =
-                    sample.Value<string>("sha256") ?? string.Empty,
+                    ComputeSha256(samplesPath),
                 sampling_relative_frame_count = frameCount
             };
         }
@@ -1146,6 +1144,21 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             return builder.ToString();
         }
 
+        static string ComputeSha256(string path)
+        {
+            using FileStream stream = File.OpenRead(path);
+            using SHA256 hash = SHA256.Create();
+            byte[] bytes = hash.ComputeHash(stream);
+            var builder = new StringBuilder(bytes.Length * 2);
+            for (int i = 0; i < bytes.Length; i++)
+            {
+                builder.Append(bytes[i].ToString(
+                    "x2",
+                    CultureInfo.InvariantCulture));
+            }
+            return builder.ToString();
+        }
+
         static bool IsRuntimeIdentityValid(
             ReplayRuntimeIdentityDocument identity) =>
             identity != null &&
@@ -1242,10 +1255,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 StopPresentationScheduleRun();
                 AbandonReplayTickDrive();
                 if (s_ReplayOwnsSampling &&
-                    (CharacterFootLandingPredictionSampler.IsCapturing ||
-                     CharacterFootLandingPredictionSampler.IsStartPending))
+                    CharacterFootDiagnosticSampling.IsCapturing)
                 {
-                    CharacterFootLandingPredictionSampler.StopAndSaveSampling();
+                    CharacterFootDiagnosticSampling.StopAndSaveSampling();
                 }
                 ClearReplayOwnership();
                 FixedCharacterInputTraceModule.Stop();
@@ -1257,10 +1269,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             if (IsRecording)
                 s_LastFailure = "Script reload interrupted canonical Fixed input recording before it was saved.";
             if (s_ReplayOwnsSampling &&
-                (CharacterFootLandingPredictionSampler.IsCapturing ||
-                 CharacterFootLandingPredictionSampler.IsStartPending))
+                CharacterFootDiagnosticSampling.IsCapturing)
             {
-                CharacterFootLandingPredictionSampler.StopAndSaveSampling();
+                CharacterFootDiagnosticSampling.StopAndSaveSampling();
             }
             StopPresentationScheduleRun();
             AbandonReplayTickDrive();
@@ -1283,10 +1294,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             CloseReplaySamplingWindow();
             ReleaseReplayTickDrive();
             if (s_ReplayOwnsSampling &&
-                (CharacterFootLandingPredictionSampler.IsCapturing ||
-                 CharacterFootLandingPredictionSampler.IsStartPending))
+                CharacterFootDiagnosticSampling.IsCapturing)
             {
-                CharacterFootLandingPredictionSampler.StopAndSaveSampling();
+                CharacterFootDiagnosticSampling.StopAndSaveSampling();
             }
             ClearReplayOwnership();
             FixedCharacterInputTraceModule.Stop();
@@ -1313,9 +1323,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             if (EditorApplication.isCompiling)
                 throw new InvalidOperationException("Canonical Fixed input trace is unavailable while scripts are compiling.");
             if (IsPending || IsRecording || IsReplaying || s_ReplayWaitingForSampling ||
-                CharacterFootLandingPredictionSampler.IsFinalizing)
+                CharacterFootDiagnosticSampling.IsFinalizing)
                 throw new InvalidOperationException("Another canonical Fixed input trace operation is already active.");
-            if (CharacterFootLandingPredictionSampler.IsCapturing || CharacterFootLandingPredictionSampler.IsStartPending)
+            if (CharacterFootDiagnosticSampling.IsCapturing)
                 throw new InvalidOperationException("Foot Landing sampling is already active.");
         }
 
@@ -1687,10 +1697,10 @@ namespace ThirdPersonCharacter.Pipeline.Editor
 
         static void CloseReplaySamplingWindow()
         {
-            if (CharacterFootLandingPredictionSampler.IsControlledCaptureWindow &&
-                CharacterFootLandingPredictionSampler.IsCaptureWindowOpen)
+            if (CharacterFootDiagnosticSampling.IsControlledCaptureWindow &&
+                CharacterFootDiagnosticSampling.IsCaptureWindowOpen)
             {
-                CharacterFootLandingPredictionSampler.CloseControlledCaptureWindow();
+                CharacterFootDiagnosticSampling.CloseControlledCaptureWindow();
             }
         }
 

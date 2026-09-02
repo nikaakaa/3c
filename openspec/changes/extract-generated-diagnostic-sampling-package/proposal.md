@@ -28,6 +28,6 @@
 - 依赖：`3cDemo/Client/3C_Client/Packages/manifest.json`与`packages-lock.json`。
 - 领域声明：Foot真实readonly事实成员、Capability、Sampler、Program和少量Derived公式。
 - Commit接点：正式同步Commit成功后直接调用generated `HandleCommitted`，不发布采样Event DTO。
-- Host消费：Foot Analyzer／Publisher只读自动CSV、typed artifact和manifest。
+- Host消费：Foot把自动CSV、typed artifact和manifest作为最终诊断产物，不迁移旧Analyzer／Publisher与评分报告。
 - 删除范围：旧embedded package、Tools、Event／View／Bridge／Adapter／Column／CsvBinding／Getter／Extractor与兼容身份。
 - 验收边界：3C真实Capture与Disabled Player Gate尚未完成；完成前本change保持active且不得归档。

@@ -12,7 +12,7 @@
 - 固定一对多事实可在现有readonly struct或只向调用方暴露`Count`与只读索引器的class page上声明`DiagnosticTable`；行内字段继续使用真实成员`DiagnosticField`，不创建表DTO。
 - Generated lifecycle自动完成Session创建、packet租用、每Dimension Capture、提交与封存。Host只依据sealed packet和统一Schema自动生成主表、子表、RFC 4180 CSV、Sampler manifest及Capability manifest；不存在Bridge、Column／CsvBinding或Host Adapter。
 - `KK_DIAGNOSTIC_SAMPLING`缺失时Attribute不写入业务metadata、Generator零输出、Capture Runtime与领域Diagnostics程序集不进入Player。Cecil与IL2CPP Gate必须证明Annotations不作为Player根程序集残留，并证明零Sampling AssemblyRef、零Generated Program／Session／packet／queue／interest和零Capability／Field identity。
-- `refactor-foot-ik-diagnostic-sampling`只负责把现有Foot事实注册为多个Fact Root、声明字段／表／Sampler／Program、在同步Commit点调用生成入口，并在基础产物完成后运行领域Analyzer／Publisher；PoseGraph不为采样增加View、DTO、Event或运行分支。
+- `refactor-foot-ik-diagnostic-sampling`只负责把现有Foot事实注册为多个Fact Root、声明字段／表／Sampler／Program、在同步Commit点调用生成入口，并把通用Host产物作为最终诊断输出；它已删除旧Foot Analyzer／Publisher与评分报告。PoseGraph不为采样增加View、DTO、Event或运行分支。
 - 不建立通用对象序列化器、运行时表达式／脚本引擎、反射fallback、动态字段字典、远程遥测或旧0.3兼容链。
 
 ## Capabilities

@@ -12,27 +12,24 @@
 
 ## 2. 通用Host基础产物
 
-- [ ] 2.1 将3C Foot Capture的sealed packet接入通用Schema-driven Host Finalizer
-- [ ] 2.2 由通用Host生成Full Sampler主表、ground-contacts、ground-envelope和ground-surfaces CSV
-- [ ] 2.3 生成并闭合Sampler manifest与Capability manifest，保存Schema／Program identity、Dimension、Frame范围、单位、availability与文件hash
-- [ ] 2.4 自动检查Table容量、packet序列、Writer与Host失败，确保任一基础产物失败时Capability不发布Completed
-- [ ] 2.5 删除Foot Editor中的CharacterFootCsvColumn、CsvBinding、手写Header、旧Reader字段映射和领域Host Adapter
+- [x] 2.1 将3C Foot Capture的sealed packet接入通用Schema-driven Host Finalizer
+- [x] 2.2 由通用Host生成Full Sampler主表、ground-contacts、ground-envelope和ground-surfaces CSV
+- [x] 2.3 生成并封存Sampler manifest与Capability manifest，保存Schema／Program identity、Dimension、单位、availability与文件hash
+- [x] 2.4 自动检查Table容量、packet序列、Writer与Host失败，确保任一基础产物失败时Capability不发布Completed
+- [x] 2.5 删除Foot Editor中的CharacterFootCsvColumn、CsvBinding、手写Header、旧Reader字段映射和领域Host Adapter
 
-## 3. Analyzer与Publisher下游迁移
+## 3. 删除旧Foot报告系统
 
-- [ ] 3.1 将Foot Analyzer改为只通过生成manifest读取主表与三张Ground子表，不维护第二字段映射
-- [ ] 3.2 将Envelope统计、穿透、事件统计和其它跨字段公式从Player采集链迁入Analyzer
-- [ ] 3.3 将现有诊断规则、明细、七维评分、资格与分母接到新Analyzer事实，保持业务数学
-- [ ] 3.4 将Publisher改为只消费Analyzer结果和生成manifest，不参与Session、packet、Writer或Host生命周期
-- [ ] 3.5 保持历史封存采样包不可变，删除旧Schema兼容reader、别名、默认值和双写路径
+- [x] 3.1 删除旧Foot Analyzer、Publisher、七维评分、规则报告与诊断Store，不迁移第二套报告产品
+- [x] 3.2 删除旧字段迁移清单、旧Schema reader、别名、默认值与历史包兼容读取
+- [x] 3.3 固定输入Presentation Schedule证据只直接读取生成主表、ground-contacts与ground-envelope，不重建旧samples.csv或合成geometry
 
-## 4. Performance工作流接入
+## 4. 唯一Editor诊断入口
 
-- [ ] 4.1 通过唯一DiagnosticCapabilitySet为character-foot-ik声明Disabled与Capture构建身份
-- [ ] 4.2 Capture构建定义KK_DIAGNOSTIC_SAMPLING与KK_DIAGNOSTIC_FOOT并锁定Sampler、Schema、Program、packet capacity与transport identity
-- [ ] 4.3 将Foot Capability结果写入现有Player、Run与Capture manifest和握手，不增加Foot专属Build字段或第二identity算法
-- [ ] 4.4 让唯一Comparer拒绝Capability mode、Sampler Set、Schema、Program、容量或transport不一致的性能比较
-- [ ] 4.5 将现有Launcher／MCP控制面接到同一Performance Build、Run、Capture和产物打开链，不建立Foot专属Player或Controller
+- [x] 4.1 用通用Editor workflow registry暴露编译进来的诊断Capability，不让主Editor程序集依赖条件Foot程序集
+- [x] 4.2 Capture构建通过KK_DIAGNOSTIC_SAMPLING与KK_DIAGNOSTIC_FOOT包含Foot Program、Runtime与Editor workflow
+- [x] 4.3 Launcher、固定输入回放和MCP状态统一调用生成式Foot workflow，旧菜单与旧Sampler删除
+- [x] 4.4 支持普通采样与受控窗口采样；Stop后由通用Host封存主表、三张子表与Capability manifest
 
 ## 5. Disabled与Capture Player硬门禁
 
@@ -43,7 +40,7 @@
 
 ## 6. 自动化一致性检查
 
-- [ ] 6.1 在Host和Analyzer迁移完成后执行受影响Runtime、Editor与Controller编译；dotnet命令使用--disable-build-servers、/nr:false和/p:UseSharedCompilation=false并立即shutdown build server
+- [x] 6.1 执行受影响Runtime、Editor与Controller编译；dotnet命令使用--disable-build-servers、/nr:false和/p:UseSharedCompilation=false并立即shutdown build server
 - [ ] 6.2 执行Repository Policy、git diff --check和禁止路径搜索，确认无旧Getter、Projection、Side选择、合成geometry、Column／CsvBinding、领域Writer与第二采样链
 - [ ] 6.3 严格校验本change、generated diagnostic sampling framework、PoseGraph和Performance相关OpenSpec
-- [ ] 6.4 完成代码与current specs对账；用户端到端验收前不归档，不把未完成Host、Analyzer、Performance或Player Gate写成已安装能力
+- [ ] 6.4 完成代码与current specs对账；用户端到端验收前不归档，不把未完成Player Gate写成已安装能力

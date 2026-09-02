@@ -61,7 +61,7 @@ Lifecycle.Stop(outcome)
 
 ### Decision 5: Host按Schema自动完成基础产物
 
-Player只运行generated Lifecycle与Capture并封存packet／runtime manifest。Editor Host直接读取Schema和sealed packet，自动生成主表、固定子表、UTF-8 RFC 4180 CSV、Sampler manifest和Capability manifest。Foot Analyzer／Publisher只读取Completed产物计算评分和发布报告，不声明Column、CsvBinding、Adapter或第二Schema。
+Player只运行generated Lifecycle与Capture并封存packet／runtime manifest。Editor Host直接读取Schema和sealed packet，自动生成主表、固定子表、UTF-8 RFC 4180 CSV、Sampler manifest和Capability manifest。Foot把这些Completed产物作为最终诊断输出；旧Analyzer／Publisher、评分报告、Column、CsvBinding、Adapter与第二Schema全部删除。
 
 ### Decision 6: Disabled使用零闭包硬门禁
 
@@ -87,7 +87,7 @@ Capture Player显式定义`KK_DIAGNOSTIC_SAMPLING`与`KK_DIAGNOSTIC_FOOT`；普�
 2. 将Foot Capability改成多Fact Root，普通Attribute迁到真实成员，公式改成multi-root Derived。
 3. Program声明左右Dimension，在同步Commit点调用generated `HandleCommitted`。
 4. 删除Event／View／Bridge／Adapter／Getter／Extractor／Column／CsvBinding和旧Reader。
-5. Analyzer／Publisher切到Host自动CSV、typed artifact和manifest。
+5. 删除旧Analyzer／Publisher与评分报告，Launcher、固定回放和MCP直接消费Host自动CSV、typed artifact和manifest。
 6. 完成portable、Unity、Capture Player、Disabled Cecil／IL2CPP、identity搜索和strict验收。
 7. 用户验收后更新current truth并归档；完成前保持active。
 

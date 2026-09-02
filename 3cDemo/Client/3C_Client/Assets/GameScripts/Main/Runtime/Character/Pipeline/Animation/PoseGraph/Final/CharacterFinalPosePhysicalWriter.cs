@@ -76,16 +76,13 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         internal void Write(
             in AnimationFinalPoseNativeReadBinding pending,
             bool hasCommitted,
-            in AnimationFinalPoseNativeReadBinding committed,
+            in ComposedAnimationPoseFrame committed,
             CharacterFootIkCaptureInterest footIkCaptureInterest)
         {
             bool pendingValid = HeaderIsValid(in pending);
             bool committedValid =
                 hasCommitted &&
-                HeaderIsValid(in committed) &&
-                committed.AppliedAt[0] == committed.CompletionIdentity &&
-                committed.WriteOutcome[0] ==
-                    AnimationFinalPoseWriteOutcome.Committed;
+                CommittedHeaderIsValid(in committed);
 
             for (int boneIndex = 0; boneIndex < m_Bones.Count; boneIndex++)
             {
@@ -178,7 +175,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
 
         AnimationLocalBonePose ResolvePose(
             in AnimationFinalPoseNativeReadBinding pending,
-            in AnimationFinalPoseNativeReadBinding committed,
+            in ComposedAnimationPoseFrame committed,
             bool pendingValid,
             bool committedValid,
             int boneIndex) =>
@@ -189,17 +186,20 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 : pendingValid
                     ? pending.DenseLocalPoses[boneIndex]
                     : committedValid
-                        ? committed.DenseLocalPoses[boneIndex]
+                        ? committed.DenseLocalPose[boneIndex]
                 : m_ReferencePoses[boneIndex];
 
         internal void ValidateBindingsBeforeEvaluate(
             in AnimationFinalPoseNativeReadBinding pending,
             bool hasCommitted,
-            in AnimationFinalPoseNativeReadBinding committed)
+            in ComposedAnimationPoseFrame committed)
         {
             RequireBinding(in pending);
-            if (hasCommitted)
-                RequireBinding(in committed);
+            if (hasCommitted && !CommittedHeaderIsValid(in committed))
+            {
+                throw new ArgumentException(
+                    "Final animation physical writer committed Pose is invalid.");
+            }
             for (int boneIndex = 0; boneIndex < m_Bones.Count; boneIndex++)
             {
                 if (!m_Bones[boneIndex])
@@ -244,6 +244,13 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 AnimationPoseNativeInvalidReason.None &&
             binding.PoseGraphInvalidOperationIndex[0] == -1 &&
             binding.ContinuityIdentity[0] != 0;
+
+        bool CommittedHeaderIsValid(
+            in ComposedAnimationPoseFrame frame) =>
+            frame.CompletionIdentity != 0 &&
+            frame.Availability == AnimationPoseAvailability.Pose &&
+            frame.ContinuityIdentity != 0 &&
+            frame.DenseLocalPose.Count >= m_Bones.Count;
 
         static void PublishFault(
             in AnimationFinalPoseNativeReadBinding binding)

@@ -317,28 +317,32 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         }
 
         internal void ValidateWriterBeforeEvaluate(
-            in AnimationFinalPoseNativeReadBinding pending,
-            bool hasCommitted,
-            in AnimationFinalPoseNativeReadBinding committed) =>
+            in AnimationFinalPoseNativeReadBinding pending) =>
             m_PhysicalWriter.ValidateBindingsBeforeEvaluate(
                 in pending,
-                hasCommitted,
-                in committed);
+                HasCommittedPhysicalPose,
+                in m_CommittedFrame);
 
         internal void WritePhysicalPose(
             CharacterFinalPosePublicationFrameLease lease,
-            in AnimationFinalPoseNativeReadBinding pending,
-            bool hasCommitted,
-            in AnimationFinalPoseNativeReadBinding committed)
+            in AnimationFinalPoseNativeReadBinding pending)
         {
             m_Pending.RequirePrepared(lease);
             m_PhysicalWriter.Write(
                 in pending,
-                hasCommitted,
-                in committed,
+                HasCommittedPhysicalPose,
+                in m_CommittedFrame,
                 m_Pending.FootIkCaptureInterest);
             m_Pending.PhysicalWrite = m_PhysicalWriter.Diagnostics;
         }
+
+        bool HasCommittedPhysicalPose =>
+            m_CommittedResult.IsPublished &&
+            m_CommittedPhysicalWrite.IsAvailable &&
+            m_CommittedPhysicalWrite.CompletionIdentity ==
+            m_CommittedResult.Lineage.CompletionIdentity &&
+            m_CommittedFrame.CompletionIdentity ==
+            m_CommittedResult.Lineage.CompletionIdentity;
 
         void RequirePhysicalWrite(
             CharacterFinalPosePublicationFrameLease lease,

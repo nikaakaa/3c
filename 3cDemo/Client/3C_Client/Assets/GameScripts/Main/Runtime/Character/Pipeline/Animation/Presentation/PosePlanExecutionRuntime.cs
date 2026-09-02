@@ -30,17 +30,13 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                 float presentationDeltaSeconds,
                 in CharacterPoseGraphNativeBinding frame,
                 CharacterPoseGraphStagedExecutor executor,
-                in AnimationFinalPoseNativeReadBinding finalRead,
-                bool hasCommittedFinal,
-                in AnimationFinalPoseNativeReadBinding committedFinalRead)
+                in AnimationFinalPoseNativeReadBinding finalRead)
             {
                 Lineage = lineage;
                 PresentationDeltaSeconds = presentationDeltaSeconds;
                 Frame = frame;
                 Executor = executor;
                 FinalRead = finalRead;
-                HasCommittedFinal = hasCommittedFinal;
-                CommittedFinalRead = committedFinalRead;
             }
 
             internal CharacterPoseFrameLineage Lineage { get; }
@@ -48,8 +44,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             internal CharacterPoseGraphNativeBinding Frame { get; }
             internal CharacterPoseGraphStagedExecutor Executor { get; }
             internal AnimationFinalPoseNativeReadBinding FinalRead { get; }
-            internal bool HasCommittedFinal { get; }
-            internal AnimationFinalPoseNativeReadBinding CommittedFinalRead { get; }
             internal bool IsValid =>
                 Lineage.IsValid &&
                 float.IsFinite(PresentationDeltaSeconds) &&
@@ -65,9 +59,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             CharacterPoseGraphNativeBinding m_Frame;
             CharacterPoseGraphStagedExecutor m_Executor;
             AnimationFinalPoseNativeReadBinding m_FinalRead;
-            AnimationFinalPoseNativeReadBinding m_CommittedFinalRead;
             float m_PresentationDeltaSeconds;
-            bool m_HasCommittedFinal;
             bool m_HasValue;
 
             internal bool HasValue => m_HasValue;
@@ -77,9 +69,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                 float presentationDeltaSeconds,
                 in CharacterPoseGraphNativeBinding frame,
                 CharacterPoseGraphStagedExecutor executor,
-                in AnimationFinalPoseNativeReadBinding finalRead,
-                bool hasCommittedFinal,
-                in AnimationFinalPoseNativeReadBinding committedFinalRead)
+                in AnimationFinalPoseNativeReadBinding finalRead)
             {
                 if (m_HasValue)
                 {
@@ -104,8 +94,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                 m_Frame = frame;
                 m_Executor = executor;
                 m_FinalRead = finalRead;
-                m_HasCommittedFinal = hasCommittedFinal;
-                m_CommittedFinalRead = committedFinalRead;
                 m_HasValue = true;
             }
 
@@ -125,9 +113,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                     m_PresentationDeltaSeconds,
                     in m_Frame,
                     m_Executor,
-                    in m_FinalRead,
-                    m_HasCommittedFinal,
-                    in m_CommittedFinalRead);
+                    in m_FinalRead);
                 Clear();
                 if (!state.IsValid)
                 {
@@ -2205,10 +2191,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                 throw new ArgumentNullException(
                     nameof(providerSourceSamples));
 
-            bool hasCommittedFinal =
-                m_ProgramFrames.TryGetCommittedFinalReadBinding(
-                    out AnimationFinalPoseNativeReadBinding committedFinalRead);
-
             ulong completionIdentity =
                 sourceDemand.Lineage.CompletionIdentity;
             CharacterPoseGraphNativeBinding frame;
@@ -2397,9 +2379,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                         completionIdentity);
                 InstallOrUpdateJobs();
                 m_FinalPublication.ValidateWriterBeforeEvaluate(
-                    in finalRead,
-                    hasCommittedFinal,
-                    in committedFinalRead);
+                    in finalRead);
             }
 
             CharacterPoseSourceFrameResult sourceFrame =
@@ -2419,9 +2399,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                 presentationDeltaSeconds,
                 in frame,
                 poseExecutor,
-                in finalRead,
-                hasCommittedFinal,
-                in committedFinalRead);
+                in finalRead);
             return prepared;
         }
 
@@ -2476,10 +2454,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                 preparedState.Executor;
             AnimationFinalPoseNativeReadBinding finalRead =
                 preparedState.FinalRead;
-            AnimationFinalPoseNativeReadBinding committedFinalRead =
-                preparedState.CommittedFinalRead;
-            bool hasCommittedFinal =
-                preparedState.HasCommittedFinal;
 
             enterEvaluateBarrier();
             m_SourceModule.EnterEvaluateBarrier(
@@ -2552,9 +2526,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                 m_PendingFrameOutcome = publicationResult.Outcome;
                 m_FinalPublication.WritePhysicalPose(
                     publicationLease,
-                    in finalRead,
-                    hasCommittedFinal,
-                    in committedFinalRead);
+                    in finalRead);
             }
             var executionResult = new CharacterPoseFrameExecutionResult(
                 in programResult,

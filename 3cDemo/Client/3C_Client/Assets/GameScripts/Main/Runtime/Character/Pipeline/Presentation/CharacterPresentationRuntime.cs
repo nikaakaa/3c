@@ -625,8 +625,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 CharacterPoseProgramPrepared preparedPose =
                     m_PoseRuntime.PrepareEvaluation(
                         transaction.SourceLease,
-                        in sourceDemand,
                         transaction.PublicationLease,
+                        in sourceDemand,
                         presentationDeltaSeconds,
                         m_ActionSourceSamples,
                         m_ProviderSourceSamples,
@@ -843,28 +843,16 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         {
             if (m_TuningBinding is null)
                 return;
-            CharacterPoseTuningParameterBlock previous =
-                m_TuningBinding.ActiveBlock;
             bool applied = m_TuningBinding.TryApplyPending(
                 m_TuningTarget,
                 presentationFrame,
                 activation: m_PoseRuntime.CanApplyNextActivation,
                 (block, resetOwnerState) =>
-                {
-                    string error = m_PoseRuntime.ApplyTuning(
+                    m_PoseRuntime.ApplyTuning(
                         m_Bindings.Projection.TuningLayout,
                         block,
                         checked(m_TuningGeneration + 1),
-                        resetOwnerState);
-                    if (string.IsNullOrEmpty(error) || previous == null)
-                        return error;
-                    string rollbackError = m_PoseRuntime.RestoreMutableTuning(
-                        m_Bindings.Projection.TuningLayout,
-                        previous);
-                    return string.IsNullOrEmpty(rollbackError)
-                        ? error
-                        : $"{error} Rollback failed: {rollbackError}";
-                },
+                        resetOwnerState),
                 out _);
             if (applied)
                 m_TuningGeneration++;

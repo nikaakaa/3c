@@ -74,6 +74,82 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 in finalOutput,
                 recordDiagnostics);
 
+        internal string PrepareTuningCandidate(
+            CharacterPoseTuningLayout layout,
+            CharacterPoseTuningParameterBlock block,
+            ulong generation)
+        {
+            try
+            {
+                Tuning.PrepareCandidate(layout, block, generation);
+            }
+            catch (Exception exception)
+            {
+                return exception.Message;
+            }
+            for (int i = 0;
+                 i < ActorState.PoseStateSources.StateMachines.Length;
+                 i++)
+            {
+                string error = ActorState.PoseStateSources.StateMachines[i]
+                    .PrepareTuningCandidate(layout, block);
+                if (!string.IsNullOrEmpty(error))
+                {
+                    DiscardTuningCandidate();
+                    return error;
+                }
+            }
+            for (int i = 0; i < ActorState.Stacks.Length; i++)
+            {
+                string error = ActorState.Stacks[i].PrepareTuningCandidate(
+                    layout,
+                    block);
+                if (!string.IsNullOrEmpty(error))
+                {
+                    DiscardTuningCandidate();
+                    return error;
+                }
+            }
+            string inertializationError = ActorState.Inertialization
+                .PrepareTuningCandidate(layout, block);
+            if (!string.IsNullOrEmpty(inertializationError))
+            {
+                DiscardTuningCandidate();
+                return inertializationError;
+            }
+            return string.Empty;
+        }
+
+        internal void CommitTuningCandidate(ulong generation)
+        {
+            for (int i = 0;
+                 i < ActorState.PoseStateSources.StateMachines.Length;
+                 i++)
+            {
+                ActorState.PoseStateSources.StateMachines[i]
+                    .CommitTuningCandidate();
+            }
+            for (int i = 0; i < ActorState.Stacks.Length; i++)
+                ActorState.Stacks[i].CommitTuningCandidate();
+            ActorState.Inertialization.CommitTuningCandidate();
+            Tuning.CommitCandidate(generation);
+        }
+
+        internal void DiscardTuningCandidate()
+        {
+            for (int i = 0;
+                 i < ActorState.PoseStateSources.StateMachines.Length;
+                 i++)
+            {
+                ActorState.PoseStateSources.StateMachines[i]
+                    .DiscardTuningCandidate();
+            }
+            for (int i = 0; i < ActorState.Stacks.Length; i++)
+                ActorState.Stacks[i].DiscardTuningCandidate();
+            ActorState.Inertialization.DiscardTuningCandidate();
+            Tuning.DiscardCandidate();
+        }
+
         internal void SetLinkedPoseGroupSelection(
             in CharacterLinkedPoseGenerationHandle selection)
         {

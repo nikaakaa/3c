@@ -157,6 +157,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
         readonly int[][] m_TransitionsBySource;
         readonly float[] m_TransitionDurations;
         readonly float[] m_TransitionCompletionDurations;
+        readonly float[] m_CandidateTransitionDurations;
+        readonly float[] m_CandidateTransitionCompletionDurations;
+        bool m_HasTuningCandidate;
 
         ulong m_NextSelectionGeneration = 2;
         ulong m_NextControlGeneration = 2;
@@ -339,6 +342,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             m_RuleValues = new CharacterPoseTransitionRuleValue[ruleCapacity];
             m_TransitionDurations = new float[descriptor.Transitions.Count];
             m_TransitionCompletionDurations = new float[descriptor.Transitions.Count];
+            m_CandidateTransitionDurations =
+                new float[descriptor.Transitions.Count];
+            m_CandidateTransitionCompletionDurations =
+                new float[descriptor.Transitions.Count];
             for (int i = 0; i < descriptor.Transitions.Count; i++)
             {
                 m_TransitionDurations[i] = descriptor.Transitions[i].DurationSeconds;
@@ -384,12 +391,24 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
         internal PresentationFrameFailure FrameFailure => m_FrameFailure;
         internal bool HasActiveTransition => m_ActiveTransition != null;
 
-        internal string ApplyTuning(
+        internal string PrepareTuningCandidate(
             CharacterPoseTuningLayout layout,
             CharacterPoseTuningParameterBlock block)
         {
             if (layout == null || block == null)
                 return "Pose StateMachine tuning payload is missing.";
+            if (m_FrameOpen)
+                return "Pose StateMachine tuning cannot change during an open frame.";
+            if (m_HasTuningCandidate)
+                return "Pose StateMachine tuning candidate is already prepared.";
+            Array.Copy(
+                m_TransitionDurations,
+                m_CandidateTransitionDurations,
+                m_TransitionDurations.Length);
+            Array.Copy(
+                m_TransitionCompletionDurations,
+                m_CandidateTransitionCompletionDurations,
+                m_TransitionCompletionDurations.Length);
             string ownerId = $"pose-state-machine:{m_Descriptor.StateMachineId.Value}";
             for (int i = 0; i < layout.Entries.Count; i++)
             {
@@ -432,20 +451,43 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                     return $"Pose StateMachine tuning field '{entry.FieldId}' is not a valid transition field.";
                 if (entry.FieldId.EndsWith("/duration", StringComparison.Ordinal))
                 {
-                    m_TransitionDurations[transitionIndex] = value.FloatValue;
+                    m_CandidateTransitionDurations[transitionIndex] =
+                        value.FloatValue;
                     float authoredDuration =
                         m_Descriptor.Transitions[transitionIndex].DurationSeconds;
                     float authoredCompletionDuration =
                         m_Descriptor.Transitions[transitionIndex].CompletionDurationSeconds;
-                    m_TransitionCompletionDurations[transitionIndex] = authoredDuration > 0f
+                    m_CandidateTransitionCompletionDurations[transitionIndex] = authoredDuration > 0f
                         ? authoredCompletionDuration * value.FloatValue / authoredDuration
                         : value.FloatValue;
                 }
                 else if (entry.FieldId.EndsWith("/completion-duration", StringComparison.Ordinal))
-                    m_TransitionCompletionDurations[transitionIndex] = value.FloatValue;
+                    m_CandidateTransitionCompletionDurations[transitionIndex] = value.FloatValue;
             }
+            m_HasTuningCandidate = true;
             return string.Empty;
         }
+
+        internal void CommitTuningCandidate()
+        {
+            if (!m_HasTuningCandidate)
+            {
+                throw new InvalidOperationException(
+                    "Pose StateMachine tuning candidate is not prepared.");
+            }
+            Array.Copy(
+                m_CandidateTransitionDurations,
+                m_TransitionDurations,
+                m_TransitionDurations.Length);
+            Array.Copy(
+                m_CandidateTransitionCompletionDurations,
+                m_TransitionCompletionDurations,
+                m_TransitionCompletionDurations.Length);
+            m_HasTuningCandidate = false;
+        }
+
+        internal void DiscardTuningCandidate() =>
+            m_HasTuningCandidate = false;
 
         internal void BeginFrame()
         {

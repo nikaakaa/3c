@@ -122,6 +122,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation.BlendStack
         ulong m_PreparedCompletionIdentity;
         float m_MaxBlendInTimeToReplaceNewest;
         float m_DepthBlendTimeMultiplier;
+        float m_CandidateMaxBlendInTimeToReplaceNewest;
+        float m_CandidateDepthBlendTimeMultiplier;
+        bool m_HasTuningCandidate;
 
         int m_EntryCount
         {
@@ -515,7 +518,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.BlendStack
         internal AnimationPoseNativeInvalidReason LastInvalidReason => m_LastInvalidReason;
         internal ulong ContinuityIdentity => m_ContinuityIdentity;
 
-        internal string ApplyTuning(
+        internal string PrepareTuningCandidate(
             CharacterPoseTuningLayout layout,
             CharacterPoseTuningParameterBlock block)
         {
@@ -523,6 +526,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.BlendStack
                 return "Animation Blend Stack tuning payload is missing.";
             if (m_FrameOpen)
                 return "Animation Blend Stack tuning cannot change during an open frame.";
+            if (m_HasTuningCandidate)
+                return "Animation Blend Stack tuning candidate is already prepared.";
             string ownerId = $"animation-blend-policy:{m_Slot.PolicyId}";
             float replaceNewest = m_MaxBlendInTimeToReplaceNewest;
             float depthMultiplier = m_DepthBlendTimeMultiplier;
@@ -561,10 +566,28 @@ namespace ThirdPersonCharacter.Pipeline.Animation.BlendStack
                     depthMultiplier = value.FloatValue;
                 }
             }
-            m_MaxBlendInTimeToReplaceNewest = replaceNewest;
-            m_DepthBlendTimeMultiplier = depthMultiplier;
+            m_CandidateMaxBlendInTimeToReplaceNewest = replaceNewest;
+            m_CandidateDepthBlendTimeMultiplier = depthMultiplier;
+            m_HasTuningCandidate = true;
             return string.Empty;
         }
+
+        internal void CommitTuningCandidate()
+        {
+            if (!m_HasTuningCandidate)
+            {
+                throw new InvalidOperationException(
+                    "Animation Blend Stack tuning candidate is not prepared.");
+            }
+            m_MaxBlendInTimeToReplaceNewest =
+                m_CandidateMaxBlendInTimeToReplaceNewest;
+            m_DepthBlendTimeMultiplier =
+                m_CandidateDepthBlendTimeMultiplier;
+            m_HasTuningCandidate = false;
+        }
+
+        internal void DiscardTuningCandidate() =>
+            m_HasTuningCandidate = false;
 
         internal void BeginFrame()
         {

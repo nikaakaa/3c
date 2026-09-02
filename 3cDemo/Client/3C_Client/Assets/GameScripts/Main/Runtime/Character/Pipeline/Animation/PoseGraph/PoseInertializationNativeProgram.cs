@@ -155,6 +155,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         readonly int m_ParameterCount;
         readonly int m_SlotNodeOffset;
         readonly CharacterPoseProgramImage m_Plan;
+        PoseInertializationNativeRule[] m_CandidateRules;
+        bool m_HasTuningCandidate;
         bool m_FrameOpen;
         bool m_Disposed;
 
@@ -364,7 +366,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             return Mathf.Clamp01(curve - startDerivative * h10 - endDerivative * h11);
         }
 
-        internal string ApplyTuning(
+        internal string PrepareTuningCandidate(
             CharacterPoseTuningLayout layout,
             CharacterPoseTuningParameterBlock block)
         {
@@ -372,6 +374,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 return "Pose Inertialization tuning payload is missing.";
             if (m_FrameOpen)
                 return "Pose Inertialization tuning cannot change during an open frame.";
+            if (m_HasTuningCandidate)
+                return "Pose Inertialization tuning candidate is already prepared.";
             var rules = new PoseInertializationNativeRule[m_Rules.Length];
             for (int i = 0; i < rules.Length; i++)
                 rules[i] = m_Rules[i];
@@ -418,9 +422,30 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                         value.FloatValue);
                 }
             }
-            for (int i = 0; i < rules.Length; i++)
-                m_Rules[i] = rules[i];
+            m_CandidateRules = rules;
+            m_HasTuningCandidate = true;
             return string.Empty;
+        }
+
+        internal void CommitTuningCandidate()
+        {
+            if (!m_HasTuningCandidate ||
+                m_CandidateRules == null ||
+                m_CandidateRules.Length != m_Rules.Length)
+            {
+                throw new InvalidOperationException(
+                    "Pose Inertialization tuning candidate is not prepared.");
+            }
+            for (int i = 0; i < m_CandidateRules.Length; i++)
+                m_Rules[i] = m_CandidateRules[i];
+            m_CandidateRules = null;
+            m_HasTuningCandidate = false;
+        }
+
+        internal void DiscardTuningCandidate()
+        {
+            m_CandidateRules = null;
+            m_HasTuningCandidate = false;
         }
 
         void ApplyDirectPolicyDuration(
@@ -699,6 +724,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             if (m_Disposed)
                 return;
             m_Disposed = true;
+            m_CandidateRules = null;
+            m_HasTuningCandidate = false;
             if (m_CommittedPage != null)
                 DisposePage(m_CommittedPage);
             else

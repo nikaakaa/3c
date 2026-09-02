@@ -672,17 +672,14 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                 candidateGeneration);
             if (!string.IsNullOrEmpty(sourceError))
                 return sourceError;
-            try
-            {
-                m_ProgramTuning.PrepareCandidate(
-                    layout,
-                    block,
-                    candidateGeneration);
-            }
-            catch (Exception exception)
+            string programError = m_ProgramRuntime.PrepareTuningCandidate(
+                layout,
+                block,
+                candidateGeneration);
+            if (!string.IsNullOrEmpty(programError))
             {
                 m_SourceModule.DiscardTuningCandidate();
-                return exception.Message;
+                return programError;
             }
             string constraintError = m_PoseConstraints.PrepareTuningCandidate(
                 layout,
@@ -691,66 +688,13 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                 resetOwnerState);
             if (!string.IsNullOrEmpty(constraintError))
             {
-                m_ProgramTuning.DiscardCandidate();
+                m_ProgramRuntime.DiscardTuningCandidate();
                 m_SourceModule.DiscardTuningCandidate();
                 return constraintError;
             }
-            string error;
-            try
-            {
-                error = ApplyMutableTuning(
-                    layout,
-                    block,
-                    resetOwnerState);
-            }
-            catch
-            {
-                m_PoseConstraints.DiscardTuningCandidate();
-                m_ProgramTuning.DiscardCandidate();
-                m_SourceModule.DiscardTuningCandidate();
-                throw;
-            }
-            if (!string.IsNullOrEmpty(error))
-            {
-                m_PoseConstraints.DiscardTuningCandidate();
-                m_ProgramTuning.DiscardCandidate();
-                m_SourceModule.DiscardTuningCandidate();
-                return error;
-            }
-            m_ProgramTuning.CommitCandidate(candidateGeneration);
+            m_ProgramRuntime.CommitTuningCandidate(candidateGeneration);
             m_SourceModule.CommitTuningCandidate(candidateGeneration);
             m_PoseConstraints.CommitTuningCandidate(candidateGeneration);
-            return string.Empty;
-        }
-
-        internal string RestoreMutableTuning(
-            CharacterPoseTuningLayout layout,
-            CharacterPoseTuningParameterBlock block) =>
-            ApplyMutableTuning(layout, block, false);
-
-        string ApplyMutableTuning(
-            CharacterPoseTuningLayout layout,
-            CharacterPoseTuningParameterBlock block,
-            bool resetOwnerState)
-        {
-            for (int i = 0; i < m_PoseStateSources.StateMachines.Length; i++)
-            {
-                string error = m_PoseStateSources.StateMachines[i].ApplyTuning(
-                    layout,
-                    block);
-                if (!string.IsNullOrEmpty(error))
-                    return error;
-            }
-            for (int i = 0; i < m_Stacks.Length; i++)
-            {
-                string error = m_Stacks[i].ApplyTuning(layout, block);
-                if (!string.IsNullOrEmpty(error))
-                    return error;
-            }
-            string inertializationError =
-                m_InertializationPlan.ApplyTuning(layout, block);
-            if (!string.IsNullOrEmpty(inertializationError))
-                return inertializationError;
             return string.Empty;
         }
 

@@ -32,7 +32,7 @@ Constraint外部Owner变化 MUST整体保留指定提交ad3527e103cc3235a63e8a1c
 
 Diagnostics Projector MUST不持有Program Runtime、Source Module、Constraint Module或Final Publication的可变引用，不得读取Pending Workspace、Actor State私有页、Foot Context、FBBIK Vendor对象或Physical Transform反推，也不得从Animancer weight重建事实。没有interest时 MUST跳过对应大页与逐骨骼复制，但正式执行结果不变。
 
-PoseGraph MUST只把成功Seal后的具体`CharacterFootIkCommittedCaptureViewLease`交给Foot领域Bridge并唯一控制其短租约；不得以Runtime Snapshot、万能Committed View或第二事实页接入采样。`generated-diagnostic-sampling-framework`唯一拥有通用AOT生成、typed packet、Capability Session、Writer和Host Finalizer合同，`character-foot-ik-diagnostic-sampling`只拥有Foot Bridge、字段／Sampler／Program Definitions、Analyzer与Publisher。该迁移不改变采样窗口、输入、字段业务含义、规则阈值、评分权重、资格和分母，不新增第二采样／分析／发布、领域专属框架或旧格式兼容路径；历史原包 MUST保持。
+PoseGraph MUST只把成功Seal后的具体`CharacterFootIkCommittedCaptureViewLease`交给外部Foot Diagnostics consumer并唯一控制其短租约；consumer只绑定Left／Right View与Metadata并发布CommittedSample Event，不得以Runtime Snapshot、万能Committed View或第二事实页接入采样。`generated-diagnostic-sampling-framework`唯一拥有通用AOT生成、Generated Lifecycle、typed packet、Capability Session、Writer和Schema-driven Host Finalizer合同，`character-foot-ik-diagnostic-sampling`只拥有Foot生命周期Event、字段／Sampler／Program Definitions、Analyzer与Publisher，不拥有Bridge或Foot Host Adapter。该迁移不改变采样窗口、输入、字段业务含义、规则阈值、评分权重、资格和分母，不新增第二采样／分析／发布、领域专属框架或旧格式兼容路径；历史原包 MUST保持。
 
 #### Scenario: 导出每帧调试数据
 

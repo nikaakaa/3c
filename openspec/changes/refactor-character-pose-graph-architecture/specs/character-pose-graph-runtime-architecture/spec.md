@@ -188,7 +188,7 @@ Program Image与actor-local Execution View MUST只保存Build默认值。每个A
 
 系统 MUST在Frame开始冻结Diagnostics interest和容量，并只在有interest时从Module Pending Result向预分配诊断页深冻结允许观察的数据。成功Seal后，`CharacterPoseDiagnosticsProjector` MUST只读取匹配同一lineage与Tuning Generation的Committed Source、Program、Constraint和Final Publication Result；MUST不持有Runtime Module引用、不读取Pending Workspace、Actor State私有页、Foot Context、FBBIK Vendor对象或Physical Transform反推结果，也 MUST不参与任何运行决定。
 
-Runtime Projector MUST在Frame开始冻结Foot IK typed interest与View固定容量，并只在成功Seal后发布同lineage、短租约的具体`CharacterFootIkCommittedCaptureViewLease`。PoseGraph MUST唯一拥有该View的生产、有效期与失效；该View MUST只包含Foot IK采样允许观察的typed值与availability，不得成为通用DTO、万能Committed View或第二Snapshot。PoseGraph不拥有Diagnostic Capability、字段Attribute、Sampler Definition、Schema Compiler、AOT Generated Capture Program、typed packet、Host Adapter、CSV、geometry、Analyzer、Publisher或评分。独立`character-foot-ik-diagnostic-sampling`能力 MAY在租约内通过Foot Bridge调用`generated-diagnostic-sampling-framework`生成的具体Foot Capture Program；框架Session MUST不索取、保存或解释该View。三者 MUST保持现有Foot字段业务含义、Analyzer／Publisher规则、评分数学与历史证据。PoseGraph Runtime MUST不引用框架或领域插件的Generator、Generated Program、packet、Host或Build类型，也 MUST不为旧Sampler建立表达式／反射路径、兼容DTO、第二Snapshot或临时Adapter。
+Runtime Projector MUST在Frame开始冻结Foot IK typed interest与View固定容量，并只在成功Seal后发布同lineage、短租约的具体`CharacterFootIkCommittedCaptureViewLease`。PoseGraph MUST唯一拥有该View的生产、有效期与失效；该View MUST只包含Foot IK采样允许观察的typed值与availability，不得成为通用DTO、万能Committed View或第二Snapshot。PoseGraph不拥有Diagnostic Capability、字段Attribute、Sampler Definition、Schema Compiler、AOT Generated Capture Program、Generated Lifecycle、typed packet、Host、CSV、geometry、Analyzer、Publisher或评分。独立`character-foot-ik-diagnostic-sampling`能力 MAY由外部Foot Diagnostics consumer在租约内绑定Left／Right View与Metadata并发布CommittedSample Event；`generated-diagnostic-sampling-framework`生成的typed Lifecycle Handler自动取得packet lease、调用具体Foot Capture Program并提交，框架Session MUST不索取、保存或解释该View。三者 MUST保持现有Foot字段业务含义、Analyzer／Publisher规则、评分数学与历史证据。PoseGraph Runtime MUST不引用框架Runtime或领域插件的Event、Generator、Generated Program、packet、Host或Build类型，也 MUST不为旧Sampler建立Bridge、表达式／反射路径、兼容DTO、第二Snapshot或临时Adapter。
 
 #### Scenario: 同时观察Player、Foot和FBBIK
 
@@ -206,7 +206,7 @@ Runtime Projector MUST在Frame开始冻结Foot IK typed interest与View固定容
 
 - **WHEN** 匹配Sampler Set与Schema identity的Foot IK Capture Session在Frame开始前声明detail interest且当前Frame成功Seal
 - **THEN** Projector MUST发布一份同lineage的短租约`CharacterFootIkCommittedCaptureViewLease`
-- **AND** Foot Bridge MAY在租约内调用通用框架为该Program Definition生成的Editor／IL2CPP AOT Capture Program写入预分配packet，但PoseGraph Runtime MUST不解释Sampler字段、执行生成程序、生成CSV或保留旧事件/Snapshot二次join
+- **AND** 外部Foot Diagnostics consumer MAY在租约内发布CommittedSample Event，由通用框架生成的Editor／IL2CPP typed Lifecycle Handler自动调用AOT Capture Program写入预分配packet，但PoseGraph Runtime MUST不解释Sampler字段、执行生成程序、生成CSV或保留Bridge、旧事件／Snapshot二次join
 
 ### Requirement: Preview与正式Runtime必须复用同一Module Factory和Program Image
 

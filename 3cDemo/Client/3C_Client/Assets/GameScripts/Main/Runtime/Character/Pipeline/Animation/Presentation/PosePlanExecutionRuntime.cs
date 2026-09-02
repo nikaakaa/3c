@@ -196,6 +196,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                 new CharacterFootIkCommittedCaptureViewProjector();
         readonly CharacterPoseActorCommittedDiagnosticsProjector
             m_ActorDiagnosticsProjector;
+        readonly CharacterPoseProgramCommittedDiagnosticsProjector
+            m_ProgramDiagnosticsProjector;
         readonly AnimationSlotBlendJob[] m_SlotJobs;
         readonly AnimationSelectedPosePlayerJob[] m_DirectPlayerJobs;
         readonly AnimationSelectedPosePlayerJob[] m_ClipPlayerJobs;
@@ -318,6 +320,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             AnimationPresentationRuntimeSnapshotPublisher diagnosticsPublisher = null;
             CharacterPoseActorCommittedDiagnosticsProjector
                 actorDiagnosticsProjector = null;
+            CharacterPoseProgramCommittedDiagnosticsProjector
+                programDiagnosticsProjector = null;
             AnimationFinalPosePhysicalWriter finalWriter = null;
             var nodeRuntimeIndex =
                 new CharacterPoseProgramNodeRuntimeIndex();
@@ -335,6 +339,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                 executionView = new CharacterPoseProgramExecutionView(
                     projection,
                     in initialLayout);
+                programDiagnosticsProjector =
+                    new CharacterPoseProgramCommittedDiagnosticsProjector(
+                        executionView);
                 programTuning = new CharacterPoseProgramTuningState(
                     projection,
                     executionView.Operations,
@@ -620,6 +627,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                     projection.PosePlan.PoseValueWorkspaceCount];
             m_DiagnosticsPublisher = diagnosticsPublisher;
             m_ActorDiagnosticsProjector = actorDiagnosticsProjector;
+            m_ProgramDiagnosticsProjector =
+                programDiagnosticsProjector;
             m_ManagesGraphClock = managesGraphClock;
             m_FootPlacementWeightParameterIndex = projection.PosePlan.RequireParameterIndex(
                 AnimationPoseParameterIds.FootPlacementWeight);
@@ -1535,7 +1544,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                                 in sourceFrame);
                     CharacterPoseProgramCommittedDiagnosticsView
                         programDiagnostics =
-                            m_ExecutionView.CaptureCommittedDiagnostics(
+                            m_ProgramDiagnosticsProjector.Capture(
                                 m_ProgramFrames,
                                 in committedProgramResult,
                                 in m_LastCompletedFrame,

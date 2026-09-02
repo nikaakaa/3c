@@ -18,7 +18,9 @@ using Unity.Profiling;
 
 namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
 {
-    internal sealed partial class PosePlanExecutionRuntime : IDisposable
+    internal sealed partial class PosePlanExecutionRuntime :
+        IDisposable,
+        ICharacterPoseCommittedDiagnosticsEventSink
     {
         static readonly ProfilerMarker PrepareMarker =
             new ProfilerMarker("ThirdPerson.Presentation.Animation.Prepare");
@@ -51,25 +53,11 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
         readonly CharacterPoseConstraintRuntime m_PoseConstraints;
         readonly CharacterPoseSourceModule m_SourceModule;
         readonly CharacterFinalPosePublication m_FinalPublication;
-        readonly AnimationPresentationRuntimeSnapshotPublisher m_DiagnosticsPublisher;
-        readonly CharacterFootIkCommittedCaptureViewProjector
-            m_FootIkDiagnosticsProjector =
-                new CharacterFootIkCommittedCaptureViewProjector();
-        readonly CharacterPoseActorCommittedDiagnosticsProjector
-            m_ActorDiagnosticsProjector;
-        readonly CharacterPoseProgramCommittedDiagnosticsProjector
-            m_ProgramDiagnosticsProjector;
+        readonly CharacterPoseDiagnosticsRuntime m_Diagnostics;
         readonly bool m_ManagesGraphClock;
 
         PoseInertializationNativeProgram m_InertializationPlan =>
             m_ProgramRuntime.Inertialization;
-        AnimationBlendStackRuntime[] m_Stacks => m_ProgramRuntime.Stacks;
-        CharacterAnimationTransitionRouteRuntime[] m_StackRoutes =>
-            m_ProgramRuntime.Routes;
-        PoseStateAndSourceRuntime m_PoseStateSources =>
-            m_ProgramRuntime.PoseStateSources;
-        RootOrientationWarpRuntime[] m_RootOrientationWarps =>
-            m_ProgramRuntime.RootOrientationWarps;
 
         ulong m_CompletionIdentity = 1;
         ulong m_FrameCompletionContext;
@@ -131,11 +119,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             AnimationClipPlayerRuntime[] clipPlayers = null;
             AnimationBlendSpacePlayerRuntime[] blendSpacePlayers = null;
             PoseStateAndSourceRuntime poseStateSources = null;
-            AnimationPresentationRuntimeSnapshotPublisher diagnosticsPublisher = null;
-            CharacterPoseActorCommittedDiagnosticsProjector
-                actorDiagnosticsProjector = null;
-            CharacterPoseProgramCommittedDiagnosticsProjector
-                programDiagnosticsProjector = null;
+            CharacterPoseDiagnosticsRuntime diagnostics = null;
             CharacterFinalPosePublication finalPublication = null;
             var nodeRuntimeIndex =
                 new CharacterPoseProgramNodeRuntimeIndex();
@@ -153,9 +137,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                 executionView = new CharacterPoseProgramExecutionView(
                     projection,
                     in initialLayout);
-                programDiagnosticsProjector =
-                    new CharacterPoseProgramCommittedDiagnosticsProjector(
-                        executionView);
                 programTuning = new CharacterPoseProgramTuningState(
                     projection,
                     executionView.Operations,
@@ -327,14 +308,12 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                     executionView.FullBodyIkContributionGoalCount,
                     projection.Rig.RigId,
                     projection.Rig.RigRevision);
-                diagnosticsPublisher = new AnimationPresentationRuntimeSnapshotPublisher(
+                diagnostics = new CharacterPoseDiagnosticsRuntime(
                     projection,
                     in initialLayout,
-                    physicalSourceCapacity);
-                actorDiagnosticsProjector =
-                    new CharacterPoseActorCommittedDiagnosticsProjector(
-                        projection,
-                        in initialLayout);
+                    physicalSourceCapacity,
+                    executionView,
+                    this);
 
                 sourceModule = new CharacterPoseSourceModule(
                     animancer,
@@ -382,7 +361,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                     for (int i = blendSpacePlayers.Length - 1; i >= 0; i--)
                         blendSpacePlayers[i]?.Dispose();
                 }
-                diagnosticsPublisher?.Dispose();
+                diagnostics?.Dispose();
                 poseConstraints?.Dispose();
                 executionView?.Dispose();
                 inertializationProgram?.Dispose();
@@ -434,19 +413,17 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                 presentationWorkspace);
             m_TuningSnapshot = CaptureTuningSnapshot(1);
             m_FinalPublication = finalPublication;
-            m_DiagnosticsPublisher = diagnosticsPublisher;
-            m_ActorDiagnosticsProjector = actorDiagnosticsProjector;
-            m_ProgramDiagnosticsProjector =
-                programDiagnosticsProjector;
+            m_Diagnostics = diagnostics;
             m_ManagesGraphClock = managesGraphClock;
         }
 
-        internal bool HasDiagnosticsSnapshot => m_DiagnosticsPublisher.HasCurrent;
-        internal AnimationPresentationRuntimeSnapshot DiagnosticsSnapshot => m_DiagnosticsPublisher.Current;
+        internal bool HasDiagnosticsSnapshot => m_Diagnostics.HasCurrent;
+        internal AnimationPresentationRuntimeSnapshot DiagnosticsSnapshot =>
+            m_Diagnostics.Current;
         internal AnimationPresentationDiagnosticsInterest DiagnosticsInterest =>
-            m_DiagnosticsPublisher.Interest;
+            m_Diagnostics.Interest;
         internal ulong DiagnosticsNoInterestSkipCount =>
-            m_DiagnosticsPublisher.NoInterestSkipCount;
+            m_Diagnostics.NoInterestSkipCount;
         internal bool HasFootPlacement => m_PoseConstraints.HasFootPlacement;
         internal bool MotionMatchingRuntimeEnabled =>
             m_SourceModule.MotionMatching?.Enabled == true;
@@ -557,7 +534,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                 m_ProgramRuntime.SourceRetirementStandaloneCapacity);
 
         internal void RecordNoDiagnosticsInterest() =>
-            m_DiagnosticsPublisher.RecordNoInterestSkip();
+            m_Diagnostics.RecordNoInterestSkip();
         internal ulong FrameCompletionContext =>
             m_FrameCompletionContext;
 
@@ -895,7 +872,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                 publicationOpen = true;
                 m_PendingFrameOutcome = AnimationPresentationFrameOutcome.None;
                 m_ProgramRuntime.BeginFrame(programLease);
-                m_ActorDiagnosticsProjector.BeginFrame();
+                m_Diagnostics.BeginFrame();
                 m_ProgramRuntime.BeginActorStateFrame(
                     programLease,
                     linkedPose,
@@ -1000,13 +977,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             DiscardStep(
                 () => m_FinalPublication.DiscardPending(publicationLease),
                 ref failure);
-            DiscardStep(
-                m_DiagnosticsPublisher
-                    .DiscardPendingFrame,
-                ref failure);
-            DiscardStep(
-                m_FootIkDiagnosticsProjector.DiscardPendingFrame,
-                ref failure);
+            DiscardStep(m_Diagnostics.DiscardPendingFrame, ref failure);
             DiscardStep(
                 m_ProgramRuntime.DiscardSourceRetirementFrame,
                 ref failure);
@@ -1058,30 +1029,29 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
         }
 
         internal void SetPoseWatchInterests(Guid ownerId, IReadOnlyList<AnimationPoseWatchIdentity> interests) =>
-            m_DiagnosticsPublisher.SetPoseWatchInterests(ownerId, interests);
+            m_Diagnostics.SetPoseWatchInterests(ownerId, interests);
 
         internal void RemovePoseWatchInterests(Guid ownerId) =>
-            m_DiagnosticsPublisher.RemovePoseWatchInterests(ownerId);
+            m_Diagnostics.RemovePoseWatchInterests(ownerId);
 
         internal void SetDiagnosticsInterest(
             Guid ownerId,
             AnimationPresentationDiagnosticsInterest interest) =>
-            m_DiagnosticsPublisher.SetDiagnosticsInterest(ownerId, interest);
+            m_Diagnostics.SetDiagnosticsInterest(ownerId, interest);
 
         internal void RemoveDiagnosticsInterest(Guid ownerId) =>
-            m_DiagnosticsPublisher.RemoveDiagnosticsInterest(ownerId);
+            m_Diagnostics.RemoveDiagnosticsInterest(ownerId);
 
         internal AnimationPresentationDiagnosticsInterest ResolveDiagnosticsInterest(
             AnimationPresentationDiagnosticsInterest transientInterest) =>
-            m_DiagnosticsPublisher.ResolveFrameInterest(transientInterest);
+            m_Diagnostics.ResolveFrameInterest(transientInterest);
 
         internal void InvalidateDiagnosticsSnapshot() =>
             InvalidateDiagnostics();
 
         void InvalidateDiagnostics()
         {
-            m_DiagnosticsPublisher.Invalidate();
-            m_FootIkDiagnosticsProjector.Invalidate();
+            m_Diagnostics.Invalidate();
         }
 
         internal MotionMatchingFrameResolution ResolveMotionMatching(
@@ -1212,174 +1182,16 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
         {
             RequireAlive();
             RequireNoOpenMutation();
-            if (linkedPose == null)
-                throw new ArgumentNullException(nameof(linkedPose));
-            bool publishRuntimeSnapshot =
-                interest != AnimationPresentationDiagnosticsInterest.None;
-            if (!publishRuntimeSnapshot && !captureFootIk)
-                return;
-            if (captureFootIk &&
-                !m_PoseConstraints.HasFootPlacement)
-            {
-                throw new InvalidOperationException(
-                    "Foot IK capture requires the compiled Foot Placement capability.");
-            }
-            if (!sourceFrame.IsReady ||
-                sourceFrame.Lineage != executionResult.Lineage ||
-                !executionResult.IsPublished ||
-                !m_ProgramRuntime.HasCommittedEvaluationFrame ||
-                m_ProgramRuntime.CommittedEvaluationCompletionIdentity == 0 ||
-                executionResult.Lineage.CompletionIdentity !=
-                m_ProgramRuntime.CommittedEvaluationCompletionIdentity)
-            {
-                throw new InvalidOperationException(
-                    "Animation diagnostics requires a successfully sealed committed Pose page.");
-            }
-            using (DiagnosticsMarker.Auto())
-            {
-                CharacterPoseProgramResult committedProgramResult =
-                    executionResult.Program;
-                CharacterPoseConstraintResult committedConstraintResult =
-                    executionResult.Constraint;
-                CharacterFinalPosePublicationResult committedPublicationResult =
-                    executionResult.Publication;
-                CharacterPoseFrameLineage committedFrame =
-                    executionResult.Lineage;
-                if (executionResult.Constraint.Lineage !=
-                        executionResult.Lineage ||
-                    executionResult.Publication.Lineage !=
-                        executionResult.Lineage)
-                {
-                    throw new InvalidOperationException(
-                        "Animation diagnostics committed lineage is inconsistent.");
-                }
-                if (captureFootIk)
-                {
-                    PublishCommittedFootDiagnosticEvent(
-                        in committedFrame,
-                        in committedConstraintResult,
-                        in committedPublicationResult);
-                }
-                if (!publishRuntimeSnapshot)
-                    return;
-                bool requiresFoot = m_PoseConstraints.HasFootPlacement &&
-                    CharacterPoseConstraintRuntime
-                        .RequiresFootDiagnostics(interest);
-                bool requiresSolver = CharacterPoseConstraintRuntime
-                    .RequiresFullBodyIkDiagnostics(interest);
-                bool requiresPhysical = CharacterFinalPosePublication
-                    .RequiresPhysicalDiagnostics(interest);
-                CharacterPoseActorCommittedDiagnosticsView actorDiagnostics =
-                    m_ActorDiagnosticsProjector.Capture(
-                        in committedProgramResult,
-                        m_Stacks,
-                        m_StackRoutes,
-                        m_PoseStateSources.StateMachines,
-                        m_InertializationPlan,
-                        m_PoseStateSources.ClipPlayers,
-                        m_PoseStateSources.BlendSpacePlayers,
-                        m_RootOrientationWarps,
-                        interest,
-                        false);
-                CharacterPoseConstraintCommittedDiagnosticsView
-                    constraintDiagnostics =
-                        m_PoseConstraints.CaptureCommittedDiagnostics(
-                            in committedConstraintResult,
-                            interest,
-                            default);
-                CharacterFinalPoseCommittedDiagnosticsView
-                    publicationDiagnostics =
-                        m_FinalPublication.CaptureCommittedDiagnostics(
-                            in committedPublicationResult);
-                AnimationPhysicalBoneWriteDiagnostics physicalWrite =
-                    publicationDiagnostics.PhysicalWrite;
-                CharacterFootLandingPredictionDiagnostics footDiagnostics =
-                    constraintDiagnostics.FootLandingPrediction;
-                CharacterFullBodyIkSolverDiagnostics solverDiagnostics =
-                    constraintDiagnostics.Solver;
-                if (!actorDiagnostics.IsValid ||
-                    actorDiagnostics.Result.Lineage !=
-                    executionResult.Lineage ||
-                    !constraintDiagnostics.IsValid ||
-                    constraintDiagnostics.Result.Lineage !=
-                    executionResult.Lineage ||
-                    !publicationDiagnostics.IsValid ||
-                    publicationDiagnostics.Result.Lineage !=
-                    executionResult.Lineage ||
-                    requiresFoot &&
-                    (!footDiagnostics.IsCompleted ||
-                     footDiagnostics.FrameSequence !=
-                     executionResult.Lineage.PresentationFrame ||
-                     footDiagnostics.CompletionIdentity !=
-                     m_ProgramRuntime.CommittedEvaluationCompletionIdentity) ||
-                    requiresSolver &&
-                    solverDiagnostics.OutputCompletionIdentity !=
-                    m_ProgramRuntime.CommittedEvaluationCompletionIdentity ||
-                    requiresPhysical &&
-                    (!physicalWrite.IsAvailable ||
-                     physicalWrite.CompletionIdentity !=
-                     m_ProgramRuntime.CommittedEvaluationCompletionIdentity))
-                {
-                    throw new InvalidOperationException(
-                        "Animation diagnostics committed lineage is inconsistent.");
-                }
-                bool includeFootBasicState =
-                    (interest &
-                     (AnimationPresentationDiagnosticsInterest.LiveState |
-                      AnimationPresentationDiagnosticsInterest.Capture)) != 0;
-                m_FootIkDiagnosticsProjector.BeginFrame(
-                    in executionResult,
-                    in actorDiagnostics,
-                    in constraintDiagnostics,
-                    in publicationDiagnostics,
-                    includeFootBasicState);
-                try
-                {
-                    CharacterPoseSourceCommittedDiagnosticsView
-                        sourceDiagnostics =
-                            m_SourceModule.CaptureCommittedDiagnostics(
-                                in sourceFrame);
-                    CharacterPoseProgramCommittedDiagnosticsView
-                        programDiagnostics =
-                            m_ProgramRuntime.CaptureCommittedDiagnostics(
-                                m_ProgramDiagnosticsProjector,
-                                in committedProgramResult,
-                                in publicationDiagnostics,
-                                interest);
-                    CharacterLinkedPoseCommittedDiagnosticsView
-                        linkedPoseDiagnostics =
-                            linkedPose.CaptureCommittedDiagnostics(
-                                in committedProgramResult);
-                    if (!sourceDiagnostics.IsValid ||
-                        sourceDiagnostics.Result.Lineage !=
-                        executionResult.Lineage ||
-                        !programDiagnostics.IsValid ||
-                        programDiagnostics.Result.Lineage !=
-                        executionResult.Lineage ||
-                        !linkedPoseDiagnostics.IsValid ||
-                        linkedPoseDiagnostics.Result.Lineage !=
-                        executionResult.Lineage)
-                    {
-                        throw new InvalidOperationException(
-                            "Animation runtime Snapshot lineage is inconsistent.");
-                    }
-                    m_DiagnosticsPublisher.BeginFrame(
-                        in executionResult,
-                        in sourceDiagnostics,
-                        in programDiagnostics,
-                        in linkedPoseDiagnostics,
-                        in actorDiagnostics,
-                        in constraintDiagnostics,
-                        in publicationDiagnostics,
-                        interest);
-                }
-                catch
-                {
-                    m_FootIkDiagnosticsProjector
-                        .DiscardPendingFrame();
-                    throw;
-                }
-            }
+            m_Diagnostics.BeginCommittedFrame(
+                interest,
+                captureFootIk,
+                linkedPose,
+                m_ProgramRuntime,
+                m_SourceModule,
+                m_PoseConstraints,
+                m_FinalPublication,
+                in sourceFrame,
+                in executionResult);
         }
 
         partial void QueryFootDiagnosticEventInterest(
@@ -1390,46 +1202,22 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             in CharacterPoseConstraintResult constraintResult,
             in CharacterFinalPosePublicationResult publicationResult);
 
-        internal CharacterFootIkCommittedCaptureViewLease PublishDiagnostics()
+        void ICharacterPoseCommittedDiagnosticsEventSink
+            .PublishCommittedFootDiagnosticEvent(
+                in CharacterPoseFrameLineage frame,
+                in CharacterPoseConstraintResult constraintResult,
+                in CharacterFinalPosePublicationResult publicationResult) =>
+            PublishCommittedFootDiagnosticEvent(
+                in frame,
+                in constraintResult,
+                in publicationResult);
+
+        internal CharacterFootIkCommittedCaptureViewLease
+            PublishDiagnostics()
         {
-            bool publishRuntimeSnapshot =
-                m_DiagnosticsPublisher.HasPendingFrame;
-            bool publishFootIkView =
-                m_FootIkDiagnosticsProjector.HasPendingFrame;
-            if (!publishRuntimeSnapshot && !publishFootIkView)
-                return default;
-            if (publishRuntimeSnapshot && !publishFootIkView)
-            {
-                throw new InvalidOperationException(
-                    "Foot IK committed capture view is not pending.");
-            }
-            CharacterFootIkCommittedCaptureViewLease footIkCaptureView;
-            using (DiagnosticsMarker.Auto())
-            {
-                footIkCaptureView =
-                    m_FootIkDiagnosticsProjector.Publish();
-                if (publishRuntimeSnapshot)
-                {
-                    try
-                    {
-                        AnimationPresentationRuntimeSnapshot snapshot =
-                            m_DiagnosticsPublisher.Publish(
-                                footIkCaptureView);
-                        if (!snapshot.FootIkCommittedCaptureView.Lineage.Equals(
-                                footIkCaptureView.Lineage))
-                        {
-                            throw new InvalidOperationException(
-                                "Animation diagnostics Foot IK view was not preserved.");
-                        }
-                    }
-                    catch
-                    {
-                        m_FootIkDiagnosticsProjector.Invalidate();
-                        throw;
-                    }
-                }
-            }
-            return footIkCaptureView;
+            RequireAlive();
+            RequireNoOpenMutation();
+            return m_Diagnostics.Publish();
         }
 
         internal void ApplyValidatedActionBackendReleaseCompletionAcknowledgements()
@@ -1808,8 +1596,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             if (reason == PoseDiscontinuityResetReason.None)
                 throw new ArgumentOutOfRangeException(nameof(reason));
             m_FinalPublication.Invalidate();
-            InvalidateDiagnostics();
-            m_ActorDiagnosticsProjector.Reset();
+            m_Diagnostics.Reset();
             m_SourceModule.CancelReleaseDiagnostics();
             m_SourceModule.ClearActionSlotReleaseCompletions();
             m_ProgramRuntime.ClearSourceRetirements();
@@ -1834,11 +1621,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                 return;
             m_Disposed = true;
             m_FinalPublication.Invalidate();
-            m_FootIkDiagnosticsProjector.Invalidate();
             m_ProgramRuntime.ClearSourceDemand();
             m_PendingFrameOutcome = AnimationPresentationFrameOutcome.None;
             Exception failure = null;
-            DisposeStep(m_DiagnosticsPublisher.Dispose, ref failure);
+            DisposeStep(m_Diagnostics.Dispose, ref failure);
             DisposeStep(
                 m_ProgramRuntime.DetachExecutionJobs,
                 ref failure);

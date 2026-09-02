@@ -1009,3 +1009,9 @@ Compiler入口随后按固定顺序运行Stage Schedule、Value Lifetime和Works
 状态：`PosePlanExecutionRuntime`成为`CharacterPoseConstraintRuntime`的唯一生命周期Owner，并在原根销毁时机负责Dispose；根`CharacterAnimationPresentationRuntime`删除Constraint字段、转发属性、构造失败清理和第二次Dispose。Pose协调层内部仍在相同位置调用Constraint Frame，业务输入和执行顺序不变。
 
 销毁顺序保持Source／Motion Matching、Program、Graph Clock、Constraint，任一前置Dispose失败仍继续清理Constraint并汇总原异常。任务5.10继续推进，尚需对账Projection replacement、Preview与Fault；3C MCP对Pose协调层和根Runtime错误筛选均为0，不单独运行回放。
+
+## 拆出只读Committed Diagnostics组合模块
+
+状态：新增`CharacterPoseDiagnosticsRuntime`，唯一持有Runtime Snapshot Publisher、Foot committed capture projector、Actor projector与Program projector。它只在根Frame已Seal后接收同lineage的Program／Source／Constraint／Publication Result，完成验证、只读投影、短租约发布与interest生命周期；Pose协调层删除四个诊断字段和全部Snapshot／Foot View内部装配逻辑。
+
+Frame Begin仍只清理Actor projector的帧内投影页，Discard、Reset、Invalidate、Dispose和Post-Commit发布顺序保持不变；无interest时仍在原位置直接返回，不查询世界、不执行Constraint、不读取Physical Transform反推结果，也不新增每帧分配。Foot committed事件继续通过现有partial边界发布，通用采样器、Foot插件与Performance不进入该模块。3C MCP对Diagnostics组合模块与Pose协调层错误筛选均为0；不单独运行回放。

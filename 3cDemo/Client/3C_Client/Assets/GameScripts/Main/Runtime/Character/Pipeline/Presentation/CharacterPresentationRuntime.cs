@@ -622,9 +622,12 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     CommitFrameTransaction(
                         transaction,
                         linkedPose);
+                    CharacterPoseSourceFrameResult committedSourceFrame =
+                        transaction.SourceFrame;
                     composedPose =
                         m_PoseFrame.FinalizeCommitted(
-                            transaction.PublicationLease);
+                            transaction.PublicationLease,
+                            in committedSourceFrame);
                 }
 
                 using (PostCommitMarker.Auto())

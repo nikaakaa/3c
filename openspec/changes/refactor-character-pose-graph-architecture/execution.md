@@ -1225,3 +1225,9 @@ Actor与Program诊断字段、interest条件、快照排序和读取的Committed
 状态：Program Evaluation完成全部Stage和节点完成通知后，`CharacterPoseFrameCoordinator`在根Seal之前把同lineage的Program Result、Program Output与Final Publication Pending Frame交回Program。Program-owned Actor与Evaluation projector立即按冻结interest深拷贝State、Operation、Value、Contribution、Pose与最终Output；Post-Commit Diagnostics只取得已准备View，不再读取Actor State或Native Evaluation binding生成新事实。
 
 无diagnostics interest时不执行拷贝；Discard与Reset清除本帧View，成功根提交后才允许读取。原有字段内容、数组容量、排序和短租约有效期保持不变。3C MCP完成全脚本重编且C#错误为0，不单独运行回放。
+
+## 在各Module完成边界冻结诊断事实
+
+状态：Source在Committed退休应用完成后冻结物理Source与release页，Constraint在Bank Seal并发布Foot内部Committed诊断后冻结Foot／Goal／Solver页，Final Publication在Pending Frame提升时冻结Program Output、Physical Write与最终Frame页；Program已在前一步于根Seal前冻结Actor／Operation／Value／Contribution／Pose页。全部冻结都使用Frame开始确定的interest，未观察帧不复制诊断payload。
+
+Post-Commit `CharacterPoseDiagnosticsRuntime`现在只验证同lineage并取得四个Owner已经冻结的Committed View，Snapshot Publisher不再从Native Program、Pending Workspace、Foot Context、FBBIK Vendor对象或Physical Transform反推事实。任务13.3与13.6完成。3C MCP完成全脚本重编且C#错误为0，不单独运行回放。

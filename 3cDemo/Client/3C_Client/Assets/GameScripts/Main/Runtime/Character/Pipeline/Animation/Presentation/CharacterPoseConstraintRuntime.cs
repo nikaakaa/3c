@@ -452,8 +452,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
         internal CharacterFullBodyIkLimbDiagnostics
             GetCommittedSolverLimb(int index) =>
                 m_Committed.SolverLimbs[index];
-        internal CharacterPoseConstraintCommittedDiagnosticsView
-            CaptureCommittedDiagnostics(
+        void FreezeCommittedDiagnostics(
             in CharacterPoseConstraintResult result,
             AnimationPresentationDiagnosticsInterest interest,
             bool captureFootIkDiagnostics)
@@ -527,7 +526,28 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                     page.SolverLimbs[i] = m_Committed.SolverLimbs[i];
             }
             page.Identity = m_NextDiagnosticsIdentity++;
-            return new CharacterPoseConstraintCommittedDiagnosticsView(page);
+        }
+
+        internal CharacterPoseConstraintCommittedDiagnosticsView
+            CaptureCommittedDiagnostics(
+            in CharacterPoseConstraintResult result,
+            AnimationPresentationDiagnosticsInterest interest,
+            bool captureFootIkDiagnostics)
+        {
+            RequireAlive();
+            if (interest == AnimationPresentationDiagnosticsInterest.None &&
+                    !captureFootIkDiagnostics ||
+                !MatchesCommittedResult(in result) ||
+                (interest & ~m_Committed.DiagnosticsInterest) != 0 ||
+                captureFootIkDiagnostics &&
+                !m_Committed.CaptureFootIkDiagnostics ||
+                m_CommittedDiagnostics.Result.Lineage != result.Lineage)
+            {
+                throw new InvalidOperationException(
+                    "Pose Constraint committed diagnostics are unavailable.");
+            }
+            return new CharacterPoseConstraintCommittedDiagnosticsView(
+                m_CommittedDiagnostics);
         }
         internal CharacterPoseConstraintFrameLease BeginFrame(
             in CharacterPoseFrameLineage lineage,
@@ -930,7 +950,17 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             m_Pending = null;
             m_PendingResult = default;
             m_HasPending = false;
-            m_FootPlacement?.PublishCommittedDiagnostics(m_Committed.FootPlacement);
+            m_FootPlacement?.PublishCommittedDiagnostics(
+                m_Committed.FootPlacement);
+            if (m_Committed.DiagnosticsInterest !=
+                    AnimationPresentationDiagnosticsInterest.None ||
+                m_Committed.CaptureFootIkDiagnostics)
+            {
+                FreezeCommittedDiagnostics(
+                    in m_CommittedResult,
+                    m_Committed.DiagnosticsInterest,
+                    m_Committed.CaptureFootIkDiagnostics);
+            }
         }
 
         internal void DiscardFrame(

@@ -140,6 +140,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             internal CharacterFinalPosePublicationResult Result;
             internal CharacterPoseProgramOutputResult ProgramOutput;
             internal AnimationPhysicalBoneWriteDiagnostics PhysicalWrite;
+            internal AnimationPresentationDiagnosticsInterest
+                DiagnosticsInterest;
             internal bool CaptureFootIkDiagnostics;
             internal ComposedAnimationPoseFrame Frame;
             internal AnimationPoseAvailability OutputAvailability;
@@ -152,6 +154,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
 
             internal void Begin(
                 CharacterFinalPosePublicationFrameLease lease,
+                AnimationPresentationDiagnosticsInterest diagnosticsInterest,
                 bool captureFootIkDiagnostics)
             {
                 if (IsOpen || !lease.IsValid)
@@ -164,6 +167,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 Result = default;
                 ProgramOutput = default;
                 PhysicalWrite = default;
+                DiagnosticsInterest = diagnosticsInterest;
                 CaptureFootIkDiagnostics = captureFootIkDiagnostics;
                 Frame = default;
                 OutputAvailability = default;
@@ -309,6 +313,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 Result = default;
                 ProgramOutput = default;
                 PhysicalWrite = default;
+                DiagnosticsInterest =
+                    AnimationPresentationDiagnosticsInterest.None;
                 CaptureFootIkDiagnostics = false;
                 Frame = default;
                 OutputAvailability = default;
@@ -472,12 +478,14 @@ namespace ThirdPersonCharacter.Pipeline.Animation
 
         internal CharacterFinalPosePublicationFrameLease BeginFrame(
             in CharacterPoseFrameLineage lineage,
+            AnimationPresentationDiagnosticsInterest diagnosticsInterest,
             bool captureFootIkDiagnostics)
         {
             var lease =
                 new CharacterFinalPosePublicationFrameLease(in lineage);
             m_Pending.Begin(
                 lease,
+                diagnosticsInterest,
                 captureFootIkDiagnostics);
             return lease;
         }
@@ -972,12 +980,17 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             ComposedAnimationPoseFrame result =
                 m_Pending.Frame;
             m_CommittedFrame = result;
+            if (m_Pending.DiagnosticsInterest !=
+                    AnimationPresentationDiagnosticsInterest.None ||
+                m_Pending.CaptureFootIkDiagnostics)
+            {
+                FreezeCommittedDiagnostics(in m_CommittedResult);
+            }
             m_Pending.Clear();
             return result;
         }
 
-        internal CharacterFinalPoseCommittedDiagnosticsView
-            CaptureCommittedDiagnostics(
+        void FreezeCommittedDiagnostics(
             in CharacterFinalPosePublicationResult result)
         {
             if (!m_CommittedResult.IsPublished ||
@@ -1001,7 +1014,22 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             page.PhysicalWrite = m_CommittedPhysicalWrite;
             page.Frame = m_CommittedFrame;
             page.Identity = m_NextDiagnosticsIdentity++;
-            return new CharacterFinalPoseCommittedDiagnosticsView(page);
+        }
+
+        internal CharacterFinalPoseCommittedDiagnosticsView
+            CaptureCommittedDiagnostics(
+            in CharacterFinalPosePublicationResult result)
+        {
+            if (!m_CommittedResult.IsPublished ||
+                !result.IsPublished ||
+                m_CommittedResult.Lineage != result.Lineage ||
+                m_CommittedDiagnostics.Result.Lineage != result.Lineage)
+            {
+                throw new InvalidOperationException(
+                    "Final Pose committed diagnostics are unavailable.");
+            }
+            return new CharacterFinalPoseCommittedDiagnosticsView(
+                m_CommittedDiagnostics);
         }
 
         internal ComposedAnimationPoseFrame RequireCommittedFrame(

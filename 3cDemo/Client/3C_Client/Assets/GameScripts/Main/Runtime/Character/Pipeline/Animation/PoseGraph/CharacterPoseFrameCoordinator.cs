@@ -142,6 +142,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 sourceOpen = true;
                 publicationLease = m_Publication.BeginFrame(
                     in lineage,
+                    diagnosticsInterest,
                     captureFootIkDiagnostics);
                 publicationOpen = true;
                 m_PendingOutcome = AnimationPresentationFrameOutcome.None;
@@ -647,7 +648,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         }
 
         internal ComposedAnimationPoseFrame FinalizeCommitted(
-            CharacterFinalPosePublicationFrameLease publicationLease)
+            CharacterFinalPosePublicationFrameLease publicationLease,
+            in CharacterPoseSourceFrameResult sourceFrame)
         {
             if (m_ActiveFrameLease.IsValid)
             {
@@ -659,8 +661,19 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 throw new InvalidOperationException(
                     "Pose Plan committed frame was not validated.");
             }
+            if (!sourceFrame.IsReady ||
+                !publicationLease.Matches(sourceFrame.Lineage))
+            {
+                throw new InvalidOperationException(
+                    "Pose Source committed diagnostics lineage is invalid.");
+            }
             m_Program.FinalizeCommittedSourceRetirements(
                 m_CompletionIdentity);
+            if (m_PendingDiagnosticsInterest !=
+                AnimationPresentationDiagnosticsInterest.None)
+            {
+                m_Source.FreezeCommittedDiagnostics(in sourceFrame);
+            }
             ComposedAnimationPoseFrame result =
                 m_Publication.CommitPending(publicationLease);
             m_CommitValidated = false;

@@ -1310,9 +1310,13 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Sources
 
         internal CharacterPoseSourceCommittedDiagnosticsView
             CaptureCommittedDiagnostics(
-                in CharacterPoseSourceFrameResult sourceFrame) =>
+            in CharacterPoseSourceFrameResult sourceFrame) =>
                 m_PhysicalSources.CaptureCommittedDiagnostics(
                     in sourceFrame);
+
+        internal void FreezeCommittedDiagnostics(
+            in CharacterPoseSourceFrameResult sourceFrame) =>
+            m_PhysicalSources.FreezeCommittedDiagnostics(in sourceFrame);
 
         internal ClipSamplePlan RequireDominantClipSample(
             AnimationPoseSourceId sourceId,

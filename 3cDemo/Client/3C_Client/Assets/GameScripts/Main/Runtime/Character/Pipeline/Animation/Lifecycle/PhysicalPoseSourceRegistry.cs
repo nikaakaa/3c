@@ -475,8 +475,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
             return CreateIdentity(index);
         }
 
-        internal CharacterPoseSourceCommittedDiagnosticsView
-            CaptureCommittedDiagnostics(
+        internal void FreezeCommittedDiagnostics(
             in CharacterPoseSourceFrameResult sourceFrame)
         {
             RequireAlive();
@@ -511,7 +510,22 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Lifecycle
                 page.Releases.Length - m_ReleaseDiagnosticsCount);
             page.ReleaseCount = m_ReleaseDiagnosticsCount;
             page.Identity = m_NextDiagnosticsIdentity++;
-            return new CharacterPoseSourceCommittedDiagnosticsView(page);
+        }
+
+        internal CharacterPoseSourceCommittedDiagnosticsView
+            CaptureCommittedDiagnostics(
+            in CharacterPoseSourceFrameResult sourceFrame)
+        {
+            RequireAlive();
+            if (!sourceFrame.IsReady ||
+                !m_CommittedDiagnostics.Result.IsCommitted ||
+                m_CommittedDiagnostics.Result.Lineage != sourceFrame.Lineage)
+            {
+                throw new InvalidOperationException(
+                    "Pose Source committed diagnostics are unavailable.");
+            }
+            return new CharacterPoseSourceCommittedDiagnosticsView(
+                m_CommittedDiagnostics);
         }
 
         internal AnimationPoseSourceId RequireSourceId(AnimationPhysicalSourceIdentity identity)

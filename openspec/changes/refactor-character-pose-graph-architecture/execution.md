@@ -1119,3 +1119,9 @@ Selection顺序、Stack／Direct Player usage扫描、history Bone校验、Pendi
 状态：新增`CharacterPoseProgramTuningRuntime`，整体拥有Program Tuning State，并统一协调Pose StateMachine、Blend Stack、Inertialization与Operation Weight的Candidate Prepare／Commit／Discard。Program Runtime只保留同名typed入口，不再解释各Owner的调参提交顺序。
 
 Candidate失败回收、全部成功后的提交顺序、generation验证和Dispose所有权保持不变；没有增加回滚Apply或第二Snapshot。3C MCP全脚本重编且C#错误为0，不单独运行回放。
+
+## 拆出Program Action与Slot模块
+
+状态：新增`CharacterPoseProgramActionRuntime`，整体拥有Action Playback事务、Animation Slot mutation lease、Presentation Workspace lease、backend／slot release页、Retired Playback页和Slot Frame Plan。Action命令、生命周期解析、采样、Source发布、Release Protocol、三类提交／回滚与Reset都进入该模块；Program Runtime只验证自己的根Frame lease并转交frame identity与业务输入。
+
+Action／Slot／Workspace打开与关闭顺序、Backend acknowledgement、request sequence、Source采样键、route选择、retirement permission和已退休列表保持不变；Motion Matching仍复用同一Workspace lease，没有复制第二事务或第二Source路径。Program Runtime由2738行降至2252行。3C MCP全脚本重编且C#错误为0，不单独运行回放。

@@ -24,14 +24,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         readonly PresentationFrameWorkspace m_PresentationWorkspace;
         readonly CharacterPoseProgramMotionMatchingRuntime m_MotionMatching;
         readonly CharacterPoseProgramTuningRuntime m_Tuning;
-        readonly List<ActionBackendReleaseCompletion>
-            m_ActionBackendReleaseCompletions;
-        readonly List<AnimationSlotSourceReleaseCompletion>
-            m_ActionSlotReleaseCompletions;
-        readonly FixedCapacityFrameBuffer<ActionBackendReleaseCompletion>
-            m_ConsumedActionBackendReleaseCompletions;
-        readonly FixedCapacityFrameBuffer<AnimationPlaybackId>
-            m_RetiredActionPlaybacks;
+        readonly CharacterPoseProgramActionRuntime m_Action;
         readonly AnimationSlotBlendJob[] m_SlotJobs;
         readonly AnimationSelectedPosePlayerJob[] m_DirectPlayerJobs;
         readonly AnimationSelectedPosePlayerJob[] m_ClipPlayerJobs;
@@ -40,9 +33,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         AnimationScriptPlayable[] m_DirectPlayerPlayables;
         AnimationScriptPlayable[] m_ClipPlayerPlayables;
         AnimationScriptPlayable[] m_BlendSpacePlayerPlayables;
-        CharacterActionPlaybackFrameTransaction m_ActionFrame;
-        AnimationSlotMutationLease m_AnimationSlotFrame;
-        PresentationFrameWorkspaceLease m_PresentationWorkspaceFrame;
         CharacterPoseProgramFrameLease m_ActiveFrameLease;
         CharacterPoseProgramFrameLease m_CommittingFrameLease;
         readonly CharacterPoseProgramEvaluationState m_Evaluation =
@@ -52,8 +42,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         double m_SequencePreviewTime;
         bool m_SequencePreviewReset;
         bool m_HasSequencePreview;
-        IReadOnlyList<AnimationSlotFramePlan> m_AnimationSlotPlans =
-            Array.Empty<AnimationSlotFramePlan>();
         bool m_JobsInstalled;
         bool m_Disposed;
 
@@ -97,21 +85,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                     m_Evaluation,
                     m_SourceModule,
                     m_PresentationWorkspace);
-            int actionFrameCapacity = ActorState.ActionPlayback.FrameCapacity;
-            int backendReleaseCompletionCapacity =
-                ActorState.ActionPlayback.BackendReleaseCompletionCapacity;
-            m_ActionBackendReleaseCompletions =
-                new List<ActionBackendReleaseCompletion>(
-                    backendReleaseCompletionCapacity);
-            m_ActionSlotReleaseCompletions =
-                new List<AnimationSlotSourceReleaseCompletion>(
-                    actionFrameCapacity);
-            m_ConsumedActionBackendReleaseCompletions =
-                new FixedCapacityFrameBuffer<ActionBackendReleaseCompletion>(
-                    backendReleaseCompletionCapacity);
-            m_RetiredActionPlaybacks =
-                new FixedCapacityFrameBuffer<AnimationPlaybackId>(
-                    actionFrameCapacity);
+            m_Action = new CharacterPoseProgramActionRuntime(
+                ActorState,
+                m_SourceModule,
+                m_PresentationWorkspace);
             m_SlotJobs =
                 new AnimationSlotBlendJob[ActorState.Stacks.Length];
             m_DirectPlayerJobs =
@@ -197,7 +174,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         internal bool HasPendingCompletedEvaluationFrame =>
             m_Evaluation.HasPendingCompleted;
         internal IReadOnlyList<ActionSlotSourceUsage> ActionSourceUsages =>
-            m_PresentationWorkspace.ActionUsages;
+            m_Action.SourceUsages;
         internal IReadOnlyList<PoseSourceProviderDemand> ProviderDemands =>
             m_PresentationWorkspace.ProviderDemands;
         internal IReadOnlyDictionary<AnimationPlayerSourceSampleKey,
@@ -215,42 +192,13 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             ulong presentationFrame)
         {
             RequireAlive();
-            if (m_ActionFrame?.IsValid == true ||
-                m_AnimationSlotFrame.IsValid ||
-                m_PresentationWorkspaceFrame.IsValid)
-            {
-                throw new InvalidOperationException(
-                    "Character Pose Program Action frame is already open.");
-            }
-            m_PresentationWorkspaceFrame =
-                m_PresentationWorkspace.Begin(
-                    frameIdentity,
-                    presentationFrame);
-            try
-            {
-                m_ActionFrame = ActorState.ActionPlayback.BeginFrame(
-                    frameIdentity,
-                    presentationFrame);
-            }
-            catch
-            {
-                m_PresentationWorkspace.Discard(
-                    m_PresentationWorkspaceFrame);
-                m_PresentationWorkspaceFrame = default;
-                throw;
-            }
+            m_Action.Begin(frameIdentity, presentationFrame);
         }
 
         internal void BeginAnimationSlotFrame(ulong frameIdentity)
         {
-            RequireActionFrame(frameIdentity);
-            if (m_AnimationSlotFrame.IsValid)
-            {
-                throw new InvalidOperationException(
-                    "Character Pose Program Animation Slot frame is already open.");
-            }
-            m_AnimationSlotFrame =
-                ActorState.AnimationSlots.BeginFrame(frameIdentity);
+            RequireAlive();
+            m_Action.BeginSlot(frameIdentity);
         }
 
         internal void BeginActionSamplingFrame(
@@ -258,8 +206,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             ulong presentationFrame,
             bool captureDiagnostics)
         {
-            RequireActionFrame(frameIdentity);
-            m_SourceModule.BeginActionSamplingFrame(
+            RequireAlive();
+            m_Action.BeginSampling(
                 frameIdentity,
                 presentationFrame,
                 captureDiagnostics);
@@ -269,119 +217,62 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             CharacterPoseProgramFrameLease lease)
         {
             RequireFrame(lease);
-            RequireAnimationSlotFrame(lease.Lineage.FrameIdentity);
-            ActorState.AnimationSlots.CommitFrame(m_AnimationSlotFrame);
-            m_AnimationSlotFrame = default;
+            m_Action.CommitSlot(lease.Lineage.FrameIdentity);
         }
 
         internal void CommitActionPlaybackFrame(
             CharacterPoseProgramFrameLease lease)
         {
             RequireFrame(lease);
-            RequireActionFrame(lease.Lineage.FrameIdentity);
-            if (m_AnimationSlotFrame.IsValid)
-            {
-                throw new InvalidOperationException(
-                    "Character Pose Program Animation Slot frame must commit first.");
-            }
-            ActorState.ActionPlayback.Commit(m_ActionFrame);
-            m_ActionFrame = null;
+            m_Action.CommitAction(lease.Lineage.FrameIdentity);
         }
 
         internal void DiscardAnimationSlotFrame(ulong frameIdentity)
         {
             RequireAlive();
-            RequireAnimationSlotFrame(frameIdentity);
-            ActorState.AnimationSlots.DiscardFrame(m_AnimationSlotFrame);
-            m_AnimationSlotFrame = default;
+            m_Action.DiscardSlot(frameIdentity);
         }
 
         internal void DiscardActionPlaybackFrame(ulong frameIdentity)
         {
             RequireAlive();
-            RequireActionFrame(frameIdentity);
-            if (m_AnimationSlotFrame.IsValid)
-            {
-                throw new InvalidOperationException(
-                    "Character Pose Program Animation Slot frame must discard first.");
-            }
-            ActorState.ActionPlayback.DiscardFrame(m_ActionFrame);
-            m_ActionFrame = null;
-            ClearActionFrameViews();
+            m_Action.DiscardAction(frameIdentity);
         }
 
         internal void CommitPresentationWorkspaceFrame(
             CharacterPoseProgramFrameLease lease)
         {
             RequireFrame(lease);
-            RequirePresentationWorkspaceFrame(
-                lease.Lineage.FrameIdentity);
-            m_PresentationWorkspace.Commit(m_PresentationWorkspaceFrame);
-            m_PresentationWorkspaceFrame = default;
+            m_Action.CommitWorkspace(lease.Lineage.FrameIdentity);
         }
 
         internal void DiscardPresentationWorkspaceFrame(
             ulong frameIdentity)
         {
             RequireAlive();
-            RequirePresentationWorkspaceFrame(frameIdentity);
-            m_PresentationWorkspace.Discard(m_PresentationWorkspaceFrame);
-            m_PresentationWorkspaceFrame = default;
+            m_Action.DiscardWorkspace(frameIdentity);
         }
 
         internal void PublishActionCommand(
             in ActionAnimationPlaybackCommand command) =>
-            ActorState.ActionPlayback.Publish(command);
+            m_Action.Publish(in command);
 
         internal void RetireActionCommand(
             in ActionAnimationPlaybackCommand command) =>
-            ActorState.ActionPlayback.Retire(command);
+            m_Action.Retire(in command);
 
         internal void ReplaceActionCommand(
             EventId targetEventId,
             in ActionAnimationPlaybackCommand replacement) =>
-            ActorState.ActionPlayback.Replace(
-                targetEventId,
-                replacement);
+            m_Action.Replace(targetEventId, in replacement);
 
         internal IReadOnlyList<ActionAnimationPlaybackLifecycleFrame>
             PrepareActionLifecycleFrame(
                 CharacterPoseProgramFrameLease lease)
         {
             RequireFrame(lease);
-            RequireActionFrame(lease.Lineage.FrameIdentity);
-            RequireAnimationSlotFrame(lease.Lineage.FrameIdentity);
-            RequirePresentationWorkspaceFrame(
+            return m_Action.PrepareLifecycle(
                 lease.Lineage.FrameIdentity);
-            m_ConsumedActionBackendReleaseCompletions.Clear();
-            m_RetiredActionPlaybacks.Clear();
-            m_SourceModule.CopyActionBackendReleaseCompletions(
-                m_ActionBackendReleaseCompletions);
-            for (int i = 0;
-                 i < m_ActionBackendReleaseCompletions.Count;
-                 i++)
-            {
-                ActionBackendReleaseCompletion completion =
-                    m_ActionBackendReleaseCompletions[i];
-                m_PresentationWorkspace.AddReleaseCompletion(
-                    m_PresentationWorkspaceFrame,
-                    completion);
-                m_ConsumedActionBackendReleaseCompletions.Add(
-                    completion);
-            }
-            m_SourceModule.ValidateActionBackendReleaseAcknowledgements(
-                m_ConsumedActionBackendReleaseCompletions);
-            ActorState.ActionPlayback.ApplyBackendReleaseCompletions(
-                m_ActionFrame,
-                m_ActionBackendReleaseCompletions);
-            IReadOnlyList<ActionAnimationPlaybackLifecycleFrame> lifecycle =
-                ActorState.ActionPlayback.BuildLifecycleFrame(m_ActionFrame);
-            RebaseRetiredActionPlaybacks(lifecycle);
-            m_AnimationSlotPlans =
-                ActorState.AnimationSlots.BuildFramePlans(
-                    m_AnimationSlotFrame,
-                    lifecycle);
-            return lifecycle;
         }
 
         internal void ProjectActionPresentationSamples(
@@ -391,10 +282,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             float presentationDeltaSeconds)
         {
             RequireFrame(lease);
-            RequireActionFrame(lease.Lineage.FrameIdentity);
-            m_SourceModule.ProjectActionPresentationSamples(
-                ActorState.ActionPlayback,
-                m_ActionFrame,
+            m_Action.ProjectSamples(
+                lease.Lineage.FrameIdentity,
                 lifecycle,
                 presentationSampleTick,
                 presentationDeltaSeconds);
@@ -404,34 +293,27 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             CharacterPoseProgramFrameLease lease)
         {
             RequireFrame(lease);
-            RequirePresentationWorkspaceFrame(
-                lease.Lineage.FrameIdentity);
-            m_SourceModule.ResolveActionPresentationFrames(
-                lease.Lineage.FrameIdentity,
-                m_PresentationWorkspace,
-                m_PresentationWorkspaceFrame);
+            m_Action.ResolveFrames(lease.Lineage.FrameIdentity);
         }
 
         internal void ValidateActionSamplingFrame(
             CharacterPoseProgramFrameLease lease)
         {
             RequireFrame(lease);
-            m_SourceModule.ValidateActionSamplingFrame(
-                lease.Lineage.FrameIdentity);
+            m_Action.ValidateSampling(lease.Lineage.FrameIdentity);
         }
 
         internal void CommitActionSamplingFrame(
             CharacterPoseProgramFrameLease lease)
         {
             RequireFrame(lease);
-            m_SourceModule.CommitActionSamplingFrame(
-                lease.Lineage.FrameIdentity);
+            m_Action.CommitSampling(lease.Lineage.FrameIdentity);
         }
 
         internal void DiscardActionSamplingFrame(ulong frameIdentity)
         {
             RequireAlive();
-            m_SourceModule.DiscardActionSamplingFrame(frameIdentity);
+            m_Action.DiscardSampling(frameIdentity);
         }
 
         internal void BuildCommittedActionTimeSnapshots(
@@ -439,13 +321,13 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 destination)
         {
             RequireAlive();
-            m_SourceModule.BuildCommittedActionTimeSnapshots(destination);
+            m_Action.BuildCommittedTimeSnapshots(destination);
         }
 
         internal void ResetActionSampling()
         {
             RequireAlive();
-            m_SourceModule.ResetActionSampling();
+            m_Action.ResetSampling();
         }
 
         internal void PublishActionSources(
@@ -454,159 +336,43 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 AnimationResolvedPoseSourceSample> sourceSamples)
         {
             RequireFrame(lease);
-            RequireActionFrame(lease.Lineage.FrameIdentity);
-            RequireAnimationSlotFrame(lease.Lineage.FrameIdentity);
-            RequirePresentationWorkspaceFrame(
-                lease.Lineage.FrameIdentity);
-            if (sourceSamples == null)
-            {
-                throw new ArgumentException(
-                    "Character Pose Program Action source input is invalid.");
-            }
-            IReadOnlyList<AnimationSlotActionSourcePlan> sourcePlans =
-                ActorState.AnimationSlots.CollectActionSourcePlans(
-                    m_AnimationSlotFrame);
-            if (sourcePlans.Count > ActorState.ActionPlayback.FrameCapacity)
-            {
-                throw new InvalidOperationException(
-                    "Action source sample capacity was exceeded.");
-            }
-            IReadOnlyDictionary<AnimationPlaybackId,
-                ActionAnimationPlaybackFrame> frames =
-                    m_PresentationWorkspace.ActionFrames;
-            for (int i = 0; i < sourcePlans.Count; i++)
-            {
-                AnimationSlotActionSourcePlan sourcePlan = sourcePlans[i];
-                if (!frames.TryGetValue(
-                        sourcePlan.PlaybackId,
-                        out ActionAnimationPlaybackFrame frame) ||
-                    !ActorState.ActionPlayback.Bindings.TryGet(
-                        sourcePlan.PlaybackId.ProducerId,
-                        out ResolvedActionAnimationBinding binding) ||
-                    binding.SlotId != sourcePlan.SlotId ||
-                    binding.SlotNodeId != sourcePlan.SlotNodeId)
-                {
-                    throw new InvalidOperationException(
-                        $"Animation Slot Action source '{sourcePlan.PlaybackId}' has no exact resolved frame.");
-                }
-                PublishActionSourceFrame(
-                    lease,
-                    in frame,
-                    in binding,
-                    sourcePlan.SelectionGeneration,
-                    ActorState.NextPresentationRequestSequence(),
-                    sourceSamples,
-                    sourcePlan.Current);
-            }
-            for (int i = 0; i < m_AnimationSlotPlans.Count; i++)
-            {
-                AnimationSlotFramePlan plan = m_AnimationSlotPlans[i];
-                if (!plan.TargetsSourcePose)
-                    continue;
-                PublishActionSourcePose(
-                    lease,
-                    plan.SlotId,
-                    plan.SlotNodeId,
-                    ActorState.NextPresentationRequestSequence());
-            }
+            m_Action.PublishSources(
+                lease.Lineage.FrameIdentity,
+                sourceSamples);
         }
 
         internal void CompleteActionReleaseProtocol(
             CharacterPoseProgramFrameLease lease)
         {
             RequireFrame(lease);
-            RequireActionFrame(lease.Lineage.FrameIdentity);
-            RequireAnimationSlotFrame(lease.Lineage.FrameIdentity);
-            RequirePresentationWorkspaceFrame(
+            m_Action.CompleteReleaseProtocol(
                 lease.Lineage.FrameIdentity);
-            m_SourceModule.CopyActionSlotReleaseCompletions(
-                m_ActionSlotReleaseCompletions);
-            for (int i = 0;
-                 i < m_ActionSlotReleaseCompletions.Count;
-                 i++)
-            {
-                AnimationSlotSourceReleaseCompletion completion =
-                    m_ActionSlotReleaseCompletions[i];
-                ActorState.AnimationSlots.CompleteSourceRelease(
-                    m_AnimationSlotFrame,
-                    completion.SlotId,
-                    completion.PlaybackId);
-            }
-            ActorState.AnimationSlots.PublishActionUsages(
-                m_AnimationSlotFrame,
-                m_PresentationWorkspace,
-                m_PresentationWorkspaceFrame);
-            ActorState.ActionPlayback.ReplaceSlotUsageBatch(
-                m_ActionFrame,
-                m_PresentationWorkspace.ActionUsages);
-            IReadOnlyList<ActionAnimationPlaybackLifecycleFrame> lifecycle =
-                ActorState.ActionPlayback.BuildLifecycleFrame(m_ActionFrame);
-            ActorState.AnimationSlots.PublishRetirementPermissions(
-                m_AnimationSlotFrame,
-                lifecycle,
-                m_PresentationWorkspace,
-                m_PresentationWorkspaceFrame);
-            ActorState.ActionPlayback.ApplyRetirementPermissions(
-                m_ActionFrame,
-                m_PresentationWorkspace.RetirementPermissions);
-            lifecycle =
-                ActorState.ActionPlayback.BuildLifecycleFrame(m_ActionFrame);
-            for (int i = 0; i < lifecycle.Count; i++)
-            {
-                ActionAnimationPlaybackLifecycleFrame snapshot = lifecycle[i];
-                if (snapshot.Phase !=
-                        ActionAnimationPlaybackLifecyclePhase
-                            .RetirementPermitted ||
-                    snapshot.BackendReleaseRequestIdentity != 0)
-                {
-                    continue;
-                }
-                if (TryPrepareActionBackendReleaseRequest(
-                        snapshot.PlaybackId,
-                        out ActionBackendReleaseRequest request))
-                {
-                    ActorState.ActionPlayback.RegisterBackendReleaseRequest(
-                        m_ActionFrame,
-                        request);
-                    m_PresentationWorkspace.AddReleaseRequest(
-                        m_PresentationWorkspaceFrame,
-                        request);
-                    continue;
-                }
-                ActorState.ActionPlayback.RetireWithoutBackendResources(
-                    m_ActionFrame,
-                    snapshot.PlaybackId);
-                TryAddRetiredActionPlayback(snapshot.PlaybackId);
-            }
         }
 
         internal void ValidateActionFrame(
             CharacterPoseProgramFrameLease lease)
         {
             RequireFrame(lease);
-            RequireActionFrame(lease.Lineage.FrameIdentity);
-            ActorState.ActionPlayback.ValidateFrame(m_ActionFrame);
+            m_Action.ValidateAction(lease.Lineage.FrameIdentity);
         }
 
         internal IReadOnlyList<ActionAnimationPlaybackLifecycleSnapshot>
             BuildCommittedActionLifecycleSnapshot() =>
-            ActorState.ActionPlayback.BuildCommittedLifecycleSnapshot();
+            m_Action.BuildCommittedLifecycleSnapshot();
 
         internal IReadOnlyList<AnimationPlaybackId>
-            RetiredActionPlaybacks => m_RetiredActionPlaybacks;
+            RetiredActionPlaybacks => m_Action.RetiredPlaybacks;
 
         internal void ResetAnimationSlots()
         {
             RequireAlive();
-            ActorState.AnimationSlots.Reset();
-            m_AnimationSlotPlans = Array.Empty<AnimationSlotFramePlan>();
+            m_Action.ResetSlots();
         }
 
         internal void ResetActionPlayback()
         {
             RequireAlive();
-            ActorState.ActionPlayback.Reset();
-            ClearActionFrameViews();
+            m_Action.ResetPlayback();
         }
 
         internal void ResetPresentationWorkspace()
@@ -615,102 +381,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             m_PresentationWorkspace.Reset();
             m_MotionMatching.ClearSelections();
         }
-
-        internal AnimationPoseSourceId PublishActionSourceFrame(
-            CharacterPoseProgramFrameLease lease,
-            in ActionAnimationPlaybackFrame frame,
-            in ResolvedActionAnimationBinding binding,
-            AnimationPoseSelectionGeneration selectionGeneration,
-            ulong presentationRequestSequence,
-            IDictionary<AnimationPlayerSourceSampleKey,
-                AnimationResolvedPoseSourceSample> sourceSamples,
-            bool select)
-        {
-            RequireFrame(lease);
-            if (!frame.IsValid ||
-                !binding.IsValid ||
-                !frame.PlaybackId.ProducerId.Equals(binding.ProducerId) ||
-                frame.AnimationChannelId != binding.AnimationChannelId ||
-                !string.Equals(
-                    frame.ProgramProducerId,
-                    binding.ProgramProducerId,
-                    StringComparison.Ordinal) ||
-                !selectionGeneration.IsValid ||
-                presentationRequestSequence == 0 ||
-                sourceSamples == null ||
-                !ActorState.NodeRuntimeIndex.TryGetStackRoute(
-                    binding.SlotNodeId,
-                    out AnimationBlendStackRuntime stack,
-                    out CharacterAnimationTransitionRouteRuntime route) ||
-                !route.IsAnimationSlot)
-            {
-                throw new InvalidOperationException(
-                    "Action frame has no exact compiled Animation Slot route.");
-            }
-            var sourceId = new AnimationPoseSourceId(
-                frame.PlaybackId,
-                AnimationPoseSourceKind.Timeline,
-                selectionGeneration,
-                frame.ActionInstanceId);
-            PresentationPoseSampleTime sampleTime =
-                frame.ProjectedSampleTime;
-            var request = new AnimationPoseSampleRequest(
-                sourceId,
-                frame.SourcePoseContinuityIdentity,
-                presentationRequestSequence,
-                binding.ProgramProducerIndex,
-                sampleTime.SampleTime,
-                sampleTime.ContinuousTime,
-                sampleTime.Cycle,
-                sampleTime.Loop,
-                sampleTime.TimeScale,
-                frame.Clips,
-                frame.ParameterPageId,
-                frame.PoseParameters,
-                frame.PoseParameterAvailability);
-            if (select)
-                route.PushSelection(stack, in request);
-            var key = new AnimationPlayerSourceSampleKey(
-                binding.SlotNodeId,
-                sourceId);
-            if (sourceSamples.ContainsKey(key))
-            {
-                throw new InvalidOperationException(
-                    $"Animation Slot '{binding.SlotId}' received a duplicate Action source.");
-            }
-            sourceSamples.Add(
-                key,
-                new AnimationResolvedPoseSourceSample(
-                    request,
-                    in frame.LeftFootFeatures,
-                    in frame.RightFootFeatures,
-                    true));
-            return sourceId;
-        }
-
-        internal void PublishActionSourcePose(
-            CharacterPoseProgramFrameLease lease,
-            AnimationSlotId slotId,
-            PoseNodeId slotNodeId,
-            ulong presentationRequestSequence)
-        {
-            RequireFrame(lease);
-            if (!slotId.IsValid ||
-                !slotNodeId.IsValid ||
-                presentationRequestSequence == 0 ||
-                !ActorState.NodeRuntimeIndex.TryGetStackRoute(
-                    slotNodeId,
-                    out AnimationBlendStackRuntime stack,
-                    out CharacterAnimationTransitionRouteRuntime route) ||
-                !route.IsAnimationSlot ||
-                route.SlotId != slotId)
-            {
-                throw new InvalidOperationException(
-                    "Source Pose target has no exact compiled Animation Slot route.");
-            }
-            route.PushSourcePose(stack, presentationRequestSequence);
-        }
-
         internal void BeginSourceRetirementFrame()
         {
             RequireAlive();
@@ -859,10 +529,11 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             in CharacterPresentationFactFrame factFrame)
         {
             RequireFrame(lease);
-            RequirePresentationWorkspaceFrame(
-                lease.Lineage.FrameIdentity);
+            m_Action.RequireWorkspace(lease.Lineage.FrameIdentity);
+            PresentationFrameWorkspaceLease workspaceFrame =
+                m_Action.WorkspaceFrame;
             if (!factFrame.IsValid ||
-                !m_PresentationWorkspaceFrame.IsValid)
+                !workspaceFrame.IsValid)
             {
                 throw new ArgumentException(
                     "Pose State frame finalization is invalid.",
@@ -874,7 +545,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 in factFrame,
                 FramePages,
                 m_PresentationWorkspace,
-                m_PresentationWorkspaceFrame);
+                workspaceFrame);
             for (int i = 0;
                  i < ActorState.RootOrientationWarps.Length;
                  i++)
@@ -1045,14 +716,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             if (!lease.IsValid ||
                 m_ActiveFrameLease.IsValid ||
                 m_CommittingFrameLease.IsValid ||
-                m_ActionFrame?.IsValid != true ||
-                m_ActionFrame.Identity != lease.Lineage.FrameIdentity ||
-                !m_AnimationSlotFrame.IsValid ||
-                m_AnimationSlotFrame.FrameIdentity !=
-                    lease.Lineage.FrameIdentity ||
-                !m_PresentationWorkspaceFrame.IsValid ||
-                m_PresentationWorkspaceFrame.Identity !=
-                    lease.Lineage.FrameIdentity)
+                !m_Action.MatchesOpenFrame(
+                    lease.Lineage.FrameIdentity))
             {
                 throw new InvalidOperationException(
                     "Character Pose Program frame cannot begin.");
@@ -1093,9 +758,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             m_Evaluation.DiscardPending();
             m_ActiveFrameLease = default;
             m_CommittingFrameLease = default;
-            m_ActionFrame = null;
-            m_AnimationSlotFrame = default;
-            m_PresentationWorkspaceFrame = default;
+            m_Action.ClearLeaseState();
             if (failure != null)
             {
                 throw new AggregateException(
@@ -2324,12 +1987,11 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 ulong resetSequence)
         {
             RequireFrame(lease);
-            RequirePresentationWorkspaceFrame(
-                lease.Lineage.FrameIdentity);
+            m_Action.RequireWorkspace(lease.Lineage.FrameIdentity);
             return m_MotionMatching.BuildDemandBatch(
                 presentationFrame,
                 resetSequence,
-                m_PresentationWorkspaceFrame);
+                m_Action.WorkspaceFrame);
         }
 
         internal void ApplyMotionMatchingSelections(
@@ -2337,11 +1999,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             in MotionMatchingFrameResolution resolution)
         {
             RequireFrame(lease);
-            RequirePresentationWorkspaceFrame(
-                lease.Lineage.FrameIdentity);
+            m_Action.RequireWorkspace(lease.Lineage.FrameIdentity);
             m_MotionMatching.ApplySelections(
                 in resolution,
-                m_PresentationWorkspaceFrame);
+                m_Action.WorkspaceFrame);
         }
 
         internal void ClearMotionMatchingSelections(
@@ -2511,56 +2172,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             }
         }
 
-        void RebaseRetiredActionPlaybacks(
-            IReadOnlyList<ActionAnimationPlaybackLifecycleFrame> lifecycle)
-        {
-            for (int i = 0; i < lifecycle.Count; i++)
-            {
-                ActionAnimationPlaybackLifecycleFrame snapshot = lifecycle[i];
-                if (snapshot.Phase !=
-                    ActionAnimationPlaybackLifecyclePhase.Retired)
-                {
-                    continue;
-                }
-                bool completedThisFrame = false;
-                for (int completionIndex = 0;
-                     completionIndex <
-                     m_ConsumedActionBackendReleaseCompletions.Count;
-                     completionIndex++)
-                {
-                    if (m_ConsumedActionBackendReleaseCompletions[
-                            completionIndex]
-                        .PlaybackId.Equals(snapshot.PlaybackId))
-                    {
-                        completedThisFrame = true;
-                        break;
-                    }
-                }
-                if (completedThisFrame)
-                    TryAddRetiredActionPlayback(snapshot.PlaybackId);
-            }
-        }
-
-        bool TryAddRetiredActionPlayback(AnimationPlaybackId playbackId)
-        {
-            for (int i = 0; i < m_RetiredActionPlaybacks.Count; i++)
-            {
-                if (m_RetiredActionPlaybacks[i].Equals(playbackId))
-                    return false;
-            }
-            m_RetiredActionPlaybacks.Add(playbackId);
-            return true;
-        }
-
-        void ClearActionFrameViews()
-        {
-            m_ActionBackendReleaseCompletions.Clear();
-            m_ActionSlotReleaseCompletions.Clear();
-            m_ConsumedActionBackendReleaseCompletions.Clear();
-            m_RetiredActionPlaybacks.Clear();
-            m_AnimationSlotPlans = Array.Empty<AnimationSlotFramePlan>();
-        }
-
         void DiscardNodeFrames()
         {
             for (int i = ActorState.DirectPlayers.Length - 1; i >= 0; i--)
@@ -2598,39 +2209,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             {
                 throw new InvalidOperationException(
                     "Character Pose Program frame lease is stale.");
-            }
-        }
-
-        void RequireActionFrame(ulong frameIdentity)
-        {
-            if (frameIdentity == 0 ||
-                m_ActionFrame?.IsValid != true ||
-                m_ActionFrame.Identity != frameIdentity)
-            {
-                throw new InvalidOperationException(
-                    "Character Pose Program Action frame is stale.");
-            }
-        }
-
-        void RequireAnimationSlotFrame(ulong frameIdentity)
-        {
-            if (frameIdentity == 0 ||
-                !m_AnimationSlotFrame.IsValid ||
-                m_AnimationSlotFrame.FrameIdentity != frameIdentity)
-            {
-                throw new InvalidOperationException(
-                    "Character Pose Program Animation Slot frame is stale.");
-            }
-        }
-
-        void RequirePresentationWorkspaceFrame(ulong frameIdentity)
-        {
-            if (frameIdentity == 0 ||
-                !m_PresentationWorkspaceFrame.IsValid ||
-                m_PresentationWorkspaceFrame.Identity != frameIdentity)
-            {
-                throw new InvalidOperationException(
-                    "Character Pose Program Presentation workspace frame is stale.");
             }
         }
 

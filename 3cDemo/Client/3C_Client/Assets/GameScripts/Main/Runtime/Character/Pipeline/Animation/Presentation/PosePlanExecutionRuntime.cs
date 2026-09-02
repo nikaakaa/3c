@@ -227,6 +227,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
         CharacterPoseGraphNativeBinding m_LastCompletedFrame;
         CharacterPoseGraphNativeBinding m_PendingCompletedFrame;
         CharacterPoseProgramFrameLease m_ActiveFrameLease;
+        CharacterPoseTuningSnapshot m_TuningSnapshot;
         bool m_CommitValidated;
         bool m_HasCompletedFrame;
         bool m_HasPendingCompletedFrame;
@@ -591,6 +592,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                 programFrames,
                 programTuning,
                 poseConstraints);
+            m_TuningSnapshot = CaptureTuningSnapshot(1);
             m_MotionMatchingHistoryCompletions =
                 new MotionMatchingPosePlanHistoryCompletion[
                     m_PoseStateSources
@@ -695,7 +697,23 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             m_ProgramRuntime.CommitTuningCandidate(candidateGeneration);
             m_SourceModule.CommitTuningCandidate(candidateGeneration);
             m_PoseConstraints.CommitTuningCandidate(candidateGeneration);
+            m_TuningSnapshot = CaptureTuningSnapshot(candidateGeneration);
             return string.Empty;
+        }
+
+        CharacterPoseTuningSnapshot CaptureTuningSnapshot(
+            ulong generation)
+        {
+            CharacterPoseProgramTuningView program =
+                m_ProgramTuning.RequireCommitted(generation);
+            CharacterPoseSourceTuningView source =
+                m_SourceModule.RequireTuning(generation);
+            CharacterPoseConstraintTuningView constraint =
+                m_PoseConstraints.RequireTuning(generation);
+            return new CharacterPoseTuningSnapshot(
+                in program,
+                in source,
+                in constraint);
         }
 
         internal bool CanApplyNextActivation =>
@@ -789,7 +807,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             bool publicationOpen = false;
             try
             {
-                m_ProgramTuning.RequireCommitted(
+                m_TuningSnapshot.RequireGeneration(
                     lineage.TuningGeneration);
                 constraintLease = m_PoseConstraints.BeginFrame(
                     in lineage,

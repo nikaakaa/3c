@@ -391,6 +391,17 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
 
         internal bool HasFootPlacement => m_FootPlacement != null;
         internal bool IsFullBodyIkPrepared => m_Solver.IsPrepared;
+        internal CharacterPoseConstraintTuningView RequireTuning(
+            ulong generation)
+        {
+            RequireAlive();
+            if (generation != m_TuningGeneration)
+            {
+                throw new InvalidOperationException(
+                    "Pose Constraint tuning generation is stale.");
+            }
+            return new CharacterPoseConstraintTuningView(generation);
+        }
         internal bool MatchesCompiledLayout(
             int contributionCount,
             int contributionGoalCount) =>

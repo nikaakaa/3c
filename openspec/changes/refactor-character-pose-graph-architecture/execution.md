@@ -1243,3 +1243,9 @@ Pose Contracts目录不引用Program／Source／Constraint／Publication Impleme
 ## 更新项目Pose Graph架构真相
 
 状态：`openspec/project.md`已写入实际Program Image v24／Runtime ABI v27、固定Compiler Pass、Seal前Inertialization与Motion Matching、actor-local Execution View、Program内部组合模块、根Frame Transaction、三分区Tuning、四个Owner诊断冻结页与唯一Physical Writer；目录职责同步区分Program、Sources、Constraints、Final和Diagnostics。任务14.6完成。
+
+## Runtime与Editor工程编译
+
+状态：使用`dotnet build ThirdPersonClient.Runtime.csproj --disable-build-servers /nr:false /p:UseSharedCompilation=false`完成Runtime工程编译，结果0错误、27个既有Package／Analyzer警告；随后立即执行`dotnet build-server shutdown`。使用相同参数完成`ThirdPersonClient.Editor.csproj`编译，结果0错误、30个既有Package警告；随后再次关闭MSBuild与VB/C#编译服务器。任务14.7完成。
+
+本change的`openspec validate refactor-character-pose-graph-architecture --strict --no-interactive`通过。全量strict实际执行为100项通过、8项失败，失败均来自其它现存change／spec；全工作区`git diff --check`只命中其它Performance工作修改的六个Prefab空值行尾空格。因此14.8暂不标完成，也不跨范围修改这些文件。

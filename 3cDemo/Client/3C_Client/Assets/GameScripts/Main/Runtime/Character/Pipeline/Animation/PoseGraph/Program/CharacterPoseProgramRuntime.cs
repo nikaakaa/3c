@@ -307,6 +307,101 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         internal ulong NextPresentationRequestSequence() =>
             ActorState.NextPresentationRequestSequence();
 
+        internal AnimationPoseSourceId PublishActionSourceFrame(
+            CharacterPoseProgramFrameLease lease,
+            in ActionAnimationPlaybackFrame frame,
+            in ResolvedActionAnimationBinding binding,
+            AnimationPoseSelectionGeneration selectionGeneration,
+            ulong presentationRequestSequence,
+            IDictionary<AnimationPlayerSourceSampleKey,
+                AnimationResolvedPoseSourceSample> sourceSamples,
+            bool select)
+        {
+            RequireFrame(lease);
+            if (!frame.IsValid ||
+                !binding.IsValid ||
+                !frame.PlaybackId.ProducerId.Equals(binding.ProducerId) ||
+                frame.AnimationChannelId != binding.AnimationChannelId ||
+                !string.Equals(
+                    frame.ProgramProducerId,
+                    binding.ProgramProducerId,
+                    StringComparison.Ordinal) ||
+                !selectionGeneration.IsValid ||
+                presentationRequestSequence == 0 ||
+                sourceSamples == null ||
+                !ActorState.NodeRuntimeIndex.TryGetStackRoute(
+                    binding.SlotNodeId,
+                    out AnimationBlendStackRuntime stack,
+                    out CharacterAnimationTransitionRouteRuntime route) ||
+                !route.IsAnimationSlot)
+            {
+                throw new InvalidOperationException(
+                    "Action frame has no exact compiled Animation Slot route.");
+            }
+            var sourceId = new AnimationPoseSourceId(
+                frame.PlaybackId,
+                AnimationPoseSourceKind.Timeline,
+                selectionGeneration,
+                frame.ActionInstanceId);
+            PresentationPoseSampleTime sampleTime =
+                frame.ProjectedSampleTime;
+            var request = new AnimationPoseSampleRequest(
+                sourceId,
+                frame.SourcePoseContinuityIdentity,
+                presentationRequestSequence,
+                binding.ProgramProducerIndex,
+                sampleTime.SampleTime,
+                sampleTime.ContinuousTime,
+                sampleTime.Cycle,
+                sampleTime.Loop,
+                sampleTime.TimeScale,
+                frame.Clips,
+                frame.ParameterPageId,
+                frame.PoseParameters,
+                frame.PoseParameterAvailability);
+            if (select)
+                route.PushSelection(stack, in request);
+            var key = new AnimationPlayerSourceSampleKey(
+                binding.SlotNodeId,
+                sourceId);
+            if (sourceSamples.ContainsKey(key))
+            {
+                throw new InvalidOperationException(
+                    $"Animation Slot '{binding.SlotId}' received a duplicate Action source.");
+            }
+            sourceSamples.Add(
+                key,
+                new AnimationResolvedPoseSourceSample(
+                    request,
+                    in frame.LeftFootFeatures,
+                    in frame.RightFootFeatures,
+                    true));
+            return sourceId;
+        }
+
+        internal void PublishActionSourcePose(
+            CharacterPoseProgramFrameLease lease,
+            AnimationSlotId slotId,
+            PoseNodeId slotNodeId,
+            ulong presentationRequestSequence)
+        {
+            RequireFrame(lease);
+            if (!slotId.IsValid ||
+                !slotNodeId.IsValid ||
+                presentationRequestSequence == 0 ||
+                !ActorState.NodeRuntimeIndex.TryGetStackRoute(
+                    slotNodeId,
+                    out AnimationBlendStackRuntime stack,
+                    out CharacterAnimationTransitionRouteRuntime route) ||
+                !route.IsAnimationSlot ||
+                route.SlotId != slotId)
+            {
+                throw new InvalidOperationException(
+                    "Source Pose target has no exact compiled Animation Slot route.");
+            }
+            route.PushSourcePose(stack, presentationRequestSequence);
+        }
+
         internal void BeginSourceRetirementFrame()
         {
             RequireAlive();

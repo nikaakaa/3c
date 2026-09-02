@@ -44,7 +44,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         internal bool WorldContextAvailable { get; }
     }
 
-    internal struct CharacterPoseGraphStagedExecutor
+    internal sealed class CharacterPoseGraphStagedExecutor
     {
         const float ScaleEpsilon = 0.000001f;
 
@@ -78,7 +78,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         [ReadOnly]
         readonly NativeArray<AnimationPoseGraphNativeOperation> m_Operations;
         [ReadOnly]
-        readonly NativeArray<float> m_OperationWeights;
+        NativeArray<float> m_OperationWeights;
         [ReadOnly]
         readonly NativeArray<AnimationPoseGraphNativeStage> m_Stages;
         [ReadOnly]
@@ -106,19 +106,19 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         [ReadOnly]
         readonly NativeArray<AnimationPoseGraphNativeRootOrientationWarp> m_RootOrientationWarps;
         [ReadOnly]
-        readonly NativeArray<CharacterRootOrientationWarpNativeControl> m_RootOrientationWarpControls;
+        NativeArray<CharacterRootOrientationWarpNativeControl> m_RootOrientationWarpControls;
         [ReadOnly]
         readonly NativeArray<AnimationPoseGraphNativeLinkedPoseCall> m_LinkedPoseCalls;
         [ReadOnly]
         readonly NativeArray<AnimationPoseGraphNativeLinkedPoseCandidate> m_LinkedPoseCandidates;
         [ReadOnly]
-        readonly NativeArray<AnimationPoseGraphNativeLinkedPoseCallControl> m_LinkedPoseCallControls;
+        NativeArray<AnimationPoseGraphNativeLinkedPoseCallControl> m_LinkedPoseCallControls;
         [ReadOnly]
-        readonly NativeArray<byte> m_LinkedPoseActiveFragments;
+        NativeArray<byte> m_LinkedPoseActiveFragments;
         [ReadOnly]
-        readonly NativeArray<CharacterPoseStateMachineNativeControl> m_StateMachineControls;
+        NativeArray<CharacterPoseStateMachineNativeControl> m_StateMachineControls;
         [ReadOnly]
-        readonly NativeArray<CharacterAnimationSlotNativeControl> m_AnimationSlotControls;
+        NativeArray<CharacterAnimationSlotNativeControl> m_AnimationSlotControls;
         [ReadOnly]
         readonly NativeArray<PoseInertializationNativeRule> m_InertialRules;
         [ReadOnly]
@@ -145,78 +145,78 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         NativeArray<Vector3> m_InertialAngularVelocityResiduals;
         NativeArray<Vector3> m_InertialScaleVelocityResiduals;
         NativeArray<float> m_InertialParameterResiduals;
-        readonly NativeArray<byte> m_InertialResetRequests;
+        NativeArray<byte> m_InertialResetRequests;
         [ReadOnly]
-        readonly NativeArray<PoseInertializationNativeState> m_CommittedInertialStates;
+        NativeArray<PoseInertializationNativeState> m_CommittedInertialStates;
         [ReadOnly]
-        readonly NativeArray<AnimationLocalBonePose> m_CommittedInertialHistory;
+        NativeArray<AnimationLocalBonePose> m_CommittedInertialHistory;
         [ReadOnly]
-        readonly NativeArray<AnimationBlendBoneVelocity> m_CommittedInertialHistoryVelocities;
+        NativeArray<AnimationBlendBoneVelocity> m_CommittedInertialHistoryVelocities;
         [ReadOnly]
-        readonly NativeArray<float> m_CommittedInertialHistoryParameters;
+        NativeArray<float> m_CommittedInertialHistoryParameters;
         [ReadOnly]
-        readonly NativeArray<byte> m_CommittedInertialHistoryParameterAvailability;
+        NativeArray<byte> m_CommittedInertialHistoryParameterAvailability;
         [ReadOnly]
-        readonly NativeArray<AnimationFootFeatureSample> m_CommittedInertialHistoryLeftFeet;
+        NativeArray<AnimationFootFeatureSample> m_CommittedInertialHistoryLeftFeet;
         [ReadOnly]
-        readonly NativeArray<AnimationFootFeatureSample> m_CommittedInertialHistoryRightFeet;
+        NativeArray<AnimationFootFeatureSample> m_CommittedInertialHistoryRightFeet;
         [ReadOnly]
-        readonly NativeArray<byte> m_CommittedInertialHistoryHasFeet;
+        NativeArray<byte> m_CommittedInertialHistoryHasFeet;
         [ReadOnly]
-        readonly NativeArray<AnimationFootFeatureSample> m_CommittedInertialAccumulatorLeftFeet;
+        NativeArray<AnimationFootFeatureSample> m_CommittedInertialAccumulatorLeftFeet;
         [ReadOnly]
-        readonly NativeArray<AnimationFootFeatureSample> m_CommittedInertialAccumulatorRightFeet;
+        NativeArray<AnimationFootFeatureSample> m_CommittedInertialAccumulatorRightFeet;
         [ReadOnly]
-        readonly NativeArray<byte> m_CommittedInertialAccumulatorHasFeet;
+        NativeArray<byte> m_CommittedInertialAccumulatorHasFeet;
         [ReadOnly]
-        readonly NativeArray<Vector3> m_CommittedInertialPositionResiduals;
+        NativeArray<Vector3> m_CommittedInertialPositionResiduals;
         [ReadOnly]
-        readonly NativeArray<Vector3> m_CommittedInertialRotationResiduals;
+        NativeArray<Vector3> m_CommittedInertialRotationResiduals;
         [ReadOnly]
-        readonly NativeArray<Vector3> m_CommittedInertialScaleResiduals;
+        NativeArray<Vector3> m_CommittedInertialScaleResiduals;
         [ReadOnly]
-        readonly NativeArray<Vector3> m_CommittedInertialLinearVelocityResiduals;
+        NativeArray<Vector3> m_CommittedInertialLinearVelocityResiduals;
         [ReadOnly]
-        readonly NativeArray<Vector3> m_CommittedInertialAngularVelocityResiduals;
+        NativeArray<Vector3> m_CommittedInertialAngularVelocityResiduals;
         [ReadOnly]
-        readonly NativeArray<Vector3> m_CommittedInertialScaleVelocityResiduals;
+        NativeArray<Vector3> m_CommittedInertialScaleVelocityResiduals;
         [ReadOnly]
-        readonly NativeArray<float> m_CommittedInertialParameterResiduals;
+        NativeArray<float> m_CommittedInertialParameterResiduals;
 
         [ReadOnly]
-        readonly NativeArray<AnimationPlayerPoseNativeRange> m_SlotRanges;
+        NativeArray<AnimationPlayerPoseNativeRange> m_SlotRanges;
         [ReadOnly]
-        readonly NativeArray<AnimationLocalBonePose> m_SlotDenseLocalPoses;
+        NativeArray<AnimationLocalBonePose> m_SlotDenseLocalPoses;
         [ReadOnly]
-        readonly NativeArray<AnimationBlendBoneVelocity> m_SlotDenseVelocities;
+        NativeArray<AnimationBlendBoneVelocity> m_SlotDenseVelocities;
         [ReadOnly]
-        readonly NativeArray<float> m_SlotPoseParameters;
+        NativeArray<float> m_SlotPoseParameters;
         [ReadOnly]
-        readonly NativeArray<byte> m_SlotPoseParameterAvailability;
+        NativeArray<byte> m_SlotPoseParameterAvailability;
         [ReadOnly]
-        readonly NativeArray<AnimationPrimitivePoseContribution> m_SlotContributions;
+        NativeArray<AnimationPrimitivePoseContribution> m_SlotContributions;
         [ReadOnly]
-        readonly NativeArray<float> m_SlotDenseContributionWeights;
+        NativeArray<float> m_SlotDenseContributionWeights;
         [ReadOnly]
-        readonly NativeArray<int> m_SlotContributionCounts;
+        NativeArray<int> m_SlotContributionCounts;
         [ReadOnly]
-        readonly NativeArray<float> m_SlotOutputWeights;
+        NativeArray<float> m_SlotOutputWeights;
         [ReadOnly]
-        readonly NativeArray<AnimationFootFeatureSample> m_SlotLeftFootFeatures;
+        NativeArray<AnimationFootFeatureSample> m_SlotLeftFootFeatures;
         [ReadOnly]
-        readonly NativeArray<AnimationFootFeatureSample> m_SlotRightFootFeatures;
+        NativeArray<AnimationFootFeatureSample> m_SlotRightFootFeatures;
         [ReadOnly]
-        readonly NativeArray<byte> m_SlotHasFootFeatures;
+        NativeArray<byte> m_SlotHasFootFeatures;
         [ReadOnly]
-        readonly NativeArray<AnimationPoseAvailability> m_SlotAvailability;
+        NativeArray<AnimationPoseAvailability> m_SlotAvailability;
         [ReadOnly]
-        readonly NativeArray<ulong> m_SlotContinuityIdentities;
+        NativeArray<ulong> m_SlotContinuityIdentities;
         [ReadOnly]
-        readonly NativeArray<PoseDiscontinuityNative> m_SlotDiscontinuities;
+        NativeArray<PoseDiscontinuityNative> m_SlotDiscontinuities;
         [ReadOnly]
-        readonly NativeArray<AnimationPoseNativeInvalidReason> m_SlotInvalidReasons;
+        NativeArray<AnimationPoseNativeInvalidReason> m_SlotInvalidReasons;
         [ReadOnly]
-        readonly NativeArray<ulong> m_SlotCompletedAt;
+        NativeArray<ulong> m_SlotCompletedAt;
 
         NativeArray<AnimationLocalBonePose> m_ValueDenseLocalPoses;
         NativeArray<AnimationBlendBoneVelocity> m_ValueDenseVelocities;
@@ -252,30 +252,32 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         readonly FixedString64Bytes m_RigId;
         readonly FixedString64Bytes m_RigRevision;
         readonly int m_AnimationSlotNodeOffset;
-        readonly ulong m_CompletionIdentity;
+        ulong m_CompletionIdentity;
         readonly CharacterPoseConstraintRuntime m_PoseConstraints;
-        readonly bool m_RecordDiagnostics;
+        readonly CharacterPoseProgramExecutionView m_Program;
+        readonly CharacterPoseProgramFramePages m_FramePages;
+        readonly PoseInertializationNativeProgram m_InertializationProgram;
+        bool m_RecordDiagnostics;
         ulong m_FrameSequence;
 
         internal CharacterPoseGraphStagedExecutor(
             CharacterPoseProgramExecutionView program,
             CharacterPoseProgramFramePages framePages,
-            in CharacterPoseProgramTuningView tuning,
             PoseInertializationNativeProgram inertializationProgram,
-            CharacterPoseGraphNativeBinding binding,
-            CharacterPoseConstraintRuntime poseConstraints,
-            bool recordDiagnostics)
+            CharacterPoseConstraintRuntime poseConstraints)
         {
-            RequireValidConfiguration(
-                program,
-                framePages,
-                in tuning,
-                inertializationProgram,
-                binding,
-                poseConstraints);
+            m_Program = program ??
+                throw new ArgumentNullException(nameof(program));
+            m_FramePages = framePages ??
+                throw new ArgumentNullException(nameof(framePages));
+            m_InertializationProgram = inertializationProgram ??
+                throw new ArgumentNullException(nameof(inertializationProgram));
+            m_PoseConstraints = poseConstraints ??
+                throw new ArgumentNullException(nameof(poseConstraints));
+            program.RequireValid();
+            framePages.RequireValid();
 
             m_Operations = program.Operations;
-            m_OperationWeights = tuning.OperationWeights;
             m_Stages = program.Stages;
             m_DenseBoneMasks = program.DenseBoneMasks;
             m_AdditiveReferences = program.AdditiveReferences;
@@ -289,71 +291,145 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             m_Inertializations = inertializationProgram.Nodes;
             m_ModifyBones = program.ModifyBones;
             m_RootOrientationWarps = program.RootOrientationWarps;
-            m_RootOrientationWarpControls =
-                framePages.RootOrientationWarpControls;
             m_LinkedPoseCalls = program.LinkedPoseCalls;
             m_LinkedPoseCandidates = program.LinkedPoseCandidates;
-            m_LinkedPoseCallControls = framePages.LinkedPoseCallControls;
-            m_LinkedPoseActiveFragments = framePages.LinkedPoseActiveFragments;
-            m_StateMachineControls = framePages.StateMachineControls;
-            m_AnimationSlotControls = framePages.AnimationSlotControls;
             m_InertialRules = inertializationProgram.Rules;
             m_InertialCurveSegments = inertializationProgram.CurveSegments;
             m_InertialDenseProfiles = inertializationProgram.DenseProfiles;
             m_InertialParameterModes = inertializationProgram.ParameterModes;
-            m_InertialStates = inertializationProgram.States;
-            m_InertialHistory = inertializationProgram.HistoryPoses;
-            m_InertialHistoryVelocities = inertializationProgram.HistoryVelocities;
-            m_InertialHistoryParameters = inertializationProgram.HistoryParameters;
-            m_InertialHistoryParameterAvailability = inertializationProgram.HistoryParameterAvailability;
-            m_InertialHistoryLeftFeet = inertializationProgram.HistoryLeftFeet;
-            m_InertialHistoryRightFeet = inertializationProgram.HistoryRightFeet;
-            m_InertialHistoryHasFeet = inertializationProgram.HistoryHasFeet;
-            m_InertialAccumulatorLeftFeet = inertializationProgram.AccumulatorLeftFeet;
-            m_InertialAccumulatorRightFeet = inertializationProgram.AccumulatorRightFeet;
-            m_InertialAccumulatorHasFeet = inertializationProgram.AccumulatorHasFeet;
-            m_InertialPositionResiduals = inertializationProgram.PositionResiduals;
-            m_InertialRotationResiduals = inertializationProgram.RotationResiduals;
-            m_InertialScaleResiduals = inertializationProgram.ScaleResiduals;
-            m_InertialLinearVelocityResiduals = inertializationProgram.LinearVelocityResiduals;
-            m_InertialAngularVelocityResiduals = inertializationProgram.AngularVelocityResiduals;
-            m_InertialScaleVelocityResiduals = inertializationProgram.ScaleVelocityResiduals;
-            m_InertialParameterResiduals = inertializationProgram.ParameterResiduals;
-            m_InertialResetRequests = inertializationProgram.ResetRequests;
-            m_CommittedInertialStates = inertializationProgram.CommittedStates;
-            m_CommittedInertialHistory = inertializationProgram.CommittedHistoryPoses;
-            m_CommittedInertialHistoryVelocities = inertializationProgram.CommittedHistoryVelocities;
-            m_CommittedInertialHistoryParameters = inertializationProgram.CommittedHistoryParameters;
-            m_CommittedInertialHistoryParameterAvailability = inertializationProgram.CommittedHistoryParameterAvailability;
-            m_CommittedInertialHistoryLeftFeet = inertializationProgram.CommittedHistoryLeftFeet;
-            m_CommittedInertialHistoryRightFeet = inertializationProgram.CommittedHistoryRightFeet;
-            m_CommittedInertialHistoryHasFeet = inertializationProgram.CommittedHistoryHasFeet;
-            m_CommittedInertialAccumulatorLeftFeet = inertializationProgram.CommittedAccumulatorLeftFeet;
-            m_CommittedInertialAccumulatorRightFeet = inertializationProgram.CommittedAccumulatorRightFeet;
-            m_CommittedInertialAccumulatorHasFeet = inertializationProgram.CommittedAccumulatorHasFeet;
-            m_CommittedInertialPositionResiduals = inertializationProgram.CommittedPositionResiduals;
-            m_CommittedInertialRotationResiduals = inertializationProgram.CommittedRotationResiduals;
-            m_CommittedInertialScaleResiduals = inertializationProgram.CommittedScaleResiduals;
-            m_CommittedInertialLinearVelocityResiduals = inertializationProgram.CommittedLinearVelocityResiduals;
-            m_CommittedInertialAngularVelocityResiduals = inertializationProgram.CommittedAngularVelocityResiduals;
-            m_CommittedInertialScaleVelocityResiduals = inertializationProgram.CommittedScaleVelocityResiduals;
-            m_CommittedInertialParameterResiduals = inertializationProgram.CommittedParameterResiduals;
             m_AnimationSlotNodeOffset = inertializationProgram.SlotNodeOffset;
+            AnimationPoseNativeAggregateLayout layout =
+                framePages.EvaluationLayout;
+            m_PlayerCount = layout.PlayerCount;
+            m_BoneCount = layout.BoneCount;
+            m_ParameterCount = layout.ParameterCount;
+            m_PoseValueCount = layout.PoseValueCount;
+            m_ContributionStride = layout.PoseValueContributionStride;
+            m_OutputOperationIndex = program.OutputOperationIndex;
+            m_OutputValueIndex = program.OutputValueIndex;
+            m_LeftFootBoneIndex = program.LeftFootBoneIndex;
+            m_RightFootBoneIndex = program.RightFootBoneIndex;
+            m_RigId = program.RigId;
+            m_RigRevision = program.RigRevision;
+            m_FrameSequence = 0;
+        }
+
+        internal CharacterPoseGraphStagedExecutor BindFrame(
+            in CharacterPoseProgramTuningView tuning,
+            CharacterPoseGraphNativeBinding binding,
+            bool recordDiagnostics)
+        {
+            RequireValidConfiguration(
+                m_Program,
+                m_FramePages,
+                in tuning,
+                m_InertializationProgram,
+                binding,
+                m_PoseConstraints);
+            m_OperationWeights = tuning.OperationWeights;
+            m_RootOrientationWarpControls =
+                m_FramePages.RootOrientationWarpControls;
+            m_LinkedPoseCallControls =
+                m_FramePages.LinkedPoseCallControls;
+            m_LinkedPoseActiveFragments =
+                m_FramePages.LinkedPoseActiveFragments;
+            m_StateMachineControls = m_FramePages.StateMachineControls;
+            m_AnimationSlotControls = m_FramePages.AnimationSlotControls;
+
+            m_InertialStates = m_InertializationProgram.States;
+            m_InertialHistory = m_InertializationProgram.HistoryPoses;
+            m_InertialHistoryVelocities =
+                m_InertializationProgram.HistoryVelocities;
+            m_InertialHistoryParameters =
+                m_InertializationProgram.HistoryParameters;
+            m_InertialHistoryParameterAvailability =
+                m_InertializationProgram.HistoryParameterAvailability;
+            m_InertialHistoryLeftFeet =
+                m_InertializationProgram.HistoryLeftFeet;
+            m_InertialHistoryRightFeet =
+                m_InertializationProgram.HistoryRightFeet;
+            m_InertialHistoryHasFeet =
+                m_InertializationProgram.HistoryHasFeet;
+            m_InertialAccumulatorLeftFeet =
+                m_InertializationProgram.AccumulatorLeftFeet;
+            m_InertialAccumulatorRightFeet =
+                m_InertializationProgram.AccumulatorRightFeet;
+            m_InertialAccumulatorHasFeet =
+                m_InertializationProgram.AccumulatorHasFeet;
+            m_InertialPositionResiduals =
+                m_InertializationProgram.PositionResiduals;
+            m_InertialRotationResiduals =
+                m_InertializationProgram.RotationResiduals;
+            m_InertialScaleResiduals =
+                m_InertializationProgram.ScaleResiduals;
+            m_InertialLinearVelocityResiduals =
+                m_InertializationProgram.LinearVelocityResiduals;
+            m_InertialAngularVelocityResiduals =
+                m_InertializationProgram.AngularVelocityResiduals;
+            m_InertialScaleVelocityResiduals =
+                m_InertializationProgram.ScaleVelocityResiduals;
+            m_InertialParameterResiduals =
+                m_InertializationProgram.ParameterResiduals;
+            m_InertialResetRequests =
+                m_InertializationProgram.ResetRequests;
+            m_CommittedInertialStates =
+                m_InertializationProgram.CommittedStates;
+            m_CommittedInertialHistory =
+                m_InertializationProgram.CommittedHistoryPoses;
+            m_CommittedInertialHistoryVelocities =
+                m_InertializationProgram.CommittedHistoryVelocities;
+            m_CommittedInertialHistoryParameters =
+                m_InertializationProgram.CommittedHistoryParameters;
+            m_CommittedInertialHistoryParameterAvailability =
+                m_InertializationProgram
+                    .CommittedHistoryParameterAvailability;
+            m_CommittedInertialHistoryLeftFeet =
+                m_InertializationProgram.CommittedHistoryLeftFeet;
+            m_CommittedInertialHistoryRightFeet =
+                m_InertializationProgram.CommittedHistoryRightFeet;
+            m_CommittedInertialHistoryHasFeet =
+                m_InertializationProgram.CommittedHistoryHasFeet;
+            m_CommittedInertialAccumulatorLeftFeet =
+                m_InertializationProgram.CommittedAccumulatorLeftFeet;
+            m_CommittedInertialAccumulatorRightFeet =
+                m_InertializationProgram.CommittedAccumulatorRightFeet;
+            m_CommittedInertialAccumulatorHasFeet =
+                m_InertializationProgram.CommittedAccumulatorHasFeet;
+            m_CommittedInertialPositionResiduals =
+                m_InertializationProgram.CommittedPositionResiduals;
+            m_CommittedInertialRotationResiduals =
+                m_InertializationProgram.CommittedRotationResiduals;
+            m_CommittedInertialScaleResiduals =
+                m_InertializationProgram.CommittedScaleResiduals;
+            m_CommittedInertialLinearVelocityResiduals =
+                m_InertializationProgram
+                    .CommittedLinearVelocityResiduals;
+            m_CommittedInertialAngularVelocityResiduals =
+                m_InertializationProgram
+                    .CommittedAngularVelocityResiduals;
+            m_CommittedInertialScaleVelocityResiduals =
+                m_InertializationProgram
+                    .CommittedScaleVelocityResiduals;
+            m_CommittedInertialParameterResiduals =
+                m_InertializationProgram.CommittedParameterResiduals;
 
             m_SlotRanges = binding.SlotRanges;
             m_SlotDenseLocalPoses = binding.SlotDenseLocalPoses;
             m_SlotDenseVelocities = binding.SlotDenseVelocities;
             m_SlotPoseParameters = binding.SlotPoseParameters;
-            m_SlotPoseParameterAvailability = binding.SlotPoseParameterAvailability;
+            m_SlotPoseParameterAvailability =
+                binding.SlotPoseParameterAvailability;
             m_SlotContributions = binding.SlotContributions;
-            m_SlotDenseContributionWeights = binding.SlotDenseContributionWeights;
+            m_SlotDenseContributionWeights =
+                binding.SlotDenseContributionWeights;
             m_SlotContributionCounts = binding.SlotContributionCounts;
             m_SlotOutputWeights = binding.SlotOutputWeights;
             m_SlotLeftFootFeatures = binding.SlotLeftFootFeatures;
             m_SlotRightFootFeatures = binding.SlotRightFootFeatures;
             m_SlotHasFootFeatures = binding.SlotHasFootFeatures;
             m_SlotAvailability = binding.SlotAvailability;
-            m_SlotContinuityIdentities = binding.SlotContinuityIdentities;
+            m_SlotContinuityIdentities =
+                binding.SlotContinuityIdentities;
             m_SlotDiscontinuities = binding.SlotDiscontinuities;
             m_SlotInvalidReasons = binding.SlotInvalidReasons;
             m_SlotCompletedAt = binding.SlotCompletedAt;
@@ -361,40 +437,33 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             m_ValueDenseLocalPoses = binding.ValueDenseLocalPoses;
             m_ValueDenseVelocities = binding.ValueDenseVelocities;
             m_ValuePoseParameters = binding.ValuePoseParameters;
-            m_ValuePoseParameterAvailability = binding.ValuePoseParameterAvailability;
+            m_ValuePoseParameterAvailability =
+                binding.ValuePoseParameterAvailability;
             m_ValueContributions = binding.ValueContributions;
-            m_ValueDenseContributionWeights = binding.ValueDenseContributionWeights;
+            m_ValueDenseContributionWeights =
+                binding.ValueDenseContributionWeights;
             m_ValueContributionCounts = binding.ValueContributionCounts;
             m_ValueOutputWeights = binding.ValueOutputWeights;
             m_ValueLeftFootFeatures = binding.ValueLeftFootFeatures;
             m_ValueRightFootFeatures = binding.ValueRightFootFeatures;
             m_ValueHasFootFeatures = binding.ValueHasFootFeatures;
             m_ValueAvailability = binding.ValueAvailability;
-            m_ValueContinuityIdentities = binding.ValueContinuityIdentities;
+            m_ValueContinuityIdentities =
+                binding.ValueContinuityIdentities;
             m_ValueDiscontinuities = binding.ValueDiscontinuities;
             m_ValueInvalidReasons = binding.ValueInvalidReasons;
             m_OperationCompletions = binding.OperationCompletions;
             m_StageCompletedAt = binding.StageCompletedAt;
-            m_StageInvalidOperationIndex = binding.StageInvalidOperationIndex;
+            m_StageInvalidOperationIndex =
+                binding.StageInvalidOperationIndex;
             m_PoseGraphInvalidReason = binding.PoseGraphInvalidReason;
-            m_PoseGraphInvalidOperationIndex = binding.PoseGraphInvalidOperationIndex;
+            m_PoseGraphInvalidOperationIndex =
+                binding.PoseGraphInvalidOperationIndex;
             m_PoseGraphCompletedAt = binding.PoseGraphCompletedAt;
-
-            m_PlayerCount = binding.Layout.PlayerCount;
-            m_BoneCount = binding.Layout.BoneCount;
-            m_ParameterCount = binding.Layout.ParameterCount;
-            m_PoseValueCount = binding.Layout.PoseValueCount;
-            m_ContributionStride = binding.Layout.PoseValueContributionStride;
-            m_OutputOperationIndex = program.OutputOperationIndex;
-            m_OutputValueIndex = program.OutputValueIndex;
-            m_LeftFootBoneIndex = program.LeftFootBoneIndex;
-            m_RightFootBoneIndex = program.RightFootBoneIndex;
-            m_RigId = program.RigId;
-            m_RigRevision = program.RigRevision;
             m_CompletionIdentity = binding.CompletionIdentity;
-            m_PoseConstraints = poseConstraints;
             m_RecordDiagnostics = recordDiagnostics;
             m_FrameSequence = 0;
+            return this;
         }
 
         internal void BeginStagedEvaluation(ulong frameSequence)

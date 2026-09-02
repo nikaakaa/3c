@@ -13,7 +13,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             CharacterPoseProgramExecutionView executionView,
             CharacterPoseActorState actorState,
             CharacterPoseProgramFramePages framePages,
-            CharacterPoseProgramTuningState tuning)
+            CharacterPoseProgramTuningState tuning,
+            CharacterPoseConstraintRuntime poseConstraints)
         {
             m_Image = image ?? throw new ArgumentNullException(nameof(image));
             ExecutionView = executionView ??
@@ -23,6 +24,11 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             FramePages = framePages ??
                 throw new ArgumentNullException(nameof(framePages));
             Tuning = tuning ?? throw new ArgumentNullException(nameof(tuning));
+            Executor = new CharacterPoseGraphStagedExecutor(
+                ExecutionView,
+                FramePages,
+                ActorState.Inertialization,
+                poseConstraints);
             if (!string.Equals(
                     m_Image.ProgramId,
                     ExecutionView.ProgramId.ToString(),
@@ -54,6 +60,16 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         internal CharacterPoseActorState ActorState { get; }
         internal CharacterPoseProgramFramePages FramePages { get; }
         internal CharacterPoseProgramTuningState Tuning { get; }
+        internal CharacterPoseGraphStagedExecutor Executor { get; }
+
+        internal CharacterPoseGraphStagedExecutor BindExecutor(
+            in CharacterPoseProgramTuningView tuning,
+            CharacterPoseGraphNativeBinding binding,
+            bool recordDiagnostics) =>
+            Executor.BindFrame(
+                in tuning,
+                binding,
+                recordDiagnostics);
 
         public void Dispose()
         {

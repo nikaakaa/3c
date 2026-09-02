@@ -29,7 +29,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                 in CharacterPoseFrameLineage lineage,
                 float presentationDeltaSeconds,
                 in CharacterPoseGraphNativeBinding frame,
-                in CharacterPoseGraphStagedExecutor executor,
+                CharacterPoseGraphStagedExecutor executor,
                 in AnimationFinalPoseNativeReadBinding finalRead,
                 bool hasCommittedFinal,
                 in AnimationFinalPoseNativeReadBinding committedFinalRead)
@@ -54,6 +54,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                 Lineage.IsValid &&
                 float.IsFinite(PresentationDeltaSeconds) &&
                 PresentationDeltaSeconds >= 0f &&
+                Executor != null &&
                 Frame.CompletionIdentity == Lineage.CompletionIdentity &&
                 FinalRead.CompletionIdentity == Lineage.CompletionIdentity;
         }
@@ -75,7 +76,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                 in CharacterPoseProgramPrepared prepared,
                 float presentationDeltaSeconds,
                 in CharacterPoseGraphNativeBinding frame,
-                in CharacterPoseGraphStagedExecutor executor,
+                CharacterPoseGraphStagedExecutor executor,
                 in AnimationFinalPoseNativeReadBinding finalRead,
                 bool hasCommittedFinal,
                 in AnimationFinalPoseNativeReadBinding committedFinalRead)
@@ -88,6 +89,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                 if (!prepared.IsValid ||
                     !float.IsFinite(presentationDeltaSeconds) ||
                     presentationDeltaSeconds < 0f ||
+                    executor == null ||
                     frame.CompletionIdentity !=
                         prepared.Lineage.CompletionIdentity ||
                     finalRead.CompletionIdentity !=
@@ -122,7 +124,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                     in m_Lineage,
                     m_PresentationDeltaSeconds,
                     in m_Frame,
-                    in m_Executor,
+                    m_Executor,
                     in m_FinalRead,
                     m_HasCommittedFinal,
                     in m_CommittedFinalRead);
@@ -612,7 +614,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                 executionView,
                 actorState,
                 programFrames,
-                programTuning);
+                programTuning,
+                poseConstraints);
             m_MotionMatchingHistoryCompletions =
                 new MotionMatchingPosePlanHistoryCompletion[
                     m_PoseStateSources
@@ -2192,14 +2195,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                 CharacterPoseProgramTuningView programTuning =
                     m_ProgramTuning.RequireCommitted(
                         sourceDemand.Lineage.TuningGeneration);
-                poseExecutor = new CharacterPoseGraphStagedExecutor(
-                    m_ExecutionView,
-                    m_ProgramFrames,
+                poseExecutor = m_ProgramRuntime.BindExecutor(
                     in programTuning,
-                    m_InertializationPlan,
                     m_ProgramFrames.RequirePoseGraphBinding(
                         completionIdentity),
-                    m_PoseConstraints,
                     recordDiagnostics);
                 finalRead =
                     m_ProgramFrames.RequireFinalReadBinding(
@@ -2227,7 +2226,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                 in prepared,
                 presentationDeltaSeconds,
                 in frame,
-                in poseExecutor,
+                poseExecutor,
                 in finalRead,
                 hasCommittedFinal,
                 in committedFinalRead);

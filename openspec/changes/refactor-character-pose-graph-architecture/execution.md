@@ -739,3 +739,9 @@ Execution View与Frame Pages之间的Control容量一致性改由`CharacterPoseG
 状态：新增`CharacterPoseProgramRuntime`，唯一保存同一Actor的Program Image只读引用、唯一Execution View、Actor State、Program Frame Pages与Program Tuning。构造时逐项核对ProgramId、ProjectionRevision、PoseProgramImageHash和Rig identity；Dispose按原顺序统一释放Actor State、Tuning、Execution View与Frame Pages，并保持异常聚合。
 
 旧`PosePlanExecutionRuntime`删除上述四个独立存储字段，只保留一个`m_ProgramRuntime`；当前大类内部的过渡访问器全部指向该Owner中的同一对象，没有复制页、状态或第二View。Source Module、Constraint Runtime、Final Publication和Diagnostics Projector未进入Program Runtime。任务5.3与6.1暂不勾选：Execution View仍含运行时Compile，Executor仍是每帧构造且旧大类尚未收窄为根协调器。3C MCP重建新文件后Program Runtime与旧Pose Runtime错误筛选均为0；不单独运行回放。
+
+## Staged Executor改为Actor级持久Implementation
+
+状态：`CharacterPoseGraphStagedExecutor`从每帧值类型改为每Actor唯一引用类型，只在`CharacterPoseProgramRuntime`构造时建立一次。Program Runtime保存该Executor，并以`BindExecutor`在每帧绑定Committed Program Tuning、当前Program Frame页、当前Inertialization页、当前Workspace binding、completion identity与diagnostics开关；Prepared页保存同一Executor引用，不再复制大结构体。
+
+Execution View的Operation／Stage／Rig／Mask／Blend／Linked Pose静态页，以及Inertialization规则页和Constraint入口，只在持久构造时绑定一次。Root Warp／Linked／StateMachine／Slot control、Inertialization active／committed页和Workspace Slot／Value／Completion页仍按原时机从当前Pending／Committed页取得，所有Evaluate、Stage和Operation顺序未改。全文只有Program Runtime一处`new CharacterPoseGraphStagedExecutor`，任务6.3完成；任务6.1仍等待Program Runtime直接接收根Frame lease和旧大类外层收窄。3C MCP对Executor、Program Runtime和Pose Runtime错误筛选均为0；不单独运行回放。

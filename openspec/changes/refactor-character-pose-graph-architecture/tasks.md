@@ -63,7 +63,7 @@
 
 - [ ] 6.1 新增`CharacterPoseProgramRuntime`，唯一持有Program Image只读引用或自己的actor-local Execution View、Actor State、Program Frame Pages和持久Executor Implementation，并只接收根Frame Lease
 - [ ] 6.2 将PoseStateMachine、Player、ActionPlaybackInput lifecycle、AnimationSlot、BlendStack、Transition消费、Inertialization和其它逻辑节点执行迁入Program Runtime
-- [ ] 6.3 将每帧Executor构造改为持久绑定Program Image/Execution View和Program自有固定页，只切换根Frame Lease与Pending页索引
+- [x] 6.3 将每帧Executor构造改为持久绑定Program Image/Execution View和Program自有固定页，只切换根Frame Lease与Pending页索引
 - [ ] 6.4 按Stage Schedule执行每个Operation恰好一次并写入唯一Operation Completion页
 - [ ] 6.5 让Program Runtime通过typed Result调用Source Module，并通过typed编译Handle逐Operation调用Constraint Module
 - [ ] 6.6 删除外层Runtime对World-aware Operation的扫描和内部输入装配，删除Staged Executor对同一Operation的第二解释或完成检查

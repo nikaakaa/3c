@@ -102,21 +102,21 @@
 
 ## 10. 建立唯一Node Definition Module
 
-- [ ] 10.1 新增`CharacterPoseNodeDefinition`合同和`CharacterPoseNodeDefinitionModule`唯一目录
-- [ ] 10.2 为全部正式Node Kind建立唯一Definition Adapter，声明Payload、字段、固定端口、条件portVariants、动态端口、Graph Role、Execution Domain、Operation Family、Graph dependency投影、局部校验、Rig校验和typed lowering
-- [ ] 10.3 将Pose Capability Catalog改为从Node Definition投影，不再保存与Definition重复的Payload、端口、domain和compiler binding真相
-- [ ] 10.4 让唯一`GraphAuthoringNodePortShapeProjector`从Capability、typed properties与node-local动态端口投影完整形状，拒绝固定/条件/动态端口identity重叠
-- [ ] 10.5 将Canvas创建、Details字段、Authoring Adapter、Clipboard和typed Mutation迁移为消费Capability与统一Port Shape
-- [ ] 10.6 将Document v4模型、Presentation Exporter、strict parser、Target Mapper、Reconciler、Mutation preflight与Validator迁移为消费同一Capability与统一Port Shape
-- [ ] 10.7 保证Definition不得直接修改Unity对象、执行Document apply、接管五个MCP生命周期或建立第二Reconciler/Transaction Service
-- [ ] 10.8 将Graph dependency、局部Validator和Source Map命名迁移到Node Definition，保持跨节点全局规则只属于Topology Pass
+- [x] 10.1 新增`CharacterPoseNodeDefinition`合同和`CharacterPoseNodeDefinitionModule`唯一目录
+- [x] 10.2 为全部正式Node Kind建立唯一Definition Adapter，声明Payload、字段、固定端口、条件portVariants、动态端口、Graph Role、Execution Domain、Operation Family、Graph dependency投影、局部校验、Rig校验和typed lowering
+- [x] 10.3 将Pose Capability Catalog改为从Node Definition投影，不再保存与Definition重复的Payload、端口、domain和compiler binding真相
+- [x] 10.4 让唯一`GraphAuthoringNodePortShapeProjector`从Capability、typed properties与node-local动态端口投影完整形状，拒绝固定/条件/动态端口identity重叠
+- [x] 10.5 将Canvas创建、Details字段、Authoring Adapter、Clipboard和typed Mutation迁移为消费Capability与统一Port Shape
+- [x] 10.6 将Document v4模型、Presentation Exporter、strict parser、Target Mapper、Reconciler、Mutation preflight与Validator迁移为消费同一Capability与统一Port Shape
+- [x] 10.7 保证Definition不得直接修改Unity对象、执行Document apply、接管五个MCP生命周期或建立第二Reconciler/Transaction Service
+- [x] 10.8 将Graph dependency、局部Validator和Source Map命名迁移到Node Definition，保持跨节点全局规则只属于Topology Pass
 - [ ] 10.9 删除`ICharacterPoseCompilerHandler`、泛型Handler、Handler Registry、反射注册和Player/Slot/Blend等布尔能力矩阵
 - [ ] 10.10 搜索并删除Agent exporter、Package codec、Target Mapper、Profile Inspector、Clipboard、Canvas和Compiler中可由Definition/Capability/Port Shape表达的重复NodeKind switch
-- [ ] 10.11 校验全部正式节点恰有一个Definition且Capability、Document、Mutation、Clipboard和Compiler不存在第二catalog；若Agent可见语义变化则同步`btsmtl-agent-authoring`当前合同
+- [x] 10.11 校验全部正式节点恰有一个Definition且Capability、Document、Mutation、Clipboard和Compiler不存在第二catalog；若Agent可见语义变化则同步`btsmtl-agent-authoring`当前合同
 
 ## 11. 将Pose Compiler拆为不可变Pass
 
-- [ ] 11.1 建立唯一`CharacterPoseCompilationRequest/Result`和结构化Pass Diagnostic合同
+- [x] 11.1 建立唯一`CharacterPoseCompilationRequest/Result`和结构化Pass Diagnostic合同
 - [ ] 11.2 实现Graph Closure Pass，只从root flat catalog、State引用与Node Definition Graph dependency投影展开State Graph、Subgraph和Linked Pose call closure
 - [ ] 11.3 实现Typed Lowering Pass，只通过Node Definition把authoring node降低为typed IR
 - [ ] 11.4 实现Topology Pass，统一验证typed edge、空间、Graph Role、唯一Output/Assembler/Goal Set/FBBIK、唯一Final Publication requirement和写冲突；递归只由前置Graph Closure验证，具体Writer唯一性只由Runtime Factory验证
@@ -127,7 +127,7 @@
 - [ ] 11.9 实现Bind Family Payload Pass，只把symbolic引用绑定为stage/value/workspace typed handle，不得发现新的Operation、状态页或容量需求
 - [ ] 11.10 实现Seal Program Image Pass，校验全部pass identity、source map、容量、PoseProgramImageHash和schema后发布Projection内不可变Program Image
 - [ ] 11.11 删除中央`CompilationState`、原地跨阶段mutation、重复Graph dependency/拓扑扫描和Runtime二次Compile
-- [ ] 11.12 删除只做参数转发的Compiler入口；保留的外部入口只能调用唯一Compiler Module
+- [x] 11.12 删除只做参数转发的Compiler入口；保留的外部入口只能调用唯一Compiler Module
 
 ## 12. 原子替换Operation与Projection ABI
 

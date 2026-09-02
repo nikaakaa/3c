@@ -907,3 +907,17 @@ Action inbox读取、Lifecycle／sample history mutation、Slot selection genera
 状态：Action Playback事务、Lifecycle Runtime、Animation Slot frame plan、source plan、mutation lease与Runtime类型全部降为程序集内部实现；外部仍只通过既有`IActionPlaybackCommandPublisher`发布command，不能取得内部事务、Slot pending state或直接推进Lifecycle。Program Runtime保持这些实现的唯一调用者，Action采样只在Program入口内读取同一活动事务。
 
 本步不改任何状态、容量、顺序或结果，只删除可形成第二逻辑Owner的公开入口。3C MCP对两个触碰文件错误筛选均为0；任务6.10仍等待Operation／Value全局唯一性审计，不提前勾选，也不单独运行回放。
+
+## Node Definition与统一Port Shape作者链
+
+状态：29个正式`CharacterPoseNodeKind`由唯一`CharacterPoseNodeDefinitionModule`显式登记Definition；重复Kind、重复Payload、缺失Definition、Capability缺失或重复Capability在目录封口时失败。Definition统一提供Payload、字段、固定／条件／动态端口、Graph Role、Execution Domain、Operation Family、Graph dependency、局部／Rig校验、typed lowering、Source Map命名、Canvas创建与Clipboard政策。
+
+Pose Capability改为由Definition投影到共享`GraphAuthoringCapabilityCatalog`；旧Handler Registry、逐节点`compilerBindingId`和Motion Matching第二Capability注册删除。统一Port Shape同时供Canvas、Connection、Clipboard、typed Mutation、Document strict parser、Target Mapper、Reconciler、Mutation preflight与Validator消费，并在字段改变条件端口时验证全部既有edge两端的存在性、方向与value type。Profile Inspector的Pose Source consumer扫描也只读取Definition dependency与能力，不再维护另一套NodeKind分支。
+
+Definition Module不引用Document Store、Reconciler、Mutation Service、Undo、SaveAssets、MCP或事务类型；Agent可见字段、端口、role、identity和JSON schema没有改变。任务10.1至10.8与10.11完成；10.9仍等待旧Compiler Handler实现删除，10.10仍等待Compiler侧剩余NodeKind分支随不可变Pass收口。3C MCP对Definition、Authoring、Document、Mutation、Clipboard、Profile与Compiler接线文件错误筛选均为0；不单独运行回放。
+
+## 唯一Pose Compilation Request／Result入口
+
+状态：新增`CharacterPoseCompilationRequest`、`CharacterPoseCompilationResult`、固定Pass枚举与结构化`CharacterPoseCompilationDiagnostic`。Diagnostic携带Pass、severity、stable reason、Graph／Node／Port、call-site、source path与related identity；Projection Compiler只把结构化错误格式化到既有Build错误集合，不再从异常文本反推Node位置。
+
+旧参数转发Compiler入口和`CharacterPoseNativePlanBuilder`命名删除。`CharacterPresentationProjectionCompiler`构造唯一typed Request并直接调用`CharacterPoseCompilerModule.Compile`，Module只返回Program Image或结构化失败，不保留第二Compiler facade、旧入口别名或兼容分派。任务11.1与11.12完成；中央Compilation State、旧Handler实现和其余独立Pass仍待后续删除。与Node Definition整合后的3C MCP编译错误筛选均为0，`git diff --check`与本change严格OpenSpec校验通过；不单独运行回放。

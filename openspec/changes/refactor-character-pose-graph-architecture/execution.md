@@ -1057,3 +1057,9 @@ Sequence Preview也改为调用唯一Player模块；Player/Slot source range、C
 状态：新增`CharacterPoseStateOperationModule`，迁移State Pose Output、Pose StateMachine、Standard Blend、Parameter／Contribution／Foot Feature合并和Prediction传递。模块直接读取同一State control与Value页，仍由唯一Stage dispatch按原Operation顺序调用。
 
 State selection、source／target availability、curve与profile采样、bone顺序、continuity、discontinuity、Contribution去重和Foot prediction权重均未改变。旧Executor只剩Frame绑定、Stage调度、完成页和静态配置验证，已降到1036行；下一步直接替换旧类型并完成6.8。3C MCP对State模块与Executor错误筛选均为0，不单独运行回放。
+
+## 删除旧Staged Executor
+
+状态：旧`CharacterPoseGraphStagedExecutor`类型与文件已直接删除，替换为749行`CharacterPoseProgramExecutor`。新Executor只绑定Execution Context、组合有限Family模块、按编译Stage顺序dispatch一次Operation并写Completion；原近300行构造期全量配置验证独立为`CharacterPoseProgramExecutorConfiguration`，不参与普通帧。
+
+Program Runtime是新Executor的唯一Owner，入口同步改为`BeginEvaluation／ExecuteStage／CompleteEvaluation`，不存在旧类型wrapper、第二dispatch或兼容路径。Program／Frame／Value巨型字段属于共享Context，Player、State、Inertialization、Composition、Transform、Constraint、Linked和Output实际执行属于各组合模块。任务6.8完成；3C MCP对Executor、Configuration与Program Runtime错误筛选均为0，不单独运行回放。

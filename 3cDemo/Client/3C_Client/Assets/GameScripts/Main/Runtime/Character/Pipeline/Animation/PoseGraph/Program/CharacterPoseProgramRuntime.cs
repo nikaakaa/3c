@@ -255,7 +255,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             m_BlendSpacePlayerJobs =
                 new AnimationSelectedPosePlayerJob[
                     ActorState.PoseStateSources.BlendSpacePlayers.Length];
-            Executor = new CharacterPoseGraphStagedExecutor(
+            Executor = new CharacterPoseProgramExecutor(
                 ExecutionView,
                 FramePages,
                 ActorState.Inertialization,
@@ -291,7 +291,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         CharacterPoseActorState ActorState { get; }
         CharacterPoseProgramFramePages FramePages { get; }
         CharacterPoseProgramTuningState Tuning { get; }
-        CharacterPoseGraphStagedExecutor Executor { get; }
+        CharacterPoseProgramExecutor Executor { get; }
         internal PoseInertializationNativeProgram Inertialization =>
             ActorState.Inertialization;
         internal CharacterPoseProgramSourceRetirementState SourceRetirement =>
@@ -2296,7 +2296,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             }
             PreparedEvaluationState state =
                 m_PreparedEvaluation.Consume(in prepared);
-            Executor.BeginStagedEvaluation(
+            Executor.BeginEvaluation(
                 state.Lineage.PresentationFrame);
             CharacterPoseProgramOutputResult output;
             if (m_HasSequencePreview)
@@ -2328,7 +2328,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                         break;
                     }
                 }
-                output = Executor.CompleteStagedEvaluation();
+                output = Executor.CompleteEvaluation();
             }
             FramePages.RequireEvaluationStagesCompleted(
                 state.Lineage.CompletionIdentity);

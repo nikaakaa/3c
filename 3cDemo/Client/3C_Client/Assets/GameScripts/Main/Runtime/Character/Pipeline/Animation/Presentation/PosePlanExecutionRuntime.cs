@@ -454,9 +454,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             m_SourceModule.MotionMatching?.AcceptsTrajectoryIntent == true;
         internal int ProviderSourceSampleCount =>
             m_ProgramRuntime.ProviderSourceSampleCount;
-        internal CharacterPoseConstraintRuntime PoseConstraints =>
-            m_PoseConstraints;
-
         internal void ResetFootPlacement(in CharacterFootPlacementReset reset) =>
             m_PoseConstraints.ResetFootPlacement(in reset);
 
@@ -1848,6 +1845,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             DisposeStep(m_SourceModule.Dispose, ref failure);
             DisposeStep(m_ProgramRuntime.Dispose, ref failure);
             DisposeStep(RestoreGraphClock, ref failure);
+            DisposeStep(m_PoseConstraints.Dispose, ref failure);
             if (failure != null)
                 throw failure;
         }

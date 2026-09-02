@@ -34,7 +34,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         readonly ActorId m_ActorId;
         readonly CharacterAnimationPresentationBindings m_Bindings;
         readonly PosePlanExecutionRuntime m_PoseRuntime;
-        readonly CharacterPoseConstraintRuntime m_PoseConstraints;
         readonly List<ActionAnimationPlaybackLifecycleSnapshot>
             m_ActionSnapshots;
         readonly List<ActionPresentationTimeSnapshot>
@@ -134,7 +133,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                         presentationWorkspace,
                         footPlacement,
                         ownsGraphClock);
-                m_PoseConstraints = m_PoseRuntime.PoseConstraints;
                 m_CapacityMetrics =
                     m_PoseRuntime.CreateCapacityMetrics(
                         actionPlayback.JournalCapacity,
@@ -145,7 +143,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             {
                 motionMatching?.Dispose();
                 m_PoseRuntime?.Dispose();
-                m_PoseConstraints?.Dispose();
                 throw;
             }
         }
@@ -806,15 +803,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             catch (Exception exception)
             {
                 failure = exception;
-            }
-            try
-            {
-                m_PoseConstraints.Dispose();
-            }
-            catch (Exception exception)
-            {
-                if (failure == null)
-                    failure = exception;
             }
             ClearPublishedState();
             if (failure != null)

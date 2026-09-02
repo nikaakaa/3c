@@ -1003,3 +1003,9 @@ Player、Action Input、Slot、Blend、StateMachine、Inertialization、Additive
 状态：Family Payload Binding Pass现在只递归消费Topology与Symbolic Operation序列，产出`CharacterPoseFamilyPayloadBinding`。Result把Parameter／Blend／Constraint／Player／StateMachine／Slot／Linked Pose等已绑定Family页、唯一Operation序列、Source Map、Graph dependency和物理布局计数分开保存；原中央`CompilationState`改为Pass私有`BindingBuilder`，不再跨Pass流动。
 
 Compiler入口随后按固定顺序运行Stage Schedule、Value Lifetime和Workspace Plan，并由独立`CharacterPoseProgramImageSealPass`绑定Linked Fragment stage range、计算原样Hash并唯一构造Program Image。原Binding Pass中的Hash与Image构造已删除，所有Hash token、数组顺序、Workspace数值和构造参数保持不变。11.9仍等待把万能Operation改为分Family typed payload handle后闭合；3C MCP对Compiler、Binding Result／Pass与Seal Pass错误筛选均为0，不单独运行回放。
+
+## 收口Constraint Runtime销毁所有权
+
+状态：`PosePlanExecutionRuntime`成为`CharacterPoseConstraintRuntime`的唯一生命周期Owner，并在原根销毁时机负责Dispose；根`CharacterAnimationPresentationRuntime`删除Constraint字段、转发属性、构造失败清理和第二次Dispose。Pose协调层内部仍在相同位置调用Constraint Frame，业务输入和执行顺序不变。
+
+销毁顺序保持Source／Motion Matching、Program、Graph Clock、Constraint，任一前置Dispose失败仍继续清理Constraint并汇总原异常。任务5.10继续推进，尚需对账Projection replacement、Preview与Fault；3C MCP对Pose协调层和根Runtime错误筛选均为0，不单独运行回放。

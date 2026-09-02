@@ -120,6 +120,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         readonly CharacterPoseWorldContextAdapter m_WorldContext;
         readonly int m_FootPlacementWeightParameterIndex;
         CharacterPoseProgramFrameLease m_ActiveFrameLease;
+        CharacterPoseProgramFrameLease m_CommittingFrameLease;
         PreparedEvaluationPage m_PreparedEvaluation;
         CharacterPoseGraphNativeBinding m_CommittedEvaluationFrame;
         CharacterPoseGraphNativeBinding m_PendingCompletedEvaluationFrame;
@@ -507,7 +508,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         internal void BeginFrame(CharacterPoseProgramFrameLease lease)
         {
             RequireAlive();
-            if (!lease.IsValid || m_ActiveFrameLease.IsValid)
+            if (!lease.IsValid ||
+                m_ActiveFrameLease.IsValid ||
+                m_CommittingFrameLease.IsValid)
             {
                 throw new InvalidOperationException(
                     "Character Pose Program frame cannot begin.");
@@ -519,15 +522,160 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         internal void CommitFrame(CharacterPoseProgramFrameLease lease)
         {
             RequireFrame(lease);
+            ActorState.Inertialization.CommitFrame();
             FramePages.CommitFrame();
             m_ActiveFrameLease = default;
+            m_CommittingFrameLease = lease;
         }
 
         internal void DiscardFrame(CharacterPoseProgramFrameLease lease)
         {
             RequireFrame(lease);
-            FramePages.DiscardFrame();
+            Exception failure = null;
+            if (FramePages.HasPendingEvaluationFrame)
+            {
+                ulong completionIdentity =
+                    FramePages.PendingEvaluationCompletionIdentity;
+                DiscardStep(
+                    () => FramePages.DiscardEvaluationFrame(
+                        completionIdentity),
+                    ref failure);
+            }
+            if (ActorState.Inertialization.HasOpenFrame)
+            {
+                DiscardStep(
+                    ActorState.Inertialization.DiscardFrame,
+                    ref failure);
+            }
+            DiscardStep(FramePages.DiscardFrame, ref failure);
+            m_PreparedEvaluation.Clear();
+            m_PendingCompletedEvaluationFrame = default;
+            m_HasPendingCompletedEvaluationFrame = false;
             m_ActiveFrameLease = default;
+            m_CommittingFrameLease = default;
+            if (failure != null)
+            {
+                throw new AggregateException(
+                    "Character Pose Program frame discard failed.",
+                    failure);
+            }
+        }
+
+        internal void BeginActorStateFrame(
+            CharacterPoseProgramFrameLease lease,
+            CharacterLinkedPoseRuntimeSession linkedPose,
+            IReadOnlyList<CharacterLinkedPoseGroupProjectionDescriptor> groups,
+            ulong resetCompletionIdentity)
+        {
+            RequireFrame(lease);
+            bool nodeFramesOpen = false;
+            try
+            {
+                PrepareLinkedPoseSelection(linkedPose, groups);
+                ActorState.Inertialization.BeginFrame();
+                for (int i = 0; i < ActorState.Routes.Length; i++)
+                    ActorState.Routes[i].BeginFrame();
+                for (int i = 0;
+                     i < ActorState.RootOrientationWarps.Length;
+                     i++)
+                {
+                    ActorState.RootOrientationWarps[i].BeginFrame();
+                }
+                BeginNodeFrames();
+                nodeFramesOpen = true;
+                ApplyLinkedPoseGenerationResets(resetCompletionIdentity);
+            }
+            catch
+            {
+                if (nodeFramesOpen)
+                    DiscardNodeFrames();
+                for (int i = ActorState.Routes.Length - 1; i >= 0; i--)
+                {
+                    if (ActorState.Routes[i].HasOpenFrame)
+                        ActorState.Routes[i].DiscardFrame();
+                }
+                for (int i = ActorState.RootOrientationWarps.Length - 1;
+                     i >= 0;
+                     i--)
+                {
+                    if (ActorState.RootOrientationWarps[i].HasOpenFrame)
+                        ActorState.RootOrientationWarps[i].DiscardFrame();
+                }
+                if (ActorState.Inertialization.HasOpenFrame)
+                    ActorState.Inertialization.DiscardFrame();
+                LinkedFragments.Clear();
+                throw;
+            }
+        }
+
+        internal void CommitActorStateFrame(
+            CharacterPoseProgramFrameLease lease)
+        {
+            RequireAlive();
+            if (!lease.IsValid ||
+                !m_CommittingFrameLease.IsValid ||
+                lease.Lineage != m_CommittingFrameLease.Lineage)
+            {
+                throw new InvalidOperationException(
+                    "Character Pose Program committing frame lease is stale.");
+            }
+            for (int i = 0; i < ActorState.Routes.Length; i++)
+                ActorState.Routes[i].CommitFrame();
+            for (int i = 0;
+                 i < ActorState.RootOrientationWarps.Length;
+                 i++)
+            {
+                ActorState.RootOrientationWarps[i].CommitFrame();
+            }
+            for (int i = 0; i < ActorState.Stacks.Length; i++)
+                ActorState.Stacks[i].CommitFrame();
+            for (int i = 0; i < ActorState.DirectPlayers.Length; i++)
+                ActorState.DirectPlayers[i].CommitFrame();
+            ActorState.PoseStateSources.CommitFrame();
+            m_CommittingFrameLease = default;
+        }
+
+        internal void DiscardActorNodeFrames(
+            CharacterPoseProgramFrameLease lease)
+        {
+            RequireFrame(lease);
+            Exception failure = null;
+            for (int i = ActorState.Routes.Length - 1; i >= 0; i--)
+            {
+                CharacterAnimationTransitionRouteRuntime route =
+                    ActorState.Routes[i];
+                if (route.HasOpenFrame)
+                    DiscardStep(route.DiscardFrame, ref failure);
+            }
+            DiscardStep(DiscardNodeFrames, ref failure);
+            if (failure != null)
+            {
+                throw new AggregateException(
+                    "Character Pose Program actor node discard failed.",
+                    failure);
+            }
+        }
+
+        internal void DiscardRootOrientationWarpFrames(
+            CharacterPoseProgramFrameLease lease)
+        {
+            RequireFrame(lease);
+            Exception failure = null;
+            for (int i = ActorState.RootOrientationWarps.Length - 1;
+                 i >= 0;
+                 i--)
+            {
+                RootOrientationWarpRuntime warp =
+                    ActorState.RootOrientationWarps[i];
+                if (warp.HasOpenFrame)
+                    DiscardStep(warp.DiscardFrame, ref failure);
+            }
+            if (failure != null)
+            {
+                throw new AggregateException(
+                    "Character Pose Program Root Orientation Warp discard failed.",
+                    failure);
+            }
         }
 
         internal void BeginEvaluationFrame(
@@ -559,17 +707,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             FramePages.CommitEvaluationFrame(completionIdentity);
             m_CommittedEvaluationFrame = m_PendingCompletedEvaluationFrame;
             m_HasCommittedEvaluationFrame = true;
-            m_PendingCompletedEvaluationFrame = default;
-            m_HasPendingCompletedEvaluationFrame = false;
-        }
-
-        internal void DiscardEvaluationFrame(
-            CharacterPoseProgramFrameLease lease,
-            ulong completionIdentity)
-        {
-            RequireFrame(lease);
-            FramePages.DiscardEvaluationFrame(completionIdentity);
-            m_PreparedEvaluation.Clear();
             m_PendingCompletedEvaluationFrame = default;
             m_HasPendingCompletedEvaluationFrame = false;
         }
@@ -1016,11 +1153,52 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             }
         }
 
+        void BeginNodeFrames()
+        {
+            int stackCount = 0;
+            int directPlayerCount = 0;
+            bool poseStateSourcesOpen = false;
+            try
+            {
+                ActorState.PoseStateSources.BeginFrame();
+                poseStateSourcesOpen = true;
+                for (; stackCount < ActorState.Stacks.Length; stackCount++)
+                    ActorState.Stacks[stackCount].BeginFrame();
+                for (;
+                     directPlayerCount < ActorState.DirectPlayers.Length;
+                     directPlayerCount++)
+                {
+                    ActorState.DirectPlayers[directPlayerCount].BeginFrame();
+                }
+            }
+            catch
+            {
+                for (int i = directPlayerCount - 1; i >= 0; i--)
+                    ActorState.DirectPlayers[i].DiscardFrame();
+                for (int i = stackCount - 1; i >= 0; i--)
+                    ActorState.Stacks[i].DiscardFrame();
+                if (poseStateSourcesOpen)
+                    ActorState.PoseStateSources.DiscardFrame();
+                throw;
+            }
+        }
+
+        void DiscardNodeFrames()
+        {
+            for (int i = ActorState.DirectPlayers.Length - 1; i >= 0; i--)
+                ActorState.DirectPlayers[i].DiscardFrame();
+            for (int i = ActorState.Stacks.Length - 1; i >= 0; i--)
+                ActorState.Stacks[i].DiscardFrame();
+            ActorState.PoseStateSources.DiscardFrame();
+        }
+
         public void Dispose()
         {
             if (m_Disposed)
                 return;
             m_Disposed = true;
+            m_ActiveFrameLease = default;
+            m_CommittingFrameLease = default;
             m_PreparedEvaluation.Clear();
             m_CommittedEvaluationFrame = default;
             m_PendingCompletedEvaluationFrame = default;
@@ -1061,6 +1239,20 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             try
             {
                 dispose();
+            }
+            catch (Exception exception)
+            {
+                failure = failure == null
+                    ? exception
+                    : new AggregateException(failure, exception);
+            }
+        }
+
+        static void DiscardStep(Action discard, ref Exception failure)
+        {
+            try
+            {
+                discard();
             }
             catch (Exception exception)
             {

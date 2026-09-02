@@ -657,7 +657,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                 throw new InvalidOperationException(
                     "Pose Plan Motion Matching completion from the previous frame was not consumed.");
             }
-            bool modulesOpen = false;
             bool poseConstraintsOpen = false;
             bool sourceOpen = false;
             bool publicationOpen = false;
@@ -680,17 +679,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                 m_PendingFrameOutcome = AnimationPresentationFrameOutcome.None;
                 m_ProgramRuntime.BeginFrame(programLease);
                 m_ActorDiagnosticsProjector.BeginFrame();
-                m_ProgramRuntime.PrepareLinkedPoseSelection(
+                m_ProgramRuntime.BeginActorStateFrame(
+                    programLease,
                     linkedPose,
-                    m_Projection.LinkedPose.Groups);
-                m_InertializationPlan.BeginFrame();
-                for (int i = 0; i < m_StackRoutes.Length; i++)
-                    m_StackRoutes[i].BeginFrame();
-                for (int i = 0; i < m_RootOrientationWarps.Length; i++)
-                    m_RootOrientationWarps[i].BeginFrame();
-                BeginPendingModuleFrames();
-                modulesOpen = true;
-                m_ProgramRuntime.ApplyLinkedPoseGenerationResets(
+                    m_Projection.LinkedPose.Groups,
                     m_CompletionIdentity);
                 m_HasOpenFrame = true;
                 m_ActiveFrameLease = programLease;
@@ -702,20 +694,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                     m_FinalPublication.DiscardPending(publicationLease);
                 if (poseConstraintsOpen)
                     m_PoseConstraints.DiscardFrame(constraintLease);
-                if (modulesOpen)
-                    DiscardPendingModuleFrames();
-                for (int i = m_StackRoutes.Length - 1; i >= 0; i--)
-                {
-                    if (m_StackRoutes[i].HasOpenFrame)
-                        m_StackRoutes[i].DiscardFrame();
-                }
-                for (int i = m_RootOrientationWarps.Length - 1; i >= 0; i--)
-                {
-                    if (m_RootOrientationWarps[i].HasOpenFrame)
-                        m_RootOrientationWarps[i].DiscardFrame();
-                }
-                if (m_InertializationPlan.HasOpenFrame)
-                    m_InertializationPlan.DiscardFrame();
                 if (m_ProgramRuntime.HasOpenFrame)
                     m_ProgramRuntime.DiscardFrame(programLease);
                 if (sourceOpen)
@@ -750,18 +728,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             m_ProgramRuntime.CommitEvaluationFrame(
                 lease,
                 m_ProgramRuntime.PendingCompletedEvaluationCompletionIdentity);
-            m_InertializationPlan.CommitFrame();
             m_ProgramRuntime.CommitFrame(lease);
             m_SourceModule.CommitFrame(sourceLease);
-            for (int i = 0; i < m_StackRoutes.Length; i++)
-                m_StackRoutes[i].CommitFrame();
-            for (int i = 0; i < m_RootOrientationWarps.Length; i++)
-                m_RootOrientationWarps[i].CommitFrame();
-            for (int i = 0; i < m_Stacks.Length; i++)
-                m_Stacks[i].CommitFrame();
-            for (int i = 0; i < m_DirectPlayers.Length; i++)
-                m_DirectPlayers[i].CommitFrame();
-            m_PoseStateSources.CommitFrame();
+            m_ProgramRuntime.CommitActorStateFrame(lease);
             m_PoseConstraints.SealFrame(constraintLease);
             m_HasOpenFrame = false;
             m_ActiveFrameLease = default;
@@ -891,37 +860,17 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             DiscardStep(
                 () => m_SourceModule.DiscardFrame(sourceLease),
                 ref failure);
-            for (int i = m_StackRoutes.Length - 1; i >= 0; i--)
-            {
-                CharacterAnimationTransitionRouteRuntime route = m_StackRoutes[i];
-                if (route.HasOpenFrame)
-                    DiscardStep(route.DiscardFrame, ref failure);
-            }
             DiscardStep(
-                DiscardPendingModuleFrames,
+                () => m_ProgramRuntime.DiscardActorNodeFrames(lease),
                 ref failure);
-            for (int i = m_RootOrientationWarps.Length - 1; i >= 0; i--)
-            {
-                RootOrientationWarpRuntime warp = m_RootOrientationWarps[i];
-                if (warp.HasOpenFrame)
-                    DiscardStep(warp.DiscardFrame, ref failure);
-            }
-            if (m_ProgramRuntime.HasPendingEvaluationFrame)
-            {
-                ulong pendingCompletionIdentity =
-                    m_ProgramRuntime.PendingEvaluationCompletionIdentity;
-                DiscardStep(
-                    () => m_ProgramRuntime.DiscardEvaluationFrame(
-                        lease,
-                        pendingCompletionIdentity),
-                    ref failure);
-            }
-            if (m_InertializationPlan.HasOpenFrame)
-            {
-                DiscardStep(
-                    m_InertializationPlan.DiscardFrame,
-                    ref failure);
-            }
+            m_SourceModule.ClearActionSlotReleaseCompletions();
+            m_SourceModule.CancelReleaseDiagnostics();
+            m_SourceModule.ClearUsage();
+            m_MotionMatchingHistoryCompletionCount = 0;
+            DiscardStep(
+                () => m_ProgramRuntime
+                    .DiscardRootOrientationWarpFrames(lease),
+                ref failure);
             if (m_ProgramRuntime.HasOpenFrame)
             {
                 DiscardStep(
@@ -2815,45 +2764,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
         void DiscardPendingReleasePreparation()
         {
             m_SourceRetirementState.DiscardFrame();
-        }
-
-        void BeginPendingModuleFrames()
-        {
-            int stackCount = 0;
-            int directPlayerCount = 0;
-            bool poseStateSourcesOpen = false;
-            try
-            {
-                m_PoseStateSources.BeginFrame();
-                poseStateSourcesOpen = true;
-                for (; stackCount < m_Stacks.Length; stackCount++)
-                    m_Stacks[stackCount].BeginFrame();
-                for (; directPlayerCount < m_DirectPlayers.Length; directPlayerCount++)
-                    m_DirectPlayers[directPlayerCount].BeginFrame();
-            }
-            catch
-            {
-                for (int i = directPlayerCount - 1; i >= 0; i--)
-                    m_DirectPlayers[i].DiscardFrame();
-                for (int i = stackCount - 1; i >= 0; i--)
-                    m_Stacks[i].DiscardFrame();
-                if (poseStateSourcesOpen)
-                    m_PoseStateSources.DiscardFrame();
-                throw;
-            }
-        }
-
-        void DiscardPendingModuleFrames()
-        {
-            for (int i = m_DirectPlayers.Length - 1; i >= 0; i--)
-                m_DirectPlayers[i].DiscardFrame();
-            for (int i = m_Stacks.Length - 1; i >= 0; i--)
-                m_Stacks[i].DiscardFrame();
-            m_PoseStateSources.DiscardFrame();
-            m_SourceModule.ClearActionSlotReleaseCompletions();
-            m_SourceModule.CancelReleaseDiagnostics();
-            m_SourceModule.ClearUsage();
-            m_MotionMatchingHistoryCompletionCount = 0;
         }
 
         void RequireMutation(

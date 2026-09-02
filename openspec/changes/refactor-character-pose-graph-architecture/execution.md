@@ -853,3 +853,9 @@ Linked Group incoming selection、Program Frame call control写入、Entry Fragm
 状态：`CharacterPoseProgramRuntime.Advance`现在按原顺序执行Preview覆盖、PoseState Prepare、活动Stack Route release刷新、Animation Slot control发布、Blend Stack时钟推进和Clip／BlendSpace／Motion Matching source逻辑推进；Source Module只向它提供同generation的只读Source Tuning View。`FinalizePoseStateFrame`同样迁入Program Runtime，在同一Frame Pages上执行Transition求值并发布活动Root Orientation Warp control。
 
 旧Pose Runtime的两个公开阶段入口只验证根Mutation并传递Fact、Parameter、Workspace与typed Tuning，不再遍历PoseState、Route、Stack或Root Warp，也不再写Program control页。Preview早退、Linked Fragment gating、循环顺序、Delta、Transition workspace、Root Warp Prepare时机和异常合同保持不变；任务6.2继续推进，但Player／Source准备、Action／Slot生命周期与Commit／Discard仍待迁移，因此不提前勾选。3C MCP对五个相关文件错误筛选均为0；全局外部Foot诊断ABI错误不由本change兼容，不单独运行回放。
+
+## Program Actor帧生命周期收口
+
+状态：Program Runtime新增Actor State Frame的Begin、Commit和分阶段Discard入口，整体接管Inertialization、Transition Route、Root Orientation Warp、PoseState Source、Blend Stack与Direct Player的帧打开、提交和回滚循环。Program Frame Commit继续保持Evaluation页、Inertialization、Frame Pages、Source Module、Actor节点、Constraint的原相对顺序；为保留Source提交夹在Program页与Actor节点之间的既有顺序，Program Runtime用typed committing lease验证后一阶段提交，不向外暴露内部对象。
+
+旧Pose Runtime删除`BeginPendingModuleFrames`／`DiscardPendingModuleFrames`及全部节点生命周期循环，只在原Source清理位置调用Program的Node Discard与Root Warp Discard两个阶段。Evaluation、Inertialization和Frame Pages的回滚统一进入Program `DiscardFrame`，并继续聚合失败；Linked selection清理、Source usage清理、Constraint与Publication顺序不变。任务6.2与5.10继续推进但尚未闭合Action／Slot／source preparation及整体Dispose审计。3C MCP对相关Runtime文件错误筛选均为0；不处理并行诊断Attribute迁移错误，也不单独运行回放。

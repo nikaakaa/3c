@@ -681,3 +681,11 @@ Discard、Reset与Dispose继续在原时机清空Demand，但现在只调用Fram
 Actor State统一负责Stack、Direct Player、Clip Player、Blend Space Player与Inertialization的销毁，顺序与异常聚合规则保持不变。Source物理资源仍由`CharacterPoseSourceModule`拥有，Constraint Bank、Final Publication、Diagnostics、Program Frame Pages、Program Tuning与静态Program存储均未进入Actor State，因此没有复制其它Module真相。
 
 任务5.4暂不勾选：`ActionPlaybackInput` lifecycle／command cursor尚未从外层执行器迁入Actor State，Slot控制的跨帧状态也仍需继续对账。Unity MCP已显式路由到`3C_Client@e852139597e42532`完成脚本编译；本次两个文件的错误筛选均为0。全局错误只来自并行Foot生成采样迁移缺失`KK.GeneratedDiagnosticSampling` ABI，本步不添加兼容类型，也不把外部编译阻塞误报为PoseGraph回归；不单独运行回放。
+
+## ActionPlayback与Slot跨帧状态归入Actor State
+
+状态：`CharacterPoseActorState`继续接管唯一`CharacterActionPlaybackRuntime`与`AnimationSlotRuntime`。其中Action对象保存command inbox、`PendingFirstSample／Selected／Retained／Retired` lifecycle、Latest Command Sequence和Committed sample history；Slot对象保存Current／Outgoing／Retained Action、Selection Generation与固定Pending页。外层`CharacterAnimationPresentationRuntime`已删除这两个存储字段，只在构造期创建后一次交给Pose Runtime的Actor State，并经只读访问器调用同一实例。
+
+原外层`m_NextPresentationRequestSequence`也迁入Actor State，Slot Action source发布和Slot target发布统一从同一递增cursor取号。Begin、sampling、usage／retirement、Validate、Seal、Discard和Reset调用顺序未改变；本步只改变跨帧状态归属，没有把节点执行阶段提前迁入Program Runtime，任务6.2仍保持未完成。
+
+全仓审计确认`ActionAnimationPlaybackLifecycleRegistry`只有`CharacterActionPlaybackRuntime`一处构造，外层不再保存Action lifecycle、Slot runtime或presentation request cursor。Actor State也不引用Animancer、Physical Source Registry、Constraint Bank、Final Publication、Diagnostics Publisher或其Committed页；逻辑Source Retirement只保存Program发布的usage／permission与Action release协议状态，不拥有物理资源。由此任务5.4与5.9完成。Unity MCP显式路由到`3C_Client@e852139597e42532`后，三个触碰文件的编译错误筛选均为0；全局仍只被并行Foot 0.3 ABI迁移阻塞，不新增兼容路径，也不单独运行回放。

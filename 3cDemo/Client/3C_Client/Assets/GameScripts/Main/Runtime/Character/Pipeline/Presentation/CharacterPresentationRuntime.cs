@@ -33,9 +33,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
 
         readonly ActorId m_ActorId;
         readonly CharacterAnimationPresentationBindings m_Bindings;
-        readonly CharacterActionPlaybackRuntime m_ActionPlayback;
         readonly ActionPresentationSamplingRuntime m_ActionSampling;
-        readonly AnimationSlotRuntime m_AnimationSlots;
         readonly PresentationFrameWorkspace m_FrameWorkspace;
         readonly PosePlanExecutionRuntime m_PoseRuntime;
         readonly CharacterPoseConstraintRuntime m_PoseConstraints;
@@ -70,12 +68,15 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             m_CapacityMetrics;
         readonly int m_ActionSourceSampleCapacity;
         readonly int m_ProviderSourceSampleCapacity;
+        CharacterActionPlaybackRuntime m_ActionPlayback =>
+            m_PoseRuntime.ActionPlayback;
+        AnimationSlotRuntime m_AnimationSlots =>
+            m_PoseRuntime.AnimationSlots;
         CharacterPoseTuningRuntimeBinding m_TuningBinding;
         CharacterPoseTuningTargetIdentity m_TuningTarget;
 
         ulong m_TuningGeneration = 1;
         ulong m_NextFrameTransactionIdentity;
-        ulong m_NextPresentationRequestSequence;
         CharacterFootIkCaptureBinding m_FootIkCaptureBinding;
         AnimationPresentationDebugView m_DebugView;
         AnimationPresentationFault m_Fault;
@@ -101,22 +102,22 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     nameof(actorId));
             m_Bindings = bindings ??
                 throw new ArgumentNullException(nameof(bindings));
-            m_ActionPlayback =
+            var actionPlayback =
                 new CharacterActionPlaybackRuntime(
                     bindings.ActionPlayback);
             m_ActionSampling =
                 new ActionPresentationSamplingRuntime(
                     bindings.ActionPlayback);
-            m_AnimationSlots =
+            var animationSlots =
                 new AnimationSlotRuntime(
                     bindings.ActionPlayback);
-            int frameCapacity = m_ActionPlayback.FrameCapacity;
+            int frameCapacity = actionPlayback.FrameCapacity;
             int providerCapacity =
                 bindings.Projection.MotionMatching?.NodeBindingCount ?? 0;
             m_ActionSourceSampleCapacity = frameCapacity;
             m_ProviderSourceSampleCapacity = providerCapacity;
             int releaseCompletionCapacity =
-                m_ActionPlayback.BackendReleaseCompletionCapacity;
+                actionPlayback.BackendReleaseCompletionCapacity;
             int failureCapacity = Math.Max(
                 1,
                 checked(
@@ -168,14 +169,16 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                         rigBinding,
                         rootHierarchy,
                         bindings.Projection,
+                        actionPlayback,
+                        animationSlots,
                         footPlacement,
                         ownsGraphClock);
                 m_PoseConstraints = m_PoseRuntime.PoseConstraints;
                 m_CapacityMetrics =
                     m_PoseRuntime.CreateCapacityMetrics(
-                        m_ActionPlayback.JournalCapacity,
+                        actionPlayback.JournalCapacity,
                         m_ActionSampling.JournalCapacity,
-                        Math.Max(1, m_AnimationSlots.SlotCount));
+                        Math.Max(1, animationSlots.SlotCount));
                 m_MotionMatching = motionMatching;
             }
             catch
@@ -1247,7 +1250,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                         in frame,
                         in binding,
                         sourcePlan.SelectionGeneration,
-                        NextPresentationRequestSequence(),
+                        m_PoseRuntime.NextPresentationRequestSequence(),
                         m_ActionSourceSamples);
                 }
                 else
@@ -1256,7 +1259,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                         in frame,
                         in binding,
                         sourcePlan.SelectionGeneration,
-                        NextPresentationRequestSequence(),
+                        m_PoseRuntime.NextPresentationRequestSequence(),
                         m_ActionSourceSamples);
                 }
             }
@@ -1272,7 +1275,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 m_PoseRuntime.PublishActionSourcePose(
                     plan.SlotId,
                     plan.SlotNodeId,
-                    NextPresentationRequestSequence());
+                    m_PoseRuntime.NextPresentationRequestSequence());
             }
         }
 
@@ -1634,17 +1637,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 m_MotionMatching ??
                 throw new InvalidOperationException(
                     "Presentation has no Motion Matching module.");
-
-        ulong NextPresentationRequestSequence()
-        {
-            m_NextPresentationRequestSequence++;
-            if (m_NextPresentationRequestSequence == 0)
-            {
-                throw new InvalidOperationException(
-                    "Animation Presentation request identity was exhausted.");
-            }
-            return m_NextPresentationRequestSequence;
-        }
 
         void ClearPublishedState()
         {

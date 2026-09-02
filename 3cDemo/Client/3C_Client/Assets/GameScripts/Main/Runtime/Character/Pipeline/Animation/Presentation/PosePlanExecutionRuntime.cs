@@ -263,6 +263,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             CharacterAnimationRigBinding rigBinding,
             CharacterRootHierarchyBinding rootHierarchy,
             CharacterPresentationProjection projection,
+            CharacterActionPlaybackRuntime actionPlayback,
+            AnimationSlotRuntime animationSlots,
             CharacterFootPlacementModule footPlacement,
             bool managesGraphClock)
         {
@@ -601,6 +603,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                 rootOrientationWarps,
                 inertializationProgram,
                 nodeRuntimeIndex,
+                actionPlayback,
+                animationSlots,
                 sourceModule.Capacity);
             m_MotionMatchingHistoryCompletions =
                 new MotionMatchingPosePlanHistoryCompletion[
@@ -638,6 +642,13 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
         internal bool HasFootPlacement => m_PoseConstraints.HasFootPlacement;
         internal CharacterPoseConstraintRuntime PoseConstraints =>
             m_PoseConstraints;
+        internal CharacterActionPlaybackRuntime ActionPlayback =>
+            m_ActorState.ActionPlayback;
+        internal AnimationSlotRuntime AnimationSlots =>
+            m_ActorState.AnimationSlots;
+
+        internal ulong NextPresentationRequestSequence() =>
+            m_ActorState.NextPresentationRequestSequence();
 
         internal void ResetFootPlacement(in CharacterFootPlacementReset reset) =>
             m_PoseConstraints.ResetFootPlacement(in reset);

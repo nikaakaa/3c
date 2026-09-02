@@ -1,10 +1,12 @@
 using System;
 using ThirdPersonCharacter.Pipeline.Animation.BlendStack;
+using ThirdPersonCharacter.Pipeline.Presentation;
 
 namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
 {
     internal sealed class CharacterPoseActorState : IDisposable
     {
+        ulong m_NextPresentationRequestSequence;
         bool m_Disposed;
 
         internal CharacterPoseActorState(
@@ -15,6 +17,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             RootOrientationWarpRuntime[] rootOrientationWarps,
             PoseInertializationNativeProgram inertialization,
             CharacterPoseProgramNodeRuntimeIndex nodeRuntimeIndex,
+            CharacterActionPlaybackRuntime actionPlayback,
+            AnimationSlotRuntime animationSlots,
             int sourceRetirementCapacity)
         {
             Stacks = stacks ?? throw new ArgumentNullException(nameof(stacks));
@@ -29,6 +33,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                 throw new ArgumentNullException(nameof(inertialization));
             NodeRuntimeIndex = nodeRuntimeIndex ??
                 throw new ArgumentNullException(nameof(nodeRuntimeIndex));
+            ActionPlayback = actionPlayback ??
+                throw new ArgumentNullException(nameof(actionPlayback));
+            AnimationSlots = animationSlots ??
+                throw new ArgumentNullException(nameof(animationSlots));
             if (Stacks.Length != Routes.Length ||
                 sourceRetirementCapacity <= 0)
             {
@@ -47,9 +55,22 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
         internal RootOrientationWarpRuntime[] RootOrientationWarps { get; }
         internal PoseInertializationNativeProgram Inertialization { get; }
         internal CharacterPoseProgramNodeRuntimeIndex NodeRuntimeIndex { get; }
+        internal CharacterActionPlaybackRuntime ActionPlayback { get; }
+        internal AnimationSlotRuntime AnimationSlots { get; }
         internal CharacterPoseProgramSourceRetirementState SourceRetirement
         {
             get;
+        }
+
+        internal ulong NextPresentationRequestSequence()
+        {
+            m_NextPresentationRequestSequence++;
+            if (m_NextPresentationRequestSequence == 0)
+            {
+                throw new InvalidOperationException(
+                    "Animation Presentation request identity was exhausted.");
+            }
+            return m_NextPresentationRequestSequence;
         }
 
         public void Dispose()

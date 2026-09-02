@@ -1135,3 +1135,9 @@ Action／Slot／Workspace打开与关闭顺序、Backend acknowledgement、reque
 状态：新增`CharacterPoseTuningCoordinator`，唯一协调Program、Source与Constraint三个分区的Candidate Prepare／Commit／Discard并持有统一Committed Snapshot。旧Pose外层删除分区调参顺序和Snapshot构造，只在新Frame打开时读取协调器的同generation Committed结果。
 
 Source先准备、Program次之、Constraint最后准备以及Program／Source／Constraint提交顺序保持不变；任一失败仍只Discard已经准备的Candidate，不修改Committed状态。3C MCP全脚本重编且C#错误为0，不单独运行回放。
+
+## 拆出根Pose Frame Coordinator
+
+状态：新增`CharacterPoseFrameCoordinator`，唯一持有Completion计数、活动Program lease、Commit验证位、Pending Outcome与Frame completion context，并接管Begin、Source Demand、Source Prepare、Animancer Evaluate Barrier、Program／Constraint／Publication typed结果、Seal、Discard、Committed Finalize和Pose State推进。旧Pose外层不再保存或修改任何根帧状态，只保留当前上层API转交。
+
+Begin／Prepare／Evaluate／Final Write／Node Complete／Seal顺序、Barrier失败清理、Writer后提交政策、Reset时completion递增和Profiler Marker名称保持不变；没有复制第二Frame事务、Workspace或Final页。旧Pose外层由1417行降至863行。3C MCP全脚本重编且C#错误为0，不单独运行回放。

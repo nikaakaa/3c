@@ -9,7 +9,6 @@ using ThirdPersonCharacter.Pipeline.Animation.Sources;
 using ThirdPersonCharacter.Pipeline.Presentation;
 using ThirdPersonCharacter.Pipeline.Presentation.Animancer;
 using ThirdPersonSimulation;
-using Unity.Profiling;
 
 namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
 {
@@ -17,34 +16,11 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
         IDisposable,
         ICharacterPoseCommittedDiagnosticsEventSink
     {
-        static readonly ProfilerMarker PrepareMarker =
-            new ProfilerMarker("ThirdPerson.Presentation.Animation.Prepare");
-        static readonly ProfilerMarker PrepareWorkspaceMarker =
-            new ProfilerMarker("ThirdPerson.Presentation.Animation.Prepare.Workspace");
-        static readonly ProfilerMarker PrepareStackMarker =
-            new ProfilerMarker("ThirdPerson.Presentation.Animation.Prepare.Stack");
-        static readonly ProfilerMarker PrepareDirectMarker =
-            new ProfilerMarker("ThirdPerson.Presentation.Animation.Prepare.Direct");
-        static readonly ProfilerMarker PrepareSequenceMarker =
-            new ProfilerMarker("ThirdPerson.Presentation.Animation.Prepare.Clip");
-        static readonly ProfilerMarker PrepareBlendSpaceMarker =
-            new ProfilerMarker("ThirdPerson.Presentation.Animation.Prepare.BlendSpace");
-        static readonly ProfilerMarker ValidateMarker =
-            new ProfilerMarker("ThirdPerson.Presentation.Animation.Validate");
-        static readonly ProfilerMarker GraphEvaluateMarker =
-            new ProfilerMarker("ThirdPerson.Presentation.Animation.GraphEvaluate");
-        static readonly ProfilerMarker PoseGraphExecuteMarker =
-            new ProfilerMarker("ThirdPerson.Presentation.Animation.PoseGraphExecute");
-        static readonly ProfilerMarker FinalWriteMarker =
-            new ProfilerMarker("ThirdPerson.Presentation.Animation.FinalWrite");
-        static readonly ProfilerMarker SealMarker =
-            new ProfilerMarker("ThirdPerson.Presentation.Animation.Seal");
-        static readonly ProfilerMarker DiagnosticsMarker =
-            new ProfilerMarker("ThirdPerson.Presentation.Animation.Diagnostics");
         readonly AnimancerComponent m_Animancer;
         readonly CharacterPresentationProjection m_Projection;
         readonly CharacterPoseRuntimeComposition m_Modules;
         readonly CharacterPoseTuningCoordinator m_Tuning;
+        readonly CharacterPoseFrameCoordinator m_Frame;
 
         CharacterPoseProgramRuntime m_ProgramRuntime => m_Modules.Program;
         CharacterPoseConstraintRuntime m_PoseConstraints =>
@@ -58,12 +34,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
         PoseInertializationNativeProgram m_InertializationPlan =>
             m_ProgramRuntime.Inertialization;
 
-        ulong m_CompletionIdentity = 1;
-        ulong m_FrameCompletionContext;
-        CharacterPoseProgramFrameLease m_ActiveFrameLease;
-        bool m_CommitValidated;
-        bool m_HasOpenFrame;
-        AnimationPresentationFrameOutcome m_PendingFrameOutcome;
         bool m_Disposed;
 
         internal PosePlanExecutionRuntime(
@@ -103,7 +73,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                     presentationWorkspace,
                     footPlacement,
                     managesGraphClock,
-                    m_CompletionIdentity,
+                    1,
                     this);
                 m_Modules = modules;
                 m_Tuning = new CharacterPoseTuningCoordinator(
@@ -111,6 +81,11 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                     m_SourceModule,
                     m_PoseConstraints,
                     1);
+                m_Frame = new CharacterPoseFrameCoordinator(
+                    animancer,
+                    projection,
+                    m_Modules,
+                    m_Tuning);
             }
             catch
             {
@@ -141,22 +116,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
 
         internal void DiscardPoseFrameAfterBarrier(
             CharacterPoseConstraintFrameLease constraintLease,
-            CharacterFinalPosePublicationFrameLease publicationLease)
-        {
-            Exception failure = null;
-            DiscardStep(
-                () => m_FinalPublication.DiscardPending(publicationLease),
-                ref failure);
-            DiscardStep(
-                () => m_PoseConstraints.DiscardFrame(constraintLease),
-                ref failure);
-            if (failure != null)
-            {
-                throw new AggregateException(
-                    "Pose frame post-barrier Pending discard failed.",
-                    failure);
-            }
-        }
+            CharacterFinalPosePublicationFrameLease publicationLease) =>
+            m_Frame.DiscardAfterBarrier(
+                constraintLease,
+                publicationLease);
 
         internal string ApplyTuning(
             CharacterPoseTuningLayout layout,
@@ -194,7 +157,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
         internal void RecordNoDiagnosticsInterest() =>
             m_Diagnostics.RecordNoInterestSkip();
         internal ulong FrameCompletionContext =>
-            m_FrameCompletionContext;
+            m_Frame.FrameCompletionContext;
 
         internal void BeginActionPlaybackFrame(
             ulong frameIdentity,
@@ -466,139 +429,39 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             out CharacterFinalPosePublicationFrameLease publicationLease,
             out bool captureFootIkDiagnostics)
         {
-            sourceLease = default;
-            constraintLease = default;
-            publicationLease = default;
             captureFootIkDiagnostics = false;
             QueryFootDiagnosticEventInterest(
                 ref captureFootIkDiagnostics);
             RequireAlive();
-            var programLease =
-                new CharacterPoseProgramFrameLease(in lineage);
-            if (linkedPose == null)
-                throw new ArgumentNullException(nameof(linkedPose));
-            ulong frameIdentity = lineage.FrameIdentity;
-            ulong presentationFrame = lineage.PresentationFrame;
-            if (m_ActiveFrameLease.IsValid)
-            {
-                throw new InvalidOperationException(
-                    "Pose Plan frame mutation is already open.");
-            }
-            if (m_ProgramRuntime.HasPreparedEvaluation)
-            {
-                throw new InvalidOperationException(
-                    "Pose Program prepared state from the previous frame was not consumed.");
-            }
-            if (m_CommitValidated)
-            {
-                throw new InvalidOperationException(
-                    "Pose Plan committed-frame finalization is still pending.");
-            }
-            if (m_ProgramRuntime.HasPreparedStandaloneSourceRetirement)
-            {
-                throw new InvalidOperationException(
-                    "Pose Plan standalone source releases from the committed frame were not finalized.");
-            }
-            if (m_SourceModule.ReleaseAcknowledgementsValidated)
-            {
-                throw new InvalidOperationException(
-                    "Pose Plan action backend acknowledgements from the previous frame were not applied.");
-            }
-            if (m_ProgramRuntime.HasPreparedMotionMatchingPoseCompletion)
-            {
-                throw new InvalidOperationException(
-                    "Pose Plan Motion Matching completion from the previous frame was not consumed.");
-            }
-            bool poseConstraintsOpen = false;
-            bool sourceOpen = false;
-            bool publicationOpen = false;
-            try
-            {
-                m_Tuning.Committed.RequireGeneration(
-                    lineage.TuningGeneration);
-                constraintLease = m_PoseConstraints.BeginFrame(
-                    in lineage,
-                    diagnosticsInterest,
-                    captureFootIkDiagnostics);
-                poseConstraintsOpen = true;
-                m_ProgramRuntime.BeginSourceRetirementFrame();
-                sourceLease = m_SourceModule.BeginFrame(in lineage);
-                sourceOpen = true;
-                publicationLease = m_FinalPublication.BeginFrame(
-                    in lineage,
-                    captureFootIkDiagnostics);
-                publicationOpen = true;
-                m_PendingFrameOutcome = AnimationPresentationFrameOutcome.None;
-                m_ProgramRuntime.BeginFrame(programLease);
-                m_Diagnostics.BeginFrame();
-                m_ProgramRuntime.BeginActorStateFrame(
-                    programLease,
-                    linkedPose,
-                    m_Projection.LinkedPose.Groups,
-                    m_CompletionIdentity);
-                m_HasOpenFrame = true;
-                m_ActiveFrameLease = programLease;
-                return m_ActiveFrameLease;
-            }
-            catch
-            {
-                if (publicationOpen)
-                    m_FinalPublication.DiscardPending(publicationLease);
-                if (poseConstraintsOpen)
-                    m_PoseConstraints.DiscardFrame(constraintLease);
-                if (m_ProgramRuntime.HasOpenFrame)
-                    m_ProgramRuntime.DiscardFrame(programLease);
-                if (sourceOpen)
-                    m_SourceModule.DiscardFrame(sourceLease);
-                m_ProgramRuntime.CompleteSourceRetirementFrame();
-                m_ProgramRuntime.ClearLinkedPoseFrameSelection();
-                throw;
-            }
+            return m_Frame.Begin(
+                in lineage,
+                diagnosticsInterest,
+                captureFootIkDiagnostics,
+                linkedPose,
+                out sourceLease,
+                out constraintLease,
+                out publicationLease);
         }
-
         internal void SealFrame(
             CharacterPoseProgramFrameLease lease,
             CharacterPoseSourceFrameLease sourceLease,
             CharacterPoseConstraintFrameLease constraintLease,
             CharacterFinalPosePublicationFrameLease publicationLease)
         {
-            RequireMutation(lease);
-            m_SourceModule.RequirePendingReady(sourceLease);
-            m_FinalPublication.ValidatePendingSeal(publicationLease);
-            if (!m_CommitValidated)
-            {
-                throw new InvalidOperationException(
-                    "Pose Plan frame mutation was not validated for commit.");
-            }
-            if (m_PendingFrameOutcome != AnimationPresentationFrameOutcome.Committed ||
-                !m_ProgramRuntime.HasPendingCompletedEvaluationFrame ||
-                m_ProgramRuntime.PendingCompletedEvaluationCompletionIdentity == 0)
-            {
-                throw new InvalidOperationException(
-                    "Pose Plan frame has no completed Native page to commit.");
-            }
-            m_ProgramRuntime.CommitEvaluationFrame(
+            RequireAlive();
+            m_Frame.Seal(
                 lease,
-                m_ProgramRuntime.PendingCompletedEvaluationCompletionIdentity);
-            m_ProgramRuntime.CommitFrame(lease);
-            m_SourceModule.CommitFrame(sourceLease);
-            m_ProgramRuntime.CommitActorStateFrame(lease);
-            m_PoseConstraints.SealFrame(constraintLease);
-            m_HasOpenFrame = false;
-            m_ActiveFrameLease = default;
-            m_ProgramRuntime.CompleteSourceRetirementFrame();
-            m_ProgramRuntime.ClearLinkedPoseFrameSelection();
+                sourceLease,
+                constraintLease,
+                publicationLease);
         }
 
         internal void ValidatePendingSeal(
             CharacterPoseProgramFrameLease lease,
             CharacterPoseSourceFrameLease sourceLease)
         {
-            RequireMutation(lease);
-            m_ProgramRuntime.ValidateSourceRetirements(
-                lease,
-                sourceLease);
-            m_CommitValidated = true;
+            RequireAlive();
+            m_Frame.ValidatePendingSeal(lease, sourceLease);
         }
 
         internal void DiscardPendingFrame(
@@ -607,54 +470,12 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             CharacterPoseConstraintFrameLease constraintLease,
             CharacterFinalPosePublicationFrameLease publicationLease)
         {
-            RequireMutation(lease);
-            m_SourceModule.RequirePendingOpen(sourceLease);
-            Exception failure = null;
-            DiscardStep(
-                () => m_PoseConstraints.DiscardFrame(constraintLease),
-                ref failure);
-            DiscardStep(
-                () => m_SourceModule.DiscardFrame(sourceLease),
-                ref failure);
-            DiscardStep(
-                () => m_ProgramRuntime.DiscardActorNodeFrames(lease),
-                ref failure);
-            m_SourceModule.ClearActionSlotReleaseCompletions();
-            m_SourceModule.CancelReleaseDiagnostics();
-            m_SourceModule.ClearUsage();
-            DiscardStep(
-                () => m_ProgramRuntime
-                    .DiscardRootOrientationWarpFrames(lease),
-                ref failure);
-            if (m_ProgramRuntime.HasOpenFrame)
-            {
-                DiscardStep(
-                    () => m_ProgramRuntime.DiscardFrame(lease),
-                    ref failure);
-            }
-            DiscardStep(
-                () => m_FinalPublication.DiscardPending(publicationLease),
-                ref failure);
-            DiscardStep(m_Diagnostics.DiscardPendingFrame, ref failure);
-            DiscardStep(
-                m_ProgramRuntime.DiscardSourceRetirementFrame,
-                ref failure);
-            m_ProgramRuntime.ClearStandaloneSourceRetirements();
-            ClearValidatedActionBackendAcknowledgements();
-            m_ProgramRuntime.ClearMotionMatchingPoseCompletion();
-            m_ProgramRuntime.ClearSourceDemand();
-            m_HasOpenFrame = false;
-            m_ActiveFrameLease = default;
-            m_CommitValidated = false;
-            m_PendingFrameOutcome = AnimationPresentationFrameOutcome.None;
-            m_SourceModule.CancelReleaseDiagnostics();
-            m_ProgramRuntime.ClearLinkedPoseFrameSelection();
-            if (failure != null)
-            {
-                throw new AggregateException(
-                    "Pose Plan Pending discard failed.",
-                    failure);
-            }
+            RequireAlive();
+            m_Frame.Discard(
+                lease,
+                sourceLease,
+                constraintLease,
+                publicationLease);
         }
 
         internal ComposedAnimationPoseFrame
@@ -662,25 +483,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                 CharacterFinalPosePublicationFrameLease publicationLease)
         {
             RequireAlive();
-            if (m_ActiveFrameLease.IsValid)
-            {
-                throw new InvalidOperationException(
-                    "Pose Plan frame mutation must commit before physical releases.");
-            }
-            if (!m_CommitValidated)
-            {
-                throw new InvalidOperationException(
-                    "Pose Plan committed frame was not validated.");
-            }
-            m_ProgramRuntime.FinalizeCommittedSourceRetirements(
-                m_CompletionIdentity);
-            ComposedAnimationPoseFrame result =
-                m_FinalPublication.CommitPending(publicationLease);
-            m_CommitValidated = false;
-            m_PendingFrameOutcome = AnimationPresentationFrameOutcome.None;
-            return result;
+            return m_Frame.FinalizeCommitted(publicationLease);
         }
-
         void ClearValidatedActionBackendAcknowledgements()
         {
             m_SourceModule.ClearValidatedReleaseAcknowledgements();
@@ -721,7 +525,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             RequireAlive();
             RequireOpenMutation();
             m_ProgramRuntime.ClearMotionMatchingSelections(
-                m_ActiveFrameLease);
+                m_Frame.ActiveLease);
             hasResolution = false;
             CharacterPoseMotionMatchingSourceRuntime motionMatching =
                 m_SourceModule.MotionMatching;
@@ -729,24 +533,24 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                 return default;
             MotionMatchingPoseStateDemandBatch demands =
                 m_ProgramRuntime.BuildMotionMatchingDemandBatch(
-                    m_ActiveFrameLease,
+                    m_Frame.ActiveLease,
                     presentationFrame,
                     bodyFrame.ResetSequence);
             if (!motionMatching.HasFrameWork(
-                    m_ActiveFrameLease.FrameIdentity,
+                    m_Frame.ActiveLease.FrameIdentity,
                     in demands))
             {
                 return default;
             }
             MotionMatchingFrameResolution resolution =
                 motionMatching.ResolveFrame(
-                    m_ActiveFrameLease.FrameIdentity,
+                    m_Frame.ActiveLease.FrameIdentity,
                     presentationFrame,
                     presentationDeltaSeconds,
                     in bodyFrame,
                     in demands);
-            m_ProgramRuntime.ApplyMotionMatchingSelections(
-                m_ActiveFrameLease,
+                m_ProgramRuntime.ApplyMotionMatchingSelections(
+                m_Frame.ActiveLease,
                 in resolution);
             hasResolution = true;
             return resolution;
@@ -759,11 +563,11 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             RequireAlive();
             RequireOpenMutation();
             m_ProgramRuntime.PrepareMotionMatchingPosePlanCompletion(
-                m_ActiveFrameLease,
+                m_Frame.ActiveLease,
                 in resolution,
                 poseCompletionIdentity);
             m_SourceModule.MotionMatching.PrepareFrameCompletion(
-                m_ActiveFrameLease.FrameIdentity,
+                m_Frame.ActiveLease.FrameIdentity,
                 in resolution,
                 poseCompletionIdentity);
         }
@@ -772,7 +576,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
         {
             RequireAlive();
             RequireOpenMutation();
-            if (m_PendingFrameOutcome !=
+            if (m_Frame.PendingOutcome !=
                 AnimationPresentationFrameOutcome.Committed)
             {
                 throw new InvalidOperationException(
@@ -780,9 +584,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             }
             MotionMatchingPosePlanCompletion completion =
                 m_ProgramRuntime.BuildMotionMatchingPosePlanCompletion(
-                    m_ActiveFrameLease);
+                    m_Frame.ActiveLease);
             m_SourceModule.MotionMatching.CompleteFrame(
-                m_ActiveFrameLease.FrameIdentity,
+                m_Frame.ActiveLease.FrameIdentity,
                 in completion);
         }
 
@@ -896,33 +700,17 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             in CharacterPresentationProgramParameterFrame parameterFrame)
         {
             RequireAlive();
-            RequireOpenMutation();
-            if (!float.IsFinite(presentationDeltaSeconds) || presentationDeltaSeconds < 0f ||
-                !factFrame.IsValid || !parameterFrame.IsValid)
-                throw new ArgumentOutOfRangeException(nameof(presentationDeltaSeconds));
-            CharacterPoseSourceTuningView sourceTuning =
-                m_SourceModule.RequireTuning(
-                    m_ActiveFrameLease.Lineage.TuningGeneration);
-            m_ProgramRuntime.Advance(
-                m_ActiveFrameLease,
+            m_Frame.Advance(
                 presentationDeltaSeconds,
                 in factFrame,
-                in parameterFrame,
-                in sourceTuning);
+                in parameterFrame);
         }
 
         internal void FinalizePoseStateFrame(
             in CharacterPresentationFactFrame factFrame)
         {
             RequireAlive();
-            RequireOpenMutation();
-            if (!factFrame.IsValid)
-                throw new ArgumentException(
-                    "Pose State frame finalization is invalid.",
-                    nameof(factFrame));
-            m_ProgramRuntime.FinalizePoseStateFrame(
-                m_ActiveFrameLease,
-                in factFrame);
+            m_Frame.FinalizePoseState(in factFrame);
         }
 
         internal CharacterPoseSourceDemand CreateSourceDemand(
@@ -932,36 +720,11 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             int providerSourceCount)
         {
             RequireAlive();
-            RequireMutation(programLease);
-            m_SourceModule.RequirePendingOpen(sourceLease);
-            CharacterPoseFrameLineage openLineage = programLease.Lineage;
-            if (!openLineage.IsOpenValid ||
-                openLineage.CompletionIdentity != 0 ||
-                !sourceLease.Matches(openLineage))
-            {
-                throw new ArgumentException(
-                    "Pose Program source demand lineage is invalid.",
-                    nameof(openLineage));
-            }
-            ulong completionIdentity = NextCompletionIdentity();
-            m_FrameCompletionContext = completionIdentity;
-            CharacterPoseFrameLineage lineage =
-                openLineage.WithCompletion(completionIdentity);
-            CharacterPoseSourcePreparationView preparations =
-                m_ProgramRuntime.BeginSourceDemand(
-                    programLease,
-                    completionIdentity);
-            var demand = new CharacterPoseSourceDemand(
-                in lineage,
-                in preparations,
-                m_ProgramRuntime.ProviderDemands,
+            return m_Frame.CreateSourceDemand(
+                programLease,
+                sourceLease,
                 actionSourceCount,
                 providerSourceCount);
-            m_ProgramRuntime.BindSourceDemand(
-                programLease,
-                in demand);
-            m_SourceModule.BindDemand(sourceLease, in demand);
-            return demand;
         }
 
         internal CharacterPoseProgramPrepared PrepareEvaluation(
@@ -974,140 +737,13 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             bool recordDiagnostics)
         {
             RequireAlive();
-            RequireOpenMutation();
-            CharacterPoseSourceDemand pendingDemand =
-                m_SourceModule.RequireDemand(sourceLease);
-            CharacterPoseSourceDemand programDemand =
-                m_ProgramRuntime.RequireSourceDemand(
-                    m_ActiveFrameLease,
-                    in sourceDemand);
-            CharacterPoseSourcePreparationView sourcePreparations =
-                sourceDemand.Preparations;
-            CharacterPoseSourcePreparationView pendingPreparations =
-                pendingDemand.Preparations;
-            if (m_ProgramRuntime.HasPreparedEvaluation)
-            {
-                throw new InvalidOperationException(
-                    "Pose Program evaluation is already prepared for the active frame.");
-            }
-            if (!sourceDemand.IsValid ||
-                sourceDemand.Lineage != pendingDemand.Lineage ||
-                sourceDemand.Lineage != programDemand.Lineage ||
-                !sourcePreparations.Matches(
-                    in pendingPreparations) ||
-                sourceDemand.ActionSourceCount !=
-                    pendingDemand.ActionSourceCount ||
-                sourceDemand.ProviderSourceCount !=
-                    pendingDemand.ProviderSourceCount ||
-                !ReferenceEquals(
-                    sourceDemand.ProviderDemands,
-                    pendingDemand.ProviderDemands) ||
-                sourceDemand.Lineage.FrameIdentity !=
-                    m_ActiveFrameLease.FrameIdentity ||
-                sourceDemand.Lineage.CompletionIdentity !=
-                    m_FrameCompletionContext)
-            {
-                throw new ArgumentException(
-                    "Pose Program source demand is not active.",
-                    nameof(sourceDemand));
-            }
-            if (!float.IsFinite(presentationDeltaSeconds) || presentationDeltaSeconds < 0f)
-                throw new ArgumentOutOfRangeException(nameof(presentationDeltaSeconds));
-            if (actionSourceSamples == null)
-                throw new ArgumentNullException(
-                    nameof(actionSourceSamples));
-            ulong completionIdentity =
-                sourceDemand.Lineage.CompletionIdentity;
-            using (PrepareMarker.Auto())
-            {
-                m_SourceModule.BeginReleaseDiagnostics(
-                    recordDiagnostics);
-                m_SourceModule.ClearActionSlotReleaseCompletions();
-                using (PrepareWorkspaceMarker.Auto())
-                {
-                    m_ProgramRuntime.BeginSourceEvaluation(
-                        m_ActiveFrameLease,
-                        completionIdentity);
-                }
-                using (PrepareStackMarker.Auto())
-                {
-                    m_ProgramRuntime.PrepareStackSources(
-                        m_ActiveFrameLease,
-                        sourceLease,
-                        in sourcePreparations,
-                        presentationDeltaSeconds,
-                        actionSourceSamples,
-                        m_ProgramRuntime.ProviderSourceSamples);
-                }
-                using (PrepareDirectMarker.Auto())
-                {
-                    m_ProgramRuntime.PrepareDirectSources(
-                        m_ActiveFrameLease,
-                        sourceLease,
-                        in sourcePreparations,
-                        presentationDeltaSeconds,
-                        m_ProgramRuntime.ProviderSourceSamples);
-                }
-                using (PrepareSequenceMarker.Auto())
-                {
-                    CharacterPoseSourceTuningView sourceTuning =
-                        m_SourceModule.RequireTuning(
-                            sourceDemand.Lineage.TuningGeneration);
-                    m_ProgramRuntime.PrepareSequenceSources(
-                        m_ActiveFrameLease,
-                        sourceLease,
-                        in sourcePreparations,
-                        presentationDeltaSeconds,
-                        in sourceTuning);
-                }
-                using (PrepareBlendSpaceMarker.Auto())
-                {
-                    m_ProgramRuntime.PrepareBlendSpaceSources(
-                        m_ActiveFrameLease,
-                        sourceLease,
-                        in sourcePreparations,
-                        presentationDeltaSeconds);
-                }
-            }
-
-            CharacterPoseSourcePreparedResources preparedSources =
-                m_SourceModule.RequirePreparedResources(sourceLease);
-            CharacterFinalPosePublicationOutputBinding finalOutput;
-            using (ValidateMarker.Auto())
-            {
-                m_ProgramRuntime.PrepareEvaluationJobsAndRetirements(
-                    m_ActiveFrameLease,
-                    in preparedSources,
-                    completionIdentity);
-                finalOutput =
-                    m_FinalPublication.BindProgramOutput(
-                        publicationLease);
-                m_ProgramRuntime.BindEvaluationExecution(
-                    m_ActiveFrameLease,
-                    sourceDemand.Lineage,
-                    in finalOutput,
-                    recordDiagnostics);
-                m_FinalPublication.ValidateWriterBeforeEvaluate(
-                    in finalOutput);
-            }
-
-            CharacterPoseSourceFrameResult sourceFrame =
-                m_SourceModule.PrepareFrameResult(
+            return m_Frame.PrepareEvaluation(
                 sourceLease,
-                in preparedSources,
+                publicationLease,
+                in sourceDemand,
+                presentationDeltaSeconds,
                 actionSourceSamples,
-                m_ProgramRuntime.ProviderSourceSamples);
-            if (!sourceFrame.IsReady)
-            {
-                throw new InvalidOperationException(
-                    $"Pose source frame ended as '{sourceFrame.Outcome}'.");
-            }
-            var prepared = new CharacterPoseProgramPrepared(in sourceFrame);
-            m_ProgramRuntime.PrepareEvaluation(
-                m_ActiveFrameLease,
-                in prepared,
-                presentationDeltaSeconds);
-            return prepared;
+                recordDiagnostics);
         }
 
         internal CharacterPoseFrameExecutionResult ExecuteEvaluateBarrier(
@@ -1120,133 +756,15 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             Action enterEvaluateBarrier)
         {
             RequireAlive();
-            RequireOpenMutation();
-            ActorId actorId = prepared.Lineage.ActorId;
-            ulong renderFrame = prepared.Lineage.PresentationFrame;
-            if (!actorId.IsValid)
-                throw new ArgumentException(
-                    "Pose Plan Actor identity is invalid.",
-                    nameof(actorId));
-            if (renderFrame == 0)
-                throw new ArgumentOutOfRangeException(nameof(renderFrame));
-            if (!bodyFrame.IsValid)
-                throw new ArgumentException(
-                    "Pose Plan Body frame is invalid.",
-                    nameof(bodyFrame));
-            if (!factFrame.IsValid)
-                throw new ArgumentException(
-                    "Pose Plan Presentation Fact frame is invalid.",
-                    nameof(factFrame));
-            if (!prepared.IsValid ||
-                prepared.Lineage.CompletionIdentity != m_FrameCompletionContext ||
-                !m_ProgramRuntime.HasPendingEvaluationFrame ||
-                m_ProgramRuntime.PendingEvaluationCompletionIdentity !=
-                    prepared.Lineage.CompletionIdentity)
-            {
-                throw new ArgumentException(
-                    "Pose Plan prepared evaluation is not the active Pending frame.",
-                    nameof(prepared));
-            }
-            if (enterEvaluateBarrier == null)
-                throw new ArgumentNullException(nameof(enterEvaluateBarrier));
-
-            ulong completionIdentity = prepared.Lineage.CompletionIdentity;
-            float presentationDeltaSeconds =
-                m_ProgramRuntime.RequirePreparedEvaluationDeltaSeconds(
-                    m_ActiveFrameLease,
-                    in prepared);
-
-            enterEvaluateBarrier();
-            m_SourceModule.EnterEvaluateBarrier(
-                sourceLease);
-            using (GraphEvaluateMarker.Auto())
-                m_Animancer.Evaluate(presentationDeltaSeconds);
-            CharacterPoseProgramOutputResult programOutput;
-            using (PoseGraphExecuteMarker.Auto())
-            {
-                programOutput = m_ProgramRuntime.CompleteEvaluation(
-                    m_ActiveFrameLease,
-                    in prepared,
-                    in bodyFrame,
-                    in factFrame);
-            }
-            CharacterPoseFrameLineage completedLineage =
-                prepared.Lineage;
-            CharacterPoseProgramResult programResult =
-                CreateProgramResult(
-                    in completedLineage,
-                    in programOutput);
-            CharacterPoseConstraintResult constraintResult =
-                m_PoseConstraints.CompleteFrame(
-                    constraintLease,
-                    in completedLineage,
-                    programResult.OutputAvailability,
-                    programResult.OutputInvalidReason,
-                    programResult.GraphInvalidReason);
-            CharacterFinalPosePublicationResult publicationResult;
-            using (FinalWriteMarker.Auto())
-            {
-                publicationResult = m_FinalPublication.PreparePending(
-                    publicationLease,
-                    in completedLineage,
-                    in programResult,
-                    in constraintResult,
-                    in programOutput);
-                m_PendingFrameOutcome = publicationResult.Outcome;
-                m_FinalPublication.WritePhysicalPose(
-                    publicationLease);
-            }
-            var executionResult = new CharacterPoseFrameExecutionResult(
-                in programResult,
-                in constraintResult,
-                in publicationResult);
-            if (!executionResult.IsValid)
-            {
-                throw new InvalidOperationException(
-                    "Pose frame typed execution results are inconsistent.");
-            }
-            if (m_PendingFrameOutcome !=
-                AnimationPresentationFrameOutcome.Committed)
-            {
-                return executionResult;
-            }
-
-            using (SealMarker.Auto())
-            {
-                m_ProgramRuntime.CompleteNodeEvaluation(
-                    m_ActiveFrameLease,
-                    completionIdentity);
-            }
-            return executionResult;
+            return m_Frame.ExecuteEvaluateBarrier(
+                in bodyFrame,
+                in factFrame,
+                sourceLease,
+                constraintLease,
+                publicationLease,
+                in prepared,
+                enterEvaluateBarrier);
         }
-
-        CharacterPoseProgramResult CreateProgramResult(
-            in CharacterPoseFrameLineage lineage,
-            in CharacterPoseProgramOutputResult output)
-        {
-            if (!output.IsValid || output.Lineage != lineage)
-            {
-                throw new InvalidOperationException(
-                    "Pose Program output result is inconsistent.");
-            }
-            bool completed =
-                output.Availability == AnimationPoseAvailability.Pose &&
-                output.OutputInvalidReason ==
-                    AnimationPoseNativeInvalidReason.None &&
-                output.GraphInvalidReason ==
-                    AnimationPoseNativeInvalidReason.None &&
-                output.InvalidOperationIndex == -1;
-            return new CharacterPoseProgramResult(
-                in lineage,
-                completed
-                    ? AnimationPresentationFrameOutcome.Committed
-                    : AnimationPresentationFrameOutcome.TypedInvalid,
-                output.Availability,
-                output.OutputInvalidReason,
-                output.GraphInvalidReason,
-                output.InvalidOperationIndex);
-        }
-
         internal void Reset(PoseDiscontinuityResetReason reason)
         {
             RequireAlive();
@@ -1262,15 +780,14 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             m_ProgramRuntime.ClearMotionMatchingPoseCompletion();
             m_SourceModule.ClearActionBackendReleaseCompletions();
             m_ProgramRuntime.BeginReset();
-            m_PendingFrameOutcome = AnimationPresentationFrameOutcome.None;
+            m_Frame.ResetState();
             m_PoseConstraints.ResetSolvers();
-            ulong completionIdentity = NextCompletionIdentity();
+            ulong completionIdentity = m_Frame.NextCompletionIdentity();
             m_ProgramRuntime.ResetBlendState(completionIdentity);
             m_ProgramRuntime.ReleaseCompletedSources(completionIdentity);
             m_ProgramRuntime.ResetPoseState(reason);
             m_ProgramRuntime.ReleasePlayerSources();
             m_SourceModule.Clear();
-            m_CommitValidated = false;
         }
 
         public void Dispose()
@@ -1278,7 +795,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             if (m_Disposed)
                 return;
             m_Disposed = true;
-            m_PendingFrameOutcome = AnimationPresentationFrameOutcome.None;
+            m_Frame.ResetState();
             m_Modules.Dispose();
         }
 
@@ -1302,47 +819,16 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             m_ProgramRuntime.ClearSequencePreview();
         }
 
-        ulong NextCompletionIdentity()
-        {
-            if (m_CompletionIdentity == ulong.MaxValue)
-                throw new InvalidOperationException("Animation Pose completion identity was exhausted.");
-            m_CompletionIdentity++;
-            return m_CompletionIdentity;
-        }
-
         void RequireMutation(
             CharacterPoseProgramFrameLease lease)
         {
             RequireAlive();
-            if (!lease.IsValid ||
-                !m_ActiveFrameLease.IsValid ||
-                lease.Lineage != m_ActiveFrameLease.Lineage ||
-                !m_HasOpenFrame)
-            {
-                throw new InvalidOperationException(
-                    "Pose Plan frame mutation lease is invalid.");
-            }
+            m_Frame.RequireMutation(lease);
         }
 
-        void RequireOpenMutation()
-        {
-            if (!m_ActiveFrameLease.IsValid ||
-                !m_HasOpenFrame)
-            {
-                throw new InvalidOperationException(
-                    "Pose Plan mutation must be open before frame evaluation.");
-            }
-        }
+        void RequireOpenMutation() => m_Frame.RequireOpenMutation();
 
-        void RequireNoOpenMutation()
-        {
-            if (m_ActiveFrameLease.IsValid ||
-                m_HasOpenFrame)
-            {
-                throw new InvalidOperationException(
-                    "Pose Plan frame mutation must close before reset.");
-            }
-        }
+        void RequireNoOpenMutation() => m_Frame.RequireNoOpenMutation();
 
         CharacterPoseMotionMatchingSourceRuntime RequireMotionMatching() =>
             m_SourceModule.MotionMatching ??

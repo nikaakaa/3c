@@ -66,12 +66,56 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             }
             try
             {
-                CharacterPoseProgramImage image =
+                CharacterPoseFamilyPayloadBinding binding =
                     CharacterPoseFamilyPayloadBindingPass.Run(
                         request,
                         closureResult.Closure,
                         topologyResult.Catalog,
                         symbolicResult.Program);
+                CharacterPoseBoundFamilyPayloads payloads =
+                    binding.Payloads;
+                CharacterPoseBoundProgramLayout layout =
+                    binding.Layout;
+                CharacterPoseStageSchedule schedule =
+                    CharacterPoseStageSchedulePass.Run(
+                        symbolicResult.Program,
+                        binding.Operations,
+                        payloads.LinkedPoseFragments);
+                CharacterPoseValueLifetime valueLifetime =
+                    CharacterPoseValueLifetimePass.Run(
+                        binding.Operations,
+                        schedule,
+                        layout.PoseValueCount,
+                        payloads.Parameters.Length,
+                        layout.FullBodyIkGoalContributionValueCount,
+                        layout.FullBodyIkGoalSetValueCount,
+                        payloads
+                            .FullBodyIkGoalContributionInputValueIndices,
+                        payloads.LinkedPoseCalls,
+                        payloads.LinkedPoseFragments,
+                        layout.OutputOperationIndex);
+                CharacterPoseWorkspacePlan workspace =
+                    CharacterPoseWorkspacePlanPass.Run(
+                        valueLifetime,
+                        schedule,
+                        request.Rig,
+                        binding.Operations,
+                        payloads.BlendNodes,
+                        layout.PlayerCount,
+                        layout.InertializationCount,
+                        payloads.StateMachines,
+                        layout.PoseSourceCount,
+                        payloads.PoseBoneIkGoalSources,
+                        payloads.FootPlacements,
+                        payloads.FullBodyIks,
+                        layout
+                            .FullBodyIkGoalContributionGoalWorkspaceCount);
+                CharacterPoseProgramImage image =
+                    CharacterPoseProgramImageSealPass.Run(
+                        request,
+                        binding,
+                        schedule,
+                        workspace);
                 return new CharacterPoseCompilationResult(
                     image,
                     diagnostics);

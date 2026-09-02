@@ -997,3 +997,9 @@ Player、Action Input、Slot、Blend、StateMachine、Inertialization、Additive
 状态：唯一`CharacterPoseCompilerModule`现只编排Capability、Graph Closure、Typed Lowering、Topology与Symbolic Family Lowering，并把后续物理绑定交给独立`CharacterPoseFamilyPayloadBindingPass`。原2463行中央Compiler文件整体改名为该Pass实现，新建的小型Compiler入口不再持有Binding字段、递归Graph lowering或Payload索引分配逻辑。
 
 本步只移动唯一调用边界，输入Request、前置Pass结果、异常归属、Operation顺序、物理索引、Hash和Program Image输出不变。11.9暂不勾选：Stage／Lifetime／Workspace与Image Seal仍在Binding Pass尾部，下一步继续拆成明确Result与Seal Pass；3C MCP对Compiler入口与Binding Pass错误筛选均为0，不单独运行回放。
+
+## 分离Family Binding Result与Program Image Seal
+
+状态：Family Payload Binding Pass现在只递归消费Topology与Symbolic Operation序列，产出`CharacterPoseFamilyPayloadBinding`。Result把Parameter／Blend／Constraint／Player／StateMachine／Slot／Linked Pose等已绑定Family页、唯一Operation序列、Source Map、Graph dependency和物理布局计数分开保存；原中央`CompilationState`改为Pass私有`BindingBuilder`，不再跨Pass流动。
+
+Compiler入口随后按固定顺序运行Stage Schedule、Value Lifetime和Workspace Plan，并由独立`CharacterPoseProgramImageSealPass`绑定Linked Fragment stage range、计算原样Hash并唯一构造Program Image。原Binding Pass中的Hash与Image构造已删除，所有Hash token、数组顺序、Workspace数值和构造参数保持不变。11.9仍等待把万能Operation改为分Family typed payload handle后闭合；3C MCP对Compiler、Binding Result／Pass与Seal Pass错误筛选均为0，不单独运行回放。

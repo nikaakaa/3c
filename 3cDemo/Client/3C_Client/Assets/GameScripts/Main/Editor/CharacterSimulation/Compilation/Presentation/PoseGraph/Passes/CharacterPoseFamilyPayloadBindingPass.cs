@@ -54,9 +54,9 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             public PoseStateId SourceStateId { get; }
         }
 
-        sealed class CompilationState
+        sealed class BindingBuilder
         {
-            public CompilationState(
+            public BindingBuilder(
                 CharacterPresentationPoseGraphAsset graphAsset,
                 CharacterPoseGraphClosure graphClosure,
                 CharacterPoseTopologyCatalog topology,
@@ -165,7 +165,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             public int SymbolicOperationCursor { get; set; }
         }
 
-        internal static CharacterPoseProgramImage Run(
+        internal static CharacterPoseFamilyPayloadBinding Run(
             CharacterPoseCompilationRequest request,
             CharacterPoseGraphClosure graphClosure,
             CharacterPoseTopologyCatalog topology,
@@ -189,7 +189,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                     parameter.Unit);
                 parameterIndices.Add(parameter.ParameterId, i);
             }
-            var state = new CompilationState(
+            var state = new BindingBuilder(
                 asset,
                 graphClosure,
                 topology,
@@ -227,67 +227,9 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             if (state.BlendNodeIndices.Count != state.BlendNodes.Length)
                 throw new InvalidOperationException("Pose Plan Blend Stack payload identities are not unique.");
 
-            CharacterPoseStageSchedule schedule =
-                CharacterPoseStageSchedulePass.Run(
-                    state.SymbolicProgram,
-                    state.Operations,
-                    state.LinkedFragments);
-            CharacterPoseValueLifetime valueLifetime =
-                CharacterPoseValueLifetimePass.Run(
-                    state.Operations,
-                    schedule,
-                    state.PoseValueCount,
-                    state.Parameters.Length,
-                    state.FullBodyIkGoalContributionValueCount,
-                    state.FullBodyIkGoalSetValueCount,
-                    state.FullBodyIkGoalContributionInputValueIndices,
-                    state.LinkedCalls,
-                    state.LinkedFragments,
-                    state.OutputOperationIndex);
-            CharacterPoseWorkspacePlan workspace =
-                CharacterPoseWorkspacePlanPass.Run(
-                    valueLifetime,
-                    schedule,
-                    state.Rig,
-                    state.Operations,
-                    state.BlendNodes,
-                    state.PlayerCount,
-                    state.InertializationCount,
-                    state.StateMachines,
-                    state.PoseSources.Count,
-                    state.PoseBoneIkGoalSources,
-                    state.FootPlacements,
-                    state.FullBodyIks,
-                    state.FullBodyIkGoalContributionGoalWorkspaceCount);
-            for (int rangeIndex = 0;
-                 rangeIndex < schedule.FragmentRanges.Count;
-                 rangeIndex++)
-            {
-                CharacterPoseLinkedFragmentStageRange range =
-                    schedule.FragmentRanges[rangeIndex];
-                state.LinkedFragments[range.FragmentIndex].BindStageRange(
-                    range.StageStart,
-                    range.StageCount);
-            }
-            CharacterPresentationPoseStage[] stages =
-                schedule.Stages.ToArray();
-            string hash = ComputeHash(
-                graph,
-                rig,
-                state,
-                stages,
-                workspace.PoseValueCapacity,
-                workspace.ParameterValueCapacity,
-                workspace.ContributionCapacity,
-                workspace.FrameCacheCapacity);
-            return new CharacterPoseProgramImage(
-                graph.GraphId.Value,
-                graph.ContentRevision,
-                hash,
-                rig,
-                parameters,
-                blendNodes,
-                Array.Empty<CharacterPresentationInertializationDescriptor>(),
+            var payloads = new CharacterPoseBoundFamilyPayloads(
+                state.Parameters,
+                state.BlendNodes,
                 state.Masks.ToArray(),
                 state.AdditiveReferences.ToArray(),
                 state.ModifyBones.ToArray(),
@@ -301,20 +243,22 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                 state.AnimationSlots.ToArray(),
                 state.ActionPlaybackInputs.ToArray(),
                 state.LinkedFragments.ToArray(),
-                state.LinkedCalls.ToArray(),
-                state.Operations.ToArray(),
-                state.SourceMap.ToArray(),
-                stages,
+                state.LinkedCalls.ToArray());
+            var layout = new CharacterPoseBoundProgramLayout(
+                state.PoseSources.Count,
                 state.PoseValueCount,
-                workspace.PoseValueCapacity,
                 state.FullBodyIkGoalContributionValueCount,
                 state.FullBodyIkGoalSetValueCount,
                 state.FullBodyIkGoalContributionGoalWorkspaceCount,
-                workspace.ParameterValueCapacity,
-                workspace.ContributionCapacity /
-                workspace.PoseValueCapacity,
-                workspace.FrameCacheCapacity,
+                state.PlayerCount,
+                state.InertializationCount,
                 state.OutputOperationIndex);
+            return new CharacterPoseFamilyPayloadBinding(
+                payloads,
+                state.Operations.ToArray(),
+                state.SourceMap.ToArray(),
+                state.GraphDependencies.ToArray(),
+                in layout);
         }
 
         static CharacterPoseSpace ResolveInputPoseSpace(CharacterTypedPoseNode node) =>
@@ -357,7 +301,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
         }
 
         static Dictionary<PoseInterfacePortId, CompiledValue> CompileGraph(
-            CompilationState state,
+            BindingBuilder state,
             CharacterPresentationPoseGraphAsset ownerAsset,
             CharacterTypedPoseGraph graph,
             IReadOnlyDictionary<PoseInterfacePortId, CompiledValue> imports,
@@ -724,7 +668,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
         }
 
         static LinkedPoseCallCompilation CompileLinkedPoseCall(
-            CompilationState state,
+            BindingBuilder state,
             CharacterTypedPoseNode call,
             Dictionary<string, CharacterPoseEdge> incoming,
             string scope,
@@ -893,7 +837,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             int actionPlaybackOperationIndex,
             int playerIndex,
             int blendNodeIndex,
-            CompilationState state)
+            BindingBuilder state)
         {
             if (sourcePoseValueIndex < 0 || actionPlaybackOperationIndex < 0 ||
                 playerIndex < 0 || blendNodeIndex < 0)
@@ -1130,7 +1074,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
 
         static int CompileModifyBone(
             CharacterModifyBonePosePayload payload,
-            CompilationState state)
+            BindingBuilder state)
         {
             int boneIndex = state.Rig.RequirePhysicalBoneIndex(payload.BoneId);
             int index = state.ModifyBones.Count;
@@ -1145,7 +1089,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
         static int CompilePoseBoneIkGoals(
             CharacterPoseBoneIkGoalsPayload payload,
             PoseNodeId scopedNodeId,
-            CompilationState state)
+            BindingBuilder state)
         {
             var bindings = new CharacterPresentationPoseBoneIkGoalBindingDescriptor[
                 payload.Bindings.Count];
@@ -1173,13 +1117,13 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             return index;
         }
 
-        static int CompileInertialization(CompilationState state) =>
+        static int CompileInertialization(BindingBuilder state) =>
             state.InertializationCount++;
 
         static int CompileFootPlacement(
             CharacterFootPlacementPosePayload payload,
             PoseNodeId scopedNodeId,
-            CompilationState state)
+            BindingBuilder state)
         {
             if (state.FootPlacements.Count != 0)
                 throw new InvalidOperationException("Pose Plan contains more than one Foot Placement node.");
@@ -1200,7 +1144,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
 
         static int CompileFullBodyIk(
             PoseNodeId scopedNodeId,
-            CompilationState state)
+            BindingBuilder state)
         {
             CharacterFullBodyIkProfile profile = state.Profile.FullBodyIkProfile;
             if (!profile)
@@ -1219,7 +1163,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             CharacterPresentationPoseGraphAsset ownerAsset,
             CharacterPoseStateMachineNodePayload payload,
             PoseNodeId scopedNodeId,
-            CompilationState state,
+            BindingBuilder state,
             string scope,
             string callChain,
             int linkedPoseFragmentIndex,
@@ -1528,7 +1472,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             int stateIndex,
             int operationStart,
             int operationCount,
-            CompilationState state)
+            BindingBuilder state)
         {
             var result = new List<PoseStateSourceProviderPlan>();
             int end = checked(operationStart + operationCount);
@@ -1581,7 +1525,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             CharacterPoseStateTransition transition,
             CharacterPoseStateDescriptor sourceState,
             CharacterPoseStateDescriptor targetState,
-            CompilationState state)
+            BindingBuilder state)
         {
             PoseStateSourceProviderPlan sourceUsage = FindSyncProvider(sourceState);
             PoseStateSourceProviderPlan targetUsage = FindSyncProvider(targetState);
@@ -1664,7 +1608,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
         }
 
         static CharacterLocomotionSyncGroup ResolveLocomotionSyncGroup(
-            CompilationState state,
+            BindingBuilder state,
             PresentationPoseSourceIndex sourceIndex)
         {
             CharacterPresentationPoseSourceSlot slot = state.SourceIndices
@@ -1683,7 +1627,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             return null;
         }
 
-        static CharacterClipPlayerClockSource RequireClipClock(CompilationState state, int playerIndex)
+        static CharacterClipPlayerClockSource RequireClipClock(BindingBuilder state, int playerIndex)
         {
             for (int i = 0; i < state.ClipPlayers.Count; i++)
             {
@@ -1733,7 +1677,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             CharacterClipPlayerPosePayload payload,
             PoseNodeId scopedNodeId,
             int playerIndex,
-            CompilationState state)
+            BindingBuilder state)
         {
             if (!payload.SourceSlot || !state.SourceIndices.TryGetValue(payload.SourceSlot, out PresentationPoseSourceIndex sourceIndex))
                 throw new InvalidOperationException($"Clip Player '{scopedNodeId}' Source Slot is outside the compiled source catalog.");
@@ -1751,7 +1695,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             CharacterRootOrientationWarpPosePayload payload,
             PoseNodeId scopedNodeId,
             int inputValueIndex,
-            CompilationState state)
+            BindingBuilder state)
         {
             CharacterPresentationPoseOperation source = state.Operations
                 .SingleOrDefault(value =>
@@ -1830,7 +1774,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
         }
 
         static void CompileSubgraphCall(
-            CompilationState state,
+            BindingBuilder state,
             CharacterPresentationPoseGraphAsset ownerAsset,
             CharacterTypedPoseGraph owner,
             CharacterTypedPoseNode callSite,
@@ -2154,7 +2098,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
         }
 
         static CharacterPoseSymbolicOperation RequireNextSymbolicOperation(
-            CompilationState state,
+            BindingBuilder state,
             PoseNodeId nodeId,
             CharacterPoseNodeDefinition definition,
             CharacterPoseOperationCode operationCode,
@@ -2212,174 +2156,5 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
         static PosePortId ScopePortId(PosePortId portId, string scope) =>
             string.IsNullOrEmpty(scope) ? portId : new PosePortId(scope + "/" + portId.Value);
 
-        static string ComputeHash(
-            CharacterTypedPoseGraph graph,
-            CharacterAnimationRigDefinition rig,
-            CompilationState state,
-            IReadOnlyList<CharacterPresentationPoseStage> stages,
-            int poseWorkspace,
-            int parameterWorkspace,
-            int contributionWorkspace,
-            int frameCache)
-        {
-            var values = new List<string>
-            {
-                CharacterPoseProgramImage.SchemaVersion,
-                CharacterPoseProgramImage.RuntimeAbi,
-                graph.GraphId.Value,
-                graph.ContentRevision,
-                rig.RigId,
-                rig.Revision
-            };
-            values.AddRange(state.GraphDependencies.Select(value => "graph:" + value));
-            for (int i = 0; i < state.Parameters.Length; i++)
-            {
-                CharacterPresentationPoseParameterEntry parameter = state.Parameters[i];
-                values.Add(FormattableString.Invariant($"parameter:{parameter.Index}:{parameter.ParameterId}:{(int)parameter.ValueType}:{parameter.Unit}:{parameter.DefaultValue:R}"));
-            }
-            for (int i = 0; i < state.BlendNodes.Length; i++)
-            {
-                AnimationBlendNodePayload blend = state.BlendNodes[i];
-                values.Add(
-                    $"blend:{blend.NodeId}:{blend.PolicyId}:{blend.PolicyRevision}:{blend.RoutingPlanId}:{blend.RoutingDefinitionRevision}:{blend.Transitions.Count}");
-                for (int transitionIndex = 0; transitionIndex < blend.Transitions.Count; transitionIndex++)
-                {
-                    AnimationBlendTransitionPayload transition = blend.Transitions[transitionIndex];
-                    values.Add(FormattableString.Invariant(
-                        $"blend-transition:{i}:{transitionIndex}:{transition.SourceOwnerIndex}:{(int)transition.SourceEndpointKind}:{transition.SourceOwnerIdentity}:{transition.TargetOwnerIndex}:{(int)transition.TargetEndpointKind}:{transition.TargetOwnerIdentity}:{(int)transition.BlendLogic}:{transition.DurationSeconds:R}:{transition.CurveIndex}:{transition.BlendProfileIndex}"));
-                }
-            }
-            for (int i = 0; i < rig.VirtualBoneCount; i++)
-            {
-                CharacterAnimationVirtualBoneDefinition bone = rig.VirtualBones[i];
-                values.Add(
-                    $"virtual-bone:{i}:{bone.VirtualBoneId}:{bone.DisplayName}:{bone.SourcePhysicalBoneId}:{bone.TargetPhysicalBoneId}");
-            }
-            for (int i = 0; i < state.PoseBoneIkGoalSources.Count; i++)
-            {
-                CharacterPresentationPoseBoneIkGoalsDescriptor descriptor =
-                    state.PoseBoneIkGoalSources[i];
-                values.Add($"pose-bone-ik-goals:{i}:{descriptor.NodeId}:{descriptor.ContributionGoalWorkspaceOffset}:{descriptor.GoalCount}");
-                for (int bindingIndex = 0; bindingIndex < descriptor.Bindings.Count; bindingIndex++)
-                {
-                    CharacterPresentationPoseBoneIkGoalBindingDescriptor binding = descriptor.Bindings[bindingIndex];
-                    values.Add(FormattableString.Invariant(
-                        $"pose-bone-ik-goal:{i}:{bindingIndex}:{(int)binding.EffectorSlot}:{binding.TargetPoseBoneIndex}:{binding.PositionOffset.x:R}:{binding.PositionOffset.y:R}:{binding.PositionOffset.z:R}:{binding.RotationOffset.x:R}:{binding.RotationOffset.y:R}:{binding.RotationOffset.z:R}:{binding.RotationOffset.w:R}:{binding.PositionWeight:R}:{binding.RotationWeight:R}"));
-                }
-            }
-            for (int i = 0; i < state.FootPlacements.Count; i++)
-            {
-                CharacterPresentationFootPlacementDescriptor descriptor =
-                    state.FootPlacements[i];
-                values.Add(
-                    $"foot-placement:{i}:{descriptor.NodeId}:{descriptor.Profile.ProfileId}:{descriptor.Profile.Revision}:{descriptor.CalibrationId}:{descriptor.CalibrationRevision}:{descriptor.ContributionGoalWorkspaceOffset}");
-            }
-            for (int i = 0; i < state.FullBodyIks.Count; i++)
-            {
-                CharacterPresentationFullBodyIkDescriptor descriptor = state.FullBodyIks[i];
-                values.Add(
-                    $"full-body-ik:{i}:{descriptor.NodeId}:{descriptor.ProfileId}:{descriptor.ProfileRevision}:{descriptor.BackendIdentity}:{descriptor.BackendSourceRevision}");
-            }
-            for (int i = 0;
-                 i < state.FullBodyIkGoalContributionInputValueIndices.Count;
-                 i++)
-            {
-                values.Add(
-                    $"full-body-ik-goal-contribution-input:{i}:{state.FullBodyIkGoalContributionInputValueIndices[i]}");
-            }
-            for (int i = 0; i < state.ClipPlayers.Count; i++)
-            {
-                CharacterPresentationClipPlayerDescriptor descriptor = state.ClipPlayers[i];
-                values.Add(FormattableString.Invariant(
-                    $"clip-player:{descriptor.Index}:{descriptor.NodeId}:{descriptor.PresentationPoseSourceIndex.Value}:{descriptor.PlayRate:R}:{descriptor.InitialTime:R}:{(int)descriptor.ClockSource}:{descriptor.PlayerIndex}"));
-            }
-            for (int i = 0; i < state.RootOrientationWarps.Count; i++)
-            {
-                CharacterPresentationRootOrientationWarpDescriptor descriptor =
-                    state.RootOrientationWarps[i];
-                Keyframe[] keys = descriptor.YawCurve.keys;
-                values.Add(FormattableString.Invariant(
-                    $"root-orientation-warp:{descriptor.Index}:{descriptor.NodeId}:{descriptor.ClipPlayerIndex}:{descriptor.RootPhysicalBoneIndex}:{descriptor.Duration:R}:{descriptor.TotalYaw:R}:{keys.Length}"));
-                for (int keyIndex = 0; keyIndex < keys.Length; keyIndex++)
-                {
-                    Keyframe key = keys[keyIndex];
-                    values.Add(FormattableString.Invariant(
-                        $"root-orientation-warp-key:{i}:{keyIndex}:{key.time:R}:{key.value:R}:{key.inTangent:R}:{key.outTangent:R}:{key.inWeight:R}:{key.outWeight:R}:{(int)key.weightedMode}"));
-                }
-            }
-            for (int i = 0; i < state.StateMachines.Count; i++)
-            {
-                CharacterPoseStateMachineDescriptor descriptor = state.StateMachines[i];
-                values.Add(
-                    $"state-machine:{descriptor.Index}:{descriptor.NodeId}:{descriptor.StateMachineId}:" +
-                    $"{descriptor.ContentRevision}:{descriptor.EntryStateIndex}:{descriptor.MaxTransitionsPerFrame}:" +
-                    $"{descriptor.StateWorkspaceCount}:{descriptor.TransitionWorkspaceCount}:" +
-                    $"{descriptor.RoutingPlanId}:{descriptor.RoutingDefinitionRevision}");
-                for (int stateIndex = 0; stateIndex < descriptor.States.Count; stateIndex++)
-                {
-                    CharacterPoseStateDescriptor poseState = descriptor.States[stateIndex];
-                    values.Add(FormattableString.Invariant(
-                        $"state:{i}:{poseState.Index}:{poseState.StateId}:{poseState.AlwaysResetOnEntry}"));
-                }
-                for (int transitionIndex = 0; transitionIndex < descriptor.Transitions.Count; transitionIndex++)
-                {
-                    CharacterPoseStateTransitionDescriptor transition = descriptor.Transitions[transitionIndex];
-                    values.Add(FormattableString.Invariant(
-                        $"state-transition:{i}:{transition.Index}:{transition.TransitionId}:{transition.SourceStateIndex}:{transition.TargetStateIndex}:{transition.Priority}:{transition.Rule.GraphId}:{transition.Rule.ContentRevision}:{(int)transition.BlendLogic}:{transition.DurationSeconds:R}:{transition.CompletionDurationSeconds:R}:{(int)transition.BlendMode}:{transition.CurveIndex}:{transition.BlendProfileIndex}:{transition.RoutingRuleId}:{(int)transition.SourceSync.Mode}:{transition.SourceSync.RelationId}"));
-                }
-            }
-            for (int i = 0; i < state.AnimationSlots.Count; i++)
-            {
-                CharacterAnimationSlotDescriptor descriptor = state.AnimationSlots[i];
-                values.Add(
-                    $"animation-slot:{descriptor.Index}:{descriptor.NodeId}:{descriptor.SlotId}:{descriptor.AnimationChannelId}:" +
-                    $"{descriptor.RoutingOwnerId}:{descriptor.RoutingPlanId}:{descriptor.RoutingDefinitionRevision}:" +
-                    $"{descriptor.ActionPlayer.PlayerNodeId}:{descriptor.ActionPlayer.ActionPlaybackOperationIndex}:" +
-                    $"{descriptor.ActionPlayer.PlayerIndex}:{descriptor.BlendStackWorkspace.BlendNodeIndex}:" +
-                    $"{descriptor.BlendStackWorkspace.Capacity}:{descriptor.SourceUsage.SourcePoseValueIndex}");
-                for (int routeIndex = 0; routeIndex < descriptor.RequestRoutes.Count; routeIndex++)
-                {
-                    CharacterAnimationSlotRequestRouteDescriptor route = descriptor.RequestRoutes[routeIndex];
-                    values.Add(FormattableString.Invariant(
-                        $"animation-slot-route:{i}:{routeIndex}:{route.RuleId}:{route.SourceEndpointId}:{route.TargetEndpointId}:{(int)route.BlendLogic}:{route.DurationSeconds:R}:{route.CurveIndex}:{route.BlendProfileIndex}:{route.RequiresTargetFirstSample}:{route.RequiresCaptureCompletion}"));
-                }
-            }
-            values.Add($"inertial-count:{state.InertializationCount}");
-            for (int i = 0; i < state.LinkedFragments.Count; i++)
-            {
-                CharacterLinkedPoseEntryFragmentPlanDescriptor fragment = state.LinkedFragments[i];
-                values.Add($"linked-fragment:{fragment.Index}:{fragment.GroupId}:{fragment.InterfaceId}:{fragment.InterfaceSignature}:{fragment.ImplementationId}:{fragment.ImplementationRevision}:{fragment.EntryId}:{fragment.GraphId}:{fragment.GraphRevision}:{fragment.OperationStart}:{fragment.OperationCount}:{fragment.PoseValueStart}:{fragment.PoseValueCount}:{fragment.GoalSetValueStart}:{fragment.GoalSetValueCount}:{fragment.PlayerStart}:{fragment.PlayerCount}:{fragment.StateMachineStart}:{fragment.StateMachineCount}:{fragment.InertializationStart}:{fragment.InertializationCount}:{fragment.RootOrientationWarpStart}:{fragment.RootOrientationWarpCount}:{fragment.MotionMatchingProviderStart}:{fragment.MotionMatchingProviderCount}:{fragment.StageStart}:{fragment.StageCount}:{string.Join(",", fragment.SourceIndices)}");
-                for (int bindingIndex = 0; bindingIndex < fragment.Inputs.Count; bindingIndex++)
-                {
-                    CharacterLinkedPosePortValueBinding binding = fragment.Inputs[bindingIndex];
-                    values.Add($"linked-fragment-input:{i}:{bindingIndex}:{binding.PortId}:{(int)binding.Kind}:{binding.ValueIndex}");
-                }
-                for (int bindingIndex = 0; bindingIndex < fragment.Outputs.Count; bindingIndex++)
-                {
-                    CharacterLinkedPosePortValueBinding binding = fragment.Outputs[bindingIndex];
-                    values.Add($"linked-fragment-output:{i}:{bindingIndex}:{binding.PortId}:{(int)binding.Kind}:{binding.ValueIndex}");
-                }
-            }
-            for (int i = 0; i < state.LinkedCalls.Count; i++)
-            {
-                CharacterLinkedPoseCallPlanDescriptor call = state.LinkedCalls[i];
-                values.Add($"linked-call:{call.Index}:{call.NodeId}:{call.GroupId}:{call.InterfaceId}:{call.InterfaceSignature}:{call.EntryId}:{(int)call.ExecutionDomain}:{string.Join(",", call.FragmentIndices)}");
-            }
-            for (int i = 0; i < state.Operations.Count; i++)
-            {
-                CharacterPresentationPoseOperation operation = state.Operations[i];
-                values.Add(FormattableString.Invariant(
-                    $"operation:{operation.Index}:{(int)operation.ExecutionDomain}:{(int)operation.InputPoseSpace}:{(int)operation.OutputPoseSpace}:{(int)operation.Code}:{operation.NodeId}:{operation.AnimationChannelId}:{(int)operation.SelectionAvailability}:{operation.OutputValueIndex}:{operation.InputValueIndexA}:{operation.InputValueIndexB}:{operation.OutputFullBodyIkGoalContributionValueIndex}:{operation.OutputFullBodyIkGoalSetValueIndex}:{operation.InputFullBodyIkGoalSetValueIndex}:{operation.FullBodyIkGoalContributionInputStart}:{operation.FullBodyIkGoalContributionInputCount}:{operation.ControlInputOperationIndex}:{operation.ParameterIndex}:{operation.ParameterIndexB}:{operation.PlayerIndex}:{operation.BlendNodeIndex}:{operation.InertializationIndex}:{operation.BoneMaskIndex}:{operation.AdditiveReferenceIndex}:{operation.ModifyBoneIndex}:{operation.RootOrientationWarpIndex}:{operation.PoseBoneIkGoalsIndex}:{operation.FootPlacementIndex}:{operation.FullBodyIkIndex}:{operation.ClipPlayerIndex}:{operation.StateMachineIndex}:{operation.AnimationSlotIndex}:{operation.LinkedPoseCallIndex}:{operation.LinkedPoseFragmentIndex}:{operation.Weight:R}"));
-            }
-            for (int i = 0; i < stages.Count; i++)
-            {
-                CharacterPresentationPoseStage stage = stages[i];
-                values.Add(
-                    $"stage:{stage.Index}:{(int)stage.ExecutionDomain}:{(int)stage.InputPoseSpace}:{(int)stage.OutputPoseSpace}:{stage.OperationStart}:{stage.OperationCount}:{stage.NativeOperationStart}:{stage.NativeOperationCount}:{stage.PoseWorkspaceStart}:{stage.PoseWorkspaceCount}:{stage.CompletionIndex}:{stage.DiagnosticIndex}");
-            }
-            values.Add(FormattableString.Invariant(
-                $"workspace:{poseWorkspace}:{state.FullBodyIkGoalContributionValueCount}:{state.FullBodyIkGoalSetValueCount}:{state.FullBodyIkGoalContributionGoalWorkspaceCount}:{parameterWorkspace}:{contributionWorkspace}:{frameCache}:{state.OutputOperationIndex}"));
-            return StableHash.Compute(values.ToArray()).ToString();
-        }
     }
 }

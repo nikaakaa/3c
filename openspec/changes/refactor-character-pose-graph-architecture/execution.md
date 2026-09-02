@@ -1183,3 +1183,9 @@ Stage顺序、提前停止条件、World Context输入、Preview Operation位置
 状态：新增`CharacterPoseProgramActorRuntime`，统一拥有Pose State推进、Transition与Root Orientation Warp控制、Linked Pose generation选择与局部Reset、Actor节点Frame的Begin／Commit／Discard。Program Runtime只保留根Program active／committing lease，再把同一Actor State与Frame页交给该模块执行。
 
 Sequence Preview短路位置、State准备与最终Transition时机、Slot control写入、Linked Fragment匹配、generation reset、节点打开／回滚顺序和Root Orientation Warp reset值保持不变。Actor State仍由Program Runtime唯一释放，没有新增第二状态页。Program Runtime由1367行降至1029行。3C MCP完成全脚本重编且C#错误为0，不单独运行回放。
+
+## 拆出Presentation提交诊断协调器
+
+状态：新增`CharacterAnimationPresentationDiagnosticsCoordinator`，独立持有Action lifecycle、Action时间、Source同步、Retired Playback与Debug View的Committed投影，并统一处理interest合并、无interest清理、Foot短租约发布和Trace发布。根Presentation Runtime不再持有或拼装任何诊断Snapshot列表，只在Post-Commit把同帧typed Result交给该协调器。
+
+无interest时的跳过计数、仅Foot Event时不生成Runtime Snapshot、Live／Capture状态快照条件、Foot短租约失效时机和Trace输入保持不变；该模块不参与Program、Source、Constraint或Final Pose结果计算。根Runtime由约1380行降至1202行。3C MCP完成全脚本重编且C#错误为0，不单独运行回放。

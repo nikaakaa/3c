@@ -38,13 +38,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         readonly CharacterPoseTuningCoordinator m_PoseTuning;
         readonly CharacterPoseFrameCoordinator m_PoseFrame;
         readonly CharacterPoseMotionMatchingCoordinator m_PoseMotionMatching;
-        readonly List<ActionAnimationPlaybackLifecycleSnapshot>
-            m_ActionSnapshots;
-        readonly List<ActionPresentationTimeSnapshot>
-            m_ActionTimeSnapshots;
-        readonly List<PoseStateSourceSyncSnapshot>
-            m_PoseStateSourceSyncSnapshots;
-        readonly List<AnimationPlaybackId> m_RetiredPlaybacks;
+        readonly CharacterAnimationPresentationDiagnosticsCoordinator
+            m_PresentationDiagnostics;
         readonly Dictionary<AnimationPlayerSourceSampleKey,
             AnimationResolvedPoseSourceSample>
             m_ActionSourceSamples;
@@ -57,7 +52,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
 
         ulong m_TuningGeneration = 1;
         ulong m_NextFrameTransactionIdentity;
-        AnimationPresentationDebugView m_DebugView;
         AnimationPresentationFault m_Fault;
         AnimationPresentationFrameOutcome m_LastFrameOutcome;
         ulong m_DiscardCount;
@@ -104,17 +98,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     frameCapacity,
                     releaseCompletionCapacity,
                     failureCapacity);
-            m_ActionSnapshots =
-                new List<ActionAnimationPlaybackLifecycleSnapshot>(
-                    frameCapacity);
-            m_ActionTimeSnapshots =
-                new List<ActionPresentationTimeSnapshot>(frameCapacity);
-            m_PoseStateSourceSyncSnapshots =
-                new List<PoseStateSourceSyncSnapshot>(
-                    CalculateSourceSyncCapacity(
-                        bindings.Projection.PosePlan));
-            m_RetiredPlaybacks =
-                new List<AnimationPlaybackId>(frameCapacity);
             m_ActionSourceSamples =
                 new Dictionary<AnimationPlayerSourceSampleKey,
                     AnimationResolvedPoseSourceSample>(frameCapacity);
@@ -157,6 +140,13 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                         PoseProgram,
                         PoseSource,
                         m_PoseFrame);
+                m_PresentationDiagnostics =
+                    new CharacterAnimationPresentationDiagnosticsCoordinator(
+                        m_ActorId,
+                        m_PoseModules,
+                        frameCapacity,
+                        CalculateSourceSyncCapacity(
+                            bindings.Projection.PosePlan));
                 m_CapacityMetrics =
                     CreateCapacityMetrics(
                         actionPlayback.JournalCapacity,
@@ -181,28 +171,23 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             m_PoseModules.Diagnostics;
 
         public IReadOnlyList<AnimationPlaybackId> RetiredPlaybacks =>
-            m_RetiredPlaybacks;
+            m_PresentationDiagnostics.RetiredPlaybacks;
         public IReadOnlyList<ActionAnimationPlaybackLifecycleSnapshot>
-            ActionSnapshots => m_ActionSnapshots;
+            ActionSnapshots => m_PresentationDiagnostics.ActionSnapshots;
         public IReadOnlyList<ActionSlotSourceUsage> ActionSourceUsages =>
             PoseProgram.ActionSourceUsages;
         public bool HasRuntimeDiagnosticsSnapshot =>
-            PoseDiagnostics.HasCurrent;
+            m_PresentationDiagnostics.HasRuntimeSnapshot;
         public AnimationPresentationRuntimeSnapshot
             RuntimeDiagnosticsSnapshot =>
-                PoseDiagnostics.Current;
-        public bool HasDebugView =>
-            m_DebugView != null &&
-            PoseDiagnostics.HasCurrent;
+                m_PresentationDiagnostics.RuntimeSnapshot;
+        public bool HasDebugView => m_PresentationDiagnostics.HasDebugView;
         public AnimationPresentationDebugView DebugView =>
-            HasDebugView
-                ? m_DebugView
-                : throw new InvalidOperationException(
-                    "Animation Presentation Debug View is unavailable.");
+            m_PresentationDiagnostics.DebugView;
         public bool MotionMatchingRuntimeEnabled =>
             m_PoseMotionMatching.Enabled;
         public AnimationPresentationDiagnosticsInterest DiagnosticsInterest =>
-            PoseDiagnostics.Interest;
+            m_PresentationDiagnostics.Interest;
         internal bool HasFootPlacement => PoseConstraints.HasFootPlacement;
 
         internal void ResetFootPlacement(in CharacterFootPlacementReset reset) =>
@@ -216,7 +201,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 m_LastFrameOutcome,
                 m_DiscardCount,
                 m_Faulted ? m_Fault.Phase : default,
-                PoseDiagnostics.NoInterestSkipCount);
+                m_PresentationDiagnostics.NoInterestSkipCount);
         public bool AcceptsMotionMatchingTrajectoryIntent =>
             m_PoseMotionMatching.AcceptsTrajectoryIntent;
         public bool IsFaulted => m_Faulted;
@@ -229,20 +214,22 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         public void SetPoseWatchInterests(
             Guid ownerId,
             IReadOnlyList<AnimationPoseWatchIdentity> interests) =>
-            PoseDiagnostics.SetPoseWatchInterests(
+            m_PresentationDiagnostics.SetPoseWatchInterests(
                 ownerId,
                 interests);
 
         public void RemovePoseWatchInterests(Guid ownerId) =>
-            PoseDiagnostics.RemovePoseWatchInterests(ownerId);
+            m_PresentationDiagnostics.RemovePoseWatchInterests(ownerId);
 
         public void SetDiagnosticsInterest(
             Guid ownerId,
             AnimationPresentationDiagnosticsInterest interest) =>
-            PoseDiagnostics.SetDiagnosticsInterest(ownerId, interest);
+            m_PresentationDiagnostics.SetDiagnosticsInterest(
+                ownerId,
+                interest);
 
         public void RemoveDiagnosticsInterest(Guid ownerId) =>
-            PoseDiagnostics.RemoveDiagnosticsInterest(ownerId);
+            m_PresentationDiagnostics.RemoveDiagnosticsInterest(ownerId);
 
         internal void SetTuningBinding(CharacterPoseTuningRuntimeBinding binding)
         {
@@ -469,15 +456,12 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 AnimationPresentationTracePublisher.ResolveInterest(
                     diagnostics);
             AnimationPresentationDiagnosticsInterest diagnosticsInterest =
-                PoseDiagnostics.ResolveFrameInterest(
+                m_PresentationDiagnostics.ResolveInterest(
                     traceInterest);
             bool publishStateDiagnostics =
                 RequiresStateDiagnostics(diagnosticsInterest);
-            if (diagnosticsInterest ==
-                AnimationPresentationDiagnosticsInterest.None)
-            {
-                ClearPublishedDiagnostics();
-            }
+            m_PresentationDiagnostics.ClearWhenUnobserved(
+                diagnosticsInterest);
 
             CharacterPoseFrameTransaction transaction;
             using (TransactionBeginMarker.Auto())
@@ -648,57 +632,14 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     frameStage = "PostCommit";
                     PoseSource.ApplyActionBackendReleaseAcknowledgements();
                     PoseProgram.ExecutePreparedActionBackendReleaseRequests();
-                    bool publishRuntimeDiagnostics =
-                        diagnosticsInterest !=
-                        AnimationPresentationDiagnosticsInterest.None;
-                    bool captureFootIk =
-                        transaction.CaptureFootIkDiagnostics;
-                    if (publishRuntimeDiagnostics ||
-                        captureFootIk)
-                    {
-                        if (publishStateDiagnostics)
-                            BuildCommittedSnapshots(transaction);
-                        CharacterPoseSourceFrameResult committedSourceFrame =
-                            transaction.SourceFrame;
-                        PoseDiagnostics.BeginCommittedFrame(
-                            diagnosticsInterest,
-                            captureFootIk,
-                            linkedPose,
-                            PoseProgram,
-                            PoseSource,
-                            PoseConstraints,
-                            PosePublication,
-                            in committedSourceFrame,
-                            in executionResult);
-                        if (publishRuntimeDiagnostics)
-                        {
-                            CharacterFootIkCommittedCaptureViewLease
-                                footIkCaptureView =
-                                    PoseDiagnostics.Publish();
-                            if (publishStateDiagnostics)
-                                PublishCommittedSnapshots(transaction);
-                            else
-                                ClearCommittedStateSnapshots();
-                            PublishCommittedDebugView(
-                                publishStateDiagnostics);
-                            AnimationPresentationTracePublisher
-                                .PublishCompletedFootPlacement(
-                                    m_ActorId,
-                                    footIkCaptureView);
-                            if (traceInterest !=
-                                AnimationPresentationDiagnosticsInterest.None)
-                            {
-                                AnimationPresentationTracePublisher.Publish(
-                                    diagnostics,
-                                    m_DebugView,
-                                    m_RetiredPlaybacks);
-                            }
-                        }
-                    }
-                    else
-                    {
-                        PoseDiagnostics.RecordNoInterestSkip();
-                    }
+                    m_PresentationDiagnostics.PublishCommittedFrame(
+                        transaction,
+                        linkedPose,
+                        in executionResult,
+                        diagnosticsInterest,
+                        publishStateDiagnostics,
+                        traceInterest,
+                        diagnostics);
                     if (hasMotionMatchingResolution)
                     {
                         m_PoseMotionMatching
@@ -1027,89 +968,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 out hasResolution);
         }
 
-        void BuildCommittedSnapshots(
-            CharacterPoseFrameTransaction transaction)
-        {
-            CopyActionSnapshots(
-                PoseProgram.BuildCommittedActionLifecycleSnapshot(),
-                transaction.ActionSnapshots);
-            PoseProgram.BuildCommittedActionTimeSnapshots(
-                transaction.TimeSnapshots);
-            foreach (AnimationPlaybackId playbackId in
-                     PoseProgram.RetiredActionPlaybacks)
-            {
-                transaction.RetiredPlaybacks.Add(playbackId);
-            }
-            transaction.RetiredPlaybacks.Sort(
-                ComparePlayback);
-        }
-
-        void PublishCommittedSnapshots(
-            CharacterPoseFrameTransaction transaction)
-        {
-            CopyActionSnapshots(
-                transaction.ActionSnapshots,
-                m_ActionSnapshots);
-            Copy(
-                transaction.TimeSnapshots,
-                m_ActionTimeSnapshots);
-            Copy(
-                transaction.RetiredPlaybacks,
-                m_RetiredPlaybacks);
-        }
-
-        void PublishCommittedDebugView(
-            bool includeStateDiagnostics)
-        {
-            if (!PoseDiagnostics.HasCurrent)
-            {
-                m_PoseStateSourceSyncSnapshots.Clear();
-                m_DebugView = null;
-                return;
-            }
-            if (includeStateDiagnostics)
-            {
-                PoseProgram.CopySourceSyncSnapshots(
-                    m_PoseStateSourceSyncSnapshots);
-            }
-            else
-            {
-                m_PoseStateSourceSyncSnapshots.Clear();
-            }
-            AnimationPresentationRuntimeSnapshot posePlan =
-                PoseDiagnostics.Current;
-            m_DebugView =
-                new AnimationPresentationDebugView(
-                    in posePlan,
-                    m_ActionSnapshots,
-                    m_ActionTimeSnapshots,
-                    m_PoseStateSourceSyncSnapshots);
-        }
-
-        void ClearCommittedStateSnapshots()
-        {
-            m_ActionSnapshots.Clear();
-            m_ActionTimeSnapshots.Clear();
-            m_RetiredPlaybacks.Clear();
-            m_PoseStateSourceSyncSnapshots.Clear();
-        }
-
-        void ClearPublishedDiagnostics()
-        {
-            if (m_DebugView == null &&
-                !PoseDiagnostics.HasCurrent &&
-                m_ActionSnapshots.Count == 0 &&
-                m_ActionTimeSnapshots.Count == 0 &&
-                m_RetiredPlaybacks.Count == 0 &&
-                m_PoseStateSourceSyncSnapshots.Count == 0)
-            {
-                return;
-            }
-            ClearCommittedStateSnapshots();
-            m_DebugView = null;
-            PoseDiagnostics.Invalidate();
-        }
-
         static bool RequiresStateDiagnostics(
             AnimationPresentationDiagnosticsInterest interest) =>
             (interest &
@@ -1216,35 +1074,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             }
         }
 
-        static void CopyActionSnapshots(
-            IReadOnlyList<ActionAnimationPlaybackLifecycleSnapshot>
-                source,
-            FixedCapacityFrameBuffer<ActionAnimationPlaybackLifecycleSnapshot>
-                destination)
-        {
-            destination.Clear();
-            for (int i = 0; i < source.Count; i++)
-                destination.Add(source[i]);
-        }
-
-        static void CopyActionSnapshots(
-            IReadOnlyList<ActionAnimationPlaybackLifecycleSnapshot>
-                source,
-            List<ActionAnimationPlaybackLifecycleSnapshot>
-                destination)
-        {
-            Copy(source, destination);
-        }
-
-        static void Copy<T>(
-            IReadOnlyList<T> source,
-            List<T> destination)
-        {
-            destination.Clear();
-            for (int i = 0; i < source.Count; i++)
-                destination.Add(source[i]);
-        }
-
         ResolvedActionAnimationBinding RequireActionBinding(
             CharacterPresentationCommand command,
             CharacterPresentationProducerEntry producer)
@@ -1274,12 +1103,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
 
         void ClearPublishedState()
         {
-            m_ActionSnapshots.Clear();
-            m_ActionTimeSnapshots.Clear();
-            m_PoseStateSourceSyncSnapshots.Clear();
-            m_RetiredPlaybacks.Clear();
+            m_PresentationDiagnostics.ClearPublishedState();
             m_ActionSourceSamples.Clear();
-            m_DebugView = null;
         }
 
         void RequireAlive()
@@ -1341,19 +1166,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 throw new ArgumentOutOfRangeException(
                     nameof(presentationDeltaSeconds));
             }
-        }
-
-        static int ComparePlayback(
-            AnimationPlaybackId left,
-            AnimationPlaybackId right)
-        {
-            int producer = string.Compare(
-                left.ProducerId.ProgramProducerIdentity,
-                right.ProducerId.ProgramProducerIdentity,
-                StringComparison.Ordinal);
-            return producer != 0
-                ? producer
-                : left.Generation.CompareTo(right.Generation);
         }
 
         AnimationPresentationRuntimeCapacityMetrics CreateCapacityMetrics(

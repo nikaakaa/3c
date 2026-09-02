@@ -58,6 +58,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
         {
             public CompilationState(
                 CharacterPresentationPoseGraphAsset graphAsset,
+                CharacterPoseGraphClosure graphClosure,
                 CharacterAnimationRigDefinition rig,
                 CharacterPresentationPoseParameterEntry[] parameters,
                 Dictionary<PoseParameterId, int> parameterIndices,
@@ -74,6 +75,8 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                 CharacterFootPlacementAnalysisCompilation footAnalysis)
             {
                 GraphAsset = graphAsset;
+                GraphClosure = graphClosure ??
+                    throw new ArgumentNullException(nameof(graphClosure));
                 Rig = rig;
                 Parameters = parameters;
                 ParameterIndices = parameterIndices;
@@ -103,6 +106,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             }
 
             public CharacterPresentationPoseGraphAsset GraphAsset { get; }
+            public CharacterPoseGraphClosure GraphClosure { get; }
             public CharacterAnimationRigDefinition Rig { get; }
             public CharacterPresentationPoseParameterEntry[] Parameters { get; }
             public Dictionary<PoseParameterId, int> ParameterIndices { get; }
@@ -144,8 +148,6 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             public List<CharacterPresentationPoseOperation> Operations { get; } = new List<CharacterPresentationPoseOperation>();
             public List<CharacterPresentationPoseSourceMapEntry> SourceMap { get; } = new List<CharacterPresentationPoseSourceMapEntry>();
             public List<string> GraphDependencies { get; } = new List<string>();
-            public HashSet<string> GraphCallStack { get; } =
-                new HashSet<string>(StringComparer.Ordinal);
             public int PoseValueCount { get; set; }
             public int FullBodyIkGoalContributionValueCount { get; set; }
             public int FullBodyIkGoalSetValueCount { get; set; }
@@ -198,6 +200,13 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                 }
                 return new CharacterPoseCompilationResult(null, diagnostics);
             }
+            CharacterPoseGraphClosurePassResult closureResult =
+                CharacterPoseGraphClosurePass.Run(request);
+            if (!closureResult.IsSuccess)
+            {
+                diagnostics.AddRange(closureResult.Diagnostics);
+                return new CharacterPoseCompilationResult(null, diagnostics);
+            }
             CharacterPoseGraphValidationReport report = CharacterPresentationPoseGraphValidator.Validate(
                 request.Asset,
                 request.Rig,
@@ -224,7 +233,9 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             }
             try
             {
-                CharacterPoseProgramImage image = CompileValidated(request);
+                CharacterPoseProgramImage image = CompileValidated(
+                    request,
+                    closureResult.Closure);
                 return new CharacterPoseCompilationResult(image, diagnostics);
             }
             catch (Exception exception)
@@ -240,7 +251,8 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
         }
 
         static CharacterPoseProgramImage CompileValidated(
-            CharacterPoseCompilationRequest request)
+            CharacterPoseCompilationRequest request,
+            CharacterPoseGraphClosure graphClosure)
         {
             CharacterPresentationPoseGraphAsset asset = request.Asset;
             CharacterAnimationRigDefinition rig = request.Rig;
@@ -262,6 +274,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             }
             var state = new CompilationState(
                 asset,
+                graphClosure,
                 rig,
                 parameters,
                 parameterIndices,
@@ -754,14 +767,14 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             Action<int> stateOutput = null,
             int linkedPoseFragmentIndex = -1)
         {
-            string graphStackKey = CharacterPresentationAssetObjectIdentity.Require(ownerAsset) + "\0" + graph.GraphId.Value;
-            if (!state.GraphCallStack.Add(graphStackKey))
+            CharacterTypedPoseGraph closedGraph =
+                state.GraphClosure.RequireGraph(
+                    ownerAsset,
+                    graph.GraphId);
+            if (!ReferenceEquals(closedGraph, graph))
             {
-                string path = string.IsNullOrEmpty(callChain)
-                    ? graph.GraphId.Value
-                    : callChain + " -> " + graph.GraphId.Value;
                 throw new InvalidOperationException(
-                    $"Pose Graph catalog contains a recursive call: {path}.");
+                    $"Pose Graph '{graph.GraphId}' does not match its Graph Closure entry.");
             }
             state.GraphDependencies.Add($"{CharacterPresentationAssetObjectIdentity.Require(ownerAsset)}\0{callChain}\0{graph.GraphId}\0{graph.ContentRevision}");
             CharacterPoseIrGraphRole graphRole = linkedPoseFragmentIndex >= 0 && stateOutput == null
@@ -1077,7 +1090,6 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                         state.OutputOperationIndex = operationIndex;
                 }
             }
-            state.GraphCallStack.Remove(graphStackKey);
             return exports;
         }
 
@@ -1124,7 +1136,10 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                 if (!state.LinkedImplementations.TryGetValue(implementationId, out CharacterLinkedPoseImplementationAsset implementation))
                     throw new InvalidOperationException($"Linked Pose Call '{call.NodeId}' candidate '{implementationId}' is absent from authoring.");
                 CharacterLinkedPoseImplementationEntryBinding entryBinding = implementation.RequireEntry(payload.EntryId);
-                CharacterTypedPoseGraph entryGraph = entryBinding.RequireValid();
+                CharacterTypedPoseGraph entryGraph =
+                    state.GraphClosure.RequireGraph(
+                        entryBinding.GraphOwner,
+                        entryBinding.GraphId);
                 CharacterLinkedPosePortProjection.RequireEntryGraphMatch(entryGraph, group.Interface, payload.EntryId);
 
                 int fragmentIndex = state.LinkedFragments.Count;
@@ -1581,7 +1596,9 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             CharacterPoseStateMachineDefinition definition = payload.StateMachine;
             CharacterPoseStateMachineAuthoringValidator.RequireValid(
                 definition,
-                ownerAsset.RequireGraph);
+                graphId => state.GraphClosure.RequireGraph(
+                    ownerAsset,
+                    graphId));
             Dictionary<PoseStateAliasId, HashSet<PoseStateId>> aliases = ExpandAliases(definition);
             List<ExpandedStateTransition> expanded = ExpandTransitions(definition, aliases);
             HashSet<PoseStateId> reachable = CollectReachableStates(definition.Entry.TargetStateId, expanded);
@@ -1608,7 +1625,9 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             {
                 CharacterPoseStateDefinition authored = orderedStates[stateIndex];
                 CharacterTypedPoseGraph stateGraph =
-                    ownerAsset.RequireGraph(authored.PoseGraphId);
+                    state.GraphClosure.RequireGraph(
+                        ownerAsset,
+                        authored.PoseGraphId);
                 ValidateStateParameters(authored, stateGraph, state.Parameters);
                 int operationStart = state.Operations.Count;
                 int outputValueIndex = -1;
@@ -2189,7 +2208,9 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             int linkedPoseFragmentIndex)
         {
             CharacterTypedPoseGraph child =
-                ownerAsset.RequireGraph(callSite.Subgraph.PoseGraphId);
+                state.GraphClosure.RequireGraph(
+                    ownerAsset,
+                    callSite.Subgraph.PoseGraphId);
             CharacterPoseSubgraphSignatureValidator.RequireMatch(callSite, child);
             var imports = new Dictionary<PoseInterfacePortId, CompiledValue>();
             IReadOnlyList<CharacterPosePortDefinition> ports =

@@ -921,3 +921,9 @@ Definition Module不引用Document Store、Reconciler、Mutation Service、Undo�
 状态：新增`CharacterPoseCompilationRequest`、`CharacterPoseCompilationResult`、固定Pass枚举与结构化`CharacterPoseCompilationDiagnostic`。Diagnostic携带Pass、severity、stable reason、Graph／Node／Port、call-site、source path与related identity；Projection Compiler只把结构化错误格式化到既有Build错误集合，不再从异常文本反推Node位置。
 
 旧参数转发Compiler入口和`CharacterPoseNativePlanBuilder`命名删除。`CharacterPresentationProjectionCompiler`构造唯一typed Request并直接调用`CharacterPoseCompilerModule.Compile`，Module只返回Program Image或结构化失败，不保留第二Compiler facade、旧入口别名或兼容分派。任务11.1与11.12完成；中央Compilation State、旧Handler实现和其余独立Pass仍待后续删除。与Node Definition整合后的3C MCP编译错误筛选均为0，`git diff --check`与本change严格OpenSpec校验通过；不单独运行回放。
+
+## Graph Closure不可变Pass
+
+状态：新增独立`CharacterPoseGraphClosurePass`，先为每个Graph owner建立一次flat catalog，再只从root、Node Definition投影的State Pose／Subgraph／Motion Matching Entry依赖和Linked Pose selector候选展开唯一闭包。闭包按`owner identity + graph id`保存不可变Entry，递归路径、缺失Graph、重复catalog identity、缺失Linked Group／Interface／Selector／Implementation／Entry owner均发布`GraphClosure`结构化Diagnostic，失败时不进入Topology或Lowering。
+
+旧Compiler递归Lowering删除自己的Graph call stack与动态`RequireGraph`发现；StateMachine、Subgraph和Linked Pose Entry只读取前置闭包中已证明的Graph，并保持原递归Lowering顺序、scope、call chain、Graph dependency hash输入和最终Program Image不变。任务11.2完成；Topology Validator当前仍保留自身图内校验，待11.4改为消费同一闭包后删除重复递归判断。3C MCP对新Pass与Compiler入口错误筛选均为0；不单独运行回放。

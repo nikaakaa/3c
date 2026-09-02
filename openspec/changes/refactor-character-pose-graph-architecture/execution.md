@@ -769,3 +769,9 @@ Call遍历顺序、Group／Interface／Implementation匹配、重复Control保�
 状态：`CharacterFinalPosePublication.WritePhysicalPose`现在同时接收Publication lease、完整lineage、Program Result、Constraint Result与Final read binding，在进入具体Writer前统一核对lease、Program／Constraint有效性及同lineage、两者Outcome、Completion、PoseGraph Completed、成功帧continuity、availability／invalid metadata、invalid operation和Rig identity。TypedInvalid帧不强行要求Pose continuity，继续走既有Committed／reference fallback。
 
 具体Writer仍先遍历全部Physical Bone验证Transform和解析后的Pose，再在第二次唯一循环一次写入全部local position／rotation／scale；任一无效输入在首个物理写之前发布原Fault outcome并抛错，成功Pose用Pending，TypedInvalid用上一Committed或reference。由此任务7.5与7.6完成。任务7.7仍不勾选：Writer之后的Publication frame复制和部分Seal准备仍包含可抛验证，必须继续前移后才能证明Writer后no-throw。3C MCP对Publication和Pose Runtime错误筛选均为0；不单独运行回放。
+
+## Final Publication全部可抛准备前移到Writer之前
+
+状态：Final Publication Pending页拆成`Prepare`与`RequireReady`两段。`PreparePending`现在在Physical Writer之前完成lineage／Program／Constraint验证、页选择、Final Pose／Parameter／Contribution／Bone Kind复制、source identity展开、TypedInvalid判定和Publication Result构造；成功帧预期Applied identity由lineage确定，TypedInvalid预期为0，不再等待Writer后反读运行页。
+
+随后唯一Writer只执行既有全量预检和完整骨架写入，并把实际Physical diagnostics赋给已准备Pending页；Writer返回后没有Foot、Goal、FBBIK、source展开、Frame复制、Outcome switch或其它业务验证。旧Pose Runtime的Writer后`RequireFinalWriteOutcome`、Outcome switch和后置`PreparePending`已删除，Workspace与Frame Pages两层无调用转发也删除。Seal前`RequireReady`只核对已准备页和成功帧Physical write完成事实。由此任务7.7完成；7.2／7.3／7.8仍等待消除Program Final buffer到Publication双页的复制。3C MCP四个触碰文件错误筛选均为0；不单独运行回放。

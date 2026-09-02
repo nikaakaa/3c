@@ -109,7 +109,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 BufferPage = bufferPage;
             }
 
-            internal void Complete(
+            internal void Prepare(
                 CharacterFinalPosePublicationFrameLease lease,
                 in CharacterFinalPosePublicationResult result,
                 in ComposedAnimationPoseFrame frame)
@@ -118,10 +118,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 if (HasValue || BufferPage < 0 ||
                     !result.IsValid ||
                     !lease.Matches(result.Lineage) ||
-                    result.IsPublished &&
-                    (!PhysicalWrite.IsAvailable ||
-                     PhysicalWrite.CompletionIdentity !=
-                     result.Lineage.CompletionIdentity) ||
                     frame.CompletionIdentity !=
                     result.Lineage.CompletionIdentity)
                 {
@@ -133,7 +129,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 HasValue = true;
             }
 
-            internal void RequireReady(
+            internal void RequirePrepared(
                 CharacterFinalPosePublicationFrameLease lease)
             {
                 RequireLease(lease);
@@ -141,6 +137,20 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 {
                     throw new InvalidOperationException(
                         "Final Pose Publication Pending page is incomplete.");
+                }
+            }
+
+            internal void RequireReady(
+                CharacterFinalPosePublicationFrameLease lease)
+            {
+                RequirePrepared(lease);
+                if (Result.IsPublished &&
+                    (!PhysicalWrite.IsAvailable ||
+                     PhysicalWrite.CompletionIdentity !=
+                     Result.Lineage.CompletionIdentity))
+                {
+                    throw new InvalidOperationException(
+                        "Final Pose Publication physical write is incomplete.");
                 }
             }
 
@@ -319,19 +329,11 @@ namespace ThirdPersonCharacter.Pipeline.Animation
 
         internal void WritePhysicalPose(
             CharacterFinalPosePublicationFrameLease lease,
-            in CharacterPoseFrameLineage lineage,
-            in CharacterPoseProgramResult programResult,
-            in CharacterPoseConstraintResult constraintResult,
             in AnimationFinalPoseNativeReadBinding pending,
             bool hasCommitted,
             in AnimationFinalPoseNativeReadBinding committed)
         {
-            RequirePhysicalWrite(
-                lease,
-                in lineage,
-                in programResult,
-                in constraintResult,
-                in pending);
+            m_Pending.RequirePrepared(lease);
             m_PhysicalWriter.Write(
                 in pending,
                 hasCommitted,
@@ -385,13 +387,19 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         internal CharacterFinalPosePublicationResult PreparePending(
             CharacterFinalPosePublicationFrameLease lease,
             in CharacterPoseFrameLineage lineage,
+            in CharacterPoseProgramResult programResult,
+            in CharacterPoseConstraintResult constraintResult,
             in AnimationFinalPoseNativeReadBinding binding,
-            CharacterPoseSourceModule sourceModule,
-            AnimationFinalPoseWriteOutcome writeOutcome)
+            CharacterPoseSourceModule sourceModule)
         {
             if (sourceModule == null)
                 throw new ArgumentNullException(nameof(sourceModule));
-            m_Pending.RequireLease(lease);
+            RequirePhysicalWrite(
+                lease,
+                in lineage,
+                in programResult,
+                in constraintResult,
+                in binding);
             if (!lineage.IsValid ||
                 !lease.Matches(lineage) ||
                 binding.CompletionIdentity != lineage.CompletionIdentity)
@@ -400,6 +408,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                     "Final Pose Publication completed lineage is invalid.",
                     nameof(lineage));
             }
+            AnimationFinalPoseWriteOutcome writeOutcome =
+                programResult.IsCompleted
+                    ? AnimationFinalPoseWriteOutcome.Committed
+                    : AnimationFinalPoseWriteOutcome.TypedInvalid;
             CharacterFinalPosePublicationResult result =
                 CreatePublicationResult(
                     in lineage,
@@ -426,7 +438,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             ComposedAnimationPoseFrame frame = availability == AnimationPoseAvailability.Invalid
                 ? PublishInvalid(in binding, page, pageLease)
                 : PublishPose(in binding, sourceModule, page, pageLease);
-            m_Pending.Complete(lease, in result, in frame);
+            m_Pending.Prepare(lease, in result, in frame);
             return result;
         }
 
@@ -560,8 +572,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             if (binding.OutputInvalidReason[0] != AnimationPoseNativeInvalidReason.None ||
                 binding.PoseGraphInvalidReason[0] != AnimationPoseNativeInvalidReason.None ||
                 binding.PoseGraphInvalidOperationIndex[0] != -1 ||
-                binding.AppliedAt[0] != binding.CompletionIdentity ||
-                binding.WriteOutcome[0] != AnimationFinalPoseWriteOutcome.Committed ||
                 !float.IsFinite(binding.OutputWeight[0]) ||
                 binding.OutputWeight[0] < 0f || binding.OutputWeight[0] > 1f)
             {
@@ -664,19 +674,14 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             AnimationPoseNativeInvalidReason outputReason = binding.OutputInvalidReason[0];
             AnimationPoseNativeInvalidReason graphReason = binding.PoseGraphInvalidReason[0];
             int invalidOperationIndex = binding.PoseGraphInvalidOperationIndex[0];
-            bool finalPhysicalInvalid = outputReason == AnimationPoseNativeInvalidReason.FinalPhysicalWriteInvalid &&
-                                      graphReason == AnimationPoseNativeInvalidReason.None &&
-                                      invalidOperationIndex == -1 && binding.AppliedAt[0] == 0;
             bool graphInvalid = outputReason != AnimationPoseNativeInvalidReason.None &&
                                 graphReason != AnimationPoseNativeInvalidReason.None &&
                                 invalidOperationIndex >= 0 && invalidOperationIndex < m_OperationCount &&
                                 binding.AppliedAt[0] == 0 && binding.ContributionCount[0] == 0;
-            AnimationFinalPoseWriteOutcome outcome = binding.WriteOutcome[0];
             if (!IsInvalidReason(outputReason) ||
                 !IsInvalidReason(graphReason) ||
                 (outputReason == AnimationPoseNativeInvalidReason.None && graphReason == AnimationPoseNativeInvalidReason.None) ||
-                !finalPhysicalInvalid && !graphInvalid ||
-                outcome != AnimationFinalPoseWriteOutcome.TypedInvalid)
+                !graphInvalid)
             {
                 throw new InvalidOperationException(
                     $"Final Animation Pose Graph Invalid completion metadata is inconsistent. " +
@@ -684,7 +689,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                     $"GraphReason={graphReason}, InvalidOperation={invalidOperationIndex}, " +
                     $"ContributionCount={binding.ContributionCount[0]}, AppliedAt={binding.AppliedAt[0]}, " +
                     $"Completion={binding.CompletionIdentity}, GraphCompletedAt={binding.PoseGraphCompletedAt[0]}, " +
-                    $"Continuity={binding.ContinuityIdentity[0]}, WriteOutcome={outcome}.");
+                    $"Continuity={binding.ContinuityIdentity[0]}, WriteOutcome={binding.WriteOutcome[0]}.");
             }
             int poseOffset = checked(page * m_BoneCount);
             int parameterOffset = checked(page * m_ParameterCount);
@@ -789,7 +794,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 binding.OutputInvalidReason[0],
                 binding.PoseGraphInvalidReason[0],
                 binding.PoseGraphInvalidOperationIndex[0],
-                binding.AppliedAt[0]);
+                writeOutcome == AnimationFinalPoseWriteOutcome.Committed
+                    ? lineage.CompletionIdentity
+                    : 0);
         }
 
         void RequireBinding(in AnimationFinalPoseNativeReadBinding binding)

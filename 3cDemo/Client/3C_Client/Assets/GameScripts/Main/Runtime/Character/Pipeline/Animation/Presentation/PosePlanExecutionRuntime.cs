@@ -2348,32 +2348,19 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             CharacterFinalPosePublicationResult publicationResult;
             using (FinalWriteMarker.Auto())
             {
-                m_FinalPublication.WritePhysicalPose(
+                publicationResult = m_FinalPublication.PreparePending(
                     publicationLease,
                     in completedLineage,
                     in programResult,
                     in constraintResult,
                     in finalRead,
+                    m_SourceModule);
+                m_PendingFrameOutcome = publicationResult.Outcome;
+                m_FinalPublication.WritePhysicalPose(
+                    publicationLease,
+                    in finalRead,
                     hasCommittedFinal,
                     in committedFinalRead);
-                AnimationFinalPoseWriteOutcome finalWriteOutcome =
-                    m_ProgramFrames.RequireFinalWriteOutcome(
-                        completionIdentity);
-                m_PendingFrameOutcome = finalWriteOutcome switch
-                {
-                    AnimationFinalPoseWriteOutcome.Committed =>
-                        AnimationPresentationFrameOutcome.Committed,
-                    AnimationFinalPoseWriteOutcome.TypedInvalid =>
-                        AnimationPresentationFrameOutcome.TypedInvalid,
-                    _ => throw new InvalidOperationException(
-                        $"Unsupported final animation pose writer outcome '{finalWriteOutcome}'.")
-                };
-                publicationResult = m_FinalPublication.PreparePending(
-                    publicationLease,
-                    in completedLineage,
-                    in finalRead,
-                    m_SourceModule,
-                    finalWriteOutcome);
             }
             var executionResult = new CharacterPoseFrameExecutionResult(
                 in programResult,

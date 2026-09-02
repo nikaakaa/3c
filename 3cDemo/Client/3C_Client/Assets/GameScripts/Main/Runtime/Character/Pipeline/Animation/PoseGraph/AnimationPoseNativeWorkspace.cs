@@ -410,21 +410,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             return new AnimationFinalPoseNativeReadBinding(in m_FrameBinding);
         }
 
-        internal AnimationFinalPoseWriteOutcome RequireFinalWriteOutcome(
-            ulong completionIdentity)
-        {
-            RequireFrame(completionIdentity);
-            AnimationFinalPoseWriteOutcome outcome =
-                m_FinalWriteOutcome[0];
-            if (outcome == AnimationFinalPoseWriteOutcome.None ||
-                outcome == AnimationFinalPoseWriteOutcome.Faulted)
-            {
-                throw new InvalidOperationException(
-                    $"Final animation pose writer failed with outcome '{outcome}'.");
-            }
-            return outcome;
-        }
-
         internal PoseNodeId RequirePoseNodeId(int physicalSlotIndex)
         {
             RequireAlive();

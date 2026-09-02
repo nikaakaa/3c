@@ -382,10 +382,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             ulong completionIdentity) =>
             m_Workspace.RequireFinalReadBinding(completionIdentity);
 
-        internal AnimationFinalPoseWriteOutcome RequireFinalWriteOutcome(
-            ulong completionIdentity) =>
-            m_Workspace.RequireFinalWriteOutcome(completionIdentity);
-
         internal PoseNodeId RequirePoseNodeId(int physicalSlotIndex) =>
             m_Workspace.RequirePoseNodeId(physicalSlotIndex);
 

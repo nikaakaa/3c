@@ -225,7 +225,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             graph.Nodes.Count(value => value != null &&
                 value.Kind != CharacterPoseNodeKind.EntryPoseInput &&
                 value.Kind != CharacterPoseNodeKind.GraphOutput &&
-                CharacterPoseCompilerHandlerRegistry.Shared.Require(value.Kind).ExecutionDomain != CharacterPoseExecutionDomain.PurePose);
+                CharacterPoseNodeDefinitionModule.Shared.Require(value.Kind).ExecutionDomain != CharacterPoseExecutionDomain.PurePose);
 
         static PoseNodeId Scope(PoseNodeId nodeId, string scope) =>
             string.IsNullOrEmpty(scope)

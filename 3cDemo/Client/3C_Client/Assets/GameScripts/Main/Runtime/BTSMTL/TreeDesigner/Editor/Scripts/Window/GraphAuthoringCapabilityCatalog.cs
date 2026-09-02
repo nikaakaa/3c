@@ -331,6 +331,38 @@ namespace TreeDesigner.Editor
 
     public static class GraphAuthoringNodePortShapeProjector
     {
+        public static IReadOnlyList<GraphAuthoringDynamicPortProjection>
+            ProjectComplete(
+                GraphAuthoringCapabilityDescriptor capability,
+                IReadOnlyList<GraphAuthoringTypedPropertyValue> properties,
+                IReadOnlyList<GraphAuthoringDynamicPortProjection>
+                    authoredDynamicPorts = null)
+        {
+            if (capability == null)
+                throw new ArgumentNullException(nameof(capability));
+            GraphAuthoringDynamicPortProjection[] fixedPorts = capability
+                .FixedPorts
+                .OrderBy(value => value.Order)
+                .Select(value =>
+                    new GraphAuthoringDynamicPortProjection(
+                        value.PortId,
+                        value.DisplayName,
+                        value.ValueTypeId,
+                        value.Direction,
+                        value.Capacity,
+                        value.Required,
+                        value.Order,
+                        value.InterfacePortId))
+                .ToArray();
+            return fixedPorts
+                .Concat(Project(
+                    capability,
+                    properties,
+                    authoredDynamicPorts))
+                .OrderBy(value => value.Order)
+                .ToArray();
+        }
+
         public static IReadOnlyList<GraphAuthoringDynamicPortProjection> Project(
             GraphAuthoringCapabilityDescriptor capability,
             IReadOnlyList<GraphAuthoringTypedPropertyValue> properties,
@@ -344,6 +376,11 @@ namespace TreeDesigner.Editor
                 properties ?? Array.Empty<GraphAuthoringTypedPropertyValue>());
             var occupied = new HashSet<GraphAuthoringPortId>(
                 capability.FixedPorts.Select(value => value.PortId));
+            var interfacePorts = new HashSet<string>(
+                capability.FixedPorts
+                    .Select(value => value.InterfacePortId)
+                    .Where(value => !string.IsNullOrWhiteSpace(value)),
+                StringComparer.Ordinal);
             var result = new List<GraphAuthoringDynamicPortProjection>();
             if (variant != null)
             {
@@ -352,6 +389,7 @@ namespace TreeDesigner.Editor
                     AddProjectedPort(
                         result,
                         occupied,
+                        interfacePorts,
                         new GraphAuthoringDynamicPortProjection(
                             port.PortId,
                             port.DisplayName,
@@ -359,14 +397,21 @@ namespace TreeDesigner.Editor
                             port.Direction,
                             port.Capacity,
                             port.Required,
-                            port.Order),
+                            port.Order,
+                            port.InterfacePortId),
                         capability.CapabilityId);
                 }
             }
             foreach (GraphAuthoringDynamicPortProjection port in
                      authoredDynamicPorts ?? Array.Empty<GraphAuthoringDynamicPortProjection>())
             {
-                AddProjectedPort(result, occupied, port, capability.CapabilityId);
+                ValidateDynamicPort(capability, port);
+                AddProjectedPort(
+                    result,
+                    occupied,
+                    interfacePorts,
+                    port,
+                    capability.CapabilityId);
             }
             return result.OrderBy(value => value.Order).ToArray();
         }
@@ -410,6 +455,7 @@ namespace TreeDesigner.Editor
         static void AddProjectedPort(
             ICollection<GraphAuthoringDynamicPortProjection> result,
             ISet<GraphAuthoringPortId> occupied,
+            ISet<string> interfacePorts,
             GraphAuthoringDynamicPortProjection port,
             GraphAuthoringCapabilityId capabilityId)
         {
@@ -419,7 +465,33 @@ namespace TreeDesigner.Editor
                     "port_shape_identity_duplicate",
                     $"Capability '{capabilityId}' projects duplicate port identity '{port.PortId}'.");
             }
+            if (!string.IsNullOrWhiteSpace(port.InterfacePortId) &&
+                !interfacePorts.Add(port.InterfacePortId))
+            {
+                throw new GraphAuthoringPortShapeException(
+                    "port_shape_interface_identity_duplicate",
+                    $"Capability '{capabilityId}' projects duplicate interface port identity '{port.InterfacePortId}'.");
+            }
             result.Add(port);
+        }
+
+        static void ValidateDynamicPort(
+            GraphAuthoringCapabilityDescriptor capability,
+            GraphAuthoringDynamicPortProjection port)
+        {
+            if (capability.DynamicPortPolicy ==
+                GraphAuthoringDynamicPortPolicy.None ||
+                capability.DynamicPortPolicy ==
+                GraphAuthoringDynamicPortPolicy.OrderedInputs &&
+                port.Direction != GraphAuthoringPortDirection.Input ||
+                capability.DynamicPortPolicy ==
+                GraphAuthoringDynamicPortPolicy.OrderedOutputs &&
+                port.Direction != GraphAuthoringPortDirection.Output)
+            {
+                throw new GraphAuthoringPortShapeException(
+                    "port_shape_dynamic_port_forbidden",
+                    $"Capability '{capability.CapabilityId}' does not allow dynamic port '{port.PortId}' with direction '{port.Direction}'.");
+            }
         }
     }
 

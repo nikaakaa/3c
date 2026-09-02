@@ -900,16 +900,15 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
             signature = string.Empty;
             if (!s_Capabilities.TryProjectSnapshotPortShape(
                     node,
-                    out GraphAuthoringCapabilityDescriptor capability,
+                    out _,
                     out IReadOnlyList<GraphAuthoringDynamicPortProjection> projected,
                     out GraphAuthoringPortShapeException error))
             {
                 report.Error($"{graphPath}.nodes[{Escape(node.elementAuthoringId)}].properties", error.Code, error.Message);
                 return false;
             }
-            signature = string.Join("|", capability.FixedPorts
+            signature = string.Join("|", projected
                 .Select(value => $"{value.PortId}:{value.Direction}:{value.Capacity}")
-                .Concat(projected.Select(value => $"{value.PortId}:{value.Direction}:{value.Capacity}"))
                 .OrderBy(value => value, StringComparer.Ordinal));
             return true;
         }

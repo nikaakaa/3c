@@ -1,9 +1,11 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 using BTSMTL.Timeline;
 using Newtonsoft.Json.Linq;
 using ThirdPersonCharacter.Animation.TransitionRouting;
+using ThirdPersonCharacter.Editor.CharacterSimulation;
 using ThirdPersonCharacter.Pipeline.Animation;
 using TreeDesigner.Editor;
 
@@ -1197,24 +1199,43 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
 
             foreach (AgentPackagePoseNode node in nodes.Values)
             {
-                bool stateMachine = string.Equals(
-                    node.capability,
-                    CharacterPoseGraphAuthoringCapabilities
-                        .Get(CharacterPoseNodeKind.PoseStateMachine).Value,
-                    StringComparison.Ordinal);
-                if (stateMachine != !string.IsNullOrWhiteSpace(node.childDocumentId) ||
-                    stateMachine &&
-                    !machines.ContainsKey(node.childDocumentId))
+                CharacterPoseNodeDefinition definition =
+                    CharacterPoseNodeDefinitionModule.Shared
+                        .RequireCapability(node.capability);
+                bool stateMachine = definition.OperationFamily ==
+                    CharacterPoseOperationFamily.StateMachine;
+                bool motionMatching = definition.OperationFamily ==
+                    CharacterPoseOperationFamily.MotionMatching;
+                string expectedGraph = motionMatching
+                    ? node.properties?["entry-graph-id"]?.Value<string>() ??
+                      string.Empty
+                    : string.Empty;
+                bool validChild = stateMachine
+                    ? !string.IsNullOrWhiteSpace(node.childDocumentId) &&
+                      machines.ContainsKey(node.childDocumentId)
+                    : motionMatching
+                        ? !string.IsNullOrWhiteSpace(expectedGraph) &&
+                          string.Equals(
+                              node.childDocumentId,
+                              expectedGraph,
+                              StringComparison.Ordinal) &&
+                          graphs.ContainsKey(expectedGraph)
+                        : string.IsNullOrWhiteSpace(node.childDocumentId);
+                if (!validChild)
                 {
                     report.Error(
                         $"presentation.poseNodes[{node.id}].childDocumentId",
                         "presentation_pose_child_document_invalid",
-                        "PoseStateMachine节点必须唯一引用现有StateMachine文档，其它节点不得声明child document。");
+                        "Pose节点child document必须与唯一Node Definition的直接图依赖一致。");
                     valid = false;
                 }
             }
             HashSet<string> ownedMachines = nodes.Values
-                .Where(value => !string.IsNullOrWhiteSpace(value.childDocumentId))
+                .Where(value =>
+                    CharacterPoseNodeDefinitionModule.Shared
+                        .RequireCapability(value.capability)
+                        .OperationFamily ==
+                    CharacterPoseOperationFamily.StateMachine)
                 .Select(value => value.childDocumentId)
                 .ToHashSet(StringComparer.Ordinal);
             if (!ownedMachines.SetEquals(machines.Keys))
@@ -1810,8 +1831,15 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                             capabilityId,
                             CharacterPoseGraphAuthoringCapabilities.Domain,
                             role);
-                    valid &= ValidateNode(node, capability, graph.id, report);
-                    nodes.Add(node.id, new NodeContract(node, capability));
+                    valid &= ValidateNode(
+                        node,
+                        capability,
+                        graph.id,
+                        report,
+                        out IReadOnlyList<
+                            GraphAuthoringDynamicPortProjection>
+                            portShape);
+                    nodes.Add(node.id, new NodeContract(portShape));
                     allNodes.Add(node.id, node);
                 }
                 catch (Exception exception)
@@ -1860,9 +1888,12 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
             AgentPackagePoseNode node,
             GraphAuthoringCapabilityDescriptor capability,
             string graphId,
-            AgentCompileReport report)
+            AgentCompileReport report,
+            out IReadOnlyList<GraphAuthoringDynamicPortProjection>
+                portShape)
         {
             bool valid = true;
+            portShape = Array.Empty<GraphAuthoringDynamicPortProjection>();
             var fields = capability.Fields
                 .Where(value => value.AuthoringWritable)
                 .ToDictionary(
@@ -1913,33 +1944,18 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                 }
             }
 
-            var ports = new HashSet<string>(
-                capability.FixedPorts.Select(value => value.PortId.Value),
-                StringComparer.Ordinal);
-            var interfacePorts = new HashSet<string>(StringComparer.Ordinal);
-            var portOrders = new HashSet<int>();
+            var dynamicPorts = new List<
+                GraphAuthoringDynamicPortProjection>();
             foreach (AgentPackagePoseDynamicPort port in node.dynamicPorts ??
                          new List<AgentPackagePoseDynamicPort>())
             {
                 if (port == null || !Identity(port.id) ||
-                    !ports.Add(port.id) ||
                     string.IsNullOrWhiteSpace(port.name) ||
-                    !ValidPoseValueType(port.valueType) ||
-                    Identity(port.interfacePortId) &&
-                    !interfacePorts.Add(port.interfacePortId) ||
                     !Enum.TryParse(
                         port.direction,
                         false,
                         out GraphAuthoringPortDirection direction) ||
-                    port.order < 0 || !portOrders.Add(port.order) ||
-                    capability.DynamicPortPolicy ==
-                    GraphAuthoringDynamicPortPolicy.None ||
-                    capability.DynamicPortPolicy ==
-                    GraphAuthoringDynamicPortPolicy.OrderedInputs &&
-                    direction != GraphAuthoringPortDirection.Input ||
-                    capability.DynamicPortPolicy ==
-                    GraphAuthoringDynamicPortPolicy.OrderedOutputs &&
-                    direction != GraphAuthoringPortDirection.Output)
+                    port.order < 0)
                 {
                     report.Error(
                         GraphDirectory(graphId) +
@@ -1947,13 +1963,58 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                         "presentation_pose_dynamic_port_invalid",
                         "Pose dynamic port不符合Capability策略。");
                     valid = false;
+                    continue;
+                }
+                try
+                {
+                    _ = CharacterPoseAuthoringPortProjection.Kind(
+                        port.valueType);
+                    dynamicPorts.Add(
+                        new GraphAuthoringDynamicPortProjection(
+                            new GraphAuthoringPortId(port.id),
+                            port.name,
+                            port.valueType,
+                            direction,
+                            direction == GraphAuthoringPortDirection.Input
+                                ? GraphAuthoringPortCapacity.Single
+                                : GraphAuthoringPortCapacity.Multiple,
+                            port.required,
+                            port.order,
+                            port.interfacePortId));
+                }
+                catch (Exception exception)
+                {
+                    report.Error(
+                        GraphDirectory(graphId) +
+                        $"/graph.json.nodes[{node.id}].dynamicPorts",
+                        "presentation_pose_dynamic_port_invalid",
+                        exception.Message);
+                    valid = false;
                 }
             }
-            if (string.Equals(
-                    node.capability,
-                    CharacterPoseGraphAuthoringCapabilities
-                        .Get(CharacterPoseNodeKind.AnimationSlot).Value,
-                    StringComparison.Ordinal))
+            try
+            {
+                portShape = GraphAuthoringNodePortShapeProjector
+                    .ProjectComplete(
+                        capability,
+                        ProjectTypedProperties(node, capability),
+                        dynamicPorts);
+            }
+            catch (Exception exception)
+            {
+                report.Error(
+                    GraphDirectory(graphId) +
+                    $"/graph.json.nodes[{node.id}].dynamicPorts",
+                    exception is GraphAuthoringPortShapeException shape
+                        ? shape.Code
+                        : "port_shape_property_invalid",
+                    exception.Message);
+                valid = false;
+            }
+            if (CharacterPoseNodeDefinitionModule.Shared
+                    .RequireCapability(node.capability)
+                    .OperationFamily ==
+                CharacterPoseOperationFamily.AnimationSlot)
             {
                 var binding = new AgentPackageAnimationSlotBinding
                 {
@@ -1975,17 +2036,71 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
             return valid;
         }
 
+        static IReadOnlyList<GraphAuthoringTypedPropertyValue>
+            ProjectTypedProperties(
+                AgentPackagePoseNode node,
+                GraphAuthoringCapabilityDescriptor capability) =>
+            capability.PortVariants
+                .Select(value => value.When.FieldId)
+                .Distinct()
+                .Select(fieldId =>
+                {
+                    GraphAuthoringFieldDescriptor field = capability.Fields
+                        .Single(value => value.FieldId.Equals(fieldId));
+                    if (node.properties == null ||
+                        !node.properties.TryGetValue(
+                            fieldId.Value,
+                            StringComparison.Ordinal,
+                            out JToken token))
+                    {
+                        throw new GraphAuthoringPortShapeException(
+                            "port_shape_discriminator_unknown",
+                            $"Pose capability '{capability.CapabilityId}' requires discriminator '{fieldId}'.");
+                    }
+                    return new GraphAuthoringTypedPropertyValue(
+                        fieldId,
+                        field.ValueKind,
+                        CanonicalPropertyValue(field.ValueKind, token));
+                })
+                .ToArray();
+
+        static string CanonicalPropertyValue(
+            GraphAuthoringFieldValueKind kind,
+            JToken token) =>
+            kind switch
+            {
+                GraphAuthoringFieldValueKind.Boolean =>
+                    token.Value<bool>().ToString(),
+                GraphAuthoringFieldValueKind.Integer =>
+                    token.Value<long>().ToString(
+                        CultureInfo.InvariantCulture),
+                GraphAuthoringFieldValueKind.Float =>
+                    token.Value<double>().ToString(
+                        "R",
+                        CultureInfo.InvariantCulture),
+                GraphAuthoringFieldValueKind.String or
+                GraphAuthoringFieldValueKind.Enum or
+                GraphAuthoringFieldValueKind.IdentityReference =>
+                    token.Value<string>() ?? string.Empty,
+                _ => throw new GraphAuthoringPortShapeException(
+                    "port_shape_discriminator_type_invalid",
+                    $"Pose port discriminator type '{kind}' is not supported.")
+            };
+
         static bool ValidateSubgraphSignatures(
             IReadOnlyDictionary<string, AgentPackagePoseGraphFile> graphs,
             AgentCompileReport report)
         {
             bool valid = true;
-            string subgraphCapability = CharacterPoseGraphAuthoringCapabilities
-                .Get(CharacterPoseNodeKind.PoseSubgraph).Value;
-            string inputCapability = CharacterPoseGraphAuthoringCapabilities
-                .Get(CharacterPoseNodeKind.GraphInput).Value;
-            string outputCapability = CharacterPoseGraphAuthoringCapabilities
-                .Get(CharacterPoseNodeKind.GraphOutput).Value;
+            string subgraphCapability = CharacterPoseNodeDefinitionModule
+                .Shared.Require(CharacterPoseNodeKind.PoseSubgraph)
+                .CapabilityIdentity;
+            string inputCapability = CharacterPoseNodeDefinitionModule.Shared
+                .Require(CharacterPoseNodeKind.GraphInput)
+                .CapabilityIdentity;
+            string outputCapability = CharacterPoseNodeDefinitionModule.Shared
+                .Require(CharacterPoseNodeKind.GraphOutput)
+                .CapabilityIdentity;
             foreach (AgentPackagePoseGraphFile owner in graphs.Values)
             {
                 foreach (AgentPackagePoseNode callSite in owner.nodes ??
@@ -2101,18 +2216,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
             }
             return true;
         }
-
-        static bool ValidPoseValueType(string value) => value switch
-        {
-            "pose.local" => true,
-            "pose.component" => true,
-            "pose.parameter" => true,
-            "pose.discontinuity" => true,
-            "pose.action-playback" => true,
-            "component.full-body-ik-goals" => true,
-            "component.full-body-ik-goal-contribution" => true,
-            _ => false
-        };
 
         static bool ValidateStateMachine(
             AgentPackagePoseStateMachineFile machine,
@@ -2559,22 +2662,17 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
             readonly Dictionary<string, PortContract> m_Ports;
 
             public NodeContract(
-                AgentPackagePoseNode node,
-                GraphAuthoringCapabilityDescriptor capability)
+                IReadOnlyList<GraphAuthoringDynamicPortProjection>
+                    portShape)
             {
-                m_Ports = capability.FixedPorts.ToDictionary(
+                m_Ports = (portShape ??
+                    Array.Empty<GraphAuthoringDynamicPortProjection>())
+                    .ToDictionary(
                     value => value.PortId.Value,
                     value => new PortContract(
                         value.ValueTypeId,
                         value.Direction),
                     StringComparer.Ordinal);
-                foreach (AgentPackagePoseDynamicPort port in node.dynamicPorts ??
-                             new List<AgentPackagePoseDynamicPort>())
-                {
-                    m_Ports[port.id] = new PortContract(
-                        port.valueType,
-                        Enum.Parse<GraphAuthoringPortDirection>(port.direction));
-                }
             }
 
             public bool TryPort(string id, out PortContract port) =>

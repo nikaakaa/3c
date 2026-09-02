@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
+using ThirdPersonCharacter.Editor.CharacterSimulation;
 using ThirdPersonCharacter.Pipeline.Animation;
 using TreeDesigner.Editor;
 using UnityEditor;
@@ -230,12 +231,18 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 .ToDictionary(
                     node => Require(node.id, "node identity"),
                     StringComparer.Ordinal);
+            var portShapes = new Dictionary<string,
+                IReadOnlyDictionary<string,
+                    GraphAuthoringDynamicPortProjection>>(
+                StringComparer.Ordinal);
             foreach (ClipboardNode node in nodes.Values)
             {
                 CharacterPoseNodeKind kind = ResolveKind(
                     node.capability,
                     document.DocumentRoleId);
-                RequireCopyable(kind);
+                CharacterPoseNodeDefinition definition =
+                    CharacterPoseNodeDefinitionModule.Shared.Require(kind);
+                RequireCopyable(definition);
                 GraphAuthoringCapabilityDescriptor capability =
                     CharacterPoseGraphAuthoringCapabilities.Catalog.Require(
                         new GraphAuthoringCapabilityId(node.capability),
@@ -263,7 +270,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     throw new InvalidOperationException(
                         $"Pose clipboard node '{node.id}' has invalid dynamic ports.");
                 }
-                CharacterPoseAuthoringPayloadCodec.Create(
+                CharacterPoseNodePayload typedPayload =
+                    CharacterPoseAuthoringPayloadCodec.Create(
                     kind,
                     new CharacterPoseAuthoringPayloadInput(
                         (fieldId, expectedType) => DecodeField(
@@ -271,6 +279,34 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                             node,
                             fieldId,
                             expectedType)));
+                CharacterPoseDynamicPort[] dynamicPorts =
+                    node.dynamicPorts.Select(port =>
+                        new CharacterPoseDynamicPort(
+                            new PosePortId(port.id),
+                            port.name,
+                            CharacterPoseAuthoringPortProjection.Kind(
+                                port.valueType),
+                            Enum.Parse<CharacterPosePortDirection>(
+                                port.direction,
+                                false),
+                            port.required,
+                            port.order,
+                            string.IsNullOrWhiteSpace(port.interfacePortId)
+                                ? default
+                                : new PoseInterfacePortId(
+                                    port.interfacePortId)))
+                    .ToArray();
+                portShapes.Add(
+                    node.id,
+                    definition.ProjectPortShape(
+                            new CharacterTypedPoseNode(
+                                new PoseNodeId(node.id),
+                                node.name,
+                                typedPayload,
+                                dynamicPorts))
+                        .ToDictionary(
+                            value => value.PortId.Value,
+                            StringComparer.Ordinal));
             }
             if (payload.edges
                 .Select(edge => Require(edge.id, "edge identity"))
@@ -288,8 +324,28 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     throw new InvalidOperationException(
                         $"Pose clipboard edge '{edge.id}' leaves the copied node closure.");
                 }
-                Require(edge.sourcePort, "source port identity");
-                Require(edge.targetPort, "target port identity");
+                string sourcePortId = Require(
+                    edge.sourcePort,
+                    "source port identity");
+                string targetPortId = Require(
+                    edge.targetPort,
+                    "target port identity");
+                if (!portShapes[edge.sourceNode].TryGetValue(
+                        sourcePortId,
+                        out GraphAuthoringDynamicPortProjection source) ||
+                    !portShapes[edge.targetNode].TryGetValue(
+                        targetPortId,
+                        out GraphAuthoringDynamicPortProjection target) ||
+                    source.Direction != GraphAuthoringPortDirection.Output ||
+                    target.Direction != GraphAuthoringPortDirection.Input ||
+                    !string.Equals(
+                        source.ValueTypeId,
+                        target.ValueTypeId,
+                        StringComparison.Ordinal))
+                {
+                    throw new InvalidOperationException(
+                        $"Pose clipboard edge '{edge.id}' does not match the projected Port Shape.");
+                }
             }
         }
 
@@ -436,56 +492,32 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             string capability,
             GraphAuthoringDocumentRoleId role)
         {
-            foreach (CharacterPoseNodeKind kind in
-                     Enum.GetValues(typeof(CharacterPoseNodeKind)))
-            {
-                if (!string.Equals(
-                        CharacterPoseGraphAuthoringCapabilities.Get(kind)
-                            .Value,
-                        capability,
-                        StringComparison.Ordinal))
-                    continue;
-                CharacterPoseGraphAuthoringCapabilities.Catalog.Require(
-                    new GraphAuthoringCapabilityId(capability),
-                    CharacterPoseGraphAuthoringCapabilities.Domain,
-                    role);
-                return kind;
-            }
-            throw new InvalidOperationException(
-                $"Unknown Pose clipboard capability '{capability}'.");
+            CharacterPoseNodeDefinition definition =
+                CharacterPoseNodeDefinitionModule.Shared.RequireCapability(
+                    capability);
+            CharacterPoseGraphAuthoringCapabilities.Catalog.Require(
+                definition.Capability.CapabilityId,
+                CharacterPoseGraphAuthoringCapabilities.Domain,
+                role);
+            return definition.Kind;
         }
 
         static void RequireCopyable(CharacterTypedPoseNode node) =>
-            RequireCopyable(node.Kind);
+            RequireCopyable(
+                CharacterPoseNodeDefinitionModule.Shared.Require(
+                    node.Kind));
 
-        static void RequireCopyable(CharacterPoseNodeKind kind)
+        static void RequireCopyable(CharacterPoseNodeDefinition definition)
         {
-            if (kind == CharacterPoseNodeKind.GraphInput ||
-                kind == CharacterPoseNodeKind.GraphOutput ||
-                kind == CharacterPoseNodeKind.OutputPose ||
-                kind == CharacterPoseNodeKind.PoseStateMachine)
+            if (!definition.Copyable)
             {
                 throw new InvalidOperationException(
-                    $"Pose capability '{kind}' owns a system or child-document boundary and cannot be copied.");
+                    $"Pose capability '{definition.CapabilityIdentity}' owns a system or child-document boundary and cannot be copied.");
             }
         }
 
-        static CharacterPosePortKind PortKind(string value) => value switch
-        {
-            "pose.local" => CharacterPosePortKind.LocalPose,
-            "pose.component" => CharacterPosePortKind.ComponentPose,
-            "pose.parameter" => CharacterPosePortKind.Parameter,
-            "pose.discontinuity" =>
-                CharacterPosePortKind.PoseDiscontinuity,
-            "pose.action-playback" =>
-                CharacterPosePortKind.ActionPlayback,
-            "component.full-body-ik-goals" =>
-                CharacterPosePortKind.FullBodyIkGoals,
-            "component.full-body-ik-goal-contribution" =>
-                CharacterPosePortKind.FullBodyIkGoalContribution,
-            _ => throw new InvalidOperationException(
-                $"Unknown Pose clipboard port value type '{value}'.")
-        };
+        static CharacterPosePortKind PortKind(string value) =>
+            CharacterPoseAuthoringPortProjection.Kind(value);
 
         static string RemapPort(
             string node,

@@ -822,7 +822,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             {
                 CharacterPoseIrNode irNode = ir.Nodes[nodeIndex];
                 CharacterTypedPoseNode node = nodes[new PoseNodeId(irNode.NodeId.Value)];
-                ICharacterPoseCompilerHandler handler =
+                CharacterPoseNodeDefinition handler =
                     RequireNativeHandler(irNode);
                 if (handler.NativeRole ==
                     CharacterPoseNativeNodeRole.GraphInput)
@@ -878,7 +878,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                     CharacterPoseNativeNodeRole.PoseOutput &&
                     stateOutput != null
                         ? CharacterPoseOperationCode.StatePoseOutput
-                        : handler.Code;
+                        : handler.OperationCode;
                 int outputValueIndex = HasPoseOutput(node) ||
                                        handler.NativeRole ==
                                        CharacterPoseNativeNodeRole
@@ -2526,14 +2526,14 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             kind == CharacterPosePortKind.LocalPose ||
             kind == CharacterPosePortKind.ComponentPose;
 
-        static ICharacterPoseCompilerHandler RequireNativeHandler(
+        static CharacterPoseNodeDefinition RequireNativeHandler(
             CharacterPoseIrNode node)
         {
             if (node == null)
                 throw new InvalidOperationException(
                     "Pose IR node is missing.");
-            ICharacterPoseCompilerHandler handler =
-                CharacterPoseCompilerHandlerRegistry.Shared
+            CharacterPoseNodeDefinition handler =
+                CharacterPoseNodeDefinitionModule.Shared
                     .RequireCapability(node.CapabilityIdentity);
             handler.RequirePayload(node.Payload);
             return handler;

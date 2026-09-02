@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using ThirdPersonCharacter.Animation.TransitionRouting;
+using ThirdPersonCharacter.Editor.CharacterSimulation;
 using ThirdPersonCharacter.Pipeline.Animation;
 using ThirdPersonCharacter.Pipeline.Animation.MotionMatching;
 using ThirdPersonCharacter.Pipeline.Presentation;
@@ -1036,6 +1037,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     case CreatePoseNodeMutation create:
                         if (nodes.Any(value => value.NodeId == create.Node.NodeId))
                             throw new InvalidOperationException($"Pose node '{create.Node.NodeId}' already exists.");
+                        _ = CharacterPoseNodeDefinitionModule.Shared
+                            .Require(create.Node.Kind)
+                            .ProjectPortShape(create.Node);
                         nodes.Add(create.Node);
                         layout.Add(new CharacterPoseGraphLayoutEntry(create.Node.NodeId, create.Position));
                         break;
@@ -1055,14 +1059,26 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                             .OfType<SetPoseNodeFieldMutation>()
                             .Where(value => value.NodeId == set.NodeId)
                             .ToArray();
-                        nodes[index] = new CharacterTypedPoseNode(node.NodeId, node.DisplayName, CharacterPosePayloadFieldMutation.Set(node.Payload, fields), node.DynamicPorts.ToArray());
+                        var replacement = new CharacterTypedPoseNode(
+                            node.NodeId,
+                            node.DisplayName,
+                            CharacterPosePayloadFieldMutation.Set(
+                                node.Payload,
+                                fields),
+                            node.DynamicPorts.ToArray());
+                        RequireExistingEdgesCompatible(
+                            replacement,
+                            edges);
+                        nodes[index] = replacement;
                         break;
                     }
                     case ConfigureLinkedPoseCallMutation configure:
                     {
                         int index = RequireNodeIndex(nodes, configure.NodeId);
                         CharacterTypedPoseNode node = nodes[index];
-                        if (node.Kind != CharacterPoseNodeKind.LinkedPoseCall)
+                        if (CharacterPoseNodeDefinitionModule.Shared
+                                .Require(node.Kind).OperationFamily !=
+                            CharacterPoseOperationFamily.LinkedPose)
                             throw new InvalidOperationException(
                                 $"Pose node '{configure.NodeId}' is not a Linked Pose Call.");
                         var replacement = new CharacterTypedPoseNode(
@@ -1070,22 +1086,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                             node.DisplayName,
                             configure.Payload,
                             configure.Ports.ToArray());
-                        IReadOnlyList<CharacterPosePortDefinition> ports =
-                            CharacterPoseAuthoringPortProjection.Get(replacement);
-                        foreach (CharacterPoseEdge edge in edges.Where(value =>
-                                     value.SourceNodeId == configure.NodeId ||
-                                     value.TargetNodeId == configure.NodeId))
-                        {
-                            bool sourceValid = edge.SourceNodeId != configure.NodeId ||
-                                ports.Any(value => value.PortId.Equals(edge.SourcePortId) &&
-                                                   value.Direction == CharacterPosePortDirection.Output);
-                            bool targetValid = edge.TargetNodeId != configure.NodeId ||
-                                ports.Any(value => value.PortId.Equals(edge.TargetPortId) &&
-                                                   value.Direction == CharacterPosePortDirection.Input);
-                            if (!sourceValid || !targetValid)
-                                throw new InvalidOperationException(
-                                    $"Linked Pose Call '{configure.NodeId}' cannot rebind while edge '{edge.EdgeId}' would become incompatible.");
-                        }
+                        RequireExistingEdgesCompatible(
+                            replacement,
+                            edges);
                         nodes[index] = replacement;
                         break;
                     }
@@ -1094,7 +1097,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                         int index = RequireNodeIndex(nodes, add.NodeId);
                         CharacterTypedPoseNode node = nodes[index];
                         if (CharacterPoseAuthoringPortProjection
-                                .GetFixed(node.Kind)
+                                .GetDeclared(node)
                                 .Any(value =>
                                     value.PortId.Equals(
                                         add.Port.PortId)) ||
@@ -1102,7 +1105,17 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                                 value.PortId.Equals(
                                     add.Port.PortId)))
                             throw new InvalidOperationException($"Pose port '{add.Port.PortId}' already exists on '{add.NodeId}'.");
-                        nodes[index] = new CharacterTypedPoseNode(node.NodeId, node.DisplayName, node.Payload, node.DynamicPorts.Concat(new[] { add.Port }).OrderBy(value => value.Order).ToArray());
+                        var replacement = new CharacterTypedPoseNode(
+                            node.NodeId,
+                            node.DisplayName,
+                            node.Payload,
+                            node.DynamicPorts.Concat(new[] { add.Port })
+                                .OrderBy(value => value.Order)
+                                .ToArray());
+                        _ = CharacterPoseNodeDefinitionModule.Shared
+                            .Require(node.Kind)
+                            .ProjectPortShape(replacement);
+                        nodes[index] = replacement;
                         break;
                     }
                     case RemoveDynamicPosePortMutation remove:
@@ -1185,6 +1198,30 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 .SingleOrDefault(value => value != null && value.PortId.Equals(portId)) ??
             throw new InvalidOperationException(
                 $"Pose node '{node.NodeId}' does not declare port '{portId}'.");
+
+        static void RequireExistingEdgesCompatible(
+            CharacterTypedPoseNode node,
+            IReadOnlyList<CharacterPoseEdge> edges)
+        {
+            IReadOnlyList<CharacterPosePortDefinition> ports =
+                CharacterPoseAuthoringPortProjection.Get(node);
+            foreach (CharacterPoseEdge edge in edges.Where(value =>
+                         value.SourceNodeId == node.NodeId ||
+                         value.TargetNodeId == node.NodeId))
+            {
+                bool sourceValid = edge.SourceNodeId != node.NodeId ||
+                    ports.Any(value =>
+                        value.PortId.Equals(edge.SourcePortId) &&
+                        value.Direction == CharacterPosePortDirection.Output);
+                bool targetValid = edge.TargetNodeId != node.NodeId ||
+                    ports.Any(value =>
+                        value.PortId.Equals(edge.TargetPortId) &&
+                        value.Direction == CharacterPosePortDirection.Input);
+                if (!sourceValid || !targetValid)
+                    throw new InvalidOperationException(
+                        $"Pose node '{node.NodeId}' cannot change shape while edge '{edge.EdgeId}' would become incompatible.");
+            }
+        }
         static bool IsGraphCatalogPreMutation(CharacterPresentationMutation value) =>
             value.Kind == CharacterPresentationMutationKind.CreatePoseGraph ||
             value.Kind == CharacterPresentationMutationKind.DeletePoseGraph ||
@@ -1320,131 +1357,19 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             if (payload == null)
                 throw new ArgumentNullException(nameof(payload));
             if (fields == null || fields.Count == 0)
-                throw new ArgumentException("Pose payload field mutation set is empty.", nameof(fields));
-            if (fields.Select(value => value.FieldId).Distinct(StringComparer.Ordinal).Count() != fields.Count)
-                throw new InvalidOperationException("Pose payload field mutation set contains duplicate fields.");
-            if (payload is CharacterClipPlayerPosePayload clip)
-                return SetClip(clip, fields);
-            CharacterPoseNodePayload current = payload;
-            foreach (SetPoseNodeFieldMutation field in fields)
-                current = Set(current, field.FieldId, field.Value);
-            return current;
+                throw new ArgumentException(
+                    "Pose payload field mutation set is empty.",
+                    nameof(fields));
+            Dictionary<string, object> values = fields.ToDictionary(
+                value => value.FieldId,
+                value => value.Value,
+                StringComparer.Ordinal);
+            if (values.Count != fields.Count)
+                throw new InvalidOperationException(
+                    "Pose payload field mutation set contains duplicate fields.");
+            return CharacterPoseNodeDefinitionModule.Shared
+                .RequirePayload(payload)
+                .MutatePayload(payload, values);
         }
-
-        public static CharacterPoseNodePayload Set(CharacterPoseNodePayload payload, string fieldId, object value)
-        {
-            if (payload == null)
-                throw new ArgumentNullException(nameof(payload));
-            return payload switch
-            {
-                CharacterProgramParameterInputPosePayload current when fieldId == "parameter-id" => new CharacterProgramParameterInputPosePayload(Id<PoseParameterId>(value, text => new PoseParameterId(text))),
-                CharacterActionPlaybackInputPosePayload current when fieldId == "animation-channel-id" => new CharacterActionPlaybackInputPosePayload(Id<AnimationChannelId>(value, text => new AnimationChannelId(text))),
-                CharacterSelectedPosePlayerPayload current => SetSelected(current, fieldId, value),
-                CharacterBlendSpacePlayerPosePayload current => SetBlendSpace(current, fieldId, value),
-                CharacterClipPlayerPosePayload current => SetClip(current, fieldId, value),
-                CharacterAnimationSlotPosePayload current => SetSlot(current, fieldId, value),
-                CharacterBlendStackPosePayload current => SetBlendStack(current, fieldId, value),
-                CharacterMotionMatchingPosePayload current => CharacterMotionMatchingPoseFieldMutation.Set(current, fieldId, value),
-                CharacterPoseHistoryCollectorPayload current => CharacterMotionMatchingPoseFieldMutation.Set(current, fieldId, value),
-                CharacterInertializationPosePayload current when fieldId == "inertialization-policy" => new CharacterInertializationPosePayload(Require<CharacterPoseInertializationPolicy>(value, fieldId)),
-                CharacterBlendPosePayload current when fieldId == "weight" => new CharacterBlendPosePayload(Convert.ToSingle(value)),
-                CharacterLayeredBoneBlendPosePayload current => SetLayered(current, fieldId, value),
-                CharacterAdditivePosePayload current => SetAdditive(current, fieldId, value),
-                CharacterPoseParameterResolvePayload current when fieldId == "parameter-policies" => new CharacterPoseParameterResolvePayload(Require<CharacterPoseParameterPolicy[]>(value, fieldId)),
-                CharacterModifyBonePosePayload current => SetModifyBone(current, fieldId, value),
-                CharacterRootOrientationWarpPosePayload current when fieldId == "yaw-curve" => new CharacterRootOrientationWarpPosePayload(Require<ThirdPersonCharacter.Pipeline.Motion.RootMotion.RootMotionCurveAsset>(value, fieldId)),
-                CharacterPoseBoneIkGoalsPayload current when fieldId == "bindings" => new CharacterPoseBoneIkGoalsPayload(Require<CharacterPoseBoneIkGoalBinding[]>(value, fieldId)),
-                CharacterFootPlacementPosePayload current => SetFootPlacement(current, fieldId, value),
-                CharacterPoseSubgraphPayload current when fieldId == "graph-id" => new CharacterPoseSubgraphPayload(Subgraph(value)),
-                _ => throw new InvalidOperationException($"Pose payload '{payload.GetType().Name}' does not declare writable field '{fieldId}'.")
-            };
-        }
-
-        static CharacterPoseNodePayload SetSelected(CharacterSelectedPosePlayerPayload current, string field, object value) => field switch
-        {
-            "pose-source-slot" => new CharacterSelectedPosePlayerPayload(
-                Require<CharacterMotionMatchingPoseSourceSlot>(value, field)),
-            _ => Unknown(current, field)
-        };
-
-        static CharacterPoseNodePayload SetBlendSpace(CharacterBlendSpacePlayerPosePayload current, string field, object value) => field switch
-        {
-            "pose-source-slot" => new CharacterBlendSpacePlayerPosePayload(Require<CharacterBlendSpacePoseSourceSlot>(value, field), current.InputRangePolicy),
-            "input-range-policy" => new CharacterBlendSpacePlayerPosePayload(current.SourceSlot, EnumValue<CharacterAnimationBlendSpaceInputRangePolicy>(value)),
-            _ => Unknown(current, field)
-        };
-
-        static CharacterPoseNodePayload SetClip(CharacterClipPlayerPosePayload current, string field, object value)
-        {
-            CharacterClipPlayerClockSource clockSource = field == "clock-source"
-                ? EnumValue<CharacterClipPlayerClockSource>(value)
-                : current.ClockSource;
-            return new CharacterClipPlayerPosePayload(
-                field == "pose-source-slot" ? Require<CharacterClipPoseSourceSlot>(value, field) : current.SourceSlot,
-                field == "play-rate" ? Convert.ToSingle(value) : current.PlayRate,
-                field == "initial-time" ? Convert.ToSingle(value) : current.InitialTime,
-                clockSource);
-        }
-
-        static CharacterPoseNodePayload SetClip(
-            CharacterClipPlayerPosePayload current,
-            IReadOnlyList<SetPoseNodeFieldMutation> fields)
-        {
-            var values = fields.ToDictionary(value => value.FieldId, value => value.Value, StringComparer.Ordinal);
-            CharacterClipPlayerClockSource clockSource = values.TryGetValue("clock-source", out object clockSourceValue)
-                ? EnumValue<CharacterClipPlayerClockSource>(clockSourceValue)
-                : current.ClockSource;
-            return new CharacterClipPlayerPosePayload(
-                values.TryGetValue("pose-source-slot", out object source)
-                    ? Require<CharacterClipPoseSourceSlot>(source, "pose-source-slot")
-                    : current.SourceSlot,
-                values.TryGetValue("play-rate", out object playRate) ? Convert.ToSingle(playRate) : current.PlayRate,
-                values.TryGetValue("initial-time", out object initialTime) ? Convert.ToSingle(initialTime) : current.InitialTime,
-                clockSource);
-        }
-
-        static CharacterPoseNodePayload SetSlot(CharacterAnimationSlotPosePayload current, string field, object value) => new CharacterAnimationSlotPosePayload(
-            field == "slot-id" ? Id<AnimationSlotId>(value, text => new AnimationSlotId(text)) : current.SlotId,
-            field == "animation-channel-id" ? Id<AnimationChannelId>(value, text => new AnimationChannelId(text)) : current.AnimationChannelId,
-            field == "selection-availability" ? EnumValue<AnimationSelectionAvailabilityPolicy>(value) : current.SelectionAvailability,
-            field == "blend-policy" ? Require<CharacterAnimationBlendPolicy>(value, field) : current.BlendPolicy);
-
-        static CharacterPoseNodePayload SetBlendStack(CharacterBlendStackPosePayload current, string field, object value) => new CharacterBlendStackPosePayload(
-            field == "pose-source-slot" ? Require<CharacterMotionMatchingPoseSourceSlot>(value, field) : current.SourceSlot,
-            field == "blend-policy" ? Require<CharacterAnimationBlendPolicy>(value, field) : current.BlendPolicy);
-
-        static CharacterPoseNodePayload SetLayered(CharacterLayeredBoneBlendPosePayload current, string field, object value) => new CharacterLayeredBoneBlendPosePayload(
-            field == "bone-mask" ? Require<CharacterAnimationBoneMaskAsset>(value, field) : current.BoneMask,
-            field == "weight" ? Convert.ToSingle(value) : current.Weight);
-
-        static CharacterPoseNodePayload SetAdditive(CharacterAdditivePosePayload current, string field, object value) => new CharacterAdditivePosePayload(
-            field == "reference-pose-id" ? Convert.ToString(value) : current.ReferencePoseId,
-            field == "reference-space" ? EnumValue<AdditiveReferenceSpace>(value) : current.ReferenceSpace,
-            field == "scale-policy" ? EnumValue<AdditiveScalePolicy>(value) : current.ScalePolicy,
-            field == "weight" ? Convert.ToSingle(value) : current.Weight);
-
-        static CharacterPoseNodePayload SetModifyBone(CharacterModifyBonePosePayload current, string field, object value) => new CharacterModifyBonePosePayload(
-            field == "bone-id" ? Id<AnimationBoneId>(value, text => new AnimationBoneId(text)) : current.BoneId,
-            field == "reference-space" ? EnumValue<ModifyBoneReferenceSpace>(value) : current.ReferenceSpace,
-            field == "operations" ? EnumValue<ModifyBoneOperationMask>(value) : current.Operations,
-            field == "position" ? Require<Vector3>(value, field) : current.Position,
-            field == "rotation" ? Require<Quaternion>(value, field).eulerAngles : current.Rotation.eulerAngles,
-            field == "scale" ? Require<Vector3>(value, field) : current.Scale);
-
-        static CharacterPoseNodePayload SetFootPlacement(CharacterFootPlacementPosePayload current, string field, object value) => new CharacterFootPlacementPosePayload(
-            field == "profile" ? Require<CharacterFootPlacementProfile>(value, field) : current.Profile,
-            field == "calibration" ? Require<CharacterFootPlacementRigCalibration>(value, field) : current.Calibration);
-
-        static CharacterPoseSubgraphReference Subgraph(object value)
-        {
-            var result = new CharacterPoseSubgraphReference();
-            result.Assign(Id<PoseGraphId>(value, text => new PoseGraphId(text)));
-            return result;
-        }
-
-        static TId Id<TId>(object value, Func<string, TId> create) => create(Convert.ToString(value));
-        static T Require<T>(object value, string field) => value is T typed ? typed : throw new InvalidOperationException($"Pose field '{field}' requires '{typeof(T).Name}'.");
-        static T EnumValue<T>(object value) where T : struct => value is T typed ? typed : Enum.Parse<T>(Convert.ToString(value), false);
-        static CharacterPoseNodePayload Unknown(CharacterPoseNodePayload payload, string field) => throw new InvalidOperationException($"Pose payload '{payload.GetType().Name}' does not declare writable field '{field}'.");
     }
 }

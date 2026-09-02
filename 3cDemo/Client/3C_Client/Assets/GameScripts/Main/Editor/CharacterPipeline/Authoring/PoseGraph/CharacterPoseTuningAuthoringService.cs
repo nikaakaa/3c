@@ -1,5 +1,6 @@
 using System;
 using System.Linq;
+using ThirdPersonCharacter.Editor.CharacterSimulation;
 using ThirdPersonCharacter.Pipeline.Animation;
 using ThirdPersonCharacter.Pipeline.Presentation;
 using ThirdPersonCharacter.Pipeline.Simulation.Editor;
@@ -497,12 +498,10 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             CharacterPresentationPoseGraphAsset asset,
             string ownerId)
         {
-            return asset.EnumerateGraphs()
-                .Where(graph => graph != null)
-                .SelectMany(graph => graph.Nodes)
-                .Where(node => node?.Payload is CharacterFootPlacementPosePayload)
-                .Select(node => ((CharacterFootPlacementPosePayload)node.Payload).Profile)
-                .Where(profile => profile && $"foot-placement-profile:{profile.ProfileId}" == ownerId)
+            return FindNodeAssets<CharacterFootPlacementProfile>(asset)
+                .Where(profile =>
+                    profile &&
+                    $"foot-placement-profile:{profile.ProfileId}" == ownerId)
                 .Distinct()
                 .SingleOrDefault();
         }
@@ -511,19 +510,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             CharacterPresentationPoseGraphAsset asset,
             string ownerId)
         {
-            return asset.EnumerateGraphs()
-                .Where(graph => graph != null)
-                .SelectMany(graph => graph.Nodes)
-                .Select(node => node?.Payload switch
-                {
-                    CharacterAnimationSlotPosePayload payload =>
-                        payload.BlendPolicy,
-                    CharacterBlendStackPosePayload payload =>
-                        payload.BlendPolicy,
-                    CharacterMotionMatchingPosePayload payload =>
-                        payload.JumpBlendPolicy,
-                    _ => null
-                })
+            return FindNodeAssets<CharacterAnimationBlendPolicy>(asset)
                 .Where(policy => policy &&
                     $"animation-blend-policy:{policy.PolicyId}" == ownerId)
                 .Distinct()
@@ -534,15 +521,35 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             CharacterPresentationPoseGraphAsset asset,
             string ownerId)
         {
-            return asset.EnumerateGraphs()
-                .Where(graph => graph != null)
-                .SelectMany(graph => graph.Nodes)
-                .Select(node =>
-                    (node?.Payload as CharacterInertializationPosePayload)?.Policy)
+            return FindNodeAssets<CharacterPoseInertializationPolicy>(asset)
                 .Where(policy => policy &&
                     $"pose-inertialization-policy:{policy.PolicyId}" == ownerId)
                 .Distinct()
                 .SingleOrDefault();
+        }
+
+        static System.Collections.Generic.IEnumerable<T> FindNodeAssets<T>(
+            CharacterPresentationPoseGraphAsset asset)
+            where T : UnityEngine.Object
+        {
+            foreach (CharacterTypedPoseNode node in asset.EnumerateGraphs()
+                         .Where(graph => graph != null)
+                         .SelectMany(graph => graph.Nodes)
+                         .Where(node => node?.Payload != null))
+            {
+                CharacterPoseNodeDefinition definition =
+                    CharacterPoseNodeDefinitionModule.Shared.Require(
+                        node.Kind);
+                foreach (GraphAuthoringFieldDescriptor field in
+                         definition.Capability.Fields.Where(value =>
+                             value.ObjectType == typeof(T)))
+                {
+                    if (definition.ReadField(
+                            node.Payload,
+                            field.FieldId.Value) is T value)
+                        yield return value;
+                }
+            }
         }
 
         static object ToAuthoringValue(CharacterPoseTuningValue value) => value.Kind switch

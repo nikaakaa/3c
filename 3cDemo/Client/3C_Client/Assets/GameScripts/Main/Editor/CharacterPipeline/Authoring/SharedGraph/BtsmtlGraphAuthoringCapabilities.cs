@@ -1479,27 +1479,13 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
             if (!TryProjectDocumentPortShape(
                     kind,
                     properties,
-                    out GraphAuthoringCapabilityDescriptor capability,
+                    out _,
                     out IReadOnlyList<GraphAuthoringDynamicPortProjection> projected,
                     out error))
                 return false;
             GraphAuthoringPortId portId = property
                 ? BtsmtlSharedGraphPort.Property(port)
                 : BtsmtlSharedGraphPort.Flow(port);
-            GraphAuthoringPortDescriptor fixedPort = capability.FixedPorts
-                .SingleOrDefault(value => value.PortId.Equals(portId));
-            if (fixedPort != null)
-            {
-                descriptor = new GraphAuthoringDynamicPortProjection(
-                    fixedPort.PortId,
-                    fixedPort.DisplayName,
-                    fixedPort.ValueTypeId,
-                    fixedPort.Direction,
-                    fixedPort.Capacity,
-                    fixedPort.Required,
-                    fixedPort.Order);
-                return true;
-            }
             GraphAuthoringDynamicPortProjection[] matches = projected
                 .Where(value => value.PortId.Equals(portId))
                 .ToArray();
@@ -1537,7 +1523,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
             }
             try
             {
-                projected = GraphAuthoringNodePortShapeProjector.Project(
+                projected = GraphAuthoringNodePortShapeProjector.ProjectComplete(
                     capability,
                     ReadDocumentTypedProperties(capability, properties));
                 return true;
@@ -1567,7 +1553,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
             }
             try
             {
-                projected = GraphAuthoringNodePortShapeProjector.Project(
+                projected = GraphAuthoringNodePortShapeProjector.ProjectComplete(
                     capability,
                     ReadSnapshotTypedProperties(node, capability));
                 return true;
@@ -1585,6 +1571,18 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
             GraphAuthoringCapabilityDescriptor capability)
         {
             return GraphAuthoringNodePortShapeProjector.Project(
+                capability,
+                ReadNodeTypedProperties(node, capability),
+                ProjectAuthoredDynamicPorts(node, owner, capability));
+        }
+
+        public IReadOnlyList<GraphAuthoringDynamicPortProjection>
+            ProjectCompletePortShape(
+                BaseNode node,
+                BaseGraph owner,
+                GraphAuthoringCapabilityDescriptor capability)
+        {
+            return GraphAuthoringNodePortShapeProjector.ProjectComplete(
                 capability,
                 ReadNodeTypedProperties(node, capability),
                 ProjectAuthoredDynamicPorts(node, owner, capability));

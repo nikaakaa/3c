@@ -47,7 +47,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             CharacterPoseAuthoringPayloadInput input)
         {
             CharacterPoseNodePayload payload =
-                CharacterPoseCompilerHandlerRegistry.Shared
+                CharacterPoseNodeDefinitionModule.Shared
                     .Require(kind)
                     .CreatePayload(
                 input ?? throw new ArgumentNullException(nameof(input)));
@@ -67,7 +67,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         {
             if (payload == null)
                 throw new ArgumentNullException(nameof(payload));
-            return CharacterPoseCompilerHandlerRegistry.Shared
+            return CharacterPoseNodeDefinitionModule.Shared
                 .Require(payload.Kind)
                 .ReadField(payload, field);
         }

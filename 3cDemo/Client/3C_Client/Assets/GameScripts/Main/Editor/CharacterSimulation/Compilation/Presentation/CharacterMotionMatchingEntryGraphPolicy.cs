@@ -37,7 +37,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                     throw new InvalidOperationException($"Motion Matching entry graph '{graph.GraphId}' contains a missing node.");
                 if (!s_AllowedKinds.Contains(node.Kind))
                     throw new InvalidOperationException($"Motion Matching entry graph '{graph.GraphId}' contains forbidden node '{node.Kind}'.");
-                CharacterPoseExecutionDomain domain = CharacterPoseCompilerHandlerRegistry.Shared.Require(node.Kind).ExecutionDomain;
+                CharacterPoseExecutionDomain domain = CharacterPoseNodeDefinitionModule.Shared.Require(node.Kind).ExecutionDomain;
                 if (domain == CharacterPoseExecutionDomain.WorldAwareValue ||
                     node.Kind == CharacterPoseNodeKind.LocalToComponentPose ||
                     node.Kind == CharacterPoseNodeKind.ComponentToLocalPose ||

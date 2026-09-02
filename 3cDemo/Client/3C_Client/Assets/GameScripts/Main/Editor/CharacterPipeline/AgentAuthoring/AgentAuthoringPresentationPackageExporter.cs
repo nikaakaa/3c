@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using BTSMTL.Timeline;
 using Newtonsoft.Json.Linq;
+using ThirdPersonCharacter.Editor.CharacterSimulation;
 using ThirdPersonCharacter.Pipeline.Animation;
 using TreeDesigner.Editor;
 using UnityEditor;
@@ -428,11 +429,14 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
             if (node?.Payload == null)
                 throw new InvalidOperationException(
                     "Pose Graph contains a node without typed payload.");
+            CharacterPoseNodeDefinition definition =
+                CharacterPoseNodeDefinitionModule.Shared.Require(node.Kind);
             GraphAuthoringCapabilityDescriptor capability =
                 CharacterPoseGraphAuthoringCapabilities.Catalog.Require(
-                    CharacterPoseGraphAuthoringCapabilities.Get(node.Kind),
+                    definition.Capability.CapabilityId,
                     CharacterPoseGraphAuthoringCapabilities.Domain,
                     role);
+            _ = definition.ProjectPortShape(node);
             var properties = new JObject();
             foreach (GraphAuthoringFieldDescriptor field in capability.Fields
                          .Where(value => value.AuthoringWritable)
@@ -464,14 +468,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                         order = value.Order,
                         interfacePortId = value.InterfacePortId.Value
                     }).ToList(),
-                childDocumentId = node.Payload switch
-                {
-                    CharacterPoseStateMachineNodePayload stateMachine =>
-                        stateMachine.StateMachine?.StateMachineId.Value,
-                    CharacterMotionMatchingPosePayload motionMatching =>
-                        motionMatching.EntryGraph?.PoseGraphId.Value,
-                    _ => string.Empty
-                }
+                childDocumentId =
+                    definition.ProjectChildDocumentId(node.Payload)
             };
         }
 

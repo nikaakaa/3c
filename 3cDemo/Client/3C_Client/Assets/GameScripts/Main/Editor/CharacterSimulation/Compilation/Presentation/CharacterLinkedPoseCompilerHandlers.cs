@@ -1,3 +1,5 @@
+using System;
+using System.Collections.Generic;
 using ThirdPersonCharacter.Pipeline.Animation;
 using ThirdPersonCharacter.Pipeline.Editor;
 using ThirdPersonCharacter.Pipeline.Presentation;
@@ -39,5 +41,23 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                 payload.EntryId.IsValid,
                 sourcePath,
                 "Linked Pose Call Group, Interface or Entry identity is missing.");
+
+        protected override IReadOnlyList<CharacterPoseGraphDependency>
+            GetGraphDependencies(CharacterLinkedPoseCallPayload payload) =>
+            payload.GroupId.IsValid &&
+            payload.InterfaceId.IsValid &&
+            payload.EntryId.IsValid
+                ? new[]
+                {
+                    new CharacterPoseGraphDependency(
+                        CharacterPoseGraphDependencyKind.LinkedPoseEntry,
+                        default,
+                        string.Join(
+                            "/",
+                            payload.GroupId.Value,
+                            payload.InterfaceId.Value,
+                            payload.EntryId.Value))
+                }
+                : Array.Empty<CharacterPoseGraphDependency>();
     }
 }

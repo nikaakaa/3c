@@ -4,6 +4,7 @@ using System.Linq;
 using BTSMTL.Diagnostics;
 using BTSMTL.Diagnostics.Editor;
 using BTSMTL.Timeline.Editor;
+using ThirdPersonCharacter.Editor.CharacterSimulation;
 using ThirdPersonCharacter.Pipeline;
 using ThirdPersonCharacter.Pipeline.Animation;
 using ThirdPersonCharacter.Pipeline.Animation.Diagnostics;
@@ -450,19 +451,18 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     "Transition Rule changed · published Projection is Stale until explicit Build.";
                 return;
             }
-            CharacterPoseNodeKind kind = Enum.GetValues(typeof(CharacterPoseNodeKind))
-                .Cast<CharacterPoseNodeKind>()
-                .Single(value => CharacterPoseGraphAuthoringCapabilities.Get(value).Equals(capability.CapabilityId));
-            if (kind == CharacterPoseNodeKind.LinkedPoseCall)
+            CharacterPoseNodeDefinition definition =
+                CharacterPoseNodeDefinitionModule.Shared.RequireCapability(
+                    capability.CapabilityId.Value);
+            if (definition.CanvasCreation ==
+                CharacterPoseCanvasCreationKind.DedicatedSurface)
             {
                 ShowLinkedPoseSelection("linked-root");
                 m_Status.text = "Linked Pose Call is created from the typed Group/Entry authoring page.";
                 return;
             }
             CharacterPoseNodePayload payload =
-                (CharacterPoseNodePayload)Activator.CreateInstance(
-                    CharacterPoseGraphAuthoringCapabilities
-                        .RequirePayloadType(kind));
+                definition.CreateDefaultPayload();
             var node = new CharacterTypedPoseNode(new PoseNodeId(Guid.NewGuid().ToString("N")), capability.DisplayName, payload);
             Vector2 graphPosition = m_Canvas.contentViewContainer.WorldToLocal(screenPosition - position.position);
             m_Canvas.CreateNode(capability.CapabilityId, node, graphPosition);
@@ -511,8 +511,11 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 if (!m_ShowingTransitionRule && m_Document != null &&
                     current.Value.Kind == GraphAuthoringSelectionKind.Node &&
                     m_Document.Graph.Nodes.FirstOrDefault(value =>
-                        value.NodeId.Value == current.Value.ElementId.Value)?.Kind ==
-                    CharacterPoseNodeKind.LinkedPoseCall)
+                        value.NodeId.Value == current.Value.ElementId.Value) is
+                        CharacterTypedPoseNode selectedNode &&
+                    CharacterPoseNodeDefinitionModule.Shared
+                        .Require(selectedNode.Kind).CanvasCreation ==
+                    CharacterPoseCanvasCreationKind.DedicatedSurface)
                 {
                     ShowLinkedPoseSelection(
                         $"linked-call:{m_Document.DocumentId}:{current.Value.ElementId.Value}");

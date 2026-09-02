@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using ThirdPersonCharacter.Pipeline.Animation;
 using ThirdPersonCharacter.Pipeline.Animation.MotionMatching;
 using ThirdPersonCharacter.Pipeline.Editor;
@@ -37,6 +38,22 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             CharacterPoseCompilerHandlerValidation.Require(Enum.IsDefined(typeof(CharacterMotionMatchingRelevanceResetPolicy), payload.RelevanceResetPolicy), sourcePath, "Motion Matching relevance reset policy is invalid.");
             CharacterPoseCompilerHandlerValidation.Require(Enum.IsDefined(typeof(CharacterMotionMatchingSearchCadencePolicy), payload.SearchCadencePolicy), sourcePath, "Motion Matching search cadence policy is invalid.");
         }
+
+        protected override IReadOnlyList<CharacterPoseGraphDependency>
+            GetGraphDependencies(CharacterMotionMatchingPosePayload payload) =>
+            payload.EntryGraph?.PoseGraphId.IsValid == true
+                ? new[]
+                {
+                    new CharacterPoseGraphDependency(
+                        CharacterPoseGraphDependencyKind.MotionMatchingEntry,
+                        payload.EntryGraph.PoseGraphId,
+                        payload.EntryGraph.PoseGraphId.Value)
+                }
+                : Array.Empty<CharacterPoseGraphDependency>();
+
+        protected override string GetChildDocumentId(
+            CharacterMotionMatchingPosePayload payload) =>
+            payload.EntryGraph?.PoseGraphId.Value ?? string.Empty;
 
         protected override void ValidateRig(CharacterMotionMatchingPosePayload payload, CharacterAnimationRigDefinition rig, string sourcePath)
         {

@@ -182,22 +182,20 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 {
                     if (node?.Payload == null)
                         continue;
-                    ICharacterPoseCompilerHandler handler =
-                        CharacterPoseCompilerHandlerRegistry.Shared
+                    CharacterPoseNodeDefinition handler =
+                        CharacterPoseNodeDefinitionModule.Shared
                             .Require(node.Kind);
-                    if (handler.NativeRole ==
-                        CharacterPoseNativeNodeRole.Subgraph)
+                    IReadOnlyList<CharacterPoseGraphDependency>
+                        dependencies = handler.ProjectGraphDependencies(
+                            node.Payload);
+                    for (int dependencyIndex = 0;
+                         dependencyIndex < dependencies.Count;
+                         dependencyIndex++)
                     {
-                        CharacterPoseSubgraphReference reference =
-                            ((CharacterPoseSubgraphPayload)
-                                node.Payload).Subgraph;
-                        if (reference?.PoseGraphId.IsValid == true)
-                            AddOwner(reference.PoseGraphId);
-                    }
-                    if (node.Payload is CharacterMotionMatchingPosePayload motionMatching &&
-                        motionMatching.EntryGraph?.PoseGraphId.IsValid == true)
-                    {
-                        AddOwner(motionMatching.EntryGraph.PoseGraphId);
+                        CharacterPoseGraphDependency dependency =
+                            dependencies[dependencyIndex];
+                        if (dependency.GraphId.IsValid)
+                            AddOwner(dependency.GraphId);
                     }
                     if (!handler.StateMachine)
                         continue;
@@ -371,7 +369,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                     continue;
                 }
 
-                ICharacterPoseCompilerHandler handler;
+                CharacterPoseNodeDefinition handler;
                 try
                 {
                     CharacterPoseGraphAuthoringCapabilities.Catalog
@@ -382,7 +380,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                                 .Domain,
                             documentRole);
                     handler =
-                        CharacterPoseCompilerHandlerRegistry.Shared
+                        CharacterPoseNodeDefinitionModule.Shared
                             .Require(node.Kind);
                     string sourcePath =
                         $"pose-graphs/{graph.GraphId.Value}/nodes/{node.NodeId.Value}";
@@ -418,7 +416,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                         graph.GraphId,
                         node.NodeId);
                 }
-                if (handler.Code ==
+                if (handler.OperationCode ==
                     CharacterPoseOperationCode
                         .PoseParameterResolve)
                 {
@@ -1379,7 +1377,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         {
             CharacterTypedPoseNode output =
                 nodes.Values.SingleOrDefault(node =>
-                    CharacterPoseCompilerHandlerRegistry.Shared
+                    CharacterPoseNodeDefinitionModule.Shared
                         .Require(node.Kind).NativeRole ==
                     CharacterPoseNativeNodeRole.PoseOutput);
             if (output == null)

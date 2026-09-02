@@ -1,8 +1,10 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using ThirdPersonCharacter.Editor.CharacterSimulation;
 using ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring;
 using ThirdPersonCharacter.Pipeline.Animation;
+using ThirdPersonCharacter.Pipeline.Animation.MotionMatching;
 using ThirdPersonCharacter.Pipeline.Motion.RootMotion;
 using ThirdPersonCharacter.Pipeline.Presentation;
 using TreeDesigner.Editor;
@@ -70,34 +72,15 @@ namespace ThirdPersonCharacter.Pipeline.Editor
 
         public static GraphAuthoringCapabilityDescriptor Require(
             CharacterPoseNodeKind kind) =>
-            Catalog.Require(Get(kind));
+            CharacterPoseNodeDefinitionModule.Shared.Require(kind).Capability;
 
         public static Type RequirePayloadType(
-            CharacterPoseNodeKind kind)
-        {
-            Type type = Require(kind).AuthoringType;
-            return type != null &&
-                   typeof(CharacterPoseNodePayload).IsAssignableFrom(type)
-                ? type
-                : throw new InvalidOperationException(
-                    $"Pose capability '{Get(kind)}' has no typed payload.");
-        }
+            CharacterPoseNodeKind kind) =>
+            CharacterPoseNodeDefinitionModule.Shared.Require(kind).PayloadType;
 
         public static CharacterPoseNodeKind RequireKind(
-            CharacterPoseNodePayload payload)
-        {
-            if (payload == null ||
-                !Catalog.TryGetByAuthoringType(
-                    Domain,
-                    payload.GetType(),
-                    out GraphAuthoringCapabilityDescriptor descriptor) ||
-                !descriptor.CapabilityId.Equals(Get(payload.Kind)))
-            {
-                throw new InvalidOperationException(
-                    $"Pose payload '{payload?.GetType().FullName ?? "null"}' is not registered.");
-            }
-            return payload.Kind;
-        }
+            CharacterPoseNodePayload payload) =>
+            CharacterPoseNodeDefinitionModule.Shared.RequirePayload(payload).Kind;
 
         public static GraphAuthoringCapabilityId Get(
             PoseTransitionRuleOperationKind kind)
@@ -138,7 +121,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 "character-presentation.pose",
                 Register);
             s_Registered = true;
-            CharacterMotionMatchingPoseAuthoringCapabilities.EnsureRegistered();
         }
 
         static void Register(GraphAuthoringCapabilityCatalog catalog)
@@ -258,9 +240,22 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 Array.Empty<GraphAuthoringFieldDescriptor>(), Array.Empty<GraphAuthoringPortDescriptor>(), GraphAuthoringDynamicPortPolicy.OrderedOutputs));
             catalog.Register(Node<CharacterGraphOutputPosePayload>(CharacterPoseNodeKind.GraphOutput, stateSubgraphAndLinkedEntry, "Graph Output", "Graph", outputColor,
                 Array.Empty<GraphAuthoringFieldDescriptor>(), Array.Empty<GraphAuthoringPortDescriptor>(), GraphAuthoringDynamicPortPolicy.OrderedInputs));
+            catalog.Register(Node<CharacterMotionMatchingPosePayload>(CharacterPoseNodeKind.MotionMatchingPose, new[] { StatePoseGraph }, "Motion Matching Pose", "Sources", sourceColor,
+                Fields(ReferenceAssetField("binding", "Binding", "motion-matching-binding", typeof(CharacterMotionMatchingBinding)), ReferenceAssetField("jump-blend-policy", "Jump Blend Policy", "animation-blend-policy", typeof(CharacterAnimationBlendPolicy)), ReferenceIdentityField("entry-graph-id", "Entry Processing Graph", "pose-graph"), TypedEnumField("relevance-reset-policy", "Relevance Reset", typeof(CharacterMotionMatchingRelevanceResetPolicy)), TypedEnumField("search-cadence-policy", "Search Cadence", typeof(CharacterMotionMatchingSearchCadencePolicy))),
+                Ports(In("history.pose", "Previous Pose History", "pose.history"), OptionalIn("trajectory.query", "Trajectory", "motion-matching.trajectory"), OptionalIn("presentation.facts", "Presentation Facts", "presentation.facts"), OptionalIn("motion-matching.binding", "Binding", "motion-matching.binding"), Out("pose.local", "Local Pose", "pose.local")),
+                childSurfaces: new[] { Child("open-entry-processing-graph", "Open Entry Processing Graph", Subgraph) },
+                executionDomain: CharacterPoseExecutionDomain.SourceCapture));
+            catalog.Register(Node<CharacterPoseHistoryCollectorPayload>(CharacterPoseNodeKind.PoseHistoryCollector, new[] { StatePoseGraph }, "Pose History Collector", "Sources", sourceColor,
+                Fields(Field("history-id", "History", GraphAuthoringFieldValueKind.IdentityReference, "pose-history")),
+                Ports(In("pose.local.input", "Local Pose", "pose.local"), Out("pose.local", "Local Pose", "pose.local"), Out("history.pose", "Previous Pose History", "pose.history"))));
+            catalog.Register(Node<CharacterEntryPoseInputPayload>(CharacterPoseNodeKind.EntryPoseInput, new[] { Subgraph }, "Entry Pose Input", "Inputs", inputColor,
+                Array.Empty<GraphAuthoringFieldDescriptor>(),
+                Ports(InterfaceOut("pose.local", "Local Pose", "pose.local", "entry.pose")),
+                executionDomain: CharacterPoseExecutionDomain.SourceCapture));
             catalog.Register(Node<CharacterOutputPosePayload>(CharacterPoseNodeKind.OutputPose, rootAndState, "Output Pose", "Output", outputColor,
                 Array.Empty<GraphAuthoringFieldDescriptor>(), Ports(In("pose", "Local Pose", "pose.local")),
                 executionDomain: CharacterPoseExecutionDomain.FinalPublication));
+            CharacterPoseNodeDefinitionModule.Shared.SealCapabilities();
 
             catalog.Register(Surface("pose.state-machine.entry", "Entry", GraphAuthoringNodePresentationKind.StateMachineEntry));
             catalog.Register(Surface(
@@ -322,25 +317,27 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 throw new InvalidOperationException(
                     $"Pose capability '{Get(kind)}' payload type '{typeof(TPayload).FullName}' declares a different kind.");
             }
-            return new GraphAuthoringCapabilityDescriptor(
-                Get(kind),
-                Domain,
-                roles,
-                displayName,
-                category,
-                color,
-                fields,
-                ports,
-                dynamicPortPolicy,
-                childSurfaces,
-                commands: commands,
-                mutationBindingId: "presentation.pose-node",
-                validationBindingId: "presentation.pose-node",
-                compilerBindingId: "presentation.pose-node." + ToKebabCase(kind.ToString()),
-                documentCodecId: "presentation.pose-node",
-                authoringType: typeof(TPayload),
-                externalKind: Get(kind).Value,
-                executionDomainId: executionDomain.ToString());
+            return CharacterPoseNodeDefinitionModule.Shared
+                .ProjectCapability(
+                    new GraphAuthoringCapabilityDescriptor(
+                        Get(kind),
+                        Domain,
+                        roles,
+                        displayName,
+                        category,
+                        color,
+                        fields,
+                        ports,
+                        dynamicPortPolicy,
+                        childSurfaces,
+                        commands: commands,
+                        mutationBindingId: "presentation.pose-node",
+                        validationBindingId: "presentation.pose-node",
+                        compilerBindingId: string.Empty,
+                        documentCodecId: "presentation.pose-node",
+                        authoringType: typeof(TPayload),
+                        externalKind: Get(kind).Value,
+                        executionDomainId: executionDomain.ToString()));
         }
 
         static GraphAuthoringCapabilityDescriptor Surface(
@@ -551,6 +548,12 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         static GraphAuthoringFieldDescriptor SelectionAvailabilityField() => EnumField("selection-availability", "Availability", typeof(AnimationSelectionAvailabilityPolicy));
         static GraphAuthoringFieldDescriptor AssetField(string id, string name, string pickerKind, Type objectType) =>
             Field(id, name, GraphAuthoringFieldValueKind.AssetReference, pickerKind, objectType);
+        static GraphAuthoringFieldDescriptor ReferenceAssetField(string id, string name, string pickerKind, Type objectType) =>
+            new GraphAuthoringFieldDescriptor(new GraphAuthoringFieldId(id), name, GraphAuthoringFieldValueKind.AssetReference, GraphAuthoringFieldAccess.AuthoringRead | GraphAuthoringFieldAccess.AuthoringWrite | GraphAuthoringFieldAccess.ReferenceRead, pickerKind: pickerKind, objectType: objectType);
+        static GraphAuthoringFieldDescriptor ReferenceIdentityField(string id, string name, string pickerKind) =>
+            new GraphAuthoringFieldDescriptor(new GraphAuthoringFieldId(id), name, GraphAuthoringFieldValueKind.IdentityReference, GraphAuthoringFieldAccess.AuthoringRead | GraphAuthoringFieldAccess.AuthoringWrite | GraphAuthoringFieldAccess.ReferenceRead, pickerKind: pickerKind);
+        static GraphAuthoringFieldDescriptor TypedEnumField(string id, string name, Type enumType) =>
+            new GraphAuthoringFieldDescriptor(new GraphAuthoringFieldId(id), name, GraphAuthoringFieldValueKind.Enum, GraphAuthoringFieldAccess.AuthoringRead | GraphAuthoringFieldAccess.AuthoringWrite, defaultValue: Enum.GetValues(enumType).GetValue(0), objectType: enumType);
         static GraphAuthoringFieldDescriptor ConditionalAssetField(
             string id,
             string name,
@@ -637,6 +640,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         static GraphAuthoringPortDescriptor In(string id, string name, string valueType) => Port(id, name, valueType, GraphAuthoringPortDirection.Input, true);
         static GraphAuthoringPortDescriptor OptionalIn(string id, string name, string valueType) => Port(id, name, valueType, GraphAuthoringPortDirection.Input, false);
         static GraphAuthoringPortDescriptor Out(string id, string name, string valueType) => Port(id, name, valueType, GraphAuthoringPortDirection.Output, false);
+        static GraphAuthoringPortDescriptor InterfaceOut(string id, string name, string valueType, string interfacePortId) =>
+            new GraphAuthoringPortDescriptor(new GraphAuthoringPortId(id), name, valueType, GraphAuthoringPortDirection.Output, GraphAuthoringPortCapacity.Multiple, true, 0, interfacePortId);
         static GraphAuthoringPortDescriptor Port(string id, string name, string valueType, GraphAuthoringPortDirection direction, bool required) =>
             new GraphAuthoringPortDescriptor(new GraphAuthoringPortId(id), name, valueType, direction, direction == GraphAuthoringPortDirection.Input ? GraphAuthoringPortCapacity.Single : GraphAuthoringPortCapacity.Multiple, required, 0);
         static GraphAuthoringPortDescriptor[] Ports(
@@ -654,7 +659,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     port.Direction,
                     port.Capacity,
                     port.Required,
-                    i);
+                    i,
+                    port.InterfacePortId);
             }
             return ordered;
         }
@@ -687,32 +693,18 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         {
             if (node == null)
                 throw new ArgumentNullException(nameof(node));
-            IEnumerable<CharacterPosePortDefinition> fixedPorts =
-                CharacterPoseGraphAuthoringCapabilities
-                    .Require(node.Kind)
-                    .FixedPorts
-                    .OrderBy(value => value.Order)
-                    .Select(ToPosePort);
-            IEnumerable<CharacterPosePortDefinition> dynamicPorts =
-                node.DynamicPorts
-                    .OrderBy(value => value.Order)
-                    .Select(value =>
-                        new CharacterPosePortDefinition(
-                            value.PortId,
-                            value.DisplayName,
-                            value.Kind,
-                            value.Direction,
-                            value.Required,
-                            value.InterfacePortId));
-            return fixedPorts.Concat(dynamicPorts).ToArray();
+            return CharacterPoseNodeDefinitionModule.Shared
+                .Require(node.Kind)
+                .ProjectPortShape(node)
+                .Select(ToPosePort)
+                .ToArray();
         }
 
         public static IReadOnlyList<CharacterPosePortDefinition>
-            GetFixed(CharacterPoseNodeKind kind) =>
-            CharacterPoseGraphAuthoringCapabilities
-                .Require(kind)
-                .FixedPorts
-                .OrderBy(value => value.Order)
+            GetDeclared(CharacterTypedPoseNode node) =>
+            CharacterPoseNodeDefinitionModule.Shared
+                .Require(node.Kind)
+                .ProjectDeclaredPortShape(node.Payload)
                 .Select(ToPosePort)
                 .ToArray();
 
@@ -781,7 +773,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             };
 
         static CharacterPosePortDefinition ToPosePort(
-            GraphAuthoringPortDescriptor port) =>
+            GraphAuthoringDynamicPortProjection port) =>
             new CharacterPosePortDefinition(
                 new PosePortId(port.PortId.Value),
                 port.DisplayName,

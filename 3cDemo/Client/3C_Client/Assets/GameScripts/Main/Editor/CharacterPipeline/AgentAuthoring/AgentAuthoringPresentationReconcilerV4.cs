@@ -520,22 +520,19 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                 presentation.poseGraphs.Select(value => value.id),
                 StringComparer.Ordinal);
             var sourceCapabilities = new HashSet<string>(
-                CharacterPoseCompilerHandlerRegistry.Shared.All
-                    .Where(value =>
-                        value.Player &&
-                        !value.AnimationSlot)
+                CharacterPoseNodeDefinitionModule.Shared.All
+                    .Where(value => value.UsesPoseSourceSlot)
                     .Select(value =>
                         value.CapabilityIdentity),
                 StringComparer.Ordinal);
             var channelCapabilities = new HashSet<string>(
-                CharacterPoseCompilerHandlerRegistry.Shared.All
-                    .Where(value =>
-                        value.ActionPlaybackControl)
+                CharacterPoseNodeDefinitionModule.Shared.All
+                    .Where(value => value.UsesAnimationChannel)
                     .Select(value =>
                         value.CapabilityIdentity),
                 StringComparer.Ordinal);
             var subgraphCapabilities = new HashSet<string>(
-                CharacterPoseCompilerHandlerRegistry.Shared.All
+                CharacterPoseNodeDefinitionModule.Shared.All
                     .Where(value =>
                         value.NativeRole ==
                         CharacterPoseNativeNodeRole.Subgraph)
@@ -1259,8 +1256,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                 contextByGroup.Add(group.groupId, interfaceContext);
             }
 
-            string capability = CharacterPoseGraphAuthoringCapabilities
-                .Get(CharacterPoseNodeKind.LinkedPoseCall).Value;
+            string capability = CharacterPoseNodeDefinitionModule.Shared
+                .Require(CharacterPoseNodeKind.LinkedPoseCall)
+                .CapabilityIdentity;
             var calls = new Dictionary<string, int>(StringComparer.Ordinal);
             foreach (AgentPackagePoseGraphFile graph in presentation.poseGraphs)
             {
@@ -2141,8 +2139,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                                 expectedType,
                                 report,
                                 path + ".properties." + field),
-                            CharacterPoseCompilerHandlerRegistry
-                                .Shared.Require(kind).StateMachine
+                            CharacterPoseNodeDefinitionModule
+                                .Shared.Require(kind).OperationFamily ==
+                            CharacterPoseOperationFamily.StateMachine
                                 ? new Func<CharacterPoseStateMachineDefinition>(() =>
                                     ConvertStateMachine(
                                         RequireStateMachine(
@@ -2620,7 +2619,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                 new GraphAuthoringCapabilityId(capability),
                 CharacterPoseGraphAuthoringCapabilities.Domain,
                 role);
-            return CharacterPoseCompilerHandlerRegistry.Shared
+            return CharacterPoseNodeDefinitionModule.Shared
                 .RequireCapability(capability)
                 .Kind;
         }

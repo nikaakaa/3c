@@ -96,22 +96,18 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
             signature = string.Empty;
             if (!s_Capabilities.TryProjectSnapshotPortShape(
                     node,
-                    out GraphAuthoringCapabilityDescriptor capability,
+                    out _,
                     out IReadOnlyList<GraphAuthoringDynamicPortProjection> projected,
                     out GraphAuthoringPortShapeException error))
             {
                 report.Error(path, error.Code, error.Message);
                 return false;
             }
-            signature = string.Join("|", capability.FixedPorts
+            signature = string.Join("|", projected
                 .Select(PortSignature)
-                .Concat(projected.Select(PortSignature))
                 .OrderBy(value => value, StringComparer.Ordinal));
             return true;
         }
-
-        static string PortSignature(GraphAuthoringPortDescriptor value) =>
-            $"{value.PortId}:{value.ValueTypeId}:{value.Direction}:{value.Capacity}:{value.Required}";
 
         static string PortSignature(GraphAuthoringDynamicPortProjection value) =>
             $"{value.PortId}:{value.ValueTypeId}:{value.Direction}:{value.Capacity}:{value.Required}";
@@ -196,7 +192,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                 return true;
             if (!s_Capabilities.TryProjectSnapshotPortShape(
                     target,
-                    out GraphAuthoringCapabilityDescriptor capability,
+                    out _,
                     out IReadOnlyList<GraphAuthoringDynamicPortProjection> projected,
                     out GraphAuthoringPortShapeException error))
             {
@@ -206,10 +202,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
             GraphAuthoringPortId portId = property
                 ? BtsmtlSharedGraphPort.Property(port)
                 : BtsmtlSharedGraphPort.Flow(port);
-            bool matches = capability.FixedPorts.Any(value =>
-                               value.PortId.Equals(portId) &&
-                               value.Direction == direction) ||
-                           projected.Any(value =>
+            bool matches = projected.Any(value =>
                                value.PortId.Equals(portId) &&
                                value.Direction == direction);
             if (matches)

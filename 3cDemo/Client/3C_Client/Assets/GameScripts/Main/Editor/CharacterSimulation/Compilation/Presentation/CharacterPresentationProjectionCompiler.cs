@@ -2647,8 +2647,8 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 if (node.Kind ==
                     CharacterPoseNodeKind.ActionPlaybackInput)
                 {
-                    ICharacterPoseCompilerHandler handler =
-                        CharacterPoseCompilerHandlerRegistry.Shared
+                    CharacterPoseNodeDefinition handler =
+                        CharacterPoseNodeDefinitionModule.Shared
                             .Require(node.Kind);
                     var endpoint = new SelectionEndpoint(
                         handler.Channel(node.Payload),

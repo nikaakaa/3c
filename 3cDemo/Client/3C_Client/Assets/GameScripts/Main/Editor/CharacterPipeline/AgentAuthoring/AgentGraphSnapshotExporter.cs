@@ -4,6 +4,7 @@ using System.Linq;
 using BTSMTL.Timeline;
 using ThirdPersonCharacter.ActionSystem;
 using ThirdPersonCharacter.AI;
+using ThirdPersonCharacter.Editor.CharacterSimulation;
 using ThirdPersonCharacter.Pipeline;
 using ThirdPersonCharacter.Pipeline.Graph;
 using ThirdPersonCharacter.Pipeline.Input;
@@ -395,7 +396,10 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                 PoseNodeId scopedNodeId = string.IsNullOrEmpty(scope)
                     ? node.NodeId
                     : new PoseNodeId(scope + "/" + node.NodeId.Value);
-                if (IsStateLocalPoseSourceNode(node.Kind))
+                CharacterPoseNodeDefinition definition =
+                    CharacterPoseNodeDefinitionModule.Shared.Require(
+                        node.Kind);
+                if (definition.UsesPoseSourceSlot)
                 {
                     CharacterPresentationPoseSourceSlot sourceSlot =
                         node.PresentationPoseSourceSlot;
@@ -421,12 +425,15 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                         sourceKind = ResolveStateLocalPoseSourceKind(profile, node),
                         xParameterPortId = parameters.Length > 0 ? parameters[0].PortId.Value : string.Empty,
                         yParameterPortId = parameters.Length > 1 ? parameters[1].PortId.Value : string.Empty,
-                        inputRangePolicy = node.Kind == CharacterPoseNodeKind.BlendSpacePlayer
-                            ? node.BlendSpaceInputRangePolicy.ToString()
-                            : string.Empty
+                        inputRangePolicy =
+                            definition.OperationCode ==
+                            CharacterPoseOperationCode.BlendSpacePlayer
+                                ? definition.InputRange(node.Payload).ToString()
+                                : string.Empty
                     });
                 }
-                if (node.Kind == CharacterPoseNodeKind.ActionPlaybackInput)
+                if (definition.OperationFamily ==
+                    CharacterPoseOperationFamily.ActionInput)
                 {
                     destination.actionPlaybackInputs.Add(new AgentSnapshotActionPlaybackInput
                     {
@@ -438,7 +445,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                             : string.Empty
                     });
                 }
-                if (node.Kind == CharacterPoseNodeKind.AnimationSlot)
+                if (definition.OperationFamily ==
+                    CharacterPoseOperationFamily.AnimationSlot)
                 {
                     destination.animationSlots.Add(new AgentSnapshotAnimationSlot
                     {
@@ -453,81 +461,32 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                             : string.Empty
                     });
                 }
-                if (node.Kind == CharacterPoseNodeKind.PoseSubgraph &&
-                    node.Subgraph?.PoseGraphId.IsValid == true)
+                IReadOnlyList<CharacterPoseGraphDependency> dependencies =
+                    definition.ProjectGraphDependencies(node.Payload);
+                for (int dependencyIndex = 0;
+                     dependencyIndex < dependencies.Count;
+                     dependencyIndex++)
                 {
-                    CharacterTypedPoseGraph child =
-                        owner.RequireGraph(node.Subgraph.PoseGraphId);
-                    ExportPresentationPoseGraphContext(
-                        profile,
-                        owner,
-                        child,
-                        scopedNodeId.Value + "/" + child.GraphId,
-                        path,
-                        destination);
-                }
-                CharacterPoseStateMachineDefinition machine =
-                    node.PoseStateMachine;
-                if (node.Kind != CharacterPoseNodeKind.PoseStateMachine ||
-                    machine == null)
-                {
-                    continue;
-                }
-                for (int stateIndex = 0;
-                     stateIndex < machine.States.Count;
-                     stateIndex++)
-                {
-                    CharacterPoseStateDefinition state = machine.States[stateIndex];
-                    if (state == null)
+                    CharacterPoseGraphDependency dependency =
+                        dependencies[dependencyIndex];
+                    if (!dependency.GraphId.IsValid)
                         continue;
-                    CharacterTypedPoseGraph child = RequirePoseStateGraph(
-                        owner,
-                        machine,
-                        state);
+                    CharacterTypedPoseGraph child =
+                        owner.RequireGraph(dependency.GraphId);
                     ExportPresentationPoseGraphContext(
                         profile,
                         owner,
                         child,
-                        scopedNodeId.Value + "/state/" + state.StateId.Value,
+                        dependency.Kind ==
+                        CharacterPoseGraphDependencyKind.StatePose
+                            ? scopedNodeId.Value + "/state/" +
+                              dependency.OwnerIdentity
+                            : scopedNodeId.Value + "/" + child.GraphId,
                         path,
                         destination);
                 }
             }
             path.Remove(graph.GraphId);
-        }
-
-        static CharacterTypedPoseGraph RequirePoseStateGraph(
-            CharacterPresentationPoseGraphAsset owner,
-            CharacterPoseStateMachineDefinition machine,
-            CharacterPoseStateDefinition state)
-        {
-            string path =
-                $"context.dependencies.presentation.poseStateMachines[{machine.StateMachineId}].states[{state.StateId}]";
-            if (!state.PoseGraphId.IsValid)
-            {
-                throw new AgentAuthoringOperationException(
-                    "presentation_pose_state_graph_reference_missing",
-                    path,
-                    $"Pose State '{state.StateId}' has no GraphCatalog reference.",
-                    "使用正式Presentation Pose Graph authoring入口为该State配置PoseGraphId与OutputPoseNodeId。");
-            }
-            if (!owner.TryGetGraph(state.PoseGraphId, out CharacterTypedPoseGraph graph))
-            {
-                throw new AgentAuthoringOperationException(
-                    "presentation_pose_state_graph_missing",
-                    path,
-                    $"Pose State '{state.StateId}' references missing Pose Graph '{state.PoseGraphId}'.",
-                    "使用正式Presentation Pose Graph authoring入口修复GraphCatalog与State引用。");
-            }
-            return graph;
-        }
-
-        static bool IsStateLocalPoseSourceNode(CharacterPoseNodeKind kind)
-        {
-            return kind == CharacterPoseNodeKind.SelectedPosePlayer ||
-                   kind == CharacterPoseNodeKind.BlendStack ||
-                   kind == CharacterPoseNodeKind.BlendSpacePlayer ||
-                   kind == CharacterPoseNodeKind.ClipPlayer;
         }
 
         static string ResolveStateLocalPoseSourceKind(

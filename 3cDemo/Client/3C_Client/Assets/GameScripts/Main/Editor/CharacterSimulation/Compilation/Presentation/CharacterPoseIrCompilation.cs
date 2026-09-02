@@ -31,7 +31,6 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
     internal interface ICharacterPoseCompilerHandler
     {
         CharacterPoseNodeKind Kind { get; }
-        string BindingId { get; }
         string CapabilityIdentity { get; }
         Type PayloadType { get; }
         CharacterPoseNativeNodeRole NativeRole { get; }
@@ -76,6 +75,11 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
         object ReadField(
             CharacterPoseNodePayload payload,
             string field);
+        IReadOnlyList<CharacterPoseGraphDependency>
+            ProjectGraphDependencies(CharacterPoseNodePayload payload);
+        string ProjectChildDocumentId(
+            CharacterPoseNodePayload payload);
+        string SourceMapName(CharacterPoseNodePayload payload);
         CharacterPoseIrNode Lower(CharacterTypedPoseNode node, IReadOnlyList<CharacterPoseIrInput> inputs, string sourcePath);
     }
 
@@ -84,9 +88,6 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
         where TPayload : CharacterPoseNodePayload, new()
     {
         public abstract CharacterPoseNodeKind Kind { get; }
-        public string BindingId =>
-            CharacterPoseGraphAuthoringCapabilities
-                .Require(Kind).CompilerBindingId;
         public string CapabilityIdentity =>
             CharacterPoseGraphAuthoringCapabilities.Get(Kind).Value;
         public Type PayloadType => typeof(TPayload);
@@ -126,7 +127,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             Validate(payload, sourcePath);
             return new CharacterPoseIrNode(
                 new CharacterPoseIrNodeId(node.NodeId.Value),
-                CharacterPoseGraphAuthoringCapabilities.Get(Kind).Value,
+                GetSourceMapName(payload),
                 payload,
                 inputs,
                 sourcePath);
@@ -195,6 +196,18 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             string field) =>
             ReadField(Require(payload), field);
 
+        public IReadOnlyList<CharacterPoseGraphDependency>
+            ProjectGraphDependencies(CharacterPoseNodePayload payload) =>
+            GetGraphDependencies(Require(payload)) ??
+            Array.Empty<CharacterPoseGraphDependency>();
+
+        public string ProjectChildDocumentId(
+            CharacterPoseNodePayload payload) =>
+            GetChildDocumentId(Require(payload)) ?? string.Empty;
+
+        public string SourceMapName(CharacterPoseNodePayload payload) =>
+            GetSourceMapName(Require(payload));
+
         protected virtual CharacterPresentationPoseSourceSlot GetSource(
             TPayload payload) => null;
 
@@ -221,6 +234,16 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
         protected virtual IReadOnlyList<CharacterPoseParameterPolicy>
             GetParameterPolicies(TPayload payload) =>
             Array.Empty<CharacterPoseParameterPolicy>();
+
+        protected virtual IReadOnlyList<CharacterPoseGraphDependency>
+            GetGraphDependencies(TPayload payload) =>
+            Array.Empty<CharacterPoseGraphDependency>();
+
+        protected virtual string GetChildDocumentId(TPayload payload) =>
+            string.Empty;
+
+        protected virtual string GetSourceMapName(TPayload payload) =>
+            CapabilityIdentity;
 
         protected virtual object ReadField(
             TPayload payload,
@@ -546,6 +569,21 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                 payload.StateMachine != null,
                 sourcePath,
                 "Pose StateMachine is missing.");
+
+        protected override IReadOnlyList<CharacterPoseGraphDependency>
+            GetGraphDependencies(
+                CharacterPoseStateMachineNodePayload payload) =>
+            payload.StateMachine?.States
+                .Where(value => value?.PoseGraphId.IsValid == true)
+                .Select(value => new CharacterPoseGraphDependency(
+                    CharacterPoseGraphDependencyKind.StatePose,
+                    value.PoseGraphId,
+                    value.StateId.Value))
+                .ToArray() ?? Array.Empty<CharacterPoseGraphDependency>();
+
+        protected override string GetChildDocumentId(
+            CharacterPoseStateMachineNodePayload payload) =>
+            payload.StateMachine?.StateMachineId.Value ?? string.Empty;
 
         public override CharacterPoseNodePayload CreatePayload(
             CharacterPoseAuthoringPayloadInput input) =>
@@ -1088,6 +1126,19 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                 payload.Subgraph?.PoseGraphId.IsValid == true,
                 sourcePath,
                 "Pose Subgraph target is missing.");
+
+        protected override IReadOnlyList<CharacterPoseGraphDependency>
+            GetGraphDependencies(CharacterPoseSubgraphPayload payload) =>
+            payload.Subgraph?.PoseGraphId.IsValid == true
+                ? new[]
+                {
+                    new CharacterPoseGraphDependency(
+                        CharacterPoseGraphDependencyKind.Subgraph,
+                        payload.Subgraph.PoseGraphId,
+                        payload.Subgraph.PoseGraphId.Value)
+                }
+                : Array.Empty<CharacterPoseGraphDependency>();
+
     }
 
     internal sealed class CharacterLocalToComponentPoseCompilerHandler :
@@ -1137,132 +1188,10 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             CharacterPoseOperationCode.OutputPose;
     }
 
-    internal sealed class CharacterPoseCompilerHandlerRegistry
-    {
-        readonly Dictionary<string, ICharacterPoseCompilerHandler>
-            m_Handlers =
-                new Dictionary<string, ICharacterPoseCompilerHandler>(
-                    StringComparer.Ordinal);
-
-        public static CharacterPoseCompilerHandlerRegistry Shared
-        {
-            get;
-        } = new CharacterPoseCompilerHandlerRegistry();
-
-        public IReadOnlyCollection<ICharacterPoseCompilerHandler>
-            All => m_Handlers.Values;
-
-        public CharacterPoseCompilerHandlerRegistry()
-        {
-            IEnumerable<Type> handlerTypes =
-                typeof(ICharacterPoseCompilerHandler).Assembly
-                    .GetTypes()
-                    .Where(type =>
-                        !type.IsAbstract &&
-                        !type.IsGenericTypeDefinition &&
-                        typeof(ICharacterPoseCompilerHandler)
-                            .IsAssignableFrom(type))
-                    .OrderBy(
-                        type => type.FullName,
-                        StringComparer.Ordinal);
-            foreach (Type type in handlerTypes)
-            {
-                Register(
-                    (ICharacterPoseCompilerHandler)
-                    Activator.CreateInstance(type, true));
-            }
-
-            IReadOnlyList<GraphAuthoringCapabilityDescriptor>
-                capabilities =
-                    CharacterPoseGraphAuthoringCapabilities.Catalog
-                        .GetDomain(
-                            CharacterPoseGraphAuthoringCapabilities
-                                .Domain)
-                        .Where(value =>
-                            value.AuthoringType != null &&
-                            typeof(CharacterPoseNodePayload)
-                                .IsAssignableFrom(
-                                    value.AuthoringType))
-                        .ToArray();
-            foreach (GraphAuthoringCapabilityDescriptor capability in
-                     capabilities)
-            {
-                if (!m_Handlers.ContainsKey(
-                        capability.CompilerBindingId))
-                {
-                    throw new InvalidOperationException(
-                        $"Pose capability '{capability.CapabilityId}' has no compiler handler '{capability.CompilerBindingId}'.");
-                }
-            }
-            if (m_Handlers.Count != capabilities.Count)
-            {
-                throw new InvalidOperationException(
-                    "Pose compiler handlers do not match the formal capability catalog.");
-            }
-        }
-
-        public ICharacterPoseCompilerHandler Require(
-            CharacterPoseNodeKind kind)
-        {
-            GraphAuthoringCapabilityDescriptor capability =
-                CharacterPoseGraphAuthoringCapabilities.Require(kind);
-            return m_Handlers.TryGetValue(
-                capability.CompilerBindingId,
-                out ICharacterPoseCompilerHandler handler)
-                ? handler
-                : throw new InvalidOperationException(
-                    $"Pose capability '{capability.CapabilityId}' has no compiler handler '{capability.CompilerBindingId}'.");
-        }
-
-        public ICharacterPoseCompilerHandler RequireCapability(
-            string capabilityIdentity)
-        {
-            if (!CharacterPoseGraphAuthoringCapabilities.Catalog
-                    .TryGetByExternalKind(
-                        CharacterPoseGraphAuthoringCapabilities
-                            .Domain,
-                        capabilityIdentity,
-                        out GraphAuthoringCapabilityDescriptor
-                            capability) ||
-                !m_Handlers.TryGetValue(
-                    capability.CompilerBindingId,
-                    out ICharacterPoseCompilerHandler handler))
-            {
-                throw new InvalidOperationException(
-                    $"Pose IR capability '{capabilityIdentity ?? "<null>"}' has no compiler handler.");
-            }
-            return handler;
-        }
-
-        void Register(ICharacterPoseCompilerHandler handler)
-        {
-            if (handler == null)
-                throw new InvalidOperationException(
-                    "Pose compiler handler is missing.");
-            GraphAuthoringCapabilityDescriptor capability =
-                CharacterPoseGraphAuthoringCapabilities.Require(
-                    handler.Kind);
-            if (capability.AuthoringType != handler.PayloadType ||
-                !string.Equals(
-                    capability.CompilerBindingId,
-                    handler.BindingId,
-                    StringComparison.Ordinal))
-            {
-                throw new InvalidOperationException(
-                    $"Pose compiler handler '{handler.GetType().FullName}' does not match capability '{capability.CapabilityId}'.");
-            }
-            if (!m_Handlers.TryAdd(handler.BindingId, handler))
-            {
-                throw new InvalidOperationException(
-                    $"Pose compiler handler binding '{handler.BindingId}' is registered more than once.");
-            }
-        }
-    }
-
     internal sealed class CharacterPoseIrCompiler
     {
-        readonly CharacterPoseCompilerHandlerRegistry m_Handlers =
-            CharacterPoseCompilerHandlerRegistry.Shared;
+        readonly CharacterPoseNodeDefinitionModule m_Definitions =
+            CharacterPoseNodeDefinitionModule.Shared;
 
         public CharacterPoseIrGraph Compile(CharacterTypedPoseGraph graph, CharacterPoseIrGraphRole role)
         {
@@ -1277,7 +1206,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             {
                 string sourcePath = $"pose-graphs/{graph.GraphId.Value}/nodes/{node.NodeId.Value}";
                 IReadOnlyList<CharacterPoseIrInput> inputs = BuildInputs(node, incoming[node.NodeId], nodes, sourcePath);
-                lowered.Add(m_Handlers.Require(node.Kind).Lower(node, inputs, sourcePath));
+                lowered.Add(m_Definitions.Require(node.Kind).Lower(node, inputs, sourcePath));
             }
             CharacterTypedPoseNode output = role != CharacterPoseIrGraphRole.Subgraph && role != CharacterPoseIrGraphRole.LinkedPoseEntry
                 ? ordered.Single(value => value.Kind == CharacterPoseNodeKind.OutputPose)
@@ -1303,7 +1232,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
         {
             var ids = new HashSet<string>(
                 CharacterPoseAuthoringPortProjection
-                    .GetFixed(node.Kind)
+                    .GetDeclared(node)
                     .Select(value => value.PortId.Value),
                 StringComparer.Ordinal);
             foreach (CharacterPoseDynamicPort port in node.DynamicPorts)

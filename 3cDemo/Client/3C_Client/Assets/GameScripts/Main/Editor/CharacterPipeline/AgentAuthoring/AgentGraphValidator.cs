@@ -6,6 +6,7 @@ using BTSMTL.Timeline;
 using ThirdPersonCharacter.ActionSystem;
 using ThirdPersonCharacter.AI;
 using ThirdPersonCharacter.AI.Editor;
+using ThirdPersonCharacter.Editor.CharacterSimulation;
 using ThirdPersonCharacter.Pipeline;
 using ThirdPersonCharacter.Pipeline.Animation;
 using ThirdPersonCharacter.Pipeline.Graph;
@@ -333,16 +334,18 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                     : scope + "/" + node.NodeId.Value;
                 string nodePath =
                     $"definition.animationPresentationProfile.poseGraph:{graph.GraphId}/node:{nodeId}";
-                bool stateLocal =
-                    node.Kind == CharacterPoseNodeKind.SelectedPosePlayer ||
-                    node.Kind == CharacterPoseNodeKind.BlendStack ||
-                    node.Kind == CharacterPoseNodeKind.BlendSpacePlayer ||
-                    node.Kind == CharacterPoseNodeKind.ClipPlayer;
+                CharacterPoseNodeDefinition definition =
+                    CharacterPoseNodeDefinitionModule.Shared.Require(
+                        node.Kind);
+                bool stateLocal = definition.UsesPoseSourceSlot;
                 if (stateLocal)
-                    ValidateStateLocalPoseSource(presentation, node, nodePath);
+                    ValidateStateLocalPoseSource(
+                        presentation,
+                        node,
+                        definition,
+                        nodePath);
                 if (!stateLocal &&
-                    node.Kind != CharacterPoseNodeKind.ActionPlaybackInput &&
-                    node.Kind != CharacterPoseNodeKind.AnimationSlot &&
+                    !definition.UsesAnimationChannel &&
                     node.AnimationChannelId.IsValid)
                 {
                     m_Report.Error(
@@ -350,47 +353,34 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                         "action_channel_owner_invalid",
                         "只有ActionPlaybackInput与AnimationSlot可以引用Action AnimationChannel。");
                 }
-                if (node.Kind == CharacterPoseNodeKind.ActionPlaybackInput)
+                if (definition.OperationFamily ==
+                    CharacterPoseOperationFamily.ActionInput)
                     CountActionChannel(node, nodePath, actionInputs, "action_playback_input_channel_missing");
-                if (node.Kind == CharacterPoseNodeKind.AnimationSlot)
+                if (definition.OperationFamily ==
+                    CharacterPoseOperationFamily.AnimationSlot)
                     CountActionChannel(node, nodePath, animationSlots, "animation_slot_channel_missing");
 
-                if (node.Kind == CharacterPoseNodeKind.PoseSubgraph &&
-                    node.Subgraph?.PoseGraphId.IsValid == true)
+                IReadOnlyList<CharacterPoseGraphDependency> dependencies =
+                    definition.ProjectGraphDependencies(node.Payload);
+                for (int dependencyIndex = 0;
+                     dependencyIndex < dependencies.Count;
+                     dependencyIndex++)
                 {
-                    CharacterTypedPoseGraph child =
-                        owner.RequireGraph(node.Subgraph.PoseGraphId);
-                    ValidatePresentationGraph(
-                        presentation,
-                        owner,
-                        child,
-                        nodeId + "/" + child.GraphId,
-                        path,
-                        actionInputs,
-                        animationSlots);
-                }
-
-                CharacterPoseStateMachineDefinition machine =
-                    node.PoseStateMachine;
-                if (node.Kind != CharacterPoseNodeKind.PoseStateMachine ||
-                    machine == null)
-                {
-                    continue;
-                }
-                for (int stateIndex = 0;
-                     stateIndex < machine.States.Count;
-                     stateIndex++)
-                {
-                    CharacterPoseStateDefinition state = machine.States[stateIndex];
-                    if (state == null)
+                    CharacterPoseGraphDependency dependency =
+                        dependencies[dependencyIndex];
+                    if (!dependency.GraphId.IsValid)
                         continue;
                     CharacterTypedPoseGraph child =
-                        owner.RequireGraph(state.PoseGraphId);
+                        owner.RequireGraph(dependency.GraphId);
                     ValidatePresentationGraph(
                         presentation,
                         owner,
                         child,
-                        nodeId + "/state/" + state.StateId.Value,
+                        dependency.Kind ==
+                        CharacterPoseGraphDependencyKind.StatePose
+                            ? nodeId + "/state/" +
+                              dependency.OwnerIdentity
+                            : nodeId + "/" + child.GraphId,
                         path,
                         actionInputs,
                         animationSlots);
@@ -402,6 +392,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
         void ValidateStateLocalPoseSource(
             CharacterAnimationPresentationProfile presentation,
             CharacterTypedPoseNode node,
+            CharacterPoseNodeDefinition definition,
             string path)
         {
             if (node.AnimationChannelId.IsValid)
@@ -421,18 +412,12 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                     "State-local Pose source缺少typed Source Slot对象引用。");
                 return;
             }
-            Type expectedSlotType = node.Kind switch
-            {
-                CharacterPoseNodeKind.SelectedPosePlayer =>
-                    typeof(CharacterMotionMatchingPoseSourceSlot),
-                CharacterPoseNodeKind.BlendStack =>
-                    typeof(CharacterMotionMatchingPoseSourceSlot),
-                CharacterPoseNodeKind.BlendSpacePlayer =>
-                    typeof(CharacterBlendSpacePoseSourceSlot),
-                CharacterPoseNodeKind.ClipPlayer =>
-                    typeof(CharacterClipPoseSourceSlot),
-                _ => typeof(CharacterPresentationPoseSourceSlot)
-            };
+            Type expectedSlotType = definition.Capability.Fields
+                .Single(value => string.Equals(
+                    value.FieldId.Value,
+                    "pose-source-slot",
+                    StringComparison.Ordinal))
+                .ObjectType;
             if (!expectedSlotType.IsInstanceOfType(sourceSlot))
             {
                 m_Report.Error(
@@ -452,7 +437,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                     "Source Slot不能从Presentation Profile解析到唯一typed binding子资产。");
                 return;
             }
-            if (node.Kind == CharacterPoseNodeKind.ClipPlayer &&
+            if (definition.OperationCode ==
+                CharacterPoseOperationCode.ClipPlayer &&
                 source?.SourceKind != PresentationPoseSourceKind.Clip)
             {
                 m_Report.Error(
@@ -460,7 +446,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                     "clip_pose_source_kind_invalid",
                     "ClipPlayer必须引用Clip Presentation Pose source。");
             }
-            if (node.Kind == CharacterPoseNodeKind.BlendSpacePlayer &&
+            if (definition.OperationCode ==
+                CharacterPoseOperationCode.BlendSpacePlayer &&
                 source?.SourceKind != PresentationPoseSourceKind.BlendSpace)
             {
                 m_Report.Error(
@@ -898,7 +885,10 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
             IReadOnlyList<GraphAuthoringDynamicPortProjection> projected;
             try
             {
-                projected = s_Capabilities.ProjectPortShape(node, graph, capability);
+                projected = s_Capabilities.ProjectCompletePortShape(
+                    node,
+                    graph,
+                    capability);
             }
             catch (GraphAuthoringPortShapeException exception)
             {
@@ -906,14 +896,10 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                 return;
             }
 
-            var expected = capability.FixedPorts
-                .Select(value => new KeyValuePair<GraphAuthoringPortId, Tuple<GraphAuthoringPortDirection, GraphAuthoringPortCapacity>>(
-                    value.PortId,
-                    Tuple.Create(value.Direction, value.Capacity)))
-                .Concat(projected.Select(value =>
+            var expected = projected.Select(value =>
                     new KeyValuePair<GraphAuthoringPortId, Tuple<GraphAuthoringPortDirection, GraphAuthoringPortCapacity>>(
                         value.PortId,
-                        Tuple.Create(value.Direction, value.Capacity))))
+                        Tuple.Create(value.Direction, value.Capacity)))
                 .ToDictionary(value => value.Key, value => value.Value);
             var actual = new Dictionary<GraphAuthoringPortId, Tuple<GraphAuthoringPortDirection, GraphAuthoringPortCapacity>>();
             foreach (FlowPortDeclaration port in node.GetFlowPortDeclarations(graph))

@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using BTSMTL.Diagnostics.Editor;
+using ThirdPersonCharacter.Editor.CharacterSimulation;
 using ThirdPersonCharacter.Pipeline.Animation;
 using ThirdPersonCharacter.Pipeline.Animation.Diagnostics;
 using ThirdPersonCharacter.Pipeline.Animation.MotionMatching;
@@ -823,7 +824,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 CharacterPoseGraphAuthoringCapabilities.Get(node.Kind),
                 node.DisplayName,
                 positions.TryGetValue(node.NodeId, out Vector2 position) ? position : Vector2.zero,
-                node.DynamicPorts.Select(ProjectDynamicPort).ToArray(),
+                CharacterPoseNodeDefinitionModule.Shared
+                    .Require(node.Kind)
+                    .ProjectAdditionalPorts(node),
                 SourceSubtitle(node, profile))).ToArray();
         }
 
@@ -843,15 +846,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 : $"{slot.name} → Missing Binding";
         }
 
-        static GraphAuthoringDynamicPortProjection ProjectDynamicPort(CharacterPoseDynamicPort port) => new GraphAuthoringDynamicPortProjection(
-            new GraphAuthoringPortId(port.PortId.Value),
-            port.DisplayName,
-            ValueType(port.Kind),
-            port.Direction == CharacterPosePortDirection.Input ? GraphAuthoringPortDirection.Input : GraphAuthoringPortDirection.Output,
-            port.Direction == CharacterPosePortDirection.Input ? GraphAuthoringPortCapacity.Single : GraphAuthoringPortCapacity.Multiple,
-            port.Required,
-            port.Order);
-
         IReadOnlyList<GraphAuthoringEdgeProjection> ProjectEdges() => Graph.Edges.Select(edge => new GraphAuthoringEdgeProjection(
             new GraphAuthoringElementId(edge.EdgeId),
             new GraphAuthoringElementId(edge.SourceNodeId.Value),
@@ -859,17 +853,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             new GraphAuthoringElementId(edge.TargetNodeId.Value),
             new GraphAuthoringPortId(edge.TargetPortId.Value))).ToArray();
 
-        internal static string ValueType(CharacterPosePortKind kind) => kind switch
-        {
-            CharacterPosePortKind.LocalPose => "pose.local",
-            CharacterPosePortKind.ComponentPose => "pose.component",
-            CharacterPosePortKind.Parameter => "pose.parameter",
-            CharacterPosePortKind.PoseDiscontinuity => "pose.discontinuity",
-            CharacterPosePortKind.ActionPlayback => "pose.action-playback",
-            CharacterPosePortKind.FullBodyIkGoals => "component.full-body-ik-goals",
-            CharacterPosePortKind.FullBodyIkGoalContribution => "component.full-body-ik-goal-contribution",
-            _ => throw new ArgumentOutOfRangeException(nameof(kind))
-        };
+        internal static string ValueType(CharacterPosePortKind kind) =>
+            CharacterPoseAuthoringPortProjection.ValueType(kind);
     }
 
     public sealed class CharacterTypedPoseGraphMutationAdapter : IGraphAuthoringDomainMutation
@@ -946,16 +931,13 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         static PortInfo Resolve(CharacterTypedPoseNode node, string portId)
         {
             foreach (CharacterPosePortDefinition port in
-                     CharacterPoseAuthoringPortProjection.GetFixed(
-                         node.Kind))
+                     CharacterPoseAuthoringPortProjection.Get(node))
                 if (port.PortId.Value == portId)
                     return new PortInfo(
                         port.Kind,
                         port.Direction);
-            CharacterPoseDynamicPort dynamic = node.DynamicPorts.SingleOrDefault(value => value.PortId.Value == portId);
-            return dynamic == null
-                ? throw new InvalidOperationException($"Pose node '{node.NodeId}' does not declare port '{portId}'.")
-                : new PortInfo(dynamic.Kind, dynamic.Direction);
+            throw new InvalidOperationException(
+                $"Pose node '{node.NodeId}' does not declare port '{portId}'.");
         }
 
         readonly struct PortInfo
@@ -1160,20 +1142,24 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             HashSet<PoseGraphId> stateGraphs = asset.EnumerateGraphs()
                 .Where(value => value != null)
                 .SelectMany(value => value.Nodes)
-                .Select(value => value?.Payload)
-                .OfType<CharacterPoseStateMachineNodePayload>()
-                .Where(value => value.StateMachine != null)
-                .SelectMany(value => value.StateMachine.States)
-                .Where(value => value != null && value.PoseGraphId.IsValid)
-                .Select(value => value.PoseGraphId)
+                .Where(value => value?.Payload != null)
+                .SelectMany(value => CharacterPoseNodeDefinitionModule.Shared
+                    .Require(value.Kind)
+                    .ProjectGraphDependencies(value.Payload))
+                .Where(value =>
+                    value.Kind == CharacterPoseGraphDependencyKind.StatePose &&
+                    value.GraphId.IsValid)
+                .Select(value => value.GraphId)
                 .ToHashSet();
             var linkedEntries = new HashSet<PoseGraphId>(linkedPoseEntryGraphs ?? Array.Empty<PoseGraphId>());
-            HashSet<PoseGraphId> linkedClosure = CollectLinkedPoseClosure(asset, linkedEntries);
+            HashSet<PoseGraphId> linkedClosure = CollectGraphClosure(
+                asset,
+                linkedEntries);
             foreach (CharacterTypedPoseGraph graph in asset.EnumerateGraphs())
             {
                 if (graph == null)
                     continue;
-                GraphAuthoringDocumentRoleId role = linkedEntries.Contains(graph.GraphId)
+                GraphAuthoringDocumentRoleId role = linkedClosure.Contains(graph.GraphId)
                     ? CharacterPoseGraphAuthoringCapabilities.LinkedPoseEntry
                     : ReferenceEquals(graph, asset.Graph)
                     ? CharacterPoseGraphAuthoringCapabilities.RootGraph
@@ -1190,16 +1176,18 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     }
                     try
                     {
+                        CharacterPoseNodeDefinition definition =
+                            CharacterPoseNodeDefinitionModule.Shared.Require(
+                                node.Kind);
                         GraphAuthoringCapabilityDescriptor capability = catalog.Require(
-                            CharacterPoseGraphAuthoringCapabilities.Get(node.Kind),
+                            definition.Capability.CapabilityId,
                             CharacterPoseGraphAuthoringCapabilities.Domain,
                             role);
-                        ValidatePayload(node, capability);
+                        definition.RequirePayload(node.Payload);
                         ValidateFields(node, capability);
-                        ValidatePorts(node, capability);
-                        if (linkedClosure.Contains(graph.GraphId))
-                            ValidateLinkedPoseEntryContext(node, role);
-                        if (node.Kind == CharacterPoseNodeKind.PoseSubgraph)
+                        ValidatePorts(node, definition);
+                        if (definition.NativeRole ==
+                            CharacterPoseNativeNodeRole.Subgraph)
                         {
                             CharacterPoseSubgraphSignatureValidator.RequireMatch(
                                 node,
@@ -1215,7 +1203,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             return errors;
         }
 
-        static HashSet<PoseGraphId> CollectLinkedPoseClosure(
+        static HashSet<PoseGraphId> CollectGraphClosure(
             CharacterPresentationPoseGraphAsset asset,
             IReadOnlyCollection<PoseGraphId> roots)
         {
@@ -1227,61 +1215,20 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 if (!result.Add(graphId))
                     continue;
                 CharacterTypedPoseGraph graph = asset.RequireGraph(graphId);
-                for (int nodeIndex = 0; nodeIndex < graph.Nodes.Count; nodeIndex++)
+                foreach (CharacterTypedPoseNode node in graph.Nodes.Where(
+                             value => value?.Payload != null))
                 {
-                    CharacterTypedPoseNode node = graph.Nodes[nodeIndex];
-                    if (node?.Payload is CharacterPoseSubgraphPayload subgraph && subgraph.Subgraph != null && subgraph.Subgraph.PoseGraphId.IsValid)
-                        pending.Push(subgraph.Subgraph.PoseGraphId);
-                    if (node?.Payload is not CharacterPoseStateMachineNodePayload stateMachine || stateMachine.StateMachine == null)
-                        continue;
-                    for (int stateIndex = 0; stateIndex < stateMachine.StateMachine.States.Count; stateIndex++)
+                    foreach (CharacterPoseGraphDependency dependency in
+                             CharacterPoseNodeDefinitionModule.Shared
+                                 .Require(node.Kind)
+                                 .ProjectGraphDependencies(node.Payload))
                     {
-                        CharacterPoseStateDefinition state = stateMachine.StateMachine.States[stateIndex];
-                        if (state != null && state.PoseGraphId.IsValid)
-                            pending.Push(state.PoseGraphId);
+                        if (dependency.GraphId.IsValid)
+                            pending.Push(dependency.GraphId);
                     }
                 }
             }
             return result;
-        }
-
-        static void ValidateLinkedPoseEntryContext(
-            CharacterTypedPoseNode node,
-            GraphAuthoringDocumentRoleId role)
-        {
-            switch (node.Kind)
-            {
-                case CharacterPoseNodeKind.ActionPlaybackInput:
-                case CharacterPoseNodeKind.AnimationSlot:
-                case CharacterPoseNodeKind.ModifyBone:
-                case CharacterPoseNodeKind.FootPlacement:
-                case CharacterPoseNodeKind.FullBodyIkGoalAssembler:
-                case CharacterPoseNodeKind.FullBodyIK:
-                case CharacterPoseNodeKind.LocalToComponentPose:
-                case CharacterPoseNodeKind.ComponentToLocalPose:
-                case CharacterPoseNodeKind.LinkedPoseCall:
-                    throw new InvalidOperationException($"Linked Pose Entry context forbids '{node.Kind}'.");
-                case CharacterPoseNodeKind.OutputPose when !role.Equals(CharacterPoseGraphAuthoringCapabilities.StatePoseGraph):
-                    throw new InvalidOperationException("Linked Pose Entry context only permits OutputPose as a StateMachine state boundary.");
-            }
-        }
-
-        static void ValidatePayload(
-            CharacterTypedPoseNode node,
-            GraphAuthoringCapabilityDescriptor capability)
-        {
-            Type expected =
-                CharacterPoseGraphAuthoringCapabilities.RequirePayloadType(
-                    node.Kind);
-            if (node.Payload.GetType() != expected ||
-                !string.Equals(
-                    capability.CompilerBindingId,
-                    "presentation.pose-node." + ToKebabCase(node.Kind.ToString()),
-                    StringComparison.Ordinal))
-            {
-                throw new InvalidOperationException(
-                    $"capability '{capability.CapabilityId}' does not own payload '{node.Payload.GetType().Name}'.");
-            }
         }
 
         static void ValidateFields(
@@ -1322,43 +1269,15 @@ namespace ThirdPersonCharacter.Pipeline.Editor
 
         static void ValidatePorts(
             CharacterTypedPoseNode node,
-            GraphAuthoringCapabilityDescriptor capability)
+            CharacterPoseNodeDefinition definition)
         {
-            Dictionary<string, CharacterPosePortDefinition> ports =
-                CharacterPoseAuthoringPortProjection.Get(node)
-                .Where(value => value != null)
-                .ToDictionary(value => value.PortId.Value, StringComparer.Ordinal);
-            foreach (GraphAuthoringPortDescriptor expected in capability.FixedPorts)
-            {
-                if (!ports.TryGetValue(expected.PortId.Value, out CharacterPosePortDefinition actual) ||
-                    CharacterTypedPoseGraphDocument.ValueType(actual.Kind) != expected.ValueTypeId ||
-                    (actual.Direction == CharacterPosePortDirection.Input
-                        ? GraphAuthoringPortDirection.Input
-                        : GraphAuthoringPortDirection.Output) != expected.Direction ||
-                    actual.Required != expected.Required)
-                {
-                    throw new InvalidOperationException(
-                        $"fixed port '{expected.PortId}' does not match the shared capability.");
-                }
-                ports.Remove(expected.PortId.Value);
-            }
-
-            foreach (CharacterPoseDynamicPort dynamic in node.DynamicPorts)
-            {
-                if (dynamic == null || !ports.Remove(dynamic.PortId.Value))
-                    throw new InvalidOperationException("dynamic port identity is missing or duplicated.");
-                if (capability.DynamicPortPolicy == GraphAuthoringDynamicPortPolicy.None ||
-                    capability.DynamicPortPolicy == GraphAuthoringDynamicPortPolicy.OrderedInputs &&
-                    dynamic.Direction != CharacterPosePortDirection.Input ||
-                    capability.DynamicPortPolicy == GraphAuthoringDynamicPortPolicy.OrderedOutputs &&
-                    dynamic.Direction != CharacterPosePortDirection.Output)
-                {
-                    throw new InvalidOperationException(
-                        $"dynamic port '{dynamic.PortId}' is not allowed by capability '{capability.CapabilityId}'.");
-                }
-            }
-            if (ports.Count != 0)
-                throw new InvalidOperationException("node publishes ports not declared by its capability.");
+            IReadOnlyList<GraphAuthoringDynamicPortProjection> ports =
+                definition.ProjectPortShape(node);
+            if (ports.Count !=
+                definition.ProjectDeclaredPortShape(node.Payload).Count +
+                node.DynamicPorts.Count)
+                throw new InvalidOperationException(
+                    "node publishes ports outside its projected Port Shape.");
         }
 
         static bool TryNumber(object value, out double number)
@@ -1389,17 +1308,5 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             }
         }
 
-        static string ToKebabCase(string value)
-        {
-            var characters = new List<char>(value.Length + 8);
-            for (int i = 0; i < value.Length; i++)
-            {
-                char current = value[i];
-                if (i > 0 && char.IsUpper(current))
-                    characters.Add('-');
-                characters.Add(char.ToLowerInvariant(current));
-            }
-            return new string(characters.ToArray());
-        }
     }
 }

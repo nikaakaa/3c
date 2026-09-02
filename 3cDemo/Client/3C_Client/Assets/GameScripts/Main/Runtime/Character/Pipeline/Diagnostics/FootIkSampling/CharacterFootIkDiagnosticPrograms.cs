@@ -38,6 +38,7 @@ namespace ThirdPersonCharacter.Pipeline.Diagnostics.FootIkSampling
         "resolved-target",
         "resolved-contact",
         "pelvis-input",
+        "pelvis-spring-input",
         "root-hierarchy",
         Tables = new[] { "ground-geometry" })]
     internal static class CharacterFootIkFullSamplerDefinition

@@ -189,3 +189,9 @@ Full Sampler加入`pelvis-input`后，生成主Extractor调用由709增长到731
 Performance capture作为顶层编排Owner需要直接持有Foot generated lifecycle，而不是通过Bridge或Foot专属Host Adapter。Foot程序集因此只把`CharacterFootIkFullCaptureProgram`、三个typed lifecycle Event、`CharacterFootIkCaptureMetadata`及其构造器提升为public；Generator已生成的嵌套`DiagnosticLifecycle`和`CreateDiagnosticLifecycle()`随public Program成为跨程序集可见。Event payload属性、Capability、Identity、Sampler与全部Field仍保持internal，Performance只能创建正式生命周期输入，不能读取或重写Foot Schema内部。
 
 Unity重编译后使用程序集metadata核对：Program public、Lifecycle nested public、Factory public，Started／Committed／Stopped Event及Metadata type／constructor全部public。没有新增facade、`InternalsVisibleTo`、Bridge或兼容链，Console无相关编译错误；PostCommit／PoseGraph seam未修改。
+
+## 迁移Pelvis Spring Input字段
+
+Pelvis Spring Input 11个typed字段已迁移，覆盖Previous State／Support Changed／Previous Slope、Handoff Reason、Velocity Reset、Previous Target／Output／Velocity及本帧Input／Input Velocity／Frequency。类别值保持领域枚举Int32，数值直接读取Committed `StrideHips.Response`，不重跑handoff或弹簧积分。
+
+Full Sampler加入`pelvis-spring-input`后，生成主Extractor调用由731增长到742，连同Geometry表共763个typed字段；Schema为`0b48465a63727163fbca3bbcf127195d975560a5a56c22894586c9e937b1a910`，Program hash为`af167a8cd2764edef27928bd7bb9c5d04f66b736fd2a6936d878f56144245223`，主layout为`775fc2d4bafd1eb4ee62e09965824359309b7806172bacdfebc3f895ca4fa447`。该模块与字段清单对账expected 11、actual 11、missing 0、extra 0；Unity编译无新增错误。Pelvis当前33／94项完成，本步不单独回放。

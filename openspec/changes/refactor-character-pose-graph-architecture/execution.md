@@ -947,3 +947,9 @@ Compiler路径改为逐闭包Graph执行局部Topology验证，typed edge、Port
 状态：新增`CharacterPoseStageSchedulePass`，从当前唯一线性Operation序列按Execution Domain、Output Pose Space和Linked Fragment identity生成固定连续Stage，并独立计算Native Operation range、Pose Value range与Linked Fragment Stage range。Pass构造时证明Stage从Operation 0连续覆盖到末尾，每个Operation恰好落入一个Stage；Fragment必须拥有完整且隔离的Stage范围，否则编译失败。
 
 旧Compiler内联`CompileStages`与原地扫描Fragment范围删除；Compiler只在Pass完成后把已计算range绑定到最终Fragment Payload，Stage分组、顺序、Native计数和Program hash输入保持不变。任务11.6仍等待Symbolic Family Lowering产出的typed dependency直接成为此Pass输入，当前不提前勾选。3C MCP对新Pass与Compiler入口错误筛选均为0；不单独运行回放。
+
+## Value Lifetime与Workspace Plan分离
+
+状态：新增`CharacterPoseValueLifetimePass`，只消费固定Stage Schedule和唯一线性Operation页，冻结Pose、Parameter address、Pose Discontinuity、Goal Contribution与Goal Set的producer／last-use页；同时验证每个typed输入只能读取更早的唯一producer、Goal值必须有consumer、Linked Fragment输出必须在Call前完成、最终Output只延长Final Pose寿命而不分配第二Final页。Parameter使用固定schema地址，Discontinuity与对应Pose Value共享同一寿命。
+
+旧Compiler中的producer／last-use临时数组和六组Register辅助方法删除。`CharacterPoseWorkspacePlanPass`开始独立消费Value Lifetime、Player／Blend Stack容量与Parameter schema，保持现有Pose workspace排除唯一Final Output、Contribution stride总量、Parameter stride和Frame cache数值不变。任务11.7完成；11.8仍等待把Rig、节点状态、Source、Constraint、Inertialization与Diagnostics manifest的全部容量收进同一Workspace Plan。3C MCP对新Pass与Compiler入口错误筛选均为0；不单独运行回放。

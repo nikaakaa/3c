@@ -160,29 +160,6 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             public int OutputOperationIndex { get; set; } = -1;
         }
 
-        readonly struct NativeWorkspacePlan
-        {
-            public NativeWorkspacePlan(
-                int poseValueCapacity,
-                int parameterValueCapacity,
-                int contributionCapacity,
-                int frameCacheCapacity,
-                int[] poseValueLastUse)
-            {
-                PoseValueCapacity = poseValueCapacity;
-                ParameterValueCapacity = parameterValueCapacity;
-                ContributionCapacity = contributionCapacity;
-                FrameCacheCapacity = frameCacheCapacity;
-                PoseValueLastUse = poseValueLastUse ?? throw new ArgumentNullException(nameof(poseValueLastUse));
-            }
-
-            public int PoseValueCapacity { get; }
-            public int ParameterValueCapacity { get; }
-            public int ContributionCapacity { get; }
-            public int FrameCacheCapacity { get; }
-            public IReadOnlyList<int> PoseValueLastUse { get; }
-        }
-
         public static CharacterPoseCompilationResult Compile(
             CharacterPoseCompilationRequest request)
         {
@@ -308,6 +285,23 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                 CharacterPoseStageSchedulePass.Run(
                     state.Operations,
                     state.LinkedFragments);
+            CharacterPoseValueLifetime valueLifetime =
+                CharacterPoseValueLifetimePass.Run(
+                    state.Operations,
+                    schedule,
+                    state.PoseValueCount,
+                    state.Parameters.Length,
+                    state.FullBodyIkGoalContributionValueCount,
+                    state.FullBodyIkGoalSetValueCount,
+                    state.FullBodyIkGoalContributionInputValueIndices,
+                    state.LinkedCalls,
+                    state.LinkedFragments,
+                    state.OutputOperationIndex);
+            CharacterPoseWorkspacePlan workspace =
+                CharacterPoseWorkspacePlanPass.Run(
+                    valueLifetime,
+                    state.Operations,
+                    state.BlendNodes);
             for (int rangeIndex = 0;
                  rangeIndex < schedule.FragmentRanges.Count;
                  rangeIndex++)
@@ -318,7 +312,6 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                     range.StageStart,
                     range.StageCount);
             }
-            NativeWorkspacePlan workspace = PlanNativeWorkspace(state);
             CharacterPresentationPoseStage[] stages =
                 schedule.Stages.ToArray();
             string hash = ComputeHash(
@@ -404,257 +397,6 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                 result = candidate;
             }
             return result;
-        }
-
-        static NativeWorkspacePlan PlanNativeWorkspace(CompilationState state)
-        {
-            if (state.PoseValueCount <= 0 || state.Operations.Count <= 0)
-                throw new InvalidOperationException("Pose Native plan requires operations and Pose values.");
-            var producer = Enumerable.Repeat(-1, state.PoseValueCount).ToArray();
-            var lastUse = Enumerable.Repeat(-1, state.PoseValueCount).ToArray();
-            var goalContributionProducer = Enumerable.Repeat(
-                -1,
-                state.FullBodyIkGoalContributionValueCount).ToArray();
-            var goalContributionLastUse = Enumerable.Repeat(
-                -1,
-                state.FullBodyIkGoalContributionValueCount).ToArray();
-            var goalSetProducer = Enumerable.Repeat(
-                -1,
-                state.FullBodyIkGoalSetValueCount).ToArray();
-            var goalSetLastUse = Enumerable.Repeat(
-                -1,
-                state.FullBodyIkGoalSetValueCount).ToArray();
-            int contributionCapacityPerValue = 0;
-            for (int i = 0; i < state.Operations.Count; i++)
-            {
-                CharacterPresentationPoseOperation operation = state.Operations[i];
-                if (operation.Index != i)
-                    throw new InvalidOperationException(
-                        $"Pose Native plan operation '{operation.NodeId}' has non-linear index '{operation.Index}'.");
-                RegisterPoseOutput(operation.OutputValueIndex, i, producer, lastUse, operation.NodeId);
-                RegisterPoseInput(operation.InputValueIndexA, i, producer, lastUse, operation.NodeId);
-                RegisterPoseInput(operation.InputValueIndexB, i, producer, lastUse, operation.NodeId);
-                RegisterFullBodyIkGoalContributionOutput(
-                    operation.OutputFullBodyIkGoalContributionValueIndex,
-                    i,
-                    goalContributionProducer,
-                    goalContributionLastUse,
-                    operation.NodeId);
-                RegisterFullBodyIkGoalSetOutput(
-                    operation.OutputFullBodyIkGoalSetValueIndex,
-                    i,
-                    goalSetProducer,
-                    goalSetLastUse,
-                    operation.NodeId);
-                for (int inputIndex = 0;
-                     inputIndex < operation.FullBodyIkGoalContributionInputCount;
-                     inputIndex++)
-                {
-                    RegisterFullBodyIkGoalContributionInput(
-                        state.FullBodyIkGoalContributionInputValueIndices[
-                            operation.FullBodyIkGoalContributionInputStart + inputIndex],
-                        i,
-                        goalContributionProducer,
-                        goalContributionLastUse,
-                        operation.NodeId);
-                }
-                RegisterFullBodyIkGoalSetInput(
-                    operation.InputFullBodyIkGoalSetValueIndex,
-                    i,
-                    goalSetProducer,
-                    goalSetLastUse,
-                    operation.NodeId);
-                if (operation.Code == CharacterPoseOperationCode.LinkedPoseCall)
-                {
-                    CharacterLinkedPoseCallPlanDescriptor call =
-                        state.LinkedCalls[operation.LinkedPoseCallIndex];
-                    for (int fragmentOffset = 0;
-                         fragmentOffset < call.FragmentIndices.Count;
-                         fragmentOffset++)
-                    {
-                        CharacterLinkedPoseEntryFragmentPlanDescriptor fragment =
-                            state.LinkedFragments[call.FragmentIndices[fragmentOffset]];
-                        for (int outputIndex = 0;
-                             outputIndex < fragment.Outputs.Count;
-                             outputIndex++)
-                        {
-                            CharacterLinkedPosePortValueBinding binding =
-                                fragment.Outputs[outputIndex];
-                            if (binding.Kind == CharacterPosePortKind.LocalPose ||
-                                binding.Kind == CharacterPosePortKind.ComponentPose)
-                            {
-                                RegisterPoseInput(
-                                    binding.ValueIndex,
-                                    i,
-                                    producer,
-                                    lastUse,
-                                    operation.NodeId);
-                            }
-                            else if (binding.Kind == CharacterPosePortKind.FullBodyIkGoals ||
-                                     binding.Kind == CharacterPosePortKind.FullBodyIkGoalContribution)
-                            {
-                                throw new InvalidOperationException(
-                                    $"Linked Pose Call '{operation.NodeId}' cannot pass Full Body IK Goals or Contributions.");
-                            }
-                        }
-                    }
-                }
-                if (operation.Code == CharacterPoseOperationCode.SelectedPosePlayer ||
-                    operation.Code == CharacterPoseOperationCode.BlendSpacePlayer ||
-                    operation.Code == CharacterPoseOperationCode.ClipPlayer)
-                {
-                    contributionCapacityPerValue = checked(contributionCapacityPerValue + 1);
-                    continue;
-                }
-                if (operation.Code != CharacterPoseOperationCode.BlendStack &&
-                    operation.Code != CharacterPoseOperationCode.AnimationSlot ||
-                    operation.BlendNodeIndex < 0 || operation.BlendNodeIndex >= state.BlendNodes.Length)
-                    continue;
-                AnimationBlendNodePayload blendNode = state.BlendNodes[operation.BlendNodeIndex];
-                if (blendNode?.StackPolicy == null || blendNode.StackPolicy.MaxActiveSourceEntries <= 0)
-                    throw new InvalidOperationException($"Pose Plan Blend Stack '{operation.NodeId}' has an invalid contribution capacity.");
-                contributionCapacityPerValue = checked(
-                    contributionCapacityPerValue +
-                    blendNode.StackPolicy.MaxActiveSourceEntries +
-                    1);
-            }
-            if ((uint)state.OutputOperationIndex >= (uint)state.Operations.Count)
-                throw new InvalidOperationException("Pose Native plan output operation is outside the linear operation list.");
-            CharacterPresentationPoseOperation output = state.Operations[state.OutputOperationIndex];
-            if (output.OutputValueIndex != state.PoseValueCount - 1)
-                throw new InvalidOperationException("Pose Native plan output operation does not publish a Pose value.");
-            lastUse[output.OutputValueIndex] = state.Operations.Count;
-            for (int i = 0; i < producer.Length; i++)
-            {
-                if (producer[i] < 0 || lastUse[i] < producer[i])
-                    throw new InvalidOperationException($"Pose Native plan value '{i}' has an invalid lifetime.");
-            }
-            for (int i = 0; i < goalSetProducer.Length; i++)
-            {
-                if (goalSetProducer[i] < 0 || goalSetLastUse[i] <= goalSetProducer[i])
-                    throw new InvalidOperationException($"Pose Native plan Full Body IK Goal Set value '{i}' has an invalid lifetime.");
-            }
-            for (int i = 0; i < goalContributionProducer.Length; i++)
-            {
-                if (goalContributionProducer[i] < 0 ||
-                    goalContributionLastUse[i] <= goalContributionProducer[i])
-                {
-                    throw new InvalidOperationException(
-                        $"Pose Native plan Full Body IK Goal Contribution value '{i}' has an invalid lifetime.");
-                }
-            }
-            if (contributionCapacityPerValue <= 0)
-                throw new InvalidOperationException("Pose Plan requires at least one Player contribution capacity.");
-            return new NativeWorkspacePlan(
-                output.OutputValueIndex,
-                state.Parameters.Length,
-                checked(output.OutputValueIndex * contributionCapacityPerValue),
-                state.Operations.Count,
-                lastUse);
-        }
-
-        static void RegisterPoseOutput(
-            int valueIndex,
-            int operationIndex,
-            int[] producer,
-            int[] lastUse,
-            PoseNodeId nodeId)
-        {
-            if (valueIndex < 0)
-                return;
-            if ((uint)valueIndex >= (uint)producer.Length || producer[valueIndex] >= 0)
-                throw new InvalidOperationException(
-                    $"Pose Native plan node '{nodeId}' publishes invalid or duplicate value '{valueIndex}'.");
-            producer[valueIndex] = operationIndex;
-            lastUse[valueIndex] = operationIndex;
-        }
-
-        static void RegisterPoseInput(
-            int valueIndex,
-            int operationIndex,
-            int[] producer,
-            int[] lastUse,
-            PoseNodeId nodeId)
-        {
-            if (valueIndex < 0)
-                return;
-            if ((uint)valueIndex >= (uint)producer.Length || producer[valueIndex] < 0 ||
-                producer[valueIndex] >= operationIndex)
-            {
-                throw new InvalidOperationException(
-                    $"Pose Native plan node '{nodeId}' consumes Pose value '{valueIndex}' before it is published.");
-            }
-            lastUse[valueIndex] = Math.Max(lastUse[valueIndex], operationIndex);
-        }
-
-        static void RegisterFullBodyIkGoalSetOutput(
-            int valueIndex,
-            int operationIndex,
-            int[] producer,
-            int[] lastUse,
-            PoseNodeId nodeId)
-        {
-            if (valueIndex < 0)
-                return;
-            if ((uint)valueIndex >= (uint)producer.Length || producer[valueIndex] >= 0)
-                throw new InvalidOperationException(
-                    $"Pose Native plan node '{nodeId}' publishes invalid or duplicate Full Body IK Goal Set value '{valueIndex}'.");
-            producer[valueIndex] = operationIndex;
-            lastUse[valueIndex] = operationIndex;
-        }
-
-        static void RegisterFullBodyIkGoalContributionOutput(
-            int valueIndex,
-            int operationIndex,
-            int[] producer,
-            int[] lastUse,
-            PoseNodeId nodeId)
-        {
-            if (valueIndex < 0)
-                return;
-            if ((uint)valueIndex >= (uint)producer.Length || producer[valueIndex] >= 0)
-            {
-                throw new InvalidOperationException(
-                    $"Pose Native plan node '{nodeId}' publishes invalid or duplicate Full Body IK Goal Contribution value '{valueIndex}'.");
-            }
-            producer[valueIndex] = operationIndex;
-            lastUse[valueIndex] = operationIndex;
-        }
-
-        static void RegisterFullBodyIkGoalSetInput(
-            int valueIndex,
-            int operationIndex,
-            int[] producer,
-            int[] lastUse,
-            PoseNodeId nodeId)
-        {
-            if (valueIndex < 0)
-                return;
-            if ((uint)valueIndex >= (uint)producer.Length || producer[valueIndex] < 0 ||
-                producer[valueIndex] >= operationIndex)
-            {
-                throw new InvalidOperationException(
-                    $"Pose Native plan node '{nodeId}' consumes Full Body IK Goal Set value '{valueIndex}' before it is published.");
-            }
-            lastUse[valueIndex] = Math.Max(lastUse[valueIndex], operationIndex);
-        }
-
-        static void RegisterFullBodyIkGoalContributionInput(
-            int valueIndex,
-            int operationIndex,
-            int[] producer,
-            int[] lastUse,
-            PoseNodeId nodeId)
-        {
-            if (valueIndex < 0)
-                return;
-            if ((uint)valueIndex >= (uint)producer.Length || producer[valueIndex] < 0 ||
-                producer[valueIndex] >= operationIndex)
-            {
-                throw new InvalidOperationException(
-                    $"Pose Native plan node '{nodeId}' consumes Full Body IK Goal Contribution value '{valueIndex}' before it is published.");
-            }
-            lastUse[valueIndex] = Math.Max(lastUse[valueIndex], operationIndex);
         }
 
         static Dictionary<PoseInterfacePortId, CompiledValue> CompileGraph(

@@ -186,10 +186,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
         readonly int[] m_RootOrientationWarpLinkedPoseFragmentIndices;
         readonly int[] m_InertializationLinkedPoseFragmentIndices;
 
-        CharacterPoseProgramFramePages m_ProgramFrames =>
-            m_ProgramRuntime.FramePages;
-        CharacterPoseProgramTuningState m_ProgramTuning =>
-            m_ProgramRuntime.Tuning;
         CharacterPoseProgramExecutionView m_ExecutionView =>
             m_ProgramRuntime.ExecutionView;
         CharacterPoseActorState m_ActorState =>
@@ -705,7 +701,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             ulong generation)
         {
             CharacterPoseProgramTuningView program =
-                m_ProgramTuning.RequireCommitted(generation);
+                m_ProgramRuntime.RequireTuning(generation);
             CharacterPoseSourceTuningView source =
                 m_SourceModule.RequireTuning(generation);
             CharacterPoseConstraintTuningView constraint =
@@ -724,7 +720,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                 int samplingJournalCapacity,
                 int slotJournalCapacity) =>
             new AnimationPresentationRuntimeCapacityMetrics(
-                m_ProgramFrames.DenseDoublePageResidentPayloadBytes,
+                m_ProgramRuntime.DenseDoublePageResidentPayloadBytes,
                 PoseInertializationNativeProgramPayloadMetrics
                     .CalculateDoublePageResidentPayloadBytes(
                         m_InertializationPlan),
@@ -824,7 +820,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                 m_PendingCompletedFrame = default;
                 m_HasPendingCompletedFrame = false;
                 m_PendingFrameOutcome = AnimationPresentationFrameOutcome.None;
-                m_ProgramFrames.BeginFrame();
+                m_ProgramRuntime.BeginFrame(programLease);
                 m_ActorDiagnosticsProjector.BeginFrame();
                 PrepareLinkedPoseSelection(linkedPose);
                 m_InertializationPlan.BeginFrame();
@@ -859,8 +855,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                 }
                 if (m_InertializationPlan.HasOpenFrame)
                     m_InertializationPlan.DiscardFrame();
-                if (m_ProgramFrames.HasOpenFrame)
-                    m_ProgramFrames.DiscardFrame();
+                if (m_ProgramRuntime.HasOpenFrame)
+                    m_ProgramRuntime.DiscardFrame(programLease);
                 if (sourceOpen)
                     m_SourceModule.DiscardFrame(sourceLease);
                 m_SourceRetirementState.CompleteFrame();
@@ -890,10 +886,11 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                 throw new InvalidOperationException(
                     "Pose Plan frame has no completed Native page to commit.");
             }
-            m_ProgramFrames.CommitEvaluationFrame(
+            m_ProgramRuntime.CommitEvaluationFrame(
+                lease,
                 m_PendingCompletedFrame.CompletionIdentity);
             m_InertializationPlan.CommitFrame();
-            m_ProgramFrames.CommitFrame();
+            m_ProgramRuntime.CommitFrame(lease);
             m_SourceModule.CommitFrame(sourceLease);
             for (int i = 0; i < m_StackRoutes.Length; i++)
                 m_StackRoutes[i].CommitFrame();
@@ -1053,12 +1050,13 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                 if (warp.HasOpenFrame)
                     DiscardStep(warp.DiscardFrame, ref failure);
             }
-            if (m_ProgramFrames.HasPendingEvaluationFrame)
+            if (m_ProgramRuntime.HasPendingEvaluationFrame)
             {
                 ulong pendingCompletionIdentity =
-                    m_ProgramFrames.PendingEvaluationCompletionIdentity;
+                    m_ProgramRuntime.PendingEvaluationCompletionIdentity;
                 DiscardStep(
-                    () => m_ProgramFrames.DiscardEvaluationFrame(
+                    () => m_ProgramRuntime.DiscardEvaluationFrame(
+                        lease,
                         pendingCompletionIdentity),
                     ref failure);
             }
@@ -1068,10 +1066,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                     m_InertializationPlan.DiscardFrame,
                     ref failure);
             }
-            if (m_ProgramFrames.HasOpenFrame)
+            if (m_ProgramRuntime.HasOpenFrame)
             {
                 DiscardStep(
-                    m_ProgramFrames.DiscardFrame,
+                    () => m_ProgramRuntime.DiscardFrame(lease),
                     ref failure);
             }
             DiscardStep(
@@ -1091,7 +1089,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             ClearValidatedActionBackendAcknowledgements();
             ClearPreparedMotionMatchingPoseCompletion();
             m_PreparedPage.Clear();
-            m_ProgramFrames.ClearSourceDemand();
+            m_ProgramRuntime.ClearSourceDemand();
             m_HasOpenFrame = false;
             m_ActiveFrameLease = default;
             m_CommitValidated = false;
@@ -1504,8 +1502,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                                 in sourceFrame);
                     CharacterPoseProgramCommittedDiagnosticsView
                         programDiagnostics =
-                            m_ProgramDiagnosticsProjector.Capture(
-                                m_ProgramFrames,
+                            m_ProgramRuntime.CaptureCommittedDiagnostics(
+                                m_ProgramDiagnosticsProjector,
                                 in committedProgramResult,
                                 in m_LastCompletedFrame,
                                 in publicationDiagnostics,
@@ -1992,7 +1990,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                 if (!route.IsAnimationSlot)
                     continue;
                 CharacterAnimationSlotNativeControl control = route.NativeControl;
-                m_ProgramFrames.SetAnimationSlotControl(
+                m_ProgramRuntime.SetAnimationSlotControl(
+                    m_ActiveFrameLease,
                     route.AnimationSlotIndex,
                     in control);
             }
@@ -2024,9 +2023,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                     nameof(factFrame));
             if (m_HasSequencePreview)
                 return;
-            m_PoseStateSources.EvaluateTransitions(
+            m_ProgramRuntime.EvaluateTransitions(
+                m_ActiveFrameLease,
                 in factFrame,
-                m_ProgramFrames,
                 workspace,
                 lease);
             for (int i = 0; i < m_RootOrientationWarps.Length; i++)
@@ -2039,7 +2038,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                 CharacterRootOrientationWarpNativeControl control =
                     m_RootOrientationWarps[i].Prepare(
                         in factFrame);
-                m_ProgramFrames.SetRootOrientationWarpControl(
+                m_ProgramRuntime.SetRootOrientationWarpControl(
+                    m_ActiveFrameLease,
                     i,
                     in control);
             }
@@ -2069,7 +2069,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             CharacterPoseFrameLineage lineage =
                 openLineage.WithCompletion(completionIdentity);
             CharacterPoseSourcePreparationView preparations =
-                m_ProgramFrames.BeginSourceDemand(
+                m_ProgramRuntime.BeginSourceDemand(
+                    programLease,
                     completionIdentity);
             var demand = new CharacterPoseSourceDemand(
                 in lineage,
@@ -2077,7 +2078,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                 providerDemands,
                 actionSourceCount,
                 providerSourceCount);
-            m_ProgramFrames.BindSourceDemand(in demand);
+            m_ProgramRuntime.BindSourceDemand(
+                programLease,
+                in demand);
             m_SourceModule.BindDemand(sourceLease, in demand);
             return demand;
         }
@@ -2098,7 +2101,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             CharacterPoseSourceDemand pendingDemand =
                 m_SourceModule.RequireDemand(sourceLease);
             CharacterPoseSourceDemand programDemand =
-                m_ProgramFrames.RequireSourceDemand(
+                m_ProgramRuntime.RequireSourceDemand(
+                    m_ActiveFrameLease,
                     in sourceDemand);
             CharacterPoseSourcePreparationView sourcePreparations =
                 sourceDemand.Preparations;
@@ -2149,7 +2153,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                 m_SourceModule.ClearActionSlotReleaseCompletions();
                 using (PrepareWorkspaceMarker.Auto())
                 {
-                    frame = m_ProgramFrames.BeginEvaluationFrame(
+                    frame = m_ProgramRuntime.BeginEvaluationFrame(
+                        m_ActiveFrameLease,
                         completionIdentity);
                     for (int i = 0; i < m_Stacks.Length; i++)
                         m_Stacks[i].BeginSourceFrame(completionIdentity);
@@ -2239,7 +2244,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                 {
                     AnimationBlendStackRuntime stack = m_Stacks[slotIndex];
                     AnimationPlayerPoseNativeWriteBinding write =
-                        m_ProgramFrames.RequirePlayerWriteBinding(
+                        m_ProgramRuntime.RequirePlayerWriteBinding(
+                            m_ActiveFrameLease,
                             stack.PlayerIndex,
                             completionIdentity);
                     m_SlotJobs[slotIndex] = stack.PrepareSlotJob(
@@ -2258,7 +2264,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                 {
                     AnimationSelectedPosePlayerRuntime player = m_DirectPlayers[playerIndex];
                     AnimationPlayerPoseNativeWriteBinding write =
-                        m_ProgramFrames.RequirePlayerWriteBinding(
+                        m_ProgramRuntime.RequirePlayerWriteBinding(
+                            m_ActiveFrameLease,
                             player.PlayerIndex,
                             completionIdentity);
                     CharacterPoseSourceBinding sourceBinding =
@@ -2279,7 +2286,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                         m_PoseStateSources.ClipPlayers[
                             playerIndex];
                     AnimationPlayerPoseNativeWriteBinding write =
-                        m_ProgramFrames.RequirePlayerWriteBinding(
+                        m_ProgramRuntime.RequirePlayerWriteBinding(
+                            m_ActiveFrameLease,
                             player.PlayerIndex,
                             completionIdentity);
                     CharacterPoseSourceBinding sourceBinding =
@@ -2300,7 +2308,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                         m_PoseStateSources.BlendSpacePlayers[
                             playerIndex];
                     AnimationPlayerPoseNativeWriteBinding write =
-                        m_ProgramFrames.RequirePlayerWriteBinding(
+                        m_ProgramRuntime.RequirePlayerWriteBinding(
+                            m_ActiveFrameLease,
                             player.PlayerIndex,
                             completionIdentity);
                     CharacterPoseSourceBinding sourceBinding =
@@ -2314,14 +2323,15 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                 }
                 StageCompletedSources(completionIdentity);
                 CharacterPoseProgramTuningView programTuning =
-                    m_ProgramTuning.RequireCommitted(
+                    m_ProgramRuntime.RequireTuning(
                         sourceDemand.Lineage.TuningGeneration);
                 CharacterFinalPosePublicationOutputBinding finalOutput =
                     m_FinalPublication.BindProgramOutput(
                         publicationLease);
                 poseExecutor = m_ProgramRuntime.BindExecutor(
                     in programTuning,
-                    m_ProgramFrames.RequirePoseGraphBinding(
+                    m_ProgramRuntime.RequirePoseGraphBinding(
+                        m_ActiveFrameLease,
                         completionIdentity),
                     in finalOutput,
                     recordDiagnostics);
@@ -2379,8 +2389,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                     nameof(factFrame));
             if (!prepared.IsValid ||
                 prepared.Lineage.CompletionIdentity != m_FrameCompletionContext ||
-                !m_ProgramFrames.HasPendingEvaluationFrame ||
-                m_ProgramFrames.PendingEvaluationCompletionIdentity !=
+                !m_ProgramRuntime.HasPendingEvaluationFrame ||
+                m_ProgramRuntime.PendingEvaluationCompletionIdentity !=
                     prepared.Lineage.CompletionIdentity)
             {
                 throw new ArgumentException(
@@ -2444,7 +2454,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                     programOutput =
                         poseExecutor.CompleteStagedEvaluation();
                 }
-                m_ProgramFrames.RequireEvaluationStagesCompleted(
+                m_ProgramRuntime.RequireEvaluationStagesCompleted(
+                    m_ActiveFrameLease,
                     completionIdentity);
             }
             CharacterPoseFrameLineage completedLineage =
@@ -2603,7 +2614,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                     constraint);
             }
             AnimationPoseValueNativeReadBinding inputBinding =
-                m_ProgramFrames.RequirePoseValueReadBinding(
+                m_ProgramRuntime.RequirePoseValueReadBinding(
+                    m_ActiveFrameLease,
                     operation.InputValueIndexA,
                     completionIdentity);
             int contributionCount =
@@ -2829,7 +2841,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             m_HasCompletedFrame = false;
             m_HasPendingCompletedFrame = false;
             m_PreparedPage.Clear();
-            m_ProgramFrames.ClearSourceDemand();
+            m_ProgramRuntime.ClearSourceDemand();
             m_PendingFrameOutcome = AnimationPresentationFrameOutcome.None;
             m_InertializationPlan.Reset();
             m_PoseConstraints.ResetSolvers();
@@ -2849,7 +2861,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                     new CharacterRootOrientationWarpNativeControl(
                         false,
                         0f);
-                m_ProgramFrames.SetRootOrientationWarpControl(
+                m_ProgramRuntime.ResetRootOrientationWarpControl(
                     i,
                     in control);
             }
@@ -2872,7 +2884,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             m_HasCompletedFrame = false;
             m_HasPendingCompletedFrame = false;
             m_PreparedPage.Clear();
-            m_ProgramFrames.ClearSourceDemand();
+            m_ProgramRuntime.ClearSourceDemand();
             m_PendingFrameOutcome = AnimationPresentationFrameOutcome.None;
             Exception failure = null;
             DisposeStep(m_DiagnosticsPublisher.Dispose, ref failure);
@@ -3130,7 +3142,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             in CharacterPoseSourcePreparationView preparations,
             in CharacterPoseSourcePreparation preparation)
         {
-            int index = m_ProgramFrames.AddSourcePreparation(
+            int index = m_ProgramRuntime.AddSourcePreparation(
+                m_ActiveFrameLease,
                 in preparation);
             m_SourceModule.Prepare(
                 sourceLease,

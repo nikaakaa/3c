@@ -1,4 +1,5 @@
 using System;
+using ThirdPersonCharacter.Pipeline.Animation.Diagnostics;
 using ThirdPersonCharacter.Pipeline.Animation.Presentation;
 using Unity.Collections;
 
@@ -7,6 +8,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
     internal sealed class CharacterPoseProgramRuntime : IDisposable
     {
         readonly CharacterPoseProgramImage m_Image;
+        CharacterPoseProgramFrameLease m_ActiveFrameLease;
         bool m_Disposed;
 
         internal CharacterPoseProgramRuntime(
@@ -59,9 +61,218 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         internal CharacterPoseProgramImage Image => m_Image;
         internal CharacterPoseProgramExecutionView ExecutionView { get; }
         internal CharacterPoseActorState ActorState { get; }
-        internal CharacterPoseProgramFramePages FramePages { get; }
-        internal CharacterPoseProgramTuningState Tuning { get; }
+        CharacterPoseProgramFramePages FramePages { get; }
+        CharacterPoseProgramTuningState Tuning { get; }
         internal CharacterPoseGraphStagedExecutor Executor { get; }
+        internal bool HasOpenFrame => m_ActiveFrameLease.IsValid;
+        internal bool HasPendingEvaluationFrame =>
+            FramePages.HasPendingEvaluationFrame;
+        internal ulong PendingEvaluationCompletionIdentity =>
+            FramePages.PendingEvaluationCompletionIdentity;
+        internal long DenseDoublePageResidentPayloadBytes =>
+            FramePages.DenseDoublePageResidentPayloadBytes;
+
+        internal void BeginFrame(CharacterPoseProgramFrameLease lease)
+        {
+            RequireAlive();
+            if (!lease.IsValid || m_ActiveFrameLease.IsValid)
+            {
+                throw new InvalidOperationException(
+                    "Character Pose Program frame cannot begin.");
+            }
+            FramePages.BeginFrame();
+            m_ActiveFrameLease = lease;
+        }
+
+        internal void CommitFrame(CharacterPoseProgramFrameLease lease)
+        {
+            RequireFrame(lease);
+            FramePages.CommitFrame();
+            m_ActiveFrameLease = default;
+        }
+
+        internal void DiscardFrame(CharacterPoseProgramFrameLease lease)
+        {
+            RequireFrame(lease);
+            FramePages.DiscardFrame();
+            m_ActiveFrameLease = default;
+        }
+
+        internal CharacterPoseGraphNativeBinding BeginEvaluationFrame(
+            CharacterPoseProgramFrameLease lease,
+            ulong completionIdentity)
+        {
+            RequireFrame(lease);
+            return FramePages.BeginEvaluationFrame(completionIdentity);
+        }
+
+        internal void CommitEvaluationFrame(
+            CharacterPoseProgramFrameLease lease,
+            ulong completionIdentity)
+        {
+            RequireFrame(lease);
+            FramePages.CommitEvaluationFrame(completionIdentity);
+        }
+
+        internal void DiscardEvaluationFrame(
+            CharacterPoseProgramFrameLease lease,
+            ulong completionIdentity)
+        {
+            RequireFrame(lease);
+            FramePages.DiscardEvaluationFrame(completionIdentity);
+        }
+
+        internal CharacterPoseSourcePreparationView BeginSourceDemand(
+            CharacterPoseProgramFrameLease lease,
+            ulong completionIdentity)
+        {
+            RequireFrame(lease);
+            return FramePages.BeginSourceDemand(completionIdentity);
+        }
+
+        internal void BindSourceDemand(
+            CharacterPoseProgramFrameLease lease,
+            in CharacterPoseSourceDemand demand)
+        {
+            RequireFrame(lease);
+            if (!lease.Matches(demand.Lineage))
+            {
+                throw new ArgumentException(
+                    "Character Pose Program source demand lineage is invalid.",
+                    nameof(demand));
+            }
+            FramePages.BindSourceDemand(in demand);
+        }
+
+        internal CharacterPoseSourceDemand RequireSourceDemand(
+            CharacterPoseProgramFrameLease lease,
+            in CharacterPoseSourceDemand demand)
+        {
+            RequireFrame(lease);
+            return FramePages.RequireSourceDemand(in demand);
+        }
+
+        internal int AddSourcePreparation(
+            CharacterPoseProgramFrameLease lease,
+            in CharacterPoseSourcePreparation preparation)
+        {
+            RequireFrame(lease);
+            return FramePages.AddSourcePreparation(in preparation);
+        }
+
+        internal void ClearSourceDemand() => FramePages.ClearSourceDemand();
+
+        internal void SetAnimationSlotControl(
+            CharacterPoseProgramFrameLease lease,
+            int animationSlotIndex,
+            in CharacterAnimationSlotNativeControl control)
+        {
+            RequireFrame(lease);
+            FramePages.SetAnimationSlotControl(
+                animationSlotIndex,
+                in control);
+        }
+
+        internal void SetRootOrientationWarpControl(
+            CharacterPoseProgramFrameLease lease,
+            int rootOrientationWarpIndex,
+            in CharacterRootOrientationWarpNativeControl control)
+        {
+            RequireFrame(lease);
+            FramePages.SetRootOrientationWarpControl(
+                rootOrientationWarpIndex,
+                in control);
+        }
+
+        internal void ResetRootOrientationWarpControl(
+            int rootOrientationWarpIndex,
+            in CharacterRootOrientationWarpNativeControl control)
+        {
+            RequireAlive();
+            if (m_ActiveFrameLease.IsValid)
+            {
+                throw new InvalidOperationException(
+                    "Character Pose Program Root Orientation Warp cannot reset during a frame.");
+            }
+            FramePages.SetRootOrientationWarpControl(
+                rootOrientationWarpIndex,
+                in control);
+        }
+
+        internal void EvaluateTransitions(
+            CharacterPoseProgramFrameLease lease,
+            in CharacterPresentationFactFrame factFrame,
+            PresentationFrameWorkspace workspace,
+            PresentationFrameWorkspaceLease workspaceLease)
+        {
+            RequireFrame(lease);
+            ActorState.PoseStateSources.EvaluateTransitions(
+                in factFrame,
+                FramePages,
+                workspace,
+                workspaceLease);
+        }
+
+        internal AnimationPlayerPoseNativeWriteBinding
+            RequirePlayerWriteBinding(
+                CharacterPoseProgramFrameLease lease,
+                int physicalSlotIndex,
+                ulong completionIdentity)
+        {
+            RequireFrame(lease);
+            return FramePages.RequirePlayerWriteBinding(
+                physicalSlotIndex,
+                completionIdentity);
+        }
+
+        internal CharacterPoseGraphNativeBinding RequirePoseGraphBinding(
+            CharacterPoseProgramFrameLease lease,
+            ulong completionIdentity)
+        {
+            RequireFrame(lease);
+            return FramePages.RequirePoseGraphBinding(completionIdentity);
+        }
+
+        internal AnimationPoseValueNativeReadBinding
+            RequirePoseValueReadBinding(
+                CharacterPoseProgramFrameLease lease,
+                int valueIndex,
+                ulong completionIdentity)
+        {
+            RequireFrame(lease);
+            return FramePages.RequirePoseValueReadBinding(
+                valueIndex,
+                completionIdentity);
+        }
+
+        internal void RequireEvaluationStagesCompleted(
+            CharacterPoseProgramFrameLease lease,
+            ulong completionIdentity)
+        {
+            RequireFrame(lease);
+            FramePages.RequireEvaluationStagesCompleted(completionIdentity);
+        }
+
+        internal CharacterPoseProgramTuningView RequireTuning(
+            ulong generation) => Tuning.RequireCommitted(generation);
+
+        internal CharacterPoseProgramCommittedDiagnosticsView
+            CaptureCommittedDiagnostics(
+                CharacterPoseProgramCommittedDiagnosticsProjector projector,
+                in CharacterPoseProgramResult result,
+                in CharacterPoseGraphNativeBinding frame,
+                in CharacterFinalPoseCommittedDiagnosticsView finalOutput,
+                AnimationPresentationDiagnosticsInterest interest)
+        {
+            if (projector == null)
+                throw new ArgumentNullException(nameof(projector));
+            return projector.Capture(
+                FramePages,
+                in result,
+                in frame,
+                in finalOutput,
+                interest);
+        }
 
         internal CharacterPoseGraphStagedExecutor BindExecutor(
             in CharacterPoseProgramTuningView tuning,
@@ -231,6 +442,27 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             DisposeStep(FramePages.Dispose, ref failure);
             if (failure != null)
                 throw failure;
+        }
+
+        void RequireFrame(CharacterPoseProgramFrameLease lease)
+        {
+            RequireAlive();
+            if (!lease.IsValid ||
+                !m_ActiveFrameLease.IsValid ||
+                lease.Lineage != m_ActiveFrameLease.Lineage)
+            {
+                throw new InvalidOperationException(
+                    "Character Pose Program frame lease is stale.");
+            }
+        }
+
+        void RequireAlive()
+        {
+            if (m_Disposed)
+            {
+                throw new ObjectDisposedException(
+                    nameof(CharacterPoseProgramRuntime));
+            }
         }
 
         static void DisposeStep(Action dispose, ref Exception failure)

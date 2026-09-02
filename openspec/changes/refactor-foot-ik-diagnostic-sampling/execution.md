@@ -177,3 +177,9 @@ Resolved Foot的Support Target 18个typed字段已全部迁移，覆盖Target可
 Resolved Foot余下18个typed字段已全部迁移，覆盖Contact availability／event／point／ownership、Support eligibility／weight／intent weight／horizontal error／event，以及Pelvis与Landing Reach的availability、event、point／hip／target ankle、leg length和minimum compression reserve。Contact point、Pelvis point与Landing Reach条件字段分别依赖自己的availability；Extractor只读取同一Constraint Committed Resolved结果。`ResolvedSupportIntentWeight`继续读取`Support.Weight`，与现行旧Column的正式重复语义完全一致，不在字段迁移中擅自改变行为。
 
 Full Sampler加入`resolved-contact`后，生成主Extractor调用由691增长到709，连同Geometry表共730个typed字段；Schema为`6a8beba270e462997ee145c3f721a6fbb0075073586bf22b0b2866abe0208832`，Program hash为`7d5bc5adef911b71e8873f8538110599dfc1c880370917c291e1b3d5d8bd2ee8`，主layout为`94e918ccec329ed11c39e625682b9ca0780801641880080a90fdaa1ddb12ee96`。字段清单与Core／Target／Contact三个模块静态对账为expected 57、actual 57、missing 0、extra 0；Unity Console无新增编译错误。Resolved Foot 57个typed字段至此完整迁移，Generated Lifecycle仍未接入Runtime consumer，本步不单独回放。
+
+## 迁移Pelvis Input字段
+
+Pelvis 94个typed字段按业务拆为Input 22、Spring Input 11、Posture 12、Reach 29与Response／Final 20五个独立小步。首批Input 22项已迁移，覆盖Stride状态／拒绝／支撑脚／摆动脚／进度／坡度、Stride起终点与采样地面、Pose Input及Pose Root／Animated Pelvis位置，以及Pelvis Height Target的Component Up、双脚Animated／Target Sole、最小高度和请求偏移。Extractor只读取Committed `StrideHips.Core`、`Observation`与`HeightTarget`，不重新执行Stride或Pelvis求解。
+
+Full Sampler加入`pelvis-input`后，生成主Extractor调用由709增长到731，连同Geometry表共752个typed字段；Schema为`29c831c7c8cf1a7526cd0887425441f9b43f2994d295aaf2903134446767c483`，Program hash为`0ee36a2626e5e4daa3ad08d7d462a15ec40b546795c521b939db967660efd156`，主layout为`e4f431fcd8bd2ee9b742a3a0b7453fd8b0bb65ec822ead5c1daf630da42813ff`。该模块与字段清单对账expected 22、actual 22、missing 0、extra 0；Unity全量Asset refresh后编译无新增错误。Pelvis当前22／94项完成，Generated Lifecycle尚未接入Runtime consumer，本步不单独回放。

@@ -8,44 +8,12 @@ using UnityEngine;
 
 namespace ThirdPersonCharacter.Pipeline.Animation
 {
-    internal abstract class CharacterPoseExecutionContext
+    internal abstract class CharacterPoseValueWorkspace
     {
         internal const float ScaleEpsilon = 0.000001f;
 
         [ReadOnly]
         internal NativeArray<CharacterPoseNativeOperationHeader> m_OperationHeaders;
-        [ReadOnly]
-        internal NativeArray<CharacterPoseNativeParameterResolveOperation> m_ParameterResolveOperations;
-        [ReadOnly]
-        internal NativeArray<CharacterPoseNativePlayerOperation> m_PlayerFamilyOperations;
-        [ReadOnly]
-        internal NativeArray<CharacterPoseNativeStateMachineOperation> m_StateMachineFamilyOperations;
-        [ReadOnly]
-        internal NativeArray<CharacterPoseNativeAnimationSlotOperation> m_AnimationSlotFamilyOperations;
-        [ReadOnly]
-        internal NativeArray<CharacterPoseNativeBlendOperation> m_BlendFamilyOperations;
-        [ReadOnly]
-        internal NativeArray<CharacterPoseNativeInertializationOperation> m_InertializationFamilyOperations;
-        [ReadOnly]
-        internal NativeArray<CharacterPoseNativeCompositionOperation> m_CompositionFamilyOperations;
-        [ReadOnly]
-        internal NativeArray<CharacterPoseNativeSpaceConversionOperation> m_SpaceConversionOperations;
-        [ReadOnly]
-        internal NativeArray<CharacterPoseNativeComponentControlOperation> m_ComponentControlOperations;
-        [ReadOnly]
-        internal NativeArray<CharacterPoseNativeGoalContributionOperation> m_GoalContributionOperations;
-        [ReadOnly]
-        internal NativeArray<CharacterPoseNativeGoalAssemblerOperation> m_GoalAssemblerOperations;
-        [ReadOnly]
-        internal NativeArray<CharacterPoseNativeFullBodyIkOperation> m_FullBodyIkOperations;
-        [ReadOnly]
-        internal NativeArray<CharacterPoseNativeLinkedPoseOperation> m_LinkedPoseOperations;
-        [ReadOnly]
-        internal NativeArray<CharacterPoseNativeOutputOperation> m_OutputFamilyOperations;
-        [ReadOnly]
-        internal NativeArray<float> m_OperationWeights;
-        [ReadOnly]
-        internal NativeArray<AnimationPoseGraphNativeStage> m_Stages;
         [ReadOnly]
         internal NativeArray<float> m_DenseBoneMasks;
         [ReadOnly]

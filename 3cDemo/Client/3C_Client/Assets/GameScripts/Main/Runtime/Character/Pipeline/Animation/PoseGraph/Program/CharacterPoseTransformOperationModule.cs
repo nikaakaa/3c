@@ -5,10 +5,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation
 {
     internal sealed class CharacterPoseTransformOperationModule
     {
-        readonly CharacterPoseExecutionContext m_Context;
+        readonly CharacterPoseValueWorkspace m_Context;
 
         internal CharacterPoseTransformOperationModule(
-            CharacterPoseExecutionContext context)
+            CharacterPoseValueWorkspace context)
         {
             m_Context = context ??
                 throw new ArgumentNullException(nameof(context));
@@ -190,7 +190,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 AnimationLocalBonePose local =
                     m_Context.m_ValueDenseLocalPoses[m_Context.PoseOffset(input) + bone];
                 if (parent >= 0 &&
-                    !CharacterPoseExecutionContext.TryToModel(
+                    !CharacterPoseValueWorkspace.TryToModel(
                         m_Context.m_ValueDenseLocalPoses[m_Context.PoseOffset(output) + parent],
                         local,
                         out local))
@@ -229,7 +229,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 AnimationLocalBonePose component =
                     m_Context.m_ValueDenseLocalPoses[m_Context.PoseOffset(input) + bone];
                 if (parent >= 0 &&
-                    !CharacterPoseExecutionContext.TryToLocal(
+                    !CharacterPoseValueWorkspace.TryToLocal(
                         m_Context.m_ValueDenseLocalPoses[m_Context.PoseOffset(input) + parent],
                         component,
                         out component))

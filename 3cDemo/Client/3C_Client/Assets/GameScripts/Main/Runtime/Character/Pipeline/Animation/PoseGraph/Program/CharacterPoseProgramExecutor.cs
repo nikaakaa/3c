@@ -72,7 +72,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
     }
 
     internal sealed class CharacterPoseProgramExecutor :
-        CharacterPoseExecutionContext
+        CharacterPoseValueWorkspace
     {
         static readonly ProfilerMarker ValueResetMarker =
             new ProfilerMarker("ThirdPerson.Presentation.Animation.PoseGraph.ValueReset");
@@ -112,6 +112,36 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             m_InertializationOperations;
         readonly CharacterPosePlayerOperationModule m_PlayerOperations;
         readonly CharacterPoseStateOperationModule m_StateOperations;
+        readonly NativeArray<CharacterPoseNativeParameterResolveOperation>
+            m_ParameterResolveOperations;
+        readonly NativeArray<CharacterPoseNativePlayerOperation>
+            m_PlayerFamilyOperations;
+        readonly NativeArray<CharacterPoseNativeStateMachineOperation>
+            m_StateMachineFamilyOperations;
+        readonly NativeArray<CharacterPoseNativeAnimationSlotOperation>
+            m_AnimationSlotFamilyOperations;
+        readonly NativeArray<CharacterPoseNativeBlendOperation>
+            m_BlendFamilyOperations;
+        readonly NativeArray<CharacterPoseNativeInertializationOperation>
+            m_InertializationFamilyOperations;
+        readonly NativeArray<CharacterPoseNativeCompositionOperation>
+            m_CompositionFamilyOperations;
+        readonly NativeArray<CharacterPoseNativeSpaceConversionOperation>
+            m_SpaceConversionOperations;
+        readonly NativeArray<CharacterPoseNativeComponentControlOperation>
+            m_ComponentControlOperations;
+        readonly NativeArray<CharacterPoseNativeGoalContributionOperation>
+            m_GoalContributionOperations;
+        readonly NativeArray<CharacterPoseNativeGoalAssemblerOperation>
+            m_GoalAssemblerOperations;
+        readonly NativeArray<CharacterPoseNativeFullBodyIkOperation>
+            m_FullBodyIkOperations;
+        readonly NativeArray<CharacterPoseNativeLinkedPoseOperation>
+            m_LinkedPoseOperations;
+        readonly NativeArray<CharacterPoseNativeOutputOperation>
+            m_OutputFamilyOperations;
+        NativeArray<float> m_OperationWeights;
+        readonly NativeArray<AnimationPoseGraphNativeStage> m_Stages;
 
         internal CharacterPoseProgramExecutor(
             CharacterPoseProgramExecutionView program,

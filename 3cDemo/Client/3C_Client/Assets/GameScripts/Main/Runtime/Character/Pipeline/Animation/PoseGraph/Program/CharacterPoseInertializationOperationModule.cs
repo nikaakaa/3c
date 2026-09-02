@@ -10,10 +10,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation
 {
     internal sealed class CharacterPoseInertializationOperationModule
     {
-        readonly CharacterPoseExecutionContext m_Context;
+        readonly CharacterPoseValueWorkspace m_Context;
 
         internal CharacterPoseInertializationOperationModule(
-            CharacterPoseExecutionContext context)
+            CharacterPoseValueWorkspace context)
         {
             m_Context = context ??
                 throw new ArgumentNullException(nameof(context));
@@ -195,7 +195,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                                       weight * m_Context.m_InertialAngularVelocityResiduals[residualIndex];
                     Vector3 scaleVelocity = targetVelocity.Scale + derivative * scaleBase +
                                             weight * m_Context.m_InertialScaleVelocityResiduals[residualIndex];
-                    if (!CharacterPoseExecutionContext.IsFinite(linear) || !CharacterPoseExecutionContext.IsFinite(angular) || !CharacterPoseExecutionContext.IsFinite(scaleVelocity))
+                    if (!CharacterPoseValueWorkspace.IsFinite(linear) || !CharacterPoseValueWorkspace.IsFinite(angular) || !CharacterPoseValueWorkspace.IsFinite(scaleVelocity))
                     {
                         ClearInertialState(stateIndex, PoseInertializationRuntimeState.Invalid);
                         m_Context.SetInvalid(output, m_Context.m_ValueContinuityIdentities[input], AnimationPoseNativeInvalidReason.PoseGraphOperationInvalid, header.Index);
@@ -344,7 +344,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                                   m_Context.m_InertialDenseProfiles[rule.ProfileOffset + m_Context.m_RightFootBoneIndex];
             EvaluateInertialEnvelope(rule, elapsedSeconds, leftDuration, out float leftEnvelope, out _, out _);
             EvaluateInertialEnvelope(rule, elapsedSeconds, rightDuration, out float rightEnvelope, out _, out _);
-            if (CharacterPoseExecutionContext.TryResolveFeature(
+            if (CharacterPoseValueWorkspace.TryResolveFeature(
                     true,
                     m_Context.m_InertialAccumulatorLeftFeet[stateIndex],
                     true,
@@ -352,7 +352,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                     leftEnvelope,
                     true,
                     out AnimationFootFeatureSample left) &&
-                CharacterPoseExecutionContext.TryResolveFeature(
+                CharacterPoseValueWorkspace.TryResolveFeature(
                     true,
                     m_Context.m_InertialAccumulatorRightFeet[stateIndex],
                     true,

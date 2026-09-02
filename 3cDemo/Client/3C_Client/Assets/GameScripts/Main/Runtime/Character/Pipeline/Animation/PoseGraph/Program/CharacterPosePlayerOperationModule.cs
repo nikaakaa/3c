@@ -10,12 +10,12 @@ namespace ThirdPersonCharacter.Pipeline.Animation
 {
     internal sealed class CharacterPosePlayerOperationModule
     {
-        readonly CharacterPoseExecutionContext m_Context;
+        readonly CharacterPoseValueWorkspace m_Context;
         readonly CharacterPoseInertializationOperationModule
             m_Inertialization;
 
         internal CharacterPosePlayerOperationModule(
-            CharacterPoseExecutionContext context,
+            CharacterPoseValueWorkspace context,
             CharacterPoseInertializationOperationModule inertialization)
         {
             m_Context = context ??
@@ -67,10 +67,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             PoseDiscontinuityNative discontinuity = m_Context.m_SlotDiscontinuities[slotIndex];
             if (availability == AnimationPoseAvailability.Invalid)
             {
-                m_Context.SetInvalid(output, continuity, CharacterPoseExecutionContext.NormalizeInvalidReason(slotReason), header.Index);
+                m_Context.SetInvalid(output, continuity, CharacterPoseValueWorkspace.NormalizeInvalidReason(slotReason), header.Index);
                 return;
             }
-            if (!CharacterPoseExecutionContext.IsAvailability(availability) || slotReason != AnimationPoseNativeInvalidReason.None || continuity == 0 ||
+            if (!CharacterPoseValueWorkspace.IsAvailability(availability) || slotReason != AnimationPoseNativeInvalidReason.None || continuity == 0 ||
                 !discontinuity.IsValid || discontinuity.IsPresent && discontinuity.CompletionIdentity != m_Context.m_CompletionIdentity)
             {
                 m_Context.SetInvalid(
@@ -93,7 +93,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             byte hasFootFeatures = m_Context.m_SlotHasFootFeatures[slotIndex];
             if (range.PhysicalPlayerIndex != slotIndex || contributionCount < 0 ||
                 contributionCount > range.ContributionCapacity || contributionCount > m_Context.m_ContributionStride ||
-                !CharacterPoseExecutionContext.IsWeight(outputWeight) || hasFootFeatures > 1)
+                !CharacterPoseValueWorkspace.IsWeight(outputWeight) || hasFootFeatures > 1)
             {
                 m_Context.SetInvalid(output, continuity, AnimationPoseNativeInvalidReason.SlotPlanInvalid, header.Index);
                 return;
@@ -144,8 +144,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             }
 
             if (hasFootFeatures == 1 &&
-                (!CharacterPoseExecutionContext.IsValidFootFeature(m_Context.m_SlotLeftFootFeatures[slotIndex]) ||
-                 !CharacterPoseExecutionContext.IsValidFootFeature(m_Context.m_SlotRightFootFeatures[slotIndex])))
+                (!CharacterPoseValueWorkspace.IsValidFootFeature(m_Context.m_SlotLeftFootFeatures[slotIndex]) ||
+                 !CharacterPoseValueWorkspace.IsValidFootFeature(m_Context.m_SlotRightFootFeatures[slotIndex])))
             {
                 m_Context.SetInvalid(output, continuity, AnimationPoseNativeInvalidReason.SlotFootFeatureInvalid, header.Index);
                 return;
@@ -157,7 +157,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             {
                 AnimationPrimitivePoseContribution primitive =
                     m_Context.m_SlotContributions[range.ContributionOffset + contribution];
-                if (!CharacterPoseExecutionContext.IsValidPrimitiveContribution(primitive) || primitive.PhysicalPlayerIndex != slotIndex)
+                if (!CharacterPoseValueWorkspace.IsValidPrimitiveContribution(primitive) || primitive.PhysicalPlayerIndex != slotIndex)
                 {
                     m_Context.SetInvalid(output, continuity, AnimationPoseNativeInvalidReason.SlotContributionInvalid, header.Index);
                     return;
@@ -167,7 +167,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 {
                     float weight = m_Context.m_SlotDenseContributionWeights[
                         range.DenseContributionWeightOffset + contribution * m_Context.m_BoneCount + bone];
-                    if (!CharacterPoseExecutionContext.IsWeight(weight))
+                    if (!CharacterPoseValueWorkspace.IsWeight(weight))
                     {
                         m_Context.SetInvalid(output, continuity, AnimationPoseNativeInvalidReason.SlotContributionInvalid, header.Index);
                         return;
@@ -292,7 +292,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 AnimationLocalBonePose actionPose = m_Context.m_ValueDenseLocalPoses[m_Context.PoseOffset(output) + bone];
                 AnimationBlendBoneVelocity actionVelocity = m_Context.m_ValueDenseVelocities[m_Context.PoseOffset(output) + bone];
                 AnimationBlendBoneVelocity sourceVelocity = m_Context.m_ValueDenseVelocities[m_Context.PoseOffset(source) + bone];
-                if (!CharacterPoseExecutionContext.TryBlendPose(
+                if (!CharacterPoseValueWorkspace.TryBlendPose(
                         m_Context.m_ValueDenseLocalPoses[m_Context.PoseOffset(source) + bone],
                         actionPose,
                         actionBoneWeight,
@@ -356,10 +356,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             }
 
             m_Context.m_ValueAvailability[output] = AnimationPoseAvailability.Pose;
-            m_Context.m_ValueOutputWeights[output] = CharacterPoseExecutionContext.UnionWeight(
+            m_Context.m_ValueOutputWeights[output] = CharacterPoseValueWorkspace.UnionWeight(
                 m_Context.m_ValueOutputWeights[source],
                 actionOutputWeight);
-            m_Context.m_ValueContinuityIdentities[output] = CharacterPoseExecutionContext.CombineContinuity(
+            m_Context.m_ValueContinuityIdentities[output] = CharacterPoseValueWorkspace.CombineContinuity(
                 m_Context.m_ValueContinuityIdentities[source],
                 actionContinuity,
                 header.Index);
@@ -503,7 +503,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                                       weight * m_Context.m_InertialAngularVelocityResiduals[residualIndex];
                     Vector3 scaleVelocity = targetVelocity.Scale + derivative * scaleBase +
                                             weight * m_Context.m_InertialScaleVelocityResiduals[residualIndex];
-                    if (!CharacterPoseExecutionContext.IsFinite(linear) || !CharacterPoseExecutionContext.IsFinite(angular) || !CharacterPoseExecutionContext.IsFinite(scaleVelocity))
+                    if (!CharacterPoseValueWorkspace.IsFinite(linear) || !CharacterPoseValueWorkspace.IsFinite(angular) || !CharacterPoseValueWorkspace.IsFinite(scaleVelocity))
                     {
                         state.RuntimeState = PoseInertializationRuntimeState.Invalid;
                         m_Context.m_InertialStates[stateIndex] = state;
@@ -550,12 +550,12 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         {
             AnimationPrimitivePoseContribution source =
                 m_Context.m_ValueContributions[m_Context.ContributionOffset(sourceValue) + sourceIndex];
-            if (!CharacterPoseExecutionContext.IsValidPrimitiveContribution(source))
+            if (!CharacterPoseValueWorkspace.IsValidPrimitiveContribution(source))
                 return false;
             float scalarWeight = source.Weight * Mathf.Clamp01(1f - actionOutputWeight);
             float leftWeight = source.LeftFootWeight * Mathf.Clamp01(1f - actionLeftFootWeight);
             float rightWeight = source.RightFootWeight * Mathf.Clamp01(1f - actionRightFootWeight);
-            if (!CharacterPoseExecutionContext.IsWeight(scalarWeight) || !CharacterPoseExecutionContext.IsWeight(leftWeight) || !CharacterPoseExecutionContext.IsWeight(rightWeight))
+            if (!CharacterPoseValueWorkspace.IsWeight(scalarWeight) || !CharacterPoseValueWorkspace.IsWeight(leftWeight) || !CharacterPoseValueWorkspace.IsWeight(rightWeight))
                 return false;
 
             int targetIndex = m_Context.FindContribution(output, source);
@@ -611,7 +611,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                                Mathf.Clamp01(1f - actionWeight);
                 float combined = Mathf.Clamp01(
                     m_Context.GetContributionBoneWeight(output, targetIndex, bone) + weight);
-                if (!CharacterPoseExecutionContext.IsWeight(combined))
+                if (!CharacterPoseValueWorkspace.IsWeight(combined))
                     return false;
                 m_Context.SetContributionBoneWeight(output, targetIndex, bone, combined);
             }
@@ -636,7 +636,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 m_Context.m_ValueRightFootFeatures[output] = default;
                 return true;
             }
-            if (!CharacterPoseExecutionContext.TryResolveFeature(
+            if (!CharacterPoseValueWorkspace.TryResolveFeature(
                     hasSource,
                     m_Context.m_ValueLeftFootFeatures[source],
                     hasAction,
@@ -644,7 +644,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                     actionLeftFootWeight,
                     hasAction && actionLeftFootWeight > 0f,
                     out AnimationFootFeatureSample left) ||
-                !CharacterPoseExecutionContext.TryResolveFeature(
+                !CharacterPoseValueWorkspace.TryResolveFeature(
                     hasSource,
                     m_Context.m_ValueRightFootFeatures[source],
                     hasAction,

@@ -4,10 +4,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation
 {
     internal sealed class CharacterPoseLinkedOperationModule
     {
-        readonly CharacterPoseExecutionContext m_Context;
+        readonly CharacterPoseValueWorkspace m_Context;
 
         internal CharacterPoseLinkedOperationModule(
-            CharacterPoseExecutionContext context)
+            CharacterPoseValueWorkspace context)
         {
             m_Context = context ??
                 throw new ArgumentNullException(nameof(context));
@@ -50,7 +50,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                         header.Index);
                     return false;
                 }
-                m_Context.m_ValueContinuityIdentities[operation.OutputPoseValueIndex] = CharacterPoseExecutionContext.CombineContinuity(
+                m_Context.m_ValueContinuityIdentities[operation.OutputPoseValueIndex] = CharacterPoseValueWorkspace.CombineContinuity(
                     m_Context.m_ValueContinuityIdentities[operation.OutputPoseValueIndex],
                     control.Generation,
                     header.Index);
@@ -58,7 +58,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 {
                     ulong continuity = m_Context.m_ValueContinuityIdentities[operation.OutputPoseValueIndex];
                     PoseDiscontinuity discontinuity = PoseDiscontinuity.Reset(
-                        CharacterPoseExecutionContext.CombineContinuity(control.Generation, continuity, header.Index),
+                        CharacterPoseValueWorkspace.CombineContinuity(control.Generation, continuity, header.Index),
                         m_Context.m_CompletionIdentity,
                         default,
                         continuity,

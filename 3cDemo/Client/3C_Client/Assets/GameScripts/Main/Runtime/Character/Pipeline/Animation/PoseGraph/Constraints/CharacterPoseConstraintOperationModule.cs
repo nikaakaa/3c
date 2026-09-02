@@ -6,10 +6,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation
 {
     internal sealed class CharacterPoseConstraintOperationModule
     {
-        readonly CharacterPoseExecutionContext m_Context;
+        readonly CharacterPoseValueWorkspace m_Context;
 
         internal CharacterPoseConstraintOperationModule(
-            CharacterPoseExecutionContext context)
+            CharacterPoseValueWorkspace context)
         {
             m_Context = context ??
                 throw new ArgumentNullException(nameof(context));

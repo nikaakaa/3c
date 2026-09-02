@@ -10,10 +10,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation
 {
     internal sealed class CharacterPoseStateOperationModule
     {
-        readonly CharacterPoseExecutionContext m_Context;
+        readonly CharacterPoseValueWorkspace m_Context;
 
         internal CharacterPoseStateOperationModule(
-            CharacterPoseExecutionContext context)
+            CharacterPoseValueWorkspace context)
         {
             m_Context = context ??
                 throw new ArgumentNullException(nameof(context));
@@ -145,7 +145,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             {
                 m_Context.SetInvalid(
                     output,
-                    CharacterPoseExecutionContext.CombineContinuity(
+                    CharacterPoseValueWorkspace.CombineContinuity(
                         m_Context.m_ValueContinuityIdentities[source],
                         m_Context.m_ValueContinuityIdentities[target],
                         header.Index),
@@ -172,10 +172,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 m_Context.m_RightFootBoneIndex);
 
             m_Context.m_ValueAvailability[output] = AnimationPoseAvailability.Pose;
-            m_Context.m_ValueOutputWeights[output] = CharacterPoseExecutionContext.UnionWeight(
+            m_Context.m_ValueOutputWeights[output] = CharacterPoseValueWorkspace.UnionWeight(
                 m_Context.m_ValueOutputWeights[source],
                 m_Context.m_ValueOutputWeights[target] * globalWeight);
-            m_Context.m_ValueContinuityIdentities[output] = CharacterPoseExecutionContext.CombineContinuity(
+            m_Context.m_ValueContinuityIdentities[output] = CharacterPoseValueWorkspace.CombineContinuity(
                 m_Context.m_ValueContinuityIdentities[source],
                 m_Context.m_ValueContinuityIdentities[target],
                 header.Index);
@@ -187,7 +187,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                     control,
                     profile,
                     bone);
-                if (!CharacterPoseExecutionContext.TryBlendPose(
+                if (!CharacterPoseValueWorkspace.TryBlendPose(
                         m_Context.m_ValueDenseLocalPoses[m_Context.PoseOffset(source) + bone],
                         m_Context.m_ValueDenseLocalPoses[m_Context.PoseOffset(target) + bone],
                         weight,
@@ -375,12 +375,12 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         {
             AnimationPrimitivePoseContribution source =
                 m_Context.m_ValueContributions[m_Context.ContributionOffset(sourceValue) + sourceIndex];
-            if (!CharacterPoseExecutionContext.IsValidPrimitiveContribution(source))
+            if (!CharacterPoseValueWorkspace.IsValidPrimitiveContribution(source))
                 return false;
             float scalarWeight = source.Weight * Mathf.Clamp01(scalarFactor);
             float leftWeight = source.LeftFootWeight * Mathf.Clamp01(leftFactor);
             float rightWeight = source.RightFootWeight * Mathf.Clamp01(rightFactor);
-            if (!CharacterPoseExecutionContext.IsWeight(scalarWeight) || !CharacterPoseExecutionContext.IsWeight(leftWeight) || !CharacterPoseExecutionContext.IsWeight(rightWeight))
+            if (!CharacterPoseValueWorkspace.IsWeight(scalarWeight) || !CharacterPoseValueWorkspace.IsWeight(leftWeight) || !CharacterPoseValueWorkspace.IsWeight(rightWeight))
                 return false;
 
             int targetIndex = m_Context.FindContribution(output, source);
@@ -432,7 +432,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                                    bone) * Mathf.Clamp01(factor);
                 float combined = Mathf.Clamp01(
                     m_Context.GetContributionBoneWeight(output, targetIndex, bone) + weight);
-                if (!CharacterPoseExecutionContext.IsWeight(combined))
+                if (!CharacterPoseValueWorkspace.IsWeight(combined))
                     return false;
                 m_Context.SetContributionBoneWeight(output, targetIndex, bone, combined);
             }
@@ -453,14 +453,14 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 m_Context.m_ValueHasFootFeatures[output] = 0;
                 return true;
             }
-            if (!CharacterPoseExecutionContext.TryResolveStateMachineFeature(
+            if (!CharacterPoseValueWorkspace.TryResolveStateMachineFeature(
                     hasSource,
                     m_Context.m_ValueLeftFootFeatures[source],
                     hasTarget,
                     m_Context.m_ValueLeftFootFeatures[target],
                     leftWeight,
                     out AnimationFootFeatureSample left) ||
-                !CharacterPoseExecutionContext.TryResolveStateMachineFeature(
+                !CharacterPoseValueWorkspace.TryResolveStateMachineFeature(
                     hasSource,
                     m_Context.m_ValueRightFootFeatures[source],
                     hasTarget,
@@ -495,7 +495,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 AnimationPrimitivePoseContribution source =
                     m_Context.m_ValueContributions[
                         m_Context.ContributionOffset(prediction) + contribution];
-                if (!CharacterPoseExecutionContext.IsValidPrimitiveContribution(source))
+                if (!CharacterPoseValueWorkspace.IsValidPrimitiveContribution(source))
                     return false;
                 if (m_Context.FindContribution(output, source) >= 0)
                     continue;

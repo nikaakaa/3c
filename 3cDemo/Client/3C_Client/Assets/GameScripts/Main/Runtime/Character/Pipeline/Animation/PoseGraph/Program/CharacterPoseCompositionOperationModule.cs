@@ -5,10 +5,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation
 {
     internal sealed class CharacterPoseCompositionOperationModule
     {
-        readonly CharacterPoseExecutionContext m_Context;
+        readonly CharacterPoseValueWorkspace m_Context;
 
         internal CharacterPoseCompositionOperationModule(
-            CharacterPoseExecutionContext context)
+            CharacterPoseValueWorkspace context)
         {
             m_Context = context ??
                 throw new ArgumentNullException(nameof(context));
@@ -85,10 +85,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             }
 
             m_Context.m_ValueAvailability[output] = AnimationPoseAvailability.Pose;
-            m_Context.m_ValueOutputWeights[output] = CharacterPoseExecutionContext.UnionWeight(
+            m_Context.m_ValueOutputWeights[output] = CharacterPoseValueWorkspace.UnionWeight(
                 m_Context.m_ValueOutputWeights[baseValue],
                 m_Context.m_ValueOutputWeights[overlayValue] * weight);
-            m_Context.m_ValueContinuityIdentities[output] = CharacterPoseExecutionContext.CombineContinuity(
+            m_Context.m_ValueContinuityIdentities[output] = CharacterPoseValueWorkspace.CombineContinuity(
                 m_Context.m_ValueContinuityIdentities[baseValue],
                 m_Context.m_ValueContinuityIdentities[overlayValue],
                 header.Index);
@@ -103,7 +103,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 float overlay = Mathf.Clamp01(
                     overlayOutputWeight *
                     m_Context.GetMaskWeight(boneMaskOffset, bone) * weight);
-                if (!CharacterPoseExecutionContext.TryBlendPose(
+                if (!CharacterPoseValueWorkspace.TryBlendPose(
                         m_Context.m_ValueDenseLocalPoses[m_Context.PoseOffset(baseValue) + bone],
                         m_Context.m_ValueDenseLocalPoses[m_Context.PoseOffset(overlayValue) + bone],
                         overlay,
@@ -145,7 +145,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             {
                 m_Context.SetInvalid(
                     output,
-                    CharacterPoseExecutionContext.CombineContinuity(
+                    CharacterPoseValueWorkspace.CombineContinuity(
                         m_Context.m_ValueContinuityIdentities[baseValue],
                         m_Context.m_ValueContinuityIdentities[additiveValue],
                         header.Index),
@@ -155,10 +155,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             }
 
             m_Context.m_ValueAvailability[output] = AnimationPoseAvailability.Pose;
-            m_Context.m_ValueOutputWeights[output] = CharacterPoseExecutionContext.UnionWeight(
+            m_Context.m_ValueOutputWeights[output] = CharacterPoseValueWorkspace.UnionWeight(
                 m_Context.m_ValueOutputWeights[baseValue],
                 m_Context.m_ValueOutputWeights[additiveValue] * header.Weight);
-            m_Context.m_ValueContinuityIdentities[output] = CharacterPoseExecutionContext.CombineContinuity(
+            m_Context.m_ValueContinuityIdentities[output] = CharacterPoseValueWorkspace.CombineContinuity(
                 m_Context.m_ValueContinuityIdentities[baseValue],
                 m_Context.m_ValueContinuityIdentities[additiveValue],
                 header.Index);
@@ -176,7 +176,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                     header.Weight);
                 bool valid = operation.AdditiveReferenceSpace switch
                 {
-                    AdditiveReferenceSpace.Local => CharacterPoseExecutionContext.TryAddPose(
+                    AdditiveReferenceSpace.Local => CharacterPoseValueWorkspace.TryAddPose(
                         m_Context.m_ValueDenseLocalPoses[m_Context.PoseOffset(baseValue) + bone],
                         m_Context.m_ValueDenseLocalPoses[m_Context.PoseOffset(additiveValue) + bone],
                         m_Context.m_AdditiveReferences[operation.AdditiveReferenceOffset + bone],
@@ -239,7 +239,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 m_Context.SetInvalid(output, m_Context.m_ValueContinuityIdentities[output], AnimationPoseNativeInvalidReason.PoseGraphOperationInvalid, header.Index);
                 return;
             }
-            m_Context.m_ValueContinuityIdentities[output] = CharacterPoseExecutionContext.CombineContinuity(
+            m_Context.m_ValueContinuityIdentities[output] = CharacterPoseValueWorkspace.CombineContinuity(
                 m_Context.m_ValueContinuityIdentities[baseValue],
                 m_Context.m_ValueContinuityIdentities[parameterSourceValue],
                 header.Index);

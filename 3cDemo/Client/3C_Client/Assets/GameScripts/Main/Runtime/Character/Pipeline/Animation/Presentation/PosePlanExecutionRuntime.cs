@@ -1099,7 +1099,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
         {
             RequireMutation(lease);
             m_SourceModule.ValidatePhysicalFrame();
-            m_SourceModule.ClearReleaseValidation();
             int standaloneReleaseCount = 0;
             for (int i = 0; i < m_DirectPlayers.Length; i++)
             {
@@ -1212,7 +1211,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             m_SourceModule
                 .RequireActionBackendReleaseCompletionCapacity(
                     checked(preparedActionReleaseCount * 2));
-            m_SourceModule.ClearReleaseValidation();
             m_SourceModule.ValidateFrame(sourceLease);
             m_CommitValidated = true;
         }
@@ -1281,7 +1279,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             DiscardStep(
                 DiscardPendingReleasePreparation,
                 ref failure);
-            m_SourceModule.ClearReleaseValidation();
             Array.Clear(
                 m_PreparedStandaloneSourceReleases,
                 0,
@@ -3795,7 +3792,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             m_PrepareActionBackendPendingScratch.Clear();
             m_PrepareActionBackendSourceScratch.Clear();
             m_ExpectedActionBackendSources.Clear();
-            m_SourceModule.ClearReleaseValidation();
             Array.Clear(
                 m_PreparedStandaloneSourceReleases,
                 0,

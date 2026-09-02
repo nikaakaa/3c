@@ -584,6 +584,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Sources
             in CharacterPoseFrameLineage lineage)
         {
             m_ReleasePage.RequireEmpty();
+            m_ReleaseValidationIdentities.Clear();
             CharacterPoseSourceFrameLease lease =
                 m_FramePage.Begin(in lineage);
             try
@@ -946,6 +947,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Sources
             CharacterPoseSourceFrameLease lease)
         {
             m_FramePage.RequireReady(lease);
+            m_ReleaseValidationIdentities.Clear();
             m_Backend.ValidateFrame(lease);
         }
 
@@ -996,6 +998,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Sources
                 ref failure);
             m_BindingPage.Clear();
             m_ReleasePage.Clear();
+            m_ReleaseValidationIdentities.Clear();
             if (failure != null)
             {
                 throw new AggregateException(
@@ -1053,9 +1056,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Sources
             }
             return current;
         }
-
-        internal void ClearReleaseValidation() =>
-            m_ReleaseValidationIdentities.Clear();
 
         internal CharacterPoseSourceRetirementHandle PrepareRetirement(
             in CharacterPoseSourceRetirementPermission permission)
@@ -1126,8 +1126,11 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Sources
             m_PhysicalSources.CompleteReleaseDiagnostics();
         }
 
-        internal void CancelReleaseDiagnostics() =>
+        internal void CancelReleaseDiagnostics()
+        {
+            m_ReleaseValidationIdentities.Clear();
             m_PhysicalSources.CancelReleaseDiagnostics();
+        }
 
         internal bool ReleaseAcknowledgementsValidated =>
             m_ReleaseCompletions.AcknowledgementsValidated;

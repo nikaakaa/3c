@@ -1189,3 +1189,9 @@ Sequence Preview短路位置、State准备与最终Transition时机、Slot contr
 状态：新增`CharacterAnimationPresentationDiagnosticsCoordinator`，独立持有Action lifecycle、Action时间、Source同步、Retired Playback与Debug View的Committed投影，并统一处理interest合并、无interest清理、Foot短租约发布和Trace发布。根Presentation Runtime不再持有或拼装任何诊断Snapshot列表，只在Post-Commit把同帧typed Result交给该协调器。
 
 无interest时的跳过计数、仅Foot Event时不生成Runtime Snapshot、Live／Capture状态快照条件、Foot短租约失效时机和Trace输入保持不变；该模块不参与Program、Source、Constraint或Final Pose结果计算。根Runtime由约1380行降至1202行。3C MCP完成全脚本重编且C#错误为0，不单独运行回放。
+
+## Runtime与Preview统一装配审计
+
+状态：正式Runtime与`AnimationPreviewRuntime`都只构造`CharacterAnimationPresentationRuntime`；全仓只有其构造函数调用一次`CharacterPoseRuntimeCompositionFactory.Create`，也只有该Factory创建actor-local Execution View和Program Runtime。Preview只提供显式Body／Fact／World／Equipment／Timeline／Motion Matching Query输入，再调用同一个Present、Reset、Tuning与Sequence Preview入口。
+
+搜索确认不存在Preview专用Pose Executor、第二Native Program、临时Program、运行时Compile、默认World Context、旧Projection reader或Stale Projection fallback；Projection不匹配只报告Stale并拒绝继续。任务13.8与13.9完成。

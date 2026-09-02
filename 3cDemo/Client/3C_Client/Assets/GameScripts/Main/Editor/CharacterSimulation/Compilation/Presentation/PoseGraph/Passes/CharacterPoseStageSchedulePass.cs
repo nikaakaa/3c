@@ -75,7 +75,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
     {
         internal static CharacterPoseStageSchedule Run(
             CharacterPoseSymbolicProgram symbolicProgram,
-            IReadOnlyList<CharacterPresentationPoseOperation> operations,
+            IReadOnlyList<CharacterPoseBoundOperation> operations,
             IReadOnlyList<CharacterLinkedPoseEntryFragmentPlanDescriptor>
                 fragments)
         {
@@ -95,7 +95,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             int nativeOperationStart = 0;
             while (operationStart < operations.Count)
             {
-                CharacterPresentationPoseOperation first =
+                CharacterPoseBoundOperation first =
                     RequireOperation(operations, operationStart);
                 CharacterPoseSymbolicOperation firstSymbolic =
                     RequireSymbolicOperation(
@@ -109,7 +109,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                 int operationEnd = operationStart + 1;
                 while (operationEnd < operations.Count)
                 {
-                    CharacterPresentationPoseOperation candidate =
+                    CharacterPoseBoundOperation candidate =
                         RequireOperation(operations, operationEnd);
                     CharacterPoseSymbolicOperation candidateSymbolic =
                         RequireSymbolicOperation(
@@ -136,7 +136,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                      operationIndex < operationEnd;
                      operationIndex++)
                 {
-                    CharacterPresentationPoseOperation operation =
+                    CharacterPoseBoundOperation operation =
                         operations[operationIndex];
                     CharacterPoseSymbolicOperation symbolic =
                         symbolicProgram.Operations[operationIndex];
@@ -235,11 +235,11 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             return ranges;
         }
 
-        static CharacterPresentationPoseOperation RequireOperation(
-            IReadOnlyList<CharacterPresentationPoseOperation> operations,
+        static CharacterPoseBoundOperation RequireOperation(
+            IReadOnlyList<CharacterPoseBoundOperation> operations,
             int index)
         {
-            CharacterPresentationPoseOperation operation = operations[index];
+            CharacterPoseBoundOperation operation = operations[index];
             if (operation == null || operation.Index != index)
             {
                 throw new InvalidOperationException(
@@ -250,7 +250,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
 
         static CharacterPoseSymbolicOperation RequireSymbolicOperation(
             CharacterPoseSymbolicProgram symbolicProgram,
-            CharacterPresentationPoseOperation operation,
+            CharacterPoseBoundOperation operation,
             int index)
         {
             CharacterPoseSymbolicOperation symbolic =

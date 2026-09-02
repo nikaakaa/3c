@@ -153,7 +153,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                 new List<CharacterAnimationSlotDescriptor>();
             public List<ActionPlaybackInputPlan> ActionPlaybackInputs { get; } =
                 new List<ActionPlaybackInputPlan>();
-            public List<CharacterPresentationPoseOperation> Operations { get; } = new List<CharacterPresentationPoseOperation>();
+            public List<CharacterPoseBoundOperation> Operations { get; } = new List<CharacterPoseBoundOperation>();
             public List<CharacterPresentationPoseSourceMapEntry> SourceMap { get; } = new List<CharacterPresentationPoseSourceMapEntry>();
             public List<string> GraphDependencies { get; } = new List<string>();
             public int PoseValueCount { get; set; }
@@ -600,7 +600,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                 PresentationPoseSourceIndex sourceIndex = default;
                 if (sourceSlot && !state.SourceIndices.TryGetValue(sourceSlot, out sourceIndex))
                     throw new InvalidOperationException($"Pose Player '{scopedNodeId}' Source Slot is outside the compiled source catalog.");
-                state.Operations.Add(new CharacterPresentationPoseOperation(
+                state.Operations.Add(new CharacterPoseBoundOperation(
                     operationIndex,
                     symbolic.ExecutionDomain,
                     symbolic.InputPoseSpace,
@@ -845,7 +845,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             if ((uint)actionPlaybackOperationIndex >= (uint)state.Operations.Count)
                 throw new InvalidOperationException(
                     $"Animation Slot '{scopedNodeId}' Action Playback operation is outside the compiled graph.");
-            CharacterPresentationPoseOperation actionPlayback =
+            CharacterPoseBoundOperation actionPlayback =
                 state.Operations[actionPlaybackOperationIndex];
             if (actionPlayback.Code != CharacterPoseOperationCode.ActionPlaybackInput ||
                 actionPlayback.AnimationChannelId != payload.AnimationChannelId ||
@@ -1478,7 +1478,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             int end = checked(operationStart + operationCount);
             for (int operationIndex = operationStart; operationIndex < end; operationIndex++)
             {
-                CharacterPresentationPoseOperation operation = state.Operations[operationIndex];
+                CharacterPoseBoundOperation operation = state.Operations[operationIndex];
                 AnimationPoseSourceKind sourceKind;
                 PresentationPoseSourceIndex poseSourceIndex = default;
                 if (operation.Code == CharacterPoseOperationCode.ClipPlayer)
@@ -1697,7 +1697,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             int inputValueIndex,
             BindingBuilder state)
         {
-            CharacterPresentationPoseOperation source = state.Operations
+            CharacterPoseBoundOperation source = state.Operations
                 .SingleOrDefault(value =>
                     value.OutputValueIndex == inputValueIndex);
             if (source == null ||

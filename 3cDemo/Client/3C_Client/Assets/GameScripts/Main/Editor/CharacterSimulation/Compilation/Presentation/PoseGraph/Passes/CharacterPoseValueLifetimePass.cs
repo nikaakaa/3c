@@ -182,7 +182,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
     internal static class CharacterPoseValueLifetimePass
     {
         internal static CharacterPoseValueLifetime Run(
-            IReadOnlyList<CharacterPresentationPoseOperation> operations,
+            IReadOnlyList<CharacterPoseBoundOperation> operations,
             CharacterPoseStageSchedule schedule,
             int poseValueCount,
             int parameterValueCount,
@@ -221,7 +221,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                  operationIndex < operations.Count;
                  operationIndex++)
             {
-                CharacterPresentationPoseOperation operation =
+                CharacterPoseBoundOperation operation =
                     operations[operationIndex];
                 if (operation == null || operation.Index != operationIndex)
                 {
@@ -354,7 +354,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                 throw new InvalidOperationException(
                     "Pose output Operation is outside the linear schedule.");
             }
-            CharacterPresentationPoseOperation output =
+            CharacterPoseBoundOperation output =
                 operations[outputOperationIndex];
             if (output.OutputValueIndex != poseValueCount - 1)
             {
@@ -455,7 +455,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             CharacterPoseValueLifetime lifetime,
             CharacterPoseStageSchedule schedule,
             CharacterAnimationRigDefinition rig,
-            IReadOnlyList<CharacterPresentationPoseOperation> operations,
+            IReadOnlyList<CharacterPoseBoundOperation> operations,
             IReadOnlyList<AnimationBlendNodePayload> blendNodes,
             int playerStateCount,
             int inertializationStateCount,
@@ -495,7 +495,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                  operationIndex < operations.Count;
                  operationIndex++)
             {
-                CharacterPresentationPoseOperation operation =
+                CharacterPoseBoundOperation operation =
                     operations[operationIndex];
                 if (operation.Code ==
                         CharacterPoseOperationCode.SelectedPosePlayer ||

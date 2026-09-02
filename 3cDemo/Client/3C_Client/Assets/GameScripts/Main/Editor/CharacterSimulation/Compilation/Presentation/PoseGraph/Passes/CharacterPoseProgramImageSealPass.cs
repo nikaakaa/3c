@@ -40,6 +40,8 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             }
             CharacterPresentationPoseStage[] stages =
                 schedule.Stages.ToArray();
+            CharacterPresentationPoseOperation[] operations =
+                binding.Operations.Select(CreateOperation).ToArray();
             CharacterTypedPoseGraph graph = request.Asset.Graph;
             CharacterAnimationRigDefinition rig = request.Rig;
             string hash = ComputeHash(
@@ -73,7 +75,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                 payloads.ActionPlaybackInputs,
                 payloads.LinkedPoseFragments,
                 payloads.LinkedPoseCalls,
-                binding.Operations,
+                operations,
                 binding.SourceMap,
                 stages,
                 layout.PoseValueCount,
@@ -289,7 +291,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             }
             for (int i = 0; i < binding.Operations.Length; i++)
             {
-                CharacterPresentationPoseOperation operation =
+                CharacterPoseBoundOperation operation =
                     binding.Operations[i];
                 values.Add(FormattableString.Invariant(
                     $"operation:{operation.Index}:{(int)operation.ExecutionDomain}:{(int)operation.InputPoseSpace}:{(int)operation.OutputPoseSpace}:{(int)operation.Code}:{operation.NodeId}:{operation.AnimationChannelId}:{(int)operation.SelectionAvailability}:{operation.OutputValueIndex}:{operation.InputValueIndexA}:{operation.InputValueIndexB}:{operation.OutputFullBodyIkGoalContributionValueIndex}:{operation.OutputFullBodyIkGoalSetValueIndex}:{operation.InputFullBodyIkGoalSetValueIndex}:{operation.FullBodyIkGoalContributionInputStart}:{operation.FullBodyIkGoalContributionInputCount}:{operation.ControlInputOperationIndex}:{operation.ParameterIndex}:{operation.ParameterIndexB}:{operation.PlayerIndex}:{operation.BlendNodeIndex}:{operation.InertializationIndex}:{operation.BoneMaskIndex}:{operation.AdditiveReferenceIndex}:{operation.ModifyBoneIndex}:{operation.RootOrientationWarpIndex}:{operation.PoseBoneIkGoalsIndex}:{operation.FootPlacementIndex}:{operation.FullBodyIkIndex}:{operation.ClipPlayerIndex}:{operation.StateMachineIndex}:{operation.AnimationSlotIndex}:{operation.LinkedPoseCallIndex}:{operation.LinkedPoseFragmentIndex}:{operation.Weight:R}"));
@@ -304,5 +306,48 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                 $"workspace:{poseWorkspace}:{layout.FullBodyIkGoalContributionValueCount}:{layout.FullBodyIkGoalSetValueCount}:{layout.FullBodyIkGoalContributionGoalWorkspaceCount}:{parameterWorkspace}:{contributionWorkspace}:{frameCache}:{layout.OutputOperationIndex}"));
             return StableHash.Compute(values.ToArray()).ToString();
         }
+
+        static CharacterPresentationPoseOperation CreateOperation(
+            CharacterPoseBoundOperation operation) =>
+            new CharacterPresentationPoseOperation(
+                operation.Index,
+                operation.ExecutionDomain,
+                operation.InputPoseSpace,
+                operation.OutputPoseSpace,
+                operation.Code,
+                operation.NodeId,
+                operation.PresentationPoseSourceProviderId,
+                operation.PresentationPoseSourceIndex,
+                operation.OutputValueIndex,
+                operation.InputValueIndexA,
+                operation.InputValueIndexB,
+                operation.ControlInputOperationIndex,
+                operation.AnimationChannelId,
+                operation.SelectionAvailability,
+                operation.ParameterIndex,
+                operation.ParameterIndexB,
+                operation.BlendSpaceInputRangePolicy,
+                operation.PlayerIndex,
+                operation.BlendNodeIndex,
+                operation.InertializationIndex,
+                operation.BoneMaskIndex,
+                operation.AdditiveReferenceIndex,
+                operation.ModifyBoneIndex,
+                operation.RootOrientationWarpIndex,
+                operation.PoseBoneIkGoalsIndex,
+                operation.FootPlacementIndex,
+                operation.FullBodyIkIndex,
+                operation.OutputFullBodyIkGoalContributionValueIndex,
+                operation.OutputFullBodyIkGoalSetValueIndex,
+                operation.InputFullBodyIkGoalSetValueIndex,
+                operation.FullBodyIkGoalContributionInputStart,
+                operation.FullBodyIkGoalContributionInputCount,
+                operation.ClipPlayerIndex,
+                operation.StateMachineIndex,
+                operation.AnimationSlotIndex,
+                operation.LinkedPoseCallIndex,
+                operation.LinkedPoseFragmentIndex,
+                operation.Weight,
+                operation.ParameterPolicies);
     }
 }

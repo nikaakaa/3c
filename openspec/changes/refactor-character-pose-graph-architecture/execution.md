@@ -1073,3 +1073,9 @@ Program Runtime是新Executor的唯一Owner，入口同步改为`BeginEvaluation
 状态：全仓运行时代码搜索确认Action Playback与Animation Slot只在根构造一次并由Program Actor State持有唯一Pending事务；Pose Operation只有`CharacterPoseProgramExecutor.ExecuteStage`一处按Stage dispatch，各Family模块没有第二Stage循环；Sequence Preview也调用同一Player模块。Value与Final Pose分别只写Program Frame Pages的当前Value页和Final Publication的唯一Pending页。
 
 `AnimationPoseRequestWorkspaceLayoutFactory`与Runtime组合工厂中的Operation switch只在Runtime创建前计算固定容量，不执行Pose、不打开Frame页也不写Value；Diagnostics只读Committed Result。未发现第二Action lifecycle Owner、第二Operation执行Owner、第二Value writer或图外隐式Pose stage，任务6.10完成。分段ABI仍会删除这些构造期万能Operation扫描，但不影响本项执行唯一性结论。
+
+## 分离编译期Operation绑定结果
+
+状态：新增Editor内部`CharacterPoseBoundOperation`作为Bind Family Payload Pass的唯一物理绑定结果。Stage Schedule、Value Lifetime与Workspace Plan只读取该编译期结果；`CharacterPresentationPoseOperation`不再穿过多个编译Pass，只在Seal Program Image边界由逐字段映射一次生成当前Runtime ABI。
+
+本步没有新增运行时读取路径，也没有改变字段值、Operation顺序、Hash输入或Program Image序列化结果；它把后续分段Header／Family Payload替换限制在Seal边界，避免Runtime万能记录继续反向约束前置Pass。3C MCP完成脚本重编，相关`CharacterPose`错误筛选仅剩既有Import Error；不单独运行回放。

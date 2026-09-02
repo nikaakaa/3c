@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using ThirdPersonCharacter.Pipeline.Animation.BlendStack;
 using ThirdPersonCharacter.Pipeline.Animation.Diagnostics;
 using ThirdPersonCharacter.Pipeline.Animation.Presentation;
@@ -206,6 +207,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             ActorState.RootOrientationWarps;
         internal CharacterPoseProgramNodeRuntimeIndex NodeRuntimeIndex =>
             ActorState.NodeRuntimeIndex;
+        CharacterPoseLinkedFragmentState LinkedFragments =>
+            ActorState.LinkedFragments;
         internal CharacterActionPlaybackRuntime ActionPlayback =>
             ActorState.ActionPlayback;
         internal AnimationSlotRuntime AnimationSlots =>
@@ -269,6 +272,83 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         internal bool IsSequencePreviewPlayer(int playerIndex) =>
             m_HasSequencePreview &&
             playerIndex == m_SequencePreviewPlayerIndex;
+
+        internal bool IsPlayerActive(int playerIndex) =>
+            LinkedFragments.IsPlayerActive(playerIndex);
+
+        internal bool IsRootOrientationWarpActive(int index) =>
+            LinkedFragments.IsRootOrientationWarpActive(index);
+
+        internal void PrepareLinkedPoseSelection(
+            CharacterLinkedPoseRuntimeSession linkedPose,
+            IReadOnlyList<CharacterLinkedPoseGroupProjectionDescriptor> groups)
+        {
+            RequireFrame(m_ActiveFrameLease);
+            if (linkedPose == null)
+                throw new ArgumentNullException(nameof(linkedPose));
+            if (groups == null)
+                throw new ArgumentNullException(nameof(groups));
+            LinkedFragments.Clear();
+            for (int groupIndex = 0; groupIndex < groups.Count; groupIndex++)
+            {
+                CharacterLinkedPoseGroupProjectionDescriptor group =
+                    groups[groupIndex];
+                CharacterLinkedPoseGenerationHandle selection =
+                    linkedPose.RequireIncoming(group.GroupId);
+                SetLinkedPoseGroupSelection(in selection);
+                LinkedFragments.ApplySelection(in selection);
+            }
+        }
+
+        internal void ApplyLinkedPoseGenerationResets(
+            ulong resetCompletionIdentity)
+        {
+            RequireFrame(m_ActiveFrameLease);
+            if (resetCompletionIdentity == 0)
+                throw new ArgumentOutOfRangeException(
+                    nameof(resetCompletionIdentity));
+            if (!LinkedFragments.HasFragments)
+                return;
+            for (int i = 0; i < ActorState.Stacks.Length; i++)
+            {
+                AnimationBlendStackRuntime stack = ActorState.Stacks[i];
+                if (!LinkedFragments.RequiresPlayerReset(stack.PlayerIndex))
+                    continue;
+                ActorState.Routes[i].Reset();
+                stack.Reset(resetCompletionIdentity);
+            }
+            for (int i = 0; i < ActorState.DirectPlayers.Length; i++)
+            {
+                AnimationSelectedPosePlayerRuntime player =
+                    ActorState.DirectPlayers[i];
+                if (LinkedFragments.RequiresPlayerReset(player.PlayerIndex))
+                {
+                    player.Reset(
+                        PoseDiscontinuityResetReason.BranchReplacement);
+                }
+            }
+            ActorState.PoseStateSources.ApplyLinkedPoseGenerationResets();
+            for (int i = 0;
+                 i < m_Image.Inertializations.Count;
+                 i++)
+            {
+                if (LinkedFragments.RequiresInertializationReset(i))
+                    ActorState.Inertialization.RequestReset(i);
+            }
+            for (int i = 0;
+                 i < ActorState.RootOrientationWarps.Length;
+                 i++)
+            {
+                if (LinkedFragments.RequiresRootOrientationWarpReset(i))
+                    ActorState.RootOrientationWarps[i].Reset();
+            }
+        }
+
+        internal void ClearLinkedPoseFrameSelection()
+        {
+            RequireAlive();
+            LinkedFragments.Clear();
+        }
 
         internal void SetSequencePreview(
             PresentationPoseSourceIndex sourceIndex,

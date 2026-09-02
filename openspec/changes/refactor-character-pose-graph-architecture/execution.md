@@ -841,3 +841,9 @@ Frame Pages与Tuning属性改为Program Runtime私有，原调用顺序、comple
 状态：全仓执行入口审计确认只有`CharacterPoseProgramRuntime.CompleteEvaluation`逐Stage调用一次持久Executor，只有该Executor逐Operation调用一次`TryCompleteOperation`并写Program Frame Pages唯一Completion页；Stage构造验证覆盖连续range与全部Operation，重复completion会直接失败。Constraint Module与Source Module均不读取Program Operation表，Diagnostics Projector只冻结Committed Result与静态显示身份，不调用Operation、Source、World Query、Foot或FBBIK。因此任务6.4与6.7完成。
 
 Sequence Preview的player／operation选择、sample time、continuity reset与启用状态迁入Program Runtime。Preview Advance现在由Program Runtime设置同一Clip Player relevance与time，Prepare只查询Program-owned选择，Complete直接由同一持久Executor执行原Preview Operation；旧Pose Runtime只转交作者输入并遵守同一根Frame／Barrier。运行扫描顺序、Clip Player选择、Blend Space关闭、Preview时间和Output生成保持不变；任务6.2与13.9仍等待其余逻辑节点和Preview Factory收口，不提前勾选。3C实例重连后两个触碰文件编译错误均为0，全局只有既有FinalIK序列化深度错误；不单独运行回放。
+
+## Linked Pose Fragment状态归入Program Actor
+
+状态：新增唯一`CharacterPoseLinkedFragmentState`，由Program Image一次建立Player、StateMachine、Root Orientation Warp与Inertialization到Linked Fragment的归属表，并持有每帧Active／Reset位。`CharacterPoseActorState`保存该状态，`PoseStateAndSourceRuntime`改为消费同一对象，不再各自保存外部数组引用；旧Pose Runtime删除六组fragment数组、四套归属表构造函数和全部active／reset判断。
+
+Linked Group incoming selection、Program Frame call control写入、Entry Fragment激活、branch replacement reset、Stack／Direct Player／StateMachine／Inertialization／Root Warp reset及帧末Clear现在都由Program Runtime按原顺序驱动。映射构造、重复归属拒绝、未归属拒绝、无Linked Fragment早退和reset completion identity保持原值；本步推进任务6.2但其余PoseState／Slot／Blend／Transition执行尚在旧外层，因此不提前勾选。3C MCP全局编译被并行Foot诊断Attribute ABI迁移阻塞，但五个本步触碰文件的错误筛选均为0；不修改或兼容外部诊断代码，也不单独运行回放。

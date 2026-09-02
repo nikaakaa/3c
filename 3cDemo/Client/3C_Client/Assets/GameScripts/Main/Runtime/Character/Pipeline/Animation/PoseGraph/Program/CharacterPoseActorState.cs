@@ -17,6 +17,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             RootOrientationWarpRuntime[] rootOrientationWarps,
             PoseInertializationNativeProgram inertialization,
             CharacterPoseProgramNodeRuntimeIndex nodeRuntimeIndex,
+            CharacterPoseLinkedFragmentState linkedFragments,
             CharacterActionPlaybackRuntime actionPlayback,
             AnimationSlotRuntime animationSlots,
             int sourceRetirementCapacity)
@@ -33,6 +34,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                 throw new ArgumentNullException(nameof(inertialization));
             NodeRuntimeIndex = nodeRuntimeIndex ??
                 throw new ArgumentNullException(nameof(nodeRuntimeIndex));
+            LinkedFragments = linkedFragments ??
+                throw new ArgumentNullException(nameof(linkedFragments));
             ActionPlayback = actionPlayback ??
                 throw new ArgumentNullException(nameof(actionPlayback));
             AnimationSlots = animationSlots ??
@@ -55,6 +58,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
         internal RootOrientationWarpRuntime[] RootOrientationWarps { get; }
         internal PoseInertializationNativeProgram Inertialization { get; }
         internal CharacterPoseProgramNodeRuntimeIndex NodeRuntimeIndex { get; }
+        internal CharacterPoseLinkedFragmentState LinkedFragments { get; }
         internal CharacterActionPlaybackRuntime ActionPlayback { get; }
         internal AnimationSlotRuntime AnimationSlots { get; }
         internal CharacterPoseProgramSourceRetirementState SourceRetirement

@@ -278,11 +278,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
         readonly MotionMatchingRelevance[] m_MotionMatching;
         readonly MotionMatchingRelevance[] m_MotionMatchingByOperation;
         readonly MotionMatchingPoseStateDemand[] m_MotionMatchingDemands;
-        readonly int[] m_PlayerLinkedPoseFragmentIndices;
-        readonly int[] m_StateMachineLinkedPoseFragmentIndices;
+        readonly CharacterPoseLinkedFragmentState m_LinkedFragments;
         readonly bool[] m_StateControlledPlayers;
-        readonly bool[] m_LinkedPoseActiveFragments;
-        readonly bool[] m_LinkedPoseResetFragments;
         int m_SourceSyncRelationJournalCount;
         bool m_FrameOpen;
 
@@ -292,10 +289,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             IReadOnlyList<AnimationSourcePhasePlan> sourcePhasePlans,
             AnimationClipPlayerRuntime[] clipPlayers,
             AnimationBlendSpacePlayerRuntime[] blendSpacePlayers,
-            int[] playerLinkedPoseFragmentIndices,
-            int[] stateMachineLinkedPoseFragmentIndices,
-            bool[] linkedPoseActiveFragments,
-            bool[] linkedPoseResetFragments)
+            CharacterPoseLinkedFragmentState linkedFragments)
         {
             if (plan == null)
                 throw new ArgumentNullException(nameof(plan));
@@ -305,34 +299,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             m_SourcePhasePlans = sourcePhasePlans ?? throw new ArgumentNullException(nameof(sourcePhasePlans));
             m_BlendSpacePlayers = blendSpacePlayers ??
                 throw new ArgumentNullException(nameof(blendSpacePlayers));
-            m_PlayerLinkedPoseFragmentIndices =
-                playerLinkedPoseFragmentIndices ??
-                throw new ArgumentNullException(
-                    nameof(playerLinkedPoseFragmentIndices));
-            m_StateMachineLinkedPoseFragmentIndices =
-                stateMachineLinkedPoseFragmentIndices ??
-                throw new ArgumentNullException(
-                    nameof(stateMachineLinkedPoseFragmentIndices));
+            m_LinkedFragments = linkedFragments ??
+                throw new ArgumentNullException(nameof(linkedFragments));
             m_StateControlledPlayers =
                 BuildStateControlledPlayers(plan);
-            m_LinkedPoseActiveFragments =
-                linkedPoseActiveFragments ??
-                throw new ArgumentNullException(
-                    nameof(linkedPoseActiveFragments));
-            m_LinkedPoseResetFragments =
-                linkedPoseResetFragments ??
-                throw new ArgumentNullException(
-                    nameof(linkedPoseResetFragments));
-            if (m_StateMachineLinkedPoseFragmentIndices.Length !=
-                    plan.StateMachines.Count ||
-                m_LinkedPoseActiveFragments.Length !=
-                    plan.LinkedPoseFragments.Count ||
-                m_LinkedPoseResetFragments.Length !=
-                    plan.LinkedPoseFragments.Count)
-            {
-                throw new InvalidOperationException(
-                    "Pose State Linked Pose ownership does not match the compiled plan.");
-            }
             for (int i = 0; i < m_ClipPlayers.Length; i++)
             {
                 AnimationClipPlayerRuntime player =
@@ -836,8 +806,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             }
             for (int i = 0; i < m_StateMachines.Length; i++)
             {
-                if (!RequiresFragmentReset(
-                        m_StateMachineLinkedPoseFragmentIndices[i]))
+                if (!m_LinkedFragments.RequiresStateMachineReset(i))
                 {
                     continue;
                 }
@@ -848,17 +817,13 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
         }
 
         bool IsStateMachineActive(int stateMachineIndex) =>
-            IsFragmentActive(
-                m_StateMachineLinkedPoseFragmentIndices[
-                    stateMachineIndex]);
+            m_LinkedFragments.IsStateMachineActive(stateMachineIndex);
 
         bool IsPlayerActive(int playerIndex) =>
-            IsFragmentActive(
-                RequirePlayerFragmentIndex(playerIndex));
+            m_LinkedFragments.IsPlayerActive(playerIndex);
 
         bool RequiresPlayerReset(int playerIndex) =>
-            RequiresFragmentReset(
-                RequirePlayerFragmentIndex(playerIndex));
+            m_LinkedFragments.RequiresPlayerReset(playerIndex);
 
         bool IsOperationActive(int operationIndex) =>
             IsFragmentActive(
@@ -877,28 +842,15 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                 throw new InvalidOperationException(
                     $"Pose operation #{operationIndex} has no Motion Matching relevance ownership.");
             }
-            return RequirePlayerFragmentIndex(
+            return m_LinkedFragments.RequirePlayerFragmentIndex(
                 relevance.Usage.PlayerIndex);
         }
 
-        int RequirePlayerFragmentIndex(int playerIndex)
-        {
-            if ((uint)playerIndex >=
-                (uint)m_PlayerLinkedPoseFragmentIndices.Length)
-            {
-                throw new InvalidOperationException(
-                    $"Pose Player #{playerIndex} is outside the compiled Linked Pose ownership table.");
-            }
-            return m_PlayerLinkedPoseFragmentIndices[playerIndex];
-        }
-
         bool IsFragmentActive(int fragmentIndex) =>
-            fragmentIndex < 0 ||
-            m_LinkedPoseActiveFragments[fragmentIndex];
+            m_LinkedFragments.IsFragmentActive(fragmentIndex);
 
         bool RequiresFragmentReset(int fragmentIndex) =>
-            fragmentIndex >= 0 &&
-            m_LinkedPoseResetFragments[fragmentIndex];
+            m_LinkedFragments.RequiresFragmentReset(fragmentIndex);
 
         internal void Reset(
             PoseDiscontinuityResetReason reason)

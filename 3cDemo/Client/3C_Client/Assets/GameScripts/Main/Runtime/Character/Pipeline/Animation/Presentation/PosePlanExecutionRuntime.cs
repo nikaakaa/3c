@@ -76,12 +76,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
         readonly PreparedMotionMatchingHistoryRead[]
             m_PreparedMotionMatchingHistoryReads;
         readonly bool m_ManagesGraphClock;
-        readonly bool[] m_LinkedPoseActiveFragments;
-        readonly bool[] m_LinkedPoseResetFragments;
-        readonly int[] m_PlayerLinkedPoseFragmentIndices;
-        readonly int[] m_StateMachineLinkedPoseFragmentIndices;
-        readonly int[] m_RootOrientationWarpLinkedPoseFragmentIndices;
-        readonly int[] m_InertializationLinkedPoseFragmentIndices;
 
         PoseInertializationNativeProgram m_InertializationPlan =>
             m_ProgramRuntime.Inertialization;
@@ -139,22 +133,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                     "Animation Presentation requires an AlwaysAnimate Animator because Pose jobs produce the frame transaction payload.");
             }
             projection.RequirePosePayload();
-            m_LinkedPoseActiveFragments =
-                new bool[projection.PosePlan.LinkedPoseFragments.Count];
-            m_LinkedPoseResetFragments =
-                new bool[projection.PosePlan.LinkedPoseFragments.Count];
-            m_PlayerLinkedPoseFragmentIndices =
-                BuildPlayerLinkedPoseFragmentIndices(
-                    projection.PosePlan);
-            m_StateMachineLinkedPoseFragmentIndices =
-                BuildStateMachineLinkedPoseFragmentIndices(
-                    projection.PosePlan);
-            m_RootOrientationWarpLinkedPoseFragmentIndices =
-                BuildRootOrientationWarpLinkedPoseFragmentIndices(
-                    projection.PosePlan);
-            m_InertializationLinkedPoseFragmentIndices =
-                BuildInertializationLinkedPoseFragmentIndices(
-                    projection.PosePlan);
+            var linkedFragments = new CharacterPoseLinkedFragmentState(
+                projection.PosePlan);
             int sourceCapacity = CalculateSourceCapacity(projection.PosePlan);
             int physicalSourceCapacity = checked(
                 sourceCapacity +
@@ -363,10 +343,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                         projection.SourcePhasePlans,
                         clipPlayers,
                         blendSpacePlayers,
-                        m_PlayerLinkedPoseFragmentIndices,
-                        m_StateMachineLinkedPoseFragmentIndices,
-                        m_LinkedPoseActiveFragments,
-                        m_LinkedPoseResetFragments);
+                        linkedFragments);
                 poseConstraints = new CharacterPoseConstraintRuntime(
                     footPlacement,
                     executionView.PoseBoneContributions,
@@ -461,6 +438,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                 rootOrientationWarps,
                 inertializationProgram,
                 nodeRuntimeIndex,
+                linkedFragments,
                 actionPlayback,
                 animationSlots,
                 sourceModule.Capacity);
@@ -702,7 +680,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                 m_PendingFrameOutcome = AnimationPresentationFrameOutcome.None;
                 m_ProgramRuntime.BeginFrame(programLease);
                 m_ActorDiagnosticsProjector.BeginFrame();
-                PrepareLinkedPoseSelection(linkedPose);
+                m_ProgramRuntime.PrepareLinkedPoseSelection(
+                    linkedPose,
+                    m_Projection.LinkedPose.Groups);
                 m_InertializationPlan.BeginFrame();
                 for (int i = 0; i < m_StackRoutes.Length; i++)
                     m_StackRoutes[i].BeginFrame();
@@ -710,7 +690,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                     m_RootOrientationWarps[i].BeginFrame();
                 BeginPendingModuleFrames();
                 modulesOpen = true;
-                ApplyLinkedPoseGenerationResets();
+                m_ProgramRuntime.ApplyLinkedPoseGenerationResets(
+                    m_CompletionIdentity);
                 m_HasOpenFrame = true;
                 m_ActiveFrameLease = programLease;
                 return m_ActiveFrameLease;
@@ -740,7 +721,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                 if (sourceOpen)
                     m_SourceModule.DiscardFrame(sourceLease);
                 m_SourceRetirementState.CompleteFrame();
-                ClearLinkedPoseFrameSelection();
+                m_ProgramRuntime.ClearLinkedPoseFrameSelection();
                 throw;
             }
         }
@@ -785,7 +766,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             m_HasOpenFrame = false;
             m_ActiveFrameLease = default;
             m_SourceRetirementState.CompleteFrame();
-            ClearLinkedPoseFrameSelection();
+            m_ProgramRuntime.ClearLinkedPoseFrameSelection();
         }
 
         internal void ValidatePendingSeal(
@@ -969,7 +950,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             m_CommitValidated = false;
             m_PendingFrameOutcome = AnimationPresentationFrameOutcome.None;
             m_SourceModule.CancelReleaseDiagnostics();
-            ClearLinkedPoseFrameSelection();
+            m_ProgramRuntime.ClearLinkedPoseFrameSelection();
             if (failure != null)
             {
                 throw new AggregateException(
@@ -1839,7 +1820,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                 in factFrame);
             for (int i = 0; i < m_StackRoutes.Length; i++)
             {
-                if (!IsPlayerActive(m_Stacks[i].PlayerIndex))
+                if (!m_ProgramRuntime.IsPlayerActive(
+                        m_Stacks[i].PlayerIndex))
                     continue;
                 CharacterAnimationTransitionRouteRuntime route = m_StackRoutes[i];
                 route.FlushReleaseCompletion();
@@ -1853,7 +1835,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             }
             for (int i = 0; i < m_Stacks.Length; i++)
             {
-                if (IsPlayerActive(m_Stacks[i].PlayerIndex))
+                if (m_ProgramRuntime.IsPlayerActive(
+                        m_Stacks[i].PlayerIndex))
                     m_Stacks[i].Advance(presentationDeltaSeconds);
             }
             m_PoseStateSources.AdvanceSources(
@@ -1886,8 +1869,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                 lease);
             for (int i = 0; i < m_RootOrientationWarps.Length; i++)
             {
-                if (!IsFragmentActive(
-                        m_RootOrientationWarpLinkedPoseFragmentIndices[i]))
+                if (!m_ProgramRuntime.IsRootOrientationWarpActive(i))
                 {
                     continue;
                 }
@@ -2030,7 +2012,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                 {
                     for (int stackIndex = 0; stackIndex < m_Stacks.Length; stackIndex++)
                     {
-                        if (IsPlayerActive(m_Stacks[stackIndex].PlayerIndex))
+                        if (m_ProgramRuntime.IsPlayerActive(
+                                m_Stacks[stackIndex].PlayerIndex))
                         {
                             PrepareStackSources(
                                 m_Stacks[stackIndex],
@@ -2046,7 +2029,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                 {
                     for (int playerIndex = 0; playerIndex < m_DirectPlayers.Length; playerIndex++)
                     {
-                        if (IsPlayerActive(m_DirectPlayers[playerIndex].PlayerIndex))
+                        if (m_ProgramRuntime.IsPlayerActive(
+                                m_DirectPlayers[playerIndex].PlayerIndex))
                         {
                             PrepareDirectSource(
                                 playerIndex,
@@ -2585,7 +2569,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                 m_PoseStateSources.ClipPlayers[playerIndex];
             bool selectedPreview =
                 m_ProgramRuntime.IsSequencePreviewPlayer(playerIndex);
-            if (!selectedPreview && !IsPlayerActive(player.PlayerIndex) ||
+            if (!selectedPreview &&
+                    !m_ProgramRuntime.IsPlayerActive(player.PlayerIndex) ||
                 !player.IsRelevant)
                 return;
             AnimationPoseSourceCaptureBinding capture = player.PrepareCapture(
@@ -2634,7 +2619,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             AnimationBlendSpacePlayerRuntime player =
                 m_PoseStateSources.BlendSpacePlayers[
                     playerIndex];
-            if (!IsPlayerActive(player.PlayerIndex) || !player.IsRelevant)
+            if (!m_ProgramRuntime.IsPlayerActive(player.PlayerIndex) ||
+                !player.IsRelevant)
                 return;
             AnimationPoseSourceCaptureBinding capture =
                 player.PrepareCapture(presentationDeltaSeconds);
@@ -2868,128 +2854,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
         void DiscardPendingReleasePreparation()
         {
             m_SourceRetirementState.DiscardFrame();
-        }
-
-        void PrepareLinkedPoseSelection(
-            CharacterLinkedPoseRuntimeSession linkedPose)
-        {
-            ClearLinkedPoseFrameSelection();
-            IReadOnlyList<CharacterLinkedPoseGroupProjectionDescriptor> groups =
-                m_Projection.LinkedPose.Groups;
-            for (int groupIndex = 0; groupIndex < groups.Count; groupIndex++)
-            {
-                CharacterLinkedPoseGroupProjectionDescriptor group =
-                    groups[groupIndex];
-                CharacterLinkedPoseGenerationHandle selection =
-                    linkedPose.RequireIncoming(group.GroupId);
-                m_ProgramRuntime.SetLinkedPoseGroupSelection(
-                    in selection);
-                int activeCount = 0;
-                for (int fragmentIndex = 0;
-                     fragmentIndex <
-                     m_Projection.PosePlan.LinkedPoseFragments.Count;
-                     fragmentIndex++)
-                {
-                    CharacterLinkedPoseEntryFragmentPlanDescriptor fragment =
-                        m_Projection.PosePlan.LinkedPoseFragments[
-                            fragmentIndex];
-                    if (fragment.GroupId != group.GroupId)
-                        continue;
-                    if (selection.PoseDiscontinuity)
-                        m_LinkedPoseResetFragments[fragmentIndex] = true;
-                    if (fragment.ImplementationId !=
-                        selection.ImplementationId)
-                    {
-                        continue;
-                    }
-                    m_LinkedPoseActiveFragments[fragmentIndex] = true;
-                    activeCount++;
-                }
-                if (activeCount == 0)
-                {
-                    throw new InvalidOperationException(
-                        $"Linked Pose Group '{group.GroupId}' selection '{selection.ImplementationId}' has no Entry fragments.");
-                }
-            }
-        }
-
-        void ApplyLinkedPoseGenerationResets()
-        {
-            if (m_LinkedPoseResetFragments.Length == 0)
-                return;
-            for (int i = 0; i < m_Stacks.Length; i++)
-            {
-                int fragmentIndex =
-                    RequirePlayerFragmentIndex(
-                        m_Stacks[i].PlayerIndex);
-                if (!RequiresFragmentReset(fragmentIndex))
-                    continue;
-                m_StackRoutes[i].Reset();
-                m_Stacks[i].Reset(m_CompletionIdentity);
-            }
-            for (int i = 0; i < m_DirectPlayers.Length; i++)
-            {
-                int fragmentIndex =
-                    RequirePlayerFragmentIndex(
-                        m_DirectPlayers[i].PlayerIndex);
-                if (RequiresFragmentReset(fragmentIndex))
-                {
-                    m_DirectPlayers[i].Reset(
-                        PoseDiscontinuityResetReason.BranchReplacement);
-                }
-            }
-            m_PoseStateSources.ApplyLinkedPoseGenerationResets();
-            for (int i = 0; i < m_InertializationLinkedPoseFragmentIndices.Length; i++)
-            {
-                if (RequiresFragmentReset(
-                        m_InertializationLinkedPoseFragmentIndices[i]))
-                {
-                    m_InertializationPlan.RequestReset(i);
-                }
-            }
-            for (int i = 0; i < m_RootOrientationWarps.Length; i++)
-            {
-                if (RequiresFragmentReset(
-                        m_RootOrientationWarpLinkedPoseFragmentIndices[i]))
-                {
-                    m_RootOrientationWarps[i].Reset();
-                }
-            }
-        }
-
-        bool IsPlayerActive(int playerIndex) =>
-            IsFragmentActive(
-                RequirePlayerFragmentIndex(playerIndex));
-
-        int RequirePlayerFragmentIndex(int playerIndex)
-        {
-            if ((uint)playerIndex >=
-                (uint)m_PlayerLinkedPoseFragmentIndices.Length)
-            {
-                throw new InvalidOperationException(
-                    $"Pose Player #{playerIndex} is outside the compiled Linked Pose ownership table.");
-            }
-            return m_PlayerLinkedPoseFragmentIndices[playerIndex];
-        }
-
-        bool IsFragmentActive(int fragmentIndex) =>
-            fragmentIndex < 0 ||
-            m_LinkedPoseActiveFragments[fragmentIndex];
-
-        bool RequiresFragmentReset(int fragmentIndex) =>
-            fragmentIndex >= 0 &&
-            m_LinkedPoseResetFragments[fragmentIndex];
-
-        void ClearLinkedPoseFrameSelection()
-        {
-            Array.Clear(
-                m_LinkedPoseActiveFragments,
-                0,
-                m_LinkedPoseActiveFragments.Length);
-            Array.Clear(
-                m_LinkedPoseResetFragments,
-                0,
-                m_LinkedPoseResetFragments.Length);
         }
 
         void BeginPendingModuleFrames()
@@ -3264,150 +3128,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             return m_NodeRuntimeIndex.PlayerUsesSource(
                 playerNodeId,
                 sourceId);
-        }
-
-        static int[] BuildPlayerLinkedPoseFragmentIndices(
-            CharacterPoseProgramImage plan)
-        {
-            var result = CreateUnassignedOwnership(plan.PlayerCount);
-            for (int operationIndex = 0;
-                 operationIndex < plan.Operations.Count;
-                 operationIndex++)
-            {
-                CharacterPresentationPoseOperation operation =
-                    plan.Operations[operationIndex];
-                if (operation.PlayerIndex < 0)
-                    continue;
-                SetLinkedPoseOwnership(
-                    result,
-                    operation.PlayerIndex,
-                    operation.LinkedPoseFragmentIndex,
-                    "Player");
-            }
-            RequireCompleteLinkedPoseOwnership(result, "Player");
-            return result;
-        }
-
-        static int[] BuildStateMachineLinkedPoseFragmentIndices(
-            CharacterPoseProgramImage plan)
-        {
-            var result =
-                CreateUnassignedOwnership(plan.StateMachines.Count);
-            for (int operationIndex = 0;
-                 operationIndex < plan.Operations.Count;
-                 operationIndex++)
-            {
-                CharacterPresentationPoseOperation operation =
-                    plan.Operations[operationIndex];
-                if (operation.Code !=
-                    CharacterPoseOperationCode.PoseStateMachine)
-                {
-                    continue;
-                }
-                SetLinkedPoseOwnership(
-                    result,
-                    operation.StateMachineIndex,
-                    operation.LinkedPoseFragmentIndex,
-                    "StateMachine");
-            }
-            RequireCompleteLinkedPoseOwnership(
-                result,
-                "StateMachine");
-            return result;
-        }
-
-        static int[] BuildRootOrientationWarpLinkedPoseFragmentIndices(
-            CharacterPoseProgramImage plan)
-        {
-            var result =
-                CreateUnassignedOwnership(
-                    plan.RootOrientationWarps.Count);
-            for (int operationIndex = 0;
-                 operationIndex < plan.Operations.Count;
-                 operationIndex++)
-            {
-                CharacterPresentationPoseOperation operation =
-                    plan.Operations[operationIndex];
-                if (operation.Code !=
-                    CharacterPoseOperationCode.RootOrientationWarp)
-                {
-                    continue;
-                }
-                SetLinkedPoseOwnership(
-                    result,
-                    operation.RootOrientationWarpIndex,
-                    operation.LinkedPoseFragmentIndex,
-                    "Root Orientation Warp");
-            }
-            RequireCompleteLinkedPoseOwnership(
-                result,
-                "Root Orientation Warp");
-            return result;
-        }
-
-        static int[] BuildInertializationLinkedPoseFragmentIndices(
-            CharacterPoseProgramImage plan)
-        {
-            var result =
-                CreateUnassignedOwnership(plan.Inertializations.Count);
-            for (int operationIndex = 0;
-                 operationIndex < plan.Operations.Count;
-                 operationIndex++)
-            {
-                CharacterPresentationPoseOperation operation =
-                    plan.Operations[operationIndex];
-                if (operation.Code !=
-                    CharacterPoseOperationCode.Inertialization)
-                {
-                    continue;
-                }
-                SetLinkedPoseOwnership(
-                    result,
-                    operation.InertializationIndex,
-                    operation.LinkedPoseFragmentIndex,
-                    "Inertialization");
-            }
-            RequireCompleteLinkedPoseOwnership(
-                result,
-                "Inertialization");
-            return result;
-        }
-
-        static int[] CreateUnassignedOwnership(int count)
-        {
-            var result = new int[count];
-            for (int i = 0; i < result.Length; i++)
-                result[i] = int.MinValue;
-            return result;
-        }
-
-        static void SetLinkedPoseOwnership(
-            int[] ownership,
-            int index,
-            int fragmentIndex,
-            string kind)
-        {
-            if ((uint)index >= (uint)ownership.Length ||
-                ownership[index] != int.MinValue)
-            {
-                throw new InvalidOperationException(
-                    $"{kind} #{index} has invalid Linked Pose ownership.");
-            }
-            ownership[index] = fragmentIndex;
-        }
-
-        static void RequireCompleteLinkedPoseOwnership(
-            int[] ownership,
-            string kind)
-        {
-            for (int i = 0; i < ownership.Length; i++)
-            {
-                if (ownership[i] == int.MinValue)
-                {
-                    throw new InvalidOperationException(
-                        $"{kind} #{i} has no compiled Linked Pose ownership.");
-                }
-            }
         }
 
         static int CalculateSourceCapacity(

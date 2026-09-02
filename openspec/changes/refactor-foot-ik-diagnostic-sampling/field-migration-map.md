@@ -42,10 +42,10 @@
 
 - `RootHierarchy`的35列不能迁入新Sampler。旧链从`CharacterRootHierarchyBinding`读取场景Transform；新链必须由Final Publication Committed Result直接提供所需Root／Physical世界空间事实，随后删除整组旧Transform输入。
 - `SolverPhysical`的世界Ankle旋转／位置、Heel／Toe接触点与部分残差目前由旧Sampler把Component事实经Root Transform换算。Final Publication必须直接发布对应世界空间Physical结果；纯残差和Contact Pose再由Foot Extractor只读同一View计算。
-- `Identity`中的Sample identity、开始UTC、目标Runtime／Host identity和当前Capture固定的组合Program identity属于`CharacterFootIkCaptureMetadata`；Projection／PoseGraph／PlanHash／Rig／Tuning与Frame／Completion逐帧取自View lineage。Bridge必须在调用Generated Program前核对两侧固定身份，两类输入通过独立typed参数显式传入，不能重新查询Runtime Target。
+- `Identity`中的Sample identity、开始UTC、目标Runtime／Host identity和当前Capture固定的组合Program identity属于`CharacterFootIkCaptureMetadata`；Projection／PoseGraph／PlanHash／Rig／Tuning与Frame／Completion逐帧取自View lineage。CommittedSample Generated Handler必须在调用Generated Program前核对两侧固定身份，两类输入通过独立typed参数显式传入，不能重新查询Runtime Target；Foot不实现Bridge。
 - `MotionCore`、`SelectedStep`以及Goal／Pelvis／SolverPhysical中的派生项必须成为Foot插件AOT-safe纯Extractor；它们只读同一View及固定Capture metadata，不回写Runtime，也不进入下一帧。
 - `GroundGeometry`保持一个固定容量子表。行数仍取Surface、Contact与Envelope三类正式计数的最大值，每行用各自availability／index表达缺项，不把27列重新塞回主表。
 
 ## 删除与保留边界
 
-新Schema必须以CSV中的`TypedFieldId`、`TypedValueKind`、`Component`、`AvailabilityFieldId`和表内ordinal生成。旧`ColumnName`只用于Host输出字段名与迁移对账，不得继续成为Runtime字符串路径；Category Int32到稳定文本、UTC ticks到`O`格式属于Foot Host Adapter格式合同。旧封存目录保持不可变；完成新Reader／Host Adapter对账后，现行`CharacterFootCsvColumn/Group`、`RootHierarchyCapture`、手写Geometry Header与旧Reader绑定整体删除，不保留兼容分支。
+新Schema必须以CSV中的`TypedFieldId`、`TypedValueKind`、`Component`、`AvailabilityFieldId`和表内ordinal生成。旧`ColumnName`只用于迁移对账，不得继续成为Runtime字符串路径或新CSV Header真相；Vector／Quaternion组件展开、availability空单元格、枚举稳定文本和UTC `O`格式由通用Schema-driven Formatter合同声明。旧封存目录保持不可变；完成生成artifact与Analyzer对账后，现行`CharacterFootCsvColumn/Group`、`RootHierarchyCapture`、手写Geometry Header与旧Reader绑定整体删除，不保留兼容分支。

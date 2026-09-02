@@ -1,121 +1,74 @@
 ## Context
 
-见[proposal.md](proposal.md)。通用框架当前已在3C本地package中实现并通过Foot双输入Extractor与Unity编译验证，但其物理Owner仍是3C目录，正式identity也仍为`ThirdPerson.*`。`pik`已经固定使用`KK`、`com.kk.pik`与MIT许可证，并已成为独立Git／Unity项目；若直接复制现有package，会立即产生两个Generator binary、两套Schema identity和两个维护Owner。
+见[proposal.md](proposal.md)。本change在3C repo-local OpenSpec范围内实施，只修改3C。独立KK package与`pik`消费分别由自己的仓库change管理；三个change共享migration identity，但每个Git仓库只提交自身Owner文件。
 
-当前约束：框架正式目标仍是Unity 2022.3与IL2CPP AOT；Generator固定Roslyn 3.8／.NET Standard 2.0；3C Foot change正在持续增加领域字段；`pik`不得反向依赖3C；项目不接受wrapper、fallback、vendor snapshot或同步脚本。
+前置约束：Foot字段迁移任务可以继续增加Extractor，但在本change窗口必须冻结package／Generator／Foot using／asmdef／生命周期文件；独立package必须已完成内建生命周期处理器与Schema-driven CSV，不得把旧Bridge／Host Adapter合同迁回3C。
 
 ## Goals / Non-Goals
 
 **Goals:**
 
-- 建立一个可被3C、`pik`和未来Unity项目共同消费的独立KK package仓库。
-- 保持现有框架ABI、AOT调用图、packet协议与Host边界，只迁移Owner和正式公开identity。
-- 让源码、Analyzer、Schema／Program identity、版本、许可证和文档形成一个可发布闭包。
-- 在一次破坏性迁移中删除3C旧Owner，避免任何旧新并行路径。
+- 让3C从框架源码Owner变为纯UPM消费者。
+- 把Foot接入改为三个typed生命周期Event与Attribute声明。
+- 一次删除旧package、Tools、namespace、Analyzer与Repository Policy allowlist。
+- 保持PoseGraph、Foot算法、Performance顶层Player／Controller Owner不变。
 
 **Non-Goals:**
 
-- 不把Foot、FinalIK、PoseGraph或Performance工作流迁入独立框架。
-- 不在本change为`pik`发明新的领域Sampler或采样字段。
-- 不建立NuGet、远程Collector、数据库、线上遥测或商业配置服务。
-- 不保留ThirdPerson namespace兼容层，也不提供历史packet兼容Reader。
+- 不创建或修改独立仓库与`pik`；它们由关联change实施。
+- 不新增Foot字段、评分规则、World Query或运行算法。
+- 不兼容旧Schema、Program、packet或Capture request identity。
 
 ## Decisions
 
-### Decision 1: 建立第三个独立仓库，而不是把框架归属给3C或pik
+### Decision 1: 3C只使用一个外部file dependency
 
-正式目录固定为：
-
-```text
-D:\Unity_Project_1\generated-diagnostic-sampling
-├─ Packages/com.kk.generated-diagnostic-sampling
-│  ├─ Runtime
-│  ├─ Editor/Host
-│  ├─ RoslynAnalyzers
-│  └─ package.json
-├─ Tools/KK.GeneratedDiagnosticSampling
-│  ├─ Generator
-│  ├─ Host
-│  └─ Probe
-├─ openspec
-├─ README.md
-└─ LICENSE
-```
-
-选择独立仓库，是因为框架语义既不属于3C Gameplay，也不属于FinalIK Foot Placement。把它放进`pik` monorepo虽然比留在3C更容易共享，但会让通用Camera、Simulation或AI采样反向归属于FinalIK产品。独立仓库增加一个版本发布点，换来清晰Owner与第三方可消费性。
-
-### Decision 2: 正式身份一次改为KK，不保留ThirdPerson兼容
-
-固定映射：
-
-| 当前身份 | 正式身份 |
-|---|---|
-| `com.thirdperson.generated-diagnostic-sampling` | `com.kk.generated-diagnostic-sampling` |
-| `ThirdPerson.GeneratedDiagnosticSampling` | `KK.GeneratedDiagnosticSampling` |
-| `ThirdPerson.GeneratedDiagnosticSampling.Host` | `KK.GeneratedDiagnosticSampling.Host` |
-| `ThirdPerson.GeneratedDiagnosticSampling.Generator` | `KK.GeneratedDiagnosticSampling.Generator` |
-| `Tools/ThirdPersonGeneratedDiagnosticSampling` | `Tools/KK.GeneratedDiagnosticSampling` |
-
-选择现在破坏性重命名，是因为当前只有3C Foot一个正式消费者，迁移面仍可控。保留ThirdPerson identity虽然改动少，但会把3C项目品牌永久泄露进独立公共API；wrapper或type forwarder则会让两个assembly identity同时长期存在。
-
-### Decision 3: 本地消费者使用唯一file dependency，package声明正式版本依赖
-
-本地开发路径固定为：
+3C `Packages/manifest.json`固定引用：
 
 ```text
-3C manifest:
 file:../../../../../generated-diagnostic-sampling/Packages/com.kk.generated-diagnostic-sampling
-
-pik manifest:
-file:../../generated-diagnostic-sampling/Packages/com.kk.generated-diagnostic-sampling
 ```
 
-路径相对于各自`Packages/manifest.json`解析。`com.kk.pik/package.json`声明`com.kk.generated-diagnostic-sampling: 0.1.0`，项目manifest的file dependency提供本地正式实现。以后发布Git tag时只改变消费者的正式依赖来源，不在同一项目保留file／Git双配置。
+路径相对3C `Packages`目录解析。packages lock必须只保存`com.kk.generated-diagnostic-sampling`。不使用submodule、复制package或file／Git双配置，因为它们都会在3C重新产生框架工作树或双来源。
 
-不使用Git submodule，是因为它会在每个消费者仓库内再次出现package工作树并增加submodule状态管理；不使用复制脚本，是因为脚本无法防止消费者直接修改镜像。独立file dependency让两个Unity项目实时解析同一目录。
+### Decision 2: Foot消费者执行破坏性KK重命名
 
-### Decision 4: Source与Analyzer是同一个发布原子
+Foot的using与asmdef从`ThirdPerson.GeneratedDiagnosticSampling*`一次改到`KK.GeneratedDiagnosticSampling*`。Generator assembly、MVID和Sampler descriptor变化会产生新Schema／Program identity；3C删除未完成旧Capture与请求，不提供旧Reader。OpenSpec历史证据可保留旧commit/hash文字，但不得成为编译引用。
 
-独立仓库保留Generator源码、portable工程和package内Analyzer DLL。发布前必须用规定参数构建Generator，关闭build server，把唯一Release DLL复制到package，然后核对SHA-256与MVID完全一致。package version、Generator identity、assembly binding、生成source hash、Schema identity与Program identity一起变化。
+### Decision 3: 三个Event替代Foot Bridge
 
-选择提交Analyzer binary，是因为Unity package导入需要可直接加载的Roslyn Analyzer，不能要求每个Unity消费者先构建Generator。代价是仓库必须把“源码／DLL一致性”作为强制发布Gate。
-
-### Decision 5: 三仓迁移按一个migration identity协调提交
-
-迁移使用同一文字identity记录在独立仓库、3C和`pik`提交中，顺序为：
+Foot只在正式Owner处发布：
 
 ```text
-建立并验证独立仓库
--> 更新3C using/asmdef/manifest并删除旧Owner
--> 更新pik manifest/package依赖
--> 分别portable build
--> 依次Unity refresh 3C与pik
--> 严格校验三仓OpenSpec与源码唯一性
--> 提交三个仓库的闭合状态
+CaptureStarted
+-> CommittedSample after successful PoseGraph Seal
+-> CaptureStopped(Completed | Cancelled | Faulted)
 ```
 
-工作区中可以在提交前短暂同时存在新旧目录用于机械迁移，但任何可提交状态都不得让Unity同时解析两个Analyzer，也不得让3C Foot同时生成旧新Program。回退必须三个仓库一起回到迁移前提交，不保留运行时选择开关。
+Started冻结Program／Schema／容量／interest；CommittedSample携带短租约`CharacterFootIkCommittedCaptureViewLease`、frame lineage与`CharacterFootIkCaptureMetadata`，Left／Right由声明式样本维度展开；Stopped提交最终outcome。KK Generator生成typed handler并自动Session、租包、Capture、提交和封存。任何`CharacterFootIkCaptureBridge`或领域Session wrapper都必须删除。
 
-### Decision 6: 独立仓库安装框架真相，3C只保存消费者事实
+### Decision 4: Foot Analyzer／Publisher位于采样完成之后
 
-独立仓库的`openspec/project.md`与current specs拥有Generated Diagnostic Sampling Framework和package distribution真相。3C的`add-generated-diagnostic-sampling-framework`保留历史实施证据，并在本迁移完成后把Owner指向独立仓库；3C current specs只描述Foot／Performance如何消费Capability，不复制框架内部需求。`pik`只描述自身领域接入和package依赖。
+KK Host自动生成主表、Geometry子表、CSV和Sampler／Capability manifest。Foot Analyzer与Publisher只读取这些生成产物并发布独立报告，不参与Host Finalizer，不影响基础Capability是否Completed。旧ColumnName只用于迁移对账；迁移完成后Column／CsvBinding／旧Reader整体删除。
+
+### Decision 5: 删除旧Owner与切换消费者属于同一3C提交
+
+3C不能提交“新dependency已接入但旧package仍跟踪”或“旧package已删但Foot仍引用ThirdPerson”的中间状态。实现可在工作区分步完成，但最终只在portable build、Unity refresh、identity搜索和OpenSpec校验全部通过后提交一个闭合迁移。
 
 ## Risks / Trade-offs
 
-- [Foot change正在增加字段，重命名可能产生冲突] → 在迁移窗口冻结Foot插件文件，先完成机械namespace／asmdef迁移，再由原任务继续新增字段。
-- [三个Git仓库不能事务提交] → 使用同一migration identity和精确前置commit，所有编译与Unity refresh通过后才提交最终状态；失败时三仓一起回退。
-- [file dependency依赖固定本机目录布局] → 当前三个项目都位于`D:\Unity_Project_1`并以此作为正式本地工作区；公开发布时使用单一版本来源替换，不保留双配置。
-- [Generator重命名导致所有identity变化] → 将变化视为一次明确breaking migration，删除旧请求与未完成产物，重建Program／manifest，不实现旧packet兼容。
-- [独立仓库过早承载未使用能力] → 只迁移已经由3C Foot实际使用并验证的框架，不新增Camera、AI、远程传输或通用查询语言。
+- [Foot并行字段迁移冲突] → 先取得明确冻结窗口，只迁移using／asmdef／Event与框架依赖；已有字段内容原样保留。
+- [Generator identity变化导致旧产物不可读] → 明确删除未完成旧请求和staging，不实现兼容Reader；历史归档保持只读文件证据。
+- [外部file dependency目录缺失] → 以独立package已构建commit作为任务前置；缺失时停止，不恢复3C本地副本。
+- [Analyzer仍依赖旧CSV Header] → 在同一迁移中切到生成artifact／typed manifest，旧Column绑定整体删除，不保留双Reader。
 
 ## Migration Plan
 
-1. 在`D:\Unity_Project_1\generated-diagnostic-sampling`初始化独立Git、OpenSpec、MIT许可证和固定目录结构，记录3C来源commit。
-2. 迁移package与Tools并完成KK全量重命名；更新Generator硬编码Attribute／生成类型引用，重建Analyzer并核对源码／binary identity。
-3. 在独立仓库用Probe验证具体View／Metadata双输入、table、lease、codec与compile closure，严格校验OpenSpec。
-4. 冻结3C Foot诊断接入窗口，更新Unity manifest、packages lock、using、asmdef、portable工程与Repository Policy；删除3C旧package和Tools。
-5. 重建3C Foot Generated Program与Capability identity，按规定参数构建portable工程并执行3C Unity refresh。
-6. 更新`pik`项目manifest与`com.kk.pik`依赖，执行`pik` Unity refresh，确认项目只消费独立package。
-7. 搜索三个仓库，确认ThirdPerson采样identity、第二package源码、同步脚本和旧Analyzer为零；更新各自OpenSpec Owner事实并提交同一migration identity。
+1. 记录独立package、3C和`pik`关联change／commit，确认KK package源码与Analyzer闭合。
+2. 冻结Foot重叠文件，更新3C manifest／lock、using、asmdef、Event Definition和Generated Program引用。
+3. 删除Foot Bridge、Host Adapter、Column／CsvBinding与旧Reader控制面，Analyzer／Publisher改为只读生成产物。
+4. 删除3C本地package、Tools和Repository Policy allowlist，更新相关active change Owner口径。
+5. 依次执行portable build、build server shutdown、3C Unity refresh、Console核对、旧identity搜索和OpenSpec严格校验。
+6. 提交3C迁移并记录独立package与`pik`精确关联commit。
 
-回退时，独立仓库保留未发布提交，3C与`pik`同时恢复迁移前manifest／namespace；不得在任一消费者中临时恢复复制package。
+回退只恢复整个3C迁移前commit，并要求关联仓库回到匹配identity；不在运行时保留旧新选择。

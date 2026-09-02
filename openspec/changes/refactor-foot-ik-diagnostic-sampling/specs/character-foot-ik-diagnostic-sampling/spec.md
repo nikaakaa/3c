@@ -1,6 +1,6 @@
 ## Purpose
 
-定义Foot IK作为Generated Diagnostic Sampling Framework首个领域插件时，如何从唯一Committed表现帧按需冻结事实，并通过Foot字段／Sampler／Program Definitions与Host Adapter生成可追溯、可校验且不反向影响运行结果的采样产物。
+定义Foot IK作为Generated Diagnostic Sampling Framework首个领域插件时，如何从唯一Committed表现帧发布三个typed采样生命周期Event，并通过Foot字段／Sampler／Program Definitions自动生成可追溯、可校验且不反向影响运行结果的采样产物。
 
 ## ADDED Requirements
 
@@ -11,8 +11,8 @@ Foot IK采样 MUST只接收PoseGraph在根表现帧成功Seal后交付的一份`
 #### Scenario: 完整Foot IK帧成功提交
 
 - **WHEN** Foot、Goal、FBBIK与Final Publication在同一根表现帧成功完成并Seal
-- **THEN** PoseGraph MUST向Foot Bridge交付一份同lineage的`CharacterFootIkCommittedCaptureViewLease`
-- **AND** Generated Program MUST在该租约内按Left、Right各提取一次全部已选Sampler字段并提交共享同一Frame／Completion lineage、携带不同Side metadata的两个主packet，而不得重新执行查询、求解或物理读取
+- **THEN** PoseGraph MUST发布一份携带同lineage`CharacterFootIkCommittedCaptureViewLease`的Foot CommittedSample Event
+- **AND** Generated Event Handler MUST在该租约内按声明的Left、Right维度各提取一次全部已选Sampler字段并提交共享同一Frame／Completion lineage、携带不同Side metadata的两个主packet，而不得要求Foot Bridge或重新执行查询、求解、物理读取
 
 #### Scenario: 表现帧被丢弃或Fault
 
@@ -22,7 +22,7 @@ Foot IK采样 MUST只接收PoseGraph在根表现帧成功Seal后交付的一份`
 
 ### Requirement: Attribute Schema必须成为采样字段的唯一声明
 
-每个Foot可采样字段 MUST通过`generated-diagnostic-sampling-framework`提供的唯一Attribute在AOT-safe诊断Extractor上声明稳定字段identity、数据类型、单位、availability关系、表归属与一个或多个可组合字段分组。每个Foot Sampler Definition MUST只选择字段分组与自己新增的专项派生字段，不得要求已有字段反向登记新Sampler identity。Extractor MUST是只读`CharacterFootIkCommittedCaptureView`的普通静态函数，不得引用`UnityEditor`、`object`动态调用、运行时成员路径、World Query、Vendor对象或场景Transform。框架唯一Schema Compiler MUST在C#编译期发现全部Foot声明、校验Schema闭包并生成不可变Schema descriptor与静态Capture程序；Foot插件 MUST不实现第二Compiler、Attribute、codec或identity算法。Schema字段、顺序、Program Definition或派生规则变化 MUST生成新的稳定Schema identity与Generated Program hash。
+每个Foot可采样字段 MUST通过`generated-diagnostic-sampling-framework`提供的唯一Attribute在AOT-safe诊断Extractor上声明稳定字段identity、数据类型、单位、availability关系、表归属与一个或多个可组合字段分组。Foot MUST通过Attribute声明Capability ID、Started／CommittedSample／Stopped Event ID、Left／Right封闭样本维度和通用输出格式。每个Foot Sampler Definition MUST只选择字段分组与自己新增的专项派生字段，不得要求已有字段反向登记新Sampler identity。Extractor MUST是只读`CharacterFootIkCommittedCaptureViewLease`与`CharacterFootIkCaptureMetadata`的普通静态函数，不得引用`UnityEditor`、`object`动态调用、运行时成员路径、World Query、Vendor对象或场景Transform。框架唯一Schema Compiler MUST在C#编译期发现全部Foot声明、校验Event／维度／Schema闭包并生成不可变Schema descriptor、静态Capture程序和typed Event Handler；Foot插件 MUST不实现Bridge、第二Compiler、Attribute、codec或identity算法。Schema字段、顺序、Event Set、Program Definition或派生规则变化 MUST生成新的稳定Schema identity与Generated Program hash。
 
 #### Scenario: 多个Sampler复用同一字段
 
@@ -60,7 +60,7 @@ Foot插件 MUST声明一个或多个稳定Capture Program Definition，每个Def
 
 ### Requirement: 多套Sampler必须可同时组合且共享唯一上游采样
 
-每个Foot Sampler Definition MUST声明稳定Sampler identity、revision、字段集合、派生事实、表集合、Analyzer与发布物。作者 MUST通过Foot Capture Program Definition显式组合一套或多套Sampler；该Program MUST在Editor Capture编译或Player Build前冻结。全部选中Sampler MUST通过一个Generated Program消费同一`CharacterFootIkCommittedCaptureViewLease`，按Left、Right固定顺序各提交一个携带Side metadata的主packet，并各自发布带Schema identity的产物。新增Sampler Definition MUST不要求修改既有Sampler Implementation、通用框架或Foot/FBBIK Runtime。多个Sampler同时启用 MUST不增加Foot查询次数、FBBIK执行次数、Final Publication次数或上游View数量。
+每个Foot Sampler Definition MUST声明稳定Sampler identity、revision、输出格式、字段集合、派生事实与表集合，不声明Host Adapter、Analyzer或Publisher identity。作者 MUST通过Foot Capture Program Definition显式组合一套或多套Sampler；该Program MUST在Editor Capture编译或Player Build前冻结。全部选中Sampler MUST通过一个Generated Program消费同一`CharacterFootIkCommittedCaptureViewLease`，由Generated CommittedSample Handler按Left、Right声明维度各提交一个携带Side metadata的主packet，并由通用Host自动发布带Schema identity的主表／子表CSV与manifest。新增Sampler Definition MUST不要求修改既有Sampler、通用框架或Foot/FBBIK Runtime，也不需要新增Bridge／Adapter。多个Sampler同时启用 MUST不增加Foot查询次数、FBBIK执行次数、Final Publication次数或上游View数量。
 
 #### Scenario: 同时运行Full与Solver Sampler
 
@@ -82,7 +82,7 @@ Foot插件 MUST声明一个或多个稳定Capture Program Definition，每个Def
 
 ### Requirement: Sampler必须保持只读并隔离派生事实
 
-Sampler Definition的Extractor MUST只读取PoseGraph-owned具体Committed Capture View和当前Capture固定metadata，Host Adapter MUST只读取sealed packet或由同一Schema生成的typed row。它们 MUST不访问Foot持久状态、FBBIK Vendor对象、Physical Transform、World Query、Gameplay State或可写Runtime Target，也 MUST不向Runtime回传Decision、目标、权重或配置。派生事实 MUST归属具体Sampler Schema，不得伪装成Runtime正式字段或被下一帧消费。
+Sampler Definition的Extractor MUST只读取PoseGraph-owned具体Committed Capture View短租约和当前Capture固定metadata。Generated Event Handler、Host Finalizer以及下游Analyzer／Publisher MUST不访问Foot持久状态、FBBIK Vendor对象、Physical Transform、World Query、Gameplay State或可写Runtime Target，也 MUST不向Runtime回传Decision、目标、权重或配置。Analyzer／Publisher MUST只读取生成artifact／manifest，不参与采样生命周期。派生事实 MUST归属具体Sampler Schema，不得伪装成Runtime正式字段或被下一帧消费。
 
 #### Scenario: Sampler计算穿透诊断
 
@@ -92,7 +92,7 @@ Sampler Definition的Extractor MUST只读取PoseGraph-owned具体Committed Captu
 
 ### Requirement: 多Sampler Capture必须有界、非阻塞且原子发布
 
-一次Foot Capture MUST通过独立通用框架Capability Session冻结Program Definition、Sampler Set、Schema、Generated Program、packet layout/capacity、Writer和Foot Host输出闭包。Foot领域Bridge MUST只在具体Committed View租约内取得框架packet lease、调用一次生成函数并提交，不得等待文件写入或离线分析。框架Writer MUST只封存版本化typed packet流与Capability manifest；Foot Host Adapter MUST从框架验证后的sealed packet view生成各Sampler CSV、运行Analyzer和Publisher。任一Foot Sampler失败或框架发布Overflow、Sequence、Writer、Host或hash故障时，Foot Capability MUST为Faulted且不得生成部分Completed身份；Performance工作流 MUST再依据该Capability结果决定顶层Capture状态。
+一次Foot Capture MUST只通过三个typed Event驱动：CaptureStarted冻结Program Definition、Sampler Set、Schema、Generated Program、维度、packet layout/capacity、Writer和输出闭包；CommittedSample只在具体Committed View租约内由Generated Handler取得packet lease、按Left／Right维度调用生成函数并提交；CaptureStopped携带Completed／Cancelled／Faulted outcome并由Generated Handler请求封存。领域 MUST不实现Bridge、Session wrapper或手写租包循环，也不得等待文件写入或离线分析。框架Writer与Host MUST封存版本化typed packet流，并自动生成各Sampler主表／子表CSV和Capability manifest。任一Sampler基础产物失败或框架发布Overflow、Sequence、Writer、Host或hash故障时，Foot Capability MUST为Faulted且不得生成部分Completed身份；Analyzer／Publisher在Completed后只读产物并拥有独立下游结果；Performance工作流 MUST再依据Capability结果决定顶层Capture状态。
 
 #### Scenario: 一个Sampler后台写入失败
 
@@ -102,13 +102,13 @@ Sampler Definition的Extractor MUST只读取PoseGraph-owned具体Committed Captu
 
 #### Scenario: 所有Sampler正常完成
 
-- **WHEN** 全部选中Sampler完成相同Frame范围的写入、分析与hash闭包
+- **WHEN** 全部选中Sampler完成相同Frame范围的写入、基础CSV与hash闭包
 - **THEN** Foot Capability manifest MUST引用每个Sampler manifest、Schema identity、Frame范围与产物
 - **AND** 消费者 MUST只通过manifest精确路径打开对应产物
 
 ### Requirement: 内建Foot全量Sampler必须保留正式业务语义
 
-系统 MUST提供一个内建Full Foot Sampler，覆盖现行主Foot行、Ground Geometry、离线Analyzer、诊断Publisher、明细存储与评分结果。迁移 MUST保持现行字段的业务含义、单位、availability、事件分母、诊断规则和评分数学，但新产物 MUST使用新的Schema与manifest identity。既有封存采样包 MUST保持不可变且不得迁移、覆盖或通过兼容reader解释为新Schema。
+系统 MUST提供一个内建Full Foot Sampler，覆盖现行主Foot行与Ground Geometry，并由通用Host自动生成基础CSV／manifest。离线Analyzer、诊断Publisher、明细存储与评分结果 MUST作为只读生成产物的下游流程。迁移 MUST保持现行字段的业务含义、单位、availability、事件分母、诊断规则和评分数学，但新产物 MUST使用新的Schema与manifest identity。既有封存采样包 MUST保持不可变且不得迁移、覆盖或通过兼容reader解释为新Schema。
 
 #### Scenario: 新Full Sampler生成诊断
 
@@ -118,7 +118,7 @@ Sampler Definition的Extractor MUST只读取PoseGraph-owned具体Committed Captu
 
 ### Requirement: Performance Player必须显式区分Disabled与Capture能力身份
 
-唯一Performance Player Build Request MUST通过稳定排序`DiagnosticCapabilitySet`显式声明`character-foot-ik`为`Disabled`或`Capture`。对应descriptor MUST保存Mode、Sampler Set、Schema、Program、packet capacity与transport identity。Disabled构建用于纯性能基线，MUST不编译或装配Foot IK Definitions、Bridge、Generated Program、capture page、队列或interest；Capture构建用于IL2CPP实机采样，MUST引用合法Foot Program Definition。Foot change MUST不新增专属Build字段、manifest codec、握手或Comparer算法；Performance工作流 MUST拒绝完整Capability identity不同的性能数值比较。
+唯一Performance Player Build Request MUST通过稳定排序`DiagnosticCapabilitySet`显式声明`character-foot-ik`为`Disabled`或`Capture`。对应descriptor MUST保存Mode、Event Set、Sampler Set、Schema、Program、维度、packet capacity与transport identity。Disabled构建用于纯性能基线，MUST不编译或装配Foot IK Definitions、typed Event Handler、Generated Program、capture page、队列或interest；Capture构建用于IL2CPP实机采样，MUST引用合法Foot Event／Program Definition。Foot change MUST不新增专属Build字段、manifest codec、握手或Comparer算法；Performance工作流 MUST拒绝完整Capability identity不同的性能数值比较。
 
 #### Scenario: 构建纯性能基线Player
 
@@ -140,7 +140,7 @@ Sampler Definition的Extractor MUST只读取PoseGraph-owned具体Committed Captu
 
 ### Requirement: Foot IK采样不得扫描目标进程私有内存
 
-本能力 MUST不通过外部进程读取Unity私有虚拟地址、解析未版本化对象布局、暂停Player、扫描托管堆或按PDB地址重建Foot/FBBIK状态。Foot Host Adapter MUST只消费通用框架验证后的sealed packet view、Schema与manifest。若后续需要跨机器实时采集，MUST由通用框架的独立change定义传输和Collector合同；Foot插件不得增加私有Shared Memory、socket或地址扫描fallback。
+本能力 MUST不通过外部进程读取Unity私有虚拟地址、解析未版本化对象布局、暂停Player、扫描托管堆或按PDB地址重建Foot/FBBIK状态。Foot Analyzer／Publisher MUST只消费通用框架生成并验证的artifact、Schema与manifest。若后续需要跨机器实时采集，MUST由通用框架的独立change定义传输和Collector合同；Foot插件不得增加私有Shared Memory、socket或地址扫描fallback。
 
 #### Scenario: 外部工具请求读取Player私有地址
 

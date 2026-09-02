@@ -36,7 +36,7 @@ Ready要求至少包含GameplayTickSystem已初始化、所选Session Active、�
 
 唯一正式采集目标是Windows x64 IL2CPP Development Performance Player，关闭Deep Profiling、Script Debugging与Autoconnect Profiler。Player只包含Gameplay Lab及Performance Agent所需内容，输出到`Library/Performance/Players/<BuildIdentity>`。BuildIdentity锁定Unity版本、BuildTarget、ScriptingBackend、场景、Player文件、GameAssembly、PDB、Burst/Native符号、Scenario catalog、构建输入哈希及全部显式诊断capability identity。
 
-`add-generated-diagnostic-sampling-framework`提供canonical `DiagnosticCapabilityDescriptor`与稳定排序`DiagnosticCapabilitySet`。Performance Build Request只保存该Set，删除并禁止任何领域专属Disabled／Capture字段。每项descriptor显式保存CapabilityId、Mode、Sampler Set identity、Schema identity、Program identity、packet capacity与transport identity；Program identity闭合AOT Generated Program hash、Generator revision与packet layout revision。Disabled是纯性能基线并通过Player编译约束排除对应领域Definitions、Bridge、Generated Program、capture页、packet队列与interest；Capture只包含匹配Program闭包。`refactor-foot-ik-diagnostic-sampling`只注册首个`character-foot-ik` descriptor。Build workflow使用Player专属编译输入生成全部选中Capability闭包，不修改全局配置后等待隐式重编译，也不在Player启动后切换Program。
+`add-generated-diagnostic-sampling-framework`提供canonical `DiagnosticCapabilityDescriptor`与稳定排序`DiagnosticCapabilitySet`。Performance Build Request只保存该Set，删除并禁止任何领域专属Disabled／Capture字段。每项descriptor显式保存CapabilityId、Mode、Event Set、Sampler Set identity、Schema identity、Program identity、维度、packet capacity与transport identity；Program identity闭合AOT Generated Program hash、Generator revision与packet layout revision。Disabled是纯性能基线并通过Player编译约束排除对应领域Definitions、typed Event Handler、Generated Program、capture页、packet队列与interest；Capture只包含匹配Event／Program闭包。`refactor-foot-ik-diagnostic-sampling`只注册首个`character-foot-ik` descriptor。Build workflow使用Player专属编译输入生成全部选中Capability闭包，不修改全局配置后等待隐式重编译，也不在Player启动后切换Program。
 
 Build与Run分离。Performance Build通过现有`ProductBuildValidationContext`的显式`PerformancePlayer` kind进入全局Build回调，不伪装成Commercial Client或Network Test Player。由于Unity禁止把`BuildPipeline`输出直接指向项目`Library`，Build固定使用仓库根下项目外同盘的`.performance-build/<job>`工作区，并以短路径避免IL2CPP与StreamingAssets输出越过Windows文件API边界。Build成功后工作流必须把`GameAssembly.pdb`移到`GameAssembly.dll`同目录、保留Data中的Burst PDB，并删除Unity明确标注不得随游戏发布的`BackUpThisFolder_ButDontShipItWithYourGame`构建中间目录；完整Player、符号、Scenario、诊断capability和manifest校验成功后先移动进`Library/Performance/Players/.staging`，再原子发布本机Player目录。该外部工作区是正式Build边界且被Git忽略，不是fallback、第二产物根或可消费Player。Capture只消费作者显式选择且manifest完全合法的既有BuildIdentity，不自动重建、不改用Editor Play Mode，也不扫描其它Player目录补齐缺失文件。商业`Build`根不接收任何Performance文件。
 
@@ -92,7 +92,7 @@ P50/P95/P99/Max必须基于对应SampleScope的原始序列计算。`Idle`跨线
 
 manifest锁定Capture schema、Request、Scenario、Build、Program、Pipeline、Projection、Solver、Actor roster、设备、OS、CPU/GPU、分辨率、画质、VSync、targetFrameRate、Toolchain、WPR profile、全部文件hash和最终Status。Completed Capture要求全部声明文件存在且hash匹配；Faulted Capture保存失败阶段、进程退出、WPR状态和已有证据，但Comparer必须拒绝它。旧`Library/Performance/Simulation-*.json`不读取、不迁移、不覆盖。
 
-当任一Diagnostic Capability为Capture时，该Capability独立拥有Session、cadence、opaque typed lineage、sample key、packet流、Writer和runtime manifest；对应领域Bridge只通过通用框架Writer向自己的staging子目录封存版本化typed packet。Controller在Player停止且各流分别封存后按稳定CapabilityId调用框架Host Finalizer，再由领域Host Adapter生成Sampler格式、Analyzer与Publisher产物，并把每个Capability manifest作为当前Capture manifest的显式子闭包。Performance只编排开始、停止、Finalizer顺序和顶层完成状态，不解释领域lineage、不跨Capability对齐sample、不合并packet或重写子manifest。该扩展不得改变WPR、Unity Profiler或Metric采集顺序，也不得让Player主线程执行格式化、Analyzer或Publisher。Disabled Capability不得创建空目录、Null Adapter或占位manifest。
+当任一Diagnostic Capability为Capture时，Controller在受控窗口发布对应Generated CaptureStarted Event，正式领域Owner只在成功Seal后发布CommittedSample Event，窗口结束时Controller发布CaptureStopped outcome。Generated Handler让该Capability独立拥有Session、cadence、opaque typed lineage、sample key、packet流、Writer和runtime manifest；Controller在Player停止且各流分别封存后按稳定CapabilityId调用框架Schema-driven Host Finalizer，自动生成Sampler主表／子表CSV与Capability manifest，并把每个Capability manifest作为当前Capture manifest的显式子闭包。领域Analyzer／Publisher只在基础产物Completed后读取artifact并发布独立报告结果。Performance只编排开始、停止、Finalizer顺序和顶层完成状态，不解释领域lineage／维度、不跨Capability对齐sample、不合并packet或重写子manifest。该扩展不得改变WPR、Unity Profiler或Metric采集顺序，也不得让Player主线程执行格式化、Analyzer或Publisher。Disabled Capability不得创建空目录、Null Adapter或占位manifest。
 
 ## 分析、预算与比较
 
@@ -118,7 +118,7 @@ MCP固定暴露`performance.prepare`、`performance.build_player`、`performance
 - `character-camera-pipeline`与`character-input-pipeline`：Scenario只替代正式输入来源，不写Camera Transform、不建立第二request buffer。
 - `refactor-character-pose-graph-architecture`：Marker迁移只落在新Program Runtime、Source Module、Constraint Module与Final Publication Owner。若旧类仍在迁移中，相关任务等待Owner闭合并报告冲突，不对旧类加桥接。
 - `add-generated-diagnostic-sampling-framework`：提供通用Capability Set、编译闭包descriptor、packet与Host Finalizer合同，本change继续唯一拥有Build、Player、Controller、Run Request、manifest与Comparer；框架不得建立第二性能入口。
-- `refactor-foot-ik-diagnostic-sampling`：只注册首个`character-foot-ik` descriptor与领域Host Adapter；Foot IK packet不进入Metric、Unity Profiler、WPR或Gameplay状态，也不建立Foot专属传输或第二Capture发布根。
+- `refactor-foot-ik-diagnostic-sampling`：只注册首个`character-foot-ik` descriptor、三个typed Event和领域字段；Foot IK Analyzer／Publisher只读生成产物，packet不进入Metric、Unity Profiler、WPR或Gameplay状态，也不建立Foot Bridge、Host Adapter、专属传输或第二Capture发布根。
 
 ## 取舍
 

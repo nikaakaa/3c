@@ -44,4 +44,8 @@
 ## 未完成边界
 
 - 任务7.5等待Foot IK、Performance与PoseGraph相关change全部完成并处理全量OpenSpec既有失败后，再安装`openspec/project.md`与current specs真相。
-- Foot字段全集、Domain Bridge、Host业务Adapter与Performance接入由对应change继续实施，不在本change复制第二路径。
+- Foot字段全集、Domain Bridge、可选Analyzer／Publisher Processor与Performance接入由对应change继续实施，不在本change复制第二路径。
+
+## 2026-09-02 Host合同修正
+
+Foot字段迁移证明原实现仍强制每个Sampler提供`hostAdapterId`和一份`IDiagnosticHostAdapter`，并仍要求Foot Bridge手写Session、Left／Right租包、Capture调用与提交，因此“新增Sampler只声明生命周期Event与Attribute”尚未成立。已有Field Attribute／双输入Extractor／AOT Capture／typed packet／Session／Writer证据继续有效；任务2.1、3.1至3.5、4.2至4.4、5.2、5.3、6.2、6.3、7.1和7.4重新打开。正式目标改为三个typed生命周期Event驱动的生成处理器与框架内建Schema-driven主表／子表／CSV／manifest；领域不保留Bridge或Host Adapter，Analyzer／Publisher只读生成产物。

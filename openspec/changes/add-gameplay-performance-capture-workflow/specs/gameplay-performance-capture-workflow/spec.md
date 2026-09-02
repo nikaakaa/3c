@@ -108,7 +108,7 @@ Player Capture Agent MUST只发布Runtime Ready、接收Warmup/Start/Stop/Fault�
 
 ### Requirement: Performance Player必须是可符号化的本机诊断闭包
 
-正式Capture MUST只消费Windows x64 IL2CPP Development Performance Player。Build MUST关闭Deep Profiling、Script Debugging和Autoconnect Profiler。Unity BuildPipeline MUST使用项目外同盘的正式临时工作区，完整校验后移动进`Library/Performance/Players/.staging`并在`Library/Performance/Players/<BuildIdentity>`原子发布可执行文件、Data/GameAssembly、PDB/Burst/Native符号、Scenario catalog与manifest；外部工作区 MUST不成为第二可消费Player根。BuildIdentity MUST锁定Unity、目标、场景、脚本后端、Program、Pipeline、Projection、Solver、全部文件hash及canonical、稳定排序`DiagnosticCapabilitySet` identity。Performance Build Request MUST只用该Set承载诊断构建能力，不得增加Foot或其它领域专属Disabled／Capture字段。每项`DiagnosticCapabilityDescriptor` MUST保存CapabilityId、Mode、Sampler Set identity、Schema identity、Program identity、packet capacity与transport identity；Program identity MUST闭合AOT Generated Program hash、Generator revision与packet layout revision。Disabled闭包 MUST在编译期排除对应领域Definitions、Bridge、Generated Program、capture页、packet队列与interest；Capture闭包 MUST只包含匹配Program。该目录 MUST不被解释为商业Player、Network Product或第二诊断Player。
+正式Capture MUST只消费Windows x64 IL2CPP Development Performance Player。Build MUST关闭Deep Profiling、Script Debugging和Autoconnect Profiler。Unity BuildPipeline MUST使用项目外同盘的正式临时工作区，完整校验后移动进`Library/Performance/Players/.staging`并在`Library/Performance/Players/<BuildIdentity>`原子发布可执行文件、Data/GameAssembly、PDB/Burst/Native符号、Scenario catalog与manifest；外部工作区 MUST不成为第二可消费Player根。BuildIdentity MUST锁定Unity、目标、场景、脚本后端、Program、Pipeline、Projection、Solver、全部文件hash及canonical、稳定排序`DiagnosticCapabilitySet` identity。Performance Build Request MUST只用该Set承载诊断构建能力，不得增加Foot或其它领域专属Disabled／Capture字段。每项`DiagnosticCapabilityDescriptor` MUST保存CapabilityId、Mode、Event Set、Sampler Set identity、Schema identity、Program identity、维度、packet capacity与transport identity；Program identity MUST闭合AOT Generated Event Handler／Program hash、Generator revision与packet layout revision。Disabled闭包 MUST在编译期排除对应领域Definitions、typed Event Handler、Generated Program、capture页、packet队列与interest；Capture闭包 MUST只包含匹配Event／Program。该目录 MUST不被解释为商业Player、Network Product或第二诊断Player。
 
 #### Scenario: 构建Performance Player
 
@@ -119,13 +119,13 @@ Player Capture Agent MUST只发布Runtime Ready、接收Warmup/Start/Stop/Fault�
 #### Scenario: 构建领域实机采样变体
 
 - **WHEN** 同一Build Performance Player入口将一个或多个Diagnostic Capability设为Capture并引用合法Program Definition
-- **THEN** 工作流 MUST通过Player编译输入把每项匹配Generated Program、领域Bridge、capture页和packet队列纳入IL2CPP AOT闭包
+- **THEN** 工作流 MUST通过Player编译输入把每项匹配Generated Event Handler／Program、capture页和packet队列纳入IL2CPP AOT闭包
 - **AND** Player manifest MUST保存完整Capability Set identity且不得包含运行时表达式编译或反射提取路径
 
 #### Scenario: 构建全部诊断关闭的纯性能基线
 
 - **WHEN** 同一Build Performance Player入口把全部Diagnostic Capability设为Disabled
-- **THEN** 构建闭包 MUST不包含任何领域诊断Definition、Bridge、Generated Program、capture页、packet队列或Sampler interest
+- **THEN** 构建闭包 MUST不包含任何领域诊断Definition、typed Event Handler、Generated Program、capture页、packet队列或Sampler interest
 - **AND** MUST不使用运行时bool、Null Adapter或空manifest冒充编译期关闭
 
 #### Scenario: Capture引用旧Player
@@ -184,7 +184,7 @@ Analyzer MUST分别计算RenderFrame Aggregate、LogicTick Aggregate和Invocatio
 
 ### Requirement: Capture产物必须原子发布且完整可追溯
 
-每次Capture MUST先写入`Library/Performance/Captures/.staging/<CaptureId>`，并只在manifest声明的Unity raw、Metric samples、WPR ETL、xperf Marker/栈报告、WPA Context Switch导出、日志、process结果、summary以及当前`DiagnosticCapabilitySet`要求的全部子产物完成且hash匹配后发布Completed Capture。每个Capture Capability MUST独立拥有Session、cadence、opaque typed lineage、sample key、packet流、Writer和runtime manifest，并只在Player侧通过通用Writer封存自己的版本化typed packet流；Controller MUST在Player停止后按稳定CapabilityId调用框架唯一Host Finalizer和领域Host Adapter。Performance MUST只编排顶层生命周期与子manifest闭包，不解释领域lineage、不对齐跨Capability sample、不合并packet流，也不得重写子manifest。Disabled Capability MUST不创建空目录或占位产物。故障Capture MUST保存失败阶段、进程结果、WPR状态和已有证据，但 MUST不生成Completed身份或成为Baseline。旧`Simulation-*.json` MUST不读取、迁移或覆盖。
+每次Capture MUST先写入`Library/Performance/Captures/.staging/<CaptureId>`，并只在manifest声明的Unity raw、Metric samples、WPR ETL、xperf Marker/栈报告、WPA Context Switch导出、日志、process结果、summary以及当前`DiagnosticCapabilitySet`要求的全部子产物完成且hash匹配后发布Completed Capture。每个Capture Capability MUST由Generated Started／CommittedSample／Stopped Handler独立拥有Session、cadence、opaque typed lineage、sample key、packet流、Writer和runtime manifest，并只在Player侧通过通用Writer封存自己的版本化typed packet流；Controller MUST在Player停止后按稳定CapabilityId调用框架唯一Schema-driven Host Finalizer，自动生成Sampler主表／子表CSV与manifest，不调用领域Bridge或Host Adapter。Performance MUST只编排顶层生命周期与子manifest闭包，不解释领域lineage／维度、不对齐跨Capability sample、不合并packet流，也不得重写子manifest。Analyzer／Publisher只读Completed基础产物并拥有独立下游结果。Disabled Capability MUST不创建空目录或占位产物。故障Capture MUST保存失败阶段、进程结果、WPR状态和已有证据，但 MUST不生成Completed身份或成为Baseline。旧`Simulation-*.json` MUST不读取、迁移或覆盖。
 
 #### Scenario: Windows分析导出失败
 

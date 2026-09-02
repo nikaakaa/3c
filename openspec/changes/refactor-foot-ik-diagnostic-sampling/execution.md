@@ -46,7 +46,11 @@ Final Publication Pending页现保存根Frame冻结的specific Foot interest。�
 
 ## 固定每脚主packet模型
 
-对账旧CSV的每帧Left／Right两条主行与框架单主区ABI后，Foot Capture正式采用每脚一个主packet：PoseGraph每帧仍只发布一个同lineage短租约，Bridge在租约内按Left、Right固定顺序调用同一个Generated Program两次，两个packet共享Frame／Completion lineage并由各自固定`CharacterFootIkCaptureMetadata.Side`区分。`Side`已成为第22个typed Field，由Host恢复稳定Category文本。
+对账旧CSV的每帧Left／Right两条主行与框架单主区ABI后，Foot Capture正式采用每脚一个主packet：PoseGraph每帧仍只发布一个同lineage短租约，Generated CommittedSample Handler按Left、Right声明维度调用同一个Program两次，两个packet共享Frame／Completion lineage并由各自固定`CharacterFootIkCaptureMetadata.Side`区分。`Side`已成为第22个typed Field，由通用Formatter恢复稳定Category文本；Foot不保留Bridge。
+
+## 2026-09-02 生命周期与Host合同修正
+
+最终架构删除Foot Bridge、每Sampler Host Adapter、`hostAdapterId`、手写Column／CsvBinding和领域Session控制。Foot只定义CaptureStarted、CommittedSample、CaptureStopped三个typed Event及Field／Sampler／Program Attribute；通用Generator生成Event Handler并自动完成Session、Left／Right维度展开、租包、提取、提交、封存和基础CSV／manifest。Analyzer／Publisher只读生成产物，不参与采样生命周期。此前把Bridge／Host Adapter作为目标的任务与设计均已重新打开并改写。
 
 不把两脚塞进容量2的万能Foot表，因为框架Table按Sampler整体选择，那会让Landing／Solver无法独立组合主字段，也会与每脚Ground Geometry子表冲突；不复制Left／Right两套Field identity，因为会翻倍Schema并破坏多Sampler字段并集。Foot插件工程按规定参数构建成功、0错误，27个warning仍只来自既有Unity／第三方依赖，build server已关闭。Proposal、Design、Spec和任务4.2已同步这一正式调用模型。
 

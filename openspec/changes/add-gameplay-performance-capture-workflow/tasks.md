@@ -50,7 +50,7 @@
 
 ## 8. 串行接入通用Generated Diagnostic Sampling Framework
 
-- [ ] 8.1 扩展唯一Performance Build Request只消费canonical、稳定排序`DiagnosticCapabilitySet`，每项保存CapabilityId、Mode、Sampler Set、Schema、Program、packet capacity与transport identity，并通过Player专属编译输入选择Disabled或Capture；删除并禁止领域专属Build字段、全局配置隐式重编译和运行时fallback
-- [ ] 8.2 扩展BuildIdentity与Player manifest保存完整`DiagnosticCapabilitySet`，由Program identity闭合AOT Generated Program、Generator与packet layout revision；Disabled排除对应领域插件，Capture只包含匹配闭包
-- [ ] 8.3 扩展Run Request、Player握手与Capture manifest核对同一Set identity；让每个Capture Capability独立拥有Session、cadence、opaque typed lineage、packet流与子manifest，并让Controller在Player停止后按稳定CapabilityId运行框架唯一Host Finalizer和领域Host Adapter
+- [ ] 8.1 扩展唯一Performance Build Request只消费canonical、稳定排序`DiagnosticCapabilitySet`，每项保存CapabilityId、Mode、Event Set、Sampler Set、Schema、Program、维度、packet capacity与transport identity，并通过Player专属编译输入选择Disabled或Capture；删除并禁止领域专属Build字段、全局配置隐式重编译和运行时fallback
+- [ ] 8.2 扩展BuildIdentity与Player manifest保存完整`DiagnosticCapabilitySet`，由Program identity闭合AOT Generated Event Handler／Program、Generator与packet layout revision；Disabled排除对应领域Definition／Handler，Capture只包含匹配闭包
+- [ ] 8.3 扩展Run Request、Player握手与Capture manifest核对同一Set identity；让Controller发布Generated Started／Stopped Event、领域Owner发布CommittedSample Event，使每个Capture Capability独立拥有Session、cadence、lineage、packet流与子manifest，并在Player停止后按稳定CapabilityId运行框架唯一Schema-driven Host Finalizer，不调用领域Host Adapter
 - [ ] 8.4 确认Performance只编排顶层Build／Player／Controller／Gate／Capture／Comparer，不解释lineage、不对齐跨Capability sample、不合并packet流或重写子manifest；Comparer拒绝任一Capability的Mode、Program、Sampler Set、Schema、capacity或transport差异，Launcher与MCP仍只复用现有入口且不新增领域按钮

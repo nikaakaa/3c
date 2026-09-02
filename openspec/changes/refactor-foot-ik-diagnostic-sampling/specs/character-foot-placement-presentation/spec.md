@@ -23,3 +23,9 @@ Gizmo、Trace与Pose Watch MUST只读取各自允许的Committed页；Foot Sampl
 - **WHEN** 多个Sampler在Frame开始前共同请求Foot IK committed facts
 - **THEN** PoseGraph MUST只冻结和发布一份匹配该Frame的具体View租约
 - **AND** MUST不增加Foot查询、Goal Assembly、FBBIK或Physical Writer执行次数
+
+#### Scenario: Writer失败
+
+- **WHEN** Constraint Result已经完成但Final Publication在Physical Writer前或Writer中失败
+- **THEN** Diagnostics MUST不发布本帧Pending Constraint、Physical结果或Foot CommittedSample Event
+- **AND** Projector MUST不借用上一帧或发布第二Snapshot；Live／Pose Watch只能按各自既有合同保留上一Committed事实或正式Actor Fault

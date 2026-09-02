@@ -314,11 +314,196 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Sources
             }
         }
 
+        sealed class SourceReleaseCompletionPage
+        {
+            readonly List<ActionBackendReleaseCompletion>
+                m_ActionBackend;
+            readonly List<AnimationSlotSourceReleaseCompletion>
+                m_ActionSlot;
+            readonly bool[] m_AcknowledgementMatches;
+            int m_ValidatedAcknowledgementCount;
+            bool m_AcknowledgementsValidated;
+
+            internal SourceReleaseCompletionPage(int sourceCapacity)
+            {
+                if (sourceCapacity < 0)
+                {
+                    throw new ArgumentOutOfRangeException(
+                        nameof(sourceCapacity));
+                }
+                int backendCapacity = checked(sourceCapacity * 2);
+                m_ActionBackend =
+                    new List<ActionBackendReleaseCompletion>(
+                        backendCapacity);
+                m_ActionSlot =
+                    new List<AnimationSlotSourceReleaseCompletion>(
+                        sourceCapacity);
+                m_AcknowledgementMatches = new bool[backendCapacity];
+            }
+
+            internal bool AcknowledgementsValidated =>
+                m_AcknowledgementsValidated;
+
+            internal void RequireActionBackendCapacity(
+                int additionalCount)
+            {
+                if (additionalCount < 0 ||
+                    checked(m_ActionBackend.Count + additionalCount) >
+                    m_ActionBackend.Capacity)
+                {
+                    throw new InvalidOperationException(
+                        "Action backend release completion capacity was exceeded.");
+                }
+            }
+
+            internal void Record(
+                in ActionBackendReleaseCompletion completion)
+            {
+                if (m_ActionBackend.Count >= m_ActionBackend.Capacity)
+                {
+                    throw new InvalidOperationException(
+                        "Action backend release completion journal capacity was exceeded.");
+                }
+                m_ActionBackend.Add(completion);
+            }
+
+            internal void Record(
+                in AnimationSlotSourceReleaseCompletion completion)
+            {
+                if (m_ActionSlot.Count >= m_ActionSlot.Capacity)
+                {
+                    throw new InvalidOperationException(
+                        "Animation Slot source release completion journal capacity was exceeded.");
+                }
+                m_ActionSlot.Add(completion);
+            }
+
+            internal void CopyActionBackend(
+                List<ActionBackendReleaseCompletion> destination)
+            {
+                if (destination == null)
+                    throw new ArgumentNullException(nameof(destination));
+                destination.Clear();
+                destination.AddRange(m_ActionBackend);
+            }
+
+            internal void CopyActionSlot(
+                List<AnimationSlotSourceReleaseCompletion> destination)
+            {
+                if (destination == null)
+                    throw new ArgumentNullException(nameof(destination));
+                destination.Clear();
+                destination.AddRange(m_ActionSlot);
+            }
+
+            internal void ValidateAcknowledgements(
+                IReadOnlyList<ActionBackendReleaseCompletion>
+                    completions)
+            {
+                if (completions == null)
+                    throw new ArgumentNullException(nameof(completions));
+                Array.Clear(
+                    m_AcknowledgementMatches,
+                    0,
+                    m_ActionBackend.Count);
+                for (int i = 0; i < completions.Count; i++)
+                {
+                    ActionBackendReleaseCompletion expected =
+                        completions[i];
+                    int matchIndex = -1;
+                    for (int candidateIndex = 0;
+                         candidateIndex < m_ActionBackend.Count;
+                         candidateIndex++)
+                    {
+                        ActionBackendReleaseCompletion candidate =
+                            m_ActionBackend[candidateIndex];
+                        if (!Matches(in candidate, in expected))
+                            continue;
+                        if (matchIndex >= 0 ||
+                            m_AcknowledgementMatches[candidateIndex])
+                        {
+                            throw new InvalidOperationException(
+                                "Action backend release completion is duplicated.");
+                        }
+                        matchIndex = candidateIndex;
+                    }
+                    if (matchIndex < 0)
+                    {
+                        throw new InvalidOperationException(
+                            "Action backend release completion acknowledgement is not exact.");
+                    }
+                    m_AcknowledgementMatches[matchIndex] = true;
+                }
+                m_ValidatedAcknowledgementCount =
+                    m_ActionBackend.Count;
+                m_AcknowledgementsValidated = true;
+            }
+
+            internal void ApplyAcknowledgements()
+            {
+                if (!m_AcknowledgementsValidated ||
+                    m_ActionBackend.Count !=
+                    m_ValidatedAcknowledgementCount)
+                {
+                    throw new InvalidOperationException(
+                        "Action backend release acknowledgements were not validated for the committed frame.");
+                }
+                int writeIndex = 0;
+                for (int readIndex = 0;
+                     readIndex < m_ValidatedAcknowledgementCount;
+                     readIndex++)
+                {
+                    if (m_AcknowledgementMatches[readIndex])
+                        continue;
+                    m_ActionBackend[writeIndex++] =
+                        m_ActionBackend[readIndex];
+                }
+                if (writeIndex < m_ActionBackend.Count)
+                {
+                    m_ActionBackend.RemoveRange(
+                        writeIndex,
+                        m_ActionBackend.Count - writeIndex);
+                }
+                ClearValidatedAcknowledgements();
+            }
+
+            internal void ClearActionSlot() => m_ActionSlot.Clear();
+
+            internal void ClearActionBackend() =>
+                m_ActionBackend.Clear();
+
+            internal void ClearValidatedAcknowledgements()
+            {
+                Array.Clear(
+                    m_AcknowledgementMatches,
+                    0,
+                    m_ValidatedAcknowledgementCount);
+                m_ValidatedAcknowledgementCount = 0;
+                m_AcknowledgementsValidated = false;
+            }
+
+            internal void Clear()
+            {
+                m_ActionBackend.Clear();
+                m_ActionSlot.Clear();
+                ClearValidatedAcknowledgements();
+            }
+
+            static bool Matches(
+                in ActionBackendReleaseCompletion left,
+                in ActionBackendReleaseCompletion right) =>
+                left.RequestIdentity == right.RequestIdentity &&
+                left.PlaybackId.Equals(right.PlaybackId) &&
+                left.Source.Equals(right.Source) &&
+                left.CompletionIdentity == right.CompletionIdentity;
+        }
+
         readonly AnimancerComponent m_Animancer;
         readonly AnimancerPoseSamplingBackend m_Backend;
         readonly PhysicalPoseSourceRegistry m_PhysicalSources;
         readonly CharacterPoseSourceBindingPage m_BindingPage;
         readonly SourceReleasePage m_ReleasePage;
+        readonly SourceReleaseCompletionPage m_ReleaseCompletions;
         readonly HashSet<AnimationPhysicalSourceIdentity>
             m_ReleaseValidationIdentities;
         readonly Playable m_PreviousOutputSource;
@@ -396,6 +581,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Sources
                 clipBindingCapacity,
                 blendSpaceBindingCapacity);
             m_ReleasePage = new SourceReleasePage(sourceCapacity);
+            m_ReleaseCompletions =
+                new SourceReleaseCompletionPage(sourceCapacity);
             m_ReleaseValidationIdentities =
                 new HashSet<AnimationPhysicalSourceIdentity>(
                     sourceCapacity);
@@ -809,6 +996,47 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Sources
         internal void CancelReleaseDiagnostics() =>
             m_PhysicalSources.CancelReleaseDiagnostics();
 
+        internal bool ReleaseAcknowledgementsValidated =>
+            m_ReleaseCompletions.AcknowledgementsValidated;
+
+        internal void RequireActionBackendReleaseCompletionCapacity(
+            int additionalCount) =>
+            m_ReleaseCompletions.RequireActionBackendCapacity(
+                additionalCount);
+
+        internal void RecordReleaseCompletion(
+            in ActionBackendReleaseCompletion completion) =>
+            m_ReleaseCompletions.Record(in completion);
+
+        internal void RecordReleaseCompletion(
+            in AnimationSlotSourceReleaseCompletion completion) =>
+            m_ReleaseCompletions.Record(in completion);
+
+        internal void CopyActionBackendReleaseCompletions(
+            List<ActionBackendReleaseCompletion> destination) =>
+            m_ReleaseCompletions.CopyActionBackend(destination);
+
+        internal void CopyActionSlotReleaseCompletions(
+            List<AnimationSlotSourceReleaseCompletion> destination) =>
+            m_ReleaseCompletions.CopyActionSlot(destination);
+
+        internal void ValidateActionBackendReleaseAcknowledgements(
+            IReadOnlyList<ActionBackendReleaseCompletion>
+                completions) =>
+            m_ReleaseCompletions.ValidateAcknowledgements(completions);
+
+        internal void ApplyActionBackendReleaseAcknowledgements() =>
+            m_ReleaseCompletions.ApplyAcknowledgements();
+
+        internal void ClearValidatedReleaseAcknowledgements() =>
+            m_ReleaseCompletions.ClearValidatedAcknowledgements();
+
+        internal void ClearActionSlotReleaseCompletions() =>
+            m_ReleaseCompletions.ClearActionSlot();
+
+        internal void ClearActionBackendReleaseCompletions() =>
+            m_ReleaseCompletions.ClearActionBackend();
+
         internal CharacterPoseSourceCommittedDiagnosticsView
             CaptureCommittedDiagnostics(
                 in CharacterPoseSourceFrameResult sourceFrame) =>
@@ -840,6 +1068,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Sources
             }
             m_ReleaseValidationIdentities.Clear();
             m_ReleasePage.Clear();
+            m_ReleaseCompletions.Clear();
         }
 
         void Connect(

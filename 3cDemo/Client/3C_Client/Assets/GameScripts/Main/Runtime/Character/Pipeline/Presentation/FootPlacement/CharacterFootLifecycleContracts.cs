@@ -42,7 +42,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         PostInterpolation = 2
     }
 
-    internal enum CharacterFootTransitionReason : byte
+    public enum CharacterFootTransitionReason : byte
     {
         None = 0,
         OwnershipLost = 1,
@@ -60,7 +60,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         NewEventContactAcquired = 13
     }
 
-    internal enum CharacterFootContactEdge : byte
+    public enum CharacterFootContactEdge : byte
     {
         None = 0,
         Rising = 1,
@@ -68,13 +68,13 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         EventChanged = 3
     }
 
-    internal enum CharacterFootLockRequestAvailability : byte
+    public enum CharacterFootLockRequestAvailability : byte
     {
         Ready = 1,
         ContactEventUnavailable = 2
     }
 
-    internal enum CharacterFootAnchorCommand : byte
+    public enum CharacterFootAnchorCommand : byte
     {
         None = 0,
         Create = 1,
@@ -165,7 +165,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
     }
 
     [Flags]
-    internal enum CharacterFootGoalOwnershipLossReason : byte
+    public enum CharacterFootGoalOwnershipLossReason : byte
     {
         None = 0,
         Ungrounded = 1 << 0,

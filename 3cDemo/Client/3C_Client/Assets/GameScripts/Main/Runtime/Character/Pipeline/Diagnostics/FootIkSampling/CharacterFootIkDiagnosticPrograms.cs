@@ -28,6 +28,7 @@ namespace ThirdPersonCharacter.Pipeline.Diagnostics.FootIkSampling
         "output-stages",
         "ground-path",
         "landing-observation",
+        "lifecycle",
         "path-continuity",
         "root-hierarchy",
         Tables = new[] { "ground-geometry" })]

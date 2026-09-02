@@ -763,7 +763,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             PreviousLockRequested = previousContext.RequestedLock;
             PreviousLockRequestEventIdentity =
                 previousContext.RequestEventIdentity;
-            PreviousLockRequestMode = previousContext.RequestMode.ToString();
+            PreviousLockRequestMode = previousContext.RequestMode;
             PreviousLockRequestWeight = previousContext.RequestWeight;
             PreviousContactEdgeSeconds = previousContext.SecondsSinceEdge;
             PreviousLatestContactEventIdentity =
@@ -784,10 +784,10 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             PreviousContactAnchorNormal = previousAnchor.Normal;
             CurrentLockRequested = request.RequestsLock;
             CurrentLockRequestEventIdentity = request.EventIdentity;
-            CurrentLockRequestMode = request.Mode.ToString();
+            CurrentLockRequestMode = request.Mode;
             CurrentLockRequestWeight = request.Weight;
-            CurrentLockRequestAvailability = request.Availability.ToString();
-            ContactEdge = preTransition.ContactEdge.ToString();
+            CurrentLockRequestAvailability = request.Availability;
+            ContactEdge = preTransition.ContactEdge;
             CurrentContactEdgeSeconds = currentContext.SecondsSinceEdge;
             CurrentLatestContactEventIdentity =
                 currentContext.LatestContactEventIdentity;
@@ -814,18 +814,18 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 lifecycle.ReentryInterpolationHistoryRetained;
             FormalFootPlacementWeight = lifecycle.FormalFootPlacementWeight;
             HardOwnershipLoss = lifecycle.HardOwnershipLoss;
-            HardOwnershipLossReason = lifecycle.OwnershipLossReason.ToString();
-            PreTransitionReason = preTransition.Reason.ToString();
+            HardOwnershipLossReason = lifecycle.OwnershipLossReason;
+            PreTransitionReason = preTransition.Reason;
             PreTransitionSource = preTransition.SourceState;
             PreTransitionTarget = preTransition.TargetState;
-            PreTransitionAnchorCommand = preTransition.AnchorCommand.ToString();
+            PreTransitionAnchorCommand = preTransition.AnchorCommand;
             PreTransitionSuppressOutput = preTransition.SuppressOutput;
             PreTransitionResetInterpolation = preTransition.ResetInterpolation;
             PostTransitionEvaluated = lifecycle.PostTransitionEvaluated;
-            PostTransitionReason = postTransition.Reason.ToString();
+            PostTransitionReason = postTransition.Reason;
             PostTransitionSource = postTransition.SourceState;
             PostTransitionTarget = postTransition.TargetState;
-            PostTransitionAnchorCommand = postTransition.AnchorCommand.ToString();
+            PostTransitionAnchorCommand = postTransition.AnchorCommand;
             PostTransitionSuppressOutput = postTransition.SuppressOutput;
             PostTransitionResetInterpolation = postTransition.ResetInterpolation;
         }
@@ -834,7 +834,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         public bool PreviousLockRequestAvailable { get; }
         public bool PreviousLockRequested { get; }
         public ulong PreviousLockRequestEventIdentity { get; }
-        public string PreviousLockRequestMode { get; }
+        public AnimationFootStepObservationLockMode PreviousLockRequestMode { get; }
         public float PreviousLockRequestWeight { get; }
         public float PreviousContactEdgeSeconds { get; }
         public ulong PreviousLatestContactEventIdentity { get; }
@@ -850,10 +850,10 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         public Vector3 PreviousContactAnchorNormal { get; }
         public bool CurrentLockRequested { get; }
         public ulong CurrentLockRequestEventIdentity { get; }
-        public string CurrentLockRequestMode { get; }
+        public AnimationFootStepObservationLockMode CurrentLockRequestMode { get; }
         public float CurrentLockRequestWeight { get; }
-        public string CurrentLockRequestAvailability { get; }
-        public string ContactEdge { get; }
+        public CharacterFootLockRequestAvailability CurrentLockRequestAvailability { get; }
+        public CharacterFootContactEdge ContactEdge { get; }
         public float CurrentContactEdgeSeconds { get; }
         public ulong CurrentLatestContactEventIdentity { get; }
         public ulong CurrentLatestReleasedContactEventIdentity { get; }
@@ -872,20 +872,20 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         public bool ReentryInterpolationHistoryRetained { get; }
         public float FormalFootPlacementWeight { get; }
         public bool HardOwnershipLoss { get; }
-        public string HardOwnershipLossReason { get; }
+        public CharacterFootGoalOwnershipLossReason HardOwnershipLossReason { get; }
         public bool PreTransitionSuppressOutput { get; }
         public bool PreTransitionResetInterpolation { get; }
         public bool PostTransitionEvaluated { get; }
         public bool PostTransitionSuppressOutput { get; }
         public bool PostTransitionResetInterpolation { get; }
-        public string PreTransitionReason { get; }
+        public CharacterFootTransitionReason PreTransitionReason { get; }
         public CharacterFootConstraintState PreTransitionSource { get; }
         public CharacterFootConstraintState PreTransitionTarget { get; }
-        public string PreTransitionAnchorCommand { get; }
-        public string PostTransitionReason { get; }
+        public CharacterFootAnchorCommand PreTransitionAnchorCommand { get; }
+        public CharacterFootTransitionReason PostTransitionReason { get; }
         public CharacterFootConstraintState PostTransitionSource { get; }
         public CharacterFootConstraintState PostTransitionTarget { get; }
-        public string PostTransitionAnchorCommand { get; }
+        public CharacterFootAnchorCommand PostTransitionAnchorCommand { get; }
     }
 
     public readonly struct CharacterFootPathContinuityDiagnostics

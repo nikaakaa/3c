@@ -1015,3 +1015,9 @@ Compiler入口随后按固定顺序运行Stage Schedule、Value Lifetime和Works
 状态：新增`CharacterPoseDiagnosticsRuntime`，唯一持有Runtime Snapshot Publisher、Foot committed capture projector、Actor projector与Program projector。它只在根Frame已Seal后接收同lineage的Program／Source／Constraint／Publication Result，完成验证、只读投影、短租约发布与interest生命周期；Pose协调层删除四个诊断字段和全部Snapshot／Foot View内部装配逻辑。
 
 Frame Begin仍只清理Actor projector的帧内投影页，Discard、Reset、Invalidate、Dispose和Post-Commit发布顺序保持不变；无interest时仍在原位置直接返回，不查询世界、不执行Constraint、不读取Physical Transform反推结果，也不新增每帧分配。Foot committed事件继续通过现有partial边界发布，通用采样器、Foot插件与Performance不进入该模块。3C MCP对Diagnostics组合模块与Pose协调层错误筛选均为0；不单独运行回放。
+
+## 建立Pose Runtime组合工厂
+
+状态：新增`CharacterPoseRuntimeCompositionFactory`，在唯一构造入口完整装配Execution View、Program Frame Pages、Tuning、Player／Stack／Route Actor State、Source、Constraint、Final Publication与Diagnostics；`CharacterPoseRuntimeComposition`保存五个正式模块并按原顺序统一销毁。Pose协调层删除350余行具体节点和资源构造、Source容量扫描、Blend Stack Operation查找及逐类型失败清理，只保留组合请求和Frame阶段。
+
+正式Runtime与Preview仍调用同一个`PosePlanExecutionRuntime`构造，因此自动共享该组合工厂；Animator准入、初始Frame layout、Player索引、Slot control、Source容量、Graph Pause、初始Frame discard及正常Dispose顺序不变。构造失败清理继续覆盖Source、全部Player、Diagnostics、Constraint、Execution View、Inertialization、Tuning与Frame Pages，并补齐Graph已Pause后的恢复。任务5.10与14.1继续推进，等待Preview根事务与最终类型替换一起闭合；3C MCP对组合与协调层错误筛选均为0，不单独运行回放。

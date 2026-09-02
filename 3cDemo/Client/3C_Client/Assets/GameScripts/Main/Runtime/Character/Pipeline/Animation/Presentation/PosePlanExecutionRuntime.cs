@@ -1,10 +1,7 @@
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using Animancer;
 using BTSMTL.Diagnostics;
-using ThirdPersonCharacter.Animation.TransitionRouting;
-using ThirdPersonCharacter.Pipeline.Animation.BlendStack;
 using ThirdPersonCharacter.Pipeline.Animation.Diagnostics;
 using ThirdPersonCharacter.Pipeline.Animation.Lifecycle;
 using ThirdPersonCharacter.Pipeline.Animation.MotionMatching;
@@ -12,8 +9,6 @@ using ThirdPersonCharacter.Pipeline.Animation.Sources;
 using ThirdPersonCharacter.Pipeline.Presentation;
 using ThirdPersonCharacter.Pipeline.Presentation.Animancer;
 using ThirdPersonSimulation;
-using Unity.Collections;
-using UnityEngine;
 using Unity.Profiling;
 
 namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
@@ -47,14 +42,17 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
         static readonly ProfilerMarker DiagnosticsMarker =
             new ProfilerMarker("ThirdPerson.Presentation.Animation.Diagnostics");
         readonly AnimancerComponent m_Animancer;
-        readonly Guid m_RuntimeInstanceId;
         readonly CharacterPresentationProjection m_Projection;
-        readonly CharacterPoseProgramRuntime m_ProgramRuntime;
-        readonly CharacterPoseConstraintRuntime m_PoseConstraints;
-        readonly CharacterPoseSourceModule m_SourceModule;
-        readonly CharacterFinalPosePublication m_FinalPublication;
-        readonly CharacterPoseDiagnosticsRuntime m_Diagnostics;
-        readonly bool m_ManagesGraphClock;
+        readonly CharacterPoseRuntimeComposition m_Modules;
+
+        CharacterPoseProgramRuntime m_ProgramRuntime => m_Modules.Program;
+        CharacterPoseConstraintRuntime m_PoseConstraints =>
+            m_Modules.Constraints;
+        CharacterPoseSourceModule m_SourceModule => m_Modules.Source;
+        CharacterFinalPosePublication m_FinalPublication =>
+            m_Modules.Publication;
+        CharacterPoseDiagnosticsRuntime m_Diagnostics =>
+            m_Modules.Diagnostics;
 
         PoseInertializationNativeProgram m_InertializationPlan =>
             m_ProgramRuntime.Inertialization;
@@ -81,340 +79,40 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             CharacterFootPlacementModule footPlacement,
             bool managesGraphClock)
         {
-            m_RuntimeInstanceId = runtimeInstanceId != Guid.Empty
-                ? runtimeInstanceId
-                : throw new ArgumentException(
+            if (runtimeInstanceId == Guid.Empty)
+            {
+                throw new ArgumentException(
                     "Animation Presentation runtime identity is invalid.",
                     nameof(runtimeInstanceId));
-            m_Animancer = animancer ? animancer : throw new ArgumentNullException(nameof(animancer));
-            m_Projection = projection ?? throw new ArgumentNullException(nameof(projection));
-            Animator animator = m_Animancer.Animator;
-            if (!animator || animator.cullingMode != AnimatorCullingMode.AlwaysAnimate)
-            {
-                throw new InvalidOperationException(
-                    "Animation Presentation requires an AlwaysAnimate Animator because Pose jobs produce the frame transaction payload.");
             }
-            projection.RequirePosePayload();
-            var linkedFragments = new CharacterPoseLinkedFragmentState(
-                projection.PosePlan);
-            int sourceCapacity = CalculateSourceCapacity(projection.PosePlan);
-            int physicalSourceCapacity = checked(
-                sourceCapacity +
-                projection.PosePlan.ClipPlayers.Count);
-            int clipCatalogCapacity =
-                AnimationPoseRequestWorkspaceLayoutFactory
-                    .RequireClipCatalogCapacity(projection);
-
-            AnimationPoseNativeWorkspace workspace = null;
-            CharacterPoseProgramFramePages programFrames = null;
-            CharacterPoseProgramTuningState programTuning = null;
-            CharacterPoseProgramExecutionView executionView = null;
-            CharacterFinalIkFullBodySolver fullBodyIkSolver = null;
-            CharacterPoseConstraintRuntime poseConstraints = null;
-            PoseInertializationNativeProgram inertializationProgram = null;
-            CharacterPoseSourceModule sourceModule = null;
-            AnimationBlendStackRuntime[] stacks = null;
-            CharacterAnimationTransitionRouteRuntime[] stackRoutes = null;
-            AnimationSelectedPosePlayerRuntime[] directPlayers = null;
-            AnimationClipPlayerRuntime[] clipPlayers = null;
-            AnimationBlendSpacePlayerRuntime[] blendSpacePlayers = null;
-            PoseStateAndSourceRuntime poseStateSources = null;
-            CharacterPoseDiagnosticsRuntime diagnostics = null;
-            CharacterFinalPosePublication finalPublication = null;
-            var nodeRuntimeIndex =
-                new CharacterPoseProgramNodeRuntimeIndex();
+            m_Animancer = animancer ? animancer :
+                throw new ArgumentNullException(nameof(animancer));
+            m_Projection = projection ??
+                throw new ArgumentNullException(nameof(projection));
+            CharacterPoseRuntimeComposition modules = null;
             try
             {
-                workspace = new AnimationPoseNativeWorkspace(projection);
-                CharacterPoseGraphNativeBinding initialFrame = workspace.BeginFrame(m_CompletionIdentity);
-                AnimationPoseNativeAggregateLayout initialLayout =
-                    initialFrame.Layout;
-                programFrames = new CharacterPoseProgramFramePages(
-                    projection.PosePlan,
-                    physicalSourceCapacity,
-                    workspace);
-                workspace = null;
-                executionView = new CharacterPoseProgramExecutionView(
-                    projection,
-                    in initialLayout);
-                programTuning = new CharacterPoseProgramTuningState(
-                    projection,
-                    executionView.Operations,
-                    1);
-                if (projection.PosePlan.FullBodyIks.Count != 1)
-                    throw new InvalidOperationException(
-                        "Pose Plan requires exactly one Full Body IK descriptor.");
-                CharacterPresentationFullBodyIkDescriptor fullBodyIkDescriptor =
-                    projection.PosePlan.FullBodyIks[0];
-                fullBodyIkDescriptor.RequireValid();
-                fullBodyIkSolver = new CharacterFinalIkFullBodySolver(
-                    projection.Rig,
-                    fullBodyIkDescriptor.Profile,
-                    executionView.ParentIndices,
-                    executionView.VirtualBones);
-                inertializationProgram = new PoseInertializationNativeProgram(
-                    projection.PosePlan,
-                    projection.BlendCurveCatalog,
-                    projection.BlendProfileCatalog);
-                stacks = new AnimationBlendStackRuntime[projection.PosePlan.BlendNodes.Count];
-                stackRoutes = new CharacterAnimationTransitionRouteRuntime[stacks.Length];
-                Dictionary<PoseNodeId, CharacterAnimationSlotDescriptor> slotsByNode =
-                    projection.PosePlan.AnimationSlots.ToDictionary(value => value.NodeId);
-                for (int stackIndex = 0; stackIndex < stacks.Length; stackIndex++)
-                {
-                    AnimationBlendNodePayload blendNode = projection.PosePlan.BlendNodes[stackIndex] ??
-                        throw new InvalidOperationException($"Pose Plan Blend Stack #{stackIndex} is missing.");
-                    CharacterPresentationPoseOperation operation = RequireBlendStackOperation(
-                        projection.PosePlan,
-                        stackIndex,
-                        blendNode.NodeId);
-                    slotsByNode.TryGetValue(
-                        blendNode.NodeId,
-                        out CharacterAnimationSlotDescriptor
-                            slotDescriptor);
-                    var route =
-                        new CharacterAnimationTransitionRouteRuntime(
-                            blendNode,
-                            slotDescriptor);
-                    CharacterPresentationPoseOperation input =
-                        route.IsAnimationSlot
-                            ? RequireControlInput(
-                                projection.PosePlan,
-                                operation)
-                            : null;
-                    if (!route.IsAnimationSlot &&
-                        (!operation
-                             .PresentationPoseSourceProviderId
-                             .IsValid ||
-                         !operation.PresentationPoseSourceIndex
-                             .IsValid))
-                    {
-                        throw new InvalidOperationException(
-                            $"Pose State Blend Stack '{operation.NodeId}' has no compiled provider identity.");
-                    }
-                    AnimationPlayerPoseNativeWriteBinding initialWrite =
-                        programFrames.RequirePlayerWriteBinding(
-                            operation.PlayerIndex,
-                            initialFrame.CompletionIdentity);
-                    var stack = new AnimationBlendStackRuntime(
-                        blendNode,
-                        route.IsAnimationSlot
-                            ? input.AnimationChannelId
-                            : default,
-                        route.IsAnimationSlot
-                            ? default
-                            : operation
-                                .PresentationPoseSourceProviderId,
-                        route.IsAnimationSlot
-                            ? default
-                            : operation.PresentationPoseSourceIndex,
-                        operation.SelectionAvailability,
-                        projection.BlendCurveCatalog,
-                        projection.BlendProfileCatalog,
-                        projection.Rig,
-                        in initialWrite);
-                    stacks[stackIndex] = stack;
-                    stackRoutes[stackIndex] = route;
-                    nodeRuntimeIndex.AddStack(
-                        blendNode.NodeId,
-                        stack,
-                        route,
-                        operation.PlayerIndex,
-                        route.IsAnimationSlot ? -1 : 0);
-                    if (route.IsAnimationSlot)
-                    {
-                        CharacterAnimationSlotNativeControl control = route.NativeControl;
-                        programFrames.SetAnimationSlotControl(
-                            route.AnimationSlotIndex,
-                            in control);
-                    }
-                }
-                var directPlayerList = new List<AnimationSelectedPosePlayerRuntime>();
-                for (int operationIndex = 0; operationIndex < projection.PosePlan.Operations.Count; operationIndex++)
-                {
-                    CharacterPresentationPoseOperation operation = projection.PosePlan.Operations[operationIndex];
-                    if (operation.Code != CharacterPoseOperationCode.SelectedPosePlayer)
-                        continue;
-                    if (operation.PlayerIndex < 0 ||
-                        !operation
-                            .PresentationPoseSourceProviderId
-                            .IsValid ||
-                        !operation.PresentationPoseSourceIndex
-                            .IsValid)
-                        throw new InvalidOperationException($"Selected Pose Player operation '{operation.NodeId}' has invalid compiled inputs.");
-                    var player = new AnimationSelectedPosePlayerRuntime(
-                        operation.NodeId,
-                        operation.PlayerIndex,
-                        operation.PlayerIndex,
-                        operation
-                            .PresentationPoseSourceProviderId,
-                        operation.SelectionAvailability,
-                        projection.Rig,
-                        projection.PosePlan.Parameters.Count);
-                    directPlayerList.Add(player);
-                    nodeRuntimeIndex.AddDirect(
-                        operation.NodeId,
-                        player,
-                        operation.PlayerIndex,
-                        operation.PlayerIndex);
-                }
-                directPlayers = directPlayerList.ToArray();
-                clipPlayers = new AnimationClipPlayerRuntime[projection.PosePlan.ClipPlayers.Count];
-                for (int clipPlayerIndex = 0; clipPlayerIndex < clipPlayers.Length; clipPlayerIndex++)
-                {
-                    AnimationClipPlayerRuntime clipPlayer = AnimationClipPlayerFactory.Create(
-                        projection,
-                        projection.PosePlan.ClipPlayers[clipPlayerIndex]);
-                    clipPlayers[clipPlayerIndex] = clipPlayer;
-                    nodeRuntimeIndex.AddPlayer(
-                        clipPlayer.NodeId,
-                        clipPlayer.PlayerIndex);
-                }
-                blendSpacePlayers =
-                    new AnimationBlendSpacePlayerRuntime[projection.BlendSpacePlayers.Count];
-                for (int blendSpaceIndex = 0;
-                     blendSpaceIndex < blendSpacePlayers.Length;
-                     blendSpaceIndex++)
-                {
-                    CharacterAnimationBlendSpacePlayerPlan descriptor =
-                        projection.BlendSpacePlayers[blendSpaceIndex];
-                    descriptor.RequireValid(projection);
-                    var player = new AnimationBlendSpacePlayerRuntime(
-                        descriptor,
-                        projection.BlendSpaces[descriptor.BlendSpacePlanIndex],
-                        projection.PosePlan,
-                        projection.Rig,
-                        projection.FootAnalysis,
-                        projection.ClipPhasePlans);
-                    blendSpacePlayers[blendSpaceIndex] = player;
-                    nodeRuntimeIndex.AddPlayer(
-                        player.NodeId,
-                        player.PlayerIndex);
-                }
-                poseStateSources =
-                    new PoseStateAndSourceRuntime(
-                        projection.PosePlan,
-                        projection.ClipPhasePlans,
-                        projection.SourcePhasePlans,
-                        clipPlayers,
-                        blendSpacePlayers,
-                        linkedFragments);
-                poseConstraints = new CharacterPoseConstraintRuntime(
-                    footPlacement,
-                    executionView.PoseBoneContributions,
-                    executionView.GoalAssemblers,
-                    fullBodyIkSolver,
-                    executionView.FullBodyIkGoalContributionCount,
-                    executionView.FullBodyIkContributionGoalCount,
-                    projection.Rig.RigId,
-                    projection.Rig.RigRevision);
-                diagnostics = new CharacterPoseDiagnosticsRuntime(
-                    projection,
-                    in initialLayout,
-                    physicalSourceCapacity,
-                    executionView,
-                    this);
-
-                sourceModule = new CharacterPoseSourceModule(
+                modules = CharacterPoseRuntimeCompositionFactory.Create(
                     animancer,
-                    projection,
-                    actionPlayback.Bindings,
-                    motionMatching,
-                    rigBinding,
-                    projection.Rig,
-                    physicalSourceCapacity,
-                    clipCatalogCapacity,
-                    directPlayers.Length,
-                    clipPlayers.Length,
-                    blendSpacePlayers.Length);
-                finalPublication = new CharacterFinalPosePublication(
-                    projection.PosePlan,
-                    projection.Rig,
                     rigBinding,
                     rootHierarchy,
-                    sourceModule);
-                if (managesGraphClock)
-                    animancer.Graph.PauseGraph();
-                programFrames.DiscardEvaluationFrame(
-                    initialFrame.CompletionIdentity);
+                    projection,
+                    actionPlayback,
+                    motionMatching,
+                    animationSlots,
+                    presentationWorkspace,
+                    footPlacement,
+                    managesGraphClock,
+                    m_CompletionIdentity,
+                    this);
+                m_Modules = modules;
+                m_TuningSnapshot = CaptureTuningSnapshot(1);
             }
             catch
             {
-                sourceModule?.Dispose();
-                if (stacks != null)
-                {
-                    for (int i = stacks.Length - 1; i >= 0; i--)
-                        stacks[i]?.Dispose();
-                }
-                if (directPlayers != null)
-                {
-                    for (int i = directPlayers.Length - 1; i >= 0; i--)
-                        directPlayers[i]?.Dispose();
-                }
-                if (clipPlayers != null)
-                {
-                    for (int i = clipPlayers.Length - 1; i >= 0; i--)
-                        clipPlayers[i]?.Dispose();
-                }
-                if (blendSpacePlayers != null)
-                {
-                    for (int i = blendSpacePlayers.Length - 1; i >= 0; i--)
-                        blendSpacePlayers[i]?.Dispose();
-                }
-                diagnostics?.Dispose();
-                poseConstraints?.Dispose();
-                executionView?.Dispose();
-                inertializationProgram?.Dispose();
-                programTuning?.Dispose();
-                programFrames?.Dispose();
-                workspace?.Dispose();
+                modules?.Dispose();
                 throw;
             }
-
-            m_PoseConstraints = poseConstraints;
-            m_SourceModule = sourceModule;
-            var rootOrientationWarps =
-                new RootOrientationWarpRuntime[
-                    projection.PosePlan.RootOrientationWarps.Count];
-            for (int i = 0; i < rootOrientationWarps.Length; i++)
-            {
-                CharacterPresentationRootOrientationWarpDescriptor descriptor =
-                    projection.PosePlan.RootOrientationWarps[i];
-                rootOrientationWarps[i] =
-                    new RootOrientationWarpRuntime(
-                        descriptor,
-                        clipPlayers[descriptor.ClipPlayerIndex]);
-            }
-            var actorState = new CharacterPoseActorState(
-                stacks,
-                stackRoutes,
-                directPlayers,
-                poseStateSources,
-                rootOrientationWarps,
-                inertializationProgram,
-                nodeRuntimeIndex,
-                linkedFragments,
-                actionPlayback,
-                animationSlots,
-                sourceModule.Capacity);
-            m_ProgramRuntime = new CharacterPoseProgramRuntime(
-                animancer,
-                projection.PosePlan,
-                executionView,
-                actorState,
-                programFrames,
-                programTuning,
-                sourceModule,
-                new CharacterPoseWorldContextAdapter(
-                    projection,
-                    sourceModule,
-                    finalPublication),
-                poseConstraints,
-                presentationWorkspace);
-            m_TuningSnapshot = CaptureTuningSnapshot(1);
-            m_FinalPublication = finalPublication;
-            m_Diagnostics = diagnostics;
-            m_ManagesGraphClock = managesGraphClock;
         }
 
         internal bool HasDiagnosticsSnapshot => m_Diagnostics.HasCurrent;
@@ -1620,20 +1318,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             if (m_Disposed)
                 return;
             m_Disposed = true;
-            m_FinalPublication.Invalidate();
-            m_ProgramRuntime.ClearSourceDemand();
             m_PendingFrameOutcome = AnimationPresentationFrameOutcome.None;
-            Exception failure = null;
-            DisposeStep(m_Diagnostics.Dispose, ref failure);
-            DisposeStep(
-                m_ProgramRuntime.DetachExecutionJobs,
-                ref failure);
-            DisposeStep(m_SourceModule.Dispose, ref failure);
-            DisposeStep(m_ProgramRuntime.Dispose, ref failure);
-            DisposeStep(RestoreGraphClock, ref failure);
-            DisposeStep(m_PoseConstraints.Dispose, ref failure);
-            if (failure != null)
-                throw failure;
+            m_Modules.Dispose();
         }
 
         internal void SetSequencePreview(
@@ -1703,25 +1389,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             throw new InvalidOperationException(
                 "Presentation has no Motion Matching module.");
 
-        void RestoreGraphClock()
-        {
-            if (m_ManagesGraphClock && m_Animancer && m_Animancer.IsGraphInitialized)
-                m_Animancer.Graph.UnpauseGraph();
-        }
-
-        static void DisposeStep(Action action, ref Exception failure)
-        {
-            try
-            {
-                action();
-            }
-            catch (Exception exception)
-            {
-                if (failure == null)
-                    failure = exception;
-            }
-        }
-
         static void DiscardStep(
             Action action,
             ref Exception failure)
@@ -1738,88 +1405,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                         failure,
                         exception);
             }
-        }
-
-        static CharacterPresentationPoseOperation RequireBlendStackOperation(
-            CharacterPoseProgramImage plan,
-            int blendNodeIndex,
-            PoseNodeId nodeId)
-        {
-            CharacterPresentationPoseOperation result = null;
-            for (int i = 0; i < plan.Operations.Count; i++)
-            {
-                CharacterPresentationPoseOperation candidate = plan.Operations[i];
-                if (candidate.Code != CharacterPoseOperationCode.BlendStack &&
-                    candidate.Code != CharacterPoseOperationCode.AnimationSlot ||
-                    candidate.BlendNodeIndex != blendNodeIndex || candidate.NodeId != nodeId)
-                    continue;
-                if (result != null)
-                    throw new InvalidOperationException($"Pose Plan duplicates Blend Stack operation '{nodeId}'.");
-                result = candidate;
-            }
-            if (result == null ||
-                (result.Code ==
-                     CharacterPoseOperationCode.AnimationSlot &&
-                 result.ControlInputOperationIndex < 0) ||
-                (result.Code ==
-                     CharacterPoseOperationCode.BlendStack &&
-                 (!result.PresentationPoseSourceProviderId.IsValid ||
-                  !result.PresentationPoseSourceIndex.IsValid ||
-                  result.ControlInputOperationIndex >= 0)))
-                throw new InvalidOperationException($"Pose Plan has no valid animation transition operation '{nodeId}'.");
-            return result;
-        }
-
-        static CharacterPresentationPoseOperation RequireControlInput(
-            CharacterPoseProgramImage plan,
-            CharacterPresentationPoseOperation operation)
-        {
-            int controlIndex = operation.ControlInputOperationIndex;
-            if ((uint)controlIndex >= (uint)operation.Index)
-                throw new InvalidOperationException(
-                    $"Pose operation '{operation.NodeId}' has no compiled control input.");
-            CharacterPresentationPoseOperation control =
-                plan.Operations[controlIndex];
-            return control;
-        }
-
-        static int CalculateSourceCapacity(
-            CharacterPoseProgramImage plan)
-        {
-            int capacity = 0;
-            for (int i = 0; i < plan.Operations.Count; i++)
-            {
-                CharacterPresentationPoseOperation operation =
-                    plan.Operations[i];
-                switch (operation.Code)
-                {
-                    case CharacterPoseOperationCode.SelectedPosePlayer:
-                    case CharacterPoseOperationCode.BlendSpacePlayer:
-                        capacity = checked(capacity + 1);
-                        break;
-                    case CharacterPoseOperationCode.BlendStack:
-                    case CharacterPoseOperationCode.AnimationSlot:
-                        AnimationBlendNodePayload blendNode =
-                            plan.RequireBlendNode(operation.NodeId);
-                        if (blendNode.StackPolicy == null ||
-                            blendNode.StackPolicy.MaxActiveSourceEntries <= 0)
-                        {
-                            throw new InvalidOperationException(
-                                $"Pose Player '{operation.NodeId}' has no source capacity.");
-                        }
-                        capacity = checked(
-                            capacity +
-                            blendNode.StackPolicy.MaxActiveSourceEntries +
-                            1);
-                        break;
-                }
-            }
-            for (int i = 0; i < plan.MotionMatchingNodes.Count; i++)
-                capacity = checked(capacity + plan.MotionMatchingNodes[i].LiveEntryCapacity);
-            return capacity > 0
-                ? capacity
-                : throw new InvalidOperationException(
-                    "Pose Plan has no source capacity.");
         }
 
         void RequireAlive()

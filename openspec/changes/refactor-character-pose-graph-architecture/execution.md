@@ -1177,3 +1177,9 @@ Program、Source、Constraint与Final Publication的Begin／Result／Seal都由`
 状态：新增`CharacterPoseProgramEvaluationRuntime`，整体拥有Evaluation状态页，并接管Frame绑定、Prepared消费、Stage执行、Sequence Preview执行、节点完成、Pending／Committed提升及Committed诊断View。Program Runtime不再解释Evaluation workspace状态、Stage循环、World输入或完成页，只在自己的根Program lease通过后转交。
 
 Stage顺序、提前停止条件、World Context输入、Preview Operation位置、Player／Stack／Route完成通知、Frame页提交顺序和Committed诊断来源保持不变；Motion Matching继续读取同一个Evaluation状态实例，没有复制第二Committed状态。Program Runtime由1514行降至1367行。3C MCP完成全脚本重编且C#错误为0，不单独运行回放。
+
+## 拆出Program Actor状态协调模块
+
+状态：新增`CharacterPoseProgramActorRuntime`，统一拥有Pose State推进、Transition与Root Orientation Warp控制、Linked Pose generation选择与局部Reset、Actor节点Frame的Begin／Commit／Discard。Program Runtime只保留根Program active／committing lease，再把同一Actor State与Frame页交给该模块执行。
+
+Sequence Preview短路位置、State准备与最终Transition时机、Slot control写入、Linked Fragment匹配、generation reset、节点打开／回滚顺序和Root Orientation Warp reset值保持不变。Actor State仍由Program Runtime唯一释放，没有新增第二状态页。Program Runtime由1367行降至1029行。3C MCP完成全脚本重编且C#错误为0，不单独运行回放。

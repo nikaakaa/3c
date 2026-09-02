@@ -9,7 +9,6 @@ using ThirdPersonCharacter.Pipeline.Animation.Presentation;
 using ThirdPersonCharacter.Pipeline.Animation.Sources;
 using ThirdPersonCharacter.Pipeline.Presentation;
 using ThirdPersonSimulation;
-using Unity.Collections;
 
 namespace ThirdPersonCharacter.Pipeline.Animation
 {
@@ -25,6 +24,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             m_SourcePreparation;
         readonly CharacterPoseProgramSourceRetirementRuntime
             m_SourceRetirement;
+        readonly CharacterPoseProgramActorRuntime m_ActorRuntime;
         CharacterPoseProgramFrameLease m_ActiveFrameLease;
         CharacterPoseProgramFrameLease m_CommittingFrameLease;
         bool m_Disposed;
@@ -75,6 +75,14 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 new CharacterPoseProgramSourceRetirementRuntime(
                     ActorState,
                     source);
+            m_ActorRuntime = new CharacterPoseProgramActorRuntime(
+                image,
+                ExecutionView,
+                ActorState,
+                FramePages,
+                m_Action,
+                m_PresentationWorkspace,
+                m_SourcePreparation);
             Executor = new CharacterPoseProgramExecutor(
                 ExecutionView,
                 FramePages,
@@ -141,8 +149,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             ActorState.RootOrientationWarps;
         internal CharacterPoseProgramNodeRuntimeIndex NodeRuntimeIndex =>
             ActorState.NodeRuntimeIndex;
-        CharacterPoseLinkedFragmentState LinkedFragments =>
-            ActorState.LinkedFragments;
         internal bool HasOpenFrame => m_ActiveFrameLease.IsValid;
         internal bool HasPreparedEvaluation => m_Evaluation.HasPrepared;
         internal bool HasPendingEvaluationFrame =>
@@ -435,12 +441,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         internal bool HasSequencePreview =>
             m_SourcePreparation.HasSequencePreview;
 
-        bool ApplySequencePreview()
-        {
-            RequireFrame(m_ActiveFrameLease);
-            return m_SourcePreparation.ApplySequencePreview();
-        }
-
         internal void Advance(
             CharacterPoseProgramFrameLease lease,
             float presentationDeltaSeconds,
@@ -449,46 +449,12 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             in CharacterPoseSourceTuningView sourceTuning)
         {
             RequireFrame(lease);
-            if (!float.IsFinite(presentationDeltaSeconds) ||
-                presentationDeltaSeconds < 0f ||
-                !factFrame.IsValid ||
-                !parameterFrame.IsValid)
-            {
-                throw new ArgumentOutOfRangeException(
-                    nameof(presentationDeltaSeconds));
-            }
-            if (ApplySequencePreview())
-                return;
-            ActorState.PoseStateSources.PrepareFrame(
-                presentationDeltaSeconds,
-                in factFrame);
-            for (int i = 0; i < ActorState.Routes.Length; i++)
-            {
-                AnimationBlendStackRuntime stack = ActorState.Stacks[i];
-                if (!LinkedFragments.IsPlayerActive(stack.PlayerIndex))
-                    continue;
-                CharacterAnimationTransitionRouteRuntime route =
-                    ActorState.Routes[i];
-                route.FlushReleaseCompletion();
-                if (!route.IsAnimationSlot)
-                    continue;
-                CharacterAnimationSlotNativeControl control =
-                    route.NativeControl;
-                FramePages.SetAnimationSlotControl(
-                    route.AnimationSlotIndex,
-                    in control);
-            }
-            for (int i = 0; i < ActorState.Stacks.Length; i++)
-            {
-                AnimationBlendStackRuntime stack = ActorState.Stacks[i];
-                if (LinkedFragments.IsPlayerActive(stack.PlayerIndex))
-                    stack.Advance(presentationDeltaSeconds);
-            }
-            ActorState.PoseStateSources.AdvanceSources(
+            m_ActorRuntime.Advance(
+                lease,
                 presentationDeltaSeconds,
                 in factFrame,
                 in parameterFrame,
-                sourceTuning);
+                in sourceTuning);
         }
 
         internal void FinalizePoseStateFrame(
@@ -496,110 +462,19 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             in CharacterPresentationFactFrame factFrame)
         {
             RequireFrame(lease);
-            m_Action.RequireWorkspace(lease.Lineage.FrameIdentity);
-            PresentationFrameWorkspaceLease workspaceFrame =
-                m_Action.WorkspaceFrame;
-            if (!factFrame.IsValid ||
-                !workspaceFrame.IsValid)
-            {
-                throw new ArgumentException(
-                    "Pose State frame finalization is invalid.",
-                    nameof(factFrame));
-            }
-            if (m_SourcePreparation.HasSequencePreview)
-                return;
-            ActorState.PoseStateSources.EvaluateTransitions(
-                in factFrame,
-                FramePages,
-                m_PresentationWorkspace,
-                workspaceFrame);
-            for (int i = 0;
-                 i < ActorState.RootOrientationWarps.Length;
-                 i++)
-            {
-                if (!LinkedFragments.IsRootOrientationWarpActive(i))
-                    continue;
-                CharacterRootOrientationWarpNativeControl control =
-                    ActorState.RootOrientationWarps[i].Prepare(in factFrame);
-                FramePages.SetRootOrientationWarpControl(i, in control);
-            }
+            m_ActorRuntime.FinalizePoseStateFrame(lease, in factFrame);
         }
 
         internal bool IsSequencePreviewPlayer(int playerIndex) =>
             m_SourcePreparation.IsSequencePreviewPlayer(playerIndex);
 
         internal bool IsPlayerActive(int playerIndex) =>
-            LinkedFragments.IsPlayerActive(playerIndex);
-
-        internal void PrepareLinkedPoseSelection(
-            CharacterLinkedPoseRuntimeSession linkedPose,
-            IReadOnlyList<CharacterLinkedPoseGroupProjectionDescriptor> groups)
-        {
-            RequireFrame(m_ActiveFrameLease);
-            if (linkedPose == null)
-                throw new ArgumentNullException(nameof(linkedPose));
-            if (groups == null)
-                throw new ArgumentNullException(nameof(groups));
-            LinkedFragments.Clear();
-            for (int groupIndex = 0; groupIndex < groups.Count; groupIndex++)
-            {
-                CharacterLinkedPoseGroupProjectionDescriptor group =
-                    groups[groupIndex];
-                CharacterLinkedPoseGenerationHandle selection =
-                    linkedPose.RequireIncoming(group.GroupId);
-                SetLinkedPoseGroupSelection(in selection);
-                LinkedFragments.ApplySelection(in selection);
-            }
-        }
-
-        internal void ApplyLinkedPoseGenerationResets(
-            ulong resetCompletionIdentity)
-        {
-            RequireFrame(m_ActiveFrameLease);
-            if (resetCompletionIdentity == 0)
-                throw new ArgumentOutOfRangeException(
-                    nameof(resetCompletionIdentity));
-            if (!LinkedFragments.HasFragments)
-                return;
-            for (int i = 0; i < ActorState.Stacks.Length; i++)
-            {
-                AnimationBlendStackRuntime stack = ActorState.Stacks[i];
-                if (!LinkedFragments.RequiresPlayerReset(stack.PlayerIndex))
-                    continue;
-                ActorState.Routes[i].Reset();
-                stack.Reset(resetCompletionIdentity);
-            }
-            for (int i = 0; i < ActorState.DirectPlayers.Length; i++)
-            {
-                AnimationSelectedPosePlayerRuntime player =
-                    ActorState.DirectPlayers[i];
-                if (LinkedFragments.RequiresPlayerReset(player.PlayerIndex))
-                {
-                    player.Reset(
-                        PoseDiscontinuityResetReason.BranchReplacement);
-                }
-            }
-            ActorState.PoseStateSources.ApplyLinkedPoseGenerationResets();
-            for (int i = 0;
-                 i < m_Image.Inertializations.Count;
-                 i++)
-            {
-                if (LinkedFragments.RequiresInertializationReset(i))
-                    ActorState.Inertialization.RequestReset(i);
-            }
-            for (int i = 0;
-                 i < ActorState.RootOrientationWarps.Length;
-                 i++)
-            {
-                if (LinkedFragments.RequiresRootOrientationWarpReset(i))
-                    ActorState.RootOrientationWarps[i].Reset();
-            }
-        }
+            m_ActorRuntime.IsPlayerActive(playerIndex);
 
         internal void ClearLinkedPoseFrameSelection()
         {
             RequireAlive();
-            LinkedFragments.Clear();
+            m_ActorRuntime.ClearLinkedPoseFrameSelection();
         }
 
         internal void SetSequencePreview(
@@ -695,44 +570,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             ulong resetCompletionIdentity)
         {
             RequireFrame(lease);
-            bool nodeFramesOpen = false;
-            try
-            {
-                PrepareLinkedPoseSelection(linkedPose, groups);
-                ActorState.Inertialization.BeginFrame();
-                for (int i = 0; i < ActorState.Routes.Length; i++)
-                    ActorState.Routes[i].BeginFrame();
-                for (int i = 0;
-                     i < ActorState.RootOrientationWarps.Length;
-                     i++)
-                {
-                    ActorState.RootOrientationWarps[i].BeginFrame();
-                }
-                BeginNodeFrames();
-                nodeFramesOpen = true;
-                ApplyLinkedPoseGenerationResets(resetCompletionIdentity);
-            }
-            catch
-            {
-                if (nodeFramesOpen)
-                    DiscardNodeFrames();
-                for (int i = ActorState.Routes.Length - 1; i >= 0; i--)
-                {
-                    if (ActorState.Routes[i].HasOpenFrame)
-                        ActorState.Routes[i].DiscardFrame();
-                }
-                for (int i = ActorState.RootOrientationWarps.Length - 1;
-                     i >= 0;
-                     i--)
-                {
-                    if (ActorState.RootOrientationWarps[i].HasOpenFrame)
-                        ActorState.RootOrientationWarps[i].DiscardFrame();
-                }
-                if (ActorState.Inertialization.HasOpenFrame)
-                    ActorState.Inertialization.DiscardFrame();
-                LinkedFragments.Clear();
-                throw;
-            }
+            m_ActorRuntime.BeginFrame(
+                linkedPose,
+                groups,
+                resetCompletionIdentity);
         }
 
         internal void CommitActorStateFrame(
@@ -746,19 +587,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 throw new InvalidOperationException(
                     "Character Pose Program committing frame lease is stale.");
             }
-            for (int i = 0; i < ActorState.Routes.Length; i++)
-                ActorState.Routes[i].CommitFrame();
-            for (int i = 0;
-                 i < ActorState.RootOrientationWarps.Length;
-                 i++)
-            {
-                ActorState.RootOrientationWarps[i].CommitFrame();
-            }
-            for (int i = 0; i < ActorState.Stacks.Length; i++)
-                ActorState.Stacks[i].CommitFrame();
-            for (int i = 0; i < ActorState.DirectPlayers.Length; i++)
-                ActorState.DirectPlayers[i].CommitFrame();
-            ActorState.PoseStateSources.CommitFrame();
+            m_ActorRuntime.CommitFrame();
             m_CommittingFrameLease = default;
         }
 
@@ -766,43 +595,14 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             CharacterPoseProgramFrameLease lease)
         {
             RequireFrame(lease);
-            Exception failure = null;
-            for (int i = ActorState.Routes.Length - 1; i >= 0; i--)
-            {
-                CharacterAnimationTransitionRouteRuntime route =
-                    ActorState.Routes[i];
-                if (route.HasOpenFrame)
-                    DiscardStep(route.DiscardFrame, ref failure);
-            }
-            DiscardStep(DiscardNodeFrames, ref failure);
-            if (failure != null)
-            {
-                throw new AggregateException(
-                    "Character Pose Program actor node discard failed.",
-                    failure);
-            }
+            m_ActorRuntime.DiscardNodeFrames();
         }
 
         internal void DiscardRootOrientationWarpFrames(
             CharacterPoseProgramFrameLease lease)
         {
             RequireFrame(lease);
-            Exception failure = null;
-            for (int i = ActorState.RootOrientationWarps.Length - 1;
-                 i >= 0;
-                 i--)
-            {
-                RootOrientationWarpRuntime warp =
-                    ActorState.RootOrientationWarps[i];
-                if (warp.HasOpenFrame)
-                    DiscardStep(warp.DiscardFrame, ref failure);
-            }
-            if (failure != null)
-            {
-                throw new AggregateException(
-                    "Character Pose Program Root Orientation Warp discard failed.",
-                    failure);
-            }
+            m_ActorRuntime.DiscardRootOrientationWarpFrames();
         }
 
         void BeginEvaluationFrame(
@@ -984,21 +784,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation
 
         internal void ClearSourceDemand() => FramePages.ClearSourceDemand();
 
-        void ResetRootOrientationWarpControl(
-            int rootOrientationWarpIndex,
-            in CharacterRootOrientationWarpNativeControl control)
-        {
-            RequireAlive();
-            if (m_ActiveFrameLease.IsValid)
-            {
-                throw new InvalidOperationException(
-                    "Character Pose Program Root Orientation Warp cannot reset during a frame.");
-            }
-            FramePages.SetRootOrientationWarpControl(
-                rootOrientationWarpIndex,
-                in control);
-        }
-
         internal void PrepareEvaluation(
             CharacterPoseProgramFrameLease lease,
             in CharacterPoseProgramPrepared prepared,
@@ -1069,10 +854,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 throw new InvalidOperationException(
                     "Character Pose Program Blend reset is invalid.");
             }
-            for (int i = 0; i < ActorState.Routes.Length; i++)
-                ActorState.Routes[i].Reset();
-            for (int i = 0; i < ActorState.Stacks.Length; i++)
-                ActorState.Stacks[i].Reset(completionIdentity);
+            m_ActorRuntime.ResetBlendState(completionIdentity);
         }
 
         internal void ResetPoseState(
@@ -1086,19 +868,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 throw new InvalidOperationException(
                     "Character Pose Program Pose State reset is invalid.");
             }
-            for (int i = 0; i < ActorState.DirectPlayers.Length; i++)
-                ActorState.DirectPlayers[i].Reset(reason);
-            ActorState.PoseStateSources.Reset(reason);
-            for (int i = 0;
-                 i < ActorState.RootOrientationWarps.Length;
-                 i++)
-            {
-                ActorState.RootOrientationWarps[i].Reset();
-                var control = new CharacterRootOrientationWarpNativeControl(
-                    false,
-                    0f);
-                ResetRootOrientationWarpControl(i, in control);
-            }
+            m_ActorRuntime.ResetPoseState(reason);
         }
 
         internal bool HasPreparedMotionMatchingPoseCompletion =>
@@ -1188,114 +958,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             m_Tuning.Commit(generation);
 
         internal void DiscardTuningCandidate() => m_Tuning.Discard();
-        internal void SetLinkedPoseGroupSelection(
-            in CharacterLinkedPoseGenerationHandle selection)
-        {
-            if (!FramePages.HasOpenFrame)
-            {
-                throw new InvalidOperationException(
-                    "Character Pose Program frame pages are not open.");
-            }
-            if (!selection.IsValid)
-            {
-                throw new ArgumentException(
-                    "Linked Pose generation selection is invalid.",
-                    nameof(selection));
-            }
-            NativeArray<AnimationPoseGraphNativeLinkedPoseCallControl>
-                controls = FramePages.LinkedPoseCallControls;
-            NativeArray<byte> activeFragments =
-                FramePages.LinkedPoseActiveFragments;
-            int matchingCallCount = 0;
-            for (int callIndex = 0;
-                 callIndex < ExecutionView.LinkedPoseCalls.Length;
-                 callIndex++)
-            {
-                if (ExecutionView.GetLinkedPoseCallGroupId(callIndex) !=
-                    selection.GroupId)
-                {
-                    continue;
-                }
-                matchingCallCount++;
-                if (ExecutionView.GetLinkedPoseCallInterfaceId(callIndex) !=
-                        selection.InterfaceId ||
-                    controls[callIndex].IsActive ||
-                    ExecutionView.FindLinkedPoseCandidate(
-                        callIndex,
-                        selection.ImplementationId) < 0)
-                {
-                    throw new InvalidOperationException(
-                        $"Linked Pose Group '{selection.GroupId}' selection does not match call #{callIndex}.");
-                }
-            }
-            if (matchingCallCount == 0)
-            {
-                throw new InvalidOperationException(
-                    $"Linked Pose Group '{selection.GroupId}' has no compiled calls.");
-            }
-            for (int callIndex = 0;
-                 callIndex < ExecutionView.LinkedPoseCalls.Length;
-                 callIndex++)
-            {
-                if (ExecutionView.GetLinkedPoseCallGroupId(callIndex) !=
-                    selection.GroupId)
-                {
-                    continue;
-                }
-                int candidateIndex =
-                    ExecutionView.FindLinkedPoseCandidate(
-                        callIndex,
-                        selection.ImplementationId);
-                AnimationPoseGraphNativeLinkedPoseCandidate candidate =
-                    ExecutionView.LinkedPoseCandidates[candidateIndex];
-                controls[callIndex] =
-                    new AnimationPoseGraphNativeLinkedPoseCallControl(
-                        candidateIndex,
-                        selection.Generation,
-                        selection.PoseDiscontinuity);
-                activeFragments[candidate.FragmentIndex] = 1;
-            }
-        }
-
-        void BeginNodeFrames()
-        {
-            int stackCount = 0;
-            int directPlayerCount = 0;
-            bool poseStateSourcesOpen = false;
-            try
-            {
-                ActorState.PoseStateSources.BeginFrame();
-                poseStateSourcesOpen = true;
-                for (; stackCount < ActorState.Stacks.Length; stackCount++)
-                    ActorState.Stacks[stackCount].BeginFrame();
-                for (;
-                     directPlayerCount < ActorState.DirectPlayers.Length;
-                     directPlayerCount++)
-                {
-                    ActorState.DirectPlayers[directPlayerCount].BeginFrame();
-                }
-            }
-            catch
-            {
-                for (int i = directPlayerCount - 1; i >= 0; i--)
-                    ActorState.DirectPlayers[i].DiscardFrame();
-                for (int i = stackCount - 1; i >= 0; i--)
-                    ActorState.Stacks[i].DiscardFrame();
-                if (poseStateSourcesOpen)
-                    ActorState.PoseStateSources.DiscardFrame();
-                throw;
-            }
-        }
-
-        void DiscardNodeFrames()
-        {
-            for (int i = ActorState.DirectPlayers.Length - 1; i >= 0; i--)
-                ActorState.DirectPlayers[i].DiscardFrame();
-            for (int i = ActorState.Stacks.Length - 1; i >= 0; i--)
-                ActorState.Stacks[i].DiscardFrame();
-            ActorState.PoseStateSources.DiscardFrame();
-        }
-
         public void Dispose()
         {
             if (m_Disposed)

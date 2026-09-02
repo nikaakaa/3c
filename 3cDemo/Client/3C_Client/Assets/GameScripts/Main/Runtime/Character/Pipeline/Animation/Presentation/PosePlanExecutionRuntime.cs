@@ -87,6 +87,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             CharacterPresentationProjection projection,
             CharacterActionPlaybackRuntime actionPlayback,
             AnimationSlotRuntime animationSlots,
+            PresentationFrameWorkspace presentationWorkspace,
             CharacterFootPlacementModule footPlacement,
             bool managesGraphClock)
         {
@@ -425,7 +426,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                     projection,
                     sourceModule,
                     finalPublication),
-                poseConstraints);
+                poseConstraints,
+                presentationWorkspace);
             m_TuningSnapshot = CaptureTuningSnapshot(1);
             m_FinalPublication = finalPublication;
             m_DiagnosticsPublisher = diagnosticsPublisher;
@@ -623,15 +625,11 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
 
         internal IReadOnlyList<ActionAnimationPlaybackLifecycleFrame>
             PrepareActionLifecycleFrame(
-                CharacterPoseProgramFrameLease lease,
-                PresentationFrameWorkspace workspace,
-                PresentationFrameWorkspaceLease workspaceLease)
+                CharacterPoseProgramFrameLease lease)
         {
             RequireMutation(lease);
             return m_ProgramRuntime.PrepareActionLifecycleFrame(
-                lease,
-                workspace,
-                workspaceLease);
+                lease);
         }
 
         internal void ProjectActionPresentationSamples(
@@ -652,31 +650,35 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                 presentationDeltaSeconds);
         }
 
+        internal void ResolveActionPresentationFrames(
+            CharacterPoseProgramFrameLease lease,
+            ActionPresentationSamplingRuntime sampling,
+            ActionPresentationSamplingFrameTransaction samplingTransaction)
+        {
+            RequireMutation(lease);
+            m_ProgramRuntime.ResolveActionPresentationFrames(
+                lease,
+                sampling,
+                samplingTransaction);
+        }
+
         internal void PublishActionSources(
             CharacterPoseProgramFrameLease lease,
-            PresentationFrameWorkspace workspace,
-            PresentationFrameWorkspaceLease workspaceLease,
             IDictionary<AnimationPlayerSourceSampleKey,
                 AnimationResolvedPoseSourceSample> sourceSamples)
         {
             RequireMutation(lease);
             m_ProgramRuntime.PublishActionSources(
                 lease,
-                workspace,
-                workspaceLease,
                 sourceSamples);
         }
 
         internal void CompleteActionReleaseProtocol(
-            CharacterPoseProgramFrameLease lease,
-            PresentationFrameWorkspace workspace,
-            PresentationFrameWorkspaceLease workspaceLease)
+            CharacterPoseProgramFrameLease lease)
         {
             RequireMutation(lease);
             m_ProgramRuntime.CompleteActionReleaseProtocol(
-                lease,
-                workspace,
-                workspaceLease);
+                lease);
         }
 
         internal void ValidateActionFrame(
@@ -698,6 +700,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
         internal IReadOnlyList<AnimationPlaybackId>
             RetiredActionPlaybacks =>
             m_ProgramRuntime.RetiredActionPlaybacks;
+        internal IReadOnlyList<ActionSlotSourceUsage> ActionSourceUsages =>
+            m_ProgramRuntime.ActionSourceUsages;
 
         internal void ResetAnimationSlots()
         {
@@ -711,6 +715,28 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             RequireAlive();
             RequireNoOpenMutation();
             m_ProgramRuntime.ResetActionPlayback();
+        }
+
+        internal void ResetPresentationWorkspace()
+        {
+            RequireAlive();
+            RequireNoOpenMutation();
+            m_ProgramRuntime.ResetPresentationWorkspace();
+        }
+
+        internal void CommitPresentationWorkspaceFrame(
+            CharacterPoseProgramFrameLease lease)
+        {
+            RequireMutation(lease);
+            m_ProgramRuntime.CommitPresentationWorkspaceFrame(lease);
+        }
+
+        internal void DiscardPresentationWorkspaceFrame(
+            ulong frameIdentity)
+        {
+            RequireAlive();
+            m_ProgramRuntime.DiscardPresentationWorkspaceFrame(
+                frameIdentity);
         }
 
         internal void CopySourceSyncSnapshots(
@@ -986,35 +1012,27 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
 
         internal MotionMatchingPoseStateDemandBatch BuildMotionMatchingDemandBatch(
             ulong presentationFrame,
-            ulong resetSequence,
-            PresentationFrameWorkspace workspace,
-            PresentationFrameWorkspaceLease lease)
+            ulong resetSequence)
         {
             RequireAlive();
             RequireOpenMutation();
             return m_ProgramRuntime.BuildMotionMatchingDemandBatch(
                     m_ActiveFrameLease,
                     presentationFrame,
-                    resetSequence,
-                    workspace,
-                    lease);
+                    resetSequence);
         }
 
         internal void ApplyMotionMatchingSelections(
             in MotionMatchingFrameResolution resolution,
             IDictionary<AnimationPlayerSourceSampleKey,
-                PresentationPoseSourceSample> sourceSamples,
-            PresentationFrameWorkspace workspace,
-            PresentationFrameWorkspaceLease lease)
+                PresentationPoseSourceSample> sourceSamples)
         {
             RequireAlive();
             RequireOpenMutation();
             m_ProgramRuntime.ApplyMotionMatchingSelections(
                 m_ActiveFrameLease,
                 in resolution,
-                sourceSamples,
-                workspace,
-                lease);
+                sourceSamples);
         }
 
         internal void PrepareMotionMatchingPosePlanCompletion(
@@ -1307,29 +1325,22 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
         }
 
         internal void FinalizePoseStateFrame(
-            in CharacterPresentationFactFrame factFrame,
-            PresentationFrameWorkspace workspace,
-            PresentationFrameWorkspaceLease lease)
+            in CharacterPresentationFactFrame factFrame)
         {
             RequireAlive();
             RequireOpenMutation();
-            if (!factFrame.IsValid ||
-                workspace == null ||
-                !lease.IsValid)
+            if (!factFrame.IsValid)
                 throw new ArgumentException(
                     "Pose State frame finalization is invalid.",
                     nameof(factFrame));
             m_ProgramRuntime.FinalizePoseStateFrame(
                 m_ActiveFrameLease,
-                in factFrame,
-                workspace,
-                lease);
+                in factFrame);
         }
 
         internal CharacterPoseSourceDemand CreateSourceDemand(
             CharacterPoseProgramFrameLease programLease,
             CharacterPoseSourceFrameLease sourceLease,
-            IReadOnlyList<PoseSourceProviderDemand> providerDemands,
             int actionSourceCount,
             int providerSourceCount)
         {
@@ -1356,7 +1367,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             var demand = new CharacterPoseSourceDemand(
                 in lineage,
                 in preparations,
-                providerDemands,
+                m_ProgramRuntime.ProviderDemands,
                 actionSourceCount,
                 providerSourceCount);
             m_ProgramRuntime.BindSourceDemand(

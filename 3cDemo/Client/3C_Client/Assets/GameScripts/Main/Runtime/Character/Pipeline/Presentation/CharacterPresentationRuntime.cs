@@ -34,7 +34,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         readonly ActorId m_ActorId;
         readonly CharacterAnimationPresentationBindings m_Bindings;
         readonly ActionPresentationSamplingRuntime m_ActionSampling;
-        readonly PresentationFrameWorkspace m_FrameWorkspace;
         readonly PosePlanExecutionRuntime m_PoseRuntime;
         readonly CharacterPoseConstraintRuntime m_PoseConstraints;
         readonly CharacterMotionMatchingPresentationModule m_MotionMatching;
@@ -106,7 +105,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 checked(
                     providerCapacity +
                     bindings.Projection.PosePlan.StateMachines.Count));
-            m_FrameWorkspace =
+            var presentationWorkspace =
                 new PresentationFrameWorkspace(
                     providerCapacity,
                     frameCapacity,
@@ -144,6 +143,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                         bindings.Projection,
                         actionPlayback,
                         animationSlots,
+                        presentationWorkspace,
                         footPlacement,
                         ownsGraphClock);
                 m_PoseConstraints = m_PoseRuntime.PoseConstraints;
@@ -168,7 +168,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         public IReadOnlyList<ActionAnimationPlaybackLifecycleSnapshot>
             ActionSnapshots => m_ActionSnapshots;
         public IReadOnlyList<ActionSlotSourceUsage> ActionSourceUsages =>
-            m_FrameWorkspace.ActionUsages;
+            m_PoseRuntime.ActionSourceUsages;
         public bool HasRuntimeDiagnosticsSnapshot =>
             m_PoseRuntime.HasDiagnosticsSnapshot;
         public AnimationPresentationRuntimeSnapshot
@@ -484,9 +484,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 {
                     lifecycle =
                         m_PoseRuntime.PrepareActionLifecycleFrame(
-                            transaction.PoseLease,
-                            m_FrameWorkspace,
-                            transaction.WorkspaceLease);
+                            transaction.PoseLease);
                 }
 
                 double presentationSampleTick =
@@ -504,10 +502,10 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                         lifecycle,
                         presentationSampleTick,
                         presentationDeltaSeconds);
-                    m_ActionSampling.ResolvePresentationFrames(
-                        transaction.SamplingTransaction,
-                        m_FrameWorkspace,
-                        transaction.WorkspaceLease);
+                    m_PoseRuntime.ResolveActionPresentationFrames(
+                        transaction.PoseLease,
+                        m_ActionSampling,
+                        transaction.SamplingTransaction);
                 }
 
                 using (PoseRoutingMarker.Auto())
@@ -524,7 +522,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 {
                     frameStage = "MotionMatching";
                     motionMatchingResolution = ResolveMotionMatching(
-                        transaction,
                         presentationFrame,
                         presentationDeltaSeconds,
                         in bodyFrame,
@@ -535,20 +532,15 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 {
                     frameStage = "PoseFinalize";
                     m_PoseRuntime.FinalizePoseStateFrame(
-                        in factFrame,
-                        m_FrameWorkspace,
-                        transaction.WorkspaceLease);
+                        in factFrame);
                     m_PoseRuntime.PublishActionSources(
                         transaction.PoseLease,
-                        m_FrameWorkspace,
-                        transaction.WorkspaceLease,
                         m_ActionSourceSamples);
                 }
                 CharacterPoseSourceDemand sourceDemand =
                     m_PoseRuntime.CreateSourceDemand(
                         transaction.PoseLease,
                         transaction.SourceLease,
-                        m_FrameWorkspace.ProviderDemands,
                         m_ActionSourceSamples.Count,
                         m_ProviderSourceSamples.Count);
                 CharacterPoseProgramPrepared preparedPose =
@@ -580,9 +572,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 {
                     frameStage = "ReleaseProtocol";
                     m_PoseRuntime.CompleteActionReleaseProtocol(
-                        transaction.PoseLease,
-                        m_FrameWorkspace,
-                        transaction.WorkspaceLease);
+                        transaction.PoseLease);
                     m_ActionSampling.ValidateFrame(
                         transaction.SamplingTransaction);
                     m_PoseRuntime.ValidateActionFrame(
@@ -803,7 +793,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             m_PoseRuntime.ResetAnimationSlots();
             m_ActionSampling.Reset();
             m_PoseRuntime.ResetActionPlayback();
-            m_FrameWorkspace.Reset();
+            m_PoseRuntime.ResetPresentationWorkspace();
             m_MotionMatching?.Reset(
                 0,
                 MotionMatchingPresentationResetReason
@@ -818,7 +808,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 PoseDiscontinuityResetReason.BranchReplacement);
             m_PoseRuntime.ResetAnimationSlots();
             m_ActionSampling.Reset();
-            m_FrameWorkspace.Reset();
+            m_PoseRuntime.ResetPresentationWorkspace();
             m_MotionMatching?.Reset(
                 resetSequence,
                 MotionMatchingPresentationResetReason
@@ -882,7 +872,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             AnimationPresentationDiagnosticsInterest diagnosticsInterest,
             CharacterLinkedPoseRuntimeSession linkedPose)
         {
-            PresentationFrameWorkspaceLease workspaceLease = default;
             ActionPresentationSamplingFrameTransaction sampling = null;
             CharacterPoseProgramFrameLease pose = default;
             CharacterPoseSourceFrameLease source = default;
@@ -915,10 +904,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             {
                 linkedPose.Prepare();
                 linkedPosePrepared = true;
-                workspaceLease =
-                    m_FrameWorkspace.Begin(
-                        frameIdentity,
-                        presentationFrame);
                 m_PoseRuntime.BeginActionPlaybackFrame(
                     frameIdentity,
                     presentationFrame);
@@ -946,7 +931,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     out bool captureFootIkDiagnostics);
                 m_FrameTransaction.Begin(
                     in lineage,
-                    workspaceLease,
                     sampling,
                     pose,
                     source,
@@ -998,12 +982,10 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                         () => m_PoseRuntime
                             .DiscardActionPlaybackFrame(frameIdentity),
                         ref discardFailure);
-                }
-                if (workspaceLease.IsValid)
-                {
                     DiscardStep(
-                        () => m_FrameWorkspace.Discard(
-                            workspaceLease),
+                        () => m_PoseRuntime
+                            .DiscardPresentationWorkspaceFrame(
+                                frameIdentity),
                         ref discardFailure);
                 }
                 if (linkedPosePrepared)
@@ -1028,7 +1010,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         }
 
         MotionMatchingFrameResolution ResolveMotionMatching(
-            CharacterPoseFrameTransaction transaction,
             ulong presentationFrame,
             float presentationDeltaSeconds,
             in CharacterBodyPresentationFrame bodyFrame,
@@ -1043,9 +1024,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             MotionMatchingPoseStateDemandBatch demands =
                 m_PoseRuntime.BuildMotionMatchingDemandBatch(
                     presentationFrame,
-                    bodyFrame.ResetSequence,
-                    m_FrameWorkspace,
-                    transaction.WorkspaceLease);
+                    bodyFrame.ResetSequence);
             if (!m_MotionMatching.HasFrameWork(in demands))
                 return default;
             MotionMatchingFrameResolution resolution =
@@ -1063,9 +1042,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             }
             m_PoseRuntime.ApplyMotionMatchingSelections(
                 in resolution,
-                m_ProviderSourceSamples,
-                m_FrameWorkspace,
-                transaction.WorkspaceLease);
+                m_ProviderSourceSamples);
             hasResolution = true;
             return resolution;
         }
@@ -1169,8 +1146,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 throw new InvalidOperationException(
                     "Animation Presentation frame transaction cannot commit.");
             }
-            m_FrameWorkspace.Commit(
-                transaction.WorkspaceLease);
+            m_PoseRuntime.CommitPresentationWorkspaceFrame(
+                transaction.PoseLease);
             m_ActionSampling.SealFrame(
                 transaction.SamplingTransaction);
             m_PoseRuntime.CommitAnimationSlotFrame(
@@ -1228,8 +1205,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     transaction.Lineage.FrameIdentity),
                 ref failure);
             DiscardStep(
-                () => m_FrameWorkspace.Discard(
-                    transaction.WorkspaceLease),
+                () => m_PoseRuntime.DiscardPresentationWorkspaceFrame(
+                    transaction.Lineage.FrameIdentity),
                 ref failure);
             DiscardStep(
                 linkedPose.Discard,

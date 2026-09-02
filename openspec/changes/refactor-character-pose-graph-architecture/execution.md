@@ -967,3 +967,9 @@ Compiler路径改为逐闭包Graph执行局部Topology验证，typed edge、Port
 中央物理绑定每生成一个Operation必须按序消费并精确匹配同一个Symbolic Operation的Node、Kind、Code、Family、Domain、Pose Space与Fragment identity；多出、缺失或重排都会在Program Image发布前失败，因此旧绑定不再发现第二套Operation序列。State Graph与Linked candidate的隐藏Pose依赖也显式进入Symbolic输入。
 
 Stage Schedule改为以Symbolic Program作为分组与依赖真相，只用已绑定Operation读取最终Pose workspace range。它验证除明确Pose History时间边外的每个typed输入都已有更早唯一producer，再按Symbolic Execution Domain、Output Space和Fragment identity分段，并继续证明全部Operation恰好一次。任务11.5与11.6完成。3C MCP对Symbolic Pass、Stage Pass与Compiler入口错误筛选均为0；不单独运行回放。
+
+## Presentation Workspace归入Program Runtime
+
+状态：`PresentationFrameWorkspace`及其双页lease从根Runtime与根Frame Transaction迁入Program Runtime。Program在原位置先打开Workspace再打开Action lifecycle，后续由同一Owner处理Action sample frame落页、Slot usage／retirement、Provider demand、Motion Matching selection与Source Demand读取；根只按原阶段调用Program，不再取得Workspace实例或页索引。
+
+Commit仍严格保持Workspace、Action Sampling、Slot、Action Playback、Motion Matching、Program／Source／Constraint的原顺序；Discard仍保持Program、Motion Matching、Slot、Sampling、Action、Workspace顺序。Reset和Begin失败清理也保留原相对位置。任务5.6继续推进，但根事务仍暂存Action Sampling与Motion Matching内部lease，暂不勾选。3C MCP对Program、Pose协调层、根Runtime与根Transaction错误筛选均为0；不单独运行回放。

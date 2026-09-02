@@ -134,6 +134,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         readonly AnimancerComponent m_Animancer;
         readonly CharacterPoseSourceModule m_SourceModule;
         readonly CharacterPoseWorldContextAdapter m_WorldContext;
+        readonly PresentationFrameWorkspace m_PresentationWorkspace;
         readonly int m_FootPlacementWeightParameterIndex;
         readonly MotionMatchingPosePlanHistoryCompletion[]
             m_MotionMatchingHistoryCompletions;
@@ -157,6 +158,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         AnimationScriptPlayable[] m_BlendSpacePlayerPlayables;
         CharacterActionPlaybackFrameTransaction m_ActionFrame;
         AnimationSlotMutationLease m_AnimationSlotFrame;
+        PresentationFrameWorkspaceLease m_PresentationWorkspaceFrame;
         CharacterPoseProgramFrameLease m_ActiveFrameLease;
         CharacterPoseProgramFrameLease m_CommittingFrameLease;
         PreparedEvaluationPage m_PreparedEvaluation;
@@ -190,7 +192,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             CharacterPoseProgramTuningState tuning,
             CharacterPoseSourceModule sourceModule,
             CharacterPoseWorldContextAdapter worldContext,
-            CharacterPoseConstraintRuntime poseConstraints)
+            CharacterPoseConstraintRuntime poseConstraints,
+            PresentationFrameWorkspace presentationWorkspace)
         {
             m_Animancer = animancer ? animancer :
                 throw new ArgumentNullException(nameof(animancer));
@@ -206,6 +209,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 throw new ArgumentNullException(nameof(sourceModule));
             m_WorldContext = worldContext ??
                 throw new ArgumentNullException(nameof(worldContext));
+            m_PresentationWorkspace = presentationWorkspace ??
+                throw new ArgumentNullException(nameof(presentationWorkspace));
             CharacterPoseConstraintRuntime constraintRuntime = poseConstraints ??
                 throw new ArgumentNullException(nameof(poseConstraints));
             m_FootPlacementWeightParameterIndex =
@@ -318,6 +323,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             m_HasCommittedEvaluationFrame;
         internal bool HasPendingCompletedEvaluationFrame =>
             m_HasPendingCompletedEvaluationFrame;
+        internal IReadOnlyList<ActionSlotSourceUsage> ActionSourceUsages =>
+            m_PresentationWorkspace.ActionUsages;
+        internal IReadOnlyList<PoseSourceProviderDemand> ProviderDemands =>
+            m_PresentationWorkspace.ProviderDemands;
         internal ulong CommittedEvaluationCompletionIdentity =>
             m_HasCommittedEvaluationFrame
                 ? m_CommittedEvaluationFrame.CompletionIdentity
@@ -333,14 +342,29 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         {
             RequireAlive();
             if (m_ActionFrame?.IsValid == true ||
-                m_AnimationSlotFrame.IsValid)
+                m_AnimationSlotFrame.IsValid ||
+                m_PresentationWorkspaceFrame.IsValid)
             {
                 throw new InvalidOperationException(
                     "Character Pose Program Action frame is already open.");
             }
-            m_ActionFrame = ActorState.ActionPlayback.BeginFrame(
-                frameIdentity,
-                presentationFrame);
+            m_PresentationWorkspaceFrame =
+                m_PresentationWorkspace.Begin(
+                    frameIdentity,
+                    presentationFrame);
+            try
+            {
+                m_ActionFrame = ActorState.ActionPlayback.BeginFrame(
+                    frameIdentity,
+                    presentationFrame);
+            }
+            catch
+            {
+                m_PresentationWorkspace.Discard(
+                    m_PresentationWorkspaceFrame);
+                m_PresentationWorkspaceFrame = default;
+                throw;
+            }
         }
 
         internal void BeginAnimationSlotFrame(ulong frameIdentity)
@@ -400,6 +424,25 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             ClearActionFrameViews();
         }
 
+        internal void CommitPresentationWorkspaceFrame(
+            CharacterPoseProgramFrameLease lease)
+        {
+            RequireFrame(lease);
+            RequirePresentationWorkspaceFrame(
+                lease.Lineage.FrameIdentity);
+            m_PresentationWorkspace.Commit(m_PresentationWorkspaceFrame);
+            m_PresentationWorkspaceFrame = default;
+        }
+
+        internal void DiscardPresentationWorkspaceFrame(
+            ulong frameIdentity)
+        {
+            RequireAlive();
+            RequirePresentationWorkspaceFrame(frameIdentity);
+            m_PresentationWorkspace.Discard(m_PresentationWorkspaceFrame);
+            m_PresentationWorkspaceFrame = default;
+        }
+
         internal void PublishActionCommand(
             in ActionAnimationPlaybackCommand command) =>
             ActorState.ActionPlayback.Publish(command);
@@ -417,20 +460,13 @@ namespace ThirdPersonCharacter.Pipeline.Animation
 
         internal IReadOnlyList<ActionAnimationPlaybackLifecycleFrame>
             PrepareActionLifecycleFrame(
-                CharacterPoseProgramFrameLease lease,
-                PresentationFrameWorkspace workspace,
-                PresentationFrameWorkspaceLease workspaceLease)
+                CharacterPoseProgramFrameLease lease)
         {
             RequireFrame(lease);
             RequireActionFrame(lease.Lineage.FrameIdentity);
             RequireAnimationSlotFrame(lease.Lineage.FrameIdentity);
-            if (workspace == null ||
-                !workspaceLease.IsValid ||
-                workspaceLease.Identity != lease.Lineage.FrameIdentity)
-            {
-                throw new ArgumentException(
-                    "Character Pose Program Action workspace is invalid.");
-            }
+            RequirePresentationWorkspaceFrame(
+                lease.Lineage.FrameIdentity);
             m_ConsumedActionBackendReleaseCompletions.Clear();
             m_RetiredActionPlaybacks.Clear();
             m_SourceModule.CopyActionBackendReleaseCompletions(
@@ -441,8 +477,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             {
                 ActionBackendReleaseCompletion completion =
                     m_ActionBackendReleaseCompletions[i];
-                workspace.AddReleaseCompletion(
-                    workspaceLease,
+                m_PresentationWorkspace.AddReleaseCompletion(
+                    m_PresentationWorkspaceFrame,
                     completion);
                 m_ConsumedActionBackendReleaseCompletions.Add(
                     completion);
@@ -483,20 +519,33 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 presentationDeltaSeconds);
         }
 
+        internal void ResolveActionPresentationFrames(
+            CharacterPoseProgramFrameLease lease,
+            ActionPresentationSamplingRuntime sampling,
+            ActionPresentationSamplingFrameTransaction samplingTransaction)
+        {
+            RequireFrame(lease);
+            RequirePresentationWorkspaceFrame(
+                lease.Lineage.FrameIdentity);
+            if (sampling == null)
+                throw new ArgumentNullException(nameof(sampling));
+            sampling.ResolvePresentationFrames(
+                samplingTransaction,
+                m_PresentationWorkspace,
+                m_PresentationWorkspaceFrame);
+        }
+
         internal void PublishActionSources(
             CharacterPoseProgramFrameLease lease,
-            PresentationFrameWorkspace workspace,
-            PresentationFrameWorkspaceLease workspaceLease,
             IDictionary<AnimationPlayerSourceSampleKey,
                 AnimationResolvedPoseSourceSample> sourceSamples)
         {
             RequireFrame(lease);
             RequireActionFrame(lease.Lineage.FrameIdentity);
             RequireAnimationSlotFrame(lease.Lineage.FrameIdentity);
-            if (workspace == null ||
-                !workspaceLease.IsValid ||
-                workspaceLease.Identity != lease.Lineage.FrameIdentity ||
-                sourceSamples == null)
+            RequirePresentationWorkspaceFrame(
+                lease.Lineage.FrameIdentity);
+            if (sourceSamples == null)
             {
                 throw new ArgumentException(
                     "Character Pose Program Action source input is invalid.");
@@ -511,7 +560,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             }
             IReadOnlyDictionary<AnimationPlaybackId,
                 ActionAnimationPlaybackFrame> frames =
-                    workspace.ActionFrames;
+                    m_PresentationWorkspace.ActionFrames;
             for (int i = 0; i < sourcePlans.Count; i++)
             {
                 AnimationSlotActionSourcePlan sourcePlan = sourcePlans[i];
@@ -550,20 +599,13 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         }
 
         internal void CompleteActionReleaseProtocol(
-            CharacterPoseProgramFrameLease lease,
-            PresentationFrameWorkspace workspace,
-            PresentationFrameWorkspaceLease workspaceLease)
+            CharacterPoseProgramFrameLease lease)
         {
             RequireFrame(lease);
             RequireActionFrame(lease.Lineage.FrameIdentity);
             RequireAnimationSlotFrame(lease.Lineage.FrameIdentity);
-            if (workspace == null ||
-                !workspaceLease.IsValid ||
-                workspaceLease.Identity != lease.Lineage.FrameIdentity)
-            {
-                throw new ArgumentException(
-                    "Character Pose Program Action release workspace is invalid.");
-            }
+            RequirePresentationWorkspaceFrame(
+                lease.Lineage.FrameIdentity);
             m_SourceModule.CopyActionSlotReleaseCompletions(
                 m_ActionSlotReleaseCompletions);
             for (int i = 0;
@@ -579,21 +621,21 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             }
             ActorState.AnimationSlots.PublishActionUsages(
                 m_AnimationSlotFrame,
-                workspace,
-                workspaceLease);
+                m_PresentationWorkspace,
+                m_PresentationWorkspaceFrame);
             ActorState.ActionPlayback.ReplaceSlotUsageBatch(
                 m_ActionFrame,
-                workspace.ActionUsages);
+                m_PresentationWorkspace.ActionUsages);
             IReadOnlyList<ActionAnimationPlaybackLifecycleFrame> lifecycle =
                 ActorState.ActionPlayback.BuildLifecycleFrame(m_ActionFrame);
             ActorState.AnimationSlots.PublishRetirementPermissions(
                 m_AnimationSlotFrame,
                 lifecycle,
-                workspace,
-                workspaceLease);
+                m_PresentationWorkspace,
+                m_PresentationWorkspaceFrame);
             ActorState.ActionPlayback.ApplyRetirementPermissions(
                 m_ActionFrame,
-                workspace.RetirementPermissions);
+                m_PresentationWorkspace.RetirementPermissions);
             lifecycle =
                 ActorState.ActionPlayback.BuildLifecycleFrame(m_ActionFrame);
             for (int i = 0; i < lifecycle.Count; i++)
@@ -613,8 +655,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                     ActorState.ActionPlayback.RegisterBackendReleaseRequest(
                         m_ActionFrame,
                         request);
-                    workspace.AddReleaseRequest(
-                        workspaceLease,
+                    m_PresentationWorkspace.AddReleaseRequest(
+                        m_PresentationWorkspaceFrame,
                         request);
                     continue;
                 }
@@ -652,6 +694,12 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             RequireAlive();
             ActorState.ActionPlayback.Reset();
             ClearActionFrameViews();
+        }
+
+        internal void ResetPresentationWorkspace()
+        {
+            RequireAlive();
+            m_PresentationWorkspace.Reset();
         }
 
         internal AnimationPoseSourceId PublishActionSourceFrame(
@@ -894,14 +942,13 @@ namespace ThirdPersonCharacter.Pipeline.Animation
 
         internal void FinalizePoseStateFrame(
             CharacterPoseProgramFrameLease lease,
-            in CharacterPresentationFactFrame factFrame,
-            PresentationFrameWorkspace workspace,
-            PresentationFrameWorkspaceLease workspaceLease)
+            in CharacterPresentationFactFrame factFrame)
         {
             RequireFrame(lease);
+            RequirePresentationWorkspaceFrame(
+                lease.Lineage.FrameIdentity);
             if (!factFrame.IsValid ||
-                workspace == null ||
-                !workspaceLease.IsValid)
+                !m_PresentationWorkspaceFrame.IsValid)
             {
                 throw new ArgumentException(
                     "Pose State frame finalization is invalid.",
@@ -912,8 +959,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             ActorState.PoseStateSources.EvaluateTransitions(
                 in factFrame,
                 FramePages,
-                workspace,
-                workspaceLease);
+                m_PresentationWorkspace,
+                m_PresentationWorkspaceFrame);
             for (int i = 0;
                  i < ActorState.RootOrientationWarps.Length;
                  i++)
@@ -1086,6 +1133,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 m_ActionFrame.Identity != lease.Lineage.FrameIdentity ||
                 !m_AnimationSlotFrame.IsValid ||
                 m_AnimationSlotFrame.FrameIdentity !=
+                    lease.Lineage.FrameIdentity ||
+                !m_PresentationWorkspaceFrame.IsValid ||
+                m_PresentationWorkspaceFrame.Identity !=
                     lease.Lineage.FrameIdentity)
             {
                 throw new InvalidOperationException(
@@ -1131,6 +1181,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             m_CommittingFrameLease = default;
             m_ActionFrame = null;
             m_AnimationSlotFrame = default;
+            m_PresentationWorkspaceFrame = default;
             if (failure != null)
             {
                 throw new AggregateException(
@@ -2413,32 +2464,32 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             BuildMotionMatchingDemandBatch(
                 CharacterPoseProgramFrameLease lease,
                 ulong presentationFrame,
-                ulong resetSequence,
-                PresentationFrameWorkspace workspace,
-                PresentationFrameWorkspaceLease workspaceLease)
+                ulong resetSequence)
         {
             RequireFrame(lease);
+            RequirePresentationWorkspaceFrame(
+                lease.Lineage.FrameIdentity);
             return ActorState.PoseStateSources.BuildMotionMatchingDemandBatch(
                 presentationFrame,
                 resetSequence,
-                workspace,
-                workspaceLease);
+                m_PresentationWorkspace,
+                m_PresentationWorkspaceFrame);
         }
 
         internal void ApplyMotionMatchingSelections(
             CharacterPoseProgramFrameLease lease,
             in MotionMatchingFrameResolution resolution,
             IDictionary<AnimationPlayerSourceSampleKey,
-                PresentationPoseSourceSample> sourceSamples,
-            PresentationFrameWorkspace workspace,
-            PresentationFrameWorkspaceLease workspaceLease)
+                PresentationPoseSourceSample> sourceSamples)
         {
             RequireFrame(lease);
+            RequirePresentationWorkspaceFrame(
+                lease.Lineage.FrameIdentity);
             ActorState.PoseStateSources.ApplyMotionMatchingSelections(
                 in resolution,
                 sourceSamples,
-                workspace,
-                workspaceLease,
+                m_PresentationWorkspace,
+                m_PresentationWorkspaceFrame,
                 this);
         }
 
@@ -2959,6 +3010,17 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             {
                 throw new InvalidOperationException(
                     "Character Pose Program Animation Slot frame is stale.");
+            }
+        }
+
+        void RequirePresentationWorkspaceFrame(ulong frameIdentity)
+        {
+            if (frameIdentity == 0 ||
+                !m_PresentationWorkspaceFrame.IsValid ||
+                m_PresentationWorkspaceFrame.Identity != frameIdentity)
+            {
+                throw new InvalidOperationException(
+                    "Character Pose Program Presentation workspace frame is stale.");
             }
         }
 

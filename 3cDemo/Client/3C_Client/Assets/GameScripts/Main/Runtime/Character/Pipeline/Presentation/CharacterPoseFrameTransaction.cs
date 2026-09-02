@@ -120,11 +120,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         }
 
         internal CharacterPoseFrameLineage Lineage { get; private set; }
-        internal PresentationFrameWorkspaceLease WorkspaceLease
-        {
-            get;
-            private set;
-        }
         internal ActionPresentationSamplingFrameTransaction
             SamplingTransaction { get; private set; }
         internal CharacterPoseProgramFrameLease PoseLease { get; private set; }
@@ -168,9 +163,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         internal AnimationPresentationFrameOutcome Outcome { get; private set; }
         internal bool IsValid =>
             Lineage.IsValid &&
-            WorkspaceLease.IsValid &&
-            WorkspaceLease.Identity == Lineage.FrameIdentity &&
-            WorkspaceLease.PresentationFrame == Lineage.PresentationFrame &&
             SamplingTransaction?.IsValid == true &&
             SamplingTransaction.Identity == Lineage.FrameIdentity &&
             SamplingTransaction.PresentationFrame == Lineage.PresentationFrame &&
@@ -197,7 +189,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
 
         internal void Begin(
             in CharacterPoseFrameLineage lineage,
-            PresentationFrameWorkspaceLease workspaceLease,
             ActionPresentationSamplingFrameTransaction samplingTransaction,
             CharacterPoseProgramFrameLease poseLease,
             CharacterPoseSourceFrameLease sourceLease,
@@ -209,9 +200,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         {
             if (!Closed ||
                 lineage.CompletionIdentity != 0 ||
-                !workspaceLease.IsValid ||
-                workspaceLease.Identity != lineage.FrameIdentity ||
-                workspaceLease.PresentationFrame != lineage.PresentationFrame ||
                 samplingTransaction == null ||
                 !samplingTransaction.IsValid ||
                 samplingTransaction.Identity != lineage.FrameIdentity ||
@@ -229,7 +217,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             }
             ClearBatches();
             Lineage = lineage;
-            WorkspaceLease = workspaceLease;
             SamplingTransaction = samplingTransaction;
             PoseLease = poseLease;
             SourceLease = sourceLease;
@@ -358,7 +345,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             }
             ClearBatches();
             Lineage = default;
-            WorkspaceLease = default;
             SamplingTransaction = null;
             PoseLease = default;
             SourceLease = default;

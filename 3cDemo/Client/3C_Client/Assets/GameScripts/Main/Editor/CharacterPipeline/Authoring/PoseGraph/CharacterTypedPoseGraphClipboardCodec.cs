@@ -316,6 +316,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 throw new InvalidOperationException(
                     "Pose clipboard contains duplicate edge identities.");
             }
+            var connectedInputs = new HashSet<string>(StringComparer.Ordinal);
             foreach (ClipboardEdge edge in payload.edges)
             {
                 if (!nodes.ContainsKey(edge.sourceNode) ||
@@ -338,6 +339,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                         out GraphAuthoringDynamicPortProjection target) ||
                     source.Direction != GraphAuthoringPortDirection.Output ||
                     target.Direction != GraphAuthoringPortDirection.Input ||
+                    !connectedInputs.Add(
+                        edge.targetNode + "\0" + targetPortId) ||
                     !string.Equals(
                         source.ValueTypeId,
                         target.ValueTypeId,

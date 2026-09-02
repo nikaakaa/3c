@@ -1068,6 +1068,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                             node.DynamicPorts.ToArray());
                         RequireExistingEdgesCompatible(
                             replacement,
+                            nodes,
                             edges);
                         nodes[index] = replacement;
                         break;
@@ -1088,6 +1089,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                             configure.Ports.ToArray());
                         RequireExistingEdgesCompatible(
                             replacement,
+                            nodes,
                             edges);
                         nodes[index] = replacement;
                         break;
@@ -1201,23 +1203,33 @@ namespace ThirdPersonCharacter.Pipeline.Editor
 
         static void RequireExistingEdgesCompatible(
             CharacterTypedPoseNode node,
+            IReadOnlyList<CharacterTypedPoseNode> nodes,
             IReadOnlyList<CharacterPoseEdge> edges)
         {
-            IReadOnlyList<CharacterPosePortDefinition> ports =
-                CharacterPoseAuthoringPortProjection.Get(node);
             foreach (CharacterPoseEdge edge in edges.Where(value =>
                          value.SourceNodeId == node.NodeId ||
                          value.TargetNodeId == node.NodeId))
             {
-                bool sourceValid = edge.SourceNodeId != node.NodeId ||
-                    ports.Any(value =>
-                        value.PortId.Equals(edge.SourcePortId) &&
-                        value.Direction == CharacterPosePortDirection.Output);
-                bool targetValid = edge.TargetNodeId != node.NodeId ||
-                    ports.Any(value =>
-                        value.PortId.Equals(edge.TargetPortId) &&
-                        value.Direction == CharacterPosePortDirection.Input);
-                if (!sourceValid || !targetValid)
+                CharacterTypedPoseNode sourceNode =
+                    edge.SourceNodeId == node.NodeId
+                        ? node
+                        : RequireNode(nodes, edge.SourceNodeId);
+                CharacterTypedPoseNode targetNode =
+                    edge.TargetNodeId == node.NodeId
+                        ? node
+                        : RequireNode(nodes, edge.TargetNodeId);
+                CharacterPosePortDefinition source =
+                    CharacterPoseAuthoringPortProjection.Get(sourceNode)
+                        .SingleOrDefault(value =>
+                            value.PortId.Equals(edge.SourcePortId));
+                CharacterPosePortDefinition target =
+                    CharacterPoseAuthoringPortProjection.Get(targetNode)
+                        .SingleOrDefault(value =>
+                            value.PortId.Equals(edge.TargetPortId));
+                if (source == null || target == null ||
+                    source.Direction != CharacterPosePortDirection.Output ||
+                    target.Direction != CharacterPosePortDirection.Input ||
+                    source.Kind != target.Kind)
                     throw new InvalidOperationException(
                         $"Pose node '{node.NodeId}' cannot change shape while edge '{edge.EdgeId}' would become incompatible.");
             }
@@ -1360,13 +1372,14 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 throw new ArgumentException(
                     "Pose payload field mutation set is empty.",
                     nameof(fields));
+            if (fields.Select(value => value.FieldId)
+                    .Distinct(StringComparer.Ordinal).Count() != fields.Count)
+                throw new InvalidOperationException(
+                    "Pose payload field mutation set contains duplicate fields.");
             Dictionary<string, object> values = fields.ToDictionary(
                 value => value.FieldId,
                 value => value.Value,
                 StringComparer.Ordinal);
-            if (values.Count != fields.Count)
-                throw new InvalidOperationException(
-                    "Pose payload field mutation set contains duplicate fields.");
             return CharacterPoseNodeDefinitionModule.Shared
                 .RequirePayload(payload)
                 .MutatePayload(payload, values);

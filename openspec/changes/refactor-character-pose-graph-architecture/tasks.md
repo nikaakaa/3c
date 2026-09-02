@@ -61,7 +61,7 @@
 
 ## 6. 建立唯一CharacterPoseProgramRuntime与持久Executor
 
-- [ ] 6.1 新增`CharacterPoseProgramRuntime`，唯一持有Program Image只读引用或自己的actor-local Execution View、Actor State、Program Frame Pages和持久Executor Implementation，并只接收根Frame Lease
+- [x] 6.1 新增`CharacterPoseProgramRuntime`，唯一持有Program Image只读引用或自己的actor-local Execution View、Actor State、Program Frame Pages和持久Executor Implementation，并只接收根Frame Lease
 - [ ] 6.2 将PoseStateMachine、Player、ActionPlaybackInput lifecycle、AnimationSlot、BlendStack、Transition消费、Inertialization和其它逻辑节点执行迁入Program Runtime
 - [x] 6.3 将每帧Executor构造改为持久绑定Program Image/Execution View和Program自有固定页，只切换根Frame Lease与Pending页索引
 - [ ] 6.4 按Stage Schedule执行每个Operation恰好一次并写入唯一Operation Completion页

@@ -817,3 +817,15 @@ Constraint在Begin Frame时要求自己的Committed generation与根lineage一�
 状态：Program-owned Candidate现在同时准备Operation Weight、Pose StateMachine Transition duration、Blend Stack policy与Inertialization rule；各对象只保存候选值，Commit前不修改当前Actor状态。Source继续准备Clip play rate Candidate，Constraint继续准备FBBIK／Foot Candidate。新增`CharacterPoseTuningSnapshot`组合三个同generation Committed View，根Runtime在打开Frame前验证它与lineage一致。
 
 `CharacterAnimationPresentationRuntime.ApplyPendingTuning`仍在`BeginFrameTransaction`之前运行；Pose Runtime依次准备三个分区，任一失败统一Discard，全部成功后分别Commit并只发布一个新的统一Snapshot，外层随后只提升一次`m_TuningGeneration`。旧`RestoreMutableTuning`、先改StateMachine／Stack／Inertialization／Vendor再反向Apply旧Block的路径全部删除。Sequence Preview继续进入同一`Present`和同一actor-local Runtime，不复制调参对象或generation。由此任务6.9与8.1至8.6完成；3C MCP对六个Runtime触碰文件与新Snapshot类型错误筛选均为0，不单独运行回放。
+
+## Program Frame Pages入口归还Program Runtime
+
+状态：`CharacterPoseProgramRuntime`接管Program Frame的Begin／Commit／Discard、Evaluation页、Source Demand／Preparation、Slot与Root Warp控制、Player写Binding、Pose Value读Binding、Stage completion、Committed diagnostics和容量查询。旧`PosePlanExecutionRuntime`删除对`CharacterPoseProgramFramePages`与`CharacterPoseProgramTuningState`的直接引用，只通过Program Runtime的typed入口处理同一根Frame lease。
+
+Frame Pages与Tuning属性改为Program Runtime私有，原调用顺序、completion identity、Pending／Committed页选择和失败清理保持不变；外层尚保留逻辑节点调度及Execution View过渡访问，所以本步不提前完成任务5.6、6.1或6.2。3C MCP对Program Runtime与旧Pose Runtime编译错误筛选均为0，不单独运行回放。
+
+## Program Evaluation与World Context装配归还Program Runtime
+
+状态：`CharacterPoseProgramRuntime`现在保存Prepared Evaluation、Pending／Committed Evaluation binding并直接驱动唯一持久Executor的Stage Schedule。旧`PosePlanExecutionRuntime`删除raw `CharacterPoseGraphNativeBinding`、Executor引用、Pending／Committed Frame标记、World-aware Stage扫描和Foot Placement输入装配，只在Animancer Barrier前后调用Program Runtime的typed Prepare／Complete／Mark入口。
+
+新增唯一`CharacterPoseWorldContextAdapter`，整体接管原有Contribution展开、主导Live source选择、Clip／Timeline Foot Step曲线解析和`CharacterFootPlacementFrameInput`构造；Program Runtime只在已编译WorldAware Stage遇到Foot handle时传入自己的Pose Value只读Binding与根Body／Fact frame。没有改Foot、Pelvis、Goal、FBBIK公式、参数、Unavailable政策、Operation顺序或Physical Writer顺序。由此任务6.1完成；任务6.6仍等待把旧`CharacterPoseGraphStagedExecutor`的Operation switch整体并入正式Program执行实现，当前不提前勾选。3C MCP清空并重编后触碰文件均无编译错误，全局仅剩既有FinalIK序列化深度Import Error；不单独运行回放。

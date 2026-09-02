@@ -165,3 +165,9 @@ Full Sampler加入`current-support-target`后，Source Generator输出由634增�
 Resolved Foot 57个typed字段中的21项Core事实已迁移，覆盖Frame／Completion／Rig／Side／Outcome、Final与Effective Sole、Goal Target Ankle／Rotation、Effective Ankle／Rotation／Heel／Toe／Sole from Contacts、Source Sole frame、Goal／Effective correction及最终权重。Extractor逐项读取当前脚Committed Resolved Core，不重新解算Sole contact、Goal或Ankle姿态。
 
 Full Sampler加入`resolved-core`后，Source Generator输出由652增长到673个主Field Handle，连同Geometry表共694个Field Handle；Schema为`1d8ce2d334f120ec230c37b74ddd885f2e8fdcec14ab488b9d62b536aea60554`，Program hash为`2e6b8fd916455cdff3ac528cf723121172d462745deab4827b3930d644f4c067`，主layout为`da4b593ffcbe219d3c607abaec5bd2f741858f5190e194ad17a9184b7b3ffc2a`。Foot插件及依赖工程0错误，build server已关闭；本步不修改运行链，不单独回放。余下Support Target 18项和Contact／Support／Reach 18项分别独立迁移。
+
+## 迁移Resolved Support Target字段
+
+Resolved Foot的Support Target 18个typed字段已全部迁移，覆盖Target可用性、Frame／Completion／Side、position／normal／surface／world lineage、Target Kind及Position／Normal各自的来源、Frame、Completion、Event和Path identity。position起的14项统一依赖`resolved-support-target-available`，Frame／Completion／Side保持现行无条件lineage语义；Extractor只读取同一Constraint Committed Resolved Support Target，不查询World或重算Target选择。
+
+切换KK正式Generator后，Full Sampler加入`resolved-target`并由Unity重新编译。生成主Extractor调用由673增长到691，连同Geometry表共712个typed字段；Generator identity为`kk.generated-diagnostic-sampling.generator/1/c91a40d87c6340d8a342a60f1efe2cf1`，Schema为`6d049e27c93222695c6eff1eba508cc76d1ef27bc1f6dc10d36fce6e5ae05955`，Program hash为`783e80c1b207082b73fbce855b11f7f02aaaaf5903411fe647ffd823f009eac9`，主layout为`e1ef95da5af927e31855d1fe92114d86ba3a3b8d6e18b13650786fcfef31a634`。Unity Console无C#、package或asmdef错误，唯一Error仍是既有FinalIK序列化深度提示；Generated Lifecycle尚未接入Runtime consumer，本步不改变现行运行链，不单独回放。Resolved Foot当前39／57个typed字段完成，余下Contact／Support／Reach 18项下一小步迁移。

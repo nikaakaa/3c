@@ -604,7 +604,7 @@
         {
           "slot": "selected-in-approach-contact",
           "dataset": "foot",
-          "field": "character-foot-ik/main/foot/step-candidate-selection/formal/in-approach-contact-to-landing"
+          "key": "character-foot-ik/main/formal-input/formal-in-approach"
         },
         {
           "slot": "consumed-landing-available",
@@ -760,7 +760,7 @@
         {
           "slot": "current-step-authoritative",
           "dataset": "foot",
-          "field": "character-foot-ik/main/foot/step-candidate-selection/formal/is-authoritative"
+          "key": "character-foot-ik/main/formal-input/formal-authoritative"
         },
         {
           "slot": "formal-foot-placement-weight",
@@ -1254,12 +1254,12 @@
         {
           "slot": "in-approach",
           "dataset": "foot",
-          "key": "character-foot-ik/main/foot/formal-step-in-approach"
+          "key": "character-foot-ik/main/formal-input/formal-in-approach"
         },
         {
           "slot": "approach-event-identity",
           "dataset": "foot",
-          "key": "character-foot-ik/main/foot/formal-step-landing-event"
+          "key": "character-foot-ik/main/formal-input/formal-landing-event"
         },
         {
           "slot": "source-identity",
@@ -1269,12 +1269,12 @@
         {
           "slot": "source-cycle",
           "dataset": "foot",
-          "key": "character-foot-ik/main/foot/formal-step-source-cycle"
+          "key": "character-foot-ik/main/formal-input/formal-source-cycle"
         },
         {
           "slot": "approach-progress",
           "dataset": "foot",
-          "field": "character-foot-ik/main/foot/step-candidate-selection/formal/approach-contact-to-landing-progress"
+          "key": "character-foot-ik/main/formal-input/formal-approach-progress"
         },
         {
           "slot": "plant-interpolation-evaluated",
@@ -1349,7 +1349,7 @@
         {
           "slot": "current-step-authoritative",
           "dataset": "foot",
-          "field": "character-foot-ik/main/foot/step-candidate-selection/formal/is-authoritative"
+          "key": "character-foot-ik/main/formal-input/formal-authoritative"
         },
         {
           "slot": "hard-ownership-loss",
@@ -1406,7 +1406,7 @@
         {
           "slot": "current-step-authoritative",
           "dataset": "foot",
-          "field": "character-foot-ik/main/foot/step-candidate-selection/formal/is-authoritative"
+          "key": "character-foot-ik/main/formal-input/formal-authoritative"
         },
         {
           "slot": "hard-ownership-loss",
@@ -2132,7 +2132,7 @@
         {
           "slot": "formal-landing-event",
           "dataset": "foot",
-          "key": "character-foot-ik/main/foot/formal-step-landing-event"
+          "key": "character-foot-ik/main/formal-input/formal-landing-event"
         },
         {
           "slot": "selected-source",

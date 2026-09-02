@@ -102,6 +102,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             IsValid &&
             (Events.Phase == AnimationFootMotionEventPhase.Swing ||
              Events.Phase == AnimationFootMotionEventPhase.ApproachContact);
+        [DiagnosticField]
+        [DiagnosticKey("formal-landing-event")]
+        [DiagnosticGroup("formal-source")]
         public ulong LandingEventIdentity =>
             HasPredictiveLanding ? Events.NextLanding.Identity : 0;
         [DiagnosticField]
@@ -118,20 +121,35 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             HasPredictiveLanding ? Events.NextLanding.RootLocalLanding : default;
         public float SwingProgress =>
             HasPredictiveLanding ? Events.SwingProgress : 0f;
+        [DiagnosticField]
+        [DiagnosticKey("formal-approach-progress")]
+        [DiagnosticGroup("formal-source")]
         public float ApproachContactToLandingProgress =>
             HasPredictiveLanding && Events.InApproachContactToLanding
                 ? Events.ApproachContactToLandingProgress
                 : 0f;
         public int EventOrdinal =>
             HasPredictiveLanding ? Events.NextLanding.Ordinal : 0;
+        [DiagnosticField]
+        [DiagnosticKey("formal-source-cycle")]
+        [DiagnosticGroup("formal-source")]
         public int SourceSampleCycle =>
             HasPredictiveLanding ? Events.NextLanding.LandingCycle : 0;
+        [DiagnosticField]
+        [DiagnosticKey("formal-source-sample-identity")]
+        [DiagnosticGroup("formal-source")]
         public ulong SourceSampleIdentity =>
             HasPredictiveLanding ? Events.NextLanding.SourceSampleIdentity : 0;
+        [DiagnosticField]
+        [DiagnosticKey("formal-contribution-continuity")]
+        [DiagnosticGroup("formal-source")]
         public ulong ContributionContinuityIdentity =>
             HasPredictiveLanding
                 ? Events.NextLanding.ContributionContinuityIdentity
                 : 0;
+        [DiagnosticField]
+        [DiagnosticKey("formal-authoritative")]
+        [DiagnosticGroup("formal-source")]
         public bool IsAuthoritative => IsValid;
         public bool HasConsistentLandingEventIdentity =>
             HasPredictiveLanding && LandingEventIdentity != 0;
@@ -139,6 +157,12 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             IsValid && Events.CurrentContact.IsBound;
         public ulong CurrentContactEventIdentity =>
             HasCurrentContactEvent ? Events.CurrentContact.Identity : 0;
+
+        [DiagnosticField]
+        [DiagnosticKey("formal-in-approach")]
+        [DiagnosticGroup("formal-source")]
+        public bool InApproachContactToLanding =>
+            HasPredictiveLanding && Events.InApproachContactToLanding;
 
         internal AnimationFootMotionRuntimeSample BindEventLineage(
             ulong sourceSampleIdentity,

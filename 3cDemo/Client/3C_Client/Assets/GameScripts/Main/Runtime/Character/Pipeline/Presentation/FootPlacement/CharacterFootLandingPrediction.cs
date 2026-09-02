@@ -612,7 +612,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         internal CharacterFootLandingPredictionFootDiagnostics(
             in CharacterFootLandingPredictionResult result,
             CharacterFootPlacementAnimatedFootPose sourcePose,
-            in CharacterFootStepCandidateSelectionDiagnostics stepCandidateSelection,
+            in CharacterFootStepSelectionDiagnostics stepSelection,
             CharacterFootLandingSnapshot landing,
             bool approachPlantTargetPrepared,
             in CharacterFootCurrentSupportObservation currentSupport,
@@ -647,7 +647,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             SourceAnkleRotation = sourcePose.AnkleRotation;
             SourceHeelPosition = sourcePose.HeelPosition;
             SourceToePosition = sourcePose.ToePosition;
-            StepCandidateSelection = stepCandidateSelection;
+            StepSelection = stepSelection;
             NextLandingTrackingState = landing.NextTrackingState;
             NextLandingTrackingEventIdentity =
                 landing.NextTrackingEventIdentity;
@@ -777,7 +777,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         [DiagnosticKey("source-toe-position")]
         [DiagnosticGroup("motion-core")]
         public Vector3 SourceToePosition { get; }
-        public CharacterFootStepCandidateSelectionDiagnostics StepCandidateSelection { get; }
+        public CharacterFootStepSelectionDiagnostics StepSelection { get; }
         [DiagnosticField]
         [DiagnosticGroup("identity")]
         public CharacterFootNextLandingTrackingState NextLandingTrackingState { get; }
@@ -849,118 +849,20 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         public bool Accepted => State == CharacterFootLandingPredictionState.Accepted;
     }
 
-    public readonly struct CharacterFootStepCandidateDiagnostics
+    public readonly struct CharacterFootStepSelectionDiagnostics
     {
-        internal CharacterFootStepCandidateDiagnostics(
-            in AnimationFootMotionRuntimeSample step)
-        {
-            IsValid = step.IsValid;
-            IsAuthoritative = step.IsAuthoritative;
-            HasConsistentLandingEventIdentity =
-                step.HasConsistentLandingEventIdentity;
-            IsPreSwing = step.IsPreSwing;
-            IsSwing = step.IsSwing;
-            HasCurrentContactEvent = step.HasCurrentContactEvent;
-            CurrentContactEventIdentity = step.CurrentContactEventIdentity;
-            EventOrdinal = step.EventOrdinal;
-            SourceSampleCycle = step.SourceSampleCycle;
-            ContributionContinuityIdentity =
-                step.ContributionContinuityIdentity;
-            LandingEventIdentity = step.LandingEventIdentity;
-            TimeToLandingSeconds = step.TimeToLandingSeconds;
-            Distance = step.Distance;
-            Phase = step.Events.Phase;
-            SwingProgress = step.SwingProgress;
-            ApproachContactToLandingProgress =
-                step.ApproachContactToLandingProgress;
-            RootLocalLanding = step.RootLocalLanding;
-        }
-
-        [DiagnosticField]
-        [DiagnosticGroup("current-step")]
-        public bool IsValid { get; }
-        [DiagnosticField]
-        [DiagnosticGroup("current-step")]
-        public bool IsAuthoritative { get; }
-        [DiagnosticField]
-        [DiagnosticGroup("current-step")]
-        public bool HasConsistentLandingEventIdentity { get; }
-        [DiagnosticField]
-        [DiagnosticGroup("current-step")]
-        public bool IsPreSwing { get; }
-        [DiagnosticField]
-        [DiagnosticGroup("current-step")]
-        public bool IsSwing { get; }
-        public bool HasCurrentContactEvent { get; }
-        public ulong CurrentContactEventIdentity { get; }
-        [DiagnosticField]
-        [DiagnosticGroup("current-step")]
-        public int EventOrdinal { get; }
-        [DiagnosticField]
-        [DiagnosticKey("formal-step-source-cycle")]
-        [DiagnosticGroup("current-step")]
-        public int SourceSampleCycle { get; }
-        [DiagnosticField]
-        [DiagnosticKey("formal-step-continuity")]
-        [DiagnosticGroup("current-step")]
-        public ulong ContributionContinuityIdentity { get; }
-        [DiagnosticField]
-        [DiagnosticKey("formal-step-landing-event")]
-        [DiagnosticGroup("current-step")]
-        public ulong LandingEventIdentity { get; }
-        [DiagnosticField]
-        [DiagnosticKey("formal-step-time-to-landing")]
-        [DiagnosticGroup("current-step")]
-        public float TimeToLandingSeconds { get; }
-        [DiagnosticField]
-        [DiagnosticGroup("current-step")]
-        public float Distance { get; }
-        [DiagnosticField]
-        [DiagnosticGroup("current-step")]
-        public AnimationFootMotionEventPhase Phase { get; }
-        [DiagnosticField]
-        [DiagnosticGroup("current-step")]
-        public float SwingProgress { get; }
-        [DiagnosticField]
-        [DiagnosticGroup("current-step")]
-        public float EventPhase => SwingProgress;
-        [DiagnosticField]
-        [DiagnosticGroup("current-step")]
-        public float ApproachContactToLandingProgress { get; }
-        [DiagnosticField]
-        [DiagnosticGroup("current-step")]
-        public float LandingPhase => IsValid ? 1f : 0f;
-        [DiagnosticField]
-        [DiagnosticGroup("current-step")]
-        public bool AtOrAfterApproachContact =>
-            IsValid && Phase == AnimationFootMotionEventPhase.ApproachContact;
-        [DiagnosticField]
-        [DiagnosticKey("formal-step-in-approach")]
-        [DiagnosticGroup("current-step")]
-        public bool InApproachContactToLanding =>
-            IsValid && Phase == AnimationFootMotionEventPhase.ApproachContact;
-        [DiagnosticField]
-        [DiagnosticGroup("current-step")]
-        public Vector3 RootLocalLanding { get; }
-    }
-
-    public readonly struct CharacterFootStepCandidateSelectionDiagnostics
-    {
-        internal CharacterFootStepCandidateSelectionDiagnostics(
-            in AnimationFootMotionRuntimeSample footMotion,
+        internal CharacterFootStepSelectionDiagnostics(
             ulong lastLandingEventIdentity,
             CharacterFootLandingStepSource selectedSource,
             ulong selectedLandingEventIdentity,
             float maximumPredictionTimeSeconds)
         {
-            Formal = new CharacterFootStepCandidateDiagnostics(in footMotion);
             LastLandingEventIdentity = lastLandingEventIdentity;
             SelectedSource = selectedSource;
             SelectedLandingEventIdentity = selectedLandingEventIdentity;
             MaximumPredictionTimeSeconds = maximumPredictionTimeSeconds;
         }
 
-        public CharacterFootStepCandidateDiagnostics Formal { get; }
         [DiagnosticField]
         [DiagnosticKey("step-selection-last-landing-event")]
         [DiagnosticGroup("identity")]
@@ -1026,8 +928,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         [DiagnosticKey("formal-observation-normalized-time")]
         [DiagnosticGroup("formal-source")]
         public float NormalizedTime { get; }
-        public AnimationFootMotionRuntimeSample Left { get; }
-        public AnimationFootMotionRuntimeSample Right { get; }
+        internal AnimationFootMotionRuntimeSample Left { get; }
+        internal AnimationFootMotionRuntimeSample Right { get; }
         public bool IsValid => m_IsSpecified != 0;
     }
 

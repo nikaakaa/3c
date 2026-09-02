@@ -660,8 +660,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     new CharacterFootLandingPredictionFootDiagnostics(
                         in left,
                         pose.Left,
-                        new CharacterFootStepCandidateSelectionDiagnostics(
-                            leftCurrentStep,
+                        new CharacterFootStepSelectionDiagnostics(
                             leftLanding.LastLandingEventIdentity,
                             leftPair.SelectedSource,
                             left.LandingEventIdentity,
@@ -677,8 +676,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     new CharacterFootLandingPredictionFootDiagnostics(
                         in right,
                         pose.Right,
-                        new CharacterFootStepCandidateSelectionDiagnostics(
-                            rightCurrentStep,
+                        new CharacterFootStepSelectionDiagnostics(
                             rightLanding.LastLandingEventIdentity,
                             rightPair.SelectedSource,
                             right.LandingEventIdentity,

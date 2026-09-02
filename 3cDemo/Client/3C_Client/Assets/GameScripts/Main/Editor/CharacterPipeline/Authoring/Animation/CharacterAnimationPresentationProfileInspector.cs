@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using Animancer;
 using BTSMTL.Timeline;
 using BTSMTL.Timeline.Editor;
+using ThirdPersonCharacter.Editor.CharacterSimulation;
 using ThirdPersonCharacter.Pipeline.Animation;
 using ThirdPersonCharacter.Pipeline.Animation.MotionMatching;
 using ThirdPersonCharacter.Editor.MotionMatching;
@@ -749,18 +750,28 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             for (int nodeIndex = 0; nodeIndex < graph.Nodes.Count; nodeIndex++)
             {
                 CharacterTypedPoseNode machine = graph.Nodes[nodeIndex];
-                if (machine?.Kind == CharacterPoseNodeKind.PoseSubgraph &&
-                    machine.Subgraph?.PoseGraphId.IsValid == true)
+                if (machine?.Payload == null)
+                    continue;
+                CharacterPoseNodeDefinition definition =
+                    CharacterPoseNodeDefinitionModule.Shared.Require(
+                        machine.Kind);
+                CharacterPoseGraphDependency subgraph = definition
+                    .ProjectGraphDependencies(machine.Payload)
+                    .FirstOrDefault(value =>
+                        value.Kind ==
+                        CharacterPoseGraphDependencyKind.Subgraph);
+                if (subgraph.GraphId.IsValid)
                 {
                     CollectPoseSourceConsumers(
                         owner,
-                        owner.RequireGraph(machine.Subgraph.PoseGraphId),
+                        owner.RequireGraph(subgraph.GraphId),
                         slot,
                         consumers,
                         visited);
                     continue;
                 }
-                if (machine?.Kind != CharacterPoseNodeKind.PoseStateMachine ||
+                if (definition.OperationFamily !=
+                        CharacterPoseOperationFamily.StateMachine ||
                     machine.PoseStateMachine == null)
                 {
                     continue;
@@ -776,9 +787,13 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     for (int stateNodeIndex = 0; stateNodeIndex < stateGraph.Nodes.Count; stateNodeIndex++)
                     {
                         CharacterTypedPoseNode player = stateGraph.Nodes[stateNodeIndex];
-                        if ((player?.Kind == CharacterPoseNodeKind.ClipPlayer ||
-                             player?.Kind == CharacterPoseNodeKind.BlendSpacePlayer) &&
-                            player.PresentationPoseSourceSlot == slot)
+                        if (player?.Payload == null)
+                            continue;
+                        CharacterPoseNodeDefinition playerDefinition =
+                            CharacterPoseNodeDefinitionModule.Shared
+                                .Require(player.Kind);
+                        if (playerDefinition.UsesPoseSourceSlot &&
+                            playerDefinition.Source(player.Payload) == slot)
                         {
                             consumers.Add(new PoseSourceConsumer(machine, state, player));
                         }

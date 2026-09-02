@@ -177,23 +177,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                 (left, right) => left.PlayableSource.CompareTo(
                     right.PlayableSource);
 
-        enum StandaloneSourceReleaseOwner : byte
-        {
-            Direct = 1,
-            Clip = 2,
-            BlendSpace = 3
-        }
-
-        struct PreparedStandaloneSourceRelease
-        {
-            internal StandaloneSourceReleaseOwner Owner;
-            internal int PlayerIndex;
-            internal AnimationPoseSourceId SourceId;
-            internal PoseNodeId NodeId;
-            internal CharacterPoseSourceRetirementHandle SourceRelease;
-            internal AnimationPlayerReleaseToken PlayerRelease;
-        }
-
         struct PreparedMotionMatchingHistoryRead
         {
             internal MotionMatchingSelectionBatchItem Selection;
@@ -298,6 +281,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
         readonly CharacterPoseSourceModule m_SourceModule;
         readonly CharacterPoseSourcePreparationPage
             m_SourcePreparationPage;
+        readonly CharacterPoseProgramSourceRetirementState
+            m_SourceRetirementState;
         readonly ComposedAnimationPoseFramePublisher m_FramePublisher;
         readonly AnimationPoseSourceContribution[]
             m_FootPlacementContributions;
@@ -316,8 +301,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
         readonly AnimationSelectedPosePlayerJob[] m_DirectPlayerJobs;
         readonly AnimationSelectedPosePlayerJob[] m_ClipPlayerJobs;
         readonly AnimationSelectedPosePlayerJob[] m_BlendSpacePlayerJobs;
-        readonly PreparedStandaloneSourceRelease[]
-            m_PreparedStandaloneSourceReleases;
         readonly List<PendingActionBackendRelease>
             m_PendingActionBackendReleases;
         readonly List<PreparedActionBackendRelease>
@@ -369,7 +352,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
         CharacterPoseProgramPreparedPage m_PreparedPage;
         ulong m_ActionBackendReleaseRequestIdentity;
         ulong m_ActionBackendReleaseCompletionIdentity;
-        int m_PreparedStandaloneSourceReleaseCount;
         int m_PendingActionBackendReleaseFrameStartCount;
         int m_PreparedMotionMatchingHistoryReadCount;
         ulong m_PreparedMotionMatchingPresentationFrame;
@@ -733,8 +715,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             m_DiagnosticsPublisher = diagnosticsPublisher;
             m_ActorDiagnosticsProjector = actorDiagnosticsProjector;
             int releaseCapacity = sourceModule.Capacity;
-            m_PreparedStandaloneSourceReleases =
-                new PreparedStandaloneSourceRelease[releaseCapacity];
+            m_SourceRetirementState =
+                new CharacterPoseProgramSourceRetirementState(
+                    releaseCapacity);
             int backendSourceCapacity = checked(releaseCapacity * 2);
             m_PendingActionBackendReleases =
                 new List<PendingActionBackendRelease>(releaseCapacity);
@@ -911,9 +894,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                 actionJournalCapacity,
                 samplingJournalCapacity,
                 slotJournalCapacity,
-                m_PreparedStandaloneSourceReleases.Length,
+                m_SourceRetirementState.StandaloneCapacity,
                 m_SourceModule.Capacity,
-                m_PreparedStandaloneSourceReleases.Length);
+                m_SourceRetirementState.StandaloneCapacity);
 
         internal void RecordNoDiagnosticsInterest() =>
             m_DiagnosticsPublisher.RecordNoInterestSkip();
@@ -964,7 +947,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                 throw new InvalidOperationException(
                     "Pose Plan committed-frame finalization is still pending.");
             }
-            if (m_PreparedStandaloneSourceReleaseCount != 0)
+            if (m_SourceRetirementState.HasPreparedStandalone)
             {
                 throw new InvalidOperationException(
                     "Pose Plan standalone source releases from the committed frame were not finalized.");
@@ -1121,8 +1104,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                             sourceId,
                             player.NodeId,
                             default);
-                    AddPreparedStandaloneSourceRelease(
-                        StandaloneSourceReleaseOwner.Direct,
+                    m_SourceRetirementState.PrepareDirect(
                         i,
                         in sourceRelease,
                         in playerRelease);
@@ -1151,8 +1133,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                             sourceId,
                             player.NodeId,
                             default);
-                    AddPreparedStandaloneSourceRelease(
-                        StandaloneSourceReleaseOwner.Clip,
+                    m_SourceRetirementState.PrepareClip(
                         i,
                         in sourceRelease,
                         in playerRelease);
@@ -1181,8 +1162,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                             sourceId,
                             player.NodeId,
                             default);
-                    AddPreparedStandaloneSourceRelease(
-                        StandaloneSourceReleaseOwner.BlendSpace,
+                    m_SourceRetirementState.PrepareBlendSpace(
                         i,
                         in sourceRelease,
                         in playerRelease);
@@ -1279,11 +1259,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             DiscardStep(
                 DiscardPendingReleasePreparation,
                 ref failure);
-            Array.Clear(
-                m_PreparedStandaloneSourceReleases,
-                0,
-                m_PreparedStandaloneSourceReleaseCount);
-            m_PreparedStandaloneSourceReleaseCount = 0;
+            m_SourceRetirementState.ClearStandalone();
             ClearValidatedActionBackendAcknowledgements();
             ClearPreparedMotionMatchingPoseCompletion();
             m_PreparedPage.Clear();
@@ -1319,55 +1295,18 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                 throw new InvalidOperationException(
                     "Pose Plan committed frame was not validated.");
             }
-            ExecutePreparedStandaloneSourceReleases();
+            m_SourceRetirementState.ApplyStandalone(
+                m_SourceModule,
+                m_DirectPlayers,
+                m_PoseStateSources.ClipPlayers,
+                m_PoseStateSources.BlendSpacePlayers,
+                m_CompletionIdentity);
             ExecutePendingPoseSourceReleases();
             ComposedAnimationPoseFrame result =
                 m_FramePublisher.CommitPending(publicationLease);
             m_CommitValidated = false;
             m_PendingFrameOutcome = AnimationPresentationFrameOutcome.None;
             return result;
-        }
-
-        void ExecutePreparedStandaloneSourceReleases()
-        {
-            for (int i = 0;
-                 i < m_PreparedStandaloneSourceReleaseCount;
-                 i++)
-            {
-                PreparedStandaloneSourceRelease release =
-                    m_PreparedStandaloneSourceReleases[i];
-                m_SourceModule.ApplyRetirement(
-                    in release.SourceRelease);
-                switch (release.Owner)
-                {
-                    case StandaloneSourceReleaseOwner.Direct:
-                        m_DirectPlayers[release.PlayerIndex]
-                            .ApplyPreparedRelease(
-                                in release.PlayerRelease);
-                        break;
-                    case StandaloneSourceReleaseOwner.Clip:
-                        m_PoseStateSources.ClipPlayers[
-                                release.PlayerIndex]
-                            .ApplyPreparedRelease(
-                                in release.PlayerRelease);
-                        break;
-                    case StandaloneSourceReleaseOwner.BlendSpace:
-                        m_PoseStateSources.BlendSpacePlayers[
-                                release.PlayerIndex]
-                            .ApplyPreparedRelease(
-                                in release.PlayerRelease);
-                        break;
-                    default:
-                        throw new InvalidOperationException(
-                            "Standalone pose source release owner is invalid.");
-                }
-                m_SourceModule.RecordRelease(
-                    release.NodeId,
-                    release.SourceId,
-                    m_CompletionIdentity);
-                m_PreparedStandaloneSourceReleases[i] = default;
-            }
-            m_PreparedStandaloneSourceReleaseCount = 0;
         }
 
         void ClearValidatedActionBackendAcknowledgements()
@@ -3792,11 +3731,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             m_PrepareActionBackendPendingScratch.Clear();
             m_PrepareActionBackendSourceScratch.Clear();
             m_ExpectedActionBackendSources.Clear();
-            Array.Clear(
-                m_PreparedStandaloneSourceReleases,
-                0,
-                m_PreparedStandaloneSourceReleaseCount);
-            m_PreparedStandaloneSourceReleaseCount = 0;
+            m_SourceRetirementState.ClearStandalone();
             ClearValidatedActionBackendAcknowledgements();
             ClearPreparedMotionMatchingPoseCompletion();
         }
@@ -4266,35 +4201,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                 throw new InvalidOperationException(
                     "Pose Plan frame mutation must close before reset.");
             }
-        }
-
-        void AddPreparedStandaloneSourceRelease(
-            StandaloneSourceReleaseOwner owner,
-            int playerIndex,
-            in CharacterPoseSourceRetirementHandle sourceRelease,
-            in AnimationPlayerReleaseToken playerRelease)
-        {
-            if (owner == 0 ||
-                playerIndex < 0 ||
-                !sourceRelease.IsValid ||
-                !playerRelease.IsValid ||
-                m_PreparedStandaloneSourceReleaseCount >=
-                m_PreparedStandaloneSourceReleases.Length)
-            {
-                throw new InvalidOperationException(
-                    "Standalone pose source release exceeds its compiled journal.");
-            }
-            m_PreparedStandaloneSourceReleases[
-                m_PreparedStandaloneSourceReleaseCount++] =
-                new PreparedStandaloneSourceRelease
-                {
-                    Owner = owner,
-                    PlayerIndex = playerIndex,
-                    SourceId = sourceRelease.Permission.SourceId,
-                    NodeId = sourceRelease.Permission.PoseNodeId,
-                    SourceRelease = sourceRelease,
-                    PlayerRelease = playerRelease
-                };
         }
 
         void RestoreGraphClock()

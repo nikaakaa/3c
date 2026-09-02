@@ -181,7 +181,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 throw new ArgumentOutOfRangeException(
                     nameof(contributionIndex));
             }
-            return m_Page.FinalOutputContributions[contributionIndex];
+            return m_Page.FinalOutputFrame.Contributions[contributionIndex];
         }
 
         internal AnimationPrimitivePoseContribution GetValueContribution(
@@ -214,9 +214,19 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 AnimationPresentationDiagnosticsInterest.Capture |
                 AnimationPresentationDiagnosticsInterest.OperationDetail);
             if (IsFinalOutputValue(valueIndex))
+            {
                 GetFinalOutputContribution(contributionIndex);
-            else
-                GetValueContribution(valueIndex, contributionIndex);
+                if ((uint)boneIndex >=
+                    (uint)m_Page.Layout.BoneCount)
+                {
+                    throw new ArgumentOutOfRangeException(
+                        nameof(boneIndex));
+                }
+                return m_Page.FinalOutputFrame.GetContributionBoneWeight(
+                    contributionIndex,
+                    boneIndex);
+            }
+            GetValueContribution(valueIndex, contributionIndex);
             if ((uint)boneIndex >= (uint)m_Page.Layout.BoneCount)
                 throw new ArgumentOutOfRangeException(nameof(boneIndex));
             int flatContributionIndex =
@@ -234,6 +244,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             RequireValueIndex(valueIndex);
             if ((uint)boneIndex >= (uint)m_Page.Layout.BoneCount)
                 throw new ArgumentOutOfRangeException(nameof(boneIndex));
+            if (valueIndex == m_Page.OutputValueIndex)
+                return m_Page.FinalOutputFrame.DenseLocalPose[boneIndex];
             return m_Page.ValueDenseLocalPoses[
                 valueIndex * m_Page.Layout.BoneCount + boneIndex];
         }
@@ -321,6 +333,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 finalOutput.ProgramOutput;
             ComposedAnimationPoseFrame outputFrame = finalOutput.Frame;
             page.Identity = 0;
+            page.FinalOutputFrame = outputFrame;
             page.Result = result;
             page.Interest = interest;
             page.PoseGraphInvalidReason = frame.PoseGraphInvalidReason[0];
@@ -387,13 +400,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                     output.ContinuityIdentity;
                 page.ValueInvalidReasons[outputValueIndex] =
                     output.OutputInvalidReason;
-                for (int i = 0;
-                     i < outputFrame.Contributions.Count;
-                     i++)
-                {
-                    page.FinalOutputContributions[i] =
-                        outputFrame.Contributions[i];
-                }
                 int workspaceContributionCount = checked(
                     outputValueIndex *
                     page.Layout.PoseValueContributionStride);
@@ -411,23 +417,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                     page.ValueDenseContributionWeights[i] =
                         frame.ValueDenseContributionWeights[i];
                 }
-                int outputDenseWeightOffset = workspaceDenseWeightCount;
-                for (int contribution = 0;
-                     contribution < outputFrame.Contributions.Count;
-                     contribution++)
-                {
-                    for (int bone = 0;
-                         bone < page.Layout.BoneCount;
-                         bone++)
-                    {
-                        page.ValueDenseContributionWeights[
-                            outputDenseWeightOffset +
-                            contribution * page.Layout.BoneCount + bone] =
-                            outputFrame.GetContributionBoneWeight(
-                                contribution,
-                                bone);
-                    }
-                }
             }
             if (poseWatch)
             {
@@ -435,14 +424,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                     outputValueIndex * page.Layout.BoneCount);
                 for (int i = 0; i < workspacePoseCount; i++)
                     page.ValueDenseLocalPoses[i] = frame.ValueDenseLocalPoses[i];
-                int outputPoseOffset = workspacePoseCount;
-                for (int bone = 0;
-                     bone < page.Layout.BoneCount;
-                     bone++)
-                {
-                    page.ValueDenseLocalPoses[outputPoseOffset + bone] =
-                        outputFrame.DenseLocalPose[bone];
-                }
             }
             framePages.PublishCommittedDiagnostics();
             return new CharacterPoseProgramCommittedDiagnosticsView(page);

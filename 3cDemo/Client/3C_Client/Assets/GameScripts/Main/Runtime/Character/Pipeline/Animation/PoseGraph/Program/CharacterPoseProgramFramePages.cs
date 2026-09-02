@@ -36,9 +36,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 ValueContributions =
                     new AnimationPrimitivePoseContribution[
                         layout.PoseValueContributionCapacity];
-                FinalOutputContributions =
-                    new AnimationPoseSourceContribution[
-                        layout.PoseValueContributionStride];
                 ValueDenseContributionWeights =
                     new float[layout.PoseValueDenseContributionWeightCapacity];
                 ValueContributionCounts = new int[layout.PoseValueCount];
@@ -67,8 +64,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             internal readonly AnimationLocalBonePose[] ValueDenseLocalPoses;
             internal readonly AnimationPrimitivePoseContribution[]
                 ValueContributions;
-            internal readonly AnimationPoseSourceContribution[]
-                FinalOutputContributions;
             internal readonly float[] ValueDenseContributionWeights;
             internal readonly int[] ValueContributionCounts;
             internal readonly float[] ValueOutputWeights;
@@ -77,6 +72,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             internal readonly AnimationPoseNativeInvalidReason[]
                 ValueInvalidReasons;
             internal AnimationPoseNativeInvalidReason PoseGraphInvalidReason;
+            internal ComposedAnimationPoseFrame FinalOutputFrame;
         }
 
         sealed class Page
@@ -362,10 +358,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         internal void DiscardEvaluationFrame(ulong completionIdentity) =>
             m_Workspace.DiscardFrame(completionIdentity);
 
-        internal bool TryGetCommittedFinalReadBinding(
-            out AnimationFinalPoseNativeReadBinding binding) =>
-            m_Workspace.TryGetCommittedFinalReadBinding(out binding);
-
         internal AnimationPlayerPoseNativeWriteBinding
             RequirePlayerWriteBinding(
                 int physicalSlotIndex,
@@ -384,10 +376,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             m_Workspace.RequirePoseValueReadBinding(
                 valueIndex,
                 completionIdentity);
-
-        internal AnimationFinalPoseNativeReadBinding RequireFinalReadBinding(
-            ulong completionIdentity) =>
-            m_Workspace.RequireFinalReadBinding(completionIdentity);
 
         internal PoseNodeId RequirePoseNodeId(int physicalSlotIndex) =>
             m_Workspace.RequirePoseNodeId(physicalSlotIndex);

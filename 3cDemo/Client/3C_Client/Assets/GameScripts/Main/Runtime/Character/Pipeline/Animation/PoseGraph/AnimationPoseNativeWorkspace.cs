@@ -63,9 +63,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 PoseGraphInvalidReason;
             internal NativeArray<int> PoseGraphInvalidOperationIndex;
             internal NativeArray<ulong> PoseGraphCompletedAt;
-            internal NativeArray<ulong> FinalAppliedAt;
-            internal NativeArray<AnimationFinalPoseWriteOutcome>
-                FinalWriteOutcome;
         }
 
         AnimationPoseNativeAggregateLayout m_Layout;
@@ -107,13 +104,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         NativeArray<AnimationPoseNativeInvalidReason> m_PoseGraphInvalidReason;
         NativeArray<int> m_PoseGraphInvalidOperationIndex;
         NativeArray<ulong> m_PoseGraphCompletedAt;
-        NativeArray<ulong> m_FinalAppliedAt;
-        NativeArray<AnimationFinalPoseWriteOutcome> m_FinalWriteOutcome;
         Page m_CommittedPage;
         Page m_PendingPage;
         PoseNodeId[] m_PoseNodeIds;
         CharacterPoseGraphNativeBinding m_FrameBinding;
-        CharacterPoseGraphNativeBinding m_CommittedBinding;
         ulong m_LastCompletionIdentity;
         ulong m_CurrentCompletionIdentity;
         readonly long m_DenseDoublePageResidentPayloadBytes;
@@ -230,15 +224,15 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 m_ValuePoseParameterAvailability = Allocate<byte>(m_Layout.PoseValueParameterCapacity);
                 m_ValueContributions = Allocate<AnimationPrimitivePoseContribution>(m_Layout.PoseValueContributionCapacity);
                 m_ValueDenseContributionWeights = Allocate<float>(m_Layout.PoseValueDenseContributionWeightCapacity);
-                m_ValueContributionCounts = Allocate<int>(m_Layout.PoseValueCount);
-                m_ValueOutputWeights = Allocate<float>(m_Layout.PoseValueCount);
-                m_ValueLeftFootFeatures = Allocate<AnimationFootFeatureSample>(m_Layout.PoseValueCount);
-                m_ValueRightFootFeatures = Allocate<AnimationFootFeatureSample>(m_Layout.PoseValueCount);
-                m_ValueHasFootFeatures = Allocate<byte>(m_Layout.PoseValueCount);
-                m_ValueAvailability = Allocate<AnimationPoseAvailability>(m_Layout.PoseValueCount);
-                m_ValueContinuityIdentities = Allocate<ulong>(m_Layout.PoseValueCount);
-                m_ValueDiscontinuities = Allocate<PoseDiscontinuityNative>(m_Layout.PoseValueCount);
-                m_ValueInvalidReasons = Allocate<AnimationPoseNativeInvalidReason>(m_Layout.PoseValueCount);
+                m_ValueContributionCounts = Allocate<int>(m_Layout.PoseValueWorkspaceCount);
+                m_ValueOutputWeights = Allocate<float>(m_Layout.PoseValueWorkspaceCount);
+                m_ValueLeftFootFeatures = Allocate<AnimationFootFeatureSample>(m_Layout.PoseValueWorkspaceCount);
+                m_ValueRightFootFeatures = Allocate<AnimationFootFeatureSample>(m_Layout.PoseValueWorkspaceCount);
+                m_ValueHasFootFeatures = Allocate<byte>(m_Layout.PoseValueWorkspaceCount);
+                m_ValueAvailability = Allocate<AnimationPoseAvailability>(m_Layout.PoseValueWorkspaceCount);
+                m_ValueContinuityIdentities = Allocate<ulong>(m_Layout.PoseValueWorkspaceCount);
+                m_ValueDiscontinuities = Allocate<PoseDiscontinuityNative>(m_Layout.PoseValueWorkspaceCount);
+                m_ValueInvalidReasons = Allocate<AnimationPoseNativeInvalidReason>(m_Layout.PoseValueWorkspaceCount);
                 m_OperationCompletions =
                     Allocate<CharacterPoseOperationCompletion>(
                         m_Layout.OperationCount);
@@ -247,8 +241,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 m_PoseGraphInvalidReason = Allocate<AnimationPoseNativeInvalidReason>(1);
                 m_PoseGraphInvalidOperationIndex = Allocate<int>(1);
                 m_PoseGraphCompletedAt = Allocate<ulong>(1);
-                m_FinalAppliedAt = Allocate<ulong>(1);
-                m_FinalWriteOutcome = Allocate<AnimationFinalPoseWriteOutcome>(1);
                 m_CommittedPage = CaptureActivePage();
                 m_PendingPage = AllocatePage();
                 m_DenseDoublePageResidentPayloadBytes = checked(
@@ -284,7 +276,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 m_SlotInvalidReasons[i] = AnimationPoseNativeInvalidReason.SourceIncomplete;
                 m_SlotCompletedAt[i] = 0;
             }
-            for (int i = 0; i < m_Layout.PoseValueCount; i++)
+            for (int i = 0; i < m_Layout.PoseValueWorkspaceCount; i++)
             {
                 m_ValueContributionCounts[i] = 0;
                 m_ValueOutputWeights[i] = 0f;
@@ -305,8 +297,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             m_PoseGraphInvalidReason[0] = AnimationPoseNativeInvalidReason.PoseGraphInputIncomplete;
             m_PoseGraphInvalidOperationIndex[0] = -1;
             m_PoseGraphCompletedAt[0] = 0;
-            m_FinalAppliedAt[0] = 0;
-            m_FinalWriteOutcome[0] = AnimationFinalPoseWriteOutcome.None;
             m_FrameBinding = CreateBinding(completionIdentity);
             return m_FrameBinding;
         }
@@ -345,7 +335,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             Page previousCommitted = m_CommittedPage;
             m_CommittedPage = m_PendingPage;
             m_PendingPage = previousCommitted;
-            m_CommittedBinding = m_FrameBinding;
             m_FrameBinding = default;
             m_CurrentCompletionIdentity = 0;
         }
@@ -356,20 +345,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             BindPage(m_CommittedPage);
             m_FrameBinding = default;
             m_CurrentCompletionIdentity = 0;
-        }
-
-        internal bool TryGetCommittedFinalReadBinding(
-            out AnimationFinalPoseNativeReadBinding binding)
-        {
-            RequireAlive();
-            if (m_CommittedBinding.CompletionIdentity == 0)
-            {
-                binding = default;
-                return false;
-            }
-            binding = new AnimationFinalPoseNativeReadBinding(
-                in m_CommittedBinding);
-            return true;
         }
 
         internal AnimationPlayerPoseNativeWriteBinding RequirePlayerWriteBinding(
@@ -398,12 +373,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 valueIndex);
         }
 
-        internal AnimationFinalPoseNativeReadBinding RequireFinalReadBinding(ulong completionIdentity)
-        {
-            RequireFrame(completionIdentity);
-            return new AnimationFinalPoseNativeReadBinding(in m_FrameBinding);
-        }
-
         internal PoseNodeId RequirePoseNodeId(int physicalSlotIndex)
         {
             RequireAlive();
@@ -421,7 +390,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 return;
             m_Disposed = true;
             m_FrameBinding = default;
-            m_CommittedBinding = default;
             m_CurrentCompletionIdentity = 0;
             if (m_CommittedPage != null)
             {
@@ -480,9 +448,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 m_StageInvalidOperationIndex,
                 m_PoseGraphInvalidReason,
                 m_PoseGraphInvalidOperationIndex,
-                m_PoseGraphCompletedAt,
-                m_FinalAppliedAt,
-                m_FinalWriteOutcome);
+                m_PoseGraphCompletedAt);
         }
 
         void RequireFrame(ulong completionIdentity)
@@ -549,9 +515,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 PayloadBytes(page.StageInvalidOperationIndex) +
                 PayloadBytes(page.PoseGraphInvalidReason) +
                 PayloadBytes(page.PoseGraphInvalidOperationIndex) +
-                PayloadBytes(page.PoseGraphCompletedAt) +
-                PayloadBytes(page.FinalAppliedAt) +
-                PayloadBytes(page.FinalWriteOutcome));
+                PayloadBytes(page.PoseGraphCompletedAt));
         }
 
         static long PayloadBytes<T>(NativeArray<T> values)
@@ -596,10 +560,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             StageInvalidOperationIndex = m_StageInvalidOperationIndex,
             PoseGraphInvalidReason = m_PoseGraphInvalidReason,
             PoseGraphInvalidOperationIndex = m_PoseGraphInvalidOperationIndex,
-            PoseGraphCompletedAt = m_PoseGraphCompletedAt,
-            FinalAppliedAt = m_FinalAppliedAt
-            ,
-            FinalWriteOutcome = m_FinalWriteOutcome
+            PoseGraphCompletedAt = m_PoseGraphCompletedAt
         };
 
         Page AllocatePage()
@@ -629,15 +590,15 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 page.ValuePoseParameterAvailability = Allocate<byte>(m_Layout.PoseValueParameterCapacity);
                 page.ValueContributions = Allocate<AnimationPrimitivePoseContribution>(m_Layout.PoseValueContributionCapacity);
                 page.ValueDenseContributionWeights = Allocate<float>(m_Layout.PoseValueDenseContributionWeightCapacity);
-                page.ValueContributionCounts = Allocate<int>(m_Layout.PoseValueCount);
-                page.ValueOutputWeights = Allocate<float>(m_Layout.PoseValueCount);
-                page.ValueLeftFootFeatures = Allocate<AnimationFootFeatureSample>(m_Layout.PoseValueCount);
-                page.ValueRightFootFeatures = Allocate<AnimationFootFeatureSample>(m_Layout.PoseValueCount);
-                page.ValueHasFootFeatures = Allocate<byte>(m_Layout.PoseValueCount);
-                page.ValueAvailability = Allocate<AnimationPoseAvailability>(m_Layout.PoseValueCount);
-                page.ValueContinuityIdentities = Allocate<ulong>(m_Layout.PoseValueCount);
-                page.ValueDiscontinuities = Allocate<PoseDiscontinuityNative>(m_Layout.PoseValueCount);
-                page.ValueInvalidReasons = Allocate<AnimationPoseNativeInvalidReason>(m_Layout.PoseValueCount);
+                page.ValueContributionCounts = Allocate<int>(m_Layout.PoseValueWorkspaceCount);
+                page.ValueOutputWeights = Allocate<float>(m_Layout.PoseValueWorkspaceCount);
+                page.ValueLeftFootFeatures = Allocate<AnimationFootFeatureSample>(m_Layout.PoseValueWorkspaceCount);
+                page.ValueRightFootFeatures = Allocate<AnimationFootFeatureSample>(m_Layout.PoseValueWorkspaceCount);
+                page.ValueHasFootFeatures = Allocate<byte>(m_Layout.PoseValueWorkspaceCount);
+                page.ValueAvailability = Allocate<AnimationPoseAvailability>(m_Layout.PoseValueWorkspaceCount);
+                page.ValueContinuityIdentities = Allocate<ulong>(m_Layout.PoseValueWorkspaceCount);
+                page.ValueDiscontinuities = Allocate<PoseDiscontinuityNative>(m_Layout.PoseValueWorkspaceCount);
+                page.ValueInvalidReasons = Allocate<AnimationPoseNativeInvalidReason>(m_Layout.PoseValueWorkspaceCount);
                 page.OperationCompletions =
                     Allocate<CharacterPoseOperationCompletion>(
                         m_Layout.OperationCount);
@@ -646,8 +607,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 page.PoseGraphInvalidReason = Allocate<AnimationPoseNativeInvalidReason>(1);
                 page.PoseGraphInvalidOperationIndex = Allocate<int>(1);
                 page.PoseGraphCompletedAt = Allocate<ulong>(1);
-                page.FinalAppliedAt = Allocate<ulong>(1);
-                page.FinalWriteOutcome = Allocate<AnimationFinalPoseWriteOutcome>(1);
                 return page;
             }
             catch
@@ -698,8 +657,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             m_PoseGraphInvalidReason = page.PoseGraphInvalidReason;
             m_PoseGraphInvalidOperationIndex = page.PoseGraphInvalidOperationIndex;
             m_PoseGraphCompletedAt = page.PoseGraphCompletedAt;
-            m_FinalAppliedAt = page.FinalAppliedAt;
-            m_FinalWriteOutcome = page.FinalWriteOutcome;
         }
 
         void DisposeActivePage()
@@ -712,8 +669,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         {
             if (page == null)
                 return;
-            DisposeArray(ref page.FinalAppliedAt);
-            DisposeArray(ref page.FinalWriteOutcome);
             DisposeArray(ref page.PoseGraphCompletedAt);
             DisposeArray(ref page.PoseGraphInvalidOperationIndex);
             DisposeArray(ref page.PoseGraphInvalidReason);

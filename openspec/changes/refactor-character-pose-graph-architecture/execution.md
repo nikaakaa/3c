@@ -1039,3 +1039,9 @@ Bone遍历顺序、Local／Component数学、Root yaw乘法顺序、Invalid reas
 状态：新增`CharacterPoseConstraintOperationModule`，迁移Pose Bone Goal Contribution、Foot Placement、Goal Assembler与Full Body IK四类Operation调用。模块只从共享Execution Context取得当前Value read/write binding、Frame／Completion identity和唯一Constraint Runtime，并返回原typed per-operation Result匹配结果。
 
 Foot world input、Goal workspace、FBBIK输出Pose、invalid reason、completion校验和Constraint调用次数均保持不变；模块不拥有Constraint Pending页、不扫描Program，也不复制Goal或Pose。旧Executor只保留原Stage dispatch，6.8继续推进；3C MCP对Constraint Operation模块与Executor错误筛选均为0，不单独运行回放。
+
+## 拆出Linked与Output Operation模块
+
+状态：新增`CharacterPoseLinkedOperationModule`与`CharacterPoseOutputOperationModule`。Linked模块唯一消费编译后的Call／Candidate、活动Fragment页和Call control，把选中Fragment的Pose与discontinuity写回同一Value页；Output模块唯一完成最终输入检查、deep validation和Final Publication binding写入。
+
+Stage对非活动Fragment的跳过仍查询同一个Linked模块，candidate范围、generation合并、Branch Replacement discontinuity、Final invalid保持及Output continuity顺序均未改变。两个模块不分配第二Value或Final页，旧Executor只做调度；6.8继续推进，3C MCP对Linked、Output模块与Executor错误筛选均为0，不单独运行回放。

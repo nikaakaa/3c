@@ -106,6 +106,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             m_TransformOperations;
         readonly CharacterPoseConstraintOperationModule
             m_ConstraintOperations;
+        readonly CharacterPoseLinkedOperationModule m_LinkedOperations;
+        readonly CharacterPoseOutputOperationModule m_OutputOperations;
 
         internal CharacterPoseGraphStagedExecutor(
             CharacterPoseProgramExecutionView program,
@@ -164,6 +166,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 new CharacterPoseTransformOperationModule(this);
             m_ConstraintOperations =
                 new CharacterPoseConstraintOperationModule(this);
+            m_LinkedOperations =
+                new CharacterPoseLinkedOperationModule(this);
+            m_OutputOperations =
+                new CharacterPoseOutputOperationModule(this);
         }
 
         internal CharacterPoseGraphStagedExecutor BindFrame(
@@ -368,7 +374,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 bool publishesFinalPose =
                     operation.Code == CharacterPoseOperationCode.OutputPose;
                 if (operation.LinkedPoseFragmentIndex >= 0 &&
-                    !IsLinkedPoseFragmentActive(operation.LinkedPoseFragmentIndex))
+                    !m_LinkedOperations.IsFragmentActive(
+                        operation.LinkedPoseFragmentIndex))
                 {
                     if (producesPose && !publishesFinalPose)
                     {
@@ -472,7 +479,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                         break;
                     case CharacterPoseOperationCode.LinkedPoseCall:
                         using (LinkedPoseMarker.Auto())
-                            valueOperationValid = EvaluateLinkedPoseCall(operation);
+                            valueOperationValid = m_LinkedOperations
+                                .EvaluateLinkedPoseCall(operation);
                         break;
                     case CharacterPoseOperationCode.LocalToComponentPose:
                         using (SpaceConversionMarker.Auto())
@@ -486,7 +494,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                         break;
                     case CharacterPoseOperationCode.OutputPose:
                         using (OutputMarker.Auto())
-                            EvaluateOutputPose(operation);
+                            m_OutputOperations.EvaluateOutputPose(operation);
                         break;
                     default:
                         if (producesPose)
@@ -2030,68 +2038,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                          (segment.EndTime - segment.StartTime);
         }
 
-        bool EvaluateLinkedPoseCall(AnimationPoseGraphNativeOperation operation)
-        {
-            if ((uint)operation.LinkedPoseCallIndex >= (uint)m_LinkedPoseCalls.Length)
-                return false;
-            AnimationPoseGraphNativeLinkedPoseCall call =
-                m_LinkedPoseCalls[operation.LinkedPoseCallIndex];
-            AnimationPoseGraphNativeLinkedPoseCallControl control =
-                m_LinkedPoseCallControls[operation.LinkedPoseCallIndex];
-            if (!control.IsActive || control.CandidateIndex < call.CandidateStart ||
-                control.CandidateIndex >= call.CandidateStart + call.CandidateCount ||
-                (uint)control.CandidateIndex >= (uint)m_LinkedPoseCandidates.Length)
-            {
-                return false;
-            }
-            AnimationPoseGraphNativeLinkedPoseCandidate candidate =
-                m_LinkedPoseCandidates[control.CandidateIndex];
-            if (!IsLinkedPoseFragmentActive(candidate.FragmentIndex))
-                return false;
-
-            if (operation.OutputValueIndex >= 0)
-            {
-                if (candidate.OutputPoseValueIndex < 0 ||
-                    !IsInputReady(candidate.OutputPoseValueIndex, operation.Index) ||
-                    !TryCopyValue(
-                        candidate.OutputPoseValueIndex,
-                        operation.OutputValueIndex,
-                        operation.Index))
-                {
-                    SetInvalid(
-                        operation.OutputValueIndex,
-                        control.Generation,
-                        AnimationPoseNativeInvalidReason.PoseGraphInputIncomplete,
-                        operation.Index);
-                    return false;
-                }
-                m_ValueContinuityIdentities[operation.OutputValueIndex] = CombineContinuity(
-                    m_ValueContinuityIdentities[operation.OutputValueIndex],
-                    control.Generation,
-                    operation.Index);
-                if (control.PoseDiscontinuity != 0)
-                {
-                    ulong continuity = m_ValueContinuityIdentities[operation.OutputValueIndex];
-                    PoseDiscontinuity discontinuity = PoseDiscontinuity.Reset(
-                        CombineContinuity(control.Generation, continuity, operation.Index),
-                        m_CompletionIdentity,
-                        default,
-                        continuity,
-                        PoseDiscontinuityResetReason.BranchReplacement,
-                        control.Generation,
-                        false);
-                    m_ValueDiscontinuities[operation.OutputValueIndex] =
-                        PoseDiscontinuityNative.From(in discontinuity);
-                }
-            }
-
-            return operation.OutputValueIndex >= 0;
-        }
-
-        bool IsLinkedPoseFragmentActive(int fragmentIndex) =>
-            (uint)fragmentIndex < (uint)m_LinkedPoseActiveFragments.Length &&
-            m_LinkedPoseActiveFragments[fragmentIndex] == 1;
-
         AnimationPoseNativeInvalidReason ValueOperationInvalidReason(
             AnimationPoseGraphNativeOperation operation)
         {
@@ -2359,57 +2305,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             output.WithPredictionPair(
                 prediction.PredictedStep,
                 prediction.IncomingPredictedStep);
-
-        void EvaluateOutputPose(AnimationPoseGraphNativeOperation operation)
-        {
-            int input = operation.InputValueIndexA;
-            if (!IsInputReady(input, operation.Index))
-            {
-                AnimationPoseNativeInvalidReason reason =
-                    AnimationPoseNativeInvalidReason.PoseGraphInputIncomplete;
-                RecordGraphInvalid(reason, operation.Index);
-                m_FinalOutput.WriteInvalid(
-                    reason,
-                    (ulong)operation.Index + 1UL);
-                return;
-            }
-            ulong continuity = CombineContinuity(
-                m_ValueContinuityIdentities[input],
-                (ulong)operation.Index + 1UL,
-                operation.Index);
-            if (m_ValueAvailability[input] == AnimationPoseAvailability.NoPose)
-            {
-                AnimationPoseNativeInvalidReason reason =
-                    AnimationPoseNativeInvalidReason.PoseGraphOutputInvalid;
-                RecordGraphInvalid(reason, operation.Index);
-                m_FinalOutput.WriteInvalid(reason, continuity);
-                return;
-            }
-            if (m_ValueAvailability[input] == AnimationPoseAvailability.Invalid)
-            {
-                AnimationPoseNativeInvalidReason reason =
-                    NormalizeInvalidReason(m_ValueInvalidReasons[input]);
-                RecordGraphInvalid(reason, operation.Index);
-                m_FinalOutput.WriteInvalid(reason, continuity);
-                return;
-            }
-            if (!TryValidateValueDeep(
-                    input,
-                    out AnimationPoseNativeInvalidReason invalidReason))
-            {
-                invalidReason = NormalizeInvalidReason(invalidReason);
-                RecordGraphInvalid(invalidReason, operation.Index);
-                m_FinalOutput.WriteInvalid(invalidReason, continuity);
-                return;
-            }
-            var inputBinding = new AnimationPoseValueNativeReadBinding(
-                in m_FrameBinding,
-                input);
-            m_FinalOutput.WritePose(
-                in inputBinding,
-                m_ValueOutputWeights[input],
-                continuity);
-        }
 
         static void RequireValidConfiguration(
             CharacterPoseProgramExecutionView program,

@@ -775,3 +775,9 @@ Call遍历顺序、Group／Interface／Implementation匹配、重复Control保�
 状态：Final Publication Pending页拆成`Prepare`与`RequireReady`两段。`PreparePending`现在在Physical Writer之前完成lineage／Program／Constraint验证、页选择、Final Pose／Parameter／Contribution／Bone Kind复制、source identity展开、TypedInvalid判定和Publication Result构造；成功帧预期Applied identity由lineage确定，TypedInvalid预期为0，不再等待Writer后反读运行页。
 
 随后唯一Writer只执行既有全量预检和完整骨架写入，并把实际Physical diagnostics赋给已准备Pending页；Writer返回后没有Foot、Goal、FBBIK、source展开、Frame复制、Outcome switch或其它业务验证。旧Pose Runtime的Writer后`RequireFinalWriteOutcome`、Outcome switch和后置`PreparePending`已删除，Workspace与Frame Pages两层无调用转发也删除。Seal前`RequireReady`只核对已准备页和成功帧Physical write完成事实。由此任务7.7完成；7.2／7.3／7.8仍等待消除Program Final buffer到Publication双页的复制。3C MCP四个触碰文件错误筛选均为0；不单独运行回放。
+
+## Output与唯一Writer责任对账
+
+状态：Compiler只在根Graph lowering时接受一次`OutputPose`并记录唯一`OutputOperationIndex`，Program Image Seal再次要求Output数量为1、位于Final Publication domain且占据记录的index；Compiler和Image均不创建Writer、不读取Rig Binding或Root Hierarchy。Runtime全文只有旧Pose Runtime装配路径一处`new CharacterFinalPosePublication`，而具体`CharacterFinalPosePhysicalWriter`只能在Publication构造内部建立。
+
+Writer构造立即验证完整`CharacterAnimationRigBinding`、正式`CharacterRootHierarchyBinding`、Physical Bone数量、PoseRoot和Root Bone policy；Program Image／Rig payload不匹配也在Publication构造失败。不存在第二Factory、Writer接口或Graph节点，因此任务7.4完成。任务7.2／7.3仍需把Output Family改成正式Publication layout handle。该步只做现有责任审计，不修改代码或运行行为，也不单独运行回放。

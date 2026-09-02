@@ -251,6 +251,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             var reachableGraphs = new HashSet<PoseGraphId>();
             ValidateGraph(
                 asset,
+                asset.RequireGraph,
                 asset.Graph,
                 rig,
                 portResolver,
@@ -259,7 +260,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 GraphRole.Root,
                 new List<PoseGraphId>(),
                 reachableGraphs,
-                report);
+                report,
+                true);
             foreach (PoseGraphId graphId in catalogIds)
             {
                 if (!reachableGraphs.Contains(graphId))
@@ -281,8 +283,63 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             }
         }
 
+        internal static CharacterPoseGraphValidationReport
+            ValidateClosedGraph(
+                CharacterPresentationPoseGraphAsset ownerAsset,
+                CharacterTypedPoseGraph graph,
+                CharacterAnimationRigDefinition rig,
+                CharacterPosePortContractResolver portResolver,
+                CharacterPoseGraphClosure closure,
+                CharacterPoseIrGraphRole role,
+                IReadOnlyCollection<AnimationChannelId>
+                    reachableChannels,
+                IReadOnlyCollection<CharacterPresentationPoseSourceSlot>
+                    reachableSources)
+        {
+            if (!ownerAsset)
+                throw new ArgumentNullException(nameof(ownerAsset));
+            if (graph == null)
+                throw new ArgumentNullException(nameof(graph));
+            if (!rig)
+                throw new ArgumentNullException(nameof(rig));
+            if (portResolver == null)
+                throw new ArgumentNullException(nameof(portResolver));
+            if (closure == null)
+                throw new ArgumentNullException(nameof(closure));
+            var report = new CharacterPoseGraphValidationReport();
+            if (role == CharacterPoseIrGraphRole.Root)
+                ValidateStateMachineLayouts(ownerAsset, report);
+            ValidateGraph(
+                ownerAsset,
+                graphId => closure.RequireGraph(
+                    ownerAsset,
+                    graphId),
+                graph,
+                rig,
+                portResolver,
+                reachableChannels,
+                reachableSources,
+                role switch
+                {
+                    CharacterPoseIrGraphRole.Root => GraphRole.Root,
+                    CharacterPoseIrGraphRole.StateLocal =>
+                        GraphRole.StatePose,
+                    CharacterPoseIrGraphRole.Subgraph or
+                    CharacterPoseIrGraphRole.LinkedPoseEntry or
+                    CharacterPoseIrGraphRole.MotionMatchingEntry =>
+                        GraphRole.Subgraph,
+                    _ => throw new ArgumentOutOfRangeException(nameof(role))
+                },
+                new List<PoseGraphId>(),
+                new HashSet<PoseGraphId>(),
+                report,
+                false);
+            return report;
+        }
+
         static void ValidateGraph(
             CharacterPresentationPoseGraphAsset ownerAsset,
+            Func<PoseGraphId, CharacterTypedPoseGraph> graphResolver,
             CharacterTypedPoseGraph graph,
             CharacterAnimationRigDefinition rig,
             CharacterPosePortContractResolver portResolver,
@@ -293,7 +350,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             GraphRole role,
             List<PoseGraphId> callPath,
             HashSet<PoseGraphId> reachableGraphs,
-            CharacterPoseGraphValidationReport report)
+            CharacterPoseGraphValidationReport report,
+            bool traverseDependencies)
         {
             if (graph == null ||
                 !graph.GraphId.IsValid ||
@@ -307,25 +365,27 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                     graph?.GraphId.Value ?? string.Empty);
                 return;
             }
-            int recursiveIndex = callPath.IndexOf(graph.GraphId);
-            if (recursiveIndex >= 0)
+            if (traverseDependencies)
             {
-                string path = string.Join(
-                    " -> ",
-                    callPath.Skip(recursiveIndex)
-                        .Select(value => value.Value)
-                        .Concat(new[] { graph.GraphId.Value }));
-                Report(
-                    report,
-                    CharacterPoseGraphValidationCode
-                        .SharedSubgraphCycle,
-                    $"Pose Graph catalog contains a recursive call: {path}.",
-                    graph.GraphId);
-                return;
+                int recursiveIndex = callPath.IndexOf(graph.GraphId);
+                if (recursiveIndex >= 0)
+                {
+                    string path = string.Join(
+                        " -> ",
+                        callPath.Skip(recursiveIndex)
+                            .Select(value => value.Value)
+                            .Concat(new[] { graph.GraphId.Value }));
+                    Report(
+                        report,
+                        CharacterPoseGraphValidationCode
+                            .SharedSubgraphCycle,
+                        $"Pose Graph catalog contains a recursive call: {path}.",
+                        graph.GraphId);
+                    return;
+                }
+                callPath.Add(graph.GraphId);
+                reachableGraphs.Add(graph.GraphId);
             }
-
-            callPath.Add(graph.GraphId);
-            reachableGraphs.Add(graph.GraphId);
             HashSet<PoseParameterId> parameters =
                 ValidateParameters(graph, report);
             var nodes =
@@ -478,6 +538,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 {
                     ValidateStateMachine(
                         ownerAsset,
+                        graphResolver,
                         graph,
                         node,
                         (CharacterPoseStateMachineNodePayload)
@@ -487,13 +548,15 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                         reachableSources,
                         callPath,
                         reachableGraphs,
-                        report);
+                        report,
+                        traverseDependencies);
                 }
                 else if (handler.NativeRole ==
                          CharacterPoseNativeNodeRole.Subgraph)
                 {
                     ValidateSubgraph(
                         ownerAsset,
+                        graphResolver,
                         graph,
                         node,
                         (CharacterPoseSubgraphPayload)
@@ -503,12 +566,14 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                         reachableSources,
                         callPath,
                         reachableGraphs,
-                        report);
+                        report,
+                        traverseDependencies);
                 }
                 else if (node.Payload is CharacterMotionMatchingPosePayload motionMatching)
                 {
                     ValidateMotionMatchingEntryGraph(
                         ownerAsset,
+                        graphResolver,
                         graph,
                         node,
                         motionMatching,
@@ -516,7 +581,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                         portResolver,
                         callPath,
                         reachableGraphs,
-                        report);
+                        report,
+                        traverseDependencies);
                 }
 
                 IReadOnlyList<CharacterPosePortDefinition>
@@ -663,11 +729,13 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 role == GraphRole.StatePose,
                 role == GraphRole.Root,
                 report);
-            callPath.RemoveAt(callPath.Count - 1);
+            if (traverseDependencies)
+                callPath.RemoveAt(callPath.Count - 1);
         }
 
         static void ValidateStateMachine(
             CharacterPresentationPoseGraphAsset ownerAsset,
+            Func<PoseGraphId, CharacterTypedPoseGraph> graphResolver,
             CharacterTypedPoseGraph ownerGraph,
             CharacterTypedPoseNode node,
             CharacterPoseStateMachineNodePayload payload,
@@ -677,14 +745,15 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 reachableSources,
             List<PoseGraphId> callPath,
             HashSet<PoseGraphId> reachableGraphs,
-            CharacterPoseGraphValidationReport report)
+            CharacterPoseGraphValidationReport report,
+            bool traverseDependencies)
         {
             try
             {
                 CharacterPoseStateMachineAuthoringValidator
                     .RequireValid(
                         payload.StateMachine,
-                        ownerAsset.RequireGraph);
+                        graphResolver);
             }
             catch (Exception exception)
             {
@@ -700,10 +769,17 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             foreach (CharacterPoseStateDefinition state in
                      payload.StateMachine.States)
             {
-                if (state == null ||
-                    !ownerAsset.TryGetGraph(
-                        state.PoseGraphId,
-                        out CharacterTypedPoseGraph stateGraph))
+                CharacterTypedPoseGraph stateGraph = null;
+                try
+                {
+                    if (state != null)
+                        stateGraph = graphResolver(state.PoseGraphId);
+                }
+                catch
+                {
+                    stateGraph = null;
+                }
+                if (state == null || stateGraph == null)
                 {
                     Report(
                         report,
@@ -714,17 +790,22 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                         node.NodeId);
                     continue;
                 }
-                ValidateGraph(
-                    ownerAsset,
-                    stateGraph,
-                    rig,
-                    portResolver,
-                    null,
-                    reachableSources,
-                    GraphRole.StatePose,
-                    callPath,
-                    reachableGraphs,
-                    report);
+                if (traverseDependencies)
+                {
+                    ValidateGraph(
+                        ownerAsset,
+                        graphResolver,
+                        stateGraph,
+                        rig,
+                        portResolver,
+                        null,
+                        reachableSources,
+                        GraphRole.StatePose,
+                        callPath,
+                        reachableGraphs,
+                        report,
+                        true);
+                }
             }
         }
 
@@ -791,6 +872,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
 
         static void ValidateSubgraph(
             CharacterPresentationPoseGraphAsset ownerAsset,
+            Func<PoseGraphId, CharacterTypedPoseGraph> graphResolver,
             CharacterTypedPoseGraph ownerGraph,
             CharacterTypedPoseNode node,
             CharacterPoseSubgraphPayload payload,
@@ -800,13 +882,20 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 reachableSources,
             List<PoseGraphId> callPath,
             HashSet<PoseGraphId> reachableGraphs,
-            CharacterPoseGraphValidationReport report)
+            CharacterPoseGraphValidationReport report,
+            bool traverseDependencies)
         {
-            if (payload.Subgraph == null ||
-                !payload.Subgraph.PoseGraphId.IsValid ||
-                !ownerAsset.TryGetGraph(
-                    payload.Subgraph.PoseGraphId,
-                    out CharacterTypedPoseGraph child))
+            CharacterTypedPoseGraph child = null;
+            try
+            {
+                if (payload.Subgraph?.PoseGraphId.IsValid == true)
+                    child = graphResolver(payload.Subgraph.PoseGraphId);
+            }
+            catch
+            {
+                child = null;
+            }
+            if (child == null)
             {
                 Report(
                     report,
@@ -817,21 +906,27 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                     node.NodeId);
                 return;
             }
-            ValidateGraph(
-                ownerAsset,
-                child,
-                rig,
-                portResolver,
-                null,
-                reachableSources,
-                GraphRole.Subgraph,
-                callPath,
-                reachableGraphs,
-                report);
+            if (traverseDependencies)
+            {
+                ValidateGraph(
+                    ownerAsset,
+                    graphResolver,
+                    child,
+                    rig,
+                    portResolver,
+                    null,
+                    reachableSources,
+                    GraphRole.Subgraph,
+                    callPath,
+                    reachableGraphs,
+                    report,
+                    true);
+            }
         }
 
         static void ValidateMotionMatchingEntryGraph(
             CharacterPresentationPoseGraphAsset ownerAsset,
+            Func<PoseGraphId, CharacterTypedPoseGraph> graphResolver,
             CharacterTypedPoseGraph ownerGraph,
             CharacterTypedPoseNode node,
             CharacterMotionMatchingPosePayload payload,
@@ -839,11 +934,20 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             CharacterPosePortContractResolver portResolver,
             List<PoseGraphId> callPath,
             HashSet<PoseGraphId> reachableGraphs,
-            CharacterPoseGraphValidationReport report)
+            CharacterPoseGraphValidationReport report,
+            bool traverseDependencies)
         {
-            if (payload.EntryGraph == null ||
-                !payload.EntryGraph.PoseGraphId.IsValid ||
-                !ownerAsset.TryGetGraph(payload.EntryGraph.PoseGraphId, out CharacterTypedPoseGraph entryGraph))
+            CharacterTypedPoseGraph entryGraph = null;
+            try
+            {
+                if (payload.EntryGraph?.PoseGraphId.IsValid == true)
+                    entryGraph = graphResolver(payload.EntryGraph.PoseGraphId);
+            }
+            catch
+            {
+                entryGraph = null;
+            }
+            if (entryGraph == null)
             {
                 Report(
                     report,
@@ -867,17 +971,22 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                     node.NodeId);
                 return;
             }
-            ValidateGraph(
-                ownerAsset,
-                entryGraph,
-                rig,
-                portResolver,
-                null,
-                null,
-                GraphRole.Subgraph,
-                callPath,
-                reachableGraphs,
-                report);
+            if (traverseDependencies)
+            {
+                ValidateGraph(
+                    ownerAsset,
+                    graphResolver,
+                    entryGraph,
+                    rig,
+                    portResolver,
+                    null,
+                    null,
+                    GraphRole.Subgraph,
+                    callPath,
+                    reachableGraphs,
+                    report,
+                    true);
+            }
         }
 
         static void ValidateMotionMatchingTopology(

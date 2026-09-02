@@ -16,7 +16,8 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
         Root = 1,
         StateLocal = 2,
         Subgraph = 3,
-        LinkedPoseEntry = 4
+        LinkedPoseEntry = 4,
+        MotionMatchingEntry = 5
     }
 
     internal enum CharacterPoseNativeNodeRole : byte
@@ -1191,7 +1192,10 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             var loweredNodes = new List<CharacterPoseIrNode>(ordered.Count);
             foreach (CharacterTypedPoseNode node in ordered)
                 loweredNodes.Add(source.RequireNode(node.NodeId));
-            CharacterTypedPoseNode output = role != CharacterPoseIrGraphRole.Subgraph && role != CharacterPoseIrGraphRole.LinkedPoseEntry
+            CharacterTypedPoseNode output =
+                role != CharacterPoseIrGraphRole.Subgraph &&
+                role != CharacterPoseIrGraphRole.LinkedPoseEntry &&
+                role != CharacterPoseIrGraphRole.MotionMatchingEntry
                 ? ordered.Single(value => value.Kind == CharacterPoseNodeKind.OutputPose)
                 : ordered.Single(value => value.Kind == CharacterPoseNodeKind.GraphOutput);
             return new CharacterPoseIrGraph(graph.GraphId, graph.ContentRevision, loweredNodes, new CharacterPoseIrNodeId(output.NodeId.Value));
@@ -1255,7 +1259,10 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
         {
             int rootOutputs = nodes.Count(value => value.Kind == CharacterPoseNodeKind.OutputPose);
             int graphOutputs = nodes.Count(value => value.Kind == CharacterPoseNodeKind.GraphOutput);
-            bool graphBoundary = role == CharacterPoseIrGraphRole.Subgraph || role == CharacterPoseIrGraphRole.LinkedPoseEntry;
+            bool graphBoundary =
+                role == CharacterPoseIrGraphRole.Subgraph ||
+                role == CharacterPoseIrGraphRole.LinkedPoseEntry ||
+                role == CharacterPoseIrGraphRole.MotionMatchingEntry;
             if (!graphBoundary && (rootOutputs != 1 || graphOutputs != 0))
                 throw new InvalidOperationException("Root and state-local Pose Graphs must contain exactly one Output Pose and no Graph Output.");
             if (graphBoundary && (graphOutputs != 1 || rootOutputs != 0))

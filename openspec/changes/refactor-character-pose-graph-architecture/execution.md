@@ -933,3 +933,11 @@ Definition Module不引用Document Store、Reconciler、Mutation Service、Undo�
 状态：新增`CharacterPoseTypedLoweringPass`，对Graph Closure中的每个Graph一次建立只读authoring node索引、incoming typed edge页和typed IR node页。每个节点只通过唯一Node Definition执行Payload／Rig校验与Lower；Capability identity、source path、typed input link、目标／来源Port和Value Kind在该Pass内冻结，失败发布带Graph／Node／Port／source path的`TypedLowering`结构化Diagnostic。
 
 旧`CharacterPoseIrCompiler`不再读取authoring Payload或调用Handler／Definition Lower，改为只消费已冻结的`CharacterPoseTypedIrGraph`并保留原确定性拓扑顺序与Graph Role边界选择。全仓实际Node Lower调用只剩Typed Lowering Pass到Node Definition这一处，任务11.3完成；拓扑排序、Graph Role、唯一Output与写冲突仍待11.4整体迁入独立Topology Pass。3C MCP强制Asset刷新后对新Pass、IR与Compiler入口错误筛选均为0；不单独运行回放。
+
+## Topology不可变Pass
+
+状态：新增`CharacterPoseTopologyPass`与只读Topology Catalog。Graph Closure现在同时冻结每条Node Definition dependency reference；Topology据此为root、State-local、Subgraph、Motion Matching Entry与Linked Pose Entry分配明确Graph Role，并对同一typed IR按Role生成确定性有序IR，不再在递归Lowering过程中临时排序或决定边界。
+
+Compiler路径改为逐闭包Graph执行局部Topology验证，typed edge、Port方向／Value Kind、Pose Space、required input、fan-in、Graph Role、Output／Graph boundary、Goal Contribution／Goal Set／Assembler／FBBIK闭包、Motion Matching history、Root Warp、可达性、环与写入归属仍沿原规则验证；Program级额外固定唯一root Final Publication boundary、Goal Assembler和FBBIK。State／Subgraph／Motion Matching引用只通过Graph Closure resolver读取，Topology不再递归发现或验证Graph cycle；root flat catalog的可达性与单Owner计数也前移到Closure Pass。具体Physical Writer没有进入Compiler，继续只由Runtime Factory和Final Publication构造证明唯一。
+
+任务11.4完成。原Graph Validator的公开作者校验入口仍保留自身递归诊断，但Compiler只调用`ValidateClosedGraph`的非递归路径；3C MCP对Closure、Topology、Validator、IR与Compiler入口错误筛选均为0，不单独运行回放。

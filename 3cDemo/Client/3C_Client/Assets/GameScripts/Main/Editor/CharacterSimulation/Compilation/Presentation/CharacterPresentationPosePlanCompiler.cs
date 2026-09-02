@@ -59,7 +59,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             public CompilationState(
                 CharacterPresentationPoseGraphAsset graphAsset,
                 CharacterPoseGraphClosure graphClosure,
-                CharacterPoseTypedIrCatalog typedIr,
+                CharacterPoseTopologyCatalog topology,
                 CharacterAnimationRigDefinition rig,
                 CharacterPresentationPoseParameterEntry[] parameters,
                 Dictionary<PoseParameterId, int> parameterIndices,
@@ -78,8 +78,8 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                 GraphAsset = graphAsset;
                 GraphClosure = graphClosure ??
                     throw new ArgumentNullException(nameof(graphClosure));
-                TypedIr = typedIr ??
-                    throw new ArgumentNullException(nameof(typedIr));
+                Topology = topology ??
+                    throw new ArgumentNullException(nameof(topology));
                 Rig = rig;
                 Parameters = parameters;
                 ParameterIndices = parameterIndices;
@@ -110,7 +110,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
 
             public CharacterPresentationPoseGraphAsset GraphAsset { get; }
             public CharacterPoseGraphClosure GraphClosure { get; }
-            public CharacterPoseTypedIrCatalog TypedIr { get; }
+            public CharacterPoseTopologyCatalog Topology { get; }
             public CharacterAnimationRigDefinition Rig { get; }
             public CharacterPresentationPoseParameterEntry[] Parameters { get; }
             public Dictionary<PoseParameterId, int> ParameterIndices { get; }
@@ -220,28 +220,14 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                 diagnostics.AddRange(typedLoweringResult.Diagnostics);
                 return new CharacterPoseCompilationResult(null, diagnostics);
             }
-            CharacterPoseGraphValidationReport report = CharacterPresentationPoseGraphValidator.Validate(
-                request.Asset,
-                request.Rig,
-                CharacterPoseAuthoringPortProjection.Get,
-                request.ReachableAnimationChannels,
-                request.SourceIndices.Keys.ToArray());
-            if (!report.IsValid)
+            CharacterPoseTopologyPassResult topologyResult =
+                CharacterPoseTopologyPass.Run(
+                    request,
+                    closureResult.Closure,
+                    typedLoweringResult.Catalog);
+            if (!topologyResult.IsSuccess)
             {
-                for (int i = 0; i < report.Issues.Count; i++)
-                {
-                    CharacterPoseGraphValidationIssue issue = report.Issues[i];
-                    diagnostics.Add(new CharacterPoseCompilationDiagnostic(
-                        CharacterPoseCompilationPass.Topology,
-                        CharacterPoseCompilationDiagnosticSeverity.Error,
-                        issue.Code.ToString(),
-                        issue.Message,
-                        string.IsNullOrWhiteSpace(issue.GraphId)
-                            ? default
-                            : new PoseGraphId(issue.GraphId),
-                        issue.NodeId,
-                        issue.PortId));
-                }
+                diagnostics.AddRange(topologyResult.Diagnostics);
                 return new CharacterPoseCompilationResult(null, diagnostics);
             }
             try
@@ -249,7 +235,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                 CharacterPoseProgramImage image = CompileValidated(
                     request,
                     closureResult.Closure,
-                    typedLoweringResult.Catalog);
+                    topologyResult.Catalog);
                 return new CharacterPoseCompilationResult(image, diagnostics);
             }
             catch (Exception exception)
@@ -267,7 +253,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
         static CharacterPoseProgramImage CompileValidated(
             CharacterPoseCompilationRequest request,
             CharacterPoseGraphClosure graphClosure,
-            CharacterPoseTypedIrCatalog typedIr)
+            CharacterPoseTopologyCatalog topology)
         {
             CharacterPresentationPoseGraphAsset asset = request.Asset;
             CharacterAnimationRigDefinition rig = request.Rig;
@@ -290,7 +276,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             var state = new CompilationState(
                 asset,
                 graphClosure,
-                typedIr,
+                topology,
                 rig,
                 parameters,
                 parameterIndices,
@@ -800,14 +786,10 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                 : stateOutput != null
                     ? CharacterPoseIrGraphRole.StateLocal
                     : CharacterPoseIrGraphRole.Subgraph;
-            CharacterPoseTypedIrGraph typedIr =
-                state.TypedIr.RequireGraph(
-                    ownerAsset,
-                    graph.GraphId);
-            CharacterPoseIrGraph ir =
-                new CharacterPoseIrTopologyCompiler().Compile(
-                    typedIr,
-                    graphRole);
+            CharacterPoseIrGraph ir = state.Topology.RequireGraph(
+                ownerAsset,
+                graph.GraphId,
+                graphRole);
             Dictionary<PoseNodeId, CharacterTypedPoseNode> nodes = graph.Nodes.ToDictionary(value => value.NodeId);
             Dictionary<string, CharacterPoseEdge> incoming = BuildIncoming(graph);
             var values = new Dictionary<string, CompiledValue>(StringComparer.Ordinal);

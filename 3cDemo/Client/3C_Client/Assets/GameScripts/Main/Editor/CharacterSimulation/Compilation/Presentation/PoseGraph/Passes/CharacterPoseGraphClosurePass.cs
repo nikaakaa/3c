@@ -24,21 +24,74 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
         internal CharacterTypedPoseGraph Graph { get; }
     }
 
+    internal sealed class CharacterPoseGraphClosureReference
+    {
+        internal CharacterPoseGraphClosureReference(
+            string sourceOwnerIdentity,
+            PoseGraphId sourceGraphId,
+            PoseNodeId sourceNodeId,
+            CharacterPoseGraphDependencyKind kind,
+            string targetOwnerIdentity,
+            PoseGraphId targetGraphId)
+        {
+            SourceOwnerIdentity = PoseIdentity.Require(
+                sourceOwnerIdentity,
+                nameof(sourceOwnerIdentity));
+            SourceGraphId = sourceGraphId.IsValid
+                ? sourceGraphId
+                : throw new ArgumentException(
+                    "Source Graph identity is invalid.",
+                    nameof(sourceGraphId));
+            SourceNodeId = sourceNodeId.IsValid
+                ? sourceNodeId
+                : throw new ArgumentException(
+                    "Source Node identity is invalid.",
+                    nameof(sourceNodeId));
+            if (!Enum.IsDefined(
+                    typeof(CharacterPoseGraphDependencyKind),
+                    kind))
+            {
+                throw new ArgumentOutOfRangeException(nameof(kind));
+            }
+            Kind = kind;
+            TargetOwnerIdentity = PoseIdentity.Require(
+                targetOwnerIdentity,
+                nameof(targetOwnerIdentity));
+            TargetGraphId = targetGraphId.IsValid
+                ? targetGraphId
+                : throw new ArgumentException(
+                    "Target Graph identity is invalid.",
+                    nameof(targetGraphId));
+        }
+
+        internal string SourceOwnerIdentity { get; }
+        internal PoseGraphId SourceGraphId { get; }
+        internal PoseNodeId SourceNodeId { get; }
+        internal CharacterPoseGraphDependencyKind Kind { get; }
+        internal string TargetOwnerIdentity { get; }
+        internal PoseGraphId TargetGraphId { get; }
+    }
+
     internal sealed class CharacterPoseGraphClosure
     {
         readonly Dictionary<string, CharacterPoseGraphClosureEntry> m_Entries;
 
         internal CharacterPoseGraphClosure(
-            IReadOnlyList<CharacterPoseGraphClosureEntry> entries)
+            IReadOnlyList<CharacterPoseGraphClosureEntry> entries,
+            IReadOnlyList<CharacterPoseGraphClosureReference> references)
         {
             Entries = entries?.ToArray() ??
                 throw new ArgumentNullException(nameof(entries));
             m_Entries = Entries.ToDictionary(
                 value => Key(value.OwnerIdentity, value.Graph.GraphId),
                 StringComparer.Ordinal);
+            References = references?.ToArray() ??
+                throw new ArgumentNullException(nameof(references));
         }
 
         internal IReadOnlyList<CharacterPoseGraphClosureEntry> Entries { get; }
+        internal IReadOnlyList<CharacterPoseGraphClosureReference>
+            References { get; }
 
         internal CharacterTypedPoseGraph RequireGraph(
             CharacterPresentationPoseGraphAsset owner,
@@ -132,6 +185,8 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                 m_LinkedSelectors;
             readonly List<CharacterPoseGraphClosureEntry> m_Entries =
                 new List<CharacterPoseGraphClosureEntry>();
+            readonly List<CharacterPoseGraphClosureReference> m_References =
+                new List<CharacterPoseGraphClosureReference>();
             readonly HashSet<string> m_Visited =
                 new HashSet<string>(StringComparer.Ordinal);
             readonly List<string> m_CallStack = new List<string>();
@@ -167,7 +222,42 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                         root?.GraphId ?? default);
                 }
                 Visit(rootOwner, root.GraphId, default);
-                return new CharacterPoseGraphClosure(m_Entries);
+                RequireRootCatalogClosure(rootOwner, root.GraphId);
+                return new CharacterPoseGraphClosure(
+                    m_Entries,
+                    m_References);
+            }
+
+            void RequireRootCatalogClosure(
+                CharacterPresentationPoseGraphAsset owner,
+                PoseGraphId rootGraphId)
+            {
+                string ownerIdentity =
+                    CharacterPresentationAssetObjectIdentity.Require(owner);
+                Dictionary<PoseGraphId, CharacterTypedPoseGraph> catalog =
+                    m_Catalogs[ownerIdentity];
+                foreach (PoseGraphId graphId in catalog.Keys)
+                {
+                    string key = CharacterPoseGraphClosure.Key(
+                        ownerIdentity,
+                        graphId);
+                    int ownerCount = m_References.Count(value =>
+                        string.Equals(
+                            value.TargetOwnerIdentity,
+                            ownerIdentity,
+                            StringComparison.Ordinal) &&
+                        value.TargetGraphId == graphId);
+                    int expectedOwnerCount = graphId == rootGraphId ? 0 : 1;
+                    if (!m_Visited.Contains(key) ||
+                        ownerCount != expectedOwnerCount)
+                    {
+                        throw new GraphClosureFailure(
+                            "graph-closure-ownership-invalid",
+                            $"Pose Graph catalog record '{graphId}' has {ownerCount} owner references; expected {expectedOwnerCount}.",
+                            graphId,
+                            relatedIdentities: new[] { ownerIdentity });
+                    }
+                }
             }
 
             void Visit(
@@ -239,6 +329,14 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                                 node.NodeId,
                                 new[] { dependency.OwnerIdentity });
                         }
+                        m_References.Add(
+                            new CharacterPoseGraphClosureReference(
+                                ownerIdentity,
+                                graph.GraphId,
+                                node.NodeId,
+                                dependency.Kind,
+                                ownerIdentity,
+                                dependency.GraphId));
                         Visit(owner, dependency.GraphId, node.NodeId);
                     }
                 }
@@ -302,6 +400,15 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                             node.NodeId,
                             new[] { implementationId.Value });
                     }
+                    m_References.Add(
+                        new CharacterPoseGraphClosureReference(
+                            CharacterPresentationAssetObjectIdentity.Require(
+                                owner),
+                            graph.GraphId,
+                            node.NodeId,
+                            CharacterPoseGraphDependencyKind.LinkedPoseEntry,
+                            entry.GraphOwnerIdentity,
+                            entry.GraphId));
                     Visit(entry.GraphOwner, entry.GraphId, node.NodeId);
                 }
             }

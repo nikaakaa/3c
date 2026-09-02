@@ -927,3 +927,9 @@ Definition Module不引用Document Store、Reconciler、Mutation Service、Undo�
 状态：新增独立`CharacterPoseGraphClosurePass`，先为每个Graph owner建立一次flat catalog，再只从root、Node Definition投影的State Pose／Subgraph／Motion Matching Entry依赖和Linked Pose selector候选展开唯一闭包。闭包按`owner identity + graph id`保存不可变Entry，递归路径、缺失Graph、重复catalog identity、缺失Linked Group／Interface／Selector／Implementation／Entry owner均发布`GraphClosure`结构化Diagnostic，失败时不进入Topology或Lowering。
 
 旧Compiler递归Lowering删除自己的Graph call stack与动态`RequireGraph`发现；StateMachine、Subgraph和Linked Pose Entry只读取前置闭包中已证明的Graph，并保持原递归Lowering顺序、scope、call chain、Graph dependency hash输入和最终Program Image不变。任务11.2完成；Topology Validator当前仍保留自身图内校验，待11.4改为消费同一闭包后删除重复递归判断。3C MCP对新Pass与Compiler入口错误筛选均为0；不单独运行回放。
+
+## Typed Lowering不可变Pass
+
+状态：新增`CharacterPoseTypedLoweringPass`，对Graph Closure中的每个Graph一次建立只读authoring node索引、incoming typed edge页和typed IR node页。每个节点只通过唯一Node Definition执行Payload／Rig校验与Lower；Capability identity、source path、typed input link、目标／来源Port和Value Kind在该Pass内冻结，失败发布带Graph／Node／Port／source path的`TypedLowering`结构化Diagnostic。
+
+旧`CharacterPoseIrCompiler`不再读取authoring Payload或调用Handler／Definition Lower，改为只消费已冻结的`CharacterPoseTypedIrGraph`并保留原确定性拓扑顺序与Graph Role边界选择。全仓实际Node Lower调用只剩Typed Lowering Pass到Node Definition这一处，任务11.3完成；拓扑排序、Graph Role、唯一Output与写冲突仍待11.4整体迁入独立Topology Pass。3C MCP强制Asset刷新后对新Pass、IR与Compiler入口错误筛选均为0；不单独运行回放。

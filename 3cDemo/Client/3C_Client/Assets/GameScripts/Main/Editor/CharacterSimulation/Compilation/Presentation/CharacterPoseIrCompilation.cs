@@ -1172,78 +1172,35 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             CharacterPoseOperationCode.OutputPose;
     }
 
-    internal sealed class CharacterPoseIrCompiler
+    internal sealed class CharacterPoseIrTopologyCompiler
     {
-        readonly CharacterPoseNodeDefinitionModule m_Definitions =
-            CharacterPoseNodeDefinitionModule.Shared;
-
-        public CharacterPoseIrGraph Compile(CharacterTypedPoseGraph graph, CharacterPoseIrGraphRole role)
+        public CharacterPoseIrGraph Compile(
+            CharacterPoseTypedIrGraph source,
+            CharacterPoseIrGraphRole role)
         {
-            if (graph == null || !graph.GraphId.IsValid || string.IsNullOrWhiteSpace(graph.ContentRevision))
-                throw new ArgumentException("Typed Pose Graph identity or revision is missing.", nameof(graph));
-            Dictionary<PoseNodeId, CharacterTypedPoseNode> nodes = IndexNodes(graph);
-            Dictionary<PoseNodeId, List<CharacterPoseEdge>> incoming = BuildIncoming(graph, nodes);
+            if (source == null)
+                throw new ArgumentNullException(nameof(source));
+            CharacterTypedPoseGraph graph = source.Source;
+            IReadOnlyDictionary<PoseNodeId, CharacterTypedPoseNode> nodes =
+                source.AuthoredNodes;
+            IReadOnlyDictionary<PoseNodeId,
+                IReadOnlyList<CharacterPoseEdge>> incoming =
+                source.Incoming;
             List<CharacterTypedPoseNode> ordered = TopologicalOrder(nodes, incoming);
             ValidateBoundary(role, ordered);
-            var lowered = new List<CharacterPoseIrNode>(ordered.Count);
+            var loweredNodes = new List<CharacterPoseIrNode>(ordered.Count);
             foreach (CharacterTypedPoseNode node in ordered)
-            {
-                string sourcePath = $"pose-graphs/{graph.GraphId.Value}/nodes/{node.NodeId.Value}";
-                IReadOnlyList<CharacterPoseIrInput> inputs = BuildInputs(node, incoming[node.NodeId], nodes, sourcePath);
-                lowered.Add(m_Definitions.Require(node.Kind).Lower(node, inputs, sourcePath));
-            }
+                loweredNodes.Add(source.RequireNode(node.NodeId));
             CharacterTypedPoseNode output = role != CharacterPoseIrGraphRole.Subgraph && role != CharacterPoseIrGraphRole.LinkedPoseEntry
                 ? ordered.Single(value => value.Kind == CharacterPoseNodeKind.OutputPose)
                 : ordered.Single(value => value.Kind == CharacterPoseNodeKind.GraphOutput);
-            return new CharacterPoseIrGraph(graph.GraphId, graph.ContentRevision, lowered, new CharacterPoseIrNodeId(output.NodeId.Value));
-        }
-
-        static Dictionary<PoseNodeId, CharacterTypedPoseNode> IndexNodes(CharacterTypedPoseGraph graph)
-        {
-            var result = new Dictionary<PoseNodeId, CharacterTypedPoseNode>();
-            foreach (CharacterTypedPoseNode node in graph.Nodes)
-            {
-                if (node == null || !node.NodeId.IsValid || !result.TryAdd(node.NodeId, node))
-                    throw new InvalidOperationException($"pose-graphs/{graph.GraphId.Value}: Pose node identity is missing or duplicated.");
-                CharacterPoseGraphAuthoringCapabilities
-                    .RequireKind(node.Payload);
-                ValidatePorts(node);
-            }
-            return result;
-        }
-
-        static void ValidatePorts(CharacterTypedPoseNode node)
-        {
-            var ids = new HashSet<string>(
-                CharacterPoseAuthoringPortProjection
-                    .GetDeclared(node)
-                    .Select(value => value.PortId.Value),
-                StringComparer.Ordinal);
-            foreach (CharacterPoseDynamicPort port in node.DynamicPorts)
-            {
-                if (port == null || !port.PortId.IsValid || !ids.Add(port.PortId.Value))
-                    throw new InvalidOperationException($"Pose node '{node.NodeId}' contains an invalid or duplicate dynamic port.");
-            }
-        }
-
-        static Dictionary<PoseNodeId, List<CharacterPoseEdge>> BuildIncoming(CharacterTypedPoseGraph graph, IReadOnlyDictionary<PoseNodeId, CharacterTypedPoseNode> nodes)
-        {
-            var result = nodes.Keys.ToDictionary(value => value, _ => new List<CharacterPoseEdge>());
-            var edgeIds = new HashSet<string>(StringComparer.Ordinal);
-            foreach (CharacterPoseEdge edge in graph.Edges)
-            {
-                if (edge == null || string.IsNullOrWhiteSpace(edge.EdgeId) || !edgeIds.Add(edge.EdgeId) || !nodes.ContainsKey(edge.SourceNodeId) || !nodes.ContainsKey(edge.TargetNodeId))
-                    throw new InvalidOperationException($"pose-graphs/{graph.GraphId.Value}: Pose edge identity or endpoint is invalid.");
-                ResolvePort(nodes[edge.SourceNodeId], edge.SourcePortId.Value, CharacterPosePortDirection.Output);
-                ResolvePort(nodes[edge.TargetNodeId], edge.TargetPortId.Value, CharacterPosePortDirection.Input);
-                result[edge.TargetNodeId].Add(edge);
-            }
-            return result;
+            return new CharacterPoseIrGraph(graph.GraphId, graph.ContentRevision, loweredNodes, new CharacterPoseIrNodeId(output.NodeId.Value));
         }
 
         static List<CharacterTypedPoseNode> TopologicalOrder(
             IReadOnlyDictionary<PoseNodeId, CharacterTypedPoseNode> nodes,
-            IReadOnlyDictionary<PoseNodeId, List<CharacterPoseEdge>> incoming)
+            IReadOnlyDictionary<PoseNodeId,
+                IReadOnlyList<CharacterPoseEdge>> incoming)
         {
             var indegree = incoming.ToDictionary(
                 pair => pair.Key,
@@ -1253,7 +1210,8 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                     .Distinct()
                     .Count());
             var outgoing = nodes.Keys.ToDictionary(value => value, _ => new HashSet<PoseNodeId>());
-            foreach (KeyValuePair<PoseNodeId, List<CharacterPoseEdge>> pair in incoming)
+            foreach (KeyValuePair<PoseNodeId,
+                         IReadOnlyList<CharacterPoseEdge>> pair in incoming)
                 foreach (CharacterPoseEdge edge in pair.Value)
                     if (!IsTemporalHistoryEdge(nodes, edge))
                         outgoing[edge.SourceNodeId].Add(pair.Key);
@@ -1283,44 +1241,6 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                 nodes[edge.SourceNodeId],
                 edge.SourcePortId.Value,
                 CharacterPosePortDirection.Output).Kind == CharacterPosePortKind.PoseHistory;
-
-        static IReadOnlyList<CharacterPoseIrInput> BuildInputs(
-            CharacterTypedPoseNode target,
-            IReadOnlyList<CharacterPoseEdge> incoming,
-            IReadOnlyDictionary<PoseNodeId, CharacterTypedPoseNode> nodes,
-            string sourcePath)
-        {
-            var occupied = new HashSet<string>(StringComparer.Ordinal);
-            var result = new List<CharacterPoseIrInput>();
-            foreach (CharacterPoseEdge edge in incoming.OrderBy(value => value.TargetPortId.Value, StringComparer.Ordinal))
-            {
-                if (!occupied.Add(edge.TargetPortId.Value))
-                    throw new InvalidOperationException($"{sourcePath}: input port '{edge.TargetPortId}' has more than one source.");
-                CharacterPosePortDefinition targetPort =
-                    ResolvePort(
-                        target,
-                        edge.TargetPortId.Value,
-                        CharacterPosePortDirection.Input);
-                CharacterPosePortDefinition sourcePort =
-                    ResolvePort(
-                        nodes[edge.SourceNodeId],
-                        edge.SourcePortId.Value,
-                        CharacterPosePortDirection.Output);
-                if (targetPort.Kind != sourcePort.Kind)
-                    throw new InvalidOperationException($"{sourcePath}: edge '{edge.EdgeId}' connects different value kinds.");
-                result.Add(new CharacterPoseIrInput(new CharacterPoseIrLinkId(edge.EdgeId), edge.TargetPortId.Value, new CharacterPoseIrNodeId(edge.SourceNodeId.Value), edge.SourcePortId.Value, targetPort.Kind));
-            }
-            foreach (CharacterPosePortDefinition port in
-                     CharacterPoseAuthoringPortProjection.Get(target))
-            {
-                if (port.Direction ==
-                    CharacterPosePortDirection.Input &&
-                    port.Required &&
-                    !occupied.Contains(port.PortId.Value))
-                    throw new InvalidOperationException($"{sourcePath}: required input '{port.PortId}' is not connected.");
-            }
-            return result;
-        }
 
         static CharacterPosePortDefinition ResolvePort(
             CharacterTypedPoseNode node,

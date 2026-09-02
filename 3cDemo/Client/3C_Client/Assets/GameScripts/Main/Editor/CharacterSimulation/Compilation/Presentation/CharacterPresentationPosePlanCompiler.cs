@@ -59,6 +59,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             public CompilationState(
                 CharacterPresentationPoseGraphAsset graphAsset,
                 CharacterPoseGraphClosure graphClosure,
+                CharacterPoseTypedIrCatalog typedIr,
                 CharacterAnimationRigDefinition rig,
                 CharacterPresentationPoseParameterEntry[] parameters,
                 Dictionary<PoseParameterId, int> parameterIndices,
@@ -77,6 +78,8 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                 GraphAsset = graphAsset;
                 GraphClosure = graphClosure ??
                     throw new ArgumentNullException(nameof(graphClosure));
+                TypedIr = typedIr ??
+                    throw new ArgumentNullException(nameof(typedIr));
                 Rig = rig;
                 Parameters = parameters;
                 ParameterIndices = parameterIndices;
@@ -107,6 +110,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
 
             public CharacterPresentationPoseGraphAsset GraphAsset { get; }
             public CharacterPoseGraphClosure GraphClosure { get; }
+            public CharacterPoseTypedIrCatalog TypedIr { get; }
             public CharacterAnimationRigDefinition Rig { get; }
             public CharacterPresentationPoseParameterEntry[] Parameters { get; }
             public Dictionary<PoseParameterId, int> ParameterIndices { get; }
@@ -207,6 +211,15 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                 diagnostics.AddRange(closureResult.Diagnostics);
                 return new CharacterPoseCompilationResult(null, diagnostics);
             }
+            CharacterPoseTypedLoweringPassResult typedLoweringResult =
+                CharacterPoseTypedLoweringPass.Run(
+                    request,
+                    closureResult.Closure);
+            if (!typedLoweringResult.IsSuccess)
+            {
+                diagnostics.AddRange(typedLoweringResult.Diagnostics);
+                return new CharacterPoseCompilationResult(null, diagnostics);
+            }
             CharacterPoseGraphValidationReport report = CharacterPresentationPoseGraphValidator.Validate(
                 request.Asset,
                 request.Rig,
@@ -235,7 +248,8 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             {
                 CharacterPoseProgramImage image = CompileValidated(
                     request,
-                    closureResult.Closure);
+                    closureResult.Closure,
+                    typedLoweringResult.Catalog);
                 return new CharacterPoseCompilationResult(image, diagnostics);
             }
             catch (Exception exception)
@@ -252,7 +266,8 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
 
         static CharacterPoseProgramImage CompileValidated(
             CharacterPoseCompilationRequest request,
-            CharacterPoseGraphClosure graphClosure)
+            CharacterPoseGraphClosure graphClosure,
+            CharacterPoseTypedIrCatalog typedIr)
         {
             CharacterPresentationPoseGraphAsset asset = request.Asset;
             CharacterAnimationRigDefinition rig = request.Rig;
@@ -275,6 +290,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             var state = new CompilationState(
                 asset,
                 graphClosure,
+                typedIr,
                 rig,
                 parameters,
                 parameterIndices,
@@ -784,7 +800,14 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                 : stateOutput != null
                     ? CharacterPoseIrGraphRole.StateLocal
                     : CharacterPoseIrGraphRole.Subgraph;
-            CharacterPoseIrGraph ir = new CharacterPoseIrCompiler().Compile(graph, graphRole);
+            CharacterPoseTypedIrGraph typedIr =
+                state.TypedIr.RequireGraph(
+                    ownerAsset,
+                    graph.GraphId);
+            CharacterPoseIrGraph ir =
+                new CharacterPoseIrTopologyCompiler().Compile(
+                    typedIr,
+                    graphRole);
             Dictionary<PoseNodeId, CharacterTypedPoseNode> nodes = graph.Nodes.ToDictionary(value => value.NodeId);
             Dictionary<string, CharacterPoseEdge> incoming = BuildIncoming(graph);
             var values = new Dictionary<string, CompiledValue>(StringComparer.Ordinal);

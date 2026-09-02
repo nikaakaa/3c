@@ -1249,3 +1249,9 @@ Pose Contracts目录不引用Program／Source／Constraint／Publication Impleme
 状态：使用`dotnet build ThirdPersonClient.Runtime.csproj --disable-build-servers /nr:false /p:UseSharedCompilation=false`完成Runtime工程编译，结果0错误、27个既有Package／Analyzer警告；随后立即执行`dotnet build-server shutdown`。使用相同参数完成`ThirdPersonClient.Editor.csproj`编译，结果0错误、30个既有Package警告；随后再次关闭MSBuild与VB/C#编译服务器。任务14.7完成。
 
 本change的`openspec validate refactor-character-pose-graph-architecture --strict --no-interactive`通过。全量strict实际执行为100项通过、8项失败，失败均来自其它现存change／spec；全工作区`git diff --check`只命中其它Performance工作修改的六个Prefab空值行尾空格。因此14.8暂不标完成，也不跨范围修改这些文件。
+
+## IK保护项源码审计
+
+状态：当前HEAD搜索不存在`CharacterFootStateMachine`、SmoothKnee、Pelvis Reach硬夹紧或末端Foot Effector夹紧实现；Current Support只作为正式接触观察与Unavailable结果存在，`CharacterFootSwingMotionBuilder`不使用它替代Ground Envelope候选。FBBIK的可靠动画膝向仍通过`Quaternion.FromToRotation(originalAnkle-originalHip, targetAxis) * animatedDirection`保留有符号运输，只对无可靠动画方向的历史／参考候选执行同半球翻转。
+
+本change提交未修改Foot／Pelvis／FBBIK算法与Profile，也没有接管外部仍在进行的Foot行为任务；只迁移Constraint typed边界、根事务和Committed诊断页。任务14.9完成；数值行为任务3.9与14.10仍等待正式Projection重建后用同一Replay闭合。

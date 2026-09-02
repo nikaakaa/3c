@@ -78,6 +78,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         [ReadOnly]
         readonly NativeArray<AnimationPoseGraphNativeOperation> m_Operations;
         [ReadOnly]
+        readonly NativeArray<float> m_OperationWeights;
+        [ReadOnly]
         readonly NativeArray<AnimationPoseGraphNativeStage> m_Stages;
         [ReadOnly]
         readonly NativeArray<float> m_DenseBoneMasks;
@@ -258,6 +260,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         internal CharacterPoseGraphStagedExecutor(
             CharacterPoseGraphNativeProgram program,
             CharacterPoseProgramFramePages framePages,
+            in CharacterPoseProgramTuningView tuning,
             PoseInertializationNativeProgram inertializationProgram,
             CharacterPoseGraphNativeBinding binding,
             CharacterPoseConstraintRuntime poseConstraints,
@@ -266,11 +269,13 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             RequireValidConfiguration(
                 program,
                 framePages,
+                in tuning,
                 inertializationProgram,
                 binding,
                 poseConstraints);
 
             m_Operations = program.Operations;
+            m_OperationWeights = tuning.OperationWeights;
             m_Stages = program.Stages;
             m_DenseBoneMasks = program.DenseBoneMasks;
             m_AdditiveReferences = program.AdditiveReferences;
@@ -424,7 +429,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                  operationIndex < stage.OperationStart + stage.OperationCount;
                 operationIndex++)
             {
-                AnimationPoseGraphNativeOperation operation = m_Operations[operationIndex];
+                AnimationPoseGraphNativeOperation operation =
+                    m_Operations[operationIndex].WithWeight(
+                        m_OperationWeights[operationIndex]);
                 if (!m_OperationCompletions[operation.FrameCacheIndex].IsEmpty)
                 {
                     RecordDuplicateOperation(
@@ -4009,6 +4016,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         static void RequireValidConfiguration(
             CharacterPoseGraphNativeProgram program,
             CharacterPoseProgramFramePages framePages,
+            in CharacterPoseProgramTuningView tuning,
             PoseInertializationNativeProgram inertializationProgram,
             CharacterPoseGraphNativeBinding binding,
             CharacterPoseConstraintRuntime poseConstraints)
@@ -4018,6 +4026,15 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             if (framePages == null)
                 throw new ArgumentNullException(nameof(framePages));
             program.RequireValid(framePages);
+            NativeArray<float> operationWeights = tuning.OperationWeights;
+            if (!tuning.IsValid ||
+                !operationWeights.IsCreated ||
+                operationWeights.Length != program.Operations.Length)
+            {
+                throw new ArgumentException(
+                    "Pose Program tuning view is invalid.",
+                    nameof(tuning));
+            }
             if (poseConstraints == null ||
                 program.FullBodyIkCount != 1 ||
                 !poseConstraints.MatchesCompiledLayout(
@@ -4101,7 +4118,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                     operation.LinkedPoseFragmentIndex < -1 ||
                     operation.LinkedPoseFragmentIndex >=
                     framePages.LinkedPoseActiveFragments.Length ||
-                    !float.IsFinite(operation.Weight) || operation.Weight < 0f || operation.Weight > 1f)
+                    !float.IsFinite(operationWeights[i]) ||
+                    operationWeights[i] < 0f ||
+                    operationWeights[i] > 1f)
                 {
                     throw new ArgumentException($"Animation Pose Graph Native Job operation #{i} is invalid.", nameof(program));
                 }

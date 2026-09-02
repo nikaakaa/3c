@@ -665,3 +665,11 @@ Discard、Reset与Dispose继续在原时机清空Demand，但现在只调用Fram
 `CharacterPoseGraphStagedExecutor`现在显式接收Frame Pages并从该Owner取得五组当前控制页，静态Program只继续提供Operation、Stage、Rig、Blend catalog及其它执行常量。StateMachine transition发布、Slot与Root Warp控制、Linked Pose选择都写入同一Frame Pages；Linked Pose静态candidate解析仍由旧Native Program提供，但必须显式传入当前已打开Frame Pages，不再依赖其内部可变引用。Committed Diagnostics投影同样显式接收同一页Owner。
 
 `ThirdPersonClient.Runtime.csproj`按规定参数编译成功，0错误，构建服务器已关闭。旧Native Program已不持有Frame identity、Pending／Committed控制页或diagnostics页；任务5.8仍不勾选，因为`SetOperationWeight`仍直接修改Native Operation，必须在Program-owned Candidate Tuning Snapshot建立时删除。
+
+## Native Operation Weight迁入Program Tuning Snapshot
+
+状态：新增`CharacterPoseProgramTuningState`、不可变`CharacterPoseProgramTuningSnapshot`与只读`CharacterPoseProgramTuningView`。初始Snapshot逐项保存全部native operation编译权重；Blend Pose、Layered Bone Blend与Additive Pose的可调字段从同identity Tuning Layout／Default Block建立精确映射，其它Operation保持编译默认。候选使用独立Persistent Native权重页，完整验证后才与Source Candidate按同一连续`TuningGeneration`提交；失败直接Dispose候选，不修改Committed页。
+
+`CharacterPoseGraphNativeProgram.SetOperationWeight`与运行时Native Operation回写已删除，Native Operation数组只在构造编译时写一次。`CharacterPoseGraphStagedExecutor`显式接收同generation Program Tuning View，在唯一Stage执行循环读取对应native index权重并构造本次只读Operation；静态Program Image候选、旧Native执行存储和其它Actor不会被在线调参污染。Sequence Preview只执行不可调Clip Player Operation，保持原静态入口。
+
+全文搜索确认旧Native Program不再保存Frame identity、Pending／Committed控制／诊断页、Goal workspace、Tuning Generation、Candidate或运行调参值；Native Operation赋值只剩构造期`CompileOperations`。因此任务5.8完成。任务6.9仍不勾选：PoseState、Blend Stack与Inertialization调参尚未迁入同一Program Candidate Snapshot。`ThirdPersonClient.Runtime.csproj`按规定参数编译成功，0错误，构建服务器已关闭；全局Unity仍由并行Foot 0.3迁移编译边界阻塞，本步不伪造Replay。

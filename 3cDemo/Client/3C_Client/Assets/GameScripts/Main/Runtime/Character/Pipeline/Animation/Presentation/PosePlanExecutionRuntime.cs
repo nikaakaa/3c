@@ -182,6 +182,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
         readonly AnimancerComponent m_Animancer;
         readonly CharacterPresentationProjection m_Projection;
         readonly CharacterPoseProgramFramePages m_ProgramFrames;
+        readonly CharacterPoseProgramTuningState m_ProgramTuning;
         readonly CharacterPoseGraphNativeProgram m_PosePlan;
         readonly CharacterPoseConstraintRuntime m_PoseConstraints;
         readonly PoseInertializationNativeProgram m_InertializationPlan;
@@ -293,6 +294,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
 
             AnimationPoseNativeWorkspace workspace = null;
             CharacterPoseProgramFramePages programFrames = null;
+            CharacterPoseProgramTuningState programTuning = null;
             CharacterPoseGraphNativeProgram poseProgram = null;
             CharacterFinalIkFullBodySolver fullBodyIkSolver = null;
             CharacterPoseConstraintRuntime poseConstraints = null;
@@ -330,6 +332,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                     projection.BlendProfileCatalog,
                     programFrames,
                     in initialLayout);
+                programTuning = new CharacterPoseProgramTuningState(
+                    projection,
+                    poseProgram.Operations,
+                    1);
                 if (projection.PosePlan.FullBodyIks.Count != 1)
                     throw new InvalidOperationException(
                         "Pose Plan requires exactly one Full Body IK descriptor.");
@@ -555,12 +561,14 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                 poseConstraints?.Dispose();
                 poseProgram?.Dispose();
                 inertializationProgram?.Dispose();
+                programTuning?.Dispose();
                 programFrames?.Dispose();
                 workspace?.Dispose();
                 throw;
             }
 
             m_ProgramFrames = programFrames;
+            m_ProgramTuning = programTuning;
             m_PosePlan = poseProgram;
             m_PoseConstraints = poseConstraints;
             m_InertializationPlan = inertializationProgram;
@@ -661,6 +669,18 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                 candidateGeneration);
             if (!string.IsNullOrEmpty(sourceError))
                 return sourceError;
+            try
+            {
+                m_ProgramTuning.PrepareCandidate(
+                    layout,
+                    block,
+                    candidateGeneration);
+            }
+            catch (Exception exception)
+            {
+                m_SourceModule.DiscardTuningCandidate();
+                return exception.Message;
+            }
             string error;
             try
             {
@@ -671,16 +691,18 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             }
             catch
             {
+                m_ProgramTuning.DiscardCandidate();
                 m_SourceModule.DiscardTuningCandidate();
                 throw;
             }
             if (!string.IsNullOrEmpty(error))
             {
+                m_ProgramTuning.DiscardCandidate();
                 m_SourceModule.DiscardTuningCandidate();
                 return error;
             }
-            m_SourceModule.CommitTuningCandidate(
-                candidateGeneration);
+            m_ProgramTuning.CommitCandidate(candidateGeneration);
+            m_SourceModule.CommitTuningCandidate(candidateGeneration);
             return string.Empty;
         }
 
@@ -694,31 +716,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             CharacterPoseTuningParameterBlock block,
             bool resetOwnerState)
         {
-            for (int i = 0; i < layout.Entries.Count; i++)
-            {
-                CharacterPoseTuningLayoutEntry entry = layout.Entries[i];
-                if (entry.Interaction != CharacterPoseTuningInteractionPolicy.TunableDefault ||
-                    !entry.OwnerId.StartsWith("pose-node:", StringComparison.Ordinal) ||
-                    !entry.FieldId.EndsWith("/weight", StringComparison.Ordinal))
-                    continue;
-                CharacterPoseTuningValue value = block.GetValue(entry);
-                for (int operationIndex = 0;
-                     operationIndex < m_Projection.PosePlan.Operations.Count;
-                     operationIndex++)
-                {
-                    CharacterPresentationPoseOperation operation =
-                        m_Projection.PosePlan.Operations[operationIndex];
-                    if (!string.Equals(
-                            $"pose-node:{operation.NodeId.Value}/weight",
-                            entry.FieldId,
-                            StringComparison.Ordinal))
-                        continue;
-                    if (!CharacterPoseGraphNativeProgram.IsNativePoseOperation(operation.Code))
-                        return $"Pose tuning operation '{operation.NodeId}' is not a native pose consumer.";
-                    m_PosePlan.SetOperationWeight(operation.Index, value.FloatValue);
-                    break;
-                }
-            }
             for (int i = 0; i < m_PoseStateSources.StateMachines.Length; i++)
             {
                 string error = m_PoseStateSources.StateMachines[i].ApplyTuning(
@@ -834,6 +831,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             bool publicationOpen = false;
             try
             {
+                m_ProgramTuning.RequireCommitted(
+                    lineage.TuningGeneration);
                 constraintLease = m_PoseConstraints.BeginFrame(
                     in lineage,
                     diagnosticsInterest,
@@ -2161,9 +2160,13 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                         sourceBinding.SourceIndex);
                 }
                 StageCompletedSources(completionIdentity);
+                CharacterPoseProgramTuningView programTuning =
+                    m_ProgramTuning.RequireCommitted(
+                        sourceDemand.Lineage.TuningGeneration);
                 poseExecutor = new CharacterPoseGraphStagedExecutor(
                     m_PosePlan,
                     m_ProgramFrames,
+                    in programTuning,
                     m_InertializationPlan,
                     m_ProgramFrames.RequirePoseGraphBinding(
                         completionIdentity),
@@ -2776,6 +2779,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                 if (player != null)
                     DisposeStep(player.Dispose, ref failure);
             }
+            DisposeStep(m_ProgramTuning.Dispose, ref failure);
             DisposeStep(m_PosePlan.Dispose, ref failure);
             DisposeStep(m_InertializationPlan.Dispose, ref failure);
             DisposeStep(m_ProgramFrames.Dispose, ref failure);

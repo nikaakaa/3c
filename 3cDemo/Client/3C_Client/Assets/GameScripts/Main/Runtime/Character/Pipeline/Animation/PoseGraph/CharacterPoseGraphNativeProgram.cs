@@ -917,22 +917,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         internal FixedString64Bytes RigRevision => m_RigRevision;
         internal NativeArray<AnimationPoseGraphNativeOperation> Operations => m_Operations;
 
-        internal void SetOperationWeight(int operationIndex, float weight)
-        {
-            RequireAlive();
-            if (!float.IsFinite(weight) || weight < 0f || weight > 1f)
-                throw new ArgumentOutOfRangeException(nameof(weight));
-            for (int i = 0; i < m_Operations.Length; i++)
-            {
-                if (m_Operations[i].Index != operationIndex)
-                    continue;
-                m_Operations[i] = m_Operations[i].WithWeight(weight);
-                return;
-            }
-            throw new InvalidOperationException(
-                $"Pose tuning operation '{operationIndex}' has no native operation.");
-        }
-
         internal NativeArray<AnimationPoseGraphNativeStage> Stages => m_Stages;
         internal NativeArray<float> DenseBoneMasks => m_DenseBoneMasks;
         internal NativeArray<AnimationLocalBonePose> AdditiveReferences => m_AdditiveReferences;

@@ -1,4 +1,5 @@
 using System;
+using KK.GeneratedDiagnosticSampling;
 using UnityEngine;
 
 namespace ThirdPersonCharacter.Pipeline.Presentation
@@ -27,13 +28,17 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             End = end;
         }
 
+        [DiagnosticField(1, "identity", "ground-geometry")]
         public int SurfaceIdentity { get; }
+        [DiagnosticField(1, "count", "ground-geometry")]
         public int FaceIdentity { get; }
+        [DiagnosticField(1, "metres", "ground-geometry")]
         public Vector2 Start { get; }
+        [DiagnosticField(1, "metres", "ground-geometry")]
         public Vector2 End { get; }
     }
 
-    internal sealed class CharacterFootGroundSurfacePage
+    public sealed class CharacterFootGroundSurfacePage
     {
         internal const int SegmentsPerContact = 8;
         readonly CharacterFootGroundSurfaceSegment[] m_Segments;
@@ -46,7 +51,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         }
 
         internal int Capacity => m_Segments.Length;
-        internal int Count { get; private set; }
+        public int Count { get; private set; }
         internal CharacterFootGroundSurfaceState State { get; private set; }
         internal Vector3 Origin { get; private set; }
         internal Vector3 Forward { get; private set; }
@@ -56,6 +61,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         internal float AxisRise { get; private set; }
         internal ulong WorldRevision { get; private set; }
         internal bool IsReady => State == CharacterFootGroundSurfaceState.Ready;
+
+        public CharacterFootGroundSurfaceSegment this[int index] => SegmentAt(index);
 
         internal bool Begin(
             in CharacterFootGroundPathQueryRequest query,
@@ -188,37 +195,28 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
 
     public readonly struct CharacterFootGroundSurfaceDiagnostics
     {
-        readonly CharacterFootGroundSurfaceSegment[] m_Segments;
+        readonly CharacterFootGroundSurfacePage m_Page;
 
         internal CharacterFootGroundSurfaceDiagnostics(
-            CharacterFootGroundSurfacePage page)
-        {
-            State = page.State;
-            Origin = page.Origin;
-            Forward = page.Forward;
-            Up = page.Up;
-            Length = page.Length;
-            WorldRevision = page.WorldRevision;
-            m_Segments = page.Count == 0
-                ? Array.Empty<CharacterFootGroundSurfaceSegment>()
-                : new CharacterFootGroundSurfaceSegment[page.Count];
-            for (int i = 0; i < m_Segments.Length; i++)
-                m_Segments[i] = page.SegmentAt(i);
-        }
+            CharacterFootGroundSurfacePage page) => m_Page = page;
 
-        public CharacterFootGroundSurfaceState State { get; }
-        public Vector3 Origin { get; }
-        public Vector3 Forward { get; }
-        public Vector3 Up { get; }
-        public float Length { get; }
-        public ulong WorldRevision { get; }
-        public int Count => m_Segments?.Length ?? 0;
+        [DiagnosticField(1, "category", "ground-path")]
+        public CharacterFootGroundSurfaceState State =>
+            m_Page == null ? default : m_Page.State;
+        public Vector3 Origin => m_Page == null ? default : m_Page.Origin;
+        public Vector3 Forward => m_Page == null ? default : m_Page.Forward;
+        public Vector3 Up => m_Page == null ? default : m_Page.Up;
+        public float Length => m_Page == null ? 0f : m_Page.Length;
+        [DiagnosticField(1, "identity", "ground-path")]
+        public ulong WorldRevision => m_Page == null ? 0 : m_Page.WorldRevision;
+        [DiagnosticField(1, "count", "ground-path")]
+        public int Count => m_Page?.Count ?? 0;
 
         public CharacterFootGroundSurfaceSegment SegmentAt(int index)
         {
             if ((uint)index >= (uint)Count)
                 throw new ArgumentOutOfRangeException(nameof(index));
-            return m_Segments[index];
+            return m_Page[index];
         }
     }
 

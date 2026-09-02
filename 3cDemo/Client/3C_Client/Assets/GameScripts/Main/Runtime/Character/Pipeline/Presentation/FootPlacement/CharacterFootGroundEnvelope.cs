@@ -1,4 +1,5 @@
 using System;
+using KK.GeneratedDiagnosticSampling;
 using UnityEngine;
 
 namespace ThirdPersonCharacter.Pipeline.Presentation
@@ -10,6 +11,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             Position = position;
         }
 
+        [DiagnosticField(1, "metres", "ground-geometry")]
         public Vector3 Position { get; }
     }
 
@@ -198,7 +200,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         }
     }
 
-    internal sealed class CharacterFootGroundEnvelopePage
+    public sealed class CharacterFootGroundEnvelopePage
     {
         readonly CharacterFootGroundEnvelopeVertex[] m_Vertices;
 
@@ -209,7 +211,9 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             m_Vertices = new CharacterFootGroundEnvelopeVertex[contactCapacity + 4];
         }
 
-        internal int Count { get; private set; }
+        public int Count { get; private set; }
+
+        public CharacterFootGroundEnvelopeVertex this[int index] => VertexAt(index);
 
         internal CharacterFootGroundEnvelopeVertex VertexAt(int index)
         {

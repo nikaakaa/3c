@@ -1,4 +1,5 @@
 using System;
+using KK.GeneratedDiagnosticSampling;
 using ThirdPersonCharacter.Pipeline.Presentation;
 using UnityEngine;
 
@@ -65,14 +66,20 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         }
 
         readonly byte m_IsSpecified;
+        [DiagnosticField(1, "count", "formal-event", AvailabilityMember = nameof(IsValid))]
         public int Ordinal { get; }
+        [DiagnosticField(1, "count", "formal-event", AvailabilityMember = nameof(IsValid))]
         public int LandingCycle { get; }
         public float NormalizedTime { get; }
+        [DiagnosticField(1, "metres", "formal-event", AvailabilityMember = nameof(IsValid))]
         public float Distance { get; }
+        [DiagnosticField(1, "metres", "formal-event", AvailabilityMember = nameof(IsValid))]
         public Vector3 RootLocalLanding { get; }
         public ulong SourceSampleIdentity { get; }
         public ulong ContributionContinuityIdentity { get; }
+        [DiagnosticField(1, "identity", "formal-event", AvailabilityMember = nameof(IsValid))]
         public ulong Identity { get; }
+        [DiagnosticField(1, "none", "formal-event")]
         public bool IsValid => m_IsSpecified != 0;
         public bool IsBound => IsValid && SourceSampleIdentity != 0 && Identity != 0;
 
@@ -152,11 +159,16 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         readonly byte m_IsSpecified;
         public AnimationFootMotionEventOccurrence CurrentContact { get; }
         public AnimationFootMotionEventOccurrence NextLanding { get; }
+        [DiagnosticField(1, "category", "formal-event", AvailabilityMember = nameof(IsValid))]
         public AnimationFootMotionEventPhase Phase { get; }
+        [DiagnosticField(1, "seconds", "formal-event", AvailabilityMember = nameof(IsValid))]
         public float TimeToLandingSeconds { get; }
         public float SwingProgress { get; }
+        [DiagnosticField(1, "unitless", "formal-event", AvailabilityMember = nameof(IsValid))]
         public float ApproachContactToLandingProgress { get; }
+        [DiagnosticField(1, "none", "formal-event")]
         public bool IsValid => m_IsSpecified != 0;
+        [DiagnosticField(1, "none", "formal-event", AvailabilityMember = nameof(IsValid))]
         public bool InApproachContactToLanding =>
             IsValid && Phase == AnimationFootMotionEventPhase.ApproachContact;
 

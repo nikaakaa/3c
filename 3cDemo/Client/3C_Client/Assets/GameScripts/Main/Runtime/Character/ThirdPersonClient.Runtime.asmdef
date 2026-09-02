@@ -2,6 +2,7 @@
     "name": "ThirdPersonClient.Runtime",
     "rootNamespace": "ThirdPersonCharacter",
     "references": [
+        "KK.GeneratedDiagnosticSampling.Annotations",
         "ThirdPersonSimulation.Core",
         "ThirdPersonSimulation.Float32",
         "ThirdPersonSimulation.Unity",

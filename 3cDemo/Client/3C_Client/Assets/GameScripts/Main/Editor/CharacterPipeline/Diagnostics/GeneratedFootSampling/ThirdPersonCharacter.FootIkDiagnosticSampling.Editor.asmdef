@@ -1,12 +1,15 @@
 {
-    "name": "ThirdPersonCharacter.FootIkDiagnosticSampling",
-    "rootNamespace": "ThirdPersonCharacter.Pipeline.Diagnostics.FootIkSampling",
+    "name": "ThirdPersonCharacter.FootIkDiagnosticSampling.Editor",
+    "rootNamespace": "ThirdPersonCharacter.Pipeline.Diagnostics.FootIkSampling.Editor",
     "references": [
-        "KK.GeneratedDiagnosticSampling.Annotations",
+        "ThirdPersonCharacter.FootIkDiagnosticSampling",
         "ThirdPersonClient.Runtime",
-        "KK.GeneratedDiagnosticSampling"
+        "KK.GeneratedDiagnosticSampling",
+        "KK.GeneratedDiagnosticSampling.Host"
     ],
-    "includePlatforms": [],
+    "includePlatforms": [
+        "Editor"
+    ],
     "excludePlatforms": [],
     "allowUnsafeCode": false,
     "overrideReferences": false,

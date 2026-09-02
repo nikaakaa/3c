@@ -1,4 +1,5 @@
 using System;
+using KK.GeneratedDiagnosticSampling;
 using ThirdPersonCharacter.Pipeline.Presentation;
 using UnityEngine;
 
@@ -50,16 +51,26 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         }
 
         readonly byte m_IsSpecified;
+        [DiagnosticField(1, "metres", "formal-motion", AvailabilityMember = nameof(IsValid))]
         public float FootHeight { get; }
+        [DiagnosticField(1, "metres", "formal-motion", AvailabilityMember = nameof(IsValid))]
         public float ToeHeight { get; }
+        [DiagnosticField(1, "metres-per-second", "formal-motion", AvailabilityMember = nameof(IsValid))]
         public float ToeSpeed { get; }
+        [DiagnosticField(1, "metres", "formal-motion", AvailabilityMember = nameof(IsValid))]
         public float PositionError { get; }
+        [DiagnosticField(1, "degrees", "formal-motion", AvailabilityMember = nameof(IsValid))]
         public float RotationError { get; }
+        [DiagnosticField(1, "unitless", "formal-motion", AvailabilityMember = nameof(IsValid))]
         public float Contact { get; }
+        [DiagnosticField(1, "category", "formal-motion", AvailabilityMember = nameof(IsValid))]
         public AnimationFootStepObservationLockMode LockMode { get; }
+        [DiagnosticField(1, "unitless", "formal-motion", AvailabilityMember = nameof(IsValid))]
         public float LockWeight { get; }
+        [DiagnosticField(1, "unitless", "formal-motion", AvailabilityMember = nameof(IsValid))]
         public float Support { get; }
         public AnimationFootMotionEventFrame Events { get; }
+        [DiagnosticField(1, "none", "formal-motion")]
         public bool IsValid => m_IsSpecified != 0;
         public bool HasPredictiveLanding =>
             IsValid && Events.NextLanding.IsBound &&
@@ -74,8 +85,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation
              Events.Phase == AnimationFootMotionEventPhase.ApproachContact);
         public ulong LandingEventIdentity =>
             HasPredictiveLanding ? Events.NextLanding.Identity : 0;
+        [DiagnosticField(1, "seconds", "formal-motion", AvailabilityMember = nameof(IsValid))]
         public float TimeToLandingSeconds =>
             HasPredictiveLanding ? Events.TimeToLandingSeconds : 0f;
+        [DiagnosticField(1, "metres", "formal-motion", AvailabilityMember = nameof(IsValid))]
         public float Distance =>
             HasPredictiveLanding ? Events.NextLanding.Distance : 0f;
         public Vector3 RootLocalLanding =>

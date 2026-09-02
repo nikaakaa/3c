@@ -1,4 +1,5 @@
 using System;
+using KK.GeneratedDiagnosticSampling;
 using UnityEngine;
 
 namespace ThirdPersonCharacter.Pipeline.Presentation
@@ -39,14 +40,23 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             MinimumGroundNormalDot = minimumGroundNormalDot;
         }
 
+        [DiagnosticField(1, "category", "landing-observation")]
         public CharacterFootPlacementQueryShape Shape { get; }
+        [DiagnosticField(1, "category", "landing-observation")]
         public CharacterFootPlacementQueryPurpose Purpose { get; }
+        [DiagnosticField(1, "count", "landing-observation")]
         public int FootIndex { get; }
+        [DiagnosticField(1, "metres", "landing-observation")]
         public Vector3 Origin { get; }
+        [DiagnosticField(1, "direction", "landing-observation")]
         public Vector3 Direction { get; }
+        [DiagnosticField(1, "metres", "landing-observation")]
         public float MaximumDistance { get; }
+        [DiagnosticField(1, "metres", "landing-observation")]
         public float Radius { get; }
+        [DiagnosticField(1, "bitmask", "landing-observation")]
         public int LayerMask { get; }
+        [DiagnosticField(1, "unitless", "landing-observation")]
         public float MinimumGroundNormalDot { get; }
     }
 

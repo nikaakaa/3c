@@ -9,38 +9,36 @@ namespace ThirdPersonCharacter.Pipeline.Diagnostics.FootIkSampling
         DiagnosticOutputFormat.Csv,
         "capture-metadata",
         "identity",
-        "selected-step",
         "current-step",
-        "incoming-step",
         "root-landing",
-        "formal-output",
-        "formal-events",
-        "formal-input",
-        "input-formal-events",
+        "formal-motion",
+        "formal-event",
         "timing",
         "action",
         "primary-support",
         "body-correction",
         "current-support",
-        "current-support-target",
+        "current-support-probe",
+        "support-target",
         "prediction-motion",
         "goal",
-        "selected-support-target",
         "output-stages",
         "ground-path",
         "landing-observation",
         "lifecycle",
         "motion-core",
-        "motion-derived",
         "path-continuity",
         "response-contact",
         "resolved-core",
-        "resolved-target",
         "resolved-contact",
         "pelvis-input",
         "pelvis-spring-input",
-        "root-hierarchy",
-        Tables = new[] { "ground-geometry" })]
+        Tables = new[]
+        {
+            "ground-contacts",
+            "ground-envelope",
+            "ground-surfaces"
+        })]
     internal static class CharacterFootIkFullSamplerDefinition
     {
     }
@@ -48,6 +46,11 @@ namespace ThirdPersonCharacter.Pipeline.Diagnostics.FootIkSampling
     [DiagnosticCaptureProgram(
         "character-foot-ik/full-program",
         CharacterFootIkDiagnosticIdentity.CapabilityId,
+        new[]
+        {
+            CharacterFootIkDiagnosticIdentity.LeftDimensionId,
+            CharacterFootIkDiagnosticIdentity.RightDimensionId
+        },
         typeof(CharacterFootIkFullSamplerDefinition))]
     public static partial class CharacterFootIkFullCaptureProgram
     {

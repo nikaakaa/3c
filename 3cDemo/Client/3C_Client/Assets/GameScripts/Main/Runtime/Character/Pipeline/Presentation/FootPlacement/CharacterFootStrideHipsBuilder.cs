@@ -1,4 +1,5 @@
 using System;
+using KK.GeneratedDiagnosticSampling;
 using ThirdPersonCharacter.Pipeline.Animation;
 using UnityEngine;
 
@@ -87,9 +88,13 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             in CharacterFootPrimarySupportResult result) =>
             m_Result = result;
 
+        [DiagnosticField(1, "none", "primary-support")]
         public bool HasValue => m_Result.HasValue;
+        [DiagnosticField(1, "category", "primary-support", AvailabilityMember = nameof(HasValue))]
         public CharacterFootSide Side => m_Result.Side;
+        [DiagnosticField(1, "identity", "primary-support", AvailabilityMember = nameof(HasValue))]
         public ulong LandingEventIdentity => m_Result.LandingEventIdentity;
+        [DiagnosticField(1, "none", "primary-support")]
         public bool Retained => m_Result.Retained;
     }
 
@@ -121,7 +126,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         internal bool ReleasePelvis { get; }
     }
 
-    internal readonly struct CharacterFootPelvisHeightTarget
+    public readonly struct CharacterFootPelvisHeightTarget
     {
         internal CharacterFootPelvisHeightTarget(
             Vector3 componentUp,
@@ -161,15 +166,24 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             Available = true;
         }
 
-        internal bool Available { get; }
-        internal Vector3 ComponentUp { get; }
-        internal Vector3 LeftAnimatedSole { get; }
-        internal Vector3 RightAnimatedSole { get; }
-        internal Vector3 LeftTargetSole { get; }
-        internal Vector3 RightTargetSole { get; }
-        internal float AnimatedMinimumAlongUp { get; }
-        internal float TargetMinimumAlongUp { get; }
-        internal float OffsetAlongUp { get; }
+        [DiagnosticField(1, "none", "pelvis-input")]
+        public bool Available { get; }
+        [DiagnosticField(1, "direction", "pelvis-input")]
+        public Vector3 ComponentUp { get; }
+        [DiagnosticField(1, "metres", "pelvis-input")]
+        public Vector3 LeftAnimatedSole { get; }
+        [DiagnosticField(1, "metres", "pelvis-input")]
+        public Vector3 RightAnimatedSole { get; }
+        [DiagnosticField(1, "metres", "pelvis-input")]
+        public Vector3 LeftTargetSole { get; }
+        [DiagnosticField(1, "metres", "pelvis-input")]
+        public Vector3 RightTargetSole { get; }
+        [DiagnosticField(1, "metres", "pelvis-input")]
+        public float AnimatedMinimumAlongUp { get; }
+        [DiagnosticField(1, "metres", "pelvis-input")]
+        public float TargetMinimumAlongUp { get; }
+        [DiagnosticField(1, "metres", "pelvis-input")]
+        public float OffsetAlongUp { get; }
     }
 
     internal readonly struct CharacterFootPelvisFrame
@@ -446,7 +460,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
 
     }
 
-    internal readonly struct CharacterFootPelvisSpringStep
+    public readonly struct CharacterFootPelvisSpringStep
     {
         internal CharacterFootPelvisSpringStep(
             bool evaluated,
@@ -505,17 +519,28 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
 
         internal bool Evaluated { get; }
         internal bool Completed { get; }
-        internal bool HadPreviousState { get; }
-        internal bool SupportChanged { get; }
-        internal CharacterFootStrideSlope PreviousSlope { get; }
-        internal CharacterFootPelvisSpringHandoffReason HandoffReason { get; }
-        internal bool VelocityReset { get; }
-        internal float PreviousTarget { get; }
-        internal float PreviousOutput { get; }
-        internal float PreviousVelocity { get; }
-        internal float Input { get; }
-        internal float InputVelocity { get; }
-        internal float Frequency { get; }
+        [DiagnosticField(1, "none", "pelvis-spring-input")]
+        public bool HadPreviousState { get; }
+        [DiagnosticField(1, "none", "pelvis-spring-input")]
+        public bool SupportChanged { get; }
+        [DiagnosticField(1, "category", "pelvis-spring-input")]
+        public CharacterFootStrideSlope PreviousSlope { get; }
+        [DiagnosticField(1, "category", "pelvis-spring-input")]
+        public CharacterFootPelvisSpringHandoffReason HandoffReason { get; }
+        [DiagnosticField(1, "none", "pelvis-spring-input")]
+        public bool VelocityReset { get; }
+        [DiagnosticField(1, "metres", "pelvis-spring-input")]
+        public float PreviousTarget { get; }
+        [DiagnosticField(1, "metres", "pelvis-spring-input")]
+        public float PreviousOutput { get; }
+        [DiagnosticField(1, "metres-per-second", "pelvis-spring-input")]
+        public float PreviousVelocity { get; }
+        [DiagnosticField(1, "metres", "pelvis-spring-input")]
+        public float Input { get; }
+        [DiagnosticField(1, "metres-per-second", "pelvis-spring-input")]
+        public float InputVelocity { get; }
+        [DiagnosticField(1, "hertz", "pelvis-spring-input")]
+        public float Frequency { get; }
         internal float IntegratedOutput { get; }
         internal float Target { get; }
         internal float Output { get; }
@@ -531,7 +556,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
 
     }
 
-    internal readonly struct CharacterFootStrideHipsResult
+    public readonly struct CharacterFootStrideHipsResult
     {
         internal CharacterFootStrideHipsResult(
             CharacterFootStrideState state,
@@ -571,23 +596,36 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             Response = response;
         }
 
-        internal CharacterFootStrideState State { get; }
-        internal CharacterFootStrideRejectReason RejectReason { get; }
-        internal CharacterFootSide SupportSide { get; }
-        internal CharacterFootSide SwingSide { get; }
-        internal Vector3 StrideStart { get; }
-        internal Vector3 StrideEnd { get; }
-        internal float Progress { get; }
-        internal CharacterFootStrideSlope Slope { get; }
-        internal Vector3 SampledGround { get; }
-        internal bool PoseInputAvailable { get; }
-        internal Vector3 PoseRootPosition { get; }
-        internal Vector3 AnimatedPelvis { get; }
-        internal Vector3 AnimatedPelvisComponentPosition { get; }
-        internal CharacterFootPelvisHeightTarget HeightTarget { get; }
+        [DiagnosticField(1, "category", "pelvis-input")]
+        public CharacterFootStrideState State { get; }
+        [DiagnosticField(1, "category", "pelvis-input")]
+        public CharacterFootStrideRejectReason RejectReason { get; }
+        [DiagnosticField(1, "category", "pelvis-input")]
+        public CharacterFootSide SupportSide { get; }
+        [DiagnosticField(1, "category", "pelvis-input")]
+        public CharacterFootSide SwingSide { get; }
+        [DiagnosticField(1, "metres", "pelvis-input")]
+        public Vector3 StrideStart { get; }
+        [DiagnosticField(1, "metres", "pelvis-input")]
+        public Vector3 StrideEnd { get; }
+        [DiagnosticField(1, "unitless", "pelvis-input")]
+        public float Progress { get; }
+        [DiagnosticField(1, "category", "pelvis-input")]
+        public CharacterFootStrideSlope Slope { get; }
+        [DiagnosticField(1, "metres", "pelvis-input")]
+        public Vector3 SampledGround { get; }
+        [DiagnosticField(1, "none", "pelvis-input")]
+        public bool PoseInputAvailable { get; }
+        [DiagnosticField(1, "metres", "pelvis-input")]
+        public Vector3 PoseRootPosition { get; }
+        [DiagnosticField(1, "metres", "pelvis-input")]
+        public Vector3 AnimatedPelvis { get; }
+        [DiagnosticField(1, "metres", "pelvis-input")]
+        public Vector3 AnimatedPelvisComponentPosition { get; }
+        public CharacterFootPelvisHeightTarget HeightTarget { get; }
         internal CharacterFootPelvisPosturePreference PosturePreference { get; }
         internal CharacterFootPelvisReachObservation Reach { get; }
-        internal CharacterFootPelvisSpringStep Response { get; }
+        public CharacterFootPelvisSpringStep Response { get; }
 
         internal bool Accepted => State == CharacterFootStrideState.Accepted;
         internal bool ProducesPelvisGoal =>
@@ -724,18 +762,18 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
 
     public readonly struct CharacterFootStrideHipsDiagnostics
     {
-        readonly CharacterFootStrideHipsResult m_Result;
+        public readonly CharacterFootStrideHipsResult Result;
         internal CharacterFootStrideHipsDiagnostics(
-            in CharacterFootStrideHipsResult result) => m_Result = result;
+            in CharacterFootStrideHipsResult result) => Result = result;
 
-        public CharacterFootStrideCoreDiagnostics Core => new(m_Result);
-        public CharacterFootPelvisObservationDiagnostics Observation => new(m_Result);
+        public CharacterFootStrideCoreDiagnostics Core => new(Result);
+        public CharacterFootPelvisObservationDiagnostics Observation => new(Result);
         public CharacterFootPelvisHeightTargetDiagnostics HeightTarget =>
-            new(m_Result.HeightTarget);
+            new(Result.HeightTarget);
         public CharacterFootPelvisPostureDiagnostics Posture =>
-            new(m_Result.PosturePreference);
-        public CharacterFootPelvisReachDiagnostics Reach => new(m_Result.Reach);
-        public CharacterFootPelvisResponseDiagnostics Response => new(m_Result);
+            new(Result.PosturePreference);
+        public CharacterFootPelvisReachDiagnostics Reach => new(Result.Reach);
+        public CharacterFootPelvisResponseDiagnostics Response => new(Result);
     }
 
     internal readonly struct CharacterFootPelvisInput

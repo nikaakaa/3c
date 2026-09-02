@@ -1,4 +1,5 @@
 using System;
+using KK.GeneratedDiagnosticSampling;
 using UnityEngine;
 
 namespace ThirdPersonCharacter.Pipeline.Presentation
@@ -56,14 +57,23 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         }
 
         public CharacterFootSide Side { get; }
+        [DiagnosticField(1, "metres", "ground-path")]
         public Vector3 AxisStart { get; }
+        [DiagnosticField(1, "metres", "ground-path")]
         public Vector3 AxisEnd { get; }
+        [DiagnosticField(1, "metres", "ground-path")]
         public float Radius { get; }
+        [DiagnosticField(1, "metres", "ground-path")]
         public float MaximumAxisSegmentLength { get; }
+        [DiagnosticField(1, "direction", "ground-path")]
         public Vector3 Direction { get; }
+        [DiagnosticField(1, "metres", "ground-path")]
         public float MaximumDistance { get; }
+        [DiagnosticField(1, "bitmask", "ground-path")]
         public int LayerMask { get; }
+        [DiagnosticField(1, "count", "ground-path")]
         public int SegmentHitCapacity { get; }
+        [DiagnosticField(1, "count", "ground-path")]
         public int ContactCapacity { get; }
 
         internal bool IsValid =>
@@ -99,11 +109,17 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             QueryDistance = queryDistance;
         }
 
+        [DiagnosticField(1, "count", "ground-geometry")]
         public int SegmentIndex { get; }
+        [DiagnosticField(1, "identity", "ground-geometry")]
         public int SurfaceIdentity { get; }
+        [DiagnosticField(1, "identity", "ground-geometry")]
         public ulong CandidateIdentity { get; }
+        [DiagnosticField(1, "metres", "ground-geometry")]
         public Vector3 Position { get; }
+        [DiagnosticField(1, "direction", "ground-geometry")]
         public Vector3 Normal { get; }
+        [DiagnosticField(1, "metres", "ground-geometry")]
         public float QueryDistance { get; }
     }
 
@@ -122,7 +138,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         internal bool Accepted => RejectReason == CharacterFootGroundPathRejectReason.None;
     }
 
-    internal sealed class CharacterFootGroundContactPage
+    public sealed class CharacterFootGroundContactPage
     {
         readonly CharacterFootGroundContact[] m_Contacts;
 
@@ -136,7 +152,9 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
 
         internal CharacterFootGroundSurfacePage SurfaceCoverage { get; }
         internal int Capacity => m_Contacts.Length;
-        internal int Count { get; private set; }
+        public int Count { get; private set; }
+
+        public CharacterFootGroundContact this[int index] => ContactAt(index);
 
         internal CharacterFootGroundContact ContactAt(int index)
         {
@@ -716,6 +734,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
 
         internal CharacterFootGroundPathPage Page =>
             m_Page ?? throw new InvalidOperationException("Ground Path Result is unavailable.");
+        internal CharacterFootGroundPathPage PageOrNull => m_Page;
         internal CharacterFootGroundPathState State => Page.State;
         internal CharacterFootGroundPathRejectReason RejectReason => Page.RejectReason;
         internal bool QueryExecutedThisFrame { get; }
@@ -739,572 +758,143 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             Page.Envelope.VertexAt(index);
     }
 
-    readonly struct CharacterFootGroundPathDiagnosticContacts
-    {
-        readonly CharacterFootGroundContact m_0;
-        readonly CharacterFootGroundContact m_1;
-        readonly CharacterFootGroundContact m_2;
-        readonly CharacterFootGroundContact m_3;
-        readonly CharacterFootGroundContact m_4;
-        readonly CharacterFootGroundContact m_5;
-        readonly CharacterFootGroundContact m_6;
-        readonly CharacterFootGroundContact m_7;
-        readonly CharacterFootGroundContact m_8;
-        readonly CharacterFootGroundContact m_9;
-        readonly CharacterFootGroundContact m_10;
-        readonly CharacterFootGroundContact m_11;
-        readonly CharacterFootGroundContact m_12;
-        readonly CharacterFootGroundContact m_13;
-        readonly CharacterFootGroundContact m_14;
-        readonly CharacterFootGroundContact m_15;
-        readonly CharacterFootGroundContact m_16;
-        readonly CharacterFootGroundContact m_17;
-        readonly CharacterFootGroundContact m_18;
-        readonly CharacterFootGroundContact m_19;
-        readonly CharacterFootGroundContact m_20;
-        readonly CharacterFootGroundContact m_21;
-        readonly CharacterFootGroundContact m_22;
-        readonly CharacterFootGroundContact m_23;
-        readonly CharacterFootGroundContact m_24;
-        readonly CharacterFootGroundContact m_25;
-        readonly CharacterFootGroundContact m_26;
-        readonly CharacterFootGroundContact m_27;
-        readonly CharacterFootGroundContact m_28;
-        readonly CharacterFootGroundContact m_29;
-        readonly CharacterFootGroundContact m_30;
-        readonly CharacterFootGroundContact m_31;
-        readonly CharacterFootGroundContact m_32;
-        readonly CharacterFootGroundContact m_33;
-        readonly CharacterFootGroundContact m_34;
-        readonly CharacterFootGroundContact m_35;
-        readonly CharacterFootGroundContact m_36;
-        readonly CharacterFootGroundContact m_37;
-        readonly CharacterFootGroundContact m_38;
-        readonly CharacterFootGroundContact m_39;
-        readonly CharacterFootGroundContact m_40;
-        readonly CharacterFootGroundContact m_41;
-        readonly CharacterFootGroundContact m_42;
-        readonly CharacterFootGroundContact m_43;
-        readonly CharacterFootGroundContact m_44;
-        readonly CharacterFootGroundContact m_45;
-        readonly CharacterFootGroundContact m_46;
-        readonly CharacterFootGroundContact m_47;
-        readonly CharacterFootGroundContact m_48;
-        readonly CharacterFootGroundContact m_49;
-        readonly CharacterFootGroundContact m_50;
-        readonly CharacterFootGroundContact m_51;
-        readonly CharacterFootGroundContact m_52;
-        readonly CharacterFootGroundContact m_53;
-        readonly CharacterFootGroundContact m_54;
-        readonly CharacterFootGroundContact m_55;
-        readonly CharacterFootGroundContact m_56;
-        readonly CharacterFootGroundContact m_57;
-        readonly CharacterFootGroundContact m_58;
-        readonly CharacterFootGroundContact m_59;
-        readonly CharacterFootGroundContact m_60;
-        readonly CharacterFootGroundContact m_61;
-        readonly CharacterFootGroundContact m_62;
-        readonly CharacterFootGroundContact m_63;
 
-        internal CharacterFootGroundPathDiagnosticContacts(
-            CharacterFootGroundContactPage page)
-        {
-            Count = page.Count;
-            m_0 = Read(page, 0);
-            m_1 = Read(page, 1);
-            m_2 = Read(page, 2);
-            m_3 = Read(page, 3);
-            m_4 = Read(page, 4);
-            m_5 = Read(page, 5);
-            m_6 = Read(page, 6);
-            m_7 = Read(page, 7);
-            m_8 = Read(page, 8);
-            m_9 = Read(page, 9);
-            m_10 = Read(page, 10);
-            m_11 = Read(page, 11);
-            m_12 = Read(page, 12);
-            m_13 = Read(page, 13);
-            m_14 = Read(page, 14);
-            m_15 = Read(page, 15);
-            m_16 = Read(page, 16);
-            m_17 = Read(page, 17);
-            m_18 = Read(page, 18);
-            m_19 = Read(page, 19);
-            m_20 = Read(page, 20);
-            m_21 = Read(page, 21);
-            m_22 = Read(page, 22);
-            m_23 = Read(page, 23);
-            m_24 = Read(page, 24);
-            m_25 = Read(page, 25);
-            m_26 = Read(page, 26);
-            m_27 = Read(page, 27);
-            m_28 = Read(page, 28);
-            m_29 = Read(page, 29);
-            m_30 = Read(page, 30);
-            m_31 = Read(page, 31);
-            m_32 = Read(page, 32);
-            m_33 = Read(page, 33);
-            m_34 = Read(page, 34);
-            m_35 = Read(page, 35);
-            m_36 = Read(page, 36);
-            m_37 = Read(page, 37);
-            m_38 = Read(page, 38);
-            m_39 = Read(page, 39);
-            m_40 = Read(page, 40);
-            m_41 = Read(page, 41);
-            m_42 = Read(page, 42);
-            m_43 = Read(page, 43);
-            m_44 = Read(page, 44);
-            m_45 = Read(page, 45);
-            m_46 = Read(page, 46);
-            m_47 = Read(page, 47);
-            m_48 = Read(page, 48);
-            m_49 = Read(page, 49);
-            m_50 = Read(page, 50);
-            m_51 = Read(page, 51);
-            m_52 = Read(page, 52);
-            m_53 = Read(page, 53);
-            m_54 = Read(page, 54);
-            m_55 = Read(page, 55);
-            m_56 = Read(page, 56);
-            m_57 = Read(page, 57);
-            m_58 = Read(page, 58);
-            m_59 = Read(page, 59);
-            m_60 = Read(page, 60);
-            m_61 = Read(page, 61);
-            m_62 = Read(page, 62);
-            m_63 = Read(page, 63);
-        }
-
-        internal int Count { get; }
-
-        internal CharacterFootGroundContact ContactAt(int index) => index switch
-        {
-            0 => m_0,
-            1 => m_1,
-            2 => m_2,
-            3 => m_3,
-            4 => m_4,
-            5 => m_5,
-            6 => m_6,
-            7 => m_7,
-            8 => m_8,
-            9 => m_9,
-            10 => m_10,
-            11 => m_11,
-            12 => m_12,
-            13 => m_13,
-            14 => m_14,
-            15 => m_15,
-            16 => m_16,
-            17 => m_17,
-            18 => m_18,
-            19 => m_19,
-            20 => m_20,
-            21 => m_21,
-            22 => m_22,
-            23 => m_23,
-            24 => m_24,
-            25 => m_25,
-            26 => m_26,
-            27 => m_27,
-            28 => m_28,
-            29 => m_29,
-            30 => m_30,
-            31 => m_31,
-            32 => m_32,
-            33 => m_33,
-            34 => m_34,
-            35 => m_35,
-            36 => m_36,
-            37 => m_37,
-            38 => m_38,
-            39 => m_39,
-            40 => m_40,
-            41 => m_41,
-            42 => m_42,
-            43 => m_43,
-            44 => m_44,
-            45 => m_45,
-            46 => m_46,
-            47 => m_47,
-            48 => m_48,
-            49 => m_49,
-            50 => m_50,
-            51 => m_51,
-            52 => m_52,
-            53 => m_53,
-            54 => m_54,
-            55 => m_55,
-            56 => m_56,
-            57 => m_57,
-            58 => m_58,
-            59 => m_59,
-            60 => m_60,
-            61 => m_61,
-            62 => m_62,
-            63 => m_63,
-            _ => throw new ArgumentOutOfRangeException(nameof(index))
-        };
-
-        static CharacterFootGroundContact Read(
-            CharacterFootGroundContactPage page,
-            int index) =>
-            index < page.Count ? page.ContactAt(index) : default;
-    }
-
-    readonly struct CharacterFootGroundEnvelopeDiagnosticVertices
-    {
-        readonly CharacterFootGroundEnvelopeVertex m_0;
-        readonly CharacterFootGroundEnvelopeVertex m_1;
-        readonly CharacterFootGroundEnvelopeVertex m_2;
-        readonly CharacterFootGroundEnvelopeVertex m_3;
-        readonly CharacterFootGroundEnvelopeVertex m_4;
-        readonly CharacterFootGroundEnvelopeVertex m_5;
-        readonly CharacterFootGroundEnvelopeVertex m_6;
-        readonly CharacterFootGroundEnvelopeVertex m_7;
-        readonly CharacterFootGroundEnvelopeVertex m_8;
-        readonly CharacterFootGroundEnvelopeVertex m_9;
-        readonly CharacterFootGroundEnvelopeVertex m_10;
-        readonly CharacterFootGroundEnvelopeVertex m_11;
-        readonly CharacterFootGroundEnvelopeVertex m_12;
-        readonly CharacterFootGroundEnvelopeVertex m_13;
-        readonly CharacterFootGroundEnvelopeVertex m_14;
-        readonly CharacterFootGroundEnvelopeVertex m_15;
-        readonly CharacterFootGroundEnvelopeVertex m_16;
-        readonly CharacterFootGroundEnvelopeVertex m_17;
-        readonly CharacterFootGroundEnvelopeVertex m_18;
-        readonly CharacterFootGroundEnvelopeVertex m_19;
-        readonly CharacterFootGroundEnvelopeVertex m_20;
-        readonly CharacterFootGroundEnvelopeVertex m_21;
-        readonly CharacterFootGroundEnvelopeVertex m_22;
-        readonly CharacterFootGroundEnvelopeVertex m_23;
-        readonly CharacterFootGroundEnvelopeVertex m_24;
-        readonly CharacterFootGroundEnvelopeVertex m_25;
-        readonly CharacterFootGroundEnvelopeVertex m_26;
-        readonly CharacterFootGroundEnvelopeVertex m_27;
-        readonly CharacterFootGroundEnvelopeVertex m_28;
-        readonly CharacterFootGroundEnvelopeVertex m_29;
-        readonly CharacterFootGroundEnvelopeVertex m_30;
-        readonly CharacterFootGroundEnvelopeVertex m_31;
-        readonly CharacterFootGroundEnvelopeVertex m_32;
-        readonly CharacterFootGroundEnvelopeVertex m_33;
-        readonly CharacterFootGroundEnvelopeVertex m_34;
-        readonly CharacterFootGroundEnvelopeVertex m_35;
-        readonly CharacterFootGroundEnvelopeVertex m_36;
-        readonly CharacterFootGroundEnvelopeVertex m_37;
-        readonly CharacterFootGroundEnvelopeVertex m_38;
-        readonly CharacterFootGroundEnvelopeVertex m_39;
-        readonly CharacterFootGroundEnvelopeVertex m_40;
-        readonly CharacterFootGroundEnvelopeVertex m_41;
-        readonly CharacterFootGroundEnvelopeVertex m_42;
-        readonly CharacterFootGroundEnvelopeVertex m_43;
-        readonly CharacterFootGroundEnvelopeVertex m_44;
-        readonly CharacterFootGroundEnvelopeVertex m_45;
-        readonly CharacterFootGroundEnvelopeVertex m_46;
-        readonly CharacterFootGroundEnvelopeVertex m_47;
-        readonly CharacterFootGroundEnvelopeVertex m_48;
-        readonly CharacterFootGroundEnvelopeVertex m_49;
-        readonly CharacterFootGroundEnvelopeVertex m_50;
-        readonly CharacterFootGroundEnvelopeVertex m_51;
-        readonly CharacterFootGroundEnvelopeVertex m_52;
-        readonly CharacterFootGroundEnvelopeVertex m_53;
-        readonly CharacterFootGroundEnvelopeVertex m_54;
-        readonly CharacterFootGroundEnvelopeVertex m_55;
-        readonly CharacterFootGroundEnvelopeVertex m_56;
-        readonly CharacterFootGroundEnvelopeVertex m_57;
-        readonly CharacterFootGroundEnvelopeVertex m_58;
-        readonly CharacterFootGroundEnvelopeVertex m_59;
-        readonly CharacterFootGroundEnvelopeVertex m_60;
-        readonly CharacterFootGroundEnvelopeVertex m_61;
-        readonly CharacterFootGroundEnvelopeVertex m_62;
-        readonly CharacterFootGroundEnvelopeVertex m_63;
-        readonly CharacterFootGroundEnvelopeVertex m_64;
-        readonly CharacterFootGroundEnvelopeVertex m_65;
-        readonly CharacterFootGroundEnvelopeVertex m_66;
-        readonly CharacterFootGroundEnvelopeVertex m_67;
-
-        internal CharacterFootGroundEnvelopeDiagnosticVertices(
-            CharacterFootGroundEnvelopePage page)
-        {
-            Count = page.Count;
-            m_0 = Read(page, 0);
-            m_1 = Read(page, 1);
-            m_2 = Read(page, 2);
-            m_3 = Read(page, 3);
-            m_4 = Read(page, 4);
-            m_5 = Read(page, 5);
-            m_6 = Read(page, 6);
-            m_7 = Read(page, 7);
-            m_8 = Read(page, 8);
-            m_9 = Read(page, 9);
-            m_10 = Read(page, 10);
-            m_11 = Read(page, 11);
-            m_12 = Read(page, 12);
-            m_13 = Read(page, 13);
-            m_14 = Read(page, 14);
-            m_15 = Read(page, 15);
-            m_16 = Read(page, 16);
-            m_17 = Read(page, 17);
-            m_18 = Read(page, 18);
-            m_19 = Read(page, 19);
-            m_20 = Read(page, 20);
-            m_21 = Read(page, 21);
-            m_22 = Read(page, 22);
-            m_23 = Read(page, 23);
-            m_24 = Read(page, 24);
-            m_25 = Read(page, 25);
-            m_26 = Read(page, 26);
-            m_27 = Read(page, 27);
-            m_28 = Read(page, 28);
-            m_29 = Read(page, 29);
-            m_30 = Read(page, 30);
-            m_31 = Read(page, 31);
-            m_32 = Read(page, 32);
-            m_33 = Read(page, 33);
-            m_34 = Read(page, 34);
-            m_35 = Read(page, 35);
-            m_36 = Read(page, 36);
-            m_37 = Read(page, 37);
-            m_38 = Read(page, 38);
-            m_39 = Read(page, 39);
-            m_40 = Read(page, 40);
-            m_41 = Read(page, 41);
-            m_42 = Read(page, 42);
-            m_43 = Read(page, 43);
-            m_44 = Read(page, 44);
-            m_45 = Read(page, 45);
-            m_46 = Read(page, 46);
-            m_47 = Read(page, 47);
-            m_48 = Read(page, 48);
-            m_49 = Read(page, 49);
-            m_50 = Read(page, 50);
-            m_51 = Read(page, 51);
-            m_52 = Read(page, 52);
-            m_53 = Read(page, 53);
-            m_54 = Read(page, 54);
-            m_55 = Read(page, 55);
-            m_56 = Read(page, 56);
-            m_57 = Read(page, 57);
-            m_58 = Read(page, 58);
-            m_59 = Read(page, 59);
-            m_60 = Read(page, 60);
-            m_61 = Read(page, 61);
-            m_62 = Read(page, 62);
-            m_63 = Read(page, 63);
-            m_64 = Read(page, 64);
-            m_65 = Read(page, 65);
-            m_66 = Read(page, 66);
-            m_67 = Read(page, 67);
-        }
-
-        internal int Count { get; }
-
-        internal CharacterFootGroundEnvelopeVertex VertexAt(int index) => index switch
-        {
-            0 => m_0,
-            1 => m_1,
-            2 => m_2,
-            3 => m_3,
-            4 => m_4,
-            5 => m_5,
-            6 => m_6,
-            7 => m_7,
-            8 => m_8,
-            9 => m_9,
-            10 => m_10,
-            11 => m_11,
-            12 => m_12,
-            13 => m_13,
-            14 => m_14,
-            15 => m_15,
-            16 => m_16,
-            17 => m_17,
-            18 => m_18,
-            19 => m_19,
-            20 => m_20,
-            21 => m_21,
-            22 => m_22,
-            23 => m_23,
-            24 => m_24,
-            25 => m_25,
-            26 => m_26,
-            27 => m_27,
-            28 => m_28,
-            29 => m_29,
-            30 => m_30,
-            31 => m_31,
-            32 => m_32,
-            33 => m_33,
-            34 => m_34,
-            35 => m_35,
-            36 => m_36,
-            37 => m_37,
-            38 => m_38,
-            39 => m_39,
-            40 => m_40,
-            41 => m_41,
-            42 => m_42,
-            43 => m_43,
-            44 => m_44,
-            45 => m_45,
-            46 => m_46,
-            47 => m_47,
-            48 => m_48,
-            49 => m_49,
-            50 => m_50,
-            51 => m_51,
-            52 => m_52,
-            53 => m_53,
-            54 => m_54,
-            55 => m_55,
-            56 => m_56,
-            57 => m_57,
-            58 => m_58,
-            59 => m_59,
-            60 => m_60,
-            61 => m_61,
-            62 => m_62,
-            63 => m_63,
-            64 => m_64,
-            65 => m_65,
-            66 => m_66,
-            67 => m_67,
-            _ => throw new ArgumentOutOfRangeException(nameof(index))
-        };
-
-        static CharacterFootGroundEnvelopeVertex Read(
-            CharacterFootGroundEnvelopePage page,
-            int index) =>
-            index < page.Count ? page.VertexAt(index) : default;
-    }
 
     public readonly struct CharacterFootGroundPathDiagnostics
     {
-        readonly CharacterFootGroundPathDiagnosticContacts m_Contacts;
-        readonly CharacterFootGroundEnvelopeDiagnosticVertices m_Envelope;
+        readonly CharacterFootGroundPathResult m_Result;
 
         internal CharacterFootGroundPathDiagnostics(
-            in CharacterFootGroundPathResult result)
-        {
-            CharacterFootGroundPathPage page = result.Page;
-            State = page.State;
-            RejectReason = page.RejectReason;
-            QueryExecutedThisFrame = result.QueryExecutedThisFrame;
-            SegmentCount = page.SegmentCount;
-            InputIdentity = page.Input.Identity;
-            LastLandingEventIdentity = page.HasInput
-                ? page.Input.Key.LastLandingEventIdentity
-                : 0;
-            NextSwingLandingEventIdentity = page.HasInput
-                ? page.Input.Key.NextSwingLandingEventIdentity
-                : 0;
-            TrajectoryGeneration = page.HasInput
-                ? page.Input.Key.TrajectoryGeneration
-                : 0;
-            AuthorityTick = page.HasInput
-                ? page.Input.Key.AuthorityTick
-                : 0;
-            LastFutureBodyTranslationSourceIdentity = page.HasInput
-                ? page.Input.Key.LastFutureBodyTranslationSourceIdentity
-                : string.Empty;
-            NextSwingFutureBodyTranslationSourceIdentity = page.HasInput
-                ? page.Input.Key.NextSwingFutureBodyTranslationSourceIdentity
-                : string.Empty;
-            LastLanding = page.HasInput
-                ? page.Input.LastLanding
-                : default;
-            NextSwingLanding = page.HasInput
-                ? page.Input.NextSwingLanding
-                : default;
-            LastLandingNormal = page.HasInput
-                ? page.Input.LastLandingNormal
-                : default;
-            NextSwingLandingNormal = page.HasInput
-                ? page.Input.NextSwingLandingNormal
-                : default;
-            LastLandingSurfaceIdentity = page.HasInput
-                ? page.Input.LastLandingSurfaceIdentity
-                : 0;
-            NextSwingLandingSurfaceIdentity = page.HasInput
-                ? page.Input.NextSwingLandingSurfaceIdentity
-                : 0;
-            ComponentUp = page.HasInput
-                ? page.Input.ComponentUp
-                : default;
-            Query = page.HasInput
-                ? page.Input.Query
-                : default;
-            MaximumReachableVerticalEdge = page.HasInput
-                ? page.Input.MaximumReachableVerticalEdge
-                : 0f;
-            EdgeCount = page.Edges.Count;
-            HasInvalidSegment = page.InvalidSegment.HasValue;
-            FirstInvalidSegmentIndex = page.InvalidSegment.HasValue
-                ? page.InvalidSegment.EdgeIndex
-                : -1;
-            FirstInvalidSegmentIdentity = page.InvalidSegment.HasValue
-                ? page.InvalidSegment.EdgeIdentity
-                : 0;
-            FirstInvalidSegmentBottom = page.InvalidSegment.HasValue
-                ? page.InvalidSegment.Bottom
-                : default;
-            FirstInvalidSegmentTop = page.InvalidSegment.HasValue
-                ? page.InvalidSegment.Top
-                : default;
-            FirstInvalidSegmentVerticalDistance = page.InvalidSegment.HasValue
-                ? page.InvalidSegment.VerticalDistance
-                : 0f;
-            SurfaceCoverage = new CharacterFootGroundSurfaceDiagnostics(page.Contacts.SurfaceCoverage);
-            m_Contacts = new CharacterFootGroundPathDiagnosticContacts(page.Contacts);
-            m_Envelope = new CharacterFootGroundEnvelopeDiagnosticVertices(page.Envelope);
-        }
+            in CharacterFootGroundPathResult result) => m_Result = result;
 
-        public CharacterFootGroundPathState State { get; }
-        public CharacterFootGroundPathRejectReason RejectReason { get; }
-        public bool QueryExecutedThisFrame { get; }
+        CharacterFootGroundPathPage Page => m_Result.PageOrNull;
+
+        [DiagnosticField(1, "category", "ground-path")]
+        public CharacterFootGroundPathState State =>
+            Page == null ? default : Page.State;
+        [DiagnosticField(1, "category", "ground-path")]
+        public CharacterFootGroundPathRejectReason RejectReason =>
+            Page == null ? default : Page.RejectReason;
+        [DiagnosticField(1, "none", "ground-path")]
+        public bool QueryExecutedThisFrame =>
+            Page != null && m_Result.QueryExecutedThisFrame;
         public bool QueryExecuted => QueryExecutedThisFrame;
-        public int SegmentCount { get; }
-        public ulong InputIdentity { get; }
-        public ulong LastLandingEventIdentity { get; }
-        public ulong NextSwingLandingEventIdentity { get; }
-        public ulong TrajectoryGeneration { get; }
-        public ulong AuthorityTick { get; }
-        public string LastFutureBodyTranslationSourceIdentity { get; }
-        public string NextSwingFutureBodyTranslationSourceIdentity { get; }
-        public Vector3 LastLanding { get; }
-        public Vector3 NextSwingLanding { get; }
-        public Vector3 LastLandingNormal { get; }
-        public Vector3 NextSwingLandingNormal { get; }
-        public int LastLandingSurfaceIdentity { get; }
-        public int NextSwingLandingSurfaceIdentity { get; }
-        public Vector3 ComponentUp { get; }
-        public CharacterFootGroundPathQueryRequest Query { get; }
-        public float MaximumReachableVerticalEdge { get; }
-        public int EdgeCount { get; }
-        public bool HasInvalidSegment { get; }
-        public int FirstInvalidSegmentIndex { get; }
-        public ulong FirstInvalidSegmentIdentity { get; }
-        public Vector3 FirstInvalidSegmentBottom { get; }
-        public Vector3 FirstInvalidSegmentTop { get; }
-        public float FirstInvalidSegmentVerticalDistance { get; }
-        public CharacterFootGroundSurfaceDiagnostics SurfaceCoverage { get; }
-        public int ContactCount => m_Contacts.Count;
-        public int EnvelopeVertexCount => m_Envelope.Count;
+        [DiagnosticField(1, "count", "ground-path")]
+        public int SegmentCount => Page?.SegmentCount ?? 0;
+        [DiagnosticField(1, "identity", "ground-path")]
+        public ulong InputIdentity => Page == null ? 0 : Page.Input.Identity;
+        [DiagnosticField(1, "identity", "ground-path")]
+        public ulong LastLandingEventIdentity =>
+            Page != null && Page.HasInput
+                ? Page.Input.Key.LastLandingEventIdentity
+                : 0;
+        [DiagnosticField(1, "identity", "ground-path")]
+        public ulong NextSwingLandingEventIdentity =>
+            Page != null && Page.HasInput
+                ? Page.Input.Key.NextSwingLandingEventIdentity
+                : 0;
+        [DiagnosticField(1, "none", "ground-path")]
+        public bool TargetAvailable => NextSwingLandingEventIdentity != 0;
+        [DiagnosticField(1, "identity", "ground-path")]
+        public ulong TrajectoryGeneration =>
+            Page != null && Page.HasInput
+                ? Page.Input.Key.TrajectoryGeneration
+                : 0;
+        [DiagnosticField(1, "frame", "ground-path")]
+        public ulong AuthorityTick =>
+            Page != null && Page.HasInput ? Page.Input.Key.AuthorityTick : 0;
+        [DiagnosticField(1, "identity", "ground-path")]
+        public string LastFutureBodyTranslationSourceIdentity =>
+            Page != null && Page.HasInput
+                ? Page.Input.Key.LastFutureBodyTranslationSourceIdentity
+                : string.Empty;
+        [DiagnosticField(1, "identity", "ground-path")]
+        public string NextSwingFutureBodyTranslationSourceIdentity =>
+            Page != null && Page.HasInput
+                ? Page.Input.Key.NextSwingFutureBodyTranslationSourceIdentity
+                : string.Empty;
+        [DiagnosticField(1, "metres", "ground-path")]
+        public Vector3 LastLanding =>
+            Page != null && Page.HasInput ? Page.Input.LastLanding : default;
+        [DiagnosticField(1, "metres", "ground-path")]
+        public Vector3 NextSwingLanding =>
+            Page != null && Page.HasInput ? Page.Input.NextSwingLanding : default;
+        [DiagnosticField(1, "direction", "ground-path")]
+        public Vector3 LastLandingNormal =>
+            Page != null && Page.HasInput ? Page.Input.LastLandingNormal : default;
+        [DiagnosticField(1, "direction", "ground-path")]
+        public Vector3 NextSwingLandingNormal =>
+            Page != null && Page.HasInput ? Page.Input.NextSwingLandingNormal : default;
+        [DiagnosticField(1, "identity", "ground-path")]
+        public int LastLandingSurfaceIdentity =>
+            Page != null && Page.HasInput
+                ? Page.Input.LastLandingSurfaceIdentity
+                : 0;
+        [DiagnosticField(1, "identity", "ground-path")]
+        public int NextSwingLandingSurfaceIdentity =>
+            Page != null && Page.HasInput
+                ? Page.Input.NextSwingLandingSurfaceIdentity
+                : 0;
+        [DiagnosticField(1, "direction", "ground-path")]
+        public Vector3 ComponentUp =>
+            Page != null && Page.HasInput ? Page.Input.ComponentUp : default;
+        public CharacterFootGroundPathQueryRequest Query =>
+            Page != null && Page.HasInput ? Page.Input.Query : default;
+        [DiagnosticField(1, "metres", "ground-path")]
+        public float MaximumReachableVerticalEdge =>
+            Page != null && Page.HasInput
+                ? Page.Input.MaximumReachableVerticalEdge
+                : 0f;
+        [DiagnosticField(1, "count", "ground-path")]
+        public int EdgeCount => Page?.Edges.Count ?? 0;
+        [DiagnosticField(1, "none", "ground-path")]
+        public bool HasInvalidSegment =>
+            Page != null && Page.InvalidSegment.HasValue;
+        [DiagnosticField(1, "count", "ground-path", AvailabilityMember = nameof(HasInvalidSegment))]
+        public int FirstInvalidSegmentIndex =>
+            HasInvalidSegment ? Page.InvalidSegment.EdgeIndex : -1;
+        [DiagnosticField(1, "identity", "ground-path", AvailabilityMember = nameof(HasInvalidSegment))]
+        public ulong FirstInvalidSegmentIdentity =>
+            HasInvalidSegment ? Page.InvalidSegment.EdgeIdentity : 0;
+        [DiagnosticField(1, "metres", "ground-path", AvailabilityMember = nameof(HasInvalidSegment))]
+        public Vector3 FirstInvalidSegmentBottom =>
+            HasInvalidSegment ? Page.InvalidSegment.Bottom : default;
+        [DiagnosticField(1, "metres", "ground-path", AvailabilityMember = nameof(HasInvalidSegment))]
+        public Vector3 FirstInvalidSegmentTop =>
+            HasInvalidSegment ? Page.InvalidSegment.Top : default;
+        [DiagnosticField(1, "metres", "ground-path", AvailabilityMember = nameof(HasInvalidSegment))]
+        public float FirstInvalidSegmentVerticalDistance =>
+            HasInvalidSegment ? Page.InvalidSegment.VerticalDistance : 0f;
+        public CharacterFootGroundSurfaceDiagnostics SurfaceCoverage =>
+            new(Page?.Contacts.SurfaceCoverage);
+        [DiagnosticField(1, "count", "ground-path")]
+        public int ContactCount => Page?.Contacts.Count ?? 0;
+        [DiagnosticField(1, "count", "ground-path")]
+        public int EnvelopeVertexCount => Page?.Envelope.Count ?? 0;
         public bool Accepted => State == CharacterFootGroundPathState.Accepted;
+
+        [DiagnosticTable("ground-contacts", 1, 64)]
+        public CharacterFootGroundContactPage Contacts => Page?.Contacts;
+
+        [DiagnosticTable("ground-envelope", 1, 68)]
+        public CharacterFootGroundEnvelopePage Envelope => Page?.Envelope;
+
+        [DiagnosticTable("ground-surfaces", 1, 512)]
+        public CharacterFootGroundSurfacePage Surfaces =>
+            Page?.Contacts.SurfaceCoverage;
 
         public CharacterFootGroundContact ContactAt(int index)
         {
-            if ((uint)index >= (uint)m_Contacts.Count)
+            if ((uint)index >= (uint)ContactCount)
                 throw new ArgumentOutOfRangeException(nameof(index));
-            return m_Contacts.ContactAt(index);
+            return Page.Contacts[index];
         }
 
         public CharacterFootGroundEnvelopeVertex EnvelopeVertexAt(int index)
         {
-            if ((uint)index >= (uint)m_Envelope.Count)
+            if ((uint)index >= (uint)EnvelopeVertexCount)
                 throw new ArgumentOutOfRangeException(nameof(index));
-            return m_Envelope.VertexAt(index);
+            return Page.Envelope[index];
         }
     }
 }

@@ -12,103 +12,8 @@ namespace ThirdPersonCharacter.Pipeline.Diagnostics.FootIkSampling
         internal const int CapabilityRevision = 1;
         internal const string LineageTypeIdentity =
             "character-foot-ik-lineage/1";
-    }
-
-    [DiagnosticLifecycleEvent(
-        CharacterFootIkDiagnosticIdentity.CapabilityId,
-        "character-foot-ik/capture-started",
-        DiagnosticLifecycleEventKind.CaptureStarted)]
-    public readonly struct CharacterFootIkCaptureStartedEvent
-    {
-        public CharacterFootIkCaptureStartedEvent(
-            DiagnosticCaptureStartRequest request)
-        {
-            Request = request ?? throw new ArgumentNullException(nameof(request));
-        }
-
-        [DiagnosticLifecyclePayload(DiagnosticLifecyclePayloadKind.StartRequest)]
-        internal DiagnosticCaptureStartRequest Request { get; }
-    }
-
-    [DiagnosticLifecycleEvent(
-        CharacterFootIkDiagnosticIdentity.CapabilityId,
-        "character-foot-ik/committed-sample",
-        DiagnosticLifecycleEventKind.CommittedSample)]
-    public readonly struct CharacterFootIkCommittedSampleEvent
-    {
-        public CharacterFootIkCommittedSampleEvent(
-            in CharacterFootIkCommittedCaptureViewLease view,
-            in CharacterFootIkCaptureMetadata left,
-            in CharacterFootIkCaptureMetadata right)
-        {
-            if (left.Side != CharacterFootSide.Left ||
-                right.Side != CharacterFootSide.Right)
-            {
-                throw new ArgumentException(
-                    "Foot IK committed sample dimensions are invalid.");
-            }
-            View = view;
-            Lineage = CharacterFootIkDiagnosticCapability.CreateLineage(in view);
-            Left = left;
-            Right = right;
-        }
-
-        [DiagnosticLifecyclePayload(DiagnosticLifecyclePayloadKind.CommittedView)]
-        internal CharacterFootIkCommittedCaptureViewLease View { get; }
-
-        [DiagnosticLifecyclePayload(DiagnosticLifecyclePayloadKind.Lineage)]
-        internal DiagnosticLineageKey Lineage { get; }
-
-        [DiagnosticLifecyclePayload(
-            DiagnosticLifecyclePayloadKind.SampleDimension,
-            "character-foot-ik/left")]
-        internal CharacterFootIkCaptureMetadata Left { get; }
-
-        [DiagnosticLifecyclePayload(
-            DiagnosticLifecyclePayloadKind.SampleDimension,
-            "character-foot-ik/right")]
-        internal CharacterFootIkCaptureMetadata Right { get; }
-    }
-
-    [DiagnosticLifecycleEvent(
-        CharacterFootIkDiagnosticIdentity.CapabilityId,
-        "character-foot-ik/capture-stopped",
-        DiagnosticLifecycleEventKind.CaptureStopped)]
-    public readonly struct CharacterFootIkCaptureStoppedEvent
-    {
-        public CharacterFootIkCaptureStoppedEvent(
-            in DiagnosticCaptureStopOutcome outcome)
-        {
-            Outcome = outcome;
-        }
-
-        [DiagnosticLifecyclePayload(DiagnosticLifecyclePayloadKind.StopOutcome)]
-        internal DiagnosticCaptureStopOutcome Outcome { get; }
-    }
-
-    [DiagnosticCapability(
-        CharacterFootIkDiagnosticIdentity.CapabilityId,
-        CharacterFootIkDiagnosticIdentity.CapabilityRevision,
-        typeof(CharacterFootIkCommittedCaptureViewLease),
-        typeof(CharacterFootIkCaptureMetadata))]
-    internal static class CharacterFootIkDiagnosticCapability
-    {
-        internal static DiagnosticLineageKey CreateLineage(
-            in CharacterFootIkCommittedCaptureViewLease view)
-        {
-            CharacterPoseFrameLineage lineage = view.Lineage;
-            if (!lineage.IsValid)
-            {
-                throw new ArgumentException(
-                    "Foot IK diagnostic lineage is invalid.",
-                    nameof(view));
-            }
-            var diagnosticLineage = new DiagnosticLineageKey(
-                CharacterFootIkDiagnosticIdentity.LineageTypeIdentity,
-                lineage.FrameIdentity,
-                lineage.CompletionIdentity);
-            return diagnosticLineage;
-        }
+        internal const string LeftDimensionId = "character-foot-ik/left";
+        internal const string RightDimensionId = "character-foot-ik/right";
     }
 
     public readonly struct CharacterFootIkCaptureMetadata
@@ -118,40 +23,58 @@ namespace ThirdPersonCharacter.Pipeline.Diagnostics.FootIkSampling
             DateTime startedUtc,
             in AnimationPresentationProgramIdentity program,
             Guid targetRuntimeInstanceId,
-            int targetHostInstanceId,
-            CharacterFootSide side,
-            in CharacterFootIkCommittedCaptureViewLease view)
+            int targetHostInstanceId)
         {
             if (sampleIdentity == Guid.Empty ||
                 startedUtc.Kind != DateTimeKind.Utc ||
                 !program.IsValid ||
                 targetRuntimeInstanceId == Guid.Empty ||
-                targetHostInstanceId == 0 ||
-                !view.IsAvailable ||
-                (side != CharacterFootSide.Left &&
-                 side != CharacterFootSide.Right))
+                targetHostInstanceId == 0)
             {
-                throw new ArgumentException(
-                    "Foot IK capture metadata is invalid.");
+                throw new ArgumentException("Foot IK capture metadata is invalid.");
             }
             SampleIdentity = sampleIdentity.ToString("N");
             StartedUtcTicks = startedUtc.Ticks;
             ProgramIdentity =
                 $"{program.ProjectionRevision}|{program.PosePlanHash}";
-            TargetRuntimeInstanceId =
-                targetRuntimeInstanceId.ToString("N");
+            TargetRuntimeInstanceId = targetRuntimeInstanceId.ToString("N");
             TargetHostInstanceId = targetHostInstanceId;
-            Side = side;
-            MotionCoreDerived =
-                CharacterFootIkMotionCoreDerivedFacts.Resolve(in view, side);
         }
 
-        internal string SampleIdentity { get; }
-        internal long StartedUtcTicks { get; }
-        internal string ProgramIdentity { get; }
-        internal string TargetRuntimeInstanceId { get; }
-        internal int TargetHostInstanceId { get; }
-        internal CharacterFootSide Side { get; }
-        internal CharacterFootIkMotionCoreDerivedFacts MotionCoreDerived { get; }
+        [DiagnosticField(1, "identity", "capture-metadata")]
+        public string SampleIdentity { get; }
+
+        [DiagnosticField(1, "utc-ticks", "capture-metadata")]
+        public long StartedUtcTicks { get; }
+
+        [DiagnosticField(1, "identity", "capture-metadata")]
+        public string ProgramIdentity { get; }
+
+        [DiagnosticField(1, "identity", "capture-metadata")]
+        public string TargetRuntimeInstanceId { get; }
+
+        [DiagnosticField(1, "identity", "capture-metadata")]
+        public int TargetHostInstanceId { get; }
+    }
+
+    [DiagnosticCapability(
+        CharacterFootIkDiagnosticIdentity.CapabilityId,
+        CharacterFootIkDiagnosticIdentity.CapabilityRevision,
+        typeof(CharacterFootIkCaptureMetadata))]
+    [DiagnosticFactRoot("effector", typeof(CharacterFullBodyIkEffectorDiagnostics))]
+    [DiagnosticFactRoot("foot", typeof(CharacterFootLandingPredictionFootDiagnostics))]
+    [DiagnosticFactRoot("foot-steps", typeof(AnimationBiomechanicalStepReadPage))]
+    [DiagnosticFactRoot("formal-input", typeof(AnimationFootMotionRuntimeSample))]
+    [DiagnosticFactRoot("formal-output", typeof(AnimationFootMotionRuntimeSample))]
+    [DiagnosticFactRoot("frame", typeof(CharacterPoseFrameLineage))]
+    [DiagnosticFactRoot("input", typeof(CharacterFootLandingPredictionInputDiagnostics))]
+    [DiagnosticFactRoot("leg", typeof(CharacterFullBodyIkLimbDiagnostics))]
+    [DiagnosticFactRoot("pelvis", typeof(CharacterFullBodyIkEffectorDiagnostics))]
+    [DiagnosticFactRoot("pelvis-goal", typeof(CharacterFullBodyIkGoal))]
+    [DiagnosticFactRoot("primary-support", typeof(CharacterFootPrimarySupportDiagnostics))]
+    [DiagnosticFactRoot("solver", typeof(CharacterFullBodyIkSolverDiagnostics))]
+    [DiagnosticFactRoot("stride", typeof(CharacterFootStrideHipsDiagnostics))]
+    internal static class CharacterFootIkDiagnosticCapability
+    {
     }
 }

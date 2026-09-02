@@ -1,4 +1,5 @@
 using System;
+using KK.GeneratedDiagnosticSampling;
 using UnityEngine;
 
 namespace ThirdPersonCharacter.Pipeline.Presentation
@@ -330,23 +331,58 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             NormalEventIdentity = target.NormalEventIdentity;
         }
 
+        [DiagnosticField(1, "none", "support-target")]
         public bool Available { get; }
+
+        [DiagnosticField(1, "frame", "support-target")]
         public ulong FrameSequence { get; }
+
+        [DiagnosticField(1, "identity", "support-target")]
         public ulong CompletionIdentity { get; }
+
+        [DiagnosticField(1, "category", "support-target")]
         public CharacterFootSide Side { get; }
+
+        [DiagnosticField(1, "metres", "support-target", AvailabilityMember = nameof(Available))]
         public Vector3 Position { get; }
+
+        [DiagnosticField(1, "direction", "support-target", AvailabilityMember = nameof(Available))]
         public Vector3 SupportNormal { get; }
+
+        [DiagnosticField(1, "identity", "support-target", AvailabilityMember = nameof(Available))]
         public int SurfaceIdentity { get; }
+
+        [DiagnosticField(1, "identity", "support-target", AvailabilityMember = nameof(Available))]
         public ulong WorldRevision { get; }
+
+        [DiagnosticField(1, "category", "support-target", AvailabilityMember = nameof(Available))]
         public CharacterFootSupportTargetKind Kind { get; }
+
+        [DiagnosticField(1, "category", "support-target", AvailabilityMember = nameof(Available))]
         public CharacterFootSupportPositionSource PositionSource { get; }
+
+        [DiagnosticField(1, "frame", "support-target", AvailabilityMember = nameof(Available))]
         public ulong PositionFrameSequence { get; }
+
+        [DiagnosticField(1, "identity", "support-target", AvailabilityMember = nameof(Available))]
         public ulong PositionCompletionIdentity { get; }
+
+        [DiagnosticField(1, "identity", "support-target", AvailabilityMember = nameof(Available))]
         public ulong PositionEventIdentity { get; }
+
+        [DiagnosticField(1, "identity", "support-target", AvailabilityMember = nameof(Available))]
         public ulong PositionPathIdentity { get; }
+
+        [DiagnosticField(1, "category", "support-target", AvailabilityMember = nameof(Available))]
         public CharacterFootSupportNormalSource NormalSource { get; }
+
+        [DiagnosticField(1, "frame", "support-target", AvailabilityMember = nameof(Available))]
         public ulong NormalFrameSequence { get; }
+
+        [DiagnosticField(1, "identity", "support-target", AvailabilityMember = nameof(Available))]
         public ulong NormalCompletionIdentity { get; }
+
+        [DiagnosticField(1, "identity", "support-target", AvailabilityMember = nameof(Available))]
         public ulong NormalEventIdentity { get; }
     }
 
@@ -659,26 +695,67 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             Accepted = result.Accepted;
         }
 
+        [DiagnosticField(1, "category", "current-support-probe")]
         public CharacterFootPlacementQueryPurpose Purpose { get; }
+
+        [DiagnosticField(1, "category", "current-support-probe")]
         public CharacterFootCurrentSupportProbeKind Kind { get; }
+
+        [DiagnosticField(1, "category", "current-support-probe")]
         public CharacterFootCurrentSupportProbeState State { get; }
+
+        [DiagnosticField(1, "category", "current-support-probe")]
         public CharacterFootCurrentSupportProbeRejectReason RejectReason { get; }
+
+        [DiagnosticField(1, "metres", "current-support-probe")]
         public Vector3 ProbePosition { get; }
+
+        [DiagnosticField(1, "direction", "current-support-probe")]
         public Vector3 ComponentUp { get; }
+
+        [DiagnosticField(1, "metres", "current-support-probe")]
         public Vector3 Origin { get; }
+
+        [DiagnosticField(1, "direction", "current-support-probe")]
         public Vector3 Direction { get; }
+
+        [DiagnosticField(1, "metres", "current-support-probe")]
         public float MaximumDistance { get; }
+
+        [DiagnosticField(1, "metres", "current-support-probe")]
         public float Radius { get; }
+
+        [DiagnosticField(1, "bitmask", "current-support-probe")]
         public int LayerMask { get; }
+
+        [DiagnosticField(1, "unitless", "current-support-probe")]
         public float MinimumGroundNormalDot { get; }
+
+        [DiagnosticField(1, "count", "current-support-probe")]
         public int HitCapacity { get; }
+
+        [DiagnosticField(1, "count", "current-support-probe")]
         public int CandidateCount { get; }
+
+        [DiagnosticField(1, "identity", "current-support-probe", AvailabilityMember = nameof(Accepted))]
         public int SurfaceIdentity { get; }
+
+        [DiagnosticField(1, "metres", "current-support-probe", AvailabilityMember = nameof(Accepted))]
         public Vector3 Point { get; }
+
+        [DiagnosticField(1, "direction", "current-support-probe", AvailabilityMember = nameof(Accepted))]
         public Vector3 Normal { get; }
+
+        [DiagnosticField(1, "metres", "current-support-probe", AvailabilityMember = nameof(Accepted))]
         public float Distance { get; }
+
+        [DiagnosticField(1, "identity", "current-support-probe")]
         public ulong WorldRevision { get; }
+
+        [DiagnosticField(1, "none", "current-support-probe")]
         public bool SphereCastExecuted { get; }
+
+        [DiagnosticField(1, "none", "current-support-probe")]
         public bool Accepted { get; }
     }
 
@@ -718,23 +795,46 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 in target);
         }
 
+        [DiagnosticField(1, "frame", "current-support")]
         public ulong FrameSequence { get; }
+
+        [DiagnosticField(1, "identity", "current-support")]
         public ulong CompletionIdentity { get; }
+
         public CharacterFootSide Side { get; }
+
+        [DiagnosticField(1, "identity", "current-support")]
         public ulong WorldRevision { get; }
+
+        [DiagnosticField(1, "none", "current-support")]
         public bool IsSpecified { get; }
+
+        [DiagnosticField(1, "none", "current-support")]
         public bool Available { get; }
+
+        [DiagnosticField(1, "category", "current-support")]
         public CharacterFootCurrentSupportRejectReason RejectReason { get; }
         public CharacterFootCurrentSupportProbeDiagnostics Heel { get; }
         public CharacterFootCurrentSupportProbeDiagnostics Toe { get; }
+
+        [DiagnosticField(1, "metres", "current-support")]
         public float HeelRequiredDisplacement { get; }
+
+        [DiagnosticField(1, "metres", "current-support")]
         public float ToeRequiredDisplacement { get; }
+
+        [DiagnosticField(1, "category", "current-support")]
         public CharacterFootCurrentSupportProbeKind SelectedProbe { get; }
+        [DiagnosticField(1, "category", "current-support")]
         public CharacterFootCurrentSupportSelectionReason SelectionReason
         {
             get;
         }
+
+        [DiagnosticField(1, "metres", "current-support")]
         public float SelectionEpsilon { get; }
+
+        [DiagnosticField(1, "direction", "current-support")]
         public Vector3 SelectedSupportNormalBeforeNormalization { get; }
         public CharacterFootSupportTargetDiagnostics Target { get; }
     }

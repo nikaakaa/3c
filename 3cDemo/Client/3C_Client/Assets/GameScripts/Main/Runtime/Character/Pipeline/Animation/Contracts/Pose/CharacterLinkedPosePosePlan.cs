@@ -231,7 +231,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         }
     }
 
-    public sealed partial class CharacterPresentationPosePlan
+    public sealed partial class CharacterPoseProgramImage
     {
         [SerializeField] CharacterLinkedPoseEntryFragmentPlanDescriptor[] m_LinkedPoseFragments = Array.Empty<CharacterLinkedPoseEntryFragmentPlanDescriptor>();
         [SerializeField] CharacterLinkedPoseCallPlanDescriptor[] m_LinkedPoseCalls = Array.Empty<CharacterLinkedPoseCallPlanDescriptor>();

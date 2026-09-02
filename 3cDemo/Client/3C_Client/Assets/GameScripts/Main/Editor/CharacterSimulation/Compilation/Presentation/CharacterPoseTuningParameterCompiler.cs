@@ -130,7 +130,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
         }
 
         static void AddOperationWeights(
-            CharacterPresentationPosePlan plan,
+            CharacterPoseProgramImage plan,
             List<FieldValue> fields)
         {
             int nextFloat = 0;
@@ -161,7 +161,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             code == CharacterPoseOperationCode.AdditivePose;
 
         static void AddClipPlayRates(
-            CharacterPresentationPosePlan plan,
+            CharacterPoseProgramImage plan,
             List<FieldValue> fields)
         {
             int nextFloat = NextIndex(fields, CharacterPoseTuningValueKind.Float);
@@ -190,7 +190,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
         }
 
         static void AddStateMachineTransitionDurations(
-            CharacterPresentationPosePlan plan,
+            CharacterPoseProgramImage plan,
             List<FieldValue> fields)
         {
             int nextFloat = NextIndex(fields, CharacterPoseTuningValueKind.Float);
@@ -227,7 +227,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
         }
 
         static void AddBlendStackPolicies(
-            CharacterPresentationPosePlan plan,
+            CharacterPoseProgramImage plan,
             List<FieldValue> fields)
         {
             var owners = new HashSet<string>(StringComparer.Ordinal);
@@ -291,7 +291,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
         }
 
         static void AddInertializationPolicies(
-            CharacterPresentationPosePlan plan,
+            CharacterPoseProgramImage plan,
             List<FieldValue> fields)
         {
             var owners = new HashSet<string>(StringComparer.Ordinal);

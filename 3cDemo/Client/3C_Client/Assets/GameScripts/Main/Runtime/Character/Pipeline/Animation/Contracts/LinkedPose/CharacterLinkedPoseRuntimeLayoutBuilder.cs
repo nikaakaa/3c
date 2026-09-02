@@ -9,7 +9,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             projection = projection ?? throw new ArgumentNullException(nameof(projection));
             projection.RequirePosePayload();
             CharacterLinkedPoseProjectionPayload linkedPose = projection.LinkedPose;
-            CharacterPresentationPosePlan posePlan = projection.PosePlan;
+            CharacterPoseProgramImage posePlan = projection.PosePlan;
             var orderedGroups = new CharacterLinkedPoseGroupProjectionDescriptor[linkedPose.Groups.Count];
             for (int i = 0; i < orderedGroups.Length; i++)
                 orderedGroups[i] = linkedPose.Groups[i];
@@ -22,7 +22,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
 
         static CharacterLinkedPoseGroupRuntimeLayout BuildGroup(
             CharacterLinkedPoseProjectionPayload linkedPose,
-            CharacterPresentationPosePlan posePlan,
+            CharacterPoseProgramImage posePlan,
             CharacterLinkedPoseGroupProjectionDescriptor group)
         {
             CharacterLinkedPoseCompiledSelectorDescriptor selector = RequireSelector(linkedPose, group.GroupId);
@@ -47,7 +47,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         }
 
         static CharacterLinkedPoseImplementationRuntimeLayout BuildImplementation(
-            CharacterPresentationPosePlan posePlan,
+            CharacterPoseProgramImage posePlan,
             LinkedPoseGroupId groupId,
             LinkedPoseImplementationId implementationId,
             CharacterLinkedPoseInterfaceProjectionDescriptor linkedInterface)
@@ -160,7 +160,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         }
 
         static CharacterLinkedPoseEntryFragmentPlanDescriptor RequireFragment(
-            CharacterPresentationPosePlan posePlan,
+            CharacterPoseProgramImage posePlan,
             LinkedPoseGroupId groupId,
             LinkedPoseImplementationId implementationId,
             LinkedPoseEntryId entryId)

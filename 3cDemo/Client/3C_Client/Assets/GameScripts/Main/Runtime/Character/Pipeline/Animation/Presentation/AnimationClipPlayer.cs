@@ -293,7 +293,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
         internal AnimationClipPlayerRuntime(
             CharacterPresentationClipPlayerDescriptor descriptor,
             CharacterPresentationPoseSourcePlan source,
-            CharacterPresentationPosePlan posePlan,
+            CharacterPoseProgramImage posePlan,
             CharacterAnimationRigPayload rig)
         {
             m_Descriptor = descriptor ?? throw new ArgumentNullException(nameof(descriptor));

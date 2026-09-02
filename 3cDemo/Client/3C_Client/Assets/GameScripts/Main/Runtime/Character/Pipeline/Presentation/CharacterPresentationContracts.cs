@@ -114,7 +114,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
     internal static class CharacterPosePlanStageSnapshotFactory
     {
         internal static CharacterPosePlanStageSnapshot Completed(
-            CharacterPresentationPosePlan plan,
+            CharacterPoseProgramImage plan,
             in ComposedAnimationPoseFrame composed)
         {
             RequirePlan(plan);
@@ -129,7 +129,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         }
 
         internal static CharacterPosePlanStageSnapshot Unavailable(
-            CharacterPresentationPosePlan plan,
+            CharacterPoseProgramImage plan,
             AnimationPoseAvailability composedAvailability,
             CharacterPoseStageUnavailableReason reason,
             int firstUnavailableStageIndex = 0,
@@ -160,7 +160,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         }
 
         internal static CharacterPosePlanStageSnapshot Preview(
-            CharacterPresentationPosePlan plan,
+            CharacterPoseProgramImage plan,
             in ComposedAnimationPoseFrame composed,
             bool worldContextAvailable)
         {
@@ -218,7 +218,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 reason,
                 0);
 
-        static void RequirePlan(CharacterPresentationPosePlan plan)
+        static void RequirePlan(CharacterPoseProgramImage plan)
         {
             if (plan == null)
                 throw new ArgumentNullException(nameof(plan));

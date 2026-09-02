@@ -29,7 +29,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
         }
 
         internal static void Compile(
-            CharacterPresentationPosePlan plan,
+            CharacterPoseProgramImage plan,
             CharacterPresentationPoseGraphAsset graphAsset,
             CharacterAnimationRigDefinition rig,
             MotionMatchingProjectionPayload motionMatching,

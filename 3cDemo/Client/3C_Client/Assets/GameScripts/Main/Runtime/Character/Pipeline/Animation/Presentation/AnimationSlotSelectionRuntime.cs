@@ -267,7 +267,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
         {
             m_Bindings = bindings ??
                 throw new ArgumentNullException(nameof(bindings));
-            CharacterPresentationPosePlan posePlan =
+            CharacterPoseProgramImage posePlan =
                 bindings.Projection.PosePlan;
             int slotCount = posePlan.AnimationSlots.Count;
             int sourceCapacity = 0;

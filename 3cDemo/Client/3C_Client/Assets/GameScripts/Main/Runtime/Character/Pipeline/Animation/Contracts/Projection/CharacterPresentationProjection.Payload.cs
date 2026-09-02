@@ -8,7 +8,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
 {
     public sealed partial class CharacterPresentationProjection
     {
-        [SerializeField] CharacterPresentationPosePlan m_PosePlan;
+        [SerializeField] CharacterPoseProgramImage m_PosePlan;
         [SerializeField] AnimationBlendCurveCatalogPayload m_BlendCurveCatalog;
         [SerializeField] AnimationBlendProfileCatalogPayload m_BlendProfileCatalog;
         [SerializeField] CharacterAnimationRigPayload m_Rig;
@@ -24,7 +24,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         [SerializeField] byte[] m_MotionMatchingPayload = Array.Empty<byte>();
         [SerializeField] UnityEngine.AnimationClip[] m_MotionMatchingClips = Array.Empty<UnityEngine.AnimationClip>();
 
-        public CharacterPresentationPosePlan PosePlan => m_PosePlan;
+        public CharacterPoseProgramImage PosePlan => m_PosePlan;
         public AnimationBlendCurveCatalogPayload BlendCurveCatalog => m_BlendCurveCatalog;
         public AnimationBlendProfileCatalogPayload BlendProfileCatalog => m_BlendProfileCatalog;
         public CharacterAnimationRigPayload Rig => m_Rig;
@@ -92,7 +92,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
 
         internal static CharacterPresentationProjection Create(
             CharacterPresentationSemanticContract contract,
-            CharacterPresentationPosePlan posePlan,
+            CharacterPoseProgramImage posePlan,
             AnimationBlendCurveCatalogPayload blendCurveCatalog,
             AnimationBlendProfileCatalogPayload blendProfileCatalog,
             CharacterAnimationRigPayload rig,

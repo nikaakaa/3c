@@ -287,7 +287,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
         bool m_FrameOpen;
 
         internal PoseStateAndSourceRuntime(
-            CharacterPresentationPosePlan plan,
+            CharacterPoseProgramImage plan,
             IReadOnlyList<AnimationClipPhasePlan> clipPhasePlans,
             IReadOnlyList<AnimationSourcePhasePlan> sourcePhasePlans,
             AnimationClipPlayerRuntime[] clipPlayers,
@@ -1383,7 +1383,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
 
         static Dictionary<string, SourceSyncRelationSlot>
             BuildSourceSyncRelations(
-                CharacterPresentationPosePlan plan)
+                CharacterPoseProgramImage plan)
         {
             var result =
                 new Dictionary<string, SourceSyncRelationSlot>(
@@ -1416,7 +1416,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
 
         static MotionMatchingRelevance[]
             BuildMotionMatchingRelevance(
-                CharacterPresentationPosePlan plan)
+                CharacterPoseProgramImage plan)
         {
             var result =
                 new List<MotionMatchingRelevance>();
@@ -1481,7 +1481,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
         }
 
         static bool[] BuildStateControlledPlayers(
-            CharacterPresentationPosePlan plan)
+            CharacterPoseProgramImage plan)
         {
             var result = new bool[plan.PlayerCount];
             for (int machineIndex = 0;

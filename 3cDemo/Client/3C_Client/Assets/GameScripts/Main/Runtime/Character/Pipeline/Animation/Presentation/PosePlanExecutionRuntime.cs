@@ -3558,7 +3558,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
         }
 
         static CharacterPresentationPoseOperation RequireBlendStackOperation(
-            CharacterPresentationPosePlan plan,
+            CharacterPoseProgramImage plan,
             int blendNodeIndex,
             PoseNodeId nodeId)
         {
@@ -3588,7 +3588,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
         }
 
         static CharacterPresentationPoseOperation RequireControlInput(
-            CharacterPresentationPosePlan plan,
+            CharacterPoseProgramImage plan,
             CharacterPresentationPoseOperation operation)
         {
             int controlIndex = operation.ControlInputOperationIndex;
@@ -3631,7 +3631,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
         }
 
         static int[] BuildPlayerLinkedPoseFragmentIndices(
-            CharacterPresentationPosePlan plan)
+            CharacterPoseProgramImage plan)
         {
             var result = CreateUnassignedOwnership(plan.PlayerCount);
             for (int operationIndex = 0;
@@ -3653,7 +3653,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
         }
 
         static int[] BuildStateMachineLinkedPoseFragmentIndices(
-            CharacterPresentationPosePlan plan)
+            CharacterPoseProgramImage plan)
         {
             var result =
                 CreateUnassignedOwnership(plan.StateMachines.Count);
@@ -3681,7 +3681,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
         }
 
         static int[] BuildRootOrientationWarpLinkedPoseFragmentIndices(
-            CharacterPresentationPosePlan plan)
+            CharacterPoseProgramImage plan)
         {
             var result =
                 CreateUnassignedOwnership(
@@ -3710,7 +3710,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
         }
 
         static int[] BuildInertializationLinkedPoseFragmentIndices(
-            CharacterPresentationPosePlan plan)
+            CharacterPoseProgramImage plan)
         {
             var result =
                 CreateUnassignedOwnership(plan.Inertializations.Count);
@@ -3775,7 +3775,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
         }
 
         static int CalculateSourceCapacity(
-            CharacterPresentationPosePlan plan)
+            CharacterPoseProgramImage plan)
         {
             int capacity = 0;
             for (int i = 0; i < plan.Operations.Count; i++)

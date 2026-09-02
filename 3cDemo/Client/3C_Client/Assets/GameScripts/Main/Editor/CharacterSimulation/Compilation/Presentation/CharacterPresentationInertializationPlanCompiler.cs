@@ -10,8 +10,8 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
 {
     static class CharacterPresentationInertializationPlanCompiler
     {
-        public static CharacterPresentationPosePlan Compile(
-            CharacterPresentationPosePlan source,
+        public static CharacterPoseProgramImage Compile(
+            CharacterPoseProgramImage source,
             CharacterPresentationPoseGraphAsset graphAsset,
             CharacterAnimationRigDefinition rig,
             IReadOnlyDictionary<string, int> curveIndices,
@@ -132,7 +132,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                         policy.Revision,
                         rules);
                 }
-                CharacterPresentationPosePlan result = Rebuild(source, rig, descriptors);
+                CharacterPoseProgramImage result = Rebuild(source, rig, descriptors);
                 result.RequireInertializationValid();
                 return result;
             }
@@ -143,8 +143,8 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             }
         }
 
-        static CharacterPresentationPosePlan Rebuild(
-            CharacterPresentationPosePlan source,
+        static CharacterPoseProgramImage Rebuild(
+            CharacterPoseProgramImage source,
             CharacterAnimationRigDefinition rig,
             CharacterPresentationInertializationDescriptor[] descriptors)
         {
@@ -161,7 +161,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                         $"rule:{rule.SourceEndpointIndex}:{rule.TargetEndpointIndex}:{(int)rule.Mode}:{rule.DurationSeconds:R}:{rule.CurveIndex}:{rule.ProfileIndex}:{string.Join(",", rule.ParameterModes.Select(value => ((int)value).ToString(CultureInfo.InvariantCulture)))}"));
                 }
             }
-            return new CharacterPresentationPosePlan(
+            return new CharacterPoseProgramImage(
                 source.PoseGraphId,
                 source.ContentRevision,
                 StableHash.Compute(hashTokens.ToArray()).ToString(),

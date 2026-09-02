@@ -647,7 +647,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
     }
 
     [Serializable]
-    public sealed partial class CharacterPresentationPosePlan
+    public sealed partial class CharacterPoseProgramImage
     {
         public const string SchemaVersion = "character-presentation-pose-plan/v23";
         public const string RuntimeAbi = "character-presentation-pose-runtime/v26";
@@ -692,7 +692,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         [SerializeField] int m_FrameCacheCount;
         [SerializeField] int m_OutputOperationIndex = -1;
 
-        public CharacterPresentationPosePlan(
+        public CharacterPoseProgramImage(
             string poseGraphId,
             string contentRevision,
             string planHash,

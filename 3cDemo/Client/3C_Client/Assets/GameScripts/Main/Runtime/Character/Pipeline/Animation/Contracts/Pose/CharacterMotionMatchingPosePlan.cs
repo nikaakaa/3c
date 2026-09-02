@@ -226,7 +226,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         public CharacterMotionMatchingSearchCadencePolicy SearchCadencePolicy => m_SearchCadencePolicy;
     }
 
-    public sealed partial class CharacterPresentationPosePlan
+    public sealed partial class CharacterPoseProgramImage
     {
         [SerializeField] CharacterMotionMatchingPosePlanDescriptor[] m_MotionMatchingNodes = Array.Empty<CharacterMotionMatchingPosePlanDescriptor>();
         [SerializeField] CharacterPoseHistoryCollectorPlanDescriptor[] m_PoseHistoryCollectors = Array.Empty<CharacterPoseHistoryCollectorPlanDescriptor>();

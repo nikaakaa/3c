@@ -23,7 +23,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.MotionMatching
             if (workspace == null)
                 throw new ArgumentNullException(nameof(workspace));
             projection.RequirePosePayload();
-            CharacterPresentationPosePlan plan = projection.PosePlan;
+            CharacterPoseProgramImage plan = projection.PosePlan;
             MotionMatchingProjectionPayload motionMatching =
                 projection.MotionMatching;
             if (motionMatching == null ||

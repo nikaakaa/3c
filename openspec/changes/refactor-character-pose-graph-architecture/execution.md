@@ -689,3 +689,9 @@ Actor State统一负责Stack、Direct Player、Clip Player、Blend Space Player�
 原外层`m_NextPresentationRequestSequence`也迁入Actor State，Slot Action source发布和Slot target发布统一从同一递增cursor取号。Begin、sampling、usage／retirement、Validate、Seal、Discard和Reset调用顺序未改变；本步只改变跨帧状态归属，没有把节点执行阶段提前迁入Program Runtime，任务6.2仍保持未完成。
 
 全仓审计确认`ActionAnimationPlaybackLifecycleRegistry`只有`CharacterActionPlaybackRuntime`一处构造，外层不再保存Action lifecycle、Slot runtime或presentation request cursor。Actor State也不引用Animancer、Physical Source Registry、Constraint Bank、Final Publication、Diagnostics Publisher或其Committed页；逻辑Source Retirement只保存Program发布的usage／permission与Action release协议状态，不拥有物理资源。由此任务5.4与5.9完成。Unity MCP显式路由到`3C_Client@e852139597e42532`后，三个触碰文件的编译错误筛选均为0；全局仍只被并行Foot 0.3 ABI迁移阻塞，不新增兼容路径，也不单独运行回放。
+
+## 唯一Pose语义对象改名为Program Image
+
+状态：原`CharacterPresentationPosePlan`类型直接改名为`CharacterPoseProgramImage`，三个partial声明、Projection序列化字段类型、Compiler输出以及Runtime／Editor全部强类型引用一次切换；主定义文件与原meta guid同步改名。没有保留旧类型、派生alias、wrapper、转换器或第二份数组，因此当前Projection仍只有一个Pose语义对象，现有序列化字段名、schema值、hash、Operation／Stage顺序和Workspace容量均未改变。
+
+任务5.1暂不勾选：Program Image内部还保存旧`CharacterPresentationPoseOperation`万能记录，尚未切成Operation Header、typed Value Reference和Family Payload页；`CharacterPoseGraphNativeProgram`也仍在Actor构造时从Image materialize并带有运行时Compile命名。下一步继续把它收窄为只读Execution View并删除运行时补齐能力。Unity MCP server域重载后已自动重连，所有调用都显式路由`3C_Client@e852139597e42532`；新旧类型名的编译错误筛选均为0。全局Foot ABI阻塞不属于本步，也不为它增加兼容路径或额外回放。

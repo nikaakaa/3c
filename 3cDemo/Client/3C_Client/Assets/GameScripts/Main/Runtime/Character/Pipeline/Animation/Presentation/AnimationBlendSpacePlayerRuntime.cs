@@ -102,7 +102,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
         internal AnimationBlendSpacePlayerRuntime(
             CharacterAnimationBlendSpacePlayerPlan descriptor,
             CharacterAnimationBlendSpacePlan plan,
-            CharacterPresentationPosePlan posePlan,
+            CharacterPoseProgramImage posePlan,
             CharacterAnimationRigPayload rig,
             AnimationFootAnalysisProjectionIdentity footAnalysis,
             System.Collections.Generic.IReadOnlyList<AnimationClipPhasePlan> clipPhasePlans)

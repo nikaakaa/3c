@@ -1730,7 +1730,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         }
 
         static int CalculateSourceSyncCapacity(
-            CharacterPresentationPosePlan plan)
+            CharacterPoseProgramImage plan)
         {
             int capacity = 0;
             for (int i = 0; i < plan.StateMachines.Count; i++)

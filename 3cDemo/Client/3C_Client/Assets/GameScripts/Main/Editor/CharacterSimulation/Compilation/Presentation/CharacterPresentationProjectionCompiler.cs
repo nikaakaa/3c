@@ -538,7 +538,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                     profile,
                     equipmentProfile,
                     errors);
-            CharacterPresentationPosePlan poseProgram = CharacterPresentationPoseGraphCompiler.Compile(
+            CharacterPoseProgramImage poseProgram = CharacterPresentationPoseGraphCompiler.Compile(
                 profile.PoseGraph,
                 profile.RigDefinition,
                 animationChannels,
@@ -1252,7 +1252,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
         }
 
         static void ValidateClipPlayers(
-            CharacterPresentationPosePlan posePlan,
+            CharacterPoseProgramImage posePlan,
             IReadOnlyList<CharacterPresentationPoseSourcePlan> poseSources,
             CharacterAnimationRigDefinition rig,
             List<string> errors)
@@ -1293,7 +1293,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
         }
 
         static CharacterAnimationBlendSpacePlayerPlan[] CompileBlendSpacePlayers(
-            CharacterPresentationPosePlan posePlan,
+            CharacterPoseProgramImage posePlan,
             IReadOnlyList<CharacterAnimationBlendSpacePlan> blendSpaces,
             IReadOnlyDictionary<PresentationPoseSourceIndex, int> blendSpacePlanBySource,
             List<string> errors)

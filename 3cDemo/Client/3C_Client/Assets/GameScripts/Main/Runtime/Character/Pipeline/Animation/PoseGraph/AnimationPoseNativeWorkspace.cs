@@ -127,7 +127,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 if (projection == null)
                     throw new ArgumentNullException(nameof(projection));
                 projection.RequirePosePayload();
-                CharacterPresentationPosePlan program = projection.PosePlan;
+                CharacterPoseProgramImage program = projection.PosePlan;
                 program.RequireValid();
                 int playerCount = program.PlayerCount;
                 int boneCount = program.PoseBoneCount;

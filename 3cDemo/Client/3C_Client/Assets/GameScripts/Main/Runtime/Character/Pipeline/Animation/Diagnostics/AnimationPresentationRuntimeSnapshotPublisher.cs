@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using ThirdPersonCharacter.Pipeline.Animation.BlendStack;
 using ThirdPersonCharacter.Pipeline.Animation.Lifecycle;
@@ -309,7 +309,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
                 CharacterPresentationProjection projection,
                 in AnimationPoseNativeAggregateLayout layout)
             {
-                CharacterPresentationPosePlan program =
+                CharacterPoseProgramImage program =
                     projection.PosePlan;
                 int entryCapacity = 0;
                 for (int i = 0; i < program.BlendNodes.Count; i++)
@@ -410,7 +410,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
         }
 
         readonly Page m_Page;
-        readonly CharacterPresentationPosePlan m_Program;
+        readonly CharacterPoseProgramImage m_Program;
         ulong m_NextIdentity = 1;
 
         internal CharacterPoseActorCommittedDiagnosticsProjector(
@@ -419,7 +419,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
         {
             if (projection == null)
                 throw new ArgumentNullException(nameof(projection));
-            CharacterPresentationPosePlan program =
+            CharacterPoseProgramImage program =
                 projection.PosePlan;
             if (program == null)
                 throw new ArgumentNullException(nameof(program));
@@ -785,7 +785,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
             AnimationPresentationDiagnosticsInterest.FinalPoseDetail;
 
         readonly CharacterPresentationProjection m_Projection;
-        readonly CharacterPresentationPosePlan m_Program;
+        readonly CharacterPoseProgramImage m_Program;
         readonly Page[] m_Pages;
         readonly Guid[] m_InterestOwnerIds = new Guid[InterestOwnerCapacity];
         readonly AnimationPresentationDiagnosticsInterest[] m_OwnerInterests =
@@ -2203,7 +2203,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
         sealed class Page
         {
             internal Page(
-                CharacterPresentationPosePlan program,
+                CharacterPoseProgramImage program,
                 CharacterAnimationRigPayload rig,
                 AnimationPoseNativeAggregateLayout layout,
                 int entryCapacity,
@@ -2373,7 +2373,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
 
             internal AnimationPresentationRuntimeSnapshot CreateSnapshot(
                 CharacterPresentationProjection projection,
-                CharacterPresentationPosePlan program,
+                CharacterPoseProgramImage program,
                 CharacterFootIkCommittedCaptureViewLease footIkCaptureView,
                 ulong leaseIdentity)
             {

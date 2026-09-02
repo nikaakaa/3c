@@ -1593,7 +1593,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         }
 
         internal bool TryGetPublishedPosePlan(
-            out CharacterPresentationPosePlan plan,
+            out CharacterPoseProgramImage plan,
             out string status)
         {
             plan = null;

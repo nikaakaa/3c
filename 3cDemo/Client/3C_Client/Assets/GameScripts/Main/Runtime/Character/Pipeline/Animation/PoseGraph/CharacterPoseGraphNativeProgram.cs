@@ -778,7 +778,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         bool m_Disposed;
 
         internal CharacterPoseGraphNativeProgram(
-            CharacterPresentationPosePlan program,
+            CharacterPoseProgramImage program,
             CharacterAnimationRigPayload rig,
             AnimationBlendCurveCatalogPayload curves,
             AnimationBlendProfileCatalogPayload profiles,
@@ -1151,7 +1151,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             }
         }
 
-        void CompileRig(CharacterPresentationPosePlan program, CharacterAnimationRigPayload rig)
+        void CompileRig(CharacterPoseProgramImage program, CharacterAnimationRigPayload rig)
         {
             for (int bone = 0; bone < m_BoneCount; bone++)
             {
@@ -1209,7 +1209,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         }
 
         void CompilePayloads(
-            CharacterPresentationPosePlan program,
+            CharacterPoseProgramImage program,
             CharacterPoseProgramFramePages framePages)
         {
             for (int maskIndex = 0; maskIndex < program.BoneMasks.Count; maskIndex++)
@@ -1284,7 +1284,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             }
         }
 
-        void CompileLinkedPose(CharacterPresentationPosePlan program)
+        void CompileLinkedPose(CharacterPoseProgramImage program)
         {
             int candidateIndex = 0;
             for (int callIndex = 0; callIndex < program.LinkedPoseCalls.Count; callIndex++)
@@ -1358,7 +1358,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             return -1;
         }
 
-        void CompileOperations(CharacterPresentationPosePlan program)
+        void CompileOperations(CharacterPoseProgramImage program)
         {
             int nativeIndex = 0;
             int policyOffset = 0;
@@ -1528,7 +1528,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 throw new InvalidOperationException("Animation Pose Graph Native operation layout is inconsistent.");
         }
 
-        void CompileStages(CharacterPresentationPosePlan program)
+        void CompileStages(CharacterPoseProgramImage program)
         {
             int nativeOperationStart = 0;
             for (int stageIndex = 0; stageIndex < program.Stages.Count; stageIndex++)

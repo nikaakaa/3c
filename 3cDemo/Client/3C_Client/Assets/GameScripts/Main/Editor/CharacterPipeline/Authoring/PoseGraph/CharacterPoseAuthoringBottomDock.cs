@@ -299,7 +299,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         {
             RefreshTargetChoices();
             bool published = m_Window.TryGetPublishedPosePlan(
-                out CharacterPresentationPosePlan plan,
+                out CharacterPoseProgramImage plan,
                 out string status);
             AddOrReplaceSummary(published ? "Ready" : status);
             if (published &&
@@ -403,7 +403,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 fieldPrefix = $"/transition:{selection.ElementId.Value}/";
             }
             if (m_Window.TryGetPublishedPosePlan(
-                    out CharacterPresentationPosePlan plan,
+                    out CharacterPoseProgramImage plan,
                     out _))
             {
                 for (int i = 0; i < plan.FullBodyIks.Count; i++)
@@ -633,7 +633,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         }
 
         void RebuildParameterFixture(
-            CharacterPresentationPosePlan plan)
+            CharacterPoseProgramImage plan)
         {
             m_ParameterFixture.Clear();
             m_ParameterIds.Clear();
@@ -742,7 +742,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             long targetRevision = RuntimeDebugSession.Shared.TargetRevision;
             string previousContextKey = m_TargetChoicesContextKey;
             bool published = m_Window.TryGetPublishedPosePlan(
-                out CharacterPresentationPosePlan publishedPlan,
+                out CharacterPoseProgramImage publishedPlan,
                 out string publishedStatus);
             string contextKey = string.Join(
                 "|",
@@ -1093,7 +1093,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             {
                 owners.Add($"pose-node:{current.ElementId.Value}");
                 if (m_Window.TryGetPublishedPosePlan(
-                        out CharacterPresentationPosePlan plan,
+                        out CharacterPoseProgramImage plan,
                         out _))
                 {
                     for (int i = 0; i < plan.FullBodyIks.Count; i++)

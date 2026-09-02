@@ -154,12 +154,12 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         readonly int m_BoneCount;
         readonly int m_ParameterCount;
         readonly int m_SlotNodeOffset;
-        readonly CharacterPresentationPosePlan m_Plan;
+        readonly CharacterPoseProgramImage m_Plan;
         bool m_FrameOpen;
         bool m_Disposed;
 
         internal PoseInertializationNativeProgram(
-            CharacterPresentationPosePlan plan,
+            CharacterPoseProgramImage plan,
             AnimationBlendCurveCatalogPayload curves,
             AnimationBlendProfileCatalogPayload profiles)
         {
@@ -570,7 +570,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         }
 
         void Compile(
-            CharacterPresentationPosePlan plan,
+            CharacterPoseProgramImage plan,
             AnimationBlendCurveCatalogPayload curves,
             AnimationBlendProfileCatalogPayload profiles)
         {

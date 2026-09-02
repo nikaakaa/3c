@@ -28,7 +28,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
 
             ActionPresentationSampleWorkspaceRow row =
                 workspace.Prepare(projected.PlaybackId);
-            CharacterPresentationPosePlan posePlan =
+            CharacterPoseProgramImage posePlan =
                 bindings.Projection.PosePlan;
             int parameterCount = row.ParameterCount;
             if (posePlan == null ||

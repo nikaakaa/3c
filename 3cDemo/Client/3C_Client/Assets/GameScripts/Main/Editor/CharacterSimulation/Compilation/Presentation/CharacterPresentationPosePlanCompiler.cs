@@ -14,7 +14,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
 {
     public static class CharacterPresentationPoseGraphCompiler
     {
-        public static CharacterPresentationPosePlan Compile(
+        public static CharacterPoseProgramImage Compile(
             CharacterPresentationPoseGraphAsset asset,
             CharacterAnimationRigDefinition rig,
             IReadOnlyCollection<AnimationChannelId> reachableAnimationChannels,
@@ -213,7 +213,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             public IReadOnlyList<int> PoseValueLastUse { get; }
         }
 
-        public static CharacterPresentationPosePlan Build(
+        public static CharacterPoseProgramImage Build(
             CharacterPresentationPoseGraphAsset asset,
             CharacterAnimationRigDefinition rig,
             IReadOnlyCollection<AnimationChannelId> reachableAnimationChannels,
@@ -272,7 +272,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             }
         }
 
-        static CharacterPresentationPosePlan CompileValidated(
+        static CharacterPoseProgramImage CompileValidated(
             CharacterPresentationPoseGraphAsset asset,
             CharacterAnimationRigDefinition rig,
             AnimationBlendNodePayload[] blendNodes,
@@ -343,7 +343,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                 workspace.ParameterValueCapacity,
                 workspace.ContributionCapacity,
                 workspace.FrameCacheCapacity);
-            return new CharacterPresentationPosePlan(
+            return new CharacterPoseProgramImage(
                 graph.GraphId.Value,
                 graph.ContentRevision,
                 hash,
@@ -2569,8 +2569,8 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
         {
             var values = new List<string>
             {
-                CharacterPresentationPosePlan.SchemaVersion,
-                CharacterPresentationPosePlan.RuntimeAbi,
+                CharacterPoseProgramImage.SchemaVersion,
+                CharacterPoseProgramImage.RuntimeAbi,
                 graph.GraphId.Value,
                 graph.ContentRevision,
                 rig.RigId,

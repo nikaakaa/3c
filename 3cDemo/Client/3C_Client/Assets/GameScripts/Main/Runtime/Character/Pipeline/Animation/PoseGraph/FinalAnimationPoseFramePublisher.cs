@@ -206,7 +206,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         ComposedAnimationPoseFrame m_CommittedFrame;
 
         internal ComposedAnimationPoseFramePublisher(
-            CharacterPresentationPosePlan program,
+            CharacterPoseProgramImage program,
             CharacterAnimationRigPayload rig,
             AnimationFinalPosePhysicalWriter physicalWriter)
         {

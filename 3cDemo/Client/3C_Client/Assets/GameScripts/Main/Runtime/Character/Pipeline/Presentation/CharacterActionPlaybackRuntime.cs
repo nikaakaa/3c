@@ -389,7 +389,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         static int CalculatePlaybackCapacity(
             ActionAnimationBindingIndex bindings)
         {
-            CharacterPresentationPosePlan plan = bindings.Projection.PosePlan;
+            CharacterPoseProgramImage plan = bindings.Projection.PosePlan;
             int capacity = 0;
             for (int i = 0; i < plan.AnimationSlots.Count; i++)
             {

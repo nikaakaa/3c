@@ -6,7 +6,7 @@ using ThirdPersonSimulation;
 
 namespace ThirdPersonCharacter.Pipeline.Presentation
 {
-    public sealed class CharacterActionPlaybackFrameTransaction
+    internal sealed class CharacterActionPlaybackFrameTransaction
     {
         readonly ActionPlaybackCommandInbox m_Inbox;
 
@@ -18,14 +18,14 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             Closed = true;
         }
 
-        public ulong Identity { get; private set; }
+        internal ulong Identity { get; private set; }
         internal ActionPlaybackInboxReadLease InboxLease { get; private set; }
         internal ActionLifecycleMutationLease LifecycleLease { get; private set; }
         internal ActionSampleHistoryMutationLease HistoryLease { get; private set; }
-        public ulong PresentationFrame { get; private set; }
+        internal ulong PresentationFrame { get; private set; }
         internal IReadOnlyList<ActionPlaybackInboxEntry> InboxEntries => m_Inbox;
         internal bool Closed { get; set; }
-        public bool IsValid =>
+        internal bool IsValid =>
             Identity != 0 &&
             LifecycleLease.IsValid &&
             HistoryLease.IsValid &&
@@ -67,7 +67,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         }
     }
 
-    public sealed class CharacterActionPlaybackRuntime :
+    internal sealed class CharacterActionPlaybackRuntime :
         IActionPlaybackCommandPublisher
     {
         readonly ActionAnimationBindingIndex m_Bindings;
@@ -79,7 +79,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         readonly CharacterActionPlaybackFrameTransaction m_Transaction;
         CharacterActionPlaybackFrameTransaction m_ActiveTransaction;
 
-        public CharacterActionPlaybackRuntime(
+        internal CharacterActionPlaybackRuntime(
             ActionAnimationBindingIndex bindings)
         {
             m_Bindings = bindings ??
@@ -105,15 +105,15 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 new CharacterActionPlaybackFrameTransaction(m_Inbox);
         }
 
-        public ActionAnimationBindingIndex Bindings => m_Bindings;
-        public int PendingCommandCount => m_Inbox.PendingCount;
+        internal ActionAnimationBindingIndex Bindings => m_Bindings;
+        internal int PendingCommandCount => m_Inbox.PendingCount;
         internal int FrameCapacity { get; }
         internal int JournalCapacity => checked(
             m_Lifecycle.CommandMutationCapacity +
             m_CommittedSamples.MutationCapacity);
         internal int BackendReleaseCompletionCapacity =>
             checked(FrameCapacity * FrameCapacity);
-        public bool HasActiveFrameTransaction =>
+        internal bool HasActiveFrameTransaction =>
             m_ActiveTransaction != null &&
             m_ActiveTransaction.IsValid;
 
@@ -137,7 +137,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             m_Inbox.Retire(terminalCommand);
         }
 
-        public CharacterActionPlaybackFrameTransaction BeginFrame(
+        internal CharacterActionPlaybackFrameTransaction BeginFrame(
             ulong frameIdentity,
             ulong presentationFrame)
         {
@@ -204,7 +204,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             }
         }
 
-        public void ReplaceSlotUsageBatch(
+        internal void ReplaceSlotUsageBatch(
             CharacterActionPlaybackFrameTransaction transaction,
             IReadOnlyList<ActionSlotSourceUsage> usages)
         {
@@ -214,7 +214,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 usages);
         }
 
-        public void ApplyRetirementPermissions(
+        internal void ApplyRetirementPermissions(
             CharacterActionPlaybackFrameTransaction transaction,
             IReadOnlyList<ActionRetirementPermission> permissions)
         {
@@ -224,7 +224,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 permissions);
         }
 
-        public void RegisterBackendReleaseRequest(
+        internal void RegisterBackendReleaseRequest(
             CharacterActionPlaybackFrameTransaction transaction,
             ActionBackendReleaseRequest request)
         {
@@ -234,7 +234,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 request);
         }
 
-        public void ApplyBackendReleaseCompletions(
+        internal void ApplyBackendReleaseCompletions(
             CharacterActionPlaybackFrameTransaction transaction,
             IReadOnlyList<ActionBackendReleaseCompletion> completions)
         {
@@ -245,7 +245,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             RemoveRetiredSampleHistory(transaction);
         }
 
-        public void RetireWithoutBackendResources(
+        internal void RetireWithoutBackendResources(
             CharacterActionPlaybackFrameTransaction transaction,
             AnimationPlaybackId playbackId)
         {
@@ -258,7 +258,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 playbackId);
         }
 
-        public bool TryGetCommittedSampleWindow(
+        internal bool TryGetCommittedSampleWindow(
             CharacterActionPlaybackFrameTransaction transaction,
             AnimationPlaybackId playbackId,
             double presentationSampleTick,
@@ -281,7 +281,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 transaction.LifecycleLease);
         }
 
-        public IReadOnlyList<ActionAnimationPlaybackLifecycleSnapshot>
+        internal IReadOnlyList<ActionAnimationPlaybackLifecycleSnapshot>
             BuildCommittedLifecycleSnapshot()
         {
             m_Lifecycle.BuildCommittedSnapshot(m_Snapshots);
@@ -296,7 +296,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             m_CommittedSamples.ValidateFrame(transaction.HistoryLease);
         }
 
-        public void Commit(
+        internal void Commit(
             CharacterActionPlaybackFrameTransaction transaction)
         {
             RequireTransaction(transaction);
@@ -307,7 +307,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             Close(transaction);
         }
 
-        public void DiscardFrame(
+        internal void DiscardFrame(
             CharacterActionPlaybackFrameTransaction transaction)
         {
             RequireTransaction(transaction);
@@ -318,7 +318,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             Close(transaction);
         }
 
-        public void Reset()
+        internal void Reset()
         {
             if (HasActiveFrameTransaction)
             {

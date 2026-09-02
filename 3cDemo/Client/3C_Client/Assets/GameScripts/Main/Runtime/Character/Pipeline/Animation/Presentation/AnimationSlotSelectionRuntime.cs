@@ -4,9 +4,9 @@ using ThirdPersonCharacter.Pipeline.Animation.Lifecycle;
 
 namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
 {
-    public readonly struct AnimationSlotFramePlan
+    internal readonly struct AnimationSlotFramePlan
     {
-        public AnimationSlotFramePlan(
+        internal AnimationSlotFramePlan(
             AnimationSlotId slotId,
             PoseNodeId slotNodeId,
             PoseNodeId actionPlayerNodeId,
@@ -29,16 +29,16 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             }
         }
 
-        public AnimationSlotId SlotId { get; }
-        public PoseNodeId SlotNodeId { get; }
-        public PoseNodeId ActionPlayerNodeId { get; }
-        public AnimationPoseSelectionGeneration SelectionGeneration { get; }
-        public bool SelectionChanged { get; }
-        public AnimationPlaybackId TargetActionPlaybackId { get; }
-        public AnimationPlaybackId OutgoingPlaybackId { get; }
-        public bool TargetsSourcePose => !TargetActionPlaybackId.IsValid;
-        public bool HasOutgoingSource => OutgoingPlaybackId.IsValid;
-        public bool IsValid =>
+        internal AnimationSlotId SlotId { get; }
+        internal PoseNodeId SlotNodeId { get; }
+        internal PoseNodeId ActionPlayerNodeId { get; }
+        internal AnimationPoseSelectionGeneration SelectionGeneration { get; }
+        internal bool SelectionChanged { get; }
+        internal AnimationPlaybackId TargetActionPlaybackId { get; }
+        internal AnimationPlaybackId OutgoingPlaybackId { get; }
+        internal bool TargetsSourcePose => !TargetActionPlaybackId.IsValid;
+        internal bool HasOutgoingSource => OutgoingPlaybackId.IsValid;
+        internal bool IsValid =>
             SlotId.IsValid &&
             SlotNodeId.IsValid &&
             ActionPlayerNodeId.IsValid &&
@@ -48,7 +48,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
              !OutgoingPlaybackId.Equals(TargetActionPlaybackId));
     }
 
-    public readonly struct AnimationSlotMutationLease
+    internal readonly struct AnimationSlotMutationLease
     {
         internal AnimationSlotMutationLease(
             ulong frameIdentity,
@@ -58,14 +58,14 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             Generation = generation;
         }
 
-        public ulong FrameIdentity { get; }
+        internal ulong FrameIdentity { get; }
         internal ulong Generation { get; }
-        public bool IsValid => FrameIdentity != 0 && Generation != 0;
+        internal bool IsValid => FrameIdentity != 0 && Generation != 0;
     }
 
-    public readonly struct AnimationSlotActionSourcePlan
+    internal readonly struct AnimationSlotActionSourcePlan
     {
-        public AnimationSlotActionSourcePlan(
+        internal AnimationSlotActionSourcePlan(
             AnimationSlotId slotId,
             PoseNodeId slotNodeId,
             AnimationPlaybackId playbackId,
@@ -84,19 +84,19 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             }
         }
 
-        public AnimationSlotId SlotId { get; }
-        public PoseNodeId SlotNodeId { get; }
-        public AnimationPlaybackId PlaybackId { get; }
-        public AnimationPoseSelectionGeneration SelectionGeneration { get; }
-        public bool Current { get; }
-        public bool IsValid =>
+        internal AnimationSlotId SlotId { get; }
+        internal PoseNodeId SlotNodeId { get; }
+        internal AnimationPlaybackId PlaybackId { get; }
+        internal AnimationPoseSelectionGeneration SelectionGeneration { get; }
+        internal bool Current { get; }
+        internal bool IsValid =>
             SlotId.IsValid &&
             SlotNodeId.IsValid &&
             PlaybackId.IsValid &&
             SelectionGeneration.IsValid;
     }
 
-    public sealed class AnimationSlotRuntime
+    internal sealed class AnimationSlotRuntime
     {
         sealed class SlotState
         {
@@ -263,7 +263,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
         int m_DirtyStateCount;
         AnimationSlotMutationLease m_ActiveLease;
 
-        public AnimationSlotRuntime(ActionAnimationBindingIndex bindings)
+        internal AnimationSlotRuntime(ActionAnimationBindingIndex bindings)
         {
             m_Bindings = bindings ??
                 throw new ArgumentNullException(nameof(bindings));
@@ -324,9 +324,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             }
         }
 
-        public int SlotCount => m_CommittedOwners.Length;
+        internal int SlotCount => m_CommittedOwners.Length;
 
-        public AnimationSlotMutationLease BeginFrame(ulong frameIdentity)
+        internal AnimationSlotMutationLease BeginFrame(ulong frameIdentity)
         {
             if (m_ActiveLease.IsValid)
             {
@@ -534,7 +534,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             return m_ActionSourcePlans;
         }
 
-        public void PublishActionUsages(
+        internal void PublishActionUsages(
             AnimationSlotMutationLease lease,
             PresentationFrameWorkspace workspace,
             PresentationFrameWorkspaceLease workspaceLease)
@@ -577,7 +577,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             }
         }
 
-        public void CompleteSourceRelease(
+        internal void CompleteSourceRelease(
             AnimationSlotMutationLease lease,
             AnimationSlotId slotId,
             AnimationPlaybackId playbackId)
@@ -656,7 +656,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             }
         }
 
-        public void CommitFrame(AnimationSlotMutationLease lease)
+        internal void CommitFrame(AnimationSlotMutationLease lease)
         {
             RequireLease(lease);
             for (int i = 0; i < m_DirtyStateCount; i++)
@@ -672,13 +672,13 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             Close();
         }
 
-        public void DiscardFrame(AnimationSlotMutationLease lease)
+        internal void DiscardFrame(AnimationSlotMutationLease lease)
         {
             RequireLease(lease);
             Close();
         }
 
-        public void Reset()
+        internal void Reset()
         {
             if (m_ActiveLease.IsValid)
             {

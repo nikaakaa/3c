@@ -901,3 +901,9 @@ Action source id、presentation request sequence、sample time、clip、paramete
 状态：Program Runtime现在持有Action Playback与Animation Slot的唯一Pending事务，按原顺序接收Action command、消费Backend release completion、推进Lifecycle、仲裁Slot winner、生成Action source、发布Slot usage与Retirement permission、准备Backend release request并提交或回滚。根Frame Transaction删除Action事务、Slot lease与Backend completion副本；外层Runtime只保留外部command校验、Action采样器调用时机、Module阶段顺序和诊断结果发布。
 
 Action inbox读取、Lifecycle／sample history mutation、Slot selection generation、Current／Outgoing／Retained选择、Source请求序号、release acknowledgement、Retired列表排序及Commit／Discard顺序均保持原值。PoseStateMachine、全部Player、ActionPlaybackInput、AnimationSlot、BlendStack、Transition、Inertialization与Linked Fragment的逻辑执行现均只由Program Runtime驱动，因此任务6.2完成；Action采样物理适配仍随Source Module边界和根事务收窄继续处理。3C MCP对Program Runtime、Pose Runtime、根Runtime与根Transaction错误筛选均为0；不单独运行回放。
+
+## 收紧Action与Slot实现可见性
+
+状态：Action Playback事务、Lifecycle Runtime、Animation Slot frame plan、source plan、mutation lease与Runtime类型全部降为程序集内部实现；外部仍只通过既有`IActionPlaybackCommandPublisher`发布command，不能取得内部事务、Slot pending state或直接推进Lifecycle。Program Runtime保持这些实现的唯一调用者，Action采样只在Program入口内读取同一活动事务。
+
+本步不改任何状态、容量、顺序或结果，只删除可形成第二逻辑Owner的公开入口。3C MCP对两个触碰文件错误筛选均为0；任务6.10仍等待Operation／Value全局唯一性审计，不提前勾选，也不单独运行回放。

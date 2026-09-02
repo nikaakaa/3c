@@ -88,13 +88,19 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             in CharacterFootPrimarySupportResult result) =>
             m_Result = result;
 
-        [DiagnosticField(1, "none", "primary-support")]
+        [DiagnosticField]
+        [DiagnosticGroup("primary-support")]
         public bool HasValue => m_Result.HasValue;
-        [DiagnosticField(1, "category", "primary-support", AvailabilityMember = nameof(HasValue))]
+        [DiagnosticField]
+        [DiagnosticGroup("primary-support")]
+        [DiagnosticAvailability(DiagnosticAvailabilityReference.Member, nameof(HasValue))]
         public CharacterFootSide Side => m_Result.Side;
-        [DiagnosticField(1, "identity", "primary-support", AvailabilityMember = nameof(HasValue))]
+        [DiagnosticField]
+        [DiagnosticGroup("primary-support")]
+        [DiagnosticAvailability(DiagnosticAvailabilityReference.Member, nameof(HasValue))]
         public ulong LandingEventIdentity => m_Result.LandingEventIdentity;
-        [DiagnosticField(1, "none", "primary-support")]
+        [DiagnosticField]
+        [DiagnosticGroup("primary-support")]
         public bool Retained => m_Result.Retained;
     }
 
@@ -166,23 +172,32 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             Available = true;
         }
 
-        [DiagnosticField(1, "none", "pelvis-input")]
+        [DiagnosticField]
+        [DiagnosticGroup("pelvis-input")]
         public bool Available { get; }
-        [DiagnosticField(1, "direction", "pelvis-input")]
+        [DiagnosticField]
+        [DiagnosticGroup("pelvis-input")]
         public Vector3 ComponentUp { get; }
-        [DiagnosticField(1, "metres", "pelvis-input")]
+        [DiagnosticField]
+        [DiagnosticGroup("pelvis-input")]
         public Vector3 LeftAnimatedSole { get; }
-        [DiagnosticField(1, "metres", "pelvis-input")]
+        [DiagnosticField]
+        [DiagnosticGroup("pelvis-input")]
         public Vector3 RightAnimatedSole { get; }
-        [DiagnosticField(1, "metres", "pelvis-input")]
+        [DiagnosticField]
+        [DiagnosticGroup("pelvis-input")]
         public Vector3 LeftTargetSole { get; }
-        [DiagnosticField(1, "metres", "pelvis-input")]
+        [DiagnosticField]
+        [DiagnosticGroup("pelvis-input")]
         public Vector3 RightTargetSole { get; }
-        [DiagnosticField(1, "metres", "pelvis-input")]
+        [DiagnosticField]
+        [DiagnosticGroup("pelvis-input")]
         public float AnimatedMinimumAlongUp { get; }
-        [DiagnosticField(1, "metres", "pelvis-input")]
+        [DiagnosticField]
+        [DiagnosticGroup("pelvis-input")]
         public float TargetMinimumAlongUp { get; }
-        [DiagnosticField(1, "metres", "pelvis-input")]
+        [DiagnosticField]
+        [DiagnosticGroup("pelvis-input")]
         public float OffsetAlongUp { get; }
     }
 
@@ -519,27 +534,38 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
 
         internal bool Evaluated { get; }
         internal bool Completed { get; }
-        [DiagnosticField(1, "none", "pelvis-spring-input")]
+        [DiagnosticField]
+        [DiagnosticGroup("pelvis-spring-input")]
         public bool HadPreviousState { get; }
-        [DiagnosticField(1, "none", "pelvis-spring-input")]
+        [DiagnosticField]
+        [DiagnosticGroup("pelvis-spring-input")]
         public bool SupportChanged { get; }
-        [DiagnosticField(1, "category", "pelvis-spring-input")]
+        [DiagnosticField]
+        [DiagnosticGroup("pelvis-spring-input")]
         public CharacterFootStrideSlope PreviousSlope { get; }
-        [DiagnosticField(1, "category", "pelvis-spring-input")]
+        [DiagnosticField]
+        [DiagnosticGroup("pelvis-spring-input")]
         public CharacterFootPelvisSpringHandoffReason HandoffReason { get; }
-        [DiagnosticField(1, "none", "pelvis-spring-input")]
+        [DiagnosticField]
+        [DiagnosticGroup("pelvis-spring-input")]
         public bool VelocityReset { get; }
-        [DiagnosticField(1, "metres", "pelvis-spring-input")]
+        [DiagnosticField]
+        [DiagnosticGroup("pelvis-spring-input")]
         public float PreviousTarget { get; }
-        [DiagnosticField(1, "metres", "pelvis-spring-input")]
+        [DiagnosticField]
+        [DiagnosticGroup("pelvis-spring-input")]
         public float PreviousOutput { get; }
-        [DiagnosticField(1, "metres-per-second", "pelvis-spring-input")]
+        [DiagnosticField]
+        [DiagnosticGroup("pelvis-spring-input")]
         public float PreviousVelocity { get; }
-        [DiagnosticField(1, "metres", "pelvis-spring-input")]
+        [DiagnosticField]
+        [DiagnosticGroup("pelvis-spring-input")]
         public float Input { get; }
-        [DiagnosticField(1, "metres-per-second", "pelvis-spring-input")]
+        [DiagnosticField]
+        [DiagnosticGroup("pelvis-spring-input")]
         public float InputVelocity { get; }
-        [DiagnosticField(1, "hertz", "pelvis-spring-input")]
+        [DiagnosticField]
+        [DiagnosticGroup("pelvis-spring-input")]
         public float Frequency { get; }
         internal float IntegratedOutput { get; }
         internal float Target { get; }
@@ -596,31 +622,44 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             Response = response;
         }
 
-        [DiagnosticField(1, "category", "pelvis-input")]
+        [DiagnosticField]
+        [DiagnosticGroup("pelvis-input")]
         public CharacterFootStrideState State { get; }
-        [DiagnosticField(1, "category", "pelvis-input")]
+        [DiagnosticField]
+        [DiagnosticGroup("pelvis-input")]
         public CharacterFootStrideRejectReason RejectReason { get; }
-        [DiagnosticField(1, "category", "pelvis-input")]
+        [DiagnosticField]
+        [DiagnosticGroup("pelvis-input")]
         public CharacterFootSide SupportSide { get; }
-        [DiagnosticField(1, "category", "pelvis-input")]
+        [DiagnosticField]
+        [DiagnosticGroup("pelvis-input")]
         public CharacterFootSide SwingSide { get; }
-        [DiagnosticField(1, "metres", "pelvis-input")]
+        [DiagnosticField]
+        [DiagnosticGroup("pelvis-input")]
         public Vector3 StrideStart { get; }
-        [DiagnosticField(1, "metres", "pelvis-input")]
+        [DiagnosticField]
+        [DiagnosticGroup("pelvis-input")]
         public Vector3 StrideEnd { get; }
-        [DiagnosticField(1, "unitless", "pelvis-input")]
+        [DiagnosticField]
+        [DiagnosticGroup("pelvis-input")]
         public float Progress { get; }
-        [DiagnosticField(1, "category", "pelvis-input")]
+        [DiagnosticField]
+        [DiagnosticGroup("pelvis-input")]
         public CharacterFootStrideSlope Slope { get; }
-        [DiagnosticField(1, "metres", "pelvis-input")]
+        [DiagnosticField]
+        [DiagnosticGroup("pelvis-input")]
         public Vector3 SampledGround { get; }
-        [DiagnosticField(1, "none", "pelvis-input")]
+        [DiagnosticField]
+        [DiagnosticGroup("pelvis-input")]
         public bool PoseInputAvailable { get; }
-        [DiagnosticField(1, "metres", "pelvis-input")]
+        [DiagnosticField]
+        [DiagnosticGroup("pelvis-input")]
         public Vector3 PoseRootPosition { get; }
-        [DiagnosticField(1, "metres", "pelvis-input")]
+        [DiagnosticField]
+        [DiagnosticGroup("pelvis-input")]
         public Vector3 AnimatedPelvis { get; }
-        [DiagnosticField(1, "metres", "pelvis-input")]
+        [DiagnosticField]
+        [DiagnosticGroup("pelvis-input")]
         public Vector3 AnimatedPelvisComponentPosition { get; }
         public CharacterFootPelvisHeightTarget HeightTarget { get; }
         internal CharacterFootPelvisPosturePreference PosturePreference { get; }

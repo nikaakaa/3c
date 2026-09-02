@@ -1,0 +1,22 @@
+{
+    "name": "ThirdPersonCharacter.FootDiagnosticAnalysis.Editor",
+    "rootNamespace": "ThirdPersonCharacter.Pipeline.Diagnostics.FootAnalysis.Editor",
+    "references": [
+        "KK.GeneratedDiagnosticSampling",
+        "KK.GeneratedDiagnosticSampling.Host"
+    ],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [
+        "KK_DIAGNOSTIC_SAMPLING",
+        "KK_DIAGNOSTIC_FOOT"
+    ],
+    "versionDefines": [],
+    "noEngineReferences": true
+}

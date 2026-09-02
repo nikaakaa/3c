@@ -1,6 +1,6 @@
 ## Context
 
-见[proposal.md](proposal.md)。独立仓库`D:/Unity_Project_1/generated-diagnostic-sampling`的0.4.0 release已经实现multi Fact Root、path-scoped Field identity、generated lifecycle、typed packet、Schema-driven Host和Disabled portable gate；3C当前仍在清理0.3单View及旧Getter链。本change以独立0.4.0合同为唯一框架真相，只规划3C消费与最终Player闭包，不恢复项目内第二份实现。
+见[proposal.md](proposal.md)。独立仓库`D:/Unity_Project_1/generated-diagnostic-sampling`的0.5.1 release已经实现multi Fact Root、path-scoped Field identity、业务`DiagnosticEvent`、可选partial interest Query、generated lifecycle、typed packet、Schema-driven Host／Analysis和Disabled portable gate；3C当前仍在清理旧Consumer／Binding链。本change以独立0.5.1合同为唯一框架真相，只规划3C消费与最终Player闭包，不恢复项目内第二份实现。
 
 约束固定为Unity 2022.3、Roslyn 3.8兼容Source Generator、.NET Standard 2.0 Generator边界和IL2CPP AOT。采样不得反向驱动业务状态；Performance工作流只有一个Build、Player、Controller、顶层Capture和Comparer；项目不接受反射fallback、运行时表达式、兼容wrapper或第二采样路径。
 
@@ -10,7 +10,7 @@
 
 - 一个Dimension直接消费多个现有强类型Fact Root与一个Metadata，不创建诊断View或Event DTO。
 - 普通字段只在现有真实只读成员声明一次Attribute，现有业务计算getter可直接采样。
-- Generator生成静态Capture以及`Start／HandleCommitted／Stop`生命周期，Editor与IL2CPP执行同一Program identity。
+- Generator生成静态Capture、业务`DiagnosticEvent` typed dispatcher、Program handler和Session生命周期，Editor与IL2CPP执行同一Program identity；Start／Stop由Host workflow控制。
 - Runtime packet、Host CSV／manifest与BuildIdentity形成可验证闭包，Disabled Player完全退出采样。
 - 3C Foot只作为首个多来源消费方，不让通用框架认识Foot、Landing、PIK或PoseGraph。
 
@@ -44,18 +44,17 @@ Annotations只保存Conditional Attribute与最小enum，不引用Runtime、Host
 
 每个Capability使用一个`DiagnosticCapability(id, revision, metadataType)`和多个`DiagnosticFactRoot(rootId, type)`。Fact Root ID在Capability内唯一，Generator按ordinal稳定排序。Fact Root是现有业务事实，不是采样专属DTO；框架只认识Dimension、Fact Root、Metadata和Field，不解释Root ID的领域含义。
 
-Program使用`DiagnosticCaptureProgram`声明稳定Dimension ID数组和Sampler类型。Generator生成：
+Program使用`DiagnosticCaptureProgram`声明Event identity、稳定Dimension ID数组和Sampler类型；业务使用`DiagnosticEvent`标记自己的Post-Commit partial方法，参数直接列出目标、真实lineage和多个`in` Fact Root。Metadata只由Lifecycle Start提供并冻结。Generator生成：
 
 ```text
-DiagnosticLifecycle.Start(request)
-DiagnosticLifecycle.HandleCommitted(
-  in lineage,
-  in dimension0.root0, ... in dimension0.metadata,
-  in dimension1.root0, ... in dimension1.metadata)
-DiagnosticLifecycle.Stop(outcome)
+BusinessDiagnosticEvent(in target, in lineage, in dimension0.root0, ...)
+  -> typed dispatcher
+  -> matching generated Program handler
+  -> rent / Capture each dimension / submit / Fault
+Host workflow -> Session Start / Stop
 ```
 
-参数顺序由Program Dimension顺序和Fact Root ID顺序唯一决定。`HandleCommitted`为每个Dimension自动租packet、调用同一Capture并提交。消费方只在同步Commit调用栈传入已有事实，不定义`CaptureStarted`、`CommittedSample`、`CaptureStopped`领域Event DTO，也不持有Session或packet。
+参数顺序由Event签名、Program Dimension顺序和Fact Root ID顺序共同锁定。业务只在同步Commit调用栈调用一行partial方法；typed dispatcher按目标过滤，匹配handler使用业务lineage为每个Dimension自动租packet、调用同一Capture并提交。昂贵事实Owner可额外声明约定的partial Query，在帧开始取得同一目标的订阅兴趣；普通Event不强制Query。消费方不定义`CaptureStarted`、`CommittedSample`、`CaptureStopped`领域Event DTO，不持有Session或packet，也不使用通用Event Bus。
 
 选择生成显式多参数入口，是用较长但编译期固定的调用签名换取零View构造、零逐字段复制和完整AOT调用图。
 
@@ -93,7 +92,7 @@ Capture(in Root0, in Root1, ..., in Metadata, ref DiagnosticCapturePacket)
 
 ### Decision 6: Runtime只拥有Session、packet和封存状态
 
-每个Capability Session状态为`Prepared -> Capturing -> Finalizing -> Completed/Faulted/Cancelled`。Generated `Start`冻结Program、Schema、Sampler interest、cadence、packet capacity、queue、transport与输出闭包；Generated `HandleCommitted`同步读取调用方提供的`in`事实、取得versioned struct lease、Capture并消费式提交；Generated `Stop`只发起非阻塞封存。
+每个Capability Session状态为`Prepared -> Capturing -> Finalizing -> Completed/Faulted/Cancelled`。Host workflow Start冻结Program、Schema、Sampler interest、cadence、packet capacity、queue、transport与输出闭包并订阅匹配typed dispatcher；generated Program handler同步读取Event提供的`in`事实、取得versioned struct lease、Capture并消费式提交；Host workflow Stop退订并发起非阻塞封存。
 
 主线程不等待Writer、格式化、Analyzer或Publisher。Overflow、sequence断裂、非法状态或Writer失败使对应Capability Faulted并保留已有证据。框架不知道Left／Right、Presentation Frame、Simulation Tick或跨Capability对齐关系；这些只存在于Dimension ID、opaque lineage和上层工作流。
 
@@ -109,15 +108,15 @@ Annotations使用`Conditional("KK_DIAGNOSTIC_SAMPLING")`；Generator在全局def
 
 Annotations必须在源码编译时可解析，但Disabled Player不得因Attribute语法保留Annotations根程序集。Gate使用Cecil检查业务程序集零Diagnostic custom attribute与零`KK.GeneratedDiagnosticSampling` AssemblyRef，并检查Managed／IL2CPP输出零Annotations、Runtime、领域Diagnostics、Generated Program、Session／packet／queue／interest类型及Capability／Field identity。运行时bool、空实现、未订阅Session、Linker推测或构建后删除都不能替代Gate。
 
-### Decision 9: 3C只消费独立0.4.0发布
+### Decision 9: 3C只消费独立0.5.1发布
 
-通用Owner固定为独立`com.kk.generated-diagnostic-sampling` 0.4.0。3C只保存package引用、领域Capability／Sampler／Program声明、现有业务成员Attribute、同步Commit调用和Editor workflow；当前Foot消费方不再拥有Analyzer／Publisher。PoseGraph继续生产自己的正式Committed事实，不新增采样View、Event、interest或运行分支。
+通用Owner固定为独立`com.kk.generated-diagnostic-sampling` 0.5.1，Owner提交`1c17465`，Analyzer SHA-256为`47EE5F876377EBE453E98009E5AEA6D95FECC8DC4491B1A9EBE881812C55AA87`，MVID为`9b3d5a64-d7e9-46c4-a687-52e87a5bc84a`。3C只保存package引用、领域Capability／Sampler／Program声明、现有业务成员Attribute、一行Post-Commit `DiagnosticEvent` partial调用和Editor workflow；Foot采样消费方不再拥有手写GeneratedCapture或旧单体Analyzer／Publisher。`add-schema-driven-diagnostic-analysis`在同一package内提供Host-only通用分析基础设施，并由独立3C Foot Analysis Editor程序集提供领域Operator、Plan和报告；它只读取Completed artifact，不反向进入业务事实Owner。PoseGraph继续生产自己的正式Committed事实，不新增采样View、Event payload或consumer binding；只在帧开始读取generated target interest决定延迟事实冻结。
 
 Performance工作流继续唯一拥有Build Request、`DiagnosticCapabilitySet`、Player manifest、Run Request、握手、顶层Capture与Comparer。框架不创建第二Player、第二Controller或第二产物根。
 
 ## Risks / Trade-offs
 
-- [生成入口参数较多] → 参数只出现在同步Commit边界并由Generator固定顺序；换取零DTO、零字段复制和明确AOT闭包。
+- [DiagnosticEvent参数较多] → 参数只出现在业务声明和同步Commit一行调用，Generator按完整签名绑定handler；换取零DTO、零字段复制和明确AOT闭包。
 - [同类型多路径产生更多字段] → identity明确包含Fact Root和成员路径；不同业务位置不被错误合并。
 - [业务成员改名改变path identity] → 路径是Schema合同；对外冻结字段使用显式绝对identity，改名触发Schema升级。
 - [计算getter可能包含业务成本] → 只允许采样现有业务事实getter且只在Capture调用时执行；无Capture不调用，领域必须对自身getter语义负责。
@@ -126,10 +125,10 @@ Performance工作流继续唯一拥有Build Request、`DiagnosticCapabilitySet`�
 
 ## Migration Plan
 
-1. 锁定独立0.4.0 package与Analyzer identity，3C package引用只指向该正式发布。
+1. 锁定独立0.5.1 package与Analyzer identity，3C package引用只指向该正式发布。
 2. 把每个Capability改为Metadata加多个`DiagnosticFactRoot`，Program直接声明Dimension IDs。
 3. 把普通旧Getter迁到现有真实成员Attribute；允许现有计算getter和class page Table，公式改为只接实际Root的Derived。
-4. 在同步Commit点把每个Dimension的已有事实和Metadata以`in`传给generated `HandleCommitted`，调用generated `Start／Stop`。
+4. 在同步Commit点声明并调用一行`DiagnosticEvent` partial方法，把目标、真实lineage和每个Dimension的已有事实以`in`传入；Host workflow在Start冻结Metadata，Generator生成typed dispatcher、可选partial interest Query和Program handler。
 5. 删除单View、Dimension View、三个领域Event DTO、Projection、Bridge、Column／CsvBinding、Host Adapter和旧Reader兼容。
 6. 执行Capture Player、Disabled Managed／IL2CPP Gate、Repository Policy、OpenSpec strict和identity闭包验收。
 7. 用户完成实机验收后再安装current specs并归档；回退只恢复上一套完整提交，不保留双版本运行路径。
@@ -137,7 +136,7 @@ Performance工作流继续唯一拥有Build Request、`DiagnosticCapabilitySet`�
 ## Current Spec And Active Change Comparison
 
 - current `btsmtl-runtime-diagnostics`要求诊断只读且不反向驱动运行；本框架只在同步Commit边界读取现有事实并保持该要求，不进入RuntimeDebugSession Trace Store。
-- current `character-foot-placement-presentation`、`character-animation-pipeline`与`character-pose-graph-runtime-architecture`已经由`refactor-foot-ik-diagnostic-sampling`同步为`成功Seal -> 同步Commit直接Fact Root -> frozen consumer`；保留的Capture View只服务Live／Trace／Gizmo，不属于采样链。
+- current `character-foot-placement-presentation`、`character-animation-pipeline`与`character-pose-graph-runtime-architecture`的业务真相仍是成功Seal后的唯一Post-Commit事实边界；`add-schema-driven-diagnostic-analysis`只在该边界增加一行partial Event调用。保留的Capture View只服务Live／Trace／Gizmo，不属于采样链。
 - active `refactor-character-pose-graph-architecture`只拥有正式Committed Result、事务、Seal和Post-Commit边界，可独立推进；它不等待或引用Sampling Runtime。
-- active `refactor-foot-ik-diagnostic-sampling`负责0.4领域接入和下游分析，不得恢复View、Event DTO、Bridge或Host Adapter。
+- active `refactor-foot-ik-diagnostic-sampling`只负责0.4领域采样接入；active `add-schema-driven-diagnostic-analysis`负责Completed artifact之后的通用Host分析与Foot领域规则，二者都不得恢复View、Event DTO、Bridge或Host Adapter。
 - completed未归档`add-gameplay-performance-capture-workflow`继续唯一拥有Player BuildIdentity和Comparer；后续只接入通用Capability Set，不增加Foot专属构建字段。

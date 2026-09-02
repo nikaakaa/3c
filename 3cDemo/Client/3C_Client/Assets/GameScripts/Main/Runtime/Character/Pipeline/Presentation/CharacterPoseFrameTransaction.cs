@@ -156,11 +156,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             private set;
         }
         internal bool HasMotionMatchingLease { get; private set; }
-        internal CharacterFootIkCaptureBinding FootIkCaptureBinding
-        {
-            get;
-            private set;
-        }
+        internal bool CaptureFootIkDiagnostics { get; private set; }
         internal FixedCapacityFrameBuffer<ActionAnimationPlaybackLifecycleSnapshot>
             ActionSnapshots { get; }
         internal FixedCapacityFrameBuffer<ActionPresentationTimeSnapshot>
@@ -209,7 +205,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             CharacterFinalPosePublicationFrameLease publicationLease,
             MotionMatchingFrameMutationLease motionMatchingLease,
             bool hasMotionMatchingLease,
-            in CharacterFootIkCaptureBinding footIkCaptureBinding)
+            bool captureFootIkDiagnostics)
         {
             if (!Closed ||
                 lineage.CompletionIdentity != 0 ||
@@ -241,7 +237,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             PublicationLease = publicationLease;
             MotionMatchingLease = motionMatchingLease;
             HasMotionMatchingLease = hasMotionMatchingLease;
-            FootIkCaptureBinding = footIkCaptureBinding;
+            CaptureFootIkDiagnostics = captureFootIkDiagnostics;
             SourceDemand = default;
             SourceFrame = default;
             HasSourceFrame = false;
@@ -377,7 +373,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             HasExecutionResults = false;
             MotionMatchingLease = default;
             HasMotionMatchingLease = false;
-            FootIkCaptureBinding = default;
+            CaptureFootIkDiagnostics = false;
             Outcome = AnimationPresentationFrameOutcome.None;
             Phase = default;
         }

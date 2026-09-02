@@ -9,8 +9,9 @@
 **Goals:**
 
 - 让不同业务以Capability隔离，一个真实成员只声明一次采样与必要分类信息。
-- 让字段分类保持聚焦：Field、Key、Group分别表达允许采样、稳定关键身份和采样集合。
+- 让字段分类保持聚焦：Field、Key、Group和Availability分别表达允许采样、稳定关键身份、采样集合和有效条件。
 - 让Sampler按Group选择并由Generator展开字段，不再维护第二份Getter、路径或Field列表。
+- 让业务用带特性的partial Event声明实际采样时机，运行路径只保留一行触发且不构造Event DTO。
 - 让当前Plan在Host侧动态绑定当前Schema，字段与测试变化不修改Player采样框架或Operator算法。
 - 把旧Foot诊断业务算法迁成独立Operator与默认Plan，恢复可定位结论和七维评分。
 - 让同一通用Reader／Plan／Operator基础设施以后服务Combat、Network和Animation，而不认识其领域名词。
@@ -22,10 +23,11 @@
 - 不允许Plan创造本次Capture没有采集的事实；新增采样字段仍需要重新编译Capture Player。
 - 不把Foot规则、阈值、评分或报告移入通用采样包。
 - 不让跨Capability分析成为运行时组合DTO、同步Commit或统一业务Frame语义。
+- 不恢复Started／CommittedSample／Stopped生命周期DTO、Dimension View或运行时通用Event Bus。
 
 ## Decisions
 
-### Decision 1: 使用三个聚焦Annotation而不是巨型Field Attribute
+### Decision 1: 使用四个聚焦Annotation而不是巨型Field Attribute
 
 Annotations提供：
 
@@ -33,13 +35,14 @@ Annotations提供：
 DiagnosticField                 允许采样真实成员
 DiagnosticKey("stable-key")     稳定关键身份
 DiagnosticGroup("group-id")     采样集合成员，可重复
+DiagnosticAvailability(...)    字段有效条件
 ```
 
-普通成员只有`DiagnosticField`。长期被多个Plan依赖的关键成员额外声明`DiagnosticKey`；需要被一个或多个Sampler选择的事实类型、结构分支或叶子声明`DiagnosticGroup`。三个Attribute均受`KK_DIAGNOSTIC_SAMPLING`条件控制，Disabled业务程序集不保留metadata或Annotations引用。
+普通成员只有`DiagnosticField`。长期被多个Plan依赖的关键成员额外声明`DiagnosticKey`；需要被一个或多个Sampler选择的事实类型、结构分支或叶子声明`DiagnosticGroup`；只在确定条件下有效的字段额外声明`DiagnosticAvailability`，引用同一分支可读成员或稳定Key／Field并给出期望值。四个Attribute均受`KK_DIAGNOSTIC_SAMPLING`条件控制，Disabled业务程序集不保留metadata或Annotations引用。
 
 Key的完整作用域固定为`Capability / Table / Fact Root / Key`。它允许同一Fact Root内的成员结构搬家，但Table或Fact Root改变会因基数或事实角色变化而主动破坏绑定。Group identity只在Capability内有意义；Generator从Fact Root到叶子传播Group并合并叶子附加组。
 
-选择独立Attribute而不是继续给`DiagnosticField`增加参数，是为了让字段标记保持稳定，并让Key或Group以后删除时不改变采样资格。备选方案是单一`DiagnosticField(Key, Groups, Unit, Revision...)`，写法短但会持续膨胀且混淆采集、兼容和分析职责，因此不采用。完全无Key／Group的备选方案虽然最小，但会迫使Sampler和Plan重复列字段路径，无法满足维护目标。
+选择独立Attribute而不是继续给`DiagnosticField`增加参数，是为了让字段标记保持稳定，并让Key、Group或Availability以后删除时不改变采样资格。备选方案是单一`DiagnosticField(Key, Groups, Unit, Revision, Availability...)`，写法短但会持续膨胀且混淆采集、兼容和分析职责，因此不采用。完全无Key／Group的备选方案虽然最小，但会迫使Sampler和Plan重复列字段路径，无法满足维护目标；丢弃Availability则会把无效默认值误当证据，也不采用。
 
 ### Decision 2: Capability负责业务隔离，Group只负责业务内部采样集合
 
@@ -67,15 +70,39 @@ Capability
   -> Main / Table
   -> Fact Root
   -> structural member path
-  -> Field + optional Key + inherited Groups
+  -> Field + optional Key + inherited Groups + optional Availability
   -> Sampler field closure
 ```
 
-编译期检查Key重复、Group identity非法、Sampler选择空组、Field不可读、类型／codec非法、Table行闭包、availability、Dimension结构、packet布局和容量。Schema同时保存结构Field identity、可选Key和Group集合；运行Capture仍只执行生成的直接成员访问，不读取Attribute或字符串路径。
+编译期检查Key重复、Group identity非法、Sampler选择空组、Field不可读、类型／codec非法、Table行闭包、Availability引用、Dimension结构、packet布局和容量。Schema同时保存结构Field identity、可选Key、Group集合和Availability合同；运行Capture仍只执行生成的直接成员访问，不读取Attribute或字符串路径。
 
 Group与Key只改变Schema和Sampler closure，不改变业务事实、内存布局或Commit调用。不存在Capture时不访问业务getter；普通发布没有生成Program。
 
-### Decision 5: Artifact Reader提供动态列解析但执行阶段使用typed handle
+### Decision 5: DiagnosticEvent partial方法表达业务自定义采样时机
+
+业务在自己拥有的Commit实现类型中声明：
+
+```csharp
+[DiagnosticEvent("character-foot-ik/post-commit")]
+private static partial void PublishFootCommitted(
+    in DiagnosticEventTargetKey target,
+    in DiagnosticLineageKey lineage,
+    in LeftRoot0 leftRoot0,
+    in RightRoot0 rightRoot0,
+    in SharedRoot sharedRoot);
+```
+
+成功Commit处只执行一次该方法调用。首两个参数分别是稳定目标身份和业务当前真实lineage，其余参数必须全部是已有事实的`in`只读传递，不能是诊断View、组合DTO、`object`、数组或动态字典。Event identity不包含Sampler选择；同一Event可以由当前Capability的Core或Full generated Program订阅。Capture Metadata不进入逐帧Event，它由Host workflow在Session Start时提供并冻结。
+
+Generator在业务程序集的Capture编译中为partial方法生成typed dispatcher contract和实现。该实现只调用已经注册的typed delegate，不引用领域Analyzer。Capability Program Generator在下游诊断程序集按Event identity和完整参数签名生成handler及订阅／退订，handler内部拥有Session、Dimension展开、rent、Capture、submit和Fault。业务程序集只引用Annotations；它不反向引用领域Diagnostics程序集。
+
+昂贵事实Owner可以在同一Event owner中额外声明约定的`Query{EventMethodName}Interest(in target, ref bool interested)` private partial方法。Generator只在该声明存在时生成实现；普通事实Event不强制Query。Host Start先以目标和Metadata启动Lifecycle并订阅该目标；业务帧开始把interest初始化为false并调用Query，只为匹配目标准备允许延迟冻结的诊断页，成功Commit仍只调用一行Event。没有匹配目标的活动订阅时dispatcher直接返回，Event参数必须是Commit点已经存在的事实，业务不得为了可能的订阅预先构造诊断状态。Disabled编译时Generator零输出，Event与Query private partial void都没有实现，C#编译器消除调用及参数求值，业务程序集不形成Annotations引用，因此不需要`#if`、运行时bool开关或空实现。
+
+选择partial Event而不是旧readonly Event payload，是因为旧Payload会复制多个大Fact Root并恢复第二DTO。选择生成typed dispatcher而不是通用Event Bus，是为了避免`object`、boxing、反射和运行时注册表。Start／Stop不建业务Event：Capture workflow创建和停止Session，只有每次Sample的时机属于业务。
+
+生成handler不得向业务调用栈抛出Capture异常；失败转换为对应Session Fault。handler必须使用Event传入的真实lineage，不得用本地序号合成completion。业务Commit只负责调用一次Event，不捕获采样异常，也不持有Capture owner、Session或consumer interface。
+
+### Decision 6: Artifact Reader提供动态列解析但执行阶段使用typed handle
 
 Host新增通用`DiagnosticDataset`入口。Reader从Capability manifest定位Schema和Artifact，验证Completed、hash、Sampler、表集合与编码后，把CSV header解析为当前Schema Field descriptor。Plan编译阶段将Key或Field identity解析为整数typed handle；Operator循环中只通过handle读取typed scalar、vector、quaternion或Table行，不进行每行字符串查找、字典反射或领域转换。
 
@@ -93,7 +120,7 @@ availability
 
 Reader不知道Foot、Combat或其它业务。选择Schema-driven cursor而不是为每个Sampler生成Host DTO，是为了让字段变化不要求重新编译Reader或维护Column绑定。备选方案是直接把CSV反序列化为FootFrame，迁移最快但会恢复固定1249列模型和第二字段真相，因此不采用。
 
-### Decision 6: Plan只负责当前绑定和参数，Operator只负责算法
+### Decision 7: Plan只负责当前绑定和参数，Operator只负责算法
 
 Plan是Host侧source-controlled JSON，包含：
 
@@ -112,7 +139,7 @@ Operator是显式注册的Host代码，声明typed input slots、参数合同、
 
 选择Plan／Operator分离，是因为实际业务中测试目的和阈值变化频率高于算法结构；把两者都写死在Analyzer会再次形成单体。采用任意表达式DSL虽然表面更动态，但会引入第二解释器、难以审查的运行逻辑和不受控错误面，因此不采用。
 
-### Decision 7: 结果必须把无问题、不适用和证据缺失分开
+### Decision 8: 结果必须把无问题、不适用和证据缺失分开
 
 统一规则结果为：
 
@@ -127,13 +154,13 @@ Plan绑定失败、字段availability缺失、Table行不完整或窗口断裂�
 
 结果目录作为Capture目录旁的独立不可变输出，核心文件为`diagnosis.json`和`report.md`。`diagnosis.json`记录源Manifest和文件hash、Schema hash、Plan内容hash、Analyzer binary hash、规则输入证据和评分分母；它不是第二Capture manifest，也不回写采样状态。
 
-### Decision 8: 多Capability Capture共享Run但不共享事实模型
+### Decision 9: 多Capability Capture共享Run但不共享事实模型
 
 顶层Capture workflow可以选择例如`character-foot-ik/full`和`combat-hit-resolution/core`。每个Capability在自己的Commit点调用自己的generated lifecycle，公共Capture Run identity由工作流写入各自Metadata。Host分别封存Capability Artifact；单领域Plan读取一个Dataset，跨领域Plan显式读取多个Dataset并绑定公共Actor、Frame／Tick或时间输入。
 
 通用框架不假设Presentation Frame等于Simulation Tick，也不自动按列名join。缺少可证明的关联输入时，跨Capability Plan产生MissingEvidence。选择独立数据集而不是组合Program，是为了避免AOT参数签名和业务生命周期发生组合爆炸。
 
-### Decision 9: Foot只恢复算法语义并按当前Schema重建Plan
+### Decision 10: Foot只恢复算法语义并按当前Schema重建Plan
 
 从`b601d933b`父提交读取旧诊断源码，逐条建立“规则 -> 原始事实依赖 -> 当前Key／Field -> 当前Operator”的迁移清单。恢复范围包括Contact Plane Penetration、Locked Sole Motion、Landing Path Continuity、Landing State Consistency、Swing Path Jitter、Step Time Candidate、Pelvis／Reach和七维评分。
 
@@ -141,13 +168,13 @@ Plan绑定失败、字段availability缺失、Table行不完整或窗口断裂�
 
 Foot提供两个当前默认Plan：Core Plan只选择Core Capture能够完整支持的规则；Full Plan选择全部已迁移规则和七维评分。Launcher、固定输入回放和MCP共用一个Editor前端服务，Stop只封存，Analyze Last／Analyze Existing显式启动Host分析。分析工作不得发生在`OnInspectorGUI`或Player主线程。
 
-### Decision 10: 通用分析留在独立包，Foot规则留在3C领域Editor程序集
+### Decision 11: 通用分析留在独立包，Foot规则留在3C领域Editor程序集
 
 独立`generated-diagnostic-sampling`包新增Annotations／Generator分类能力和Host Analysis基础设施，但不包含Foot Operator、Plan或报告文案。3C新增独立Foot Analysis Editor程序集，只引用通用Host和必要的JSON／基础数学合同，不引用Runtime Fact Root或PoseGraph实现。
 
 选择这一分层而不是把Foot Analyzer放回现有Character Editor大程序集，是为了让未来Combat等领域只依赖通用Reader／Plan引擎，并让Foot删除或重写规则不影响采样包。Foot前端可以由现有Launcher和MCP调用，但二者不直接读取CSV或持有规则。
 
-### Decision 11: Disabled与Capture构建继续按程序集闭包分离
+### Decision 12: Disabled与Capture构建继续按程序集闭包分离
 
 `DiagnosticKey`与`DiagnosticGroup`和`DiagnosticField`一样使用Conditional Attribute。Generator在`KK_DIAGNOSTIC_SAMPLING`缺失时零输出；Capability Capture程序集继续使用领域define constraint。Host Analysis与Foot Analysis都是Editor／Host-only，不进入任何Player。Capture Player只有选中的generated samplers、Runtime和Writer；普通Player继续满足零Attribute、零AssemblyRef、零Program／Session／packet／identity字符串Gate。
 
@@ -161,12 +188,13 @@ Foot提供两个当前默认Plan：Core Plan只选择Core Capture能够完整支
 - [旧规则依赖已删除的派生列] → 逐规则追溯到当前原始事实；缺失就补真实采样或保持规则未迁移，不复活旧DTO／Column。
 - [跨Capability时间轴无法可靠关联] → Plan必须绑定显式关联字段；框架不猜测Frame与Tick关系，无法证明时返回MissingEvidence。
 - [新增Focused Attribute增加业务源码标记] → 普通字段仍只有`DiagnosticField`；Key和Group只用于长期核心或可复用分支，并可在结构分支一次声明后继承。
+- [Event调用仍可能产生无订阅参数准备] → Event只允许传Commit点已经存在的事实；Disabled调用由partial语义完整消除，Capture构建无订阅时不允许调用方预构造诊断DTO或额外变换。
 
 ## Migration Plan
 
-1. 先在独立包拆分`DiagnosticField`、`DiagnosticKey`与`DiagnosticGroup`合同，升级descriptor、Schema、Group闭包和Generator诊断；删除旧revision／unit／groups Field构造，不保留兼容重载。
+1. 先在独立包拆分`DiagnosticField`、`DiagnosticKey`、`DiagnosticGroup`与`DiagnosticAvailability`合同，新增partial `DiagnosticEvent` dispatcher／Program绑定，升级descriptor、Schema、Group闭包、Availability直接读取和Generator诊断；删除旧revision／unit／groups／availability Field构造，不保留兼容重载。
 2. 在通用Host增加Manifest／Schema验证、typed dataset、Plan compiler、Operator registry、四态结果与原子Report Writer；保持现有Schema-driven CSV Finalizer为唯一产物来源。
-3. 把3C Foot现有字段声明迁到Field／Key／Group，定义Core和Full Sampler并重新生成唯一Foot Program；不改PoseGraph事实结构、业务计算或Commit调用语义。
+3. 把3C Foot现有字段声明迁到Field／Key／Group，定义Core和Full Sampler并重新生成唯一Foot Program；在成功Seal后的业务Commit点改为一行Foot Event调用，删除Capture consumer／binding和手写TryCapture转发。只为缺失的真实证据在Final Physical诊断页补每脚Ankle位姿，不改变PoseGraph业务结果或求解计算。
 4. 从Git历史逐条提取Foot算法和依赖，先迁当前Schema完整覆盖的Operator，再为缺失的真实原始事实补采样声明；旧采样、Column、DTO、Store和Publisher持续保持删除。
 5. 建立当前Foot Core／Full Plan、`diagnosis.json`／`report.md`输出和统一Editor前端，接入Launcher、固定输入回放与MCP。
 6. 同步`add-generated-diagnostic-sampling-framework`、`extract-generated-diagnostic-sampling-package`、`refactor-foot-ik-diagnostic-sampling`及三项正式动画／Foot规格，删除“Host产物就是最终诊断结论”的冲突口径。

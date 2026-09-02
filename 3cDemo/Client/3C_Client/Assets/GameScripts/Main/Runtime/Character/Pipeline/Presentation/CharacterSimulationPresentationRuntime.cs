@@ -4,6 +4,7 @@ using BTSMTL.Diagnostics;
 using ThirdPersonCharacter.Pipeline.Animation;
 using ThirdPersonCharacter.Pipeline.Animation.Diagnostics;
 using ThirdPersonCharacter.Pipeline.Animation.MotionMatching;
+using ThirdPersonCharacter.Pipeline.Diagnostics;
 using ThirdPersonGameplay.Tick;
 using ThirdPersonSimulation;
 using Unity.Profiling;
@@ -16,11 +17,11 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         ISimulationPresentationOutputPort,
         IAnimationPresentationRuntimeSnapshotProvider
     {
-        static readonly ProfilerMarker AnimationMarker = new ProfilerMarker("ThirdPerson.Presentation.Animation");
-        static readonly ProfilerMarker EquipmentMarker = new ProfilerMarker("ThirdPerson.Presentation.Equipment");
-        static readonly ProfilerMarker FactProjectionMarker = new ProfilerMarker("ThirdPerson.Presentation.FactProjection");
-        static readonly ProfilerMarker FinalPoseMarker = new ProfilerMarker("ThirdPerson.Presentation.FinalPose");
-        static readonly ProfilerMarker CameraMarker = new ProfilerMarker("ThirdPerson.Presentation.Camera");
+        static readonly ProfilerMarker AnimationMarker = new ProfilerMarker(CharacterPerformanceMetrics.AnimationName);
+        static readonly ProfilerMarker EquipmentMarker = new ProfilerMarker(CharacterPerformanceMetrics.EquipmentName);
+        static readonly ProfilerMarker FactProjectionMarker = new ProfilerMarker(CharacterPerformanceMetrics.FactProjectionName);
+        static readonly ProfilerMarker FinalPoseMarker = new ProfilerMarker(CharacterPerformanceMetrics.FinalPoseName);
+        static readonly ProfilerMarker CameraMarker = new ProfilerMarker(CharacterPerformanceMetrics.CameraName);
 
         readonly ActorId m_ActorId;
         readonly CharacterPresentationProjection m_Projection;
@@ -93,8 +94,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         public bool MotionMatchingRuntimeEnabled => m_Animation.MotionMatchingRuntimeEnabled;
         public AnimationPresentationDiagnosticsInterest DiagnosticsInterest =>
             m_Animation.DiagnosticsInterest;
-        public CharacterFootIkCaptureInterest FootIkCaptureInterest =>
-            m_Animation.FootIkCaptureInterest;
         internal CharacterPoseTuningLayout TuningLayout =>
             m_Animation.TuningLayout;
         internal CharacterPoseTuningParameterBlock ActiveTuningBlock =>
@@ -164,24 +163,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         {
             if (!m_Disposed)
                 m_Animation.RemoveDiagnosticsInterest(ownerId);
-        }
-
-        public void SetFootIkCapture(
-            Guid ownerId,
-            CharacterFootIkCaptureInterest interest,
-            ICharacterFootIkCommittedCaptureConsumer consumer)
-        {
-            RequireAlive();
-            m_Animation.SetFootIkCapture(
-                ownerId,
-                interest,
-                consumer);
-        }
-
-        public void RemoveFootIkCapture(Guid ownerId)
-        {
-            if (!m_Disposed)
-                m_Animation.RemoveFootIkCapture(ownerId);
         }
 
         public void CaptureEquipmentSelections(IReadOnlyList<EquipmentVisualSelection> selections)

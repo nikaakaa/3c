@@ -6,7 +6,7 @@
 
 Diagnostics Projector MUST不持有Program Runtime、Source Module、Constraint Module或Final Publication的可变引用，不得读取Pending Workspace、Actor State私有页、Foot Context、FBBIK Vendor对象或Physical Transform反推，也不得从Animancer weight重建事实。没有interest时 MUST跳过对应大页与逐骨骼复制，但正式执行结果不变。
 
-成功Seal后，Runtime Snapshot或具体`CharacterFootIkCommittedCaptureViewLease` MAY继续服务Live、Trace与Gizmo，但 Foot采样 MUST在同步Commit调用栈内从同一lineage的已提交Owner直接取得Left／Right与公共Fact Root并以`in`调用冻结consumer，不得消费Runtime Snapshot、Capture View、万能Committed View或第二事实页。`generated-diagnostic-sampling-framework`唯一拥有通用AOT生成、typed packet、Capability Session、Writer和Host Finalizer合同，`character-foot-ik-diagnostic-sampling`只拥有字段分类、Sampler／Program Definitions、薄GeneratedCapture与Editor workflow。PoseGraph不得认识Schema、Generated Program、packet、Host或字段映射。旧Foot单体Analyzer／Publisher、Diagnosis Store与旧格式兼容路径直接删除；独立Host-only Foot诊断器 MAY在Capability manifest完成后读取生成Artifact并执行当前Plan、Operator、评分与报告，但不得形成动画Runtime、PoseGraph或采样Session的第二报告状态机。
+成功Seal后，Runtime Snapshot或具体`CharacterFootIkCommittedCaptureViewLease` MAY继续服务Live、Trace与Gizmo，但 Foot采样 MUST在同步Commit调用栈内从同一lineage的已提交Owner直接取得Left／Right与公共Fact Root，并以`in`执行一行target-scoped `DiagnosticEvent` partial调用，不得消费Runtime Snapshot、Capture View、万能Committed View、Consumer／Binding或第二事实页。帧开始的可选partial Query只决定是否冻结昂贵事实；Disabled构建中Event／Query调用及参数求值都必须消失。`generated-diagnostic-sampling-framework`唯一拥有通用AOT生成、typed packet、Capability Session、Writer和Host Finalizer合同，`character-foot-ik-diagnostic-sampling`只拥有字段分类、Sampler／Program Definitions和Editor workflow。PoseGraph不得认识Schema、Generated Program、packet、Host或字段映射。旧Foot单体Analyzer／Publisher、Diagnosis Store与旧格式兼容路径直接删除；独立Host-only Foot诊断器 MAY在Capability manifest完成后读取生成Artifact并执行当前Plan、Operator、评分与报告，但不得形成动画Runtime、PoseGraph或采样Session的第二报告状态机。
 
 #### Scenario: 导出每帧调试数据
 

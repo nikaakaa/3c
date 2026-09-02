@@ -6,7 +6,7 @@
 
 ### Requirement: 字段分类必须由聚焦特性单点声明
 
-系统 MUST使用无参数`DiagnosticField`标记允许采样的真实只读成员，并分别使用可选`DiagnosticKey`和可重复`DiagnosticGroup`声明稳定关键身份与采样集合。`DiagnosticField` MUST不保存人工version、unit、group、阈值、评分、报告或诊断规则；普通字段 MUST只需要`DiagnosticField`。Generator MUST从C#类型推断codec，从Fact Root、成员路径与Table推导结构身份。
+系统 MUST使用无参数`DiagnosticField`标记允许采样的真实只读成员，并分别使用可选`DiagnosticKey`、可重复`DiagnosticGroup`和可选`DiagnosticAvailability`声明稳定关键身份、采样集合与有效条件。`DiagnosticField` MUST不保存人工version、unit、group、availability、阈值、评分、报告或诊断规则；无额外语义的普通字段 MUST只需要`DiagnosticField`。Generator MUST从C#类型推断codec，从Fact Root、成员路径与Table推导结构身份。
 
 #### Scenario: 普通调查字段接入
 
@@ -20,6 +20,12 @@
 - **THEN** Generator MUST在所属Capability和Fact Root作用域生成唯一Key与Group成员关系
 - **AND** Key MUST不隐式决定该字段属于Core、Full或任一其它Sampler
 
+#### Scenario: 条件有效字段接入
+
+- **WHEN** 一个真实字段只在同一事实分支的可读状态或另一个稳定字段满足确定值时有效
+- **THEN** 消费方 MUST用独立`DiagnosticAvailability`声明该条件且Generator MUST编译对应直接读取
+- **AND** `DiagnosticField` MUST保持无参数，运行Capture MUST不通过反射或字符串路径求值有效性
+
 ### Requirement: Capability必须形成唯一业务分组边界
 
 战斗、IK、网络、动画等不同业务 MUST分别拥有独立Capability。每个Capability MUST只通过Fact Root声明本业务可提供的现有强类型事实；Generator MUST递归发现根下带`DiagnosticField`的成员。系统 MUST不要求每个字段重复声明Capability，不得为跨业务采样构造组合DTO、万能View或公共字段Bank。
@@ -29,6 +35,40 @@
 - **WHEN** Capture workflow同时选择Foot IK Sampler与Combat Sampler
 - **THEN** 两个Capability MUST在各自Commit边界提交独立typed packet并共享Run和调用方显式提供的关联身份
 - **AND** 系统 MUST不创建CombatAndFoot组合事实或让任一Capability读取另一业务对象
+
+### Requirement: 采样时机必须由业务事件触发点声明
+
+业务 MUST在自己选择的同步Commit边界声明一个带`DiagnosticEvent`的private static partial void方法，并以目标、现有真实lineage和多个现有Fact Root的`in`参数表达本次事实。业务执行路径 MUST只调用该方法一次，不得手写Session、packet、左右循环、Sampler switch或Capture Bridge。Generator MUST为Capture构建生成目标隔离的typed dispatcher，并把匹配Program的generated handler绑定到Event；Session Start／Stop仍由外部Capture workflow控制，Capture Metadata MUST只在Start时提供并冻结，不得作为逐帧Event参数。只有需要按订阅延迟准备昂贵事实的Owner MAY声明约定private partial Query，Generator MUST不强制普通Event增加Query。
+
+#### Scenario: Foot在Post-Commit触发采样
+
+- **WHEN** Foot业务把带`DiagnosticEvent`的partial方法调用放在成功Seal后的同步Commit调用栈
+- **THEN** 有匹配目标Session订阅时generated handler MUST使用调用方提供的真实lineage，按Program Dimension和Fact Root闭包采集本次现有事实
+- **AND** 业务方法 MUST不构造CommittedSample Event DTO、Dimension View或逐字段副本
+
+#### Scenario: 只准备匹配目标的延迟诊断事实
+
+- **WHEN** Host只为一个运行目标启动Session且昂贵事实Owner在帧开始调用可选partial interest Query
+- **THEN** 只有匹配目标 MUST准备允许延迟冻结的诊断页
+- **AND** 其它目标与没有订阅的帧 MUST不构造诊断事实或执行额外坐标变换
+
+#### Scenario: 业务选择另一个采样时机
+
+- **WHEN** Combat Capability把自己的`DiagnosticEvent`调用放在Damage Commit而不是动画Frame Commit
+- **THEN** Generator MUST按Combat Event和Program合同生成独立调用图
+- **AND** 通用框架 MUST不假设所有Capability共享Update、Frame或Tick时机
+
+#### Scenario: Disabled构建触发调用消失
+
+- **WHEN** 构建未定义`KK_DIAGNOSTIC_SAMPLING`且Generator不生成partial方法实现
+- **THEN** C#编译器 MUST消除该partial调用及其参数求值
+- **AND** 业务程序集 MUST不保留Event dispatcher、partial interest Query、Sampling Runtime引用或Event identity
+
+#### Scenario: Capture处理失败
+
+- **WHEN** generated Event handler在rent、字段读取、submit或Writer路径失败
+- **THEN** 对应Capture Session MUST进入Faulted并停止处理该Event
+- **AND** 异常 MUST不逃逸到业务Commit或改变已提交业务结果
 
 ### Requirement: Group必须在事实声明处继承并由Sampler选择
 

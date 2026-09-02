@@ -1,8 +1,8 @@
-## 1. 固定独立0.4.0 Owner与发布身份
+## 1. 固定独立0.5.1 Owner与发布身份
 
 - [x] 1.1 将Annotations、Source Generator、Capture Runtime和Editor Host迁入独立`com.kk.generated-diagnostic-sampling` Owner，并以仓库、package路径和命名空间搜索确认通用代码不含Foot／PIK／PoseGraph领域分支
 - [x] 1.2 固定Annotations → Domain／Generator、Generated Program → Runtime、Host Editor-only的单向程序集依赖，检查asmdef与portable工程确认无循环且Generator不进入Player
-- [x] 1.3 使用规定的`--disable-build-servers /nr:false /p:UseSharedCompilation=false`参数完成0.4.0 Release构建并立即执行`dotnet build-server shutdown`，核对package Analyzer SHA-256、MVID、assembly name和Generator identity
+- [x] 1.3 使用规定的`--disable-build-servers /nr:false /p:UseSharedCompilation=false`参数完成0.5.1 Release构建并立即执行`dotnet build-server shutdown`，核对package Analyzer SHA-256、MVID、assembly name和Generator identity
 
 ## 2. 收口multi Fact Root编译合同
 
@@ -16,7 +16,7 @@
 
 - [x] 3.1 扩展唯一Roslyn Generator发现multi Fact Root、Metadata、Field／Table、Sampler与Program；缺少`KK_DIAGNOSTIC_SAMPLING`时Probe确认零generated source和零identity
 - [x] 3.2 生成`Capture(in Root0, ..., in Metadata, ref Packet)`并直接展开成员访问、enum与Unity值转换，检查generated source不存在普通Getter／Extractor、Side选择、Expression、Reflection、DynamicInvoke或字符串路径执行
-- [x] 3.3 生成`DiagnosticLifecycle.Start／HandleCommitted／Stop`，Probe以两个Dimension和两个Fact Root确认参数稳定排序、自动rent、逐Dimension Capture、submit和封存
+- [x] 3.3 在既有静态Capture与Session基础上生成目标隔离`DiagnosticEvent` typed dispatcher、可选partial interest Query和Program handler，跨程序集Probe以两个Dimension和两个Fact Root确认真实lineage、Start冻结Metadata、自动rent、逐Dimension Capture、submit与Fault，Disabled Probe确认Query调用与参数求值消失
 - [x] 3.4 生成Sampler union、dense typed handle、固定Table layout与Schema descriptor，检查同一Field identity在一个sample中只有一个求值位置
 - [x] 3.5 将Generator binary、生成source hash、Fact Root type identity、Dimension Set与assembly binding闭合进Program identity，并通过重复Release构建hash核对确定性
 
@@ -24,7 +24,7 @@
 
 - [x] 4.1 实现按type family分页的预分配packet pool、固定容量Table页和versioned struct lease，检查Capturing路径不扩容、不boxing且不保存业务managed引用
 - [x] 4.2 实现每Capability独立`Prepared -> Capturing -> Finalizing -> Completed/Faulted/Cancelled` Session，Probe确认Start冻结Program／Schema／容量／interest且非法状态产生typed failure
-- [x] 4.3 实现Generated `HandleCommitted`非阻塞租用／提交与Generated `Stop`后台封存，检查主线程不等待IO且领域不持有Session／packet
+- [ ] 4.3 实现generated Program handler的非阻塞租用／提交、Host workflow Stop退订与后台封存，检查业务一行partial Event调用不等待IO且领域不持有Session／packet
 - [x] 4.4 实现Overflow、sequence、Writer和hash failure闭包，确认Faulted保留已有证据但不发布部分Completed身份
 - [x] 4.5 实现packet、Schema descriptor、runtime manifest与文件hash闭包，Reader验证identity、layout、capacity、sample key和opaque lineage后才允许读取
 
@@ -46,12 +46,12 @@
 
 ## 7. 迁移3C Foot消费方
 
-- [x] 7.1 将3C package依赖指向独立`com.kk.generated-diagnostic-sampling` 0.4.0路径，并核对消费到的package version与唯一Analyzer发布身份
-- [x] 7.2 将Foot Capability收口为现有Fact Root集合与Metadata，将Program声明Left／Right Dimension并在同步Commit点调用generated `Start／HandleCommitted／Stop`
+- [x] 7.1 将3C package依赖指向独立`com.kk.generated-diagnostic-sampling` 0.5.1路径，并核对消费到的package version与唯一Analyzer发布身份
+- [x] 7.2 将Foot Capability收口为现有Fact Root集合与Metadata，将Program声明Event与Left／Right Dimension，并在同步Commit点只调用一行target-scoped Foot `DiagnosticEvent` partial方法；删除手写GeneratedCapture／Consumer／Binding转发，Metadata与Start／Stop留在Host workflow
 - [x] 7.3 把全部普通Foot字段迁到现有readonly field／property／计算getter的单个path-scoped Attribute，将固定集合迁到现有buffer／class page Table，并以搜索确认旧方法式Getter／Extractor为零
 - [x] 7.4 删除Foot运行时公式与无字段root，通过Generator diagnostics确认没有Capture View、Side选择、普通字段转发或未注册Root
 - [ ] 7.5 删除Committed／Dimension View、Started／CommittedSample／Stopped领域Event DTO、Projection／Group根、Bridge、Column／CsvBinding、Host Adapter、旧Reader及全部兼容wrapper，并用程序集与符号搜索确认零残留
-- [x] 7.6 接通Schema-driven Host主表／子表／manifest，并按Foot当前范围删除旧Analyzer／Publisher、评分报告与第二字段映射
+- [x] 7.6 接通Schema-driven Host主表／子表／manifest作为唯一基础采样产物，并从采样链删除旧单体Analyzer／Publisher、评分报告与第二字段映射；领域离线诊断由`add-schema-driven-diagnostic-analysis`独立恢复
 - [ ] 7.7 用3C Capture IL2CPP Player核对multi Fact Root `in`调用、Generated Program／Schema／packet／CSV／manifest identity和左右Dimension数据闭合
 
 ## 8. 收口项目一致性

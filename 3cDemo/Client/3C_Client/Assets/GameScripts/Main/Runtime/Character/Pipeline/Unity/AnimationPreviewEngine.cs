@@ -136,6 +136,7 @@ namespace ThirdPersonCharacter.Pipeline
                 }
                 playback = new CharacterAnimationPresentationRuntime(
                     m_PreviewActorId,
+                    Guid.NewGuid(),
                     animationBindings,
                     motionMatching,
                     animancer,

@@ -418,67 +418,109 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             RotationWeight = result.Pose.RotationWeight;
         }
 
-        [DiagnosticField("character-foot-ik/main/resolved-frame-sequence", 1, "frame", "resolved-core")]
+        [DiagnosticField]
+        [DiagnosticKey("resolved-frame-sequence")]
+        [DiagnosticGroup("resolved-core")]
         public ulong FrameSequence { get; }
 
-        [DiagnosticField("character-foot-ik/main/resolved-completion-identity", 1, "identity", "resolved-core")]
+        [DiagnosticField]
+        [DiagnosticKey("resolved-completion-identity")]
+        [DiagnosticGroup("resolved-core")]
         public ulong CompletionIdentity { get; }
 
-        [DiagnosticField("character-foot-ik/main/resolved-rig-id", 1, "identity", "resolved-core")]
+        [DiagnosticField]
+        [DiagnosticKey("resolved-rig-id")]
+        [DiagnosticGroup("resolved-core")]
         public string RigId { get; }
 
-        [DiagnosticField("character-foot-ik/main/resolved-rig-revision", 1, "identity", "resolved-core")]
+        [DiagnosticField]
+        [DiagnosticKey("resolved-rig-revision")]
+        [DiagnosticGroup("resolved-core")]
         public string RigRevision { get; }
 
-        [DiagnosticField("character-foot-ik/main/resolved-side", 1, "category", "resolved-core")]
+        [DiagnosticField]
+        [DiagnosticKey("resolved-side")]
+        [DiagnosticGroup("resolved-core")]
         public CharacterFootSide Side { get; }
 
-        [DiagnosticField("character-foot-ik/main/resolved-outcome", 1, "category", "resolved-core")]
+        [DiagnosticField]
+        [DiagnosticKey("resolved-outcome")]
+        [DiagnosticGroup("resolved-core")]
         public CharacterFootResolvedOutcome Outcome { get; }
 
-        [DiagnosticField("character-foot-ik/main/resolved-final-sole", 1, "metres", "resolved-core")]
+        [DiagnosticField]
+        [DiagnosticKey("resolved-final-sole")]
+        [DiagnosticGroup("resolved-core")]
         public Vector3 FinalSole { get; }
 
-        [DiagnosticField("character-foot-ik/main/resolved-effective-sole", 1, "metres", "resolved-core")]
+        [DiagnosticField]
+        [DiagnosticKey("resolved-effective-sole")]
+        [DiagnosticGroup("resolved-core")]
         public Vector3 EffectiveSole { get; }
 
-        [DiagnosticField("character-foot-ik/main/resolved-goal-target-ankle", 1, "metres", "resolved-core")]
+        [DiagnosticField]
+        [DiagnosticKey("resolved-goal-target-ankle")]
+        [DiagnosticGroup("resolved-core")]
         public Vector3 GoalTargetAnkle { get; }
 
-        [DiagnosticField("character-foot-ik/main/resolved-goal-target-rotation", 1, "unitless", "resolved-core")]
+        [DiagnosticField]
+        [DiagnosticKey("resolved-goal-target-rotation")]
+        [DiagnosticGroup("resolved-core")]
         public Quaternion GoalTargetRotation { get; }
 
-        [DiagnosticField("character-foot-ik/main/resolved-effective-ankle", 1, "metres", "resolved-core")]
+        [DiagnosticField]
+        [DiagnosticKey("resolved-effective-ankle")]
+        [DiagnosticGroup("resolved-core")]
         public Vector3 EffectiveAnkle { get; }
 
-        [DiagnosticField("character-foot-ik/main/resolved-effective-rotation", 1, "unitless", "resolved-core")]
+        [DiagnosticField]
+        [DiagnosticKey("resolved-effective-rotation")]
+        [DiagnosticGroup("resolved-core")]
         public Quaternion EffectiveRotation { get; }
 
-        [DiagnosticField("character-foot-ik/main/resolved-effective-heel", 1, "metres", "resolved-core")]
+        [DiagnosticField]
+        [DiagnosticKey("resolved-effective-heel")]
+        [DiagnosticGroup("resolved-core")]
         public Vector3 EffectiveHeel { get; }
 
-        [DiagnosticField("character-foot-ik/main/resolved-effective-toe", 1, "metres", "resolved-core")]
+        [DiagnosticField]
+        [DiagnosticKey("resolved-effective-toe")]
+        [DiagnosticGroup("resolved-core")]
         public Vector3 EffectiveToe { get; }
 
-        [DiagnosticField("character-foot-ik/main/resolved-effective-sole-from-contacts", 1, "metres", "resolved-core")]
+        [DiagnosticField]
+        [DiagnosticKey("resolved-effective-sole-from-contacts")]
+        [DiagnosticGroup("resolved-core")]
         public Vector3 EffectiveSoleFromContacts { get; }
 
-        [DiagnosticField("character-foot-ik/main/resolved-source-sole-forward", 1, "direction", "resolved-core")]
+        [DiagnosticField]
+        [DiagnosticKey("resolved-source-sole-forward")]
+        [DiagnosticGroup("resolved-core")]
         public Vector3 SourceSoleForward { get; }
 
-        [DiagnosticField("character-foot-ik/main/resolved-source-sole-frame-local-rotation", 1, "unitless", "resolved-core")]
+        [DiagnosticField]
+        [DiagnosticKey("resolved-source-sole-frame-local-rotation")]
+        [DiagnosticGroup("resolved-core")]
         public Quaternion SourceSoleFrameLocalRotation { get; }
 
-        [DiagnosticField("character-foot-ik/main/resolved-goal-target-correction", 1, "metres", "resolved-core")]
+        [DiagnosticField]
+        [DiagnosticKey("resolved-goal-target-correction")]
+        [DiagnosticGroup("resolved-core")]
         public Vector3 GoalTargetCorrection { get; }
 
-        [DiagnosticField("character-foot-ik/main/resolved-effective-sole-correction", 1, "metres", "resolved-core")]
+        [DiagnosticField]
+        [DiagnosticKey("resolved-effective-sole-correction")]
+        [DiagnosticGroup("resolved-core")]
         public Vector3 EffectiveSoleCorrection { get; }
 
-        [DiagnosticField("character-foot-ik/main/resolved-position-weight", 1, "unitless", "resolved-core")]
+        [DiagnosticField]
+        [DiagnosticKey("resolved-position-weight")]
+        [DiagnosticGroup("resolved-core")]
         public float PositionWeight { get; }
 
-        [DiagnosticField("character-foot-ik/main/resolved-rotation-weight", 1, "unitless", "resolved-core")]
+        [DiagnosticField]
+        [DiagnosticKey("resolved-rotation-weight")]
+        [DiagnosticGroup("resolved-core")]
         public float RotationWeight { get; }
     }
 
@@ -492,16 +534,25 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             Ownership = support.ContactOwnership;
         }
 
-        [DiagnosticField("character-foot-ik/main/resolved-contact-available", 1, "none", "resolved-contact")]
+        [DiagnosticField]
+        [DiagnosticKey("resolved-contact-available")]
+        [DiagnosticGroup("resolved-contact")]
         public bool Available { get; }
 
-        [DiagnosticField("character-foot-ik/main/resolved-contact-event-identity", 1, "identity", "resolved-contact")]
+        [DiagnosticField]
+        [DiagnosticKey("resolved-contact-event-identity")]
+        [DiagnosticGroup("resolved-contact")]
         public ulong EventIdentity { get; }
 
-        [DiagnosticField("character-foot-ik/main/resolved-contact-point", 1, "metres", "resolved-contact", AvailabilityFieldId = "character-foot-ik/main/resolved-contact-available")]
+        [DiagnosticField]
+        [DiagnosticKey("resolved-contact-point")]
+        [DiagnosticGroup("resolved-contact")]
+        [DiagnosticAvailability(DiagnosticAvailabilityReference.Key, "resolved-contact-available")]
         public Vector3 Point { get; }
 
-        [DiagnosticField("character-foot-ik/main/resolved-contact-ownership", 1, "unitless", "resolved-contact")]
+        [DiagnosticField]
+        [DiagnosticKey("resolved-contact-ownership")]
+        [DiagnosticGroup("resolved-contact")]
         public float Ownership { get; }
     }
 
@@ -515,16 +566,23 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             EventIdentity = support.EventIdentity;
         }
 
-        [DiagnosticField("character-foot-ik/main/resolved-support-eligibility", 1, "category", "resolved-contact")]
+        [DiagnosticField]
+        [DiagnosticKey("resolved-support-eligibility")]
+        [DiagnosticGroup("resolved-contact")]
         public CharacterFootSupportEligibility Eligibility { get; }
 
-        [DiagnosticField(1, "unitless", "resolved-contact")]
+        [DiagnosticField]
+        [DiagnosticGroup("resolved-contact")]
         public float Weight { get; }
 
-        [DiagnosticField("character-foot-ik/main/resolved-support-horizontal-error", 1, "metres", "resolved-contact")]
+        [DiagnosticField]
+        [DiagnosticKey("resolved-support-horizontal-error")]
+        [DiagnosticGroup("resolved-contact")]
         public float HorizontalError { get; }
 
-        [DiagnosticField("character-foot-ik/main/resolved-support-event-identity", 1, "identity", "resolved-contact")]
+        [DiagnosticField]
+        [DiagnosticKey("resolved-support-event-identity")]
+        [DiagnosticGroup("resolved-contact")]
         public ulong EventIdentity { get; }
     }
 
@@ -544,31 +602,54 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 result.LandingReachRequest.MinimumCompressionReserve;
         }
 
-        [DiagnosticField("character-foot-ik/main/resolved-pelvis-reach-available", 1, "none", "resolved-contact")]
+        [DiagnosticField]
+        [DiagnosticKey("resolved-pelvis-reach-available")]
+        [DiagnosticGroup("resolved-contact")]
         public bool PelvisAvailable { get; }
 
-        [DiagnosticField("character-foot-ik/main/resolved-pelvis-reach-event-identity", 1, "identity", "resolved-contact")]
+        [DiagnosticField]
+        [DiagnosticKey("resolved-pelvis-reach-event-identity")]
+        [DiagnosticGroup("resolved-contact")]
         public ulong PelvisEventIdentity { get; }
 
-        [DiagnosticField("character-foot-ik/main/resolved-pelvis-reach-point", 1, "metres", "resolved-contact", AvailabilityFieldId = "character-foot-ik/main/resolved-pelvis-reach-available")]
+        [DiagnosticField]
+        [DiagnosticKey("resolved-pelvis-reach-point")]
+        [DiagnosticGroup("resolved-contact")]
+        [DiagnosticAvailability(DiagnosticAvailabilityReference.Key, "resolved-pelvis-reach-available")]
         public Vector3 PelvisPoint { get; }
 
-        [DiagnosticField("character-foot-ik/main/resolved-landing-reach-available", 1, "none", "resolved-contact")]
+        [DiagnosticField]
+        [DiagnosticKey("resolved-landing-reach-available")]
+        [DiagnosticGroup("resolved-contact")]
         public bool LandingAvailable { get; }
 
-        [DiagnosticField("character-foot-ik/main/resolved-landing-reach-event-identity", 1, "identity", "resolved-contact")]
+        [DiagnosticField]
+        [DiagnosticKey("resolved-landing-reach-event-identity")]
+        [DiagnosticGroup("resolved-contact")]
         public ulong LandingEventIdentity { get; }
 
-        [DiagnosticField("character-foot-ik/main/resolved-landing-reach-hip", 1, "metres", "resolved-contact", AvailabilityFieldId = "character-foot-ik/main/resolved-landing-reach-available")]
+        [DiagnosticField]
+        [DiagnosticKey("resolved-landing-reach-hip")]
+        [DiagnosticGroup("resolved-contact")]
+        [DiagnosticAvailability(DiagnosticAvailabilityReference.Key, "resolved-landing-reach-available")]
         public Vector3 LandingHip { get; }
 
-        [DiagnosticField("character-foot-ik/main/resolved-landing-reach-target-ankle", 1, "metres", "resolved-contact", AvailabilityFieldId = "character-foot-ik/main/resolved-landing-reach-available")]
+        [DiagnosticField]
+        [DiagnosticKey("resolved-landing-reach-target-ankle")]
+        [DiagnosticGroup("resolved-contact")]
+        [DiagnosticAvailability(DiagnosticAvailabilityReference.Key, "resolved-landing-reach-available")]
         public Vector3 LandingTargetAnkle { get; }
 
-        [DiagnosticField("character-foot-ik/main/resolved-landing-reach-leg-length", 1, "metres", "resolved-contact", AvailabilityFieldId = "character-foot-ik/main/resolved-landing-reach-available")]
+        [DiagnosticField]
+        [DiagnosticKey("resolved-landing-reach-leg-length")]
+        [DiagnosticGroup("resolved-contact")]
+        [DiagnosticAvailability(DiagnosticAvailabilityReference.Key, "resolved-landing-reach-available")]
         public float LandingLegLength { get; }
 
-        [DiagnosticField("character-foot-ik/main/resolved-landing-reach-minimum-compression-reserve", 1, "metres", "resolved-contact", AvailabilityFieldId = "character-foot-ik/main/resolved-landing-reach-available")]
+        [DiagnosticField]
+        [DiagnosticKey("resolved-landing-reach-minimum-compression-reserve")]
+        [DiagnosticGroup("resolved-contact")]
+        [DiagnosticAvailability(DiagnosticAvailabilityReference.Key, "resolved-landing-reach-available")]
         public float LandingMinimumCompressionReserve { get; }
     }
 
@@ -784,85 +865,141 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             LandingReachAvailable = result.LandingReachAvailable;
         }
 
-        [DiagnosticField("character-foot-ik/main/foot-motion-state", 1, "category", "motion-core")]
+        [DiagnosticField]
+        [DiagnosticKey("foot-motion-state")]
+        [DiagnosticGroup("motion-core")]
         public CharacterFootSwingMotionState State { get; }
 
-        [DiagnosticField("character-foot-ik/main/foot-motion-reject-reason", 1, "category", "motion-core")]
+        [DiagnosticField]
+        [DiagnosticKey("foot-motion-reject-reason")]
+        [DiagnosticGroup("motion-core")]
         public CharacterFootSwingMotionRejectReason RejectReason { get; }
 
-        [DiagnosticField("character-foot-ik/main/foot-motion-landing-event-identity", 1, "identity", "motion-core")]
+        [DiagnosticField]
+        [DiagnosticKey("foot-motion-landing-event-identity")]
+        [DiagnosticGroup("motion-core")]
         public ulong LandingEventIdentity { get; }
 
-        [DiagnosticField("character-foot-ik/main/foot-motion-ground-path-input-identity", 1, "identity", "motion-core")]
+        [DiagnosticField]
+        [DiagnosticKey("foot-motion-ground-path-input-identity")]
+        [DiagnosticGroup("motion-core")]
         public ulong GroundPathInputIdentity { get; }
 
-        [DiagnosticField("character-foot-ik/main/foot-motion-original-sole", 1, "metres", "motion-core")]
+        [DiagnosticField]
+        [DiagnosticKey("foot-motion-original-sole")]
+        [DiagnosticGroup("motion-core")]
         public Vector3 OriginalSole { get; }
 
-        [DiagnosticField("character-foot-ik/main/foot-motion-original-ankle", 1, "metres", "motion-core")]
+        [DiagnosticField]
+        [DiagnosticKey("foot-motion-original-ankle")]
+        [DiagnosticGroup("motion-core")]
         public Vector3 OriginalAnkle { get; }
 
-        [DiagnosticField("character-foot-ik/main/foot-motion-distance", 1, "metres", "motion-core")]
+        [DiagnosticField]
+        [DiagnosticKey("foot-motion-distance")]
+        [DiagnosticGroup("motion-core")]
         public float Distance { get; }
 
-        [DiagnosticField("character-foot-ik/main/foot-motion-progress", 1, "unitless", "motion-core")]
+        [DiagnosticField]
+        [DiagnosticKey("foot-motion-progress")]
+        [DiagnosticGroup("motion-core")]
         public float Progress { get; }
 
-        [DiagnosticField("character-foot-ik/main/foot-motion-baseline-sample", 1, "metres", "motion-core")]
+        [DiagnosticField]
+        [DiagnosticKey("foot-motion-baseline-sample")]
+        [DiagnosticGroup("motion-core")]
         public Vector3 BaselineSample { get; }
 
-        [DiagnosticField("character-foot-ik/main/foot-motion-envelope-sample", 1, "metres", "motion-core")]
+        [DiagnosticField]
+        [DiagnosticKey("foot-motion-envelope-sample")]
+        [DiagnosticGroup("motion-core")]
         public Vector3 EnvelopeSample { get; }
 
-        [DiagnosticField("character-foot-ik/main/foot-motion-landing-prediction-error", 1, "metres", "motion-core")]
+        [DiagnosticField]
+        [DiagnosticKey("foot-motion-landing-prediction-error")]
+        [DiagnosticGroup("motion-core")]
         public float LandingPredictionError { get; }
 
-        [DiagnosticField("character-foot-ik/main/foot-motion-corrected-sole", 1, "metres", "motion-core")]
+        [DiagnosticField]
+        [DiagnosticKey("foot-motion-corrected-sole")]
+        [DiagnosticGroup("motion-core")]
         public Vector3 CorrectedSole { get; }
 
-        [DiagnosticField("character-foot-ik/main/foot-motion-corrected-ankle", 1, "metres", "motion-core")]
+        [DiagnosticField]
+        [DiagnosticKey("foot-motion-corrected-ankle")]
+        [DiagnosticGroup("motion-core")]
         public Vector3 CorrectedAnkle { get; }
 
-        [DiagnosticField("character-foot-ik/main/foot-motion-position-weight", 1, "unitless", "motion-core")]
+        [DiagnosticField]
+        [DiagnosticKey("foot-motion-position-weight")]
+        [DiagnosticGroup("motion-core")]
         public float PositionWeight { get; }
 
-        [DiagnosticField("character-foot-ik/main/foot-motion-rotation-weight", 1, "unitless", "motion-core")]
+        [DiagnosticField]
+        [DiagnosticKey("foot-motion-rotation-weight")]
+        [DiagnosticGroup("motion-core")]
         public float RotationWeight { get; }
 
-        [DiagnosticField("character-foot-ik/main/foot-motion-constraint-state", 1, "category", "motion-core")]
+        [DiagnosticField]
+        [DiagnosticKey("foot-motion-constraint-state")]
+        [DiagnosticGroup("motion-core")]
         public CharacterFootConstraintState ConstraintState { get; }
 
-        [DiagnosticField("character-foot-ik/main/foot-motion-lock-response", 1, "category", "motion-core")]
+        [DiagnosticField]
+        [DiagnosticKey("foot-motion-lock-response")]
+        [DiagnosticGroup("motion-core")]
         public CharacterFootLockResponse LockResponse { get; }
 
-        [DiagnosticField("character-foot-ik/main/foot-motion-support-horizontal-error", 1, "metres", "motion-core")]
+        [DiagnosticField]
+        [DiagnosticKey("foot-motion-support-horizontal-error")]
+        [DiagnosticGroup("motion-core")]
         public float SupportHorizontalError { get; }
 
-        [DiagnosticField("character-foot-ik/main/foot-motion-contact-ownership", 1, "unitless", "motion-core")]
+        [DiagnosticField]
+        [DiagnosticKey("foot-motion-contact-ownership")]
+        [DiagnosticGroup("motion-core")]
         public float ContactOwnership { get; }
 
-        [DiagnosticField("character-foot-ik/main/foot-motion-support-weight", 1, "unitless", "motion-core")]
+        [DiagnosticField]
+        [DiagnosticKey("foot-motion-support-weight")]
+        [DiagnosticGroup("motion-core")]
         public float SupportWeight { get; }
 
-        [DiagnosticField("character-foot-ik/main/foot-motion-support-contact-anchor", 1, "metres", "motion-core")]
+        [DiagnosticField]
+        [DiagnosticKey("foot-motion-support-contact-anchor")]
+        [DiagnosticGroup("motion-core")]
         public Vector3 SupportContactAnchor { get; }
 
-        [DiagnosticField("character-foot-ik/main/foot-motion-desired-correction", 1, "metres", "motion-core")]
+        [DiagnosticField]
+        [DiagnosticKey("foot-motion-desired-correction")]
+        [DiagnosticGroup("motion-core")]
         public Vector3 DesiredCorrection { get; }
 
-        [DiagnosticField("character-foot-ik/main/foot-motion-contact-plane-available", 1, "none", "motion-core")]
+        [DiagnosticField]
+        [DiagnosticKey("foot-motion-contact-plane-available")]
+        [DiagnosticGroup("motion-core")]
         public bool ContactPlaneAvailable { get; }
 
-        [DiagnosticField("character-foot-ik/main/foot-motion-contact-surface-identity", 1, "identity", "motion-core", AvailabilityFieldId = "character-foot-ik/main/foot-motion-contact-plane-available")]
+        [DiagnosticField]
+        [DiagnosticKey("foot-motion-contact-surface-identity")]
+        [DiagnosticGroup("motion-core")]
+        [DiagnosticAvailability(DiagnosticAvailabilityReference.Key, "foot-motion-contact-plane-available")]
         public int ContactSurfaceIdentity { get; }
 
-        [DiagnosticField("character-foot-ik/main/foot-motion-contact-plane-normal", 1, "direction", "motion-core", AvailabilityFieldId = "character-foot-ik/main/foot-motion-contact-plane-available")]
+        [DiagnosticField]
+        [DiagnosticKey("foot-motion-contact-plane-normal")]
+        [DiagnosticGroup("motion-core")]
+        [DiagnosticAvailability(DiagnosticAvailabilityReference.Key, "foot-motion-contact-plane-available")]
         public Vector3 ContactPlaneNormal { get; }
 
-        [DiagnosticField("character-foot-ik/main/foot-motion-landing-reach-evaluated", 1, "none", "motion-core")]
+        [DiagnosticField]
+        [DiagnosticKey("foot-motion-landing-reach-evaluated")]
+        [DiagnosticGroup("motion-core")]
         public bool LandingReachEvaluated { get; }
 
-        [DiagnosticField("character-foot-ik/main/foot-motion-landing-reach-available", 1, "none", "motion-core")]
+        [DiagnosticField]
+        [DiagnosticKey("foot-motion-landing-reach-available")]
+        [DiagnosticGroup("motion-core")]
         public bool LandingReachAvailable { get; }
         public bool Accepted => State == CharacterFootSwingMotionState.Accepted;
     }
@@ -956,172 +1093,302 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             PostTransitionResetInterpolation = postTransition.ResetInterpolation;
         }
 
-        [DiagnosticField("character-foot-ik/main/foot-motion-lifecycle-transition-evaluated", 1, "none", "lifecycle")]
+        [DiagnosticField]
+        [DiagnosticKey("foot-motion-lifecycle-transition-evaluated")]
+        [DiagnosticGroup("lifecycle")]
         public bool LifecycleTransitionEvaluated { get; }
 
-        [DiagnosticField("character-foot-ik/main/foot-motion-previous-lock-request-available", 1, "none", "lifecycle")]
+        [DiagnosticField]
+        [DiagnosticKey("foot-motion-previous-lock-request-available")]
+        [DiagnosticGroup("lifecycle")]
         public bool PreviousLockRequestAvailable { get; }
 
-        [DiagnosticField("character-foot-ik/main/foot-motion-previous-lock-requested", 1, "none", "lifecycle", AvailabilityFieldId = "character-foot-ik/main/foot-motion-previous-lock-request-available")]
+        [DiagnosticField]
+        [DiagnosticKey("foot-motion-previous-lock-requested")]
+        [DiagnosticGroup("lifecycle")]
+        [DiagnosticAvailability(DiagnosticAvailabilityReference.Key, "foot-motion-previous-lock-request-available")]
         public bool PreviousLockRequested { get; }
 
-        [DiagnosticField("character-foot-ik/main/foot-motion-previous-lock-request-event-identity", 1, "identity", "lifecycle", AvailabilityFieldId = "character-foot-ik/main/foot-motion-previous-lock-request-available")]
+        [DiagnosticField]
+        [DiagnosticKey("foot-motion-previous-lock-request-event-identity")]
+        [DiagnosticGroup("lifecycle")]
+        [DiagnosticAvailability(DiagnosticAvailabilityReference.Key, "foot-motion-previous-lock-request-available")]
         public ulong PreviousLockRequestEventIdentity { get; }
 
-        [DiagnosticField("character-foot-ik/main/foot-motion-previous-lock-request-mode", 1, "category", "lifecycle", AvailabilityFieldId = "character-foot-ik/main/foot-motion-previous-lock-request-available")]
+        [DiagnosticField]
+        [DiagnosticKey("foot-motion-previous-lock-request-mode")]
+        [DiagnosticGroup("lifecycle")]
+        [DiagnosticAvailability(DiagnosticAvailabilityReference.Key, "foot-motion-previous-lock-request-available")]
         public AnimationFootStepObservationLockMode PreviousLockRequestMode { get; }
 
-        [DiagnosticField("character-foot-ik/main/foot-motion-previous-lock-request-weight", 1, "unitless", "lifecycle", AvailabilityFieldId = "character-foot-ik/main/foot-motion-previous-lock-request-available")]
+        [DiagnosticField]
+        [DiagnosticKey("foot-motion-previous-lock-request-weight")]
+        [DiagnosticGroup("lifecycle")]
+        [DiagnosticAvailability(DiagnosticAvailabilityReference.Key, "foot-motion-previous-lock-request-available")]
         public float PreviousLockRequestWeight { get; }
 
-        [DiagnosticField("character-foot-ik/main/foot-motion-previous-contact-edge-seconds", 1, "seconds", "lifecycle")]
+        [DiagnosticField]
+        [DiagnosticKey("foot-motion-previous-contact-edge-seconds")]
+        [DiagnosticGroup("lifecycle")]
         public float PreviousContactEdgeSeconds { get; }
 
-        [DiagnosticField("character-foot-ik/main/foot-motion-previous-latest-contact-event-identity", 1, "identity", "lifecycle")]
+        [DiagnosticField]
+        [DiagnosticKey("foot-motion-previous-latest-contact-event-identity")]
+        [DiagnosticGroup("lifecycle")]
         public ulong PreviousLatestContactEventIdentity { get; }
 
-        [DiagnosticField("character-foot-ik/main/foot-motion-previous-latest-released-contact-event-identity", 1, "identity", "lifecycle")]
+        [DiagnosticField]
+        [DiagnosticKey("foot-motion-previous-latest-released-contact-event-identity")]
+        [DiagnosticGroup("lifecycle")]
         public ulong PreviousLatestReleasedContactEventIdentity { get; }
 
-        [DiagnosticField("character-foot-ik/main/foot-motion-previous-completed-lock-weight-event-identity", 1, "identity", "lifecycle")]
+        [DiagnosticField]
+        [DiagnosticKey("foot-motion-previous-completed-lock-weight-event-identity")]
+        [DiagnosticGroup("lifecycle")]
         public ulong PreviousCompletedLockWeightEventIdentity { get; }
 
-        [DiagnosticField("character-foot-ik/main/foot-motion-previous-contact-anchor-available", 1, "none", "lifecycle")]
+        [DiagnosticField]
+        [DiagnosticKey("foot-motion-previous-contact-anchor-available")]
+        [DiagnosticGroup("lifecycle")]
         public bool PreviousContactAnchorAvailable { get; }
 
-        [DiagnosticField("character-foot-ik/main/foot-motion-previous-contact-anchor-event-identity", 1, "identity", "lifecycle", AvailabilityFieldId = "character-foot-ik/main/foot-motion-previous-contact-anchor-available")]
+        [DiagnosticField]
+        [DiagnosticKey("foot-motion-previous-contact-anchor-event-identity")]
+        [DiagnosticGroup("lifecycle")]
+        [DiagnosticAvailability(DiagnosticAvailabilityReference.Key, "foot-motion-previous-contact-anchor-available")]
         public ulong PreviousContactAnchorEventIdentity { get; }
 
-        [DiagnosticField("character-foot-ik/main/foot-motion-previous-contact-anchor-acquired-frame-sequence", 1, "frame", "lifecycle", AvailabilityFieldId = "character-foot-ik/main/foot-motion-previous-contact-anchor-available")]
+        [DiagnosticField]
+        [DiagnosticKey("foot-motion-previous-contact-anchor-acquired-frame-sequence")]
+        [DiagnosticGroup("lifecycle")]
+        [DiagnosticAvailability(DiagnosticAvailabilityReference.Key, "foot-motion-previous-contact-anchor-available")]
         public ulong PreviousContactAnchorAcquiredFrameSequence { get; }
 
-        [DiagnosticField("character-foot-ik/main/foot-motion-previous-contact-anchor-acquired-completion-identity", 1, "identity", "lifecycle", AvailabilityFieldId = "character-foot-ik/main/foot-motion-previous-contact-anchor-available")]
+        [DiagnosticField]
+        [DiagnosticKey("foot-motion-previous-contact-anchor-acquired-completion-identity")]
+        [DiagnosticGroup("lifecycle")]
+        [DiagnosticAvailability(DiagnosticAvailabilityReference.Key, "foot-motion-previous-contact-anchor-available")]
         public ulong PreviousContactAnchorAcquiredCompletionIdentity { get; }
 
-        [DiagnosticField("character-foot-ik/main/foot-motion-previous-contact-anchor-world-revision", 1, "identity", "lifecycle", AvailabilityFieldId = "character-foot-ik/main/foot-motion-previous-contact-anchor-available")]
+        [DiagnosticField]
+        [DiagnosticKey("foot-motion-previous-contact-anchor-world-revision")]
+        [DiagnosticGroup("lifecycle")]
+        [DiagnosticAvailability(DiagnosticAvailabilityReference.Key, "foot-motion-previous-contact-anchor-available")]
         public ulong PreviousContactAnchorWorldRevision { get; }
 
-        [DiagnosticField("character-foot-ik/main/foot-motion-previous-contact-anchor-surface-identity", 1, "identity", "lifecycle", AvailabilityFieldId = "character-foot-ik/main/foot-motion-previous-contact-anchor-available")]
+        [DiagnosticField]
+        [DiagnosticKey("foot-motion-previous-contact-anchor-surface-identity")]
+        [DiagnosticGroup("lifecycle")]
+        [DiagnosticAvailability(DiagnosticAvailabilityReference.Key, "foot-motion-previous-contact-anchor-available")]
         public int PreviousContactAnchorSurfaceIdentity { get; }
 
-        [DiagnosticField("character-foot-ik/main/foot-motion-previous-contact-anchor-point", 1, "metres", "lifecycle", AvailabilityFieldId = "character-foot-ik/main/foot-motion-previous-contact-anchor-available")]
+        [DiagnosticField]
+        [DiagnosticKey("foot-motion-previous-contact-anchor-point")]
+        [DiagnosticGroup("lifecycle")]
+        [DiagnosticAvailability(DiagnosticAvailabilityReference.Key, "foot-motion-previous-contact-anchor-available")]
         public Vector3 PreviousContactAnchorPoint { get; }
 
-        [DiagnosticField("character-foot-ik/main/foot-motion-previous-contact-anchor-normal", 1, "direction", "lifecycle", AvailabilityFieldId = "character-foot-ik/main/foot-motion-previous-contact-anchor-available")]
+        [DiagnosticField]
+        [DiagnosticKey("foot-motion-previous-contact-anchor-normal")]
+        [DiagnosticGroup("lifecycle")]
+        [DiagnosticAvailability(DiagnosticAvailabilityReference.Key, "foot-motion-previous-contact-anchor-available")]
         public Vector3 PreviousContactAnchorNormal { get; }
 
-        [DiagnosticField("character-foot-ik/main/foot-motion-current-lock-requested", 1, "none", "lifecycle")]
+        [DiagnosticField]
+        [DiagnosticKey("foot-motion-current-lock-requested")]
+        [DiagnosticGroup("lifecycle")]
         public bool CurrentLockRequested { get; }
 
-        [DiagnosticField("character-foot-ik/main/foot-motion-current-lock-request-event-identity", 1, "identity", "lifecycle")]
+        [DiagnosticField]
+        [DiagnosticKey("foot-motion-current-lock-request-event-identity")]
+        [DiagnosticGroup("lifecycle")]
         public ulong CurrentLockRequestEventIdentity { get; }
 
-        [DiagnosticField("character-foot-ik/main/foot-motion-current-lock-request-mode", 1, "category", "lifecycle")]
+        [DiagnosticField]
+        [DiagnosticKey("foot-motion-current-lock-request-mode")]
+        [DiagnosticGroup("lifecycle")]
         public AnimationFootStepObservationLockMode CurrentLockRequestMode { get; }
 
-        [DiagnosticField("character-foot-ik/main/foot-motion-current-lock-request-weight", 1, "unitless", "lifecycle")]
+        [DiagnosticField]
+        [DiagnosticKey("foot-motion-current-lock-request-weight")]
+        [DiagnosticGroup("lifecycle")]
         public float CurrentLockRequestWeight { get; }
 
-        [DiagnosticField("character-foot-ik/main/foot-motion-current-lock-request-availability", 1, "category", "lifecycle")]
+        [DiagnosticField]
+        [DiagnosticKey("foot-motion-current-lock-request-availability")]
+        [DiagnosticGroup("lifecycle")]
         public CharacterFootLockRequestAvailability CurrentLockRequestAvailability { get; }
 
-        [DiagnosticField("character-foot-ik/main/foot-motion-contact-edge", 1, "category", "lifecycle")]
+        [DiagnosticField]
+        [DiagnosticKey("foot-motion-contact-edge")]
+        [DiagnosticGroup("lifecycle")]
         public CharacterFootContactEdge ContactEdge { get; }
 
-        [DiagnosticField("character-foot-ik/main/foot-motion-current-contact-edge-seconds", 1, "seconds", "lifecycle")]
+        [DiagnosticField]
+        [DiagnosticKey("foot-motion-current-contact-edge-seconds")]
+        [DiagnosticGroup("lifecycle")]
         public float CurrentContactEdgeSeconds { get; }
 
-        [DiagnosticField("character-foot-ik/main/foot-motion-current-latest-contact-event-identity", 1, "identity", "lifecycle")]
+        [DiagnosticField]
+        [DiagnosticKey("foot-motion-current-latest-contact-event-identity")]
+        [DiagnosticGroup("lifecycle")]
         public ulong CurrentLatestContactEventIdentity { get; }
 
-        [DiagnosticField("character-foot-ik/main/foot-motion-current-latest-released-contact-event-identity", 1, "identity", "lifecycle")]
+        [DiagnosticField]
+        [DiagnosticKey("foot-motion-current-latest-released-contact-event-identity")]
+        [DiagnosticGroup("lifecycle")]
         public ulong CurrentLatestReleasedContactEventIdentity { get; }
 
-        [DiagnosticField("character-foot-ik/main/foot-motion-current-completed-lock-weight-event-identity", 1, "identity", "lifecycle")]
+        [DiagnosticField]
+        [DiagnosticKey("foot-motion-current-completed-lock-weight-event-identity")]
+        [DiagnosticGroup("lifecycle")]
         public ulong CurrentCompletedLockWeightEventIdentity { get; }
 
-        [DiagnosticField("character-foot-ik/main/foot-motion-current-contact-anchor-available", 1, "none", "lifecycle")]
+        [DiagnosticField]
+        [DiagnosticKey("foot-motion-current-contact-anchor-available")]
+        [DiagnosticGroup("lifecycle")]
         public bool CurrentContactAnchorAvailable { get; }
 
-        [DiagnosticField("character-foot-ik/main/foot-motion-current-contact-anchor-event-identity", 1, "identity", "lifecycle", AvailabilityFieldId = "character-foot-ik/main/foot-motion-current-contact-anchor-available")]
+        [DiagnosticField]
+        [DiagnosticKey("foot-motion-current-contact-anchor-event-identity")]
+        [DiagnosticGroup("lifecycle")]
+        [DiagnosticAvailability(DiagnosticAvailabilityReference.Key, "foot-motion-current-contact-anchor-available")]
         public ulong CurrentContactAnchorEventIdentity { get; }
 
-        [DiagnosticField("character-foot-ik/main/foot-motion-current-contact-anchor-acquired-frame-sequence", 1, "frame", "lifecycle", AvailabilityFieldId = "character-foot-ik/main/foot-motion-current-contact-anchor-available")]
+        [DiagnosticField]
+        [DiagnosticKey("foot-motion-current-contact-anchor-acquired-frame-sequence")]
+        [DiagnosticGroup("lifecycle")]
+        [DiagnosticAvailability(DiagnosticAvailabilityReference.Key, "foot-motion-current-contact-anchor-available")]
         public ulong CurrentContactAnchorAcquiredFrameSequence { get; }
 
-        [DiagnosticField("character-foot-ik/main/foot-motion-current-contact-anchor-acquired-completion-identity", 1, "identity", "lifecycle", AvailabilityFieldId = "character-foot-ik/main/foot-motion-current-contact-anchor-available")]
+        [DiagnosticField]
+        [DiagnosticKey("foot-motion-current-contact-anchor-acquired-completion-identity")]
+        [DiagnosticGroup("lifecycle")]
+        [DiagnosticAvailability(DiagnosticAvailabilityReference.Key, "foot-motion-current-contact-anchor-available")]
         public ulong CurrentContactAnchorAcquiredCompletionIdentity { get; }
 
-        [DiagnosticField("character-foot-ik/main/foot-motion-current-contact-anchor-world-revision", 1, "identity", "lifecycle", AvailabilityFieldId = "character-foot-ik/main/foot-motion-current-contact-anchor-available")]
+        [DiagnosticField]
+        [DiagnosticKey("foot-motion-current-contact-anchor-world-revision")]
+        [DiagnosticGroup("lifecycle")]
+        [DiagnosticAvailability(DiagnosticAvailabilityReference.Key, "foot-motion-current-contact-anchor-available")]
         public ulong CurrentContactAnchorWorldRevision { get; }
 
-        [DiagnosticField("character-foot-ik/main/foot-motion-current-contact-anchor-surface-identity", 1, "identity", "lifecycle", AvailabilityFieldId = "character-foot-ik/main/foot-motion-current-contact-anchor-available")]
+        [DiagnosticField]
+        [DiagnosticKey("foot-motion-current-contact-anchor-surface-identity")]
+        [DiagnosticGroup("lifecycle")]
+        [DiagnosticAvailability(DiagnosticAvailabilityReference.Key, "foot-motion-current-contact-anchor-available")]
         public int CurrentContactAnchorSurfaceIdentity { get; }
 
-        [DiagnosticField("character-foot-ik/main/foot-motion-current-contact-anchor-point", 1, "metres", "lifecycle", AvailabilityFieldId = "character-foot-ik/main/foot-motion-current-contact-anchor-available")]
+        [DiagnosticField]
+        [DiagnosticKey("foot-motion-current-contact-anchor-point")]
+        [DiagnosticGroup("lifecycle")]
+        [DiagnosticAvailability(DiagnosticAvailabilityReference.Key, "foot-motion-current-contact-anchor-available")]
         public Vector3 CurrentContactAnchorPoint { get; }
 
-        [DiagnosticField("character-foot-ik/main/foot-motion-current-contact-anchor-normal", 1, "direction", "lifecycle", AvailabilityFieldId = "character-foot-ik/main/foot-motion-current-contact-anchor-available")]
+        [DiagnosticField]
+        [DiagnosticKey("foot-motion-current-contact-anchor-normal")]
+        [DiagnosticGroup("lifecycle")]
+        [DiagnosticAvailability(DiagnosticAvailabilityReference.Key, "foot-motion-current-contact-anchor-available")]
         public Vector3 CurrentContactAnchorNormal { get; }
 
-        [DiagnosticField("character-foot-ik/main/foot-motion-same-event-contact-reentry-refreshed", 1, "none", "lifecycle")]
+        [DiagnosticField]
+        [DiagnosticKey("foot-motion-same-event-contact-reentry-refreshed")]
+        [DiagnosticGroup("lifecycle")]
         public bool SameEventContactReentryRefreshed { get; }
 
-        [DiagnosticField("character-foot-ik/main/foot-motion-same-event-contact-reentry-unavailable", 1, "none", "lifecycle")]
+        [DiagnosticField]
+        [DiagnosticKey("foot-motion-same-event-contact-reentry-unavailable")]
+        [DiagnosticGroup("lifecycle")]
         public bool SameEventContactReentryUnavailable { get; }
 
-        [DiagnosticField("character-foot-ik/main/foot-motion-retained-verified-anchor", 1, "none", "lifecycle")]
+        [DiagnosticField]
+        [DiagnosticKey("foot-motion-retained-verified-anchor")]
+        [DiagnosticGroup("lifecycle")]
         public bool RetainedVerifiedAnchor { get; }
 
-        [DiagnosticField("character-foot-ik/main/foot-motion-reentry-interpolation-history-retained", 1, "none", "lifecycle")]
+        [DiagnosticField]
+        [DiagnosticKey("foot-motion-reentry-interpolation-history-retained")]
+        [DiagnosticGroup("lifecycle")]
         public bool ReentryInterpolationHistoryRetained { get; }
 
-        [DiagnosticField("character-foot-ik/main/foot-motion-formal-foot-placement-weight", 1, "unitless", "lifecycle")]
+        [DiagnosticField]
+        [DiagnosticKey("foot-motion-formal-foot-placement-weight")]
+        [DiagnosticGroup("lifecycle")]
         public float FormalFootPlacementWeight { get; }
 
-        [DiagnosticField("character-foot-ik/main/foot-motion-hard-ownership-loss", 1, "none", "lifecycle")]
+        [DiagnosticField]
+        [DiagnosticKey("foot-motion-hard-ownership-loss")]
+        [DiagnosticGroup("lifecycle")]
         public bool HardOwnershipLoss { get; }
 
-        [DiagnosticField("character-foot-ik/main/foot-motion-hard-ownership-loss-reason", 1, "category", "lifecycle")]
+        [DiagnosticField]
+        [DiagnosticKey("foot-motion-hard-ownership-loss-reason")]
+        [DiagnosticGroup("lifecycle")]
         public CharacterFootGoalOwnershipLossReason HardOwnershipLossReason { get; }
 
-        [DiagnosticField("character-foot-ik/main/foot-motion-pre-transition-suppress-output", 1, "none", "lifecycle")]
+        [DiagnosticField]
+        [DiagnosticKey("foot-motion-pre-transition-suppress-output")]
+        [DiagnosticGroup("lifecycle")]
         public bool PreTransitionSuppressOutput { get; }
 
-        [DiagnosticField("character-foot-ik/main/foot-motion-pre-transition-reset-interpolation", 1, "none", "lifecycle")]
+        [DiagnosticField]
+        [DiagnosticKey("foot-motion-pre-transition-reset-interpolation")]
+        [DiagnosticGroup("lifecycle")]
         public bool PreTransitionResetInterpolation { get; }
 
-        [DiagnosticField("character-foot-ik/main/foot-motion-post-transition-evaluated", 1, "none", "lifecycle")]
+        [DiagnosticField]
+        [DiagnosticKey("foot-motion-post-transition-evaluated")]
+        [DiagnosticGroup("lifecycle")]
         public bool PostTransitionEvaluated { get; }
 
-        [DiagnosticField("character-foot-ik/main/foot-motion-post-transition-suppress-output", 1, "none", "lifecycle")]
+        [DiagnosticField]
+        [DiagnosticKey("foot-motion-post-transition-suppress-output")]
+        [DiagnosticGroup("lifecycle")]
         public bool PostTransitionSuppressOutput { get; }
 
-        [DiagnosticField("character-foot-ik/main/foot-motion-post-transition-reset-interpolation", 1, "none", "lifecycle")]
+        [DiagnosticField]
+        [DiagnosticKey("foot-motion-post-transition-reset-interpolation")]
+        [DiagnosticGroup("lifecycle")]
         public bool PostTransitionResetInterpolation { get; }
 
-        [DiagnosticField("character-foot-ik/main/foot-motion-pre-transition-reason", 1, "category", "lifecycle")]
+        [DiagnosticField]
+        [DiagnosticKey("foot-motion-pre-transition-reason")]
+        [DiagnosticGroup("lifecycle")]
         public CharacterFootTransitionReason PreTransitionReason { get; }
 
-        [DiagnosticField("character-foot-ik/main/foot-motion-pre-transition-source", 1, "category", "lifecycle")]
+        [DiagnosticField]
+        [DiagnosticKey("foot-motion-pre-transition-source")]
+        [DiagnosticGroup("lifecycle")]
         public CharacterFootConstraintState PreTransitionSource { get; }
 
-        [DiagnosticField("character-foot-ik/main/foot-motion-pre-transition-target", 1, "category", "lifecycle")]
+        [DiagnosticField]
+        [DiagnosticKey("foot-motion-pre-transition-target")]
+        [DiagnosticGroup("lifecycle")]
         public CharacterFootConstraintState PreTransitionTarget { get; }
 
-        [DiagnosticField("character-foot-ik/main/foot-motion-pre-transition-anchor-command", 1, "category", "lifecycle")]
+        [DiagnosticField]
+        [DiagnosticKey("foot-motion-pre-transition-anchor-command")]
+        [DiagnosticGroup("lifecycle")]
         public CharacterFootAnchorCommand PreTransitionAnchorCommand { get; }
 
-        [DiagnosticField("character-foot-ik/main/foot-motion-post-transition-reason", 1, "category", "lifecycle")]
+        [DiagnosticField]
+        [DiagnosticKey("foot-motion-post-transition-reason")]
+        [DiagnosticGroup("lifecycle")]
         public CharacterFootTransitionReason PostTransitionReason { get; }
 
-        [DiagnosticField("character-foot-ik/main/foot-motion-post-transition-source", 1, "category", "lifecycle")]
+        [DiagnosticField]
+        [DiagnosticKey("foot-motion-post-transition-source")]
+        [DiagnosticGroup("lifecycle")]
         public CharacterFootConstraintState PostTransitionSource { get; }
 
-        [DiagnosticField("character-foot-ik/main/foot-motion-post-transition-target", 1, "category", "lifecycle")]
+        [DiagnosticField]
+        [DiagnosticKey("foot-motion-post-transition-target")]
+        [DiagnosticGroup("lifecycle")]
         public CharacterFootConstraintState PostTransitionTarget { get; }
 
-        [DiagnosticField("character-foot-ik/main/foot-motion-post-transition-anchor-command", 1, "category", "lifecycle")]
+        [DiagnosticField]
+        [DiagnosticKey("foot-motion-post-transition-anchor-command")]
+        [DiagnosticGroup("lifecycle")]
         public CharacterFootAnchorCommand PostTransitionAnchorCommand { get; }
     }
 
@@ -1177,115 +1444,192 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             TargetHeightComponentUp = path.TargetHeightComponentUp;
         }
 
-        [DiagnosticField("character-foot-ik/main/foot-motion-path-continuity-evaluated", 1, "none", "path-continuity")]
+        [DiagnosticField]
+        [DiagnosticKey("foot-motion-path-continuity-evaluated")]
+        [DiagnosticGroup("path-continuity")]
         public bool PathContinuityEvaluated { get; }
 
-        [DiagnosticField("character-foot-ik/main/foot-motion-path-revision-reason", 1, "category", "path-continuity")]
+        [DiagnosticField]
+        [DiagnosticKey("foot-motion-path-revision-reason")]
+        [DiagnosticGroup("path-continuity")]
         public CharacterFootPathRevisionReason PathRevisionReason { get; }
 
-        [DiagnosticField("character-foot-ik/main/foot-motion-path-residual-rebuilt", 1, "none", "path-continuity")]
+        [DiagnosticField]
+        [DiagnosticKey("foot-motion-path-residual-rebuilt")]
+        [DiagnosticGroup("path-continuity")]
         public bool PathResidualRebuilt { get; }
 
-        [DiagnosticField("character-foot-ik/main/foot-motion-target-tracking-applied", 1, "none", "path-continuity")]
+        [DiagnosticField]
+        [DiagnosticKey("foot-motion-target-tracking-applied")]
+        [DiagnosticGroup("path-continuity")]
         public bool TargetTrackingApplied { get; }
 
-        [DiagnosticField("character-foot-ik/main/foot-motion-path-available-before", 1, "none", "path-continuity")]
+        [DiagnosticField]
+        [DiagnosticKey("foot-motion-path-available-before")]
+        [DiagnosticGroup("path-continuity")]
         public bool PathAvailableBefore { get; }
 
-        [DiagnosticField("character-foot-ik/main/foot-motion-path-available-after", 1, "none", "path-continuity")]
+        [DiagnosticField]
+        [DiagnosticKey("foot-motion-path-available-after")]
+        [DiagnosticGroup("path-continuity")]
         public bool PathAvailableAfter { get; }
 
-        [DiagnosticField("character-foot-ik/main/foot-motion-path-previous-landing-event-identity", 1, "identity", "path-continuity")]
+        [DiagnosticField]
+        [DiagnosticKey("foot-motion-path-previous-landing-event-identity")]
+        [DiagnosticGroup("path-continuity")]
         public ulong PathPreviousLandingEventIdentity { get; }
 
-        [DiagnosticField("character-foot-ik/main/foot-motion-path-current-landing-event-identity", 1, "identity", "path-continuity")]
+        [DiagnosticField]
+        [DiagnosticKey("foot-motion-path-current-landing-event-identity")]
+        [DiagnosticGroup("path-continuity")]
         public ulong PathCurrentLandingEventIdentity { get; }
 
-        [DiagnosticField("character-foot-ik/main/foot-motion-path-previous-target-correction", 1, "metres", "path-continuity", AvailabilityFieldId = "character-foot-ik/main/foot-motion-path-available-before")]
+        [DiagnosticField]
+        [DiagnosticKey("foot-motion-path-previous-target-correction")]
+        [DiagnosticGroup("path-continuity")]
+        [DiagnosticAvailability(DiagnosticAvailabilityReference.Key, "foot-motion-path-available-before")]
         public Vector3 PathPreviousTargetCorrection { get; }
 
-        [DiagnosticField("character-foot-ik/main/foot-motion-path-current-target-correction", 1, "metres", "path-continuity", AvailabilityFieldId = "character-foot-ik/main/foot-motion-path-available-after")]
+        [DiagnosticField]
+        [DiagnosticKey("foot-motion-path-current-target-correction")]
+        [DiagnosticGroup("path-continuity")]
+        [DiagnosticAvailability(DiagnosticAvailabilityReference.Key, "foot-motion-path-available-after")]
         public Vector3 PathCurrentTargetCorrection { get; }
 
-        [DiagnosticField("character-foot-ik/main/foot-motion-path-landing-point-delta-meters", 1, "metres", "path-continuity")]
+        [DiagnosticField]
+        [DiagnosticKey("foot-motion-path-landing-point-delta-meters")]
+        [DiagnosticGroup("path-continuity")]
         public float PathLandingPointDelta { get; }
 
-        [DiagnosticField("character-foot-ik/main/foot-motion-path-target-delta-meters", 1, "metres", "path-continuity")]
+        [DiagnosticField]
+        [DiagnosticKey("foot-motion-path-target-delta-meters")]
+        [DiagnosticGroup("path-continuity")]
         public float PathTargetDelta { get; }
 
-        [DiagnosticField("character-foot-ik/main/foot-motion-swing-residual-before-revision", 1, "metres", "path-continuity")]
+        [DiagnosticField]
+        [DiagnosticKey("foot-motion-swing-residual-before-revision")]
+        [DiagnosticGroup("path-continuity")]
         public Vector3 SwingResidualBeforeRevision { get; }
 
-        [DiagnosticField("character-foot-ik/main/foot-motion-swing-residual-before-decay", 1, "metres", "path-continuity")]
+        [DiagnosticField]
+        [DiagnosticKey("foot-motion-swing-residual-before-decay")]
+        [DiagnosticGroup("path-continuity")]
         public Vector3 SwingResidualBeforeDecay { get; }
 
-        [DiagnosticField("character-foot-ik/main/foot-motion-swing-residual-after-decay", 1, "metres", "path-continuity")]
+        [DiagnosticField]
+        [DiagnosticKey("foot-motion-swing-residual-after-decay")]
+        [DiagnosticGroup("path-continuity")]
         public Vector3 SwingResidualAfterDecay { get; }
 
-        [DiagnosticField("character-foot-ik/main/foot-motion-residual-output-correction", 1, "metres", "path-continuity")]
+        [DiagnosticField]
+        [DiagnosticKey("foot-motion-residual-output-correction")]
+        [DiagnosticGroup("path-continuity")]
         public Vector3 ResidualOutputCorrection { get; }
 
-        [DiagnosticField("character-foot-ik/main/foot-motion-landing-acceptance-distance", 1, "metres", "path-continuity")]
+        [DiagnosticField]
+        [DiagnosticKey("foot-motion-landing-acceptance-distance")]
+        [DiagnosticGroup("path-continuity")]
         public float LandingAcceptanceDistance { get; }
 
-        [DiagnosticField("character-foot-ik/main/foot-motion-path-revision-distance", 1, "metres", "path-continuity")]
+        [DiagnosticField]
+        [DiagnosticKey("foot-motion-path-revision-distance")]
+        [DiagnosticGroup("path-continuity")]
         public float PathRevisionDistance { get; }
 
-        [DiagnosticField("character-foot-ik/main/foot-motion-swing-residual-tolerance", 1, "metres", "path-continuity")]
+        [DiagnosticField]
+        [DiagnosticKey("foot-motion-swing-residual-tolerance")]
+        [DiagnosticGroup("path-continuity")]
         public float SwingResidualTolerance { get; }
 
-        [DiagnosticField("character-foot-ik/main/foot-motion-residual-time-to-landing-seconds", 1, "seconds", "path-continuity")]
+        [DiagnosticField]
+        [DiagnosticKey("foot-motion-residual-time-to-landing-seconds")]
+        [DiagnosticGroup("path-continuity")]
         public float ResidualTimeToLandingSeconds { get; }
 
-        [DiagnosticField("character-foot-ik/main/foot-motion-residual-base-half-life-seconds", 1, "seconds", "path-continuity")]
+        [DiagnosticField]
+        [DiagnosticKey("foot-motion-residual-base-half-life-seconds")]
+        [DiagnosticGroup("path-continuity")]
         public float ResidualBaseHalfLifeSeconds { get; }
 
-        [DiagnosticField("character-foot-ik/main/foot-motion-residual-deadline-half-life-available", 1, "none", "path-continuity")]
+        [DiagnosticField]
+        [DiagnosticKey("foot-motion-residual-deadline-half-life-available")]
+        [DiagnosticGroup("path-continuity")]
         public bool ResidualDeadlineHalfLifeAvailable { get; }
 
-        [DiagnosticField("character-foot-ik/main/foot-motion-residual-deadline-half-life-seconds", 1, "seconds", "path-continuity", AvailabilityFieldId = "character-foot-ik/main/foot-motion-residual-deadline-half-life-available")]
+        [DiagnosticField]
+        [DiagnosticKey("foot-motion-residual-deadline-half-life-seconds")]
+        [DiagnosticGroup("path-continuity")]
+        [DiagnosticAvailability(DiagnosticAvailabilityReference.Key, "foot-motion-residual-deadline-half-life-available")]
         public float ResidualDeadlineHalfLifeSeconds { get; }
 
-        [DiagnosticField("character-foot-ik/main/foot-motion-residual-applied-half-life-seconds", 1, "seconds", "path-continuity")]
+        [DiagnosticField]
+        [DiagnosticKey("foot-motion-residual-applied-half-life-seconds")]
+        [DiagnosticGroup("path-continuity")]
         public float ResidualAppliedHalfLifeSeconds { get; }
 
-        [DiagnosticField("character-foot-ik/main/foot-motion-swing-raw-target-height-along-up", 1, "metres", "path-continuity")]
+        [DiagnosticField]
+        [DiagnosticKey("foot-motion-swing-raw-target-height-along-up")]
+        [DiagnosticGroup("path-continuity")]
         public float SwingRawTargetHeightAlongUp { get; }
 
-        [DiagnosticField("character-foot-ik/main/foot-motion-swing-filtered-target-height-before", 1, "metres", "path-continuity")]
+        [DiagnosticField]
+        [DiagnosticKey("foot-motion-swing-filtered-target-height-before")]
+        [DiagnosticGroup("path-continuity")]
         public float SwingFilteredTargetHeightBefore { get; }
 
-        [DiagnosticField("character-foot-ik/main/foot-motion-swing-target-height-delta", 1, "metres", "path-continuity")]
+        [DiagnosticField]
+        [DiagnosticKey("foot-motion-swing-target-height-delta")]
+        [DiagnosticGroup("path-continuity")]
         public float SwingTargetHeightDelta { get; }
 
-        [DiagnosticField("character-foot-ik/main/foot-motion-swing-target-height-applied-delta", 1, "metres", "path-continuity")]
+        [DiagnosticField]
+        [DiagnosticKey("foot-motion-swing-target-height-applied-delta")]
+        [DiagnosticGroup("path-continuity")]
         public float SwingTargetHeightAppliedDelta { get; }
 
-        [DiagnosticField("character-foot-ik/main/foot-motion-swing-target-height-update-held", 1, "none", "path-continuity")]
+        [DiagnosticField]
+        [DiagnosticKey("foot-motion-swing-target-height-update-held")]
+        [DiagnosticGroup("path-continuity")]
         public bool SwingTargetHeightUpdateHeld { get; }
 
-        [DiagnosticField("character-foot-ik/main/foot-motion-swing-target-height-force-refreshed", 1, "none", "path-continuity")]
+        [DiagnosticField]
+        [DiagnosticKey("foot-motion-swing-target-height-force-refreshed")]
+        [DiagnosticGroup("path-continuity")]
         public bool SwingTargetHeightForceRefreshed { get; }
 
-        [DiagnosticField("character-foot-ik/main/foot-motion-swing-target-height-rate-limited", 1, "none", "path-continuity")]
+        [DiagnosticField]
+        [DiagnosticKey("foot-motion-swing-target-height-rate-limited")]
+        [DiagnosticGroup("path-continuity")]
         public bool SwingTargetHeightRateLimited { get; }
 
-        [DiagnosticField("character-foot-ik/main/foot-motion-swing-target-height-clamped", 1, "none", "path-continuity")]
+        [DiagnosticField]
+        [DiagnosticKey("foot-motion-swing-target-height-clamped")]
+        [DiagnosticGroup("path-continuity")]
         public bool SwingTargetHeightClamped { get; }
 
-        [DiagnosticField("character-foot-ik/main/foot-motion-swing-target-height-force-refresh-distance", 1, "metres", "path-continuity")]
+        [DiagnosticField]
+        [DiagnosticKey("foot-motion-swing-target-height-force-refresh-distance")]
+        [DiagnosticGroup("path-continuity")]
         public float SwingTargetHeightForceRefreshDistance { get; }
 
-        [DiagnosticField("character-foot-ik/main/foot-motion-swing-target-maximum-vertical-speed", 1, "metres-per-second", "path-continuity")]
+        [DiagnosticField]
+        [DiagnosticKey("foot-motion-swing-target-maximum-vertical-speed")]
+        [DiagnosticGroup("path-continuity")]
         public float SwingTargetMaximumVerticalSpeed { get; }
 
-        [DiagnosticField("character-foot-ik/main/foot-motion-swing-target-height-adoption-mode", 1, "category", "path-continuity")]
+        [DiagnosticField]
+        [DiagnosticKey("foot-motion-swing-target-height-adoption-mode")]
+        [DiagnosticGroup("path-continuity")]
         public CharacterFootTargetHeightAdoptionMode SwingTargetHeightAdoptionMode { get; }
 
-        [DiagnosticField("character-foot-ik/main/foot-motion-swing-filtered-target-height-along-up", 1, "metres", "path-continuity")]
+        [DiagnosticField]
+        [DiagnosticKey("foot-motion-swing-filtered-target-height-along-up")]
+        [DiagnosticGroup("path-continuity")]
         public float SwingFilteredTargetHeightAlongUp { get; }
 
-        [DiagnosticField("character-foot-ik/main/foot-motion-target-height-component-up", 1, "direction", "path-continuity")]
+        [DiagnosticField]
+        [DiagnosticKey("foot-motion-target-height-component-up")]
+        [DiagnosticGroup("path-continuity")]
         public Vector3 TargetHeightComponentUp { get; }
     }
 
@@ -1331,61 +1675,91 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             PlantFilteredPoint = path.PlantFilteredPoint;
         }
 
-        [DiagnosticField(1, "metres", "output-stages")]
+        [DiagnosticField]
+        [DiagnosticGroup("output-stages")]
         public Vector3 StateTargetCorrection { get; }
-        [DiagnosticField(1, "category", "output-stages")]
+        [DiagnosticField]
+        [DiagnosticGroup("output-stages")]
         public CharacterFootInterpolationPolicy InterpolationPolicy { get; }
-        [DiagnosticField(1, "metres", "output-stages")]
+        [DiagnosticField]
+        [DiagnosticGroup("output-stages")]
         public Vector3 InterpolationOutputCorrection { get; }
-        [DiagnosticField(1, "none", "output-stages")]
+        [DiagnosticField]
+        [DiagnosticGroup("output-stages")]
         public bool InterpolationCompleted { get; }
-        [DiagnosticField(1, "category", "output-stages")]
+        [DiagnosticField]
+        [DiagnosticGroup("output-stages")]
         public CharacterFootConstraintState ConstraintStateBefore { get; }
-        [DiagnosticField(1, "category", "output-stages")]
+        [DiagnosticField]
+        [DiagnosticGroup("output-stages")]
         public CharacterFootLockResponse LockResponseBefore { get; }
-        [DiagnosticField(1, "none", "output-stages")]
+        [DiagnosticField]
+        [DiagnosticGroup("output-stages")]
         public bool OutputStagesAvailable { get; }
-        [DiagnosticField(1, "none", "output-stages")]
+        [DiagnosticField]
+        [DiagnosticGroup("output-stages")]
         public bool ReleasingCompletedToSwing { get; }
-        [DiagnosticField(1, "none", "output-stages")]
+        [DiagnosticField]
+        [DiagnosticGroup("output-stages")]
         public bool SafetyFloorAvailable { get; }
-        [DiagnosticField(1, "category", "output-stages")]
+        [DiagnosticField]
+        [DiagnosticGroup("output-stages")]
         public CharacterFootSafetyFloorOwner SafetyFloorOwner { get; }
-        [DiagnosticField(1, "identity", "output-stages")]
+        [DiagnosticField]
+        [DiagnosticGroup("output-stages")]
         public int SafetyFloorOwnerSurfaceIdentity { get; }
-        [DiagnosticField(1, "identity", "output-stages")]
+        [DiagnosticField]
+        [DiagnosticGroup("output-stages")]
         public ulong SafetyFloorOwnerPathIdentity { get; }
-        [DiagnosticField(1, "metres", "output-stages")]
+        [DiagnosticField]
+        [DiagnosticGroup("output-stages")]
         public Vector3 CorrectionBeforeSafetyFloor { get; }
-        [DiagnosticField(1, "metres", "output-stages", AvailabilityMember = nameof(SafetyFloorAvailable))]
+        [DiagnosticField]
+        [DiagnosticGroup("output-stages")]
+        [DiagnosticAvailability(DiagnosticAvailabilityReference.Member, nameof(SafetyFloorAvailable))]
         public Vector3 SafetyFloorMinimumCorrection { get; }
-        [DiagnosticField(1, "metres", "output-stages", AvailabilityMember = nameof(SafetyFloorAvailable))]
+        [DiagnosticField]
+        [DiagnosticGroup("output-stages")]
+        [DiagnosticAvailability(DiagnosticAvailabilityReference.Member, nameof(SafetyFloorAvailable))]
         public Vector3 SafetyFloorOutputCorrection { get; }
-        [DiagnosticField(1, "metres", "output-stages")]
+        [DiagnosticField]
+        [DiagnosticGroup("output-stages")]
         public Vector3 FinalEffectiveCorrection { get; }
-        [DiagnosticField(1, "none", "output-stages")]
+        [DiagnosticField]
+        [DiagnosticGroup("output-stages")]
         public bool SafetyFloorClamped { get; }
-        [DiagnosticField(1, "metres", "output-stages")]
+        [DiagnosticField]
+        [DiagnosticGroup("output-stages")]
         public float SafetyFloorClampMeters { get; }
-        [DiagnosticField(1, "metres", "output-stages")]
+        [DiagnosticField]
+        [DiagnosticGroup("output-stages")]
         public float SafetyFloorClearanceBeforeMeters { get; }
-        [DiagnosticField(1, "metres", "output-stages")]
+        [DiagnosticField]
+        [DiagnosticGroup("output-stages")]
         public float SafetyFloorClearanceAfterMeters { get; }
-        [DiagnosticField(1, "none", "output-stages")]
+        [DiagnosticField]
+        [DiagnosticGroup("output-stages")]
         public bool PlantInterpolationEvaluated { get; }
-        [DiagnosticField(1, "identity", "output-stages")]
+        [DiagnosticField]
+        [DiagnosticGroup("output-stages")]
         public ulong PlantTargetEventIdentity { get; }
-        [DiagnosticField(1, "none", "output-stages")]
+        [DiagnosticField]
+        [DiagnosticGroup("output-stages")]
         public bool PlantTargetVerified { get; }
-        [DiagnosticField(1, "category", "output-stages")]
+        [DiagnosticField]
+        [DiagnosticGroup("output-stages")]
         public CharacterFootPlantTargetKind PlantTargetKind { get; }
-        [DiagnosticField(1, "category", "output-stages")]
+        [DiagnosticField]
+        [DiagnosticGroup("output-stages")]
         public CharacterFootLockResponse PlantLockResponse { get; }
-        [DiagnosticField(1, "none", "output-stages")]
+        [DiagnosticField]
+        [DiagnosticGroup("output-stages")]
         public bool PlantLockWeightCompleted { get; }
-        [DiagnosticField(1, "metres", "output-stages")]
+        [DiagnosticField]
+        [DiagnosticGroup("output-stages")]
         public Vector3 PlantDesiredPoint { get; }
-        [DiagnosticField(1, "metres", "output-stages")]
+        [DiagnosticField]
+        [DiagnosticGroup("output-stages")]
         public Vector3 PlantFilteredPoint { get; }
     }
 
@@ -1492,169 +1866,281 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             PlantPenetrationDepth = path.PlantPenetrationDepth;
         }
 
-        [DiagnosticField("character-foot-ik/main/foot-motion-plant-target-height-adoption-mode", 1, "category", "response-contact")]
+        [DiagnosticField]
+        [DiagnosticKey("foot-motion-plant-target-height-adoption-mode")]
+        [DiagnosticGroup("response-contact")]
         public CharacterFootTargetHeightAdoptionMode PlantTargetHeightAdoptionMode { get; }
 
-        [DiagnosticField("character-foot-ik/main/foot-motion-plant-target-maximum-vertical-speed", 1, "metres-per-second", "response-contact")]
+        [DiagnosticField]
+        [DiagnosticKey("foot-motion-plant-target-maximum-vertical-speed")]
+        [DiagnosticGroup("response-contact")]
         public float PlantTargetMaximumVerticalSpeed { get; }
 
-        [DiagnosticField("character-foot-ik/main/foot-motion-plant-target-height-before", 1, "metres", "response-contact")]
+        [DiagnosticField]
+        [DiagnosticKey("foot-motion-plant-target-height-before")]
+        [DiagnosticGroup("response-contact")]
         public float PlantTargetHeightBefore { get; }
 
-        [DiagnosticField("character-foot-ik/main/foot-motion-plant-target-height-target", 1, "metres", "response-contact")]
+        [DiagnosticField]
+        [DiagnosticKey("foot-motion-plant-target-height-target")]
+        [DiagnosticGroup("response-contact")]
         public float PlantTargetHeightTarget { get; }
 
-        [DiagnosticField("character-foot-ik/main/foot-motion-plant-target-vertical-delta", 1, "metres", "response-contact")]
+        [DiagnosticField]
+        [DiagnosticKey("foot-motion-plant-target-vertical-delta")]
+        [DiagnosticGroup("response-contact")]
         public float PlantTargetVerticalDelta { get; }
 
-        [DiagnosticField("character-foot-ik/main/foot-motion-plant-target-applied-vertical-delta", 1, "metres", "response-contact")]
+        [DiagnosticField]
+        [DiagnosticKey("foot-motion-plant-target-applied-vertical-delta")]
+        [DiagnosticGroup("response-contact")]
         public float PlantTargetAppliedVerticalDelta { get; }
 
-        [DiagnosticField("character-foot-ik/main/foot-motion-plant-target-height-after", 1, "metres", "response-contact")]
+        [DiagnosticField]
+        [DiagnosticKey("foot-motion-plant-target-height-after")]
+        [DiagnosticGroup("response-contact")]
         public float PlantTargetHeightAfter { get; }
 
-        [DiagnosticField("character-foot-ik/main/foot-motion-plant-target-height-event-identity", 1, "identity", "response-contact")]
+        [DiagnosticField]
+        [DiagnosticKey("foot-motion-plant-target-height-event-identity")]
+        [DiagnosticGroup("response-contact")]
         public ulong PlantTargetHeightEventIdentity { get; }
 
-        [DiagnosticField("character-foot-ik/main/foot-motion-plant-target-height-update-reason", 1, "category", "response-contact")]
+        [DiagnosticField]
+        [DiagnosticKey("foot-motion-plant-target-height-update-reason")]
+        [DiagnosticGroup("response-contact")]
         public CharacterFootPlantTargetHeightUpdateReason PlantTargetHeightUpdateReason { get; }
 
-        [DiagnosticField("character-foot-ik/main/foot-motion-plant-target-force-refreshed", 1, "none", "response-contact")]
+        [DiagnosticField]
+        [DiagnosticKey("foot-motion-plant-target-force-refreshed")]
+        [DiagnosticGroup("response-contact")]
         public bool PlantTargetForceRefreshed { get; }
 
-        [DiagnosticField("character-foot-ik/main/foot-motion-plant-target-force-refresh-distance", 1, "metres", "response-contact")]
+        [DiagnosticField]
+        [DiagnosticKey("foot-motion-plant-target-force-refresh-distance")]
+        [DiagnosticGroup("response-contact")]
         public float PlantTargetForceRefreshDistance { get; }
 
-        [DiagnosticField("character-foot-ik/main/foot-motion-plant-target-vertical-clamped", 1, "none", "response-contact")]
+        [DiagnosticField]
+        [DiagnosticKey("foot-motion-plant-target-vertical-clamped")]
+        [DiagnosticGroup("response-contact")]
         public bool PlantTargetVerticalClamped { get; }
 
-        [DiagnosticField("character-foot-ik/main/foot-motion-plant-previous-selected-world-target", 1, "metres", "response-contact")]
+        [DiagnosticField]
+        [DiagnosticKey("foot-motion-plant-previous-selected-world-target")]
+        [DiagnosticGroup("response-contact")]
         public Vector3 PlantPreviousSelectedWorldTarget { get; }
 
-        [DiagnosticField("character-foot-ik/main/foot-motion-plant-selected-world-target", 1, "metres", "response-contact")]
+        [DiagnosticField]
+        [DiagnosticKey("foot-motion-plant-selected-world-target")]
+        [DiagnosticGroup("response-contact")]
         public Vector3 PlantSelectedWorldTarget { get; }
 
-        [DiagnosticField("character-foot-ik/main/foot-motion-previous-response-output-available", 1, "none", "response-contact")]
+        [DiagnosticField]
+        [DiagnosticKey("foot-motion-previous-response-output-available")]
+        [DiagnosticGroup("response-contact")]
         public bool PreviousResponseOutputAvailable { get; }
 
-        [DiagnosticField("character-foot-ik/main/foot-motion-previous-response-output-point", 1, "metres", "response-contact", AvailabilityFieldId = "character-foot-ik/main/foot-motion-previous-response-output-available")]
+        [DiagnosticField]
+        [DiagnosticKey("foot-motion-previous-response-output-point")]
+        [DiagnosticGroup("response-contact")]
+        [DiagnosticAvailability(DiagnosticAvailabilityReference.Key, "foot-motion-previous-response-output-available")]
         public Vector3 PreviousResponseOutputPoint { get; }
 
-        [DiagnosticField("character-foot-ik/main/foot-motion-desired-output-point", 1, "metres", "response-contact")]
+        [DiagnosticField]
+        [DiagnosticKey("foot-motion-desired-output-point")]
+        [DiagnosticGroup("response-contact")]
         public Vector3 DesiredOutputPoint { get; }
 
-        [DiagnosticField("character-foot-ik/main/foot-motion-response-output-point", 1, "metres", "response-contact")]
+        [DiagnosticField]
+        [DiagnosticKey("foot-motion-response-output-point")]
+        [DiagnosticGroup("response-contact")]
         public Vector3 ResponseOutputPoint { get; }
 
-        [DiagnosticField("character-foot-ik/main/foot-motion-plant-residual-capture-reason", 1, "category", "response-contact")]
+        [DiagnosticField]
+        [DiagnosticKey("foot-motion-plant-residual-capture-reason")]
+        [DiagnosticGroup("response-contact")]
         public CharacterFootPlantResidualCaptureReason PlantResidualCaptureReason { get; }
 
-        [DiagnosticField("character-foot-ik/main/foot-motion-plant-world-residual-before-capture", 1, "metres", "response-contact")]
+        [DiagnosticField]
+        [DiagnosticKey("foot-motion-plant-world-residual-before-capture")]
+        [DiagnosticGroup("response-contact")]
         public Vector3 PlantWorldResidualBeforeCapture { get; }
 
-        [DiagnosticField("character-foot-ik/main/foot-motion-plant-world-residual-captured-before-decay", 1, "metres", "response-contact")]
+        [DiagnosticField]
+        [DiagnosticKey("foot-motion-plant-world-residual-captured-before-decay")]
+        [DiagnosticGroup("response-contact")]
         public Vector3 PlantWorldResidualCapturedBeforeDecay { get; }
 
-        [DiagnosticField("character-foot-ik/main/foot-motion-plant-world-residual-decay-applied", 1, "none", "response-contact")]
+        [DiagnosticField]
+        [DiagnosticKey("foot-motion-plant-world-residual-decay-applied")]
+        [DiagnosticGroup("response-contact")]
         public bool PlantWorldResidualDecayApplied { get; }
 
-        [DiagnosticField("character-foot-ik/main/foot-motion-plant-world-residual-base-half-life-seconds", 1, "seconds", "response-contact")]
+        [DiagnosticField]
+        [DiagnosticKey("foot-motion-plant-world-residual-base-half-life-seconds")]
+        [DiagnosticGroup("response-contact")]
         public float PlantWorldResidualBaseHalfLifeSeconds { get; }
 
-        [DiagnosticField("character-foot-ik/main/foot-motion-plant-world-residual-deadline-half-life-available", 1, "none", "response-contact")]
+        [DiagnosticField]
+        [DiagnosticKey("foot-motion-plant-world-residual-deadline-half-life-available")]
+        [DiagnosticGroup("response-contact")]
         public bool PlantWorldResidualDeadlineHalfLifeAvailable { get; }
 
-        [DiagnosticField("character-foot-ik/main/foot-motion-plant-world-residual-deadline-half-life-seconds", 1, "seconds", "response-contact", AvailabilityFieldId = "character-foot-ik/main/foot-motion-plant-world-residual-deadline-half-life-available")]
+        [DiagnosticField]
+        [DiagnosticKey("foot-motion-plant-world-residual-deadline-half-life-seconds")]
+        [DiagnosticGroup("response-contact")]
+        [DiagnosticAvailability(DiagnosticAvailabilityReference.Key, "foot-motion-plant-world-residual-deadline-half-life-available")]
         public float PlantWorldResidualDeadlineHalfLifeSeconds { get; }
 
-        [DiagnosticField("character-foot-ik/main/foot-motion-plant-world-residual-applied-half-life-seconds", 1, "seconds", "response-contact")]
+        [DiagnosticField]
+        [DiagnosticKey("foot-motion-plant-world-residual-applied-half-life-seconds")]
+        [DiagnosticGroup("response-contact")]
         public float PlantWorldResidualAppliedHalfLifeSeconds { get; }
 
-        [DiagnosticField("character-foot-ik/main/foot-motion-plant-world-residual-after-decay", 1, "metres", "response-contact")]
+        [DiagnosticField]
+        [DiagnosticKey("foot-motion-plant-world-residual-after-decay")]
+        [DiagnosticGroup("response-contact")]
         public Vector3 PlantWorldResidualAfterDecay { get; }
 
-        [DiagnosticField("character-foot-ik/main/foot-motion-plant-world-residual-completion-tolerance", 1, "metres", "response-contact")]
+        [DiagnosticField]
+        [DiagnosticKey("foot-motion-plant-world-residual-completion-tolerance")]
+        [DiagnosticGroup("response-contact")]
         public float PlantWorldResidualCompletionTolerance { get; }
 
-        [DiagnosticField("character-foot-ik/main/foot-motion-plant-world-residual-cleared-at-completion-tolerance", 1, "none", "response-contact")]
+        [DiagnosticField]
+        [DiagnosticKey("foot-motion-plant-world-residual-cleared-at-completion-tolerance")]
+        [DiagnosticGroup("response-contact")]
         public bool PlantWorldResidualClearedAtCompletionTolerance { get; }
 
-        [DiagnosticField("character-foot-ik/main/foot-motion-correction-response-evaluated", 1, "none", "response-contact")]
+        [DiagnosticField]
+        [DiagnosticKey("foot-motion-correction-response-evaluated")]
+        [DiagnosticGroup("response-contact")]
         public bool CorrectionResponseEvaluated { get; }
 
-        [DiagnosticField("character-foot-ik/main/foot-motion-correction-response-initialized-before", 1, "none", "response-contact")]
+        [DiagnosticField]
+        [DiagnosticKey("foot-motion-correction-response-initialized-before")]
+        [DiagnosticGroup("response-contact")]
         public bool CorrectionResponseInitializedBefore { get; }
 
-        [DiagnosticField("character-foot-ik/main/foot-motion-correction-response-initialized-this-frame", 1, "none", "response-contact")]
+        [DiagnosticField]
+        [DiagnosticKey("foot-motion-correction-response-initialized-this-frame")]
+        [DiagnosticGroup("response-contact")]
         public bool CorrectionResponseInitializedThisFrame { get; }
 
-        [DiagnosticField("character-foot-ik/main/foot-motion-correction-response-initialization-reason", 1, "category", "response-contact")]
+        [DiagnosticField]
+        [DiagnosticKey("foot-motion-correction-response-initialization-reason")]
+        [DiagnosticGroup("response-contact")]
         public CharacterFootCorrectionResponseInitializationReason CorrectionResponseInitializationReason { get; }
 
-        [DiagnosticField("character-foot-ik/main/foot-motion-correction-response-desired", 1, "metres", "response-contact")]
+        [DiagnosticField]
+        [DiagnosticKey("foot-motion-correction-response-desired")]
+        [DiagnosticGroup("response-contact")]
         public float CorrectionResponseDesired { get; }
 
-        [DiagnosticField("character-foot-ik/main/foot-motion-correction-response-requested-direction", 1, "direction", "response-contact")]
+        [DiagnosticField]
+        [DiagnosticKey("foot-motion-correction-response-requested-direction")]
+        [DiagnosticGroup("response-contact")]
         public Vector3 CorrectionResponseRequestedDirection { get; }
 
-        [DiagnosticField("character-foot-ik/main/foot-motion-correction-response-previous-direction", 1, "direction", "response-contact")]
+        [DiagnosticField]
+        [DiagnosticKey("foot-motion-correction-response-previous-direction")]
+        [DiagnosticGroup("response-contact")]
         public Vector3 CorrectionResponsePreviousDirection { get; }
 
-        [DiagnosticField("character-foot-ik/main/foot-motion-correction-response-direction-limited", 1, "none", "response-contact")]
+        [DiagnosticField]
+        [DiagnosticKey("foot-motion-correction-response-direction-limited")]
+        [DiagnosticGroup("response-contact")]
         public bool CorrectionResponseDirectionLimited { get; }
 
-        [DiagnosticField("character-foot-ik/main/foot-motion-correction-response-maximum-direction-change-degrees", 1, "degrees", "response-contact")]
+        [DiagnosticField]
+        [DiagnosticKey("foot-motion-correction-response-maximum-direction-change-degrees")]
+        [DiagnosticGroup("response-contact")]
         public float CorrectionResponseMaximumDirectionChangeDegrees { get; }
 
-        [DiagnosticField("character-foot-ik/main/foot-motion-correction-response-applied-direction-change-degrees", 1, "degrees", "response-contact")]
+        [DiagnosticField]
+        [DiagnosticKey("foot-motion-correction-response-applied-direction-change-degrees")]
+        [DiagnosticGroup("response-contact")]
         public float CorrectionResponseAppliedDirectionChangeDegrees { get; }
 
-        [DiagnosticField("character-foot-ik/main/foot-motion-correction-response-visible-output-transferred", 1, "none", "response-contact")]
+        [DiagnosticField]
+        [DiagnosticKey("foot-motion-correction-response-visible-output-transferred")]
+        [DiagnosticGroup("response-contact")]
         public bool CorrectionResponseVisibleOutputTransferred { get; }
 
-        [DiagnosticField("character-foot-ik/main/foot-motion-correction-response-before-rebase", 1, "metres", "response-contact")]
+        [DiagnosticField]
+        [DiagnosticKey("foot-motion-correction-response-before-rebase")]
+        [DiagnosticGroup("response-contact")]
         public float CorrectionResponseBeforeRebase { get; }
 
-        [DiagnosticField("character-foot-ik/main/foot-motion-correction-response-previous", 1, "metres", "response-contact")]
+        [DiagnosticField]
+        [DiagnosticKey("foot-motion-correction-response-previous")]
+        [DiagnosticGroup("response-contact")]
         public float CorrectionResponsePrevious { get; }
 
-        [DiagnosticField("character-foot-ik/main/foot-motion-correction-response-current", 1, "metres", "response-contact")]
+        [DiagnosticField]
+        [DiagnosticKey("foot-motion-correction-response-current")]
+        [DiagnosticGroup("response-contact")]
         public float CorrectionResponseCurrent { get; }
 
-        [DiagnosticField("character-foot-ik/main/foot-motion-correction-response-direction", 1, "direction", "response-contact")]
+        [DiagnosticField]
+        [DiagnosticKey("foot-motion-correction-response-direction")]
+        [DiagnosticGroup("response-contact")]
         public Vector3 CorrectionResponseDirection { get; }
 
-        [DiagnosticField("character-foot-ik/main/foot-motion-correction-response-delta-direction", 1, "category", "response-contact")]
+        [DiagnosticField]
+        [DiagnosticKey("foot-motion-correction-response-delta-direction")]
+        [DiagnosticGroup("response-contact")]
         public CharacterFootCorrectionResponseDeltaDirection CorrectionResponseDeltaDirection { get; }
 
-        [DiagnosticField("character-foot-ik/main/foot-motion-correction-response-selected-speed", 1, "metres-per-second", "response-contact")]
+        [DiagnosticField]
+        [DiagnosticKey("foot-motion-correction-response-selected-speed")]
+        [DiagnosticGroup("response-contact")]
         public float CorrectionResponseSelectedSpeed { get; }
 
-        [DiagnosticField("character-foot-ik/main/foot-motion-correction-response-applied-delta", 1, "metres", "response-contact")]
+        [DiagnosticField]
+        [DiagnosticKey("foot-motion-correction-response-applied-delta")]
+        [DiagnosticGroup("response-contact")]
         public float CorrectionResponseAppliedDelta { get; }
 
-        [DiagnosticField("character-foot-ik/main/foot-motion-correction-response-domain", 1, "category", "response-contact")]
+        [DiagnosticField]
+        [DiagnosticKey("foot-motion-correction-response-domain")]
+        [DiagnosticGroup("response-contact")]
         public CharacterFootCorrectionResponseDomain CorrectionResponseDomain { get; }
 
-        [DiagnosticField("character-foot-ik/main/foot-motion-correction-response-previous-domain", 1, "category", "response-contact")]
+        [DiagnosticField]
+        [DiagnosticKey("foot-motion-correction-response-previous-domain")]
+        [DiagnosticGroup("response-contact")]
         public CharacterFootCorrectionResponseDomain CorrectionResponsePreviousDomain { get; }
 
-        [DiagnosticField("character-foot-ik/main/foot-motion-correction-response-domain-transferred", 1, "none", "response-contact")]
+        [DiagnosticField]
+        [DiagnosticKey("foot-motion-correction-response-domain-transferred")]
+        [DiagnosticGroup("response-contact")]
         public bool CorrectionResponseDomainTransferred { get; }
 
-        [DiagnosticField("character-foot-ik/main/foot-motion-plant-vertical-continuity-owners", 1, "category", "response-contact")]
+        [DiagnosticField]
+        [DiagnosticKey("foot-motion-plant-vertical-continuity-owners")]
+        [DiagnosticGroup("response-contact")]
         public CharacterFootVerticalContinuityOwner PlantVerticalContinuityOwners { get; }
 
-        [DiagnosticField("character-foot-ik/main/foot-motion-plant-effective-correction-before", 1, "metres", "response-contact")]
+        [DiagnosticField]
+        [DiagnosticKey("foot-motion-plant-effective-correction-before")]
+        [DiagnosticGroup("response-contact")]
         public Vector3 PlantEffectiveCorrectionBefore { get; }
 
-        [DiagnosticField("character-foot-ik/main/foot-motion-plant-effective-correction-after", 1, "metres", "response-contact")]
+        [DiagnosticField]
+        [DiagnosticKey("foot-motion-plant-effective-correction-after")]
+        [DiagnosticGroup("response-contact")]
         public Vector3 PlantEffectiveCorrectionAfter { get; }
 
-        [DiagnosticField("character-foot-ik/main/foot-motion-plant-output-distance", 1, "metres", "response-contact")]
+        [DiagnosticField]
+        [DiagnosticKey("foot-motion-plant-output-distance")]
+        [DiagnosticGroup("response-contact")]
         public float PlantOutputDistance { get; }
 
-        [DiagnosticField("character-foot-ik/main/foot-motion-plant-penetration-depth", 1, "metres", "response-contact")]
+        [DiagnosticField]
+        [DiagnosticKey("foot-motion-plant-penetration-depth")]
+        [DiagnosticGroup("response-contact")]
         public float PlantPenetrationDepth { get; }
     }
 

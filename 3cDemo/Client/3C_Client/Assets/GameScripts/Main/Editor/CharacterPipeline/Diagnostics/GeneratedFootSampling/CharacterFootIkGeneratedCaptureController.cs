@@ -3,78 +3,89 @@ using System.IO;
 using KK.GeneratedDiagnosticSampling;
 using KK.GeneratedDiagnosticSampling.Host;
 using ThirdPersonCharacter.Pipeline.Animation.Diagnostics;
+using ThirdPersonCharacter.Pipeline.Animation.Presentation;
 
 namespace ThirdPersonCharacter.Pipeline.Diagnostics.FootIkSampling.Editor
 {
     public sealed class CharacterFootIkGeneratedCaptureController : IDisposable
     {
-        readonly Guid m_OwnerId = Guid.NewGuid();
-        readonly AnimationPresentationRuntimeTarget m_Target;
         readonly DiagnosticCaptureStartRequest m_Request;
-        readonly CharacterFootIkGeneratedCapture m_Capture;
-        bool m_Registered;
+        readonly CharacterFootIkCaptureMetadata m_Metadata;
+        readonly DiagnosticEventTargetKey m_Target;
+        readonly CharacterFootIkFullCaptureProgram.DiagnosticLifecycle
+            m_Lifecycle;
+        bool m_Started;
+        bool m_Stopped;
 
         public CharacterFootIkGeneratedCaptureController(
             AnimationPresentationRuntimeTarget target,
             DiagnosticCaptureStartRequest request,
             in CharacterFootIkCaptureMetadata metadata)
         {
-            m_Target = target ?? throw new ArgumentNullException(nameof(target));
+            if (target == null)
+                throw new ArgumentNullException(nameof(target));
             m_Request = request ?? throw new ArgumentNullException(nameof(request));
-            m_Capture = new CharacterFootIkGeneratedCapture(in metadata);
+            m_Metadata = metadata;
+            m_Target = new DiagnosticEventTargetKey(
+                CharacterFootIkCommitDiagnosticEvent.TargetTypeIdentity,
+                target.RuntimeInstanceId);
+            m_Lifecycle =
+                CharacterFootIkFullCaptureProgram.CreateDiagnosticLifecycle();
         }
 
-        public Guid OwnerId => m_OwnerId;
-        public DiagnosticCaptureFailure? Failure => m_Capture.Failure;
-        public int CapturedFrameCount => m_Capture.CapturedFrameCount;
+        public DiagnosticCaptureFailure? Failure => m_Lifecycle.Failure;
+        public int CapturedFrameCount => checked(
+            (int)(m_Lifecycle.SubmittedSampleCount / 2));
 
         public bool Start(bool attach = true)
         {
-            if (!m_Capture.Start(m_Request))
-                return false;
-            if (attach)
-                Attach();
-            return true;
+            if (m_Started || m_Stopped)
+                throw new InvalidOperationException(
+                    "Foot IK capture controller already started.");
+            return !attach || StartLifecycle();
         }
 
         public void Attach()
         {
-            if (m_Registered)
-                return;
-            try
-            {
-                m_Target.SetFootIkCapture(
-                    m_OwnerId,
-                    new CharacterFootIkCaptureInterest(1),
-                    m_Capture);
-            }
-            catch (Exception failure)
-            {
-                m_Capture.CaptureFault(failure);
-                throw;
-            }
-            m_Registered = true;
+            if (m_Started || m_Stopped)
+                throw new InvalidOperationException(
+                    "Foot IK capture window cannot be opened.");
+            if (!StartLifecycle())
+                throw new InvalidOperationException(
+                    Failure?.Message ??
+                    "Foot IK generated sampling failed to start.");
         }
 
         public void Detach()
         {
-            if (!m_Registered)
+            if (!m_Started || m_Stopped)
                 return;
-            m_Target.RemoveFootIkCapture(m_OwnerId);
-            m_Registered = false;
+            DiagnosticCaptureStopOutcome outcome =
+                DiagnosticCaptureStopOutcome.Completed();
+            Stop(in outcome);
         }
 
         public bool Stop(in DiagnosticCaptureStopOutcome outcome)
         {
-            Detach();
-            return m_Capture.Stop(in outcome);
+            if (!m_Started)
+            {
+                if (outcome.Kind != DiagnosticCaptureStopKind.Cancelled)
+                    throw new InvalidOperationException(
+                        "Foot IK capture window was not opened.");
+                m_Stopped = true;
+                return true;
+            }
+            if (m_Stopped)
+                return !Failure.HasValue;
+            m_Stopped = true;
+            return m_Lifecycle.Stop(in outcome);
         }
 
         public bool TryFinalize(
             string outputRoot,
             out DiagnosticHostFinalizationResult result)
         {
-            if (!m_Capture.TryGetRuntimeManifest(
+            if (!m_Lifecycle.TryGetRuntimeManifest(
                     out DiagnosticRuntimeManifest manifest,
                     out DiagnosticSealedArtifact artifact))
             {
@@ -106,8 +117,20 @@ namespace ThirdPersonCharacter.Pipeline.Diagnostics.FootIkSampling.Editor
 
         public void Dispose()
         {
-            Detach();
-            m_Capture.Dispose();
+            m_Lifecycle.Dispose();
+        }
+
+        bool StartLifecycle()
+        {
+            if (!m_Lifecycle.Start(
+                    m_Request,
+                    in m_Target,
+                    in m_Metadata))
+            {
+                return false;
+            }
+            m_Started = true;
+            return true;
         }
     }
 }

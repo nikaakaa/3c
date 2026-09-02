@@ -1,4 +1,5 @@
 using KK.GeneratedDiagnosticSampling;
+using ThirdPersonCharacter.Pipeline.Animation.Presentation;
 
 namespace ThirdPersonCharacter.Pipeline.Diagnostics.FootIkSampling
 {
@@ -7,38 +8,7 @@ namespace ThirdPersonCharacter.Pipeline.Diagnostics.FootIkSampling
         CharacterFootIkDiagnosticIdentity.FullSamplerId,
         1,
         DiagnosticOutputFormat.Csv,
-        "capture-metadata",
-        "identity",
-        "current-step",
-        "root-landing",
-        "formal-motion",
-        "formal-event",
-        "timing",
-        "action",
-        "primary-support",
-        "body-correction",
-        "current-support",
-        "current-support-probe",
-        "support-target",
-        "prediction-motion",
-        "goal",
-        "output-stages",
-        "ground-path",
-        "landing-observation",
-        "lifecycle",
-        "motion-core",
-        "path-continuity",
-        "response-contact",
-        "resolved-core",
-        "resolved-contact",
-        "pelvis-input",
-        "pelvis-spring-input",
-        Tables = new[]
-        {
-            "ground-contacts",
-            "ground-envelope",
-            "ground-surfaces"
-        })]
+        IncludeAll = true)]
     internal static class CharacterFootIkFullSamplerDefinition
     {
     }
@@ -46,6 +16,7 @@ namespace ThirdPersonCharacter.Pipeline.Diagnostics.FootIkSampling
     [DiagnosticCaptureProgram(
         CharacterFootIkDiagnosticIdentity.FullProgramId,
         CharacterFootIkDiagnosticIdentity.CapabilityId,
+        CharacterFootIkCommitDiagnosticEvent.EventId,
         new[]
         {
             CharacterFootIkDiagnosticIdentity.LeftDimensionId,

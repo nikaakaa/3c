@@ -77,7 +77,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             in ComposedAnimationPoseFrame pending,
             bool hasCommitted,
             in ComposedAnimationPoseFrame committed,
-            CharacterFootIkCaptureInterest footIkCaptureInterest)
+            bool captureFootIkDiagnostics)
         {
             bool pendingValid = PendingHeaderIsValid(
                 in output,
@@ -119,7 +119,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             {
                 Vector3 pelvisWorldPosition = m_Bones[m_PelvisBoneIndex].position;
                 CharacterFootIkPhysicalCapture footIkCapture =
-                    footIkCaptureInterest.IsEnabled
+                    captureFootIkDiagnostics
                         ? CaptureFootIkPhysical()
                         : default;
                 m_Diagnostics = new AnimationPhysicalBoneWriteDiagnostics(

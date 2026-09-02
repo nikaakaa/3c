@@ -3,6 +3,7 @@ using System.IO;
 using KK.GeneratedDiagnosticSampling;
 using KK.GeneratedDiagnosticSampling.Host;
 using ThirdPersonCharacter.Pipeline.Animation.Diagnostics;
+using ThirdPersonCharacter.Pipeline.Animation.Presentation;
 using ThirdPersonCharacter.Pipeline.Editor;
 using UnityEditor;
 using UnityEngine;
@@ -155,7 +156,7 @@ namespace ThirdPersonCharacter.Pipeline.Diagnostics.FootIkSampling.Editor
                 $"{startedUtc:yyyyMMdd-HHmmss}-{sampleIdentity:N}"));
             var request = new DiagnosticCaptureStartRequest(
                 "presentation-commit/1",
-                CharacterFootIkDiagnosticIdentity.LineageTypeIdentity,
+                CharacterFootIkCommitDiagnosticEvent.LineageTypeIdentity,
                 PacketCapacity,
                 QueueCapacity,
                 DiagnosticBinaryPacketWriter.TransportIdentity,

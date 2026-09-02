@@ -140,7 +140,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             internal CharacterFinalPosePublicationResult Result;
             internal CharacterPoseProgramOutputResult ProgramOutput;
             internal AnimationPhysicalBoneWriteDiagnostics PhysicalWrite;
-            internal CharacterFootIkCaptureInterest FootIkCaptureInterest;
+            internal bool CaptureFootIkDiagnostics;
             internal ComposedAnimationPoseFrame Frame;
             internal AnimationPoseAvailability OutputAvailability;
             internal AnimationPoseNativeInvalidReason OutputInvalidReason;
@@ -152,7 +152,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
 
             internal void Begin(
                 CharacterFinalPosePublicationFrameLease lease,
-                CharacterFootIkCaptureInterest footIkCaptureInterest)
+                bool captureFootIkDiagnostics)
             {
                 if (IsOpen || !lease.IsValid)
                 {
@@ -164,7 +164,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 Result = default;
                 ProgramOutput = default;
                 PhysicalWrite = default;
-                FootIkCaptureInterest = footIkCaptureInterest;
+                CaptureFootIkDiagnostics = captureFootIkDiagnostics;
                 Frame = default;
                 OutputAvailability = default;
                 OutputInvalidReason = default;
@@ -309,7 +309,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 Result = default;
                 ProgramOutput = default;
                 PhysicalWrite = default;
-                FootIkCaptureInterest = default;
+                CaptureFootIkDiagnostics = false;
                 Frame = default;
                 OutputAvailability = default;
                 OutputInvalidReason = default;
@@ -455,13 +455,13 @@ namespace ThirdPersonCharacter.Pipeline.Animation
 
         internal CharacterFinalPosePublicationFrameLease BeginFrame(
             in CharacterPoseFrameLineage lineage,
-            CharacterFootIkCaptureInterest footIkCaptureInterest)
+            bool captureFootIkDiagnostics)
         {
             var lease =
                 new CharacterFinalPosePublicationFrameLease(in lineage);
             m_Pending.Begin(
                 lease,
-                footIkCaptureInterest);
+                captureFootIkDiagnostics);
             return lease;
         }
 
@@ -510,7 +510,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 in m_Pending.Frame,
                 HasCommittedPhysicalPose,
                 in m_CommittedFrame,
-                m_Pending.FootIkCaptureInterest);
+                m_Pending.CaptureFootIkDiagnostics);
             m_Pending.PhysicalWrite = m_PhysicalWriter.Diagnostics;
         }
 
@@ -1000,6 +1000,23 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                     "Final Pose committed frame is unavailable.");
             }
             return m_CommittedFrame;
+        }
+
+        internal CharacterFootIkPhysicalCapture
+            RequireCommittedFootIkPhysical(
+            in CharacterFinalPosePublicationResult result)
+        {
+            if (!m_CommittedResult.IsPublished ||
+                !result.IsPublished ||
+                m_CommittedResult.Lineage != result.Lineage ||
+                m_CommittedPhysicalWrite.CompletionIdentity !=
+                result.Lineage.CompletionIdentity ||
+                !m_CommittedPhysicalWrite.FootIkCapture.IsAvailable)
+            {
+                throw new InvalidOperationException(
+                    "Final Pose committed Foot physical facts are unavailable.");
+            }
+            return m_CommittedPhysicalWrite.FootIkCapture;
         }
 
         internal static bool RequiresPhysicalDiagnostics(

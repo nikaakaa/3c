@@ -338,6 +338,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 }
                 animation = new CharacterAnimationPresentationRuntime(
                     actorId,
+                    diagnostics.CharacterRuntimeId,
                     animationBindings,
                     motionMatching,
                     animancer,

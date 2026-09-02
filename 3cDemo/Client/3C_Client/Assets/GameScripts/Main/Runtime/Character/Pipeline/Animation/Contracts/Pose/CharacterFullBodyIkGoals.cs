@@ -70,24 +70,33 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 throw new ArgumentException("Full Body IK Goal is invalid.");
         }
 
-        [DiagnosticField(1, "category", "goal")]
+        [DiagnosticField]
+        [DiagnosticGroup("goal")]
         public CharacterFullBodyIkEffectorSlot Slot { get; }
-        [DiagnosticField(1, "metres", "goal")]
+        [DiagnosticField]
+        [DiagnosticGroup("goal")]
         public Vector3 ComponentPosition { get; }
-        [DiagnosticField(1, "unitless", "goal")]
+        [DiagnosticField]
+        [DiagnosticGroup("goal")]
         public Quaternion ComponentRotation { get; }
-        [DiagnosticField(1, "unitless", "goal")]
+        [DiagnosticField]
+        [DiagnosticGroup("goal")]
         public float PositionWeight { get; }
-        [DiagnosticField(1, "unitless", "goal")]
+        [DiagnosticField]
+        [DiagnosticGroup("goal")]
         public float RotationWeight { get; }
-        [DiagnosticField(1, "category", "goal")]
+        [DiagnosticField]
+        [DiagnosticGroup("goal")]
         public CharacterFullBodyIkGoalApplication Application { get; }
-        [DiagnosticField(1, "category", "goal")]
+        [DiagnosticField]
+        [DiagnosticGroup("goal")]
         public CharacterFullBodyIkGoalSourceKind SourceKind { get; }
-        [DiagnosticField(1, "identity", "goal")]
+        [DiagnosticField]
+        [DiagnosticGroup("goal")]
         public int DiagnosticMetadataIndex { get; }
 
-        [DiagnosticField(1, "none", "goal")]
+        [DiagnosticField]
+        [DiagnosticGroup("goal")]
         public bool IsValid =>
             Slot >= CharacterFullBodyIkEffectorSlot.PelvisPreSolveTranslation &&
             Slot <= CharacterFullBodyIkEffectorSlot.RightFoot &&

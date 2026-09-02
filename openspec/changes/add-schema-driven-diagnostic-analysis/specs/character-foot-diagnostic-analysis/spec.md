@@ -14,6 +14,28 @@ Foot诊断 MUST以Completed的`character-foot-ik` Capability manifest及其当�
 - **THEN** Foot诊断 MUST只通过通用Artifact Reader取得typed dataset并执行规则
 - **AND** 采样结束前或Manifest未完成时 MUST拒绝启动分析
 
+### Requirement: Foot采样必须由唯一Post-Commit事件一行触发
+
+Foot业务 MUST在成功Seal后的现有同步Commit位置声明并调用唯一Foot `DiagnosticEvent` partial触发点。触发点 MUST直接接收目标、当前真实lineage、Left／Right各Fact Root和共享事实的`in`参数；Generator MUST把它绑定到当前Foot Core／Full Program。Capture Metadata MUST由Foot Host workflow在Session Start时冻结，不得由Commit逐帧传递。Foot Runtime MUST不保留`ICharacterFootIkCommittedCaptureConsumer`、Capture Binding、手写`TryCapture`参数转发或诊断Event DTO。
+
+#### Scenario: Foot Capture Session已订阅
+
+- **WHEN** 当前Foot Core或Full Session已经订阅Post-Commit Event且本帧成功Seal
+- **THEN** 业务 MUST执行一行Event触发并由generated handler采集左右Dimension
+- **AND** 调用方 MUST不选择Sampler、租packet或捕获采样异常
+
+#### Scenario: 没有Foot Capture Session
+
+- **WHEN** Capture构建中没有活动Foot Session订阅Event
+- **THEN** generated dispatcher MUST立即返回且不访问标记字段
+- **AND** 业务方传入参数 MUST只引用已经存在的Committed事实，不得为无订阅路径执行额外坐标变换或诊断DTO构造
+
+#### Scenario: Foot Session只采集选定角色
+
+- **WHEN** Foot Host workflow只为一个目标启动Session
+- **THEN** generated target interest MUST只要求该目标准备Foot诊断页并只接收该目标Event
+- **AND** 其它角色 MUST不因该Session增加诊断事实冻结成本
+
 ### Requirement: Foot规则必须从旧单体迁为独立Operator
 
 Foot诊断 MUST提供穿地、锁脚滑动、Landing路径连续性、Landing状态一致性、Swing路径抖动、Step Time候选、Pelvis／Reach和既有七维质量计算所需的独立Operator。迁移 MUST保留仍适用于当前业务事实的公式、阈值、窗口、分母与严重度语义；旧Sampler、诊断DTO、Column／CsvBinding、合成Geometry、单体Analyzer、Diagnosis Store和运行时Publisher MUST不恢复。

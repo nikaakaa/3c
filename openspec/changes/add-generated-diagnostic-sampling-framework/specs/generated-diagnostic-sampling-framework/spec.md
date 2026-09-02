@@ -74,14 +74,14 @@
 - **THEN** 编译 MUST拒绝该公式并指出缺失或错误Root
 - **AND** MUST不从其它DTO、全局对象或Side选择helper绕过合同
 
-### Requirement: 生命周期必须由Generator生成Start、HandleCommitted和Stop
+### Requirement: 采样时机必须由DiagnosticEvent和generated typed handler连接
 
-每个Program MUST声明稳定Dimension ID数组和Sampler集合。Generator MUST生成具体`DiagnosticLifecycle.Start(request)`、`HandleCommitted(in lineage, 每个Dimension的全部in Fact Root与in Metadata)`和`Stop(outcome)`。参数顺序 MUST由Program Dimension顺序与Fact Root ID稳定顺序确定；每个Dimension MUST具有相同Fact Root结构与Metadata类型。`HandleCommitted` MUST为每个Dimension自动完成packet租用、Capture与消费式提交。领域 MUST不定义Started／CommittedSample／Stopped Event DTO、Bridge、Session控制、左右租包循环或Side选择。
+每个Program MUST声明Event identity、稳定Dimension ID数组和Sampler集合。业务 MUST在自选同步Commit边界声明带`DiagnosticEvent`的private static partial void方法，参数直接使用目标、真实lineage与每个Dimension的全部`in` Fact Root；Generator MUST按Event identity和完整参数签名生成目标隔离typed dispatcher及匹配Program handler。参数顺序 MUST由Event签名、Program Dimension顺序与Fact Root ID稳定顺序确定；每个Dimension MUST具有相同Fact Root结构与Metadata类型。Program handler MUST使用业务lineage为每个Dimension自动完成packet租用、Capture与消费式提交，Host workflow MUST在Start提供并冻结共享或逐Dimension Metadata，唯一控制Session Start／Stop和订阅寿命。领域 MUST不定义Started／CommittedSample／Stopped Event DTO、Bridge、Session控制、左右租包循环、Side选择或通用Event Bus。
 
 #### Scenario: 同步提交左右两个Dimension
 
-- **WHEN** 业务在成功Commit边界把Left与Right的现有事实和Metadata按生成签名以`in`传给`HandleCommitted`
-- **THEN** Generated lifecycle MUST用同一Capture程序分别产生两个Dimension packet并提交
+- **WHEN** 业务在成功Commit边界调用一行Foot `DiagnosticEvent` partial方法并以`in`传入目标、真实lineage及Left与Right的现有事实
+- **THEN** generated typed dispatcher MUST调用匹配Program handler并用同一Capture程序分别产生两个Dimension packet提交
 - **AND** 调用方 MUST不构造View、不复制采样事实且不逐字段写packet
 
 #### Scenario: Capture停止为Faulted
@@ -124,7 +124,7 @@
 
 ### Requirement: Host必须只依据Schema和sealed packet生成基础产物
 
-Host MUST只读取sealed packet、Schema descriptor和manifest，由通用Finalizer为每个Sampler自动生成主表、固定子表、UTF-8无BOM RFC 4180 CSV、基础Sampler manifest和Capability manifest。主表 MUST携带sample key与Dimension，子表 MUST额外携带row index；字段顺序、Vector／Quaternion组件和availability空单元格 MUST由Schema确定。Host MUST不持有Fact Root／Metadata、不重新读取业务成员、不调用Derived公式、不访问Player私有地址或执行World Query。领域Analyzer／Publisher MUST只消费Completed artifact，不声明Column、Header、CsvBinding或Host Adapter，也不得参与Capture生命周期。
+Host MUST只读取sealed packet、Schema descriptor和manifest，由通用Finalizer为每个Sampler自动生成主表、固定子表、UTF-8无BOM RFC 4180 CSV、基础Sampler manifest和Capability manifest。主表 MUST携带sample key与Dimension，子表 MUST额外携带row index；字段顺序、Vector／Quaternion组件和availability空单元格 MUST由Schema确定。Host MUST不持有Fact Root／Metadata、不重新读取业务成员、不调用Derived公式、不访问Player私有地址或执行World Query。基础产物 MUST是采样最终输出而非领域诊断结论；`add-schema-driven-diagnostic-analysis`定义的领域Operator／Plan／Report MUST只消费Completed artifact，不声明Column、Header、CsvBinding或Host Adapter，也不得参与Capture生命周期。
 
 #### Scenario: 普通Sampler没有领域处理器
 
@@ -166,7 +166,7 @@ Player Build Request MUST保存canonical、稳定排序的`DiagnosticCapabilityS
 
 ### Requirement: 采样不得反向驱动业务运行结果
 
-Generated lifecycle与Capture MUST只在同步Commit边界读取调用方提供的现有Fact Root、Metadata与opaque lineage。Metadata MUST只承载采样固定上下文，不得承载Side选择或业务事实。没有Capture／订阅时，业务 MUST不为采样构造事实、执行额外坐标变换或运行采样getter。任何采样组件不得创建第二业务Tick、查询世界、调用求解器、写Gameplay／Presentation状态或改变权重、目标、配置、随机数、时钟及下一帧事实。Capture写入packet属于采集输出，不是业务DTO复制。
+Generated Event dispatcher、Program handler与Capture MUST只在同步Commit边界读取调用方提供的现有Fact Root与真实lineage，并只使用Lifecycle Start冻结的Metadata。Metadata MUST只承载采样固定上下文，不得承载Side选择或业务事实。没有匹配目标Capture订阅时dispatcher MUST立即返回；昂贵事实Owner MAY声明`Query{EventMethodName}Interest` private partial方法，Generator只在存在该声明时生成目标兴趣实现。Disabled编译时Event与Query调用及参数求值 MUST由编译器消除，业务 MUST不为采样构造事实、执行额外坐标变换或运行采样getter。普通事实Event MUST不被强制声明Query。任何采样组件不得创建第二业务Tick、查询世界、调用求解器、写Gameplay／Presentation状态或改变权重、目标、配置、随机数、时钟及下一帧事实。Capture写入packet属于采集输出，不是业务DTO复制。
 
 #### Scenario: Sampler产生派生公式
 

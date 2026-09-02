@@ -57,23 +57,32 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         }
 
         public CharacterFootSide Side { get; }
-        [DiagnosticField(1, "metres", "ground-path")]
+        [DiagnosticField]
+        [DiagnosticGroup("ground-path")]
         public Vector3 AxisStart { get; }
-        [DiagnosticField(1, "metres", "ground-path")]
+        [DiagnosticField]
+        [DiagnosticGroup("ground-path")]
         public Vector3 AxisEnd { get; }
-        [DiagnosticField(1, "metres", "ground-path")]
+        [DiagnosticField]
+        [DiagnosticGroup("ground-path")]
         public float Radius { get; }
-        [DiagnosticField(1, "metres", "ground-path")]
+        [DiagnosticField]
+        [DiagnosticGroup("ground-path")]
         public float MaximumAxisSegmentLength { get; }
-        [DiagnosticField(1, "direction", "ground-path")]
+        [DiagnosticField]
+        [DiagnosticGroup("ground-path")]
         public Vector3 Direction { get; }
-        [DiagnosticField(1, "metres", "ground-path")]
+        [DiagnosticField]
+        [DiagnosticGroup("ground-path")]
         public float MaximumDistance { get; }
-        [DiagnosticField(1, "bitmask", "ground-path")]
+        [DiagnosticField]
+        [DiagnosticGroup("ground-path")]
         public int LayerMask { get; }
-        [DiagnosticField(1, "count", "ground-path")]
+        [DiagnosticField]
+        [DiagnosticGroup("ground-path")]
         public int SegmentHitCapacity { get; }
-        [DiagnosticField(1, "count", "ground-path")]
+        [DiagnosticField]
+        [DiagnosticGroup("ground-path")]
         public int ContactCapacity { get; }
 
         internal bool IsValid =>
@@ -109,17 +118,23 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             QueryDistance = queryDistance;
         }
 
-        [DiagnosticField(1, "count", "ground-geometry")]
+        [DiagnosticField]
+        [DiagnosticGroup("ground-geometry")]
         public int SegmentIndex { get; }
-        [DiagnosticField(1, "identity", "ground-geometry")]
+        [DiagnosticField]
+        [DiagnosticGroup("ground-geometry")]
         public int SurfaceIdentity { get; }
-        [DiagnosticField(1, "identity", "ground-geometry")]
+        [DiagnosticField]
+        [DiagnosticGroup("ground-geometry")]
         public ulong CandidateIdentity { get; }
-        [DiagnosticField(1, "metres", "ground-geometry")]
+        [DiagnosticField]
+        [DiagnosticGroup("ground-geometry")]
         public Vector3 Position { get; }
-        [DiagnosticField(1, "direction", "ground-geometry")]
+        [DiagnosticField]
+        [DiagnosticGroup("ground-geometry")]
         public Vector3 Normal { get; }
-        [DiagnosticField(1, "metres", "ground-geometry")]
+        [DiagnosticField]
+        [DiagnosticGroup("ground-geometry")]
         public float QueryDistance { get; }
     }
 
@@ -769,107 +784,141 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
 
         CharacterFootGroundPathPage Page => m_Result.PageOrNull;
 
-        [DiagnosticField(1, "category", "ground-path")]
+        [DiagnosticField]
+        [DiagnosticGroup("ground-path")]
         public CharacterFootGroundPathState State =>
             Page == null ? default : Page.State;
-        [DiagnosticField(1, "category", "ground-path")]
+        [DiagnosticField]
+        [DiagnosticGroup("ground-path")]
         public CharacterFootGroundPathRejectReason RejectReason =>
             Page == null ? default : Page.RejectReason;
-        [DiagnosticField(1, "none", "ground-path")]
+        [DiagnosticField]
+        [DiagnosticGroup("ground-path")]
         public bool QueryExecutedThisFrame =>
             Page != null && m_Result.QueryExecutedThisFrame;
         public bool QueryExecuted => QueryExecutedThisFrame;
-        [DiagnosticField(1, "count", "ground-path")]
+        [DiagnosticField]
+        [DiagnosticGroup("ground-path")]
         public int SegmentCount => Page?.SegmentCount ?? 0;
-        [DiagnosticField(1, "identity", "ground-path")]
+        [DiagnosticField]
+        [DiagnosticGroup("ground-path")]
         public ulong InputIdentity => Page == null ? 0 : Page.Input.Identity;
-        [DiagnosticField(1, "identity", "ground-path")]
+        [DiagnosticField]
+        [DiagnosticGroup("ground-path")]
         public ulong LastLandingEventIdentity =>
             Page != null && Page.HasInput
                 ? Page.Input.Key.LastLandingEventIdentity
                 : 0;
-        [DiagnosticField(1, "identity", "ground-path")]
+        [DiagnosticField]
+        [DiagnosticGroup("ground-path")]
         public ulong NextSwingLandingEventIdentity =>
             Page != null && Page.HasInput
                 ? Page.Input.Key.NextSwingLandingEventIdentity
                 : 0;
-        [DiagnosticField(1, "none", "ground-path")]
+        [DiagnosticField]
+        [DiagnosticGroup("ground-path")]
         public bool TargetAvailable => NextSwingLandingEventIdentity != 0;
-        [DiagnosticField(1, "identity", "ground-path")]
+        [DiagnosticField]
+        [DiagnosticGroup("ground-path")]
         public ulong TrajectoryGeneration =>
             Page != null && Page.HasInput
                 ? Page.Input.Key.TrajectoryGeneration
                 : 0;
-        [DiagnosticField(1, "frame", "ground-path")]
+        [DiagnosticField]
+        [DiagnosticGroup("ground-path")]
         public ulong AuthorityTick =>
             Page != null && Page.HasInput ? Page.Input.Key.AuthorityTick : 0;
-        [DiagnosticField(1, "identity", "ground-path")]
+        [DiagnosticField]
+        [DiagnosticGroup("ground-path")]
         public string LastFutureBodyTranslationSourceIdentity =>
             Page != null && Page.HasInput
                 ? Page.Input.Key.LastFutureBodyTranslationSourceIdentity
                 : string.Empty;
-        [DiagnosticField(1, "identity", "ground-path")]
+        [DiagnosticField]
+        [DiagnosticGroup("ground-path")]
         public string NextSwingFutureBodyTranslationSourceIdentity =>
             Page != null && Page.HasInput
                 ? Page.Input.Key.NextSwingFutureBodyTranslationSourceIdentity
                 : string.Empty;
-        [DiagnosticField(1, "metres", "ground-path")]
+        [DiagnosticField]
+        [DiagnosticGroup("ground-path")]
         public Vector3 LastLanding =>
             Page != null && Page.HasInput ? Page.Input.LastLanding : default;
-        [DiagnosticField(1, "metres", "ground-path")]
+        [DiagnosticField]
+        [DiagnosticGroup("ground-path")]
         public Vector3 NextSwingLanding =>
             Page != null && Page.HasInput ? Page.Input.NextSwingLanding : default;
-        [DiagnosticField(1, "direction", "ground-path")]
+        [DiagnosticField]
+        [DiagnosticGroup("ground-path")]
         public Vector3 LastLandingNormal =>
             Page != null && Page.HasInput ? Page.Input.LastLandingNormal : default;
-        [DiagnosticField(1, "direction", "ground-path")]
+        [DiagnosticField]
+        [DiagnosticGroup("ground-path")]
         public Vector3 NextSwingLandingNormal =>
             Page != null && Page.HasInput ? Page.Input.NextSwingLandingNormal : default;
-        [DiagnosticField(1, "identity", "ground-path")]
+        [DiagnosticField]
+        [DiagnosticGroup("ground-path")]
         public int LastLandingSurfaceIdentity =>
             Page != null && Page.HasInput
                 ? Page.Input.LastLandingSurfaceIdentity
                 : 0;
-        [DiagnosticField(1, "identity", "ground-path")]
+        [DiagnosticField]
+        [DiagnosticGroup("ground-path")]
         public int NextSwingLandingSurfaceIdentity =>
             Page != null && Page.HasInput
                 ? Page.Input.NextSwingLandingSurfaceIdentity
                 : 0;
-        [DiagnosticField(1, "direction", "ground-path")]
+        [DiagnosticField]
+        [DiagnosticGroup("ground-path")]
         public Vector3 ComponentUp =>
             Page != null && Page.HasInput ? Page.Input.ComponentUp : default;
         public CharacterFootGroundPathQueryRequest Query =>
             Page != null && Page.HasInput ? Page.Input.Query : default;
-        [DiagnosticField(1, "metres", "ground-path")]
+        [DiagnosticField]
+        [DiagnosticGroup("ground-path")]
         public float MaximumReachableVerticalEdge =>
             Page != null && Page.HasInput
                 ? Page.Input.MaximumReachableVerticalEdge
                 : 0f;
-        [DiagnosticField(1, "count", "ground-path")]
+        [DiagnosticField]
+        [DiagnosticGroup("ground-path")]
         public int EdgeCount => Page?.Edges.Count ?? 0;
-        [DiagnosticField(1, "none", "ground-path")]
+        [DiagnosticField]
+        [DiagnosticGroup("ground-path")]
         public bool HasInvalidSegment =>
             Page != null && Page.InvalidSegment.HasValue;
-        [DiagnosticField(1, "count", "ground-path", AvailabilityMember = nameof(HasInvalidSegment))]
+        [DiagnosticField]
+        [DiagnosticGroup("ground-path")]
+        [DiagnosticAvailability(DiagnosticAvailabilityReference.Member, nameof(HasInvalidSegment))]
         public int FirstInvalidSegmentIndex =>
             HasInvalidSegment ? Page.InvalidSegment.EdgeIndex : -1;
-        [DiagnosticField(1, "identity", "ground-path", AvailabilityMember = nameof(HasInvalidSegment))]
+        [DiagnosticField]
+        [DiagnosticGroup("ground-path")]
+        [DiagnosticAvailability(DiagnosticAvailabilityReference.Member, nameof(HasInvalidSegment))]
         public ulong FirstInvalidSegmentIdentity =>
             HasInvalidSegment ? Page.InvalidSegment.EdgeIdentity : 0;
-        [DiagnosticField(1, "metres", "ground-path", AvailabilityMember = nameof(HasInvalidSegment))]
+        [DiagnosticField]
+        [DiagnosticGroup("ground-path")]
+        [DiagnosticAvailability(DiagnosticAvailabilityReference.Member, nameof(HasInvalidSegment))]
         public Vector3 FirstInvalidSegmentBottom =>
             HasInvalidSegment ? Page.InvalidSegment.Bottom : default;
-        [DiagnosticField(1, "metres", "ground-path", AvailabilityMember = nameof(HasInvalidSegment))]
+        [DiagnosticField]
+        [DiagnosticGroup("ground-path")]
+        [DiagnosticAvailability(DiagnosticAvailabilityReference.Member, nameof(HasInvalidSegment))]
         public Vector3 FirstInvalidSegmentTop =>
             HasInvalidSegment ? Page.InvalidSegment.Top : default;
-        [DiagnosticField(1, "metres", "ground-path", AvailabilityMember = nameof(HasInvalidSegment))]
+        [DiagnosticField]
+        [DiagnosticGroup("ground-path")]
+        [DiagnosticAvailability(DiagnosticAvailabilityReference.Member, nameof(HasInvalidSegment))]
         public float FirstInvalidSegmentVerticalDistance =>
             HasInvalidSegment ? Page.InvalidSegment.VerticalDistance : 0f;
         public CharacterFootGroundSurfaceDiagnostics SurfaceCoverage =>
             new(Page?.Contacts.SurfaceCoverage);
-        [DiagnosticField(1, "count", "ground-path")]
+        [DiagnosticField]
+        [DiagnosticGroup("ground-path")]
         public int ContactCount => Page?.Contacts.Count ?? 0;
-        [DiagnosticField(1, "count", "ground-path")]
+        [DiagnosticField]
+        [DiagnosticGroup("ground-path")]
         public int EnvelopeVertexCount => Page?.Envelope.Count ?? 0;
         public bool Accepted => State == CharacterFootGroundPathState.Accepted;
 

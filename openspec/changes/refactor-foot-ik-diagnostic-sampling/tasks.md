@@ -4,9 +4,9 @@
 - [x] 1.2 把普通采样字段迁到现有真实readonly成员的单一path-scoped DiagnosticField，并由CLR类型推断codec
 - [x] 1.3 删除Foot Runtime的一字段一Getter／Extractor、Projection、中央字段容器和DiagnosticDerivedField
 - [x] 1.4 把Ground Contact、Envelope与Surface声明为ground-contacts、ground-envelope、ground-surfaces三张真实class page表，行字段直接标记真实成员
-- [x] 1.5 定义Full Sampler与Capture Program，由Roslyn生成统一Schema、typed packet layout、Lifecycle和左右HandleCommitted
-- [x] 1.6 实现薄CharacterFootIkGeneratedCapture，在成功Seal后的同步Commit边界直接绑定现有Left／Right与公共Fact Root并以in调用HandleCommitted；采样链不消费CharacterFootIkCommittedCaptureViewLease
-- [x] 1.7 编译字段、Program和GeneratedCapture，确认生成调用不包含Side选择、DTO构造、Projection、Getter、表达式树或运行时反射
+- [ ] 1.5 定义Core／Full Sampler与Capture Program，由Roslyn生成统一Schema、typed packet layout、`DiagnosticEvent` typed dispatcher和左右Program handler
+- [x] 1.6 在成功Seal后的同步Commit边界只调用一行Foot `DiagnosticEvent` partial方法并以in传入target、真实lineage、现有Left／Right与公共Fact Root；删除`ICharacterFootIkCommittedCaptureConsumer`、Capture Binding和手写GeneratedCapture／TryCapture转发
+- [x] 1.7 编译字段、Program、Event dispatcher和handler，确认业务调用不包含Side选择、DTO构造、Projection、Getter、表达式树或运行时反射，且target无订阅立即返回、Disabled Event／Query调用与参数求值被消除
 - [x] 1.8 删除三个Foot typed Event、Dimension类型、Metadata Side、旧DiagnosticTableCount和旧max-count Ground Geometry合成表
 - [x] 1.9 删除没有任何采样字段却要求构造AnimationBiomechanicalStepReadPage的foot-steps根
 
@@ -18,9 +18,9 @@
 - [x] 2.4 自动检查Table容量、packet序列、Writer与Host失败，确保任一基础产物失败时Capability不发布Completed
 - [x] 2.5 删除Foot Editor中的CharacterFootCsvColumn、CsvBinding、手写Header、旧Reader字段映射和领域Host Adapter
 
-## 3. 删除旧Foot报告系统
+## 3. 从采样链删除旧Foot报告系统
 
-- [x] 3.1 删除旧Foot Analyzer、Publisher、七维评分、规则报告与诊断Store，不迁移第二套报告产品
+- [x] 3.1 从采样链删除旧Foot单体Analyzer、Publisher、七维评分、规则报告与诊断Store；领域算法语义与当前报告由`add-schema-driven-diagnostic-analysis`独立迁移，不恢复第二套采样或字段映射
 - [x] 3.2 删除旧字段迁移清单、旧Schema reader、别名、默认值与历史包兼容读取
 - [x] 3.3 固定输入Presentation Schedule证据只直接读取生成主表、ground-contacts与ground-envelope，不重建旧samples.csv或合成geometry
 

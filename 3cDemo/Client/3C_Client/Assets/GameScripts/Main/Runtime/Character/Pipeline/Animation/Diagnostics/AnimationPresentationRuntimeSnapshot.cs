@@ -1,4 +1,5 @@
 using System;
+using KK.GeneratedDiagnosticSampling;
 using ThirdPersonCharacter.Animation.TransitionRouting;
 using ThirdPersonCharacter.Pipeline.Animation.BlendStack;
 using ThirdPersonCharacter.Pipeline.Presentation;
@@ -7,6 +8,37 @@ using UnityEngine;
 
 namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
 {
+    [DiagnosticGroup("physical")]
+    public readonly struct CharacterPhysicalFootPose
+    {
+        internal CharacterPhysicalFootPose(
+            Vector3 ankleWorldPosition,
+            Quaternion ankleWorldRotation)
+        {
+            IsAvailable = true;
+            AnkleWorldPosition = ankleWorldPosition;
+            AnkleWorldRotation = ankleWorldRotation;
+        }
+
+        [DiagnosticField]
+        [DiagnosticKey("physical-write-available")]
+        public bool IsAvailable { get; }
+
+        [DiagnosticField]
+        [DiagnosticKey("physical-ankle-position")]
+        [DiagnosticAvailability(
+            DiagnosticAvailabilityReference.Member,
+            nameof(IsAvailable))]
+        public Vector3 AnkleWorldPosition { get; }
+
+        [DiagnosticField]
+        [DiagnosticKey("physical-ankle-rotation")]
+        [DiagnosticAvailability(
+            DiagnosticAvailabilityReference.Member,
+            nameof(IsAvailable))]
+        public Quaternion AnkleWorldRotation { get; }
+    }
+
     internal readonly struct CharacterFootIkPhysicalCapture
     {
         internal CharacterFootIkPhysicalCapture(
@@ -35,10 +67,12 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
             PoseRootLocalRotation = poseRootLocalRotation;
             PoseRootWorldPosition = poseRootWorldPosition;
             PoseRootWorldRotation = poseRootWorldRotation;
-            LeftAnkleWorldPosition = leftAnkleWorldPosition;
-            LeftAnkleWorldRotation = leftAnkleWorldRotation;
-            RightAnkleWorldPosition = rightAnkleWorldPosition;
-            RightAnkleWorldRotation = rightAnkleWorldRotation;
+            Left = new CharacterPhysicalFootPose(
+                leftAnkleWorldPosition,
+                leftAnkleWorldRotation);
+            Right = new CharacterPhysicalFootPose(
+                rightAnkleWorldPosition,
+                rightAnkleWorldRotation);
         }
 
         internal Vector3 LogicRootWorldPosition { get; }
@@ -51,10 +85,12 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
         internal Quaternion PoseRootLocalRotation { get; }
         internal Vector3 PoseRootWorldPosition { get; }
         internal Quaternion PoseRootWorldRotation { get; }
-        internal Vector3 LeftAnkleWorldPosition { get; }
-        internal Quaternion LeftAnkleWorldRotation { get; }
-        internal Vector3 RightAnkleWorldPosition { get; }
-        internal Quaternion RightAnkleWorldRotation { get; }
+        internal CharacterPhysicalFootPose Left { get; }
+        internal CharacterPhysicalFootPose Right { get; }
+        internal Vector3 LeftAnkleWorldPosition => Left.AnkleWorldPosition;
+        internal Quaternion LeftAnkleWorldRotation => Left.AnkleWorldRotation;
+        internal Vector3 RightAnkleWorldPosition => Right.AnkleWorldPosition;
+        internal Quaternion RightAnkleWorldRotation => Right.AnkleWorldRotation;
         internal bool IsAvailable =>
             IsFinite(LogicRootWorldPosition) &&
             IsFinite(LogicRootWorldRotation) &&
@@ -66,6 +102,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
             IsFinite(PoseRootLocalRotation) &&
             IsFinite(PoseRootWorldPosition) &&
             IsFinite(PoseRootWorldRotation) &&
+            Left.IsAvailable &&
+            Right.IsAvailable &&
             IsFinite(LeftAnkleWorldPosition) &&
             IsFinite(LeftAnkleWorldRotation) &&
             IsFinite(RightAnkleWorldPosition) &&

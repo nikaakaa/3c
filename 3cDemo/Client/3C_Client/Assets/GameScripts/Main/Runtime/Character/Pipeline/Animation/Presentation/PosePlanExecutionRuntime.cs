@@ -17,7 +17,7 @@ using Unity.Profiling;
 
 namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
 {
-    internal sealed class PosePlanExecutionRuntime : IDisposable
+    internal sealed partial class PosePlanExecutionRuntime : IDisposable
     {
         static readonly ProfilerMarker PrepareMarker =
             new ProfilerMarker("ThirdPerson.Presentation.Animation.Prepare");
@@ -44,6 +44,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
         static readonly ProfilerMarker DiagnosticsMarker =
             new ProfilerMarker("ThirdPerson.Presentation.Animation.Diagnostics");
         readonly AnimancerComponent m_Animancer;
+        readonly Guid m_RuntimeInstanceId;
         readonly CharacterPresentationProjection m_Projection;
         readonly CharacterPoseProgramRuntime m_ProgramRuntime;
         readonly CharacterPoseConstraintRuntime m_PoseConstraints;
@@ -79,6 +80,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
         bool m_Disposed;
 
         internal PosePlanExecutionRuntime(
+            Guid runtimeInstanceId,
             AnimancerComponent animancer,
             CharacterAnimationRigBinding rigBinding,
             CharacterRootHierarchyBinding rootHierarchy,
@@ -88,6 +90,11 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             CharacterFootPlacementModule footPlacement,
             bool managesGraphClock)
         {
+            m_RuntimeInstanceId = runtimeInstanceId != Guid.Empty
+                ? runtimeInstanceId
+                : throw new ArgumentException(
+                    "Animation Presentation runtime identity is invalid.",
+                    nameof(runtimeInstanceId));
             m_Animancer = animancer ? animancer : throw new ArgumentNullException(nameof(animancer));
             m_Projection = projection ?? throw new ArgumentNullException(nameof(projection));
             Animator animator = m_Animancer.Animator;
@@ -718,15 +725,18 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
         internal CharacterPoseProgramFrameLease BeginPendingFrame(
             in CharacterPoseFrameLineage lineage,
             AnimationPresentationDiagnosticsInterest diagnosticsInterest,
-            CharacterFootIkCaptureInterest footIkCaptureInterest,
             CharacterLinkedPoseRuntimeSession linkedPose,
             out CharacterPoseSourceFrameLease sourceLease,
             out CharacterPoseConstraintFrameLease constraintLease,
-            out CharacterFinalPosePublicationFrameLease publicationLease)
+            out CharacterFinalPosePublicationFrameLease publicationLease,
+            out bool captureFootIkDiagnostics)
         {
             sourceLease = default;
             constraintLease = default;
             publicationLease = default;
+            captureFootIkDiagnostics = false;
+            QueryFootDiagnosticEventInterest(
+                ref captureFootIkDiagnostics);
             RequireAlive();
             var programLease =
                 new CharacterPoseProgramFrameLease(in lineage);
@@ -774,14 +784,14 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                 constraintLease = m_PoseConstraints.BeginFrame(
                     in lineage,
                     diagnosticsInterest,
-                    footIkCaptureInterest);
+                    captureFootIkDiagnostics);
                 poseConstraintsOpen = true;
                 m_ProgramRuntime.BeginSourceRetirementFrame();
                 sourceLease = m_SourceModule.BeginFrame(in lineage);
                 sourceOpen = true;
                 publicationLease = m_FinalPublication.BeginFrame(
                     in lineage,
-                    footIkCaptureInterest);
+                    captureFootIkDiagnostics);
                 publicationOpen = true;
                 m_PendingFrameOutcome = AnimationPresentationFrameOutcome.None;
                 m_ProgramRuntime.BeginFrame(programLease);
@@ -1036,7 +1046,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
 
         internal void BeginCommittedDiagnostics(
             AnimationPresentationDiagnosticsInterest interest,
-            in CharacterFootIkCaptureBinding footIkCapture,
+            bool captureFootIk,
             CharacterLinkedPoseRuntimeSession linkedPose,
             in CharacterPoseSourceFrameResult sourceFrame,
             in CharacterPoseFrameExecutionResult executionResult)
@@ -1047,7 +1057,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                 throw new ArgumentNullException(nameof(linkedPose));
             bool publishRuntimeSnapshot =
                 interest != AnimationPresentationDiagnosticsInterest.None;
-            bool captureFootIk = footIkCapture.IsValid;
             if (!publishRuntimeSnapshot && !captureFootIk)
                 return;
             if (captureFootIk &&
@@ -1087,8 +1096,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                 }
                 if (captureFootIk)
                 {
-                    CaptureCommittedFootIk(
-                        in footIkCapture,
+                    PublishCommittedFootDiagnosticEvent(
                         in committedFrame,
                         in committedConstraintResult,
                         in committedPublicationResult);
@@ -1215,180 +1223,13 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             }
         }
 
-        void CaptureCommittedFootIk(
-            in CharacterFootIkCaptureBinding binding,
+        partial void QueryFootDiagnosticEventInterest(
+            ref bool interested);
+
+        partial void PublishCommittedFootDiagnosticEvent(
             in CharacterPoseFrameLineage frame,
             in CharacterPoseConstraintResult constraintResult,
-            in CharacterFinalPosePublicationResult publicationResult)
-        {
-            m_PoseConstraints.RequireCommittedFootIkCapture(
-                in constraintResult);
-            ComposedAnimationPoseFrame finalFrame =
-                m_FinalPublication.RequireCommittedFrame(
-                    in publicationResult);
-            CharacterFootLandingPredictionDiagnostics landing =
-                m_PoseConstraints.CommittedFootLandingPrediction;
-            if (!landing.IsCompleted ||
-                landing.FrameSequence != frame.PresentationFrame ||
-                landing.CompletionIdentity != frame.CompletionIdentity)
-            {
-                throw new InvalidOperationException(
-                    "Committed Foot IK landing facts are inconsistent.");
-            }
-            CharacterFullBodyIkSolverDiagnostics solver = default;
-            CharacterFullBodyIkEffectorDiagnostics pelvis = default;
-            CharacterFullBodyIkEffectorDiagnostics leftEffector = default;
-            CharacterFullBodyIkEffectorDiagnostics rightEffector = default;
-            CharacterFullBodyIkLimbDiagnostics leftLeg = default;
-            CharacterFullBodyIkLimbDiagnostics rightLeg = default;
-            CharacterFullBodyIkSolverDiagnostics candidate =
-                m_PoseConstraints.CommittedFullBodyIkSolver;
-            if (candidate.IsCompleted &&
-                candidate.InputCompletionIdentity == frame.CompletionIdentity &&
-                candidate.FrameSequence == landing.FrameSequence)
-            {
-                bool containsFoot = false;
-                for (int i = 0;
-                     i < m_PoseConstraints.CommittedSolverEffectorCount;
-                     i++)
-                {
-                    CharacterFullBodyIkEffectorDiagnostics effector =
-                        m_PoseConstraints.GetCommittedSolverEffector(i);
-                    if (effector.Slot ==
-                        CharacterFullBodyIkEffectorSlot.PelvisPreSolveTranslation)
-                    {
-                        pelvis = effector;
-                        containsFoot = true;
-                    }
-                    else if (effector.Slot ==
-                             CharacterFullBodyIkEffectorSlot.LeftFoot)
-                    {
-                        leftEffector = effector;
-                        containsFoot = true;
-                    }
-                    else if (effector.Slot ==
-                             CharacterFullBodyIkEffectorSlot.RightFoot)
-                    {
-                        rightEffector = effector;
-                        containsFoot = true;
-                    }
-                }
-                if (containsFoot)
-                {
-                    for (int i = 0;
-                         i < m_PoseConstraints.CommittedSolverLimbCount;
-                         i++)
-                    {
-                        CharacterFullBodyIkLimbDiagnostics limb =
-                            m_PoseConstraints.GetCommittedSolverLimb(i);
-                        if (limb.Limb == CharacterFullBodyIkLimbSlot.LeftLeg)
-                            leftLeg = limb;
-                        else if (limb.Limb ==
-                                 CharacterFullBodyIkLimbSlot.RightLeg)
-                            rightLeg = limb;
-                    }
-                    solver = candidate;
-                }
-            }
-            CharacterFootLandingPredictionFootDiagnostics leftFoot =
-                landing.Left;
-            CharacterFootLandingPredictionFootDiagnostics rightFoot =
-                landing.Right;
-            CharacterFootLandingPredictionInputDiagnostics input =
-                landing.Input;
-            CharacterFootStepObservationInputDiagnostics formalInput =
-                input.FootStepObservation;
-            AnimationFootMotionRuntimeSample leftFormalInput =
-                formalInput.Left;
-            AnimationFootMotionRuntimeSample rightFormalInput =
-                formalInput.Right;
-            ResolveCommittedFootMotion(
-                in finalFrame,
-                out AnimationFootMotionRuntimeSample leftFormalOutput,
-                out AnimationFootMotionRuntimeSample rightFormalOutput);
-            CharacterFullBodyIkGoal pelvisGoal = landing.PelvisGoal;
-            CharacterFootPrimarySupportDiagnostics primarySupport =
-                landing.PrimarySupport;
-            CharacterFootStrideHipsDiagnostics stride = landing.StrideHips;
-            try
-            {
-                binding.Consumer.TryCapture(
-                    in frame,
-                    in leftEffector,
-                    in leftFoot,
-                    in leftFormalInput,
-                    in leftFormalOutput,
-                    in leftLeg,
-                    in rightEffector,
-                    in rightFoot,
-                    in rightFormalInput,
-                    in rightFormalOutput,
-                    in rightLeg,
-                    in input,
-                    in pelvis,
-                    in pelvisGoal,
-                    in primarySupport,
-                    in solver,
-                    in stride);
-            }
-            catch (Exception failure)
-            {
-                try
-                {
-                    binding.Consumer.CaptureFault(failure);
-                }
-                catch
-                {
-                }
-            }
-        }
-
-        void ResolveCommittedFootMotion(
-            in ComposedAnimationPoseFrame finalFrame,
-            out AnimationFootMotionRuntimeSample left,
-            out AnimationFootMotionRuntimeSample right)
-        {
-            AnimationPoseSourceId sourceId = default;
-            float sourceWeight = -1f;
-            AnimationReadOnlyBuffer<AnimationPoseSourceContribution>
-                contributions = finalFrame.Contributions;
-            for (int i = 0; i < contributions.Count; i++)
-            {
-                AnimationPoseSourceContribution contribution =
-                    contributions[i];
-                if (contribution.Kind !=
-                        AnimationPoseContributionKind.Live ||
-                    contribution.Weight <= sourceWeight)
-                {
-                    continue;
-                }
-                sourceId = contribution.SourceId;
-                sourceWeight = contribution.Weight;
-            }
-            if (!sourceId.IsValid)
-            {
-                left = default;
-                right = default;
-                return;
-            }
-            for (int i = 0;
-                 i < m_PoseStateSources.ClipPlayers.Length;
-                 i++)
-            {
-                AnimationClipPlayerRuntime player =
-                    m_PoseStateSources.ClipPlayers[i];
-                if (player.SourceId.Equals(sourceId))
-                {
-                    player.CreateFootMotionSamples(
-                        sourceWeight,
-                        out left,
-                        out right);
-                    return;
-                }
-            }
-            left = default;
-            right = default;
-        }
+            in CharacterFinalPosePublicationResult publicationResult);
 
         internal CharacterFootIkCommittedCaptureViewLease PublishDiagnostics()
         {

@@ -11,7 +11,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             Position = position;
         }
 
-        [DiagnosticField(1, "metres", "ground-geometry")]
+        [DiagnosticField]
+        [DiagnosticGroup("ground-geometry")]
         public Vector3 Position { get; }
     }
 

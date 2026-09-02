@@ -2,12 +2,15 @@
 
 现有生成采样链已经能把多个业务事实根编译为AOT Capture、Schema和CSV，但Foot旧Analyzer在迁移中被直接删除，导致系统只能采集证据，不能再给出穿地、脚滑、Landing连续性等诊断结论。同时，把revision、unit、group等持续塞进`DiagnosticField`或让Sampler再次列出字段，都会让战斗、IK、网络和动画接入后形成两份字段真相，无法承受字段与测试方案的持续变化。
 
-本change建立独立于Player采样热路径的Schema-driven离线诊断能力：字段旁只保存必要的采样、稳定Key和Group声明，Capability划分业务，Sampler按Group选择而不逐字段映射；Host读取最新采样Schema，动态Plan绑定输入并组合稳定Operator。Foot作为首个领域消费者从Git历史迁移诊断规则，但不恢复旧Sampler、Column／CsvBinding、诊断DTO和一万行Analyzer单体。
+本change建立独立于Player采样热路径的Schema-driven离线诊断能力：字段旁只保存必要的采样、稳定Key、Group和Availability声明，Capability划分业务，Sampler按Group选择而不逐字段映射；业务用`DiagnosticEvent`标记自己的同步Commit时机并只调用一行partial触发点，Generator绑定Event与Program并完成AOT采集；Host读取最新采样Schema，动态Plan绑定输入并组合稳定Operator。Foot作为首个领域消费者从Git历史迁移诊断规则，但不恢复旧Sampler、Column／CsvBinding、诊断DTO和一万行Analyzer单体。
 
 ## What Changes
 
-- **BREAKING**：把现有`DiagnosticField(revision, unit, groups)`收敛为纯字段标记；稳定关键身份与采样分组分别使用小而独立的`DiagnosticKey`和可继承、可重复的`DiagnosticGroup`，不在字段Attribute保存人工版本、阈值、评分或报告信息。
+- **BREAKING**：把现有`DiagnosticField(revision, unit, groups)`收敛为纯字段标记；稳定关键身份、采样分组与有效条件分别使用小而独立的`DiagnosticKey`、可继承／可重复的`DiagnosticGroup`和`DiagnosticAvailability`，不在字段Attribute保存人工版本、阈值、评分或报告信息。
 - Capability成为战斗、IK、网络、动画等业务采样的唯一边界。Generator从Capability的Fact Root递归发现字段；一个真实成员只声明一次，不在Sampler、Host或Analyzer维护第二份字段清单。
+- 业务在自己选择的Commit点声明带`DiagnosticEvent`的private static partial void触发方法，参数直接使用目标、现有lineage与多个`in` Fact Root；业务执行只保留一行方法调用。Generator为Capture构建生成目标隔离的typed dispatcher、兴趣查询与Program handler，无匹配目标订阅时不采集，Disabled构建无实现时由编译器消除调用及参数求值。
+- Event只声明采样发生时机和直接事实参数，不恢复Started／CommittedSample／Stopped Event DTO、Dimension View或字段副本。Session Start／Stop继续由Host workflow控制；Capture失败只Fault对应Session，不得逃逸改变业务Commit。
+- Capture Metadata只在Host workflow启动Session时提供并冻结，不作为每帧Event参数反复传递；Event必须接收业务当前真实lineage，Generator不得自行合成frame、tick或completion identity。
 - Generator把Fact Root、成员层级、Table以及显式Group编译进Schema；Sampler只选择Group或`IncludeAll`，编译期展开字段并检查空组、重复Key、非法类型、Table闭包、左右Dimension结构和packet容量。
 - 提供通用Schema-driven Artifact Reader，以`capability.manifest.json`为唯一入口，验证Completed状态、hash和Schema后统一读取主表与子表，按当前Schema解析类型、Dimension、Frame／Tick和Table关联，不要求每个Capability编写CSV Binding或Reader Adapter。
 - 提供Editor／Host-only动态诊断Plan。Plan只保存Operator选择、输入Key或当前Field identity绑定、阈值、窗口、过滤、规则组合与评分参数；字段和测试变化后只维护当前Plan，不迁移旧Plan、不猜测近似字段、不建立alias或兼容Schema。
@@ -33,7 +36,7 @@
 ## Impact
 
 - Affected package: 独立`D:/Unity_Project_1/generated-diagnostic-sampling`的Annotations、Generator与Host API，新增聚焦Key／Group元数据、Group展开和通用Artifact Reader，不加入任何Foot或Combat概念。
-- Affected 3C runtime definitions: Foot Capability／Fact Root／Field／Sampler／Program声明；业务计算、事实结构和内存布局不改变。
+- Affected 3C runtime definitions: Foot Capability／Fact Root／Field／Sampler／Program声明；业务求解结果与算法不改变，Final Physical Writer只在匹配interest时向既有诊断页新增每脚Physical Ankle只读事实。
 - Affected 3C editor tooling: 新增独立Foot诊断Core、当前Plan、报告Writer、Launcher／MCP前端；从Git历史迁移算法而非恢复旧基础设施。
 - Affected active changes: `add-generated-diagnostic-sampling-framework`、`extract-generated-diagnostic-sampling-package`和`refactor-foot-ik-diagnostic-sampling`必须同步删除“通用Host产物即最终Foot诊断输出”口径，并保持单一生成采样链。
 - Affected builds: Unity Editor、Windows x64 IL2CPP Capture Player与实机Capture；Analyzer始终Host-only，Disabled Player闭包要求不变。

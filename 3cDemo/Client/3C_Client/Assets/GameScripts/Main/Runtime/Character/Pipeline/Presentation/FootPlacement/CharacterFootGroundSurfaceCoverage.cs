@@ -28,13 +28,17 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             End = end;
         }
 
-        [DiagnosticField(1, "identity", "ground-geometry")]
+        [DiagnosticField]
+        [DiagnosticGroup("ground-geometry")]
         public int SurfaceIdentity { get; }
-        [DiagnosticField(1, "count", "ground-geometry")]
+        [DiagnosticField]
+        [DiagnosticGroup("ground-geometry")]
         public int FaceIdentity { get; }
-        [DiagnosticField(1, "metres", "ground-geometry")]
+        [DiagnosticField]
+        [DiagnosticGroup("ground-geometry")]
         public Vector2 Start { get; }
-        [DiagnosticField(1, "metres", "ground-geometry")]
+        [DiagnosticField]
+        [DiagnosticGroup("ground-geometry")]
         public Vector2 End { get; }
     }
 
@@ -200,16 +204,19 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         internal CharacterFootGroundSurfaceDiagnostics(
             CharacterFootGroundSurfacePage page) => m_Page = page;
 
-        [DiagnosticField(1, "category", "ground-path")]
+        [DiagnosticField]
+        [DiagnosticGroup("ground-path")]
         public CharacterFootGroundSurfaceState State =>
             m_Page == null ? default : m_Page.State;
         public Vector3 Origin => m_Page == null ? default : m_Page.Origin;
         public Vector3 Forward => m_Page == null ? default : m_Page.Forward;
         public Vector3 Up => m_Page == null ? default : m_Page.Up;
         public float Length => m_Page == null ? 0f : m_Page.Length;
-        [DiagnosticField(1, "identity", "ground-path")]
+        [DiagnosticField]
+        [DiagnosticGroup("ground-path")]
         public ulong WorldRevision => m_Page == null ? 0 : m_Page.WorldRevision;
-        [DiagnosticField(1, "count", "ground-path")]
+        [DiagnosticField]
+        [DiagnosticGroup("ground-path")]
         public int Count => m_Page?.Count ?? 0;
 
         public CharacterFootGroundSurfaceSegment SegmentAt(int index)

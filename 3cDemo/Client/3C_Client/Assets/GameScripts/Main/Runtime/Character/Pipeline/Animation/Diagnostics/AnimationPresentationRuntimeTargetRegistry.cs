@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using ThirdPersonCharacter.Pipeline.Animation.MotionMatching;
 using ThirdPersonCharacter.Pipeline.Presentation;
+using ThirdPersonSimulation;
 
 namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
 {
@@ -73,84 +74,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
         PoseWatch = 1 << 4
     }
 
-    public readonly struct CharacterFootIkCaptureInterest :
-        IEquatable<CharacterFootIkCaptureInterest>
-    {
-        public CharacterFootIkCaptureInterest(int viewCapacity)
-        {
-            if (viewCapacity != 1)
-                throw new ArgumentOutOfRangeException(nameof(viewCapacity));
-            ViewCapacity = viewCapacity;
-        }
-
-        public int ViewCapacity { get; }
-        public bool IsEnabled => ViewCapacity == 1;
-
-        public bool Equals(CharacterFootIkCaptureInterest other) =>
-            ViewCapacity == other.ViewCapacity;
-
-        public override bool Equals(object obj) =>
-            obj is CharacterFootIkCaptureInterest other && Equals(other);
-
-        public override int GetHashCode() => ViewCapacity;
-    }
-
-    public interface ICharacterFootIkCommittedCaptureConsumer
-    {
-        bool TryCapture(
-            in CharacterPoseFrameLineage frame,
-            in CharacterFullBodyIkEffectorDiagnostics leftEffector,
-            in CharacterFootLandingPredictionFootDiagnostics leftFoot,
-            in AnimationFootMotionRuntimeSample leftFormalInput,
-            in AnimationFootMotionRuntimeSample leftFormalOutput,
-            in CharacterFullBodyIkLimbDiagnostics leftLeg,
-            in CharacterFullBodyIkEffectorDiagnostics rightEffector,
-            in CharacterFootLandingPredictionFootDiagnostics rightFoot,
-            in AnimationFootMotionRuntimeSample rightFormalInput,
-            in AnimationFootMotionRuntimeSample rightFormalOutput,
-            in CharacterFullBodyIkLimbDiagnostics rightLeg,
-            in CharacterFootLandingPredictionInputDiagnostics input,
-            in CharacterFullBodyIkEffectorDiagnostics pelvis,
-            in CharacterFullBodyIkGoal pelvisGoal,
-            in CharacterFootPrimarySupportDiagnostics primarySupport,
-            in CharacterFullBodyIkSolverDiagnostics solver,
-            in CharacterFootStrideHipsDiagnostics stride);
-        void CaptureFault(Exception failure);
-    }
-
-    internal readonly struct CharacterFootIkCaptureBinding
-    {
-        internal CharacterFootIkCaptureBinding(
-            Guid ownerId,
-            in CharacterFootIkCaptureInterest interest,
-            ICharacterFootIkCommittedCaptureConsumer consumer)
-        {
-            if (ownerId == Guid.Empty ||
-                !interest.IsEnabled ||
-                consumer == null)
-            {
-                throw new ArgumentException(
-                    "Foot IK capture binding is invalid.");
-            }
-            OwnerId = ownerId;
-            Interest = interest;
-            Consumer = consumer;
-        }
-
-        internal Guid OwnerId { get; }
-        internal CharacterFootIkCaptureInterest Interest { get; }
-        internal ICharacterFootIkCommittedCaptureConsumer Consumer { get; }
-        internal bool IsValid =>
-            OwnerId != Guid.Empty &&
-            Interest.IsEnabled &&
-            Consumer != null;
-    }
-
     public interface IAnimationPresentationRuntimeSnapshotProvider
     {
         bool MotionMatchingRuntimeEnabled { get; }
         AnimationPresentationDiagnosticsInterest DiagnosticsInterest { get; }
-        CharacterFootIkCaptureInterest FootIkCaptureInterest { get; }
         bool TryGetAnimationPresentationDebugView(
             out AnimationPresentationDebugView debugView);
         bool TryGetPosePlanStages(out CharacterPosePlanStageSnapshot snapshot);
@@ -161,11 +88,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
             Guid ownerId,
             AnimationPresentationDiagnosticsInterest interest);
         void RemoveDiagnosticsInterest(Guid ownerId);
-        void SetFootIkCapture(
-            Guid ownerId,
-            CharacterFootIkCaptureInterest interest,
-            ICharacterFootIkCommittedCaptureConsumer consumer);
-        void RemoveFootIkCapture(Guid ownerId);
         void SetPoseWatchInterests(Guid ownerId, IReadOnlyList<AnimationPoseWatchIdentity> interests);
         void RemovePoseWatchInterests(Guid ownerId);
     }
@@ -176,17 +98,19 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
 
         public AnimationPresentationRuntimeTarget(
             Guid runtimeInstanceId,
+            ActorId actorId,
             int hostInstanceId,
             string displayName,
             AnimationPresentationProgramIdentity programIdentity,
             IAnimationPresentationRuntimeSnapshotProvider provider)
         {
-            if (runtimeInstanceId == Guid.Empty || hostInstanceId == 0 ||
+            if (runtimeInstanceId == Guid.Empty || !actorId.IsValid || hostInstanceId == 0 ||
                 string.IsNullOrWhiteSpace(displayName) || !programIdentity.IsValid)
             {
                 throw new ArgumentException("Animation Presentation runtime target identity is incomplete.");
             }
             RuntimeInstanceId = runtimeInstanceId;
+            ActorId = actorId;
             HostInstanceId = hostInstanceId;
             DisplayName = displayName.Trim();
             ProgramIdentity = programIdentity;
@@ -194,6 +118,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
         }
 
         public Guid RuntimeInstanceId { get; }
+        public ActorId ActorId { get; }
         public int HostInstanceId { get; }
         public string DisplayName { get; }
         public AnimationPresentationProgramIdentity ProgramIdentity { get; }
@@ -201,9 +126,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
         public bool MotionMatchingRuntimeEnabled => m_Provider.MotionMatchingRuntimeEnabled;
         public AnimationPresentationDiagnosticsInterest DiagnosticsInterest =>
             m_Provider.DiagnosticsInterest;
-        public CharacterFootIkCaptureInterest FootIkCaptureInterest =>
-            m_Provider.FootIkCaptureInterest;
-
         public bool TryGetDebugView(
             out AnimationPresentationDebugView debugView)
         {
@@ -243,18 +165,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
         public void RemoveDiagnosticsInterest(Guid ownerId) =>
             m_Provider.RemoveDiagnosticsInterest(ownerId);
 
-        public void SetFootIkCapture(
-            Guid ownerId,
-            CharacterFootIkCaptureInterest interest,
-            ICharacterFootIkCommittedCaptureConsumer consumer) =>
-            m_Provider.SetFootIkCapture(
-                ownerId,
-                interest,
-                consumer);
-
-        public void RemoveFootIkCapture(Guid ownerId) =>
-            m_Provider.RemoveFootIkCapture(ownerId);
-
         public void SetPoseWatchInterests(Guid ownerId, IReadOnlyList<AnimationPoseWatchIdentity> interests) =>
             m_Provider.SetPoseWatchInterests(ownerId, interests);
 
@@ -278,6 +188,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
             {
                 if (s_Targets[i].RuntimeInstanceId == target.RuntimeInstanceId)
                     throw new InvalidOperationException($"Animation Presentation runtime target is already registered: {target.RuntimeInstanceId:N}.");
+                if (s_Targets[i].ActorId == target.ActorId)
+                    throw new InvalidOperationException($"Animation Presentation Actor target is already registered: {target.ActorId}.");
             }
             s_Targets.Add(target);
             try
@@ -303,6 +215,19 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
             for (int i = 0; i < s_Targets.Count; i++)
             {
                 if (s_Targets[i].RuntimeInstanceId != runtimeInstanceId)
+                    continue;
+                target = s_Targets[i];
+                return true;
+            }
+            target = null;
+            return false;
+        }
+
+        public static bool TryGet(ActorId actorId, out AnimationPresentationRuntimeTarget target)
+        {
+            for (int i = 0; i < s_Targets.Count; i++)
+            {
+                if (s_Targets[i].ActorId != actorId)
                     continue;
                 target = s_Targets[i];
                 return true;

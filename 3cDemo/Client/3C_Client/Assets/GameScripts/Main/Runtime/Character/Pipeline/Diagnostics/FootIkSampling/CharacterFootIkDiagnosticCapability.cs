@@ -10,8 +10,6 @@ namespace ThirdPersonCharacter.Pipeline.Diagnostics.FootIkSampling
     {
         public const string CapabilityId = "character-foot-ik";
         public const int CapabilityRevision = 1;
-        public const string LineageTypeIdentity =
-            "character-foot-ik-lineage/1";
         public const string LeftDimensionId = "character-foot-ik/left";
         public const string RightDimensionId = "character-foot-ik/right";
         public const string FullSamplerId = "character-foot-ik/full";
@@ -43,19 +41,24 @@ namespace ThirdPersonCharacter.Pipeline.Diagnostics.FootIkSampling
             TargetHostInstanceId = targetHostInstanceId;
         }
 
-        [DiagnosticField(1, "identity", "capture-metadata")]
+        [DiagnosticField]
+        [DiagnosticGroup("capture-metadata")]
         public string SampleIdentity { get; }
 
-        [DiagnosticField(1, "utc-ticks", "capture-metadata")]
+        [DiagnosticField]
+        [DiagnosticGroup("capture-metadata")]
         public long StartedUtcTicks { get; }
 
-        [DiagnosticField(1, "identity", "capture-metadata")]
+        [DiagnosticField]
+        [DiagnosticGroup("capture-metadata")]
         public string ProgramIdentity { get; }
 
-        [DiagnosticField(1, "identity", "capture-metadata")]
+        [DiagnosticField]
+        [DiagnosticGroup("capture-metadata")]
         public string TargetRuntimeInstanceId { get; }
 
-        [DiagnosticField(1, "identity", "capture-metadata")]
+        [DiagnosticField]
+        [DiagnosticGroup("capture-metadata")]
         public int TargetHostInstanceId { get; }
     }
 
@@ -72,6 +75,7 @@ namespace ThirdPersonCharacter.Pipeline.Diagnostics.FootIkSampling
     [DiagnosticFactRoot("leg", typeof(CharacterFullBodyIkLimbDiagnostics))]
     [DiagnosticFactRoot("pelvis", typeof(CharacterFullBodyIkEffectorDiagnostics))]
     [DiagnosticFactRoot("pelvis-goal", typeof(CharacterFullBodyIkGoal))]
+    [DiagnosticFactRoot("physical", typeof(CharacterPhysicalFootPose))]
     [DiagnosticFactRoot("primary-support", typeof(CharacterFootPrimarySupportDiagnostics))]
     [DiagnosticFactRoot("solver", typeof(CharacterFullBodyIkSolverDiagnostics))]
     [DiagnosticFactRoot("stride", typeof(CharacterFootStrideHipsDiagnostics))]

@@ -90,13 +90,20 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             Distance = distance;
         }
 
-        [DiagnosticField(1, "identity", "landing-observation", AvailabilityMember = nameof(IsAvailable))]
+        [DiagnosticField]
+        [DiagnosticGroup("landing-observation")]
+        [DiagnosticAvailability(DiagnosticAvailabilityReference.Member, nameof(IsAvailable))]
         public int SurfaceIdentity { get; }
-        [DiagnosticField(1, "metres", "landing-observation", AvailabilityMember = nameof(IsAvailable))]
+        [DiagnosticField]
+        [DiagnosticGroup("landing-observation")]
+        [DiagnosticAvailability(DiagnosticAvailabilityReference.Member, nameof(IsAvailable))]
         public Vector3 Point { get; }
-        [DiagnosticField(1, "metres", "landing-observation", AvailabilityMember = nameof(IsAvailable))]
+        [DiagnosticField]
+        [DiagnosticGroup("landing-observation")]
+        [DiagnosticAvailability(DiagnosticAvailabilityReference.Member, nameof(IsAvailable))]
         public float Distance { get; }
-        [DiagnosticField(1, "none", "landing-observation")]
+        [DiagnosticField]
+        [DiagnosticGroup("landing-observation")]
         public bool IsAvailable => SurfaceIdentity != 0;
     }
 
@@ -112,9 +119,11 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             Selected = selected;
         }
 
-        [DiagnosticField(1, "category", "landing-observation")]
+        [DiagnosticField]
+        [DiagnosticGroup("landing-observation")]
         public CharacterFootLandingQueryCandidateSelectionState State { get; }
-        [DiagnosticField(1, "count", "landing-observation")]
+        [DiagnosticField]
+        [DiagnosticGroup("landing-observation")]
         public int ValidCandidateCount { get; }
         public CharacterFootLandingQueryCandidateDiagnostics Selected { get; }
     }
@@ -446,39 +455,56 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 result.ComponentUpChangeAngleDegrees;
         }
 
-        [DiagnosticField(1, "identity", "landing-observation")]
+        [DiagnosticField]
+        [DiagnosticGroup("landing-observation")]
         public ulong Identity { get; }
-        [DiagnosticField(1, "identity", "landing-observation")]
+        [DiagnosticField]
+        [DiagnosticGroup("landing-observation")]
         public ulong WorldRevision { get; }
-        [DiagnosticField(1, "identity", "landing-observation")]
+        [DiagnosticField]
+        [DiagnosticGroup("landing-observation")]
         public ulong SourceSampleIdentity { get; }
-        [DiagnosticField(1, "count", "landing-observation")]
+        [DiagnosticField]
+        [DiagnosticGroup("landing-observation")]
         public int SourceSampleCycle { get; }
-        [DiagnosticField(1, "category", "landing-observation")]
+        [DiagnosticField]
+        [DiagnosticGroup("landing-observation")]
         public CharacterFootLandingObservationCacheState CacheState { get; }
-        [DiagnosticField(1, "none", "landing-observation")]
+        [DiagnosticField]
+        [DiagnosticGroup("landing-observation")]
         public bool QueryExecutedThisFrame { get; }
-        [DiagnosticField(1, "category", "landing-observation")]
+        [DiagnosticField]
+        [DiagnosticGroup("landing-observation")]
         public CharacterFootPlacementQueryPurpose QueryPurpose { get; }
-        [DiagnosticField(1, "metres", "landing-observation")]
+        [DiagnosticField]
+        [DiagnosticGroup("landing-observation")]
         public Vector3 CanonicalRawLanding { get; }
-        [DiagnosticField(1, "direction", "landing-observation")]
+        [DiagnosticField]
+        [DiagnosticGroup("landing-observation")]
         public Vector3 CanonicalComponentUp { get; }
-        [DiagnosticField(1, "category", "landing-observation")]
+        [DiagnosticField]
+        [DiagnosticGroup("landing-observation")]
         public CharacterFootLandingObservationQueryReason QueryReason { get; }
-        [DiagnosticField(1, "category", "landing-observation")]
+        [DiagnosticField]
+        [DiagnosticGroup("landing-observation")]
         public CharacterFootLandingObservationRefreshMode RefreshMode { get; }
-        [DiagnosticField(1, "metres", "landing-observation")]
+        [DiagnosticField]
+        [DiagnosticGroup("landing-observation")]
         public Vector3 CandidateRawLanding { get; }
-        [DiagnosticField(1, "direction", "landing-observation")]
+        [DiagnosticField]
+        [DiagnosticGroup("landing-observation")]
         public Vector3 CandidateComponentUp { get; }
-        [DiagnosticField(1, "metres", "landing-observation")]
+        [DiagnosticField]
+        [DiagnosticGroup("landing-observation")]
         public float QueryInputDistance { get; }
-        [DiagnosticField(1, "degrees", "landing-observation")]
+        [DiagnosticField]
+        [DiagnosticGroup("landing-observation")]
         public float QueryComponentUpAngleDegrees { get; }
-        [DiagnosticField(1, "metres", "landing-observation")]
+        [DiagnosticField]
+        [DiagnosticGroup("landing-observation")]
         public float PredictionInputAccumulationDistance { get; }
-        [DiagnosticField(1, "degrees", "landing-observation")]
+        [DiagnosticField]
+        [DiagnosticGroup("landing-observation")]
         public float ComponentUpChangeAngleDegrees { get; }
         public bool IsAvailable => Identity != 0;
     }
@@ -664,32 +690,48 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         }
 
         public CharacterFootSide Side { get; }
-        [DiagnosticField(1, "category", "identity")]
+        [DiagnosticField]
+        [DiagnosticGroup("identity")]
         public CharacterFootLandingPredictionState State { get; }
-        [DiagnosticField(1, "category", "identity")]
+        [DiagnosticField]
+        [DiagnosticGroup("identity")]
         public CharacterFootLandingPredictionRejectReason RejectReason { get; }
-        [DiagnosticField(1, "category", "identity")]
+        [DiagnosticField]
+        [DiagnosticGroup("identity")]
         public CharacterFootLandingStepSource StepSource { get; }
-        [DiagnosticField(1, "identity", "identity")]
+        [DiagnosticField]
+        [DiagnosticGroup("identity")]
         public ulong LandingEventIdentity { get; }
-        [DiagnosticField(1, "identity", "identity")]
+        [DiagnosticField]
+        [DiagnosticGroup("identity")]
         public ulong TrajectoryGeneration { get; }
-        [DiagnosticField(1, "unitless", "identity")]
+        [DiagnosticField]
+        [DiagnosticGroup("identity")]
         public float LandingConfidence { get; }
-        [DiagnosticField(1, "seconds", "identity")]
+        [DiagnosticField]
+        [DiagnosticGroup("identity")]
         public float TimeToLandingSeconds { get; }
-        [DiagnosticField(1, "metres", "root-landing")]
+        [DiagnosticField]
+        [DiagnosticGroup("root-landing")]
         public Vector3 RootLocalLanding { get; }
-        [DiagnosticField(1, "none", "landing-observation")]
+        [DiagnosticField]
+        [DiagnosticGroup("landing-observation")]
         public bool FutureBodyTranslationAvailable { get; }
         public string FutureBodyTranslationSourceIdentity { get; }
-        [DiagnosticField(1, "metres", "landing-observation", AvailabilityMember = nameof(FutureBodyTranslationAvailable))]
+        [DiagnosticField]
+        [DiagnosticGroup("landing-observation")]
+        [DiagnosticAvailability(DiagnosticAvailabilityReference.Member, nameof(FutureBodyTranslationAvailable))]
         public Vector3 FutureBodyRelativeTranslation { get; }
-        [DiagnosticField(1, "metres", "landing-observation", AvailabilityMember = nameof(FutureBodyTranslationAvailable))]
+        [DiagnosticField]
+        [DiagnosticGroup("landing-observation")]
+        [DiagnosticAvailability(DiagnosticAvailabilityReference.Member, nameof(FutureBodyTranslationAvailable))]
         public Vector3 FutureBodyTranslationVelocity { get; }
-        [DiagnosticField(1, "metres", "landing-observation")]
+        [DiagnosticField]
+        [DiagnosticGroup("landing-observation")]
         public Vector3 CurrentAnimatedSole { get; }
-        [DiagnosticField(1, "metres", "landing-observation", AvailabilityMember = nameof(RawLandingAvailable))]
+        [DiagnosticField]
+        [DiagnosticGroup("landing-observation")]
+        [DiagnosticAvailability(DiagnosticAvailabilityReference.Member, nameof(RawLandingAvailable))]
         public Vector3 RawLandingCandidate { get; }
         public CharacterFootLandingObservationDiagnostics Observation { get; }
         public CharacterFootPlacementQueryRequest Query { get; }
@@ -697,69 +739,110 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         {
             get;
         }
-        [DiagnosticField(1, "identity", "landing-observation", AvailabilityMember = nameof(Accepted))]
+        [DiagnosticField]
+        [DiagnosticGroup("landing-observation")]
+        [DiagnosticAvailability(DiagnosticAvailabilityReference.Member, nameof(Accepted))]
         public int SurfaceIdentity { get; }
-        [DiagnosticField(1, "metres", "landing-observation", AvailabilityMember = nameof(Accepted))]
+        [DiagnosticField]
+        [DiagnosticGroup("landing-observation")]
+        [DiagnosticAvailability(DiagnosticAvailabilityReference.Member, nameof(Accepted))]
         public Vector3 LandingPoint { get; }
-        [DiagnosticField(1, "direction", "landing-observation", AvailabilityMember = nameof(Accepted))]
+        [DiagnosticField]
+        [DiagnosticGroup("landing-observation")]
+        [DiagnosticAvailability(DiagnosticAvailabilityReference.Member, nameof(Accepted))]
         public Vector3 LandingNormal { get; }
-        [DiagnosticField(1, "metres", "landing-observation", AvailabilityMember = nameof(Accepted))]
+        [DiagnosticField]
+        [DiagnosticGroup("landing-observation")]
+        [DiagnosticAvailability(DiagnosticAvailabilityReference.Member, nameof(Accepted))]
         public float QueryDistance { get; }
         public CharacterFullBodyIkGoal Goal { get; }
+        [DiagnosticField]
+        [DiagnosticKey("source-ankle-position")]
+        [DiagnosticGroup("motion-core")]
         public Vector3 SourceAnklePosition { get; }
-        [DiagnosticField(1, "unitless", "motion-core")]
+        [DiagnosticField]
+        [DiagnosticKey("source-ankle-rotation")]
+        [DiagnosticGroup("motion-core")]
         public Quaternion SourceAnkleRotation { get; }
 
-        [DiagnosticField(1, "metres", "motion-core")]
+        [DiagnosticField]
+        [DiagnosticKey("source-heel-position")]
+        [DiagnosticGroup("motion-core")]
         public Vector3 SourceHeelPosition { get; }
 
-        [DiagnosticField(1, "metres", "motion-core")]
+        [DiagnosticField]
+        [DiagnosticKey("source-toe-position")]
+        [DiagnosticGroup("motion-core")]
         public Vector3 SourceToePosition { get; }
         public CharacterFootStepCandidateSelectionDiagnostics StepCandidateSelection { get; }
-        [DiagnosticField(1, "category", "identity")]
+        [DiagnosticField]
+        [DiagnosticGroup("identity")]
         public CharacterFootNextLandingTrackingState NextLandingTrackingState { get; }
-        [DiagnosticField(1, "identity", "identity")]
+        [DiagnosticField]
+        [DiagnosticGroup("identity")]
         public ulong NextLandingTrackingEventIdentity { get; }
-        [DiagnosticField(1, "none", "identity")]
+        [DiagnosticField]
+        [DiagnosticGroup("identity")]
         public bool VerifiedLastLandingAvailable { get; }
-        [DiagnosticField(1, "identity", "identity")]
+        [DiagnosticField]
+        [DiagnosticGroup("identity")]
         public ulong VerifiedLastLandingEventIdentity { get; }
-        [DiagnosticField(1, "category", "identity")]
+        [DiagnosticField]
+        [DiagnosticGroup("identity")]
         public CharacterFootPlantTargetState PlantTargetState { get; }
-        [DiagnosticField(1, "none", "identity")]
+        [DiagnosticField]
+        [DiagnosticGroup("identity")]
         public bool PlantTargetAvailable { get; }
-        [DiagnosticField(1, "identity", "identity", AvailabilityMember = nameof(PlantTargetAvailable))]
+        [DiagnosticField]
+        [DiagnosticGroup("identity")]
+        [DiagnosticAvailability(DiagnosticAvailabilityReference.Member, nameof(PlantTargetAvailable))]
         public ulong PlantTargetEventIdentity { get; }
-        [DiagnosticField(1, "count", "identity", AvailabilityMember = nameof(PlantTargetAvailable))]
+        [DiagnosticField]
+        [DiagnosticGroup("identity")]
+        [DiagnosticAvailability(DiagnosticAvailabilityReference.Member, nameof(PlantTargetAvailable))]
         public int PlantTargetSurfaceIdentity { get; }
-        [DiagnosticField(1, "metres", "identity", AvailabilityMember = nameof(PlantTargetAvailable))]
+        [DiagnosticField]
+        [DiagnosticGroup("identity")]
+        [DiagnosticAvailability(DiagnosticAvailabilityReference.Member, nameof(PlantTargetAvailable))]
         public Vector3 PlantTargetPoint { get; }
-        [DiagnosticField(1, "direction", "identity", AvailabilityMember = nameof(PlantTargetAvailable))]
+        [DiagnosticField]
+        [DiagnosticGroup("identity")]
+        [DiagnosticAvailability(DiagnosticAvailabilityReference.Member, nameof(PlantTargetAvailable))]
         public Vector3 PlantTargetNormal { get; }
-        [DiagnosticField(1, "identity", "identity", AvailabilityMember = nameof(PlantTargetAvailable))]
+        [DiagnosticField]
+        [DiagnosticGroup("identity")]
+        [DiagnosticAvailability(DiagnosticAvailabilityReference.Member, nameof(PlantTargetAvailable))]
         public ulong PlantTargetTrajectoryGeneration { get; }
-        [DiagnosticField(1, "identity", "identity", AvailabilityMember = nameof(PlantTargetAvailable))]
+        [DiagnosticField]
+        [DiagnosticGroup("identity")]
+        [DiagnosticAvailability(DiagnosticAvailabilityReference.Member, nameof(PlantTargetAvailable))]
         public string PlantTargetFutureBodyTranslationSourceIdentity { get; }
-        [DiagnosticField(1, "none", "identity")]
+        [DiagnosticField]
+        [DiagnosticGroup("identity")]
         public bool PlantTargetUpdated { get; }
-        [DiagnosticField(1, "none", "identity")]
+        [DiagnosticField]
+        [DiagnosticGroup("identity")]
         public bool PlantVerificationAttempted { get; }
-        [DiagnosticField(1, "none", "identity")]
+        [DiagnosticField]
+        [DiagnosticGroup("identity")]
         public bool PlantVerificationUnavailable { get; }
-        [DiagnosticField(1, "none", "identity")]
+        [DiagnosticField]
+        [DiagnosticGroup("identity")]
         public bool ApproachPlantTargetPrepared { get; }
         public CharacterFootGroundPathDiagnostics GroundPath { get; }
         public CharacterFootSwingMotionDiagnostics FootMotion { get; }
         public CharacterFootCurrentSupportDiagnostics CurrentSupport { get; }
         public CharacterResolvedFootDiagnostics Resolved { get; }
-        [DiagnosticField(1, "none", "landing-observation")]
+        [DiagnosticField]
+        [DiagnosticGroup("landing-observation")]
         public bool RawLandingAvailable =>
             RejectReason == CharacterFootLandingPredictionRejectReason.None ||
             RejectReason ==
             CharacterFootLandingPredictionRejectReason.GroundQueryMissed ||
             RejectReason ==
             CharacterFootLandingPredictionRejectReason.GroundQueryCapacityExceeded;
-        [DiagnosticField(1, "none", "landing-observation")]
+        [DiagnosticField]
+        [DiagnosticGroup("landing-observation")]
         public bool Accepted => State == CharacterFootLandingPredictionState.Accepted;
     }
 
@@ -790,46 +873,63 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             RootLocalLanding = step.RootLocalLanding;
         }
 
-        [DiagnosticField(1, "none", "current-step")]
+        [DiagnosticField]
+        [DiagnosticGroup("current-step")]
         public bool IsValid { get; }
-        [DiagnosticField(1, "none", "current-step")]
+        [DiagnosticField]
+        [DiagnosticGroup("current-step")]
         public bool IsAuthoritative { get; }
-        [DiagnosticField(1, "none", "current-step")]
+        [DiagnosticField]
+        [DiagnosticGroup("current-step")]
         public bool HasConsistentLandingEventIdentity { get; }
-        [DiagnosticField(1, "none", "current-step")]
+        [DiagnosticField]
+        [DiagnosticGroup("current-step")]
         public bool IsPreSwing { get; }
-        [DiagnosticField(1, "none", "current-step")]
+        [DiagnosticField]
+        [DiagnosticGroup("current-step")]
         public bool IsSwing { get; }
         public bool HasCurrentContactEvent { get; }
         public ulong CurrentContactEventIdentity { get; }
-        [DiagnosticField(1, "count", "current-step")]
+        [DiagnosticField]
+        [DiagnosticGroup("current-step")]
         public int EventOrdinal { get; }
         public int SourceLandingCycleOffset => 0;
-        [DiagnosticField(1, "count", "current-step")]
+        [DiagnosticField]
+        [DiagnosticGroup("current-step")]
         public int SourceSampleCycle { get; }
-        [DiagnosticField(1, "identity", "current-step")]
+        [DiagnosticField]
+        [DiagnosticGroup("current-step")]
         public ulong ContributionContinuityIdentity { get; }
-        [DiagnosticField(1, "identity", "current-step")]
+        [DiagnosticField]
+        [DiagnosticGroup("current-step")]
         public ulong LandingEventIdentity { get; }
-        [DiagnosticField(1, "seconds", "current-step")]
+        [DiagnosticField]
+        [DiagnosticGroup("current-step")]
         public float TimeToLandingSeconds { get; }
         public float Distance { get; }
         public AnimationFootMotionEventPhase Phase { get; }
-        [DiagnosticField(1, "unitless", "current-step")]
+        [DiagnosticField]
+        [DiagnosticGroup("current-step")]
         public float SwingProgress { get; }
-        [DiagnosticField(1, "unitless", "current-step")]
+        [DiagnosticField]
+        [DiagnosticGroup("current-step")]
         public float EventPhase => SwingProgress;
-        [DiagnosticField(1, "unitless", "current-step")]
+        [DiagnosticField]
+        [DiagnosticGroup("current-step")]
         public float ApproachContactToLandingProgress { get; }
-        [DiagnosticField(1, "unitless", "current-step")]
+        [DiagnosticField]
+        [DiagnosticGroup("current-step")]
         public float LandingPhase => IsValid ? 1f : 0f;
-        [DiagnosticField(1, "none", "current-step")]
+        [DiagnosticField]
+        [DiagnosticGroup("current-step")]
         public bool AtOrAfterApproachContact =>
             IsValid && Phase == AnimationFootMotionEventPhase.ApproachContact;
-        [DiagnosticField(1, "none", "current-step")]
+        [DiagnosticField]
+        [DiagnosticGroup("current-step")]
         public bool InApproachContactToLanding =>
             IsValid && Phase == AnimationFootMotionEventPhase.ApproachContact;
-        [DiagnosticField(1, "metres", "current-step")]
+        [DiagnosticField]
+        [DiagnosticGroup("current-step")]
         public Vector3 RootLocalLanding { get; }
     }
 
@@ -852,13 +952,17 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         public CharacterFootStepCandidateDiagnostics FootMotion { get; }
         public CharacterFootStepCandidateDiagnostics Current => FootMotion;
         public CharacterFootStepCandidateDiagnostics Incoming => default;
-        [DiagnosticField(1, "identity", "identity")]
+        [DiagnosticField]
+        [DiagnosticGroup("identity")]
         public ulong LastLandingEventIdentity { get; }
-        [DiagnosticField(1, "category", "identity")]
+        [DiagnosticField]
+        [DiagnosticGroup("identity")]
         public CharacterFootLandingStepSource SelectedSource { get; }
-        [DiagnosticField(1, "identity", "identity")]
+        [DiagnosticField]
+        [DiagnosticGroup("identity")]
         public ulong SelectedLandingEventIdentity { get; }
-        [DiagnosticField(1, "seconds", "identity")]
+        [DiagnosticField]
+        [DiagnosticGroup("identity")]
         public float MaximumPredictionTimeSeconds { get; }
     }
 
@@ -1007,143 +1111,214 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 new CharacterFootStepObservationInputDiagnostics(in footStepObservation);
         }
 
-        [DiagnosticField(1, "seconds", "timing")]
+        [DiagnosticField]
+        [DiagnosticKey("presentation-delta-seconds")]
+        [DiagnosticGroup("timing")]
         public float PresentationDeltaSeconds { get; }
-        [DiagnosticField(1, "none", "action")]
+        [DiagnosticField]
+        [DiagnosticGroup("action")]
         public bool Grounded { get; }
-        [DiagnosticField(1, "metres-per-second", "action")]
+        [DiagnosticField]
+        [DiagnosticGroup("action")]
         public float HorizontalSpeed { get; }
-        [DiagnosticField(1, "identity", "action")]
+        [DiagnosticField]
+        [DiagnosticGroup("action")]
         public ulong LeftActionInstanceIdentity { get; }
-        [DiagnosticField(1, "unitless", "action")]
+        [DiagnosticField]
+        [DiagnosticGroup("action")]
         public float LeftActionFootWeight { get; }
-        [DiagnosticField(1, "identity", "action")]
+        [DiagnosticField]
+        [DiagnosticGroup("action")]
         public ulong RightActionInstanceIdentity { get; }
-        [DiagnosticField(1, "unitless", "action")]
+        [DiagnosticField]
+        [DiagnosticGroup("action")]
         public float RightActionFootWeight { get; }
-        [DiagnosticField(1, "frame", "timing")]
+        [DiagnosticField]
+        [DiagnosticGroup("timing")]
         public ulong PreviousBodyTick { get; }
-        [DiagnosticField(1, "frame", "timing")]
+        [DiagnosticField]
+        [DiagnosticGroup("timing")]
         public ulong CurrentBodyTick { get; }
-        [DiagnosticField(1, "unitless", "timing")]
+        [DiagnosticField]
+        [DiagnosticGroup("timing")]
         public float BodySampleAlpha { get; }
-        [DiagnosticField(1, "seconds", "timing")]
+        [DiagnosticField]
+        [DiagnosticGroup("timing")]
         public float BodySampleAgeSeconds { get; }
-        [DiagnosticField(1, "metres", "body-correction")]
+        [DiagnosticField]
+        [DiagnosticGroup("body-correction")]
         public Vector3 VisibleBodyPosition { get; }
-        [DiagnosticField(1, "unitless", "body-correction")]
+        [DiagnosticField]
+        [DiagnosticGroup("body-correction")]
         public Quaternion VisibleBodyRotation { get; }
-        [DiagnosticField(1, "metres-per-second", "body-correction")]
+        [DiagnosticField]
+        [DiagnosticGroup("body-correction")]
         public Vector3 VisibleBodyVelocity { get; }
-        [DiagnosticField(1, "degrees-per-second", "body-correction")]
+        [DiagnosticField]
+        [DiagnosticGroup("body-correction")]
         public float VisibleBodyYawVelocityDegreesPerSecond { get; }
-        [DiagnosticField(1, "metres", "body-correction")]
+        [DiagnosticField]
+        [DiagnosticGroup("body-correction")]
         public Vector3 TargetBodyPosition { get; }
-        [DiagnosticField(1, "unitless", "body-correction")]
+        [DiagnosticField]
+        [DiagnosticGroup("body-correction")]
         public Quaternion TargetBodyRotation { get; }
-        [DiagnosticField(1, "metres-per-second", "body-correction")]
+        [DiagnosticField]
+        [DiagnosticGroup("body-correction")]
         public Vector3 TargetBodyVelocity { get; }
-        [DiagnosticField(1, "degrees-per-second", "body-correction")]
+        [DiagnosticField]
+        [DiagnosticGroup("body-correction")]
         public float TargetBodyYawVelocityDegreesPerSecond { get; }
-        [DiagnosticField(1, "metres", "body-correction")]
+        [DiagnosticField]
+        [DiagnosticGroup("body-correction")]
         public float BodyPositionError { get; }
-        [DiagnosticField(1, "degrees", "body-correction")]
+        [DiagnosticField]
+        [DiagnosticGroup("body-correction")]
         public float BodyRotationError { get; }
-        [DiagnosticField(1, "metres", "body-correction")]
+        [DiagnosticField]
+        [DiagnosticGroup("body-correction")]
         public Vector3 CorrectionPositionError { get; }
-        [DiagnosticField(1, "metres-per-second", "body-correction")]
+        [DiagnosticField]
+        [DiagnosticGroup("body-correction")]
         public Vector3 CorrectionPositionVelocity { get; }
-        [DiagnosticField(1, "degrees-per-second", "body-correction")]
+        [DiagnosticField]
+        [DiagnosticGroup("body-correction")]
         public float CorrectionYawVelocityDegreesPerSecond { get; }
-        [DiagnosticField(1, "none", "body-correction")]
+        [DiagnosticField]
+        [DiagnosticGroup("body-correction")]
         public bool CorrectionActive { get; }
-        [DiagnosticField(1, "none", "body-correction")]
+        [DiagnosticField]
+        [DiagnosticGroup("body-correction")]
         public bool CorrectionClamped { get; }
-        [DiagnosticField(1, "none", "body-correction")]
+        [DiagnosticField]
+        [DiagnosticGroup("body-correction")]
         public bool CorrectionSettled { get; }
-        [DiagnosticField(1, "identity", "body-correction")]
+        [DiagnosticField]
+        [DiagnosticKey("body-reset-sequence")]
+        [DiagnosticGroup("body-correction")]
         public ulong BodyResetSequence { get; }
-        [DiagnosticField(1, "none", "timing")]
+        [DiagnosticField]
+        [DiagnosticGroup("timing")]
         public bool MotionTimelineAvailable { get; }
-        [DiagnosticField(1, "identity", "timing")]
+        [DiagnosticField]
+        [DiagnosticGroup("timing")]
         public ulong TimelineGeneration { get; }
-        [DiagnosticField(1, "frame", "timing")]
+        [DiagnosticField]
+        [DiagnosticGroup("timing")]
         public ulong TimelineAuthorityTick { get; }
-        [DiagnosticField(1, "hertz", "timing")]
+        [DiagnosticField]
+        [DiagnosticGroup("timing")]
         public int TimelineTickRate { get; }
-        [DiagnosticField(1, "metres-per-second", "timing")]
+        [DiagnosticField]
+        [DiagnosticGroup("timing")]
         public float TimelineCurrentVelocityX { get; }
-        [DiagnosticField(1, "metres-per-second", "timing")]
+        [DiagnosticField]
+        [DiagnosticGroup("timing")]
         public float TimelineCurrentVelocityZ { get; }
-        [DiagnosticField(1, "metres-per-second", "timing")]
+        [DiagnosticField]
+        [DiagnosticGroup("timing")]
         public float TimelineContinuationVelocityX { get; }
-        [DiagnosticField(1, "metres-per-second", "timing")]
+        [DiagnosticField]
+        [DiagnosticGroup("timing")]
         public float TimelineContinuationVelocityZ { get; }
-        [DiagnosticField(1, "none", "timing")]
+        [DiagnosticField]
+        [DiagnosticGroup("timing")]
         public bool TimelineHasContinuation { get; }
-        [DiagnosticField(1, "degrees-per-second", "timing")]
+        [DiagnosticField]
+        [DiagnosticGroup("timing")]
         public float TimelineBodyYawVelocityDegreesPerSecond { get; }
-        [DiagnosticField(1, "degrees-per-second", "timing")]
+        [DiagnosticField]
+        [DiagnosticGroup("timing")]
         public float TimelineMaximumBodyYawVelocityDegreesPerSecond { get; }
-        [DiagnosticField(1, "seconds", "timing")]
+        [DiagnosticField]
+        [DiagnosticGroup("timing")]
         public float CurrentSegmentRemainingSeconds { get; }
-        [DiagnosticField(1, "none", "prediction-motion")]
+        [DiagnosticField]
+        [DiagnosticGroup("prediction-motion")]
         public bool PredictionMotionAvailable { get; }
-        [DiagnosticField(1, "category", "prediction-motion")]
+        [DiagnosticField]
+        [DiagnosticGroup("prediction-motion")]
         public CharacterFootPredictionMotionRejectReason PredictionMotionRejectReason { get; }
-        [DiagnosticField(1, "category", "prediction-motion")]
+        [DiagnosticField]
+        [DiagnosticGroup("prediction-motion")]
         public CharacterFootPredictionMotionResetReason PredictionMotionResetReason { get; }
-        [DiagnosticField(1, "identity", "prediction-motion")]
+        [DiagnosticField]
+        [DiagnosticGroup("prediction-motion")]
         public string PredictionMotionSourceIdentity { get; }
-        [DiagnosticField(1, "metres-per-second", "prediction-motion")]
+        [DiagnosticField]
+        [DiagnosticGroup("prediction-motion")]
         public float PredictionRawCurrentVelocityX { get; }
-        [DiagnosticField(1, "metres-per-second", "prediction-motion")]
+        [DiagnosticField]
+        [DiagnosticGroup("prediction-motion")]
         public float PredictionRawCurrentVelocityZ { get; }
-        [DiagnosticField(1, "metres-per-second", "prediction-motion")]
+        [DiagnosticField]
+        [DiagnosticGroup("prediction-motion")]
         public float PredictionRawContinuationVelocityX { get; }
-        [DiagnosticField(1, "metres-per-second", "prediction-motion")]
+        [DiagnosticField]
+        [DiagnosticGroup("prediction-motion")]
         public float PredictionRawContinuationVelocityZ { get; }
-        [DiagnosticField(1, "metres-per-second", "prediction-motion")]
+        [DiagnosticField]
+        [DiagnosticGroup("prediction-motion")]
         public float PredictionPreviousStableCurrentVelocityX { get; }
-        [DiagnosticField(1, "metres-per-second", "prediction-motion")]
+        [DiagnosticField]
+        [DiagnosticGroup("prediction-motion")]
         public float PredictionPreviousStableCurrentVelocityZ { get; }
-        [DiagnosticField(1, "metres-per-second", "prediction-motion")]
+        [DiagnosticField]
+        [DiagnosticGroup("prediction-motion")]
         public float PredictionPreviousStableContinuationVelocityX { get; }
-        [DiagnosticField(1, "metres-per-second", "prediction-motion")]
+        [DiagnosticField]
+        [DiagnosticGroup("prediction-motion")]
         public float PredictionPreviousStableContinuationVelocityZ { get; }
-        [DiagnosticField(1, "metres-per-second", "prediction-motion")]
+        [DiagnosticField]
+        [DiagnosticGroup("prediction-motion")]
         public float PredictionStableCurrentVelocityX { get; }
-        [DiagnosticField(1, "metres-per-second", "prediction-motion")]
+        [DiagnosticField]
+        [DiagnosticGroup("prediction-motion")]
         public float PredictionStableCurrentVelocityZ { get; }
-        [DiagnosticField(1, "metres-per-second", "prediction-motion")]
+        [DiagnosticField]
+        [DiagnosticGroup("prediction-motion")]
         public float PredictionStableContinuationVelocityX { get; }
-        [DiagnosticField(1, "metres-per-second", "prediction-motion")]
+        [DiagnosticField]
+        [DiagnosticGroup("prediction-motion")]
         public float PredictionStableContinuationVelocityZ { get; }
-        [DiagnosticField(1, "metres-per-second", "prediction-motion")]
+        [DiagnosticField]
+        [DiagnosticGroup("prediction-motion")]
         public float PredictionCurrentVelocityDeltaX { get; }
-        [DiagnosticField(1, "metres-per-second", "prediction-motion")]
+        [DiagnosticField]
+        [DiagnosticGroup("prediction-motion")]
         public float PredictionCurrentVelocityDeltaZ { get; }
-        [DiagnosticField(1, "metres-per-second", "prediction-motion")]
+        [DiagnosticField]
+        [DiagnosticGroup("prediction-motion")]
         public float PredictionContinuationVelocityDeltaX { get; }
-        [DiagnosticField(1, "metres-per-second", "prediction-motion")]
+        [DiagnosticField]
+        [DiagnosticGroup("prediction-motion")]
         public float PredictionContinuationVelocityDeltaZ { get; }
-        [DiagnosticField(1, "unitless", "prediction-motion")]
+        [DiagnosticField]
+        [DiagnosticGroup("prediction-motion")]
         public float PredictionVelocityResponseAlpha { get; }
-        [DiagnosticField(1, "metres-per-second", "prediction-motion")]
+        [DiagnosticField]
+        [DiagnosticGroup("prediction-motion")]
         public float PredictionVelocityDeltaThreshold { get; }
-        [DiagnosticField(1, "per-second", "prediction-motion")]
+        [DiagnosticField]
+        [DiagnosticGroup("prediction-motion")]
         public float PredictionVelocitySmoothSpeed { get; }
-        [DiagnosticField(1, "metres-per-second", "prediction-motion")]
+        [DiagnosticField]
+        [DiagnosticGroup("prediction-motion")]
         public float PredictionMaximumSpeed { get; }
-        [DiagnosticField(1, "none", "prediction-motion")]
+        [DiagnosticField]
+        [DiagnosticGroup("prediction-motion")]
         public bool PredictionCurrentResponseApplied { get; }
-        [DiagnosticField(1, "none", "prediction-motion")]
+        [DiagnosticField]
+        [DiagnosticGroup("prediction-motion")]
         public bool PredictionContinuationResponseApplied { get; }
-        [DiagnosticField(1, "none", "prediction-motion")]
+        [DiagnosticField]
+        [DiagnosticGroup("prediction-motion")]
         public bool PredictionCurrentMaximumSpeedClamped { get; }
-        [DiagnosticField(1, "none", "prediction-motion")]
+        [DiagnosticField]
+        [DiagnosticGroup("prediction-motion")]
         public bool PredictionContinuationMaximumSpeedClamped { get; }
-        [DiagnosticField(1, "identity", "prediction-motion")]
+        [DiagnosticField]
+        [DiagnosticGroup("prediction-motion")]
         public ulong PredictionMotionRevision { get; }
         public CharacterFootStepObservationInputDiagnostics FootStepObservation { get; }
     }

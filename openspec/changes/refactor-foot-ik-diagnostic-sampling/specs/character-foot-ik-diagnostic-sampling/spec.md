@@ -13,7 +13,7 @@ Left与Right MUST使用同一组Fact Root id和同一Schema。公共Pelvis、Sol
 #### Scenario: 捕获一帧左右脚事实
 
 - **WHEN** 当前Frame已经成功Seal且同步Commit边界可读取同一Frame与Completion的左右脚和公共事实
-- **THEN** Foot薄Capture MUST把对应现有根以in参数交给生成入口
+- **THEN** Foot业务 MUST只调用一行带`DiagnosticEvent`的partial方法并把对应现有根作为in参数传入
 - **AND** MUST不构造CommittedFoot、LandingView、Dimension View、Projection或Side选择对象
 
 #### Scenario: 左右根类型不一致
@@ -26,7 +26,7 @@ Left与Right MUST使用同一组Fact Root id和同一Schema。公共Pelvis、Sol
 
 每个被采样的现有readonly field或可读成员 MUST只使用一个path-scoped DiagnosticField声明revision、unit、groups和可选availability。Generator MUST从Capability、main或Table、Fact Root id与递归成员路径形成稳定Field identity，并从真实CLR类型推断codec。Foot MUST不再维护字段Getter、Extractor、Projection、Column、CsvBinding、字段类型表、单位表或Sampler到字段的反向登记。
 
-Foot Player Schema MUST不包含DiagnosticDerivedField。旧跨字段统计、穿透、七维评分、规则报告、Diagnosis Store与Publisher MUST不迁移到新链，也不得进入Generated Capture热路径。固定输入回放 MAY按生成Field ID读取自己确实需要的最小证据，但 MUST不建立第二字段映射或旧CSV格式。
+Foot Player Schema MUST不包含DiagnosticDerivedField。旧跨字段统计、穿透、七维评分、规则报告、Diagnosis Store与Publisher MUST不迁入Generated Capture热路径。`add-schema-driven-diagnostic-analysis` MAY从Completed基础产物恢复算法语义，但 MUST迁成Host-only Operator、Plan与独立报告，不得恢复旧单体Analyzer、Store、Publisher、第二字段映射或旧CSV格式。固定输入回放 MAY按生成Field ID读取自己确实需要的最小证据。
 
 #### Scenario: 新增普通Foot字段
 
@@ -48,15 +48,15 @@ Foot Player Schema MUST不包含DiagnosticDerivedField。旧跨字段统计、�
 
 ### Requirement: Capture必须由Roslyn生成的AOT静态程序完成
 
-Foot MUST只声明DiagnosticSampler和DiagnosticCaptureProgram。Roslyn Source Generator MUST在编译期遍历多Fact Root和Metadata，生成统一Schema、typed packet layout、Lifecycle、左右Dimension直接成员访问和HandleCommitted。生成代码 MUST是普通C#静态访问，并由Unity C# Compiler与IL2CPP AOT编译。
+Foot MUST声明DiagnosticSampler和DiagnosticCaptureProgram，并在唯一业务Post-Commit边界声明一个带`DiagnosticEvent`的private static partial void方法。Roslyn Source Generator MUST在编译期遍历多Fact Root和Metadata，按Event identity及完整参数签名生成target-scoped dispatcher、可选partial interest Query、统一Schema、typed packet layout、左右Dimension直接成员访问和匹配Program handler。Event MUST只传target、真实lineage与Fact Root，Metadata MUST由Lifecycle Start冻结。生成代码 MUST是普通C#静态访问，并由Unity C# Compiler与IL2CPP AOT编译。
 
-CharacterFootIkGeneratedCapture MUST只在成功Seal后的同步Commit调用栈内接收现有根并调用生成Lifecycle。采样链 MUST不创建或消费CharacterFootIkCommittedCaptureViewLease、Runtime Snapshot、Dimension View或其它聚合DTO，也 MUST不拥有字段映射、packet layout、Session wrapper、领域Writer、Host Finalizer、表达式树、反射、dynamic或字符串成员路径执行。
+Foot Runtime MUST在成功Seal后的同步Commit调用栈内只调用该partial方法一次。Generated dispatcher无订阅时 MUST立即返回；匹配Program handler MUST完成左右展开、packet rent、Capture、submit与Fault，Host workflow MUST唯一控制Session Start／Stop。采样链 MUST删除`ICharacterFootIkCommittedCaptureConsumer`、Capture Binding和手写`CharacterFootIkGeneratedCapture.TryCapture`，也不得创建或消费CharacterFootIkCommittedCaptureViewLease、Runtime Snapshot、Dimension View或其它聚合DTO，不得拥有字段映射、packet layout、领域Writer、Host Finalizer、表达式树、反射、dynamic或字符串成员路径执行。
 
 #### Scenario: Capture Program处理Committed帧
 
 - **WHEN** Foot Capture已Start且当前Frame成功Seal并进入同步Commit
-- **THEN** 薄Capture MUST一次调用生成的HandleCommitted并传入Left与Right的完整根集合
-- **AND** Generated Program MUST在当前调用栈内把两套Dimension写入framework-owned typed packet，后台不得持有业务page
+- **THEN** Foot业务 MUST一次调用`DiagnosticEvent` partial方法并传入Left与Right的完整根集合
+- **AND** generated dispatcher／Program handler MUST在当前调用栈内把两套Dimension写入framework-owned typed packet，后台不得持有业务page
 
 #### Scenario: 构建IL2CPP Capture Player
 
@@ -98,11 +98,11 @@ Ground Geometry MUST分别使用ground-contacts、ground-envelope和ground-surfa
 - **THEN** 系统 MUST不创建Foot采样Session、packet、queue或输出
 - **AND** Foot业务结果与PostCommit行为 MUST保持不变
 
-### Requirement: 通用Host必须自动生成最终诊断产物
+### Requirement: 通用Host必须自动生成基础采样产物
 
 通用Host MUST仅依据Generated Schema和sealed packet自动生成每个Sampler主表、ground-contacts、ground-envelope、ground-surfaces、Sampler manifest和Capability manifest。Host MUST保存Schema／Program identity、Dimension、Frame范围、文件hash、字段类型、单位和availability，不得要求Foot Column、CsvBinding或Host Adapter。
 
-Foot MUST不再拥有Analyzer、Publisher、七维评分、规则报告、Diagnosis Store或第二manifest。Launcher与MCP MUST只展示生成artifact和Capability manifest；固定输入回放 MUST只按生成Field ID读取自己需要的主表、ground-contacts与ground-envelope证据。
+Foot采样模块 MUST不再拥有旧单体Analyzer、Publisher、七维评分、规则报告、Diagnosis Store或第二manifest。基础产物 MUST不冒充领域诊断结论；`add-schema-driven-diagnostic-analysis`定义的Foot Analysis MAY只读Completed artifact执行当前Operator／Plan并生成独立诊断结果。Launcher与MCP MUST通过唯一workflow分别展示采样artifact和显式分析结果；固定输入回放 MUST只按生成Field ID或通用Dataset handle读取自己需要的证据。
 
 #### Scenario: Host完成基础Finalization
 
@@ -136,7 +136,7 @@ Foot MUST不再拥有Analyzer、Publisher、七维评分、规则报告、Diagno
 
 ### Requirement: Foot采样必须保持只读且不扫描私有内存
 
-GeneratedCapture、Generated Program、Host与Editor workflow MUST不修改Foot、Goal、FBBIK、Final Pose、Gameplay或Network状态。Player采样 MUST不重新执行World Query、坐标变换、FBBIK或Physical读取。外部工具 MUST不读取Player私有虚拟地址、解析对象布局、暂停进程、扫描托管堆或按PDB地址重建事实。
+Generated Event dispatcher、Program handler、Generated Program、Host与Editor workflow MUST不修改Foot、Goal、FBBIK、Final Pose、Gameplay或Network状态。Player采样 MUST不重新执行World Query、坐标变换、FBBIK或Physical读取。外部工具 MUST不读取Player私有虚拟地址、解析对象布局、暂停进程、扫描托管堆或按PDB地址重建事实。
 
 #### Scenario: 外部工具请求地址扫描
 

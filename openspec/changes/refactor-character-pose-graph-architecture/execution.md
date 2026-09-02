@@ -1101,3 +1101,9 @@ Bind Family Payload阶段一次生成全部Header、typed引用与Family页；Se
 Program Executor按Header的Family Payload index取得唯一typed页后调用现有Family模块；各模块签名改为Header加自身Payload，Execution Context的合成辅助入口只接收实际所需Weight、Mask、Policy或Value参数。旧万能Native字段、`WithWeight`整记录复制、State blend临时万能记录和跨Family`-1`校验矩阵全部删除；Stage顺序、Value地址、Weight覆盖、Constraint handle、Slot合成、Inertialization及Final Publication调用位置不变。任务5.1至5.3、11.10、11.11、12.3、12.6至12.8完成。
 
 3C MCP完成全脚本重编且C#错误为0。generated Projection仍只等待既有Foot Analysis身份恢复后从正式Character Build入口重建；本步不回放。
+
+## 分离Program Evaluation状态页
+
+状态：新增`CharacterPoseProgramEvaluationState`，唯一持有Prepared、Pending Completed与Committed Evaluation binding。Prepare／Consume、Mark Completed、Commit、Discard Pending、Reset和Committed Diagnostics读取全部通过该状态页完成；`CharacterPoseProgramRuntime`删除三份binding字段、两份布尔状态和内嵌Prepared页实现。
+
+帧内Prepare消费、Stage完成确认、提交前验证、Motion Matching history读取、Committed Diagnostics和Reset／Dispose顺序保持原样；失败Discard只清Pending，成功Commit才提升Committed。Dense跨帧Evaluation现在有明确Committed／Pending所有权，Source Retirement继续使用既有固定pending state与journal，任务5.7完成。3C MCP全脚本重编且C#错误为0，不单独运行回放。

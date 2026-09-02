@@ -26,110 +26,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             internal bool SourceUsed;
         }
 
-        readonly struct PreparedEvaluationState
-        {
-            internal PreparedEvaluationState(
-                in CharacterPoseFrameLineage lineage,
-                float presentationDeltaSeconds,
-                in CharacterPoseGraphNativeBinding frame)
-            {
-                Lineage = lineage;
-                PresentationDeltaSeconds = presentationDeltaSeconds;
-                Frame = frame;
-            }
-
-            internal CharacterPoseFrameLineage Lineage { get; }
-            internal float PresentationDeltaSeconds { get; }
-            internal CharacterPoseGraphNativeBinding Frame { get; }
-            internal bool IsValid =>
-                Lineage.IsValid &&
-                float.IsFinite(PresentationDeltaSeconds) &&
-                PresentationDeltaSeconds >= 0f &&
-                Frame.CompletionIdentity == Lineage.CompletionIdentity;
-        }
-
-        struct PreparedEvaluationPage
-        {
-            CharacterPoseFrameLineage m_Lineage;
-            CharacterPoseGraphNativeBinding m_Frame;
-            float m_PresentationDeltaSeconds;
-            bool m_HasValue;
-
-            internal bool HasValue => m_HasValue;
-
-            internal float RequireDeltaSeconds(
-                in CharacterPoseProgramPrepared prepared)
-            {
-                if (!m_HasValue ||
-                    !prepared.IsValid ||
-                    prepared.Lineage != m_Lineage)
-                {
-                    throw new ArgumentException(
-                        "Pose Program prepared page does not match the requested frame.",
-                        nameof(prepared));
-                }
-                return m_PresentationDeltaSeconds;
-            }
-
-            internal void Prepare(
-                in CharacterPoseProgramPrepared prepared,
-                float presentationDeltaSeconds,
-                in CharacterPoseGraphNativeBinding frame)
-            {
-                if (m_HasValue)
-                {
-                    throw new InvalidOperationException(
-                        "Pose Program prepared page already contains a frame.");
-                }
-                if (!prepared.IsValid ||
-                    !float.IsFinite(presentationDeltaSeconds) ||
-                    presentationDeltaSeconds < 0f ||
-                    frame.CompletionIdentity !=
-                        prepared.Lineage.CompletionIdentity)
-                {
-                    throw new ArgumentException(
-                        "Pose Program prepared page input is invalid.",
-                        nameof(prepared));
-                }
-                m_Lineage = prepared.Lineage;
-                m_PresentationDeltaSeconds = presentationDeltaSeconds;
-                m_Frame = frame;
-                m_HasValue = true;
-            }
-
-            internal PreparedEvaluationState Consume(
-                in CharacterPoseProgramPrepared prepared)
-            {
-                if (!m_HasValue ||
-                    !prepared.IsValid ||
-                    prepared.Lineage != m_Lineage)
-                {
-                    throw new ArgumentException(
-                        "Pose Program prepared page does not match the requested frame.",
-                        nameof(prepared));
-                }
-                var state = new PreparedEvaluationState(
-                    in m_Lineage,
-                    m_PresentationDeltaSeconds,
-                    in m_Frame);
-                Clear();
-                if (!state.IsValid)
-                {
-                    throw new InvalidOperationException(
-                        "Pose Program prepared page state is inconsistent.");
-                }
-                return state;
-            }
-
-            internal void Clear()
-            {
-                m_Lineage = default;
-                m_Frame = default;
-                m_PresentationDeltaSeconds = 0f;
-                m_HasValue = false;
-            }
-        }
-
         readonly CharacterPoseProgramImage m_Image;
         readonly AnimancerComponent m_Animancer;
         readonly CharacterPoseSourceModule m_SourceModule;
@@ -163,9 +59,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         PresentationFrameWorkspaceLease m_PresentationWorkspaceFrame;
         CharacterPoseProgramFrameLease m_ActiveFrameLease;
         CharacterPoseProgramFrameLease m_CommittingFrameLease;
-        PreparedEvaluationPage m_PreparedEvaluation;
-        CharacterPoseGraphNativeBinding m_CommittedEvaluationFrame;
-        CharacterPoseGraphNativeBinding m_PendingCompletedEvaluationFrame;
+        readonly CharacterPoseProgramEvaluationState m_Evaluation =
+            new CharacterPoseProgramEvaluationState();
         int m_SequencePreviewPlayerIndex = -1;
         int m_SequencePreviewOperationIndex = -1;
         double m_SequencePreviewTime;
@@ -180,8 +75,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         int m_MotionMatchingHistoryCompletionCount;
         IReadOnlyList<AnimationSlotFramePlan> m_AnimationSlotPlans =
             Array.Empty<AnimationSlotFramePlan>();
-        bool m_HasCommittedEvaluationFrame;
-        bool m_HasPendingCompletedEvaluationFrame;
         bool m_JobsInstalled;
         bool m_Disposed;
 
@@ -310,7 +203,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         CharacterPoseLinkedFragmentState LinkedFragments =>
             ActorState.LinkedFragments;
         internal bool HasOpenFrame => m_ActiveFrameLease.IsValid;
-        internal bool HasPreparedEvaluation => m_PreparedEvaluation.HasValue;
+        internal bool HasPreparedEvaluation => m_Evaluation.HasPrepared;
         internal bool HasPendingEvaluationFrame =>
             FramePages.HasPendingEvaluationFrame;
         internal ulong PendingEvaluationCompletionIdentity =>
@@ -326,9 +219,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         internal bool CanApplyNextActivation =>
             ActorState.PoseStateSources.CanApplyNextActivation;
         internal bool HasCommittedEvaluationFrame =>
-            m_HasCommittedEvaluationFrame;
+            m_Evaluation.HasCommitted;
         internal bool HasPendingCompletedEvaluationFrame =>
-            m_HasPendingCompletedEvaluationFrame;
+            m_Evaluation.HasPendingCompleted;
         internal IReadOnlyList<ActionSlotSourceUsage> ActionSourceUsages =>
             m_PresentationWorkspace.ActionUsages;
         internal IReadOnlyList<PoseSourceProviderDemand> ProviderDemands =>
@@ -339,13 +232,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         internal int ProviderSourceSampleCount =>
             m_ProviderSourceSamples.Count;
         internal ulong CommittedEvaluationCompletionIdentity =>
-            m_HasCommittedEvaluationFrame
-                ? m_CommittedEvaluationFrame.CompletionIdentity
-                : 0;
+            m_Evaluation.CommittedCompletionIdentity;
         internal ulong PendingCompletedEvaluationCompletionIdentity =>
-            m_HasPendingCompletedEvaluationFrame
-                ? m_PendingCompletedEvaluationFrame.CompletionIdentity
-                : 0;
+            m_Evaluation.PendingCompletedCompletionIdentity;
 
         internal void BeginActionPlaybackFrame(
             ulong frameIdentity,
@@ -1227,9 +1116,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                     ref failure);
             }
             DiscardStep(FramePages.DiscardFrame, ref failure);
-            m_PreparedEvaluation.Clear();
-            m_PendingCompletedEvaluationFrame = default;
-            m_HasPendingCompletedEvaluationFrame = false;
+            m_Evaluation.DiscardPending();
             m_ActiveFrameLease = default;
             m_CommittingFrameLease = default;
             m_ActionFrame = null;
@@ -1365,8 +1252,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             ulong completionIdentity)
         {
             RequireFrame(lease);
-            if (m_PreparedEvaluation.HasValue ||
-                m_HasPendingCompletedEvaluationFrame)
+            if (m_Evaluation.HasPrepared ||
+                m_Evaluation.HasPendingCompleted)
             {
                 throw new InvalidOperationException(
                     "Character Pose Program has an unfinished evaluation.");
@@ -2161,18 +2048,15 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             ulong completionIdentity)
         {
             RequireFrame(lease);
-            if (!m_HasPendingCompletedEvaluationFrame ||
-                m_PendingCompletedEvaluationFrame.CompletionIdentity !=
+            if (!m_Evaluation.HasPendingCompleted ||
+                m_Evaluation.PendingCompletedCompletionIdentity !=
                     completionIdentity)
             {
                 throw new InvalidOperationException(
                     "Character Pose Program has no completed evaluation to commit.");
             }
             FramePages.CommitEvaluationFrame(completionIdentity);
-            m_CommittedEvaluationFrame = m_PendingCompletedEvaluationFrame;
-            m_HasCommittedEvaluationFrame = true;
-            m_PendingCompletedEvaluationFrame = default;
-            m_HasPendingCompletedEvaluationFrame = false;
+            m_Evaluation.Commit(completionIdentity);
         }
 
         internal CharacterPoseSourcePreparationView BeginSourceDemand(
@@ -2271,7 +2155,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             CharacterPoseGraphNativeBinding frame =
                 FramePages.RequirePoseGraphBinding(
                     prepared.Lineage.CompletionIdentity);
-            m_PreparedEvaluation.Prepare(
+            m_Evaluation.Prepare(
                 in prepared,
                 presentationDeltaSeconds,
                 in frame);
@@ -2296,8 +2180,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                     "Character Pose Program evaluation input is invalid.",
                     nameof(prepared));
             }
-            PreparedEvaluationState state =
-                m_PreparedEvaluation.Consume(in prepared);
+            CharacterPosePreparedEvaluationState state =
+                m_Evaluation.Consume(in prepared);
             Executor.BeginEvaluation(
                 state.Lineage.PresentationFrame);
             CharacterPoseProgramOutputResult output;
@@ -2342,7 +2226,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             in CharacterPoseProgramPrepared prepared)
         {
             RequireFrame(lease);
-            return m_PreparedEvaluation.RequireDeltaSeconds(in prepared);
+            return m_Evaluation.RequireDeltaSeconds(in prepared);
         }
 
         void MarkEvaluationCompleted(
@@ -2350,16 +2234,16 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             ulong completionIdentity)
         {
             RequireFrame(lease);
-            if (m_PreparedEvaluation.HasValue ||
-                m_HasPendingCompletedEvaluationFrame)
+            if (m_Evaluation.HasPrepared ||
+                m_Evaluation.HasPendingCompleted)
             {
                 throw new InvalidOperationException(
                     "Character Pose Program evaluation completion is invalid.");
             }
             FramePages.RequireEvaluationStagesCompleted(completionIdentity);
-            m_PendingCompletedEvaluationFrame =
+            CharacterPoseGraphNativeBinding completed =
                 FramePages.RequirePoseGraphBinding(completionIdentity);
-            m_HasPendingCompletedEvaluationFrame = true;
+            m_Evaluation.MarkCompleted(in completed);
         }
 
         internal void CompleteNodeEvaluation(
@@ -2411,16 +2295,18 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 throw new ArgumentException(
                     "Animation Player history copy input is invalid.");
             }
-            if (!m_HasPendingCompletedEvaluationFrame)
+            if (!m_Evaluation.HasPendingCompleted)
             {
                 footPlacement = default;
                 return false;
             }
+            CharacterPoseGraphNativeBinding pending =
+                m_Evaluation.RequirePendingCompleted();
             var read = new AnimationPlayerPoseNativeWriteBinding(
-                in m_PendingCompletedEvaluationFrame,
+                in pending,
                 playerIndex);
             if (read.CompletedAt[0] !=
-                    m_PendingCompletedEvaluationFrame.CompletionIdentity ||
+                    pending.CompletionIdentity ||
                 read.Availability[0] != AnimationPoseAvailability.Pose ||
                 read.HasFootFeatures[0] == 0 ||
                 read.PoseParameterAvailability[
@@ -2454,11 +2340,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 throw new InvalidOperationException(
                     "Character Pose Program evaluation cannot reset during a frame.");
             }
-            m_PreparedEvaluation.Clear();
-            m_CommittedEvaluationFrame = default;
-            m_PendingCompletedEvaluationFrame = default;
-            m_HasCommittedEvaluationFrame = false;
-            m_HasPendingCompletedEvaluationFrame = false;
+            m_Evaluation.Reset();
         }
 
         internal void BeginReset()
@@ -2673,8 +2555,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         {
             RequireFrame(lease);
             if (!m_MotionMatchingPoseCompletionPrepared ||
-                !m_HasPendingCompletedEvaluationFrame ||
-                m_PendingCompletedEvaluationFrame.CompletionIdentity !=
+                !m_Evaluation.HasPendingCompleted ||
+                m_Evaluation.PendingCompletedCompletionIdentity !=
                     m_PreparedMotionMatchingPoseCompletionIdentity)
             {
                 throw new InvalidOperationException(
@@ -2774,15 +2656,17 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         {
             if (projector == null)
                 throw new ArgumentNullException(nameof(projector));
-            if (!m_HasCommittedEvaluationFrame)
+            if (!m_Evaluation.HasCommitted)
             {
                 throw new InvalidOperationException(
                     "Character Pose Program has no committed evaluation diagnostics.");
             }
+            CharacterPoseGraphNativeBinding committed =
+                m_Evaluation.RequireCommitted();
             return projector.Capture(
                 FramePages,
                 in result,
-                in m_CommittedEvaluationFrame,
+                in committed,
                 in finalOutput,
                 interest);
         }
@@ -3028,11 +2912,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             m_Disposed = true;
             m_ActiveFrameLease = default;
             m_CommittingFrameLease = default;
-            m_PreparedEvaluation.Clear();
-            m_CommittedEvaluationFrame = default;
-            m_PendingCompletedEvaluationFrame = default;
-            m_HasCommittedEvaluationFrame = false;
-            m_HasPendingCompletedEvaluationFrame = false;
+            m_Evaluation.Reset();
             m_ProviderSourceSamples.Clear();
             Exception failure = null;
             DisposeStep(DetachExecutionJobs, ref failure);

@@ -54,7 +54,7 @@
 - [x] 5.4 新增`CharacterPoseActorState`，迁移PoseState、Player continuity、ActionPlaybackInput lifecycle/command cursor、Slot、Blend Stack、Routing、Inertialization和其它跨帧节点状态
 - [x] 5.5 新增`CharacterPoseProgramFramePages`，保存Pending node control、Source Demand输出、当前帧Value、Operation completion和Program diagnostics
 - [x] 5.6 让根`CharacterPoseFrameTransaction`只持有Program/Source/Constraint/Publication typed lease/result，不取得或索引各Module内部页
-- [ ] 5.7 将Dense跨帧状态改为明确Committed/Pending页，将稀疏节点与source生命周期变化保持为固定pending state或journal
+- [x] 5.7 将Dense跨帧状态改为明确Committed/Pending页，将稀疏节点与source生命周期变化保持为固定pending state或journal
 - [x] 5.8 删除`CharacterPoseGraphNativeProgram`中的Frame identity、Pending/Committed控制、Goal workspace、运行时Tuning Weight和其它可变状态
 - [x] 5.9 删除Actor State对Source物理资源、Constraint Bank、Final Pose和Diagnostics真相的复制
 - [ ] 5.10 对账Reset、Projection replacement、Preview seek、actor-local Execution View、Dispose和Actor Fault，确保静态、执行View、Actor、Module Frame与根事务寿命各自只由唯一Owner清理

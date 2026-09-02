@@ -727,52 +727,21 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         internal NativeArray<AnimationPoseGraphNativeLinkedPoseCandidate> LinkedPoseCandidates => m_LinkedPoseCandidates;
         internal CharacterPoseBoneCounts BoneCounts => m_BoneCounts;
 
-        internal void SetLinkedPoseGroupSelection(
-            CharacterPoseProgramFramePages framePages,
-            in CharacterLinkedPoseGenerationHandle selection)
+        internal LinkedPoseGroupId GetLinkedPoseCallGroupId(int callIndex)
         {
             RequireAlive();
-            if (framePages == null)
-                throw new ArgumentNullException(nameof(framePages));
-            if (!framePages.HasOpenFrame)
-            {
-                throw new InvalidOperationException(
-                    "Character Pose Program frame pages are not open.");
-            }
-            if (!selection.IsValid)
-                throw new ArgumentException("Linked Pose generation selection is invalid.", nameof(selection));
-            NativeArray<AnimationPoseGraphNativeLinkedPoseCallControl> controls =
-                framePages.LinkedPoseCallControls;
-            NativeArray<byte> activeFragments =
-                framePages.LinkedPoseActiveFragments;
-            int matchingCallCount = 0;
-            for (int callIndex = 0; callIndex < m_LinkedPoseCalls.Length; callIndex++)
-            {
-                if (m_LinkedPoseCallGroupIds[callIndex] != selection.GroupId)
-                    continue;
-                matchingCallCount++;
-                if (m_LinkedPoseCallInterfaceIds[callIndex] != selection.InterfaceId ||
-                    controls[callIndex].IsActive ||
-                    FindLinkedPoseCandidate(callIndex, selection.ImplementationId) < 0)
-                {
-                    throw new InvalidOperationException(
-                        $"Linked Pose Group '{selection.GroupId}' selection does not match call #{callIndex}.");
-                }
-            }
-            if (matchingCallCount == 0)
-                throw new InvalidOperationException($"Linked Pose Group '{selection.GroupId}' has no compiled calls.");
-            for (int callIndex = 0; callIndex < m_LinkedPoseCalls.Length; callIndex++)
-            {
-                if (m_LinkedPoseCallGroupIds[callIndex] != selection.GroupId)
-                    continue;
-                int candidateIndex = FindLinkedPoseCandidate(callIndex, selection.ImplementationId);
-                AnimationPoseGraphNativeLinkedPoseCandidate candidate = m_LinkedPoseCandidates[candidateIndex];
-                controls[callIndex] = new AnimationPoseGraphNativeLinkedPoseCallControl(
-                    candidateIndex,
-                    selection.Generation,
-                    selection.PoseDiscontinuity);
-                activeFragments[candidate.FragmentIndex] = 1;
-            }
+            if ((uint)callIndex >= (uint)m_LinkedPoseCallGroupIds.Length)
+                throw new ArgumentOutOfRangeException(nameof(callIndex));
+            return m_LinkedPoseCallGroupIds[callIndex];
+        }
+
+        internal LinkedPoseInterfaceId GetLinkedPoseCallInterfaceId(
+            int callIndex)
+        {
+            RequireAlive();
+            if ((uint)callIndex >= (uint)m_LinkedPoseCallInterfaceIds.Length)
+                throw new ArgumentOutOfRangeException(nameof(callIndex));
+            return m_LinkedPoseCallInterfaceIds[callIndex];
         }
 
         void CompileRig(CharacterPoseProgramImage program, CharacterAnimationRigPayload rig)
@@ -945,7 +914,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 throw new InvalidOperationException("Linked Pose native candidate layout is incomplete.");
         }
 
-        int FindLinkedPoseCandidate(
+        internal int FindLinkedPoseCandidate(
             int callIndex,
             LinkedPoseImplementationId implementationId)
         {

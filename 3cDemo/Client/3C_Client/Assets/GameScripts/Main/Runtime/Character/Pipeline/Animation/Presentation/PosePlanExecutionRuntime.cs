@@ -3250,8 +3250,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                     groups[groupIndex];
                 CharacterLinkedPoseGenerationHandle selection =
                     linkedPose.RequireIncoming(group.GroupId);
-                m_ExecutionView.SetLinkedPoseGroupSelection(
-                    m_ProgramFrames,
+                m_ProgramRuntime.SetLinkedPoseGroupSelection(
                     in selection);
                 int activeCount = 0;
                 for (int fragmentIndex = 0;

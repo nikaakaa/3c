@@ -1,5 +1,6 @@
 using System;
 using ThirdPersonCharacter.Pipeline.Animation.Presentation;
+using Unity.Collections;
 
 namespace ThirdPersonCharacter.Pipeline.Animation
 {
@@ -70,6 +71,75 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 in tuning,
                 binding,
                 recordDiagnostics);
+
+        internal void SetLinkedPoseGroupSelection(
+            in CharacterLinkedPoseGenerationHandle selection)
+        {
+            if (!FramePages.HasOpenFrame)
+            {
+                throw new InvalidOperationException(
+                    "Character Pose Program frame pages are not open.");
+            }
+            if (!selection.IsValid)
+            {
+                throw new ArgumentException(
+                    "Linked Pose generation selection is invalid.",
+                    nameof(selection));
+            }
+            NativeArray<AnimationPoseGraphNativeLinkedPoseCallControl>
+                controls = FramePages.LinkedPoseCallControls;
+            NativeArray<byte> activeFragments =
+                FramePages.LinkedPoseActiveFragments;
+            int matchingCallCount = 0;
+            for (int callIndex = 0;
+                 callIndex < ExecutionView.LinkedPoseCalls.Length;
+                 callIndex++)
+            {
+                if (ExecutionView.GetLinkedPoseCallGroupId(callIndex) !=
+                    selection.GroupId)
+                {
+                    continue;
+                }
+                matchingCallCount++;
+                if (ExecutionView.GetLinkedPoseCallInterfaceId(callIndex) !=
+                        selection.InterfaceId ||
+                    controls[callIndex].IsActive ||
+                    ExecutionView.FindLinkedPoseCandidate(
+                        callIndex,
+                        selection.ImplementationId) < 0)
+                {
+                    throw new InvalidOperationException(
+                        $"Linked Pose Group '{selection.GroupId}' selection does not match call #{callIndex}.");
+                }
+            }
+            if (matchingCallCount == 0)
+            {
+                throw new InvalidOperationException(
+                    $"Linked Pose Group '{selection.GroupId}' has no compiled calls.");
+            }
+            for (int callIndex = 0;
+                 callIndex < ExecutionView.LinkedPoseCalls.Length;
+                 callIndex++)
+            {
+                if (ExecutionView.GetLinkedPoseCallGroupId(callIndex) !=
+                    selection.GroupId)
+                {
+                    continue;
+                }
+                int candidateIndex =
+                    ExecutionView.FindLinkedPoseCandidate(
+                        callIndex,
+                        selection.ImplementationId);
+                AnimationPoseGraphNativeLinkedPoseCandidate candidate =
+                    ExecutionView.LinkedPoseCandidates[candidateIndex];
+                controls[callIndex] =
+                    new AnimationPoseGraphNativeLinkedPoseCallControl(
+                        candidateIndex,
+                        selection.Generation,
+                        selection.PoseDiscontinuity);
+                activeFragments[candidate.FragmentIndex] = 1;
+            }
+        }
 
         public void Dispose()
         {

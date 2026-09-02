@@ -745,3 +745,9 @@ Execution View与Frame Pages之间的Control容量一致性改由`CharacterPoseG
 状态：`CharacterPoseGraphStagedExecutor`从每帧值类型改为每Actor唯一引用类型，只在`CharacterPoseProgramRuntime`构造时建立一次。Program Runtime保存该Executor，并以`BindExecutor`在每帧绑定Committed Program Tuning、当前Program Frame页、当前Inertialization页、当前Workspace binding、completion identity与diagnostics开关；Prepared页保存同一Executor引用，不再复制大结构体。
 
 Execution View的Operation／Stage／Rig／Mask／Blend／Linked Pose静态页，以及Inertialization规则页和Constraint入口，只在持久构造时绑定一次。Root Warp／Linked／StateMachine／Slot control、Inertialization active／committed页和Workspace Slot／Value／Completion页仍按原时机从当前Pending／Committed页取得，所有Evaluate、Stage和Operation顺序未改。全文只有Program Runtime一处`new CharacterPoseGraphStagedExecutor`，任务6.3完成；任务6.1仍等待Program Runtime直接接收根Frame lease和旧大类外层收窄。3C MCP对Executor、Program Runtime和Pose Runtime错误筛选均为0；不单独运行回放。
+
+## Linked Pose selection写入归还Program Runtime
+
+状态：`CharacterPoseProgramExecutionView`删除`SetLinkedPoseGroupSelection`，只保留按index读取Call Group／Interface以及查找静态Candidate的只读查询。`CharacterPoseProgramRuntime`接管Group selection验证与Frame Pages的Call Control／Active Fragment写入，旧Pose Runtime只把根会话给出的generation handle交给Program Runtime。
+
+Call遍历顺序、Group／Interface／Implementation匹配、重复Control保护、Candidate选择、generation、Pose discontinuity和active fragment写值逐项保持。Execution View不再写Program Frame页；Program Runtime成为Linked Pose节点控制的唯一写入入口。任务6.2暂不勾选，其他PoseState／Player／Slot／Blend／Inertialization执行仍需继续迁移。3C实例重连后Program Runtime、Execution View和Pose Runtime错误筛选均为0；不单独运行回放。

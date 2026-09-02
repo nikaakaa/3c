@@ -1051,3 +1051,9 @@ Stage对非活动Fragment的跳过仍查询同一个Linked模块，candidate范�
 状态：新增`CharacterPosePlayerOperationModule`，迁移Selected／Clip／Blend Space／Blend Stack输入投影和完整Animation Slot合成；新增`CharacterPoseInertializationOperationModule`，迁移普通Inertialization与Slot共享的History、Residual、Envelope、Parameter、Foot Feature和Commit逻辑。Player模块只组合调用同一Inertialization模块，不复制算法。
 
 Sequence Preview也改为调用唯一Player模块；Player/Slot source range、Contribution、Foot Feature、continuity、selection policy、Inertial rule、History写入、delta与completion顺序保持不变。旧Executor从2598行降到1535行，只余Stage协调、StateMachine和静态配置验证；6.8继续推进，3C MCP对Player、Inertialization模块和Executor错误筛选均为0，不单独运行回放。
+
+## 拆出State Operation模块
+
+状态：新增`CharacterPoseStateOperationModule`，迁移State Pose Output、Pose StateMachine、Standard Blend、Parameter／Contribution／Foot Feature合并和Prediction传递。模块直接读取同一State control与Value页，仍由唯一Stage dispatch按原Operation顺序调用。
+
+State selection、source／target availability、curve与profile采样、bone顺序、continuity、discontinuity、Contribution去重和Foot prediction权重均未改变。旧Executor只剩Frame绑定、Stage调度、完成页和静态配置验证，已降到1036行；下一步直接替换旧类型并完成6.8。3C MCP对State模块与Executor错误筛选均为0，不单独运行回放。

@@ -83,25 +83,21 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
         readonly int[] m_RootOrientationWarpLinkedPoseFragmentIndices;
         readonly int[] m_InertializationLinkedPoseFragmentIndices;
 
-        CharacterPoseProgramExecutionView m_ExecutionView =>
-            m_ProgramRuntime.ExecutionView;
-        CharacterPoseActorState m_ActorState =>
-            m_ProgramRuntime.ActorState;
         PoseInertializationNativeProgram m_InertializationPlan =>
-            m_ActorState.Inertialization;
+            m_ProgramRuntime.Inertialization;
         CharacterPoseProgramSourceRetirementState m_SourceRetirementState =>
-            m_ActorState.SourceRetirement;
-        AnimationBlendStackRuntime[] m_Stacks => m_ActorState.Stacks;
+            m_ProgramRuntime.SourceRetirement;
+        AnimationBlendStackRuntime[] m_Stacks => m_ProgramRuntime.Stacks;
         CharacterAnimationTransitionRouteRuntime[] m_StackRoutes =>
-            m_ActorState.Routes;
+            m_ProgramRuntime.Routes;
         AnimationSelectedPosePlayerRuntime[] m_DirectPlayers =>
-            m_ActorState.DirectPlayers;
+            m_ProgramRuntime.DirectPlayers;
         PoseStateAndSourceRuntime m_PoseStateSources =>
-            m_ActorState.PoseStateSources;
+            m_ProgramRuntime.PoseStateSources;
         RootOrientationWarpRuntime[] m_RootOrientationWarps =>
-            m_ActorState.RootOrientationWarps;
+            m_ProgramRuntime.RootOrientationWarps;
         CharacterPoseProgramNodeRuntimeIndex m_NodeRuntimeIndex =>
-            m_ActorState.NodeRuntimeIndex;
+            m_ProgramRuntime.NodeRuntimeIndex;
 
         AnimationScriptPlayable[] m_SlotPlayables;
         AnimationScriptPlayable[] m_DirectPlayerPlayables;
@@ -515,12 +511,12 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
         internal CharacterPoseConstraintRuntime PoseConstraints =>
             m_PoseConstraints;
         internal CharacterActionPlaybackRuntime ActionPlayback =>
-            m_ActorState.ActionPlayback;
+            m_ProgramRuntime.ActionPlayback;
         internal AnimationSlotRuntime AnimationSlots =>
-            m_ActorState.AnimationSlots;
+            m_ProgramRuntime.AnimationSlots;
 
         internal ulong NextPresentationRequestSequence() =>
-            m_ActorState.NextPresentationRequestSequence();
+            m_ProgramRuntime.NextPresentationRequestSequence();
 
         internal void ResetFootPlacement(in CharacterFootPlacementReset reset) =>
             m_PoseConstraints.ResetFootPlacement(in reset);

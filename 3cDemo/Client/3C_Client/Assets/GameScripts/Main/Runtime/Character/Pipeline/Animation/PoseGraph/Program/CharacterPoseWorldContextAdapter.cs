@@ -28,8 +28,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 projection.PosePlan.ContributionCapacity];
         }
 
-        internal CharacterPoseWorldAwareStageInput BuildFootPlacement(
-            in CharacterFootPlacementConstraintHandle constraint,
+        internal CharacterFootPlacementFrameInput BuildFootPlacement(
             ActorId actorId,
             ulong renderFrame,
             float presentationDeltaSeconds,
@@ -71,9 +70,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 bodyFrame,
                 in factFrame,
                 in input);
-            return new CharacterPoseWorldAwareStageInput(
-                constraint,
-                in planningFrame);
+            return planningFrame;
         }
 
         AnimationFootMotionRuntimeFrame ResolveFootStepObservationFrame(

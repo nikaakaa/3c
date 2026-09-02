@@ -1,4 +1,5 @@
 using System;
+using ThirdPersonCharacter.Pipeline.Animation.BlendStack;
 using ThirdPersonCharacter.Pipeline.Animation.Diagnostics;
 using ThirdPersonCharacter.Pipeline.Animation.Presentation;
 using ThirdPersonCharacter.Pipeline.Presentation;
@@ -114,7 +115,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         }
 
         readonly CharacterPoseProgramImage m_Image;
-        readonly CharacterPoseConstraintRuntime m_PoseConstraints;
         readonly CharacterPoseWorldContextAdapter m_WorldContext;
         readonly int m_FootPlacementWeightParameterIndex;
         CharacterPoseProgramFrameLease m_ActiveFrameLease;
@@ -144,7 +144,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             Tuning = tuning ?? throw new ArgumentNullException(nameof(tuning));
             m_WorldContext = worldContext ??
                 throw new ArgumentNullException(nameof(worldContext));
-            m_PoseConstraints = poseConstraints ??
+            CharacterPoseConstraintRuntime constraintRuntime = poseConstraints ??
                 throw new ArgumentNullException(nameof(poseConstraints));
             m_FootPlacementWeightParameterIndex =
                 image.RequireParameterIndex(
@@ -153,7 +153,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 ExecutionView,
                 FramePages,
                 ActorState.Inertialization,
-                m_PoseConstraints);
+                constraintRuntime);
             if (!string.Equals(
                     m_Image.ProgramId,
                     ExecutionView.ProgramId.ToString(),
@@ -181,11 +181,30 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         }
 
         internal CharacterPoseProgramImage Image => m_Image;
-        internal CharacterPoseProgramExecutionView ExecutionView { get; }
-        internal CharacterPoseActorState ActorState { get; }
+        CharacterPoseProgramExecutionView ExecutionView { get; }
+        CharacterPoseActorState ActorState { get; }
         CharacterPoseProgramFramePages FramePages { get; }
         CharacterPoseProgramTuningState Tuning { get; }
         CharacterPoseGraphStagedExecutor Executor { get; }
+        internal PoseInertializationNativeProgram Inertialization =>
+            ActorState.Inertialization;
+        internal CharacterPoseProgramSourceRetirementState SourceRetirement =>
+            ActorState.SourceRetirement;
+        internal AnimationBlendStackRuntime[] Stacks => ActorState.Stacks;
+        internal CharacterAnimationTransitionRouteRuntime[] Routes =>
+            ActorState.Routes;
+        internal AnimationSelectedPosePlayerRuntime[] DirectPlayers =>
+            ActorState.DirectPlayers;
+        internal PoseStateAndSourceRuntime PoseStateSources =>
+            ActorState.PoseStateSources;
+        internal RootOrientationWarpRuntime[] RootOrientationWarps =>
+            ActorState.RootOrientationWarps;
+        internal CharacterPoseProgramNodeRuntimeIndex NodeRuntimeIndex =>
+            ActorState.NodeRuntimeIndex;
+        internal CharacterActionPlaybackRuntime ActionPlayback =>
+            ActorState.ActionPlayback;
+        internal AnimationSlotRuntime AnimationSlots =>
+            ActorState.AnimationSlots;
         internal bool HasOpenFrame => m_ActiveFrameLease.IsValid;
         internal bool HasPreparedEvaluation => m_PreparedEvaluation.HasValue;
         internal bool HasPendingEvaluationFrame =>
@@ -206,6 +225,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             m_HasPendingCompletedEvaluationFrame
                 ? m_PendingCompletedEvaluationFrame.CompletionIdentity
                 : 0;
+
+        internal ulong NextPresentationRequestSequence() =>
+            ActorState.NextPresentationRequestSequence();
 
         internal void BeginFrame(CharacterPoseProgramFrameLease lease)
         {
@@ -468,22 +490,20 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             }
             else
             {
+                var worldInput = new CharacterPoseWorldFrameInput(
+                    m_WorldContext,
+                    state.Lineage.ActorId,
+                    state.Lineage.PresentationFrame,
+                    state.PresentationDeltaSeconds,
+                    in bodyFrame,
+                    in factFrame,
+                    state.Lineage.CompletionIdentity);
                 for (int stageIndex = 0;
                      stageIndex < ExecutionView.Stages.Length;
                      stageIndex++)
                 {
                     AnimationPoseGraphNativeStage stage =
                         ExecutionView.Stages[stageIndex];
-                    CharacterPoseWorldAwareStageInput worldInput = default;
-                    if (stage.ExecutionDomain ==
-                        CharacterPoseExecutionDomain.WorldAwareValue)
-                    {
-                        worldInput = BuildWorldAwareStageInput(
-                            in state,
-                            in bodyFrame,
-                            in factFrame,
-                            in stage);
-                    }
                     if (!Executor.ExecuteStage(
                             stageIndex,
                             state.PresentationDeltaSeconds,
@@ -612,60 +632,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 in m_CommittedEvaluationFrame,
                 in finalOutput,
                 interest);
-        }
-
-        CharacterPoseWorldAwareStageInput BuildWorldAwareStageInput(
-            in PreparedEvaluationState state,
-            in CharacterBodyPresentationFrame bodyFrame,
-            in CharacterPresentationFactFrame factFrame,
-            in AnimationPoseGraphNativeStage stage)
-        {
-            CharacterPoseWorldAwareStageInput result = default;
-            for (int operationIndex = stage.OperationStart;
-                 operationIndex < stage.OperationStart + stage.OperationCount;
-                 operationIndex++)
-            {
-                AnimationPoseGraphNativeOperation operation =
-                    ExecutionView.Operations[operationIndex];
-                switch (operation.Code)
-                {
-                    case CharacterPoseOperationCode.FootPlacement:
-                        if (result.HasFootPlacement)
-                        {
-                            throw new InvalidOperationException(
-                                "World-Aware Pose stage contains multiple Foot Placement operations.");
-                        }
-                        CharacterFootPlacementConstraintHandle constraint =
-                            operation.FootPlacementConstraint;
-                        if (!m_PoseConstraints.HasFootPlacement)
-                        {
-                            result = new CharacterPoseWorldAwareStageInput(
-                                constraint);
-                            break;
-                        }
-                        AnimationPoseValueNativeReadBinding inputBinding =
-                            FramePages.RequirePoseValueReadBinding(
-                                operation.InputValueIndexA,
-                                state.Lineage.CompletionIdentity);
-                        result = m_WorldContext.BuildFootPlacement(
-                            in constraint,
-                            state.Lineage.ActorId,
-                            state.Lineage.PresentationFrame,
-                            state.PresentationDeltaSeconds,
-                            in bodyFrame,
-                            in factFrame,
-                            state.Lineage.CompletionIdentity,
-                            in inputBinding,
-                            operation.ParameterIndex);
-                        break;
-                }
-            }
-            if (!result.HasFootPlacement)
-            {
-                throw new InvalidOperationException(
-                    "World-Aware Pose stage has no supported planner operation.");
-            }
-            return result;
         }
 
         internal string PrepareTuningCandidate(

@@ -829,3 +829,9 @@ Frame Pages与Tuning属性改为Program Runtime私有，原调用顺序、comple
 状态：`CharacterPoseProgramRuntime`现在保存Prepared Evaluation、Pending／Committed Evaluation binding并直接驱动唯一持久Executor的Stage Schedule。旧`PosePlanExecutionRuntime`删除raw `CharacterPoseGraphNativeBinding`、Executor引用、Pending／Committed Frame标记、World-aware Stage扫描和Foot Placement输入装配，只在Animancer Barrier前后调用Program Runtime的typed Prepare／Complete／Mark入口。
 
 新增唯一`CharacterPoseWorldContextAdapter`，整体接管原有Contribution展开、主导Live source选择、Clip／Timeline Foot Step曲线解析和`CharacterFootPlacementFrameInput`构造；Program Runtime只在已编译WorldAware Stage遇到Foot handle时传入自己的Pose Value只读Binding与根Body／Fact frame。没有改Foot、Pelvis、Goal、FBBIK公式、参数、Unavailable政策、Operation顺序或Physical Writer顺序。由此任务6.1完成；任务6.6仍等待把旧`CharacterPoseGraphStagedExecutor`的Operation switch整体并入正式Program执行实现，当前不提前勾选。3C MCP清空并重编后触碰文件均无编译错误，全局仅剩既有FinalIK序列化深度Import Error；不单独运行回放。
+
+## World-aware Operation恢复唯一解释
+
+状态：Program Runtime不再为WorldAware Stage预扫描Operation，也不再按`Operation.Code`提前组装Foot输入；它只建立一份带根Actor／Frame／Delta／Body／Fact／Completion的`CharacterPoseWorldFrameInput`并按Stage Schedule交给持久Executor。Executor在唯一Foot Operation位置读取Program自有Pose Value、调用World Context Adapter组装原业务输入，再调用Constraint typed handle一次。
+
+旧`CharacterPoseWorldAwareStageInput`及其`HasFootPlacement`／handle对照页删除，World Context unavailable仍由同一个Constraint入口记录，Foot可用时的Contribution顺序、Live source选择、曲线采样、权重读取与Constraint调用顺序保持不变。旧Pose Runtime与Program Runtime均不再二次解释World-aware Operation，由此任务6.6完成。同时Program Runtime不再向旧Pose Runtime暴露整个Execution View或Actor State，只保留当前尚待迁移的窄节点实现访问。3C实例Domain Reload后自动重连，三个触碰文件编译错误均为0，全局仍只有既有FinalIK序列化深度Import Error；不单独运行回放。

@@ -2,46 +2,73 @@ using System;
 using ThirdPersonCharacter.Pipeline.Animation.BlendStack;
 using ThirdPersonCharacter.Pipeline.Animation.Presentation;
 using ThirdPersonCharacter.Pipeline.Presentation;
+using ThirdPersonSimulation;
 using Unity.Collections;
 using Unity.Profiling;
 using UnityEngine;
 
 namespace ThirdPersonCharacter.Pipeline.Animation
 {
-    internal readonly struct CharacterPoseWorldAwareStageInput
+    internal readonly struct CharacterPoseWorldFrameInput
     {
-        internal CharacterPoseWorldAwareStageInput(
-            CharacterFootPlacementConstraintHandle constraint,
-            in CharacterFootPlacementFrameInput footPlacement)
+        readonly CharacterPoseWorldContextAdapter m_Adapter;
+
+        internal CharacterPoseWorldFrameInput(
+            CharacterPoseWorldContextAdapter adapter,
+            ActorId actorId,
+            ulong presentationFrame,
+            float presentationDeltaSeconds,
+            in CharacterBodyPresentationFrame bodyFrame,
+            in CharacterPresentationFactFrame factFrame,
+            ulong completionIdentity)
         {
-            if (!constraint.IsValid)
+            m_Adapter = adapter ??
+                throw new ArgumentNullException(nameof(adapter));
+            ActorId = actorId;
+            PresentationFrame = presentationFrame;
+            PresentationDeltaSeconds = presentationDeltaSeconds;
+            BodyFrame = bodyFrame;
+            FactFrame = factFrame;
+            CompletionIdentity = completionIdentity;
+            if (!IsValid)
+            {
                 throw new ArgumentException(
-                    "Foot Placement Constraint handle is invalid.",
-                    nameof(constraint));
-            FootPlacementConstraint = constraint;
-            FootPlacement = footPlacement;
-            HasFootPlacement = true;
-            WorldContextAvailable = true;
+                    "Character Pose world frame input is invalid.");
+            }
         }
 
-        internal CharacterPoseWorldAwareStageInput(
-            CharacterFootPlacementConstraintHandle constraint)
-        {
-            if (!constraint.IsValid)
-                throw new ArgumentException(
-                    "Foot Placement Constraint handle is invalid.",
-                    nameof(constraint));
-            FootPlacementConstraint = constraint;
-            FootPlacement = default;
-            HasFootPlacement = true;
-            WorldContextAvailable = false;
-        }
+        internal ActorId ActorId { get; }
+        internal ulong PresentationFrame { get; }
+        internal float PresentationDeltaSeconds { get; }
+        internal CharacterBodyPresentationFrame BodyFrame { get; }
+        internal CharacterPresentationFactFrame FactFrame { get; }
+        internal ulong CompletionIdentity { get; }
+        internal bool IsValid =>
+            m_Adapter != null &&
+            ActorId.IsValid &&
+            PresentationFrame != 0 &&
+            float.IsFinite(PresentationDeltaSeconds) &&
+            PresentationDeltaSeconds >= 0f &&
+            BodyFrame.IsValid &&
+            FactFrame.IsValid &&
+            CompletionIdentity != 0;
 
-        internal CharacterFootPlacementConstraintHandle
-            FootPlacementConstraint { get; }
-        internal CharacterFootPlacementFrameInput FootPlacement { get; }
-        internal bool HasFootPlacement { get; }
-        internal bool WorldContextAvailable { get; }
+        internal CharacterFootPlacementFrameInput BuildFootPlacement(
+            in AnimationPoseValueNativeReadBinding inputBinding,
+            int parameterIndex)
+        {
+            CharacterBodyPresentationFrame bodyFrame = BodyFrame;
+            CharacterPresentationFactFrame factFrame = FactFrame;
+            return m_Adapter.BuildFootPlacement(
+                ActorId,
+                PresentationFrame,
+                PresentationDeltaSeconds,
+                in bodyFrame,
+                in factFrame,
+                CompletionIdentity,
+                in inputBinding,
+                parameterIndex);
+        }
     }
 
     internal sealed class CharacterPoseGraphStagedExecutor
@@ -239,9 +266,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         NativeArray<AnimationPoseNativeInvalidReason> m_PoseGraphInvalidReason;
         NativeArray<int> m_PoseGraphInvalidOperationIndex;
         NativeArray<ulong> m_PoseGraphCompletedAt;
-
         CharacterPoseGraphNativeBinding m_FrameBinding;
         CharacterFinalPosePublicationOutputBinding m_FinalOutput;
+
         readonly int m_PlayerCount;
         readonly int m_BoneCount;
         readonly int m_ParameterCount;
@@ -317,8 +344,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         internal CharacterPoseGraphStagedExecutor BindFrame(
             in CharacterPoseProgramTuningView tuning,
             CharacterPoseGraphNativeBinding binding,
-            bool recordDiagnostics)
             in CharacterFinalPosePublicationOutputBinding finalOutput,
+            bool recordDiagnostics)
         {
             RequireValidConfiguration(
                 m_Program,
@@ -326,8 +353,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 in tuning,
                 m_InertializationProgram,
                 binding,
-                m_PoseConstraints);
                 in finalOutput,
+                m_PoseConstraints);
             m_OperationWeights = tuning.OperationWeights;
             m_RootOrientationWarpControls =
                 m_FramePages.RootOrientationWarpControls;
@@ -462,9 +489,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             m_PoseGraphInvalidOperationIndex =
                 binding.PoseGraphInvalidOperationIndex;
             m_PoseGraphCompletedAt = binding.PoseGraphCompletedAt;
-            m_CompletionIdentity = binding.CompletionIdentity;
             m_FrameBinding = binding;
             m_FinalOutput = finalOutput;
+            m_CompletionIdentity = binding.CompletionIdentity;
             m_RecordDiagnostics = recordDiagnostics;
             m_FrameSequence = 0;
             return this;
@@ -484,7 +511,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         internal bool ExecuteStage(
             int stageIndex,
             float deltaSeconds,
-            in CharacterPoseWorldAwareStageInput worldInput)
+            in CharacterPoseWorldFrameInput worldInput)
         {
             if ((uint)stageIndex >= (uint)m_Stages.Length ||
                 !float.IsFinite(deltaSeconds) || deltaSeconds < 0f ||
@@ -513,9 +540,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                     return false;
                 }
                 bool producesPose = operation.OutputValueIndex >= 0;
-                if (operation.LinkedPoseFragmentIndex >= 0 &&
                 bool publishesFinalPose =
                     operation.Code == CharacterPoseOperationCode.OutputPose;
+                if (operation.LinkedPoseFragmentIndex >= 0 &&
                     !IsLinkedPoseFragmentActive(operation.LinkedPoseFragmentIndex))
                 {
                     if (producesPose && !publishesFinalPose)
@@ -662,12 +689,12 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 {
                     if (producesPose)
                     {
-                        SetInvalid(
                         if (publishesFinalPose)
                         {
                             throw new InvalidOperationException(
                                 "Final Pose Output operation did not publish its actor-local result.");
                         }
+                        SetInvalid(
                             operation.OutputValueIndex,
                             m_ValueContinuityIdentities[operation.OutputValueIndex],
                             reason,
@@ -836,10 +863,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                     (ulong)m_OutputOperationIndex + 1UL);
             }
             m_PoseGraphCompletedAt[0] = m_CompletionIdentity;
-        }
             return m_FinalOutput.Complete(
                 m_PoseGraphInvalidReason[0],
                 m_PoseGraphInvalidOperationIndex[0]);
+        }
 
         void EvaluatePlayerInput(AnimationPoseGraphNativeOperation operation)
         {
@@ -2363,7 +2390,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
 
         bool EvaluateWorldAwareFootGoal(
             AnimationPoseGraphNativeOperation operation,
-            in CharacterPoseWorldAwareStageInput worldInput,
+            in CharacterPoseWorldFrameInput worldInput,
             out AnimationPoseNativeInvalidReason invalidReason)
         {
             invalidReason =
@@ -2371,16 +2398,23 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             CharacterFootPlacementConstraintHandle handle =
                 operation.FootPlacementConstraint;
             if (!handle.IsValid ||
-                !worldInput.HasFootPlacement ||
-                !worldInput.FootPlacementConstraint.Equals(handle))
+                !worldInput.IsValid ||
+                worldInput.CompletionIdentity != m_CompletionIdentity ||
+                worldInput.PresentationFrame != m_FrameSequence)
             {
                 return false;
             }
             CharacterFootPlacementConstraintOperationResult result;
-            if (worldInput.WorldContextAvailable)
+            if (m_PoseConstraints.HasFootPlacement)
             {
+                AnimationPoseValueNativeReadBinding inputBinding =
+                    m_FramePages.RequirePoseValueReadBinding(
+                        operation.InputValueIndexA,
+                        m_CompletionIdentity);
                 CharacterFootPlacementFrameInput footPlacement =
-                    worldInput.FootPlacement;
+                    worldInput.BuildFootPlacement(
+                        in inputBinding,
+                        operation.ParameterIndex);
                 result = m_PoseConstraints.EvaluateFootPlacement(
                     in handle,
                     in footPlacement);
@@ -3055,11 +3089,11 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                     (ulong)operation.Index + 1UL);
                 return;
             }
-            if (m_ValueAvailability[input] == AnimationPoseAvailability.NoPose)
             ulong continuity = CombineContinuity(
                 m_ValueContinuityIdentities[input],
                 (ulong)operation.Index + 1UL,
                 operation.Index);
+            if (m_ValueAvailability[input] == AnimationPoseAvailability.NoPose)
             {
                 AnimationPoseNativeInvalidReason reason =
                     AnimationPoseNativeInvalidReason.PoseGraphOutputInvalid;
@@ -3084,7 +3118,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 m_FinalOutput.WriteInvalid(invalidReason, continuity);
                 return;
             }
-        }
             var inputBinding = new AnimationPoseValueNativeReadBinding(
                 in m_FrameBinding,
                 input);
@@ -3092,6 +3125,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 in inputBinding,
                 m_ValueOutputWeights[input],
                 continuity);
+        }
 
         bool TryRequireInputs(AnimationPoseGraphNativeOperation operation, int inputA, int inputB)
         {
@@ -4129,8 +4163,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             in CharacterPoseProgramTuningView tuning,
             PoseInertializationNativeProgram inertializationProgram,
             CharacterPoseGraphNativeBinding binding,
-            CharacterPoseConstraintRuntime poseConstraints)
             in CharacterFinalPosePublicationOutputBinding finalOutput,
+            CharacterPoseConstraintRuntime poseConstraints)
         {
             if (program == null)
                 throw new ArgumentNullException(nameof(program));
@@ -4171,7 +4205,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 inertializationProgram.ResetRequests.Length != inertializationProgram.Nodes.Length)
                 throw new ArgumentException("Pose Inertialization Native Program is invalid.", nameof(inertializationProgram));
             binding.RequireValid();
-            AnimationPoseNativeAggregateLayout layout = binding.Layout;
             if (!finalOutput.IsValid ||
                 finalOutput.CompletionIdentity != binding.CompletionIdentity ||
                 finalOutput.Layout.OutputOperationIndex !=
@@ -4183,6 +4216,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                     "Final Pose Publication output binding is invalid.",
                     nameof(finalOutput));
             }
+            AnimationPoseNativeAggregateLayout layout = binding.Layout;
             if (layout.BoneCount != program.PoseBoneCount ||
                 layout.ParameterCount != program.ParameterCount ||
                 layout.PoseValueCount != program.PoseValueCount ||

@@ -238,40 +238,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         public IReadOnlyList<CharacterMotionMatchingEntryProgramDescriptor> MotionMatchingEntryPrograms => m_MotionMatchingEntryPrograms ?? Array.Empty<CharacterMotionMatchingEntryProgramDescriptor>();
         public IReadOnlyList<CharacterMotionMatchingBlendPlanDescriptor> MotionMatchingBlendPlans => m_MotionMatchingBlendPlans ?? Array.Empty<CharacterMotionMatchingBlendPlanDescriptor>();
 
-        internal void ConfigureMotionMatching(
-            CharacterMotionMatchingPosePlanDescriptor[] nodes,
-            CharacterPoseHistoryCollectorPlanDescriptor[] collectors,
-            CharacterMotionMatchingEntryProgramDescriptor[] entryPrograms,
-            CharacterMotionMatchingBlendPlanDescriptor[] blendPlans)
-        {
-            m_MotionMatchingNodes = nodes ?? Array.Empty<CharacterMotionMatchingPosePlanDescriptor>();
-            m_PoseHistoryCollectors = collectors ?? Array.Empty<CharacterPoseHistoryCollectorPlanDescriptor>();
-            m_MotionMatchingEntryPrograms = entryPrograms ?? Array.Empty<CharacterMotionMatchingEntryProgramDescriptor>();
-            m_MotionMatchingBlendPlans = blendPlans ?? Array.Empty<CharacterMotionMatchingBlendPlanDescriptor>();
-            int contributionCapacity = 0;
-            var revision = new List<string>
-            {
-                m_PlanHash,
-                "motion-matching-pose-plan/v1"
-            };
-            for (int i = 0; i < m_MotionMatchingNodes.Length; i++)
-            {
-                CharacterMotionMatchingPosePlanDescriptor node = m_MotionMatchingNodes[i] ??
-                    throw new InvalidOperationException($"Motion Matching Pose plan #{i} is missing.");
-                contributionCapacity = checked(contributionCapacity + node.LiveEntryCapacity + node.StoredPoseCapacity);
-                revision.Add($"node:{node.NodeId}:{node.BindingId}:{node.BindingRevision}:{node.ProfileId}:{node.ProfileRevision}:{node.ChooserId}:{node.ChooserRevision}:{node.SearchDomainId}:{node.FirstDatabaseIndex}:{node.DatabaseCount}:{node.CollectorIndex}:{node.EntryProgramIndex}:{node.BlendPlanIndex}:{node.OutputPoseValueIndex}:{node.CandidateCapacity}:{node.FeatureCapacity}:{node.LiveEntryCapacity}:{node.StoredPoseCapacity}:{node.DiagnosticCapacity}:{(int)node.RelevanceResetPolicy}:{(int)node.SearchCadencePolicy}");
-            }
-            for (int i = 0; i < m_MotionMatchingBlendPlans.Length; i++)
-            {
-                CharacterMotionMatchingBlendPlanDescriptor blend = m_MotionMatchingBlendPlans[i] ??
-                    throw new InvalidOperationException($"Motion Matching Blend plan #{i} is missing.");
-                revision.Add($"blend:{blend.PolicyId}:{blend.PolicyRevision}:{blend.StackPolicy.MaxActiveSourceEntries}:{(int)blend.StackPolicy.StoredPosePolicy}:{blend.StackPolicy.MaxBlendInTimeToReplaceNewest:R}:{blend.StackPolicy.DepthBlendTimeMultiplier:R}:{blend.JumpDurationSeconds:R}:{blend.CurveIndex}:{blend.ProfileIndex}");
-            }
-            m_ContributionWorkspaceCount = checked(m_ContributionWorkspaceCount + contributionCapacity);
-            m_PlanHash = ThirdPersonSimulation.StableHash.Compute(string.Join("|", revision)).ToString();
-            RequireMotionMatchingPlan();
-        }
-
         public void RequireMotionMatchingPlan()
         {
             if (MotionMatchingNodes.Count == 0)

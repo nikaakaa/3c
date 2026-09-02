@@ -1201,3 +1201,9 @@ Sequence Preview短路位置、State准备与最终Transition时机、Slot contr
 状态：Inertialization descriptor编译已进入唯一Pose Compiler Module，在Family Payload绑定、Stage／Value／Workspace完成后、Program Image Seal之前执行。Seal Pass现在一次接收全部descriptor、沿用原先“基础PlanHash + Inertialization schema与规则”的最终Hash算法，并只构造一个`CharacterPoseProgramImage`；Projection Compiler删除Seal后重建整个Image的路径。
 
 Inertialization owner查找仍使用同一已绑定Operation顺序、Player Source index、StateMachine transition和Policy，规则排序与Hash token逐项保持不变；失败统一成为Seal Program Image编译诊断，不发布半成品Image。全仓Editor源码现在只有Seal Pass一处`new CharacterPoseProgramImage`。3C MCP完成全脚本重编且C#错误为0，不单独运行回放。
+
+## 删除Seal后的Motion Matching程序修改
+
+状态：Motion Matching Pose Plan现在从同一Family Payload Binding生成typed compilation结果，并在Workspace Plan阶段计入每个Pose Value的Contribution容量；Seal Pass一次写入Node、History Collector、Entry Program与Blend Plan页。`CharacterPoseProgramImage.ConfigureMotionMatching`及Projection Compiler的Seal后修改已删除，最终Hash继续按原先Inertialization Hash后追加Motion Matching schema、Node与Blend token。
+
+Motion Matching节点、History边、Entry Graph容量、Blend catalog、Provider binding和Operation value index的解析顺序保持不变；无Motion Matching节点时仍写空页并追加同一schema hash。Program Image构造完成后不再修改PlanHash或Workspace容量。3C MCP完成全脚本重编且C#错误为0，不单独运行回放。

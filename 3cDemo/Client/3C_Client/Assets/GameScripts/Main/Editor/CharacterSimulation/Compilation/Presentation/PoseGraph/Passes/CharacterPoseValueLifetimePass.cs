@@ -99,6 +99,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             int poseValueCapacity,
             int parameterValueCapacity,
             int contributionCapacity,
+            int motionMatchingContributionCapacity,
             int frameCacheCapacity,
             int rigPoseBoneCount,
             int rigPhysicalBoneCount,
@@ -118,6 +119,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             if (poseValueCapacity <= 0 ||
                 parameterValueCapacity <= 0 ||
                 contributionCapacity <= 0 ||
+                motionMatchingContributionCapacity < 0 ||
                 frameCacheCapacity <= 0 ||
                 rigPoseBoneCount <= 0 ||
                 rigPhysicalBoneCount <= 0 ||
@@ -141,6 +143,8 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             PoseValueCapacity = poseValueCapacity;
             ParameterValueCapacity = parameterValueCapacity;
             ContributionCapacity = contributionCapacity;
+            MotionMatchingContributionCapacity =
+                motionMatchingContributionCapacity;
             FrameCacheCapacity = frameCacheCapacity;
             RigPoseBoneCount = rigPoseBoneCount;
             RigPhysicalBoneCount = rigPhysicalBoneCount;
@@ -162,6 +166,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
         internal int PoseValueCapacity { get; }
         internal int ParameterValueCapacity { get; }
         internal int ContributionCapacity { get; }
+        internal int MotionMatchingContributionCapacity { get; }
         internal int FrameCacheCapacity { get; }
         internal int RigPoseBoneCount { get; }
         internal int RigPhysicalBoneCount { get; }
@@ -467,7 +472,8 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                 footPlacements,
             IReadOnlyList<CharacterPresentationFullBodyIkDescriptor>
                 fullBodyIks,
-            int constraintGoalCapacity)
+            int constraintGoalCapacity,
+            int motionMatchingContributionCapacity)
         {
             if (lifetime == null ||
                 schedule == null ||
@@ -483,7 +489,8 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                 poseBoneIkGoals == null ||
                 footPlacements == null ||
                 fullBodyIks == null ||
-                constraintGoalCapacity <= 0)
+                constraintGoalCapacity <= 0 ||
+                motionMatchingContributionCapacity < 0)
             {
                 throw new ArgumentException(
                     "Pose Workspace Plan input is invalid.");
@@ -537,6 +544,9 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                     blendStackEntryCount +
                     blendNode.StackPolicy.MaxActiveSourceEntries);
             }
+            contributionCapacityPerValue = checked(
+                contributionCapacityPerValue +
+                motionMatchingContributionCapacity);
             if (contributionCapacityPerValue <= 0 ||
                 lifetime.OutputPoseValueIndex <= 0)
             {
@@ -557,7 +567,8 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                 lifetime.ParameterAddresses.Count,
                 checked(
                     lifetime.OutputPoseValueIndex *
-                    contributionCapacityPerValue),
+                        contributionCapacityPerValue),
+                motionMatchingContributionCapacity,
                 operations.Count,
                 rig.PoseBoneCount,
                 rig.PhysicalBoneCount,

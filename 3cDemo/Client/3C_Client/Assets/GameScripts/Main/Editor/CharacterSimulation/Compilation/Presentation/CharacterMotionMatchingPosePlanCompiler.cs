@@ -6,6 +6,52 @@ using ThirdPersonCharacter.Pipeline.Animation.MotionMatching;
 
 namespace ThirdPersonCharacter.Editor.CharacterSimulation
 {
+    internal sealed class CharacterMotionMatchingPosePlanCompilation
+    {
+        internal CharacterMotionMatchingPosePlanCompilation(
+            CharacterMotionMatchingPosePlanDescriptor[] nodes,
+            CharacterPoseHistoryCollectorPlanDescriptor[] collectors,
+            CharacterMotionMatchingEntryProgramDescriptor[] entryPrograms,
+            CharacterMotionMatchingBlendPlanDescriptor[] blendPlans)
+        {
+            Nodes = nodes ??
+                Array.Empty<CharacterMotionMatchingPosePlanDescriptor>();
+            Collectors = collectors ??
+                Array.Empty<CharacterPoseHistoryCollectorPlanDescriptor>();
+            EntryPrograms = entryPrograms ??
+                Array.Empty<CharacterMotionMatchingEntryProgramDescriptor>();
+            BlendPlans = blendPlans ??
+                Array.Empty<CharacterMotionMatchingBlendPlanDescriptor>();
+            int contributionCapacity = 0;
+            for (int i = 0; i < Nodes.Length; i++)
+            {
+                CharacterMotionMatchingPosePlanDescriptor node = Nodes[i] ??
+                    throw new InvalidOperationException(
+                        $"Motion Matching Pose plan #{i} is missing.");
+                contributionCapacity = checked(
+                    contributionCapacity +
+                    node.LiveEntryCapacity +
+                    node.StoredPoseCapacity);
+            }
+            ContributionCapacity = contributionCapacity;
+        }
+
+        internal CharacterMotionMatchingPosePlanDescriptor[] Nodes { get; }
+        internal CharacterPoseHistoryCollectorPlanDescriptor[] Collectors
+        {
+            get;
+        }
+        internal CharacterMotionMatchingEntryProgramDescriptor[] EntryPrograms
+        {
+            get;
+        }
+        internal CharacterMotionMatchingBlendPlanDescriptor[] BlendPlans
+        {
+            get;
+        }
+        internal int ContributionCapacity { get; }
+    }
+
     internal static class CharacterMotionMatchingPosePlanCompiler
     {
         readonly struct ScopedNode
@@ -28,15 +74,15 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             internal string Scope { get; }
         }
 
-        internal static void Compile(
-            CharacterPoseProgramImage plan,
+        internal static CharacterMotionMatchingPosePlanCompilation Compile(
+            CharacterPoseFamilyPayloadBinding pose,
             CharacterPresentationPoseGraphAsset graphAsset,
             CharacterAnimationRigDefinition rig,
             MotionMatchingProjectionPayload motionMatching,
             IReadOnlyDictionary<string, int> curveIndices,
             IReadOnlyDictionary<string, int> profileIndicesByIdentity)
         {
-            if (plan == null || !graphAsset || !rig)
+            if (pose == null || !graphAsset || !rig)
                 throw new ArgumentException("Motion Matching Pose plan compilation input is incomplete.");
             ScopedNode[] nodes = Enumerate(graphAsset)
                 .Where(value => value.Node.Payload is CharacterMotionMatchingPosePayload)
@@ -44,23 +90,21 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                 .ToArray();
             if (nodes.Length == 0)
             {
-                plan.ConfigureMotionMatching(
+                return new CharacterMotionMatchingPosePlanCompilation(
                     Array.Empty<CharacterMotionMatchingPosePlanDescriptor>(),
                     Array.Empty<CharacterPoseHistoryCollectorPlanDescriptor>(),
                     Array.Empty<CharacterMotionMatchingEntryProgramDescriptor>(),
                     Array.Empty<CharacterMotionMatchingBlendPlanDescriptor>());
-                return;
             }
             if (motionMatching == null || curveIndices == null || profileIndicesByIdentity == null)
                 throw new InvalidOperationException("Motion Matching Pose nodes require compiled Projection and Blend catalogs.");
-            if (!string.Equals(plan.RigId, rig.RigId, StringComparison.Ordinal) ||
-                !string.Equals(plan.RigRevision, rig.Revision, StringComparison.Ordinal) ||
-                motionMatching.NodeBindingCount != nodes.Length)
+            if (motionMatching.NodeBindingCount != nodes.Length)
             {
                 throw new InvalidOperationException("Motion Matching Pose plan Rig or node binding closure is inconsistent.");
             }
 
-            var operations = plan.OperationHeaders.ToDictionary(value => value.NodeId);
+            var operations = pose.Operations.ToDictionary(
+                value => value.NodeId);
             var collectors = new List<CharacterPoseHistoryCollectorPlanDescriptor>(nodes.Length);
             var entryPrograms = new List<CharacterMotionMatchingEntryProgramDescriptor>(nodes.Length);
             var blends = new List<CharacterMotionMatchingBlendPlanDescriptor>(nodes.Length);
@@ -76,7 +120,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                 MotionMatchingNodeBindingPayload binding = RequireBinding(
                     motionMatching,
                     scoped.ScopedNodeId);
-                CharacterPoseOperationHeader operation = RequireOperation(
+                CharacterPoseBoundOperation operation = RequireOperation(
                     operations,
                     scoped.ScopedNodeId,
                     CharacterPoseOperationCode.MotionMatchingPose);
@@ -89,19 +133,13 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                 PoseNodeId scopedCollectorId = Scope(collectorNode.NodeId, scoped.Scope);
                 if (!collectorIds.Add(scopedCollectorId))
                     throw new InvalidOperationException($"Pose History Collector '{scopedCollectorId}' has competing Motion Matching writers.");
-                CharacterPoseOperationHeader collectorOperation = RequireOperation(
+                CharacterPoseBoundOperation collectorOperation = RequireOperation(
                     operations,
                     scopedCollectorId,
                     CharacterPoseOperationCode.PoseHistoryRead);
-                int operationOutput = plan.OperationPages.FindOutputValueIndex(
-                    operation,
-                    CharacterPoseValueReferenceKind.Pose);
-                int collectorInput = plan.OperationPages.FindInputValueIndex(
-                    collectorOperation,
-                    CharacterPoseValueReferenceKind.Pose);
-                int collectorOutput = plan.OperationPages.FindOutputValueIndex(
-                    collectorOperation,
-                    CharacterPoseValueReferenceKind.Pose);
+                int operationOutput = operation.OutputValueIndex;
+                int collectorInput = collectorOperation.InputValueIndexA;
+                int collectorOutput = collectorOperation.OutputValueIndex;
                 if (collectorInput != operationOutput ||
                     collectorOperation.Index <= operation.Index)
                 {
@@ -174,11 +212,43 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                     payload.RelevanceResetPolicy,
                     payload.SearchCadencePolicy);
             }
-            plan.ConfigureMotionMatching(
+            return new CharacterMotionMatchingPosePlanCompilation(
                 compiledNodes,
                 collectors.ToArray(),
                 entryPrograms.ToArray(),
                 blends.ToArray());
+        }
+
+        internal static string ComputeProgramHash(
+            string baseHash,
+            CharacterMotionMatchingPosePlanCompilation plan)
+        {
+            if (string.IsNullOrWhiteSpace(baseHash))
+                throw new ArgumentException(nameof(baseHash));
+            if (plan == null)
+                throw new ArgumentNullException(nameof(plan));
+            var revision = new List<string>
+            {
+                baseHash,
+                "motion-matching-pose-plan/v1"
+            };
+            for (int i = 0; i < plan.Nodes.Length; i++)
+            {
+                CharacterMotionMatchingPosePlanDescriptor node =
+                    plan.Nodes[i];
+                revision.Add(
+                    $"node:{node.NodeId}:{node.BindingId}:{node.BindingRevision}:{node.ProfileId}:{node.ProfileRevision}:{node.ChooserId}:{node.ChooserRevision}:{node.SearchDomainId}:{node.FirstDatabaseIndex}:{node.DatabaseCount}:{node.CollectorIndex}:{node.EntryProgramIndex}:{node.BlendPlanIndex}:{node.OutputPoseValueIndex}:{node.CandidateCapacity}:{node.FeatureCapacity}:{node.LiveEntryCapacity}:{node.StoredPoseCapacity}:{node.DiagnosticCapacity}:{(int)node.RelevanceResetPolicy}:{(int)node.SearchCadencePolicy}");
+            }
+            for (int i = 0; i < plan.BlendPlans.Length; i++)
+            {
+                CharacterMotionMatchingBlendPlanDescriptor blend =
+                    plan.BlendPlans[i];
+                revision.Add(
+                    $"blend:{blend.PolicyId}:{blend.PolicyRevision}:{blend.StackPolicy.MaxActiveSourceEntries}:{(int)blend.StackPolicy.StoredPosePolicy}:{blend.StackPolicy.MaxBlendInTimeToReplaceNewest:R}:{blend.StackPolicy.DepthBlendTimeMultiplier:R}:{blend.JumpDurationSeconds:R}:{blend.CurveIndex}:{blend.ProfileIndex}");
+            }
+            return ThirdPersonSimulation.StableHash
+                .Compute(string.Join("|", revision))
+                .ToString();
         }
 
         static IEnumerable<ScopedNode> Enumerate(
@@ -241,12 +311,15 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                 ? nodeId
                 : new PoseNodeId(scope + "/" + nodeId.Value);
 
-        static CharacterPoseOperationHeader RequireOperation(
-            IReadOnlyDictionary<PoseNodeId, CharacterPoseOperationHeader> operations,
+        static CharacterPoseBoundOperation RequireOperation(
+            IReadOnlyDictionary<PoseNodeId, CharacterPoseBoundOperation>
+                operations,
             PoseNodeId nodeId,
             CharacterPoseOperationCode code)
         {
-            if (!operations.TryGetValue(nodeId, out CharacterPoseOperationHeader operation) ||
+            if (!operations.TryGetValue(
+                    nodeId,
+                    out CharacterPoseBoundOperation operation) ||
                 operation.Code != code)
             {
                 throw new InvalidOperationException($"Pose node '{nodeId}' has no compiled '{code}' operation.");

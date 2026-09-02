@@ -552,28 +552,12 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 blendCatalogs?.ProfileIndicesByIdentity,
                 profile,
                 linkedPose,
+                motionMatching,
                 footAnalysisCompilation);
             CharacterPoseCompilationResult poseCompilation =
                 CharacterPoseCompilerModule.Compile(poseRequest);
             poseCompilation.CopyMessagesTo(errors);
             CharacterPoseProgramImage poseProgram = poseCompilation.ProgramImage;
-            if (poseProgram != null && blendCatalogs != null)
-            {
-                try
-                {
-                    CharacterMotionMatchingPosePlanCompiler.Compile(
-                        poseProgram,
-                        profile.PoseGraph,
-                        profile.RigDefinition,
-                        motionMatching,
-                        blendCatalogs.CurveIndices,
-                        blendCatalogs.ProfileIndicesByIdentity);
-                }
-                catch (Exception exception)
-                {
-                    errors?.Add(exception.Message);
-                }
-            }
             CharacterAnimationBlendSpacePlayerPlan[] blendSpacePlayers = poseProgram == null
                 ? Array.Empty<CharacterAnimationBlendSpacePlayerPlan>()
                 : CompileBlendSpacePlayers(

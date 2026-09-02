@@ -94,6 +94,14 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                         payloads.LinkedPoseCalls,
                         payloads.LinkedPoseFragments,
                         layout.OutputOperationIndex);
+                CharacterMotionMatchingPosePlanCompilation motionMatching =
+                    CharacterMotionMatchingPosePlanCompiler.Compile(
+                        binding,
+                        request.Asset,
+                        request.Rig,
+                        request.MotionMatching,
+                        request.CurveIndices,
+                        request.ProfileIndicesByIdentity);
                 CharacterPoseWorkspacePlan workspace =
                     CharacterPoseWorkspacePlanPass.Run(
                         valueLifetime,
@@ -109,7 +117,8 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                         payloads.FootPlacements,
                         payloads.FullBodyIks,
                         layout
-                            .FullBodyIkGoalContributionGoalWorkspaceCount);
+                            .FullBodyIkGoalContributionGoalWorkspaceCount,
+                        motionMatching.ContributionCapacity);
                 CharacterPresentationInertializationDescriptor[]
                     inertializations =
                         CharacterPresentationInertializationPlanCompiler
@@ -125,7 +134,8 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                         binding,
                         schedule,
                         workspace,
-                        inertializations);
+                        inertializations,
+                        motionMatching);
                 return new CharacterPoseCompilationResult(
                     image,
                     diagnostics);

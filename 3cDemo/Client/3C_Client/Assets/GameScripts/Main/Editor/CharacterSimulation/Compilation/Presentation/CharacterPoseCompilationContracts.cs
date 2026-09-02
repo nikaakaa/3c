@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using ThirdPersonCharacter.Pipeline.Animation;
+using ThirdPersonCharacter.Pipeline.Animation.MotionMatching;
 using ThirdPersonCharacter.Pipeline.Simulation.Editor;
 using ThirdPersonSimulation;
 
@@ -108,6 +109,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             IReadOnlyDictionary<string, int> profileIndicesByIdentity,
             CharacterAnimationPresentationProfile profile,
             CharacterLinkedPoseProjectionPayload linkedPose,
+            MotionMatchingProjectionPayload motionMatching,
             CharacterFootPlacementAnalysisCompilation footAnalysis)
         {
             Asset = asset ? asset : throw new ArgumentNullException(nameof(asset));
@@ -127,6 +129,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                 throw new ArgumentNullException(nameof(profileIndicesByIdentity));
             Profile = profile ? profile : throw new ArgumentNullException(nameof(profile));
             LinkedPose = linkedPose ?? throw new ArgumentNullException(nameof(linkedPose));
+            MotionMatching = motionMatching;
             FootAnalysis = footAnalysis ?? throw new ArgumentNullException(nameof(footAnalysis));
         }
 
@@ -143,6 +146,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
         public IReadOnlyDictionary<string, int> ProfileIndicesByIdentity { get; }
         public CharacterAnimationPresentationProfile Profile { get; }
         public CharacterLinkedPoseProjectionPayload LinkedPose { get; }
+        public MotionMatchingProjectionPayload MotionMatching { get; }
         public CharacterFootPlacementAnalysisCompilation FootAnalysis { get; }
     }
 

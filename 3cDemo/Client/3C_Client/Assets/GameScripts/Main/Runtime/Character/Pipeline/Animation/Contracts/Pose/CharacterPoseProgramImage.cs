@@ -655,6 +655,13 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             CharacterPoseStateMachineDescriptor[] stateMachines,
             CharacterAnimationSlotDescriptor[] animationSlots,
             ActionPlaybackInputPlan[] actionPlaybackInputs,
+            CharacterMotionMatchingPosePlanDescriptor[] motionMatchingNodes,
+            CharacterPoseHistoryCollectorPlanDescriptor[]
+                poseHistoryCollectors,
+            CharacterMotionMatchingEntryProgramDescriptor[]
+                motionMatchingEntryPrograms,
+            CharacterMotionMatchingBlendPlanDescriptor[]
+                motionMatchingBlendPlans,
             CharacterLinkedPoseEntryFragmentPlanDescriptor[] linkedPoseFragments,
             CharacterLinkedPoseCallPlanDescriptor[] linkedPoseCalls,
             CharacterPoseOperationPages operationPages,
@@ -696,6 +703,15 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             m_AnimationSlots = animationSlots ?? throw new ArgumentNullException(nameof(animationSlots));
             m_ActionPlaybackInputs = actionPlaybackInputs ??
                 throw new ArgumentNullException(nameof(actionPlaybackInputs));
+            m_MotionMatchingNodes = motionMatchingNodes ??
+                throw new ArgumentNullException(nameof(motionMatchingNodes));
+            m_PoseHistoryCollectors = poseHistoryCollectors ??
+                throw new ArgumentNullException(nameof(poseHistoryCollectors));
+            m_MotionMatchingEntryPrograms = motionMatchingEntryPrograms ??
+                throw new ArgumentNullException(
+                    nameof(motionMatchingEntryPrograms));
+            m_MotionMatchingBlendPlans = motionMatchingBlendPlans ??
+                throw new ArgumentNullException(nameof(motionMatchingBlendPlans));
             m_LinkedPoseFragments = linkedPoseFragments ?? throw new ArgumentNullException(nameof(linkedPoseFragments));
             m_LinkedPoseCalls = linkedPoseCalls ?? throw new ArgumentNullException(nameof(linkedPoseCalls));
             m_OperationPages = operationPages ??
@@ -721,6 +737,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             m_FrameCacheCount = frameCacheCount;
             m_OutputOperationIndex = outputOperationIndex;
             RequireValid();
+            RequireMotionMatchingPlan();
         }
 
         public string PoseGraphId => m_PoseGraphId ?? string.Empty;

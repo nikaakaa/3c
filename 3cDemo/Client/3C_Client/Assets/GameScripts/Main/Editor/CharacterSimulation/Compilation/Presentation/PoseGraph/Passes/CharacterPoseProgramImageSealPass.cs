@@ -17,7 +17,8 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             CharacterPoseStageSchedule schedule,
             CharacterPoseWorkspacePlan workspace,
             CharacterPresentationInertializationDescriptor[]
-                inertializations)
+                inertializations,
+            CharacterMotionMatchingPosePlanCompilation motionMatching)
         {
             if (request == null)
                 throw new ArgumentNullException(nameof(request));
@@ -29,6 +30,14 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                 throw new ArgumentNullException(nameof(workspace));
             if (inertializations == null)
                 throw new ArgumentNullException(nameof(inertializations));
+            if (motionMatching == null)
+                throw new ArgumentNullException(nameof(motionMatching));
+            if (motionMatching.ContributionCapacity !=
+                workspace.MotionMatchingContributionCapacity)
+            {
+                throw new InvalidOperationException(
+                    "Motion Matching contribution capacity is inconsistent.");
+            }
             CharacterPoseBoundFamilyPayloads payloads = binding.Payloads;
             CharacterPoseBoundProgramLayout layout = binding.Layout;
             for (int rangeIndex = 0;
@@ -46,6 +55,10 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                 schedule.Stages.ToArray();
             CharacterTypedPoseGraph graph = request.Asset.Graph;
             CharacterAnimationRigDefinition rig = request.Rig;
+            int baseContributionCapacity = checked(
+                workspace.ContributionCapacity -
+                workspace.PoseValueCapacity *
+                workspace.MotionMatchingContributionCapacity);
             string baseHash = ComputeHash(
                 graph,
                 rig,
@@ -53,10 +66,15 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                 stages,
                 workspace.PoseValueCapacity,
                 workspace.ParameterValueCapacity,
-                workspace.ContributionCapacity,
+                baseContributionCapacity,
                 workspace.FrameCacheCapacity);
-            string hash = CharacterPresentationInertializationPlanCompiler
+            string inertializationHash =
+                CharacterPresentationInertializationPlanCompiler
                 .ComputeProgramHash(baseHash, inertializations);
+            string hash = CharacterMotionMatchingPosePlanCompiler
+                .ComputeProgramHash(
+                    inertializationHash,
+                    motionMatching);
             var image = new CharacterPoseProgramImage(
                 graph.GraphId.Value,
                 graph.ContentRevision,
@@ -76,6 +94,10 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                 payloads.StateMachines,
                 payloads.AnimationSlots,
                 payloads.ActionPlaybackInputs,
+                motionMatching.Nodes,
+                motionMatching.Collectors,
+                motionMatching.EntryPrograms,
+                motionMatching.BlendPlans,
                 payloads.LinkedPoseFragments,
                 payloads.LinkedPoseCalls,
                 binding.OperationPages,

@@ -185,10 +185,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
         readonly CharacterPoseProgramTuningState m_ProgramTuning;
         readonly CharacterPoseGraphNativeProgram m_PosePlan;
         readonly CharacterPoseConstraintRuntime m_PoseConstraints;
-        readonly PoseInertializationNativeProgram m_InertializationPlan;
         readonly CharacterPoseSourceModule m_SourceModule;
-        readonly CharacterPoseProgramSourceRetirementState
-            m_SourceRetirementState;
+        readonly CharacterPoseActorState m_ActorState;
         readonly ComposedAnimationPoseFramePublisher m_FramePublisher;
         readonly AnimationPoseSourceContribution[]
             m_FootPlacementContributions;
@@ -198,17 +196,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                 new CharacterFootIkCommittedCaptureViewProjector();
         readonly CharacterPoseActorCommittedDiagnosticsProjector
             m_ActorDiagnosticsProjector;
-        readonly AnimationBlendStackRuntime[] m_Stacks;
-        readonly CharacterAnimationTransitionRouteRuntime[] m_StackRoutes;
-        readonly AnimationSelectedPosePlayerRuntime[] m_DirectPlayers;
-        readonly PoseStateAndSourceRuntime m_PoseStateSources;
-        readonly RootOrientationWarpRuntime[] m_RootOrientationWarps;
         readonly AnimationSlotBlendJob[] m_SlotJobs;
         readonly AnimationSelectedPosePlayerJob[] m_DirectPlayerJobs;
         readonly AnimationSelectedPosePlayerJob[] m_ClipPlayerJobs;
         readonly AnimationSelectedPosePlayerJob[] m_BlendSpacePlayerJobs;
-        readonly CharacterPoseProgramNodeRuntimeIndex m_NodeRuntimeIndex =
-            new CharacterPoseProgramNodeRuntimeIndex();
         readonly MotionMatchingPosePlanHistoryCompletion[] m_MotionMatchingHistoryCompletions;
         readonly PreparedMotionMatchingHistoryRead[]
             m_PreparedMotionMatchingHistoryReads;
@@ -220,6 +211,22 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
         readonly int[] m_StateMachineLinkedPoseFragmentIndices;
         readonly int[] m_RootOrientationWarpLinkedPoseFragmentIndices;
         readonly int[] m_InertializationLinkedPoseFragmentIndices;
+
+        PoseInertializationNativeProgram m_InertializationPlan =>
+            m_ActorState.Inertialization;
+        CharacterPoseProgramSourceRetirementState m_SourceRetirementState =>
+            m_ActorState.SourceRetirement;
+        AnimationBlendStackRuntime[] m_Stacks => m_ActorState.Stacks;
+        CharacterAnimationTransitionRouteRuntime[] m_StackRoutes =>
+            m_ActorState.Routes;
+        AnimationSelectedPosePlayerRuntime[] m_DirectPlayers =>
+            m_ActorState.DirectPlayers;
+        PoseStateAndSourceRuntime m_PoseStateSources =>
+            m_ActorState.PoseStateSources;
+        RootOrientationWarpRuntime[] m_RootOrientationWarps =>
+            m_ActorState.RootOrientationWarps;
+        CharacterPoseProgramNodeRuntimeIndex m_NodeRuntimeIndex =>
+            m_ActorState.NodeRuntimeIndex;
 
         AnimationScriptPlayable[] m_SlotPlayables;
         AnimationScriptPlayable[] m_DirectPlayerPlayables;
@@ -310,6 +317,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             CharacterPoseActorCommittedDiagnosticsProjector
                 actorDiagnosticsProjector = null;
             AnimationFinalPosePhysicalWriter finalWriter = null;
+            var nodeRuntimeIndex =
+                new CharacterPoseProgramNodeRuntimeIndex();
             try
             {
                 workspace = new AnimationPoseNativeWorkspace(projection);
@@ -410,7 +419,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                         in initialWrite);
                     stacks[stackIndex] = stack;
                     stackRoutes[stackIndex] = route;
-                    m_NodeRuntimeIndex.AddStack(
+                    nodeRuntimeIndex.AddStack(
                         blendNode.NodeId,
                         stack,
                         route,
@@ -447,7 +456,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                         projection.Rig,
                         projection.PosePlan.Parameters.Count);
                     directPlayerList.Add(player);
-                    m_NodeRuntimeIndex.AddDirect(
+                    nodeRuntimeIndex.AddDirect(
                         operation.NodeId,
                         player,
                         operation.PlayerIndex,
@@ -461,7 +470,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                         projection,
                         projection.PosePlan.ClipPlayers[clipPlayerIndex]);
                     clipPlayers[clipPlayerIndex] = clipPlayer;
-                    m_NodeRuntimeIndex.AddPlayer(
+                    nodeRuntimeIndex.AddPlayer(
                         clipPlayer.NodeId,
                         clipPlayer.PlayerIndex);
                 }
@@ -482,7 +491,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                         projection.FootAnalysis,
                         projection.ClipPhasePlans);
                     blendSpacePlayers[blendSpaceIndex] = player;
-                    m_NodeRuntimeIndex.AddPlayer(
+                    nodeRuntimeIndex.AddPlayer(
                         player.NodeId,
                         player.PlayerIndex);
                 }
@@ -571,24 +580,28 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             m_ProgramTuning = programTuning;
             m_PosePlan = poseProgram;
             m_PoseConstraints = poseConstraints;
-            m_InertializationPlan = inertializationProgram;
             m_SourceModule = sourceModule;
-            m_Stacks = stacks;
-            m_StackRoutes = stackRoutes;
-            m_DirectPlayers = directPlayers;
-            m_PoseStateSources = poseStateSources;
-            m_RootOrientationWarps =
+            var rootOrientationWarps =
                 new RootOrientationWarpRuntime[
                     projection.PosePlan.RootOrientationWarps.Count];
-            for (int i = 0; i < m_RootOrientationWarps.Length; i++)
+            for (int i = 0; i < rootOrientationWarps.Length; i++)
             {
                 CharacterPresentationRootOrientationWarpDescriptor descriptor =
                     projection.PosePlan.RootOrientationWarps[i];
-                m_RootOrientationWarps[i] =
+                rootOrientationWarps[i] =
                     new RootOrientationWarpRuntime(
                         descriptor,
                         clipPlayers[descriptor.ClipPlayerIndex]);
             }
+            m_ActorState = new CharacterPoseActorState(
+                stacks,
+                stackRoutes,
+                directPlayers,
+                poseStateSources,
+                rootOrientationWarps,
+                inertializationProgram,
+                nodeRuntimeIndex,
+                sourceModule.Capacity);
             m_MotionMatchingHistoryCompletions =
                 new MotionMatchingPosePlanHistoryCompletion[
                     m_PoseStateSources
@@ -611,10 +624,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                     projection.PosePlan.PoseValueWorkspaceCount];
             m_DiagnosticsPublisher = diagnosticsPublisher;
             m_ActorDiagnosticsProjector = actorDiagnosticsProjector;
-            int releaseCapacity = sourceModule.Capacity;
-            m_SourceRetirementState =
-                new CharacterPoseProgramSourceRetirementState(
-                    releaseCapacity);
             m_ManagesGraphClock = managesGraphClock;
             m_FootPlacementWeightParameterIndex = projection.PosePlan.RequireParameterIndex(
                 AnimationPoseParameterIds.FootPlacementWeight);
@@ -2746,42 +2755,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             DisposeStep(m_DiagnosticsPublisher.Dispose, ref failure);
             DisposeStep(RemoveJobs, ref failure);
             DisposeStep(m_SourceModule.Dispose, ref failure);
-            for (int i = m_Stacks.Length - 1; i >= 0; i--)
-            {
-                AnimationBlendStackRuntime stack = m_Stacks[i];
-                if (stack != null)
-                    DisposeStep(stack.Dispose, ref failure);
-            }
-            for (int i = m_DirectPlayers.Length - 1; i >= 0; i--)
-            {
-                AnimationSelectedPosePlayerRuntime player = m_DirectPlayers[i];
-                if (player != null)
-                    DisposeStep(player.Dispose, ref failure);
-            }
-            for (int i =
-                     m_PoseStateSources.ClipPlayers.Length - 1;
-                 i >= 0;
-                 i--)
-            {
-                AnimationClipPlayerRuntime player =
-                    m_PoseStateSources.ClipPlayers[i];
-                if (player != null)
-                    DisposeStep(player.Dispose, ref failure);
-            }
-            for (int i =
-                     m_PoseStateSources.BlendSpacePlayers.Length -
-                     1;
-                 i >= 0;
-                 i--)
-            {
-                AnimationBlendSpacePlayerRuntime player =
-                    m_PoseStateSources.BlendSpacePlayers[i];
-                if (player != null)
-                    DisposeStep(player.Dispose, ref failure);
-            }
+            DisposeStep(m_ActorState.Dispose, ref failure);
             DisposeStep(m_ProgramTuning.Dispose, ref failure);
             DisposeStep(m_PosePlan.Dispose, ref failure);
-            DisposeStep(m_InertializationPlan.Dispose, ref failure);
             DisposeStep(m_ProgramFrames.Dispose, ref failure);
             DisposeStep(RestoreGraphClock, ref failure);
             if (failure != null)

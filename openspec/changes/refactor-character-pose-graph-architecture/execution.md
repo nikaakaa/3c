@@ -673,3 +673,11 @@ Discard、Reset与Dispose继续在原时机清空Demand，但现在只调用Fram
 `CharacterPoseGraphNativeProgram.SetOperationWeight`与运行时Native Operation回写已删除，Native Operation数组只在构造编译时写一次。`CharacterPoseGraphStagedExecutor`显式接收同generation Program Tuning View，在唯一Stage执行循环读取对应native index权重并构造本次只读Operation；静态Program Image候选、旧Native执行存储和其它Actor不会被在线调参污染。Sequence Preview只执行不可调Clip Player Operation，保持原静态入口。
 
 全文搜索确认旧Native Program不再保存Frame identity、Pending／Committed控制／诊断页、Goal workspace、Tuning Generation、Candidate或运行调参值；Native Operation赋值只剩构造期`CompileOperations`。因此任务5.8完成。任务6.9仍不勾选：PoseState、Blend Stack与Inertialization调参尚未迁入同一Program Candidate Snapshot。`ThirdPersonClient.Runtime.csproj`按规定参数编译成功，0错误，构建服务器已关闭；全局Unity仍由并行Foot 0.3迁移编译边界阻塞，本步不伪造Replay。
+
+## 建立Program Actor State所有权边界
+
+状态：新增`CharacterPoseActorState`，先整体接管PoseState／Player continuity集合、Blend Stack、Transition Routing、Root Orientation Warp、Inertialization、Program节点运行索引与逻辑Source Retirement状态。`PosePlanExecutionRuntime`删除这些对象各自的存储字段，只保留唯一`m_ActorState`；现有执行代码经内部只读访问器取得同一对象，没有复制状态、第二套页或兼容路径。
+
+Actor State统一负责Stack、Direct Player、Clip Player、Blend Space Player与Inertialization的销毁，顺序与异常聚合规则保持不变。Source物理资源仍由`CharacterPoseSourceModule`拥有，Constraint Bank、Final Publication、Diagnostics、Program Frame Pages、Program Tuning与静态Program存储均未进入Actor State，因此没有复制其它Module真相。
+
+任务5.4暂不勾选：`ActionPlaybackInput` lifecycle／command cursor尚未从外层执行器迁入Actor State，Slot控制的跨帧状态也仍需继续对账。Unity MCP已显式路由到`3C_Client@e852139597e42532`完成脚本编译；本次两个文件的错误筛选均为0。全局错误只来自并行Foot生成采样迁移缺失`KK.GeneratedDiagnosticSampling` ABI，本步不添加兼容类型，也不把外部编译阻塞误报为PoseGraph回归；不单独运行回放。

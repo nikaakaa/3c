@@ -50,6 +50,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
     public sealed class GameplayLauncherWindow : EditorWindow
     {
         const string BootstrapScene = "Assets/Scenes/Bootstrap.unity";
+        static readonly string[] s_FootSamplerLabels = { "Core", "Full" };
 
         BuildTarget m_BuildTarget;
         string m_ResourcePackageVersion = string.Empty;
@@ -252,6 +253,29 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             EditorGUILayout.LabelField(
                 "Foot Landing Sampling",
                 capturing ? "Recording" : finalizing ? "Finalizing" : "Idle");
+            int samplerIndex = string.Equals(
+                CharacterFootDiagnosticSampling.SelectedSamplerId,
+                CharacterFootDiagnosticSampling.CoreSamplerId,
+                StringComparison.Ordinal)
+                ? 0
+                : 1;
+            using (new EditorGUI.DisabledScope(
+                       !CharacterFootDiagnosticSampling.IsAvailable ||
+                       capturing ||
+                       finalizing))
+            {
+                int selectedSamplerIndex = EditorGUILayout.Popup(
+                    "Sampler",
+                    samplerIndex,
+                    s_FootSamplerLabels);
+                if (selectedSamplerIndex != samplerIndex)
+                {
+                    CharacterFootDiagnosticSampling.SelectSampler(
+                        selectedSamplerIndex == 0
+                            ? CharacterFootDiagnosticSampling.CoreSamplerId
+                            : CharacterFootDiagnosticSampling.FullSamplerId);
+                }
+            }
             using (new EditorGUILayout.HorizontalScope())
             {
                 using (new EditorGUI.DisabledScope(

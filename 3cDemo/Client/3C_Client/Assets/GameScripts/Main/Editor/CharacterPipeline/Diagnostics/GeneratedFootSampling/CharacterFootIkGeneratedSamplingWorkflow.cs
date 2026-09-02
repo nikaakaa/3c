@@ -17,6 +17,9 @@ namespace ThirdPersonCharacter.Pipeline.Diagnostics.FootIkSampling.Editor
         {
             public string CapabilityId =>
                 CharacterFootIkDiagnosticIdentity.CapabilityId;
+            public System.Collections.Generic.IReadOnlyList<string>
+                SamplerIds => s_SamplerIds;
+            public string SelectedSamplerId => s_SelectedSamplerId;
             public bool IsCapturing =>
                 CharacterFootIkGeneratedSamplingWorkflow.IsCapturing;
             public bool IsFinalizing =>
@@ -46,6 +49,10 @@ namespace ThirdPersonCharacter.Pipeline.Diagnostics.FootIkSampling.Editor
                 CharacterFootIkGeneratedSamplingWorkflow.GetArtifactPath(
                     artifactId);
 
+            public void SelectSampler(string samplerId) =>
+                CharacterFootIkGeneratedSamplingWorkflow.SelectSampler(
+                    samplerId);
+
             public void Start(bool controlledCaptureWindow) =>
                 CharacterFootIkGeneratedSamplingWorkflow.Start(
                     controlledCaptureWindow);
@@ -70,6 +77,11 @@ namespace ThirdPersonCharacter.Pipeline.Diagnostics.FootIkSampling.Editor
             "Tools/3C/Diagnostics/Foot IK Generated Sampling/Reveal Last Capture";
         const int PacketCapacity = 2048;
         const int QueueCapacity = 512;
+        static readonly string[] s_SamplerIds =
+        {
+            CharacterFootIkDiagnosticIdentity.CoreSamplerId,
+            CharacterFootIkDiagnosticIdentity.FullSamplerId
+        };
         static readonly Workflow s_Workflow = new Workflow();
         static CharacterFootIkGeneratedCaptureController s_Controller;
         static string s_OutputRoot = string.Empty;
@@ -86,6 +98,9 @@ namespace ThirdPersonCharacter.Pipeline.Diagnostics.FootIkSampling.Editor
         static bool s_ControlledCaptureWindow;
         static bool s_CaptureWindowOpen;
         static bool s_Finalizing;
+        static string s_SelectedSamplerId =
+            CharacterFootIkDiagnosticIdentity.FullSamplerId;
+        static string s_ActiveSamplerId = string.Empty;
 
         static CharacterFootIkGeneratedSamplingWorkflow()
         {
@@ -116,6 +131,7 @@ namespace ThirdPersonCharacter.Pipeline.Diagnostics.FootIkSampling.Editor
         public static int CapturedFrameCount =>
             s_Controller?.CapturedFrameCount ?? 0;
         public static int LastSavedFrameCount => s_LastSavedFrameCount;
+        public static string SelectedSamplerId => s_SelectedSamplerId;
 
         public static string GetArtifactPath(string artifactId) =>
             s_LastArtifacts.TryGetValue(
@@ -126,6 +142,29 @@ namespace ThirdPersonCharacter.Pipeline.Diagnostics.FootIkSampling.Editor
 
         [MenuItem(StartMenu)]
         static void StartFromMenu() => Start(false);
+
+        public static void SelectSampler(string samplerId)
+        {
+            if (s_Controller != null || s_Finalizing)
+            {
+                throw new InvalidOperationException(
+                    "Foot IK sampler cannot change during capture.");
+            }
+            if (!string.Equals(
+                    samplerId,
+                    CharacterFootIkDiagnosticIdentity.CoreSamplerId,
+                    StringComparison.Ordinal) &&
+                !string.Equals(
+                    samplerId,
+                    CharacterFootIkDiagnosticIdentity.FullSamplerId,
+                    StringComparison.Ordinal))
+            {
+                throw new ArgumentException(
+                    $"Foot IK sampler is unknown: {samplerId}.",
+                    nameof(samplerId));
+            }
+            s_SelectedSamplerId = samplerId;
+        }
 
         public static void Start(bool controlledCaptureWindow)
         {
@@ -160,7 +199,7 @@ namespace ThirdPersonCharacter.Pipeline.Diagnostics.FootIkSampling.Editor
                 PacketCapacity,
                 QueueCapacity,
                 DiagnosticBinaryPacketWriter.TransportIdentity,
-                CharacterFootIkDiagnosticIdentity.FullSamplerId,
+                s_SelectedSamplerId,
                 Path.Combine(s_OutputRoot, "capture.packets.bin"),
                 Path.Combine(s_OutputRoot, "schema.json"),
                 Path.Combine(s_OutputRoot, "runtime.manifest.json"));
@@ -173,6 +212,7 @@ namespace ThirdPersonCharacter.Pipeline.Diagnostics.FootIkSampling.Editor
             var controller = new CharacterFootIkGeneratedCaptureController(
                 target,
                 request,
+                s_SelectedSamplerId,
                 in metadata);
             try
             {
@@ -183,6 +223,7 @@ namespace ThirdPersonCharacter.Pipeline.Diagnostics.FootIkSampling.Editor
                         "Foot IK generated sampling failed to start.");
                 }
                 s_Controller = controller;
+                s_ActiveSamplerId = s_SelectedSamplerId;
                 s_CurrentSampleIdentity = sampleIdentity.ToString("N");
                 s_LastFailure = string.Empty;
                 s_LastSavedFrameCount = 0;
@@ -285,7 +326,7 @@ namespace ThirdPersonCharacter.Pipeline.Diagnostics.FootIkSampling.Editor
                 s_LastManifestPath = Path.Combine(
                     s_OutputRoot,
                     "capability.manifest.json");
-                CaptureArtifacts(result.Manifest);
+                CaptureArtifacts(result.Manifest, s_ActiveSamplerId);
                 s_LastSavedSampleIdentity = s_CurrentSampleIdentity;
                 s_LastSavedFrameCount = checked(
                     (int)(result.Manifest.SampleCount / 2));
@@ -300,7 +341,9 @@ namespace ThirdPersonCharacter.Pipeline.Diagnostics.FootIkSampling.Editor
             }
         }
 
-        static void CaptureArtifacts(DiagnosticCapabilityManifest manifest)
+        static void CaptureArtifacts(
+            DiagnosticCapabilityManifest manifest,
+            string samplerId)
         {
             for (int samplerIndex = 0;
                  samplerIndex < manifest.Samplers.Count;
@@ -310,23 +353,22 @@ namespace ThirdPersonCharacter.Pipeline.Diagnostics.FootIkSampling.Editor
                     manifest.Samplers[samplerIndex];
                 if (!string.Equals(
                         sampler.SamplerId,
-                        CharacterFootIkDiagnosticIdentity.FullSamplerId,
+                        samplerId,
                         StringComparison.Ordinal))
                 {
                     continue;
                 }
-                for (int artifactIndex = 0;
+                if (sampler.Artifacts.Count == 0)
+                    continue;
+                s_LastMainCsvPath = sampler.Artifacts[0].Path;
+                s_LastArtifacts.Add("main", s_LastMainCsvPath);
+                for (int artifactIndex = 1;
                      artifactIndex < sampler.Artifacts.Count;
                      artifactIndex++)
                 {
                     string path = sampler.Artifacts[artifactIndex].Path;
                     string name = Path.GetFileName(path);
-                    if (name.EndsWith("%2Ffull.csv", StringComparison.Ordinal))
-                    {
-                        s_LastMainCsvPath = path;
-                        s_LastArtifacts.Add("main", path);
-                    }
-                    else if (name.EndsWith(
+                    if (name.EndsWith(
                                  ".ground-contacts.csv",
                                  StringComparison.Ordinal))
                     {
@@ -346,7 +388,13 @@ namespace ThirdPersonCharacter.Pipeline.Diagnostics.FootIkSampling.Editor
                     }
                 }
             }
-            if (s_LastArtifacts.Count != 4)
+            int expectedArtifactCount = string.Equals(
+                samplerId,
+                CharacterFootIkDiagnosticIdentity.FullSamplerId,
+                StringComparison.Ordinal)
+                ? 4
+                : 1;
+            if (s_LastArtifacts.Count != expectedArtifactCount)
             {
                 throw new InvalidDataException(
                     "Foot IK generated artifact set is incomplete.");
@@ -367,6 +415,7 @@ namespace ThirdPersonCharacter.Pipeline.Diagnostics.FootIkSampling.Editor
             s_Controller?.Dispose();
             s_Controller = null;
             s_CurrentSampleIdentity = string.Empty;
+            s_ActiveSamplerId = string.Empty;
             s_ControlledCaptureWindow = false;
             s_CaptureWindowOpen = false;
             s_Finalizing = false;
@@ -384,6 +433,7 @@ namespace ThirdPersonCharacter.Pipeline.Diagnostics.FootIkSampling.Editor
             s_Controller?.Dispose();
             s_Controller = null;
             s_CurrentSampleIdentity = string.Empty;
+            s_ActiveSamplerId = string.Empty;
             s_ControlledCaptureWindow = false;
             s_CaptureWindowOpen = false;
             s_Finalizing = false;

@@ -32,7 +32,7 @@
 - [x] 4.3 在可复用事实分支和必要叶子声明`motion-core`、`lifecycle`、`ground-*`、`pelvis-*`、`solver-*`等领域内Group，通过Schema检查继承结果、Capability隔离和每组字段规模
 - [x] 4.4 定义独立Foot Core／Full Sampler与Program，通过生成源码检查Core只选择`body-correction`、`lifecycle`、`motion-core`、`physical`、`resolved-core`、`timing` Group，Full包含全部Foot字段且两者没有逐字段列表
 - [x] 4.5 为迁移清单首批Operator在Foot Result与Final Physical诊断页补Source Ankle／Physical Ankle真实成员采样声明，在成功Seal后的唯一业务Commit点声明并调用一行Foot `DiagnosticEvent` partial触发方法，删除`ICharacterFootIkCommittedCaptureConsumer`、Capture Binding和手写`TryCapture`转发，通过Capture／Disabled Runtime程序集编译和diff检查确认业务求解结果与Commit时机不改变、Physical事实只在匹配interest时冻结
-- [ ] 4.6 更新Foot Host workflow选择Core或Full并在Capability manifest记录实际Sampler，通过Editor程序集编译确认Stop仍只执行通用封存
+- [x] 4.6 更新Foot Host workflow选择Core或Full并在Capability manifest记录实际Sampler，通过Editor程序集编译确认Stop仍只执行通用封存
 
 ## 5. Foot离线Operator迁移
 

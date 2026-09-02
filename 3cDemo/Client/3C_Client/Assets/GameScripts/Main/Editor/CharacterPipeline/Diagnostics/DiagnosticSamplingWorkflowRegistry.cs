@@ -6,6 +6,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
     public interface IDiagnosticSamplingWorkflow
     {
         string CapabilityId { get; }
+        IReadOnlyList<string> SamplerIds { get; }
+        string SelectedSamplerId { get; }
         bool IsCapturing { get; }
         bool IsFinalizing { get; }
         bool IsControlledCaptureWindow { get; }
@@ -19,6 +21,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         int CapturedFrameCount { get; }
         int LastSavedFrameCount { get; }
         string GetArtifactPath(string artifactId);
+        void SelectSampler(string samplerId);
         void Start(bool controlledCaptureWindow);
         void OpenControlledCaptureWindow();
         void CloseControlledCaptureWindow();

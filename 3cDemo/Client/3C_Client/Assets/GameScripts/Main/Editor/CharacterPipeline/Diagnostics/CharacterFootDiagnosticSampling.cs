@@ -3,6 +3,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
     public static class CharacterFootDiagnosticSampling
     {
         public const string CapabilityId = "character-foot-ik";
+        public const string CoreSamplerId = "character-foot-ik/core";
+        public const string FullSamplerId = "character-foot-ik/full";
 
         public static bool IsAvailable =>
             DiagnosticSamplingWorkflowRegistry.TryGet(
@@ -52,6 +54,10 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             TryGet(out IDiagnosticSamplingWorkflow workflow)
                 ? workflow.LastSavedFrameCount
                 : 0;
+        public static string SelectedSamplerId =>
+            TryGet(out IDiagnosticSamplingWorkflow workflow)
+                ? workflow.SelectedSamplerId
+                : string.Empty;
         public static bool IsAnalysisAvailable =>
             DiagnosticAnalysisWorkflowRegistry.TryGet(
                 CapabilityId,
@@ -74,6 +80,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor
 
         public static void StartSampling() =>
             Require().Start(false);
+
+        public static void SelectSampler(string samplerId) =>
+            Require().SelectSampler(samplerId);
 
         public static void StartControlledSampling() =>
             Require().Start(true);

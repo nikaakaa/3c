@@ -12,30 +12,60 @@ namespace ThirdPersonCharacter.Pipeline.Diagnostics.FootIkSampling.Editor
         readonly DiagnosticCaptureStartRequest m_Request;
         readonly CharacterFootIkCaptureMetadata m_Metadata;
         readonly DiagnosticEventTargetKey m_Target;
+        readonly string m_SamplerId;
+        readonly CharacterFootIkCoreCaptureProgram.DiagnosticLifecycle
+            m_CoreLifecycle;
         readonly CharacterFootIkFullCaptureProgram.DiagnosticLifecycle
-            m_Lifecycle;
+            m_FullLifecycle;
         bool m_Started;
         bool m_Stopped;
 
         public CharacterFootIkGeneratedCaptureController(
             AnimationPresentationRuntimeTarget target,
             DiagnosticCaptureStartRequest request,
+            string samplerId,
             in CharacterFootIkCaptureMetadata metadata)
         {
             if (target == null)
                 throw new ArgumentNullException(nameof(target));
             m_Request = request ?? throw new ArgumentNullException(nameof(request));
+            m_SamplerId = samplerId ?? throw new ArgumentNullException(nameof(samplerId));
             m_Metadata = metadata;
             m_Target = new DiagnosticEventTargetKey(
                 CharacterFootIkCommitDiagnosticEvent.TargetTypeIdentity,
                 target.RuntimeInstanceId);
-            m_Lifecycle =
-                CharacterFootIkFullCaptureProgram.CreateDiagnosticLifecycle();
+            if (string.Equals(
+                    m_SamplerId,
+                    CharacterFootIkDiagnosticIdentity.CoreSamplerId,
+                    StringComparison.Ordinal))
+            {
+                m_CoreLifecycle =
+                    CharacterFootIkCoreCaptureProgram.CreateDiagnosticLifecycle();
+            }
+            else if (string.Equals(
+                         m_SamplerId,
+                         CharacterFootIkDiagnosticIdentity.FullSamplerId,
+                         StringComparison.Ordinal))
+            {
+                m_FullLifecycle =
+                    CharacterFootIkFullCaptureProgram.CreateDiagnosticLifecycle();
+            }
+            else
+            {
+                throw new ArgumentException(
+                    $"Foot IK sampler is unknown: {m_SamplerId}.",
+                    nameof(samplerId));
+            }
         }
 
-        public DiagnosticCaptureFailure? Failure => m_Lifecycle.Failure;
+        public DiagnosticCaptureFailure? Failure =>
+            m_CoreLifecycle != null
+                ? m_CoreLifecycle.Failure
+                : m_FullLifecycle.Failure;
         public int CapturedFrameCount => checked(
-            (int)(m_Lifecycle.SubmittedSampleCount / 2));
+            (int)((m_CoreLifecycle != null
+                ? m_CoreLifecycle.SubmittedSampleCount
+                : m_FullLifecycle.SubmittedSampleCount) / 2));
 
         public bool Start(bool attach = true)
         {
@@ -78,30 +108,53 @@ namespace ThirdPersonCharacter.Pipeline.Diagnostics.FootIkSampling.Editor
             if (m_Stopped)
                 return !Failure.HasValue;
             m_Stopped = true;
-            return m_Lifecycle.Stop(in outcome);
+            return m_CoreLifecycle != null
+                ? m_CoreLifecycle.Stop(in outcome)
+                : m_FullLifecycle.Stop(in outcome);
         }
 
         public bool TryFinalize(
             string outputRoot,
             out DiagnosticHostFinalizationResult result)
         {
-            if (!m_Lifecycle.TryGetRuntimeManifest(
+            bool available = m_CoreLifecycle != null
+                ? m_CoreLifecycle.TryGetRuntimeManifest(
                     out DiagnosticRuntimeManifest manifest,
-                    out DiagnosticSealedArtifact artifact))
+                    out DiagnosticSealedArtifact artifact)
+                : m_FullLifecycle.TryGetRuntimeManifest(
+                    out manifest,
+                    out artifact);
+            if (!available)
             {
                 result = null;
                 return false;
             }
-            DiagnosticSchemaLayout schema =
-                CharacterFootIkFullCaptureProgram.CreateDiagnosticSchemaLayout();
-            DiagnosticCapabilityBuildDescriptor capability =
-                CharacterFootIkFullCaptureProgram
+            DiagnosticSchemaLayout schema;
+            DiagnosticCapabilityBuildDescriptor capability;
+            if (m_CoreLifecycle != null)
+            {
+                schema = CharacterFootIkCoreCaptureProgram
+                    .CreateDiagnosticSchemaLayout();
+                capability = CharacterFootIkCoreCaptureProgram
                     .CreateDiagnosticCapabilityBuildDescriptor(
                         m_Request.InterestIdentity,
                         m_Request.CadenceIdentity,
                         m_Request.LineageTypeIdentity,
                         m_Request.PacketCapacity,
                         m_Request.WriterTransportIdentity);
+            }
+            else
+            {
+                schema = CharacterFootIkFullCaptureProgram
+                    .CreateDiagnosticSchemaLayout();
+                capability = CharacterFootIkFullCaptureProgram
+                    .CreateDiagnosticCapabilityBuildDescriptor(
+                        m_Request.InterestIdentity,
+                        m_Request.CadenceIdentity,
+                        m_Request.LineageTypeIdentity,
+                        m_Request.PacketCapacity,
+                        m_Request.WriterTransportIdentity);
+            }
             result = new DiagnosticHostFinalizer().Finalize(
                 capability,
                 DiagnosticArtifactStore.Open(artifact),
@@ -117,15 +170,24 @@ namespace ThirdPersonCharacter.Pipeline.Diagnostics.FootIkSampling.Editor
 
         public void Dispose()
         {
-            m_Lifecycle.Dispose();
+            if (m_CoreLifecycle != null)
+                m_CoreLifecycle.Dispose();
+            else
+                m_FullLifecycle.Dispose();
         }
 
         bool StartLifecycle()
         {
-            if (!m_Lifecycle.Start(
+            bool started = m_CoreLifecycle != null
+                ? m_CoreLifecycle.Start(
                     m_Request,
                     in m_Target,
-                    in m_Metadata))
+                    in m_Metadata)
+                : m_FullLifecycle.Start(
+                    m_Request,
+                    in m_Target,
+                    in m_Metadata);
+            if (!started)
             {
                 return false;
             }

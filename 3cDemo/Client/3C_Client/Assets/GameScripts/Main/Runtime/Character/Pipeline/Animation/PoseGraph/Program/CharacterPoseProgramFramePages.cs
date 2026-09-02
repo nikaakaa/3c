@@ -1,4 +1,5 @@
 using System;
+using ThirdPersonCharacter.Pipeline.Animation.Diagnostics;
 using ThirdPersonCharacter.Pipeline.Animation.Presentation;
 using Unity.Collections;
 
@@ -6,6 +7,71 @@ namespace ThirdPersonCharacter.Pipeline.Animation
 {
     internal sealed class CharacterPoseProgramFramePages : IDisposable
     {
+        internal sealed class CommittedDiagnosticsPage
+        {
+            internal CommittedDiagnosticsPage(
+                in AnimationPoseNativeAggregateLayout layout,
+                int stateMachineCount)
+            {
+                layout.RequireValid();
+                if (stateMachineCount < 0)
+                    throw new ArgumentOutOfRangeException(nameof(stateMachineCount));
+                Layout = layout;
+                StateMachineCount = stateMachineCount;
+                OperationCompletions =
+                    new CharacterPoseOperationCompletion[layout.OperationCount];
+                StateMachineBoneWeights =
+                    new float[checked(stateMachineCount * layout.BoneCount)];
+                SlotRanges =
+                    new AnimationPlayerPoseNativeRange[layout.PlayerCount];
+                SlotContributions =
+                    new AnimationPrimitivePoseContribution[
+                        layout.TotalPlayerContributionCapacity];
+                SlotDenseContributionWeights =
+                    new float[layout.PlayerDenseContributionWeightCapacity];
+                SlotContributionCounts = new int[layout.PlayerCount];
+                ValueDenseLocalPoses =
+                    new AnimationLocalBonePose[layout.PoseValuePoseCapacity];
+                ValueContributions =
+                    new AnimationPrimitivePoseContribution[
+                        layout.PoseValueContributionCapacity];
+                ValueDenseContributionWeights =
+                    new float[layout.PoseValueDenseContributionWeightCapacity];
+                ValueContributionCounts = new int[layout.PoseValueCount];
+                ValueOutputWeights = new float[layout.PoseValueCount];
+                ValueAvailability =
+                    new AnimationPoseAvailability[layout.PoseValueCount];
+                ValueContinuityIdentities = new ulong[layout.PoseValueCount];
+                ValueInvalidReasons =
+                    new AnimationPoseNativeInvalidReason[layout.PoseValueCount];
+            }
+
+            internal ulong Identity;
+            internal CharacterPoseProgramResult Result;
+            internal AnimationPresentationDiagnosticsInterest Interest;
+            internal readonly AnimationPoseNativeAggregateLayout Layout;
+            internal readonly int StateMachineCount;
+            internal readonly CharacterPoseOperationCompletion[]
+                OperationCompletions;
+            internal readonly float[] StateMachineBoneWeights;
+            internal readonly AnimationPlayerPoseNativeRange[] SlotRanges;
+            internal readonly AnimationPrimitivePoseContribution[]
+                SlotContributions;
+            internal readonly float[] SlotDenseContributionWeights;
+            internal readonly int[] SlotContributionCounts;
+            internal readonly AnimationLocalBonePose[] ValueDenseLocalPoses;
+            internal readonly AnimationPrimitivePoseContribution[]
+                ValueContributions;
+            internal readonly float[] ValueDenseContributionWeights;
+            internal readonly int[] ValueContributionCounts;
+            internal readonly float[] ValueOutputWeights;
+            internal readonly AnimationPoseAvailability[] ValueAvailability;
+            internal readonly ulong[] ValueContinuityIdentities;
+            internal readonly AnimationPoseNativeInvalidReason[]
+                ValueInvalidReasons;
+            internal AnimationPoseNativeInvalidReason PoseGraphInvalidReason;
+        }
+
         sealed class Page
         {
             internal NativeArray<CharacterPoseStateMachineNativeControl>
@@ -22,6 +88,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         Page m_Committed;
         Page m_Pending;
         Page m_Active;
+        CommittedDiagnosticsPage m_CommittedDiagnostics;
+        ulong m_NextDiagnosticsIdentity = 1;
         bool m_FrameOpen;
         bool m_Disposed;
 
@@ -30,7 +98,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             int animationSlotCount,
             int rootOrientationWarpCount,
             int linkedPoseCallCount,
-            int linkedPoseFragmentCount)
+            int linkedPoseFragmentCount,
+            in AnimationPoseNativeAggregateLayout diagnosticsLayout)
         {
             if (stateMachineCount < 0 ||
                 animationSlotCount < 0 ||
@@ -55,6 +124,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                     linkedPoseCallCount,
                     linkedPoseFragmentCount);
                 m_Active = m_Committed;
+                m_CommittedDiagnostics = new CommittedDiagnosticsPage(
+                    in diagnosticsLayout,
+                    stateMachineCount);
             }
             catch
             {
@@ -75,6 +147,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         internal NativeArray<byte> LinkedPoseActiveFragments =>
             RequireActive().LinkedPoseActiveFragments;
         internal bool HasOpenFrame => m_FrameOpen;
+        internal CommittedDiagnosticsPage CommittedDiagnostics =>
+            m_CommittedDiagnostics ??
+            throw new InvalidOperationException(
+                "Character Pose Program committed diagnostics page is missing.");
 
         internal void BeginFrame()
         {
@@ -84,6 +160,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 throw new InvalidOperationException(
                     "Character Pose Program frame pages are already open.");
             }
+            m_CommittedDiagnostics.Identity = 0;
             m_Active = m_Pending;
             ClearLinkedPose(m_Active);
             m_FrameOpen = true;
@@ -106,6 +183,23 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             RequireOpenFrame();
             m_Active = m_Committed;
             m_FrameOpen = false;
+        }
+
+        internal ulong PublishCommittedDiagnostics()
+        {
+            RequireAlive();
+            if (m_FrameOpen || m_CommittedDiagnostics.Identity != 0)
+            {
+                throw new InvalidOperationException(
+                    "Character Pose Program committed diagnostics cannot be published.");
+            }
+            ulong identity = m_NextDiagnosticsIdentity++;
+            if (identity == 0)
+            {
+                identity = m_NextDiagnosticsIdentity++;
+            }
+            m_CommittedDiagnostics.Identity = identity;
+            return identity;
         }
 
         internal void RequireValid()
@@ -141,6 +235,12 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             if (m_Disposed)
                 return;
             m_Disposed = true;
+            if (m_CommittedDiagnostics != null)
+            {
+                m_CommittedDiagnostics.Identity = 0;
+                m_CommittedDiagnostics.Result = default;
+                m_CommittedDiagnostics = null;
+            }
             DisposePage(m_Pending);
             DisposePage(m_Committed);
             m_Active = null;

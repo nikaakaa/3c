@@ -497,7 +497,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
     internal readonly struct CharacterPoseProgramCommittedDiagnosticsView
     {
         internal CharacterPoseProgramCommittedDiagnosticsView(
-            CharacterPoseGraphNativeProgram.CommittedDiagnosticsPage page)
+            CharacterPoseProgramFramePages.CommittedDiagnosticsPage page)
         {
             m_Page = page ?? throw new ArgumentNullException(nameof(page));
             m_Identity = page.Identity;
@@ -509,7 +509,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             }
         }
 
-        readonly CharacterPoseGraphNativeProgram.CommittedDiagnosticsPage m_Page;
+        readonly CharacterPoseProgramFramePages.CommittedDiagnosticsPage m_Page;
         readonly ulong m_Identity;
         internal bool IsValid =>
             m_Page != null &&
@@ -733,71 +733,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation
 
     internal sealed class CharacterPoseGraphNativeProgram : IDisposable
     {
-        internal sealed class CommittedDiagnosticsPage
-        {
-            internal CommittedDiagnosticsPage(
-                in AnimationPoseNativeAggregateLayout layout,
-                int stateMachineCount)
-            {
-                layout.RequireValid();
-                if (stateMachineCount < 0)
-                    throw new ArgumentOutOfRangeException(nameof(stateMachineCount));
-                Layout = layout;
-                StateMachineCount = stateMachineCount;
-                OperationCompletions =
-                    new CharacterPoseOperationCompletion[layout.OperationCount];
-                StateMachineBoneWeights =
-                    new float[checked(stateMachineCount * layout.BoneCount)];
-                SlotRanges =
-                    new AnimationPlayerPoseNativeRange[layout.PlayerCount];
-                SlotContributions =
-                    new AnimationPrimitivePoseContribution[
-                        layout.TotalPlayerContributionCapacity];
-                SlotDenseContributionWeights =
-                    new float[layout.PlayerDenseContributionWeightCapacity];
-                SlotContributionCounts = new int[layout.PlayerCount];
-                ValueDenseLocalPoses =
-                    new AnimationLocalBonePose[layout.PoseValuePoseCapacity];
-                ValueContributions =
-                    new AnimationPrimitivePoseContribution[
-                        layout.PoseValueContributionCapacity];
-                ValueDenseContributionWeights =
-                    new float[layout.PoseValueDenseContributionWeightCapacity];
-                ValueContributionCounts = new int[layout.PoseValueCount];
-                ValueOutputWeights = new float[layout.PoseValueCount];
-                ValueAvailability =
-                    new AnimationPoseAvailability[layout.PoseValueCount];
-                ValueContinuityIdentities = new ulong[layout.PoseValueCount];
-                ValueInvalidReasons =
-                    new AnimationPoseNativeInvalidReason[layout.PoseValueCount];
-            }
-
-            internal ulong Identity;
-            internal CharacterPoseProgramResult Result;
-            internal AnimationPresentationDiagnosticsInterest Interest;
-            internal readonly AnimationPoseNativeAggregateLayout Layout;
-            internal readonly int StateMachineCount;
-            internal readonly CharacterPoseOperationCompletion[]
-                OperationCompletions;
-            internal readonly float[] StateMachineBoneWeights;
-            internal readonly AnimationPlayerPoseNativeRange[] SlotRanges;
-            internal readonly AnimationPrimitivePoseContribution[]
-                SlotContributions;
-            internal readonly float[] SlotDenseContributionWeights;
-            internal readonly int[] SlotContributionCounts;
-            internal readonly AnimationLocalBonePose[] ValueDenseLocalPoses;
-            internal readonly AnimationPrimitivePoseContribution[]
-                ValueContributions;
-            internal readonly float[] ValueDenseContributionWeights;
-            internal readonly int[] ValueContributionCounts;
-            internal readonly float[] ValueOutputWeights;
-            internal readonly AnimationPoseAvailability[] ValueAvailability;
-            internal readonly ulong[] ValueContinuityIdentities;
-            internal readonly AnimationPoseNativeInvalidReason[]
-                ValueInvalidReasons;
-            internal AnimationPoseNativeInvalidReason PoseGraphInvalidReason;
-        }
-
         NativeArray<AnimationPoseGraphNativeOperation> m_Operations;
         NativeArray<AnimationPoseGraphNativeStage> m_Stages;
         NativeArray<float> m_DenseBoneMasks;
@@ -820,7 +755,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         LinkedPoseInterfaceId[] m_LinkedPoseCallInterfaceIds;
         LinkedPoseImplementationId[] m_LinkedPoseCandidateImplementationIds;
         CharacterPoseProgramFramePages m_FramePages;
-        CommittedDiagnosticsPage m_CommittedDiagnostics;
         CharacterPoseBoneCounts m_BoneCounts;
         int m_BoneCount;
         int m_ParameterCount;
@@ -842,7 +776,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         AnimationPoseGraphNativeLegChain m_RightLeg;
         FixedString64Bytes m_RigId;
         FixedString64Bytes m_RigRevision;
-        ulong m_NextDiagnosticsIdentity = 1;
         bool m_Disposed;
 
         internal CharacterPoseGraphNativeProgram(
@@ -947,10 +880,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                     program.AnimationSlots.Count,
                     program.RootOrientationWarps.Count,
                     program.LinkedPoseCalls.Count,
-                    program.LinkedPoseFragments.Count);
-                m_CommittedDiagnostics = new CommittedDiagnosticsPage(
-                    in layout,
-                    program.StateMachines.Count);
+                    program.LinkedPoseFragments.Count,
+                    in layout);
 
                 CompileRig(program, rig);
                 CompileBlendCatalogs(curves, profiles);
@@ -1053,7 +984,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             RequireAlive();
             if (m_FramePages.HasOpenFrame)
                 throw new InvalidOperationException("Character Pose Graph frame is already open.");
-            m_CommittedDiagnostics.Identity = 0;
             m_FramePages.BeginFrame();
         }
 
@@ -1081,7 +1011,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                     "Pose Program committed diagnostics request is invalid.");
             }
             frame.RequireValid();
-            CommittedDiagnosticsPage page = m_CommittedDiagnostics;
+            CharacterPoseProgramFramePages.CommittedDiagnosticsPage page =
+                m_FramePages.CommittedDiagnostics;
             AnimationPoseNativeAggregateLayout frameLayout = frame.Layout;
             RequireDiagnosticsLayout(in frameLayout, in page.Layout);
             page.Identity = 0;
@@ -1155,7 +1086,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 for (int i = 0; i < page.ValueDenseLocalPoses.Length; i++)
                     page.ValueDenseLocalPoses[i] = frame.ValueDenseLocalPoses[i];
             }
-            page.Identity = m_NextDiagnosticsIdentity++;
+            m_FramePages.PublishCommittedDiagnostics();
             return new CharacterPoseProgramCommittedDiagnosticsView(page);
         }
 
@@ -1822,12 +1753,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             if (m_Disposed)
                 return;
             m_Disposed = true;
-            if (m_CommittedDiagnostics != null)
-            {
-                m_CommittedDiagnostics.Identity = 0;
-                m_CommittedDiagnostics.Result = default;
-                m_CommittedDiagnostics = null;
-            }
             m_FramePages?.Dispose();
             m_FramePages = null;
             m_LinkedPoseCallGroupIds = null;

@@ -635,3 +635,9 @@ Clip、Blend Space、Motion Matching、Action与Blend Stack保留的多个`Prepa
 Begin仍只切换Pending页并清空本帧Linked Pose选择，Commit仍交换双页，Discard仍恢复Committed页；StateMachine／Slot未初始化存储、Root Warp清零、Linked Call inactive和Fragment清零的构造选项与原实现相同。静态Operation／Stage／Rig常量、运行Tuning Weight、Value Workspace、Operation Completion和Committed Diagnostics尚未迁移，因此任务5.5与5.8不提前勾选，也没有把旧Native Program改名成新Program Image冒充完成。
 
 Unity普通Assets Refresh把新增文件写入正式Runtime工程；补齐现有Presentation control类型的唯一命名空间引用后，`ThirdPersonClient.Runtime.csproj`按规定参数编译成功，0错误，构建服务器已关闭。本步不改变公式、Operation顺序、Source、Constraint、Final Publication或IK数据，不单独运行回放。
+
+## Program Committed Diagnostics页归还Frame Pages
+
+状态：`CharacterPoseProgramFramePages`继续接管预分配Committed Program Diagnostics页、单调发布identity、下一帧Begin失效和Dispose失效。`CharacterPoseGraphNativeProgram`已删除嵌套`CommittedDiagnosticsPage`、页字段与diagnostics identity计数，只保留按现有字段语义从已完成Frame复制数据的投影过程；`CharacterPoseProgramCommittedDiagnosticsView`直接租用Frame Pages持有的同一页，不建立第二Snapshot或复制Owner。
+
+诊断interest分组、Operation Completion、StateMachine骨骼权重、Slot Contribution、Value header／Contribution／dense weight／Pose的冻结条件与遍历顺序未改。任务5.5仍不勾选，因为Program Value、Operation Completion的运行写页和Source Demand输出尚未归入Frame Pages；本步只闭合Committed diagnostics物理页与租约寿命。`ThirdPersonClient.Runtime.csproj`按规定参数编译成功，0错误，构建服务器已关闭；不单独运行回放。

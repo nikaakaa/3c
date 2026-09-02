@@ -13,8 +13,6 @@ using ThirdPersonCharacter.Pipeline.Presentation.Animancer;
 using ThirdPersonSimulation;
 using Unity.Collections;
 using UnityEngine;
-using UnityEngine.Animations;
-using UnityEngine.Playables;
 using Unity.Profiling;
 
 namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
@@ -59,10 +57,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             m_ActorDiagnosticsProjector;
         readonly CharacterPoseProgramCommittedDiagnosticsProjector
             m_ProgramDiagnosticsProjector;
-        readonly AnimationSlotBlendJob[] m_SlotJobs;
-        readonly AnimationSelectedPosePlayerJob[] m_DirectPlayerJobs;
-        readonly AnimationSelectedPosePlayerJob[] m_ClipPlayerJobs;
-        readonly AnimationSelectedPosePlayerJob[] m_BlendSpacePlayerJobs;
         readonly bool m_ManagesGraphClock;
 
         PoseInertializationNativeProgram m_InertializationPlan =>
@@ -81,10 +75,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
         CharacterPoseProgramNodeRuntimeIndex m_NodeRuntimeIndex =>
             m_ProgramRuntime.NodeRuntimeIndex;
 
-        AnimationScriptPlayable[] m_SlotPlayables;
-        AnimationScriptPlayable[] m_DirectPlayerPlayables;
-        AnimationScriptPlayable[] m_ClipPlayerPlayables;
-        AnimationScriptPlayable[] m_BlendSpacePlayerPlayables;
         ulong m_CompletionIdentity = 1;
         ulong m_FrameCompletionContext;
         CharacterPoseProgramFrameLease m_ActiveFrameLease;
@@ -92,7 +82,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
         bool m_CommitValidated;
         bool m_HasOpenFrame;
         AnimationPresentationFrameOutcome m_PendingFrameOutcome;
-        bool m_JobsInstalled;
         bool m_Disposed;
 
         internal PosePlanExecutionRuntime(
@@ -424,6 +413,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                 animationSlots,
                 sourceModule.Capacity);
             m_ProgramRuntime = new CharacterPoseProgramRuntime(
+                animancer,
                 projection.PosePlan,
                 executionView,
                 actorState,
@@ -436,11 +426,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                     finalPublication),
                 poseConstraints);
             m_TuningSnapshot = CaptureTuningSnapshot(1);
-            m_SlotJobs = new AnimationSlotBlendJob[stacks.Length];
-            m_DirectPlayerJobs = new AnimationSelectedPosePlayerJob[directPlayers.Length];
-            m_ClipPlayerJobs = new AnimationSelectedPosePlayerJob[clipPlayers.Length];
-            m_BlendSpacePlayerJobs =
-                new AnimationSelectedPosePlayerJob[blendSpacePlayers.Length];
             m_FinalPublication = finalPublication;
             m_DiagnosticsPublisher = diagnosticsPublisher;
             m_ActorDiagnosticsProjector = actorDiagnosticsProjector;
@@ -1789,98 +1774,18 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             CharacterFinalPosePublicationOutputBinding finalOutput;
             using (ValidateMarker.Auto())
             {
-                for (int slotIndex = 0; slotIndex < m_Stacks.Length; slotIndex++)
-                {
-                    AnimationBlendStackRuntime stack = m_Stacks[slotIndex];
-                    AnimationPlayerPoseNativeWriteBinding write =
-                        m_ProgramRuntime.RequirePlayerWriteBinding(
-                            m_ActiveFrameLease,
-                            stack.PlayerIndex,
-                            completionIdentity);
-                    m_SlotJobs[slotIndex] = stack.PrepareSlotJob(
-                        completionIdentity,
-                        in write,
-                        m_SourceModule);
-                }
-                for (int slotIndex = 0;
-                     slotIndex < m_Stacks.Length;
-                     slotIndex++)
-                {
-                    m_Stacks[slotIndex].PrepareCompletion(
-                        completionIdentity);
-                }
-                for (int playerIndex = 0; playerIndex < m_DirectPlayers.Length; playerIndex++)
-                {
-                    AnimationSelectedPosePlayerRuntime player = m_DirectPlayers[playerIndex];
-                    AnimationPlayerPoseNativeWriteBinding write =
-                        m_ProgramRuntime.RequirePlayerWriteBinding(
-                            m_ActiveFrameLease,
-                            player.PlayerIndex,
-                            completionIdentity);
-                    CharacterPoseSourceBinding sourceBinding =
-                        preparedSources.RequireDirectBinding(
-                            playerIndex);
-                    m_DirectPlayerJobs[playerIndex] = player.PrepareJob(
-                        completionIdentity,
-                        in write,
-                        sourceBinding.PhysicalIdentity,
-                        sourceBinding.SourceIndex);
-                }
-                for (int playerIndex = 0;
-                     playerIndex <
-                     m_PoseStateSources.ClipPlayers.Length;
-                     playerIndex++)
-                {
-                    AnimationClipPlayerRuntime player =
-                        m_PoseStateSources.ClipPlayers[
-                            playerIndex];
-                    AnimationPlayerPoseNativeWriteBinding write =
-                        m_ProgramRuntime.RequirePlayerWriteBinding(
-                            m_ActiveFrameLease,
-                            player.PlayerIndex,
-                            completionIdentity);
-                    CharacterPoseSourceBinding sourceBinding =
-                        preparedSources.RequireClipBinding(
-                            playerIndex);
-                    m_ClipPlayerJobs[playerIndex] = player.PrepareJob(
-                        completionIdentity,
-                        in write,
-                        sourceBinding.PhysicalIdentity,
-                        sourceBinding.SourceIndex);
-                }
-                for (int playerIndex = 0;
-                     playerIndex <
-                     m_PoseStateSources.BlendSpacePlayers.Length;
-                     playerIndex++)
-                {
-                    AnimationBlendSpacePlayerRuntime player =
-                        m_PoseStateSources.BlendSpacePlayers[
-                            playerIndex];
-                    AnimationPlayerPoseNativeWriteBinding write =
-                        m_ProgramRuntime.RequirePlayerWriteBinding(
-                            m_ActiveFrameLease,
-                            player.PlayerIndex,
-                            completionIdentity);
-                    CharacterPoseSourceBinding sourceBinding =
-                        preparedSources.RequireBlendSpaceBinding(
-                            playerIndex);
-                    m_BlendSpacePlayerJobs[playerIndex] = player.PrepareJob(
-                        completionIdentity,
-                        in write,
-                        sourceBinding.PhysicalIdentity,
-                        sourceBinding.SourceIndex);
-                }
-                StageCompletedSources(completionIdentity);
+                m_ProgramRuntime.PrepareEvaluationJobsAndRetirements(
+                    m_ActiveFrameLease,
+                    in preparedSources,
+                    completionIdentity);
                 finalOutput =
                     m_FinalPublication.BindProgramOutput(
                         publicationLease);
-                m_ProgramRuntime.BindEvaluation(
+                m_ProgramRuntime.BindEvaluationExecution(
                     m_ActiveFrameLease,
                     sourceDemand.Lineage,
-                    sourceDemand.Lineage.TuningGeneration,
                     in finalOutput,
                     recordDiagnostics);
-                InstallOrUpdateJobs();
                 m_FinalPublication.ValidateWriterBeforeEvaluate(
                     in finalOutput);
             }
@@ -2079,7 +1984,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             m_PendingFrameOutcome = AnimationPresentationFrameOutcome.None;
             Exception failure = null;
             DisposeStep(m_DiagnosticsPublisher.Dispose, ref failure);
-            DisposeStep(RemoveJobs, ref failure);
+            DisposeStep(
+                m_ProgramRuntime.DetachExecutionJobs,
+                ref failure);
             DisposeStep(m_SourceModule.Dispose, ref failure);
             DisposeStep(m_ProgramRuntime.Dispose, ref failure);
             DisposeStep(RestoreGraphClock, ref failure);
@@ -2105,53 +2012,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             RequireAlive();
             RequireNoOpenMutation();
             m_ProgramRuntime.ClearSequencePreview();
-        }
-
-        void InstallOrUpdateJobs()
-        {
-            if (!m_JobsInstalled)
-            {
-                m_BlendSpacePlayerPlayables =
-                    new AnimationScriptPlayable[m_BlendSpacePlayerJobs.Length];
-                for (int i = 0; i < m_BlendSpacePlayerJobs.Length; i++)
-                {
-                    m_BlendSpacePlayerPlayables[i] =
-                        m_Animancer.Graph.InsertOutputJob(
-                            m_BlendSpacePlayerJobs[i]);
-                    m_BlendSpacePlayerPlayables[i].SetProcessInputs(true);
-                }
-                m_ClipPlayerPlayables = new AnimationScriptPlayable[m_ClipPlayerJobs.Length];
-                for (int i = 0; i < m_ClipPlayerJobs.Length; i++)
-                {
-                    m_ClipPlayerPlayables[i] = m_Animancer.Graph.InsertOutputJob(m_ClipPlayerJobs[i]);
-                    m_ClipPlayerPlayables[i].SetProcessInputs(true);
-                }
-                m_DirectPlayerPlayables = new AnimationScriptPlayable[m_DirectPlayerJobs.Length];
-                for (int i = 0; i < m_DirectPlayerJobs.Length; i++)
-                {
-                    m_DirectPlayerPlayables[i] = m_Animancer.Graph.InsertOutputJob(m_DirectPlayerJobs[i]);
-                    m_DirectPlayerPlayables[i].SetProcessInputs(true);
-                }
-                m_SlotPlayables = new AnimationScriptPlayable[m_SlotJobs.Length];
-                for (int i = 0; i < m_SlotJobs.Length; i++)
-                {
-                    m_SlotPlayables[i] = m_Animancer.Graph.InsertOutputJob(m_SlotJobs[i]);
-                    m_SlotPlayables[i].SetProcessInputs(true);
-                }
-                m_JobsInstalled = true;
-                return;
-            }
-            for (int i = 0; i < m_BlendSpacePlayerJobs.Length; i++)
-            {
-                m_BlendSpacePlayerPlayables[i].SetJobData(
-                    m_BlendSpacePlayerJobs[i]);
-            }
-            for (int i = 0; i < m_ClipPlayerJobs.Length; i++)
-                m_ClipPlayerPlayables[i].SetJobData(m_ClipPlayerJobs[i]);
-            for (int i = 0; i < m_DirectPlayerJobs.Length; i++)
-                m_DirectPlayerPlayables[i].SetJobData(m_DirectPlayerJobs[i]);
-            for (int i = 0; i < m_SlotJobs.Length; i++)
-                m_SlotPlayables[i].SetJobData(m_SlotJobs[i]);
         }
 
         CharacterPoseSourceRetirementHandle PrepareSourceRetirement(
@@ -2204,85 +2064,12 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             }
         }
 
-        void RemoveJobs()
-        {
-            if (!m_JobsInstalled || !m_Animancer || !m_Animancer.IsGraphInitialized)
-                return;
-            for (int i = m_SlotPlayables.Length - 1; i >= 0; i--)
-                AnimancerUtilities.RemovePlayable(m_SlotPlayables[i]);
-            for (int i = m_DirectPlayerPlayables.Length - 1; i >= 0; i--)
-                AnimancerUtilities.RemovePlayable(m_DirectPlayerPlayables[i]);
-            for (int i = m_ClipPlayerPlayables.Length - 1; i >= 0; i--)
-                AnimancerUtilities.RemovePlayable(m_ClipPlayerPlayables[i]);
-            for (int i = m_BlendSpacePlayerPlayables.Length - 1; i >= 0; i--)
-                AnimancerUtilities.RemovePlayable(m_BlendSpacePlayerPlayables[i]);
-            m_JobsInstalled = false;
-        }
-
         ulong NextCompletionIdentity()
         {
             if (m_CompletionIdentity == ulong.MaxValue)
                 throw new InvalidOperationException("Animation Pose completion identity was exhausted.");
             m_CompletionIdentity++;
             return m_CompletionIdentity;
-        }
-
-        void StageCompletedSources(ulong completionIdentity)
-        {
-            if (m_SourceRetirementState.PendingPoseCount != 0)
-            {
-                throw new InvalidOperationException(
-                    "Pose source releases from the previous committed frame were not finalized.");
-            }
-            for (int stackIndex = 0;
-                 stackIndex < m_Stacks.Length;
-                 stackIndex++)
-            {
-                AnimationBlendStackRuntime stack =
-                    m_Stacks[stackIndex];
-                CharacterAnimationTransitionRouteRuntime route =
-                    m_StackRoutes[stackIndex];
-                if (!route.CanReleaseSources)
-                    continue;
-                int releaseCount =
-                    stack.PendingPriorFrameReleaseCount(
-                        completionIdentity);
-                for (int releaseIndex = 0;
-                     releaseIndex < releaseCount;
-                     releaseIndex++)
-                {
-                    AnimationBlendStackSourceReleaseToken stackRelease =
-                        stack.PrepareRelease(
-                            releaseIndex,
-                            completionIdentity);
-                    AnimationBlendStackRelease release =
-                        stackRelease.Release;
-                    AnimationPhysicalSourceIdentity physical =
-                        m_SourceModule.RequireIdentity(
-                            release.SourceId,
-                            release.PoseNodeId);
-                    if (route.IsAnimationSlot &&
-                        CharacterPoseProgramSourceRetirementState
-                            .IsFiniteActionSource(
-                            release.SourceId))
-                    {
-                        m_SourceRetirementState.StageAction(
-                            m_SourceModule,
-                            route.SlotId,
-                            stack,
-                            route,
-                            in stackRelease,
-                            physical);
-                        continue;
-                    }
-                    m_SourceRetirementState.StagePose(
-                        m_SourceModule,
-                        stack,
-                        route,
-                        in stackRelease,
-                        physical);
-                }
-            }
         }
 
         void ClearReleaseJournals()

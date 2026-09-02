@@ -1,13 +1,17 @@
 using System;
 using System.Collections.Generic;
+using Animancer;
 using ThirdPersonCharacter.Pipeline.Animation.BlendStack;
 using ThirdPersonCharacter.Pipeline.Animation.Diagnostics;
+using ThirdPersonCharacter.Pipeline.Animation.Lifecycle;
 using ThirdPersonCharacter.Pipeline.Animation.MotionMatching;
 using ThirdPersonCharacter.Pipeline.Animation.Presentation;
 using ThirdPersonCharacter.Pipeline.Animation.Sources;
 using ThirdPersonCharacter.Pipeline.Presentation;
 using ThirdPersonSimulation;
 using Unity.Collections;
+using UnityEngine.Animations;
+using UnityEngine.Playables;
 
 namespace ThirdPersonCharacter.Pipeline.Animation
 {
@@ -127,6 +131,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         }
 
         readonly CharacterPoseProgramImage m_Image;
+        readonly AnimancerComponent m_Animancer;
         readonly CharacterPoseSourceModule m_SourceModule;
         readonly CharacterPoseWorldContextAdapter m_WorldContext;
         readonly int m_FootPlacementWeightParameterIndex;
@@ -134,6 +139,14 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             m_MotionMatchingHistoryCompletions;
         readonly PreparedMotionMatchingHistoryRead[]
             m_PreparedMotionMatchingHistoryReads;
+        readonly AnimationSlotBlendJob[] m_SlotJobs;
+        readonly AnimationSelectedPosePlayerJob[] m_DirectPlayerJobs;
+        readonly AnimationSelectedPosePlayerJob[] m_ClipPlayerJobs;
+        readonly AnimationSelectedPosePlayerJob[] m_BlendSpacePlayerJobs;
+        AnimationScriptPlayable[] m_SlotPlayables;
+        AnimationScriptPlayable[] m_DirectPlayerPlayables;
+        AnimationScriptPlayable[] m_ClipPlayerPlayables;
+        AnimationScriptPlayable[] m_BlendSpacePlayerPlayables;
         CharacterPoseProgramFrameLease m_ActiveFrameLease;
         CharacterPoseProgramFrameLease m_CommittingFrameLease;
         PreparedEvaluationPage m_PreparedEvaluation;
@@ -153,9 +166,11 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         int m_MotionMatchingHistoryCompletionCount;
         bool m_HasCommittedEvaluationFrame;
         bool m_HasPendingCompletedEvaluationFrame;
+        bool m_JobsInstalled;
         bool m_Disposed;
 
         internal CharacterPoseProgramRuntime(
+            AnimancerComponent animancer,
             CharacterPoseProgramImage image,
             CharacterPoseProgramExecutionView executionView,
             CharacterPoseActorState actorState,
@@ -165,6 +180,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             CharacterPoseWorldContextAdapter worldContext,
             CharacterPoseConstraintRuntime poseConstraints)
         {
+            m_Animancer = animancer ? animancer :
+                throw new ArgumentNullException(nameof(animancer));
             m_Image = image ?? throw new ArgumentNullException(nameof(image));
             ExecutionView = executionView ??
                 throw new ArgumentNullException(nameof(executionView));
@@ -189,6 +206,17 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             m_PreparedMotionMatchingHistoryReads =
                 new PreparedMotionMatchingHistoryRead[
                     m_MotionMatchingHistoryCompletions.Length];
+            m_SlotJobs =
+                new AnimationSlotBlendJob[ActorState.Stacks.Length];
+            m_DirectPlayerJobs =
+                new AnimationSelectedPosePlayerJob[
+                    ActorState.DirectPlayers.Length];
+            m_ClipPlayerJobs =
+                new AnimationSelectedPosePlayerJob[
+                    ActorState.PoseStateSources.ClipPlayers.Length];
+            m_BlendSpacePlayerJobs =
+                new AnimationSelectedPosePlayerJob[
+                    ActorState.PoseStateSources.BlendSpacePlayers.Length];
             Executor = new CharacterPoseGraphStagedExecutor(
                 ExecutionView,
                 FramePages,
@@ -1024,6 +1052,248 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             return false;
         }
 
+        internal void PrepareEvaluationJobsAndRetirements(
+            CharacterPoseProgramFrameLease lease,
+            in CharacterPoseSourcePreparedResources preparedSources,
+            ulong completionIdentity)
+        {
+            RequireFrame(lease);
+            for (int slotIndex = 0;
+                 slotIndex < ActorState.Stacks.Length;
+                 slotIndex++)
+            {
+                AnimationBlendStackRuntime stack =
+                    ActorState.Stacks[slotIndex];
+                AnimationPlayerPoseNativeWriteBinding write =
+                    FramePages.RequirePlayerWriteBinding(
+                        stack.PlayerIndex,
+                        completionIdentity);
+                m_SlotJobs[slotIndex] = stack.PrepareSlotJob(
+                    completionIdentity,
+                    in write,
+                    m_SourceModule);
+            }
+            for (int slotIndex = 0;
+                 slotIndex < ActorState.Stacks.Length;
+                 slotIndex++)
+            {
+                ActorState.Stacks[slotIndex].PrepareCompletion(
+                    completionIdentity);
+            }
+            for (int playerIndex = 0;
+                 playerIndex < ActorState.DirectPlayers.Length;
+                 playerIndex++)
+            {
+                AnimationSelectedPosePlayerRuntime player =
+                    ActorState.DirectPlayers[playerIndex];
+                AnimationPlayerPoseNativeWriteBinding write =
+                    FramePages.RequirePlayerWriteBinding(
+                        player.PlayerIndex,
+                        completionIdentity);
+                CharacterPoseSourceBinding sourceBinding =
+                    preparedSources.RequireDirectBinding(playerIndex);
+                m_DirectPlayerJobs[playerIndex] = player.PrepareJob(
+                    completionIdentity,
+                    in write,
+                    sourceBinding.PhysicalIdentity,
+                    sourceBinding.SourceIndex);
+            }
+            for (int playerIndex = 0;
+                 playerIndex < ActorState.PoseStateSources.ClipPlayers.Length;
+                 playerIndex++)
+            {
+                AnimationClipPlayerRuntime player =
+                    ActorState.PoseStateSources.ClipPlayers[playerIndex];
+                AnimationPlayerPoseNativeWriteBinding write =
+                    FramePages.RequirePlayerWriteBinding(
+                        player.PlayerIndex,
+                        completionIdentity);
+                CharacterPoseSourceBinding sourceBinding =
+                    preparedSources.RequireClipBinding(playerIndex);
+                m_ClipPlayerJobs[playerIndex] = player.PrepareJob(
+                    completionIdentity,
+                    in write,
+                    sourceBinding.PhysicalIdentity,
+                    sourceBinding.SourceIndex);
+            }
+            for (int playerIndex = 0;
+                 playerIndex <
+                 ActorState.PoseStateSources.BlendSpacePlayers.Length;
+                 playerIndex++)
+            {
+                AnimationBlendSpacePlayerRuntime player =
+                    ActorState.PoseStateSources.BlendSpacePlayers[
+                        playerIndex];
+                AnimationPlayerPoseNativeWriteBinding write =
+                    FramePages.RequirePlayerWriteBinding(
+                        player.PlayerIndex,
+                        completionIdentity);
+                CharacterPoseSourceBinding sourceBinding =
+                    preparedSources.RequireBlendSpaceBinding(playerIndex);
+                m_BlendSpacePlayerJobs[playerIndex] = player.PrepareJob(
+                    completionIdentity,
+                    in write,
+                    sourceBinding.PhysicalIdentity,
+                    sourceBinding.SourceIndex);
+            }
+            StageCompletedSources(completionIdentity);
+        }
+
+        internal void BindEvaluationExecution(
+            CharacterPoseProgramFrameLease lease,
+            in CharacterPoseFrameLineage lineage,
+            in CharacterFinalPosePublicationOutputBinding finalOutput,
+            bool recordDiagnostics)
+        {
+            BindEvaluation(
+                lease,
+                in lineage,
+                lineage.TuningGeneration,
+                in finalOutput,
+                recordDiagnostics);
+            InstallOrUpdateJobs();
+        }
+
+        internal void DetachExecutionJobs()
+        {
+            if (!m_JobsInstalled ||
+                !m_Animancer ||
+                !m_Animancer.IsGraphInitialized)
+            {
+                return;
+            }
+            for (int i = m_SlotPlayables.Length - 1; i >= 0; i--)
+                AnimancerUtilities.RemovePlayable(m_SlotPlayables[i]);
+            for (int i = m_DirectPlayerPlayables.Length - 1; i >= 0; i--)
+                AnimancerUtilities.RemovePlayable(m_DirectPlayerPlayables[i]);
+            for (int i = m_ClipPlayerPlayables.Length - 1; i >= 0; i--)
+                AnimancerUtilities.RemovePlayable(m_ClipPlayerPlayables[i]);
+            for (int i = m_BlendSpacePlayerPlayables.Length - 1;
+                 i >= 0;
+                 i--)
+            {
+                AnimancerUtilities.RemovePlayable(
+                    m_BlendSpacePlayerPlayables[i]);
+            }
+            m_JobsInstalled = false;
+        }
+
+        void StageCompletedSources(ulong completionIdentity)
+        {
+            if (ActorState.SourceRetirement.PendingPoseCount != 0)
+            {
+                throw new InvalidOperationException(
+                    "Pose source releases from the previous committed frame were not finalized.");
+            }
+            for (int stackIndex = 0;
+                 stackIndex < ActorState.Stacks.Length;
+                 stackIndex++)
+            {
+                AnimationBlendStackRuntime stack =
+                    ActorState.Stacks[stackIndex];
+                CharacterAnimationTransitionRouteRuntime route =
+                    ActorState.Routes[stackIndex];
+                if (!route.CanReleaseSources)
+                    continue;
+                int releaseCount = stack.PendingPriorFrameReleaseCount(
+                    completionIdentity);
+                for (int releaseIndex = 0;
+                     releaseIndex < releaseCount;
+                     releaseIndex++)
+                {
+                    AnimationBlendStackSourceReleaseToken stackRelease =
+                        stack.PrepareRelease(
+                            releaseIndex,
+                            completionIdentity);
+                    AnimationBlendStackRelease release =
+                        stackRelease.Release;
+                    AnimationPhysicalSourceIdentity physical =
+                        m_SourceModule.RequireIdentity(
+                            release.SourceId,
+                            release.PoseNodeId);
+                    if (route.IsAnimationSlot &&
+                        CharacterPoseProgramSourceRetirementState
+                            .IsFiniteActionSource(release.SourceId))
+                    {
+                        ActorState.SourceRetirement.StageAction(
+                            m_SourceModule,
+                            route.SlotId,
+                            stack,
+                            route,
+                            in stackRelease,
+                            physical);
+                        continue;
+                    }
+                    ActorState.SourceRetirement.StagePose(
+                        m_SourceModule,
+                        stack,
+                        route,
+                        in stackRelease,
+                        physical);
+                }
+            }
+        }
+
+        void InstallOrUpdateJobs()
+        {
+            if (!m_JobsInstalled)
+            {
+                m_BlendSpacePlayerPlayables =
+                    new AnimationScriptPlayable[
+                        m_BlendSpacePlayerJobs.Length];
+                for (int i = 0;
+                     i < m_BlendSpacePlayerJobs.Length;
+                     i++)
+                {
+                    m_BlendSpacePlayerPlayables[i] =
+                        m_Animancer.Graph.InsertOutputJob(
+                            m_BlendSpacePlayerJobs[i]);
+                    m_BlendSpacePlayerPlayables[i].SetProcessInputs(true);
+                }
+                m_ClipPlayerPlayables =
+                    new AnimationScriptPlayable[m_ClipPlayerJobs.Length];
+                for (int i = 0; i < m_ClipPlayerJobs.Length; i++)
+                {
+                    m_ClipPlayerPlayables[i] =
+                        m_Animancer.Graph.InsertOutputJob(
+                            m_ClipPlayerJobs[i]);
+                    m_ClipPlayerPlayables[i].SetProcessInputs(true);
+                }
+                m_DirectPlayerPlayables =
+                    new AnimationScriptPlayable[m_DirectPlayerJobs.Length];
+                for (int i = 0; i < m_DirectPlayerJobs.Length; i++)
+                {
+                    m_DirectPlayerPlayables[i] =
+                        m_Animancer.Graph.InsertOutputJob(
+                            m_DirectPlayerJobs[i]);
+                    m_DirectPlayerPlayables[i].SetProcessInputs(true);
+                }
+                m_SlotPlayables =
+                    new AnimationScriptPlayable[m_SlotJobs.Length];
+                for (int i = 0; i < m_SlotJobs.Length; i++)
+                {
+                    m_SlotPlayables[i] =
+                        m_Animancer.Graph.InsertOutputJob(m_SlotJobs[i]);
+                    m_SlotPlayables[i].SetProcessInputs(true);
+                }
+                m_JobsInstalled = true;
+                return;
+            }
+            for (int i = 0;
+                 i < m_BlendSpacePlayerJobs.Length;
+                 i++)
+            {
+                m_BlendSpacePlayerPlayables[i].SetJobData(
+                    m_BlendSpacePlayerJobs[i]);
+            }
+            for (int i = 0; i < m_ClipPlayerJobs.Length; i++)
+                m_ClipPlayerPlayables[i].SetJobData(m_ClipPlayerJobs[i]);
+            for (int i = 0; i < m_DirectPlayerJobs.Length; i++)
+                m_DirectPlayerPlayables[i].SetJobData(m_DirectPlayerJobs[i]);
+            for (int i = 0; i < m_SlotJobs.Length; i++)
+                m_SlotPlayables[i].SetJobData(m_SlotJobs[i]);
+        }
+
         internal void CommitEvaluationFrame(
             CharacterPoseProgramFrameLease lease,
             ulong completionIdentity)
@@ -1090,19 +1360,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 in control);
         }
 
-        internal AnimationPlayerPoseNativeWriteBinding
-            RequirePlayerWriteBinding(
-                CharacterPoseProgramFrameLease lease,
-                int physicalSlotIndex,
-                ulong completionIdentity)
-        {
-            RequireFrame(lease);
-            return FramePages.RequirePlayerWriteBinding(
-                physicalSlotIndex,
-                completionIdentity);
-        }
-
-        internal void BindEvaluation(
+        void BindEvaluation(
             CharacterPoseProgramFrameLease lease,
             in CharacterPoseFrameLineage lineage,
             ulong tuningGeneration,
@@ -1853,6 +2111,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             m_HasCommittedEvaluationFrame = false;
             m_HasPendingCompletedEvaluationFrame = false;
             Exception failure = null;
+            DisposeStep(DetachExecutionJobs, ref failure);
             DisposeStep(ActorState.Dispose, ref failure);
             DisposeStep(Tuning.Dispose, ref failure);
             DisposeStep(ExecutionView.Dispose, ref failure);

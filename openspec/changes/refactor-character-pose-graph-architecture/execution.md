@@ -877,3 +877,9 @@ Reset保持现有三段顺序：Program先清Evaluation／Demand并Reset Inertia
 状态：Program Runtime接管Evaluation Workspace打开，以及Stack、Direct Player、Clip Player和Blend Space Player逐Family的Source Preparation。它按原Linked Fragment／Preview relevance、Stack entry去重和Player relevance读取逻辑节点状态，生成typed `CharacterPoseSourcePreparation`，再通过`CharacterPoseSourceModule.Prepare`唯一物理入口提交；Provider sample解析和Source owner映射也不再由旧Pose Runtime处理。
 
 Source Module继续唯一拥有Animancer／Playable物理Source、Prepared Resources与Source Frame Result，外层仍保留现有Profiler阶段、Job binding、Final Publication binding和Writer预验证顺序。Action与Provider字典、Clip play rate、Capture binding、Preparation index、循环顺序和异常文本保持不变；任务6.2与6.5继续推进，但Job安装与Source Result闭包尚未归入Program Runtime，暂不勾选。3C MCP对两个触碰文件错误筛选均为0；不单独运行回放。
+
+## Program Job绑定与Source结果消费收口
+
+状态：Program Runtime现在自有Slot、Direct Player、Clip Player与Blend Space Player的Job data数组及对应Output Playable，消费Source Module发布的typed `CharacterPoseSourcePreparedResources`绑定Program Frame Player页，并在原位置处理prior-frame Source retirement staging。Final Publication仍先产生actor-local Output binding，Program随后绑定同lineage Executor并安装或更新Job，Writer预验证与Animancer Evaluate顺序未变。
+
+Program Runtime成为这些Job／Playable的唯一Owner；旧Pose Runtime删除数组、Playable、安装、更新、移除和Stage Completed Source扫描，只在原Dispose位置要求Program先Detach，再Dispose Source Module与Program Actor State，保持既有销毁顺序。Program对Source只使用Demand／Preparation／Prepared Resources／Usage／Retirement等typed合同，对Constraint仍只由唯一Executor在Operation位置使用typed Handle和per-operation Result，因此任务6.5完成。任务6.2仍等待Action／Slot生命周期入口收口。3C MCP在补齐正式Lifecycle命名空间后两个触碰文件错误筛选均为0；不单独运行回放。

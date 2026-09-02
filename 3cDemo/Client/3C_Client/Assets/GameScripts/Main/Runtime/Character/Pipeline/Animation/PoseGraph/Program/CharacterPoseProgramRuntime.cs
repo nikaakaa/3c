@@ -10,39 +10,25 @@ using ThirdPersonCharacter.Pipeline.Animation.Sources;
 using ThirdPersonCharacter.Pipeline.Presentation;
 using ThirdPersonSimulation;
 using Unity.Collections;
-using UnityEngine.Animations;
-using UnityEngine.Playables;
 
 namespace ThirdPersonCharacter.Pipeline.Animation
 {
     internal sealed class CharacterPoseProgramRuntime : IDisposable
     {
         readonly CharacterPoseProgramImage m_Image;
-        readonly AnimancerComponent m_Animancer;
-        readonly CharacterPoseSourceModule m_SourceModule;
         readonly CharacterPoseWorldContextAdapter m_WorldContext;
         readonly PresentationFrameWorkspace m_PresentationWorkspace;
         readonly CharacterPoseProgramMotionMatchingRuntime m_MotionMatching;
         readonly CharacterPoseProgramTuningRuntime m_Tuning;
         readonly CharacterPoseProgramActionRuntime m_Action;
-        readonly AnimationSlotBlendJob[] m_SlotJobs;
-        readonly AnimationSelectedPosePlayerJob[] m_DirectPlayerJobs;
-        readonly AnimationSelectedPosePlayerJob[] m_ClipPlayerJobs;
-        readonly AnimationSelectedPosePlayerJob[] m_BlendSpacePlayerJobs;
-        AnimationScriptPlayable[] m_SlotPlayables;
-        AnimationScriptPlayable[] m_DirectPlayerPlayables;
-        AnimationScriptPlayable[] m_ClipPlayerPlayables;
-        AnimationScriptPlayable[] m_BlendSpacePlayerPlayables;
+        readonly CharacterPoseProgramSourcePreparationRuntime
+            m_SourcePreparation;
+        readonly CharacterPoseProgramSourceRetirementRuntime
+            m_SourceRetirement;
         CharacterPoseProgramFrameLease m_ActiveFrameLease;
         CharacterPoseProgramFrameLease m_CommittingFrameLease;
         readonly CharacterPoseProgramEvaluationState m_Evaluation =
             new CharacterPoseProgramEvaluationState();
-        int m_SequencePreviewPlayerIndex = -1;
-        int m_SequencePreviewOperationIndex = -1;
-        double m_SequencePreviewTime;
-        bool m_SequencePreviewReset;
-        bool m_HasSequencePreview;
-        bool m_JobsInstalled;
         bool m_Disposed;
 
         internal CharacterPoseProgramRuntime(
@@ -57,7 +43,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             CharacterPoseConstraintRuntime poseConstraints,
             PresentationFrameWorkspace presentationWorkspace)
         {
-            m_Animancer = animancer ? animancer :
+            AnimancerComponent animancerComponent = animancer ? animancer :
                 throw new ArgumentNullException(nameof(animancer));
             m_Image = image ?? throw new ArgumentNullException(nameof(image));
             ExecutionView = executionView ??
@@ -69,7 +55,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             m_Tuning = new CharacterPoseProgramTuningRuntime(
                 tuning,
                 ActorState);
-            m_SourceModule = sourceModule ??
+            CharacterPoseSourceModule source = sourceModule ??
                 throw new ArgumentNullException(nameof(sourceModule));
             m_WorldContext = worldContext ??
                 throw new ArgumentNullException(nameof(worldContext));
@@ -83,23 +69,22 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                     ActorState,
                     FramePages,
                     m_Evaluation,
-                    m_SourceModule,
+                    source,
                     m_PresentationWorkspace);
             m_Action = new CharacterPoseProgramActionRuntime(
                 ActorState,
-                m_SourceModule,
+                source,
                 m_PresentationWorkspace);
-            m_SlotJobs =
-                new AnimationSlotBlendJob[ActorState.Stacks.Length];
-            m_DirectPlayerJobs =
-                new AnimationSelectedPosePlayerJob[
-                    ActorState.DirectPlayers.Length];
-            m_ClipPlayerJobs =
-                new AnimationSelectedPosePlayerJob[
-                    ActorState.PoseStateSources.ClipPlayers.Length];
-            m_BlendSpacePlayerJobs =
-                new AnimationSelectedPosePlayerJob[
-                    ActorState.PoseStateSources.BlendSpacePlayers.Length];
+            m_SourcePreparation =
+                new CharacterPoseProgramSourcePreparationRuntime(
+                    animancerComponent,
+                    ActorState,
+                    FramePages,
+                    source);
+            m_SourceRetirement =
+                new CharacterPoseProgramSourceRetirementRuntime(
+                    ActorState,
+                    source);
             Executor = new CharacterPoseProgramExecutor(
                 ExecutionView,
                 FramePages,
@@ -438,40 +423,17 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         internal void ExecutePreparedActionBackendReleaseRequests()
         {
             RequireAlive();
-            ActorState.SourceRetirement.ExecutePreparedActions(
-                m_SourceModule);
+            m_SourceRetirement
+                .ExecutePreparedActionBackendReleaseRequests();
         }
 
-        internal bool HasSequencePreview => m_HasSequencePreview;
+        internal bool HasSequencePreview =>
+            m_SourcePreparation.HasSequencePreview;
 
         bool ApplySequencePreview()
         {
             RequireFrame(m_ActiveFrameLease);
-            if (!m_HasSequencePreview)
-                return false;
-            for (int i = 0;
-                 i < ActorState.PoseStateSources.ClipPlayers.Length;
-                 i++)
-            {
-                AnimationClipPlayerRuntime player =
-                    ActorState.PoseStateSources.ClipPlayers[i];
-                bool selected = i == m_SequencePreviewPlayerIndex;
-                player.SetRelevant(selected);
-                if (selected)
-                {
-                    player.SetPreviewTime(
-                        m_SequencePreviewTime,
-                        m_SequencePreviewReset);
-                }
-            }
-            for (int i = 0;
-                 i < ActorState.PoseStateSources.BlendSpacePlayers.Length;
-                 i++)
-            {
-                ActorState.PoseStateSources.BlendSpacePlayers[i]
-                    .SetRelevant(false);
-            }
-            return true;
+            return m_SourcePreparation.ApplySequencePreview();
         }
 
         internal void Advance(
@@ -539,7 +501,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                     "Pose State frame finalization is invalid.",
                     nameof(factFrame));
             }
-            if (m_HasSequencePreview)
+            if (m_SourcePreparation.HasSequencePreview)
                 return;
             ActorState.PoseStateSources.EvaluateTransitions(
                 in factFrame,
@@ -559,8 +521,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         }
 
         internal bool IsSequencePreviewPlayer(int playerIndex) =>
-            m_HasSequencePreview &&
-            playerIndex == m_SequencePreviewPlayerIndex;
+            m_SourcePreparation.IsSequencePreviewPlayer(playerIndex);
 
         internal bool IsPlayerActive(int playerIndex) =>
             LinkedFragments.IsPlayerActive(playerIndex);
@@ -642,57 +603,16 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             bool resetContinuity)
         {
             RequireAlive();
-            if (m_ActiveFrameLease.IsValid ||
-                !sourceIndex.IsValid ||
-                !double.IsFinite(sampleTime) ||
-                sampleTime < 0d)
+            if (m_ActiveFrameLease.IsValid)
             {
                 throw new ArgumentException(
                     "Clip Preview sample is invalid.");
             }
-            int playerIndex = -1;
-            for (int i = 0;
-                 i < ActorState.PoseStateSources.ClipPlayers.Length;
-                 i++)
-            {
-                if (ActorState.PoseStateSources.ClipPlayers[i].SourceIndex !=
-                    sourceIndex)
-                {
-                    continue;
-                }
-                playerIndex = i;
-                break;
-            }
-            if (playerIndex < 0)
-            {
-                throw new InvalidOperationException(
-                    $"Clip Preview source #{sourceIndex.Value} has no compiled Clip Player.");
-            }
-            int operationIndex = -1;
-            for (int i = 0; i < m_Image.OperationHeaders.Count; i++)
-            {
-                CharacterPoseOperationHeader operation =
-                    m_Image.OperationHeaders[i];
-                if (operation.Code != CharacterPoseOperationCode.ClipPlayer ||
-                    ((CharacterPosePlayerOperationPayload)
-                        m_Image.OperationPages.RequirePayload(operation))
-                    .ClipPlayerIndex != playerIndex)
-                {
-                    continue;
-                }
-                operationIndex = operation.Index;
-                break;
-            }
-            if (operationIndex < 0)
-            {
-                throw new InvalidOperationException(
-                    $"Clip Preview source #{sourceIndex.Value} has no compiled Pose operation.");
-            }
-            m_SequencePreviewPlayerIndex = playerIndex;
-            m_SequencePreviewOperationIndex = operationIndex;
-            m_SequencePreviewTime = sampleTime;
-            m_SequencePreviewReset = resetContinuity;
-            m_HasSequencePreview = true;
+            m_SourcePreparation.SetSequencePreview(
+                m_Image,
+                sourceIndex,
+                sampleTime,
+                resetContinuity);
         }
 
         internal void ClearSequencePreview()
@@ -703,11 +623,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 throw new InvalidOperationException(
                     "Clip Preview cannot clear during a frame.");
             }
-            m_SequencePreviewPlayerIndex = -1;
-            m_SequencePreviewOperationIndex = -1;
-            m_SequencePreviewTime = 0d;
-            m_SequencePreviewReset = false;
-            m_HasSequencePreview = false;
+            m_SourcePreparation.ClearSequencePreview();
         }
 
         internal void BeginFrame(CharacterPoseProgramFrameLease lease)
@@ -903,24 +819,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             ulong completionIdentity)
         {
             BeginEvaluationFrame(lease, completionIdentity);
-            for (int i = 0; i < ActorState.Stacks.Length; i++)
-                ActorState.Stacks[i].BeginSourceFrame(completionIdentity);
-            for (int i = 0; i < ActorState.DirectPlayers.Length; i++)
-                ActorState.DirectPlayers[i].BeginFrame(completionIdentity);
-            for (int i = 0;
-                 i < ActorState.PoseStateSources.ClipPlayers.Length;
-                 i++)
-            {
-                ActorState.PoseStateSources.ClipPlayers[i]
-                    .BeginFrame(completionIdentity);
-            }
-            for (int i = 0;
-                 i < ActorState.PoseStateSources.BlendSpacePlayers.Length;
-                 i++)
-            {
-                ActorState.PoseStateSources.BlendSpacePlayers[i]
-                    .BeginFrame(completionIdentity);
-            }
+            m_SourcePreparation.BeginFrame(completionIdentity);
         }
 
         internal void PrepareStackSources(
@@ -934,41 +833,12 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 PresentationPoseSourceSample> providerSourceSamples)
         {
             RequireFrame(lease);
-            for (int stackIndex = 0;
-                 stackIndex < ActorState.Stacks.Length;
-                 stackIndex++)
-            {
-                AnimationBlendStackRuntime stack =
-                    ActorState.Stacks[stackIndex];
-                if (!LinkedFragments.IsPlayerActive(stack.PlayerIndex) ||
-                    !stack.HasCurrentSelectionSample)
-                {
-                    continue;
-                }
-                for (int entryIndex = 0;
-                     entryIndex < stack.EntryCount;
-                     entryIndex++)
-                {
-                    AnimationBlendEntryId entry =
-                        stack.GetEntryId(entryIndex);
-                    if (entry.SourcePoseTarget ||
-                        HasEarlierSource(
-                            stack,
-                            entryIndex,
-                            entry.SourceId))
-                    {
-                        continue;
-                    }
-                    PrepareStackSource(
-                        stack,
-                        sourceLease,
-                        in preparations,
-                        entry.SourceId,
-                        presentationDeltaSeconds,
-                        actionSourceSamples,
-                        providerSourceSamples);
-                }
-            }
+            m_SourcePreparation.PrepareStacks(
+                sourceLease,
+                in preparations,
+                presentationDeltaSeconds,
+                actionSourceSamples,
+                providerSourceSamples);
         }
 
         internal void PrepareDirectSources(
@@ -980,45 +850,11 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 PresentationPoseSourceSample> sourceSamples)
         {
             RequireFrame(lease);
-            for (int playerIndex = 0;
-                 playerIndex < ActorState.DirectPlayers.Length;
-                 playerIndex++)
-            {
-                AnimationSelectedPosePlayerRuntime player =
-                    ActorState.DirectPlayers[playerIndex];
-                if (!LinkedFragments.IsPlayerActive(player.PlayerIndex) ||
-                    !player.HasCurrentSample)
-                {
-                    continue;
-                }
-                var key = new AnimationPlayerSourceSampleKey(
-                    player.NodeId,
-                    player.SourceId);
-                if (!sourceSamples.TryGetValue(
-                        key,
-                        out PresentationPoseSourceSample sample))
-                {
-                    throw new InvalidOperationException(
-                        $"Animation Pose Source '{player.SourceId}' has no current resolved request.");
-                }
-                AnimationPoseSourceCaptureBinding capture =
-                    player.PrepareCapture(
-                        in sample,
-                        presentationDeltaSeconds);
-                CharacterPoseSourcePreparation preparation =
-                    CharacterPoseSourcePreparation.DirectPlayer(
-                        playerIndex,
-                        player.SourceId,
-                        player.SourceOwnerIndex,
-                        sample.Clips,
-                        in sample,
-                        in capture,
-                        player.NodeId);
-                SubmitSourcePreparation(
-                    sourceLease,
-                    in preparations,
-                    in preparation);
-            }
+            m_SourcePreparation.PrepareDirectPlayers(
+                sourceLease,
+                in preparations,
+                presentationDeltaSeconds,
+                sourceSamples);
         }
 
         internal void PrepareSequenceSources(
@@ -1029,37 +865,11 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             in CharacterPoseSourceTuningView sourceTuning)
         {
             RequireFrame(lease);
-            for (int playerIndex = 0;
-                 playerIndex < ActorState.PoseStateSources.ClipPlayers.Length;
-                 playerIndex++)
-            {
-                AnimationClipPlayerRuntime player =
-                    ActorState.PoseStateSources.ClipPlayers[playerIndex];
-                bool selectedPreview =
-                    IsSequencePreviewPlayer(playerIndex);
-                if (!selectedPreview &&
-                        !LinkedFragments.IsPlayerActive(player.PlayerIndex) ||
-                    !player.IsRelevant)
-                {
-                    continue;
-                }
-                AnimationPoseSourceCaptureBinding capture =
-                    player.PrepareCapture(
-                        presentationDeltaSeconds,
-                        sourceTuning.RequireClipPlayRate(playerIndex));
-                CharacterPoseSourcePreparation preparation =
-                    CharacterPoseSourcePreparation.ClipPlayer(
-                        playerIndex,
-                        player.SourceId,
-                        player.PlayerIndex,
-                        player.ClipSamples,
-                        in capture,
-                        player.NodeId);
-                SubmitSourcePreparation(
-                    sourceLease,
-                    in preparations,
-                    in preparation);
-            }
+            m_SourcePreparation.PrepareClipPlayers(
+                sourceLease,
+                in preparations,
+                presentationDeltaSeconds,
+                in sourceTuning);
         }
 
         internal void PrepareBlendSpaceSources(
@@ -1069,133 +879,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             float presentationDeltaSeconds)
         {
             RequireFrame(lease);
-            for (int playerIndex = 0;
-                 playerIndex <
-                 ActorState.PoseStateSources.BlendSpacePlayers.Length;
-                 playerIndex++)
-            {
-                AnimationBlendSpacePlayerRuntime player =
-                    ActorState.PoseStateSources.BlendSpacePlayers[
-                        playerIndex];
-                if (!LinkedFragments.IsPlayerActive(player.PlayerIndex) ||
-                    !player.IsRelevant)
-                {
-                    continue;
-                }
-                AnimationPoseSourceCaptureBinding capture =
-                    player.PrepareCapture(presentationDeltaSeconds);
-                CharacterPoseSourcePreparation preparation =
-                    CharacterPoseSourcePreparation.BlendSpacePlayer(
-                        playerIndex,
-                        player.SourceId,
-                        player.PlayerIndex,
-                        player.ClipSamples,
-                        in capture,
-                        player.NodeId);
-                SubmitSourcePreparation(
-                    sourceLease,
-                    in preparations,
-                    in preparation);
-            }
-        }
-
-        void PrepareStackSource(
-            AnimationBlendStackRuntime stack,
-            CharacterPoseSourceFrameLease sourceLease,
-            in CharacterPoseSourcePreparationView preparations,
-            AnimationPoseSourceId sourceId,
-            float presentationDeltaSeconds,
-            IReadOnlyDictionary<AnimationPlayerSourceSampleKey,
-                AnimationResolvedPoseSourceSample> actionSourceSamples,
-            IReadOnlyDictionary<AnimationPlayerSourceSampleKey,
-                PresentationPoseSourceSample> providerSourceSamples)
-        {
-            var key = new AnimationPlayerSourceSampleKey(
-                stack.PoseNodeId,
-                sourceId);
-            if (sourceId.SourceKind == AnimationPoseSourceKind.Timeline)
-            {
-                if (!actionSourceSamples.TryGetValue(
-                        key,
-                        out AnimationResolvedPoseSourceSample sourceSample))
-                {
-                    throw new InvalidOperationException(
-                        $"Action Pose Source '{sourceId}' has no current resolved request.");
-                }
-                AnimationPoseSampleRequest request = sourceSample.Request;
-                AnimationPoseSourceCaptureBinding capture =
-                    stack.PrepareCapture(
-                        sourceSample,
-                        presentationDeltaSeconds);
-                CharacterPoseSourcePreparation preparation =
-                    CharacterPoseSourcePreparation.Action(
-                        in request,
-                        in capture,
-                        stack.PoseNodeId);
-                SubmitSourcePreparation(
-                    sourceLease,
-                    in preparations,
-                    in preparation);
-                return;
-            }
-            if (!providerSourceSamples.TryGetValue(
-                    key,
-                    out PresentationPoseSourceSample providerSample) ||
-                !ActorState.NodeRuntimeIndex.TryGetSourceOwnerIndex(
-                    stack.PoseNodeId,
-                    out int sourceOwnerIndex))
-            {
-                throw new InvalidOperationException(
-                    $"Presentation Pose Source '{sourceId}' has no current resolved request.");
-            }
-            AnimationResolvedPoseSourceSample resolved =
-                m_SourceModule.ResolveProviderSample(
-                    in providerSample,
-                    sourceOwnerIndex);
-            AnimationPoseSampleRequest providerRequest = resolved.Request;
-            AnimationPoseSourceCaptureBinding providerCapture =
-                stack.PrepareCapture(
-                    resolved,
-                    presentationDeltaSeconds);
-            CharacterPoseSourcePreparation providerPreparation =
-                CharacterPoseSourcePreparation.Provider(
-                    in providerRequest,
-                    in providerSample,
-                    in providerCapture,
-                    stack.PoseNodeId);
-            SubmitSourcePreparation(
+            m_SourcePreparation.PrepareBlendSpacePlayers(
                 sourceLease,
                 in preparations,
-                in providerPreparation);
-        }
-
-        void SubmitSourcePreparation(
-            CharacterPoseSourceFrameLease sourceLease,
-            in CharacterPoseSourcePreparationView preparations,
-            in CharacterPoseSourcePreparation preparation)
-        {
-            int index = FramePages.AddSourcePreparation(in preparation);
-            m_SourceModule.Prepare(
-                sourceLease,
-                in preparations,
-                index);
-        }
-
-        static bool HasEarlierSource(
-            AnimationBlendStackRuntime stack,
-            int entryIndex,
-            AnimationPoseSourceId sourceId)
-        {
-            for (int i = 0; i < entryIndex; i++)
-            {
-                AnimationBlendEntryId candidate = stack.GetEntryId(i);
-                if (!candidate.SourcePoseTarget &&
-                    candidate.SourceId.Equals(sourceId))
-                {
-                    return true;
-                }
-            }
-            return false;
+                presentationDeltaSeconds);
         }
 
         internal void PrepareEvaluationJobsAndRetirements(
@@ -1204,85 +891,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             ulong completionIdentity)
         {
             RequireFrame(lease);
-            for (int slotIndex = 0;
-                 slotIndex < ActorState.Stacks.Length;
-                 slotIndex++)
-            {
-                AnimationBlendStackRuntime stack =
-                    ActorState.Stacks[slotIndex];
-                AnimationPlayerPoseNativeWriteBinding write =
-                    FramePages.RequirePlayerWriteBinding(
-                        stack.PlayerIndex,
-                        completionIdentity);
-                m_SlotJobs[slotIndex] = stack.PrepareSlotJob(
-                    completionIdentity,
-                    in write,
-                    m_SourceModule);
-            }
-            for (int slotIndex = 0;
-                 slotIndex < ActorState.Stacks.Length;
-                 slotIndex++)
-            {
-                ActorState.Stacks[slotIndex].PrepareCompletion(
-                    completionIdentity);
-            }
-            for (int playerIndex = 0;
-                 playerIndex < ActorState.DirectPlayers.Length;
-                 playerIndex++)
-            {
-                AnimationSelectedPosePlayerRuntime player =
-                    ActorState.DirectPlayers[playerIndex];
-                AnimationPlayerPoseNativeWriteBinding write =
-                    FramePages.RequirePlayerWriteBinding(
-                        player.PlayerIndex,
-                        completionIdentity);
-                CharacterPoseSourceBinding sourceBinding =
-                    preparedSources.RequireDirectBinding(playerIndex);
-                m_DirectPlayerJobs[playerIndex] = player.PrepareJob(
-                    completionIdentity,
-                    in write,
-                    sourceBinding.PhysicalIdentity,
-                    sourceBinding.SourceIndex);
-            }
-            for (int playerIndex = 0;
-                 playerIndex < ActorState.PoseStateSources.ClipPlayers.Length;
-                 playerIndex++)
-            {
-                AnimationClipPlayerRuntime player =
-                    ActorState.PoseStateSources.ClipPlayers[playerIndex];
-                AnimationPlayerPoseNativeWriteBinding write =
-                    FramePages.RequirePlayerWriteBinding(
-                        player.PlayerIndex,
-                        completionIdentity);
-                CharacterPoseSourceBinding sourceBinding =
-                    preparedSources.RequireClipBinding(playerIndex);
-                m_ClipPlayerJobs[playerIndex] = player.PrepareJob(
-                    completionIdentity,
-                    in write,
-                    sourceBinding.PhysicalIdentity,
-                    sourceBinding.SourceIndex);
-            }
-            for (int playerIndex = 0;
-                 playerIndex <
-                 ActorState.PoseStateSources.BlendSpacePlayers.Length;
-                 playerIndex++)
-            {
-                AnimationBlendSpacePlayerRuntime player =
-                    ActorState.PoseStateSources.BlendSpacePlayers[
-                        playerIndex];
-                AnimationPlayerPoseNativeWriteBinding write =
-                    FramePages.RequirePlayerWriteBinding(
-                        player.PlayerIndex,
-                        completionIdentity);
-                CharacterPoseSourceBinding sourceBinding =
-                    preparedSources.RequireBlendSpaceBinding(playerIndex);
-                m_BlendSpacePlayerJobs[playerIndex] = player.PrepareJob(
-                    completionIdentity,
-                    in write,
-                    sourceBinding.PhysicalIdentity,
-                    sourceBinding.SourceIndex);
-            }
-            StageCompletedSources(completionIdentity);
+            m_SourcePreparation.PrepareJobs(
+                in preparedSources,
+                completionIdentity);
+            m_SourceRetirement.StageCompletedSources(completionIdentity);
         }
 
         internal void ValidateSourceRetirements(
@@ -1290,239 +902,26 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             CharacterPoseSourceFrameLease sourceLease)
         {
             RequireFrame(lease);
-            m_SourceModule.ValidatePhysicalFrame();
-            int standaloneReleaseCount = 0;
-            for (int i = 0;
-                 i < ActorState.DirectPlayers.Length;
-                 i++)
-            {
-                AnimationSelectedPosePlayerRuntime player =
-                    ActorState.DirectPlayers[i];
-                int releaseCount = player.PendingReleaseCount;
-                standaloneReleaseCount = checked(
-                    standaloneReleaseCount + releaseCount);
-                for (int releaseIndex = 0;
-                     releaseIndex < releaseCount;
-                     releaseIndex++)
-                {
-                    AnimationPlayerReleaseToken playerRelease =
-                        player.PrepareRelease(releaseIndex);
-                    CharacterPoseSourceRetirementHandle sourceRelease =
-                        PrepareSourceRetirement(
-                            playerRelease.SourceId,
-                            player.NodeId,
-                            default);
-                    ActorState.SourceRetirement.PrepareDirect(
-                        i,
-                        in sourceRelease,
-                        in playerRelease);
-                }
-            }
-            for (int i = 0;
-                 i < ActorState.PoseStateSources.ClipPlayers.Length;
-                 i++)
-            {
-                AnimationClipPlayerRuntime player =
-                    ActorState.PoseStateSources.ClipPlayers[i];
-                int releaseCount = player.PendingReleaseCount;
-                standaloneReleaseCount = checked(
-                    standaloneReleaseCount + releaseCount);
-                for (int releaseIndex = 0;
-                     releaseIndex < releaseCount;
-                     releaseIndex++)
-                {
-                    AnimationPlayerReleaseToken playerRelease =
-                        player.PrepareRelease(releaseIndex);
-                    CharacterPoseSourceRetirementHandle sourceRelease =
-                        PrepareSourceRetirement(
-                            playerRelease.SourceId,
-                            player.NodeId,
-                            default);
-                    ActorState.SourceRetirement.PrepareClip(
-                        i,
-                        in sourceRelease,
-                        in playerRelease);
-                }
-            }
-            for (int i = 0;
-                 i < ActorState.PoseStateSources.BlendSpacePlayers.Length;
-                 i++)
-            {
-                AnimationBlendSpacePlayerRuntime player =
-                    ActorState.PoseStateSources.BlendSpacePlayers[i];
-                int releaseCount = player.PendingReleaseCount;
-                standaloneReleaseCount = checked(
-                    standaloneReleaseCount + releaseCount);
-                for (int releaseIndex = 0;
-                     releaseIndex < releaseCount;
-                     releaseIndex++)
-                {
-                    AnimationPlayerReleaseToken playerRelease =
-                        player.PrepareRelease(releaseIndex);
-                    CharacterPoseSourceRetirementHandle sourceRelease =
-                        PrepareSourceRetirement(
-                            playerRelease.SourceId,
-                            player.NodeId,
-                            default);
-                    ActorState.SourceRetirement.PrepareBlendSpace(
-                        i,
-                        in sourceRelease,
-                        in playerRelease);
-                }
-            }
-            int preparedActionReleaseCount =
-                ActorState.SourceRetirement.PreparePendingRetirements(
-                    m_SourceModule);
-            m_SourceModule.RequireReleaseDiagnosticsCapacity(
-                checked(
-                    standaloneReleaseCount +
-                    ActorState.SourceRetirement.PendingPoseCount +
-                    preparedActionReleaseCount));
-            m_SourceModule.RequireActionBackendReleaseCompletionCapacity(
-                checked(preparedActionReleaseCount * 2));
-            m_SourceModule.ValidateFrame(sourceLease);
+            m_SourceRetirement.Validate(sourceLease);
         }
 
         internal void FinalizeCommittedSourceRetirements(
             ulong completionIdentity)
         {
             RequireAlive();
-            ActorState.SourceRetirement.ApplyStandalone(
-                m_SourceModule,
-                ActorState.DirectPlayers,
-                ActorState.PoseStateSources.ClipPlayers,
-                ActorState.PoseStateSources.BlendSpacePlayers,
-                completionIdentity);
-            ActorState.SourceRetirement.ApplyPendingPose(m_SourceModule);
+            m_SourceRetirement.FinalizeCommitted(completionIdentity);
         }
 
         internal void ReleaseCompletedSources(ulong completionIdentity)
         {
             RequireAlive();
-            for (int stackIndex = 0;
-                 stackIndex < ActorState.Stacks.Length;
-                 stackIndex++)
-            {
-                AnimationBlendStackRuntime stack =
-                    ActorState.Stacks[stackIndex];
-                CharacterAnimationTransitionRouteRuntime route =
-                    ActorState.Routes[stackIndex];
-                if (!route.CanReleaseSources)
-                    continue;
-                bool releasedAny = false;
-                int releaseCount = stack.PendingReleaseCount;
-                for (int releaseIndex = 0;
-                     releaseIndex < releaseCount;
-                     releaseIndex++)
-                {
-                    AnimationBlendStackSourceReleaseToken stackRelease =
-                        stack.PrepareRelease(
-                            releaseIndex,
-                            completionIdentity);
-                    AnimationBlendStackRelease release =
-                        stackRelease.Release;
-                    CharacterPoseSourceRetirementHandle sourceRelease =
-                        PrepareSourceRetirement(
-                            release.SourceId,
-                            release.PoseNodeId,
-                            default);
-                    m_SourceModule.ApplyRetirement(in sourceRelease);
-                    stack.ApplyPreparedRelease(in stackRelease);
-                    releasedAny = true;
-                }
-                if (releasedAny)
-                    route.NotifySourcesReleased();
-            }
+            m_SourceRetirement.ReleaseCompleted(completionIdentity);
         }
 
         internal void ReleasePlayerSources()
         {
             RequireAlive();
-            for (int i = 0; i < ActorState.DirectPlayers.Length; i++)
-                ReleasePlayerSources(ActorState.DirectPlayers[i]);
-            for (int i = 0;
-                 i < ActorState.PoseStateSources.ClipPlayers.Length;
-                 i++)
-            {
-                ReleasePlayerSources(
-                    ActorState.PoseStateSources.ClipPlayers[i]);
-            }
-            for (int i = 0;
-                 i < ActorState.PoseStateSources.BlendSpacePlayers.Length;
-                 i++)
-            {
-                ReleasePlayerSources(
-                    ActorState.PoseStateSources.BlendSpacePlayers[i]);
-            }
-        }
-
-        void ReleasePlayerSources(AnimationSelectedPosePlayerRuntime player)
-        {
-            int releaseCount = player.PendingReleaseCount;
-            for (int releaseIndex = 0;
-                 releaseIndex < releaseCount;
-                 releaseIndex++)
-            {
-                AnimationPlayerReleaseToken playerRelease =
-                    player.PrepareRelease(releaseIndex);
-                CharacterPoseSourceRetirementHandle sourceRelease =
-                    PrepareSourceRetirement(
-                        playerRelease.SourceId,
-                        player.NodeId,
-                        default);
-                m_SourceModule.ApplyRetirement(in sourceRelease);
-                player.ApplyPreparedRelease(in playerRelease);
-            }
-        }
-
-        void ReleasePlayerSources(AnimationClipPlayerRuntime player)
-        {
-            int releaseCount = player.PendingReleaseCount;
-            for (int releaseIndex = 0;
-                 releaseIndex < releaseCount;
-                 releaseIndex++)
-            {
-                AnimationPlayerReleaseToken playerRelease =
-                    player.PrepareRelease(releaseIndex);
-                CharacterPoseSourceRetirementHandle sourceRelease =
-                    PrepareSourceRetirement(
-                        playerRelease.SourceId,
-                        player.NodeId,
-                        default);
-                m_SourceModule.ApplyRetirement(in sourceRelease);
-                player.ApplyPreparedRelease(in playerRelease);
-            }
-        }
-
-        void ReleasePlayerSources(AnimationBlendSpacePlayerRuntime player)
-        {
-            int releaseCount = player.PendingReleaseCount;
-            for (int releaseIndex = 0;
-                 releaseIndex < releaseCount;
-                 releaseIndex++)
-            {
-                AnimationPlayerReleaseToken playerRelease =
-                    player.PrepareRelease(releaseIndex);
-                CharacterPoseSourceRetirementHandle sourceRelease =
-                    PrepareSourceRetirement(
-                        playerRelease.SourceId,
-                        player.NodeId,
-                        default);
-                m_SourceModule.ApplyRetirement(in sourceRelease);
-                player.ApplyPreparedRelease(in playerRelease);
-            }
-        }
-
-        CharacterPoseSourceRetirementHandle PrepareSourceRetirement(
-            AnimationPoseSourceId sourceId,
-            PoseNodeId poseNodeId,
-            AnimationPhysicalSourceIdentity expectedPhysicalIdentity)
-        {
-            var permission = new CharacterPoseSourceRetirementPermission(
-                sourceId,
-                poseNodeId,
-                expectedPhysicalIdentity);
-            return m_SourceModule.PrepareRetirement(in permission);
+            m_SourceRetirement.ReleasePlayers();
         }
 
         internal void BindEvaluationExecution(
@@ -1537,148 +936,11 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 lineage.TuningGeneration,
                 in finalOutput,
                 recordDiagnostics);
-            InstallOrUpdateJobs();
+            m_SourcePreparation.InstallOrUpdateJobs();
         }
 
-        internal void DetachExecutionJobs()
-        {
-            if (!m_JobsInstalled ||
-                !m_Animancer ||
-                !m_Animancer.IsGraphInitialized)
-            {
-                return;
-            }
-            for (int i = m_SlotPlayables.Length - 1; i >= 0; i--)
-                AnimancerUtilities.RemovePlayable(m_SlotPlayables[i]);
-            for (int i = m_DirectPlayerPlayables.Length - 1; i >= 0; i--)
-                AnimancerUtilities.RemovePlayable(m_DirectPlayerPlayables[i]);
-            for (int i = m_ClipPlayerPlayables.Length - 1; i >= 0; i--)
-                AnimancerUtilities.RemovePlayable(m_ClipPlayerPlayables[i]);
-            for (int i = m_BlendSpacePlayerPlayables.Length - 1;
-                 i >= 0;
-                 i--)
-            {
-                AnimancerUtilities.RemovePlayable(
-                    m_BlendSpacePlayerPlayables[i]);
-            }
-            m_JobsInstalled = false;
-        }
-
-        void StageCompletedSources(ulong completionIdentity)
-        {
-            if (ActorState.SourceRetirement.PendingPoseCount != 0)
-            {
-                throw new InvalidOperationException(
-                    "Pose source releases from the previous committed frame were not finalized.");
-            }
-            for (int stackIndex = 0;
-                 stackIndex < ActorState.Stacks.Length;
-                 stackIndex++)
-            {
-                AnimationBlendStackRuntime stack =
-                    ActorState.Stacks[stackIndex];
-                CharacterAnimationTransitionRouteRuntime route =
-                    ActorState.Routes[stackIndex];
-                if (!route.CanReleaseSources)
-                    continue;
-                int releaseCount = stack.PendingPriorFrameReleaseCount(
-                    completionIdentity);
-                for (int releaseIndex = 0;
-                     releaseIndex < releaseCount;
-                     releaseIndex++)
-                {
-                    AnimationBlendStackSourceReleaseToken stackRelease =
-                        stack.PrepareRelease(
-                            releaseIndex,
-                            completionIdentity);
-                    AnimationBlendStackRelease release =
-                        stackRelease.Release;
-                    AnimationPhysicalSourceIdentity physical =
-                        m_SourceModule.RequireIdentity(
-                            release.SourceId,
-                            release.PoseNodeId);
-                    if (route.IsAnimationSlot &&
-                        CharacterPoseProgramSourceRetirementState
-                            .IsFiniteActionSource(release.SourceId))
-                    {
-                        ActorState.SourceRetirement.StageAction(
-                            m_SourceModule,
-                            route.SlotId,
-                            stack,
-                            route,
-                            in stackRelease,
-                            physical);
-                        continue;
-                    }
-                    ActorState.SourceRetirement.StagePose(
-                        m_SourceModule,
-                        stack,
-                        route,
-                        in stackRelease,
-                        physical);
-                }
-            }
-        }
-
-        void InstallOrUpdateJobs()
-        {
-            if (!m_JobsInstalled)
-            {
-                m_BlendSpacePlayerPlayables =
-                    new AnimationScriptPlayable[
-                        m_BlendSpacePlayerJobs.Length];
-                for (int i = 0;
-                     i < m_BlendSpacePlayerJobs.Length;
-                     i++)
-                {
-                    m_BlendSpacePlayerPlayables[i] =
-                        m_Animancer.Graph.InsertOutputJob(
-                            m_BlendSpacePlayerJobs[i]);
-                    m_BlendSpacePlayerPlayables[i].SetProcessInputs(true);
-                }
-                m_ClipPlayerPlayables =
-                    new AnimationScriptPlayable[m_ClipPlayerJobs.Length];
-                for (int i = 0; i < m_ClipPlayerJobs.Length; i++)
-                {
-                    m_ClipPlayerPlayables[i] =
-                        m_Animancer.Graph.InsertOutputJob(
-                            m_ClipPlayerJobs[i]);
-                    m_ClipPlayerPlayables[i].SetProcessInputs(true);
-                }
-                m_DirectPlayerPlayables =
-                    new AnimationScriptPlayable[m_DirectPlayerJobs.Length];
-                for (int i = 0; i < m_DirectPlayerJobs.Length; i++)
-                {
-                    m_DirectPlayerPlayables[i] =
-                        m_Animancer.Graph.InsertOutputJob(
-                            m_DirectPlayerJobs[i]);
-                    m_DirectPlayerPlayables[i].SetProcessInputs(true);
-                }
-                m_SlotPlayables =
-                    new AnimationScriptPlayable[m_SlotJobs.Length];
-                for (int i = 0; i < m_SlotJobs.Length; i++)
-                {
-                    m_SlotPlayables[i] =
-                        m_Animancer.Graph.InsertOutputJob(m_SlotJobs[i]);
-                    m_SlotPlayables[i].SetProcessInputs(true);
-                }
-                m_JobsInstalled = true;
-                return;
-            }
-            for (int i = 0;
-                 i < m_BlendSpacePlayerJobs.Length;
-                 i++)
-            {
-                m_BlendSpacePlayerPlayables[i].SetJobData(
-                    m_BlendSpacePlayerJobs[i]);
-            }
-            for (int i = 0; i < m_ClipPlayerJobs.Length; i++)
-                m_ClipPlayerPlayables[i].SetJobData(m_ClipPlayerJobs[i]);
-            for (int i = 0; i < m_DirectPlayerJobs.Length; i++)
-                m_DirectPlayerPlayables[i].SetJobData(m_DirectPlayerJobs[i]);
-            for (int i = 0; i < m_SlotJobs.Length; i++)
-                m_SlotPlayables[i].SetJobData(m_SlotJobs[i]);
-        }
+        internal void DetachExecutionJobs() =>
+            m_SourcePreparation.DetachJobs();
 
         internal void CommitEvaluationFrame(
             CharacterPoseProgramFrameLease lease,
@@ -1822,10 +1084,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             Executor.BeginEvaluation(
                 state.Lineage.PresentationFrame);
             CharacterPoseProgramOutputResult output;
-            if (m_HasSequencePreview)
+            if (m_SourcePreparation.HasSequencePreview)
             {
                 output = Executor.ExecuteSequencePreview(
-                    m_SequencePreviewOperationIndex);
+                    m_SourcePreparation.SequencePreviewOperationIndex);
             }
             else
             {

@@ -1159,3 +1159,9 @@ Foot诊断事件identity、interest查询、字段来源、发布时机和最终
 状态：`PosePlanExecutionRuntime`及其meta已删除。唯一`CharacterAnimationPresentationRuntime`现在直接装配`CharacterPoseRuntimeComposition`、Tuning Coordinator、Frame Coordinator和Motion Matching Coordinator，并只按固定根帧顺序调用Program、Source、Constraint、Final Publication与Diagnostics模块；不再经过第二个同构外层转发Action、Frame、Reset、Diagnostics或Source生命周期。
 
 旧外层的存活检查由公开Runtime保留，根Frame lease检查由Frame Coordinator保留，Program Action的frame检查仍由Program Action模块保留；Reset、提交、丢弃、Evaluate Barrier、物理发布与释放顺序逐项原样迁入唯一根协调链。全仓可编译源码已无`PosePlanExecutionRuntime`及旧Event Sink接口，任务14.1完成。3C MCP完成全脚本重编且C#错误为0，不单独运行回放。
+
+## 拆出Program Source准备与退休模块
+
+状态：新增`CharacterPoseProgramSourcePreparationRuntime`与`CharacterPoseProgramSourceRetirementRuntime`。前者唯一持有Clip／BlendSpace／Direct／Slot采样Job和Playable安装状态，并接管Sequence Preview、Source Preparation与Job绑定；后者唯一解释Player／Stack的待退休Source、物理Source permission、Action backend release和Committed后释放。`CharacterPoseProgramRuntime`只保留根Program lease验证与两个模块的窄调用。
+
+Stack、Direct、Clip、BlendSpace的准备顺序，旧Source识别、Job插入顺序、先Stage再验证再Committed释放的生命周期以及Reset释放顺序均保持不变；Source Module仍是物理资源Owner，Program Actor State仍是节点连续状态Owner。Program Runtime由2252行降至1514行。3C MCP完成全脚本重编且C#错误为0，不单独运行回放。

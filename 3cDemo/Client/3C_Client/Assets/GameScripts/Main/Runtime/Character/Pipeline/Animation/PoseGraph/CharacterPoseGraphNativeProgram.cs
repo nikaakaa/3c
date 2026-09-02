@@ -783,6 +783,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             CharacterAnimationRigPayload rig,
             AnimationBlendCurveCatalogPayload curves,
             AnimationBlendProfileCatalogPayload profiles,
+            AnimationPoseNativeWorkspace workspace,
             in AnimationPoseNativeAggregateLayout layout)
         {
             try
@@ -795,11 +796,18 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                     throw new ArgumentNullException(nameof(curves));
                 if (profiles == null)
                     throw new ArgumentNullException(nameof(profiles));
+                if (workspace == null)
+                    throw new ArgumentNullException(nameof(workspace));
                 program.RequireValid();
                 rig.RequireValid();
                 curves.RequireValid();
                 profiles.RequireValid(program.PoseBoneCount, rig.RigId, rig.RigRevision);
                 layout.RequireValid();
+                AnimationPoseNativeAggregateLayout workspaceLayout =
+                    workspace.Layout;
+                RequireDiagnosticsLayout(
+                    in workspaceLayout,
+                    in layout);
                 if (!string.Equals(program.RigId, rig.RigId, StringComparison.Ordinal) ||
                     !string.Equals(program.RigRevision, rig.RigRevision, StringComparison.Ordinal) ||
                     program.PoseBoneCount != rig.PoseBoneCount || program.Parameters.Count <= 0 ||
@@ -881,7 +889,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                     program.RootOrientationWarps.Count,
                     program.LinkedPoseCalls.Count,
                     program.LinkedPoseFragments.Count,
-                    in layout);
+                    workspace);
 
                 CompileRig(program, rig);
                 CompileBlendCatalogs(curves, profiles);
@@ -899,6 +907,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         }
 
         internal int PoseBoneCount => m_BoneCount;
+        internal CharacterPoseProgramFramePages FramePages =>
+            m_FramePages ??
+            throw new InvalidOperationException(
+                "Character Pose Program frame pages are missing.");
         internal int ParameterCount => m_ParameterCount;
         internal int PoseValueCount => m_PoseValueCount;
         internal int FootPlacementCount => m_FootPlacementCount;

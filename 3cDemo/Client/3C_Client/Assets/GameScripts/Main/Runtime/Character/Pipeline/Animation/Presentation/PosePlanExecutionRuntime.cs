@@ -181,7 +181,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
 
         readonly AnimancerComponent m_Animancer;
         readonly CharacterPresentationProjection m_Projection;
-        readonly AnimationPoseNativeWorkspace m_Workspace;
+        readonly CharacterPoseProgramFramePages m_ProgramFrames;
         readonly CharacterPoseGraphNativeProgram m_PosePlan;
         readonly CharacterPoseConstraintRuntime m_PoseConstraints;
         readonly PoseInertializationNativeProgram m_InertializationPlan;
@@ -294,6 +294,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                     .RequireClipCatalogCapacity(projection);
 
             AnimationPoseNativeWorkspace workspace = null;
+            CharacterPoseProgramFramePages programFrames = null;
             CharacterPoseGraphNativeProgram poseProgram = null;
             CharacterFinalIkFullBodySolver fullBodyIkSolver = null;
             CharacterPoseConstraintRuntime poseConstraints = null;
@@ -320,7 +321,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                     projection.Rig,
                     projection.BlendCurveCatalog,
                     projection.BlendProfileCatalog,
+                    workspace,
                     in initialLayout);
+                programFrames = poseProgram.FramePages;
+                workspace = null;
                 if (projection.PosePlan.FullBodyIks.Count != 1)
                     throw new InvalidOperationException(
                         "Pose Plan requires exactly one Full Body IK descriptor.");
@@ -373,7 +377,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                             $"Pose State Blend Stack '{operation.NodeId}' has no compiled provider identity.");
                     }
                     AnimationPlayerPoseNativeWriteBinding initialWrite =
-                        workspace.RequirePlayerWriteBinding(operation.PlayerIndex, initialFrame.CompletionIdentity);
+                        programFrames.RequirePlayerWriteBinding(
+                            operation.PlayerIndex,
+                            initialFrame.CompletionIdentity);
                     var stack = new AnimationBlendStackRuntime(
                         blendNode,
                         route.IsAnimationSlot
@@ -512,7 +518,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                     blendSpacePlayers.Length);
                 if (managesGraphClock)
                     animancer.Graph.PauseGraph();
-                workspace.DiscardFrame(initialFrame.CompletionIdentity);
+                programFrames.DiscardEvaluationFrame(
+                    initialFrame.CompletionIdentity);
             }
             catch
             {
@@ -545,7 +552,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                 throw;
             }
 
-            m_Workspace = workspace;
+            m_ProgramFrames = programFrames;
             m_PosePlan = poseProgram;
             m_PoseConstraints = poseConstraints;
             m_InertializationPlan = inertializationProgram;
@@ -739,7 +746,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                 int samplingJournalCapacity,
                 int slotJournalCapacity) =>
             new AnimationPresentationRuntimeCapacityMetrics(
-                m_Workspace.DenseDoublePageResidentPayloadBytes,
+                m_ProgramFrames.DenseDoublePageResidentPayloadBytes,
                 PoseInertializationNativeProgramPayloadMetrics
                     .CalculateDoublePageResidentPayloadBytes(
                         m_InertializationPlan),
@@ -903,7 +910,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                 throw new InvalidOperationException(
                     "Pose Plan frame has no completed Native page to commit.");
             }
-            m_Workspace.CommitFrame(
+            m_ProgramFrames.CommitEvaluationFrame(
                 m_PendingCompletedFrame.CompletionIdentity);
             m_InertializationPlan.CommitFrame();
             m_PosePlan.CommitFrame();
@@ -1066,12 +1073,12 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                 if (warp.HasOpenFrame)
                     DiscardStep(warp.DiscardFrame, ref failure);
             }
-            if (m_Workspace.HasPendingFrame)
+            if (m_ProgramFrames.HasPendingEvaluationFrame)
             {
                 ulong pendingCompletionIdentity =
-                    m_Workspace.PendingCompletionIdentity;
+                    m_ProgramFrames.PendingEvaluationCompletionIdentity;
                 DiscardStep(
-                    () => m_Workspace.DiscardFrame(
+                    () => m_ProgramFrames.DiscardEvaluationFrame(
                         pendingCompletionIdentity),
                     ref failure);
             }
@@ -1408,7 +1415,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                 m_LastCompletedFrame.CompletionIdentity == 0 ||
                 executionResult.Lineage.CompletionIdentity !=
                 m_LastCompletedFrame.CompletionIdentity ||
-                !m_Workspace.TryGetCommittedFinalReadBinding(
+                !m_ProgramFrames.TryGetCommittedFinalReadBinding(
                     out AnimationFinalPoseNativeReadBinding finalRead) ||
                 finalRead.CompletionIdentity != m_LastCompletedFrame.CompletionIdentity)
             {
@@ -1962,7 +1969,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                     nameof(providerSourceSamples));
 
             bool hasCommittedFinal =
-                m_Workspace.TryGetCommittedFinalReadBinding(
+                m_ProgramFrames.TryGetCommittedFinalReadBinding(
                     out AnimationFinalPoseNativeReadBinding committedFinalRead);
 
             ulong completionIdentity =
@@ -1975,7 +1982,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                 m_SourceModule.ClearActionSlotReleaseCompletions();
                 using (PrepareWorkspaceMarker.Auto())
                 {
-                    frame = m_Workspace.BeginFrame(completionIdentity);
+                    frame = m_ProgramFrames.BeginEvaluationFrame(
+                        completionIdentity);
                     for (int i = 0; i < m_Stacks.Length; i++)
                         m_Stacks[i].BeginSourceFrame(completionIdentity);
                     for (int i = 0; i < m_DirectPlayers.Length; i++)
@@ -2065,7 +2073,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                 {
                     AnimationBlendStackRuntime stack = m_Stacks[slotIndex];
                     AnimationPlayerPoseNativeWriteBinding write =
-                        m_Workspace.RequirePlayerWriteBinding(stack.PlayerIndex, completionIdentity);
+                        m_ProgramFrames.RequirePlayerWriteBinding(
+                            stack.PlayerIndex,
+                            completionIdentity);
                     m_SlotJobs[slotIndex] = stack.PrepareSlotJob(
                         completionIdentity,
                         in write,
@@ -2082,7 +2092,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                 {
                     AnimationSelectedPosePlayerRuntime player = m_DirectPlayers[playerIndex];
                     AnimationPlayerPoseNativeWriteBinding write =
-                        m_Workspace.RequirePlayerWriteBinding(player.PlayerIndex, completionIdentity);
+                        m_ProgramFrames.RequirePlayerWriteBinding(
+                            player.PlayerIndex,
+                            completionIdentity);
                     CharacterPoseSourceBinding sourceBinding =
                         preparedSources.RequireDirectBinding(
                             playerIndex);
@@ -2101,7 +2113,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                         m_PoseStateSources.ClipPlayers[
                             playerIndex];
                     AnimationPlayerPoseNativeWriteBinding write =
-                        m_Workspace.RequirePlayerWriteBinding(player.PlayerIndex, completionIdentity);
+                        m_ProgramFrames.RequirePlayerWriteBinding(
+                            player.PlayerIndex,
+                            completionIdentity);
                     CharacterPoseSourceBinding sourceBinding =
                         preparedSources.RequireClipBinding(
                             playerIndex);
@@ -2120,7 +2134,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                         m_PoseStateSources.BlendSpacePlayers[
                             playerIndex];
                     AnimationPlayerPoseNativeWriteBinding write =
-                        m_Workspace.RequirePlayerWriteBinding(
+                    m_ProgramFrames.RequirePlayerWriteBinding(
                             player.PlayerIndex,
                             completionIdentity);
                     CharacterPoseSourceBinding sourceBinding =
@@ -2136,11 +2150,13 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                 poseExecutor = new CharacterPoseGraphStagedExecutor(
                     m_PosePlan,
                     m_InertializationPlan,
-                    m_Workspace.RequirePoseGraphBinding(completionIdentity),
+                    m_ProgramFrames.RequirePoseGraphBinding(
+                        completionIdentity),
                     m_PoseConstraints,
                     recordDiagnostics);
                 finalRead =
-                    m_Workspace.RequireFinalReadBinding(completionIdentity);
+                    m_ProgramFrames.RequireFinalReadBinding(
+                        completionIdentity);
                 InstallOrUpdateJobs();
                 m_FramePublisher.ValidateWriterBeforeEvaluate(
                     in finalRead,
@@ -2200,8 +2216,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                     nameof(factFrame));
             if (!prepared.IsValid ||
                 prepared.Lineage.CompletionIdentity != m_FrameCompletionContext ||
-                !m_Workspace.HasPendingFrame ||
-                m_Workspace.PendingCompletionIdentity != prepared.Lineage.CompletionIdentity)
+                !m_ProgramFrames.HasPendingEvaluationFrame ||
+                m_ProgramFrames.PendingEvaluationCompletionIdentity !=
+                    prepared.Lineage.CompletionIdentity)
             {
                 throw new ArgumentException(
                     "Pose Plan prepared evaluation is not the active Pending frame.",
@@ -2268,7 +2285,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                     }
                     poseExecutor.CompleteStagedEvaluation();
                 }
-                m_Workspace.RequireStagesCompleted(completionIdentity);
+                m_ProgramFrames.RequireEvaluationStagesCompleted(
+                    completionIdentity);
             }
             CharacterPoseFrameLineage completedLineage =
                 prepared.Lineage;
@@ -2292,7 +2310,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                     hasCommittedFinal,
                     in committedFinalRead);
                 AnimationFinalPoseWriteOutcome finalWriteOutcome =
-                    m_Workspace.RequireFinalWriteOutcome(
+                    m_ProgramFrames.RequireFinalWriteOutcome(
                         completionIdentity);
                 m_PendingFrameOutcome = finalWriteOutcome switch
                 {
@@ -2435,7 +2453,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                     constraint);
             }
             AnimationPoseValueNativeReadBinding inputBinding =
-                m_Workspace.RequirePoseValueReadBinding(
+                m_ProgramFrames.RequirePoseValueReadBinding(
                     operation.InputValueIndexA,
                     completionIdentity);
             int contributionCount =
@@ -2745,7 +2763,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             }
             DisposeStep(m_PosePlan.Dispose, ref failure);
             DisposeStep(m_InertializationPlan.Dispose, ref failure);
-            DisposeStep(m_Workspace.Dispose, ref failure);
             DisposeStep(RestoreGraphClock, ref failure);
             if (failure != null)
                 throw failure;

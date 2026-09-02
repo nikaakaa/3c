@@ -641,3 +641,11 @@ Unity普通Assets Refresh把新增文件写入正式Runtime工程；补齐现有
 状态：`CharacterPoseProgramFramePages`继续接管预分配Committed Program Diagnostics页、单调发布identity、下一帧Begin失效和Dispose失效。`CharacterPoseGraphNativeProgram`已删除嵌套`CommittedDiagnosticsPage`、页字段与diagnostics identity计数，只保留按现有字段语义从已完成Frame复制数据的投影过程；`CharacterPoseProgramCommittedDiagnosticsView`直接租用Frame Pages持有的同一页，不建立第二Snapshot或复制Owner。
 
 诊断interest分组、Operation Completion、StateMachine骨骼权重、Slot Contribution、Value header／Contribution／dense weight／Pose的冻结条件与遍历顺序未改。任务5.5仍不勾选，因为Program Value、Operation Completion的运行写页和Source Demand输出尚未归入Frame Pages；本步只闭合Committed diagnostics物理页与租约寿命。`ThirdPersonClient.Runtime.csproj`按规定参数编译成功，0错误，构建服务器已关闭；不单独运行回放。
+
+## Program Value与Operation Completion Workspace归还Frame Pages
+
+状态：`CharacterPoseProgramFramePages`现在唯一持有并销毁原`AnimationPoseNativeWorkspace`实现，向Program执行链提供Current Value、Player写页、Operation／Stage Completion、Pose Graph失败、Final Read／Write outcome和Committed Final只读绑定。`PosePlanExecutionRuntime`已删除`m_Workspace`字段与独立Dispose，只保存正式`m_ProgramFrames`引用；构造时创建Workspace、取得初始layout并交给旧Native Program后立即清空局部引用，正常帧不再存在Frame Pages之外的Workspace Owner。
+
+旧`CharacterPoseGraphNativeProgram`构造时验证传入Workspace与自身layout完全一致，并把同一Workspace交给Frame Pages；其Dispose只通过Frame Pages完成一次释放。Begin／RequireStagesCompleted／Commit／Discard、Player／Value／Final binding与容量统计仍调用原Workspace实现，数据布局、清零顺序、completion identity和双页交换没有改变。本步没有建立第二Value页或兼容入口。
+
+`ThirdPersonClient.Runtime.csproj`按规定参数编译成功，0错误，构建服务器已关闭。任务5.5暂不勾选，只剩Program-owned Source Demand／Preparation输出仍由外层字段持有；该页迁入后再按完整Owner闭包判断。

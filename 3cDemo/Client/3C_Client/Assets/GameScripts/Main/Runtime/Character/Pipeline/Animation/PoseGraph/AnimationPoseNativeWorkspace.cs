@@ -320,6 +320,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         internal bool HasPendingFrame =>
             m_CurrentCompletionIdentity != 0;
 
+        internal AnimationPoseNativeAggregateLayout Layout => m_Layout;
+
         internal ulong PendingCompletionIdentity =>
             m_CurrentCompletionIdentity;
         internal long DenseDoublePageResidentPayloadBytes =>

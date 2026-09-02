@@ -88,6 +88,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         Page m_Committed;
         Page m_Pending;
         Page m_Active;
+        AnimationPoseNativeWorkspace m_Workspace;
         CommittedDiagnosticsPage m_CommittedDiagnostics;
         ulong m_NextDiagnosticsIdentity = 1;
         bool m_FrameOpen;
@@ -99,7 +100,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             int rootOrientationWarpCount,
             int linkedPoseCallCount,
             int linkedPoseFragmentCount,
-            in AnimationPoseNativeAggregateLayout diagnosticsLayout)
+            AnimationPoseNativeWorkspace workspace)
         {
             if (stateMachineCount < 0 ||
                 animationSlotCount < 0 ||
@@ -109,6 +110,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             {
                 throw new ArgumentOutOfRangeException();
             }
+            m_Workspace = workspace ??
+                throw new ArgumentNullException(nameof(workspace));
             try
             {
                 m_Committed = AllocatePage(
@@ -124,6 +127,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                     linkedPoseCallCount,
                     linkedPoseFragmentCount);
                 m_Active = m_Committed;
+                AnimationPoseNativeAggregateLayout diagnosticsLayout =
+                    m_Workspace.Layout;
                 m_CommittedDiagnostics = new CommittedDiagnosticsPage(
                     in diagnosticsLayout,
                     stateMachineCount);
@@ -147,6 +152,12 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         internal NativeArray<byte> LinkedPoseActiveFragments =>
             RequireActive().LinkedPoseActiveFragments;
         internal bool HasOpenFrame => m_FrameOpen;
+        internal bool HasPendingEvaluationFrame =>
+            m_Workspace.HasPendingFrame;
+        internal ulong PendingEvaluationCompletionIdentity =>
+            m_Workspace.PendingCompletionIdentity;
+        internal long DenseDoublePageResidentPayloadBytes =>
+            m_Workspace.DenseDoublePageResidentPayloadBytes;
         internal CommittedDiagnosticsPage CommittedDiagnostics =>
             m_CommittedDiagnostics ??
             throw new InvalidOperationException(
@@ -185,6 +196,54 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             m_FrameOpen = false;
         }
 
+        internal CharacterPoseGraphNativeBinding BeginEvaluationFrame(
+            ulong completionIdentity) =>
+            m_Workspace.BeginFrame(completionIdentity);
+
+        internal void RequireEvaluationStagesCompleted(
+            ulong completionIdentity) =>
+            m_Workspace.RequireStagesCompleted(completionIdentity);
+
+        internal void CommitEvaluationFrame(ulong completionIdentity) =>
+            m_Workspace.CommitFrame(completionIdentity);
+
+        internal void DiscardEvaluationFrame(ulong completionIdentity) =>
+            m_Workspace.DiscardFrame(completionIdentity);
+
+        internal bool TryGetCommittedFinalReadBinding(
+            out AnimationFinalPoseNativeReadBinding binding) =>
+            m_Workspace.TryGetCommittedFinalReadBinding(out binding);
+
+        internal AnimationPlayerPoseNativeWriteBinding
+            RequirePlayerWriteBinding(
+                int physicalSlotIndex,
+                ulong completionIdentity) =>
+            m_Workspace.RequirePlayerWriteBinding(
+                physicalSlotIndex,
+                completionIdentity);
+
+        internal CharacterPoseGraphNativeBinding RequirePoseGraphBinding(
+            ulong completionIdentity) =>
+            m_Workspace.RequirePoseGraphBinding(completionIdentity);
+
+        internal AnimationPoseValueNativeReadBinding RequirePoseValueReadBinding(
+            int valueIndex,
+            ulong completionIdentity) =>
+            m_Workspace.RequirePoseValueReadBinding(
+                valueIndex,
+                completionIdentity);
+
+        internal AnimationFinalPoseNativeReadBinding RequireFinalReadBinding(
+            ulong completionIdentity) =>
+            m_Workspace.RequireFinalReadBinding(completionIdentity);
+
+        internal AnimationFinalPoseWriteOutcome RequireFinalWriteOutcome(
+            ulong completionIdentity) =>
+            m_Workspace.RequireFinalWriteOutcome(completionIdentity);
+
+        internal PoseNodeId RequirePoseNodeId(int physicalSlotIndex) =>
+            m_Workspace.RequirePoseNodeId(physicalSlotIndex);
+
         internal ulong PublishCommittedDiagnostics()
         {
             RequireAlive();
@@ -205,6 +264,14 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         internal void RequireValid()
         {
             RequireAlive();
+            if (m_Workspace == null)
+            {
+                throw new InvalidOperationException(
+                    "Character Pose Program evaluation workspace is missing.");
+            }
+            AnimationPoseNativeAggregateLayout workspaceLayout =
+                m_Workspace.Layout;
+            workspaceLayout.RequireValid();
             Page committed = m_Committed ??
                 throw new InvalidOperationException(
                     "Character Pose Program committed frame page is missing.");
@@ -241,6 +308,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 m_CommittedDiagnostics.Result = default;
                 m_CommittedDiagnostics = null;
             }
+            m_Workspace?.Dispose();
+            m_Workspace = null;
             DisposePage(m_Pending);
             DisposePage(m_Committed);
             m_Active = null;

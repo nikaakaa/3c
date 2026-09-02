@@ -1165,3 +1165,9 @@ Foot诊断事件identity、interest查询、字段来源、发布时机和最终
 状态：新增`CharacterPoseProgramSourcePreparationRuntime`与`CharacterPoseProgramSourceRetirementRuntime`。前者唯一持有Clip／BlendSpace／Direct／Slot采样Job和Playable安装状态，并接管Sequence Preview、Source Preparation与Job绑定；后者唯一解释Player／Stack的待退休Source、物理Source permission、Action backend release和Committed后释放。`CharacterPoseProgramRuntime`只保留根Program lease验证与两个模块的窄调用。
 
 Stack、Direct、Clip、BlendSpace的准备顺序，旧Source识别、Job插入顺序、先Stage再验证再Committed释放的生命周期以及Reset释放顺序均保持不变；Source Module仍是物理资源Owner，Program Actor State仍是节点连续状态Owner。Program Runtime由2252行降至1514行。3C MCP完成全脚本重编且C#错误为0，不单独运行回放。
+
+## 根Frame Transaction一致性审计
+
+状态：可编译源码中只有`CharacterAnimationPresentationRuntime`构造并持有`CharacterPoseFrameTransaction`。它只生成lineage与typed lease，按Action、Pose Advance、Motion Matching、Source Demand、Prepare、Evaluate Barrier、Release、Seal和Post-Commit的固定顺序调用模块；Operation、Native offset、Program Frame页、Foot Context、Goal页、FBBIK状态、Source物理页与Physical Bone字段均未进入根协调代码。
+
+Program、Source、Constraint与Final Publication的Begin／Result／Seal都由`CharacterPoseFrameCoordinator`按同一lineage和Tuning Generation校验；Barrier前仍执行可回滚Discard，进入Barrier后仍丢弃Constraint／Publication Pending页并把Actor标记Faulted，物理Writer后的Seal路径没有新增业务计算。任务9.1至9.4完成。

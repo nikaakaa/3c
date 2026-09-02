@@ -95,10 +95,10 @@
 
 ## 9. 收窄唯一动画表现协调根
 
-- [ ] 9.1 在Program、Source、Constraint与Final Publication全部接通后，让`CharacterAnimationPresentationRuntime`唯一拥有根Frame Transaction，只创建Frame Lease、按固定阶段调用Module、传播Outcome并执行唯一Seal/Discard/Fault
-- [ ] 9.2 删除协调根对Native offset、Operation字段、Program Frame页、Foot Context、Goal页、FBBIK状态、source资源页和Physical Bone业务字段的读取
-- [ ] 9.3 让全部Module只提交同一Frame lineage与Tuning Generation并由根事务统一提升，不允许Module自行提前Seal
-- [ ] 9.4 对账Barrier前Discard、Barrier内/后Fault和Writer后no-throw Seal，确保收窄根Runtime不改变失败政策
+- [x] 9.1 在Program、Source、Constraint与Final Publication全部接通后，让`CharacterAnimationPresentationRuntime`唯一拥有根Frame Transaction，只创建Frame Lease、按固定阶段调用Module、传播Outcome并执行唯一Seal/Discard/Fault
+- [x] 9.2 删除协调根对Native offset、Operation字段、Program Frame页、Foot Context、Goal页、FBBIK状态、source资源页和Physical Bone业务字段的读取
+- [x] 9.3 让全部Module只提交同一Frame lineage与Tuning Generation并由根事务统一提升，不允许Module自行提前Seal
+- [x] 9.4 对账Barrier前Discard、Barrier内/后Fault和Writer后no-throw Seal，确保收窄根Runtime不改变失败政策
 
 ## 10. 建立唯一Node Definition Module
 

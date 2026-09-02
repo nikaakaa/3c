@@ -29,6 +29,7 @@ namespace ThirdPersonCharacter.Pipeline.Diagnostics.FootIkSampling
         "ground-path",
         "landing-observation",
         "lifecycle",
+        "motion-core",
         "path-continuity",
         "response-contact",
         "root-hierarchy",

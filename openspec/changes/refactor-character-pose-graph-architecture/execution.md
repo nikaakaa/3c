@@ -883,3 +883,9 @@ Source Module继续唯一拥有Animancer／Playable物理Source、Prepared Resou
 状态：Program Runtime现在自有Slot、Direct Player、Clip Player与Blend Space Player的Job data数组及对应Output Playable，消费Source Module发布的typed `CharacterPoseSourcePreparedResources`绑定Program Frame Player页，并在原位置处理prior-frame Source retirement staging。Final Publication仍先产生actor-local Output binding，Program随后绑定同lineage Executor并安装或更新Job，Writer预验证与Animancer Evaluate顺序未变。
 
 Program Runtime成为这些Job／Playable的唯一Owner；旧Pose Runtime删除数组、Playable、安装、更新、移除和Stage Completed Source扫描，只在原Dispose位置要求Program先Detach，再Dispose Source Module与Program Actor State，保持既有销毁顺序。Program对Source只使用Demand／Preparation／Prepared Resources／Usage／Retirement等typed合同，对Constraint仍只由唯一Executor在Operation位置使用typed Handle和per-operation Result，因此任务6.5完成。任务6.2仍等待Action／Slot生命周期入口收口。3C MCP在补齐正式Lifecycle命名空间后两个触碰文件错误筛选均为0；不单独运行回放。
+
+## Source Retirement生命周期归入Program Runtime
+
+状态：Program Runtime整体接管Source Retirement State的Frame Begin／Complete／Discard、Direct／Clip／BlendSpace standalone release准备、Action／Pose pending retirement、容量预验证、提交后Apply、Reset时Stack及全部Player Source释放，以及Action Backend pending request查询与执行。它只通过Source Module的typed identity、permission、retirement、usage和completion入口操作物理Source。
+
+旧Pose Runtime删除Source Retirement State访问器、三类Player遍历、Stack release遍历和Prepare／Apply辅助方法；根仍按原位置调用Program的分阶段入口，使Constraint、Source Frame、Program Node、Publication、Action Backend acknowledgement与Motion Matching usage的相对顺序保持不变。任务6.2与5.10继续推进但ActionPlayback／AnimationSlot根事务仍待收口。3C MCP对Program Runtime与Pose Runtime错误筛选均为0；不单独运行回放。

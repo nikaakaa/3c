@@ -185,6 +185,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
         public string id;
         public string nodeKind;
         public string executionDomain;
+        public bool workerThreadSafe;
+        public string workerKernel;
         public List<AgentDocumentPoseCapabilityPortContext> ports =
             new List<AgentDocumentPoseCapabilityPortContext>();
     }

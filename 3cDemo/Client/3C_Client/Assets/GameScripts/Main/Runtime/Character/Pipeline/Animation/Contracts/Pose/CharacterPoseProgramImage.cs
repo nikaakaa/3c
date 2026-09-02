@@ -627,6 +627,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         [SerializeField] CharacterPoseOperationPages m_OperationPages;
         [SerializeField] CharacterPresentationPoseSourceMapEntry[] m_SourceMap = Array.Empty<CharacterPresentationPoseSourceMapEntry>();
         [SerializeField] CharacterPresentationPoseStage[] m_Stages = Array.Empty<CharacterPresentationPoseStage>();
+        [SerializeField] CharacterPoseWorkerPlan m_WorkerPlan;
         [SerializeField] int m_PoseValueWorkspaceCount;
         [SerializeField] int m_FullBodyIkGoalContributionWorkspaceCount;
         [SerializeField] int m_FullBodyIkGoalSetWorkspaceCount;
@@ -667,6 +668,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             CharacterPoseOperationPages operationPages,
             CharacterPresentationPoseSourceMapEntry[] sourceMap,
             CharacterPresentationPoseStage[] stages,
+            CharacterPoseWorkerPlan workerPlan,
             int poseValueCount,
             int poseValueWorkspaceCount,
             int fullBodyIkGoalContributionWorkspaceCount,
@@ -718,6 +720,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 throw new ArgumentNullException(nameof(operationPages));
             m_SourceMap = sourceMap ?? throw new ArgumentNullException(nameof(sourceMap));
             m_Stages = stages ?? throw new ArgumentNullException(nameof(stages));
+            m_WorkerPlan = workerPlan ??
+                throw new ArgumentNullException(nameof(workerPlan));
             if (poseValueCount <= 1 ||
                 poseValueWorkspaceCount != poseValueCount - 1 ||
                 contributionCapacity <= 0)
@@ -789,6 +793,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             OperationPages?.Headers ?? Array.Empty<CharacterPoseOperationHeader>();
         public IReadOnlyList<CharacterPresentationPoseSourceMapEntry> SourceMap => m_SourceMap ?? Array.Empty<CharacterPresentationPoseSourceMapEntry>();
         public IReadOnlyList<CharacterPresentationPoseStage> Stages => m_Stages ?? Array.Empty<CharacterPresentationPoseStage>();
+        public CharacterPoseWorkerPlan WorkerPlan => m_WorkerPlan;
         public int PoseValueCount => m_PoseValueWorkspaceCount;
         public int PoseValueWorkspaceCount => PoseValueCount - 1;
         public int FullBodyIkGoalContributionWorkspaceCount =>
@@ -941,6 +946,16 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 FinalPosePublicationLayout;
             publicationLayout.RequireValid();
             OperationPages.RequireValid();
+            WorkerPlan?.RequireValid(
+                OperationPages,
+                Stages,
+                PoseValueCount,
+                FrameCacheCount,
+                RigId,
+                RigRevision);
+            if (WorkerPlan == null)
+                throw new InvalidOperationException(
+                    "Character Presentation Pose Plan has no Worker Batch Plan.");
             for (int i = 0; i < OperationPages.ValueReferences.Count; i++)
             {
                 CharacterPoseValueReference reference =

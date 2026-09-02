@@ -428,7 +428,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                             ? CharacterPoseOperationCode.StatePoseOutput
                             : definition.OperationCode;
                     if (code == CharacterPoseOperationCode.StatePoseOutput)
-                        domain = CharacterPoseExecutionDomain.PurePose;
+                        domain = CharacterPoseExecutionDomain.ManagedControl;
                     CharacterPoseOperationFamily family =
                         code == CharacterPoseOperationCode.StatePoseOutput
                             ? CharacterPoseOperationFamily.StateMachine

@@ -16,6 +16,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             CharacterPoseFamilyPayloadBinding binding,
             CharacterPoseStageSchedule schedule,
             CharacterPoseWorkspacePlan workspace,
+            CharacterPoseWorkerPlan workerPlan,
             CharacterPresentationInertializationDescriptor[]
                 inertializations,
             CharacterMotionMatchingPosePlanCompilation motionMatching)
@@ -28,6 +29,8 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                 throw new ArgumentNullException(nameof(schedule));
             if (workspace == null)
                 throw new ArgumentNullException(nameof(workspace));
+            if (workerPlan == null)
+                throw new ArgumentNullException(nameof(workerPlan));
             if (inertializations == null)
                 throw new ArgumentNullException(nameof(inertializations));
             if (motionMatching == null)
@@ -64,6 +67,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                 rig,
                 binding,
                 stages,
+                workerPlan,
                 workspace.PoseValueCapacity,
                 workspace.ParameterValueCapacity,
                 baseContributionCapacity,
@@ -103,6 +107,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                 binding.OperationPages,
                 binding.SourceMap,
                 stages,
+                workerPlan,
                 layout.PoseValueCount,
                 workspace.PoseValueCapacity,
                 layout.FullBodyIkGoalContributionValueCount,
@@ -122,6 +127,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             CharacterAnimationRigDefinition rig,
             CharacterPoseFamilyPayloadBinding binding,
             IReadOnlyList<CharacterPresentationPoseStage> stages,
+            CharacterPoseWorkerPlan workerPlan,
             int poseWorkspace,
             int parameterWorkspace,
             int contributionWorkspace,
@@ -335,6 +341,28 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                 CharacterPresentationPoseStage stage = stages[i];
                 values.Add(
                     $"stage:{stage.Index}:{(int)stage.ExecutionDomain}:{(int)stage.InputPoseSpace}:{(int)stage.OutputPoseSpace}:{stage.OperationStart}:{stage.OperationCount}:{stage.NativeOperationStart}:{stage.NativeOperationCount}:{stage.PoseWorkspaceStart}:{stage.PoseWorkspaceCount}:{stage.CompletionIndex}:{stage.DiagnosticIndex}");
+            }
+            values.Add(
+                $"worker-plan:{workerPlan.Version}:{workerPlan.Policy}:{workerPlan.Capability}:{workerPlan.RigLayout.Identity}:{workerPlan.RigLayout.RigId}:{workerPlan.RigLayout.RigRevision}:{workerPlan.RigLayout.PoseBoneCount}:{workerPlan.RigLayout.PhysicalBoneCount}:{workerPlan.RigLayout.VirtualBoneCount}");
+            values.Add(
+                "worker-kernels:" + string.Join(",", workerPlan.KernelSet.Select(value => ((int)value).ToString())));
+            for (int i = 0; i < workerPlan.Batches.Count; i++)
+            {
+                CharacterPoseWorkerBatchPlan batch = workerPlan.Batches[i];
+                values.Add(
+                    $"worker-batch:{batch.Index}:{batch.BatchIdentity}:{batch.ActorBatchKey}:{batch.StageIndex}:{batch.DependencyWave}:{(int)batch.Kernel}:{(int)batch.ExecutionDomain}:{string.Join(",", batch.OperationIndices)}:{string.Join(",", batch.InputCompletionIndices)}:{string.Join(",", batch.OutputCompletionIndices)}:{batch.PoseWorkspaceStart}:{batch.PoseWorkspaceCount}");
+                for (int rangeIndex = 0; rangeIndex < batch.ReadRanges.Count; rangeIndex++)
+                {
+                    CharacterPoseWorkerValueRange range = batch.ReadRanges[rangeIndex];
+                    values.Add(
+                        $"worker-read:{i}:{rangeIndex}:{(int)range.Kind}:{range.Start}:{range.Count}");
+                }
+                for (int rangeIndex = 0; rangeIndex < batch.WriteRanges.Count; rangeIndex++)
+                {
+                    CharacterPoseWorkerValueRange range = batch.WriteRanges[rangeIndex];
+                    values.Add(
+                        $"worker-write:{i}:{rangeIndex}:{(int)range.Kind}:{range.Start}:{range.Count}");
+                }
             }
             values.Add(FormattableString.Invariant(
                 $"workspace:{poseWorkspace}:{layout.FullBodyIkGoalContributionValueCount}:{layout.FullBodyIkGoalSetValueCount}:{layout.FullBodyIkGoalContributionGoalWorkspaceCount}:{parameterWorkspace}:{contributionWorkspace}:{frameCache}:{layout.OutputOperationIndex}"));

@@ -119,6 +119,12 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                         layout
                             .FullBodyIkGoalContributionGoalWorkspaceCount,
                         motionMatching.ContributionCapacity);
+                CharacterPoseWorkerPlan workerPlan =
+                    CharacterPoseWorkerBatchPlanPass.Run(
+                        request,
+                        binding,
+                        schedule,
+                        workspace);
                 CharacterPresentationInertializationDescriptor[]
                     inertializations =
                         CharacterPresentationInertializationPlanCompiler
@@ -134,6 +140,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                         binding,
                         schedule,
                         workspace,
+                        workerPlan,
                         inertializations,
                         motionMatching);
                 return new CharacterPoseCompilationResult(

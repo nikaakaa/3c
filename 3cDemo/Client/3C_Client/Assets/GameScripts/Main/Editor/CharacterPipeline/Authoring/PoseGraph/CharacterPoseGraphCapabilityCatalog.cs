@@ -166,10 +166,12 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 Array.Empty<GraphAuthoringFieldDescriptor>(),
                 Ports(Out("pose", "Local Pose", "pose.local")),
                 GraphAuthoringDynamicPortPolicy.None,
-                new[] { Child("open-state-machine", "Open State Machine", StateMachine) }));
+                new[] { Child("open-state-machine", "Open State Machine", StateMachine) },
+                executionDomain: CharacterPoseExecutionDomain.ManagedControl));
             catalog.Register(Node<CharacterAnimationSlotPosePayload>(CharacterPoseNodeKind.AnimationSlot, rootOnly, "Slot", "Action", blendColor,
                 Fields(Field("animation-channel-id", "Animation Channel", GraphAuthoringFieldValueKind.IdentityReference, "animation-channel"), Field("slot-id", "Slot", GraphAuthoringFieldValueKind.IdentityReference, "animation-slot"), SelectionAvailabilityField(), AssetField("blend-policy", "Blend Policy", "animation-blend-policy", typeof(CharacterAnimationBlendPolicy))),
-                Ports(In("source-pose", "Source Local Pose", "pose.local"), In("action-playback", "Action Playback", "pose.action-playback"), Out("pose", "Local Pose", "pose.local"))));
+                Ports(In("source-pose", "Source Local Pose", "pose.local"), In("action-playback", "Action Playback", "pose.action-playback"), Out("pose", "Local Pose", "pose.local")),
+                executionDomain: CharacterPoseExecutionDomain.SourceCapture));
             catalog.Register(Node<CharacterBlendStackPosePayload>(CharacterPoseNodeKind.BlendStack, rootAndStateWithLinkedEntry, "Blend Stack", "Blend", blendColor,
                 Fields(SourceField(typeof(CharacterMotionMatchingPoseSourceSlot)), AssetField("blend-policy", "Blend Policy", "animation-blend-policy", typeof(CharacterAnimationBlendPolicy))),
                 Ports(Out("pose", "Local Pose", "pose.local")),
@@ -177,7 +179,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 executionDomain: CharacterPoseExecutionDomain.SourceCapture));
             catalog.Register(Node<CharacterInertializationPosePayload>(CharacterPoseNodeKind.Inertialization, allPoseGraphsWithLinkedEntry, "Inertialization", "Blend", blendColor,
                 Fields(AssetField("inertialization-policy", "Policy", "pose-inertialization-policy", typeof(CharacterPoseInertializationPolicy))),
-                UnaryLocalPosePorts()));
+                UnaryLocalPosePorts(),
+                executionDomain: CharacterPoseExecutionDomain.ManagedControl));
             catalog.Register(Node<CharacterBlendPosePayload>(CharacterPoseNodeKind.BlendPose, allPoseGraphsWithLinkedEntry, "Blend Pose", "Blend", blendColor,
                 Fields(FloatField("weight", "Weight", 1f, 0f, 1f)),
                 BinaryLocalPoseWithWeight("Base", "Overlay"),
@@ -190,7 +193,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 BinaryLocalPoseWithWeight("Base", "Additive")));
             catalog.Register(Node<CharacterPoseParameterResolvePayload>(CharacterPoseNodeKind.PoseParameterResolve, allPoseGraphsWithLinkedEntry, "Pose Parameter Resolve", "Parameters", blendColor,
                 Fields(Field("parameter-policies", "Parameter Policies", GraphAuthoringFieldValueKind.Object, "pose-parameter-policy")),
-                Ports(In("base-pose", "Base Local Pose", "pose.local"), In("parameter-source-pose", "Parameter Source Local Pose", "pose.local"), Out("pose", "Local Pose", "pose.local"))));
+                Ports(In("base-pose", "Base Local Pose", "pose.local"), In("parameter-source-pose", "Parameter Source Local Pose", "pose.local"), Out("pose", "Local Pose", "pose.local")),
+                executionDomain: CharacterPoseExecutionDomain.PureValue));
             catalog.Register(Node<CharacterModifyBonePosePayload>(CharacterPoseNodeKind.ModifyBone, allPoseGraphs, "Modify Bone", "Constraints", constraintColor,
                 Fields(Field("bone-id", "Bone", GraphAuthoringFieldValueKind.IdentityReference, "rig-bone"), EnumField("reference-space", "Reference Space", typeof(ModifyBoneReferenceSpace)), EnumField("operations", "Operations", typeof(ModifyBoneOperationMask)), Vector3Field("position", "Position"), Field("rotation", "Rotation", GraphAuthoringFieldValueKind.Quaternion, ""), Vector3Field("scale", "Scale", Vector3.one)),
                 UnaryComponentPoseWithWeight()));
@@ -204,12 +208,12 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             catalog.Register(Node<CharacterPoseBoneIkGoalsPayload>(CharacterPoseNodeKind.PoseBoneIKGoals, allPoseGraphsWithLinkedEntry, "Pose Bone IK Goals", "Goal Sources", constraintColor,
                 Fields(Field("bindings", "Effector Bindings", GraphAuthoringFieldValueKind.Object, "full-body-ik-goal-binding")),
                 Ports(In("pose", "Component Pose", "pose.component"), Out("contribution", "Goal Contribution", "component.full-body-ik-goal-contribution")),
-                executionDomain: CharacterPoseExecutionDomain.PureValue));
+                executionDomain: CharacterPoseExecutionDomain.ManagedConstraint));
             catalog.Register(Node<CharacterFullBodyIkGoalAssemblerPayload>(CharacterPoseNodeKind.FullBodyIkGoalAssembler, allPoseGraphs, "Goal Assembler", "Goal Sources", constraintColor,
                 Array.Empty<GraphAuthoringFieldDescriptor>(),
                 Ports(Out("goals", "Full Body IK Goals", "component.full-body-ik-goals")),
                 GraphAuthoringDynamicPortPolicy.OrderedInputs,
-                executionDomain: CharacterPoseExecutionDomain.PureValue));
+                executionDomain: CharacterPoseExecutionDomain.ManagedConstraint));
             catalog.Register(Node<CharacterFullBodyIkPosePayload>(CharacterPoseNodeKind.FullBodyIK, allPoseGraphs, "Full Body IK", "Constraints", constraintColor,
                 Fields(ReadOnlyField("backend", "Solver Backend", GraphAuthoringFieldValueKind.String)),
                 Ports(In("pose", "Component Pose", "pose.component"), In("goals", "Full Body IK Goals", "component.full-body-ik-goals"), Out("result", "Solved Component Pose", "pose.component")),
@@ -217,7 +221,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 {
                     new GraphAuthoringCommandDescriptor(OpenFullBodyIkProfile, "Edit FinalIK FBBIK Profile", false)
                 },
-                executionDomain: CharacterPoseExecutionDomain.PurePose));
+                executionDomain: CharacterPoseExecutionDomain.ManagedConstraint));
             catalog.Register(Node<CharacterLocalToComponentPosePayload>(CharacterPoseNodeKind.LocalToComponentPose, allPoseGraphs, "Local To Component", "Pose Space", constraintColor,
                 Array.Empty<GraphAuthoringFieldDescriptor>(),
                 Ports(In("local-pose", "Local Pose", "pose.local"), Out("component-pose", "Component Pose", "pose.component"))));
@@ -230,7 +234,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     Field("interface-id", "Interface", GraphAuthoringFieldValueKind.IdentityReference, "linked-pose-interface"),
                     Field("entry-id", "Entry", GraphAuthoringFieldValueKind.IdentityReference, "linked-pose-entry")),
                 Array.Empty<GraphAuthoringPortDescriptor>(),
-                GraphAuthoringDynamicPortPolicy.OrderedBidirectional));
+                GraphAuthoringDynamicPortPolicy.OrderedBidirectional,
+                executionDomain: CharacterPoseExecutionDomain.ManagedControl));
             catalog.Register(Node<CharacterPoseSubgraphPayload>(CharacterPoseNodeKind.PoseSubgraph, allPoseGraphsWithLinkedEntry, "Pose Subgraph", "Graph", blendColor,
                 Fields(Field("graph-id", "Graph", GraphAuthoringFieldValueKind.IdentityReference, "pose-graph")),
                 Array.Empty<GraphAuthoringPortDescriptor>(),
@@ -247,7 +252,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 executionDomain: CharacterPoseExecutionDomain.SourceCapture));
             catalog.Register(Node<CharacterPoseHistoryCollectorPayload>(CharacterPoseNodeKind.PoseHistoryCollector, new[] { StatePoseGraph }, "Pose History Collector", "Sources", sourceColor,
                 Fields(Field("history-id", "History", GraphAuthoringFieldValueKind.IdentityReference, "pose-history")),
-                Ports(In("pose.local.input", "Local Pose", "pose.local"), Out("pose.local", "Local Pose", "pose.local"), Out("history.pose", "Previous Pose History", "pose.history"))));
+                Ports(In("pose.local.input", "Local Pose", "pose.local"), Out("pose.local", "Local Pose", "pose.local"), Out("history.pose", "Previous Pose History", "pose.history")),
+                executionDomain: CharacterPoseExecutionDomain.SourceCapture));
             catalog.Register(Node<CharacterEntryPoseInputPayload>(CharacterPoseNodeKind.EntryPoseInput, new[] { Subgraph }, "Entry Pose Input", "Inputs", inputColor,
                 Array.Empty<GraphAuthoringFieldDescriptor>(),
                 Ports(InterfaceOut("pose.local", "Local Pose", "pose.local", "entry.pose")),

@@ -213,7 +213,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         PureValue = 3,
         WorldAwareValue = 4,
         PurePose = 5,
-        FinalPublication = 6
+        FinalPublication = 6,
+        ManagedControl = 7,
+        ManagedConstraint = 8
     }
 
     public enum CharacterPosePortDirection : byte

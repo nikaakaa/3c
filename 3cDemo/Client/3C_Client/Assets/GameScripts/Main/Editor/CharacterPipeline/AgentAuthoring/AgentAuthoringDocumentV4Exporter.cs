@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using ThirdPersonCharacter.Editor.CharacterSimulation;
 using ThirdPersonCharacter.AI;
 using ThirdPersonCharacter.Pipeline.Animation;
 using ThirdPersonCharacter.Pipeline.Simulation.Editor;
@@ -293,6 +294,12 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                     id = value.CapabilityId.Value,
                     nodeKind = value.ExternalKind,
                     executionDomain = value.ExecutionDomainId,
+                    workerThreadSafe = CharacterPoseNodeDefinitionModule.Shared
+                        .RequireCapability(value.CapabilityId.Value)
+                        .WorkerThreadSafe,
+                    workerKernel = CharacterPoseNodeDefinitionModule.Shared
+                        .RequireCapability(value.CapabilityId.Value)
+                        .WorkerKernel.ToString(),
                     ports = value.FixedPorts
                         .OrderBy(port => port.Order)
                         .Select(port =>

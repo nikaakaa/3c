@@ -668,13 +668,11 @@ Physical Transform反推
 
 Pose Watch所需Pose、Goal和Contribution在运行帧完成时按interest冻结，Watch只读取这些Committed页，不重跑source、world query或FBBIK。
 
-Runtime Projector与Generated Diagnostic Sampling Framework、Foot IK插件、离线Analyzer和Publisher不是同一个职责。Projector只在成功Seal后组合上述Owner Result，发布同lineage的具体`CharacterFootIkCommittedCaptureViewLease`，并唯一决定租约何时有效、何时失效。该View只保存Foot IK采样所需的typed值和availability，不是通用DTO、万能Committed View或第二Snapshot。Projector不知道Capability、字段Attribute、Sampler Definition、Schema Compiler、Generated Program、typed packet、CSV、geometry、manifest、Analyzer或评分。
+Runtime Projector与Generated Diagnostic Sampling Framework、Foot IK插件不是同一个职责。Projector只在成功Seal后按Runtime diagnostics interest读取上述Owner Committed Result，不为外部采样发布Capture View、Event、DTO或第二Snapshot。PoseGraph只保留既有Source、Program、Constraint与Final Publication事实根及其正式Post-Commit有效期，不知道Capability、字段Attribute、Sampler Definition、Schema Compiler、Generated Program、typed packet、CSV、geometry、manifest或Host产物。
 
-`add-generated-diagnostic-sampling-framework`提供通用Attribute、Schema Compiler、Source Generator、Generated Program ABI、Generated Lifecycle、typed packet、Capability Session、Writer、Schema-driven Host Reader／Finalizer和`DiagnosticCapabilitySet`身份合同；`refactor-foot-ik-diagnostic-sampling`只提供首个`character-foot-ik` Capability、三个Foot生命周期Event、字段／Sampler／Program Definitions、Analyzer与Publisher。外部Foot Diagnostics consumer在PoseGraph租约内绑定Left View／Metadata与Right View／Metadata并发布CommittedSample Event；Generated Lifecycle自动取得packet lease、调用匹配的具体Generated Program并提交，框架Session从不索取或持有View，Schema-driven Host自动生成主表、子表、CSV和基础manifest，再把artifact交给Foot Analyzer与Publisher。Foot change一次删除现有`CharacterFootLandingPredictionSampler`事件/Snapshot二次join、Bridge、Host Adapter与手写Column链。PoseGraph不得引用框架Runtime或Foot插件的Event、Generator、Generated Program、packet、Host或Build类型，也不得为了维持旧Sampler先增加临时DTO、表达式委托、反射路径、兼容Adapter或第二Snapshot Publisher。
+`add-generated-diagnostic-sampling-framework`提供通用Attribute、Schema Compiler、Source Generator、Generated Program ABI、Generated Lifecycle、typed packet、Capability Session、Writer、Schema-driven Host Reader／Finalizer和`DiagnosticCapabilitySet`身份合同；`refactor-foot-ik-diagnostic-sampling`只保留`character-foot-ik`字段／Sampler／Program Definition、薄`CharacterFootIkGeneratedCapture`与Editor workflow。外部Generated Capture在既有Post-Commit边界直接读取同lineage事实根并交给Generated Lifecycle，Schema-driven Host产出的主表、子表、CSV与manifest就是最终诊断输出。旧Sampler二次join、Bridge、Host Adapter、手写Column／CsvBinding、Analyzer、Publisher、评分与Store链已经直接删除；PoseGraph不得重新建立Event、Capture View、临时DTO、兼容Adapter或第二报告链。
 
-框架sealed packet经Schema-driven Host自动生成的主表、geometry子表、CSV与基础manifest继续保持现行业务语义；Foot Analyzer／Publisher继续唯一生成明细索引、小报告、完整事件枚举和七维评分。Foot Sampler schema可以由领域change破坏性升级，但不能恢复Foot Host Adapter、手写Column／CsvBinding、第二Schema、展开facts.json读写往返、运行时表达式编译或修改评分数学。
-
-字段在模块间搬家不等于评分规则改变。目标／实际Foot、Pelvis、Goal、Solved和Physical事实仍按现有版本与分母解释；不得改阈值、权重、资格或总分来证明重构等价。确实需要改变外部采样字段含义时先报告冲突，不在本change擅自升级评分政策；历史原包保持。
+目标／实际Foot、Pelvis、Goal、Solved和Physical字段仍保持现有业务含义与事实来源；其对账由生成Program与Host产物完成，不再经过旧评分或报告层解释。确实需要改变外部采样字段含义时由对应诊断change显式升级schema，本change只保证PoseGraph事实根的lineage、提交时机与运行行为不变；历史原包保持。
 
 ## Decision 14: Preview与Runtime只使用Adapter差异
 
@@ -788,7 +786,7 @@ Editor/CharacterSimulation/Compilation/Presentation/PoseGraph/
 10. 建立Node Definition Module，一次性迁移Capability、Port Shape Projector、Authoring、Document v4 Exporter/strict parser/Target Mapper/Reconciler、Clipboard、Mutation preflight、local validation、Graph dependency和typed lowering；保留唯一Document Transaction Service，删除旧Handler Registry与重复switch。
 11. 将Compiler拆成`Graph Dependency -> Symbolic Family -> Schedule -> Value Lifetime -> Workspace -> Bind Payload`固定Pass，删除中央`CompilationState`和pass-through入口。
 12. 完成全部现行Operation Code到Family/Owner/Domain映射后，原子切换分段Operation ABI、Projection内Program Image schema和Runtime reader；提升PoseProgramImageHash但保持Gameplay ContractHash不变，删除万能Operation、旧Native Program语义容器与旧reader。
-13. 将Runtime Diagnostics改为Committed Result Projector并发布PoseGraph-owned具体`CharacterFootIkCommittedCaptureViewLease`；与`add-generated-diagnostic-sampling-framework`的通用AOT生成／Generated Lifecycle／packet／Schema-driven Host合同分别闭合后，再串行接入`refactor-foot-ik-diagnostic-sampling`的首个Foot Capability生命周期Event与Definitions，删除Bridge、Foot Host Adapter、跨Owner内部读取、运行时表达式／反射路径和旧Sampler二次join，不修改离线诊断业务含义或七维评分数学。
+13. 将Runtime Diagnostics改为只读Committed Result的Projector；外部薄Generated Capture在既有Post-Commit边界直接消费正式事实根并交给通用AOT Program／Generated Lifecycle／packet／Schema-driven Host，Host产物就是最终诊断输出。删除Capture View、Event、Bridge、Foot Host Adapter、跨Owner内部读取、旧Sampler二次join、Analyzer、Publisher、评分、Store与第二报告链。
 14. 迁移Preview到同一Factory、Program Image、actor-local Execution View规则、Tuning Snapshot和根Frame Transaction，删除简化或重复执行路径。
 15. 搜索并删除旧类、旧字段、旧codec、旧validator知识、兼容版本和未引用路径，更新project truth并完成编译与严格校验。
 

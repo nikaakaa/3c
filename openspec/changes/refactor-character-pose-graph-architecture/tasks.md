@@ -32,7 +32,7 @@
 - [x] 3.5 让Constraint `Complete`只验证完整闭包并发布一个Constraint Result，不扫描Program、不维护第二Stage Schedule也不重新执行Operation
 - [x] 3.6 删除调用方可见的NativeSlice、Goal offset/count、Operation index、Callsite index、内部Bank页和Diagnostics页
 - [x] 3.7 让Constraint内部Pending页只响应根Frame lineage和唯一Seal/Discard，不再拥有可与根事务分离的完成身份
-- [ ] 3.8 将Foot Placement与FBBIK调参接入Constraint-owned Candidate Tuning Snapshot，保持当前字段、值域、成功resetOwnerState结果和生效时机，保留第一阶段独立验证的Vendor方向与BendHistory Reset结果，本阶段不另改行为
+- [x] 3.8 将Foot Placement与FBBIK调参接入Constraint-owned Candidate Tuning Snapshot，保持当前字段、值域、成功resetOwnerState结果和生效时机，保留第一阶段独立验证的Vendor方向与BendHistory Reset结果，本阶段不另改行为
 - [ ] 3.9 对账Foot、Support、Pelvis、Goal、Assembler、Bend与最终骨骼保持冻结基线；发现差异定位外层迁移，不修改已保留IK公式或配置
 
 ## 4. 建立CharacterPoseSourceModule
@@ -69,7 +69,7 @@
 - [ ] 6.6 删除外层Runtime对World-aware Operation的扫描和内部输入装配，删除Staged Executor对同一Operation的第二解释或完成检查
 - [ ] 6.7 删除Constraint Module扫描Program、Source Module扫描Operation以及Diagnostics重放Operation的路径
 - [ ] 6.8 将旧`CharacterPoseGraphStagedExecutor`巨型字段和构造整体替换，删除旧类型而不保留wrapper
-- [ ] 6.9 将Node Weight、PoseState、Slot、BlendStack、Routing与Inertialization调参改为Program-owned Candidate Tuning Snapshot
+- [x] 6.9 将Node Weight、PoseState、Slot、BlendStack、Routing与Inertialization调参改为Program-owned Candidate Tuning Snapshot
 - [ ] 6.10 搜索并消除第二Action lifecycle Owner、第二Pose Operation执行Owner、第二Value writer和任何图外隐式Pose stage
 
 ## 7. 建立CharacterFinalPosePublication与单一Final Pose物理页
@@ -86,12 +86,12 @@
 
 ## 8. 建立actor-local原子在线调参
 
-- [ ] 8.1 建立`CharacterPoseTuningSnapshot`、单调`TuningGeneration`和Program/Source/Constraint分区Candidate合同
-- [ ] 8.2 让根Runtime在打开新Frame前收集三个Module Candidate并完成identity、容量、值域与resetOwnerState预验证
-- [ ] 8.3 让全部Candidate成功后一次提升同一TuningGeneration，任一失败时保持三个Committed Snapshot不变
-- [ ] 8.4 删除先修改运行对象、失败后反向Apply旧Block的回滚路径
-- [ ] 8.5 删除Program Image、actor-local Execution View、静态Projection和跨Actor对象上的可变Tuning字段
-- [ ] 8.6 对账Runtime与Preview的调参字段、生效时机、resetOwnerState与逐Actor隔离，保持现行作者行为
+- [x] 8.1 建立`CharacterPoseTuningSnapshot`、单调`TuningGeneration`和Program/Source/Constraint分区Candidate合同
+- [x] 8.2 让根Runtime在打开新Frame前收集三个Module Candidate并完成identity、容量、值域与resetOwnerState预验证
+- [x] 8.3 让全部Candidate成功后一次提升同一TuningGeneration，任一失败时保持三个Committed Snapshot不变
+- [x] 8.4 删除先修改运行对象、失败后反向Apply旧Block的回滚路径
+- [x] 8.5 删除Program Image、actor-local Execution View、静态Projection和跨Actor对象上的可变Tuning字段
+- [x] 8.6 对账Runtime与Preview的调参字段、生效时机、resetOwnerState与逐Actor隔离，保持现行作者行为
 
 ## 9. 收窄唯一动画表现协调根
 

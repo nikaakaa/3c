@@ -805,3 +805,15 @@ Writer构造立即验证完整`CharacterAnimationRigBinding`、正式`CharacterR
 状态：`AnimationPoseNativeAggregateLayout`现在明确区分逻辑`PoseValueCount`与真实`PoseValueWorkspaceCount`，后者等于唯一Output Value index，所有Program Pose／Parameter／Contribution／Header Native页只按真实Workspace数量分配。旧`FinalAppliedAt`、`FinalWriteOutcome` Native数组、Committed Final binding、Final read binding类型与Frame Pages转发入口全部删除；Final write outcome只存在于Publication Result，最终页只存在于Final Publication。
 
 Program Image对外明确逻辑Value数量、真实Workspace数量和单Value Contribution容量；Compiler的Workspace计划排除最后一个Output Value，Inertialization重建保持三者原值。审计确认全仓只有Final Publication一处具体Writer构造，只有Writer一处Physical Bone position／rotation／scale写循环，不存在第二Final页、旧Final Native ABI或Diagnostics Pose复制。由此任务7.2、7.3与7.8完成；3C MCP对Program Image、Execution View、Compiler、Workspace、Executor与Publication相关文件错误筛选均为0，当前全局Editor错误来自另一个Foot采样迁移窗口，不属于本change；不单独运行回放。
+
+## Constraint与FBBIK改为Candidate调参提交
+
+状态：`CharacterFinalIkFullBodySolver`的调参入口拆成Prepare／Commit／Discard。Prepare仍按原Layout、字段、值域和`ActiveTuning.RequireValid`构造候选，但不再修改Active Tuning、FinalIK Vendor属性、Effector或Bend状态；`CharacterPoseConstraintRuntime`保存候选generation与`resetOwnerState`，Foot Placement对当前无独立可调字段的合同只做Block预验证。全部前置成功后Commit才一次应用同一FBBIK值，并按原顺序执行Effector Reset、Solver Bend Reset与Constraint Bank BendHistory清理。
+
+Constraint在Begin Frame时要求自己的Committed generation与根lineage一致；失败候选只Discard且不会改变已提交Vendor方向或BendHistory。由此任务3.8完成。3C MCP对FBBIK Solver、Constraint Runtime、Foot Placement Module与Pose Runtime编译错误筛选均为0；没有改IK公式、参数范围或运行阶段，也不单独运行回放。
+
+## 统一Program／Source／Constraint原子调参快照
+
+状态：Program-owned Candidate现在同时准备Operation Weight、Pose StateMachine Transition duration、Blend Stack policy与Inertialization rule；各对象只保存候选值，Commit前不修改当前Actor状态。Source继续准备Clip play rate Candidate，Constraint继续准备FBBIK／Foot Candidate。新增`CharacterPoseTuningSnapshot`组合三个同generation Committed View，根Runtime在打开Frame前验证它与lineage一致。
+
+`CharacterAnimationPresentationRuntime.ApplyPendingTuning`仍在`BeginFrameTransaction`之前运行；Pose Runtime依次准备三个分区，任一失败统一Discard，全部成功后分别Commit并只发布一个新的统一Snapshot，外层随后只提升一次`m_TuningGeneration`。旧`RestoreMutableTuning`、先改StateMachine／Stack／Inertialization／Vendor再反向Apply旧Block的路径全部删除。Sequence Preview继续进入同一`Present`和同一actor-local Runtime，不复制调参对象或generation。由此任务6.9与8.1至8.6完成；3C MCP对六个Runtime触碰文件与新Snapshot类型错误筛选均为0，不单独运行回放。

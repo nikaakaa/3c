@@ -701,3 +701,9 @@ Actor State统一负责Stack、Direct Player、Clip Player、Blend Space Player�
 状态：原`CharacterPoseGraphNativeProgram`类型与文件直接改名为`CharacterPoseProgramExecutionView`并移入Program目录，旧类型全文删除。`PosePlanExecutionRuntime`保存字段同步改为`m_ExecutionView`，构造、校验、Executor绑定、Linked Pose查询、Committed diagnostics与Dispose全部继续指向同一实例；没有同时保留Native Program与Execution View两套对象。
 
 任务5.2与5.3暂不勾选：当前Execution View仍在Actor创建时从Program Image、Rig和Blend Catalog执行`Compile*` materialize，也尚未携带并核对Program、Projection Revision和Pose Program Image Hash完整身份；它仍由旧`PosePlanExecutionRuntime`而不是最终`CharacterPoseProgramRuntime`释放。后续必须把可执行静态页在Projection Build时写入Image，让View只逐值分配只读Native存储，并删除运行时Compile入口。Unity经3C MCP `Assets/Refresh`重建项目文件后，旧文件路径、旧类型、新Execution View和Pose Runtime的错误筛选均为0；不单独运行回放。
+
+## Execution View Operation集合归还Program Image
+
+状态：决定哪些语义Operation需要进入Unity Execution View的唯一`IsExecutionViewOperation`判定已迁入`CharacterPoseProgramImage`。Image自身的Stage closure校验与Execution View的容量计算、materialize过滤现在读取同一判定；Execution View删除原`IsNativePoseOperation`静态语义入口，不再被Image反向依赖。判定集合逐项保持原Runtime值，因此没有改变Operation数量、Stage范围或执行顺序。
+
+Editor旧Builder仍有一份自己的Native Operation判定，且其集合包含Motion Matching／Pose History差异；本步为保持现有生成资产与运行行为不修改它，也不把任务5.1或Compiler任务11误报完成。该重复会在Operation Header／Family Payload与Compiler固定Pass迁移时删除。3C MCP对新判定、Program Image和Execution View的编译错误筛选均为0；不单独运行回放。

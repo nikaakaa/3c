@@ -849,7 +849,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 for (int i = 0; i < program.Operations.Count; i++)
                 {
                     CharacterPresentationPoseOperation operation = program.Operations[i];
-                    if (IsNativePoseOperation(operation.Code))
+                    if (CharacterPoseProgramImage.IsExecutionViewOperation(
+                            operation.Code))
                         nativeOperationCount++;
                     if (operation.Code == CharacterPoseOperationCode.PoseParameterResolve)
                         policyCount = checked(policyCount + m_ParameterCount);
@@ -1366,7 +1367,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             for (int i = 0; i < program.Operations.Count; i++)
             {
                 CharacterPresentationPoseOperation operation = program.Operations[i];
-                if (!IsNativePoseOperation(operation.Code))
+                if (!CharacterPoseProgramImage.IsExecutionViewOperation(
+                        operation.Code))
                     continue;
                 AnimationSelectionAvailabilityPolicy outputPolicy = default;
                 if (operation.Code == CharacterPoseOperationCode.SelectedPosePlayer ||
@@ -1649,33 +1651,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 throw new InvalidOperationException("Animation Pose Graph Native stage table is incomplete.");
             }
         }
-
-        internal static bool IsNativePoseOperation(CharacterPoseOperationCode code) => code switch
-        {
-            CharacterPoseOperationCode.SelectedPosePlayer => true,
-            CharacterPoseOperationCode.BlendSpacePlayer => true,
-            CharacterPoseOperationCode.ClipPlayer => true,
-            CharacterPoseOperationCode.BlendStack => true,
-            CharacterPoseOperationCode.AnimationSlot => true,
-            CharacterPoseOperationCode.Inertialization => true,
-            CharacterPoseOperationCode.BlendPose => true,
-            CharacterPoseOperationCode.LayeredBoneBlend => true,
-            CharacterPoseOperationCode.AdditivePose => true,
-            CharacterPoseOperationCode.PoseParameterResolve => true,
-            CharacterPoseOperationCode.ModifyBone => true,
-            CharacterPoseOperationCode.RootOrientationWarp => true,
-            CharacterPoseOperationCode.FootPlacement => true,
-            CharacterPoseOperationCode.PoseBoneIKGoals => true,
-            CharacterPoseOperationCode.FullBodyIkGoalAssembler => true,
-            CharacterPoseOperationCode.FullBodyIK => true,
-            CharacterPoseOperationCode.LinkedPoseCall => true,
-            CharacterPoseOperationCode.LocalToComponentPose => true,
-            CharacterPoseOperationCode.ComponentToLocalPose => true,
-            CharacterPoseOperationCode.StatePoseOutput => true,
-            CharacterPoseOperationCode.PoseStateMachine => true,
-            CharacterPoseOperationCode.OutputPose => true,
-            _ => false
-        };
 
         public void Dispose()
         {

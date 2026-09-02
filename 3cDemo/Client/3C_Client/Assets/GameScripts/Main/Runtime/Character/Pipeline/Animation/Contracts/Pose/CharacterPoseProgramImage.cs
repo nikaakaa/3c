@@ -1321,7 +1321,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                         throw new InvalidOperationException(
                             $"Pose Plan stage #{stageIndex} operation #{operationIndex} domain or Pose space is inconsistent.");
                     }
-                    if (CharacterPoseProgramExecutionView.IsNativePoseOperation(operation.Code))
+                    if (IsExecutionViewOperation(operation.Code))
                         nativeCount++;
                     if (operation.OutputValueIndex < 0)
                         continue;
@@ -1343,13 +1343,41 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             }
 
             if (expectedOperationStart != Operations.Count ||
-                expectedNativeOperationStart != Operations.Count(value => CharacterPoseProgramExecutionView.IsNativePoseOperation(value.Code)) ||
+                expectedNativeOperationStart != Operations.Count(value => IsExecutionViewOperation(value.Code)) ||
                 finalStageCount != 1 ||
                 Stages[Stages.Count - 1].ExecutionDomain != CharacterPoseExecutionDomain.FinalPublication)
             {
                 throw new InvalidOperationException("Pose Plan ordered stage table does not close the operation topology.");
             }
         }
+
+        internal static bool IsExecutionViewOperation(
+            CharacterPoseOperationCode code) => code switch
+        {
+            CharacterPoseOperationCode.SelectedPosePlayer => true,
+            CharacterPoseOperationCode.BlendSpacePlayer => true,
+            CharacterPoseOperationCode.ClipPlayer => true,
+            CharacterPoseOperationCode.BlendStack => true,
+            CharacterPoseOperationCode.AnimationSlot => true,
+            CharacterPoseOperationCode.Inertialization => true,
+            CharacterPoseOperationCode.BlendPose => true,
+            CharacterPoseOperationCode.LayeredBoneBlend => true,
+            CharacterPoseOperationCode.AdditivePose => true,
+            CharacterPoseOperationCode.PoseParameterResolve => true,
+            CharacterPoseOperationCode.ModifyBone => true,
+            CharacterPoseOperationCode.RootOrientationWarp => true,
+            CharacterPoseOperationCode.FootPlacement => true,
+            CharacterPoseOperationCode.PoseBoneIKGoals => true,
+            CharacterPoseOperationCode.FullBodyIkGoalAssembler => true,
+            CharacterPoseOperationCode.FullBodyIK => true,
+            CharacterPoseOperationCode.LinkedPoseCall => true,
+            CharacterPoseOperationCode.LocalToComponentPose => true,
+            CharacterPoseOperationCode.ComponentToLocalPose => true,
+            CharacterPoseOperationCode.StatePoseOutput => true,
+            CharacterPoseOperationCode.PoseStateMachine => true,
+            CharacterPoseOperationCode.OutputPose => true,
+            _ => false
+        };
 
         static void RequirePoseInputDependency(
             CharacterPresentationPoseOperation operation,

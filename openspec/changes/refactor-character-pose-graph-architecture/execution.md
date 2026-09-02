@@ -1239,3 +1239,7 @@ Post-Commit `CharacterPoseDiagnosticsRuntime`现在只验证同lineage并取得�
 Agent exporter不判断Node Kind；Package codec的Subgraph／Graph Input／Graph Output规则通过Definition取得Capability；Target Mapper无Pose Kind分支；Profile Inspector只读Capability字段；Clipboard通过`RequireCapability`解析Definition；Canvas使用统一Port Shape；Compiler中的Kind判断只剩Definition注册、节点局部Lowering与Topology全局唯一性规则。不存在可由Definition／Capability／Port Shape替代的消费端switch，任务10.10完成。
 
 Pose Contracts目录不引用Program／Source／Constraint／Publication Implementation或Editor命名空间，Pose Runtime目录不引用UnityEditor／AssetDatabase；Diagnostics只消费冻结Result View，不参与运行结果选择。3C MCP完整脚本编译同时证明现有asmdef引用无循环，任务14.5完成。
+
+## 更新项目Pose Graph架构真相
+
+状态：`openspec/project.md`已写入实际Program Image v24／Runtime ABI v27、固定Compiler Pass、Seal前Inertialization与Motion Matching、actor-local Execution View、Program内部组合模块、根Frame Transaction、三分区Tuning、四个Owner诊断冻结页与唯一Physical Writer；目录职责同步区分Program、Sources、Constraints、Final和Diagnostics。任务14.6完成。

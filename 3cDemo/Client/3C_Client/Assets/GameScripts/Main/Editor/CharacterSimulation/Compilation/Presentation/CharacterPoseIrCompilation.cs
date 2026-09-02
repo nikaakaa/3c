@@ -34,7 +34,6 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
         string CapabilityIdentity { get; }
         Type PayloadType { get; }
         CharacterPoseNativeNodeRole NativeRole { get; }
-        CharacterPoseExecutionDomain ExecutionDomain { get; }
         CharacterPoseOperationCode Code { get; }
         bool Player { get; }
         bool ActionPlaybackControl { get; }
@@ -93,21 +92,6 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
         public Type PayloadType => typeof(TPayload);
         public virtual CharacterPoseNativeNodeRole NativeRole =>
             CharacterPoseNativeNodeRole.Operation;
-        public CharacterPoseExecutionDomain ExecutionDomain
-        {
-            get
-            {
-                string value = CharacterPoseGraphAuthoringCapabilities
-                    .Require(Kind).ExecutionDomainId;
-                if (!Enum.TryParse(value, false, out CharacterPoseExecutionDomain result) ||
-                    !Enum.IsDefined(typeof(CharacterPoseExecutionDomain), result))
-                {
-                    throw new InvalidOperationException(
-                        $"Pose capability '{CapabilityIdentity}' has invalid execution domain '{value}'.");
-                }
-                return result;
-            }
-        }
         public virtual CharacterPoseOperationCode Code => default;
         public virtual bool Player => false;
         public virtual bool ActionPlaybackControl => false;

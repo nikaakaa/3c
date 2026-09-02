@@ -710,7 +710,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             }
         }
 
-        internal void BeginEvaluationFrame(
+        void BeginEvaluationFrame(
             CharacterPoseProgramFrameLease lease,
             ulong completionIdentity)
         {
@@ -722,6 +722,306 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                     "Character Pose Program has an unfinished evaluation.");
             }
             FramePages.BeginEvaluationFrame(completionIdentity);
+        }
+
+        internal void BeginSourceEvaluation(
+            CharacterPoseProgramFrameLease lease,
+            ulong completionIdentity)
+        {
+            BeginEvaluationFrame(lease, completionIdentity);
+            for (int i = 0; i < ActorState.Stacks.Length; i++)
+                ActorState.Stacks[i].BeginSourceFrame(completionIdentity);
+            for (int i = 0; i < ActorState.DirectPlayers.Length; i++)
+                ActorState.DirectPlayers[i].BeginFrame(completionIdentity);
+            for (int i = 0;
+                 i < ActorState.PoseStateSources.ClipPlayers.Length;
+                 i++)
+            {
+                ActorState.PoseStateSources.ClipPlayers[i]
+                    .BeginFrame(completionIdentity);
+            }
+            for (int i = 0;
+                 i < ActorState.PoseStateSources.BlendSpacePlayers.Length;
+                 i++)
+            {
+                ActorState.PoseStateSources.BlendSpacePlayers[i]
+                    .BeginFrame(completionIdentity);
+            }
+        }
+
+        internal void PrepareStackSources(
+            CharacterPoseProgramFrameLease lease,
+            CharacterPoseSourceFrameLease sourceLease,
+            in CharacterPoseSourcePreparationView preparations,
+            float presentationDeltaSeconds,
+            IReadOnlyDictionary<AnimationPlayerSourceSampleKey,
+                AnimationResolvedPoseSourceSample> actionSourceSamples,
+            IReadOnlyDictionary<AnimationPlayerSourceSampleKey,
+                PresentationPoseSourceSample> providerSourceSamples)
+        {
+            RequireFrame(lease);
+            for (int stackIndex = 0;
+                 stackIndex < ActorState.Stacks.Length;
+                 stackIndex++)
+            {
+                AnimationBlendStackRuntime stack =
+                    ActorState.Stacks[stackIndex];
+                if (!LinkedFragments.IsPlayerActive(stack.PlayerIndex) ||
+                    !stack.HasCurrentSelectionSample)
+                {
+                    continue;
+                }
+                for (int entryIndex = 0;
+                     entryIndex < stack.EntryCount;
+                     entryIndex++)
+                {
+                    AnimationBlendEntryId entry =
+                        stack.GetEntryId(entryIndex);
+                    if (entry.SourcePoseTarget ||
+                        HasEarlierSource(
+                            stack,
+                            entryIndex,
+                            entry.SourceId))
+                    {
+                        continue;
+                    }
+                    PrepareStackSource(
+                        stack,
+                        sourceLease,
+                        in preparations,
+                        entry.SourceId,
+                        presentationDeltaSeconds,
+                        actionSourceSamples,
+                        providerSourceSamples);
+                }
+            }
+        }
+
+        internal void PrepareDirectSources(
+            CharacterPoseProgramFrameLease lease,
+            CharacterPoseSourceFrameLease sourceLease,
+            in CharacterPoseSourcePreparationView preparations,
+            float presentationDeltaSeconds,
+            IReadOnlyDictionary<AnimationPlayerSourceSampleKey,
+                PresentationPoseSourceSample> sourceSamples)
+        {
+            RequireFrame(lease);
+            for (int playerIndex = 0;
+                 playerIndex < ActorState.DirectPlayers.Length;
+                 playerIndex++)
+            {
+                AnimationSelectedPosePlayerRuntime player =
+                    ActorState.DirectPlayers[playerIndex];
+                if (!LinkedFragments.IsPlayerActive(player.PlayerIndex) ||
+                    !player.HasCurrentSample)
+                {
+                    continue;
+                }
+                var key = new AnimationPlayerSourceSampleKey(
+                    player.NodeId,
+                    player.SourceId);
+                if (!sourceSamples.TryGetValue(
+                        key,
+                        out PresentationPoseSourceSample sample))
+                {
+                    throw new InvalidOperationException(
+                        $"Animation Pose Source '{player.SourceId}' has no current resolved request.");
+                }
+                AnimationPoseSourceCaptureBinding capture =
+                    player.PrepareCapture(
+                        in sample,
+                        presentationDeltaSeconds);
+                CharacterPoseSourcePreparation preparation =
+                    CharacterPoseSourcePreparation.DirectPlayer(
+                        playerIndex,
+                        player.SourceId,
+                        player.SourceOwnerIndex,
+                        sample.Clips,
+                        in sample,
+                        in capture,
+                        player.NodeId);
+                SubmitSourcePreparation(
+                    sourceLease,
+                    in preparations,
+                    in preparation);
+            }
+        }
+
+        internal void PrepareSequenceSources(
+            CharacterPoseProgramFrameLease lease,
+            CharacterPoseSourceFrameLease sourceLease,
+            in CharacterPoseSourcePreparationView preparations,
+            float presentationDeltaSeconds,
+            in CharacterPoseSourceTuningView sourceTuning)
+        {
+            RequireFrame(lease);
+            for (int playerIndex = 0;
+                 playerIndex < ActorState.PoseStateSources.ClipPlayers.Length;
+                 playerIndex++)
+            {
+                AnimationClipPlayerRuntime player =
+                    ActorState.PoseStateSources.ClipPlayers[playerIndex];
+                bool selectedPreview =
+                    IsSequencePreviewPlayer(playerIndex);
+                if (!selectedPreview &&
+                        !LinkedFragments.IsPlayerActive(player.PlayerIndex) ||
+                    !player.IsRelevant)
+                {
+                    continue;
+                }
+                AnimationPoseSourceCaptureBinding capture =
+                    player.PrepareCapture(
+                        presentationDeltaSeconds,
+                        sourceTuning.RequireClipPlayRate(playerIndex));
+                CharacterPoseSourcePreparation preparation =
+                    CharacterPoseSourcePreparation.ClipPlayer(
+                        playerIndex,
+                        player.SourceId,
+                        player.PlayerIndex,
+                        player.ClipSamples,
+                        in capture,
+                        player.NodeId);
+                SubmitSourcePreparation(
+                    sourceLease,
+                    in preparations,
+                    in preparation);
+            }
+        }
+
+        internal void PrepareBlendSpaceSources(
+            CharacterPoseProgramFrameLease lease,
+            CharacterPoseSourceFrameLease sourceLease,
+            in CharacterPoseSourcePreparationView preparations,
+            float presentationDeltaSeconds)
+        {
+            RequireFrame(lease);
+            for (int playerIndex = 0;
+                 playerIndex <
+                 ActorState.PoseStateSources.BlendSpacePlayers.Length;
+                 playerIndex++)
+            {
+                AnimationBlendSpacePlayerRuntime player =
+                    ActorState.PoseStateSources.BlendSpacePlayers[
+                        playerIndex];
+                if (!LinkedFragments.IsPlayerActive(player.PlayerIndex) ||
+                    !player.IsRelevant)
+                {
+                    continue;
+                }
+                AnimationPoseSourceCaptureBinding capture =
+                    player.PrepareCapture(presentationDeltaSeconds);
+                CharacterPoseSourcePreparation preparation =
+                    CharacterPoseSourcePreparation.BlendSpacePlayer(
+                        playerIndex,
+                        player.SourceId,
+                        player.PlayerIndex,
+                        player.ClipSamples,
+                        in capture,
+                        player.NodeId);
+                SubmitSourcePreparation(
+                    sourceLease,
+                    in preparations,
+                    in preparation);
+            }
+        }
+
+        void PrepareStackSource(
+            AnimationBlendStackRuntime stack,
+            CharacterPoseSourceFrameLease sourceLease,
+            in CharacterPoseSourcePreparationView preparations,
+            AnimationPoseSourceId sourceId,
+            float presentationDeltaSeconds,
+            IReadOnlyDictionary<AnimationPlayerSourceSampleKey,
+                AnimationResolvedPoseSourceSample> actionSourceSamples,
+            IReadOnlyDictionary<AnimationPlayerSourceSampleKey,
+                PresentationPoseSourceSample> providerSourceSamples)
+        {
+            var key = new AnimationPlayerSourceSampleKey(
+                stack.PoseNodeId,
+                sourceId);
+            if (sourceId.SourceKind == AnimationPoseSourceKind.Timeline)
+            {
+                if (!actionSourceSamples.TryGetValue(
+                        key,
+                        out AnimationResolvedPoseSourceSample sourceSample))
+                {
+                    throw new InvalidOperationException(
+                        $"Action Pose Source '{sourceId}' has no current resolved request.");
+                }
+                AnimationPoseSampleRequest request = sourceSample.Request;
+                AnimationPoseSourceCaptureBinding capture =
+                    stack.PrepareCapture(
+                        sourceSample,
+                        presentationDeltaSeconds);
+                CharacterPoseSourcePreparation preparation =
+                    CharacterPoseSourcePreparation.Action(
+                        in request,
+                        in capture,
+                        stack.PoseNodeId);
+                SubmitSourcePreparation(
+                    sourceLease,
+                    in preparations,
+                    in preparation);
+                return;
+            }
+            if (!providerSourceSamples.TryGetValue(
+                    key,
+                    out PresentationPoseSourceSample providerSample) ||
+                !ActorState.NodeRuntimeIndex.TryGetSourceOwnerIndex(
+                    stack.PoseNodeId,
+                    out int sourceOwnerIndex))
+            {
+                throw new InvalidOperationException(
+                    $"Presentation Pose Source '{sourceId}' has no current resolved request.");
+            }
+            AnimationResolvedPoseSourceSample resolved =
+                m_SourceModule.ResolveProviderSample(
+                    in providerSample,
+                    sourceOwnerIndex);
+            AnimationPoseSampleRequest providerRequest = resolved.Request;
+            AnimationPoseSourceCaptureBinding providerCapture =
+                stack.PrepareCapture(
+                    resolved,
+                    presentationDeltaSeconds);
+            CharacterPoseSourcePreparation providerPreparation =
+                CharacterPoseSourcePreparation.Provider(
+                    in providerRequest,
+                    in providerSample,
+                    in providerCapture,
+                    stack.PoseNodeId);
+            SubmitSourcePreparation(
+                sourceLease,
+                in preparations,
+                in providerPreparation);
+        }
+
+        void SubmitSourcePreparation(
+            CharacterPoseSourceFrameLease sourceLease,
+            in CharacterPoseSourcePreparationView preparations,
+            in CharacterPoseSourcePreparation preparation)
+        {
+            int index = FramePages.AddSourcePreparation(in preparation);
+            m_SourceModule.Prepare(
+                sourceLease,
+                in preparations,
+                index);
+        }
+
+        static bool HasEarlierSource(
+            AnimationBlendStackRuntime stack,
+            int entryIndex,
+            AnimationPoseSourceId sourceId)
+        {
+            for (int i = 0; i < entryIndex; i++)
+            {
+                AnimationBlendEntryId candidate = stack.GetEntryId(i);
+                if (!candidate.SourcePoseTarget &&
+                    candidate.SourceId.Equals(sourceId))
+                {
+                    return true;
+                }
+            }
+            return false;
         }
 
         internal void CommitEvaluationFrame(
@@ -771,14 +1071,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         {
             RequireFrame(lease);
             return FramePages.RequireSourceDemand(in demand);
-        }
-
-        internal int AddSourcePreparation(
-            CharacterPoseProgramFrameLease lease,
-            in CharacterPoseSourcePreparation preparation)
-        {
-            RequireFrame(lease);
-            return FramePages.AddSourcePreparation(in preparation);
         }
 
         internal void ClearSourceDemand() => FramePages.ClearSourceDemand();

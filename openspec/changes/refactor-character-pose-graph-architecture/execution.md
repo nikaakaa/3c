@@ -871,3 +871,9 @@ Reset保持现有三段顺序：Program先清Evaluation／Demand并Reset Inertia
 状态：`CharacterPoseProgramRuntime`接管Motion Matching的PoseState Demand构造、Selection应用入口、`IPoseStateSourceSelectionSink`、Player路由、Source usage记录、History读准备和Pose Plan Completion。所需固定数组按Actor的Motion Matching Provider容量在Program Runtime构造时一次分配；旧Pose Runtime删除对应跨Barrier字段、数组、sink实现和Player／Source反查辅助方法。
 
 独立`CharacterMotionMatchingPresentationModule`仍唯一负责查询与Selection Resolution，Program Runtime只消费typed Resolution并通过`CharacterPoseSourceModule`正式usage入口记录物理Source使用；History仍从同一Pending Player Pose读取，Foot feature、bone顺序、selection completion、pose completion和reset sequence保持不变。由此推进任务6.2与6.5，但Clip／BlendSpace／Action的物理Source准备仍在旧外层，暂不勾选。3C MCP对Program Runtime、Pose Runtime与PoseState Source错误筛选均为0；不单独运行回放。
+
+## Source Preparation逻辑迁入Program Runtime
+
+状态：Program Runtime接管Evaluation Workspace打开，以及Stack、Direct Player、Clip Player和Blend Space Player逐Family的Source Preparation。它按原Linked Fragment／Preview relevance、Stack entry去重和Player relevance读取逻辑节点状态，生成typed `CharacterPoseSourcePreparation`，再通过`CharacterPoseSourceModule.Prepare`唯一物理入口提交；Provider sample解析和Source owner映射也不再由旧Pose Runtime处理。
+
+Source Module继续唯一拥有Animancer／Playable物理Source、Prepared Resources与Source Frame Result，外层仍保留现有Profiler阶段、Job binding、Final Publication binding和Writer预验证顺序。Action与Provider字典、Clip play rate、Capture binding、Preparation index、循环顺序和异常文本保持不变；任务6.2与6.5继续推进，但Job安装与Source Result闭包尚未归入Program Runtime，暂不勾选。3C MCP对两个触碰文件错误筛选均为0；不单独运行回放。

@@ -207,6 +207,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation
 
         public void RequirePosePayload()
         {
+            PosePlan?.BindProjectionIdentity(
+                ProgramId,
+                ProjectionRevision);
             PosePlan?.RequireValid();
             Rig?.RequireValid();
             BlendCurveCatalog?.RequireValid();

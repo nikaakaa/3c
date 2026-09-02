@@ -773,31 +773,37 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         int m_PelvisBoneIndex;
         AnimationPoseGraphNativeLegChain m_LeftLeg;
         AnimationPoseGraphNativeLegChain m_RightLeg;
+        FixedString128Bytes m_ProgramId;
+        FixedString128Bytes m_ProjectionRevision;
+        FixedString128Bytes m_PoseProgramImageHash;
         FixedString64Bytes m_RigId;
         FixedString64Bytes m_RigRevision;
         bool m_Disposed;
 
         internal CharacterPoseProgramExecutionView(
-            CharacterPoseProgramImage program,
-            CharacterAnimationRigPayload rig,
-            AnimationBlendCurveCatalogPayload curves,
-            AnimationBlendProfileCatalogPayload profiles,
+            CharacterPresentationProjection projection,
             CharacterPoseProgramFramePages framePages,
             in AnimationPoseNativeAggregateLayout layout)
         {
             try
             {
-                if (program == null)
-                    throw new ArgumentNullException(nameof(program));
-                if (rig == null)
-                    throw new ArgumentNullException(nameof(rig));
-                if (curves == null)
-                    throw new ArgumentNullException(nameof(curves));
-                if (profiles == null)
-                    throw new ArgumentNullException(nameof(profiles));
+                if (projection == null)
+                    throw new ArgumentNullException(nameof(projection));
                 if (framePages == null)
                     throw new ArgumentNullException(nameof(framePages));
+                projection.RequirePosePayload();
+                CharacterPoseProgramImage program = projection.PosePlan;
+                CharacterAnimationRigPayload rig = projection.Rig;
+                AnimationBlendCurveCatalogPayload curves =
+                    projection.BlendCurveCatalog;
+                AnimationBlendProfileCatalogPayload profiles =
+                    projection.BlendProfileCatalog;
                 program.RequireValid();
+                program.RequireProjectionIdentity(
+                    projection.ProgramId,
+                    projection.ProjectionRevision,
+                    rig.RigId,
+                    rig.RigRevision);
                 rig.RequireValid();
                 curves.RequireValid();
                 profiles.RequireValid(program.PoseBoneCount, rig.RigId, rig.RigRevision);
@@ -841,6 +847,11 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 m_PelvisBoneIndex = rig.PelvisPhysicalBoneIndex;
                 m_LeftLeg = new AnimationPoseGraphNativeLegChain(rig.LeftLeg);
                 m_RightLeg = new AnimationPoseGraphNativeLegChain(rig.RightLeg);
+                m_ProgramId = new FixedString128Bytes(program.ProgramId);
+                m_ProjectionRevision =
+                    new FixedString128Bytes(program.ProjectionRevision);
+                m_PoseProgramImageHash =
+                    new FixedString128Bytes(program.PoseProgramImageHash);
                 m_RigId = new FixedString64Bytes(rig.RigId);
                 m_RigRevision = new FixedString64Bytes(rig.RigRevision);
 
@@ -914,6 +925,11 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         internal int PelvisBoneIndex => m_PelvisBoneIndex;
         internal AnimationPoseGraphNativeLegChain LeftLeg => m_LeftLeg;
         internal AnimationPoseGraphNativeLegChain RightLeg => m_RightLeg;
+        internal FixedString128Bytes ProgramId => m_ProgramId;
+        internal FixedString128Bytes ProjectionRevision =>
+            m_ProjectionRevision;
+        internal FixedString128Bytes PoseProgramImageHash =>
+            m_PoseProgramImageHash;
         internal FixedString64Bytes RigId => m_RigId;
         internal FixedString64Bytes RigRevision => m_RigRevision;
         internal NativeArray<AnimationPoseGraphNativeOperation> Operations => m_Operations;
@@ -1587,6 +1603,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 !m_LeftLeg.IsValid(m_BoneCounts.PhysicalBoneCount, m_PelvisBoneIndex) ||
                 !m_RightLeg.IsValid(m_BoneCounts.PhysicalBoneCount, m_PelvisBoneIndex) ||
                 m_ParameterDefaults.Length != m_ParameterCount || m_ParentIndices.Length != m_BoneCount ||
+                m_ProgramId.Length == 0 ||
+                m_ProjectionRevision.Length == 0 ||
+                m_PoseProgramImageHash.Length == 0 ||
                 m_RigId.Length == 0 || m_RigRevision.Length == 0 ||
                 m_OutputNativeOperationIndex < 0 || m_OutputNativeOperationIndex >= m_Operations.Length ||
                 m_OutputOperationIndex < 0 || m_OutputOperationIndex >= m_FrameCacheCount ||

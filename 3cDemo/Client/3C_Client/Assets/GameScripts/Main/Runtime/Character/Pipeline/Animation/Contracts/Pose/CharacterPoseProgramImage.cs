@@ -659,6 +659,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         [SerializeField] string m_PlanHash = string.Empty;
         [SerializeField] string m_RigId = string.Empty;
         [SerializeField] string m_RigRevision = string.Empty;
+        [NonSerialized] string m_ProgramId = string.Empty;
+        [NonSerialized] string m_ProjectionRevision = string.Empty;
         [SerializeField] int m_PoseBoneCount;
         [SerializeField] int m_LeftFootBoneIndex = -1;
         [SerializeField] int m_RightFootBoneIndex = -1;
@@ -776,6 +778,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         public string PoseGraphId => m_PoseGraphId ?? string.Empty;
         public string ContentRevision => m_ContentRevision ?? string.Empty;
         public string PlanHash => m_PlanHash ?? string.Empty;
+        public string ProgramId => m_ProgramId ?? string.Empty;
+        public string ProjectionRevision => m_ProjectionRevision ?? string.Empty;
+        public string PoseProgramImageHash => PlanHash;
         public string RigId => m_RigId ?? string.Empty;
         public string RigRevision => m_RigRevision ?? string.Empty;
         public int PoseBoneCount => m_PoseBoneCount;
@@ -829,6 +834,61 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         public int ContributionWorkspaceCount => m_ContributionWorkspaceCount;
         public int FrameCacheCount => m_FrameCacheCount;
         public int OutputOperationIndex => m_OutputOperationIndex;
+
+        internal void BindProjectionIdentity(
+            string programId,
+            string projectionRevision)
+        {
+            programId = PoseIdentity.Require(
+                programId,
+                nameof(programId));
+            projectionRevision = PoseIdentity.Require(
+                projectionRevision,
+                nameof(projectionRevision));
+            if (!string.IsNullOrEmpty(m_ProgramId) &&
+                (!string.Equals(
+                     m_ProgramId,
+                     programId,
+                     StringComparison.Ordinal) ||
+                 !string.Equals(
+                     m_ProjectionRevision,
+                     projectionRevision,
+                     StringComparison.Ordinal)))
+            {
+                throw new InvalidOperationException(
+                    "Pose Program Image projection identity is already bound.");
+            }
+            m_ProgramId = programId;
+            m_ProjectionRevision = projectionRevision;
+        }
+
+        internal void RequireProjectionIdentity(
+            string programId,
+            string projectionRevision,
+            string rigId,
+            string rigRevision)
+        {
+            if (string.IsNullOrEmpty(ProgramId) ||
+                string.IsNullOrEmpty(ProjectionRevision) ||
+                string.IsNullOrEmpty(PoseProgramImageHash) ||
+                !string.Equals(
+                    ProgramId,
+                    programId,
+                    StringComparison.Ordinal) ||
+                !string.Equals(
+                    ProjectionRevision,
+                    projectionRevision,
+                    StringComparison.Ordinal) ||
+                !string.Equals(RigId, rigId, StringComparison.Ordinal) ||
+                !string.Equals(
+                    RigRevision,
+                    rigRevision,
+                    StringComparison.Ordinal))
+            {
+                throw new InvalidOperationException(
+                    "Pose Program Image projection identity is inconsistent.");
+            }
+        }
 
         public int RequireParameterIndex(PoseParameterId parameterId)
         {

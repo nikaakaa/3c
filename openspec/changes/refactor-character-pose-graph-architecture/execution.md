@@ -991,3 +991,9 @@ Action sample window、presentation tick、delta、Interpolation／Retention投�
 状态：`CharacterPoseNodeDefinition`改为真正的抽象定义合同，typed泛型Definition直接实现Payload创建／字段读取、局部与Rig校验、Graph dependency、Source Map和Lowering；Definition Module直接登记29个具体Definition，不再先登记Handler再包装一次。Full Body IK、Linked Pose与Motion Matching定义文件同步改名，旧`ICharacterPoseCompilerHandler`、泛型Handler和Handler命名全部删除。
 
 Player、Action Input、Slot、Blend、StateMachine、Inertialization、Additive、Component Control与Clip需求由单一`CharacterPoseNodeRuntimeRequirement`位集表达，Compiler与Symbolic Lowering只消费该typed需求，不再读取逐项布尔矩阵。任务10.9完成；3C MCP强制刷新后所有触碰文件错误筛选均为0，当前唯一全局编译错误来自范围外ASP Local Integration；不单独运行回放。
+
+## 拆出Family Payload绑定Pass入口
+
+状态：唯一`CharacterPoseCompilerModule`现只编排Capability、Graph Closure、Typed Lowering、Topology与Symbolic Family Lowering，并把后续物理绑定交给独立`CharacterPoseFamilyPayloadBindingPass`。原2463行中央Compiler文件整体改名为该Pass实现，新建的小型Compiler入口不再持有Binding字段、递归Graph lowering或Payload索引分配逻辑。
+
+本步只移动唯一调用边界，输入Request、前置Pass结果、异常归属、Operation顺序、物理索引、Hash和Program Image输出不变。11.9暂不勾选：Stage／Lifetime／Workspace与Image Seal仍在Binding Pass尾部，下一步继续拆成明确Result与Seal Pass；3C MCP对Compiler入口与Binding Pass错误筛选均为0，不单独运行回放。

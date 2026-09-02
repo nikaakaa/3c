@@ -14,7 +14,7 @@ Unity导入新程序集并生成正式meta与csproj；`ThirdPersonCharacter.Foot
 
 ## 固结现行字段迁移清单
 
-从固定Record正式Header与现行`CharacterFootSampleColumns.Schema.Columns`逐字段对账，生成`current-field-migration-inventory.csv`与`field-migration-map.md`。清单包含主表1222列、Ground Geometry 27列、共1249列和29组；折叠CSV组件后为879个typed字段，其中701标量、164 Vector3、14 Quaternion。151个typed字段的231个展开列引用34个availability typed字段，表内ordinal、Column、typed Field identity与availability引用检查均为0错误。
+从固定Record正式Header与旧`CharacterFootSampleColumns.Schema.Columns`逐字段对账，生成现已更名的`historical-field-migration-inventory.csv`与`field-migration-map.md`。这些数量只属于历史迁移基线，不代表0.4生成Schema。
 
 现行Analyzer 75仍通过唯一Schema绑定完整主表与Geometry，因此1249列全部登记为`required:facts/75`；每行同时登记当前来源Owner、运行／派生／格式化／旧Transform分类和七维评分消费者。清单明确发现35个`RootHierarchy`列与93个`SolverPhysical`混合列仍经过旧场景Transform，不能直接接入新Sampler；它们先由PoseGraph Final Publication补齐世界空间Physical事实，随后旧Transform输入整体删除。由此完成任务1.4，并给任务2.4、3.2、3.6、3.7、5.1至5.4提供同一零遗漏迁移真相。
 
@@ -195,3 +195,6 @@ Unity重编译后使用程序集metadata核对：Program public、Lifecycle nest
 Pelvis Spring Input 11个typed字段已迁移，覆盖Previous State／Support Changed／Previous Slope、Handoff Reason、Velocity Reset、Previous Target／Output／Velocity及本帧Input／Input Velocity／Frequency。类别值保持领域枚举Int32，数值直接读取Committed `StrideHips.Response`，不重跑handoff或弹簧积分。
 
 Full Sampler加入`pelvis-spring-input`后，生成主Extractor调用由731增长到742，连同Geometry表共763个typed字段；Schema为`0b48465a63727163fbca3bbcf127195d975560a5a56c22894586c9e937b1a910`，Program hash为`af167a8cd2764edef27928bd7bb9c5d04f66b736fd2a6936d878f56144245223`，主layout为`775fc2d4bafd1eb4ee62e09965824359309b7806172bacdfebc3f895ca4fa447`。该模块与字段清单对账expected 11、actual 11、missing 0、extra 0；Unity编译无新增错误。Pelvis当前33／94项完成，本步不单独回放。
+# 历史执行记录（已由0.4合同替代）
+
+本文件只保留0.2／0.3迁移过程证据，不再描述当前实现。当前唯一合同见`proposal.md`、`design.md`与`specs/`：Foot使用多个现有Fact Root、真实成员单Attribute、generated `Start/HandleCommitted/Stop`、三张真实Ground class page表和Schema-driven Host；不存在Dimension View、生命周期Event DTO、Side Metadata、Runtime Derived、合成Geometry表、Bridge、Host Adapter、Column或CsvBinding。以下旧hash、旧字段数与旧阶段结论不得用于实现或验收。

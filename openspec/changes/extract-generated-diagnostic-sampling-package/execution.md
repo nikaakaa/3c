@@ -1,21 +1,38 @@
 # 执行记录
 
-## 冻结独立package输入与3C迁移清单
+## 当前独立package输入
 
-独立Owner仓库为`D:/Unity_Project_1/generated-diagnostic-sampling`，消费commit为`57681605d1e9b017bf0bb4a829700eb7db7bb1da`，package为`com.kk.generated-diagnostic-sampling` 0.1.0。正式Analyzer SHA-256为`D73D39C59271BFE6AC0A34C7E45C4CF2D74DE44239106D9A2BB967C8C63D8C73`，MVID为`c91a40d8-7c63-40d8-a342-a60f1efe2cf1`；源码、UPM Analyzer与独立仓库记录一致。迁移前复核发现旧发布DLL与当前Release输出身份不一致，独立Owner已增加确定性构建、CI构建和稳定PathMap，连续两次Rebuild身份一致，Probe全闭包0警告0错误，package与Release的SHA-256和MVID完全相同。
+独立Owner仓库为`D:/Unity_Project_1/generated-diagnostic-sampling`。当前唯一消费输入已经核对为：
 
-独立package已具备`DiagnosticLifecycleEvent`／`DiagnosticLifecyclePayload`、三个Event生成处理器、Schema-driven CSV／主表／子表／artifact／manifest、Runtime Session／Writer和Host Finalizer。Probe以Started、含Left／Right声明维度的CommittedSample、Stopped三事件闭合生命周期；领域不需要Bridge、Host Adapter、Column或CsvBinding。
+- commit：`507ccbdb3c780f45d36b21bb044eedb4b53ec4a9`
+- package：`com.kk.generated-diagnostic-sampling` 0.4.0
+- Analyzer SHA-256：`26577FD50C2DED7C7572E97C223777BCEF9C545BAB30379C5B6172C727AC20C1`
+- Analyzer MVID：`5152d24c-57cd-4f31-9b50-837bfcb93de5`
 
-3C迁移清单已覆盖Unity manifest／packages lock、Foot using／asmdef／Sampler／Program／三个Event、旧`3cDemo/Shared/UnityPackages/com.thirdperson.generated-diagnostic-sampling`、旧`Tools/ThirdPersonGeneratedDiagnosticSampling`、Repository Policy四项allowlist以及OpenSpec Owner口径。当前Foot字段迁移只修改Foot插件自身，独立package Owner线程明确不修改3C consumer文件；共享index窗口已串行协调。由此完成任务1.1至1.3。
+0.4正式ABI为一个Dimension下多个强类型Fact Root与一个Metadata。Capability通过重复`DiagnosticFactRoot`声明Root；Program声明Dimension；Generator生成multi-`in` `HandleCommitted`、Lifecycle、Schema和packet访问；Host自动生成CSV与manifest。0.1至0.3的单View、Lifecycle Event DTO和旧Analyzer只属于历史，不是本change的有效构建或验收证据。
 
-## 3C consumer切换证据
+## 3C已完成部分
 
-工作区已把manifest与lock改为唯一`file:../../../../../generated-diagnostic-sampling/Packages/com.kk.generated-diagnostic-sampling`，Foot程序集和23个Extractor文件改用`KK.GeneratedDiagnosticSampling`，Full Sampler改为`DiagnosticOutputFormat.Csv`，并声明CaptureStarted、CommittedSample、CaptureStopped三个typed Event及`character-foot-ik/left`、`character-foot-ik/right`两个稳定样本维度。旧embedded package的44个跟踪文件、旧Tools的6个跟踪文件和其134个忽略构建产物已删除；旧package、namespace、Bridge、Host Adapter、Column、CsvBinding、Reader及Session／Writer控制面在Foot消费范围搜索均为零。
+3C manifest与packages lock已经切换到唯一外部file dependency。本地旧embedded package、旧Tools及其精确Repository Policy allowlist已经删除。此前3C核心消费者切换提交为`499a24a2fe29efeeb27f7580c7c1325dc5405b54`，它只证明旧Owner删除和外部依赖切换，不证明0.4 multi Fact Root消费闭环。
 
-Unity MCP重启并恢复`3C_Client@e852139597e42532`后执行全量refresh与脚本编译，`ThirdPersonCharacter.FootIkDiagnosticSampling.dll`和`KK.GeneratedDiagnosticSampling.dll`于2026-09-02 10:46:21重建。Unity生成工程只引用外部KK Analyzer和`KK.GeneratedDiagnosticSampling.csproj`，Analyzer SHA-256为`D73D39C59271BFE6AC0A34C7E45C4CF2D74DE44239106D9A2BB967C8C63D8C73`；Foot程序集包含三个领域Event、`DiagnosticLifecycle`、`CreateDiagnosticLifecycle`、`Handle`及Left／Right维度identity。Console没有C#、package或asmdef错误，唯一Error是既有FinalIK `FBIKChain.reachSmoothing`序列化深度提示。
+当前工作区正在把Foot普通Attribute迁到既有readonly业务成员，并把Capability拆为多个Fact Root；旧普通Getter／Extractor正在删除，剩余Derived正在限制为真正公式。这些修改尚未完成统一生成、Commit接线、Host消费和最终提交，因此任务2.2至3.5保持未完成。
 
-常规`dotnet build`按规定参数执行并立即关闭build server，但被既有项目图错误阻断：`.NET Framework 4.7.1`的`ThirdPersonGameplay.csproj`引用`netstandard2.1`的`TEngine.Runtime.csproj`；关闭ProjectReference构建后又因对应输出DLL缺失而无法独立编译Foot目标。本迁移不复制DLL、不创建临时引用路径，也不修改无关TEngine目标框架，因此任务4.1仍保持未完成。Repository Policy报告36项既有空meta或其它项目白名单违规，无KK迁移新增项；迁移范围`git diff --check`通过，全局仅有用户Rollback prefab两处既有尾随空格；OpenSpec strict通过。
+## 已失效的旧验收证据
 
-## 3C核心迁移提交
+先前针对0.1 Analyzer进行的Unity refresh、三个Lifecycle Event handler、单View Left／Right Dimension和旧Generated Program编译记录不能验证0.4。旧Analyzer SHA-256 `D73D39C59271BFE6AC0A34C7E45C4CF2D74DE44239106D9A2BB967C8C63D8C73`以及相关Event／View生成结果只保留为迁移历史，不得用于勾选当前构建任务。
 
-3C核心consumer切换已提交为`499a24a2fe29efeeb27f7580c7c1325dc5405b54`。提交只包含KK依赖、Foot namespace／Sampler／typed Event、旧embedded package与旧Tools删除、对应Policy删除和本change证据；工作区中的TND package、Performance／Network Policy、Resolved Target／Contact后续字段及其它PoseGraph／Performance修改均未进入该提交。任务4.5仍等待`pik`精确关联commit及完整consumer收口，不因3C核心提交提前勾选。
+旧portable构建曾被`.NET Framework 4.7.1`与`netstandard2.1`项目图冲突阻断，该记录同样没有验证0.4。不得通过复制DLL、临时ProjectReference或第二工程绕过正式构建图。
+
+## 尚未完成的验收
+
+以下闭环目前没有完成，不能声明3C采样器已经交付：
+
+- Foot Capability、真实Field／Table、Sampler与Program的完整0.4生成校验。
+- 正式同步Commit点对generated `HandleCommitted`的Left／Right多Fact Root调用。
+- Event／View／Bridge／Adapter／Getter／Extractor／Column／CsvBinding及旧Reader的零残留搜索。
+- Analyzer／Publisher只读Host自动CSV、typed artifact和manifest。
+- 真实Capture Player的0.4闭包检查。
+- 真实Disabled Player的Cecil／IL2CPP零Attribute、零AssemblyRef、零程序集、零生成代码和零identity检查。
+- 统一migration identity最终提交、用户验收、current truth更新与归档。
+
+本change继续保持active。只有上述代码、生成结果和真实Player Gate完成并由用户验收后，才能更新任务状态和归档。

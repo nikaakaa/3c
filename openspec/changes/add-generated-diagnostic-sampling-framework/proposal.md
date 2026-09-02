@@ -1,30 +1,33 @@
 ## Why
 
-`refactor-foot-ik-diagnostic-sampling`已经需要Attribute字段声明、编译期AOT函数生成、typed packet、多Sampler组合、Host Reader和构建身份；如果这些能力继续以Foot IK命名和实现，后续Camera、Animation、Simulation或AI诊断会复制同一套编译器、packet与生命周期。现在实现尚未开始，应先把稳定基础设施提取为项目级通用框架，让Foot IK成为首个完整领域插件，而不是未来再做第二次迁移。
+通用采样核心已经具备AOT Capture、typed packet和Schema-driven Host，但旧单View合同仍迫使消费方把Landing、Motion、Goal、Solved、Pelvis等现有事实复制进诊断DTO。独立仓库0.4.0已经确立multi Fact Root合同，3C必须以该合同为唯一真相，删除单View、生命周期Event DTO和逐字段映射。
 
 ## What Changes
 
-- 新增项目级Generated Diagnostic Sampling Framework。框架只定义Capability、Field／Group／Table／Sampler Attribute、Capture Program Request、Schema descriptor、Generated Capture Program ABI、codec、typed packet、Capability Session、Writer／Reader、Host Finalizer与manifest合同，不定义通用Committed View，也不理解Foot、PoseGraph、Presentation Frame、Simulation Tick、Camera、FBBIK、评分或具体CSV字段。
-- 新增唯一.NET Standard 2.0 Source Generator与编译期Schema Compiler。它从编译符号发现领域Capability、三个typed生命周期Event、字段、样本维度和Sampler声明，按Capability与Sampler Set校验闭包并生成普通C#具体事件处理器与Capture Program；Editor与IL2CPP Player执行同一Generated Program，运行时不得编译表达式、反射成员、使用`object`动态调用或解析字符串路径。
-- 每个领域正式Runtime Owner必须提供自己的具体只读Committed Capture View并拥有其lineage／availability与租约语义；领域手写采样代码只定义并发布`CaptureStarted`、`CommittedSample`、`CaptureStopped`三个typed事件，以及具体Capture Metadata、字段Extractor和Sampler Definition。普通Sampler不声明Bridge或Host Adapter。生成类型按Capability identity隔离；框架不提供共同View／Metadata DTO，不把Capture Metadata塞回Committed View，也不使用`object`、运行时未知泛型、万能DTO或中央领域`switch`。
-- 新增固定类型族的dense packet与固定容量子表协议。Generated `CaptureStarted`处理器创建Session并冻结Program／Schema／容量／interest；Generated `CommittedSample`处理器在短View租约内按声明的枚举／稳定ID维度自动租packet、调用Extractor、写入并提交；Generated `CaptureStopped`处理器按Completed／Cancelled／Faulted结果封存packet、artifact和manifest。Host依据同一Sampler Schema自动生成主表、固定子表、RFC 4180 CSV、逐Sampler manifest和无复制typed view；领域Analyzer／Publisher只读取生成产物，不参与采样适配、字段映射或生命周期。
-- 新增通用诊断Capability构建身份合同。每个Player Build Request显式声明Capability为`Disabled`或`Capture`；Capture锁定Sampler Set、Schema identity、Generated Program hash、Generator binary identity、程序集binding、cadence、packet layout/capacity与transport，Disabled通过`DiagnosticCompilationClosureProof`在编译期排除对应插件和生成程序。Player manifest、Run Request、握手、Runtime／Capability manifest与Comparer共享同一Capability Set codec；框架不创建第二Player、Controller、顶层Capture或Comparer。
-- `refactor-foot-ik-diagnostic-sampling`改为首个领域插件：只定义Foot三个生命周期Event、具体Capture Metadata、字段／表／Sampler声明以及下游Full Analyzer／Publisher和评分迁移，不再拥有Foot Bridge、手写Column／CsvBinding、每Sampler Host Adapter、第二Source Generator、通用packet、Session、Writer、manifest或Host编排框架。
-- 不建立通用对象序列化器、运行时脚本／表达式引擎、远程遥测、跨机器实时Collector、数据库、通用查询语言或线上配置系统；这些能力不能作为当前框架失败时的fallback。
+- **BREAKING**：`DiagnosticCapability`只声明Capability identity、revision和Metadata类型；一个Dimension需要的每个现有事实类型分别通过`DiagnosticFactRoot(rootId, type)`注册，不再声明Dimension View或通用View。
+- **BREAKING**：`DiagnosticCaptureProgram`直接声明稳定Dimension ID与Sampler集合；Generator生成`DiagnosticLifecycle.Start`、多Fact Root `HandleCommitted`和`Stop`，领域不再定义`CaptureStarted`、`CommittedSample`、`CaptureStopped`三个Event DTO。
+- 一个Dimension可以同时接收多个现有强类型Fact Root和一个Metadata。Commit点按生成签名把左右或其它Dimension的事实直接以`in`传入，不构造诊断DTO、不复制字段、不执行Side选择。
+- 普通字段只在现有readonly field或调用方可读不可写property上声明一个`DiagnosticField`；现有业务计算getter同样允许直接标记。Generator从Fact Root与成员路径生成默认Field identity、推断codec并展开直接访问。
+- 同一业务类型可以作为多个Fact Root或经多条成员路径复用，叶子Attribute只声明一次；Schema通过Fact Root ID和成员路径区分位置。`DiagnosticDerivedField`只保留真正公式，方法只接收实际读取的Fact Root，参数名映射Root ID，最后接收`in Metadata`。
+- 固定一对多事实可在现有readonly struct或只向调用方暴露`Count`与只读索引器的class page上声明`DiagnosticTable`；行内字段继续使用真实成员`DiagnosticField`，不创建表DTO。
+- Generated lifecycle自动完成Session创建、packet租用、每Dimension Capture、提交与封存。Host只依据sealed packet和统一Schema自动生成主表、子表、RFC 4180 CSV、Sampler manifest及Capability manifest；不存在Bridge、Column／CsvBinding或Host Adapter。
+- `KK_DIAGNOSTIC_SAMPLING`缺失时Attribute不写入业务metadata、Generator零输出、Capture Runtime与领域Diagnostics程序集不进入Player。Cecil与IL2CPP Gate必须证明Annotations不作为Player根程序集残留，并证明零Sampling AssemblyRef、零Generated Program／Session／packet／queue／interest和零Capability／Field identity。
+- `refactor-foot-ik-diagnostic-sampling`只负责把现有Foot事实注册为多个Fact Root、声明字段／表／Sampler／Program、在同步Commit点调用生成入口，并在基础产物完成后运行领域Analyzer／Publisher；PoseGraph不为采样增加View、DTO、Event或运行分支。
+- 不建立通用对象序列化器、运行时表达式／脚本引擎、反射fallback、动态字段字典、远程遥测或旧0.3兼容链。
 
 ## Capabilities
 
 ### New Capabilities
 
-- `generated-diagnostic-sampling-framework`: 定义跨领域的编译期Schema、AOT Generated Capture Program、typed packet、多Sampler组合、Session／Writer／Host Finalizer、manifest和构建capability合同。
+- `generated-diagnostic-sampling-framework`: 定义跨领域的multi Fact Root编译期Schema、AOT直接成员访问、generated lifecycle、typed packet、Session／Writer／Reader、Schema-driven CSV／manifest和Disabled零闭包。
 
 ### Modified Capabilities
 
 ## Impact
 
-- Affected runtime/tooling: 通用诊断contracts、AOT-safe Attribute定义、Source Generator、Generated Program ABI、typed packet／固定容量子表、Session、Writer、Host Reader与manifest identity。
-- Affected active change: `refactor-foot-ik-diagnostic-sampling`从通用基础设施Owner收窄为Foot IK领域插件和首个纵向验证；不改变Foot、Pelvis、Goal、FBBIK或评分业务语义。
-- Affected active change: `add-gameplay-performance-capture-workflow`新增通用`DiagnosticCapabilitySet`接入并明确禁止Foot专属构建字段，继续唯一拥有Build、Player、Controller、Gate、顶层Capture与Comparer。
-- Affected active change: `refactor-character-pose-graph-architecture`唯一生产并控制具体`CharacterFootIkCommittedCaptureViewLease`；它不定义通用View，也不引用框架Source Generator、Generated Program、packet或Performance Build身份。
-- Affected dependencies: Unity 2022.3支持的Roslyn API版本、.NET Standard 2.0生成器编译边界和Player专属编译输入必须进入Generator／Build identity。
-- Current specs: `btsmtl-runtime-diagnostics`的只读、source identity和不反向驱动运行结果要求保持；本change新增独立采样基础设施，不把性能样本或领域packet写入RuntimeDebugSession Trace Store。
+- Affected dependency: 3C统一消费独立`com.kk.generated-diagnostic-sampling` 0.4.0及其唯一Analyzer identity，不再维护项目内第二份Generator或旧单View ABI。
+- Affected runtime/tooling: Annotations、Source Generator、Generated Program ABI、multi Fact Root Schema、typed packet、固定容量Table、Runtime Session、Writer、Host Reader／Finalizer和构建闭包Gate。
+- Affected active change: `refactor-foot-ik-diagnostic-sampling`迁移为0.4.0消费方，删除诊断View、三个Event DTO、普通Getter／Extractor、Bridge、Column／CsvBinding和Host Adapter。
+- Affected active change: `add-gameplay-performance-capture-workflow`继续唯一拥有Build、Player、Controller、顶层Capture、Gate与Comparer，只消费通用`DiagnosticCapabilitySet`。
+- Affected active change: `refactor-character-pose-graph-architecture`继续独立维护正式Committed Result、事务、Seal和既有Post-Commit边界；采样只在现有事实成员上保留条件Attribute并由外部Commit调用生成入口。
+- Affected build targets: Unity 2022.3 Editor、Windows x64 IL2CPP Capture Player与不含采样闭包的Disabled Player。

@@ -2,30 +2,32 @@
 
 ### Requirement: Foot Placement诊断必须只显示正式结果
 
-Runtime Result MUST与Diagnostics严格分型。PoseGraph MUST在表现帧开始冻结具体`CharacterFootIkCaptureInterest`和View固定容量；仅在存在interest时，Foot、Constraint/FBBIK与Final Publication Owner才可把允许观察的Pending Result单向深冻结进各自预分配诊断页。根表现帧成功Seal后，`CharacterPoseDiagnosticsProjector` MUST只按同一Frame、Completion、Program、Projection、Rig、Tuning Generation与Bank lineage组合一份具体`CharacterFootIkCommittedCaptureViewLease`，包含正式Input、Observation、Transition、Target、连续Correction、Hard Constraint、Resolved、Goal、Solved与Physical事实，并由PoseGraph唯一控制其有效期与失效。
+Runtime Result MUST与Diagnostics严格分型。Foot、Landing、Ground Path、Pelvis、Goal、FBBIK与Final Publication MUST只按业务管线产生正式结果；PoseGraph MUST只拥有自己的Pending／Committed事务、Seal和既有PostCommit短租约，不得为了采样新增事实结构、Dimension类型、领域生命周期Event、Side metadata、packet、Session、Host或第二发布路径。
 
-Gizmo、Trace与Pose Watch MUST只读取各自允许的Committed页；Foot Sampler MUST只通过同一Generated Program读取该唯一具体View租约。任何诊断路径不得查询世界、修改Foot状态、选择Support、生成Goal、执行FBBIK、读取FBBIK Vendor对象、读取Pending Workspace、反推Physical Transform，或通过Foot事件与Animation Snapshot/Pose Watch二次拼接同一帧。多个Sampler MUST共享该唯一View，不得让Runtime为每个Sampler复制第二套Foot、FBBIK或Physical事实。Diagnostics命名、Attribute、Schema、Sampler数量或布局变化 MUST不改变Runtime Result，也 MUST不进入PoseGraph View合同。
+需要采样的现有真实readonly成员 MAY增加Conditional DiagnosticField，但该标记 MUST不改变成员值、对象布局、业务执行顺序或无采样构建的运行闭包。Foot薄Capture MUST只在成功Seal后的既有PostCommit调用栈中取得现有Left／Right与公共事实根，并以in参数一次交给生成的HandleCommitted；它 MUST不构造采样DTO、不逐字段复制、不按Metadata Side选择、不重新执行World Query、坐标变换、Goal Assembly、FBBIK或Physical读取。
+
+Gizmo、Trace与Pose Watch MUST继续只读取各自允许的Committed事实。Generated Program MUST只读取本次PostCommit提供的根并写framework-owned packet；后台 MUST不持有业务page。通用Host和Foot Analyzer／Publisher MUST只消费sealed packet与生成artifact，不得访问Pending Workspace、Vendor对象、场景Transform或可写Runtime Target。
 
 #### Scenario: 捕获正式Foot事实
 
-- **WHEN** Foot、Pelvis、Goal、FBBIK和Final Publication完成同一根表现帧验证并Seal
-- **THEN** PoseGraph MUST发布一份同lineage的`CharacterFootIkCommittedCaptureViewLease`
-- **AND** Foot Generated Program MUST在该租约内为全部已选Sampler一次读取输入、过程、Resolved、Solved与Physical事实
+- **WHEN** Foot、Pelvis、Goal、FBBIK与Final Publication在同一Frame和Completion成功Seal
+- **THEN** 既有PostCommit consumer MUST把现有左右脚与公共Fact Root传给同一个Generated HandleCommitted
+- **AND** PoseGraph MUST不发布采样专用Event或第二事实页，Foot业务结果 MUST不因Sampler数量变化
 
-#### Scenario: 当前帧没有Foot IK diagnostics interest
+#### Scenario: 当前没有Foot采样
 
-- **WHEN** 根表现帧开始时没有任何Foot IK Sampler、Pose Watch或Trace interest需要对应详情
-- **THEN** Foot、FBBIK与Final Publication MUST不构造Foot IK View诊断payload，PoseGraph MUST不发布该租约
-- **AND** 正式Foot、Goal、Solver与Physical结果 MUST按相同输入产生相同结果
-
-#### Scenario: 同时启用多个Foot IK Sampler
-
-- **WHEN** 多个Sampler在Frame开始前共同请求Foot IK committed facts
-- **THEN** PoseGraph MUST只冻结和发布一份匹配该Frame的具体View租约
-- **AND** MUST不增加Foot查询、Goal Assembly、FBBIK或Physical Writer执行次数
+- **WHEN** 构建未包含Foot Diagnostics或Session没有选择Foot Sampler
+- **THEN** Foot、Ground Path、Goal、FBBIK与Final Publication MUST只执行原业务链
+- **AND** MUST不构造采样事实、不执行额外坐标变换、不创建packet或保留采样interest
 
 #### Scenario: Writer失败
 
-- **WHEN** Constraint Result已经完成但Final Publication在Physical Writer前或Writer中失败
-- **THEN** Diagnostics MUST不发布本帧Pending Constraint、Physical结果或Foot CommittedSample Event
-- **AND** Projector MUST不借用上一帧或发布第二Snapshot；Live／Pose Watch只能按各自既有合同保留上一Committed事实或正式Actor Fault
+- **WHEN** 当前帧在Seal前Discard或Final Publication失败
+- **THEN** Foot采样 MUST不提交该Frame的packet
+- **AND** MUST不借用上一帧、Pending结果、Pose Watch或当前Transform补成记录
+
+#### Scenario: 多个Sampler共享同一帧
+
+- **WHEN** 同一个Program组合多个Foot Sampler
+- **THEN** Generated Program MUST从同一PostCommit根集合求字段并集
+- **AND** Foot查询、Ground page、Goal Assembly、FBBIK与Final Publication执行次数 MUST保持不变

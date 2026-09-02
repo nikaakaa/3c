@@ -49,3 +49,6 @@
 ## 2026-09-02 Host合同修正
 
 Foot字段迁移证明原实现仍强制每个Sampler提供`hostAdapterId`和一份`IDiagnosticHostAdapter`，并仍要求Foot Bridge手写Session、Left／Right租包、Capture调用与提交，因此“新增Sampler只声明生命周期Event与Attribute”尚未成立。已有Field Attribute／双输入Extractor／AOT Capture／typed packet／Session／Writer证据继续有效；任务2.1、3.1至3.5、4.2至4.4、5.2、5.3、6.2、6.3、7.1和7.4重新打开。正式目标改为三个typed生命周期Event驱动的生成处理器与框架内建Schema-driven主表／子表／CSV／manifest；领域不保留Bridge或Host Adapter，Analyzer／Publisher只读生成产物。
+# 历史执行记录（已由0.4合同替代）
+
+本文件只保留单View／生命周期Event阶段的执行证据，不再描述当前框架。当前唯一合同见本change的`proposal.md`、`design.md`、`specs/`与独立包`D:/Unity_Project_1/generated-diagnostic-sampling`：Capability声明多个Fact Root，Program生成`Start/HandleCommitted/Stop`，Host按Schema生成CSV／manifest，Disabled构建剥离全部采样闭包。以下View、Event DTO、Bridge与旧任务结论不得作为实现依据。

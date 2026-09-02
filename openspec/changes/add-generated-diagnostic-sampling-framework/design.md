@@ -1,167 +1,143 @@
 ## Context
 
-见[proposal.md](proposal.md)。当前尚未实现新的Attribute/AOT采样链；Foot change已经提出Source Generator、Generated Program、typed packet与Host Finalizer需求，而Performance代码尚无任何Diagnostic Capability Set或Foot专属Disabled／Capture字段。若先按Foot命名实现通用基础设施，或先给Performance加Foot专属字段，以后增加Camera、Simulation或AI采样时只能复制或再次迁移。
+见[proposal.md](proposal.md)。独立仓库`D:/Unity_Project_1/generated-diagnostic-sampling`的0.4.0 release已经实现multi Fact Root、path-scoped Field identity、generated lifecycle、typed packet、Schema-driven Host和Disabled portable gate；3C当前仍在清理0.3单View及旧Getter链。本change以独立0.4.0合同为唯一框架真相，只规划3C消费与最终Player闭包，不恢复项目内第二份实现。
 
-现有约束：Unity版本为2022.3，Source Generator使用该版本支持的Roslyn API与.NET Standard 2.0边界；正式实机目标是IL2CPP AOT；Runtime diagnostics不得反向驱动业务状态；性能构建只有一个Build、Player、Controller和Comparer；项目不接受运行时反射fallback、兼容wrapper或第二采样路径。
+约束固定为Unity 2022.3、Roslyn 3.8兼容Source Generator、.NET Standard 2.0 Generator边界和IL2CPP AOT。采样不得反向驱动业务状态；Performance工作流只有一个Build、Player、Controller、顶层Capture和Comparer；项目不接受反射fallback、运行时表达式、兼容wrapper或第二采样路径。
 
 ## Goals / Non-Goals
 
 **Goals:**
 
-- 形成不依赖Character、PoseGraph或Foot程序集的通用采样contracts、编译器、Runtime packet和Host生命周期。
-- 让领域正式Runtime Owner提供具体Committed View，领域插件另行提供具体Capture Metadata，字段／Sampler定义通过两个具体输入类型编译，新增领域不修改框架中央代码。
-- 让每个Capture Program在编译期形成具体静态函数，Editor与IL2CPP执行相同程序。
-- 让BuildIdentity、packet和Host产物拥有可闭合的统一identity，同时保持不同领域Schema和lineage隔离。
-- 以Foot IK作为首个完整纵向插件验证框架深度，完成后删除Foot专属通用基础设施命名。
+- 一个Dimension直接消费多个现有强类型Fact Root与一个Metadata，不创建诊断View或Event DTO。
+- 普通字段只在现有真实只读成员声明一次Attribute，现有业务计算getter可直接采样。
+- Generator生成静态Capture以及`Start／HandleCommitted／Stop`生命周期，Editor与IL2CPP执行同一Program identity。
+- Runtime packet、Host CSV／manifest与BuildIdentity形成可验证闭包，Disabled Player完全退出采样。
+- 3C Foot只作为首个多来源消费方，不让通用框架认识Foot、Landing、PIK或PoseGraph。
 
 **Non-Goals:**
 
-- 不建立万能反射序列化器、运行时表达式／脚本语言或动态字段黑板。
-- 不统一各领域的Frame、Tick、Completion、availability或评分语义。
+- 不建立通用对象序列化器、运行时反射、表达式树编译、动态对象图、字符串成员路径或字段字典。
+- 不统一各领域的Frame、Tick、Completion、availability、lineage或评分语义。
 - 不替代BTSMTL Trace、Unity Profiler、WPR、日志、线上遥测或数据库。
-- 不实现跨机器实时传输、Shared Memory、远程配置或商业Player诊断开关。
-- 不让框架直接读取任何Module、Workspace、Transform、World Query或Vendor对象。
+- 不实现旧单View／Dimension View／生命周期Event DTO ABI兼容。
+- 不让框架主动读取Module、Workspace、Transform、World Query或Vendor对象。
 
 ## Decisions
 
-### Decision 1: 通用框架按Contracts、Generator、Runtime和Host四层分离
+### Decision 1: Annotations、Generator、Runtime和Host保持单向分层
 
 依赖方向固定为：
 
 ```text
-Generated Diagnostic Sampling Contracts
-  ├─ Domain Definitions
-  │    ├─ Foot IK Fields / Samplers
-  │    └─ Future Domain Fields / Samplers
-  ├─ Source Generator
-  │    └─ Generated concrete Capture Programs
-  ├─ Runtime Session / Packet / Writer
-  │    └─ Generated typed lifecycle handlers
-  └─ Host Reader / Finalizer
-       ├─ Built-in Schema-driven Table / CSV Finalizer
-       └─ Domain Analyzer / Publisher artifact consumers
+Annotations
+  ├─ Existing Domain Facts + Definitions
+  ├─ Source Generator -> Generated Program + Lifecycle
+  ├─ Capture Runtime -> Session + Packet + Writer
+  └─ Editor Host -> Schema Finalizer -> Analyzer / Publisher
 ```
 
-Contracts保存Capability、三个生命周期Event kind／identity、Field、Group、Table、样本维度、Sampler输出格式、Program Definition、Schema、packet、manifest和failure identity，不引用`UnityEditor`或具体领域。Generator只在编译期间运行，不进入Player。Runtime只处理生成事件处理器、packet lease、固定容量队列、Writer和状态机。Host内建Schema驱动的主表／子表／CSV与manifest Finalizer。领域Analyzer／Publisher位于生成产物之后，只读artifact与manifest，不进入框架Finalizer或Capture状态机。
+Annotations只保存Conditional Attribute与最小enum，不引用Runtime、Host、`UnityEditor`或领域程序集。Generator只在编译期间运行。Runtime只拥有Session、packet lease、有界队列、Writer和状态机。Host保持Editor-only并内建Schema驱动CSV／manifest。领域Analyzer／Publisher只读取Completed artifact。
 
-领域Definitions可以引用正式Runtime Owner发布的具体Committed View合同和通用Attribute，并自行定义只保存采样固定上下文的具体Capture Metadata与三个生命周期Event。正式领域Runtime Result不得引用Capture Metadata、CSV、Sampler或Generator。领域Owner只在正式边界发布Event：开始时发布`CaptureStarted`，成功Post-Commit／Post-Seal时发布携带短View租约的`CommittedSample`，结束时发布`CaptureStopped`。生成的typed处理器取得lease、调用Capture、提交并封存；领域不再实现Bridge。框架Runtime不定义共同View／Metadata DTO，也不保存短租约，从而避免`object`、boxing、未知泛型和生命周期泄露。
+选择分层而不是一个运行时Manager，是因为编译期发现、Player热路径、后台写入和Host格式化具有不同依赖与寿命；它也让Disabled构建可以按程序集闭包证明退出。
 
-选择四层而不是一个`DiagnosticSamplerManager`，是因为编译期发现、Player热路径、后台传输和Host分析拥有不同依赖与寿命。选择typed Event而不是领域Bridge或框架主动拉取，是为了让正式Runtime Owner唯一决定合法生命周期边界，同时把Session、租包、提取、提交和封存的机械代码全部交给Generator。
+### Decision 2: Capability注册Metadata与多个Fact Root
 
-### Decision 2: 编译输入使用显式Capability与Capture Program Definition
+每个Capability使用一个`DiagnosticCapability(id, revision, metadataType)`和多个`DiagnosticFactRoot(rootId, type)`。Fact Root ID在Capability内唯一，Generator按ordinal稳定排序。Fact Root是现有业务事实，不是采样专属DTO；框架只认识Dimension、Fact Root、Metadata和Field，不解释Root ID的领域含义。
 
-每个领域通过稳定Capability Definition声明CapabilityId、revision、由正式Runtime Owner提供的具体Committed View类型、领域具体Capture Metadata类型，以及只供该Capability packet验证的typed lineage与cadence descriptor。三个生命周期Event分别声明稳定EventId与Started／CommittedSample／Stopped kind；CommittedSample Event携带短租约View、lineage与metadata。Capture Metadata用于Sample identity、采样时间、目标实例和声明的样本维度，不得回填进Committed View；框架不解释其业务字段。每个Sampler Definition只声明字段组、专项字段、固定表和通用输出格式，不声明Bridge或Host Adapter identity。一个Capture Program Definition以稳定ProgramId显式列出同一Capability下的一套或多套Sampler；它是编译期Sampler Set真相。
-
-Source Generator从Roslyn compilation symbols读取这些定义，构造normalized descriptor并依次执行：
+Program使用`DiagnosticCaptureProgram`声明稳定Dimension ID数组和Sampler类型。Generator生成：
 
 ```text
-Discover Definitions
--> Validate Lifecycle Events and Sample Dimensions
--> Validate Identities and AOT Signatures
--> Resolve Field Groups and Derived Dependencies
--> Build Sampler Union
--> Assign Dense Typed Handles and Table Layouts
--> Emit Schema Descriptor
--> Emit Concrete Capture Program
--> Emit Typed Lifecycle Handlers
--> Seal Program Identity
+DiagnosticLifecycle.Start(request)
+DiagnosticLifecycle.HandleCommitted(
+  in lineage,
+  in dimension0.root0, ... in dimension0.metadata,
+  in dimension1.root0, ... in dimension1.metadata)
+DiagnosticLifecycle.Stop(outcome)
 ```
 
-Editor编译可以生成全部合法Program Definition，便于本地选择；Player Build Request通过Player专属编译输入选择一个已声明ProgramId，Capture闭包只静态引用匹配程序。Build Request不传任意字符串字段集合，也不在Build过程中生成新业务定义。作者需要新的Sampler组合时新增或修改Program Definition并重新编译，然后构建引用其新identity。
+参数顺序由Program Dimension顺序和Fact Root ID顺序唯一决定。`HandleCommitted`为每个Dimension自动租packet、调用同一Capture并提交。消费方只在同步Commit调用栈传入已有事实，不定义`CaptureStarted`、`CommittedSample`、`CaptureStopped`领域Event DTO，也不持有Session或packet。
 
-选择显式Program Definition而不是为任意Sampler组合运行时组装，是为了生成一个直接展开的Union函数并固定实机开销。代价是新的组合需要编译，但同一Player不会携带无法证明使用的所有组合或运行时dispatcher。
+选择生成显式多参数入口，是用较长但编译期固定的调用签名换取零View构造、零逐字段复制和完整AOT调用图。
 
-### Decision 3: 每个Program生成具体静态类型，不建立运行时未知泛型
+### Decision 3: 普通字段按Fact Root与成员路径生成
 
-Generator按CapabilityId与ProgramId生成稳定、冲突可诊断的内部类型，例如：
+普通声明使用`DiagnosticField(revision, unit, groups)`，默认identity为：
 
 ```text
-GeneratedDiagnosticCaptureProgram_<CapabilityHash>_<ProgramHash>
-GeneratedDiagnosticCaptureSchema_<SchemaHash>
+Capability/main/FactRoot/member/path
+Capability/Table/FactRoot/row/member/path
+Capability/main/metadata/member/path
 ```
 
-生成Capture函数使用领域具体Committed View和通用具体packet layout：
+成员名确定性转为kebab-case。同一类型作为不同Fact Root或经不同公开路径复用时得到不同identity，叶子Attribute仍只写一次。`AvailabilityMember`引用当前类型的同级可读成员并在同一Root／Path下解析；对外已经冻结的绝对identity才使用显式字符串重载。
+
+Generator只沿调用方可读路径查找带合同的成员。Fact Root必须是readonly struct；普通字段可以是readonly field、getter-only auto-property或现有无setter计算getter。计算getter已经属于业务事实，其执行只发生在Capture调用内；Generator不得因它不是auto-property而拒绝，也不得把它复制成Derived转发方法。无订阅或Disabled时不会调用这些getter。
+
+固定一对多事实在现有readonly struct buffer或外部只读class page上声明`DiagnosticTable`。class page只需稳定`Count`和只读索引器；行内叶子仍用`DiagnosticField`。Generator不要求把page复制为新数组或表DTO。
+
+### Decision 4: Derived只保留真正公式并只声明实际Root
+
+`DiagnosticDerivedField`只用于无法由现有成员直接读取的诊断公式。方法参数按名字映射Fact Root ID，只列实际读取的Root且全部使用`in`，最后必须是`in Metadata`；Table公式再接row index。Generator校验Root名称、类型、重复参数、availability、依赖闭包和环。
+
+enum编码、Unity Vector／Quaternion转换、已有计算getter、成员转发、Side分发和字段搬运都不是Derived理由。一个公式需要两个Root时直接接收两个Root，不创建组合View；需要的Root未注册时编译失败并要求修正Capability，而不是从其它DTO或Metadata绕取。
+
+### Decision 5: Generator产生完整AOT静态闭包
+
+Generator从Roslyn symbol构造normalized descriptor，依次完成Fact Root与字段发现、成员路径／codec／availability校验、Sampler union、dense typed handle、Table layout、Schema、Capture、Lifecycle和Program identity。Capture形态为：
 
 ```text
-Capture(in DomainCommittedView source, in DomainCaptureMetadata metadata, ref DiagnosticCapturePacket output)
+Capture(in Root0, in Root1, ..., in Metadata, ref DiagnosticCapturePacket)
 ```
 
-函数体直接调用`Extractor(in View, in Metadata)`；Table Count使用同样双输入，Table Field再接收row index，并写入dense typed页。相同FieldId只生成一次求值；Sampler列视图只引用Schema拥有的canonical handle，不复制值或第二份字段descriptor。生成代码不得构造表达式树、反射成员、生成每列Delegate或调用领域中央switch。
+函数体直接访问各Root成员并写packet；相同Field identity在一个sample中只求值一次。运行时不存在表达式树、Reflection、`DynamicInvoke`、`MethodInfo.Invoke`、字符串路径执行、每字段Delegate或领域switch。Schema identity闭合Capability、Dimension Set、Fact Root Set／type identity、Sampler、字段路径、Derived来源、codec revision、Generator binary、生成source hash和packet layout。
 
-选择生成具体函数而不是`ICaptureSource<object>`、反射getter或开放运行时泛型，是为了让IL2CPP看到完整调用图和类型闭包，并使Editor／Player执行身份可比较。生成类型名不成为外部API，外部只依赖Program与Schema identity。
+### Decision 6: Runtime只拥有Session、packet和封存状态
 
-### Decision 4: Schema只支持封闭基础类型族和固定容量表
+每个Capability Session状态为`Prepared -> Capturing -> Finalizing -> Completed/Faulted/Cancelled`。Generated `Start`冻结Program、Schema、Sampler interest、cadence、packet capacity、queue、transport与输出闭包；Generated `HandleCommitted`同步读取调用方提供的`in`事实、取得versioned struct lease、Capture并消费式提交；Generated `Stop`只发起非阻塞封存。
 
-框架核心type family固定覆盖诊断所需的布尔、有符号／无符号整数、浮点、稳定identity、Vector与Quaternion等明确值类型。领域复合事实必须在编译期展开为这些字段，或声明为拥有稳定record layout和固定容量的子表；不得在packet中保存任意对象、managed引用、Dictionary或运行时type tag。
+主线程不等待Writer、格式化、Analyzer或Publisher。Overflow、sequence断裂、非法状态或Writer失败使对应Capability Faulted并保留已有证据。框架不知道Left／Right、Presentation Frame、Simulation Tick或跨Capability对齐关系；这些只存在于Dimension ID、opaque lineage和上层工作流。
 
-每个Field descriptor固定FieldId、revision、type family、unit、availability、table、dense handle与source kind。Schema identity闭合Capability、Program Definition、Sampler descriptor、Field descriptor、table layout、codec revision、Generator revision和生成source hash。packet header保存Schema、Program、layout、sample key与领域lineage；主表按type family拥有预分配dense页，子表拥有count、capacity和固定record页。
+### Decision 7: Host只按Schema处理sealed packet
 
-选择封闭类型族而不是任意codec插件，是为了保持AOT、文件格式和Host Reader可验证。以后确实需要新基础类型时必须升级框架codec与packet layout revision，不能由领域私自写opaque blob规避。
+Player Writer只封存packet stream、Schema引用、runtime manifest与failure证据。Host Reader先验证hash和identity闭包，再由`DiagnosticHostFinalizer`按Sampler Schema生成主表、固定子表、UTF-8无BOM RFC 4180 CSV、Sampler manifest和Capability manifest。主表带sample key与Dimension，子表额外带row index；Vector／Quaternion稳定展开组件，不可用字段输出空单元格。
 
-### Decision 5: Runtime Session只管理容量、packet和状态，不拥有领域选择
+Host不重新读取业务成员、不调用Derived公式、不持有Fact Root／Metadata，也不需要Host Adapter、Column、Header或CsvBinding。领域Analyzer／Publisher只在基础Capability manifest为Completed后读取产物并拥有自己的结果身份，不回写采样状态。
 
-每个Capability Session的状态固定为`Prepared -> Capturing -> Finalizing -> Completed/Faulted/Cancelled`。Generated `CaptureStarted`处理器创建Session并冻结Program／Schema identity、Sampler interest、cadence identity、packet pool、queue容量、Writer transport与输出闭包。Generated `CommittedSample`处理器只在Event携带的具体View短租约内构造／读取Metadata，按声明的enum／稳定ID样本维度循环取得预分配struct packet lease、调用生成程序并消费式提交；复制、重复提交或过期lease会被version拒绝。Generated `CaptureStopped`处理器提交Completed／Cancelled／Faulted outcome并触发封存。Session不知道Presentation Frame、Simulation Tick、Left／Right或其它领域语义。
+### Decision 8: Disabled由编译与产物Gate形成零闭包
 
-主线程不得等待Writer、格式化或Host。Finalize只发布非阻塞请求，由外部轮询sealed Runtime manifest；队列溢出、table溢出、sequence断裂、非法状态转换或Writer失败会发布typed failure、停止接收新sample并使该Capability Session进入Faulted。不同Capability各自拥有独立Program、Schema、cadence、lineage、packet流与Capability manifest；框架不组合顶层Capture，也不把它们合并为万能行。
+Annotations使用`Conditional("KK_DIAGNOSTIC_SAMPLING")`；Generator在全局define缺失时零输出；Capture Runtime与领域Diagnostics asmdef使用define constraints；Host为Editor-only。Capture构建再定义Capability专属符号并静态包含选中Program。
 
-选择每Capability独立packet流而不是跨领域共享一张Union表，是因为Presentation Frame、Simulation Tick、Camera sample和AI event没有共同sample key。Performance工作流只在顶层编排身份和完成结果，不重新对齐不同领域事实；框架不拥有该顶层编排。
+Annotations必须在源码编译时可解析，但Disabled Player不得因Attribute语法保留Annotations根程序集。Gate使用Cecil检查业务程序集零Diagnostic custom attribute与零`KK.GeneratedDiagnosticSampling` AssemblyRef，并检查Managed／IL2CPP输出零Annotations、Runtime、领域Diagnostics、Generated Program、Session／packet／queue／interest类型及Capability／Field identity。运行时bool、空实现、未订阅Session、Linker推测或构建后删除都不能替代Gate。
 
-### Decision 6: Host内建Schema驱动基础产物，领域Processor只做业务处理
+### Decision 9: 3C只消费独立0.4.0发布
 
-Player Writer只写packet stream、Schema descriptor引用、运行manifest和必要failure证据。Host Reader验证hash闭包后，以Sampler Schema建立typed row和无复制handle view，并由框架直接生成基础产物：有主字段时输出一个主表CSV，每个被选固定表输出一个子表CSV；主表按sample key排序，子表额外携带sample key与row index。标量对应一列，Vector2／3／4与Quaternion按稳定组件列展开，availability不满足时写空单元格；CSV固定UTF-8无BOM、RFC 4180 quoting与canonical identity转义文件名。
+通用Owner固定为独立`com.kk.generated-diagnostic-sampling` 0.4.0。3C只保存package引用、领域Capability／Sampler／Program声明、现有业务成员Attribute、同步Commit调用和下游Analyzer／Publisher。PoseGraph继续生产自己的正式Committed事实，不新增采样View、Event、interest或运行分支。
 
-基础CSV与逐Sampler manifest不需要领域代码。领域Analyzer／Publisher只在Capability基础产物Completed后读取typed artifact／manifest，计算评分、报告或发布下游产物；它们不得重新声明Column、Header、CsvBinding、调用Extractor、访问Player进程、查询世界或持有Runtime View，也不得改变采样Capability的生命周期结果。Performance工作流可以独立记录下游分析状态，但不能让Analyzer充当采样Adapter。
-
-选择框架内建CSV而不是每Sampler Host Adapter，是为了让新增普通Sampler真正只需生命周期Event／Field／Sampler／Program Attribute，并保证Schema、CSV和manifest只有一个Owner。代价是框架必须固定通用CSV编码、组件展开、文件命名和表连接规则；领域特殊展示通过下游Analyzer／Publisher产物实现，不能篡改基础CSV。Capture完成基础Finalization后成为Completed，不能把仅有packet的staging冒充最终产物；下游报告拥有自己的成功或失败身份。
-
-### Decision 7: Performance工作流消费通用Diagnostic Capability Set
-
-框架提供canonical `DiagnosticCapabilityDescriptor`与稳定排序`DiagnosticCapabilitySet`。每项保存CapabilityId、Mode、Sampler Set identity、Schema identity、Program identity、cadence identity、packet capacity和transport identity；Program identity闭合Generated Program hash、Generator binary identity、程序集binding与packet layout revision。框架同时提供Capability Set codec与`DiagnosticCompilationClosureProof`：领域插件声明Capture程序集和scripting define闭包，Disabled进入排除证明，Capture进入包含证明。现有Performance Build Request保存该Set并把proof转成Player专属编译输入；Player manifest、Run Request、握手、Capture manifest与Comparer复用同一Set codec和identity。
-
-`Disabled`不编译该Capability的Definitions、typed lifecycle handlers、Generated Program、page、queue或interest。`Capture`只包含选中Program Definition与匹配Event handler的AOT闭包。Performance工作流继续唯一拥有Build、Player、Controller、Gate、Capture根和Comparer；框架不启动Player、不实现第二Controller或另建产物根。
-
-选择Capability Set而不是Foot专属字段，是为了未来新增领域时只增加descriptor。选择编译期Disabled而不是运行时bool，是为了纯性能基线没有诊断布局和热路径；任何Capability身份差异都阻止性能差值比较。
-
-### Decision 8: Foot IK只作为首个领域插件验证框架
-
-Foot IK插件拥有：
-
-- `character-foot-ik` Capability Definition、领域具体Capture Metadata与三个typed生命周期Event；
-- Foot、Pelvis、Goal、Solver、Physical与Geometry字段／表Extractor；
-- Full、Solver、Landing等Sampler Definition与Program Definition；
-- 下游Full Analyzer／Publisher、评分和历史产物政策。
-
-通用框架拥有Source Generator、descriptor validator、dense handle、packet pool、queue、Writer、Host Reader、Schema-driven CSV Finalizer、基础Sampler manifest、可选Processor编排、Capability manifest和Capability Build descriptor。Performance唯一拥有顶层Capture manifest与组合状态。实现后删除`CharacterFootIkCaptureSourceGenerator`等把通用Owner绑定Foot的命名，不保留wrapper；生成的具体Foot程序可以带Capability hash，但不是第二框架实现。
-
-选择Foot作为首个插件，是因为它覆盖数百字段、availability、Vector／Quaternion、固定容量Geometry、多Sampler、IL2CPP和Host Analyzer，足以证明框架深度。框架本change不同时发明Camera或AI字段，只保证它们可通过同一合同接入。
+Performance工作流继续唯一拥有Build Request、`DiagnosticCapabilitySet`、Player manifest、Run Request、握手、顶层Capture与Comparer。框架不创建第二Player、第二Controller或第二产物根。
 
 ## Risks / Trade-offs
 
-- [为未来领域过度抽象] → 框架只提取Foot实现已经需要的稳定机制；Frame语义、领域View、Analyzer和评分继续留在插件，不新增未被首个插件使用的查询语言或传输。
-- [Source Generator与Unity Roslyn版本漂移] → 生成器固定.NET Standard 2.0和Unity 2022.3支持的Roslyn API，Generator revision与二进制hash进入Schema和BuildIdentity；版本不匹配直接编译失败。
-- [Editor生成全部Program而Player只生成一个导致差异] → 每个Program Definition拥有相同normalized descriptor和source hash；Player manifest与Editor Capture都核对相同Program identity，生成函数不得根据执行后端改变内容。
-- [通用packet为Foot需求变得过宽] → 核心只保留封闭基础类型族、dense页和固定表；Foot专有Geometry record layout仍由Foot插件声明。
-- [多个Capability同时Capture造成IO积压] → 每Capability独立有界队列和packet流；任一溢出只使该Capability Faulted，Performance再使包含它的顶层Capture Faulted，不动态借容量或丢帧冒充完成。
-- [框架与Performance工作流争夺Owner] → 框架只提供Capability descriptor和Host Finalizer合同，Performance继续唯一拥有Build、Player、Controller、Gate、Capture根与Comparer。
-- [Foot change与框架change并行修改同一类型] → 先完成框架Contracts／Generator／Runtime／Host，再让Foot change实现领域插件；发现同文件Owner重叠时停止，不复制临时Foot版本。
+- [生成入口参数较多] → 参数只出现在同步Commit边界并由Generator固定顺序；换取零DTO、零字段复制和明确AOT闭包。
+- [同类型多路径产生更多字段] → identity明确包含Fact Root和成员路径；不同业务位置不被错误合并。
+- [业务成员改名改变path identity] → 路径是Schema合同；对外冻结字段使用显式绝对identity，改名触发Schema升级。
+- [计算getter可能包含业务成本] → 只允许采样现有业务事实getter且只在Capture调用时执行；无Capture不调用，领域必须对自身getter语义负责。
+- [Capture增加读取与packet写入成本] → 成本只属于Capture BuildIdentity；Disabled以产物Gate证明完全退出，两种BuildIdentity不直接做性能差值。
+- [独立包与3C迁移不同步] → package版本、Analyzer SHA-256、MVID和Generator identity进入闭包；3C不得复制源码或保留0.3兼容ABI。
 
 ## Migration Plan
 
-1. 建立通用Contracts与canonical descriptor／identity，不修改现有Foot采样路径。
-2. 建立唯一Source Generator、Schema Compiler和Generated Program ABI，固定Unity 2022.3编译边界。
-3. 建立typed packet、固定容量子表、Session、Writer、sealed Reader、Formatter与Host Finalizer。
-4. 在Performance工作流新增通用`DiagnosticCapabilitySet`，并禁止引入Foot专属能力字段，保持唯一Build、Player、Controller与Comparer。
-5. 将`refactor-foot-ik-diagnostic-sampling`中的通用Attribute、Generator、packet、Session、Writer、Host编排任务迁入本change；Foot change只实现首个Capability插件。
-6. 在PoseGraph具体`CharacterFootIkCommittedCaptureViewLease`完成后发布Foot三个typed生命周期Event，并用生成处理器和同一Generated Program覆盖Editor与IL2CPP Capture Player。
-7. 删除旧Foot事件／Snapshot join、手写Column链及任何Foot专属通用框架类型，不保留表达式、反射或兼容路径。
-8. 更新current specs和`openspec/project.md`，只在实现闭合后安装通用框架与Foot首个插件真相。
-
-回退只通过独立Git提交恢复前一套完整采样Implementation；运行时不保留旧／新Generator、packet、Writer或Sampler双链。
+1. 锁定独立0.4.0 package与Analyzer identity，3C package引用只指向该正式发布。
+2. 把每个Capability改为Metadata加多个`DiagnosticFactRoot`，Program直接声明Dimension IDs。
+3. 把普通旧Getter迁到现有真实成员Attribute；允许现有计算getter和class page Table，公式改为只接实际Root的Derived。
+4. 在同步Commit点把每个Dimension的已有事实和Metadata以`in`传给generated `HandleCommitted`，调用generated `Start／Stop`。
+5. 删除单View、Dimension View、三个领域Event DTO、Projection、Bridge、Column／CsvBinding、Host Adapter和旧Reader兼容。
+6. 执行Capture Player、Disabled Managed／IL2CPP Gate、Repository Policy、OpenSpec strict和identity闭包验收。
+7. 用户完成实机验收后再安装current specs并归档；回退只恢复上一套完整提交，不保留双版本运行路径。
 
 ## Current Spec And Active Change Comparison
 
-- current `btsmtl-runtime-diagnostics`要求Editor不轮询可变Runtime对象且诊断不反向驱动运行；本框架只消费领域Committed View并保持该约束，但不进入RuntimeDebugSession Trace Store。
-- current `character-foot-placement-presentation`只要求Foot diagnostics读取Committed事实；Foot插件继续负责具体View和字段，本框架不改变Foot业务要求。
-- active `refactor-character-pose-graph-architecture`唯一拥有Committed Result Projector和具体`CharacterFootIkCommittedCaptureViewLease`的生产与寿命；框架和Foot插件都不得读取PoseGraph内部页，框架也不得定义通用View。
-- active `refactor-foot-ik-diagnostic-sampling`现已回写为依赖本框架，只拥有Foot生命周期Event、Definitions与下游Analyzer／Publisher；后续实施不得恢复Foot Bridge、Host Adapter或Foot专属通用类型。
-- completed未归档`add-gameplay-performance-capture-workflow`现已回写为消费通用Diagnostic Capability Set，并继续唯一拥有Player BuildIdentity和Comparer；后续实施不得增加领域专属构建字段。
+- current `btsmtl-runtime-diagnostics`要求诊断只读且不反向驱动运行；本框架只在同步Commit边界读取现有事实并保持该要求，不进入RuntimeDebugSession Trace Store。
+- current `character-foot-placement-presentation`仍明确写有`Runtime Diagnostics Projector -> CharacterFootIkCommittedCaptureViewLease -> Foot Bridge`旧链，与0.4 multi Fact Root合同冲突；必须由`refactor-foot-ik-diagnostic-sampling`的delta在归档前完整替换，不能把该current段落当作继续保留View／Bridge的依据。
+- active `refactor-character-pose-graph-architecture`只拥有正式Committed Result、事务、Seal和Post-Commit边界，可独立推进；它不等待或引用Sampling Runtime。
+- active `refactor-foot-ik-diagnostic-sampling`负责0.4领域接入和下游分析，不得恢复View、Event DTO、Bridge或Host Adapter。
+- completed未归档`add-gameplay-performance-capture-workflow`继续唯一拥有Player BuildIdentity和Comparer；后续只接入通用Capability Set，不增加Foot专属构建字段。

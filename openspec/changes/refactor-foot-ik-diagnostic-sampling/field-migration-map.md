@@ -1,6 +1,6 @@
 # Foot IK字段迁移清单
 
-逐列真相见[current-field-migration-inventory.csv](current-field-migration-inventory.csv)。该清单以固定Record `20260902-020333-815-08bc7f3b04b44d2daa27b8a4919ce442`的正式Header为顺序真相，以现行`CharacterFootSampleColumns.Schema.Columns`为组、类型、单位和availability真相，并记录每列的当前Owner、迁移分类、Analyzer要求与七维评分消费者。
+历史逐列清单见[historical-field-migration-inventory.csv](historical-field-migration-inventory.csv)。它只记录旧Record与旧手写Column的迁移来源，不再是当前Schema真相。
 
 清单包含主表1222列与Ground Geometry 27列，共1249列、29个业务组，列名和表内ordinal零遗漏、零重复。按新框架基础类型折叠XYZ／XYZW组件后得到879个typed字段：701个标量、164个Vector3、14个Quaternion。151个typed字段的231个展开列受34个availability typed字段控制，所有引用都能在同表解析；879个Field identity均满足框架lowercase identity规则且唯一。现行103个Category文本列迁移为领域枚举Int32并由Host恢复稳定列文本，不在Player逐帧`ToString`；`SampleStartedUtc`迁移为UTC ticks Int64并由Host恢复原`O`格式。
 
@@ -49,3 +49,6 @@
 ## 删除与保留边界
 
 新Schema必须以CSV中的`TypedFieldId`、`TypedValueKind`、`Component`、`AvailabilityFieldId`和表内ordinal生成。旧`ColumnName`只用于迁移对账，不得继续成为Runtime字符串路径或新CSV Header真相；Vector／Quaternion组件展开、availability空单元格、枚举稳定文本和UTC `O`格式由通用Schema-driven Formatter合同声明。旧封存目录保持不可变；完成生成artifact与Analyzer对账后，现行`CharacterFootCsvColumn/Group`、`RootHierarchyCapture`、手写Geometry Header与旧Reader绑定整体删除，不保留兼容分支。
+# 历史字段迁移清单（已由0.4合同替代）
+
+本文件只用于追溯旧CSV字段来源，不再是采样Schema或实施清单。当前字段真相只来自现有业务事实成员上的`DiagnosticField`和Generator产出的Schema；Foot不再维护View、Extractor、Side选择、Column、CsvBinding或逐字段迁移映射。Ground Geometry已拆成`ground-contacts`、`ground-envelope`、`ground-surfaces`三张真实表。下表不得用于生成Capture代码。

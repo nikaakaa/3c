@@ -1,50 +1,62 @@
-## 1. 冻结通用Owner与程序集边界
+## 1. 固定独立0.4.0 Owner与发布身份
 
-- [x] 1.1 盘点`refactor-foot-ik-diagnostic-sampling`中Attribute、Schema Compiler、Generated Program、typed packet、Session、Writer、Host Reader、manifest与Build descriptor的通用责任，输出唯一Owner迁移表并用全文搜索确认Foot change只保留领域插件责任
-- [x] 1.2 固定Contracts、Generator、Runtime、Host与Domain Plugin的程序集依赖方向，确认Contracts不引用UnityEditor／具体领域、Generator不进入Player、Host不被Runtime引用且不存在循环asmdef
-- [x] 1.3 固定Unity 2022.3、.NET Standard 2.0、Roslyn API版本和Generator binary identity，使用规定的`--disable-build-servers /nr:false /p:UseSharedCompilation=false`参数构建生成器工程并立即执行`dotnet build-server shutdown`
+- [x] 1.1 将Annotations、Source Generator、Capture Runtime和Editor Host迁入独立`com.kk.generated-diagnostic-sampling` Owner，并以仓库、package路径和命名空间搜索确认通用代码不含Foot／PIK／PoseGraph领域分支
+- [x] 1.2 固定Annotations → Domain／Generator、Generated Program → Runtime、Host Editor-only的单向程序集依赖，检查asmdef与portable工程确认无循环且Generator不进入Player
+- [x] 1.3 使用规定的`--disable-build-servers /nr:false /p:UseSharedCompilation=false`参数完成0.4.0 Release构建并立即执行`dotnet build-server shutdown`，核对package Analyzer SHA-256、MVID、assembly name和Generator identity
 
-## 2. 建立canonical Contracts与Identity
+## 2. 收口multi Fact Root编译合同
 
-- [ ] 2.1 收口Diagnostic Capability、Started／CommittedSample／Stopped Event、具体Committed View／Capture Metadata双输入、样本维度、Sampler、Capture Program Definition、Field、Group、Table、availability与通用输出格式descriptor，删除Bridge／Host Adapter／Processor参与采样生命周期的合同并确认框架不包含领域专用字段
-- [x] 2.2 定义normalized descriptor排序与Capability／Sampler Set／Schema／Generated Program／packet layout／Capture identity算法，通过重复编译产物hash核对确认相同输入身份稳定
-- [x] 2.3 定义封闭基础类型族、dense typed handle、固定容量table record和codec revision，全文搜索确认packet合同不包含`object[]`、值Dictionary、managed Runtime引用或opaque领域blob
-- [x] 2.4 定义Compile、Preflight、Capture、Writer与Host Finalization的typed failure合同，确认错误携带Capability、Program、Sampler、Field／Table与阶段identity且不存在跳字段或兼容默认值
+- [x] 2.1 将Capability合同改为一个Metadata类型加多个`DiagnosticFactRoot(rootId,type)`，将Program改为Dimension ID数组加Sampler集合，并通过Probe Schema确认不含单View／Dimension View或生命周期Event DTO descriptor
+- [x] 2.2 实现path-scoped `DiagnosticField`，按Capability／Table／Fact Root／成员路径生成identity并从CLR类型推断codec；Probe确认同一类型在多个Root／Path复用时叶子Attribute只有一份
+- [x] 2.3 放宽现有无setter计算getter并支持外部只读class page Table，检查generated source确认直接调用getter、Count与只读索引器且不构造DTO或复制集合
+- [x] 2.4 将`DiagnosticDerivedField`限制为真正公式和实际Fact Root参数子集，验证参数名到Root ID、`in`类型、Metadata尾参数、availability与依赖环诊断
+- [x] 2.5 升级Dimension／Fact Root Set、Field Path、Schema、codec、Program和packet identity，确认0.4 Reader拒绝0.3单View文档与旧Analyzer
 
-## 3. 实现唯一编译期Schema Compiler与Source Generator
+## 3. 生成AOT Capture与Lifecycle
 
-- [ ] 3.1 扩展唯一Source Generator入口，从Roslyn compilation symbols发现Capability、三个生命周期Event、Sample Dimension、Program、Sampler、Field、Group与Table定义，并用生成诊断确认无需领域Bridge、Unity类型目录或运行时反射Catalog
-- [ ] 3.2 更新编译期Schema闭包校验，拒绝重复identity、跨Capability引用、未知分组、断裂availability、非法codec／输出格式、AOT非法双输入Extractor签名、派生环和Processor必需字段缺失，并确认普通Sampler不再要求Host Adapter
-- [ ] 3.3 更新Sampler union、稳定Field排序、sample dimension展开、dense typed handle、table layout与capacity plan，删除Host Adapter identity后检查生成descriptor确认同Field identity在一个Program中只有一个求值位置
-- [ ] 3.4 生成领域具体`Capture(in CommittedView, in CaptureMetadata, ref Packet)`与Started／CommittedSample／Stopped typed事件处理器，检查生成源码确认自动Session、租包、维度循环、Extractor、提交与封存且不存在Bridge、Expression、Reflection、DynamicInvoke或领域中央switch
-- [ ] 3.5 重建Program source hash、Generator binary identity与assembly binding并接入compile diagnostics，确认删除Host Adapter identity后的Editor与Player编译发布相同Schema、Program和packet layout identity
+- [x] 3.1 扩展唯一Roslyn Generator发现multi Fact Root、Metadata、Field／Table、Sampler与Program；缺少`KK_DIAGNOSTIC_SAMPLING`时Probe确认零generated source和零identity
+- [x] 3.2 生成`Capture(in Root0, ..., in Metadata, ref Packet)`并直接展开成员访问、enum与Unity值转换，检查generated source不存在普通Getter／Extractor、Side选择、Expression、Reflection、DynamicInvoke或字符串路径执行
+- [x] 3.3 生成`DiagnosticLifecycle.Start／HandleCommitted／Stop`，Probe以两个Dimension和两个Fact Root确认参数稳定排序、自动rent、逐Dimension Capture、submit和封存
+- [x] 3.4 生成Sampler union、dense typed handle、固定Table layout与Schema descriptor，检查同一Field identity在一个sample中只有一个求值位置
+- [x] 3.5 将Generator binary、生成source hash、Fact Root type identity、Dimension Set与assembly binding闭合进Program identity，并通过重复Release构建hash核对确定性
 
-## 4. 实现通用Runtime Session与typed packet
+## 4. 实现有界Runtime与sealed packet
 
-- [x] 4.1 实现按type family分页的预分配packet pool、固定容量子表页与versioned struct lease，检查分配点确认Capturing期间不扩容、不boxing且不创建字段Dictionary
-- [ ] 4.2 把每Capability独立`Prepared -> Capturing -> Finalizing -> Completed/Faulted/Cancelled` Session／manifest状态机接入生成生命周期处理器，确认领域只发布三个Event、非法转换发布typed failure且不存在手写Session控制或跨Capability共享Session
-- [ ] 4.3 实现每Capability独立cadence identity、opaque typed lineage、sample key、声明式enum／稳定ID维度展开、packet流与单一有界队列，确认框架不识别Presentation Frame／Simulation Tick／Left／Right业务语义
-- [ ] 4.4 实现Generated CommittedSample非阻塞packet租用／提交与Generated CaptureStopped封存、Overflow／Sequence fault和后台sealed Writer，检查领域主线程不等待IO且没有Foot Bridge
-- [x] 4.5 实现packet、Schema descriptor、runtime manifest与文件hash闭包，确认未闭合stream不能发布Completed
+- [x] 4.1 实现按type family分页的预分配packet pool、固定容量Table页和versioned struct lease，检查Capturing路径不扩容、不boxing且不保存业务managed引用
+- [x] 4.2 实现每Capability独立`Prepared -> Capturing -> Finalizing -> Completed/Faulted/Cancelled` Session，Probe确认Start冻结Program／Schema／容量／interest且非法状态产生typed failure
+- [x] 4.3 实现Generated `HandleCommitted`非阻塞租用／提交与Generated `Stop`后台封存，检查主线程不等待IO且领域不持有Session／packet
+- [x] 4.4 实现Overflow、sequence、Writer和hash failure闭包，确认Faulted保留已有证据但不发布部分Completed身份
+- [x] 4.5 实现packet、Schema descriptor、runtime manifest与文件hash闭包，Reader验证identity、layout、capacity、sample key和opaque lineage后才允许读取
 
-## 5. 实现通用Host Reader与Finalizer
+## 5. 实现Schema-driven Host
 
-- [x] 5.1 实现sealed packet Reader并严格核对Capability、Program、Schema、layout、capacity、sample key、lineage和文件hash，确认不存在列数猜测、默认值补全或旧layout兼容
-- [ ] 5.2 实现每Sampler无复制dense handle view与内建Schema-driven主表／固定子表／RFC 4180 CSV Finalizer，确认多个Sampler复用同一packet、稳定展开Vector／Quaternion／availability且Host不重新执行Extractor或复制第二字段Schema
-- [ ] 5.3 实现无需Adapter的逐Sampler基础manifest和Capability manifest；确认普通Sampler可独立Completed，Analyzer／Publisher只读生成artifact并拥有独立下游结果，不参与采样生命周期，框架不得创建Performance顶层Capture状态机
-- [x] 5.4 收紧Host权限与依赖，全文搜索确认Host不持有Committed View／Capture Metadata、不引用领域Runtime Module、不扫描Player私有地址且不执行World Query或业务求解
+- [x] 5.1 实现sealed packet Reader并拒绝错误Schema／Program／layout／capacity／文件hash，确认不存在列数猜测、默认值补全或旧layout兼容
+- [x] 5.2 实现每Sampler无复制canonical handle视图和Schema-driven主表／固定子表／RFC 4180 CSV Finalizer，验证Vector／Quaternion稳定展开及availability空单元格
+- [x] 5.3 实现不需要Adapter的Sampler manifest与Capability manifest，Probe确认普通Sampler在零领域Processor时仍可Completed
+- [x] 5.4 收紧Host依赖，全文搜索确认不存在Host Adapter、Column／CsvBinding、Fact Root／Metadata持有、业务成员反读、Derived调用、Player内存扫描或World Query
+- [x] 5.5 固定Analyzer／Publisher为Completed artifact消费者，确认它们不参与Capture生命周期、不映射字段且拥有独立下游结果身份
 
-## 6. 建立通用Diagnostic Capability构建合同
+## 6. 建立通用Build与Disabled闭包
 
-- [x] 6.1 定义canonical `DiagnosticCapabilityDescriptor`与稳定排序`DiagnosticCapabilitySet` identity，每项覆盖Mode、Sampler Set、Schema、Program、cadence、packet capacity和transport identity，并由Program identity闭合Generated Program、Generator binary与packet layout revision
-- [ ] 6.2 更新Player专属`DiagnosticCompilationClosureProof`，确认Disabled进入领域Definitions／typed lifecycle handlers／Generated Program排除闭包，Capture只包含匹配Event与Program程序集和scripting define
-- [ ] 6.3 更新Player manifest、Run Request、握手、Runtime／Sampler／Capability manifest和Comparer共享的Capability Set codec，删除Host Adapter／Processor字段并确认任一模式、Event Set、Program、Schema、输出格式、维度、cadence、容量或transport变化均可被精确定位
-- [x] 6.4 向`add-gameplay-performance-capture-workflow`交付唯一Build／Controller集成合同，全文搜索确认框架没有创建第二Player、第二Controller、第二Capture根或第二Comparer
+- [x] 6.1 实现Conditional Annotations、Generator零输出、Runtime define constraints和Editor-only Host，portable Disabled Probe确认业务DLL零Diagnostic Attribute、零Sampling AssemblyRef与零identity
+- [x] 6.2 实现canonical `DiagnosticCapabilityDescriptor`、稳定排序`DiagnosticCapabilitySet`和`DiagnosticCompilationClosureProof`，核对descriptor覆盖Mode、Dimension／Fact Root Set、Sampler、Schema、Program、cadence、capacity与transport
+- [x] 6.3 实现Cecil／IL2CPP Disabled Player Gate脚本，检查项覆盖Annotations根程序集、Runtime／领域Diagnostics程序集、Generated Program、Session／packet／queue／interest类型及Capability／Field identity
+- [ ] 6.4 将3C Performance Build Request、Player manifest、Run Request、握手、Runtime／Capability manifest与Comparer接入同一Capability Set codec，并以全文搜索确认没有Foot专属构建字段或第二Comparer
+- [ ] 6.5 用3C真实Disabled IL2CPP Player执行Gate，保存零Attribute／AssemblyRef／程序集／类型／identity的机器可读闭包证据
 
-## 7. 收口首个插件接入边界与最终一致性
+## 7. 迁移3C Foot消费方
 
-- [ ] 7.1 向`refactor-foot-ik-diagnostic-sampling`交付Capability Definition、三个typed生命周期Event、具体Capture Metadata、Sample Dimension、Program Definition与内建CSV，搜索确认Foot插件不拥有Bridge、手写Column／CsvBinding、Host Adapter、通用packet、Session、Writer或Host Orchestrator；Analyzer／Publisher只读生成产物
-- [x] 7.2 与`refactor-character-pose-graph-architecture`对齐PoseGraph唯一生产并控制具体`CharacterFootIkCommittedCaptureViewLease`的边界；搜索确认框架不存在通用Committed View／Capture Metadata接口／基类／DTO，PoseGraph不引用框架Generator、Generated Program、packet、Host或Capability Build类型
-- [x] 7.3 删除所有把通用Owner绑定到Foot的类型、配置和命名，不保留wrapper；用程序集与符号搜索确认通用模块中`Foot`、`FBBIK`、`PoseGraph`、`Camera`和`AI`领域分支为零
-- [ ] 7.4 Host合同收口后使用规定参数重建受影响portable／generator工程并立即执行`dotnet build-server shutdown`，执行Repository Policy、`git diff --check`及禁止Expression／Reflection／fallback路径搜索且不运行Unity batchmode；区分既有跨仓违规与本次新增问题
-- [ ] 7.5 严格校验本change、Foot IK采样、Performance工作流、PoseGraph及全量OpenSpec；实现闭合后再更新`openspec/project.md`和current specs，不提前安装未实施框架真相
+- [x] 7.1 将3C package依赖指向独立`com.kk.generated-diagnostic-sampling` 0.4.0路径，并核对消费到的package version与唯一Analyzer发布身份
+- [ ] 7.2 将Foot Capability收口为现有Fact Root集合与Metadata，将Program声明Left／Right Dimension并在同步Commit点调用generated `Start／HandleCommitted／Stop`
+- [ ] 7.3 把全部普通Foot字段迁到现有readonly field／property／计算getter的单个path-scoped Attribute，将固定集合迁到现有buffer／class page Table，并以搜索确认旧方法式Getter／Extractor为零
+- [ ] 7.4 把保留公式改为只接实际`in` Fact Root与`in Metadata`，通过Generator diagnostics确认没有View、Side选择、普通字段转发或未注册Root
+- [ ] 7.5 删除Committed／Dimension View、Started／CommittedSample／Stopped领域Event DTO、Projection／Group根、Bridge、Column／CsvBinding、Host Adapter、旧Reader及全部兼容wrapper，并用程序集与符号搜索确认零残留
+- [ ] 7.6 接通Schema-driven Host基础CSV／manifest和Foot Analyzer／Publisher，确认Analyzer只读取Completed artifact且不重新映射字段或回写Capability状态
+- [ ] 7.7 用3C Capture IL2CPP Player核对multi Fact Root `in`调用、Generated Program／Schema／packet／CSV／manifest identity和左右Dimension数据闭合
+
+## 8. 收口项目一致性
+
+- [ ] 8.1 与`refactor-character-pose-graph-architecture`核对剥离边界：PoseGraph只拥有正式Committed Result／事务／Seal／Post-Commit，不定义或等待Sampling View、Event、Session、packet与interest
+- [ ] 8.2 使用规定参数重建受影响portable／Generator工程并立即关闭build server，执行Repository Policy、`git diff --check`及禁止View／Event DTO／Expression／Reflection／Host Adapter／fallback路径搜索且不运行Unity batchmode
+- [ ] 8.3 严格校验本change、`refactor-foot-ik-diagnostic-sampling`、`add-gameplay-performance-capture-workflow`、`refactor-character-pose-graph-architecture`及全量OpenSpec，区分既有失败与本次新增问题
+- [ ] 8.4 只有在3C Capture与Disabled Player闭包均完成后才更新`openspec/project.md`和current specs；用户验收后再归档，不提前安装未完成消费方真相

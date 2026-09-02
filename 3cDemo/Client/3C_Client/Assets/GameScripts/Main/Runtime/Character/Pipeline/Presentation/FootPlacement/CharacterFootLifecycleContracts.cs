@@ -82,7 +82,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         Release = 3
     }
 
-    internal enum CharacterFootInterpolationPolicy : byte
+    public enum CharacterFootInterpolationPolicy : byte
     {
         Suppressed = 0,
         SwingResidual = 1,
@@ -90,7 +90,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         ReleaseResidual = 3
     }
 
-    internal enum CharacterFootPlantTargetKind : byte
+    public enum CharacterFootPlantTargetKind : byte
     {
         None = 0,
         PreparedPrediction = 1,

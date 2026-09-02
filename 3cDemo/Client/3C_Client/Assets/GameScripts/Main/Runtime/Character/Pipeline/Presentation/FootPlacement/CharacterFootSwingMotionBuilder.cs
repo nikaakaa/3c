@@ -988,7 +988,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             ConstraintStateBefore = lifecycle.PreTransition.SourceState;
             LockResponseBefore = lifecycle.LockResponseBefore;
             StateTargetCorrection = path.StateTargetCorrection;
-            InterpolationPolicy = path.InterpolationPolicy.ToString();
+            InterpolationPolicy = path.InterpolationPolicy;
             InterpolationOutputCorrection =
                 path.InterpolationOutputCorrection;
             InterpolationCompleted = path.InterpolationCompleted;
@@ -1014,7 +1014,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             PlantInterpolationEvaluated = path.PlantInterpolationEvaluated;
             PlantTargetEventIdentity = path.PlantTargetEventIdentity;
             PlantTargetVerified = path.PlantTargetVerified;
-            PlantTargetKind = path.PlantTargetKind.ToString();
+            PlantTargetKind = path.PlantTargetKind;
             PlantLockResponse = path.PlantLockResponse;
             PlantLockWeightCompleted = path.PlantLockWeightCompleted;
             PlantDesiredPoint = path.PlantDesiredPoint;
@@ -1022,7 +1022,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         }
 
         public Vector3 StateTargetCorrection { get; }
-        public string InterpolationPolicy { get; }
+        public CharacterFootInterpolationPolicy InterpolationPolicy { get; }
         public Vector3 InterpolationOutputCorrection { get; }
         public bool InterpolationCompleted { get; }
         public CharacterFootConstraintState ConstraintStateBefore { get; }
@@ -1044,7 +1044,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         public bool PlantInterpolationEvaluated { get; }
         public ulong PlantTargetEventIdentity { get; }
         public bool PlantTargetVerified { get; }
-        public string PlantTargetKind { get; }
+        public CharacterFootPlantTargetKind PlantTargetKind { get; }
         public CharacterFootLockResponse PlantLockResponse { get; }
         public bool PlantLockWeightCompleted { get; }
         public Vector3 PlantDesiredPoint { get; }

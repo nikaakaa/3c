@@ -16,19 +16,17 @@ namespace ThirdPersonCharacter.Pipeline.Animation
     internal sealed class CharacterPoseProgramRuntime : IDisposable
     {
         readonly CharacterPoseProgramImage m_Image;
-        readonly CharacterPoseWorldContextAdapter m_WorldContext;
         readonly PresentationFrameWorkspace m_PresentationWorkspace;
         readonly CharacterPoseProgramMotionMatchingRuntime m_MotionMatching;
         readonly CharacterPoseProgramTuningRuntime m_Tuning;
         readonly CharacterPoseProgramActionRuntime m_Action;
+        readonly CharacterPoseProgramEvaluationRuntime m_Evaluation;
         readonly CharacterPoseProgramSourcePreparationRuntime
             m_SourcePreparation;
         readonly CharacterPoseProgramSourceRetirementRuntime
             m_SourceRetirement;
         CharacterPoseProgramFrameLease m_ActiveFrameLease;
         CharacterPoseProgramFrameLease m_CommittingFrameLease;
-        readonly CharacterPoseProgramEvaluationState m_Evaluation =
-            new CharacterPoseProgramEvaluationState();
         bool m_Disposed;
 
         internal CharacterPoseProgramRuntime(
@@ -57,20 +55,12 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 ActorState);
             CharacterPoseSourceModule source = sourceModule ??
                 throw new ArgumentNullException(nameof(sourceModule));
-            m_WorldContext = worldContext ??
+            CharacterPoseWorldContextAdapter world = worldContext ??
                 throw new ArgumentNullException(nameof(worldContext));
             m_PresentationWorkspace = presentationWorkspace ??
                 throw new ArgumentNullException(nameof(presentationWorkspace));
             CharacterPoseConstraintRuntime constraintRuntime = poseConstraints ??
                 throw new ArgumentNullException(nameof(poseConstraints));
-            m_MotionMatching =
-                new CharacterPoseProgramMotionMatchingRuntime(
-                    image,
-                    ActorState,
-                    FramePages,
-                    m_Evaluation,
-                    source,
-                    m_PresentationWorkspace);
             m_Action = new CharacterPoseProgramActionRuntime(
                 ActorState,
                 source,
@@ -90,6 +80,21 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 FramePages,
                 ActorState.Inertialization,
                 constraintRuntime);
+            m_Evaluation = new CharacterPoseProgramEvaluationRuntime(
+                ExecutionView,
+                ActorState,
+                FramePages,
+                Executor,
+                world,
+                m_SourcePreparation);
+            m_MotionMatching =
+                new CharacterPoseProgramMotionMatchingRuntime(
+                    image,
+                    ActorState,
+                    FramePages,
+                    m_Evaluation.State,
+                    source,
+                    m_PresentationWorkspace);
             if (!string.Equals(
                     m_Image.ProgramId,
                     ExecutionView.ProgramId.ToString(),
@@ -805,13 +810,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             ulong completionIdentity)
         {
             RequireFrame(lease);
-            if (m_Evaluation.HasPrepared ||
-                m_Evaluation.HasPendingCompleted)
-            {
-                throw new InvalidOperationException(
-                    "Character Pose Program has an unfinished evaluation.");
-            }
-            FramePages.BeginEvaluationFrame(completionIdentity);
+            m_Evaluation.BeginFrame(completionIdentity);
         }
 
         internal void BeginSourceEvaluation(
@@ -930,10 +929,13 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             in CharacterFinalPosePublicationOutputBinding finalOutput,
             bool recordDiagnostics)
         {
-            BindEvaluation(
+            RequireFrame(lease);
+            CharacterPoseProgramTuningView tuning =
+                m_Tuning.Require(lineage.TuningGeneration);
+            m_Evaluation.Bind(
                 lease,
                 in lineage,
-                lineage.TuningGeneration,
+                in tuning,
                 in finalOutput,
                 recordDiagnostics);
             m_SourcePreparation.InstallOrUpdateJobs();
@@ -947,14 +949,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             ulong completionIdentity)
         {
             RequireFrame(lease);
-            if (!m_Evaluation.HasPendingCompleted ||
-                m_Evaluation.PendingCompletedCompletionIdentity !=
-                    completionIdentity)
-            {
-                throw new InvalidOperationException(
-                    "Character Pose Program has no completed evaluation to commit.");
-            }
-            FramePages.CommitEvaluationFrame(completionIdentity);
             m_Evaluation.Commit(completionIdentity);
         }
 
@@ -1005,59 +999,16 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 in control);
         }
 
-        void BindEvaluation(
-            CharacterPoseProgramFrameLease lease,
-            in CharacterPoseFrameLineage lineage,
-            ulong tuningGeneration,
-            in CharacterFinalPosePublicationOutputBinding finalOutput,
-            bool recordDiagnostics)
-        {
-            RequireFrame(lease);
-            if (!lineage.IsValid ||
-                !lease.Matches(lineage) ||
-                !FramePages.HasPendingEvaluationFrame ||
-                FramePages.PendingEvaluationCompletionIdentity !=
-                    lineage.CompletionIdentity)
-            {
-                throw new ArgumentException(
-                    "Character Pose Program evaluation binding is invalid.",
-                    nameof(lineage));
-            }
-            CharacterPoseGraphNativeBinding frame =
-                FramePages.RequirePoseGraphBinding(
-                    lineage.CompletionIdentity);
-            CharacterPoseProgramTuningView tuning =
-                m_Tuning.Require(tuningGeneration);
-            Executor.BindFrame(
-                in tuning,
-                frame,
-                in finalOutput,
-                recordDiagnostics);
-        }
-
         internal void PrepareEvaluation(
             CharacterPoseProgramFrameLease lease,
             in CharacterPoseProgramPrepared prepared,
             float presentationDeltaSeconds)
         {
             RequireFrame(lease);
-            if (!prepared.IsValid ||
-                !lease.Matches(prepared.Lineage) ||
-                !FramePages.HasPendingEvaluationFrame ||
-                FramePages.PendingEvaluationCompletionIdentity !=
-                    prepared.Lineage.CompletionIdentity)
-            {
-                throw new ArgumentException(
-                    "Character Pose Program prepared evaluation is invalid.",
-                    nameof(prepared));
-            }
-            CharacterPoseGraphNativeBinding frame =
-                FramePages.RequirePoseGraphBinding(
-                    prepared.Lineage.CompletionIdentity);
             m_Evaluation.Prepare(
+                lease,
                 in prepared,
-                presentationDeltaSeconds,
-                in frame);
+                presentationDeltaSeconds);
         }
 
         internal CharacterPoseProgramOutputResult CompleteEvaluation(
@@ -1067,57 +1018,11 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             in CharacterPresentationFactFrame factFrame)
         {
             RequireFrame(lease);
-            if (!prepared.IsValid ||
-                !lease.Matches(prepared.Lineage) ||
-                !bodyFrame.IsValid ||
-                !factFrame.IsValid ||
-                !FramePages.HasPendingEvaluationFrame ||
-                FramePages.PendingEvaluationCompletionIdentity !=
-                    prepared.Lineage.CompletionIdentity)
-            {
-                throw new ArgumentException(
-                    "Character Pose Program evaluation input is invalid.",
-                    nameof(prepared));
-            }
-            CharacterPosePreparedEvaluationState state =
-                m_Evaluation.Consume(in prepared);
-            Executor.BeginEvaluation(
-                state.Lineage.PresentationFrame);
-            CharacterPoseProgramOutputResult output;
-            if (m_SourcePreparation.HasSequencePreview)
-            {
-                output = Executor.ExecuteSequencePreview(
-                    m_SourcePreparation.SequencePreviewOperationIndex);
-            }
-            else
-            {
-                var worldInput = new CharacterPoseWorldFrameInput(
-                    m_WorldContext,
-                    state.Lineage.ActorId,
-                    state.Lineage.PresentationFrame,
-                    state.PresentationDeltaSeconds,
-                    in bodyFrame,
-                    in factFrame,
-                    state.Lineage.CompletionIdentity);
-                for (int stageIndex = 0;
-                     stageIndex < ExecutionView.Stages.Length;
-                     stageIndex++)
-                {
-                    AnimationPoseGraphNativeStage stage =
-                        ExecutionView.Stages[stageIndex];
-                    if (!Executor.ExecuteStage(
-                            stageIndex,
-                            state.PresentationDeltaSeconds,
-                            in worldInput))
-                    {
-                        break;
-                    }
-                }
-                output = Executor.CompleteEvaluation();
-            }
-            FramePages.RequireEvaluationStagesCompleted(
-                state.Lineage.CompletionIdentity);
-            return output;
+            return m_Evaluation.Complete(
+                lease,
+                in prepared,
+                in bodyFrame,
+                in factFrame);
         }
 
         internal float RequirePreparedEvaluationDeltaSeconds(
@@ -1128,55 +1033,12 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             return m_Evaluation.RequireDeltaSeconds(in prepared);
         }
 
-        void MarkEvaluationCompleted(
-            CharacterPoseProgramFrameLease lease,
-            ulong completionIdentity)
-        {
-            RequireFrame(lease);
-            if (m_Evaluation.HasPrepared ||
-                m_Evaluation.HasPendingCompleted)
-            {
-                throw new InvalidOperationException(
-                    "Character Pose Program evaluation completion is invalid.");
-            }
-            FramePages.RequireEvaluationStagesCompleted(completionIdentity);
-            CharacterPoseGraphNativeBinding completed =
-                FramePages.RequirePoseGraphBinding(completionIdentity);
-            m_Evaluation.MarkCompleted(in completed);
-        }
-
         internal void CompleteNodeEvaluation(
             CharacterPoseProgramFrameLease lease,
             ulong completionIdentity)
         {
             RequireFrame(lease);
-            for (int i = 0; i < ActorState.Stacks.Length; i++)
-                ActorState.Stacks[i].CompleteFrame(completionIdentity);
-            for (int i = 0; i < ActorState.DirectPlayers.Length; i++)
-                ActorState.DirectPlayers[i].CompleteFrame();
-            for (int i = 0;
-                 i < ActorState.PoseStateSources.ClipPlayers.Length;
-                 i++)
-            {
-                ActorState.PoseStateSources.ClipPlayers[i].CompleteFrame();
-            }
-            for (int i = 0;
-                 i < ActorState.PoseStateSources.BlendSpacePlayers.Length;
-                 i++)
-            {
-                ActorState.PoseStateSources.BlendSpacePlayers[i]
-                    .CompleteFrame();
-            }
-            for (int i = 0; i < ActorState.Routes.Length; i++)
-            {
-                ActorState.Routes[i].NotifyNativeFrameCompleted(
-                    ActorState.Inertialization,
-                    completionIdentity);
-            }
-            ActorState.PoseStateSources.NotifyNativeFrameCompleted(
-                ActorState.Inertialization,
-                completionIdentity);
-            MarkEvaluationCompleted(lease, completionIdentity);
+            m_Evaluation.CompleteNodes(completionIdentity);
         }
 
         void ResetEvaluation()
@@ -1308,19 +1170,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 in CharacterFinalPoseCommittedDiagnosticsView finalOutput,
                 AnimationPresentationDiagnosticsInterest interest)
         {
-            if (projector == null)
-                throw new ArgumentNullException(nameof(projector));
-            if (!m_Evaluation.HasCommitted)
-            {
-                throw new InvalidOperationException(
-                    "Character Pose Program has no committed evaluation diagnostics.");
-            }
-            CharacterPoseGraphNativeBinding committed =
-                m_Evaluation.RequireCommitted();
-            return projector.Capture(
-                FramePages,
+            RequireAlive();
+            return m_Evaluation.CaptureCommittedDiagnostics(
+                projector,
                 in result,
-                in committed,
                 in finalOutput,
                 interest);
         }

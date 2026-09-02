@@ -1171,3 +1171,9 @@ Stack、Direct、Clip、BlendSpace的准备顺序，旧Source识别、Job插入�
 状态：可编译源码中只有`CharacterAnimationPresentationRuntime`构造并持有`CharacterPoseFrameTransaction`。它只生成lineage与typed lease，按Action、Pose Advance、Motion Matching、Source Demand、Prepare、Evaluate Barrier、Release、Seal和Post-Commit的固定顺序调用模块；Operation、Native offset、Program Frame页、Foot Context、Goal页、FBBIK状态、Source物理页与Physical Bone字段均未进入根协调代码。
 
 Program、Source、Constraint与Final Publication的Begin／Result／Seal都由`CharacterPoseFrameCoordinator`按同一lineage和Tuning Generation校验；Barrier前仍执行可回滚Discard，进入Barrier后仍丢弃Constraint／Publication Pending页并把Actor标记Faulted，物理Writer后的Seal路径没有新增业务计算。任务9.1至9.4完成。
+
+## 拆出Program Evaluation模块
+
+状态：新增`CharacterPoseProgramEvaluationRuntime`，整体拥有Evaluation状态页，并接管Frame绑定、Prepared消费、Stage执行、Sequence Preview执行、节点完成、Pending／Committed提升及Committed诊断View。Program Runtime不再解释Evaluation workspace状态、Stage循环、World输入或完成页，只在自己的根Program lease通过后转交。
+
+Stage顺序、提前停止条件、World Context输入、Preview Operation位置、Player／Stack／Route完成通知、Frame页提交顺序和Committed诊断来源保持不变；Motion Matching继续读取同一个Evaluation状态实例，没有复制第二Committed状态。Program Runtime由1514行降至1367行。3C MCP完成全脚本重编且C#错误为0，不单独运行回放。

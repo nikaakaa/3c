@@ -1420,7 +1420,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
 
         internal void BeginCommittedDiagnostics(
             AnimationPresentationDiagnosticsInterest interest,
-            CharacterFootIkCaptureInterest footIkCaptureInterest,
+            in CharacterFootIkCaptureBinding footIkCapture,
             CharacterLinkedPoseRuntimeSession linkedPose,
             in CharacterPoseSourceFrameResult sourceFrame,
             in CharacterPoseFrameExecutionResult executionResult)
@@ -1431,12 +1431,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                 throw new ArgumentNullException(nameof(linkedPose));
             bool publishRuntimeSnapshot =
                 interest != AnimationPresentationDiagnosticsInterest.None;
-            bool publishFootIkView =
-                publishRuntimeSnapshot ||
-                footIkCaptureInterest.IsEnabled;
-            if (!publishFootIkView)
+            bool captureFootIk = footIkCapture.IsValid;
+            if (!publishRuntimeSnapshot && !captureFootIk)
                 return;
-            if (footIkCaptureInterest.IsEnabled &&
+            if (captureFootIk &&
                 !m_PoseConstraints.HasFootPlacement)
             {
                 throw new InvalidOperationException(
@@ -1458,18 +1456,39 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             }
             using (DiagnosticsMarker.Auto())
             {
-                bool requiresFoot = m_PoseConstraints.HasFootPlacement &&
-                    (CharacterPoseConstraintRuntime
-                         .RequiresFootDiagnostics(interest) ||
-                     footIkCaptureInterest.IsEnabled);
-                bool requiresSolver = CharacterPoseConstraintRuntime
-                    .RequiresFullBodyIkDiagnostics(interest) ||
-                    footIkCaptureInterest.IsEnabled;
-                bool requiresPhysical = CharacterFinalPosePublication
-                    .RequiresPhysicalDiagnostics(interest) ||
-                    footIkCaptureInterest.IsEnabled;
                 CharacterPoseProgramResult committedProgramResult =
                     executionResult.Program;
+                CharacterPoseConstraintResult committedConstraintResult =
+                    executionResult.Constraint;
+                CharacterFinalPosePublicationResult committedPublicationResult =
+                    executionResult.Publication;
+                CharacterPoseFrameLineage committedFrame =
+                    executionResult.Lineage;
+                if (executionResult.Constraint.Lineage !=
+                        executionResult.Lineage ||
+                    executionResult.Publication.Lineage !=
+                        executionResult.Lineage)
+                {
+                    throw new InvalidOperationException(
+                        "Animation diagnostics committed lineage is inconsistent.");
+                }
+                if (captureFootIk)
+                {
+                    CaptureCommittedFootIk(
+                        in footIkCapture,
+                        in committedFrame,
+                        in committedConstraintResult,
+                        in committedPublicationResult);
+                }
+                if (!publishRuntimeSnapshot)
+                    return;
+                bool requiresFoot = m_PoseConstraints.HasFootPlacement &&
+                    CharacterPoseConstraintRuntime
+                        .RequiresFootDiagnostics(interest);
+                bool requiresSolver = CharacterPoseConstraintRuntime
+                    .RequiresFullBodyIkDiagnostics(interest);
+                bool requiresPhysical = CharacterFinalPosePublication
+                    .RequiresPhysicalDiagnostics(interest);
                 CharacterPoseActorCommittedDiagnosticsView actorDiagnostics =
                     m_ActorDiagnosticsProjector.Capture(
                         in committedProgramResult,
@@ -1481,17 +1500,13 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                         m_PoseStateSources.BlendSpacePlayers,
                         m_RootOrientationWarps,
                         interest,
-                        footIkCaptureInterest.IsEnabled);
-                CharacterPoseConstraintResult committedConstraintResult =
-                    executionResult.Constraint;
+                        false);
                 CharacterPoseConstraintCommittedDiagnosticsView
                     constraintDiagnostics =
                         m_PoseConstraints.CaptureCommittedDiagnostics(
                             in committedConstraintResult,
                             interest,
-                            footIkCaptureInterest);
-                CharacterFinalPosePublicationResult committedPublicationResult =
-                    executionResult.Publication;
+                            default);
                 CharacterFinalPoseCommittedDiagnosticsView
                     publicationDiagnostics =
                         m_FinalPublication.CaptureCommittedDiagnostics(
@@ -1511,10 +1526,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                     !publicationDiagnostics.IsValid ||
                     publicationDiagnostics.Result.Lineage !=
                     executionResult.Lineage ||
-                    executionResult.Constraint.Lineage !=
-                    executionResult.Lineage ||
-                    executionResult.Publication.Lineage !=
-                    executionResult.Lineage ||
                     requiresFoot &&
                     (!footDiagnostics.IsCompleted ||
                      footDiagnostics.FrameSequence !=
@@ -1533,7 +1544,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                         "Animation diagnostics committed lineage is inconsistent.");
                 }
                 bool includeFootBasicState =
-                    footIkCaptureInterest.IsEnabled ||
                     (interest &
                      (AnimationPresentationDiagnosticsInterest.LiveState |
                       AnimationPresentationDiagnosticsInterest.Capture)) != 0;
@@ -1543,8 +1553,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                     in constraintDiagnostics,
                     in publicationDiagnostics,
                     includeFootBasicState);
-                if (!publishRuntimeSnapshot)
-                    return;
                 try
                 {
                     CharacterPoseSourceCommittedDiagnosticsView
@@ -1592,6 +1600,192 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                     throw;
                 }
             }
+        }
+
+        void CaptureCommittedFootIk(
+            in CharacterFootIkCaptureBinding binding,
+            in CharacterPoseFrameLineage frame,
+            in CharacterPoseConstraintResult constraintResult,
+            in CharacterFinalPosePublicationResult publicationResult)
+        {
+            m_PoseConstraints.RequireCommittedFootIkCapture(
+                in constraintResult);
+            ComposedAnimationPoseFrame finalFrame =
+                m_FinalPublication.RequireCommittedFrame(
+                    in publicationResult);
+            CharacterFootLandingPredictionDiagnostics landing =
+                m_PoseConstraints.CommittedFootLandingPrediction;
+            if (!landing.IsCompleted ||
+                landing.FrameSequence != frame.PresentationFrame ||
+                landing.CompletionIdentity != frame.CompletionIdentity)
+            {
+                throw new InvalidOperationException(
+                    "Committed Foot IK landing facts are inconsistent.");
+            }
+            CharacterFullBodyIkSolverDiagnostics solver = default;
+            CharacterFullBodyIkEffectorDiagnostics pelvis = default;
+            CharacterFullBodyIkEffectorDiagnostics leftEffector = default;
+            CharacterFullBodyIkEffectorDiagnostics rightEffector = default;
+            CharacterFullBodyIkLimbDiagnostics leftLeg = default;
+            CharacterFullBodyIkLimbDiagnostics rightLeg = default;
+            CharacterFullBodyIkSolverDiagnostics candidate =
+                m_PoseConstraints.CommittedFullBodyIkSolver;
+            if (candidate.IsCompleted &&
+                candidate.InputCompletionIdentity == frame.CompletionIdentity &&
+                candidate.FrameSequence == landing.FrameSequence)
+            {
+                bool containsFoot = false;
+                for (int i = 0;
+                     i < m_PoseConstraints.CommittedSolverEffectorCount;
+                     i++)
+                {
+                    CharacterFullBodyIkEffectorDiagnostics effector =
+                        m_PoseConstraints.GetCommittedSolverEffector(i);
+                    if (effector.Slot ==
+                        CharacterFullBodyIkEffectorSlot.PelvisPreSolveTranslation)
+                    {
+                        pelvis = effector;
+                        containsFoot = true;
+                    }
+                    else if (effector.Slot ==
+                             CharacterFullBodyIkEffectorSlot.LeftFoot)
+                    {
+                        leftEffector = effector;
+                        containsFoot = true;
+                    }
+                    else if (effector.Slot ==
+                             CharacterFullBodyIkEffectorSlot.RightFoot)
+                    {
+                        rightEffector = effector;
+                        containsFoot = true;
+                    }
+                }
+                if (containsFoot)
+                {
+                    for (int i = 0;
+                         i < m_PoseConstraints.CommittedSolverLimbCount;
+                         i++)
+                    {
+                        CharacterFullBodyIkLimbDiagnostics limb =
+                            m_PoseConstraints.GetCommittedSolverLimb(i);
+                        if (limb.Limb == CharacterFullBodyIkLimbSlot.LeftLeg)
+                            leftLeg = limb;
+                        else if (limb.Limb ==
+                                 CharacterFullBodyIkLimbSlot.RightLeg)
+                            rightLeg = limb;
+                    }
+                    solver = candidate;
+                }
+            }
+            AnimationFootFeatureSample leftFootFeatures =
+                finalFrame.LeftFootFeatures;
+            AnimationFootFeatureSample rightFootFeatures =
+                finalFrame.RightFootFeatures;
+            AnimationBiomechanicalStepReadPage leftFootSteps =
+                finalFrame.HasFootFeatures
+                    ? new AnimationBiomechanicalStepReadPage(
+                        in leftFootFeatures,
+                        CharacterFootSide.Left)
+                    : default;
+            AnimationBiomechanicalStepReadPage rightFootSteps =
+                finalFrame.HasFootFeatures
+                    ? new AnimationBiomechanicalStepReadPage(
+                        in rightFootFeatures,
+                        CharacterFootSide.Right)
+                    : default;
+            CharacterFootLandingPredictionFootDiagnostics leftFoot =
+                landing.Left;
+            CharacterFootLandingPredictionFootDiagnostics rightFoot =
+                landing.Right;
+            CharacterFootLandingPredictionInputDiagnostics input =
+                landing.Input;
+            CharacterFootStepObservationInputDiagnostics formalInput =
+                input.FootStepObservation;
+            AnimationFootMotionRuntimeSample leftFormalInput =
+                formalInput.Left;
+            AnimationFootMotionRuntimeSample rightFormalInput =
+                formalInput.Right;
+            AnimationFootStepObservationRuntimeSnapshot formalOutput =
+                ResolveCommittedFootStepObservation(in finalFrame);
+            AnimationFootMotionRuntimeSample leftFormalOutput =
+                formalOutput.Left;
+            AnimationFootMotionRuntimeSample rightFormalOutput =
+                formalOutput.Right;
+            CharacterFullBodyIkGoal pelvisGoal = landing.PelvisGoal;
+            CharacterFootPrimarySupportDiagnostics primarySupport =
+                landing.PrimarySupport;
+            CharacterFootStrideHipsDiagnostics stride = landing.StrideHips;
+            try
+            {
+                binding.Consumer.TryCapture(
+                    in frame,
+                    in leftEffector,
+                    in leftFoot,
+                    in leftFootSteps,
+                    in leftFormalInput,
+                    in leftFormalOutput,
+                    in leftLeg,
+                    in rightEffector,
+                    in rightFoot,
+                    in rightFootSteps,
+                    in rightFormalInput,
+                    in rightFormalOutput,
+                    in rightLeg,
+                    in input,
+                    in pelvis,
+                    in pelvisGoal,
+                    in primarySupport,
+                    in solver,
+                    in stride);
+            }
+            catch (Exception failure)
+            {
+                try
+                {
+                    binding.Consumer.CaptureFault(failure);
+                }
+                catch
+                {
+                }
+            }
+        }
+
+        AnimationFootStepObservationRuntimeSnapshot
+            ResolveCommittedFootStepObservation(
+                in ComposedAnimationPoseFrame finalFrame)
+        {
+            AnimationPoseSourceId sourceId = default;
+            float sourceWeight = -1f;
+            AnimationReadOnlyBuffer<AnimationPoseSourceContribution>
+                contributions = finalFrame.Contributions;
+            for (int i = 0; i < contributions.Count; i++)
+            {
+                AnimationPoseSourceContribution contribution =
+                    contributions[i];
+                if (contribution.Kind !=
+                        AnimationPoseContributionKind.Live ||
+                    contribution.Weight <= sourceWeight)
+                {
+                    continue;
+                }
+                sourceId = contribution.SourceId;
+                sourceWeight = contribution.Weight;
+            }
+            if (!sourceId.IsValid)
+                return default;
+            for (int i = 0;
+                 i < m_PoseStateSources.ClipPlayers.Length;
+                 i++)
+            {
+                AnimationClipPlayerRuntime player =
+                    m_PoseStateSources.ClipPlayers[i];
+                if (player.SourceId.Equals(sourceId))
+                {
+                    return player.CreateFootStepObservationSnapshot(
+                        sourceWeight);
+                }
+            }
+            return default;
         }
 
         internal CharacterFootIkCommittedCaptureViewLease PublishDiagnostics()

@@ -517,6 +517,21 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             return new CharacterFinalPoseCommittedDiagnosticsView(page);
         }
 
+        internal ComposedAnimationPoseFrame RequireCommittedFrame(
+            in CharacterFinalPosePublicationResult result)
+        {
+            if (!m_CommittedResult.IsPublished ||
+                !result.IsPublished ||
+                m_CommittedResult.Lineage != result.Lineage ||
+                m_CommittedFrame.CompletionIdentity !=
+                result.Lineage.CompletionIdentity)
+            {
+                throw new InvalidOperationException(
+                    "Final Pose committed frame is unavailable.");
+            }
+            return m_CommittedFrame;
+        }
+
         internal static bool RequiresPhysicalDiagnostics(
             AnimationPresentationDiagnosticsInterest interest) =>
             (interest &

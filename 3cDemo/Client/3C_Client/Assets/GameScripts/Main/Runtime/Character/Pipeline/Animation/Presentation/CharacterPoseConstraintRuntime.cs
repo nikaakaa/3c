@@ -409,6 +409,34 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             m_CommittedResult.SolverProduced == result.SolverProduced &&
             m_CommittedResult.FullBodyIk.AppliedGoalCount ==
             result.FullBodyIk.AppliedGoalCount;
+        internal void RequireCommittedFootIkCapture(
+            in CharacterPoseConstraintResult result)
+        {
+            RequireAlive();
+            if (!MatchesCommittedResult(in result) ||
+                !m_Committed.FootIkCaptureInterest.IsEnabled ||
+                m_Committed.FootPlacement?.Diagnostics.HasValue != true)
+            {
+                throw new InvalidOperationException(
+                    "Committed Foot IK capture facts are unavailable.");
+            }
+        }
+        internal CharacterFootLandingPredictionDiagnostics
+            CommittedFootLandingPrediction =>
+                m_Committed.FootPlacement.Diagnostics.Value;
+        internal CharacterFullBodyIkSolverDiagnostics
+            CommittedFullBodyIkSolver =>
+                m_Committed.SolverDiagnostics;
+        internal int CommittedSolverEffectorCount =>
+            m_Committed.SolverEffectorCount;
+        internal CharacterFullBodyIkEffectorDiagnostics
+            GetCommittedSolverEffector(int index) =>
+                m_Committed.SolverEffectors[index];
+        internal int CommittedSolverLimbCount =>
+            m_Committed.SolverLimbCount;
+        internal CharacterFullBodyIkLimbDiagnostics
+            GetCommittedSolverLimb(int index) =>
+                m_Committed.SolverLimbs[index];
         internal CharacterPoseConstraintCommittedDiagnosticsView
             CaptureCommittedDiagnostics(
             in CharacterPoseConstraintResult result,

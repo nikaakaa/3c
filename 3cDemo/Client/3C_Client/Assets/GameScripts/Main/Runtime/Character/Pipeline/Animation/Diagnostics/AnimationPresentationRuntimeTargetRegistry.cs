@@ -98,7 +98,25 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
     public interface ICharacterFootIkCommittedCaptureConsumer
     {
         bool TryCapture(
-            in CharacterFootIkCommittedCaptureViewLease view);
+            in CharacterPoseFrameLineage frame,
+            in CharacterFullBodyIkEffectorDiagnostics leftEffector,
+            in CharacterFootLandingPredictionFootDiagnostics leftFoot,
+            in AnimationBiomechanicalStepReadPage leftFootSteps,
+            in AnimationFootMotionRuntimeSample leftFormalInput,
+            in AnimationFootMotionRuntimeSample leftFormalOutput,
+            in CharacterFullBodyIkLimbDiagnostics leftLeg,
+            in CharacterFullBodyIkEffectorDiagnostics rightEffector,
+            in CharacterFootLandingPredictionFootDiagnostics rightFoot,
+            in AnimationBiomechanicalStepReadPage rightFootSteps,
+            in AnimationFootMotionRuntimeSample rightFormalInput,
+            in AnimationFootMotionRuntimeSample rightFormalOutput,
+            in CharacterFullBodyIkLimbDiagnostics rightLeg,
+            in CharacterFootLandingPredictionInputDiagnostics input,
+            in CharacterFullBodyIkEffectorDiagnostics pelvis,
+            in CharacterFullBodyIkGoal pelvisGoal,
+            in CharacterFootPrimarySupportDiagnostics primarySupport,
+            in CharacterFullBodyIkSolverDiagnostics solver,
+            in CharacterFootStrideHipsDiagnostics stride);
         void CaptureFault(Exception failure);
     }
 

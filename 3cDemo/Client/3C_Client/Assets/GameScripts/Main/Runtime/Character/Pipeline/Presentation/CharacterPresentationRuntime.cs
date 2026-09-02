@@ -742,15 +742,15 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                             transaction.SourceFrame;
                         m_PoseRuntime.BeginCommittedDiagnostics(
                             diagnosticsInterest,
-                            footIkCapture.Interest,
+                            in footIkCapture,
                             linkedPose,
                             in committedSourceFrame,
                             in executionResult);
-                        CharacterFootIkCommittedCaptureViewLease
-                            footIkCaptureView =
-                                m_PoseRuntime.PublishDiagnostics();
                         if (publishRuntimeDiagnostics)
                         {
+                            CharacterFootIkCommittedCaptureViewLease
+                                footIkCaptureView =
+                                    m_PoseRuntime.PublishDiagnostics();
                             if (publishStateDiagnostics)
                                 PublishCommittedSnapshots(transaction);
                             else
@@ -770,10 +770,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                                     m_RetiredPlaybacks);
                             }
                         }
-                        if (footIkCapture.IsValid)
-                            PublishFootIkCapture(
-                                in footIkCapture,
-                                in footIkCaptureView);
                     }
                     else
                     {
@@ -1485,26 +1481,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 transaction.PublicationLease);
             linkedPose.Seal();
             transaction.MarkSealed();
-        }
-
-        static void PublishFootIkCapture(
-            in CharacterFootIkCaptureBinding binding,
-            in CharacterFootIkCommittedCaptureViewLease view)
-        {
-            try
-            {
-                binding.Consumer.TryCapture(in view);
-            }
-            catch (Exception failure)
-            {
-                try
-                {
-                    binding.Consumer.CaptureFault(failure);
-                }
-                catch
-                {
-                }
-            }
         }
 
         Exception DiscardFrameTransaction(

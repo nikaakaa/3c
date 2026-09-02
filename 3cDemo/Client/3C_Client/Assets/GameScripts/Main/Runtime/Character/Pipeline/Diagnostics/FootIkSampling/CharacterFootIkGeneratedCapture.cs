@@ -35,47 +35,30 @@ namespace ThirdPersonCharacter.Pipeline.Diagnostics.FootIkSampling
             m_Lifecycle.TryGetRuntimeManifest(out manifest, out artifact);
 
         public bool TryCapture(
-            in CharacterFootIkCommittedCaptureViewLease view)
+            in CharacterPoseFrameLineage frame,
+            in CharacterFullBodyIkEffectorDiagnostics leftEffector,
+            in CharacterFootLandingPredictionFootDiagnostics leftFoot,
+            in AnimationBiomechanicalStepReadPage leftFootSteps,
+            in AnimationFootMotionRuntimeSample leftFormalInput,
+            in AnimationFootMotionRuntimeSample leftFormalOutput,
+            in CharacterFullBodyIkLimbDiagnostics leftLeg,
+            in CharacterFullBodyIkEffectorDiagnostics rightEffector,
+            in CharacterFootLandingPredictionFootDiagnostics rightFoot,
+            in AnimationBiomechanicalStepReadPage rightFootSteps,
+            in AnimationFootMotionRuntimeSample rightFormalInput,
+            in AnimationFootMotionRuntimeSample rightFormalOutput,
+            in CharacterFullBodyIkLimbDiagnostics rightLeg,
+            in CharacterFootLandingPredictionInputDiagnostics input,
+            in CharacterFullBodyIkEffectorDiagnostics pelvis,
+            in CharacterFullBodyIkGoal pelvisGoal,
+            in CharacterFootPrimarySupportDiagnostics primarySupport,
+            in CharacterFullBodyIkSolverDiagnostics solver,
+            in CharacterFootStrideHipsDiagnostics stride)
         {
-            CharacterPoseFrameLineage frame = view.Lineage;
             var lineage = new DiagnosticLineageKey(
                 CharacterFootIkDiagnosticIdentity.LineageTypeIdentity,
                 frame.PresentationFrame,
                 frame.CompletionIdentity);
-            ref readonly CharacterFootLandingPredictionDiagnostics landing =
-                ref view.LandingPrediction;
-            CharacterFootLandingPredictionFootDiagnostics leftFoot =
-                landing.Left;
-            CharacterFootLandingPredictionFootDiagnostics rightFoot =
-                landing.Right;
-            CharacterFootLandingPredictionInputDiagnostics input =
-                landing.Input;
-            CharacterFootStepObservationInputDiagnostics formalInput =
-                input.FootStepObservation;
-            AnimationFootMotionRuntimeSample leftFormalInput = formalInput.Left;
-            AnimationFootMotionRuntimeSample rightFormalInput = formalInput.Right;
-            AnimationFootStepObservationRuntimeSnapshot formalOutput =
-                view.FootStepObservation;
-            AnimationFootMotionRuntimeSample leftFormalOutput = formalOutput.Left;
-            AnimationFootMotionRuntimeSample rightFormalOutput = formalOutput.Right;
-            AnimationBiomechanicalStepReadPage leftFootSteps = view.LeftFootSteps;
-            AnimationBiomechanicalStepReadPage rightFootSteps = view.RightFootSteps;
-            CharacterFullBodyIkGoal pelvisGoal = landing.PelvisGoal;
-            CharacterFootPrimarySupportDiagnostics primarySupport =
-                landing.PrimarySupport;
-            CharacterFootStrideHipsDiagnostics stride = landing.StrideHips;
-            ref readonly CharacterFullBodyIkEffectorDiagnostics leftEffector =
-                ref view.LeftFoot;
-            ref readonly CharacterFullBodyIkEffectorDiagnostics rightEffector =
-                ref view.RightFoot;
-            ref readonly CharacterFullBodyIkLimbDiagnostics leftLeg =
-                ref view.LeftLeg;
-            ref readonly CharacterFullBodyIkLimbDiagnostics rightLeg =
-                ref view.RightLeg;
-            ref readonly CharacterFullBodyIkEffectorDiagnostics pelvis =
-                ref view.Pelvis;
-            ref readonly CharacterFullBodyIkSolverDiagnostics solver =
-                ref view.Solver;
             return m_Lifecycle.HandleCommitted(
                 in lineage,
                 in leftEffector,

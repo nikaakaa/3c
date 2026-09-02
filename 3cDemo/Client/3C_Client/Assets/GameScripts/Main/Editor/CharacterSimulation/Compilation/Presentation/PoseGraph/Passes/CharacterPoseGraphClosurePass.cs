@@ -14,7 +14,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             CharacterTypedPoseGraph graph)
         {
             Owner = owner ? owner : throw new ArgumentNullException(nameof(owner));
-            OwnerIdentity = PoseIdentity.Require(
+            OwnerIdentity = CharacterPoseGraphClosure.RequireOwnerIdentity(
                 ownerIdentity,
                 nameof(ownerIdentity));
             Graph = graph ?? throw new ArgumentNullException(nameof(graph));
@@ -35,7 +35,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             string targetOwnerIdentity,
             PoseGraphId targetGraphId)
         {
-            SourceOwnerIdentity = PoseIdentity.Require(
+            SourceOwnerIdentity = CharacterPoseGraphClosure.RequireOwnerIdentity(
                 sourceOwnerIdentity,
                 nameof(sourceOwnerIdentity));
             SourceGraphId = sourceGraphId.IsValid
@@ -55,7 +55,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                 throw new ArgumentOutOfRangeException(nameof(kind));
             }
             Kind = kind;
-            TargetOwnerIdentity = PoseIdentity.Require(
+            TargetOwnerIdentity = CharacterPoseGraphClosure.RequireOwnerIdentity(
                 targetOwnerIdentity,
                 nameof(targetOwnerIdentity));
             TargetGraphId = targetGraphId.IsValid
@@ -112,13 +112,22 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
         internal static string Key(
             string ownerIdentity,
             PoseGraphId graphId) =>
-            PoseIdentity.Require(ownerIdentity, nameof(ownerIdentity)) +
+            RequireOwnerIdentity(ownerIdentity, nameof(ownerIdentity)) +
             "\0" +
             (graphId.IsValid
                 ? graphId.Value
                 : throw new ArgumentException(
                     "Pose Graph identity is invalid.",
                     nameof(graphId)));
+
+        internal static string RequireOwnerIdentity(
+            string ownerIdentity,
+            string parameterName) =>
+            string.IsNullOrWhiteSpace(ownerIdentity)
+                ? throw new ArgumentException(
+                    "Pose Graph owner identity is missing.",
+                    parameterName)
+                : ownerIdentity.Trim();
     }
 
     internal sealed class CharacterPoseGraphClosurePassResult

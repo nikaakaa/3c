@@ -7,6 +7,7 @@ using ThirdPersonCharacter.Pipeline.Animation.Diagnostics;
 using ThirdPersonCharacter.Pipeline.Animation.Lifecycle;
 using ThirdPersonCharacter.Pipeline.Animation.MotionMatching;
 using ThirdPersonCharacter.Pipeline.Animation.Presentation;
+using ThirdPersonCharacter.Pipeline.Animation.Sources;
 using ThirdPersonSimulation;
 using Unity.Profiling;
 
@@ -33,7 +34,10 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
 
         readonly ActorId m_ActorId;
         readonly CharacterAnimationPresentationBindings m_Bindings;
-        readonly PosePlanExecutionRuntime m_PoseRuntime;
+        readonly CharacterPoseRuntimeComposition m_PoseModules;
+        readonly CharacterPoseTuningCoordinator m_PoseTuning;
+        readonly CharacterPoseFrameCoordinator m_PoseFrame;
+        readonly CharacterPoseMotionMatchingCoordinator m_PoseMotionMatching;
         readonly List<ActionAnimationPlaybackLifecycleSnapshot>
             m_ActionSnapshots;
         readonly List<ActionPresentationTimeSnapshot>
@@ -118,74 +122,103 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 new CharacterPoseFrameTransaction(frameCapacity);
             m_EnterEvaluateBarrier =
                 m_FrameTransaction.EnterEvaluateBarrier;
+            CharacterPoseRuntimeComposition poseModules = null;
             try
             {
-                m_PoseRuntime =
-                    new PosePlanExecutionRuntime(
-                        runtimeInstanceId,
-                        animancer,
-                        rigBinding,
-                        rootHierarchy,
-                        bindings.Projection,
-                        actionPlayback,
-                        motionMatching,
-                        animationSlots,
-                        presentationWorkspace,
-                        footPlacement,
-                        ownsGraphClock);
+                var diagnosticsEvents =
+                    new CharacterPoseCommittedDiagnosticsEventPublisher(
+                        runtimeInstanceId);
+                poseModules = CharacterPoseRuntimeCompositionFactory.Create(
+                    animancer,
+                    rigBinding,
+                    rootHierarchy,
+                    bindings.Projection,
+                    actionPlayback,
+                    motionMatching,
+                    animationSlots,
+                    presentationWorkspace,
+                    footPlacement,
+                    ownsGraphClock,
+                    1,
+                    diagnosticsEvents);
+                m_PoseModules = poseModules;
+                m_PoseTuning = new CharacterPoseTuningCoordinator(
+                    PoseProgram,
+                    PoseSource,
+                    PoseConstraints,
+                    1);
+                m_PoseFrame = new CharacterPoseFrameCoordinator(
+                    animancer,
+                    bindings.Projection,
+                    m_PoseModules,
+                    m_PoseTuning);
+                m_PoseMotionMatching =
+                    new CharacterPoseMotionMatchingCoordinator(
+                        PoseProgram,
+                        PoseSource,
+                        m_PoseFrame);
                 m_CapacityMetrics =
-                    m_PoseRuntime.CreateCapacityMetrics(
+                    CreateCapacityMetrics(
                         actionPlayback.JournalCapacity,
-                        m_PoseRuntime.ActionSamplingJournalCapacity,
+                        PoseSource.ActionSamplingJournalCapacity,
                         Math.Max(1, animationSlots.SlotCount));
             }
             catch
             {
                 motionMatching?.Dispose();
-                m_PoseRuntime?.Dispose();
+                poseModules?.Dispose();
                 throw;
             }
         }
+
+        CharacterPoseProgramRuntime PoseProgram => m_PoseModules.Program;
+        CharacterPoseSourceModule PoseSource => m_PoseModules.Source;
+        CharacterPoseConstraintRuntime PoseConstraints =>
+            m_PoseModules.Constraints;
+        CharacterFinalPosePublication PosePublication =>
+            m_PoseModules.Publication;
+        CharacterPoseDiagnosticsRuntime PoseDiagnostics =>
+            m_PoseModules.Diagnostics;
 
         public IReadOnlyList<AnimationPlaybackId> RetiredPlaybacks =>
             m_RetiredPlaybacks;
         public IReadOnlyList<ActionAnimationPlaybackLifecycleSnapshot>
             ActionSnapshots => m_ActionSnapshots;
         public IReadOnlyList<ActionSlotSourceUsage> ActionSourceUsages =>
-            m_PoseRuntime.ActionSourceUsages;
+            PoseProgram.ActionSourceUsages;
         public bool HasRuntimeDiagnosticsSnapshot =>
-            m_PoseRuntime.HasDiagnosticsSnapshot;
+            PoseDiagnostics.HasCurrent;
         public AnimationPresentationRuntimeSnapshot
             RuntimeDiagnosticsSnapshot =>
-                m_PoseRuntime.DiagnosticsSnapshot;
+                PoseDiagnostics.Current;
         public bool HasDebugView =>
             m_DebugView != null &&
-            m_PoseRuntime.HasDiagnosticsSnapshot;
+            PoseDiagnostics.HasCurrent;
         public AnimationPresentationDebugView DebugView =>
             HasDebugView
                 ? m_DebugView
                 : throw new InvalidOperationException(
                     "Animation Presentation Debug View is unavailable.");
         public bool MotionMatchingRuntimeEnabled =>
-            m_PoseRuntime.MotionMatchingRuntimeEnabled;
+            m_PoseMotionMatching.Enabled;
         public AnimationPresentationDiagnosticsInterest DiagnosticsInterest =>
-            m_PoseRuntime.DiagnosticsInterest;
-        internal bool HasFootPlacement => m_PoseRuntime.HasFootPlacement;
+            PoseDiagnostics.Interest;
+        internal bool HasFootPlacement => PoseConstraints.HasFootPlacement;
 
         internal void ResetFootPlacement(in CharacterFootPlacementReset reset) =>
-            m_PoseRuntime.ResetFootPlacement(in reset);
+            PoseConstraints.ResetFootPlacement(in reset);
 
         internal void RetargetFootPlacement(ulong resetSequence) =>
-            m_PoseRuntime.RetargetFootPlacement(resetSequence);
+            PoseConstraints.RetargetFootPlacement(resetSequence);
         public AnimationPresentationRuntimeMetrics RuntimeMetrics =>
             new AnimationPresentationRuntimeMetrics(
                 in m_CapacityMetrics,
                 m_LastFrameOutcome,
                 m_DiscardCount,
                 m_Faulted ? m_Fault.Phase : default,
-                m_PoseRuntime.DiagnosticsNoInterestSkipCount);
+                PoseDiagnostics.NoInterestSkipCount);
         public bool AcceptsMotionMatchingTrajectoryIntent =>
-            m_PoseRuntime.AcceptsMotionMatchingTrajectoryIntent;
+            m_PoseMotionMatching.AcceptsTrajectoryIntent;
         public bool IsFaulted => m_Faulted;
         public AnimationPresentationFault Fault =>
             m_Faulted
@@ -196,20 +229,20 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         public void SetPoseWatchInterests(
             Guid ownerId,
             IReadOnlyList<AnimationPoseWatchIdentity> interests) =>
-            m_PoseRuntime.SetPoseWatchInterests(
+            PoseDiagnostics.SetPoseWatchInterests(
                 ownerId,
                 interests);
 
         public void RemovePoseWatchInterests(Guid ownerId) =>
-            m_PoseRuntime.RemovePoseWatchInterests(ownerId);
+            PoseDiagnostics.RemovePoseWatchInterests(ownerId);
 
         public void SetDiagnosticsInterest(
             Guid ownerId,
             AnimationPresentationDiagnosticsInterest interest) =>
-            m_PoseRuntime.SetDiagnosticsInterest(ownerId, interest);
+            PoseDiagnostics.SetDiagnosticsInterest(ownerId, interest);
 
         public void RemoveDiagnosticsInterest(Guid ownerId) =>
-            m_PoseRuntime.RemoveDiagnosticsInterest(ownerId);
+            PoseDiagnostics.RemoveDiagnosticsInterest(ownerId);
 
         internal void SetTuningBinding(CharacterPoseTuningRuntimeBinding binding)
         {
@@ -255,7 +288,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             out MotionMatchingSearchReplayArtifact artifact)
         {
             RequireAlive();
-            return m_PoseRuntime.TryCaptureMotionMatchingSearchReplay(
+            return m_PoseMotionMatching.TryCaptureSearchReplay(
                 providerId,
                 out artifact);
         }
@@ -264,7 +297,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             CharacterPresentationTrajectoryIntent intent)
         {
             RequireAlive();
-            m_PoseRuntime.CaptureMotionMatchingTrajectoryIntent(intent);
+            m_PoseMotionMatching.CaptureTrajectoryIntent(intent);
         }
 
         internal void CaptureMotionMatchingPreviewQuery(
@@ -272,7 +305,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             MotionMatchingSearchReplayArtifact query)
         {
             RequireAlive();
-            m_PoseRuntime.CaptureMotionMatchingPreviewQuery(
+            m_PoseMotionMatching.CapturePreviewQuery(
                 providerId,
                 query);
         }
@@ -295,7 +328,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 ActionAnimationPlaybackCommandFactory.Create(
                     command,
                     in binding);
-            m_PoseRuntime.PublishActionCommand(in actionCommand);
+            m_PoseFrame.RequireNoOpenMutation();
+            PoseProgram.PublishActionCommand(in actionCommand);
         }
 
         public void Retire(
@@ -316,7 +350,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 ActionAnimationPlaybackCommandFactory.Create(
                     command,
                     in binding);
-            m_PoseRuntime.RetireActionCommand(in actionCommand);
+            m_PoseFrame.RequireNoOpenMutation();
+            PoseProgram.RetireActionCommand(in actionCommand);
         }
 
         public void Replace(
@@ -342,7 +377,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 ActionAnimationPlaybackCommandFactory.Create(
                     replacement,
                     in replacementBinding);
-            m_PoseRuntime.ReplaceActionCommand(
+            m_PoseFrame.RequireNoOpenMutation();
+            PoseProgram.ReplaceActionCommand(
                 currentCommand.EventId,
                 in replacementCommand);
         }
@@ -383,7 +419,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             in CharacterPresentationFactFrame factFrame,
             CharacterLinkedPoseRuntimeSession linkedPose)
         {
-            m_PoseRuntime.SetSequencePreview(
+            m_PoseFrame.RequireNoOpenMutation();
+            PoseProgram.SetSequencePreview(
                 sourceIndex,
                 sampleTime,
                 resetContinuity);
@@ -401,7 +438,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             }
             finally
             {
-                m_PoseRuntime.ClearSequencePreview();
+                m_PoseFrame.RequireNoOpenMutation();
+                PoseProgram.ClearSequencePreview();
             }
         }
 
@@ -431,7 +469,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 AnimationPresentationTracePublisher.ResolveInterest(
                     diagnostics);
             AnimationPresentationDiagnosticsInterest diagnosticsInterest =
-                m_PoseRuntime.ResolveDiagnosticsInterest(
+                PoseDiagnostics.ResolveFrameInterest(
                     traceInterest);
             bool publishStateDiagnostics =
                 RequiresStateDiagnostics(diagnosticsInterest);
@@ -459,7 +497,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 using (ActionLifecycleMarker.Auto())
                 {
                     lifecycle =
-                        m_PoseRuntime.PrepareActionLifecycleFrame(
+                        PoseProgram.PrepareActionLifecycleFrame(
                             transaction.PoseLease);
                 }
 
@@ -471,19 +509,19 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 using (ActionSamplingMarker.Auto())
                 {
                     frameStage = "ActionSampling";
-                    m_PoseRuntime.ProjectActionPresentationSamples(
+                    PoseProgram.ProjectActionPresentationSamples(
                         transaction.PoseLease,
                         lifecycle,
                         presentationSampleTick,
                         presentationDeltaSeconds);
-                    m_PoseRuntime.ResolveActionPresentationFrames(
+                    PoseProgram.ResolveActionPresentationFrames(
                         transaction.PoseLease);
                 }
 
                 using (PoseRoutingMarker.Auto())
                 {
                     frameStage = "PoseAdvance";
-                    m_PoseRuntime.Advance(
+                    m_PoseFrame.Advance(
                         presentationDeltaSeconds,
                         in factFrame,
                         in parameterFrame);
@@ -502,20 +540,20 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 using (PoseRoutingMarker.Auto())
                 {
                     frameStage = "PoseFinalize";
-                    m_PoseRuntime.FinalizePoseStateFrame(
+                    m_PoseFrame.FinalizePoseState(
                         in factFrame);
-                    m_PoseRuntime.PublishActionSources(
+                    PoseProgram.PublishActionSources(
                         transaction.PoseLease,
                         m_ActionSourceSamples);
                 }
                 CharacterPoseSourceDemand sourceDemand =
-                    m_PoseRuntime.CreateSourceDemand(
+                    m_PoseFrame.CreateSourceDemand(
                         transaction.PoseLease,
                         transaction.SourceLease,
                         m_ActionSourceSamples.Count,
-                        m_PoseRuntime.ProviderSourceSampleCount);
+                        PoseProgram.ProviderSourceSampleCount);
                 CharacterPoseProgramPrepared preparedPose =
-                    m_PoseRuntime.PrepareEvaluation(
+                    m_PoseFrame.PrepareEvaluation(
                         transaction.SourceLease,
                         transaction.PublicationLease,
                         in sourceDemand,
@@ -530,20 +568,20 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     in sourceFrame);
                 if (hasMotionMatchingResolution)
                 {
-                    m_PoseRuntime.PrepareMotionMatchingFrameCompletion(
+                    m_PoseMotionMatching.PrepareCompletion(
                         in motionMatchingResolution,
                         preparedPose.Lineage.CompletionIdentity);
                 }
                 using (ReleaseProtocolMarker.Auto())
                 {
                     frameStage = "ReleaseProtocol";
-                    m_PoseRuntime.CompleteActionReleaseProtocol(
+                    PoseProgram.CompleteActionReleaseProtocol(
                         transaction.PoseLease);
-                    m_PoseRuntime.ValidateActionSamplingFrame(
+                    PoseProgram.ValidateActionSamplingFrame(
                         transaction.PoseLease);
-                    m_PoseRuntime.ValidateActionFrame(
+                    PoseProgram.ValidateActionFrame(
                         transaction.PoseLease);
-                    m_PoseRuntime.ValidatePendingSeal(
+                    m_PoseFrame.ValidatePendingSeal(
                         transaction.PoseLease,
                         transaction.SourceLease);
                     transaction.MarkValidated();
@@ -551,7 +589,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
 
                 frameStage = "EvaluateBarrier";
                 CharacterPoseFrameExecutionResult executionResult =
-                    m_PoseRuntime.ExecuteEvaluateBarrier(
+                    m_PoseFrame.ExecuteEvaluateBarrier(
                     in bodyFrame,
                     in factFrame,
                     transaction.SourceLease,
@@ -595,23 +633,21 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     frameStage = "FrameCommit";
                     if (hasMotionMatchingResolution)
                     {
-                        m_PoseRuntime.CompleteMotionMatchingFrame();
+                        m_PoseMotionMatching.CompleteFrame();
                     }
                     CommitFrameTransaction(
                         transaction,
                         linkedPose);
                     composedPose =
-                        m_PoseRuntime.FinalizeCommittedFrame(
+                        m_PoseFrame.FinalizeCommitted(
                             transaction.PublicationLease);
                 }
 
                 using (PostCommitMarker.Auto())
                 {
                     frameStage = "PostCommit";
-                    m_PoseRuntime
-                        .ApplyValidatedActionBackendReleaseCompletionAcknowledgements();
-                    m_PoseRuntime
-                        .ExecutePreparedActionBackendReleaseRequests();
+                    PoseSource.ApplyActionBackendReleaseAcknowledgements();
+                    PoseProgram.ExecutePreparedActionBackendReleaseRequests();
                     bool publishRuntimeDiagnostics =
                         diagnosticsInterest !=
                         AnimationPresentationDiagnosticsInterest.None;
@@ -624,17 +660,21 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                             BuildCommittedSnapshots(transaction);
                         CharacterPoseSourceFrameResult committedSourceFrame =
                             transaction.SourceFrame;
-                        m_PoseRuntime.BeginCommittedDiagnostics(
+                        PoseDiagnostics.BeginCommittedFrame(
                             diagnosticsInterest,
                             captureFootIk,
                             linkedPose,
+                            PoseProgram,
+                            PoseSource,
+                            PoseConstraints,
+                            PosePublication,
                             in committedSourceFrame,
                             in executionResult);
                         if (publishRuntimeDiagnostics)
                         {
                             CharacterFootIkCommittedCaptureViewLease
                                 footIkCaptureView =
-                                    m_PoseRuntime.PublishDiagnostics();
+                                    PoseDiagnostics.Publish();
                             if (publishStateDiagnostics)
                                 PublishCommittedSnapshots(transaction);
                             else
@@ -657,12 +697,12 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     }
                     else
                     {
-                        m_PoseRuntime.RecordNoDiagnosticsInterest();
+                        PoseDiagnostics.RecordNoInterestSkip();
                     }
                     if (hasMotionMatchingResolution)
                     {
-                        m_PoseRuntime
-                            .PublishMotionMatchingFrameDiagnostics(
+                        m_PoseMotionMatching
+                            .PublishCommittedFrameDiagnostics(
                                 diagnostics,
                                 in motionMatchingResolution);
                     }
@@ -690,7 +730,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 }
                 else
                 {
-                    m_PoseRuntime.DiscardPoseFrameAfterBarrier(
+                    m_PoseFrame.DiscardAfterBarrier(
                         transaction.ConstraintLease,
                         transaction.PublicationLease);
                     MarkFaulted(transaction);
@@ -729,9 +769,9 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             bool applied = m_TuningBinding.TryApplyPending(
                 m_TuningTarget,
                 presentationFrame,
-                activation: m_PoseRuntime.CanApplyNextActivation,
+                activation: PoseProgram.CanApplyNextActivation,
                 (block, resetOwnerState) =>
-                    m_PoseRuntime.ApplyTuning(
+                    m_PoseTuning.Apply(
                         m_Bindings.Projection.TuningLayout,
                         block,
                         checked(m_TuningGeneration + 1),
@@ -739,6 +779,31 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 out _);
             if (applied)
                 m_TuningGeneration++;
+        }
+
+        void ResetPoseModules(PoseDiscontinuityResetReason reason)
+        {
+            m_PoseFrame.RequireNoOpenMutation();
+            if (reason == PoseDiscontinuityResetReason.None)
+                throw new ArgumentOutOfRangeException(nameof(reason));
+            PosePublication.Invalidate();
+            PoseDiagnostics.Reset();
+            PoseSource.CancelReleaseDiagnostics();
+            PoseSource.ClearActionSlotReleaseCompletions();
+            PoseProgram.ClearSourceRetirements();
+            PoseSource.ClearValidatedReleaseAcknowledgements();
+            PoseProgram.ClearMotionMatchingPoseCompletion();
+            PoseSource.ClearActionBackendReleaseCompletions();
+            PoseProgram.BeginReset();
+            m_PoseFrame.ResetState();
+            PoseConstraints.ResetSolvers();
+            ulong completionIdentity =
+                m_PoseFrame.NextCompletionIdentity();
+            PoseProgram.ResetBlendState(completionIdentity);
+            PoseProgram.ReleaseCompletedSources(completionIdentity);
+            PoseProgram.ResetPoseState(reason);
+            PoseProgram.ReleasePlayerSources();
+            PoseSource.Clear();
         }
 
         public void Reset()
@@ -751,12 +816,12 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         {
             if (m_Disposed)
                 return;
-            m_PoseRuntime.Reset(reason);
-            m_PoseRuntime.ResetAnimationSlots();
-            m_PoseRuntime.ResetActionSampling();
-            m_PoseRuntime.ResetActionPlayback();
-            m_PoseRuntime.ResetPresentationWorkspace();
-            m_PoseRuntime.ResetMotionMatching(
+            ResetPoseModules(reason);
+            PoseProgram.ResetAnimationSlots();
+            PoseProgram.ResetActionSampling();
+            PoseProgram.ResetActionPlayback();
+            PoseProgram.ResetPresentationWorkspace();
+            m_PoseMotionMatching.Reset(
                 0,
                 MotionMatchingPresentationResetReason
                     .PresentationReset);
@@ -766,12 +831,12 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         internal void ResetPoseBranch(ulong resetSequence)
         {
             RequireAlive();
-            m_PoseRuntime.Reset(
+            ResetPoseModules(
                 PoseDiscontinuityResetReason.BranchReplacement);
-            m_PoseRuntime.ResetAnimationSlots();
-            m_PoseRuntime.ResetActionSampling();
-            m_PoseRuntime.ResetPresentationWorkspace();
-            m_PoseRuntime.ResetMotionMatching(
+            PoseProgram.ResetAnimationSlots();
+            PoseProgram.ResetActionSampling();
+            PoseProgram.ResetPresentationWorkspace();
+            m_PoseMotionMatching.Reset(
                 resetSequence,
                 MotionMatchingPresentationResetReason
                     .BodyStreamReset);
@@ -784,7 +849,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             if (resetSequence == 0)
                 throw new ArgumentOutOfRangeException(
                     nameof(resetSequence));
-            m_PoseRuntime.ResetMotionMatching(
+            m_PoseMotionMatching.Reset(
                 resetSequence,
                 MotionMatchingPresentationResetReason
                     .BodyStreamReset);
@@ -798,7 +863,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             Exception failure = null;
             try
             {
-                m_PoseRuntime.Dispose();
+                m_PoseFrame.ResetState();
+                m_PoseModules.Dispose();
             }
             catch (Exception exception)
             {
@@ -847,28 +913,29 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             {
                 linkedPose.Prepare();
                 linkedPosePrepared = true;
-                m_PoseRuntime.BeginActionPlaybackFrame(
+                PoseProgram.BeginActionPlaybackFrame(
                     frameIdentity,
                     presentationFrame);
                 actionFrameOpen = true;
-                m_PoseRuntime.BeginActionSamplingFrame(
+                PoseProgram.BeginActionSamplingFrame(
                     frameIdentity,
                     presentationFrame,
                     captureDiagnostics);
                 actionSamplingFrameOpen = true;
-                m_PoseRuntime.BeginAnimationSlotFrame(frameIdentity);
+                PoseProgram.BeginAnimationSlotFrame(frameIdentity);
                 animationSlotFrameOpen = true;
                 motionMatchingFrameOpen =
-                    m_PoseRuntime.BeginMotionMatchingFrame(
-                        frameIdentity);
-                pose = m_PoseRuntime.BeginPendingFrame(
+                    m_PoseMotionMatching.BeginFrame(frameIdentity);
+                bool captureFootIkDiagnostics =
+                    PoseDiagnostics.HasFootCaptureInterest;
+                pose = m_PoseFrame.Begin(
                     in lineage,
                     diagnosticsInterest,
+                    captureFootIkDiagnostics,
                     linkedPose,
                     out source,
                     out constraint,
-                    out publication,
-                    out bool captureFootIkDiagnostics);
+                    out publication);
                 m_FrameTransaction.Begin(
                     in lineage,
                     pose,
@@ -885,7 +952,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 if (pose.IsValid)
                 {
                     DiscardStep(
-                        () => m_PoseRuntime.DiscardPendingFrame(
+                        () => m_PoseFrame.Discard(
                             pose,
                             source,
                             constraint,
@@ -895,32 +962,32 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 if (motionMatchingFrameOpen)
                 {
                     DiscardStep(
-                        () => m_PoseRuntime
-                            .DiscardMotionMatchingFrame(frameIdentity),
+                        () => m_PoseMotionMatching
+                            .DiscardFrame(frameIdentity),
                         ref discardFailure);
                 }
                 if (animationSlotFrameOpen)
                 {
                     DiscardStep(
-                        () => m_PoseRuntime
+                        () => PoseProgram
                             .DiscardAnimationSlotFrame(frameIdentity),
                         ref discardFailure);
                 }
                 if (actionSamplingFrameOpen)
                 {
                     DiscardStep(
-                        () => m_PoseRuntime
+                        () => PoseProgram
                             .DiscardActionSamplingFrame(frameIdentity),
                         ref discardFailure);
                 }
                 if (actionFrameOpen)
                 {
                     DiscardStep(
-                        () => m_PoseRuntime
+                        () => PoseProgram
                             .DiscardActionPlaybackFrame(frameIdentity),
                         ref discardFailure);
                     DiscardStep(
-                        () => m_PoseRuntime
+                        () => PoseProgram
                             .DiscardPresentationWorkspaceFrame(
                                 frameIdentity),
                         ref discardFailure);
@@ -953,7 +1020,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             out bool hasResolution)
         {
             m_ActionSourceSamples.Clear();
-            return m_PoseRuntime.ResolveMotionMatching(
+            return m_PoseMotionMatching.Resolve(
                 presentationFrame,
                 presentationDeltaSeconds,
                 in bodyFrame,
@@ -964,12 +1031,12 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             CharacterPoseFrameTransaction transaction)
         {
             CopyActionSnapshots(
-                m_PoseRuntime.BuildCommittedActionLifecycleSnapshot(),
+                PoseProgram.BuildCommittedActionLifecycleSnapshot(),
                 transaction.ActionSnapshots);
-            m_PoseRuntime.BuildCommittedActionTimeSnapshots(
+            PoseProgram.BuildCommittedActionTimeSnapshots(
                 transaction.TimeSnapshots);
             foreach (AnimationPlaybackId playbackId in
-                     m_PoseRuntime.RetiredActionPlaybacks)
+                     PoseProgram.RetiredActionPlaybacks)
             {
                 transaction.RetiredPlaybacks.Add(playbackId);
             }
@@ -994,7 +1061,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         void PublishCommittedDebugView(
             bool includeStateDiagnostics)
         {
-            if (!m_PoseRuntime.HasDiagnosticsSnapshot)
+            if (!PoseDiagnostics.HasCurrent)
             {
                 m_PoseStateSourceSyncSnapshots.Clear();
                 m_DebugView = null;
@@ -1002,7 +1069,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             }
             if (includeStateDiagnostics)
             {
-                m_PoseRuntime.CopySourceSyncSnapshots(
+                PoseProgram.CopySourceSyncSnapshots(
                     m_PoseStateSourceSyncSnapshots);
             }
             else
@@ -1010,7 +1077,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 m_PoseStateSourceSyncSnapshots.Clear();
             }
             AnimationPresentationRuntimeSnapshot posePlan =
-                m_PoseRuntime.DiagnosticsSnapshot;
+                PoseDiagnostics.Current;
             m_DebugView =
                 new AnimationPresentationDebugView(
                     in posePlan,
@@ -1030,7 +1097,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         void ClearPublishedDiagnostics()
         {
             if (m_DebugView == null &&
-                !m_PoseRuntime.HasDiagnosticsSnapshot &&
+                !PoseDiagnostics.HasCurrent &&
                 m_ActionSnapshots.Count == 0 &&
                 m_ActionTimeSnapshots.Count == 0 &&
                 m_RetiredPlaybacks.Count == 0 &&
@@ -1040,7 +1107,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             }
             ClearCommittedStateSnapshots();
             m_DebugView = null;
-            m_PoseRuntime.InvalidateDiagnosticsSnapshot();
+            PoseDiagnostics.Invalidate();
         }
 
         static bool RequiresStateDiagnostics(
@@ -1059,17 +1126,22 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 throw new InvalidOperationException(
                     "Animation Presentation frame transaction cannot commit.");
             }
-            m_PoseRuntime.CommitPresentationWorkspaceFrame(
+            m_PoseFrame.RequireMutation(transaction.PoseLease);
+            PoseProgram.CommitPresentationWorkspaceFrame(
                 transaction.PoseLease);
-            m_PoseRuntime.CommitActionSamplingFrame(
+            m_PoseFrame.RequireMutation(transaction.PoseLease);
+            PoseProgram.CommitActionSamplingFrame(
                 transaction.PoseLease);
-            m_PoseRuntime.CommitAnimationSlotFrame(
+            m_PoseFrame.RequireMutation(transaction.PoseLease);
+            PoseProgram.CommitAnimationSlotFrame(
                 transaction.PoseLease);
-            m_PoseRuntime.CommitActionPlaybackFrame(
+            m_PoseFrame.RequireMutation(transaction.PoseLease);
+            PoseProgram.CommitActionPlaybackFrame(
                 transaction.PoseLease);
-            m_PoseRuntime.CommitMotionMatchingFrame(
+            m_PoseFrame.RequireMutation(transaction.PoseLease);
+            m_PoseMotionMatching.CommitFrame(
                 transaction.PoseLease);
-            m_PoseRuntime.SealFrame(
+            m_PoseFrame.Seal(
                 transaction.PoseLease,
                 transaction.SourceLease,
                 transaction.ConstraintLease,
@@ -1089,30 +1161,30 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             }
             Exception failure = null;
             DiscardStep(
-                () => m_PoseRuntime.DiscardPendingFrame(
+                () => m_PoseFrame.Discard(
                     transaction.PoseLease,
                     transaction.SourceLease,
                     transaction.ConstraintLease,
                     transaction.PublicationLease),
                 ref failure);
             DiscardStep(
-                () => m_PoseRuntime.DiscardMotionMatchingFrame(
+                () => m_PoseMotionMatching.DiscardFrame(
                     transaction.Lineage.FrameIdentity),
                 ref failure);
             DiscardStep(
-                () => m_PoseRuntime.DiscardAnimationSlotFrame(
+                () => PoseProgram.DiscardAnimationSlotFrame(
                     transaction.Lineage.FrameIdentity),
                 ref failure);
             DiscardStep(
-                () => m_PoseRuntime.DiscardActionSamplingFrame(
+                () => PoseProgram.DiscardActionSamplingFrame(
                     transaction.Lineage.FrameIdentity),
                 ref failure);
             DiscardStep(
-                () => m_PoseRuntime.DiscardActionPlaybackFrame(
+                () => PoseProgram.DiscardActionPlaybackFrame(
                     transaction.Lineage.FrameIdentity),
                 ref failure);
             DiscardStep(
-                () => m_PoseRuntime.DiscardPresentationWorkspaceFrame(
+                () => PoseProgram.DiscardPresentationWorkspaceFrame(
                     transaction.Lineage.FrameIdentity),
                 ref failure);
             DiscardStep(
@@ -1241,7 +1313,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 transaction.Lineage.PresentationFrame,
                 transaction.Lineage.BodyTick,
                 phase,
-                m_PoseRuntime.FrameCompletionContext);
+                m_PoseFrame.FrameCompletionContext);
             m_Faulted = true;
             m_LastFrameOutcome =
                 AnimationPresentationFrameOutcome.Faulted;
@@ -1283,6 +1355,23 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 ? producer
                 : left.Generation.CompareTo(right.Generation);
         }
+
+        AnimationPresentationRuntimeCapacityMetrics CreateCapacityMetrics(
+            int actionJournalCapacity,
+            int samplingJournalCapacity,
+            int slotJournalCapacity) =>
+            new AnimationPresentationRuntimeCapacityMetrics(
+                PoseProgram.DenseDoublePageResidentPayloadBytes,
+                PoseInertializationNativeProgramPayloadMetrics
+                    .CalculateDoublePageResidentPayloadBytes(
+                        PoseProgram.Inertialization),
+                PosePublication.DenseDoublePageResidentPayloadBytes,
+                actionJournalCapacity,
+                samplingJournalCapacity,
+                slotJournalCapacity,
+                PoseProgram.SourceRetirementStandaloneCapacity,
+                PoseSource.Capacity,
+                PoseProgram.SourceRetirementStandaloneCapacity);
 
         static int CalculateSourceSyncCapacity(
             CharacterPoseProgramImage plan)

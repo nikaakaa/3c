@@ -57,6 +57,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
             m_Publisher.Interest;
         internal ulong NoInterestSkipCount =>
             m_Publisher.NoInterestSkipCount;
+        internal bool HasFootCaptureInterest =>
+            m_EventPublisher.HasFootCaptureInterest;
 
         internal void BeginFrame()
         {

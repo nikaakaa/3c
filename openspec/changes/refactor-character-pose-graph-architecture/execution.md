@@ -1153,3 +1153,9 @@ Demand生成、HasFrameWork、Resolve、Selection应用、Pose completion准备�
 状态：新增`CharacterPoseCommittedDiagnosticsEventPublisher`，只持有Runtime identity，并在调用时接收同一Committed lineage的Program、Constraint与Final Publication事实。`CharacterPoseDiagnosticsRuntime`直接拥有该发布器；旧Pose外层不再实现诊断Event Sink接口，也不再通过partial方法读取Constraint、Publication或Player内部状态。
 
 Foot诊断事件identity、interest查询、字段来源、发布时机和最终Pose对应的Foot Motion解析顺序保持不变；未修改生成采样框架、Foot字段或IK算法。3C MCP完成全脚本重编且C#错误为0，不单独运行回放。
+
+## 删除旧Pose Plan执行外层
+
+状态：`PosePlanExecutionRuntime`及其meta已删除。唯一`CharacterAnimationPresentationRuntime`现在直接装配`CharacterPoseRuntimeComposition`、Tuning Coordinator、Frame Coordinator和Motion Matching Coordinator，并只按固定根帧顺序调用Program、Source、Constraint、Final Publication与Diagnostics模块；不再经过第二个同构外层转发Action、Frame、Reset、Diagnostics或Source生命周期。
+
+旧外层的存活检查由公开Runtime保留，根Frame lease检查由Frame Coordinator保留，Program Action的frame检查仍由Program Action模块保留；Reset、提交、丢弃、Evaluate Barrier、物理发布与释放顺序逐项原样迁入唯一根协调链。全仓可编译源码已无`PosePlanExecutionRuntime`及旧Event Sink接口，任务14.1完成。3C MCP完成全脚本重编且C#错误为0，不单独运行回放。

@@ -137,7 +137,7 @@ Performance工作流继续唯一拥有Build Request、`DiagnosticCapabilitySet`�
 ## Current Spec And Active Change Comparison
 
 - current `btsmtl-runtime-diagnostics`要求诊断只读且不反向驱动运行；本框架只在同步Commit边界读取现有事实并保持该要求，不进入RuntimeDebugSession Trace Store。
-- current `character-foot-placement-presentation`仍明确写有`Runtime Diagnostics Projector -> CharacterFootIkCommittedCaptureViewLease -> Foot Bridge`旧链，与0.4 multi Fact Root合同冲突；必须由`refactor-foot-ik-diagnostic-sampling`的delta在归档前完整替换，不能把该current段落当作继续保留View／Bridge的依据。
+- current `character-foot-placement-presentation`、`character-animation-pipeline`与`character-pose-graph-runtime-architecture`已经由`refactor-foot-ik-diagnostic-sampling`同步为`成功Seal -> 同步Commit直接Fact Root -> frozen consumer`；保留的Capture View只服务Live／Trace／Gizmo，不属于采样链。
 - active `refactor-character-pose-graph-architecture`只拥有正式Committed Result、事务、Seal和Post-Commit边界，可独立推进；它不等待或引用Sampling Runtime。
 - active `refactor-foot-ik-diagnostic-sampling`负责0.4领域接入和下游分析，不得恢复View、Event DTO、Bridge或Host Adapter。
 - completed未归档`add-gameplay-performance-capture-workflow`继续唯一拥有Player BuildIdentity和Comparer；后续只接入通用Capability Set，不增加Foot专属构建字段。

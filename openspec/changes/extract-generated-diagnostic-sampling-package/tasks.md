@@ -7,14 +7,14 @@
 ## 2. 切换3C依赖与多Fact Root声明
 
 - [x] 2.1 将3C manifest与packages lock切换为唯一`file:../../../../../generated-diagnostic-sampling/Packages/com.kk.generated-diagnostic-sampling`依赖并删除本地Analyzer来源
-- [ ] 2.2 将Foot Capability收敛为Metadata与多个既有readonly Fact Root，确认Root ID、类型和Program Dimension顺序唯一稳定
-- [ ] 2.3 将普通`DiagnosticField`迁到真实业务成员，使用path-scoped identity；删除普通Getter／Extractor并把剩余Derived限制为真正公式
-- [ ] 2.4 迁移固定集合`DiagnosticTable`，确认Generator直接读取既有Count／只读索引器并生成子表，不复制行DTO
+- [x] 2.2 将Foot Capability收敛为Metadata与多个既有readonly Fact Root，确认Root ID、类型和Program Dimension顺序唯一稳定
+- [x] 2.3 将普通`DiagnosticField`迁到真实业务成员，使用path-scoped identity；删除普通Getter／Extractor与Runtime Derived
+- [x] 2.4 迁移固定集合`DiagnosticTable`，确认Generator直接读取既有Count／只读索引器并生成子表，不复制行DTO
 
 ## 3. 接入generated Commit与Host
 
-- [ ] 3.1 删除Started／CommittedSample／Stopped Event DTO、Dimension View、Side Metadata和Bridge，在正式同步Commit点直接以`in`传入Left／Right Fact Root与Metadata并调用generated `HandleCommitted`
-- [ ] 3.2 检查generated Lifecycle自动完成Start、左右Dimension packet rent／Capture／submit、Stop与结构化失败传播，领域不直接控制Session或Writer
+- [x] 3.1 删除Started／CommittedSample／Stopped Event DTO、Dimension View、Side Metadata和Bridge，在正式同步Commit点直接以`in`传入Left／Right Fact Root与Metadata并调用generated `HandleCommitted`
+- [x] 3.2 检查generated Lifecycle自动完成Start、左右Dimension packet rent／Capture／submit、Stop与结构化失败传播，领域不直接控制Session或Writer
 - [ ] 3.3 删除Host Adapter、`hostAdapterId`、Column、CsvBinding、Geometry Header、旧Reader和第二CSV映射
 - [ ] 3.4 将Foot Analyzer／Publisher切到Host自动生成的基础CSV、typed artifact和manifest，确认它们只负责评分与报告
 - [ ] 3.5 重建Foot Schema、Program、Capability Set和Player manifest identity，确认0.1至0.3 Request／packet／Reader不能进入0.4链

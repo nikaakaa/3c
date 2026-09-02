@@ -1,6 +1,6 @@
 ## Context
 
-见proposal.md。Foot的正式输入、Landing、Motion、Ground Path、Goal、Pelvis、FBBIK与Frame lineage已经在成功提交后的PostCommit短租约中同时可读。旧采样又建立采样专用结构、按Side选择左右脚、逐字段搬运到Column并手写CSV，导致同一事实拥有第二套结构和Schema。
+见proposal.md。Foot的正式输入、Landing、Motion、Ground Path、Goal、Pelvis、FBBIK与Frame lineage已经在成功Seal后的同步Commit边界同时可读。旧采样又建立采样专用结构、按Side选择左右脚、逐字段搬运到Column并手写CSV，导致同一事实拥有第二套结构和Schema。
 
 通用Generated Diagnostic Sampling已经提供多Fact Root Capability、path-scoped DiagnosticField、Roslyn Source Generator、typed packet、Lifecycle和Schema-driven Host基础。3C当前已经完成真实字段标记、Foot Program生成与薄Capture编译；Host、Analyzer／Publisher、Performance接线和真实Player剥离门禁尚未闭合。
 
@@ -28,7 +28,7 @@
 
 ### Decision 1: Capability直接声明多个Fact Root
 
-character-foot-ik Capability通过DiagnosticFactRoot注册现有事实类型。当前根包含effector、foot、foot-steps、formal-input、formal-output、frame、input、leg、pelvis、pelvis-goal、primary-support、solver和stride；Capture Metadata只保存采样会话固定身份。
+character-foot-ik Capability通过DiagnosticFactRoot注册现有事实类型。当前根包含effector、foot、formal-input、formal-output、frame、input、leg、pelvis、pelvis-goal、primary-support、solver和stride；Capture Metadata只保存采样会话固定身份。无字段的foot-steps根及其AnimationBiomechanicalStepReadPage构造已删除。
 
 Dimension不是新的业务类型。Left和Right只是同一个Generated Program的两个参数集合：每套集合都按相同Fact Root id传入对应脚事实，共享pelvis、solver、stride等双脚公共事实。左右结构由生成器在编译期统一确定，不存在Metadata Side分支，也不存在两套字段identity。
 
@@ -68,7 +68,7 @@ Foot只声明DiagnosticSampler和DiagnosticCaptureProgram。Roslyn在编译期�
 4. 为Left和Right生成同构的直接成员访问。
 5. 生成Schema、typed packet layout、Lifecycle和HandleCommitted。
 
-CharacterFootIkGeneratedCapture是领域内唯一薄接点。它接收既有PostCommit lease，将其中已经存在的事实赋给对应Fact Root参数，并在租约有效期内一次调用Generated Lifecycle的HandleCommitted。Generated Program把值写入framework-owned packet后，后台不再持有业务对象或page。
+CharacterFootIkGeneratedCapture是领域内唯一薄接点。Runtime在成功Seal后的同步Commit边界从Constraint、Final Publication和当前Clip Player的已提交状态取得现有事实，并把Left／Right与公共Fact Root直接传给它；它一次调用Generated Lifecycle的HandleCommitted。采样链不读取Runtime Snapshot或CharacterFootIkCommittedCaptureViewLease。Generated Program把值写入framework-owned packet后，后台不再持有业务对象或page。
 
 这里不使用Expression、反射、dynamic、字典或字符串成员路径。生成的是普通C#，由Unity C# Compiler和IL2CPP AOT处理。
 
@@ -98,7 +98,7 @@ Capture构建同时定义KK_DIAGNOSTIC_SAMPLING与KK_DIAGNOSTIC_FOOT。普通发
 
 ## Risks / Trade-offs
 
-- [真实class page在业务内部可写] → GeneratedCapture只在同步PostCommit租约内调用HandleCommitted，packet提交后不持有page引用。
+- [真实class page在业务内部可写] → GeneratedCapture只在同步Commit调用栈内调用HandleCommitted，packet提交后不持有page引用。
 - [多个Fact Root左右绑定错位] → Generated HandleCommitted固定左右参数顺序和相同root集合，Program编译与调用编译共同失败，不按Side运行时选择。
 - [path-scoped成员改名改变Field identity] → 把改名视为Schema破坏性变更并生成新Program identity；不提供旧名别名。
 - [三张表改变旧CSV形状] → Analyzer必须按新manifest消费，历史包保持不可变，不兼容读取。
@@ -109,7 +109,7 @@ Capture构建同时定义KK_DIAGNOSTIC_SAMPLING与KK_DIAGNOSTIC_FOOT。普通发
 
 1. 完成多Fact Root Capability、真实成员Attribute、三个真实page表、Full Sampler和Program。
 2. 删除全部旧Getter／Extractor、Projection、领域Derived、Side选择、三个Event、旧合成geometry表及Column／CsvBinding链。
-3. 用薄GeneratedCapture在现有PostCommit租约内绑定Left／Right根并调用HandleCommitted。
+3. 用薄GeneratedCapture在成功Seal后的同步Commit边界绑定Left／Right根并调用HandleCommitted，不经过Capture View。
 4. 接入通用Host生成主表、三张子表和manifest。
 5. 迁移Analyzer／Publisher，只保留领域公式、评分和报告。
 6. 接入唯一Performance Build、Run、Capture与Comparer身份。
@@ -118,6 +118,6 @@ Capture构建同时定义KK_DIAGNOSTIC_SAMPLING与KK_DIAGNOSTIC_FOOT。普通发
 
 ## Current Implementation Status
 
-- 已完成并编译：多Fact Root Capability、真实成员单Attribute、三张真实class page表、Full Sampler、Capture Program、Generated Lifecycle、左右HandleCommitted调用和薄GeneratedCapture。
+- 已完成并编译：多Fact Root Capability、真实成员单Attribute、三张真实class page表、Full Sampler、Capture Program、Generated Lifecycle、成功Seal后直接事实根绑定、左右HandleCommitted调用和薄GeneratedCapture。
 - 已删除：旧字段Getter／Extractor、Projection、领域Derived、Dimension类型、三个Event、Metadata Side、旧合成Ground Geometry表。
 - 未完成：通用Host在3C中的基础产物闭环、Foot Analyzer／Publisher迁移、Performance工作流接线、Disabled／Capture Player的Cecil与IL2CPP Gate。

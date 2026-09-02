@@ -5,9 +5,10 @@
 - [x] 1.3 删除Foot Runtime的一字段一Getter／Extractor、Projection、中央字段容器和DiagnosticDerivedField
 - [x] 1.4 把Ground Contact、Envelope与Surface声明为ground-contacts、ground-envelope、ground-surfaces三张真实class page表，行字段直接标记真实成员
 - [x] 1.5 定义Full Sampler与Capture Program，由Roslyn生成统一Schema、typed packet layout、Lifecycle和左右HandleCommitted
-- [x] 1.6 实现薄CharacterFootIkGeneratedCapture，在既有PostCommit短租约内绑定现有Left／Right与公共Fact Root并以in调用HandleCommitted
+- [x] 1.6 实现薄CharacterFootIkGeneratedCapture，在成功Seal后的同步Commit边界直接绑定现有Left／Right与公共Fact Root并以in调用HandleCommitted；采样链不消费CharacterFootIkCommittedCaptureViewLease
 - [x] 1.7 编译字段、Program和GeneratedCapture，确认生成调用不包含Side选择、DTO构造、Projection、Getter、表达式树或运行时反射
 - [x] 1.8 删除三个Foot typed Event、Dimension类型、Metadata Side、旧DiagnosticTableCount和旧max-count Ground Geometry合成表
+- [x] 1.9 删除没有任何采样字段却要求构造AnimationBiomechanicalStepReadPage的foot-steps根
 
 ## 2. 通用Host基础产物
 

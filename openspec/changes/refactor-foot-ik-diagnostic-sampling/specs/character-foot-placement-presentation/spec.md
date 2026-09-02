@@ -2,7 +2,7 @@
 
 ### Requirement: Foot Placement诊断必须只显示正式结果
 
-Runtime Result MUST与Diagnostics严格分型。Foot、Landing、Ground Path、Pelvis、Goal、FBBIK与Final Publication MUST只按业务管线产生正式结果；PoseGraph MUST只拥有自己的Pending／Committed事务、Seal和既有PostCommit短租约，不得为了采样新增事实结构、Dimension类型、领域生命周期Event、Side metadata、packet、Session、Host或第二发布路径。
+Runtime Result MUST与Diagnostics严格分型。Foot、Landing、Ground Path、Pelvis、Goal、FBBIK与Final Publication MUST只按业务管线产生正式结果；PoseGraph MUST只拥有自己的Pending／Committed事务与Seal，并在成功Seal后的同步Commit调用栈内暴露现有只读事实，不得为了采样新增事实结构、Dimension类型、领域生命周期Event、Side metadata、packet、Session、Host或第二发布路径。
 
 需要采样的现有真实readonly成员 MAY增加Conditional DiagnosticField，但该标记 MUST不改变成员值、对象布局、业务执行顺序或无采样构建的运行闭包。Foot薄Capture MUST只在成功Seal后的既有PostCommit调用栈中取得现有Left／Right与公共事实根，并以in参数一次交给生成的HandleCommitted；它 MUST不构造采样DTO、不逐字段复制、不按Metadata Side选择、不重新执行World Query、坐标变换、Goal Assembly、FBBIK或Physical读取。
 

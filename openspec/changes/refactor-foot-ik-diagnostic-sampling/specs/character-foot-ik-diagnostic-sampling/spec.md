@@ -6,13 +6,13 @@
 
 ### Requirement: Foot Capability必须直接声明多个现有Fact Root
 
-character-foot-ik Capability MUST以DiagnosticFactRoot注册现有强类型事实，不得要求消费方合并成采样专用结构。每个Dimension MUST能同时接收foot、input、formal-input、formal-output、effector、leg、pelvis、pelvis-goal、solver、stride、primary-support、foot-steps和frame等所需根；Metadata MUST只保存采样会话固定身份，不得保存Side或业务事实。
+character-foot-ik Capability MUST以DiagnosticFactRoot注册现有强类型事实，不得要求消费方合并成采样专用结构。每个Dimension MUST能同时接收foot、input、formal-input、formal-output、effector、leg、pelvis、pelvis-goal、solver、stride、primary-support和frame等所需根；Metadata MUST只保存采样会话固定身份，不得保存Side或业务事实。没有字段的类型 MUST不作为Fact Root，也不得为了维持根集合构造读取DTO。
 
 Left与Right MUST使用同一组Fact Root id和同一Schema。公共Pelvis、Solver、Stride或Frame事实 MAY同时作为两套Dimension参数传入，但 MUST不复制成左右专用字段结构。框架 MUST只理解Dimension、Fact Root、Metadata、Field和Table，不得包含Foot、Landing、PIK或其它领域分支。
 
 #### Scenario: 捕获一帧左右脚事实
 
-- **WHEN** 既有PostCommit lease包含同一Frame与Completion的左右脚和公共事实
+- **WHEN** 当前Frame已经成功Seal且同步Commit边界可读取同一Frame与Completion的左右脚和公共事实
 - **THEN** Foot薄Capture MUST把对应现有根以in参数交给生成入口
 - **AND** MUST不构造CommittedFoot、LandingView、Dimension View、Projection或Side选择对象
 
@@ -50,13 +50,13 @@ Foot Player Schema MUST不包含DiagnosticDerivedField。无法直接从现有�
 
 Foot MUST只声明DiagnosticSampler和DiagnosticCaptureProgram。Roslyn Source Generator MUST在编译期遍历多Fact Root和Metadata，生成统一Schema、typed packet layout、Lifecycle、左右Dimension直接成员访问和HandleCommitted。生成代码 MUST是普通C#静态访问，并由Unity C# Compiler与IL2CPP AOT编译。
 
-CharacterFootIkGeneratedCapture MUST只在既有PostCommit短租约内绑定现有根并调用生成Lifecycle。它 MUST不拥有字段映射、packet layout、Session wrapper、领域Writer、Host Finalizer、表达式树、反射、dynamic或字符串成员路径执行。
+CharacterFootIkGeneratedCapture MUST只在成功Seal后的同步Commit调用栈内接收现有根并调用生成Lifecycle。采样链 MUST不创建或消费CharacterFootIkCommittedCaptureViewLease、Runtime Snapshot、Dimension View或其它聚合DTO，也 MUST不拥有字段映射、packet layout、Session wrapper、领域Writer、Host Finalizer、表达式树、反射、dynamic或字符串成员路径执行。
 
 #### Scenario: Capture Program处理Committed帧
 
-- **WHEN** Foot Capture已Start且PostCommit提交一帧合法事实
+- **WHEN** Foot Capture已Start且当前Frame成功Seal并进入同步Commit
 - **THEN** 薄Capture MUST一次调用生成的HandleCommitted并传入Left与Right的完整根集合
-- **AND** Generated Program MUST在租约内把两套Dimension写入framework-owned typed packet，后台不得持有业务page
+- **AND** Generated Program MUST在当前调用栈内把两套Dimension写入framework-owned typed packet，后台不得持有业务page
 
 #### Scenario: 构建IL2CPP Capture Player
 

@@ -4025,7 +4025,19 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 throw new ArgumentNullException(nameof(program));
             if (framePages == null)
                 throw new ArgumentNullException(nameof(framePages));
-            program.RequireValid(framePages);
+            program.RequireValid();
+            framePages.RequireValid();
+            if (framePages.RootOrientationWarpControls.Length !=
+                    program.RootOrientationWarps.Length ||
+                framePages.LinkedPoseCallControls.Length !=
+                    program.LinkedPoseCalls.Length ||
+                framePages.LinkedPoseActiveFragments.Length !=
+                    program.LinkedPoseFragmentCount)
+            {
+                throw new ArgumentException(
+                    "Pose Program frame pages do not match the Execution View.",
+                    nameof(framePages));
+            }
             NativeArray<float> operationWeights = tuning.OperationWeights;
             if (!tuning.IsValid ||
                 !operationWeights.IsCreated ||

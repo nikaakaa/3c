@@ -771,6 +771,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         int m_LeftFootBoneIndex;
         int m_RightFootBoneIndex;
         int m_PelvisBoneIndex;
+        int m_LinkedPoseFragmentCount;
         AnimationPoseGraphNativeLegChain m_LeftLeg;
         AnimationPoseGraphNativeLegChain m_RightLeg;
         FixedString128Bytes m_ProgramId;
@@ -782,15 +783,12 @@ namespace ThirdPersonCharacter.Pipeline.Animation
 
         internal CharacterPoseProgramExecutionView(
             CharacterPresentationProjection projection,
-            CharacterPoseProgramFramePages framePages,
             in AnimationPoseNativeAggregateLayout layout)
         {
             try
             {
                 if (projection == null)
                     throw new ArgumentNullException(nameof(projection));
-                if (framePages == null)
-                    throw new ArgumentNullException(nameof(framePages));
                 projection.RequirePosePayload();
                 CharacterPoseProgramImage program = projection.PosePlan;
                 CharacterAnimationRigPayload rig = projection.Rig;
@@ -808,11 +806,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 curves.RequireValid();
                 profiles.RequireValid(program.PoseBoneCount, rig.RigId, rig.RigRevision);
                 layout.RequireValid();
-                AnimationPoseNativeAggregateLayout workspaceLayout =
-                    framePages.EvaluationLayout;
-                RequireDiagnosticsLayout(
-                    in workspaceLayout,
-                    in layout);
                 if (!string.Equals(program.RigId, rig.RigId, StringComparison.Ordinal) ||
                     !string.Equals(program.RigRevision, rig.RigRevision, StringComparison.Ordinal) ||
                     program.PoseBoneCount != rig.PoseBoneCount || program.Parameters.Count <= 0 ||
@@ -845,6 +838,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 m_LeftFootBoneIndex = rig.LeftLeg.AnklePhysicalBoneIndex;
                 m_RightFootBoneIndex = rig.RightLeg.AnklePhysicalBoneIndex;
                 m_PelvisBoneIndex = rig.PelvisPhysicalBoneIndex;
+                m_LinkedPoseFragmentCount =
+                    program.LinkedPoseFragments.Count;
                 m_LeftLeg = new AnimationPoseGraphNativeLegChain(rig.LeftLeg);
                 m_RightLeg = new AnimationPoseGraphNativeLegChain(rig.RightLeg);
                 m_ProgramId = new FixedString128Bytes(program.ProgramId);
@@ -900,7 +895,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 CompileLinkedPose(program);
                 CompileOperations(program);
                 CompileStages(program);
-                RequireValid(framePages);
+                RequireValid();
             }
             catch
             {
@@ -923,6 +918,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         internal int LeftFootBoneIndex => m_LeftFootBoneIndex;
         internal int RightFootBoneIndex => m_RightFootBoneIndex;
         internal int PelvisBoneIndex => m_PelvisBoneIndex;
+        internal int LinkedPoseFragmentCount =>
+            m_LinkedPoseFragmentCount;
         internal AnimationPoseGraphNativeLegChain LeftLeg => m_LeftLeg;
         internal AnimationPoseGraphNativeLegChain RightLeg => m_RightLeg;
         internal FixedString128Bytes ProgramId => m_ProgramId;
@@ -1545,8 +1542,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 throw new InvalidOperationException("Animation Pose Graph native stages do not close the operation range.");
         }
 
-        internal void RequireValid(
-            CharacterPoseProgramFramePages framePages)
+        internal void RequireValid()
         {
             RequireAlive();
             if (m_BoneCount <= 0 || m_ParameterCount <= 0 || m_PoseValueCount <= 0 ||
@@ -1577,7 +1573,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 m_LinkedPoseCallInterfaceIds.Length != m_LinkedPoseCalls.Length ||
                 m_LinkedPoseCandidateImplementationIds == null ||
                 m_LinkedPoseCandidateImplementationIds.Length != m_LinkedPoseCandidates.Length ||
-                framePages == null ||
+                m_LinkedPoseFragmentCount < 0 ||
                 !m_BoneCounts.IsValid ||
                 m_PelvisBoneIndex < 0 || m_PelvisBoneIndex >= m_BoneCount ||
                 !m_LeftLeg.IsValid(m_BoneCounts.PhysicalBoneCount, m_PelvisBoneIndex) ||
@@ -1591,16 +1587,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 m_OutputOperationIndex < 0 || m_OutputOperationIndex >= m_FrameCacheCount ||
                 m_OutputValueIndex < 0 || m_OutputValueIndex >= m_PoseValueCount)
                 throw new InvalidOperationException("Animation Pose Graph Native Program is invalid.");
-
-            framePages.RequireValid();
-            if (framePages.RootOrientationWarpControls.Length !=
-                    m_RootOrientationWarps.Length ||
-                framePages.LinkedPoseCallControls.Length !=
-                    m_LinkedPoseCalls.Length)
-            {
-                throw new InvalidOperationException(
-                    "Animation Pose Graph frame page layout is inconsistent.");
-            }
 
             int linkedCandidateStart = 0;
             for (int callIndex = 0; callIndex < m_LinkedPoseCalls.Length; callIndex++)
@@ -1620,7 +1606,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             {
                 AnimationPoseGraphNativeLinkedPoseCandidate candidate = m_LinkedPoseCandidates[candidateIndex];
                 if ((uint)candidate.FragmentIndex >=
-                    (uint)framePages.LinkedPoseActiveFragments.Length ||
+                    (uint)m_LinkedPoseFragmentCount ||
                     candidate.OutputPoseValueIndex < 0 ||
                     candidate.OutputPoseValueIndex >= m_PoseValueCount ||
                     !m_LinkedPoseCandidateImplementationIds[candidateIndex].IsValid)

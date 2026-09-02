@@ -334,7 +334,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                 workspace = null;
                 executionView = new CharacterPoseProgramExecutionView(
                     projection,
-                    programFrames,
                     in initialLayout);
                 programTuning = new CharacterPoseProgramTuningState(
                     projection,

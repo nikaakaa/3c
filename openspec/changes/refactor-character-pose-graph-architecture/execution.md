@@ -721,3 +721,9 @@ Editor旧Builder仍有一份自己的Native Operation判定，且其集合包含
 状态：`CharacterPoseProgramFramePages`构造入口改为直接接收唯一Program Image，自身从Image取得StateMachine、Slot、Root Warp、Linked Call与Fragment固定容量，并按原值初始化Committed StateMachine entry control。`PosePlanExecutionRuntime`不再逐项拆出五个容量传参，Frame Pages layout只由Image决定。
 
 `CharacterPoseProgramExecutionView.CompilePayloads`删除Frame Pages参数和StateMachine control写入，只materialize自己的静态Mask、Additive Reference、Modify Bone、Root Warp、Pose Bone Goal与Goal input页。初始化写入时机仍在Actor构造期、首帧之前，control内容和首帧Begin／Commit／Discard语义不变；区别是Actor页只由其Owner写，Execution View不再接触可变节点状态。任务5.2仍等待静态页与Operation／Stage materialize彻底去除运行时语义编译后再勾选。3C MCP对Frame Pages、Execution View和Pose Runtime的编译错误筛选均为0；不单独运行回放。
+
+## Execution View构造移除Frame Pages依赖
+
+状态：`CharacterPoseProgramExecutionView`构造现在只接收完整Projection与只读Workspace layout，不再接收`CharacterPoseProgramFramePages`。View保存Image的Linked Pose Fragment固定数量并以它校验Candidate索引，自身`RequireValid`只检查静态Native页、身份和静态layout，不调用Frame Pages有效性或读取其当前页。
+
+Execution View与Frame Pages之间的Control容量一致性改由`CharacterPoseGraphStagedExecutor`绑定时校验：先分别验证View与Frame Pages，再核对Root Warp、Linked Call和Linked Fragment容量。这样静态View不再把Actor帧对象当作构造依赖，而真正执行时仍保留同样的交叉边界检查。View上的Committed diagnostics投影与Linked selection方法仍显式接收短期Frame Pages参数，留待Program Runtime迁移执行职责时删除，任务5.2暂不提前完成。3C MCP对View、Executor和Pose Runtime的编译错误筛选均为0；不单独运行回放。

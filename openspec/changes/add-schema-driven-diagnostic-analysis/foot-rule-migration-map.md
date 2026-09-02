@@ -228,4 +228,4 @@ Evidence评级：大于等于90为`Strong`，大于等于60为`Moderate`，其�
 5. 重新生成Full Schema后逐条编译Plan绑定；只有本表列出的必需输入全部存在，Operator才从`MissingEvidence`转为可执行。
 6. 先迁纯离线Operator，再恢复当前Core／Full Plan和七维评分组合；不恢复任何旧采样、列绑定、DTO、Store或Publisher路径。
 
-当前结论是：旧算法大部分中间量可以从当前事实离线派生，但七维Health的七个维度目前全部至少有一个真实原始证据缺口。只恢复规则代码而不补Owner字段，会生成看似完整但实际缺证据的错误报告。
+当前结论是：现有真实Owner字段已经闭合Core 4条规则和Full 28条规则的全部Plan输入。Full Plan的七维评分权重只属于3C Foot领域；通用Host只按Plan组合并在MissingEvidence／NotApplicable时保留未知权重、输出最低／最高可能分。旧Current／Incoming Step候选因当前业务已不存在而未恢复，现行Operator只诊断Formal到Selected的真实选择链。

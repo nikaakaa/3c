@@ -1,0 +1,3083 @@
+{
+  "id": "character-foot-full-current",
+  "datasets": [
+    {
+      "id": "foot",
+      "capability": "character-foot-ik",
+      "sampler": "character-foot-ik/full"
+    }
+  ],
+  "rules": [
+    {
+      "id": "final-contact-plane-penetration",
+      "operator": "foot/final-contact-plane-penetration",
+      "category": "contact",
+      "inputs": [
+        {
+          "slot": "frame-sequence",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/foot/resolved-frame-sequence"
+        },
+        {
+          "slot": "reset-sequence",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/input/body-reset-sequence"
+        },
+        {
+          "slot": "delta-seconds",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/input/presentation-delta-seconds"
+        },
+        {
+          "slot": "constraint-state",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/foot/foot-motion-constraint-state"
+        },
+        {
+          "slot": "event-identity",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/foot/foot-motion-landing-event-identity"
+        },
+        {
+          "slot": "surface-identity",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/foot/foot-motion-contact-surface-identity"
+        },
+        {
+          "slot": "contact-plane-available",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/foot/foot-motion-contact-plane-available"
+        },
+        {
+          "slot": "anchor-available",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/foot/foot-motion-current-contact-anchor-available"
+        },
+        {
+          "slot": "anchor-event-identity",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/foot/foot-motion-current-contact-anchor-event-identity"
+        },
+        {
+          "slot": "anchor-surface-identity",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/foot/foot-motion-current-contact-anchor-surface-identity"
+        },
+        {
+          "slot": "anchor-point",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/foot/foot-motion-current-contact-anchor-point"
+        },
+        {
+          "slot": "anchor-normal",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/foot/foot-motion-current-contact-anchor-normal"
+        },
+        {
+          "slot": "source-ankle-position",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/foot/source-ankle-position"
+        },
+        {
+          "slot": "source-ankle-rotation",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/foot/source-ankle-rotation"
+        },
+        {
+          "slot": "source-heel",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/foot/source-heel-position"
+        },
+        {
+          "slot": "source-toe",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/foot/source-toe-position"
+        },
+        {
+          "slot": "physical-write-available",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/physical/physical-write-available"
+        },
+        {
+          "slot": "physical-ankle-position",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/physical/physical-ankle-position"
+        },
+        {
+          "slot": "physical-ankle-rotation",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/physical/physical-ankle-rotation"
+        }
+      ],
+      "parameters": {
+        "maximum-depth-meters": 0.01,
+        "geometry-epsilon-meters": 0.00001,
+        "landing-state": 1,
+        "locked-state": 2
+      },
+      "window": {
+        "minimumRows": 1,
+        "maximumSequenceGap": 0
+      }
+    },
+    {
+      "id": "contact-plane-penetration-contribution",
+      "operator": "foot/contact-plane-penetration-contribution",
+      "category": "contact",
+      "inputs": [
+        {
+          "slot": "frame-sequence",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/foot/resolved-frame-sequence"
+        },
+        {
+          "slot": "reset-sequence",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/input/body-reset-sequence"
+        },
+        {
+          "slot": "delta-seconds",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/input/presentation-delta-seconds"
+        },
+        {
+          "slot": "constraint-state",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/foot/foot-motion-constraint-state"
+        },
+        {
+          "slot": "event-identity",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/foot/foot-motion-landing-event-identity"
+        },
+        {
+          "slot": "surface-identity",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/foot/foot-motion-contact-surface-identity"
+        },
+        {
+          "slot": "contact-plane-available",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/foot/foot-motion-contact-plane-available"
+        },
+        {
+          "slot": "anchor-available",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/foot/foot-motion-current-contact-anchor-available"
+        },
+        {
+          "slot": "anchor-event-identity",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/foot/foot-motion-current-contact-anchor-event-identity"
+        },
+        {
+          "slot": "anchor-surface-identity",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/foot/foot-motion-current-contact-anchor-surface-identity"
+        },
+        {
+          "slot": "anchor-point",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/foot/foot-motion-current-contact-anchor-point"
+        },
+        {
+          "slot": "anchor-normal",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/foot/foot-motion-current-contact-anchor-normal"
+        },
+        {
+          "slot": "source-ankle-position",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/foot/source-ankle-position"
+        },
+        {
+          "slot": "source-ankle-rotation",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/foot/source-ankle-rotation"
+        },
+        {
+          "slot": "source-heel",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/foot/source-heel-position"
+        },
+        {
+          "slot": "source-toe",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/foot/source-toe-position"
+        },
+        {
+          "slot": "physical-write-available",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/physical/physical-write-available"
+        },
+        {
+          "slot": "physical-ankle-position",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/physical/physical-ankle-position"
+        },
+        {
+          "slot": "physical-ankle-rotation",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/physical/physical-ankle-rotation"
+        }
+      ],
+      "parameters": {
+        "geometry-epsilon-meters": 0.00001,
+        "landing-state": 1,
+        "locked-state": 2
+      },
+      "window": {
+        "minimumRows": 1,
+        "maximumSequenceGap": 0
+      }
+    },
+    {
+      "id": "locked-horizontal-drift",
+      "operator": "foot/locked-horizontal-drift",
+      "category": "motion",
+      "inputs": [
+        {
+          "slot": "frame-sequence",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/foot/resolved-frame-sequence"
+        },
+        {
+          "slot": "reset-sequence",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/input/body-reset-sequence"
+        },
+        {
+          "slot": "delta-seconds",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/input/presentation-delta-seconds"
+        },
+        {
+          "slot": "constraint-state",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/foot/foot-motion-constraint-state"
+        },
+        {
+          "slot": "lock-response",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/foot/foot-motion-lock-response"
+        },
+        {
+          "slot": "event-identity",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/foot/foot-motion-landing-event-identity"
+        },
+        {
+          "slot": "surface-identity",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/foot/foot-motion-contact-surface-identity"
+        },
+        {
+          "slot": "anchor-available",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/foot/foot-motion-current-contact-anchor-available"
+        },
+        {
+          "slot": "anchor-event-identity",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/foot/foot-motion-current-contact-anchor-event-identity"
+        },
+        {
+          "slot": "anchor-surface-identity",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/foot/foot-motion-current-contact-anchor-surface-identity"
+        },
+        {
+          "slot": "anchor-point",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/foot/foot-motion-current-contact-anchor-point"
+        },
+        {
+          "slot": "anchor-normal",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/foot/foot-motion-current-contact-anchor-normal"
+        },
+        {
+          "slot": "corrected-sole",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/foot/foot-motion-corrected-sole"
+        },
+        {
+          "slot": "source-ankle-position",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/foot/source-ankle-position"
+        },
+        {
+          "slot": "source-ankle-rotation",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/foot/source-ankle-rotation"
+        },
+        {
+          "slot": "source-heel",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/foot/source-heel-position"
+        },
+        {
+          "slot": "source-toe",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/foot/source-toe-position"
+        },
+        {
+          "slot": "physical-write-available",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/physical/physical-write-available"
+        },
+        {
+          "slot": "physical-ankle-position",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/physical/physical-ankle-position"
+        },
+        {
+          "slot": "physical-ankle-rotation",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/physical/physical-ankle-rotation"
+        }
+      ],
+      "parameters": {
+        "maximum-horizontal-distance-meters": 0.01,
+        "anchor-stability-tolerance-meters": 0.001,
+        "locked-state": 2,
+        "full-anchor-response": 1,
+        "sliding-response": 2
+      },
+      "window": {
+        "minimumRows": 1,
+        "maximumSequenceGap": 0
+      }
+    },
+    {
+      "id": "locked-vertical-anchor-evidence",
+      "operator": "foot/locked-vertical-anchor-evidence",
+      "category": "motion",
+      "inputs": [
+        {
+          "slot": "frame-sequence",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/foot/resolved-frame-sequence"
+        },
+        {
+          "slot": "reset-sequence",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/input/body-reset-sequence"
+        },
+        {
+          "slot": "delta-seconds",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/input/presentation-delta-seconds"
+        },
+        {
+          "slot": "constraint-state",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/foot/foot-motion-constraint-state"
+        },
+        {
+          "slot": "lock-response",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/foot/foot-motion-lock-response"
+        },
+        {
+          "slot": "event-identity",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/foot/foot-motion-landing-event-identity"
+        },
+        {
+          "slot": "surface-identity",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/foot/foot-motion-contact-surface-identity"
+        },
+        {
+          "slot": "anchor-available",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/foot/foot-motion-current-contact-anchor-available"
+        },
+        {
+          "slot": "anchor-event-identity",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/foot/foot-motion-current-contact-anchor-event-identity"
+        },
+        {
+          "slot": "anchor-surface-identity",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/foot/foot-motion-current-contact-anchor-surface-identity"
+        },
+        {
+          "slot": "anchor-point",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/foot/foot-motion-current-contact-anchor-point"
+        },
+        {
+          "slot": "anchor-normal",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/foot/foot-motion-current-contact-anchor-normal"
+        },
+        {
+          "slot": "corrected-sole",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/foot/foot-motion-corrected-sole"
+        },
+        {
+          "slot": "source-ankle-position",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/foot/source-ankle-position"
+        },
+        {
+          "slot": "source-ankle-rotation",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/foot/source-ankle-rotation"
+        },
+        {
+          "slot": "source-heel",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/foot/source-heel-position"
+        },
+        {
+          "slot": "source-toe",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/foot/source-toe-position"
+        },
+        {
+          "slot": "physical-write-available",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/physical/physical-write-available"
+        },
+        {
+          "slot": "physical-ankle-position",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/physical/physical-ankle-position"
+        },
+        {
+          "slot": "physical-ankle-rotation",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/physical/physical-ankle-rotation"
+        }
+      ],
+      "parameters": {
+        "maximum-downward-excursion-meters": 0.005,
+        "anchor-stability-tolerance-meters": 0.001,
+        "locked-state": 2,
+        "full-anchor-response": 1,
+        "sliding-response": 2
+      },
+      "window": {
+        "minimumRows": 1,
+        "maximumSequenceGap": 0
+      }
+    },
+    {
+      "id": "landing-path-continuity",
+      "operator": "foot/landing-path-continuity",
+      "category": "motion",
+      "inputs": [
+        {
+          "slot": "frame-sequence",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/foot/resolved-frame-sequence"
+        },
+        {
+          "slot": "reset-sequence",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/input/body-reset-sequence"
+        },
+        {
+          "slot": "delta-seconds",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/input/presentation-delta-seconds"
+        },
+        {
+          "slot": "ground-path-input-identity",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/foot/foot-motion-ground-path-input-identity"
+        },
+        {
+          "slot": "path-continuity-evaluated",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/foot/foot-motion-path-continuity-evaluated"
+        },
+        {
+          "slot": "path-residual-rebuilt",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/foot/foot-motion-path-residual-rebuilt"
+        },
+        {
+          "slot": "path-available-before",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/foot/foot-motion-path-available-before"
+        },
+        {
+          "slot": "path-available-after",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/foot/foot-motion-path-available-after"
+        },
+        {
+          "slot": "path-previous-event-identity",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/foot/foot-motion-path-previous-landing-event-identity"
+        },
+        {
+          "slot": "path-current-event-identity",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/foot/foot-motion-path-current-landing-event-identity"
+        },
+        {
+          "slot": "landing-point-delta-meters",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/foot/foot-motion-path-landing-point-delta-meters"
+        },
+        {
+          "slot": "path-revision-distance-meters",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/foot/foot-motion-path-revision-distance"
+        },
+        {
+          "slot": "path-revision-reason",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/foot/foot-motion-path-revision-reason"
+        },
+        {
+          "slot": "residual-before-decay",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/foot/foot-motion-swing-residual-before-decay"
+        },
+        {
+          "slot": "residual-after-decay",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/foot/foot-motion-swing-residual-after-decay"
+        },
+        {
+          "slot": "residual-tolerance-meters",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/foot/foot-motion-swing-residual-tolerance"
+        },
+        {
+          "slot": "time-to-landing-seconds",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/foot/foot-motion-residual-time-to-landing-seconds"
+        },
+        {
+          "slot": "releasing-completed-to-swing",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/foot/foot-motion-releasing-completed-to-swing"
+        },
+        {
+          "slot": "safety-floor-clearance-after-meters",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/foot/foot-motion-safety-floor-clearance-after"
+        }
+      ],
+      "parameters": {
+        "position-noise-meters": 0.001,
+        "clearance-tolerance-meters": 0.0001,
+        "time-epsilon-seconds": 0.000001,
+        "availability-revision-reason": 1,
+        "event-revision-reason": 2,
+        "landing-point-revision-reason": 4
+      },
+      "window": {
+        "minimumRows": 1,
+        "maximumSequenceGap": 0
+      }
+    },
+    {
+      "id": "late-approach-landing-revision",
+      "operator": "foot/late-approach-landing-revision",
+      "category": "motion",
+      "inputs": [
+        {
+          "slot": "frame-sequence",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/foot/resolved-frame-sequence"
+        },
+        {
+          "slot": "reset-sequence",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/input/body-reset-sequence"
+        },
+        {
+          "slot": "selected-landing-event-identity",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/foot/selected-landing-event-identity"
+        },
+        {
+          "slot": "selected-in-approach-contact",
+          "dataset": "foot",
+          "field": "character-foot-ik/main/foot/step-candidate-selection/formal/in-approach-contact-to-landing"
+        },
+        {
+          "slot": "consumed-landing-available",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/foot/ground-path-target-available"
+        },
+        {
+          "slot": "consumed-landing-event-identity",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/foot/ground-path-next-landing-event-identity"
+        },
+        {
+          "slot": "consumed-landing-surface-identity",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/foot/ground-path-next-landing-surface-identity"
+        },
+        {
+          "slot": "consumed-landing-point",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/foot/ground-path-next-landing"
+        },
+        {
+          "slot": "landing-acceptance-distance-meters",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/foot/foot-motion-landing-acceptance-distance"
+        }
+      ],
+      "parameters": {},
+      "window": {
+        "minimumRows": 2,
+        "maximumSequenceGap": 0
+      }
+    },
+    {
+      "id": "landing-state-consistency",
+      "operator": "foot/landing-state-consistency",
+      "category": "landing",
+      "inputs": [
+        {
+          "slot": "frame-sequence",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/foot/resolved-frame-sequence"
+        },
+        {
+          "slot": "reset-sequence",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/input/body-reset-sequence"
+        },
+        {
+          "slot": "constraint-state",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/foot/foot-motion-constraint-state"
+        },
+        {
+          "slot": "landing-event-identity",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/foot/foot-motion-landing-event-identity"
+        },
+        {
+          "slot": "formal-lock-mode",
+          "dataset": "foot",
+          "field": "character-foot-ik/main/formal-input/lock-mode"
+        },
+        {
+          "slot": "contact-plane-available",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/foot/foot-motion-contact-plane-available"
+        },
+        {
+          "slot": "anchor-available",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/foot/foot-motion-current-contact-anchor-available"
+        },
+        {
+          "slot": "anchor-event-identity",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/foot/foot-motion-current-contact-anchor-event-identity"
+        },
+        {
+          "slot": "anchor-point",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/foot/foot-motion-current-contact-anchor-point"
+        },
+        {
+          "slot": "corrected-sole",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/foot/foot-motion-corrected-sole"
+        },
+        {
+          "slot": "original-sole",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/foot/foot-motion-original-sole"
+        }
+      ],
+      "parameters": {
+        "landing-state": 1,
+        "locked-state": 2,
+        "releasing-state": 3,
+        "formal-unlocked-mode": 0,
+        "exit-jump-meters": 0.01,
+        "runtime-geometry-epsilon-meters": 0.0001
+      },
+      "window": {
+        "minimumRows": 1,
+        "maximumSequenceGap": 0
+      }
+    },
+    {
+      "id": "contact-support-gap",
+      "operator": "foot/contact-support-gap",
+      "category": "contact",
+      "inputs": [
+        {
+          "slot": "frame-sequence",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/foot/resolved-frame-sequence"
+        },
+        {
+          "slot": "reset-sequence",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/input/body-reset-sequence"
+        },
+        {
+          "slot": "delta-seconds",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/input/presentation-delta-seconds"
+        },
+        {
+          "slot": "constraint-state",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/foot/foot-motion-constraint-state"
+        },
+        {
+          "slot": "lock-response",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/foot/foot-motion-lock-response"
+        },
+        {
+          "slot": "current-lock-requested",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/foot/foot-motion-current-lock-requested"
+        },
+        {
+          "slot": "current-lock-request-event-identity",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/foot/foot-motion-current-lock-request-event-identity"
+        },
+        {
+          "slot": "grounded",
+          "dataset": "foot",
+          "field": "character-foot-ik/main/input/grounded"
+        },
+        {
+          "slot": "current-step-authoritative",
+          "dataset": "foot",
+          "field": "character-foot-ik/main/foot/step-candidate-selection/formal/is-authoritative"
+        },
+        {
+          "slot": "formal-foot-placement-weight",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/foot/foot-motion-formal-foot-placement-weight"
+        },
+        {
+          "slot": "goal-position-weight",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/foot/resolved-position-weight"
+        },
+        {
+          "slot": "anchor-available",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/foot/foot-motion-current-contact-anchor-available"
+        },
+        {
+          "slot": "anchor-event-identity",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/foot/foot-motion-current-contact-anchor-event-identity"
+        },
+        {
+          "slot": "anchor-acquired-frame-sequence",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/foot/foot-motion-current-contact-anchor-acquired-frame-sequence"
+        },
+        {
+          "slot": "anchor-acquired-completion-identity",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/foot/foot-motion-current-contact-anchor-acquired-completion-identity"
+        },
+        {
+          "slot": "anchor-world-revision",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/foot/foot-motion-current-contact-anchor-world-revision"
+        },
+        {
+          "slot": "anchor-surface-identity",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/foot/foot-motion-current-contact-anchor-surface-identity"
+        },
+        {
+          "slot": "anchor-point",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/foot/foot-motion-current-contact-anchor-point"
+        },
+        {
+          "slot": "anchor-normal",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/foot/foot-motion-current-contact-anchor-normal"
+        },
+        {
+          "slot": "source-ankle-position",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/foot/source-ankle-position"
+        },
+        {
+          "slot": "source-ankle-rotation",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/foot/source-ankle-rotation"
+        },
+        {
+          "slot": "source-heel",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/foot/source-heel-position"
+        },
+        {
+          "slot": "source-toe",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/foot/source-toe-position"
+        },
+        {
+          "slot": "physical-write-available",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/physical/physical-write-available"
+        },
+        {
+          "slot": "physical-ankle-position",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/physical/physical-ankle-position"
+        },
+        {
+          "slot": "physical-ankle-rotation",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/physical/physical-ankle-rotation"
+        }
+      ],
+      "parameters": {
+        "landing-state": 1,
+        "locked-state": 2,
+        "releasing-state": 3,
+        "full-anchor-response": 1,
+        "sliding-response": 2,
+        "gap-threshold-meters": 0.01,
+        "persistent-duration-seconds": 0.1,
+        "transient-large-gap-meters": 0.1,
+        "touch-tolerance-meters": 0.001,
+        "position-noise-meters": 0.001,
+        "time-epsilon-seconds": 0.000001
+      },
+      "window": {
+        "minimumRows": 1,
+        "maximumSequenceGap": 0
+      }
+    },
+    {
+      "id": "contact-state-output-jump",
+      "operator": "foot/contact-state-output-jump",
+      "category": "motion",
+      "inputs": [
+        {
+          "slot": "frame-sequence",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/foot/resolved-frame-sequence"
+        },
+        {
+          "slot": "reset-sequence",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/input/body-reset-sequence"
+        },
+        {
+          "slot": "constraint-state",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/foot/foot-motion-constraint-state"
+        },
+        {
+          "slot": "source-ankle-position",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/foot/source-ankle-position"
+        },
+        {
+          "slot": "source-ankle-rotation",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/foot/source-ankle-rotation"
+        },
+        {
+          "slot": "source-heel",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/foot/source-heel-position"
+        },
+        {
+          "slot": "source-toe",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/foot/source-toe-position"
+        },
+        {
+          "slot": "physical-write-available",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/physical/physical-write-available"
+        },
+        {
+          "slot": "physical-ankle-position",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/physical/physical-ankle-position"
+        },
+        {
+          "slot": "physical-ankle-rotation",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/physical/physical-ankle-rotation"
+        }
+      ],
+      "parameters": {
+        "landing-state": 1,
+        "locked-state": 2,
+        "releasing-state": 3,
+        "output-jump-meters": 0.02,
+        "runtime-geometry-epsilon-meters": 0.0001
+      },
+      "window": {
+        "minimumRows": 2,
+        "maximumSequenceGap": 0
+      }
+    },
+    {
+      "id": "release-flyback",
+      "operator": "foot/release-flyback",
+      "category": "landing",
+      "inputs": [
+        {
+          "slot": "frame-sequence",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/foot/resolved-frame-sequence"
+        },
+        {
+          "slot": "reset-sequence",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/input/body-reset-sequence"
+        },
+        {
+          "slot": "constraint-state",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/foot/foot-motion-constraint-state"
+        },
+        {
+          "slot": "landing-event-identity",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/foot/foot-motion-landing-event-identity"
+        },
+        {
+          "slot": "final-effective-correction",
+          "dataset": "foot",
+          "field": "character-foot-ik/main/foot/foot-motion/output-stages/final-effective-correction"
+        }
+      ],
+      "parameters": {
+        "releasing-state": 3,
+        "correction-excursion-threshold-meters": 0.01
+      },
+      "window": {
+        "minimumRows": 1,
+        "maximumSequenceGap": 0
+      }
+    },
+    {
+      "id": "swing-to-landing-floor-handoff",
+      "operator": "foot/swing-to-landing-floor-handoff",
+      "category": "landing",
+      "inputs": [
+        {
+          "slot": "frame-sequence",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/foot/resolved-frame-sequence"
+        },
+        {
+          "slot": "reset-sequence",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/input/body-reset-sequence"
+        },
+        {
+          "slot": "constraint-state",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/foot/foot-motion-constraint-state"
+        },
+        {
+          "slot": "animated-sole",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/foot/foot-motion-original-sole"
+        },
+        {
+          "slot": "final-sole",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/foot/resolved-final-sole"
+        },
+        {
+          "slot": "safety-floor-clamp-meters",
+          "dataset": "foot",
+          "field": "character-foot-ik/main/foot/foot-motion/output-stages/safety-floor-clamp-meters"
+        },
+        {
+          "slot": "swing-residual-after-decay",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/foot/foot-motion-swing-residual-after-decay"
+        },
+        {
+          "slot": "formal-foot-height",
+          "dataset": "foot",
+          "field": "character-foot-ik/main/formal-input/foot-height"
+        },
+        {
+          "slot": "swing-progress",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/foot/foot-motion-progress"
+        },
+        {
+          "slot": "time-to-landing-seconds",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/foot/foot-motion-residual-time-to-landing-seconds"
+        }
+      ],
+      "parameters": {
+        "swing-state": 0,
+        "landing-state": 1,
+        "additional-output-step-threshold-meters": 0.02
+      },
+      "window": {
+        "minimumRows": 2,
+        "maximumSequenceGap": 0
+      }
+    },
+    {
+      "id": "plant-interpolation-output-jump",
+      "operator": "foot/plant-interpolation-output-jump",
+      "category": "landing",
+      "inputs": [
+        {
+          "slot": "frame-sequence",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/foot/resolved-frame-sequence"
+        },
+        {
+          "slot": "reset-sequence",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/input/body-reset-sequence"
+        },
+        {
+          "slot": "plant-interpolation-evaluated",
+          "dataset": "foot",
+          "field": "character-foot-ik/main/foot/foot-motion/output-stages/plant-interpolation-evaluated"
+        },
+        {
+          "slot": "final-effective-correction",
+          "dataset": "foot",
+          "field": "character-foot-ik/main/foot/foot-motion/output-stages/final-effective-correction"
+        },
+        {
+          "slot": "plant-selected-target",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/foot/foot-motion-plant-selected-world-target"
+        },
+        {
+          "slot": "desired-output-point",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/foot/foot-motion-desired-output-point"
+        },
+        {
+          "slot": "response-output-point",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/foot/foot-motion-response-output-point"
+        },
+        {
+          "slot": "plant-residual-after-decay",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/foot/foot-motion-plant-world-residual-after-decay"
+        },
+        {
+          "slot": "delta-seconds",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/input/presentation-delta-seconds"
+        }
+      ],
+      "parameters": {
+        "output-step-threshold-meters": 0.02
+      },
+      "window": {
+        "minimumRows": 2,
+        "maximumSequenceGap": 0
+      }
+    },
+    {
+      "id": "contact-acquisition-continuity",
+      "operator": "foot/contact-acquisition-continuity",
+      "category": "landing",
+      "inputs": [
+        {
+          "slot": "frame-sequence",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/foot/resolved-frame-sequence"
+        },
+        {
+          "slot": "reset-sequence",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/input/body-reset-sequence"
+        },
+        {
+          "slot": "constraint-state",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/foot/foot-motion-constraint-state"
+        },
+        {
+          "slot": "anchor-acquired-frame-sequence",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/foot/foot-motion-current-contact-anchor-acquired-frame-sequence"
+        },
+        {
+          "slot": "anchor-point",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/foot/foot-motion-current-contact-anchor-point"
+        },
+        {
+          "slot": "original-sole",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/foot/foot-motion-original-sole"
+        },
+        {
+          "slot": "final-sole",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/foot/resolved-final-sole"
+        },
+        {
+          "slot": "response-output-point",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/foot/foot-motion-response-output-point"
+        },
+        {
+          "slot": "plant-residual-after-decay",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/foot/foot-motion-plant-world-residual-after-decay"
+        }
+      ],
+      "parameters": {
+        "idle-state": 0,
+        "visible-output-step-threshold-meters": 0.02
+      },
+      "window": {
+        "minimumRows": 2,
+        "maximumSequenceGap": 0
+      }
+    },
+    {
+      "id": "lock-weight-completion-by-contact-event",
+      "operator": "foot/lock-weight-completion-by-contact-event",
+      "category": "landing",
+      "inputs": [
+        {
+          "slot": "frame-sequence",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/foot/resolved-frame-sequence"
+        },
+        {
+          "slot": "reset-sequence",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/input/body-reset-sequence"
+        },
+        {
+          "slot": "lock-request-event-identity",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/foot/foot-motion-current-lock-request-event-identity"
+        },
+        {
+          "slot": "lock-requested",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/foot/foot-motion-current-lock-requested"
+        },
+        {
+          "slot": "lock-weight",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/foot/foot-motion-current-lock-request-weight"
+        },
+        {
+          "slot": "constraint-state",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/foot/foot-motion-constraint-state"
+        },
+        {
+          "slot": "plant-output-distance",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/foot/foot-motion-plant-output-distance"
+        },
+        {
+          "slot": "plant-penetration-depth",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/foot/foot-motion-plant-penetration-depth"
+        },
+        {
+          "slot": "landing-reach-evaluated",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/foot/foot-motion-landing-reach-evaluated"
+        },
+        {
+          "slot": "landing-reach-available",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/foot/foot-motion-landing-reach-available"
+        },
+        {
+          "slot": "landing-reach-leg-length",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/foot/resolved-landing-reach-leg-length"
+        },
+        {
+          "slot": "landing-reach-compression-reserve",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/foot/resolved-landing-reach-minimum-compression-reserve"
+        }
+      ],
+      "parameters": {
+        "locked-state": 2,
+        "full-weight-threshold": 0.999999,
+        "landing-lock-completion-tolerance-meters": 0.01,
+        "ground-penetration-tolerance-meters": 0.01
+      },
+      "window": {
+        "minimumRows": 1,
+        "maximumSequenceGap": 0
+      }
+    },
+    {
+      "id": "approach-progress-ownership",
+      "operator": "foot/approach-progress-ownership",
+      "category": "landing",
+      "inputs": [
+        {
+          "slot": "frame-sequence",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/foot/resolved-frame-sequence"
+        },
+        {
+          "slot": "reset-sequence",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/input/body-reset-sequence"
+        },
+        {
+          "slot": "in-approach",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/foot/formal-step-in-approach"
+        },
+        {
+          "slot": "approach-event-identity",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/foot/formal-step-landing-event"
+        },
+        {
+          "slot": "source-identity",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/input/formal-observation-source-identity"
+        },
+        {
+          "slot": "source-cycle",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/foot/formal-step-source-cycle"
+        },
+        {
+          "slot": "approach-progress",
+          "dataset": "foot",
+          "field": "character-foot-ik/main/foot/step-candidate-selection/formal/approach-contact-to-landing-progress"
+        },
+        {
+          "slot": "plant-interpolation-evaluated",
+          "dataset": "foot",
+          "field": "character-foot-ik/main/foot/foot-motion/output-stages/plant-interpolation-evaluated"
+        },
+        {
+          "slot": "plant-event-identity",
+          "dataset": "foot",
+          "field": "character-foot-ik/main/foot/foot-motion/output-stages/plant-target-event-identity"
+        },
+        {
+          "slot": "residual-capture-reason",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/foot/foot-motion-plant-residual-capture-reason"
+        },
+        {
+          "slot": "residual-event-identity",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/foot/foot-motion-plant-target-height-event-identity"
+        },
+        {
+          "slot": "final-effective-correction",
+          "dataset": "foot",
+          "field": "character-foot-ik/main/foot/foot-motion/output-stages/final-effective-correction"
+        },
+        {
+          "slot": "formal-foot-placement-weight",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/foot/foot-motion-formal-foot-placement-weight"
+        },
+        {
+          "slot": "goal-position-weight",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/foot/resolved-position-weight"
+        }
+      ],
+      "parameters": {
+        "comparison-epsilon": 0.000001,
+        "no-residual-capture-reason": 0
+      },
+      "window": {
+        "minimumRows": 1,
+        "maximumSequenceGap": 0
+      }
+    },
+    {
+      "id": "action-hard-ownership-left",
+      "operator": "foot/action-hard-ownership",
+      "category": "landing",
+      "inputs": [
+        {
+          "slot": "frame-sequence",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/foot/resolved-frame-sequence"
+        },
+        {
+          "slot": "action-instance-identity",
+          "dataset": "foot",
+          "field": "character-foot-ik/main/input/left-action-instance-identity"
+        },
+        {
+          "slot": "action-foot-weight",
+          "dataset": "foot",
+          "field": "character-foot-ik/main/input/left-action-foot-weight"
+        },
+        {
+          "slot": "grounded",
+          "dataset": "foot",
+          "field": "character-foot-ik/main/input/grounded"
+        },
+        {
+          "slot": "current-step-authoritative",
+          "dataset": "foot",
+          "field": "character-foot-ik/main/foot/step-candidate-selection/formal/is-authoritative"
+        },
+        {
+          "slot": "hard-ownership-loss",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/foot/foot-motion-hard-ownership-loss"
+        },
+        {
+          "slot": "pre-transition-suppress-output",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/foot/foot-motion-pre-transition-suppress-output"
+        },
+        {
+          "slot": "pre-transition-reset-interpolation",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/foot/foot-motion-pre-transition-reset-interpolation"
+        }
+      ],
+      "parameters": {
+        "comparison-epsilon": 0.0001
+      },
+      "dimensions": [
+        "character-foot-ik/left"
+      ],
+      "window": {
+        "minimumRows": 1,
+        "maximumSequenceGap": 0
+      }
+    },
+    {
+      "id": "action-hard-ownership-right",
+      "operator": "foot/action-hard-ownership",
+      "category": "landing",
+      "inputs": [
+        {
+          "slot": "frame-sequence",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/foot/resolved-frame-sequence"
+        },
+        {
+          "slot": "action-instance-identity",
+          "dataset": "foot",
+          "field": "character-foot-ik/main/input/right-action-instance-identity"
+        },
+        {
+          "slot": "action-foot-weight",
+          "dataset": "foot",
+          "field": "character-foot-ik/main/input/right-action-foot-weight"
+        },
+        {
+          "slot": "grounded",
+          "dataset": "foot",
+          "field": "character-foot-ik/main/input/grounded"
+        },
+        {
+          "slot": "current-step-authoritative",
+          "dataset": "foot",
+          "field": "character-foot-ik/main/foot/step-candidate-selection/formal/is-authoritative"
+        },
+        {
+          "slot": "hard-ownership-loss",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/foot/foot-motion-hard-ownership-loss"
+        },
+        {
+          "slot": "pre-transition-suppress-output",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/foot/foot-motion-pre-transition-suppress-output"
+        },
+        {
+          "slot": "pre-transition-reset-interpolation",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/foot/foot-motion-pre-transition-reset-interpolation"
+        }
+      ],
+      "parameters": {
+        "comparison-epsilon": 0.0001
+      },
+      "dimensions": [
+        "character-foot-ik/right"
+      ],
+      "window": {
+        "minimumRows": 1,
+        "maximumSequenceGap": 0
+      }
+    },
+    {
+      "id": "contact-transition-context",
+      "operator": "foot/contact-transition-context",
+      "category": "landing",
+      "inputs": [
+        {
+          "slot": "frame-sequence",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/foot/resolved-frame-sequence"
+        },
+        {
+          "slot": "reset-sequence",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/input/body-reset-sequence"
+        },
+        {
+          "slot": "contact-edge",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/foot/foot-motion-contact-edge"
+        },
+        {
+          "slot": "previous-latest-contact-event-identity",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/foot/foot-motion-previous-latest-contact-event-identity"
+        },
+        {
+          "slot": "current-latest-contact-event-identity",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/foot/foot-motion-current-latest-contact-event-identity"
+        },
+        {
+          "slot": "previous-latest-released-event-identity",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/foot/foot-motion-previous-latest-released-contact-event-identity"
+        },
+        {
+          "slot": "current-latest-released-event-identity",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/foot/foot-motion-current-latest-released-contact-event-identity"
+        },
+        {
+          "slot": "previous-completed-lock-weight-event-identity",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/foot/foot-motion-previous-completed-lock-weight-event-identity"
+        },
+        {
+          "slot": "current-completed-lock-weight-event-identity",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/foot/foot-motion-current-completed-lock-weight-event-identity"
+        },
+        {
+          "slot": "same-event-reentry-refreshed",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/foot/foot-motion-same-event-contact-reentry-refreshed"
+        },
+        {
+          "slot": "same-event-reentry-unavailable",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/foot/foot-motion-same-event-contact-reentry-unavailable"
+        },
+        {
+          "slot": "previous-lock-requested",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/foot/foot-motion-previous-lock-requested"
+        },
+        {
+          "slot": "current-lock-requested",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/foot/foot-motion-current-lock-requested"
+        },
+        {
+          "slot": "previous-lock-event-identity",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/foot/foot-motion-previous-lock-request-event-identity"
+        },
+        {
+          "slot": "current-lock-event-identity",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/foot/foot-motion-current-lock-request-event-identity"
+        },
+        {
+          "slot": "previous-lock-mode",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/foot/foot-motion-previous-lock-request-mode"
+        },
+        {
+          "slot": "current-lock-mode",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/foot/foot-motion-current-lock-request-mode"
+        },
+        {
+          "slot": "previous-lock-weight",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/foot/foot-motion-previous-lock-request-weight"
+        },
+        {
+          "slot": "current-lock-weight",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/foot/foot-motion-current-lock-request-weight"
+        },
+        {
+          "slot": "previous-contact-edge-seconds",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/foot/foot-motion-previous-contact-edge-seconds"
+        },
+        {
+          "slot": "current-contact-edge-seconds",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/foot/foot-motion-current-contact-edge-seconds"
+        },
+        {
+          "slot": "previous-anchor-available",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/foot/foot-motion-previous-contact-anchor-available"
+        },
+        {
+          "slot": "current-anchor-available",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/foot/foot-motion-current-contact-anchor-available"
+        },
+        {
+          "slot": "previous-anchor-event-identity",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/foot/foot-motion-previous-contact-anchor-event-identity"
+        },
+        {
+          "slot": "current-anchor-event-identity",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/foot/foot-motion-current-contact-anchor-event-identity"
+        },
+        {
+          "slot": "previous-anchor-point",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/foot/foot-motion-previous-contact-anchor-point"
+        },
+        {
+          "slot": "current-anchor-point",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/foot/foot-motion-current-contact-anchor-point"
+        },
+        {
+          "slot": "previous-anchor-normal",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/foot/foot-motion-previous-contact-anchor-normal"
+        },
+        {
+          "slot": "current-anchor-normal",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/foot/foot-motion-current-contact-anchor-normal"
+        }
+      ],
+      "parameters": {
+        "comparison-epsilon": 0.000001,
+        "no-contact-edge": 0
+      },
+      "window": {
+        "minimumRows": 1,
+        "maximumSequenceGap": 0
+      }
+    },
+    {
+      "id": "formal-goal-weight-policy",
+      "operator": "foot/formal-goal-weight-policy",
+      "category": "landing",
+      "inputs": [
+        {
+          "slot": "frame-sequence",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/foot/resolved-frame-sequence"
+        },
+        {
+          "slot": "resolved-outcome",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/foot/resolved-outcome"
+        },
+        {
+          "slot": "suppress-output",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/foot/foot-motion-pre-transition-suppress-output"
+        },
+        {
+          "slot": "formal-foot-placement-weight",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/foot/foot-motion-formal-foot-placement-weight"
+        },
+        {
+          "slot": "lock-weight",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/foot/foot-motion-current-lock-request-weight"
+        },
+        {
+          "slot": "motion-position-weight",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/foot/foot-motion-position-weight"
+        },
+        {
+          "slot": "motion-rotation-weight",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/foot/foot-motion-rotation-weight"
+        },
+        {
+          "slot": "resolved-position-weight",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/foot/resolved-position-weight"
+        },
+        {
+          "slot": "resolved-rotation-weight",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/foot/resolved-rotation-weight"
+        },
+        {
+          "slot": "goal-position-weight",
+          "dataset": "foot",
+          "field": "character-foot-ik/main/foot/goal/position-weight"
+        },
+        {
+          "slot": "goal-rotation-weight",
+          "dataset": "foot",
+          "field": "character-foot-ik/main/foot/goal/rotation-weight"
+        }
+      ],
+      "parameters": {
+        "ready-outcome": 1,
+        "comparison-epsilon": 0.000001
+      },
+      "window": {
+        "minimumRows": 1,
+        "maximumSequenceGap": 0
+      }
+    },
+    {
+      "id": "contact-reentry-output-geometry",
+      "operator": "foot/contact-reentry-output-geometry",
+      "category": "landing",
+      "inputs": [
+        {
+          "slot": "frame-sequence",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/foot/resolved-frame-sequence"
+        },
+        {
+          "slot": "same-event-reentry-refreshed",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/foot/foot-motion-same-event-contact-reentry-refreshed"
+        },
+        {
+          "slot": "previous-response-available",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/foot/foot-motion-previous-response-output-available"
+        },
+        {
+          "slot": "plant-interpolation-evaluated",
+          "dataset": "foot",
+          "field": "character-foot-ik/main/foot/foot-motion/output-stages/plant-interpolation-evaluated"
+        },
+        {
+          "slot": "correction-response-evaluated",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/foot/foot-motion-correction-response-evaluated"
+        },
+        {
+          "slot": "resolved-outcome",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/foot/resolved-outcome"
+        },
+        {
+          "slot": "plant-selected-target",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/foot/foot-motion-plant-selected-world-target"
+        },
+        {
+          "slot": "residual-before-decay",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/foot/foot-motion-plant-world-residual-captured-before-decay"
+        },
+        {
+          "slot": "residual-after-decay",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/foot/foot-motion-plant-world-residual-after-decay"
+        },
+        {
+          "slot": "previous-response-output",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/foot/foot-motion-previous-response-output-point"
+        },
+        {
+          "slot": "desired-output",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/foot/foot-motion-desired-output-point"
+        },
+        {
+          "slot": "response-output",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/foot/foot-motion-response-output-point"
+        },
+        {
+          "slot": "final-sole",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/foot/resolved-final-sole"
+        }
+      ],
+      "parameters": {
+        "ready-outcome": 1
+      },
+      "window": {
+        "minimumRows": 1,
+        "maximumSequenceGap": 0
+      }
+    },
+    {
+      "id": "landing-leg-extension",
+      "operator": "foot/landing-leg-extension",
+      "category": "pelvis",
+      "inputs": [
+        {
+          "slot": "frame-sequence",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/foot/resolved-frame-sequence"
+        },
+        {
+          "slot": "reset-sequence",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/input/body-reset-sequence"
+        },
+        {
+          "slot": "constraint-state",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/foot/foot-motion-constraint-state"
+        },
+        {
+          "slot": "landing-event-identity",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/foot/foot-motion-landing-event-identity"
+        },
+        {
+          "slot": "original-hip",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/leg/leg-original-hip"
+        },
+        {
+          "slot": "original-knee",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/leg/leg-original-knee"
+        },
+        {
+          "slot": "original-ankle",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/leg/leg-original-ankle"
+        },
+        {
+          "slot": "target-ankle",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/leg/leg-target-ankle"
+        },
+        {
+          "slot": "solved-hip",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/leg/leg-solved-hip"
+        },
+        {
+          "slot": "solved-knee",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/leg/leg-solved-knee"
+        },
+        {
+          "slot": "solved-ankle",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/leg/leg-solved-ankle"
+        },
+        {
+          "slot": "original-extension-ratio",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/leg/leg-original-extension-ratio"
+        },
+        {
+          "slot": "target-extension-ratio",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/leg/leg-target-extension-ratio"
+        },
+        {
+          "slot": "solved-extension-ratio",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/leg/leg-solved-extension-ratio"
+        },
+        {
+          "slot": "solved-bend-degrees",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/leg/leg-solved-bend-degrees"
+        },
+        {
+          "slot": "bend-direction-previous-dot",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/leg/leg-effective-bend-direction-previous-dot"
+        },
+        {
+          "slot": "original-compression-reserve",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/leg/leg-original-compression-reserve"
+        },
+        {
+          "slot": "target-compression-reserve",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/leg/leg-target-compression-reserve"
+        },
+        {
+          "slot": "solved-compression-reserve",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/leg/leg-solved-compression-reserve"
+        },
+        {
+          "slot": "component-up",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/stride/pelvis-reach-component-up"
+        },
+        {
+          "slot": "landing-reach-available",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/foot/resolved-landing-reach-available"
+        },
+        {
+          "slot": "landing-reach-hip",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/foot/resolved-landing-reach-hip"
+        },
+        {
+          "slot": "landing-reach-target-ankle",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/foot/resolved-landing-reach-target-ankle"
+        },
+        {
+          "slot": "landing-reach-leg-length",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/foot/resolved-landing-reach-leg-length"
+        },
+        {
+          "slot": "landing-reach-reserve",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/foot/resolved-landing-reach-minimum-compression-reserve"
+        },
+        {
+          "slot": "pelvis-reach-evaluated",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/stride/pelvis-reach-intersection-evaluated"
+        },
+        {
+          "slot": "pelvis-reach-status",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/stride/pelvis-reach-status"
+        },
+        {
+          "slot": "pelvis-reach-minimum",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/stride/pelvis-reach-intersection-minimum"
+        },
+        {
+          "slot": "pelvis-reach-maximum",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/stride/pelvis-reach-intersection-maximum"
+        }
+      ],
+      "parameters": {
+        "landing-state": 1,
+        "locked-state": 2,
+        "releasing-state": 3,
+        "extension-ratio-delta": 0.02,
+        "bend-drop-degrees": 5,
+        "candidate-compression-reserve-meters": 0.02
+      },
+      "window": {
+        "minimumRows": 2,
+        "maximumSequenceGap": 0
+      }
+    },
+    {
+      "id": "same-level-feet-pelvis-descent",
+      "operator": "foot/same-level-feet-pelvis-descent",
+      "category": "pelvis",
+      "inputs": [
+        {
+          "slot": "frame-sequence",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/foot/resolved-frame-sequence"
+        },
+        {
+          "slot": "reset-sequence",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/input/body-reset-sequence"
+        },
+        {
+          "slot": "delta-seconds",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/input/presentation-delta-seconds"
+        },
+        {
+          "slot": "component-up",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/stride/pelvis-component-up"
+        },
+        {
+          "slot": "source-ankle-position",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/foot/source-ankle-position"
+        },
+        {
+          "slot": "source-ankle-rotation",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/foot/source-ankle-rotation"
+        },
+        {
+          "slot": "source-sole",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/foot/foot-motion-original-sole"
+        },
+        {
+          "slot": "physical-write-available",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/physical/physical-write-available"
+        },
+        {
+          "slot": "physical-ankle-position",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/physical/physical-ankle-position"
+        },
+        {
+          "slot": "physical-ankle-rotation",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/physical/physical-ankle-rotation"
+        },
+        {
+          "slot": "physical-pelvis-available",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/physical-body/physical-body-available"
+        },
+        {
+          "slot": "physical-pelvis-position",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/physical-body/physical-pelvis-position"
+        },
+        {
+          "slot": "pose-input-available",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/stride/pelvis-pose-input-available"
+        },
+        {
+          "slot": "animated-pelvis-position",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/stride/pelvis-animated-world-position"
+        },
+        {
+          "slot": "pose-root-position",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/stride/pelvis-pose-root-position"
+        },
+        {
+          "slot": "resolved-target-sole",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/foot/foot-motion-corrected-sole"
+        },
+        {
+          "slot": "animated-sole",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/foot/foot-motion-original-sole"
+        },
+        {
+          "slot": "response-evaluated",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/stride/pelvis-response-evaluated"
+        },
+        {
+          "slot": "response-previous-output",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/stride/pelvis-response-previous-output"
+        },
+        {
+          "slot": "response-target",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/stride/pelvis-response-target"
+        },
+        {
+          "slot": "response-output",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/stride/pelvis-response-output"
+        },
+        {
+          "slot": "height-target-available",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/stride/pelvis-height-target-available"
+        },
+        {
+          "slot": "requested-height-offset",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/stride/pelvis-requested-height-offset"
+        },
+        {
+          "slot": "posture-available",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/stride/pelvis-posture-available"
+        },
+        {
+          "slot": "posture-offset",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/stride/pelvis-posture-offset"
+        },
+        {
+          "slot": "constraint-state",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/foot/foot-motion-constraint-state"
+        },
+        {
+          "slot": "same-level-limit-applied",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/stride/pelvis-same-level-limit-applied"
+        },
+        {
+          "slot": "support-changed",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/stride/pelvis-response-support-changed"
+        },
+        {
+          "slot": "reach-intersection-evaluated",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/stride/pelvis-reach-intersection-evaluated"
+        },
+        {
+          "slot": "reach-intersection-minimum",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/stride/pelvis-reach-intersection-minimum"
+        },
+        {
+          "slot": "reach-intersection-maximum",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/stride/pelvis-reach-intersection-maximum"
+        }
+      ],
+      "parameters": {
+        "same-level-height-tolerance-meters": 0.01,
+        "downward-step-threshold-meters": 0.01,
+        "position-noise-floor-meters": 0.001,
+        "releasing-state": 3
+      },
+      "dimensions": [
+        "character-foot-ik/left",
+        "character-foot-ik/right"
+      ],
+      "window": {
+        "minimumRows": 2,
+        "maximumSequenceGap": 0
+      }
+    },
+    {
+      "id": "step-time-selection-observations",
+      "operator": "foot/step-time-selection-observations",
+      "category": "timing",
+      "inputs": [
+        {
+          "slot": "frame-sequence",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/foot/resolved-frame-sequence"
+        },
+        {
+          "slot": "reset-sequence",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/input/body-reset-sequence"
+        },
+        {
+          "slot": "formal-available",
+          "dataset": "foot",
+          "field": "character-foot-ik/main/formal-input/is-valid"
+        },
+        {
+          "slot": "formal-source-identity",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/input/formal-observation-source-identity"
+        },
+        {
+          "slot": "formal-source-cycle",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/input/formal-observation-cycle"
+        },
+        {
+          "slot": "formal-continuity",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/input/formal-observation-continuity"
+        },
+        {
+          "slot": "formal-normalized-time",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/input/formal-observation-normalized-time"
+        },
+        {
+          "slot": "formal-time-to-landing",
+          "dataset": "foot",
+          "field": "character-foot-ik/main/formal-input/time-to-landing-seconds"
+        },
+        {
+          "slot": "formal-landing-event",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/foot/formal-step-landing-event"
+        },
+        {
+          "slot": "selected-source",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/foot/step-selection-source"
+        },
+        {
+          "slot": "selected-event",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/foot/selected-landing-event-identity"
+        },
+        {
+          "slot": "selected-time-to-landing",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/foot/landing-time-to-landing"
+        },
+        {
+          "slot": "maximum-prediction-time",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/foot/step-selection-maximum-prediction-time"
+        },
+        {
+          "slot": "last-landing-event",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/foot/step-selection-last-landing-event"
+        }
+      ],
+      "parameters": {
+        "difference-threshold-seconds": 0.001,
+        "formal-next-landing-source": 2,
+        "representative-limit": 5
+      },
+      "window": {
+        "minimumRows": 1,
+        "maximumSequenceGap": 0
+      }
+    },
+    {
+      "id": "stable-swing-output-jump",
+      "operator": "foot/stable-swing-output-jump",
+      "category": "motion",
+      "inputs": [
+        {
+          "slot": "frame-sequence",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/foot/resolved-frame-sequence"
+        },
+        {
+          "slot": "reset-sequence",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/input/body-reset-sequence"
+        },
+        {
+          "slot": "delta-seconds",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/input/presentation-delta-seconds"
+        },
+        {
+          "slot": "body-tick",
+          "dataset": "foot",
+          "field": "character-foot-ik/main/input/current-body-tick"
+        },
+        {
+          "slot": "motion-state",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/foot/foot-motion-state"
+        },
+        {
+          "slot": "constraint-state",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/foot/foot-motion-constraint-state"
+        },
+        {
+          "slot": "anchor-available",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/foot/foot-motion-current-contact-anchor-available"
+        },
+        {
+          "slot": "event-identity",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/foot/foot-motion-landing-event-identity"
+        },
+        {
+          "slot": "path-identity",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/foot/foot-motion-ground-path-input-identity"
+        },
+        {
+          "slot": "path-available",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/foot/foot-motion-path-available-after"
+        },
+        {
+          "slot": "path-revision-reason",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/foot/foot-motion-path-revision-reason"
+        },
+        {
+          "slot": "path-residual-rebuilt",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/foot/foot-motion-path-residual-rebuilt"
+        },
+        {
+          "slot": "path-revision-distance",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/foot/foot-motion-path-revision-distance"
+        },
+        {
+          "slot": "path-landing-delta",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/foot/foot-motion-path-landing-point-delta-meters"
+        },
+        {
+          "slot": "path-target-delta",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/foot/foot-motion-path-target-delta-meters"
+        },
+        {
+          "slot": "path-target-correction",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/foot/foot-motion-path-current-target-correction"
+        },
+        {
+          "slot": "ground-path-state",
+          "dataset": "foot",
+          "field": "character-foot-ik/main/foot/ground-path/state"
+        },
+        {
+          "slot": "ground-landing-event",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/foot/ground-path-next-landing-event-identity"
+        },
+        {
+          "slot": "ground-landing-surface",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/foot/ground-path-next-landing-surface-identity"
+        },
+        {
+          "slot": "ground-landing-point",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/foot/ground-path-next-landing"
+        },
+        {
+          "slot": "source-ankle-position",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/foot/source-ankle-position"
+        },
+        {
+          "slot": "source-ankle-rotation",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/foot/source-ankle-rotation"
+        },
+        {
+          "slot": "source-heel",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/foot/source-heel-position"
+        },
+        {
+          "slot": "source-toe",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/foot/source-toe-position"
+        },
+        {
+          "slot": "physical-write-available",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/physical/physical-write-available"
+        },
+        {
+          "slot": "physical-ankle-position",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/physical/physical-ankle-position"
+        },
+        {
+          "slot": "physical-ankle-rotation",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/physical/physical-ankle-rotation"
+        },
+        {
+          "slot": "formal-source-identity",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/input/formal-observation-source-identity"
+        },
+        {
+          "slot": "formal-source-cycle",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/input/formal-observation-cycle"
+        }
+      ],
+      "parameters": {
+        "maximum-output-step-meters": 0.02,
+        "position-noise-floor-meters": 0.001,
+        "time-epsilon-seconds": 0.000001,
+        "low-cadence-delta-seconds": 0.03333333333333333,
+        "speed-anomaly-meters-per-second": 5,
+        "accepted-motion-state": 2,
+        "swing-constraint-state": 0,
+        "accepted-ground-path-state": 2,
+        "path-availability-reason": 1,
+        "landing-event-reason": 2,
+        "representative-limit": 5
+      },
+      "window": {
+        "minimumRows": 2,
+        "maximumSequenceGap": 0
+      }
+    },
+    {
+      "id": "path-revision-output-jump",
+      "operator": "foot/path-revision-output-jump",
+      "category": "motion",
+      "inputs": [
+        {
+          "slot": "frame-sequence",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/foot/resolved-frame-sequence"
+        },
+        {
+          "slot": "reset-sequence",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/input/body-reset-sequence"
+        },
+        {
+          "slot": "delta-seconds",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/input/presentation-delta-seconds"
+        },
+        {
+          "slot": "body-tick",
+          "dataset": "foot",
+          "field": "character-foot-ik/main/input/current-body-tick"
+        },
+        {
+          "slot": "motion-state",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/foot/foot-motion-state"
+        },
+        {
+          "slot": "constraint-state",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/foot/foot-motion-constraint-state"
+        },
+        {
+          "slot": "anchor-available",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/foot/foot-motion-current-contact-anchor-available"
+        },
+        {
+          "slot": "event-identity",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/foot/foot-motion-landing-event-identity"
+        },
+        {
+          "slot": "path-identity",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/foot/foot-motion-ground-path-input-identity"
+        },
+        {
+          "slot": "path-available",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/foot/foot-motion-path-available-after"
+        },
+        {
+          "slot": "path-revision-reason",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/foot/foot-motion-path-revision-reason"
+        },
+        {
+          "slot": "path-residual-rebuilt",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/foot/foot-motion-path-residual-rebuilt"
+        },
+        {
+          "slot": "path-revision-distance",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/foot/foot-motion-path-revision-distance"
+        },
+        {
+          "slot": "path-landing-delta",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/foot/foot-motion-path-landing-point-delta-meters"
+        },
+        {
+          "slot": "path-target-delta",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/foot/foot-motion-path-target-delta-meters"
+        },
+        {
+          "slot": "path-target-correction",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/foot/foot-motion-path-current-target-correction"
+        },
+        {
+          "slot": "ground-path-state",
+          "dataset": "foot",
+          "field": "character-foot-ik/main/foot/ground-path/state"
+        },
+        {
+          "slot": "ground-landing-event",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/foot/ground-path-next-landing-event-identity"
+        },
+        {
+          "slot": "ground-landing-surface",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/foot/ground-path-next-landing-surface-identity"
+        },
+        {
+          "slot": "ground-landing-point",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/foot/ground-path-next-landing"
+        },
+        {
+          "slot": "source-ankle-position",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/foot/source-ankle-position"
+        },
+        {
+          "slot": "source-ankle-rotation",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/foot/source-ankle-rotation"
+        },
+        {
+          "slot": "source-heel",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/foot/source-heel-position"
+        },
+        {
+          "slot": "source-toe",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/foot/source-toe-position"
+        },
+        {
+          "slot": "physical-write-available",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/physical/physical-write-available"
+        },
+        {
+          "slot": "physical-ankle-position",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/physical/physical-ankle-position"
+        },
+        {
+          "slot": "physical-ankle-rotation",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/physical/physical-ankle-rotation"
+        },
+        {
+          "slot": "formal-source-identity",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/input/formal-observation-source-identity"
+        },
+        {
+          "slot": "formal-source-cycle",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/input/formal-observation-cycle"
+        }
+      ],
+      "parameters": {
+        "maximum-output-step-meters": 0.02,
+        "position-noise-floor-meters": 0.001,
+        "time-epsilon-seconds": 0.000001,
+        "low-cadence-delta-seconds": 0.03333333333333333,
+        "speed-anomaly-meters-per-second": 5,
+        "accepted-motion-state": 2,
+        "swing-constraint-state": 0,
+        "accepted-ground-path-state": 2,
+        "path-availability-reason": 1,
+        "landing-event-reason": 2,
+        "representative-limit": 5
+      },
+      "window": {
+        "minimumRows": 2,
+        "maximumSequenceGap": 0
+      }
+    },
+    {
+      "id": "path-revision-amplification-evidence",
+      "operator": "foot/path-revision-amplification-evidence",
+      "category": "motion",
+      "inputs": [
+        {
+          "slot": "frame-sequence",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/foot/resolved-frame-sequence"
+        },
+        {
+          "slot": "reset-sequence",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/input/body-reset-sequence"
+        },
+        {
+          "slot": "delta-seconds",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/input/presentation-delta-seconds"
+        },
+        {
+          "slot": "body-tick",
+          "dataset": "foot",
+          "field": "character-foot-ik/main/input/current-body-tick"
+        },
+        {
+          "slot": "motion-state",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/foot/foot-motion-state"
+        },
+        {
+          "slot": "constraint-state",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/foot/foot-motion-constraint-state"
+        },
+        {
+          "slot": "anchor-available",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/foot/foot-motion-current-contact-anchor-available"
+        },
+        {
+          "slot": "event-identity",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/foot/foot-motion-landing-event-identity"
+        },
+        {
+          "slot": "path-identity",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/foot/foot-motion-ground-path-input-identity"
+        },
+        {
+          "slot": "path-available",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/foot/foot-motion-path-available-after"
+        },
+        {
+          "slot": "path-revision-reason",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/foot/foot-motion-path-revision-reason"
+        },
+        {
+          "slot": "path-residual-rebuilt",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/foot/foot-motion-path-residual-rebuilt"
+        },
+        {
+          "slot": "path-revision-distance",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/foot/foot-motion-path-revision-distance"
+        },
+        {
+          "slot": "path-landing-delta",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/foot/foot-motion-path-landing-point-delta-meters"
+        },
+        {
+          "slot": "path-target-delta",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/foot/foot-motion-path-target-delta-meters"
+        },
+        {
+          "slot": "path-target-correction",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/foot/foot-motion-path-current-target-correction"
+        },
+        {
+          "slot": "ground-path-state",
+          "dataset": "foot",
+          "field": "character-foot-ik/main/foot/ground-path/state"
+        },
+        {
+          "slot": "ground-landing-event",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/foot/ground-path-next-landing-event-identity"
+        },
+        {
+          "slot": "ground-landing-surface",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/foot/ground-path-next-landing-surface-identity"
+        },
+        {
+          "slot": "ground-landing-point",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/foot/ground-path-next-landing"
+        },
+        {
+          "slot": "source-ankle-position",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/foot/source-ankle-position"
+        },
+        {
+          "slot": "source-ankle-rotation",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/foot/source-ankle-rotation"
+        },
+        {
+          "slot": "source-heel",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/foot/source-heel-position"
+        },
+        {
+          "slot": "source-toe",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/foot/source-toe-position"
+        },
+        {
+          "slot": "physical-write-available",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/physical/physical-write-available"
+        },
+        {
+          "slot": "physical-ankle-position",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/physical/physical-ankle-position"
+        },
+        {
+          "slot": "physical-ankle-rotation",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/physical/physical-ankle-rotation"
+        },
+        {
+          "slot": "state-target-correction",
+          "dataset": "foot",
+          "field": "character-foot-ik/main/foot/foot-motion/output-stages/state-target-correction"
+        },
+        {
+          "slot": "interpolation-output-correction",
+          "dataset": "foot",
+          "field": "character-foot-ik/main/foot/foot-motion/output-stages/interpolation-output-correction"
+        },
+        {
+          "slot": "swing-residual-before-decay",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/foot/foot-motion-swing-residual-before-decay"
+        },
+        {
+          "slot": "swing-residual-after-decay",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/foot/foot-motion-swing-residual-after-decay"
+        },
+        {
+          "slot": "residual-output-correction",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/foot/foot-motion-residual-output-correction"
+        },
+        {
+          "slot": "correction-before-safety-floor",
+          "dataset": "foot",
+          "field": "character-foot-ik/main/foot/foot-motion/output-stages/correction-before-safety-floor"
+        },
+        {
+          "slot": "safety-floor-output-correction",
+          "dataset": "foot",
+          "field": "character-foot-ik/main/foot/foot-motion/output-stages/safety-floor-output-correction"
+        },
+        {
+          "slot": "final-effective-correction",
+          "dataset": "foot",
+          "field": "character-foot-ik/main/foot/foot-motion/output-stages/final-effective-correction"
+        },
+        {
+          "slot": "goal-target-correction",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/foot/resolved-goal-target-correction"
+        },
+        {
+          "slot": "formal-source-identity",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/input/formal-observation-source-identity"
+        },
+        {
+          "slot": "formal-source-cycle",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/input/formal-observation-cycle"
+        }
+      ],
+      "parameters": {
+        "maximum-output-step-meters": 0.02,
+        "position-noise-floor-meters": 0.001,
+        "time-epsilon-seconds": 0.000001,
+        "accepted-motion-state": 2,
+        "swing-constraint-state": 0,
+        "accepted-ground-path-state": 2,
+        "path-availability-reason": 1,
+        "landing-event-reason": 2,
+        "representative-limit": 5
+      },
+      "window": {
+        "minimumRows": 2,
+        "maximumSequenceGap": 0
+      }
+    },
+    {
+      "id": "swing-actual-foot-envelope-counterfactual",
+      "operator": "foot/swing-actual-foot-envelope-counterfactual",
+      "category": "motion",
+      "inputs": [
+        {
+          "slot": "frame-sequence",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/foot/resolved-frame-sequence"
+        },
+        {
+          "slot": "reset-sequence",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/input/body-reset-sequence"
+        },
+        {
+          "slot": "delta-seconds",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/input/presentation-delta-seconds"
+        },
+        {
+          "slot": "body-tick",
+          "dataset": "foot",
+          "field": "character-foot-ik/main/input/current-body-tick"
+        },
+        {
+          "slot": "motion-state",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/foot/foot-motion-state"
+        },
+        {
+          "slot": "constraint-state",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/foot/foot-motion-constraint-state"
+        },
+        {
+          "slot": "anchor-available",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/foot/foot-motion-current-contact-anchor-available"
+        },
+        {
+          "slot": "event-identity",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/foot/foot-motion-landing-event-identity"
+        },
+        {
+          "slot": "path-identity",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/foot/foot-motion-ground-path-input-identity"
+        },
+        {
+          "slot": "path-available",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/foot/foot-motion-path-available-after"
+        },
+        {
+          "slot": "path-revision-reason",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/foot/foot-motion-path-revision-reason"
+        },
+        {
+          "slot": "path-residual-rebuilt",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/foot/foot-motion-path-residual-rebuilt"
+        },
+        {
+          "slot": "path-revision-distance",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/foot/foot-motion-path-revision-distance"
+        },
+        {
+          "slot": "path-landing-delta",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/foot/foot-motion-path-landing-point-delta-meters"
+        },
+        {
+          "slot": "path-target-delta",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/foot/foot-motion-path-target-delta-meters"
+        },
+        {
+          "slot": "path-target-correction",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/foot/foot-motion-path-current-target-correction"
+        },
+        {
+          "slot": "ground-path-state",
+          "dataset": "foot",
+          "field": "character-foot-ik/main/foot/ground-path/state"
+        },
+        {
+          "slot": "ground-landing-event",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/foot/ground-path-next-landing-event-identity"
+        },
+        {
+          "slot": "ground-landing-surface",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/foot/ground-path-next-landing-surface-identity"
+        },
+        {
+          "slot": "ground-landing-point",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/foot/ground-path-next-landing"
+        },
+        {
+          "slot": "source-ankle-position",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/foot/source-ankle-position"
+        },
+        {
+          "slot": "source-ankle-rotation",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/foot/source-ankle-rotation"
+        },
+        {
+          "slot": "source-heel",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/foot/source-heel-position"
+        },
+        {
+          "slot": "source-toe",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/foot/source-toe-position"
+        },
+        {
+          "slot": "physical-write-available",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/physical/physical-write-available"
+        },
+        {
+          "slot": "physical-ankle-position",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/physical/physical-ankle-position"
+        },
+        {
+          "slot": "physical-ankle-rotation",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/physical/physical-ankle-rotation"
+        },
+        {
+          "slot": "ground-last-landing",
+          "dataset": "foot",
+          "field": "character-foot-ik/main/foot/ground-path/last-landing"
+        },
+        {
+          "slot": "component-up",
+          "dataset": "foot",
+          "field": "character-foot-ik/main/foot/ground-path/component-up"
+        },
+        {
+          "slot": "corridor-radius",
+          "dataset": "foot",
+          "field": "character-foot-ik/main/foot/ground-path/query/radius"
+        },
+        {
+          "slot": "envelope-vertex",
+          "dataset": "foot",
+          "table": "ground-envelope",
+          "field": "character-foot-ik/ground-envelope/foot/position"
+        },
+        {
+          "slot": "formal-source-identity",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/input/formal-observation-source-identity"
+        },
+        {
+          "slot": "formal-source-cycle",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/input/formal-observation-cycle"
+        }
+      ],
+      "parameters": {
+        "maximum-output-step-meters": 0.02,
+        "position-noise-floor-meters": 0.001,
+        "time-epsilon-seconds": 0.000001,
+        "accepted-motion-state": 2,
+        "swing-constraint-state": 0,
+        "accepted-ground-path-state": 2,
+        "path-availability-reason": 1,
+        "landing-event-reason": 2,
+        "representative-limit": 5,
+        "horizontal-epsilon-meters": 0.001,
+        "height-epsilon-meters": 0.001
+      },
+      "window": {
+        "minimumRows": 2,
+        "maximumSequenceGap": 0
+      }
+    },
+    {
+      "id": "stable-swing-correction-response-cadence",
+      "operator": "foot/stable-swing-correction-response-cadence",
+      "category": "motion",
+      "inputs": [
+        {
+          "slot": "frame-sequence",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/foot/resolved-frame-sequence"
+        },
+        {
+          "slot": "reset-sequence",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/input/body-reset-sequence"
+        },
+        {
+          "slot": "motion-state",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/foot/foot-motion-state"
+        },
+        {
+          "slot": "constraint-state",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/foot/foot-motion-constraint-state"
+        },
+        {
+          "slot": "event-identity",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/foot/foot-motion-landing-event-identity"
+        },
+        {
+          "slot": "path-identity",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/foot/foot-motion-ground-path-input-identity"
+        },
+        {
+          "slot": "path-revision-reason",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/foot/foot-motion-path-revision-reason"
+        },
+        {
+          "slot": "path-residual-rebuilt",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/foot/foot-motion-path-residual-rebuilt"
+        },
+        {
+          "slot": "output-stages-available",
+          "dataset": "foot",
+          "field": "character-foot-ik/main/foot/foot-motion/output-stages/output-stages-available"
+        },
+        {
+          "slot": "correction-response-evaluated",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/foot/foot-motion-correction-response-evaluated"
+        },
+        {
+          "slot": "final-effective-correction",
+          "dataset": "foot",
+          "field": "character-foot-ik/main/foot/foot-motion/output-stages/final-effective-correction"
+        },
+        {
+          "slot": "formal-foot-height",
+          "dataset": "foot",
+          "field": "character-foot-ik/main/formal-output/foot-height"
+        },
+        {
+          "slot": "correction-response-desired",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/foot/foot-motion-correction-response-desired"
+        },
+        {
+          "slot": "correction-response-previous",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/foot/foot-motion-correction-response-previous"
+        },
+        {
+          "slot": "correction-response-current",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/foot/foot-motion-correction-response-current"
+        },
+        {
+          "slot": "correction-response-applied-delta",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/foot/foot-motion-correction-response-applied-delta"
+        },
+        {
+          "slot": "correction-response-selected-speed",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/foot/foot-motion-correction-response-selected-speed"
+        },
+        {
+          "slot": "response-output-point",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/foot/foot-motion-response-output-point"
+        },
+        {
+          "slot": "envelope-sample",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/foot/foot-motion-envelope-sample"
+        },
+        {
+          "slot": "original-sole",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/foot/foot-motion-original-sole"
+        },
+        {
+          "slot": "correction-response-direction",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/foot/foot-motion-correction-response-direction"
+        },
+        {
+          "slot": "formal-source-identity",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/input/formal-observation-source-identity"
+        },
+        {
+          "slot": "formal-source-cycle",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/input/formal-observation-cycle"
+        }
+      ],
+      "parameters": {
+        "hold-maximum-meters": 0.005,
+        "advance-minimum-meters": 0.02,
+        "accepted-motion-state": 2,
+        "swing-constraint-state": 0,
+        "no-path-revision-reason": 0,
+        "representative-limit": 5
+      },
+      "window": {
+        "minimumRows": 3,
+        "maximumSequenceGap": 0
+      }
+    }
+  ],
+  "scores": [
+    {
+      "id": "foot-total-score",
+      "members": [
+        {
+          "rule": "final-contact-plane-penetration",
+          "weight": 0.2
+        },
+        {
+          "rule": "contact-support-gap",
+          "weight": 0.2
+        },
+        {
+          "rule": "stable-swing-output-jump",
+          "weight": 0.15
+        },
+        {
+          "rule": "path-revision-output-jump",
+          "weight": 0.15
+        },
+        {
+          "rule": "contact-state-output-jump",
+          "weight": 0.15
+        },
+        {
+          "rule": "landing-leg-extension",
+          "weight": 0.1
+        },
+        {
+          "rule": "locked-horizontal-drift",
+          "weight": 0.05
+        }
+      ]
+    }
+  ]
+}

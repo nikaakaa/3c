@@ -42,8 +42,8 @@
 - [x] 5.4 迁移Swing Path Jitter与当前Formal Step Time Selection算法，通过当前typed dataset输出确认选择、窗口和Dimension证据可定位，并删除已不存在的Current／Incoming候选假字段
 - [x] 5.5 迁移Pelvis、Leg Reach与Support相关算法，通过当前typed dataset输出确认坐标事实来自生成字段而非场景Transform反查
 - [ ] 5.6 迁移Coverage、资格、分母和七维评分组合，通过`diagnosis.json`检查总分能够追溯到规则结果且MissingEvidence会标记评分不完整
-- [ ] 5.7 建立当前Foot Core与Full默认Plan，通过Plan编译结果确认Core只启用现有Core Capture可完整支持的规则、Full覆盖全部已迁移Operator
-- [ ] 5.8 删除迁移过程中产生的临时字段清单、旧CSV模型或中间Adapter，通过`rg`确认没有恢复`CharacterFootMotionDiagnosticAnalyzer`、`CharacterFootCsvColumn`、`CharacterFootCsvBinding`、`FootFrame`和`CharacterFootDiagnosticStore`
+- [x] 5.7 建立当前Foot Core与Full默认Plan，通过Plan编译结果确认Core只启用现有Core Capture可完整支持的规则、Full覆盖全部已迁移Operator
+- [x] 5.8 删除迁移过程中产生的临时字段清单、旧CSV模型或中间Adapter，通过`rg`确认没有恢复`CharacterFootMotionDiagnosticAnalyzer`、`CharacterFootCsvColumn`、`CharacterFootCsvBinding`、`FootFrame`和`CharacterFootDiagnosticStore`
 
 ## 6. Foot诊断前端接入
 
@@ -55,7 +55,7 @@
 ## 7. 构建闭包与规格收口
 
 - [x] 7.1 编译独立Annotations、Generator、Runtime和Host项目，命令统一带`--disable-build-servers /nr:false /p:UseSharedCompilation=false`并在完成后执行build server shutdown，确认零编译错误
-- [ ] 7.2 分别编译3C Runtime、Foot Generator、Foot Capture Editor和Foot Analysis Editor程序集，使用相同build server关闭规则确认新依赖闭包完整
+- [x] 7.2 分别编译3C Runtime、Foot Generator、Foot Capture Editor和Foot Analysis Editor程序集，使用相同build server关闭规则确认新依赖闭包完整
 - [ ] 7.3 扩展Managed／IL2CPP产物Gate覆盖`DiagnosticKey`、`DiagnosticGroup`、Analyzer、Plan、Operator和Report identity，通过Gate命令确认Disabled闭包为零且Capture闭包不包含离线Analyzer
 - [ ] 7.4 对新Change及三个受影响采样Change执行OpenSpec strict validation，并用`git diff --check`和冲突文本搜索确认current specs不再宣称Foot没有独立诊断能力
 - [ ] 7.5 对照proposal列出的全部Capability和受影响规格检查实现归属，通过依赖搜索确认通用包没有Foot／Combat概念、Foot Analysis没有PoseGraph运行引用且旧诊断基础设施保持删除

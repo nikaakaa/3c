@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using KK.GeneratedDiagnosticSampling;
 using KK.GeneratedDiagnosticSampling.Host;
 using ThirdPersonCharacter.Pipeline.Diagnostics.FootAnalysis.Editor;
 using ThirdPersonCharacter.Pipeline.Editor;
@@ -29,7 +30,7 @@ namespace ThirdPersonCharacter.Pipeline.Diagnostics.FootIkSampling.Editor
                 string manifestPath) =>
                 CharacterFootDiagnosticAnalysisWorkflow.AnalyzeExisting(
                     manifestPath,
-                    CurrentPlanPath());
+                    CurrentPlanPath(manifestPath));
             public void OpenLastReport() =>
                 CharacterFootDiagnosticAnalysisWorkflow.OpenLastReport();
         }
@@ -69,7 +70,7 @@ namespace ThirdPersonCharacter.Pipeline.Diagnostics.FootIkSampling.Editor
             }
             AnalyzeExisting(
                 manifest,
-                CurrentPlanPath());
+                CurrentPlanPath(manifest));
         }
 
         [MenuItem(AnalyzeLastMenu, true)]
@@ -92,7 +93,7 @@ namespace ThirdPersonCharacter.Pipeline.Diagnostics.FootIkSampling.Editor
                 return;
             AnalyzeExisting(
                 manifest,
-                CurrentPlanPath());
+                CurrentPlanPath(manifest));
         }
 
         public static void AnalyzeExisting(
@@ -151,11 +152,26 @@ namespace ThirdPersonCharacter.Pipeline.Diagnostics.FootIkSampling.Editor
         static bool CanOpenLastReport() =>
             File.Exists(s_LastReportPath);
 
-        static string CurrentPlanPath() =>
-            Path.GetFullPath(Path.Combine(
+        static string CurrentPlanPath(string manifestPath)
+        {
+            byte[] content = File.ReadAllBytes(Path.GetFullPath(manifestPath));
+            var document = new DiagnosticEncodedDocument(
+                content,
+                DiagnosticArtifactIntegrity.ComputeSha256(content));
+            DiagnosticCapabilityManifest manifest =
+                DiagnosticCapabilityCodec.DecodeCapabilityManifest(document);
+            if (manifest.Status != DiagnosticCaptureStatus.Completed ||
+                manifest.Samplers.Count != 1)
+            {
+                throw new InvalidDataException(
+                    "Foot diagnostic analysis requires one completed Sampler manifest.");
+            }
+            string assetPath = CharacterFootDiagnosticPlanCatalog
+                .RequireCurrentPlanAssetPath(manifest.Samplers[0].SamplerId);
+            return Path.GetFullPath(Path.Combine(
                 Application.dataPath,
                 "..",
-                CharacterFootDiagnosticPlanCatalog
-                    .CurrentContactAndLockPlanAssetPath));
+                assetPath));
+        }
     }
 }

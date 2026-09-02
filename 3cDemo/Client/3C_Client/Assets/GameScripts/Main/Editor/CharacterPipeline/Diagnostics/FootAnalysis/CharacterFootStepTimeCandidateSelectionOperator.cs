@@ -234,13 +234,26 @@ namespace ThirdPersonCharacter.Pipeline.Diagnostics.FootAnalysis.Editor
             out Observation value)
         {
             bool complete = true;
-            for (int i = 0; i < inputs.All.Count; i++)
+            for (int i = 0; i < inputs.Unconditional.Count; i++)
             {
-                if (row.IsAvailable(inputs.All[i].Handle))
+                if (row.IsAvailable(inputs.Unconditional[i].Handle))
                     continue;
                 missing.Add(CharacterFootDiagnosticOperatorSupport.Identity(
-                    inputs.All[i]));
+                    inputs.Unconditional[i]));
                 complete = false;
+            }
+            bool formalAvailable = complete &&
+                row.GetBoolean(inputs.Formal.Handle);
+            if (formalAvailable)
+            {
+                for (int i = 0; i < inputs.FormalEvidence.Count; i++)
+                {
+                    if (row.IsAvailable(inputs.FormalEvidence[i].Handle))
+                        continue;
+                    missing.Add(CharacterFootDiagnosticOperatorSupport.Identity(
+                        inputs.FormalEvidence[i]));
+                    complete = false;
+                }
             }
             if (!complete)
             {
@@ -253,13 +266,17 @@ namespace ThirdPersonCharacter.Pipeline.Diagnostics.FootAnalysis.Editor
                 Sequence = row.SampleKey.Sequence,
                 Frame = row.GetUInt64(inputs.FrameValue.Handle),
                 Reset = row.GetUInt64(inputs.ResetValue.Handle),
-                FormalAvailable = row.GetBoolean(inputs.Formal.Handle),
+                FormalAvailable = formalAvailable,
                 SourceIdentity = row.GetIdentity(inputs.Source.Handle),
                 SourceCycle = row.GetInt32(inputs.Cycle.Handle),
                 Continuity = row.GetUInt64(inputs.ContinuityValue.Handle),
                 NormalizedTime = row.GetFloat32(inputs.Normalized.Handle),
-                FormalTime = row.GetFloat32(inputs.FormalTimeValue.Handle),
-                FormalEvent = row.GetUInt64(inputs.FormalEventValue.Handle),
+                FormalTime = formalAvailable
+                    ? row.GetFloat32(inputs.FormalTimeValue.Handle)
+                    : 0d,
+                FormalEvent = formalAvailable
+                    ? row.GetUInt64(inputs.FormalEventValue.Handle)
+                    : 0,
                 SelectedSource = row.GetUInt32(inputs.SelectionSource.Handle),
                 SelectedEvent = row.GetUInt64(inputs.SelectionEvent.Handle),
                 SelectedTime = row.GetFloat32(inputs.SelectionTime.Handle),
@@ -314,7 +331,7 @@ namespace ThirdPersonCharacter.Pipeline.Diagnostics.FootAnalysis.Editor
                 SelectionTime = context.Input(SelectedTime);
                 Maximum = context.Input(MaximumPrediction);
                 LastLanding = context.Input(LastLandingEvent);
-                All = new[]
+                Unconditional = new[]
                 {
                     FrameValue,
                     ResetValue,
@@ -323,13 +340,16 @@ namespace ThirdPersonCharacter.Pipeline.Diagnostics.FootAnalysis.Editor
                     Cycle,
                     ContinuityValue,
                     Normalized,
-                    FormalTimeValue,
-                    FormalEventValue,
                     SelectionSource,
                     SelectionEvent,
                     SelectionTime,
                     Maximum,
                     LastLanding
+                };
+                FormalEvidence = new[]
+                {
+                    FormalTimeValue,
+                    FormalEventValue
                 };
             }
 
@@ -347,7 +367,8 @@ namespace ThirdPersonCharacter.Pipeline.Diagnostics.FootAnalysis.Editor
             internal DiagnosticBoundInput SelectionTime { get; }
             internal DiagnosticBoundInput Maximum { get; }
             internal DiagnosticBoundInput LastLanding { get; }
-            internal IReadOnlyList<DiagnosticBoundInput> All { get; }
+            internal IReadOnlyList<DiagnosticBoundInput> Unconditional { get; }
+            internal IReadOnlyList<DiagnosticBoundInput> FormalEvidence { get; }
         }
 
         sealed class Observation

@@ -44,6 +44,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
         readonly AnimancerComponent m_Animancer;
         readonly CharacterPresentationProjection m_Projection;
         readonly CharacterPoseRuntimeComposition m_Modules;
+        readonly CharacterPoseTuningCoordinator m_Tuning;
 
         CharacterPoseProgramRuntime m_ProgramRuntime => m_Modules.Program;
         CharacterPoseConstraintRuntime m_PoseConstraints =>
@@ -60,7 +61,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
         ulong m_CompletionIdentity = 1;
         ulong m_FrameCompletionContext;
         CharacterPoseProgramFrameLease m_ActiveFrameLease;
-        CharacterPoseTuningSnapshot m_TuningSnapshot;
         bool m_CommitValidated;
         bool m_HasOpenFrame;
         AnimationPresentationFrameOutcome m_PendingFrameOutcome;
@@ -106,7 +106,11 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                     m_CompletionIdentity,
                     this);
                 m_Modules = modules;
-                m_TuningSnapshot = CaptureTuningSnapshot(1);
+                m_Tuning = new CharacterPoseTuningCoordinator(
+                    m_ProgramRuntime,
+                    m_SourceModule,
+                    m_PoseConstraints,
+                    1);
             }
             catch
             {
@@ -159,56 +163,12 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             CharacterPoseTuningParameterBlock block,
             ulong candidateGeneration,
             bool resetOwnerState)
-        {
-            if (layout == null || block == null)
-                return "Pose tuning payload is missing.";
-            string sourceError = m_SourceModule.PrepareTuningCandidate(
-                layout,
-                block,
-                candidateGeneration);
-            if (!string.IsNullOrEmpty(sourceError))
-                return sourceError;
-            string programError = m_ProgramRuntime.PrepareTuningCandidate(
-                layout,
-                block,
-                candidateGeneration);
-            if (!string.IsNullOrEmpty(programError))
-            {
-                m_SourceModule.DiscardTuningCandidate();
-                return programError;
-            }
-            string constraintError = m_PoseConstraints.PrepareTuningCandidate(
+            =>
+            m_Tuning.Apply(
                 layout,
                 block,
                 candidateGeneration,
                 resetOwnerState);
-            if (!string.IsNullOrEmpty(constraintError))
-            {
-                m_ProgramRuntime.DiscardTuningCandidate();
-                m_SourceModule.DiscardTuningCandidate();
-                return constraintError;
-            }
-            m_ProgramRuntime.CommitTuningCandidate(candidateGeneration);
-            m_SourceModule.CommitTuningCandidate(candidateGeneration);
-            m_PoseConstraints.CommitTuningCandidate(candidateGeneration);
-            m_TuningSnapshot = CaptureTuningSnapshot(candidateGeneration);
-            return string.Empty;
-        }
-
-        CharacterPoseTuningSnapshot CaptureTuningSnapshot(
-            ulong generation)
-        {
-            CharacterPoseProgramTuningView program =
-                m_ProgramRuntime.RequireTuning(generation);
-            CharacterPoseSourceTuningView source =
-                m_SourceModule.RequireTuning(generation);
-            CharacterPoseConstraintTuningView constraint =
-                m_PoseConstraints.RequireTuning(generation);
-            return new CharacterPoseTuningSnapshot(
-                in program,
-                in source,
-                in constraint);
-        }
 
         internal bool CanApplyNextActivation =>
             m_ProgramRuntime.CanApplyNextActivation;
@@ -554,7 +514,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             bool publicationOpen = false;
             try
             {
-                m_TuningSnapshot.RequireGeneration(
+                m_Tuning.Committed.RequireGeneration(
                     lineage.TuningGeneration);
                 constraintLease = m_PoseConstraints.BeginFrame(
                     in lineage,

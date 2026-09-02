@@ -1129,3 +1129,9 @@ Action／Slot／Workspace打开与关闭顺序、Backend acknowledgement、reque
 ## 旧Pose执行类型删除审计
 
 状态：全仓运行时与Editor源码搜索确认`CharacterPoseGraphNativeProgram`、`CharacterPoseGraphStagedExecutor`、`CharacterPresentationPoseOperation`、`AnimationPoseGraphNativeOperation`、`ICharacterPoseCompilerHandler`、Handler Registry和中央`CompilationState`类型均已删除；命中只存在于OpenSpec迁移历史与基线说明，不存在可编译实现、wrapper或Runtime reader。任务14.2完成。
+
+## 拆出根Pose调参协调器
+
+状态：新增`CharacterPoseTuningCoordinator`，唯一协调Program、Source与Constraint三个分区的Candidate Prepare／Commit／Discard并持有统一Committed Snapshot。旧Pose外层删除分区调参顺序和Snapshot构造，只在新Frame打开时读取协调器的同generation Committed结果。
+
+Source先准备、Program次之、Constraint最后准备以及Program／Source／Constraint提交顺序保持不变；任一失败仍只Discard已经准备的Candidate，不修改Committed状态。3C MCP全脚本重编且C#错误为0，不单独运行回放。

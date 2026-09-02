@@ -2589,6 +2589,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                 }
             }
 
+            CharacterPoseSourcePreparedResources preparedSources =
+                m_SourceModule.RequirePreparedResources(sourceLease);
             CharacterPoseGraphStagedExecutor poseExecutor;
             AnimationFinalPoseNativeReadBinding finalRead;
             using (ValidateMarker.Auto())
@@ -2615,10 +2617,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                     AnimationSelectedPosePlayerRuntime player = m_DirectPlayers[playerIndex];
                     AnimationPlayerPoseNativeWriteBinding write =
                         m_Workspace.RequirePlayerWriteBinding(player.PlayerIndex, completionIdentity);
-                    CharacterPoseSourceModule.SourceBinding sourceBinding =
-                        m_SourceModule.ReadDirectBinding(
-                            playerIndex,
-                            completionIdentity);
+                    CharacterPoseSourceBinding sourceBinding =
+                        preparedSources.RequireDirectBinding(
+                            playerIndex);
                     m_DirectPlayerJobs[playerIndex] = player.PrepareJob(
                         completionIdentity,
                         in write,
@@ -2635,10 +2636,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                             playerIndex];
                     AnimationPlayerPoseNativeWriteBinding write =
                         m_Workspace.RequirePlayerWriteBinding(player.PlayerIndex, completionIdentity);
-                    CharacterPoseSourceModule.SourceBinding sourceBinding =
-                        m_SourceModule.ReadClipBinding(
-                            playerIndex,
-                            completionIdentity);
+                    CharacterPoseSourceBinding sourceBinding =
+                        preparedSources.RequireClipBinding(
+                            playerIndex);
                     m_ClipPlayerJobs[playerIndex] = player.PrepareJob(
                         completionIdentity,
                         in write,
@@ -2657,10 +2657,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                         m_Workspace.RequirePlayerWriteBinding(
                             player.PlayerIndex,
                             completionIdentity);
-                    CharacterPoseSourceModule.SourceBinding sourceBinding =
-                        m_SourceModule.ReadBlendSpaceBinding(
-                            playerIndex,
-                            completionIdentity);
+                    CharacterPoseSourceBinding sourceBinding =
+                        preparedSources.RequireBlendSpaceBinding(
+                            playerIndex);
                     m_BlendSpacePlayerJobs[playerIndex] = player.PrepareJob(
                         completionIdentity,
                         in write,
@@ -2686,6 +2685,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             CharacterPoseSourceFrameResult sourceFrame =
                 m_SourceModule.PrepareFrameResult(
                 sourceLease,
+                in preparedSources,
                 actionSourceSamples,
                 providerSourceSamples);
             if (!sourceFrame.IsReady)

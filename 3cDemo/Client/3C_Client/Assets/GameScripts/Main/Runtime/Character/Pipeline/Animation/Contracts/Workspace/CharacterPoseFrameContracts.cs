@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using ThirdPersonCharacter.Pipeline.Animation.Lifecycle;
 using ThirdPersonSimulation;
 
 namespace ThirdPersonCharacter.Pipeline.Animation
@@ -255,6 +256,199 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         internal bool IsValid { get; }
     }
 
+    internal readonly struct CharacterPoseSourceBinding
+    {
+        internal CharacterPoseSourceBinding(
+            AnimationPhysicalSourceIdentity physicalIdentity,
+            int sourceIndex)
+        {
+            if (!physicalIdentity.IsValid || sourceIndex < 0)
+            {
+                throw new ArgumentException(
+                    "Pose source binding is invalid.");
+            }
+            PhysicalIdentity = physicalIdentity;
+            m_EncodedSourceIndex = checked(sourceIndex + 1);
+        }
+
+        readonly int m_EncodedSourceIndex;
+        internal AnimationPhysicalSourceIdentity PhysicalIdentity { get; }
+        internal int SourceIndex => m_EncodedSourceIndex - 1;
+        internal bool IsValid =>
+            PhysicalIdentity.IsValid &&
+            m_EncodedSourceIndex > 0;
+    }
+
+    internal sealed class CharacterPoseSourceBindingPage
+    {
+        readonly CharacterPoseSourceBinding[] m_Direct;
+        readonly CharacterPoseSourceBinding[] m_Clip;
+        readonly CharacterPoseSourceBinding[] m_BlendSpace;
+        ulong m_CompletionIdentity;
+
+        internal CharacterPoseSourceBindingPage(
+            int directCapacity,
+            int clipCapacity,
+            int blendSpaceCapacity)
+        {
+            m_Direct = new CharacterPoseSourceBinding[
+                RequireCapacity(
+                    directCapacity,
+                    nameof(directCapacity))];
+            m_Clip = new CharacterPoseSourceBinding[
+                RequireCapacity(
+                    clipCapacity,
+                    nameof(clipCapacity))];
+            m_BlendSpace = new CharacterPoseSourceBinding[
+                RequireCapacity(
+                    blendSpaceCapacity,
+                    nameof(blendSpaceCapacity))];
+        }
+
+        internal ulong CompletionIdentity => m_CompletionIdentity;
+
+        internal void Begin(ulong completionIdentity)
+        {
+            if (completionIdentity == 0)
+            {
+                throw new ArgumentOutOfRangeException(
+                    nameof(completionIdentity));
+            }
+            Clear();
+            m_CompletionIdentity = completionIdentity;
+        }
+
+        internal void BindDirect(
+            int index,
+            in CharacterPoseSourceBinding binding) =>
+            Bind(m_Direct, index, in binding);
+
+        internal void BindClip(
+            int index,
+            in CharacterPoseSourceBinding binding) =>
+            Bind(m_Clip, index, in binding);
+
+        internal void BindBlendSpace(
+            int index,
+            in CharacterPoseSourceBinding binding) =>
+            Bind(m_BlendSpace, index, in binding);
+
+        internal CharacterPoseSourceBinding RequireDirect(
+            int index,
+            ulong completionIdentity) =>
+            Require(m_Direct, index, completionIdentity);
+
+        internal CharacterPoseSourceBinding RequireClip(
+            int index,
+            ulong completionIdentity) =>
+            Require(m_Clip, index, completionIdentity);
+
+        internal CharacterPoseSourceBinding RequireBlendSpace(
+            int index,
+            ulong completionIdentity) =>
+            Require(m_BlendSpace, index, completionIdentity);
+
+        internal bool Matches(ulong completionIdentity) =>
+            completionIdentity != 0 &&
+            completionIdentity == m_CompletionIdentity;
+
+        internal void Clear()
+        {
+            Array.Clear(m_Direct, 0, m_Direct.Length);
+            Array.Clear(m_Clip, 0, m_Clip.Length);
+            Array.Clear(
+                m_BlendSpace,
+                0,
+                m_BlendSpace.Length);
+            m_CompletionIdentity = 0;
+        }
+
+        void Bind(
+            CharacterPoseSourceBinding[] bindings,
+            int index,
+            in CharacterPoseSourceBinding binding)
+        {
+            if (m_CompletionIdentity == 0 || !binding.IsValid)
+            {
+                throw new InvalidOperationException(
+                    "Pose source binding page is not open.");
+            }
+            bindings[index] = binding;
+        }
+
+        CharacterPoseSourceBinding Require(
+            CharacterPoseSourceBinding[] bindings,
+            int index,
+            ulong completionIdentity)
+        {
+            if ((uint)index >= (uint)bindings.Length ||
+                !Matches(completionIdentity))
+            {
+                throw new InvalidOperationException(
+                    "Pose source binding request is stale.");
+            }
+            CharacterPoseSourceBinding binding = bindings[index];
+            if (!binding.IsValid)
+            {
+                throw new InvalidOperationException(
+                    "Pose source binding is not prepared.");
+            }
+            return binding;
+        }
+
+        static int RequireCapacity(
+            int capacity,
+            string parameterName)
+        {
+            if (capacity < 0)
+                throw new ArgumentOutOfRangeException(parameterName);
+            return capacity;
+        }
+    }
+
+    internal readonly struct CharacterPoseSourcePreparedResources
+    {
+        internal CharacterPoseSourcePreparedResources(
+            in CharacterPoseFrameLineage lineage,
+            CharacterPoseSourceBindingPage bindings)
+        {
+            if (!lineage.IsValid ||
+                bindings == null ||
+                !bindings.Matches(lineage.CompletionIdentity))
+            {
+                throw new ArgumentException(
+                    "Character Pose prepared source resources are invalid.");
+            }
+            Lineage = lineage;
+            m_Bindings = bindings;
+        }
+
+        readonly CharacterPoseSourceBindingPage m_Bindings;
+        internal CharacterPoseFrameLineage Lineage { get; }
+        internal bool IsValid =>
+            Lineage.IsValid &&
+            m_Bindings != null &&
+            m_Bindings.Matches(Lineage.CompletionIdentity);
+
+        internal CharacterPoseSourceBinding RequireDirectBinding(
+            int index) =>
+            m_Bindings.RequireDirect(
+                index,
+                Lineage.CompletionIdentity);
+
+        internal CharacterPoseSourceBinding RequireClipBinding(
+            int index) =>
+            m_Bindings.RequireClip(
+                index,
+                Lineage.CompletionIdentity);
+
+        internal CharacterPoseSourceBinding RequireBlendSpaceBinding(
+            int index) =>
+            m_Bindings.RequireBlendSpace(
+                index,
+                Lineage.CompletionIdentity);
+    }
+
     internal enum CharacterPoseSourceFrameOutcome : byte
     {
         AwaitingSample = 1,
@@ -266,12 +460,15 @@ namespace ThirdPersonCharacter.Pipeline.Animation
     {
         internal CharacterPoseSourceFrameResult(
             in CharacterPoseSourceDemand demand,
+            in CharacterPoseSourcePreparedResources preparedResources,
             IReadOnlyDictionary<AnimationPlayerSourceSampleKey,
                 AnimationResolvedPoseSourceSample> actionSources,
             IReadOnlyDictionary<AnimationPlayerSourceSampleKey,
                 PresentationPoseSourceSample> providerSources)
         {
             if (!demand.IsValid ||
+                !preparedResources.IsValid ||
+                preparedResources.Lineage != demand.Lineage ||
                 actionSources == null ||
                 providerSources == null ||
                 actionSources.Count != demand.ActionSourceCount ||
@@ -306,6 +503,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 }
             }
             Demand = demand;
+            PreparedResources = preparedResources;
             ActionSources = actionSources;
             ProviderSources = providerSources;
             Availability = invalid
@@ -324,6 +522,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         }
 
         internal CharacterPoseSourceDemand Demand { get; }
+        internal CharacterPoseSourcePreparedResources PreparedResources
+        {
+            get;
+        }
         internal CharacterPoseFrameLineage Lineage => Demand.Lineage;
         internal IReadOnlyDictionary<AnimationPlayerSourceSampleKey,
             AnimationResolvedPoseSourceSample> ActionSources { get; }
@@ -334,6 +536,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         internal PresentationPoseSourceFailureReason FailureReason { get; }
         internal bool IsValid =>
             Demand.IsValid &&
+            PreparedResources.IsValid &&
+            PreparedResources.Lineage == Demand.Lineage &&
             ActionSources != null &&
             ProviderSources != null &&
             ActionSources.Count == Demand.ActionSourceCount &&

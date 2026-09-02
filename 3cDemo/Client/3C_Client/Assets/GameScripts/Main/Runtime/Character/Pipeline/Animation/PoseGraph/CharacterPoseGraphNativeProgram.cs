@@ -754,7 +754,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         LinkedPoseGroupId[] m_LinkedPoseCallGroupIds;
         LinkedPoseInterfaceId[] m_LinkedPoseCallInterfaceIds;
         LinkedPoseImplementationId[] m_LinkedPoseCandidateImplementationIds;
-        CharacterPoseProgramFramePages m_FramePages;
         CharacterPoseBoneCounts m_BoneCounts;
         int m_BoneCount;
         int m_ParameterCount;
@@ -783,8 +782,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             CharacterAnimationRigPayload rig,
             AnimationBlendCurveCatalogPayload curves,
             AnimationBlendProfileCatalogPayload profiles,
-            AnimationPoseNativeWorkspace workspace,
-            int sourcePreparationCapacity,
+            CharacterPoseProgramFramePages framePages,
             in AnimationPoseNativeAggregateLayout layout)
         {
             try
@@ -797,15 +795,15 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                     throw new ArgumentNullException(nameof(curves));
                 if (profiles == null)
                     throw new ArgumentNullException(nameof(profiles));
-                if (workspace == null)
-                    throw new ArgumentNullException(nameof(workspace));
+                if (framePages == null)
+                    throw new ArgumentNullException(nameof(framePages));
                 program.RequireValid();
                 rig.RequireValid();
                 curves.RequireValid();
                 profiles.RequireValid(program.PoseBoneCount, rig.RigId, rig.RigRevision);
                 layout.RequireValid();
                 AnimationPoseNativeAggregateLayout workspaceLayout =
-                    workspace.Layout;
+                    framePages.EvaluationLayout;
                 RequireDiagnosticsLayout(
                     in workspaceLayout,
                     in layout);
@@ -884,22 +882,13 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 m_LinkedPoseCallGroupIds = new LinkedPoseGroupId[program.LinkedPoseCalls.Count];
                 m_LinkedPoseCallInterfaceIds = new LinkedPoseInterfaceId[program.LinkedPoseCalls.Count];
                 m_LinkedPoseCandidateImplementationIds = new LinkedPoseImplementationId[linkedPoseCandidateCount];
-                m_FramePages = new CharacterPoseProgramFramePages(
-                    program.StateMachines.Count,
-                    program.AnimationSlots.Count,
-                    program.RootOrientationWarps.Count,
-                    program.LinkedPoseCalls.Count,
-                    program.LinkedPoseFragments.Count,
-                    sourcePreparationCapacity,
-                    workspace);
-
                 CompileRig(program, rig);
                 CompileBlendCatalogs(curves, profiles);
-                CompilePayloads(program);
+                CompilePayloads(program, framePages);
                 CompileLinkedPose(program);
                 CompileOperations(program);
                 CompileStages(program);
-                RequireValid();
+                RequireValid(framePages);
             }
             catch
             {
@@ -909,10 +898,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         }
 
         internal int PoseBoneCount => m_BoneCount;
-        internal CharacterPoseProgramFramePages FramePages =>
-            m_FramePages ??
-            throw new InvalidOperationException(
-                "Character Pose Program frame pages are missing.");
         internal int ParameterCount => m_ParameterCount;
         internal int PoseValueCount => m_PoseValueCount;
         internal int FootPlacementCount => m_FootPlacementCount;
@@ -960,8 +945,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         internal NativeArray<float> BlendDenseProfiles => m_BlendDenseProfiles;
         internal NativeArray<AnimationPoseGraphNativeModifyBone> ModifyBones => m_ModifyBones;
         internal NativeArray<AnimationPoseGraphNativeRootOrientationWarp> RootOrientationWarps => m_RootOrientationWarps;
-        internal NativeArray<CharacterRootOrientationWarpNativeControl> RootOrientationWarpControls =>
-            m_FramePages.RootOrientationWarpControls;
         internal NativeArray<CharacterVirtualBoneDescriptor> VirtualBones => m_VirtualBones;
         internal CharacterPoseBoneContributionCatalog PoseBoneContributions =>
             new CharacterPoseBoneContributionCatalog(
@@ -982,40 +965,18 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             m_FullBodyIkContributionGoalCount;
         internal NativeArray<AnimationPoseGraphNativeLinkedPoseCall> LinkedPoseCalls => m_LinkedPoseCalls;
         internal NativeArray<AnimationPoseGraphNativeLinkedPoseCandidate> LinkedPoseCandidates => m_LinkedPoseCandidates;
-        internal NativeArray<AnimationPoseGraphNativeLinkedPoseCallControl> LinkedPoseCallControls =>
-            m_FramePages.LinkedPoseCallControls;
-        internal NativeArray<byte> LinkedPoseActiveFragments =>
-            m_FramePages.LinkedPoseActiveFragments;
         internal CharacterPoseBoneCounts BoneCounts => m_BoneCounts;
-        internal NativeArray<CharacterPoseStateMachineNativeControl> StateMachineControls =>
-            m_FramePages.StateMachineControls;
-        internal NativeArray<CharacterAnimationSlotNativeControl> AnimationSlotControls =>
-            m_FramePages.AnimationSlotControls;
-        internal bool HasOpenFrame => m_FramePages?.HasOpenFrame == true;
-
-        internal void BeginFrame()
-        {
-            RequireAlive();
-            if (m_FramePages.HasOpenFrame)
-                throw new InvalidOperationException("Character Pose Graph frame is already open.");
-            m_FramePages.BeginFrame();
-        }
-
-        internal void CommitFrame()
-        {
-            RequireAlive();
-            RequireOpenFrame();
-            m_FramePages.CommitFrame();
-        }
 
         internal CharacterPoseProgramCommittedDiagnosticsView
             CaptureCommittedDiagnostics(
+            CharacterPoseProgramFramePages framePages,
             in CharacterPoseProgramResult result,
             in CharacterPoseGraphNativeBinding frame,
             AnimationPresentationDiagnosticsInterest interest)
         {
             RequireAlive();
-            if (m_FramePages.HasOpenFrame ||
+            if (framePages == null ||
+                framePages.HasOpenFrame ||
                 !result.IsCompleted ||
                 interest == AnimationPresentationDiagnosticsInterest.None ||
                 result.Lineage.CompletionIdentity !=
@@ -1026,7 +987,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             }
             frame.RequireValid();
             CharacterPoseProgramFramePages.CommittedDiagnosticsPage page =
-                m_FramePages.CommittedDiagnostics;
+                framePages.CommittedDiagnostics;
             AnimationPoseNativeAggregateLayout frameLayout = frame.Layout;
             RequireDiagnosticsLayout(in frameLayout, in page.Layout);
             page.Identity = 0;
@@ -1066,7 +1027,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                     {
                         page.StateMachineBoneWeights[
                             stateMachine * page.Layout.BoneCount + bone] =
-                            GetStateMachineBoneWeight(stateMachine, bone);
+                            GetStateMachineBoneWeight(
+                                framePages,
+                                stateMachine,
+                                bone);
                     }
                 }
             }
@@ -1100,34 +1064,20 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 for (int i = 0; i < page.ValueDenseLocalPoses.Length; i++)
                     page.ValueDenseLocalPoses[i] = frame.ValueDenseLocalPoses[i];
             }
-            m_FramePages.PublishCommittedDiagnostics();
+            framePages.PublishCommittedDiagnostics();
             return new CharacterPoseProgramCommittedDiagnosticsView(page);
         }
 
-        internal void DiscardFrame()
-        {
-            RequireAlive();
-            RequireOpenFrame();
-            m_FramePages.DiscardFrame();
-        }
-
-        internal void SetStateMachineControl(
+        internal float GetStateMachineBoneWeight(
+            CharacterPoseProgramFramePages framePages,
             int stateMachineIndex,
-            in CharacterPoseStateMachineNativeControl control)
+            int boneIndex)
         {
             RequireAlive();
+            if (framePages == null)
+                throw new ArgumentNullException(nameof(framePages));
             NativeArray<CharacterPoseStateMachineNativeControl> controls =
-                m_FramePages.StateMachineControls;
-            if ((uint)stateMachineIndex >= (uint)controls.Length)
-                throw new ArgumentOutOfRangeException(nameof(stateMachineIndex));
-            controls[stateMachineIndex] = control;
-        }
-
-        internal float GetStateMachineBoneWeight(int stateMachineIndex, int boneIndex)
-        {
-            RequireAlive();
-            NativeArray<CharacterPoseStateMachineNativeControl> controls =
-                m_FramePages.StateMachineControls;
+                framePages.StateMachineControls;
             if ((uint)stateMachineIndex >= (uint)controls.Length ||
                 (uint)boneIndex >= (uint)m_BoneCount)
                 throw new ArgumentOutOfRangeException();
@@ -1169,46 +1119,24 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 normalized + segment.D);
         }
 
-        internal void SetAnimationSlotControl(
-            int animationSlotIndex,
-            in CharacterAnimationSlotNativeControl control)
-        {
-            RequireAlive();
-            NativeArray<CharacterAnimationSlotNativeControl> controls =
-                m_FramePages.AnimationSlotControls;
-            if ((uint)animationSlotIndex >= (uint)controls.Length)
-                throw new ArgumentOutOfRangeException(nameof(animationSlotIndex));
-            controls[animationSlotIndex] = control;
-        }
-
-        internal void SetRootOrientationWarpControl(
-            int rootOrientationWarpIndex,
-            in CharacterRootOrientationWarpNativeControl control)
-        {
-            RequireAlive();
-            NativeArray<CharacterRootOrientationWarpNativeControl> controls =
-                m_FramePages.RootOrientationWarpControls;
-            if ((uint)rootOrientationWarpIndex >=
-                (uint)controls.Length ||
-                !control.IsValid)
-            {
-                throw new ArgumentOutOfRangeException(
-                    nameof(rootOrientationWarpIndex));
-            }
-            controls[rootOrientationWarpIndex] = control;
-        }
-
         internal void SetLinkedPoseGroupSelection(
+            CharacterPoseProgramFramePages framePages,
             in CharacterLinkedPoseGenerationHandle selection)
         {
             RequireAlive();
-            RequireOpenFrame();
+            if (framePages == null)
+                throw new ArgumentNullException(nameof(framePages));
+            if (!framePages.HasOpenFrame)
+            {
+                throw new InvalidOperationException(
+                    "Character Pose Program frame pages are not open.");
+            }
             if (!selection.IsValid)
                 throw new ArgumentException("Linked Pose generation selection is invalid.", nameof(selection));
             NativeArray<AnimationPoseGraphNativeLinkedPoseCallControl> controls =
-                m_FramePages.LinkedPoseCallControls;
+                framePages.LinkedPoseCallControls;
             NativeArray<byte> activeFragments =
-                m_FramePages.LinkedPoseActiveFragments;
+                framePages.LinkedPoseActiveFragments;
             int matchingCallCount = 0;
             for (int callIndex = 0; callIndex < m_LinkedPoseCalls.Length; callIndex++)
             {
@@ -1296,7 +1224,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             }
         }
 
-        void CompilePayloads(CharacterPresentationPosePlan program)
+        void CompilePayloads(
+            CharacterPresentationPosePlan program,
+            CharacterPoseProgramFramePages framePages)
         {
             for (int maskIndex = 0; maskIndex < program.BoneMasks.Count; maskIndex++)
             {
@@ -1351,7 +1281,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                     program.FullBodyIkGoalContributionInputValueIndices[inputIndex];
             }
             NativeArray<CharacterPoseStateMachineNativeControl> controls =
-                m_FramePages.StateMachineControls;
+                framePages.StateMachineControls;
             for (int i = 0; i < program.StateMachines.Count; i++)
             {
                 CharacterPoseStateMachineDescriptor machine = program.StateMachines[i];
@@ -1633,7 +1563,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 throw new InvalidOperationException("Animation Pose Graph native stages do not close the operation range.");
         }
 
-        internal void RequireValid()
+        internal void RequireValid(
+            CharacterPoseProgramFramePages framePages)
         {
             RequireAlive();
             if (m_BoneCount <= 0 || m_ParameterCount <= 0 || m_PoseValueCount <= 0 ||
@@ -1664,7 +1595,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 m_LinkedPoseCallInterfaceIds.Length != m_LinkedPoseCalls.Length ||
                 m_LinkedPoseCandidateImplementationIds == null ||
                 m_LinkedPoseCandidateImplementationIds.Length != m_LinkedPoseCandidates.Length ||
-                m_FramePages == null ||
+                framePages == null ||
                 !m_BoneCounts.IsValid ||
                 m_PelvisBoneIndex < 0 || m_PelvisBoneIndex >= m_BoneCount ||
                 !m_LeftLeg.IsValid(m_BoneCounts.PhysicalBoneCount, m_PelvisBoneIndex) ||
@@ -1676,10 +1607,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 m_OutputValueIndex < 0 || m_OutputValueIndex >= m_PoseValueCount)
                 throw new InvalidOperationException("Animation Pose Graph Native Program is invalid.");
 
-            m_FramePages.RequireValid();
-            if (m_FramePages.RootOrientationWarpControls.Length !=
+            framePages.RequireValid();
+            if (framePages.RootOrientationWarpControls.Length !=
                     m_RootOrientationWarps.Length ||
-                m_FramePages.LinkedPoseCallControls.Length !=
+                framePages.LinkedPoseCallControls.Length !=
                     m_LinkedPoseCalls.Length)
             {
                 throw new InvalidOperationException(
@@ -1704,7 +1635,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             {
                 AnimationPoseGraphNativeLinkedPoseCandidate candidate = m_LinkedPoseCandidates[candidateIndex];
                 if ((uint)candidate.FragmentIndex >=
-                    (uint)m_FramePages.LinkedPoseActiveFragments.Length ||
+                    (uint)framePages.LinkedPoseActiveFragments.Length ||
                     candidate.OutputPoseValueIndex < 0 ||
                     candidate.OutputPoseValueIndex >= m_PoseValueCount ||
                     !m_LinkedPoseCandidateImplementationIds[candidateIndex].IsValid)
@@ -1767,8 +1698,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             if (m_Disposed)
                 return;
             m_Disposed = true;
-            m_FramePages?.Dispose();
-            m_FramePages = null;
             m_LinkedPoseCallGroupIds = null;
             m_LinkedPoseCallInterfaceIds = null;
             m_LinkedPoseCandidateImplementationIds = null;
@@ -1829,12 +1758,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             (interest &
              (AnimationPresentationDiagnosticsInterest.Capture |
               AnimationPresentationDiagnosticsInterest.OperationDetail)) != 0;
-
-        void RequireOpenFrame()
-        {
-            if (!m_FramePages.HasOpenFrame)
-                throw new InvalidOperationException("Character Pose Graph frame is not open.");
-        }
 
         static NativeArray<T> Allocate<T>(int length) where T : struct =>
             new NativeArray<T>(length, Allocator.Persistent, NativeArrayOptions.UninitializedMemory);

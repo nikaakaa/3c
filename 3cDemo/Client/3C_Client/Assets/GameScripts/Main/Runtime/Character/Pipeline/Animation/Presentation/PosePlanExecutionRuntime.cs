@@ -314,16 +314,22 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                 CharacterPoseGraphNativeBinding initialFrame = workspace.BeginFrame(m_CompletionIdentity);
                 AnimationPoseNativeAggregateLayout initialLayout =
                     initialFrame.Layout;
+                programFrames = new CharacterPoseProgramFramePages(
+                    projection.PosePlan.StateMachines.Count,
+                    projection.PosePlan.AnimationSlots.Count,
+                    projection.PosePlan.RootOrientationWarps.Count,
+                    projection.PosePlan.LinkedPoseCalls.Count,
+                    projection.PosePlan.LinkedPoseFragments.Count,
+                    physicalSourceCapacity,
+                    workspace);
+                workspace = null;
                 poseProgram = new CharacterPoseGraphNativeProgram(
                     projection.PosePlan,
                     projection.Rig,
                     projection.BlendCurveCatalog,
                     projection.BlendProfileCatalog,
-                    workspace,
-                    physicalSourceCapacity,
+                    programFrames,
                     in initialLayout);
-                programFrames = poseProgram.FramePages;
-                workspace = null;
                 if (projection.PosePlan.FullBodyIks.Count != 1)
                     throw new InvalidOperationException(
                         "Pose Plan requires exactly one Full Body IK descriptor.");
@@ -407,7 +413,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                     if (route.IsAnimationSlot)
                     {
                         CharacterAnimationSlotNativeControl control = route.NativeControl;
-                        poseProgram.SetAnimationSlotControl(route.AnimationSlotIndex, in control);
+                        programFrames.SetAnimationSlotControl(
+                            route.AnimationSlotIndex,
+                            in control);
                     }
                 }
                 var directPlayerList = new List<AnimationSelectedPosePlayerRuntime>();
@@ -547,6 +555,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                 poseConstraints?.Dispose();
                 poseProgram?.Dispose();
                 inertializationProgram?.Dispose();
+                programFrames?.Dispose();
                 workspace?.Dispose();
                 throw;
             }
@@ -840,7 +849,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                 m_PendingCompletedFrame = default;
                 m_HasPendingCompletedFrame = false;
                 m_PendingFrameOutcome = AnimationPresentationFrameOutcome.None;
-                m_PosePlan.BeginFrame();
+                m_ProgramFrames.BeginFrame();
                 m_ActorDiagnosticsProjector.BeginFrame();
                 PrepareLinkedPoseSelection(linkedPose);
                 m_InertializationPlan.BeginFrame();
@@ -875,8 +884,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                 }
                 if (m_InertializationPlan.HasOpenFrame)
                     m_InertializationPlan.DiscardFrame();
-                if (m_PosePlan.HasOpenFrame)
-                    m_PosePlan.DiscardFrame();
+                if (m_ProgramFrames.HasOpenFrame)
+                    m_ProgramFrames.DiscardFrame();
                 if (sourceOpen)
                     m_SourceModule.DiscardFrame(sourceLease);
                 m_SourceRetirementState.CompleteFrame();
@@ -909,7 +918,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             m_ProgramFrames.CommitEvaluationFrame(
                 m_PendingCompletedFrame.CompletionIdentity);
             m_InertializationPlan.CommitFrame();
-            m_PosePlan.CommitFrame();
+            m_ProgramFrames.CommitFrame();
             m_SourceModule.CommitFrame(sourceLease);
             for (int i = 0; i < m_StackRoutes.Length; i++)
                 m_StackRoutes[i].CommitFrame();
@@ -1084,10 +1093,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                     m_InertializationPlan.DiscardFrame,
                     ref failure);
             }
-            if (m_PosePlan.HasOpenFrame)
+            if (m_ProgramFrames.HasOpenFrame)
             {
                 DiscardStep(
-                    m_PosePlan.DiscardFrame,
+                    m_ProgramFrames.DiscardFrame,
                     ref failure);
             }
             DiscardStep(
@@ -1516,6 +1525,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                     CharacterPoseProgramCommittedDiagnosticsView
                         programDiagnostics =
                             m_PosePlan.CaptureCommittedDiagnostics(
+                                m_ProgramFrames,
                                 in committedProgramResult,
                                 in m_LastCompletedFrame,
                                 interest);
@@ -1826,7 +1836,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                 if (!route.IsAnimationSlot)
                     continue;
                 CharacterAnimationSlotNativeControl control = route.NativeControl;
-                m_PosePlan.SetAnimationSlotControl(route.AnimationSlotIndex, in control);
+                m_ProgramFrames.SetAnimationSlotControl(
+                    route.AnimationSlotIndex,
+                    in control);
             }
             for (int i = 0; i < m_Stacks.Length; i++)
             {
@@ -1858,7 +1870,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                 return;
             m_PoseStateSources.EvaluateTransitions(
                 in factFrame,
-                m_PosePlan,
+                m_ProgramFrames,
                 workspace,
                 lease);
             for (int i = 0; i < m_RootOrientationWarps.Length; i++)
@@ -1871,7 +1883,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                 CharacterRootOrientationWarpNativeControl control =
                     m_RootOrientationWarps[i].Prepare(
                         in factFrame);
-                m_PosePlan.SetRootOrientationWarpControl(
+                m_ProgramFrames.SetRootOrientationWarpControl(
                     i,
                     in control);
             }
@@ -2136,7 +2148,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                         m_PoseStateSources.BlendSpacePlayers[
                             playerIndex];
                     AnimationPlayerPoseNativeWriteBinding write =
-                    m_ProgramFrames.RequirePlayerWriteBinding(
+                        m_ProgramFrames.RequirePlayerWriteBinding(
                             player.PlayerIndex,
                             completionIdentity);
                     CharacterPoseSourceBinding sourceBinding =
@@ -2151,6 +2163,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                 StageCompletedSources(completionIdentity);
                 poseExecutor = new CharacterPoseGraphStagedExecutor(
                     m_PosePlan,
+                    m_ProgramFrames,
                     m_InertializationPlan,
                     m_ProgramFrames.RequirePoseGraphBinding(
                         completionIdentity),
@@ -2701,7 +2714,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                     new CharacterRootOrientationWarpNativeControl(
                         false,
                         0f);
-                m_PosePlan.SetRootOrientationWarpControl(
+                m_ProgramFrames.SetRootOrientationWarpControl(
                     i,
                     in control);
             }
@@ -2765,6 +2778,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             }
             DisposeStep(m_PosePlan.Dispose, ref failure);
             DisposeStep(m_InertializationPlan.Dispose, ref failure);
+            DisposeStep(m_ProgramFrames.Dispose, ref failure);
             DisposeStep(RestoreGraphClock, ref failure);
             if (failure != null)
                 throw failure;
@@ -3240,7 +3254,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                     groups[groupIndex];
                 CharacterLinkedPoseGenerationHandle selection =
                     linkedPose.RequireIncoming(group.GroupId);
-                m_PosePlan.SetLinkedPoseGroupSelection(in selection);
+                m_PosePlan.SetLinkedPoseGroupSelection(
+                    m_ProgramFrames,
+                    in selection);
                 int activeCount = 0;
                 for (int fragmentIndex = 0;
                      fragmentIndex <

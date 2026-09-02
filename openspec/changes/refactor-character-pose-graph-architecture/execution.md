@@ -657,3 +657,11 @@ Unity普通Assets Refresh把新增文件写入正式Runtime工程；补齐现有
 Discard、Reset与Dispose继续在原时机清空Demand，但现在只调用Frame Pages Owner；成功帧仍保留短租约到下一次Demand Begin，生命周期与原实现一致。Source Module的Demand副本只是本Module接收的typed输入，不取得Program Preparation页写权限，也不成为第二Program输出Owner。
 
 至此`CharacterPoseProgramFramePages`已实际持有Pending node control、Source Demand／Preparation输出、Current Value、Operation／Stage Completion、Program失败／Final outcome和Committed diagnostics，任务5.5完成。旧Native Program仍持有静态执行存储及运行Tuning Weight，所以任务5.8不提前完成。`ThirdPersonClient.Runtime.csproj`按规定参数编译成功，0错误，构建服务器已关闭；本步不单独回放。
+
+## Frame Pages脱离旧Native Program所有权
+
+状态：`PosePlanExecutionRuntime`在构造期建立唯一`CharacterPoseProgramFramePages`，把新建Value Workspace的所有权一次交给它，再将同一Frame Pages只读引用用于旧Native Program静态layout核对和Staged Executor帧绑定。旧`CharacterPoseGraphNativeProgram`已删除Frame Pages字段、Frame Pages构造、Frame Pages Dispose、Begin／Commit／Discard与StateMachine／Slot／Root Warp控制写入口；根当前Program Owner直接驱动Frame Pages，Dispose也只执行一次。
+
+`CharacterPoseGraphStagedExecutor`现在显式接收Frame Pages并从该Owner取得五组当前控制页，静态Program只继续提供Operation、Stage、Rig、Blend catalog及其它执行常量。StateMachine transition发布、Slot与Root Warp控制、Linked Pose选择都写入同一Frame Pages；Linked Pose静态candidate解析仍由旧Native Program提供，但必须显式传入当前已打开Frame Pages，不再依赖其内部可变引用。Committed Diagnostics投影同样显式接收同一页Owner。
+
+`ThirdPersonClient.Runtime.csproj`按规定参数编译成功，0错误，构建服务器已关闭。旧Native Program已不持有Frame identity、Pending／Committed控制页或diagnostics页；任务5.8仍不勾选，因为`SetOperationWeight`仍直接修改Native Operation，必须在Program-owned Candidate Tuning Snapshot建立时删除。

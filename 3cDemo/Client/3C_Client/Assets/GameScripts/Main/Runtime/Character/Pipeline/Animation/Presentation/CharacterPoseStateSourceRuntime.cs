@@ -720,16 +720,16 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
 
         internal void EvaluateTransitions(
             in CharacterPresentationFactFrame factFrame,
-            CharacterPoseGraphNativeProgram nativePlan,
+            CharacterPoseProgramFramePages framePages,
             PresentationFrameWorkspace workspace,
             PresentationFrameWorkspaceLease lease)
         {
             if (!factFrame.IsValid)
                 throw new ArgumentException(
                     "Pose State fact frame is invalid.");
-            if (nativePlan == null)
+            if (framePages == null)
                 throw new ArgumentNullException(
-                    nameof(nativePlan));
+                    nameof(framePages));
             if (workspace == null ||
                 !lease.IsValid)
             {
@@ -764,7 +764,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                 }
                 CharacterPoseStateMachineNativeControl control =
                     machine.BuildNativeControl();
-                nativePlan.SetStateMachineControl(
+                framePages.SetStateMachineControl(
                     machine.Index,
                     in control);
             }

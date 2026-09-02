@@ -164,6 +164,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             m_Workspace.PendingCompletionIdentity;
         internal long DenseDoublePageResidentPayloadBytes =>
             m_Workspace.DenseDoublePageResidentPayloadBytes;
+        internal AnimationPoseNativeAggregateLayout EvaluationLayout =>
+            m_Workspace.Layout;
         internal CommittedDiagnosticsPage CommittedDiagnostics =>
             m_CommittedDiagnostics ??
             throw new InvalidOperationException(
@@ -263,6 +265,43 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                     "Character Pose Program source demand is stale.");
             }
             return current;
+        }
+
+        internal void SetStateMachineControl(
+            int stateMachineIndex,
+            in CharacterPoseStateMachineNativeControl control)
+        {
+            NativeArray<CharacterPoseStateMachineNativeControl> controls =
+                StateMachineControls;
+            if ((uint)stateMachineIndex >= (uint)controls.Length)
+                throw new ArgumentOutOfRangeException(nameof(stateMachineIndex));
+            controls[stateMachineIndex] = control;
+        }
+
+        internal void SetAnimationSlotControl(
+            int animationSlotIndex,
+            in CharacterAnimationSlotNativeControl control)
+        {
+            NativeArray<CharacterAnimationSlotNativeControl> controls =
+                AnimationSlotControls;
+            if ((uint)animationSlotIndex >= (uint)controls.Length)
+                throw new ArgumentOutOfRangeException(nameof(animationSlotIndex));
+            controls[animationSlotIndex] = control;
+        }
+
+        internal void SetRootOrientationWarpControl(
+            int rootOrientationWarpIndex,
+            in CharacterRootOrientationWarpNativeControl control)
+        {
+            NativeArray<CharacterRootOrientationWarpNativeControl> controls =
+                RootOrientationWarpControls;
+            if ((uint)rootOrientationWarpIndex >= (uint)controls.Length ||
+                !control.IsValid)
+            {
+                throw new ArgumentOutOfRangeException(
+                    nameof(rootOrientationWarpIndex));
+            }
+            controls[rootOrientationWarpIndex] = control;
         }
 
         internal int AddSourcePreparation(

@@ -257,12 +257,18 @@ namespace ThirdPersonCharacter.Pipeline.Animation
 
         internal CharacterPoseGraphStagedExecutor(
             CharacterPoseGraphNativeProgram program,
+            CharacterPoseProgramFramePages framePages,
             PoseInertializationNativeProgram inertializationProgram,
             CharacterPoseGraphNativeBinding binding,
             CharacterPoseConstraintRuntime poseConstraints,
             bool recordDiagnostics)
         {
-            RequireValidConfiguration(program, inertializationProgram, binding, poseConstraints);
+            RequireValidConfiguration(
+                program,
+                framePages,
+                inertializationProgram,
+                binding,
+                poseConstraints);
 
             m_Operations = program.Operations;
             m_Stages = program.Stages;
@@ -278,13 +284,14 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             m_Inertializations = inertializationProgram.Nodes;
             m_ModifyBones = program.ModifyBones;
             m_RootOrientationWarps = program.RootOrientationWarps;
-            m_RootOrientationWarpControls = program.RootOrientationWarpControls;
+            m_RootOrientationWarpControls =
+                framePages.RootOrientationWarpControls;
             m_LinkedPoseCalls = program.LinkedPoseCalls;
             m_LinkedPoseCandidates = program.LinkedPoseCandidates;
-            m_LinkedPoseCallControls = program.LinkedPoseCallControls;
-            m_LinkedPoseActiveFragments = program.LinkedPoseActiveFragments;
-            m_StateMachineControls = program.StateMachineControls;
-            m_AnimationSlotControls = program.AnimationSlotControls;
+            m_LinkedPoseCallControls = framePages.LinkedPoseCallControls;
+            m_LinkedPoseActiveFragments = framePages.LinkedPoseActiveFragments;
+            m_StateMachineControls = framePages.StateMachineControls;
+            m_AnimationSlotControls = framePages.AnimationSlotControls;
             m_InertialRules = inertializationProgram.Rules;
             m_InertialCurveSegments = inertializationProgram.CurveSegments;
             m_InertialDenseProfiles = inertializationProgram.DenseProfiles;
@@ -4001,13 +4008,16 @@ namespace ThirdPersonCharacter.Pipeline.Animation
 
         static void RequireValidConfiguration(
             CharacterPoseGraphNativeProgram program,
+            CharacterPoseProgramFramePages framePages,
             PoseInertializationNativeProgram inertializationProgram,
             CharacterPoseGraphNativeBinding binding,
             CharacterPoseConstraintRuntime poseConstraints)
         {
             if (program == null)
                 throw new ArgumentNullException(nameof(program));
-            program.RequireValid();
+            if (framePages == null)
+                throw new ArgumentNullException(nameof(framePages));
+            program.RequireValid(framePages);
             if (poseConstraints == null ||
                 program.FullBodyIkCount != 1 ||
                 !poseConstraints.MatchesCompiledLayout(
@@ -4089,7 +4099,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                     operation.FullBodyIkGoalContributionInputCount < 0 ||
                     operation.LinkedPoseCallIndex < -1 ||
                     operation.LinkedPoseFragmentIndex < -1 ||
-                    operation.LinkedPoseFragmentIndex >= program.LinkedPoseActiveFragments.Length ||
+                    operation.LinkedPoseFragmentIndex >=
+                    framePages.LinkedPoseActiveFragments.Length ||
                     !float.IsFinite(operation.Weight) || operation.Weight < 0f || operation.Weight > 1f)
                 {
                     throw new ArgumentException($"Animation Pose Graph Native Job operation #{i} is invalid.", nameof(program));
@@ -4117,7 +4128,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                         inputA && operation.InputValueIndexB == -1 &&
                         operation.PhysicalPlayerIndex >= 0 && operation.PhysicalPlayerIndex < layout.PlayerCount &&
                         operation.AnimationSlotIndex >= 0 &&
-                        operation.AnimationSlotIndex < program.AnimationSlotControls.Length &&
+                        operation.AnimationSlotIndex <
+                        framePages.AnimationSlotControls.Length &&
                         inertializationProgram.SlotNodeOffset + operation.AnimationSlotIndex <
                         inertializationProgram.Nodes.Length &&
                         operation.AnimationSelectionAvailabilityPolicy == AnimationSelectionAvailabilityPolicy.AllowEmpty &&
@@ -4207,7 +4219,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                     CharacterPoseOperationCode.PoseStateMachine =>
                         operation.InputValueIndexA == -1 && operation.InputValueIndexB == -1 &&
                         operation.StateMachineIndex >= 0 &&
-                        operation.StateMachineIndex < program.StateMachineControls.Length,
+                        operation.StateMachineIndex <
+                        framePages.StateMachineControls.Length,
                     CharacterPoseOperationCode.OutputPose =>
                         inputA && operation.InputValueIndexB == -1 && operation.BoneMaskOffset == -1 &&
                         operation.AdditiveReferenceOffset == -1 && operation.ParameterPolicyOffset == -1,

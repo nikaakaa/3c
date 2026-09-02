@@ -606,6 +606,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                     symbolic.InputPoseSpace,
                     symbolic.OutputPoseSpace,
                     code,
+                    symbolic.Family,
                     scopedNodeId,
                     provider,
                     sourceIndex,

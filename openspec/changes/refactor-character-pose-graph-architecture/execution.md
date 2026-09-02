@@ -1079,3 +1079,9 @@ Program Runtime是新Executor的唯一Owner，入口同步改为`BeginEvaluation
 状态：新增Editor内部`CharacterPoseBoundOperation`作为Bind Family Payload Pass的唯一物理绑定结果。Stage Schedule、Value Lifetime与Workspace Plan只读取该编译期结果；`CharacterPresentationPoseOperation`不再穿过多个编译Pass，只在Seal Program Image边界由逐字段映射一次生成当前Runtime ABI。
 
 本步没有新增运行时读取路径，也没有改变字段值、Operation顺序、Hash输入或Program Image序列化结果；它把后续分段Header／Family Payload替换限制在Seal边界，避免Runtime万能记录继续反向约束前置Pass。3C MCP完成脚本重编，相关`CharacterPose`错误筛选仅剩既有Import Error；不单独运行回放。
+
+## 固定Operation Code与Family对应关系
+
+状态：Runtime ABI新增唯一`CharacterPoseOperationFamilies.RequireFamily`，覆盖全部现行Operation Code。编译期Bound Operation显式携带Symbolic Family并立即核对Code／Family；Stage Schedule同时核对Symbolic与Bound结果。State Graph内部合成的`StatePoseOutput`明确归入StateMachine Family，不再沿用作者Output节点的Final Output Family。
+
+本步只固定后续Header与Payload页的归属事实，没有改变现有Program Image字段、Hash、Stage顺序或Runtime执行数据。3C MCP完成脚本重编，相关`CharacterPose`错误筛选仅剩既有Import Error；不单独运行回放。

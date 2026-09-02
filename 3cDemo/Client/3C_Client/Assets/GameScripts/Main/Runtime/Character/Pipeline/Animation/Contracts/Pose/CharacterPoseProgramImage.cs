@@ -72,6 +72,64 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         Output = 18
     }
 
+    public static class CharacterPoseOperationFamilies
+    {
+        public static CharacterPoseOperationFamily RequireFamily(
+            CharacterPoseOperationCode code) => code switch
+        {
+            CharacterPoseOperationCode.ProgramParameterInput =>
+                CharacterPoseOperationFamily.ParameterInput,
+            CharacterPoseOperationCode.PoseParameterResolve =>
+                CharacterPoseOperationFamily.ParameterResolve,
+            CharacterPoseOperationCode.SelectedPosePlayer or
+            CharacterPoseOperationCode.ClipPlayer or
+            CharacterPoseOperationCode.BlendSpacePlayer =>
+                CharacterPoseOperationFamily.Player,
+            CharacterPoseOperationCode.StatePoseOutput or
+            CharacterPoseOperationCode.PoseStateMachine =>
+                CharacterPoseOperationFamily.StateMachine,
+            CharacterPoseOperationCode.ActionPlaybackInput =>
+                CharacterPoseOperationFamily.ActionInput,
+            CharacterPoseOperationCode.AnimationSlot =>
+                CharacterPoseOperationFamily.AnimationSlot,
+            CharacterPoseOperationCode.BlendStack or
+            CharacterPoseOperationCode.BlendPose =>
+                CharacterPoseOperationFamily.Blend,
+            CharacterPoseOperationCode.Inertialization =>
+                CharacterPoseOperationFamily.Inertialization,
+            CharacterPoseOperationCode.LayeredBoneBlend or
+            CharacterPoseOperationCode.AdditivePose =>
+                CharacterPoseOperationFamily.Composition,
+            CharacterPoseOperationCode.LocalToComponentPose or
+            CharacterPoseOperationCode.ComponentToLocalPose =>
+                CharacterPoseOperationFamily.SpaceConversion,
+            CharacterPoseOperationCode.ModifyBone or
+            CharacterPoseOperationCode.RootOrientationWarp =>
+                CharacterPoseOperationFamily.ComponentControl,
+            CharacterPoseOperationCode.MotionMatchingPose or
+            CharacterPoseOperationCode.MotionMatchingChooserResolve or
+            CharacterPoseOperationCode.MotionMatchingEntrySourceCapture or
+            CharacterPoseOperationCode.MotionMatchingEntryProcessing or
+            CharacterPoseOperationCode.MotionMatchingInternalBlend =>
+                CharacterPoseOperationFamily.MotionMatching,
+            CharacterPoseOperationCode.PoseHistoryRead or
+            CharacterPoseOperationCode.PoseHistoryCommit =>
+                CharacterPoseOperationFamily.PoseHistory,
+            CharacterPoseOperationCode.FootPlacement or
+            CharacterPoseOperationCode.PoseBoneIKGoals =>
+                CharacterPoseOperationFamily.GoalContribution,
+            CharacterPoseOperationCode.FullBodyIkGoalAssembler =>
+                CharacterPoseOperationFamily.GoalAssembler,
+            CharacterPoseOperationCode.FullBodyIK =>
+                CharacterPoseOperationFamily.FullBodyIk,
+            CharacterPoseOperationCode.LinkedPoseCall =>
+                CharacterPoseOperationFamily.LinkedPose,
+            CharacterPoseOperationCode.OutputPose =>
+                CharacterPoseOperationFamily.Output,
+            _ => throw new ArgumentOutOfRangeException(nameof(code))
+        };
+    }
+
     [Serializable]
     public sealed class CharacterPresentationPoseParameterEntry
     {

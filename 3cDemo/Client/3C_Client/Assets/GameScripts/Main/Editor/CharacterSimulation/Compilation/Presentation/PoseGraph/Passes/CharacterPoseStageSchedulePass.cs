@@ -259,6 +259,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                 symbolic.Sequence != index ||
                 symbolic.NodeId != operation.NodeId ||
                 symbolic.OperationCode != operation.Code ||
+                symbolic.Family != operation.Family ||
                 symbolic.ExecutionDomain != operation.ExecutionDomain ||
                 symbolic.InputPoseSpace != operation.InputPoseSpace ||
                 symbolic.OutputPoseSpace != operation.OutputPoseSpace)

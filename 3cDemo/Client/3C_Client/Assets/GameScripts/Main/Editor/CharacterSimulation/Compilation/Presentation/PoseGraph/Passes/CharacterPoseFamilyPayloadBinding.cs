@@ -13,6 +13,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             CharacterPoseSpace inputPoseSpace,
             CharacterPoseSpace outputPoseSpace,
             CharacterPoseOperationCode code,
+            CharacterPoseOperationFamily family,
             PoseNodeId nodeId,
             PresentationPoseSourceProviderId presentationPoseSourceProviderId,
             PresentationPoseSourceIndex presentationPoseSourceIndex,
@@ -53,6 +54,9 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                 !Enum.IsDefined(typeof(CharacterPoseSpace), inputPoseSpace) ||
                 !Enum.IsDefined(typeof(CharacterPoseSpace), outputPoseSpace) ||
                 !Enum.IsDefined(typeof(CharacterPoseOperationCode), code) ||
+                !Enum.IsDefined(typeof(CharacterPoseOperationFamily), family) ||
+                family == CharacterPoseOperationFamily.None ||
+                CharacterPoseOperationFamilies.RequireFamily(code) != family ||
                 !nodeId.IsValid ||
                 !float.IsFinite(weight) || weight < 0f || weight > 1f ||
                 outputFullBodyIkGoalContributionValueIndex < -1 ||
@@ -75,6 +79,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             InputPoseSpace = inputPoseSpace;
             OutputPoseSpace = outputPoseSpace;
             Code = code;
+            Family = family;
             NodeId = nodeId;
             PresentationPoseSourceProviderId =
                 presentationPoseSourceProviderId;
@@ -123,6 +128,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
         internal CharacterPoseSpace InputPoseSpace { get; }
         internal CharacterPoseSpace OutputPoseSpace { get; }
         internal CharacterPoseOperationCode Code { get; }
+        internal CharacterPoseOperationFamily Family { get; }
         internal PoseNodeId NodeId { get; }
         internal PresentationPoseSourceProviderId PresentationPoseSourceProviderId { get; }
         internal PresentationPoseSourceIndex PresentationPoseSourceIndex { get; }

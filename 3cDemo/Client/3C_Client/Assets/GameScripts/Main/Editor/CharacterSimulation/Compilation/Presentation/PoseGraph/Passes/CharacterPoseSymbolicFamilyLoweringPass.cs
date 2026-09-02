@@ -429,6 +429,10 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                             : definition.OperationCode;
                     if (code == CharacterPoseOperationCode.StatePoseOutput)
                         domain = CharacterPoseExecutionDomain.PurePose;
+                    CharacterPoseOperationFamily family =
+                        code == CharacterPoseOperationCode.StatePoseOutput
+                            ? CharacterPoseOperationFamily.StateMachine
+                            : definition.OperationFamily;
                     var inputs = new List<
                         CharacterPoseSymbolicValueReference>(
                         irNode.Inputs.Count + hiddenInputs.Count);
@@ -464,7 +468,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                         scopedNodeId,
                         definition.Kind,
                         code,
-                        definition.OperationFamily,
+                        family,
                         domain,
                         ResolvePoseSpace(
                             node,

@@ -140,6 +140,13 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             };
             values.AddRange(binding.GraphDependencies.Select(
                 value => "graph:" + value));
+            for (int i = 0; i < binding.SourceMap.Length; i++)
+            {
+                CharacterPresentationPoseSourceMapEntry source =
+                    binding.SourceMap[i];
+                values.Add(
+                    $"source-map:{source.OperationIndex}:{source.GraphId}:{source.NodeId}:{source.CallSite}");
+            }
             for (int i = 0; i < payloads.Parameters.Length; i++)
             {
                 CharacterPresentationPoseParameterEntry parameter =

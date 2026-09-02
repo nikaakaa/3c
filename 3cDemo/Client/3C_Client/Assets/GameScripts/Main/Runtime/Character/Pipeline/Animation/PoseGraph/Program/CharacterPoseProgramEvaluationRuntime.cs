@@ -14,6 +14,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         readonly CharacterPoseWorldContextAdapter m_WorldContext;
         readonly CharacterPoseProgramSourcePreparationRuntime
             m_SourcePreparation;
+        readonly CharacterPoseProgramCommittedDiagnosticsProjector
+            m_Diagnostics;
         readonly CharacterPoseProgramEvaluationState m_State =
             new CharacterPoseProgramEvaluationState();
 
@@ -23,7 +25,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             CharacterPoseProgramFramePages framePages,
             CharacterPoseProgramExecutor executor,
             CharacterPoseWorldContextAdapter worldContext,
-            CharacterPoseProgramSourcePreparationRuntime sourcePreparation)
+            CharacterPoseProgramSourcePreparationRuntime sourcePreparation,
+            CharacterPoseProgramCommittedDiagnosticsProjector diagnostics)
         {
             m_ExecutionView = executionView ??
                 throw new ArgumentNullException(nameof(executionView));
@@ -37,6 +40,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 throw new ArgumentNullException(nameof(worldContext));
             m_SourcePreparation = sourcePreparation ??
                 throw new ArgumentNullException(nameof(sourcePreparation));
+            m_Diagnostics = diagnostics ??
+                throw new ArgumentNullException(nameof(diagnostics));
         }
 
         internal bool HasPrepared => m_State.HasPrepared;
@@ -217,13 +222,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation
 
         internal CharacterPoseProgramCommittedDiagnosticsView
             CaptureCommittedDiagnostics(
-                CharacterPoseProgramCommittedDiagnosticsProjector projector,
                 in CharacterPoseProgramResult result,
                 in CharacterFinalPoseCommittedDiagnosticsView finalOutput,
                 AnimationPresentationDiagnosticsInterest interest)
         {
-            if (projector == null)
-                throw new ArgumentNullException(nameof(projector));
             if (!m_State.HasCommitted)
             {
                 throw new InvalidOperationException(
@@ -231,7 +233,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             }
             CharacterPoseGraphNativeBinding committed =
                 m_State.RequireCommitted();
-            return projector.Capture(
+            return m_Diagnostics.Capture(
                 m_FramePages,
                 in result,
                 in committed,

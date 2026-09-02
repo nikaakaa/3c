@@ -17,10 +17,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
         readonly AnimationPresentationRuntimeSnapshotPublisher m_Publisher;
         readonly CharacterFootIkCommittedCaptureViewProjector
             m_FootIkProjector;
-        readonly CharacterPoseActorCommittedDiagnosticsProjector
-            m_ActorProjector;
-        readonly CharacterPoseProgramCommittedDiagnosticsProjector
-            m_ProgramProjector;
         readonly CharacterPoseCommittedDiagnosticsEventPublisher
             m_EventPublisher;
         bool m_Disposed;
@@ -29,7 +25,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
             CharacterPresentationProjection projection,
             in AnimationPoseNativeAggregateLayout initialLayout,
             int physicalSourceCapacity,
-            CharacterPoseProgramExecutionView executionView,
             CharacterPoseCommittedDiagnosticsEventPublisher eventPublisher)
         {
             m_EventPublisher = eventPublisher ??
@@ -40,14 +35,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
                 physicalSourceCapacity);
             m_FootIkProjector =
                 new CharacterFootIkCommittedCaptureViewProjector();
-            m_ActorProjector =
-                new CharacterPoseActorCommittedDiagnosticsProjector(
-                    projection,
-                    in initialLayout);
-            m_ProgramProjector =
-                new CharacterPoseProgramCommittedDiagnosticsProjector(
-                    executionView ??
-                    throw new ArgumentNullException(nameof(executionView)));
         }
 
         internal bool HasCurrent => m_Publisher.HasCurrent;
@@ -59,12 +46,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
             m_Publisher.NoInterestSkipCount;
         internal bool HasFootCaptureInterest =>
             m_EventPublisher.HasFootCaptureInterest;
-
-        internal void BeginFrame()
-        {
-            RequireAlive();
-            m_ActorProjector.BeginFrame();
-        }
 
         internal void SetPoseWatchInterests(
             Guid ownerId,
@@ -195,17 +176,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
                 bool requiresPhysical = CharacterFinalPosePublication
                     .RequiresPhysicalDiagnostics(interest);
                 CharacterPoseActorCommittedDiagnosticsView actorDiagnostics =
-                    m_ActorProjector.Capture(
+                    program.CaptureCommittedActorDiagnostics(
                         in programResult,
-                        program.Stacks,
-                        program.Routes,
-                        program.PoseStateSources.StateMachines,
-                        program.Inertialization,
-                        program.PoseStateSources.ClipPlayers,
-                        program.PoseStateSources.BlendSpacePlayers,
-                        program.RootOrientationWarps,
-                        interest,
-                        false);
+                        interest);
                 CharacterPoseConstraintCommittedDiagnosticsView
                     constraintDiagnostics =
                         constraints.CaptureCommittedDiagnostics(
@@ -263,7 +236,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
                     CharacterPoseProgramCommittedDiagnosticsView
                         programDiagnostics =
                             program.CaptureCommittedDiagnostics(
-                                m_ProgramProjector,
                                 in programResult,
                                 in publicationDiagnostics,
                                 interest);
@@ -342,7 +314,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
         {
             RequireAlive();
             Invalidate();
-            m_ActorProjector.Reset();
         }
 
         internal void Invalidate()

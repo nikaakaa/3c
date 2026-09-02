@@ -144,7 +144,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 publicationOpen = true;
                 m_PendingOutcome = AnimationPresentationFrameOutcome.None;
                 m_Program.BeginFrame(programLease);
-                m_Diagnostics.BeginFrame();
                 m_Program.BeginActorStateFrame(
                     programLease,
                     linkedPose,

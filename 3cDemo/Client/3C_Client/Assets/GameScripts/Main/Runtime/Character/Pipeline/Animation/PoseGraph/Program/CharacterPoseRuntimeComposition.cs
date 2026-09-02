@@ -373,11 +373,17 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                     executionView.FullBodyIkContributionGoalCount,
                     projection.Rig.RigId,
                     projection.Rig.RigRevision);
+                var actorDiagnostics =
+                    new CharacterPoseActorCommittedDiagnosticsProjector(
+                        projection,
+                        in initialLayout);
+                var programDiagnostics =
+                    new CharacterPoseProgramCommittedDiagnosticsProjector(
+                        executionView);
                 diagnostics = new CharacterPoseDiagnosticsRuntime(
                     projection,
                     in initialLayout,
                     physicalSourceCapacity,
-                    executionView,
                     diagnosticsEventPublisher);
                 source = new CharacterPoseSourceModule(
                     animancer,
@@ -443,7 +449,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                         source,
                         publication),
                     constraints,
-                    presentationWorkspace);
+                    presentationWorkspace,
+                    actorDiagnostics,
+                    programDiagnostics);
                 return new CharacterPoseRuntimeComposition(
                     animancer,
                     program,

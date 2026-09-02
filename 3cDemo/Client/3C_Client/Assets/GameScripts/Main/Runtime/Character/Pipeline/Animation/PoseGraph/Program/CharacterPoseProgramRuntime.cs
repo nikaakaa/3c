@@ -25,6 +25,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         readonly CharacterPoseProgramSourceRetirementRuntime
             m_SourceRetirement;
         readonly CharacterPoseProgramActorRuntime m_ActorRuntime;
+        readonly CharacterPoseActorCommittedDiagnosticsProjector
+            m_ActorDiagnostics;
         CharacterPoseProgramFrameLease m_ActiveFrameLease;
         CharacterPoseProgramFrameLease m_CommittingFrameLease;
         bool m_Disposed;
@@ -39,7 +41,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             CharacterPoseSourceModule sourceModule,
             CharacterPoseWorldContextAdapter worldContext,
             CharacterPoseConstraintRuntime poseConstraints,
-            PresentationFrameWorkspace presentationWorkspace)
+            PresentationFrameWorkspace presentationWorkspace,
+            CharacterPoseActorCommittedDiagnosticsProjector actorDiagnostics,
+            CharacterPoseProgramCommittedDiagnosticsProjector
+                programDiagnostics)
         {
             AnimancerComponent animancerComponent = animancer ? animancer :
                 throw new ArgumentNullException(nameof(animancer));
@@ -59,6 +64,11 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 throw new ArgumentNullException(nameof(worldContext));
             m_PresentationWorkspace = presentationWorkspace ??
                 throw new ArgumentNullException(nameof(presentationWorkspace));
+            m_ActorDiagnostics = actorDiagnostics ??
+                throw new ArgumentNullException(nameof(actorDiagnostics));
+            CharacterPoseProgramCommittedDiagnosticsProjector diagnostics =
+                programDiagnostics ??
+                throw new ArgumentNullException(nameof(programDiagnostics));
             CharacterPoseConstraintRuntime constraintRuntime = poseConstraints ??
                 throw new ArgumentNullException(nameof(poseConstraints));
             m_Action = new CharacterPoseProgramActionRuntime(
@@ -94,7 +104,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 FramePages,
                 Executor,
                 world,
-                m_SourcePreparation);
+                m_SourcePreparation,
+                diagnostics);
             m_MotionMatching =
                 new CharacterPoseProgramMotionMatchingRuntime(
                     image,
@@ -519,6 +530,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                     "Character Pose Program frame cannot begin.");
             }
             FramePages.BeginFrame();
+            m_ActorDiagnostics.BeginFrame();
             m_ActiveFrameLease = lease;
         }
 
@@ -842,6 +854,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             ResetEvaluation();
             FramePages.ClearSourceDemand();
             ActorState.Inertialization.Reset();
+            m_ActorDiagnostics.Reset();
         }
 
         internal void ResetBlendState(ulong completionIdentity)
@@ -935,17 +948,34 @@ namespace ThirdPersonCharacter.Pipeline.Animation
 
         internal CharacterPoseProgramCommittedDiagnosticsView
             CaptureCommittedDiagnostics(
-                CharacterPoseProgramCommittedDiagnosticsProjector projector,
                 in CharacterPoseProgramResult result,
                 in CharacterFinalPoseCommittedDiagnosticsView finalOutput,
                 AnimationPresentationDiagnosticsInterest interest)
         {
             RequireAlive();
             return m_Evaluation.CaptureCommittedDiagnostics(
-                projector,
                 in result,
                 in finalOutput,
                 interest);
+        }
+
+        internal CharacterPoseActorCommittedDiagnosticsView
+            CaptureCommittedActorDiagnostics(
+                in CharacterPoseProgramResult result,
+                AnimationPresentationDiagnosticsInterest interest)
+        {
+            RequireAlive();
+            return m_ActorDiagnostics.Capture(
+                in result,
+                ActorState.Stacks,
+                ActorState.Routes,
+                ActorState.PoseStateSources.StateMachines,
+                ActorState.Inertialization,
+                ActorState.PoseStateSources.ClipPlayers,
+                ActorState.PoseStateSources.BlendSpacePlayers,
+                ActorState.RootOrientationWarps,
+                interest,
+                false);
         }
 
         internal string PrepareTuningCandidate(

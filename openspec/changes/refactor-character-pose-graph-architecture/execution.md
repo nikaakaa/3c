@@ -1213,3 +1213,9 @@ Motion Matching节点、History边、Entry Graph容量、Blend catalog、Provide
 状态：Program Image schema固定为v24、Runtime ABI固定为v27，Source Map的Operation／Graph／Node／CallSite现已进入PoseProgramImageHash；Runtime只从`CharacterPresentationProjection.PosePlan`建立同identity的actor-local Execution View，没有旧schema reader、运行时补齐或动态Compile。Gameplay Semantic Contract与Projection顶层Program／Semantic／Contract Hash代码相对指定基线未修改。任务12.5完成。
 
 全仓构造点逐项核对为：一个Program Image Seal、一个Execution View Factory、一个Program Evaluation State、一个根Frame Transaction、一个Action Playback、一个Source Module、一个Operation Executor、一个Constraint Runtime、一个Goal Assembler、一个FBBIK Solver、一个Final Publication和一个Physical Writer。Runtime Pose链搜索不存在authoring asset、NodeKind、AssetDatabase、旧Projection版本分支或动态编译。任务14.3与14.4完成。
+
+## 归还Program诊断页投影所有权
+
+状态：Actor State与Program Evaluation的Committed Diagnostics Projector已从`CharacterPoseDiagnosticsRuntime`移入唯一`CharacterPoseProgramRuntime`。Program在根Frame打开时失效自己的Actor诊断页、Reset时清理，并只通过两个Committed View入口向外发布；Diagnostics Runtime不再持有Execution View，也不再接收Stack、Route、StateMachine、Inertialization、Clip、BlendSpace或Root Warp集合。
+
+Actor与Program诊断字段、interest条件、快照排序和读取的Committed Evaluation binding保持不变；这里只收紧Owner，尚未改变外部Foot采样链。3C MCP完成全脚本重编且C#错误为0，不单独运行回放。

@@ -50,7 +50,7 @@
 - [x] 6.1 在独立analysis workflow registry增加Analyze Last、Analyze Existing、Open Last Report状态与路径，并由Foot Editor workflow显式调用统一Analyzer，确认Stop只封存采样、分析写入Capture目录外的独立结果目录
 - [x] 6.2 接入Gameplay Launcher的Analyze Last、Analyze Existing与Open Last Report按钮，只显示分析状态、失败和结果路径，确认绘制回调不解析CSV或执行Operator
 - [x] 6.3 接入Foot MCP并复用同一分析入口和状态，通过MCP合同检查确认没有第二套Reader、规则registry或报告路径
-- [ ] 6.4 把固定输入回放的最小证据读取迁到通用Artifact Reader，通过Editor程序集编译和引用搜索确认不再直接维护CSV header／Field字符串解析器
+- [x] 6.4 把固定输入回放的最小证据读取迁到通用Artifact Reader，通过Editor程序集编译和引用搜索确认不再直接维护CSV header／Field字符串解析器
 
 ## 7. 构建闭包与规格收口
 

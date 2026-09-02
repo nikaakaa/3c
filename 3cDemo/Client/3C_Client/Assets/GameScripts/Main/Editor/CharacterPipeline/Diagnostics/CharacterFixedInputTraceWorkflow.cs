@@ -636,13 +636,24 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 throw new InvalidOperationException(
                     "Presentation Schedule capture evidence is incomplete.");
             }
+            CharacterFixedInputPresentationScheduleEvidence evidence =
+                CharacterFixedInputPresentationScheduleEvidenceRegistry
+                    .Require()
+                    .Analyze(CharacterFootDiagnosticSampling.LastManifestPath);
             var representative =
-                CharacterFixedInputPresentationScheduleEvidenceAnalyzer.Analyze(
-                    CharacterFootDiagnosticSampling.LastSavedPath,
-                    CharacterFootDiagnosticSampling.GetArtifactPath(
-                        "ground-contacts"),
-                    CharacterFootDiagnosticSampling.GetArtifactPath(
-                        "ground-envelope"));
+                new CharacterFixedInputPresentationScheduleRepresentativeEvidence(
+                    evidence.AcceptedEnvelopeRowCount,
+                    evidence.CorridorOutsideEnvelopeRowCount,
+                    evidence.ClampAboveTenCentimetersOutsideCorridorCount,
+                    evidence.MaximumOutsideCorridorClampMeters,
+                    evidence.VerticalEndpointEventCount,
+                    evidence.RepresentativeFrameSequence,
+                    evidence.RepresentativeSide,
+                    evidence.LandingSurfaceIdentity,
+                    evidence.VerticalSurfaceIdentity,
+                    evidence.LandingHeight,
+                    evidence.VerticalEdgeUpperHeight,
+                    evidence.VerticalSeparationMeters);
             CharacterFixedInputPresentationScheduleBinding binding =
                 BuildPresentationScheduleBinding(trace);
             CharacterFixedInputPresentationSchedule schedule =
@@ -677,11 +688,14 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 s_LastPresentationScheduleFrames ??
                 throw new InvalidOperationException(
                     "Scheduled replay completion has no Schedule frame evidence.");
-            var coverage =
-                CharacterFixedInputPresentationScheduleEvidenceAnalyzer
+            CharacterFixedInputPresentationScheduleFootCoverage coverage =
+                CharacterFixedInputPresentationScheduleEvidenceRegistry
+                    .Require()
                     .AnalyzeCoverage(
-                        CharacterFootDiagnosticSampling.LastSavedPath,
-                        scheduleFrames);
+                        CharacterFootDiagnosticSampling.LastManifestPath,
+                        scheduleFrames
+                            .Select(frame => frame.RenderFrame)
+                            .ToArray());
             CharacterFixedInputPresentationScheduleBinding binding =
                 BuildPresentationScheduleBinding(trace);
             CharacterFixedInputScheduledReplayProofResult result =

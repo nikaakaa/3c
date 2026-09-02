@@ -626,6 +626,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     m_PoseRuntime.PrepareEvaluation(
                         transaction.SourceLease,
                         in sourceDemand,
+                        transaction.PublicationLease,
                         presentationDeltaSeconds,
                         m_ActionSourceSamples,
                         m_ProviderSourceSamples,

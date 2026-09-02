@@ -66,10 +66,12 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         internal CharacterPoseGraphStagedExecutor BindExecutor(
             in CharacterPoseProgramTuningView tuning,
             CharacterPoseGraphNativeBinding binding,
+            in CharacterFinalPosePublicationOutputBinding finalOutput,
             bool recordDiagnostics) =>
             Executor.BindFrame(
                 in tuning,
                 binding,
+                in finalOutput,
                 recordDiagnostics);
 
         internal void SetLinkedPoseGroupSelection(

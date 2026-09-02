@@ -17,6 +17,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 if (stateMachineCount < 0)
                     throw new ArgumentOutOfRangeException(nameof(stateMachineCount));
                 Layout = layout;
+                OutputValueIndex = layout.OutputValueIndex;
                 StateMachineCount = stateMachineCount;
                 OperationCompletions =
                     new CharacterPoseOperationCompletion[layout.OperationCount];
@@ -35,6 +36,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 ValueContributions =
                     new AnimationPrimitivePoseContribution[
                         layout.PoseValueContributionCapacity];
+                FinalOutputContributions =
+                    new AnimationPoseSourceContribution[
+                        layout.PoseValueContributionStride];
                 ValueDenseContributionWeights =
                     new float[layout.PoseValueDenseContributionWeightCapacity];
                 ValueContributionCounts = new int[layout.PoseValueCount];
@@ -50,6 +54,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             internal CharacterPoseProgramResult Result;
             internal AnimationPresentationDiagnosticsInterest Interest;
             internal readonly AnimationPoseNativeAggregateLayout Layout;
+            internal readonly int OutputValueIndex;
             internal readonly int StateMachineCount;
             internal readonly CharacterPoseOperationCompletion[]
                 OperationCompletions;
@@ -62,6 +67,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             internal readonly AnimationLocalBonePose[] ValueDenseLocalPoses;
             internal readonly AnimationPrimitivePoseContribution[]
                 ValueContributions;
+            internal readonly AnimationPoseSourceContribution[]
+                FinalOutputContributions;
             internal readonly float[] ValueDenseContributionWeights;
             internal readonly int[] ValueContributionCounts;
             internal readonly float[] ValueOutputWeights;

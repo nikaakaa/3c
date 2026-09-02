@@ -28,6 +28,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             m_Identity != 0 &&
             m_Page.Identity == m_Identity &&
             m_Page.Result.IsPublished &&
+            m_Page.ProgramOutput.IsCompleted &&
+            m_Page.ProgramOutput.Lineage == m_Page.Result.Lineage &&
             m_Page.PhysicalWrite.IsAvailable;
         internal CharacterFinalPosePublicationResult Result
         {
@@ -35,6 +37,14 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             {
                 RequireValid();
                 return m_Page.Result;
+            }
+        }
+        internal CharacterPoseProgramOutputResult ProgramOutput
+        {
+            get
+            {
+                RequireValid();
+                return m_Page.ProgramOutput;
             }
         }
         internal AnimationPhysicalBoneWriteDiagnostics PhysicalWrite
@@ -64,6 +74,63 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         }
     }
 
+    internal readonly struct CharacterFinalPosePublicationOutputBinding
+    {
+        internal CharacterFinalPosePublicationOutputBinding(
+            CharacterFinalPosePublication owner,
+            CharacterFinalPosePublicationFrameLease lease,
+            in CharacterFinalPosePublicationLayoutHandle layout)
+        {
+            m_Owner = owner ?? throw new ArgumentNullException(nameof(owner));
+            m_Lease = lease;
+            Layout = layout;
+            if (!IsValid)
+            {
+                throw new ArgumentException(
+                    "Final Pose Publication output binding is invalid.");
+            }
+        }
+
+        readonly CharacterFinalPosePublication m_Owner;
+        readonly CharacterFinalPosePublicationFrameLease m_Lease;
+        internal CharacterFinalPosePublicationLayoutHandle Layout { get; }
+        internal bool IsValid =>
+            m_Owner != null &&
+            m_Owner.OutputBindingIsValid(this);
+        internal ulong CompletionIdentity =>
+            m_Lease.Lineage.CompletionIdentity;
+        internal bool HasOutput =>
+            IsValid && m_Owner.ProgramOutputIsWritten(this);
+        internal CharacterFinalPosePublication Owner => m_Owner;
+        internal CharacterFinalPosePublicationFrameLease Lease => m_Lease;
+
+        internal void WritePose(
+            in AnimationPoseValueNativeReadBinding input,
+            float outputWeight,
+            ulong continuityIdentity) =>
+            m_Owner.WriteProgramOutputPose(
+                this,
+                in input,
+                outputWeight,
+                continuityIdentity);
+
+        internal void WriteInvalid(
+            AnimationPoseNativeInvalidReason outputInvalidReason,
+            ulong continuityIdentity) =>
+            m_Owner.WriteInvalidProgramOutput(
+                this,
+                outputInvalidReason,
+                continuityIdentity);
+
+        internal CharacterPoseProgramOutputResult Complete(
+            AnimationPoseNativeInvalidReason graphInvalidReason,
+            int invalidOperationIndex) =>
+            m_Owner.CompleteProgramOutput(
+                this,
+                graphInvalidReason,
+                invalidOperationIndex);
+    }
+
     internal sealed class CharacterFinalPosePublication
     {
         sealed class CharacterFinalPosePublicationPendingPage
@@ -71,9 +138,15 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             internal CharacterFinalPosePublicationFrameLease Lease;
             internal int BufferPage = -1;
             internal CharacterFinalPosePublicationResult Result;
+            internal CharacterPoseProgramOutputResult ProgramOutput;
             internal AnimationPhysicalBoneWriteDiagnostics PhysicalWrite;
             internal CharacterFootIkCaptureInterest FootIkCaptureInterest;
             internal ComposedAnimationPoseFrame Frame;
+            internal AnimationPoseAvailability OutputAvailability;
+            internal AnimationPoseNativeInvalidReason OutputInvalidReason;
+            internal float OutputWeight;
+            internal ulong OutputContinuityIdentity;
+            internal bool HasProgramOutput;
             internal bool HasValue;
             internal bool IsOpen => Lease.IsValid;
 
@@ -89,9 +162,15 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 Lease = lease;
                 BufferPage = -1;
                 Result = default;
+                ProgramOutput = default;
                 PhysicalWrite = default;
                 FootIkCaptureInterest = footIkCaptureInterest;
                 Frame = default;
+                OutputAvailability = default;
+                OutputInvalidReason = default;
+                OutputWeight = 0f;
+                OutputContinuityIdentity = 0;
+                HasProgramOutput = false;
                 HasValue = false;
             }
 
@@ -109,23 +188,79 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 BufferPage = bufferPage;
             }
 
-            internal void Prepare(
+            internal void SetProgramOutput(
                 CharacterFinalPosePublicationFrameLease lease,
-                in CharacterFinalPosePublicationResult result,
+                AnimationPoseAvailability availability,
+                AnimationPoseNativeInvalidReason invalidReason,
+                float outputWeight,
+                ulong continuityIdentity,
                 in ComposedAnimationPoseFrame frame)
             {
                 RequireLease(lease);
-                if (HasValue || BufferPage < 0 ||
-                    !result.IsValid ||
-                    !lease.Matches(result.Lineage) ||
+                if (HasProgramOutput || HasValue || BufferPage < 0 ||
                     frame.CompletionIdentity !=
-                    result.Lineage.CompletionIdentity)
+                    lease.Lineage.CompletionIdentity ||
+                    continuityIdentity == 0 ||
+                    !float.IsFinite(outputWeight))
+                {
+                    throw new InvalidOperationException(
+                        "Final Pose Publication Program output is invalid.");
+                }
+                Frame = frame;
+                OutputAvailability = availability;
+                OutputInvalidReason = invalidReason;
+                OutputWeight = outputWeight;
+                OutputContinuityIdentity = continuityIdentity;
+                HasProgramOutput = true;
+            }
+
+            internal void CompleteProgramOutput(
+                CharacterFinalPosePublicationFrameLease lease,
+                in CharacterPoseProgramOutputResult output)
+            {
+                RequireLease(lease);
+                if (!HasProgramOutput || ProgramOutput.IsValid ||
+                    !output.IsValid ||
+                    !lease.Matches(output.Lineage) ||
+                    output.Availability != OutputAvailability ||
+                    output.OutputInvalidReason != OutputInvalidReason ||
+                    output.OutputWeight != OutputWeight ||
+                    output.ContinuityIdentity != OutputContinuityIdentity)
+                {
+                    throw new InvalidOperationException(
+                        "Final Pose Publication Program output result is invalid.");
+                }
+                ProgramOutput = output;
+            }
+
+            internal void Prepare(
+                CharacterFinalPosePublicationFrameLease lease,
+                in CharacterPoseProgramOutputResult output,
+                in CharacterFinalPosePublicationResult result)
+            {
+                RequireLease(lease);
+                if (HasValue || !HasProgramOutput ||
+                    !ProgramOutput.IsValid ||
+                    !output.IsValid ||
+                    ProgramOutput.Lineage != output.Lineage ||
+                    !ProgramOutput.Layout.Equals(output.Layout) ||
+                    ProgramOutput.Availability != output.Availability ||
+                    ProgramOutput.OutputInvalidReason !=
+                    output.OutputInvalidReason ||
+                    ProgramOutput.GraphInvalidReason !=
+                    output.GraphInvalidReason ||
+                    ProgramOutput.InvalidOperationIndex !=
+                    output.InvalidOperationIndex ||
+                    ProgramOutput.OutputWeight != output.OutputWeight ||
+                    ProgramOutput.ContinuityIdentity !=
+                    output.ContinuityIdentity ||
+                    !result.IsValid ||
+                    !lease.Matches(result.Lineage))
                 {
                     throw new InvalidOperationException(
                         "Final Pose Publication Pending result is invalid.");
                 }
                 Result = result;
-                Frame = frame;
                 HasValue = true;
             }
 
@@ -133,7 +268,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 CharacterFinalPosePublicationFrameLease lease)
             {
                 RequireLease(lease);
-                if (!HasValue || BufferPage < 0 || !Result.IsValid)
+                if (!HasValue || !HasProgramOutput ||
+                    !ProgramOutput.IsValid || BufferPage < 0 ||
+                    !Result.IsValid)
                 {
                     throw new InvalidOperationException(
                         "Final Pose Publication Pending page is incomplete.");
@@ -170,9 +307,15 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 Lease = default;
                 BufferPage = -1;
                 Result = default;
+                ProgramOutput = default;
                 PhysicalWrite = default;
                 FootIkCaptureInterest = default;
                 Frame = default;
+                OutputAvailability = default;
+                OutputInvalidReason = default;
+                OutputWeight = 0f;
+                OutputContinuityIdentity = 0;
+                HasProgramOutput = false;
                 HasValue = false;
             }
         }
@@ -181,6 +324,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         {
             internal ulong Identity;
             internal CharacterFinalPosePublicationResult Result;
+            internal CharacterPoseProgramOutputResult ProgramOutput;
             internal AnimationPhysicalBoneWriteDiagnostics PhysicalWrite;
             internal ComposedAnimationPoseFrame Frame;
         }
@@ -189,6 +333,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         readonly string m_PosePlanHash;
         readonly string m_RigId;
         readonly string m_RigRevision;
+        readonly CharacterFinalPosePublicationLayoutHandle m_Layout;
         readonly PoseNodeId[] m_PoseNodeIds;
         readonly float[] m_ParameterDefaults;
         readonly AnimationLocalBonePose[] m_DenseLocalPoses;
@@ -199,9 +344,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         readonly CharacterPoseBoneKind[] m_BoneKinds;
         readonly FinalAnimationPoseFramePageLease[] m_PageLeases;
         readonly CharacterFinalPosePhysicalWriter m_PhysicalWriter;
+        readonly CharacterPoseSourceModule m_SourceModule;
         readonly CommittedDiagnosticsPage m_CommittedDiagnostics =
             new CommittedDiagnosticsPage();
-        readonly int m_OperationCount;
         readonly int m_BoneCount;
         readonly int m_ParameterCount;
         readonly int m_ContributionCapacity;
@@ -214,6 +359,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         ulong m_LastCommittedCompletionIdentity;
         ulong m_NextDiagnosticsIdentity = 1;
         CharacterFinalPosePublicationResult m_CommittedResult;
+        CharacterPoseProgramOutputResult m_CommittedProgramOutput;
         AnimationPhysicalBoneWriteDiagnostics m_CommittedPhysicalWrite;
         ComposedAnimationPoseFrame m_CommittedFrame;
 
@@ -221,7 +367,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             CharacterPoseProgramImage program,
             CharacterAnimationRigPayload rig,
             CharacterAnimationRigBinding rigBinding,
-            CharacterRootHierarchyBinding rootHierarchy)
+            CharacterRootHierarchyBinding rootHierarchy,
+            CharacterPoseSourceModule sourceModule)
         {
             if (program == null)
                 throw new ArgumentNullException(nameof(program));
@@ -236,6 +383,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             CharacterFinalPosePublicationLayoutHandle layout =
                 program.FinalPosePublicationLayout;
             layout.RequireValid();
+            m_Layout = layout;
+            m_SourceModule = sourceModule ??
+                throw new ArgumentNullException(nameof(sourceModule));
             if (!string.Equals(program.RigId, rig.RigId, StringComparison.Ordinal) ||
                 !string.Equals(program.RigRevision, rig.RigRevision, StringComparison.Ordinal) ||
                 layout.BoneCount != rig.PoseBoneCount ||
@@ -250,7 +400,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             m_PosePlanHash = program.PlanHash;
             m_RigId = program.RigId;
             m_RigRevision = program.RigRevision;
-            m_OperationCount = program.Operations.Count;
             m_PoseNodeIds = new PoseNodeId[program.PlayerCount];
             for (int i = 0; i < program.Operations.Count; i++)
             {
@@ -316,24 +465,351 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             return lease;
         }
 
+        internal CharacterFinalPosePublicationOutputBinding BindProgramOutput(
+            CharacterFinalPosePublicationFrameLease lease)
+        {
+            m_Pending.RequireLease(lease);
+            int page = (m_CommittedPage + 1) & 1;
+            m_Pending.BeginWrite(lease, page);
+            m_PageLeases[page].BeginWrite(
+                lease.Lineage.CompletionIdentity);
+            return new CharacterFinalPosePublicationOutputBinding(
+                this,
+                lease,
+                in m_Layout);
+        }
+
+        internal bool OutputBindingIsValid(
+            in CharacterFinalPosePublicationOutputBinding binding) =>
+            ReferenceEquals(binding.Owner, this) &&
+            binding.Layout.Equals(m_Layout) &&
+            m_Pending.IsOpen &&
+            m_Pending.BufferPage >= 0 &&
+            m_Pending.Lease.Lineage == binding.Lease.Lineage;
+
+        internal bool ProgramOutputIsWritten(
+            in CharacterFinalPosePublicationOutputBinding binding) =>
+            OutputBindingIsValid(in binding) &&
+            m_Pending.HasProgramOutput;
+
         internal void ValidateWriterBeforeEvaluate(
-            in AnimationFinalPoseNativeReadBinding pending) =>
+            in CharacterFinalPosePublicationOutputBinding binding)
+        {
+            RequireOutputBinding(in binding);
             m_PhysicalWriter.ValidateBindingsBeforeEvaluate(
-                in pending,
                 HasCommittedPhysicalPose,
                 in m_CommittedFrame);
+        }
 
         internal void WritePhysicalPose(
-            CharacterFinalPosePublicationFrameLease lease,
-            in AnimationFinalPoseNativeReadBinding pending)
+            CharacterFinalPosePublicationFrameLease lease)
         {
             m_Pending.RequirePrepared(lease);
             m_PhysicalWriter.Write(
-                in pending,
+                in m_Pending.ProgramOutput,
+                in m_Pending.Frame,
                 HasCommittedPhysicalPose,
                 in m_CommittedFrame,
                 m_Pending.FootIkCaptureInterest);
             m_Pending.PhysicalWrite = m_PhysicalWriter.Diagnostics;
+        }
+
+        internal void WriteProgramOutputPose(
+            in CharacterFinalPosePublicationOutputBinding output,
+            in AnimationPoseValueNativeReadBinding input,
+            float outputWeight,
+            ulong continuityIdentity)
+        {
+            RequireOutputBinding(in output);
+            if (m_Pending.HasProgramOutput ||
+                input.CompletionIdentity != output.CompletionIdentity ||
+                input.DensePoses.Length != m_BoneCount ||
+                input.PoseParameters.Length != m_ParameterCount ||
+                input.PoseParameterAvailability.Length != m_ParameterCount ||
+                input.Contributions.Length != m_ContributionCapacity ||
+                input.DenseContributionWeights.Length !=
+                checked(m_ContributionCapacity * m_BoneCount) ||
+                input.Availability[0] != AnimationPoseAvailability.Pose ||
+                input.InvalidReason[0] !=
+                AnimationPoseNativeInvalidReason.None ||
+                !float.IsFinite(outputWeight) || outputWeight < 0f ||
+                outputWeight > 1f || continuityIdentity == 0)
+            {
+                throw new ArgumentException(
+                    "Final Pose Program output Pose input is invalid.");
+            }
+            for (int bone = 0; bone < m_BoneCount; bone++)
+            {
+                if (!input.DensePoses[bone].IsValid)
+                {
+                    throw new InvalidOperationException(
+                        $"Final Pose Program output Bone #{bone} is invalid.");
+                }
+            }
+            for (int parameter = 0; parameter < m_ParameterCount; parameter++)
+            {
+                if (!float.IsFinite(input.PoseParameters[parameter]) ||
+                    input.PoseParameterAvailability[parameter] > 1)
+                {
+                    throw new InvalidOperationException(
+                        $"Final Pose Program output Parameter #{parameter} is invalid.");
+                }
+            }
+            int contributionCount = input.ContributionCount[0];
+            if (contributionCount <= 0 ||
+                contributionCount > m_ContributionCapacity)
+            {
+                throw new InvalidOperationException(
+                    "Final Pose Program output contribution count is invalid.");
+            }
+            for (int contribution = 0;
+                 contribution < contributionCount;
+                 contribution++)
+            {
+                ExpandContribution(
+                    input.Contributions[contribution],
+                    m_SourceModule);
+                for (int bone = 0; bone < m_BoneCount; bone++)
+                {
+                    float weight = input.DenseContributionWeights[
+                        contribution * m_BoneCount + bone];
+                    if (!IsWeight(weight))
+                    {
+                        throw new InvalidOperationException(
+                            $"Final Pose Program output contribution #{contribution} Bone #{bone} weight is invalid.");
+                    }
+                }
+            }
+            byte hasFootFeatures = input.HasFootFeatures[0];
+            AnimationFootFeatureSample left = hasFootFeatures == 1
+                ? input.LeftFootFeatures[0]
+                : default;
+            AnimationFootFeatureSample right = hasFootFeatures == 1
+                ? input.RightFootFeatures[0]
+                : default;
+            if (hasFootFeatures > 1 ||
+                hasFootFeatures == 1 && (!left.IsValid || !right.IsValid))
+            {
+                throw new InvalidOperationException(
+                    "Final Pose Program output Foot Features are invalid.");
+            }
+
+            int page = m_Pending.BufferPage;
+            int poseOffset = checked(page * m_BoneCount);
+            int parameterOffset = checked(page * m_ParameterCount);
+            int contributionOffset = checked(page * m_ContributionCapacity);
+            int denseWeightOffset = checked(contributionOffset * m_BoneCount);
+            for (int bone = 0; bone < m_BoneCount; bone++)
+                m_DenseLocalPoses[poseOffset + bone] = input.DensePoses[bone];
+            for (int parameter = 0; parameter < m_ParameterCount; parameter++)
+            {
+                m_PoseParameters[parameterOffset + parameter] =
+                    input.PoseParameters[parameter];
+                m_PoseParameterAvailability[parameterOffset + parameter] =
+                    input.PoseParameterAvailability[parameter];
+            }
+            for (int contribution = 0;
+                 contribution < contributionCount;
+                 contribution++)
+            {
+                m_Contributions[contributionOffset + contribution] =
+                    ExpandContribution(
+                        input.Contributions[contribution],
+                        m_SourceModule);
+                for (int bone = 0; bone < m_BoneCount; bone++)
+                {
+                    m_DenseContributionWeights[
+                        denseWeightOffset +
+                        contribution * m_BoneCount + bone] =
+                        input.DenseContributionWeights[
+                            contribution * m_BoneCount + bone];
+                }
+            }
+            FinalAnimationPoseFramePageLease pageLease = m_PageLeases[page];
+            var frame = new ComposedAnimationPoseFrame(
+                m_PoseGraphId,
+                m_PosePlanHash,
+                input.CompletionIdentity,
+                AnimationPoseAvailability.Pose,
+                new AnimationReadOnlyBuffer<AnimationLocalBonePose>(
+                    m_DenseLocalPoses,
+                    poseOffset,
+                    m_BoneCount,
+                    pageLease,
+                    input.CompletionIdentity),
+                new AnimationReadOnlyBuffer<float>(
+                    m_PoseParameters,
+                    parameterOffset,
+                    m_ParameterCount,
+                    pageLease,
+                    input.CompletionIdentity),
+                new AnimationReadOnlyBuffer<byte>(
+                    m_PoseParameterAvailability,
+                    parameterOffset,
+                    m_ParameterCount,
+                    pageLease,
+                    input.CompletionIdentity),
+                new AnimationReadOnlyBuffer<AnimationPoseSourceContribution>(
+                    m_Contributions,
+                    contributionOffset,
+                    contributionCount,
+                    pageLease,
+                    input.CompletionIdentity),
+                new AnimationReadOnlyBuffer<float>(
+                    m_DenseContributionWeights,
+                    denseWeightOffset,
+                    checked(contributionCount * m_BoneCount),
+                    pageLease,
+                    input.CompletionIdentity),
+                new AnimationReadOnlyBuffer<CharacterPoseBoneKind>(
+                    m_BoneKinds,
+                    0,
+                    m_BoneKinds.Length,
+                    pageLease,
+                    input.CompletionIdentity),
+                m_PhysicalBoneCount,
+                m_VirtualBoneCount,
+                m_BoneCount,
+                left,
+                right,
+                hasFootFeatures == 1,
+                continuityIdentity,
+                pageLease,
+                input.CompletionIdentity);
+            m_Pending.SetProgramOutput(
+                output.Lease,
+                AnimationPoseAvailability.Pose,
+                AnimationPoseNativeInvalidReason.None,
+                outputWeight,
+                continuityIdentity,
+                in frame);
+        }
+
+        internal void WriteInvalidProgramOutput(
+            in CharacterFinalPosePublicationOutputBinding output,
+            AnimationPoseNativeInvalidReason outputInvalidReason,
+            ulong continuityIdentity)
+        {
+            RequireOutputBinding(in output);
+            outputInvalidReason =
+                AnimationPoseNativeInvalidReasonContract.NormalizeFailure(
+                    outputInvalidReason);
+            int page = m_Pending.BufferPage;
+            int poseOffset = checked(page * m_BoneCount);
+            int parameterOffset = checked(page * m_ParameterCount);
+            int contributionOffset = checked(page * m_ContributionCapacity);
+            int denseWeightOffset = checked(contributionOffset * m_BoneCount);
+            Array.Copy(
+                m_ParameterDefaults,
+                0,
+                m_PoseParameters,
+                parameterOffset,
+                m_ParameterCount);
+            Array.Clear(
+                m_PoseParameterAvailability,
+                parameterOffset,
+                m_ParameterCount);
+            FinalAnimationPoseFramePageLease pageLease = m_PageLeases[page];
+            var frame = new ComposedAnimationPoseFrame(
+                m_PoseGraphId,
+                m_PosePlanHash,
+                output.CompletionIdentity,
+                AnimationPoseAvailability.Invalid,
+                new AnimationReadOnlyBuffer<AnimationLocalBonePose>(
+                    m_DenseLocalPoses,
+                    poseOffset,
+                    0,
+                    pageLease,
+                    output.CompletionIdentity),
+                new AnimationReadOnlyBuffer<float>(
+                    m_PoseParameters,
+                    parameterOffset,
+                    m_ParameterCount,
+                    pageLease,
+                    output.CompletionIdentity),
+                new AnimationReadOnlyBuffer<byte>(
+                    m_PoseParameterAvailability,
+                    parameterOffset,
+                    m_ParameterCount,
+                    pageLease,
+                    output.CompletionIdentity),
+                new AnimationReadOnlyBuffer<AnimationPoseSourceContribution>(
+                    m_Contributions,
+                    contributionOffset,
+                    0,
+                    pageLease,
+                    output.CompletionIdentity),
+                new AnimationReadOnlyBuffer<float>(
+                    m_DenseContributionWeights,
+                    denseWeightOffset,
+                    0,
+                    pageLease,
+                    output.CompletionIdentity),
+                new AnimationReadOnlyBuffer<CharacterPoseBoneKind>(
+                    m_BoneKinds,
+                    0,
+                    m_BoneKinds.Length,
+                    pageLease,
+                    output.CompletionIdentity),
+                m_PhysicalBoneCount,
+                m_VirtualBoneCount,
+                m_BoneCount,
+                default,
+                default,
+                false,
+                continuityIdentity,
+                pageLease,
+                output.CompletionIdentity);
+            m_Pending.SetProgramOutput(
+                output.Lease,
+                AnimationPoseAvailability.Invalid,
+                outputInvalidReason,
+                0f,
+                continuityIdentity,
+                in frame);
+        }
+
+        internal CharacterPoseProgramOutputResult CompleteProgramOutput(
+            in CharacterFinalPosePublicationOutputBinding output,
+            AnimationPoseNativeInvalidReason graphInvalidReason,
+            int invalidOperationIndex)
+        {
+            RequireOutputBinding(in output);
+            if (!m_Pending.HasProgramOutput ||
+                m_Pending.ProgramOutput.IsValid)
+            {
+                throw new InvalidOperationException(
+                    "Final Pose Program output cannot complete.");
+            }
+            CharacterPoseFrameLineage lineage = output.Lease.Lineage;
+            var result = new CharacterPoseProgramOutputResult(
+                in lineage,
+                in m_Layout,
+                m_Pending.OutputAvailability,
+                m_Pending.OutputInvalidReason,
+                graphInvalidReason,
+                invalidOperationIndex,
+                m_Pending.OutputWeight,
+                m_Pending.OutputContinuityIdentity);
+            if (!result.IsValid)
+            {
+                throw new InvalidOperationException(
+                    "Final Pose Program output result is inconsistent.");
+            }
+            m_Pending.CompleteProgramOutput(
+                output.Lease,
+                in result);
+            return result;
+        }
+
+        void RequireOutputBinding(
+            in CharacterFinalPosePublicationOutputBinding binding)
+        {
+            if (!OutputBindingIsValid(in binding))
+            {
+                throw new InvalidOperationException(
+                    "Final Pose Publication output binding is stale.");
+            }
         }
 
         bool HasCommittedPhysicalPose =>
@@ -349,7 +825,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             in CharacterPoseFrameLineage lineage,
             in CharacterPoseProgramResult programResult,
             in CharacterPoseConstraintResult constraintResult,
-            in AnimationFinalPoseNativeReadBinding pending)
+            in CharacterPoseProgramOutputResult output)
         {
             m_Pending.RequireLease(lease);
             if (!lineage.IsValid ||
@@ -358,20 +834,18 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 !constraintResult.IsValid ||
                 programResult.Lineage != lineage ||
                 constraintResult.Lineage != lineage ||
+                output.Lineage != lineage ||
+                !output.Layout.Equals(m_Layout) ||
                 programResult.Outcome != constraintResult.Outcome ||
-                pending.CompletionIdentity != lineage.CompletionIdentity ||
-                pending.PoseGraphCompletedAt[0] !=
-                    lineage.CompletionIdentity ||
                 programResult.IsCompleted &&
-                (!constraintResult.IsCompleted ||
-                 pending.ContinuityIdentity[0] == 0) ||
-                programResult.OutputAvailability != pending.Availability[0] ||
+                (!constraintResult.IsCompleted || !output.IsCompleted) ||
+                programResult.OutputAvailability != output.Availability ||
                 programResult.OutputInvalidReason !=
-                    pending.OutputInvalidReason[0] ||
+                    output.OutputInvalidReason ||
                 programResult.GraphInvalidReason !=
-                    pending.PoseGraphInvalidReason[0] ||
+                    output.GraphInvalidReason ||
                 programResult.InvalidOperationIndex !=
-                    pending.PoseGraphInvalidOperationIndex[0] ||
+                    output.InvalidOperationIndex ||
                 !string.Equals(
                     lineage.RigId,
                     m_RigId,
@@ -391,20 +865,17 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             in CharacterPoseFrameLineage lineage,
             in CharacterPoseProgramResult programResult,
             in CharacterPoseConstraintResult constraintResult,
-            in AnimationFinalPoseNativeReadBinding binding,
-            CharacterPoseSourceModule sourceModule)
+            in CharacterPoseProgramOutputResult output)
         {
-            if (sourceModule == null)
-                throw new ArgumentNullException(nameof(sourceModule));
             RequirePhysicalWrite(
                 lease,
                 in lineage,
                 in programResult,
                 in constraintResult,
-                in binding);
+                in output);
             if (!lineage.IsValid ||
                 !lease.Matches(lineage) ||
-                binding.CompletionIdentity != lineage.CompletionIdentity)
+                output.Lineage != lineage)
             {
                 throw new ArgumentException(
                     "Final Pose Publication completed lineage is invalid.",
@@ -417,30 +888,21 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             CharacterFinalPosePublicationResult result =
                 CreatePublicationResult(
                     in lineage,
-                    in binding,
+                    in output,
                     writeOutcome);
-            RequireBinding(in binding);
-            ulong completionIdentity = binding.CompletionIdentity;
+            ulong completionIdentity = output.Lineage.CompletionIdentity;
             if (completionIdentity <= m_LastCommittedCompletionIdentity)
                 throw new InvalidOperationException("Final Animation Pose Frame completion identity did not advance.");
-            if (binding.PoseGraphCompletedAt[0] != completionIdentity)
-                throw new InvalidOperationException("Animation Pose Graph did not complete the requested frame.");
-
-            AnimationPoseAvailability availability = binding.Availability[0];
-            if (!IsAvailability(availability) ||
-                availability == AnimationPoseAvailability.NoPose || binding.ContinuityIdentity[0] == 0)
+            if (!output.IsValid ||
+                output.Availability == AnimationPoseAvailability.NoPose ||
+                output.ContinuityIdentity == 0)
             {
                 throw new InvalidOperationException("Final Animation Pose Graph output header is invalid.");
             }
-
-            int page = (m_CommittedPage + 1) & 1;
-            FinalAnimationPoseFramePageLease pageLease = m_PageLeases[page];
-            m_Pending.BeginWrite(lease, page);
-            pageLease.BeginWrite(completionIdentity);
-            ComposedAnimationPoseFrame frame = availability == AnimationPoseAvailability.Invalid
-                ? PublishInvalid(in binding, page, pageLease)
-                : PublishPose(in binding, sourceModule, page, pageLease);
-            m_Pending.Prepare(lease, in result, in frame);
+            m_Pending.Prepare(
+                lease,
+                in output,
+                in result);
             return result;
         }
 
@@ -488,6 +950,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             m_LastCommittedCompletionIdentity =
                 m_Pending.Result.Lineage.CompletionIdentity;
             m_CommittedResult = m_Pending.Result;
+            m_CommittedProgramOutput = m_Pending.ProgramOutput;
             m_CommittedPhysicalWrite = m_Pending.PhysicalWrite;
             ComposedAnimationPoseFrame result =
                 m_Pending.Frame;
@@ -501,8 +964,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             in CharacterFinalPosePublicationResult result)
         {
             if (!m_CommittedResult.IsPublished ||
+                !m_CommittedProgramOutput.IsCompleted ||
                 !result.IsPublished ||
                 m_CommittedResult.Lineage != result.Lineage ||
+                m_CommittedProgramOutput.Lineage != result.Lineage ||
                 !m_CommittedPhysicalWrite.IsAvailable ||
                 m_CommittedPhysicalWrite.CompletionIdentity !=
                 result.Lineage.CompletionIdentity ||
@@ -515,6 +980,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             CommittedDiagnosticsPage page = m_CommittedDiagnostics;
             page.Identity = 0;
             page.Result = result;
+            page.ProgramOutput = m_CommittedProgramOutput;
             page.PhysicalWrite = m_CommittedPhysicalWrite;
             page.Frame = m_CommittedFrame;
             page.Identity = m_NextDiagnosticsIdentity++;
@@ -571,175 +1037,15 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             m_CommittedPage = -1;
             m_LastCommittedCompletionIdentity = 0;
             m_CommittedResult = default;
+            m_CommittedProgramOutput = default;
             m_CommittedPhysicalWrite = default;
             m_CommittedDiagnostics.Identity = 0;
             m_CommittedDiagnostics.Result = default;
+            m_CommittedDiagnostics.ProgramOutput = default;
             m_CommittedDiagnostics.PhysicalWrite = default;
             m_CommittedDiagnostics.Frame = default;
             m_Pending.Clear();
             m_CommittedFrame = default;
-        }
-
-        ComposedAnimationPoseFrame PublishPose(
-            in AnimationFinalPoseNativeReadBinding binding,
-            CharacterPoseSourceModule sourceModule,
-            int page,
-            FinalAnimationPoseFramePageLease pageLease)
-        {
-            if (binding.OutputInvalidReason[0] != AnimationPoseNativeInvalidReason.None ||
-                binding.PoseGraphInvalidReason[0] != AnimationPoseNativeInvalidReason.None ||
-                binding.PoseGraphInvalidOperationIndex[0] != -1 ||
-                !float.IsFinite(binding.OutputWeight[0]) ||
-                binding.OutputWeight[0] < 0f || binding.OutputWeight[0] > 1f)
-            {
-                throw new InvalidOperationException(
-                    $"Final Animation Pose Graph completed Pose metadata is invalid: " +
-                    $"OutputReason={binding.OutputInvalidReason[0]}, " +
-                    $"GraphReason={binding.PoseGraphInvalidReason[0]}, " +
-                    $"InvalidOperation={binding.PoseGraphInvalidOperationIndex[0]}, " +
-                    $"AppliedAt={binding.AppliedAt[0]}, " +
-                    $"Completion={binding.CompletionIdentity}, " +
-                    $"OutputWeight={binding.OutputWeight[0]:R}.");
-            }
-
-            int poseOffset = checked(page * m_BoneCount);
-            int parameterOffset = checked(page * m_ParameterCount);
-            int contributionOffset = checked(page * m_ContributionCapacity);
-            int denseWeightOffset = checked(contributionOffset * m_BoneCount);
-            for (int bone = 0; bone < m_BoneCount; bone++)
-            {
-                AnimationLocalBonePose pose = binding.DenseLocalPoses[bone];
-                if (!pose.IsValid)
-                    throw new InvalidOperationException($"Final Animation Pose Graph Bone #{bone} is invalid.");
-                m_DenseLocalPoses[poseOffset + bone] = pose;
-            }
-            for (int parameter = 0; parameter < m_ParameterCount; parameter++)
-            {
-                float value = binding.PoseParameters[parameter];
-                byte parameterAvailable = binding.PoseParameterAvailability[parameter];
-                if (!float.IsFinite(value) || parameterAvailable > 1)
-                    throw new InvalidOperationException($"Final Animation Pose Graph Parameter #{parameter} is invalid.");
-                m_PoseParameters[parameterOffset + parameter] = value;
-                m_PoseParameterAvailability[parameterOffset + parameter] = parameterAvailable;
-            }
-
-            int contributionCount = binding.ContributionCount[0];
-            if (contributionCount <= 0 || contributionCount > m_ContributionCapacity)
-                throw new InvalidOperationException("Final Animation Pose Graph contribution count is invalid.");
-            for (int contribution = 0; contribution < contributionCount; contribution++)
-            {
-                AnimationPrimitivePoseContribution primitive = binding.Contributions[contribution];
-                m_Contributions[contributionOffset + contribution] = ExpandContribution(primitive, sourceModule);
-                for (int bone = 0; bone < m_BoneCount; bone++)
-                {
-                    float weight = binding.DenseContributionWeights[
-                        contribution * m_BoneCount + bone];
-                    if (!float.IsFinite(weight) || weight < 0f || weight > 1f)
-                    {
-                        throw new InvalidOperationException(
-                            $"Final Animation Pose Graph contribution #{contribution} Bone #{bone} weight is invalid.");
-                    }
-                    m_DenseContributionWeights[denseWeightOffset + contribution * m_BoneCount + bone] = weight;
-                }
-            }
-
-            byte hasFootFeatures = binding.HasFootFeatures[0];
-            if (hasFootFeatures > 1)
-                throw new InvalidOperationException("Final Animation Pose Graph Foot Feature state is invalid.");
-            AnimationFootFeatureSample left = hasFootFeatures == 1 ? binding.LeftFootFeatures[0] : default;
-            AnimationFootFeatureSample right = hasFootFeatures == 1 ? binding.RightFootFeatures[0] : default;
-            if (hasFootFeatures == 1 && (!left.IsValid || !right.IsValid))
-                throw new InvalidOperationException("Final Animation Pose Graph Foot Features are invalid.");
-
-            return new ComposedAnimationPoseFrame(
-                m_PoseGraphId,
-                m_PosePlanHash,
-                binding.CompletionIdentity,
-                AnimationPoseAvailability.Pose,
-                new AnimationReadOnlyBuffer<AnimationLocalBonePose>(
-                    m_DenseLocalPoses, poseOffset, m_BoneCount, pageLease, binding.CompletionIdentity),
-                new AnimationReadOnlyBuffer<float>(
-                    m_PoseParameters, parameterOffset, m_ParameterCount, pageLease, binding.CompletionIdentity),
-                new AnimationReadOnlyBuffer<byte>(
-                    m_PoseParameterAvailability, parameterOffset, m_ParameterCount, pageLease, binding.CompletionIdentity),
-                new AnimationReadOnlyBuffer<AnimationPoseSourceContribution>(
-                    m_Contributions, contributionOffset, contributionCount, pageLease, binding.CompletionIdentity),
-                new AnimationReadOnlyBuffer<float>(
-                    m_DenseContributionWeights,
-                    denseWeightOffset,
-                    checked(contributionCount * m_BoneCount),
-                    pageLease,
-                    binding.CompletionIdentity),
-                new AnimationReadOnlyBuffer<CharacterPoseBoneKind>(
-                    m_BoneKinds, 0, m_BoneKinds.Length, pageLease, binding.CompletionIdentity),
-                m_PhysicalBoneCount,
-                m_VirtualBoneCount,
-                m_BoneCount,
-                left,
-                right,
-                hasFootFeatures == 1,
-                binding.ContinuityIdentity[0],
-                pageLease,
-                binding.CompletionIdentity);
-        }
-
-        ComposedAnimationPoseFrame PublishInvalid(
-            in AnimationFinalPoseNativeReadBinding binding,
-            int page,
-            FinalAnimationPoseFramePageLease pageLease)
-        {
-            AnimationPoseNativeInvalidReason outputReason = binding.OutputInvalidReason[0];
-            AnimationPoseNativeInvalidReason graphReason = binding.PoseGraphInvalidReason[0];
-            int invalidOperationIndex = binding.PoseGraphInvalidOperationIndex[0];
-            bool graphInvalid = outputReason != AnimationPoseNativeInvalidReason.None &&
-                                graphReason != AnimationPoseNativeInvalidReason.None &&
-                                invalidOperationIndex >= 0 && invalidOperationIndex < m_OperationCount &&
-                                binding.AppliedAt[0] == 0 && binding.ContributionCount[0] == 0;
-            if (!IsInvalidReason(outputReason) ||
-                !IsInvalidReason(graphReason) ||
-                (outputReason == AnimationPoseNativeInvalidReason.None && graphReason == AnimationPoseNativeInvalidReason.None) ||
-                !graphInvalid)
-            {
-                throw new InvalidOperationException(
-                    $"Final Animation Pose Graph Invalid completion metadata is inconsistent. " +
-                    $"Availability={binding.Availability[0]}, OutputReason={outputReason}, " +
-                    $"GraphReason={graphReason}, InvalidOperation={invalidOperationIndex}, " +
-                    $"ContributionCount={binding.ContributionCount[0]}, AppliedAt={binding.AppliedAt[0]}, " +
-                    $"Completion={binding.CompletionIdentity}, GraphCompletedAt={binding.PoseGraphCompletedAt[0]}, " +
-                    $"Continuity={binding.ContinuityIdentity[0]}, WriteOutcome={binding.WriteOutcome[0]}.");
-            }
-            int poseOffset = checked(page * m_BoneCount);
-            int parameterOffset = checked(page * m_ParameterCount);
-            int contributionOffset = checked(page * m_ContributionCapacity);
-            int denseWeightOffset = checked(contributionOffset * m_BoneCount);
-            Array.Copy(m_ParameterDefaults, 0, m_PoseParameters, parameterOffset, m_ParameterCount);
-            Array.Clear(m_PoseParameterAvailability, parameterOffset, m_ParameterCount);
-            return new ComposedAnimationPoseFrame(
-                m_PoseGraphId,
-                m_PosePlanHash,
-                binding.CompletionIdentity,
-                AnimationPoseAvailability.Invalid,
-                new AnimationReadOnlyBuffer<AnimationLocalBonePose>(
-                    m_DenseLocalPoses, poseOffset, 0, pageLease, binding.CompletionIdentity),
-                new AnimationReadOnlyBuffer<float>(
-                    m_PoseParameters, parameterOffset, m_ParameterCount, pageLease, binding.CompletionIdentity),
-                new AnimationReadOnlyBuffer<byte>(
-                    m_PoseParameterAvailability, parameterOffset, m_ParameterCount, pageLease, binding.CompletionIdentity),
-                new AnimationReadOnlyBuffer<AnimationPoseSourceContribution>(
-                    m_Contributions, contributionOffset, 0, pageLease, binding.CompletionIdentity),
-                new AnimationReadOnlyBuffer<float>(
-                    m_DenseContributionWeights, denseWeightOffset, 0, pageLease, binding.CompletionIdentity),
-                new AnimationReadOnlyBuffer<CharacterPoseBoneKind>(
-                    m_BoneKinds, 0, m_BoneKinds.Length, pageLease, binding.CompletionIdentity),
-                m_PhysicalBoneCount,
-                m_VirtualBoneCount,
-                m_BoneCount,
-                default,
-                default,
-                false,
-                binding.ContinuityIdentity[0],
-                pageLease,
-                binding.CompletionIdentity);
         }
 
         AnimationPoseSourceContribution ExpandContribution(
@@ -791,7 +1097,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
 
         static CharacterFinalPosePublicationResult CreatePublicationResult(
             in CharacterPoseFrameLineage lineage,
-            in AnimationFinalPoseNativeReadBinding binding,
+            in CharacterPoseProgramOutputResult output,
             AnimationFinalPoseWriteOutcome writeOutcome)
         {
             AnimationPresentationFrameOutcome outcome = writeOutcome switch
@@ -807,45 +1113,19 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 in lineage,
                 outcome,
                 writeOutcome,
-                binding.Availability[0],
-                binding.OutputInvalidReason[0],
-                binding.PoseGraphInvalidReason[0],
-                binding.PoseGraphInvalidOperationIndex[0],
+                output.Availability,
+                output.OutputInvalidReason,
+                output.GraphInvalidReason,
+                output.InvalidOperationIndex,
                 writeOutcome == AnimationFinalPoseWriteOutcome.Committed
                     ? lineage.CompletionIdentity
                     : 0);
         }
 
-        void RequireBinding(in AnimationFinalPoseNativeReadBinding binding)
-        {
-            if (binding.CompletionIdentity == 0 ||
-                binding.DenseLocalPoses.Length != m_BoneCount ||
-                binding.PoseParameters.Length != m_ParameterCount ||
-                binding.Contributions.Length != m_ContributionCapacity ||
-                binding.DenseContributionWeights.Length != checked(m_ContributionCapacity * m_BoneCount) ||
-                !IsUnit(binding.ContributionCount) || !IsUnit(binding.OutputWeight) ||
-                !IsUnit(binding.LeftFootFeatures) || !IsUnit(binding.RightFootFeatures) ||
-                !IsUnit(binding.HasFootFeatures) || !IsUnit(binding.Availability) ||
-                !IsUnit(binding.ContinuityIdentity) || !IsUnit(binding.OutputInvalidReason) ||
-                !IsUnit(binding.PoseGraphInvalidReason) || !IsUnit(binding.PoseGraphInvalidOperationIndex) ||
-                !IsUnit(binding.PoseGraphCompletedAt) || !IsUnit(binding.AppliedAt) ||
-                !IsUnit(binding.WriteOutcome))
-            {
-                throw new ArgumentException("Final Animation Pose Native read binding does not match its publisher.");
-            }
-        }
-
         static bool IsWeight(float value) => float.IsFinite(value) && value >= 0f && value <= 1f;
-        static bool IsAvailability(AnimationPoseAvailability value) =>
-            (int)value >= (int)AnimationPoseAvailability.Pose &&
-            (int)value <= (int)AnimationPoseAvailability.Invalid;
-        static bool IsInvalidReason(AnimationPoseNativeInvalidReason value) =>
-            AnimationPoseNativeInvalidReasonContract.IsDefined(value);
         static bool IsContributionKind(AnimationPoseContributionKind value) =>
             (int)value >= (int)AnimationPoseContributionKind.Live &&
             (int)value <= (int)AnimationPoseContributionKind.Stored;
-        static bool IsUnit<T>(Unity.Collections.NativeSlice<T> values) where T : struct =>
-            values.Length == 1;
         static long PayloadBytes<T>(T[] values) where T : unmanaged =>
             checked((long)UnsafeUtility.SizeOf<T>() * values.LongLength);
     }

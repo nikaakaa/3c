@@ -794,6 +794,61 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             IsValid && CompletionIdentity == completionIdentity;
     }
 
+    internal readonly struct CharacterPoseProgramOutputResult
+    {
+        internal CharacterPoseProgramOutputResult(
+            in CharacterPoseFrameLineage lineage,
+            in CharacterFinalPosePublicationLayoutHandle layout,
+            AnimationPoseAvailability availability,
+            AnimationPoseNativeInvalidReason outputInvalidReason,
+            AnimationPoseNativeInvalidReason graphInvalidReason,
+            int invalidOperationIndex,
+            float outputWeight,
+            ulong continuityIdentity)
+        {
+            Lineage = lineage;
+            Layout = layout;
+            Availability = availability;
+            OutputInvalidReason = outputInvalidReason;
+            GraphInvalidReason = graphInvalidReason;
+            InvalidOperationIndex = invalidOperationIndex;
+            OutputWeight = outputWeight;
+            ContinuityIdentity = continuityIdentity;
+            bool completed =
+                availability == AnimationPoseAvailability.Pose &&
+                outputInvalidReason == AnimationPoseNativeInvalidReason.None &&
+                graphInvalidReason == AnimationPoseNativeInvalidReason.None &&
+                invalidOperationIndex == -1 &&
+                outputWeight >= 0f &&
+                outputWeight <= 1f;
+            bool invalid =
+                availability == AnimationPoseAvailability.Invalid &&
+                outputInvalidReason != AnimationPoseNativeInvalidReason.None &&
+                graphInvalidReason != AnimationPoseNativeInvalidReason.None &&
+                invalidOperationIndex >= 0 &&
+                outputWeight == 0f;
+            m_IsValid =
+                lineage.IsValid &&
+                layout.IsValid &&
+                continuityIdentity != 0 &&
+                float.IsFinite(outputWeight) &&
+                (completed || invalid);
+        }
+
+        readonly bool m_IsValid;
+        internal CharacterPoseFrameLineage Lineage { get; }
+        internal CharacterFinalPosePublicationLayoutHandle Layout { get; }
+        internal AnimationPoseAvailability Availability { get; }
+        internal AnimationPoseNativeInvalidReason OutputInvalidReason { get; }
+        internal AnimationPoseNativeInvalidReason GraphInvalidReason { get; }
+        internal int InvalidOperationIndex { get; }
+        internal float OutputWeight { get; }
+        internal ulong ContinuityIdentity { get; }
+        internal bool IsValid => m_IsValid;
+        internal bool IsCompleted =>
+            IsValid && Availability == AnimationPoseAvailability.Pose;
+    }
+
     internal readonly struct CharacterPoseProgramResult
     {
         internal CharacterPoseProgramResult(

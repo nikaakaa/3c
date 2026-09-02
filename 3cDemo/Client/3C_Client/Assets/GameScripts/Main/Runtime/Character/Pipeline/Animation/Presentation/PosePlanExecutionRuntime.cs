@@ -29,28 +29,24 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                 in CharacterPoseFrameLineage lineage,
                 float presentationDeltaSeconds,
                 in CharacterPoseGraphNativeBinding frame,
-                CharacterPoseGraphStagedExecutor executor,
-                in AnimationFinalPoseNativeReadBinding finalRead)
+                CharacterPoseGraphStagedExecutor executor)
             {
                 Lineage = lineage;
                 PresentationDeltaSeconds = presentationDeltaSeconds;
                 Frame = frame;
                 Executor = executor;
-                FinalRead = finalRead;
             }
 
             internal CharacterPoseFrameLineage Lineage { get; }
             internal float PresentationDeltaSeconds { get; }
             internal CharacterPoseGraphNativeBinding Frame { get; }
             internal CharacterPoseGraphStagedExecutor Executor { get; }
-            internal AnimationFinalPoseNativeReadBinding FinalRead { get; }
             internal bool IsValid =>
                 Lineage.IsValid &&
                 float.IsFinite(PresentationDeltaSeconds) &&
                 PresentationDeltaSeconds >= 0f &&
                 Executor != null &&
-                Frame.CompletionIdentity == Lineage.CompletionIdentity &&
-                FinalRead.CompletionIdentity == Lineage.CompletionIdentity;
+                Frame.CompletionIdentity == Lineage.CompletionIdentity;
         }
 
         struct CharacterPoseProgramPreparedPage
@@ -58,7 +54,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             CharacterPoseFrameLineage m_Lineage;
             CharacterPoseGraphNativeBinding m_Frame;
             CharacterPoseGraphStagedExecutor m_Executor;
-            AnimationFinalPoseNativeReadBinding m_FinalRead;
             float m_PresentationDeltaSeconds;
             bool m_HasValue;
 
@@ -68,8 +63,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                 in CharacterPoseProgramPrepared prepared,
                 float presentationDeltaSeconds,
                 in CharacterPoseGraphNativeBinding frame,
-                CharacterPoseGraphStagedExecutor executor,
-                in AnimationFinalPoseNativeReadBinding finalRead)
+                CharacterPoseGraphStagedExecutor executor)
             {
                 if (m_HasValue)
                 {
@@ -81,8 +75,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                     presentationDeltaSeconds < 0f ||
                     executor == null ||
                     frame.CompletionIdentity !=
-                        prepared.Lineage.CompletionIdentity ||
-                    finalRead.CompletionIdentity !=
                         prepared.Lineage.CompletionIdentity)
                 {
                     throw new ArgumentException(
@@ -93,7 +85,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                 m_PresentationDeltaSeconds = presentationDeltaSeconds;
                 m_Frame = frame;
                 m_Executor = executor;
-                m_FinalRead = finalRead;
                 m_HasValue = true;
             }
 
@@ -112,8 +103,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                     in m_Lineage,
                     m_PresentationDeltaSeconds,
                     in m_Frame,
-                    m_Executor,
-                    in m_FinalRead);
+                    m_Executor);
                 Clear();
                 if (!state.IsValid)
                 {
@@ -128,7 +118,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                 m_Lineage = default;
                 m_Frame = default;
                 m_Executor = default;
-                m_FinalRead = default;
                 m_PresentationDeltaSeconds = 0f;
                 m_HasValue = false;
             }
@@ -530,7 +519,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                     projection.PosePlan,
                     projection.Rig,
                     rigBinding,
-                    rootHierarchy);
+                    rootHierarchy,
+                    sourceModule);
                 if (managesGraphClock)
                     animancer.Graph.PauseGraph();
                 programFrames.DiscardEvaluationFrame(
@@ -1430,10 +1420,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                 !m_HasCompletedFrame ||
                 m_LastCompletedFrame.CompletionIdentity == 0 ||
                 executionResult.Lineage.CompletionIdentity !=
-                m_LastCompletedFrame.CompletionIdentity ||
-                !m_ProgramFrames.TryGetCommittedFinalReadBinding(
-                    out AnimationFinalPoseNativeReadBinding finalRead) ||
-                finalRead.CompletionIdentity != m_LastCompletedFrame.CompletionIdentity)
+                m_LastCompletedFrame.CompletionIdentity)
             {
                 throw new InvalidOperationException(
                     "Animation diagnostics requires a successfully sealed committed Pose page.");
@@ -1550,6 +1537,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                                 in committedProgramResult,
                                 in m_LastCompletedFrame,
                                 interest);
+                                in publicationDiagnostics,
                     CharacterLinkedPoseCommittedDiagnosticsView
                         linkedPoseDiagnostics =
                             linkedPose.CaptureCommittedDiagnostics(
@@ -2125,6 +2113,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
         internal CharacterPoseProgramPrepared PrepareEvaluation(
             CharacterPoseSourceFrameLease sourceLease,
             in CharacterPoseSourceDemand sourceDemand,
+            CharacterFinalPosePublicationFrameLease publicationLease,
             float presentationDeltaSeconds,
             IReadOnlyDictionary<AnimationPlayerSourceSampleKey,
                 AnimationResolvedPoseSourceSample> actionSourceSamples,
@@ -2272,7 +2261,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             CharacterPoseSourcePreparedResources preparedSources =
                 m_SourceModule.RequirePreparedResources(sourceLease);
             CharacterPoseGraphStagedExecutor poseExecutor;
-            AnimationFinalPoseNativeReadBinding finalRead;
             using (ValidateMarker.Auto())
             {
                 for (int slotIndex = 0; slotIndex < m_Stacks.Length; slotIndex++)
@@ -2357,16 +2345,17 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                     m_ProgramTuning.RequireCommitted(
                         sourceDemand.Lineage.TuningGeneration);
                 poseExecutor = m_ProgramRuntime.BindExecutor(
+                CharacterFinalPosePublicationOutputBinding finalOutput =
+                    m_FinalPublication.BindProgramOutput(
+                        publicationLease);
                     in programTuning,
                     m_ProgramFrames.RequirePoseGraphBinding(
                         completionIdentity),
                     recordDiagnostics);
-                finalRead =
-                    m_ProgramFrames.RequireFinalReadBinding(
-                        completionIdentity);
+                    in finalOutput,
                 InstallOrUpdateJobs();
                 m_FinalPublication.ValidateWriterBeforeEvaluate(
-                    in finalRead);
+                    in finalOutput);
             }
 
             CharacterPoseSourceFrameResult sourceFrame =
@@ -2385,8 +2374,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                 in prepared,
                 presentationDeltaSeconds,
                 in frame,
-                poseExecutor,
-                in finalRead);
+                poseExecutor);
             return prepared;
         }
 
@@ -2439,8 +2427,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                 preparedState.Frame;
             CharacterPoseGraphStagedExecutor poseExecutor =
                 preparedState.Executor;
-            AnimationFinalPoseNativeReadBinding finalRead =
-                preparedState.FinalRead;
 
             enterEvaluateBarrier();
             m_SourceModule.EnterEvaluateBarrier(
@@ -2448,11 +2434,12 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             using (GraphEvaluateMarker.Auto())
                 m_Animancer.Evaluate(presentationDeltaSeconds);
             using (PoseGraphExecuteMarker.Auto())
+            CharacterPoseProgramOutputResult programOutput;
             {
                 poseExecutor.BeginStagedEvaluation(renderFrame);
                 if (m_HasSequencePreview)
                 {
-                    poseExecutor.ExecuteSequencePreview(
+                    programOutput = poseExecutor.ExecuteSequencePreview(
                         m_SequencePreviewOperationIndex);
                 }
                 else
@@ -2482,7 +2469,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                                 in worldInput))
                             break;
                     }
-                    poseExecutor.CompleteStagedEvaluation();
+                    programOutput =
+                        poseExecutor.CompleteStagedEvaluation();
                 }
                 m_ProgramFrames.RequireEvaluationStagesCompleted(
                     completionIdentity);
@@ -2492,7 +2480,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             CharacterPoseProgramResult programResult =
                 CreateProgramResult(
                     in completedLineage,
-                    in finalRead);
+                    in programOutput);
             CharacterPoseConstraintResult constraintResult =
                 m_PoseConstraints.CompleteFrame(
                     constraintLease,
@@ -2508,12 +2496,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                     in completedLineage,
                     in programResult,
                     in constraintResult,
-                    in finalRead,
-                    m_SourceModule);
+                    in programOutput);
                 m_PendingFrameOutcome = publicationResult.Outcome;
                 m_FinalPublication.WritePhysicalPose(
-                    publicationLease,
-                    in finalRead);
+                    publicationLease);
             }
             var executionResult = new CharacterPoseFrameExecutionResult(
                 in programResult,
@@ -2559,24 +2545,29 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
 
         CharacterPoseProgramResult CreateProgramResult(
             in CharacterPoseFrameLineage lineage,
-            in AnimationFinalPoseNativeReadBinding finalRead)
+            in CharacterPoseProgramOutputResult output)
         {
             bool completed =
-                finalRead.Availability[0] == AnimationPoseAvailability.Pose &&
-                finalRead.OutputInvalidReason[0] ==
+            if (!output.IsValid || output.Lineage != lineage)
+            {
+                throw new InvalidOperationException(
+                    "Pose Program output result is inconsistent.");
+            }
+                output.Availability == AnimationPoseAvailability.Pose &&
+                output.OutputInvalidReason ==
                     AnimationPoseNativeInvalidReason.None &&
-                finalRead.PoseGraphInvalidReason[0] ==
+                output.GraphInvalidReason ==
                     AnimationPoseNativeInvalidReason.None &&
-                finalRead.PoseGraphInvalidOperationIndex[0] == -1;
+                output.InvalidOperationIndex == -1;
             return new CharacterPoseProgramResult(
                 in lineage,
                 completed
                     ? AnimationPresentationFrameOutcome.Committed
                     : AnimationPresentationFrameOutcome.TypedInvalid,
-                finalRead.Availability[0],
-                finalRead.OutputInvalidReason[0],
-                finalRead.PoseGraphInvalidReason[0],
-                finalRead.PoseGraphInvalidOperationIndex[0]);
+                output.Availability,
+                output.OutputInvalidReason,
+                output.GraphInvalidReason,
+                output.InvalidOperationIndex);
         }
 
         CharacterPoseWorldAwareStageInput BuildWorldAwareStageInput(

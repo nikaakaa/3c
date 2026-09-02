@@ -1606,11 +1606,15 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
                 for (int contributionIndex = 0; contributionIndex < contributionCount; contributionIndex++)
                 {
                     int destinationIndex = contributionOffset + contributionIndex;
-                    page.OperationContributions[destinationIndex] = ConvertContribution(
-                        programDiagnostics.GetValueContribution(
-                            valueIndex,
-                            contributionIndex),
-                        in sourceDiagnostics);
+                    page.OperationContributions[destinationIndex] =
+                        programDiagnostics.IsFinalOutputValue(valueIndex)
+                            ? programDiagnostics.GetFinalOutputContribution(
+                                contributionIndex)
+                            : ConvertContribution(
+                                programDiagnostics.GetValueContribution(
+                                    valueIndex,
+                                    contributionIndex),
+                                in sourceDiagnostics);
                     for (int boneIndex = 0;
                          boneIndex < programDiagnostics.BoneCount;
                          boneIndex++)
@@ -1890,11 +1894,17 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
                         throw new InvalidOperationException($"Pose Watch operation #{operation.Index} contribution count is invalid.");
                     for (int contributionIndex = 0; contributionIndex < contributionCount; contributionIndex++)
                     {
-                        page.PoseWatchContributions[contributionOffset + contributionIndex] = ConvertContribution(
-                            programDiagnostics.GetValueContribution(
-                                valueIndex,
-                                contributionIndex),
-                            in sourceDiagnostics);
+                        page.PoseWatchContributions[
+                            contributionOffset + contributionIndex] =
+                            programDiagnostics.IsFinalOutputValue(valueIndex)
+                                ? programDiagnostics
+                                    .GetFinalOutputContribution(
+                                        contributionIndex)
+                                : ConvertContribution(
+                                    programDiagnostics.GetValueContribution(
+                                        valueIndex,
+                                        contributionIndex),
+                                    in sourceDiagnostics);
                     }
                 }
                 if (operation.Code == CharacterPoseOperationCode.FullBodyIK &&

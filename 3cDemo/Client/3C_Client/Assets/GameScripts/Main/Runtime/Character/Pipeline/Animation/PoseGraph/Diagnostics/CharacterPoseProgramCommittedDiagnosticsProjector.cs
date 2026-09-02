@@ -161,11 +161,39 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             return m_Page.ValueContributionCounts[valueIndex];
         }
 
+        internal bool IsFinalOutputValue(int valueIndex)
+        {
+            RequireValueIndex(valueIndex);
+            return valueIndex == m_Page.OutputValueIndex;
+        }
+
+        internal AnimationPoseSourceContribution GetFinalOutputContribution(
+            int contributionIndex)
+        {
+            RequireInterest(
+                AnimationPresentationDiagnosticsInterest.Capture |
+                AnimationPresentationDiagnosticsInterest.OperationDetail |
+                AnimationPresentationDiagnosticsInterest.PoseWatch);
+            if ((uint)contributionIndex >=
+                (uint)m_Page.ValueContributionCounts[
+                    m_Page.OutputValueIndex])
+            {
+                throw new ArgumentOutOfRangeException(
+                    nameof(contributionIndex));
+            }
+            return m_Page.FinalOutputContributions[contributionIndex];
+        }
+
         internal AnimationPrimitivePoseContribution GetValueContribution(
             int valueIndex,
             int contributionIndex)
         {
             RequireValueIndex(valueIndex);
+            if (valueIndex == m_Page.OutputValueIndex)
+            {
+                throw new InvalidOperationException(
+                    "Final Output contribution is already resolved by its Publication owner.");
+            }
             if ((uint)contributionIndex >=
                 (uint)m_Page.Layout.PoseValueContributionStride)
             {
@@ -185,7 +213,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             RequireInterest(
                 AnimationPresentationDiagnosticsInterest.Capture |
                 AnimationPresentationDiagnosticsInterest.OperationDetail);
-            GetValueContribution(valueIndex, contributionIndex);
+            if (IsFinalOutputValue(valueIndex))
+                GetFinalOutputContribution(contributionIndex);
+            else
+                GetValueContribution(valueIndex, contributionIndex);
             if ((uint)boneIndex >= (uint)m_Page.Layout.BoneCount)
                 throw new ArgumentOutOfRangeException(nameof(boneIndex));
             int flatContributionIndex =
@@ -259,11 +290,15 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             CharacterPoseProgramFramePages framePages,
             in CharacterPoseProgramResult result,
             in CharacterPoseGraphNativeBinding frame,
+            in CharacterFinalPoseCommittedDiagnosticsView finalOutput,
             AnimationPresentationDiagnosticsInterest interest)
         {
             if (framePages == null ||
                 framePages.HasOpenFrame ||
                 !result.IsCompleted ||
+                !finalOutput.IsValid ||
+                !finalOutput.ProgramOutput.IsCompleted ||
+                finalOutput.ProgramOutput.Lineage != result.Lineage ||
                 interest == AnimationPresentationDiagnosticsInterest.None ||
                 result.Lineage.CompletionIdentity !=
                 frame.CompletionIdentity)
@@ -276,6 +311,15 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 framePages.CommittedDiagnostics;
             AnimationPoseNativeAggregateLayout frameLayout = frame.Layout;
             RequireDiagnosticsLayout(in frameLayout, in page.Layout);
+            int outputValueIndex = page.OutputValueIndex;
+            if (outputValueIndex != frameLayout.OutputValueIndex)
+            {
+                throw new InvalidOperationException(
+                    "Pose Program committed Output layout is inconsistent.");
+            }
+            CharacterPoseProgramOutputResult output =
+                finalOutput.ProgramOutput;
+            ComposedAnimationPoseFrame outputFrame = finalOutput.Frame;
             page.Identity = 0;
             page.Result = result;
             page.Interest = interest;
@@ -322,7 +366,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             }
             if (operationDetail || poseWatch)
             {
-                for (int i = 0; i < page.Layout.PoseValueCount; i++)
+                for (int i = 0; i < outputValueIndex; i++)
                 {
                     page.ValueContributionCounts[i] =
                         frame.ValueContributionCounts[i];
@@ -333,23 +377,72 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                     page.ValueInvalidReasons[i] =
                         frame.ValueInvalidReasons[i];
                 }
-                for (int i = 0; i < page.ValueContributions.Length; i++)
+                page.ValueContributionCounts[outputValueIndex] =
+                    outputFrame.Contributions.Count;
+                page.ValueOutputWeights[outputValueIndex] =
+                    output.OutputWeight;
+                page.ValueAvailability[outputValueIndex] =
+                    output.Availability;
+                page.ValueContinuityIdentities[outputValueIndex] =
+                    output.ContinuityIdentity;
+                page.ValueInvalidReasons[outputValueIndex] =
+                    output.OutputInvalidReason;
+                for (int i = 0;
+                     i < outputFrame.Contributions.Count;
+                     i++)
+                {
+                    page.FinalOutputContributions[i] =
+                        outputFrame.Contributions[i];
+                }
+                int workspaceContributionCount = checked(
+                    outputValueIndex *
+                    page.Layout.PoseValueContributionStride);
+                for (int i = 0; i < workspaceContributionCount; i++)
                     page.ValueContributions[i] = frame.ValueContributions[i];
             }
             if (operationDetail)
             {
-                for (int i = 0;
-                     i < page.ValueDenseContributionWeights.Length;
-                     i++)
+                int workspaceDenseWeightCount = checked(
+                    outputValueIndex *
+                    page.Layout.PoseValueContributionStride *
+                    page.Layout.BoneCount);
+                for (int i = 0; i < workspaceDenseWeightCount; i++)
                 {
                     page.ValueDenseContributionWeights[i] =
                         frame.ValueDenseContributionWeights[i];
                 }
+                int outputDenseWeightOffset = workspaceDenseWeightCount;
+                for (int contribution = 0;
+                     contribution < outputFrame.Contributions.Count;
+                     contribution++)
+                {
+                    for (int bone = 0;
+                         bone < page.Layout.BoneCount;
+                         bone++)
+                    {
+                        page.ValueDenseContributionWeights[
+                            outputDenseWeightOffset +
+                            contribution * page.Layout.BoneCount + bone] =
+                            outputFrame.GetContributionBoneWeight(
+                                contribution,
+                                bone);
+                    }
+                }
             }
             if (poseWatch)
             {
-                for (int i = 0; i < page.ValueDenseLocalPoses.Length; i++)
+                int workspacePoseCount = checked(
+                    outputValueIndex * page.Layout.BoneCount);
+                for (int i = 0; i < workspacePoseCount; i++)
                     page.ValueDenseLocalPoses[i] = frame.ValueDenseLocalPoses[i];
+                int outputPoseOffset = workspacePoseCount;
+                for (int bone = 0;
+                     bone < page.Layout.BoneCount;
+                     bone++)
+                {
+                    page.ValueDenseLocalPoses[outputPoseOffset + bone] =
+                        outputFrame.DenseLocalPose[bone];
+                }
             }
             framePages.PublishCommittedDiagnostics();
             return new CharacterPoseProgramCommittedDiagnosticsView(page);

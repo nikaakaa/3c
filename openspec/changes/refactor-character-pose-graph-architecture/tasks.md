@@ -70,7 +70,7 @@
 - [x] 6.7 删除Constraint Module扫描Program、Source Module扫描Operation以及Diagnostics重放Operation的路径
 - [x] 6.8 将旧`CharacterPoseGraphStagedExecutor`巨型字段和构造整体替换，删除旧类型而不保留wrapper
 - [x] 6.9 将Node Weight、PoseState、Slot、BlendStack、Routing与Inertialization调参改为Program-owned Candidate Tuning Snapshot
-- [ ] 6.10 搜索并消除第二Action lifecycle Owner、第二Pose Operation执行Owner、第二Value writer和任何图外隐式Pose stage
+- [x] 6.10 搜索并消除第二Action lifecycle Owner、第二Pose Operation执行Owner、第二Value writer和任何图外隐式Pose stage
 
 ## 7. 建立CharacterFinalPosePublication与单一Final Pose物理页
 

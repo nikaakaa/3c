@@ -57,7 +57,7 @@
 - [x] 5.7 将Dense跨帧状态改为明确Committed/Pending页，将稀疏节点与source生命周期变化保持为固定pending state或journal
 - [x] 5.8 删除`CharacterPoseGraphNativeProgram`中的Frame identity、Pending/Committed控制、Goal workspace、运行时Tuning Weight和其它可变状态
 - [x] 5.9 删除Actor State对Source物理资源、Constraint Bank、Final Pose和Diagnostics真相的复制
-- [ ] 5.10 对账Reset、Projection replacement、Preview seek、actor-local Execution View、Dispose和Actor Fault，确保静态、执行View、Actor、Module Frame与根事务寿命各自只由唯一Owner清理
+- [x] 5.10 对账Reset、Projection replacement、Preview seek、actor-local Execution View、Dispose和Actor Fault，确保静态、执行View、Actor、Module Frame与根事务寿命各自只由唯一Owner清理
 
 ## 6. 建立唯一CharacterPoseProgramRuntime与持久Executor
 
@@ -111,7 +111,7 @@
 - [x] 10.7 保证Definition不得直接修改Unity对象、执行Document apply、接管五个MCP生命周期或建立第二Reconciler/Transaction Service
 - [x] 10.8 将Graph dependency、局部Validator和Source Map命名迁移到Node Definition，保持跨节点全局规则只属于Topology Pass
 - [x] 10.9 删除`ICharacterPoseCompilerHandler`、泛型Handler、Handler Registry、反射注册和Player/Slot/Blend等布尔能力矩阵
-- [ ] 10.10 搜索并删除Agent exporter、Package codec、Target Mapper、Profile Inspector、Clipboard、Canvas和Compiler中可由Definition/Capability/Port Shape表达的重复NodeKind switch
+- [x] 10.10 搜索并删除Agent exporter、Package codec、Target Mapper、Profile Inspector、Clipboard、Canvas和Compiler中可由Definition/Capability/Port Shape表达的重复NodeKind switch
 - [x] 10.11 校验全部正式节点恰有一个Definition且Capability、Document、Mutation、Clipboard和Compiler不存在第二catalog；若Agent可见语义变化则同步`btsmtl-agent-authoring`当前合同
 
 ## 11. 将Pose Compiler拆为不可变Pass
@@ -161,7 +161,7 @@
 - [x] 14.2 删除旧`CharacterPoseGraphNativeProgram`、旧`CharacterPoseGraphStagedExecutor`、旧万能Operation、旧Compiler Handler Registry和旧中央CompilationState
 - [x] 14.3 搜索并消除第二Program Image语义、同一Actor第二Execution View、第二Program State、第二根Frame Transaction、第二Action lifecycle Owner、第二Source owner、第二Operation executor、第二Constraint owner、第二Goal Set、第二FBBIK、第二Final Pose页和第二Physical Writer
 - [x] 14.4 搜索并消除Runtime对authoring asset、NodeKind字符串、AssetDatabase、旧Projection schema和动态编译的读取
-- [ ] 14.5 检查Module依赖方向，确保Contracts不引用Implementation、Runtime不引用Editor、Diagnostics不反向驱动运行结果且不存在asmdef循环
+- [x] 14.5 检查Module依赖方向，确保Contracts不引用Implementation、Runtime不引用Editor、Diagnostics不反向驱动运行结果且不存在asmdef循环
 - [ ] 14.6 更新`openspec/project.md`为实际PoseGraph Module、根事务/Owned页数据流、Projection内Program Image、actor-local Execution View与Tuning、Compiler Pass和ABI真相
 - [ ] 14.7 使用规定参数编译Runtime与Editor工程，并在每次构建后立即执行`dotnet build-server shutdown`
 - [ ] 14.8 执行`git diff --check`、本change严格校验和全量严格OpenSpec校验

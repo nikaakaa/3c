@@ -1231,3 +1231,11 @@ Actor与Program诊断字段、interest条件、快照排序和读取的Committed
 状态：Source在Committed退休应用完成后冻结物理Source与release页，Constraint在Bank Seal并发布Foot内部Committed诊断后冻结Foot／Goal／Solver页，Final Publication在Pending Frame提升时冻结Program Output、Physical Write与最终Frame页；Program已在前一步于根Seal前冻结Actor／Operation／Value／Contribution／Pose页。全部冻结都使用Frame开始确定的interest，未观察帧不复制诊断payload。
 
 Post-Commit `CharacterPoseDiagnosticsRuntime`现在只验证同lineage并取得四个Owner已经冻结的Committed View，Snapshot Publisher不再从Native Program、Pending Workspace、Foot Context、FBBIK Vendor对象或Physical Transform反推事实。任务13.3与13.6完成。3C MCP完成全脚本重编且C#错误为0，不单独运行回放。
+
+## 生命周期、Node Definition与依赖方向审计
+
+状态：Reset只清actor-local Program／Source／Constraint／Publication／Diagnostics状态，不修改Projection内Program Image或Execution View；Preview Seek走同一Reset，Projection切换只允许释放整个旧Runtime后由正式Factory重建，Actor Fault禁止继续Present，Dispose由Composition依次失效Publication、解绑Job、释放Source、Program Execution View／Actor State／Frame页并恢复Graph Clock。任务5.10完成。
+
+Agent exporter不判断Node Kind；Package codec的Subgraph／Graph Input／Graph Output规则通过Definition取得Capability；Target Mapper无Pose Kind分支；Profile Inspector只读Capability字段；Clipboard通过`RequireCapability`解析Definition；Canvas使用统一Port Shape；Compiler中的Kind判断只剩Definition注册、节点局部Lowering与Topology全局唯一性规则。不存在可由Definition／Capability／Port Shape替代的消费端switch，任务10.10完成。
+
+Pose Contracts目录不引用Program／Source／Constraint／Publication Implementation或Editor命名空间，Pose Runtime目录不引用UnityEditor／AssetDatabase；Diagnostics只消费冻结Result View，不参与运行结果选择。3C MCP完整脚本编译同时证明现有asmdef引用无循环，任务14.5完成。

@@ -1033,3 +1033,9 @@ Frame Begin仍只清理Actor projector的帧内投影页，Discard、Reset、Inv
 状态：新增`CharacterPoseTransformOperationModule`，整体迁移Modify Bone、Root Orientation Warp、Local-to-Component、Component-to-Local及其Component descendant重建逻辑。模块直接消费同一`CharacterPoseExecutionContext`的已绑定Value与Rig parent页，仍由唯一Stage dispatch在原Operation位置调用。
 
 Bone遍历顺序、Local／Component数学、Root yaw乘法顺序、Invalid reason、continuity和完成页写入均未改变；没有复制Pose页、Transform写入或额外空间转换。旧Executor进一步缩减但仍保留Player、State、Inertialization、Constraint、Linked与Output Family，6.8暂不勾选；3C MCP对Transform模块与Executor错误筛选均为0，不单独运行回放。
+
+## 拆出Constraint Operation模块
+
+状态：新增`CharacterPoseConstraintOperationModule`，迁移Pose Bone Goal Contribution、Foot Placement、Goal Assembler与Full Body IK四类Operation调用。模块只从共享Execution Context取得当前Value read/write binding、Frame／Completion identity和唯一Constraint Runtime，并返回原typed per-operation Result匹配结果。
+
+Foot world input、Goal workspace、FBBIK输出Pose、invalid reason、completion校验和Constraint调用次数均保持不变；模块不拥有Constraint Pending页、不扫描Program，也不复制Goal或Pose。旧Executor只保留原Stage dispatch，6.8继续推进；3C MCP对Constraint Operation模块与Executor错误筛选均为0，不单独运行回放。

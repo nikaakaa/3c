@@ -104,6 +104,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             m_CompositionOperations;
         readonly CharacterPoseTransformOperationModule
             m_TransformOperations;
+        readonly CharacterPoseConstraintOperationModule
+            m_ConstraintOperations;
 
         internal CharacterPoseGraphStagedExecutor(
             CharacterPoseProgramExecutionView program,
@@ -160,6 +162,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 new CharacterPoseCompositionOperationModule(this);
             m_TransformOperations =
                 new CharacterPoseTransformOperationModule(this);
+            m_ConstraintOperations =
+                new CharacterPoseConstraintOperationModule(this);
         }
 
         internal CharacterPoseGraphStagedExecutor BindFrame(
@@ -445,22 +449,26 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                         break;
                     case CharacterPoseOperationCode.PoseBoneIKGoals:
                         using (IkGoalMarker.Auto())
-                            valueOperationValid = EvaluatePoseBoneIkGoals(operation);
+                            valueOperationValid = m_ConstraintOperations
+                                .EvaluatePoseBoneIkGoals(operation);
                         break;
                     case CharacterPoseOperationCode.FootPlacement:
                         using (IkGoalMarker.Auto())
-                            valueOperationValid = EvaluateWorldAwareFootGoal(
-                                operation,
-                                in worldInput,
-                                out typedInvalidReason);
+                            valueOperationValid = m_ConstraintOperations
+                                .EvaluateWorldAwareFootGoal(
+                                    operation,
+                                    in worldInput,
+                                    out typedInvalidReason);
                         break;
                     case CharacterPoseOperationCode.FullBodyIkGoalAssembler:
                         using (IkGoalMarker.Auto())
-                            valueOperationValid = EvaluateGoalAssembler(operation);
+                            valueOperationValid = m_ConstraintOperations
+                                .EvaluateGoalAssembler(operation);
                         break;
                     case CharacterPoseOperationCode.FullBodyIK:
                         using (FullBodyIkMarker.Auto())
-                            EvaluateFullBodyIk(operation);
+                            m_ConstraintOperations.EvaluateFullBodyIk(
+                                operation);
                         break;
                     case CharacterPoseOperationCode.LinkedPoseCall:
                         using (LinkedPoseMarker.Auto())
@@ -2020,150 +2028,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             value = Mathf.Clamp01(((segment.A * u + segment.B) * u + segment.C) * u + segment.D);
             derivative = ((3f * segment.A * u + 2f * segment.B) * u + segment.C) /
                          (segment.EndTime - segment.StartTime);
-        }
-
-        bool EvaluatePoseBoneIkGoals(AnimationPoseGraphNativeOperation operation)
-        {
-            CharacterPoseBoneContributionConstraintHandle handle =
-                operation.PoseBoneContribution;
-            int input = handle.InputPoseValueIndex;
-            if (!handle.IsValid ||
-                !IsInputReady(input, operation.Index) ||
-                m_ValueAvailability[input] != AnimationPoseAvailability.Pose)
-            {
-                return false;
-            }
-            NativeSlice<AnimationLocalBonePose> componentPose = new NativeSlice<AnimationLocalBonePose>(
-                m_ValueDenseLocalPoses,
-                PoseOffset(input),
-                m_BoneCount);
-            CharacterPoseBoneContributionOperationResult result =
-                m_PoseConstraints.ExecutePoseBoneContribution(
-                    in handle,
-                    componentPose,
-                    m_FrameSequence,
-                    m_CompletionIdentity);
-            return result.Matches(
-                in handle,
-                m_FrameSequence,
-                m_CompletionIdentity);
-        }
-
-        bool EvaluateWorldAwareFootGoal(
-            AnimationPoseGraphNativeOperation operation,
-            in CharacterPoseWorldFrameInput worldInput,
-            out AnimationPoseNativeInvalidReason invalidReason)
-        {
-            invalidReason =
-                AnimationPoseNativeInvalidReason.FootPlacementInvalid;
-            CharacterFootPlacementConstraintHandle handle =
-                operation.FootPlacementConstraint;
-            if (!handle.IsValid ||
-                !worldInput.IsValid ||
-                worldInput.CompletionIdentity != m_CompletionIdentity ||
-                worldInput.PresentationFrame != m_FrameSequence)
-            {
-                return false;
-            }
-            CharacterFootPlacementConstraintOperationResult result;
-            if (m_PoseConstraints.HasFootPlacement)
-            {
-                AnimationPoseValueNativeReadBinding inputBinding =
-                    m_FramePages.RequirePoseValueReadBinding(
-                        operation.InputValueIndexA,
-                        m_CompletionIdentity);
-                CharacterFootPlacementFrameInput footPlacement =
-                    worldInput.BuildFootPlacement(
-                        in inputBinding,
-                        operation.ParameterIndex);
-                result = m_PoseConstraints.EvaluateFootPlacement(
-                    in handle,
-                    in footPlacement);
-            }
-            else
-            {
-                result = m_PoseConstraints.RecordUnavailableFootPlacement(
-                    in handle,
-                    m_FrameSequence,
-                    m_CompletionIdentity);
-            }
-            if (!result.Matches(
-                    in handle,
-                    m_FrameSequence,
-                    m_CompletionIdentity))
-            {
-                return false;
-            }
-            if (result.Availability ==
-                CharacterFullBodyIkGoalContributionAvailability.Ready)
-            {
-                invalidReason = AnimationPoseNativeInvalidReason.None;
-                return true;
-            }
-            if (result.Availability ==
-                CharacterFullBodyIkGoalContributionAvailability
-                    .WorldContextUnavailable)
-            {
-                invalidReason =
-                    AnimationPoseNativeInvalidReason.WorldContextUnavailable;
-            }
-            return false;
-        }
-
-        bool EvaluateGoalAssembler(AnimationPoseGraphNativeOperation operation)
-        {
-            CharacterFullBodyIkGoalAssemblerConstraintHandle handle =
-                operation.GoalAssemblerConstraint;
-            if (!handle.IsValid)
-                return false;
-            CharacterFullBodyIkGoalAssemblerOperationResult result =
-                m_PoseConstraints.ExecuteGoalAssembler(
-                    in handle,
-                    m_FrameSequence,
-                    m_CompletionIdentity);
-            return result.Matches(
-                in handle,
-                m_FrameSequence,
-                m_CompletionIdentity);
-        }
-
-        void EvaluateFullBodyIk(AnimationPoseGraphNativeOperation operation)
-        {
-            CharacterFullBodyIkConstraintHandle handle =
-                operation.FullBodyIkConstraint;
-            int input = handle.InputPoseValueIndex;
-            int output = handle.OutputPoseValueIndex;
-            if (!handle.IsValid ||
-                !IsInputReady(input, operation.Index) ||
-                !m_PoseConstraints.HasPendingAssembledGoalSet ||
-                !TryCopyValue(input, output, operation.Index))
-            {
-                SetInvalid(output, (ulong)operation.Index + 1UL,
-                    AnimationPoseNativeInvalidReason.PoseGraphInputIncomplete,
-                    operation.Index);
-                return;
-            }
-            if (m_ValueAvailability[output] != AnimationPoseAvailability.Pose)
-                return;
-            NativeSlice<AnimationLocalBonePose> outputPose = new NativeSlice<AnimationLocalBonePose>(
-                m_ValueDenseLocalPoses,
-                PoseOffset(output),
-                m_BoneCount);
-            CharacterFullBodyIkConstraintOperationResult result =
-                m_PoseConstraints.ExecuteFullBodyIk(
-                    in handle,
-                    outputPose,
-                    m_FrameSequence,
-                    m_CompletionIdentity);
-            if (!result.Matches(
-                    in handle,
-                    m_FrameSequence,
-                    m_CompletionIdentity))
-            {
-                SetInvalid(output, m_ValueContinuityIdentities[output],
-                    AnimationPoseNativeInvalidReason.FullBodyIkSolverInvalid,
-                    operation.Index);
-            }
         }
 
         bool EvaluateLinkedPoseCall(AnimationPoseGraphNativeOperation operation)

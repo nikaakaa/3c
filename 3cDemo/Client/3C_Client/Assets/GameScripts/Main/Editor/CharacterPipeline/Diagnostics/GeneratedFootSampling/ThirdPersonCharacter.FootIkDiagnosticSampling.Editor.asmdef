@@ -3,6 +3,7 @@
     "rootNamespace": "ThirdPersonCharacter.Pipeline.Diagnostics.FootIkSampling.Editor",
     "references": [
         "ThirdPersonCharacter.FootIkDiagnosticSampling",
+        "ThirdPersonCharacter.FootDiagnosticAnalysis.Editor",
         "ThirdPersonClient.Runtime",
         "ThirdPersonClient.Editor",
         "KK.GeneratedDiagnosticSampling",

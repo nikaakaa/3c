@@ -12,7 +12,9 @@ namespace ThirdPersonCharacter.Pipeline.Diagnostics.FootIkSampling
         public const int CapabilityRevision = 1;
         public const string LeftDimensionId = "character-foot-ik/left";
         public const string RightDimensionId = "character-foot-ik/right";
+        public const string CoreSamplerId = "character-foot-ik/core";
         public const string FullSamplerId = "character-foot-ik/full";
+        public const string CoreProgramId = "character-foot-ik/core-program";
         public const string FullProgramId = "character-foot-ik/full-program";
     }
 

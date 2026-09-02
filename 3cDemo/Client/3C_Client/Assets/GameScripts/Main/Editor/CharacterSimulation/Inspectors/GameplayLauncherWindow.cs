@@ -292,6 +292,75 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                         StartAutoSample();
                 }
             }
+            EditorGUILayout.Space(4f);
+            EditorGUILayout.LabelField(
+                "Foot Diagnosis",
+                CharacterFootDiagnosticSampling.IsAnalyzing
+                    ? "Analyzing"
+                    : "Idle");
+            using (new EditorGUILayout.HorizontalScope())
+            {
+                using (new EditorGUI.DisabledScope(
+                           !CharacterFootDiagnosticSampling.IsAnalysisAvailable ||
+                           CharacterFootDiagnosticSampling.IsAnalyzing ||
+                           finalizing ||
+                           !File.Exists(manifestPath)))
+                {
+                    if (GUILayout.Button("Analyze Last Capture"))
+                        ExecuteSampling(
+                            CharacterFootDiagnosticSampling
+                                .AnalyzeLastCapture);
+                }
+                using (new EditorGUI.DisabledScope(
+                           !CharacterFootDiagnosticSampling.IsAnalysisAvailable ||
+                           CharacterFootDiagnosticSampling.IsAnalyzing ||
+                           finalizing))
+                {
+                    if (GUILayout.Button("Analyze Existing Capture"))
+                    {
+                        string selectedManifest = EditorUtility.OpenFilePanel(
+                            "Select Foot Capability Manifest",
+                            Path.GetFullPath(Path.Combine(
+                                Application.dataPath,
+                                "..",
+                                "Diagnostics")),
+                            "json");
+                        if (!string.IsNullOrEmpty(selectedManifest))
+                        {
+                            ExecuteSampling(() =>
+                                CharacterFootDiagnosticSampling
+                                    .AnalyzeExistingCapture(
+                                        selectedManifest));
+                        }
+                    }
+                }
+                using (new EditorGUI.DisabledScope(
+                           !File.Exists(
+                               CharacterFootDiagnosticSampling
+                                   .LastReportPath)))
+                {
+                    if (GUILayout.Button("Open Last Report"))
+                    {
+                        ExecuteSampling(
+                            CharacterFootDiagnosticSampling.OpenLastReport);
+                    }
+                }
+            }
+            if (!string.IsNullOrEmpty(
+                    CharacterFootDiagnosticSampling.LastAnalysisFailure))
+            {
+                EditorGUILayout.HelpBox(
+                    CharacterFootDiagnosticSampling.LastAnalysisFailure,
+                    MessageType.Error);
+            }
+            else if (!string.IsNullOrEmpty(
+                         CharacterFootDiagnosticSampling.LastReportPath))
+            {
+                EditorGUILayout.SelectableLabel(
+                    CharacterFootDiagnosticSampling.LastReportPath,
+                    EditorStyles.textField,
+                    GUILayout.Height(EditorGUIUtility.singleLineHeight));
+            }
             DrawFixedInputTrace();
             EditorGUILayout.Space(4f);
             EditorGUILayout.LabelField(

@@ -52,6 +52,25 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             TryGet(out IDiagnosticSamplingWorkflow workflow)
                 ? workflow.LastSavedFrameCount
                 : 0;
+        public static bool IsAnalysisAvailable =>
+            DiagnosticAnalysisWorkflowRegistry.TryGet(
+                CapabilityId,
+                out _);
+        public static bool IsAnalyzing =>
+            TryGetAnalysis(out IDiagnosticAnalysisWorkflow workflow) &&
+            workflow.IsAnalyzing;
+        public static string LastAnalysisDirectory =>
+            TryGetAnalysis(out IDiagnosticAnalysisWorkflow workflow)
+                ? workflow.LastResultDirectory
+                : string.Empty;
+        public static string LastReportPath =>
+            TryGetAnalysis(out IDiagnosticAnalysisWorkflow workflow)
+                ? workflow.LastReportPath
+                : string.Empty;
+        public static string LastAnalysisFailure =>
+            TryGetAnalysis(out IDiagnosticAnalysisWorkflow workflow)
+                ? workflow.LastFailure
+                : string.Empty;
 
         public static void StartSampling() =>
             Require().Start(false);
@@ -68,6 +87,16 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         public static void StopAndSaveSampling() =>
             Require().StopAndSave();
 
+        public static void AnalyzeLastCapture() =>
+            RequireAnalysis().AnalyzeLast();
+
+        public static void AnalyzeExistingCapture(
+            string manifestPath) =>
+            RequireAnalysis().AnalyzeExisting(manifestPath);
+
+        public static void OpenLastReport() =>
+            RequireAnalysis().OpenLastReport();
+
         public static string GetArtifactPath(string artifactId) =>
             TryGet(out IDiagnosticSamplingWorkflow workflow)
                 ? workflow.GetArtifactPath(artifactId)
@@ -80,5 +109,14 @@ namespace ThirdPersonCharacter.Pipeline.Editor
 
         static IDiagnosticSamplingWorkflow Require() =>
             DiagnosticSamplingWorkflowRegistry.Require(CapabilityId);
+
+        static bool TryGetAnalysis(
+            out IDiagnosticAnalysisWorkflow workflow) =>
+            DiagnosticAnalysisWorkflowRegistry.TryGet(
+                CapabilityId,
+                out workflow);
+
+        static IDiagnosticAnalysisWorkflow RequireAnalysis() =>
+            DiagnosticAnalysisWorkflowRegistry.Require(CapabilityId);
     }
 }

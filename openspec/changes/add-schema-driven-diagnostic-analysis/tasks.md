@@ -29,8 +29,8 @@
 
 - [x] 4.1 把现有Foot真实成员迁为无参数`DiagnosticField`并删除旧revision／unit／group实参，通过Foot Generator程序集编译确认没有恢复Getter、Extractor、Projection或DTO
 - [x] 4.2 为Frame关联、Final Solved Sole、Goal、Lifecycle、Contact、Anchor、Ground、Pelvis及Physical Ankle等长期关键事实声明稳定`DiagnosticKey`，通过Schema检查Key在Capability／Table／Fact Root作用域唯一
-- [ ] 4.3 在可复用事实分支和必要叶子声明`core`、`landing`、`ground`、`motion`、`pelvis`与`solver-detail` Group，通过Schema检查继承结果和每组字段规模
-- [ ] 4.4 定义Foot Core与Full Sampler并让现有Foot Capture Program消费生成闭包，通过生成源码检查Core只来自选择Group、Full包含全部Foot字段且两者没有逐字段列表
+- [x] 4.3 在可复用事实分支和必要叶子声明`motion-core`、`lifecycle`、`ground-*`、`pelvis-*`、`solver-*`等领域内Group，通过Schema检查继承结果、Capability隔离和每组字段规模
+- [x] 4.4 定义独立Foot Core／Full Sampler与Program，通过生成源码检查Core只选择`body-correction`、`lifecycle`、`motion-core`、`physical`、`resolved-core`、`timing` Group，Full包含全部Foot字段且两者没有逐字段列表
 - [x] 4.5 为迁移清单首批Operator在Foot Result与Final Physical诊断页补Source Ankle／Physical Ankle真实成员采样声明，在成功Seal后的唯一业务Commit点声明并调用一行Foot `DiagnosticEvent` partial触发方法，删除`ICharacterFootIkCommittedCaptureConsumer`、Capture Binding和手写`TryCapture`转发，通过Capture／Disabled Runtime程序集编译和diff检查确认业务求解结果与Commit时机不改变、Physical事实只在匹配interest时冻结
 - [ ] 4.6 更新Foot Host workflow选择Core或Full并在Capability manifest记录实际Sampler，通过Editor程序集编译确认Stop仍只执行通用封存
 
@@ -47,8 +47,8 @@
 
 ## 6. Foot诊断前端接入
 
-- [ ] 6.1 在唯一Foot workflow registry增加Analyze Last、Analyze Existing、Open Last Report状态与路径，通过Editor程序集编译确认采样和分析是两个独立操作
-- [ ] 6.2 接入Gameplay Launcher并只显示采样状态、当前Plan、分析状态和结果路径，通过静态检查确认`OnInspectorGUI`不解析CSV或执行Operator
+- [x] 6.1 在独立analysis workflow registry增加Analyze Last、Analyze Existing、Open Last Report状态与路径，并由Foot Editor workflow显式调用统一Analyzer，确认Stop只封存采样、分析写入Capture目录外的独立结果目录
+- [x] 6.2 接入Gameplay Launcher的Analyze Last、Analyze Existing与Open Last Report按钮，只显示分析状态、失败和结果路径，确认绘制回调不解析CSV或执行Operator
 - [ ] 6.3 接入Foot MCP并复用同一分析入口和状态，通过MCP合同检查确认没有第二套Reader、规则registry或报告路径
 - [ ] 6.4 把固定输入回放的最小证据读取迁到通用Artifact Reader，通过Editor程序集编译和引用搜索确认不再直接维护CSV header／Field字符串解析器
 

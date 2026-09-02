@@ -172,104 +172,11 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             new ProfilerMarker("ThirdPerson.Presentation.Animation.Seal");
         static readonly ProfilerMarker DiagnosticsMarker =
             new ProfilerMarker("ThirdPerson.Presentation.Animation.Diagnostics");
-        static readonly Comparison<PendingActionBackendRelease>
-            s_PendingActionBackendReleaseComparison =
-                (left, right) => left.PlayableSource.CompareTo(
-                    right.PlayableSource);
-
         struct PreparedMotionMatchingHistoryRead
         {
             internal MotionMatchingSelectionBatchItem Selection;
             internal int PlayerIndex;
             internal bool SourceUsed;
-        }
-
-        sealed class PendingPoseSourceRelease
-        {
-            internal bool InUse;
-            internal AnimationBlendStackRuntime Stack;
-            internal CharacterAnimationTransitionRouteRuntime
-                Route;
-            internal AnimationBlendStackSourceReleaseToken StackRelease;
-            internal AnimationPhysicalSourceIdentity
-                PhysicalSource;
-            internal CharacterPoseSourceRetirementHandle SourceRelease;
-            internal bool NotifyRouteAfterApply;
-
-            internal AnimationBlendStackRelease Release =>
-                StackRelease.Release;
-
-            internal void Clear()
-            {
-                InUse = false;
-                Stack = null;
-                Route = null;
-                StackRelease = default;
-                PhysicalSource = default;
-                SourceRelease = default;
-                NotifyRouteAfterApply = false;
-            }
-        }
-
-        sealed class PendingActionBackendRelease
-        {
-            internal bool InUse;
-            internal AnimationSlotId SlotId;
-            internal AnimationBlendStackRuntime Stack;
-            internal CharacterAnimationTransitionRouteRuntime Route;
-            internal AnimationBlendStackSourceReleaseToken StackRelease;
-            internal AnimationPhysicalSourceIdentity PhysicalSource;
-            internal CharacterPoseSourceRetirementHandle SourceRelease;
-            internal ActionBackendSourceIdentity PlayableSource;
-            internal ActionBackendSourceIdentity StoredPoseSource;
-            internal ulong RequestIdentity;
-            internal ulong PlayableCompletionIdentity;
-            internal ulong StoredPoseCompletionIdentity;
-            internal bool NotifyRouteAfterApply;
-
-            internal AnimationBlendStackRelease Release =>
-                StackRelease.Release;
-
-            internal void Clear()
-            {
-                InUse = false;
-                SlotId = default;
-                Stack = null;
-                Route = null;
-                StackRelease = default;
-                PhysicalSource = default;
-                SourceRelease = default;
-                PlayableSource = default;
-                StoredPoseSource = default;
-                RequestIdentity = 0;
-                PlayableCompletionIdentity = 0;
-                StoredPoseCompletionIdentity = 0;
-                NotifyRouteAfterApply = false;
-            }
-        }
-
-        sealed class PreparedActionBackendRelease
-        {
-            internal PreparedActionBackendRelease(
-                int releaseCapacity,
-                int backendSourceCapacity)
-            {
-                Request = new ActionBackendReleaseRequest(
-                    backendSourceCapacity);
-                Sources = new List<PendingActionBackendRelease>(
-                    releaseCapacity);
-            }
-
-            internal bool InUse;
-            internal readonly ActionBackendReleaseRequest Request;
-            internal readonly List<PendingActionBackendRelease> Sources;
-
-            internal void Clear()
-            {
-                InUse = false;
-                Request.Clear();
-                Sources.Clear();
-            }
         }
 
         readonly AnimancerComponent m_Animancer;
@@ -301,26 +208,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
         readonly AnimationSelectedPosePlayerJob[] m_DirectPlayerJobs;
         readonly AnimationSelectedPosePlayerJob[] m_ClipPlayerJobs;
         readonly AnimationSelectedPosePlayerJob[] m_BlendSpacePlayerJobs;
-        readonly List<PendingActionBackendRelease>
-            m_PendingActionBackendReleases;
-        readonly List<PreparedActionBackendRelease>
-            m_PreparedActionBackendReleases;
-        readonly List<PendingPoseSourceRelease>
-            m_PendingPoseSourceReleases;
-        readonly HashSet<ActionBackendSourceIdentity>
-            m_ExpectedActionBackendSources;
-        readonly PendingPoseSourceRelease[]
-            m_PendingPoseSourceReleasePool;
-        readonly PendingActionBackendRelease[]
-            m_PendingActionBackendReleasePool;
-        readonly PreparedActionBackendRelease[]
-            m_PreparedActionBackendReleasePool;
-        readonly List<PendingActionBackendRelease>
-            m_PrepareActionBackendPendingScratch;
-        readonly List<ActionBackendSourceIdentity>
-            m_PrepareActionBackendSourceScratch;
-        readonly string[] m_PlayableBackendResourceIds;
-        readonly string[] m_StoredPoseBackendResourceIds;
         readonly Dictionary<PoseNodeId, AnimationBlendStackRuntime> m_StacksByNode =
             new Dictionary<PoseNodeId, AnimationBlendStackRuntime>();
         readonly Dictionary<PoseNodeId, CharacterAnimationTransitionRouteRuntime> m_StackRoutesByNode =
@@ -350,9 +237,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
         ulong m_CompletionIdentity = 1;
         ulong m_FrameCompletionContext;
         CharacterPoseProgramPreparedPage m_PreparedPage;
-        ulong m_ActionBackendReleaseRequestIdentity;
-        ulong m_ActionBackendReleaseCompletionIdentity;
-        int m_PendingActionBackendReleaseFrameStartCount;
         int m_PreparedMotionMatchingHistoryReadCount;
         ulong m_PreparedMotionMatchingPresentationFrame;
         ulong m_PreparedMotionMatchingResetSequence;
@@ -718,42 +602,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             m_SourceRetirementState =
                 new CharacterPoseProgramSourceRetirementState(
                     releaseCapacity);
-            int backendSourceCapacity = checked(releaseCapacity * 2);
-            m_PendingActionBackendReleases =
-                new List<PendingActionBackendRelease>(releaseCapacity);
-            m_PreparedActionBackendReleases =
-                new List<PreparedActionBackendRelease>(releaseCapacity);
-            m_PendingPoseSourceReleases =
-                new List<PendingPoseSourceRelease>(releaseCapacity);
-            m_ExpectedActionBackendSources =
-                new HashSet<ActionBackendSourceIdentity>(backendSourceCapacity);
-            m_PendingPoseSourceReleasePool =
-                new PendingPoseSourceRelease[releaseCapacity];
-            m_PendingActionBackendReleasePool =
-                new PendingActionBackendRelease[releaseCapacity];
-            m_PreparedActionBackendReleasePool =
-                new PreparedActionBackendRelease[releaseCapacity];
-            m_PrepareActionBackendPendingScratch =
-                new List<PendingActionBackendRelease>(releaseCapacity);
-            m_PrepareActionBackendSourceScratch =
-                new List<ActionBackendSourceIdentity>(backendSourceCapacity);
-            m_PlayableBackendResourceIds = new string[releaseCapacity];
-            m_StoredPoseBackendResourceIds = new string[releaseCapacity];
-            for (int i = 0; i < releaseCapacity; i++)
-            {
-                m_PendingPoseSourceReleasePool[i] =
-                    new PendingPoseSourceRelease();
-                m_PendingActionBackendReleasePool[i] =
-                    new PendingActionBackendRelease();
-                m_PreparedActionBackendReleasePool[i] =
-                    new PreparedActionBackendRelease(
-                        releaseCapacity,
-                        backendSourceCapacity);
-                m_PlayableBackendResourceIds[i] =
-                    $"animation-source-slot/{i}/playable";
-                m_StoredPoseBackendResourceIds[i] =
-                    $"animation-source-slot/{i}/stored-pose";
-            }
             m_ManagesGraphClock = managesGraphClock;
             m_FootPlacementWeightParameterIndex = projection.PosePlan.RequireParameterIndex(
                 AnimationPoseParameterIds.FootPlacementWeight);
@@ -973,8 +821,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                     diagnosticsInterest,
                     footIkCaptureInterest);
                 poseConstraintsOpen = true;
-                m_PendingActionBackendReleaseFrameStartCount =
-                    m_PendingActionBackendReleases.Count;
+                m_SourceRetirementState.BeginFrame();
                 sourceLease = m_SourceModule.BeginFrame(in lineage);
                 sourceOpen = true;
                 publicationLease = m_FramePublisher.BeginFrame(
@@ -1023,7 +870,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                     m_PosePlan.DiscardFrame();
                 if (sourceOpen)
                     m_SourceModule.DiscardFrame(sourceLease);
-                m_PendingActionBackendReleaseFrameStartCount = 0;
+                m_SourceRetirementState.CompleteFrame();
                 ClearLinkedPoseFrameSelection();
                 throw;
             }
@@ -1072,7 +919,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             m_PreparedPage.Clear();
             m_HasOpenFrame = false;
             m_ActiveFrameLease = default;
-            m_PendingActionBackendReleaseFrameStartCount = 0;
+            m_SourceRetirementState.CompleteFrame();
             ClearLinkedPoseFrameSelection();
         }
 
@@ -1168,25 +1015,13 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                         in playerRelease);
                 }
             }
-            for (int i = 0;
-                 i < m_PendingPoseSourceReleases.Count;
-                 i++)
-            {
-                PendingPoseSourceRelease pending =
-                    m_PendingPoseSourceReleases[i];
-                pending.SourceRelease =
-                    PrepareSourceRetirement(
-                        pending.Release.SourceId,
-                        pending.Release.PoseNodeId,
-                        pending.PhysicalSource);
-            }
             int preparedActionReleaseCount =
-                ValidatePreparedActionBackendReleases();
-            PrepareRouteReleaseNotifications();
+                m_SourceRetirementState.PreparePendingRetirements(
+                    m_SourceModule);
             m_SourceModule.RequireReleaseDiagnosticsCapacity(
                 checked(
                     standaloneReleaseCount +
-                    m_PendingPoseSourceReleases.Count +
+                    m_SourceRetirementState.PendingPoseCount +
                     preparedActionReleaseCount));
             m_SourceModule
                 .RequireActionBackendReleaseCompletionCapacity(
@@ -1301,7 +1136,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                 m_PoseStateSources.ClipPlayers,
                 m_PoseStateSources.BlendSpacePlayers,
                 m_CompletionIdentity);
-            ExecutePendingPoseSourceReleases();
+            m_SourceRetirementState.ApplyPendingPose(m_SourceModule);
             ComposedAnimationPoseFrame result =
                 m_FramePublisher.CommitPending(publicationLease);
             m_CommitValidated = false;
@@ -1765,22 +1600,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             AnimationPlaybackId playbackId)
         {
             RequireAlive();
-            if (!playbackId.IsValid)
-                throw new ArgumentException(
-                    "Action playback identity is invalid.",
-                    nameof(playbackId));
-            for (int i = 0;
-                 i < m_PendingActionBackendReleases.Count;
-                 i++)
-            {
-                if (m_PendingActionBackendReleases[i]
-                    .Release.SourceId.PlaybackId.Equals(
-                        playbackId))
-                {
-                    return true;
-                }
-            }
-            return false;
+            return m_SourceRetirementState.HasPendingAction(
+                playbackId);
         }
 
         internal bool TryPrepareActionBackendReleaseRequest(
@@ -1788,93 +1609,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             out ActionBackendReleaseRequest request)
         {
             RequireAlive();
-            if (!playbackId.IsValid)
-                throw new ArgumentException(
-                    "Action playback identity is invalid.",
-                    nameof(playbackId));
-            m_PrepareActionBackendSourceScratch.Clear();
-            m_PrepareActionBackendPendingScratch.Clear();
-            for (int i = 0;
-                 i < m_PendingActionBackendReleases.Count;
-                 i++)
-            {
-                PendingActionBackendRelease candidate =
-                    m_PendingActionBackendReleases[i];
-                if (!candidate.Release.SourceId.PlaybackId
-                        .Equals(playbackId))
-                {
-                    continue;
-                }
-                if (candidate.RequestIdentity != 0)
-                {
-                    throw new InvalidOperationException(
-                        $"Action playback '{playbackId}' already has a prepared backend release request.");
-                }
-                AddFixed(
-                    m_PrepareActionBackendPendingScratch,
-                    candidate,
-                    "Action backend pending release scratch");
-                AddFixed(
-                    m_PrepareActionBackendSourceScratch,
-                    candidate.PlayableSource,
-                    "Action backend source scratch");
-                AddFixed(
-                    m_PrepareActionBackendSourceScratch,
-                    candidate.StoredPoseSource,
-                    "Action backend source scratch");
-            }
-            if (m_PrepareActionBackendPendingScratch.Count == 0)
-            {
-                request = null;
-                return false;
-            }
-            m_PrepareActionBackendPendingScratch.Sort(
-                s_PendingActionBackendReleaseComparison);
-            ulong requestIdentity =
-                NextActionBackendReleaseRequestIdentity();
-            PreparedActionBackendRelease prepared =
-                RentPreparedActionBackendRelease();
-            try
-            {
-                prepared.Request.Prepare(
-                    requestIdentity,
-                    playbackId,
-                    m_PrepareActionBackendSourceScratch);
-                for (int i = 0;
-                     i < m_PrepareActionBackendPendingScratch.Count;
-                     i++)
-                {
-                    PendingActionBackendRelease pending =
-                        m_PrepareActionBackendPendingScratch[i];
-                    pending.RequestIdentity = requestIdentity;
-                    AddFixed(
-                        prepared.Sources,
-                        pending,
-                        "Prepared Action backend release");
-                }
-                AddFixed(
-                    m_PreparedActionBackendReleases,
-                    prepared,
-                    "Prepared Action backend release journal");
-                request = prepared.Request;
-                return true;
-            }
-            catch
-            {
-                for (int i = 0;
-                     i < m_PrepareActionBackendPendingScratch.Count;
-                     i++)
-                {
-                    if (m_PrepareActionBackendPendingScratch[i]
-                            .RequestIdentity == requestIdentity)
-                    {
-                        m_PrepareActionBackendPendingScratch[i]
-                            .RequestIdentity = 0;
-                    }
-                }
-                ReturnPreparedActionBackendRelease(prepared);
-                throw;
-            }
+            return m_SourceRetirementState.TryPrepareActionRequest(
+                playbackId,
+                out request);
         }
 
         internal void CopyActionBackendReleaseCompletions(
@@ -1905,138 +1642,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
         internal void ExecutePreparedActionBackendReleaseRequests()
         {
             RequireAlive();
-            for (int requestIndex = 0;
-                 requestIndex <
-                 m_PreparedActionBackendReleases.Count;
-                 requestIndex++)
-            {
-                PreparedActionBackendRelease prepared =
-                    m_PreparedActionBackendReleases[requestIndex];
-                ExecuteActionBackendReleaseRequest(prepared);
-                ReturnPreparedActionBackendRelease(prepared);
-            }
-            m_PreparedActionBackendReleases.Clear();
-            m_PendingActionBackendReleases.Clear();
-            m_SourceModule.CompleteDeferredReleases();
-        }
-
-        void ExecuteActionBackendReleaseRequest(
-            PreparedActionBackendRelease prepared)
-        {
-            ActionBackendReleaseRequest request =
-                prepared?.Request ??
-                    throw new ArgumentNullException(nameof(prepared));
-            for (int sourceIndex = 0;
-                 sourceIndex < prepared.Sources.Count;
-                 sourceIndex++)
-            {
-                PendingActionBackendRelease release =
-                    prepared.Sources[sourceIndex];
-                m_SourceModule.ApplyRetirement(
-                    in release.SourceRelease);
-                release.Stack.ApplyPreparedRelease(
-                    in release.StackRelease);
-                if (release.NotifyRouteAfterApply)
-                    release.Route.NotifySourcesReleased();
-                m_SourceModule.RecordRelease(
-                    release.Release.PoseNodeId,
-                    release.Release.SourceId,
-                    release.Release.CompletionIdentity);
-                AddActionBackendReleaseCompletion(
-                    new ActionBackendReleaseCompletion(
-                        request.RequestIdentity,
-                        request.PlaybackId,
-                        release.PlayableSource,
-                        release.PlayableCompletionIdentity));
-                AddActionBackendReleaseCompletion(
-                    new ActionBackendReleaseCompletion(
-                        request.RequestIdentity,
-                        request.PlaybackId,
-                        release.StoredPoseSource,
-                        release.StoredPoseCompletionIdentity));
-                release.Clear();
-            }
-        }
-
-        int ValidatePreparedActionBackendReleases()
-        {
-            int releaseCount = 0;
-            for (int requestIndex = 0;
-                 requestIndex <
-                 m_PreparedActionBackendReleases.Count;
-                 requestIndex++)
-            {
-                PreparedActionBackendRelease prepared =
-                    m_PreparedActionBackendReleases[
-                        requestIndex];
-                ActionBackendReleaseRequest request =
-                    prepared?.Request ??
-                    throw new InvalidOperationException(
-                        "Prepared Action backend release has no request.");
-                prepared.Sources.Sort(
-                    s_PendingActionBackendReleaseComparison);
-                m_ExpectedActionBackendSources.Clear();
-                for (int i = 0;
-                     i < prepared.Sources.Count;
-                     i++)
-                {
-                    PendingActionBackendRelease candidate =
-                        prepared.Sources[i];
-                    if (candidate == null ||
-                        !m_PendingActionBackendReleases.Contains(
-                            candidate) ||
-                        candidate.RequestIdentity !=
-                        request.RequestIdentity ||
-                        !candidate.Release.SourceId.PlaybackId
-                            .Equals(request.PlaybackId) ||
-                        !m_ExpectedActionBackendSources.Add(
-                            candidate.PlayableSource) ||
-                        !m_ExpectedActionBackendSources.Add(
-                            candidate.StoredPoseSource))
-                    {
-                        throw new InvalidOperationException(
-                            "Action backend release request contains a detached or duplicate source.");
-                    }
-                    candidate.SourceRelease =
-                        PrepareSourceRetirement(
-                            candidate.Release.SourceId,
-                            candidate.Release.PoseNodeId,
-                            candidate.PhysicalSource);
-                    candidate.PlayableCompletionIdentity =
-                        NextActionBackendReleaseCompletionIdentity();
-                    candidate.StoredPoseCompletionIdentity =
-                        NextActionBackendReleaseCompletionIdentity();
-                    releaseCount = checked(
-                        releaseCount + 1);
-                }
-                if (prepared.Sources.Count == 0 ||
-                    m_ExpectedActionBackendSources.Count !=
-                    request.Sources.Count)
-                {
-                    throw new InvalidOperationException(
-                        "Action backend release request source set is incomplete.");
-                }
-                for (int i = 0;
-                     i < request.Sources.Count;
-                     i++)
-                {
-                    ActionBackendSourceIdentity source =
-                        request.Sources[i];
-                    if (!m_ExpectedActionBackendSources.Contains(
-                            source))
-                    {
-                        throw new InvalidOperationException(
-                            "Action backend release request source set is not exact.");
-                    }
-                }
-            }
-            if (releaseCount !=
-                m_PendingActionBackendReleases.Count)
-            {
-                throw new InvalidOperationException(
-                    "Action backend release journal contains sources without a prepared request.");
-            }
-            return releaseCount;
+            m_SourceRetirementState.ExecutePreparedActions(
+                m_SourceModule);
         }
 
         internal AnimationPoseSourceId PublishActionFrame(
@@ -3522,7 +3129,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
 
         void StageCompletedSources(ulong completionIdentity)
         {
-            if (m_PendingPoseSourceReleases.Count != 0)
+            if (m_SourceRetirementState.PendingPoseCount != 0)
             {
                 throw new InvalidOperationException(
                     "Pose source releases from the previous committed frame were not finalized.");
@@ -3555,459 +3162,40 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                             release.SourceId,
                             release.PoseNodeId);
                     if (route.IsAnimationSlot &&
-                        IsFiniteActionSource(
+                        CharacterPoseProgramSourceRetirementState
+                            .IsFiniteActionSource(
                             release.SourceId))
                     {
-                        AddPendingActionBackendRelease(
+                        m_SourceRetirementState.StageAction(
+                            m_SourceModule,
                             route.SlotId,
                             stack,
                             route,
                             in stackRelease,
                             physical);
-                        AddActionSlotReleaseCompletion(
-                            new AnimationSlotSourceReleaseCompletion(
-                                route.SlotId,
-                                release.SourceId.PlaybackId,
-                                release.SourceId,
-                                release.CompletionIdentity));
                         continue;
                     }
-                    m_SourceModule.RecordRelease(
-                        release.PoseNodeId,
-                        release.SourceId,
-                        release.CompletionIdentity);
-                    PendingPoseSourceRelease pending =
-                        RentPendingPoseSourceRelease();
-                    pending.Stack = stack;
-                    pending.Route = route;
-                    pending.StackRelease = stackRelease;
-                    pending.PhysicalSource = physical;
-                    AddFixed(
-                        m_PendingPoseSourceReleases,
-                        pending,
-                        "Pending Pose source release journal");
+                    m_SourceRetirementState.StagePose(
+                        m_SourceModule,
+                        stack,
+                        route,
+                        in stackRelease,
+                        physical);
                 }
             }
         }
 
-        void ExecutePendingPoseSourceReleases()
-        {
-            for (int releaseIndex = 0;
-                 releaseIndex < m_PendingPoseSourceReleases.Count;
-                 releaseIndex++)
-            {
-                PendingPoseSourceRelease pending =
-                    m_PendingPoseSourceReleases[releaseIndex];
-                CharacterAnimationTransitionRouteRuntime route =
-                    pending.Route;
-                m_SourceModule.ApplyRetirement(
-                    in pending.SourceRelease);
-                pending.Stack.ApplyPreparedRelease(
-                    in pending.StackRelease);
-                bool notifyRoute =
-                    pending.NotifyRouteAfterApply;
-                pending.Clear();
-                if (notifyRoute)
-                    route.NotifySourcesReleased();
-            }
-            m_PendingPoseSourceReleases.Clear();
-        }
-
-        ulong NextActionBackendReleaseRequestIdentity()
-        {
-            m_ActionBackendReleaseRequestIdentity++;
-            if (m_ActionBackendReleaseRequestIdentity == 0)
-            {
-                throw new InvalidOperationException(
-                    "Action backend release request identity was exhausted.");
-            }
-            return m_ActionBackendReleaseRequestIdentity;
-        }
-
-        ulong NextActionBackendReleaseCompletionIdentity()
-        {
-            m_ActionBackendReleaseCompletionIdentity++;
-            if (m_ActionBackendReleaseCompletionIdentity == 0)
-            {
-                throw new InvalidOperationException(
-                    "Action backend release completion identity was exhausted.");
-            }
-            return m_ActionBackendReleaseCompletionIdentity;
-        }
-
-        PendingPoseSourceRelease RentPendingPoseSourceRelease()
-        {
-            for (int i = 0;
-                 i < m_PendingPoseSourceReleasePool.Length;
-                 i++)
-            {
-                PendingPoseSourceRelease candidate =
-                    m_PendingPoseSourceReleasePool[i];
-                if (candidate.InUse)
-                    continue;
-                candidate.InUse = true;
-                return candidate;
-            }
-            throw new InvalidOperationException(
-                "Pending Pose source release journal capacity was exceeded.");
-        }
-
-        PendingActionBackendRelease RentPendingActionBackendRelease()
-        {
-            for (int i = 0;
-                 i < m_PendingActionBackendReleasePool.Length;
-                 i++)
-            {
-                PendingActionBackendRelease candidate =
-                    m_PendingActionBackendReleasePool[i];
-                if (candidate.InUse)
-                    continue;
-                candidate.InUse = true;
-                return candidate;
-            }
-            throw new InvalidOperationException(
-                "Pending Action backend release journal capacity was exceeded.");
-        }
-
-        PreparedActionBackendRelease RentPreparedActionBackendRelease()
-        {
-            for (int i = 0;
-                 i < m_PreparedActionBackendReleasePool.Length;
-                 i++)
-            {
-                PreparedActionBackendRelease candidate =
-                    m_PreparedActionBackendReleasePool[i];
-                if (candidate.InUse)
-                    continue;
-                candidate.InUse = true;
-                return candidate;
-            }
-            throw new InvalidOperationException(
-                "Prepared Action backend release journal capacity was exceeded.");
-        }
-
-        static void ReturnPreparedActionBackendRelease(
-            PreparedActionBackendRelease prepared)
-        {
-            if (prepared == null || !prepared.InUse)
-            {
-                throw new InvalidOperationException(
-                    "Prepared Action backend release journal entry is not active.");
-            }
-            prepared.Clear();
-        }
-
-        void AddActionBackendReleaseCompletion(
-            ActionBackendReleaseCompletion completion) =>
-            m_SourceModule.RecordReleaseCompletion(in completion);
-
-        void AddActionSlotReleaseCompletion(
-            AnimationSlotSourceReleaseCompletion completion) =>
-            m_SourceModule.RecordReleaseCompletion(in completion);
-
         void ClearReleaseJournals()
         {
-            for (int i = 0;
-                 i < m_PreparedActionBackendReleases.Count;
-                 i++)
-            {
-                m_PreparedActionBackendReleases[i].Clear();
-            }
-            m_PreparedActionBackendReleases.Clear();
-            for (int i = 0;
-                 i < m_PendingActionBackendReleases.Count;
-                 i++)
-            {
-                m_PendingActionBackendReleases[i].Clear();
-            }
-            m_PendingActionBackendReleases.Clear();
-            for (int i = 0;
-                 i < m_PendingPoseSourceReleases.Count;
-                 i++)
-            {
-                m_PendingPoseSourceReleases[i].Clear();
-            }
-            m_PendingPoseSourceReleases.Clear();
-            m_PrepareActionBackendPendingScratch.Clear();
-            m_PrepareActionBackendSourceScratch.Clear();
-            m_ExpectedActionBackendSources.Clear();
-            m_SourceRetirementState.ClearStandalone();
+            m_SourceRetirementState.Clear();
             ClearValidatedActionBackendAcknowledgements();
             ClearPreparedMotionMatchingPoseCompletion();
         }
 
         void DiscardPendingReleasePreparation()
         {
-            for (int i = 0;
-                 i < m_PreparedActionBackendReleases.Count;
-                 i++)
-            {
-                PreparedActionBackendRelease prepared =
-                    m_PreparedActionBackendReleases[i];
-                for (int sourceIndex = 0;
-                     sourceIndex < prepared.Sources.Count;
-                     sourceIndex++)
-                {
-                    PendingActionBackendRelease source =
-                        prepared.Sources[sourceIndex];
-                    source.RequestIdentity = 0;
-                    source.PlayableCompletionIdentity = 0;
-                    source.StoredPoseCompletionIdentity = 0;
-                    source.SourceRelease = default;
-                    source.NotifyRouteAfterApply = false;
-                }
-                prepared.Clear();
-            }
-            m_PreparedActionBackendReleases.Clear();
-            int committedCount =
-                m_PendingActionBackendReleaseFrameStartCount;
-            if (committedCount < 0 ||
-                committedCount >
-                m_PendingActionBackendReleases.Count)
-            {
-                throw new InvalidOperationException(
-                    "Pending Action backend release frame boundary is invalid.");
-            }
-            for (int i = committedCount;
-                 i < m_PendingActionBackendReleases.Count;
-                 i++)
-            {
-                m_PendingActionBackendReleases[i].Clear();
-            }
-            if (committedCount <
-                m_PendingActionBackendReleases.Count)
-            {
-                m_PendingActionBackendReleases.RemoveRange(
-                    committedCount,
-                    m_PendingActionBackendReleases.Count -
-                    committedCount);
-            }
-            for (int i = 0;
-                 i < m_PendingPoseSourceReleases.Count;
-                 i++)
-            {
-                m_PendingPoseSourceReleases[i].Clear();
-            }
-            m_PendingPoseSourceReleases.Clear();
-            m_PrepareActionBackendPendingScratch.Clear();
-            m_PrepareActionBackendSourceScratch.Clear();
-            m_ExpectedActionBackendSources.Clear();
-            m_PendingActionBackendReleaseFrameStartCount = 0;
+            m_SourceRetirementState.DiscardFrame();
         }
-
-        static void AddFixed<T>(
-            List<T> destination,
-            T value,
-            string journalName)
-        {
-            if (destination.Count >= destination.Capacity)
-            {
-                throw new InvalidOperationException(
-                    $"{journalName} capacity was exceeded.");
-            }
-            destination.Add(value);
-        }
-
-        void AddPendingActionBackendRelease(
-            AnimationSlotId slotId,
-            AnimationBlendStackRuntime stack,
-            CharacterAnimationTransitionRouteRuntime route,
-            in AnimationBlendStackSourceReleaseToken stackRelease,
-            AnimationPhysicalSourceIdentity physical)
-        {
-            AnimationBlendStackRelease release =
-                stackRelease.Release;
-            if (!slotId.IsValid ||
-                stack == null ||
-                route == null ||
-                !stackRelease.IsValid ||
-                !physical.IsValid ||
-                !IsFiniteActionSource(release.SourceId))
-            {
-                throw new ArgumentException(
-                    "Pending Action backend release is invalid.");
-            }
-            for (int i = 0;
-                 i < m_PendingActionBackendReleases.Count;
-                 i++)
-            {
-                PendingActionBackendRelease existing =
-                    m_PendingActionBackendReleases[i];
-                if (existing.Release.SourceId.Equals(
-                        release.SourceId) &&
-                    existing.Release.PoseNodeId ==
-                        release.PoseNodeId)
-                {
-                    throw new InvalidOperationException(
-                        $"Action source '{release.SourceId}' already waits for backend release.");
-                }
-            }
-            int resourceIndex = physical.Index.Value;
-            if ((uint)resourceIndex >=
-                (uint)m_PlayableBackendResourceIds.Length)
-            {
-                throw new InvalidOperationException(
-                    "Action backend physical source index exceeds the release journal capacity.");
-            }
-            PendingActionBackendRelease pending =
-                RentPendingActionBackendRelease();
-            pending.SlotId = slotId;
-            pending.Stack = stack;
-            pending.Route = route;
-            pending.StackRelease = stackRelease;
-            pending.PhysicalSource = physical;
-            pending.PlayableSource =
-                new ActionBackendSourceIdentity(
-                    ActionBackendSourceKind.Playable,
-                    m_PlayableBackendResourceIds[resourceIndex],
-                    physical.Generation);
-            pending.StoredPoseSource =
-                new ActionBackendSourceIdentity(
-                    ActionBackendSourceKind.StoredPoseCapture,
-                    m_StoredPoseBackendResourceIds[resourceIndex],
-                    physical.Generation);
-            AddFixed(
-                m_PendingActionBackendReleases,
-                pending,
-                "Pending Action backend release journal");
-        }
-
-        void PrepareRouteReleaseNotifications()
-        {
-            for (int i = 0;
-                 i < m_PendingPoseSourceReleases.Count;
-                 i++)
-            {
-                m_PendingPoseSourceReleases[i]
-                    .NotifyRouteAfterApply = false;
-            }
-            for (int i = 0;
-                 i < m_PendingActionBackendReleases.Count;
-                 i++)
-            {
-                m_PendingActionBackendReleases[i]
-                    .NotifyRouteAfterApply = false;
-            }
-            for (int poseIndex = 0;
-                 poseIndex < m_PendingPoseSourceReleases.Count;
-                 poseIndex++)
-            {
-                PendingPoseSourceRelease candidate =
-                    m_PendingPoseSourceReleases[poseIndex];
-                if (!HasActionRouteRelease(
-                        candidate.Route,
-                        candidate.Release.CompletionIdentity) &&
-                    !HasLaterPoseRouteRelease(
-                        poseIndex,
-                        candidate.Route,
-                        candidate.Release.CompletionIdentity))
-                {
-                    candidate.NotifyRouteAfterApply = true;
-                }
-            }
-            for (int requestIndex = 0;
-                 requestIndex < m_PreparedActionBackendReleases.Count;
-                 requestIndex++)
-            {
-                PreparedActionBackendRelease request =
-                    m_PreparedActionBackendReleases[requestIndex];
-                for (int sourceIndex = 0;
-                     sourceIndex < request.Sources.Count;
-                     sourceIndex++)
-                {
-                    PendingActionBackendRelease candidate =
-                        request.Sources[sourceIndex];
-                    if (!HasLaterPreparedActionRouteRelease(
-                            requestIndex,
-                            sourceIndex,
-                            candidate.Route,
-                            candidate.Release.CompletionIdentity))
-                    {
-                        candidate.NotifyRouteAfterApply = true;
-                    }
-                }
-            }
-        }
-
-        bool HasActionRouteRelease(
-            CharacterAnimationTransitionRouteRuntime route,
-            ulong completionIdentity)
-        {
-            for (int i = 0;
-                 i < m_PendingActionBackendReleases.Count;
-                 i++)
-            {
-                PendingActionBackendRelease pending =
-                    m_PendingActionBackendReleases[i];
-                if (ReferenceEquals(pending.Route, route) &&
-                    pending.Release.CompletionIdentity ==
-                        completionIdentity)
-                {
-                    return true;
-                }
-            }
-            return false;
-        }
-
-        bool HasLaterPoseRouteRelease(
-            int currentIndex,
-            CharacterAnimationTransitionRouteRuntime route,
-            ulong completionIdentity)
-        {
-            for (int i = currentIndex + 1;
-                 i < m_PendingPoseSourceReleases.Count;
-                 i++)
-            {
-                PendingPoseSourceRelease pending =
-                    m_PendingPoseSourceReleases[i];
-                if (ReferenceEquals(pending.Route, route) &&
-                    pending.Release.CompletionIdentity ==
-                        completionIdentity)
-                {
-                    return true;
-                }
-            }
-            return false;
-        }
-
-        bool HasLaterPreparedActionRouteRelease(
-            int currentRequestIndex,
-            int currentSourceIndex,
-            CharacterAnimationTransitionRouteRuntime route,
-            ulong completionIdentity)
-        {
-            for (int requestIndex = currentRequestIndex;
-                 requestIndex < m_PreparedActionBackendReleases.Count;
-                 requestIndex++)
-            {
-                PreparedActionBackendRelease request =
-                    m_PreparedActionBackendReleases[requestIndex];
-                int sourceStart = requestIndex == currentRequestIndex
-                    ? currentSourceIndex + 1
-                    : 0;
-                for (int sourceIndex = sourceStart;
-                     sourceIndex < request.Sources.Count;
-                     sourceIndex++)
-                {
-                    PendingActionBackendRelease pending =
-                        request.Sources[sourceIndex];
-                    if (ReferenceEquals(pending.Route, route) &&
-                        pending.Release.CompletionIdentity ==
-                            completionIdentity)
-                    {
-                        return true;
-                    }
-                }
-            }
-            return false;
-        }
-
-        static bool IsFiniteActionSource(
-            AnimationPoseSourceId sourceId) =>
-            sourceId.IsValid &&
-            sourceId.SourceKind ==
-                AnimationPoseSourceKind.Timeline &&
-            sourceId.SourceActionInstanceId != 0;
 
         void PrepareLinkedPoseSelection(
             CharacterLinkedPoseRuntimeSession linkedPose)

@@ -129,9 +129,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                 m_Frame = default;
                 m_Executor = default;
                 m_FinalRead = default;
-                m_CommittedFinalRead = default;
                 m_PresentationDeltaSeconds = 0f;
-                m_HasCommittedFinal = false;
                 m_HasValue = false;
             }
         }

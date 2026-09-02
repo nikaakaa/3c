@@ -1,4 +1,5 @@
 using System;
+using System.IO;
 using KK.GeneratedDiagnosticSampling;
 using KK.GeneratedDiagnosticSampling.Host;
 using ThirdPersonCharacter.Pipeline.Animation.Diagnostics;
@@ -82,6 +83,11 @@ namespace ThirdPersonCharacter.Pipeline.Diagnostics.FootIkSampling.Editor
                 DiagnosticArtifactStore.Open(artifact),
                 schema,
                 outputRoot);
+            DiagnosticArtifactStore.Seal(
+                Path.Combine(
+                    Path.GetFullPath(outputRoot),
+                    "capability.manifest.json"),
+                result.EncodedManifest);
             return result.Manifest.Status == DiagnosticCaptureStatus.Completed;
         }
 

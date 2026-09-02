@@ -597,3 +597,11 @@ Runtime工程用显式保留build退出码的规定命令构建成功、0错误�
 `CharacterFootIkCommittedCaptureViewLease`只从Final Publication Committed页公开这些值；具体Foot Projector与Foot插件目录全文搜索均不包含`Transform`、`RootHierarchy`、`PhysicalBones`或Animator骨骼查询，因此后续Bridge和Generated Program不再反向读取场景。Runtime与Editor工程按规定参数构建成功、0错误；Editor的30个warning只来自既有第三方包，构建后立即关闭build server。Unity只刷新改动脚本，回放与退出Play仅出现既有FinalIK序列化深度日志，已清空。
 
 正式A为`Diagnostics/FootPlacementRuns/20260902-032312-398-b58a9d6e91894276b0610ca19a27affa`，候选B为`Diagnostics/FootPlacementRuns/20260902-033516-613-1591907a78214a389ab18cdc9835fe66`；B Proof为`Temp/CharacterInputReplayProofs/v4/43357ff3cd384e5cba75d2c31175b116/20260902-033613-172-f30d20daa7554b24b89ed641ecc21a3d.json`，工具报告`matched:1044`。A/B均为2086脚行、1222列，其中1198业务列逐值相同、24个运行身份列一一映射且0冲突；Geometry均为67186行、27列，其中22业务列逐值相同、5个身份列一一映射且0冲突；总分84.2与weighted evidence 96.5不变。由此完成Foot采样重构任务2.2与2.4；`033516`成为Foot Generated Field继续迁移的正式A。
+
+## Source Demand／Prepared Resource／Usage／Retirement外层收口
+
+状态：提交`9260c9d81`、`80645b9d3`、`b036c171d`、`d8732cfb7`、`0916a15d2`、`3758a2bf2`、`d7b0a4cfa`、`de938f796`、`44c25704a`、`0971cd5c8`与`6b08ffeb9`连续完成Source外层收口。`CharacterPoseSourceModule`现在唯一拥有固定容量Binding、prepared resource、Usage、Retirement、release completion与acknowledgement页；Program-owned `CharacterPoseSourcePreparationPage`随`CharacterPoseSourceDemand`发布同Completion短租约，每条命令仍按原顺序追加后立即由Source消费，Source Frame Result发布前验证连续index和零遗漏。
+
+Action、Motion Matching provider、Direct、Clip与Blend Space统一为一个`CharacterPoseSourcePreparation`合同。Source Module内部唯一识别具体Source Adapter，并持有从已校验Projection一次构造的不可变`CharacterPoseSourceCatalog`；旧Runtime的三组Binding数组、physical identity／SourceIndex scratch、Clip Catalog scratch、四套每帧Catalog Builder、MM专属Usage数组／count、release completion List、ack位图和Module嵌套Release token类型均已删除。Program继续唯一决定Player relevance、State、Transition、Slot、Blend、source-local时间、Capture和Retirement Permission；Source不读取这些逻辑Owner状态。
+
+3C Unity通过正常Assets Refresh逐步编译上述Source、Program、Motion Matching与合同文件，当前没有这些文件的编译错误。全局编译停在并行Foot Sampling迁移已删除旧`DiagnosticField` ABI、但旧逐字段声明尚未切换的明确边界；因此本阶段不伪造全工程绿灯，也不在PoseGraph增加兼容Attribute。任务4.1、4.2和4.5按实际所有权闭合完成；任务4.6仍保持未完成，因为旧Runtime还持有Program逻辑release pool／List、Player／Stack集合及其控制journal，后续必须迁入Program Actor State／Frame Pages后删除。为避免在采样ABI切换期间产生无效中间证据，本组合只做一次后续统一Replay，不把当前编译阻塞误报为运行行为差异。

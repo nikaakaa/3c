@@ -646,6 +646,75 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         public int DiagnosticIndex => m_DiagnosticIndex;
     }
 
+    internal readonly struct CharacterFinalPosePublicationLayoutHandle :
+        IEquatable<CharacterFinalPosePublicationLayoutHandle>
+    {
+        internal CharacterFinalPosePublicationLayoutHandle(
+            int layoutSlotIndex,
+            int outputOperationIndex,
+            int outputValueIndex,
+            int poseValueCount,
+            int boneCount,
+            int parameterCount,
+            int contributionCapacity)
+        {
+            LayoutSlotIndex = layoutSlotIndex;
+            OutputOperationIndex = outputOperationIndex;
+            OutputValueIndex = outputValueIndex;
+            PoseValueCount = poseValueCount;
+            BoneCount = boneCount;
+            ParameterCount = parameterCount;
+            ContributionCapacity = contributionCapacity;
+        }
+
+        internal int LayoutSlotIndex { get; }
+        internal int OutputOperationIndex { get; }
+        internal int OutputValueIndex { get; }
+        internal int PoseValueCount { get; }
+        internal int BoneCount { get; }
+        internal int ParameterCount { get; }
+        internal int ContributionCapacity { get; }
+        internal bool IsValid =>
+            LayoutSlotIndex == 0 &&
+            OutputOperationIndex >= 0 &&
+            OutputValueIndex == PoseValueCount - 1 &&
+            PoseValueCount > 1 &&
+            BoneCount > 0 &&
+            ParameterCount > 0 &&
+            ContributionCapacity > 0;
+
+        public bool Equals(CharacterFinalPosePublicationLayoutHandle other) =>
+            LayoutSlotIndex == other.LayoutSlotIndex &&
+            OutputOperationIndex == other.OutputOperationIndex &&
+            OutputValueIndex == other.OutputValueIndex &&
+            PoseValueCount == other.PoseValueCount &&
+            BoneCount == other.BoneCount &&
+            ParameterCount == other.ParameterCount &&
+            ContributionCapacity == other.ContributionCapacity;
+
+        public override bool Equals(object obj) =>
+            obj is CharacterFinalPosePublicationLayoutHandle other &&
+            Equals(other);
+
+        public override int GetHashCode() => HashCode.Combine(
+            LayoutSlotIndex,
+            OutputOperationIndex,
+            OutputValueIndex,
+            PoseValueCount,
+            BoneCount,
+            ParameterCount,
+            ContributionCapacity);
+
+        internal void RequireValid()
+        {
+            if (!IsValid)
+            {
+                throw new InvalidOperationException(
+                    "Final Pose Publication layout handle is invalid.");
+            }
+        }
+    }
+
     [Serializable]
     public sealed partial class CharacterPoseProgramImage
     {
@@ -834,6 +903,33 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         public int ContributionWorkspaceCount => m_ContributionWorkspaceCount;
         public int FrameCacheCount => m_FrameCacheCount;
         public int OutputOperationIndex => m_OutputOperationIndex;
+        internal CharacterFinalPosePublicationLayoutHandle
+            FinalPosePublicationLayout
+        {
+            get
+            {
+                if ((uint)OutputOperationIndex >= (uint)Operations.Count ||
+                    PoseValueWorkspaceCount <= 0 ||
+                    ContributionWorkspaceCount <= 0 ||
+                    ContributionWorkspaceCount % PoseValueWorkspaceCount != 0)
+                {
+                    return default;
+                }
+                CharacterPresentationPoseOperation output =
+                    Operations[OutputOperationIndex];
+                return output == null
+                    ? default
+                    : new CharacterFinalPosePublicationLayoutHandle(
+                        0,
+                        OutputOperationIndex,
+                        output.OutputValueIndex,
+                        PoseValueWorkspaceCount,
+                        PoseBoneCount,
+                        Parameters.Count,
+                        ContributionWorkspaceCount /
+                        PoseValueWorkspaceCount);
+            }
+        }
 
         internal void BindProjectionIdentity(
             string programId,
@@ -927,8 +1023,13 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 FullBodyIkGoalSetWorkspaceCount != 1 ||
                 FullBodyIkGoalContributionGoalWorkspaceCount < 0 ||
                 ParameterWorkspaceCount < Parameters.Count || ContributionWorkspaceCount <= 0 ||
+                ContributionWorkspaceCount % PoseValueWorkspaceCount != 0 ||
                 FrameCacheCount != Operations.Count || OutputOperationIndex < 0 || OutputOperationIndex >= Operations.Count)
                 throw new InvalidOperationException("Character Presentation Pose Plan header or workspace is invalid.");
+
+            CharacterFinalPosePublicationLayoutHandle publicationLayout =
+                FinalPosePublicationLayout;
+            publicationLayout.RequireValid();
 
             var actionProducerIds = new HashSet<string>(StringComparer.Ordinal);
             for (int i = 0; i < ActionPlaybackInputs.Count; i++)
@@ -1051,7 +1152,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 {
                     outputCount++;
                     if (i != OutputOperationIndex || operation.ExecutionDomain != CharacterPoseExecutionDomain.FinalPublication ||
-                        operation.InputPoseSpace != CharacterPoseSpace.Local || operation.OutputPoseSpace != CharacterPoseSpace.Local)
+                        operation.InputPoseSpace != CharacterPoseSpace.Local || operation.OutputPoseSpace != CharacterPoseSpace.Local ||
+                        operation.OutputValueIndex != publicationLayout.OutputValueIndex)
                         throw new InvalidOperationException("Pose Plan Output operation boundary is inconsistent.");
                 }
                 if (operation.Code == CharacterPoseOperationCode.SelectedPosePlayer || operation.Code == CharacterPoseOperationCode.BlendStack ||

@@ -130,25 +130,19 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 CharacterPoseProgramImage program = projection.PosePlan;
                 program.RequireValid();
                 int playerCount = program.PlayerCount;
-                int boneCount = program.PoseBoneCount;
-                int parameterCount = program.Parameters.Count;
-                int poseValueCount = program.PoseValueWorkspaceCount;
-                if (playerCount <= 0 || boneCount <= 0 || parameterCount <= 0 || poseValueCount <= 0 ||
-                    program.ContributionWorkspaceCount % poseValueCount != 0)
+                CharacterFinalPosePublicationLayoutHandle publicationLayout =
+                    program.FinalPosePublicationLayout;
+                publicationLayout.RequireValid();
+                int boneCount = publicationLayout.BoneCount;
+                int parameterCount = publicationLayout.ParameterCount;
+                int poseValueCount = publicationLayout.PoseValueCount;
+                if (playerCount <= 0)
                 {
                     throw new InvalidOperationException("Animation Pose Native workspace source layout is invalid.");
                 }
 
-                int poseValueContributionStride = program.ContributionWorkspaceCount / poseValueCount;
-                if (poseValueContributionStride <= 0)
-                    throw new InvalidOperationException("Animation Pose Native contribution stride is invalid.");
-                CharacterPresentationPoseOperation outputOperation = program.Operations[program.OutputOperationIndex];
-                if (outputOperation == null || outputOperation.Index != program.OutputOperationIndex ||
-                    outputOperation.Code != CharacterPoseOperationCode.OutputPose ||
-                    outputOperation.OutputValueIndex < 0 || outputOperation.OutputValueIndex >= poseValueCount)
-                {
-                    throw new InvalidOperationException("Animation Pose Native output operation is invalid.");
-                }
+                int poseValueContributionStride =
+                    publicationLayout.ContributionCapacity;
 
                 m_PoseNodeIds = new PoseNodeId[playerCount];
                 int totalPlayerContributionCapacity = 0;
@@ -211,7 +205,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                     program.Operations.Count,
                     program.FrameCacheCount,
                     program.Stages.Count,
-                    outputOperation.OutputValueIndex,
+                    publicationLayout.OutputValueIndex,
                     m_SlotRanges);
 
                 m_SlotDenseLocalPoses = Allocate<AnimationLocalBonePose>(m_Layout.PlayerPoseCapacity);

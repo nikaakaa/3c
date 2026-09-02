@@ -233,21 +233,19 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 rootHierarchy);
             program.RequireValid();
             rig.RequireValid();
+            CharacterFinalPosePublicationLayoutHandle layout =
+                program.FinalPosePublicationLayout;
+            layout.RequireValid();
             if (!string.Equals(program.RigId, rig.RigId, StringComparison.Ordinal) ||
                 !string.Equals(program.RigRevision, rig.RigRevision, StringComparison.Ordinal) ||
-                program.PoseBoneCount != rig.PoseBoneCount)
+                layout.BoneCount != rig.PoseBoneCount ||
+                layout.ParameterCount != program.Parameters.Count ||
+                layout.PoseValueCount != program.PoseValueWorkspaceCount ||
+                layout.OutputOperationIndex != program.OutputOperationIndex)
             {
                 throw new InvalidOperationException("Final Animation Pose Frame Rig layout is invalid.");
             }
-            if (program.Parameters.Count <= 0 ||
-                program.ContributionWorkspaceCount % program.PoseValueWorkspaceCount != 0)
-            {
-                throw new InvalidOperationException("Final Animation Pose Frame publisher layout is invalid.");
-            }
-
-            int contributionCapacity = program.ContributionWorkspaceCount / program.PoseValueWorkspaceCount;
-            if (contributionCapacity <= 0)
-                throw new InvalidOperationException("Final Animation Pose Frame contribution capacity is invalid.");
+            int contributionCapacity = layout.ContributionCapacity;
             m_PoseGraphId = program.PoseGraphId;
             m_PosePlanHash = program.PlanHash;
             m_RigId = program.RigId;
@@ -278,13 +276,13 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 m_ParameterDefaults[i] = parameter.DefaultValue;
             }
 
-            m_BoneCount = program.PoseBoneCount;
+            m_BoneCount = layout.BoneCount;
             m_PhysicalBoneCount = rig.PhysicalBoneCount;
             m_VirtualBoneCount = rig.VirtualBoneCount;
             m_BoneKinds = new CharacterPoseBoneKind[m_BoneCount];
             for (int i = 0; i < m_BoneKinds.Length; i++)
                 m_BoneKinds[i] = rig.GetPoseBoneKind(i);
-            m_ParameterCount = program.Parameters.Count;
+            m_ParameterCount = layout.ParameterCount;
             m_ContributionCapacity = contributionCapacity;
             m_DenseLocalPoses = new AnimationLocalBonePose[checked(2 * m_BoneCount)];
             m_PoseParameters = new float[checked(2 * m_ParameterCount)];

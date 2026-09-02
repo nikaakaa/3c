@@ -806,14 +806,21 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 m_Rig.VisualRoot.GetInstanceID());
         }
 
-        internal string ApplyTuning(
+        internal string ValidateTuningCandidate(
             CharacterPoseTuningLayout layout,
-            CharacterPoseTuningParameterBlock block,
-            bool resetOwnerState)
+            CharacterPoseTuningParameterBlock block)
         {
             if (layout == null || block == null)
                 return "Foot Placement tuning payload is missing.";
-            return string.Empty;
+            try
+            {
+                block.RequireValid(layout);
+                return string.Empty;
+            }
+            catch (Exception exception)
+            {
+                return exception.Message;
+            }
         }
 
         CharacterFootCurrentSupportObservationPage PrepareCurrentSupport(

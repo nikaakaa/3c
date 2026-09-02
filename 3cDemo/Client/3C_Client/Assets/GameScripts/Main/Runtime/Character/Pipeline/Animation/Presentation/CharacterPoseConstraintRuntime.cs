@@ -339,6 +339,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
         CharacterPoseConstraintResult m_PendingResult;
         ulong m_NextBankIdentity = 1;
         ulong m_NextDiagnosticsIdentity = 1;
+        ulong m_TuningGeneration = 1;
+        ulong m_CandidateTuningGeneration;
+        bool m_CandidateResetOwnerState;
+        bool m_HasTuningCandidate;
         bool m_HasCommitted;
         bool m_HasPending;
         bool m_Disposed;
@@ -522,6 +526,11 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             RequireAlive();
             if (m_HasPending)
                 throw new InvalidOperationException("Pose Constraint frame is already open.");
+            if (lineage.TuningGeneration != m_TuningGeneration)
+            {
+                throw new InvalidOperationException(
+                    "Pose Constraint tuning generation differs from the root frame.");
+            }
             var lease = new CharacterPoseConstraintFrameLease(in lineage);
             m_Pending = m_HasCommitted && ReferenceEquals(m_Committed, m_First)
                 ? m_Second
@@ -742,21 +751,63 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                 completionIdentity);
         }
 
-        internal string ApplyTuning(
+        internal string PrepareTuningCandidate(
             CharacterPoseTuningLayout layout,
             CharacterPoseTuningParameterBlock block,
+            ulong generation,
             bool resetOwnerState)
         {
             RequireAlive();
-            string solverError = m_Solver.ApplyTuning(
+            if (m_HasPending)
+                return "Pose Constraint tuning cannot change during an open frame.";
+            if (m_HasTuningCandidate)
+                return "Pose Constraint tuning candidate is already prepared.";
+            if (generation != checked(m_TuningGeneration + 1))
+                return "Pose Constraint tuning generation is not consecutive.";
+            string solverError = m_Solver.PrepareTuningCandidate(
                 layout,
-                block,
-                resetOwnerState);
+                block);
             if (!string.IsNullOrEmpty(solverError))
                 return solverError;
+            string footError = m_FootPlacement?.ValidateTuningCandidate(
+                layout,
+                block) ?? string.Empty;
+            if (!string.IsNullOrEmpty(footError))
+            {
+                m_Solver.DiscardTuningCandidate();
+                return footError;
+            }
+            m_CandidateTuningGeneration = generation;
+            m_CandidateResetOwnerState = resetOwnerState;
+            m_HasTuningCandidate = true;
+            return string.Empty;
+        }
+
+        internal void CommitTuningCandidate(ulong generation)
+        {
+            RequireAlive();
+            if (!m_HasTuningCandidate ||
+                m_CandidateTuningGeneration != generation)
+            {
+                throw new InvalidOperationException(
+                    "Pose Constraint tuning candidate is not prepared.");
+            }
+            bool resetOwnerState = m_CandidateResetOwnerState;
+            m_Solver.CommitTuningCandidate(resetOwnerState);
             if (resetOwnerState)
                 ClearBendHistories();
-            return m_FootPlacement?.ApplyTuning(layout, block, resetOwnerState) ?? string.Empty;
+            m_TuningGeneration = generation;
+            m_CandidateTuningGeneration = 0;
+            m_CandidateResetOwnerState = false;
+            m_HasTuningCandidate = false;
+        }
+
+        internal void DiscardTuningCandidate()
+        {
+            m_Solver.DiscardTuningCandidate();
+            m_CandidateTuningGeneration = 0;
+            m_CandidateResetOwnerState = false;
+            m_HasTuningCandidate = false;
         }
 
         internal CharacterPoseConstraintResult CompleteFrame(
@@ -993,6 +1044,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             if (m_Disposed)
                 return;
             m_Disposed = true;
+            DiscardTuningCandidate();
             if (m_HasPending)
             {
                 m_FootPlacement?.ReleasePendingPages(

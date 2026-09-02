@@ -684,6 +684,17 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                 m_SourceModule.DiscardTuningCandidate();
                 return exception.Message;
             }
+            string constraintError = m_PoseConstraints.PrepareTuningCandidate(
+                layout,
+                block,
+                candidateGeneration,
+                resetOwnerState);
+            if (!string.IsNullOrEmpty(constraintError))
+            {
+                m_ProgramTuning.DiscardCandidate();
+                m_SourceModule.DiscardTuningCandidate();
+                return constraintError;
+            }
             string error;
             try
             {
@@ -694,18 +705,21 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             }
             catch
             {
+                m_PoseConstraints.DiscardTuningCandidate();
                 m_ProgramTuning.DiscardCandidate();
                 m_SourceModule.DiscardTuningCandidate();
                 throw;
             }
             if (!string.IsNullOrEmpty(error))
             {
+                m_PoseConstraints.DiscardTuningCandidate();
                 m_ProgramTuning.DiscardCandidate();
                 m_SourceModule.DiscardTuningCandidate();
                 return error;
             }
             m_ProgramTuning.CommitCandidate(candidateGeneration);
             m_SourceModule.CommitTuningCandidate(candidateGeneration);
+            m_PoseConstraints.CommitTuningCandidate(candidateGeneration);
             return string.Empty;
         }
 
@@ -737,10 +751,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                 m_InertializationPlan.ApplyTuning(layout, block);
             if (!string.IsNullOrEmpty(inertializationError))
                 return inertializationError;
-            return m_PoseConstraints.ApplyTuning(
-                layout,
-                block,
-                resetOwnerState);
+            return string.Empty;
         }
 
         internal bool CanApplyNextActivation =>

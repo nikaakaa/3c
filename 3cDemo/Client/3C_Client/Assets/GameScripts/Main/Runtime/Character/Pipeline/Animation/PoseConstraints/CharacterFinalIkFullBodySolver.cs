@@ -188,6 +188,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             new CharacterFullBodyIkLimbDiagnostics[4];
         CharacterFullBodyIkSolverDiagnostics m_Diagnostics;
         ActiveTuning m_ActiveTuning;
+        ActiveTuning m_CandidateTuning;
+        bool m_HasTuningCandidate;
         Vector3 m_DiagnosticPelvisTranslation;
         LegSolveFrame m_LeftLegSolveFrame;
         LegSolveFrame m_RightLegSolveFrame;
@@ -234,15 +236,19 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             return m_DiagnosticLimbs[index];
         }
 
-        internal string ApplyTuning(
+        internal string PrepareTuningCandidate(
             CharacterPoseTuningLayout layout,
-            CharacterPoseTuningParameterBlock block,
-            bool resetOwnerState)
+            CharacterPoseTuningParameterBlock block)
         {
             if (layout == null || block == null)
                 return "Full Body IK tuning payload is missing.";
             try
             {
+                if (m_HasTuningCandidate)
+                {
+                    throw new InvalidOperationException(
+                        "Full Body IK tuning candidate is already prepared.");
+                }
                 block.RequireValid(layout);
                 var next = m_ActiveTuning;
                 string ownerId = $"full-body-ik-profile:{m_Profile.ProfileId}";
@@ -255,19 +261,38 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                     ApplyTuningField(ref next, entry, block.GetValue(entry));
                 }
                 next.RequireValid();
-                m_ActiveTuning = next;
-                ApplyProfile();
-                if (resetOwnerState)
-                {
-                    ResetEffectorsToPose();
-                    ResetLegBendState();
-                }
+                m_CandidateTuning = next;
+                m_HasTuningCandidate = true;
                 return string.Empty;
             }
             catch (Exception exception)
             {
                 return exception.Message;
             }
+        }
+
+        internal void CommitTuningCandidate(bool resetOwnerState)
+        {
+            if (!m_HasTuningCandidate)
+            {
+                throw new InvalidOperationException(
+                    "Full Body IK tuning candidate is not prepared.");
+            }
+            m_CandidateTuning.RequireValid();
+            m_ActiveTuning = m_CandidateTuning;
+            m_CandidateTuning = default;
+            m_HasTuningCandidate = false;
+            ApplyProfile();
+            if (!resetOwnerState)
+                return;
+            ResetEffectorsToPose();
+            ResetLegBendState();
+        }
+
+        internal void DiscardTuningCandidate()
+        {
+            m_CandidateTuning = default;
+            m_HasTuningCandidate = false;
         }
 
         CharacterFullBodyIkResult Prepare(

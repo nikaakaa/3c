@@ -99,7 +99,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         LockedSliding = 4
     }
 
-    internal enum CharacterFootPlantTargetHeightUpdateReason : byte
+    public enum CharacterFootPlantTargetHeightUpdateReason : byte
     {
         None = 0,
         Initialized = 1,
@@ -114,7 +114,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
     }
 
     [Flags]
-    internal enum CharacterFootPlantResidualCaptureReason : ushort
+    public enum CharacterFootPlantResidualCaptureReason : ushort
     {
         None = 0,
         TargetEventChanged = 1 << 0,
@@ -129,7 +129,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
     }
 
     [Flags]
-    internal enum CharacterFootVerticalContinuityOwner : byte
+    public enum CharacterFootVerticalContinuityOwner : byte
     {
         None = 0,
         TargetHeightHistory = 1 << 0,
@@ -138,21 +138,21 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         PlantTarget = 1 << 3
     }
 
-    internal enum CharacterFootCorrectionResponseDeltaDirection : byte
+    public enum CharacterFootCorrectionResponseDeltaDirection : byte
     {
         None = 0,
         Increase = 1,
         Decrease = 2
     }
 
-    internal enum CharacterFootCorrectionResponseDomain : byte
+    public enum CharacterFootCorrectionResponseDomain : byte
     {
         None = 0,
         AnimationRelativeScalar = 1,
         ContactWorldResidual = 2
     }
 
-    internal enum CharacterFootCorrectionResponseInitializationReason : byte
+    public enum CharacterFootCorrectionResponseInitializationReason : byte
     {
         None = 0,
         FirstLegalInput = 1,

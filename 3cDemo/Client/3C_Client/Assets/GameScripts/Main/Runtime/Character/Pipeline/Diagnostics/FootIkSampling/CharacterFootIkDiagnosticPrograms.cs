@@ -30,6 +30,7 @@ namespace ThirdPersonCharacter.Pipeline.Diagnostics.FootIkSampling
         "landing-observation",
         "lifecycle",
         "path-continuity",
+        "response-contact",
         "root-hierarchy",
         Tables = new[] { "ground-geometry" })]
     internal static class CharacterFootIkFullSamplerDefinition

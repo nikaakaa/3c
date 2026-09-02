@@ -1056,7 +1056,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         internal CharacterFootCorrectionResponseDiagnostics(in CharacterFootPathContinuityFact path)
         {
             PlantTargetHeightAdoptionMode =
-                path.PlantTargetHeightAdoptionMode.ToString();
+                path.PlantTargetHeightAdoptionMode;
             PlantTargetMaximumVerticalSpeed =
                 path.PlantTargetMaximumVerticalSpeed;
             PlantTargetHeightBefore = path.PlantTargetHeightBefore;
@@ -1068,7 +1068,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             PlantTargetHeightEventIdentity =
                 path.PlantTargetHeightEventIdentity;
             PlantTargetHeightUpdateReason =
-                path.PlantTargetHeightUpdateReason.ToString();
+                path.PlantTargetHeightUpdateReason;
             PlantTargetForceRefreshed =
                 path.PlantTargetForceRefreshed;
             PlantTargetForceRefreshDistance =
@@ -1084,7 +1084,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             DesiredOutputPoint = path.DesiredOutputPoint;
             ResponseOutputPoint = path.ResponseOutputPoint;
             PlantResidualCaptureReason =
-                path.PlantResidualCaptureReason.ToString();
+                path.PlantResidualCaptureReason;
             PlantWorldResidualBeforeCapture =
                 path.PlantWorldResidualBeforeCapture;
             PlantWorldResidualCapturedBeforeDecay =
@@ -1112,7 +1112,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             CorrectionResponseInitializedThisFrame =
                 path.CorrectionResponseInitializedThisFrame;
             CorrectionResponseInitializationReason =
-                path.CorrectionResponseInitializationReason.ToString();
+                path.CorrectionResponseInitializationReason;
             CorrectionResponseDesired =
                 path.CorrectionResponseDesired;
             CorrectionResponseRequestedDirection =
@@ -1136,16 +1136,16 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             CorrectionResponseDirection =
                 path.CorrectionResponseDirection;
             CorrectionResponseDeltaDirection =
-                path.CorrectionResponseDeltaDirection.ToString();
+                path.CorrectionResponseDeltaDirection;
             CorrectionResponseSelectedSpeed =
                 path.CorrectionResponseSelectedSpeed;
             CorrectionResponseAppliedDelta =
                 path.CorrectionResponseAppliedDelta;
-            CorrectionResponseDomain = path.CorrectionResponseDomain.ToString();
-            CorrectionResponsePreviousDomain = path.CorrectionResponsePreviousDomain.ToString();
+            CorrectionResponseDomain = path.CorrectionResponseDomain;
+            CorrectionResponsePreviousDomain = path.CorrectionResponsePreviousDomain;
             CorrectionResponseDomainTransferred = path.CorrectionResponseDomainTransferred;
             PlantVerticalContinuityOwners =
-                path.PlantVerticalContinuityOwners.ToString();
+                path.PlantVerticalContinuityOwners;
             PlantEffectiveCorrectionBefore =
                 path.PlantEffectiveCorrectionBefore;
             PlantEffectiveCorrectionAfter =
@@ -1154,7 +1154,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             PlantPenetrationDepth = path.PlantPenetrationDepth;
         }
 
-        public string PlantTargetHeightAdoptionMode { get; }
+        public CharacterFootTargetHeightAdoptionMode PlantTargetHeightAdoptionMode { get; }
         public float PlantTargetMaximumVerticalSpeed { get; }
         public float PlantTargetHeightBefore { get; }
         public float PlantTargetHeightTarget { get; }
@@ -1162,7 +1162,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         public float PlantTargetAppliedVerticalDelta { get; }
         public float PlantTargetHeightAfter { get; }
         public ulong PlantTargetHeightEventIdentity { get; }
-        public string PlantTargetHeightUpdateReason { get; }
+        public CharacterFootPlantTargetHeightUpdateReason PlantTargetHeightUpdateReason { get; }
         public bool PlantTargetForceRefreshed { get; }
         public float PlantTargetForceRefreshDistance { get; }
         public bool PlantTargetVerticalClamped { get; }
@@ -1172,7 +1172,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         public Vector3 PreviousResponseOutputPoint { get; }
         public Vector3 DesiredOutputPoint { get; }
         public Vector3 ResponseOutputPoint { get; }
-        public string PlantResidualCaptureReason { get; }
+        public CharacterFootPlantResidualCaptureReason PlantResidualCaptureReason { get; }
         public Vector3 PlantWorldResidualBeforeCapture { get; }
         public Vector3 PlantWorldResidualCapturedBeforeDecay { get; }
         public bool PlantWorldResidualDecayApplied { get; }
@@ -1186,7 +1186,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         public bool CorrectionResponseEvaluated { get; }
         public bool CorrectionResponseInitializedBefore { get; }
         public bool CorrectionResponseInitializedThisFrame { get; }
-        public string CorrectionResponseInitializationReason { get; }
+        public CharacterFootCorrectionResponseInitializationReason CorrectionResponseInitializationReason { get; }
         public float CorrectionResponseDesired { get; }
         public Vector3 CorrectionResponseRequestedDirection { get; }
         public Vector3 CorrectionResponsePreviousDirection { get; }
@@ -1198,13 +1198,13 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         public float CorrectionResponsePrevious { get; }
         public float CorrectionResponseCurrent { get; }
         public Vector3 CorrectionResponseDirection { get; }
-        public string CorrectionResponseDeltaDirection { get; }
+        public CharacterFootCorrectionResponseDeltaDirection CorrectionResponseDeltaDirection { get; }
         public float CorrectionResponseSelectedSpeed { get; }
         public float CorrectionResponseAppliedDelta { get; }
-        public string CorrectionResponseDomain { get; }
-        public string CorrectionResponsePreviousDomain { get; }
+        public CharacterFootCorrectionResponseDomain CorrectionResponseDomain { get; }
+        public CharacterFootCorrectionResponseDomain CorrectionResponsePreviousDomain { get; }
         public bool CorrectionResponseDomainTransferred { get; }
-        public string PlantVerticalContinuityOwners { get; }
+        public CharacterFootVerticalContinuityOwner PlantVerticalContinuityOwners { get; }
         public Vector3 PlantEffectiveCorrectionBefore { get; }
         public Vector3 PlantEffectiveCorrectionAfter { get; }
         public float PlantOutputDistance { get; }

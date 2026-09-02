@@ -328,11 +328,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                 AnimationPoseNativeAggregateLayout initialLayout =
                     initialFrame.Layout;
                 programFrames = new CharacterPoseProgramFramePages(
-                    projection.PosePlan.StateMachines.Count,
-                    projection.PosePlan.AnimationSlots.Count,
-                    projection.PosePlan.RootOrientationWarps.Count,
-                    projection.PosePlan.LinkedPoseCalls.Count,
-                    projection.PosePlan.LinkedPoseFragments.Count,
+                    projection.PosePlan,
                     physicalSourceCapacity,
                     workspace);
                 workspace = null;

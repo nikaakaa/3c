@@ -97,23 +97,25 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         bool m_Disposed;
 
         internal CharacterPoseProgramFramePages(
-            int stateMachineCount,
-            int animationSlotCount,
-            int rootOrientationWarpCount,
-            int linkedPoseCallCount,
-            int linkedPoseFragmentCount,
+            CharacterPoseProgramImage program,
             int sourcePreparationCapacity,
             AnimationPoseNativeWorkspace workspace)
         {
-            if (stateMachineCount < 0 ||
-                animationSlotCount < 0 ||
-                rootOrientationWarpCount < 0 ||
-                linkedPoseCallCount < 0 ||
-                linkedPoseFragmentCount < 0 ||
-                sourcePreparationCapacity <= 0)
+            if (program == null)
+                throw new ArgumentNullException(nameof(program));
+            program.RequireValid();
+            if (sourcePreparationCapacity <= 0)
             {
-                throw new ArgumentOutOfRangeException();
+                throw new ArgumentOutOfRangeException(
+                    nameof(sourcePreparationCapacity));
             }
+            int stateMachineCount = program.StateMachines.Count;
+            int animationSlotCount = program.AnimationSlots.Count;
+            int rootOrientationWarpCount =
+                program.RootOrientationWarps.Count;
+            int linkedPoseCallCount = program.LinkedPoseCalls.Count;
+            int linkedPoseFragmentCount =
+                program.LinkedPoseFragments.Count;
             m_Workspace = workspace ??
                 throw new ArgumentNullException(nameof(workspace));
             m_SourcePreparations = new CharacterPoseSourcePreparationPage(
@@ -133,6 +135,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                     linkedPoseCallCount,
                     linkedPoseFragmentCount);
                 m_Active = m_Committed;
+                InitializeStateMachineControls(program);
                 AnimationPoseNativeAggregateLayout diagnosticsLayout =
                     m_Workspace.Layout;
                 m_CommittedDiagnostics = new CommittedDiagnosticsPage(
@@ -143,6 +146,31 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             {
                 Dispose();
                 throw;
+            }
+        }
+
+        void InitializeStateMachineControls(
+            CharacterPoseProgramImage program)
+        {
+            NativeArray<CharacterPoseStateMachineNativeControl> controls =
+                m_Committed.StateMachineControls;
+            for (int i = 0; i < program.StateMachines.Count; i++)
+            {
+                CharacterPoseStateMachineDescriptor machine =
+                    program.StateMachines[i];
+                int output = machine.States[machine.EntryStateIndex]
+                    .OutputPoseValueIndex;
+                controls[i] = new CharacterPoseStateMachineNativeControl(
+                    output,
+                    output,
+                    machine.EntryStateIndex,
+                    machine.EntryStateIndex,
+                    0f,
+                    0f,
+                    -1,
+                    -1,
+                    CharacterPoseStateMachineBlendMode.Single,
+                    1);
             }
         }
 

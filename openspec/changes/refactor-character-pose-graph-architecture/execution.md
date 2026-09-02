@@ -715,3 +715,9 @@ Editor旧Builder仍有一份自己的Native Operation判定，且其集合包含
 `CharacterPoseProgramExecutionView`构造入口收窄为完整Projection、Frame Pages与layout，不再让调用方分别传Image、Rig和两个Blend Catalog。View从同一Projection取得这些只读输入，在materialize前核对ProgramId、ProjectionRevision、PoseProgramImageHash与Rig identity，并用固定字符串保存这组身份；自身有效性同时要求四组身份非空。原数组容量、Compile顺序、Operation内容和执行阶段不变。
 
 任务5.2仍不勾选，因为View还在运行时执行`CompileRig／CompilePayloads／CompileOperations／CompileStages`，尚未做到只逐值materialize Image内已编译静态页。3C MCP域重载后按同一实例重试成功，身份绑定、Execution View与Pose Runtime的错误筛选均为0；通用采样器0.4不要求PoseGraph增加View／DTO／Event，因此本步也未改变诊断或回放链。
+
+## Execution View停止写入Actor Frame页
+
+状态：`CharacterPoseProgramFramePages`构造入口改为直接接收唯一Program Image，自身从Image取得StateMachine、Slot、Root Warp、Linked Call与Fragment固定容量，并按原值初始化Committed StateMachine entry control。`PosePlanExecutionRuntime`不再逐项拆出五个容量传参，Frame Pages layout只由Image决定。
+
+`CharacterPoseProgramExecutionView.CompilePayloads`删除Frame Pages参数和StateMachine control写入，只materialize自己的静态Mask、Additive Reference、Modify Bone、Root Warp、Pose Bone Goal与Goal input页。初始化写入时机仍在Actor构造期、首帧之前，control内容和首帧Begin／Commit／Discard语义不变；区别是Actor页只由其Owner写，Execution View不再接触可变节点状态。任务5.2仍等待静态页与Operation／Stage materialize彻底去除运行时语义编译后再勾选。3C MCP对Frame Pages、Execution View和Pose Runtime的编译错误筛选均为0；不单独运行回放。

@@ -896,7 +896,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 m_LinkedPoseCandidateImplementationIds = new LinkedPoseImplementationId[linkedPoseCandidateCount];
                 CompileRig(program, rig);
                 CompileBlendCatalogs(curves, profiles);
-                CompilePayloads(program, framePages);
+                CompilePayloads(program);
                 CompileLinkedPose(program);
                 CompileOperations(program);
                 CompileStages(program);
@@ -1225,9 +1225,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             }
         }
 
-        void CompilePayloads(
-            CharacterPoseProgramImage program,
-            CharacterPoseProgramFramePages framePages)
+        void CompilePayloads(CharacterPoseProgramImage program)
         {
             for (int maskIndex = 0; maskIndex < program.BoneMasks.Count; maskIndex++)
             {
@@ -1280,24 +1278,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             {
                 m_FullBodyIkGoalContributionInputValueIndices[inputIndex] =
                     program.FullBodyIkGoalContributionInputValueIndices[inputIndex];
-            }
-            NativeArray<CharacterPoseStateMachineNativeControl> controls =
-                framePages.StateMachineControls;
-            for (int i = 0; i < program.StateMachines.Count; i++)
-            {
-                CharacterPoseStateMachineDescriptor machine = program.StateMachines[i];
-                int output = machine.States[machine.EntryStateIndex].OutputPoseValueIndex;
-                controls[i] = new CharacterPoseStateMachineNativeControl(
-                    output,
-                    output,
-                    machine.EntryStateIndex,
-                    machine.EntryStateIndex,
-                    0f,
-                    0f,
-                    -1,
-                    -1,
-                    CharacterPoseStateMachineBlendMode.Single,
-                    1);
             }
         }
 

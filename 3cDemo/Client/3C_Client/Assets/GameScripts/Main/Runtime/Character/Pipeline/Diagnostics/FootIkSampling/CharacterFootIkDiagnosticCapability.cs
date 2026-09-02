@@ -63,7 +63,6 @@ namespace ThirdPersonCharacter.Pipeline.Diagnostics.FootIkSampling
         typeof(CharacterFootIkCaptureMetadata))]
     [DiagnosticFactRoot("effector", typeof(CharacterFullBodyIkEffectorDiagnostics))]
     [DiagnosticFactRoot("foot", typeof(CharacterFootLandingPredictionFootDiagnostics))]
-    [DiagnosticFactRoot("foot-steps", typeof(AnimationBiomechanicalStepReadPage))]
     [DiagnosticFactRoot("formal-input", typeof(AnimationFootMotionRuntimeSample))]
     [DiagnosticFactRoot("formal-output", typeof(AnimationFootMotionRuntimeSample))]
     [DiagnosticFactRoot("frame", typeof(CharacterPoseFrameLineage))]

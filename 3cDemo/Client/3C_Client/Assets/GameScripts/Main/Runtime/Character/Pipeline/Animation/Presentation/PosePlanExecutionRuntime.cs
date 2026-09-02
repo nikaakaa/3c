@@ -1661,22 +1661,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                     solver = candidate;
                 }
             }
-            AnimationFootFeatureSample leftFootFeatures =
-                finalFrame.LeftFootFeatures;
-            AnimationFootFeatureSample rightFootFeatures =
-                finalFrame.RightFootFeatures;
-            AnimationBiomechanicalStepReadPage leftFootSteps =
-                finalFrame.HasFootFeatures
-                    ? new AnimationBiomechanicalStepReadPage(
-                        in leftFootFeatures,
-                        CharacterFootSide.Left)
-                    : default;
-            AnimationBiomechanicalStepReadPage rightFootSteps =
-                finalFrame.HasFootFeatures
-                    ? new AnimationBiomechanicalStepReadPage(
-                        in rightFootFeatures,
-                        CharacterFootSide.Right)
-                    : default;
             CharacterFootLandingPredictionFootDiagnostics leftFoot =
                 landing.Left;
             CharacterFootLandingPredictionFootDiagnostics rightFoot =
@@ -1705,13 +1689,11 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                     in frame,
                     in leftEffector,
                     in leftFoot,
-                    in leftFootSteps,
                     in leftFormalInput,
                     in leftFormalOutput,
                     in leftLeg,
                     in rightEffector,
                     in rightFoot,
-                    in rightFootSteps,
                     in rightFormalInput,
                     in rightFormalOutput,
                     in rightLeg,

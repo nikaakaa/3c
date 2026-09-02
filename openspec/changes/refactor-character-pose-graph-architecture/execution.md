@@ -959,3 +959,11 @@ Compiler路径改为逐闭包Graph执行局部Topology验证，typed edge、Port
 状态：`CharacterPoseWorkspacePlanPass`现在一次冻结Rig Pose／Physical／Virtual Bone布局，Pose／Parameter／Contribution／Frame cache，Player、Inertialization、StateMachine state／transition、Blend Stack entry、Source catalog、Constraint operation／goal以及Diagnostics stage／operation的全部固定容量。Pass只消费前置Schedule、Value Lifetime、Rig和已编译节点描述，不读取Runtime、Actor或动态资源；任一计数不一致在Program Image发布前失败。
 
 现有Program Image参数仍取同一Plan中的Pose workspace、Parameter stride、Contribution capacity和Frame cache，所以生成数值与Hash输入不变；其余容量先作为后续Family Payload与ABI绑定的唯一计划真相，不再由中央Compiler临时推算。任务11.8完成。3C MCP对Workspace Plan与Compiler入口错误筛选均为0；不单独运行回放。
+
+## Symbolic Family Lowering与Stage依赖闭包
+
+状态：新增`CharacterPoseSymbolicFamilyLoweringPass`，沿Topology Catalog的确定顺序展开root、State、Subgraph和全部Linked Pose candidate Fragment。每个可执行节点只从Node Definition取得唯一Operation Family与Execution Domain，并冻结symbolic typed input／output identity、Pose Space、跨帧Actor State需求、Program Frame页需求、Workspace需求、Graph Role、source path和稳定Fragment identity；Value只使用符号端点，不分配Operation、Pose、Parameter、Goal、Player或Workspace物理index。
+
+中央物理绑定每生成一个Operation必须按序消费并精确匹配同一个Symbolic Operation的Node、Kind、Code、Family、Domain、Pose Space与Fragment identity；多出、缺失或重排都会在Program Image发布前失败，因此旧绑定不再发现第二套Operation序列。State Graph与Linked candidate的隐藏Pose依赖也显式进入Symbolic输入。
+
+Stage Schedule改为以Symbolic Program作为分组与依赖真相，只用已绑定Operation读取最终Pose workspace range。它验证除明确Pose History时间边外的每个typed输入都已有更早唯一producer，再按Symbolic Execution Domain、Output Space和Fragment identity分段，并继续证明全部Operation恰好一次。任务11.5与11.6完成。3C MCP对Symbolic Pass、Stage Pass与Compiler入口错误筛选均为0；不单独运行回放。

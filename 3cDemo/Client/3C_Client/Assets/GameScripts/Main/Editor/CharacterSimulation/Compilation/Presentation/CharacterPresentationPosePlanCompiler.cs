@@ -60,6 +60,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                 CharacterPresentationPoseGraphAsset graphAsset,
                 CharacterPoseGraphClosure graphClosure,
                 CharacterPoseTopologyCatalog topology,
+                CharacterPoseSymbolicProgram symbolicProgram,
                 CharacterAnimationRigDefinition rig,
                 CharacterPresentationPoseParameterEntry[] parameters,
                 Dictionary<PoseParameterId, int> parameterIndices,
@@ -80,6 +81,8 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                     throw new ArgumentNullException(nameof(graphClosure));
                 Topology = topology ??
                     throw new ArgumentNullException(nameof(topology));
+                SymbolicProgram = symbolicProgram ??
+                    throw new ArgumentNullException(nameof(symbolicProgram));
                 Rig = rig;
                 Parameters = parameters;
                 ParameterIndices = parameterIndices;
@@ -111,6 +114,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             public CharacterPresentationPoseGraphAsset GraphAsset { get; }
             public CharacterPoseGraphClosure GraphClosure { get; }
             public CharacterPoseTopologyCatalog Topology { get; }
+            public CharacterPoseSymbolicProgram SymbolicProgram { get; }
             public CharacterAnimationRigDefinition Rig { get; }
             public CharacterPresentationPoseParameterEntry[] Parameters { get; }
             public Dictionary<PoseParameterId, int> ParameterIndices { get; }
@@ -158,6 +162,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             public int FullBodyIkGoalContributionGoalWorkspaceCount { get; set; }
             public int PlayerCount { get; set; }
             public int OutputOperationIndex { get; set; } = -1;
+            public int SymbolicOperationCursor { get; set; }
         }
 
         public static CharacterPoseCompilationResult Compile(
@@ -207,12 +212,23 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                 diagnostics.AddRange(topologyResult.Diagnostics);
                 return new CharacterPoseCompilationResult(null, diagnostics);
             }
+            CharacterPoseSymbolicFamilyLoweringPassResult symbolicResult =
+                CharacterPoseSymbolicFamilyLoweringPass.Run(
+                    request,
+                    closureResult.Closure,
+                    topologyResult.Catalog);
+            if (!symbolicResult.IsSuccess)
+            {
+                diagnostics.AddRange(symbolicResult.Diagnostics);
+                return new CharacterPoseCompilationResult(null, diagnostics);
+            }
             try
             {
                 CharacterPoseProgramImage image = CompileValidated(
                     request,
                     closureResult.Closure,
-                    topologyResult.Catalog);
+                    topologyResult.Catalog,
+                    symbolicResult.Program);
                 return new CharacterPoseCompilationResult(image, diagnostics);
             }
             catch (Exception exception)
@@ -230,7 +246,8 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
         static CharacterPoseProgramImage CompileValidated(
             CharacterPoseCompilationRequest request,
             CharacterPoseGraphClosure graphClosure,
-            CharacterPoseTopologyCatalog topology)
+            CharacterPoseTopologyCatalog topology,
+            CharacterPoseSymbolicProgram symbolicProgram)
         {
             CharacterPresentationPoseGraphAsset asset = request.Asset;
             CharacterAnimationRigDefinition rig = request.Rig;
@@ -254,6 +271,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                 asset,
                 graphClosure,
                 topology,
+                symbolicProgram,
                 rig,
                 parameters,
                 parameterIndices,
@@ -276,6 +294,12 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                 string.Empty,
                 string.Empty,
                 true);
+            if (state.SymbolicOperationCursor !=
+                state.SymbolicProgram.Operations.Count)
+            {
+                throw new InvalidOperationException(
+                    "Pose compiler did not consume the complete Symbolic Program.");
+            }
             if (state.OutputOperationIndex < 0 || state.PoseValueCount <= 0)
                 throw new InvalidOperationException("Pose Plan has no complete Pose and Output boundary.");
             if (state.BlendNodeIndices.Count != state.BlendNodes.Length)
@@ -283,6 +307,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
 
             CharacterPoseStageSchedule schedule =
                 CharacterPoseStageSchedulePass.Run(
+                    state.SymbolicProgram,
                     state.Operations,
                     state.LinkedFragments);
             CharacterPoseValueLifetime valueLifetime =
@@ -418,7 +443,8 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             string callChain,
             bool root,
             Action<int> stateOutput = null,
-            int linkedPoseFragmentIndex = -1)
+            int linkedPoseFragmentIndex = -1,
+            string linkedPoseFragmentIdentity = "")
         {
             CharacterTypedPoseGraph closedGraph =
                 state.GraphClosure.RequireGraph(
@@ -475,7 +501,8 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                         scope,
                         callChain,
                         values,
-                        linkedPoseFragmentIndex);
+                        linkedPoseFragmentIndex,
+                        linkedPoseFragmentIdentity);
                     continue;
                 }
 
@@ -497,15 +524,31 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                         state,
                         scope,
                         callChain,
-                        linkedPoseFragmentIndex)
+                        linkedPoseFragmentIndex,
+                        linkedPoseFragmentIdentity)
                     : -1;
-                int operationIndex = state.Operations.Count;
-                CharacterPoseOperationCode code =
+                CharacterPoseOperationCode expectedCode =
                     handler.NativeRole ==
                     CharacterPoseNativeNodeRole.PoseOutput &&
                     stateOutput != null
                         ? CharacterPoseOperationCode.StatePoseOutput
                         : handler.OperationCode;
+                CharacterPoseExecutionDomain expectedDomain =
+                    expectedCode == CharacterPoseOperationCode.StatePoseOutput
+                        ? CharacterPoseExecutionDomain.PurePose
+                        : linkedPoseCall.ExecutionDomain;
+                CharacterPoseSymbolicOperation symbolic =
+                    RequireNextSymbolicOperation(
+                        state,
+                        scopedNodeId,
+                        handler,
+                        expectedCode,
+                        expectedDomain,
+                        ResolveInputPoseSpace(node),
+                        ResolveOutputPoseSpace(node, expectedCode),
+                        linkedPoseFragmentIdentity);
+                int operationIndex = state.Operations.Count;
+                CharacterPoseOperationCode code = symbolic.OperationCode;
                 int outputValueIndex = HasPoseOutput(node) ||
                                        handler.NativeRole ==
                                        CharacterPoseNativeNodeRole
@@ -682,11 +725,9 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                     throw new InvalidOperationException($"Pose Player '{scopedNodeId}' Source Slot is outside the compiled source catalog.");
                 state.Operations.Add(new CharacterPresentationPoseOperation(
                     operationIndex,
-                    handler.NativeRole == CharacterPoseNativeNodeRole.PoseOutput && stateOutput != null
-                        ? CharacterPoseExecutionDomain.PurePose
-                        : linkedPoseCall.ExecutionDomain,
-                    ResolveInputPoseSpace(node),
-                    ResolveOutputPoseSpace(node, code),
+                    symbolic.ExecutionDomain,
+                    symbolic.InputPoseSpace,
+                    symbolic.OutputPoseSpace,
                     code,
                     scopedNodeId,
                     provider,
@@ -822,7 +863,8 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                     fragmentCallChain,
                     false,
                     null,
-                    fragmentIndex);
+                    fragmentIndex,
+                    fragmentScope);
                 int operationCount = state.Operations.Count - operationStart;
                 var outputBindings = new List<CharacterLinkedPosePortValueBinding>();
                 for (int portIndex = 0; portIndex < entry.Ports.Count; portIndex++)
@@ -1247,7 +1289,8 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             CompilationState state,
             string scope,
             string callChain,
-            int linkedPoseFragmentIndex)
+            int linkedPoseFragmentIndex,
+            string linkedPoseFragmentIdentity)
         {
             CharacterPoseStateMachineDefinition definition = payload.StateMachine;
             CharacterPoseStateMachineAuthoringValidator.RequireValid(
@@ -1308,7 +1351,8 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                         }
                         outputValueIndex = value;
                     },
-                    linkedPoseFragmentIndex);
+                    linkedPoseFragmentIndex,
+                    linkedPoseFragmentIdentity);
                 int operationCount = state.Operations.Count - operationStart;
                 if (outputValueIndex < 0 || operationCount <= 0)
                     throw new InvalidOperationException($"Pose State '{authored.StateId}' has no compiled Pose output.");
@@ -1861,7 +1905,8 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             string scope,
             string callChain,
             Dictionary<string, CompiledValue> values,
-            int linkedPoseFragmentIndex)
+            int linkedPoseFragmentIndex,
+            string linkedPoseFragmentIdentity)
         {
             CharacterTypedPoseGraph child =
                 state.GraphClosure.RequireGraph(
@@ -1895,7 +1940,8 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                 childCallChain,
                 false,
                 null,
-                linkedPoseFragmentIndex);
+                linkedPoseFragmentIndex,
+                linkedPoseFragmentIdentity);
             for (int i = 0; i < ports.Count; i++)
             {
                 CharacterPosePortDefinition port = ports[i];
@@ -2172,6 +2218,45 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                     .RequireCapability(node.CapabilityIdentity);
             handler.RequirePayload(node.Payload);
             return handler;
+        }
+
+        static CharacterPoseSymbolicOperation RequireNextSymbolicOperation(
+            CompilationState state,
+            PoseNodeId nodeId,
+            CharacterPoseNodeDefinition definition,
+            CharacterPoseOperationCode operationCode,
+            CharacterPoseExecutionDomain executionDomain,
+            CharacterPoseSpace inputPoseSpace,
+            CharacterPoseSpace outputPoseSpace,
+            string fragmentIdentity)
+        {
+            int sequence = state.SymbolicOperationCursor;
+            if ((uint)sequence >=
+                (uint)state.SymbolicProgram.Operations.Count)
+            {
+                throw new InvalidOperationException(
+                    $"Pose binding produced an unexpected Operation '{nodeId}'.");
+            }
+            CharacterPoseSymbolicOperation operation =
+                state.SymbolicProgram.Operations[sequence];
+            if (operation.Sequence != sequence ||
+                operation.NodeId != nodeId ||
+                operation.NodeKind != definition.Kind ||
+                operation.OperationCode != operationCode ||
+                operation.Family != definition.OperationFamily ||
+                operation.ExecutionDomain != executionDomain ||
+                operation.InputPoseSpace != inputPoseSpace ||
+                operation.OutputPoseSpace != outputPoseSpace ||
+                !string.Equals(
+                    operation.FragmentIdentity,
+                    fragmentIdentity ?? string.Empty,
+                    StringComparison.Ordinal))
+            {
+                throw new InvalidOperationException(
+                    $"Pose binding Operation '{nodeId}' does not match Symbolic Family Lowering sequence #{sequence}.");
+            }
+            state.SymbolicOperationCursor++;
+            return operation;
         }
 
         static TPayload RequirePayload<TPayload>(CharacterPoseIrNode node)

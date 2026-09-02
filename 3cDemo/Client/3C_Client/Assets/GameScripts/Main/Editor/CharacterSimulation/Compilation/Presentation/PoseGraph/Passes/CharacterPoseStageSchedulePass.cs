@@ -73,17 +73,22 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
     internal static class CharacterPoseStageSchedulePass
     {
         internal static CharacterPoseStageSchedule Run(
+            CharacterPoseSymbolicProgram symbolicProgram,
             IReadOnlyList<CharacterPresentationPoseOperation> operations,
             IReadOnlyList<CharacterLinkedPoseEntryFragmentPlanDescriptor>
                 fragments)
         {
-            if (operations == null || operations.Count == 0)
+            if (symbolicProgram == null ||
+                operations == null ||
+                operations.Count == 0 ||
+                symbolicProgram.Operations.Count != operations.Count)
             {
                 throw new InvalidOperationException(
                     "Pose Stage Schedule requires Operations.");
             }
             if (fragments == null)
                 throw new ArgumentNullException(nameof(fragments));
+            RequireTypedDependencies(symbolicProgram);
             var stages = new List<CharacterPresentationPoseStage>();
             int operationStart = 0;
             int nativeOperationStart = 0;
@@ -91,17 +96,31 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             {
                 CharacterPresentationPoseOperation first =
                     RequireOperation(operations, operationStart);
-                CharacterPoseExecutionDomain domain = first.ExecutionDomain;
-                CharacterPoseSpace outputSpace = first.OutputPoseSpace;
+                CharacterPoseSymbolicOperation firstSymbolic =
+                    RequireSymbolicOperation(
+                        symbolicProgram,
+                        first,
+                        operationStart);
+                CharacterPoseExecutionDomain domain =
+                    firstSymbolic.ExecutionDomain;
+                CharacterPoseSpace outputSpace =
+                    firstSymbolic.OutputPoseSpace;
                 int operationEnd = operationStart + 1;
                 while (operationEnd < operations.Count)
                 {
                     CharacterPresentationPoseOperation candidate =
                         RequireOperation(operations, operationEnd);
-                    if (candidate.ExecutionDomain != domain ||
-                        candidate.OutputPoseSpace != outputSpace ||
-                        candidate.LinkedPoseFragmentIndex !=
-                            first.LinkedPoseFragmentIndex)
+                    CharacterPoseSymbolicOperation candidateSymbolic =
+                        RequireSymbolicOperation(
+                            symbolicProgram,
+                            candidate,
+                            operationEnd);
+                    if (candidateSymbolic.ExecutionDomain != domain ||
+                        candidateSymbolic.OutputPoseSpace != outputSpace ||
+                        !string.Equals(
+                            candidateSymbolic.FragmentIdentity,
+                            firstSymbolic.FragmentIdentity,
+                            StringComparison.Ordinal))
                     {
                         break;
                     }
@@ -118,12 +137,14 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                 {
                     CharacterPresentationPoseOperation operation =
                         operations[operationIndex];
+                    CharacterPoseSymbolicOperation symbolic =
+                        symbolicProgram.Operations[operationIndex];
                     if (inputSpace == CharacterPoseSpace.None &&
-                        operation.InputPoseSpace != CharacterPoseSpace.None)
+                        symbolic.InputPoseSpace != CharacterPoseSpace.None)
                     {
-                        inputSpace = operation.InputPoseSpace;
+                        inputSpace = symbolic.InputPoseSpace;
                     }
-                    if (IsNativePoseOperation(operation.Code))
+                    if (IsNativePoseOperation(symbolic.OperationCode))
                         nativeOperationCount++;
                     if (operation.OutputValueIndex < 0)
                         continue;
@@ -224,6 +245,64 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                     $"Pose Operation #{index} is missing or not linearly indexed.");
             }
             return operation;
+        }
+
+        static CharacterPoseSymbolicOperation RequireSymbolicOperation(
+            CharacterPoseSymbolicProgram symbolicProgram,
+            CharacterPresentationPoseOperation operation,
+            int index)
+        {
+            CharacterPoseSymbolicOperation symbolic =
+                symbolicProgram.Operations[index];
+            if (symbolic == null ||
+                symbolic.Sequence != index ||
+                symbolic.NodeId != operation.NodeId ||
+                symbolic.OperationCode != operation.Code ||
+                symbolic.ExecutionDomain != operation.ExecutionDomain ||
+                symbolic.InputPoseSpace != operation.InputPoseSpace ||
+                symbolic.OutputPoseSpace != operation.OutputPoseSpace)
+            {
+                throw new InvalidOperationException(
+                    $"Bound Pose Operation #{index} does not match its Symbolic Operation.");
+            }
+            return symbolic;
+        }
+
+        static void RequireTypedDependencies(
+            CharacterPoseSymbolicProgram symbolicProgram)
+        {
+            var producers = new Dictionary<
+                CharacterPoseSymbolicValueReference,
+                int>();
+            for (int operationIndex = 0;
+                 operationIndex < symbolicProgram.Operations.Count;
+                 operationIndex++)
+            {
+                CharacterPoseSymbolicOperation operation =
+                    symbolicProgram.Operations[operationIndex];
+                for (int inputIndex = 0;
+                     inputIndex < operation.Inputs.Count;
+                     inputIndex++)
+                {
+                    CharacterPoseSymbolicValueReference input =
+                        operation.Inputs[inputIndex];
+                    if (producers.ContainsKey(input) ||
+                        input.Kind == CharacterPosePortKind.PoseHistory)
+                    {
+                        continue;
+                    }
+                    throw new InvalidOperationException(
+                        $"Symbolic Pose Operation '{operation.NodeId}' consumes Value '{input.Identity}' before its producer.");
+                }
+                for (int outputIndex = 0;
+                     outputIndex < operation.Outputs.Count;
+                     outputIndex++)
+                {
+                    producers.Add(
+                        operation.Outputs[outputIndex],
+                        operationIndex);
+                }
+            }
         }
 
         static bool IsNativePoseOperation(

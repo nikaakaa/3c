@@ -3221,10 +3221,12 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                     stack.PrepareCapture(
                         sourceSample,
                         presentationDeltaSeconds);
-                m_SourceModule.PrepareActionAndConnect(
-                    in timelineRequest,
-                    in timelineCapture,
-                    stack.PoseNodeId);
+                CharacterPoseSourcePreparation preparation =
+                    CharacterPoseSourcePreparation.Action(
+                        in timelineRequest,
+                        in timelineCapture,
+                        stack.PoseNodeId);
+                m_SourceModule.Prepare(in preparation);
                 return;
             }
             if (!providerSourceSamples.TryGetValue(
@@ -3246,11 +3248,13 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             AnimationPoseSourceCaptureBinding capture = stack.PrepareCapture(
                 resolved,
                 presentationDeltaSeconds);
-            m_SourceModule.PrepareProviderAndConnect(
-                in request,
-                in providerSample,
-                in capture,
-                stack.PoseNodeId);
+            CharacterPoseSourcePreparation providerPreparation =
+                CharacterPoseSourcePreparation.Provider(
+                    in request,
+                    in providerSample,
+                    in capture,
+                    stack.PoseNodeId);
+            m_SourceModule.Prepare(in providerPreparation);
         }
 
         void PrepareDirectSource(
@@ -3268,14 +3272,16 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                     out PresentationPoseSourceSample sample))
                 throw new InvalidOperationException($"Animation Pose Source '{player.SourceId}' has no current resolved request.");
             AnimationPoseSourceCaptureBinding capture = player.PrepareCapture(in sample, presentationDeltaSeconds);
-            m_SourceModule.PrepareDirectAndConnect(
-                playerIndex,
-                player.SourceId,
-                player.SourceOwnerIndex,
-                sample.Clips,
-                in sample,
-                in capture,
-                player.NodeId);
+            CharacterPoseSourcePreparation preparation =
+                CharacterPoseSourcePreparation.DirectPlayer(
+                    playerIndex,
+                    player.SourceId,
+                    player.SourceOwnerIndex,
+                    sample.Clips,
+                    in sample,
+                    in capture,
+                    player.NodeId);
+            m_SourceModule.Prepare(in preparation);
         }
 
         void PrepareSequenceSource(int playerIndex, float presentationDeltaSeconds)
@@ -3288,13 +3294,15 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                 !player.IsRelevant)
                 return;
             AnimationPoseSourceCaptureBinding capture = player.PrepareCapture(presentationDeltaSeconds);
-            m_SourceModule.PrepareClipAndConnect(
-                playerIndex,
-                player.SourceId,
-                player.PlayerIndex,
-                player.ClipSamples,
-                in capture,
-                player.NodeId);
+            CharacterPoseSourcePreparation preparation =
+                CharacterPoseSourcePreparation.ClipPlayer(
+                    playerIndex,
+                    player.SourceId,
+                    player.PlayerIndex,
+                    player.ClipSamples,
+                    in capture,
+                    player.NodeId);
+            m_SourceModule.Prepare(in preparation);
         }
 
         internal void SetSequencePreview(
@@ -3360,13 +3368,15 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                 return;
             AnimationPoseSourceCaptureBinding capture =
                 player.PrepareCapture(presentationDeltaSeconds);
-            m_SourceModule.PrepareBlendSpaceAndConnect(
+            CharacterPoseSourcePreparation preparation =
+                CharacterPoseSourcePreparation.BlendSpacePlayer(
                     playerIndex,
                     player.SourceId,
                     player.PlayerIndex,
                     player.ClipSamples,
                     in capture,
                     player.NodeId);
+            m_SourceModule.Prepare(in preparation);
         }
 
         static bool HasEarlierSource(

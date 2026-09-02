@@ -743,9 +743,67 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Sources
                 sample.HasFootFeatures);
         }
 
-        internal void PrepareActionAndConnect(
-            in AnimationPoseSampleRequest request,
-            in AnimationPoseSourceCaptureBinding capture,
+        internal void Prepare(
+            in CharacterPoseSourcePreparation preparation)
+        {
+            if (!preparation.IsValid)
+            {
+                throw new ArgumentException(
+                    "Character Pose source preparation is invalid.",
+                    nameof(preparation));
+            }
+            switch (preparation.Kind)
+            {
+                case CharacterPoseSourcePreparationKind.Action:
+                    PrepareActionAndConnect(
+                        preparation.Request,
+                        preparation.Capture,
+                        preparation.PoseNodeId);
+                    break;
+                case CharacterPoseSourcePreparationKind.Provider:
+                    PrepareProviderAndConnect(
+                        preparation.Request,
+                        preparation.ProviderSample,
+                        preparation.Capture,
+                        preparation.PoseNodeId);
+                    break;
+                case CharacterPoseSourcePreparationKind.DirectPlayer:
+                    PrepareDirectAndConnect(
+                        preparation.BindingIndex,
+                        preparation.SourceId,
+                        preparation.SourceOwnerIndex,
+                        preparation.Clips,
+                        preparation.ProviderSample,
+                        preparation.Capture,
+                        preparation.PoseNodeId);
+                    break;
+                case CharacterPoseSourcePreparationKind.ClipPlayer:
+                    PrepareClipAndConnect(
+                        preparation.BindingIndex,
+                        preparation.SourceId,
+                        preparation.SourceOwnerIndex,
+                        preparation.Clips,
+                        preparation.Capture,
+                        preparation.PoseNodeId);
+                    break;
+                case CharacterPoseSourcePreparationKind.BlendSpacePlayer:
+                    PrepareBlendSpaceAndConnect(
+                        preparation.BindingIndex,
+                        preparation.SourceId,
+                        preparation.SourceOwnerIndex,
+                        preparation.Clips,
+                        preparation.Capture,
+                        preparation.PoseNodeId);
+                    break;
+                default:
+                    throw new InvalidOperationException(
+                        "Character Pose source preparation kind is invalid.");
+            }
+        }
+
+        void PrepareActionAndConnect(
+            AnimationPoseSampleRequest request,
+            AnimationPoseSourceCaptureBinding capture,
             PoseNodeId poseNodeId)
         {
             AnimationPhysicalSourceIdentity physical =
@@ -767,10 +825,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Sources
             Connect(physical, prepared);
         }
 
-        internal void PrepareProviderAndConnect(
-            in AnimationPoseSampleRequest request,
-            in PresentationPoseSourceSample sample,
-            in AnimationPoseSourceCaptureBinding capture,
+        void PrepareProviderAndConnect(
+            AnimationPoseSampleRequest request,
+            PresentationPoseSourceSample sample,
+            AnimationPoseSourceCaptureBinding capture,
             PoseNodeId poseNodeId)
         {
             AnimationPhysicalSourceIdentity physical =
@@ -792,13 +850,13 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Sources
             Connect(physical, prepared);
         }
 
-        internal void PrepareDirectAndConnect(
+        void PrepareDirectAndConnect(
             int bindingIndex,
             AnimationPoseSourceId sourceId,
             int sourceOwnerIndex,
             AnimationReadOnlyBuffer<ClipSamplePlan> clips,
-            in PresentationPoseSourceSample sample,
-            in AnimationPoseSourceCaptureBinding capture,
+            PresentationPoseSourceSample sample,
+            AnimationPoseSourceCaptureBinding capture,
             PoseNodeId poseNodeId)
         {
             CharacterPoseSourceBinding binding =
@@ -814,12 +872,12 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Sources
             m_BindingPage.BindDirect(bindingIndex, in binding);
         }
 
-        internal void PrepareClipAndConnect(
+        void PrepareClipAndConnect(
             int bindingIndex,
             AnimationPoseSourceId sourceId,
             int sourceOwnerIndex,
             AnimationReadOnlyBuffer<ClipSamplePlan> clips,
-            in AnimationPoseSourceCaptureBinding capture,
+            AnimationPoseSourceCaptureBinding capture,
             PoseNodeId poseNodeId)
         {
             CharacterPoseSourceBinding binding =
@@ -835,12 +893,12 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Sources
             m_BindingPage.BindClip(bindingIndex, in binding);
         }
 
-        internal void PrepareBlendSpaceAndConnect(
+        void PrepareBlendSpaceAndConnect(
             int bindingIndex,
             AnimationPoseSourceId sourceId,
             int sourceOwnerIndex,
             AnimationReadOnlyBuffer<ClipSamplePlan> clips,
-            in AnimationPoseSourceCaptureBinding capture,
+            AnimationPoseSourceCaptureBinding capture,
             PoseNodeId poseNodeId)
         {
             CharacterPoseSourceBinding binding =

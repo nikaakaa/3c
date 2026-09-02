@@ -18,6 +18,10 @@ namespace ThirdPersonCharacter.Pipeline.Diagnostics.FootIkSampling
         "formal-events",
         "formal-input",
         "input-formal-events",
+        "timing",
+        "action",
+        "primary-support",
+        "body-correction",
         "root-hierarchy")]
     internal static class CharacterFootIkFullSamplerDefinition
     {

@@ -71,3 +71,9 @@ Full Sampler已加入`selected-step`、`current-step`、`incoming-step`和`root-
 新增Formal Observation和Formal Event两个独立partial模块，迁移FormalOutput 15项、FormalEvents 16项、FormalInput 20项和InputFormalEvents 16项，共67个typed字段。Output只读取PoseGraph具体View已经封存的`FootStepObservation`；Input只读取Constraint Committed Result内同帧`Input.FootStepObservation`。每脚选择由Capture metadata的Side完成，不访问Animancer、Pose Watch、Source Module或可变Runtime对象。
 
 Formal／Input Formal availability、Current Contact与Next Landing availability均作为显式Field依赖闭合；Lock Mode与Event Phase保留领域枚举Int32，Host负责恢复现行空值／Category文本。Full Sampler加入四个正式组后，实际Source Generator输出由92增长到159个唯一Field Handle和159次packet写入，Schema为`bde0358f4c8883d3bcfb0ec78f101ecf54169b22334cc0b4c9740df42d66798a`，Program hash为`19eddb0b9d5dee3efb6c50c5e4eae661f7ce9e691533eaf7e983585156fb2082`，layout为`5e9b7b0300aec8d3c43a56b83b91862335e156a5cb81de8de04deeac559078db`。Foot插件工程0错误，build server已关闭；仍沿用`035606`作为行为A。
+
+## 迁移Frame Timing、Action、Primary Support与Body Correction
+
+新增帧级字段模块，迁移Timing 17项、Action 6项、PrimarySupport 4项和BodyCorrection 17个typed字段，共44项。所有字段只读取`LandingPrediction.Input`或同一Frame的`PrimarySupport` Committed值；Visible／Target Body、Correction向量和旋转由框架codec承载，不重新采样Body、Timeline、Action或Transform。Primary Support的Side与Landing Event由`primary-support-has-value`形成availability闭包。
+
+Full Sampler加入四个正式组后，实际Source Generator输出由159增长到203个唯一Field Handle和203次packet写入，Schema为`394a4fe1e5bcffe511fc7fc0395536cd2cff1f3fad7a64836e689bb8b299a3f3`，Program hash为`0889d20da92b60eec70e22af23fd3f6d8c32d1803cab62bf318214006b32c304`，layout为`04cd46e55e97c1222523298fc1285d414d1de1420999af61982e331c1f55e2fa`。Foot插件工程0错误，build server已关闭；仍沿用`035606`作为行为A。

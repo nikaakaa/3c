@@ -181,12 +181,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
 
         readonly AnimancerComponent m_Animancer;
         readonly CharacterPresentationProjection m_Projection;
-        readonly CharacterPoseProgramFramePages m_ProgramFrames;
-        readonly CharacterPoseProgramTuningState m_ProgramTuning;
-        readonly CharacterPoseProgramExecutionView m_ExecutionView;
+        readonly CharacterPoseProgramRuntime m_ProgramRuntime;
         readonly CharacterPoseConstraintRuntime m_PoseConstraints;
         readonly CharacterPoseSourceModule m_SourceModule;
-        readonly CharacterPoseActorState m_ActorState;
         readonly ComposedAnimationPoseFramePublisher m_FramePublisher;
         readonly AnimationPoseSourceContribution[]
             m_FootPlacementContributions;
@@ -214,6 +211,14 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
         readonly int[] m_RootOrientationWarpLinkedPoseFragmentIndices;
         readonly int[] m_InertializationLinkedPoseFragmentIndices;
 
+        CharacterPoseProgramFramePages m_ProgramFrames =>
+            m_ProgramRuntime.FramePages;
+        CharacterPoseProgramTuningState m_ProgramTuning =>
+            m_ProgramRuntime.Tuning;
+        CharacterPoseProgramExecutionView m_ExecutionView =>
+            m_ProgramRuntime.ExecutionView;
+        CharacterPoseActorState m_ActorState =>
+            m_ProgramRuntime.ActorState;
         PoseInertializationNativeProgram m_InertializationPlan =>
             m_ActorState.Inertialization;
         CharacterPoseProgramSourceRetirementState m_SourceRetirementState =>
@@ -577,9 +582,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                 throw;
             }
 
-            m_ProgramFrames = programFrames;
-            m_ProgramTuning = programTuning;
-            m_ExecutionView = executionView;
             m_PoseConstraints = poseConstraints;
             m_SourceModule = sourceModule;
             var rootOrientationWarps =
@@ -594,7 +596,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                         descriptor,
                         clipPlayers[descriptor.ClipPlayerIndex]);
             }
-            m_ActorState = new CharacterPoseActorState(
+            var actorState = new CharacterPoseActorState(
                 stacks,
                 stackRoutes,
                 directPlayers,
@@ -605,6 +607,12 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                 actionPlayback,
                 animationSlots,
                 sourceModule.Capacity);
+            m_ProgramRuntime = new CharacterPoseProgramRuntime(
+                projection.PosePlan,
+                executionView,
+                actorState,
+                programFrames,
+                programTuning);
             m_MotionMatchingHistoryCompletions =
                 new MotionMatchingPosePlanHistoryCompletion[
                     m_PoseStateSources
@@ -2767,10 +2775,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             DisposeStep(m_DiagnosticsPublisher.Dispose, ref failure);
             DisposeStep(RemoveJobs, ref failure);
             DisposeStep(m_SourceModule.Dispose, ref failure);
-            DisposeStep(m_ActorState.Dispose, ref failure);
-            DisposeStep(m_ProgramTuning.Dispose, ref failure);
-            DisposeStep(m_ExecutionView.Dispose, ref failure);
-            DisposeStep(m_ProgramFrames.Dispose, ref failure);
+            DisposeStep(m_ProgramRuntime.Dispose, ref failure);
             DisposeStep(RestoreGraphClock, ref failure);
             if (failure != null)
                 throw failure;

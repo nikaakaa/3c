@@ -611,3 +611,9 @@ Action、Motion Matching provider、Direct、Clip与Blend Space统一为一个`C
 状态：提交`8a1410879`先把Direct、Clip与Blend Space的Standalone退休数组、owner分发、Source→Player应用顺序和release诊断记录整体迁入`CharacterPoseProgramSourceRetirementState`。提交`6c8b21e00`继续把Pending Pose与Action backend两套pool／List、request与completion identity、source scratch、exact-source集合、resource identity、Retirement Permission准备、deferred apply、discard边界和跨协议route notification全部迁入同一Program Actor State。Source Module仍唯一执行physical/backend退休；Program State只拥有逻辑Player／Stack token、usage许可和等待外部Action backend确认的协议状态。
 
 提交`72779800a`新增唯一`CharacterPoseProgramNodeRuntimeIndex`，收拢Stack、Route、Player index、Source owner与Direct Player查找，并内聚Motion Matching selection投递和Player source usage判断。旧`PosePlanExecutionRuntime`已删除5个Dictionary字段、三类release对象、三套pool／List、两套scratch、HashSet、resource-id数组与request／completion计数；全文只剩构造期把Direct Player临时收集后转为固定数组的局部List。Source Begin／Validate／Commit／Discard仍在唯一根帧生命周期各执行一次，未新增第二Seal或Discard Owner，因此任务4.6完成。3C Unity正常Assets Refresh没有上述Program State、Node Runtime Index或旧Runtime编译错误；全局失败仍只来自并行Foot Sampling旧字段声明尚未消费0.3 ABI，不影响本项所有权结论。
+
+## Source物理采样旁路审计
+
+状态：全仓Runtime搜索确认`PhysicalPoseSourceRegistry`与`AnimancerPoseSamplingBackend`均只有`CharacterPoseSourceModule`一处构造，`InsertOutputPlayable`也只有该Module安装source fan-in的一处调用；Character Runtime不存在直接`.Play(...)`，不存在以Legacy／Default／Fallback命名或语义补洞的source路径。唯一`AnimationScriptPlayable.Create`位于该Backend内部，source物理注册、Playable连接、capture binding安装、断连与销毁仍由同一Module闭合。
+
+Clip、Blend Space、Motion Matching、Action与Blend Stack保留的多个`PrepareCapture`只按各自Program节点语义准备同帧目标缓冲和typed binding；它们不持有Animancer Graph、Physical Registry或capture Playable，也不能自行连接、播放或发布物理source。Source Module消费这些命令后才由唯一Backend创建／更新capture Playable。因此这些入口是Program逻辑Owner到Source物理Owner的正式输入，不是第二capture owner。审计没有发现需删除的旁路，任务4.8完成；本步没有代码或行为变化，不单独运行回放。

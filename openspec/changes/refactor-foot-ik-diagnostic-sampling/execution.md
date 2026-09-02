@@ -2,7 +2,7 @@
 
 ## 冻结评分Owner
 
-`consolidate-foot-diagnostic-scoring`任务5.3已由独立提交`df146d35b`完成，唯一格式冻结为`character-foot-motion-facts/75`、Analyzer 75、`character-foot-diagnosis-file/44`、`character-foot-quality-score/4`与`foot-quality-seven-dimensions/3`。固定Record基线为`Diagnostics/FootPlacementRuns/20260902-020333-815-08bc7f3b04b44d2daa27b8a4919ce442`，1043表现帧、2086脚行、67186 Geometry行，总分84.2、weighted evidence 96.5。后续Full Host Adapter只迁移同一字段、资格、分母、规则、权重与Publisher语义，不再并行修改旧Analyzer／Publisher数学。由此完成任务1.3。
+`consolidate-foot-diagnostic-scoring`任务5.3已由独立提交`df146d35b`完成，唯一格式冻结为`character-foot-motion-facts/75`、Analyzer 75、`character-foot-diagnosis-file/44`、`character-foot-quality-score/4`与`foot-quality-seven-dimensions/3`。固定Record基线为`Diagnostics/FootPlacementRuns/20260902-020333-815-08bc7f3b04b44d2daa27b8a4919ce442`，1043表现帧、2086脚行、67186 Geometry行，总分84.2、weighted evidence 96.5。后续生成式Full产物与下游Analyzer／Publisher只迁移同一字段、资格、分母、规则、权重与发布语义，不再并行修改旧Analyzer／Publisher数学。由此完成任务1.3。
 
 ## 建立Foot Capability与typed lineage边界
 
@@ -24,7 +24,7 @@ PoseGraph提交候选已把`PoseGraphId`与`PoseGraphRevision`补入唯一`Chara
 
 `CharacterFootIkDiagnosticCapability`已登记PoseGraph-owned `CharacterFootIkCommittedCaptureViewLease`与Foot-owned `CharacterFootIkCaptureMetadata`两个不同输入类型。metadata只在Capture开始构造一次，保存Sample identity、UTC ticks、Target Runtime identity、Host identity及组合Program identity；它不保存View、Module、Workspace、Vendor或Transform。首批11个Field Extractor覆盖上述metadata以及View lineage中的Projection、PoseGraph、PlanHash、Frame和Completion，全部使用框架Attribute与`(in View, in Metadata)`普通静态签名。
 
-通用Generator Probe已验证生成ABI为`Capture(in View, in Metadata, ref Packet)`；Foot插件用同一Generator实际编译成功，27个既有warning、0错误并关闭build server。3C Unity force refresh确认新Analyzer、`DiagnosticCompilationClosure`、Foot metadata type与双输入Field签名均无编译错误。字段清单同时把103个Category文本列收紧为领域枚举Int32、把`SampleStartedUtc`收紧为UTC ticks Int64；Host后续负责恢复稳定Category文本与`O`格式，不让Player逐帧格式化字符串。任务3.2仍等待其余868个typed字段及Geometry表全部声明后统一勾选。
+通用Generator Probe已验证生成ABI为`Capture(in View, in Metadata, ref Packet)`；Foot插件用同一Generator实际编译成功，27个既有warning、0错误并关闭build server。3C Unity force refresh确认新Analyzer、`DiagnosticCompilationClosure`、Foot metadata type与双输入Field签名均无编译错误。字段清单同时把103个Category文本列收紧为领域枚举Int32、把`SampleStartedUtc`收紧为UTC ticks Int64；通用Generator／Formatter后续恢复稳定Category文本与`O`格式，不让Player逐帧格式化字符串。任务3.2仍等待其余868个typed字段及Geometry表全部声明后统一勾选。
 
 ## 验收独立Post-Seal Foot View Projector
 
@@ -56,9 +56,9 @@ Final Publication Pending页现保存根Frame冻结的specific Foot interest。�
 
 ## 迁移完整Identity组并生成首个Full Program
 
-Identity组42个typed字段已全部声明。每脚状态、Reject、Step来源、Landing／Trajectory、Tracking、Plant Target、Verification与Step Selection直接读取同一Foot Committed View；Plant Target的5个条件字段通过`plant-target-available`形成生成器校验的availability闭包。`FrameSequence`按现行CSV合同保持Int32，Side及全部Category按领域枚举写入Int32，Host后续统一恢复文本。
+Identity组42个typed字段已全部声明。每脚状态、Reject、Step来源、Landing／Trajectory、Tracking、Plant Target、Verification与Step Selection直接读取同一Foot Committed View；Plant Target的5个条件字段通过`plant-target-available`形成生成器校验的availability闭包。`FrameSequence`按现行CSV合同保持Int32，Side及全部Category按领域枚举写入Int32，通用Formatter后续统一恢复文本。
 
-`CharacterFootNextLandingTrackingState`与`CharacterFootPlantTargetState`已从Runtime诊断中的提前`ToString()`改回公开typed枚举；旧Editor CSV列只在Host写出时格式化，因此当前旧链字节语义不变，Capture Player热路径不再制造这两个类别字符串。新增稳定`character-foot-ik/full` Sampler和`character-foot-ik/full-program` Program Definition，当前组合`capture-metadata`、`identity`、`root-hierarchy`三组；随着其余正式字段组迁入，Full Definition继续扩展，不建立过渡Program或第二Generator。
+`CharacterFootNextLandingTrackingState`与`CharacterFootPlantTargetState`已从Runtime诊断中的提前`ToString()`改回公开typed枚举；旧Editor CSV列只在既有写出边界格式化，因此当前旧链字节语义不变，Capture Player热路径不再制造这两个类别字符串。新增稳定`character-foot-ik/full` Sampler和`character-foot-ik/full-program` Program Definition，当前组合`capture-metadata`、`identity`、`root-hierarchy`三组；随着其余正式字段组迁入，Full Definition继续扩展，不建立过渡Program或第二Generator。
 
 实际Source Generator输出52个唯一Field Handle和52次packet写入，没有重复求值。当前生成身份为Schema `f12081aaab9717213d60fe4569b41070dbc77eabfafcb366e4b6cc01a6070129`、Program hash `d807398b9ce8a1faf8ccfa8d69a0022864d5929a2130098d09c8f328ea21cf4e`、layout `9b3d5f885eef6d8c1f66dab306140c0f6f0beedffcaa995e53a1c0c18eca66fe`；它们属于当前已迁移字段快照，后续字段增加会按框架合同产生新身份。Foot插件和Editor工程均0错误，build server已关闭。
 
@@ -74,7 +74,7 @@ Full Sampler已加入`selected-step`、`current-step`、`incoming-step`和`root-
 
 新增Formal Observation和Formal Event两个独立partial模块，迁移FormalOutput 15项、FormalEvents 16项、FormalInput 20项和InputFormalEvents 16项，共67个typed字段。Output只读取PoseGraph具体View已经封存的`FootStepObservation`；Input只读取Constraint Committed Result内同帧`Input.FootStepObservation`。每脚选择由Capture metadata的Side完成，不访问Animancer、Pose Watch、Source Module或可变Runtime对象。
 
-Formal／Input Formal availability、Current Contact与Next Landing availability均作为显式Field依赖闭合；Lock Mode与Event Phase保留领域枚举Int32，Host负责恢复现行空值／Category文本。Full Sampler加入四个正式组后，实际Source Generator输出由92增长到159个唯一Field Handle和159次packet写入，Schema为`bde0358f4c8883d3bcfb0ec78f101ecf54169b22334cc0b4c9740df42d66798a`，Program hash为`19eddb0b9d5dee3efb6c50c5e4eae661f7ce9e691533eaf7e983585156fb2082`，layout为`5e9b7b0300aec8d3c43a56b83b91862335e156a5cb81de8de04deeac559078db`。Foot插件工程0错误，build server已关闭；仍沿用`035606`作为行为A。
+Formal／Input Formal availability、Current Contact与Next Landing availability均作为显式Field依赖闭合；Lock Mode与Event Phase保留领域枚举Int32，通用Formatter负责恢复现行空值／Category文本。Full Sampler加入四个正式组后，实际Source Generator输出由92增长到159个唯一Field Handle和159次packet写入，Schema为`bde0358f4c8883d3bcfb0ec78f101ecf54169b22334cc0b4c9740df42d66798a`，Program hash为`19eddb0b9d5dee3efb6c50c5e4eae661f7ce9e691533eaf7e983585156fb2082`，layout为`5e9b7b0300aec8d3c43a56b83b91862335e156a5cb81de8de04deeac559078db`。Foot插件工程0错误，build server已关闭；仍沿用`035606`作为行为A。
 
 ## 迁移Frame Timing、Action、Primary Support与Body Correction
 
@@ -84,7 +84,7 @@ Full Sampler加入四个正式组后，实际Source Generator输出由159增长�
 
 ## 迁移Prediction Motion并移除Runtime类别字符串
 
-PredictionMotion 29个typed字段已全部迁移。Reject Reason与Reset Reason从`CharacterFootLandingPredictionInputDiagnostics`中的提前`ToString()`恢复为公开领域枚举，旧Editor CSV列只在Host写出时格式化；其余速度、响应、Clamp与Revision直接读取同帧Committed Input，不在Extractor中重算平滑或最大速度政策。
+PredictionMotion 29个typed字段已全部迁移。Reject Reason与Reset Reason从`CharacterFootLandingPredictionInputDiagnostics`中的提前`ToString()`恢复为公开领域枚举，旧Editor CSV列只在既有写出边界格式化；其余速度、响应、Clamp与Revision直接读取同帧Committed Input，不在Extractor中重算平滑或最大速度政策。
 
 Full Sampler加入`prediction-motion`后，实际Source Generator输出由203增长到232个唯一Field Handle和232次packet写入，Schema为`3b8c061718c365495897c33084fca6982cdf7df291dccb0e2c757b3991b584ae`，Program hash为`a6f29d9da79c471aa4736cc593f7e949e09962ce30c54f06a580163e05fbabfc`，layout为`99efe61453fae1685c40eb1689d789cebac1f821b706ac4f70d2429bbc670b82`。Foot插件与Editor工程均0错误，build server已关闭。
 
@@ -94,7 +94,7 @@ Full Sampler加入`prediction-motion`后，实际Source Generator输出由203增
 
 新增Goal／Selected Support与Output Stages两个独立partial模块，迁移Goal 8项、Selected Support Target 18项和Output Stages 28项，共54个typed字段。Goal correction保持旧链公式`Goal.ComponentPosition - OriginalAnkle`；Selected Support逐项读取正式position／normal来源lineage；Output Stages只投影Interpolation、Safety Floor与Plant阶段的Committed事实，不重跑约束或响应。
 
-`CharacterFootInterpolationPolicy`与`CharacterFootPlantTargetKind`从Runtime诊断中的提前`ToString()`恢复为公开领域枚举，旧Editor CSV列只在Host写出时格式化。Full Sampler加入三个正式组后，实际Source Generator输出由232增长到286个唯一Field Handle和286次packet写入，Schema为`14480c1162749fc8ac9bbcf3fb6106e0a5ce619921a59e7db7ab4e6f0038ecc7`，Program hash为`bf6107119b4251c89411c996ec11c98cdcd5fb3aced6f9c2503dee02d3c12d75`，layout为`ef408d64d37a2badbe659f3b847169a5c3173b85a3c966212ce37ea9834f40d7`。Foot插件与Editor工程均0错误，build server已关闭。
+`CharacterFootInterpolationPolicy`与`CharacterFootPlantTargetKind`从Runtime诊断中的提前`ToString()`恢复为公开领域枚举，旧Editor CSV列只在既有写出边界格式化。Full Sampler加入三个正式组后，实际Source Generator输出由232增长到286个唯一Field Handle和286次packet写入，Schema为`14480c1162749fc8ac9bbcf3fb6106e0a5ce619921a59e7db7ab4e6f0038ecc7`，Program hash为`bf6107119b4251c89411c996ec11c98cdcd5fb3aced6f9c2503dee02d3c12d75`，layout为`ef408d64d37a2badbe659f3b847169a5c3173b85a3c966212ce37ea9834f40d7`。Foot插件与Editor工程均0错误，build server已关闭。
 
 正式A为`Diagnostics/FootPlacementRuns/20260902-081115-952-88f20f2e6274474697bce24850715721`，候选B为`Diagnostics/FootPlacementRuns/20260902-082236-002-fd8d5889dc8544f793d80f1ed212d18e`；B Proof为`Temp/CharacterInputReplayProofs/v4/43357ff3cd384e5cba75d2c31175b116/20260902-082334-133-e924909777f8459dad2e0def50601996.json`，工具报告`matched:1044`。主表1198业务列和Geometry 22业务列逐值相同，identity一一映射且0冲突；总分84.2、weighted evidence 96.5不变。`082236`成为下一字段组迁移的正式A。
 
@@ -106,13 +106,13 @@ Full Sampler加入`ground-path`后，实际Source Generator输出由286增长到
 
 ## 迁移Ground Geometry固定容量子表
 
-Ground Geometry的27个CSV列已折叠为21个typed Table字段，覆盖Sample／Frame／Completion／Side／Ground Path关联、Contact、Envelope Vertex与Surface Segment。表行数严格保持旧链`max(surface count, contact count, envelope vertex count)`，容量固定为68；缺失Contact、Envelope或Surface仍使用旧链的`-1`索引与default值，不引入稀疏表或第二Geometry协议。Unity surface identity保持有符号Int32，避免负实例ID被转换为UInt64或在采样时抛出异常；Side以Int32进入packet，由Host恢复现行Category文本。
+Ground Geometry的27个CSV列已折叠为21个typed Table字段，覆盖Sample／Frame／Completion／Side／Ground Path关联、Contact、Envelope Vertex与Surface Segment。表行数严格保持旧链`max(surface count, contact count, envelope vertex count)`，容量固定为68；缺失Contact、Envelope或Surface仍使用旧链的`-1`索引与default值，不引入稀疏表或第二Geometry协议。Unity surface identity保持有符号Int32，避免负实例ID被转换为UInt64或在采样时抛出异常；Side以Int32进入packet，由通用Formatter恢复现行Category文本。
 
-Full Sampler登记唯一`ground-geometry`表后，实际Source Generator输出327个主Field Handle、21个表Field Handle、327次主packet写入与21次table row写入。Schema为`f947491354a25639f241bc144ead3599bcb6b63592f615b0d6b59b7360c5c03f`，Program hash为`d88a0a867ea1b5fd0d4af82474fe1751b5fbdb57a5a41e344cfcfe0e3851e4d2`，主layout为`29f7143d10e636b4dd2e3c2040770243f5433324bdb746494471d09f231c66eb`，Geometry row layout为`574736357ba17c407e858e41524af0f0a517a86e314624878c2db3f9a00334c2`。Foot插件工程0警告、0错误，build server已关闭。本步只扩展尚未接入Runtime Session的生成程序，不改变运行链，继续沿用`082236`作为行为A；待Host以manifest核对主行关联后再完成任务5.2。
+Full Sampler登记唯一`ground-geometry`表后，实际Source Generator输出327个主Field Handle、21个表Field Handle、327次主packet写入与21次table row写入。Schema为`f947491354a25639f241bc144ead3599bcb6b63592f615b0d6b59b7360c5c03f`，Program hash为`d88a0a867ea1b5fd0d4af82474fe1751b5fbdb57a5a41e344cfcfe0e3851e4d2`，主layout为`29f7143d10e636b4dd2e3c2040770243f5433324bdb746494471d09f231c66eb`，Geometry row layout为`574736357ba17c407e858e41524af0f0a517a86e314624878c2db3f9a00334c2`。Foot插件工程0警告、0错误，build server已关闭。本步只扩展尚未接入Runtime Session的生成程序，不改变运行链，继续沿用`082236`作为行为A；待通用生成Finalizer通过manifest核对主行关联后再完成任务5.2。
 
 ## 迁移Landing Observation字段组
 
-Landing Observation 43个typed字段已全部迁移，覆盖Future Body Translation、当前动画脚底、Raw Landing、Observation缓存与刷新事实、正式Query输入与候选选择、最终Accepted support。Extractor逐项读取当前脚Committed结果，不重新执行World Query；Cache State、Refresh Mode、Query Reason、Query Shape／Purpose与Selection State均以领域枚举Int32进入packet，Host后续恢复Category文本。Future Body、Raw Landing、Selected Candidate与Accepted四组条件字段都通过正式availability闭包，不把default值误当有效观测。
+Landing Observation 43个typed字段已全部迁移，覆盖Future Body Translation、当前动画脚底、Raw Landing、Observation缓存与刷新事实、正式Query输入与候选选择、最终Accepted support。Extractor逐项读取当前脚Committed结果，不重新执行World Query；Cache State、Refresh Mode、Query Reason、Query Shape／Purpose与Selection State均以领域枚举Int32进入packet，通用Formatter后续恢复Category文本。Future Body、Raw Landing、Selected Candidate与Accepted四组条件字段都通过正式availability闭包，不把default值误当有效观测。
 
 Full Sampler加入`landing-observation`后，实际Source Generator输出由327增长到370个主Field Handle，连同Geometry表共391个Field Handle；生成370次主packet写入和21次table row写入。Schema为`151f80eb90fec723ad421c13e307fedbf23b22f342a107e0b45340e0d8eb76d2`，Program hash为`740ea28d3cfd9e987e43fdd590dfe6c4527778477363865683a441ad63928876`，主layout为`fbe9a98a3304e0498405ad333d89c123241cca2a3e4ed4382b89341c5074ff1f`。Foot插件工程0警告、0错误，build server已关闭；本步不修改运行链，继续沿用`082236`作为行为A，不单独回放。
 
@@ -133,3 +133,5 @@ Transition Reason、Anchor Command、Lock Mode、Lock Request Availability、Con
 Response Contact 55个typed字段已全部迁移，覆盖Plant Target Height历史、World Residual捕获与衰减、Correction Response方向／Domain／速率，以及最终Plant continuity与penetration结果。Previous Response Output与Residual Deadline Half-life通过正式availability字段闭合；所有Extractor只读取当前脚Committed Response，不重新执行高度采用、响应积分、残差衰减或穿透计算。
 
 Target Height Adoption／Update Reason、Residual Capture Reason、Response Initialization／Delta Direction／Domain和Vertical Continuity Owners均从Runtime诊断中的提前字符串恢复为公开领域枚举，旧Editor CSV只在写出边界格式化。Full Sampler加入`response-contact`后，实际Source Generator输出由463增长到518个主Field Handle，连同Geometry表共539个Field Handle；Schema为`558098e9a1bceb6fc56cd84ba00e63f12c5fe7d9c13fda320cc4b05adc26d7f2`，Program hash为`21ffc497158ba89ba113c210dbc8913188124792342f898403227a54252886a6`，主layout为`be6bd72483d3abc9731316a16b96076389675cddf746591ff7855ee9c18611eb`。Foot插件及依赖工程0错误，build server已关闭。Path Continuity、Lifecycle与Response三组Runtime类别边界现在合并为同一回放批次，不对每个字段组重复回放。
+
+正式A为`Diagnostics/FootPlacementRuns/20260902-082236-002-fd8d5889dc8544f793d80f1ed212d18e`，合并候选B为`Diagnostics/FootPlacementRuns/20260902-091133-512-5df50cd823844d27921a4fee55c793ca`；B Proof为`Temp/CharacterInputReplayProofs/v4/43357ff3cd384e5cba75d2c31175b116/20260902-091251-494-987b463cb3e2404098c4dd245d8d14d8.json`，工具报告`matched:1044`。主表2086行、1222列，1198业务列逐值一致、24 identity列一一映射且0冲突；Geometry 67186行、27列，22业务列逐值一致、5 identity列一一映射且0冲突；Analyzer coverage逐项一致，总分84.2、weighted evidence 96.5不变。`091133`成为下一字段批次的正式A；该证据一次覆盖Path Continuity、Lifecycle与Response三组Runtime类别边界改动。

@@ -649,3 +649,11 @@ Unity普通Assets Refresh把新增文件写入正式Runtime工程；补齐现有
 旧`CharacterPoseGraphNativeProgram`构造时验证传入Workspace与自身layout完全一致，并把同一Workspace交给Frame Pages；其Dispose只通过Frame Pages完成一次释放。Begin／RequireStagesCompleted／Commit／Discard、Player／Value／Final binding与容量统计仍调用原Workspace实现，数据布局、清零顺序、completion identity和双页交换没有改变。本步没有建立第二Value页或兼容入口。
 
 `ThirdPersonClient.Runtime.csproj`按规定参数编译成功，0错误，构建服务器已关闭。任务5.5暂不勾选，只剩Program-owned Source Demand／Preparation输出仍由外层字段持有；该页迁入后再按完整Owner闭包判断。
+
+## Program Source Demand输出归还Frame Pages
+
+状态：`CharacterPoseProgramFramePages`新增固定容量`CharacterPoseSourcePreparationPage`和当前typed `CharacterPoseSourceDemand`，统一负责Begin、Bind、逐条Preparation追加、短租约校验与Clear。`PosePlanExecutionRuntime`已删除`m_SourcePreparationPage`字段和构造分配；创建Demand时先由Frame Pages开启唯一Preparation页并保存完整Demand，再把同一只读命令交给Source Module。Prepare Evaluation同时验证调用方Demand、Program-owned Demand与Source收到的Demand具有相同lineage、计数、provider引用和Preparation页identity。
+
+Discard、Reset与Dispose继续在原时机清空Demand，但现在只调用Frame Pages Owner；成功帧仍保留短租约到下一次Demand Begin，生命周期与原实现一致。Source Module的Demand副本只是本Module接收的typed输入，不取得Program Preparation页写权限，也不成为第二Program输出Owner。
+
+至此`CharacterPoseProgramFramePages`已实际持有Pending node control、Source Demand／Preparation输出、Current Value、Operation／Stage Completion、Program失败／Final outcome和Committed diagnostics，任务5.5完成。旧Native Program仍持有静态执行存储及运行Tuning Weight，所以任务5.8不提前完成。`ThirdPersonClient.Runtime.csproj`按规定参数编译成功，0错误，构建服务器已关闭；本步不单独回放。

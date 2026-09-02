@@ -186,8 +186,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
         readonly CharacterPoseConstraintRuntime m_PoseConstraints;
         readonly PoseInertializationNativeProgram m_InertializationPlan;
         readonly CharacterPoseSourceModule m_SourceModule;
-        readonly CharacterPoseSourcePreparationPage
-            m_SourcePreparationPage;
         readonly CharacterPoseProgramSourceRetirementState
             m_SourceRetirementState;
         readonly ComposedAnimationPoseFramePublisher m_FramePublisher;
@@ -322,6 +320,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                     projection.BlendCurveCatalog,
                     projection.BlendProfileCatalog,
                     workspace,
+                    physicalSourceCapacity,
                     in initialLayout);
                 programFrames = poseProgram.FramePages;
                 workspace = null;
@@ -557,9 +556,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             m_PoseConstraints = poseConstraints;
             m_InertializationPlan = inertializationProgram;
             m_SourceModule = sourceModule;
-            m_SourcePreparationPage =
-                new CharacterPoseSourcePreparationPage(
-                    physicalSourceCapacity);
             m_Stacks = stacks;
             m_StackRoutes = stackRoutes;
             m_DirectPlayers = directPlayers;
@@ -1111,7 +1107,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             ClearValidatedActionBackendAcknowledgements();
             ClearPreparedMotionMatchingPoseCompletion();
             m_PreparedPage.Clear();
-            m_SourcePreparationPage.Clear();
+            m_ProgramFrames.ClearSourceDemand();
             m_HasOpenFrame = false;
             m_ActiveFrameLease = default;
             m_CommitValidated = false;
@@ -1905,13 +1901,15 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             CharacterPoseFrameLineage lineage =
                 openLineage.WithCompletion(completionIdentity);
             CharacterPoseSourcePreparationView preparations =
-                m_SourcePreparationPage.Begin(completionIdentity);
+                m_ProgramFrames.BeginSourceDemand(
+                    completionIdentity);
             var demand = new CharacterPoseSourceDemand(
                 in lineage,
                 in preparations,
                 providerDemands,
                 actionSourceCount,
                 providerSourceCount);
+            m_ProgramFrames.BindSourceDemand(in demand);
             m_SourceModule.BindDemand(sourceLease, in demand);
             return demand;
         }
@@ -1930,6 +1928,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             RequireOpenMutation();
             CharacterPoseSourceDemand pendingDemand =
                 m_SourceModule.RequireDemand(sourceLease);
+            CharacterPoseSourceDemand programDemand =
+                m_ProgramFrames.RequireSourceDemand(
+                    in sourceDemand);
             CharacterPoseSourcePreparationView sourcePreparations =
                 sourceDemand.Preparations;
             CharacterPoseSourcePreparationView pendingPreparations =
@@ -1941,6 +1942,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             }
             if (!sourceDemand.IsValid ||
                 sourceDemand.Lineage != pendingDemand.Lineage ||
+                sourceDemand.Lineage != programDemand.Lineage ||
                 !sourcePreparations.Matches(
                     in pendingPreparations) ||
                 sourceDemand.ActionSourceCount !=
@@ -2679,7 +2681,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             m_HasCompletedFrame = false;
             m_HasPendingCompletedFrame = false;
             m_PreparedPage.Clear();
-            m_SourcePreparationPage.Clear();
+            m_ProgramFrames.ClearSourceDemand();
             m_PendingFrameOutcome = AnimationPresentationFrameOutcome.None;
             m_InertializationPlan.Reset();
             m_PoseConstraints.ResetSolvers();
@@ -2722,7 +2724,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             m_HasCompletedFrame = false;
             m_HasPendingCompletedFrame = false;
             m_PreparedPage.Clear();
-            m_SourcePreparationPage.Clear();
+            m_ProgramFrames.ClearSourceDemand();
             m_PendingFrameOutcome = AnimationPresentationFrameOutcome.None;
             Exception failure = null;
             DisposeStep(m_DiagnosticsPublisher.Dispose, ref failure);
@@ -3014,7 +3016,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             in CharacterPoseSourcePreparationView preparations,
             in CharacterPoseSourcePreparation preparation)
         {
-            int index = m_SourcePreparationPage.Add(
+            int index = m_ProgramFrames.AddSourcePreparation(
                 in preparation);
             m_SourceModule.Prepare(
                 sourceLease,

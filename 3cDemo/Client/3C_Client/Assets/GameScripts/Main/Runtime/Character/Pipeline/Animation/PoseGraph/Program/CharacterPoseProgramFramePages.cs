@@ -89,6 +89,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         Page m_Pending;
         Page m_Active;
         AnimationPoseNativeWorkspace m_Workspace;
+        CharacterPoseSourcePreparationPage m_SourcePreparations;
+        CharacterPoseSourceDemand m_SourceDemand;
         CommittedDiagnosticsPage m_CommittedDiagnostics;
         ulong m_NextDiagnosticsIdentity = 1;
         bool m_FrameOpen;
@@ -100,18 +102,22 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             int rootOrientationWarpCount,
             int linkedPoseCallCount,
             int linkedPoseFragmentCount,
+            int sourcePreparationCapacity,
             AnimationPoseNativeWorkspace workspace)
         {
             if (stateMachineCount < 0 ||
                 animationSlotCount < 0 ||
                 rootOrientationWarpCount < 0 ||
                 linkedPoseCallCount < 0 ||
-                linkedPoseFragmentCount < 0)
+                linkedPoseFragmentCount < 0 ||
+                sourcePreparationCapacity <= 0)
             {
                 throw new ArgumentOutOfRangeException();
             }
             m_Workspace = workspace ??
                 throw new ArgumentNullException(nameof(workspace));
+            m_SourcePreparations = new CharacterPoseSourcePreparationPage(
+                sourcePreparationCapacity);
             try
             {
                 m_Committed = AllocatePage(
@@ -200,6 +206,78 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             ulong completionIdentity) =>
             m_Workspace.BeginFrame(completionIdentity);
 
+        internal CharacterPoseSourcePreparationView BeginSourceDemand(
+            ulong completionIdentity)
+        {
+            RequireAlive();
+            m_SourceDemand = default;
+            return m_SourcePreparations.Begin(completionIdentity);
+        }
+
+        internal void BindSourceDemand(
+            in CharacterPoseSourceDemand demand)
+        {
+            RequireAlive();
+            if (!demand.IsValid ||
+                m_SourceDemand.IsValid ||
+                !m_SourcePreparations.Matches(
+                    demand.Lineage.CompletionIdentity))
+            {
+                throw new InvalidOperationException(
+                    "Character Pose Program source demand cannot be bound.");
+            }
+            CharacterPoseSourcePreparationView preparations =
+                demand.Preparations;
+            CharacterPoseSourcePreparationView current =
+                new CharacterPoseSourcePreparationView(
+                    m_SourcePreparations,
+                    demand.Lineage.CompletionIdentity);
+            if (!preparations.Matches(in current))
+            {
+                throw new InvalidOperationException(
+                    "Character Pose Program source demand preparation page differs from its owner.");
+            }
+            m_SourceDemand = demand;
+        }
+
+        internal CharacterPoseSourceDemand RequireSourceDemand(
+            in CharacterPoseSourceDemand demand)
+        {
+            RequireAlive();
+            CharacterPoseSourceDemand current = m_SourceDemand;
+            CharacterPoseSourcePreparationView expected =
+                current.Preparations;
+            CharacterPoseSourcePreparationView actual =
+                demand.Preparations;
+            if (!current.IsValid ||
+                !demand.IsValid ||
+                current.Lineage != demand.Lineage ||
+                current.ActionSourceCount != demand.ActionSourceCount ||
+                current.ProviderSourceCount != demand.ProviderSourceCount ||
+                !ReferenceEquals(
+                    current.ProviderDemands,
+                    demand.ProviderDemands) ||
+                !expected.Matches(in actual))
+            {
+                throw new InvalidOperationException(
+                    "Character Pose Program source demand is stale.");
+            }
+            return current;
+        }
+
+        internal int AddSourcePreparation(
+            in CharacterPoseSourcePreparation preparation)
+        {
+            RequireAlive();
+            return m_SourcePreparations.Add(in preparation);
+        }
+
+        internal void ClearSourceDemand()
+        {
+            m_SourceDemand = default;
+            m_SourcePreparations?.Clear();
+        }
+
         internal void RequireEvaluationStagesCompleted(
             ulong completionIdentity) =>
             m_Workspace.RequireStagesCompleted(completionIdentity);
@@ -269,6 +347,11 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 throw new InvalidOperationException(
                     "Character Pose Program evaluation workspace is missing.");
             }
+            if (m_SourcePreparations == null)
+            {
+                throw new InvalidOperationException(
+                    "Character Pose Program source preparation page is missing.");
+            }
             AnimationPoseNativeAggregateLayout workspaceLayout =
                 m_Workspace.Layout;
             workspaceLayout.RequireValid();
@@ -310,6 +393,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             }
             m_Workspace?.Dispose();
             m_Workspace = null;
+            ClearSourceDemand();
+            m_SourcePreparations = null;
             DisposePage(m_Pending);
             DisposePage(m_Committed);
             m_Active = null;

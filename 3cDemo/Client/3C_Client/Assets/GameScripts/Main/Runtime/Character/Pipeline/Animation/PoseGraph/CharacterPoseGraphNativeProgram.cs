@@ -784,6 +784,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             AnimationBlendCurveCatalogPayload curves,
             AnimationBlendProfileCatalogPayload profiles,
             AnimationPoseNativeWorkspace workspace,
+            int sourcePreparationCapacity,
             in AnimationPoseNativeAggregateLayout layout)
         {
             try
@@ -889,6 +890,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                     program.RootOrientationWarps.Count,
                     program.LinkedPoseCalls.Count,
                     program.LinkedPoseFragments.Count,
+                    sourcePreparationCapacity,
                     workspace);
 
                 CompileRig(program, rig);

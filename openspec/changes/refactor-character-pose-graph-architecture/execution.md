@@ -1125,3 +1125,7 @@ Candidate失败回收、全部成功后的提交顺序、generation验证和Disp
 状态：新增`CharacterPoseProgramActionRuntime`，整体拥有Action Playback事务、Animation Slot mutation lease、Presentation Workspace lease、backend／slot release页、Retired Playback页和Slot Frame Plan。Action命令、生命周期解析、采样、Source发布、Release Protocol、三类提交／回滚与Reset都进入该模块；Program Runtime只验证自己的根Frame lease并转交frame identity与业务输入。
 
 Action／Slot／Workspace打开与关闭顺序、Backend acknowledgement、request sequence、Source采样键、route选择、retirement permission和已退休列表保持不变；Motion Matching仍复用同一Workspace lease，没有复制第二事务或第二Source路径。Program Runtime由2738行降至2252行。3C MCP全脚本重编且C#错误为0，不单独运行回放。
+
+## 旧Pose执行类型删除审计
+
+状态：全仓运行时与Editor源码搜索确认`CharacterPoseGraphNativeProgram`、`CharacterPoseGraphStagedExecutor`、`CharacterPresentationPoseOperation`、`AnimationPoseGraphNativeOperation`、`ICharacterPoseCompilerHandler`、Handler Registry和中央`CompilationState`类型均已删除；命中只存在于OpenSpec迁移历史与基线说明，不存在可编译实现、wrapper或Runtime reader。任务14.2完成。

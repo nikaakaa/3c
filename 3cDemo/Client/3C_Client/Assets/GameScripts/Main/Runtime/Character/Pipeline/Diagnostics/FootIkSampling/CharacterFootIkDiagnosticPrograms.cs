@@ -27,7 +27,8 @@ namespace ThirdPersonCharacter.Pipeline.Diagnostics.FootIkSampling
         "selected-support-target",
         "output-stages",
         "ground-path",
-        "root-hierarchy")]
+        "root-hierarchy",
+        Tables = new[] { "ground-geometry" })]
     internal static class CharacterFootIkFullSamplerDefinition
     {
     }

@@ -183,7 +183,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
         readonly CharacterPresentationProjection m_Projection;
         readonly CharacterPoseProgramFramePages m_ProgramFrames;
         readonly CharacterPoseProgramTuningState m_ProgramTuning;
-        readonly CharacterPoseGraphNativeProgram m_PosePlan;
+        readonly CharacterPoseProgramExecutionView m_ExecutionView;
         readonly CharacterPoseConstraintRuntime m_PoseConstraints;
         readonly CharacterPoseSourceModule m_SourceModule;
         readonly CharacterPoseActorState m_ActorState;
@@ -304,7 +304,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             AnimationPoseNativeWorkspace workspace = null;
             CharacterPoseProgramFramePages programFrames = null;
             CharacterPoseProgramTuningState programTuning = null;
-            CharacterPoseGraphNativeProgram poseProgram = null;
+            CharacterPoseProgramExecutionView executionView = null;
             CharacterFinalIkFullBodySolver fullBodyIkSolver = null;
             CharacterPoseConstraintRuntime poseConstraints = null;
             PoseInertializationNativeProgram inertializationProgram = null;
@@ -336,7 +336,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                     physicalSourceCapacity,
                     workspace);
                 workspace = null;
-                poseProgram = new CharacterPoseGraphNativeProgram(
+                executionView = new CharacterPoseProgramExecutionView(
                     projection.PosePlan,
                     projection.Rig,
                     projection.BlendCurveCatalog,
@@ -345,7 +345,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                     in initialLayout);
                 programTuning = new CharacterPoseProgramTuningState(
                     projection,
-                    poseProgram.Operations,
+                    executionView.Operations,
                     1);
                 if (projection.PosePlan.FullBodyIks.Count != 1)
                     throw new InvalidOperationException(
@@ -356,8 +356,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                 fullBodyIkSolver = new CharacterFinalIkFullBodySolver(
                     projection.Rig,
                     fullBodyIkDescriptor.Profile,
-                    poseProgram.ParentIndices,
-                    poseProgram.VirtualBones);
+                    executionView.ParentIndices,
+                    executionView.VirtualBones);
                 inertializationProgram = new PoseInertializationNativeProgram(
                     projection.PosePlan,
                     projection.BlendCurveCatalog,
@@ -514,11 +514,11 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                     rootHierarchy);
                 poseConstraints = new CharacterPoseConstraintRuntime(
                     footPlacement,
-                    poseProgram.PoseBoneContributions,
-                    poseProgram.GoalAssemblers,
+                    executionView.PoseBoneContributions,
+                    executionView.GoalAssemblers,
                     fullBodyIkSolver,
-                    poseProgram.FullBodyIkGoalContributionCount,
-                    poseProgram.FullBodyIkContributionGoalCount,
+                    executionView.FullBodyIkGoalContributionCount,
+                    executionView.FullBodyIkContributionGoalCount,
                     projection.Rig.RigId,
                     projection.Rig.RigRevision);
                 diagnosticsPublisher = new AnimationPresentationRuntimeSnapshotPublisher(
@@ -570,7 +570,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                 }
                 diagnosticsPublisher?.Dispose();
                 poseConstraints?.Dispose();
-                poseProgram?.Dispose();
+                executionView?.Dispose();
                 inertializationProgram?.Dispose();
                 programTuning?.Dispose();
                 programFrames?.Dispose();
@@ -580,7 +580,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
 
             m_ProgramFrames = programFrames;
             m_ProgramTuning = programTuning;
-            m_PosePlan = poseProgram;
+            m_ExecutionView = executionView;
             m_PoseConstraints = poseConstraints;
             m_SourceModule = sourceModule;
             var rootOrientationWarps =
@@ -1543,7 +1543,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                                 in sourceFrame);
                     CharacterPoseProgramCommittedDiagnosticsView
                         programDiagnostics =
-                            m_PosePlan.CaptureCommittedDiagnostics(
+                            m_ExecutionView.CaptureCommittedDiagnostics(
                                 m_ProgramFrames,
                                 in committedProgramResult,
                                 in m_LastCompletedFrame,
@@ -2184,7 +2184,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                     m_ProgramTuning.RequireCommitted(
                         sourceDemand.Lineage.TuningGeneration);
                 poseExecutor = new CharacterPoseGraphStagedExecutor(
-                    m_PosePlan,
+                    m_ExecutionView,
                     m_ProgramFrames,
                     in programTuning,
                     m_InertializationPlan,
@@ -2297,11 +2297,11 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                 else
                 {
                     for (int stageIndex = 0;
-                         stageIndex < m_PosePlan.Stages.Length;
+                         stageIndex < m_ExecutionView.Stages.Length;
                          stageIndex++)
                     {
                         AnimationPoseGraphNativeStage stage =
-                            m_PosePlan.Stages[stageIndex];
+                            m_ExecutionView.Stages[stageIndex];
                         CharacterPoseWorldAwareStageInput worldInput = default;
                         if (stage.ExecutionDomain ==
                             CharacterPoseExecutionDomain.WorldAwareValue)
@@ -2446,7 +2446,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                  operationIndex++)
             {
                 AnimationPoseGraphNativeOperation operation =
-                    m_PosePlan.Operations[operationIndex];
+                    m_ExecutionView.Operations[operationIndex];
                 switch (operation.Code)
                 {
                     case CharacterPoseOperationCode.FootPlacement:
@@ -2768,7 +2768,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             DisposeStep(m_SourceModule.Dispose, ref failure);
             DisposeStep(m_ActorState.Dispose, ref failure);
             DisposeStep(m_ProgramTuning.Dispose, ref failure);
-            DisposeStep(m_PosePlan.Dispose, ref failure);
+            DisposeStep(m_ExecutionView.Dispose, ref failure);
             DisposeStep(m_ProgramFrames.Dispose, ref failure);
             DisposeStep(RestoreGraphClock, ref failure);
             if (failure != null)
@@ -3245,7 +3245,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                     groups[groupIndex];
                 CharacterLinkedPoseGenerationHandle selection =
                     linkedPose.RequireIncoming(group.GroupId);
-                m_PosePlan.SetLinkedPoseGroupSelection(
+                m_ExecutionView.SetLinkedPoseGroupSelection(
                     m_ProgramFrames,
                     in selection);
                 int activeCount = 0;

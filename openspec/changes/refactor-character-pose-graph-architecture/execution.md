@@ -695,3 +695,9 @@ Actor State统一负责Stack、Direct Player、Clip Player、Blend Space Player�
 状态：原`CharacterPresentationPosePlan`类型直接改名为`CharacterPoseProgramImage`，三个partial声明、Projection序列化字段类型、Compiler输出以及Runtime／Editor全部强类型引用一次切换；主定义文件与原meta guid同步改名。没有保留旧类型、派生alias、wrapper、转换器或第二份数组，因此当前Projection仍只有一个Pose语义对象，现有序列化字段名、schema值、hash、Operation／Stage顺序和Workspace容量均未改变。
 
 任务5.1暂不勾选：Program Image内部还保存旧`CharacterPresentationPoseOperation`万能记录，尚未切成Operation Header、typed Value Reference和Family Payload页；`CharacterPoseGraphNativeProgram`也仍在Actor构造时从Image materialize并带有运行时Compile命名。下一步继续把它收窄为只读Execution View并删除运行时补齐能力。Unity MCP server域重载后已自动重连，所有调用都显式路由`3C_Client@e852139597e42532`；新旧类型名的编译错误筛选均为0。全局Foot ABI阻塞不属于本步，也不为它增加兼容路径或额外回放。
+
+## Native Program改名并收口为Execution View
+
+状态：原`CharacterPoseGraphNativeProgram`类型与文件直接改名为`CharacterPoseProgramExecutionView`并移入Program目录，旧类型全文删除。`PosePlanExecutionRuntime`保存字段同步改为`m_ExecutionView`，构造、校验、Executor绑定、Linked Pose查询、Committed diagnostics与Dispose全部继续指向同一实例；没有同时保留Native Program与Execution View两套对象。
+
+任务5.2与5.3暂不勾选：当前Execution View仍在Actor创建时从Program Image、Rig和Blend Catalog执行`Compile*` materialize，也尚未携带并核对Program、Projection Revision和Pose Program Image Hash完整身份；它仍由旧`PosePlanExecutionRuntime`而不是最终`CharacterPoseProgramRuntime`释放。后续必须把可执行静态页在Projection Build时写入Image，让View只逐值分配只读Native存储，并删除运行时Compile入口。Unity经3C MCP `Assets/Refresh`重建项目文件后，旧文件路径、旧类型、新Execution View和Pose Runtime的错误筛选均为0；不单独运行回放。

@@ -258,7 +258,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         ulong m_FrameSequence;
 
         internal CharacterPoseGraphStagedExecutor(
-            CharacterPoseGraphNativeProgram program,
+            CharacterPoseProgramExecutionView program,
             CharacterPoseProgramFramePages framePages,
             in CharacterPoseProgramTuningView tuning,
             PoseInertializationNativeProgram inertializationProgram,
@@ -4014,7 +4014,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         }
 
         static void RequireValidConfiguration(
-            CharacterPoseGraphNativeProgram program,
+            CharacterPoseProgramExecutionView program,
             CharacterPoseProgramFramePages framePages,
             in CharacterPoseProgramTuningView tuning,
             PoseInertializationNativeProgram inertializationProgram,

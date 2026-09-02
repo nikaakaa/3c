@@ -1321,7 +1321,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                         throw new InvalidOperationException(
                             $"Pose Plan stage #{stageIndex} operation #{operationIndex} domain or Pose space is inconsistent.");
                     }
-                    if (CharacterPoseGraphNativeProgram.IsNativePoseOperation(operation.Code))
+                    if (CharacterPoseProgramExecutionView.IsNativePoseOperation(operation.Code))
                         nativeCount++;
                     if (operation.OutputValueIndex < 0)
                         continue;
@@ -1343,7 +1343,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             }
 
             if (expectedOperationStart != Operations.Count ||
-                expectedNativeOperationStart != Operations.Count(value => CharacterPoseGraphNativeProgram.IsNativePoseOperation(value.Code)) ||
+                expectedNativeOperationStart != Operations.Count(value => CharacterPoseProgramExecutionView.IsNativePoseOperation(value.Code)) ||
                 finalStageCount != 1 ||
                 Stages[Stages.Count - 1].ExecutionDomain != CharacterPoseExecutionDomain.FinalPublication)
             {

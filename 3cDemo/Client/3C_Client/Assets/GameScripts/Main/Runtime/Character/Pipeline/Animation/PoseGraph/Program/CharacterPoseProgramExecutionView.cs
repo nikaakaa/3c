@@ -731,7 +731,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         }
     }
 
-    internal sealed class CharacterPoseGraphNativeProgram : IDisposable
+    internal sealed class CharacterPoseProgramExecutionView : IDisposable
     {
         NativeArray<AnimationPoseGraphNativeOperation> m_Operations;
         NativeArray<AnimationPoseGraphNativeStage> m_Stages;
@@ -777,7 +777,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         FixedString64Bytes m_RigRevision;
         bool m_Disposed;
 
-        internal CharacterPoseGraphNativeProgram(
+        internal CharacterPoseProgramExecutionView(
             CharacterPoseProgramImage program,
             CharacterAnimationRigPayload rig,
             AnimationBlendCurveCatalogPayload curves,
@@ -1708,7 +1708,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         void RequireAlive()
         {
             if (m_Disposed)
-                throw new ObjectDisposedException(nameof(CharacterPoseGraphNativeProgram));
+                throw new ObjectDisposedException(nameof(CharacterPoseProgramExecutionView));
         }
 
         static void RequireDiagnosticsLayout(

@@ -3230,7 +3230,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                         $"Presentation Pose Source '{sourceId}' has no current resolved request.");
                 }
                 sourceSample =
-                    BuildResolvedProviderSample(
+                    m_SourceModule.ResolveProviderSample(
                         in providerSample,
                         sourceOwnerIndex);
             }
@@ -3279,47 +3279,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                 clipCatalog,
                 in capture,
                 player.NodeId);
-        }
-
-        static AnimationResolvedPoseSourceSample
-            BuildResolvedProviderSample(
-                in PresentationPoseSourceSample sample,
-                int sourceOwnerIndex)
-        {
-            if (sample == null || !sample.IsValid ||
-                sample.Availability !=
-                    PresentationPoseSourceAvailability.Ready ||
-                sourceOwnerIndex < 0)
-            {
-                throw new ArgumentException(
-                    "Presentation Pose source sample cannot be lowered.");
-            }
-            var sourceId = new AnimationPoseSourceId(
-                sample.SourceIndex,
-                sample.SourceKind,
-                new AnimationPoseSelectionGeneration(
-                    sample.SourceGeneration.Value));
-            PresentationPoseSampleTime time =
-                sample.EffectiveSample;
-            var request = new AnimationPoseSampleRequest(
-                sourceId,
-                sample.SourcePoseContinuityIdentity,
-                sample.FrameSequence,
-                sourceOwnerIndex,
-                time.SampleTime,
-                time.ContinuousTime,
-                time.Cycle,
-                time.Loop,
-                time.TimeScale,
-                sample.Clips,
-                sample.ParameterPageId,
-                sample.PoseParameters,
-                sample.PoseParameterAvailability);
-            return new AnimationResolvedPoseSourceSample(
-                request,
-                in sample.LeftFootFeatures,
-                in sample.RightFootFeatures,
-                sample.HasFootFeatures);
         }
 
         void PrepareSequenceSource(int playerIndex, float presentationDeltaSeconds)
@@ -4448,7 +4407,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                         $"Motion Matching Selection does not belong to Pose State Player '{playerNodeId}'.");
                 }
                 AnimationResolvedPoseSourceSample resolved =
-                    BuildResolvedProviderSample(
+                    m_SourceModule.ResolveProviderSample(
                         in sample,
                         sourceOwnerIndex);
                 AnimationPoseSampleRequest request =

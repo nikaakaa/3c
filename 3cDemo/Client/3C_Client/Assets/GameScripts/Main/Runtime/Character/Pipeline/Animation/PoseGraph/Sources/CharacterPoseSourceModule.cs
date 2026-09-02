@@ -705,6 +705,45 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Sources
             PoseNodeId poseNodeId) =>
             m_Backend.ContainsCommitted(sourceId, poseNodeId);
 
+        internal AnimationResolvedPoseSourceSample ResolveProviderSample(
+            in PresentationPoseSourceSample sample,
+            int sourceOwnerIndex)
+        {
+            if (sample == null || !sample.IsValid ||
+                sample.Availability !=
+                    PresentationPoseSourceAvailability.Ready ||
+                sourceOwnerIndex < 0)
+            {
+                throw new ArgumentException(
+                    "Presentation Pose source sample cannot be lowered.");
+            }
+            var sourceId = new AnimationPoseSourceId(
+                sample.SourceIndex,
+                sample.SourceKind,
+                new AnimationPoseSelectionGeneration(
+                    sample.SourceGeneration.Value));
+            PresentationPoseSampleTime time = sample.EffectiveSample;
+            var request = new AnimationPoseSampleRequest(
+                sourceId,
+                sample.SourcePoseContinuityIdentity,
+                sample.FrameSequence,
+                sourceOwnerIndex,
+                time.SampleTime,
+                time.ContinuousTime,
+                time.Cycle,
+                time.Loop,
+                time.TimeScale,
+                sample.Clips,
+                sample.ParameterPageId,
+                sample.PoseParameters,
+                sample.PoseParameterAvailability);
+            return new AnimationResolvedPoseSourceSample(
+                request,
+                in sample.LeftFootFeatures,
+                in sample.RightFootFeatures,
+                sample.HasFootFeatures);
+        }
+
         internal void PrepareAndConnect(
             in AnimationPoseSampleRequest request,
             AnimationReadOnlyBuffer<AnimationPoseSourceClipBinding>

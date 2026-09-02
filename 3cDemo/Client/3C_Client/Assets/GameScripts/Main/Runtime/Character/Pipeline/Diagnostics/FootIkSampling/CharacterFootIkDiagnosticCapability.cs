@@ -50,13 +50,15 @@ namespace ThirdPersonCharacter.Pipeline.Diagnostics.FootIkSampling
             in AnimationPresentationProgramIdentity program,
             Guid targetRuntimeInstanceId,
             int targetHostInstanceId,
-            CharacterFootSide side)
+            CharacterFootSide side,
+            in CharacterFootIkCommittedCaptureViewLease view)
         {
             if (sampleIdentity == Guid.Empty ||
                 startedUtc.Kind != DateTimeKind.Utc ||
                 !program.IsValid ||
                 targetRuntimeInstanceId == Guid.Empty ||
                 targetHostInstanceId == 0 ||
+                !view.IsAvailable ||
                 (side != CharacterFootSide.Left &&
                  side != CharacterFootSide.Right))
             {
@@ -71,6 +73,8 @@ namespace ThirdPersonCharacter.Pipeline.Diagnostics.FootIkSampling
                 targetRuntimeInstanceId.ToString("N");
             TargetHostInstanceId = targetHostInstanceId;
             Side = side;
+            MotionCoreDerived =
+                CharacterFootIkMotionCoreDerivedFacts.Resolve(in view, side);
         }
 
         internal string SampleIdentity { get; }
@@ -79,5 +83,6 @@ namespace ThirdPersonCharacter.Pipeline.Diagnostics.FootIkSampling
         internal string TargetRuntimeInstanceId { get; }
         internal int TargetHostInstanceId { get; }
         internal CharacterFootSide Side { get; }
+        internal CharacterFootIkMotionCoreDerivedFacts MotionCoreDerived { get; }
     }
 }

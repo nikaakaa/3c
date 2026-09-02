@@ -22,7 +22,7 @@ PoseGraph提交候选已把`PoseGraphId`与`PoseGraphRevision`补入唯一`Chara
 
 ## 建立View与Capture metadata双输入字段边界
 
-`CharacterFootIkDiagnosticCapability`已登记PoseGraph-owned `CharacterFootIkCommittedCaptureViewLease`与Foot-owned `CharacterFootIkCaptureMetadata`两个不同输入类型。metadata只在Capture开始构造一次，保存Sample identity、UTC ticks、Target Runtime identity、Host identity及组合Program identity；它不保存View、Module、Workspace、Vendor或Transform。首批11个Field Extractor覆盖上述metadata以及View lineage中的Projection、PoseGraph、PlanHash、Frame和Completion，全部使用框架Attribute与`(in View, in Metadata)`普通静态签名。
+`CharacterFootIkDiagnosticCapability`已登记PoseGraph-owned `CharacterFootIkCommittedCaptureViewLease`与Foot-owned `CharacterFootIkCaptureMetadata`两个不同输入类型。metadata在每脚CommittedSample Event展开时构造一次，保存Sample identity、UTC ticks、Target Runtime identity、Host identity、组合Program identity、Side及同一短租约内预计算的Foot派生事实；它不保存View、Module、Workspace、Vendor或Transform。首批11个Field Extractor覆盖上述metadata以及View lineage中的Projection、PoseGraph、PlanHash、Frame和Completion，全部使用框架Attribute与`(in View, in Metadata)`普通静态签名。
 
 通用Generator Probe已验证生成ABI为`Capture(in View, in Metadata, ref Packet)`；Foot插件用同一Generator实际编译成功，27个既有warning、0错误并关闭build server。3C Unity force refresh确认新Analyzer、`DiagnosticCompilationClosure`、Foot metadata type与双输入Field签名均无编译错误。字段清单同时把103个Category文本列收紧为领域枚举Int32、把`SampleStartedUtc`收紧为UTC ticks Int64；通用Generator／Formatter后续恢复稳定Category文本与`O`格式，不让Player逐帧格式化字符串。任务3.2仍等待其余868个typed字段及Geometry表全部声明后统一勾选。
 
@@ -141,3 +141,9 @@ Target Height Adoption／Update Reason、Residual Capture Reason、Response Init
 Motion Core 62个typed字段中的30个Committed直接事实已迁移，覆盖Motion状态／拒绝、Landing与Ground Path lineage、原始与修正Sole／Ankle、Source Ankle／Heel／Toe、Baseline／Envelope样本、权重、Constraint／Lock、Support、Landing Reach、Contact Plane与Desired Correction。Contact surface与normal统一依赖`foot-motion-contact-plane-available`；Extractor不重算Path、Envelope、Solver或Physical结果。
 
 Full Sampler加入`motion-core`后，实际Source Generator输出由518增长到548个主Field Handle，连同Geometry表共569个Field Handle；Schema为`51ed65979caca38c5885e271646a4a1452c1f610451c262e5b328e28f9dcd5df`，Program hash为`a60b4de2c1c7293a51c28a75c9b2d5bd41c6145f2c4a653a3881c8d2c0413b9c`，主layout为`fb1160c65ec21282d1294f20762f859790848ba02195714dc14f5d87d663438f`。Foot插件及依赖工程0错误，build server已关闭；本步只扩展生成程序，不单独回放。余下32项属于同一组的共享Envelope／penetration派生事实，下一小步只计算一次派生结果再展开字段，避免生成程序对每个字段重复执行旧Editor算法。
+
+## 迁移Motion Core共享派生事实
+
+Motion Core余下32个typed字段已全部迁移，覆盖沿Component Up的Baseline／Envelope／Formal Height、Builder Swing Target、实际脚相对Ground Path水平轴、Envelope交点候选、Counterfactual correction和Contact Plane Penetration availability。每个字段均标记`Derived`并声明对正式Committed字段的依赖闭包；Ground Geometry内容通过同一Ground Path input identity与Envelope count绑定，不调用World Query、Transform、FBBIK或旧Sampler状态。
+
+`CharacterFootIkCaptureMetadata`在每脚样本构造时只计算一次`CharacterFootIkMotionCoreDerivedFacts`，32个Extractor只读取同一缓存事实。Envelope高度候选使用固定136项栈缓冲，替代旧Editor `List<float>`分配，并保持0.001米水平／高度唯一性规则、Axis Region、Corridor与Ambiguous判定不变；没有Capture event时不会构造metadata或执行派生计算。Full Sampler加入`motion-derived`后，Source Generator输出580个主Field Handle和21个Geometry表Field Handle，其中32个Handle为Derived；Schema为`030052567c0d003124f5a0dab6257ca53e81ec0290ce8368142ff28d67dc1a56`，Program hash为`39ce2a80ea77634e65b768395fcb4a3965e112d4fb0e2d3bc863267938d2d902`，主layout为`6dda23a8f8e722a737cbd57d866a9ea14663a5e4d7fb6c867d639468797d69a2`。Foot插件及依赖工程0错误，build server已关闭；当前尚无Runtime Event Handler构造该metadata，因此现行运行链不变，不单独回放。

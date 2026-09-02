@@ -337,6 +337,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                 sourceModule = new CharacterPoseSourceModule(
                     animancer,
                     projection,
+                    actionPlayback.Bindings,
                     rigBinding,
                     projection.Rig,
                     physicalSourceCapacity,
@@ -570,6 +571,18 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             m_ProgramRuntime.BeginAnimationSlotFrame(frameIdentity);
         }
 
+        internal void BeginActionSamplingFrame(
+            ulong frameIdentity,
+            ulong presentationFrame,
+            bool captureDiagnostics)
+        {
+            RequireAlive();
+            m_ProgramRuntime.BeginActionSamplingFrame(
+                frameIdentity,
+                presentationFrame,
+                captureDiagnostics);
+        }
+
         internal void CommitAnimationSlotFrame(
             CharacterPoseProgramFrameLease lease)
         {
@@ -634,8 +647,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
 
         internal void ProjectActionPresentationSamples(
             CharacterPoseProgramFrameLease lease,
-            ActionPresentationSamplingRuntime sampling,
-            ActionPresentationSamplingFrameTransaction samplingTransaction,
             IReadOnlyList<ActionAnimationPlaybackLifecycleFrame> lifecycle,
             double presentationSampleTick,
             float presentationDeltaSeconds)
@@ -643,23 +654,37 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             RequireMutation(lease);
             m_ProgramRuntime.ProjectActionPresentationSamples(
                 lease,
-                sampling,
-                samplingTransaction,
                 lifecycle,
                 presentationSampleTick,
                 presentationDeltaSeconds);
         }
 
         internal void ResolveActionPresentationFrames(
-            CharacterPoseProgramFrameLease lease,
-            ActionPresentationSamplingRuntime sampling,
-            ActionPresentationSamplingFrameTransaction samplingTransaction)
+            CharacterPoseProgramFrameLease lease)
         {
             RequireMutation(lease);
             m_ProgramRuntime.ResolveActionPresentationFrames(
-                lease,
-                sampling,
-                samplingTransaction);
+                lease);
+        }
+
+        internal void ValidateActionSamplingFrame(
+            CharacterPoseProgramFrameLease lease)
+        {
+            RequireMutation(lease);
+            m_ProgramRuntime.ValidateActionSamplingFrame(lease);
+        }
+
+        internal void CommitActionSamplingFrame(
+            CharacterPoseProgramFrameLease lease)
+        {
+            RequireMutation(lease);
+            m_ProgramRuntime.CommitActionSamplingFrame(lease);
+        }
+
+        internal void DiscardActionSamplingFrame(ulong frameIdentity)
+        {
+            RequireAlive();
+            m_ProgramRuntime.DiscardActionSamplingFrame(frameIdentity);
         }
 
         internal void PublishActionSources(
@@ -702,12 +727,21 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             m_ProgramRuntime.RetiredActionPlaybacks;
         internal IReadOnlyList<ActionSlotSourceUsage> ActionSourceUsages =>
             m_ProgramRuntime.ActionSourceUsages;
+        internal int ActionSamplingJournalCapacity =>
+            m_SourceModule.ActionSamplingJournalCapacity;
 
         internal void ResetAnimationSlots()
         {
             RequireAlive();
             RequireNoOpenMutation();
             m_ProgramRuntime.ResetAnimationSlots();
+        }
+
+        internal void ResetActionSampling()
+        {
+            RequireAlive();
+            RequireNoOpenMutation();
+            m_ProgramRuntime.ResetActionSampling();
         }
 
         internal void ResetActionPlayback()
@@ -722,6 +756,15 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             RequireAlive();
             RequireNoOpenMutation();
             m_ProgramRuntime.ResetPresentationWorkspace();
+        }
+
+        internal void BuildCommittedActionTimeSnapshots(
+            FixedCapacityFrameBuffer<ActionPresentationTimeSnapshot>
+                destination)
+        {
+            RequireAlive();
+            RequireNoOpenMutation();
+            m_ProgramRuntime.BuildCommittedActionTimeSnapshots(destination);
         }
 
         internal void CommitPresentationWorkspaceFrame(

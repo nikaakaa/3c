@@ -3,6 +3,8 @@ using System.Collections.Generic;
 using Animancer;
 using ThirdPersonCharacter.Pipeline.Animation.Diagnostics;
 using ThirdPersonCharacter.Pipeline.Animation.Lifecycle;
+using ThirdPersonCharacter.Pipeline.Animation.Presentation;
+using ThirdPersonCharacter.Pipeline.Presentation;
 using ThirdPersonCharacter.Pipeline.Presentation.Animancer;
 using UnityEngine.Animations;
 using UnityEngine.Playables;
@@ -485,6 +487,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Sources
         readonly PhysicalPoseSourceRegistry m_PhysicalSources;
         readonly CharacterPoseSourceBindingPage m_BindingPage;
         readonly CharacterPoseSourceUsagePage m_UsagePage;
+        readonly ActionPresentationSamplingRuntime m_ActionSampling;
         readonly SourceReleasePage m_ReleasePage;
         readonly SourceReleaseCompletionPage m_ReleaseCompletions;
         readonly HashSet<AnimationPhysicalSourceIdentity>
@@ -492,12 +495,14 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Sources
         readonly Playable m_PreviousOutputSource;
         readonly float m_PreviousOutputWeight;
         SourceFramePage m_FramePage;
+        ActionPresentationSamplingFrameTransaction m_ActionSamplingFrame;
         AnimationMixerPlayable m_SourceFanIn;
         bool m_Disposed;
 
         internal CharacterPoseSourceModule(
             AnimancerComponent animancer,
             CharacterPresentationProjection projection,
+            ActionAnimationBindingIndex actionBindings,
             CharacterAnimationRigBinding rigBinding,
             CharacterAnimationRigPayload rig,
             int sourceCapacity,
@@ -514,6 +519,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Sources
             m_Catalog = new CharacterPoseSourceCatalog(
                 projection,
                 clipCapacity);
+            m_ActionSampling = new ActionPresentationSamplingRuntime(
+                actionBindings ??
+                throw new ArgumentNullException(nameof(actionBindings)));
             m_Tuning = new CharacterPoseSourceTuningState(
                 projection,
                 1);
@@ -586,6 +594,88 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Sources
         }
 
         internal int Capacity => m_PhysicalSources.Capacity;
+        internal int ActionSamplingJournalCapacity =>
+            m_ActionSampling.JournalCapacity;
+
+        internal void BeginActionSamplingFrame(
+            ulong frameIdentity,
+            ulong presentationFrame,
+            bool captureDiagnostics)
+        {
+            if (m_ActionSamplingFrame?.IsValid == true)
+            {
+                throw new InvalidOperationException(
+                    "Pose Source Action sampling frame is already open.");
+            }
+            m_ActionSamplingFrame = m_ActionSampling.BeginFrame(
+                frameIdentity,
+                presentationFrame,
+                captureDiagnostics);
+        }
+
+        internal void ProjectActionPresentationSamples(
+            CharacterActionPlaybackRuntime actionRuntime,
+            CharacterActionPlaybackFrameTransaction actionTransaction,
+            IReadOnlyList<ActionAnimationPlaybackLifecycleFrame> lifecycle,
+            double presentationSampleTick,
+            float presentationDeltaSeconds)
+        {
+            RequireActionSamplingFrame(actionTransaction.Identity);
+            m_ActionSampling.ProjectPresentationSamples(
+                m_ActionSamplingFrame,
+                actionRuntime,
+                actionTransaction,
+                lifecycle,
+                presentationSampleTick,
+                presentationDeltaSeconds);
+        }
+
+        internal void ResolveActionPresentationFrames(
+            ulong frameIdentity,
+            PresentationFrameWorkspace workspace,
+            PresentationFrameWorkspaceLease workspaceLease)
+        {
+            RequireActionSamplingFrame(frameIdentity);
+            m_ActionSampling.ResolvePresentationFrames(
+                m_ActionSamplingFrame,
+                workspace,
+                workspaceLease);
+        }
+
+        internal void ValidateActionSamplingFrame(ulong frameIdentity)
+        {
+            RequireActionSamplingFrame(frameIdentity);
+            m_ActionSampling.ValidateFrame(m_ActionSamplingFrame);
+        }
+
+        internal void CommitActionSamplingFrame(ulong frameIdentity)
+        {
+            RequireActionSamplingFrame(frameIdentity);
+            m_ActionSampling.SealFrame(m_ActionSamplingFrame);
+            m_ActionSamplingFrame = null;
+        }
+
+        internal void DiscardActionSamplingFrame(ulong frameIdentity)
+        {
+            RequireActionSamplingFrame(frameIdentity);
+            m_ActionSampling.DiscardFrame(m_ActionSamplingFrame);
+            m_ActionSamplingFrame = null;
+        }
+
+        internal void BuildCommittedActionTimeSnapshots(
+            FixedCapacityFrameBuffer<ActionPresentationTimeSnapshot>
+                destination) =>
+            m_ActionSampling.BuildCommittedTimeSnapshots(destination);
+
+        internal void ResetActionSampling()
+        {
+            if (m_ActionSamplingFrame?.IsValid == true)
+            {
+                throw new InvalidOperationException(
+                    "Pose Source Action sampling cannot reset during a frame.");
+            }
+            m_ActionSampling.Reset();
+        }
 
         internal CharacterPoseSourceTuningView RequireTuning(
             ulong generation) =>
@@ -616,6 +706,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Sources
         internal CharacterPoseSourceFrameLease BeginFrame(
             in CharacterPoseFrameLineage lineage)
         {
+            RequireActionSamplingFrame(lineage.FrameIdentity);
             m_Tuning.RequireCommitted(lineage.TuningGeneration);
             m_ReleasePage.RequireEmpty();
             m_ReleaseValidationIdentities.Clear();
@@ -1338,6 +1429,17 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Sources
                 failure = failure == null
                     ? exception
                     : new AggregateException(failure, exception);
+            }
+        }
+
+        void RequireActionSamplingFrame(ulong frameIdentity)
+        {
+            if (frameIdentity == 0 ||
+                m_ActionSamplingFrame?.IsValid != true ||
+                m_ActionSamplingFrame.Identity != frameIdentity)
+            {
+                throw new InvalidOperationException(
+                    "Pose Source Action sampling frame is stale.");
             }
         }
     }

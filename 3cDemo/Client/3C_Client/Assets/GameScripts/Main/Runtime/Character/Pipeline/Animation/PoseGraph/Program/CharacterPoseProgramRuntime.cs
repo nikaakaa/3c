@@ -379,6 +379,18 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 ActorState.AnimationSlots.BeginFrame(frameIdentity);
         }
 
+        internal void BeginActionSamplingFrame(
+            ulong frameIdentity,
+            ulong presentationFrame,
+            bool captureDiagnostics)
+        {
+            RequireActionFrame(frameIdentity);
+            m_SourceModule.BeginActionSamplingFrame(
+                frameIdentity,
+                presentationFrame,
+                captureDiagnostics);
+        }
+
         internal void CommitAnimationSlotFrame(
             CharacterPoseProgramFrameLease lease)
         {
@@ -500,18 +512,13 @@ namespace ThirdPersonCharacter.Pipeline.Animation
 
         internal void ProjectActionPresentationSamples(
             CharacterPoseProgramFrameLease lease,
-            ActionPresentationSamplingRuntime sampling,
-            ActionPresentationSamplingFrameTransaction samplingTransaction,
             IReadOnlyList<ActionAnimationPlaybackLifecycleFrame> lifecycle,
             double presentationSampleTick,
             float presentationDeltaSeconds)
         {
             RequireFrame(lease);
             RequireActionFrame(lease.Lineage.FrameIdentity);
-            if (sampling == null)
-                throw new ArgumentNullException(nameof(sampling));
-            sampling.ProjectPresentationSamples(
-                samplingTransaction,
+            m_SourceModule.ProjectActionPresentationSamples(
                 ActorState.ActionPlayback,
                 m_ActionFrame,
                 lifecycle,
@@ -520,19 +527,51 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         }
 
         internal void ResolveActionPresentationFrames(
-            CharacterPoseProgramFrameLease lease,
-            ActionPresentationSamplingRuntime sampling,
-            ActionPresentationSamplingFrameTransaction samplingTransaction)
+            CharacterPoseProgramFrameLease lease)
         {
             RequireFrame(lease);
             RequirePresentationWorkspaceFrame(
                 lease.Lineage.FrameIdentity);
-            if (sampling == null)
-                throw new ArgumentNullException(nameof(sampling));
-            sampling.ResolvePresentationFrames(
-                samplingTransaction,
+            m_SourceModule.ResolveActionPresentationFrames(
+                lease.Lineage.FrameIdentity,
                 m_PresentationWorkspace,
                 m_PresentationWorkspaceFrame);
+        }
+
+        internal void ValidateActionSamplingFrame(
+            CharacterPoseProgramFrameLease lease)
+        {
+            RequireFrame(lease);
+            m_SourceModule.ValidateActionSamplingFrame(
+                lease.Lineage.FrameIdentity);
+        }
+
+        internal void CommitActionSamplingFrame(
+            CharacterPoseProgramFrameLease lease)
+        {
+            RequireFrame(lease);
+            m_SourceModule.CommitActionSamplingFrame(
+                lease.Lineage.FrameIdentity);
+        }
+
+        internal void DiscardActionSamplingFrame(ulong frameIdentity)
+        {
+            RequireAlive();
+            m_SourceModule.DiscardActionSamplingFrame(frameIdentity);
+        }
+
+        internal void BuildCommittedActionTimeSnapshots(
+            FixedCapacityFrameBuffer<ActionPresentationTimeSnapshot>
+                destination)
+        {
+            RequireAlive();
+            m_SourceModule.BuildCommittedActionTimeSnapshots(destination);
+        }
+
+        internal void ResetActionSampling()
+        {
+            RequireAlive();
+            m_SourceModule.ResetActionSampling();
         }
 
         internal void PublishActionSources(

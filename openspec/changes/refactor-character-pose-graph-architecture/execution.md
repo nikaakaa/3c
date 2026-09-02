@@ -973,3 +973,9 @@ Stage Schedule改为以Symbolic Program作为分组与依赖真相，只用已�
 状态：`PresentationFrameWorkspace`及其双页lease从根Runtime与根Frame Transaction迁入Program Runtime。Program在原位置先打开Workspace再打开Action lifecycle，后续由同一Owner处理Action sample frame落页、Slot usage／retirement、Provider demand、Motion Matching selection与Source Demand读取；根只按原阶段调用Program，不再取得Workspace实例或页索引。
 
 Commit仍严格保持Workspace、Action Sampling、Slot、Action Playback、Motion Matching、Program／Source／Constraint的原顺序；Discard仍保持Program、Motion Matching、Slot、Sampling、Action、Workspace顺序。Reset和Begin失败清理也保留原相对位置。任务5.6继续推进，但根事务仍暂存Action Sampling与Motion Matching内部lease，暂不勾选。3C MCP对Program、Pose协调层、根Runtime与根Transaction错误筛选均为0；不单独运行回放。
+
+## Action Sampling归入Source Module
+
+状态：`ActionPresentationSamplingRuntime`及其Pending transaction从根Runtime和根Frame Transaction迁入`CharacterPoseSourceModule`。Source Module在原阶段打开、投影、解析、验证、提交或丢弃Action sample页；Program Runtime只把自己的活动Action lifecycle事务和Program-owned Presentation Workspace交给Source入口，根不再取得采样Runtime或lease。
+
+Action sample window、presentation tick、delta、Interpolation／Retention投影、Foot Feature解析、诊断冻结、Commit／Discard／Reset相对顺序和容量均保持不变。由此任务4.2中有限Action sample Adapter的实际Owner与文档一致；任务5.6仅剩Motion Matching内部lease仍暴露给根事务，暂不勾选。3C MCP对Source、Program、Pose协调层、根Runtime与根Transaction错误筛选均为0；不单独运行回放。

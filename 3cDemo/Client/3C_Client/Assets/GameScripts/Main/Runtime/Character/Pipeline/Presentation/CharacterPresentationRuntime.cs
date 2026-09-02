@@ -33,7 +33,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
 
         readonly ActorId m_ActorId;
         readonly CharacterAnimationPresentationBindings m_Bindings;
-        readonly ActionPresentationSamplingRuntime m_ActionSampling;
         readonly PosePlanExecutionRuntime m_PoseRuntime;
         readonly CharacterPoseConstraintRuntime m_PoseConstraints;
         readonly CharacterMotionMatchingPresentationModule m_MotionMatching;
@@ -87,9 +86,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 throw new ArgumentNullException(nameof(bindings));
             var actionPlayback =
                 new CharacterActionPlaybackRuntime(
-                    bindings.ActionPlayback);
-            m_ActionSampling =
-                new ActionPresentationSamplingRuntime(
                     bindings.ActionPlayback);
             var animationSlots =
                 new AnimationSlotRuntime(
@@ -150,7 +146,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 m_CapacityMetrics =
                     m_PoseRuntime.CreateCapacityMetrics(
                         actionPlayback.JournalCapacity,
-                        m_ActionSampling.JournalCapacity,
+                        m_PoseRuntime.ActionSamplingJournalCapacity,
                         Math.Max(1, animationSlots.SlotCount));
                 m_MotionMatching = motionMatching;
             }
@@ -497,15 +493,11 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     frameStage = "ActionSampling";
                     m_PoseRuntime.ProjectActionPresentationSamples(
                         transaction.PoseLease,
-                        m_ActionSampling,
-                        transaction.SamplingTransaction,
                         lifecycle,
                         presentationSampleTick,
                         presentationDeltaSeconds);
                     m_PoseRuntime.ResolveActionPresentationFrames(
-                        transaction.PoseLease,
-                        m_ActionSampling,
-                        transaction.SamplingTransaction);
+                        transaction.PoseLease);
                 }
 
                 using (PoseRoutingMarker.Auto())
@@ -573,8 +565,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     frameStage = "ReleaseProtocol";
                     m_PoseRuntime.CompleteActionReleaseProtocol(
                         transaction.PoseLease);
-                    m_ActionSampling.ValidateFrame(
-                        transaction.SamplingTransaction);
+                    m_PoseRuntime.ValidateActionSamplingFrame(
+                        transaction.PoseLease);
                     m_PoseRuntime.ValidateActionFrame(
                         transaction.PoseLease);
                     m_PoseRuntime.ValidatePendingSeal(
@@ -791,7 +783,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 return;
             m_PoseRuntime.Reset(reason);
             m_PoseRuntime.ResetAnimationSlots();
-            m_ActionSampling.Reset();
+            m_PoseRuntime.ResetActionSampling();
             m_PoseRuntime.ResetActionPlayback();
             m_PoseRuntime.ResetPresentationWorkspace();
             m_MotionMatching?.Reset(
@@ -807,7 +799,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             m_PoseRuntime.Reset(
                 PoseDiscontinuityResetReason.BranchReplacement);
             m_PoseRuntime.ResetAnimationSlots();
-            m_ActionSampling.Reset();
+            m_PoseRuntime.ResetActionSampling();
             m_PoseRuntime.ResetPresentationWorkspace();
             m_MotionMatching?.Reset(
                 resetSequence,
@@ -872,7 +864,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             AnimationPresentationDiagnosticsInterest diagnosticsInterest,
             CharacterLinkedPoseRuntimeSession linkedPose)
         {
-            ActionPresentationSamplingFrameTransaction sampling = null;
             CharacterPoseProgramFrameLease pose = default;
             CharacterPoseSourceFrameLease source = default;
             CharacterPoseConstraintFrameLease constraint = default;
@@ -899,6 +890,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 m_TuningGeneration);
             bool linkedPosePrepared = false;
             bool actionFrameOpen = false;
+            bool actionSamplingFrameOpen = false;
             bool animationSlotFrameOpen = false;
             try
             {
@@ -908,11 +900,11 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     frameIdentity,
                     presentationFrame);
                 actionFrameOpen = true;
-                sampling =
-                    m_ActionSampling.BeginFrame(
-                        frameIdentity,
-                        presentationFrame,
-                        captureDiagnostics);
+                m_PoseRuntime.BeginActionSamplingFrame(
+                    frameIdentity,
+                    presentationFrame,
+                    captureDiagnostics);
+                actionSamplingFrameOpen = true;
                 m_PoseRuntime.BeginAnimationSlotFrame(frameIdentity);
                 animationSlotFrameOpen = true;
                 if (m_MotionMatching != null)
@@ -931,7 +923,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     out bool captureFootIkDiagnostics);
                 m_FrameTransaction.Begin(
                     in lineage,
-                    sampling,
                     pose,
                     source,
                     constraint,
@@ -969,11 +960,11 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                             .DiscardAnimationSlotFrame(frameIdentity),
                         ref discardFailure);
                 }
-                if (sampling?.IsValid == true)
+                if (actionSamplingFrameOpen)
                 {
                     DiscardStep(
-                        () => m_ActionSampling.DiscardFrame(
-                            sampling),
+                        () => m_PoseRuntime
+                            .DiscardActionSamplingFrame(frameIdentity),
                         ref discardFailure);
                 }
                 if (actionFrameOpen)
@@ -1053,7 +1044,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             CopyActionSnapshots(
                 m_PoseRuntime.BuildCommittedActionLifecycleSnapshot(),
                 transaction.ActionSnapshots);
-            m_ActionSampling.BuildCommittedTimeSnapshots(
+            m_PoseRuntime.BuildCommittedActionTimeSnapshots(
                 transaction.TimeSnapshots);
             foreach (AnimationPlaybackId playbackId in
                      m_PoseRuntime.RetiredActionPlaybacks)
@@ -1148,8 +1139,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             }
             m_PoseRuntime.CommitPresentationWorkspaceFrame(
                 transaction.PoseLease);
-            m_ActionSampling.SealFrame(
-                transaction.SamplingTransaction);
+            m_PoseRuntime.CommitActionSamplingFrame(
+                transaction.PoseLease);
             m_PoseRuntime.CommitAnimationSlotFrame(
                 transaction.PoseLease);
             m_PoseRuntime.CommitActionPlaybackFrame(
@@ -1197,8 +1188,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     transaction.Lineage.FrameIdentity),
                 ref failure);
             DiscardStep(
-                () => m_ActionSampling.DiscardFrame(
-                    transaction.SamplingTransaction),
+                () => m_PoseRuntime.DiscardActionSamplingFrame(
+                    transaction.Lineage.FrameIdentity),
                 ref failure);
             DiscardStep(
                 () => m_PoseRuntime.DiscardActionPlaybackFrame(

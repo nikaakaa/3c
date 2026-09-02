@@ -58,4 +58,4 @@
 - [x] 7.2 分别编译3C Runtime、Foot Generator、Foot Capture Editor和Foot Analysis Editor程序集，使用相同build server关闭规则确认新依赖闭包完整
 - [ ] 7.3 扩展Managed／IL2CPP产物Gate覆盖`DiagnosticKey`、`DiagnosticGroup`、Analyzer、Plan、Operator和Report identity，通过Gate命令确认Disabled闭包为零且Capture闭包不包含离线Analyzer
 - [ ] 7.4 对新Change及三个受影响采样Change执行OpenSpec strict validation，并用`git diff --check`和冲突文本搜索确认current specs不再宣称Foot没有独立诊断能力
-- [ ] 7.5 对照proposal列出的全部Capability和受影响规格检查实现归属，通过依赖搜索确认通用包没有Foot／Combat概念、Foot Analysis没有PoseGraph运行引用且旧诊断基础设施保持删除
+- [x] 7.5 对照proposal列出的全部Capability和受影响规格检查实现归属，通过依赖搜索确认通用包没有Foot／Combat概念、Foot Analysis没有PoseGraph运行引用、采样链不依赖Live／Trace专用View且旧采样诊断基础设施保持删除

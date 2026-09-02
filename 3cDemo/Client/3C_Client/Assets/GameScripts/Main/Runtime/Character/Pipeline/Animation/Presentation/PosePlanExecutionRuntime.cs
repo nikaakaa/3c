@@ -21,6 +21,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
         readonly CharacterPoseRuntimeComposition m_Modules;
         readonly CharacterPoseTuningCoordinator m_Tuning;
         readonly CharacterPoseFrameCoordinator m_Frame;
+        readonly CharacterPoseMotionMatchingCoordinator m_MotionMatching;
 
         CharacterPoseProgramRuntime m_ProgramRuntime => m_Modules.Program;
         CharacterPoseConstraintRuntime m_PoseConstraints =>
@@ -86,6 +87,11 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                     projection,
                     m_Modules,
                     m_Tuning);
+                m_MotionMatching =
+                    new CharacterPoseMotionMatchingCoordinator(
+                        m_ProgramRuntime,
+                        m_SourceModule,
+                        m_Frame);
             }
             catch
             {
@@ -103,9 +109,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             m_Diagnostics.NoInterestSkipCount;
         internal bool HasFootPlacement => m_PoseConstraints.HasFootPlacement;
         internal bool MotionMatchingRuntimeEnabled =>
-            m_SourceModule.MotionMatching?.Enabled == true;
+            m_MotionMatching.Enabled;
         internal bool AcceptsMotionMatchingTrajectoryIntent =>
-            m_SourceModule.MotionMatching?.AcceptsTrajectoryIntent == true;
+            m_MotionMatching.AcceptsTrajectoryIntent;
         internal int ProviderSourceSampleCount =>
             m_ProgramRuntime.ProviderSourceSampleCount;
         internal void ResetFootPlacement(in CharacterFootPlacementReset reset) =>
@@ -178,12 +184,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
         internal bool BeginMotionMatchingFrame(ulong frameIdentity)
         {
             RequireAlive();
-            CharacterPoseMotionMatchingSourceRuntime motionMatching =
-                m_SourceModule.MotionMatching;
-            if (motionMatching == null)
-                return false;
-            motionMatching.BeginFrame(frameIdentity);
-            return true;
+            return m_MotionMatching.BeginFrame(frameIdentity);
         }
 
         internal void BeginActionSamplingFrame(
@@ -228,14 +229,13 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             CharacterPoseProgramFrameLease lease)
         {
             RequireMutation(lease);
-            m_SourceModule.MotionMatching?.CommitFrame(
-                lease.FrameIdentity);
+            m_MotionMatching.CommitFrame(lease);
         }
 
         internal void DiscardMotionMatchingFrame(ulong frameIdentity)
         {
             RequireAlive();
-            m_SourceModule.MotionMatching?.DiscardFrame(frameIdentity);
+            m_MotionMatching.DiscardFrame(frameIdentity);
         }
 
         internal void PublishActionCommand(
@@ -523,37 +523,11 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             out bool hasResolution)
         {
             RequireAlive();
-            RequireOpenMutation();
-            m_ProgramRuntime.ClearMotionMatchingSelections(
-                m_Frame.ActiveLease);
-            hasResolution = false;
-            CharacterPoseMotionMatchingSourceRuntime motionMatching =
-                m_SourceModule.MotionMatching;
-            if (motionMatching == null)
-                return default;
-            MotionMatchingPoseStateDemandBatch demands =
-                m_ProgramRuntime.BuildMotionMatchingDemandBatch(
-                    m_Frame.ActiveLease,
-                    presentationFrame,
-                    bodyFrame.ResetSequence);
-            if (!motionMatching.HasFrameWork(
-                    m_Frame.ActiveLease.FrameIdentity,
-                    in demands))
-            {
-                return default;
-            }
-            MotionMatchingFrameResolution resolution =
-                motionMatching.ResolveFrame(
-                    m_Frame.ActiveLease.FrameIdentity,
-                    presentationFrame,
-                    presentationDeltaSeconds,
-                    in bodyFrame,
-                    in demands);
-                m_ProgramRuntime.ApplyMotionMatchingSelections(
-                m_Frame.ActiveLease,
-                in resolution);
-            hasResolution = true;
-            return resolution;
+            return m_MotionMatching.Resolve(
+                presentationFrame,
+                presentationDeltaSeconds,
+                in bodyFrame,
+                out hasResolution);
         }
 
         internal void PrepareMotionMatchingFrameCompletion(
@@ -561,13 +535,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             ulong poseCompletionIdentity)
         {
             RequireAlive();
-            RequireOpenMutation();
-            m_ProgramRuntime.PrepareMotionMatchingPosePlanCompletion(
-                m_Frame.ActiveLease,
-                in resolution,
-                poseCompletionIdentity);
-            m_SourceModule.MotionMatching.PrepareFrameCompletion(
-                m_Frame.ActiveLease.FrameIdentity,
+            m_MotionMatching.PrepareCompletion(
                 in resolution,
                 poseCompletionIdentity);
         }
@@ -575,19 +543,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
         internal void CompleteMotionMatchingFrame()
         {
             RequireAlive();
-            RequireOpenMutation();
-            if (m_Frame.PendingOutcome !=
-                AnimationPresentationFrameOutcome.Committed)
-            {
-                throw new InvalidOperationException(
-                    "Motion Matching Pose Plan completion does not match the evaluated frame.");
-            }
-            MotionMatchingPosePlanCompletion completion =
-                m_ProgramRuntime.BuildMotionMatchingPosePlanCompletion(
-                    m_Frame.ActiveLease);
-            m_SourceModule.MotionMatching.CompleteFrame(
-                m_Frame.ActiveLease.FrameIdentity,
-                in completion);
+            m_MotionMatching.CompleteFrame();
         }
 
         internal bool TryCaptureMotionMatchingSearchReplay(
@@ -595,18 +551,16 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             out MotionMatchingSearchReplayArtifact artifact)
         {
             RequireAlive();
-            artifact = null;
-            return m_SourceModule.MotionMatching != null &&
-                   m_SourceModule.MotionMatching.TryCaptureSearchReplay(
-                       providerId,
-                       out artifact);
+            return m_MotionMatching.TryCaptureSearchReplay(
+                providerId,
+                out artifact);
         }
 
         internal void CaptureMotionMatchingTrajectoryIntent(
             CharacterPresentationTrajectoryIntent intent)
         {
             RequireAlive();
-            RequireMotionMatching().CaptureTrajectoryIntent(intent);
+            m_MotionMatching.CaptureTrajectoryIntent(intent);
         }
 
         internal void CaptureMotionMatchingPreviewQuery(
@@ -614,15 +568,13 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             MotionMatchingSearchReplayArtifact query)
         {
             RequireAlive();
-            RequireMotionMatching().CapturePreviewQuery(
-                providerId,
-                query);
+            m_MotionMatching.CapturePreviewQuery(providerId, query);
         }
 
         internal void PublishMotionMatchingFrameDiagnostics(
             RuntimeDiagnosticsContext diagnostics,
             in MotionMatchingFrameResolution resolution) =>
-            RequireMotionMatching().PublishCommittedFrameDiagnostics(
+            m_MotionMatching.PublishCommittedFrameDiagnostics(
                 diagnostics,
                 in resolution);
 
@@ -632,9 +584,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
         {
             RequireAlive();
             RequireNoOpenMutation();
-            m_SourceModule.MotionMatching?.Reset(resetSequence, reason);
+            m_MotionMatching.Reset(resetSequence, reason);
         }
-
         internal void BeginCommittedDiagnostics(
             AnimationPresentationDiagnosticsInterest interest,
             bool captureFootIk,
@@ -829,11 +780,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
         void RequireOpenMutation() => m_Frame.RequireOpenMutation();
 
         void RequireNoOpenMutation() => m_Frame.RequireNoOpenMutation();
-
-        CharacterPoseMotionMatchingSourceRuntime RequireMotionMatching() =>
-            m_SourceModule.MotionMatching ??
-            throw new InvalidOperationException(
-                "Presentation has no Motion Matching module.");
 
         static void DiscardStep(
             Action action,

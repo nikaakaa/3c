@@ -1141,3 +1141,9 @@ Source先准备、Program次之、Constraint最后准备以及Program／Source�
 状态：新增`CharacterPoseFrameCoordinator`，唯一持有Completion计数、活动Program lease、Commit验证位、Pending Outcome与Frame completion context，并接管Begin、Source Demand、Source Prepare、Animancer Evaluate Barrier、Program／Constraint／Publication typed结果、Seal、Discard、Committed Finalize和Pose State推进。旧Pose外层不再保存或修改任何根帧状态，只保留当前上层API转交。
 
 Begin／Prepare／Evaluate／Final Write／Node Complete／Seal顺序、Barrier失败清理、Writer后提交政策、Reset时completion递增和Profiler Marker名称保持不变；没有复制第二Frame事务、Workspace或Final页。旧Pose外层由1417行降至863行。3C MCP全脚本重编且C#错误为0，不单独运行回放。
+
+## 拆出根Motion Matching协调器
+
+状态：新增`CharacterPoseMotionMatchingCoordinator`，统一连接Program-owned Demand／Selection／Pose Completion与Source-owned查询、Frame Completion、Replay capture、Trajectory intent、Preview query及Diagnostics发布。旧Pose外层不再解释Motion Matching frame work或在Program与Source之间拼接completion。
+
+Demand生成、HasFrameWork、Resolve、Selection应用、Pose completion准备与最终Source completion顺序保持不变；Reset与可选模块Unavailable语义未变，也没有接管搜索内部算法。3C MCP全脚本重编且C#错误为0，不单独运行回放。

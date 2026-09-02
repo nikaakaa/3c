@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using Animancer;
 using ThirdPersonCharacter.Pipeline.Animation.Diagnostics;
 using ThirdPersonCharacter.Pipeline.Animation.Lifecycle;
+using ThirdPersonCharacter.Pipeline.Animation.MotionMatching;
 using ThirdPersonCharacter.Pipeline.Animation.Presentation;
 using ThirdPersonCharacter.Pipeline.Presentation;
 using ThirdPersonCharacter.Pipeline.Presentation.Animancer;
@@ -488,6 +489,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Sources
         readonly CharacterPoseSourceBindingPage m_BindingPage;
         readonly CharacterPoseSourceUsagePage m_UsagePage;
         readonly ActionPresentationSamplingRuntime m_ActionSampling;
+        readonly CharacterPoseMotionMatchingSourceRuntime
+            m_MotionMatching;
         readonly SourceReleasePage m_ReleasePage;
         readonly SourceReleaseCompletionPage m_ReleaseCompletions;
         readonly HashSet<AnimationPhysicalSourceIdentity>
@@ -503,6 +506,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Sources
             AnimancerComponent animancer,
             CharacterPresentationProjection projection,
             ActionAnimationBindingIndex actionBindings,
+            CharacterMotionMatchingPresentationModule motionMatching,
             CharacterAnimationRigBinding rigBinding,
             CharacterAnimationRigPayload rig,
             int sourceCapacity,
@@ -522,6 +526,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Sources
             m_ActionSampling = new ActionPresentationSamplingRuntime(
                 actionBindings ??
                 throw new ArgumentNullException(nameof(actionBindings)));
+            m_MotionMatching = motionMatching != null
+                ? new CharacterPoseMotionMatchingSourceRuntime(
+                    motionMatching)
+                : null;
             m_Tuning = new CharacterPoseSourceTuningState(
                 projection,
                 1);
@@ -596,6 +604,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Sources
         internal int Capacity => m_PhysicalSources.Capacity;
         internal int ActionSamplingJournalCapacity =>
             m_ActionSampling.JournalCapacity;
+        internal CharacterPoseMotionMatchingSourceRuntime MotionMatching =>
+            m_MotionMatching;
 
         internal void BeginActionSamplingFrame(
             ulong frameIdentity,
@@ -1368,6 +1378,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Sources
             RequireAlive();
             Exception failure = null;
             DisposeStep(m_Backend.Dispose, ref failure);
+            if (m_MotionMatching != null)
+                DisposeStep(m_MotionMatching.Dispose, ref failure);
             m_FramePage.Clear();
             m_BindingPage.Clear();
             m_UsagePage.Clear();
@@ -1442,5 +1454,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Sources
                     "Pose Source Action sampling frame is stale.");
             }
         }
+
     }
 }

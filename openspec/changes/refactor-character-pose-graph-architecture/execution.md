@@ -979,3 +979,9 @@ Commit仍严格保持Workspace、Action Sampling、Slot、Action Playback、Moti
 状态：`ActionPresentationSamplingRuntime`及其Pending transaction从根Runtime和根Frame Transaction迁入`CharacterPoseSourceModule`。Source Module在原阶段打开、投影、解析、验证、提交或丢弃Action sample页；Program Runtime只把自己的活动Action lifecycle事务和Program-owned Presentation Workspace交给Source入口，根不再取得采样Runtime或lease。
 
 Action sample window、presentation tick、delta、Interpolation／Retention投影、Foot Feature解析、诊断冻结、Commit／Discard／Reset相对顺序和容量均保持不变。由此任务4.2中有限Action sample Adapter的实际Owner与文档一致；任务5.6仅剩Motion Matching内部lease仍暴露给根事务，暂不勾选。3C MCP对Source、Program、Pose协调层、根Runtime与根Transaction错误筛选均为0；不单独运行回放。
+
+## Motion Matching归入Source组合模块
+
+状态：新增`CharacterPoseMotionMatchingSourceRuntime`，由`CharacterPoseSourceModule`唯一持有Motion Matching查询模块及其Pending lease。独立组合模块负责Trajectory／Preview输入、Demand Resolution、Completion、Commit／Discard、Reset与提交后诊断；Program Runtime持有固定容量Provider sample页并消费Selection，Pose协调层只负责Program与Source之间的typed阶段编排。
+
+根Runtime删除Motion Matching模块、Provider sample字典和容量，根`CharacterPoseFrameTransaction`也删除Motion Matching lease及其索引。Begin、Resolve、Completion、Commit、Discard、Reset和诊断发布仍位于原阶段，Action／Workspace／Slot／Program／Source／Constraint／Publication相对顺序未变。任务5.6完成；3C MCP强制刷新后对新增组合模块、Source、Program、Pose协调层、根Runtime与根Transaction错误筛选均为0；不单独运行回放。

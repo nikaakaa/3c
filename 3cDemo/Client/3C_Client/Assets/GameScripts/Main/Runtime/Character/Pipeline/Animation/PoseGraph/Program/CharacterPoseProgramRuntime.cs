@@ -140,6 +140,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             m_MotionMatchingHistoryCompletions;
         readonly PreparedMotionMatchingHistoryRead[]
             m_PreparedMotionMatchingHistoryReads;
+        readonly Dictionary<AnimationPlayerSourceSampleKey,
+            PresentationPoseSourceSample> m_ProviderSourceSamples;
         readonly List<ActionBackendReleaseCompletion>
             m_ActionBackendReleaseCompletions;
         readonly List<AnimationSlotSourceReleaseCompletion>
@@ -223,6 +225,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             m_PreparedMotionMatchingHistoryReads =
                 new PreparedMotionMatchingHistoryRead[
                     m_MotionMatchingHistoryCompletions.Length];
+            m_ProviderSourceSamples =
+                new Dictionary<AnimationPlayerSourceSampleKey,
+                    PresentationPoseSourceSample>(
+                    m_MotionMatchingHistoryCompletions.Length);
             int actionFrameCapacity = ActorState.ActionPlayback.FrameCapacity;
             int backendReleaseCompletionCapacity =
                 ActorState.ActionPlayback.BackendReleaseCompletionCapacity;
@@ -327,6 +333,11 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             m_PresentationWorkspace.ActionUsages;
         internal IReadOnlyList<PoseSourceProviderDemand> ProviderDemands =>
             m_PresentationWorkspace.ProviderDemands;
+        internal IReadOnlyDictionary<AnimationPlayerSourceSampleKey,
+            PresentationPoseSourceSample> ProviderSourceSamples =>
+            m_ProviderSourceSamples;
+        internal int ProviderSourceSampleCount =>
+            m_ProviderSourceSamples.Count;
         internal ulong CommittedEvaluationCompletionIdentity =>
             m_HasCommittedEvaluationFrame
                 ? m_CommittedEvaluationFrame.CompletionIdentity
@@ -739,6 +750,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         {
             RequireAlive();
             m_PresentationWorkspace.Reset();
+            m_ProviderSourceSamples.Clear();
         }
 
         internal AnimationPoseSourceId PublishActionSourceFrame(
@@ -2517,19 +2529,30 @@ namespace ThirdPersonCharacter.Pipeline.Animation
 
         internal void ApplyMotionMatchingSelections(
             CharacterPoseProgramFrameLease lease,
-            in MotionMatchingFrameResolution resolution,
-            IDictionary<AnimationPlayerSourceSampleKey,
-                PresentationPoseSourceSample> sourceSamples)
+            in MotionMatchingFrameResolution resolution)
         {
             RequireFrame(lease);
             RequirePresentationWorkspaceFrame(
                 lease.Lineage.FrameIdentity);
+            if (resolution.SelectionCount >
+                m_MotionMatchingHistoryCompletions.Length)
+            {
+                throw new InvalidOperationException(
+                    "Motion Matching source sample capacity was exceeded.");
+            }
             ActorState.PoseStateSources.ApplyMotionMatchingSelections(
                 in resolution,
-                sourceSamples,
+                m_ProviderSourceSamples,
                 m_PresentationWorkspace,
                 m_PresentationWorkspaceFrame,
                 this);
+        }
+
+        internal void ClearMotionMatchingSelections(
+            CharacterPoseProgramFrameLease lease)
+        {
+            RequireFrame(lease);
+            m_ProviderSourceSamples.Clear();
         }
 
         internal void PrepareMotionMatchingPosePlanCompletion(
@@ -3008,6 +3031,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             m_PendingCompletedEvaluationFrame = default;
             m_HasCommittedEvaluationFrame = false;
             m_HasPendingCompletedEvaluationFrame = false;
+            m_ProviderSourceSamples.Clear();
             Exception failure = null;
             DisposeStep(DetachExecutionJobs, ref failure);
             DisposeStep(ActorState.Dispose, ref failure);

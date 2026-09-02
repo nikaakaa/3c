@@ -3,7 +3,6 @@ using System.Collections;
 using System.Collections.Generic;
 using ThirdPersonCharacter.Pipeline.Animation;
 using ThirdPersonCharacter.Pipeline.Animation.Diagnostics;
-using ThirdPersonCharacter.Pipeline.Animation.MotionMatching;
 using ThirdPersonCharacter.Pipeline.Animation.Presentation;
 
 namespace ThirdPersonCharacter.Pipeline.Animation
@@ -143,12 +142,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             private set;
         }
         internal bool HasExecutionResults { get; private set; }
-        internal MotionMatchingFrameMutationLease MotionMatchingLease
-        {
-            get;
-            private set;
-        }
-        internal bool HasMotionMatchingLease { get; private set; }
         internal bool CaptureFootIkDiagnostics { get; private set; }
         internal FixedCapacityFrameBuffer<ActionAnimationPlaybackLifecycleSnapshot>
             ActionSnapshots { get; }
@@ -177,9 +170,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             ProgramResult.Lineage == Lineage &&
             ConstraintResult.Lineage == Lineage &&
             PublicationResult.Lineage == Lineage &&
-            HasMotionMatchingLease == MotionMatchingLease.IsValid &&
-            (!HasMotionMatchingLease ||
-             MotionMatchingLease.FrameIdentity == Lineage.FrameIdentity) &&
             !Closed;
 
         internal void Begin(
@@ -188,8 +178,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             CharacterPoseSourceFrameLease sourceLease,
             CharacterPoseConstraintFrameLease constraintLease,
             CharacterFinalPosePublicationFrameLease publicationLease,
-            MotionMatchingFrameMutationLease motionMatchingLease,
-            bool hasMotionMatchingLease,
             bool captureFootIkDiagnostics)
         {
             if (!Closed ||
@@ -197,10 +185,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 !poseLease.Matches(lineage) ||
                 !sourceLease.Matches(lineage) ||
                 !constraintLease.Matches(lineage) ||
-                !publicationLease.Matches(lineage) ||
-                hasMotionMatchingLease != motionMatchingLease.IsValid ||
-                hasMotionMatchingLease &&
-                motionMatchingLease.FrameIdentity != lineage.FrameIdentity)
+                !publicationLease.Matches(lineage))
             {
                 throw new ArgumentException(
                     "Animation Presentation frame transaction is invalid.");
@@ -211,8 +196,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             SourceLease = sourceLease;
             ConstraintLease = constraintLease;
             PublicationLease = publicationLease;
-            MotionMatchingLease = motionMatchingLease;
-            HasMotionMatchingLease = hasMotionMatchingLease;
             CaptureFootIkDiagnostics = captureFootIkDiagnostics;
             SourceDemand = default;
             SourceFrame = default;
@@ -345,8 +328,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             ConstraintResult = default;
             PublicationResult = default;
             HasExecutionResults = false;
-            MotionMatchingLease = default;
-            HasMotionMatchingLease = false;
             CaptureFootIkDiagnostics = false;
             Outcome = AnimationPresentationFrameOutcome.None;
             Phase = default;

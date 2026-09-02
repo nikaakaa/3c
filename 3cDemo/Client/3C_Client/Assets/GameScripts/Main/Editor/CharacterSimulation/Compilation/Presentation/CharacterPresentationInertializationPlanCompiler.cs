@@ -10,82 +10,111 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
 {
     static class CharacterPresentationInertializationPlanCompiler
     {
-        public static CharacterPoseProgramImage Compile(
-            CharacterPoseProgramImage source,
+        public static CharacterPresentationInertializationDescriptor[] Compile(
+            CharacterPoseFamilyPayloadBinding binding,
             CharacterPresentationPoseGraphAsset graphAsset,
             CharacterAnimationRigDefinition rig,
             IReadOnlyDictionary<string, int> curveIndices,
-            IReadOnlyDictionary<string, int> profileIndices,
-            List<string> errors)
+            IReadOnlyDictionary<string, int> profileIndices)
         {
-            try
+            if (binding == null)
+                throw new ArgumentNullException(nameof(binding));
+            if (!graphAsset || graphAsset.Graph == null)
+                throw new ArgumentNullException(nameof(graphAsset));
+            if (!rig)
+                throw new ArgumentNullException(nameof(rig));
+            if (curveIndices == null || profileIndices == null)
+                throw new ArgumentNullException(nameof(curveIndices));
+            CharacterPoseBoundOperation[] operations = binding.Operations;
+            CharacterPoseBoundFamilyPayloads payloads = binding.Payloads;
+            var policies =
+                new Dictionary<PoseNodeId,
+                    CharacterPoseInertializationPolicy>();
+            CollectPolicies(
+                graphAsset,
+                graphAsset.Graph,
+                string.Empty,
+                policies);
+            int inertializationCount = operations.Count(value =>
+                value.Code == CharacterPoseOperationCode.Inertialization);
+            var descriptors =
+                new CharacterPresentationInertializationDescriptor[
+                    inertializationCount];
+            for (int index = 0; index < descriptors.Length; index++)
             {
-                if (!graphAsset || graphAsset.Graph == null)
-                    throw new ArgumentNullException(nameof(graphAsset));
-                source.RequireValid();
-                if (curveIndices == null || profileIndices == null)
-                    throw new ArgumentNullException(nameof(curveIndices));
-                var policies = new Dictionary<PoseNodeId, CharacterPoseInertializationPolicy>();
-                CollectPolicies(
-                    graphAsset,
-                    graphAsset.Graph,
-                    string.Empty,
-                    policies);
-                int inertializationCount = source.OperationHeaders.Count(value =>
-                    value.Code == CharacterPoseOperationCode.Inertialization);
-                var descriptors = new CharacterPresentationInertializationDescriptor[inertializationCount];
-                for (int index = 0; index < descriptors.Length; index++)
+                CharacterPoseBoundOperation operation =
+                    operations.Single(value =>
+                        value.Code ==
+                            CharacterPoseOperationCode.Inertialization &&
+                        value.InertializationIndex == index);
+                int inputPose = operation.InputValueIndexA;
+                CharacterPoseBoundOperation inputOwner =
+                    operations.SingleOrDefault(value =>
+                        value.Index < operation.Index &&
+                        value.OutputValueIndex == inputPose);
+                if (inputOwner == null)
                 {
-                    CharacterPoseOperationHeader operation =
-                        source.OperationHeaders.Single(value =>
-                            value.Code == CharacterPoseOperationCode.Inertialization &&
-                            ((CharacterPoseIndexedOperationPayload)
-                                source.OperationPages.RequirePayload(value))
-                            .ValueIndex == index);
-                    int inputPose = source.OperationPages.FindInputValueIndex(
-                        operation,
-                        CharacterPoseValueReferenceKind.Pose);
-                    CharacterPoseOperationHeader inputOwner =
-                        source.OperationHeaders.SingleOrDefault(value =>
-                            value.Index < operation.Index &&
-                            source.OperationPages.FindOutputValueIndex(
-                                value,
-                                CharacterPoseValueReferenceKind.Pose) == inputPose);
-                    if (inputOwner == null)
-                        throw new InvalidOperationException($"Inertialization '{operation.NodeId}' has no direct input owner.");
-                    if (!policies.TryGetValue(operation.NodeId, out CharacterPoseInertializationPolicy policy) || !policy)
-                        throw new InvalidOperationException($"Inertialization '{operation.NodeId}' has no authoring Policy.");
-                    policy.RequireValid(rig);
-                    PoseParameterInertializationMode[] parameterModes = CompileParameterModes(
+                    throw new InvalidOperationException(
+                        $"Inertialization '{operation.NodeId}' has no direct input owner.");
+                }
+                if (!policies.TryGetValue(
+                        operation.NodeId,
+                        out CharacterPoseInertializationPolicy policy) ||
+                    !policy)
+                {
+                    throw new InvalidOperationException(
+                        $"Inertialization '{operation.NodeId}' has no authoring Policy.");
+                }
+                policy.RequireValid(rig);
+                PoseParameterInertializationMode[] parameterModes =
+                    CompileParameterModes(
                         operation.NodeId,
                         policy.Response,
-                        source.Parameters);
-                    PoseInertializationTemporalOwnerKind ownerKind;
-                    int inputOwnerIndex;
-                    CharacterPresentationInertializationRuleDescriptor[] rules;
-                    if (inputOwner.Code == CharacterPoseOperationCode.PoseStateMachine)
+                        payloads.Parameters);
+                PoseInertializationTemporalOwnerKind ownerKind;
+                int inputOwnerIndex;
+                CharacterPresentationInertializationRuleDescriptor[] rules;
+                if (inputOwner.Code ==
+                    CharacterPoseOperationCode.PoseStateMachine)
+                {
+                    if (policy.DirectPlayerRule != null)
                     {
-                        if (policy.DirectPlayerRule != null)
-                            throw new InvalidOperationException($"Inertialization '{operation.NodeId}' is owned by PoseStateMachine and cannot declare a Direct Player temporal rule.");
-                        int stateMachineIndex =
-                            ((CharacterPoseStateMachineOperationPayload)
-                                source.OperationPages.RequirePayload(inputOwner))
-                            .StateMachineIndex;
-                        if ((uint)stateMachineIndex >= (uint)source.StateMachines.Count)
-                            throw new InvalidOperationException($"Inertialization '{operation.NodeId}' StateMachine owner is invalid.");
-                        CharacterPoseStateMachineDescriptor stateMachine =
-                            source.StateMachines[stateMachineIndex];
-                        CharacterPoseStateTransitionDescriptor[] transitions = stateMachine.Transitions
-                            .Where(value => value.BlendLogic == AnimationTransitionBlendLogic.Inertialization)
+                        throw new InvalidOperationException(
+                            $"Inertialization '{operation.NodeId}' is owned by PoseStateMachine and cannot declare a Direct Player temporal rule.");
+                    }
+                    int stateMachineIndex = inputOwner.StateMachineIndex;
+                    if ((uint)stateMachineIndex >=
+                        (uint)payloads.StateMachines.Length)
+                    {
+                        throw new InvalidOperationException(
+                            $"Inertialization '{operation.NodeId}' StateMachine owner is invalid.");
+                    }
+                    CharacterPoseStateMachineDescriptor stateMachine =
+                        payloads.StateMachines[stateMachineIndex];
+                    CharacterPoseStateTransitionDescriptor[] transitions =
+                        stateMachine.Transitions
+                            .Where(value =>
+                                value.BlendLogic ==
+                                AnimationTransitionBlendLogic
+                                    .Inertialization)
                             .OrderBy(value => value.Index)
                             .ToArray();
-                        if (transitions.Length == 0)
-                            throw new InvalidOperationException($"Inertialization '{operation.NodeId}' PoseStateMachine has no inertial transition.");
-                        rules = new CharacterPresentationInertializationRuleDescriptor[transitions.Length];
-                        for (int transitionIndex = 0; transitionIndex < transitions.Length; transitionIndex++)
-                        {
-                            CharacterPoseStateTransitionDescriptor transition = transitions[transitionIndex];
-                            rules[transitionIndex] = new CharacterPresentationInertializationRuleDescriptor(
+                    if (transitions.Length == 0)
+                    {
+                        throw new InvalidOperationException(
+                            $"Inertialization '{operation.NodeId}' PoseStateMachine has no inertial transition.");
+                    }
+                    rules =
+                        new CharacterPresentationInertializationRuleDescriptor[
+                            transitions.Length];
+                    for (int transitionIndex = 0;
+                         transitionIndex < transitions.Length;
+                         transitionIndex++)
+                    {
+                        CharacterPoseStateTransitionDescriptor transition =
+                            transitions[transitionIndex];
+                        rules[transitionIndex] =
+                            new CharacterPresentationInertializationRuleDescriptor(
                                 transition.SourceStateIndex,
                                 transition.TargetStateIndex,
                                 PoseInertializationMode.Inertialize,
@@ -93,54 +122,71 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                                 transition.CurveIndex,
                                 transition.BlendProfileIndex,
                                 parameterModes);
-                        }
-                        ownerKind = PoseInertializationTemporalOwnerKind.StateMachineTransition;
-                        inputOwnerIndex = stateMachineIndex;
                     }
-                    else if (IsDirectPlayer(inputOwner.Code))
+                    ownerKind =
+                        PoseInertializationTemporalOwnerKind
+                            .StateMachineTransition;
+                    inputOwnerIndex = stateMachineIndex;
+                }
+                else if (IsDirectPlayer(inputOwner.Code))
+                {
+                    PresentationPoseSourceIndex sourceIndex =
+                        inputOwner.PresentationPoseSourceIndex;
+                    if (!sourceIndex.IsValid)
                     {
-                        CharacterPosePlayerOperationPayload player =
-                            (CharacterPosePlayerOperationPayload)
-                            source.OperationPages.RequirePayload(inputOwner);
-                        if (!player.SourceIndex.IsValid)
-                            throw new InvalidOperationException($"Inertialization '{operation.NodeId}' direct Player has no source index.");
-                        CharacterPoseDirectInertializationRule directRule = policy.DirectPlayerRule;
-                        if (directRule == null)
-                            throw new InvalidOperationException($"Inertialization '{operation.NodeId}' direct Player requires one exact temporal rule.");
-                        int curveIndex = -1;
-                        int profileIndex = -1;
-                        if (directRule.Mode == PoseInertializationMode.Inertialize)
-                        {
-                            string curveKey = AnimationBlendCanonicalPayload.CurveKey(
+                        throw new InvalidOperationException(
+                            $"Inertialization '{operation.NodeId}' direct Player has no source index.");
+                    }
+                    CharacterPoseDirectInertializationRule directRule =
+                        policy.DirectPlayerRule;
+                    if (directRule == null)
+                    {
+                        throw new InvalidOperationException(
+                            $"Inertialization '{operation.NodeId}' direct Player requires one exact temporal rule.");
+                    }
+                    int curveIndex = -1;
+                    int profileIndex = -1;
+                    if (directRule.Mode ==
+                        PoseInertializationMode.Inertialize)
+                    {
+                        string curveKey =
+                            AnimationBlendCanonicalPayload.CurveKey(
                                 directRule.CompileCurve());
-                            if (!curveIndices.TryGetValue(curveKey, out curveIndex) ||
-                                !profileIndices.TryGetValue(
-                                    directRule.BlendProfile.ProfileId,
-                                    out profileIndex))
-                            {
-                                throw new InvalidOperationException($"Inertialization '{operation.NodeId}' direct Player temporal assets are absent from the Projection catalog.");
-                            }
+                        if (!curveIndices.TryGetValue(
+                                curveKey,
+                                out curveIndex) ||
+                            !profileIndices.TryGetValue(
+                                directRule.BlendProfile.ProfileId,
+                                out profileIndex))
+                        {
+                            throw new InvalidOperationException(
+                                $"Inertialization '{operation.NodeId}' direct Player temporal assets are absent from the Projection catalog.");
                         }
-                        int sourceIndex = player.SourceIndex.Value;
-                        rules = new[]
+                    }
+                    rules =
+                        new[]
                         {
                             new CharacterPresentationInertializationRuleDescriptor(
-                            sourceIndex,
-                            sourceIndex,
-                            directRule.Mode,
-                            directRule.DurationSeconds,
-                            curveIndex,
-                            profileIndex,
-                            parameterModes)
+                                sourceIndex.Value,
+                                sourceIndex.Value,
+                                directRule.Mode,
+                                directRule.DurationSeconds,
+                                curveIndex,
+                                profileIndex,
+                                parameterModes)
                         };
-                        ownerKind = PoseInertializationTemporalOwnerKind.DirectPlayerPolicy;
-                        inputOwnerIndex = sourceIndex;
-                    }
-                    else
-                    {
-                        throw new InvalidOperationException($"Inertialization '{operation.NodeId}' input '{inputOwner.Code}' has no exact temporal owner contract.");
-                    }
-                    descriptors[index] = new CharacterPresentationInertializationDescriptor(
+                    ownerKind =
+                        PoseInertializationTemporalOwnerKind
+                            .DirectPlayerPolicy;
+                    inputOwnerIndex = sourceIndex.Value;
+                }
+                else
+                {
+                    throw new InvalidOperationException(
+                        $"Inertialization '{operation.NodeId}' input '{inputOwner.Code}' has no exact temporal owner contract.");
+                }
+                descriptors[index] =
+                    new CharacterPresentationInertializationDescriptor(
                         index,
                         operation.NodeId,
                         ownerKind,
@@ -149,69 +195,41 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                         policy.PolicyId,
                         policy.Revision,
                         rules);
-                }
-                CharacterPoseProgramImage result = Rebuild(source, rig, descriptors);
-                result.RequireInertializationValid();
-                return result;
             }
-            catch (Exception exception)
-            {
-                errors?.Add(exception.Message);
-                return null;
-            }
+            return descriptors;
         }
 
-        static CharacterPoseProgramImage Rebuild(
-            CharacterPoseProgramImage source,
-            CharacterAnimationRigDefinition rig,
-            CharacterPresentationInertializationDescriptor[] descriptors)
+        public static string ComputeProgramHash(
+            string baseHash,
+            IReadOnlyList<CharacterPresentationInertializationDescriptor>
+                descriptors)
         {
-            var hashTokens = new List<string> { source.PlanHash, CharacterPoseInertializationPolicy.SchemaVersion };
-            for (int i = 0; i < descriptors.Length; i++)
+            if (string.IsNullOrWhiteSpace(baseHash))
+                throw new ArgumentException(nameof(baseHash));
+            if (descriptors == null)
+                throw new ArgumentNullException(nameof(descriptors));
+            var hashTokens = new List<string>
             {
-                CharacterPresentationInertializationDescriptor descriptor = descriptors[i];
+                baseHash,
+                CharacterPoseInertializationPolicy.SchemaVersion
+            };
+            for (int i = 0; i < descriptors.Count; i++)
+            {
+                CharacterPresentationInertializationDescriptor descriptor =
+                    descriptors[i];
                 hashTokens.Add(
                     $"node:{descriptor.NodeId}:{(int)descriptor.TemporalOwnerKind}:{descriptor.InputOwnerNodeId}:{descriptor.InputOwnerIndex}:{descriptor.PolicyId}:{descriptor.PolicyRevision}");
-                for (int ruleIndex = 0; ruleIndex < descriptor.Rules.Count; ruleIndex++)
+                for (int ruleIndex = 0;
+                     ruleIndex < descriptor.Rules.Count;
+                     ruleIndex++)
                 {
-                    CharacterPresentationInertializationRuleDescriptor rule = descriptor.Rules[ruleIndex];
+                    CharacterPresentationInertializationRuleDescriptor rule =
+                        descriptor.Rules[ruleIndex];
                     hashTokens.Add(FormattableString.Invariant(
                         $"rule:{rule.SourceEndpointIndex}:{rule.TargetEndpointIndex}:{(int)rule.Mode}:{rule.DurationSeconds:R}:{rule.CurveIndex}:{rule.ProfileIndex}:{string.Join(",", rule.ParameterModes.Select(value => ((int)value).ToString(CultureInfo.InvariantCulture)))}"));
                 }
             }
-            return new CharacterPoseProgramImage(
-                source.PoseGraphId,
-                source.ContentRevision,
-                StableHash.Compute(hashTokens.ToArray()).ToString(),
-                rig,
-                source.Parameters.ToArray(),
-                source.BlendNodes.ToArray(),
-                descriptors,
-                source.BoneMasks.ToArray(),
-                source.AdditiveReferences.ToArray(),
-                source.ModifyBones.ToArray(),
-                source.RootOrientationWarps.ToArray(),
-                source.PoseBoneIkGoalSources.ToArray(),
-                source.FootPlacements.ToArray(),
-                source.FullBodyIks.ToArray(),
-                source.ClipPlayers.ToArray(),
-                source.StateMachines.ToArray(),
-                source.AnimationSlots.ToArray(),
-                source.ActionPlaybackInputs.ToArray(),
-                source.LinkedPoseFragments.ToArray(),
-                source.LinkedPoseCalls.ToArray(),
-                source.OperationPages,
-                source.SourceMap.ToArray(),
-                source.Stages.ToArray(),
-                source.PoseValueCount,
-                source.PoseValueWorkspaceCount,
-                source.FullBodyIkGoalContributionWorkspaceCount,
-                source.FullBodyIkGoalSetWorkspaceCount,
-                source.FullBodyIkGoalContributionGoalWorkspaceCount,
-                source.ParameterWorkspaceCount,
-                source.ContributionCapacity,
-                source.FrameCacheCount,
-                source.OutputOperationIndex);
+            return StableHash.Compute(hashTokens.ToArray()).ToString();
         }
 
         static PoseParameterInertializationMode[] CompileParameterModes(

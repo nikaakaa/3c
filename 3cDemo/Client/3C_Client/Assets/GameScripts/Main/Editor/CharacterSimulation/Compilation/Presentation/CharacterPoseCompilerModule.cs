@@ -110,12 +110,22 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                         payloads.FullBodyIks,
                         layout
                             .FullBodyIkGoalContributionGoalWorkspaceCount);
+                CharacterPresentationInertializationDescriptor[]
+                    inertializations =
+                        CharacterPresentationInertializationPlanCompiler
+                            .Compile(
+                                binding,
+                                request.Asset,
+                                request.Rig,
+                                request.CurveIndices,
+                                request.ProfileIndicesByIdentity);
                 CharacterPoseProgramImage image =
                     CharacterPoseProgramImageSealPass.Run(
                         request,
                         binding,
                         schedule,
-                        workspace);
+                        workspace,
+                        inertializations);
                 return new CharacterPoseCompilationResult(
                     image,
                     diagnostics);

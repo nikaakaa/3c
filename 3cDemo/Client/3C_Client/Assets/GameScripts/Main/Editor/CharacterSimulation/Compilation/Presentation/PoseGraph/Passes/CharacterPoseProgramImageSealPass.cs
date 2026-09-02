@@ -15,7 +15,9 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             CharacterPoseCompilationRequest request,
             CharacterPoseFamilyPayloadBinding binding,
             CharacterPoseStageSchedule schedule,
-            CharacterPoseWorkspacePlan workspace)
+            CharacterPoseWorkspacePlan workspace,
+            CharacterPresentationInertializationDescriptor[]
+                inertializations)
         {
             if (request == null)
                 throw new ArgumentNullException(nameof(request));
@@ -25,6 +27,8 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                 throw new ArgumentNullException(nameof(schedule));
             if (workspace == null)
                 throw new ArgumentNullException(nameof(workspace));
+            if (inertializations == null)
+                throw new ArgumentNullException(nameof(inertializations));
             CharacterPoseBoundFamilyPayloads payloads = binding.Payloads;
             CharacterPoseBoundProgramLayout layout = binding.Layout;
             for (int rangeIndex = 0;
@@ -42,7 +46,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                 schedule.Stages.ToArray();
             CharacterTypedPoseGraph graph = request.Asset.Graph;
             CharacterAnimationRigDefinition rig = request.Rig;
-            string hash = ComputeHash(
+            string baseHash = ComputeHash(
                 graph,
                 rig,
                 binding,
@@ -51,14 +55,16 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                 workspace.ParameterValueCapacity,
                 workspace.ContributionCapacity,
                 workspace.FrameCacheCapacity);
-            return new CharacterPoseProgramImage(
+            string hash = CharacterPresentationInertializationPlanCompiler
+                .ComputeProgramHash(baseHash, inertializations);
+            var image = new CharacterPoseProgramImage(
                 graph.GraphId.Value,
                 graph.ContentRevision,
                 hash,
                 rig,
                 payloads.Parameters,
                 payloads.BlendNodes,
-                Array.Empty<CharacterPresentationInertializationDescriptor>(),
+                inertializations,
                 payloads.BoneMasks,
                 payloads.AdditiveReferences,
                 payloads.ModifyBones,
@@ -85,6 +91,8 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                 workspace.PoseValueCapacity,
                 workspace.FrameCacheCapacity,
                 layout.OutputOperationIndex);
+            image.RequireInertializationValid();
+            return image;
         }
 
         static string ComputeHash(

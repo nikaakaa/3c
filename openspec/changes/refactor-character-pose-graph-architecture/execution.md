@@ -1195,3 +1195,9 @@ Sequence Preview短路位置、State准备与最终Transition时机、Slot contr
 状态：正式Runtime与`AnimationPreviewRuntime`都只构造`CharacterAnimationPresentationRuntime`；全仓只有其构造函数调用一次`CharacterPoseRuntimeCompositionFactory.Create`，也只有该Factory创建actor-local Execution View和Program Runtime。Preview只提供显式Body／Fact／World／Equipment／Timeline／Motion Matching Query输入，再调用同一个Present、Reset、Tuning与Sequence Preview入口。
 
 搜索确认不存在Preview专用Pose Executor、第二Native Program、临时Program、运行时Compile、默认World Context、旧Projection reader或Stale Projection fallback；Projection不匹配只报告Stale并拒绝继续。任务13.8与13.9完成。
+
+## 删除Seal后的第二Program Image构造
+
+状态：Inertialization descriptor编译已进入唯一Pose Compiler Module，在Family Payload绑定、Stage／Value／Workspace完成后、Program Image Seal之前执行。Seal Pass现在一次接收全部descriptor、沿用原先“基础PlanHash + Inertialization schema与规则”的最终Hash算法，并只构造一个`CharacterPoseProgramImage`；Projection Compiler删除Seal后重建整个Image的路径。
+
+Inertialization owner查找仍使用同一已绑定Operation顺序、Player Source index、StateMachine transition和Policy，规则排序与Hash token逐项保持不变；失败统一成为Seal Program Image编译诊断，不发布半成品Image。全仓Editor源码现在只有Seal Pass一处`new CharacterPoseProgramImage`。3C MCP完成全脚本重编且C#错误为0，不单独运行回放。

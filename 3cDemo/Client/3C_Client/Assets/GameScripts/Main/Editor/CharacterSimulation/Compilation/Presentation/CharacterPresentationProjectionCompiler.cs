@@ -559,16 +559,6 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             CharacterPoseProgramImage poseProgram = poseCompilation.ProgramImage;
             if (poseProgram != null && blendCatalogs != null)
             {
-                poseProgram = CharacterPresentationInertializationPlanCompiler.Compile(
-                    poseProgram,
-                    profile.PoseGraph,
-                    profile.RigDefinition,
-                    blendCatalogs.CurveIndices,
-                    blendCatalogs.ProfileIndicesByIdentity,
-                    errors);
-            }
-            if (poseProgram != null && blendCatalogs != null)
-            {
                 try
                 {
                     CharacterMotionMatchingPosePlanCompiler.Compile(

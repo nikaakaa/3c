@@ -697,9 +697,11 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         [DiagnosticGroup("identity")]
         public CharacterFootLandingPredictionRejectReason RejectReason { get; }
         [DiagnosticField]
+        [DiagnosticKey("landing-step-source")]
         [DiagnosticGroup("identity")]
         public CharacterFootLandingStepSource StepSource { get; }
         [DiagnosticField]
+        [DiagnosticKey("landing-event-identity")]
         [DiagnosticGroup("identity")]
         public ulong LandingEventIdentity { get; }
         [DiagnosticField]
@@ -709,6 +711,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         [DiagnosticGroup("identity")]
         public float LandingConfidence { get; }
         [DiagnosticField]
+        [DiagnosticKey("landing-time-to-landing")]
         [DiagnosticGroup("identity")]
         public float TimeToLandingSeconds { get; }
         [DiagnosticField]
@@ -893,20 +896,27 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         [DiagnosticField]
         [DiagnosticGroup("current-step")]
         public int EventOrdinal { get; }
-        public int SourceLandingCycleOffset => 0;
         [DiagnosticField]
+        [DiagnosticKey("formal-step-source-cycle")]
         [DiagnosticGroup("current-step")]
         public int SourceSampleCycle { get; }
         [DiagnosticField]
+        [DiagnosticKey("formal-step-continuity")]
         [DiagnosticGroup("current-step")]
         public ulong ContributionContinuityIdentity { get; }
         [DiagnosticField]
+        [DiagnosticKey("formal-step-landing-event")]
         [DiagnosticGroup("current-step")]
         public ulong LandingEventIdentity { get; }
         [DiagnosticField]
+        [DiagnosticKey("formal-step-time-to-landing")]
         [DiagnosticGroup("current-step")]
         public float TimeToLandingSeconds { get; }
+        [DiagnosticField]
+        [DiagnosticGroup("current-step")]
         public float Distance { get; }
+        [DiagnosticField]
+        [DiagnosticGroup("current-step")]
         public AnimationFootMotionEventPhase Phase { get; }
         [DiagnosticField]
         [DiagnosticGroup("current-step")]
@@ -925,6 +935,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         public bool AtOrAfterApproachContact =>
             IsValid && Phase == AnimationFootMotionEventPhase.ApproachContact;
         [DiagnosticField]
+        [DiagnosticKey("formal-step-in-approach")]
         [DiagnosticGroup("current-step")]
         public bool InApproachContactToLanding =>
             IsValid && Phase == AnimationFootMotionEventPhase.ApproachContact;
@@ -942,20 +953,20 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             ulong selectedLandingEventIdentity,
             float maximumPredictionTimeSeconds)
         {
-            FootMotion = new CharacterFootStepCandidateDiagnostics(in footMotion);
+            Formal = new CharacterFootStepCandidateDiagnostics(in footMotion);
             LastLandingEventIdentity = lastLandingEventIdentity;
             SelectedSource = selectedSource;
             SelectedLandingEventIdentity = selectedLandingEventIdentity;
             MaximumPredictionTimeSeconds = maximumPredictionTimeSeconds;
         }
 
-        public CharacterFootStepCandidateDiagnostics FootMotion { get; }
-        public CharacterFootStepCandidateDiagnostics Current => FootMotion;
-        public CharacterFootStepCandidateDiagnostics Incoming => default;
+        public CharacterFootStepCandidateDiagnostics Formal { get; }
         [DiagnosticField]
+        [DiagnosticKey("step-selection-last-landing-event")]
         [DiagnosticGroup("identity")]
         public ulong LastLandingEventIdentity { get; }
         [DiagnosticField]
+        [DiagnosticKey("step-selection-source")]
         [DiagnosticGroup("identity")]
         public CharacterFootLandingStepSource SelectedSource { get; }
         [DiagnosticField]
@@ -963,6 +974,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         [DiagnosticGroup("identity")]
         public ulong SelectedLandingEventIdentity { get; }
         [DiagnosticField]
+        [DiagnosticKey("step-selection-maximum-prediction-time")]
         [DiagnosticGroup("identity")]
         public float MaximumPredictionTimeSeconds { get; }
     }
@@ -988,13 +1000,31 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         }
 
         readonly byte m_IsSpecified;
+        [DiagnosticField]
+        [DiagnosticKey("formal-observation-completion")]
+        [DiagnosticGroup("formal-source")]
         public ulong CompletionIdentity { get; }
+        [DiagnosticField]
+        [DiagnosticKey("formal-observation-source-id")]
+        [DiagnosticGroup("formal-source")]
         public string SourceId { get; }
+        [DiagnosticField]
+        [DiagnosticKey("formal-observation-source-identity")]
+        [DiagnosticGroup("formal-source")]
         public string SourceIdentity { get; }
+        [DiagnosticField]
+        [DiagnosticKey("formal-observation-continuity")]
+        [DiagnosticGroup("formal-source")]
         public ulong ContributionContinuityIdentity { get; }
         public int ClipBindingIndex { get; }
+        [DiagnosticField]
+        [DiagnosticKey("formal-observation-cycle")]
+        [DiagnosticGroup("formal-source")]
         public int Cycle { get; }
         public float SourceWeight { get; }
+        [DiagnosticField]
+        [DiagnosticKey("formal-observation-normalized-time")]
+        [DiagnosticGroup("formal-source")]
         public float NormalizedTime { get; }
         public AnimationFootMotionRuntimeSample Left { get; }
         public AnimationFootMotionRuntimeSample Right { get; }

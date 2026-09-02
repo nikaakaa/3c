@@ -865,3 +865,9 @@ Linked Group incoming selection、Program Frame call control写入、Entry Fragm
 状态：成功Output与Physical Publication完成后，Stack、Direct Player、Clip Player、Blend Space Player的Complete以及Route／PoseState的Native completion通知统一进入`CharacterPoseProgramRuntime.CompleteNodeEvaluation`，最后由Program内部标记唯一Pending Evaluation完成。旧Pose Runtime的Seal区段不再遍历任何Program节点。
 
 Reset保持现有三段顺序：Program先清Evaluation／Demand并Reset Inertialization，Constraint按原位置Reset Solver；生成新completion identity后Program Reset Route与Stack，外层完成既有Source release；最后Program Reset Direct Player、PoseState与Root Warp control，再由外层释放物理Source。旧Pose Runtime删除对应节点循环，既有Release插入点、reason、completion identity和Root Warp默认control值不变。任务6.2继续推进但Source preparation与Action／Slot生命周期仍未全部迁入。3C实例Domain Reload重连后两个触碰文件错误筛选均为0；不单独运行回放。
+
+## Motion Matching逻辑状态归还Program Runtime
+
+状态：`CharacterPoseProgramRuntime`接管Motion Matching的PoseState Demand构造、Selection应用入口、`IPoseStateSourceSelectionSink`、Player路由、Source usage记录、History读准备和Pose Plan Completion。所需固定数组按Actor的Motion Matching Provider容量在Program Runtime构造时一次分配；旧Pose Runtime删除对应跨Barrier字段、数组、sink实现和Player／Source反查辅助方法。
+
+独立`CharacterMotionMatchingPresentationModule`仍唯一负责查询与Selection Resolution，Program Runtime只消费typed Resolution并通过`CharacterPoseSourceModule`正式usage入口记录物理Source使用；History仍从同一Pending Player Pose读取，Foot feature、bone顺序、selection completion、pose completion和reset sequence保持不变。由此推进任务6.2与6.5，但Clip／BlendSpace／Action的物理Source准备仍在旧外层，暂不勾选。3C MCP对Program Runtime、Pose Runtime与PoseState Source错误筛选均为0；不单独运行回放。

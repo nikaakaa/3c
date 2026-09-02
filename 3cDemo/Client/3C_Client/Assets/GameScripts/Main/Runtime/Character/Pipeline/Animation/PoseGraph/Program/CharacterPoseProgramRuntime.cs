@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using ThirdPersonCharacter.Pipeline.Animation.BlendStack;
 using ThirdPersonCharacter.Pipeline.Animation.Diagnostics;
+using ThirdPersonCharacter.Pipeline.Animation.MotionMatching;
 using ThirdPersonCharacter.Pipeline.Animation.Presentation;
 using ThirdPersonCharacter.Pipeline.Animation.Sources;
 using ThirdPersonCharacter.Pipeline.Presentation;
@@ -10,8 +11,17 @@ using Unity.Collections;
 
 namespace ThirdPersonCharacter.Pipeline.Animation
 {
-    internal sealed class CharacterPoseProgramRuntime : IDisposable
+    internal sealed class CharacterPoseProgramRuntime :
+        IDisposable,
+        IPoseStateSourceSelectionSink
     {
+        struct PreparedMotionMatchingHistoryRead
+        {
+            internal MotionMatchingSelectionBatchItem Selection;
+            internal int PlayerIndex;
+            internal bool SourceUsed;
+        }
+
         readonly struct PreparedEvaluationState
         {
             internal PreparedEvaluationState(
@@ -117,8 +127,13 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         }
 
         readonly CharacterPoseProgramImage m_Image;
+        readonly CharacterPoseSourceModule m_SourceModule;
         readonly CharacterPoseWorldContextAdapter m_WorldContext;
         readonly int m_FootPlacementWeightParameterIndex;
+        readonly MotionMatchingPosePlanHistoryCompletion[]
+            m_MotionMatchingHistoryCompletions;
+        readonly PreparedMotionMatchingHistoryRead[]
+            m_PreparedMotionMatchingHistoryReads;
         CharacterPoseProgramFrameLease m_ActiveFrameLease;
         CharacterPoseProgramFrameLease m_CommittingFrameLease;
         PreparedEvaluationPage m_PreparedEvaluation;
@@ -129,6 +144,13 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         double m_SequencePreviewTime;
         bool m_SequencePreviewReset;
         bool m_HasSequencePreview;
+        int m_PreparedMotionMatchingHistoryReadCount;
+        ulong m_PreparedMotionMatchingPresentationFrame;
+        ulong m_PreparedMotionMatchingResetSequence;
+        ulong m_PreparedMotionMatchingSelectionCompletionIdentity;
+        ulong m_PreparedMotionMatchingPoseCompletionIdentity;
+        bool m_MotionMatchingPoseCompletionPrepared;
+        int m_MotionMatchingHistoryCompletionCount;
         bool m_HasCommittedEvaluationFrame;
         bool m_HasPendingCompletedEvaluationFrame;
         bool m_Disposed;
@@ -139,6 +161,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             CharacterPoseActorState actorState,
             CharacterPoseProgramFramePages framePages,
             CharacterPoseProgramTuningState tuning,
+            CharacterPoseSourceModule sourceModule,
             CharacterPoseWorldContextAdapter worldContext,
             CharacterPoseConstraintRuntime poseConstraints)
         {
@@ -150,6 +173,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             FramePages = framePages ??
                 throw new ArgumentNullException(nameof(framePages));
             Tuning = tuning ?? throw new ArgumentNullException(nameof(tuning));
+            m_SourceModule = sourceModule ??
+                throw new ArgumentNullException(nameof(sourceModule));
             m_WorldContext = worldContext ??
                 throw new ArgumentNullException(nameof(worldContext));
             CharacterPoseConstraintRuntime constraintRuntime = poseConstraints ??
@@ -157,6 +182,13 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             m_FootPlacementWeightParameterIndex =
                 image.RequireParameterIndex(
                     AnimationPoseParameterIds.FootPlacementWeight);
+            m_MotionMatchingHistoryCompletions =
+                new MotionMatchingPosePlanHistoryCompletion[
+                    ActorState.PoseStateSources
+                        .MotionMatchingProviderCount];
+            m_PreparedMotionMatchingHistoryReads =
+                new PreparedMotionMatchingHistoryRead[
+                    m_MotionMatchingHistoryCompletions.Length];
             Executor = new CharacterPoseGraphStagedExecutor(
                 ExecutionView,
                 FramePages,
@@ -1064,6 +1096,247 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                     0f);
                 ResetRootOrientationWarpControl(i, in control);
             }
+        }
+
+        internal bool HasPreparedMotionMatchingPoseCompletion =>
+            m_MotionMatchingPoseCompletionPrepared;
+
+        internal MotionMatchingPoseStateDemandBatch
+            BuildMotionMatchingDemandBatch(
+                CharacterPoseProgramFrameLease lease,
+                ulong presentationFrame,
+                ulong resetSequence,
+                PresentationFrameWorkspace workspace,
+                PresentationFrameWorkspaceLease workspaceLease)
+        {
+            RequireFrame(lease);
+            return ActorState.PoseStateSources.BuildMotionMatchingDemandBatch(
+                presentationFrame,
+                resetSequence,
+                workspace,
+                workspaceLease);
+        }
+
+        internal void ApplyMotionMatchingSelections(
+            CharacterPoseProgramFrameLease lease,
+            in MotionMatchingFrameResolution resolution,
+            IDictionary<AnimationPlayerSourceSampleKey,
+                PresentationPoseSourceSample> sourceSamples,
+            PresentationFrameWorkspace workspace,
+            PresentationFrameWorkspaceLease workspaceLease)
+        {
+            RequireFrame(lease);
+            ActorState.PoseStateSources.ApplyMotionMatchingSelections(
+                in resolution,
+                sourceSamples,
+                workspace,
+                workspaceLease,
+                this);
+        }
+
+        internal void PrepareMotionMatchingPosePlanCompletion(
+            CharacterPoseProgramFrameLease lease,
+            in MotionMatchingFrameResolution resolution,
+            ulong poseCompletionIdentity)
+        {
+            RequireFrame(lease);
+            if (m_MotionMatchingPoseCompletionPrepared ||
+                resolution.PresentationFrame == 0 ||
+                resolution.CompletionIdentity == 0 ||
+                poseCompletionIdentity == 0 ||
+                !FramePages.HasPendingEvaluationFrame ||
+                FramePages.PendingEvaluationCompletionIdentity !=
+                    poseCompletionIdentity)
+            {
+                throw new InvalidOperationException(
+                    "Motion Matching Pose Plan completion preparation is invalid.");
+            }
+            m_SourceModule.BeginUsage(poseCompletionIdentity);
+            m_MotionMatchingHistoryCompletionCount = 0;
+            m_PreparedMotionMatchingHistoryReadCount = 0;
+            for (int stackIndex = 0;
+                 stackIndex < ActorState.Stacks.Length;
+                 stackIndex++)
+            {
+                AnimationBlendStackRuntime stack =
+                    ActorState.Stacks[stackIndex];
+                for (int entryIndex = 0;
+                     entryIndex < stack.EntryCount;
+                     entryIndex++)
+                {
+                    AnimationBlendEntryId entry =
+                        stack.GetEntryId(entryIndex);
+                    if (!entry.SourcePoseTarget &&
+                        entry.SourceId.SourceKind ==
+                        AnimationPoseSourceKind.MotionMatching)
+                    {
+                        AddMotionMatchingSourceUsage(
+                            stack.PoseNodeId,
+                            entry.SourceId,
+                            poseCompletionIdentity);
+                    }
+                }
+            }
+            for (int playerIndex = 0;
+                 playerIndex < ActorState.DirectPlayers.Length;
+                 playerIndex++)
+            {
+                AnimationSelectedPosePlayerRuntime player =
+                    ActorState.DirectPlayers[playerIndex];
+                if (player.HasSelection &&
+                    player.SourceId.SourceKind ==
+                    AnimationPoseSourceKind.MotionMatching)
+                {
+                    AddMotionMatchingSourceUsage(
+                        player.NodeId,
+                        player.SourceId,
+                        poseCompletionIdentity);
+                }
+            }
+            for (int selectionIndex = 0;
+                 selectionIndex < resolution.SelectionCount;
+                 selectionIndex++)
+            {
+                MotionMatchingSelectionBatchItem selection =
+                    resolution.GetSelection(selectionIndex);
+                if (!selection.RequiresHistory)
+                    continue;
+                if (m_PreparedMotionMatchingHistoryReadCount >=
+                        m_PreparedMotionMatchingHistoryReads.Length ||
+                    !ActorState.NodeRuntimeIndex.TryGetPlayerIndex(
+                        selection.PlayerNodeId,
+                        out int playerIndex))
+                {
+                    throw new InvalidOperationException(
+                        "Motion Matching Pose Plan history completion exceeds its compiled layout.");
+                }
+                for (int boneIndex = 0;
+                     boneIndex < selection.HistoryBoneIndices.Length;
+                     boneIndex++)
+                {
+                    if ((uint)selection.HistoryBoneIndices[boneIndex] >=
+                        (uint)m_Image.PoseBoneCount)
+                    {
+                        throw new InvalidOperationException(
+                            "Motion Matching history Bone index is outside the compiled Rig.");
+                    }
+                }
+                bool sourceUsed = ActorState.NodeRuntimeIndex.PlayerUsesSource(
+                    selection.PlayerNodeId,
+                    selection.SourceIdentity);
+                m_PreparedMotionMatchingHistoryReads[
+                    m_PreparedMotionMatchingHistoryReadCount++] =
+                    new PreparedMotionMatchingHistoryRead
+                    {
+                        Selection = selection,
+                        PlayerIndex = playerIndex,
+                        SourceUsed = sourceUsed
+                    };
+            }
+            m_PreparedMotionMatchingPresentationFrame =
+                resolution.PresentationFrame;
+            m_PreparedMotionMatchingResetSequence =
+                resolution.ResetSequence;
+            m_PreparedMotionMatchingSelectionCompletionIdentity =
+                resolution.CompletionIdentity;
+            m_PreparedMotionMatchingPoseCompletionIdentity =
+                poseCompletionIdentity;
+            m_MotionMatchingPoseCompletionPrepared = true;
+        }
+
+        internal MotionMatchingPosePlanCompletion
+            BuildMotionMatchingPosePlanCompletion(
+                CharacterPoseProgramFrameLease lease)
+        {
+            RequireFrame(lease);
+            if (!m_MotionMatchingPoseCompletionPrepared ||
+                !m_HasPendingCompletedEvaluationFrame ||
+                m_PendingCompletedEvaluationFrame.CompletionIdentity !=
+                    m_PreparedMotionMatchingPoseCompletionIdentity)
+            {
+                throw new InvalidOperationException(
+                    "Motion Matching Pose Plan completion does not match the evaluated frame.");
+            }
+            for (int i = 0;
+                 i < m_PreparedMotionMatchingHistoryReadCount;
+                 i++)
+            {
+                PreparedMotionMatchingHistoryRead prepared =
+                    m_PreparedMotionMatchingHistoryReads[i];
+                MotionMatchingSelectionBatchItem selection =
+                    prepared.Selection;
+                AnimationFootPlacementSample footPlacement = default;
+                bool poseAvailable =
+                    prepared.SourceUsed &&
+                    TryCopyPendingPlayerPose(
+                        prepared.PlayerIndex,
+                        selection.HistoryBoneIndices,
+                        selection.HistoryBonePositions,
+                        out footPlacement);
+                m_MotionMatchingHistoryCompletions[
+                    m_MotionMatchingHistoryCompletionCount++] =
+                    new MotionMatchingPosePlanHistoryCompletion(
+                        selection.ProviderId,
+                        selection.PlayerNodeId,
+                        selection.SourceIdentity,
+                        m_PreparedMotionMatchingSelectionCompletionIdentity,
+                        m_PreparedMotionMatchingPoseCompletionIdentity,
+                        poseAvailable,
+                        in footPlacement);
+                m_PreparedMotionMatchingHistoryReads[i] = default;
+            }
+            m_PreparedMotionMatchingHistoryReadCount = 0;
+            m_MotionMatchingPoseCompletionPrepared = false;
+            CharacterPoseSourceUsageView sourceUsages =
+                m_SourceModule.CaptureUsage(
+                    m_PreparedMotionMatchingPoseCompletionIdentity);
+            return new MotionMatchingPosePlanCompletion(
+                m_PreparedMotionMatchingPresentationFrame,
+                m_PreparedMotionMatchingResetSequence,
+                m_PreparedMotionMatchingSelectionCompletionIdentity,
+                m_PreparedMotionMatchingPoseCompletionIdentity,
+                in sourceUsages,
+                m_MotionMatchingHistoryCompletions,
+                m_MotionMatchingHistoryCompletionCount);
+        }
+
+        internal void ClearMotionMatchingPoseCompletion()
+        {
+            RequireAlive();
+            Array.Clear(
+                m_PreparedMotionMatchingHistoryReads,
+                0,
+                m_PreparedMotionMatchingHistoryReadCount);
+            m_PreparedMotionMatchingHistoryReadCount = 0;
+            m_PreparedMotionMatchingPresentationFrame = 0;
+            m_PreparedMotionMatchingResetSequence = 0;
+            m_PreparedMotionMatchingSelectionCompletionIdentity = 0;
+            m_PreparedMotionMatchingPoseCompletionIdentity = 0;
+            m_SourceModule.ClearUsage();
+            m_MotionMatchingHistoryCompletionCount = 0;
+            m_MotionMatchingPoseCompletionPrepared = false;
+        }
+
+        void IPoseStateSourceSelectionSink.PushMotionMatchingSelection(
+            PoseNodeId playerNodeId,
+            in PresentationPoseSourceSample sample)
+        {
+            ActorState.NodeRuntimeIndex.PushMotionMatchingSelection(
+                m_SourceModule,
+                playerNodeId,
+                in sample);
+        }
+
+        void AddMotionMatchingSourceUsage(
+            PoseNodeId playerNodeId,
+            AnimationPoseSourceId sourceId,
+            ulong completionIdentity)
+        {
+            var usage = new CharacterPoseSourceUsage(
+                playerNodeId,
+                sourceId,
+                completionIdentity);
+            m_SourceModule.RecordUsage(in usage);
         }
 
         internal CharacterPoseProgramTuningView RequireTuning(

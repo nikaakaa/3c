@@ -1255,3 +1255,9 @@ Pose Contracts目录不引用Program／Source／Constraint／Publication Impleme
 状态：当前HEAD搜索不存在`CharacterFootStateMachine`、SmoothKnee、Pelvis Reach硬夹紧或末端Foot Effector夹紧实现；Current Support只作为正式接触观察与Unavailable结果存在，`CharacterFootSwingMotionBuilder`不使用它替代Ground Envelope候选。FBBIK的可靠动画膝向仍通过`Quaternion.FromToRotation(originalAnkle-originalHip, targetAxis) * animatedDirection`保留有符号运输，只对无可靠动画方向的历史／参考候选执行同半球翻转。
 
 本change提交未修改Foot／Pelvis／FBBIK算法与Profile，也没有接管外部仍在进行的Foot行为任务；只迁移Constraint typed边界、根事务和Committed诊断页。任务14.9完成；数值行为任务3.9与14.10仍等待正式Projection重建后用同一Replay闭合。
+
+## 最终Projection重建阻塞复核
+
+状态：再次通过3C实例的正式`character_build_float32_products`入口执行Corin Character Build，Job `f894dcbec04e4e82b2928117b29da433`仍在Presentation Projection阶段被现有Foot Analysis geometry validation identity stale拒绝，覆盖Attack1至Attack5、Dodge、Idle、Walk／Run／Turn等正式Timeline与Pose Source绑定。构建没有发布半成品，generated Projection仍是旧Program Image v23／Runtime ABI v26。
+
+本change不能绕过Foot校验、伪造新identity或修改Foot资产，因此12.9无法完成；没有v24／v27正式Projection也不能运行当前Runtime的同输入Replay，3.9与14.10随之保持未完成。14.8已实际执行，但全工作区diff与全量OpenSpec的失败均来自其它并行工作，未越界修复。

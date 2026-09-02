@@ -23,6 +23,7 @@ namespace ThirdPersonCharacter.Pipeline.Diagnostics.FootIkSampling
         "primary-support",
         "body-correction",
         "current-support",
+        "current-support-target",
         "prediction-motion",
         "goal",
         "selected-support-target",

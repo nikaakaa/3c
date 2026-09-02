@@ -186,7 +186,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
         readonly CharacterPoseProgramRuntime m_ProgramRuntime;
         readonly CharacterPoseConstraintRuntime m_PoseConstraints;
         readonly CharacterPoseSourceModule m_SourceModule;
-        readonly ComposedAnimationPoseFramePublisher m_FramePublisher;
+        readonly CharacterFinalPosePublication m_FinalPublication;
         readonly AnimationPoseSourceContribution[]
             m_FootPlacementContributions;
         readonly AnimationPresentationRuntimeSnapshotPublisher m_DiagnosticsPublisher;
@@ -628,7 +628,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             m_ClipPlayerJobs = new AnimationSelectedPosePlayerJob[clipPlayers.Length];
             m_BlendSpacePlayerJobs =
                 new AnimationSelectedPosePlayerJob[blendSpacePlayers.Length];
-            m_FramePublisher = new ComposedAnimationPoseFramePublisher(
+            m_FinalPublication = new CharacterFinalPosePublication(
                 projection.PosePlan,
                 projection.Rig,
                 finalWriter);
@@ -674,7 +674,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
         {
             Exception failure = null;
             DiscardStep(
-                () => m_FramePublisher.DiscardPending(publicationLease),
+                () => m_FinalPublication.DiscardPending(publicationLease),
                 ref failure);
             DiscardStep(
                 () => m_PoseConstraints.DiscardFrame(constraintLease),
@@ -784,7 +784,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                 PoseInertializationNativeProgramPayloadMetrics
                     .CalculateDoublePageResidentPayloadBytes(
                         m_InertializationPlan),
-                m_FramePublisher
+                m_FinalPublication
                     .DenseDoublePageResidentPayloadBytes,
                 actionJournalCapacity,
                 samplingJournalCapacity,
@@ -873,7 +873,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                 m_SourceRetirementState.BeginFrame();
                 sourceLease = m_SourceModule.BeginFrame(in lineage);
                 sourceOpen = true;
-                publicationLease = m_FramePublisher.BeginFrame(
+                publicationLease = m_FinalPublication.BeginFrame(
                     in lineage,
                     footIkCaptureInterest);
                 publicationOpen = true;
@@ -898,7 +898,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             catch
             {
                 if (publicationOpen)
-                    m_FramePublisher.DiscardPending(publicationLease);
+                    m_FinalPublication.DiscardPending(publicationLease);
                 if (poseConstraintsOpen)
                     m_PoseConstraints.DiscardFrame(constraintLease);
                 if (modulesOpen)
@@ -933,7 +933,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
         {
             RequireMutation(lease);
             m_SourceModule.RequirePendingReady(sourceLease);
-            m_FramePublisher.ValidatePendingSeal(publicationLease);
+            m_FinalPublication.ValidatePendingSeal(publicationLease);
             if (!m_CommitValidated)
             {
                 throw new InvalidOperationException(
@@ -1131,7 +1131,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                     ref failure);
             }
             DiscardStep(
-                () => m_FramePublisher.DiscardPending(publicationLease),
+                () => m_FinalPublication.DiscardPending(publicationLease),
                 ref failure);
             DiscardStep(
                 m_DiagnosticsPublisher
@@ -1187,7 +1187,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                 m_CompletionIdentity);
             m_SourceRetirementState.ApplyPendingPose(m_SourceModule);
             ComposedAnimationPoseFrame result =
-                m_FramePublisher.CommitPending(publicationLease);
+                m_FinalPublication.CommitPending(publicationLease);
             m_CommitValidated = false;
             m_PendingFrameOutcome = AnimationPresentationFrameOutcome.None;
             return result;
@@ -1467,7 +1467,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                 bool requiresSolver = CharacterPoseConstraintRuntime
                     .RequiresFullBodyIkDiagnostics(interest) ||
                     footIkCaptureInterest.IsEnabled;
-                bool requiresPhysical = ComposedAnimationPoseFramePublisher
+                bool requiresPhysical = CharacterFinalPosePublication
                     .RequiresPhysicalDiagnostics(interest) ||
                     footIkCaptureInterest.IsEnabled;
                 CharacterPoseProgramResult committedProgramResult =
@@ -1496,7 +1496,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                     executionResult.Publication;
                 CharacterFinalPoseCommittedDiagnosticsView
                     publicationDiagnostics =
-                        m_FramePublisher.CaptureCommittedDiagnostics(
+                        m_FinalPublication.CaptureCommittedDiagnostics(
                             in committedPublicationResult);
                 AnimationPhysicalBoneWriteDiagnostics physicalWrite =
                     publicationDiagnostics.PhysicalWrite;
@@ -2204,7 +2204,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                     m_ProgramFrames.RequireFinalReadBinding(
                         completionIdentity);
                 InstallOrUpdateJobs();
-                m_FramePublisher.ValidateWriterBeforeEvaluate(
+                m_FinalPublication.ValidateWriterBeforeEvaluate(
                     in finalRead,
                     hasCommittedFinal,
                     in committedFinalRead);
@@ -2350,7 +2350,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             CharacterFinalPosePublicationResult publicationResult;
             using (FinalWriteMarker.Auto())
             {
-                m_FramePublisher.WritePhysicalPose(
+                m_FinalPublication.WritePhysicalPose(
                     publicationLease,
                     in finalRead,
                     hasCommittedFinal,
@@ -2367,7 +2367,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                     _ => throw new InvalidOperationException(
                         $"Unsupported final animation pose writer outcome '{finalWriteOutcome}'.")
                 };
-                publicationResult = m_FramePublisher.PreparePending(
+                publicationResult = m_FinalPublication.PreparePending(
                     publicationLease,
                     in completedLineage,
                     in finalRead,
@@ -2503,7 +2503,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                     operation.InputValueIndexA,
                     completionIdentity);
             int contributionCount =
-                m_FramePublisher.ResolveContributions(
+                m_FinalPublication.ResolveContributions(
                     in inputBinding,
                     m_SourceModule,
                     m_FootPlacementContributions);
@@ -2713,7 +2713,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             RequireNoOpenMutation();
             if (reason == PoseDiscontinuityResetReason.None)
                 throw new ArgumentOutOfRangeException(nameof(reason));
-            m_FramePublisher.Invalidate();
+            m_FinalPublication.Invalidate();
             InvalidateDiagnostics();
             m_ActorDiagnosticsProjector.Reset();
             m_SourceModule.CancelReleaseDiagnostics();
@@ -2761,7 +2761,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             if (m_Disposed)
                 return;
             m_Disposed = true;
-            m_FramePublisher.Invalidate();
+            m_FinalPublication.Invalidate();
             m_FootIkDiagnosticsProjector.Invalidate();
             m_LastCompletedFrame = default;
             m_PendingCompletedFrame = default;

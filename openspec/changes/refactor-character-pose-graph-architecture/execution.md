@@ -751,3 +751,9 @@ Execution View的Operation／Stage／Rig／Mask／Blend／Linked Pose静态页�
 状态：`CharacterPoseProgramExecutionView`删除`SetLinkedPoseGroupSelection`，只保留按index读取Call Group／Interface以及查找静态Candidate的只读查询。`CharacterPoseProgramRuntime`接管Group selection验证与Frame Pages的Call Control／Active Fragment写入，旧Pose Runtime只把根会话给出的generation handle交给Program Runtime。
 
 Call遍历顺序、Group／Interface／Implementation匹配、重复Control保护、Candidate选择、generation、Pose discontinuity和active fragment写值逐项保持。Execution View不再写Program Frame页；Program Runtime成为Linked Pose节点控制的唯一写入入口。任务6.2暂不勾选，其他PoseState／Player／Slot／Blend／Inertialization执行仍需继续迁移。3C实例重连后Program Runtime、Execution View和Pose Runtime错误筛选均为0；不单独运行回放。
+
+## 现有Final双页实现正式归名Publication Module
+
+状态：原`ComposedAnimationPoseFramePublisher`类型和文件直接改名为`CharacterFinalPosePublication`并移入PoseGraph Final目录，旧类型全文删除。旧Pose Runtime字段同步从`m_FramePublisher`改为`m_FinalPublication`，Begin、预验证、唯一Physical Write、Pending Result准备、Commit／Discard、Committed diagnostics、Invalidate和容量统计全部继续调用同一实例，没有新增wrapper或第二发布路径。
+
+该具体Module已经实际持有唯一双页Dense Final Pose、Parameter、Contribution、Bone Kind与page lease，唯一Pending页、Committed Publication Result、完整Rig布局和唯一`AnimationFinalPosePhysicalWriter`。因此任务7.1完成。Output layout handle绑定、Writer前完整统一验证、Writer后no-throw Seal和旧外层调用清理仍分别留在7.2至7.9，不提前勾选。3C MCP执行`Assets/Refresh`后新Publication、旧文件路径和Pose Runtime错误筛选均为0；不单独运行回放。

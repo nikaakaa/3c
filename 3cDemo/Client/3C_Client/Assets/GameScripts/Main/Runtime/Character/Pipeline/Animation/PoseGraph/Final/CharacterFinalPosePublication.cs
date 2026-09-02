@@ -10,7 +10,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
     internal readonly struct CharacterFinalPoseCommittedDiagnosticsView
     {
         internal CharacterFinalPoseCommittedDiagnosticsView(
-            ComposedAnimationPoseFramePublisher.CommittedDiagnosticsPage page)
+            CharacterFinalPosePublication.CommittedDiagnosticsPage page)
         {
             m_Page = page ?? throw new ArgumentNullException(nameof(page));
             m_Identity = page.Identity;
@@ -20,7 +20,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                     nameof(page));
         }
 
-        readonly ComposedAnimationPoseFramePublisher.CommittedDiagnosticsPage
+        readonly CharacterFinalPosePublication.CommittedDiagnosticsPage
             m_Page;
         readonly ulong m_Identity;
         internal bool IsValid =>
@@ -64,7 +64,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         }
     }
 
-    internal sealed class ComposedAnimationPoseFramePublisher
+    internal sealed class CharacterFinalPosePublication
     {
         sealed class CharacterFinalPosePublicationPendingPage
         {
@@ -205,7 +205,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         AnimationPhysicalBoneWriteDiagnostics m_CommittedPhysicalWrite;
         ComposedAnimationPoseFrame m_CommittedFrame;
 
-        internal ComposedAnimationPoseFramePublisher(
+        internal CharacterFinalPosePublication(
             CharacterPoseProgramImage program,
             CharacterAnimationRigPayload rig,
             AnimationFinalPosePhysicalWriter physicalWriter)

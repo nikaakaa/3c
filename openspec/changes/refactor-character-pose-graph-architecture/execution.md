@@ -1113,3 +1113,9 @@ Program Executor按Header的Family Payload index取得唯一typed页后调用现
 状态：新增`CharacterPoseProgramMotionMatchingRuntime`，接管Provider Source Sample表、Demand／Selection、source usage、history read、Pose Plan Completion以及全部pending completion字段，并成为唯一`IPoseStateSourceSelectionSink`。`CharacterPoseProgramRuntime`只保留根Frame／Workspace lease验证和窄入口转交，不再持有Motion Matching数组、Dictionary或完成状态。
 
 Selection顺序、Stack／Direct Player usage扫描、history Bone校验、Pending Player Pose读取、Foot Feature携带、Source usage completion和Reset清理顺序保持不变；没有修改搜索、评分或Source选择逻辑。Program Runtime由3129行降至2738行。3C MCP全脚本重编且C#错误为0，不单独运行回放。
+
+## 拆出Program Tuning模块
+
+状态：新增`CharacterPoseProgramTuningRuntime`，整体拥有Program Tuning State，并统一协调Pose StateMachine、Blend Stack、Inertialization与Operation Weight的Candidate Prepare／Commit／Discard。Program Runtime只保留同名typed入口，不再解释各Owner的调参提交顺序。
+
+Candidate失败回收、全部成功后的提交顺序、generation验证和Dispose所有权保持不变；没有增加回滚Apply或第二Snapshot。3C MCP全脚本重编且C#错误为0，不单独运行回放。

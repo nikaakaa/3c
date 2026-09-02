@@ -23,6 +23,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         readonly CharacterPoseWorldContextAdapter m_WorldContext;
         readonly PresentationFrameWorkspace m_PresentationWorkspace;
         readonly CharacterPoseProgramMotionMatchingRuntime m_MotionMatching;
+        readonly CharacterPoseProgramTuningRuntime m_Tuning;
         readonly List<ActionBackendReleaseCompletion>
             m_ActionBackendReleaseCompletions;
         readonly List<AnimationSlotSourceReleaseCompletion>
@@ -77,7 +78,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 throw new ArgumentNullException(nameof(actorState));
             FramePages = framePages ??
                 throw new ArgumentNullException(nameof(framePages));
-            Tuning = tuning ?? throw new ArgumentNullException(nameof(tuning));
+            m_Tuning = new CharacterPoseProgramTuningRuntime(
+                tuning,
+                ActorState);
             m_SourceModule = sourceModule ??
                 throw new ArgumentNullException(nameof(sourceModule));
             m_WorldContext = worldContext ??
@@ -155,7 +158,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         CharacterPoseProgramExecutionView ExecutionView { get; }
         CharacterPoseActorState ActorState { get; }
         CharacterPoseProgramFramePages FramePages { get; }
-        CharacterPoseProgramTuningState Tuning { get; }
         CharacterPoseProgramExecutor Executor { get; }
         internal PoseInertializationNativeProgram Inertialization =>
             ActorState.Inertialization;
@@ -2100,7 +2102,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 FramePages.RequirePoseGraphBinding(
                     lineage.CompletionIdentity);
             CharacterPoseProgramTuningView tuning =
-                Tuning.RequireCommitted(tuningGeneration);
+                m_Tuning.Require(tuningGeneration);
             Executor.BindFrame(
                 in tuning,
                 frame,
@@ -2374,7 +2376,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             m_MotionMatching.ClearCompletion();
         }
         internal CharacterPoseProgramTuningView RequireTuning(
-            ulong generation) => Tuning.RequireCommitted(generation);
+            ulong generation) => m_Tuning.Require(generation);
 
         internal CharacterPoseProgramCommittedDiagnosticsView
             CaptureCommittedDiagnostics(
@@ -2403,79 +2405,13 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         internal string PrepareTuningCandidate(
             CharacterPoseTuningLayout layout,
             CharacterPoseTuningParameterBlock block,
-            ulong generation)
-        {
-            try
-            {
-                Tuning.PrepareCandidate(layout, block, generation);
-            }
-            catch (Exception exception)
-            {
-                return exception.Message;
-            }
-            for (int i = 0;
-                 i < ActorState.PoseStateSources.StateMachines.Length;
-                 i++)
-            {
-                string error = ActorState.PoseStateSources.StateMachines[i]
-                    .PrepareTuningCandidate(layout, block);
-                if (!string.IsNullOrEmpty(error))
-                {
-                    DiscardTuningCandidate();
-                    return error;
-                }
-            }
-            for (int i = 0; i < ActorState.Stacks.Length; i++)
-            {
-                string error = ActorState.Stacks[i].PrepareTuningCandidate(
-                    layout,
-                    block);
-                if (!string.IsNullOrEmpty(error))
-                {
-                    DiscardTuningCandidate();
-                    return error;
-                }
-            }
-            string inertializationError = ActorState.Inertialization
-                .PrepareTuningCandidate(layout, block);
-            if (!string.IsNullOrEmpty(inertializationError))
-            {
-                DiscardTuningCandidate();
-                return inertializationError;
-            }
-            return string.Empty;
-        }
+            ulong generation) =>
+            m_Tuning.Prepare(layout, block, generation);
 
-        internal void CommitTuningCandidate(ulong generation)
-        {
-            for (int i = 0;
-                 i < ActorState.PoseStateSources.StateMachines.Length;
-                 i++)
-            {
-                ActorState.PoseStateSources.StateMachines[i]
-                    .CommitTuningCandidate();
-            }
-            for (int i = 0; i < ActorState.Stacks.Length; i++)
-                ActorState.Stacks[i].CommitTuningCandidate();
-            ActorState.Inertialization.CommitTuningCandidate();
-            Tuning.CommitCandidate(generation);
-        }
+        internal void CommitTuningCandidate(ulong generation) =>
+            m_Tuning.Commit(generation);
 
-        internal void DiscardTuningCandidate()
-        {
-            for (int i = 0;
-                 i < ActorState.PoseStateSources.StateMachines.Length;
-                 i++)
-            {
-                ActorState.PoseStateSources.StateMachines[i]
-                    .DiscardTuningCandidate();
-            }
-            for (int i = 0; i < ActorState.Stacks.Length; i++)
-                ActorState.Stacks[i].DiscardTuningCandidate();
-            ActorState.Inertialization.DiscardTuningCandidate();
-            Tuning.DiscardCandidate();
-        }
-
+        internal void DiscardTuningCandidate() => m_Tuning.Discard();
         internal void SetLinkedPoseGroupSelection(
             in CharacterLinkedPoseGenerationHandle selection)
         {
@@ -2646,7 +2582,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             Exception failure = null;
             DisposeStep(DetachExecutionJobs, ref failure);
             DisposeStep(ActorState.Dispose, ref failure);
-            DisposeStep(Tuning.Dispose, ref failure);
+            DisposeStep(m_Tuning.Dispose, ref failure);
             DisposeStep(ExecutionView.Dispose, ref failure);
             DisposeStep(FramePages.Dispose, ref failure);
             if (failure != null)

@@ -941,3 +941,9 @@ Definition Module不引用Document Store、Reconciler、Mutation Service、Undo�
 Compiler路径改为逐闭包Graph执行局部Topology验证，typed edge、Port方向／Value Kind、Pose Space、required input、fan-in、Graph Role、Output／Graph boundary、Goal Contribution／Goal Set／Assembler／FBBIK闭包、Motion Matching history、Root Warp、可达性、环与写入归属仍沿原规则验证；Program级额外固定唯一root Final Publication boundary、Goal Assembler和FBBIK。State／Subgraph／Motion Matching引用只通过Graph Closure resolver读取，Topology不再递归发现或验证Graph cycle；root flat catalog的可达性与单Owner计数也前移到Closure Pass。具体Physical Writer没有进入Compiler，继续只由Runtime Factory和Final Publication构造证明唯一。
 
 任务11.4完成。原Graph Validator的公开作者校验入口仍保留自身递归诊断，但Compiler只调用`ValidateClosedGraph`的非递归路径；3C MCP对Closure、Topology、Validator、IR与Compiler入口错误筛选均为0，不单独运行回放。
+
+## Stage Schedule独立Pass入口
+
+状态：新增`CharacterPoseStageSchedulePass`，从当前唯一线性Operation序列按Execution Domain、Output Pose Space和Linked Fragment identity生成固定连续Stage，并独立计算Native Operation range、Pose Value range与Linked Fragment Stage range。Pass构造时证明Stage从Operation 0连续覆盖到末尾，每个Operation恰好落入一个Stage；Fragment必须拥有完整且隔离的Stage范围，否则编译失败。
+
+旧Compiler内联`CompileStages`与原地扫描Fragment范围删除；Compiler只在Pass完成后把已计算range绑定到最终Fragment Payload，Stage分组、顺序、Native计数和Program hash输入保持不变。任务11.6仍等待Symbolic Family Lowering产出的typed dependency直接成为此Pass输入，当前不提前勾选。3C MCP对新Pass与Compiler入口错误筛选均为0；不单独运行回放。

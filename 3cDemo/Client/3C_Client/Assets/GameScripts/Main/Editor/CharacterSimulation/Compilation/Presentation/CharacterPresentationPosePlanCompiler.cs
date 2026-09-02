@@ -304,9 +304,23 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             if (state.BlendNodeIndices.Count != state.BlendNodes.Length)
                 throw new InvalidOperationException("Pose Plan Blend Stack payload identities are not unique.");
 
+            CharacterPoseStageSchedule schedule =
+                CharacterPoseStageSchedulePass.Run(
+                    state.Operations,
+                    state.LinkedFragments);
+            for (int rangeIndex = 0;
+                 rangeIndex < schedule.FragmentRanges.Count;
+                 rangeIndex++)
+            {
+                CharacterPoseLinkedFragmentStageRange range =
+                    schedule.FragmentRanges[rangeIndex];
+                state.LinkedFragments[range.FragmentIndex].BindStageRange(
+                    range.StageStart,
+                    range.StageCount);
+            }
             NativeWorkspacePlan workspace = PlanNativeWorkspace(state);
-            CharacterPresentationPoseStage[] stages = CompileStages(state.Operations);
-            BindLinkedPoseStageRanges(state.LinkedFragments, stages);
+            CharacterPresentationPoseStage[] stages =
+                schedule.Stages.ToArray();
             string hash = ComputeHash(
                 graph,
                 rig,
@@ -353,92 +367,6 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                 state.OutputOperationIndex);
         }
 
-        static CharacterPresentationPoseStage[] CompileStages(
-            IReadOnlyList<CharacterPresentationPoseOperation> operations)
-        {
-            if (operations == null || operations.Count == 0)
-                throw new InvalidOperationException("Pose Plan has no operations to stage.");
-
-            var stages = new List<CharacterPresentationPoseStage>();
-            int operationStart = 0;
-            int nativeOperationStart = 0;
-            while (operationStart < operations.Count)
-            {
-                CharacterPresentationPoseOperation first = operations[operationStart];
-                CharacterPoseExecutionDomain domain = first.ExecutionDomain;
-                CharacterPoseSpace outputSpace = first.OutputPoseSpace;
-                int operationEnd = operationStart + 1;
-                while (operationEnd < operations.Count &&
-                       operations[operationEnd].ExecutionDomain == domain &&
-                       operations[operationEnd].OutputPoseSpace == outputSpace &&
-                       operations[operationEnd].LinkedPoseFragmentIndex == first.LinkedPoseFragmentIndex)
-                {
-                    operationEnd++;
-                }
-
-                CharacterPoseSpace inputSpace = CharacterPoseSpace.None;
-                int nativeOperationCount = 0;
-                int minPoseValue = int.MaxValue;
-                int maxPoseValue = -1;
-                for (int operationIndex = operationStart; operationIndex < operationEnd; operationIndex++)
-                {
-                    CharacterPresentationPoseOperation operation = operations[operationIndex];
-                    if (inputSpace == CharacterPoseSpace.None && operation.InputPoseSpace != CharacterPoseSpace.None)
-                        inputSpace = operation.InputPoseSpace;
-                    if (IsNativePoseOperation(operation.Code))
-                        nativeOperationCount++;
-                    if (operation.OutputValueIndex < 0)
-                        continue;
-                    minPoseValue = Math.Min(minPoseValue, operation.OutputValueIndex);
-                    maxPoseValue = Math.Max(maxPoseValue, operation.OutputValueIndex);
-                }
-
-                stages.Add(new CharacterPresentationPoseStage(
-                    stages.Count,
-                    domain,
-                    inputSpace,
-                    outputSpace,
-                    operationStart,
-                    operationEnd - operationStart,
-                    nativeOperationStart,
-                    nativeOperationCount,
-                    maxPoseValue < 0 ? 0 : minPoseValue,
-                    maxPoseValue < 0 ? 0 : maxPoseValue - minPoseValue + 1));
-                nativeOperationStart += nativeOperationCount;
-                operationStart = operationEnd;
-            }
-            return stages.ToArray();
-        }
-
-        static void BindLinkedPoseStageRanges(
-            IReadOnlyList<CharacterLinkedPoseEntryFragmentPlanDescriptor> fragments,
-            IReadOnlyList<CharacterPresentationPoseStage> stages)
-        {
-            int stageIndex = 0;
-            for (int fragmentIndex = 0; fragmentIndex < fragments.Count; fragmentIndex++)
-            {
-                CharacterLinkedPoseEntryFragmentPlanDescriptor fragment = fragments[fragmentIndex];
-                int operationEnd = checked(fragment.OperationStart + fragment.OperationCount);
-                while (stageIndex < stages.Count &&
-                       stages[stageIndex].OperationStart + stages[stageIndex].OperationCount <= fragment.OperationStart)
-                {
-                    stageIndex++;
-                }
-                int stageStart = stageIndex;
-                while (stageIndex < stages.Count && stages[stageIndex].OperationStart < operationEnd)
-                {
-                    CharacterPresentationPoseStage stage = stages[stageIndex];
-                    if (stage.OperationStart < fragment.OperationStart ||
-                        stage.OperationStart + stage.OperationCount > operationEnd)
-                    {
-                        throw new InvalidOperationException($"Linked Pose fragment #{fragment.Index} does not own an isolated stage range.");
-                    }
-                    stageIndex++;
-                }
-                fragment.BindStageRange(stageStart, stageIndex - stageStart);
-            }
-        }
-
         static CharacterPoseSpace ResolveInputPoseSpace(CharacterTypedPoseNode node) =>
             ResolvePoseSpace(node, CharacterPosePortDirection.Input);
 
@@ -477,35 +405,6 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             }
             return result;
         }
-
-        static bool IsNativePoseOperation(CharacterPoseOperationCode code) => code switch
-        {
-            CharacterPoseOperationCode.SelectedPosePlayer or
-            CharacterPoseOperationCode.BlendSpacePlayer or
-            CharacterPoseOperationCode.ClipPlayer or
-            CharacterPoseOperationCode.BlendStack or
-            CharacterPoseOperationCode.AnimationSlot or
-            CharacterPoseOperationCode.Inertialization or
-            CharacterPoseOperationCode.BlendPose or
-            CharacterPoseOperationCode.LayeredBoneBlend or
-            CharacterPoseOperationCode.AdditivePose or
-            CharacterPoseOperationCode.PoseParameterResolve or
-            CharacterPoseOperationCode.ModifyBone or
-            CharacterPoseOperationCode.RootOrientationWarp or
-            CharacterPoseOperationCode.FootPlacement or
-            CharacterPoseOperationCode.PoseBoneIKGoals or
-            CharacterPoseOperationCode.FullBodyIkGoalAssembler or
-            CharacterPoseOperationCode.FullBodyIK or
-            CharacterPoseOperationCode.LocalToComponentPose or
-            CharacterPoseOperationCode.ComponentToLocalPose or
-            CharacterPoseOperationCode.StatePoseOutput or
-            CharacterPoseOperationCode.PoseStateMachine or
-            CharacterPoseOperationCode.LinkedPoseCall or
-            CharacterPoseOperationCode.MotionMatchingPose or
-            CharacterPoseOperationCode.PoseHistoryRead or
-            CharacterPoseOperationCode.OutputPose => true,
-            _ => false
-        };
 
         static NativeWorkspacePlan PlanNativeWorkspace(CompilationState state)
         {

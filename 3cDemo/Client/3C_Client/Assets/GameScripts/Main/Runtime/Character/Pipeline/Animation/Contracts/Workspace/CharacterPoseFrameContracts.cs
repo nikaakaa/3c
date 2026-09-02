@@ -217,11 +217,15 @@ namespace ThirdPersonCharacter.Pipeline.Animation
     {
         internal CharacterPoseSourceDemand(
             in CharacterPoseFrameLineage lineage,
+            in CharacterPoseSourcePreparationView preparations,
             IReadOnlyList<PoseSourceProviderDemand> providerDemands,
             int actionSourceCount,
             int providerSourceCount)
         {
             if (!lineage.IsValid ||
+                !preparations.IsValid ||
+                preparations.CompletionIdentity !=
+                    lineage.CompletionIdentity ||
                 providerDemands == null ||
                 actionSourceCount < 0 ||
                 providerSourceCount < 0)
@@ -240,20 +244,25 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 }
             }
             Lineage = lineage;
+            Preparations = preparations;
             ProviderDemands = providerDemands;
             ActionSourceCount = actionSourceCount;
             ProviderSourceCount = providerSourceCount;
-            IsValid = true;
+            m_IsValid = true;
         }
 
+        readonly bool m_IsValid;
         internal CharacterPoseFrameLineage Lineage { get; }
+        internal CharacterPoseSourcePreparationView Preparations { get; }
         internal IReadOnlyList<PoseSourceProviderDemand> ProviderDemands
         {
             get;
         }
         internal int ActionSourceCount { get; }
         internal int ProviderSourceCount { get; }
-        internal bool IsValid { get; }
+        internal bool IsValid =>
+            m_IsValid &&
+            Preparations.IsValid;
     }
 
     internal readonly struct CharacterPoseSourceBinding

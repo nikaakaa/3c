@@ -212,4 +212,124 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 in capture,
                 poseNodeId);
     }
+
+    internal sealed class CharacterPoseSourcePreparationPage
+    {
+        readonly CharacterPoseSourcePreparation[] m_Preparations;
+        ulong m_CompletionIdentity;
+        int m_Count;
+
+        internal CharacterPoseSourcePreparationPage(int capacity)
+        {
+            if (capacity <= 0)
+                throw new ArgumentOutOfRangeException(nameof(capacity));
+            m_Preparations =
+                new CharacterPoseSourcePreparation[capacity];
+        }
+
+        internal CharacterPoseSourcePreparationView Begin(
+            ulong completionIdentity)
+        {
+            if (completionIdentity == 0)
+            {
+                throw new ArgumentOutOfRangeException(
+                    nameof(completionIdentity));
+            }
+            Clear();
+            m_CompletionIdentity = completionIdentity;
+            return new CharacterPoseSourcePreparationView(
+                this,
+                completionIdentity);
+        }
+
+        internal int Add(
+            in CharacterPoseSourcePreparation preparation)
+        {
+            if (!preparation.IsValid ||
+                preparation.Capture.CompletionIdentity !=
+                    m_CompletionIdentity)
+            {
+                throw new InvalidOperationException(
+                    "Character Pose source preparation does not match the open demand page.");
+            }
+            if (m_Count >= m_Preparations.Length)
+            {
+                throw new InvalidOperationException(
+                    "Character Pose source preparation capacity was exceeded.");
+            }
+            int index = m_Count++;
+            m_Preparations[index] = preparation;
+            return index;
+        }
+
+        internal bool Matches(ulong completionIdentity) =>
+            completionIdentity != 0 &&
+            completionIdentity == m_CompletionIdentity;
+
+        internal int RequireCount(ulong completionIdentity)
+        {
+            RequireOpen(completionIdentity);
+            return m_Count;
+        }
+
+        internal CharacterPoseSourcePreparation Require(
+            int index,
+            ulong completionIdentity)
+        {
+            RequireOpen(completionIdentity);
+            if ((uint)index >= (uint)m_Count)
+                throw new ArgumentOutOfRangeException(nameof(index));
+            return m_Preparations[index];
+        }
+
+        internal void Clear()
+        {
+            Array.Clear(m_Preparations, 0, m_Count);
+            m_CompletionIdentity = 0;
+            m_Count = 0;
+        }
+
+        void RequireOpen(ulong completionIdentity)
+        {
+            if (!Matches(completionIdentity))
+            {
+                throw new InvalidOperationException(
+                    "Character Pose source preparation page is stale.");
+            }
+        }
+    }
+
+    internal readonly struct CharacterPoseSourcePreparationView
+    {
+        internal CharacterPoseSourcePreparationView(
+            CharacterPoseSourcePreparationPage page,
+            ulong completionIdentity)
+        {
+            if (page == null || !page.Matches(completionIdentity))
+            {
+                throw new ArgumentException(
+                    "Character Pose source preparation view is invalid.");
+            }
+            m_Page = page;
+            CompletionIdentity = completionIdentity;
+        }
+
+        readonly CharacterPoseSourcePreparationPage m_Page;
+        internal ulong CompletionIdentity { get; }
+        internal int Count => m_Page.RequireCount(CompletionIdentity);
+        internal bool IsValid =>
+            m_Page != null &&
+            m_Page.Matches(CompletionIdentity);
+
+        internal CharacterPoseSourcePreparation Get(int index) =>
+            m_Page.Require(index, CompletionIdentity);
+
+        internal bool Matches(
+            in CharacterPoseSourcePreparationView other) =>
+            m_Page != null &&
+            ReferenceEquals(m_Page, other.m_Page) &&
+            CompletionIdentity == other.CompletionIdentity &&
+            IsValid &&
+            other.IsValid;
+    }
 }

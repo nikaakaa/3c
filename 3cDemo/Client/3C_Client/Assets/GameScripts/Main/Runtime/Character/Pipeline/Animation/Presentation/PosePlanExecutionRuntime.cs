@@ -296,6 +296,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
         readonly CharacterPoseConstraintRuntime m_PoseConstraints;
         readonly PoseInertializationNativeProgram m_InertializationPlan;
         readonly CharacterPoseSourceModule m_SourceModule;
+        readonly CharacterPoseSourcePreparationPage
+            m_SourcePreparationPage;
         readonly ComposedAnimationPoseFramePublisher m_FramePublisher;
         readonly AnimationPoseSourceContribution[]
             m_FootPlacementContributions;
@@ -689,6 +691,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             m_PoseConstraints = poseConstraints;
             m_InertializationPlan = inertializationProgram;
             m_SourceModule = sourceModule;
+            m_SourcePreparationPage =
+                new CharacterPoseSourcePreparationPage(
+                    physicalSourceCapacity);
             m_Stacks = stacks;
             m_StackRoutes = stackRoutes;
             m_DirectPlayers = directPlayers;
@@ -1285,6 +1290,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             ClearValidatedActionBackendAcknowledgements();
             ClearPreparedMotionMatchingPoseCompletion();
             m_PreparedPage.Clear();
+            m_SourcePreparationPage.Clear();
             m_HasOpenFrame = false;
             m_ActiveFrameLease = default;
             m_CommitValidated = false;
@@ -2344,8 +2350,11 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             m_FrameCompletionContext = completionIdentity;
             CharacterPoseFrameLineage lineage =
                 openLineage.WithCompletion(completionIdentity);
+            CharacterPoseSourcePreparationView preparations =
+                m_SourcePreparationPage.Begin(completionIdentity);
             var demand = new CharacterPoseSourceDemand(
                 in lineage,
+                in preparations,
                 providerDemands,
                 actionSourceCount,
                 providerSourceCount);
@@ -2367,6 +2376,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             RequireOpenMutation();
             CharacterPoseSourceDemand pendingDemand =
                 m_SourceModule.RequireDemand(sourceLease);
+            CharacterPoseSourcePreparationView sourcePreparations =
+                sourceDemand.Preparations;
+            CharacterPoseSourcePreparationView pendingPreparations =
+                pendingDemand.Preparations;
             if (m_PreparedPage.HasValue)
             {
                 throw new InvalidOperationException(
@@ -2374,6 +2387,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             }
             if (!sourceDemand.IsValid ||
                 sourceDemand.Lineage != pendingDemand.Lineage ||
+                !sourcePreparations.Matches(
+                    in pendingPreparations) ||
                 sourceDemand.ActionSourceCount !=
                     pendingDemand.ActionSourceCount ||
                 sourceDemand.ProviderSourceCount !=
@@ -2437,6 +2452,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                         {
                             PrepareStackSources(
                                 m_Stacks[stackIndex],
+                                sourceLease,
+                                in sourcePreparations,
                                 presentationDeltaSeconds,
                                 actionSourceSamples,
                                 providerSourceSamples);
@@ -2451,6 +2468,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                         {
                             PrepareDirectSource(
                                 playerIndex,
+                                sourceLease,
+                                in sourcePreparations,
                                 presentationDeltaSeconds,
                                 providerSourceSamples);
                         }
@@ -2462,7 +2481,11 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                          playerIndex <
                          m_PoseStateSources.ClipPlayers.Length;
                          playerIndex++)
-                        PrepareSequenceSource(playerIndex, presentationDeltaSeconds);
+                        PrepareSequenceSource(
+                            playerIndex,
+                            sourceLease,
+                            in sourcePreparations,
+                            presentationDeltaSeconds);
                 }
                 using (PrepareBlendSpaceMarker.Auto())
                 {
@@ -2471,7 +2494,11 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                          m_PoseStateSources.BlendSpacePlayers.Length;
                          playerIndex++)
                     {
-                        PrepareBlendSpaceSource(playerIndex, presentationDeltaSeconds);
+                        PrepareBlendSpaceSource(
+                            playerIndex,
+                            sourceLease,
+                            in sourcePreparations,
+                            presentationDeltaSeconds);
                     }
                 }
             }
@@ -3082,6 +3109,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             m_HasCompletedFrame = false;
             m_HasPendingCompletedFrame = false;
             m_PreparedPage.Clear();
+            m_SourcePreparationPage.Clear();
             m_PendingFrameOutcome = AnimationPresentationFrameOutcome.None;
             m_InertializationPlan.Reset();
             m_PoseConstraints.ResetSolvers();
@@ -3124,6 +3152,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             m_HasCompletedFrame = false;
             m_HasPendingCompletedFrame = false;
             m_PreparedPage.Clear();
+            m_SourcePreparationPage.Clear();
             m_PendingFrameOutcome = AnimationPresentationFrameOutcome.None;
             Exception failure = null;
             DisposeStep(m_DiagnosticsPublisher.Dispose, ref failure);
@@ -3172,6 +3201,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
 
         void PrepareStackSources(
             AnimationBlendStackRuntime stack,
+            CharacterPoseSourceFrameLease sourceLease,
+            in CharacterPoseSourcePreparationView preparations,
             float presentationDeltaSeconds,
             IReadOnlyDictionary<AnimationPlayerSourceSampleKey,
                 AnimationResolvedPoseSourceSample> actionSourceSamples,
@@ -3187,6 +3218,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                     continue;
                 PrepareSource(
                     stack,
+                    sourceLease,
+                    in preparations,
                     entry.SourceId,
                     presentationDeltaSeconds,
                     actionSourceSamples,
@@ -3196,6 +3229,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
 
         void PrepareSource(
             AnimationBlendStackRuntime stack,
+            CharacterPoseSourceFrameLease sourceLease,
+            in CharacterPoseSourcePreparationView preparations,
             AnimationPoseSourceId sourceId,
             float presentationDeltaSeconds,
             IReadOnlyDictionary<AnimationPlayerSourceSampleKey,
@@ -3226,7 +3261,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                         in timelineRequest,
                         in timelineCapture,
                         stack.PoseNodeId);
-                m_SourceModule.Prepare(in preparation);
+                SubmitSourcePreparation(
+                    sourceLease,
+                    in preparations,
+                    in preparation);
                 return;
             }
             if (!providerSourceSamples.TryGetValue(
@@ -3254,11 +3292,16 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                     in providerSample,
                     in capture,
                     stack.PoseNodeId);
-            m_SourceModule.Prepare(in providerPreparation);
+            SubmitSourcePreparation(
+                sourceLease,
+                in preparations,
+                in providerPreparation);
         }
 
         void PrepareDirectSource(
             int playerIndex,
+            CharacterPoseSourceFrameLease sourceLease,
+            in CharacterPoseSourcePreparationView preparations,
             float presentationDeltaSeconds,
             IReadOnlyDictionary<AnimationPlayerSourceSampleKey,
                 PresentationPoseSourceSample> sourceSamples)
@@ -3281,10 +3324,17 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                     in sample,
                     in capture,
                     player.NodeId);
-            m_SourceModule.Prepare(in preparation);
+            SubmitSourcePreparation(
+                sourceLease,
+                in preparations,
+                in preparation);
         }
 
-        void PrepareSequenceSource(int playerIndex, float presentationDeltaSeconds)
+        void PrepareSequenceSource(
+            int playerIndex,
+            CharacterPoseSourceFrameLease sourceLease,
+            in CharacterPoseSourcePreparationView preparations,
+            float presentationDeltaSeconds)
         {
             AnimationClipPlayerRuntime player =
                 m_PoseStateSources.ClipPlayers[playerIndex];
@@ -3302,7 +3352,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                     player.ClipSamples,
                     in capture,
                     player.NodeId);
-            m_SourceModule.Prepare(in preparation);
+            SubmitSourcePreparation(
+                sourceLease,
+                in preparations,
+                in preparation);
         }
 
         internal void SetSequencePreview(
@@ -3359,6 +3412,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
 
         void PrepareBlendSpaceSource(
             int playerIndex,
+            CharacterPoseSourceFrameLease sourceLease,
+            in CharacterPoseSourcePreparationView preparations,
             float presentationDeltaSeconds)
         {
             AnimationBlendSpacePlayerRuntime player =
@@ -3376,7 +3431,23 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                     player.ClipSamples,
                     in capture,
                     player.NodeId);
-            m_SourceModule.Prepare(in preparation);
+            SubmitSourcePreparation(
+                sourceLease,
+                in preparations,
+                in preparation);
+        }
+
+        void SubmitSourcePreparation(
+            CharacterPoseSourceFrameLease sourceLease,
+            in CharacterPoseSourcePreparationView preparations,
+            in CharacterPoseSourcePreparation preparation)
+        {
+            int index = m_SourcePreparationPage.Add(
+                in preparation);
+            m_SourceModule.Prepare(
+                sourceLease,
+                in preparations,
+                index);
         }
 
         static bool HasEarlierSource(

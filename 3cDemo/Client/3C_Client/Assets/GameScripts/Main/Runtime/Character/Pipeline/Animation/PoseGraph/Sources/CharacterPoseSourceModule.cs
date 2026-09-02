@@ -16,6 +16,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Sources
             CharacterPoseSourceFrameLease m_Lease;
             CharacterPoseSourceDemand m_Demand;
             CharacterPoseSourceFrameResult m_Result;
+            int m_ConsumedPreparationCount;
             bool m_HasDemand;
             bool m_HasResult;
 
@@ -33,6 +34,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Sources
                     in lineage);
                 m_Demand = default;
                 m_Result = default;
+                m_ConsumedPreparationCount = 0;
                 m_HasDemand = false;
                 m_HasResult = false;
                 return m_Lease;
@@ -67,6 +69,28 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Sources
                 return m_Demand;
             }
 
+            internal CharacterPoseSourcePreparation
+                ConsumePreparation(
+                    CharacterPoseSourceFrameLease lease,
+                    in CharacterPoseSourcePreparationView preparations,
+                    int index)
+            {
+                RequireLease(lease);
+                CharacterPoseSourcePreparationView expected =
+                    m_Demand.Preparations;
+                if (!m_HasDemand ||
+                    !expected.Matches(in preparations) ||
+                    index != m_ConsumedPreparationCount)
+                {
+                    throw new InvalidOperationException(
+                        "Pose Source preparation does not match the Pending demand.");
+                }
+                CharacterPoseSourcePreparation preparation =
+                    preparations.Get(index);
+                m_ConsumedPreparationCount++;
+                return preparation;
+            }
+
             internal void BindResult(
                 CharacterPoseSourceFrameLease lease,
                 in CharacterPoseSourceFrameResult result)
@@ -74,6 +98,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Sources
                 RequireLease(lease);
                 if (!m_HasDemand ||
                     m_HasResult ||
+                    m_ConsumedPreparationCount !=
+                        m_Demand.Preparations.Count ||
                     !result.IsReady ||
                     result.Lineage != m_Demand.Lineage)
                 {
@@ -122,6 +148,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Sources
                 m_Lease = default;
                 m_Demand = default;
                 m_Result = default;
+                m_ConsumedPreparationCount = 0;
                 m_HasDemand = false;
                 m_HasResult = false;
             }
@@ -744,8 +771,15 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Sources
         }
 
         internal void Prepare(
-            in CharacterPoseSourcePreparation preparation)
+            CharacterPoseSourceFrameLease lease,
+            in CharacterPoseSourcePreparationView preparations,
+            int preparationIndex)
         {
+            CharacterPoseSourcePreparation preparation =
+                m_FramePage.ConsumePreparation(
+                    lease,
+                    in preparations,
+                    preparationIndex);
             if (!preparation.IsValid)
             {
                 throw new ArgumentException(

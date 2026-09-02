@@ -329,7 +329,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                 actorDiagnosticsProjector = null;
             CharacterPoseProgramCommittedDiagnosticsProjector
                 programDiagnosticsProjector = null;
-            AnimationFinalPosePhysicalWriter finalWriter = null;
+            CharacterFinalPosePublication finalPublication = null;
             var nodeRuntimeIndex =
                 new CharacterPoseProgramNodeRuntimeIndex();
             try
@@ -514,10 +514,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                         m_StateMachineLinkedPoseFragmentIndices,
                         m_LinkedPoseActiveFragments,
                         m_LinkedPoseResetFragments);
-                finalWriter = new AnimationFinalPosePhysicalWriter(
-                    rigBinding,
-                    projection.Rig,
-                    rootHierarchy);
                 poseConstraints = new CharacterPoseConstraintRuntime(
                     footPlacement,
                     executionView.PoseBoneContributions,
@@ -546,6 +542,11 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                     directPlayers.Length,
                     clipPlayers.Length,
                     blendSpacePlayers.Length);
+                finalPublication = new CharacterFinalPosePublication(
+                    projection.PosePlan,
+                    projection.Rig,
+                    rigBinding,
+                    rootHierarchy);
                 if (managesGraphClock)
                     animancer.Graph.PauseGraph();
                 programFrames.DiscardEvaluationFrame(
@@ -628,10 +629,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             m_ClipPlayerJobs = new AnimationSelectedPosePlayerJob[clipPlayers.Length];
             m_BlendSpacePlayerJobs =
                 new AnimationSelectedPosePlayerJob[blendSpacePlayers.Length];
-            m_FinalPublication = new CharacterFinalPosePublication(
-                projection.PosePlan,
-                projection.Rig,
-                finalWriter);
+            m_FinalPublication = finalPublication;
             m_FootPlacementContributions =
                 new AnimationPoseSourceContribution[
                     projection.PosePlan.ContributionWorkspaceCount /

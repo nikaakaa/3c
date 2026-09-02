@@ -2,7 +2,7 @@ using System;
 using ThirdPersonCharacter.Pipeline.Animation.Diagnostics;
 using ThirdPersonCharacter.Pipeline.Animation.Lifecycle;
 using ThirdPersonCharacter.Pipeline.Animation.Sources;
-using ThirdPersonCharacter.Pipeline.Presentation.Animancer;
+using ThirdPersonCharacter.Pipeline.Presentation;
 using Unity.Collections.LowLevel.Unsafe;
 
 namespace ThirdPersonCharacter.Pipeline.Animation
@@ -186,7 +186,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         readonly float[] m_DenseContributionWeights;
         readonly CharacterPoseBoneKind[] m_BoneKinds;
         readonly FinalAnimationPoseFramePageLease[] m_PageLeases;
-        readonly AnimationFinalPosePhysicalWriter m_PhysicalWriter;
+        readonly CharacterFinalPosePhysicalWriter m_PhysicalWriter;
         readonly CommittedDiagnosticsPage m_CommittedDiagnostics =
             new CommittedDiagnosticsPage();
         readonly int m_OperationCount;
@@ -208,14 +208,17 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         internal CharacterFinalPosePublication(
             CharacterPoseProgramImage program,
             CharacterAnimationRigPayload rig,
-            AnimationFinalPosePhysicalWriter physicalWriter)
+            CharacterAnimationRigBinding rigBinding,
+            CharacterRootHierarchyBinding rootHierarchy)
         {
             if (program == null)
                 throw new ArgumentNullException(nameof(program));
             if (rig == null)
                 throw new ArgumentNullException(nameof(rig));
-            m_PhysicalWriter = physicalWriter ??
-                throw new ArgumentNullException(nameof(physicalWriter));
+            m_PhysicalWriter = new CharacterFinalPosePhysicalWriter(
+                rigBinding,
+                rig,
+                rootHierarchy);
             program.RequireValid();
             rig.RequireValid();
             if (!string.Equals(program.RigId, rig.RigId, StringComparison.Ordinal) ||

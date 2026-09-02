@@ -1,13 +1,13 @@
 using System;
 using System.Collections.Generic;
-using ThirdPersonCharacter.Pipeline.Animation;
 using ThirdPersonCharacter.Pipeline.Animation.Diagnostics;
+using ThirdPersonCharacter.Pipeline.Presentation;
 using Unity.Collections;
 using UnityEngine;
 
-namespace ThirdPersonCharacter.Pipeline.Presentation.Animancer
+namespace ThirdPersonCharacter.Pipeline.Animation
 {
-    internal sealed class AnimationFinalPosePhysicalWriter
+    internal sealed class CharacterFinalPosePhysicalWriter
     {
         readonly CharacterAnimationRigPayload m_Rig;
         readonly CharacterRootHierarchyBinding m_RootHierarchy;
@@ -22,7 +22,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation.Animancer
         readonly AnimationLocalBonePose[] m_ReferencePoses;
         AnimationPhysicalBoneWriteDiagnostics m_Diagnostics;
 
-        internal AnimationFinalPosePhysicalWriter(
+        internal CharacterFinalPosePhysicalWriter(
             CharacterAnimationRigBinding binding,
             CharacterAnimationRigPayload rig,
             CharacterRootHierarchyBinding rootHierarchy)

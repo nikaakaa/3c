@@ -4,7 +4,7 @@ using UnityEngine;
 
 namespace ThirdPersonCharacter.Pipeline.Presentation
 {
-    internal enum CharacterFootPredictionMotionRejectReason : byte
+    public enum CharacterFootPredictionMotionRejectReason : byte
     {
         None = 0,
         TimelineUnavailable = 1,
@@ -12,7 +12,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         InvalidInput = 3
     }
 
-    internal enum CharacterFootPredictionMotionResetReason : byte
+    public enum CharacterFootPredictionMotionResetReason : byte
     {
         None = 0,
         Initialization = 1,

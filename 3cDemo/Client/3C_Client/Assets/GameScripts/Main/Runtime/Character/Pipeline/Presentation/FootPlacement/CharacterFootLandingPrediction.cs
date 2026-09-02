@@ -871,8 +871,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 timeline.MaximumBodyYawVelocityDegreesPerSecond;
             CurrentSegmentRemainingSeconds = currentSegmentRemainingSeconds;
             PredictionMotionAvailable = predictionMotion.IsValid;
-            PredictionMotionRejectReason = predictionMotion.RejectReason.ToString();
-            PredictionMotionResetReason = predictionMotion.ResetReason.ToString();
+            PredictionMotionRejectReason = predictionMotion.RejectReason;
+            PredictionMotionResetReason = predictionMotion.ResetReason;
             PredictionMotionSourceIdentity =
                 predictionMotion.PredictionSourceIdentity;
             PredictionRawCurrentVelocityX = predictionMotion.RawCurrentVelocity.x;
@@ -963,8 +963,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         public float TimelineMaximumBodyYawVelocityDegreesPerSecond { get; }
         public float CurrentSegmentRemainingSeconds { get; }
         public bool PredictionMotionAvailable { get; }
-        public string PredictionMotionRejectReason { get; }
-        public string PredictionMotionResetReason { get; }
+        public CharacterFootPredictionMotionRejectReason PredictionMotionRejectReason { get; }
+        public CharacterFootPredictionMotionResetReason PredictionMotionResetReason { get; }
         public string PredictionMotionSourceIdentity { get; }
         public float PredictionRawCurrentVelocityX { get; }
         public float PredictionRawCurrentVelocityZ { get; }

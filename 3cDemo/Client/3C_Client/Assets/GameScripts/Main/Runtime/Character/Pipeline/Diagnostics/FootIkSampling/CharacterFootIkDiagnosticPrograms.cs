@@ -22,6 +22,7 @@ namespace ThirdPersonCharacter.Pipeline.Diagnostics.FootIkSampling
         "action",
         "primary-support",
         "body-correction",
+        "prediction-motion",
         "root-hierarchy")]
     internal static class CharacterFootIkFullSamplerDefinition
     {

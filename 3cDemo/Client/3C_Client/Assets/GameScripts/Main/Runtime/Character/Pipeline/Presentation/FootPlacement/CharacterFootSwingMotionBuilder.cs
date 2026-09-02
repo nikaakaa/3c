@@ -1697,6 +1697,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         [DiagnosticGroup("output-stages")]
         public bool OutputStagesAvailable { get; }
         [DiagnosticField]
+        [DiagnosticKey("foot-motion-releasing-completed-to-swing")]
         [DiagnosticGroup("output-stages")]
         public bool ReleasingCompletedToSwing { get; }
         [DiagnosticField]
@@ -1735,6 +1736,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         [DiagnosticGroup("output-stages")]
         public float SafetyFloorClearanceBeforeMeters { get; }
         [DiagnosticField]
+        [DiagnosticKey("foot-motion-safety-floor-clearance-after")]
         [DiagnosticGroup("output-stages")]
         public float SafetyFloorClearanceAfterMeters { get; }
         [DiagnosticField]

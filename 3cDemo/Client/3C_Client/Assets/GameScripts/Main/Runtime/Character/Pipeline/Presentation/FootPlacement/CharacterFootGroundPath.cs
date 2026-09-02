@@ -810,12 +810,14 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 ? Page.Input.Key.LastLandingEventIdentity
                 : 0;
         [DiagnosticField]
+        [DiagnosticKey("ground-path-next-landing-event-identity")]
         [DiagnosticGroup("ground-path")]
         public ulong NextSwingLandingEventIdentity =>
             Page != null && Page.HasInput
                 ? Page.Input.Key.NextSwingLandingEventIdentity
                 : 0;
         [DiagnosticField]
+        [DiagnosticKey("ground-path-target-available")]
         [DiagnosticGroup("ground-path")]
         public bool TargetAvailable => NextSwingLandingEventIdentity != 0;
         [DiagnosticField]
@@ -845,6 +847,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         public Vector3 LastLanding =>
             Page != null && Page.HasInput ? Page.Input.LastLanding : default;
         [DiagnosticField]
+        [DiagnosticKey("ground-path-next-landing")]
         [DiagnosticGroup("ground-path")]
         public Vector3 NextSwingLanding =>
             Page != null && Page.HasInput ? Page.Input.NextSwingLanding : default;
@@ -863,6 +866,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 ? Page.Input.LastLandingSurfaceIdentity
                 : 0;
         [DiagnosticField]
+        [DiagnosticKey("ground-path-next-landing-surface-identity")]
         [DiagnosticGroup("ground-path")]
         public int NextSwingLandingSurfaceIdentity =>
             Page != null && Page.HasInput

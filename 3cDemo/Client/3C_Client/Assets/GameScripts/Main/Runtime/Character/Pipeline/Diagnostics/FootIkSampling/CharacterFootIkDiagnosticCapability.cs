@@ -78,6 +78,7 @@ namespace ThirdPersonCharacter.Pipeline.Diagnostics.FootIkSampling
     [DiagnosticFactRoot("pelvis", typeof(CharacterFullBodyIkEffectorDiagnostics))]
     [DiagnosticFactRoot("pelvis-goal", typeof(CharacterFullBodyIkGoal))]
     [DiagnosticFactRoot("physical", typeof(CharacterPhysicalFootPose))]
+    [DiagnosticFactRoot("physical-body", typeof(CharacterPhysicalBodyPose))]
     [DiagnosticFactRoot("primary-support", typeof(CharacterFootPrimarySupportDiagnostics))]
     [DiagnosticFactRoot("solver", typeof(CharacterFullBodyIkSolverDiagnostics))]
     [DiagnosticFactRoot("stride", typeof(CharacterFootStrideHipsDiagnostics))]

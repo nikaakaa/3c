@@ -120,7 +120,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 Vector3 pelvisWorldPosition = m_Bones[m_PelvisBoneIndex].position;
                 CharacterFootIkPhysicalCapture footIkCapture =
                     captureFootIkDiagnostics
-                        ? CaptureFootIkPhysical()
+                        ? CaptureFootIkPhysical(pelvisWorldPosition)
                         : default;
                 m_Diagnostics = new AnimationPhysicalBoneWriteDiagnostics(
                     output.Lineage.CompletionIdentity,
@@ -134,7 +134,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             }
         }
 
-        CharacterFootIkPhysicalCapture CaptureFootIkPhysical()
+        CharacterFootIkPhysicalCapture CaptureFootIkPhysical(
+            Vector3 pelvisWorldPosition)
         {
             Transform logicRoot = m_RootHierarchy.LogicRoot;
             Transform visualRoot = m_RootHierarchy.VisualRoot;
@@ -152,6 +153,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 poseRoot.localRotation,
                 poseRoot.position,
                 poseRoot.rotation,
+                pelvisWorldPosition,
                 leftAnkle.position,
                 leftAnkle.rotation,
                 rightAnkle.position,

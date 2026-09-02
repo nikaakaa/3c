@@ -173,21 +173,27 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         }
 
         [DiagnosticField]
+        [DiagnosticKey("pelvis-height-target-available")]
         [DiagnosticGroup("pelvis-input")]
         public bool Available { get; }
         [DiagnosticField]
+        [DiagnosticKey("pelvis-component-up")]
         [DiagnosticGroup("pelvis-input")]
         public Vector3 ComponentUp { get; }
         [DiagnosticField]
+        [DiagnosticKey("pelvis-left-animated-sole")]
         [DiagnosticGroup("pelvis-input")]
         public Vector3 LeftAnimatedSole { get; }
         [DiagnosticField]
+        [DiagnosticKey("pelvis-right-animated-sole")]
         [DiagnosticGroup("pelvis-input")]
         public Vector3 RightAnimatedSole { get; }
         [DiagnosticField]
+        [DiagnosticKey("pelvis-left-target-sole")]
         [DiagnosticGroup("pelvis-input")]
         public Vector3 LeftTargetSole { get; }
         [DiagnosticField]
+        [DiagnosticKey("pelvis-right-target-sole")]
         [DiagnosticGroup("pelvis-input")]
         public Vector3 RightTargetSole { get; }
         [DiagnosticField]
@@ -197,6 +203,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         [DiagnosticGroup("pelvis-input")]
         public float TargetMinimumAlongUp { get; }
         [DiagnosticField]
+        [DiagnosticKey("pelvis-requested-height-offset")]
         [DiagnosticGroup("pelvis-input")]
         public float OffsetAlongUp { get; }
     }
@@ -422,12 +429,33 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         internal CharacterFootPelvisReachDiagnostics(
             in CharacterFootPelvisReachObservation result) => m_Result = result;
 
+        [DiagnosticField]
+        [DiagnosticKey("pelvis-reach-component-up")]
+        [DiagnosticGroup("pelvis-reach")]
         public Vector3 ComponentUp => m_Result.ComponentUp;
         public CharacterFootPelvisLegReachDiagnostics Left => new(m_Result.Left);
         public CharacterFootPelvisLegReachDiagnostics Right => new(m_Result.Right);
+        [DiagnosticField]
+        [DiagnosticKey("pelvis-reach-status")]
+        [DiagnosticGroup("pelvis-reach")]
         public CharacterFootPelvisReachStatus Status => m_Result.Status;
+        [DiagnosticField]
+        [DiagnosticKey("pelvis-reach-intersection-evaluated")]
+        [DiagnosticGroup("pelvis-reach")]
         public bool IntersectionEvaluated => m_Result.IntersectionEvaluated;
+        [DiagnosticField]
+        [DiagnosticKey("pelvis-reach-intersection-minimum")]
+        [DiagnosticGroup("pelvis-reach")]
+        [DiagnosticAvailability(
+            DiagnosticAvailabilityReference.Member,
+            nameof(IntersectionEvaluated))]
         public float IntersectionMinimumAlongUp => m_Result.IntersectionMinimumAlongUp;
+        [DiagnosticField]
+        [DiagnosticKey("pelvis-reach-intersection-maximum")]
+        [DiagnosticGroup("pelvis-reach")]
+        [DiagnosticAvailability(
+            DiagnosticAvailabilityReference.Member,
+            nameof(IntersectionEvaluated))]
         public float IntersectionMaximumAlongUp => m_Result.IntersectionMaximumAlongUp;
     }
 
@@ -532,12 +560,19 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             SameLevelMaximumDownVelocity = sameLevelMaximumDownVelocity;
         }
 
-        internal bool Evaluated { get; }
-        internal bool Completed { get; }
+        [DiagnosticField]
+        [DiagnosticKey("pelvis-response-evaluated")]
+        [DiagnosticGroup("pelvis-response")]
+        public bool Evaluated { get; }
+        [DiagnosticField]
+        [DiagnosticKey("pelvis-response-completed")]
+        [DiagnosticGroup("pelvis-response")]
+        public bool Completed { get; }
         [DiagnosticField]
         [DiagnosticGroup("pelvis-spring-input")]
         public bool HadPreviousState { get; }
         [DiagnosticField]
+        [DiagnosticKey("pelvis-response-support-changed")]
         [DiagnosticGroup("pelvis-spring-input")]
         public bool SupportChanged { get; }
         [DiagnosticField]
@@ -553,6 +588,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         [DiagnosticGroup("pelvis-spring-input")]
         public float PreviousTarget { get; }
         [DiagnosticField]
+        [DiagnosticKey("pelvis-response-previous-output")]
         [DiagnosticGroup("pelvis-spring-input")]
         public float PreviousOutput { get; }
         [DiagnosticField]
@@ -567,18 +603,45 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         [DiagnosticField]
         [DiagnosticGroup("pelvis-spring-input")]
         public float Frequency { get; }
-        internal float IntegratedOutput { get; }
-        internal float Target { get; }
-        internal float Output { get; }
-        internal float Velocity { get; }
-        internal float PositionWeight { get; }
-        internal bool SameLevelWorldDownLimitEvaluated { get; }
-        internal bool SameLevelWorldDownLimitApplied { get; }
-        internal float PairTargetHeightSpread { get; }
-        internal float PreviousGoalWorldAlongUp { get; }
-        internal float RequestedGoalWorldAlongUp { get; }
-        internal float LimitedGoalWorldAlongUp { get; }
-        internal float SameLevelMaximumDownVelocity { get; }
+        [DiagnosticField]
+        [DiagnosticGroup("pelvis-response")]
+        public float IntegratedOutput { get; }
+        [DiagnosticField]
+        [DiagnosticKey("pelvis-response-target")]
+        [DiagnosticGroup("pelvis-response")]
+        public float Target { get; }
+        [DiagnosticField]
+        [DiagnosticKey("pelvis-response-output")]
+        [DiagnosticGroup("pelvis-response")]
+        public float Output { get; }
+        [DiagnosticField]
+        [DiagnosticGroup("pelvis-response")]
+        public float Velocity { get; }
+        [DiagnosticField]
+        [DiagnosticGroup("pelvis-response")]
+        public float PositionWeight { get; }
+        [DiagnosticField]
+        [DiagnosticGroup("pelvis-response")]
+        public bool SameLevelWorldDownLimitEvaluated { get; }
+        [DiagnosticField]
+        [DiagnosticKey("pelvis-same-level-limit-applied")]
+        [DiagnosticGroup("pelvis-response")]
+        public bool SameLevelWorldDownLimitApplied { get; }
+        [DiagnosticField]
+        [DiagnosticGroup("pelvis-response")]
+        public float PairTargetHeightSpread { get; }
+        [DiagnosticField]
+        [DiagnosticGroup("pelvis-response")]
+        public float PreviousGoalWorldAlongUp { get; }
+        [DiagnosticField]
+        [DiagnosticGroup("pelvis-response")]
+        public float RequestedGoalWorldAlongUp { get; }
+        [DiagnosticField]
+        [DiagnosticGroup("pelvis-response")]
+        public float LimitedGoalWorldAlongUp { get; }
+        [DiagnosticField]
+        [DiagnosticGroup("pelvis-response")]
+        public float SameLevelMaximumDownVelocity { get; }
 
     }
 
@@ -650,12 +713,15 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         [DiagnosticGroup("pelvis-input")]
         public Vector3 SampledGround { get; }
         [DiagnosticField]
+        [DiagnosticKey("pelvis-pose-input-available")]
         [DiagnosticGroup("pelvis-input")]
         public bool PoseInputAvailable { get; }
         [DiagnosticField]
+        [DiagnosticKey("pelvis-pose-root-position")]
         [DiagnosticGroup("pelvis-input")]
         public Vector3 PoseRootPosition { get; }
         [DiagnosticField]
+        [DiagnosticKey("pelvis-animated-world-position")]
         [DiagnosticGroup("pelvis-input")]
         public Vector3 AnimatedPelvis { get; }
         [DiagnosticField]
@@ -743,7 +809,12 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         internal CharacterFootPelvisPostureDiagnostics(
             in CharacterFootPelvisPosturePreference posture) => m_Posture = posture;
 
+        [DiagnosticField]
+        [DiagnosticGroup("pelvis-posture")]
         public bool Evaluated => m_Posture.Evaluated;
+        [DiagnosticField]
+        [DiagnosticKey("pelvis-posture-available")]
+        [DiagnosticGroup("pelvis-posture")]
         public bool Available => m_Posture.Available;
         public Vector3 Hip => m_Posture.Hip;
         public Vector3 AnimatedAnkle => m_Posture.AnimatedAnkle;
@@ -753,6 +824,12 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         public float UsableLegLength => m_Posture.UsableLegLength;
         public float MinimumAlongUp => m_Posture.MinimumAlongUp;
         public float MaximumAlongUp => m_Posture.MaximumAlongUp;
+        [DiagnosticField]
+        [DiagnosticKey("pelvis-posture-offset")]
+        [DiagnosticGroup("pelvis-posture")]
+        [DiagnosticAvailability(
+            DiagnosticAvailabilityReference.Member,
+            nameof(Available))]
         public float OffsetAlongUp => m_Posture.OffsetAlongUp;
         public bool TargetAdjusted => m_Posture.TargetAdjusted;
     }

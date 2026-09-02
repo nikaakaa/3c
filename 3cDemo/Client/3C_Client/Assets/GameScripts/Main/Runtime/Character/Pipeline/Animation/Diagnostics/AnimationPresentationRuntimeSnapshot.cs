@@ -39,6 +39,40 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
         public Quaternion AnkleWorldRotation { get; }
     }
 
+    [DiagnosticGroup("physical")]
+    public readonly struct CharacterPhysicalBodyPose
+    {
+        internal CharacterPhysicalBodyPose(
+            Vector3 poseRootWorldPosition,
+            Quaternion poseRootWorldRotation,
+            Vector3 pelvisWorldPosition)
+        {
+            IsAvailable = true;
+            PoseRootWorldPosition = poseRootWorldPosition;
+            PoseRootWorldRotation = poseRootWorldRotation;
+            PelvisWorldPosition = pelvisWorldPosition;
+        }
+
+        [DiagnosticField]
+        [DiagnosticKey("physical-body-available")]
+        public bool IsAvailable { get; }
+
+        [DiagnosticField]
+        [DiagnosticKey("physical-pose-root-position")]
+        [DiagnosticAvailability(DiagnosticAvailabilityReference.Member, nameof(IsAvailable))]
+        public Vector3 PoseRootWorldPosition { get; }
+
+        [DiagnosticField]
+        [DiagnosticKey("physical-pose-root-rotation")]
+        [DiagnosticAvailability(DiagnosticAvailabilityReference.Member, nameof(IsAvailable))]
+        public Quaternion PoseRootWorldRotation { get; }
+
+        [DiagnosticField]
+        [DiagnosticKey("physical-pelvis-position")]
+        [DiagnosticAvailability(DiagnosticAvailabilityReference.Member, nameof(IsAvailable))]
+        public Vector3 PelvisWorldPosition { get; }
+    }
+
     internal readonly struct CharacterFootIkPhysicalCapture
     {
         internal CharacterFootIkPhysicalCapture(
@@ -52,6 +86,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
             Quaternion poseRootLocalRotation,
             Vector3 poseRootWorldPosition,
             Quaternion poseRootWorldRotation,
+            Vector3 pelvisWorldPosition,
             Vector3 leftAnkleWorldPosition,
             Quaternion leftAnkleWorldRotation,
             Vector3 rightAnkleWorldPosition,
@@ -67,6 +102,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
             PoseRootLocalRotation = poseRootLocalRotation;
             PoseRootWorldPosition = poseRootWorldPosition;
             PoseRootWorldRotation = poseRootWorldRotation;
+            Body = new CharacterPhysicalBodyPose(
+                poseRootWorldPosition,
+                poseRootWorldRotation,
+                pelvisWorldPosition);
             Left = new CharacterPhysicalFootPose(
                 leftAnkleWorldPosition,
                 leftAnkleWorldRotation);
@@ -85,6 +124,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
         internal Quaternion PoseRootLocalRotation { get; }
         internal Vector3 PoseRootWorldPosition { get; }
         internal Quaternion PoseRootWorldRotation { get; }
+        internal CharacterPhysicalBodyPose Body { get; }
         internal CharacterPhysicalFootPose Left { get; }
         internal CharacterPhysicalFootPose Right { get; }
         internal Vector3 LeftAnkleWorldPosition => Left.AnkleWorldPosition;
@@ -102,6 +142,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
             IsFinite(PoseRootLocalRotation) &&
             IsFinite(PoseRootWorldPosition) &&
             IsFinite(PoseRootWorldRotation) &&
+            Body.IsAvailable &&
             Left.IsAvailable &&
             Right.IsAvailable &&
             IsFinite(LeftAnkleWorldPosition) &&

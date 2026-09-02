@@ -125,6 +125,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             CharacterFootStrideHipsDiagnostics stride = landing.StrideHips;
             CharacterPhysicalFootPose leftPhysical = physical.Left;
             CharacterPhysicalFootPose rightPhysical = physical.Right;
+            CharacterPhysicalBodyPose physicalBody = physical.Body;
             var target = new DiagnosticEventTargetKey(
                 CharacterFootIkCommitDiagnosticEvent.TargetTypeIdentity,
                 m_RuntimeInstanceId);
@@ -151,6 +152,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                 in input,
                 in pelvis,
                 in pelvisGoal,
+                in physicalBody,
                 in primarySupport,
                 in solver,
                 in stride);
@@ -176,6 +178,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             in CharacterFootLandingPredictionInputDiagnostics input,
             in CharacterFullBodyIkEffectorDiagnostics pelvis,
             in CharacterFullBodyIkGoal pelvisGoal,
+            in CharacterPhysicalBodyPose physicalBody,
             in CharacterFootPrimarySupportDiagnostics primarySupport,
             in CharacterFullBodyIkSolverDiagnostics solver,
             in CharacterFootStrideHipsDiagnostics stride);

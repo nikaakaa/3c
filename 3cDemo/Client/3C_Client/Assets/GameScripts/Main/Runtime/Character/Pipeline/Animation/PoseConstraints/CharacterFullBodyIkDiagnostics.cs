@@ -1,4 +1,5 @@
 using System;
+using KK.GeneratedDiagnosticSampling;
 using UnityEngine;
 
 namespace ThirdPersonCharacter.Pipeline.Animation
@@ -81,6 +82,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         public CharacterFullBodyIkLegPoseDiagnostics LegPose { get; }
     }
 
+    [DiagnosticGroup("solver-leg")]
     public readonly struct CharacterFullBodyIkLegPoseDiagnostics
     {
         internal CharacterFullBodyIkLegPoseDiagnostics(
@@ -134,29 +136,76 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             IsAvailable = true;
         }
 
+        [DiagnosticField]
+        [DiagnosticKey("leg-original-hip")]
+        [DiagnosticAvailability(DiagnosticAvailabilityReference.Key, "leg-pose-available")]
         public Vector3 OriginalHip { get; }
+        [DiagnosticField]
+        [DiagnosticKey("leg-original-knee")]
+        [DiagnosticAvailability(DiagnosticAvailabilityReference.Key, "leg-pose-available")]
         public Vector3 OriginalKnee { get; }
+        [DiagnosticField]
+        [DiagnosticKey("leg-original-ankle")]
+        [DiagnosticAvailability(DiagnosticAvailabilityReference.Key, "leg-pose-available")]
         public Vector3 OriginalAnkle { get; }
+        [DiagnosticField]
+        [DiagnosticKey("leg-target-ankle")]
+        [DiagnosticAvailability(DiagnosticAvailabilityReference.Key, "leg-pose-available")]
         public Vector3 TargetAnkle { get; }
+        [DiagnosticField]
+        [DiagnosticKey("leg-solved-hip")]
+        [DiagnosticAvailability(DiagnosticAvailabilityReference.Key, "leg-pose-available")]
         public Vector3 SolvedHip { get; }
+        [DiagnosticField]
+        [DiagnosticKey("leg-solved-knee")]
+        [DiagnosticAvailability(DiagnosticAvailabilityReference.Key, "leg-pose-available")]
         public Vector3 SolvedKnee { get; }
+        [DiagnosticField]
+        [DiagnosticKey("leg-solved-ankle")]
+        [DiagnosticAvailability(DiagnosticAvailabilityReference.Key, "leg-pose-available")]
         public Vector3 SolvedAnkle { get; }
         public Vector3 EffectiveBendDirection { get; }
         public float OriginalBendDegrees { get; }
+        [DiagnosticField]
+        [DiagnosticKey("leg-solved-bend-degrees")]
+        [DiagnosticAvailability(DiagnosticAvailabilityReference.Key, "leg-pose-available")]
         public float SolvedBendDegrees { get; }
+        [DiagnosticField]
+        [DiagnosticKey("leg-original-extension-ratio")]
+        [DiagnosticAvailability(DiagnosticAvailabilityReference.Key, "leg-pose-available")]
         public float OriginalExtensionRatio { get; }
+        [DiagnosticField]
+        [DiagnosticKey("leg-target-extension-ratio")]
+        [DiagnosticAvailability(DiagnosticAvailabilityReference.Key, "leg-pose-available")]
         public float TargetExtensionRatio { get; }
+        [DiagnosticField]
+        [DiagnosticKey("leg-solved-extension-ratio")]
+        [DiagnosticAvailability(DiagnosticAvailabilityReference.Key, "leg-pose-available")]
         public float SolvedExtensionRatio { get; }
+        [DiagnosticField]
+        [DiagnosticKey("leg-original-compression-reserve")]
+        [DiagnosticAvailability(DiagnosticAvailabilityReference.Key, "leg-pose-available")]
         public float OriginalCompressionReserve { get; }
+        [DiagnosticField]
+        [DiagnosticKey("leg-target-compression-reserve")]
+        [DiagnosticAvailability(DiagnosticAvailabilityReference.Key, "leg-pose-available")]
         public float TargetCompressionReserve { get; }
+        [DiagnosticField]
+        [DiagnosticKey("leg-solved-compression-reserve")]
+        [DiagnosticAvailability(DiagnosticAvailabilityReference.Key, "leg-pose-available")]
         public float SolvedCompressionReserve { get; }
         public float AnimatedBendDirectionPreviousDot { get; }
+        [DiagnosticField]
+        [DiagnosticKey("leg-effective-bend-direction-previous-dot")]
+        [DiagnosticAvailability(DiagnosticAvailabilityReference.Key, "leg-pose-available")]
         public float EffectiveBendDirectionPreviousDot { get; }
         public float StabilizationWeight { get; }
         public bool RetainedPreviousBendDirection { get; }
         public bool HadStableBendDirection { get; }
         public bool HadAppliedBendDirection { get; }
         public CharacterFullBodyIkBendDirectionSource BendDirectionSource { get; }
+        [DiagnosticField]
+        [DiagnosticKey("leg-pose-available")]
         public bool IsAvailable { get; }
     }
 

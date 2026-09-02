@@ -959,6 +959,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         [DiagnosticGroup("identity")]
         public CharacterFootLandingStepSource SelectedSource { get; }
         [DiagnosticField]
+        [DiagnosticKey("selected-landing-event-identity")]
         [DiagnosticGroup("identity")]
         public ulong SelectedLandingEventIdentity { get; }
         [DiagnosticField]

@@ -75,13 +75,13 @@
 ## 7. 建立CharacterFinalPosePublication与单一Final Pose物理页
 
 - [x] 7.1 新增具体`CharacterFinalPosePublication` Module并迁移唯一Committed/Pending Final Pose物理页、完整Rig binding和Publication Result
-- [ ] 7.2 让Program Image的Output Family只保存稳定`CharacterFinalPosePublicationLayoutHandle`，不保存Actor页引用且不分配第二Final Output buffer
-- [ ] 7.3 在Actor Runtime创建时由Final Publication把layout handle绑定到唯一Pending Final Pose页，Program Output Operation通过actor-local binding写入并发布只读`ProgramOutputPoseResult`
+- [x] 7.2 让Program Image的Output Family只保存稳定`CharacterFinalPosePublicationLayoutHandle`，不保存Actor页引用且不分配第二Final Output buffer
+- [x] 7.3 在Actor Runtime创建时由Final Publication把layout handle绑定到唯一Pending Final Pose页，Program Output Operation通过actor-local binding写入并发布只读`ProgramOutputPoseResult`
 - [x] 7.4 让Compiler只证明唯一Output与Publication requirement，让Runtime Factory和Final Publication构造证明唯一具体Writer与完整binding
 - [x] 7.5 在写任何Physical Bone前统一验证Pose availability、Rig、continuity、Program completion、Constraint completion和Frame lineage
 - [x] 7.6 让唯一Physical Writer一次应用完整Pending Pose，Invalid时保持Committed Pose并遵守现有Fault政策
 - [x] 7.7 确保Writer成功后不再执行Foot、Goal、FBBIK、Diagnostics或其它可能因业务输入失败的计算
-- [ ] 7.8 从Program Runtime、Source Module、Constraint Module和外层Runtime删除Physical Transform写入与第二Final Pose页所有权
+- [x] 7.8 从Program Runtime、Source Module、Constraint Module和外层Runtime删除Physical Transform写入与第二Final Pose页所有权
 - [x] 7.9 不建立Writer Graph节点、Writer抽象接口或第二Implementation，搜索并删除旧final writer旁路
 
 ## 8. 建立actor-local原子在线调参

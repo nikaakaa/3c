@@ -787,3 +787,21 @@ Writer构造立即验证完整`CharacterAnimationRigBinding`、正式`CharacterR
 状态：`CharacterPoseProgramImage`现在从唯一Output Operation与已编译固定容量产生`CharacterFinalPosePublicationLayoutHandle`，句柄只包含layout slot、Output Operation／Value identity、逻辑Pose Value数量、Bone／Parameter数量和单Value Contribution容量，不包含Actor实例、页引用或Physical Writer。Image Seal同时证明Output Value是最后一个逻辑Pose Value，并把原先散落在Workspace与Publication构造中的Contribution整除检查收回Image边界。
 
 `AnimationPoseNativeWorkspace`与`CharacterFinalPosePublication`不再各自重新查找万能Operation并推算Output布局，二者均消费同一个handle；Workspace仍暂时按旧数量分配Output Value页，Publication仍暂时复制到自身双页，因此本步不提前勾选7.2／7.3／7.8。3C MCP清空后仅存在既有FinalIK序列化深度错误，三个触碰文件的编译错误筛选均为0；不单独运行回放。
+
+## Physical Writer回退只读Publication Committed Frame
+
+状态：`CharacterFinalPosePhysicalWriter`在Pending Output为Typed Invalid时不再接收或读取Program Workspace的上一帧Output slot，而只接收`CharacterFinalPosePublication`自身保存且已成功发布的Committed `ComposedAnimationPoseFrame`。Publication以自身Committed Result、Physical Write diagnostics与Frame completion共同决定回退页是否可用，并在进入Evaluate前完成相同Physical Bone binding与Committed Pose验证。
+
+旧Pose Runtime的Prepared页删除`HasCommittedFinal`与`CommittedFinalRead`，不再为了Physical Writer取得Program Workspace Committed Output binding；Pending Output执行、Typed Invalid回退顺序、Root Bone policy、整骨预检、唯一Transform写循环和Physical diagnostics保持不变。Program Workspace的Committed Output目前仍供旧Program diagnostics读取，待actor-local Publication binding完成后一起删除，因此7.8暂不提前勾选。3C MCP对Writer、Publication和Pose Runtime编译错误筛选均为0；不单独运行回放。
+
+## Output Operation直接写入Publication Pending页
+
+状态：Final Publication在Actor装配时保存唯一Program Image layout handle与Source identity resolver，每帧由根Publication lease把该handle绑定到下一张唯一Pending页并生成`CharacterFinalPosePublicationOutputBinding`。持久Program Executor在唯一Output Operation位置通过该actor-local binding直接写入Dense Pose、Parameter、Contribution、Dense Weight与Foot Feature，并发布只读`CharacterPoseProgramOutputResult`；旧Pose Runtime不再构造、保存或反读`AnimationFinalPoseNativeReadBinding`。
+
+具体Physical Writer改为只消费同一Pending `ComposedAnimationPoseFrame`与Program Output Result，Program diagnostics在Post-Commit阶段通过Publication的短期Committed Frame view读取最终Output，非Output Value仍读取Program Committed页。Output continuity组合、Typed Invalid reason、source contribution展开、Preview输出、Root Bone policy、完整骨骼预检和唯一Transform写循环保持原顺序与数值；运行时不双写，Diagnostics也不复制第二份最终Pose。3C MCP对Runtime触碰文件编译错误筛选为0；不单独运行回放。
+
+## 删除Program第二Final Output页并修正静态Workspace合同
+
+状态：`AnimationPoseNativeAggregateLayout`现在明确区分逻辑`PoseValueCount`与真实`PoseValueWorkspaceCount`，后者等于唯一Output Value index，所有Program Pose／Parameter／Contribution／Header Native页只按真实Workspace数量分配。旧`FinalAppliedAt`、`FinalWriteOutcome` Native数组、Committed Final binding、Final read binding类型与Frame Pages转发入口全部删除；Final write outcome只存在于Publication Result，最终页只存在于Final Publication。
+
+Program Image对外明确逻辑Value数量、真实Workspace数量和单Value Contribution容量；Compiler的Workspace计划排除最后一个Output Value，Inertialization重建保持三者原值。审计确认全仓只有Final Publication一处具体Writer构造，只有Writer一处Physical Bone position／rotation／scale写循环，不存在第二Final页、旧Final Native ABI或Diagnostics Pose复制。由此任务7.2、7.3与7.8完成；3C MCP对Program Image、Execution View、Compiler、Workspace、Executor与Publication相关文件错误筛选均为0，当前全局Editor错误来自另一个Foot采样迁移窗口，不属于本change；不单独运行回放。

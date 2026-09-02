@@ -19,7 +19,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
     }
 
     [Flags]
-    internal enum CharacterFootPathRevisionReason : byte
+    public enum CharacterFootPathRevisionReason : byte
     {
         None = 0,
         PathAvailabilityChanged = 1,

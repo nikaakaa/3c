@@ -893,7 +893,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         internal CharacterFootPathContinuityDiagnostics(in CharacterFootPathContinuityFact path)
         {
             PathContinuityEvaluated = path.Evaluated;
-            PathRevisionReason = path.RevisionReason.ToString();
+            PathRevisionReason = path.RevisionReason;
             PathResidualRebuilt = path.ResidualRebuilt;
             TargetTrackingApplied = path.TargetTrackingApplied;
             PathAvailableBefore = path.PathAvailableBefore;
@@ -934,14 +934,14 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             SwingTargetMaximumVerticalSpeed =
                 path.SwingTargetMaximumVerticalSpeed;
             SwingTargetHeightAdoptionMode =
-                path.SwingTargetHeightAdoptionMode.ToString();
+                path.SwingTargetHeightAdoptionMode;
             SwingFilteredTargetHeightAlongUp =
                 path.SwingFilteredTargetHeightAlongUp;
             TargetHeightComponentUp = path.TargetHeightComponentUp;
         }
 
         public bool PathContinuityEvaluated { get; }
-        public string PathRevisionReason { get; }
+        public CharacterFootPathRevisionReason PathRevisionReason { get; }
         public bool PathResidualRebuilt { get; }
         public bool TargetTrackingApplied { get; }
         public bool PathAvailableBefore { get; }
@@ -974,7 +974,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         public bool SwingTargetHeightClamped { get; }
         public float SwingTargetHeightForceRefreshDistance { get; }
         public float SwingTargetMaximumVerticalSpeed { get; }
-        public string SwingTargetHeightAdoptionMode { get; }
+        public CharacterFootTargetHeightAdoptionMode SwingTargetHeightAdoptionMode { get; }
         public float SwingFilteredTargetHeightAlongUp { get; }
         public Vector3 TargetHeightComponentUp { get; }
     }

@@ -16,9 +16,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             {
                 int sourceCapacity = 0;
                 int playerCount = 0;
-                for (int i = 0; i < projection.PosePlan.Operations.Count; i++)
+                for (int i = 0; i < projection.PosePlan.OperationHeaders.Count; i++)
                 {
-                    CharacterPresentationPoseOperation operation = projection.PosePlan.Operations[i];
+                    CharacterPoseOperationHeader operation =
+                        projection.PosePlan.OperationHeaders[i];
                     switch (operation.Code)
                     {
                         case CharacterPoseOperationCode.SelectedPosePlayer:

@@ -111,15 +111,16 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             CharacterPoseProgramImage image)
         {
             var result = CreateUnassignedOwnership(image.PlayerCount);
-            for (int i = 0; i < image.Operations.Count; i++)
+            for (int i = 0; i < image.OperationHeaders.Count; i++)
             {
-                CharacterPresentationPoseOperation operation =
-                    image.Operations[i];
-                if (operation.PlayerIndex < 0)
+                CharacterPoseOperationHeader operation =
+                    image.OperationHeaders[i];
+                int playerIndex = FindPlayerIndex(image, operation);
+                if (playerIndex < 0)
                     continue;
                 SetOwnership(
                     result,
-                    operation.PlayerIndex,
+                    playerIndex,
                     operation.LinkedPoseFragmentIndex,
                     "Player");
             }
@@ -132,10 +133,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
         {
             var result = CreateUnassignedOwnership(
                 image.StateMachines.Count);
-            for (int i = 0; i < image.Operations.Count; i++)
+            for (int i = 0; i < image.OperationHeaders.Count; i++)
             {
-                CharacterPresentationPoseOperation operation =
-                    image.Operations[i];
+                CharacterPoseOperationHeader operation =
+                    image.OperationHeaders[i];
                 if (operation.Code !=
                     CharacterPoseOperationCode.PoseStateMachine)
                 {
@@ -143,7 +144,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                 }
                 SetOwnership(
                     result,
-                    operation.StateMachineIndex,
+                    ((CharacterPoseStateMachineOperationPayload)
+                        image.OperationPages.RequirePayload(operation))
+                    .StateMachineIndex,
                     operation.LinkedPoseFragmentIndex,
                     "StateMachine");
             }
@@ -156,10 +159,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
         {
             var result = CreateUnassignedOwnership(
                 image.RootOrientationWarps.Count);
-            for (int i = 0; i < image.Operations.Count; i++)
+            for (int i = 0; i < image.OperationHeaders.Count; i++)
             {
-                CharacterPresentationPoseOperation operation =
-                    image.Operations[i];
+                CharacterPoseOperationHeader operation =
+                    image.OperationHeaders[i];
                 if (operation.Code !=
                     CharacterPoseOperationCode.RootOrientationWarp)
                 {
@@ -167,7 +170,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                 }
                 SetOwnership(
                     result,
-                    operation.RootOrientationWarpIndex,
+                    ((CharacterPoseComponentControlOperationPayload)
+                        image.OperationPages.RequirePayload(operation))
+                    .RootOrientationWarpIndex,
                     operation.LinkedPoseFragmentIndex,
                     "Root Orientation Warp");
             }
@@ -180,10 +185,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
         {
             var result = CreateUnassignedOwnership(
                 image.Inertializations.Count);
-            for (int i = 0; i < image.Operations.Count; i++)
+            for (int i = 0; i < image.OperationHeaders.Count; i++)
             {
-                CharacterPresentationPoseOperation operation =
-                    image.Operations[i];
+                CharacterPoseOperationHeader operation =
+                    image.OperationHeaders[i];
                 if (operation.Code !=
                     CharacterPoseOperationCode.Inertialization)
                 {
@@ -191,13 +196,35 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                 }
                 SetOwnership(
                     result,
-                    operation.InertializationIndex,
+                    ((CharacterPoseIndexedOperationPayload)
+                        image.OperationPages.RequirePayload(operation))
+                    .ValueIndex,
                     operation.LinkedPoseFragmentIndex,
                     "Inertialization");
             }
             RequireCompleteOwnership(result, "Inertialization");
             return result;
         }
+
+        static int FindPlayerIndex(
+            CharacterPoseProgramImage image,
+            CharacterPoseOperationHeader operation) =>
+            operation.Family switch
+            {
+                CharacterPoseOperationFamily.Player =>
+                    ((CharacterPosePlayerOperationPayload)
+                        image.OperationPages.RequirePayload(operation))
+                    .PlayerIndex,
+                CharacterPoseOperationFamily.Blend =>
+                    ((CharacterPoseBlendOperationPayload)
+                        image.OperationPages.RequirePayload(operation))
+                    .PlayerIndex,
+                CharacterPoseOperationFamily.AnimationSlot =>
+                    ((CharacterPoseAnimationSlotOperationPayload)
+                        image.OperationPages.RequirePayload(operation))
+                    .PlayerIndex,
+                _ => -1
+            };
 
         static int[] CreateUnassignedOwnership(int count)
         {

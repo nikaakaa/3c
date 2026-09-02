@@ -134,9 +134,10 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             List<FieldValue> fields)
         {
             int nextFloat = 0;
-            for (int i = 0; i < plan.Operations.Count; i++)
+            for (int i = 0; i < plan.OperationHeaders.Count; i++)
             {
-                CharacterPresentationPoseOperation operation = plan.Operations[i];
+                CharacterPoseOperationHeader operation =
+                    plan.OperationHeaders[i];
                 if (!IsTunableOperationWeight(operation.Code))
                     continue;
                 AddFloat(
@@ -165,13 +166,18 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             List<FieldValue> fields)
         {
             int nextFloat = NextIndex(fields, CharacterPoseTuningValueKind.Float);
-            for (int i = 0; i < plan.Operations.Count; i++)
+            for (int i = 0; i < plan.OperationHeaders.Count; i++)
             {
-                CharacterPresentationPoseOperation operation = plan.Operations[i];
+                CharacterPoseOperationHeader operation =
+                    plan.OperationHeaders[i];
                 if (operation.Code != CharacterPoseOperationCode.ClipPlayer)
                     continue;
+                int clipPlayerIndex =
+                    ((CharacterPosePlayerOperationPayload)
+                        plan.OperationPages.RequirePayload(operation))
+                    .ClipPlayerIndex;
                 CharacterPresentationClipPlayerDescriptor player =
-                    plan.ClipPlayers[operation.ClipPlayerIndex];
+                    plan.ClipPlayers[clipPlayerIndex];
                 string ownerId = $"pose-node:{operation.NodeId.Value}";
                 AddFloat(
                     fields,

@@ -1302,19 +1302,32 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             List<string> errors)
         {
             var result = new List<CharacterAnimationBlendSpacePlayerPlan>();
-            for (int operationIndex = 0; operationIndex < posePlan.Operations.Count; operationIndex++)
+            for (int operationIndex = 0;
+                 operationIndex < posePlan.OperationHeaders.Count;
+                 operationIndex++)
             {
-                CharacterPresentationPoseOperation operation = posePlan.Operations[operationIndex];
+                CharacterPoseOperationHeader operation =
+                    posePlan.OperationHeaders[operationIndex];
                 if (operation.Code != CharacterPoseOperationCode.BlendSpacePlayer)
                     continue;
-                if (!operation.PresentationPoseSourceIndex.IsValid ||
-                    operation.ParameterIndex < 0 || operation.ParameterIndex >= posePlan.Parameters.Count)
+                CharacterPosePlayerOperationPayload player =
+                    (CharacterPosePlayerOperationPayload)
+                    posePlan.OperationPages.RequirePayload(operation);
+                int parameterIndex = posePlan.OperationPages.FindInputValueIndex(
+                    operation,
+                    CharacterPoseValueReferenceKind.Parameter);
+                int parameterIndexB = posePlan.OperationPages.FindInputValueIndex(
+                    operation,
+                    CharacterPoseValueReferenceKind.Parameter,
+                    1);
+                if (!player.SourceIndex.IsValid ||
+                    parameterIndex < 0 || parameterIndex >= posePlan.Parameters.Count)
                 {
                     errors?.Add($"Blend Space Player '{operation.NodeId}' has incomplete compiled inputs.");
                     continue;
                 }
                 if (!blendSpacePlanBySource.TryGetValue(
-                        operation.PresentationPoseSourceIndex,
+                        player.SourceIndex,
                         out int planIndex) ||
                     planIndex < 0 || planIndex >= blendSpaces.Count)
                 {
@@ -1333,21 +1346,26 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 }
                 bool consistent = true;
                 if (reference.Mode == CharacterAnimationBlendSpaceMode.Linear1D &&
-                    operation.BlendSpaceInputRangePolicy != CharacterAnimationBlendSpaceInputRangePolicy.Clamp)
+                    player.InputRangePolicy != CharacterAnimationBlendSpaceInputRangePolicy.Clamp)
                     consistent = false;
-                CharacterPresentationPoseParameterEntry xParameter = posePlan.Parameters[operation.ParameterIndex];
+                CharacterPresentationPoseParameterEntry xParameter =
+                    posePlan.Parameters[parameterIndex];
                 consistent &= SameParameterContract(xParameter, reference.XAxis);
                 if (reference.AxisCount == 1)
-                    consistent &= operation.ParameterIndexB == -1;
-                else if (operation.ParameterIndexB < 0 || operation.ParameterIndexB >= posePlan.Parameters.Count)
+                    consistent &= parameterIndexB == -1;
+                else if (parameterIndexB < 0 || parameterIndexB >= posePlan.Parameters.Count)
                     consistent = false;
                 else
-                    consistent &= SameParameterContract(posePlan.Parameters[operation.ParameterIndexB], reference.YAxis);
-                for (int parameterIndex = 0; parameterIndex < posePlan.Parameters.Count; parameterIndex++)
+                    consistent &= SameParameterContract(posePlan.Parameters[parameterIndexB], reference.YAxis);
+                for (int otherParameterIndex = 0;
+                     otherParameterIndex < posePlan.Parameters.Count;
+                     otherParameterIndex++)
                 {
-                    if (parameterIndex == operation.ParameterIndex || parameterIndex == operation.ParameterIndexB)
+                    if (otherParameterIndex == parameterIndex ||
+                        otherParameterIndex == parameterIndexB)
                         continue;
-                    PoseParameterId parameterId = posePlan.Parameters[parameterIndex].ParameterId;
+                    PoseParameterId parameterId =
+                        posePlan.Parameters[otherParameterIndex].ParameterId;
                     if (!reference.TryGetParameterPolicy(parameterId, out CharacterAnimationBlendSpaceParameterPolicy policy))
                     {
                         consistent = false;
@@ -1361,12 +1379,12 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 }
                 result.Add(new CharacterAnimationBlendSpacePlayerPlan(
                     operation.NodeId,
-                    operation.PresentationPoseSourceIndex,
+                    player.SourceIndex,
                     operation.Index,
-                    operation.PlayerIndex,
-                    operation.ParameterIndex,
-                    operation.ParameterIndexB,
-                    operation.BlendSpaceInputRangePolicy,
+                    player.PlayerIndex,
+                    parameterIndex,
+                    parameterIndexB,
+                    player.InputRangePolicy,
                     planIndex));
             }
             return result.ToArray();

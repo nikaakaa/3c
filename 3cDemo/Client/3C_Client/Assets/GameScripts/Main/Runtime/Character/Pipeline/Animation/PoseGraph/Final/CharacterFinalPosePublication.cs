@@ -401,19 +401,36 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             m_RigId = program.RigId;
             m_RigRevision = program.RigRevision;
             m_PoseNodeIds = new PoseNodeId[program.PlayerCount];
-            for (int i = 0; i < program.Operations.Count; i++)
+            for (int i = 0; i < program.OperationHeaders.Count; i++)
             {
-                CharacterPresentationPoseOperation operation = program.Operations[i];
+                CharacterPoseOperationHeader operation =
+                    program.OperationHeaders[i];
                 if (operation.Code != CharacterPoseOperationCode.SelectedPosePlayer &&
                     operation.Code != CharacterPoseOperationCode.BlendStack &&
                     operation.Code != CharacterPoseOperationCode.BlendSpacePlayer &&
                     operation.Code != CharacterPoseOperationCode.ClipPlayer &&
                     operation.Code != CharacterPoseOperationCode.AnimationSlot)
                     continue;
-                if (operation.PlayerIndex < 0 || operation.PlayerIndex >= m_PoseNodeIds.Length ||
-                    m_PoseNodeIds[operation.PlayerIndex].IsValid)
-                    throw new InvalidOperationException($"Composed Animation Pose Player #{operation.PlayerIndex} is invalid.");
-                m_PoseNodeIds[operation.PlayerIndex] = operation.NodeId;
+                int playerIndex = operation.Family switch
+                {
+                    CharacterPoseOperationFamily.Player =>
+                        ((CharacterPosePlayerOperationPayload)
+                            program.OperationPages.RequirePayload(operation))
+                        .PlayerIndex,
+                    CharacterPoseOperationFamily.Blend =>
+                        ((CharacterPoseBlendOperationPayload)
+                            program.OperationPages.RequirePayload(operation))
+                        .PlayerIndex,
+                    CharacterPoseOperationFamily.AnimationSlot =>
+                        ((CharacterPoseAnimationSlotOperationPayload)
+                            program.OperationPages.RequirePayload(operation))
+                        .PlayerIndex,
+                    _ => -1
+                };
+                if (playerIndex < 0 || playerIndex >= m_PoseNodeIds.Length ||
+                    m_PoseNodeIds[playerIndex].IsValid)
+                    throw new InvalidOperationException($"Composed Animation Pose Player #{playerIndex} is invalid.");
+                m_PoseNodeIds[playerIndex] = operation.NodeId;
             }
 
             m_ParameterDefaults = new float[program.Parameters.Count];

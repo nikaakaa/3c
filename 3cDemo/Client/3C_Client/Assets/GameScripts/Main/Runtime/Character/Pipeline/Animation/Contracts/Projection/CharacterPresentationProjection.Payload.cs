@@ -339,9 +339,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             var referencedPlans = new HashSet<int>();
             int operationCount = 0;
             var playerNodes = new HashSet<PoseNodeId>();
-            for (int i = 0; i < PosePlan.Operations.Count; i++)
+            for (int i = 0; i < PosePlan.OperationHeaders.Count; i++)
             {
-                if (PosePlan.Operations[i].Code == CharacterPoseOperationCode.BlendSpacePlayer)
+                if (PosePlan.OperationHeaders[i].Code == CharacterPoseOperationCode.BlendSpacePlayer)
                     operationCount++;
             }
             for (int i = 0; i < BlendSpacePlayers.Count; i++)

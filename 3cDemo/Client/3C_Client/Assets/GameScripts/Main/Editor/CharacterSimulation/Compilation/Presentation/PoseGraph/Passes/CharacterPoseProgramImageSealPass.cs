@@ -40,8 +40,6 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             }
             CharacterPresentationPoseStage[] stages =
                 schedule.Stages.ToArray();
-            CharacterPresentationPoseOperation[] operations =
-                binding.Operations.Select(CreateOperation).ToArray();
             CharacterTypedPoseGraph graph = request.Asset.Graph;
             CharacterAnimationRigDefinition rig = request.Rig;
             string hash = ComputeHash(
@@ -68,14 +66,13 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                 payloads.PoseBoneIkGoalSources,
                 payloads.FootPlacements,
                 payloads.FullBodyIks,
-                payloads.FullBodyIkGoalContributionInputValueIndices,
                 payloads.ClipPlayers,
                 payloads.StateMachines,
                 payloads.AnimationSlots,
                 payloads.ActionPlaybackInputs,
                 payloads.LinkedPoseFragments,
                 payloads.LinkedPoseCalls,
-                operations,
+                binding.OperationPages,
                 binding.SourceMap,
                 stages,
                 layout.PoseValueCount,
@@ -294,7 +291,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                 CharacterPoseBoundOperation operation =
                     binding.Operations[i];
                 values.Add(FormattableString.Invariant(
-                    $"operation:{operation.Index}:{(int)operation.ExecutionDomain}:{(int)operation.InputPoseSpace}:{(int)operation.OutputPoseSpace}:{(int)operation.Code}:{operation.NodeId}:{operation.AnimationChannelId}:{(int)operation.SelectionAvailability}:{operation.OutputValueIndex}:{operation.InputValueIndexA}:{operation.InputValueIndexB}:{operation.OutputFullBodyIkGoalContributionValueIndex}:{operation.OutputFullBodyIkGoalSetValueIndex}:{operation.InputFullBodyIkGoalSetValueIndex}:{operation.FullBodyIkGoalContributionInputStart}:{operation.FullBodyIkGoalContributionInputCount}:{operation.ControlInputOperationIndex}:{operation.ParameterIndex}:{operation.ParameterIndexB}:{operation.PlayerIndex}:{operation.BlendNodeIndex}:{operation.InertializationIndex}:{operation.BoneMaskIndex}:{operation.AdditiveReferenceIndex}:{operation.ModifyBoneIndex}:{operation.RootOrientationWarpIndex}:{operation.PoseBoneIkGoalsIndex}:{operation.FootPlacementIndex}:{operation.FullBodyIkIndex}:{operation.ClipPlayerIndex}:{operation.StateMachineIndex}:{operation.AnimationSlotIndex}:{operation.LinkedPoseCallIndex}:{operation.LinkedPoseFragmentIndex}:{operation.Weight:R}"));
+                    $"operation:{operation.Index}:{(int)operation.ExecutionDomain}:{(int)operation.InputPoseSpace}:{(int)operation.OutputPoseSpace}:{(int)operation.Code}:{(int)operation.Family}:{operation.NodeId}:{operation.PresentationPoseSourceProviderId}:{(operation.PresentationPoseSourceIndex.IsValid ? operation.PresentationPoseSourceIndex.Value : -1)}:{operation.AnimationChannelId}:{(int)operation.SelectionAvailability}:{(int)operation.BlendSpaceInputRangePolicy}:{operation.OutputValueIndex}:{operation.InputValueIndexA}:{operation.InputValueIndexB}:{operation.OutputFullBodyIkGoalContributionValueIndex}:{operation.OutputFullBodyIkGoalSetValueIndex}:{operation.InputFullBodyIkGoalSetValueIndex}:{operation.FullBodyIkGoalContributionInputStart}:{operation.FullBodyIkGoalContributionInputCount}:{operation.ControlInputOperationIndex}:{operation.ParameterIndex}:{operation.ParameterIndexB}:{operation.PlayerIndex}:{operation.BlendNodeIndex}:{operation.InertializationIndex}:{operation.BoneMaskIndex}:{operation.AdditiveReferenceIndex}:{operation.ModifyBoneIndex}:{operation.RootOrientationWarpIndex}:{operation.PoseBoneIkGoalsIndex}:{operation.FootPlacementIndex}:{operation.FullBodyIkIndex}:{operation.ClipPlayerIndex}:{operation.StateMachineIndex}:{operation.AnimationSlotIndex}:{operation.LinkedPoseCallIndex}:{operation.LinkedPoseFragmentIndex}:{operation.Weight:R}:{string.Join(",", operation.ParameterPolicies.Select(value => ((int)value).ToString()))}"));
             }
             for (int i = 0; i < stages.Count; i++)
             {
@@ -307,47 +304,260 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             return StableHash.Compute(values.ToArray()).ToString();
         }
 
-        static CharacterPresentationPoseOperation CreateOperation(
-            CharacterPoseBoundOperation operation) =>
-            new CharacterPresentationPoseOperation(
-                operation.Index,
-                operation.ExecutionDomain,
-                operation.InputPoseSpace,
-                operation.OutputPoseSpace,
-                operation.Code,
-                operation.NodeId,
-                operation.PresentationPoseSourceProviderId,
-                operation.PresentationPoseSourceIndex,
-                operation.OutputValueIndex,
-                operation.InputValueIndexA,
-                operation.InputValueIndexB,
-                operation.ControlInputOperationIndex,
-                operation.AnimationChannelId,
-                operation.SelectionAvailability,
-                operation.ParameterIndex,
-                operation.ParameterIndexB,
-                operation.BlendSpaceInputRangePolicy,
-                operation.PlayerIndex,
-                operation.BlendNodeIndex,
-                operation.InertializationIndex,
-                operation.BoneMaskIndex,
-                operation.AdditiveReferenceIndex,
-                operation.ModifyBoneIndex,
-                operation.RootOrientationWarpIndex,
-                operation.PoseBoneIkGoalsIndex,
-                operation.FootPlacementIndex,
-                operation.FullBodyIkIndex,
-                operation.OutputFullBodyIkGoalContributionValueIndex,
-                operation.OutputFullBodyIkGoalSetValueIndex,
-                operation.InputFullBodyIkGoalSetValueIndex,
-                operation.FullBodyIkGoalContributionInputStart,
-                operation.FullBodyIkGoalContributionInputCount,
-                operation.ClipPlayerIndex,
-                operation.StateMachineIndex,
-                operation.AnimationSlotIndex,
-                operation.LinkedPoseCallIndex,
-                operation.LinkedPoseFragmentIndex,
-                operation.Weight,
-                operation.ParameterPolicies);
+    }
+
+    internal static class CharacterPoseOperationPageBinding
+    {
+        internal static CharacterPoseOperationPages Create(
+            CharacterPoseBoundOperation[] operations,
+            CharacterPoseBoundFamilyPayloads payloads)
+        {
+            var headers = new List<CharacterPoseOperationHeader>(
+                operations.Length);
+            var references = new List<CharacterPoseValueReference>();
+            var parameterInputs = new List<CharacterPoseMarkerOperationPayload>();
+            var parameterResolves = new List<CharacterPoseParameterResolveOperationPayload>();
+            var players = new List<CharacterPosePlayerOperationPayload>();
+            var stateMachines = new List<CharacterPoseStateMachineOperationPayload>();
+            var actionInputs = new List<CharacterPoseActionInputOperationPayload>();
+            var animationSlots = new List<CharacterPoseAnimationSlotOperationPayload>();
+            var blends = new List<CharacterPoseBlendOperationPayload>();
+            var inertializations = new List<CharacterPoseIndexedOperationPayload>();
+            var compositions = new List<CharacterPoseCompositionOperationPayload>();
+            var spaceConversions = new List<CharacterPoseMarkerOperationPayload>();
+            var componentControls = new List<CharacterPoseComponentControlOperationPayload>();
+            var motionMatchings = new List<CharacterPoseMarkerOperationPayload>();
+            var poseHistories = new List<CharacterPoseMarkerOperationPayload>();
+            var goalContributions = new List<CharacterPoseGoalContributionOperationPayload>();
+            var goalAssemblers = new List<CharacterPoseMarkerOperationPayload>();
+            var fullBodyIks = new List<CharacterPoseIndexedOperationPayload>();
+            var linkedPoses = new List<CharacterPoseIndexedOperationPayload>();
+            var outputs = new List<CharacterPoseMarkerOperationPayload>();
+            for (int i = 0; i < operations.Length; i++)
+            {
+                CharacterPoseBoundOperation operation = operations[i];
+                int inputStart = references.Count;
+                AddReference(
+                    references,
+                    CharacterPoseValueReferenceKind.Pose,
+                    operation.InputValueIndexA);
+                AddReference(
+                    references,
+                    CharacterPoseValueReferenceKind.Pose,
+                    operation.InputValueIndexB);
+                if (operation.Code != CharacterPoseOperationCode.ProgramParameterInput)
+                {
+                    AddReference(
+                        references,
+                        CharacterPoseValueReferenceKind.Parameter,
+                        operation.ParameterIndex);
+                    AddReference(
+                        references,
+                        CharacterPoseValueReferenceKind.Parameter,
+                        operation.ParameterIndexB);
+                }
+                if (operation.Code != CharacterPoseOperationCode.ActionPlaybackInput)
+                {
+                    AddReference(
+                        references,
+                        CharacterPoseValueReferenceKind.OperationControl,
+                        operation.ControlInputOperationIndex);
+                }
+                for (int input = 0;
+                     input < operation.FullBodyIkGoalContributionInputCount;
+                     input++)
+                {
+                    AddReference(
+                        references,
+                        CharacterPoseValueReferenceKind.FullBodyIkGoalContribution,
+                        payloads.FullBodyIkGoalContributionInputValueIndices[
+                            operation.FullBodyIkGoalContributionInputStart + input]);
+                }
+                AddReference(
+                    references,
+                    CharacterPoseValueReferenceKind.FullBodyIkGoalSet,
+                    operation.InputFullBodyIkGoalSetValueIndex);
+                int outputStart = references.Count;
+                AddReference(
+                    references,
+                    CharacterPoseValueReferenceKind.Pose,
+                    operation.OutputValueIndex);
+                if (operation.Code == CharacterPoseOperationCode.ProgramParameterInput)
+                {
+                    AddReference(
+                        references,
+                        CharacterPoseValueReferenceKind.Parameter,
+                        operation.ParameterIndex);
+                }
+                if (operation.Code == CharacterPoseOperationCode.ActionPlaybackInput)
+                {
+                    AddReference(
+                        references,
+                        CharacterPoseValueReferenceKind.OperationControl,
+                        operation.ControlInputOperationIndex);
+                }
+                AddReference(
+                    references,
+                    CharacterPoseValueReferenceKind.FullBodyIkGoalContribution,
+                    operation.OutputFullBodyIkGoalContributionValueIndex);
+                AddReference(
+                    references,
+                    CharacterPoseValueReferenceKind.FullBodyIkGoalSet,
+                    operation.OutputFullBodyIkGoalSetValueIndex);
+                int familyPayloadIndex = operation.Family switch
+                {
+                    CharacterPoseOperationFamily.ParameterInput => Add(
+                        parameterInputs,
+                        new CharacterPoseMarkerOperationPayload(
+                            operation.Index)),
+                    CharacterPoseOperationFamily.ParameterResolve => Add(
+                        parameterResolves,
+                        new CharacterPoseParameterResolveOperationPayload(
+                            operation.Index,
+                            operation.ParameterPolicies)),
+                    CharacterPoseOperationFamily.Player => Add(
+                        players,
+                        new CharacterPosePlayerOperationPayload(
+                            operation.Index,
+                            operation.PresentationPoseSourceProviderId,
+                            operation.PresentationPoseSourceIndex,
+                            operation.SelectionAvailability,
+                            operation.BlendSpaceInputRangePolicy,
+                            operation.PlayerIndex,
+                            operation.ClipPlayerIndex)),
+                    CharacterPoseOperationFamily.StateMachine => Add(
+                        stateMachines,
+                        new CharacterPoseStateMachineOperationPayload(
+                            operation.Index,
+                            operation.StateMachineIndex)),
+                    CharacterPoseOperationFamily.ActionInput => Add(
+                        actionInputs,
+                        new CharacterPoseActionInputOperationPayload(
+                            operation.Index,
+                            operation.AnimationChannelId,
+                            operation.SelectionAvailability)),
+                    CharacterPoseOperationFamily.AnimationSlot => Add(
+                        animationSlots,
+                        new CharacterPoseAnimationSlotOperationPayload(
+                            operation.Index,
+                            operation.PresentationPoseSourceProviderId,
+                            operation.AnimationChannelId,
+                            operation.PlayerIndex,
+                            operation.BlendNodeIndex,
+                            operation.AnimationSlotIndex)),
+                    CharacterPoseOperationFamily.Blend => Add(
+                        blends,
+                        new CharacterPoseBlendOperationPayload(
+                            operation.Index,
+                            operation.PresentationPoseSourceProviderId,
+                            operation.PresentationPoseSourceIndex,
+                            operation.SelectionAvailability,
+                            operation.PlayerIndex,
+                            operation.BlendNodeIndex)),
+                    CharacterPoseOperationFamily.Inertialization => Add(
+                        inertializations,
+                        new CharacterPoseIndexedOperationPayload(
+                            operation.Index,
+                            operation.InertializationIndex)),
+                    CharacterPoseOperationFamily.Composition => Add(
+                        compositions,
+                        new CharacterPoseCompositionOperationPayload(
+                            operation.Index,
+                            operation.BoneMaskIndex,
+                            operation.AdditiveReferenceIndex)),
+                    CharacterPoseOperationFamily.SpaceConversion => Add(
+                        spaceConversions,
+                        new CharacterPoseMarkerOperationPayload(operation.Index)),
+                    CharacterPoseOperationFamily.ComponentControl => Add(
+                        componentControls,
+                        new CharacterPoseComponentControlOperationPayload(
+                            operation.Index,
+                            operation.ModifyBoneIndex,
+                            operation.RootOrientationWarpIndex)),
+                    CharacterPoseOperationFamily.MotionMatching => Add(
+                        motionMatchings,
+                        new CharacterPoseMarkerOperationPayload(operation.Index)),
+                    CharacterPoseOperationFamily.PoseHistory => Add(
+                        poseHistories,
+                        new CharacterPoseMarkerOperationPayload(operation.Index)),
+                    CharacterPoseOperationFamily.GoalContribution => Add(
+                        goalContributions,
+                        new CharacterPoseGoalContributionOperationPayload(
+                            operation.Index,
+                            operation.PoseBoneIkGoalsIndex,
+                            operation.FootPlacementIndex)),
+                    CharacterPoseOperationFamily.GoalAssembler => Add(
+                        goalAssemblers,
+                        new CharacterPoseMarkerOperationPayload(operation.Index)),
+                    CharacterPoseOperationFamily.FullBodyIk => Add(
+                        fullBodyIks,
+                        new CharacterPoseIndexedOperationPayload(
+                            operation.Index,
+                            operation.FullBodyIkIndex)),
+                    CharacterPoseOperationFamily.LinkedPose => Add(
+                        linkedPoses,
+                        new CharacterPoseIndexedOperationPayload(
+                            operation.Index,
+                            operation.LinkedPoseCallIndex)),
+                    CharacterPoseOperationFamily.Output => Add(
+                        outputs,
+                        new CharacterPoseMarkerOperationPayload(operation.Index)),
+                    _ => throw new InvalidOperationException(
+                        $"Pose Operation '{operation.NodeId}' has no Family payload.")
+                };
+                headers.Add(new CharacterPoseOperationHeader(
+                    operation.Index,
+                    operation.ExecutionDomain,
+                    operation.InputPoseSpace,
+                    operation.OutputPoseSpace,
+                    operation.Code,
+                    operation.Family,
+                    familyPayloadIndex,
+                    operation.NodeId,
+                    inputStart,
+                    outputStart - inputStart,
+                    outputStart,
+                    references.Count - outputStart,
+                    operation.LinkedPoseFragmentIndex,
+                    operation.Weight));
+            }
+            return new CharacterPoseOperationPages(
+                headers.ToArray(),
+                references.ToArray(),
+                parameterInputs.ToArray(),
+                parameterResolves.ToArray(),
+                players.ToArray(),
+                stateMachines.ToArray(),
+                actionInputs.ToArray(),
+                animationSlots.ToArray(),
+                blends.ToArray(),
+                inertializations.ToArray(),
+                compositions.ToArray(),
+                spaceConversions.ToArray(),
+                componentControls.ToArray(),
+                motionMatchings.ToArray(),
+                poseHistories.ToArray(),
+                goalContributions.ToArray(),
+                goalAssemblers.ToArray(),
+                fullBodyIks.ToArray(),
+                linkedPoses.ToArray(),
+                outputs.ToArray());
+        }
+
+        static void AddReference(
+            ICollection<CharacterPoseValueReference> references,
+            CharacterPoseValueReferenceKind kind,
+            int index)
+        {
+            if (index >= 0)
+                references.Add(new CharacterPoseValueReference(kind, index));
+        }
+
+        static int Add<T>(ICollection<T> values, T value)
+        {
+            int index = values.Count;
+            values.Add(value);
+            return index;
+        }
     }
 }

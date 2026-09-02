@@ -343,7 +343,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                 BuildMotionMatchingRelevance(plan);
             m_MotionMatchingByOperation =
                 new MotionMatchingRelevance[
-                    plan.Operations.Count];
+                    plan.OperationHeaders.Count];
             for (int i = 0; i < m_MotionMatching.Length; i++)
             {
                 MotionMatchingRelevance relevance =
@@ -1398,15 +1398,27 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                             continue;
                         }
                         if ((uint)usage.OperationIndex >=
-                            (uint)plan.Operations.Count)
+                            (uint)plan.OperationHeaders.Count)
                         {
                             throw new InvalidOperationException(
                                 "Motion Matching Pose State usage operation is invalid.");
                         }
-                        CharacterPresentationPoseOperation
+                        CharacterPoseOperationHeader
                             operation =
-                                plan.Operations[
+                                plan.OperationHeaders[
                                     usage.OperationIndex];
+                        int playerIndex = operation.Family switch
+                        {
+                            CharacterPoseOperationFamily.Player =>
+                                ((CharacterPosePlayerOperationPayload)
+                                    plan.OperationPages.RequirePayload(operation))
+                                .PlayerIndex,
+                            CharacterPoseOperationFamily.Blend =>
+                                ((CharacterPoseBlendOperationPayload)
+                                    plan.OperationPages.RequirePayload(operation))
+                                .PlayerIndex,
+                            _ => -1
+                        };
                         if ((operation.Code !=
                              CharacterPoseOperationCode
                                  .SelectedPosePlayer &&
@@ -1415,7 +1427,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                                  .BlendStack) ||
                             operation.NodeId !=
                                 usage.PlayerNodeId ||
-                            operation.PlayerIndex !=
+                            playerIndex !=
                                 usage.PlayerIndex)
                         {
                             throw new InvalidOperationException(

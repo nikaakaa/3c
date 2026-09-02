@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using ThirdPersonCharacter.Pipeline.Animation.Presentation;
 using Unity.Collections;
@@ -579,7 +580,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                     program.PoseValueWorkspaceCount ||
                     layout.PoseValueContributionStride !=
                     program.ContributionCapacity ||
-                    layout.OperationCount != program.Operations.Count ||
+                    layout.OperationCount != program.OperationHeaders.Count ||
                     layout.StageCount != program.Stages.Count)
                     throw new InvalidOperationException("Animation Pose Graph Program and Rig payload do not match.");
 
@@ -615,16 +616,18 @@ namespace ThirdPersonCharacter.Pipeline.Animation
 
                 int nativeOperationCount = 0;
                 int policyCount = 0;
-                for (int i = 0; i < program.Operations.Count; i++)
+                for (int i = 0; i < program.OperationHeaders.Count; i++)
                 {
-                    CharacterPresentationPoseOperation operation = program.Operations[i];
+                    CharacterPoseOperationHeader operation =
+                        program.OperationHeaders[i];
                     if (CharacterPoseProgramImage.IsExecutionViewOperation(
                             operation.Code))
                         nativeOperationCount++;
                     if (operation.Code == CharacterPoseOperationCode.PoseParameterResolve)
                         policyCount = checked(policyCount + m_ParameterCount);
                 }
-                if (nativeOperationCount <= 0 || m_ContributionStride <= 0 || m_FrameCacheCount != program.Operations.Count)
+                if (nativeOperationCount <= 0 || m_ContributionStride <= 0 ||
+                    m_FrameCacheCount != program.OperationHeaders.Count)
                     throw new InvalidOperationException("Animation Pose Graph Native workspace layout is invalid.");
 
                 m_Operations = Allocate<AnimationPoseGraphNativeOperation>(nativeOperationCount);
@@ -645,7 +648,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 int poseBoneGoalCount = program.PoseBoneIkGoalSources.Sum(value => value.GoalCount);
                 m_PoseBoneIkGoalDescriptors = Allocate<CharacterPoseBoneIkGoalDescriptor>(poseBoneGoalCount);
                 m_FullBodyIkGoalContributionInputValueIndices = Allocate<int>(
-                    program.FullBodyIkGoalContributionInputValueIndices.Count);
+                    program.OperationHeaders.Sum(value =>
+                        program.OperationPages.CountInputValues(
+                            value,
+                            CharacterPoseValueReferenceKind.FullBodyIkGoalContribution)));
                 int linkedPoseCandidateCount = program.LinkedPoseCalls.Sum(value => value.FragmentIndices.Count);
                 m_LinkedPoseCalls = Allocate<AnimationPoseGraphNativeLinkedPoseCall>(program.LinkedPoseCalls.Count);
                 m_LinkedPoseCandidates = Allocate<AnimationPoseGraphNativeLinkedPoseCandidate>(linkedPoseCandidateCount);
@@ -849,13 +855,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             }
             if (poseBoneGoalOffset != m_PoseBoneIkGoalDescriptors.Length)
                 throw new InvalidOperationException("Pose Bone IK Goal native descriptor layout is inconsistent.");
-            for (int inputIndex = 0;
-                 inputIndex < m_FullBodyIkGoalContributionInputValueIndices.Length;
-                 inputIndex++)
-            {
-                m_FullBodyIkGoalContributionInputValueIndices[inputIndex] =
-                    program.FullBodyIkGoalContributionInputValueIndices[inputIndex];
-            }
         }
 
         void CompileLinkedPose(CharacterPoseProgramImage program)
@@ -866,9 +865,12 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 CharacterLinkedPoseCallPlanDescriptor call = program.LinkedPoseCalls[callIndex];
                 if (call == null || call.Index != callIndex)
                     throw new InvalidOperationException($"Linked Pose native call #{callIndex} is invalid.");
-                CharacterPresentationPoseOperation callOperation = program.Operations
-                    .Single(value => value.Code == CharacterPoseOperationCode.LinkedPoseCall &&
-                                     value.LinkedPoseCallIndex == callIndex);
+                CharacterPoseOperationHeader callOperation =
+                    program.OperationHeaders.Single(value =>
+                        value.Code == CharacterPoseOperationCode.LinkedPoseCall &&
+                        ((CharacterPoseIndexedOperationPayload)
+                            program.OperationPages.RequirePayload(value))
+                        .ValueIndex == callIndex);
                 int candidateStart = candidateIndex;
                 m_LinkedPoseCallGroupIds[callIndex] = call.GroupId;
                 m_LinkedPoseCallInterfaceIds[callIndex] = call.InterfaceId;
@@ -895,8 +897,12 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                                 $"Linked Pose fragment #{fragmentIndex} has a non-Pose output.");
                         }
                     }
-                    if (callOperation.OutputValueIndex < 0 ||
-                        callOperation.OutputFullBodyIkGoalSetValueIndex >= 0 ||
+                    if (program.OperationPages.FindOutputValueIndex(
+                            callOperation,
+                            CharacterPoseValueReferenceKind.Pose) < 0 ||
+                        program.OperationPages.FindOutputValueIndex(
+                            callOperation,
+                            CharacterPoseValueReferenceKind.FullBodyIkGoalSet) >= 0 ||
                         outputPoseValueIndex < 0)
                     {
                         throw new InvalidOperationException($"Linked Pose fragment #{fragmentIndex} output ABI does not match call #{callIndex}.");
@@ -936,52 +942,147 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         {
             int nativeIndex = 0;
             int policyOffset = 0;
+            int contributionInputCursor = 0;
             m_OutputNativeOperationIndex = -1;
-            for (int i = 0; i < program.Operations.Count; i++)
+            for (int i = 0; i < program.OperationHeaders.Count; i++)
             {
-                CharacterPresentationPoseOperation operation = program.Operations[i];
+                CharacterPoseOperationHeader operation =
+                    program.OperationHeaders[i];
                 if (!CharacterPoseProgramImage.IsExecutionViewOperation(
                         operation.Code))
                     continue;
-                AnimationSelectionAvailabilityPolicy outputPolicy = default;
-                if (operation.Code == CharacterPoseOperationCode.SelectedPosePlayer ||
-                    operation.Code == CharacterPoseOperationCode.BlendStack ||
-                    operation.Code == CharacterPoseOperationCode.BlendSpacePlayer ||
-                    operation.Code == CharacterPoseOperationCode.ClipPlayer ||
-                    operation.Code == CharacterPoseOperationCode.AnimationSlot)
+                int outputPose = program.OperationPages.FindOutputValueIndex(
+                    operation,
+                    CharacterPoseValueReferenceKind.Pose);
+                int outputGoalContribution =
+                    program.OperationPages.FindOutputValueIndex(
+                        operation,
+                        CharacterPoseValueReferenceKind.FullBodyIkGoalContribution);
+                int outputGoalSet = program.OperationPages.FindOutputValueIndex(
+                    operation,
+                    CharacterPoseValueReferenceKind.FullBodyIkGoalSet);
+                int inputGoalSet = program.OperationPages.FindInputValueIndex(
+                    operation,
+                    CharacterPoseValueReferenceKind.FullBodyIkGoalSet);
+                int inputPoseA = program.OperationPages.FindInputValueIndex(
+                    operation,
+                    CharacterPoseValueReferenceKind.Pose);
+                int inputPoseB = program.OperationPages.FindInputValueIndex(
+                    operation,
+                    CharacterPoseValueReferenceKind.Pose,
+                    1);
+                int parameterIndex = program.OperationPages.FindInputValueIndex(
+                    operation,
+                    CharacterPoseValueReferenceKind.Parameter);
+                int contributionInputStart = contributionInputCursor;
+                int contributionInputCount =
+                    program.OperationPages.CountInputValues(
+                        operation,
+                        CharacterPoseValueReferenceKind.FullBodyIkGoalContribution);
+                for (int inputIndex = 0;
+                     inputIndex < contributionInputCount;
+                     inputIndex++)
                 {
-                    if (operation.Code !=
-                        CharacterPoseOperationCode.AnimationSlot)
-                    {
-                        outputPolicy = operation.SelectionAvailability;
-                    }
-                    else
-                    {
-                        int controlIndex = operation.ControlInputOperationIndex;
-                        if ((uint)controlIndex >= (uint)i)
-                            throw new InvalidOperationException(
-                                $"Animation Pose Graph Player operation #{i} has no compiled control input.");
-                        CharacterPresentationPoseOperation control =
-                            program.Operations[controlIndex];
-                        outputPolicy = control.SelectionAvailability;
-                    }
+                    m_FullBodyIkGoalContributionInputValueIndices[
+                            contributionInputCursor++] =
+                        program.OperationPages.FindInputValueIndex(
+                            operation,
+                            CharacterPoseValueReferenceKind.FullBodyIkGoalContribution,
+                            inputIndex);
+                }
+                int playerIndex = -1;
+                int inertializationIndex = -1;
+                int stateMachineIndex = -1;
+                int animationSlotIndex = -1;
+                int linkedPoseCallIndex = -1;
+                int modifyBoneIndex = -1;
+                int rootOrientationWarpIndex = -1;
+                int boneMaskIndex = -1;
+                int additiveReferenceIndex = -1;
+                int poseBoneIkGoalsIndex = -1;
+                int footPlacementIndex = -1;
+                int fullBodyIkIndex = -1;
+                AnimationSelectionAvailabilityPolicy outputPolicy = default;
+                CharacterPoseOperationPayload payload =
+                    program.OperationPages.RequirePayload(operation);
+                if (payload is CharacterPosePlayerOperationPayload player)
+                {
+                    playerIndex = player.PlayerIndex;
+                    outputPolicy = player.SelectionAvailability;
+                }
+                else if (payload is CharacterPoseBlendOperationPayload blend)
+                {
+                    playerIndex = blend.PlayerIndex;
+                    outputPolicy = blend.SelectionAvailability;
+                }
+                else if (payload is CharacterPoseAnimationSlotOperationPayload slot)
+                {
+                    playerIndex = slot.PlayerIndex;
+                    animationSlotIndex = slot.AnimationSlotIndex;
+                    int controlIndex = program.OperationPages.FindInputValueIndex(
+                        operation,
+                        CharacterPoseValueReferenceKind.OperationControl);
+                    if ((uint)controlIndex >= (uint)i)
+                        throw new InvalidOperationException(
+                            $"Animation Pose Graph Player operation #{i} has no compiled control input.");
+                    outputPolicy =
+                        ((CharacterPoseActionInputOperationPayload)
+                            program.OperationPages.RequirePayload(
+                                program.OperationHeaders[controlIndex]))
+                        .SelectionAvailability;
+                }
+                else if (payload is CharacterPoseIndexedOperationPayload indexed)
+                {
+                    if (operation.Family == CharacterPoseOperationFamily.Inertialization)
+                        inertializationIndex = indexed.ValueIndex;
+                    else if (operation.Family == CharacterPoseOperationFamily.FullBodyIk)
+                        fullBodyIkIndex = indexed.ValueIndex;
+                    else if (operation.Family == CharacterPoseOperationFamily.LinkedPose)
+                        linkedPoseCallIndex = indexed.ValueIndex;
+                }
+                else if (payload is CharacterPoseStateMachineOperationPayload machine)
+                {
+                    stateMachineIndex = machine.StateMachineIndex;
+                }
+                else if (payload is CharacterPoseCompositionOperationPayload composition)
+                {
+                    boneMaskIndex = composition.BoneMaskIndex;
+                    additiveReferenceIndex = composition.AdditiveReferenceIndex;
+                }
+                else if (payload is CharacterPoseComponentControlOperationPayload control)
+                {
+                    modifyBoneIndex = control.ModifyBoneIndex;
+                    rootOrientationWarpIndex = control.RootOrientationWarpIndex;
+                }
+                else if (payload is CharacterPoseGoalContributionOperationPayload goal)
+                {
+                    poseBoneIkGoalsIndex = goal.PoseBoneIkGoalsIndex;
+                    footPlacementIndex = goal.FootPlacementIndex;
                 }
                 int operationPolicyOffset = -1;
                 if (operation.Code == CharacterPoseOperationCode.PoseParameterResolve)
                 {
-                    if (operation.ParameterPolicies.Count != m_ParameterCount)
+                    IReadOnlyList<PoseParameterResolvePolicy> policies =
+                        ((CharacterPoseParameterResolveOperationPayload)payload)
+                        .Policies;
+                    if (policies.Count != m_ParameterCount)
                         throw new InvalidOperationException($"Animation Pose Graph operation #{i} parameter policy is incomplete.");
                     operationPolicyOffset = policyOffset;
                     for (int parameter = 0; parameter < m_ParameterCount; parameter++)
-                        m_ParameterPolicies[policyOffset++] = operation.ParameterPolicies[parameter];
+                        m_ParameterPolicies[policyOffset++] = policies[parameter];
                 }
-                int maskOffset = operation.BoneMaskIndex >= 0 ? operation.BoneMaskIndex * m_BoneCount : -1;
-                int additiveOffset = operation.AdditiveReferenceIndex >= 0 ? operation.AdditiveReferenceIndex * m_BoneCount : -1;
+                int maskOffset = boneMaskIndex >= 0
+                    ? boneMaskIndex * m_BoneCount
+                    : -1;
+                int additiveOffset = additiveReferenceIndex >= 0
+                    ? additiveReferenceIndex * m_BoneCount
+                    : -1;
                 AdditiveReferenceSpace referenceSpace = default;
                 AdditiveScalePolicy scalePolicy = default;
-                if (operation.AdditiveReferenceIndex >= 0)
+                if (additiveReferenceIndex >= 0)
                 {
-                    CharacterPresentationAdditiveReferenceDescriptor reference = program.AdditiveReferences[operation.AdditiveReferenceIndex];
+                    CharacterPresentationAdditiveReferenceDescriptor reference =
+                        program.AdditiveReferences[additiveReferenceIndex];
                     referenceSpace = reference.Space;
                     scalePolicy = reference.ScalePolicy;
                 }
@@ -990,7 +1091,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 if (operation.Code ==
                     CharacterPoseOperationCode.PoseBoneIKGoals)
                 {
-                    int sourceIndex = operation.PoseBoneIkGoalsIndex;
+                    int sourceIndex = poseBoneIkGoalsIndex;
                     CharacterPresentationPoseBoneIkGoalsDescriptor source =
                         program.PoseBoneIkGoalSources[sourceIndex];
                     int descriptorOffset = 0;
@@ -1007,9 +1108,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                         new CharacterPoseBoneContributionConstraintHandle(
                             operation.Index,
                             operation.Index,
-                            operation.InputValueIndexA,
-                            operation
-                                .OutputFullBodyIkGoalContributionValueIndex,
+                            inputPoseA,
+                            outputGoalContribution,
                             source.ContributionGoalWorkspaceOffset,
                             descriptorOffset,
                             source.GoalCount);
@@ -1021,14 +1121,13 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 {
                     CharacterPresentationFootPlacementDescriptor descriptor =
                         program.FootPlacements[
-                            operation.FootPlacementIndex];
+                            footPlacementIndex];
                     footPlacementConstraint =
                         new CharacterFootPlacementConstraintHandle(
                             operation.Index,
                             operation.Index,
-                            operation.FootPlacementIndex,
-                            operation
-                                .OutputFullBodyIkGoalContributionValueIndex,
+                            footPlacementIndex,
+                            outputGoalContribution,
                             descriptor.ContributionGoalWorkspaceOffset);
                 }
                 CharacterFullBodyIkGoalAssemblerConstraintHandle
@@ -1040,11 +1139,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                         new CharacterFullBodyIkGoalAssemblerConstraintHandle(
                             operation.Index,
                             operation.Index,
-                            operation.OutputFullBodyIkGoalSetValueIndex,
-                            operation
-                                .FullBodyIkGoalContributionInputStart,
-                            operation
-                                .FullBodyIkGoalContributionInputCount);
+                            outputGoalSet,
+                            contributionInputStart,
+                            contributionInputCount);
                 }
                 CharacterFullBodyIkConstraintHandle
                     fullBodyIkConstraint = default;
@@ -1054,51 +1151,54 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                         new CharacterFullBodyIkConstraintHandle(
                             operation.Index,
                             operation.Index,
-                            operation.FullBodyIkIndex,
-                            operation.InputValueIndexA,
-                            operation.OutputValueIndex,
-                            operation.InputFullBodyIkGoalSetValueIndex);
+                            fullBodyIkIndex,
+                            inputPoseA,
+                            outputPose,
+                            inputGoalSet);
                 }
                 m_Operations[nativeIndex] = new AnimationPoseGraphNativeOperation(
                     operation.Index,
                     operation.Code,
-                    operation.OutputValueIndex,
-                    operation.OutputFullBodyIkGoalContributionValueIndex,
-                    operation.OutputFullBodyIkGoalSetValueIndex,
-                    operation.InputFullBodyIkGoalSetValueIndex,
-                    operation.InputValueIndexA,
-                    operation.InputValueIndexB,
-                    operation.FullBodyIkGoalContributionInputStart,
-                    operation.FullBodyIkGoalContributionInputCount,
-                    operation.PlayerIndex,
+                    outputPose,
+                    outputGoalContribution,
+                    outputGoalSet,
+                    inputGoalSet,
+                    inputPoseA,
+                    inputPoseB,
+                    contributionInputStart,
+                    contributionInputCount,
+                    playerIndex,
                     outputPolicy,
-                    operation.ParameterIndex,
-                    operation.InertializationIndex,
+                    parameterIndex,
+                    inertializationIndex,
                     maskOffset,
                     additiveOffset,
                     referenceSpace,
                     scalePolicy,
                     operationPolicyOffset,
-                    operation.ModifyBoneIndex,
-                    operation.RootOrientationWarpIndex,
+                    modifyBoneIndex,
+                    rootOrientationWarpIndex,
                     poseBoneContribution,
                     footPlacementConstraint,
                     goalAssemblerConstraint,
                     fullBodyIkConstraint,
-                    operation.StateMachineIndex,
-                    operation.AnimationSlotIndex,
-                    operation.LinkedPoseCallIndex,
+                    stateMachineIndex,
+                    animationSlotIndex,
+                    linkedPoseCallIndex,
                     operation.LinkedPoseFragmentIndex,
                     operation.Index,
                     operation.Weight);
                 if (operation.Code == CharacterPoseOperationCode.OutputPose)
                 {
                     m_OutputNativeOperationIndex = nativeIndex;
-                    m_OutputValueIndex = operation.OutputValueIndex;
+                    m_OutputValueIndex = outputPose;
                 }
                 nativeIndex++;
             }
-            if (nativeIndex != m_Operations.Length || policyOffset != m_ParameterPolicies.Length ||
+            if (nativeIndex != m_Operations.Length ||
+                policyOffset != m_ParameterPolicies.Length ||
+                contributionInputCursor !=
+                m_FullBodyIkGoalContributionInputValueIndices.Length ||
                 m_OutputNativeOperationIndex < 0)
                 throw new InvalidOperationException("Animation Pose Graph Native operation layout is inconsistent.");
         }

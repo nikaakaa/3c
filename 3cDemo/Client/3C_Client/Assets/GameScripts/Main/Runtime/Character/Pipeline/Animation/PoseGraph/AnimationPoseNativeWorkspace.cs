@@ -140,22 +140,22 @@ namespace ThirdPersonCharacter.Pipeline.Animation
 
                 m_PoseNodeIds = new PoseNodeId[playerCount];
                 int totalPlayerContributionCapacity = 0;
-                CharacterPresentationPoseOperation[] playerOperations = program.Operations
+                CharacterPoseOperationHeader[] playerOperations = program.OperationHeaders
                     .Where(operation => operation.Code == CharacterPoseOperationCode.SelectedPosePlayer ||
                                         operation.Code == CharacterPoseOperationCode.BlendStack ||
                                         operation.Code == CharacterPoseOperationCode.BlendSpacePlayer ||
                                         operation.Code == CharacterPoseOperationCode.ClipPlayer ||
                                         operation.Code == CharacterPoseOperationCode.AnimationSlot)
-                    .OrderBy(operation => operation.PlayerIndex)
+                    .OrderBy(operation => RequirePlayerIndex(program, operation))
                     .ToArray();
                 for (int i = 0; i < playerCount; i++)
                 {
-                    CharacterPresentationPoseOperation player = playerOperations[i];
-                    if (player == null || player.PlayerIndex != i || !player.NodeId.IsValid)
+                    CharacterPoseOperationHeader player = playerOperations[i];
+                    if (player == null || RequirePlayerIndex(program, player) != i || !player.NodeId.IsValid)
                         throw new InvalidOperationException($"Animation Pose Native Player #{i} is invalid.");
                     int contributionCapacity = player.Code == CharacterPoseOperationCode.BlendStack ||
                                                player.Code == CharacterPoseOperationCode.AnimationSlot
-                        ? checked(program.BlendNodes[player.BlendNodeIndex].StackPolicy.MaxActiveSourceEntries + 1)
+                        ? checked(program.BlendNodes[RequireBlendNodeIndex(program, player)].StackPolicy.MaxActiveSourceEntries + 1)
                         : 1;
                     totalPlayerContributionCapacity = checked(totalPlayerContributionCapacity + contributionCapacity);
                     m_PoseNodeIds[i] = player.NodeId;
@@ -171,10 +171,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 int contributionOffset = 0;
                 for (int i = 0; i < playerCount; i++)
                 {
-                    CharacterPresentationPoseOperation player = playerOperations[i];
+                    CharacterPoseOperationHeader player = playerOperations[i];
                     int contributionCapacity = player.Code == CharacterPoseOperationCode.BlendStack ||
                                                player.Code == CharacterPoseOperationCode.AnimationSlot
-                        ? checked(program.BlendNodes[player.BlendNodeIndex].StackPolicy.MaxActiveSourceEntries + 1)
+                        ? checked(program.BlendNodes[RequireBlendNodeIndex(program, player)].StackPolicy.MaxActiveSourceEntries + 1)
                         : 1;
                     m_SlotRanges[i] = new AnimationPlayerPoseNativeRange(
                         i,
@@ -196,7 +196,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                     totalPlayerContributionCapacity,
                     poseValueCount,
                     poseValueContributionStride,
-                    program.Operations.Count,
+                    program.OperationHeaders.Count,
                     program.FrameCacheCount,
                     program.Stages.Count,
                     publicationLayout.OutputValueIndex,
@@ -658,6 +658,42 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             m_PoseGraphInvalidOperationIndex = page.PoseGraphInvalidOperationIndex;
             m_PoseGraphCompletedAt = page.PoseGraphCompletedAt;
         }
+
+        static int RequirePlayerIndex(
+            CharacterPoseProgramImage program,
+            CharacterPoseOperationHeader operation) =>
+            operation.Family switch
+            {
+                CharacterPoseOperationFamily.Player =>
+                    ((CharacterPosePlayerOperationPayload)
+                        program.OperationPages.RequirePayload(operation))
+                    .PlayerIndex,
+                CharacterPoseOperationFamily.Blend =>
+                    ((CharacterPoseBlendOperationPayload)
+                        program.OperationPages.RequirePayload(operation))
+                    .PlayerIndex,
+                CharacterPoseOperationFamily.AnimationSlot =>
+                    ((CharacterPoseAnimationSlotOperationPayload)
+                        program.OperationPages.RequirePayload(operation))
+                    .PlayerIndex,
+                _ => -1
+            };
+
+        static int RequireBlendNodeIndex(
+            CharacterPoseProgramImage program,
+            CharacterPoseOperationHeader operation) =>
+            operation.Family switch
+            {
+                CharacterPoseOperationFamily.Blend =>
+                    ((CharacterPoseBlendOperationPayload)
+                        program.OperationPages.RequirePayload(operation))
+                    .BlendNodeIndex,
+                CharacterPoseOperationFamily.AnimationSlot =>
+                    ((CharacterPoseAnimationSlotOperationPayload)
+                        program.OperationPages.RequirePayload(operation))
+                    .BlendNodeIndex,
+                _ => -1
+            };
 
         void DisposeActivePage()
         {

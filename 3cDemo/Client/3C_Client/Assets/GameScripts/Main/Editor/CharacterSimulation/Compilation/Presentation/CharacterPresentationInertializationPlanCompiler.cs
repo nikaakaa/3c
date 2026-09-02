@@ -31,15 +31,26 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                     graphAsset.Graph,
                     string.Empty,
                     policies);
-                int inertializationCount = source.Operations.Count(value =>
+                int inertializationCount = source.OperationHeaders.Count(value =>
                     value.Code == CharacterPoseOperationCode.Inertialization);
                 var descriptors = new CharacterPresentationInertializationDescriptor[inertializationCount];
                 for (int index = 0; index < descriptors.Length; index++)
                 {
-                    CharacterPresentationPoseOperation operation = source.Operations.Single(value =>
-                        value.Code == CharacterPoseOperationCode.Inertialization && value.InertializationIndex == index);
-                    CharacterPresentationPoseOperation inputOwner = source.Operations.SingleOrDefault(value =>
-                        value.Index < operation.Index && value.OutputValueIndex == operation.InputValueIndexA);
+                    CharacterPoseOperationHeader operation =
+                        source.OperationHeaders.Single(value =>
+                            value.Code == CharacterPoseOperationCode.Inertialization &&
+                            ((CharacterPoseIndexedOperationPayload)
+                                source.OperationPages.RequirePayload(value))
+                            .ValueIndex == index);
+                    int inputPose = source.OperationPages.FindInputValueIndex(
+                        operation,
+                        CharacterPoseValueReferenceKind.Pose);
+                    CharacterPoseOperationHeader inputOwner =
+                        source.OperationHeaders.SingleOrDefault(value =>
+                            value.Index < operation.Index &&
+                            source.OperationPages.FindOutputValueIndex(
+                                value,
+                                CharacterPoseValueReferenceKind.Pose) == inputPose);
                     if (inputOwner == null)
                         throw new InvalidOperationException($"Inertialization '{operation.NodeId}' has no direct input owner.");
                     if (!policies.TryGetValue(operation.NodeId, out CharacterPoseInertializationPolicy policy) || !policy)
@@ -56,10 +67,14 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                     {
                         if (policy.DirectPlayerRule != null)
                             throw new InvalidOperationException($"Inertialization '{operation.NodeId}' is owned by PoseStateMachine and cannot declare a Direct Player temporal rule.");
-                        if ((uint)inputOwner.StateMachineIndex >= (uint)source.StateMachines.Count)
+                        int stateMachineIndex =
+                            ((CharacterPoseStateMachineOperationPayload)
+                                source.OperationPages.RequirePayload(inputOwner))
+                            .StateMachineIndex;
+                        if ((uint)stateMachineIndex >= (uint)source.StateMachines.Count)
                             throw new InvalidOperationException($"Inertialization '{operation.NodeId}' StateMachine owner is invalid.");
                         CharacterPoseStateMachineDescriptor stateMachine =
-                            source.StateMachines[inputOwner.StateMachineIndex];
+                            source.StateMachines[stateMachineIndex];
                         CharacterPoseStateTransitionDescriptor[] transitions = stateMachine.Transitions
                             .Where(value => value.BlendLogic == AnimationTransitionBlendLogic.Inertialization)
                             .OrderBy(value => value.Index)
@@ -80,11 +95,14 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                                 parameterModes);
                         }
                         ownerKind = PoseInertializationTemporalOwnerKind.StateMachineTransition;
-                        inputOwnerIndex = inputOwner.StateMachineIndex;
+                        inputOwnerIndex = stateMachineIndex;
                     }
                     else if (IsDirectPlayer(inputOwner.Code))
                     {
-                        if (!inputOwner.PresentationPoseSourceIndex.IsValid)
+                        CharacterPosePlayerOperationPayload player =
+                            (CharacterPosePlayerOperationPayload)
+                            source.OperationPages.RequirePayload(inputOwner);
+                        if (!player.SourceIndex.IsValid)
                             throw new InvalidOperationException($"Inertialization '{operation.NodeId}' direct Player has no source index.");
                         CharacterPoseDirectInertializationRule directRule = policy.DirectPlayerRule;
                         if (directRule == null)
@@ -103,7 +121,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                                 throw new InvalidOperationException($"Inertialization '{operation.NodeId}' direct Player temporal assets are absent from the Projection catalog.");
                             }
                         }
-                        int sourceIndex = inputOwner.PresentationPoseSourceIndex.Value;
+                        int sourceIndex = player.SourceIndex.Value;
                         rules = new[]
                         {
                             new CharacterPresentationInertializationRuleDescriptor(
@@ -176,14 +194,13 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                 source.PoseBoneIkGoalSources.ToArray(),
                 source.FootPlacements.ToArray(),
                 source.FullBodyIks.ToArray(),
-                source.FullBodyIkGoalContributionInputValueIndices.ToArray(),
                 source.ClipPlayers.ToArray(),
                 source.StateMachines.ToArray(),
                 source.AnimationSlots.ToArray(),
                 source.ActionPlaybackInputs.ToArray(),
                 source.LinkedPoseFragments.ToArray(),
                 source.LinkedPoseCalls.ToArray(),
-                source.Operations.ToArray(),
+                source.OperationPages,
                 source.SourceMap.ToArray(),
                 source.Stages.ToArray(),
                 source.PoseValueCount,

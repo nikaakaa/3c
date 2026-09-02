@@ -194,7 +194,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                         projection.PosePlan.BlendNodes[stackIndex] ??
                         throw new InvalidOperationException(
                             $"Pose Plan Blend Stack #{stackIndex} is missing.");
-                    CharacterPresentationPoseOperation operation =
+                    CharacterPoseOperationHeader operation =
                         RequireBlendStackOperation(
                             projection.PosePlan,
                             stackIndex,
@@ -206,35 +206,57 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                         new CharacterAnimationTransitionRouteRuntime(
                             blendNode,
                             slotDescriptor);
-                    CharacterPresentationPoseOperation input =
+                    CharacterPoseOperationHeader input =
                         route.IsAnimationSlot
                             ? RequireControlInput(
                                 projection.PosePlan,
                                 operation)
                             : null;
                     if (!route.IsAnimationSlot &&
-                        (!operation.PresentationPoseSourceProviderId.IsValid ||
-                         !operation.PresentationPoseSourceIndex.IsValid))
+                        (!RequireSourceProviderId(
+                             projection.PosePlan,
+                             operation).IsValid ||
+                         !RequireSourceIndex(
+                             projection.PosePlan,
+                             operation).IsValid))
                     {
                         throw new InvalidOperationException(
                             $"Pose State Blend Stack '{operation.NodeId}' has no compiled provider identity.");
                     }
+                    int playerIndex = RequirePlayerIndex(
+                        projection.PosePlan,
+                        operation);
+                    CharacterPoseActionInputOperationPayload actionInput =
+                        route.IsAnimationSlot
+                            ? (CharacterPoseActionInputOperationPayload)
+                                projection.PosePlan.OperationPages
+                                    .RequirePayload(input)
+                            : null;
                     AnimationPlayerPoseNativeWriteBinding initialWrite =
                         programFrames.RequirePlayerWriteBinding(
-                            operation.PlayerIndex,
+                            playerIndex,
                             initialFrame.CompletionIdentity);
                     var stack = new AnimationBlendStackRuntime(
                         blendNode,
                         route.IsAnimationSlot
-                            ? input.AnimationChannelId
+                            ? actionInput.AnimationChannelId
                             : default,
                         route.IsAnimationSlot
                             ? default
-                            : operation.PresentationPoseSourceProviderId,
+                            : RequireSourceProviderId(
+                                projection.PosePlan,
+                                operation),
                         route.IsAnimationSlot
                             ? default
-                            : operation.PresentationPoseSourceIndex,
-                        operation.SelectionAvailability,
+                            : RequireSourceIndex(
+                                projection.PosePlan,
+                                operation),
+                        route.IsAnimationSlot
+                            ? actionInput.SelectionAvailability
+                            : ((CharacterPoseBlendOperationPayload)
+                                projection.PosePlan.OperationPages
+                                    .RequirePayload(operation))
+                            .SelectionAvailability,
                         projection.BlendCurveCatalog,
                         projection.BlendProfileCatalog,
                         projection.Rig,
@@ -245,7 +267,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                         blendNode.NodeId,
                         stack,
                         route,
-                        operation.PlayerIndex,
+                        playerIndex,
                         route.IsAnimationSlot ? -1 : 0);
                     if (route.IsAnimationSlot)
                     {
@@ -259,37 +281,41 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                 var directPlayerList =
                     new List<AnimationSelectedPosePlayerRuntime>();
                 for (int operationIndex = 0;
-                     operationIndex < projection.PosePlan.Operations.Count;
+                     operationIndex < projection.PosePlan.OperationHeaders.Count;
                      operationIndex++)
                 {
-                    CharacterPresentationPoseOperation operation =
-                        projection.PosePlan.Operations[operationIndex];
+                    CharacterPoseOperationHeader operation =
+                        projection.PosePlan.OperationHeaders[operationIndex];
                     if (operation.Code !=
                         CharacterPoseOperationCode.SelectedPosePlayer)
                     {
                         continue;
                     }
-                    if (operation.PlayerIndex < 0 ||
-                        !operation.PresentationPoseSourceProviderId.IsValid ||
-                        !operation.PresentationPoseSourceIndex.IsValid)
+                    CharacterPosePlayerOperationPayload payload =
+                        (CharacterPosePlayerOperationPayload)
+                        projection.PosePlan.OperationPages
+                            .RequirePayload(operation);
+                    if (payload.PlayerIndex < 0 ||
+                        !payload.SourceProviderId.IsValid ||
+                        !payload.SourceIndex.IsValid)
                     {
                         throw new InvalidOperationException(
                             $"Selected Pose Player operation '{operation.NodeId}' has invalid compiled inputs.");
                     }
                     var player = new AnimationSelectedPosePlayerRuntime(
                         operation.NodeId,
-                        operation.PlayerIndex,
-                        operation.PlayerIndex,
-                        operation.PresentationPoseSourceProviderId,
-                        operation.SelectionAvailability,
+                        payload.PlayerIndex,
+                        payload.PlayerIndex,
+                        payload.SourceProviderId,
+                        payload.SelectionAvailability,
                         projection.Rig,
                         projection.PosePlan.Parameters.Count);
                     directPlayerList.Add(player);
                     nodeRuntimeIndex.AddDirect(
                         operation.NodeId,
                         player,
-                        operation.PlayerIndex,
-                        operation.PlayerIndex);
+                        payload.PlayerIndex,
+                        payload.PlayerIndex);
                 }
                 directPlayers = directPlayerList.ToArray();
                 clipPlayers = new AnimationClipPlayerRuntime[
@@ -491,20 +517,20 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             }
         }
 
-        static CharacterPresentationPoseOperation
+        static CharacterPoseOperationHeader
             RequireBlendStackOperation(
                 CharacterPoseProgramImage plan,
                 int blendNodeIndex,
                 PoseNodeId nodeId)
         {
-            CharacterPresentationPoseOperation result = null;
-            for (int i = 0; i < plan.Operations.Count; i++)
+            CharacterPoseOperationHeader result = null;
+            for (int i = 0; i < plan.OperationHeaders.Count; i++)
             {
-                CharacterPresentationPoseOperation candidate =
-                    plan.Operations[i];
+                CharacterPoseOperationHeader candidate =
+                    plan.OperationHeaders[i];
                 if (candidate.Code != CharacterPoseOperationCode.BlendStack &&
                     candidate.Code != CharacterPoseOperationCode.AnimationSlot ||
-                    candidate.BlendNodeIndex != blendNodeIndex ||
+                    RequireBlendNodeIndex(plan, candidate) != blendNodeIndex ||
                     candidate.NodeId != nodeId)
                 {
                     continue;
@@ -518,11 +544,15 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             }
             if (result == null ||
                 result.Code == CharacterPoseOperationCode.AnimationSlot &&
-                result.ControlInputOperationIndex < 0 ||
+                plan.OperationPages.FindInputValueIndex(
+                    result,
+                    CharacterPoseValueReferenceKind.OperationControl) < 0 ||
                 result.Code == CharacterPoseOperationCode.BlendStack &&
-                (!result.PresentationPoseSourceProviderId.IsValid ||
-                 !result.PresentationPoseSourceIndex.IsValid ||
-                 result.ControlInputOperationIndex >= 0))
+                (!RequireSourceProviderId(plan, result).IsValid ||
+                 !RequireSourceIndex(plan, result).IsValid ||
+                 plan.OperationPages.FindInputValueIndex(
+                     result,
+                     CharacterPoseValueReferenceKind.OperationControl) >= 0))
             {
                 throw new InvalidOperationException(
                     $"Pose Plan has no valid animation transition operation '{nodeId}'.");
@@ -530,26 +560,69 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             return result;
         }
 
-        static CharacterPresentationPoseOperation RequireControlInput(
+        static CharacterPoseOperationHeader RequireControlInput(
             CharacterPoseProgramImage plan,
-            CharacterPresentationPoseOperation operation)
+            CharacterPoseOperationHeader operation)
         {
-            int controlIndex = operation.ControlInputOperationIndex;
+            int controlIndex = plan.OperationPages.FindInputValueIndex(
+                operation,
+                CharacterPoseValueReferenceKind.OperationControl);
             if ((uint)controlIndex >= (uint)operation.Index)
             {
                 throw new InvalidOperationException(
                     $"Pose operation '{operation.NodeId}' has no compiled control input.");
             }
-            return plan.Operations[controlIndex];
+            return plan.OperationHeaders[controlIndex];
         }
+
+        static int RequirePlayerIndex(
+            CharacterPoseProgramImage plan,
+            CharacterPoseOperationHeader operation) => operation.Family switch
+        {
+            CharacterPoseOperationFamily.Player =>
+                ((CharacterPosePlayerOperationPayload)
+                    plan.OperationPages.RequirePayload(operation)).PlayerIndex,
+            CharacterPoseOperationFamily.Blend =>
+                ((CharacterPoseBlendOperationPayload)
+                    plan.OperationPages.RequirePayload(operation)).PlayerIndex,
+            CharacterPoseOperationFamily.AnimationSlot =>
+                ((CharacterPoseAnimationSlotOperationPayload)
+                    plan.OperationPages.RequirePayload(operation)).PlayerIndex,
+            _ => -1
+        };
+
+        static int RequireBlendNodeIndex(
+            CharacterPoseProgramImage plan,
+            CharacterPoseOperationHeader operation) => operation.Family switch
+        {
+            CharacterPoseOperationFamily.Blend =>
+                ((CharacterPoseBlendOperationPayload)
+                    plan.OperationPages.RequirePayload(operation)).BlendNodeIndex,
+            CharacterPoseOperationFamily.AnimationSlot =>
+                ((CharacterPoseAnimationSlotOperationPayload)
+                    plan.OperationPages.RequirePayload(operation)).BlendNodeIndex,
+            _ => -1
+        };
+
+        static PresentationPoseSourceProviderId RequireSourceProviderId(
+            CharacterPoseProgramImage plan,
+            CharacterPoseOperationHeader operation) =>
+            ((CharacterPoseBlendOperationPayload)
+                plan.OperationPages.RequirePayload(operation)).SourceProviderId;
+
+        static PresentationPoseSourceIndex RequireSourceIndex(
+            CharacterPoseProgramImage plan,
+            CharacterPoseOperationHeader operation) =>
+            ((CharacterPoseBlendOperationPayload)
+                plan.OperationPages.RequirePayload(operation)).SourceIndex;
 
         static int CalculateSourceCapacity(CharacterPoseProgramImage plan)
         {
             int capacity = 0;
-            for (int i = 0; i < plan.Operations.Count; i++)
+            for (int i = 0; i < plan.OperationHeaders.Count; i++)
             {
-                CharacterPresentationPoseOperation operation =
-                    plan.Operations[i];
+                CharacterPoseOperationHeader operation =
+                    plan.OperationHeaders[i];
                 switch (operation.Code)
                 {
                     case CharacterPoseOperationCode.SelectedPosePlayer:

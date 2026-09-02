@@ -1085,3 +1085,11 @@ Program Runtime是新Executor的唯一Owner，入口同步改为`BeginEvaluation
 状态：Runtime ABI新增唯一`CharacterPoseOperationFamilies.RequireFamily`，覆盖全部现行Operation Code。编译期Bound Operation显式携带Symbolic Family并立即核对Code／Family；Stage Schedule同时核对Symbolic与Bound结果。State Graph内部合成的`StatePoseOutput`明确归入StateMachine Family，不再沿用作者Output节点的Final Output Family。
 
 本步只固定后续Header与Payload页的归属事实，没有改变现有Program Image字段、Hash、Stage顺序或Runtime执行数据。3C MCP完成脚本重编，相关`CharacterPose`错误筛选仅剩既有Import Error；不单独运行回放。
+
+## 原子替换序列化Operation ABI
+
+状态：`CharacterPresentationPoseOperation`万能记录已从Runtime合同删除。Program Image v24／Runtime ABI v27改为`CharacterPoseOperationHeader`、单一typed Value Reference表和18个固定Family Payload页；Header只保存调度、Family索引、输入／输出range、Linked Fragment归属和公共Weight。Parameter、Pose、Action Control、Goal Contribution与Goal Set全部通过typed引用表达，不再以成组`-1`字段表达缺席。
+
+Bind Family Payload阶段一次生成全部Header、typed引用与Family页；Seal阶段只计算包含Family／Source／Policy在内的完整Image Hash并封口。Runtime构造、Linked／Motion Matching计划、调参、Diagnostics与Editor Preview均改读Header和自身Family Payload；Execution View仍在唯一构造边界逐值materialize当前Native执行数据，没有第二序列化reader或旧schema fallback。任务11.9、12.1、12.2与12.4完成。
+
+3C MCP脚本重编无C#错误。正式Character Build已从唯一显式入口执行，但被现有Foot Analysis geometry validation identity stale拒绝，未写入v24 generated Projection；本change没有绕过或修改Foot数据。Native万能Operation的Family化与生成资产重建继续作为后续原子步骤，不单独运行回放。

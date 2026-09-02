@@ -289,6 +289,9 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                     nameof(layout));
             }
             Layout = layout;
+            OperationPages = CharacterPoseOperationPageBinding.Create(
+                Operations,
+                Payloads);
         }
 
         internal CharacterPoseBoundFamilyPayloads Payloads { get; }
@@ -296,5 +299,6 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
         internal CharacterPresentationPoseSourceMapEntry[] SourceMap { get; }
         internal string[] GraphDependencies { get; }
         internal CharacterPoseBoundProgramLayout Layout { get; }
+        internal CharacterPoseOperationPages OperationPages { get; }
     }
 }

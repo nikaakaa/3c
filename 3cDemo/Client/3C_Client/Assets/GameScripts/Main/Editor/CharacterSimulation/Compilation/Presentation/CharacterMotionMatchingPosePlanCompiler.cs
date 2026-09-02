@@ -60,7 +60,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                 throw new InvalidOperationException("Motion Matching Pose plan Rig or node binding closure is inconsistent.");
             }
 
-            var operations = plan.Operations.ToDictionary(value => value.NodeId);
+            var operations = plan.OperationHeaders.ToDictionary(value => value.NodeId);
             var collectors = new List<CharacterPoseHistoryCollectorPlanDescriptor>(nodes.Length);
             var entryPrograms = new List<CharacterMotionMatchingEntryProgramDescriptor>(nodes.Length);
             var blends = new List<CharacterMotionMatchingBlendPlanDescriptor>(nodes.Length);
@@ -76,7 +76,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                 MotionMatchingNodeBindingPayload binding = RequireBinding(
                     motionMatching,
                     scoped.ScopedNodeId);
-                CharacterPresentationPoseOperation operation = RequireOperation(
+                CharacterPoseOperationHeader operation = RequireOperation(
                     operations,
                     scoped.ScopedNodeId,
                     CharacterPoseOperationCode.MotionMatchingPose);
@@ -89,11 +89,20 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                 PoseNodeId scopedCollectorId = Scope(collectorNode.NodeId, scoped.Scope);
                 if (!collectorIds.Add(scopedCollectorId))
                     throw new InvalidOperationException($"Pose History Collector '{scopedCollectorId}' has competing Motion Matching writers.");
-                CharacterPresentationPoseOperation collectorOperation = RequireOperation(
+                CharacterPoseOperationHeader collectorOperation = RequireOperation(
                     operations,
                     scopedCollectorId,
                     CharacterPoseOperationCode.PoseHistoryRead);
-                if (collectorOperation.InputValueIndexA != operation.OutputValueIndex ||
+                int operationOutput = plan.OperationPages.FindOutputValueIndex(
+                    operation,
+                    CharacterPoseValueReferenceKind.Pose);
+                int collectorInput = plan.OperationPages.FindInputValueIndex(
+                    collectorOperation,
+                    CharacterPoseValueReferenceKind.Pose);
+                int collectorOutput = plan.OperationPages.FindOutputValueIndex(
+                    collectorOperation,
+                    CharacterPoseValueReferenceKind.Pose);
+                if (collectorInput != operationOutput ||
                     collectorOperation.Index <= operation.Index)
                 {
                     throw new InvalidOperationException($"Pose History Collector '{scopedCollectorId}' does not commit Motion Matching base Pose after node '{scoped.ScopedNodeId}'.");
@@ -103,8 +112,8 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                 collectors.Add(new CharacterPoseHistoryCollectorPlanDescriptor(
                     scopedCollectorId,
                     collectorPayload.HistoryId,
-                    collectorOperation.InputValueIndexA,
-                    collectorOperation.OutputValueIndex,
+                    collectorInput,
+                    collectorOutput,
                     collectorIndex,
                     motionMatching.SearchPolicy.HistoryCapacity,
                     operation.Index,
@@ -156,7 +165,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                     collectorIndex,
                     entryProgramIndex,
                     blendPlanIndex,
-                    operation.OutputValueIndex,
+                    operationOutput,
                     motionMatching.SearchPolicy.MaximumAdmittedSampleCount,
                     motionMatching.FeatureSchema.DenseFeatureCount,
                     checked(stackPolicy.MaxActiveSourceEntries + 1),
@@ -232,12 +241,12 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                 ? nodeId
                 : new PoseNodeId(scope + "/" + nodeId.Value);
 
-        static CharacterPresentationPoseOperation RequireOperation(
-            IReadOnlyDictionary<PoseNodeId, CharacterPresentationPoseOperation> operations,
+        static CharacterPoseOperationHeader RequireOperation(
+            IReadOnlyDictionary<PoseNodeId, CharacterPoseOperationHeader> operations,
             PoseNodeId nodeId,
             CharacterPoseOperationCode code)
         {
-            if (!operations.TryGetValue(nodeId, out CharacterPresentationPoseOperation operation) ||
+            if (!operations.TryGetValue(nodeId, out CharacterPoseOperationHeader operation) ||
                 operation.Code != code)
             {
                 throw new InvalidOperationException($"Pose node '{nodeId}' has no compiled '{code}' operation.");

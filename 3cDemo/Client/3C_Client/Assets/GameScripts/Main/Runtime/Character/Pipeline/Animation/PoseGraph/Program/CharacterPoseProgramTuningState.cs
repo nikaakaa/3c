@@ -234,8 +234,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             {
                 AnimationPoseGraphNativeOperation native =
                     operations[nativeIndex];
-                CharacterPresentationPoseOperation operation =
-                    projection.PosePlan.Operations[native.Index];
+                CharacterPoseOperationHeader operation =
+                    projection.PosePlan.OperationHeaders[native.Index];
                 if (operation.Code != native.Code)
                 {
                     throw new InvalidOperationException(

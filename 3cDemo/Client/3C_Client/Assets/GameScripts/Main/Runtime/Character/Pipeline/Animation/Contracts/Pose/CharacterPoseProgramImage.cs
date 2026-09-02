@@ -431,213 +431,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation
     }
 
     [Serializable]
-    public sealed class CharacterPresentationPoseOperation
-    {
-        public const int PayloadVersion = 25;
-
-        [SerializeField] int m_Index;
-        [SerializeField] CharacterPoseExecutionDomain m_ExecutionDomain;
-        [SerializeField] CharacterPoseSpace m_InputPoseSpace;
-        [SerializeField] CharacterPoseSpace m_OutputPoseSpace;
-        [SerializeField] CharacterPoseOperationCode m_Code;
-        [SerializeField] int m_PayloadVersion = PayloadVersion;
-        [SerializeField] string m_NodeId = string.Empty;
-        [SerializeField] string m_PresentationPoseSourceProviderId =
-            string.Empty;
-        [SerializeField] int m_PresentationPoseSourceIndex = -1;
-        [SerializeField] int m_OutputValueIndex = -1;
-        [SerializeField] int m_InputValueIndexA = -1;
-        [SerializeField] int m_InputValueIndexB = -1;
-        [SerializeField] int m_ControlInputOperationIndex = -1;
-        [SerializeField] string m_AnimationChannelId = string.Empty;
-        [SerializeField] AnimationSelectionAvailabilityPolicy m_SelectionAvailability;
-        [SerializeField] int m_ParameterIndex = -1;
-        [SerializeField] int m_ParameterIndexB = -1;
-        [SerializeField] CharacterAnimationBlendSpaceInputRangePolicy m_BlendSpaceInputRangePolicy = CharacterAnimationBlendSpaceInputRangePolicy.Clamp;
-        [SerializeField] int m_PlayerIndex = -1;
-        [SerializeField] int m_BlendNodeIndex = -1;
-        [SerializeField] int m_InertializationIndex = -1;
-        [SerializeField] int m_BoneMaskIndex = -1;
-        [SerializeField] int m_AdditiveReferenceIndex = -1;
-        [SerializeField] int m_ModifyBoneIndex = -1;
-        [SerializeField] int m_RootOrientationWarpIndex = -1;
-        [SerializeField] int m_PoseBoneIkGoalsIndex = -1;
-        [SerializeField] int m_FootPlacementIndex = -1;
-        [SerializeField] int m_FullBodyIkIndex = -1;
-        [SerializeField] int m_OutputFullBodyIkGoalContributionValueIndex = -1;
-        [SerializeField] int m_OutputFullBodyIkGoalSetValueIndex = -1;
-        [SerializeField] int m_InputFullBodyIkGoalSetValueIndex = -1;
-        [SerializeField] int m_FullBodyIkGoalContributionInputStart = -1;
-        [SerializeField] int m_FullBodyIkGoalContributionInputCount;
-        [SerializeField] int m_ClipPlayerIndex = -1;
-        [SerializeField] int m_StateMachineIndex = -1;
-        [SerializeField] int m_AnimationSlotIndex = -1;
-        [SerializeField] int m_LinkedPoseCallIndex = -1;
-        [SerializeField] int m_LinkedPoseFragmentIndex = -1;
-        [SerializeField] float m_Weight = 1f;
-        [SerializeField] PoseParameterResolvePolicy[] m_ParameterPolicies = Array.Empty<PoseParameterResolvePolicy>();
-
-        public CharacterPresentationPoseOperation(
-            int index,
-            CharacterPoseExecutionDomain executionDomain,
-            CharacterPoseSpace inputPoseSpace,
-            CharacterPoseSpace outputPoseSpace,
-            CharacterPoseOperationCode code,
-            PoseNodeId nodeId,
-            PresentationPoseSourceProviderId presentationPoseSourceProviderId,
-            PresentationPoseSourceIndex presentationPoseSourceIndex,
-            int outputValueIndex,
-            int inputValueIndexA,
-            int inputValueIndexB,
-            int controlInputOperationIndex,
-            AnimationChannelId animationChannelId,
-            AnimationSelectionAvailabilityPolicy selectionAvailability,
-            int parameterIndex,
-            int parameterIndexB,
-            CharacterAnimationBlendSpaceInputRangePolicy blendSpaceInputRangePolicy,
-            int playerIndex,
-            int blendNodeIndex,
-            int inertializationIndex,
-            int boneMaskIndex,
-            int additiveReferenceIndex,
-            int modifyBoneIndex,
-            int rootOrientationWarpIndex,
-            int poseBoneIkGoalsIndex,
-            int footPlacementIndex,
-            int fullBodyIkIndex,
-            int outputFullBodyIkGoalContributionValueIndex,
-            int outputFullBodyIkGoalSetValueIndex,
-            int inputFullBodyIkGoalSetValueIndex,
-            int fullBodyIkGoalContributionInputStart,
-            int fullBodyIkGoalContributionInputCount,
-            int clipPlayerIndex,
-            int stateMachineIndex,
-            int animationSlotIndex,
-            int linkedPoseCallIndex,
-            int linkedPoseFragmentIndex,
-            float weight,
-            PoseParameterResolvePolicy[] parameterPolicies)
-        {
-            if (index < 0 || !Enum.IsDefined(typeof(CharacterPoseExecutionDomain), executionDomain) ||
-                !Enum.IsDefined(typeof(CharacterPoseSpace), inputPoseSpace) ||
-                !Enum.IsDefined(typeof(CharacterPoseSpace), outputPoseSpace) ||
-                !Enum.IsDefined(typeof(CharacterPoseOperationCode), code) || !nodeId.IsValid ||
-                !float.IsFinite(weight) || weight < 0f || weight > 1f ||
-                outputFullBodyIkGoalContributionValueIndex < -1 ||
-                outputFullBodyIkGoalSetValueIndex < -1 ||
-                inputFullBodyIkGoalSetValueIndex < -1 ||
-                fullBodyIkGoalContributionInputStart < -1 ||
-                fullBodyIkGoalContributionInputCount < 0 ||
-                linkedPoseCallIndex < -1 || linkedPoseFragmentIndex < -1 ||
-                (fullBodyIkGoalContributionInputCount == 0) !=
-                (fullBodyIkGoalContributionInputStart == -1) ||
-                !Enum.IsDefined(typeof(CharacterAnimationBlendSpaceInputRangePolicy), blendSpaceInputRangePolicy))
-                throw new ArgumentException("Compiled Pose Plan operation is invalid.");
-            m_Index = index;
-            m_ExecutionDomain = executionDomain;
-            m_InputPoseSpace = inputPoseSpace;
-            m_OutputPoseSpace = outputPoseSpace;
-            m_Code = code;
-            m_NodeId = nodeId.Value;
-            m_PresentationPoseSourceProviderId =
-                presentationPoseSourceProviderId.Value ?? string.Empty;
-            m_PresentationPoseSourceIndex = presentationPoseSourceIndex.IsValid
-                ? presentationPoseSourceIndex.Value
-                : -1;
-            m_OutputValueIndex = outputValueIndex;
-            m_InputValueIndexA = inputValueIndexA;
-            m_InputValueIndexB = inputValueIndexB;
-            m_ControlInputOperationIndex = controlInputOperationIndex;
-            m_AnimationChannelId = animationChannelId.Value ?? string.Empty;
-            m_SelectionAvailability = selectionAvailability;
-            m_ParameterIndex = parameterIndex;
-            m_ParameterIndexB = parameterIndexB;
-            m_BlendSpaceInputRangePolicy = blendSpaceInputRangePolicy;
-            m_PlayerIndex = playerIndex;
-            m_BlendNodeIndex = blendNodeIndex;
-            m_InertializationIndex = inertializationIndex;
-            m_BoneMaskIndex = boneMaskIndex;
-            m_AdditiveReferenceIndex = additiveReferenceIndex;
-            m_ModifyBoneIndex = modifyBoneIndex;
-            m_RootOrientationWarpIndex = rootOrientationWarpIndex;
-            m_PoseBoneIkGoalsIndex = poseBoneIkGoalsIndex;
-            m_FootPlacementIndex = footPlacementIndex;
-            m_FullBodyIkIndex = fullBodyIkIndex;
-            m_OutputFullBodyIkGoalContributionValueIndex =
-                outputFullBodyIkGoalContributionValueIndex;
-            m_OutputFullBodyIkGoalSetValueIndex = outputFullBodyIkGoalSetValueIndex;
-            m_InputFullBodyIkGoalSetValueIndex = inputFullBodyIkGoalSetValueIndex;
-            m_FullBodyIkGoalContributionInputStart =
-                fullBodyIkGoalContributionInputStart;
-            m_FullBodyIkGoalContributionInputCount =
-                fullBodyIkGoalContributionInputCount;
-            m_ClipPlayerIndex = clipPlayerIndex;
-            m_StateMachineIndex = stateMachineIndex;
-            m_AnimationSlotIndex = animationSlotIndex;
-            m_LinkedPoseCallIndex = linkedPoseCallIndex;
-            m_LinkedPoseFragmentIndex = linkedPoseFragmentIndex;
-            m_Weight = weight;
-            m_ParameterPolicies = parameterPolicies ?? Array.Empty<PoseParameterResolvePolicy>();
-        }
-
-        public int Index => m_Index;
-        public CharacterPoseExecutionDomain ExecutionDomain => m_ExecutionDomain;
-        public CharacterPoseSpace InputPoseSpace => m_InputPoseSpace;
-        public CharacterPoseSpace OutputPoseSpace => m_OutputPoseSpace;
-        public CharacterPoseOperationCode Code => m_Code;
-        public int Version => m_PayloadVersion;
-        public PoseNodeId NodeId => new PoseNodeId(m_NodeId);
-        public PresentationPoseSourceProviderId PresentationPoseSourceProviderId =>
-            string.IsNullOrWhiteSpace(m_PresentationPoseSourceProviderId)
-                ? default
-                : new PresentationPoseSourceProviderId(
-                    m_PresentationPoseSourceProviderId);
-        public PresentationPoseSourceIndex PresentationPoseSourceIndex =>
-            m_PresentationPoseSourceIndex < 0
-                ? default
-                : new PresentationPoseSourceIndex(m_PresentationPoseSourceIndex);
-        public int OutputValueIndex => m_OutputValueIndex;
-        public int InputValueIndexA => m_InputValueIndexA;
-        public int InputValueIndexB => m_InputValueIndexB;
-        public int ControlInputOperationIndex => m_ControlInputOperationIndex;
-        public AnimationChannelId AnimationChannelId =>
-            string.IsNullOrWhiteSpace(m_AnimationChannelId)
-                ? default
-                : new AnimationChannelId(m_AnimationChannelId);
-        public AnimationSelectionAvailabilityPolicy SelectionAvailability =>
-            m_SelectionAvailability;
-        public int ParameterIndex => m_ParameterIndex;
-        public int ParameterIndexB => m_ParameterIndexB;
-        public CharacterAnimationBlendSpaceInputRangePolicy BlendSpaceInputRangePolicy => m_BlendSpaceInputRangePolicy;
-        public int PlayerIndex => m_PlayerIndex;
-        public int BlendNodeIndex => m_BlendNodeIndex;
-        public int InertializationIndex => m_InertializationIndex;
-        public int BoneMaskIndex => m_BoneMaskIndex;
-        public int AdditiveReferenceIndex => m_AdditiveReferenceIndex;
-        public int ModifyBoneIndex => m_ModifyBoneIndex;
-        public int RootOrientationWarpIndex => m_RootOrientationWarpIndex;
-        public int PoseBoneIkGoalsIndex => m_PoseBoneIkGoalsIndex;
-        public int FootPlacementIndex => m_FootPlacementIndex;
-        public int FullBodyIkIndex => m_FullBodyIkIndex;
-        public int OutputFullBodyIkGoalContributionValueIndex =>
-            m_OutputFullBodyIkGoalContributionValueIndex;
-        public int OutputFullBodyIkGoalSetValueIndex => m_OutputFullBodyIkGoalSetValueIndex;
-        public int InputFullBodyIkGoalSetValueIndex =>
-            m_InputFullBodyIkGoalSetValueIndex;
-        public int FullBodyIkGoalContributionInputStart =>
-            m_FullBodyIkGoalContributionInputStart;
-        public int FullBodyIkGoalContributionInputCount =>
-            m_FullBodyIkGoalContributionInputCount;
-        public int ClipPlayerIndex => m_ClipPlayerIndex;
-        public int StateMachineIndex => m_StateMachineIndex;
-        public int AnimationSlotIndex => m_AnimationSlotIndex;
-        public int LinkedPoseCallIndex => m_LinkedPoseCallIndex;
-        public int LinkedPoseFragmentIndex => m_LinkedPoseFragmentIndex;
-        public float Weight => m_Weight;
-        public IReadOnlyList<PoseParameterResolvePolicy> ParameterPolicies => m_ParameterPolicies ?? Array.Empty<PoseParameterResolvePolicy>();
-    }
-
-    [Serializable]
     public sealed class CharacterPresentationPoseSourceMapEntry
     {
         [SerializeField] int m_OperationIndex;
@@ -799,8 +592,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
     [Serializable]
     public sealed partial class CharacterPoseProgramImage
     {
-        public const string SchemaVersion = "character-presentation-pose-plan/v23";
-        public const string RuntimeAbi = "character-presentation-pose-runtime/v26";
+        public const string SchemaVersion = "character-presentation-pose-plan/v24";
+        public const string RuntimeAbi = "character-presentation-pose-runtime/v27";
 
         [SerializeField] string m_SchemaVersion = SchemaVersion;
         [SerializeField] string m_RuntimeAbi = RuntimeAbi;
@@ -824,7 +617,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         [SerializeField] CharacterPresentationPoseBoneIkGoalsDescriptor[] m_PoseBoneIkGoalSources = Array.Empty<CharacterPresentationPoseBoneIkGoalsDescriptor>();
         [SerializeField] CharacterPresentationFootPlacementDescriptor[] m_FootPlacements = Array.Empty<CharacterPresentationFootPlacementDescriptor>();
         [SerializeField] CharacterPresentationFullBodyIkDescriptor[] m_FullBodyIks = Array.Empty<CharacterPresentationFullBodyIkDescriptor>();
-        [SerializeField] int[] m_FullBodyIkGoalContributionInputValueIndices = Array.Empty<int>();
         [SerializeField] CharacterPresentationClipPlayerDescriptor[] m_ClipPlayers = Array.Empty<CharacterPresentationClipPlayerDescriptor>();
         [SerializeField] CharacterPoseStateMachineDescriptor[] m_StateMachines =
             Array.Empty<CharacterPoseStateMachineDescriptor>();
@@ -832,7 +624,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             Array.Empty<CharacterAnimationSlotDescriptor>();
         [SerializeField] ActionPlaybackInputPlan[] m_ActionPlaybackInputs =
             Array.Empty<ActionPlaybackInputPlan>();
-        [SerializeField] CharacterPresentationPoseOperation[] m_Operations = Array.Empty<CharacterPresentationPoseOperation>();
+        [SerializeField] CharacterPoseOperationPages m_OperationPages;
         [SerializeField] CharacterPresentationPoseSourceMapEntry[] m_SourceMap = Array.Empty<CharacterPresentationPoseSourceMapEntry>();
         [SerializeField] CharacterPresentationPoseStage[] m_Stages = Array.Empty<CharacterPresentationPoseStage>();
         [SerializeField] int m_PoseValueWorkspaceCount;
@@ -859,14 +651,13 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             CharacterPresentationPoseBoneIkGoalsDescriptor[] poseBoneIkGoalSources,
             CharacterPresentationFootPlacementDescriptor[] footPlacements,
             CharacterPresentationFullBodyIkDescriptor[] fullBodyIks,
-            int[] fullBodyIkGoalContributionInputValueIndices,
             CharacterPresentationClipPlayerDescriptor[] clipPlayers,
             CharacterPoseStateMachineDescriptor[] stateMachines,
             CharacterAnimationSlotDescriptor[] animationSlots,
             ActionPlaybackInputPlan[] actionPlaybackInputs,
             CharacterLinkedPoseEntryFragmentPlanDescriptor[] linkedPoseFragments,
             CharacterLinkedPoseCallPlanDescriptor[] linkedPoseCalls,
-            CharacterPresentationPoseOperation[] operations,
+            CharacterPoseOperationPages operationPages,
             CharacterPresentationPoseSourceMapEntry[] sourceMap,
             CharacterPresentationPoseStage[] stages,
             int poseValueCount,
@@ -900,9 +691,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             m_PoseBoneIkGoalSources = poseBoneIkGoalSources ?? throw new ArgumentNullException(nameof(poseBoneIkGoalSources));
             m_FootPlacements = footPlacements ?? throw new ArgumentNullException(nameof(footPlacements));
             m_FullBodyIks = fullBodyIks ?? throw new ArgumentNullException(nameof(fullBodyIks));
-            m_FullBodyIkGoalContributionInputValueIndices =
-                fullBodyIkGoalContributionInputValueIndices ??
-                throw new ArgumentNullException(nameof(fullBodyIkGoalContributionInputValueIndices));
             m_ClipPlayers = clipPlayers ?? throw new ArgumentNullException(nameof(clipPlayers));
             m_StateMachines = stateMachines ?? throw new ArgumentNullException(nameof(stateMachines));
             m_AnimationSlots = animationSlots ?? throw new ArgumentNullException(nameof(animationSlots));
@@ -910,7 +698,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 throw new ArgumentNullException(nameof(actionPlaybackInputs));
             m_LinkedPoseFragments = linkedPoseFragments ?? throw new ArgumentNullException(nameof(linkedPoseFragments));
             m_LinkedPoseCalls = linkedPoseCalls ?? throw new ArgumentNullException(nameof(linkedPoseCalls));
-            m_Operations = operations ?? throw new ArgumentNullException(nameof(operations));
+            m_OperationPages = operationPages ??
+                throw new ArgumentNullException(nameof(operationPages));
             m_SourceMap = sourceMap ?? throw new ArgumentNullException(nameof(sourceMap));
             m_Stages = stages ?? throw new ArgumentNullException(nameof(stages));
             if (poseValueCount <= 1 ||
@@ -953,9 +742,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             get
             {
                 int count = 0;
-                for (int i = 0; i < Operations.Count; i++)
+                for (int i = 0; i < OperationHeaders.Count; i++)
                 {
-                    CharacterPoseOperationCode code = Operations[i].Code;
+                    CharacterPoseOperationCode code = OperationHeaders[i].Code;
                     if (code == CharacterPoseOperationCode.SelectedPosePlayer || code == CharacterPoseOperationCode.BlendStack ||
                         code == CharacterPoseOperationCode.BlendSpacePlayer || code == CharacterPoseOperationCode.ClipPlayer ||
                         code == CharacterPoseOperationCode.AnimationSlot)
@@ -971,8 +760,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         public IReadOnlyList<CharacterPresentationPoseBoneIkGoalsDescriptor> PoseBoneIkGoalSources => m_PoseBoneIkGoalSources ?? Array.Empty<CharacterPresentationPoseBoneIkGoalsDescriptor>();
         public IReadOnlyList<CharacterPresentationFootPlacementDescriptor> FootPlacements => m_FootPlacements ?? Array.Empty<CharacterPresentationFootPlacementDescriptor>();
         public IReadOnlyList<CharacterPresentationFullBodyIkDescriptor> FullBodyIks => m_FullBodyIks ?? Array.Empty<CharacterPresentationFullBodyIkDescriptor>();
-        public IReadOnlyList<int> FullBodyIkGoalContributionInputValueIndices =>
-            m_FullBodyIkGoalContributionInputValueIndices ?? Array.Empty<int>();
         public IReadOnlyList<CharacterPresentationClipPlayerDescriptor> ClipPlayers => m_ClipPlayers ?? Array.Empty<CharacterPresentationClipPlayerDescriptor>();
         public IReadOnlyList<CharacterPoseStateMachineDescriptor> StateMachines =>
             m_StateMachines ?? Array.Empty<CharacterPoseStateMachineDescriptor>();
@@ -980,7 +767,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             m_AnimationSlots ?? Array.Empty<CharacterAnimationSlotDescriptor>();
         public IReadOnlyList<ActionPlaybackInputPlan> ActionPlaybackInputs =>
             m_ActionPlaybackInputs ?? Array.Empty<ActionPlaybackInputPlan>();
-        public IReadOnlyList<CharacterPresentationPoseOperation> Operations => m_Operations ?? Array.Empty<CharacterPresentationPoseOperation>();
+        public CharacterPoseOperationPages OperationPages => m_OperationPages;
+        public IReadOnlyList<CharacterPoseOperationHeader> OperationHeaders =>
+            OperationPages?.Headers ?? Array.Empty<CharacterPoseOperationHeader>();
         public IReadOnlyList<CharacterPresentationPoseSourceMapEntry> SourceMap => m_SourceMap ?? Array.Empty<CharacterPresentationPoseSourceMapEntry>();
         public IReadOnlyList<CharacterPresentationPoseStage> Stages => m_Stages ?? Array.Empty<CharacterPresentationPoseStage>();
         public int PoseValueCount => m_PoseValueWorkspaceCount;
@@ -1006,21 +795,23 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         {
             get
             {
-                if ((uint)OutputOperationIndex >= (uint)Operations.Count ||
+                if ((uint)OutputOperationIndex >= (uint)OperationHeaders.Count ||
                     PoseValueCount <= 1 ||
                     PoseValueWorkspaceCount != PoseValueCount - 1 ||
                     ContributionCapacity <= 0)
                 {
                     return default;
                 }
-                CharacterPresentationPoseOperation output =
-                    Operations[OutputOperationIndex];
+                CharacterPoseOperationHeader output =
+                    OperationHeaders[OutputOperationIndex];
                 return output == null
                     ? default
                     : new CharacterFinalPosePublicationLayoutHandle(
                         0,
                         OutputOperationIndex,
-                        output.OutputValueIndex,
+                        OperationPages.FindOutputValueIndex(
+                            output,
+                            CharacterPoseValueReferenceKind.Pose),
                         PoseValueCount,
                         PoseBoneCount,
                         Parameters.Count,
@@ -1114,7 +905,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 !string.Equals(m_RuntimeAbi, RuntimeAbi, StringComparison.Ordinal) ||
                 string.IsNullOrEmpty(PoseGraphId) || string.IsNullOrEmpty(ContentRevision) || string.IsNullOrEmpty(PlanHash) ||
                 string.IsNullOrEmpty(RigId) || string.IsNullOrEmpty(RigRevision) || PoseBoneCount <= 0 ||
-                Operations.Count == 0 || SourceMap.Count != Operations.Count || Stages.Count == 0 ||
+                OperationPages == null || OperationHeaders.Count == 0 ||
+                SourceMap.Count != OperationHeaders.Count || Stages.Count == 0 ||
                 PoseValueCount <= 1 ||
                 PoseValueWorkspaceCount != PoseValueCount - 1 ||
                 FullBodyIkGoalContributionWorkspaceCount < 0 ||
@@ -1124,12 +916,37 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 ContributionCapacity <= 0 ||
                 m_ContributionWorkspaceCount !=
                 checked(PoseValueCount * ContributionCapacity) ||
-                FrameCacheCount != Operations.Count || OutputOperationIndex < 0 || OutputOperationIndex >= Operations.Count)
+                FrameCacheCount != OperationHeaders.Count || OutputOperationIndex < 0 ||
+                OutputOperationIndex >= OperationHeaders.Count)
                 throw new InvalidOperationException("Character Presentation Pose Plan header or workspace is invalid.");
 
             CharacterFinalPosePublicationLayoutHandle publicationLayout =
                 FinalPosePublicationLayout;
             publicationLayout.RequireValid();
+            OperationPages.RequireValid();
+            for (int i = 0; i < OperationPages.ValueReferences.Count; i++)
+            {
+                CharacterPoseValueReference reference =
+                    OperationPages.ValueReferences[i];
+                int capacity = reference.Kind switch
+                {
+                    CharacterPoseValueReferenceKind.Pose => PoseValueCount,
+                    CharacterPoseValueReferenceKind.Parameter =>
+                        Parameters.Count,
+                    CharacterPoseValueReferenceKind.OperationControl =>
+                        OperationHeaders.Count,
+                    CharacterPoseValueReferenceKind.FullBodyIkGoalContribution =>
+                        FullBodyIkGoalContributionWorkspaceCount,
+                    CharacterPoseValueReferenceKind.FullBodyIkGoalSet =>
+                        FullBodyIkGoalSetWorkspaceCount,
+                    _ => 0
+                };
+                if ((uint)reference.Index >= (uint)capacity)
+                {
+                    throw new InvalidOperationException(
+                        $"Pose Value reference #{i} is outside its typed workspace.");
+                }
+            }
 
             var actionProducerIds = new HashSet<string>(StringComparer.Ordinal);
             for (int i = 0; i < ActionPlaybackInputs.Count; i++)
@@ -1157,41 +974,63 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             }
             var operationNodes = new HashSet<PoseNodeId>();
             var playerIndices = new HashSet<int>();
-            var poseValueProducers = new Dictionary<int, CharacterPresentationPoseOperation>();
+            var poseValueProducers = new Dictionary<int, CharacterPoseOperationHeader>();
             var goalContributionProducers =
-                new Dictionary<int, CharacterPresentationPoseOperation>();
-            var goalSetProducers = new Dictionary<int, CharacterPresentationPoseOperation>();
+                new Dictionary<int, CharacterPoseOperationHeader>();
+            var goalSetProducers = new Dictionary<int, CharacterPoseOperationHeader>();
             int outputCount = 0;
-            for (int i = 0; i < Operations.Count; i++)
+            for (int i = 0; i < OperationHeaders.Count; i++)
             {
-                CharacterPresentationPoseOperation operation = Operations[i];
+                CharacterPoseOperationHeader operation = OperationHeaders[i];
                 CharacterPresentationPoseSourceMapEntry source = SourceMap[i];
-                if (operation == null || operation.Index != i || operation.Version != CharacterPresentationPoseOperation.PayloadVersion ||
+                if (operation == null || operation.Index != i ||
+                    operation.Version != CharacterPoseOperationHeader.PayloadVersion ||
+                    CharacterPoseOperationFamilies.RequireFamily(operation.Code) != operation.Family ||
                     !operationNodes.Add(operation.NodeId) || source == null || source.OperationIndex != i || source.NodeId != operation.NodeId)
                     throw new InvalidOperationException($"Pose Plan operation #{i} or source map is invalid.");
-                RequirePoseInputDependency(operation, operation.InputValueIndexA, poseValueProducers);
-                RequirePoseInputDependency(operation, operation.InputValueIndexB, poseValueProducers);
+                OperationPages.RequirePayload(operation);
+                int inputPoseA = OperationPages.FindInputValueIndex(
+                    operation,
+                    CharacterPoseValueReferenceKind.Pose);
+                int inputPoseB = OperationPages.FindInputValueIndex(
+                    operation,
+                    CharacterPoseValueReferenceKind.Pose,
+                    1);
+                int outputPose = OperationPages.FindOutputValueIndex(
+                    operation,
+                    CharacterPoseValueReferenceKind.Pose);
+                int outputGoalContribution = OperationPages.FindOutputValueIndex(
+                    operation,
+                    CharacterPoseValueReferenceKind.FullBodyIkGoalContribution);
+                int outputGoalSet = OperationPages.FindOutputValueIndex(
+                    operation,
+                    CharacterPoseValueReferenceKind.FullBodyIkGoalSet);
+                int inputGoalSet = OperationPages.FindInputValueIndex(
+                    operation,
+                    CharacterPoseValueReferenceKind.FullBodyIkGoalSet);
+                RequirePoseInputDependency(operation, inputPoseA, poseValueProducers);
+                RequirePoseInputDependency(operation, inputPoseB, poseValueProducers);
                 RequireFullBodyIkGoalTopology(
                     operation,
                     goalContributionProducers,
                     goalSetProducers);
-                if (operation.OutputValueIndex >= 0 &&
-                    ((uint)operation.OutputValueIndex >= (uint)PoseValueCount ||
-                     !poseValueProducers.TryAdd(operation.OutputValueIndex, operation)))
+                if (outputPose >= 0 &&
+                    ((uint)outputPose >= (uint)PoseValueCount ||
+                     !poseValueProducers.TryAdd(outputPose, operation)))
                 {
                     throw new InvalidOperationException($"Pose Plan operation #{i} has an invalid or duplicated Pose output value.");
                 }
-                if (operation.OutputFullBodyIkGoalSetValueIndex >= 0 &&
-                    ((uint)operation.OutputFullBodyIkGoalSetValueIndex >= (uint)FullBodyIkGoalSetWorkspaceCount ||
-                     !goalSetProducers.TryAdd(operation.OutputFullBodyIkGoalSetValueIndex, operation)))
+                if (outputGoalSet >= 0 &&
+                    ((uint)outputGoalSet >= (uint)FullBodyIkGoalSetWorkspaceCount ||
+                     !goalSetProducers.TryAdd(outputGoalSet, operation)))
                 {
                     throw new InvalidOperationException($"Pose Plan operation #{i} has an invalid or duplicated Full Body IK Goal Set output value.");
                 }
-                if (operation.OutputFullBodyIkGoalContributionValueIndex >= 0 &&
-                    ((uint)operation.OutputFullBodyIkGoalContributionValueIndex >=
+                if (outputGoalContribution >= 0 &&
+                    ((uint)outputGoalContribution >=
                      (uint)FullBodyIkGoalContributionWorkspaceCount ||
                      !goalContributionProducers.TryAdd(
-                         operation.OutputFullBodyIkGoalContributionValueIndex,
+                         outputGoalContribution,
                          operation)))
                 {
                     throw new InvalidOperationException(
@@ -1201,11 +1040,14 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                     (operation.ExecutionDomain != CharacterPoseExecutionDomain.WorldAwareValue ||
                      operation.InputPoseSpace != CharacterPoseSpace.Component ||
                      operation.OutputPoseSpace != CharacterPoseSpace.None ||
-                     operation.OutputFullBodyIkGoalContributionValueIndex < 0 ||
-                     operation.OutputFullBodyIkGoalSetValueIndex >= 0 ||
-                     operation.InputFullBodyIkGoalSetValueIndex >= 0 ||
-                     operation.FullBodyIkGoalContributionInputCount != 0 ||
-                     (uint)operation.FootPlacementIndex >= (uint)FootPlacements.Count))
+                     outputGoalContribution < 0 || outputGoalSet >= 0 ||
+                     inputGoalSet >= 0 ||
+                     OperationPages.CountInputValues(
+                         operation,
+                         CharacterPoseValueReferenceKind.FullBodyIkGoalContribution) != 0 ||
+                     (uint)((CharacterPoseGoalContributionOperationPayload)
+                         OperationPages.RequirePayload(operation)).FootPlacementIndex >=
+                     (uint)FootPlacements.Count))
                 {
                     throw new InvalidOperationException($"Pose Plan Foot Placement operation #{i} boundary is invalid.");
                 }
@@ -1213,11 +1055,14 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                     (operation.ExecutionDomain != CharacterPoseExecutionDomain.PureValue ||
                      operation.InputPoseSpace != CharacterPoseSpace.Component ||
                      operation.OutputPoseSpace != CharacterPoseSpace.None ||
-                     operation.OutputFullBodyIkGoalContributionValueIndex < 0 ||
-                     operation.OutputFullBodyIkGoalSetValueIndex >= 0 ||
-                     operation.InputFullBodyIkGoalSetValueIndex >= 0 ||
-                     operation.FullBodyIkGoalContributionInputCount != 0 ||
-                     (uint)operation.PoseBoneIkGoalsIndex >= (uint)PoseBoneIkGoalSources.Count))
+                     outputGoalContribution < 0 || outputGoalSet >= 0 ||
+                     inputGoalSet >= 0 ||
+                     OperationPages.CountInputValues(
+                         operation,
+                         CharacterPoseValueReferenceKind.FullBodyIkGoalContribution) != 0 ||
+                     (uint)((CharacterPoseGoalContributionOperationPayload)
+                         OperationPages.RequirePayload(operation)).PoseBoneIkGoalsIndex >=
+                     (uint)PoseBoneIkGoalSources.Count))
                 {
                     throw new InvalidOperationException($"Pose Plan Pose Bone IK Goals operation #{i} boundary is invalid.");
                 }
@@ -1225,12 +1070,11 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                     (operation.ExecutionDomain != CharacterPoseExecutionDomain.PureValue ||
                      operation.InputPoseSpace != CharacterPoseSpace.None ||
                      operation.OutputPoseSpace != CharacterPoseSpace.None ||
-                     operation.OutputValueIndex >= 0 ||
-                     operation.OutputFullBodyIkGoalContributionValueIndex >= 0 ||
-                     operation.OutputFullBodyIkGoalSetValueIndex < 0 ||
-                     operation.InputFullBodyIkGoalSetValueIndex >= 0 ||
-                     (operation.FullBodyIkGoalContributionInputCount == 0) !=
-                     (operation.FullBodyIkGoalContributionInputStart == -1)))
+                     outputPose >= 0 || outputGoalContribution >= 0 ||
+                     outputGoalSet < 0 || inputGoalSet >= 0 ||
+                     OperationPages.CountInputValues(
+                         operation,
+                         CharacterPoseValueReferenceKind.FullBodyIkGoalContribution) == 0))
                 {
                     throw new InvalidOperationException(
                         $"Pose Plan Full Body IK Goal Assembler operation #{i} boundary is invalid.");
@@ -1239,12 +1083,17 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                     (operation.ExecutionDomain != CharacterPoseExecutionDomain.PurePose ||
                      operation.InputPoseSpace != CharacterPoseSpace.Component ||
                      operation.OutputPoseSpace != CharacterPoseSpace.Component ||
-                     operation.OutputFullBodyIkGoalContributionValueIndex >= 0 ||
-                     operation.OutputFullBodyIkGoalSetValueIndex >= 0 ||
-                     operation.InputFullBodyIkGoalSetValueIndex < 0 ||
-                     operation.FullBodyIkGoalContributionInputCount != 0 ||
-                     operation.ParameterIndex >= 0 || operation.ParameterIndexB >= 0 ||
-                     (uint)operation.FullBodyIkIndex >= (uint)FullBodyIks.Count))
+                     outputGoalContribution >= 0 || outputGoalSet >= 0 ||
+                     inputGoalSet < 0 ||
+                     OperationPages.CountInputValues(
+                         operation,
+                         CharacterPoseValueReferenceKind.FullBodyIkGoalContribution) != 0 ||
+                     OperationPages.CountInputValues(
+                         operation,
+                         CharacterPoseValueReferenceKind.Parameter) != 0 ||
+                     (uint)((CharacterPoseIndexedOperationPayload)
+                         OperationPages.RequirePayload(operation)).ValueIndex >=
+                     (uint)FullBodyIks.Count))
                 {
                     throw new InvalidOperationException($"Pose Plan Full Body IK operation #{i} boundary is invalid.");
                 }
@@ -1253,67 +1102,83 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                     outputCount++;
                     if (i != OutputOperationIndex || operation.ExecutionDomain != CharacterPoseExecutionDomain.FinalPublication ||
                         operation.InputPoseSpace != CharacterPoseSpace.Local || operation.OutputPoseSpace != CharacterPoseSpace.Local ||
-                        operation.OutputValueIndex != publicationLayout.OutputValueIndex)
+                        outputPose != publicationLayout.OutputValueIndex)
                         throw new InvalidOperationException("Pose Plan Output operation boundary is inconsistent.");
                 }
                 if (operation.Code == CharacterPoseOperationCode.SelectedPosePlayer || operation.Code == CharacterPoseOperationCode.BlendStack ||
                     operation.Code == CharacterPoseOperationCode.BlendSpacePlayer || operation.Code == CharacterPoseOperationCode.ClipPlayer ||
                     operation.Code == CharacterPoseOperationCode.AnimationSlot)
                 {
-                    if (operation.PlayerIndex < 0 || !playerIndices.Add(operation.PlayerIndex))
+                    int playerIndex = RequirePlayerIndex(operation);
+                    if (playerIndex < 0 || !playerIndices.Add(playerIndex))
                         throw new InvalidOperationException($"Pose Plan Player operation #{i} has an invalid runtime index.");
                 }
                 if (operation.Code == CharacterPoseOperationCode.ClipPlayer)
                 {
-                    if ((uint)operation.ClipPlayerIndex >= (uint)ClipPlayers.Count)
+                    CharacterPosePlayerOperationPayload player =
+                        (CharacterPosePlayerOperationPayload)
+                        OperationPages.RequirePayload(operation);
+                    if ((uint)player.ClipPlayerIndex >= (uint)ClipPlayers.Count)
                         throw new InvalidOperationException($"Pose Plan Clip Player operation #{i} has no descriptor.");
-                    CharacterPresentationClipPlayerDescriptor descriptor = ClipPlayers[operation.ClipPlayerIndex];
+                    CharacterPresentationClipPlayerDescriptor descriptor =
+                        ClipPlayers[player.ClipPlayerIndex];
                     descriptor?.RequireValid();
-                    if (descriptor == null || descriptor.Index != operation.ClipPlayerIndex ||
-                        descriptor.NodeId != operation.NodeId || descriptor.PlayerIndex != operation.PlayerIndex)
+                    if (descriptor == null || descriptor.Index != player.ClipPlayerIndex ||
+                        descriptor.NodeId != operation.NodeId ||
+                        descriptor.PlayerIndex != player.PlayerIndex)
                     {
                         throw new InvalidOperationException($"Pose Plan Clip Player operation #{i} descriptor ownership is invalid.");
                     }
                 }
                 if (operation.Code == CharacterPoseOperationCode.RootOrientationWarp)
                 {
-                    if ((uint)operation.RootOrientationWarpIndex >=
+                    CharacterPoseComponentControlOperationPayload control =
+                        (CharacterPoseComponentControlOperationPayload)
+                        OperationPages.RequirePayload(operation);
+                    if ((uint)control.RootOrientationWarpIndex >=
                         (uint)RootOrientationWarps.Count)
                     {
                         throw new InvalidOperationException(
                             $"Pose Plan Root Orientation Warp operation #{i} has no descriptor.");
                     }
                     CharacterPresentationRootOrientationWarpDescriptor descriptor =
-                        RootOrientationWarps[operation.RootOrientationWarpIndex];
+                        RootOrientationWarps[control.RootOrientationWarpIndex];
                     descriptor?.RequireValid(
                         ClipPlayers.Count,
                         PoseBoneCount);
                     if (descriptor == null ||
-                        descriptor.Index != operation.RootOrientationWarpIndex ||
+                        descriptor.Index != control.RootOrientationWarpIndex ||
                         descriptor.NodeId != operation.NodeId ||
                         !poseValueProducers.TryGetValue(
-                            operation.InputValueIndexA,
-                            out CharacterPresentationPoseOperation rootSource) ||
+                            inputPoseA,
+                            out CharacterPoseOperationHeader rootSource) ||
                         rootSource.Code != CharacterPoseOperationCode.ClipPlayer ||
-                        rootSource.ClipPlayerIndex != descriptor.ClipPlayerIndex)
+                        ((CharacterPosePlayerOperationPayload)
+                            OperationPages.RequirePayload(rootSource))
+                        .ClipPlayerIndex != descriptor.ClipPlayerIndex)
                     {
                         throw new InvalidOperationException(
                             $"Pose Plan Root Orientation Warp operation #{i} descriptor ownership is invalid.");
                     }
                 }
                 if (operation.Code == CharacterPoseOperationCode.BlendSpacePlayer &&
-                    !operation.PresentationPoseSourceIndex.IsValid)
+                    !((CharacterPosePlayerOperationPayload)
+                        OperationPages.RequirePayload(operation)).SourceIndex.IsValid)
                 {
                     throw new InvalidOperationException(
                         $"Pose Plan Blend Space Player operation #{i} has no Presentation Pose source index.");
                 }
                 if (operation.Code == CharacterPoseOperationCode.PoseStateMachine)
                 {
-                    if ((uint)operation.StateMachineIndex >= (uint)StateMachines.Count)
+                    CharacterPoseStateMachineOperationPayload machine =
+                        (CharacterPoseStateMachineOperationPayload)
+                        OperationPages.RequirePayload(operation);
+                    if ((uint)machine.StateMachineIndex >= (uint)StateMachines.Count)
                         throw new InvalidOperationException($"Pose Plan StateMachine operation #{i} has no descriptor.");
-                    CharacterPoseStateMachineDescriptor descriptor = StateMachines[operation.StateMachineIndex];
+                    CharacterPoseStateMachineDescriptor descriptor =
+                        StateMachines[machine.StateMachineIndex];
                     descriptor?.RequireValid();
-                    if (descriptor == null || descriptor.Index != operation.StateMachineIndex ||
+                    if (descriptor == null || descriptor.Index != machine.StateMachineIndex ||
                         descriptor.NodeId != operation.NodeId)
                     {
                         throw new InvalidOperationException(
@@ -1326,7 +1191,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                         if (poseState.OperationStart < 0 || stateEnd > i ||
                             !poseValueProducers.TryGetValue(
                                 poseState.OutputPoseValueIndex,
-                                out CharacterPresentationPoseOperation stateOutput) ||
+                                out CharacterPoseOperationHeader stateOutput) ||
                             stateOutput.Code != CharacterPoseOperationCode.StatePoseOutput ||
                             stateOutput.Index < poseState.OperationStart || stateOutput.Index >= stateEnd)
                         {
@@ -1339,8 +1204,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                             if (usage == null || usage.StateIndex != stateIndex ||
                                 usage.OperationIndex < poseState.OperationStart ||
                                 usage.OperationIndex >= stateEnd ||
-                                Operations[usage.OperationIndex].PlayerIndex != usage.PlayerIndex ||
-                                Operations[usage.OperationIndex].NodeId != usage.PlayerNodeId)
+                                RequirePlayerIndex(OperationHeaders[usage.OperationIndex]) != usage.PlayerIndex ||
+                                OperationHeaders[usage.OperationIndex].NodeId != usage.PlayerNodeId)
                             {
                                 throw new InvalidOperationException(
                                     $"Pose Plan StateMachine '{descriptor.NodeId}' State #{stateIndex} source usage #{usageIndex} is invalid.");
@@ -1350,36 +1215,47 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 }
                 if (operation.Code == CharacterPoseOperationCode.AnimationSlot)
                 {
-                    if ((uint)operation.AnimationSlotIndex >= (uint)AnimationSlots.Count)
+                    CharacterPoseAnimationSlotOperationPayload slotPayload =
+                        (CharacterPoseAnimationSlotOperationPayload)
+                        OperationPages.RequirePayload(operation);
+                    int controlOperationIndex = OperationPages.FindInputValueIndex(
+                        operation,
+                        CharacterPoseValueReferenceKind.OperationControl);
+                    if ((uint)slotPayload.AnimationSlotIndex >= (uint)AnimationSlots.Count)
                         throw new InvalidOperationException($"Pose Plan Animation Slot operation #{i} has no descriptor.");
-                    CharacterAnimationSlotDescriptor descriptor = AnimationSlots[operation.AnimationSlotIndex];
+                    CharacterAnimationSlotDescriptor descriptor =
+                        AnimationSlots[slotPayload.AnimationSlotIndex];
                     descriptor?.RequireValid();
-                    if (descriptor == null || descriptor.Index != operation.AnimationSlotIndex ||
+                    if (descriptor == null || descriptor.Index != slotPayload.AnimationSlotIndex ||
                         descriptor.NodeId != operation.NodeId ||
-                        descriptor.SourceUsage.SourcePoseValueIndex != operation.InputValueIndexA ||
-                        descriptor.ActionPlayer.ActionPlaybackOperationIndex != operation.ControlInputOperationIndex ||
-                        descriptor.ActionPlayer.PlayerIndex != operation.PlayerIndex ||
-                        descriptor.BlendStackWorkspace.BlendNodeIndex != operation.BlendNodeIndex)
+                        descriptor.SourceUsage.SourcePoseValueIndex != inputPoseA ||
+                        descriptor.ActionPlayer.ActionPlaybackOperationIndex != controlOperationIndex ||
+                        descriptor.ActionPlayer.PlayerIndex != slotPayload.PlayerIndex ||
+                        descriptor.BlendStackWorkspace.BlendNodeIndex != slotPayload.BlendNodeIndex)
                     {
                         throw new InvalidOperationException(
                             $"Pose Plan Animation Slot operation #{i} descriptor ownership is invalid.");
                     }
-                    if ((uint)operation.ControlInputOperationIndex >= (uint)i ||
-                        Operations[operation.ControlInputOperationIndex].Code != CharacterPoseOperationCode.ActionPlaybackInput ||
-                        (uint)operation.BlendNodeIndex >= (uint)BlendNodes.Count)
+                    if ((uint)controlOperationIndex >= (uint)i ||
+                        OperationHeaders[controlOperationIndex].Code != CharacterPoseOperationCode.ActionPlaybackInput ||
+                        (uint)slotPayload.BlendNodeIndex >= (uint)BlendNodes.Count)
                     {
                         throw new InvalidOperationException(
                             $"Pose Plan Animation Slot '{descriptor.NodeId}' workspace indices are invalid.");
                     }
-                    CharacterPresentationPoseOperation actionInput =
-                        Operations[operation.ControlInputOperationIndex];
-                    if (actionInput.AnimationChannelId != descriptor.AnimationChannelId ||
-                        actionInput.SelectionAvailability != AnimationSelectionAvailabilityPolicy.AllowEmpty)
+                    CharacterPoseOperationHeader actionInput =
+                        OperationHeaders[controlOperationIndex];
+                    CharacterPoseActionInputOperationPayload actionPayload =
+                        (CharacterPoseActionInputOperationPayload)
+                        OperationPages.RequirePayload(actionInput);
+                    if (actionPayload.AnimationChannelId != descriptor.AnimationChannelId ||
+                        actionPayload.SelectionAvailability != AnimationSelectionAvailabilityPolicy.AllowEmpty)
                     {
                         throw new InvalidOperationException(
                             $"Pose Plan Animation Slot '{descriptor.NodeId}' Action Playback binding is invalid.");
                     }
-                    AnimationBlendNodePayload blendNode = BlendNodes[operation.BlendNodeIndex];
+                    AnimationBlendNodePayload blendNode =
+                        BlendNodes[slotPayload.BlendNodeIndex];
                     if (blendNode == null || blendNode.NodeId != descriptor.NodeId ||
                         blendNode.StackPolicy.MaxActiveSourceEntries != descriptor.BlendStackWorkspace.Capacity)
                     {
@@ -1415,24 +1291,26 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                     }
                 }
             }
-            if (ClipPlayers.Count != Operations.Count(value => value.Code == CharacterPoseOperationCode.ClipPlayer) ||
-                RootOrientationWarps.Count != Operations.Count(value => value.Code == CharacterPoseOperationCode.RootOrientationWarp) ||
-                StateMachines.Count != Operations.Count(value => value.Code == CharacterPoseOperationCode.PoseStateMachine) ||
-                AnimationSlots.Count != Operations.Count(value => value.Code == CharacterPoseOperationCode.AnimationSlot) ||
-                PoseBoneIkGoalSources.Count != Operations.Count(value => value.Code == CharacterPoseOperationCode.PoseBoneIKGoals) ||
-                FootPlacements.Count != Operations.Count(value => value.Code == CharacterPoseOperationCode.FootPlacement) ||
-                FullBodyIks.Count != Operations.Count(value => value.Code == CharacterPoseOperationCode.FullBodyIK) ||
+            if (ClipPlayers.Count != OperationHeaders.Count(value => value.Code == CharacterPoseOperationCode.ClipPlayer) ||
+                RootOrientationWarps.Count != OperationHeaders.Count(value => value.Code == CharacterPoseOperationCode.RootOrientationWarp) ||
+                StateMachines.Count != OperationHeaders.Count(value => value.Code == CharacterPoseOperationCode.PoseStateMachine) ||
+                AnimationSlots.Count != OperationHeaders.Count(value => value.Code == CharacterPoseOperationCode.AnimationSlot) ||
+                PoseBoneIkGoalSources.Count != OperationHeaders.Count(value => value.Code == CharacterPoseOperationCode.PoseBoneIKGoals) ||
+                FootPlacements.Count != OperationHeaders.Count(value => value.Code == CharacterPoseOperationCode.FootPlacement) ||
+                FullBodyIks.Count != OperationHeaders.Count(value => value.Code == CharacterPoseOperationCode.FullBodyIK) ||
                 FootPlacements.Count > 1 ||
                 FullBodyIks.Count != 1 ||
-                Operations.Count(value => value.Code == CharacterPoseOperationCode.FullBodyIkGoalAssembler) != 1 ||
+                OperationHeaders.Count(value => value.Code == CharacterPoseOperationCode.FullBodyIkGoalAssembler) != 1 ||
                 PoseBoneIkGoalSources.Count + FootPlacements.Count !=
                 FullBodyIkGoalContributionWorkspaceCount ||
                 FullBodyIkGoalSetWorkspaceCount != 1 ||
                 PoseBoneIkGoalSources.Sum(value => value.GoalCount) +
                 FootPlacements.Count * CharacterPresentationFootPlacementDescriptor.GoalCount !=
                 FullBodyIkGoalContributionGoalWorkspaceCount ||
-                FullBodyIkGoalContributionInputValueIndices.Count !=
-                Operations.Sum(value => value.FullBodyIkGoalContributionInputCount) ||
+                OperationHeaders.Sum(value => OperationPages.CountInputValues(
+                    value,
+                    CharacterPoseValueReferenceKind.FullBodyIkGoalContribution)) !=
+                FullBodyIkGoalContributionWorkspaceCount ||
                 outputCount != 1 ||
                 playerIndices.Count != PlayerCount ||
                 playerIndices.Count > 0 && (playerIndices.Min() != 0 || playerIndices.Max() != playerIndices.Count - 1))
@@ -1464,7 +1342,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
 
         public void RequireInertializationValid()
         {
-            int operationCount = Operations.Count(value => value.Code == CharacterPoseOperationCode.Inertialization);
+            int operationCount = OperationHeaders.Count(value =>
+                value.Code == CharacterPoseOperationCode.Inertialization);
             if (operationCount != Inertializations.Count)
                 throw new InvalidOperationException("Pose Plan Inertialization operation and descriptor counts are inconsistent.");
             var descriptors = new HashSet<PoseNodeId>();
@@ -1476,12 +1355,20 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                     !descriptor.InputOwnerNodeId.IsValid || descriptor.InputOwnerIndex < 0 ||
                     string.IsNullOrWhiteSpace(descriptor.PolicyId) || string.IsNullOrWhiteSpace(descriptor.PolicyRevision))
                     throw new InvalidOperationException($"Pose Plan Inertialization descriptor #{index} is invalid or duplicated.");
-                CharacterPresentationPoseOperation operation = Operations.SingleOrDefault(value =>
-                    value.Code == CharacterPoseOperationCode.Inertialization && value.InertializationIndex == index);
+                CharacterPoseOperationHeader operation = OperationHeaders.SingleOrDefault(value =>
+                    value.Code == CharacterPoseOperationCode.Inertialization &&
+                    ((CharacterPoseIndexedOperationPayload)
+                        OperationPages.RequirePayload(value)).ValueIndex == index);
                 if (operation == null || operation.NodeId != descriptor.NodeId)
                     throw new InvalidOperationException($"Pose Plan Inertialization descriptor #{index} has no exact operation owner.");
-                CharacterPresentationPoseOperation inputOwner = Operations.SingleOrDefault(value =>
-                    value.Index < operation.Index && value.OutputValueIndex == operation.InputValueIndexA);
+                int inputPose = OperationPages.FindInputValueIndex(
+                    operation,
+                    CharacterPoseValueReferenceKind.Pose);
+                CharacterPoseOperationHeader inputOwner = OperationHeaders.SingleOrDefault(value =>
+                    value.Index < operation.Index &&
+                    OperationPages.FindOutputValueIndex(
+                        value,
+                        CharacterPoseValueReferenceKind.Pose) == inputPose);
                 if (inputOwner == null || inputOwner.NodeId != descriptor.InputOwnerNodeId)
                 {
                     throw new InvalidOperationException(
@@ -1491,7 +1378,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 if (descriptor.TemporalOwnerKind == PoseInertializationTemporalOwnerKind.StateMachineTransition)
                 {
                     if (inputOwner.Code != CharacterPoseOperationCode.PoseStateMachine ||
-                        inputOwner.StateMachineIndex != descriptor.InputOwnerIndex ||
+                        ((CharacterPoseStateMachineOperationPayload)
+                            OperationPages.RequirePayload(inputOwner))
+                        .StateMachineIndex != descriptor.InputOwnerIndex ||
                         (uint)descriptor.InputOwnerIndex >= (uint)StateMachines.Count)
                     {
                         throw new InvalidOperationException(
@@ -1505,8 +1394,12 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 else
                 {
                     if (!IsDirectInertializationPlayer(inputOwner.Code) ||
-                        !inputOwner.PresentationPoseSourceIndex.IsValid ||
-                        inputOwner.PresentationPoseSourceIndex.Value != descriptor.InputOwnerIndex)
+                        !((CharacterPosePlayerOperationPayload)
+                            OperationPages.RequirePayload(inputOwner))
+                        .SourceIndex.IsValid ||
+                        ((CharacterPosePlayerOperationPayload)
+                            OperationPages.RequirePayload(inputOwner))
+                        .SourceIndex.Value != descriptor.InputOwnerIndex)
                     {
                         throw new InvalidOperationException(
                             $"Pose Plan Inertialization '{operation.NodeId}' declares a mismatched direct Player temporal owner.");
@@ -1563,7 +1456,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                     stage.NativeOperationStart != expectedNativeOperationStart || stage.NativeOperationCount < 0 ||
                     stage.CompletionIndex != stageIndex || stage.DiagnosticIndex != stageIndex ||
                     stage.PoseWorkspaceStart < 0 || stage.PoseWorkspaceCount < 0 ||
-                    stage.OperationStart > Operations.Count - stage.OperationCount)
+                    stage.OperationStart > OperationHeaders.Count - stage.OperationCount)
                 {
                     throw new InvalidOperationException($"Pose Plan stage #{stageIndex} layout is invalid.");
                 }
@@ -1575,7 +1468,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                      operationIndex < stage.OperationStart + stage.OperationCount;
                      operationIndex++)
                 {
-                    CharacterPresentationPoseOperation operation = Operations[operationIndex];
+                    CharacterPoseOperationHeader operation =
+                        OperationHeaders[operationIndex];
                     if (operation.ExecutionDomain != stage.ExecutionDomain ||
                         operation.OutputPoseSpace != CharacterPoseSpace.None &&
                         operation.OutputPoseSpace != stage.OutputPoseSpace)
@@ -1585,10 +1479,13 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                     }
                     if (IsExecutionViewOperation(operation.Code))
                         nativeCount++;
-                    if (operation.OutputValueIndex < 0)
+                    int outputPose = OperationPages.FindOutputValueIndex(
+                        operation,
+                        CharacterPoseValueReferenceKind.Pose);
+                    if (outputPose < 0)
                         continue;
-                    minPoseValue = Math.Min(minPoseValue, operation.OutputValueIndex);
-                    maxPoseValue = Math.Max(maxPoseValue, operation.OutputValueIndex);
+                    minPoseValue = Math.Min(minPoseValue, outputPose);
+                    maxPoseValue = Math.Max(maxPoseValue, outputPose);
                 }
 
                 int poseStart = maxPoseValue < 0 ? 0 : minPoseValue;
@@ -1604,8 +1501,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 expectedNativeOperationStart += stage.NativeOperationCount;
             }
 
-            if (expectedOperationStart != Operations.Count ||
-                expectedNativeOperationStart != Operations.Count(value => IsExecutionViewOperation(value.Code)) ||
+            if (expectedOperationStart != OperationHeaders.Count ||
+                expectedNativeOperationStart != OperationHeaders.Count(value => IsExecutionViewOperation(value.Code)) ||
                 finalStageCount != 1 ||
                 Stages[Stages.Count - 1].ExecutionDomain != CharacterPoseExecutionDomain.FinalPublication)
             {
@@ -1642,13 +1539,13 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         };
 
         static void RequirePoseInputDependency(
-            CharacterPresentationPoseOperation operation,
+            CharacterPoseOperationHeader operation,
             int inputValueIndex,
-            IReadOnlyDictionary<int, CharacterPresentationPoseOperation> producers)
+            IReadOnlyDictionary<int, CharacterPoseOperationHeader> producers)
         {
             if (inputValueIndex < 0)
                 return;
-            if (!producers.TryGetValue(inputValueIndex, out CharacterPresentationPoseOperation producer))
+            if (!producers.TryGetValue(inputValueIndex, out CharacterPoseOperationHeader producer))
                 throw new InvalidOperationException($"Pose Plan operation '{operation.NodeId}' reads Pose value '{inputValueIndex}' before it is produced.");
             if (producer.Index >= operation.Index || producer.OutputPoseSpace == CharacterPoseSpace.None ||
                 operation.InputPoseSpace == CharacterPoseSpace.None || producer.OutputPoseSpace != operation.InputPoseSpace)
@@ -1659,37 +1556,33 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         }
 
         void RequireFullBodyIkGoalTopology(
-            CharacterPresentationPoseOperation operation,
-            IReadOnlyDictionary<int, CharacterPresentationPoseOperation> contributionProducers,
-            IReadOnlyDictionary<int, CharacterPresentationPoseOperation> goalSetProducers)
+            CharacterPoseOperationHeader operation,
+            IReadOnlyDictionary<int, CharacterPoseOperationHeader> contributionProducers,
+            IReadOnlyDictionary<int, CharacterPoseOperationHeader> goalSetProducers)
         {
             if (operation.Code == CharacterPoseOperationCode.FullBodyIkGoalAssembler)
             {
-                if (operation.FullBodyIkGoalContributionInputStart < -1 ||
-                    operation.FullBodyIkGoalContributionInputCount < 0 ||
-                    operation.FullBodyIkGoalContributionInputCount > 0 &&
-                    operation.FullBodyIkGoalContributionInputStart >
-                    FullBodyIkGoalContributionInputValueIndices.Count -
-                    operation.FullBodyIkGoalContributionInputCount)
-                {
-                    throw new InvalidOperationException(
-                        $"Pose Plan Goal Assembler '{operation.NodeId}' input span is invalid.");
-                }
-
                 ushort occupiedSlots = 0;
                 var inputValues = new HashSet<int>();
+                int inputCount = OperationPages.CountInputValues(
+                    operation,
+                    CharacterPoseValueReferenceKind.FullBodyIkGoalContribution);
                 for (int localIndex = 0;
-                     localIndex < operation.FullBodyIkGoalContributionInputCount;
+                     localIndex < inputCount;
                      localIndex++)
                 {
-                    int valueIndex = FullBodyIkGoalContributionInputValueIndices[
-                        operation.FullBodyIkGoalContributionInputStart + localIndex];
+                    int valueIndex = OperationPages.FindInputValueIndex(
+                        operation,
+                        CharacterPoseValueReferenceKind.FullBodyIkGoalContribution,
+                        localIndex);
                     if (!inputValues.Add(valueIndex) ||
                         !contributionProducers.TryGetValue(
                             valueIndex,
-                            out CharacterPresentationPoseOperation producer) ||
+                            out CharacterPoseOperationHeader producer) ||
                         producer.Index >= operation.Index ||
-                        producer.OutputFullBodyIkGoalContributionValueIndex != valueIndex)
+                        OperationPages.FindOutputValueIndex(
+                            producer,
+                            CharacterPoseValueReferenceKind.FullBodyIkGoalContribution) != valueIndex)
                     {
                         throw new InvalidOperationException(
                             $"Pose Plan Goal Assembler '{operation.NodeId}' reads invalid Contribution '{valueIndex}'.");
@@ -1707,20 +1600,24 @@ namespace ThirdPersonCharacter.Pipeline.Animation
 
             if (operation.Code != CharacterPoseOperationCode.FullBodyIK)
                 return;
-            int goalSetValue = operation.InputFullBodyIkGoalSetValueIndex;
+            int goalSetValue = OperationPages.FindInputValueIndex(
+                operation,
+                CharacterPoseValueReferenceKind.FullBodyIkGoalSet);
             if (!goalSetProducers.TryGetValue(
                     goalSetValue,
-                    out CharacterPresentationPoseOperation assembler) ||
+                    out CharacterPoseOperationHeader assembler) ||
                 assembler.Index >= operation.Index ||
                 assembler.Code != CharacterPoseOperationCode.FullBodyIkGoalAssembler ||
-                assembler.OutputFullBodyIkGoalSetValueIndex != goalSetValue)
+                OperationPages.FindOutputValueIndex(
+                    assembler,
+                    CharacterPoseValueReferenceKind.FullBodyIkGoalSet) != goalSetValue)
             {
                 throw new InvalidOperationException(
                     $"Pose Plan Full Body IK '{operation.NodeId}' does not read the unique Goal Assembler output.");
             }
         }
 
-        ushort RequireGoalSourceSlots(CharacterPresentationPoseOperation producer)
+        ushort RequireGoalSourceSlots(CharacterPoseOperationHeader producer)
         {
             if (producer.Code == CharacterPoseOperationCode.FootPlacement)
             {
@@ -1730,10 +1627,14 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                     CharacterFullBodyIkEffectorSlot.RightFoot);
             }
             if (producer.Code == CharacterPoseOperationCode.PoseBoneIKGoals &&
-                (uint)producer.PoseBoneIkGoalsIndex < (uint)PoseBoneIkGoalSources.Count)
+                (uint)((CharacterPoseGoalContributionOperationPayload)
+                    OperationPages.RequirePayload(producer)).PoseBoneIkGoalsIndex <
+                (uint)PoseBoneIkGoalSources.Count)
             {
+                int sourceIndex = ((CharacterPoseGoalContributionOperationPayload)
+                    OperationPages.RequirePayload(producer)).PoseBoneIkGoalsIndex;
                 CharacterPresentationPoseBoneIkGoalsDescriptor descriptor =
-                    PoseBoneIkGoalSources[producer.PoseBoneIkGoalsIndex];
+                    PoseBoneIkGoalSources[sourceIndex];
                 ushort slots = 0;
                 for (int bindingIndex = 0;
                      bindingIndex < descriptor.Bindings.Count;
@@ -1753,6 +1654,21 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             throw new InvalidOperationException(
                 $"Pose Plan Goal producer '{producer.NodeId}' is not a typed Contribution Source.");
         }
+
+        int RequirePlayerIndex(CharacterPoseOperationHeader operation) =>
+            operation.Family switch
+            {
+                CharacterPoseOperationFamily.Player =>
+                    ((CharacterPosePlayerOperationPayload)
+                        OperationPages.RequirePayload(operation)).PlayerIndex,
+                CharacterPoseOperationFamily.Blend =>
+                    ((CharacterPoseBlendOperationPayload)
+                        OperationPages.RequirePayload(operation)).PlayerIndex,
+                CharacterPoseOperationFamily.AnimationSlot =>
+                    ((CharacterPoseAnimationSlotOperationPayload)
+                        OperationPages.RequirePayload(operation)).PlayerIndex,
+                _ => -1
+            };
 
         static ushort SlotMask(params CharacterFullBodyIkEffectorSlot[] slots)
         {

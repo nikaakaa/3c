@@ -1017,7 +1017,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
                 CharacterLinkedPoseRuntimeGroupSnapshot group = RequireLinkedPoseGroup(page, call.GroupId);
                 CharacterLinkedPoseEntryFragmentPlanDescriptor fragment =
                     RequireLinkedPoseFragment(call, group.ImplementationId);
-                CharacterPresentationPoseOperation callOperation = RequireLinkedPoseCallOperation(call.Index);
+                CharacterPoseOperationHeader callOperation =
+                    RequireLinkedPoseCallOperation(call.Index);
                 CharacterPoseOperationCompletion completion =
                     programDiagnostics.GetOperationCompletion(
                         callOperation.Index);
@@ -1082,13 +1083,16 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
                 $"Linked Pose Call '{call.NodeId}' has no fragment for Implementation '{implementationId}'.");
         }
 
-        CharacterPresentationPoseOperation RequireLinkedPoseCallOperation(int callIndex)
+        CharacterPoseOperationHeader RequireLinkedPoseCallOperation(int callIndex)
         {
-            for (int i = 0; i < m_Program.Operations.Count; i++)
+            for (int i = 0; i < m_Program.OperationHeaders.Count; i++)
             {
-                CharacterPresentationPoseOperation operation = m_Program.Operations[i];
+                CharacterPoseOperationHeader operation =
+                    m_Program.OperationHeaders[i];
                 if (operation.Code == CharacterPoseOperationCode.LinkedPoseCall &&
-                    operation.LinkedPoseCallIndex == callIndex)
+                    ((CharacterPoseIndexedOperationPayload)
+                        m_Program.OperationPages.RequirePayload(operation))
+                    .ValueIndex == callIndex)
                 {
                     return operation;
                 }
@@ -1576,13 +1580,16 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
         {
             int contributionOffset = 0;
             int operationCount = 0;
-            for (int i = 0; i < m_Program.Operations.Count; i++)
+            for (int i = 0; i < m_Program.OperationHeaders.Count; i++)
             {
-                CharacterPresentationPoseOperation operation = m_Program.Operations[i];
-                if (operation.OutputValueIndex < 0)
+                CharacterPoseOperationHeader operation =
+                    m_Program.OperationHeaders[i];
+                int valueIndex = m_Program.OperationPages.FindOutputValueIndex(
+                    operation,
+                    CharacterPoseValueReferenceKind.Pose);
+                if (valueIndex < 0)
                     continue;
                 CharacterPresentationPoseSourceMapEntry source = m_Program.SourceMap[i];
-                int valueIndex = operation.OutputValueIndex;
                 int contributionCount =
                     programDiagnostics.GetValueContributionCount(valueIndex);
                 if (contributionCount < 0 ||
@@ -1670,7 +1677,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
                     effectorOffset,
                     CharacterFullBodyIkGoalSetHeader.MaximumGoalCount);
                 Array.Clear(page.PoseWatchFullBodyIkLimbs, limbOffset, 4);
-                if (!TryResolvePoseWatchOperation(identity, out CharacterPresentationPoseOperation operation))
+                if (!TryResolvePoseWatchOperation(
+                        identity,
+                        out CharacterPoseOperationHeader operation))
                 {
                     page.PoseWatches[watchIndex] = CreateUnavailableWatch(
                         identity,
@@ -1700,10 +1709,12 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
                     FindLinkedPoseEntry(page, operation);
                 ulong completion = programDiagnostics.GetOperationCompletion(
                     operation.Index).CompletionIdentity;
-                if (operation.OutputFullBodyIkGoalContributionValueIndex >= 0)
+                int contributionValueIndex =
+                    m_Program.OperationPages.FindOutputValueIndex(
+                        operation,
+                        CharacterPoseValueReferenceKind.FullBodyIkGoalContribution);
+                if (contributionValueIndex >= 0)
                 {
-                    int contributionValueIndex =
-                        operation.OutputFullBodyIkGoalContributionValueIndex;
                     AnimationFullBodyIkGoalContributionSnapshot contribution = default;
                     AnimationPoseWatchAvailability goalAvailability =
                         completion != frameCompletion
@@ -1781,9 +1792,11 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
                         completion);
                     continue;
                 }
-                if (operation.OutputFullBodyIkGoalSetValueIndex >= 0)
+                int goalSetIndex = m_Program.OperationPages.FindOutputValueIndex(
+                    operation,
+                    CharacterPoseValueReferenceKind.FullBodyIkGoalSet);
+                if (goalSetIndex >= 0)
                 {
-                    int goalSetIndex = operation.OutputFullBodyIkGoalSetValueIndex;
                     AnimationFullBodyIkGoalSetSnapshot goalSet = default;
                     AnimationPoseWatchAvailability goalAvailability =
                         completion != frameCompletion
@@ -1845,7 +1858,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
                         completion);
                     continue;
                 }
-                int valueIndex = operation.OutputValueIndex;
+                int valueIndex = m_Program.OperationPages.FindOutputValueIndex(
+                    operation,
+                    CharacterPoseValueReferenceKind.Pose);
                 AnimationPoseAvailability availability =
                     programDiagnostics.GetValueAvailability(valueIndex);
                 AnimationPoseNativeInvalidReason invalidReason =
@@ -1908,7 +1923,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
                     }
                 }
                 if (operation.Code == CharacterPoseOperationCode.FullBodyIK &&
-                    operation.FullBodyIkIndex == 0)
+                    ((CharacterPoseIndexedOperationPayload)
+                        m_Program.OperationPages.RequirePayload(operation))
+                    .ValueIndex == 0)
                 {
                     CharacterFullBodyIkSolverDiagnostics diagnostics =
                         constraintDiagnostics.Solver;
@@ -1960,17 +1977,24 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
 
         bool TryResolvePoseWatchOperation(
             AnimationPoseWatchIdentity identity,
-            out CharacterPresentationPoseOperation resolved)
+            out CharacterPoseOperationHeader resolved)
         {
             resolved = default;
             bool found = false;
-            for (int i = 0; i < m_Program.Operations.Count; i++)
+            for (int i = 0; i < m_Program.OperationHeaders.Count; i++)
             {
-                CharacterPresentationPoseOperation operation = m_Program.Operations[i];
+                CharacterPoseOperationHeader operation =
+                    m_Program.OperationHeaders[i];
                 CharacterPresentationPoseSourceMapEntry source = m_Program.SourceMap[i];
-                if ((operation.OutputValueIndex < 0 &&
-                     operation.OutputFullBodyIkGoalContributionValueIndex < 0 &&
-                     operation.OutputFullBodyIkGoalSetValueIndex < 0) ||
+                if ((m_Program.OperationPages.FindOutputValueIndex(
+                         operation,
+                         CharacterPoseValueReferenceKind.Pose) < 0 &&
+                     m_Program.OperationPages.FindOutputValueIndex(
+                         operation,
+                         CharacterPoseValueReferenceKind.FullBodyIkGoalContribution) < 0 &&
+                     m_Program.OperationPages.FindOutputValueIndex(
+                         operation,
+                         CharacterPoseValueReferenceKind.FullBodyIkGoalSet) < 0) ||
                     !string.Equals(source.GraphId, identity.GraphId, StringComparison.Ordinal) ||
                     !source.NodeId.Equals(identity.NodeId) ||
                     !string.Equals(source.CallSite, identity.CallSite, StringComparison.Ordinal))
@@ -1987,7 +2011,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
 
         bool MatchesPoseWatchGraphRevision(
             AnimationPoseWatchIdentity identity,
-            CharacterPresentationPoseOperation operation)
+            CharacterPoseOperationHeader operation)
         {
             if (operation.LinkedPoseFragmentIndex >= 0)
             {
@@ -1998,12 +2022,17 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
             return string.Equals(identity.GraphRevision, m_Program.ContentRevision, StringComparison.Ordinal);
         }
 
-        static AnimationLinkedPoseEntryRuntimeSnapshot FindLinkedPoseEntry(
+        AnimationLinkedPoseEntryRuntimeSnapshot FindLinkedPoseEntry(
             Page page,
-            CharacterPresentationPoseOperation operation)
+            CharacterPoseOperationHeader operation)
         {
-            if ((uint)operation.LinkedPoseCallIndex < (uint)page.LinkedPoseEntryCount)
-                return page.LinkedPoseEntries[operation.LinkedPoseCallIndex];
+            if (operation.Family == CharacterPoseOperationFamily.LinkedPose)
+            {
+                int callIndex = ((CharacterPoseIndexedOperationPayload)
+                    m_Program.OperationPages.RequirePayload(operation)).ValueIndex;
+                if ((uint)callIndex < (uint)page.LinkedPoseEntryCount)
+                    return page.LinkedPoseEntries[callIndex];
+            }
             for (int i = 0; i < page.LinkedPoseEntryCount; i++)
             {
                 AnimationLinkedPoseEntryRuntimeSnapshot entry = page.LinkedPoseEntries[i];
@@ -2152,11 +2181,11 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
         PoseNodeId RequirePlayerNodeId(int playerIndex)
         {
             PoseNodeId result = default;
-            for (int i = 0; i < m_Program.Operations.Count; i++)
+            for (int i = 0; i < m_Program.OperationHeaders.Count; i++)
             {
-                CharacterPresentationPoseOperation operation =
-                    m_Program.Operations[i];
-                if (operation.PlayerIndex != playerIndex ||
+                CharacterPoseOperationHeader operation =
+                    m_Program.OperationHeaders[i];
+                if (FindPlayerIndex(operation) != playerIndex ||
                     operation.Code !=
                         CharacterPoseOperationCode.SelectedPosePlayer &&
                     operation.Code != CharacterPoseOperationCode.BlendStack &&
@@ -2181,6 +2210,24 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
             }
             return result;
         }
+
+        int FindPlayerIndex(CharacterPoseOperationHeader operation) =>
+            operation.Family switch
+            {
+                CharacterPoseOperationFamily.Player =>
+                    ((CharacterPosePlayerOperationPayload)
+                        m_Program.OperationPages.RequirePayload(operation))
+                    .PlayerIndex,
+                CharacterPoseOperationFamily.Blend =>
+                    ((CharacterPoseBlendOperationPayload)
+                        m_Program.OperationPages.RequirePayload(operation))
+                    .PlayerIndex,
+                CharacterPoseOperationFamily.AnimationSlot =>
+                    ((CharacterPoseAnimationSlotOperationPayload)
+                        m_Program.OperationPages.RequirePayload(operation))
+                    .PlayerIndex,
+                _ => -1
+            };
 
         static bool RequiresBasicState(AnimationPresentationDiagnosticsInterest interest) =>
             (interest & (AnimationPresentationDiagnosticsInterest.LiveState |
@@ -2226,13 +2273,15 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
                 Stacks = new AnimationBlendStackSnapshot[layout.PlayerCount];
                 Inertializations = new PoseInertializationSnapshot[program.Inertializations.Count];
                 Entries = new AnimationBlendStackEntrySnapshot[entryCapacity];
-                Operations = new AnimationPoseOperationSnapshot[program.Operations.Count];
+                Operations = new AnimationPoseOperationSnapshot[
+                    program.OperationHeaders.Count];
                 Parameters = new AnimationPoseParameterSnapshot[program.Parameters.Count];
                 BlendSpacePlayers = new AnimationBlendSpacePlayerRuntimeSnapshot[blendSpacePlayerCapacity];
                 BlendSpaceSamples = new AnimationBlendSpaceSampleRuntimeSnapshot[blendSpaceSampleCapacity];
                 SlotContributions = new AnimationPoseSourceContribution[layout.TotalPlayerContributionCapacity];
                 OperationContributions = new AnimationPoseSourceContribution[
-                    checked(program.Operations.Count * layout.PoseValueContributionStride)];
+                    checked(program.OperationHeaders.Count *
+                        layout.PoseValueContributionStride)];
                 FinalContributions = new AnimationPoseSourceContribution[layout.PoseValueContributionStride];
                 Releases = new AnimationReleasedPoseSourceSnapshot[releaseCapacity];
                 AnimationSlots = new AnimationSlotRuntimeSnapshot[program.AnimationSlots.Count];
@@ -2267,7 +2316,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
                 InertialBoneEnvelopes = new float[checked(program.Inertializations.Count * layout.BoneCount)];
                 SlotContributionBoneWeights = new float[checked(layout.TotalPlayerContributionCapacity * layout.BoneCount)];
                 OperationContributionBoneWeights = new float[
-                    checked(program.Operations.Count * layout.PoseValueContributionStride * layout.BoneCount)];
+                    checked(program.OperationHeaders.Count *
+                        layout.PoseValueContributionStride * layout.BoneCount)];
                 FinalContributionBoneWeights = new float[checked(layout.PoseValueContributionStride * layout.BoneCount)];
                 PhysicalBoneCount = rig.PhysicalBoneCount;
                 VirtualBoneCount = rig.VirtualBoneCount;

@@ -1135,12 +1135,14 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                     $"Clip Preview source #{sourceIndex.Value} has no compiled Clip Player.");
             }
             int operationIndex = -1;
-            for (int i = 0; i < m_Image.Operations.Count; i++)
+            for (int i = 0; i < m_Image.OperationHeaders.Count; i++)
             {
-                CharacterPresentationPoseOperation operation =
-                    m_Image.Operations[i];
+                CharacterPoseOperationHeader operation =
+                    m_Image.OperationHeaders[i];
                 if (operation.Code != CharacterPoseOperationCode.ClipPlayer ||
-                    operation.ClipPlayerIndex != playerIndex)
+                    ((CharacterPosePlayerOperationPayload)
+                        m_Image.OperationPages.RequirePayload(operation))
+                    .ClipPlayerIndex != playerIndex)
                 {
                     continue;
                 }

@@ -640,16 +640,30 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             m_ParameterValues.Clear();
             m_FixturePlanHash = plan.PlanHash;
             var indices = new SortedSet<int>();
-            for (int i = 0; i < plan.Operations.Count; i++)
+            for (int i = 0; i < plan.OperationHeaders.Count; i++)
             {
-                CharacterPresentationPoseOperation operation = plan.Operations[i];
+                CharacterPoseOperationHeader operation =
+                    plan.OperationHeaders[i];
                 if (operation.Code != CharacterPoseOperationCode.ProgramParameterInput &&
                     operation.Code != CharacterPoseOperationCode.BlendSpacePlayer)
                     continue;
-                if (operation.ParameterIndex >= 0)
-                    indices.Add(operation.ParameterIndex);
-                if (operation.ParameterIndexB >= 0)
-                    indices.Add(operation.ParameterIndexB);
+                int parameterIndex = plan.OperationPages.FindInputValueIndex(
+                    operation,
+                    CharacterPoseValueReferenceKind.Parameter);
+                int parameterIndexB = plan.OperationPages.FindInputValueIndex(
+                    operation,
+                    CharacterPoseValueReferenceKind.Parameter,
+                    1);
+                if (parameterIndex < 0)
+                {
+                    parameterIndex = plan.OperationPages.FindOutputValueIndex(
+                        operation,
+                        CharacterPoseValueReferenceKind.Parameter);
+                }
+                if (parameterIndex >= 0)
+                    indices.Add(parameterIndex);
+                if (parameterIndexB >= 0)
+                    indices.Add(parameterIndexB);
             }
             foreach (int index in indices)
             {

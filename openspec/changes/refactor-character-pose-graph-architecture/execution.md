@@ -1063,3 +1063,7 @@ State selection、source／target availability、curve与profile采样、bone顺
 状态：旧`CharacterPoseGraphStagedExecutor`类型与文件已直接删除，替换为749行`CharacterPoseProgramExecutor`。新Executor只绑定Execution Context、组合有限Family模块、按编译Stage顺序dispatch一次Operation并写Completion；原近300行构造期全量配置验证独立为`CharacterPoseProgramExecutorConfiguration`，不参与普通帧。
 
 Program Runtime是新Executor的唯一Owner，入口同步改为`BeginEvaluation／ExecuteStage／CompleteEvaluation`，不存在旧类型wrapper、第二dispatch或兼容路径。Program／Frame／Value巨型字段属于共享Context，Player、State、Inertialization、Composition、Transform、Constraint、Linked和Output实际执行属于各组合模块。任务6.8完成；3C MCP对Executor、Configuration与Program Runtime错误筛选均为0，不单独运行回放。
+
+## 提升Operation Family为Runtime ABI事实
+
+状态：`CharacterPoseOperationFamily`从Editor Node Definition实现移入Runtime Program Image合同，Definition、Symbolic Lowering、Family Binding和后续Runtime Payload共用同一有限枚举。数值与29个Node Kind映射不变；本步不新增Payload页或第二Operation结构，12.1随分段ABI继续推进。3C MCP对Program Image与Definition错误筛选均为0，不单独运行回放。

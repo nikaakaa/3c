@@ -49,6 +49,29 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         FullBodyIkGoalAssembler = 35
     }
 
+    public enum CharacterPoseOperationFamily : byte
+    {
+        None = 0,
+        ParameterInput = 1,
+        ParameterResolve = 2,
+        Player = 3,
+        StateMachine = 4,
+        ActionInput = 5,
+        AnimationSlot = 6,
+        Blend = 7,
+        Inertialization = 8,
+        Composition = 9,
+        SpaceConversion = 10,
+        ComponentControl = 11,
+        MotionMatching = 12,
+        PoseHistory = 13,
+        GoalContribution = 14,
+        GoalAssembler = 15,
+        FullBodyIk = 16,
+        LinkedPose = 17,
+        Output = 18
+    }
+
     [Serializable]
     public sealed class CharacterPresentationPoseParameterEntry
     {

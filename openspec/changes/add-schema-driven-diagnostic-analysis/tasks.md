@@ -38,9 +38,9 @@
 
 - [x] 5.1 新建独立Foot Analysis Editor程序集、Operator catalog、Plan catalog和统一分析入口，通过asmdef依赖检查确认只引用通用Host／基础序列化合同而不引用PoseGraph Runtime或Foot Capture Runtime
 - [x] 5.2 从Git历史迁移Contact Plane Penetration与Locked Sole Motion算法，通过当前typed dataset输出确认规则只使用Plan绑定handle、从Source／Physical Ankle刚体重建Heel／Toe并保留原阈值、窗口和严重度
-- [ ] 5.3 迁移Landing Path Continuity与Landing State Consistency算法，通过当前typed dataset输出确认状态边界、事件窗口和MissingEvidence分支完整
-- [ ] 5.4 迁移Swing Path Jitter与Step Time Candidate算法，通过当前typed dataset输出确认候选、窗口和Dimension证据可定位
-- [ ] 5.5 迁移Pelvis、Leg Reach与Support相关算法，通过当前typed dataset输出确认坐标事实来自生成字段而非场景Transform反查
+- [x] 5.3 迁移Landing Path Continuity与Landing State Consistency算法，通过当前typed dataset输出确认状态边界、事件窗口和MissingEvidence分支完整
+- [x] 5.4 迁移Swing Path Jitter与当前Formal Step Time Selection算法，通过当前typed dataset输出确认选择、窗口和Dimension证据可定位，并删除已不存在的Current／Incoming候选假字段
+- [x] 5.5 迁移Pelvis、Leg Reach与Support相关算法，通过当前typed dataset输出确认坐标事实来自生成字段而非场景Transform反查
 - [ ] 5.6 迁移Coverage、资格、分母和七维评分组合，通过`diagnosis.json`检查总分能够追溯到规则结果且MissingEvidence会标记评分不完整
 - [ ] 5.7 建立当前Foot Core与Full默认Plan，通过Plan编译结果确认Core只启用现有Core Capture可完整支持的规则、Full覆盖全部已迁移Operator
 - [ ] 5.8 删除迁移过程中产生的临时字段清单、旧CSV模型或中间Adapter，通过`rg`确认没有恢复`CharacterFootMotionDiagnosticAnalyzer`、`CharacterFootCsvColumn`、`CharacterFootCsvBinding`、`FootFrame`和`CharacterFootDiagnosticStore`

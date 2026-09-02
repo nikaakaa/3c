@@ -165,16 +165,11 @@ Contact gap分母只包含measurement applicable且reference available的事实�
 
 速度、加速度、jerk、低采样率分类和Body Tick span都是离线派生。不得把它们重新写入Player Schema。
 
-### 4.6 Step Time Candidate Selection
+### 4.6 Step Time Selection
 
-该规则是Informational，不参与Health。它记录Formal Step Time与Current／Incoming候选的选择事实，统计：
+旧Analyzer比较Current／Incoming两个候选，但当前业务只存在Formal Current Contact、Formal Next Landing和最终Selected三态；`CharacterFootStepCandidateSelectionDiagnostics.Incoming => default`不是业务事实，已连同重复Current别名删除，不能为了复刻旧报告继续输出默认候选。
 
-- observation、formal available、current eligible、incoming eligible分母。
-- selected source与formal closer candidate分类。
-- Formal到Current／Incoming／Selected的绝对时间差分布。
-- Normalized Time wrap、Selected Source变化、Selected Landing Event变化，以及Formal到Selected差异大于0.001 s的代表事件。
-
-Current／Incoming的authority、阶段、event identity、time、root-local landing和最大预测时间大部分已可直接绑定；候选eligibility与时间差可离线派生。Formal Source identity／cycle／completion／normalized time／contribution continuity以及候选`SourceLandingCycleOffset`缺失，Owner分别为Animation Pose Source／Foot Observation和Foot Step Selection。未补齐前该Operator只能`MissingEvidence`，不能只输出部分统计冒充完整迁移。
+当前Informational Operator只检查最新业务链：Formal Source／Cycle／Continuity／Normalized Time、Formal Landing Event／Time、Selected Source／Event／Time、最后一次Landing Event和Maximum Prediction Time。它报告Normalized Time wrap、Source变化、Selected Event变化、Formal Next与Selected的Event不一致、Time差大于0.001 s、超出Maximum Prediction和重复消费最后Landing Event。该规则不参与Health；全部差值与窗口在离线Operator中计算。
 
 ### 4.7 Landing Leg、Pelvis与Reach
 

@@ -449,6 +449,146 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 Lineage.CompletionIdentity);
     }
 
+    internal readonly struct CharacterPoseSourceUsage
+    {
+        internal CharacterPoseSourceUsage(
+            PoseNodeId playerNodeId,
+            AnimationPoseSourceId sourceId,
+            ulong completionIdentity)
+        {
+            if (!playerNodeId.IsValid ||
+                !sourceId.IsValid ||
+                completionIdentity == 0)
+            {
+                throw new ArgumentException(
+                    "Character Pose source usage is invalid.");
+            }
+            PlayerNodeId = playerNodeId;
+            SourceId = sourceId;
+            CompletionIdentity = completionIdentity;
+        }
+
+        internal PoseNodeId PlayerNodeId { get; }
+        internal AnimationPoseSourceId SourceId { get; }
+        internal ulong CompletionIdentity { get; }
+        internal bool IsValid =>
+            PlayerNodeId.IsValid &&
+            SourceId.IsValid &&
+            CompletionIdentity != 0;
+    }
+
+    internal sealed class CharacterPoseSourceUsagePage
+    {
+        readonly CharacterPoseSourceUsage[] m_Usages;
+        ulong m_CompletionIdentity;
+        int m_Count;
+
+        internal CharacterPoseSourceUsagePage(int capacity)
+        {
+            if (capacity < 0)
+                throw new ArgumentOutOfRangeException(nameof(capacity));
+            m_Usages = new CharacterPoseSourceUsage[capacity];
+        }
+
+        internal void Begin(ulong completionIdentity)
+        {
+            if (completionIdentity == 0)
+            {
+                throw new ArgumentOutOfRangeException(
+                    nameof(completionIdentity));
+            }
+            Clear();
+            m_CompletionIdentity = completionIdentity;
+        }
+
+        internal void Add(in CharacterPoseSourceUsage usage)
+        {
+            if (!usage.IsValid ||
+                usage.CompletionIdentity != m_CompletionIdentity)
+            {
+                throw new InvalidOperationException(
+                    "Character Pose source usage does not match the open page.");
+            }
+            for (int i = 0; i < m_Count; i++)
+            {
+                CharacterPoseSourceUsage current = m_Usages[i];
+                if (current.PlayerNodeId == usage.PlayerNodeId &&
+                    current.SourceId.Equals(usage.SourceId))
+                {
+                    return;
+                }
+            }
+            if (m_Count >= m_Usages.Length)
+            {
+                throw new InvalidOperationException(
+                    "Motion Matching Pose Plan source usage capacity was exceeded.");
+            }
+            m_Usages[m_Count++] = usage;
+        }
+
+        internal bool Matches(ulong completionIdentity) =>
+            completionIdentity != 0 &&
+            completionIdentity == m_CompletionIdentity;
+
+        internal int RequireCount(ulong completionIdentity)
+        {
+            RequireOpen(completionIdentity);
+            return m_Count;
+        }
+
+        internal CharacterPoseSourceUsage Require(
+            int index,
+            ulong completionIdentity)
+        {
+            RequireOpen(completionIdentity);
+            if ((uint)index >= (uint)m_Count)
+                throw new ArgumentOutOfRangeException(nameof(index));
+            return m_Usages[index];
+        }
+
+        internal void Clear()
+        {
+            Array.Clear(m_Usages, 0, m_Count);
+            m_CompletionIdentity = 0;
+            m_Count = 0;
+        }
+
+        void RequireOpen(ulong completionIdentity)
+        {
+            if (!Matches(completionIdentity))
+            {
+                throw new InvalidOperationException(
+                    "Character Pose source usage page is stale.");
+            }
+        }
+    }
+
+    internal readonly struct CharacterPoseSourceUsageView
+    {
+        internal CharacterPoseSourceUsageView(
+            CharacterPoseSourceUsagePage page,
+            ulong completionIdentity)
+        {
+            if (page == null || !page.Matches(completionIdentity))
+            {
+                throw new ArgumentException(
+                    "Character Pose source usage view is invalid.");
+            }
+            m_Page = page;
+            CompletionIdentity = completionIdentity;
+        }
+
+        readonly CharacterPoseSourceUsagePage m_Page;
+        internal ulong CompletionIdentity { get; }
+        internal int Count => m_Page.RequireCount(CompletionIdentity);
+        internal bool IsValid =>
+            m_Page != null &&
+            m_Page.Matches(CompletionIdentity);
+
+        internal CharacterPoseSourceUsage Get(int index) =>
+            m_Page.Require(index, CompletionIdentity);
+    }
+
     internal enum CharacterPoseSourceFrameOutcome : byte
     {
         AwaitingSample = 1,

@@ -347,7 +347,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                 new Dictionary<PoseNodeId, int>();
         readonly Dictionary<PoseNodeId, AnimationSelectedPosePlayerRuntime> m_DirectPlayersByNode =
             new Dictionary<PoseNodeId, AnimationSelectedPosePlayerRuntime>();
-        readonly MotionMatchingPosePlanSourceUsage[] m_MotionMatchingSourceUsages;
         readonly MotionMatchingPosePlanHistoryCompletion[] m_MotionMatchingHistoryCompletions;
         readonly PreparedMotionMatchingHistoryRead[]
             m_PreparedMotionMatchingHistoryReads;
@@ -371,7 +370,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
         ulong m_ActionBackendReleaseCompletionIdentity;
         int m_PreparedStandaloneSourceReleaseCount;
         int m_PendingActionBackendReleaseFrameStartCount;
-        int m_MotionMatchingSourceUsageCount;
         int m_PreparedMotionMatchingHistoryReadCount;
         ulong m_PreparedMotionMatchingPresentationFrame;
         ulong m_PreparedMotionMatchingResetSequence;
@@ -705,8 +703,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                         descriptor,
                         clipPlayers[descriptor.ClipPlayerIndex]);
             }
-            m_MotionMatchingSourceUsages =
-                new MotionMatchingPosePlanSourceUsage[sourceCapacity];
             m_MotionMatchingHistoryCompletions =
                 new MotionMatchingPosePlanHistoryCompletion[
                     m_PoseStateSources
@@ -1387,7 +1383,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             m_PreparedMotionMatchingResetSequence = 0;
             m_PreparedMotionMatchingSelectionCompletionIdentity = 0;
             m_PreparedMotionMatchingPoseCompletionIdentity = 0;
-            m_MotionMatchingSourceUsageCount = 0;
+            m_SourceModule.ClearUsage();
             m_MotionMatchingHistoryCompletionCount = 0;
             m_MotionMatchingPoseCompletionPrepared = false;
         }
@@ -1467,7 +1463,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                 throw new InvalidOperationException(
                     "Motion Matching Pose Plan completion preparation is invalid.");
             }
-            m_MotionMatchingSourceUsageCount = 0;
+            m_SourceModule.BeginUsage(poseCompletionIdentity);
             m_MotionMatchingHistoryCompletionCount = 0;
             m_PreparedMotionMatchingHistoryReadCount = 0;
             for (int stackIndex = 0; stackIndex < m_Stacks.Length; stackIndex++)
@@ -1585,13 +1581,15 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             }
             m_PreparedMotionMatchingHistoryReadCount = 0;
             m_MotionMatchingPoseCompletionPrepared = false;
+            CharacterPoseSourceUsageView sourceUsages =
+                m_SourceModule.CaptureUsage(
+                    m_PreparedMotionMatchingPoseCompletionIdentity);
             return new MotionMatchingPosePlanCompletion(
                 m_PreparedMotionMatchingPresentationFrame,
                 m_PreparedMotionMatchingResetSequence,
                 m_PreparedMotionMatchingSelectionCompletionIdentity,
                 m_PreparedMotionMatchingPoseCompletionIdentity,
-                m_MotionMatchingSourceUsages,
-                m_MotionMatchingSourceUsageCount,
+                in sourceUsages,
                 m_MotionMatchingHistoryCompletions,
                 m_MotionMatchingHistoryCompletionCount);
         }
@@ -4194,7 +4192,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             m_PoseStateSources.DiscardFrame();
             m_SourceModule.ClearActionSlotReleaseCompletions();
             m_SourceModule.CancelReleaseDiagnostics();
-            m_MotionMatchingSourceUsageCount = 0;
+            m_SourceModule.ClearUsage();
             m_MotionMatchingHistoryCompletionCount = 0;
         }
 
@@ -4475,19 +4473,11 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             AnimationPoseSourceId sourceId,
             ulong completionIdentity)
         {
-            for (int i = 0; i < m_MotionMatchingSourceUsageCount; i++)
-            {
-                MotionMatchingPosePlanSourceUsage usage = m_MotionMatchingSourceUsages[i];
-                if (usage.PlayerNodeId == playerNodeId && usage.SourceId.Equals(sourceId))
-                    return;
-            }
-            if (m_MotionMatchingSourceUsageCount >= m_MotionMatchingSourceUsages.Length)
-                throw new InvalidOperationException("Motion Matching Pose Plan source usage capacity was exceeded.");
-            m_MotionMatchingSourceUsages[m_MotionMatchingSourceUsageCount++] =
-                new MotionMatchingPosePlanSourceUsage(
-                    playerNodeId,
-                    sourceId,
-                    completionIdentity);
+            var usage = new CharacterPoseSourceUsage(
+                playerNodeId,
+                sourceId,
+                completionIdentity);
+            m_SourceModule.RecordUsage(in usage);
         }
 
         bool PlayerUsesSource(PoseNodeId playerNodeId, AnimationPoseSourceId sourceId)

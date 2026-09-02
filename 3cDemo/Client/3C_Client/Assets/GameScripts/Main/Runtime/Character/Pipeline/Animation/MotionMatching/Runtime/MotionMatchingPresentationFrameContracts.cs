@@ -172,25 +172,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation.MotionMatching
                 : throw new ArgumentOutOfRangeException(nameof(index));
     }
 
-    internal readonly struct MotionMatchingPosePlanSourceUsage
-    {
-        internal MotionMatchingPosePlanSourceUsage(
-            PoseNodeId playerNodeId,
-            AnimationPoseSourceId sourceId,
-            ulong completionIdentity)
-        {
-            if (!playerNodeId.IsValid || !sourceId.IsValid || completionIdentity == 0)
-                throw new ArgumentException("Motion Matching Pose Plan source usage is invalid.");
-            PlayerNodeId = playerNodeId;
-            SourceId = sourceId;
-            CompletionIdentity = completionIdentity;
-        }
-
-        internal PoseNodeId PlayerNodeId { get; }
-        internal AnimationPoseSourceId SourceId { get; }
-        internal ulong CompletionIdentity { get; }
-    }
-
     internal readonly struct MotionMatchingPreparedFrameCompletion
     {
         internal MotionMatchingPreparedFrameCompletion(
@@ -265,7 +246,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.MotionMatching
 
     internal readonly struct MotionMatchingPosePlanCompletion
     {
-        readonly MotionMatchingPosePlanSourceUsage[] m_SourceUsages;
+        readonly CharacterPoseSourceUsageView m_SourceUsages;
         readonly MotionMatchingPosePlanHistoryCompletion[] m_History;
 
         internal MotionMatchingPosePlanCompletion(
@@ -273,13 +254,13 @@ namespace ThirdPersonCharacter.Pipeline.Animation.MotionMatching
             ulong resetSequence,
             ulong selectionCompletionIdentity,
             ulong posePlanCompletionIdentity,
-            MotionMatchingPosePlanSourceUsage[] sourceUsages,
-            int sourceUsageCount,
+            in CharacterPoseSourceUsageView sourceUsages,
             MotionMatchingPosePlanHistoryCompletion[] history,
             int historyCount)
         {
             if (presentationFrame == 0 || selectionCompletionIdentity == 0 || posePlanCompletionIdentity == 0 ||
-                sourceUsages == null || sourceUsageCount < 0 || sourceUsageCount > sourceUsages.Length ||
+                !sourceUsages.IsValid ||
+                sourceUsages.CompletionIdentity != posePlanCompletionIdentity ||
                 history == null || historyCount < 0 || historyCount > history.Length)
             {
                 throw new ArgumentException("Motion Matching Pose Plan completion is invalid.");
@@ -289,7 +270,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.MotionMatching
             SelectionCompletionIdentity = selectionCompletionIdentity;
             PosePlanCompletionIdentity = posePlanCompletionIdentity;
             m_SourceUsages = sourceUsages;
-            SourceUsageCount = sourceUsageCount;
+            SourceUsageCount = sourceUsages.Count;
             m_History = history;
             HistoryCount = historyCount;
         }
@@ -301,9 +282,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation.MotionMatching
         internal int SourceUsageCount { get; }
         internal int HistoryCount { get; }
 
-        internal MotionMatchingPosePlanSourceUsage GetSourceUsage(int index) =>
+        internal CharacterPoseSourceUsage GetSourceUsage(int index) =>
             (uint)index < (uint)SourceUsageCount
-                ? m_SourceUsages[index]
+                ? m_SourceUsages.Get(index)
                 : throw new ArgumentOutOfRangeException(nameof(index));
 
         internal MotionMatchingPosePlanHistoryCompletion GetHistory(int index) =>

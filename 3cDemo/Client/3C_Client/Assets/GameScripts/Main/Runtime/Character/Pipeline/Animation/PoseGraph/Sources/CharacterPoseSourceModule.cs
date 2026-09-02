@@ -502,6 +502,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Sources
         readonly AnimancerPoseSamplingBackend m_Backend;
         readonly PhysicalPoseSourceRegistry m_PhysicalSources;
         readonly CharacterPoseSourceBindingPage m_BindingPage;
+        readonly CharacterPoseSourceUsagePage m_UsagePage;
         readonly SourceReleasePage m_ReleasePage;
         readonly SourceReleaseCompletionPage m_ReleaseCompletions;
         readonly HashSet<AnimationPhysicalSourceIdentity>
@@ -580,6 +581,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Sources
                 directBindingCapacity,
                 clipBindingCapacity,
                 blendSpaceBindingCapacity);
+            m_UsagePage =
+                new CharacterPoseSourceUsagePage(sourceCapacity);
             m_ReleasePage = new SourceReleasePage(sourceCapacity);
             m_ReleaseCompletions =
                 new SourceReleaseCompletionPage(sourceCapacity);
@@ -667,6 +670,21 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Sources
                 in lineage,
                 m_BindingPage);
         }
+
+        internal void BeginUsage(ulong completionIdentity) =>
+            m_UsagePage.Begin(completionIdentity);
+
+        internal void RecordUsage(
+            in CharacterPoseSourceUsage usage) =>
+            m_UsagePage.Add(in usage);
+
+        internal CharacterPoseSourceUsageView CaptureUsage(
+            ulong completionIdentity) =>
+            new CharacterPoseSourceUsageView(
+                m_UsagePage,
+                completionIdentity);
+
+        internal void ClearUsage() => m_UsagePage.Clear();
 
         internal void RequirePendingOpen(
             CharacterPoseSourceFrameLease lease)
@@ -1058,6 +1076,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Sources
             m_FramePage.Clear();
             m_PhysicalSources.Reset();
             m_BindingPage.Clear();
+            m_UsagePage.Clear();
             for (int port = 1;
                  port < m_SourceFanIn.GetInputCount();
                  port++)
@@ -1107,6 +1126,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Sources
             Exception failure = null;
             DisposeStep(m_Backend.Dispose, ref failure);
             m_FramePage.Clear();
+            m_BindingPage.Clear();
+            m_UsagePage.Clear();
+            m_ReleasePage.Clear();
+            m_ReleaseCompletions.Clear();
             DisposeStep(RestoreOutputAndDestroyFanIn, ref failure);
             DisposeStep(m_PhysicalSources.Dispose, ref failure);
             m_ReleaseValidationIdentities.Clear();

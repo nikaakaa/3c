@@ -974,7 +974,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.MotionMatching
                  usageIndex < completion.SourceUsageCount;
                  usageIndex++)
             {
-                MotionMatchingPosePlanSourceUsage usage =
+                CharacterPoseSourceUsage usage =
                     completion.GetSourceUsage(usageIndex);
                 int mutationIndex =
                     FindFrozenOutputMutation(usage.SourceId);

@@ -14,15 +14,17 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 throw new ArgumentNullException(nameof(context));
         }
 
-        internal void EvaluateModifyBone(AnimationPoseGraphNativeOperation operation)
+        internal void EvaluateModifyBone(
+            in CharacterPoseNativeOperationHeader header,
+            in CharacterPoseNativeComponentControlOperation operation)
         {
-            int input = operation.InputValueIndexA;
-            int output = operation.OutputValueIndex;
-            if (!m_Context.IsInputReady(input, operation.Index) ||
+            int input = operation.InputPoseValueIndex;
+            int output = operation.OutputPoseValueIndex;
+            if (!m_Context.IsInputReady(input, header.Index) ||
                 (uint)operation.ModifyBoneIndex >= (uint)m_Context.m_ModifyBones.Length ||
-                !m_Context.TryCopyValue(input, output, operation.Index))
+                !m_Context.TryCopyValue(input, output, header.Index))
             {
-                m_Context.SetInvalid(output, (ulong)operation.Index + 1UL, AnimationPoseNativeInvalidReason.PoseGraphInputIncomplete, operation.Index);
+                m_Context.SetInvalid(output, (ulong)header.Index + 1UL, AnimationPoseNativeInvalidReason.PoseGraphInputIncomplete, header.Index);
                 return;
             }
             if (m_Context.m_ValueAvailability[output] != AnimationPoseAvailability.Pose)
@@ -37,18 +39,18 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 parentComponent = AsComponent(m_Context.m_ValueDenseLocalPoses[outputOffset + modify.ParentBoneIndex]);
                 if (!CharacterPoseConstraintMath.TryCreateLocal(AsComponent(current), parentComponent, out current))
                 {
-                    m_Context.SetInvalid(output, m_Context.m_ValueContinuityIdentities[output], AnimationPoseNativeInvalidReason.PoseGraphOperationInvalid, operation.Index);
+                    m_Context.SetInvalid(output, m_Context.m_ValueContinuityIdentities[output], AnimationPoseNativeInvalidReason.PoseGraphOperationInvalid, header.Index);
                     return;
                 }
             }
             Vector3 position = (modify.Operations & ModifyBoneOperationMask.Position) != 0
-                ? current.Position + modify.Position * operation.Weight
+                ? current.Position + modify.Position * header.Weight
                 : current.Position;
             Quaternion rotation = (modify.Operations & ModifyBoneOperationMask.Rotation) != 0
-                ? Quaternion.SlerpUnclamped(Quaternion.identity, modify.Rotation, operation.Weight) * current.Rotation
+                ? Quaternion.SlerpUnclamped(Quaternion.identity, modify.Rotation, header.Weight) * current.Rotation
                 : current.Rotation;
             Vector3 scale = (modify.Operations & ModifyBoneOperationMask.Scale) != 0
-                ? Vector3.Scale(current.Scale, Vector3.LerpUnclamped(Vector3.one, modify.Scale, operation.Weight))
+                ? Vector3.Scale(current.Scale, Vector3.LerpUnclamped(Vector3.one, modify.Scale, header.Weight))
                 : current.Scale;
             var modified = new AnimationLocalBonePose(position, rotation, scale);
             if (modify.ReferenceSpace == ModifyBoneReferenceSpace.Local && modify.ParentBoneIndex >= 0)
@@ -58,31 +60,32 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                         parentComponent,
                         out CharacterComponentBonePose component))
                 {
-                    m_Context.SetInvalid(output, m_Context.m_ValueContinuityIdentities[output], AnimationPoseNativeInvalidReason.PoseGraphOperationInvalid, operation.Index);
+                    m_Context.SetInvalid(output, m_Context.m_ValueContinuityIdentities[output], AnimationPoseNativeInvalidReason.PoseGraphOperationInvalid, header.Index);
                     return;
                 }
                 modified = ToPose(component);
             }
             m_Context.m_ValueDenseLocalPoses[outputOffset + modify.BoneIndex] = modified;
             if (!RebuildComponentDescendants(inputOffset, outputOffset, modify.BoneIndex))
-                m_Context.SetInvalid(output, m_Context.m_ValueContinuityIdentities[output], AnimationPoseNativeInvalidReason.PoseGraphOperationInvalid, operation.Index);
+                m_Context.SetInvalid(output, m_Context.m_ValueContinuityIdentities[output], AnimationPoseNativeInvalidReason.PoseGraphOperationInvalid, header.Index);
         }
 
         internal void EvaluateRootOrientationWarp(
-            AnimationPoseGraphNativeOperation operation)
+            in CharacterPoseNativeOperationHeader header,
+            in CharacterPoseNativeComponentControlOperation operation)
         {
-            int input = operation.InputValueIndexA;
-            int output = operation.OutputValueIndex;
-            if (!m_Context.IsInputReady(input, operation.Index) ||
+            int input = operation.InputPoseValueIndex;
+            int output = operation.OutputPoseValueIndex;
+            if (!m_Context.IsInputReady(input, header.Index) ||
                 (uint)operation.RootOrientationWarpIndex >=
                 (uint)m_Context.m_RootOrientationWarps.Length ||
                 (uint)operation.RootOrientationWarpIndex >=
                 (uint)m_Context.m_RootOrientationWarpControls.Length ||
-                !m_Context.TryCopyValue(input, output, operation.Index))
+                !m_Context.TryCopyValue(input, output, header.Index))
             {
-                m_Context.SetInvalid(output, (ulong)operation.Index + 1UL,
+                m_Context.SetInvalid(output, (ulong)header.Index + 1UL,
                     AnimationPoseNativeInvalidReason.PoseGraphInputIncomplete,
-                    operation.Index);
+                    header.Index);
                 return;
             }
             if (m_Context.m_ValueAvailability[output] !=
@@ -96,7 +99,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 m_Context.SetInvalid(output,
                     m_Context.m_ValueContinuityIdentities[output],
                     AnimationPoseNativeInvalidReason.PoseGraphOperationInvalid,
-                    operation.Index);
+                    header.Index);
                 return;
             }
             if (control.Active == 0 ||
@@ -110,7 +113,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 m_Context.SetInvalid(output,
                     m_Context.m_ValueContinuityIdentities[output],
                     AnimationPoseNativeInvalidReason.PoseGraphOperationInvalid,
-                    operation.Index);
+                    header.Index);
                 return;
             }
             int offset = m_Context.PoseOffset(output) + root;
@@ -162,19 +165,20 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             new AnimationLocalBonePose(value.Position, value.Rotation, value.Scale);
 
         internal void EvaluateLocalToComponentPose(
-            AnimationPoseGraphNativeOperation operation)
+            in CharacterPoseNativeOperationHeader header,
+            in CharacterPoseNativeSpaceConversionOperation operation)
         {
-            int input = operation.InputValueIndexA;
-            int output = operation.OutputValueIndex;
-            if (!m_Context.IsInputReady(input, operation.Index) ||
+            int input = operation.InputPoseValueIndex;
+            int output = operation.OutputPoseValueIndex;
+            if (!m_Context.IsInputReady(input, header.Index) ||
                 !m_Context.TryCopyValueWithoutPose(
                     input,
                     output,
-                    operation.Index))
+                    header.Index))
             {
-                m_Context.SetInvalid(output, (ulong)operation.Index + 1UL,
+                m_Context.SetInvalid(output, (ulong)header.Index + 1UL,
                     AnimationPoseNativeInvalidReason.PoseGraphInputIncomplete,
-                    operation.Index);
+                    header.Index);
                 return;
             }
             if (m_Context.m_ValueAvailability[output] != AnimationPoseAvailability.Pose)
@@ -193,7 +197,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 {
                     m_Context.SetInvalid(output, m_Context.m_ValueContinuityIdentities[output],
                         AnimationPoseNativeInvalidReason.PoseSpaceConversionInvalid,
-                        operation.Index);
+                        header.Index);
                     return;
                 }
                 m_Context.m_ValueDenseLocalPoses[offset] = local;
@@ -201,19 +205,20 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         }
 
         internal void EvaluateComponentToLocalPose(
-            AnimationPoseGraphNativeOperation operation)
+            in CharacterPoseNativeOperationHeader header,
+            in CharacterPoseNativeSpaceConversionOperation operation)
         {
-            int input = operation.InputValueIndexA;
-            int output = operation.OutputValueIndex;
-            if (!m_Context.IsInputReady(input, operation.Index) ||
+            int input = operation.InputPoseValueIndex;
+            int output = operation.OutputPoseValueIndex;
+            if (!m_Context.IsInputReady(input, header.Index) ||
                 !m_Context.TryCopyValueWithoutPose(
                     input,
                     output,
-                    operation.Index))
+                    header.Index))
             {
-                m_Context.SetInvalid(output, (ulong)operation.Index + 1UL,
+                m_Context.SetInvalid(output, (ulong)header.Index + 1UL,
                     AnimationPoseNativeInvalidReason.PoseGraphInputIncomplete,
-                    operation.Index);
+                    header.Index);
                 return;
             }
             if (m_Context.m_ValueAvailability[output] != AnimationPoseAvailability.Pose)
@@ -231,7 +236,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 {
                     m_Context.SetInvalid(output, m_Context.m_ValueContinuityIdentities[output],
                         AnimationPoseNativeInvalidReason.PoseSpaceConversionInvalid,
-                        operation.Index);
+                        header.Index);
                     return;
                 }
                 m_Context.m_ValueDenseLocalPoses[m_Context.PoseOffset(output) + bone] = component;

@@ -13,28 +13,30 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 throw new ArgumentNullException(nameof(context));
         }
 
-        internal void EvaluateOutputPose(AnimationPoseGraphNativeOperation operation)
+        internal void EvaluateOutputPose(
+            in CharacterPoseNativeOperationHeader header,
+            in CharacterPoseNativeOutputOperation operation)
         {
-            int input = operation.InputValueIndexA;
-            if (!m_Context.IsInputReady(input, operation.Index))
+            int input = operation.InputPoseValueIndex;
+            if (!m_Context.IsInputReady(input, header.Index))
             {
                 AnimationPoseNativeInvalidReason reason =
                     AnimationPoseNativeInvalidReason.PoseGraphInputIncomplete;
-                m_Context.RecordGraphInvalid(reason, operation.Index);
+                m_Context.RecordGraphInvalid(reason, header.Index);
                 m_Context.m_FinalOutput.WriteInvalid(
                     reason,
-                    (ulong)operation.Index + 1UL);
+                    (ulong)header.Index + 1UL);
                 return;
             }
             ulong continuity = CharacterPoseExecutionContext.CombineContinuity(
                 m_Context.m_ValueContinuityIdentities[input],
-                (ulong)operation.Index + 1UL,
-                operation.Index);
+                (ulong)header.Index + 1UL,
+                header.Index);
             if (m_Context.m_ValueAvailability[input] == AnimationPoseAvailability.NoPose)
             {
                 AnimationPoseNativeInvalidReason reason =
                     AnimationPoseNativeInvalidReason.PoseGraphOutputInvalid;
-                m_Context.RecordGraphInvalid(reason, operation.Index);
+                m_Context.RecordGraphInvalid(reason, header.Index);
                 m_Context.m_FinalOutput.WriteInvalid(reason, continuity);
                 return;
             }
@@ -42,7 +44,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             {
                 AnimationPoseNativeInvalidReason reason =
                     CharacterPoseExecutionContext.NormalizeInvalidReason(m_Context.m_ValueInvalidReasons[input]);
-                m_Context.RecordGraphInvalid(reason, operation.Index);
+                m_Context.RecordGraphInvalid(reason, header.Index);
                 m_Context.m_FinalOutput.WriteInvalid(reason, continuity);
                 return;
             }
@@ -51,7 +53,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                     out AnimationPoseNativeInvalidReason invalidReason))
             {
                 invalidReason = CharacterPoseExecutionContext.NormalizeInvalidReason(invalidReason);
-                m_Context.RecordGraphInvalid(invalidReason, operation.Index);
+                m_Context.RecordGraphInvalid(invalidReason, header.Index);
                 m_Context.m_FinalOutput.WriteInvalid(invalidReason, continuity);
                 return;
             }

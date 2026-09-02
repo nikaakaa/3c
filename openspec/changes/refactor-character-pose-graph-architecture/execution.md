@@ -1093,3 +1093,11 @@ Program Runtime是新Executor的唯一Owner，入口同步改为`BeginEvaluation
 Bind Family Payload阶段一次生成全部Header、typed引用与Family页；Seal阶段只计算包含Family／Source／Policy在内的完整Image Hash并封口。Runtime构造、Linked／Motion Matching计划、调参、Diagnostics与Editor Preview均改读Header和自身Family Payload；Execution View仍在唯一构造边界逐值materialize当前Native执行数据，没有第二序列化reader或旧schema fallback。任务11.9、12.1、12.2与12.4完成。
 
 3C MCP脚本重编无C#错误。正式Character Build已从唯一显式入口执行，但被现有Foot Analysis geometry validation identity stale拒绝，未写入v24 generated Projection；本change没有绕过或修改Foot数据。Native万能Operation的Family化与生成资产重建继续作为后续原子步骤，不单独运行回放。
+
+## 删除Native万能Operation镜像
+
+状态：`AnimationPoseGraphNativeOperation`已删除。Execution View现在只materialize有限`CharacterPoseNativeOperationHeader`和Parameter Resolve、Player、StateMachine、AnimationSlot、Blend、Inertialization、Composition、Space Conversion、Component Control、Goal Contribution、Goal Assembler、FullBodyIK、Linked Pose、Output固定Native页；Header只负责Stage dispatch、Family索引、Output Pose、Fragment归属、Completion与公共Weight。
+
+Program Executor按Header的Family Payload index取得唯一typed页后调用现有Family模块；各模块签名改为Header加自身Payload，Execution Context的合成辅助入口只接收实际所需Weight、Mask、Policy或Value参数。旧万能Native字段、`WithWeight`整记录复制、State blend临时万能记录和跨Family`-1`校验矩阵全部删除；Stage顺序、Value地址、Weight覆盖、Constraint handle、Slot合成、Inertialization及Final Publication调用位置不变。任务5.1至5.3、11.10、11.11、12.3、12.6至12.8完成。
+
+3C MCP完成全脚本重编且C#错误为0。generated Projection仍只等待既有Foot Analysis身份恢复后从正式Character Build入口重建；本步不回放。

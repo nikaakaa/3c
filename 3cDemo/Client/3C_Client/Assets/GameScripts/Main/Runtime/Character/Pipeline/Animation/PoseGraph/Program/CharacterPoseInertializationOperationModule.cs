@@ -19,16 +19,19 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 throw new ArgumentNullException(nameof(context));
         }
 
-        internal void EvaluateInertialization(AnimationPoseGraphNativeOperation operation, float deltaSeconds)
+        internal void EvaluateInertialization(
+            in CharacterPoseNativeOperationHeader header,
+            in CharacterPoseNativeInertializationOperation operation,
+            float deltaSeconds)
         {
-            int output = operation.OutputValueIndex;
-            int input = operation.InputValueIndexA;
-            if (!m_Context.IsInputReady(input, operation.Index) ||
+            int output = operation.OutputPoseValueIndex;
+            int input = operation.InputPoseValueIndex;
+            if (!m_Context.IsInputReady(input, header.Index) ||
                 (uint)operation.InertializationIndex >= (uint)m_Context.m_Inertializations.Length ||
                 !float.IsFinite(deltaSeconds) || deltaSeconds < 0f)
             {
                 ClearInertialState(operation.InertializationIndex, PoseInertializationRuntimeState.Invalid);
-                m_Context.SetInvalid(output, (ulong)operation.Index + 1UL, AnimationPoseNativeInvalidReason.PoseGraphInputIncomplete, operation.Index);
+                m_Context.SetInvalid(output, (ulong)header.Index + 1UL, AnimationPoseNativeInvalidReason.PoseGraphInputIncomplete, header.Index);
                 return;
             }
             int stateIndex = operation.InertializationIndex;
@@ -44,19 +47,19 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 ClearInertialState(stateIndex, PoseInertializationRuntimeState.Invalid);
                 m_Context.SetInvalid(
                     output,
-                    (ulong)operation.Index + 1UL,
+                    (ulong)header.Index + 1UL,
                     AnimationPoseNativeInvalidReason.PoseGraphOperationInvalid,
-                    operation.Index);
+                    header.Index);
                 return;
             }
             CharacterPoseStateMachineNativeControl control = stateMachineOwner
                 ? m_Context.m_StateMachineControls[node.ControlIndex]
                 : default;
             PoseDiscontinuityNative discontinuity = m_Context.m_ValueDiscontinuities[input];
-            if (!m_Context.TryCopyValue(input, output, operation.Index))
+            if (!m_Context.TryCopyValue(input, output, header.Index))
             {
                 ClearInertialState(operation.InertializationIndex, PoseInertializationRuntimeState.Invalid);
-                m_Context.SetInvalid(output, m_Context.m_ValueContinuityIdentities[input], AnimationPoseNativeInvalidReason.PoseGraphOperationInvalid, operation.Index);
+                m_Context.SetInvalid(output, m_Context.m_ValueContinuityIdentities[input], AnimationPoseNativeInvalidReason.PoseGraphOperationInvalid, header.Index);
                 return;
             }
             PoseInertializationNativeState state = CommittedInertialState(stateIndex);
@@ -91,7 +94,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                         output,
                         m_Context.m_ValueContinuityIdentities[input],
                         AnimationPoseNativeInvalidReason.PoseGraphOperationInvalid,
-                        operation.Index);
+                        header.Index);
                     return;
                 }
                 if (eventIdentity > state.LastEventIdentity)
@@ -113,7 +116,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                             discontinuity.CurrentEndpoint.PresentationPoseSourceIndex < 0)
                         {
                             ClearInertialState(stateIndex, PoseInertializationRuntimeState.Invalid);
-                            m_Context.SetInvalid(output, m_Context.m_ValueContinuityIdentities[input], AnimationPoseNativeInvalidReason.PoseGraphOperationInvalid, operation.Index);
+                            m_Context.SetInvalid(output, m_Context.m_ValueContinuityIdentities[input], AnimationPoseNativeInvalidReason.PoseGraphOperationInvalid, header.Index);
                             return;
                         }
                         sourceEndpointIndex = discontinuity.PreviousEndpoint.PresentationPoseSourceIndex;
@@ -143,7 +146,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                             m_Context.m_InertialRules[ruleIndex].Mode != PoseInertializationMode.Inertialize)
                         {
                             ClearInertialState(stateIndex, PoseInertializationRuntimeState.Invalid);
-                            m_Context.SetInvalid(output, m_Context.m_ValueContinuityIdentities[input], AnimationPoseNativeInvalidReason.PoseGraphOperationInvalid, operation.Index);
+                            m_Context.SetInvalid(output, m_Context.m_ValueContinuityIdentities[input], AnimationPoseNativeInvalidReason.PoseGraphOperationInvalid, header.Index);
                             return;
                         }
                         if (state.HasHistory != 0)
@@ -195,7 +198,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                     if (!CharacterPoseExecutionContext.IsFinite(linear) || !CharacterPoseExecutionContext.IsFinite(angular) || !CharacterPoseExecutionContext.IsFinite(scaleVelocity))
                     {
                         ClearInertialState(stateIndex, PoseInertializationRuntimeState.Invalid);
-                        m_Context.SetInvalid(output, m_Context.m_ValueContinuityIdentities[input], AnimationPoseNativeInvalidReason.PoseGraphOperationInvalid, operation.Index);
+                        m_Context.SetInvalid(output, m_Context.m_ValueContinuityIdentities[input], AnimationPoseNativeInvalidReason.PoseGraphOperationInvalid, header.Index);
                         return;
                     }
                     m_Context.m_ValueDenseLocalPoses[m_Context.PoseOffset(output) + bone] = new AnimationLocalBonePose(

@@ -13,7 +13,35 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         internal const float ScaleEpsilon = 0.000001f;
 
         [ReadOnly]
-        internal NativeArray<AnimationPoseGraphNativeOperation> m_Operations;
+        internal NativeArray<CharacterPoseNativeOperationHeader> m_OperationHeaders;
+        [ReadOnly]
+        internal NativeArray<CharacterPoseNativeParameterResolveOperation> m_ParameterResolveOperations;
+        [ReadOnly]
+        internal NativeArray<CharacterPoseNativePlayerOperation> m_PlayerFamilyOperations;
+        [ReadOnly]
+        internal NativeArray<CharacterPoseNativeStateMachineOperation> m_StateMachineFamilyOperations;
+        [ReadOnly]
+        internal NativeArray<CharacterPoseNativeAnimationSlotOperation> m_AnimationSlotFamilyOperations;
+        [ReadOnly]
+        internal NativeArray<CharacterPoseNativeBlendOperation> m_BlendFamilyOperations;
+        [ReadOnly]
+        internal NativeArray<CharacterPoseNativeInertializationOperation> m_InertializationFamilyOperations;
+        [ReadOnly]
+        internal NativeArray<CharacterPoseNativeCompositionOperation> m_CompositionFamilyOperations;
+        [ReadOnly]
+        internal NativeArray<CharacterPoseNativeSpaceConversionOperation> m_SpaceConversionOperations;
+        [ReadOnly]
+        internal NativeArray<CharacterPoseNativeComponentControlOperation> m_ComponentControlOperations;
+        [ReadOnly]
+        internal NativeArray<CharacterPoseNativeGoalContributionOperation> m_GoalContributionOperations;
+        [ReadOnly]
+        internal NativeArray<CharacterPoseNativeGoalAssemblerOperation> m_GoalAssemblerOperations;
+        [ReadOnly]
+        internal NativeArray<CharacterPoseNativeFullBodyIkOperation> m_FullBodyIkOperations;
+        [ReadOnly]
+        internal NativeArray<CharacterPoseNativeLinkedPoseOperation> m_LinkedPoseOperations;
+        [ReadOnly]
+        internal NativeArray<CharacterPoseNativeOutputOperation> m_OutputFamilyOperations;
         [ReadOnly]
         internal NativeArray<float> m_OperationWeights;
         [ReadOnly]
@@ -199,19 +227,23 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         internal ulong m_FrameSequence;
 
 
-        internal bool TryRequireInputs(AnimationPoseGraphNativeOperation operation, int inputA, int inputB)
+        internal bool TryRequireInputs(
+            in CharacterPoseNativeOperationHeader header,
+            int output,
+            int inputA,
+            int inputB)
         {
-            int output = operation.OutputValueIndex;
-            if (!IsInputReady(inputA, operation.Index) || !IsInputReady(inputB, operation.Index))
+            if (!IsInputReady(inputA, header.Index) ||
+                !IsInputReady(inputB, header.Index))
             {
-                SetInvalid(output, (ulong)operation.Index + 1UL, AnimationPoseNativeInvalidReason.PoseGraphInputIncomplete, operation.Index);
+                SetInvalid(output, (ulong)header.Index + 1UL, AnimationPoseNativeInvalidReason.PoseGraphInputIncomplete, header.Index);
                 return false;
             }
             AnimationPoseAvailability availabilityA = m_ValueAvailability[inputA];
             AnimationPoseAvailability availabilityB = m_ValueAvailability[inputB];
             if (!IsAvailability(availabilityA) || !IsAvailability(availabilityB))
             {
-                SetInvalid(output, (ulong)operation.Index + 1UL, AnimationPoseNativeInvalidReason.PoseGraphOperationInvalid, operation.Index);
+                SetInvalid(output, (ulong)header.Index + 1UL, AnimationPoseNativeInvalidReason.PoseGraphOperationInvalid, header.Index);
                 return false;
             }
             if (availabilityA == AnimationPoseAvailability.Invalid ||
@@ -227,7 +259,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                         m_ValueContinuityIdentities[inputB],
                         output),
                     reason,
-                    operation.Index);
+                    header.Index);
                 return false;
             }
             return true;
@@ -327,11 +359,14 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             return true;
         }
 
-        internal bool TryScaleValue(int value, AnimationPoseGraphNativeOperation operation)
+        internal bool TryScaleValue(
+            int value,
+            float weight,
+            int boneMaskOffset)
         {
             if (m_ValueAvailability[value] != AnimationPoseAvailability.Pose)
                 return true;
-            float outputWeight = m_ValueOutputWeights[value] * operation.Weight;
+            float outputWeight = m_ValueOutputWeights[value] * weight;
             if (!IsWeight(outputWeight))
                 return false;
             m_ValueOutputWeights[value] = outputWeight;
@@ -340,9 +375,11 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             {
                 AnimationPrimitivePoseContribution source =
                     m_ValueContributions[ContributionOffset(value) + contribution];
-                float scalarWeight = source.Weight * operation.Weight;
-                float leftWeight = source.LeftFootWeight * GetMaskWeight(operation, m_LeftFootBoneIndex) * operation.Weight;
-                float rightWeight = source.RightFootWeight * GetMaskWeight(operation, m_RightFootBoneIndex) * operation.Weight;
+                float scalarWeight = source.Weight * weight;
+                float leftWeight = source.LeftFootWeight *
+                    GetMaskWeight(boneMaskOffset, m_LeftFootBoneIndex) * weight;
+                float rightWeight = source.RightFootWeight *
+                    GetMaskWeight(boneMaskOffset, m_RightFootBoneIndex) * weight;
                 if (!IsWeight(scalarWeight) || !IsWeight(leftWeight) || !IsWeight(rightWeight))
                     return false;
                 m_ValueContributions[ContributionOffset(value) + contribution] =
@@ -358,24 +395,30 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                         rightWeight);
                 for (int bone = 0; bone < m_BoneCount; bone++)
                 {
-                    float weight = GetContributionBoneWeight(value, contribution, bone) *
-                                   GetMaskWeight(operation, bone) * operation.Weight;
-                    if (!IsWeight(weight))
+                    float boneWeight =
+                        GetContributionBoneWeight(value, contribution, bone) *
+                        GetMaskWeight(boneMaskOffset, bone) * weight;
+                    if (!IsWeight(boneWeight))
                         return false;
-                    SetContributionBoneWeight(value, contribution, bone, weight);
+                    SetContributionBoneWeight(
+                        value,
+                        contribution,
+                        bone,
+                        boneWeight);
                 }
             }
             return true;
         }
 
         internal bool TryResolveParameters(
-            AnimationPoseGraphNativeOperation operation,
+            float weight,
+            int parameterPolicyOffset,
             int baseValue,
             int overlayValue,
             int output)
         {
             float baseWeight = m_ValueOutputWeights[baseValue];
-            float overlayWeight = m_ValueOutputWeights[overlayValue] * operation.Weight;
+            float overlayWeight = m_ValueOutputWeights[overlayValue] * weight;
             if (!IsWeight(baseWeight) || !IsWeight(overlayWeight))
                 return false;
             for (int parameter = 0; parameter < m_ParameterCount; parameter++)
@@ -390,7 +433,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 bool baseAvailable = m_ValuePoseParameterAvailability[baseOffset] != 0;
                 bool overlayAvailable = m_ValuePoseParameterAvailability[overlayOffset] != 0;
                 PoseParameterResolvePolicy policy =
-                    m_ParameterPolicies[operation.ParameterPolicyOffset + parameter];
+                    m_ParameterPolicies[parameterPolicyOffset + parameter];
                 float value;
                 bool available;
                 switch (policy)
@@ -453,7 +496,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         }
 
         internal bool TryMergeContributions(
-            AnimationPoseGraphNativeOperation operation,
+            float weight,
+            int boneMaskOffset,
             int baseValue,
             int overlayValue,
             int output,
@@ -462,7 +506,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             for (int contribution = 0; contribution < m_ValueContributionCounts[baseValue]; contribution++)
             {
                 if (!TryAddContribution(
-                        operation,
+                        weight,
+                        boneMaskOffset,
                         baseValue,
                         contribution,
                         overlayValue,
@@ -476,7 +521,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             for (int contribution = 0; contribution < m_ValueContributionCounts[overlayValue]; contribution++)
             {
                 if (!TryAddContribution(
-                        operation,
+                        weight,
+                        boneMaskOffset,
                         overlayValue,
                         contribution,
                         overlayValue,
@@ -491,7 +537,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         }
 
         internal bool TryAddContribution(
-            AnimationPoseGraphNativeOperation operation,
+            float weight,
+            int boneMaskOffset,
             int sourceValue,
             int sourceIndex,
             int overlayValue,
@@ -509,9 +556,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             float rightFactor;
             if (overlay)
             {
-                scalarFactor = operation.Weight;
-                leftFactor = GetMaskWeight(operation, m_LeftFootBoneIndex) * operation.Weight;
-                rightFactor = GetMaskWeight(operation, m_RightFootBoneIndex) * operation.Weight;
+                scalarFactor = weight;
+                leftFactor = GetMaskWeight(boneMaskOffset, m_LeftFootBoneIndex) * weight;
+                rightFactor = GetMaskWeight(boneMaskOffset, m_RightFootBoneIndex) * weight;
             }
             else if (additive)
             {
@@ -526,9 +573,11 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 {
                     return false;
                 }
-                scalarFactor = 1f - m_ValueOutputWeights[overlayValue] * operation.Weight;
-                leftFactor = 1f - leftOverlay * GetMaskWeight(operation, m_LeftFootBoneIndex) * operation.Weight;
-                rightFactor = 1f - rightOverlay * GetMaskWeight(operation, m_RightFootBoneIndex) * operation.Weight;
+                scalarFactor = 1f - m_ValueOutputWeights[overlayValue] * weight;
+                leftFactor = 1f - leftOverlay *
+                    GetMaskWeight(boneMaskOffset, m_LeftFootBoneIndex) * weight;
+                rightFactor = 1f - rightOverlay *
+                    GetMaskWeight(boneMaskOffset, m_RightFootBoneIndex) * weight;
             }
 
             float scalarWeight = source.Weight * Mathf.Clamp01(scalarFactor);
@@ -579,7 +628,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 float factor;
                 if (overlay)
                 {
-                    factor = GetMaskWeight(operation, bone) * operation.Weight;
+                    factor = GetMaskWeight(boneMaskOffset, bone) * weight;
                 }
                 else if (additive)
                 {
@@ -589,10 +638,16 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 {
                     if (!TryGetBoneOutputWeight(overlayValue, bone, out float overlayOutput))
                         return false;
-                    factor = 1f - overlayOutput * GetMaskWeight(operation, bone) * operation.Weight;
+                    factor = 1f - overlayOutput *
+                        GetMaskWeight(boneMaskOffset, bone) * weight;
                 }
-                float weight = GetContributionBoneWeight(sourceValue, sourceIndex, bone) * Mathf.Clamp01(factor);
-                float combined = Mathf.Clamp01(GetContributionBoneWeight(output, targetIndex, bone) + weight);
+                float boneWeight = GetContributionBoneWeight(
+                    sourceValue,
+                    sourceIndex,
+                    bone) * Mathf.Clamp01(factor);
+                float combined = Mathf.Clamp01(
+                    GetContributionBoneWeight(output, targetIndex, bone) +
+                    boneWeight);
                 if (!IsWeight(combined))
                     return false;
                 SetContributionBoneWeight(output, targetIndex, bone, combined);
@@ -601,7 +656,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         }
 
         internal bool TryResolveFootFeatures(
-            AnimationPoseGraphNativeOperation operation,
+            float weight,
+            int boneMaskOffset,
             int baseValue,
             int overlayValue,
             int output,
@@ -616,8 +672,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             {
                 return false;
             }
-            float left = leftOutput * GetMaskWeight(operation, m_LeftFootBoneIndex) * operation.Weight;
-            float right = rightOutput * GetMaskWeight(operation, m_RightFootBoneIndex) * operation.Weight;
+            float left = leftOutput *
+                GetMaskWeight(boneMaskOffset, m_LeftFootBoneIndex) * weight;
+            float right = rightOutput *
+                GetMaskWeight(boneMaskOffset, m_RightFootBoneIndex) * weight;
             if (additive)
             {
                 left = left / (1f + left);
@@ -731,10 +789,12 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         {
             if (value < 0 || value >= m_PoseValueCount)
                 return false;
-            for (int i = 0; i < m_Operations.Length; i++)
+            for (int i = 0; i < m_OperationHeaders.Length; i++)
             {
-                AnimationPoseGraphNativeOperation candidate = m_Operations[i];
-                if (candidate.Index < operationIndex && candidate.OutputValueIndex == value)
+                CharacterPoseNativeOperationHeader candidate =
+                    m_OperationHeaders[i];
+                if (candidate.Index < operationIndex &&
+                    candidate.OutputPoseValueIndex == value)
                     return m_OperationCompletions[
                         candidate.FrameCacheIndex].Matches(
                         m_CompletionIdentity);
@@ -837,7 +897,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             int baseValue,
             int additiveValue,
             int outputValue,
-            AnimationPoseGraphNativeOperation operation,
+            in CharacterPoseNativeCompositionOperation operation,
             int bone,
             float weight,
             out AnimationLocalBonePose result)
@@ -889,8 +949,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             return true;
         }
 
-        internal float GetMaskWeight(AnimationPoseGraphNativeOperation operation, int bone) =>
-            operation.BoneMaskOffset < 0 ? 1f : m_DenseBoneMasks[operation.BoneMaskOffset + bone];
+        internal float GetMaskWeight(int boneMaskOffset, int bone) =>
+            boneMaskOffset < 0
+                ? 1f
+                : m_DenseBoneMasks[boneMaskOffset + bone];
 
         internal float GetContributionBoneWeight(int value, int contribution, int bone) =>
             m_ValueDenseContributionWeights[

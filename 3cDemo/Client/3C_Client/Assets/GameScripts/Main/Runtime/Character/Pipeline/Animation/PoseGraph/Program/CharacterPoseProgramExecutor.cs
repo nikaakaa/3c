@@ -130,7 +130,21 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             program.RequireValid();
             framePages.RequireValid();
 
-            m_Operations = program.Operations;
+            m_OperationHeaders = program.OperationHeaders;
+            m_ParameterResolveOperations = program.ParameterResolveOperations;
+            m_PlayerFamilyOperations = program.PlayerOperations;
+            m_StateMachineFamilyOperations = program.StateMachineOperations;
+            m_AnimationSlotFamilyOperations = program.AnimationSlotOperations;
+            m_BlendFamilyOperations = program.BlendOperations;
+            m_InertializationFamilyOperations = program.InertializationOperations;
+            m_CompositionFamilyOperations = program.CompositionOperations;
+            m_SpaceConversionOperations = program.SpaceConversionOperations;
+            m_ComponentControlOperations = program.ComponentControlOperations;
+            m_GoalContributionOperations = program.GoalContributionOperations;
+            m_GoalAssemblerOperations = program.GoalAssemblerOperations;
+            m_FullBodyIkOperations = program.FullBodyIkOperations;
+            m_LinkedPoseOperations = program.LinkedPoseOperations;
+            m_OutputFamilyOperations = program.OutputOperations;
             m_Stages = program.Stages;
             m_DenseBoneMasks = program.DenseBoneMasks;
             m_AdditiveReferences = program.AdditiveReferences;
@@ -372,8 +386,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                  operationIndex < stage.OperationStart + stage.OperationCount;
                 operationIndex++)
             {
-                AnimationPoseGraphNativeOperation operation =
-                    m_Operations[operationIndex].WithWeight(
+                CharacterPoseNativeOperationHeader operation =
+                    m_OperationHeaders[operationIndex].WithWeight(
                         m_OperationWeights[operationIndex]);
                 if (!m_OperationCompletions[operation.FrameCacheIndex].IsEmpty)
                 {
@@ -382,7 +396,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                         stage.DiagnosticIndex);
                     return false;
                 }
-                bool producesPose = operation.OutputValueIndex >= 0;
+                bool producesPose = operation.OutputPoseValueIndex >= 0;
                 bool publishesFinalPose =
                     operation.Code == CharacterPoseOperationCode.OutputPose;
                 if (operation.LinkedPoseFragmentIndex >= 0 &&
@@ -392,7 +406,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                     if (producesPose && !publishesFinalPose)
                     {
                         using (ValueResetMarker.Auto())
-                            ResetValue(operation.OutputValueIndex);
+                            ResetValue(operation.OutputPoseValueIndex);
                     }
                     if (!TryCompleteOperation(
                             in operation,
@@ -406,7 +420,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 if (producesPose && !publishesFinalPose)
                 {
                     using (ValueResetMarker.Auto())
-                        ResetValue(operation.OutputValueIndex);
+                    ResetValue(operation.OutputPoseValueIndex);
                 }
                 bool valueOperationValid = true;
                 AnimationPoseNativeInvalidReason typedInvalidReason =
@@ -416,111 +430,163 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                     case CharacterPoseOperationCode.SelectedPosePlayer:
                     case CharacterPoseOperationCode.BlendSpacePlayer:
                     case CharacterPoseOperationCode.ClipPlayer:
+                        using (PlayerInputMarker.Auto())
+                            m_PlayerOperations.EvaluatePlayerInput(
+                                in operation,
+                                m_PlayerFamilyOperations[
+                                    operation.FamilyPayloadIndex]);
+                        break;
                     case CharacterPoseOperationCode.BlendStack:
                         using (PlayerInputMarker.Auto())
                             m_PlayerOperations.EvaluatePlayerInput(
-                                operation);
+                                in operation,
+                                m_BlendFamilyOperations[
+                                    operation.FamilyPayloadIndex]);
                         break;
                     case CharacterPoseOperationCode.AnimationSlot:
                         using (SlotMarker.Auto())
                             m_PlayerOperations.EvaluateAnimationSlot(
-                                operation,
+                                in operation,
+                                m_AnimationSlotFamilyOperations[
+                                    operation.FamilyPayloadIndex],
                                 deltaSeconds);
                         break;
                     case CharacterPoseOperationCode.StatePoseOutput:
                         using (StateMarker.Auto())
                             m_StateOperations.EvaluateStatePoseOutput(
-                                operation);
+                                in operation,
+                                m_StateMachineFamilyOperations[
+                                    operation.FamilyPayloadIndex]);
                         break;
                     case CharacterPoseOperationCode.PoseStateMachine:
                         using (StateMarker.Auto())
                             m_StateOperations.EvaluatePoseStateMachine(
-                                operation);
+                                in operation,
+                                m_StateMachineFamilyOperations[
+                                    operation.FamilyPayloadIndex]);
                         break;
                     case CharacterPoseOperationCode.Inertialization:
                         using (InertializationMarker.Auto())
                             m_InertializationOperations
                                 .EvaluateInertialization(
-                                    operation,
+                                    in operation,
+                                    m_InertializationFamilyOperations[
+                                        operation.FamilyPayloadIndex],
                                     deltaSeconds);
                         break;
                     case CharacterPoseOperationCode.BlendPose:
                         using (BlendMarker.Auto())
                             m_CompositionOperations.EvaluateBlendPose(
-                                operation);
+                                in operation,
+                                m_BlendFamilyOperations[
+                                    operation.FamilyPayloadIndex]);
                         break;
                     case CharacterPoseOperationCode.LayeredBoneBlend:
                         using (BlendMarker.Auto())
                             m_CompositionOperations
-                                .EvaluateLayeredBoneBlend(operation);
+                                .EvaluateLayeredBoneBlend(
+                                    in operation,
+                                    m_CompositionFamilyOperations[
+                                        operation.FamilyPayloadIndex]);
                         break;
                     case CharacterPoseOperationCode.AdditivePose:
                         using (BlendMarker.Auto())
                             m_CompositionOperations.EvaluateAdditivePose(
-                                operation);
+                                in operation,
+                                m_CompositionFamilyOperations[
+                                    operation.FamilyPayloadIndex]);
                         break;
                     case CharacterPoseOperationCode.PoseParameterResolve:
                         using (BlendMarker.Auto())
                             m_CompositionOperations
-                                .EvaluatePoseParameterResolve(operation);
+                                .EvaluatePoseParameterResolve(
+                                    in operation,
+                                    m_ParameterResolveOperations[
+                                        operation.FamilyPayloadIndex]);
                         break;
                     case CharacterPoseOperationCode.ModifyBone:
                         using (ConstraintMarker.Auto())
                             m_TransformOperations.EvaluateModifyBone(
-                                operation);
+                                in operation,
+                                m_ComponentControlOperations[
+                                    operation.FamilyPayloadIndex]);
                         break;
                     case CharacterPoseOperationCode.RootOrientationWarp:
                         using (ConstraintMarker.Auto())
                             m_TransformOperations
-                                .EvaluateRootOrientationWarp(operation);
+                                .EvaluateRootOrientationWarp(
+                                    in operation,
+                                    m_ComponentControlOperations[
+                                        operation.FamilyPayloadIndex]);
                         break;
                     case CharacterPoseOperationCode.PoseBoneIKGoals:
                         using (IkGoalMarker.Auto())
                             valueOperationValid = m_ConstraintOperations
-                                .EvaluatePoseBoneIkGoals(operation);
+                                .EvaluatePoseBoneIkGoals(
+                                    in operation,
+                                    m_GoalContributionOperations[
+                                        operation.FamilyPayloadIndex]);
                         break;
                     case CharacterPoseOperationCode.FootPlacement:
                         using (IkGoalMarker.Auto())
                             valueOperationValid = m_ConstraintOperations
                                 .EvaluateWorldAwareFootGoal(
-                                    operation,
+                                    in operation,
+                                    m_GoalContributionOperations[
+                                        operation.FamilyPayloadIndex],
                                     in worldInput,
                                     out typedInvalidReason);
                         break;
                     case CharacterPoseOperationCode.FullBodyIkGoalAssembler:
                         using (IkGoalMarker.Auto())
                             valueOperationValid = m_ConstraintOperations
-                                .EvaluateGoalAssembler(operation);
+                                .EvaluateGoalAssembler(
+                                    m_GoalAssemblerOperations[
+                                        operation.FamilyPayloadIndex]);
                         break;
                     case CharacterPoseOperationCode.FullBodyIK:
                         using (FullBodyIkMarker.Auto())
                             m_ConstraintOperations.EvaluateFullBodyIk(
-                                operation);
+                                in operation,
+                                m_FullBodyIkOperations[
+                                    operation.FamilyPayloadIndex]);
                         break;
                     case CharacterPoseOperationCode.LinkedPoseCall:
                         using (LinkedPoseMarker.Auto())
                             valueOperationValid = m_LinkedOperations
-                                .EvaluateLinkedPoseCall(operation);
+                                .EvaluateLinkedPoseCall(
+                                    in operation,
+                                    m_LinkedPoseOperations[
+                                        operation.FamilyPayloadIndex]);
                         break;
                     case CharacterPoseOperationCode.LocalToComponentPose:
                         using (SpaceConversionMarker.Auto())
                             m_TransformOperations
-                                .EvaluateLocalToComponentPose(operation);
+                                .EvaluateLocalToComponentPose(
+                                    in operation,
+                                    m_SpaceConversionOperations[
+                                        operation.FamilyPayloadIndex]);
                         break;
                     case CharacterPoseOperationCode.ComponentToLocalPose:
                         using (SpaceConversionMarker.Auto())
                             m_TransformOperations
-                                .EvaluateComponentToLocalPose(operation);
+                                .EvaluateComponentToLocalPose(
+                                    in operation,
+                                    m_SpaceConversionOperations[
+                                        operation.FamilyPayloadIndex]);
                         break;
                     case CharacterPoseOperationCode.OutputPose:
                         using (OutputMarker.Auto())
-                            m_OutputOperations.EvaluateOutputPose(operation);
+                            m_OutputOperations.EvaluateOutputPose(
+                                in operation,
+                                m_OutputFamilyOperations[
+                                    operation.FamilyPayloadIndex]);
                         break;
                     default:
                         if (producesPose)
                         {
                             SetInvalid(
-                                operation.OutputValueIndex,
+                                operation.OutputPoseValueIndex,
                                 (ulong)operation.Index + 1UL,
                                 AnimationPoseNativeInvalidReason.PoseGraphOperationInvalid,
                                 operation.Index);
@@ -546,7 +612,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                         valueValid = publishesFinalPose
                             ? m_FinalOutput.HasOutput
                             : TryValidateValueEnvelope(
-                                operation.OutputValueIndex,
+                                operation.OutputPoseValueIndex,
                                 out reason);
                     }
                 }
@@ -560,8 +626,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                                 "Final Pose Output operation did not publish its actor-local result.");
                         }
                         SetInvalid(
-                            operation.OutputValueIndex,
-                            m_ValueContinuityIdentities[operation.OutputValueIndex],
+                            operation.OutputPoseValueIndex,
+                            m_ValueContinuityIdentities[operation.OutputPoseValueIndex],
                             reason,
                             operation.Index);
                     }
@@ -591,7 +657,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         }
 
         bool TryCompleteOperation(
-            in AnimationPoseGraphNativeOperation operation,
+            in CharacterPoseNativeOperationHeader operation,
             CharacterPoseOperationOutcome outcome,
             int stageDiagnosticIndex)
         {
@@ -627,13 +693,13 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         internal CharacterPoseProgramOutputResult ExecuteSequencePreview(
             int sourceOperationIndex)
         {
-            AnimationPoseGraphNativeOperation sourceOperation = default;
+            CharacterPoseNativeOperationHeader sourceOperation = default;
             bool found = false;
-            for (int i = 0; i < m_Operations.Length; i++)
+            for (int i = 0; i < m_OperationHeaders.Length; i++)
             {
-                if (m_Operations[i].Index != sourceOperationIndex)
+                if (m_OperationHeaders[i].Index != sourceOperationIndex)
                     continue;
-                sourceOperation = m_Operations[i];
+                sourceOperation = m_OperationHeaders[i];
                 found = true;
                 break;
             }
@@ -641,11 +707,13 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 throw new InvalidOperationException(
                     $"Clip Preview source operation #{sourceOperationIndex} is not a compiled Clip Player.");
 
-            ResetValue(sourceOperation.OutputValueIndex);
-            m_PlayerOperations.EvaluatePlayerInput(sourceOperation);
+            ResetValue(sourceOperation.OutputPoseValueIndex);
+            m_PlayerOperations.EvaluatePlayerInput(
+                in sourceOperation,
+                m_PlayerFamilyOperations[sourceOperation.FamilyPayloadIndex]);
             if (!TryCompleteOperation(
                     in sourceOperation,
-                    m_ValueAvailability[sourceOperation.OutputValueIndex] ==
+                    m_ValueAvailability[sourceOperation.OutputPoseValueIndex] ==
                     AnimationPoseAvailability.Pose
                         ? CharacterPoseOperationOutcome.Completed
                         : CharacterPoseOperationOutcome.TypedInvalid,
@@ -653,7 +721,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             {
                 return CompleteEvaluation();
             }
-            int sourceValue = sourceOperation.OutputValueIndex;
+            int sourceValue = sourceOperation.OutputPoseValueIndex;
             ulong continuity = CombineContinuity(
                 m_ValueContinuityIdentities[sourceValue],
                 (ulong)sourceOperation.Index + 1UL,
@@ -693,7 +761,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             {
                 if (!m_OperationCompletions[i].IsEmpty)
                     continue;
-                AnimationPoseGraphNativeOperation operation = m_Operations[i];
+                CharacterPoseNativeOperationHeader operation =
+                    m_OperationHeaders[i];
                 if (!TryCompleteOperation(
                         in operation,
                         CharacterPoseOperationOutcome.Skipped,
@@ -734,7 +803,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         }
 
         AnimationPoseNativeInvalidReason ValueOperationInvalidReason(
-            AnimationPoseGraphNativeOperation operation)
+            CharacterPoseNativeOperationHeader operation)
         {
             return operation.Code == CharacterPoseOperationCode.FootPlacement
                 ? AnimationPoseNativeInvalidReason.FootPlacementInvalid

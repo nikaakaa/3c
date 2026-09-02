@@ -15,13 +15,15 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 throw new ArgumentNullException(nameof(context));
         }
 
-        internal bool EvaluatePoseBoneIkGoals(AnimationPoseGraphNativeOperation operation)
+        internal bool EvaluatePoseBoneIkGoals(
+            in CharacterPoseNativeOperationHeader header,
+            in CharacterPoseNativeGoalContributionOperation operation)
         {
             CharacterPoseBoneContributionConstraintHandle handle =
                 operation.PoseBoneContribution;
             int input = handle.InputPoseValueIndex;
             if (!handle.IsValid ||
-                !m_Context.IsInputReady(input, operation.Index) ||
+                !m_Context.IsInputReady(input, header.Index) ||
                 m_Context.m_ValueAvailability[input] != AnimationPoseAvailability.Pose)
             {
                 return false;
@@ -43,14 +45,15 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         }
 
         internal bool EvaluateWorldAwareFootGoal(
-            AnimationPoseGraphNativeOperation operation,
+            in CharacterPoseNativeOperationHeader header,
+            in CharacterPoseNativeGoalContributionOperation operation,
             in CharacterPoseWorldFrameInput worldInput,
             out AnimationPoseNativeInvalidReason invalidReason)
         {
             invalidReason =
                 AnimationPoseNativeInvalidReason.FootPlacementInvalid;
             CharacterFootPlacementConstraintHandle handle =
-                operation.FootPlacementConstraint;
+                operation.FootPlacement;
             if (!handle.IsValid ||
                 !worldInput.IsValid ||
                 worldInput.CompletionIdentity != m_Context.m_CompletionIdentity ||
@@ -63,7 +66,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             {
                 AnimationPoseValueNativeReadBinding inputBinding =
                     m_Context.m_FramePages.RequirePoseValueReadBinding(
-                        operation.InputValueIndexA,
+                        operation.InputPoseValueIndex,
                         m_Context.m_CompletionIdentity);
                 CharacterFootPlacementFrameInput footPlacement =
                     worldInput.BuildFootPlacement(
@@ -103,10 +106,11 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             return false;
         }
 
-        internal bool EvaluateGoalAssembler(AnimationPoseGraphNativeOperation operation)
+        internal bool EvaluateGoalAssembler(
+            in CharacterPoseNativeGoalAssemblerOperation operation)
         {
             CharacterFullBodyIkGoalAssemblerConstraintHandle handle =
-                operation.GoalAssemblerConstraint;
+                operation.Handle;
             if (!handle.IsValid)
                 return false;
             CharacterFullBodyIkGoalAssemblerOperationResult result =
@@ -120,23 +124,25 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 m_Context.m_CompletionIdentity);
         }
 
-        internal void EvaluateFullBodyIk(AnimationPoseGraphNativeOperation operation)
+        internal void EvaluateFullBodyIk(
+            in CharacterPoseNativeOperationHeader header,
+            in CharacterPoseNativeFullBodyIkOperation operation)
         {
             CharacterFullBodyIkConstraintHandle handle =
-                operation.FullBodyIkConstraint;
+                operation.Handle;
             int input = handle.InputPoseValueIndex;
             int output = handle.OutputPoseValueIndex;
             if (!handle.IsValid ||
-                !m_Context.IsInputReady(input, operation.Index) ||
+                !m_Context.IsInputReady(input, header.Index) ||
                 !m_Context.m_PoseConstraints.HasPendingAssembledGoalSet ||
                 !m_Context.TryCopyValue(
                     input,
                     output,
-                    operation.Index))
+                    header.Index))
             {
-                m_Context.SetInvalid(output, (ulong)operation.Index + 1UL,
+                m_Context.SetInvalid(output, (ulong)header.Index + 1UL,
                     AnimationPoseNativeInvalidReason.PoseGraphInputIncomplete,
-                    operation.Index);
+                    header.Index);
                 return;
             }
             if (m_Context.m_ValueAvailability[output] != AnimationPoseAvailability.Pose)
@@ -158,7 +164,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             {
                 m_Context.SetInvalid(output, m_Context.m_ValueContinuityIdentities[output],
                     AnimationPoseNativeInvalidReason.FullBodyIkSolverInvalid,
-                    operation.Index);
+                    header.Index);
             }
         }
 

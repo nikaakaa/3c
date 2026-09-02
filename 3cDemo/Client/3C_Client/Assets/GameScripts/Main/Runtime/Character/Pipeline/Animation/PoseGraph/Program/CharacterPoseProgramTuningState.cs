@@ -63,7 +63,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
 
         internal CharacterPoseProgramTuningState(
             CharacterPresentationProjection projection,
-            NativeArray<AnimationPoseGraphNativeOperation> operations,
+            NativeArray<CharacterPoseNativeOperationHeader> operations,
             ulong initialGeneration)
         {
             if (projection == null)
@@ -226,13 +226,13 @@ namespace ThirdPersonCharacter.Pipeline.Animation
 
         void BuildOperationSchema(
             CharacterPresentationProjection projection,
-            NativeArray<AnimationPoseGraphNativeOperation> operations)
+            NativeArray<CharacterPoseNativeOperationHeader> operations)
         {
             for (int nativeIndex = 0;
                  nativeIndex < operations.Length;
                  nativeIndex++)
             {
-                AnimationPoseGraphNativeOperation native =
+                CharacterPoseNativeOperationHeader native =
                     operations[nativeIndex];
                 CharacterPoseOperationHeader operation =
                     projection.PosePlan.OperationHeaders[native.Index];

@@ -13,7 +13,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 throw new ArgumentNullException(nameof(context));
         }
 
-        internal bool EvaluateLinkedPoseCall(AnimationPoseGraphNativeOperation operation)
+        internal bool EvaluateLinkedPoseCall(
+            in CharacterPoseNativeOperationHeader header,
+            in CharacterPoseNativeLinkedPoseOperation operation)
         {
             if ((uint)operation.LinkedPoseCallIndex >= (uint)m_Context.m_LinkedPoseCalls.Length)
                 return false;
@@ -32,43 +34,43 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             if (!IsFragmentActive(candidate.FragmentIndex))
                 return false;
 
-            if (operation.OutputValueIndex >= 0)
+            if (operation.OutputPoseValueIndex >= 0)
             {
                 if (candidate.OutputPoseValueIndex < 0 ||
-                    !m_Context.IsInputReady(candidate.OutputPoseValueIndex, operation.Index) ||
+                    !m_Context.IsInputReady(candidate.OutputPoseValueIndex, header.Index) ||
                     !m_Context.TryCopyValue(
                         candidate.OutputPoseValueIndex,
-                        operation.OutputValueIndex,
-                        operation.Index))
+                        operation.OutputPoseValueIndex,
+                        header.Index))
                 {
                     m_Context.SetInvalid(
-                        operation.OutputValueIndex,
+                        operation.OutputPoseValueIndex,
                         control.Generation,
                         AnimationPoseNativeInvalidReason.PoseGraphInputIncomplete,
-                        operation.Index);
+                        header.Index);
                     return false;
                 }
-                m_Context.m_ValueContinuityIdentities[operation.OutputValueIndex] = CharacterPoseExecutionContext.CombineContinuity(
-                    m_Context.m_ValueContinuityIdentities[operation.OutputValueIndex],
+                m_Context.m_ValueContinuityIdentities[operation.OutputPoseValueIndex] = CharacterPoseExecutionContext.CombineContinuity(
+                    m_Context.m_ValueContinuityIdentities[operation.OutputPoseValueIndex],
                     control.Generation,
-                    operation.Index);
+                    header.Index);
                 if (control.PoseDiscontinuity != 0)
                 {
-                    ulong continuity = m_Context.m_ValueContinuityIdentities[operation.OutputValueIndex];
+                    ulong continuity = m_Context.m_ValueContinuityIdentities[operation.OutputPoseValueIndex];
                     PoseDiscontinuity discontinuity = PoseDiscontinuity.Reset(
-                        CharacterPoseExecutionContext.CombineContinuity(control.Generation, continuity, operation.Index),
+                        CharacterPoseExecutionContext.CombineContinuity(control.Generation, continuity, header.Index),
                         m_Context.m_CompletionIdentity,
                         default,
                         continuity,
                         PoseDiscontinuityResetReason.BranchReplacement,
                         control.Generation,
                         false);
-                    m_Context.m_ValueDiscontinuities[operation.OutputValueIndex] =
+                    m_Context.m_ValueDiscontinuities[operation.OutputPoseValueIndex] =
                         PoseDiscontinuityNative.From(in discontinuity);
                 }
             }
 
-            return operation.OutputValueIndex >= 0;
+            return operation.OutputPoseValueIndex >= 0;
         }
 
         internal bool IsFragmentActive(int fragmentIndex) =>

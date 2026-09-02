@@ -48,9 +48,9 @@
 
 ## 5. 分离Program Image、Execution View、Actor State、Owned Frame Pages与根事务
 
-- [ ] 5.1 将`CharacterPoseProgramImage`作为`CharacterPresentationProjection`内部唯一语义Pose程序，保存Program identity、ProjectionRevision、PoseProgramImageHash、Rig、Stage、Operation Header、Family Payload、Value layout、Workspace layout、Source Map和容量；Gameplay ContractHash只由外层Presentation Contract与Projection拥有
-- [ ] 5.2 建立可选`CharacterPoseProgramExecutionView`，每个Program Runtime最多一份，只逐值materialize同Image并验证相同identity/hash，不得编译、重排、补字段或拥有Actor/Frame状态
-- [ ] 5.3 让`CharacterPoseProgramRuntime`唯一Dispose自己的Execution View，删除第二View、旧Native Program语义容器和旧Runtime Compile路径
+- [x] 5.1 将`CharacterPoseProgramImage`作为`CharacterPresentationProjection`内部唯一语义Pose程序，保存Program identity、ProjectionRevision、PoseProgramImageHash、Rig、Stage、Operation Header、Family Payload、Value layout、Workspace layout、Source Map和容量；Gameplay ContractHash只由外层Presentation Contract与Projection拥有
+- [x] 5.2 建立可选`CharacterPoseProgramExecutionView`，每个Program Runtime最多一份，只逐值materialize同Image并验证相同identity/hash，不得编译、重排、补字段或拥有Actor/Frame状态
+- [x] 5.3 让`CharacterPoseProgramRuntime`唯一Dispose自己的Execution View，删除第二View、旧Native Program语义容器和旧Runtime Compile路径
 - [x] 5.4 新增`CharacterPoseActorState`，迁移PoseState、Player continuity、ActionPlaybackInput lifecycle/command cursor、Slot、Blend Stack、Routing、Inertialization和其它跨帧节点状态
 - [x] 5.5 新增`CharacterPoseProgramFramePages`，保存Pending node control、Source Demand输出、当前帧Value、Operation completion和Program diagnostics
 - [x] 5.6 让根`CharacterPoseFrameTransaction`只持有Program/Source/Constraint/Publication typed lease/result，不取得或索引各Module内部页
@@ -125,20 +125,20 @@
 - [x] 11.7 实现Value Lifetime Pass，按固定Schedule为Pose、Parameter、Discontinuity、Goal Contribution、Goal Set与控制Value计算typed地址和寿命
 - [x] 11.8 实现Workspace Plan Pass，按Schedule、Value寿命、Rig、节点状态、Source、Constraint、Inertialization和Diagnostics manifest分配固定容量
 - [x] 11.9 实现Bind Family Payload Pass，只把symbolic引用绑定为stage/value/workspace typed handle，不得发现新的Operation、状态页或容量需求
-- [ ] 11.10 实现Seal Program Image Pass，校验全部pass identity、source map、容量、PoseProgramImageHash和schema后发布Projection内不可变Program Image
-- [ ] 11.11 删除中央`CompilationState`、原地跨阶段mutation、重复Graph dependency/拓扑扫描和Runtime二次Compile
+- [x] 11.10 实现Seal Program Image Pass，校验全部pass identity、source map、容量、PoseProgramImageHash和schema后发布Projection内不可变Program Image
+- [x] 11.11 删除中央`CompilationState`、原地跨阶段mutation、重复Graph dependency/拓扑扫描和Runtime二次Compile
 - [x] 11.12 删除只做参数转发的Compiler入口；保留的外部入口只能调用唯一Compiler Module
 
 ## 12. 原子替换Operation与Projection ABI
 
 - [x] 12.1 新增`CharacterPoseOperationHeader`和typed `CharacterPoseValueReference`表，只保存公共调度、Family Payload index和输入输出range
 - [x] 12.2 为Parameter Input/Resolve、Player、StateMachine、Action Input、AnimationSlot、Blend、Inertialization、Composition、Space Conversion、Component Control、Motion Matching、Pose History、Goal Contribution、Goal Assembler、FullBodyIK、Linked Pose和Output建立固定Payload页
-- [ ] 12.3 对照迁移表确认全部现行Operation Code恰有一个Family且没有Operation继续读取万能记录
+- [x] 12.3 对照迁移表确认全部现行Operation Code恰有一个Family且没有Operation继续读取万能记录
 - [x] 12.4 让Program Image Seal验证Header/Family/Payload、Value Kind、Stage Domain、Workspace Handle和唯一write set
 - [ ] 12.5 修改Projection codec、source map、PoseProgramImageHash、schema version和Runtime reader只读Projection内新Program Image，保持Gameplay ContractHash、SemanticHash与Float32/Fixed ProgramHash不变
-- [ ] 12.6 修改Runtime Family Evaluator只读取自身Payload页，不访问万能Operation无关字段
-- [ ] 12.7 删除`CharacterPresentationPoseOperation`万能记录、旧Native Operation镜像、无意义`-1`组合和旧字段Validator
-- [ ] 12.8 删除旧Projection reader、旧Native Program语义构造、旧schema兼容、默认字段补齐、双codec和运行时版本fallback；每个Program Runtime只保留一份同identity只读Execution View materialization
+- [x] 12.6 修改Runtime Family Evaluator只读取自身Payload页，不访问万能Operation无关字段
+- [x] 12.7 删除`CharacterPresentationPoseOperation`万能记录、旧Native Operation镜像、无意义`-1`组合和旧字段Validator
+- [x] 12.8 删除旧Projection reader、旧Native Program语义构造、旧schema兼容、默认字段补齐、双codec和运行时版本fallback；每个Program Runtime只保留一份同identity只读Execution View materialization
 - [ ] 12.9 通过正式显式Character Build入口重建受影响generated Projection和Program Image，不在asset import、Inspector或Runtime自动重建
 
 ## 13. 收口Diagnostics、Pose Watch与Preview

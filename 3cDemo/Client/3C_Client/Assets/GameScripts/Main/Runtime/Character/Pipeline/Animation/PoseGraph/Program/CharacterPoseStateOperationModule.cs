@@ -19,109 +19,124 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 throw new ArgumentNullException(nameof(context));
         }
 
-        internal void EvaluateStatePoseOutput(AnimationPoseGraphNativeOperation operation)
+        internal void EvaluateStatePoseOutput(
+            in CharacterPoseNativeOperationHeader header,
+            in CharacterPoseNativeStateMachineOperation operation)
         {
-            int input = operation.InputValueIndexA;
-            if (!m_Context.IsInputReady(input, operation.Index) ||
-                !m_Context.TryCopyValue(input, operation.OutputValueIndex, operation.Index))
+            int input = operation.InputPoseValueIndex;
+            if (!m_Context.IsInputReady(input, header.Index) ||
+                !m_Context.TryCopyValue(
+                    input,
+                    operation.OutputPoseValueIndex,
+                    header.Index))
             {
                 m_Context.SetInvalid(
-                    operation.OutputValueIndex,
-                    (ulong)operation.Index + 1UL,
+                    operation.OutputPoseValueIndex,
+                    (ulong)header.Index + 1UL,
                     AnimationPoseNativeInvalidReason.PoseGraphInputIncomplete,
-                    operation.Index);
+                    header.Index);
             }
         }
 
-        internal void EvaluatePoseStateMachine(AnimationPoseGraphNativeOperation operation)
+        internal void EvaluatePoseStateMachine(
+            in CharacterPoseNativeOperationHeader header,
+            in CharacterPoseNativeStateMachineOperation operation)
         {
             if ((uint)operation.StateMachineIndex >= (uint)m_Context.m_StateMachineControls.Length)
             {
                 m_Context.SetInvalid(
-                    operation.OutputValueIndex,
-                    (ulong)operation.Index + 1UL,
+                    operation.OutputPoseValueIndex,
+                    (ulong)header.Index + 1UL,
                     AnimationPoseNativeInvalidReason.PoseGraphOperationInvalid,
-                    operation.Index);
+                    header.Index);
                 return;
             }
             CharacterPoseStateMachineNativeControl control =
                 m_Context.m_StateMachineControls[operation.StateMachineIndex];
             if (control.Generation == 0 ||
                 control.SourcePoseValueIndex < 0 ||
-                control.SourcePoseValueIndex >= operation.OutputValueIndex ||
+                control.SourcePoseValueIndex >= operation.OutputPoseValueIndex ||
                 control.TargetPoseValueIndex < 0 ||
-                control.TargetPoseValueIndex >= operation.OutputValueIndex ||
+                control.TargetPoseValueIndex >= operation.OutputPoseValueIndex ||
                 control.PredictionPoseValueIndex < -1 ||
-                control.PredictionPoseValueIndex >= operation.OutputValueIndex)
+                control.PredictionPoseValueIndex >= operation.OutputPoseValueIndex)
             {
                 m_Context.SetInvalid(
-                    operation.OutputValueIndex,
-                    (ulong)operation.Index + 1UL,
+                    operation.OutputPoseValueIndex,
+                    (ulong)header.Index + 1UL,
                     AnimationPoseNativeInvalidReason.PoseGraphOperationInvalid,
-                    operation.Index);
+                    header.Index);
                 return;
             }
             if (control.BlendMode == CharacterPoseStateMachineBlendMode.Single ||
                 control.BlendMode == CharacterPoseStateMachineBlendMode.Inertialization)
             {
-                if (!m_Context.IsInputReady(control.TargetPoseValueIndex, operation.Index) ||
+                if (!m_Context.IsInputReady(control.TargetPoseValueIndex, header.Index) ||
                     !m_Context.TryCopyValue(
                         control.TargetPoseValueIndex,
-                        operation.OutputValueIndex,
-                        operation.Index) ||
+                        operation.OutputPoseValueIndex,
+                        header.Index) ||
                     !TryApplyStateMachinePrediction(
-                        operation.OutputValueIndex,
+                        operation.OutputPoseValueIndex,
                         control.PredictionPoseValueIndex,
-                        operation.Index))
+                        header.Index))
                 {
                     m_Context.SetInvalid(
-                        operation.OutputValueIndex,
-                        (ulong)operation.Index + 1UL,
+                        operation.OutputPoseValueIndex,
+                        (ulong)header.Index + 1UL,
                         AnimationPoseNativeInvalidReason.PoseGraphInputIncomplete,
-                        operation.Index);
+                        header.Index);
                 }
                 return;
             }
             if (control.BlendMode != CharacterPoseStateMachineBlendMode.Standard)
             {
                 m_Context.SetInvalid(
-                    operation.OutputValueIndex,
-                    (ulong)operation.Index + 1UL,
+                    operation.OutputPoseValueIndex,
+                    (ulong)header.Index + 1UL,
                     AnimationPoseNativeInvalidReason.PoseGraphOperationInvalid,
-                    operation.Index);
+                    header.Index);
                 return;
             }
-            EvaluateStateMachineStandardBlend(operation, control);
+            EvaluateStateMachineStandardBlend(
+                in header,
+                in operation,
+                control);
         }
 
         void EvaluateStateMachineStandardBlend(
-            AnimationPoseGraphNativeOperation operation,
+            in CharacterPoseNativeOperationHeader header,
+            in CharacterPoseNativeStateMachineOperation operation,
             CharacterPoseStateMachineNativeControl control)
         {
-            int output = operation.OutputValueIndex;
+            int output = operation.OutputPoseValueIndex;
             int source = control.SourcePoseValueIndex;
             int target = control.TargetPoseValueIndex;
-            if (!m_Context.TryRequireInputs(operation, source, target) ||
+            if (!m_Context.TryRequireInputs(
+                    in header,
+                    output,
+                    source,
+                    target) ||
                 (uint)control.CurveIndex >= (uint)m_Context.m_BlendCurves.Length ||
                 (control.DurationSeconds > 0f &&
                  (uint)control.BlendProfileIndex >= (uint)m_Context.m_BlendProfiles.Length))
             {
                 m_Context.SetInvalid(
                     output,
-                    (ulong)operation.Index + 1UL,
+                    (ulong)header.Index + 1UL,
                     AnimationPoseNativeInvalidReason.PoseGraphOperationInvalid,
-                    operation.Index);
+                    header.Index);
                 return;
             }
             if (control.DurationSeconds <= 0f)
             {
-                if (!m_Context.TryCopyValue(target, output, operation.Index))
+                if (!m_Context.TryCopyValue(target, output, header.Index))
                 {
                     m_Context.SetInvalid(
                         output,
                         m_Context.m_ValueContinuityIdentities[target],
                         AnimationPoseNativeInvalidReason.PoseGraphOperationInvalid,
-                        operation.Index);
+                        header.Index);
                 }
                 return;
             }
@@ -133,9 +148,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                     CharacterPoseExecutionContext.CombineContinuity(
                         m_Context.m_ValueContinuityIdentities[source],
                         m_Context.m_ValueContinuityIdentities[target],
-                        operation.Index),
+                        header.Index),
                     AnimationPoseNativeInvalidReason.PoseGraphInputIncomplete,
-                    operation.Index);
+                    header.Index);
                 return;
             }
 
@@ -163,7 +178,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             m_Context.m_ValueContinuityIdentities[output] = CharacterPoseExecutionContext.CombineContinuity(
                 m_Context.m_ValueContinuityIdentities[source],
                 m_Context.m_ValueContinuityIdentities[target],
-                operation.Index);
+                header.Index);
             m_Context.m_ValueDiscontinuities[output] = m_Context.m_ValueDiscontinuities[target];
             m_Context.m_ValueInvalidReasons[output] = AnimationPoseNativeInvalidReason.None;
             for (int bone = 0; bone < m_Context.m_BoneCount; bone++)
@@ -182,7 +197,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                         output,
                         m_Context.m_ValueContinuityIdentities[output],
                         AnimationPoseNativeInvalidReason.PoseGraphOperationInvalid,
-                        operation.Index);
+                        header.Index);
                     return;
                 }
                 m_Context.m_ValueDenseLocalPoses[m_Context.PoseOffset(output) + bone] = pose;
@@ -215,13 +230,13 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 !TryApplyStateMachinePrediction(
                     output,
                     control.PredictionPoseValueIndex,
-                    operation.Index))
+                    header.Index))
             {
                 m_Context.SetInvalid(
                     output,
                     m_Context.m_ValueContinuityIdentities[output],
                     AnimationPoseNativeInvalidReason.PoseGraphOperationInvalid,
-                    operation.Index);
+                    header.Index);
             }
         }
 

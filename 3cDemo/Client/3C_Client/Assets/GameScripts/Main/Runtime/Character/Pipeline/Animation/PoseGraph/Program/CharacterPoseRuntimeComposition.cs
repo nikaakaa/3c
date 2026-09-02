@@ -160,7 +160,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                     in initialLayout);
                 programTuning = new CharacterPoseProgramTuningState(
                     projection,
-                    executionView.Operations,
+                    executionView.OperationHeaders,
                     1);
                 if (projection.PosePlan.FullBodyIks.Count != 1)
                 {

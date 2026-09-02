@@ -14,46 +14,72 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 throw new ArgumentNullException(nameof(context));
         }
 
-        internal void EvaluateBlendPose(AnimationPoseGraphNativeOperation operation)
+        internal void EvaluateBlendPose(
+            in CharacterPoseNativeOperationHeader header,
+            in CharacterPoseNativeBlendOperation operation)
         {
-            float weight = operation.Weight;
+            float weight = header.Weight;
             if (operation.ParameterIndex >= 0)
             {
-                int input = operation.InputValueIndexA;
-                if (!m_Context.IsInputReady(input, operation.Index) || operation.ParameterIndex >= m_Context.m_ParameterCount)
+                int input = operation.InputPoseValueIndexA;
+                if (!m_Context.IsInputReady(input, header.Index) || operation.ParameterIndex >= m_Context.m_ParameterCount)
                 {
-                    m_Context.SetInvalid(operation.OutputValueIndex, (ulong)operation.Index + 1UL, AnimationPoseNativeInvalidReason.PoseGraphInputIncomplete, operation.Index);
+                    m_Context.SetInvalid(operation.OutputPoseValueIndex, (ulong)header.Index + 1UL, AnimationPoseNativeInvalidReason.PoseGraphInputIncomplete, header.Index);
                     return;
                 }
                 if (m_Context.m_ValuePoseParameterAvailability[m_Context.ParameterOffset(input) + operation.ParameterIndex] == 0)
                 {
-                    m_Context.SetInvalid(operation.OutputValueIndex, (ulong)operation.Index + 1UL, AnimationPoseNativeInvalidReason.SlotParameterInvalid, operation.Index);
+                    m_Context.SetInvalid(operation.OutputPoseValueIndex, (ulong)header.Index + 1UL, AnimationPoseNativeInvalidReason.SlotParameterInvalid, header.Index);
                     return;
                 }
                 weight = Mathf.Clamp01(m_Context.m_ValuePoseParameters[m_Context.ParameterOffset(input) + operation.ParameterIndex]);
             }
-            EvaluateLayeredBoneBlend(operation.WithWeight(weight));
+            EvaluateLayeredBoneBlend(
+                in header,
+                operation.OutputPoseValueIndex,
+                operation.InputPoseValueIndexA,
+                operation.InputPoseValueIndexB,
+                -1,
+                weight);
         }
 
-        internal void EvaluateLayeredBoneBlend(AnimationPoseGraphNativeOperation operation)
+        internal void EvaluateLayeredBoneBlend(
+            in CharacterPoseNativeOperationHeader header,
+            in CharacterPoseNativeCompositionOperation operation) =>
+            EvaluateLayeredBoneBlend(
+                in header,
+                operation.OutputPoseValueIndex,
+                operation.InputPoseValueIndexA,
+                operation.InputPoseValueIndexB,
+                operation.BoneMaskOffset,
+                header.Weight);
+
+        void EvaluateLayeredBoneBlend(
+            in CharacterPoseNativeOperationHeader header,
+            int output,
+            int baseValue,
+            int overlayValue,
+            int boneMaskOffset,
+            float weight)
         {
-            int output = operation.OutputValueIndex;
-            int baseValue = operation.InputValueIndexA;
-            int overlayValue = operation.InputValueIndexB;
-            if (!m_Context.TryRequireInputs(operation, baseValue, overlayValue))
+            if (!m_Context.TryRequireInputs(
+                    in header,
+                    output,
+                    baseValue,
+                    overlayValue))
                 return;
             if (m_Context.m_ValueAvailability[overlayValue] == AnimationPoseAvailability.NoPose)
             {
-                if (!m_Context.TryCopyValue(baseValue, output, operation.Index))
-                    m_Context.SetInvalid(output, m_Context.m_ValueContinuityIdentities[baseValue], AnimationPoseNativeInvalidReason.PoseGraphOperationInvalid, operation.Index);
+                if (!m_Context.TryCopyValue(baseValue, output, header.Index))
+                    m_Context.SetInvalid(output, m_Context.m_ValueContinuityIdentities[baseValue], AnimationPoseNativeInvalidReason.PoseGraphOperationInvalid, header.Index);
                 return;
             }
             if (m_Context.m_ValueAvailability[baseValue] == AnimationPoseAvailability.NoPose)
             {
-                if (!m_Context.TryCopyValue(overlayValue, output, operation.Index) ||
-                    !m_Context.TryScaleValue(output, operation))
+                if (!m_Context.TryCopyValue(overlayValue, output, header.Index) ||
+                    !m_Context.TryScaleValue(output, weight, boneMaskOffset))
                 {
-                    m_Context.SetInvalid(output, m_Context.m_ValueContinuityIdentities[overlayValue], AnimationPoseNativeInvalidReason.PoseGraphOperationInvalid, operation.Index);
+                    m_Context.SetInvalid(output, m_Context.m_ValueContinuityIdentities[overlayValue], AnimationPoseNativeInvalidReason.PoseGraphOperationInvalid, header.Index);
                 }
                 return;
             }
@@ -61,51 +87,58 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             m_Context.m_ValueAvailability[output] = AnimationPoseAvailability.Pose;
             m_Context.m_ValueOutputWeights[output] = CharacterPoseExecutionContext.UnionWeight(
                 m_Context.m_ValueOutputWeights[baseValue],
-                m_Context.m_ValueOutputWeights[overlayValue] * operation.Weight);
+                m_Context.m_ValueOutputWeights[overlayValue] * weight);
             m_Context.m_ValueContinuityIdentities[output] = CharacterPoseExecutionContext.CombineContinuity(
                 m_Context.m_ValueContinuityIdentities[baseValue],
                 m_Context.m_ValueContinuityIdentities[overlayValue],
-                operation.Index);
+                header.Index);
             m_Context.m_ValueInvalidReasons[output] = AnimationPoseNativeInvalidReason.None;
             for (int bone = 0; bone < m_Context.m_BoneCount; bone++)
             {
                 if (!m_Context.TryGetBoneOutputWeight(overlayValue, bone, out float overlayOutputWeight))
                 {
-                    m_Context.SetInvalid(output, m_Context.m_ValueContinuityIdentities[output], AnimationPoseNativeInvalidReason.PoseGraphOperationInvalid, operation.Index);
+                    m_Context.SetInvalid(output, m_Context.m_ValueContinuityIdentities[output], AnimationPoseNativeInvalidReason.PoseGraphOperationInvalid, header.Index);
                     return;
                 }
                 float overlay = Mathf.Clamp01(
-                    overlayOutputWeight * m_Context.GetMaskWeight(operation, bone) * operation.Weight);
+                    overlayOutputWeight *
+                    m_Context.GetMaskWeight(boneMaskOffset, bone) * weight);
                 if (!CharacterPoseExecutionContext.TryBlendPose(
                         m_Context.m_ValueDenseLocalPoses[m_Context.PoseOffset(baseValue) + bone],
                         m_Context.m_ValueDenseLocalPoses[m_Context.PoseOffset(overlayValue) + bone],
                         overlay,
                         out AnimationLocalBonePose pose))
                 {
-                    m_Context.SetInvalid(output, m_Context.m_ValueContinuityIdentities[output], AnimationPoseNativeInvalidReason.PoseGraphOperationInvalid, operation.Index);
+                    m_Context.SetInvalid(output, m_Context.m_ValueContinuityIdentities[output], AnimationPoseNativeInvalidReason.PoseGraphOperationInvalid, header.Index);
                     return;
                 }
                 m_Context.m_ValueDenseLocalPoses[m_Context.PoseOffset(output) + bone] = pose;
             }
             if (!m_Context.TryCopyParameters(baseValue, output) ||
-                !m_Context.TryMergeContributions(operation, baseValue, overlayValue, output, false) ||
-                !m_Context.TryResolveFootFeatures(operation, baseValue, overlayValue, output, false))
+                !m_Context.TryMergeContributions(weight, boneMaskOffset, baseValue, overlayValue, output, false) ||
+                !m_Context.TryResolveFootFeatures(weight, boneMaskOffset, baseValue, overlayValue, output, false))
             {
-                m_Context.SetInvalid(output, m_Context.m_ValueContinuityIdentities[output], AnimationPoseNativeInvalidReason.PoseGraphOperationInvalid, operation.Index);
+                m_Context.SetInvalid(output, m_Context.m_ValueContinuityIdentities[output], AnimationPoseNativeInvalidReason.PoseGraphOperationInvalid, header.Index);
             }
         }
 
-        internal void EvaluateAdditivePose(AnimationPoseGraphNativeOperation operation)
+        internal void EvaluateAdditivePose(
+            in CharacterPoseNativeOperationHeader header,
+            in CharacterPoseNativeCompositionOperation operation)
         {
-            int output = operation.OutputValueIndex;
-            int baseValue = operation.InputValueIndexA;
-            int additiveValue = operation.InputValueIndexB;
-            if (!m_Context.TryRequireInputs(operation, baseValue, additiveValue))
+            int output = operation.OutputPoseValueIndex;
+            int baseValue = operation.InputPoseValueIndexA;
+            int additiveValue = operation.InputPoseValueIndexB;
+            if (!m_Context.TryRequireInputs(
+                    in header,
+                    output,
+                    baseValue,
+                    additiveValue))
                 return;
             if (m_Context.m_ValueAvailability[additiveValue] == AnimationPoseAvailability.NoPose)
             {
-                if (!m_Context.TryCopyValue(baseValue, output, operation.Index))
-                    m_Context.SetInvalid(output, m_Context.m_ValueContinuityIdentities[baseValue], AnimationPoseNativeInvalidReason.PoseGraphOperationInvalid, operation.Index);
+                if (!m_Context.TryCopyValue(baseValue, output, header.Index))
+                    m_Context.SetInvalid(output, m_Context.m_ValueContinuityIdentities[baseValue], AnimationPoseNativeInvalidReason.PoseGraphOperationInvalid, header.Index);
                 return;
             }
             if (m_Context.m_ValueAvailability[baseValue] != AnimationPoseAvailability.Pose)
@@ -115,30 +148,32 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                     CharacterPoseExecutionContext.CombineContinuity(
                         m_Context.m_ValueContinuityIdentities[baseValue],
                         m_Context.m_ValueContinuityIdentities[additiveValue],
-                        operation.Index),
+                        header.Index),
                     AnimationPoseNativeInvalidReason.PoseGraphOperationInvalid,
-                    operation.Index);
+                    header.Index);
                 return;
             }
 
             m_Context.m_ValueAvailability[output] = AnimationPoseAvailability.Pose;
             m_Context.m_ValueOutputWeights[output] = CharacterPoseExecutionContext.UnionWeight(
                 m_Context.m_ValueOutputWeights[baseValue],
-                m_Context.m_ValueOutputWeights[additiveValue] * operation.Weight);
+                m_Context.m_ValueOutputWeights[additiveValue] * header.Weight);
             m_Context.m_ValueContinuityIdentities[output] = CharacterPoseExecutionContext.CombineContinuity(
                 m_Context.m_ValueContinuityIdentities[baseValue],
                 m_Context.m_ValueContinuityIdentities[additiveValue],
-                operation.Index);
+                header.Index);
             m_Context.m_ValueInvalidReasons[output] = AnimationPoseNativeInvalidReason.None;
             for (int bone = 0; bone < m_Context.m_BoneCount; bone++)
             {
                 if (!m_Context.TryGetBoneOutputWeight(additiveValue, bone, out float additiveOutputWeight))
                 {
-                    m_Context.SetInvalid(output, m_Context.m_ValueContinuityIdentities[output], AnimationPoseNativeInvalidReason.PoseGraphOperationInvalid, operation.Index);
+                    m_Context.SetInvalid(output, m_Context.m_ValueContinuityIdentities[output], AnimationPoseNativeInvalidReason.PoseGraphOperationInvalid, header.Index);
                     return;
                 }
                 float weight = Mathf.Clamp01(
-                    additiveOutputWeight * m_Context.GetMaskWeight(operation, bone) * operation.Weight);
+                    additiveOutputWeight *
+                    m_Context.GetMaskWeight(operation.BoneMaskOffset, bone) *
+                    header.Weight);
                 bool valid = operation.AdditiveReferenceSpace switch
                 {
                     AdditiveReferenceSpace.Local => CharacterPoseExecutionContext.TryAddPose(
@@ -162,41 +197,52 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 };
                 if (!valid)
                 {
-                    m_Context.SetInvalid(output, m_Context.m_ValueContinuityIdentities[output], AnimationPoseNativeInvalidReason.PoseGraphOperationInvalid, operation.Index);
+                    m_Context.SetInvalid(output, m_Context.m_ValueContinuityIdentities[output], AnimationPoseNativeInvalidReason.PoseGraphOperationInvalid, header.Index);
                     return;
                 }
             }
             if (!m_Context.TryCopyParameters(baseValue, output) ||
-                !m_Context.TryMergeContributions(operation, baseValue, additiveValue, output, true) ||
-                !m_Context.TryResolveFootFeatures(operation, baseValue, additiveValue, output, true))
+                !m_Context.TryMergeContributions(header.Weight, operation.BoneMaskOffset, baseValue, additiveValue, output, true) ||
+                !m_Context.TryResolveFootFeatures(header.Weight, operation.BoneMaskOffset, baseValue, additiveValue, output, true))
             {
-                m_Context.SetInvalid(output, m_Context.m_ValueContinuityIdentities[output], AnimationPoseNativeInvalidReason.PoseGraphOperationInvalid, operation.Index);
+                m_Context.SetInvalid(output, m_Context.m_ValueContinuityIdentities[output], AnimationPoseNativeInvalidReason.PoseGraphOperationInvalid, header.Index);
             }
         }
 
-        internal void EvaluatePoseParameterResolve(AnimationPoseGraphNativeOperation operation)
+        internal void EvaluatePoseParameterResolve(
+            in CharacterPoseNativeOperationHeader header,
+            in CharacterPoseNativeParameterResolveOperation operation)
         {
-            int output = operation.OutputValueIndex;
-            int baseValue = operation.InputValueIndexA;
-            int parameterSourceValue = operation.InputValueIndexB;
-            if (!m_Context.TryRequireInputs(operation, baseValue, parameterSourceValue))
+            int output = operation.OutputPoseValueIndex;
+            int baseValue = operation.InputPoseValueIndexA;
+            int parameterSourceValue = operation.InputPoseValueIndexB;
+            if (!m_Context.TryRequireInputs(
+                    in header,
+                    output,
+                    baseValue,
+                    parameterSourceValue))
                 return;
-            if (!m_Context.TryCopyValue(baseValue, output, operation.Index))
+            if (!m_Context.TryCopyValue(baseValue, output, header.Index))
             {
-                m_Context.SetInvalid(output, m_Context.m_ValueContinuityIdentities[baseValue], AnimationPoseNativeInvalidReason.PoseGraphOperationInvalid, operation.Index);
+                m_Context.SetInvalid(output, m_Context.m_ValueContinuityIdentities[baseValue], AnimationPoseNativeInvalidReason.PoseGraphOperationInvalid, header.Index);
                 return;
             }
             if (m_Context.m_ValueAvailability[parameterSourceValue] == AnimationPoseAvailability.NoPose)
                 return;
-            if (!m_Context.TryResolveParameters(operation, baseValue, parameterSourceValue, output))
+            if (!m_Context.TryResolveParameters(
+                    header.Weight,
+                    operation.ParameterPolicyOffset,
+                    baseValue,
+                    parameterSourceValue,
+                    output))
             {
-                m_Context.SetInvalid(output, m_Context.m_ValueContinuityIdentities[output], AnimationPoseNativeInvalidReason.PoseGraphOperationInvalid, operation.Index);
+                m_Context.SetInvalid(output, m_Context.m_ValueContinuityIdentities[output], AnimationPoseNativeInvalidReason.PoseGraphOperationInvalid, header.Index);
                 return;
             }
             m_Context.m_ValueContinuityIdentities[output] = CharacterPoseExecutionContext.CombineContinuity(
                 m_Context.m_ValueContinuityIdentities[baseValue],
                 m_Context.m_ValueContinuityIdentities[parameterSourceValue],
-                operation.Index);
+                header.Index);
         }
 
     }

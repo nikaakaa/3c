@@ -847,3 +847,9 @@ Sequence Preview的player／operation选择、sample time、continuity reset与�
 状态：新增唯一`CharacterPoseLinkedFragmentState`，由Program Image一次建立Player、StateMachine、Root Orientation Warp与Inertialization到Linked Fragment的归属表，并持有每帧Active／Reset位。`CharacterPoseActorState`保存该状态，`PoseStateAndSourceRuntime`改为消费同一对象，不再各自保存外部数组引用；旧Pose Runtime删除六组fragment数组、四套归属表构造函数和全部active／reset判断。
 
 Linked Group incoming selection、Program Frame call control写入、Entry Fragment激活、branch replacement reset、Stack／Direct Player／StateMachine／Inertialization／Root Warp reset及帧末Clear现在都由Program Runtime按原顺序驱动。映射构造、重复归属拒绝、未归属拒绝、无Linked Fragment早退和reset completion identity保持原值；本步推进任务6.2但其余PoseState／Slot／Blend／Transition执行尚在旧外层，因此不提前勾选。3C MCP全局编译被并行Foot诊断Attribute ABI迁移阻塞，但五个本步触碰文件的错误筛选均为0；不修改或兼容外部诊断代码，也不单独运行回放。
+
+## PoseState Advance与Finalize归还Program Runtime
+
+状态：`CharacterPoseProgramRuntime.Advance`现在按原顺序执行Preview覆盖、PoseState Prepare、活动Stack Route release刷新、Animation Slot control发布、Blend Stack时钟推进和Clip／BlendSpace／Motion Matching source逻辑推进；Source Module只向它提供同generation的只读Source Tuning View。`FinalizePoseStateFrame`同样迁入Program Runtime，在同一Frame Pages上执行Transition求值并发布活动Root Orientation Warp control。
+
+旧Pose Runtime的两个公开阶段入口只验证根Mutation并传递Fact、Parameter、Workspace与typed Tuning，不再遍历PoseState、Route、Stack或Root Warp，也不再写Program control页。Preview早退、Linked Fragment gating、循环顺序、Delta、Transition workspace、Root Warp Prepare时机和异常合同保持不变；任务6.2继续推进，但Player／Source准备、Action／Slot生命周期与Commit／Discard仍待迁移，因此不提前勾选。3C MCP对五个相关文件错误筛选均为0；全局外部Foot诊断ABI错误不由本change兼容，不单独运行回放。

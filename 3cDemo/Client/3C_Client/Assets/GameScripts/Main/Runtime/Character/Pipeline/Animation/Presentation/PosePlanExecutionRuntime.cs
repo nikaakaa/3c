@@ -1813,38 +1813,15 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             if (!float.IsFinite(presentationDeltaSeconds) || presentationDeltaSeconds < 0f ||
                 !factFrame.IsValid || !parameterFrame.IsValid)
                 throw new ArgumentOutOfRangeException(nameof(presentationDeltaSeconds));
-            if (m_ProgramRuntime.ApplySequencePreview())
-                return;
-            m_PoseStateSources.PrepareFrame(
-                presentationDeltaSeconds,
-                in factFrame);
-            for (int i = 0; i < m_StackRoutes.Length; i++)
-            {
-                if (!m_ProgramRuntime.IsPlayerActive(
-                        m_Stacks[i].PlayerIndex))
-                    continue;
-                CharacterAnimationTransitionRouteRuntime route = m_StackRoutes[i];
-                route.FlushReleaseCompletion();
-                if (!route.IsAnimationSlot)
-                    continue;
-                CharacterAnimationSlotNativeControl control = route.NativeControl;
-                m_ProgramRuntime.SetAnimationSlotControl(
-                    m_ActiveFrameLease,
-                    route.AnimationSlotIndex,
-                    in control);
-            }
-            for (int i = 0; i < m_Stacks.Length; i++)
-            {
-                if (m_ProgramRuntime.IsPlayerActive(
-                        m_Stacks[i].PlayerIndex))
-                    m_Stacks[i].Advance(presentationDeltaSeconds);
-            }
-            m_PoseStateSources.AdvanceSources(
+            CharacterPoseSourceTuningView sourceTuning =
+                m_SourceModule.RequireTuning(
+                    m_ActiveFrameLease.Lineage.TuningGeneration);
+            m_ProgramRuntime.Advance(
+                m_ActiveFrameLease,
                 presentationDeltaSeconds,
                 in factFrame,
                 in parameterFrame,
-                m_SourceModule.RequireTuning(
-                    m_ActiveFrameLease.Lineage.TuningGeneration));
+                in sourceTuning);
         }
 
         internal void FinalizePoseStateFrame(
@@ -1860,27 +1837,11 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                 throw new ArgumentException(
                     "Pose State frame finalization is invalid.",
                     nameof(factFrame));
-            if (m_ProgramRuntime.HasSequencePreview)
-                return;
-            m_ProgramRuntime.EvaluateTransitions(
+            m_ProgramRuntime.FinalizePoseStateFrame(
                 m_ActiveFrameLease,
                 in factFrame,
                 workspace,
                 lease);
-            for (int i = 0; i < m_RootOrientationWarps.Length; i++)
-            {
-                if (!m_ProgramRuntime.IsRootOrientationWarpActive(i))
-                {
-                    continue;
-                }
-                CharacterRootOrientationWarpNativeControl control =
-                    m_RootOrientationWarps[i].Prepare(
-                        in factFrame);
-                m_ProgramRuntime.SetRootOrientationWarpControl(
-                    m_ActiveFrameLease,
-                    i,
-                    in control);
-            }
         }
 
         internal CharacterPoseSourceDemand CreateSourceDemand(

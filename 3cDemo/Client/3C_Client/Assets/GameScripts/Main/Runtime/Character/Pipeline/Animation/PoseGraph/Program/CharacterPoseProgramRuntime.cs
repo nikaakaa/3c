@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using ThirdPersonCharacter.Pipeline.Animation.BlendStack;
 using ThirdPersonCharacter.Pipeline.Animation.Diagnostics;
 using ThirdPersonCharacter.Pipeline.Animation.Presentation;
+using ThirdPersonCharacter.Pipeline.Animation.Sources;
 using ThirdPersonCharacter.Pipeline.Presentation;
 using ThirdPersonSimulation;
 using Unity.Collections;
@@ -239,7 +240,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
 
         internal bool HasSequencePreview => m_HasSequencePreview;
 
-        internal bool ApplySequencePreview()
+        bool ApplySequencePreview()
         {
             RequireFrame(m_ActiveFrameLease);
             if (!m_HasSequencePreview)
@@ -269,15 +270,96 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             return true;
         }
 
+        internal void Advance(
+            CharacterPoseProgramFrameLease lease,
+            float presentationDeltaSeconds,
+            in CharacterPresentationFactFrame factFrame,
+            in CharacterPresentationProgramParameterFrame parameterFrame,
+            in CharacterPoseSourceTuningView sourceTuning)
+        {
+            RequireFrame(lease);
+            if (!float.IsFinite(presentationDeltaSeconds) ||
+                presentationDeltaSeconds < 0f ||
+                !factFrame.IsValid ||
+                !parameterFrame.IsValid)
+            {
+                throw new ArgumentOutOfRangeException(
+                    nameof(presentationDeltaSeconds));
+            }
+            if (ApplySequencePreview())
+                return;
+            ActorState.PoseStateSources.PrepareFrame(
+                presentationDeltaSeconds,
+                in factFrame);
+            for (int i = 0; i < ActorState.Routes.Length; i++)
+            {
+                AnimationBlendStackRuntime stack = ActorState.Stacks[i];
+                if (!LinkedFragments.IsPlayerActive(stack.PlayerIndex))
+                    continue;
+                CharacterAnimationTransitionRouteRuntime route =
+                    ActorState.Routes[i];
+                route.FlushReleaseCompletion();
+                if (!route.IsAnimationSlot)
+                    continue;
+                CharacterAnimationSlotNativeControl control =
+                    route.NativeControl;
+                FramePages.SetAnimationSlotControl(
+                    route.AnimationSlotIndex,
+                    in control);
+            }
+            for (int i = 0; i < ActorState.Stacks.Length; i++)
+            {
+                AnimationBlendStackRuntime stack = ActorState.Stacks[i];
+                if (LinkedFragments.IsPlayerActive(stack.PlayerIndex))
+                    stack.Advance(presentationDeltaSeconds);
+            }
+            ActorState.PoseStateSources.AdvanceSources(
+                presentationDeltaSeconds,
+                in factFrame,
+                in parameterFrame,
+                sourceTuning);
+        }
+
+        internal void FinalizePoseStateFrame(
+            CharacterPoseProgramFrameLease lease,
+            in CharacterPresentationFactFrame factFrame,
+            PresentationFrameWorkspace workspace,
+            PresentationFrameWorkspaceLease workspaceLease)
+        {
+            RequireFrame(lease);
+            if (!factFrame.IsValid ||
+                workspace == null ||
+                !workspaceLease.IsValid)
+            {
+                throw new ArgumentException(
+                    "Pose State frame finalization is invalid.",
+                    nameof(factFrame));
+            }
+            if (m_HasSequencePreview)
+                return;
+            ActorState.PoseStateSources.EvaluateTransitions(
+                in factFrame,
+                FramePages,
+                workspace,
+                workspaceLease);
+            for (int i = 0;
+                 i < ActorState.RootOrientationWarps.Length;
+                 i++)
+            {
+                if (!LinkedFragments.IsRootOrientationWarpActive(i))
+                    continue;
+                CharacterRootOrientationWarpNativeControl control =
+                    ActorState.RootOrientationWarps[i].Prepare(in factFrame);
+                FramePages.SetRootOrientationWarpControl(i, in control);
+            }
+        }
+
         internal bool IsSequencePreviewPlayer(int playerIndex) =>
             m_HasSequencePreview &&
             playerIndex == m_SequencePreviewPlayerIndex;
 
         internal bool IsPlayerActive(int playerIndex) =>
             LinkedFragments.IsPlayerActive(playerIndex);
-
-        internal bool IsRootOrientationWarpActive(int index) =>
-            LinkedFragments.IsRootOrientationWarpActive(index);
 
         internal void PrepareLinkedPoseSelection(
             CharacterLinkedPoseRuntimeSession linkedPose,
@@ -532,28 +614,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation
 
         internal void ClearSourceDemand() => FramePages.ClearSourceDemand();
 
-        internal void SetAnimationSlotControl(
-            CharacterPoseProgramFrameLease lease,
-            int animationSlotIndex,
-            in CharacterAnimationSlotNativeControl control)
-        {
-            RequireFrame(lease);
-            FramePages.SetAnimationSlotControl(
-                animationSlotIndex,
-                in control);
-        }
-
-        internal void SetRootOrientationWarpControl(
-            CharacterPoseProgramFrameLease lease,
-            int rootOrientationWarpIndex,
-            in CharacterRootOrientationWarpNativeControl control)
-        {
-            RequireFrame(lease);
-            FramePages.SetRootOrientationWarpControl(
-                rootOrientationWarpIndex,
-                in control);
-        }
-
         internal void ResetRootOrientationWarpControl(
             int rootOrientationWarpIndex,
             in CharacterRootOrientationWarpNativeControl control)
@@ -567,20 +627,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             FramePages.SetRootOrientationWarpControl(
                 rootOrientationWarpIndex,
                 in control);
-        }
-
-        internal void EvaluateTransitions(
-            CharacterPoseProgramFrameLease lease,
-            in CharacterPresentationFactFrame factFrame,
-            PresentationFrameWorkspace workspace,
-            PresentationFrameWorkspaceLease workspaceLease)
-        {
-            RequireFrame(lease);
-            ActorState.PoseStateSources.EvaluateTransitions(
-                in factFrame,
-                FramePages,
-                workspace,
-                workspaceLease);
         }
 
         internal AnimationPlayerPoseNativeWriteBinding

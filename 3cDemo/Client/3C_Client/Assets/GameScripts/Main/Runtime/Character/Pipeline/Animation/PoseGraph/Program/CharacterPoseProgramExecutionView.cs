@@ -571,13 +571,14 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 if (!string.Equals(program.RigId, rig.RigId, StringComparison.Ordinal) ||
                     !string.Equals(program.RigRevision, rig.RigRevision, StringComparison.Ordinal) ||
                     program.PoseBoneCount != rig.PoseBoneCount || program.Parameters.Count <= 0 ||
-                    program.ContributionWorkspaceCount % program.PoseValueWorkspaceCount != 0 ||
+                    program.ContributionCapacity <= 0 ||
                     layout.BoneCount != program.PoseBoneCount ||
                     layout.ParameterCount != program.Parameters.Count ||
-                    layout.PoseValueCount != program.PoseValueWorkspaceCount ||
-                    layout.PoseValueContributionStride !=
-                    program.ContributionWorkspaceCount /
+                    layout.PoseValueCount != program.PoseValueCount ||
+                    layout.PoseValueWorkspaceCount !=
                     program.PoseValueWorkspaceCount ||
+                    layout.PoseValueContributionStride !=
+                    program.ContributionCapacity ||
                     layout.OperationCount != program.Operations.Count ||
                     layout.StageCount != program.Stages.Count)
                     throw new InvalidOperationException("Animation Pose Graph Program and Rig payload do not match.");
@@ -585,7 +586,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 m_BoneCount = program.PoseBoneCount;
                 m_BoneCounts = rig.BoneCounts;
                 m_ParameterCount = program.Parameters.Count;
-                m_PoseValueCount = program.PoseValueWorkspaceCount;
+                m_PoseValueCount = program.PoseValueCount;
                 m_FootPlacementCount = program.FootPlacements.Count;
                 m_FullBodyIkCount = program.FullBodyIks.Count;
                 m_FullBodyIkGoalContributionCount =
@@ -594,7 +595,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                     program.FullBodyIkGoalContributionGoalWorkspaceCount;
                 m_FullBodyIkGoalSetValueCount =
                     program.FullBodyIkGoalSetWorkspaceCount;
-                m_ContributionStride = program.ContributionWorkspaceCount / program.PoseValueWorkspaceCount;
+                m_ContributionStride = program.ContributionCapacity;
                 m_FrameCacheCount = program.FrameCacheCount;
                 m_OutputOperationIndex = program.OutputOperationIndex;
                 m_LeftFootBoneIndex = rig.LeftLeg.AnklePhysicalBoneIndex;

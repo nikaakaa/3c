@@ -368,12 +368,14 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                 state.Operations.ToArray(),
                 state.SourceMap.ToArray(),
                 stages,
+                state.PoseValueCount,
                 workspace.PoseValueCapacity,
                 state.FullBodyIkGoalContributionValueCount,
                 state.FullBodyIkGoalSetValueCount,
                 state.FullBodyIkGoalContributionGoalWorkspaceCount,
                 workspace.ParameterValueCapacity,
-                workspace.ContributionCapacity,
+                workspace.ContributionCapacity /
+                workspace.PoseValueCapacity,
                 workspace.FrameCacheCapacity,
                 state.OutputOperationIndex);
         }
@@ -647,7 +649,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             if ((uint)state.OutputOperationIndex >= (uint)state.Operations.Count)
                 throw new InvalidOperationException("Pose Native plan output operation is outside the linear operation list.");
             CharacterPresentationPoseOperation output = state.Operations[state.OutputOperationIndex];
-            if ((uint)output.OutputValueIndex >= (uint)lastUse.Length)
+            if (output.OutputValueIndex != state.PoseValueCount - 1)
                 throw new InvalidOperationException("Pose Native plan output operation does not publish a Pose value.");
             lastUse[output.OutputValueIndex] = state.Operations.Count;
             for (int i = 0; i < producer.Length; i++)
@@ -672,9 +674,9 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             if (contributionCapacityPerValue <= 0)
                 throw new InvalidOperationException("Pose Plan requires at least one Player contribution capacity.");
             return new NativeWorkspacePlan(
-                state.PoseValueCount,
+                output.OutputValueIndex,
                 state.Parameters.Length,
-                checked(state.PoseValueCount * contributionCapacityPerValue),
+                checked(output.OutputValueIndex * contributionCapacityPerValue),
                 state.Operations.Count,
                 lastUse);
         }

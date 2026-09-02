@@ -606,8 +606,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             m_FinalPublication = finalPublication;
             m_FootPlacementContributions =
                 new AnimationPoseSourceContribution[
-                    projection.PosePlan.ContributionWorkspaceCount /
-                    projection.PosePlan.PoseValueWorkspaceCount];
+                    projection.PosePlan.ContributionCapacity];
             m_DiagnosticsPublisher = diagnosticsPublisher;
             m_ActorDiagnosticsProjector = actorDiagnosticsProjector;
             m_ProgramDiagnosticsProjector =
@@ -1536,8 +1535,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                                 m_ProgramFrames,
                                 in committedProgramResult,
                                 in m_LastCompletedFrame,
-                                interest);
                                 in publicationDiagnostics,
+                                interest);
                     CharacterLinkedPoseCommittedDiagnosticsView
                         linkedPoseDiagnostics =
                             linkedPose.CaptureCommittedDiagnostics(
@@ -2112,8 +2111,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
 
         internal CharacterPoseProgramPrepared PrepareEvaluation(
             CharacterPoseSourceFrameLease sourceLease,
-            in CharacterPoseSourceDemand sourceDemand,
             CharacterFinalPosePublicationFrameLease publicationLease,
+            in CharacterPoseSourceDemand sourceDemand,
             float presentationDeltaSeconds,
             IReadOnlyDictionary<AnimationPlayerSourceSampleKey,
                 AnimationResolvedPoseSourceSample> actionSourceSamples,
@@ -2344,15 +2343,15 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                 CharacterPoseProgramTuningView programTuning =
                     m_ProgramTuning.RequireCommitted(
                         sourceDemand.Lineage.TuningGeneration);
-                poseExecutor = m_ProgramRuntime.BindExecutor(
                 CharacterFinalPosePublicationOutputBinding finalOutput =
                     m_FinalPublication.BindProgramOutput(
                         publicationLease);
+                poseExecutor = m_ProgramRuntime.BindExecutor(
                     in programTuning,
                     m_ProgramFrames.RequirePoseGraphBinding(
                         completionIdentity),
-                    recordDiagnostics);
                     in finalOutput,
+                    recordDiagnostics);
                 InstallOrUpdateJobs();
                 m_FinalPublication.ValidateWriterBeforeEvaluate(
                     in finalOutput);
@@ -2433,8 +2432,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                 sourceLease);
             using (GraphEvaluateMarker.Auto())
                 m_Animancer.Evaluate(presentationDeltaSeconds);
-            using (PoseGraphExecuteMarker.Auto())
             CharacterPoseProgramOutputResult programOutput;
+            using (PoseGraphExecuteMarker.Auto())
             {
                 poseExecutor.BeginStagedEvaluation(renderFrame);
                 if (m_HasSequencePreview)
@@ -2547,12 +2546,12 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             in CharacterPoseFrameLineage lineage,
             in CharacterPoseProgramOutputResult output)
         {
-            bool completed =
             if (!output.IsValid || output.Lineage != lineage)
             {
                 throw new InvalidOperationException(
                     "Pose Program output result is inconsistent.");
             }
+            bool completed =
                 output.Availability == AnimationPoseAvailability.Pose &&
                 output.OutputInvalidReason ==
                     AnimationPoseNativeInvalidReason.None &&

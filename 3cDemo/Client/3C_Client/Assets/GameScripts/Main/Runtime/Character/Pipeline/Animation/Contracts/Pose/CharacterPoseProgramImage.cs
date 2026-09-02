@@ -788,12 +788,13 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             CharacterPresentationPoseOperation[] operations,
             CharacterPresentationPoseSourceMapEntry[] sourceMap,
             CharacterPresentationPoseStage[] stages,
+            int poseValueCount,
             int poseValueWorkspaceCount,
             int fullBodyIkGoalContributionWorkspaceCount,
             int fullBodyIkGoalSetWorkspaceCount,
             int fullBodyIkGoalContributionGoalWorkspaceCount,
             int parameterWorkspaceCount,
-            int contributionWorkspaceCount,
+            int contributionCapacity,
             int frameCacheCount,
             int outputOperationIndex)
         {
@@ -831,14 +832,22 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             m_Operations = operations ?? throw new ArgumentNullException(nameof(operations));
             m_SourceMap = sourceMap ?? throw new ArgumentNullException(nameof(sourceMap));
             m_Stages = stages ?? throw new ArgumentNullException(nameof(stages));
-            m_PoseValueWorkspaceCount = poseValueWorkspaceCount;
+            if (poseValueCount <= 1 ||
+                poseValueWorkspaceCount != poseValueCount - 1 ||
+                contributionCapacity <= 0)
+            {
+                throw new ArgumentOutOfRangeException(
+                    nameof(poseValueWorkspaceCount));
+            }
+            m_PoseValueWorkspaceCount = poseValueCount;
             m_FullBodyIkGoalContributionWorkspaceCount =
                 fullBodyIkGoalContributionWorkspaceCount;
             m_FullBodyIkGoalSetWorkspaceCount = fullBodyIkGoalSetWorkspaceCount;
             m_FullBodyIkGoalContributionGoalWorkspaceCount =
                 fullBodyIkGoalContributionGoalWorkspaceCount;
             m_ParameterWorkspaceCount = parameterWorkspaceCount;
-            m_ContributionWorkspaceCount = contributionWorkspaceCount;
+            m_ContributionWorkspaceCount = checked(
+                poseValueCount * contributionCapacity);
             m_FrameCacheCount = frameCacheCount;
             m_OutputOperationIndex = outputOperationIndex;
             RequireValid();
@@ -893,14 +902,22 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         public IReadOnlyList<CharacterPresentationPoseOperation> Operations => m_Operations ?? Array.Empty<CharacterPresentationPoseOperation>();
         public IReadOnlyList<CharacterPresentationPoseSourceMapEntry> SourceMap => m_SourceMap ?? Array.Empty<CharacterPresentationPoseSourceMapEntry>();
         public IReadOnlyList<CharacterPresentationPoseStage> Stages => m_Stages ?? Array.Empty<CharacterPresentationPoseStage>();
-        public int PoseValueWorkspaceCount => m_PoseValueWorkspaceCount;
+        public int PoseValueCount => m_PoseValueWorkspaceCount;
+        public int PoseValueWorkspaceCount => PoseValueCount - 1;
         public int FullBodyIkGoalContributionWorkspaceCount =>
             m_FullBodyIkGoalContributionWorkspaceCount;
         public int FullBodyIkGoalSetWorkspaceCount => m_FullBodyIkGoalSetWorkspaceCount;
         public int FullBodyIkGoalContributionGoalWorkspaceCount =>
             m_FullBodyIkGoalContributionGoalWorkspaceCount;
         public int ParameterWorkspaceCount => m_ParameterWorkspaceCount;
-        public int ContributionWorkspaceCount => m_ContributionWorkspaceCount;
+        public int ContributionCapacity =>
+            PoseValueCount > 0 &&
+            m_ContributionWorkspaceCount > 0 &&
+            m_ContributionWorkspaceCount % PoseValueCount == 0
+                ? m_ContributionWorkspaceCount / PoseValueCount
+                : 0;
+        public int ContributionWorkspaceCount => checked(
+            PoseValueWorkspaceCount * ContributionCapacity);
         public int FrameCacheCount => m_FrameCacheCount;
         public int OutputOperationIndex => m_OutputOperationIndex;
         internal CharacterFinalPosePublicationLayoutHandle
@@ -909,9 +926,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             get
             {
                 if ((uint)OutputOperationIndex >= (uint)Operations.Count ||
-                    PoseValueWorkspaceCount <= 0 ||
-                    ContributionWorkspaceCount <= 0 ||
-                    ContributionWorkspaceCount % PoseValueWorkspaceCount != 0)
+                    PoseValueCount <= 1 ||
+                    PoseValueWorkspaceCount != PoseValueCount - 1 ||
+                    ContributionCapacity <= 0)
                 {
                     return default;
                 }
@@ -923,11 +940,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                         0,
                         OutputOperationIndex,
                         output.OutputValueIndex,
-                        PoseValueWorkspaceCount,
+                        PoseValueCount,
                         PoseBoneCount,
                         Parameters.Count,
-                        ContributionWorkspaceCount /
-                        PoseValueWorkspaceCount);
+                        ContributionCapacity);
             }
         }
 
@@ -1018,12 +1034,15 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 string.IsNullOrEmpty(PoseGraphId) || string.IsNullOrEmpty(ContentRevision) || string.IsNullOrEmpty(PlanHash) ||
                 string.IsNullOrEmpty(RigId) || string.IsNullOrEmpty(RigRevision) || PoseBoneCount <= 0 ||
                 Operations.Count == 0 || SourceMap.Count != Operations.Count || Stages.Count == 0 ||
-                PoseValueWorkspaceCount <= 0 ||
+                PoseValueCount <= 1 ||
+                PoseValueWorkspaceCount != PoseValueCount - 1 ||
                 FullBodyIkGoalContributionWorkspaceCount < 0 ||
                 FullBodyIkGoalSetWorkspaceCount != 1 ||
                 FullBodyIkGoalContributionGoalWorkspaceCount < 0 ||
-                ParameterWorkspaceCount < Parameters.Count || ContributionWorkspaceCount <= 0 ||
-                ContributionWorkspaceCount % PoseValueWorkspaceCount != 0 ||
+                ParameterWorkspaceCount < Parameters.Count ||
+                ContributionCapacity <= 0 ||
+                m_ContributionWorkspaceCount !=
+                checked(PoseValueCount * ContributionCapacity) ||
                 FrameCacheCount != Operations.Count || OutputOperationIndex < 0 || OutputOperationIndex >= Operations.Count)
                 throw new InvalidOperationException("Character Presentation Pose Plan header or workspace is invalid.");
 
@@ -1076,7 +1095,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                     goalContributionProducers,
                     goalSetProducers);
                 if (operation.OutputValueIndex >= 0 &&
-                    ((uint)operation.OutputValueIndex >= (uint)PoseValueWorkspaceCount ||
+                    ((uint)operation.OutputValueIndex >= (uint)PoseValueCount ||
                      !poseValueProducers.TryAdd(operation.OutputValueIndex, operation)))
                 {
                     throw new InvalidOperationException($"Pose Plan operation #{i} has an invalid or duplicated Pose output value.");

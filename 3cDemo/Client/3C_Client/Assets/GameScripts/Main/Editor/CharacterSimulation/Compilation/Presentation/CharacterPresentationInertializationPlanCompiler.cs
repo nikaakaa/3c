@@ -186,12 +186,13 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                 source.Operations.ToArray(),
                 source.SourceMap.ToArray(),
                 source.Stages.ToArray(),
+                source.PoseValueCount,
                 source.PoseValueWorkspaceCount,
                 source.FullBodyIkGoalContributionWorkspaceCount,
                 source.FullBodyIkGoalSetWorkspaceCount,
                 source.FullBodyIkGoalContributionGoalWorkspaceCount,
                 source.ParameterWorkspaceCount,
-                source.ContributionWorkspaceCount,
+                source.ContributionCapacity,
                 source.FrameCacheCount,
                 source.OutputOperationIndex);
         }

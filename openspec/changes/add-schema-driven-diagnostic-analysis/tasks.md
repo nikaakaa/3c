@@ -23,7 +23,7 @@
 - [x] 3.5 实现source-controlled JSON Plan模型、参数合同、窗口、过滤、Dimension和评分组合，通过Plan编译命令确认未知Operator、缺失Key／Field、类型或表基数错误被拒绝
 - [x] 3.6 实现显式Operator registry及`Passed`、`Failed`、`NotApplicable`、`MissingEvidence`四态结果，通过Host编译和规则执行输出检查MissingEvidence不计为Passed
 - [x] 3.7 实现原子`diagnosis.json`与`report.md` Writer，通过产物检查确认记录Manifest、Schema／Plan／Analyzer hash、规则证据和评分分母且不修改Capture目录
-- [x] 3.8 发布独立包0.5.1并更新3C唯一package消费身份，通过Owner提交`1c17465`、Analyzer SHA-256 `47EE5F876377EBE453E98009E5AEA6D95FECC8DC4491B1A9EBE881812C55AA87`与MVID `9b3d5a64-d7e9-46c4-a687-52e87a5bc84a`确认3C没有第二份Annotations、Generator或Host实现
+- [x] 3.8 发布独立包0.5.2并更新3C唯一package消费身份，通过Owner提交`e43af24`、Analyzer SHA-256 `47EE5F876377EBE453E98009E5AEA6D95FECC8DC4491B1A9EBE881812C55AA87`与MVID `9b3d5a64-d7e9-46c4-a687-52e87a5bc84a`确认3C没有第二份Annotations、Generator或Host实现；0.5.2保持Event ABI并补全不完整评分固定权重与上下界输出
 
 ## 4. Foot采样分类迁移
 

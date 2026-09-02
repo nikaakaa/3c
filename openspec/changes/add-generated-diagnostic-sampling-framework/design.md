@@ -1,6 +1,6 @@
 ## Context
 
-见[proposal.md](proposal.md)。独立仓库`D:/Unity_Project_1/generated-diagnostic-sampling`的0.5.1 release已经实现multi Fact Root、path-scoped Field identity、业务`DiagnosticEvent`、可选partial interest Query、generated lifecycle、typed packet、Schema-driven Host／Analysis和Disabled portable gate；3C当前仍在清理旧Consumer／Binding链。本change以独立0.5.1合同为唯一框架真相，只规划3C消费与最终Player闭包，不恢复项目内第二份实现。
+见[proposal.md](proposal.md)。独立仓库`D:/Unity_Project_1/generated-diagnostic-sampling`的0.5.2 release已经实现multi Fact Root、path-scoped Field identity、业务`DiagnosticEvent`、可选partial interest Query、generated lifecycle、typed packet、Schema-driven Host／Analysis、不完整评分固定权重和Disabled portable gate；3C当前仍在清理旧Consumer／Binding链。本change以独立0.5.2合同为唯一框架真相，只规划3C消费与最终Player闭包，不恢复项目内第二份实现。
 
 约束固定为Unity 2022.3、Roslyn 3.8兼容Source Generator、.NET Standard 2.0 Generator边界和IL2CPP AOT。采样不得反向驱动业务状态；Performance工作流只有一个Build、Player、Controller、顶层Capture和Comparer；项目不接受反射fallback、运行时表达式、兼容wrapper或第二采样路径。
 
@@ -108,9 +108,9 @@ Annotations使用`Conditional("KK_DIAGNOSTIC_SAMPLING")`；Generator在全局def
 
 Annotations必须在源码编译时可解析，但Disabled Player不得因Attribute语法保留Annotations根程序集。Gate使用Cecil检查业务程序集零Diagnostic custom attribute与零`KK.GeneratedDiagnosticSampling` AssemblyRef，并检查Managed／IL2CPP输出零Annotations、Runtime、领域Diagnostics、Generated Program、Session／packet／queue／interest类型及Capability／Field identity。运行时bool、空实现、未订阅Session、Linker推测或构建后删除都不能替代Gate。
 
-### Decision 9: 3C只消费独立0.5.1发布
+### Decision 9: 3C只消费独立0.5.2发布
 
-通用Owner固定为独立`com.kk.generated-diagnostic-sampling` 0.5.1，Owner提交`1c17465`，Analyzer SHA-256为`47EE5F876377EBE453E98009E5AEA6D95FECC8DC4491B1A9EBE881812C55AA87`，MVID为`9b3d5a64-d7e9-46c4-a687-52e87a5bc84a`。3C只保存package引用、领域Capability／Sampler／Program声明、现有业务成员Attribute、一行Post-Commit `DiagnosticEvent` partial调用和Editor workflow；Foot采样消费方不再拥有手写GeneratedCapture或旧单体Analyzer／Publisher。`add-schema-driven-diagnostic-analysis`在同一package内提供Host-only通用分析基础设施，并由独立3C Foot Analysis Editor程序集提供领域Operator、Plan和报告；它只读取Completed artifact，不反向进入业务事实Owner。PoseGraph继续生产自己的正式Committed事实，不新增采样View、Event payload或consumer binding；只在帧开始读取generated target interest决定延迟事实冻结。
+通用Owner固定为独立`com.kk.generated-diagnostic-sampling` 0.5.2，Owner提交`e43af24`，Analyzer SHA-256为`47EE5F876377EBE453E98009E5AEA6D95FECC8DC4491B1A9EBE881812C55AA87`，MVID为`9b3d5a64-d7e9-46c4-a687-52e87a5bc84a`。3C只保存package引用、领域Capability／Sampler／Program声明、现有业务成员Attribute、一行Post-Commit `DiagnosticEvent` partial调用和Editor workflow；Foot采样消费方不再拥有手写GeneratedCapture或旧单体Analyzer／Publisher。`add-schema-driven-diagnostic-analysis`在同一package内提供Host-only通用分析基础设施，并由独立3C Foot Analysis Editor程序集提供领域Operator、Plan和报告；固定权重Score在证据不全时只发布已知贡献、可用权重和上下界，不重分配未知维度。PoseGraph继续生产自己的正式Committed事实，不新增采样View、Event payload或consumer binding；只在帧开始读取generated target interest决定延迟事实冻结。
 
 Performance工作流继续唯一拥有Build Request、`DiagnosticCapabilitySet`、Player manifest、Run Request、握手、顶层Capture与Comparer。框架不创建第二Player、第二Controller或第二产物根。
 
@@ -125,7 +125,7 @@ Performance工作流继续唯一拥有Build Request、`DiagnosticCapabilitySet`�
 
 ## Migration Plan
 
-1. 锁定独立0.5.1 package与Analyzer identity，3C package引用只指向该正式发布。
+1. 锁定独立0.5.2 package与Analyzer identity，3C package引用只指向该正式发布。
 2. 把每个Capability改为Metadata加多个`DiagnosticFactRoot`，Program直接声明Dimension IDs。
 3. 把普通旧Getter迁到现有真实成员Attribute；允许现有计算getter和class page Table，公式改为只接实际Root的Derived。
 4. 在同步Commit点声明并调用一行`DiagnosticEvent` partial方法，把目标、真实lineage和每个Dimension的已有事实以`in`传入；Host workflow在Start冻结Metadata，Generator生成typed dispatcher、可选partial interest Query和Program handler。

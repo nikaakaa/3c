@@ -1,6 +1,6 @@
 ## Why
 
-通用采样核心已经具备AOT Capture、typed packet和Schema-driven Host，但旧单View合同仍迫使消费方把Landing、Motion、Goal、Solved、Pelvis等现有事实复制进诊断DTO。独立仓库0.5.1已经确立multi Fact Root、业务`DiagnosticEvent`和可选partial interest合同，3C必须以该合同为唯一真相，删除单View、生命周期Event DTO、公开`HandleCommitted`和逐字段映射。
+通用采样核心已经具备AOT Capture、typed packet和Schema-driven Host，但旧单View合同仍迫使消费方把Landing、Motion、Goal、Solved、Pelvis等现有事实复制进诊断DTO。独立仓库0.5.2已经确立multi Fact Root、业务`DiagnosticEvent`、可选partial interest和不完整评分固定权重合同，3C必须以该合同为唯一真相，删除单View、生命周期Event DTO、公开`HandleCommitted`和逐字段映射。
 
 ## What Changes
 
@@ -25,9 +25,9 @@
 
 ## Impact
 
-- Affected dependency: 3C统一消费独立`com.kk.generated-diagnostic-sampling` 0.5.1及其唯一Analyzer identity，不再维护项目内第二份Generator、0.5.0 interest入口或旧单View ABI。
+- Affected dependency: 3C统一消费独立`com.kk.generated-diagnostic-sampling` 0.5.2及其唯一Analyzer identity，不再维护项目内第二份Generator、0.5.0 interest入口、0.5.1重分配评分输出或旧单View ABI。
 - Affected runtime/tooling: Annotations、Source Generator、Generated Program ABI、multi Fact Root Schema、typed packet、固定容量Table、Runtime Session、Writer、Host Reader／Finalizer和构建闭包Gate。
-- Affected active change: `refactor-foot-ik-diagnostic-sampling`迁移为0.5.1消费方，删除诊断View、三个Event DTO、普通Getter／Extractor、Bridge、Column／CsvBinding和Host Adapter。
+- Affected active change: `refactor-foot-ik-diagnostic-sampling`迁移为0.5.2消费方，删除诊断View、三个Event DTO、普通Getter／Extractor、Bridge、Column／CsvBinding和Host Adapter。
 - Affected active change: `add-schema-driven-diagnostic-analysis`在同一通用package内增加Host-only Dataset／Plan／Operator／Report基础设施，并在3C领域Editor程序集恢复Foot离线诊断；本change不拥有具体领域规则。
 - Affected active change: `add-gameplay-performance-capture-workflow`继续唯一拥有Build、Player、Controller、顶层Capture、Gate与Comparer，只消费通用`DiagnosticCapabilitySet`。
 - Affected active change: `refactor-character-pose-graph-architecture`继续独立维护正式Committed Result、事务、Seal和既有Post-Commit边界；业务只在该边界调用一行条件`DiagnosticEvent` partial方法，不反向引用Sampling Runtime或领域诊断程序集。

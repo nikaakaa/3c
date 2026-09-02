@@ -1,8 +1,8 @@
-## 1. 固定独立0.5.1 Owner与发布身份
+## 1. 固定独立0.5.2 Owner与发布身份
 
 - [x] 1.1 将Annotations、Source Generator、Capture Runtime和Editor Host迁入独立`com.kk.generated-diagnostic-sampling` Owner，并以仓库、package路径和命名空间搜索确认通用代码不含Foot／PIK／PoseGraph领域分支
 - [x] 1.2 固定Annotations → Domain／Generator、Generated Program → Runtime、Host Editor-only的单向程序集依赖，检查asmdef与portable工程确认无循环且Generator不进入Player
-- [x] 1.3 使用规定的`--disable-build-servers /nr:false /p:UseSharedCompilation=false`参数完成0.5.1 Release构建并立即执行`dotnet build-server shutdown`，核对package Analyzer SHA-256、MVID、assembly name和Generator identity
+- [x] 1.3 使用规定的`--disable-build-servers /nr:false /p:UseSharedCompilation=false`参数完成0.5.2 Release构建并立即执行`dotnet build-server shutdown`，核对package Analyzer SHA-256、MVID、assembly name和Generator identity
 
 ## 2. 收口multi Fact Root编译合同
 
@@ -46,7 +46,7 @@
 
 ## 7. 迁移3C Foot消费方
 
-- [x] 7.1 将3C package依赖指向独立`com.kk.generated-diagnostic-sampling` 0.5.1路径，并核对消费到的package version与唯一Analyzer发布身份
+- [x] 7.1 将3C package依赖指向独立`com.kk.generated-diagnostic-sampling` 0.5.2路径，并核对消费到的package version与唯一Analyzer发布身份
 - [x] 7.2 将Foot Capability收口为现有Fact Root集合与Metadata，将Program声明Event与Left／Right Dimension，并在同步Commit点只调用一行target-scoped Foot `DiagnosticEvent` partial方法；删除手写GeneratedCapture／Consumer／Binding转发，Metadata与Start／Stop留在Host workflow
 - [x] 7.3 把全部普通Foot字段迁到现有readonly field／property／计算getter的单个path-scoped Attribute，将固定集合迁到现有buffer／class page Table，并以搜索确认旧方法式Getter／Extractor为零
 - [x] 7.4 删除Foot运行时公式与无字段root，通过Generator diagnostics确认没有Capture View、Side选择、普通字段转发或未注册Root

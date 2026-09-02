@@ -1,17 +1,17 @@
 ## Purpose
 
-定义3C作为Generated Diagnostic Sampling独立0.5.1 KK package消费者时的唯一依赖、多Fact Root接入、generated `DiagnosticEvent` handler、Host产物与Disabled零闭包合同。
+定义3C作为Generated Diagnostic Sampling独立0.5.2 KK package消费者时的唯一依赖、多Fact Root接入、generated `DiagnosticEvent` handler、Host分析产物与Disabled零闭包合同。
 
 ## ADDED Requirements
 
-### Requirement: 3C必须只消费独立0.5.1 KK package
+### Requirement: 3C必须只消费独立0.5.2 KK package
 
-3C Unity项目 MUST通过唯一file dependency解析`com.kk.generated-diagnostic-sampling` 0.5.1，并对账独立commit `1c17465`、Analyzer SHA-256 `47EE5F876377EBE453E98009E5AEA6D95FECC8DC4491B1A9EBE881812C55AA87`与MVID `9b3d5a64-d7e9-46c4-a687-52e87a5bc84a`。3C MUST不跟踪通用Runtime、Host、Generator、Analyzer binary、Tools或其镜像。
+3C Unity项目 MUST通过唯一file dependency解析`com.kk.generated-diagnostic-sampling` 0.5.2，并对账独立commit `e43af24`、Analyzer SHA-256 `47EE5F876377EBE453E98009E5AEA6D95FECC8DC4491B1A9EBE881812C55AA87`与MVID `9b3d5a64-d7e9-46c4-a687-52e87a5bc84a`。3C MUST不跟踪通用Runtime、Host、Generator、Analyzer binary、Tools或其镜像。
 
 #### Scenario: Unity解析采样依赖
 
 - **WHEN** 3C刷新Package Manager与脚本程序集
-- **THEN** 它 MUST只加载独立仓库0.5.1 package和匹配Analyzer
+- **THEN** 它 MUST只加载独立仓库0.5.2 package和匹配Analyzer
 - **AND** 旧ThirdPerson package、embedded源码、第二Analyzer或0.1至0.3 ABI MUST不存在于解析图
 
 ### Requirement: Foot必须直接声明多个既有Fact Root

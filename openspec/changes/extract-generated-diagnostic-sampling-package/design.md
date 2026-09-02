@@ -1,6 +1,6 @@
 ## Context
 
-见[proposal.md](proposal.md)。独立Owner已经在`1c17465`发布`com.kk.generated-diagnostic-sampling` 0.5.1；Analyzer SHA-256为`47EE5F876377EBE453E98009E5AEA6D95FECC8DC4491B1A9EBE881812C55AA87`，MVID为`9b3d5a64-d7e9-46c4-a687-52e87a5bc84a`。0.5.1删除公开`HandleCommitted`和下游Program interest入口，一个Dimension直接接收多个既有Fact Root，业务Event传真实lineage，Metadata只在Start冻结。
+见[proposal.md](proposal.md)。独立Owner已经在`e43af24`发布`com.kk.generated-diagnostic-sampling` 0.5.2；Analyzer SHA-256为`47EE5F876377EBE453E98009E5AEA6D95FECC8DC4491B1A9EBE881812C55AA87`，MVID为`9b3d5a64-d7e9-46c4-a687-52e87a5bc84a`。0.5.2沿用0.5.1的Event ABI并补全不完整评分固定权重与上下界，一个Dimension直接接收多个既有Fact Root，业务Event传真实lineage，Metadata只在Start冻结。
 
 3C已经切换外部file dependency并删除旧本地Owner，但Foot真实字段迁移、multi-root Commit接线、旧映射清理、Host消费和真实Player Gate仍在实施。本change不得复用旧0.1／0.3 Unity编译证据宣称0.4闭环。
 
@@ -8,7 +8,7 @@
 
 **Goals:**
 
-- 让3C只消费独立0.5.1 package与唯一Analyzer。
+- 让3C只消费独立0.5.2 package与唯一Analyzer。
 - 一个Foot Dimension直接接收Landing、Motion、Goal、Solved、Pelvis、Metadata等既有强类型事实，不构造诊断View或Event DTO。
 - 普通字段只在真实readonly成员声明一次`DiagnosticField`。
 - Commit点只以`in`传递左右事实并调用一行`DiagnosticEvent` partial方法；Generator绑定typed dispatcher与Program handler。
@@ -24,7 +24,7 @@
 
 ## Decisions
 
-### Decision 1: 3C固定消费一个0.5.1外部Owner
+### Decision 1: 3C固定消费一个0.5.2外部Owner
 
 3C `Packages/manifest.json`固定引用：
 
@@ -32,7 +32,7 @@
 file:../../../../../generated-diagnostic-sampling/Packages/com.kk.generated-diagnostic-sampling
 ```
 
-packages lock只能解析这个package。独立输入必须对账完整commit、0.5.1版本、Analyzer SHA-256、MVID和assembly identity；不使用embedded副本、submodule、双file／Git配置或消费者自建Analyzer。
+packages lock只能解析这个package。独立输入必须对账完整commit、0.5.2版本、Analyzer SHA-256、MVID和assembly identity；不使用embedded副本、submodule、双file／Git配置或消费者自建Analyzer。
 
 ### Decision 2: Capability声明多个既有Fact Root
 
@@ -77,12 +77,12 @@ Capture Player显式定义`KK_DIAGNOSTIC_SAMPLING`与`KK_DIAGNOSTIC_FOOT`；普�
 - [DiagnosticEvent参数较多] → 参数只出现在partial声明与同步Commit一行调用，并换取零DTO、零字段复制与完整静态类型。
 - [path identity随业务成员改名变化] → 成员路径属于Schema合同；真正跨版本冻结的字段使用显式绝对identity并升级Schema。
 - [真实成员分散在多个程序集] → Annotations保持极薄引用，Runtime只进入Capture构建；Disabled最终以AssemblyRef和Player产物检查裁决。
-- [旧Analyzer证据误判完成] → 只接受0.5.1精确commit和hash，旧0.1至0.5.0编译、CSV或packet只能作为历史。
+- [旧Analyzer证据误判完成] → 只接受0.5.2精确commit和hash，旧0.1至0.5.1编译、CSV、评分输出或packet只能作为历史。
 - [Capture直接读取有成本] → 成本只存在于Capture BuildIdentity；Disabled构建完全退出，不能用运行时关闭伪装性能基线。
 
 ## Migration Plan
 
-1. 对账独立0.5.1 commit、Analyzer hash／MVID和唯一file dependency。
+1. 对账独立0.5.2 commit、Analyzer hash／MVID和唯一file dependency。
 2. 将Foot Capability改成多Fact Root，普通Attribute迁到真实成员，公式改成multi-root Derived。
 3. Program声明左右Dimension，在同步Commit点声明并调用一行`DiagnosticEvent` partial方法，由Generator生成typed dispatcher和Program handler；Host workflow控制Start／Stop。
 4. 删除Event／View／Bridge／Adapter／Getter／Extractor／Column／CsvBinding和旧Reader。

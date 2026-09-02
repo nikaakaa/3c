@@ -1,10 +1,10 @@
 ## Why
 
-通用采样框架已经由独立仓库发布0.5.1 multi Fact Root／DiagnosticEvent版本，3C仍需完成从旧单View／Consumer／Getter链到纯消费者链的破坏性迁移。最终接入必须直接采样已有业务事实，不能为了采样构造View、复制字段或保留第二套Host映射。
+通用采样框架已经由独立仓库发布0.5.2 multi Fact Root／DiagnosticEvent／固定权重分析版本，3C仍需完成从旧单View／Consumer／Getter链到纯消费者链的破坏性迁移。最终接入必须直接采样已有业务事实，不能为了采样构造View、复制字段或保留第二套Host映射。
 
 ## What Changes
 
-- 本change只实施3C仓库内的消费者迁移；独立Owner固定为`D:/Unity_Project_1/generated-diagnostic-sampling`的`1c17465`，package版本为0.5.1，Analyzer SHA-256为`47EE5F876377EBE453E98009E5AEA6D95FECC8DC4491B1A9EBE881812C55AA87`，MVID为`9b3d5a64-d7e9-46c4-a687-52e87a5bc84a`。
+- 本change只实施3C仓库内的消费者迁移；独立Owner固定为`D:/Unity_Project_1/generated-diagnostic-sampling`的`e43af24`，package版本为0.5.2，Analyzer SHA-256为`47EE5F876377EBE453E98009E5AEA6D95FECC8DC4491B1A9EBE881812C55AA87`，MVID为`9b3d5a64-d7e9-46c4-a687-52e87a5bc84a`。
 - 3C Unity manifest与packages lock只解析独立`com.kk.generated-diagnostic-sampling` file dependency，不保存框架源码、Analyzer镜像或同步脚本。
 - **BREAKING**：Foot Capability使用多个`DiagnosticFactRoot(rootId, type)`声明一个维度所需的既有readonly事实根；普通字段Attribute直接位于真实业务成员，默认Field identity由Capability、Table、Fact Root与成员路径生成。
 - **BREAKING**：删除Started／CommittedSample／Stopped Event DTO、Dimension View、Consumer／Binding、Bridge、Adapter、Column、CsvBinding及普通Getter／Extractor。Program声明Event和左右Dimension，业务Commit点只调用一行带`DiagnosticEvent`的partial方法并以`in`传入目标、真实lineage与左右既有事实；Generator生成typed dispatcher和匹配Program handler，Metadata在Lifecycle Start冻结。
@@ -17,7 +17,7 @@
 
 ### New Capabilities
 
-- `generated-diagnostic-sampling-external-consumption`: 定义3C如何只消费独立0.5.1 KK package，以多Fact Root和generated `DiagnosticEvent` typed handler接入Foot，并彻底删除本地框架Owner与旧映射链。
+- `generated-diagnostic-sampling-external-consumption`: 定义3C如何只消费独立0.5.2 KK package，以多Fact Root和generated `DiagnosticEvent` typed handler接入Foot，并彻底删除本地框架Owner与旧映射链。
 
 ### Modified Capabilities
 

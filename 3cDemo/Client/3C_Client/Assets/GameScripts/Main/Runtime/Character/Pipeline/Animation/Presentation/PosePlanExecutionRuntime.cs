@@ -437,13 +437,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
         internal bool HasFootPlacement => m_PoseConstraints.HasFootPlacement;
         internal CharacterPoseConstraintRuntime PoseConstraints =>
             m_PoseConstraints;
-        internal CharacterActionPlaybackRuntime ActionPlayback =>
-            m_ProgramRuntime.ActionPlayback;
-        internal AnimationSlotRuntime AnimationSlots =>
-            m_ProgramRuntime.AnimationSlots;
-
-        internal ulong NextPresentationRequestSequence() =>
-            m_ProgramRuntime.NextPresentationRequestSequence();
 
         internal void ResetFootPlacement(in CharacterFootPlacementReset reset) =>
             m_PoseConstraints.ResetFootPlacement(in reset);
@@ -551,6 +544,167 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             m_DiagnosticsPublisher.RecordNoInterestSkip();
         internal ulong FrameCompletionContext =>
             m_FrameCompletionContext;
+
+        internal void BeginActionPlaybackFrame(
+            ulong frameIdentity,
+            ulong presentationFrame)
+        {
+            RequireAlive();
+            m_ProgramRuntime.BeginActionPlaybackFrame(
+                frameIdentity,
+                presentationFrame);
+        }
+
+        internal void BeginAnimationSlotFrame(ulong frameIdentity)
+        {
+            RequireAlive();
+            m_ProgramRuntime.BeginAnimationSlotFrame(frameIdentity);
+        }
+
+        internal void CommitAnimationSlotFrame(
+            CharacterPoseProgramFrameLease lease)
+        {
+            RequireMutation(lease);
+            m_ProgramRuntime.CommitAnimationSlotFrame(lease);
+        }
+
+        internal void CommitActionPlaybackFrame(
+            CharacterPoseProgramFrameLease lease)
+        {
+            RequireMutation(lease);
+            m_ProgramRuntime.CommitActionPlaybackFrame(lease);
+        }
+
+        internal void DiscardAnimationSlotFrame(ulong frameIdentity)
+        {
+            RequireAlive();
+            m_ProgramRuntime.DiscardAnimationSlotFrame(frameIdentity);
+        }
+
+        internal void DiscardActionPlaybackFrame(ulong frameIdentity)
+        {
+            RequireAlive();
+            m_ProgramRuntime.DiscardActionPlaybackFrame(frameIdentity);
+        }
+
+        internal void PublishActionCommand(
+            in ActionAnimationPlaybackCommand command)
+        {
+            RequireAlive();
+            RequireNoOpenMutation();
+            m_ProgramRuntime.PublishActionCommand(in command);
+        }
+
+        internal void RetireActionCommand(
+            in ActionAnimationPlaybackCommand command)
+        {
+            RequireAlive();
+            RequireNoOpenMutation();
+            m_ProgramRuntime.RetireActionCommand(in command);
+        }
+
+        internal void ReplaceActionCommand(
+            EventId targetEventId,
+            in ActionAnimationPlaybackCommand replacement)
+        {
+            RequireAlive();
+            RequireNoOpenMutation();
+            m_ProgramRuntime.ReplaceActionCommand(
+                targetEventId,
+                in replacement);
+        }
+
+        internal IReadOnlyList<ActionAnimationPlaybackLifecycleFrame>
+            PrepareActionLifecycleFrame(
+                CharacterPoseProgramFrameLease lease,
+                PresentationFrameWorkspace workspace,
+                PresentationFrameWorkspaceLease workspaceLease)
+        {
+            RequireMutation(lease);
+            return m_ProgramRuntime.PrepareActionLifecycleFrame(
+                lease,
+                workspace,
+                workspaceLease);
+        }
+
+        internal void ProjectActionPresentationSamples(
+            CharacterPoseProgramFrameLease lease,
+            ActionPresentationSamplingRuntime sampling,
+            ActionPresentationSamplingFrameTransaction samplingTransaction,
+            IReadOnlyList<ActionAnimationPlaybackLifecycleFrame> lifecycle,
+            double presentationSampleTick,
+            float presentationDeltaSeconds)
+        {
+            RequireMutation(lease);
+            m_ProgramRuntime.ProjectActionPresentationSamples(
+                lease,
+                sampling,
+                samplingTransaction,
+                lifecycle,
+                presentationSampleTick,
+                presentationDeltaSeconds);
+        }
+
+        internal void PublishActionSources(
+            CharacterPoseProgramFrameLease lease,
+            PresentationFrameWorkspace workspace,
+            PresentationFrameWorkspaceLease workspaceLease,
+            IDictionary<AnimationPlayerSourceSampleKey,
+                AnimationResolvedPoseSourceSample> sourceSamples)
+        {
+            RequireMutation(lease);
+            m_ProgramRuntime.PublishActionSources(
+                lease,
+                workspace,
+                workspaceLease,
+                sourceSamples);
+        }
+
+        internal void CompleteActionReleaseProtocol(
+            CharacterPoseProgramFrameLease lease,
+            PresentationFrameWorkspace workspace,
+            PresentationFrameWorkspaceLease workspaceLease)
+        {
+            RequireMutation(lease);
+            m_ProgramRuntime.CompleteActionReleaseProtocol(
+                lease,
+                workspace,
+                workspaceLease);
+        }
+
+        internal void ValidateActionFrame(
+            CharacterPoseProgramFrameLease lease)
+        {
+            RequireMutation(lease);
+            m_ProgramRuntime.ValidateActionFrame(lease);
+        }
+
+        internal IReadOnlyList<ActionAnimationPlaybackLifecycleSnapshot>
+            BuildCommittedActionLifecycleSnapshot()
+        {
+            RequireAlive();
+            RequireNoOpenMutation();
+            return m_ProgramRuntime
+                .BuildCommittedActionLifecycleSnapshot();
+        }
+
+        internal IReadOnlyList<AnimationPlaybackId>
+            RetiredActionPlaybacks =>
+            m_ProgramRuntime.RetiredActionPlaybacks;
+
+        internal void ResetAnimationSlots()
+        {
+            RequireAlive();
+            RequireNoOpenMutation();
+            m_ProgramRuntime.ResetAnimationSlots();
+        }
+
+        internal void ResetActionPlayback()
+        {
+            RequireAlive();
+            RequireNoOpenMutation();
+            m_ProgramRuntime.ResetActionPlayback();
+        }
 
         internal void CopySourceSyncSnapshots(
             List<PoseStateSourceSyncSnapshot>
@@ -1278,115 +1432,16 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             return footIkCaptureView;
         }
 
-        internal void CopyActionSlotReleaseCompletions(
-            List<AnimationSlotSourceReleaseCompletion> destination)
-        {
-            RequireAlive();
-            m_SourceModule.CopyActionSlotReleaseCompletions(
-                destination);
-        }
-
-        internal bool HasPendingActionBackendSources(
-            AnimationPlaybackId playbackId)
-        {
-            RequireAlive();
-            return m_ProgramRuntime.HasPendingActionBackendSources(
-                playbackId);
-        }
-
-        internal bool TryPrepareActionBackendReleaseRequest(
-            AnimationPlaybackId playbackId,
-            out ActionBackendReleaseRequest request)
-        {
-            RequireAlive();
-            return m_ProgramRuntime.TryPrepareActionBackendReleaseRequest(
-                playbackId,
-                out request);
-        }
-
-        internal void CopyActionBackendReleaseCompletions(
-            List<ActionBackendReleaseCompletion> destination)
-        {
-            RequireAlive();
-            m_SourceModule.CopyActionBackendReleaseCompletions(
-                destination);
-        }
-
         internal void ApplyValidatedActionBackendReleaseCompletionAcknowledgements()
         {
             RequireAlive();
             m_SourceModule.ApplyActionBackendReleaseAcknowledgements();
         }
 
-        internal void
-            ValidateActionBackendReleaseCompletionAcknowledgements(
-                IReadOnlyList<ActionBackendReleaseCompletion>
-                    completions)
-        {
-            RequireAlive();
-            m_SourceModule
-                .ValidateActionBackendReleaseAcknowledgements(
-                    completions);
-        }
-
         internal void ExecutePreparedActionBackendReleaseRequests()
         {
             RequireAlive();
             m_ProgramRuntime.ExecutePreparedActionBackendReleaseRequests();
-        }
-
-        internal AnimationPoseSourceId PublishActionFrame(
-            in ActionAnimationPlaybackFrame frame,
-            in ResolvedActionAnimationBinding binding,
-            AnimationPoseSelectionGeneration selectionGeneration,
-            ulong presentationRequestSequence,
-            IDictionary<AnimationPlayerSourceSampleKey,
-                AnimationResolvedPoseSourceSample> sourceSamples)
-        {
-            RequireAlive();
-            RequireOpenMutation();
-            return m_ProgramRuntime.PublishActionSourceFrame(
-                m_ActiveFrameLease,
-                in frame,
-                in binding,
-                selectionGeneration,
-                presentationRequestSequence,
-                sourceSamples,
-                true);
-        }
-
-        internal AnimationPoseSourceId PublishRetainedActionFrame(
-            in ActionAnimationPlaybackFrame frame,
-            in ResolvedActionAnimationBinding binding,
-            AnimationPoseSelectionGeneration selectionGeneration,
-            ulong presentationRequestSequence,
-            IDictionary<AnimationPlayerSourceSampleKey,
-                AnimationResolvedPoseSourceSample> sourceSamples)
-        {
-            RequireAlive();
-            RequireOpenMutation();
-            return m_ProgramRuntime.PublishActionSourceFrame(
-                m_ActiveFrameLease,
-                in frame,
-                in binding,
-                selectionGeneration,
-                presentationRequestSequence,
-                sourceSamples,
-                false);
-        }
-
-        internal void PublishActionSourcePose(
-            AnimationSlotId slotId,
-            PoseNodeId slotNodeId,
-            ulong presentationRequestSequence)
-        {
-            RequireAlive();
-            RequireOpenMutation();
-            m_ProgramRuntime.PublishActionSourcePose(
-                m_ActiveFrameLease,
-                slotId,
-                slotNodeId,
-                presentationRequestSequence);
         }
 
         internal void Advance(

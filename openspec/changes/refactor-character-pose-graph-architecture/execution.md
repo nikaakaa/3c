@@ -895,3 +895,9 @@ Program Runtime成为这些Job／Playable的唯一Owner；旧Pose Runtime删除�
 状态：Program Runtime接管Action Frame到`AnimationPoseSampleRequest`的构造、Animation Slot route解析、可选Selection发布、重复Source拒绝、Foot Feature携带，以及Source Pose target发布。旧Pose Runtime不再读取Program Node Runtime Index或直接操作Stack Route，只验证根Mutation并携带当前Program Frame lease调用Program入口。
 
 Action source id、presentation request sequence、sample time、clip、parameter page、pose parameter、Foot Feature、Slot route与Selection发布顺序保持不变；Retained Action继续只登记Source而不推送Selection。任务6.2继续推进，但Action Playback与Animation Slot的根Frame生命周期仍在外层，暂不勾选。3C MCP对Program Runtime与Pose Runtime错误筛选均为0；不单独运行回放。
+
+## Action Playback与Animation Slot逻辑帧归入Program Runtime
+
+状态：Program Runtime现在持有Action Playback与Animation Slot的唯一Pending事务，按原顺序接收Action command、消费Backend release completion、推进Lifecycle、仲裁Slot winner、生成Action source、发布Slot usage与Retirement permission、准备Backend release request并提交或回滚。根Frame Transaction删除Action事务、Slot lease与Backend completion副本；外层Runtime只保留外部command校验、Action采样器调用时机、Module阶段顺序和诊断结果发布。
+
+Action inbox读取、Lifecycle／sample history mutation、Slot selection generation、Current／Outgoing／Retained选择、Source请求序号、release acknowledgement、Retired列表排序及Commit／Discard顺序均保持原值。PoseStateMachine、全部Player、ActionPlaybackInput、AnimationSlot、BlendStack、Transition、Inertialization与Linked Fragment的逻辑执行现均只由Program Runtime驱动，因此任务6.2完成；Action采样物理适配仍随Source Module边界和根事务收窄继续处理。3C MCP对Program Runtime、Pose Runtime、根Runtime与根Transaction错误筛选均为0；不单独运行回放。

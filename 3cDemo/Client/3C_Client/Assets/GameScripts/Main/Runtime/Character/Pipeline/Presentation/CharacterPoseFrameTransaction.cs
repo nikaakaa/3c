@@ -101,17 +101,12 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
     internal sealed class CharacterPoseFrameTransaction
     {
         internal CharacterPoseFrameTransaction(
-            int playbackCapacity,
-            int backendReleaseCompletionCapacity)
+            int playbackCapacity)
         {
-            if (playbackCapacity <= 0 ||
-                backendReleaseCompletionCapacity <= 0)
+            if (playbackCapacity <= 0)
             {
                 throw new ArgumentOutOfRangeException(nameof(playbackCapacity));
             }
-            ConsumedReleaseCompletions =
-                new FixedCapacityFrameBuffer<ActionBackendReleaseCompletion>(
-                    backendReleaseCompletionCapacity);
             ActionSnapshots =
                 new FixedCapacityFrameBuffer<ActionAnimationPlaybackLifecycleSnapshot>(
                     playbackCapacity);
@@ -130,14 +125,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             get;
             private set;
         }
-        internal CharacterActionPlaybackFrameTransaction ActionTransaction
-        {
-            get;
-            private set;
-        }
         internal ActionPresentationSamplingFrameTransaction
             SamplingTransaction { get; private set; }
-        internal AnimationSlotMutationLease SlotLease { get; private set; }
         internal CharacterPoseProgramFrameLease PoseLease { get; private set; }
         internal CharacterPoseSourceFrameLease SourceLease { get; private set; }
         internal CharacterPoseConstraintFrameLease ConstraintLease { get; private set; }
@@ -172,8 +161,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             get;
             private set;
         }
-        internal FixedCapacityFrameBuffer<ActionBackendReleaseCompletion>
-            ConsumedReleaseCompletions { get; }
         internal FixedCapacityFrameBuffer<ActionAnimationPlaybackLifecycleSnapshot>
             ActionSnapshots { get; }
         internal FixedCapacityFrameBuffer<ActionPresentationTimeSnapshot>
@@ -188,14 +175,9 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             WorkspaceLease.IsValid &&
             WorkspaceLease.Identity == Lineage.FrameIdentity &&
             WorkspaceLease.PresentationFrame == Lineage.PresentationFrame &&
-            ActionTransaction?.IsValid == true &&
-            ActionTransaction.Identity == Lineage.FrameIdentity &&
-            ActionTransaction.PresentationFrame == Lineage.PresentationFrame &&
             SamplingTransaction?.IsValid == true &&
             SamplingTransaction.Identity == Lineage.FrameIdentity &&
             SamplingTransaction.PresentationFrame == Lineage.PresentationFrame &&
-            SlotLease.IsValid &&
-            SlotLease.FrameIdentity == Lineage.FrameIdentity &&
             PoseLease.Matches(Lineage) &&
             SourceLease.Matches(Lineage) &&
             ConstraintLease.Matches(Lineage) &&
@@ -220,9 +202,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         internal void Begin(
             in CharacterPoseFrameLineage lineage,
             PresentationFrameWorkspaceLease workspaceLease,
-            CharacterActionPlaybackFrameTransaction actionTransaction,
             ActionPresentationSamplingFrameTransaction samplingTransaction,
-            AnimationSlotMutationLease slotLease,
             CharacterPoseProgramFrameLease poseLease,
             CharacterPoseSourceFrameLease sourceLease,
             CharacterPoseConstraintFrameLease constraintLease,
@@ -236,16 +216,10 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 !workspaceLease.IsValid ||
                 workspaceLease.Identity != lineage.FrameIdentity ||
                 workspaceLease.PresentationFrame != lineage.PresentationFrame ||
-                actionTransaction == null ||
-                !actionTransaction.IsValid ||
-                actionTransaction.Identity != lineage.FrameIdentity ||
-                actionTransaction.PresentationFrame != lineage.PresentationFrame ||
                 samplingTransaction == null ||
                 !samplingTransaction.IsValid ||
                 samplingTransaction.Identity != lineage.FrameIdentity ||
                 samplingTransaction.PresentationFrame != lineage.PresentationFrame ||
-                !slotLease.IsValid ||
-                slotLease.FrameIdentity != lineage.FrameIdentity ||
                 !poseLease.Matches(lineage) ||
                 !sourceLease.Matches(lineage) ||
                 !constraintLease.Matches(lineage) ||
@@ -260,9 +234,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             ClearBatches();
             Lineage = lineage;
             WorkspaceLease = workspaceLease;
-            ActionTransaction = actionTransaction;
             SamplingTransaction = samplingTransaction;
-            SlotLease = slotLease;
             PoseLease = poseLease;
             SourceLease = sourceLease;
             ConstraintLease = constraintLease;
@@ -391,9 +363,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             ClearBatches();
             Lineage = default;
             WorkspaceLease = default;
-            ActionTransaction = null;
             SamplingTransaction = null;
-            SlotLease = default;
             PoseLease = default;
             SourceLease = default;
             ConstraintLease = default;
@@ -423,7 +393,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
 
         void ClearBatches()
         {
-            ConsumedReleaseCompletions.Clear();
             ActionSnapshots.Clear();
             TimeSnapshots.Clear();
             RetiredPlaybacks.Clear();

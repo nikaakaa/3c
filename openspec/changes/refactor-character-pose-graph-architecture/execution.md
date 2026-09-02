@@ -627,3 +627,11 @@ Clip、Blend Space、Motion Matching、Action与Blend Stack保留的多个`Prepa
 当前发布Tuning schema中，Source sample-local可调字段只有Clip的`play-rate`；Blend Space、Motion Matching与Action没有独立sample-local调参字段。本步不为零字段Adapter制造占位配置、默认值或备用路径；以后新增这三类字段时必须扩展同一Source Snapshot。Program／Constraint仍保留旧可变Apply与失败回滚，留待任务8整体迁移，不能把本步误报为全局Tuning原子化完成。
 
 `ThirdPersonClient.Runtime.csproj`按规定参数编译成功，0错误，构建后已关闭MSBuild与编译器服务器。3C Unity普通Assets Refresh后新增文件进入正式工程，改动文件没有编译错误；全局Unity编译仍停在并行Foot Sampling尚未从旧`DiagnosticField` ABI迁到0.3 Generated Projection的已知边界。本步不增加兼容Attribute，也不在该外部阻塞期间伪造Replay证据。任务4.7完成，Source阶段4.1至4.8全部闭合。
+
+## Program控制双页归还Frame Pages
+
+状态：新增`CharacterPoseProgramFramePages`，由它一次分配并唯一销毁StateMachine、Animation Slot、Root Orientation Warp、Linked Pose Call和Linked Pose Active Fragment的Committed／Pending两套Native控制页。旧`CharacterPoseGraphNativeProgram`已删除内部`Page`、五组当前页字段、Committed／Pending页引用、Bind／Capture／Allocate／Dispose页逻辑与自己的`m_FrameOpen`，只在现有外层API内把控制读写转交Frame Pages。
+
+Begin仍只切换Pending页并清空本帧Linked Pose选择，Commit仍交换双页，Discard仍恢复Committed页；StateMachine／Slot未初始化存储、Root Warp清零、Linked Call inactive和Fragment清零的构造选项与原实现相同。静态Operation／Stage／Rig常量、运行Tuning Weight、Value Workspace、Operation Completion和Committed Diagnostics尚未迁移，因此任务5.5与5.8不提前勾选，也没有把旧Native Program改名成新Program Image冒充完成。
+
+Unity普通Assets Refresh把新增文件写入正式Runtime工程；补齐现有Presentation control类型的唯一命名空间引用后，`ThirdPersonClient.Runtime.csproj`按规定参数编译成功，0错误，构建服务器已关闭。本步不改变公式、Operation顺序、Source、Constraint、Final Publication或IK数据，不单独运行回放。

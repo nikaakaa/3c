@@ -358,16 +358,11 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
         internal AnimationFootStepObservationRuntimeSnapshot CreateFootStepObservationSnapshot(
             float sourceWeight)
         {
-            RequireAlive();
-            if (!IsRelevant || !HasCompletedFrame || !SourceId.IsValid ||
-                !float.IsFinite(sourceWeight) || sourceWeight < 0f || sourceWeight > 1f)
-            {
-                throw new InvalidOperationException(
-                    $"Clip Player '{NodeId}' Foot Step observation is unavailable.");
-            }
-            float normalizedTime = Duration > 0f
-                ? Mathf.Clamp01(SampleTime / Duration)
-                : 0f;
+            SampleFootMotion(
+                sourceWeight,
+                out float normalizedTime,
+                out AnimationFootMotionRuntimeSample left,
+                out AnimationFootMotionRuntimeSample right);
             return new AnimationFootStepObservationRuntimeSnapshot(
                 NodeId,
                 SourceIndex,
@@ -375,16 +370,46 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                 m_Source.ClipIdentity,
                 sourceWeight,
                 normalizedTime,
-                m_Source.FootStepObservation.Left.Sample(
-                    normalizedTime,
-                    Cycle,
-                    Duration,
-                    m_Source.Clip.isLooping),
-                m_Source.FootStepObservation.Right.Sample(
-                    normalizedTime,
-                    Cycle,
-                    Duration,
-                    m_Source.Clip.isLooping));
+                left,
+                right);
+        }
+
+        internal void CreateFootMotionSamples(
+            float sourceWeight,
+            out AnimationFootMotionRuntimeSample left,
+            out AnimationFootMotionRuntimeSample right) =>
+            SampleFootMotion(
+                sourceWeight,
+                out _,
+                out left,
+                out right);
+
+        void SampleFootMotion(
+            float sourceWeight,
+            out float normalizedTime,
+            out AnimationFootMotionRuntimeSample left,
+            out AnimationFootMotionRuntimeSample right)
+        {
+            RequireAlive();
+            if (!IsRelevant || !HasCompletedFrame || !SourceId.IsValid ||
+                !float.IsFinite(sourceWeight) || sourceWeight < 0f || sourceWeight > 1f)
+            {
+                throw new InvalidOperationException(
+                    $"Clip Player '{NodeId}' Foot Step observation is unavailable.");
+            }
+            normalizedTime = Duration > 0f
+                ? Mathf.Clamp01(SampleTime / Duration)
+                : 0f;
+            left = m_Source.FootStepObservation.Left.Sample(
+                normalizedTime,
+                Cycle,
+                Duration,
+                m_Source.Clip.isLooping);
+            right = m_Source.FootStepObservation.Right.Sample(
+                normalizedTime,
+                Cycle,
+                Duration,
+                m_Source.Clip.isLooping);
         }
 
         internal AnimationReadOnlyBuffer<ClipSamplePlan> ClipSamples =>

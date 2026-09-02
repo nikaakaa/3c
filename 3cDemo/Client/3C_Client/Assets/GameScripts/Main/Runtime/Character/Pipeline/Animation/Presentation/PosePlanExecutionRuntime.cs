@@ -1673,12 +1673,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                 formalInput.Left;
             AnimationFootMotionRuntimeSample rightFormalInput =
                 formalInput.Right;
-            AnimationFootStepObservationRuntimeSnapshot formalOutput =
-                ResolveCommittedFootStepObservation(in finalFrame);
-            AnimationFootMotionRuntimeSample leftFormalOutput =
-                formalOutput.Left;
-            AnimationFootMotionRuntimeSample rightFormalOutput =
-                formalOutput.Right;
+            ResolveCommittedFootMotion(
+                in finalFrame,
+                out AnimationFootMotionRuntimeSample leftFormalOutput,
+                out AnimationFootMotionRuntimeSample rightFormalOutput);
             CharacterFullBodyIkGoal pelvisGoal = landing.PelvisGoal;
             CharacterFootPrimarySupportDiagnostics primarySupport =
                 landing.PrimarySupport;
@@ -1716,9 +1714,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             }
         }
 
-        AnimationFootStepObservationRuntimeSnapshot
-            ResolveCommittedFootStepObservation(
-                in ComposedAnimationPoseFrame finalFrame)
+        void ResolveCommittedFootMotion(
+            in ComposedAnimationPoseFrame finalFrame,
+            out AnimationFootMotionRuntimeSample left,
+            out AnimationFootMotionRuntimeSample right)
         {
             AnimationPoseSourceId sourceId = default;
             float sourceWeight = -1f;
@@ -1738,7 +1737,11 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                 sourceWeight = contribution.Weight;
             }
             if (!sourceId.IsValid)
-                return default;
+            {
+                left = default;
+                right = default;
+                return;
+            }
             for (int i = 0;
                  i < m_PoseStateSources.ClipPlayers.Length;
                  i++)
@@ -1747,11 +1750,15 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                     m_PoseStateSources.ClipPlayers[i];
                 if (player.SourceId.Equals(sourceId))
                 {
-                    return player.CreateFootStepObservationSnapshot(
-                        sourceWeight);
+                    player.CreateFootMotionSamples(
+                        sourceWeight,
+                        out left,
+                        out right);
+                    return;
                 }
             }
-            return default;
+            left = default;
+            right = default;
         }
 
         internal CharacterFootIkCommittedCaptureViewLease PublishDiagnostics()

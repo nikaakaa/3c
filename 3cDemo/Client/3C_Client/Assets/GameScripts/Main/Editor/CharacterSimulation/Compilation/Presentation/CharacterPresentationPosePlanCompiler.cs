@@ -12,43 +12,7 @@ using UnityEngine;
 
 namespace ThirdPersonCharacter.Editor.CharacterSimulation
 {
-    public static class CharacterPresentationPoseGraphCompiler
-    {
-        public static CharacterPoseProgramImage Compile(
-            CharacterPresentationPoseGraphAsset asset,
-            CharacterAnimationRigDefinition rig,
-            IReadOnlyCollection<AnimationChannelId> reachableAnimationChannels,
-            AnimationBlendNodePayload[] blendNodes,
-            CharacterPresentationPoseSourcePlan[] poseSources,
-            AnimationClipPhasePlan[] clipPhasePlans,
-            AnimationSourcePhasePlan[] sourcePhasePlans,
-            AnimationFootPhaseValidationDescriptor[] clipPhaseValidations,
-            IReadOnlyDictionary<CharacterPresentationPoseSourceSlot, PresentationPoseSourceIndex> sourceIndices,
-            IReadOnlyDictionary<string, int> curveIndices,
-            IReadOnlyDictionary<string, int> profileIndicesByIdentity,
-            CharacterAnimationPresentationProfile profile,
-            CharacterLinkedPoseProjectionPayload linkedPose,
-            CharacterFootPlacementAnalysisCompilation footAnalysis,
-            List<string> errors) =>
-            CharacterPoseNativePlanBuilder.Build(
-                asset,
-                rig,
-                reachableAnimationChannels,
-                blendNodes,
-                poseSources,
-                clipPhasePlans,
-                sourcePhasePlans,
-                clipPhaseValidations,
-                sourceIndices,
-                curveIndices,
-                profileIndicesByIdentity,
-                profile,
-                linkedPose,
-                footAnalysis,
-                errors);
-    }
-
-    internal static class CharacterPoseNativePlanBuilder
+    internal static class CharacterPoseCompilerModule
     {
         readonly struct CompiledValue
         {
@@ -213,80 +177,74 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             public IReadOnlyList<int> PoseValueLastUse { get; }
         }
 
-        public static CharacterPoseProgramImage Build(
-            CharacterPresentationPoseGraphAsset asset,
-            CharacterAnimationRigDefinition rig,
-            IReadOnlyCollection<AnimationChannelId> reachableAnimationChannels,
-            AnimationBlendNodePayload[] blendNodes,
-            CharacterPresentationPoseSourcePlan[] poseSources,
-            AnimationClipPhasePlan[] clipPhasePlans,
-            AnimationSourcePhasePlan[] sourcePhasePlans,
-            AnimationFootPhaseValidationDescriptor[] clipPhaseValidations,
-            IReadOnlyDictionary<CharacterPresentationPoseSourceSlot, PresentationPoseSourceIndex> sourceIndices,
-            IReadOnlyDictionary<string, int> curveIndices,
-            IReadOnlyDictionary<string, int> profileIndicesByIdentity,
-            CharacterAnimationPresentationProfile profile,
-            CharacterLinkedPoseProjectionPayload linkedPose,
-            CharacterFootPlacementAnalysisCompilation footAnalysis,
-            List<string> errors)
+        public static CharacterPoseCompilationResult Compile(
+            CharacterPoseCompilationRequest request)
         {
+            if (request == null)
+                throw new ArgumentNullException(nameof(request));
+            var diagnostics = new List<CharacterPoseCompilationDiagnostic>();
             IReadOnlyList<string> capabilityErrors =
-                CharacterPoseGraphCapabilityValidator.Validate(asset);
+                CharacterPoseGraphCapabilityValidator.Validate(request.Asset);
             if (capabilityErrors.Count != 0)
             {
-                errors?.AddRange(capabilityErrors);
-                return null;
+                for (int i = 0; i < capabilityErrors.Count; i++)
+                {
+                    diagnostics.Add(new CharacterPoseCompilationDiagnostic(
+                        CharacterPoseCompilationPass.TypedLowering,
+                        CharacterPoseCompilationDiagnosticSeverity.Error,
+                        "capability-contract-invalid",
+                        capabilityErrors[i],
+                        request.Asset.Graph.GraphId));
+                }
+                return new CharacterPoseCompilationResult(null, diagnostics);
             }
             CharacterPoseGraphValidationReport report = CharacterPresentationPoseGraphValidator.Validate(
-                asset,
-                rig,
+                request.Asset,
+                request.Rig,
                 CharacterPoseAuthoringPortProjection.Get,
-                reachableAnimationChannels,
-                sourceIndices?.Keys.ToArray());
+                request.ReachableAnimationChannels,
+                request.SourceIndices.Keys.ToArray());
             if (!report.IsValid)
             {
-                report.CopyMessagesTo(errors);
-                return null;
+                for (int i = 0; i < report.Issues.Count; i++)
+                {
+                    CharacterPoseGraphValidationIssue issue = report.Issues[i];
+                    diagnostics.Add(new CharacterPoseCompilationDiagnostic(
+                        CharacterPoseCompilationPass.Topology,
+                        CharacterPoseCompilationDiagnosticSeverity.Error,
+                        issue.Code.ToString(),
+                        issue.Message,
+                        string.IsNullOrWhiteSpace(issue.GraphId)
+                            ? default
+                            : new PoseGraphId(issue.GraphId),
+                        issue.NodeId,
+                        issue.PortId));
+                }
+                return new CharacterPoseCompilationResult(null, diagnostics);
             }
             try
             {
-                return CompileValidated(
-                    asset,
-                    rig,
-                    blendNodes ?? Array.Empty<AnimationBlendNodePayload>(),
-                    poseSources ?? Array.Empty<CharacterPresentationPoseSourcePlan>(),
-                    clipPhasePlans ?? Array.Empty<AnimationClipPhasePlan>(),
-                    sourcePhasePlans ?? Array.Empty<AnimationSourcePhasePlan>(),
-                    clipPhaseValidations ?? Array.Empty<AnimationFootPhaseValidationDescriptor>(),
-                    sourceIndices ?? new Dictionary<CharacterPresentationPoseSourceSlot, PresentationPoseSourceIndex>(),
-                    curveIndices,
-                    profileIndicesByIdentity,
-                    profile,
-                    linkedPose,
-                    footAnalysis);
+                CharacterPoseProgramImage image = CompileValidated(request);
+                return new CharacterPoseCompilationResult(image, diagnostics);
             }
             catch (Exception exception)
             {
-                errors?.Add(exception.Message);
-                return null;
+                diagnostics.Add(new CharacterPoseCompilationDiagnostic(
+                    CharacterPoseCompilationPass.SealProgramImage,
+                    CharacterPoseCompilationDiagnosticSeverity.Error,
+                    "compiler-invariant-invalid",
+                    exception.Message,
+                    request.Asset.Graph.GraphId));
+                return new CharacterPoseCompilationResult(null, diagnostics);
             }
         }
 
         static CharacterPoseProgramImage CompileValidated(
-            CharacterPresentationPoseGraphAsset asset,
-            CharacterAnimationRigDefinition rig,
-            AnimationBlendNodePayload[] blendNodes,
-            CharacterPresentationPoseSourcePlan[] poseSources,
-            AnimationClipPhasePlan[] clipPhasePlans,
-            AnimationSourcePhasePlan[] sourcePhasePlans,
-            AnimationFootPhaseValidationDescriptor[] clipPhaseValidations,
-            IReadOnlyDictionary<CharacterPresentationPoseSourceSlot, PresentationPoseSourceIndex> sourceIndices,
-            IReadOnlyDictionary<string, int> curveIndices,
-            IReadOnlyDictionary<string, int> profileIndicesByIdentity,
-            CharacterAnimationPresentationProfile profile,
-            CharacterLinkedPoseProjectionPayload linkedPose,
-            CharacterFootPlacementAnalysisCompilation footAnalysis)
+            CharacterPoseCompilationRequest request)
         {
+            CharacterPresentationPoseGraphAsset asset = request.Asset;
+            CharacterAnimationRigDefinition rig = request.Rig;
+            AnimationBlendNodePayload[] blendNodes = request.BlendNodes;
             CharacterTypedPoseGraph graph = asset.Graph;
             CharacterPoseParameterDeclaration[] authoredParameters = graph.Parameters.OrderBy(value => value.ParameterId).ToArray();
             var parameters = new CharacterPresentationPoseParameterEntry[authoredParameters.Length];
@@ -308,16 +266,16 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                 parameters,
                 parameterIndices,
                 blendNodes,
-                poseSources,
-                clipPhasePlans,
-                sourcePhasePlans,
-                clipPhaseValidations,
-                sourceIndices,
-                curveIndices,
-                profileIndicesByIdentity,
-                profile,
-                linkedPose,
-                footAnalysis);
+                request.PoseSources,
+                request.ClipPhasePlans,
+                request.SourcePhasePlans,
+                request.ClipPhaseValidations,
+                request.SourceIndices,
+                request.CurveIndices,
+                request.ProfileIndicesByIdentity,
+                request.Profile,
+                request.LinkedPose,
+                request.FootAnalysis);
             CompileGraph(
                 state,
                 asset,

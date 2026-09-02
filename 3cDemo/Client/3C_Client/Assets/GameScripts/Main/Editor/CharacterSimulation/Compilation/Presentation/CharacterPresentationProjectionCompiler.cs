@@ -538,7 +538,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                     profile,
                     equipmentProfile,
                     errors);
-            CharacterPoseProgramImage poseProgram = CharacterPresentationPoseGraphCompiler.Compile(
+            var poseRequest = new CharacterPoseCompilationRequest(
                 profile.PoseGraph,
                 profile.RigDefinition,
                 animationChannels,
@@ -552,8 +552,11 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 blendCatalogs?.ProfileIndicesByIdentity,
                 profile,
                 linkedPose,
-                footAnalysisCompilation,
-                errors);
+                footAnalysisCompilation);
+            CharacterPoseCompilationResult poseCompilation =
+                CharacterPoseCompilerModule.Compile(poseRequest);
+            poseCompilation.CopyMessagesTo(errors);
+            CharacterPoseProgramImage poseProgram = poseCompilation.ProgramImage;
             if (poseProgram != null && blendCatalogs != null)
             {
                 poseProgram = CharacterPresentationInertializationPlanCompiler.Compile(

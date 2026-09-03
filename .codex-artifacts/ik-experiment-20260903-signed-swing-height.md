@@ -36,3 +36,5 @@
 解释：有符号 Swing 修正确实让脚在部分 Swing 区间向低处目标移动，减少了一部分输出高于目标的间隙，但它同时沿共享 `SwingMotion` 合同影响了 Releasing、腿部伸展和弯曲方向；而两个主要跳变帧的 raw/filtered 高度本来就是 0，真正跳变仍发生在 Plant 世界目标交接。进入 Plant 时，旧的向下修正又被带入世界目标响应，导致输出低于已验证目标，Landing 完成资格减少，最终表现为穿透和弯曲/伸直加重。
 
 视觉验收：用户需要在同一条回放中确认 Swing 下台阶是否更自然，以及新增的 Plant 穿透是否可接受。若不接受，执行 `git revert --no-commit ab259951c` 并提交回退；若接受，再单独实验 Swing→Plant 的高度历史交接，不能把两个变量合并。
+
+回退结果：已提交 `c746635b9`（撤销Swing有符号高度实验）。回退后恢复包为 `Diagnostics/GeneratedFootSampling/20260903-112846-79907153ed7d44158c467b439a5acd3e`，与原基线 2088 行、1026 列对齐；约束状态、最终脚底 XYZ、实际 ankle XYZ、Plant 穿透和 Plant 输出距离均逐值一致，Replay Proof 报告 `matched:1044`。

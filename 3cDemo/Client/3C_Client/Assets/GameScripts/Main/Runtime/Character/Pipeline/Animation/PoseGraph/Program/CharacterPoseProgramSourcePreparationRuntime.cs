@@ -246,12 +246,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             {
                 AnimationSelectedPosePlayerRuntime player =
                     m_ActorState.DirectPlayers[playerIndex];
-                if (!m_ActorState.LinkedFragments.IsPlayerActive(
-                        player.PlayerIndex) ||
-                    !player.HasCurrentSample)
-                {
+                if (!RequiresDirectSource(player))
                     continue;
-                }
                 var key = new AnimationPlayerSourceSampleKey(
                     player.NodeId,
                     player.SourceId);
@@ -291,15 +287,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             {
                 AnimationClipPlayerRuntime player =
                     m_ActorState.PoseStateSources.ClipPlayers[playerIndex];
-                bool selectedPreview =
-                    IsSequencePreviewPlayer(playerIndex);
-                if (!selectedPreview &&
-                        !m_ActorState.LinkedFragments.IsPlayerActive(
-                            player.PlayerIndex) ||
-                    !player.IsRelevant)
-                {
+                if (!RequiresClipSource(playerIndex, player))
                     continue;
-                }
                 AnimationPoseSourceCaptureBinding capture =
                     player.PrepareCapture(
                         presentationDeltaSeconds,
@@ -329,12 +318,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 AnimationBlendSpacePlayerRuntime player =
                     m_ActorState.PoseStateSources.BlendSpacePlayers[
                         playerIndex];
-                if (!m_ActorState.LinkedFragments.IsPlayerActive(
-                        player.PlayerIndex) ||
-                    !player.IsRelevant)
-                {
+                if (!RequiresBlendSpaceSource(player))
                     continue;
-                }
                 AnimationPoseSourceCaptureBinding capture =
                     player.PrepareCapture(presentationDeltaSeconds);
                 CharacterPoseSourcePreparation preparation =
@@ -386,7 +371,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                         player.PlayerIndex,
                         completionIdentity);
                 CharacterPoseSourceBinding sourceBinding =
-                    preparedSources.RequireDirectBinding(playerIndex);
+                    RequiresDirectSource(player)
+                        ? preparedSources.RequireDirectBinding(playerIndex)
+                        : default;
                 m_DirectPlayerJobs[playerIndex] = player.PrepareJob(
                     completionIdentity,
                     in write,
@@ -404,7 +391,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                         player.PlayerIndex,
                         completionIdentity);
                 CharacterPoseSourceBinding sourceBinding =
-                    preparedSources.RequireClipBinding(playerIndex);
+                    RequiresClipSource(playerIndex, player)
+                        ? preparedSources.RequireClipBinding(playerIndex)
+                        : default;
                 m_ClipPlayerJobs[playerIndex] = player.PrepareJob(
                     completionIdentity,
                     in write,
@@ -424,7 +413,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                         player.PlayerIndex,
                         completionIdentity);
                 CharacterPoseSourceBinding sourceBinding =
-                    preparedSources.RequireBlendSpaceBinding(playerIndex);
+                    RequiresBlendSpaceSource(player)
+                        ? preparedSources.RequireBlendSpaceBinding(playerIndex)
+                        : default;
                 m_BlendSpacePlayerJobs[playerIndex] = player.PrepareJob(
                     completionIdentity,
                     in write,
@@ -492,6 +483,26 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             for (int i = 0; i < m_SlotJobs.Length; i++)
                 m_SlotPlayables[i].SetJobData(m_SlotJobs[i]);
         }
+
+        bool RequiresDirectSource(
+            AnimationSelectedPosePlayerRuntime player) =>
+            m_ActorState.LinkedFragments.IsPlayerActive(
+                player.PlayerIndex) &&
+            player.HasCurrentSample;
+
+        bool RequiresClipSource(
+            int playerIndex,
+            AnimationClipPlayerRuntime player) =>
+            (IsSequencePreviewPlayer(playerIndex) ||
+             m_ActorState.LinkedFragments.IsPlayerActive(
+                 player.PlayerIndex)) &&
+            player.IsRelevant;
+
+        bool RequiresBlendSpaceSource(
+            AnimationBlendSpacePlayerRuntime player) =>
+            m_ActorState.LinkedFragments.IsPlayerActive(
+                player.PlayerIndex) &&
+            player.IsRelevant;
 
         internal void DetachJobs()
         {

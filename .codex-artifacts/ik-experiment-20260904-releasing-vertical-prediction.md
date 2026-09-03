@@ -1,6 +1,6 @@
 # Foot IK 实验：Releasing 不带入预测竖直抬脚
 
-候选提交：待提交
+候选提交：`ee61480f8`
 
 输入：`43357ff3cd384e5cba75d2c31175b116`
 
@@ -16,6 +16,8 @@
 
 1914 Releasing 输出更接近动画基准，1916 新 Contact 捕获的旧高位残差变小，减少下坡跨级悬空；相比禁用 FutureLanding，事件记录与 Landing/Release 生命周期应保持不变。代价是 Releasing 失去预测竖直保护，需检查全包 Plant 穿透、最终跳变、Bend/Extension 与左右脚差异。
 
-## 验证状态
+## 验证结果
 
-提交后用同一固定 Trace 正式回放并逐帧对账；不做视觉 Pass。若失败，保留采样和结论，精确回退 Runtime 候选并保留本记录。
+正式回放完成 1044/1044 帧，采样目录：`Diagnostics/GeneratedFootSampling/20260903-214310-06daa74f7b7649aab0f6ed33a8f1051b`。本轮数据与 184 基线逐字段一致，条件未在该 Trace 命中：右 1916 residual after-decay Y `0.349391m`、Plant output distance `0.569929m`，最终脚底/脚踝跳变和事件计数均未变化。
+
+结论：无行为变化，不保留。仅保留本记录作为“无 Contact anchor 条件没有覆盖主序列”的证据，恢复原 Releasing TargetResolver。

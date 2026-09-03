@@ -113,6 +113,7 @@
 - [x] 10.9 删除`ICharacterPoseCompilerHandler`、泛型Handler、Handler Registry、反射注册和Player/Slot/Blend等布尔能力矩阵
 - [x] 10.10 搜索并删除Agent exporter、Package codec、Target Mapper、Profile Inspector、Clipboard、Canvas和Compiler中可由Definition/Capability/Port Shape表达的重复NodeKind switch
 - [x] 10.11 校验全部正式节点恰有一个Definition且Capability、Document、Mutation、Clipboard和Compiler不存在第二catalog；若Agent可见语义变化则同步`btsmtl-agent-authoring`当前合同
+- [x] 10.12 为全部Operation Family在唯一Node Definition中固定Execution Domain与只读线程安全能力，向Agent context投影只读事实；确认Canvas、Inspector、Document、Clipboard与MCP不存在Burst、线程、Job、Batch size或调度策略可编辑字段
 
 ## 11. 将Pose Compiler拆为不可变Pass
 
@@ -124,8 +125,9 @@
 - [x] 11.6 实现Stage Schedule Pass，按typed依赖和Execution Domain生成唯一有序Stage并证明每Operation恰好一次
 - [x] 11.7 实现Value Lifetime Pass，按固定Schedule为Pose、Parameter、Discontinuity、Goal Contribution、Goal Set与控制Value计算typed地址和寿命
 - [x] 11.8 实现Workspace Plan Pass，按Schedule、Value寿命、Rig、节点状态、Source、Constraint、Inertialization和Diagnostics manifest分配固定容量
-- [x] 11.9 实现Bind Family Payload Pass，只把symbolic引用绑定为stage/value/workspace typed handle，不得发现新的Operation、状态页或容量需求
-- [x] 11.10 实现Seal Program Image Pass，校验全部pass identity、source map、容量、PoseProgramImageHash和schema后发布Projection内不可变Program Image
+- [x] 11.13 在Workspace Plan之后实现Worker Batch Plan，按Execution Domain、Rig执行布局、Family Kernel、Actor Batch Key、typed read/write range和Completion依赖生成固定批次并静态拒绝别名写冲突、托管捕获与缺失AOT Kernel
+- [x] 11.9 实现Bind Family Payload Pass，只把symbolic引用绑定为stage/value/workspace/batch typed handle，不得发现新的Operation、状态页、批次或容量需求
+- [x] 11.10 实现Seal Program Image Pass，校验全部pass identity、source map、Worker Batch Plan、Kernel Set、Execution Policy、Rig执行布局、容量、PoseProgramImageHash和schema后发布Projection内不可变Program Image
 - [x] 11.11 删除中央`CompilationState`、原地跨阶段mutation、重复Graph dependency/拓扑扫描和Runtime二次Compile
 - [x] 11.12 删除只做参数转发的Compiler入口；保留的外部入口只能调用唯一Compiler Module
 
@@ -139,7 +141,11 @@
 - [x] 12.6 修改Runtime Family Evaluator只读取自身Payload页，不访问万能Operation无关字段
 - [x] 12.7 删除`CharacterPresentationPoseOperation`万能记录、旧Native Operation镜像、无意义`-1`组合和旧字段Validator
 - [x] 12.8 删除旧Projection reader、旧Native Program语义构造、旧schema兼容、默认字段补齐、双codec和运行时版本fallback；每个Program Runtime只保留一份同identity只读Execution View materialization
-- [ ] 12.9 通过正式显式Character Build入口重建受影响generated Projection和Program Image，不在asset import、Inspector或Runtime自动重建
+- [x] 12.9 通过正式显式Character Build入口重建受影响generated Projection和Program Image，不在asset import、Inspector或Runtime自动重建
+- [x] 12.10 扩展Program Image、Projection codec与actor-local Execution View，封存Worker Batch、Kernel Set、Execution Policy、Rig执行布局和平台能力identity；任一身份变化提升PoseProgramImageHash与ProjectionRevision
+- [x] 12.11 为全部Pure Pose Operation Family实现有限AOT可知Burst/HPC# Kernel，按Family处理跨ActorWork Item，不创建Node级或Bone级Job，不捕获Unity／托管对象或动态分配
+- [x] 12.12 建立唯一会话级`CharacterPoseWorkerScheduler`，按Program、Rig布局、依赖波次与Family Kernel跨Actor合批；Program Runtime只提交typed Batch Lease并接收Completion，World Query、Foot、Goal、FinalIK/FBBIK和Final Publication保留Compiler指定Managed域
+- [x] 12.13 在同一次ABI切换中删除旧串行`CharacterPoseGraphStagedExecutor`、运行时Operation switch、Managed重算、Burst缺失fallback、每Actor临时Job图和逐Actor立即`Schedule/Complete`路径
 
 ## 13. 收口Diagnostics、Pose Watch与Preview
 
@@ -152,8 +158,9 @@
 - [x] 13.7 让Pose Watch只读取已冻结Committed页，不重新采样source、执行world query、运行FBBIK或推导Physical结果
 - [x] 13.8 让正式Runtime与Preview通过同一Factory装配Projection内Program Image、actor-local Execution View、Program Runtime、Source Module、Constraint Module、Final Publication、根Frame Transaction与Tuning Snapshot
 - [x] 13.9 删除Preview简化Executor、逐Preview第二Native Program、临时Program、默认World Context和Stale Projection fallback
-- [ ] 13.10 将具体`CharacterFootIkCommittedCaptureViewLease`串行交给`character-foot-ik`领域Bridge，使Bridge只在租约内取得框架packet lease、调用匹配AOT Program并提交；PoseGraph不得引用框架或Foot插件的Generator、Generated Program、packet、Host或Build类型，也不给旧Sampler增加表达式／反射路径、临时DTO、兼容Adapter、第二Snapshot或双写链
-- [ ] 13.11 对账框架sealed packet经Foot Full Host Adapter生成的字段业务含义、原始输入／几何引用、评分权重／资格／分母保持；保留历史原包，不要求保留旧Sampler／手写Column Implementation，也不用总分变化替代行为对账
+- [ ] 13.10 将具体`CharacterFootIkCommittedCaptureViewLease`在既有Post-Commit短租约内交给外部Foot Diagnostics consumer，由consumer绑定Left View／Metadata与Right View／Metadata并发布CommittedSample Event；Generated Lifecycle自动租packet、调用AOT Program和提交，PoseGraph不得引用框架Runtime或Foot插件的Event、Generator、Generated Program、packet、Host、Build类型，也不得增加Bridge、临时DTO、第二Snapshot或双写链
+- [ ] 13.11 对账框架sealed packet经Schema-driven Host自动生成的主表／子表字段业务含义、原始输入／几何引用、评分权重／资格／分母保持；确认不存在Foot Host Adapter、手写Column／CsvBinding或第二Schema，保留历史原包且不用总分变化替代行为对账
+- [ ] 13.12 让Runtime、Preview、Pose Watch与Live Debug只在全部Worker／Managed Completion完成且根事务成功Seal后读取Committed Result，保存Batch／Kernel／Completion lineage；删除诊断触发等待、重放或重新调度Kernel的路径
 
 ## 14. 激进清理与最终一致性
 
@@ -167,3 +174,6 @@
 - [ ] 14.8 执行`git diff --check`、本change严格校验和全量严格OpenSpec校验
 - [x] 14.9 核对未恢复中央Foot状态机、骨盆Reach硬夹紧、末端夹脚、已撤销SmoothKnee或CurrentSupport替代Swing包络候选，保留指定基线的有符号膝向运输，已保留第一阶段IK维护成果，未接管其它未实施IK行为任务
 - [ ] 14.10 每个代码小步复用现有正式输入Replay／Proof和诊断链，对指定基线与上一保留小步分别保存输入、Body、source时间、Foot／Pelvis／Goal／Solved／Physical的差异；未解释业务差异时停止，不用调参或改评分补偿
+- [ ] 14.11 将Reset、Projection Replacement与Dispose接入唯一Scheduler fence，完成Outstanding Job后再释放actor-local Execution View、Frame页与Module状态；搜索并消除悬空Native页与跨Actor状态污染
+- [ ] 14.12 执行正式IL2CPP／Burst AOT产物闭包检查和Performance Capture，分别记录总Presentation、Main Thread、Worker、Job等待与多Actor批次规模；不通过运行时fallback适配缺失平台能力
+- [ ] 14.13 搜索并确认不存在动画预算、Phase Offset、跳帧、旧Pose复用或插值补帧路径；Worker资源压力只按现有精确Completion与Fault政策处理

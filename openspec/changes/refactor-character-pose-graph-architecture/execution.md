@@ -1308,3 +1308,17 @@ Operation Detail诊断现在为每个Operation保存Worker Batch Index／Identit
 运行时代码搜索没有动画预算、Phase Offset、跳帧、旧Pose复用、Pose插值补帧、节流、LOD或按帧率降级路径。Animator构造仍强制`AlwaysAnimate`；每个有效表现帧都经Begin／Worker与Managed Completion／Complete／Seal，资源压力继续按现有精确Completion与Fault政策失败，不复用旧Pose，任务14.13完成。Reset、注销、Projection整体替换和Dispose均通过Actor Registration先Fence Outstanding Handle，再释放Execution View、Frame页与Module状态；Submit同时拒绝重复Actor和任一共享写页，任务14.11完成。
 
 本change strict校验再次通过；全量strict为100项通过、9项失败，失败属于其它现存change／spec，未跨范围修改。MCP Server已独立重启并重新监听8080，精确实例`3C_Client@e852139597e42532`重新注册后仍对主线程命令返回`ping not answered`，进一步确认阻塞位于Unity Editor进程而非MCP Server。
+
+## Worker运行时错误闭合与基础Replay通过
+
+状态：Unity实例`3C_Client@e852139597e42532`恢复后，使用固定trace `43357ff3cd384e5cba75d2c31175b116`重新执行正式基础Replay。此前第2帧的`IJobParallelFor`异常来自共享只读Program页仍受单个`actorIndex`范围限制；现只对Operation index、Header、Family Payload、Parameter Default／Policy、Mask、Reference与Rig Parent等不可变共享页同时声明`ReadOnly`和`NativeDisableParallelForRestriction`，Actor切片本身仍按`Execute(actorIndex)`读取，并继续由Submit阶段逐项拒绝任何共享可写页，没有关闭Actor写页隔离检查。
+
+空间转换随后暴露`in/out`自别名错误：共享`CharacterPosePureMath.TryToModel/TryToLocal`把Pose输入改成`in`后，Worker仍以同一局部变量同时传入`in pose`与`out pose`，函数开头清空`out`时也清空了输入。主线程对同一root／bone1数据可正常转换，证明Rig、AnimationSlot和Parameter Resolve输出没有损坏。两个转换函数现恢复指定基线的按值输入语义，Worker与共享Value页全部继续调用同一套纯数学，不增加Managed重算或fallback。提交为`b9337dfb8`。
+
+完成Pose计算后又定位两处外层迁移遗漏：Source诊断页曾在Action Backend deferred release与release diagnostics关闭前冻结，现移回Post-Commit诊断协调器，在正式发布已提交结果且Source release闭包完成后才按interest冻结；Stage Snapshot的合法Execution Domain上界同步包含`ManagedControl`与`ManagedConstraint`，不再把v27正式Stage误判为非法。运行计算与Final Publication不再由提前诊断冻结阻断。提交为`bfe626415`。
+
+修正后同一trace连续完成两次1044帧基础Replay。第一份Proof为`Temp/CharacterInputReplayProofs/v5/43357ff3cd384e5cba75d2c31175b116/20260903-141127-650-56fb01c86a65466da168a80093ce1a20.json`，建立1044帧v5基准；第二份为`Temp/CharacterInputReplayProofs/v5/43357ff3cd384e5cba75d2c31175b116/20260903-141550-925-fa340caf0a2b4068bd1047bdf8ab8f10.json`，工作流结果为`matched:1044`。两次均使用Program Hash `d4cf63902d75c88bc9d7883a81ab89fbce7e6269cfaf457bb07b2a9053386301`、Projection Revision `9119b4d7d702461ade4bd9a42069caaf6bce6878d74383f8d6c0cc2287352e91`与相同input/body hashes；基础Replay全过程`foot_sampling=false`且`foot_sampling_available=false`。
+
+这份证据证明正式Worker链可跨两个Gameplay Lab Actor连续完成、基础Fixed输入／Body结果可重复，并证明普通Replay不依赖Foot采样。它不包含Foot、Support、Pelvis、Goal、Solved与Physical逐项数值，因此不把任务3.9或14.10标成完成；这些任务仍需外部Foot诊断能力按独立操作提供指定基线A/B证据。此前Burst abort在当前Unity进程留下重复`ALLOC_TEMP_MAIN`原生报警，停止Play Mode后仍存在；成功Replay没有再产生Pose Worker、空间转换、提交或Snapshot异常，但干净Console证据需新的Unity Editor进程，不能把该进程残留写成当前实现的新分配泄漏。
+
+最终源码状态再次使用规定参数编译Runtime与Editor工程，分别为0错误／1个既有警告和0错误／57个既有Package及Analyzer警告；两次构建后均已执行`dotnet build-server shutdown`。本change strict校验继续通过。

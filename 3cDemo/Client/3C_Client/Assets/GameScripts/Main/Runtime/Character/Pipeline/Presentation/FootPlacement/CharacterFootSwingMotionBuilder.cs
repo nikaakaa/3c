@@ -2367,7 +2367,9 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     progress,
                     baselineSample,
                     envelopeSample);
-            float verticalCorrection = formalTargetCorrection;
+            float verticalCorrection = Mathf.Max(
+                0f,
+                formalTargetCorrection);
             Vector3 correctedSole = originalSole + up * verticalCorrection;
             Vector3 correctedAnkle = originalAnkle + up * verticalCorrection;
             float positionWeight = footPlacementWeight;

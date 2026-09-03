@@ -607,7 +607,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 ? Vector3.Dot(swingPath.LandingPoint, up)
                 : 0f;
             float rawTargetCorrectionAlongUp = hasPath
-                ? rawTargetHeightAlongUp - originalSoleHeight
+                ? Mathf.Max(0f, rawTargetHeightAlongUp - originalSoleHeight)
                 : 0f;
             float landingPointDelta = comparablePath
                 ? Vector3.Distance(
@@ -730,7 +730,9 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     : rawTargetHeightAlongUp
                 : 0f;
             Vector3 swingTargetCorrection = hasPath
-                ? up * (filteredTargetHeightAlongUp - originalSoleHeight)
+                ? up * Mathf.Max(
+                    0f,
+                    filteredTargetHeightAlongUp - originalSoleHeight)
                 : target.Correction;
             float targetDelta = comparablePath
                 ? Vector3.Distance(

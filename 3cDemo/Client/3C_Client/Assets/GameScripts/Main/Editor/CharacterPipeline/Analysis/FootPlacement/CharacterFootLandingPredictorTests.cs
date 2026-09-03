@@ -196,6 +196,96 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             Assert.That(result.OutputCorrection.y, Is.GreaterThanOrEqualTo(envelopeMinimum.y));
         }
 
+        [Test]
+        public void SwingOutputStepSeparatesSourceCorrectionAndCombinedMotion()
+        {
+            AnimationFootMotionRuntimeSample step = CreateSwingStep();
+            CharacterFootSwingMotionResult sourceOnlyBefore =
+                BuildSwingForStep(step, 0f, 0.2f);
+            CharacterFootSwingMotionResult sourceOnlyAfter =
+                BuildSwingForStep(step, 0.1f, 0.3f);
+            CharacterFootSwingMotionResult correctionOnlyBefore =
+                BuildSwingForStep(step, 0f, 0.2f);
+            CharacterFootSwingMotionResult correctionOnlyAfter =
+                BuildSwingForStep(step, 0f, 0.25f);
+            CharacterFootSwingMotionResult combinedBefore =
+                BuildSwingForStep(step, 0f, 0.2f);
+            CharacterFootSwingMotionResult combinedAfter =
+                BuildSwingForStep(step, 0.1f, 0.35f);
+
+            Assert.That(
+                Vector3.Distance(
+                    sourceOnlyAfter.OriginalSole,
+                    sourceOnlyBefore.OriginalSole),
+                Is.EqualTo(0.1f).Within(0.0001f));
+            Assert.That(
+                Vector3.Distance(
+                    sourceOnlyAfter.CorrectedSole - sourceOnlyAfter.OriginalSole,
+                    sourceOnlyBefore.CorrectedSole - sourceOnlyBefore.OriginalSole),
+                Is.EqualTo(0f).Within(0.0001f));
+            Assert.That(
+                Vector3.Distance(
+                    sourceOnlyAfter.CorrectedSole,
+                    sourceOnlyBefore.CorrectedSole),
+                Is.EqualTo(0.1f).Within(0.0001f));
+
+            Assert.That(
+                Vector3.Distance(
+                    correctionOnlyAfter.OriginalSole,
+                    correctionOnlyBefore.OriginalSole),
+                Is.EqualTo(0f).Within(0.0001f));
+            Assert.That(
+                Vector3.Distance(
+                    correctionOnlyAfter.CorrectedSole - correctionOnlyAfter.OriginalSole,
+                    correctionOnlyBefore.CorrectedSole - correctionOnlyBefore.OriginalSole),
+                Is.EqualTo(0.05f).Within(0.0001f));
+            Assert.That(
+                Vector3.Distance(
+                    correctionOnlyAfter.CorrectedSole,
+                    correctionOnlyBefore.CorrectedSole),
+                Is.EqualTo(0.05f).Within(0.0001f));
+
+            Assert.That(
+                Vector3.Distance(
+                    combinedAfter.OriginalSole,
+                    combinedBefore.OriginalSole),
+                Is.EqualTo(0.1f).Within(0.0001f));
+            Assert.That(
+                Vector3.Distance(
+                    combinedAfter.CorrectedSole - combinedAfter.OriginalSole,
+                    combinedBefore.CorrectedSole - combinedBefore.OriginalSole),
+                Is.EqualTo(0.05f).Within(0.0001f));
+            Assert.That(
+                Vector3.Distance(
+                    combinedAfter.CorrectedSole,
+                    combinedBefore.CorrectedSole),
+                Is.EqualTo(0.15f).Within(0.0001f));
+        }
+
+        static CharacterFootSwingMotionResult BuildSwingForStep(
+            AnimationFootMotionRuntimeSample step,
+            float originalSoleHeight,
+            float envelopeHeight)
+        {
+            CharacterFootGroundPathResult path = CreateAcceptedGroundPath(
+                step.LandingEventIdentity,
+                envelopeHeight);
+            CharacterFootPlacementAnimatedFootPose animated =
+                CreateAnimatedFoot(originalSoleHeight);
+            CharacterFootSwingMotionResult result =
+                CharacterFootSwingMotionBuilder.BuildForSwing(
+                    animated,
+                    in step,
+                    step.LandingEventIdentity,
+                    1f,
+                    Vector3.up,
+                    in path,
+                    0f,
+                    0f);
+            Assert.That(result.Accepted, Is.True);
+            return result;
+        }
+
         static CharacterFootPlacementAnimatedFootPose CreateAnimatedFoot(float soleHeight)
         {
             Vector3 sole = new Vector3(0f, soleHeight, 0f);

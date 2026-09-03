@@ -405,7 +405,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 supportNormal,
                 CharacterFootCorrectionResponseDomain.ContactWorldResidual,
                 captureTransition,
-                false,
                 in frame);
             Vector3 responseOutputPoint = response.OutputPoint;
             CharacterFootCorrectionResponseFact correctionResponseFact = response.Fact;
@@ -548,7 +547,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 target.SupportTarget.SupportNormal,
                 CharacterFootCorrectionResponseDomain.AnimationRelativeScalar,
                 target.StateEntered,
-                false,
                 in frame);
             Vector3 releaseOutputPoint = response.OutputPoint;
             CharacterFootCorrectionResponseFact correctionResponseFact = response.Fact;
@@ -822,7 +820,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     target.SupportTarget.SupportNormal,
                     CharacterFootCorrectionResponseDomain.AnimationRelativeScalar,
                     false,
-                    lateDownwardLandingRevision,
                     in frame);
                 Vector3 responseOutputPoint = response.OutputPoint;
                 correctionResponseFact = response.Fact;
@@ -918,7 +915,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             Vector3 responseDirection,
             CharacterFootCorrectionResponseDomain domain,
             bool targetContinuityCaptured,
-            bool bypassRateTracking,
             in CharacterFootStateFrame frame)
         {
             if ((domain != CharacterFootCorrectionResponseDomain.AnimationRelativeScalar &&
@@ -1029,23 +1025,15 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     deltaDirection = delta > 0f
                         ? CharacterFootCorrectionResponseDeltaDirection.Increase
                         : CharacterFootCorrectionResponseDeltaDirection.Decrease;
-                    if (bypassRateTracking)
-                    {
-                        appliedDelta = delta;
-                        currentResponse = desiredResponse;
-                    }
-                    else
-                    {
-                        selectedSpeed = delta > 0f
-                            ? frame.Settings.CorrectionResponseIncreaseSpeed
-                            : frame.Settings.CorrectionResponseDecreaseSpeed;
-                        float maximumDelta = selectedSpeed * frame.DeltaSeconds;
-                        appliedDelta = Mathf.Clamp(
-                            delta,
-                            -maximumDelta,
-                            maximumDelta);
-                        currentResponse = previousResponse + appliedDelta;
-                    }
+                    selectedSpeed = delta > 0f
+                        ? frame.Settings.CorrectionResponseIncreaseSpeed
+                        : frame.Settings.CorrectionResponseDecreaseSpeed;
+                    float maximumDelta = selectedSpeed * frame.DeltaSeconds;
+                    appliedDelta = Mathf.Clamp(
+                        delta,
+                        -maximumDelta,
+                        maximumDelta);
+                    currentResponse = previousResponse + appliedDelta;
                 }
             }
             Vector3 responseOutputPoint = contactWorldResidual

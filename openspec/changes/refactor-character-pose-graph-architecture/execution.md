@@ -1345,3 +1345,9 @@ Operation Detail诊断现在为每个Operation保存Worker Batch Index／Identit
 ## 当前生成诊断的重复运行校验
 
 状态：对两次独立Diagnostic Replay生成的Full CSV（`20260903-070157-780a1e7d190b47f996b5671e2aa34534`与`20260903-074709-8b00a2b85c07406a9e693727ec0690e7`）按`lineage.high + dimension`对齐，忽略采样Identity、时间、实例、Revision和Frame Identity等运行身份字段，并使用同一布尔／枚举／`1e-4`数值归一化规则比较。两次均为2088行；剩余1,897,992个行为单元全部一致，没有发现当前实现自身的随机漂移。由此可把前一节相对旧A的701个差异归为旧数据几何／身份或中间诊断语义差异候选，而不是当前Worker链每次运行不稳定。
+
+## 恢复Launcher诊断状态与产物快捷入口
+
+状态：修复了诊断窗口在Play／编译状态变化后不重绘，以及Unity域重载后丢失最近产物路径的问题。采样Workflow现在从持久化的最近manifest或`Diagnostics/GeneratedFootSampling`下最新有效manifest恢复Full／Core CSV、manifest和目录；分析Workflow恢复最近报告。Launcher的`Reveal Sample Folder`、`Analyze Last Capture`和`Open Last Report`因此不再依赖本次域生命周期内的静态字段；不在Play时仍明确提示“先点击Play Selected Variant”，但已完成产物可在编辑模式打开和分析。
+
+通过3C MCP验证：编辑模式下状态为`capture_compilation=true`、`sampling_available=true`，最近恢复的有效采样位于`3cDemo/Client/3C_Client/Diagnostics/GeneratedFootSampling/20260903-080624-395d5f0538484f499eb8fc3ff436b6d8`（199帧）；直接执行`analyze_last`成功生成对应报告，随后`open_report`入口成功。此前本轮1044帧Diagnostic Replay仍保存在`20260903-074709-8b00a2b85c07406a9e693727ec0690e7`，两者都在同一`Diagnostics/GeneratedFootSampling`根目录下。

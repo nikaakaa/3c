@@ -63,6 +63,14 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
         bool m_LastSamplingCapturing;
         bool m_LastSamplingStarting;
         string m_LastSamplingSavedPath = string.Empty;
+        string m_LastSamplingManifestPath = string.Empty;
+        string m_LastSamplingDirectory = string.Empty;
+        string m_LastSamplingReportPath = string.Empty;
+        bool m_LastEditorBusy;
+        bool m_LastEditorPlaying;
+        bool m_LastEditorCompiling;
+        bool m_LastSamplingAvailable;
+        bool m_LastAnalysisAvailable;
 
         [MenuItem("Tools/3C/Launcher", false, -1000)]
         public static void Open()
@@ -84,15 +92,39 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             bool capturing = CharacterFootDiagnosticSampling.IsCapturing;
             bool finalizing = CharacterFootDiagnosticSampling.IsFinalizing;
             string samplesPath = CharacterFootDiagnosticSampling.LastSavedPath;
+            string manifestPath = CharacterFootDiagnosticSampling.LastManifestPath;
+            string sampleDirectory = CharacterFootDiagnosticSampling.LastSavedDirectory;
+            string reportPath = CharacterFootDiagnosticSampling.LastReportPath;
+            bool editorBusy = IsBusy;
+            bool editorPlaying = EditorApplication.isPlaying;
+            bool editorCompiling = EditorApplication.isCompiling;
+            bool samplingAvailable = CharacterFootDiagnosticSampling.IsAvailable;
+            bool analysisAvailable = CharacterFootDiagnosticSampling.IsAnalysisAvailable;
             if (capturing == m_LastSamplingCapturing &&
                 finalizing == m_LastSamplingStarting &&
-                string.Equals(samplesPath, m_LastSamplingSavedPath, StringComparison.Ordinal))
+                string.Equals(samplesPath, m_LastSamplingSavedPath, StringComparison.Ordinal) &&
+                string.Equals(manifestPath, m_LastSamplingManifestPath, StringComparison.Ordinal) &&
+                string.Equals(sampleDirectory, m_LastSamplingDirectory, StringComparison.Ordinal) &&
+                string.Equals(reportPath, m_LastSamplingReportPath, StringComparison.Ordinal) &&
+                editorBusy == m_LastEditorBusy &&
+                editorPlaying == m_LastEditorPlaying &&
+                editorCompiling == m_LastEditorCompiling &&
+                samplingAvailable == m_LastSamplingAvailable &&
+                analysisAvailable == m_LastAnalysisAvailable)
             {
                 return;
             }
             m_LastSamplingCapturing = capturing;
             m_LastSamplingStarting = finalizing;
             m_LastSamplingSavedPath = samplesPath;
+            m_LastSamplingManifestPath = manifestPath;
+            m_LastSamplingDirectory = sampleDirectory;
+            m_LastSamplingReportPath = reportPath;
+            m_LastEditorBusy = editorBusy;
+            m_LastEditorPlaying = editorPlaying;
+            m_LastEditorCompiling = editorCompiling;
+            m_LastSamplingAvailable = samplingAvailable;
+            m_LastAnalysisAvailable = analysisAvailable;
             Repaint();
         }
 
@@ -271,6 +303,12 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             EditorGUILayout.LabelField(
                 "Foot Landing Sampling",
                 capturing ? "Recording" : finalizing ? "Finalizing" : "Idle");
+            if (!EditorApplication.isPlaying)
+            {
+                EditorGUILayout.HelpBox(
+                    "先点击 Play Selected Variant。采样只在 Play Mode 开始；已完成的采样可在编辑模式下打开目录或分析。",
+                    MessageType.None);
+            }
             int samplerIndex = string.Equals(
                 CharacterFootDiagnosticSampling.SelectedSamplerId,
                 CharacterFootDiagnosticSampling.CoreSamplerId,
@@ -782,6 +820,14 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             m_LastSamplingCapturing = CharacterFootDiagnosticSampling.IsCapturing;
             m_LastSamplingStarting = CharacterFootDiagnosticSampling.IsFinalizing;
             m_LastSamplingSavedPath = CharacterFootDiagnosticSampling.LastSavedPath;
+            m_LastSamplingManifestPath = CharacterFootDiagnosticSampling.LastManifestPath;
+            m_LastSamplingDirectory = CharacterFootDiagnosticSampling.LastSavedDirectory;
+            m_LastSamplingReportPath = CharacterFootDiagnosticSampling.LastReportPath;
+            m_LastEditorBusy = IsBusy;
+            m_LastEditorPlaying = EditorApplication.isPlaying;
+            m_LastEditorCompiling = EditorApplication.isCompiling;
+            m_LastSamplingAvailable = CharacterFootDiagnosticSampling.IsAvailable;
+            m_LastAnalysisAvailable = CharacterFootDiagnosticSampling.IsAnalysisAvailable;
         }
     }
 }

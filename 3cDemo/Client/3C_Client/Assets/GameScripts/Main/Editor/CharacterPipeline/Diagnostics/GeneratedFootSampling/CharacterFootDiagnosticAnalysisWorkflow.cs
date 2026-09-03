@@ -41,6 +41,8 @@ namespace ThirdPersonCharacter.Pipeline.Diagnostics.FootIkSampling.Editor
             "Tools/3C/Diagnostics/Foot IK Generated Sampling/Analyze Existing Capture";
         const string OpenReportMenu =
             "Tools/3C/Diagnostics/Foot IK Generated Sampling/Open Last Report";
+        const string LastReportPreference =
+            "ThirdPerson.Character.FootDiagnostics.LastReportPath";
         static readonly Workflow s_Workflow = new Workflow();
         static bool s_IsAnalyzing;
         static string s_LastResultDirectory = string.Empty;
@@ -50,6 +52,7 @@ namespace ThirdPersonCharacter.Pipeline.Diagnostics.FootIkSampling.Editor
         static CharacterFootDiagnosticAnalysisWorkflow()
         {
             DiagnosticAnalysisWorkflowRegistry.Register(s_Workflow);
+            RestoreLastReport();
         }
 
         public static bool IsAnalyzing => s_IsAnalyzing;
@@ -124,6 +127,9 @@ namespace ThirdPersonCharacter.Pipeline.Diagnostics.FootIkSampling.Editor
                         outputDirectory);
                 s_LastResultDirectory = artifacts.Directory;
                 s_LastReportPath = artifacts.Report.Path;
+                EditorPrefs.SetString(
+                    LastReportPreference,
+                    Path.GetFullPath(s_LastReportPath));
                 Debug.Log(
                     $"Foot diagnostic analysis completed: {s_LastReportPath}");
             }
@@ -151,6 +157,41 @@ namespace ThirdPersonCharacter.Pipeline.Diagnostics.FootIkSampling.Editor
         [MenuItem(OpenReportMenu, true)]
         static bool CanOpenLastReport() =>
             File.Exists(s_LastReportPath);
+
+        static void RestoreLastReport()
+        {
+            string reportPath = EditorPrefs.GetString(
+                LastReportPreference,
+                string.Empty);
+            if (!File.Exists(reportPath))
+            {
+                string root = Path.GetFullPath(Path.Combine(
+                    Application.dataPath,
+                    "..",
+                    "Diagnostics",
+                    "GeneratedFootSampling",
+                    "FootAnalysis"));
+                if (Directory.Exists(root))
+                {
+                    DateTime latestWrite = DateTime.MinValue;
+                    foreach (string directory in Directory.GetDirectories(root))
+                    {
+                        string candidate = Path.Combine(directory, "report.md");
+                        if (!File.Exists(candidate))
+                            continue;
+                        DateTime write = File.GetLastWriteTimeUtc(candidate);
+                        if (write <= latestWrite)
+                            continue;
+                        reportPath = candidate;
+                        latestWrite = write;
+                    }
+                }
+            }
+            if (!File.Exists(reportPath))
+                return;
+            s_LastReportPath = Path.GetFullPath(reportPath);
+            s_LastResultDirectory = Path.GetDirectoryName(s_LastReportPath);
+        }
 
         static string CurrentPlanPath(string manifestPath)
         {

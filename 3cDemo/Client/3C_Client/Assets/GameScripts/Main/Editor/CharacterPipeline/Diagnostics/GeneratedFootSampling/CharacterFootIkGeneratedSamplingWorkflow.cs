@@ -79,6 +79,10 @@ namespace ThirdPersonCharacter.Pipeline.Diagnostics.FootIkSampling.Editor
         const int DefaultPacketCapacity = 2048;
         const int QueueCapacity = 512;
         const string GameplayLabPlayerActorId = "gameplay-lab-player";
+        const string LastManifestPreference =
+            "ThirdPerson.Character.FootDiagnostics.LastManifestPath";
+        const string LastSampleIdentityPreference =
+            "ThirdPerson.Character.FootDiagnostics.LastSampleIdentity";
         static readonly string[] s_SamplerIds =
         {
             CharacterFootIkDiagnosticIdentity.CoreSamplerId,
@@ -107,6 +111,7 @@ namespace ThirdPersonCharacter.Pipeline.Diagnostics.FootIkSampling.Editor
         static CharacterFootIkGeneratedSamplingWorkflow()
         {
             DiagnosticSamplingWorkflowRegistry.Register(s_Workflow);
+            RestoreLastCapture();
             EditorApplication.playModeStateChanged += OnPlayModeStateChanged;
             AssemblyReloadEvents.beforeAssemblyReload += Cancel;
             EditorApplication.quitting += Cancel;
@@ -308,13 +313,13 @@ namespace ThirdPersonCharacter.Pipeline.Diagnostics.FootIkSampling.Editor
         [MenuItem(RevealMenu)]
         static void RevealLastCapture()
         {
-            if (!string.IsNullOrEmpty(s_LastManifestPath))
-                EditorUtility.RevealInFinder(s_LastManifestPath);
+            if (!string.IsNullOrEmpty(s_OutputRoot))
+                EditorUtility.RevealInFinder(s_OutputRoot);
         }
 
         [MenuItem(RevealMenu, true)]
         static bool CanRevealLastCapture() =>
-            File.Exists(s_LastManifestPath);
+            Directory.Exists(s_OutputRoot);
 
         static void PollFinalization()
         {
@@ -349,6 +354,7 @@ namespace ThirdPersonCharacter.Pipeline.Diagnostics.FootIkSampling.Editor
                 s_LastSavedSampleIdentity = s_CurrentSampleIdentity;
                 s_LastSavedFrameCount = checked(
                     (int)(result.Manifest.SampleCount / 2));
+                PersistLastCapture();
                 CompleteController();
                 Debug.Log(
                     $"Foot IK generated sampling completed: {s_LastManifestPath}");
@@ -438,6 +444,87 @@ namespace ThirdPersonCharacter.Pipeline.Diagnostics.FootIkSampling.Editor
             s_ControlledCaptureWindow = false;
             s_CaptureWindowOpen = false;
             s_Finalizing = false;
+        }
+
+        static void RestoreLastCapture()
+        {
+            string manifestPath = EditorPrefs.GetString(
+                LastManifestPreference,
+                string.Empty);
+            if (!File.Exists(manifestPath))
+                manifestPath = FindLatestManifest();
+            if (string.IsNullOrEmpty(manifestPath))
+                return;
+            try
+            {
+                byte[] content = File.ReadAllBytes(manifestPath);
+                var document = new DiagnosticEncodedDocument(
+                    content,
+                    DiagnosticArtifactIntegrity.ComputeSha256(content));
+                DiagnosticCapabilityManifest manifest =
+                    DiagnosticCapabilityCodec.DecodeCapabilityManifest(document);
+                if (manifest.Status != DiagnosticCaptureStatus.Completed ||
+                    manifest.Samplers.Count != 1)
+                {
+                    return;
+                }
+                s_LastManifestPath = Path.GetFullPath(manifestPath);
+                s_OutputRoot = Path.GetDirectoryName(s_LastManifestPath);
+                s_LastArtifacts.Clear();
+                string samplerId = manifest.Samplers[0].SamplerId;
+                CaptureArtifacts(manifest, samplerId);
+                s_SelectedSamplerId = samplerId;
+                s_LastSavedSampleIdentity = EditorPrefs.GetString(
+                    LastSampleIdentityPreference,
+                    Path.GetFileName(s_OutputRoot));
+                s_LastSavedFrameCount = checked(
+                    (int)(manifest.SampleCount / 2));
+            }
+            catch
+            {
+                s_LastManifestPath = string.Empty;
+                s_LastMainCsvPath = string.Empty;
+                s_OutputRoot = string.Empty;
+                s_LastArtifacts.Clear();
+                s_LastSavedFrameCount = 0;
+            }
+        }
+
+        static string FindLatestManifest()
+        {
+            string root = Path.GetFullPath(Path.Combine(
+                Application.dataPath,
+                "..",
+                "Diagnostics",
+                "GeneratedFootSampling"));
+            if (!Directory.Exists(root))
+                return string.Empty;
+            string latest = string.Empty;
+            DateTime latestWrite = DateTime.MinValue;
+            foreach (string directory in Directory.GetDirectories(root))
+            {
+                string manifest = Path.Combine(
+                    directory,
+                    "capability.manifest.json");
+                if (!File.Exists(manifest))
+                    continue;
+                DateTime write = File.GetLastWriteTimeUtc(manifest);
+                if (write <= latestWrite)
+                    continue;
+                latest = manifest;
+                latestWrite = write;
+            }
+            return latest;
+        }
+
+        static void PersistLastCapture()
+        {
+            EditorPrefs.SetString(
+                LastManifestPreference,
+                Path.GetFullPath(s_LastManifestPath));
+            EditorPrefs.SetString(
+                LastSampleIdentityPreference,
+                s_LastSavedSampleIdentity ?? string.Empty);
         }
 
         static void Cancel()

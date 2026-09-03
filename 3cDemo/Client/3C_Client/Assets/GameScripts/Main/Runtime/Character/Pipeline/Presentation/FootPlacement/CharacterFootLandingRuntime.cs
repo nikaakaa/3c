@@ -197,6 +197,12 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     context.NextSwingLanding.Resolve();
                 bool sameSurface = previous.SurfaceIdentity ==
                                    diagnostics.SurfaceIdentity;
+                bool predictionInputDistanceExceeded =
+                    (diagnostics.Observation.QueryReason &
+                     CharacterFootLandingObservationQueryReason
+                         .PredictionInputDistanceExceeded) != 0;
+                if (!sameSurface && predictionInputDistanceExceeded)
+                    return;
                 if (sameSurface &&
                     Vector3.Distance(landingPoint, previous.Point) <
                     settings.LandingAcceptanceDistance)

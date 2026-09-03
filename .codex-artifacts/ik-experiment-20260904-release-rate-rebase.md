@@ -16,4 +16,14 @@
 
 ## 回放
 
-待固定 Trace 回放完成后补充实际样本路径、正式诊断计数和异常帧对比。若跳变、穿透或弯曲抖动回归，保留本样本并回退代码。
+固定 Trace `43357ff3cd384e5cba75d2c31175b116` 已完整消费 1044/1044 帧并封口：
+
+- Samples：`3cDemo/Client/3C_Client/Diagnostics/GeneratedFootSampling/20260903-225853-f9566fdd753c4c1cab5e5d473bd59ec0/character-foot-ik%2Ffull.csv`
+- capturing/finalizing/analyzing 均为 false，未新增编译或诊断错误；编辑器保持 Edit。
+- GroundPath 1796/292，Contact Edge 114，Landing/Release 24/53，Plant positive 27，Verified 527，均与恢复基线一致。
+- Plant 最大穿透 0.083242m 不变；Plant 最大 output distance `0.569929m → 0.559662m`。
+- Bend `172.9645°`、solved/target extension `0.999992/1.19071`、Pelvis 753/2088、Physical 2088/2088 均不变。
+
+实际只命中右脚 `ReleaseCompleted seq1914 → Plant seq1916`：下降速率 1.5m/s、固定 dt 1/60，剥离步长 0.025m。右 seq1916 的 captured residual Y `0.5135124 → 0.488512278`，after-decay Y `0.349391252 → 0.3323813`，Plant output `0.569929m → 0.559662m`。影响沿 residual 衰减到 seq1938 后消失。
+
+代价是右 final correction 最大值 `0.499075 → 0.491942`，右 final sole 最大跳变 `0.267713 → 0.278466m`，右 seq1916 ankle/physical 跳变 `0.151899 → 0.165396m`；左 seq2069、全局事件集合、穿透和覆盖不变。结论是数据上局部减少旧响应，但交接首帧脚底跳变略增，暂保留候选供视觉验收，不宣称整体通过。

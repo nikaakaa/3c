@@ -61,7 +61,7 @@ namespace ThirdPersonCharacter.Pipeline
         IDisposable
     {
         static CharacterPoseWorkerPresentationSession s_Current;
-        readonly GameplayTickSystem m_TickSystem;
+        GameplayTickSystem m_TickSystem;
         readonly List<CharacterPresentationFrameTarget> m_Targets =
             new List<CharacterPresentationFrameTarget>();
         readonly List<CharacterPresentationFrameTarget> m_ReadyTargets =
@@ -72,26 +72,23 @@ namespace ThirdPersonCharacter.Pipeline
             new CharacterPoseWorkerScheduler();
         bool m_Disposed;
 
-        CharacterPoseWorkerPresentationSession(GameplayTickSystem tickSystem)
+        CharacterPoseWorkerPresentationSession()
         {
-            m_TickSystem = tickSystem ??
-                throw new ArgumentNullException(nameof(tickSystem));
-            m_TickSystem.Register(this);
         }
 
         internal static CharacterPoseWorkerPresentationSession RequireCurrent()
         {
-            GameplayTickSystem tickSystem = GameplayTickSystem.Current ??
-                throw new InvalidOperationException(
-                    "Gameplay Tick System is not initialized.");
+            GameplayTickSystem tickSystem = GameplayTickSystem.Current;
             if (s_Current != null &&
+                s_Current.m_TickSystem != null &&
+                tickSystem != null &&
                 !ReferenceEquals(s_Current.m_TickSystem, tickSystem))
             {
                 s_Current.Dispose();
                 s_Current = null;
             }
             return s_Current ??=
-                new CharacterPoseWorkerPresentationSession(tickSystem);
+                new CharacterPoseWorkerPresentationSession();
         }
 
         internal CharacterPoseWorkerScheduler WorkerScheduler =>
@@ -100,6 +97,7 @@ namespace ThirdPersonCharacter.Pipeline
         internal void Register(CharacterPresentationFrameTarget target)
         {
             RequireAlive();
+            AttachCurrentTickSystem();
             if (target == null || m_Targets.Contains(target))
                 throw new InvalidOperationException(
                     "Character Presentation target registration is invalid.");
@@ -240,7 +238,7 @@ namespace ThirdPersonCharacter.Pipeline
         {
             if (m_Disposed)
                 return;
-            m_TickSystem.Unregister(this);
+            m_TickSystem?.Unregister(this);
             m_Targets.Clear();
             m_ReadyTargets.Clear();
             m_FrameFailures.Clear();
@@ -256,6 +254,24 @@ namespace ThirdPersonCharacter.Pipeline
             {
                 throw new ObjectDisposedException(
                     nameof(CharacterPoseWorkerPresentationSession));
+            }
+        }
+
+        void AttachCurrentTickSystem()
+        {
+            GameplayTickSystem tickSystem = GameplayTickSystem.Current ??
+                throw new InvalidOperationException(
+                    "Gameplay Tick System is not initialized.");
+            if (m_TickSystem == null)
+            {
+                m_TickSystem = tickSystem;
+                m_TickSystem.Register(this);
+                return;
+            }
+            if (!ReferenceEquals(m_TickSystem, tickSystem))
+            {
+                throw new InvalidOperationException(
+                    "Pose Worker Presentation session belongs to another Gameplay Tick System.");
             }
         }
     }

@@ -5,6 +5,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
 {
     internal static class CharacterFootInterpolationRuntime
     {
+        const float PositiveContactResidualHalfLifeMultiplier = 2f;
+
         internal static CharacterFootInterpolationResult Evaluate(
             ref CharacterFootInterpolationState state,
             in CharacterFootStateTarget target,
@@ -382,6 +384,12 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     frame.Settings,
                     out residualDeadlineHalfLifeAvailable,
                     out residualDeadlineHalfLifeSeconds);
+                if (target.StateEntered &&
+                    Vector3.Dot(state.PlantWorldResidual, up) > 0f)
+                {
+                    residualAppliedHalfLifeSeconds *=
+                        PositiveContactResidualHalfLifeMultiplier;
+                }
                 residualDecayApplied = true;
                 state.PlantWorldResidual = Advance(
                     state.PlantWorldResidual,

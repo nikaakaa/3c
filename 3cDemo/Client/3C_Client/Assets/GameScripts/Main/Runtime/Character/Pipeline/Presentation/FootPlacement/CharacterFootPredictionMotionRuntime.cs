@@ -119,15 +119,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             float deltaSeconds,
             in CharacterFootLandingPredictionSettings settings)
         {
-            if (!timelineAvailable || timelineGeneration == 0)
-            {
-                return Rejected(
-                    CharacterFootPredictionMotionRejectReason.TimelineUnavailable,
-                    predictionSourceIdentity,
-                    rawCurrentVelocity,
-                    rawContinuationVelocity,
-                    in settings);
-            }
             if (string.IsNullOrWhiteSpace(predictionSourceIdentity))
             {
                 return Rejected(
@@ -143,6 +134,18 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             {
                 return Rejected(
                     CharacterFootPredictionMotionRejectReason.InvalidInput,
+                    predictionSourceIdentity,
+                    rawCurrentVelocity,
+                    rawContinuationVelocity,
+                    in settings);
+            }
+            bool timelineUnavailable = !timelineAvailable || timelineGeneration == 0;
+            if (timelineUnavailable &&
+                (rawCurrentVelocity.sqrMagnitude > ChangeEpsilon * ChangeEpsilon ||
+                 rawContinuationVelocity.sqrMagnitude > ChangeEpsilon * ChangeEpsilon))
+            {
+                return Rejected(
+                    CharacterFootPredictionMotionRejectReason.TimelineUnavailable,
                     predictionSourceIdentity,
                     rawCurrentVelocity,
                     rawContinuationVelocity,

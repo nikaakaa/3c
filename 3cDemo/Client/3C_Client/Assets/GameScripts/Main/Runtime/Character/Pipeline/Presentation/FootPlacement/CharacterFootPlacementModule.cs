@@ -1163,7 +1163,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     default,
                     default);
             }
-            if (!currentContact && !timeline.IsValid)
+            if (!currentContact && !timeline.IsValid && bodyTrajectory == null)
             {
                 return RejectedEvent(
                     side,

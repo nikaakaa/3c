@@ -1261,3 +1261,32 @@ Pose Contracts目录不引用Program／Source／Constraint／Publication Impleme
 状态：再次通过3C实例的正式`character_build_float32_products`入口执行Corin Character Build，Job `f894dcbec04e4e82b2928117b29da433`仍在Presentation Projection阶段被现有Foot Analysis geometry validation identity stale拒绝，覆盖Attack1至Attack5、Dodge、Idle、Walk／Run／Turn等正式Timeline与Pose Source绑定。构建没有发布半成品，generated Projection仍是旧Program Image v23／Runtime ABI v26。
 
 本change不能绕过Foot校验、伪造新identity或修改Foot资产，因此12.9无法完成；没有v24／v27正式Projection也不能运行当前Runtime的同输入Replay，3.9与14.10随之保持未完成。14.8已实际执行，但全工作区diff与全量OpenSpec的失败均来自其它并行工作，未越界修复。
+
+## 发布正式Worker Program Image
+
+状态：后续已通过正式Character Build发布Corin Program Image v24／Runtime ABI v27，generated Projection包含`character-pose-worker-plan/v1`、`worker-required/v1`、Rig执行布局、Kernel Set及三个正式Batch。该事实由提交`e03ca7cfa`保存，上一节“仍是v23／v26”的阻塞结论只属于当时证据，不再代表当前工作区。
+
+Worker计划不再是孤立数据：正式`GameplayTickSystem -> CharacterPoseWorkerPresentationSession -> CharacterPoseWorkerScheduler`链按当前表现帧收集全部Actor，同Program内按Stage／Dependency Wave／Family Kernel组合Handle，不同Program再组合，并只在进入后续Managed依赖前完成一次。Worker直接读写各Actor自己的Pending Frame页，不建立第二Workspace，也没有逐Stage全量CopyIn／CopyOut。
+
+## 分离Fixed Replay与Foot诊断
+
+状态：基础Fixed Replay与Foot诊断已经拆成两个显式操作。普通Replay不检查、不启动、不等待Foot采样，基础Proof升级为`character-fixed-input-replay-proof/5`且不包含`foot_sample`；显式Diagnostic Replay才组合Foot采样并发布独立`diagnostic-v1`证据。原先尝试自动修改`PlayerSettings`编译符号的`CharacterReplayDiagnosticCompilationSession`已删除，没有保留项目级编译状态机或恢复路径。提交为`440cf1d3a`。
+
+## 1044帧Replay运行时诊断
+
+状态：使用固定trace `43357ff3cd384e5cba75d2c31175b116`实际启动基础Replay后，已依次定位并修正四个外层迁移错误：非活动Player错误要求Physical Source Binding、Final Publication把打开中的零Completion lineage当作已完成输出身份、Worker Tuning Weight把完整Operation index误当成Native Operation index、IJobParallelFor把共享只读NativeArray藏在嵌套输入结构中触发Unity ParallelFor限制。对应提交为`e6688e4d9`、`bdcbcbe81`和`f3bc39a6c`。
+
+Managed与Worker现在共用`CharacterPoseValuePageSlice`和`CharacterPosePureMath`，Managed Stage遇到Worker Domain会拒绝，不存在Pure Pose重算或串行fallback。Scheduler按Registration与ActorId拒绝重复提交，检查Actor写页不重叠；任何已成功Schedule的Handle立即进入Outstanding，后续Schedule、Complete、Reset、注销或Dispose失败都先Fence再释放页。正式`ICharacterPresentationRuntime.Present`单角色立即Schedule／Complete旁路已经删除。对应提交为`0fff2bf6f`、`c48669ef0`与`0775ab65c`。
+
+Program Image加载现在重新从Operation Header的typed输入输出计算每个Batch的精确读写集合、输入Completion和Workspace范围，并检查同Stage同Wave跨Kernel的写写／读写别名；序列化声明与实际Kernel Operation不一致会直接拒绝，不再只做数组越界检查。Worker Batch Planning也拥有独立Compiler Pass Diagnostic，可报告Node、Family、Execution Domain与source path，不再统一伪装成Seal失败。对应提交为`b6e31c429`与`b71bbe293`。
+
+Runtime与Editor工程均使用规定参数编译通过，结果0错误；每次编译后均已执行`dotnet build-server shutdown`。
+
+## Worker架构仍未闭合的证据
+
+状态：当前不能勾选11.9、11.13、12.12、12.13、14.10或14.11。
+
+- Compiler实际仍先运行`CharacterPoseFamilyPayloadBindingPass`，再运行Stage、Value Lifetime、Workspace与Worker Batch Plan；这与批准的“Workspace -> Worker Batch Plan -> Bind Family Payload -> Seal”顺序不一致。当前新增的Worker Pass Diagnostic只修正错误归属，没有把Bind移动到Worker之后。
+- Worker Seam虽然不再复制Workspace，但`CharacterPoseWorkerActorSlice`仍通过`CharacterPoseValuePageSlice`取得完整Actor Value页裸指针。Program Image typed range现在能在Seal／加载时证明正确，Kernel Interface仍没有把访问能力物理收窄到对应Batch声明的范围；该Memory Interface的Locality仍需继续闭合。
+- 正式Gameplay已删除单Actor旁路，但Preview的同步`CharacterAnimationPresentationRuntime.Present`仍按单个Preview Actor立即Begin／Submit／Complete。Preview必须改为显式调度Adapter，根动画Runtime不能继续拥有第二套Scheduler驱动方式。
+- 本轮旧Burst异常后Unity完成脚本域重载并重新连接`3C_Client@e852139597e42532`，但主线程持续对MCP返回`ping not answered`。因此最新Worker修正尚未重新跑完1044帧，3.9、14.10及行为等价结论继续保持未完成；不得以源码编译替代Replay证据。

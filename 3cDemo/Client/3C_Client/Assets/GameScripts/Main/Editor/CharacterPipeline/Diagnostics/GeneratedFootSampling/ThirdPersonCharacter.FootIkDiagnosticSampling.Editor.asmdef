@@ -2,10 +2,12 @@
     "name": "ThirdPersonCharacter.FootIkDiagnosticSampling.Editor",
     "rootNamespace": "ThirdPersonCharacter.Pipeline.Diagnostics.FootIkSampling.Editor",
     "references": [
+        "KK.GeneratedDiagnosticSampling.Annotations",
         "ThirdPersonCharacter.FootIkDiagnosticSampling",
         "ThirdPersonCharacter.FootDiagnosticAnalysis.Editor",
         "ThirdPersonClient.Runtime",
         "ThirdPersonClient.Editor",
+        "ThirdPersonSimulation.Core",
         "KK.GeneratedDiagnosticSampling",
         "KK.GeneratedDiagnosticSampling.Host"
     ],

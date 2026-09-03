@@ -5,6 +5,7 @@ using KK.GeneratedDiagnosticSampling.Host;
 using ThirdPersonCharacter.Pipeline.Animation.Diagnostics;
 using ThirdPersonCharacter.Pipeline.Animation.Presentation;
 using ThirdPersonCharacter.Pipeline.Editor;
+using ThirdPersonSimulation;
 using UnityEditor;
 using UnityEngine;
 
@@ -77,6 +78,7 @@ namespace ThirdPersonCharacter.Pipeline.Diagnostics.FootIkSampling.Editor
             "Tools/3C/Diagnostics/Foot IK Generated Sampling/Reveal Last Capture";
         const int DefaultPacketCapacity = 2048;
         const int QueueCapacity = 512;
+        const string GameplayLabPlayerActorId = "gameplay-lab-player";
         static readonly string[] s_SamplerIds =
         {
             CharacterFootIkDiagnosticIdentity.CoreSamplerId,
@@ -182,13 +184,13 @@ namespace ThirdPersonCharacter.Pipeline.Diagnostics.FootIkSampling.Editor
                 throw new InvalidOperationException(
                     "Foot IK generated sampling is already active.");
             }
-            if (AnimationPresentationRuntimeTargetRegistry.Targets.Count != 1)
+            if (!AnimationPresentationRuntimeTargetRegistry.TryGet(
+                    new ActorId(GameplayLabPlayerActorId),
+                    out AnimationPresentationRuntimeTarget target))
             {
                 throw new InvalidOperationException(
-                    $"Foot IK generated sampling requires exactly one Animation Presentation target; found {AnimationPresentationRuntimeTargetRegistry.Targets.Count}.");
+                    "Gameplay Lab player Animation Presentation target is unavailable.");
             }
-            AnimationPresentationRuntimeTarget target =
-                AnimationPresentationRuntimeTargetRegistry.Targets[0];
             Guid sampleIdentity = Guid.NewGuid();
             DateTime startedUtc = DateTime.UtcNow;
             int packetCapacity = ResolvePacketCapacity(
@@ -222,7 +224,7 @@ namespace ThirdPersonCharacter.Pipeline.Diagnostics.FootIkSampling.Editor
                 in metadata);
             try
             {
-                if (!controller.Start(!controlledCaptureWindow))
+                if (!controller.Start(!startRequest.ControlledCaptureWindow))
                 {
                     throw new InvalidOperationException(
                         controller.Failure?.Message ??

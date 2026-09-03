@@ -2,6 +2,7 @@
     "name": "ThirdPersonCharacter.FootDiagnosticAnalysis.Editor",
     "rootNamespace": "ThirdPersonCharacter.Pipeline.Diagnostics.FootAnalysis.Editor",
     "references": [
+        "KK.GeneratedDiagnosticSampling.Annotations",
         "KK.GeneratedDiagnosticSampling",
         "KK.GeneratedDiagnosticSampling.Host"
     ],

@@ -21,7 +21,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
     {
         public sealed class Parameters
         {
-            [ToolParameter("Action: status, select_sampler, capture_start, capture_start_controlled, capture_window_open, capture_window_close, capture_stop, analyze_last, analyze_existing, or open_report. Defaults to status.", Required = false)]
+            [ToolParameter("Action: status, compilation_enable, compilation_disable, select_sampler, capture_start, capture_start_controlled, capture_window_open, capture_window_close, capture_stop, analyze_last, analyze_existing, or open_report. Defaults to status.", Required = false)]
             public string action { get; set; }
 
             [ToolParameter("Sampler for select_sampler: core or full.", Required = false)]
@@ -42,6 +42,12 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 switch (action.Trim().ToLowerInvariant())
                 {
                     case "status":
+                        break;
+                    case "compilation_enable":
+                        CharacterDiagnosticCompilationMode.EnableFootCapture();
+                        break;
+                    case "compilation_disable":
+                        CharacterDiagnosticCompilationMode.DisableFootCapture();
                         break;
                     case "select_sampler":
                         CharacterFootDiagnosticSampling.SelectSampler(
@@ -119,6 +125,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             {
                 action,
                 playing = EditorApplication.isPlaying,
+                capture_compilation =
+                    CharacterDiagnosticCompilationMode.IsFootCaptureEnabled,
                 sampling_available = CharacterFootDiagnosticSampling.IsAvailable,
                 analysis_available =
                     CharacterFootDiagnosticSampling.IsAnalysisAvailable,

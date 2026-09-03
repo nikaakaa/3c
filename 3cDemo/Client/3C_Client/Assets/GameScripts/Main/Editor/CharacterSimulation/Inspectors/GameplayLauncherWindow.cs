@@ -250,6 +250,24 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             string samplesPath = CharacterFootDiagnosticSampling.LastSavedPath;
             string manifestPath = CharacterFootDiagnosticSampling.LastManifestPath;
             string sampleDirectory = CharacterFootDiagnosticSampling.LastSavedDirectory;
+            bool captureCompilation = CharacterDiagnosticCompilationMode.IsFootCaptureEnabled;
+            EditorGUILayout.LabelField(
+                "Foot Diagnostic Compilation",
+                captureCompilation ? "Capture" : "Disabled");
+            using (new EditorGUILayout.HorizontalScope())
+            {
+                using (new EditorGUI.DisabledScope(IsBusy || captureCompilation))
+                {
+                    if (GUILayout.Button("Enable Foot Capture"))
+                        Execute(CharacterDiagnosticCompilationMode.EnableFootCapture);
+                }
+                using (new EditorGUI.DisabledScope(
+                           IsBusy || !captureCompilation || capturing || finalizing))
+                {
+                    if (GUILayout.Button("Disable Foot Capture"))
+                        Execute(CharacterDiagnosticCompilationMode.DisableFootCapture);
+                }
+            }
             EditorGUILayout.LabelField(
                 "Foot Landing Sampling",
                 capturing ? "Recording" : finalizing ? "Finalizing" : "Idle");
@@ -308,6 +326,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                 using (new EditorGUI.DisabledScope(
                            EditorApplication.isCompiling ||
                            !EditorApplication.isPlaying ||
+                           !CharacterFootDiagnosticSampling.IsAvailable ||
                            capturing ||
                            finalizing ||
                            m_AutoSampleStopTime > 0d))

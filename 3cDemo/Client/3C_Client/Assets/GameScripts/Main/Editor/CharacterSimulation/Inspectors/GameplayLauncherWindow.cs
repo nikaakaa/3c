@@ -461,12 +461,25 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                            string.IsNullOrEmpty(CharacterFixedInputTraceWorkflow.LastTracePath) ||
                            !File.Exists(CharacterFixedInputTraceWorkflow.LastTracePath)))
                 {
-                    if (GUILayout.Button("Replay Last + Sample"))
+                    if (GUILayout.Button("Replay Last"))
                         ExecuteSampling(CharacterFixedInputTraceWorkflow.ReplayLast);
                 }
             }
             using (new EditorGUILayout.HorizontalScope())
             {
+                using (new EditorGUI.DisabledScope(
+                           EditorApplication.isCompiling || recording || replaying || pending || sampling ||
+                           !CharacterFootDiagnosticSampling.IsAvailable ||
+                           string.IsNullOrEmpty(CharacterFixedInputTraceWorkflow.LastTracePath) ||
+                           !File.Exists(CharacterFixedInputTraceWorkflow.LastTracePath)))
+                {
+                    if (GUILayout.Button("Replay + Foot Diagnostics"))
+                    {
+                        ExecuteSampling(
+                            CharacterFixedInputTraceWorkflow
+                                .ReplayLastWithDiagnostics);
+                    }
+                }
                 using (new EditorGUI.DisabledScope(!replaying && !pending))
                 {
                     if (GUILayout.Button("Stop Replay"))

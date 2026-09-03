@@ -102,10 +102,13 @@ namespace ThirdPersonCharacter.Pipeline.Editor
     public static class CharacterFixedInputTraceWorkflow
     {
         const string Schema = "character-fixed-input-trace/3";
-        const string ReplayProofSchema = "character-fixed-input-replay-proof/4";
+        const string ReplayProofSchema = "character-fixed-input-replay-proof/5";
+        const string DiagnosticReplayProofSchema =
+            "character-fixed-input-diagnostic-replay-proof/1";
         const string ReplayTickDriveMode = "one-fixed-tick-per-presentation-frame";
         const string ReplayPresentationClockMode = "logic-locked";
         const string StandardReplayOperation = "replay";
+        const string DiagnosticReplayOperation = "diagnostic-replay";
         const string ScheduleCaptureOperation = "schedule-record";
         const string ScheduleReplayOperation = "schedule-replay";
         const string PlayerActorId = "gameplay-lab-player";
@@ -191,6 +194,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         public static string LastReplayComparison => s_LastReplayComparison;
         public static string LastPresentationSchedulePath =>
             s_LastPresentationSchedulePath;
+        public static bool OwnsReplayTickDrive => s_ReplayOwnsTickDrive;
+        public static int ReplayIssuedTickCount => s_ReplayIssuedTickCount;
         public static string TraceDirectory => ResolveTraceDirectory();
 
         public static void StartRecording()
@@ -252,6 +257,22 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 throw new FileNotFoundException($"Canonical Fixed input trace '{traceId}' was not found.");
             ReplayPath(path, StandardReplayOperation);
         }
+
+        public static void ReplayLastWithDiagnostics()
+        {
+            string path = FindLatestTracePath();
+            if (string.IsNullOrEmpty(path))
+            {
+                throw new FileNotFoundException(
+                    "No canonical Fixed input trace has been recorded.");
+            }
+            ReplayPath(path, DiagnosticReplayOperation);
+        }
+
+        public static void ReplayTraceWithDiagnostics(string traceId) =>
+            ReplayPath(
+                ResolveTracePath(traceId),
+                DiagnosticReplayOperation);
 
         public static void RecordPresentationSchedule(string traceId)
         {
@@ -348,6 +369,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         {
             RequireAvailable();
             if (operation != StandardReplayOperation &&
+                operation != DiagnosticReplayOperation &&
                 operation != ScheduleCaptureOperation &&
                 operation != ScheduleReplayOperation)
             {
@@ -401,6 +423,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         {
             s_ActiveReplayDocument ??= document;
             FixedCharacterInputTrace trace = ToRuntimeTrace(document);
+            string operation = PendingOperation;
+            bool captureFoot = RequiresFootSampling(operation);
             if (!s_ReplayWaitingForSampling)
             {
                 if (!TryResolvePlayerStartState(
@@ -416,23 +440,37 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 s_ActiveReplayRuntimeIdentity =
                     ResolveReplayRuntimeIdentity(host);
                 ResetPendingDeadline();
-                CharacterFootDiagnosticSampling.StartControlledSampling();
-                s_ReplayOwnsSampling = true;
-                s_ReplayWaitingForSampling = true;
+                if (captureFoot)
+                {
+                    if (!CharacterFootDiagnosticSampling.IsAvailable)
+                    {
+                        throw new InvalidOperationException(
+                            "Foot diagnostic replay requires the character-foot-ik capability to be compiled.");
+                    }
+                    CharacterFootDiagnosticSampling.StartControlledSampling(
+                        trace.Frames.Count);
+                    s_ReplayOwnsSampling = true;
+                    s_ReplayWaitingForSampling = true;
+                }
                 EditorApplication.isPaused = false;
-                s_LastStatus =
-                    $"Current canonical start body registered. Waiting for Foot Landing sampling before replaying {trace.Frames.Count} Fixed input frames.";
+                s_LastStatus = captureFoot
+                    ? $"Current canonical start body registered. Waiting for Foot diagnostics before replaying {trace.Frames.Count} Fixed input frames."
+                    : $"Current canonical start body registered. Replaying {trace.Frames.Count} Fixed input frames.";
             }
-            if (!CharacterFootDiagnosticSampling.IsCapturing)
+            if (captureFoot &&
+                !CharacterFootDiagnosticSampling.IsCapturing)
+            {
                 throw new InvalidOperationException(
                     string.IsNullOrEmpty(CharacterFootDiagnosticSampling.LastFailure)
                         ? "Foot Landing sampling did not start."
                         : CharacterFootDiagnosticSampling.LastFailure);
-            string operation = PendingOperation;
+            }
             FixedCharacterInputTraceModule.StartReplay();
-            CharacterFootDiagnosticSampling.OpenControlledCaptureWindow();
+            if (captureFoot)
+                CharacterFootDiagnosticSampling.OpenControlledCaptureWindow();
             s_ActiveReplayOperation = operation;
-            if (operation == StandardReplayOperation)
+            if (operation == StandardReplayOperation ||
+                operation == DiagnosticReplayOperation)
             {
                 BeginReplayTickDrive(trace.Frames.Count);
             }
@@ -464,8 +502,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             ClearPending();
             FixedCharacterInputTraceStatus status =
                 FixedCharacterInputTraceModule.Status;
-            s_LastStatus =
-                $"{operation} started for {status.FrameCount} canonical Fixed input frames with Foot Landing sampling active.";
+            s_LastStatus = captureFoot
+                ? $"{operation} started for {status.FrameCount} canonical Fixed input frames with Foot diagnostics active."
+                : $"{operation} started for {status.FrameCount} canonical Fixed input frames.";
         }
 
         static void Tick()
@@ -503,6 +542,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 return;
             }
             if (operation != StandardReplayOperation &&
+                operation != DiagnosticReplayOperation &&
                 operation != ScheduleCaptureOperation &&
                 operation != ScheduleReplayOperation)
             {
@@ -612,15 +652,17 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             {
                 PublishScheduledReplayProof();
             }
+            else if (s_ActiveReplayOperation == DiagnosticReplayOperation)
+            {
+                PublishReplayProof(true);
+            }
             else
             {
-                PublishReplayProof();
+                PublishReplayProof(false);
             }
-            s_LastStatus =
-                $"{s_ActiveReplayOperation} completed. " +
-                $"Schedule={s_LastPresentationSchedulePath}, " +
-                $"Samples={CharacterFootDiagnosticSampling.LastSavedPath}, " +
-                $"Manifest={CharacterFootDiagnosticSampling.LastManifestPath}.";
+            s_LastStatus = RequiresFootSampling(s_ActiveReplayOperation)
+                ? $"{s_ActiveReplayOperation} completed. Schedule={s_LastPresentationSchedulePath}, Samples={CharacterFootDiagnosticSampling.LastSavedPath}, Manifest={CharacterFootDiagnosticSampling.LastManifestPath}."
+                : $"{s_ActiveReplayOperation} completed. Proof={s_LastReplayProofPath}.";
             s_ActiveReplayOperation = StandardReplayOperation;
             Debug.Log(s_LastStatus);
         }
@@ -718,7 +760,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 throw new InvalidDataException(result.Summary);
         }
 
-        static void PublishReplayProof()
+        static void PublishReplayProof(bool includeFootSample)
         {
             TraceDocument trace = s_ActiveReplayDocument ??
                 throw new InvalidOperationException(
@@ -735,10 +777,14 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 throw new InvalidDataException(
                     "Fixed input replay evidence does not match the active Trace.");
             }
-            ReplayFootSampleDocument sample = ReadReplayFootSample();
+            ReplayFootSampleDocument sample = includeFootSample
+                ? ReadReplayFootSample()
+                : null;
             var document = new ReplayProofDocument
             {
-                schema = ReplayProofSchema,
+                schema = includeFootSample
+                    ? DiagnosticReplayProofSchema
+                    : ReplayProofSchema,
                 run_id = Guid.NewGuid().ToString("N"),
                 created_utc = DateTime.UtcNow.ToString(
                     "O",
@@ -757,12 +803,17 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 foot_sample = sample,
                 frames = BuildReplayProofFrames(evidence)
             };
-            string directory = ResolveReplayProofDirectory(trace.trace_id);
+            string directory = ResolveReplayProofDirectory(
+                trace.trace_id,
+                includeFootSample);
             Directory.CreateDirectory(directory);
             string baselinePath = FindLatestReplayProofPath(directory);
             if (!string.IsNullOrEmpty(baselinePath))
             {
-                ReplayProofDocument baseline = ReadReplayProof(baselinePath);
+                ReplayProofDocument baseline = ReadReplayProof(
+                    baselinePath,
+                    document.schema,
+                    includeFootSample);
                 document.comparison = CompareReplayProofs(
                     baseline,
                     document,
@@ -945,13 +996,16 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 "body_trajectory_hash",
                 baseline.body_trajectory_hash,
                 current.body_trajectory_hash);
-            AddReplayMismatch(
-                aggregate,
-                "sampling_relative_frame_count",
-                baseline.foot_sample.sampling_relative_frame_count.ToString(
-                    CultureInfo.InvariantCulture),
-                current.foot_sample.sampling_relative_frame_count.ToString(
-                    CultureInfo.InvariantCulture));
+            if (current.foot_sample != null)
+            {
+                AddReplayMismatch(
+                    aggregate,
+                    "sampling_relative_frame_count",
+                    baseline.foot_sample.sampling_relative_frame_count.ToString(
+                        CultureInfo.InvariantCulture),
+                    current.foot_sample.sampling_relative_frame_count.ToString(
+                        CultureInfo.InvariantCulture));
+            }
             AddReplayMismatch(
                 aggregate,
                 "proof_frame_count",
@@ -1087,17 +1141,20 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 $"FirstFrameFields=[{firstFrameFields}].";
         }
 
-        static ReplayProofDocument ReadReplayProof(string path)
+        static ReplayProofDocument ReadReplayProof(
+            string path,
+            string expectedSchema,
+            bool requireFootSample)
         {
             ReplayProofDocument document =
                 JsonConvert.DeserializeObject<ReplayProofDocument>(
                     File.ReadAllText(path, Encoding.UTF8));
             if (document == null ||
-                document.schema != ReplayProofSchema ||
+                document.schema != expectedSchema ||
                 document.frame_count <= 0 ||
                 document.frames == null ||
                 document.frames.Length != document.frame_count ||
-                document.foot_sample == null ||
+                requireFootSample && document.foot_sample == null ||
                 !IsRuntimeIdentityValid(document.runtime_identity))
             {
                 throw new InvalidDataException(
@@ -1130,11 +1187,14 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             AppendHash(hash, document.presentation_clock_mode);
             AppendHash(hash, document.input_sequence_hash);
             AppendHash(hash, document.body_trajectory_hash);
-            AppendHash(
-                hash,
-                document.foot_sample.sampling_relative_frame_count.ToString(
-                    CultureInfo.InvariantCulture));
-            AppendHash(hash, document.foot_sample.samples_sha256);
+            if (document.foot_sample != null)
+            {
+                AppendHash(
+                    hash,
+                    document.foot_sample.sampling_relative_frame_count.ToString(
+                        CultureInfo.InvariantCulture));
+                AppendHash(hash, document.foot_sample.samples_sha256);
+            }
             for (int i = 0; i < document.frames.Length; i++)
             {
                 ReplayProofFrameDocument frame = document.frames[i];
@@ -1213,14 +1273,16 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 .OrderByDescending(File.GetLastWriteTimeUtc)
                 .FirstOrDefault() ?? string.Empty;
 
-        static string ResolveReplayProofDirectory(string traceId) =>
+        static string ResolveReplayProofDirectory(
+            string traceId,
+            bool diagnostic) =>
             Path.Combine(
                 Path.GetFullPath(Path.Combine(
                     Application.dataPath,
                     "..",
                     "Temp",
                     "CharacterInputReplayProofs",
-                    "v4")),
+                    diagnostic ? "diagnostic-v1" : "v5")),
                 traceId);
 
         static void StartPendingPlayMode()
@@ -1587,6 +1649,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 return;
             }
             if (operation != StandardReplayOperation &&
+                operation != DiagnosticReplayOperation &&
                 operation != ScheduleCaptureOperation &&
                 operation != ScheduleReplayOperation)
             {
@@ -1718,6 +1781,11 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             }
         }
 
+        static bool RequiresFootSampling(string operation) =>
+            operation == DiagnosticReplayOperation ||
+            operation == ScheduleCaptureOperation ||
+            operation == ScheduleReplayOperation;
+
         static PendingLaunchPhase ReadPendingLaunchPhase()
         {
             var phase = (PendingLaunchPhase)EditorPrefs.GetInt(
@@ -1812,6 +1880,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             public string presentation_clock_mode;
             public string input_sequence_hash;
             public string body_trajectory_hash;
+            [JsonProperty(NullValueHandling = NullValueHandling.Ignore)]
             public ReplayFootSampleDocument foot_sample;
             public ReplayProofFrameDocument[] frames;
             public ReplayComparisonDocument comparison;

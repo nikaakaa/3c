@@ -78,14 +78,25 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 ? workflow.LastFailure
                 : string.Empty;
 
-        public static void StartSampling() =>
-            Require().Start(false);
+        public static void StartSampling()
+        {
+            var request = new DiagnosticSamplingStartRequest(false, 0);
+            Require().Start(in request);
+        }
 
         public static void SelectSampler(string samplerId) =>
             Require().SelectSampler(samplerId);
 
         public static void StartControlledSampling() =>
-            Require().Start(true);
+            StartControlledSampling(0);
+
+        public static void StartControlledSampling(int minimumFrameCount)
+        {
+            var request = new DiagnosticSamplingStartRequest(
+                true,
+                minimumFrameCount);
+            Require().Start(in request);
+        }
 
         public static void OpenControlledCaptureWindow() =>
             Require().OpenControlledCaptureWindow();

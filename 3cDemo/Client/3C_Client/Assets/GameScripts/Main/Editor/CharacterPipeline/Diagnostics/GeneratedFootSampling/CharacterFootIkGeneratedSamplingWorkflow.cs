@@ -53,9 +53,9 @@ namespace ThirdPersonCharacter.Pipeline.Diagnostics.FootIkSampling.Editor
                 CharacterFootIkGeneratedSamplingWorkflow.SelectSampler(
                     samplerId);
 
-            public void Start(bool controlledCaptureWindow) =>
+            public void Start(in DiagnosticSamplingStartRequest request) =>
                 CharacterFootIkGeneratedSamplingWorkflow.Start(
-                    controlledCaptureWindow);
+                    in request);
 
             public void OpenControlledCaptureWindow() =>
                 CharacterFootIkGeneratedSamplingWorkflow
@@ -75,7 +75,7 @@ namespace ThirdPersonCharacter.Pipeline.Diagnostics.FootIkSampling.Editor
             "Tools/3C/Diagnostics/Foot IK Generated Sampling/Stop and Save";
         const string RevealMenu =
             "Tools/3C/Diagnostics/Foot IK Generated Sampling/Reveal Last Capture";
-        const int PacketCapacity = 2048;
+        const int DefaultPacketCapacity = 2048;
         const int QueueCapacity = 512;
         static readonly string[] s_SamplerIds =
         {
@@ -141,7 +141,11 @@ namespace ThirdPersonCharacter.Pipeline.Diagnostics.FootIkSampling.Editor
                 : string.Empty;
 
         [MenuItem(StartMenu)]
-        static void StartFromMenu() => Start(false);
+        static void StartFromMenu()
+        {
+            var request = new DiagnosticSamplingStartRequest(false, 0);
+            Start(in request);
+        }
 
         public static void SelectSampler(string samplerId)
         {
@@ -166,7 +170,7 @@ namespace ThirdPersonCharacter.Pipeline.Diagnostics.FootIkSampling.Editor
             s_SelectedSamplerId = samplerId;
         }
 
-        public static void Start(bool controlledCaptureWindow)
+        public static void Start(in DiagnosticSamplingStartRequest startRequest)
         {
             if (!EditorApplication.isPlaying)
             {
@@ -187,6 +191,8 @@ namespace ThirdPersonCharacter.Pipeline.Diagnostics.FootIkSampling.Editor
                 AnimationPresentationRuntimeTargetRegistry.Targets[0];
             Guid sampleIdentity = Guid.NewGuid();
             DateTime startedUtc = DateTime.UtcNow;
+            int packetCapacity = ResolvePacketCapacity(
+                startRequest.MinimumEventCount);
             s_OutputRoot = Path.GetFullPath(Path.Combine(
                 Application.dataPath,
                 "..",
@@ -196,7 +202,7 @@ namespace ThirdPersonCharacter.Pipeline.Diagnostics.FootIkSampling.Editor
             var request = new DiagnosticCaptureStartRequest(
                 "presentation-commit/1",
                 CharacterFootIkCommitDiagnosticEvent.LineageTypeIdentity,
-                PacketCapacity,
+                packetCapacity,
                 QueueCapacity,
                 DiagnosticBinaryPacketWriter.TransportIdentity,
                 s_SelectedSamplerId,
@@ -230,8 +236,10 @@ namespace ThirdPersonCharacter.Pipeline.Diagnostics.FootIkSampling.Editor
                 s_LastManifestPath = string.Empty;
                 s_LastMainCsvPath = string.Empty;
                 s_LastArtifacts.Clear();
-                s_ControlledCaptureWindow = controlledCaptureWindow;
-                s_CaptureWindowOpen = !controlledCaptureWindow;
+                s_ControlledCaptureWindow =
+                    startRequest.ControlledCaptureWindow;
+                s_CaptureWindowOpen =
+                    !startRequest.ControlledCaptureWindow;
                 Debug.Log(
                     $"Foot IK generated sampling started: {s_OutputRoot}");
             }
@@ -247,6 +255,15 @@ namespace ThirdPersonCharacter.Pipeline.Diagnostics.FootIkSampling.Editor
             EditorApplication.isPlaying &&
             s_Controller == null &&
             !EditorApplication.isCompiling;
+
+        static int ResolvePacketCapacity(int minimumEventCount)
+        {
+            int required = checked(minimumEventCount * 2 + 1);
+            int capacity = DefaultPacketCapacity;
+            while (capacity < required)
+                capacity = checked(capacity * 2);
+            return capacity;
+        }
 
         public static void OpenControlledCaptureWindow()
         {

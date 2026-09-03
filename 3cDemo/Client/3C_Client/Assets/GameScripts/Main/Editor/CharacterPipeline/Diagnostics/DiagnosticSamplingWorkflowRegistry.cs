@@ -3,6 +3,22 @@ using System.Collections.Generic;
 
 namespace ThirdPersonCharacter.Pipeline.Editor
 {
+    public readonly struct DiagnosticSamplingStartRequest
+    {
+        public DiagnosticSamplingStartRequest(
+            bool controlledCaptureWindow,
+            int minimumEventCount)
+        {
+            if (minimumEventCount < 0)
+                throw new ArgumentOutOfRangeException(nameof(minimumEventCount));
+            ControlledCaptureWindow = controlledCaptureWindow;
+            MinimumEventCount = minimumEventCount;
+        }
+
+        public bool ControlledCaptureWindow { get; }
+        public int MinimumEventCount { get; }
+    }
+
     public interface IDiagnosticSamplingWorkflow
     {
         string CapabilityId { get; }
@@ -22,7 +38,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         int LastSavedFrameCount { get; }
         string GetArtifactPath(string artifactId);
         void SelectSampler(string samplerId);
-        void Start(bool controlledCaptureWindow);
+        void Start(in DiagnosticSamplingStartRequest request);
         void OpenControlledCaptureWindow();
         void CloseControlledCaptureWindow();
         void StopAndSave();

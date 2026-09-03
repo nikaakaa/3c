@@ -23,7 +23,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
     {
         public sealed class Parameters
         {
-            [ToolParameter("Action: record_start, record_stop, replay_last, replay_start, schedule_record_start, schedule_replay_start, list_traces, status, or stop. Defaults to status.", Required = false)]
+            [ToolParameter("Action: record_start, record_stop, replay_last, replay_start, diagnostic_replay_start, schedule_record_start, schedule_replay_start, list_traces, status, or stop. Defaults to status.", Required = false)]
             public string action { get; set; }
 
             [ToolParameter("Exact trace_id returned by record_stop or list_traces. Used by replay_start; omitted means latest.", Required = false)]
@@ -50,6 +50,16 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     case "replay_start":
                         CharacterFixedInputTraceWorkflow.ReplayTrace(traceId);
                         return Success("Canonical Fixed input replay requested.", false);
+                    case "diagnostic_replay_start":
+                        if (string.IsNullOrWhiteSpace(traceId))
+                            CharacterFixedInputTraceWorkflow
+                                .ReplayLastWithDiagnostics();
+                        else
+                            CharacterFixedInputTraceWorkflow
+                                .ReplayTraceWithDiagnostics(traceId);
+                        return Success(
+                            "Canonical Fixed input replay with Foot diagnostics requested.",
+                            false);
                     case "schedule_record_start":
                         CharacterFixedInputTraceWorkflow.RecordPresentationSchedule(
                             traceId);
@@ -94,6 +104,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 data = new
                 {
                     playing = EditorApplication.isPlaying,
+                    paused = EditorApplication.isPaused,
                     pending = CharacterFixedInputTraceWorkflow.IsPending,
                     pending_operation = CharacterFixedInputTraceWorkflow.PendingOperation,
                     mode = status.Mode.ToString(),
@@ -101,6 +112,12 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     actor_id = status.ActorId,
                     frame_count = status.FrameCount,
                     replayed_frame_count = status.ReplayedFrameCount,
+                    replay_tick_drive_owned =
+                        CharacterFixedInputTraceWorkflow
+                            .OwnsReplayTickDrive,
+                    replay_issued_tick_count =
+                        CharacterFixedInputTraceWorkflow
+                            .ReplayIssuedTickCount,
                     trace_status = status.Message,
                     workflow_status = CharacterFixedInputTraceWorkflow.LastStatus,
                     failure = CharacterFixedInputTraceWorkflow.LastFailure,

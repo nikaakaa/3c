@@ -405,6 +405,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 supportNormal,
                 CharacterFootCorrectionResponseDomain.ContactWorldResidual,
                 captureTransition,
+                false,
                 in frame);
             Vector3 responseOutputPoint = response.OutputPoint;
             CharacterFootCorrectionResponseFact correctionResponseFact = response.Fact;
@@ -547,6 +548,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 target.SupportTarget.SupportNormal,
                 CharacterFootCorrectionResponseDomain.AnimationRelativeScalar,
                 target.StateEntered,
+                false,
                 in frame);
             Vector3 releaseOutputPoint = response.OutputPoint;
             CharacterFootCorrectionResponseFact correctionResponseFact = response.Fact;
@@ -618,6 +620,11 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 ? Mathf.Abs(Vector3.Dot(
                     swingPath.LandingPoint - previousLandingPoint,
                     up))
+                : 0f;
+            float landingHeightChange = comparablePath
+                ? Vector3.Dot(
+                    swingPath.LandingPoint - previousLandingPoint,
+                    up)
                 : 0f;
             bool sameEvent = comparablePath &&
                              previousLandingEventIdentity ==
@@ -762,7 +769,20 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                            CharacterFootPathRevisionReason.None;
             bool targetTrackingApplied = groundPathInputChanged &&
                 targetDelta > frame.Settings.PathRevisionDistance;
-            if (revised || targetTrackingApplied)
+            bool lateDownwardLandingRevision =
+                groundPathInputChanged &&
+                (revisionReason & CharacterFootPathRevisionReason
+                    .LandingPointChanged) != 0 &&
+                landingHeightChange < -frame.Settings.PathRevisionDistance &&
+                target.TimeToLandingSeconds >= 0f &&
+                target.TimeToLandingSeconds <=
+                frame.DeltaSeconds * 2f +
+                CharacterFootConstraintMath.GeometryEpsilon;
+            if (lateDownwardLandingRevision)
+            {
+                state.SwingResidual = default;
+            }
+            else if (revised || targetTrackingApplied)
             {
                 state.SwingResidual =
                     state.EffectiveCorrection - swingTargetCorrection;
@@ -802,6 +822,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     target.SupportTarget.SupportNormal,
                     CharacterFootCorrectionResponseDomain.AnimationRelativeScalar,
                     false,
+                    lateDownwardLandingRevision,
                     in frame);
                 Vector3 responseOutputPoint = response.OutputPoint;
                 correctionResponseFact = response.Fact;
@@ -897,6 +918,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             Vector3 responseDirection,
             CharacterFootCorrectionResponseDomain domain,
             bool targetContinuityCaptured,
+            bool bypassRateTracking,
             in CharacterFootStateFrame frame)
         {
             if ((domain != CharacterFootCorrectionResponseDomain.AnimationRelativeScalar &&
@@ -1007,15 +1029,23 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     deltaDirection = delta > 0f
                         ? CharacterFootCorrectionResponseDeltaDirection.Increase
                         : CharacterFootCorrectionResponseDeltaDirection.Decrease;
-                    selectedSpeed = delta > 0f
-                        ? frame.Settings.CorrectionResponseIncreaseSpeed
-                        : frame.Settings.CorrectionResponseDecreaseSpeed;
-                    float maximumDelta = selectedSpeed * frame.DeltaSeconds;
-                    appliedDelta = Mathf.Clamp(
-                        delta,
-                        -maximumDelta,
-                        maximumDelta);
-                    currentResponse = previousResponse + appliedDelta;
+                    if (bypassRateTracking)
+                    {
+                        appliedDelta = delta;
+                        currentResponse = desiredResponse;
+                    }
+                    else
+                    {
+                        selectedSpeed = delta > 0f
+                            ? frame.Settings.CorrectionResponseIncreaseSpeed
+                            : frame.Settings.CorrectionResponseDecreaseSpeed;
+                        float maximumDelta = selectedSpeed * frame.DeltaSeconds;
+                        appliedDelta = Mathf.Clamp(
+                            delta,
+                            -maximumDelta,
+                            maximumDelta);
+                        currentResponse = previousResponse + appliedDelta;
+                    }
                 }
             }
             Vector3 responseOutputPoint = contactWorldResidual

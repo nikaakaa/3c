@@ -63,7 +63,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                         correction,
                         minimum,
                         frame.ComponentUp,
-                        false);
+                        true);
                 }
                 case CharacterFootConstraintState.Swing when swing.Accepted:
                 case CharacterFootConstraintState.UnlockedSupport

@@ -183,6 +183,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             Vector3 currentOutputBefore = previousResponseOutputAvailable
                 ? state.PreviousResponseOutputPoint
                 : originalSole + swing.Correction;
+            bool releaseResponseHandoff = state.PendingReleaseResponseRebase;
             if (state.PendingReleaseResponseRebase &&
                 previousResponseOutputAvailable &&
                 state.ResponseHistory.HasValue &&
@@ -378,6 +379,10 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             Vector3 residualBeforeCapture = state.PlantWorldResidual;
             bool captureTransition = captureReason !=
                                      CharacterFootPlantResidualCaptureReason.None;
+            bool contactHandoffResidual = releaseResponseHandoff &&
+                                          captureTransition &&
+                                          target.StateEntered &&
+                                          target.PlantTargetVerified;
             Vector3 continuityOutputBefore = currentOutputBefore;
             if (captureTransition)
             {
@@ -405,6 +410,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     frame.Settings,
                     out residualDeadlineHalfLifeAvailable,
                     out residualDeadlineHalfLifeSeconds);
+                if (contactHandoffResidual)
+                    residualAppliedHalfLifeSeconds *= 0.5f;
                 residualDecayApplied = true;
                 state.PlantWorldResidual = Advance(
                     state.PlantWorldResidual,

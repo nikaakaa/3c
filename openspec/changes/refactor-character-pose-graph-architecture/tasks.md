@@ -160,7 +160,7 @@
 - [x] 13.9 删除Preview简化Executor、逐Preview第二Native Program、临时Program、默认World Context和Stale Projection fallback
 - [ ] 13.10 将具体`CharacterFootIkCommittedCaptureViewLease`在既有Post-Commit短租约内交给外部Foot Diagnostics consumer，由consumer绑定Left View／Metadata与Right View／Metadata并发布CommittedSample Event；Generated Lifecycle自动租packet、调用AOT Program和提交，PoseGraph不得引用框架Runtime或Foot插件的Event、Generator、Generated Program、packet、Host、Build类型，也不得增加Bridge、临时DTO、第二Snapshot或双写链
 - [ ] 13.11 对账框架sealed packet经Schema-driven Host自动生成的主表／子表字段业务含义、原始输入／几何引用、评分权重／资格／分母保持；确认不存在Foot Host Adapter、手写Column／CsvBinding或第二Schema，保留历史原包且不用总分变化替代行为对账
-- [ ] 13.12 让Runtime、Preview、Pose Watch与Live Debug只在全部Worker／Managed Completion完成且根事务成功Seal后读取Committed Result，保存Batch／Kernel／Completion lineage；删除诊断触发等待、重放或重新调度Kernel的路径
+- [x] 13.12 让Runtime、Preview、Pose Watch与Live Debug只在全部Worker／Managed Completion完成且根事务成功Seal后读取Committed Result，保存Batch／Kernel／Completion lineage；删除诊断触发等待、重放或重新调度Kernel的路径
 
 ## 14. 激进清理与最终一致性
 
@@ -174,6 +174,6 @@
 - [ ] 14.8 执行`git diff --check`、本change严格校验和全量严格OpenSpec校验
 - [x] 14.9 核对未恢复中央Foot状态机、骨盆Reach硬夹紧、末端夹脚、已撤销SmoothKnee或CurrentSupport替代Swing包络候选，保留指定基线的有符号膝向运输，已保留第一阶段IK维护成果，未接管其它未实施IK行为任务
 - [ ] 14.10 每个代码小步复用现有正式输入Replay／Proof和诊断链，对指定基线与上一保留小步分别保存输入、Body、source时间、Foot／Pelvis／Goal／Solved／Physical的差异；未解释业务差异时停止，不用调参或改评分补偿
-- [ ] 14.11 将Reset、Projection Replacement与Dispose接入唯一Scheduler fence，完成Outstanding Job后再释放actor-local Execution View、Frame页与Module状态；搜索并消除悬空Native页与跨Actor状态污染
+- [x] 14.11 将Reset、Projection Replacement与Dispose接入唯一Scheduler fence，完成Outstanding Job后再释放actor-local Execution View、Frame页与Module状态；搜索并消除悬空Native页与跨Actor状态污染
 - [ ] 14.12 执行正式IL2CPP／Burst AOT产物闭包检查和Performance Capture，分别记录总Presentation、Main Thread、Worker、Job等待与多Actor批次规模；不通过运行时fallback适配缺失平台能力
-- [ ] 14.13 搜索并确认不存在动画预算、Phase Offset、跳帧、旧Pose复用或插值补帧路径；Worker资源压力只按现有精确Completion与Fault政策处理
+- [x] 14.13 搜索并确认不存在动画预算、Phase Offset、跳帧、旧Pose复用或插值补帧路径；Worker资源压力只按现有精确Completion与Fault政策处理

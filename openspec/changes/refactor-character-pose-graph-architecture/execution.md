@@ -1298,3 +1298,13 @@ Runtime与Editor工程均使用规定参数编译通过，结果0错误；每次
 `CharacterAnimationPresentationRuntime`已经删除同步`Present`、Sequence Preview旁路、Scheduler字段和Scheduler生命周期所有权，只保留Begin／TryAdvance／Complete的根帧协议。正式Gameplay由`CharacterPoseWorkerPresentationSession`驱动；Preview由显式`CharacterPoseWorkerPreviewAdapter`驱动并独立拥有自己的Scheduler，两个Adapter共用同一个Program Runtime、Frame页和Kernel，不再让根动画Runtime维护第二套调度路径。未使用的`CharacterSimulationPresentationRuntime.PresentAnimation`旁路同时删除，提交为`6e83d88e6`。
 
 上述修改后Runtime与Editor工程再次使用规定参数编译通过，均为0错误，并已关闭全部.NET Build Server。11.9、11.13与12.13的源码实现已经闭合；最终勾选仍与12.12、14.10、14.11一起等待同一1044帧Replay确认。当前剩余结构问题只保留Worker Actor写页的typed物理切片，以及Unity主线程恢复后的实际Burst执行证据。
+
+## 收口Worker写页、诊断与资源压力政策
+
+状态：Worker Actor不再只用Pose首地址代表整个可写Frame。`CharacterPoseValuePageSlice`现在逐项比较Pose、Velocity、Parameter、Contribution、Foot Feature、Availability、Continuity、Discontinuity、Operation Completion和Graph Invalid全部可写页；任一页共享都会在Submit阶段拒绝，只有明确互不重叠的Actor Pending页才能进入IJobParallelFor。提交为`90c18c43d`。
+
+Operation Detail诊断现在为每个Operation保存Worker Batch Index／Identity、Family Kernel与Dependency Wave，并与既有Operation Completion Identity一起只在根事务成功提交后的Committed页中发布；Managed Operation使用显式None／-1身份。Diagnostics代码不调用Scheduler、不等待Job、不重放或重新调度Kernel，任务13.12完成，提交为`3693b257b`。
+
+运行时代码搜索没有动画预算、Phase Offset、跳帧、旧Pose复用、Pose插值补帧、节流、LOD或按帧率降级路径。Animator构造仍强制`AlwaysAnimate`；每个有效表现帧都经Begin／Worker与Managed Completion／Complete／Seal，资源压力继续按现有精确Completion与Fault政策失败，不复用旧Pose，任务14.13完成。Reset、注销、Projection整体替换和Dispose均通过Actor Registration先Fence Outstanding Handle，再释放Execution View、Frame页与Module状态；Submit同时拒绝重复Actor和任一共享写页，任务14.11完成。
+
+本change strict校验再次通过；全量strict为100项通过、9项失败，失败属于其它现存change／spec，未跨范围修改。MCP Server已独立重启并重新监听8080，精确实例`3C_Client@e852139597e42532`重新注册后仍对主线程命令返回`ping not answered`，进一步确认阻塞位于Unity Editor进程而非MCP Server。

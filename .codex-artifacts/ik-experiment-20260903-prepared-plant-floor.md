@@ -20,3 +20,5 @@
 - 形式诊断的穿透、接触间隙、Contact 跳变和 Plant 跳变计数没有下降，现有诊断因缺少稳定 Swing target correction 证据没有捕获这类新增跳变。
 
 原因：PreparedPlant 的未来落点 floor 被当成了当前 Swing 的硬输出约束，脚在接触前提前追到未来 PlantTarget，造成楼梯级别的抬脚和腿部姿态变化。该 floor 只能作为证据或在明确的接触拥有阶段应用，不能无条件作用于 PreparedPlantActive 的 Swing。
+
+基线 Swing 观察：恢复包的 1032 个连续 Swing 对中，748 个最终 correction 输出超过 2cm，357 个 correction 本身超过 2cm；大位移多数来自动画 OriginalSole 与 correction 叠加。代表帧 Left 2059→2061 的动画 sole 下移 12.9cm、correction 再下移 2.5cm，最终 sole 下移 15.4cm；2067→2069 的 Path 接受与 Contact 状态切换又使 correction 上跳约 7.6cm。现有 Stable Swing 规则因缺少 path-current-target-correction 证据而未计入，这也是新增测试要补的缺口。

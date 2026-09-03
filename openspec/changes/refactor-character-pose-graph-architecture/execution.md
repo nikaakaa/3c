@@ -1341,3 +1341,7 @@ Operation Detail诊断现在为每个Operation保存Worker Batch Index／Identit
 ## 诊断编译开启时普通Replay仍保持独立
 
 状态：在同一Standalone编译选项保持开启的前提下，再次使用trace `43357ff3cd384e5cba75d2c31175b116`执行普通Fixed Replay。证明文件为`3cDemo/Client/3C_Client/Temp/CharacterInputReplayProofs/v5/43357ff3cd384e5cba75d2c31175b116/20260903-155458-200-f27935372b4a49af9b074643cabb1729.json`，工作流结果为`matched:1044`，状态同时明确`foot_sampling=false`、`foot_sampling_available=true`。这证明诊断程序集已编译并不等于普通回放会启动或等待Foot采样，普通Replay与显式Diagnostic Replay仍是两条业务操作而不是隐藏耦合。
+
+## 当前生成诊断的重复运行校验
+
+状态：对两次独立Diagnostic Replay生成的Full CSV（`20260903-070157-780a1e7d190b47f996b5671e2aa34534`与`20260903-074709-8b00a2b85c07406a9e693727ec0690e7`）按`lineage.high + dimension`对齐，忽略采样Identity、时间、实例、Revision和Frame Identity等运行身份字段，并使用同一布尔／枚举／`1e-4`数值归一化规则比较。两次均为2088行；剩余1,897,992个行为单元全部一致，没有发现当前实现自身的随机漂移。由此可把前一节相对旧A的701个差异归为旧数据几何／身份或中间诊断语义差异候选，而不是当前Worker链每次运行不稳定。

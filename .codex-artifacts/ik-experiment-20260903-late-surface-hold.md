@@ -10,6 +10,8 @@
 
 结果：失败，已回退。
 
+回退提交：`374ca75da`
+
 本轮只在 `CaptureNextSwing` 增加一条准入：同一 Landing Event 已有 NextSwingLanding，查询包含 `PredictionInputDistanceExceeded` 且 SurfaceIdentity 改变时，保留旧目标，不写入新的预测目标。
 
 回放与基线按 `sample.sequence + sample.dimension` 对齐，均为 2088 行。

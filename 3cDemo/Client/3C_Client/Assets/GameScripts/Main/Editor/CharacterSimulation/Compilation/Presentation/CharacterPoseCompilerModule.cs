@@ -65,30 +65,29 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                 return new CharacterPoseCompilationResult(null, diagnostics);
             }
             CharacterPoseCompilationPass currentPass =
-                CharacterPoseCompilationPass.BindFamilyPayload;
+                CharacterPoseCompilationPass.SymbolicFamilyLowering;
             try
             {
-                currentPass = CharacterPoseCompilationPass.BindFamilyPayload;
-                CharacterPoseFamilyPayloadBinding binding =
-                    CharacterPoseFamilyPayloadBindingPass.Run(
+                CharacterPoseFamilyPayloadPlan payloadPlan =
+                    CharacterPoseFamilyPayloadPlanPass.Run(
                         request,
                         closureResult.Closure,
                         topologyResult.Catalog,
                         symbolicResult.Program);
                 CharacterPoseBoundFamilyPayloads payloads =
-                    binding.Payloads;
+                    payloadPlan.Payloads;
                 CharacterPoseBoundProgramLayout layout =
-                    binding.Layout;
+                    payloadPlan.Layout;
                 currentPass = CharacterPoseCompilationPass.StageSchedule;
                 CharacterPoseStageSchedule schedule =
                     CharacterPoseStageSchedulePass.Run(
                         symbolicResult.Program,
-                        binding.Operations,
+                        payloadPlan.Operations,
                         payloads.LinkedPoseFragments);
                 currentPass = CharacterPoseCompilationPass.ValueLifetime;
                 CharacterPoseValueLifetime valueLifetime =
                     CharacterPoseValueLifetimePass.Run(
-                        binding.Operations,
+                        payloadPlan.Operations,
                         schedule,
                         layout.PoseValueCount,
                         payloads.Parameters.Length,
@@ -102,7 +101,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                 currentPass = CharacterPoseCompilationPass.WorkspacePlan;
                 CharacterMotionMatchingPosePlanCompilation motionMatching =
                     CharacterMotionMatchingPosePlanCompiler.Compile(
-                        binding,
+                        payloadPlan,
                         request.Asset,
                         request.Rig,
                         request.MotionMatching,
@@ -113,7 +112,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                         valueLifetime,
                         schedule,
                         request.Rig,
-                        binding.Operations,
+                        payloadPlan.Operations,
                         payloads.BlendNodes,
                         layout.PlayerCount,
                         layout.InertializationCount,
@@ -129,20 +128,28 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                 CharacterPoseWorkerPlan workerPlan =
                     CharacterPoseWorkerBatchPlanPass.Run(
                         request,
-                        binding,
+                        payloadPlan,
                         symbolicResult.Program,
                         schedule,
                         workspace);
-                currentPass = CharacterPoseCompilationPass.SealProgramImage;
+                currentPass = CharacterPoseCompilationPass.BindFamilyPayload;
                 CharacterPresentationInertializationDescriptor[]
                     inertializations =
                         CharacterPresentationInertializationPlanCompiler
                             .Compile(
-                                binding,
+                                payloadPlan,
                                 request.Asset,
                                 request.Rig,
                                 request.CurveIndices,
                                 request.ProfileIndicesByIdentity);
+                CharacterPoseFamilyPayloadBinding binding =
+                    CharacterPoseFamilyPayloadBindingPass.Run(
+                        request,
+                        payloadPlan,
+                        schedule,
+                        workspace,
+                        workerPlan);
+                currentPass = CharacterPoseCompilationPass.SealProgramImage;
                 CharacterPoseProgramImage image =
                     CharacterPoseProgramImageSealPass.Run(
                         request,

@@ -11,7 +11,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
     static class CharacterPresentationInertializationPlanCompiler
     {
         public static CharacterPresentationInertializationDescriptor[] Compile(
-            CharacterPoseFamilyPayloadBinding binding,
+            CharacterPoseFamilyPayloadPlan binding,
             CharacterPresentationPoseGraphAsset graphAsset,
             CharacterAnimationRigDefinition rig,
             IReadOnlyDictionary<string, int> curveIndices,

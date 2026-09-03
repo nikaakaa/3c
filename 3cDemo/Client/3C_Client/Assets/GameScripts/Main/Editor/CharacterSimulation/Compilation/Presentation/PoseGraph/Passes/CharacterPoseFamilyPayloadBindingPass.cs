@@ -12,7 +12,7 @@ using UnityEngine;
 
 namespace ThirdPersonCharacter.Editor.CharacterSimulation
 {
-    internal static class CharacterPoseFamilyPayloadBindingPass
+    internal static class CharacterPoseFamilyPayloadPlanPass
     {
         readonly struct CompiledValue
         {
@@ -165,7 +165,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             public int SymbolicOperationCursor { get; set; }
         }
 
-        internal static CharacterPoseFamilyPayloadBinding Run(
+        internal static CharacterPoseFamilyPayloadPlan Run(
             CharacterPoseCompilationRequest request,
             CharacterPoseGraphClosure graphClosure,
             CharacterPoseTopologyCatalog topology,
@@ -253,7 +253,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                 state.PlayerCount,
                 state.InertializationCount,
                 state.OutputOperationIndex);
-            return new CharacterPoseFamilyPayloadBinding(
+            return new CharacterPoseFamilyPayloadPlan(
                 payloads,
                 state.Operations.ToArray(),
                 state.SourceMap.ToArray(),

@@ -75,7 +75,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
         }
 
         internal static CharacterMotionMatchingPosePlanCompilation Compile(
-            CharacterPoseFamilyPayloadBinding pose,
+            CharacterPoseFamilyPayloadPlan pose,
             CharacterPresentationPoseGraphAsset graphAsset,
             CharacterAnimationRigDefinition rig,
             MotionMatchingProjectionPayload motionMatching,

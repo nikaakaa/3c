@@ -42,7 +42,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
 
         internal static CharacterPoseWorkerPlan Run(
             CharacterPoseCompilationRequest request,
-            CharacterPoseFamilyPayloadBinding binding,
+            CharacterPoseFamilyPayloadPlan binding,
             CharacterPoseSymbolicProgram symbolicProgram,
             CharacterPoseStageSchedule schedule,
             CharacterPoseWorkspacePlan workspace)
@@ -75,7 +75,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
 
         static CharacterPoseWorkerPlan RunCore(
             CharacterPoseCompilationRequest request,
-            CharacterPoseFamilyPayloadBinding binding,
+            CharacterPoseFamilyPayloadPlan binding,
             CharacterPoseSymbolicProgram symbolicProgram,
             CharacterPoseStageSchedule schedule,
             CharacterPoseWorkspacePlan workspace)
@@ -235,13 +235,6 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                 rigLayout,
                 kernelSet,
                 batches.ToArray());
-            result.RequireValid(
-                binding.OperationPages,
-                schedule.Stages,
-                workspace.PoseValueCapacity,
-                workspace.FrameCacheCapacity,
-                request.Rig.RigId,
-                request.Rig.Revision);
             return result;
         }
 

@@ -268,9 +268,9 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
         internal int OutputOperationIndex { get; }
     }
 
-    internal sealed class CharacterPoseFamilyPayloadBinding
+    internal sealed class CharacterPoseFamilyPayloadPlan
     {
-        internal CharacterPoseFamilyPayloadBinding(
+        internal CharacterPoseFamilyPayloadPlan(
             CharacterPoseBoundFamilyPayloads payloads,
             CharacterPoseBoundOperation[] operations,
             CharacterPresentationPoseSourceMapEntry[] sourceMap,
@@ -289,9 +289,6 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                     nameof(layout));
             }
             Layout = layout;
-            OperationPages = CharacterPoseOperationPageBinding.Create(
-                Operations,
-                Payloads);
         }
 
         internal CharacterPoseBoundFamilyPayloads Payloads { get; }
@@ -299,6 +296,52 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
         internal CharacterPresentationPoseSourceMapEntry[] SourceMap { get; }
         internal string[] GraphDependencies { get; }
         internal CharacterPoseBoundProgramLayout Layout { get; }
+    }
+
+    internal sealed class CharacterPoseFamilyPayloadBinding
+    {
+        internal CharacterPoseFamilyPayloadBinding(
+            CharacterPoseFamilyPayloadPlan plan)
+        {
+            Plan = plan ?? throw new ArgumentNullException(nameof(plan));
+            OperationPages = CharacterPoseOperationPageBinding.Create(
+                plan.Operations,
+                plan.Payloads);
+        }
+
+        internal CharacterPoseFamilyPayloadPlan Plan { get; }
+        internal CharacterPoseBoundFamilyPayloads Payloads => Plan.Payloads;
+        internal CharacterPoseBoundOperation[] Operations => Plan.Operations;
+        internal CharacterPresentationPoseSourceMapEntry[] SourceMap =>
+            Plan.SourceMap;
+        internal string[] GraphDependencies => Plan.GraphDependencies;
+        internal CharacterPoseBoundProgramLayout Layout => Plan.Layout;
         internal CharacterPoseOperationPages OperationPages { get; }
+    }
+
+    internal static class CharacterPoseFamilyPayloadBindingPass
+    {
+        internal static CharacterPoseFamilyPayloadBinding Run(
+            CharacterPoseCompilationRequest request,
+            CharacterPoseFamilyPayloadPlan plan,
+            CharacterPoseStageSchedule schedule,
+            CharacterPoseWorkspacePlan workspace,
+            CharacterPoseWorkerPlan workerPlan)
+        {
+            if (request == null || plan == null || schedule == null ||
+                workspace == null || workerPlan == null)
+            {
+                throw new ArgumentNullException(nameof(plan));
+            }
+            var result = new CharacterPoseFamilyPayloadBinding(plan);
+            workerPlan.RequireValid(
+                result.OperationPages,
+                schedule.Stages,
+                workspace.PoseValueCapacity,
+                workspace.FrameCacheCapacity,
+                request.Rig.RigId,
+                request.Rig.Revision);
+            return result;
+        }
     }
 }

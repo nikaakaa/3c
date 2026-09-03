@@ -15,6 +15,44 @@ using UnityEngine;
 
 namespace ThirdPersonCharacter.Pipeline
 {
+    internal sealed class CharacterPoseWorkerPreviewAdapter : IDisposable
+    {
+        readonly CharacterPoseWorkerScheduler m_Scheduler =
+            new CharacterPoseWorkerScheduler();
+
+        internal CharacterPoseWorkerScheduler Scheduler => m_Scheduler;
+
+        internal ComposedAnimationPoseFrame Complete(
+            CharacterAnimationPresentationRuntime runtime)
+        {
+            try
+            {
+                while (runtime.TryAdvancePresentation(
+                           out CharacterPoseWorkerStageLease workerLease))
+                {
+                    m_Scheduler.BeginBatch();
+                    m_Scheduler.Submit(in workerLease);
+                    m_Scheduler.CompleteBatch();
+                }
+                return runtime.CompletePresentation();
+            }
+            catch (Exception frameFailure)
+            {
+                Exception abortFailure = runtime.AbortPresentation();
+                if (abortFailure != null)
+                {
+                    throw new AggregateException(
+                        "Pose Preview Worker execution and abort both failed.",
+                        frameFailure,
+                        abortFailure);
+                }
+                throw;
+            }
+        }
+
+        public void Dispose() => m_Scheduler.Dispose();
+    }
+
     internal sealed class AnimationPreviewRuntime : IDisposable
     {
         readonly CharacterPresentationProjection m_Projection;
@@ -22,6 +60,7 @@ namespace ThirdPersonCharacter.Pipeline
         readonly CharacterEquipmentLinkedPoseRuntime m_LinkedPose;
         readonly CharacterEquipmentPreviewFixture
             m_EquipmentFixture;
+        readonly CharacterPoseWorkerPreviewAdapter m_WorkerAdapter;
         readonly bool m_WorldContextAvailable;
         readonly ActorId m_PreviewActorId;
         readonly Guid m_DiagnosticsOwnerId;
@@ -104,8 +143,10 @@ namespace ThirdPersonCharacter.Pipeline
                     m_Projection);
             CharacterAnimationPresentationRuntime playback = null;
             CharacterFootPlacementModule footPlacement = null;
+            CharacterPoseWorkerPreviewAdapter workerAdapter = null;
             try
             {
+                workerAdapter = new CharacterPoseWorkerPreviewAdapter();
                 if (m_Projection.PosePlan.FootPlacements.Count == 1 && worldAwareBinding)
                 {
                     worldAwareBinding.RequireValid();
@@ -144,8 +185,7 @@ namespace ThirdPersonCharacter.Pipeline
                     rootHierarchy,
                     footPlacement,
                     false,
-                    new CharacterPoseWorkerScheduler(),
-                    true);
+                    workerAdapter.Scheduler);
                 footPlacement = null;
                 playback.SetDiagnosticsInterest(
                     m_DiagnosticsOwnerId,
@@ -168,6 +208,8 @@ namespace ThirdPersonCharacter.Pipeline
                         m_Projection.TuningDefaultBlock,
                         m_Projection.PublishedParameterRevision));
                 m_Playback = playback;
+                m_WorkerAdapter = workerAdapter;
+                workerAdapter = null;
                 m_WorldContextAvailable =
                     m_Projection.PosePlan.FootPlacements.Count == 0 ||
                     m_Playback.HasFootPlacement;
@@ -176,6 +218,7 @@ namespace ThirdPersonCharacter.Pipeline
             {
                 footPlacement?.Dispose();
                 playback?.Dispose();
+                workerAdapter?.Dispose();
                 motionMatching?.Dispose();
                 throw;
             }
@@ -357,7 +400,7 @@ namespace ThirdPersonCharacter.Pipeline
                     session.EvaluationTick,
                     session.CurrentTime,
                     in bodyFrame);
-            ComposedAnimationPoseFrame composed = m_Playback.Present(
+            ComposedAnimationPoseFrame composed = Present(
                 presentationFrame,
                 session.EvaluationTick,
                 1f,
@@ -424,7 +467,7 @@ namespace ThirdPersonCharacter.Pipeline
                     CharacterPresentationProgramParameterFrame.FromDirect(
                         directParameterIds,
                         directParameterValues);
-                composed = m_Playback.Present(
+                composed = Present(
                     presentationFrame,
                     evaluationTick,
                     1f,
@@ -437,7 +480,7 @@ namespace ThirdPersonCharacter.Pipeline
             }
             else
             {
-                composed = m_Playback.Present(
+                composed = Present(
                     presentationFrame,
                     evaluationTick,
                     1f,
@@ -479,7 +522,7 @@ namespace ThirdPersonCharacter.Pipeline
                     0d,
                     in bodyFrame);
             ComposedAnimationPoseFrame composed =
-                m_Playback.Present(
+                Present(
                     presentationFrame,
                     presentationFrame,
                     1f,
@@ -523,7 +566,7 @@ namespace ThirdPersonCharacter.Pipeline
                         tickValue,
                         0d,
                         in bodyFrame);
-                ComposedAnimationPoseFrame composed = m_Playback.Present(
+                ComposedAnimationPoseFrame composed = Present(
                     presentationFrame,
                     tickValue,
                     1f,
@@ -551,6 +594,55 @@ namespace ThirdPersonCharacter.Pipeline
             m_PosePlanStages = default;
         }
 
+        ComposedAnimationPoseFrame Present(
+            ulong presentationFrame,
+            ulong latestSimulationTick,
+            float interpolationAlpha,
+            float presentationDeltaSeconds,
+            in CharacterBodyPresentationFrame bodyFrame,
+            in CharacterPresentationFactFrame factFrame,
+            CharacterLinkedPoseRuntimeSession linkedPose,
+            RuntimeDiagnosticsContext diagnostics)
+        {
+            CharacterPresentationProgramParameterFrame parameterFrame =
+                CharacterPresentationProgramParameterFrame.FromFact(
+                    in factFrame);
+            return Present(
+                presentationFrame,
+                latestSimulationTick,
+                interpolationAlpha,
+                presentationDeltaSeconds,
+                in bodyFrame,
+                in factFrame,
+                in parameterFrame,
+                linkedPose,
+                diagnostics);
+        }
+
+        ComposedAnimationPoseFrame Present(
+            ulong presentationFrame,
+            ulong latestSimulationTick,
+            float interpolationAlpha,
+            float presentationDeltaSeconds,
+            in CharacterBodyPresentationFrame bodyFrame,
+            in CharacterPresentationFactFrame factFrame,
+            in CharacterPresentationProgramParameterFrame parameterFrame,
+            CharacterLinkedPoseRuntimeSession linkedPose,
+            RuntimeDiagnosticsContext diagnostics)
+        {
+            m_Playback.BeginPresentation(
+                presentationFrame,
+                latestSimulationTick,
+                interpolationAlpha,
+                presentationDeltaSeconds,
+                in bodyFrame,
+                in factFrame,
+                in parameterFrame,
+                linkedPose,
+                diagnostics);
+            return m_WorkerAdapter.Complete(m_Playback);
+        }
+
         public void SetPoseWatchInterests(Guid ownerId, IReadOnlyList<AnimationPoseWatchIdentity> interests) =>
             m_Playback.SetPoseWatchInterests(ownerId, interests);
 
@@ -560,7 +652,14 @@ namespace ThirdPersonCharacter.Pipeline
         {
             m_Playback.RemoveDiagnosticsInterest(
                 m_DiagnosticsOwnerId);
-            m_Playback.Dispose();
+            try
+            {
+                m_Playback.Dispose();
+            }
+            finally
+            {
+                m_WorkerAdapter.Dispose();
+            }
         }
 
         void ResetFootPlacement(ulong renderFrame)

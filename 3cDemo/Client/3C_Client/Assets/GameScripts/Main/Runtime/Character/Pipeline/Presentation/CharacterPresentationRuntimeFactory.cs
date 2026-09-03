@@ -349,8 +349,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     rootHierarchy,
                     footPlacement,
                     true,
-                    workerSession.WorkerScheduler,
-                    false);
+                    workerSession.WorkerScheduler);
                 footPlacement = null;
                 animation.SetTuningBinding(
                     new CharacterPoseTuningRuntimeBinding(

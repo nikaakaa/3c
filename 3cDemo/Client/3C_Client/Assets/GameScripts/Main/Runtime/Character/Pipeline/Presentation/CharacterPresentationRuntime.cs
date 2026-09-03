@@ -44,8 +44,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             AnimationResolvedPoseSourceSample>
             m_ActionSourceSamples;
         readonly CharacterPoseFrameTransaction m_FrameTransaction;
-        readonly CharacterPoseWorkerScheduler m_WorkerScheduler;
-        readonly bool m_OwnsWorkerScheduler;
         readonly Action m_EnterEvaluateBarrier;
         readonly AnimationPresentationRuntimeCapacityMetrics
             m_CapacityMetrics;
@@ -80,8 +78,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             CharacterRootHierarchyBinding rootHierarchy,
             CharacterFootPlacementModule footPlacement,
             bool ownsGraphClock,
-            CharacterPoseWorkerScheduler workerScheduler,
-            bool ownsWorkerScheduler)
+            CharacterPoseWorkerScheduler workerScheduler)
         {
             m_ActorId = actorId.IsValid
                 ? actorId
@@ -90,9 +87,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     nameof(actorId));
             m_Bindings = bindings ??
                 throw new ArgumentNullException(nameof(bindings));
-            m_WorkerScheduler = workerScheduler ??
+            workerScheduler = workerScheduler ??
                 throw new ArgumentNullException(nameof(workerScheduler));
-            m_OwnsWorkerScheduler = ownsWorkerScheduler;
             var actionPlayback =
                 new CharacterActionPlaybackRuntime(
                     bindings.ActionPlayback);
@@ -130,7 +126,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                         runtimeInstanceId);
                 poseModules = CharacterPoseRuntimeCompositionFactory.Create(
                     actorId,
-                    m_WorkerScheduler,
+                    workerScheduler,
                     animancer,
                     rigBinding,
                     rootHierarchy,
@@ -176,8 +172,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             {
                 motionMatching?.Dispose();
                 poseModules?.Dispose();
-                if (m_OwnsWorkerScheduler)
-                    m_WorkerScheduler.Dispose();
                 throw;
             }
         }
@@ -389,106 +383,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             PoseProgram.ReplaceActionCommand(
                 currentCommand.EventId,
                 in replacementCommand);
-        }
-
-        internal ComposedAnimationPoseFrame Present(
-            ulong presentationFrame,
-            ulong latestSimulationTick,
-            float interpolationAlpha,
-            float presentationDeltaSeconds,
-            in CharacterBodyPresentationFrame bodyFrame,
-            in CharacterPresentationFactFrame factFrame,
-            CharacterLinkedPoseRuntimeSession linkedPose,
-            RuntimeDiagnosticsContext diagnostics = null)
-        {
-            CharacterPresentationProgramParameterFrame parameterFrame =
-                CharacterPresentationProgramParameterFrame.FromFact(
-                    in factFrame);
-            return Present(
-                presentationFrame,
-                latestSimulationTick,
-                interpolationAlpha,
-                presentationDeltaSeconds,
-                in bodyFrame,
-                in factFrame,
-                in parameterFrame,
-                linkedPose,
-                diagnostics);
-        }
-
-        internal ComposedAnimationPoseFrame PresentSequencePreview(
-            PresentationPoseSourceIndex sourceIndex,
-            double sampleTime,
-            bool resetContinuity,
-            ulong presentationFrame,
-            ulong latestSimulationTick,
-            float presentationDeltaSeconds,
-            in CharacterBodyPresentationFrame bodyFrame,
-            in CharacterPresentationFactFrame factFrame,
-            CharacterLinkedPoseRuntimeSession linkedPose)
-        {
-            m_PoseFrame.RequireNoOpenMutation();
-            PoseProgram.SetSequencePreview(
-                sourceIndex,
-                sampleTime,
-                resetContinuity);
-            try
-            {
-                return Present(
-                    presentationFrame,
-                    latestSimulationTick,
-                    1f,
-                    presentationDeltaSeconds,
-                    in bodyFrame,
-                    in factFrame,
-                    linkedPose,
-                    null);
-            }
-            finally
-            {
-                m_PoseFrame.RequireNoOpenMutation();
-                PoseProgram.ClearSequencePreview();
-            }
-        }
-
-        internal ComposedAnimationPoseFrame Present(
-            ulong presentationFrame,
-            ulong latestSimulationTick,
-            float interpolationAlpha,
-            float presentationDeltaSeconds,
-            in CharacterBodyPresentationFrame bodyFrame,
-            in CharacterPresentationFactFrame factFrame,
-            in CharacterPresentationProgramParameterFrame parameterFrame,
-            CharacterLinkedPoseRuntimeSession linkedPose,
-            RuntimeDiagnosticsContext diagnostics = null)
-        {
-            BeginPresentation(
-                presentationFrame,
-                latestSimulationTick,
-                interpolationAlpha,
-                presentationDeltaSeconds,
-                in bodyFrame,
-                in factFrame,
-                in parameterFrame,
-                linkedPose,
-                diagnostics);
-            try
-            {
-                while (TryAdvancePresentation(
-                           out CharacterPoseWorkerStageLease workerLease))
-                {
-                    m_WorkerScheduler.BeginBatch();
-                    m_WorkerScheduler.Submit(in workerLease);
-                    m_WorkerScheduler.CompleteBatch();
-                }
-                return CompletePresentation();
-            }
-            catch (Exception exception)
-            {
-                if (m_PresentationActive)
-                    throw ClosePendingPresentationFailure(exception);
-                throw;
-            }
         }
 
         internal void BeginPresentation(
@@ -968,8 +862,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             {
                 m_PoseFrame.ResetState();
                 m_PoseModules.Dispose();
-                if (m_OwnsWorkerScheduler)
-                    m_WorkerScheduler.Dispose();
             }
             catch (Exception exception)
             {

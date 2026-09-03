@@ -561,26 +561,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             CharacterPresentationModuleLifetime.Dispose(m_Camera, m_Equipment, m_Animation, m_Body);
         }
 
-        ComposedAnimationPoseFrame PresentAnimation(
-            in CharacterBodyPresentationFrame bodyFrame,
-            in CharacterPresentationFactFrame factFrame,
-            ulong presentationFrame,
-            float presentationDeltaSeconds)
-        {
-            using (AnimationMarker.Auto())
-            {
-                return m_Animation.Present(
-                    presentationFrame,
-                    bodyFrame.AnimationSampleTick,
-                    bodyFrame.AnimationSampleAlpha,
-                    presentationDeltaSeconds,
-                    in bodyFrame,
-                    in factFrame,
-                    m_LinkedPose.Session,
-                    m_Diagnostics);
-            }
-        }
-
         float ResolveAnimationDeltaSeconds(
             in GameplayPresentationFrameContext context,
             in CharacterBodyPresentationFrame bodyFrame)

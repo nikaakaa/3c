@@ -183,6 +183,17 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             Vector3 currentOutputBefore = previousResponseOutputAvailable
                 ? state.PreviousResponseOutputPoint
                 : originalSole + swing.Correction;
+            Vector3 pendingReleaseResponseRebaseRemaining =
+                state.PendingReleaseResponseRebaseRemaining;
+            state.PendingReleaseResponseRebaseRemaining = default;
+            if (pendingReleaseResponseRebaseRemaining.sqrMagnitude >
+                CharacterFootConstraintMath.GeometryEpsilon *
+                CharacterFootConstraintMath.GeometryEpsilon &&
+                state.PlantWorldResidualTransitionActive)
+            {
+                state.PlantWorldResidual -=
+                    pendingReleaseResponseRebaseRemaining;
+            }
             if (state.PendingReleaseResponseRebase &&
                 previousResponseOutputAvailable &&
                 state.ResponseHistory.HasValue &&
@@ -196,11 +207,14 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 float releaseResponseRebase = Mathf.Min(
                     Mathf.Abs(releaseResponseScalar),
                     releaseResponseStep * 0.5f);
-                currentOutputBefore -=
+                Vector3 releaseResponseRebaseVector =
                     state.ResponseHistory.AppliedDirection *
                     Mathf.Sign(releaseResponseScalar) *
                     releaseResponseRebase;
+                currentOutputBefore -= releaseResponseRebaseVector;
                 state.PendingReleaseResponseRebase = false;
+                state.PendingReleaseResponseRebaseRemaining =
+                    releaseResponseRebaseVector;
             }
             Vector3 effectiveCorrectionBefore =
                 currentOutputBefore - originalSole;
@@ -851,6 +865,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 state.EffectiveCorrection = responseOutputPoint - originalSole;
                 state.Residual = state.SwingResidual;
                 state.PendingReleaseResponseRebase = false;
+                state.PendingReleaseResponseRebaseRemaining = default;
             }
             state.Progress = 0f;
             state.StartResidual = 0f;

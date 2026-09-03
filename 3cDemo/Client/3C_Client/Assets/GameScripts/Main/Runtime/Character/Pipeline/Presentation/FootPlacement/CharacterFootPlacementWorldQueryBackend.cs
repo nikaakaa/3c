@@ -77,15 +77,13 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         readonly RaycastHit[] m_LandingHits;
         readonly RaycastHit[] m_GroundPathHits;
         readonly RaycastHit[] m_CurrentSupportHits;
-        readonly float m_MaximumReachableVerticalEdge;
         CharacterFootGroundGeometrySource m_GroundGeometry;
 
         internal CharacterFootPlacementWorldQueryBackend(
             PhysicsScene physicsScene,
             CharacterFootPlacementPoseRig rig,
             int landingHitCapacity,
-            int groundPathSegmentHitCapacity,
-            float maximumReachableVerticalEdge)
+            int groundPathSegmentHitCapacity)
         {
             if (!physicsScene.IsValid())
                 throw new ArgumentException("Foot Placement requires a valid PhysicsScene.", nameof(physicsScene));
@@ -93,14 +91,11 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 throw new ArgumentOutOfRangeException(nameof(landingHitCapacity));
             if (groundPathSegmentHitCapacity < 4 || groundPathSegmentHitCapacity > 32)
                 throw new ArgumentOutOfRangeException(nameof(groundPathSegmentHitCapacity));
-            if (!float.IsFinite(maximumReachableVerticalEdge) || maximumReachableVerticalEdge <= 0f)
-                throw new ArgumentOutOfRangeException(nameof(maximumReachableVerticalEdge));
             m_PhysicsScene = physicsScene;
             m_Rig = rig ?? throw new ArgumentNullException(nameof(rig));
             m_LandingHits = new RaycastHit[landingHitCapacity];
             m_GroundPathHits = new RaycastHit[groundPathSegmentHitCapacity];
             m_CurrentSupportHits = new RaycastHit[landingHitCapacity];
-            m_MaximumReachableVerticalEdge = maximumReachableVerticalEdge;
         }
 
         internal PhysicsScene PhysicsScene => m_PhysicsScene;
@@ -138,7 +133,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                         0,
                         default));
             }
-            RaycastHit hit = m_LandingHits[SelectLandingHit(in request, count)];
+            RaycastHit hit = m_LandingHits[0];
             CharacterFootLandingQueryCandidateDiagnostics selected =
                 CandidateDiagnostics(in hit);
             return new CharacterFootLandingQueryResult(
@@ -206,37 +201,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 m_LandingHits[insertion] = value;
             }
             return validCount;
-        }
-
-        int SelectLandingHit(
-            in CharacterFootPlacementQueryRequest request,
-            int validCount)
-        {
-            if (request.Purpose != CharacterFootPlacementQueryPurpose.FutureLanding ||
-                validCount < 2)
-                return 0;
-
-            Vector3 supportUp = -request.Direction.normalized;
-            float referenceHeight = Vector3.Dot(
-                m_LandingHits[0].point,
-                supportUp);
-            int selectedIndex = 0;
-            float selectedHeight = referenceHeight;
-            for (int i = 1; i < validCount; i++)
-            {
-                float candidateHeight = Vector3.Dot(
-                    m_LandingHits[i].point,
-                    supportUp);
-                float downwardDelta = referenceHeight - candidateHeight;
-                if (downwardDelta <= CharacterFootConstraintMath.GeometryEpsilon ||
-                    downwardDelta > m_MaximumReachableVerticalEdge +
-                    CharacterFootConstraintMath.GeometryEpsilon ||
-                    candidateHeight >= selectedHeight)
-                    continue;
-                selectedIndex = i;
-                selectedHeight = candidateHeight;
-            }
-            return selectedIndex;
         }
 
         public CharacterFootGroundPathQueryResult Query(

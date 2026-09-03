@@ -331,8 +331,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                         physicsScene,
                         rig,
                         footPlacementSettings.LandingPrediction.HitCapacity,
-                        footPlacementSettings.GroundDetection.SegmentHitCapacity,
-                        footPlacementSettings.GroundDetection.MaximumReachableVerticalEdge);
+                        footPlacementSettings.GroundDetection.SegmentHitCapacity);
                     footPlacement = new CharacterFootPlacementModule(
                         actorId,
                         footPlacementSettings,

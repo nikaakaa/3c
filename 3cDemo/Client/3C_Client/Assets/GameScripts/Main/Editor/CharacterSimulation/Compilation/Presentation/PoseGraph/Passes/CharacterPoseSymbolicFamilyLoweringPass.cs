@@ -783,8 +783,10 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                 }
                 if (publishFinalPose)
                 {
-                    string identity = ScopeNodeId(node.NodeId, scope).Value +
-                        "\0__final-pose";
+                    string nodeIdentity =
+                        ScopeNodeId(node.NodeId, scope).Value;
+                    string identity =
+                        $"final-pose/{nodeIdentity.Length}/{nodeIdentity}";
                     var value = new CharacterPoseSymbolicValueReference(
                         identity,
                         CharacterPosePortKind.LocalPose);
@@ -960,10 +962,12 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             static string EndpointKey(
                 PoseNodeId nodeId,
                 PosePortId portId,
-                string scope) =>
-                ScopeNodeId(nodeId, scope).Value +
-                "\0" +
-                ScopePortId(portId, scope).Value;
+                string scope)
+            {
+                string nodeIdentity = ScopeNodeId(nodeId, scope).Value;
+                string portIdentity = ScopePortId(portId, scope).Value;
+                return $"pose-value/{nodeIdentity.Length}/{nodeIdentity}/{portIdentity.Length}/{portIdentity}";
+            }
 
             static PoseNodeId ScopeNodeId(
                 PoseNodeId nodeId,

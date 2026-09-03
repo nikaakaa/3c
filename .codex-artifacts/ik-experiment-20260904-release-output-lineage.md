@@ -1,6 +1,6 @@
 # Foot IK 实验：ReleaseCompleted 丢弃旧事件可见输出点
 
-候选提交：待提交
+候选提交：`a3d1bda14`
 
 输入：`43357ff3cd384e5cba75d2c31175b116`
 
@@ -16,6 +16,21 @@
 
 新 Contact Event 不再从旧 Releasing 可见世界位置构造完整残差，减少 1916 的跨级悬空；代价是新事件接管可能产生更大的首帧下降或腿部伸展，必须检查全包最终 Sole/Ankle 跳变、Plant 穿透、Bend/Extension、Pelvis、左右脚以及 Releasing/Swing 稳定性。
 
-## 验证状态
+## 验证结果
 
-提交后用同一固定 Trace 正式回放，等待 1044 帧封口和诊断对账；不做视觉 Pass。若失败，保留采样和数据结论，精确回退 Runtime 候选并保留本记录。
+正式回放已完成 1044/1044 帧，采样目录：`Diagnostics/GeneratedFootSampling/20260903-200453-edb0e4cccc8e4ddca9aa1f6a022b71d5`。本轮没有生成新的 Analyzer report，使用新 CSV 与 184 基线逐帧对账。
+
+| 指标 | 候选 | 184 基线 |
+|---|---:|---:|
+| GroundPath Accepted / Rejected | 1796 / 292 | 1796 / 292 |
+| Contact Edge 行 | 114 | 114 |
+| LandingCompleted / ReleaseCompleted | 24 / 53 | 24 / 53 |
+| Plant 正穿透样本 | 34 | 27 |
+| 最大 Plant output distance | 0.338173m | 0.569929m |
+| Physical / Pelvis 覆盖 | 2088 / 2088 | 2088 / 2088 |
+
+右脚 1916 的 `PreviousResponseOutputPoint` 已为空，Plant residual 的 Y 从基线 `0.349391m` 降至 `0.015070m`，Plant output distance 从 `0.569929m` 降至 `0.015074m`，说明旧事件残差确实被切断；但最终 sole 最大跳变从 `0.267713m` 放大至 `0.828288m`，最终 ankle 从 `0.265114m` 放大至 `0.705738m`，physical ankle 最大跳变 `0.705117m`。右脚正穿透由 9 行降至 6 行，但左脚与总穿透增加，且主交接变成瞬移。
+
+左脚 2067/2069 与基线一致，说明变量只影响 ReleaseCompleted 后的跨事件接管。
+
+结论：失败。清除旧可见输出点能消掉错误残差，却没有提供连续的接管轨迹，产生更大的最终脚/脚踝跳变。保留本轮采样作为失败证据，精确回退 Runtime 候选，恢复原有 Post-Transition 输出保留行为。

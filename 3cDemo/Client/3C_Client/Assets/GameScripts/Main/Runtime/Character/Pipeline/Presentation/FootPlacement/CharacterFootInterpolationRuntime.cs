@@ -114,18 +114,13 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 state.CorrectionResponseProfileRevision;
             ulong worldRevision = state.CorrectionResponseWorldRevision;
             bool hasLineage = state.HasCorrectionResponseLineage;
-            bool retainPreviousResponseOutputPoint =
-                transition.Reason != CharacterFootTransitionReason.ReleaseCompleted;
             state = default;
             state.HasOutput = true;
             state.EffectiveCorrection = correction;
             state.ResponseHistory = responseHistory;
             state.HasPreviousResponseOutputPoint =
-                hasPreviousResponseOutputPoint &&
-                retainPreviousResponseOutputPoint;
-            state.PreviousResponseOutputPoint = retainPreviousResponseOutputPoint
-                ? previousResponseOutputPoint
-                : default;
+                hasPreviousResponseOutputPoint;
+            state.PreviousResponseOutputPoint = previousResponseOutputPoint;
             state.HasCorrectionResponseLineage = hasLineage;
             state.CorrectionResponseSourceLineage = sourceLineage;
             state.CorrectionResponseProfileRevision = profileRevision;

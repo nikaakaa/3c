@@ -114,6 +114,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 state.CorrectionResponseProfileRevision;
             ulong worldRevision = state.CorrectionResponseWorldRevision;
             bool hasLineage = state.HasCorrectionResponseLineage;
+            bool pendingReleaseResponseRebase =
+                transition.Reason == CharacterFootTransitionReason.ReleaseCompleted;
             state = default;
             state.HasOutput = true;
             state.EffectiveCorrection = correction;
@@ -125,6 +127,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             state.CorrectionResponseSourceLineage = sourceLineage;
             state.CorrectionResponseProfileRevision = profileRevision;
             state.CorrectionResponseWorldRevision = worldRevision;
+            state.PendingReleaseResponseRebase = pendingReleaseResponseRebase;
             state.PendingCorrectionResponseInitializationReason = reason;
         }
 
@@ -180,6 +183,25 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             Vector3 currentOutputBefore = previousResponseOutputAvailable
                 ? state.PreviousResponseOutputPoint
                 : originalSole + swing.Correction;
+            if (state.PendingReleaseResponseRebase &&
+                previousResponseOutputAvailable &&
+                state.ResponseHistory.HasValue &&
+                state.ResponseHistory.Domain ==
+                CharacterFootCorrectionResponseDomain.AnimationRelativeScalar)
+            {
+                float releaseResponseScalar = state.ResponseHistory.Scalar;
+                float releaseResponseStep =
+                    frame.Settings.CorrectionResponseDecreaseSpeed *
+                    frame.DeltaSeconds;
+                float releaseResponseRebase = Mathf.Min(
+                    Mathf.Abs(releaseResponseScalar),
+                    releaseResponseStep);
+                currentOutputBefore -=
+                    state.ResponseHistory.AppliedDirection *
+                    Mathf.Sign(releaseResponseScalar) *
+                    releaseResponseRebase;
+                state.PendingReleaseResponseRebase = false;
+            }
             Vector3 effectiveCorrectionBefore =
                 currentOutputBefore - originalSole;
             bool hadPlantTarget = state.HasPlantTarget;
@@ -828,6 +850,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                         response.AppliedDirection);
                 state.EffectiveCorrection = responseOutputPoint - originalSole;
                 state.Residual = state.SwingResidual;
+                state.PendingReleaseResponseRebase = false;
             }
             state.Progress = 0f;
             state.StartResidual = 0f;

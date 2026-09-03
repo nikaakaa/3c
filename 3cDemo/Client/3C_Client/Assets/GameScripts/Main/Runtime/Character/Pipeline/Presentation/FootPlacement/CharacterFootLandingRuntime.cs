@@ -197,6 +197,15 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     context.NextSwingLanding.Resolve();
                 bool sameSurface = previous.SurfaceIdentity ==
                                    diagnostics.SurfaceIdentity;
+                bool predictionInputDiscontinuity =
+                    (diagnostics.Observation.QueryReason &
+                     CharacterFootLandingObservationQueryReason
+                         .PredictionInputDistanceExceeded) != 0 &&
+                    diagnostics.Observation.QueryInputDistance > 1f &&
+                    Vector3.Distance(landingPoint, previous.Point) <=
+                    settings.TargetHeightForceRefreshDistance;
+                if (!sameSurface && predictionInputDiscontinuity)
+                    return;
                 if (sameSurface &&
                     Vector3.Distance(landingPoint, previous.Point) <
                     settings.LandingAcceptanceDistance)

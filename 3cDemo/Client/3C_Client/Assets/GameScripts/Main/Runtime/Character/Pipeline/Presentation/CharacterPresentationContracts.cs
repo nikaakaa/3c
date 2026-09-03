@@ -39,7 +39,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             bool completed = status == CharacterPoseStageStatus.Completed;
             if (stageIndex < 0 ||
                 (byte)executionDomain < (byte)CharacterPoseExecutionDomain.FactAndDemand ||
-                (byte)executionDomain > (byte)CharacterPoseExecutionDomain.FinalPublication ||
+                (byte)executionDomain > (byte)CharacterPoseExecutionDomain.ManagedConstraint ||
                 (byte)inputPoseSpace > (byte)CharacterPoseSpace.Component ||
                 (byte)outputPoseSpace > (byte)CharacterPoseSpace.Component ||
                 (byte)status < (byte)CharacterPoseStageStatus.Completed ||

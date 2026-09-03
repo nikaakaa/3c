@@ -123,6 +123,9 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 BuildCommittedSnapshots(transaction);
             CharacterPoseSourceFrameResult committedSourceFrame =
                 transaction.SourceFrame;
+            if (publishRuntimeDiagnostics)
+                m_Source.FreezeCommittedDiagnostics(
+                    in committedSourceFrame);
             m_Diagnostics.BeginCommittedFrame(
                 diagnosticsInterest,
                 captureFootIk,

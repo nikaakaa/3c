@@ -696,11 +696,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             }
             m_Program.FinalizeCommittedSourceRetirements(
                 m_CompletionIdentity);
-            if (m_PendingDiagnosticsInterest !=
-                AnimationPresentationDiagnosticsInterest.None)
-            {
-                m_Source.FreezeCommittedDiagnostics(in sourceFrame);
-            }
             ComposedAnimationPoseFrame result =
                 m_Publication.CommitPending(publicationLease);
             m_CommitValidated = false;

@@ -27,7 +27,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
         readonly FixedCharacterSimulationDiagnosticsAdapter m_DiagnosticsAdapter;
         readonly RuntimeDiagnosticsTarget m_DiagnosticsTarget;
         readonly AnimationPresentationRuntimeTarget m_AnimationDiagnosticsTarget;
-        readonly FixedPresentationFrameTarget m_PresentationTarget;
+        readonly CharacterPresentationFrameTarget m_PresentationTarget;
         readonly SortedDictionary<ulong, FixedCharacterBodySample> m_PendingBodySamples =
             new SortedDictionary<ulong, FixedCharacterBodySample>();
         readonly SortedDictionary<ulong, EquipmentVisualSelection[]> m_PendingEquipmentSelections =
@@ -101,7 +101,8 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
                 ownerName,
                 presentationProgramIdentity,
                 animationSnapshotProvider);
-            m_PresentationTarget = new FixedPresentationFrameTarget(presentationRuntime);
+            m_PresentationTarget =
+                new CharacterPresentationFrameTarget(presentationRuntime);
             ProgramIdentity = new FixedSimulationActorBinding(actorId, program, WorldBodyBindingId);
             OutputRoute = new SimulationOutputRouteDescriptor(
                 $"fixed-character-output/{actorId.Value}",
@@ -158,8 +159,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
                 m_DiagnosticsRegistered = true;
                 AnimationPresentationRuntimeTargetRegistry.Register(m_AnimationDiagnosticsTarget);
                 m_AnimationDiagnosticsRegistered = true;
-                if (!GameplayTickSystem.RegisterPresentationTarget(m_PresentationTarget))
-                    throw new InvalidOperationException("GameplayTickSystem rejected the Fixed Actor Presentation target.");
+                m_PresentationTarget.Activate();
                 m_PresentationRegistered = true;
                 m_Activated = true;
             }
@@ -353,7 +353,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
         {
             if (m_PresentationRegistered)
             {
-                TryRelease(() => GameplayTickSystem.UnregisterPresentationTarget(m_PresentationTarget), failures);
+                TryRelease(m_PresentationTarget.Deactivate, failures);
                 m_PresentationRegistered = false;
             }
             if (m_AnimationDiagnosticsRegistered)
@@ -399,18 +399,4 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
         }
     }
 
-    sealed class FixedPresentationFrameTarget : IGameplayPresentationFrameTarget
-    {
-        readonly ICharacterPresentationRuntime m_Runtime;
-
-        public FixedPresentationFrameTarget(ICharacterPresentationRuntime runtime)
-        {
-            m_Runtime = runtime ?? throw new ArgumentNullException(nameof(runtime));
-        }
-
-        public void PresentationFrame(GameplayPresentationFrameContext context)
-        {
-            m_Runtime.Present(context);
-        }
-    }
 }

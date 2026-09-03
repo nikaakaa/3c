@@ -29,7 +29,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.DeterministicRollback
         readonly FixedCharacterSimulationDiagnosticsAdapter m_DiagnosticsAdapter;
         readonly RuntimeDiagnosticsTarget m_DiagnosticsTarget;
         readonly AnimationPresentationRuntimeTarget m_AnimationDiagnosticsTarget;
-        readonly RollbackPresentationFrameTarget m_PresentationTarget;
+        readonly CharacterPresentationFrameTarget m_PresentationTarget;
         readonly SortedDictionary<ulong, FixedCharacterBodySample> m_PendingBodySamples =
             new SortedDictionary<ulong, FixedCharacterBodySample>();
         readonly SortedDictionary<ulong, FixedSimulationActorTickResult> m_PendingTrajectoryResults =
@@ -101,7 +101,8 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.DeterministicRollback
                 ownerName,
                 presentationProgramIdentity,
                 animationSnapshotProvider);
-            m_PresentationTarget = new RollbackPresentationFrameTarget(presentationRuntime);
+            m_PresentationTarget =
+                new CharacterPresentationFrameTarget(presentationRuntime);
             ProgramIdentity = new FixedSimulationActorBinding(actorId, program, WorldBodyBindingId);
             OutputRoute = new SimulationOutputRouteDescriptor(
                 $"deterministic-rollback-output/{actorId.Value}",
@@ -187,8 +188,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.DeterministicRollback
                 m_DiagnosticsRegistered = true;
                 AnimationPresentationRuntimeTargetRegistry.Register(m_AnimationDiagnosticsTarget);
                 m_AnimationDiagnosticsRegistered = true;
-                if (!GameplayTickSystem.RegisterPresentationTarget(m_PresentationTarget))
-                    throw new InvalidOperationException("GameplayTickSystem rejected the Rollback Actor Presentation target.");
+                m_PresentationTarget.Activate();
                 m_PresentationRegistered = true;
                 m_Activated = true;
             }
@@ -362,7 +362,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.DeterministicRollback
         {
             if (m_PresentationRegistered)
             {
-                TryRelease(() => GameplayTickSystem.UnregisterPresentationTarget(m_PresentationTarget), failures);
+                TryRelease(m_PresentationTarget.Deactivate, failures);
                 m_PresentationRegistered = false;
             }
             if (m_AnimationDiagnosticsRegistered)
@@ -408,18 +408,4 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.DeterministicRollback
         }
     }
 
-    sealed class RollbackPresentationFrameTarget : IGameplayPresentationFrameTarget
-    {
-        readonly ICharacterPresentationRuntime m_Runtime;
-
-        public RollbackPresentationFrameTarget(ICharacterPresentationRuntime runtime)
-        {
-            m_Runtime = runtime ?? throw new ArgumentNullException(nameof(runtime));
-        }
-
-        public void PresentationFrame(GameplayPresentationFrameContext context)
-        {
-            m_Runtime.Present(context);
-        }
-    }
 }

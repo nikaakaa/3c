@@ -285,7 +285,10 @@ namespace ThirdPersonGameplay.Networking.ServerAuthoritative
             m_RootHierarchy = rootHierarchy ? rootHierarchy : throw new ArgumentNullException(nameof(rootHierarchy));
             m_RootHierarchy.RequireValid();
             m_Release = release ?? throw new ArgumentNullException(nameof(release));
-            m_PresentationTarget = new ServerAuthoritativeRemotePresentationFrameTarget(this);
+            m_PresentationTarget =
+                new ServerAuthoritativeRemotePresentationFrameTarget(
+                    this,
+                    m_Runtime);
         }
 
         public string BindingId { get; }
@@ -301,8 +304,7 @@ namespace ThirdPersonGameplay.Networking.ServerAuthoritative
             RuntimeDiagnosticsTargetRegistry.Register(m_DiagnosticsTarget);
             try
             {
-                if (!GameplayTickSystem.RegisterPresentationTarget(m_PresentationTarget))
-                    throw new InvalidOperationException("GameplayTickSystem rejected the remote Presentation target.");
+                m_PresentationTarget.Activate();
                 m_Activated = true;
             }
             catch
@@ -344,13 +346,19 @@ namespace ThirdPersonGameplay.Networking.ServerAuthoritative
                 m_RootHierarchy.ApplyLogicPose(finalBody.Position, finalBody.Rotation);
         }
 
-        public void Present(GameplayPresentationFrameContext context)
+        internal bool PreparePresentationFrame(
+            GameplayPresentationFrameContext context)
         {
             RequireAlive();
             if (m_SelectedTick == 0)
-                return;
+                return false;
             PublishDue(m_SelectedTick, m_SelectedTick);
-            m_Runtime.Present(context);
+            return true;
+        }
+
+        internal void CompletePresentationFrame(
+            GameplayPresentationFrameContext context)
+        {
             PublishPresentationHorizonDiagnostics();
         }
 
@@ -361,7 +369,7 @@ namespace ThirdPersonGameplay.Networking.ServerAuthoritative
             m_Disposed = true;
             if (m_Activated)
             {
-                GameplayTickSystem.UnregisterPresentationTarget(m_PresentationTarget);
+                m_PresentationTarget.Deactivate();
                 RuntimeDiagnosticsTargetRegistry.Unregister(m_DiagnosticsTarget);
                 m_Activated = false;
             }
@@ -466,19 +474,25 @@ namespace ThirdPersonGameplay.Networking.ServerAuthoritative
         }
     }
 
-    internal sealed class ServerAuthoritativeRemotePresentationFrameTarget : IGameplayPresentationFrameTarget
+    internal sealed class ServerAuthoritativeRemotePresentationFrameTarget :
+        CharacterPresentationFrameTarget
     {
         readonly ServerAuthoritativeRemotePresentationRegistration m_Registration;
 
         public ServerAuthoritativeRemotePresentationFrameTarget(
-            ServerAuthoritativeRemotePresentationRegistration registration)
+            ServerAuthoritativeRemotePresentationRegistration registration,
+            ICharacterPresentationRuntime runtime)
+            : base(runtime)
         {
             m_Registration = registration ?? throw new ArgumentNullException(nameof(registration));
         }
 
-        public void PresentationFrame(GameplayPresentationFrameContext context)
-        {
-            m_Registration.Present(context);
-        }
+        protected override bool PreparePresentationFrame(
+            GameplayPresentationFrameContext context) =>
+            m_Registration.PreparePresentationFrame(context);
+
+        protected override void CompletePresentationFrame(
+            GameplayPresentationFrameContext context) =>
+            m_Registration.CompletePresentationFrame(context);
     }
 }

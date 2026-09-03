@@ -6,10 +6,12 @@ using ThirdPersonGameplay.Tick;
 
 namespace ThirdPersonCharacter.Pipeline
 {
-    internal sealed class CharacterPresentationFrameTarget : IGameplayPresentationFrameTarget
+    public class CharacterPresentationFrameTarget
     {
         readonly CharacterSimulationPresentationRuntime m_Runtime;
         readonly CharacterPoseWorkerPresentationSession m_Session;
+        GameplayPresentationFrameContext m_FrameContext;
+        bool m_FrameEnabled;
         bool m_Active;
 
         public CharacterPresentationFrameTarget(ICharacterPresentationRuntime runtime)
@@ -21,7 +23,7 @@ namespace ThirdPersonCharacter.Pipeline
             m_Session = m_Runtime.WorkerPresentationSession;
         }
 
-        internal void Activate()
+        public void Activate()
         {
             if (m_Active)
                 return;
@@ -29,7 +31,7 @@ namespace ThirdPersonCharacter.Pipeline
             m_Active = true;
         }
 
-        internal void Deactivate()
+        public void Deactivate()
         {
             if (!m_Active)
                 return;
@@ -37,23 +39,61 @@ namespace ThirdPersonCharacter.Pipeline
             m_Active = false;
         }
 
-        public void PresentationFrame(GameplayPresentationFrameContext context)
+        internal void BeginFrame(GameplayPresentationFrameContext context)
         {
-            m_Runtime.Present(context);
+            m_FrameContext = context;
+            m_FrameEnabled = PreparePresentationFrame(context);
+            if (m_FrameEnabled)
+                m_Runtime.BeginPresentationFrame(context);
         }
 
-        internal void BeginFrame(GameplayPresentationFrameContext context) =>
-            m_Runtime.BeginPresentationFrame(context);
-
         internal bool TryAdvanceFrame(
-            out CharacterPoseWorkerStageLease workerLease) =>
-            m_Runtime.TryAdvancePresentationFrame(out workerLease);
+            out CharacterPoseWorkerStageLease workerLease)
+        {
+            if (!m_FrameEnabled)
+            {
+                workerLease = default;
+                return false;
+            }
+            return m_Runtime.TryAdvancePresentationFrame(out workerLease);
+        }
 
-        internal void CompleteFrame() =>
+        internal void CompleteFrame()
+        {
+            if (!m_FrameEnabled)
+            {
+                ClearFrame();
+                return;
+            }
+            GameplayPresentationFrameContext context = m_FrameContext;
             m_Runtime.CompletePresentationFrame();
+            m_FrameEnabled = false;
+            CompletePresentationFrame(context);
+            ClearFrame();
+        }
 
-        internal Exception AbortFrame() =>
-            m_Runtime.AbortPresentationFrame();
+        internal Exception AbortFrame()
+        {
+            Exception failure = m_FrameEnabled
+                ? m_Runtime.AbortPresentationFrame()
+                : null;
+            ClearFrame();
+            return failure;
+        }
+
+        protected virtual bool PreparePresentationFrame(
+            GameplayPresentationFrameContext context) => true;
+
+        protected virtual void CompletePresentationFrame(
+            GameplayPresentationFrameContext context)
+        {
+        }
+
+        void ClearFrame()
+        {
+            m_FrameContext = default;
+            m_FrameEnabled = false;
+        }
     }
 
     internal sealed class CharacterPoseWorkerPresentationSession :
@@ -128,7 +168,9 @@ namespace ThirdPersonCharacter.Pipeline
                 }
                 catch (Exception failure)
                 {
-                    m_FrameFailures.Add(failure);
+                    RecordActorFailure(
+                        failure,
+                        target.AbortFrame());
                 }
             }
             try

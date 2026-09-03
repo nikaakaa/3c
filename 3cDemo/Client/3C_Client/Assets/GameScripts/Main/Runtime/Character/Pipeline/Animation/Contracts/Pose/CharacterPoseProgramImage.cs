@@ -845,9 +845,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             string programId,
             string projectionRevision)
         {
-            programId = PoseIdentity.Require(
-                programId,
-                nameof(programId));
+            programId = new ProgramId(programId).Value;
             projectionRevision = PoseIdentity.Require(
                 projectionRevision,
                 nameof(projectionRevision));

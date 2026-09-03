@@ -1,6 +1,6 @@
 # Foot IK 实验：Releasing 统一剥离预测竖直抬脚
 
-候选提交：待提交
+候选提交：`f73f5fd5c`
 
 输入：`43357ff3cd384e5cba75d2c31175b116`
 
@@ -16,6 +16,12 @@
 
 1914 Releasing 输出不再被预测高踏面竖直抬高，1916 捕获的旧高位残差应降低；相比禁用 FutureLanding，事件上下文与生命周期计数保持。代价是所有 Releasing 预测脚失去竖直提前抬脚，需要检查 Plant 穿透、最终跳变、Bend/Extension、Pelvis 和左右脚。
 
-## 验证状态
+## 验证结果
 
-提交后用同一固定 Trace 正式回放并逐帧对账；不做视觉 Pass。若失败，保留采样和结论，精确回退 Runtime 候选并保留本记录。
+正式回放完成 1044/1044 帧，采样目录：`Diagnostics/GeneratedFootSampling/20260903-220854-0f030a86e482401f900de33a502e6c3c`。本轮没有新的 Analyzer report，使用新 CSV 与 184 基线逐帧对账。
+
+GroundPath `1796/292`、Contact Edge `114`、Landing/Release `24/53`、Plant 正穿透 `27`、最大穿透 `0.083242m`、Plant verified `527`、Physical/Pelvis 覆盖与基线一致；右 1916 Plant output distance 由 `0.569929m` 降到 `0.558191m`，residual after-decay Y 由 `0.349391m` 降到 `0.329897m`，但这来自释放时序改变。
+
+右脚 `ReleaseCompleted` 从基线 1914 提前到 1908，1910–1914 已进入 Swing；左脚出现 `0.491246m` 的 final sole/ankle/physical ankle 跳变（基线最大 `0.285683/0.283212/0.272745m`）。右脚最大 sole 跳变也增至 `0.282997m`。这属于明显生命周期和视觉回归。
+
+结论：失败。剥离 Releasing 预测竖直修正会提前完成 Release，不能用残差小幅下降换取大跳变。保留采样和结论，精确恢复原 Releasing 目标与 SupportTarget 位置。

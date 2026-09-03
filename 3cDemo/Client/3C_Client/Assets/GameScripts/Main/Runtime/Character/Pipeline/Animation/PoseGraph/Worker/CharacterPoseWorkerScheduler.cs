@@ -454,6 +454,12 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                     view,
                     m_Pending.Count,
                     hasDependency ? dependency : default);
+                m_Outstanding = m_HasOutstanding
+                    ? JobHandle.CombineDependencies(
+                        m_Outstanding,
+                        scheduled)
+                    : scheduled;
+                m_HasOutstanding = true;
                 waveHandle = hasWaveHandle
                     ? JobHandle.CombineDependencies(waveHandle, scheduled)
                     : scheduled;
@@ -469,8 +475,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 throw new InvalidOperationException(
                     $"Pose Worker Stage #{stageIndex} has no compiled batches.");
             }
-            m_Outstanding = dependency;
-            m_HasOutstanding = true;
             handle = dependency;
             return true;
         }

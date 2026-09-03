@@ -374,7 +374,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             float residualAppliedHalfLifeSeconds = 0f;
             bool residualClearedAtCompletionTolerance = false;
             if (state.PlantWorldResidualTransitionActive &&
-                frame.DeltaSeconds > 0f)
+                frame.DeltaSeconds > 0f &&
+                !captureTransition)
             {
                 residualAppliedHalfLifeSeconds = ResolveSwingResidualHalfLife(
                     state.PlantWorldResidual,

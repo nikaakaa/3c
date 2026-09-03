@@ -1,6 +1,6 @@
 # Foot IK 实验：FutureLanding 低候选法线支撑度门控
 
-候选提交：待提交
+候选提交：`db6f7d85f`
 
 输入：`43357ff3cd384e5cba75d2c31175b116`
 
@@ -16,6 +16,10 @@
 
 如果低命中是实际踏面而高命中是台阶边/斜面，1912 将提前接近正式 Contact 的平面，同时比无门控低面选择少引入错误候选；如果低命中只是另一层但法线更好，仍可能产生预测提前或穿透，必须看全包数据。
 
-## 验证状态
+## 验证结果
 
-提交后用同一固定 Trace 正式回放并逐帧对账；不做视觉 Pass。若失败，保留采样和结论，精确回退 Runtime 候选并保留本记录。
+正式回放完成 1044/1044 帧，采样目录：`Diagnostics/GeneratedFootSampling/20260903-205821-a28529ea986d4ad8b90033a1b626f144`。本轮 Proof 匹配 1044/1044，Analyzer 未生成新报告。
+
+GroundPath `1796/292`、Contact Edge `114`、Landing/Release `24/53`、Plant 正穿透 `27`、最大穿透 `0.083242m`、最大 Plant output distance `0.569929m`、Bend/Extension、Plant verified、Physical/Pelvis 覆盖全部与 184 基线一致。右 1912/1916 的选点、residual 和 output 也完全不变，说明该法线门控在本 Trace 没有选中任何低候选。
+
+结论：无行为变化，不保留。保留采样作为“法线优先没有提供可用候选”的证据，回退三个 Runtime 文件，恢复原距离排序。

@@ -251,6 +251,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             }
             var workerOperations = new HashSet<int>();
             var kernels = new HashSet<CharacterPoseWorkerKernelId>();
+            Dictionary<int, int> poseProducers = BuildPoseProducers(
+                operationPages);
+            var batchReads = new HashSet<int>[Batches.Count];
+            var batchWrites = new HashSet<int>[Batches.Count];
             for (int batchIndex = 0; batchIndex < Batches.Count; batchIndex++)
             {
                 CharacterPoseWorkerBatchPlan batch = Batches[batchIndex];
@@ -261,6 +265,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                     throw new InvalidOperationException(
                         $"Pose Worker Batch #{batchIndex} identity is invalid.");
                 }
+                var expectedReads = new HashSet<int>();
+                var expectedWrites = new HashSet<int>();
                 kernels.Add(batch.Kernel);
                 for (int i = 0; i < batch.OperationIndices.Count; i++)
                 {
@@ -280,14 +286,82 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                         throw new InvalidOperationException(
                             $"Pose Worker Batch #{batchIndex} Kernel mapping is invalid.");
                     }
+                    CollectPoseReferences(
+                        operationPages,
+                        operation,
+                        true,
+                        expectedReads);
+                    CollectPoseReferences(
+                        operationPages,
+                        operation,
+                        false,
+                        expectedWrites);
                 }
-                RequireRanges(batch.ReadRanges, CharacterPoseWorkerValueAccess.Read, poseValueCount);
-                RequireRanges(batch.WriteRanges, CharacterPoseWorkerValueAccess.Write, poseValueCount);
-                if (batch.InputCompletionIndices.Any(value => value < 0 || value >= frameCacheCount))
+                HashSet<int> declaredReads = RequireRanges(
+                    batch.ReadRanges,
+                    CharacterPoseWorkerValueAccess.Read,
+                    poseValueCount);
+                HashSet<int> declaredWrites = RequireRanges(
+                    batch.WriteRanges,
+                    CharacterPoseWorkerValueAccess.Write,
+                    poseValueCount);
+                if (!declaredReads.SetEquals(expectedReads) ||
+                    !declaredWrites.SetEquals(expectedWrites) ||
+                    declaredReads.Overlaps(declaredWrites))
+                {
+                    throw new InvalidOperationException(
+                        $"Pose Worker Batch #{batchIndex} typed Value access is invalid.");
+                }
+                var expectedInputCompletions = new HashSet<int>(
+                    expectedReads
+                        .Where(poseProducers.ContainsKey)
+                        .Select(value => poseProducers[value]));
+                if (batch.InputCompletionIndices.Any(
+                        value => value < 0 || value >= frameCacheCount) ||
+                    batch.InputCompletionIndices.Count !=
+                    expectedInputCompletions.Count ||
+                    !expectedInputCompletions.SetEquals(
+                        batch.InputCompletionIndices))
                 {
                     throw new InvalidOperationException(
                         $"Pose Worker Batch #{batchIndex} Completion dependency is invalid.");
                 }
+                int expectedWorkspaceStart = expectedWrites.Count == 0
+                    ? 0
+                    : expectedWrites.Min();
+                int expectedWorkspaceCount = expectedWrites.Count == 0
+                    ? 0
+                    : checked(
+                        expectedWrites.Max() -
+                        expectedWorkspaceStart +
+                        1);
+                if (batch.PoseWorkspaceStart != expectedWorkspaceStart ||
+                    batch.PoseWorkspaceCount != expectedWorkspaceCount)
+                {
+                    throw new InvalidOperationException(
+                        $"Pose Worker Batch #{batchIndex} Workspace range is invalid.");
+                }
+                for (int previousIndex = 0;
+                     previousIndex < batchIndex;
+                     previousIndex++)
+                {
+                    CharacterPoseWorkerBatchPlan previous =
+                        Batches[previousIndex];
+                    if (previous.StageIndex != batch.StageIndex ||
+                        previous.DependencyWave != batch.DependencyWave)
+                        continue;
+                    if (batchWrites[previousIndex].Overlaps(
+                            declaredWrites) ||
+                        batchWrites[previousIndex].Overlaps(
+                            declaredReads) ||
+                        declaredWrites.Overlaps(batchReads[previousIndex]))
+                    {
+                        throw new InvalidOperationException(
+                            $"Pose Worker Batches #{previousIndex} and #{batchIndex} alias within one dependency wave.");
+                    }
+                }
+                batchReads[batchIndex] = declaredReads;
+                batchWrites[batchIndex] = declaredWrites;
             }
             for (int operationIndex = 0;
                  operationIndex < operationPages.Headers.Count;
@@ -305,21 +379,82 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 throw new InvalidOperationException("Pose Worker Kernel Set is incomplete.");
         }
 
-        static void RequireRanges(
+        static HashSet<int> RequireRanges(
             IReadOnlyList<CharacterPoseWorkerValueRange> ranges,
             CharacterPoseWorkerValueAccess access,
             int poseValueCount)
         {
+            var values = new HashSet<int>();
             for (int i = 0; i < ranges.Count; i++)
             {
                 CharacterPoseWorkerValueRange range = ranges[i];
                 if (range == null || range.Access != access ||
-                    range.Kind == CharacterPoseValueReferenceKind.Pose &&
+                    range.Kind != CharacterPoseValueReferenceKind.Pose ||
                     range.End > poseValueCount)
                 {
                     throw new InvalidOperationException(
                         "Pose Worker typed Value range is invalid.");
                 }
+                for (int value = range.Start; value < range.End; value++)
+                {
+                    if (!values.Add(value))
+                    {
+                        throw new InvalidOperationException(
+                            "Pose Worker typed Value ranges overlap.");
+                    }
+                }
+            }
+            return values;
+        }
+
+        static Dictionary<int, int> BuildPoseProducers(
+            CharacterPoseOperationPages operationPages)
+        {
+            var result = new Dictionary<int, int>();
+            for (int operationIndex = 0;
+                 operationIndex < operationPages.Headers.Count;
+                 operationIndex++)
+            {
+                CharacterPoseOperationHeader operation =
+                    operationPages.Headers[operationIndex];
+                for (int i = 0;
+                     i < operation.OutputValueReferenceCount;
+                     i++)
+                {
+                    CharacterPoseValueReference reference =
+                        operationPages.ValueReferences[
+                            operation.OutputValueReferenceStart + i];
+                    if (reference.Kind !=
+                        CharacterPoseValueReferenceKind.Pose)
+                        continue;
+                    if (!result.TryAdd(reference.Index, operation.Index))
+                    {
+                        throw new InvalidOperationException(
+                            $"Pose Value #{reference.Index} has multiple producers.");
+                    }
+                }
+            }
+            return result;
+        }
+
+        static void CollectPoseReferences(
+            CharacterPoseOperationPages operationPages,
+            CharacterPoseOperationHeader operation,
+            bool input,
+            HashSet<int> values)
+        {
+            int start = input
+                ? operation.InputValueReferenceStart
+                : operation.OutputValueReferenceStart;
+            int count = input
+                ? operation.InputValueReferenceCount
+                : operation.OutputValueReferenceCount;
+            for (int i = 0; i < count; i++)
+            {
+                CharacterPoseValueReference reference =
+                    operationPages.ValueReferences[start + i];
+                if (reference.Kind == CharacterPoseValueReferenceKind.Pose)
+                    values.Add(reference.Index);
             }
         }
     }

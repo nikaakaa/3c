@@ -114,8 +114,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 state.CorrectionResponseProfileRevision;
             ulong worldRevision = state.CorrectionResponseWorldRevision;
             bool hasLineage = state.HasCorrectionResponseLineage;
-            bool hasPreviousAnimatedHip = state.HasPreviousAnimatedHip;
-            Vector3 previousAnimatedHip = state.PreviousAnimatedHip;
             state = default;
             state.HasOutput = true;
             state.EffectiveCorrection = correction;
@@ -127,8 +125,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             state.CorrectionResponseSourceLineage = sourceLineage;
             state.CorrectionResponseProfileRevision = profileRevision;
             state.CorrectionResponseWorldRevision = worldRevision;
-            state.HasPreviousAnimatedHip = hasPreviousAnimatedHip;
-            state.PreviousAnimatedHip = previousAnimatedHip;
             state.PendingCorrectionResponseInitializationReason = reason;
         }
 
@@ -1006,15 +1002,9 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     : responseBeforeRebase;
             float currentResponse = previousResponse;
             CharacterFootCorrectionResponseDeltaDirection deltaDirection =
-                CharacterFootCorrectionResponseDeltaDirection.None;
+            CharacterFootCorrectionResponseDeltaDirection.None;
             float selectedSpeed = 0f;
             float appliedDelta = 0f;
-            bool animatedHipDeltaAvailable = state.HasPreviousAnimatedHip;
-            float animatedHipDeltaAlongUp = animatedHipDeltaAvailable
-                ? Vector3.Dot(
-                    frame.AnimatedHip - state.PreviousAnimatedHip,
-                    frame.ComponentUp.normalized)
-                : 0f;
             if (initializedThisFrame)
             {
                 reason = state.PendingCorrectionResponseInitializationReason !=
@@ -1038,14 +1028,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     selectedSpeed = delta > 0f
                         ? frame.Settings.CorrectionResponseIncreaseSpeed
                         : frame.Settings.CorrectionResponseDecreaseSpeed;
-                    if (animatedHipDeltaAvailable &&
-                        Mathf.Abs(animatedHipDeltaAlongUp) >
-                        CharacterFootConstraintMath.GeometryEpsilon)
-                    {
-                        selectedSpeed = animatedHipDeltaAlongUp > 0f
-                            ? frame.Settings.CorrectionResponseIncreaseSpeed
-                            : frame.Settings.CorrectionResponseDecreaseSpeed;
-                    }
                     float maximumDelta = selectedSpeed * frame.DeltaSeconds;
                     appliedDelta = Mathf.Clamp(
                         delta,
@@ -1088,8 +1070,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 currentResponse, domain, direction);
             state.HasPreviousResponseOutputPoint = true;
             state.PreviousResponseOutputPoint = responseOutputPoint;
-            state.HasPreviousAnimatedHip = true;
-            state.PreviousAnimatedHip = frame.AnimatedHip;
             state.PendingCorrectionResponseInitializationReason =
                 CharacterFootCorrectionResponseInitializationReason.None;
             return new CharacterFootCorrectionResponseResult(

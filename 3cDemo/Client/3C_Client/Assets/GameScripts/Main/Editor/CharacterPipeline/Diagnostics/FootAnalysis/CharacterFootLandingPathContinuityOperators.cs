@@ -497,6 +497,441 @@ namespace ThirdPersonCharacter.Pipeline.Diagnostics.FootAnalysis.Editor
         }
     }
 
+    internal sealed class CharacterFootLandingPathXzDistanceOperator :
+        IDiagnosticAnalysisOperator
+    {
+        const string Frame = "frame-sequence";
+        const string Reset = "reset-sequence";
+        const string Evaluated = "path-continuity-evaluated";
+        const string PathAvailableBefore = "path-available-before";
+        const string PathAvailableAfter = "path-available-after";
+        const string PreviousEvent = "path-previous-event-identity";
+        const string CurrentEvent = "path-current-event-identity";
+        const string InputIdentity = "ground-path-input-identity";
+        const string LandingPoint = "ground-landing-point";
+        const string LandingPointDelta = "landing-point-delta-meters";
+        const string RevisionDistance = "path-revision-distance-meters";
+        const string RevisionReason = "path-revision-reason";
+        const string LandingPointReason = "landing-point-revision-reason";
+        const string XzThreshold = "zzz-xz-rewrite-distance-meters";
+        const string RepresentativeLimit = "representative-limit";
+
+        public DiagnosticOperatorDescriptor Descriptor { get; } =
+            new DiagnosticOperatorDescriptor(
+                "foot/landing-path-xz-distance",
+                "motion",
+                Inputs.Slots(),
+                new[]
+                {
+                    Number(XzThreshold),
+                    Integer(LandingPointReason),
+                    Integer(RepresentativeLimit)
+                });
+
+        public DiagnosticOperatorResult Execute(
+            DiagnosticOperatorExecutionContext context)
+        {
+            var inputs = new Inputs(context);
+            double xzThreshold = CharacterFootDiagnosticOperatorSupport.RequireNumber(
+                context,
+                XzThreshold);
+            uint landingPointReason = CharacterFootDiagnosticOperatorSupport.RequireUInt32(
+                context,
+                LandingPointReason);
+            int representativeLimit = checked((int)
+                CharacterFootDiagnosticOperatorSupport.RequireUInt32(
+                    context,
+                    RepresentativeLimit));
+            var missing = new HashSet<string>(StringComparer.Ordinal);
+            var previousByDimension = new Dictionary<string, DiagnosticDatasetRow>(
+                StringComparer.Ordinal);
+            var observations = new List<XzObservation>();
+            DiagnosticDatasetCursor cursor = context.CreateCursor(0);
+            while (cursor.MoveNext())
+            {
+                DiagnosticDatasetRow current = cursor.Current;
+                string dimension = current.SampleKey.DimensionId;
+                if (!context.IncludesDimension(dimension) ||
+                    !context.MatchesFilters(current) ||
+                    !Require(current, inputs.Unconditional, missing))
+                {
+                    previousByDimension.Remove(dimension);
+                    continue;
+                }
+                bool hasPrevious = previousByDimension.TryGetValue(
+                    dimension,
+                    out DiagnosticDatasetRow previous);
+                bool continuous = hasPrevious &&
+                    previous.IsAvailable(inputs.Frame.Handle) &&
+                    previous.IsAvailable(inputs.Reset.Handle) &&
+                    current.GetUInt64(inputs.Frame.Handle) ==
+                    previous.GetUInt64(inputs.Frame.Handle) + 1 &&
+                    current.GetUInt64(inputs.Reset.Handle) ==
+                    previous.GetUInt64(inputs.Reset.Handle);
+                bool pathAvailable = current.GetBoolean(inputs.PathAvailableBefore.Handle) &&
+                    current.GetBoolean(inputs.PathAvailableAfter.Handle) &&
+                    hasPrevious &&
+                    previous.GetBoolean(inputs.PathAvailableAfter.Handle);
+                ulong currentEvent = current.GetUInt64(inputs.CurrentEvent.Handle);
+                bool sameEvent = continuous &&
+                    pathAvailable &&
+                    current.GetBoolean(inputs.Evaluated.Handle) &&
+                    previous.GetBoolean(inputs.Evaluated.Handle) &&
+                    currentEvent != 0 &&
+                    previous.GetUInt64(inputs.CurrentEvent.Handle) == currentEvent &&
+                    current.GetUInt64(inputs.PreviousEvent.Handle) == currentEvent;
+                bool landingChanged = sameEvent &&
+                    (current.GetUInt32(inputs.RevisionReason.Handle) & landingPointReason) != 0;
+                if (landingChanged)
+                {
+                    if (!previous.IsAvailable(inputs.LandingPoint.Handle) ||
+                        !current.IsAvailable(inputs.LandingPoint.Handle))
+                    {
+                        missing.Add("character-foot-ik/main/foot/ground-path-next-landing");
+                        previousByDimension.Remove(dimension);
+                        continue;
+                    }
+                    DiagnosticVector3 before = previous.GetVector3(
+                        inputs.LandingPoint.Handle);
+                    DiagnosticVector3 after = current.GetVector3(
+                        inputs.LandingPoint.Handle);
+                    double dx = after.X - before.X;
+                    double dz = after.Z - before.Z;
+                    double dy = after.Y - before.Y;
+                    double xzDistance = Math.Sqrt(dx * dx + dz * dz);
+                    double pointDistance = Math.Sqrt(
+                        dx * dx + dy * dy + dz * dz);
+                    bool rewrite = xzDistance > xzThreshold;
+                    observations.Add(new XzObservation(
+                        current,
+                        previous,
+                        currentEvent,
+                        xzDistance,
+                        pointDistance,
+                        Math.Abs(dy),
+                        rewrite,
+                        current.GetFloat32(inputs.LandingPointDelta.Handle),
+                        current.GetFloat32(inputs.RevisionDistance.Handle),
+                        current.GetUInt64(inputs.InputIdentity.Handle),
+                        previous.GetUInt64(inputs.InputIdentity.Handle)));
+                }
+                previousByDimension[dimension] = current;
+            }
+            if (missing.Count != 0)
+                return DiagnosticOperatorResult.MissingEvidence(
+                    CharacterFootDiagnosticOperatorSupport.MissingSummary(missing));
+            if (observations.Count == 0)
+                return DiagnosticOperatorResult.NotApplicable(
+                    "No continuous same-event GroundPath LandingPointChanged pair was eligible.");
+            observations.Sort((left, right) =>
+                right.XzDistance.CompareTo(left.XzDistance));
+            var evidence = new List<DiagnosticEvidence>();
+            int limit = representativeLimit <= 0
+                ? observations.Count
+                : Math.Min(representativeLimit, observations.Count);
+            for (int i = 0; i < limit; i++)
+                evidence.AddRange(BuildEvidence(
+                    inputs,
+                    observations[i],
+                    xzThreshold));
+            XzObservation maxCarry = observations.Find(value => !value.Rewrite);
+            if (maxCarry != null && !ContainsEvidence(evidence, maxCarry))
+                evidence.AddRange(BuildEvidence(
+                    inputs,
+                    maxCarry,
+                    xzThreshold));
+            int rewriteCount = observations.FindAll(value => value.Rewrite).Count;
+            int carryCount = observations.Count - rewriteCount;
+            double[] distances = new double[observations.Count];
+            for (int i = 0; i < observations.Count; i++)
+                distances[i] = observations[i].XzDistance;
+            Array.Sort(distances);
+            string summary =
+                $"Observed {observations.Count.ToString(CultureInfo.InvariantCulture)} continuous same-event GroundPath LandingPointChanged pairs; " +
+                $"carryWithinZzz={carryCount.ToString(CultureInfo.InvariantCulture)}; " +
+                $"rewriteBeyondZzz={rewriteCount.ToString(CultureInfo.InvariantCulture)}; " +
+                $"zzzThreshold={CharacterFootDiagnosticOperatorSupport.Format(xzThreshold)}m; " +
+                $"xzMin={CharacterFootDiagnosticOperatorSupport.Format(distances[0])}m; " +
+                $"xzMedian={CharacterFootDiagnosticOperatorSupport.Format(Percentile(distances, 0.5d))}m; " +
+                $"xzP90={CharacterFootDiagnosticOperatorSupport.Format(Percentile(distances, 0.9d))}m; " +
+                $"xzMax={CharacterFootDiagnosticOperatorSupport.Format(distances[distances.Length - 1])}m; " +
+                "PathRevisionDistance is reported separately from the ZZZ XZ threshold; " +
+                "ZZZ stair-edge reference seq1532->1533 has target/height-history +0.15m, arr230_y +0.021575m, f54/f56/f57/f58=0.";
+            return new DiagnosticOperatorResult(
+                DiagnosticRuleState.Passed,
+                summary,
+                null,
+                evidence,
+                null);
+        }
+
+        static bool ContainsEvidence(
+            IReadOnlyList<DiagnosticEvidence> evidence,
+            XzObservation observation)
+        {
+            string dimension = observation.Current.SampleKey.DimensionId;
+            for (int i = 0; i < evidence.Count; i++)
+            {
+                if (evidence[i].SequenceStart == observation.Previous.SampleKey.Sequence &&
+                    evidence[i].SequenceEnd == observation.Current.SampleKey.Sequence &&
+                    string.Equals(evidence[i].DimensionId, dimension, StringComparison.Ordinal))
+                {
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        static IReadOnlyList<DiagnosticEvidence> BuildEvidence(
+            Inputs inputs,
+            XzObservation observation,
+            double xzThreshold)
+        {
+            string classification = observation.Rewrite
+                ? "RewriteBeyondZzzThreshold"
+                : "CarryWithinZzzThreshold";
+            var evidence = new List<DiagnosticEvidence>
+            {
+                CharacterFootDiagnosticOperatorSupport.Evidence(
+                    EvidenceId("xz-distance", observation),
+                    inputs.LandingPoint,
+                    observation.Current.SampleKey.DimensionId,
+                    observation.Previous.SampleKey.Sequence,
+                    observation.Current.SampleKey.Sequence,
+                    CharacterFootDiagnosticOperatorSupport.Format(observation.XzDistance)),
+                CharacterFootDiagnosticOperatorSupport.Evidence(
+                    EvidenceId("point-distance", observation),
+                    inputs.LandingPoint,
+                    observation.Current.SampleKey.DimensionId,
+                    observation.Previous.SampleKey.Sequence,
+                    observation.Current.SampleKey.Sequence,
+                    CharacterFootDiagnosticOperatorSupport.Format(observation.PointDistance)),
+                CharacterFootDiagnosticOperatorSupport.Evidence(
+                    EvidenceId("vertical-delta", observation),
+                    inputs.LandingPoint,
+                    observation.Current.SampleKey.DimensionId,
+                    observation.Previous.SampleKey.Sequence,
+                    observation.Current.SampleKey.Sequence,
+                    CharacterFootDiagnosticOperatorSupport.Format(observation.VerticalDistance)),
+                CharacterFootDiagnosticOperatorSupport.Evidence(
+                    EvidenceId("revision-distance", observation),
+                    inputs.RevisionDistance,
+                    observation.Current.SampleKey.DimensionId,
+                    observation.Previous.SampleKey.Sequence,
+                    observation.Current.SampleKey.Sequence,
+                    CharacterFootDiagnosticOperatorSupport.Format(observation.RevisionDistance)),
+                CharacterFootDiagnosticOperatorSupport.Evidence(
+                    EvidenceId("recorded-point-distance", observation),
+                    inputs.LandingPointDelta,
+                    observation.Current.SampleKey.DimensionId,
+                    observation.Previous.SampleKey.Sequence,
+                    observation.Current.SampleKey.Sequence,
+                    CharacterFootDiagnosticOperatorSupport.Format(observation.RecordedPointDistance)),
+                ParameterEvidence(
+                    EvidenceId("zzz-threshold", observation),
+                    XzThreshold,
+                    inputs.LandingPoint,
+                    observation.Current.SampleKey.DimensionId,
+                    observation.Previous.SampleKey.Sequence,
+                    observation.Current.SampleKey.Sequence,
+                    CharacterFootDiagnosticOperatorSupport.Format(xzThreshold)),
+                ParameterEvidence(
+                    EvidenceId("classification", observation),
+                    "xz-classification",
+                    inputs.LandingPoint,
+                    observation.Current.SampleKey.DimensionId,
+                    observation.Previous.SampleKey.Sequence,
+                    observation.Current.SampleKey.Sequence,
+                    classification),
+                CharacterFootDiagnosticOperatorSupport.Evidence(
+                    EvidenceId("event", observation),
+                    inputs.CurrentEvent,
+                    observation.Current.SampleKey.DimensionId,
+                    observation.Previous.SampleKey.Sequence,
+                    observation.Current.SampleKey.Sequence,
+                    observation.EventIdentity.ToString(CultureInfo.InvariantCulture)),
+                CharacterFootDiagnosticOperatorSupport.Evidence(
+                    EvidenceId("path-transition", observation),
+                    inputs.InputIdentity,
+                    observation.Current.SampleKey.DimensionId,
+                    observation.Previous.SampleKey.Sequence,
+                    observation.Current.SampleKey.Sequence,
+                    observation.PreviousInputIdentity.ToString(CultureInfo.InvariantCulture) +
+                    "->" + observation.CurrentInputIdentity.ToString(CultureInfo.InvariantCulture))
+            };
+            return evidence;
+        }
+
+        static string EvidenceId(string suffix, XzObservation observation) =>
+            "xz-" + suffix + "-" +
+            observation.Current.SampleKey.Sequence.ToString(CultureInfo.InvariantCulture);
+
+        static DiagnosticEvidence ParameterEvidence(
+            string id,
+            string parameter,
+            in DiagnosticBoundInput datasetInput,
+            string dimension,
+            ulong sequenceStart,
+            ulong sequenceEnd,
+            string value) =>
+            new DiagnosticEvidence(
+                id,
+                datasetInput.DatasetId,
+                parameter,
+                dimension,
+                sequenceStart,
+                sequenceEnd,
+                value);
+
+        static bool Require(
+            in DiagnosticDatasetRow row,
+            IReadOnlyList<DiagnosticBoundInput> required,
+            ISet<string> missing)
+        {
+            bool complete = true;
+            for (int i = 0; i < required.Count; i++)
+            {
+                if (row.IsAvailable(required[i].Handle))
+                    continue;
+                missing.Add(CharacterFootDiagnosticOperatorSupport.Identity(required[i]));
+                complete = false;
+            }
+            return complete;
+        }
+
+        static double Percentile(double[] sorted, double percentile)
+        {
+            if (sorted.Length == 1)
+                return sorted[0];
+            double position = (sorted.Length - 1) * percentile;
+            int lower = (int)Math.Floor(position);
+            int upper = (int)Math.Ceiling(position);
+            if (lower == upper)
+                return sorted[lower];
+            double fraction = position - lower;
+            return sorted[lower] + (sorted[upper] - sorted[lower]) * fraction;
+        }
+
+        static DiagnosticOperatorParameter Number(string id) =>
+            new DiagnosticOperatorParameter(
+                id,
+                DiagnosticOperatorParameterKind.Number,
+                true,
+                0d);
+
+        static DiagnosticOperatorParameter Integer(string id) =>
+            new DiagnosticOperatorParameter(
+                id,
+                DiagnosticOperatorParameterKind.Integer,
+                true,
+                0d);
+
+        sealed class Inputs
+        {
+            internal Inputs(DiagnosticOperatorExecutionContext context)
+            {
+                Frame = context.Input("frame-sequence");
+                Reset = context.Input("reset-sequence");
+                Evaluated = context.Input("path-continuity-evaluated");
+                PathAvailableBefore = context.Input("path-available-before");
+                PathAvailableAfter = context.Input("path-available-after");
+                PreviousEvent = context.Input("path-previous-event-identity");
+                CurrentEvent = context.Input("path-current-event-identity");
+                InputIdentity = context.Input("ground-path-input-identity");
+                LandingPoint = context.Input("ground-landing-point");
+                LandingPointDelta = context.Input("landing-point-delta-meters");
+                RevisionDistance = context.Input("path-revision-distance-meters");
+                RevisionReason = context.Input("path-revision-reason");
+                Unconditional = new[]
+                {
+                    Frame, Reset, Evaluated, PathAvailableBefore, PathAvailableAfter,
+                    PreviousEvent, CurrentEvent, InputIdentity, LandingPointDelta,
+                    RevisionDistance, RevisionReason
+                };
+            }
+
+            internal DiagnosticBoundInput Frame { get; }
+            internal DiagnosticBoundInput Reset { get; }
+            internal DiagnosticBoundInput Evaluated { get; }
+            internal DiagnosticBoundInput PathAvailableBefore { get; }
+            internal DiagnosticBoundInput PathAvailableAfter { get; }
+            internal DiagnosticBoundInput PreviousEvent { get; }
+            internal DiagnosticBoundInput CurrentEvent { get; }
+            internal DiagnosticBoundInput InputIdentity { get; }
+            internal DiagnosticBoundInput LandingPoint { get; }
+            internal DiagnosticBoundInput LandingPointDelta { get; }
+            internal DiagnosticBoundInput RevisionDistance { get; }
+            internal DiagnosticBoundInput RevisionReason { get; }
+            internal IReadOnlyList<DiagnosticBoundInput> Unconditional { get; }
+
+            internal static DiagnosticOperatorInputSlot[] Slots() => new[]
+            {
+                Slot("frame-sequence", DiagnosticValueKind.UInt64),
+                Slot("reset-sequence", DiagnosticValueKind.UInt64),
+                Slot("path-continuity-evaluated", DiagnosticValueKind.Boolean),
+                Slot("path-available-before", DiagnosticValueKind.Boolean),
+                Slot("path-available-after", DiagnosticValueKind.Boolean),
+                Slot("path-previous-event-identity", DiagnosticValueKind.UInt64),
+                Slot("path-current-event-identity", DiagnosticValueKind.UInt64),
+                Slot("ground-path-input-identity", DiagnosticValueKind.UInt64),
+                Slot("ground-landing-point", DiagnosticValueKind.Vector3),
+                Slot("landing-point-delta-meters", DiagnosticValueKind.Float32),
+                Slot("path-revision-distance-meters", DiagnosticValueKind.Float32),
+                Slot("path-revision-reason", DiagnosticValueKind.UInt32)
+            };
+
+            static DiagnosticOperatorInputSlot Slot(
+                string id,
+                DiagnosticValueKind kind) =>
+                new DiagnosticOperatorInputSlot(
+                    id,
+                    kind,
+                    DiagnosticDatasetCardinality.Main,
+                    true);
+        }
+
+        sealed class XzObservation
+        {
+            internal XzObservation(
+                in DiagnosticDatasetRow current,
+                in DiagnosticDatasetRow previous,
+                ulong eventIdentity,
+                double xzDistance,
+                double pointDistance,
+                double verticalDistance,
+                bool rewrite,
+                double recordedPointDistance,
+                double revisionDistance,
+                ulong currentInputIdentity,
+                ulong previousInputIdentity)
+            {
+                Current = current;
+                Previous = previous;
+                EventIdentity = eventIdentity;
+                XzDistance = xzDistance;
+                PointDistance = pointDistance;
+                VerticalDistance = verticalDistance;
+                Rewrite = rewrite;
+                RecordedPointDistance = recordedPointDistance;
+                RevisionDistance = revisionDistance;
+                CurrentInputIdentity = currentInputIdentity;
+                PreviousInputIdentity = previousInputIdentity;
+            }
+
+            internal DiagnosticDatasetRow Current { get; }
+            internal DiagnosticDatasetRow Previous { get; }
+            internal ulong EventIdentity { get; }
+            internal double XzDistance { get; }
+            internal double PointDistance { get; }
+            internal double VerticalDistance { get; }
+            internal bool Rewrite { get; }
+            internal double RecordedPointDistance { get; }
+            internal double RevisionDistance { get; }
+            internal ulong CurrentInputIdentity { get; }
+            internal ulong PreviousInputIdentity { get; }
+        }
+    }
+
     internal sealed class CharacterFootLateApproachLandingRevisionOperator :
         IDiagnosticAnalysisOperator
     {

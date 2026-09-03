@@ -12,6 +12,7 @@ namespace ThirdPersonCharacter.Pipeline.Diagnostics.FootAnalysis.Editor
             registry.Register(new CharacterFootLockedHorizontalDriftOperator());
             registry.Register(new CharacterFootLockedVerticalAnchorEvidenceOperator());
             registry.Register(new CharacterFootLandingPathContinuityOperator());
+            registry.Register(new CharacterFootLandingPathXzDistanceOperator());
             registry.Register(new CharacterFootLateApproachLandingRevisionOperator());
             registry.Register(new CharacterFootLandingStateConsistencyOperator());
             registry.Register(new CharacterFootContactSupportGapOperator());

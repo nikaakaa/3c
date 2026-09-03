@@ -582,6 +582,82 @@
       }
     },
     {
+      "id": "landing-path-xz-distance",
+      "operator": "foot/landing-path-xz-distance",
+      "category": "motion",
+      "inputs": [
+        {
+          "slot": "frame-sequence",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/foot/resolved-frame-sequence"
+        },
+        {
+          "slot": "reset-sequence",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/input/body-reset-sequence"
+        },
+        {
+          "slot": "path-continuity-evaluated",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/foot/foot-motion-path-continuity-evaluated"
+        },
+        {
+          "slot": "path-available-before",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/foot/foot-motion-path-available-before"
+        },
+        {
+          "slot": "path-available-after",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/foot/foot-motion-path-available-after"
+        },
+        {
+          "slot": "path-previous-event-identity",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/foot/foot-motion-path-previous-landing-event-identity"
+        },
+        {
+          "slot": "path-current-event-identity",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/foot/foot-motion-path-current-landing-event-identity"
+        },
+        {
+          "slot": "ground-path-input-identity",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/foot/foot-motion-ground-path-input-identity"
+        },
+        {
+          "slot": "ground-landing-point",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/foot/ground-path-next-landing"
+        },
+        {
+          "slot": "landing-point-delta-meters",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/foot/foot-motion-path-landing-point-delta-meters"
+        },
+        {
+          "slot": "path-revision-distance-meters",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/foot/foot-motion-path-revision-distance"
+        },
+        {
+          "slot": "path-revision-reason",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/foot/foot-motion-path-revision-reason"
+        }
+      ],
+      "parameters": {
+        "zzz-xz-rewrite-distance-meters": 0.1,
+        "landing-point-revision-reason": 4,
+        "representative-limit": 8
+      },
+      "window": {
+        "minimumRows": 2,
+        "maximumSequenceGap": 0
+      }
+    },
+    {
       "id": "late-approach-landing-revision",
       "operator": "foot/late-approach-landing-revision",
       "category": "motion",

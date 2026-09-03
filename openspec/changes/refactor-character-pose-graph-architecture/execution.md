@@ -1290,3 +1290,11 @@ Runtime与Editor工程均使用规定参数编译通过，结果0错误；每次
 - Worker Seam虽然不再复制Workspace，但`CharacterPoseWorkerActorSlice`仍通过`CharacterPoseValuePageSlice`取得完整Actor Value页裸指针。Program Image typed range现在能在Seal／加载时证明正确，Kernel Interface仍没有把访问能力物理收窄到对应Batch声明的范围；该Memory Interface的Locality仍需继续闭合。
 - 正式Gameplay已删除单Actor旁路，但Preview的同步`CharacterAnimationPresentationRuntime.Present`仍按单个Preview Actor立即Begin／Submit／Complete。Preview必须改为显式调度Adapter，根动画Runtime不能继续拥有第二套Scheduler驱动方式。
 - 本轮旧Burst异常后Unity完成脚本域重载并重新连接`3C_Client@e852139597e42532`，但主线程持续对MCP返回`ping not answered`。因此最新Worker修正尚未重新跑完1044帧，3.9、14.10及行为等价结论继续保持未完成；不得以源码编译替代Replay证据。
+
+## 延后Family ABI绑定并分离Preview调度
+
+状态：前一节列出的Compiler顺序与Preview根调度问题已经继续修正。Compiler先生成不含Runtime Operation Pages的`CharacterPoseFamilyPayloadPlan`，Stage、Value Lifetime、Workspace和Worker Batch Plan只消费该计划；Worker Plan完成后，唯一`CharacterPoseFamilyPayloadBindingPass`才创建Header／typed Value Reference／18个Family Payload页，并立即用Worker读写、Completion、Workspace、Rig与Kernel身份验证绑定结果，最后交给Seal。Runtime ABI不再先于Worker安全计划封存，提交为`b6c99a1e0`。
+
+`CharacterAnimationPresentationRuntime`已经删除同步`Present`、Sequence Preview旁路、Scheduler字段和Scheduler生命周期所有权，只保留Begin／TryAdvance／Complete的根帧协议。正式Gameplay由`CharacterPoseWorkerPresentationSession`驱动；Preview由显式`CharacterPoseWorkerPreviewAdapter`驱动并独立拥有自己的Scheduler，两个Adapter共用同一个Program Runtime、Frame页和Kernel，不再让根动画Runtime维护第二套调度路径。未使用的`CharacterSimulationPresentationRuntime.PresentAnimation`旁路同时删除，提交为`6e83d88e6`。
+
+上述修改后Runtime与Editor工程再次使用规定参数编译通过，均为0错误，并已关闭全部.NET Build Server。11.9、11.13与12.13的源码实现已经闭合；最终勾选仍与12.12、14.10、14.11一起等待同一1044帧Replay确认。当前剩余结构问题只保留Worker Actor写页的typed物理切片，以及Unity主线程恢复后的实际Burst执行证据。

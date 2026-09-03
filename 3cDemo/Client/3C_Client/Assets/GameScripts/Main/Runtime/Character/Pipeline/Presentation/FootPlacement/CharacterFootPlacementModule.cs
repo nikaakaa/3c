@@ -366,6 +366,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 in frame,
                 in leftLanding,
                 leftPlantVerificationRequired,
+                bank.LeftFoot.Discrete.State == CharacterFootConstraintState.Locked &&
+                !leftLockRequest.RequestsLock,
                 m_LeftLandingObservation,
                 committedBank?.LeftLandingObservation,
                 out bank.LeftLandingObservation);
@@ -379,6 +381,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 in frame,
                 in rightLanding,
                 rightPlantVerificationRequired,
+                bank.RightFoot.Discrete.State == CharacterFootConstraintState.Locked &&
+                !rightLockRequest.RequestsLock,
                 m_RightLandingObservation,
                 committedBank?.RightLandingObservation,
                 out bank.RightLandingObservation);
@@ -1016,6 +1020,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             in CharacterFootPlacementFrameInput frame,
             in CharacterFootLandingSnapshot landingSnapshot,
             bool plantVerificationRequired,
+            bool suppressFutureLandingPrediction,
             CharacterFootLandingObservationPagePool observationPool,
             CharacterFootLandingObservationPage committedObservation,
             out CharacterFootLandingObservationPage pendingObservation)
@@ -1030,7 +1035,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 in footMotion,
                 in next,
                 landingSnapshot.LastLandingEventIdentity,
-                m_Settings.LandingPrediction.MaximumPredictionTimeSeconds);
+                m_Settings.LandingPrediction.MaximumPredictionTimeSeconds) &&
+                !suppressFutureLandingPrediction;
             CharacterFootLandingStepSource selectedSource;
             CharacterFootLandingPredictionResult selected;
             if (plantVerificationRequired)

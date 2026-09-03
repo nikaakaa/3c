@@ -1084,7 +1084,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                     throw new InvalidOperationException($"Pose Plan Foot Placement operation #{i} boundary is invalid.");
                 }
                 if (operation.Code == CharacterPoseOperationCode.PoseBoneIKGoals &&
-                    (operation.ExecutionDomain != CharacterPoseExecutionDomain.PureValue ||
+                    (operation.ExecutionDomain != CharacterPoseExecutionDomain.ManagedConstraint ||
                      operation.InputPoseSpace != CharacterPoseSpace.Component ||
                      operation.OutputPoseSpace != CharacterPoseSpace.None ||
                      outputGoalContribution < 0 || outputGoalSet >= 0 ||
@@ -1099,7 +1099,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                     throw new InvalidOperationException($"Pose Plan Pose Bone IK Goals operation #{i} boundary is invalid.");
                 }
                 if (operation.Code == CharacterPoseOperationCode.FullBodyIkGoalAssembler &&
-                    (operation.ExecutionDomain != CharacterPoseExecutionDomain.PureValue ||
+                    (operation.ExecutionDomain != CharacterPoseExecutionDomain.ManagedConstraint ||
                      operation.InputPoseSpace != CharacterPoseSpace.None ||
                      operation.OutputPoseSpace != CharacterPoseSpace.None ||
                      outputPose >= 0 || outputGoalContribution >= 0 ||
@@ -1112,7 +1112,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                         $"Pose Plan Full Body IK Goal Assembler operation #{i} boundary is invalid.");
                 }
                 if (operation.Code == CharacterPoseOperationCode.FullBodyIK &&
-                    (operation.ExecutionDomain != CharacterPoseExecutionDomain.PurePose ||
+                    (operation.ExecutionDomain != CharacterPoseExecutionDomain.ManagedConstraint ||
                      operation.InputPoseSpace != CharacterPoseSpace.Component ||
                      operation.OutputPoseSpace != CharacterPoseSpace.Component ||
                      outputGoalContribution >= 0 || outputGoalSet >= 0 ||

@@ -75,7 +75,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         }
 
         internal CharacterPoseValuePageSlice Values => m_Values;
-        internal ulong WritePageIdentity => m_Values.WritePageIdentity;
+        internal bool SharesWritablePages(
+            in CharacterPoseWorkerActorSlice other) =>
+            m_Values.SharesWritablePages(in other.m_Values);
 
         internal CharacterPoseNativeOperationHeader ApplyWeight(
             in CharacterPoseNativeOperationHeader operation,

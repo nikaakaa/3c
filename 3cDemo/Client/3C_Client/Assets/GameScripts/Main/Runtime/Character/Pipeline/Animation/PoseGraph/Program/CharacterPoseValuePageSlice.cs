@@ -128,7 +128,26 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         internal int LeftFootBoneIndex => m_LeftFootBoneIndex;
         internal int RightFootBoneIndex => m_RightFootBoneIndex;
         internal ulong CompletionIdentity => m_CompletionIdentity;
-        internal ulong WritePageIdentity => (ulong)m_Poses;
+        internal bool SharesWritablePages(
+            in CharacterPoseValuePageSlice other) =>
+            m_Poses == other.m_Poses ||
+            m_Velocities == other.m_Velocities ||
+            m_Parameters == other.m_Parameters ||
+            m_ParameterAvailability == other.m_ParameterAvailability ||
+            m_Contributions == other.m_Contributions ||
+            m_ContributionWeights == other.m_ContributionWeights ||
+            m_ContributionCounts == other.m_ContributionCounts ||
+            m_OutputWeights == other.m_OutputWeights ||
+            m_LeftFeet == other.m_LeftFeet ||
+            m_RightFeet == other.m_RightFeet ||
+            m_HasFeet == other.m_HasFeet ||
+            m_Availability == other.m_Availability ||
+            m_Continuity == other.m_Continuity ||
+            m_Discontinuities == other.m_Discontinuities ||
+            m_InvalidReasons == other.m_InvalidReasons ||
+            m_Completions == other.m_Completions ||
+            m_GraphInvalidReason == other.m_GraphInvalidReason ||
+            m_GraphInvalidOperation == other.m_GraphInvalidOperation;
 
         internal AnimationPoseAvailability Availability(int value) =>
             Read<AnimationPoseAvailability>(m_Availability, ValueIndex(value));

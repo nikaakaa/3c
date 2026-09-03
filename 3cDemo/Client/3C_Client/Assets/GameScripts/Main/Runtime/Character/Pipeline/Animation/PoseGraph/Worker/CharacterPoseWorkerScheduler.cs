@@ -407,8 +407,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                     throw new InvalidOperationException(
                         "Pose Worker Program batch rejected a duplicate Actor lease.");
                 }
-                if (m_ActorSlices[i].WritePageIdentity ==
-                    slice.WritePageIdentity)
+                CharacterPoseWorkerActorSlice pendingSlice =
+                    m_ActorSlices[i];
+                if (pendingSlice.SharesWritablePages(in slice))
                 {
                     throw new InvalidOperationException(
                         "Pose Worker Actor leases share one writable Frame page.");

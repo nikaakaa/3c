@@ -76,6 +76,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                 int wave = ResolveWave(
                     operation,
                     stageIndex,
+                    operations,
                     stageByOperation,
                     poseProducers,
                     waves);
@@ -122,6 +123,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                     throw new InvalidOperationException(
                         $"Pose Worker Batch stage={entry.Key.StageIndex}, wave={entry.Key.Wave}, kernel={entry.Key.Kernel} has an aliasing write set.");
                 }
+                writes = writes.OrderBy(value => value).ToArray();
                 int[] inputCompletions = reads
                     .Where(poseProducers.ContainsKey)
                     .Select(value => poseProducers[value])
@@ -218,6 +220,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
         static int ResolveWave(
             CharacterPoseBoundOperation operation,
             int stageIndex,
+            IReadOnlyList<CharacterPoseBoundOperation> operations,
             IReadOnlyList<int> stageByOperation,
             IReadOnlyDictionary<int, int> poseProducers,
             IReadOnlyList<int> waves)
@@ -228,7 +231,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                 if (!poseProducers.TryGetValue(input, out int producerIndex) ||
                     stageByOperation[producerIndex] != stageIndex ||
                     !CharacterPoseWorkerKernels.IsWorkerDomain(
-                        operation.ExecutionDomain))
+                        operations[producerIndex].ExecutionDomain))
                 {
                     continue;
                 }

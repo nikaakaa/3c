@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using BTSMTL.Diagnostics;
+using ThirdPersonCharacter.Pipeline;
 using ThirdPersonCharacter.Pipeline.Animation;
 using ThirdPersonCharacter.Pipeline.Animation.Diagnostics;
 using ThirdPersonCharacter.Pipeline.Animation.MotionMatching;
@@ -34,6 +35,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         readonly Transform m_VisualRoot;
         readonly Transform m_PoseRoot;
         readonly RuntimeDiagnosticsContext m_Diagnostics;
+        readonly CharacterPoseWorkerPresentationSession
+            m_WorkerPresentationSession;
         readonly List<CharacterPresentationCommand> m_CurrentFrameSignals =
             new List<CharacterPresentationCommand>();
 
@@ -45,6 +48,11 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         bool m_ReportedPresentationFailure;
         FinalAnimationPoseFrame m_LastFinalPose;
         CharacterPosePlanStageSnapshot m_PosePlanStages;
+        GameplayPresentationFrameContext m_PendingPresentationContext;
+        CharacterBodyPresentationFrame m_PendingBodyFrame;
+        bool m_PresentationFrameActive;
+        bool m_PendingAnimationFrame;
+        bool m_PendingCameraFrame;
         bool m_Disposed;
 
         internal CharacterSimulationPresentationRuntime(
@@ -55,7 +63,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             CharacterEquipmentVisualRuntime equipment,
             CharacterCameraPresentationRuntime camera,
             Transform poseRoot,
-            RuntimeDiagnosticsContext diagnostics)
+            RuntimeDiagnosticsContext diagnostics,
+            CharacterPoseWorkerPresentationSession workerPresentationSession)
         {
             if (!actorId.IsValid)
                 throw new ArgumentException("Presentation Runtime Actor identity is invalid.", nameof(actorId));
@@ -77,7 +86,12 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             if (m_PoseRoot.parent != m_VisualRoot)
                 throw new InvalidOperationException("PoseRoot must be a direct child of the Presentation VisualRoot.");
             m_Diagnostics = diagnostics ?? throw new ArgumentNullException(nameof(diagnostics));
+            m_WorkerPresentationSession = workerPresentationSession ??
+                throw new ArgumentNullException(nameof(workerPresentationSession));
         }
+
+        internal CharacterPoseWorkerPresentationSession
+            WorkerPresentationSession => m_WorkerPresentationSession;
 
         public void CaptureBodyInterval(CharacterPresentationBodyInterval interval)
         {
@@ -290,14 +304,52 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
 
         public void Present(GameplayPresentationFrameContext context)
         {
+            BeginPresentationFrame(context);
+            try
+            {
+                while (TryAdvancePresentationFrame(
+                           out CharacterPoseWorkerStageLease workerLease))
+                {
+                    CharacterPoseWorkerScheduler scheduler =
+                        m_WorkerPresentationSession.WorkerScheduler;
+                    scheduler.BeginBatch();
+                    scheduler.Submit(in workerLease);
+                    scheduler.CompleteBatch();
+                }
+                CompletePresentationFrame();
+            }
+            catch (Exception frameFailure)
+            {
+                Exception abortFailure = AbortPresentationFrame();
+                if (abortFailure != null)
+                {
+                    throw new AggregateException(
+                        "Character Presentation frame and abort both failed.",
+                        frameFailure,
+                        abortFailure);
+                }
+                throw;
+            }
+        }
+
+        internal void BeginPresentationFrame(
+            GameplayPresentationFrameContext context)
+        {
             RequireAlive();
+            if (m_PresentationFrameActive)
+            {
+                throw new InvalidOperationException(
+                    "Character Presentation already has an active frame.");
+            }
+            m_PendingPresentationContext = context;
+            m_PresentationFrameActive = true;
             m_Diagnostics.BeginPresentationFrame(context.RenderFrame);
             try
             {
                 using (EquipmentMarker.Auto())
                     m_Equipment.Present();
-                CharacterBodyPresentationFrame bodyFrame = m_Body.Present(context);
-                if (!bodyFrame.IsValid)
+                m_PendingBodyFrame = m_Body.Present(context);
+                if (!m_PendingBodyFrame.IsValid)
                 {
                     m_AnimationClockInitialized = false;
                     ResetPoseIfNeeded(
@@ -307,80 +359,187 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                         CharacterBodyPresentationResetReason.Initialization);
                     return;
                 }
-                if (bodyFrame.ResetSequence != m_LastBodyResetSequence)
+                if (m_PendingBodyFrame.ResetSequence !=
+                    m_LastBodyResetSequence)
                 {
                     m_AnimationClockInitialized = false;
-                    if (bodyFrame.ResetReason == CharacterBodyPresentationResetReason.CommittedBranchReplacement)
+                    if (m_PendingBodyFrame.ResetReason ==
+                        CharacterBodyPresentationResetReason
+                            .CommittedBranchReplacement)
                     {
-                        m_Animation.RetargetBodyBranch(bodyFrame.ResetSequence);
-                        m_Animation.RetargetFootPlacement(bodyFrame.ResetSequence);
+                        m_Animation.RetargetBodyBranch(
+                            m_PendingBodyFrame.ResetSequence);
+                        m_Animation.RetargetFootPlacement(
+                            m_PendingBodyFrame.ResetSequence);
                     }
                     else
                     {
-                        m_Animation.ResetPoseBranch(bodyFrame.ResetSequence);
-                        m_Animation.ResetFootPlacement(new CharacterFootPlacementReset(
-                            m_ActorId,
-                            context.RenderFrame,
-                            bodyFrame.ResetSequence,
-                            CharacterFootPlacementResetReason.BodyStreamReset,
-                            bodyFrame.ResetReason));
+                        m_Animation.ResetPoseBranch(
+                            m_PendingBodyFrame.ResetSequence);
+                        m_Animation.ResetFootPlacement(
+                            new CharacterFootPlacementReset(
+                                m_ActorId,
+                                context.RenderFrame,
+                                m_PendingBodyFrame.ResetSequence,
+                                CharacterFootPlacementResetReason
+                                    .BodyStreamReset,
+                                m_PendingBodyFrame.ResetReason));
                         m_PoseHasOutput = false;
                     }
-                    m_LastBodyResetSequence = bodyFrame.ResetSequence;
+                    m_LastBodyResetSequence =
+                        m_PendingBodyFrame.ResetSequence;
                 }
-                float animationDeltaSeconds = ResolveAnimationDeltaSeconds(in context, in bodyFrame);
+                float animationDeltaSeconds = ResolveAnimationDeltaSeconds(
+                    in context,
+                    in m_PendingBodyFrame);
+                m_PendingCameraFrame = m_Camera != null;
                 if (animationDeltaSeconds <= 0f)
-                {
-                    if (m_Camera != null)
-                    {
-                        using (CameraMarker.Auto())
-                            m_Camera.Present(bodyFrame, context.PresentationDeltaSeconds);
-                    }
                     return;
-                }
                 CharacterPresentationFactFrame factFrame;
                 using (FactProjectionMarker.Auto())
                 {
                     factFrame = m_FactProjector.Project(
                         context.RenderFrame,
                         animationDeltaSeconds,
-                        in bodyFrame);
+                        in m_PendingBodyFrame);
                 }
-                ComposedAnimationPoseFrame animationPose;
                 try
                 {
-                    animationPose = PresentAnimation(
-                        in bodyFrame,
-                        in factFrame,
-                        context.RenderFrame,
-                        animationDeltaSeconds);
+                    CharacterPresentationProgramParameterFrame parameterFrame =
+                        CharacterPresentationProgramParameterFrame.FromFact(
+                            in factFrame);
+                    using (AnimationMarker.Auto())
+                    {
+                        m_Animation.BeginPresentation(
+                            context.RenderFrame,
+                            m_PendingBodyFrame.AnimationSampleTick,
+                            m_PendingBodyFrame.AnimationSampleAlpha,
+                            animationDeltaSeconds,
+                            in m_PendingBodyFrame,
+                            in factFrame,
+                            in parameterFrame,
+                            m_LinkedPose.Session,
+                            m_Diagnostics);
+                    }
+                    m_PendingAnimationFrame = true;
                 }
                 catch (Exception exception)
                 {
-                    if (!m_ReportedPresentationFailure)
-                    {
-                        m_ReportedPresentationFailure = true;
-                        Debug.LogError(
-                            $"Presentation failure Actor={m_ActorId}, Frame={context.RenderFrame}, " +
-                            $"BodyTick={bodyFrame.PreviousTick}->{bodyFrame.CurrentTick}@{bodyFrame.SampleAlpha:R}, " +
-                            $"Visible={bodyFrame.VisiblePosition:R}, VisualRoot={m_VisualRoot.position:R}, " +
-                            $"PoseRoot={m_PoseRoot.position:R}, PoseRootLocal={m_PoseRoot.localPosition:R}, " +
-                            $"CameraSkipped={m_Camera != null}, Error={exception.Message}");
-                    }
+                    ReportPresentationFailure(exception);
                     throw;
                 }
-                using (FinalPoseMarker.Auto())
-                    CommitFinalPose(bodyFrame, context, in animationPose);
-                if (m_Camera != null)
+            }
+            catch
+            {
+                m_CurrentFrameSignals.Clear();
+                ClearPendingPresentationFrame();
+                throw;
+            }
+        }
+
+        internal bool TryAdvancePresentationFrame(
+            out CharacterPoseWorkerStageLease workerLease)
+        {
+            if (!m_PresentationFrameActive)
+            {
+                throw new InvalidOperationException(
+                    "Character Presentation has no active frame.");
+            }
+            workerLease = default;
+            if (!m_PendingAnimationFrame)
+                return false;
+            try
+            {
+                using (AnimationMarker.Auto())
+                    return m_Animation.TryAdvancePresentation(out workerLease);
+            }
+            catch (Exception exception)
+            {
+                ReportPresentationFailure(exception);
+                throw;
+            }
+        }
+
+        internal void CompletePresentationFrame()
+        {
+            if (!m_PresentationFrameActive)
+            {
+                throw new InvalidOperationException(
+                    "Character Presentation has no active frame.");
+            }
+            try
+            {
+                if (m_PendingAnimationFrame)
+                {
+                    ComposedAnimationPoseFrame animationPose;
+                    try
+                    {
+                        using (AnimationMarker.Auto())
+                            animationPose = m_Animation.CompletePresentation();
+                    }
+                    catch (Exception exception)
+                    {
+                        ReportPresentationFailure(exception);
+                        throw;
+                    }
+                    using (FinalPoseMarker.Auto())
+                    {
+                        CommitFinalPose(
+                            m_PendingBodyFrame,
+                            m_PendingPresentationContext,
+                            in animationPose);
+                    }
+                }
+                if (m_PendingCameraFrame)
                 {
                     using (CameraMarker.Auto())
-                        m_Camera.Present(bodyFrame, context.PresentationDeltaSeconds);
+                    {
+                        m_Camera.Present(
+                            m_PendingBodyFrame,
+                            m_PendingPresentationContext
+                                .PresentationDeltaSeconds);
+                    }
                 }
             }
             finally
             {
                 m_CurrentFrameSignals.Clear();
+                ClearPendingPresentationFrame();
             }
+        }
+
+        internal Exception AbortPresentationFrame()
+        {
+            if (!m_PresentationFrameActive)
+                return null;
+            Exception failure = m_PendingAnimationFrame
+                ? m_Animation.AbortPresentation()
+                : null;
+            m_CurrentFrameSignals.Clear();
+            ClearPendingPresentationFrame();
+            return failure;
+        }
+
+        void ClearPendingPresentationFrame()
+        {
+            m_PendingPresentationContext = default;
+            m_PendingBodyFrame = default;
+            m_PresentationFrameActive = false;
+            m_PendingAnimationFrame = false;
+            m_PendingCameraFrame = false;
+        }
+
+        void ReportPresentationFailure(Exception exception)
+        {
+            if (m_ReportedPresentationFailure)
+                return;
+            m_ReportedPresentationFailure = true;
+            Debug.LogError(
+                $"Presentation failure Actor={m_ActorId}, Frame={m_PendingPresentationContext.RenderFrame}, " +
+                $"BodyTick={m_PendingBodyFrame.PreviousTick}->{m_PendingBodyFrame.CurrentTick}@{m_PendingBodyFrame.SampleAlpha:R}, " +
+                $"Visible={m_PendingBodyFrame.VisiblePosition:R}, VisualRoot={m_VisualRoot.position:R}, " +
+                $"PoseRoot={m_PoseRoot.position:R}, PoseRootLocal={m_PoseRoot.localPosition:R}, " +
+                $"CameraSkipped={m_Camera != null}, Error={exception.Message}");
         }
 
         public CharacterPresentationRuntimeDiagnosticsSnapshot CaptureDiagnostics()

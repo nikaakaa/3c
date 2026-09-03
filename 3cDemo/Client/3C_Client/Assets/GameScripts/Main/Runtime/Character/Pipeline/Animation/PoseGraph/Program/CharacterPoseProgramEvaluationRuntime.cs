@@ -2,6 +2,7 @@ using System;
 using ThirdPersonCharacter.Pipeline.Animation.Diagnostics;
 using ThirdPersonCharacter.Pipeline.Animation.Presentation;
 using ThirdPersonCharacter.Pipeline.Presentation;
+using ThirdPersonSimulation;
 
 namespace ThirdPersonCharacter.Pipeline.Animation
 {
@@ -16,8 +17,17 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             m_SourcePreparation;
         readonly CharacterPoseProgramCommittedDiagnosticsProjector
             m_Diagnostics;
+        readonly ActorId m_ActorId;
+        readonly CharacterPoseWorkerActorRegistration m_WorkerRegistration;
         readonly CharacterPoseProgramEvaluationState m_State =
             new CharacterPoseProgramEvaluationState();
+        CharacterPosePreparedEvaluationState m_ExecutingState;
+        CharacterPoseWorldFrameInput m_ExecutingWorldInput;
+        CharacterPoseProgramOutputResult m_ExecutingOutput;
+        int m_NextStageIndex;
+        int m_WaitingWorkerStageIndex = -1;
+        bool m_ExecutionActive;
+        bool m_HasExecutingOutput;
 
         internal CharacterPoseProgramEvaluationRuntime(
             CharacterPoseProgramExecutionView executionView,
@@ -26,7 +36,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             CharacterPoseProgramExecutor executor,
             CharacterPoseWorldContextAdapter worldContext,
             CharacterPoseProgramSourcePreparationRuntime sourcePreparation,
-            CharacterPoseProgramCommittedDiagnosticsProjector diagnostics)
+            CharacterPoseProgramCommittedDiagnosticsProjector diagnostics,
+            ActorId actorId,
+            CharacterPoseWorkerActorRegistration workerRegistration)
         {
             m_ExecutionView = executionView ??
                 throw new ArgumentNullException(nameof(executionView));
@@ -42,6 +54,13 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 throw new ArgumentNullException(nameof(sourcePreparation));
             m_Diagnostics = diagnostics ??
                 throw new ArgumentNullException(nameof(diagnostics));
+            m_ActorId = actorId.IsValid
+                ? actorId
+                : throw new ArgumentException(
+                    "Pose Program Actor identity is invalid.",
+                    nameof(actorId));
+            m_WorkerRegistration = workerRegistration ??
+                throw new ArgumentNullException(nameof(workerRegistration));
         }
 
         internal bool HasPrepared => m_State.HasPrepared;
@@ -114,7 +133,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 in frame);
         }
 
-        internal CharacterPoseProgramOutputResult Complete(
+        internal void BeginCompletion(
             CharacterPoseProgramFrameLease lease,
             in CharacterPoseProgramPrepared prepared,
             in CharacterBodyPresentationFrame bodyFrame,
@@ -132,43 +151,111 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                     "Character Pose Program evaluation input is invalid.",
                     nameof(prepared));
             }
-            CharacterPosePreparedEvaluationState state =
+            if (m_ExecutionActive || m_HasExecutingOutput)
+            {
+                throw new InvalidOperationException(
+                    "Character Pose Program evaluation is already executing.");
+            }
+            m_ExecutingState =
                 m_State.Consume(in prepared);
-            m_Executor.BeginEvaluation(state.Lineage.PresentationFrame);
-            CharacterPoseProgramOutputResult output;
+            m_Executor.BeginEvaluation(
+                m_ExecutingState.Lineage.PresentationFrame);
+            m_NextStageIndex = 0;
+            m_WaitingWorkerStageIndex = -1;
             if (m_SourcePreparation.HasSequencePreview)
             {
-                output = m_Executor.ExecuteSequencePreview(
+                m_ExecutingOutput = m_Executor.ExecuteSequencePreview(
                     m_SourcePreparation.SequencePreviewOperationIndex);
+                m_HasExecutingOutput = true;
+                m_FramePages.RequireEvaluationStagesCompleted(
+                    m_ExecutingState.Lineage.CompletionIdentity);
+                return;
             }
-            else
+            m_ExecutingWorldInput = new CharacterPoseWorldFrameInput(
+                m_WorldContext,
+                m_ExecutingState.Lineage.ActorId,
+                m_ExecutingState.Lineage.PresentationFrame,
+                m_ExecutingState.PresentationDeltaSeconds,
+                in bodyFrame,
+                in factFrame,
+                m_ExecutingState.Lineage.CompletionIdentity);
+            m_ExecutionActive = true;
+        }
+
+        internal bool TryAdvanceCompletion(
+            out CharacterPoseWorkerStageLease workerLease)
+        {
+            workerLease = default;
+            if (m_HasExecutingOutput)
+                return false;
+            if (!m_ExecutionActive)
             {
-                var worldInput = new CharacterPoseWorldFrameInput(
-                    m_WorldContext,
-                    state.Lineage.ActorId,
-                    state.Lineage.PresentationFrame,
-                    state.PresentationDeltaSeconds,
-                    in bodyFrame,
-                    in factFrame,
-                    state.Lineage.CompletionIdentity);
-                for (int stageIndex = 0;
-                     stageIndex < m_ExecutionView.Stages.Length;
-                     stageIndex++)
-                {
-                    AnimationPoseGraphNativeStage stage =
-                        m_ExecutionView.Stages[stageIndex];
-                    if (!m_Executor.ExecuteStage(
-                            stageIndex,
-                            state.PresentationDeltaSeconds,
-                            in worldInput))
-                    {
-                        break;
-                    }
-                }
-                output = m_Executor.CompleteEvaluation();
+                throw new InvalidOperationException(
+                    "Character Pose Program evaluation has not entered execution.");
             }
+            if (m_WaitingWorkerStageIndex >= 0)
+            {
+                CharacterPoseGraphNativeBinding frame =
+                    m_FramePages.RequirePoseGraphBinding(
+                        m_ExecutingState.Lineage.CompletionIdentity);
+                AnimationPoseGraphNativeStage completed =
+                    m_ExecutionView.Stages[m_WaitingWorkerStageIndex];
+                if (frame.StageCompletedAt[completed.CompletionIndex] !=
+                    m_ExecutingState.Lineage.CompletionIdentity)
+                {
+                    throw new InvalidOperationException(
+                        $"Pose Worker Stage #{m_WaitingWorkerStageIndex} did not publish its Completion.");
+                }
+                m_NextStageIndex = m_WaitingWorkerStageIndex + 1;
+                m_WaitingWorkerStageIndex = -1;
+            }
+            while (m_NextStageIndex < m_ExecutionView.Stages.Length)
+            {
+                AnimationPoseGraphNativeStage stage =
+                    m_ExecutionView.Stages[m_NextStageIndex];
+                if (CharacterPoseWorkerKernels.IsWorkerDomain(
+                        stage.ExecutionDomain))
+                {
+                    m_WaitingWorkerStageIndex = m_NextStageIndex;
+                    workerLease = m_Executor.CreateWorkerStageLease(
+                        m_WorkerRegistration,
+                        m_ActorId,
+                        m_NextStageIndex);
+                    return true;
+                }
+                if (!m_Executor.ExecuteStage(
+                        m_NextStageIndex,
+                        m_ExecutingState.PresentationDeltaSeconds,
+                        in m_ExecutingWorldInput))
+                {
+                    m_NextStageIndex = m_ExecutionView.Stages.Length;
+                    break;
+                }
+                m_NextStageIndex++;
+            }
+            m_ExecutingOutput = m_Executor.CompleteEvaluation();
             m_FramePages.RequireEvaluationStagesCompleted(
-                state.Lineage.CompletionIdentity);
+                m_ExecutingState.Lineage.CompletionIdentity);
+            m_HasExecutingOutput = true;
+            m_ExecutionActive = false;
+            return false;
+        }
+
+        internal CharacterPoseProgramOutputResult FinishCompletion()
+        {
+            if (!m_HasExecutingOutput)
+            {
+                throw new InvalidOperationException(
+                    "Character Pose Program evaluation has no completed output.");
+            }
+            CharacterPoseProgramOutputResult output = m_ExecutingOutput;
+            m_ExecutingState = default;
+            m_ExecutingWorldInput = default;
+            m_ExecutingOutput = default;
+            m_NextStageIndex = 0;
+            m_WaitingWorkerStageIndex = -1;
+            m_ExecutionActive = false;
+            m_HasExecutingOutput = false;
             return output;
         }
 
@@ -243,9 +330,29 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 interest);
         }
 
-        internal void DiscardPending() => m_State.DiscardPending();
+        internal void DiscardPending()
+        {
+            ClearExecution();
+            m_State.DiscardPending();
+        }
 
-        internal void Reset() => m_State.Reset();
+        internal void Reset()
+        {
+            ClearExecution();
+            m_State.Reset();
+        }
+
+        void ClearExecution()
+        {
+            m_WorkerRegistration.Fence();
+            m_ExecutingState = default;
+            m_ExecutingWorldInput = default;
+            m_ExecutingOutput = default;
+            m_NextStageIndex = 0;
+            m_WaitingWorkerStageIndex = -1;
+            m_ExecutionActive = false;
+            m_HasExecutingOutput = false;
+        }
 
         void MarkCompleted(ulong completionIdentity)
         {

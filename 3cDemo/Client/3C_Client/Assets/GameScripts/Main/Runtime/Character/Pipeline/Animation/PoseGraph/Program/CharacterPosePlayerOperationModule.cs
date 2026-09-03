@@ -10,18 +10,65 @@ namespace ThirdPersonCharacter.Pipeline.Animation
 {
     internal sealed class CharacterPosePlayerOperationModule
     {
-        readonly CharacterPoseValueWorkspace m_Context;
+        readonly CharacterPoseManagedValuePage m_Values;
         readonly CharacterPoseInertializationOperationModule
             m_Inertialization;
+        NativeArray<AnimationPlayerPoseNativeRange> m_SlotRanges;
+        NativeArray<AnimationLocalBonePose> m_SlotDenseLocalPoses;
+        NativeArray<AnimationBlendBoneVelocity> m_SlotDenseVelocities;
+        NativeArray<float> m_SlotPoseParameters;
+        NativeArray<byte> m_SlotPoseParameterAvailability;
+        NativeArray<AnimationPrimitivePoseContribution> m_SlotContributions;
+        NativeArray<float> m_SlotDenseContributionWeights;
+        NativeArray<int> m_SlotContributionCounts;
+        NativeArray<float> m_SlotOutputWeights;
+        NativeArray<AnimationFootFeatureSample> m_SlotLeftFootFeatures;
+        NativeArray<AnimationFootFeatureSample> m_SlotRightFootFeatures;
+        NativeArray<byte> m_SlotHasFootFeatures;
+        NativeArray<AnimationPoseAvailability> m_SlotAvailability;
+        NativeArray<ulong> m_SlotContinuityIdentities;
+        NativeArray<PoseDiscontinuityNative> m_SlotDiscontinuities;
+        NativeArray<AnimationPoseNativeInvalidReason> m_SlotInvalidReasons;
+        NativeArray<ulong> m_SlotCompletedAt;
+        NativeArray<CharacterAnimationSlotNativeControl> m_AnimationSlotControls;
 
         internal CharacterPosePlayerOperationModule(
-            CharacterPoseValueWorkspace context,
+            CharacterPoseManagedValuePage values,
             CharacterPoseInertializationOperationModule inertialization)
         {
-            m_Context = context ??
-                throw new ArgumentNullException(nameof(context));
+            m_Values = values ??
+                throw new ArgumentNullException(nameof(values));
             m_Inertialization = inertialization ??
                 throw new ArgumentNullException(nameof(inertialization));
+        }
+
+        internal void BindFrame(
+            CharacterPoseGraphNativeBinding binding,
+            NativeArray<CharacterAnimationSlotNativeControl> controls)
+        {
+            binding.RequireValid();
+            if (!controls.IsCreated)
+                throw new ArgumentException("Animation Slot controls are invalid.");
+            m_SlotRanges = binding.SlotRanges;
+            m_SlotDenseLocalPoses = binding.SlotDenseLocalPoses;
+            m_SlotDenseVelocities = binding.SlotDenseVelocities;
+            m_SlotPoseParameters = binding.SlotPoseParameters;
+            m_SlotPoseParameterAvailability =
+                binding.SlotPoseParameterAvailability;
+            m_SlotContributions = binding.SlotContributions;
+            m_SlotDenseContributionWeights =
+                binding.SlotDenseContributionWeights;
+            m_SlotContributionCounts = binding.SlotContributionCounts;
+            m_SlotOutputWeights = binding.SlotOutputWeights;
+            m_SlotLeftFootFeatures = binding.SlotLeftFootFeatures;
+            m_SlotRightFootFeatures = binding.SlotRightFootFeatures;
+            m_SlotHasFootFeatures = binding.SlotHasFootFeatures;
+            m_SlotAvailability = binding.SlotAvailability;
+            m_SlotContinuityIdentities = binding.SlotContinuityIdentities;
+            m_SlotDiscontinuities = binding.SlotDiscontinuities;
+            m_SlotInvalidReasons = binding.SlotInvalidReasons;
+            m_SlotCompletedAt = binding.SlotCompletedAt;
+            m_AnimationSlotControls = controls;
         }
 
         internal void EvaluatePlayerInput(
@@ -48,13 +95,13 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             int slotIndex,
             AnimationSelectionAvailabilityPolicy selectionAvailability)
         {
-            ulong continuity = slotIndex >= 0 && slotIndex < m_Context.m_PlayerCount
-                ? m_Context.m_SlotContinuityIdentities[slotIndex]
+            ulong continuity = slotIndex >= 0 && slotIndex < m_SlotRanges.Length
+                ? m_SlotContinuityIdentities[slotIndex]
                 : 0UL;
-            if (slotIndex < 0 || slotIndex >= m_Context.m_PlayerCount ||
-                m_Context.m_SlotCompletedAt[slotIndex] != m_Context.m_CompletionIdentity)
+            if (slotIndex < 0 || slotIndex >= m_SlotRanges.Length ||
+                m_SlotCompletedAt[slotIndex] != m_Values.m_CompletionIdentity)
             {
-                m_Context.SetInvalid(
+                m_Values.SetInvalid(
                     output,
                     continuity,
                     AnimationPoseNativeInvalidReason.PoseGraphInputIncomplete,
@@ -62,18 +109,18 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 return;
             }
 
-            AnimationPoseAvailability availability = m_Context.m_SlotAvailability[slotIndex];
-            AnimationPoseNativeInvalidReason slotReason = m_Context.m_SlotInvalidReasons[slotIndex];
-            PoseDiscontinuityNative discontinuity = m_Context.m_SlotDiscontinuities[slotIndex];
+            AnimationPoseAvailability availability = m_SlotAvailability[slotIndex];
+            AnimationPoseNativeInvalidReason slotReason = m_SlotInvalidReasons[slotIndex];
+            PoseDiscontinuityNative discontinuity = m_SlotDiscontinuities[slotIndex];
             if (availability == AnimationPoseAvailability.Invalid)
             {
-                m_Context.SetInvalid(output, continuity, CharacterPoseValueWorkspace.NormalizeInvalidReason(slotReason), header.Index);
+                m_Values.SetInvalid(output, continuity, CharacterPosePureMath.NormalizeInvalidReason(slotReason), header.Index);
                 return;
             }
-            if (!CharacterPoseValueWorkspace.IsAvailability(availability) || slotReason != AnimationPoseNativeInvalidReason.None || continuity == 0 ||
-                !discontinuity.IsValid || discontinuity.IsPresent && discontinuity.CompletionIdentity != m_Context.m_CompletionIdentity)
+            if (!CharacterPosePureMath.IsAvailability(availability) || slotReason != AnimationPoseNativeInvalidReason.None || continuity == 0 ||
+                !discontinuity.IsValid || discontinuity.IsPresent && discontinuity.CompletionIdentity != m_Values.m_CompletionIdentity)
             {
-                m_Context.SetInvalid(
+                m_Values.SetInvalid(
                     output,
                     continuity,
                     AnimationPoseNativeInvalidReason.PoseGraphOperationInvalid,
@@ -83,113 +130,113 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             if (availability == AnimationPoseAvailability.NoPose &&
                 selectionAvailability == AnimationSelectionAvailabilityPolicy.RequireSelection)
             {
-                m_Context.SetInvalid(output, continuity, AnimationPoseNativeInvalidReason.RequiredPoseMissing, header.Index);
+                m_Values.SetInvalid(output, continuity, AnimationPoseNativeInvalidReason.RequiredPoseMissing, header.Index);
                 return;
             }
 
-            AnimationPlayerPoseNativeRange range = m_Context.m_SlotRanges[slotIndex];
-            int contributionCount = m_Context.m_SlotContributionCounts[slotIndex];
-            float outputWeight = m_Context.m_SlotOutputWeights[slotIndex];
-            byte hasFootFeatures = m_Context.m_SlotHasFootFeatures[slotIndex];
+            AnimationPlayerPoseNativeRange range = m_SlotRanges[slotIndex];
+            int contributionCount = m_SlotContributionCounts[slotIndex];
+            float outputWeight = m_SlotOutputWeights[slotIndex];
+            byte hasFootFeatures = m_SlotHasFootFeatures[slotIndex];
             if (range.PhysicalPlayerIndex != slotIndex || contributionCount < 0 ||
-                contributionCount > range.ContributionCapacity || contributionCount > m_Context.m_ContributionStride ||
-                !CharacterPoseValueWorkspace.IsWeight(outputWeight) || hasFootFeatures > 1)
+                contributionCount > range.ContributionCapacity || contributionCount > m_Values.m_ContributionStride ||
+                !CharacterPosePureMath.IsWeight(outputWeight) || hasFootFeatures > 1)
             {
-                m_Context.SetInvalid(output, continuity, AnimationPoseNativeInvalidReason.SlotPlanInvalid, header.Index);
+                m_Values.SetInvalid(output, continuity, AnimationPoseNativeInvalidReason.SlotPlanInvalid, header.Index);
                 return;
             }
 
-            for (int parameter = 0; parameter < m_Context.m_ParameterCount; parameter++)
+            for (int parameter = 0; parameter < m_Values.m_ParameterCount; parameter++)
             {
-                float value = m_Context.m_SlotPoseParameters[range.ParameterOffset + parameter];
-                byte parameterAvailable = m_Context.m_SlotPoseParameterAvailability[range.ParameterOffset + parameter];
+                float value = m_SlotPoseParameters[range.ParameterOffset + parameter];
+                byte parameterAvailable = m_SlotPoseParameterAvailability[range.ParameterOffset + parameter];
                 if (!float.IsFinite(value) || parameterAvailable > 1)
                 {
-                    m_Context.SetInvalid(output, continuity, AnimationPoseNativeInvalidReason.SlotParameterInvalid, header.Index);
+                    m_Values.SetInvalid(output, continuity, AnimationPoseNativeInvalidReason.SlotParameterInvalid, header.Index);
                     return;
                 }
-                m_Context.m_ValuePoseParameters[m_Context.ParameterOffset(output) + parameter] = value;
-                m_Context.m_ValuePoseParameterAvailability[m_Context.ParameterOffset(output) + parameter] = parameterAvailable;
+                m_Values.m_ValuePoseParameters[m_Values.ParameterOffset(output) + parameter] = value;
+                m_Values.m_ValuePoseParameterAvailability[m_Values.ParameterOffset(output) + parameter] = parameterAvailable;
             }
 
             if (availability == AnimationPoseAvailability.NoPose)
             {
                 if (contributionCount != 0 || outputWeight != 0f || hasFootFeatures != 0)
                 {
-                    m_Context.SetInvalid(output, continuity, AnimationPoseNativeInvalidReason.SlotPlanInvalid, header.Index);
+                    m_Values.SetInvalid(output, continuity, AnimationPoseNativeInvalidReason.SlotPlanInvalid, header.Index);
                     return;
                 }
-                m_Context.m_ValueAvailability[output] = AnimationPoseAvailability.NoPose;
-                m_Context.m_ValueContinuityIdentities[output] = continuity;
-                m_Context.m_ValueInvalidReasons[output] = AnimationPoseNativeInvalidReason.None;
+                m_Values.m_ValueAvailability[output] = AnimationPoseAvailability.NoPose;
+                m_Values.m_ValueContinuityIdentities[output] = continuity;
+                m_Values.m_ValueInvalidReasons[output] = AnimationPoseNativeInvalidReason.None;
                 return;
             }
 
             if (contributionCount <= 0)
             {
-                m_Context.SetInvalid(output, continuity, AnimationPoseNativeInvalidReason.SlotPlanInvalid, header.Index);
+                m_Values.SetInvalid(output, continuity, AnimationPoseNativeInvalidReason.SlotPlanInvalid, header.Index);
                 return;
             }
-            for (int bone = 0; bone < m_Context.m_BoneCount; bone++)
+            for (int bone = 0; bone < m_Values.m_BoneCount; bone++)
             {
-                AnimationLocalBonePose pose = m_Context.m_SlotDenseLocalPoses[range.PoseOffset + bone];
-                AnimationBlendBoneVelocity velocity = m_Context.m_SlotDenseVelocities[range.VelocityOffset + bone];
+                AnimationLocalBonePose pose = m_SlotDenseLocalPoses[range.PoseOffset + bone];
+                AnimationBlendBoneVelocity velocity = m_SlotDenseVelocities[range.VelocityOffset + bone];
                 if (!pose.IsValid || !velocity.IsValid)
                 {
-                    m_Context.SetInvalid(output, continuity, AnimationPoseNativeInvalidReason.SlotPoseInvalid, header.Index);
+                    m_Values.SetInvalid(output, continuity, AnimationPoseNativeInvalidReason.SlotPoseInvalid, header.Index);
                     return;
                 }
-                m_Context.m_ValueDenseLocalPoses[m_Context.PoseOffset(output) + bone] = pose;
-                m_Context.m_ValueDenseVelocities[m_Context.PoseOffset(output) + bone] = velocity;
+                m_Values.m_ValueDenseLocalPoses[m_Values.PoseOffset(output) + bone] = pose;
+                m_Values.m_ValueDenseVelocities[m_Values.PoseOffset(output) + bone] = velocity;
             }
 
             if (hasFootFeatures == 1 &&
-                (!CharacterPoseValueWorkspace.IsValidFootFeature(m_Context.m_SlotLeftFootFeatures[slotIndex]) ||
-                 !CharacterPoseValueWorkspace.IsValidFootFeature(m_Context.m_SlotRightFootFeatures[slotIndex])))
+                (!CharacterPosePureMath.IsValidFootFeature(m_SlotLeftFootFeatures[slotIndex]) ||
+                 !CharacterPosePureMath.IsValidFootFeature(m_SlotRightFootFeatures[slotIndex])))
             {
-                m_Context.SetInvalid(output, continuity, AnimationPoseNativeInvalidReason.SlotFootFeatureInvalid, header.Index);
+                m_Values.SetInvalid(output, continuity, AnimationPoseNativeInvalidReason.SlotFootFeatureInvalid, header.Index);
                 return;
             }
 
-            int destinationContributionOffset = m_Context.ContributionOffset(output);
-            int destinationDenseOffset = m_Context.ContributionBoneOffset(output);
+            int destinationContributionOffset = m_Values.ContributionOffset(output);
+            int destinationDenseOffset = m_Values.ContributionBoneOffset(output);
             for (int contribution = 0; contribution < contributionCount; contribution++)
             {
                 AnimationPrimitivePoseContribution primitive =
-                    m_Context.m_SlotContributions[range.ContributionOffset + contribution];
-                if (!CharacterPoseValueWorkspace.IsValidPrimitiveContribution(primitive) || primitive.PhysicalPlayerIndex != slotIndex)
+                    m_SlotContributions[range.ContributionOffset + contribution];
+                if (!CharacterPosePureMath.IsValidPrimitiveContribution(primitive) || primitive.PhysicalPlayerIndex != slotIndex)
                 {
-                    m_Context.SetInvalid(output, continuity, AnimationPoseNativeInvalidReason.SlotContributionInvalid, header.Index);
+                    m_Values.SetInvalid(output, continuity, AnimationPoseNativeInvalidReason.SlotContributionInvalid, header.Index);
                     return;
                 }
-                m_Context.m_ValueContributions[destinationContributionOffset + contribution] = primitive;
-                for (int bone = 0; bone < m_Context.m_BoneCount; bone++)
+                m_Values.m_ValueContributions[destinationContributionOffset + contribution] = primitive;
+                for (int bone = 0; bone < m_Values.m_BoneCount; bone++)
                 {
-                    float weight = m_Context.m_SlotDenseContributionWeights[
-                        range.DenseContributionWeightOffset + contribution * m_Context.m_BoneCount + bone];
-                    if (!CharacterPoseValueWorkspace.IsWeight(weight))
+                    float weight = m_SlotDenseContributionWeights[
+                        range.DenseContributionWeightOffset + contribution * m_Values.m_BoneCount + bone];
+                    if (!CharacterPosePureMath.IsWeight(weight))
                     {
-                        m_Context.SetInvalid(output, continuity, AnimationPoseNativeInvalidReason.SlotContributionInvalid, header.Index);
+                        m_Values.SetInvalid(output, continuity, AnimationPoseNativeInvalidReason.SlotContributionInvalid, header.Index);
                         return;
                     }
-                    m_Context.m_ValueDenseContributionWeights[
-                        destinationDenseOffset + contribution * m_Context.m_BoneCount + bone] = weight;
+                    m_Values.m_ValueDenseContributionWeights[
+                        destinationDenseOffset + contribution * m_Values.m_BoneCount + bone] = weight;
                 }
             }
 
-            m_Context.m_ValueContributionCounts[output] = contributionCount;
-            m_Context.m_ValueOutputWeights[output] = outputWeight;
-            m_Context.m_ValueLeftFootFeatures[output] = hasFootFeatures == 1
-                ? m_Context.m_SlotLeftFootFeatures[slotIndex]
+            m_Values.m_ValueContributionCounts[output] = contributionCount;
+            m_Values.m_ValueOutputWeights[output] = outputWeight;
+            m_Values.m_ValueLeftFootFeatures[output] = hasFootFeatures == 1
+                ? m_SlotLeftFootFeatures[slotIndex]
                 : default;
-            m_Context.m_ValueRightFootFeatures[output] = hasFootFeatures == 1
-                ? m_Context.m_SlotRightFootFeatures[slotIndex]
+            m_Values.m_ValueRightFootFeatures[output] = hasFootFeatures == 1
+                ? m_SlotRightFootFeatures[slotIndex]
                 : default;
-            m_Context.m_ValueHasFootFeatures[output] = hasFootFeatures;
-            m_Context.m_ValueAvailability[output] = AnimationPoseAvailability.Pose;
-            m_Context.m_ValueContinuityIdentities[output] = continuity;
-            m_Context.m_ValueDiscontinuities[output] = m_Context.m_SlotDiscontinuities[slotIndex];
-            m_Context.m_ValueInvalidReasons[output] = AnimationPoseNativeInvalidReason.None;
+            m_Values.m_ValueHasFootFeatures[output] = hasFootFeatures;
+            m_Values.m_ValueAvailability[output] = AnimationPoseAvailability.Pose;
+            m_Values.m_ValueContinuityIdentities[output] = continuity;
+            m_Values.m_ValueDiscontinuities[output] = m_SlotDiscontinuities[slotIndex];
+            m_Values.m_ValueInvalidReasons[output] = AnimationPoseNativeInvalidReason.None;
         }
 
         internal void EvaluateAnimationSlot(
@@ -199,10 +246,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         {
             int source = operation.InputPoseValueIndex;
             int output = operation.OutputPoseValueIndex;
-            if (!m_Context.IsInputReady(source, header.Index) ||
-                m_Context.m_ValueAvailability[source] != AnimationPoseAvailability.Pose)
+            if (!m_Values.IsInputReady(source, header.Index) ||
+                m_Values.m_ValueAvailability[source] != AnimationPoseAvailability.Pose)
             {
-                m_Context.SetInvalid(
+                m_Values.SetInvalid(
                     output,
                     (ulong)header.Index + 1UL,
                     AnimationPoseNativeInvalidReason.PoseGraphInputIncomplete,
@@ -215,15 +262,15 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 output,
                 operation.PlayerIndex,
                 operation.SelectionAvailability);
-            if (m_Context.m_ValueAvailability[output] == AnimationPoseAvailability.Invalid)
+            if (m_Values.m_ValueAvailability[output] == AnimationPoseAvailability.Invalid)
                 return;
-            if (m_Context.m_ValueAvailability[output] == AnimationPoseAvailability.NoPose)
+            if (m_Values.m_ValueAvailability[output] == AnimationPoseAvailability.NoPose)
             {
-                if (!m_Context.TryCopyValue(source, output, header.Index))
+                if (!m_Values.TryCopyValue(source, output, header.Index))
                 {
-                    m_Context.SetInvalid(
+                    m_Values.SetInvalid(
                         output,
-                        m_Context.m_ValueContinuityIdentities[source],
+                        m_Values.m_ValueContinuityIdentities[source],
                         AnimationPoseNativeInvalidReason.PoseGraphOperationInvalid,
                         header.Index);
                 }
@@ -237,13 +284,13 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 return;
             }
 
-            int actionContributionCount = m_Context.m_ValueContributionCounts[output];
-            int actionContributionStart = m_Context.m_ContributionStride - actionContributionCount;
+            int actionContributionCount = m_Values.m_ValueContributionCounts[output];
+            int actionContributionStart = m_Values.m_ContributionStride - actionContributionCount;
             if (actionContributionCount <= 0 || actionContributionStart < 0)
             {
-                m_Context.SetInvalid(
+                m_Values.SetInvalid(
                     output,
-                    m_Context.m_ValueContinuityIdentities[output],
+                    m_Values.m_ValueContinuityIdentities[output],
                     AnimationPoseNativeInvalidReason.SlotContributionInvalid,
                     header.Index);
                 return;
@@ -251,74 +298,73 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             for (int contribution = actionContributionCount - 1; contribution >= 0; contribution--)
             {
                 int target = actionContributionStart + contribution;
-                m_Context.m_ValueContributions[m_Context.ContributionOffset(output) + target] =
-                    m_Context.m_ValueContributions[m_Context.ContributionOffset(output) + contribution];
-                for (int bone = 0; bone < m_Context.m_BoneCount; bone++)
+                m_Values.m_ValueContributions[m_Values.ContributionOffset(output) + target] =
+                    m_Values.m_ValueContributions[m_Values.ContributionOffset(output) + contribution];
+                for (int bone = 0; bone < m_Values.m_BoneCount; bone++)
                 {
-                    m_Context.SetContributionBoneWeight(
+                    m_Values.SetContributionBoneWeight(
                         output,
                         target,
                         bone,
-                        m_Context.GetContributionBoneWeight(output, contribution, bone));
+                        m_Values.GetContributionBoneWeight(output, contribution, bone));
                 }
             }
 
-            ulong actionContinuity = m_Context.m_ValueContinuityIdentities[output];
-            float actionOutputWeight = m_Context.m_ValueOutputWeights[output];
-            byte actionHasFootFeatures = m_Context.m_ValueHasFootFeatures[output];
-            AnimationFootFeatureSample actionLeftFoot = m_Context.m_ValueLeftFootFeatures[output];
-            AnimationFootFeatureSample actionRightFoot = m_Context.m_ValueRightFootFeatures[output];
-            if (!m_Context.TryGetBoneOutputWeight(output, m_Context.m_LeftFootBoneIndex, out float actionLeftFootWeight) ||
-                !m_Context.TryGetBoneOutputWeight(output, m_Context.m_RightFootBoneIndex, out float actionRightFootWeight))
+            ulong actionContinuity = m_Values.m_ValueContinuityIdentities[output];
+            float actionOutputWeight = m_Values.m_ValueOutputWeights[output];
+            byte actionHasFootFeatures = m_Values.m_ValueHasFootFeatures[output];
+            AnimationFootFeatureSample actionLeftFoot = m_Values.m_ValueLeftFootFeatures[output];
+            AnimationFootFeatureSample actionRightFoot = m_Values.m_ValueRightFootFeatures[output];
+            if (!m_Values.TryGetBoneOutputWeight(output, m_Values.m_LeftFootBoneIndex, out float actionLeftFootWeight) ||
+                !m_Values.TryGetBoneOutputWeight(output, m_Values.m_RightFootBoneIndex, out float actionRightFootWeight))
             {
-                m_Context.SetInvalid(
+                m_Values.SetInvalid(
                     output,
                     actionContinuity,
                     AnimationPoseNativeInvalidReason.SlotContributionInvalid,
                     header.Index);
                 return;
             }
-            for (int bone = 0; bone < m_Context.m_BoneCount; bone++)
+            for (int bone = 0; bone < m_Values.m_BoneCount; bone++)
             {
-                if (!m_Context.TryGetBoneOutputWeight(output, bone, out float actionBoneWeight))
+                if (!m_Values.TryGetBoneOutputWeight(output, bone, out float actionBoneWeight))
                 {
-                    m_Context.SetInvalid(
+                    m_Values.SetInvalid(
                         output,
                         actionContinuity,
                         AnimationPoseNativeInvalidReason.SlotContributionInvalid,
                         header.Index);
                     return;
                 }
-                AnimationLocalBonePose actionPose = m_Context.m_ValueDenseLocalPoses[m_Context.PoseOffset(output) + bone];
-                AnimationBlendBoneVelocity actionVelocity = m_Context.m_ValueDenseVelocities[m_Context.PoseOffset(output) + bone];
-                AnimationBlendBoneVelocity sourceVelocity = m_Context.m_ValueDenseVelocities[m_Context.PoseOffset(source) + bone];
-                if (!CharacterPoseValueWorkspace.TryBlendPose(
-                        m_Context.m_ValueDenseLocalPoses[m_Context.PoseOffset(source) + bone],
+                AnimationLocalBonePose actionPose = m_Values.m_ValueDenseLocalPoses[m_Values.PoseOffset(output) + bone];
+                AnimationBlendBoneVelocity actionVelocity = m_Values.m_ValueDenseVelocities[m_Values.PoseOffset(output) + bone];
+                AnimationBlendBoneVelocity sourceVelocity = m_Values.m_ValueDenseVelocities[m_Values.PoseOffset(source) + bone];
+                if (!CharacterPosePureMath.TryBlendPose(
+                        m_Values.m_ValueDenseLocalPoses[m_Values.PoseOffset(source) + bone],
                         actionPose,
                         actionBoneWeight,
                         out AnimationLocalBonePose pose))
                 {
-                    m_Context.SetInvalid(
+                    m_Values.SetInvalid(
                         output,
                         actionContinuity,
                         AnimationPoseNativeInvalidReason.SlotPoseInvalid,
                         header.Index);
                     return;
                 }
-                m_Context.m_ValueDenseLocalPoses[m_Context.PoseOffset(output) + bone] = pose;
-                m_Context.m_ValueDenseVelocities[m_Context.PoseOffset(output) + bone] = new AnimationBlendBoneVelocity(
+                m_Values.m_ValueDenseLocalPoses[m_Values.PoseOffset(output) + bone] = pose;
+                m_Values.m_ValueDenseVelocities[m_Values.PoseOffset(output) + bone] = new AnimationBlendBoneVelocity(
                     Vector3.LerpUnclamped(sourceVelocity.Linear, actionVelocity.Linear, actionBoneWeight),
                     Vector3.LerpUnclamped(sourceVelocity.Angular, actionVelocity.Angular, actionBoneWeight),
                     Vector3.LerpUnclamped(sourceVelocity.Scale, actionVelocity.Scale, actionBoneWeight));
             }
 
-            m_Context.m_ValueContributionCounts[output] = 0;
-            m_Context.m_ValueOutputWeights[output] = actionOutputWeight;
+            m_Values.m_ValueContributionCounts[output] = 0;
+            m_Values.m_ValueOutputWeights[output] = actionOutputWeight;
             for (int contribution = 0; contribution < actionContributionCount; contribution++)
             {
-                if (!m_Context.TryAddContribution(
+                if (!m_Values.TryAddUnmaskedContribution(
                         header.Weight,
-                        -1,
                         output,
                         actionContributionStart + contribution,
                         output,
@@ -326,7 +372,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                         true,
                         false))
                 {
-                    m_Context.SetInvalid(
+                    m_Values.SetInvalid(
                         output,
                         actionContinuity,
                         AnimationPoseNativeInvalidReason.SlotContributionInvalid,
@@ -334,7 +380,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                     return;
                 }
             }
-            for (int contribution = 0; contribution < m_Context.m_ValueContributionCounts[source]; contribution++)
+            for (int contribution = 0; contribution < m_Values.m_ValueContributionCounts[source]; contribution++)
             {
                 if (!TryAddAnimationSlotBaseContribution(
                         source,
@@ -346,7 +392,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                         actionLeftFootWeight,
                         actionRightFootWeight))
                 {
-                    m_Context.SetInvalid(
+                    m_Values.SetInvalid(
                         output,
                         actionContinuity,
                         AnimationPoseNativeInvalidReason.SlotContributionInvalid,
@@ -355,16 +401,16 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 }
             }
 
-            m_Context.m_ValueAvailability[output] = AnimationPoseAvailability.Pose;
-            m_Context.m_ValueOutputWeights[output] = CharacterPoseValueWorkspace.UnionWeight(
-                m_Context.m_ValueOutputWeights[source],
+            m_Values.m_ValueAvailability[output] = AnimationPoseAvailability.Pose;
+            m_Values.m_ValueOutputWeights[output] = CharacterPosePureMath.UnionWeight(
+                m_Values.m_ValueOutputWeights[source],
                 actionOutputWeight);
-            m_Context.m_ValueContinuityIdentities[output] = CharacterPoseValueWorkspace.CombineContinuity(
-                m_Context.m_ValueContinuityIdentities[source],
+            m_Values.m_ValueContinuityIdentities[output] = CharacterPosePureMath.CombineContinuity(
+                m_Values.m_ValueContinuityIdentities[source],
                 actionContinuity,
                 header.Index);
-            m_Context.m_ValueInvalidReasons[output] = AnimationPoseNativeInvalidReason.None;
-            if (!m_Context.TryCopyParameters(source, output) ||
+            m_Values.m_ValueInvalidReasons[output] = AnimationPoseNativeInvalidReason.None;
+            if (!m_Values.TryCopyParameters(source, output) ||
                 !TryResolveAnimationSlotFootFeatures(
                     source,
                     output,
@@ -374,13 +420,13 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                     actionLeftFootWeight,
                     actionRightFootWeight))
             {
-                m_Context.SetInvalid(
+                m_Values.SetInvalid(
                     output,
-                    m_Context.m_ValueContinuityIdentities[output],
+                    m_Values.m_ValueContinuityIdentities[output],
                     AnimationPoseNativeInvalidReason.PoseGraphOperationInvalid,
                     header.Index);
             }
-            if (m_Context.m_ValueAvailability[output] == AnimationPoseAvailability.Pose)
+            if (m_Values.m_ValueAvailability[output] == AnimationPoseAvailability.Pose)
                 EvaluateAnimationSlotInertialization(
                     in header,
                     in operation,
@@ -393,35 +439,36 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             float deltaSeconds)
         {
             int output = operation.OutputPoseValueIndex;
-            if ((uint)operation.AnimationSlotIndex >= (uint)m_Context.m_AnimationSlotControls.Length ||
+            if ((uint)operation.AnimationSlotIndex >= (uint)m_AnimationSlotControls.Length ||
                 !float.IsFinite(deltaSeconds) || deltaSeconds < 0f)
             {
-                m_Context.SetInvalid(
+                m_Values.SetInvalid(
                     output,
-                    m_Context.m_ValueContinuityIdentities[output],
+                    m_Values.m_ValueContinuityIdentities[output],
                     AnimationPoseNativeInvalidReason.PoseGraphOperationInvalid,
                     header.Index);
                 return;
             }
-            int stateIndex = m_Context.m_AnimationSlotNodeOffset + operation.AnimationSlotIndex;
-            if ((uint)stateIndex >= (uint)m_Context.m_InertialStates.Length)
+            int stateIndex = m_Inertialization.AnimationSlotNodeOffset +
+                             operation.AnimationSlotIndex;
+            if ((uint)stateIndex >= (uint)m_Inertialization.StateCount)
             {
-                m_Context.SetInvalid(
+                m_Values.SetInvalid(
                     output,
-                    m_Context.m_ValueContinuityIdentities[output],
+                    m_Values.m_ValueContinuityIdentities[output],
                     AnimationPoseNativeInvalidReason.PoseGraphOperationInvalid,
                     header.Index);
                 return;
             }
             CharacterAnimationSlotNativeControl control =
-                m_Context.m_AnimationSlotControls[operation.AnimationSlotIndex];
+                m_AnimationSlotControls[operation.AnimationSlotIndex];
             PoseInertializationNativeState state = m_Inertialization.CommittedInertialState(stateIndex);
             m_Inertialization.PrepareInertialNode(stateIndex, in state);
             if (control.Generation == 0 || control.Generation < state.LastEventIdentity)
             {
-                m_Context.SetInvalid(
+                m_Values.SetInvalid(
                     output,
-                    m_Context.m_ValueContinuityIdentities[output],
+                    m_Values.m_ValueContinuityIdentities[output],
                     AnimationPoseNativeInvalidReason.PoseGraphOperationInvalid,
                     header.Index);
                 return;
@@ -438,13 +485,14 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                         control.SourceProducerIndex,
                         control.TargetProducerIndex);
                     if (ruleIndex < 0 ||
-                        m_Context.m_InertialRules[ruleIndex].Mode != PoseInertializationMode.Inertialize)
+                        m_Inertialization.Rule(ruleIndex).Mode !=
+                        PoseInertializationMode.Inertialize)
                     {
                         state.RuntimeState = PoseInertializationRuntimeState.Invalid;
-                        m_Context.m_InertialStates[stateIndex] = state;
-                        m_Context.SetInvalid(
+                        m_Inertialization.SetState(stateIndex, in state);
+                        m_Values.SetInvalid(
                             output,
-                            m_Context.m_ValueContinuityIdentities[output],
+                            m_Values.m_ValueContinuityIdentities[output],
                             AnimationPoseNativeInvalidReason.PoseGraphOperationInvalid,
                             header.Index);
                         return;
@@ -474,13 +522,16 @@ namespace ThirdPersonCharacter.Pipeline.Animation
 
             if (state.Active != 0)
             {
-                PoseInertializationNativeRule rule = m_Context.m_InertialRules[state.ActiveRuleIndex];
+                PoseInertializationNativeRule rule =
+                    m_Inertialization.Rule(state.ActiveRuleIndex);
                 bool anyActive = false;
-                for (int bone = 0; bone < m_Context.m_BoneCount; bone++)
+                for (int bone = 0; bone < m_Values.m_BoneCount; bone++)
                 {
-                    int residualIndex = stateIndex * m_Context.m_BoneCount + bone;
+                    int residualIndex = stateIndex * m_Values.m_BoneCount + bone;
                     float duration = state.ActiveDurationSeconds *
-                                     m_Context.m_InertialDenseProfiles[rule.ProfileOffset + bone];
+                                     m_Inertialization.DenseProfileWeight(
+                                         in rule,
+                                         bone);
                     m_Inertialization.EvaluateInertialEnvelope(
                         rule,
                         state.ElapsedSeconds,
@@ -489,36 +540,45 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                         out float weight,
                         out float derivative);
                     anyActive |= state.ElapsedSeconds < duration;
-                    AnimationLocalBonePose target = m_Context.m_ValueDenseLocalPoses[m_Context.PoseOffset(output) + bone];
-                    AnimationBlendBoneVelocity targetVelocity = m_Context.m_ValueDenseVelocities[m_Context.PoseOffset(output) + bone];
-                    Vector3 positionBase = m_Context.m_InertialPositionResiduals[residualIndex] +
-                                           state.ElapsedSeconds * m_Context.m_InertialLinearVelocityResiduals[residualIndex];
-                    Vector3 rotationBase = m_Context.m_InertialRotationResiduals[residualIndex] +
-                                           state.ElapsedSeconds * m_Context.m_InertialAngularVelocityResiduals[residualIndex];
-                    Vector3 scaleBase = m_Context.m_InertialScaleResiduals[residualIndex] +
-                                        state.ElapsedSeconds * m_Context.m_InertialScaleVelocityResiduals[residualIndex];
+                    AnimationLocalBonePose target = m_Values.m_ValueDenseLocalPoses[m_Values.PoseOffset(output) + bone];
+                    AnimationBlendBoneVelocity targetVelocity = m_Values.m_ValueDenseVelocities[m_Values.PoseOffset(output) + bone];
+                    Vector3 positionBase =
+                        m_Inertialization.PositionResidual(residualIndex) +
+                        state.ElapsedSeconds *
+                        m_Inertialization.LinearVelocityResidual(residualIndex);
+                    Vector3 rotationBase =
+                        m_Inertialization.RotationResidual(residualIndex) +
+                        state.ElapsedSeconds *
+                        m_Inertialization.AngularVelocityResidual(residualIndex);
+                    Vector3 scaleBase =
+                        m_Inertialization.ScaleResidual(residualIndex) +
+                        state.ElapsedSeconds *
+                        m_Inertialization.ScaleVelocityResidual(residualIndex);
                     Vector3 linear = targetVelocity.Linear + derivative * positionBase +
-                                     weight * m_Context.m_InertialLinearVelocityResiduals[residualIndex];
+                                     weight * m_Inertialization
+                                         .LinearVelocityResidual(residualIndex);
                     Vector3 angular = targetVelocity.Angular + derivative * rotationBase +
-                                      weight * m_Context.m_InertialAngularVelocityResiduals[residualIndex];
+                                      weight * m_Inertialization
+                                          .AngularVelocityResidual(residualIndex);
                     Vector3 scaleVelocity = targetVelocity.Scale + derivative * scaleBase +
-                                            weight * m_Context.m_InertialScaleVelocityResiduals[residualIndex];
-                    if (!CharacterPoseValueWorkspace.IsFinite(linear) || !CharacterPoseValueWorkspace.IsFinite(angular) || !CharacterPoseValueWorkspace.IsFinite(scaleVelocity))
+                                            weight * m_Inertialization
+                                                .ScaleVelocityResidual(residualIndex);
+                    if (!CharacterPosePureMath.IsFinite(linear) || !CharacterPosePureMath.IsFinite(angular) || !CharacterPosePureMath.IsFinite(scaleVelocity))
                     {
                         state.RuntimeState = PoseInertializationRuntimeState.Invalid;
-                        m_Context.m_InertialStates[stateIndex] = state;
-                        m_Context.SetInvalid(
+                        m_Inertialization.SetState(stateIndex, in state);
+                        m_Values.SetInvalid(
                             output,
-                            m_Context.m_ValueContinuityIdentities[output],
+                            m_Values.m_ValueContinuityIdentities[output],
                             AnimationPoseNativeInvalidReason.PoseGraphOperationInvalid,
                             header.Index);
                         return;
                     }
-                    m_Context.m_ValueDenseLocalPoses[m_Context.PoseOffset(output) + bone] = new AnimationLocalBonePose(
+                    m_Values.m_ValueDenseLocalPoses[m_Values.PoseOffset(output) + bone] = new AnimationLocalBonePose(
                         target.Position + weight * positionBase,
                         AnimationPoseMath.QuaternionExp(weight * rotationBase) * target.Rotation,
                         target.Scale + weight * scaleBase);
-                    m_Context.m_ValueDenseVelocities[m_Context.PoseOffset(output) + bone] =
+                    m_Values.m_ValueDenseVelocities[m_Values.PoseOffset(output) + bone] =
                         new AnimationBlendBoneVelocity(linear, angular, scaleVelocity);
                 }
                 m_Inertialization.ApplyInertialParameters(stateIndex, output, output, rule, state.ActiveDurationSeconds, state.ElapsedSeconds);
@@ -534,8 +594,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             m_Inertialization.CommitInertialHistory(stateIndex, output, ref state);
             if (state.RuntimeState == 0)
                 state.RuntimeState = PoseInertializationRuntimeState.Anchor;
-            state.OutputCompletionIdentity = m_Context.m_CompletionIdentity;
-            m_Context.m_InertialStates[stateIndex] = state;
+            state.OutputCompletionIdentity = m_Values.m_CompletionIdentity;
+            m_Inertialization.SetState(stateIndex, in state);
         }
 
         bool TryAddAnimationSlotBaseContribution(
@@ -549,24 +609,24 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             float actionRightFootWeight)
         {
             AnimationPrimitivePoseContribution source =
-                m_Context.m_ValueContributions[m_Context.ContributionOffset(sourceValue) + sourceIndex];
-            if (!CharacterPoseValueWorkspace.IsValidPrimitiveContribution(source))
+                m_Values.m_ValueContributions[m_Values.ContributionOffset(sourceValue) + sourceIndex];
+            if (!CharacterPosePureMath.IsValidPrimitiveContribution(source))
                 return false;
             float scalarWeight = source.Weight * Mathf.Clamp01(1f - actionOutputWeight);
             float leftWeight = source.LeftFootWeight * Mathf.Clamp01(1f - actionLeftFootWeight);
             float rightWeight = source.RightFootWeight * Mathf.Clamp01(1f - actionRightFootWeight);
-            if (!CharacterPoseValueWorkspace.IsWeight(scalarWeight) || !CharacterPoseValueWorkspace.IsWeight(leftWeight) || !CharacterPoseValueWorkspace.IsWeight(rightWeight))
+            if (!CharacterPosePureMath.IsWeight(scalarWeight) || !CharacterPosePureMath.IsWeight(leftWeight) || !CharacterPosePureMath.IsWeight(rightWeight))
                 return false;
 
-            int targetIndex = m_Context.FindContribution(output, source);
+            int targetIndex = m_Values.FindContribution(output, source);
             if (targetIndex < 0)
             {
-                targetIndex = m_Context.m_ValueContributionCounts[output];
-                if (targetIndex >= m_Context.m_ContributionStride)
+                targetIndex = m_Values.m_ValueContributionCounts[output];
+                if (targetIndex >= m_Values.m_ContributionStride)
                     return false;
-                m_Context.m_ValueContributionCounts[output] = targetIndex + 1;
-                m_Context.ClearContributionWeights(output, targetIndex);
-                m_Context.m_ValueContributions[m_Context.ContributionOffset(output) + targetIndex] =
+                m_Values.m_ValueContributionCounts[output] = targetIndex + 1;
+                m_Values.ClearContributionWeights(output, targetIndex);
+                m_Values.m_ValueContributions[m_Values.ContributionOffset(output) + targetIndex] =
                     new AnimationPrimitivePoseContribution(
                         source.PhysicalPlayerIndex,
                         source.PhysicalSourceIndex,
@@ -581,8 +641,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             else
             {
                 AnimationPrimitivePoseContribution current =
-                    m_Context.m_ValueContributions[m_Context.ContributionOffset(output) + targetIndex];
-                m_Context.m_ValueContributions[m_Context.ContributionOffset(output) + targetIndex] =
+                    m_Values.m_ValueContributions[m_Values.ContributionOffset(output) + targetIndex];
+                m_Values.m_ValueContributions[m_Values.ContributionOffset(output) + targetIndex] =
                     new AnimationPrimitivePoseContribution(
                         current.PhysicalPlayerIndex,
                         current.PhysicalSourceIndex,
@@ -595,25 +655,25 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                         Mathf.Clamp01(current.RightFootWeight + rightWeight));
             }
 
-            for (int bone = 0; bone < m_Context.m_BoneCount; bone++)
+            for (int bone = 0; bone < m_Values.m_BoneCount; bone++)
             {
                 float actionWeight = 0f;
                 for (int action = 0; action < actionContributionCount; action++)
                 {
-                    actionWeight += m_Context.GetContributionBoneWeight(
+                    actionWeight += m_Values.GetContributionBoneWeight(
                         output,
                         actionContributionStart + action,
                         bone);
                 }
                 if (!float.IsFinite(actionWeight))
                     return false;
-                float weight = m_Context.GetContributionBoneWeight(sourceValue, sourceIndex, bone) *
+                float weight = m_Values.GetContributionBoneWeight(sourceValue, sourceIndex, bone) *
                                Mathf.Clamp01(1f - actionWeight);
                 float combined = Mathf.Clamp01(
-                    m_Context.GetContributionBoneWeight(output, targetIndex, bone) + weight);
-                if (!CharacterPoseValueWorkspace.IsWeight(combined))
+                    m_Values.GetContributionBoneWeight(output, targetIndex, bone) + weight);
+                if (!CharacterPosePureMath.IsWeight(combined))
                     return false;
-                m_Context.SetContributionBoneWeight(output, targetIndex, bone, combined);
+                m_Values.SetContributionBoneWeight(output, targetIndex, bone, combined);
             }
             return true;
         }
@@ -627,26 +687,26 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             float actionLeftFootWeight,
             float actionRightFootWeight)
         {
-            bool hasSource = m_Context.m_ValueHasFootFeatures[source] == 1;
+            bool hasSource = m_Values.m_ValueHasFootFeatures[source] == 1;
             bool hasAction = actionHasFootFeatures == 1;
             if (!hasSource && !hasAction)
             {
-                m_Context.m_ValueHasFootFeatures[output] = 0;
-                m_Context.m_ValueLeftFootFeatures[output] = default;
-                m_Context.m_ValueRightFootFeatures[output] = default;
+                m_Values.m_ValueHasFootFeatures[output] = 0;
+                m_Values.m_ValueLeftFootFeatures[output] = default;
+                m_Values.m_ValueRightFootFeatures[output] = default;
                 return true;
             }
-            if (!CharacterPoseValueWorkspace.TryResolveFeature(
+            if (!CharacterPosePureMath.TryResolveFeature(
                     hasSource,
-                    m_Context.m_ValueLeftFootFeatures[source],
+                    m_Values.m_ValueLeftFootFeatures[source],
                     hasAction,
                     actionLeftFoot,
                     actionLeftFootWeight,
                     hasAction && actionLeftFootWeight > 0f,
                     out AnimationFootFeatureSample left) ||
-                !CharacterPoseValueWorkspace.TryResolveFeature(
+                !CharacterPosePureMath.TryResolveFeature(
                     hasSource,
-                    m_Context.m_ValueRightFootFeatures[source],
+                    m_Values.m_ValueRightFootFeatures[source],
                     hasAction,
                     actionRightFoot,
                     actionRightFootWeight,
@@ -655,9 +715,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             {
                 return false;
             }
-            m_Context.m_ValueLeftFootFeatures[output] = left;
-            m_Context.m_ValueRightFootFeatures[output] = right;
-            m_Context.m_ValueHasFootFeatures[output] = left.IsValid && right.IsValid ? (byte)1 : (byte)0;
+            m_Values.m_ValueLeftFootFeatures[output] = left;
+            m_Values.m_ValueRightFootFeatures[output] = right;
+            m_Values.m_ValueHasFootFeatures[output] = left.IsValid && right.IsValid ? (byte)1 : (byte)0;
             return true;
         }
 

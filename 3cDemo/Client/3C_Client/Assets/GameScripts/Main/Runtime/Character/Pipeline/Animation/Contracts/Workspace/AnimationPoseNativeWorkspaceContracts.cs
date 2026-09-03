@@ -454,6 +454,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation
 
         internal int Count => m_Entries.IsCreated ? m_Entries.Length : 0;
 
+        internal NativeArray<CharacterPoseOperationCompletion> Entries =>
+            m_Entries;
+
         internal CharacterPoseOperationCompletion this[int operationIndex]
         {
             get

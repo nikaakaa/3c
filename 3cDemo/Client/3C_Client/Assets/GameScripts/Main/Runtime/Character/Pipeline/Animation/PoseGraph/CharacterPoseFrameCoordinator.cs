@@ -398,12 +398,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             return prepared;
         }
 
-        internal CharacterPoseFrameExecutionResult ExecuteEvaluateBarrier(
+        internal void BeginEvaluateBarrier(
             in CharacterBodyPresentationFrame bodyFrame,
             in CharacterPresentationFactFrame factFrame,
             CharacterPoseSourceFrameLease sourceLease,
-            CharacterPoseConstraintFrameLease constraintLease,
-            CharacterFinalPosePublicationFrameLease publicationLease,
             in CharacterPoseProgramPrepared prepared,
             Action enterEvaluateBarrier)
         {
@@ -444,14 +442,40 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             m_Source.EnterEvaluateBarrier(sourceLease);
             using (GraphEvaluateMarker.Auto())
                 m_Animancer.Evaluate(presentationDeltaSeconds);
-            CharacterPoseProgramOutputResult programOutput;
             using (PoseGraphExecuteMarker.Auto())
             {
-                programOutput = m_Program.CompleteEvaluation(
+                m_Program.BeginEvaluationExecution(
                     m_ActiveFrameLease,
                     in prepared,
                     in bodyFrame,
                     in factFrame);
+            }
+        }
+
+        internal bool TryAdvanceEvaluateBarrier(
+            out CharacterPoseWorkerStageLease workerLease)
+        {
+            RequireOpenMutation();
+            using (PoseGraphExecuteMarker.Auto())
+            {
+                return m_Program.TryAdvanceEvaluationExecution(
+                    m_ActiveFrameLease,
+                    out workerLease);
+            }
+        }
+
+        internal CharacterPoseFrameExecutionResult CompleteEvaluateBarrier(
+            CharacterPoseConstraintFrameLease constraintLease,
+            CharacterFinalPosePublicationFrameLease publicationLease,
+            in CharacterPoseProgramPrepared prepared)
+        {
+            RequireOpenMutation();
+            ulong completionIdentity = prepared.Lineage.CompletionIdentity;
+            CharacterPoseProgramOutputResult programOutput;
+            using (PoseGraphExecuteMarker.Auto())
+            {
+                programOutput = m_Program.FinishEvaluationExecution(
+                    m_ActiveFrameLease);
             }
             CharacterPoseFrameLineage completedLineage = prepared.Lineage;
             CharacterPoseProgramResult programResult = CreateProgramResult(

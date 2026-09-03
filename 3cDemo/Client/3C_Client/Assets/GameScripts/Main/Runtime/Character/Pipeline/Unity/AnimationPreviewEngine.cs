@@ -143,7 +143,9 @@ namespace ThirdPersonCharacter.Pipeline
                     animationRigBinding,
                     rootHierarchy,
                     footPlacement,
-                    false);
+                    false,
+                    new CharacterPoseWorkerScheduler(),
+                    true);
                 footPlacement = null;
                 playback.SetDiagnosticsInterest(
                     m_DiagnosticsOwnerId,

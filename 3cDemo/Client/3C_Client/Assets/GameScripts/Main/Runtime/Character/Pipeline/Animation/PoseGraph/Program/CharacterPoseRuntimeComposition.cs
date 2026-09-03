@@ -9,6 +9,7 @@ using ThirdPersonCharacter.Pipeline.Animation.MotionMatching;
 using ThirdPersonCharacter.Pipeline.Animation.Sources;
 using ThirdPersonCharacter.Pipeline.Presentation;
 using ThirdPersonCharacter.Pipeline.Presentation.Animancer;
+using ThirdPersonSimulation;
 using UnityEngine;
 
 namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
@@ -89,6 +90,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
     internal static class CharacterPoseRuntimeCompositionFactory
     {
         internal static CharacterPoseRuntimeComposition Create(
+            ActorId actorId,
+            CharacterPoseWorkerScheduler workerScheduler,
             AnimancerComponent animancer,
             CharacterAnimationRigBinding rigBinding,
             CharacterRootHierarchyBinding rootHierarchy,
@@ -103,6 +106,12 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             CharacterPoseCommittedDiagnosticsEventPublisher
                 diagnosticsEventPublisher)
         {
+            if (!actorId.IsValid)
+                throw new ArgumentException(
+                    "Pose Runtime Composition Actor identity is invalid.",
+                    nameof(actorId));
+            if (workerScheduler == null)
+                throw new ArgumentNullException(nameof(workerScheduler));
             if (!animancer)
                 throw new ArgumentNullException(nameof(animancer));
             if (projection == null)
@@ -141,6 +150,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             CharacterFinalPosePublication publication = null;
             CharacterPoseActorState actorState = null;
             CharacterPoseProgramRuntime program = null;
+            CharacterPoseWorkerActorRegistration workerRegistration = null;
             bool graphPaused = false;
             var nodeRuntimeIndex =
                 new CharacterPoseProgramNodeRuntimeIndex();
@@ -159,6 +169,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                 executionView = new CharacterPoseProgramExecutionView(
                     projection,
                     in initialLayout);
+                workerRegistration = workerScheduler.Register(
+                    projection.PosePlan,
+                    executionView);
                 programTuning = new CharacterPoseProgramTuningState(
                     projection,
                     executionView.OperationHeaders,
@@ -451,7 +464,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                     constraints,
                     presentationWorkspace,
                     actorDiagnostics,
-                    programDiagnostics);
+                    programDiagnostics,
+                    actorId,
+                    workerRegistration);
+                workerRegistration = null;
                 return new CharacterPoseRuntimeComposition(
                     animancer,
                     program,
@@ -463,6 +479,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             }
             catch
             {
+                workerRegistration?.Dispose();
                 if (program != null)
                 {
                     diagnostics?.Dispose();

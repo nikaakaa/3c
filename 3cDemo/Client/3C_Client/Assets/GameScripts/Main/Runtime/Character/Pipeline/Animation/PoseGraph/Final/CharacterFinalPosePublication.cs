@@ -396,7 +396,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 !string.Equals(program.RigRevision, rig.RigRevision, StringComparison.Ordinal) ||
                 layout.BoneCount != rig.PoseBoneCount ||
                 layout.ParameterCount != program.Parameters.Count ||
-                layout.PoseValueCount != program.PoseValueWorkspaceCount ||
+                layout.PoseValueCount != program.PoseValueCount ||
                 layout.OutputOperationIndex != program.OutputOperationIndex)
             {
                 throw new InvalidOperationException("Final Animation Pose Frame Rig layout is invalid.");

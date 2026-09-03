@@ -4,13 +4,21 @@ namespace ThirdPersonCharacter.Pipeline.Animation
 {
     internal sealed class CharacterPoseOutputOperationModule
     {
-        readonly CharacterPoseValueWorkspace m_Context;
+        CharacterPoseValuePageSlice m_Values;
+        CharacterPoseGraphNativeBinding m_Frame;
+        CharacterFinalPosePublicationOutputBinding m_Output;
 
-        internal CharacterPoseOutputOperationModule(
-            CharacterPoseValueWorkspace context)
+        internal void BindFrame(
+            in CharacterPoseValuePageSlice values,
+            CharacterPoseGraphNativeBinding frame,
+            in CharacterFinalPosePublicationOutputBinding output)
         {
-            m_Context = context ??
-                throw new ArgumentNullException(nameof(context));
+            if (!values.IsValid || !output.IsValid)
+                throw new ArgumentException("Pose Output frame binding is invalid.");
+            frame.RequireValid();
+            m_Values = values;
+            m_Frame = frame;
+            m_Output = output;
         }
 
         internal void EvaluateOutputPose(
@@ -18,51 +26,51 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             in CharacterPoseNativeOutputOperation operation)
         {
             int input = operation.InputPoseValueIndex;
-            if (!m_Context.IsInputReady(input, header.Index))
+            if (!m_Values.IsInputReady(input, header.Index))
             {
                 AnimationPoseNativeInvalidReason reason =
                     AnimationPoseNativeInvalidReason.PoseGraphInputIncomplete;
-                m_Context.RecordGraphInvalid(reason, header.Index);
-                m_Context.m_FinalOutput.WriteInvalid(
+                m_Values.RecordGraphInvalid(reason, header.Index);
+                m_Output.WriteInvalid(
                     reason,
                     (ulong)header.Index + 1UL);
                 return;
             }
-            ulong continuity = CharacterPoseValueWorkspace.CombineContinuity(
-                m_Context.m_ValueContinuityIdentities[input],
+            ulong continuity = CharacterPosePureMath.CombineContinuity(
+                m_Values.Continuity(input),
                 (ulong)header.Index + 1UL,
                 header.Index);
-            if (m_Context.m_ValueAvailability[input] == AnimationPoseAvailability.NoPose)
+            if (m_Values.Availability(input) == AnimationPoseAvailability.NoPose)
             {
                 AnimationPoseNativeInvalidReason reason =
                     AnimationPoseNativeInvalidReason.PoseGraphOutputInvalid;
-                m_Context.RecordGraphInvalid(reason, header.Index);
-                m_Context.m_FinalOutput.WriteInvalid(reason, continuity);
+                m_Values.RecordGraphInvalid(reason, header.Index);
+                m_Output.WriteInvalid(reason, continuity);
                 return;
             }
-            if (m_Context.m_ValueAvailability[input] == AnimationPoseAvailability.Invalid)
+            if (m_Values.Availability(input) == AnimationPoseAvailability.Invalid)
             {
                 AnimationPoseNativeInvalidReason reason =
-                    CharacterPoseValueWorkspace.NormalizeInvalidReason(m_Context.m_ValueInvalidReasons[input]);
-                m_Context.RecordGraphInvalid(reason, header.Index);
-                m_Context.m_FinalOutput.WriteInvalid(reason, continuity);
+                    CharacterPosePureMath.NormalizeInvalidReason(m_Values.InvalidReason(input));
+                m_Values.RecordGraphInvalid(reason, header.Index);
+                m_Output.WriteInvalid(reason, continuity);
                 return;
             }
-            if (!m_Context.TryValidateValueDeep(
+            if (!m_Values.TryValidateValueDeep(
                     input,
                     out AnimationPoseNativeInvalidReason invalidReason))
             {
-                invalidReason = CharacterPoseValueWorkspace.NormalizeInvalidReason(invalidReason);
-                m_Context.RecordGraphInvalid(invalidReason, header.Index);
-                m_Context.m_FinalOutput.WriteInvalid(invalidReason, continuity);
+                invalidReason = CharacterPosePureMath.NormalizeInvalidReason(invalidReason);
+                m_Values.RecordGraphInvalid(invalidReason, header.Index);
+                m_Output.WriteInvalid(invalidReason, continuity);
                 return;
             }
             var inputBinding = new AnimationPoseValueNativeReadBinding(
-                in m_Context.m_FrameBinding,
+                in m_Frame,
                 input);
-            m_Context.m_FinalOutput.WritePose(
+            m_Output.WritePose(
                 in inputBinding,
-                m_Context.m_ValueOutputWeights[input],
+                m_Values.OutputWeight(input),
                 continuity);
         }
 

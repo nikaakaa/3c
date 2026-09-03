@@ -72,7 +72,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
     }
 
     internal sealed class CharacterPoseProgramExecutor :
-        CharacterPoseValueWorkspace
+        CharacterPoseManagedValuePage
     {
         static readonly ProfilerMarker ValueResetMarker =
             new ProfilerMarker("ThirdPerson.Presentation.Animation.PoseGraph.ValueReset");
@@ -84,26 +84,16 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             new ProfilerMarker("ThirdPerson.Presentation.Animation.PoseGraph.State");
         static readonly ProfilerMarker InertializationMarker =
             new ProfilerMarker("ThirdPerson.Presentation.Animation.PoseGraph.Inertialization");
-        static readonly ProfilerMarker BlendMarker =
-            new ProfilerMarker("ThirdPerson.Presentation.Animation.PoseGraph.Blend");
-        static readonly ProfilerMarker ConstraintMarker =
-            new ProfilerMarker("ThirdPerson.Presentation.Animation.PoseGraph.Constraint");
         static readonly ProfilerMarker IkGoalMarker =
             new ProfilerMarker("ThirdPerson.Presentation.Animation.PoseGraph.IKGoal");
         static readonly ProfilerMarker LinkedPoseMarker =
             new ProfilerMarker("ThirdPerson.Presentation.Animation.PoseGraph.LinkedPose");
         static readonly ProfilerMarker FullBodyIkMarker =
             new ProfilerMarker("ThirdPerson.Presentation.Animation.PoseGraph.FinalIKFullBody");
-        static readonly ProfilerMarker SpaceConversionMarker =
-            new ProfilerMarker("ThirdPerson.Presentation.Animation.PoseGraph.SpaceConversion");
         static readonly ProfilerMarker OutputMarker =
             new ProfilerMarker("ThirdPerson.Presentation.Animation.PoseGraph.Output");
         static readonly ProfilerMarker ValueValidationMarker =
             new ProfilerMarker("ThirdPerson.Presentation.Animation.PoseGraph.ValueValidation");
-        readonly CharacterPoseCompositionOperationModule
-            m_CompositionOperations;
-        readonly CharacterPoseTransformOperationModule
-            m_TransformOperations;
         readonly CharacterPoseConstraintOperationModule
             m_ConstraintOperations;
         readonly CharacterPoseLinkedOperationModule m_LinkedOperations;
@@ -112,8 +102,13 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             m_InertializationOperations;
         readonly CharacterPosePlayerOperationModule m_PlayerOperations;
         readonly CharacterPoseStateOperationModule m_StateOperations;
-        readonly NativeArray<CharacterPoseNativeParameterResolveOperation>
-            m_ParameterResolveOperations;
+        readonly CharacterPoseProgramExecutionView m_Program;
+        readonly CharacterPoseProgramFramePages m_FramePages;
+        readonly PoseInertializationNativeProgram m_InertializationProgram;
+        readonly CharacterPoseConstraintRuntime m_PoseConstraints;
+        readonly NativeArray<CharacterPoseNativeOperationHeader>
+            m_OperationHeaders;
+        readonly NativeArray<float> m_ParameterDefaults;
         readonly NativeArray<CharacterPoseNativePlayerOperation>
             m_PlayerFamilyOperations;
         readonly NativeArray<CharacterPoseNativeStateMachineOperation>
@@ -124,12 +119,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             m_BlendFamilyOperations;
         readonly NativeArray<CharacterPoseNativeInertializationOperation>
             m_InertializationFamilyOperations;
-        readonly NativeArray<CharacterPoseNativeCompositionOperation>
-            m_CompositionFamilyOperations;
-        readonly NativeArray<CharacterPoseNativeSpaceConversionOperation>
-            m_SpaceConversionOperations;
-        readonly NativeArray<CharacterPoseNativeComponentControlOperation>
-            m_ComponentControlOperations;
         readonly NativeArray<CharacterPoseNativeGoalContributionOperation>
             m_GoalContributionOperations;
         readonly NativeArray<CharacterPoseNativeGoalAssemblerOperation>
@@ -142,6 +131,26 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             m_OutputFamilyOperations;
         NativeArray<float> m_OperationWeights;
         readonly NativeArray<AnimationPoseGraphNativeStage> m_Stages;
+        NativeArray<CharacterRootOrientationWarpNativeControl>
+            m_RootOrientationWarpControls;
+        NativeArray<AnimationPoseGraphNativeLinkedPoseCallControl>
+            m_LinkedPoseCallControls;
+        NativeArray<byte> m_LinkedPoseActiveFragments;
+        NativeArray<CharacterPoseStateMachineNativeControl>
+            m_StateMachineControls;
+        NativeArray<CharacterAnimationSlotNativeControl>
+            m_AnimationSlotControls;
+        CharacterPoseOperationCompletionPage m_OperationCompletions;
+        NativeArray<ulong> m_StageCompletedAt;
+        NativeArray<int> m_StageInvalidOperationIndex;
+        NativeArray<AnimationPoseNativeInvalidReason>
+            m_PoseGraphInvalidReason;
+        NativeArray<int> m_PoseGraphInvalidOperationIndex;
+        NativeArray<ulong> m_PoseGraphCompletedAt;
+        CharacterPoseGraphNativeBinding m_FrameBinding;
+        CharacterFinalPosePublicationOutputBinding m_FinalOutput;
+        readonly int m_OutputOperationIndex;
+        ulong m_FrameSequence;
 
         internal CharacterPoseProgramExecutor(
             CharacterPoseProgramExecutionView program,
@@ -161,43 +170,20 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             framePages.RequireValid();
 
             m_OperationHeaders = program.OperationHeaders;
-            m_ParameterResolveOperations = program.ParameterResolveOperations;
             m_PlayerFamilyOperations = program.PlayerOperations;
             m_StateMachineFamilyOperations = program.StateMachineOperations;
             m_AnimationSlotFamilyOperations = program.AnimationSlotOperations;
             m_BlendFamilyOperations = program.BlendOperations;
             m_InertializationFamilyOperations = program.InertializationOperations;
-            m_CompositionFamilyOperations = program.CompositionOperations;
-            m_SpaceConversionOperations = program.SpaceConversionOperations;
-            m_ComponentControlOperations = program.ComponentControlOperations;
             m_GoalContributionOperations = program.GoalContributionOperations;
             m_GoalAssemblerOperations = program.GoalAssemblerOperations;
             m_FullBodyIkOperations = program.FullBodyIkOperations;
             m_LinkedPoseOperations = program.LinkedPoseOperations;
             m_OutputFamilyOperations = program.OutputOperations;
             m_Stages = program.Stages;
-            m_DenseBoneMasks = program.DenseBoneMasks;
-            m_AdditiveReferences = program.AdditiveReferences;
-            m_ParameterPolicies = program.ParameterPolicies;
             m_ParameterDefaults = program.ParameterDefaults;
-            m_ParentIndices = program.ParentIndices;
-            m_BlendCurves = program.BlendCurves;
-            m_BlendCurveSegments = program.BlendCurveSegments;
-            m_BlendProfiles = program.BlendProfiles;
-            m_BlendDenseProfiles = program.BlendDenseProfiles;
-            m_Inertializations = inertializationProgram.Nodes;
-            m_ModifyBones = program.ModifyBones;
-            m_RootOrientationWarps = program.RootOrientationWarps;
-            m_LinkedPoseCalls = program.LinkedPoseCalls;
-            m_LinkedPoseCandidates = program.LinkedPoseCandidates;
-            m_InertialRules = inertializationProgram.Rules;
-            m_InertialCurveSegments = inertializationProgram.CurveSegments;
-            m_InertialDenseProfiles = inertializationProgram.DenseProfiles;
-            m_InertialParameterModes = inertializationProgram.ParameterModes;
-            m_AnimationSlotNodeOffset = inertializationProgram.SlotNodeOffset;
             AnimationPoseNativeAggregateLayout layout =
                 framePages.EvaluationLayout;
-            m_PlayerCount = layout.PlayerCount;
             m_BoneCount = layout.BoneCount;
             m_ParameterCount = layout.ParameterCount;
             m_PoseValueCount = layout.PoseValueCount;
@@ -205,27 +191,31 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             m_OutputOperationIndex = program.OutputOperationIndex;
             m_LeftFootBoneIndex = program.LeftFootBoneIndex;
             m_RightFootBoneIndex = program.RightFootBoneIndex;
-            m_RigId = program.RigId;
-            m_RigRevision = program.RigRevision;
             m_FrameSequence = 0;
-            m_CompositionOperations =
-                new CharacterPoseCompositionOperationModule(this);
-            m_TransformOperations =
-                new CharacterPoseTransformOperationModule(this);
             m_ConstraintOperations =
-                new CharacterPoseConstraintOperationModule(this);
+                new CharacterPoseConstraintOperationModule(
+                    m_PoseConstraints);
             m_LinkedOperations =
-                new CharacterPoseLinkedOperationModule(this);
+                new CharacterPoseLinkedOperationModule(
+                    program.LinkedPoseCalls,
+                    program.LinkedPoseCandidates);
             m_OutputOperations =
-                new CharacterPoseOutputOperationModule(this);
+                new CharacterPoseOutputOperationModule();
             m_InertializationOperations =
-                new CharacterPoseInertializationOperationModule(this);
+                new CharacterPoseInertializationOperationModule(
+                    this,
+                    m_InertializationProgram);
             m_PlayerOperations =
                 new CharacterPosePlayerOperationModule(
                     this,
                     m_InertializationOperations);
             m_StateOperations =
-                new CharacterPoseStateOperationModule(this);
+                new CharacterPoseStateOperationModule(
+                    program.BlendCurves,
+                    program.BlendCurveSegments,
+                    program.BlendProfiles,
+                    program.BlendDenseProfiles,
+                    m_ParameterDefaults);
         }
 
         internal CharacterPoseProgramExecutor BindFrame(
@@ -251,104 +241,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 m_FramePages.LinkedPoseActiveFragments;
             m_StateMachineControls = m_FramePages.StateMachineControls;
             m_AnimationSlotControls = m_FramePages.AnimationSlotControls;
-
-            m_InertialStates = m_InertializationProgram.States;
-            m_InertialHistory = m_InertializationProgram.HistoryPoses;
-            m_InertialHistoryVelocities =
-                m_InertializationProgram.HistoryVelocities;
-            m_InertialHistoryParameters =
-                m_InertializationProgram.HistoryParameters;
-            m_InertialHistoryParameterAvailability =
-                m_InertializationProgram.HistoryParameterAvailability;
-            m_InertialHistoryLeftFeet =
-                m_InertializationProgram.HistoryLeftFeet;
-            m_InertialHistoryRightFeet =
-                m_InertializationProgram.HistoryRightFeet;
-            m_InertialHistoryHasFeet =
-                m_InertializationProgram.HistoryHasFeet;
-            m_InertialAccumulatorLeftFeet =
-                m_InertializationProgram.AccumulatorLeftFeet;
-            m_InertialAccumulatorRightFeet =
-                m_InertializationProgram.AccumulatorRightFeet;
-            m_InertialAccumulatorHasFeet =
-                m_InertializationProgram.AccumulatorHasFeet;
-            m_InertialPositionResiduals =
-                m_InertializationProgram.PositionResiduals;
-            m_InertialRotationResiduals =
-                m_InertializationProgram.RotationResiduals;
-            m_InertialScaleResiduals =
-                m_InertializationProgram.ScaleResiduals;
-            m_InertialLinearVelocityResiduals =
-                m_InertializationProgram.LinearVelocityResiduals;
-            m_InertialAngularVelocityResiduals =
-                m_InertializationProgram.AngularVelocityResiduals;
-            m_InertialScaleVelocityResiduals =
-                m_InertializationProgram.ScaleVelocityResiduals;
-            m_InertialParameterResiduals =
-                m_InertializationProgram.ParameterResiduals;
-            m_InertialResetRequests =
-                m_InertializationProgram.ResetRequests;
-            m_CommittedInertialStates =
-                m_InertializationProgram.CommittedStates;
-            m_CommittedInertialHistory =
-                m_InertializationProgram.CommittedHistoryPoses;
-            m_CommittedInertialHistoryVelocities =
-                m_InertializationProgram.CommittedHistoryVelocities;
-            m_CommittedInertialHistoryParameters =
-                m_InertializationProgram.CommittedHistoryParameters;
-            m_CommittedInertialHistoryParameterAvailability =
-                m_InertializationProgram
-                    .CommittedHistoryParameterAvailability;
-            m_CommittedInertialHistoryLeftFeet =
-                m_InertializationProgram.CommittedHistoryLeftFeet;
-            m_CommittedInertialHistoryRightFeet =
-                m_InertializationProgram.CommittedHistoryRightFeet;
-            m_CommittedInertialHistoryHasFeet =
-                m_InertializationProgram.CommittedHistoryHasFeet;
-            m_CommittedInertialAccumulatorLeftFeet =
-                m_InertializationProgram.CommittedAccumulatorLeftFeet;
-            m_CommittedInertialAccumulatorRightFeet =
-                m_InertializationProgram.CommittedAccumulatorRightFeet;
-            m_CommittedInertialAccumulatorHasFeet =
-                m_InertializationProgram.CommittedAccumulatorHasFeet;
-            m_CommittedInertialPositionResiduals =
-                m_InertializationProgram.CommittedPositionResiduals;
-            m_CommittedInertialRotationResiduals =
-                m_InertializationProgram.CommittedRotationResiduals;
-            m_CommittedInertialScaleResiduals =
-                m_InertializationProgram.CommittedScaleResiduals;
-            m_CommittedInertialLinearVelocityResiduals =
-                m_InertializationProgram
-                    .CommittedLinearVelocityResiduals;
-            m_CommittedInertialAngularVelocityResiduals =
-                m_InertializationProgram
-                    .CommittedAngularVelocityResiduals;
-            m_CommittedInertialScaleVelocityResiduals =
-                m_InertializationProgram
-                    .CommittedScaleVelocityResiduals;
-            m_CommittedInertialParameterResiduals =
-                m_InertializationProgram.CommittedParameterResiduals;
-
-            m_SlotRanges = binding.SlotRanges;
-            m_SlotDenseLocalPoses = binding.SlotDenseLocalPoses;
-            m_SlotDenseVelocities = binding.SlotDenseVelocities;
-            m_SlotPoseParameters = binding.SlotPoseParameters;
-            m_SlotPoseParameterAvailability =
-                binding.SlotPoseParameterAvailability;
-            m_SlotContributions = binding.SlotContributions;
-            m_SlotDenseContributionWeights =
-                binding.SlotDenseContributionWeights;
-            m_SlotContributionCounts = binding.SlotContributionCounts;
-            m_SlotOutputWeights = binding.SlotOutputWeights;
-            m_SlotLeftFootFeatures = binding.SlotLeftFootFeatures;
-            m_SlotRightFootFeatures = binding.SlotRightFootFeatures;
-            m_SlotHasFootFeatures = binding.SlotHasFootFeatures;
-            m_SlotAvailability = binding.SlotAvailability;
-            m_SlotContinuityIdentities =
-                binding.SlotContinuityIdentities;
-            m_SlotDiscontinuities = binding.SlotDiscontinuities;
-            m_SlotInvalidReasons = binding.SlotInvalidReasons;
-            m_SlotCompletedAt = binding.SlotCompletedAt;
 
             m_ValueDenseLocalPoses = binding.ValueDenseLocalPoses;
             m_ValueDenseVelocities = binding.ValueDenseVelocities;
@@ -377,10 +269,34 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 binding.PoseGraphInvalidOperationIndex;
             m_PoseGraphCompletedAt = binding.PoseGraphCompletedAt;
             m_FrameBinding = binding;
+            m_ValuePage = CharacterPoseValuePageSlice.Create(
+                in binding,
+                m_Program.ValueProducerOperationIndices,
+                m_LeftFootBoneIndex,
+                m_RightFootBoneIndex,
+                true);
             m_FinalOutput = finalOutput;
             m_CompletionIdentity = binding.CompletionIdentity;
-            m_RecordDiagnostics = recordDiagnostics;
             m_FrameSequence = 0;
+            m_ConstraintOperations.BindFrame(
+                in m_ValuePage,
+                binding);
+            m_LinkedOperations.BindFrame(
+                in m_ValuePage,
+                m_LinkedPoseCallControls,
+                m_LinkedPoseActiveFragments);
+            m_StateOperations.BindFrame(
+                in m_ValuePage,
+                m_StateMachineControls);
+            m_InertializationOperations.BindFrame(
+                m_StateMachineControls);
+            m_PlayerOperations.BindFrame(
+                binding,
+                m_AnimationSlotControls);
+            m_OutputOperations.BindFrame(
+                in m_ValuePage,
+                binding,
+                in finalOutput);
             return this;
         }
 
@@ -389,10 +305,115 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             if (frameSequence == 0)
                 throw new ArgumentOutOfRangeException(nameof(frameSequence));
             m_FrameSequence = frameSequence;
+            m_ConstraintOperations.BeginEvaluation(frameSequence);
             m_OperationCompletions.Clear();
             m_PoseGraphInvalidReason[0] = AnimationPoseNativeInvalidReason.None;
             m_PoseGraphInvalidOperationIndex[0] = -1;
             m_PoseGraphCompletedAt[0] = 0;
+        }
+
+        internal CharacterPoseWorkerStageLease CreateWorkerStageLease(
+            CharacterPoseWorkerActorRegistration registration,
+            ActorId actorId,
+            int stageIndex)
+        {
+            if (registration?.IsValid != true || !actorId.IsValid ||
+                (uint)stageIndex >= (uint)m_Stages.Length)
+            {
+                throw new ArgumentException(
+                    "Pose Worker Stage lease input is invalid.");
+            }
+            AnimationPoseGraphNativeStage stage = m_Stages[stageIndex];
+            if (!CharacterPoseWorkerKernels.IsWorkerDomain(
+                    stage.ExecutionDomain) ||
+                stageIndex > 0 &&
+                m_StageCompletedAt[m_Stages[stageIndex - 1].CompletionIndex] !=
+                m_CompletionIdentity)
+            {
+                throw new InvalidOperationException(
+                    $"Pose Worker Stage #{stageIndex} cannot be submitted outside compiled order.");
+            }
+            return new CharacterPoseWorkerStageLease(
+                registration,
+                m_Program,
+                this,
+                actorId,
+                stageIndex,
+                in m_FrameBinding,
+                m_OperationWeights,
+                m_RootOrientationWarpControls,
+                m_LinkedPoseActiveFragments);
+        }
+
+        internal void CompleteWorkerStage(
+            int stageIndex,
+            ulong completionIdentity)
+        {
+            if ((uint)stageIndex >= (uint)m_Stages.Length ||
+                completionIdentity != m_CompletionIdentity)
+            {
+                throw new InvalidOperationException(
+                    "Pose Worker Stage completion is stale.");
+            }
+            AnimationPoseGraphNativeStage stage = m_Stages[stageIndex];
+            if (!CharacterPoseWorkerKernels.IsWorkerDomain(
+                    stage.ExecutionDomain) ||
+                m_StageCompletedAt[stage.CompletionIndex] != 0)
+            {
+                throw new InvalidOperationException(
+                    $"Pose Worker Stage #{stageIndex} completion is invalid.");
+            }
+            int failedOperation = -1;
+            AnimationPoseNativeInvalidReason failureReason =
+                AnimationPoseNativeInvalidReason.None;
+            for (int nativeIndex = stage.OperationStart;
+                 nativeIndex < stage.OperationStart + stage.OperationCount;
+                 nativeIndex++)
+            {
+                CharacterPoseNativeOperationHeader operation =
+                    m_OperationHeaders[nativeIndex];
+                CharacterPoseOperationCompletion completion =
+                    m_OperationCompletions[operation.FrameCacheIndex];
+                if (!completion.Matches(completionIdentity))
+                {
+                    failedOperation = operation.Index;
+                    failureReason = AnimationPoseNativeInvalidReason
+                        .PoseGraphOperationInvalid;
+                    break;
+                }
+                if (completion.Outcome ==
+                    CharacterPoseOperationOutcome.TypedInvalid)
+                {
+                    failedOperation = operation.Index;
+                    failureReason = operation.OutputPoseValueIndex >= 0
+                        ? CharacterPosePureMath.NormalizeInvalidReason(
+                            m_ValueInvalidReasons[
+                                operation.OutputPoseValueIndex])
+                        : AnimationPoseNativeInvalidReason
+                            .PoseGraphOperationInvalid;
+                    break;
+                }
+                if (completion.Outcome == CharacterPoseOperationOutcome.Skipped ||
+                    operation.OutputPoseValueIndex < 0 ||
+                    m_ValueAvailability[operation.OutputPoseValueIndex] !=
+                    AnimationPoseAvailability.Invalid)
+                {
+                    continue;
+                }
+                RecordGraphInvalid(
+                    CharacterPosePureMath.NormalizeInvalidReason(
+                        m_ValueInvalidReasons[
+                            operation.OutputPoseValueIndex]),
+                    operation.Index);
+            }
+            if (failedOperation >= 0)
+            {
+                RecordGraphInvalid(failureReason, failedOperation);
+                m_StageInvalidOperationIndex[stage.DiagnosticIndex] =
+                    failedOperation;
+                return;
+            }
+            m_StageCompletedAt[stage.CompletionIndex] = completionIdentity;
         }
 
         internal bool ExecuteStage(
@@ -411,6 +432,12 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             }
 
             AnimationPoseGraphNativeStage stage = m_Stages[stageIndex];
+            if (CharacterPoseWorkerKernels.IsWorkerDomain(
+                    stage.ExecutionDomain))
+            {
+                throw new InvalidOperationException(
+                    $"Pose Worker Stage #{stageIndex} cannot execute on the Managed path.");
+            }
             bool stop = false;
             for (int operationIndex = stage.OperationStart;
                  operationIndex < stage.OperationStart + stage.OperationCount;
@@ -436,7 +463,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                     if (producesPose && !publishesFinalPose)
                     {
                         using (ValueResetMarker.Auto())
-                            ResetValue(operation.OutputPoseValueIndex);
+                            m_ValuePage.ResetValue(
+                                operation.OutputPoseValueIndex,
+                                m_ParameterDefaults);
                     }
                     if (!TryCompleteOperation(
                             in operation,
@@ -450,7 +479,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 if (producesPose && !publishesFinalPose)
                 {
                     using (ValueResetMarker.Auto())
-                    ResetValue(operation.OutputPoseValueIndex);
+                    m_ValuePage.ResetValue(
+                        operation.OutputPoseValueIndex,
+                        m_ParameterDefaults);
                 }
                 bool valueOperationValid = true;
                 AnimationPoseNativeInvalidReason typedInvalidReason =
@@ -504,51 +535,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                                         operation.FamilyPayloadIndex],
                                     deltaSeconds);
                         break;
-                    case CharacterPoseOperationCode.BlendPose:
-                        using (BlendMarker.Auto())
-                            m_CompositionOperations.EvaluateBlendPose(
-                                in operation,
-                                m_BlendFamilyOperations[
-                                    operation.FamilyPayloadIndex]);
-                        break;
-                    case CharacterPoseOperationCode.LayeredBoneBlend:
-                        using (BlendMarker.Auto())
-                            m_CompositionOperations
-                                .EvaluateLayeredBoneBlend(
-                                    in operation,
-                                    m_CompositionFamilyOperations[
-                                        operation.FamilyPayloadIndex]);
-                        break;
-                    case CharacterPoseOperationCode.AdditivePose:
-                        using (BlendMarker.Auto())
-                            m_CompositionOperations.EvaluateAdditivePose(
-                                in operation,
-                                m_CompositionFamilyOperations[
-                                    operation.FamilyPayloadIndex]);
-                        break;
-                    case CharacterPoseOperationCode.PoseParameterResolve:
-                        using (BlendMarker.Auto())
-                            m_CompositionOperations
-                                .EvaluatePoseParameterResolve(
-                                    in operation,
-                                    m_ParameterResolveOperations[
-                                        operation.FamilyPayloadIndex]);
-                        break;
-                    case CharacterPoseOperationCode.ModifyBone:
-                        using (ConstraintMarker.Auto())
-                            m_TransformOperations.EvaluateModifyBone(
-                                in operation,
-                                m_ComponentControlOperations[
-                                    operation.FamilyPayloadIndex]);
-                        break;
-                    case CharacterPoseOperationCode.RootOrientationWarp:
-                        using (ConstraintMarker.Auto())
-                            m_TransformOperations
-                                .EvaluateRootOrientationWarp(
-                                    in operation,
-                                    m_ComponentControlOperations[
-                                        operation.FamilyPayloadIndex]);
-                        break;
                     case CharacterPoseOperationCode.PoseBoneIKGoals:
                         using (IkGoalMarker.Auto())
                             valueOperationValid = m_ConstraintOperations
@@ -589,22 +575,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                                     m_LinkedPoseOperations[
                                         operation.FamilyPayloadIndex]);
                         break;
-                    case CharacterPoseOperationCode.LocalToComponentPose:
-                        using (SpaceConversionMarker.Auto())
-                            m_TransformOperations
-                                .EvaluateLocalToComponentPose(
-                                    in operation,
-                                    m_SpaceConversionOperations[
-                                        operation.FamilyPayloadIndex]);
-                        break;
-                    case CharacterPoseOperationCode.ComponentToLocalPose:
-                        using (SpaceConversionMarker.Auto())
-                            m_TransformOperations
-                                .EvaluateComponentToLocalPose(
-                                    in operation,
-                                    m_SpaceConversionOperations[
-                                        operation.FamilyPayloadIndex]);
-                        break;
                     case CharacterPoseOperationCode.OutputPose:
                         using (OutputMarker.Auto())
                             m_OutputOperations.EvaluateOutputPose(
@@ -641,7 +611,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                     {
                         valueValid = publishesFinalPose
                             ? m_FinalOutput.HasOutput
-                            : TryValidateValueEnvelope(
+                            : m_ValuePage.TryValidateValueEnvelope(
                                 operation.OutputPoseValueIndex,
                                 out reason);
                     }
@@ -737,7 +707,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 throw new InvalidOperationException(
                     $"Clip Preview source operation #{sourceOperationIndex} is not a compiled Clip Player.");
 
-            ResetValue(sourceOperation.OutputPoseValueIndex);
+            m_ValuePage.ResetValue(
+                sourceOperation.OutputPoseValueIndex,
+                m_ParameterDefaults);
             m_PlayerOperations.EvaluatePlayerInput(
                 in sourceOperation,
                 m_PlayerFamilyOperations[sourceOperation.FamilyPayloadIndex]);
@@ -752,7 +724,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 return CompleteEvaluation();
             }
             int sourceValue = sourceOperation.OutputPoseValueIndex;
-            ulong continuity = CombineContinuity(
+            ulong continuity = CharacterPosePureMath.CombineContinuity(
                 m_ValueContinuityIdentities[sourceValue],
                 (ulong)sourceOperation.Index + 1UL,
                 sourceOperation.Index);
@@ -777,13 +749,13 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 AnimationPoseNativeInvalidReason reason =
                     m_ValueAvailability[sourceValue] ==
                     AnimationPoseAvailability.Invalid
-                        ? NormalizeInvalidReason(
+                        ? CharacterPosePureMath.NormalizeInvalidReason(
                             m_ValueInvalidReasons[sourceValue])
                         : m_ValueAvailability[sourceValue] ==
                           AnimationPoseAvailability.NoPose
                             ? AnimationPoseNativeInvalidReason
                                 .PoseGraphOutputInvalid
-                            : NormalizeInvalidReason(previewReason);
+                            : CharacterPosePureMath.NormalizeInvalidReason(previewReason);
                 RecordGraphInvalid(reason, sourceOperation.Index);
                 m_FinalOutput.WriteInvalid(reason, continuity);
             }
@@ -815,7 +787,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                     AnimationPoseNativeInvalidReason.None
                         ? AnimationPoseNativeInvalidReason
                             .PoseGraphOutputInvalid
-                        : NormalizeInvalidReason(
+                        : CharacterPosePureMath.NormalizeInvalidReason(
                             m_PoseGraphInvalidReason[0]);
                 int operationIndex =
                     m_PoseGraphInvalidOperationIndex[0] >= 0

@@ -214,8 +214,7 @@ namespace ThirdPersonCharacter.Pipeline
 			RequireAlive();
 			if (m_PresentationRegistered)
 				return;
-			if (!GameplayTickSystem.RegisterPresentationTarget(m_PresentationTarget))
-				throw new InvalidOperationException("GameplayTickSystem rejected the Actor Presentation target.");
+			m_PresentationTarget.Activate();
 			m_PresentationRegistered = true;
 		}
 
@@ -241,7 +240,7 @@ namespace ThirdPersonCharacter.Pipeline
 			{
 				try
 				{
-					GameplayTickSystem.UnregisterPresentationTarget(m_PresentationTarget);
+					m_PresentationTarget.Deactivate();
 				}
 				catch (Exception exception)
 				{

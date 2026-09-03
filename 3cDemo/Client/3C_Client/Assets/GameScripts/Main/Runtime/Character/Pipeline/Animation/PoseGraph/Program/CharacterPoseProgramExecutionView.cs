@@ -244,6 +244,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         NativeArray<CharacterPoseNativeFullBodyIkOperation> m_FullBodyIkOperations;
         NativeArray<CharacterPoseNativeLinkedPoseOperation> m_LinkedPoseOperations;
         NativeArray<CharacterPoseNativeOutputOperation> m_OutputOperations;
+        NativeArray<int> m_ValueProducerOperationIndices;
         NativeArray<AnimationPoseGraphNativeStage> m_Stages;
         NativeArray<float> m_DenseBoneMasks;
         NativeArray<AnimationLocalBonePose> m_AdditiveReferences;
@@ -407,6 +408,14 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                     program.OperationPages.LinkedPoses.Count);
                 m_OutputOperations = Allocate<CharacterPoseNativeOutputOperation>(
                     program.OperationPages.Outputs.Count);
+                m_ValueProducerOperationIndices = Allocate<int>(
+                    program.PoseValueWorkspaceCount);
+                for (int valueIndex = 0;
+                     valueIndex < m_ValueProducerOperationIndices.Length;
+                     valueIndex++)
+                {
+                    m_ValueProducerOperationIndices[valueIndex] = -1;
+                }
                 m_Stages = Allocate<AnimationPoseGraphNativeStage>(program.Stages.Count);
                 m_DenseBoneMasks = Allocate<float>(checked(program.BoneMasks.Count * m_BoneCount));
                 m_AdditiveReferences = Allocate<AnimationLocalBonePose>(checked(program.AdditiveReferences.Count * m_BoneCount));
@@ -490,6 +499,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         internal NativeArray<CharacterPoseNativeFullBodyIkOperation> FullBodyIkOperations => m_FullBodyIkOperations;
         internal NativeArray<CharacterPoseNativeLinkedPoseOperation> LinkedPoseOperations => m_LinkedPoseOperations;
         internal NativeArray<CharacterPoseNativeOutputOperation> OutputOperations => m_OutputOperations;
+        internal NativeArray<int> ValueProducerOperationIndices =>
+            m_ValueProducerOperationIndices;
 
         internal NativeArray<AnimationPoseGraphNativeStage> Stages => m_Stages;
         internal NativeArray<float> DenseBoneMasks => m_DenseBoneMasks;
@@ -957,6 +968,17 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                     operation.LinkedPoseFragmentIndex,
                     operation.Index,
                     operation.Weight);
+                if ((uint)outputPose <
+                    (uint)m_ValueProducerOperationIndices.Length)
+                {
+                    if (m_ValueProducerOperationIndices[outputPose] >= 0)
+                    {
+                        throw new InvalidOperationException(
+                            $"Pose Value #{outputPose} has multiple execution producers.");
+                    }
+                    m_ValueProducerOperationIndices[outputPose] =
+                        operation.Index;
+                }
                 switch (operation.Family)
                 {
                     case CharacterPoseOperationFamily.ParameterResolve:
@@ -1228,6 +1250,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             DisposeArray(ref m_DenseBoneMasks);
             DisposeArray(ref m_Stages);
             DisposeArray(ref m_OutputOperations);
+            DisposeArray(ref m_ValueProducerOperationIndices);
             DisposeArray(ref m_LinkedPoseOperations);
             DisposeArray(ref m_FullBodyIkOperations);
             DisposeArray(ref m_GoalAssemblerOperations);

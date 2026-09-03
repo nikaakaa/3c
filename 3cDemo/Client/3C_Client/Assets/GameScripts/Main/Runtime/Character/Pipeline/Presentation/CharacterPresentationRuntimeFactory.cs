@@ -4,6 +4,7 @@ using Animancer;
 using BTSMTL.Diagnostics;
 using ThirdPersonCamera;
 using ThirdPersonCharacter.Equipment;
+using ThirdPersonCharacter.Pipeline;
 using ThirdPersonCharacter.Pipeline.Animation;
 using ThirdPersonCharacter.Pipeline.Animation.MotionMatching;
 using ThirdPersonCharacter.Pipeline.Simulation;
@@ -284,6 +285,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             CharacterCameraPresentationRuntime camera = null;
             CharacterEquipmentVisualRuntime equipment = null;
             CharacterMotionMatchingPresentationModule motionMatching = null;
+            CharacterPoseWorkerPresentationSession workerSession =
+                CharacterPoseWorkerPresentationSession.RequireCurrent();
             try
             {
                 body = new CharacterBodyPresentationRuntime(
@@ -345,7 +348,9 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     animationRigBinding,
                     rootHierarchy,
                     footPlacement,
-                    true);
+                    true,
+                    workerSession.WorkerScheduler,
+                    false);
                 footPlacement = null;
                 animation.SetTuningBinding(
                     new CharacterPoseTuningRuntimeBinding(
@@ -392,7 +397,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     equipment,
                     camera,
                     poseRoot,
-                    diagnostics);
+                    diagnostics,
+                    workerSession);
                 body = null;
                 animation = null;
                 equipment = null;

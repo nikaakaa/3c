@@ -27,6 +27,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         readonly CharacterPoseProgramActorRuntime m_ActorRuntime;
         readonly CharacterPoseActorCommittedDiagnosticsProjector
             m_ActorDiagnostics;
+        readonly CharacterPoseWorkerActorRegistration m_WorkerRegistration;
         CharacterPoseProgramFrameLease m_ActiveFrameLease;
         CharacterPoseProgramFrameLease m_CommittingFrameLease;
         CharacterPoseProgramCommittedDiagnosticsView
@@ -48,7 +49,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             PresentationFrameWorkspace presentationWorkspace,
             CharacterPoseActorCommittedDiagnosticsProjector actorDiagnostics,
             CharacterPoseProgramCommittedDiagnosticsProjector
-                programDiagnostics)
+                programDiagnostics,
+            ActorId actorId,
+            CharacterPoseWorkerActorRegistration workerRegistration)
         {
             AnimancerComponent animancerComponent = animancer ? animancer :
                 throw new ArgumentNullException(nameof(animancer));
@@ -75,6 +78,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 throw new ArgumentNullException(nameof(programDiagnostics));
             CharacterPoseConstraintRuntime constraintRuntime = poseConstraints ??
                 throw new ArgumentNullException(nameof(poseConstraints));
+            m_WorkerRegistration = workerRegistration ??
+                throw new ArgumentNullException(nameof(workerRegistration));
             m_Action = new CharacterPoseProgramActionRuntime(
                 ActorState,
                 source,
@@ -109,7 +114,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 Executor,
                 world,
                 m_SourcePreparation,
-                diagnostics);
+                diagnostics,
+                actorId,
+                m_WorkerRegistration);
             m_MotionMatching =
                 new CharacterPoseProgramMotionMatchingRuntime(
                     image,
@@ -820,18 +827,33 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 presentationDeltaSeconds);
         }
 
-        internal CharacterPoseProgramOutputResult CompleteEvaluation(
+        internal void BeginEvaluationExecution(
             CharacterPoseProgramFrameLease lease,
             in CharacterPoseProgramPrepared prepared,
             in CharacterBodyPresentationFrame bodyFrame,
             in CharacterPresentationFactFrame factFrame)
         {
             RequireFrame(lease);
-            return m_Evaluation.Complete(
+            m_Evaluation.BeginCompletion(
                 lease,
                 in prepared,
                 in bodyFrame,
                 in factFrame);
+        }
+
+        internal bool TryAdvanceEvaluationExecution(
+            CharacterPoseProgramFrameLease lease,
+            out CharacterPoseWorkerStageLease workerLease)
+        {
+            RequireFrame(lease);
+            return m_Evaluation.TryAdvanceCompletion(out workerLease);
+        }
+
+        internal CharacterPoseProgramOutputResult FinishEvaluationExecution(
+            CharacterPoseProgramFrameLease lease)
+        {
+            RequireFrame(lease);
+            return m_Evaluation.FinishCompletion();
         }
 
         internal float RequirePreparedEvaluationDeltaSeconds(
@@ -1055,6 +1077,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             m_Evaluation.Reset();
             m_MotionMatching.ClearSelections();
             Exception failure = null;
+            DisposeStep(m_WorkerRegistration.Dispose, ref failure);
             DisposeStep(DetachExecutionJobs, ref failure);
             DisposeStep(ActorState.Dispose, ref failure);
             DisposeStep(m_Tuning.Dispose, ref failure);

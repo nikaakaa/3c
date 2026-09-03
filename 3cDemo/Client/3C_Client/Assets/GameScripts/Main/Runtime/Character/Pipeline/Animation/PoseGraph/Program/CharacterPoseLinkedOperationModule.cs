@@ -1,72 +1,102 @@
 using System;
+using Unity.Collections;
 
 namespace ThirdPersonCharacter.Pipeline.Animation
 {
     internal sealed class CharacterPoseLinkedOperationModule
     {
-        readonly CharacterPoseValueWorkspace m_Context;
+        readonly NativeArray<AnimationPoseGraphNativeLinkedPoseCall>
+            m_Calls;
+        readonly NativeArray<AnimationPoseGraphNativeLinkedPoseCandidate>
+            m_Candidates;
+        NativeArray<AnimationPoseGraphNativeLinkedPoseCallControl> m_Controls;
+        NativeArray<byte> m_ActiveFragments;
+        CharacterPoseValuePageSlice m_Values;
 
         internal CharacterPoseLinkedOperationModule(
-            CharacterPoseValueWorkspace context)
+            NativeArray<AnimationPoseGraphNativeLinkedPoseCall> calls,
+            NativeArray<AnimationPoseGraphNativeLinkedPoseCandidate> candidates)
         {
-            m_Context = context ??
-                throw new ArgumentNullException(nameof(context));
+            m_Calls = calls;
+            m_Candidates = candidates;
+        }
+
+        internal void BindFrame(
+            in CharacterPoseValuePageSlice values,
+            NativeArray<AnimationPoseGraphNativeLinkedPoseCallControl> controls,
+            NativeArray<byte> activeFragments)
+        {
+            if (!values.IsValid ||
+                !controls.IsCreated ||
+                !activeFragments.IsCreated)
+            {
+                throw new ArgumentException(
+                    "Linked Pose frame binding is invalid.");
+            }
+            m_Values = values;
+            m_Controls = controls;
+            m_ActiveFragments = activeFragments;
         }
 
         internal bool EvaluateLinkedPoseCall(
             in CharacterPoseNativeOperationHeader header,
             in CharacterPoseNativeLinkedPoseOperation operation)
         {
-            if ((uint)operation.LinkedPoseCallIndex >= (uint)m_Context.m_LinkedPoseCalls.Length)
+            if ((uint)operation.LinkedPoseCallIndex >= (uint)m_Calls.Length)
                 return false;
             AnimationPoseGraphNativeLinkedPoseCall call =
-                m_Context.m_LinkedPoseCalls[operation.LinkedPoseCallIndex];
+                m_Calls[operation.LinkedPoseCallIndex];
             AnimationPoseGraphNativeLinkedPoseCallControl control =
-                m_Context.m_LinkedPoseCallControls[operation.LinkedPoseCallIndex];
+                m_Controls[operation.LinkedPoseCallIndex];
             if (!control.IsActive || control.CandidateIndex < call.CandidateStart ||
                 control.CandidateIndex >= call.CandidateStart + call.CandidateCount ||
-                (uint)control.CandidateIndex >= (uint)m_Context.m_LinkedPoseCandidates.Length)
+                (uint)control.CandidateIndex >= (uint)m_Candidates.Length)
             {
                 return false;
             }
             AnimationPoseGraphNativeLinkedPoseCandidate candidate =
-                m_Context.m_LinkedPoseCandidates[control.CandidateIndex];
+                m_Candidates[control.CandidateIndex];
             if (!IsFragmentActive(candidate.FragmentIndex))
                 return false;
 
             if (operation.OutputPoseValueIndex >= 0)
             {
                 if (candidate.OutputPoseValueIndex < 0 ||
-                    !m_Context.IsInputReady(candidate.OutputPoseValueIndex, header.Index) ||
-                    !m_Context.TryCopyValue(
+                    !m_Values.IsInputReady(candidate.OutputPoseValueIndex, header.Index) ||
+                    !m_Values.TryCopyValue(
                         candidate.OutputPoseValueIndex,
                         operation.OutputPoseValueIndex,
                         header.Index))
                 {
-                    m_Context.SetInvalid(
+                    m_Values.SetInvalid(
                         operation.OutputPoseValueIndex,
                         control.Generation,
                         AnimationPoseNativeInvalidReason.PoseGraphInputIncomplete,
                         header.Index);
                     return false;
                 }
-                m_Context.m_ValueContinuityIdentities[operation.OutputPoseValueIndex] = CharacterPoseValueWorkspace.CombineContinuity(
-                    m_Context.m_ValueContinuityIdentities[operation.OutputPoseValueIndex],
+                ulong outputContinuity = CharacterPosePureMath.CombineContinuity(
+                    m_Values.Continuity(operation.OutputPoseValueIndex),
                     control.Generation,
                     header.Index);
+                m_Values.SetContinuity(
+                    operation.OutputPoseValueIndex,
+                    outputContinuity);
                 if (control.PoseDiscontinuity != 0)
                 {
-                    ulong continuity = m_Context.m_ValueContinuityIdentities[operation.OutputPoseValueIndex];
                     PoseDiscontinuity discontinuity = PoseDiscontinuity.Reset(
-                        CharacterPoseValueWorkspace.CombineContinuity(control.Generation, continuity, header.Index),
-                        m_Context.m_CompletionIdentity,
+                        CharacterPosePureMath.CombineContinuity(control.Generation, outputContinuity, header.Index),
+                        m_Values.CompletionIdentity,
                         default,
-                        continuity,
+                        outputContinuity,
                         PoseDiscontinuityResetReason.BranchReplacement,
                         control.Generation,
                         false);
-                    m_Context.m_ValueDiscontinuities[operation.OutputPoseValueIndex] =
+                    PoseDiscontinuityNative nativeDiscontinuity =
                         PoseDiscontinuityNative.From(in discontinuity);
+                    m_Values.SetDiscontinuity(
+                        operation.OutputPoseValueIndex,
+                        in nativeDiscontinuity);
                 }
             }
 
@@ -74,8 +104,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         }
 
         internal bool IsFragmentActive(int fragmentIndex) =>
-            (uint)fragmentIndex < (uint)m_Context.m_LinkedPoseActiveFragments.Length &&
-            m_Context.m_LinkedPoseActiveFragments[fragmentIndex] == 1;
+            (uint)fragmentIndex < (uint)m_ActiveFragments.Length &&
+            m_ActiveFragments[fragmentIndex] == 1;
 
     }
 }

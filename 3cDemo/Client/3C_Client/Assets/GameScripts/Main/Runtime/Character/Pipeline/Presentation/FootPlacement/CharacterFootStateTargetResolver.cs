@@ -131,7 +131,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 CharacterFootConstraintMath.ResolveOriginalSole(
                     frame.AnimatedFoot);
             Vector3 releaseCorrection = swingCorrection;
-            if (!targetAvailable && frame.SwingMotion.Accepted)
+            if (frame.SwingMotion.Accepted)
             {
                 releaseCorrection = Vector3.ProjectOnPlane(
                     swingCorrection,
@@ -142,7 +142,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     frame.FrameSequence,
                     frame.CompletionIdentity,
                     frame.Side,
-                    originalSole + swingCorrection,
+                    originalSole + releaseCorrection,
                     context.Contact.Normal,
                     context.Contact.SurfaceIdentity,
                     context.Contact.WorldRevision,

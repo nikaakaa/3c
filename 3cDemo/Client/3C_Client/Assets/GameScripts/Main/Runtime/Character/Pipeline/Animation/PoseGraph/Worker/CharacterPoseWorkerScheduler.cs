@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Runtime.ExceptionServices;
 using System.Linq;
 using ThirdPersonSimulation;
 using Unity.Burst;
@@ -153,6 +154,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                     "Pose Worker Scheduler has no open batch.");
             JobHandle combined = default;
             bool scheduled = false;
+            Exception failure = null;
             try
             {
                 foreach (CharacterPoseWorkerProgramBatch program in
@@ -171,13 +173,30 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                          m_Programs.Values)
                     program.CompletePending();
             }
-            finally
+            catch (Exception exception)
             {
-                foreach (CharacterPoseWorkerProgramBatch program in
-                         m_Programs.Values)
-                    program.Fence();
-                m_Collecting = false;
+                failure = exception;
             }
+            foreach (CharacterPoseWorkerProgramBatch program in
+                     m_Programs.Values)
+            {
+                try
+                {
+                    program.Fence();
+                }
+                catch (Exception exception)
+                {
+                    failure = failure == null
+                        ? exception
+                        : new AggregateException(
+                            "Pose Worker execution and fence both failed.",
+                            failure,
+                            exception);
+                }
+            }
+            m_Collecting = false;
+            if (failure != null)
+                ExceptionDispatchInfo.Capture(failure).Throw();
         }
 
         internal void DiscardBatch()
@@ -423,19 +442,15 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                     hasWaveHandle = false;
                 }
                 currentWave = batch.Plan.DependencyWave;
-                CharacterPoseWorkerKernelInput input = new
-                    CharacterPoseWorkerKernelInput
+                CharacterPoseWorkerKernelRange range = new
+                    CharacterPoseWorkerKernelRange
                     {
-                        Actors = m_ActorSlices,
-                        NativeOperationIndices = m_NativeOperationIndices,
-                        Headers = view.OperationHeaders,
-                        ParameterDefaults = view.ParameterDefaults,
                         OperationStart = batch.OperationStart,
                         OperationCount = batch.Plan.OperationIndices.Count
                     };
                 JobHandle scheduled = Schedule(
                     batch.Plan.Kernel,
-                    input,
+                    range,
                     view,
                     m_Pending.Count,
                     hasDependency ? dependency : default);
@@ -462,7 +477,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
 
         JobHandle Schedule(
             CharacterPoseWorkerKernelId kernel,
-            CharacterPoseWorkerKernelInput input,
+            CharacterPoseWorkerKernelRange range,
             CharacterPoseProgramExecutionView view,
             int actorCount,
             JobHandle dependency) => kernel switch
@@ -470,20 +485,32 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             CharacterPoseWorkerKernelId.ParameterResolve =>
                 new CharacterPoseParameterResolveWorkerKernel
                 {
-                    Input = input,
+                    Range = range,
+                    Actors = m_ActorSlices,
+                    NativeOperationIndices = m_NativeOperationIndices,
+                    Headers = view.OperationHeaders,
+                    ParameterDefaults = view.ParameterDefaults,
                     Operations = view.ParameterResolveOperations,
                     Policies = view.ParameterPolicies
                 }.Schedule(actorCount, 1, dependency),
             CharacterPoseWorkerKernelId.Blend =>
                 new CharacterPoseBlendWorkerKernel
                 {
-                    Input = input,
+                    Range = range,
+                    Actors = m_ActorSlices,
+                    NativeOperationIndices = m_NativeOperationIndices,
+                    Headers = view.OperationHeaders,
+                    ParameterDefaults = view.ParameterDefaults,
                     Operations = view.BlendOperations
                 }.Schedule(actorCount, 1, dependency),
             CharacterPoseWorkerKernelId.Composition =>
                 new CharacterPoseCompositionWorkerKernel
                 {
-                    Input = input,
+                    Range = range,
+                    Actors = m_ActorSlices,
+                    NativeOperationIndices = m_NativeOperationIndices,
+                    Headers = view.OperationHeaders,
+                    ParameterDefaults = view.ParameterDefaults,
                     Operations = view.CompositionOperations,
                     BoneMasks = view.DenseBoneMasks,
                     AdditiveReferences = view.AdditiveReferences,
@@ -492,14 +519,22 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             CharacterPoseWorkerKernelId.SpaceConversion =>
                 new CharacterPoseSpaceConversionWorkerKernel
                 {
-                    Input = input,
+                    Range = range,
+                    Actors = m_ActorSlices,
+                    NativeOperationIndices = m_NativeOperationIndices,
+                    Headers = view.OperationHeaders,
+                    ParameterDefaults = view.ParameterDefaults,
                     Operations = view.SpaceConversionOperations,
                     ParentIndices = view.ParentIndices
                 }.Schedule(actorCount, 1, dependency),
             CharacterPoseWorkerKernelId.ComponentControl =>
                 new CharacterPoseComponentControlWorkerKernel
                 {
-                    Input = input,
+                    Range = range,
+                    Actors = m_ActorSlices,
+                    NativeOperationIndices = m_NativeOperationIndices,
+                    Headers = view.OperationHeaders,
+                    ParameterDefaults = view.ParameterDefaults,
                     Operations = view.ComponentControlOperations,
                     ModifyBones = view.ModifyBones,
                     RootOrientationWarps = view.RootOrientationWarps,
@@ -528,8 +563,14 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         {
             if (!m_HasOutstanding)
                 return;
-            m_Outstanding.Complete();
-            m_HasOutstanding = false;
+            try
+            {
+                m_Outstanding.Complete();
+            }
+            finally
+            {
+                m_HasOutstanding = false;
+            }
         }
 
         void EnsureCapacity(int actorCapacity)

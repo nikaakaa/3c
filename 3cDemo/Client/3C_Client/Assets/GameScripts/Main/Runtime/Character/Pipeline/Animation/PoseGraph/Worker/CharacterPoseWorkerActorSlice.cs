@@ -25,7 +25,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 throw new System.ArgumentNullException(nameof(executionView));
             executionView.RequireValid();
             if (!operationWeights.IsCreated ||
-                operationWeights.Length != frame.Layout.OperationCount ||
+                operationWeights.Length !=
+                    executionView.OperationHeaders.Length ||
                 !rootOrientationWarpControls.IsCreated ||
                 rootOrientationWarpControls.Length !=
                     executionView.RootOrientationWarps.Length ||
@@ -34,7 +35,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                     executionView.LinkedPoseFragmentCount)
             {
                 throw new System.ArgumentException(
-                    "Pose Worker Actor control slice is invalid.");
+                    $"Pose Worker Actor control slice is invalid. " +
+                    $"Weights={operationWeights.IsCreated}:{operationWeights.Length}/{executionView.OperationHeaders.Length}, " +
+                    $"RootWarp={rootOrientationWarpControls.IsCreated}:{rootOrientationWarpControls.Length}/{executionView.RootOrientationWarps.Length}, " +
+                    $"LinkedFragments={linkedPoseActiveFragments.IsCreated}:{linkedPoseActiveFragments.Length}/{executionView.LinkedPoseFragmentCount}.");
             }
             CharacterPoseValuePageSlice values =
                 CharacterPoseValuePageSlice.Create(
@@ -74,10 +78,11 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         internal ulong WritePageIdentity => m_Values.WritePageIdentity;
 
         internal CharacterPoseNativeOperationHeader ApplyWeight(
-            in CharacterPoseNativeOperationHeader operation) =>
+            in CharacterPoseNativeOperationHeader operation,
+            int nativeOperationIndex) =>
             operation.WithWeight(Read<float>(
                 m_OperationWeights,
-                operation.Index));
+                nativeOperationIndex));
 
         internal CharacterRootOrientationWarpNativeControl
             RootOrientationWarpControl(int index) =>

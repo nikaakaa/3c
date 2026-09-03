@@ -6,18 +6,21 @@ using UnityEngine;
 
 namespace ThirdPersonCharacter.Pipeline.Animation
 {
-    internal struct CharacterPoseWorkerKernelInput
+    internal struct CharacterPoseWorkerKernelRange
     {
-        [ReadOnly] internal NativeArray<CharacterPoseWorkerActorSlice> Actors;
-        [ReadOnly] internal NativeArray<int> NativeOperationIndices;
-        [ReadOnly] internal NativeArray<CharacterPoseNativeOperationHeader>
-            Headers;
-        [ReadOnly] internal NativeArray<float> ParameterDefaults;
         internal int OperationStart;
         internal int OperationCount;
 
-        internal CharacterPoseNativeOperationHeader Header(int index) =>
-            Headers[NativeOperationIndices[OperationStart + index]];
+        internal CharacterPoseNativeOperationHeader Header(
+            NativeArray<CharacterPoseNativeOperationHeader> headers,
+            NativeArray<int> nativeOperationIndices,
+            int index) =>
+            headers[nativeOperationIndices[OperationStart + index]];
+
+        internal int NativeOperationIndex(
+            NativeArray<int> nativeOperationIndices,
+            int index) =>
+            nativeOperationIndices[OperationStart + index];
     }
 
     internal readonly struct CharacterPoseWorkerKernelFrame
@@ -36,11 +39,14 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         internal CharacterPoseValuePageSlice Values => m_Actor.Values;
 
         internal bool TryBegin(
+            int nativeOperationIndex,
             in CharacterPoseNativeOperationHeader source,
             out CharacterPoseNativeOperationHeader operation)
         {
             CharacterPoseValuePageSlice values = m_Actor.Values;
-            operation = m_Actor.ApplyWeight(in source);
+            operation = m_Actor.ApplyWeight(
+                in source,
+                nativeOperationIndex);
             if (values.HasGraphFailure || values.HasCompletion(source.Index))
             {
                 if (values.HasCompletion(source.Index))
@@ -95,21 +101,34 @@ namespace ThirdPersonCharacter.Pipeline.Animation
     internal struct CharacterPoseParameterResolveWorkerKernel :
         IJobParallelFor
     {
-        internal CharacterPoseWorkerKernelInput Input;
+        internal CharacterPoseWorkerKernelRange Range;
+        [ReadOnly] internal NativeArray<CharacterPoseWorkerActorSlice> Actors;
+        [ReadOnly] internal NativeArray<int> NativeOperationIndices;
+        [ReadOnly] internal NativeArray<CharacterPoseNativeOperationHeader>
+            Headers;
+        [ReadOnly] internal NativeArray<float> ParameterDefaults;
         [ReadOnly] internal NativeArray<CharacterPoseNativeParameterResolveOperation>
             Operations;
         [ReadOnly] internal NativeArray<PoseParameterResolvePolicy> Policies;
 
         public void Execute(int actorIndex)
         {
-            CharacterPoseWorkerActorSlice actor = Input.Actors[actorIndex];
+            CharacterPoseWorkerActorSlice actor = Actors[actorIndex];
             var frame = new CharacterPoseWorkerKernelFrame(
                 in actor,
-                Input.ParameterDefaults);
-            for (int index = 0; index < Input.OperationCount; index++)
+                ParameterDefaults);
+            for (int index = 0; index < Range.OperationCount; index++)
             {
-                CharacterPoseNativeOperationHeader source = Input.Header(index);
+                int nativeOperationIndex =
+                    Range.NativeOperationIndex(
+                        NativeOperationIndices,
+                        index);
+                CharacterPoseNativeOperationHeader source = Range.Header(
+                    Headers,
+                    NativeOperationIndices,
+                    index);
                 if (!frame.TryBegin(
+                        nativeOperationIndex,
                         in source,
                         out CharacterPoseNativeOperationHeader header))
                     continue;
@@ -144,7 +163,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                                 parameterSource,
                                 output,
                                 Policies,
-                                Input.ParameterDefaults))
+                                ParameterDefaults))
                         {
                             values.SetInvalid(
                                 output,
@@ -173,20 +192,33 @@ namespace ThirdPersonCharacter.Pipeline.Animation
     [BurstCompile]
     internal struct CharacterPoseBlendWorkerKernel : IJobParallelFor
     {
-        internal CharacterPoseWorkerKernelInput Input;
+        internal CharacterPoseWorkerKernelRange Range;
+        [ReadOnly] internal NativeArray<CharacterPoseWorkerActorSlice> Actors;
+        [ReadOnly] internal NativeArray<int> NativeOperationIndices;
+        [ReadOnly] internal NativeArray<CharacterPoseNativeOperationHeader>
+            Headers;
+        [ReadOnly] internal NativeArray<float> ParameterDefaults;
         [ReadOnly] internal NativeArray<CharacterPoseNativeBlendOperation>
             Operations;
 
         public void Execute(int actorIndex)
         {
-            CharacterPoseWorkerActorSlice actor = Input.Actors[actorIndex];
+            CharacterPoseWorkerActorSlice actor = Actors[actorIndex];
             var frame = new CharacterPoseWorkerKernelFrame(
                 in actor,
-                Input.ParameterDefaults);
-            for (int index = 0; index < Input.OperationCount; index++)
+                ParameterDefaults);
+            for (int index = 0; index < Range.OperationCount; index++)
             {
-                CharacterPoseNativeOperationHeader source = Input.Header(index);
+                int nativeOperationIndex =
+                    Range.NativeOperationIndex(
+                        NativeOperationIndices,
+                        index);
+                CharacterPoseNativeOperationHeader source = Range.Header(
+                    Headers,
+                    NativeOperationIndices,
+                    index);
                 if (!frame.TryBegin(
+                        nativeOperationIndex,
                         in source,
                         out CharacterPoseNativeOperationHeader header))
                     continue;
@@ -255,7 +287,12 @@ namespace ThirdPersonCharacter.Pipeline.Animation
     [BurstCompile]
     internal struct CharacterPoseCompositionWorkerKernel : IJobParallelFor
     {
-        internal CharacterPoseWorkerKernelInput Input;
+        internal CharacterPoseWorkerKernelRange Range;
+        [ReadOnly] internal NativeArray<CharacterPoseWorkerActorSlice> Actors;
+        [ReadOnly] internal NativeArray<int> NativeOperationIndices;
+        [ReadOnly] internal NativeArray<CharacterPoseNativeOperationHeader>
+            Headers;
+        [ReadOnly] internal NativeArray<float> ParameterDefaults;
         [ReadOnly] internal NativeArray<CharacterPoseNativeCompositionOperation>
             Operations;
         [ReadOnly] internal NativeArray<float> BoneMasks;
@@ -265,14 +302,22 @@ namespace ThirdPersonCharacter.Pipeline.Animation
 
         public void Execute(int actorIndex)
         {
-            CharacterPoseWorkerActorSlice actor = Input.Actors[actorIndex];
+            CharacterPoseWorkerActorSlice actor = Actors[actorIndex];
             var frame = new CharacterPoseWorkerKernelFrame(
                 in actor,
-                Input.ParameterDefaults);
-            for (int index = 0; index < Input.OperationCount; index++)
+                ParameterDefaults);
+            for (int index = 0; index < Range.OperationCount; index++)
             {
-                CharacterPoseNativeOperationHeader source = Input.Header(index);
+                int nativeOperationIndex =
+                    Range.NativeOperationIndex(
+                        NativeOperationIndices,
+                        index);
+                CharacterPoseNativeOperationHeader source = Range.Header(
+                    Headers,
+                    NativeOperationIndices,
+                    index);
                 if (!frame.TryBegin(
+                        nativeOperationIndex,
                         in source,
                         out CharacterPoseNativeOperationHeader header))
                     continue;
@@ -585,21 +630,34 @@ namespace ThirdPersonCharacter.Pipeline.Animation
     [BurstCompile]
     internal struct CharacterPoseSpaceConversionWorkerKernel : IJobParallelFor
     {
-        internal CharacterPoseWorkerKernelInput Input;
+        internal CharacterPoseWorkerKernelRange Range;
+        [ReadOnly] internal NativeArray<CharacterPoseWorkerActorSlice> Actors;
+        [ReadOnly] internal NativeArray<int> NativeOperationIndices;
+        [ReadOnly] internal NativeArray<CharacterPoseNativeOperationHeader>
+            Headers;
+        [ReadOnly] internal NativeArray<float> ParameterDefaults;
         [ReadOnly] internal NativeArray<CharacterPoseNativeSpaceConversionOperation>
             Operations;
         [ReadOnly] internal NativeArray<int> ParentIndices;
 
         public void Execute(int actorIndex)
         {
-            CharacterPoseWorkerActorSlice actor = Input.Actors[actorIndex];
+            CharacterPoseWorkerActorSlice actor = Actors[actorIndex];
             var frame = new CharacterPoseWorkerKernelFrame(
                 in actor,
-                Input.ParameterDefaults);
-            for (int index = 0; index < Input.OperationCount; index++)
+                ParameterDefaults);
+            for (int index = 0; index < Range.OperationCount; index++)
             {
-                CharacterPoseNativeOperationHeader source = Input.Header(index);
+                int nativeOperationIndex =
+                    Range.NativeOperationIndex(
+                        NativeOperationIndices,
+                        index);
+                CharacterPoseNativeOperationHeader source = Range.Header(
+                    Headers,
+                    NativeOperationIndices,
+                    index);
                 if (!frame.TryBegin(
+                        nativeOperationIndex,
                         in source,
                         out CharacterPoseNativeOperationHeader header))
                     continue;
@@ -671,7 +729,12 @@ namespace ThirdPersonCharacter.Pipeline.Animation
     internal struct CharacterPoseComponentControlWorkerKernel :
         IJobParallelFor
     {
-        internal CharacterPoseWorkerKernelInput Input;
+        internal CharacterPoseWorkerKernelRange Range;
+        [ReadOnly] internal NativeArray<CharacterPoseWorkerActorSlice> Actors;
+        [ReadOnly] internal NativeArray<int> NativeOperationIndices;
+        [ReadOnly] internal NativeArray<CharacterPoseNativeOperationHeader>
+            Headers;
+        [ReadOnly] internal NativeArray<float> ParameterDefaults;
         [ReadOnly] internal NativeArray<CharacterPoseNativeComponentControlOperation>
             Operations;
         [ReadOnly] internal NativeArray<AnimationPoseGraphNativeModifyBone>
@@ -682,14 +745,22 @@ namespace ThirdPersonCharacter.Pipeline.Animation
 
         public void Execute(int actorIndex)
         {
-            CharacterPoseWorkerActorSlice actor = Input.Actors[actorIndex];
+            CharacterPoseWorkerActorSlice actor = Actors[actorIndex];
             var frame = new CharacterPoseWorkerKernelFrame(
                 in actor,
-                Input.ParameterDefaults);
-            for (int index = 0; index < Input.OperationCount; index++)
+                ParameterDefaults);
+            for (int index = 0; index < Range.OperationCount; index++)
             {
-                CharacterPoseNativeOperationHeader source = Input.Header(index);
+                int nativeOperationIndex =
+                    Range.NativeOperationIndex(
+                        NativeOperationIndices,
+                        index);
+                CharacterPoseNativeOperationHeader source = Range.Header(
+                    Headers,
+                    NativeOperationIndices,
+                    index);
                 if (!frame.TryBegin(
+                        nativeOperationIndex,
                         in source,
                         out CharacterPoseNativeOperationHeader header))
                     continue;

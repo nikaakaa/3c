@@ -477,9 +477,25 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
             float outputWeight,
             ulong continuityIdentity,
             ulong completionIdentity,
+            int workerBatchIndex,
+            string workerBatchIdentity,
+            CharacterPoseWorkerKernelId workerKernel,
+            int workerDependencyWave,
             int contributionOffset,
             int contributionCount)
         {
+            bool worker = workerKernel != CharacterPoseWorkerKernelId.None;
+            if (worker
+                    ? workerBatchIndex < 0 ||
+                      string.IsNullOrWhiteSpace(workerBatchIdentity) ||
+                      workerDependencyWave < 0
+                    : workerBatchIndex != -1 ||
+                      !string.IsNullOrEmpty(workerBatchIdentity) ||
+                      workerDependencyWave != -1)
+            {
+                throw new ArgumentException(
+                    "Pose Operation Worker diagnostics are invalid.");
+            }
             OperationIndex = operationIndex;
             GraphId = graphId ?? string.Empty;
             NodeId = nodeId;
@@ -490,6 +506,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
             OutputWeight = outputWeight;
             ContinuityIdentity = continuityIdentity;
             CompletionIdentity = completionIdentity;
+            WorkerBatchIndex = workerBatchIndex;
+            WorkerBatchIdentity = workerBatchIdentity ?? string.Empty;
+            WorkerKernel = workerKernel;
+            WorkerDependencyWave = workerDependencyWave;
             ContributionOffset = contributionOffset;
             ContributionCount = contributionCount;
         }
@@ -504,6 +524,12 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
         public float OutputWeight { get; }
         public ulong ContinuityIdentity { get; }
         public ulong CompletionIdentity { get; }
+        public bool ExecutedByWorker =>
+            WorkerKernel != CharacterPoseWorkerKernelId.None;
+        public int WorkerBatchIndex { get; }
+        public string WorkerBatchIdentity { get; }
+        public CharacterPoseWorkerKernelId WorkerKernel { get; }
+        public int WorkerDependencyWave { get; }
         public int ContributionOffset { get; }
         public int ContributionCount { get; }
     }

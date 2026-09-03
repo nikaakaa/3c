@@ -1596,6 +1596,12 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
                     contributionCount >
                     programDiagnostics.PoseValueContributionStride)
                     throw new InvalidOperationException($"Animation Pose operation #{i} contribution count is invalid.");
+                ResolveWorkerExecution(
+                    operation,
+                    out int workerBatchIndex,
+                    out string workerBatchIdentity,
+                    out CharacterPoseWorkerKernelId workerKernel,
+                    out int workerDependencyWave);
                 page.Operations[operationCount++] = new AnimationPoseOperationSnapshot(
                     i,
                     source.GraphId,
@@ -1608,6 +1614,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
                     programDiagnostics.GetValueContinuityIdentity(valueIndex),
                     programDiagnostics.GetOperationCompletion(
                         operation.Index).CompletionIdentity,
+                    workerBatchIndex,
+                    workerBatchIdentity,
+                    workerKernel,
+                    workerDependencyWave,
                     contributionOffset,
                     contributionCount);
                 for (int contributionIndex = 0; contributionIndex < contributionCount; contributionIndex++)
@@ -1639,6 +1649,52 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
             }
             page.OperationCount = operationCount;
             page.OperationContributionCount = contributionOffset;
+        }
+
+        void ResolveWorkerExecution(
+            CharacterPoseOperationHeader operation,
+            out int batchIndex,
+            out string batchIdentity,
+            out CharacterPoseWorkerKernelId kernel,
+            out int dependencyWave)
+        {
+            batchIndex = -1;
+            batchIdentity = string.Empty;
+            kernel = CharacterPoseWorkerKernelId.None;
+            dependencyWave = -1;
+            for (int candidateIndex = 0;
+                 candidateIndex < m_Program.WorkerPlan.Batches.Count;
+                 candidateIndex++)
+            {
+                CharacterPoseWorkerBatchPlan candidate =
+                    m_Program.WorkerPlan.Batches[candidateIndex];
+                for (int operationOffset = 0;
+                     operationOffset < candidate.OperationIndices.Count;
+                     operationOffset++)
+                {
+                    if (candidate.OperationIndices[operationOffset] !=
+                        operation.Index)
+                        continue;
+                    if (batchIndex >= 0 ||
+                        !CharacterPoseWorkerKernels.IsWorkerDomain(
+                            operation.ExecutionDomain))
+                    {
+                        throw new InvalidOperationException(
+                            $"Pose Worker diagnostics Operation #{operation.Index} ownership is invalid.");
+                    }
+                    batchIndex = candidate.Index;
+                    batchIdentity = candidate.BatchIdentity;
+                    kernel = candidate.Kernel;
+                    dependencyWave = candidate.DependencyWave;
+                }
+            }
+            if (CharacterPoseWorkerKernels.IsWorkerDomain(
+                    operation.ExecutionDomain) !=
+                (batchIndex >= 0))
+            {
+                throw new InvalidOperationException(
+                    $"Pose Worker diagnostics Operation #{operation.Index} coverage is incomplete.");
+            }
         }
 
         void CopyPoseWatches(

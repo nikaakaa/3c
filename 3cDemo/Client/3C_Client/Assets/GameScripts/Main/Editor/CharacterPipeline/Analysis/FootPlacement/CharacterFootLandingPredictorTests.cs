@@ -262,6 +262,198 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 Is.EqualTo(0.15f).Within(0.0001f));
         }
 
+        [Test]
+        public void PlantTargetCorrectionPreservesSignedGapOnBothSides()
+        {
+            CharacterFootPlacementAnimatedFootPose animated = CreateAnimatedFoot(0f);
+            Vector3 aboveTarget = new Vector3(0f, 0.025f, 0f);
+            Vector3 belowTarget = new Vector3(0f, -0.025f, 0f);
+
+            Vector3 aboveCorrection =
+                CharacterFootConstraintMath.ResolvePointMinimumCorrection(
+                    animated,
+                    aboveTarget,
+                    Vector3.up);
+            Vector3 belowCorrection =
+                CharacterFootConstraintMath.ResolvePointMinimumCorrection(
+                    animated,
+                    belowTarget,
+                    Vector3.up);
+
+            Assert.That(aboveCorrection.y, Is.EqualTo(0.025f).Within(0.000001f));
+            Assert.That(belowCorrection.y, Is.EqualTo(-0.025f).Within(0.000001f));
+        }
+
+        [Test]
+        public void PredictionInputDistanceExceededRequeriesLateSameEventLanding()
+        {
+            var settings = new CharacterFootLandingPredictionSettings(
+                1 << 12,
+                16,
+                0.08f,
+                0.35f,
+                0.75f,
+                55f,
+                2f,
+                0.001f,
+                60f,
+                8f,
+                0.05f,
+                1f);
+            var world = new RequeryingWorldQuery();
+            var pool = new CharacterFootLandingObservationPagePool();
+
+            CharacterFootLandingObservationResult first =
+                CharacterFootLandingPredictor.ResolveObservation(
+                    CharacterFootSide.Right,
+                    7UL,
+                    9UL,
+                    0,
+                    Vector3.zero,
+                    Vector3.up,
+                    CharacterFootLandingObservationRefreshMode.Thresholded,
+                    "test-profile",
+                    in settings,
+                    world,
+                    pool,
+                    null,
+                    out CharacterFootLandingObservationPage firstPage);
+            Assert.That(first.CacheState, Is.EqualTo(CharacterFootLandingObservationCacheState.Queried));
+            Assert.That(first.Page.Result.Support.SurfaceIdentity, Is.EqualTo(101));
+
+            Vector3 lateRawLanding = new Vector3(
+                settings.PredictionInputAccumulationDistance * 2f,
+                0f,
+                0f);
+            CharacterFootLandingObservationResult second =
+                CharacterFootLandingPredictor.ResolveObservation(
+                    CharacterFootSide.Right,
+                    7UL,
+                    9UL,
+                    0,
+                    lateRawLanding,
+                    Vector3.up,
+                    CharacterFootLandingObservationRefreshMode.Thresholded,
+                    "test-profile",
+                    in settings,
+                    world,
+                    pool,
+                    firstPage,
+                    out CharacterFootLandingObservationPage secondPage);
+
+            Assert.That(second.QueryReason &
+                        CharacterFootLandingObservationQueryReason
+                            .PredictionInputDistanceExceeded,
+                Is.Not.EqualTo(CharacterFootLandingObservationQueryReason.None));
+            Assert.That(second.QueryExecutedThisFrame, Is.True);
+            Assert.That(second.CacheState, Is.EqualTo(CharacterFootLandingObservationCacheState.Queried));
+            Assert.That(world.QueryCount, Is.EqualTo(2));
+            Assert.That(secondPage.Result.Support.SurfaceIdentity, Is.EqualTo(202));
+            Assert.That(secondPage.Key.CanonicalRawLanding.x,
+                Is.EqualTo(lateRawLanding.x).Within(0.000001f));
+        }
+
+        [Test]
+        public void ReleasingInterpolationAndLegPoseDiagnosticsRemainAvailable()
+        {
+            CharacterFullBodyIkLegPoseDiagnostics pose =
+                new CharacterFullBodyIkLegPoseDiagnostics(
+                    new Vector3(0f, 1f, 0f),
+                    new Vector3(0f, 0.5f, 0f),
+                    new Vector3(0f, 0f, 0f),
+                    new Vector3(0f, -0.1f, 0f),
+                    new Vector3(0.1f, 1f, 0f),
+                    new Vector3(0.1f, 0.5f, 0f),
+                    new Vector3(0.1f, 0f, 0f),
+                    Vector3.back,
+                    35f,
+                    40f,
+                    0.4f,
+                    0.5f,
+                    0.6f,
+                    0.1f,
+                    0.2f,
+                    0.3f,
+                    0.9f,
+                    0.8f,
+                    0.7f,
+                    true,
+                    true,
+                    true,
+                    CharacterFullBodyIkBendDirectionSource.Animated);
+            Assert.That(pose.IsAvailable, Is.True);
+            Assert.That(pose.OriginalHip, Is.EqualTo(new Vector3(0f, 1f, 0f)));
+            Assert.That(pose.OriginalKnee, Is.EqualTo(new Vector3(0f, 0.5f, 0f)));
+            Assert.That(pose.OriginalAnkle, Is.EqualTo(Vector3.zero));
+            Assert.That(pose.TargetAnkle, Is.EqualTo(new Vector3(0f, -0.1f, 0f)));
+            Assert.That(pose.SolvedHip, Is.EqualTo(new Vector3(0.1f, 1f, 0f)));
+            Assert.That(pose.SolvedKnee, Is.EqualTo(new Vector3(0.1f, 0.5f, 0f)));
+            Assert.That(pose.SolvedAnkle, Is.EqualTo(new Vector3(0.1f, 0f, 0f)));
+            Assert.That(pose.SolvedExtensionRatio, Is.EqualTo(0.6f).Within(0.000001f));
+            Assert.That(pose.SolvedCompressionReserve, Is.EqualTo(0.3f).Within(0.000001f));
+
+            AnimationFootMotionRuntimeSample step = CreateSwingStep();
+            CharacterFootGroundPathResult path = CreateAcceptedGroundPath(
+                step.LandingEventIdentity,
+                0.1f);
+            CharacterFootPlacementAnimatedFootPose animated = CreateAnimatedFoot(0.1f);
+            CharacterFootSwingMotionResult swing =
+                CharacterFootSwingMotionBuilder.BuildForSwing(
+                    animated,
+                    in step,
+                    step.LandingEventIdentity,
+                    1f,
+                    Vector3.up,
+                    in path,
+                    0f,
+                    0f);
+            CharacterFootGroundPathLanding releaseLanding =
+                new CharacterFootGroundPathLanding(
+                    step.LandingEventIdentity,
+                    1UL,
+                    "release",
+                    20,
+                    new Vector3(0f, 0.1f, 0f),
+                    Vector3.up);
+            CharacterFootStateFrame frame = CreateStateFrame(
+                animated,
+                in swing,
+                in releaseLanding);
+            CharacterFootSupportTarget support = CreateSupportTarget(
+                CharacterFootSupportTargetKind.Releasing,
+                CharacterFootSupportPositionSource.ReleasingSwing,
+                CharacterFootSupportNormalSource.RetainedContactAnchor);
+            CharacterFootStateTarget target = new CharacterFootStateTarget(
+                Vector3.zero,
+                Vector3.zero,
+                CharacterFootInterpolationPolicy.ReleaseResidual,
+                false,
+                0UL,
+                false,
+                default,
+                CharacterFootPlantTargetKind.None,
+                CharacterFootLockResponse.None,
+                false,
+                true,
+                in support,
+                true,
+                false,
+                false,
+                false,
+                0f,
+                default);
+            CharacterFootInterpolationState state = default;
+            CharacterFootInterpolationResult result =
+                CharacterFootInterpolationRuntime.Evaluate(
+                    ref state,
+                    in target,
+                    in frame);
+
+            Assert.That(result.CorrectionResponseFact.Evaluated, Is.True);
+            Assert.That(result.PlantFact.Evaluated, Is.False);
+            Assert.That(result.SupportTarget.IsValid, Is.True);
+        }
+
         static CharacterFootSwingMotionResult BuildSwingForStep(
             AnimationFootMotionRuntimeSample step,
             float originalSoleHeight,
@@ -443,6 +635,29 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 1UL,
                 default);
 
+        static CharacterFootSupportTarget CreateSupportTarget(
+            CharacterFootSupportTargetKind kind,
+            CharacterFootSupportPositionSource positionSource,
+            CharacterFootSupportNormalSource normalSource) =>
+            new CharacterFootSupportTarget(
+                1UL,
+                1UL,
+                CharacterFootSide.Left,
+                Vector3.zero,
+                Vector3.up,
+                20,
+                1UL,
+                kind,
+                positionSource,
+                1UL,
+                1UL,
+                1UL,
+                0UL,
+                normalSource,
+                1UL,
+                1UL,
+                1UL);
+
         sealed class MissingWorldQuery : ICharacterFootLandingWorldQuery
         {
             public ulong WorldRevision => 1UL;
@@ -453,6 +668,38 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     CharacterFootLandingQueryRejectReason.NoHit,
                     default,
                     default);
+        }
+
+        sealed class RequeryingWorldQuery : ICharacterFootLandingWorldQuery
+        {
+            public ulong WorldRevision => 1UL;
+
+            public int QueryCount { get; private set; }
+
+            public CharacterFootLandingQueryResult Query(
+                in CharacterFootPlacementQueryRequest request)
+            {
+                QueryCount++;
+                int surface = QueryCount == 1 ? 101 : 202;
+                Vector3 point = new Vector3(request.Origin.x, 0f, request.Origin.z);
+                var support = new CharacterFootLandingSupport(
+                    surface,
+                    point,
+                    Vector3.up,
+                    0.1f);
+                var selected = new CharacterFootLandingQueryCandidateDiagnostics(
+                    surface,
+                    point,
+                    0.1f);
+                var selection = new CharacterFootLandingQuerySelectionDiagnostics(
+                    CharacterFootLandingQueryCandidateSelectionState.Selected,
+                    1,
+                    selected);
+                return new CharacterFootLandingQueryResult(
+                    CharacterFootLandingQueryRejectReason.None,
+                    support,
+                    selection);
+            }
         }
     }
 }

@@ -302,36 +302,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             }
         }
 
-        public void Present(GameplayPresentationFrameContext context)
-        {
-            BeginPresentationFrame(context);
-            try
-            {
-                while (TryAdvancePresentationFrame(
-                           out CharacterPoseWorkerStageLease workerLease))
-                {
-                    CharacterPoseWorkerScheduler scheduler =
-                        m_WorkerPresentationSession.WorkerScheduler;
-                    scheduler.BeginBatch();
-                    scheduler.Submit(in workerLease);
-                    scheduler.CompleteBatch();
-                }
-                CompletePresentationFrame();
-            }
-            catch (Exception frameFailure)
-            {
-                Exception abortFailure = AbortPresentationFrame();
-                if (abortFailure != null)
-                {
-                    throw new AggregateException(
-                        "Character Presentation frame and abort both failed.",
-                        frameFailure,
-                        abortFailure);
-                }
-                throw;
-            }
-        }
-
         internal void BeginPresentationFrame(
             GameplayPresentationFrameContext context)
         {

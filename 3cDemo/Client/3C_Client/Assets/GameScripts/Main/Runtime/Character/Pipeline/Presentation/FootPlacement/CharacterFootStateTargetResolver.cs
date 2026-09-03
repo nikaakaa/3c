@@ -130,6 +130,13 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             Vector3 originalSole =
                 CharacterFootConstraintMath.ResolveOriginalSole(
                     frame.AnimatedFoot);
+            Vector3 releaseCorrection = swingCorrection;
+            if (!targetAvailable && frame.SwingMotion.Accepted)
+            {
+                releaseCorrection = Vector3.ProjectOnPlane(
+                    swingCorrection,
+                    frame.ComponentUp.normalized);
+            }
             CharacterFootSupportTarget target = targetAvailable
                 ? new CharacterFootSupportTarget(
                     frame.FrameSequence,
@@ -155,8 +162,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     context.Contact.EventIdentity)
                 : default;
             return Target(
-                swingCorrection,
-                swingCorrection,
+                releaseCorrection,
+                releaseCorrection,
                 CharacterFootInterpolationPolicy.ReleaseResidual,
                 in transition,
                 targetAvailable,

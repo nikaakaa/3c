@@ -183,8 +183,26 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             Vector3 currentOutputBefore = previousResponseOutputAvailable
                 ? state.PreviousResponseOutputPoint
                 : originalSole + swing.Correction;
-            bool releaseResponseHandoff = state.PendingReleaseResponseRebase;
-            state.PendingReleaseResponseRebase = false;
+            if (state.PendingReleaseResponseRebase &&
+                previousResponseOutputAvailable &&
+                state.ResponseHistory.HasValue &&
+                state.ResponseHistory.Domain ==
+                CharacterFootCorrectionResponseDomain.AnimationRelativeScalar)
+            {
+                float releaseResponseScalar = state.ResponseHistory.Scalar;
+                float releaseResponseStep =
+                    frame.Settings.CorrectionResponseDecreaseSpeed *
+                    frame.DeltaSeconds;
+                float releaseResponseRebase = Mathf.Min(
+                    Mathf.Abs(releaseResponseScalar),
+                    releaseResponseStep * 0.5f);
+                Vector3 releaseResponseRebaseVector =
+                    state.ResponseHistory.AppliedDirection *
+                    Mathf.Sign(releaseResponseScalar) *
+                    releaseResponseRebase;
+                currentOutputBefore -= releaseResponseRebaseVector;
+                state.PendingReleaseResponseRebase = false;
+            }
             Vector3 effectiveCorrectionBefore =
                 currentOutputBefore - originalSole;
             bool hadPlantTarget = state.HasPlantTarget;
@@ -363,14 +381,9 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             Vector3 continuityOutputBefore = currentOutputBefore;
             if (captureTransition)
             {
-                bool directContactHandoff = releaseResponseHandoff &&
-                                             target.StateEntered &&
-                                             target.PlantTargetVerified;
-                state.PlantWorldResidual = directContactHandoff
-                    ? default
-                    : continuityOutputBefore - selectedWorldTarget;
+                state.PlantWorldResidual =
+                    continuityOutputBefore - selectedWorldTarget;
                 state.PlantWorldResidualTransitionActive =
-                    !directContactHandoff &&
                     state.PlantWorldResidual.sqrMagnitude >
                     CharacterFootConstraintMath.GeometryEpsilon *
                     CharacterFootConstraintMath.GeometryEpsilon;

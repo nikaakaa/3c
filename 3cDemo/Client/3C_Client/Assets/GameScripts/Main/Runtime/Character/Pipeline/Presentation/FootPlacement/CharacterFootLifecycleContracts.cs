@@ -1497,7 +1497,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         internal CharacterFootSupportTarget SelectedSupportTarget;
         internal bool HasPreviousResponseOutputPoint;
         internal Vector3 PreviousResponseOutputPoint;
-        internal bool PendingReleaseResponseRebase;
         internal Vector3 PlantWorldResidual;
         internal bool PlantWorldResidualTransitionActive;
         internal CharacterFootCorrectionResponseHistory ResponseHistory;

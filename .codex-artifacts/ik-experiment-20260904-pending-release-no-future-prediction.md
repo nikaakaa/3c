@@ -1,6 +1,6 @@
 # Foot IK 实验：Pending Release 不消费 FutureLanding 预测
 
-候选提交：待提交
+候选提交：`15b906296`
 
 输入：`43357ff3cd384e5cba75d2c31175b116`
 
@@ -16,6 +16,10 @@
 
 ReleaseCompleted 前不再把即将失效的 FutureLanding 高踏面作为可见 Releasing 目标，可能降低下一 Contact 的旧高位；代价是释放边界脚步少一帧预测抬脚，需要检查事件计数、Plant 穿透、最终脚底/脚踝跳变、Bend/Extension 和左右脚。
 
-## 验证状态
+## 验证结果
 
-提交后用同一固定 Trace 正式回放并逐帧对账；不做视觉 Pass。若失败，保留采样和结论，精确回退 Runtime 候选并保留本记录。
+正式回放完成 1044/1044 帧，采样目录：`Diagnostics/GeneratedFootSampling/20260903-220129-7b5439f5cb99482789ad2d7dbd6c8a3a`。本轮没有新的 Analyzer report，使用新 CSV 与 184 基线逐帧对账。
+
+候选条件在预测阶段没有命中，FutureLanding、GroundPath、Contact/Release/Landing、Plant、Bend/Extension、Physical/Pelvis、最终脚底和脚踝字段全部与基线一致；右 1916 仍为 `residual after-decay Y=0.349391m`、Plant output distance `0.569929m`。因此没有提供可保留的行为变化。
+
+结论：无行为变化，不保留。保留采样作为“Locked 且 RequestsLock 下降条件未覆盖该 Trace”的证据，恢复原 FutureLanding 预测入口。

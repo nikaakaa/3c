@@ -16,4 +16,14 @@
 
 ## 回放
 
-待固定 Trace 回放完成后补充实际 Samples、关键帧和完整诊断对比。若第二帧出现新的脚位跳变或穿透，保留样本并精确回退本轮代码。
+固定 Trace `43357ff3cd384e5cba75d2c31175b116` 已完整消费 1044/1044 帧并封口：
+
+- Samples：`3cDemo/Client/3C_Client/Diagnostics/GeneratedFootSampling/20260903-232536-cabbdfa869504328a9447adaecd7afa6/character-foot-ik%2Ffull.csv`
+- capturing/finalizing/analyzing 均为 false，编辑器回到 Edit；Console 只有既有 FinalIK serialization-depth 日志。
+- rows=2088，GroundPath 1796/292，Contact Edge 114，Landing/Release 24/53，Plant positive 27，最大穿透 0.083242m，Verified 527，均与恢复基线和半步候选一致。
+- 右 1916 首帧与半步候选一致：captured residual Y `0.5010123m`，after-decay `0.3408863m`，Plant output `0.5647549m`，target/solved extension `0.7801122/0.7801122`，solved bend `77.54771°`。
+- 右 1918 实际发生第二次半步：captured residual Y `0.3283863m`，after-decay `0.2234324m`，Plant output `0.379184932m`；相比半步候选再次减少 `0.0125m`。
+- 右 1918 第二帧 final sole/ankle/physical 跳变为 `0.185757/0.183720/0.183720m`，恢复基线为 `0.182153/0.180075/0.180075m`，新增约 `3.6mm`；左 2069 与基线一致。
+- 全局 Plant 最大 output 仍为 `0.564755m`，与半步候选相同；Bend `172.9645°`、Extension `0.999992/1.19071`、Pelvis 753/2088、Physical 2088/2088 不变。
+
+结论：两帧分摊条件和第二次命中均成立，但没有比半步候选提供额外最大收益，并引入第二帧小跳变，判为失败。保留本样本和记录，精确回退 `de58a6d5e`，恢复 `706d83fd1` 半步行为。

@@ -1337,3 +1337,7 @@ Operation Detail诊断现在为每个Operation保存Worker Batch Index／Identit
 - 严格逐值仍有701个单元不同，主要是中间诊断事实：膝盖`solved-bend-degrees`最大差0.004501347度，少量Support／Goal中间值在第382帧附近变化，另有连续性Identity和Unavailable字段的语义变化。它们不能被隐藏在“完全一致”结论中。
 
 因此当前证据支持“重构后最终表现结果没有发现可见的大范围回归，最终Pose数值保持在微米级差异内”，但还不支持“所有IK中间诊断逐值bit-exact”。任务3.9与14.10仍保持未完成，后续若要求严格等价，必须针对上述中间值逐项确定允许的浮点／不可用语义边界后再闭合；不应修改IK行为去迎合诊断表的旧列格式。
+
+## 诊断编译开启时普通Replay仍保持独立
+
+状态：在同一Standalone编译选项保持开启的前提下，再次使用trace `43357ff3cd384e5cba75d2c31175b116`执行普通Fixed Replay。证明文件为`3cDemo/Client/3C_Client/Temp/CharacterInputReplayProofs/v5/43357ff3cd384e5cba75d2c31175b116/20260903-155458-200-f27935372b4a49af9b074643cabb1729.json`，工作流结果为`matched:1044`，状态同时明确`foot_sampling=false`、`foot_sampling_available=true`。这证明诊断程序集已编译并不等于普通回放会启动或等待Foot采样，普通Replay与显式Diagnostic Replay仍是两条业务操作而不是隐藏耦合。

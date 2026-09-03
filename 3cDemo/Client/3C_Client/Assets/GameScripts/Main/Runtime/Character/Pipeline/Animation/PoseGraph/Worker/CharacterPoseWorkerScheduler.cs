@@ -97,6 +97,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             CharacterPoseProgramExecutionView executionView)
         {
             RequireAlive();
+            if (m_Collecting)
+                throw new InvalidOperationException(
+                    "Pose Worker Scheduler cannot register an Actor during a frame batch.");
             if (image == null || executionView == null)
                 throw new ArgumentNullException(nameof(image));
             image.RequireValid();
@@ -222,7 +225,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         {
             if (m_Disposed || registration == null)
                 return;
-            registration.ProgramBatch.UnregisterActor();
+            registration.ProgramBatch.UnregisterActor(registration);
         }
 
         public void Dispose()
@@ -346,12 +349,23 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 m_Pending.Capacity = m_ActorCount;
         }
 
-        internal void UnregisterActor()
+        internal void UnregisterActor(
+            CharacterPoseWorkerActorRegistration registration)
         {
             Fence();
             if (m_ActorCount <= 0)
                 throw new InvalidOperationException(
                     "Pose Worker Program batch Actor count underflowed.");
+            for (int i = m_Pending.Count - 1; i >= 0; i--)
+            {
+                if (!ReferenceEquals(
+                        m_Pending[i].Registration,
+                        registration))
+                    continue;
+                m_Pending.RemoveAt(i);
+                for (int move = i; move < m_Pending.Count; move++)
+                    m_ActorSlices[move] = m_ActorSlices[move + 1];
+            }
             m_ActorCount--;
         }
 
@@ -388,8 +402,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 if (ReferenceEquals(
                         pending.Registration,
                         lease.Registration) ||
-                    pending.ActorId == lease.ActorId &&
-                    pending.CompletionIdentity == lease.CompletionIdentity)
+                    pending.ActorId == lease.ActorId)
                 {
                     throw new InvalidOperationException(
                         "Pose Worker Program batch rejected a duplicate Actor lease.");

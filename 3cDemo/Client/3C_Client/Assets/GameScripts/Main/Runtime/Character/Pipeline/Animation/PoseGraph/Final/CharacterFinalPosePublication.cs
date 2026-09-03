@@ -79,10 +79,12 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         internal CharacterFinalPosePublicationOutputBinding(
             CharacterFinalPosePublication owner,
             CharacterFinalPosePublicationFrameLease lease,
+            in CharacterPoseFrameLineage lineage,
             in CharacterFinalPosePublicationLayoutHandle layout)
         {
             m_Owner = owner ?? throw new ArgumentNullException(nameof(owner));
             m_Lease = lease;
+            Lineage = lineage;
             Layout = layout;
             if (!IsValid)
             {
@@ -93,12 +95,12 @@ namespace ThirdPersonCharacter.Pipeline.Animation
 
         readonly CharacterFinalPosePublication m_Owner;
         readonly CharacterFinalPosePublicationFrameLease m_Lease;
+        internal CharacterPoseFrameLineage Lineage { get; }
         internal CharacterFinalPosePublicationLayoutHandle Layout { get; }
         internal bool IsValid =>
             m_Owner != null &&
             m_Owner.OutputBindingIsValid(this);
-        internal ulong CompletionIdentity =>
-            m_Lease.Lineage.CompletionIdentity;
+        internal ulong CompletionIdentity => Lineage.CompletionIdentity;
         internal bool HasOutput =>
             IsValid && m_Owner.ProgramOutputIsWritten(this);
         internal CharacterFinalPosePublication Owner => m_Owner;
@@ -194,6 +196,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
 
             internal void SetProgramOutput(
                 CharacterFinalPosePublicationFrameLease lease,
+                in CharacterPoseFrameLineage lineage,
                 AnimationPoseAvailability availability,
                 AnimationPoseNativeInvalidReason invalidReason,
                 float outputWeight,
@@ -202,8 +205,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             {
                 RequireLease(lease);
                 if (HasProgramOutput || HasValue || BufferPage < 0 ||
+                    !lease.Matches(lineage) ||
+                    lineage.CompletionIdentity == 0 ||
                     frame.CompletionIdentity !=
-                    lease.Lineage.CompletionIdentity ||
+                    lineage.CompletionIdentity ||
                     continuityIdentity == 0 ||
                     !float.IsFinite(outputWeight))
                 {
@@ -491,16 +496,25 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         }
 
         internal CharacterFinalPosePublicationOutputBinding BindProgramOutput(
-            CharacterFinalPosePublicationFrameLease lease)
+            CharacterFinalPosePublicationFrameLease lease,
+            in CharacterPoseFrameLineage lineage)
         {
             m_Pending.RequireLease(lease);
+            if (!lease.Matches(lineage) ||
+                lineage.CompletionIdentity == 0)
+            {
+                throw new ArgumentException(
+                    "Final Pose Publication output lineage is invalid.",
+                    nameof(lineage));
+            }
             int page = (m_CommittedPage + 1) & 1;
             m_Pending.BeginWrite(lease, page);
             m_PageLeases[page].BeginWrite(
-                lease.Lineage.CompletionIdentity);
+                lineage.CompletionIdentity);
             return new CharacterFinalPosePublicationOutputBinding(
                 this,
                 lease,
+                in lineage,
                 in m_Layout);
         }
 
@@ -510,7 +524,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             binding.Layout.Equals(m_Layout) &&
             m_Pending.IsOpen &&
             m_Pending.BufferPage >= 0 &&
-            m_Pending.Lease.Lineage == binding.Lease.Lineage;
+            m_Pending.Lease.Lineage == binding.Lease.Lineage &&
+            binding.Lease.Matches(binding.Lineage) &&
+            binding.Lineage.CompletionIdentity != 0;
 
         internal bool ProgramOutputIsWritten(
             in CharacterFinalPosePublicationOutputBinding binding) =>
@@ -701,8 +717,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 continuityIdentity,
                 pageLease,
                 input.CompletionIdentity);
+            CharacterPoseFrameLineage outputLineage = output.Lineage;
             m_Pending.SetProgramOutput(
                 output.Lease,
+                in outputLineage,
                 AnimationPoseAvailability.Pose,
                 AnimationPoseNativeInvalidReason.None,
                 outputWeight,
@@ -785,8 +803,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 continuityIdentity,
                 pageLease,
                 output.CompletionIdentity);
+            CharacterPoseFrameLineage outputLineage = output.Lineage;
             m_Pending.SetProgramOutput(
                 output.Lease,
+                in outputLineage,
                 AnimationPoseAvailability.Invalid,
                 outputInvalidReason,
                 0f,
@@ -806,7 +826,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 throw new InvalidOperationException(
                     "Final Pose Program output cannot complete.");
             }
-            CharacterPoseFrameLineage lineage = output.Lease.Lineage;
+            CharacterPoseFrameLineage lineage = output.Lineage;
             var result = new CharacterPoseProgramOutputResult(
                 in lineage,
                 in m_Layout,

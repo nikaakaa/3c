@@ -370,8 +370,11 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                     m_ActiveFrameLease,
                     in preparedSources,
                     completionIdentity);
+                CharacterPoseFrameLineage outputLineage =
+                    sourceDemand.Lineage;
                 finalOutput = m_Publication.BindProgramOutput(
-                    publicationLease);
+                    publicationLease,
+                    in outputLineage);
                 m_Program.BindEvaluationExecution(
                     m_ActiveFrameLease,
                     sourceDemand.Lineage,

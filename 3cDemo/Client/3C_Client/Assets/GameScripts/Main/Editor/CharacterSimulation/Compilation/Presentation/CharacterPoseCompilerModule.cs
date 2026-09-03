@@ -64,8 +64,11 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                 diagnostics.AddRange(symbolicResult.Diagnostics);
                 return new CharacterPoseCompilationResult(null, diagnostics);
             }
+            CharacterPoseCompilationPass currentPass =
+                CharacterPoseCompilationPass.BindFamilyPayload;
             try
             {
+                currentPass = CharacterPoseCompilationPass.BindFamilyPayload;
                 CharacterPoseFamilyPayloadBinding binding =
                     CharacterPoseFamilyPayloadBindingPass.Run(
                         request,
@@ -76,11 +79,13 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                     binding.Payloads;
                 CharacterPoseBoundProgramLayout layout =
                     binding.Layout;
+                currentPass = CharacterPoseCompilationPass.StageSchedule;
                 CharacterPoseStageSchedule schedule =
                     CharacterPoseStageSchedulePass.Run(
                         symbolicResult.Program,
                         binding.Operations,
                         payloads.LinkedPoseFragments);
+                currentPass = CharacterPoseCompilationPass.ValueLifetime;
                 CharacterPoseValueLifetime valueLifetime =
                     CharacterPoseValueLifetimePass.Run(
                         binding.Operations,
@@ -94,6 +99,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                         payloads.LinkedPoseCalls,
                         payloads.LinkedPoseFragments,
                         layout.OutputOperationIndex);
+                currentPass = CharacterPoseCompilationPass.WorkspacePlan;
                 CharacterMotionMatchingPosePlanCompilation motionMatching =
                     CharacterMotionMatchingPosePlanCompiler.Compile(
                         binding,
@@ -119,12 +125,15 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                         layout
                             .FullBodyIkGoalContributionGoalWorkspaceCount,
                         motionMatching.ContributionCapacity);
+                currentPass = CharacterPoseCompilationPass.WorkerBatchPlan;
                 CharacterPoseWorkerPlan workerPlan =
                     CharacterPoseWorkerBatchPlanPass.Run(
                         request,
                         binding,
+                        symbolicResult.Program,
                         schedule,
                         workspace);
+                currentPass = CharacterPoseCompilationPass.SealProgramImage;
                 CharacterPresentationInertializationDescriptor[]
                     inertializations =
                         CharacterPresentationInertializationPlanCompiler
@@ -147,10 +156,15 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                     image,
                     diagnostics);
             }
+            catch (CharacterPoseCompilationException exception)
+            {
+                diagnostics.Add(exception.Diagnostic);
+                return new CharacterPoseCompilationResult(null, diagnostics);
+            }
             catch (Exception exception)
             {
                 diagnostics.Add(new CharacterPoseCompilationDiagnostic(
-                    CharacterPoseCompilationPass.SealProgramImage,
+                    currentPass,
                     CharacterPoseCompilationDiagnosticSeverity.Error,
                     "compiler-invariant-invalid",
                     exception.Message,

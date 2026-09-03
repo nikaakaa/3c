@@ -18,8 +18,9 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
         StageSchedule = 6,
         ValueLifetime = 7,
         WorkspacePlan = 8,
-        BindFamilyPayload = 9,
-        SealProgramImage = 10
+        WorkerBatchPlan = 9,
+        BindFamilyPayload = 10,
+        SealProgramImage = 11
     }
 
     internal enum CharacterPoseCompilationDiagnosticSeverity : byte
@@ -95,6 +96,22 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                 suffix += $" [{SourcePath}]";
             return $"Pose compiler {Pass}/{Reason}: {Message}{suffix}";
         }
+    }
+
+    internal sealed class CharacterPoseCompilationException : Exception
+    {
+        internal CharacterPoseCompilationException(
+            CharacterPoseCompilationDiagnostic diagnostic,
+            Exception innerException = null) :
+            base(
+                diagnostic?.Message ??
+                throw new ArgumentNullException(nameof(diagnostic)),
+                innerException)
+        {
+            Diagnostic = diagnostic;
+        }
+
+        internal CharacterPoseCompilationDiagnostic Diagnostic { get; }
     }
 
     internal sealed class CharacterPoseCompilationRequest

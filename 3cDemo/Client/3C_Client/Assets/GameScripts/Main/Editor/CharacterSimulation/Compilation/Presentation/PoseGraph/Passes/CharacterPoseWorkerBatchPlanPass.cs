@@ -43,12 +43,47 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
         internal static CharacterPoseWorkerPlan Run(
             CharacterPoseCompilationRequest request,
             CharacterPoseFamilyPayloadBinding binding,
+            CharacterPoseSymbolicProgram symbolicProgram,
+            CharacterPoseStageSchedule schedule,
+            CharacterPoseWorkspacePlan workspace)
+        {
+            try
+            {
+                return RunCore(
+                    request,
+                    binding,
+                    symbolicProgram,
+                    schedule,
+                    workspace);
+            }
+            catch (CharacterPoseCompilationException)
+            {
+                throw;
+            }
+            catch (Exception exception)
+            {
+                throw new CharacterPoseCompilationException(
+                    new CharacterPoseCompilationDiagnostic(
+                        CharacterPoseCompilationPass.WorkerBatchPlan,
+                        CharacterPoseCompilationDiagnosticSeverity.Error,
+                        "worker-batch-plan-invalid",
+                        exception.Message,
+                        request?.Asset?.Graph?.GraphId ?? default),
+                    exception);
+            }
+        }
+
+        static CharacterPoseWorkerPlan RunCore(
+            CharacterPoseCompilationRequest request,
+            CharacterPoseFamilyPayloadBinding binding,
+            CharacterPoseSymbolicProgram symbolicProgram,
             CharacterPoseStageSchedule schedule,
             CharacterPoseWorkspacePlan workspace)
         {
             if (request == null || binding == null || schedule == null ||
-                workspace == null ||
+                symbolicProgram == null || workspace == null ||
                 binding.Operations.Length != schedule.OperationCount ||
+                symbolicProgram.Operations.Count != schedule.OperationCount ||
                 workspace.FrameCacheCapacity != schedule.OperationCount)
             {
                 throw new ArgumentException(
@@ -65,13 +100,40 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                  operationIndex++)
             {
                 CharacterPoseBoundOperation operation = operations[operationIndex];
+                CharacterPoseSymbolicOperation symbolic =
+                    symbolicProgram.Operations[operationIndex];
+                if (symbolic == null ||
+                    symbolic.Sequence != operationIndex ||
+                    symbolic.NodeId != operation.NodeId ||
+                    symbolic.OperationCode != operation.Code ||
+                    symbolic.ExecutionDomain != operation.ExecutionDomain)
+                {
+                    throw Failure(
+                        symbolic,
+                        operation,
+                        "worker-operation-lineage-invalid",
+                        $"Pose Worker Operation #{operationIndex} does not match its symbolic lineage.");
+                }
                 if (!CharacterPoseWorkerKernels.IsWorkerDomain(
                         operation.ExecutionDomain))
                 {
                     continue;
                 }
-                CharacterPoseWorkerKernelId kernel =
-                    CharacterPoseWorkerKernels.Require(operation.Code);
+                CharacterPoseWorkerKernelId kernel;
+                try
+                {
+                    kernel = CharacterPoseWorkerKernels.Require(
+                        operation.Code);
+                }
+                catch (Exception exception)
+                {
+                    throw Failure(
+                        symbolic,
+                        operation,
+                        "worker-kernel-missing",
+                        $"Pose Worker Operation #{operation.Index} has no AOT Kernel.",
+                        exception);
+                }
                 int stageIndex = stageByOperation[operationIndex];
                 int wave = ResolveWave(
                     operation,
@@ -120,7 +182,11 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                 if (writes.Length != writes.Distinct().Count() ||
                     reads.Intersect(writes).Any())
                 {
-                    throw new InvalidOperationException(
+                    int operationIndex = operationIndices[0];
+                    throw Failure(
+                        symbolicProgram.Operations[operationIndex],
+                        operations[operationIndex],
+                        "worker-batch-write-alias",
                         $"Pose Worker Batch stage={entry.Key.StageIndex}, wave={entry.Key.Wave}, kernel={entry.Key.Kernel} has an aliasing write set.");
                 }
                 writes = writes.OrderBy(value => value).ToArray();
@@ -287,6 +353,33 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                 previous - start + 1));
             return result.ToArray();
         }
+
+        static CharacterPoseCompilationException Failure(
+            CharacterPoseSymbolicOperation symbolic,
+            CharacterPoseBoundOperation operation,
+            string reason,
+            string message,
+            Exception innerException = null) =>
+            new CharacterPoseCompilationException(
+                new CharacterPoseCompilationDiagnostic(
+                    CharacterPoseCompilationPass.WorkerBatchPlan,
+                    CharacterPoseCompilationDiagnosticSeverity.Error,
+                    reason,
+                    message,
+                    symbolic?.GraphId ?? default,
+                    operation?.NodeId ?? default,
+                    default,
+                    string.Empty,
+                    symbolic?.SourcePath ?? string.Empty,
+                    operation == null
+                        ? Array.Empty<string>()
+                        : new[]
+                        {
+                            $"operation={operation.Index}",
+                            $"family={operation.Family}",
+                            $"domain={operation.ExecutionDomain}"
+                        }),
+                innerException);
 
         static CharacterPoseRigExecutionLayout BuildRigLayout(
             CharacterPoseCompilationRequest request)

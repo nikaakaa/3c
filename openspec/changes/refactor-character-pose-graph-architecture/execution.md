@@ -1322,3 +1322,18 @@ Operation Detail诊断现在为每个Operation保存Worker Batch Index／Identit
 这份证据证明正式Worker链可跨两个Gameplay Lab Actor连续完成、基础Fixed输入／Body结果可重复，并证明普通Replay不依赖Foot采样。它不包含Foot、Support、Pelvis、Goal、Solved与Physical逐项数值，因此不把任务3.9或14.10标成完成；这些任务仍需外部Foot诊断能力按独立操作提供指定基线A/B证据。此前Burst abort在当前Unity进程留下重复`ALLOC_TEMP_MAIN`原生报警，停止Play Mode后仍存在；成功Replay没有再产生Pose Worker、空间转换、提交或Snapshot异常，但干净Console证据需新的Unity Editor进程，不能把该进程残留写成当前实现的新分配泄漏。
 
 最终源码状态再次使用规定参数编译Runtime与Editor工程，分别为0错误／1个既有警告和0错误／57个既有Package及Analyzer警告；两次构建后均已执行`dotnet build-server shutdown`。本change strict校验继续通过。
+
+## 重新开启正式诊断编译并完成重构前对比
+
+状态：通过显式的`Tools/3C/Diagnostics/Enable Foot Capture Compilation`入口开启`KK_DIAGNOSTIC_SAMPLING`与`KK_DIAGNOSTIC_FOOT`，没有再引入自动修改`PlayerSettings`的回放状态机。当前Standalone编译选项保持开启，普通Fixed Replay仍不检查、不启动也不等待Foot采样；只有显式Diagnostic Replay才拥有Foot能力。对应入口提交为`334dfd64d`，生成诊断能力的外部包Identity修正提交为`7e983d6`。
+
+使用固定trace `43357ff3cd384e5cba75d2c31175b116`再次完成1044帧Diagnostic Replay。最新证明文件为`3cDemo/Client/3C_Client/Temp/CharacterInputReplayProofs/diagnostic-v1/43357ff3cd384e5cba75d2c31175b116/20260903-154821-658-60c1c98fb34742018b3461381c7811f8.json`，结果为`matched:1044`。生成采样manifest为`3cDemo/Client/3C_Client/Diagnostics/GeneratedFootSampling/20260903-074709-8b00a2b85c07406a9e693727ec0690e7/capability.manifest.json`，Full CSV包含2088行（1044帧、左右脚各一行）和1026列；分析报告为`3cDemo/Client/3C_Client/Diagnostics/GeneratedFootSampling/FootAnalysis/20260903-074709-8b00a2b85c07406a9e693727ec0690e7-20260903-074840-cf3477cb7f634e90a6ab208788cfa613/report.md`。分析器的5项通过、15项失败、3项不适用和5项证据缺失是场景健康结论，不能直接当作重构回归。
+
+重构前对照使用保留的正式A样本`3cDemo/Client/3C_Client/Diagnostics/FootPlacementRuns/20260902-033516-613-1591907a78214a389ab18cdc9835fe66`；它的来源链对应指定基线`ad3527e103cc3235a63e8a1c1dbd26df5155e0ba`，当前环境没有重新在该历史提交上启动Unity，而是用这份已归档的基线链A与当前生成字段做语义对齐。对齐结果如下：
+
+- 2086个旧行与当前行匹配，当前多出的2行是当前采样从第2帧开始、旧A从第3帧开始造成的边界差异；
+- 当前生成字段映射到839个旧业务字段，共比较1,750,154个单元；布尔、枚举、数值容差和不可用默认值归一化后，1,749,453个单元等价，语义等价率为99.9599%；
+- 最终脚底、脚踝和物理发布字段的最大位置差约5.5e-6米，未见跨帧或跨侧的大范围漂移；
+- 严格逐值仍有701个单元不同，主要是中间诊断事实：膝盖`solved-bend-degrees`最大差0.004501347度，少量Support／Goal中间值在第382帧附近变化，另有连续性Identity和Unavailable字段的语义变化。它们不能被隐藏在“完全一致”结论中。
+
+因此当前证据支持“重构后最终表现结果没有发现可见的大范围回归，最终Pose数值保持在微米级差异内”，但还不支持“所有IK中间诊断逐值bit-exact”。任务3.9与14.10仍保持未完成，后续若要求严格等价，必须针对上述中间值逐项确定允许的浮点／不可用语义边界后再闭合；不应修改IK行为去迎合诊断表的旧列格式。

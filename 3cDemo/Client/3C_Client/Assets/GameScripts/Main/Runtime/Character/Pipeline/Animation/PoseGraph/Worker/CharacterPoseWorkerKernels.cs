@@ -1,6 +1,7 @@
 using System;
 using Unity.Burst;
 using Unity.Collections;
+using Unity.Collections.LowLevel.Unsafe;
 using Unity.Jobs;
 using UnityEngine;
 
@@ -102,14 +103,19 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         IJobParallelFor
     {
         internal CharacterPoseWorkerKernelRange Range;
-        [ReadOnly] internal NativeArray<CharacterPoseWorkerActorSlice> Actors;
-        [ReadOnly] internal NativeArray<int> NativeOperationIndices;
-        [ReadOnly] internal NativeArray<CharacterPoseNativeOperationHeader>
+        [ReadOnly] public NativeArray<CharacterPoseWorkerActorSlice> Actors;
+        [ReadOnly, NativeDisableParallelForRestriction]
+        public NativeArray<int> NativeOperationIndices;
+        [ReadOnly, NativeDisableParallelForRestriction]
+        public NativeArray<CharacterPoseNativeOperationHeader>
             Headers;
-        [ReadOnly] internal NativeArray<float> ParameterDefaults;
-        [ReadOnly] internal NativeArray<CharacterPoseNativeParameterResolveOperation>
+        [ReadOnly, NativeDisableParallelForRestriction]
+        public NativeArray<float> ParameterDefaults;
+        [ReadOnly, NativeDisableParallelForRestriction]
+        public NativeArray<CharacterPoseNativeParameterResolveOperation>
             Operations;
-        [ReadOnly] internal NativeArray<PoseParameterResolvePolicy> Policies;
+        [ReadOnly, NativeDisableParallelForRestriction]
+        public NativeArray<PoseParameterResolvePolicy> Policies;
 
         public void Execute(int actorIndex)
         {
@@ -193,12 +199,16 @@ namespace ThirdPersonCharacter.Pipeline.Animation
     internal struct CharacterPoseBlendWorkerKernel : IJobParallelFor
     {
         internal CharacterPoseWorkerKernelRange Range;
-        [ReadOnly] internal NativeArray<CharacterPoseWorkerActorSlice> Actors;
-        [ReadOnly] internal NativeArray<int> NativeOperationIndices;
-        [ReadOnly] internal NativeArray<CharacterPoseNativeOperationHeader>
+        [ReadOnly] public NativeArray<CharacterPoseWorkerActorSlice> Actors;
+        [ReadOnly, NativeDisableParallelForRestriction]
+        public NativeArray<int> NativeOperationIndices;
+        [ReadOnly, NativeDisableParallelForRestriction]
+        public NativeArray<CharacterPoseNativeOperationHeader>
             Headers;
-        [ReadOnly] internal NativeArray<float> ParameterDefaults;
-        [ReadOnly] internal NativeArray<CharacterPoseNativeBlendOperation>
+        [ReadOnly, NativeDisableParallelForRestriction]
+        public NativeArray<float> ParameterDefaults;
+        [ReadOnly, NativeDisableParallelForRestriction]
+        public NativeArray<CharacterPoseNativeBlendOperation>
             Operations;
 
         public void Execute(int actorIndex)
@@ -288,17 +298,24 @@ namespace ThirdPersonCharacter.Pipeline.Animation
     internal struct CharacterPoseCompositionWorkerKernel : IJobParallelFor
     {
         internal CharacterPoseWorkerKernelRange Range;
-        [ReadOnly] internal NativeArray<CharacterPoseWorkerActorSlice> Actors;
-        [ReadOnly] internal NativeArray<int> NativeOperationIndices;
-        [ReadOnly] internal NativeArray<CharacterPoseNativeOperationHeader>
+        [ReadOnly] public NativeArray<CharacterPoseWorkerActorSlice> Actors;
+        [ReadOnly, NativeDisableParallelForRestriction]
+        public NativeArray<int> NativeOperationIndices;
+        [ReadOnly, NativeDisableParallelForRestriction]
+        public NativeArray<CharacterPoseNativeOperationHeader>
             Headers;
-        [ReadOnly] internal NativeArray<float> ParameterDefaults;
-        [ReadOnly] internal NativeArray<CharacterPoseNativeCompositionOperation>
+        [ReadOnly, NativeDisableParallelForRestriction]
+        public NativeArray<float> ParameterDefaults;
+        [ReadOnly, NativeDisableParallelForRestriction]
+        public NativeArray<CharacterPoseNativeCompositionOperation>
             Operations;
-        [ReadOnly] internal NativeArray<float> BoneMasks;
-        [ReadOnly] internal NativeArray<AnimationLocalBonePose>
+        [ReadOnly, NativeDisableParallelForRestriction]
+        public NativeArray<float> BoneMasks;
+        [ReadOnly, NativeDisableParallelForRestriction]
+        public NativeArray<AnimationLocalBonePose>
             AdditiveReferences;
-        [ReadOnly] internal NativeArray<int> ParentIndices;
+        [ReadOnly, NativeDisableParallelForRestriction]
+        public NativeArray<int> ParentIndices;
 
         public void Execute(int actorIndex)
         {
@@ -631,14 +648,19 @@ namespace ThirdPersonCharacter.Pipeline.Animation
     internal struct CharacterPoseSpaceConversionWorkerKernel : IJobParallelFor
     {
         internal CharacterPoseWorkerKernelRange Range;
-        [ReadOnly] internal NativeArray<CharacterPoseWorkerActorSlice> Actors;
-        [ReadOnly] internal NativeArray<int> NativeOperationIndices;
-        [ReadOnly] internal NativeArray<CharacterPoseNativeOperationHeader>
+        [ReadOnly] public NativeArray<CharacterPoseWorkerActorSlice> Actors;
+        [ReadOnly, NativeDisableParallelForRestriction]
+        public NativeArray<int> NativeOperationIndices;
+        [ReadOnly, NativeDisableParallelForRestriction]
+        public NativeArray<CharacterPoseNativeOperationHeader>
             Headers;
-        [ReadOnly] internal NativeArray<float> ParameterDefaults;
-        [ReadOnly] internal NativeArray<CharacterPoseNativeSpaceConversionOperation>
+        [ReadOnly, NativeDisableParallelForRestriction]
+        public NativeArray<float> ParameterDefaults;
+        [ReadOnly, NativeDisableParallelForRestriction]
+        public NativeArray<CharacterPoseNativeSpaceConversionOperation>
             Operations;
-        [ReadOnly] internal NativeArray<int> ParentIndices;
+        [ReadOnly, NativeDisableParallelForRestriction]
+        public NativeArray<int> ParentIndices;
 
         public void Execute(int actorIndex)
         {
@@ -698,12 +720,12 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                             valid = header.Code == CharacterPoseOperationCode
                                 .LocalToComponentPose
                                     ? CharacterPosePureMath.TryToModel(
-                                        in parentPose,
-                                        in pose,
+                                        parentPose,
+                                        pose,
                                         out pose)
                                     : CharacterPosePureMath.TryToLocal(
-                                        in parentPose,
-                                        in pose,
+                                        parentPose,
+                                        pose,
                                         out pose);
                         }
                         if (!valid)
@@ -730,18 +752,25 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         IJobParallelFor
     {
         internal CharacterPoseWorkerKernelRange Range;
-        [ReadOnly] internal NativeArray<CharacterPoseWorkerActorSlice> Actors;
-        [ReadOnly] internal NativeArray<int> NativeOperationIndices;
-        [ReadOnly] internal NativeArray<CharacterPoseNativeOperationHeader>
+        [ReadOnly] public NativeArray<CharacterPoseWorkerActorSlice> Actors;
+        [ReadOnly, NativeDisableParallelForRestriction]
+        public NativeArray<int> NativeOperationIndices;
+        [ReadOnly, NativeDisableParallelForRestriction]
+        public NativeArray<CharacterPoseNativeOperationHeader>
             Headers;
-        [ReadOnly] internal NativeArray<float> ParameterDefaults;
-        [ReadOnly] internal NativeArray<CharacterPoseNativeComponentControlOperation>
+        [ReadOnly, NativeDisableParallelForRestriction]
+        public NativeArray<float> ParameterDefaults;
+        [ReadOnly, NativeDisableParallelForRestriction]
+        public NativeArray<CharacterPoseNativeComponentControlOperation>
             Operations;
-        [ReadOnly] internal NativeArray<AnimationPoseGraphNativeModifyBone>
+        [ReadOnly, NativeDisableParallelForRestriction]
+        public NativeArray<AnimationPoseGraphNativeModifyBone>
             ModifyBones;
-        [ReadOnly] internal NativeArray<AnimationPoseGraphNativeRootOrientationWarp>
+        [ReadOnly, NativeDisableParallelForRestriction]
+        public NativeArray<AnimationPoseGraphNativeRootOrientationWarp>
             RootOrientationWarps;
-        [ReadOnly] internal NativeArray<int> ParentIndices;
+        [ReadOnly, NativeDisableParallelForRestriction]
+        public NativeArray<int> ParentIndices;
 
         public void Execute(int actorIndex)
         {

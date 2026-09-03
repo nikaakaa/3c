@@ -100,8 +100,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         }
 
         internal static bool TryToModel(
-            in AnimationLocalBonePose parent,
-            in AnimationLocalBonePose local,
+            AnimationLocalBonePose parent,
+            AnimationLocalBonePose local,
             out AnimationLocalBonePose result)
         {
             result = default;
@@ -116,8 +116,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         }
 
         internal static bool TryToLocal(
-            in AnimationLocalBonePose parent,
-            in AnimationLocalBonePose model,
+            AnimationLocalBonePose parent,
+            AnimationLocalBonePose model,
             out AnimationLocalBonePose result)
         {
             result = default;

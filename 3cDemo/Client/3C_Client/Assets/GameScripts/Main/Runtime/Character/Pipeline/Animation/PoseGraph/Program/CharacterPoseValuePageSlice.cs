@@ -1091,8 +1091,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                        parentIndices,
                        out AnimationLocalBonePose outputParent) &&
                    CharacterPosePureMath.TryToLocal(
-                       in outputParent,
-                       in modelResult,
+                       outputParent,
+                       modelResult,
                        out result);
         }
 
@@ -1110,8 +1110,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             {
                 AnimationLocalBonePose parent = Pose(value, parentIndex);
                 if (!CharacterPosePureMath.TryToModel(
-                        in parent,
-                        in result,
+                        parent,
+                        result,
                         out result))
                     return false;
                 parentIndex = parentIndices[parentIndex];

@@ -402,7 +402,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                         : handler.OperationCode;
                 CharacterPoseExecutionDomain expectedDomain =
                     expectedCode == CharacterPoseOperationCode.StatePoseOutput
-                        ? CharacterPoseExecutionDomain.PurePose
+                        ? CharacterPoseExecutionDomain.ManagedControl
                         : linkedPoseCall.ExecutionDomain;
                 CharacterPoseSymbolicOperation symbolic =
                     RequireNextSymbolicOperation(
@@ -2121,7 +2121,10 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                 operation.NodeId != nodeId ||
                 operation.NodeKind != definition.Kind ||
                 operation.OperationCode != operationCode ||
-                operation.Family != definition.OperationFamily ||
+                operation.Family !=
+                (operationCode == CharacterPoseOperationCode.StatePoseOutput
+                    ? CharacterPoseOperationFamily.StateMachine
+                    : definition.OperationFamily) ||
                 operation.ExecutionDomain != executionDomain ||
                 operation.InputPoseSpace != inputPoseSpace ||
                 operation.OutputPoseSpace != outputPoseSpace ||

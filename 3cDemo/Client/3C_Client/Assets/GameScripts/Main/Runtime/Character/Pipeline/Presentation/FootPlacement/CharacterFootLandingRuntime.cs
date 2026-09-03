@@ -202,9 +202,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                      CharacterFootLandingObservationQueryReason
                          .PredictionInputDistanceExceeded) != 0 &&
                     diagnostics.Observation.QueryInputDistance > 1f &&
-                    Mathf.Abs(Vector3.Dot(
-                        landingPoint - previous.Point,
-                        diagnostics.Observation.CandidateComponentUp)) <=
+                    Vector3.Distance(landingPoint, previous.Point) <=
                     settings.TargetHeightForceRefreshDistance;
                 if (!sameSurface && predictionInputDiscontinuity)
                     return;

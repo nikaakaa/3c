@@ -1,5 +1,4 @@
 using System;
-using System.Linq;
 using UnityEngine;
 
 namespace ThirdPersonCamera
@@ -43,18 +42,8 @@ namespace ThirdPersonCamera
                         byScreen.ScreenOffset,
                         byScreen.Radius);
                 case CameraFrameOnePointByTrackStage byTrack:
-                    return new CameraFrameOnePointByTrackPayload(
-                        byTrack.StageId,
-                        byTrack.MakeContextDependent,
-                        byTrack.PlayLength,
-                        byTrack.CameraOrbits
-                            .Select(value => new CameraOrbitPayload(value.Height, value.Radius, value.ScreenY))
-                            .ToArray(),
-                        byTrack.AspectRatio,
-                        byTrack.FieldOfView,
-                        byTrack.ScreenOffset,
-                        byTrack.ElevationRatio,
-                        byTrack.PolarAngle);
+                    throw new InvalidOperationException(
+                        $"Camera Sequence stage '{byTrack.StageId}' uses ZZZ ByTrack data, but its WorldBasicCameraData consumer is not closed.");
                 case CameraRotationEulerOffsetStage euler:
                     return new CameraRotationEulerOffsetPayload(
                         euler.StageId,

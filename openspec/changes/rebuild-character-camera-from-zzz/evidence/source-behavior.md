@@ -15,7 +15,7 @@
 | `MoleMole.Config.CameraSequence.CameraSequence<T>` | 序列时间、输入数据、上下文；序列项、变量和事件集合 | 序列长度、速率、循环、上下文依赖、采样时间、`GetSequenceData`、事件与运行数据路径 | metadata session 829 `methods.csv` |
 | `FrameOnePointInCorePolicy_ByHSF.GetData` | EntityHeight、heightRatio、FOV、Vector2 screenOffset、makeContextDependent | 生成单点取景的 `WorldBasicCameraData` | RVA `0xF134030-0xF134852`，函数 hash `81187c1d3f5fe3dc88b2f2ef0682d9c2ed8e3d9ec0cd6add957b266a115fa607` |
 | `FrameOnePointInCorePolicy_ByScreenOffset.GetData` | aspectRatio、FOV、screenOffset、radius、makeContextDependent | 生成屏幕偏移单点取景数据 | RVA `0x134F3AB0-0x134F3C1E`，函数 hash `29d5fbbe30e65b2201e70d1df0b5f84233ac404682b9e65a57827c9d68046a9b` |
-| `FrameOnePointInCorePolicy_ByTrack.GetData` | cameraOrbits、screenOffset、aspectRatio、FOV、ElevationRatio、PolarAngle、makeContextDependent | 按轨道列表生成单点取景数据 | metadata session 829 `methods.csv`；完整调用分支仍需继续反汇编 |
+| `FrameOnePointInCorePolicy_ByTrack.GetData` | cameraOrbits（仅 height/radius）、screenOffset 列表、aspectRatio、FOV、ElevationRatio、PolarAngle、makeContextDependent | 按轨道列表生成单点取景数据 | metadata session 829 `methods.csv`；完整调用分支仍需继续反汇编 |
 | `FrameTwoPointsInCorePolicy_Chat.GetData` | 主/副点屏幕偏移、角色/目标高度、FOV、pitch/角度范围、BeginCameraData | 双点构图数据 | RVA `0x12A4B2F0`，metadata session 829 |
 | `FrameMultiplePointsInCorePolicy_Chat.GetData` | 半径、高度偏移/比例、点集合、角度范围、FOV、layerMask、fallback 双点策略 | 多点构图数据 | RVA `0x12EF8430`，metadata session 829 |
 | `FrameOneEntityInCoreSpace.GetSequenceDataInternal` | EntityId、EntityWorld、实体位置、frame/rotation policy、playLength 与上下文开关 | 单实体序列采样 | RVA `0x143660F0`，metadata session 829 |
@@ -33,7 +33,7 @@
 对同版本 `GameAssembly.dll` 的只读反汇编补齐了 `FrameOnePointInCorePolicy_ByTrack` 的采样骨架：
 
 - `GetData` 先解析 `aspectRatio`、`ElevationRatio`、`PolarAngle` 以及两个 context-dependent provider；轨道列表和屏幕偏移列表不会直接按整数下标读取。
-- `LAFFKCJNBDB`（RVA `0xF136C50`）把 `cameraOrbits` 转成三个键为 `0.0/0.5/1.0` 的轨道采样项；`BHALLONOACA`（RVA `0xF136570`）对 `screenOffset` 做同样处理。两个函数都实际写入三项，键值来自 `0x00000000/0x3F000000/0x3F800000`。
+- `LAFFKCJNBDB`（RVA `0xF136C50`）把 `cameraOrbits` 的前三个 `height/radius` 转成三个键为 `0.0/0.5/1.0` 的轨道采样项；`BHALLONOACA`（RVA `0xF136570`）对 `screenOffset` 列表做同样处理。两个函数都实际写入三项，键值来自 `0x00000000/0x3F000000/0x3F800000`。
 - `0x10328820` 对这类轨道数据做区间查找；落在两个键之间时进入 `0x1036ECB0`，先计算 `(sample-key0)/(key1-key0)`，再按轨道的插值策略生成 `Vector2`。因此现有 `RoundToInt(ElevationRatio * (count - 1))` 不能代表原行为。
 - `GetData` 先分别取得轨道结果和屏幕偏移结果，再使用 `PolarAngle` 构造空间方向，计算轨道平面长度，最后进入相机数据构造和有效性/碰撞检查；结果不是只改变当前 `CameraOrbitComposition` 的半径。
 - `FrameMultiplePointsInCorePolicy_Chat.GetData` 的实际函数体在 RVA `0x12EF9204` 调用 `FrameTwoPointsInCorePolicy_Chat.GetData`（RVA `0x12A4B2F0`），说明多点策略存在来源明确的双点回退分支，不能把所有多点输入都强行压成单点。

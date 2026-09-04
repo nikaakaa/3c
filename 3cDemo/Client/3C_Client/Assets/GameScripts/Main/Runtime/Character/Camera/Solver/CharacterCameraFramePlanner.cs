@@ -1,5 +1,4 @@
 using System;
-using System.Collections.Generic;
 using UnityEngine;
 
 namespace ThirdPersonCamera
@@ -8,8 +7,6 @@ namespace ThirdPersonCamera
     {
         readonly CharacterCameraProjectionPayload m_Projection;
         readonly CameraOrbitGeometry m_DefaultOrbitGeometry;
-        readonly Dictionary<CameraFrameOnePointByTrackPayload, CameraOrbitGeometry> m_TrackOrbitGeometries =
-            new Dictionary<CameraFrameOnePointByTrackPayload, CameraOrbitGeometry>();
         float m_Yaw;
         float m_Pitch;
 
@@ -93,21 +90,8 @@ namespace ThirdPersonCamera
                         compositionOffset = byScreen.ScreenOffset;
                         break;
                     case CameraFrameOnePointByTrackPayload byTrack:
-                        if (byTrack.CameraOrbits.Count == 0)
-                            throw new InvalidOperationException($"Camera Sequence stage '{byTrack.StageId}' has no orbit data.");
-                        int orbitIndex = Mathf.Clamp(
-                            Mathf.RoundToInt(byTrack.ElevationRatio * (byTrack.CameraOrbits.Count - 1)),
-                            0,
-                            byTrack.CameraOrbits.Count - 1);
-                        CameraOrbitPayload orbit = byTrack.CameraOrbits[orbitIndex];
-                        orbitGeometry = ResolveOrbitGeometry(byTrack);
-                        orbitGroupUsesAbsoluteRadius = true;
-                        radius = orbit.Radius;
-                        if (!aimPointIsExplicit)
-                            aim = anchor + input.BodyRotation * (Vector3.up * orbit.Height);
-                        fieldOfView = byTrack.FieldOfView;
-                        compositionOffset = byTrack.ScreenOffset;
-                        break;
+                        throw new InvalidOperationException(
+                            $"Camera Sequence stage '{byTrack.StageId}' uses ZZZ ByTrack data, but its WorldBasicCameraData consumer is not closed.");
                     case CameraRotationEulerOffsetPayload euler:
                         if (euler.FlipForward)
                             throw new InvalidOperationException(
@@ -148,14 +132,5 @@ namespace ThirdPersonCamera
                 rollDegrees: evaluatedRoll);
         }
 
-        CameraOrbitGeometry ResolveOrbitGeometry(CameraFrameOnePointByTrackPayload stage)
-        {
-            if (!m_TrackOrbitGeometries.TryGetValue(stage, out CameraOrbitGeometry geometry))
-            {
-                geometry = CameraOrbitGeometry.Create(stage.CameraOrbits);
-                m_TrackOrbitGeometries.Add(stage, geometry);
-            }
-            return geometry;
-        }
     }
 }

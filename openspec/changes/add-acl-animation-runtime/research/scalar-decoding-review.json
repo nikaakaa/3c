@@ -1,0 +1,294 @@
+{
+  "schema": "acl-scalar-design-review/1",
+  "date": "2026-09-04",
+  "decision": "接受这8个片段作为已解码离线数据源；不等于完整ZZZ格式或Unity发布通过",
+  "decoder": {
+    "tool": "CorinAclScalarDecoder",
+    "schema": "corin-zzz-acl-scalar-decode/1",
+    "nativeDll": "D:\\ZZZ_Dump\\tools_dl\\AnimeStudio\\AnimeStudio.ACLNative2\\x64\\Release\\AnimeStudio.ACLNative2.dll",
+    "nativeDllSha256": "d8afe819c8d139437d13cab14bbc339586f228f553cd9ec1763b989f28182c40",
+    "repositoryRevision": "ae75ccca0574cb760acd3c50e17c8e2bed4f2bd9",
+    "sourceFiles": [
+      "AnimeStudio.ACLNative2/ACLLibrary.cpp",
+      "AnimeStudio.ACLNative2/ACLLibrary.h",
+      "AnimeStudio.ACLNative2/acl/core/impl/compressed_headers.h",
+      "AnimeStudio.ACLNative2/acl/decompression/database/impl/database.impl.h",
+      "AnimeStudio.ACLNative2/acl/decompression/impl/decompression.hoyo.h"
+    ]
+  },
+  "nativeDllHashMatches": true,
+  "bindingManifestHashMatches": true,
+  "bindingIdentityConflicts": [],
+  "verifiedClipCount": 8,
+  "verifiedScalarSampleCount": 53020,
+  "artifacts": {
+    "batch-summary.json": {
+      "path": "D:/Unity_Project_1/3C/.codex-artifacts/acl-scalar-decoding-20260904-complete/batch-summary.json",
+      "sha256": "63e12c3bedfcd5466283d6517e9489c7f4fa1a594ee6eb2e71a6635104c2e6be"
+    },
+    "oracle-diff.json": {
+      "path": "D:/Unity_Project_1/3C/.codex-artifacts/acl-scalar-decoding-20260904-complete/oracle-diff.json",
+      "sha256": "a9ae96d5fdfe798f617b3e4dda88f3ed23a6566c453586f313410b0808c43f0a"
+    },
+    "binding-map.json": {
+      "path": "D:/Unity_Project_1/3C/.codex-artifacts/acl-scalar-decoding-20260904-complete/binding-map.json",
+      "sha256": "cf2a3811fc6d7bc4ef1244e3890f46407e38b53ba74a567773b6401df3cb7b2a"
+    }
+  },
+  "clips": [
+    {
+      "clipName": "Avatar_Female_Size01_Corin_Ani_MainCity_Run_Loop",
+      "sourceHashMatches": true,
+      "sampleCount": 44,
+      "scalarCount": 2420,
+      "allScalarFinite": true,
+      "changingFaceTrackCount": 0,
+      "repeatPassed": true,
+      "timeGridPassed": true,
+      "interpolationRequestedTimes": [
+        0,
+        0.008333334,
+        0.016666668,
+        0.025000002
+      ],
+      "interpolationMidpointComparisons": 110,
+      "interpolationPassed": true,
+      "observedBitWidths": [
+        6,
+        7,
+        11
+      ],
+      "mediumChunks": 0,
+      "lowChunks": 1
+    },
+    {
+      "clipName": "Avatar_Female_Size01_Corin_Ani_MainCity_Run_Start",
+      "sourceHashMatches": true,
+      "sampleCount": 92,
+      "scalarCount": 5060,
+      "allScalarFinite": true,
+      "changingFaceTrackCount": 33,
+      "repeatPassed": true,
+      "timeGridPassed": true,
+      "interpolationRequestedTimes": [
+        0,
+        0.008333334,
+        0.016666668,
+        0.025000002
+      ],
+      "interpolationMidpointComparisons": 110,
+      "interpolationPassed": true,
+      "observedBitWidths": [
+        3,
+        4,
+        6,
+        7,
+        12,
+        13,
+        14,
+        15,
+        16
+      ],
+      "mediumChunks": 0,
+      "lowChunks": 1
+    },
+    {
+      "clipName": "Avatar_Female_Size01_Corin_Ani_MainCity_Walk_Loop",
+      "sourceHashMatches": true,
+      "sampleCount": 68,
+      "scalarCount": 3740,
+      "allScalarFinite": true,
+      "changingFaceTrackCount": 0,
+      "repeatPassed": true,
+      "timeGridPassed": true,
+      "interpolationRequestedTimes": [
+        0,
+        0.008333334,
+        0.016666668,
+        0.025000002
+      ],
+      "interpolationMidpointComparisons": 110,
+      "interpolationPassed": true,
+      "observedBitWidths": [
+        4,
+        5,
+        6,
+        7,
+        10
+      ],
+      "mediumChunks": 0,
+      "lowChunks": 1
+    },
+    {
+      "clipName": "Avatar_Female_Size01_Corin_Ani_MainCity_Walk_Start",
+      "sourceHashMatches": true,
+      "sampleCount": 112,
+      "scalarCount": 6160,
+      "allScalarFinite": true,
+      "changingFaceTrackCount": 21,
+      "repeatPassed": true,
+      "timeGridPassed": true,
+      "interpolationRequestedTimes": [
+        0,
+        0.008333334,
+        0.016666668,
+        0.025000002
+      ],
+      "interpolationMidpointComparisons": 110,
+      "interpolationPassed": true,
+      "observedBitWidths": [
+        3,
+        4,
+        5,
+        6,
+        7,
+        9,
+        10,
+        13,
+        14,
+        15,
+        16
+      ],
+      "mediumChunks": 0,
+      "lowChunks": 1
+    },
+    {
+      "clipName": "Avatar_Female_Size01_Corin_Ani_MainCity_Walk_End_02_L",
+      "sourceHashMatches": true,
+      "sampleCount": 182,
+      "scalarCount": 10010,
+      "allScalarFinite": true,
+      "changingFaceTrackCount": 31,
+      "repeatPassed": true,
+      "timeGridPassed": true,
+      "interpolationRequestedTimes": [
+        0,
+        0.008333334,
+        0.016666668,
+        0.025000002
+      ],
+      "interpolationMidpointComparisons": 110,
+      "interpolationPassed": true,
+      "observedBitWidths": [
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        11,
+        12,
+        13,
+        14,
+        16
+      ],
+      "mediumChunks": 0,
+      "lowChunks": 1
+    },
+    {
+      "clipName": "Avatar_Female_Size01_Corin_Ani_MainCity_Walk_End_02_R",
+      "sourceHashMatches": true,
+      "sampleCount": 182,
+      "scalarCount": 10010,
+      "allScalarFinite": true,
+      "changingFaceTrackCount": 20,
+      "repeatPassed": true,
+      "timeGridPassed": true,
+      "interpolationRequestedTimes": [
+        0,
+        0.008333334,
+        0.016666668,
+        0.025000002
+      ],
+      "interpolationMidpointComparisons": 110,
+      "interpolationPassed": true,
+      "observedBitWidths": [
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        13,
+        14,
+        15,
+        16
+      ],
+      "mediumChunks": 0,
+      "lowChunks": 1
+    },
+    {
+      "clipName": "Avatar_Female_Size01_Corin_Ani_MainCity_Walk_End_L",
+      "sourceHashMatches": true,
+      "sampleCount": 142,
+      "scalarCount": 7810,
+      "allScalarFinite": true,
+      "changingFaceTrackCount": 7,
+      "repeatPassed": true,
+      "timeGridPassed": true,
+      "interpolationRequestedTimes": [
+        0,
+        0.008333334,
+        0.016666668,
+        0.025000002
+      ],
+      "interpolationMidpointComparisons": 110,
+      "interpolationPassed": true,
+      "observedBitWidths": [
+        3,
+        4,
+        5,
+        6,
+        8,
+        11,
+        13,
+        14,
+        16
+      ],
+      "mediumChunks": 0,
+      "lowChunks": 1
+    },
+    {
+      "clipName": "Avatar_Female_Size01_Corin_Ani_MainCity_Walk_End_R",
+      "sourceHashMatches": true,
+      "sampleCount": 142,
+      "scalarCount": 7810,
+      "allScalarFinite": true,
+      "changingFaceTrackCount": 39,
+      "repeatPassed": true,
+      "timeGridPassed": true,
+      "interpolationRequestedTimes": [
+        0,
+        0.008333334,
+        0.016666668,
+        0.025000002
+      ],
+      "interpolationMidpointComparisons": 110,
+      "interpolationPassed": true,
+      "observedBitWidths": [
+        3,
+        4,
+        5,
+        6,
+        8,
+        9,
+        12,
+        13,
+        14,
+        15,
+        16
+      ],
+      "mediumChunks": 0,
+      "lowChunks": 1
+    }
+  ],
+  "limits": [
+    "旧oracle对照仅覆盖Run_Loop，其41条表情均为常量",
+    "每个片段实际验证4个时刻，其中2个为半帧点；未证明跨segment/正式尾部的任意时间插值",
+    "本批所有数据库medium为0、low为1；不能据此验收双tier或多chunk",
+    "本批观测位宽3至16；24至31位和32位raw路径有代码但无本批样本证明",
+    "未验证Unity目标Mesh的BlendShape顺序、权重单位、实际变形及3C运行时发布"
+  ]
+}

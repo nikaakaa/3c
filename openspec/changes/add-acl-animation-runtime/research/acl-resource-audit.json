@@ -1,0 +1,340 @@
+{
+  "schema": "acl-planning-resource-audit/1",
+  "date": "2026-09-04",
+  "method": "ֻ���˶�ͷ���ֽ�����SHA-256��δִ�н������򲥷�",
+  "sourceArtifacts": {
+    "nativeExportManifest": {
+      "path": "D:/ZZZ_Dump/output/corin_replication/20260904_acl_native_v1/manifest.json",
+      "bytes": 38547,
+      "sha256": "829c9dcd8ae5d52724445806c1c0b734a4fde6ba460f3fd2a09d212da64b0787"
+    },
+    "expandedExportManifest": {
+      "path": "D:/ZZZ_Dump/output/corin_replication/20260903_animations_all_v2/export-manifest.json",
+      "bytes": 2573547,
+      "sha256": "d931fe6c196f405c48a4753b83e5db7942b53929ce241e98fe83c82d541f26da"
+    },
+    "nativeExporterSource": {
+      "path": "D:/ZZZ_Dump/kern_tools/CorinAclAssetExporter/Program.cs",
+      "bytes": 8033,
+      "sha256": "b178dc8d4bb5487cdbbdcfaf087d0ca4337d486756d7430739a8287e81fb2759"
+    },
+    "nativeDecoderSource": {
+      "path": "D:/ZZZ_Dump/tools_dl/AnimeStudio/AnimeStudio.ACLNative2/ACLLibrary.cpp",
+      "bytes": 8183,
+      "sha256": "65e8e34b6d50b6336bb9f8d523bcc39677abed7f110e6ebdb6be86e0a2d253f2"
+    },
+    "unityPlayer": {
+      "path": "D:/Normal_Software/HoYoPlay/games/ZenlessZoneZero Game/UnityPlayer.dll",
+      "bytes": 37943088,
+      "sha256": "66493677ce2739e188c41634230c3a35e5f584c4575650949d0a53b5785c6c44"
+    }
+  },
+  "summary": {
+    "batchRecords": 169,
+    "distinctClipNames": 153,
+    "statusCounts": {
+      "native-acl": 143,
+      "not-zzz-acl": 25,
+      "native-acl-missing-database": 1
+    },
+    "aclFilesInspected": 144,
+    "payloadBytes": {
+      "transform": 4996218,
+      "scalar": 466432,
+      "database": 13471575
+    },
+    "metadataMismatches": [],
+    "headerGroups": [
+      {
+        "kind": "transform",
+        "version": 8,
+        "trackType": 12,
+        "tag": "0xac11ac11",
+        "count": 144
+      },
+      {
+        "kind": "scalar",
+        "version": 100,
+        "trackType": 0,
+        "tag": "0xac11ac11",
+        "count": 144
+      }
+    ],
+    "expandedScalarTracksDecodedCounts": {
+      "False": 169
+    }
+  },
+  "rawJsonSamples": [
+    {
+      "path": "D:/ZZZ_Dump/output/corin_start_loop_clip_json_20260903/AnimationClip/Avatar_Female_Size01_Corin_Ani_MainCity_Run_Loop.json",
+      "sha256": "7c2aa8147f1f4f985438d36561df66eefa35c9dba7a60ec8ce4bfff4b099e859",
+      "databaseHeaderBytes": 88,
+      "databaseHeaderTag": "0xac11db01",
+      "databaseHeaderVersion": 100,
+      "bulkBytes": 40727,
+      "bindingKinds": {
+        "Transform": 615,
+        "SkinnedMeshRenderer": 41,
+        "Animator": 14
+      }
+    },
+    {
+      "path": "D:/ZZZ_Dump/output/corin_start_loop_clip_json_20260903/AnimationClip/Avatar_Female_Size01_Corin_Ani_MainCity_Run_Start.json",
+      "sha256": "ceae5ce9bdcad739690b6da1e2d8c9c2813d09b2d59f8860cfa7dc7a2f509999",
+      "databaseHeaderBytes": 88,
+      "databaseHeaderTag": "0xac11db01",
+      "databaseHeaderVersion": 100,
+      "bulkBytes": 86123,
+      "bindingKinds": {
+        "Transform": 615,
+        "SkinnedMeshRenderer": 41,
+        "Animator": 14
+      }
+    },
+    {
+      "path": "D:/ZZZ_Dump/output/corin_start_loop_clip_json_20260903/AnimationClip/Avatar_Female_Size01_Corin_Ani_MainCity_Walk_Loop.json",
+      "sha256": "7176b70b2f6028ac2494402620fa3d85e5a981c1a775adf7d816c252bf129f45",
+      "databaseHeaderBytes": 88,
+      "databaseHeaderTag": "0xac11db01",
+      "databaseHeaderVersion": 100,
+      "bulkBytes": 45840,
+      "bindingKinds": {
+        "Transform": 615,
+        "SkinnedMeshRenderer": 41,
+        "Animator": 14
+      }
+    },
+    {
+      "path": "D:/ZZZ_Dump/output/corin_start_loop_clip_json_20260903/AnimationClip/Avatar_Female_Size01_Corin_Ani_MainCity_Walk_Start.json",
+      "sha256": "69f72f7e3a50fa7a7d83f10ea5ab664c1761087bbd8f5c08097774ecedede7d7",
+      "databaseHeaderBytes": 88,
+      "databaseHeaderTag": "0xac11db01",
+      "databaseHeaderVersion": 100,
+      "bulkBytes": 85957,
+      "bindingKinds": {
+        "Transform": 615,
+        "SkinnedMeshRenderer": 41,
+        "Animator": 14
+      }
+    },
+    {
+      "path": "D:/ZZZ_Dump/output/corin_stop_clip_json_20260903/AnimationClip/Avatar_Female_Size01_Corin_Ani_MainCity_Walk_End_02_L.json",
+      "sha256": "ca5ff3368538d355fe00b3a4f088dc67b4113d875b57bc3dbbe1cf736cc5f28f",
+      "databaseHeaderBytes": 88,
+      "databaseHeaderTag": "0xac11db01",
+      "databaseHeaderVersion": 100,
+      "bulkBytes": 124123,
+      "bindingKinds": {
+        "Transform": 615,
+        "SkinnedMeshRenderer": 41,
+        "Animator": 14
+      }
+    },
+    {
+      "path": "D:/ZZZ_Dump/output/corin_stop_clip_json_20260903/AnimationClip/Avatar_Female_Size01_Corin_Ani_MainCity_Walk_End_02_R.json",
+      "sha256": "b3f9a206f6fd4735c5cd79331ddcb7bba2c8957b84b5f4b28afe0a2b53c403ef",
+      "databaseHeaderBytes": 88,
+      "databaseHeaderTag": "0xac11db01",
+      "databaseHeaderVersion": 100,
+      "bulkBytes": 122151,
+      "bindingKinds": {
+        "Transform": 615,
+        "SkinnedMeshRenderer": 41,
+        "Animator": 14
+      }
+    },
+    {
+      "path": "D:/ZZZ_Dump/output/corin_stop_clip_json_20260903/AnimationClip/Avatar_Female_Size01_Corin_Ani_MainCity_Walk_End_L.json",
+      "sha256": "f424d44eaa99ce8bd8e61d3970a4e19279368aefcd166758eedf62907e73743b",
+      "databaseHeaderBytes": 88,
+      "databaseHeaderTag": "0xac11db01",
+      "databaseHeaderVersion": 100,
+      "bulkBytes": 95280,
+      "bindingKinds": {
+        "Transform": 615,
+        "SkinnedMeshRenderer": 41,
+        "Animator": 14
+      }
+    },
+    {
+      "path": "D:/ZZZ_Dump/output/corin_stop_clip_json_20260903/AnimationClip/Avatar_Female_Size01_Corin_Ani_MainCity_Walk_End_R.json",
+      "sha256": "aef1d16dac4e4cf1fb927d33e67d258d24647b4963f31e92dbb3e326c822c6cc",
+      "databaseHeaderBytes": 88,
+      "databaseHeaderTag": "0xac11db01",
+      "databaseHeaderVersion": 100,
+      "bulkBytes": 104286,
+      "bindingKinds": {
+        "Transform": 615,
+        "SkinnedMeshRenderer": 41,
+        "Animator": 14
+      }
+    }
+  ],
+  "columns": [
+    "clipName",
+    "pathId",
+    "bindingCount",
+    "startSeconds",
+    "stopSeconds",
+    "transformTracks",
+    "transformSamples",
+    "transformVersion",
+    "transformBytes",
+    "scalarTracks",
+    "scalarSamples",
+    "scalarVersion",
+    "scalarBytes",
+    "bulkBytes"
+  ],
+  "interpretation": {
+    "databaseExport": "database.acl 来自 ZZZACLClip.m_DatabaseData 外置 bulk；m_databaseData 数据库头没有进入这批独立文件。",
+    "scalarBinding": "8 份原始 JSON 均为 41 个 SkinnedMeshRenderer/customType=20 与 14 个 Animator/customType=8、attribute=0..13；导出工具将后者解释为 MotionT/Q、RootT/Q。",
+    "decodeBoundary": "未执行原生解码、Unity 播放或游戏动态采样；哈希和头验证不能证明解码质量。"
+  },
+  "rows": [
+    ["Avatar_Female_Size01_Corin_Ani_AssaultAid","7635809764221306221",714,0,1.7333335,206,106,8,29732,96,106,100,2683,92547],
+    ["Avatar_Female_Size01_Corin_Ani_AssaultAid_End","-1178260269339427709",714,0,2.9333336,206,178,8,47299,96,178,100,4278,144825],
+    ["Avatar_Female_Size01_Corin_Ani_Attack_Branch_01","4972306334998478315",670,0,1.6666667,205,102,8,28545,55,102,100,2342,82268],
+    ["Avatar_Female_Size01_Corin_Ani_Attack_Branch_01_End","7399302324480911",670,0,1.5666668,205,96,8,24120,55,96,100,1832,73567],
+    ["Avatar_Female_Size01_Corin_Ani_Attack_Branch_01_Explode","4168370706981138056",670,0,0.66666687,205,42,8,14759,55,42,100,1095,37211],
+    ["Avatar_Female_Size01_Corin_Ani_Attack_Branch_02","9030710275420747283",670,0,1.6333334,205,100,8,28657,55,100,100,2058,79329],
+    ["Avatar_Female_Size01_Corin_Ani_Attack_Branch_02_End","-9081679602998172871",670,0,2.1666667,205,132,8,36410,55,132,100,2678,104749],
+    ["Avatar_Female_Size01_Corin_Ani_Attack_Branch_02_Explode","6145596945954606289",670,0,1.0333334,205,64,8,18683,55,64,100,1549,55778],
+    ["Avatar_Female_Size01_Corin_Ani_Attack_Branch_03_Loop","-3535317205021572259",670,0,1,205,62,8,15252,55,62,100,867,38763],
+    ["Avatar_Female_Size01_Corin_Ani_Attack_Branch_03_Shake","1217914733874047647",670,0,0.53333336,205,34,8,13729,55,34,100,694,23722],
+    ["Avatar_Female_Size01_Corin_Ani_Attack_Branch_03_Walk_Loop","317938327719892463",670,0,1.0666667,205,66,8,19093,55,66,100,985,43558],
+    ["Avatar_Female_Size01_Corin_Ani_Attack_Branch_03_Walk_Shake","1285715645785282665",670,0,1.0666667,205,66,8,19578,55,66,100,1027,45574],
+    ["Avatar_Female_Size01_Corin_Ani_Attack_Branch_Loop","6719575295233817980",670,0,1,205,62,8,14871,55,62,100,867,38591],
+    ["Avatar_Female_Size01_Corin_Ani_Attack_Branch_Walk","5156237803592554497",670,0,1.0666667,205,66,8,18518,55,66,100,985,42851],
+    ["Avatar_Female_Size01_Corin_Ani_Attack_Counter","1073696557301595154",670,0,0.9666667,205,60,8,17698,55,60,100,1580,48871],
+    ["Avatar_Female_Size01_Corin_Ani_Attack_Counter_End","8015599191330673062",670,0,2.9333336,205,178,8,46286,55,178,100,3743,133120],
+    ["Avatar_Female_Size01_Corin_Ani_Attack_Counter_Explode","-2497792158842393282",670,0,0.23333341,205,16,8,9512,55,16,100,599,12699],
+    ["Avatar_Female_Size01_Corin_Ani_Attack_Normal_01","-7633644030500054073",670,0,0.86666673,205,54,8,19347,55,54,100,1305,48567],
+    ["Avatar_Female_Size01_Corin_Ani_Attack_Normal_01_End","5445400713106908285",670,0,1.9666668,205,120,8,31615,55,120,100,2376,92726],
+    ["Avatar_Female_Size01_Corin_Ani_Attack_Normal_02","-8989601532274220546",670,0,0.78333336,205,49,8,18070,55,49,100,1083,39677],
+    ["Avatar_Female_Size01_Corin_Ani_Attack_Normal_02_End","2645749824858338536",670,0,2.0500002,205,125,8,32911,55,125,100,2629,102165],
+    ["Avatar_Female_Size01_Corin_Ani_Attack_Normal_03","8192693219800570535",670,0,1.3333334,205,82,8,25159,55,82,100,1819,67305],
+    ["Avatar_Female_Size01_Corin_Ani_Attack_Normal_03_End","7315923094088315732",670,0,2.0666666,205,126,8,30786,55,126,100,2501,95683],
+    ["Avatar_Female_Size01_Corin_Ani_Attack_Normal_03_Explode","8236060548339731357",670,0,0.6,205,38,8,14103,55,38,100,962,27954],
+    ["Avatar_Female_Size01_Corin_Ani_Attack_Normal_04","-6923800483859917609",670,0,1.4666667,205,90,8,24603,55,90,100,1719,76234],
+    ["Avatar_Female_Size01_Corin_Ani_Attack_Normal_04_End","-3266500787717576228",670,0,3.2000003,205,194,8,50072,55,194,100,3476,145701],
+    ["Avatar_Female_Size01_Corin_Ani_Attack_Normal_05","3909775628368015610",670,0,1.5000001,205,92,8,24486,55,92,100,1745,73347],
+    ["Avatar_Female_Size01_Corin_Ani_Attack_Normal_05_B","-3335502029207496084",670,0,3.0666666,205,186,8,45669,55,186,100,3168,144054],
+    ["Avatar_Female_Size01_Corin_Ani_Attack_Normal_05_End","5582340942119627437",670,0,2.0000002,205,122,8,33667,55,122,100,2137,99122],
+    ["Avatar_Female_Size01_Corin_Ani_Attack_ParryAid_H","-3109607261487244544",670,0,1,205,62,8,18826,55,62,100,1485,54852],
+    ["Avatar_Female_Size01_Corin_Ani_Attack_ParryAid_H_End","-3328681462733842040",670,0,2.3333335,205,142,8,35173,55,142,100,2785,111703],
+    ["Avatar_Female_Size01_Corin_Ani_Attack_ParryAid_L","6325537260468316245",670,0,0.6666667,205,42,8,13028,55,42,100,736,28339],
+    ["Avatar_Female_Size01_Corin_Ani_Attack_ParryAid_L_End","3586021969945313327",670,0,1.9333334,205,118,8,30820,55,118,100,1711,90340],
+    ["Avatar_Female_Size01_Corin_Ani_Attack_ParryAid_Start","1476541426297738532",670,0,2.9,205,176,8,42528,55,176,100,3959,142288],
+    ["Avatar_Female_Size01_Corin_Ani_Attack_Rush","-3375659985498216315",670,0,1.1666667,205,72,8,22493,55,72,100,1355,61565],
+    ["Avatar_Female_Size01_Corin_Ani_Attack_Rush_End","-3092706521776954035",670,0,1.3333335,205,82,8,28213,55,82,100,1759,64088],
+    ["Avatar_Female_Size01_Corin_Ani_Attack_Rush_Enhance","3634612281123444133",670,0,1.4333334,205,88,8,19460,55,88,100,999,50070],
+    ["Avatar_Female_Size01_Corin_Ani_Attack_Rush_Enhance_End","-4582199716545510721",670,0,1.9666669,205,120,8,34311,55,120,100,2572,93471],
+    ["Avatar_Female_Size01_Corin_Ani_Attack_Rush_Enhance_Explode","-6128367376590274902",670,0,1.1666667,205,72,8,23774,55,72,100,1697,61486],
+    ["Avatar_Female_Size01_Corin_Ani_Attack_Rush_Enhance_Loop","-3596216990451816330",670,0,1.4333334,205,88,8,25702,55,88,100,792,67791],
+    ["Avatar_Female_Size01_Corin_Ani_Attack_Rush_Enhance_Start","5159890252898213460",670,0,0.73333335,205,46,8,15475,55,46,100,1123,41368],
+    ["Avatar_Female_Size01_Corin_Ani_Attack_Rush_Explode","-3576784747995550995",670,0,1.1666669,205,72,8,20688,55,72,100,1663,54545],
+    ["Avatar_Female_Size01_Corin_Ani_Die","7614295963187894552",670,0,2.6666667,205,162,8,37632,55,162,100,3608,108302],
+    ["Avatar_Female_Size01_Corin_Ani_Evade_Back","4948186623154766841",670,0,2.3333335,205,142,8,34483,55,142,100,3155,111547],
+    ["Avatar_Female_Size01_Corin_Ani_Evade_Front","7534335214782688606",670,0,2.3333335,205,142,8,40873,55,142,100,3243,116823],
+    ["Avatar_Female_Size01_Corin_Ani_Gacha_Loop","189746862046826526",670,0,4,205,242,8,43213,55,242,100,1263,110654],
+    ["Avatar_Female_Size01_Corin_Ani_Gacha_Loop_02","-4522463288075044981",670,0,4,205,242,8,43627,55,242,100,4161,112198],
+    ["Avatar_Female_Size01_Corin_Ani_Gacha_Start","-1204574559885659784",670,0,8.133334,205,490,8,102622,55,490,100,14406,318979],
+    ["Avatar_Female_Size01_Corin_Ani_Galgame_Angry_End","6303233018647410957",661,0,4,202,242,8,48468,55,242,100,6254,112090],
+    ["Avatar_Female_Size01_Corin_Ani_Galgame_Angry_Loop","-4102951044735808599",661,0,4,202,242,8,39620,55,242,100,1709,92815],
+    ["Avatar_Female_Size01_Corin_Ani_Galgame_Angry_Start","-7823165275002722237",658,0,4,201,242,8,52077,55,242,100,6608,133498],
+    ["Avatar_Female_Size01_Corin_Ani_Galgame_Excited_End","5577468174015103246",661,0,4,202,242,8,51443,55,242,100,4979,127206],
+    ["Avatar_Female_Size01_Corin_Ani_Galgame_Excited_Loop","-4740490091237014989",661,0,4,202,242,8,35756,55,242,100,3598,86473],
+    ["Avatar_Female_Size01_Corin_Ani_Galgame_Excited_Start","4690426606600270579",661,0,4,202,242,8,48077,55,242,100,6116,119542],
+    ["Avatar_Female_Size01_Corin_Ani_Galgame_Facial_Angry","6901095654233018674",708,0,0.01666677,204,3,8,5151,96,3,100,383,67],
+    ["Avatar_Female_Size01_Corin_Ani_Galgame_Facial_Excited","-1707344001629605544",708,0,0.01666671,204,3,8,5151,96,3,100,423,67],
+    ["Avatar_Female_Size01_Corin_Ani_Galgame_Facial_Happy","5748676838864909846",708,0,0.01666668,204,3,8,5151,96,3,100,423,67],
+    ["Avatar_Female_Size01_Corin_Ani_Galgame_Facial_Idle","-2302268307736803430",708,0,0.016666673,204,3,8,5151,96,3,100,407,67],
+    ["Avatar_Female_Size01_Corin_Ani_Galgame_Facial_Sad","3771304499164414289",708,0,0.01666671,204,3,8,5151,96,3,100,415,67],
+    ["Avatar_Female_Size01_Corin_Ani_Galgame_Facial_Shy","-5630530432967357822",708,0,0.01666671,204,3,8,5151,96,3,100,439,67],
+    ["Avatar_Female_Size01_Corin_Ani_Galgame_Facial_Surprise","6022992040781179304",708,0,0.01666671,204,3,8,5151,96,3,100,319,67],
+    ["Avatar_Female_Size01_Corin_Ani_Galgame_Facial_Think","898440696609249600",708,0,0.01666665,204,2,8,5151,96,2,100,391,0],
+    ["Avatar_Female_Size01_Corin_Ani_Galgame_Happy_End","-5263095189853272683",661,0,4,202,242,8,45118,55,242,100,6607,115003],
+    ["Avatar_Female_Size01_Corin_Ani_Galgame_Happy_Loop","-8898960458305978696",661,0,4,202,242,8,36634,55,242,100,2876,87142],
+    ["Avatar_Female_Size01_Corin_Ani_Galgame_Happy_Start","-2035851236618694155",661,0,4,202,242,8,45809,55,242,100,6697,110979],
+    ["Avatar_Female_Size01_Corin_Ani_Galgame_Idle","7027748700082370727",661,0,4,202,242,8,38466,55,242,100,1456,92892],
+    ["Avatar_Female_Size01_Corin_Ani_Galgame_Sad_End","-1517827293945068839",658,0,4,201,242,8,51204,55,242,100,7850,124162],
+    ["Avatar_Female_Size01_Corin_Ani_Galgame_Sad_Loop","8886833620262037410",658,0,4,201,242,8,39811,55,242,100,3784,96270],
+    ["Avatar_Female_Size01_Corin_Ani_Galgame_Sad_Start","-1047950520196475808",658,0,4,201,242,8,50356,55,242,100,8522,119321],
+    ["Avatar_Female_Size01_Corin_Ani_Galgame_Shy_End","2523767089376883657",658,0,4,201,242,8,56722,55,242,100,10681,128721],
+    ["Avatar_Female_Size01_Corin_Ani_Galgame_Shy_Loop","-4814898092864525891",658,0,4,201,242,8,39082,55,242,100,3331,93954],
+    ["Avatar_Female_Size01_Corin_Ani_Galgame_Shy_Start","-2768672064049892920",658,0,4,201,242,8,58721,55,242,100,9519,132807],
+    ["Avatar_Female_Size01_Corin_Ani_Galgame_Surprise_End","5434242366892889504",661,0,4,202,242,8,51419,55,242,100,5539,118544],
+    ["Avatar_Female_Size01_Corin_Ani_Galgame_Surprise_Loop","-1206381914585113290",658,0,4,201,242,8,38479,55,242,100,2128,96103],
+    ["Avatar_Female_Size01_Corin_Ani_Galgame_Surprise_Start","626280592964498226",658,0,4,201,242,8,48869,55,242,100,5258,114577],
+    ["Avatar_Female_Size01_Corin_Ani_Galgame_Think_End","3891626665253744343",661,0,4,202,242,8,48617,55,242,100,5478,114459],
+    ["Avatar_Female_Size01_Corin_Ani_Galgame_Think_Loop","-2545763502646563120",661,0,4,202,242,8,40137,55,242,100,3414,98829],
+    ["Avatar_Female_Size01_Corin_Ani_Galgame_Think_Start","-2298381657069679992",661,0,4,202,242,8,52919,55,242,100,4895,125734],
+    ["Avatar_Female_Size01_Corin_Ani_Hit_H_Back","3591691489893837934",670,0,1.8333334,205,112,8,27384,55,112,100,2212,83039],
+    ["Avatar_Female_Size01_Corin_Ani_Hit_H_Front","4981330590442074593",670,0,1.8333334,205,112,8,31288,55,112,100,2738,93094],
+    ["Avatar_Female_Size01_Corin_Ani_Hit_L_Back","-6163166418253010506",670,0,1.8333334,205,112,8,27287,55,112,100,2425,84594],
+    ["Avatar_Female_Size01_Corin_Ani_Hit_L_Front","2809969480753008881",670,0,1.8333334,205,112,8,29853,55,112,100,2350,94370],
+    ["Avatar_Female_Size01_Corin_Ani_HitFly_Back","6871128011092826917",670,0,2.7333336,205,166,8,46895,55,166,100,3788,138883],
+    ["Avatar_Female_Size01_Corin_Ani_HitFly_Front","3956337634759541721",670,0,2.7333336,205,166,8,47771,55,166,100,3640,140061],
+    ["Avatar_Female_Size01_Corin_Ani_Idle","-2773389505032748633",667,0,2.6666667,204,162,8,34303,55,162,100,2200,94926],
+    ["Avatar_Female_Size01_Corin_Ani_Idle_AFK","-324432655815094095",667,0,8.3,204,500,8,109114,55,500,100,13820,324457],
+    ["Avatar_Female_Size01_Corin_Ani_LevelSwitch","-5880870598241033524",667,0,3.8333335,204,232,8,48931,55,232,100,11569,138935],
+    ["Avatar_Female_Size01_Corin_Ani_MainCity_Idle01","-4939970430407956850",670,0,4,205,242,8,43693,55,242,100,2102,111317],
+    ["Avatar_Female_Size01_Corin_Ani_MainCity_Run_End_L","-1544555912879292857",670,0,3.0000002,205,182,8,43481,55,182,100,4653,126140],
+    ["Avatar_Female_Size01_Corin_Ani_MainCity_Run_End_R","-4841879672645899988",670,0,3.0000002,205,182,8,43576,55,182,100,5015,126391],
+    ["Avatar_Female_Size01_Corin_Ani_MainCity_Run_Loop","859228465927746785",670,0,0.70000005,205,44,8,16373,55,44,100,599,40727],
+    ["Avatar_Female_Size01_Corin_Ani_MainCity_Run_Start","1246857088310306604",670,0,1.5000001,205,92,8,30015,55,92,100,2524,86123],
+    ["Avatar_Female_Size01_Corin_Ani_MainCity_Run_Start_End","-229845277499172201",670,0,2.6666667,205,162,8,38547,55,162,100,4740,109899],
+    ["Avatar_Female_Size01_Corin_Ani_MainCity_Run_TurnBack","5909555580764446636",670,0,1.3333334,205,82,8,28517,55,82,100,1883,71429],
+    ["Avatar_Female_Size01_Corin_Ani_MainCity_RunToWalk","6423646567584159731",670,0,1.6666667,205,102,8,30899,55,102,100,3077,83485],
+    ["Avatar_Female_Size01_Corin_Ani_MainCity_Sprint","2224556350242134209",670,0,0.5666667,205,36,8,15065,55,36,100,558,30561],
+    ["Avatar_Female_Size01_Corin_Ani_MainCity_Sprint_02","-9067569412475210119",670,0,0.5666667,205,36,8,14999,55,36,100,556,30326],
+    ["Avatar_Female_Size01_Corin_Ani_MainCity_Stand_Idle","-3025298900092136770",670,0,4,205,242,8,44248,55,242,100,5361,100601],
+    ["Avatar_Female_Size01_Corin_Ani_MainCity_Stand_Idle02","-4069617515630513007",667,0,8.566668,204,516,8,91942,55,516,100,9691,261018],
+    ["Avatar_Female_Size01_Corin_Ani_MainCity_Walk_End_02_L","8296501203308905078",670,0,3.0000002,205,182,8,42690,55,182,100,4290,124123],
+    ["Avatar_Female_Size01_Corin_Ani_MainCity_Walk_End_02_R","2789098038319550492",670,0,3.0000002,205,182,8,42314,55,182,100,4421,122151],
+    ["Avatar_Female_Size01_Corin_Ani_MainCity_Walk_End_L","6560206128265876505",670,0,2.3333335,205,142,8,32614,55,142,100,2136,95280],
+    ["Avatar_Female_Size01_Corin_Ani_MainCity_Walk_End_R","7926910943246564251",670,0,2.3333335,205,142,8,35025,55,142,100,3778,104286],
+    ["Avatar_Female_Size01_Corin_Ani_MainCity_Walk_Loop","3772087984224104094",670,0,1.1,205,68,8,19235,55,68,100,750,45840],
+    ["Avatar_Female_Size01_Corin_Ani_MainCity_Walk_Start","-7211855476326817431",670,0,1.8333334,205,112,8,27824,55,112,100,3382,85957],
+    ["Avatar_Female_Size01_Corin_Ani_QuestStart","-1900175821299126858",670,0,8.166667,205,492,8,104504,55,492,100,13764,319875],
+    ["Avatar_Female_Size01_Corin_Ani_Revive_01","8070600231347179875",670,0,1.1,205,68,8,19104,55,68,100,1362,45648],
+    ["Avatar_Female_Size01_Corin_Ani_Revive_02","5636653689923787039",670,0,1.1,205,68,8,19386,55,68,100,1559,46578],
+    ["Avatar_Female_Size01_Corin_Ani_Revive_03","1281976623414429704",670,0,1.1,205,68,8,19288,55,68,100,1514,46135],
+    ["Avatar_Female_Size01_Corin_Ani_Revive_04","-814707031229856576",670,0,1.1,205,68,8,19702,55,68,100,1635,48797],
+    ["Avatar_Female_Size01_Corin_Ani_Run","-6171758415763869391",670,0,0.5,205,32,8,14080,55,32,100,584,25338],
+    ["Avatar_Female_Size01_Corin_Ani_Run_End","-6907268160669464535",670,0,3.666667,205,222,8,55944,55,222,100,4880,160912],
+    ["Avatar_Female_Size01_Corin_Ani_Run_Start","-6096299002260962864",670,0,1.0333334,205,64,8,19844,55,64,100,2183,58462],
+    ["Avatar_Female_Size01_Corin_Ani_Run_Start_End","944470804005359822",670,0,2.2500002,205,137,8,37495,55,137,100,3285,103438],
+    ["Avatar_Female_Size01_Corin_Ani_SiwtchIn_Normal","-3436196794290780736",670,0,2.4666667,205,150,8,42503,55,150,100,3112,115201],
+    ["Avatar_Female_Size01_Corin_Ani_SwitchIn_Attack","-4101578516447305544",670,0,2.5000002,205,152,8,40197,55,152,100,3475,129708],
+    ["Avatar_Female_Size01_Corin_Ani_SwitchIn_Attack_02","-1024291887570613253",661,0,2.4166667,202,147,8,39954,55,147,100,4766,125284],
+    ["Avatar_Female_Size01_Corin_Ani_SwitchIn_Attack_02_End","-4557837016700474570",661,0,2.9166667,202,177,8,43138,55,177,100,3161,122517],
+    ["Avatar_Female_Size01_Corin_Ani_SwitchIn_Attack_02_Explode","-9155821795003746524",670,0,1.3166668,205,81,8,25553,55,81,100,1817,66165],
+    ["Avatar_Female_Size01_Corin_Ani_SwitchIn_Attack_02_Explode_End","-8375892542712222353",670,0,2.916667,205,177,8,42873,55,177,100,3170,122031],
+    ["Avatar_Female_Size01_Corin_Ani_SwitchIn_Attack_02_Landed","-3446958578579793644",670,0,1.9666668,205,120,8,32591,55,120,100,2519,100304],
+    ["Avatar_Female_Size01_Corin_Ani_SwitchIn_Attack_End","5726471566278226382",670,0,2.6333337,205,160,8,36733,55,160,100,2904,113891],
+    ["Avatar_Female_Size01_Corin_Ani_SwitchIn_Attack_Ex","-3061150530161799803",670,0,1.9666669,205,120,8,34555,55,120,100,4702,112116],
+    ["Avatar_Female_Size01_Corin_Ani_SwitchIn_Attack_Ex_End","-1763314135178207178",670,0,3.3166668,205,201,8,48407,55,201,100,4333,146393],
+    ["Avatar_Female_Size01_Corin_Ani_SwitchIn_Attack_Ex_Start","2473036474236341758",670,0,2,205,122,8,29805,55,122,100,3796,89048],
+    ["Avatar_Female_Size01_Corin_Ani_SwitchOut_Normal","3063350895173360205",670,0,1.5000001,205,92,8,26773,55,92,100,2170,79811],
+    ["Avatar_Female_Size01_Corin_Ani_Taunt","4790791135615900611",670,0,6.5000005,205,392,8,86879,55,392,100,8104,277561],
+    ["Avatar_Female_Size01_Corin_Ani_TurnBack","7769890977198430658",670,0,1.1666667,205,72,8,21694,55,72,100,1842,59723],
+    ["Avatar_Female_Size01_Corin_Ani_UI_CharacterSelect_01","-6759116816023670402",667,0,2.6666667,204,162,8,39993,55,162,100,3379,107690],
+    ["Avatar_Female_Size01_Corin_Ani_UI_CharacterSelect_02","2103915927029859864",667,0,4,204,242,8,44302,55,242,100,5254,117248],
+    ["Avatar_Female_Size01_Corin_Ani_UI_CharacterSelect_Loop_02","8978642814188813644",667,0,4,204,242,8,43663,55,242,100,5254,115428],
+    ["Avatar_Female_Size01_Corin_Ani_UI_DtoE","4933720727147554426",667,0,3.0000002,204,182,8,42171,55,182,100,1378,108065],
+    ["Avatar_Female_Size01_Corin_Ani_UI_DtoS","-6180440852965680934",667,0,3.0000002,204,182,8,38929,55,182,100,3104,98090],
+    ["Avatar_Female_Size01_Corin_Ani_UI_EtoD","5914118796093267836",667,0,3.0000002,204,182,8,41752,55,182,100,2557,103503],
+    ["Avatar_Female_Size01_Corin_Ani_UI_EtoS","-101838643950021270",667,0,3.0000002,204,182,8,42212,55,182,100,2928,104544],
+    ["Avatar_Female_Size01_Corin_Ani_UI_MainPage_01","-3436354439934966898",667,0,8,204,482,8,75954,55,482,100,10603,203538],
+    ["Avatar_Female_Size01_Corin_Ani_UI_MainPage_02","-8097244763300891347",611,0,2,199,122,8,20336,14,122,100,562,44078],
+    ["Avatar_Female_Size01_Corin_Ani_UI_StoD","3544084543993905061",667,0,3.0000002,204,182,8,41121,55,182,100,2863,103781],
+    ["Avatar_Female_Size01_Corin_Ani_UI_StoE","-2826566307516248648",667,0,3.0000002,204,182,8,41971,55,182,100,1280,105991],
+    ["Avatar_Female_Size01_Corin_Ani_Walk","-2446679900923443236",670,0,0.6,205,38,8,14157,55,38,100,647,31832],
+    ["Avatar_Female_Size01_Corin_Ani_Walk_Start","762554459989836095",670,0,1.2333333,205,76,8,23469,55,76,100,1404,66662],
+    ["Avatar_Female_Size02_Corin_Ani_UI_Detail","-3237535449664201515",667,0,4,204,242,8,44433,55,242,100,5389,115985],
+    ["Avatar_Female_Size02_Corin_Ani_UI_Equipment","-7298670592452153144",667,0,4,204,242,8,45375,55,242,100,3153,114440],
+    ["Avatar_Female_Size02_Corin_Ani_UI_Skill","-1601298149903270730",667,0,4,204,242,8,46312,55,242,100,4029,115194]
+  ]
+}

@@ -121,7 +121,9 @@ namespace ThirdPersonPerformance.Instrumentation.Editor
             input = null;
             error = string.Empty;
             string[] inputDefines = defines.Where(value =>
-                value.StartsWith(InputDefinePrefix, StringComparison.Ordinal)).ToArray();
+                    value.StartsWith(InputDefinePrefix, StringComparison.Ordinal))
+                .Distinct(StringComparer.Ordinal)
+                .ToArray();
             if (inputDefines.Length != 1)
             {
                 error = "Performance compilation requires exactly one explicit build input define.";

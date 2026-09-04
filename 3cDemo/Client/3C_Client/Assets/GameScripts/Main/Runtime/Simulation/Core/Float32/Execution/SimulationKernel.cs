@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using ThirdPersonPerformance.Instrumentation;
 
 namespace ThirdPersonSimulation
 {
@@ -148,23 +149,18 @@ namespace ThirdPersonSimulation
             binding.Require(binding.Program, binding.Layout, Specialization);
         }
 
+        [PerformanceProbe("simulation.kernel.evaluate")]
         public PendingCharacterEvaluation Evaluate(SimulationEvaluateRequest request)
         {
             if (request == null)
                 throw new ArgumentNullException(nameof(request));
-            using (request.Performance.Measure(SimulationPerformancePhase.KernelEvaluate))
-                return EvaluateMeasured(request);
+            return EvaluateMeasured(request);
         }
 
         PendingCharacterEvaluation EvaluateMeasured(SimulationEvaluateRequest request)
         {
-            using (request.Performance.Measure(SimulationPerformancePhase.KernelProgramValidation))
-                RequireBoundProgram(request.Binding);
-            ActorEvaluator actorEvaluator;
-            using (request.Performance.Measure(SimulationPerformancePhase.KernelWorkspace))
-            {
-                actorEvaluator = GetEvaluator(request);
-            }
+            ValidateProgramBinding(request.Binding);
+            ActorEvaluator actorEvaluator = GetEvaluatorForEvaluate(request);
             ActorOutputWorkspaceLease outputLease = actorEvaluator.Workspace.Begin(
                 request.ActorId,
                 request.Tick,
@@ -192,20 +188,13 @@ namespace ThirdPersonSimulation
                         bodyMotion.Motion,
                         bodyMotion.Plan,
                         request.Program.Manifest.Capabilities.RequiredWorldCapabilities);
-                    using (request.Performance.Measure(SimulationPerformancePhase.KernelPendingLease))
-                    {
-                        var pending = new PendingCharacterEvaluation(
-                            request.Binding,
-                            request.ActorId,
-                            request.Tick,
-                            request.CurrentState,
-                            evaluation.Transaction,
-                            outputLease,
-                            worldRequest,
-                            request.DiagnosticsEnabled);
-                        leaseTransferred = true;
-                        return pending;
-                    }
+                    PendingCharacterEvaluation pending = CreatePendingEvaluation(
+                        request,
+                        evaluation,
+                        outputLease,
+                        worldRequest);
+                    leaseTransferred = true;
+                    return pending;
                 }
                 catch
                 {
@@ -218,6 +207,36 @@ namespace ThirdPersonSimulation
                 if (!leaseTransferred)
                     actorEvaluator.Workspace.End(outputLease);
             }
+        }
+
+        [PerformanceProbe("simulation.kernel.program-validation")]
+        void ValidateProgramBinding(KernelProgramBinding binding)
+        {
+            RequireBoundProgram(binding);
+        }
+
+        [PerformanceProbe("simulation.kernel.workspace")]
+        ActorEvaluator GetEvaluatorForEvaluate(SimulationEvaluateRequest request)
+        {
+            return GetEvaluator(request);
+        }
+
+        [PerformanceProbe("simulation.kernel.pending-lease")]
+        PendingCharacterEvaluation CreatePendingEvaluation(
+            SimulationEvaluateRequest request,
+            CharacterOperationEvaluation evaluation,
+            ActorOutputWorkspaceLease outputLease,
+            CharacterWorldSolveRequest worldRequest)
+        {
+            return new PendingCharacterEvaluation(
+                request.Binding,
+                request.ActorId,
+                request.Tick,
+                request.CurrentState,
+                evaluation.Transaction,
+                outputLease,
+                worldRequest,
+                request.DiagnosticsEnabled);
         }
 
         ActorEvaluator GetEvaluator(SimulationEvaluateRequest request)
@@ -250,25 +269,19 @@ namespace ThirdPersonSimulation
             public Float32OperationEvaluator Evaluator { get; }
         }
 
+        [PerformanceProbe("simulation.kernel.finalize")]
         public SimulationActorTickResult Finalize(SimulationFinalizeRequest request)
         {
             if (request == null)
                 throw new ArgumentNullException(nameof(request));
-            using (request.Performance.Measure(SimulationPerformancePhase.KernelFinalize))
-                return FinalizeMeasured(request);
+            return FinalizeMeasured(request);
         }
 
         SimulationActorTickResult FinalizeMeasured(SimulationFinalizeRequest request)
         {
             PendingCharacterEvaluation pending = request.Pending;
-            using (request.Performance.Measure(SimulationPerformancePhase.KernelProgramValidation))
-                RequireBoundProgram(pending.Binding);
-            ActorEvaluator actorEvaluator;
-            using (request.Performance.Measure(SimulationPerformancePhase.KernelWorkspace))
-            {
-                actorEvaluator = GetEvaluator(pending);
-                actorEvaluator.Workspace.Require(pending.OutputLease);
-            }
+            ValidateProgramBinding(pending.Binding);
+            ActorEvaluator actorEvaluator = GetEvaluatorForFinalize(pending);
             Float32CharacterStateTransaction transaction = null;
             try
             {
@@ -302,21 +315,14 @@ namespace ThirdPersonSimulation
                     world.FinalBody,
                     world.AppliedDisplacement,
                     world.AppliedYawDegrees);
-                CharacterSimulationState finalState;
-                using (request.Performance.Measure(SimulationPerformancePhase.KernelStateCommit))
-                    finalState = transaction.Commit();
-                using (request.Performance.Measure(SimulationPerformancePhase.KernelResultFreeze))
-                {
-                    return new SimulationActorTickResult(
-                        pending.ActorId,
-                        pending.Tick,
-                        finalState,
-                        bodySample,
-                        expected.Motion,
-                        facts,
-                        actorEvaluator.Workspace.Presentation,
-                        trace);
-                }
+                CharacterSimulationState finalState = CommitState(transaction);
+                return CreateFinalResult(
+                    pending,
+                    finalState,
+                    bodySample,
+                    facts,
+                    trace,
+                    actorEvaluator.Workspace);
             }
             catch
             {
@@ -329,6 +335,40 @@ namespace ThirdPersonSimulation
                 transaction?.Dispose();
                 actorEvaluator.Workspace.End(pending.OutputLease);
             }
+        }
+
+        [PerformanceProbe("simulation.kernel.workspace")]
+        ActorEvaluator GetEvaluatorForFinalize(PendingCharacterEvaluation pending)
+        {
+            ActorEvaluator actorEvaluator = GetEvaluator(pending);
+            actorEvaluator.Workspace.Require(pending.OutputLease);
+            return actorEvaluator;
+        }
+
+        [PerformanceProbe("simulation.kernel.state-commit")]
+        CharacterSimulationState CommitState(Float32CharacterStateTransaction transaction)
+        {
+            return transaction.Commit();
+        }
+
+        [PerformanceProbe("simulation.kernel.result-freeze")]
+        SimulationActorTickResult CreateFinalResult(
+            PendingCharacterEvaluation pending,
+            CharacterSimulationState finalState,
+            CharacterBodySample bodySample,
+            List<GameplayFact> facts,
+            List<SimulationTraceRecord> trace,
+            Float32EvaluationWorkspace workspace)
+        {
+            return new SimulationActorTickResult(
+                pending.ActorId,
+                pending.Tick,
+                finalState,
+                bodySample,
+                pending.WorldRequest.Motion,
+                facts,
+                workspace.Presentation,
+                trace);
         }
 
         internal void Abort(PendingCharacterEvaluation pending)

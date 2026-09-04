@@ -54,6 +54,8 @@
 
 同类型还存在一个静态 `Fallback` 字段，不能当作实例输出。上述值类型负载可解释 `ByTrack.GetData` 最终写回的 `44` 字节相机核心数据；但它们与当前 `CameraFramePlan` 的 `FollowPoint/AimPoint/Orbit` 字段尚未建立逐项合同，因此当前实现不能把现有计划字段声称为该结构的等价物。
 
+工程侧以 `CameraWorldBasicData` 表达这五个实例字段，不携带静态 `Fallback`，并在真正接入计划前保留独立的有效性合同。
+
 metadata 只证明类型、字段、方法身份和地址，不证明函数体之外的完整演出规则。上表把这种边界保留下来，不能把 metadata 名称当成公式或阶段顺序。
 
 ## 补充闭合的 Profile、阻尼、锁定和曲线数据

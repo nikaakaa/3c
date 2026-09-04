@@ -72,9 +72,9 @@ namespace ThirdPersonCamera
         public float NearClipPlane => m_Lens.NearClipPlane;
         public float FarClipPlane => m_Lens.FarClipPlane;
         public Vector2 LookDelta => m_LookDelta;
-        public float OrbitYaw => m_Orbit != null ? m_Orbit.Yaw : 0f;
-        public float OrbitPitch => m_Orbit != null ? m_Orbit.Pitch : 0f;
-        public float OrbitRadius => m_Orbit != null ? m_Orbit.CenterRadius : 0f;
+        public float OrbitYaw => m_Orbit.Yaw;
+        public float OrbitPitch => m_Orbit.Pitch;
+        public float OrbitRadius => m_Orbit.CenterRadius;
         public string SequenceId => m_SequenceId ?? string.Empty;
         public string SourceId => m_SourceId ?? string.Empty;
         public ulong SourceActionInstanceId => m_SourceActionInstanceId;
@@ -84,8 +84,6 @@ namespace ThirdPersonCamera
         public float RollDegrees => m_RollDegrees;
         public CameraOrbitComposition Orbit => m_Orbit;
         public bool Valid => m_Valid;
-        public System.Collections.Generic.IReadOnlyList<CameraOrbitPayload> OrbitGroup =>
-            m_Orbit != null ? m_Orbit.Orbits : Array.Empty<CameraOrbitPayload>();
 
         public static CameraFramePlan Invalid => default;
 

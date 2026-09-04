@@ -7,12 +7,16 @@ namespace ThirdPersonCamera
     internal sealed class CharacterCameraFramePlanner
     {
         readonly CharacterCameraProjectionPayload m_Projection;
+        readonly CameraOrbitGeometry m_DefaultOrbitGeometry;
+        readonly Dictionary<CameraFrameOnePointByTrackPayload, CameraOrbitGeometry> m_TrackOrbitGeometries =
+            new Dictionary<CameraFrameOnePointByTrackPayload, CameraOrbitGeometry>();
         float m_Yaw;
         float m_Pitch;
 
         public CharacterCameraFramePlanner(CharacterCameraProjectionPayload projection)
         {
             m_Projection = projection ?? throw new ArgumentNullException(nameof(projection));
+            m_DefaultOrbitGeometry = CameraOrbitGeometry.Create(m_Projection.DefaultOrbitGroup);
         }
 
         public void Reset()
@@ -66,7 +70,7 @@ namespace ThirdPersonCamera
             float radius = m_Projection.DefaultSphere.Radius;
             float fieldOfView = m_Projection.DefaultFieldOfView;
             Vector2 compositionOffset = Vector2.zero;
-            IReadOnlyList<CameraOrbitPayload> orbitGroup = m_Projection.DefaultOrbitGroup;
+            CameraOrbitGeometry orbitGeometry = m_DefaultOrbitGeometry;
             bool orbitGroupUsesAbsoluteRadius = false;
             float evaluatedYaw = m_Yaw;
             float evaluatedPitch = m_Pitch;
@@ -96,7 +100,7 @@ namespace ThirdPersonCamera
                             0,
                             byTrack.CameraOrbits.Count - 1);
                         CameraOrbitPayload orbit = byTrack.CameraOrbits[orbitIndex];
-                        orbitGroup = byTrack.CameraOrbits;
+                        orbitGeometry = ResolveOrbitGeometry(byTrack);
                         orbitGroupUsesAbsoluteRadius = true;
                         radius = orbit.Radius;
                         if (!aimPointIsExplicit)
@@ -121,7 +125,7 @@ namespace ThirdPersonCamera
             Quaternion orbitRotation = Quaternion.Euler(evaluatedPitch, evaluatedYaw, 0f);
             aim += orbitRotation * new Vector3(compositionOffset.x, compositionOffset.y, 0f);
             CameraOrbitComposition orbitComposition = CameraOrbitComposition.Create(
-                orbitGroup,
+                orbitGeometry,
                 radius,
                 orbitGroupUsesAbsoluteRadius,
                 evaluatedYaw,
@@ -142,6 +146,16 @@ namespace ThirdPersonCamera
                 input.ResetHistory,
                 true,
                 rollDegrees: evaluatedRoll);
+        }
+
+        CameraOrbitGeometry ResolveOrbitGeometry(CameraFrameOnePointByTrackPayload stage)
+        {
+            if (!m_TrackOrbitGeometries.TryGetValue(stage, out CameraOrbitGeometry geometry))
+            {
+                geometry = CameraOrbitGeometry.Create(stage.CameraOrbits);
+                m_TrackOrbitGeometries.Add(stage, geometry);
+            }
+            return geometry;
         }
     }
 }

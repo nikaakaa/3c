@@ -335,6 +335,7 @@ namespace ThirdPersonSimulation
             m_Target.Commit(commitBatch);
         }
 
+        [PerformanceProbe("simulation.pipeline.ingress")]
         void ExecuteIngress(SimulationSessionLogicTickContext outer, ulong completedTick)
         {
             var context = new SimulationPipelineIngressContext(
@@ -347,10 +348,10 @@ namespace ThirdPersonSimulation
                 SimulationSessionFailureStage.Ingress,
                 outer.Source,
                 completedTick,
-                outer.Performance,
                 pass => pass.Execute(context));
         }
 
+        [PerformanceProbe("simulation.pipeline.schedule")]
         void ExecuteSchedule(SimulationSessionLogicTickContext outer, ulong completedTick)
         {
             var context = new SimulationPipelineScheduleContext(
@@ -363,7 +364,6 @@ namespace ThirdPersonSimulation
                 SimulationSessionFailureStage.Schedule,
                 outer.Source,
                 completedTick,
-                outer.Performance,
                 pass => pass.Execute(context));
         }
 
@@ -401,10 +401,12 @@ namespace ThirdPersonSimulation
                     step.Tick.Value,
                     performance,
                     PerformancePhase(stage),
+                    true,
                     () => pass.Execute(context));
             }
         }
 
+        [PerformanceProbe("simulation.pipeline.egress")]
         void ExecuteEgress(
             SimulationSessionLogicTickContext outer,
             int completedStepCount,
@@ -422,7 +424,6 @@ namespace ThirdPersonSimulation
                 SimulationSessionFailureStage.Egress,
                 outer.Source,
                 completedTick,
-                outer.Performance,
                 pass => pass.Execute(context));
         }
 
@@ -431,7 +432,6 @@ namespace ThirdPersonSimulation
             SimulationSessionFailureStage failureStage,
             SimulationTickSourceIdentity source,
             ulong completedTick,
-            ISimulationPerformanceSink performance,
             Action<ICompiledSimulationPipelinePassRuntime> execute)
         {
             for (int i = 0; i < m_Services.Passes.Count; i++)
@@ -444,8 +444,9 @@ namespace ThirdPersonSimulation
                         failureStage,
                         source,
                         completedTick,
-                        performance,
-                        PerformancePhase(phase),
+                        null,
+                        default,
+                        false,
                         () => execute(pass));
                 }
             }
@@ -458,14 +459,22 @@ namespace ThirdPersonSimulation
             ulong completedTick,
             ISimulationPerformanceSink performance,
             SimulationPerformancePhase performancePhase,
+            bool measurePerformance,
             Action execute)
         {
             bool trace = m_Target.DiagnosticsEnabled;
             long started = trace ? Stopwatch.GetTimestamp() : 0;
             try
             {
-                using (performance.Measure(performancePhase))
+                if (measurePerformance)
+                {
+                    using (performance.Measure(performancePhase))
+                        execute();
+                }
+                else
+                {
                     execute();
+                }
                 if (trace)
                     PublishPass(pass, source, completedTick, true, "Pipeline Pass completed.", Stopwatch.GetTimestamp() - started);
             }
@@ -485,21 +494,6 @@ namespace ThirdPersonSimulation
                     $"Pipeline Pass '{pass.Descriptor.PassId}' failed.",
                     exception,
                     pass.Descriptor.PassId.ToString());
-            }
-        }
-
-        static SimulationPerformancePhase PerformancePhase(SimulationPipelinePhase phase)
-        {
-            switch (phase)
-            {
-                case SimulationPipelinePhase.Ingress:
-                    return SimulationPerformancePhase.PipelineIngress;
-                case SimulationPipelinePhase.Schedule:
-                    return SimulationPerformancePhase.PipelineSchedule;
-                case SimulationPipelinePhase.Egress:
-                    return SimulationPerformancePhase.PipelineEgress;
-                default:
-                    return SimulationPerformancePhase.PipelineStepOther;
             }
         }
 

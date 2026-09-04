@@ -14,7 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   m_CalibrationId: Corin.FootPlacementRig
   m_SchemaVersion: 5
-  m_ContentRevision: 8a7eea2e2ee3c8766f5366972e7037129731a0ad43b53a576408e94235a937b3
+  m_ContentRevision: b4c646c77e349d0f4a25f68efe4729f654945696197b7dbc6779cd3234efe21e
   m_RigId: corin.animation-rig
   m_RigRevision: 87731f0d0ca14844bbf861368b9847b3
   m_CurrentSupportBaseFootLocalOffset: {x: 0, y: -0.08, z: 0}
@@ -27,17 +27,17 @@ MonoBehaviour:
   m_LeftSoleFrameLocalRotation: {x: 0.5018886, y: 0.4979625, z: 0.5029893, w: -0.49713477}
   m_RightHeelContactLocalOffset: {x: -0.08114601, y: 0.0014590034, z: -0.00019665039}
   m_RightToeContactLocalOffset: {x: -0.008352402, y: -0.0044627907, z: 0.0012893939}
-  m_RightSoleFrameLocalRotation: {x: 0.49782547, y: 0.4928122, z: 0.50724554, w: -0.5020041}
+  m_RightSoleFrameLocalRotation: {x: 0.4978254, y: 0.49281213, z: 0.5072455, w: -0.502004}
   m_GeometryValidation:
     m_SchemaVersion: 2
-    m_IdentityHash: 7d34976261728755d0bee26e1cf82d1f8601810a39b60ec0e01c2027fdc3e3c1
-    m_GeometryContentHash: 9996f30d90702cc7d2aa0f54d41501f6c2c38fdede3d8eff4e0ae1387b50325a
+    m_IdentityHash: 83b79a2fdef313728fb10596f935e705de1635bd67e465edce2d7d83ab0c179f
+    m_GeometryContentHash: 2e7f37998d1d35ddd48e58437baedcbfb269c0f0b51bd821953bc2b224ef0371
     m_RigId: corin.animation-rig
     m_RigRevision: 87731f0d0ca14844bbf861368b9847b3
     m_CalibrationId: Corin.FootPlacementRig
-    m_CalibrationRevision: 8a7eea2e2ee3c8766f5366972e7037129731a0ad43b53a576408e94235a937b3
+    m_CalibrationRevision: b4c646c77e349d0f4a25f68efe4729f654945696197b7dbc6779cd3234efe21e
     m_SamplingRigAssetGuid: 846373e25bc0479cb06bd295c0103817
-    m_SamplingRigDependencyHash: ee00c671fd96286aa554abcacfb0f8907a33756ccd99f5746dbbf564705e1dcd
+    m_SamplingRigDependencyHash: 4fed11c671c3679c7a140f31014bef00b8e31530c65d1cea93f25f7059ed90ba
     m_PreviewClipAssetGuid: 7dbd59f643bcfbe4495990d45ad359ef
     m_PreviewClipDependencyHash: bbaa8c9adb446f7f73662d2e2625bd3a2aa9810e3da6de1285b54109ab6f4e6e
     m_PreviewNormalizedTimeBits: 0

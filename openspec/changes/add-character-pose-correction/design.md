@@ -216,18 +216,20 @@ Agent 可以通过同一完整目标状态创建、修改和删除样本。动�
 
 ### 实现成本与运行成本
 
-估算单位为熟悉项目的开发者人日，覆盖正式作者工具、编译、运行接入和 Document；不是已测工时，不含动画美术制作、ZZZ 动态采样或项目现有未完成模块的收尾。
+2026-09-04：撤回先前的人日数字及分项加总。原估算没有完成现成源码与本项目接口的复用核算，不能作为交付工期或实施优先级依据。两种制作入口、两类驱动和 IK 前后组合的功能范围保持；不能用缩减功能来掩盖估算依据不足。
 
-| 可选业务范围 | 粗估 | 主要取舍 |
+| 工作内容 | 已有实现与已核对来源 | 实际需要补齐的部分 |
 |---|---|---|
-| 仅以素材和现有节点组合制作方向造型 | 3–6 | 作者依赖素材制作，缺少直接多骨骼样本编辑 |
-| 仅直接编辑多骨骼静态修正 | 8–15 | 程序内调形方便，已有素材需人工转成配置 |
-| 两种制作入口与参数驱动、显式前后放置 | 11–20 | 共用样本但需要完整导入/编辑/引用闭包 |
-| 本提案：再包含骨骼方向驱动和统一角色绑定 | 14–25 | 能表达运动造型与关节方向修正，增加标定、角度域和角色绑定工作 |
+| PoseGraph、IK、调度和最终输出 | 项目已有正式 Node Definition、Worker、FinalIK Pose Buffer 与唯一 Writer | 两个节点的编译/运行数据、读写影响和正式接线，不重建整个框架 |
+| 骨骼约束与混合参考 | 已检查官方 Animation Rigging 1.2.1 包中的 MultiRotationConstraintJob、OverrideTransformJob、TwistCorrectionJob 与 AnimationRuntimeUtils | 按目标数学选择可复用内容，适配现有 Pose 缓冲；AnimationStream 句柄与整套 RigBuilder 不能直接当成已兼容 |
+| 静态取帧、姿态数据与作者操作 | 已检查 SnapPose 的 PoseSampler、PoseApplicator、PoseData 和 MIT 许可证 | 从骨骼路径改为正式 Rig 身份，接入样本 owner、Mutation 与统一预览边界；不搬入直接修改运行 Actor Transform 的路径 |
+| 二维样本与两类驱动 | 项目已有二维权重求值，外部代码提供姿态采集与部分混合 | 中性参考差值、骨骼方向标定、参数坐标、单位与覆盖检查 |
+| 作者与 Document 闭环 | 项目已有 Profile/Graph、Capability、事务、严格 codec 与反向导出 | 扩展正式集合、绑定、节点字段和样本操作，复用已有事务 |
+| 完整角色观察 | 由既有场景预览变更提供正式运行接口 | 本功能的绑定、只读结果和生效状态；相关变更自身的收尾单独记录 |
 
-若进一步移植 ZZZ 动画/IK 双参考补偿，另估 5–10 人日，并先补运行配置与公式证据；它不是上述任务中的隐藏尾项。现有预览重构未完成时，其工期不能计入或冒充本功能已完成部分。
+源码依据：[Unity 官方包](https://download.packages.unity.com/com.unity.animation.rigging/-/com.unity.animation.rigging-1.2.1.tgz)、[SnapPose 取帧](https://github.com/alperunlu07/SnapPose/blob/main/package/Editor/Core/PoseSampler.cs)、[姿态应用](https://github.com/alperunlu07/SnapPose/blob/main/package/Editor/Core/PoseApplicator.cs)、[MIT 许可证](https://github.com/alperunlu07/SnapPose/blob/main/LICENSE.md)。官方包使用 Unity Companion License；引入代码时保留所需声明。以上已完成源码核对，尚未完成 3C 接入验证，不据此承诺新的缩短工期。
 
-本提案内部约分为：参数与数据合同 2–3、样本/骨骼方向数学及编译运行 4–7、取帧/直接编辑/正式观察接线 4–8、Document/装配/清理 4–7 人日。它们是工程量拆分，不替用户排列业务优先级。
+实施时按独立接入单元记录复用文件、适配调用点、实际新增逻辑与未解决依赖，再据完成证据估算剩余工作。ZZZ 动画/IK 双参考补偿继续属于范围外研究，不给它附加未经核算的工期数字。
 
 静态运行成本为权重求解、受影响骨骼混合和必要的子树重建。若复用现有全样本对比较权重算法，样本数为 N 时权重部分约为 O(N²)，混合约为 O(N×B)，另加 Rig 传播范围；不能把它宣称为固定三个样本的三角插值。前后各一个节点就各执行一次。实际 CPU 时间与页容量通过已有性能入口测量，当前没有可信毫秒估计。
 

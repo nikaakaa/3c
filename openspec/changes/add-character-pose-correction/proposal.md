@@ -36,4 +36,4 @@
 - 复用现有单骨骼更新、二维混合、Rig 与局部/Component 转换；保留 `Modify Bone`、`Additive Pose`、Clip/Blend Space 的原业务用途。静态 Correction Set 自己保存中性参考，不为本功能泛化现有 Additive 的 `RigReference` 接口。
 - 关联 `refactor-character-pose-graph-architecture`、`refactor-btsmtl-authoring-architecture` 和 `rebuild-btsmtl-preview-with-scene-play` 的正式接口；不覆盖它们正在修改的实现。保留 Foot IK 变更的业务所有权及已否决的膝角实验结论。
 - 现行拓扑文字、省略后置阶段的运行顺序、Document 可写内容与新增资源所有权需要对应 delta；局部速度的实现冲突及并行预览合同冲突在 `design.md` 单独列明。
-- 这是规划产物。完整设计、并列方案取舍、工程量估算和 current spec 对账见 `design.md`；不修改 current specs、其它 active change、项目代码或 Unity 资产。
+- 这是规划产物。完整设计、并列方案取舍、现成源码复用与剩余工作对账见 `design.md`；先前未经复用核算的工期数字已撤回，不作为实施依据。不修改 current specs、其它 active change、项目代码或 Unity 资产。

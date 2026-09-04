@@ -160,13 +160,8 @@ namespace ThirdPersonSimulation.Fixed
 
         PendingCharacterEvaluation EvaluateMeasured(SimulationEvaluateRequest request)
         {
-            using (request.Performance.Measure(SimulationPerformancePhase.KernelProgramValidation))
-                RequireBoundProgram(request.Binding);
-            ActorEvaluator actorEvaluator;
-            using (request.Performance.Measure(SimulationPerformancePhase.KernelWorkspace))
-            {
-                actorEvaluator = GetEvaluator(request);
-            }
+            ValidateProgramBinding(request.Binding);
+            ActorEvaluator actorEvaluator = GetEvaluatorForEvaluate(request);
             ActorOutputWorkspaceLease outputLease = actorEvaluator.Workspace.Begin(
                 request.ActorId,
                 request.Tick,
@@ -194,20 +189,13 @@ namespace ThirdPersonSimulation.Fixed
                         bodyMotion.Motion,
                         bodyMotion.Plan,
                         request.Program.Manifest.Capabilities.RequiredWorldCapabilities);
-                    using (request.Performance.Measure(SimulationPerformancePhase.KernelPendingLease))
-                    {
-                        var pending = new PendingCharacterEvaluation(
-                            request.Binding,
-                            request.ActorId,
-                            request.Tick,
-                            request.CurrentState,
-                            evaluation.Transaction,
-                            outputLease,
-                            worldRequest,
-                            request.DiagnosticsEnabled);
-                        leaseTransferred = true;
-                        return pending;
-                    }
+                    PendingCharacterEvaluation pending = CreatePendingEvaluation(
+                        request,
+                        evaluation,
+                        outputLease,
+                        worldRequest);
+                    leaseTransferred = true;
+                    return pending;
                 }
                 catch
                 {
@@ -220,6 +208,36 @@ namespace ThirdPersonSimulation.Fixed
                 if (!leaseTransferred)
                     actorEvaluator.Workspace.End(outputLease);
             }
+        }
+
+        [PerformanceProbe("simulation.kernel.program-validation")]
+        void ValidateProgramBinding(KernelProgramBinding binding)
+        {
+            RequireBoundProgram(binding);
+        }
+
+        [PerformanceProbe("simulation.kernel.workspace")]
+        ActorEvaluator GetEvaluatorForEvaluate(SimulationEvaluateRequest request)
+        {
+            return GetEvaluator(request);
+        }
+
+        [PerformanceProbe("simulation.kernel.pending-lease")]
+        PendingCharacterEvaluation CreatePendingEvaluation(
+            SimulationEvaluateRequest request,
+            CharacterOperationEvaluation evaluation,
+            ActorOutputWorkspaceLease outputLease,
+            CharacterWorldSolveRequest worldRequest)
+        {
+            return new PendingCharacterEvaluation(
+                request.Binding,
+                request.ActorId,
+                request.Tick,
+                request.CurrentState,
+                evaluation.Transaction,
+                outputLease,
+                worldRequest,
+                request.DiagnosticsEnabled);
         }
 
         ActorEvaluator GetEvaluator(SimulationEvaluateRequest request)
@@ -263,14 +281,8 @@ namespace ThirdPersonSimulation.Fixed
         SimulationActorTickResult FinalizeMeasured(SimulationFinalizeRequest request)
         {
             PendingCharacterEvaluation pending = request.Pending;
-            using (request.Performance.Measure(SimulationPerformancePhase.KernelProgramValidation))
-                RequireBoundProgram(pending.Binding);
-            ActorEvaluator actorEvaluator;
-            using (request.Performance.Measure(SimulationPerformancePhase.KernelWorkspace))
-            {
-                actorEvaluator = GetEvaluator(pending);
-                actorEvaluator.Workspace.Require(pending.OutputLease);
-            }
+            ValidateProgramBinding(pending.Binding);
+            ActorEvaluator actorEvaluator = GetEvaluatorForFinalize(pending);
             FixedCharacterStateTransaction transaction = null;
             try
             {
@@ -304,9 +316,7 @@ namespace ThirdPersonSimulation.Fixed
                     world.FinalBody,
                     world.AppliedDisplacement,
                     world.AppliedYawDegrees);
-                CharacterSimulationState finalState;
-                using (request.Performance.Measure(SimulationPerformancePhase.KernelStateCommit))
-                    finalState = transaction.Commit();
+                CharacterSimulationState finalState = CommitState(transaction);
                 using (request.Performance.Measure(SimulationPerformancePhase.KernelResultFreeze))
                 {
                     return new SimulationActorTickResult(
@@ -331,6 +341,20 @@ namespace ThirdPersonSimulation.Fixed
                 transaction?.Dispose();
                 actorEvaluator.Workspace.End(pending.OutputLease);
             }
+        }
+
+        [PerformanceProbe("simulation.kernel.workspace")]
+        ActorEvaluator GetEvaluatorForFinalize(PendingCharacterEvaluation pending)
+        {
+            ActorEvaluator actorEvaluator = GetEvaluator(pending);
+            actorEvaluator.Workspace.Require(pending.OutputLease);
+            return actorEvaluator;
+        }
+
+        [PerformanceProbe("simulation.kernel.state-commit")]
+        CharacterSimulationState CommitState(FixedCharacterStateTransaction transaction)
+        {
+            return transaction.Commit();
         }
 
         internal void Abort(PendingCharacterEvaluation pending)

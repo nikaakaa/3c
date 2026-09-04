@@ -58,6 +58,17 @@
 
 `WorldBasicCameraData.get_Location`（源码段 RVA `0xA3F750`）不是存储字段读取：它把值类型负载交给 `0x1E88D780` 计算 `cameraToPivot`，再用 `pivotLocation - cameraToPivot` 得到位置。该计算读取 `_rotation`、`_radius` 和 `_offset`，其中局部向量由 `offset.x/offset.y/radius` 组成；因此 `Location` 不能用当前 FreeLook 的中心半径属性直接替代。工程侧合同提供同名的 `CameraToPivot` 与 `Location` 派生值。
 
+### WorldBasicCameraData 的序列消费者与活动承载
+
+新增的类型/字段证据把 `WorldBasicCameraData` 的归属进一步固定在相机数据管线，而不是 FreeLook 轨道：
+
+- `CameraSequenceCollectionPlayer<WorldBasicCameraData>` 作为相机序列集合播放器的成员，`ICameraSubModule<WorldBasicCameraData>` 作为子模块输入；这证明序列结果以该值类型在相机模块内部流转，不是直接写 `CinemachineFreeLook`。
+- `CameraSequence.FixedInCoreSpace` 的 `activeChannel` 类型是 `WorldBasicCameraDataChannel`；`CameraShotData` 的进入/退出高级混合标记类型是 `WorldBasicCameraDataDeltaFlag`。这两处都以 WorldBasic 字段通道表达阶段选择或混合差异。
+- `MonoStageEnv` 的 `OPKELHFPFNI` 字段是 `Dictionary<string, CinemachineVirtualCamera>`，位于实例偏移 `0x90`。`GetVirtualCamera(string)` 从该字典按身份查找并返回 `CinemachineVirtualCamera`，不是返回 `CinemachineFreeLook`。
+- `MonoStageCamera` 的字段为 `followName`（`+0x20`）、`lookAtName`（`+0x28`）、`virtualCamera`（`+0x30`）和活动标记（`+0x38`）。`Awake`、`ActiveCam` 及其绑定辅助函数围绕这一个 `virtualCamera` 实例运行；目前只闭合了字段和承载身份，follow/look-at 名称最终解析到哪一个场景对象、WorldBasic 数据由哪一层写入该实例仍未闭合。
+
+因此当前工程的 `CinemachineCameraRigAdapter` 仍不能把 `CinemachineFreeLook` 当作 ZZZ 活动承载的等价物。`CameraWorldBasicData` 已先作为独立核心合同落地，但在最终 virtual camera 写入点、阶段组件和回读顺序闭合前，不接入现有 FreeLook，也不增加第二条运行输出路径。
+
 metadata 只证明类型、字段、方法身份和地址，不证明函数体之外的完整演出规则。上表把这种边界保留下来，不能把 metadata 名称当成公式或阶段顺序。
 
 ## 补充闭合的 Profile、阻尼、锁定和曲线数据

@@ -61,6 +61,13 @@ MonoBehaviour:
     m_CorrectionResponseMaximumDirectionChangeDegrees: 10
     m_GroundPenetrationTolerance: 0.01
     m_LandingLockCompletionTolerance: 0.01
+    m_EnableLockFoot: 0
+    m_FootLockHeight: 0.1
+    m_FootLockSpeed: 0.1
+    m_FootLockRange: 0.2
+    m_FootLockDamping: 0.6
+    m_FootLockStiffness: 0.2
+    m_FootLockCrossCheck: 0
     m_LockDistance: 0.08
     m_SlideDistance: 0.2
     m_PelvisSpringFrequency: 3

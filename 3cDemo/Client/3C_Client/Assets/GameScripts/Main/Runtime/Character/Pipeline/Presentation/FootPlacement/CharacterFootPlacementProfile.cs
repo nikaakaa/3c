@@ -290,6 +290,13 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         [SerializeField] float m_CorrectionResponseMaximumDirectionChangeDegrees;
         [SerializeField] float m_GroundPenetrationTolerance;
         [SerializeField] float m_LandingLockCompletionTolerance;
+        [SerializeField] bool m_EnableLockFoot;
+        [SerializeField] float m_FootLockHeight;
+        [SerializeField] float m_FootLockSpeed;
+        [SerializeField] float m_FootLockRange;
+        [SerializeField] float m_FootLockDamping;
+        [SerializeField] float m_FootLockStiffness;
+        [SerializeField] bool m_FootLockCrossCheck;
         [SerializeField] float m_LockDistance = 0.08f;
         [SerializeField] float m_SlideDistance = 0.2f;
         [SerializeField] float m_PelvisSpringFrequency = 3f;
@@ -312,6 +319,13 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 m_CorrectionResponseMaximumDirectionChangeDegrees,
                 m_GroundPenetrationTolerance,
                 m_LandingLockCompletionTolerance,
+                m_EnableLockFoot,
+                m_FootLockHeight,
+                m_FootLockSpeed,
+                m_FootLockRange,
+                m_FootLockDamping,
+                m_FootLockStiffness,
+                m_FootLockCrossCheck,
                 m_LockDistance,
                 m_SlideDistance,
                 m_PelvisSpringFrequency,
@@ -336,6 +350,13 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             float correctionResponseMaximumDirectionChangeDegrees,
             float groundPenetrationTolerance,
             float landingLockCompletionTolerance,
+            bool enableLockFoot,
+            float footLockHeight,
+            float footLockSpeed,
+            float footLockRange,
+            float footLockDamping,
+            float footLockStiffness,
+            bool footLockCrossCheck,
             float lockDistance,
             float slideDistance,
             float pelvisSpringFrequency,
@@ -358,6 +379,13 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 correctionResponseMaximumDirectionChangeDegrees;
             GroundPenetrationTolerance = groundPenetrationTolerance;
             LandingLockCompletionTolerance = landingLockCompletionTolerance;
+            EnableLockFoot = enableLockFoot;
+            FootLockHeight = footLockHeight;
+            FootLockSpeed = footLockSpeed;
+            FootLockRange = footLockRange;
+            FootLockDamping = footLockDamping;
+            FootLockStiffness = footLockStiffness;
+            FootLockCrossCheck = footLockCrossCheck;
             LockDistance = lockDistance;
             SlideDistance = slideDistance;
             PelvisSpringFrequency = pelvisSpringFrequency;
@@ -382,6 +410,13 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         internal float CorrectionResponseMaximumDirectionChangeDegrees { get; }
         internal float GroundPenetrationTolerance { get; }
         internal float LandingLockCompletionTolerance { get; }
+        internal bool EnableLockFoot { get; }
+        internal float FootLockHeight { get; }
+        internal float FootLockSpeed { get; }
+        internal float FootLockRange { get; }
+        internal float FootLockDamping { get; }
+        internal float FootLockStiffness { get; }
+        internal bool FootLockCrossCheck { get; }
         internal float LockDistance { get; }
         internal float SlideDistance { get; }
         internal float PelvisSpringFrequency { get; }
@@ -420,6 +455,16 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 GroundPenetrationTolerance <= 0f ||
                 !float.IsFinite(LandingLockCompletionTolerance) ||
                 LandingLockCompletionTolerance <= 0f ||
+                !float.IsFinite(FootLockHeight) ||
+                FootLockHeight <= 0f ||
+                !float.IsFinite(FootLockSpeed) ||
+                FootLockSpeed <= 0f ||
+                !float.IsFinite(FootLockRange) ||
+                FootLockRange <= 0f ||
+                !float.IsFinite(FootLockDamping) ||
+                FootLockDamping < 0f ||
+                !float.IsFinite(FootLockStiffness) ||
+                FootLockStiffness < 0f ||
                 !float.IsFinite(LockDistance) ||
                 LockDistance <= LandingAcceptanceDistance ||
                 LockDistance <= PathRevisionDistance ||
@@ -449,7 +494,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
     public sealed class CharacterFootPlacementProfile : ScriptableObject
     {
         public const string SchemaVersion =
-            "character-foot-placement-profile/v37-pelvis-same-level-down-limit";
+            "character-foot-placement-profile/v38-zzz-foot-lock-settings";
 
         [SerializeField] string m_ProfileId = string.Empty;
         [SerializeField] CharacterFootCurrentSupportQueryAuthoringSettings

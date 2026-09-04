@@ -2,8 +2,8 @@ using System;
 using System.Collections.Generic;
 using ThirdPersonCharacter.Pipeline.Simulation;
 using ThirdPersonGameplay.Tick;
+using ThirdPersonPerformance.Instrumentation;
 using ThirdPersonSimulation;
-using Unity.Profiling;
 using UnityEngine;
 
 namespace ThirdPersonCharacter.Pipeline
@@ -13,8 +13,6 @@ namespace ThirdPersonCharacter.Pipeline
     public sealed class SimulationSessionHost : MonoBehaviour, IGameplayRenderFrameInputTarget, IGameplayLogicTickTarget,
         ICharacterFutureBodyTranslationSource
     {
-        static readonly ProfilerMarker InputMarker = new ProfilerMarker("ThirdPerson.Session.Input");
-        static readonly ProfilerMarker LogicMarker = new ProfilerMarker("ThirdPerson.Session.LogicTick");
         static readonly ISimulationPerformanceSink Performance = UnitySimulationPerformanceSink.Instance;
 
         [SerializeField] SimulationSessionCompositionDefinition m_Composition;
@@ -136,17 +134,15 @@ namespace ThirdPersonCharacter.Pipeline
             CompleteSessionDisposal();
         }
 
+        [PerformanceProbe("session.input")]
         public void BeginRenderFrame(ulong renderFrame)
         {
             if (m_Disposed || m_Quiesced || m_State != SimulationSessionLifecycleState.Active)
                 return;
             try
             {
-                using (InputMarker.Auto())
-                {
-                    for (int i = 0; i < m_Registrations.Count; i++)
-                        m_Registrations[i].CaptureRenderFrame(renderFrame);
-                }
+                for (int i = 0; i < m_Registrations.Count; i++)
+                    m_Registrations[i].CaptureRenderFrame(renderFrame);
             }
             catch (Exception exception)
             {
@@ -179,13 +175,7 @@ namespace ThirdPersonCharacter.Pipeline
                     StepPreparation(context);
                     return;
                 }
-                using (LogicMarker.Auto())
-                {
-                    if (!ActorStartGatesReady())
-                        return;
-                    m_OutputLifecycle.BeginLogicTick();
-                    m_Runtime.LogicTick(BuildRuntimeContext(context, m_LaunchPlan.Descriptor.SourceClockId));
-                }
+                ExecuteActiveLogicTick(context);
             }
             catch (SimulationSessionCompositionException exception)
             {
@@ -202,6 +192,15 @@ namespace ThirdPersonCharacter.Pipeline
                 Fail(failure);
                 throw new SimulationSessionCompositionException(failure, exception);
             }
+        }
+
+        [PerformanceProbe("session.logic-tick")]
+        void ExecuteActiveLogicTick(GameplayLogicTickContext context)
+        {
+            if (!ActorStartGatesReady())
+                return;
+            m_OutputLifecycle.BeginLogicTick();
+            m_Runtime.LogicTick(BuildRuntimeContext(context, m_LaunchPlan.Descriptor.SourceClockId));
         }
 
         void Awake()

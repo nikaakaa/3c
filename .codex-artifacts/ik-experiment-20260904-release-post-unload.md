@@ -16,4 +16,13 @@
 
 ## 回放
 
-本候选提交后未能启动有效的同输入回放，不能把它当成通过或失败结论。为隔离后续“去掉 Locked 阶段”实验，已恢复到已验证的半步基线；本记录保留为未验证候选，不能用于行为对比。
+固定 Trace `43357ff3cd384e5cba75d2c31175b116` 已完整消费 1044/1044 帧并封口：
+
+- Samples：`3cDemo/Client/3C_Client/Diagnostics/GeneratedFootSampling/20260904-004344-1b5fa39a7d864a34a44c7156f41deb61/character-foot-ik%2Ffull.csv`
+- capturing/finalizing/analyzing 均为 false，编辑器保持 Edit；Console 只有既有 FinalIK serialization-depth 日志。
+- 右 1914 Post-Transition 条件命中，旧响应标量 `0.110955238` 被从 EffectiveCorrection 和 PreviousResponseOutputPoint 卸掉；右 1916 captured/after/output 为 `0.402557135/0.273897856/0.527033865m`，相比半步候选 `0.5010123/0.3408863/0.5647549m`。
+- 右 1916 target/solved extension `0.8492457/0.8492457`，bend `63.80986°`；sole/ankle/physical 首帧跳变 `0.247567/0.126515/0.126515m`，局部确实改善。
+- 但该逻辑对所有 ReleaseCompleted 生效：全局 final sole/ankle/physical 最大跳变达到 `0.388623/0.388555/0.388555m`（左 1313→1315），右另有约 `0.381m` 跳变；Plant positive `27→32`，左 2069 residual/output 和跳变也变差。
+- GroundPath 1796/292，Contact Edge 114，Landing/Release 24/53，Bend 172.9645°，Extension 0.999992/1.19071，Pelvis 753/2088，Physical 2088/2088；覆盖未缺失，但存在局部和全局回归。
+
+结论：局部右 1916 有收益，但无条件提前卸载会污染其它 ReleaseCompleted，造成 0.38m 级跳变和 5 个新增 Plant 穿透事件，判为失败。代码已恢复到半步基线，保留本样本和结论。

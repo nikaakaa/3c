@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using Cinemachine;
 using UnityEngine;
 
@@ -17,6 +18,7 @@ namespace ThirdPersonCamera
         CameraBasisSnapshot basisSnapshot;
         CameraRigResult result;
         CinemachineFreeLook.Orbit[] formalOrbitGroup;
+        float[] formalScreenY;
         bool missingFreeLookReported;
         bool missingTargetReported;
         bool invalidBrainReported;
@@ -90,7 +92,7 @@ namespace ThirdPersonCamera
             if (plan.ResetHistory)
                 freeLook.PreviousStateIsValid = false;
             UpdateBrain();
-            RefreshBasisSnapshot(plan.AimPoint);
+            RefreshBasisSnapshot(plan.AimPoint + plan.CameraOffset);
         }
 
         public void Reset()
@@ -218,19 +220,53 @@ namespace ThirdPersonCamera
                     orbit.Height,
                     orbit.Radius * radiusScale);
             }
+            ApplyScreenY(plan.OrbitGroup);
             if (formalOrbitGroup == null || formalOrbitGroup.Length != freeLook.m_Orbits.Length)
             {
                 formalOrbitGroup = new CinemachineFreeLook.Orbit[freeLook.m_Orbits.Length];
                 Array.Copy(freeLook.m_Orbits, formalOrbitGroup, freeLook.m_Orbits.Length);
+                formalScreenY = new float[plan.OrbitGroup.Count];
+                for (int i = 0; i < formalScreenY.Length; i++)
+                    formalScreenY[i] = plan.OrbitGroup[i].ScreenY;
+            }
+        }
+
+        void ApplyScreenY(IReadOnlyList<CameraOrbitPayload> orbitGroup)
+        {
+            for (int i = 0; i < orbitGroup.Count; i++)
+            {
+                CinemachineVirtualCamera rig = freeLook.GetRig(i);
+                CinemachineComposer composer = rig != null
+                    ? rig.GetCinemachineComponent<CinemachineComposer>()
+                    : null;
+                if (composer == null)
+                    throw new InvalidOperationException($"Camera Frame Plan orbit #{i} has no Cinemachine Composer.");
+                composer.m_ScreenY = orbitGroup[i].ScreenY;
             }
         }
 
         void RestoreFormalOrbitGroup()
         {
             if (freeLook == null || freeLook.m_Orbits == null || formalOrbitGroup == null ||
-                formalOrbitGroup.Length != freeLook.m_Orbits.Length)
+                formalOrbitGroup.Length != freeLook.m_Orbits.Length || formalScreenY == null ||
+                formalScreenY.Length != formalOrbitGroup.Length)
                 return;
             Array.Copy(formalOrbitGroup, freeLook.m_Orbits, formalOrbitGroup.Length);
+            ApplyFormalScreenY();
+        }
+
+        void ApplyFormalScreenY()
+        {
+            for (int i = 0; i < formalScreenY.Length; i++)
+            {
+                CinemachineVirtualCamera rig = freeLook.GetRig(i);
+                CinemachineComposer composer = rig != null
+                    ? rig.GetCinemachineComponent<CinemachineComposer>()
+                    : null;
+                if (composer == null)
+                    throw new InvalidOperationException($"Formal camera orbit #{i} has no Cinemachine Composer.");
+                composer.m_ScreenY = formalScreenY[i];
+            }
         }
 
         void ApplyOrbit(float yaw, float pitch)

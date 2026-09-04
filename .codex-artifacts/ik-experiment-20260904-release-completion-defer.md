@@ -16,4 +16,13 @@
 
 ## 回放
 
-待固定 Trace 回放完成后补充实际 Samples 与完整对比。若事件时序、脚位跳变或穿透变坏，保留样本并精确回退本轮代码，恢复半步交接候选。
+固定 Trace `43357ff3cd384e5cba75d2c31175b116` 已完整消费 1044/1044 帧并封口：
+
+- Samples：`3cDemo/Client/3C_Client/Diagnostics/GeneratedFootSampling/20260904-002452-4e250168e7f94dfbba2139ee3f5fb0ce/character-foot-ik%2Ffull.csv`
+- capturing/finalizing/analyzing 均为 false，编辑器回到 Edit；Console 只有既有 FinalIK serialization-depth 日志。
+- 右 1914 不再发布 `ReleaseCompleted`，右 1916 从 `ContactAcquired(6)` 改为 `NewEventContactAcquired(13)`；右 1926 再次发生新接触，状态链发生重排。
+- 右 1916 Plant residual 没有减少：captured/after/output 仍为 `0.5135124/0.349391252/0.5699288`，没有 Plant output 收益。
+- 全局 GroundPath 1796/292、Contact Edge 114、Plant positive 27，但 Landing/Release 从 `24/53` 变为 `21/6`，丢失 47 个 Release 事件；右脚跳变回到原基线而不是改善。
+- Bend `172.9645°`、Extension `0.999992/1.19071`、Pelvis 753/2088、Physical 2088/2088 保持数值覆盖；左 2069 只有微小漂移。
+
+结论：延后 Release 完成造成生命周期重排，未解决脚位问题，判为失败。保留本样本和记录，精确回退 `2106f0b8e`，恢复 `706d83fd1` 半步行为。

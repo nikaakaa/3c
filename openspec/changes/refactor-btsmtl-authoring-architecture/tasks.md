@@ -2,7 +2,7 @@
 
 - [ ] 1.1 核对实际工作区代码、未提交差异、作者资产、Program／Projection／Numeric Target、Rig、场景和输入trace，交付可重建的迁移基线记录及其他任务正确修改的保护清单。
 - [ ] 1.2 按design迁移表盘点每个目标模块的输入输出、现有调用者和待删除实现，交付覆盖节点、Document、窗口、调参与外层Projection的引用清单；通用解释器及TrainingEnemy不进入删除或资产迁移清单。
-- [ ] 1.3 对齐场景预览第6／7节、Pose架构、相机、ACL和诊断变更的共享接口，交付每个重叠调用点的唯一实施归属与依赖；有相反需求时保留明确冲突记录，不覆盖已有实现。
+- [ ] 1.3 核对与预览、Pose架构、相机、ACL和诊断变更共用文件的现有接口，交付本次作者职责与各外部change功能范围的边界表；不引入场景接入任务或预览完成依赖，有相反需求时保留冲突记录。
 - [ ] 1.4 使用既有正式Replay／Proof和比较入口取得同版本、同输入的完整重复运行结果，记录输入、Body、表现时间和采样身份；只有无运行错误且证据完整的结果进入本次行为保持基线。
 
 ## 2. BTSMTL节点作者模块
@@ -56,34 +56,29 @@
 - [ ] 6.7 将只读运行值、作者内容、layout和选择刷新分别路由，移除整块Details／Bottom Dock逐帧Clear；交付保持字段草稿、选择、滚动与折叠的更新路径，外部owner变化仍走原冲突规则。
 - [ ] 6.8 收敛Timeline窗口binding与订阅生命周期，删除重复时间定位订阅、Pause和Dispose；交付单次命令／通知的唯一调用链，保持Timeline交互、几何、曲线和本地selection所有权。
 
-## 7. 调参与运行观察模块
+## 7. 既有调参与运行观察模块
+
+本章只提取当前已有实现并保持其目标解析、字段资格、保存与采用规则；场景预览的统一Actor接入、多Actor规则和权限变化由独立预览change实施。
 
 - [ ] 7.1 从Pose预览视口提取字段到owner／Tuning Layout的映射及正式作者值读写，继续消费原Capability与Mutation；交付相同字段资格、值域和Undo结果。
 - [ ] 7.2 提取候选构造、精确Actor提交和generation管理，复用现有Candidate Compiler与Runtime协调器；交付窗口不再构造候选或读取Program私有表的引用检查。
-- [ ] 7.3 提取作者保存、运行排队、已采用、需Build和拒绝结果的状态投影，保留NextFrame／NextActivation；交付以运行确认更新状态且失败保留作者值与上一运行值的调用链。
-- [ ] 7.4 接通Undo／Redo和外部作者变化后的候选更新／失效，保持Document TreeDirty／Conflict及Play门禁；通过既有同步状态与调参报告核对无自动apply／rebase或产物写入。
+- [ ] 7.3 提取既有作者保存、运行排队、已采用、需Build和拒绝结果的状态投影，保留NextFrame／NextActivation；交付迁移前后相同采用结果与失败处理的调用链，不新增场景运行资格。
+- [ ] 7.4 迁移既有Undo／Redo和外部作者变化后的候选更新／失效处理，保持Document TreeDirty／Conflict及Play门禁；通过既有同步状态与调参报告核对无自动apply／rebase或产物写入。
 - [ ] 7.5 提取Tree／Pose／Action／Timeline共有的只读事实解析，窗口保留各自Follow／Pin与interest；交付相同source map下的观察投影及单窗口解绑不清理其他窗口状态的生命周期实现。
 
-## 8. 与场景预览的唯一接入
+## 8. 清理与合同同步
 
-- [ ] 8.1 对照场景预览变更的最终控制、Actor绑定和字段资格合同，登记共享调用点的实际交付提交；交付本变更与其第6／7节任务的一一对应，已完成调用点不再次实施。
-- [ ] 8.2 在其正式场景控制可用后，把工作区运行命令与目标投影接到唯一协调器，窗口只消费领域接口；交付无独立Start／Stop／时钟／角色执行逻辑的调用链。
-- [ ] 8.3 将提取的调参和观察模块接到真实Actor，保持窗口本地选择和正式场景generation失效规则；交付相同角色运行事实与参数采用报告，缺失场景合同不以空实现或兼容分支替代。
-- [ ] 8.4 与场景预览切换提交核对旧播放器、fixture、Motion预览、资源接管和窗口字段的删除归属，交付完整调用者／资源零引用结果；原生素材编辑和离线分析入口仍有明确消费者。
+- [ ] 8.1 按design目录图完成Editor内部文件／类型职责整理，保留脚本meta、正式窗口类型和既有序列化身份；交付最终代码地图与旧文件名／转发alias清理结果。
+- [ ] 8.2 检查节点模块、Document模块和Projection模块的引用方向，交付公共Framework无Character／AI／Agent DTO反向依赖、无新增循环程序集引用的结果。
+- [ ] 8.3 检查正式作者资产、Document schema／文件集合、五MCP工具、Build和运行ABI保持；交付差异清单，发现必须改变的外部合同先更新明确范围，不能自动加兼容。
+- [ ] 8.4 随最终目录更新 `btsmtl-agent-authoring` 及其当前合同的代码地图，交付每个被引用文件／类型均可解析的检查结果；不增加新的可写字段或生命周期工具。
+- [ ] 8.5 按实际实施内容安装本change两份delta，并对账设计中列出的保持项和其他change已安装的共享接口；交付无相反重复实施要求的规范对账记录，不等待或实施外部场景预览能力。
+- [ ] 8.6 对全部作者迁移单元执行旧Editor实现、旧菜单、旧窗口状态键及资源引用定向搜索，交付逐项删除或保留业务依据；通用解释器和旧完整角色播放器的整体去留不计入本次清理。
 
-## 9. 清理与合同同步
+## 9. 集成证据与交付
 
-- [ ] 9.1 按design目录图完成Editor内部文件／类型职责整理，保留脚本meta、正式窗口类型和既有序列化身份；交付最终代码地图与旧文件名／转发alias清理结果。
-- [ ] 9.2 检查节点模块、Document模块和Projection模块的引用方向，交付公共Framework无Character／AI／Agent DTO反向依赖、无新增循环程序集引用的结果。
-- [ ] 9.3 检查正式作者资产、Document schema／文件集合、五MCP工具、Build和运行ABI保持；交付差异清单，发现必须改变的外部合同先更新明确范围，不能自动加兼容。
-- [ ] 9.4 随最终目录更新 `btsmtl-agent-authoring` 及其当前合同的代码地图，交付每个被引用文件／类型均可解析的检查结果；不增加新的可写字段或生命周期工具。
-- [ ] 9.5 按实际实施内容安装本change两份delta，并对账设计中列出的保持项及scene-play／Pose／IK／相机／ACL接口；交付无相反重复实施要求的规范对账记录，不将未完成外部能力写成current truth。
-- [ ] 9.6 对全部迁移单元执行旧实现、旧菜单、旧窗口状态键及资源引用定向搜索，交付逐项删除或保留业务依据；通用解释器整体去留不被伪装成本次已完成清理。
-
-## 10. 集成证据与交付
-
-- [ ] 10.1 完成现有Editor编译与程序集依赖检查；如使用dotnet／msbuild，命令带 `--disable-build-servers /nr:false /p:UseSharedCompilation=false`，结束后立即执行 `dotnet build-server shutdown`；Unity MCP每次显式传 `unity_instance`、CLI每次传 `--instance`，交付明确错误归属的构建记录，不运行Unity batchmode。
-- [ ] 10.2 使用现有Character／AI Validator和Document生命周期对账完整输入到最终作者结果，交付strict parse、hash、计划、同一事务和reverse export的适用证据，不新增测试代码。
-- [ ] 10.3 通过已有正式Replay／Proof比较固定基线和上一保留小步，交付输入／Body／时间／来源／Foot／Pelvis／Goal／Solved／Physical分层差异；运行错误、缺帧或缺少时间对齐条件均不得记为通过。
-- [ ] 10.4 执行本change严格校验及限定改动的 `git diff --check`，交付proposal、两份delta、design和tasks与最终范围一致的结果；未完成的外部场景接入依赖继续保持未勾选。
-- [ ] 10.5 为每个完整迁移单元形成详细中文小步提交，交付提交、文件跳转、删除清单和实际验证结果；不夹带其他任务修改，不以剩余类行数或文件数量声明完成。
+- [ ] 9.1 完成现有Editor编译与程序集依赖检查；如使用dotnet／msbuild，命令带 `--disable-build-servers /nr:false /p:UseSharedCompilation=false`，结束后立即执行 `dotnet build-server shutdown`；Unity MCP每次显式传 `unity_instance`、CLI每次传 `--instance`，交付明确错误归属的构建记录，不运行Unity batchmode。
+- [ ] 9.2 使用现有Character／AI Validator和Document生命周期对账完整输入到最终作者结果，交付strict parse、hash、计划、同一事务和reverse export的适用证据，不新增测试代码。
+- [ ] 9.3 通过已有正式Replay／Proof比较固定基线和上一保留小步，交付输入／Body／时间／来源／Foot／Pelvis／Goal／Solved／Physical分层差异；运行错误、缺帧或缺少时间对齐条件均不得记为通过。
+- [ ] 9.4 执行本change严格校验及限定改动的 `git diff --check`，交付proposal、两份delta、design和tasks与作者重构范围一致的结果；完成条件不包含独立预览change的实施进度。
+- [ ] 9.5 为每个完整迁移单元形成详细中文小步提交，交付提交、文件跳转、删除清单和实际验证结果；不夹带其他任务修改，不以剩余类行数或文件数量声明完成。

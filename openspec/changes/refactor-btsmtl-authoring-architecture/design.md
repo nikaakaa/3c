@@ -14,7 +14,7 @@
 | `AgentAuthoring/AgentAuthoringTargetMapper.cs` 内 `AgentAuthoringPackageMapper` | 2235 | Document物理分片与内部目标的双向映射 |
 | `Authoring/PoseGraph/CharacterPresentationPoseGraphEditor.cs` 内 `CharacterPresentationPoseGraphEditorWindow` | 2182，另有partial | 工作区装配、导航、创建、选择、校验定位、Build、运行观察与调参状态 |
 | `Authoring/SharedGraph/BtsmtlGraphAuthoringCapabilities.cs` | 1993 | 节点登记、字段校验、创建配置、端口、显示和Document描述投影 |
-| `Authoring/PoseGraph/CharacterPoseAuthoringBottomDock.cs` 内 `CharacterPosePreviewViewport` | 1615 | 视口、目标、fixture、时钟、事实输入、调参和观察 |
+| `Authoring/PoseGraph/CharacterPoseAuthoringBottomDock.cs` 内 `CharacterPosePreviewViewport` | 1615 | 只整理其中既有作者调参、选择与只读观察；fixture、时钟和执行输入仅作为外部边界识别 |
 | `Authoring/ActionWorkspace/ActionAnimationAuthoringWorkspaceWindow.cs` | 1508 | 关系解析、Timeline装配、Details、导航、Build、Preview与Live |
 | `Editor/CharacterSimulation/Compilation/Presentation/CharacterPresentationProjectionCompiler.cs` | 文件3051 | 来源目录、producer、混合、脚部分析投影、Pose编译输入、相机／Cue及装备组装 |
 
@@ -22,7 +22,7 @@
 
 共享 `GraphAuthoringEditorShell`、Canvas、Details、Navigator、Capability与Port Shape已存在。Tree窗口使用Shell；Pose与Action窗口复用部分组件但仍自行装配较多流程。`TimelineEditorWorkspaceView` 重复订阅时间定位刷新，并有重复Pause／Dispose；`BaseTreeWindow.Update` 在编译时直接Close，创建阶段还调用关闭通知。Action工作区每次Preview求值可清空并重建底部控件。上述是静态代码事实，不是卡顿根因或性能收益的实测。
 
-旧完整角色Preview的时钟、fixture、独立位移求值和资源接管由 `rebuild-btsmtl-preview-with-scene-play` 负责替换。本变更只拆出其中会继续使用的作者与观察能力，不先重构一遍将被删除的播放器。
+旧完整角色Preview的时钟、fixture、独立位移求值和资源接管由 `rebuild-btsmtl-preview-with-scene-play` 负责替换。本变更只整理既有作者与观察能力并保持当前行为，不先重构一遍将被删除的播放器，不承担场景预览接入。两份change可以分别完成与验收，共享文件发生变化时只做接口对账。
 
 `openspec/AGENTS.md` 已由用户删除。本次遵循根AGENTS、当前技能和CLI返回的spec-driven规则，不恢复该文件。
 
@@ -34,13 +34,13 @@
 - 人工操作、Agent目标状态与编译继续基于同一正式作者语义；内部拆分保持现有身份、默认值、顺序、值域、错误合同和生成内容。
 - 窗口保留视图状态，领域模块处理业务命令，正式运行拥有状态演进；运行刷新不夺走作者输入。
 - 被替代的Editor实现及转发接口随调用者迁移删除，文件名与最终类型职责一致。
-- 为既有场景运行提案提供唯一作者端接入，完成跨提案交接而不另建工作台、播放器或事务服务。
+- 保持现有作者、调参和观察入口的行为，整理后的接口可由其他独立change消费；本变更不新增工作台、播放器或事务服务。
 
 **Non-Goals:**
 
 - 不改变Gameplay、Pose、Foot、Pelvis、FBBIK、相机、ACL、网络或物理算法，不接管对应active change的行为任务。
 - 不改变Unity作者资产模型、序列化节点类型、Graph／Timeline ownership、stable identity、Document v4正文或五个MCP生命周期；内部Editor类型改名不作为数据格式升级。
-- 不在本变更新建场景启动器、预览协调器、Replay播放器、采样器、评分器或构建发布流程；不安装插件，不改变Enter Play Mode设置。
+- 不实施场景预览的启动、播放切换、Actor统一接入、试验重建、运行权限调整或旧播放器／fixture删除；不新建预览协调器、Replay播放器、采样器、评分器或构建发布流程，不安装插件，不改变Enter Play Mode设置。
 - 不把大类拆成多个partial、万能Context或按任意字符串分发的service作为完成结果；不设统一行数上限或用文件数量衡量质量。
 - 不删除仍被现行graph-core合同允许的整套通用解释器。其产品用途尚未决定；本变更只清理已被新Editor模块实际取代且引用闭合的实现，不修改TrainingEnemy资产。
 
@@ -121,7 +121,6 @@ flowchart LR
 | 领域页面Presenter | 只读文档投影、选择、Capability | Navigator／Details内容与typed命令 | 随页面绑定，不拥有运行 |
 | 已发布状态投影 | 明确产物与作者来源 | Available／Stale／需要Build及原因 | 依赖变化或显式构建后刷新 |
 | 窗口运行观察绑定 | 显式target、source map、Follow／Pin | 当前合法committed事实 | target结束或identity变化时失效 |
-| 场景运行控制 | 场景提案定义的显式请求 | 运行阶段及可用Actor | 由场景预览变更的唯一协调器拥有 |
 
 Graph Shell只装配通用区域、画布、选择与命令表面。Tree／AI／Pose的页面路由、节点创建和业务Details由各domain adapter拥有；Timeline保留自己的时间轴交互表面，不能为了共用窗口而转换为Graph或改变Graph breadcrumb合同。Action Workspace保留精确Definition／Action／call-site关系解析，并复用同一导航、观察和状态服务。
 
@@ -131,7 +130,7 @@ Graph Shell只装配通用区域、画布、选择与命令表面。Tree／AI／
 
 刷新分为作者内容变化、layout变化、选择变化、运行值变化和产物状态变化。前两类只重建实际受影响的投影；选择变化重绑Details；运行值变化只更新已存在的只读字段。Snapshot通知不能 `Clear()` 整个编辑区域、改变焦点或重复提交命令。隐藏面板延迟到再次展开时读取当前事实，是否撤销诊断interest仍由已有资格合同决定，不能借UI优化改变采样结果。
 
-**取舍：** 一个全局选中角色和页面让首次接线简单，但会破坏多窗口独立观察；完全独立的工作区则反复解析相同业务关系。这里共享只读文档／产物事实与正式运行控制，窗口独立保存页面、选择和观察实例。
+**取舍：** 一个全局选中角色和页面让首次接线简单，但会破坏多窗口独立观察；完全独立的工作区则反复解析相同业务关系。这里共享只读文档／产物查询能力，窗口独立保存页面、选择和观察实例；不合并或重设当前Preview／Live会话的运行所有权。
 
 ### 5. 调参从视口提取，保持作者保存和运行采用的区别
 
@@ -141,7 +140,7 @@ Graph Shell只装配通用区域、画布、选择与命令表面。Tree／AI／
 
 以修改状态转换时长为例：Details提交字段命令；原Mutation校验并保存作者值；调参模块按当前布局构造候选；Actor在原定NextFrame／NextActivation边界采用；运行事实确认后UI才显示已生效。保存成功但运行拒绝时保留作者值、Undo和上一份运行参数，并显示两者不同。Undo／Redo同样从最终作者值生成候选。布局或结构变化失效时显示需要Build，不改写旧Projection来容纳新字段。
 
-原本允许对Live Actor调参的入口保留权限；场景运行期间字段资格、共享Profile对多个Actor的作用规则以及“构建并重启”由场景预览提案唯一拥有。本变更提取共用实现并接到该合同，不提前把所有Live字段变为可写。Document五工具的Play门禁保持，人工参数修改只形成正常TreeDirty／Conflict，不自动apply或rebase。
+本节只提取当前已经存在的Preview／Live调参实现，保持原目标解析、字段资格、保存与采用规则。场景运行中的统一Actor接入、多Actor采用规则、运行权限调整和“构建并重启”由场景预览提案实施，本变更不预先接入或模拟这些能力。Document五工具的Play门禁保持，人工参数修改只形成正常TreeDirty／Conflict，不自动apply或rebase。
 
 **取舍：** 把参数提交留在视口中容易直接取得目标，但其他页面必须复制同样流程；把所有角色默认值和运行参数放进全局管理器又会混淆作用对象。本设计采用明确owner与Actor输入的领域调参服务，运行历史仍由原Runtime拥有，窗口只持有自己的观察绑定。
 
@@ -181,9 +180,9 @@ Graph Shell只装配通用区域、画布、选择与命令表面。Tree／AI／
 | `AgentAuthoringDocumentTransactionServiceV4.cs`、`AgentAuthoringDocumentV4Exporter.cs` | 与当前真实类型 `AgentAuthoringDocumentApplicationService`、`AgentAuthoringDocumentExporter` 对应的文件 | 只按实际职责调整组织与名字；事务生命周期不分散 |
 | `BaseTreeWindow.cs` 内导航／overlay控制 | 现有Tree Editor下明确的Navigation／Diagnostics模块 | 正式窗口保留薄装配；不因纯移动改变菜单和资产打开入口 |
 | Pose窗口与 `CharacterPresentationPoseGraphEditor.Tuning.cs` | Pose页面导航、命令、发布状态、调参领域模块 | 保留正式EditorWindow类型；移除已提取的字段、业务分支与不再需要的partial |
-| `CharacterPoseAuthoringBottomDock.cs` | 视口显示、目标投影、调参状态展示；运行侧委托场景提案 | 只移动会保留的作者功能；fixture／时钟随场景切换删除 |
+| `CharacterPoseAuthoringBottomDock.cs` | 既有作者调参、目标显示和只读观察模块 | 保持当前调用与行为，不迁移fixture／时钟；其后续替换归独立预览change |
 | `ActionAnimationAuthoringWorkspaceWindow.cs` | Action关系解析、页面Presenter、只读运行投影、显式命令适配 | 窗口不再构造业务快照和编译候选，不再逐帧重建整组控件 |
-| `TimelineEditorWorkspaceView.cs` | 保留Timeline交互／几何／绘制模块，缩小窗口binding和刷新职责 | 删除重复订阅／Pause／Dispose；旧预览调用者由场景提案接管 |
+| `TimelineEditorWorkspaceView.cs` | 保留Timeline交互／几何／绘制模块，缩小窗口binding和刷新职责 | 删除重复订阅／Pause／Dispose并保持现有播放行为；播放控件改接场景不在本次范围 |
 | `CharacterPresentationProjectionCompiler.cs` | 现有 `Compilation/Presentation/` 下的Sources、Producers、Blending与Composition模块 | 使用已有Linked／MM等模块；最终Compiler仅组织明确依赖 |
 
 这是职责及目标目录图，不要求一个DTO一个文件。命名以业务职责为准；纯Editor类型和文件可直接改名并迁移调用者。Unity脚本文件移动保留对应 `.meta` 身份，既有序列化节点类型、正式EditorWindow类型、菜单／资产打开入口和仍使用的资源身份不随内部整理重命名。
@@ -230,14 +229,14 @@ Graph Shell只装配通用区域、画布、选择与命令表面。Tree／AI／
 
 | active change | 它继续拥有的工作 | 与本变更的交接 |
 |---|---|---|
-| `rebuild-btsmtl-preview-with-scene-play` | 场景、实例级运行控制、输入、运行权限、试验重建、旧完整预览删除 | 其第6节窗口迁移与第7节调参接入消费本次提取的模块；同一调用点迁移由首先落地的闭合提交交付，另一change引用该结果，不再次实现 |
+| `rebuild-btsmtl-preview-with-scene-play` | 场景、实例级运行控制、输入、播放控件改接、统一Actor、运行权限、试验重建、旧完整预览删除 | 本变更只整理现有作者实现；其第6／7／9节任务全部留在预览change。双方按实际已安装接口适配，不共享实施勾选，不将预览完成设为作者重构的门禁 |
 | `refactor-character-pose-graph-architecture` | 已有Node Definition、Compiler Pass、Actor状态、根事务、Tuning与诊断事实 | 本次只整理作者窗口和外层编译组织；沿最终公开接口，不恢复旧Executor／CaptureViewLease或复制节点规则 |
 | `rebuild-character-foot-ik-from-zzz-pik` 与旧stabilize | 新算法、输入来源、几何、骨盆、配置和诊断语义 | 新PIK已明确改变旧数值目标，本次不能同时要求其新算法保持旧Foot输出；按实际采用版本固定本次结构基线，不接管旧相反任务 |
 | `rebuild-character-camera-from-zzz` | 相机算法、资源、Graph／Timeline合同和领域Projection | 本次为既有相机投影保留明确模块边界；未来新Camera payload由相机change接入。其旧fixture／seek与场景方案的冲突交回场景统一计划 |
 | `add-acl-animation-runtime` | 正式Source backend、资源、Scalar／属性混合和唯一最终发布扩展 | 消费它实际已安装的公开作者与Projection合同；不复制解码、表情绑定或另一资源表 |
 | 采样／分析／性能changes | 字段与schema、采样资格、构建插桩、Capture门禁和比较器 | 本次只消费正式结果；不修改评分补偿差异，不恢复已删除的采样桥接 |
 
-以上交接不是等待所有active change归档。只有具体共享接口和最终场景binding形成真实依赖；其余模块可按自己的完整边界推进。相同文件上已存在正确修改时保留，出现相反需求或不可合并接口时列出业务取舍交由用户决定，不能直接覆盖。
+以上对账只处理共享代码的接口变化，不建立“必须等场景预览完成”的功能依赖。作者重构以现有作者功能的职责整理和行为保持独立验收；预览change以其正式场景运行和旧链删除独立验收。相同文件上已存在正确修改时保留，出现相反需求或不可合并接口时列出业务取舍交由用户决定，不能直接覆盖。
 
 ## Risks / Trade-offs
 
@@ -246,7 +245,7 @@ Graph Shell只装配通用区域、画布、选择与命令表面。Tree／AI／
 - [窗口刷新覆盖作者正在输入的值] → 区分作者revision与运行snapshot变化，只刷新只读显示；owner真变更走既有冲突／取消边界。
 - [共享Profile修改被误认为所有Actor已应用] → 作者保存结果与每个明确目标的运行采用分开，沿原目标身份与确认事实显示。
 - [Projection提取改变dense索引或数学] → 保留原目录排序与函数计算，按同输入canonical产物和分层运行结果核对；不以新hash自动认可差异。
-- [本次与场景预览分别写一套适配] → 公共运行控制和字段资格以场景提案为唯一合同，作者模块只实现正式消费；切换前对照双方调用点清单。
+- [作者重构重新包含场景预览实施] → 本次任务不包含场景控制、播放切换、统一Actor和旧播放器删除；只核对既有公开接口，后续场景能力由独立change接入。
 - [通用解释器或素材工具被当作旧Preview误删] → 删除必须有实际调用者与资源闭包依据；整套解释器产品去留、原生素材编辑及离线分析不在本次删除范围。
 - [其他任务在回放中改变代码／场景] → 每次运行记录精确工作目录与Unity实例；同一实例的Build／Refresh／Play／切场景按明确运行所有权执行，同机性能采集避免竞争负载。
 - [只看到Completed便当作基线] → 同时核对正式运行错误、完整输入、Proof和原始采样；缺失证据不计通过，也不在本change增加替代验证路径。
@@ -258,8 +257,7 @@ Graph Shell只装配通用区域、画布、选择与命令表面。Tree／AI／
 3. **Document模块。** 按分片、对账、lowering的依赖迁移一个完整业务闭包，保持同一Application Service与计划入口；每个闭包用现有严格解析、dry-run、apply／Undo和反向导出结果对账，不让分片各自提交。
 4. **外层Projection。** 从已有typed输入和输出边界提取内容模块，逐个保持canonical产物；最后Compiler只组织原顺序及统一结果。该步骤不依赖场景预览已完成。
 5. **工作区与调参。** 提取共享区域、定位与视图生命周期，以及领域页面、发布状态、调参和只读投影；修复本delta的编译恢复、刷新和重复通知。只整理会保留的能力，不增设旧Preview替身。
-6. **与场景预览联合切换。** 在其正式运行控制和Actor绑定可用后，窗口接到同一合同，完成调参与观察调用点迁移；旧完整角色播放器、fixture和对应资源由该change同一切换单元删除。本change该集成项在实际接入前保持未完成，不用空实现、兼容开关或另一个协调器顶替。
-7. **交付每个闭合提交。** 文件／类型改名、调用者迁移、旧实现删除与对应证据一起形成中文小步提交。只回退本次闭合迁移的实际提交及依赖，不保留运行时old/new选择；存在后续共享修改时先对账冲突，不使用破坏性git操作。
-8. **最终安装。** 完成现有编译、Validator、Document和Replay的适用门禁；核对最终代码与本change两份delta及保持项，按实际实施状态更新current spec、代码地图与技能引用。规划阶段不执行安装或归档。
+6. **交付每个闭合提交。** 文件／类型改名、调用者迁移、旧Editor实现删除与对应证据一起形成中文小步提交。只回退本次闭合迁移的实际提交及依赖，不保留运行时old/new选择；存在后续共享修改时先对账冲突，不使用破坏性git操作。
+7. **独立完成作者重构。** 完成现有编译、Validator、Document和Replay的适用门禁；核对最终代码与本change两份delta及保持项，按实际实施状态更新current spec、代码地图与技能引用。场景预览未实施不阻止本change完成，不以旧播放器尚未被另一change替换判定本次清理失败。规划阶段不执行安装或归档。
 
 这是一组技术依赖，不替用户决定IK、相机、ACL与BTSMTL的业务实施优先级。当前change的架构选择已明确；通用解释器整体删除、新Replay覆盖能力和其他系统的算法取舍属于独立范围，不作为未回答的问题混入本实施清单。

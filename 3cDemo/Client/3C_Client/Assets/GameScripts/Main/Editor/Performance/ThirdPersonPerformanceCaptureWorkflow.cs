@@ -228,7 +228,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             const int warmupLogicTicks = 180;
             if (input.frame_count <= warmupLogicTicks)
                 throw new InvalidDataException("Fixed Input Trace must contain both warmup and capture LogicTicks.");
-            string scenarioId = $"performance.{input.trace_id}.fixed.r2";
+            string scenarioId = $"performance.{input.trace_id}.fixed.r3";
             string root = Path.Combine(PerformanceRoot, "Scenarios", scenarioId);
             string scenarioPath = Path.Combine(root, "scenario.json");
             if (Directory.Exists(root))
@@ -269,7 +269,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             var profile = new PerformanceCaptureProfileDocument
             {
                 profile_id = "gameplay-cpu-standard",
-                revision = 2,
+                revision = 3,
                 maximum_presentation_fps = 120,
                 logic_tick_rate = input.tick_rate,
                 sample_capacity_margin_percent = 25,

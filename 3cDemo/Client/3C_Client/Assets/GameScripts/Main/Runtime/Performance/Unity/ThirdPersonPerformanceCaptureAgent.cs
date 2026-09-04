@@ -32,6 +32,15 @@ namespace ThirdPersonPerformance.Runtime
             public int Capacity;
         }
 
+        sealed class LogicTickSample
+        {
+            public PerformanceMetricDefinition Metric;
+            public ulong LogicTick;
+            public ulong RenderFrame;
+            public long DurationTicks;
+            public int Count;
+        }
+
         [Serializable]
         sealed class InputTraceFrameDocument
         {
@@ -393,7 +402,7 @@ namespace ThirdPersonPerformance.Runtime
             for (int i = 0; i < metrics.Count; i++)
             {
                 PerformanceMetricDefinition metric = metrics[i];
-                if (metric.SampleScope == PerformanceSampleScope.LogicTick)
+                if (!UsesRecorder(metric))
                     continue;
                 ProfilerRecorder recorder = ProfilerRecorder.StartNew(
                     Category(metric),
@@ -480,7 +489,7 @@ namespace ThirdPersonPerformance.Runtime
             for (int i = 0; i < metrics.Count; i++)
             {
                 PerformanceMetricDefinition metric = metrics[i];
-                if (metric.SampleScope == PerformanceSampleScope.LogicTick)
+                if (!UsesRecorder(metric))
                     continue;
                 ProfilerRecorder recorder = ProfilerRecorder.StartNew(Category(metric), metric.ProfilerName, capacity, options);
                 if (!recorder.Valid)
@@ -491,6 +500,10 @@ namespace ThirdPersonPerformance.Runtime
                 m_Recorders.Add(new RecorderEntry { Metric = metric, Recorder = recorder, Capacity = capacity });
             }
         }
+
+        static bool UsesRecorder(PerformanceMetricDefinition metric) =>
+            metric.SampleScope == PerformanceSampleScope.RenderFrame ||
+            metric.SampleScope == PerformanceSampleScope.Counter;
 
         static ProfilerCategory Category(PerformanceMetricDefinition metric) => metric.MetricId switch
         {
@@ -653,11 +666,33 @@ namespace ThirdPersonPerformance.Runtime
                 if (!metricsByHash.TryAdd(metricHash, metric))
                     throw new InvalidDataException($"Performance metric '{metric.MetricId}' has a duplicate hash.");
             }
+            var logicSamples = new Dictionary<(ulong MetricId, ulong LogicTick), LogicTickSample>();
             for (int i = 0; i < instrumentationSpans.Length; i++)
             {
                 PerformanceSpanRecord span = instrumentationSpans[i];
                 if (!metricsByHash.TryGetValue(span.MetricId, out PerformanceMetricDefinition metric))
                     throw new InvalidDataException($"Performance instrumentation Span metric hash '{span.MetricId:x16}' is not in the catalog.");
+                if (UsesRecorder(metric))
+                    continue;
+                if (metric.SampleScope == PerformanceSampleScope.LogicTick)
+                {
+                    if ((span.ContextFlags & PerformanceInstrumentationContextFlags.LogicTick) == 0)
+                        throw new InvalidDataException($"Performance metric '{metric.MetricId}' has no LogicTick context.");
+                    var key = (span.MetricId, span.LogicTick);
+                    if (!logicSamples.TryGetValue(key, out LogicTickSample sample))
+                    {
+                        sample = new LogicTickSample
+                        {
+                            Metric = metric,
+                            LogicTick = span.LogicTick,
+                            RenderFrame = span.RenderFrame
+                        };
+                        logicSamples.Add(key, sample);
+                    }
+                    sample.DurationTicks = checked(sample.DurationTicks + span.DurationTicks);
+                    sample.Count++;
+                    continue;
+                }
                 double nanoseconds = span.DurationTicks * 1000000000d / Stopwatch.Frequency;
                 builder.Append(Csv(metric.MetricId)).Append(',')
                     .Append(metric.SampleScope).Append(',')
@@ -665,6 +700,18 @@ namespace ThirdPersonPerformance.Runtime
                     .Append(span.PointId.ToString("x16", CultureInfo.InvariantCulture)).Append(',')
                     .Append(span.RenderFrame.ToString(CultureInfo.InvariantCulture)).Append(',')
                     .Append(nanoseconds.ToString(CultureInfo.InvariantCulture)).AppendLine(",1");
+            }
+            int logicSampleIndex = 0;
+            foreach (LogicTickSample sample in logicSamples.Values)
+            {
+                double nanoseconds = sample.DurationTicks * 1000000000d / Stopwatch.Frequency;
+                builder.Append(Csv(sample.Metric.MetricId)).Append(',')
+                    .Append(sample.Metric.SampleScope).Append(',')
+                    .Append((logicSampleIndex++).ToString(CultureInfo.InvariantCulture)).Append(',')
+                    .Append(sample.LogicTick.ToString(CultureInfo.InvariantCulture)).Append(',')
+                    .Append(sample.RenderFrame.ToString(CultureInfo.InvariantCulture)).Append(',')
+                    .Append(nanoseconds.ToString(CultureInfo.InvariantCulture)).Append(',')
+                    .Append(sample.Count.ToString(CultureInfo.InvariantCulture)).AppendLine();
             }
             File.WriteAllText(
                 Path.Combine(m_Request.staging_root, "metric-samples.csv"),

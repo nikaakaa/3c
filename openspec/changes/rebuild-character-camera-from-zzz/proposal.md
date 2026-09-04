@@ -16,7 +16,7 @@
 - **BREAKING**：建立正式 `CharacterCameraProfile` 及强类型 Sequence、Override、Zoom、Stretch、Shake、Shot、Curve 资源；Definition 只装配 Profile，Graph/Timeline 只声明已提交的请求。资源通过现有 Character Build 生成同一 Presentation Projection 中的不可变相机计划，Float32/Fixed 共用；删除旧裸字符串资源引用、万能 Cue、未消费字段和旧配置路径。
 - 相机作者功能进入现有 Character/Graph 工作区和 Timeline：资源选择、参数单位、曲线、依赖导航、Undo/Redo、明确 Build、同运行实现的 Preview、只读 Live Debug 全部接通。当前 CameraSequence 只作为相机构图求值适配配置，不恢复已删除的动画 Sequence 或 Timeline Sequence 模式，也不把它当成已确认的 ZZZ 原版作者结构。
 - 扩展统一 Agent Document v4 的 Character Camera 分片、Catalog、Exporter、严格 Codec、Reconciler、Mutation、Validator 与反向导出，沿既有五个生命周期工具完成同一资产事务，不增加相机专用编辑通道。
-- 完成 Corin 已解码 81 项 Shake、18 项 Zoom、18 项 Stretch、4 项 Override 及全部可达相机依赖和事件的正式迁移；AssaultAid、ParryAid、SwitchInAttack 作为明确的链路对照，不将它们作为缩减其它已纳入行为的理由。清理旧资源、旧入口、旧生成产物合同并同步现行规范。
+- 完成 Corin 已解码 81 项 Shake、18 项 Zoom、18 项 Stretch、4 项 Override 及全部可达相机依赖和属于单角色动作演出的事件正式迁移；AssaultAid 与 ParryAid 作为当前链路对照，SwitchInAttack 只作为来源事件证据，换人/跨角色归属待后续设计确认。清理旧资源、旧入口、旧生成产物合同并同步现行规范。
 
 ## Capabilities
 

@@ -8,6 +8,12 @@ BTSMTL Definition、Graph、StateMachine、Timeline 和 Presentation Camera Runt
 
 当前 `CameraSequenceAsset`、typed Stage 和 Timeline 相机 Clip 是工程适配模型，不视为 ZZZ 原版作者编排结构的已证实还原。相机时间、循环和事件如何归入现有 BTSMTL Timeline，待后续设计确认；本设计只要求已经接入的请求和效果沿同一 Presentation 链运行。
 
+| 来源身份/字段 | 当前实际依赖 | 本变更处理 |
+|---|---|---|
+| `CharacterCameraProfile.ChangeAvatarTransitionSeconds` | 进入 Profile/Projection 合同并参与合法性校验，当前没有运行时消费者 | 保留来源字段记录，不生成换人或跨角色相机路径，等待后续设计 |
+| `SwitchIn`、`SwitchOut`、`ChangeAvatar` | 只存在于来源 metadata/事件或配置身份，当前单角色 Runtime 没有对应 owner | 只做来源对账，不自动创建主控切换、队伍切人或第二个 Camera Runtime |
+| `SwitchInAttack` | 当前只作为 Corin 事件索引中的来源身份与时点证据 | 是否属于单角色攻击演出由后续设计确认，本轮不把名称解释为换人能力 |
+
 ### 已核实的 3C 接入点
 
 下表路径以 `3cDemo/Client/3C_Client/` 为 Unity 工程根。

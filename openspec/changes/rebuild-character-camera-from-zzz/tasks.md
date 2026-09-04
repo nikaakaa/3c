@@ -94,7 +94,7 @@
 
 - [ ] 12.1 通过正式 Import/作者事务迁入 Corin 的 81 项 Shake、18 项 Zoom、18 项 Stretch、4 项 Override，交付逐资源身份、数值和消费者对应报告。
 - [ ] 12.2 补齐 Corin Profile、Sequence、公共 Curve、Shot 与绑定依赖，交付完整可达作者配置，无默认替代或仅保留名字的资源。
-- [ ] 12.3 将 Corin 全部相机事件迁入正式 Graph/Action Timeline，交付保留原帧率/时点/顺序的对账结果，明确包含 AssaultAid、ParryAid 和 SwitchInAttack。
+- [ ] 12.3 将已确认属于单角色动作演出的 Corin 相机事件迁入正式 Graph/Action Timeline，交付保留原帧率/时点/顺序的对账结果，先覆盖 AssaultAid 与 ParryAid；SwitchInAttack 只保留来源事件证据，待换人/跨角色归属设计确认后再决定是否迁入。
 - [ ] 12.4 迁移 Float32/Fixed 输入、Local/Fixed/Rollback Host、Control Source 和 Factory 的 Camera/basis 接口，交付无具体旧 Controller 依赖的调用清单，输入与网络原逻辑保持原样。
 - [ ] 12.5 迁移 GameplayLab Builder、性能采集/回放的初始相机接口及全部明确 Scene/Prefab bindings，交付无旧 FreeLook axis 直写的引用清单及正式绑定校验结果。
 - [ ] 12.6 完整切换唯一正式入口并删除旧 Controller、State/Modifier 空实现、Mode/FOV 映射、旧 Cue/字符串/序列化配置和过期 generated 合同；交付旧符号与资产引用搜索结果，无法映射的既有正确行为先报告冲突。

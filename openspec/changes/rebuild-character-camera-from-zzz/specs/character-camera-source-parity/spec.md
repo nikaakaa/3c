@@ -62,11 +62,11 @@ Corin 已解码的 81 项 Shake、18 项 Zoom、18 项 Stretch、4 项 Override�
 - **THEN** 第 0 帧 Override/Zoom/Stretch 和第 8、19、32、52、55 帧 Shake MUST分别有正式请求与对应资源
 - **AND** 帧号 MUST按原事件帧率解释，不按目标 tick rate 直接代入
 
-#### Scenario: ParryAid 与 SwitchInAttack
+#### Scenario: ParryAid 与未决来源事件
 
 - **WHEN** 对照 ParryAid H/L 与 SwitchInAttack 的已确认事件表
-- **THEN** ParryAid 第 124 帧共享 Shake，以及 SwitchInAttack 第 0、32 帧相机构图变化和第 42、54、67、71 帧 Shake MUST保持对应关系
-- **AND** 共享资源 MUST保持单一真实 owner，不为每个技能复制一套控制器
+- **THEN** ParryAid 第 124 帧共享 Shake MUST进入单角色相机对账，SwitchInAttack 的身份和时点 MUST只保持为来源证据
+- **AND** SwitchInAttack 在换人/跨角色归属未完成设计前 MUST不生成当前框架的切人或第二角色相机路径
 
 ### Requirement: 完成判定必须覆盖每个原行为的正式去向
 

@@ -116,7 +116,7 @@ def translate(assembly):
     compute = profile.startswith("cs")
     input_signature = [] if compute else signature_records(assembly, "Input")
     outputs = [] if compute else signature_records(assembly, "Output")
-    declarations, records, emitted = [], [], []
+    declarations, records, emitted, texture_dimensions = [], [], [], {}
     immediate = re.search(r"dcl_immediateConstantBuffer\s*\{(.*?)\}\s*\}", assembly, re.S)
     if immediate:
         values = re.findall(r"0x[0-9a-f]{8}", immediate[1])
@@ -158,6 +158,7 @@ def translate(assembly):
             elif match := re.fullmatch(r"dcl_resource_(texture2darray|texture2d) \(float,float,float,float\) (t\d+)", line):
                 kind = {"texture2darray": "Texture2DArray", "texture2d": "Texture2D"}[match[1]]
                 declarations.append(f"{kind}<float4> {match[2]} : register({match[2]});")
+                texture_dimensions[match[2]] = match[1]
             elif match := re.fullmatch(r"dcl_sampler (s\d+), mode_(default|comparison)", line):
                 kind = "SamplerComparisonState" if match[2] == "comparison" else "SamplerState"
                 declarations.append(f"{kind} {match[1]} : register({match[1]});")
@@ -175,6 +176,9 @@ def translate(assembly):
         first_line = len(emitted) + 1
         saturated = opcode.endswith("_sat")
         op = opcode[:-4] if saturated else opcode
+        if op in ("sample", "sample_l", "sample_b", "sample_c_lz", "ld"):
+            texture = args[2].split(".")[0]
+            op += f"_indexable({texture_dimensions[texture]})(float,float,float,float)"
         if op in ("if_nz", "if_z", "breakc_nz", "breakc_z"):
             condition = f"{raw_source(args[0], 'x')} {'!=' if op.endswith('_nz') else '=='} 0u"
             if op.startswith("if"):

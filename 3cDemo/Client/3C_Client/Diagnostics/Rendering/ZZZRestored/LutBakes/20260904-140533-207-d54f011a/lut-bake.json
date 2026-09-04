@@ -1,0 +1,22 @@
+﻿{
+    "shader": "Assets/Render/ZZZRestored/Generated/CharacterLut/CharacterLutHDR.shader",
+    "material": "Assets/Render/ZZZRestored/Generated/CharacterLut/CorinOriginalLutHDR.mat",
+    "texture": "Assets/Render/ZZZRestored/Generated/CharacterLut/CorinOriginalCharacterLut.asset",
+    "width": 1024,
+    "height": 32,
+    "nonFinitePixels": 0,
+    "hasColorVariation": true,
+    "firstPixel": {
+        "r": 0.0,
+        "g": 0.0,
+        "b": 0.01434326171875,
+        "a": 1.0
+    },
+    "inputLutParameters": {
+        "x": 32.0,
+        "y": 0.00048828125,
+        "z": 0.015625,
+        "w": 1.0322580337524415
+    },
+    "compilerMessages": []
+}

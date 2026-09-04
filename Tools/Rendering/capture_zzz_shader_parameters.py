@@ -15,15 +15,19 @@ class SnapshotProperties:
         self.registry = self.qword(player_base + 0x1F23190)
         self.bucket_base = self.qword(self.registry)
         self.bucket_mask = self.uint(self.registry + 8)
-        self.sheet = self.qword(player_base + 0x1F22AA0)
-        self.sheet_header = self.read(self.sheet + 0x88, 0xA0)
+        self.use_sheet(self.qword(player_base + 0x1F22AA0) + 0x88, "global")
+
+    def use_sheet(self, address, source):
+        self.sheet = address
+        self.sheet_source = source
+        self.sheet_header = self.read(address, 0xA0)
         self.key_count = struct.unpack_from("<I", self.sheet_header, 0x50)[0]
         value_count = struct.unpack_from("<I", self.sheet_header, 0x70)[0]
         if self.key_count != value_count:
             raise ValueError("Property sheet key/value counts differ")
-        self.keys = self.read(self.qword(self.sheet + 0xC8), self.key_count * 4)
-        self.descriptors = self.read(self.qword(self.sheet + 0xE8), self.key_count * 4)
-        self.payload = self.qword(self.sheet + 0x108)
+        self.keys = self.read(self.qword(address + 0x40), self.key_count * 4)
+        self.descriptors = self.read(self.qword(address + 0x60), self.key_count * 4)
+        self.payload = self.qword(address + 0x80)
 
     def read(self, address, size):
         raw = self.session.read(address, size)
@@ -61,12 +65,13 @@ class SnapshotProperties:
 
     def value(self, name, kind, array_size=0):
         identity = self.name_id(name)
-        result = {"name": name, "getter_kind": kind, "identity": identity}
+        result = {"name": name, "getter_kind": kind, "identity": identity,
+                  "sheet_address": hex(self.sheet), "sheet_source": self.sheet_source}
         if identity["status"] != "registered":
             result["status"] = "not_registered"
             return result
         property_id = identity["id"]
-        if property_id & 0xE0000000:
+        if self.sheet_source == "global" and property_id & 0xE0000000:
             result.update(status="thread_local_storage_required", packed_id=hex(property_id))
             return result
         start, end = struct.unpack_from("<ii", self.sheet_header, 0x10 + kind * 4)

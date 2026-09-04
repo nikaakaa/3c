@@ -1,0 +1,87 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!21 &2100000
+Material:
+  serializedVersion: 8
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_Name: CorinOriginalLutHDR
+  m_Shader: {fileID: 4800000, guid: 890c6cf02e876114687c40c8839c1f62, type: 3}
+  m_Parent: {fileID: 0}
+  m_ModifiedSerializedProperties: 0
+  m_ValidKeywords: []
+  m_InvalidKeywords: []
+  m_LightmapFlags: 4
+  m_EnableInstancingVariants: 0
+  m_DoubleSidedGI: 0
+  m_CustomRenderQueue: -1
+  stringTagMap: {}
+  disabledShaderPasses: []
+  m_LockedProperties:
+  m_SavedProperties:
+    serializedVersion: 3
+    m_TexEnvs:
+    - _CurveBlue:
+        m_Texture: {fileID: 2800000, guid: 457fc8b962368fd4eb9e06aedf9706bf, type: 2}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _CurveGreen:
+        m_Texture: {fileID: 2800000, guid: 457fc8b962368fd4eb9e06aedf9706bf, type: 2}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _CurveHueVsHue:
+        m_Texture: {fileID: 2800000, guid: b7935d31833ecc049a2b6ddd6139fa31, type: 2}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _CurveHueVsSat:
+        m_Texture: {fileID: 2800000, guid: b7935d31833ecc049a2b6ddd6139fa31, type: 2}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _CurveLumVsSat:
+        m_Texture: {fileID: 2800000, guid: b7935d31833ecc049a2b6ddd6139fa31, type: 2}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _CurveMaster:
+        m_Texture: {fileID: 2800000, guid: 457fc8b962368fd4eb9e06aedf9706bf, type: 2}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _CurveRed:
+        m_Texture: {fileID: 2800000, guid: 457fc8b962368fd4eb9e06aedf9706bf, type: 2}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _CurveSatVsSat:
+        m_Texture: {fileID: 2800000, guid: b7935d31833ecc049a2b6ddd6139fa31, type: 2}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    m_Ints: []
+    m_Floats:
+    - _Desaturate: 1
+    - _RevertSaturation: 0
+    m_Colors:
+    - _ChannelMixerBlue: {r: 0, g: 0, b: 1, a: 0}
+    - _ChannelMixerGreen: {r: 0, g: 1, b: 0, a: 0}
+    - _ChannelMixerRed: {r: 1, g: 0, b: 0, a: 0}
+    - _ColorBalance: {r: 1, g: 1, b: 1, a: 1}
+    - _ColorFilter: {r: 1, g: 1, b: 1, a: 1}
+    - _CustomToneCurve: {r: 0.70170736, g: 0.07635897, b: 0.58274645, a: 0}
+    - _Gain: {r: 1.01, g: 1.01, b: 1.01, a: 0}
+    - _Gamma: {r: 0.990099, g: 0.990099, b: 0.990099, a: 0}
+    - _Highlights: {r: 1, g: 1, b: 1, a: 0}
+    - _HueSatCon: {r: 0, g: 1, b: 1, a: 0}
+    - _Lift: {r: -0.0005417913, g: -0.0017117113, b: 0.018556833, a: 0}
+    - _Lut_Params: {r: 32, g: 0.00048828125, b: 0.015625, a: 1.032258}
+    - _MidSegmentA: {r: 0.0076359, g: 0, b: 1, a: 1}
+    - _MidSegmentB: {r: 0.35423878, g: 1, b: 0, a: 0}
+    - _Midtones: {r: 1, g: 1, b: 1, a: 0}
+    - _ShaHiLimits: {r: 0, g: 0.3, b: 0.55, a: 1}
+    - _Shadows: {r: 1, g: 1, b: 1, a: 0}
+    - _ShoSegmentA: {r: 1, g: 1, b: -1, a: -1}
+    - _ShoSegmentB: {r: 1.1683302, g: 3.2959237, b: 0, a: 0}
+    - _SplitHighlights: {r: 0.5, g: 0.5, b: 0.5, a: 0}
+    - _SplitShadows: {r: 0.5, g: 0.5, b: 0.5, a: 0}
+    - _ToeSegmentA: {r: 0, g: 0, b: 1, a: 1}
+    - _ToeSegmentB: {r: 0.5346906, g: 1.1111112, b: 0, a: 0}
+    - _UserLut_Params: {r: 0, g: 0, b: 0, a: 0}
+  m_BuildTextureStacks: []

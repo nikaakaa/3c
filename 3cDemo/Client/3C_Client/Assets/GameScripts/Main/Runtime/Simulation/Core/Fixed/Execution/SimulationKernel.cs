@@ -317,18 +317,13 @@ namespace ThirdPersonSimulation.Fixed
                     world.AppliedDisplacement,
                     world.AppliedYawDegrees);
                 CharacterSimulationState finalState = CommitState(transaction);
-                using (request.Performance.Measure(SimulationPerformancePhase.KernelResultFreeze))
-                {
-                    return new SimulationActorTickResult(
-                        pending.ActorId,
-                        pending.Tick,
-                        finalState,
-                        bodySample,
-                        expected.Motion,
-                        facts,
-                        actorEvaluator.Workspace.Presentation,
-                        trace);
-                }
+                return CreateFinalResult(
+                    pending,
+                    finalState,
+                    bodySample,
+                    facts,
+                    trace,
+                    actorEvaluator.Workspace);
             }
             catch
             {
@@ -355,6 +350,26 @@ namespace ThirdPersonSimulation.Fixed
         CharacterSimulationState CommitState(FixedCharacterStateTransaction transaction)
         {
             return transaction.Commit();
+        }
+
+        [PerformanceProbe("simulation.kernel.result-freeze")]
+        SimulationActorTickResult CreateFinalResult(
+            PendingCharacterEvaluation pending,
+            CharacterSimulationState finalState,
+            CharacterBodySample bodySample,
+            List<GameplayFact> facts,
+            List<SimulationTraceRecord> trace,
+            FixedEvaluationWorkspace workspace)
+        {
+            return new SimulationActorTickResult(
+                pending.ActorId,
+                pending.Tick,
+                finalState,
+                bodySample,
+                pending.WorldRequest.Motion,
+                facts,
+                workspace.Presentation,
+                trace);
         }
 
         internal void Abort(PendingCharacterEvaluation pending)

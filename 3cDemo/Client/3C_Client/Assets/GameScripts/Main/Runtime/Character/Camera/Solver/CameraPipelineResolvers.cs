@@ -159,7 +159,8 @@ namespace ThirdPersonCamera
                     "camera.default.sequence",
                     0,
                     0,
-                    CameraSequenceInterruptPolicy.BlendOut);
+                    CameraSequenceInterruptPolicy.BlendOut,
+                    true);
         }
 
         static bool ShouldReplace(CameraSequenceRequest selected, CameraSequenceRequest candidate)

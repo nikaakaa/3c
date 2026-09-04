@@ -11,6 +11,7 @@ namespace ThirdPersonCamera
         string m_CurrentSequenceId = string.Empty;
         string m_CurrentSourceId = string.Empty;
         ulong m_CurrentGeneration;
+        bool m_CurrentIsDefault;
         float m_TransitionElapsed;
         float m_TransitionDuration;
         CameraFramePlan m_RetireFrom;
@@ -34,6 +35,7 @@ namespace ThirdPersonCamera
             m_CurrentSequenceId = string.Empty;
             m_CurrentSourceId = string.Empty;
             m_CurrentGeneration = 0;
+            m_CurrentIsDefault = false;
             m_TransitionElapsed = 0f;
             m_TransitionDuration = 0f;
             m_RetireFrom = default;
@@ -72,6 +74,7 @@ namespace ThirdPersonCamera
                 m_CurrentSequenceId = string.Empty;
                 m_CurrentSourceId = string.Empty;
                 m_CurrentGeneration = 0;
+                m_CurrentIsDefault = false;
                 m_TransitionElapsed = 0f;
                 m_TransitionDuration = 0f;
                 m_RetireFrom = default;
@@ -89,7 +92,7 @@ namespace ThirdPersonCamera
 
             if (m_Retiring)
             {
-                if (request.Active)
+                if (!request.IsDefault)
                 {
                     m_Retiring = false;
                     m_RetireFrom = default;
@@ -125,6 +128,7 @@ namespace ThirdPersonCamera
                         m_CurrentSequenceId = m_Projection.DefaultSequence.SequenceId;
                         m_CurrentSourceId = defaultRequest.SourceId;
                         m_CurrentGeneration = defaultRequest.Generation;
+                        m_CurrentIsDefault = true;
                         m_BlendFrom = default;
                         m_TransitionElapsed = 0f;
                         m_TransitionDuration = 0f;
@@ -133,7 +137,9 @@ namespace ThirdPersonCamera
                 }
             }
 
-            string sequenceId = request.Active ? request.SequenceId : m_Projection.DefaultSequence.SequenceId;
+            string sequenceId = request.IsDefault
+                ? m_Projection.DefaultSequence.SequenceId
+                : request.SequenceId;
             CameraSequencePayload sequence = ResolveSequence(sequenceId);
             CameraFramePlan target = BuildTargetPlan(
                 input,
@@ -141,7 +147,11 @@ namespace ThirdPersonCamera
                 sequence,
                 look);
 
-            if (!string.Equals(sequence.SequenceId, m_CurrentSequenceId, StringComparison.Ordinal))
+            bool sequenceChanged = !string.Equals(sequence.SequenceId, m_CurrentSequenceId, StringComparison.Ordinal) ||
+                request.IsDefault != m_CurrentIsDefault ||
+                request.Generation != m_CurrentGeneration ||
+                !string.Equals(request.SourceId, m_CurrentSourceId, StringComparison.Ordinal);
+            if (sequenceChanged)
             {
                 if (request.InterruptPolicy == CameraSequenceInterruptPolicy.Cut || !m_LastPlan.Valid)
                 {
@@ -156,6 +166,7 @@ namespace ThirdPersonCamera
                 m_CurrentSequenceId = sequence.SequenceId;
                 m_CurrentSourceId = request.SourceId;
                 m_CurrentGeneration = request.Generation;
+                m_CurrentIsDefault = request.IsDefault;
                 m_TransitionElapsed = 0f;
             }
             else
@@ -163,6 +174,7 @@ namespace ThirdPersonCamera
                 m_TransitionElapsed += input.Delta(CameraTimeDomain.PresentationScaled);
                 m_CurrentSourceId = request.SourceId;
                 m_CurrentGeneration = request.Generation;
+                m_CurrentIsDefault = request.IsDefault;
             }
 
             float progress = m_TransitionDuration <= 0f
@@ -269,7 +281,7 @@ namespace ThirdPersonCamera
                 sequence.SequenceId,
                 request.SourceId,
                 request.SourceActionInstanceId,
-                request.Active ? request.Weight : 1f,
+                request.IsDefault ? 1f : request.Weight,
                 input.ResetHistory,
                 true,
                 m_Projection.DefaultSphere.Radius <= 0f

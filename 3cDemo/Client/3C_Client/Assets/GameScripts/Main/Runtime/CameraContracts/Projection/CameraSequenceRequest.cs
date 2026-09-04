@@ -16,7 +16,8 @@ public readonly struct CameraSequenceRequest
             string sourceId,
             ulong generation,
             ulong sourceActionInstanceId,
-            CameraSequenceInterruptPolicy interruptPolicy)
+            CameraSequenceInterruptPolicy interruptPolicy,
+            bool isDefault = false)
         {
             SequenceId = sequenceId ?? string.Empty;
             Priority = priority;
@@ -28,6 +29,7 @@ public readonly struct CameraSequenceRequest
             Generation = generation;
             SourceActionInstanceId = sourceActionInstanceId;
             InterruptPolicy = interruptPolicy;
+            IsDefault = isDefault;
         }
 
         public string SequenceId { get; }
@@ -40,6 +42,7 @@ public readonly struct CameraSequenceRequest
         public ulong Generation { get; }
         public ulong SourceActionInstanceId { get; }
         public CameraSequenceInterruptPolicy InterruptPolicy { get; }
+        public bool IsDefault { get; }
         public bool Active => Weight > 0f && !string.IsNullOrWhiteSpace(SequenceId);
 
         public CameraSequenceRequest WithTargetKey(string targetKey) => new CameraSequenceRequest(
@@ -52,6 +55,7 @@ public readonly struct CameraSequenceRequest
             SourceId,
             Generation,
             SourceActionInstanceId,
-            InterruptPolicy);
+            InterruptPolicy,
+            IsDefault);
     }
 }

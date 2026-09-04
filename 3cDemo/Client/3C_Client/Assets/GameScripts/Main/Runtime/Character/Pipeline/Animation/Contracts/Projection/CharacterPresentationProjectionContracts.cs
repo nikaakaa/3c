@@ -18,7 +18,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
     [Serializable]
     public sealed partial class CharacterPresentationProjection : ISerializationCallbackReceiver
     {
-        public const string CurrentAbiVersion = "character-presentation-projection/v13";
+        public const string CurrentAbiVersion = "character-presentation-projection/v14";
 
         [SerializeField] string m_AbiVersion = string.Empty;
         [SerializeField] string m_ProgramId = string.Empty;
@@ -27,6 +27,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         [SerializeField] string m_ContractHash = string.Empty;
         [SerializeField] CharacterPresentationProducerEntry[] m_Producers = Array.Empty<CharacterPresentationProducerEntry>();
         [SerializeField] AnimationFootAnalysisProjectionIdentity m_FootAnalysis;
+        [SerializeField] CharacterCameraProjectionPayload m_Camera;
 
         public string ProgramId => m_ProgramId;
         public string AbiVersion => m_AbiVersion ?? string.Empty;
@@ -35,6 +36,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         public string ContractHash => m_ContractHash;
         public IReadOnlyList<CharacterPresentationProducerEntry> Producers => m_Producers ?? Array.Empty<CharacterPresentationProducerEntry>();
         public AnimationFootAnalysisProjectionIdentity FootAnalysis => m_FootAnalysis;
+        public CharacterCameraProjectionPayload Camera => m_Camera;
         public bool IsValid
         {
             get
@@ -46,6 +48,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                     string.IsNullOrEmpty(m_ContractHash) ||
                     string.IsNullOrEmpty(m_ProjectionRevision) ||
                     m_LinkedPose == null || !m_LinkedPose.IsValid ||
+                    m_Camera == null ||
                     m_FootAnalysis != null && !m_FootAnalysis.IsValid)
                 {
                     return false;
@@ -238,7 +241,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                                (m_Kind == CharacterPresentationProducerKind.Animation &&
                                  HasCleanAnimationPayload && m_Camera == null && m_Cue == null ||
                                 m_Kind == CharacterPresentationProducerKind.Camera && m_Camera != null && m_Animation == null &&
-                                m_Cue == null ||
+                                m_Cue == null &&
+                                IsCameraBindingValid() ||
                                 m_Kind == CharacterPresentationProducerKind.Cue && m_Cue != null && m_Animation == null &&
                                 m_Camera == null);
 
@@ -257,7 +261,22 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         State,
         Cue,
         Response,
-        Target
+        Target,
+        Sequence,
+        Override,
+        Zoom,
+        Stretch,
+        Shake,
+        Shot
+    }
+
+    public enum CharacterPresentationCameraEffectKind
+    {
+        Override,
+        Zoom,
+        Stretch,
+        Shake,
+        Shot
     }
 
     [Serializable]
@@ -281,6 +300,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         [SerializeField] string m_AnchorKey = string.Empty;
         [SerializeField] string m_AimPointKey = string.Empty;
         [SerializeField] string m_PreferredBoneKey = string.Empty;
+        [SerializeField] string m_SequenceId = string.Empty;
+        [SerializeField] string m_ResourceId = string.Empty;
+        [SerializeField] CharacterPresentationCameraEffectKind m_EffectKind;
 
         public CharacterPresentationCameraBindingKind Kind => m_Kind;
         public TimelineCameraMode Mode => m_Mode;
@@ -300,6 +322,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         public string AnchorKey => m_AnchorKey;
         public string AimPointKey => m_AimPointKey;
         public string PreferredBoneKey => m_PreferredBoneKey;
+        public string SequenceId => m_SequenceId ?? string.Empty;
+        public string ResourceId => m_ResourceId ?? string.Empty;
+        public CharacterPresentationCameraEffectKind EffectKind => m_EffectKind;
 
         public static CharacterPresentationCameraBinding State(
             TimelineCameraMode mode,
@@ -371,6 +396,74 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 m_AnchorKey = anchorKey ?? string.Empty,
                 m_AimPointKey = aimPointKey ?? string.Empty,
                 m_PreferredBoneKey = preferredBoneKey ?? string.Empty,
+                m_Priority = priority
+            };
+        }
+
+        bool IsCameraBindingValid()
+        {
+            if (m_Camera == null)
+                return false;
+            switch (m_Camera.Kind)
+            {
+                case CharacterPresentationCameraBindingKind.State:
+                    return true;
+                case CharacterPresentationCameraBindingKind.Response:
+                    return true;
+                case CharacterPresentationCameraBindingKind.Cue:
+                    return true;
+                case CharacterPresentationCameraBindingKind.Target:
+                    return true;
+                case CharacterPresentationCameraBindingKind.Sequence:
+                    return !string.IsNullOrWhiteSpace(m_Camera.SequenceId);
+                case CharacterPresentationCameraBindingKind.Override:
+                case CharacterPresentationCameraBindingKind.Zoom:
+                case CharacterPresentationCameraBindingKind.Stretch:
+                case CharacterPresentationCameraBindingKind.Shake:
+                case CharacterPresentationCameraBindingKind.Shot:
+                    return !string.IsNullOrWhiteSpace(m_Camera.ResourceId);
+                default:
+                    return false;
+            }
+        }
+
+        public static CharacterPresentationCameraBinding Sequence(
+            string sequenceId,
+            int priority,
+            float blendInSeconds,
+            float blendOutSeconds,
+            string targetKey,
+            TimelineCameraInterruptPolicy interruptPolicy)
+        {
+            return new CharacterPresentationCameraBinding
+            {
+                m_Kind = CharacterPresentationCameraBindingKind.Sequence,
+                m_SequenceId = sequenceId ?? string.Empty,
+                m_Priority = priority,
+                m_BlendInSeconds = blendInSeconds,
+                m_BlendOutSeconds = blendOutSeconds,
+                m_TargetKey = targetKey ?? string.Empty,
+                m_InterruptPolicy = interruptPolicy
+            };
+        }
+
+        public static CharacterPresentationCameraBinding Effect(
+            CharacterPresentationCameraBindingKind kind,
+            string resourceId,
+            int priority)
+        {
+            if (kind != CharacterPresentationCameraBindingKind.Override &&
+                kind != CharacterPresentationCameraBindingKind.Zoom &&
+                kind != CharacterPresentationCameraBindingKind.Stretch &&
+                kind != CharacterPresentationCameraBindingKind.Shake &&
+                kind != CharacterPresentationCameraBindingKind.Shot)
+                throw new ArgumentOutOfRangeException(nameof(kind));
+            return new CharacterPresentationCameraBinding
+            {
+                m_Kind = kind,
+                m_ResourceId = resourceId ?? string.Empty,
+                m_EffectKind = (CharacterPresentationCameraEffectKind)((int)kind -
+                    (int)CharacterPresentationCameraBindingKind.Override),
                 m_Priority = priority
             };
         }

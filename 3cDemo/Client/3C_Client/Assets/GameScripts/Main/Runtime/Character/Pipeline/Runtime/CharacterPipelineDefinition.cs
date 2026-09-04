@@ -12,6 +12,7 @@ using ThirdPersonGameplay.Tags;
 using ThirdPersonGameplay.Tick;
 using ThirdPersonCharacter.Pipeline.Simulation;
 using TreeDesigner;
+using ThirdPersonCamera;
 using UnityEngine;
 
 namespace ThirdPersonCharacter.Pipeline
@@ -27,6 +28,7 @@ namespace ThirdPersonCharacter.Pipeline
         [SerializeField] CharacterGameplayEffectProfile m_GameplayEffectProfile;
         [SerializeField] CharacterBodyMotionProfile m_BodyMotionProfile;
         [SerializeField] CharacterAnimationPresentationProfile m_AnimationPresentationProfile;
+        [SerializeField] CharacterCameraProfile m_CameraProfile;
         [SerializeField] bool m_EquipmentCapabilityEnabled;
         [SerializeField] CharacterEquipmentProfile m_EquipmentProfile;
         [SerializeField] CharacterEquipmentPresentationProfile m_EquipmentPresentationProfile;
@@ -41,6 +43,7 @@ namespace ThirdPersonCharacter.Pipeline
         public CharacterGameplayEffectProfile GameplayEffectProfile => m_GameplayEffectProfile;
         public CharacterBodyMotionProfile BodyMotionProfile => m_BodyMotionProfile;
         public CharacterAnimationPresentationProfile AnimationPresentationProfile => m_AnimationPresentationProfile;
+        public CharacterCameraProfile CameraProfile => m_CameraProfile;
         public bool EquipmentCapabilityEnabled => m_EquipmentCapabilityEnabled;
         public CharacterEquipmentProfile EquipmentProfile => m_EquipmentProfile;
         public CharacterEquipmentPresentationProfile EquipmentPresentationProfile => m_EquipmentPresentationProfile;
@@ -153,6 +156,16 @@ namespace ThirdPersonCharacter.Pipeline
             else
             {
                 valid &= m_AnimationPresentationProfile.CollectConfigurationErrors(errors);
+            }
+
+            if (!m_CameraProfile)
+            {
+                errors?.Add($"{name}: Camera Profile is missing.");
+                valid = false;
+            }
+            else
+            {
+                valid &= m_CameraProfile.CollectConfigurationErrors(errors);
             }
 
             HashSet<string> ids = new HashSet<string>(StringComparer.Ordinal);

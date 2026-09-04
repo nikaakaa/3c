@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using BTSMTL.Timeline;
 using ThirdPersonCamera;
 using ThirdPersonCharacter.Pipeline.Animation;
+using ThirdPersonGameplay.Tick;
 using ThirdPersonPerformance.Instrumentation;
 using UnityEngine;
 
@@ -10,14 +11,18 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
 {
     internal sealed class CharacterCameraPresentationRuntime : IDisposable
     {
-        const float DefaultFieldOfView = 60f;
-
-        readonly ThirdPersonCameraController m_CameraRig;
+        readonly ICameraRigAdapter m_CameraRig;
+        readonly CharacterCameraProjectionPayload m_CameraProjection;
+        readonly CharacterCameraSequenceEvaluator m_SequenceEvaluator;
         readonly CameraTargetBindingResolver m_CameraTargetResolver;
         readonly Vector3 m_FollowBindPosition;
         readonly Vector3 m_AimBindPosition;
         readonly ICharacterPresentationLookInput m_InputAdapter;
         readonly string m_LookInputId;
+        readonly Dictionary<PresentationProducerInstanceId, CameraSequenceRequest> m_CameraSequences =
+            new Dictionary<PresentationProducerInstanceId, CameraSequenceRequest>();
+        readonly List<CameraSequenceRequest> m_CameraSequenceBuffer = new List<CameraSequenceRequest>();
+        readonly List<CameraEffectRequest> m_PendingCameraEffects = new List<CameraEffectRequest>();
         readonly Dictionary<PresentationProducerInstanceId, CameraStateRequest> m_CameraStates =
             new Dictionary<PresentationProducerInstanceId, CameraStateRequest>();
         readonly Dictionary<PresentationProducerInstanceId, CameraResponsePolicy> m_CameraResponses =
@@ -47,6 +52,9 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         {
             if (projection == null)
                 throw new ArgumentNullException(nameof(projection));
+            projection.RequireCameraPayload();
+            m_CameraProjection = projection.Camera;
+            m_SequenceEvaluator = new CharacterCameraSequenceEvaluator(m_CameraProjection);
             m_CameraRig = cameraRig ? cameraRig : throw new ArgumentNullException(nameof(cameraRig));
             if (!followAnchor || !aimAnchor)
                 throw new ArgumentException("Presentation Camera requires explicit follow and aim anchors.");
@@ -61,7 +69,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             Quaternion inverse = Quaternion.Inverse(initialBody.Rotation);
             m_FollowBindPosition = inverse * (followAnchor.position - initialBody.Position);
             m_AimBindPosition = inverse * (aimAnchor.position - initialBody.Position);
-            Apply(initialBody.Position, initialBody.Rotation, Vector2.zero, 0f);
+            Apply(initialBody.Position, initialBody.Rotation, Vector2.zero, 0f, 0f, 0f, true);
         }
 
         public void Publish(
@@ -89,8 +97,26 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                         binding.TargetKey,
                         producer.ProgramProducerIdentity,
                         producer.SourceDisplayPath,
-                        0,
+                        command.SourceActionInstanceId,
                         ToCameraInterruptPolicy(binding.InterruptPolicy));
+                    break;
+                case CharacterPresentationCameraBindingKind.Sequence:
+                    if (weight <= 0f)
+                    {
+                        m_CameraSequences.Remove(instance);
+                        return;
+                    }
+                    m_CameraSequences[instance] = new CameraSequenceRequest(
+                        binding.SequenceId,
+                        binding.Priority,
+                        weight,
+                        binding.BlendInSeconds,
+                        binding.BlendOutSeconds,
+                        binding.TargetKey,
+                        producer.ProgramProducerIdentity,
+                        command.ProducerGeneration,
+                        command.SourceActionInstanceId,
+                        ToSequenceInterruptPolicy(binding.InterruptPolicy));
                     break;
                 case CharacterPresentationCameraBindingKind.Response:
                     if (weight <= 0f)
@@ -106,7 +132,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                         binding.Priority,
                         weight,
                         producer.ProgramProducerIdentity,
-                        0);
+                        command.SourceActionInstanceId);
                     break;
                 case CharacterPresentationCameraBindingKind.Cue:
                     m_PendingCameraCues.Add(new CameraCue(
@@ -118,7 +144,22 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                         binding.Priority,
                         command.Header.EventId.ToString(),
                         producer.SourceDisplayPath,
-                        0));
+                        command.SourceActionInstanceId));
+                    break;
+                case CharacterPresentationCameraBindingKind.Override:
+                case CharacterPresentationCameraBindingKind.Zoom:
+                case CharacterPresentationCameraBindingKind.Stretch:
+                case CharacterPresentationCameraBindingKind.Shake:
+                case CharacterPresentationCameraBindingKind.Shot:
+                    m_PendingCameraEffects.Add(new CameraEffectRequest(
+                        ToEffectKind(binding.Kind),
+                        binding.ResourceId,
+                        Mathf.Max(0f, command.Weight),
+                        binding.Priority,
+                        producer.ProgramProducerIdentity,
+                        command.ProducerGeneration,
+                        command.Header.EventId.ToString(),
+                        command.SourceActionInstanceId));
                     break;
                 case CharacterPresentationCameraBindingKind.Target:
                     if (weight <= 0f)
@@ -134,7 +175,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                         binding.Priority,
                         weight,
                         producer.ProgramProducerIdentity,
-                        0);
+                        command.SourceActionInstanceId);
                     break;
                 default:
                     throw new ArgumentOutOfRangeException(nameof(binding.Kind), binding.Kind, null);
@@ -153,6 +194,9 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 case CharacterPresentationCameraBindingKind.State:
                     m_CameraStates.Remove(instance);
                     break;
+                case CharacterPresentationCameraBindingKind.Sequence:
+                    m_CameraSequences.Remove(instance);
+                    break;
                 case CharacterPresentationCameraBindingKind.Response:
                     m_CameraResponses.Remove(instance);
                     break;
@@ -165,6 +209,13 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     }
                     m_CameraModifierResolver.RetireSource(sourceId);
                     break;
+                case CharacterPresentationCameraBindingKind.Override:
+                case CharacterPresentationCameraBindingKind.Zoom:
+                case CharacterPresentationCameraBindingKind.Stretch:
+                case CharacterPresentationCameraBindingKind.Shake:
+                case CharacterPresentationCameraBindingKind.Shot:
+                    RetireEffect(command.Header.EventId.ToString(), command.ProducerGeneration);
+                    break;
                 case CharacterPresentationCameraBindingKind.Target:
                     m_CameraTargets.Remove(instance);
                     break;
@@ -174,7 +225,9 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         }
 
         [PerformanceProbe("presentation.camera")]
-        public void Present(CharacterBodyPresentationFrame bodyFrame, float presentationDeltaSeconds)
+        public void Present(
+            CharacterBodyPresentationFrame bodyFrame,
+            in GameplayPresentationFrameContext context)
         {
             RequireAlive();
             if (!bodyFrame.IsValid)
@@ -188,7 +241,9 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 bodyFrame.VisiblePosition,
                 bodyFrame.VisibleRotation,
                 look,
-                presentationDeltaSeconds,
+                context.ScaledDeltaSeconds,
+                context.UnscaledDeltaSeconds,
+                context.PresentationDeltaSeconds,
                 resetTracking);
         }
 
@@ -197,13 +252,18 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             if (m_Disposed)
                 return;
             m_CameraStates.Clear();
+            m_CameraSequences.Clear();
             m_CameraResponses.Clear();
             m_CameraTargets.Clear();
             m_PendingCameraCues.Clear();
             m_CameraStateBuffer.Clear();
             m_CameraResponseBuffer.Clear();
+            m_CameraSequenceBuffer.Clear();
+            m_PendingCameraEffects.Clear();
             m_CameraStateResolver.Reset();
             m_CameraModifierResolver.Reset();
+            m_SequenceEvaluator.Reset();
+            m_CameraRig.Reset();
             m_LastBodyResetSequence = 0;
         }
 
@@ -219,7 +279,9 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             Vector3 position,
             Quaternion rotation,
             Vector2 look,
-            float deltaSeconds,
+            float scaledDeltaSeconds,
+            float unscaledDeltaSeconds,
+            float presentationDeltaSeconds,
             bool resetTracking = false)
         {
             Vector3 follow = position + rotation * m_FollowBindPosition;
@@ -231,7 +293,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             CameraStateRequest state = m_CameraStateResolver.Resolve(
                 m_CameraStateBuffer,
                 m_NoTerminalActions,
-                deltaSeconds,
+                presentationDeltaSeconds,
                 out float blendProgress);
             CameraResponsePolicy response = m_CameraResponseResolver.Resolve(
                 state,
@@ -244,27 +306,121 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 follow = targetPlan.FollowPoint;
             if (targetPlan.HasAimPoint)
                 aim = targetPlan.AimPoint;
-            var basePlan = new CameraPosePlan(
-                state.Mode,
-                follow,
-                aim,
-                ResolveFieldOfView(state.Mode),
-                response,
-                response.Apply(look),
-                state.SourceId,
+            CameraSequenceRequest sequenceRequest = ResolveSequenceRequest(state);
+            var responseRequest = new CameraResponseRequest(
+                ToResponseMode(response.LookResponse),
+                response.ManualOrbitWeight,
+                response.PitchResponseWeight,
+                response.YawResponseWeight,
+                response.Priority,
+                response.Weight,
+                response.SourceId,
                 0,
+                response.SourceActionInstanceId);
+            var frameInput = new CameraFrameInput(
+                position,
+                rotation,
+                look,
+                scaledDeltaSeconds,
+                unscaledDeltaSeconds,
+                presentationDeltaSeconds,
+                1f,
+                1f,
+                false,
+                resetTracking,
+                Array.Empty<CameraTargetSnapshot>());
+            CameraFramePlan framePlan = m_SequenceEvaluator.Evaluate(
+                in frameInput,
+                in sequenceRequest,
+                in responseRequest);
+            framePlan = framePlan.WithTargets(
+                targetPlan.HasFollowPoint ? targetPlan.FollowPoint : follow,
+                targetPlan.HasAimPoint ? targetPlan.AimPoint : aim);
+            var legacyPlan = new CameraPosePlan(
+                state.Mode,
+                framePlan.FollowPoint,
+                framePlan.AimPoint,
+                framePlan.FieldOfView,
+                response,
+                framePlan.LookDelta,
+                framePlan.SourceId,
+                framePlan.SourceActionInstanceId,
                 blendProgress,
-                true);
-            CameraPosePlan plan = m_CameraModifierResolver.Resolve(
-                basePlan,
+                framePlan.Valid);
+            CameraPosePlan modifiedLegacyPlan = m_CameraModifierResolver.Resolve(
+                legacyPlan,
                 m_PendingCameraCues,
                 m_NoTerminalActions,
-                deltaSeconds);
+                presentationDeltaSeconds);
             m_PendingCameraCues.Clear();
-            if (resetTracking)
-                m_CameraRig.ApplyAfterTrackingReset(plan);
-            else
-                m_CameraRig.Apply(plan);
+            framePlan = framePlan
+                .WithFieldOfView(modifiedLegacyPlan.FieldOfView)
+                .WithResetHistory(resetTracking);
+            m_CameraRig.Apply(in framePlan);
+        }
+
+        CameraSequenceRequest ResolveSequenceRequest(CameraStateRequest legacyState)
+        {
+            m_CameraSequenceBuffer.Clear();
+            foreach (CameraSequenceRequest request in m_CameraSequences.Values)
+            {
+                if (request.Active)
+                    m_CameraSequenceBuffer.Add(request);
+            }
+            CameraSequenceRequest selected = default;
+            for (int i = 0; i < m_CameraSequenceBuffer.Count; i++)
+            {
+                CameraSequenceRequest candidate = m_CameraSequenceBuffer[i];
+                if (!selected.Active || candidate.Priority > selected.Priority ||
+                    candidate.Priority == selected.Priority && candidate.Weight > selected.Weight ||
+                    candidate.Priority == selected.Priority &&
+                    Mathf.Approximately(candidate.Weight, selected.Weight) &&
+                    string.CompareOrdinal(candidate.SourceId, selected.SourceId) < 0)
+                    selected = candidate;
+            }
+            if (selected.Active)
+                return selected;
+            return new CameraSequenceRequest(
+                m_CameraProjection.DefaultSequence.SequenceId,
+                legacyState.Priority,
+                1f,
+                legacyState.BlendInSeconds,
+                legacyState.BlendOutSeconds,
+                legacyState.TargetKey,
+                legacyState.SourceId,
+                0,
+                legacyState.SourceActionInstanceId,
+                ToSequenceInterruptPolicy(legacyState.InterruptPolicy));
+        }
+
+        void RetireEffect(string eventId, ulong generation)
+        {
+            for (int i = m_PendingCameraEffects.Count - 1; i >= 0; i--)
+            {
+                CameraEffectRequest request = m_PendingCameraEffects[i];
+                if (string.Equals(request.EventId, eventId, StringComparison.Ordinal) &&
+                    request.Generation == generation)
+                    m_PendingCameraEffects.RemoveAt(i);
+            }
+        }
+
+        static CameraEffectKind ToEffectKind(CharacterPresentationCameraBindingKind kind)
+        {
+            switch (kind)
+            {
+                case CharacterPresentationCameraBindingKind.Override:
+                    return CameraEffectKind.Override;
+                case CharacterPresentationCameraBindingKind.Zoom:
+                    return CameraEffectKind.Zoom;
+                case CharacterPresentationCameraBindingKind.Stretch:
+                    return CameraEffectKind.Stretch;
+                case CharacterPresentationCameraBindingKind.Shake:
+                    return CameraEffectKind.Shake;
+                case CharacterPresentationCameraBindingKind.Shot:
+                    return CameraEffectKind.Shot;
+                default:
+                    throw new ArgumentOutOfRangeException(nameof(kind), kind, null);
+            }
         }
 
         static CharacterPresentationCameraBinding RequireCameraBinding(
@@ -292,6 +448,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 switch (binding.Kind)
                 {
                     case CharacterPresentationCameraBindingKind.State:
+                    case CharacterPresentationCameraBindingKind.Sequence:
                         resolver.RequireKey(binding.TargetKey, producer.SourceDisplayPath);
                         break;
                     case CharacterPresentationCameraBindingKind.Target:
@@ -301,18 +458,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                         resolver.RequireKey(binding.PreferredBoneKey, producer.SourceDisplayPath);
                         break;
                 }
-            }
-        }
-
-        static float ResolveFieldOfView(CameraMode mode)
-        {
-            switch (mode)
-            {
-                case CameraMode.Aim: return 50f;
-                case CameraMode.LockOn: return 55f;
-                case CameraMode.ActionFocus: return 48f;
-                case CameraMode.SkillCloseup: return 42f;
-                default: return DefaultFieldOfView;
             }
         }
 
@@ -345,6 +490,45 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 case TimelineCameraLookResponseMode.Suppressed: return CameraLookResponseMode.Suppressed;
                 case TimelineCameraLookResponseMode.Weighted: return CameraLookResponseMode.Weighted;
                 default: return CameraLookResponseMode.Full;
+            }
+        }
+
+        static CameraSequenceInterruptPolicy ToSequenceInterruptPolicy(CameraInterruptPolicy policy)
+        {
+            switch (policy)
+            {
+                case CameraInterruptPolicy.Cut:
+                    return CameraSequenceInterruptPolicy.Cut;
+                case CameraInterruptPolicy.HoldUntilSourceEnds:
+                    return CameraSequenceInterruptPolicy.HoldUntilSourceEnds;
+                default:
+                    return CameraSequenceInterruptPolicy.BlendOut;
+            }
+        }
+
+        static CameraSequenceInterruptPolicy ToSequenceInterruptPolicy(TimelineCameraInterruptPolicy policy)
+        {
+            switch (policy)
+            {
+                case TimelineCameraInterruptPolicy.Cut:
+                    return CameraSequenceInterruptPolicy.Cut;
+                case TimelineCameraInterruptPolicy.HoldUntilSourceEnds:
+                    return CameraSequenceInterruptPolicy.HoldUntilSourceEnds;
+                default:
+                    return CameraSequenceInterruptPolicy.BlendOut;
+            }
+        }
+
+        static CameraResponseMode ToResponseMode(CameraLookResponseMode mode)
+        {
+            switch (mode)
+            {
+                case CameraLookResponseMode.Suppressed:
+                    return CameraResponseMode.Suppressed;
+                case CameraLookResponseMode.Weighted:
+                    return CameraResponseMode.Weighted;
+                default:
+                    return CameraResponseMode.Full;
             }
         }
 

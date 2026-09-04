@@ -14,6 +14,8 @@ namespace ThirdPersonCamera
         [SerializeField] Vector2 sensitivity = new Vector2(0.12f, 0.0025f);
 
         CameraBasisSnapshot basisSnapshot;
+        CameraRigResult result;
+        float[] initialOrbitRadii;
         bool missingFreeLookReported;
         bool missingTargetReported;
         bool invalidBrainReported;
@@ -32,6 +34,7 @@ namespace ThirdPersonCamera
         public Vector3 LookDirection => basisSnapshot.Valid ? basisSnapshot.LookDirection : Vector3.zero;
         public Vector3 AimPoint => basisSnapshot.AimPoint;
         public CameraBasisSnapshot BasisSnapshot => basisSnapshot;
+        public CameraRigResult Result => result;
 
         void Awake()
         {
@@ -41,11 +44,13 @@ namespace ThirdPersonCamera
             if (freeLook == null || !HasValidBrain() || !HasTargets())
             {
                 basisSnapshot = CameraBasisSnapshot.Invalid;
+                result = default;
                 return;
             }
 
             ClearFreeLookInput();
             BindFreeLookTargets();
+            CaptureInitialOrbitRadii();
             RefreshBasisSnapshot();
         }
 
@@ -59,11 +64,47 @@ namespace ThirdPersonCamera
 
         public void ApplyAfterTrackingReset(CameraPosePlan plan) => Apply(plan, true);
 
+        public void Apply(in CameraFramePlan plan)
+        {
+            if (!plan.Valid)
+            {
+                basisSnapshot = CameraBasisSnapshot.Invalid;
+                result = default;
+                return;
+            }
+
+            if (!CanApply())
+                return;
+
+            ApplyTargets(plan.FollowPoint + plan.CameraOffset, plan.AimPoint + plan.CameraOffset);
+            ApplyOrbit(plan.OrbitYaw, plan.OrbitPitch);
+            ApplyOrbitRadius(plan.RadiusScale);
+            ApplyLens(plan.FieldOfView, plan.NearClipPlane, plan.FarClipPlane);
+            ApplyDutch(plan.RollDegrees);
+            if (plan.ResetHistory)
+                freeLook.PreviousStateIsValid = false;
+            UpdateBrain();
+            RefreshBasisSnapshot(plan.AimPoint);
+        }
+
+        public void Reset()
+        {
+            ClearFreeLookInput();
+            basisSnapshot = CameraBasisSnapshot.Invalid;
+            result = default;
+            if (freeLook != null)
+            {
+                freeLook.PreviousStateIsValid = false;
+                RestoreInitialOrbitRadii();
+            }
+        }
+
         void Apply(CameraPosePlan plan, bool resetTracking)
         {
             if (!plan.Valid)
             {
                 basisSnapshot = CameraBasisSnapshot.Invalid;
+                result = default;
                 return;
             }
 
@@ -95,6 +136,7 @@ namespace ThirdPersonCamera
             {
                 ReportMissingFreeLook();
                 basisSnapshot = CameraBasisSnapshot.Invalid;
+                result = default;
                 return;
             }
 
@@ -117,6 +159,7 @@ namespace ThirdPersonCamera
             if (freeLook == null || !HasValidBrain() || !HasTargets())
             {
                 basisSnapshot = CameraBasisSnapshot.Invalid;
+                result = default;
                 return false;
             }
 
@@ -174,6 +217,61 @@ namespace ThirdPersonCamera
             freeLook.m_Lens = lens;
         }
 
+        void ApplyLens(float fieldOfView, float nearClipPlane, float farClipPlane)
+        {
+            LensSettings lens = freeLook.m_Lens;
+            lens.FieldOfView = Mathf.Max(1f, fieldOfView);
+            lens.NearClipPlane = Mathf.Max(0f, nearClipPlane);
+            lens.FarClipPlane = Mathf.Max(lens.NearClipPlane + 0.001f, farClipPlane);
+            freeLook.m_Lens = lens;
+        }
+
+        void ApplyDutch(float rollDegrees)
+        {
+            LensSettings lens = freeLook.m_Lens;
+            lens.Dutch = rollDegrees;
+            freeLook.m_Lens = lens;
+        }
+
+        void CaptureInitialOrbitRadii()
+        {
+            if (freeLook == null || freeLook.m_Orbits == null)
+                return;
+            initialOrbitRadii = new float[freeLook.m_Orbits.Length];
+            for (int i = 0; i < initialOrbitRadii.Length; i++)
+                initialOrbitRadii[i] = freeLook.m_Orbits[i].m_Radius;
+        }
+
+        void ApplyOrbitRadius(float radiusScale)
+        {
+            if (freeLook == null || freeLook.m_Orbits == null)
+                return;
+            if (initialOrbitRadii == null || initialOrbitRadii.Length != freeLook.m_Orbits.Length)
+                CaptureInitialOrbitRadii();
+            for (int i = 0; i < freeLook.m_Orbits.Length; i++)
+                freeLook.m_Orbits[i].m_Radius = initialOrbitRadii[i] * Mathf.Max(0f, radiusScale);
+        }
+
+        void RestoreInitialOrbitRadii()
+        {
+            if (freeLook == null || freeLook.m_Orbits == null || initialOrbitRadii == null ||
+                initialOrbitRadii.Length != freeLook.m_Orbits.Length)
+                return;
+            for (int i = 0; i < freeLook.m_Orbits.Length; i++)
+                freeLook.m_Orbits[i].m_Radius = initialOrbitRadii[i];
+        }
+
+        void ApplyOrbit(float yaw, float pitch)
+        {
+            freeLook.m_XAxis.Value = ResolveAxisValue(
+                yaw,
+                freeLook.m_XAxis.m_MinValue,
+                freeLook.m_XAxis.m_MaxValue,
+                freeLook.m_XAxis.m_Wrap);
+            freeLook.m_YAxis.Value = Mathf.InverseLerp(-70f, 70f, pitch);
+            ClearFreeLookInput();
+        }
+
         void RefreshBasisSnapshot()
         {
             RefreshBasisSnapshot(cameraAimTarget != null ? cameraAimTarget.position : Vector3.zero);
@@ -184,6 +282,7 @@ namespace ThirdPersonCamera
             if (freeLook == null || !freeLook.PreviousStateIsValid)
             {
                 basisSnapshot = CameraBasisSnapshot.Invalid;
+                result = default;
                 return;
             }
 
@@ -192,6 +291,7 @@ namespace ThirdPersonCamera
             if (lookDirection.sqrMagnitude <= 0.000001f)
             {
                 basisSnapshot = CameraBasisSnapshot.Invalid;
+                result = default;
                 return;
             }
 
@@ -204,6 +304,12 @@ namespace ThirdPersonCamera
                 Yaw,
                 ResolvePitch(lookDirection),
                 planarForward.sqrMagnitude > 0.000001f && planarRight.sqrMagnitude > 0.000001f);
+            result = new CameraRigResult(
+                basisSnapshot,
+                freeLook.State.FinalPosition,
+                rotation,
+                freeLook.m_Lens.FieldOfView,
+                basisSnapshot.Valid);
         }
 
         bool HasTargets()
@@ -222,6 +328,7 @@ namespace ThirdPersonCamera
             {
                 ReportInvalidBrain();
                 basisSnapshot = CameraBasisSnapshot.Invalid;
+                result = default;
                 return;
             }
 

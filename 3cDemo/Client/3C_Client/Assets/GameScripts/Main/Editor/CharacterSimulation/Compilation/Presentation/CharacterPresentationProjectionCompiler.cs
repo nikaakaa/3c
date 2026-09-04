@@ -10,6 +10,7 @@ using ThirdPersonCharacter.Equipment;
 using ThirdPersonCharacter.Pipeline.Animation;
 using ThirdPersonCharacter.Pipeline.Animation.MotionMatching;
 using ThirdPersonCharacter.Pipeline.Editor;
+using ThirdPersonCamera;
 using ThirdPersonSimulation;
 using UnityEditor;
 using UnityEngine;
@@ -178,9 +179,13 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 model.AnimationPresentationProfile,
                 sourceCatalog,
                 errors);
+            CharacterCameraProjectionPayload camera = CompileCameraProfile(
+                model.CameraProfile,
+                errors);
             string projectionRevision = ComputeProjectionRevision(
                 model.AnimationPresentationProfile,
                 model.Definition.EquipmentPresentationProfile,
+                model.CameraProfile,
                 reader.Contract.ContractHash,
                 request.FootAnalysis.RevisionTokens,
                 motionMatching);
@@ -189,6 +194,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 model.AnimationPresentationProfile,
                 model.Definition.EquipmentProfile,
                 model.Definition.EquipmentPresentationProfile,
+                camera,
                 projectionRevision,
                 request.FootAnalysis,
                 motionMatching,
@@ -242,6 +248,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             revision = ComputeProjectionRevision(
                 definition.AnimationPresentationProfile,
                 definition.EquipmentPresentationProfile,
+                definition.CameraProfile,
                 contract.ContractHash,
                 footAnalysisTokens,
                 projection.MotionMatching);
@@ -417,11 +424,32 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             }
         }
 
+        static CharacterCameraProjectionPayload CompileCameraProfile(
+            CharacterCameraProfile profile,
+            List<string> errors)
+        {
+            if (!profile)
+            {
+                errors?.Add("Character Definition has no Camera Profile.");
+                return null;
+            }
+            try
+            {
+                return CharacterCameraProjectionBuilder.Build(profile);
+            }
+            catch (Exception exception)
+            {
+                errors?.Add($"Camera Profile '{profile.name}' is invalid: {exception.Message}");
+                return null;
+            }
+        }
+
         static CharacterPresentationProjection CompileCore(
             CharacterPresentationSemanticReader reader,
             CharacterAnimationPresentationProfile profile,
             CharacterEquipmentProfile equipmentProfile,
             CharacterEquipmentPresentationProfile equipmentPresentationProfile,
+            CharacterCameraProjectionPayload camera,
             string projectionRevision,
             CharacterFootPlacementAnalysisCompilation footAnalysisCompilation,
             MotionMatchingProjectionPayload motionMatching,
@@ -435,6 +463,9 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 errors?.Add("Character Presentation Projection build input is incomplete.");
                 return null;
             }
+
+            if (camera == null)
+                errors?.Add("Character Camera Projection is missing.");
 
             profile.CollectConfigurationErrors(errors);
             AnimationFootAnalysisProjectionBuildData footAnalysis =
@@ -593,7 +624,8 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 footIdentity,
                 projectionRevision,
                 visualBindings,
-                linkedPose);
+                linkedPose,
+                camera);
             CharacterPoseTuningCompilationResult tuning =
                 CharacterPoseTuningLayoutCompiler.Compile(
                     reader.Contract.ProgramId.Value,
@@ -2903,6 +2935,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
         internal static string ComputeProjectionRevision(
             CharacterAnimationPresentationProfile animationProfile,
             UnityEngine.Object equipmentPresentationProfile,
+            CharacterCameraProfile cameraProfile,
             StableHash contractHash,
             IReadOnlyList<string> footAnalysisTokens,
             MotionMatchingProjectionPayload motionMatching)
@@ -2914,6 +2947,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             };
             AddProjectionAssetRevision(animationProfile, values);
             AddProjectionAssetRevision(equipmentPresentationProfile, values);
+            AddProjectionAssetRevision(cameraProfile, values);
             AddMotionMatchingRevision(motionMatching, values);
             if (footAnalysisTokens != null)
             {

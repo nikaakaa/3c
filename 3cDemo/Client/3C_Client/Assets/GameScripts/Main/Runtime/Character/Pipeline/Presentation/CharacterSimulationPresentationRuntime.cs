@@ -451,8 +451,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 if (m_PendingCameraFrame)
                     m_Camera.Present(
                         m_PendingBodyFrame,
-                        m_PendingPresentationContext
-                            .PresentationDeltaSeconds);
+                        in m_PendingPresentationContext);
             }
             finally
             {

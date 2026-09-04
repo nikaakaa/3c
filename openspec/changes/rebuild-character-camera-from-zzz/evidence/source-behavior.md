@@ -68,6 +68,31 @@
 - `MonoStageCamera` 的字段为 `followName`（`+0x20`）、`lookAtName`（`+0x28`）、`virtualCamera`（`+0x30`）和活动标记（`+0x38`）。`Awake`、`ActiveCam` 及其绑定辅助函数围绕这一个 `virtualCamera` 实例运行；目前只闭合了字段和承载身份，follow/look-at 名称最终解析到哪一个场景对象、WorldBasic 数据由哪一层写入该实例仍未闭合。
 - 默认第三人称相机 `MoleMole.Cameras.ScopedOverShoulderCamera` 持有 `CameraVariableSubModule<WorldBasicCameraData>`（字段 `+0x270`），其 `HJOEFCAMAD(float)` 与 `MCOJPGDGMPI(CameraVariableFetchContext<WorldBasicCameraData>)` 都返回 `WorldBasicCameraData`；配置侧同时包含 follow/camera offset、FOV、roll、位置阻尼、输入灵敏度以及 Shake/Zoom/Stretch 开关。由此可以确认默认相机的核心结果也经过 WorldBasic 数据子模块，而不是把相机轨道交给 FreeLook 自己求值。
 
+### Pipeline VCam 到 CameraState 的新增证据
+
+同一 829 运行元数据中的 `MoleMole.Cameras.NapVirtualPipelineCamera`（类型索引 `69714`）是 `CinemachineVirtualCameraBase` 的子类，不是 `CinemachineFreeLook`。它的实例字段把相机管线和 Cinemachine 状态放在同一个活动承载上：
+
+| 字段 | 类型 | 记录偏移 |
+|---|---|---:|
+| `HHFPFIIMAIC` | `CameraSequenceCollectionPlayer<WorldBasicCameraData>[]` | `+0x80` |
+| `FFMLIFECBEN` | `Nullable<WorldBasicCameraData>` | `+0x9C` |
+| `FCOLECGOBJM` | `Nullable<WorldBasicCameraData>` | `+0xCC` |
+| `lookAt` | `Transform` | `+0x100` |
+| `follow` | `Transform` | `+0x108` |
+| `PNKMKMKAMED` | `Cinemachine.CameraState` | `+0x110` |
+
+该类型的运行入口和数据转换入口为：
+
+- `InternalUpdateCameraState(Vector3, float)`，RVA `0x1623B8F0`：活动 VCam 的 Cinemachine 更新入口，函数体会更新 Pipeline 数据并继续处理 CameraState。
+- `HAHPGHPCIKB(WorldBasicCameraData&, WorldBasicCameraData&, CameraState&)`，RVA `0x1623EA00`：接收两份核心相机数据和一个 `CameraState` 输出引用。
+- `IOPJLAMFIPJ(CameraState&)`，RVA `0x1623ECF0`：对 `CameraState` 做进一步输出处理。
+- `HKDKONGDANJ(CameraState&)`，RVA `0x1623F260`：从 `CameraState` 取得两份 `WorldBasicCameraData` 结果。
+- `GetLastCameraData()` / `GetLatestCameraData()`，RVA `0x1623DB50` / `0x1623DCB0`：暴露当前和最新的两份 `WorldBasicCameraData` 结果。
+
+`PipelineCamera.CameraContext<,>` 还保存 `_lastCameraData`、`_lastReferenceCameraData` 和 `_mCamera Camera`，并提供 `GetLastFinalCameraData()`；`PipelineCamera.FinalCameraData` 是 `48` 字节值类型，实例字段只有 `location Vector3`、`rotation Quaternion`、`fieldOfView float`。这把源侧阶段关系固定为“核心 WorldBasic 数据 → Pipeline VCam/CameraState → FinalCameraData”，但当前快照还没有证明 `FinalCameraData` 写回 Unity `Camera` 属性的唯一函数和同帧回读点。
+
+因此标准 `CinemachineVirtualCamera`（`MonoStageEnv` 的字典返回类型）与默认 `NapVirtualPipelineCamera` 是两个已确认但职责不同的承载类型：前者是 stage 资源的 virtual-camera 身份返回值，后者是默认相机管线的活动计算载体。工程侧在唯一写入 owner 和最终回读顺序闭合前，不能把二者合并成一个 FreeLook 适配入口，也不能在现有适配器旁边再加一条并行输出路径。
+
 因此当前工程的 `CinemachineCameraRigAdapter` 仍不能把 `CinemachineFreeLook` 当作 ZZZ 活动承载的等价物。`CameraWorldBasicData` 已先作为独立核心合同落地，但在最终 virtual camera 写入点、阶段组件和回读顺序闭合前，不接入现有 FreeLook，也不增加第二条运行输出路径。
 
 metadata 只证明类型、字段、方法身份和地址，不证明函数体之外的完整演出规则。上表把这种边界保留下来，不能把 metadata 名称当成公式或阶段顺序。

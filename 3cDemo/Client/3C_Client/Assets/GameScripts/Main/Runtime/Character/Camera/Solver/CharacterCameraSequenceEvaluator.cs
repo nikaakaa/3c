@@ -9,8 +9,14 @@ namespace ThirdPersonCamera
         CameraFramePlan m_LastPlan;
         CameraFramePlan m_BlendFrom;
         string m_CurrentSequenceId = string.Empty;
+        string m_CurrentSourceId = string.Empty;
+        ulong m_CurrentGeneration;
         float m_TransitionElapsed;
         float m_TransitionDuration;
+        CameraFramePlan m_RetireFrom;
+        float m_RetireElapsed;
+        float m_RetireDuration;
+        bool m_Retiring;
         float m_Yaw;
         float m_Pitch;
         bool m_Initialized;
@@ -26,11 +32,29 @@ namespace ThirdPersonCamera
             m_LastPlan = default;
             m_BlendFrom = default;
             m_CurrentSequenceId = string.Empty;
+            m_CurrentSourceId = string.Empty;
+            m_CurrentGeneration = 0;
             m_TransitionElapsed = 0f;
             m_TransitionDuration = 0f;
+            m_RetireFrom = default;
+            m_RetireElapsed = 0f;
+            m_RetireDuration = 0f;
+            m_Retiring = false;
             m_Yaw = 0f;
             m_Pitch = m_Projection.DefaultElevationAngle;
             m_Initialized = false;
+        }
+
+        public void Retire(string sourceId, ulong generation, float blendOutSeconds)
+        {
+            if (!m_Initialized || !m_LastPlan.Valid ||
+                m_CurrentGeneration != generation ||
+                !string.Equals(m_CurrentSourceId, sourceId, StringComparison.Ordinal))
+                return;
+            m_RetireFrom = m_LastPlan;
+            m_RetireElapsed = 0f;
+            m_RetireDuration = Mathf.Max(0f, blendOutSeconds);
+            m_Retiring = true;
         }
 
         public CameraFramePlan Evaluate(
@@ -46,8 +70,14 @@ namespace ThirdPersonCamera
                 m_LastPlan = default;
                 m_BlendFrom = default;
                 m_CurrentSequenceId = string.Empty;
+                m_CurrentSourceId = string.Empty;
+                m_CurrentGeneration = 0;
                 m_TransitionElapsed = 0f;
                 m_TransitionDuration = 0f;
+                m_RetireFrom = default;
+                m_RetireElapsed = 0f;
+                m_RetireDuration = 0f;
+                m_Retiring = false;
             }
 
             Vector2 look = response.Apply(input.LookInput);
@@ -56,6 +86,45 @@ namespace ThirdPersonCamera
                 m_Pitch - look.y * m_Projection.Input.Sensitivity.y,
                 m_Projection.Input.PitchLimit.x,
                 m_Projection.Input.PitchLimit.y);
+
+            if (m_Retiring)
+            {
+                if (request.Active)
+                {
+                    m_Retiring = false;
+                    m_RetireFrom = default;
+                    m_RetireElapsed = 0f;
+                    m_RetireDuration = 0f;
+                }
+                else
+                {
+                    CameraSequenceRequest defaultRequest = request;
+                    CameraFramePlan retireTarget = BuildTargetPlan(
+                        input,
+                        defaultRequest,
+                        m_Projection.DefaultSequence,
+                        look);
+                    float retireProgress = m_RetireDuration <= 0f
+                        ? 1f
+                        : Mathf.Clamp01(m_RetireElapsed / m_RetireDuration);
+                    CameraFramePlan retiredResult = retireProgress >= 1f
+                        ? retireTarget
+                        : Blend(m_RetireFrom, retireTarget, retireProgress);
+                    m_LastPlan = retiredResult;
+                    m_RetireElapsed += input.Delta(CameraTimeDomain.PresentationScaled);
+                    if (retireProgress >= 1f || m_RetireElapsed >= m_RetireDuration)
+                    {
+                        m_Retiring = false;
+                        m_RetireFrom = default;
+                        m_RetireElapsed = 0f;
+                        m_RetireDuration = 0f;
+                        m_CurrentSequenceId = m_Projection.DefaultSequence.SequenceId;
+                        m_CurrentSourceId = defaultRequest.SourceId;
+                        m_CurrentGeneration = defaultRequest.Generation;
+                    }
+                    return retiredResult;
+                }
+            }
 
             string sequenceId = request.Active ? request.SequenceId : m_Projection.DefaultSequence.SequenceId;
             CameraSequencePayload sequence = ResolveSequence(sequenceId);
@@ -78,11 +147,15 @@ namespace ThirdPersonCamera
                     m_TransitionDuration = request.BlendInSeconds;
                 }
                 m_CurrentSequenceId = sequence.SequenceId;
+                m_CurrentSourceId = request.SourceId;
+                m_CurrentGeneration = request.Generation;
                 m_TransitionElapsed = 0f;
             }
             else
             {
                 m_TransitionElapsed += input.Delta(CameraTimeDomain.PresentationScaled);
+                m_CurrentSourceId = request.SourceId;
+                m_CurrentGeneration = request.Generation;
             }
 
             float progress = m_TransitionDuration <= 0f
@@ -120,7 +193,11 @@ namespace ThirdPersonCamera
             for (int i = 0; i < input.Targets.Count; i++)
             {
                 CameraTargetSnapshot target = input.Targets[i];
-                if (!target.Valid || !string.Equals(target.Key, request.TargetKey, StringComparison.Ordinal))
+                bool matchesDefaultBody = string.IsNullOrEmpty(request.TargetKey) &&
+                    string.Equals(target.Key, CameraTargetBindingKeys.Body, StringComparison.Ordinal);
+                bool matchesRequestedTarget = !string.IsNullOrEmpty(request.TargetKey) &&
+                    string.Equals(target.Key, request.TargetKey, StringComparison.Ordinal);
+                if (!target.Valid || !matchesDefaultBody && !matchesRequestedTarget)
                     continue;
                 anchor = target.AnchorPoint;
                 aim = target.AimPoint;

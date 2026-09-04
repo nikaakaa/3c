@@ -3,6 +3,11 @@ using UnityEngine;
 
 namespace ThirdPersonCamera
 {
+    public static class CameraTargetBindingKeys
+    {
+        public const string Body = "camera.body";
+    }
+
     [Serializable]
     public sealed class CameraTargetBinding
     {

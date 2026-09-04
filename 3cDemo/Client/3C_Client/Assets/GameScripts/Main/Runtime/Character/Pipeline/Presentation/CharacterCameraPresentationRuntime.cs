@@ -40,7 +40,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
 
         public CharacterCameraPresentationRuntime(
             CharacterPresentationProjection projection,
-            CinemachineCameraRigAdapter cameraRig,
+            ICameraRigAdapter cameraRig,
             CharacterPresentationBodyState initialBody,
             Transform followAnchor,
             Transform aimAnchor,
@@ -52,7 +52,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 throw new ArgumentNullException(nameof(projection));
             projection.RequireCameraPayload();
             m_CameraProjection = projection.Camera;
-            m_CameraRig = cameraRig ? cameraRig : throw new ArgumentNullException(nameof(cameraRig));
+            m_CameraRig = cameraRig ?? throw new ArgumentNullException(nameof(cameraRig));
             if (!followAnchor || !aimAnchor)
                 throw new ArgumentException("Presentation Camera requires explicit follow and aim anchors.");
             if (cameraTargetBindings == null)
@@ -88,6 +88,10 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 case CharacterPresentationCameraBindingKind.Sequence:
                     if (weight <= 0f)
                     {
+                        m_SequenceEvaluator.Retire(
+                            producer.ProgramProducerIdentity,
+                            command.ProducerGeneration,
+                            binding.BlendOutSeconds);
                         m_Sequences.Remove(instance);
                         return;
                     }
@@ -175,6 +179,10 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             switch (binding.Kind)
             {
                 case CharacterPresentationCameraBindingKind.Sequence:
+                    m_SequenceEvaluator.Retire(
+                        producer.ProgramProducerIdentity,
+                        command.ProducerGeneration,
+                        binding.BlendOutSeconds);
                     m_Sequences.Remove(instance);
                     break;
                 case CharacterPresentationCameraBindingKind.Response:
@@ -287,7 +295,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
 
             m_FrameTargets.Clear();
             m_FrameTargets.Add(new CameraTargetSnapshot(
-                "camera.body",
+                CameraTargetBindingKeys.Body,
                 follow,
                 aim,
                 Vector3.zero,

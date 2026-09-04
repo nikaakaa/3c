@@ -29,6 +29,21 @@ namespace ThirdPersonCamera
         public Vector3 CameraToPivot => Rotation * new Vector3(Offset.x, Offset.y, Radius);
         public Vector3 Location => PivotLocation - CameraToPivot;
 
+        public CameraWorldBasicData WithPivotLocation(Vector3 pivotLocation) =>
+            new CameraWorldBasicData(pivotLocation, Rotation, Radius, Offset, FieldOfView);
+
+        public CameraWorldBasicData WithRotation(Quaternion rotation) =>
+            new CameraWorldBasicData(PivotLocation, rotation, Radius, Offset, FieldOfView);
+
+        public CameraWorldBasicData WithRadius(float radius) =>
+            new CameraWorldBasicData(PivotLocation, Rotation, radius, Offset, FieldOfView);
+
+        public CameraWorldBasicData WithOffset(Vector2 offset) =>
+            new CameraWorldBasicData(PivotLocation, Rotation, Radius, offset, FieldOfView);
+
+        public CameraWorldBasicData WithFieldOfView(float fieldOfView) =>
+            new CameraWorldBasicData(PivotLocation, Rotation, Radius, Offset, fieldOfView);
+
         public bool IsValid =>
             Finite(PivotLocation) && Finite(Rotation) &&
             float.IsFinite(Radius) && Radius > 0f &&

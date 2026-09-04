@@ -21,6 +21,8 @@ namespace ThirdPersonCamera
         [SerializeField] float m_MinValue;
         [SerializeField] float m_MaxValue = 1f;
         [SerializeField] string m_Unit = "normalized";
+        [SerializeField] WrapMode m_PreWrapMode = WrapMode.ClampForever;
+        [SerializeField] WrapMode m_PostWrapMode = WrapMode.ClampForever;
 
         public string Schema => m_Schema ?? string.Empty;
         public string CurveId => m_CurveId ?? string.Empty;
@@ -29,6 +31,8 @@ namespace ThirdPersonCamera
         public float MinValue => m_MinValue;
         public float MaxValue => m_MaxValue;
         public string Unit => m_Unit ?? string.Empty;
+        public WrapMode PreWrapMode => m_PreWrapMode;
+        public WrapMode PostWrapMode => m_PostWrapMode;
         public string Revision => ComputeRevision();
         public string DependencyIdentity => $"{CurveId}@{Revision}";
 
@@ -38,7 +42,9 @@ namespace ThirdPersonCamera
             CameraTimeDomain timeDomain,
             float minValue,
             float maxValue,
-            string unit)
+            string unit,
+            WrapMode preWrapMode = WrapMode.ClampForever,
+            WrapMode postWrapMode = WrapMode.ClampForever)
         {
             m_Schema = SchemaVersion;
             m_CurveId = RequireIdentity(curveId, nameof(curveId));
@@ -47,6 +53,8 @@ namespace ThirdPersonCamera
             m_MinValue = minValue;
             m_MaxValue = maxValue;
             m_Unit = RequireIdentity(unit, nameof(unit));
+            m_PreWrapMode = preWrapMode;
+            m_PostWrapMode = postWrapMode;
             RequireValid();
         }
 
@@ -69,7 +77,9 @@ namespace ThirdPersonCamera
                 TimeDomain,
                 MinValue,
                 MaxValue,
-                Unit);
+                Unit,
+                PreWrapMode,
+                PostWrapMode);
         }
 
         public void RequireValid()
@@ -78,7 +88,9 @@ namespace ThirdPersonCamera
                 string.IsNullOrWhiteSpace(CurveId) || m_Curve == null || m_Curve.length == 0 ||
                 !Enum.IsDefined(typeof(CameraTimeDomain), TimeDomain) ||
                 !float.IsFinite(MinValue) || !float.IsFinite(MaxValue) || MinValue > MaxValue ||
-                string.IsNullOrWhiteSpace(Unit))
+                string.IsNullOrWhiteSpace(Unit) ||
+                !Enum.IsDefined(typeof(WrapMode), PreWrapMode) ||
+                !Enum.IsDefined(typeof(WrapMode), PostWrapMode))
             {
                 throw new InvalidOperationException($"Camera Curve Asset '{name}' is incomplete.");
             }
@@ -107,6 +119,8 @@ namespace ThirdPersonCamera
             value.Append('|').Append(MinValue.ToString("R", CultureInfo.InvariantCulture));
             value.Append('|').Append(MaxValue.ToString("R", CultureInfo.InvariantCulture));
             value.Append('|').Append(Unit);
+            value.Append('|').Append((int)PreWrapMode);
+            value.Append('|').Append((int)PostWrapMode);
             if (m_Curve != null)
             {
                 Keyframe[] keys = m_Curve.keys;
@@ -133,8 +147,8 @@ namespace ThirdPersonCamera
                 return null;
             return new AnimationCurve(source.keys)
             {
-                preWrapMode = WrapMode.Clamp,
-                postWrapMode = WrapMode.Clamp
+                preWrapMode = source.preWrapMode,
+                postWrapMode = source.postWrapMode
             };
         }
 

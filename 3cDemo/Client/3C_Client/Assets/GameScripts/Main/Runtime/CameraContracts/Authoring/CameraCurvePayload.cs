@@ -17,6 +17,8 @@ namespace ThirdPersonCamera
         [SerializeField] float m_MinValue;
         [SerializeField] float m_MaxValue;
         [SerializeField] string m_Unit = string.Empty;
+        [SerializeField] WrapMode m_PreWrapMode;
+        [SerializeField] WrapMode m_PostWrapMode;
 
         internal CameraCurvePayload(
             string curveId,
@@ -25,7 +27,9 @@ namespace ThirdPersonCamera
             CameraTimeDomain timeDomain,
             float minValue,
             float maxValue,
-            string unit)
+            string unit,
+            WrapMode preWrapMode,
+            WrapMode postWrapMode)
         {
             m_CurveId = curveId ?? string.Empty;
             m_Revision = revision ?? string.Empty;
@@ -34,6 +38,8 @@ namespace ThirdPersonCamera
             m_MinValue = minValue;
             m_MaxValue = maxValue;
             m_Unit = unit ?? string.Empty;
+            m_PreWrapMode = preWrapMode;
+            m_PostWrapMode = postWrapMode;
         }
 
         public string CurveId => m_CurveId ?? string.Empty;
@@ -43,15 +49,24 @@ namespace ThirdPersonCamera
         public float MinValue => m_MinValue;
         public float MaxValue => m_MaxValue;
         public string Unit => m_Unit ?? string.Empty;
+        public WrapMode PreWrapMode => m_PreWrapMode;
+        public WrapMode PostWrapMode => m_PostWrapMode;
 
         public float Evaluate(float time)
         {
             IReadOnlyList<CameraCurveKey> keys = Keys;
             if (keys.Count == 0)
                 throw new InvalidOperationException($"Camera Curve '{CurveId}' has no keys.");
-            if (keys.Count == 1 || time <= keys[0].Time)
+            if (keys.Count == 1)
                 return keys[0].Value;
             int last = keys.Count - 1;
+            time = time < keys[0].Time
+                ? WrapTime(time, keys[0].Time, keys[last].Time, PreWrapMode)
+                : time > keys[last].Time
+                    ? WrapTime(time, keys[0].Time, keys[last].Time, PostWrapMode)
+                    : time;
+            if (time <= keys[0].Time)
+                return keys[0].Value;
             if (time >= keys[last].Time)
                 return keys[last].Value;
             for (int index = 1; index < keys.Count; index++)
@@ -76,12 +91,31 @@ namespace ThirdPersonCamera
             return keys[last].Value;
         }
 
+        static float WrapTime(float time, float first, float last, WrapMode mode)
+        {
+            float duration = last - first;
+            if (duration <= 0f || mode == WrapMode.Once || mode == WrapMode.Default || mode == WrapMode.ClampForever)
+                return time < first ? first : last;
+            if (mode == WrapMode.Loop)
+                return first + Mathf.Repeat(time - first, duration);
+            if (mode == WrapMode.PingPong)
+            {
+                float cycle = Mathf.Repeat(time - first, duration * 2f);
+                return cycle <= duration
+                    ? first + cycle
+                    : last - (cycle - duration);
+            }
+            return time < first ? first : last;
+        }
+
         public void RequireValid(string source)
         {
             if (string.IsNullOrWhiteSpace(CurveId) || string.IsNullOrWhiteSpace(Revision) ||
                 Keys.Count == 0 || !Enum.IsDefined(typeof(CameraTimeDomain), TimeDomain) ||
                 !float.IsFinite(MinValue) || !float.IsFinite(MaxValue) || MinValue > MaxValue ||
-                string.IsNullOrWhiteSpace(Unit))
+                string.IsNullOrWhiteSpace(Unit) ||
+                !Enum.IsDefined(typeof(WrapMode), PreWrapMode) ||
+                !Enum.IsDefined(typeof(WrapMode), PostWrapMode))
             {
                 throw new InvalidOperationException($"{source} contains an invalid Camera Curve payload.");
             }

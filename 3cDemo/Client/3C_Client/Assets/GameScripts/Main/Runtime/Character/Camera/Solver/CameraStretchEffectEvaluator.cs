@@ -38,7 +38,7 @@ namespace ThirdPersonCamera
             float envelope = Mathf.LerpUnclamped(start, end, progress) * state.Request.Weight;
             envelope *= CameraEffectEvaluationMath.ReleaseWeight(state, Mathf.Max(0.016f, payload.RecoilTime));
             float radiusScale = plan.RadiusScale + payload.RadiusRatio * envelope;
-            Vector3 offset = payload.CamOffset * envelope;
+            Vector3 offset = ResolveWorldOffset(payload, plan, in input) * envelope;
             float pitch = plan.OrbitPitch;
             if (payload.IsElevationAngleAbsolute)
                 pitch = Mathf.LerpUnclamped(pitch, payload.ElevationAngleMax, envelope);
@@ -48,6 +48,25 @@ namespace ThirdPersonCamera
                 .WithRadiusScale(radiusScale)
                 .WithCameraOffset(offset)
                 .WithOrbit(plan.OrbitYaw, pitch, plan.OrbitRadius);
+        }
+
+        static Vector3 ResolveWorldOffset(
+            CameraStretchPayload payload,
+            CameraFramePlan plan,
+            in CameraFrameInput input)
+        {
+            switch (payload.CamOffsetSpace)
+            {
+                case CameraSpace.World:
+                    return payload.CamOffset;
+                case CameraSpace.LocalAvatar:
+                    return input.BodyRotation * payload.CamOffset;
+                case CameraSpace.Camera:
+                    return Quaternion.Euler(plan.OrbitPitch, plan.OrbitYaw, plan.RollDegrees) * payload.CamOffset;
+                default:
+                    throw new InvalidOperationException(
+                        $"Camera Stretch '{payload.StretchId}' has no supported offset space '{payload.CamOffsetSpace}'.");
+            }
         }
 
         public float ResolveDelta(CameraEffectRuntimeState active, in CameraFrameInput input)

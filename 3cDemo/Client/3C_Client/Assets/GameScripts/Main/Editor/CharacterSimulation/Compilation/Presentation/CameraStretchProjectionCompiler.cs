@@ -1,3 +1,5 @@
+using System;
+
 namespace ThirdPersonCamera
 {
     internal static class CameraStretchProjectionCompiler
@@ -7,6 +9,9 @@ namespace ThirdPersonCamera
             CameraProjectionCompilationContext context)
         {
             asset.RequireValid();
+            if (asset.CamOffsetSpace == CameraSpace.Core)
+                throw new InvalidOperationException(
+                    $"Camera Stretch '{asset.StretchId}' uses Core offset space without a formal core transform input.");
             return new CameraStretchPayload(
                 asset.StretchId,
                 context.CompileCurve(context.RequireCurve(asset.StartCurve)),

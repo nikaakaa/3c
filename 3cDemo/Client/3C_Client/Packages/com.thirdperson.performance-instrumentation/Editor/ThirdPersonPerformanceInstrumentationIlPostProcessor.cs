@@ -21,7 +21,9 @@ namespace ThirdPersonPerformance.Instrumentation.Editor
             for (int i = 0; i < compiledAssembly.Defines.Length; i++)
             {
                 if (compiledAssembly.Defines[i] == PerformanceInstrumentationIdentity.Define)
-                    return true;
+                    return Array.Exists(compiledAssembly.References, reference =>
+                        string.Equals(Path.GetFileNameWithoutExtension(reference),
+                            PerformanceInstrumentationIdentity.ContractsAssembly, StringComparison.Ordinal));
             }
             return false;
         }
@@ -34,9 +36,11 @@ namespace ThirdPersonPerformance.Instrumentation.Editor
             try
             {
                 bool readSymbols = pdbData != null && pdbData.Length > 0;
+                using var pdbStream = readSymbols ? new MemoryStream(pdbData, false) : null;
                 var readerParameters = new ReaderParameters
                 {
                     ReadSymbols = readSymbols,
+                    SymbolStream = pdbStream,
                     ReadWrite = false,
                     InMemory = true,
                     SymbolReaderProvider = readSymbols

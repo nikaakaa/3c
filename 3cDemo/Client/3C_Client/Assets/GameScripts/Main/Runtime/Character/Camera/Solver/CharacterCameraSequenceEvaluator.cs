@@ -39,7 +39,7 @@ namespace ThirdPersonCamera
         {
             if (input.ResetHistory || !m_Initialized)
             {
-                m_FramePlanner.Reset();
+                m_FramePlanner.Reset(input.BodyRotation);
                 m_Transition.Reset();
                 m_Initialized = true;
             }

@@ -17,7 +17,12 @@ namespace ThirdPersonCamera
 
         public void Reset()
         {
-            m_Yaw = 0f;
+            Reset(Quaternion.identity);
+        }
+
+        public void Reset(Quaternion bodyRotation)
+        {
+            m_Yaw = Mathf.Repeat(bodyRotation.eulerAngles.y, 360f);
             m_Pitch = m_Projection.DefaultElevationAngle;
         }
 

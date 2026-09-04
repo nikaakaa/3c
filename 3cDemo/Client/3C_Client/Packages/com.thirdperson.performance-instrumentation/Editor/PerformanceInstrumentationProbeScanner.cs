@@ -14,7 +14,7 @@ namespace ThirdPersonPerformance.Instrumentation.Editor
             {
                 foreach (TypeDefinition type in AllTypes(module.Types))
                 {
-                    if (type.IsInterface || type.HasGenericParameters)
+                    if (type.IsInterface)
                         continue;
                     foreach (MethodDefinition method in type.Methods)
                     {

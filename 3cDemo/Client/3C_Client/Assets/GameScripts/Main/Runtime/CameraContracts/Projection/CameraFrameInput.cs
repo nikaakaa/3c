@@ -51,9 +51,9 @@ public readonly struct CameraFrameInput
                 case CameraTimeDomain.PresentationUnscaled:
                     return UnscaledDeltaSeconds;
                 case CameraTimeDomain.OwnerScaled:
-                    return ScaledDeltaSeconds * OwnerTimeScale;
+                    return PresentationDeltaSeconds * OwnerTimeScale;
                 case CameraTimeDomain.LocalAvatarScaled:
-                    return ScaledDeltaSeconds * LocalAvatarTimeScale;
+                    return PresentationDeltaSeconds * LocalAvatarTimeScale;
                 default:
                     return PresentationDeltaSeconds;
             }

@@ -29,3 +29,17 @@
 代码核对另发现 `IKMappingLimb.solver` 也持有同类型运行时反向引用。它尚未修改；下一步需一并核对对应初始化与域重载行为，不能只凭第一个报错字段消失就宣布完整修复。当前候选只保存已定位的BoneMap循环入口，不勾选Foot行为任务。
 
 恢复顺序：确认上述构建结束且编辑器空闲 → 确认脚本Refresh／编译实际完成 → 核对新的域重载日志与运行引用初始化 → 用同一个1044帧输入重新建立有效基线。只有此闭包成功后才开始下一项Foot行为实验。
+
+## 构建释放后的继续核对
+
+15:06:42，Performance构建以GameplayLabSessionVariantDefinition已销毁错误结束。随后Unity回到Edit空闲状态，新的域重载日志不再以BoneMap作为递归入口，而明确列出 `FullBodyBipedIK.solver → IKSolverFullBody.limbMappings → IKMappingLimb.solver` 的重复链，最终在 `Point.transform` 超出深度。
+
+第二个最小修改将 `IKMappingLimb.solver` 同样标记为System.NonSerialized。它由原Initiate方法赋值，供现有HasParent等逻辑使用；保留赋值和计算顺序。两条反向引用的修复作为同一个序列化边界闭包验证。
+
+## 第二个候选的加载结果
+
+Unity进程重新出现后，已确认Edit空闲、无回放，清理Console成功并通过正式入口请求脚本Refresh／compile。请求在域重载时断连；日志显示脚本编译后的程序集重载，卸载旧程序集时仍记录原Limb循环错误，不能将这条旧实例记录当作新版本验证结果。
+
+随后Unity进程退出，当前Editor.log记录Native Crash Reporting及SIGSEGV。原生栈顶为 `ShaderLab::Program::GetMatchingSubProgram → ShaderLab::ShaderState::FindSubProgramsToUse → ApplyShaderState → ApplyMaterialPass → ScriptableRenderContext::Submit`，上层为URP相机／编辑器重绘。没有启动新的候选回放，也没有采样或Proof。
+
+该栈定位到渲染提交，但尚未定位具体shader、材质或造成崩溃的改动；不将其归因于IK，不擅改渲染配置绕过。第二个候选继续标为未验证。恢复条件变为：先让编辑器能够稳定完成域重载和当前场景渲染，再验证两条运行时引用及1044帧基线。

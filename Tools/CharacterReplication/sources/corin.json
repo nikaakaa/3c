@@ -1,4 +1,12 @@
 {
+  "character": "Corin",
+  "configCatalogFormat": "config-index",
+  "animationManifestFormat": "replication-summary",
+  "focusedStatePattern": "^(Attack_Normal_0[1-5]|Attack_Branch|Attack_Rush|Attack_Counter|Evade_)",
+  "eventBindingMode": "exact-prefix",
+  "eventPatternPrefix": "Corin_",
+  "sharedEvidenceRoot": "D:/ZZZ_Dump/output/corin_replication/replication-guide/analysis",
+  "configRoots": {"attack":"AnimEvents","zones":"AnimatorZoneGroup","battle":"patterns","effect":"patterns","audio":"patterns","shake":"cameraShakes","zoom":"cameraZooms","stretch":"cameraStretchs","override":"config"},
   "dumpRoot": "D:/ZZZ_Dump",
   "output": "D:/ZZZ_Dump/output/corin_replication/replication-guide",
   "controller": "output/corin_replication/20260903_controller_structured_v6/Avatar_Female_Size01_Corin_Controller__1291803240_00335DAA.json",

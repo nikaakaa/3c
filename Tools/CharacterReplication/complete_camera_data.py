@@ -10,7 +10,7 @@ def canonical(value):
 
 
 def main():
-    settings = read_json(Path(__file__).with_name("sources.json"))
+    settings = read_json(Path(__file__).parent / "sources/corin.json")
     out = Path(settings["output"])
     analysis = out / "analysis"
     search = analysis / "camera-resource-search"

@@ -53,7 +53,7 @@ namespace ThirdPersonCamera
             if (!string.Equals(Schema, SchemaVersion, StringComparison.Ordinal) || string.IsNullOrWhiteSpace(ZoomId) ||
                 !StartCurve || !EndCurve || !float.IsFinite(LastTime) || LastTime < -1f ||
                 !float.IsFinite(StartTime) || StartTime < 0f || !float.IsFinite(DelayTime) || DelayTime < 0f ||
-                !float.IsFinite(EndTime) || EndTime < 0f || EndTime < StartTime ||
+                !float.IsFinite(EndTime) || EndTime < 0f ||
                 !float.IsFinite(FieldOfView) || FieldOfView <= 0f ||
                 !Enum.IsDefined(typeof(CameraEffectStackingType), StackingType) ||
                 !Enum.IsDefined(typeof(CameraEffectStackingType), PlayStackingType) ||

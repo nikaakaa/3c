@@ -28,15 +28,24 @@ namespace ThirdPersonCamera
             CameraEffectRuntimeState state = CameraEffectRuntimeStateStore.Select(active, Kind);
             if (state == null || !m_Projection.TryGetStretch(state.Request.ResourceId, out CameraStretchPayload payload))
                 return plan;
-            float progress = CameraEffectEvaluationMath.EffectProgress(
-                state.Elapsed,
-                payload.DelayTime,
-                payload.StretchTime,
-                payload.HoldTime);
-            float start = payload.StartCurve.Evaluate(progress);
-            float end = payload.EndCurve.Evaluate(progress);
-            float envelope = Mathf.LerpUnclamped(start, end, progress) * state.Request.Weight;
-            envelope *= CameraEffectEvaluationMath.ReleaseWeight(state, Mathf.Max(0.016f, payload.RecoilTime));
+            float envelope = state.Retired
+                ? CameraEffectEvaluationMath.ResolveRetiredWeight(
+                    state,
+                    payload.DelayTime,
+                    payload.StretchTime,
+                    payload.HoldTime,
+                    payload.RecoilTime,
+                    payload.StartCurve,
+                    payload.EndCurve)
+                : CameraEffectEvaluationMath.ResolvePhaseWeight(
+                    state.Elapsed,
+                    payload.DelayTime,
+                    payload.StretchTime,
+                    payload.HoldTime,
+                    payload.RecoilTime,
+                    payload.StartCurve,
+                    payload.EndCurve);
+            envelope *= state.Request.Weight;
             float radiusScale = plan.RadiusScale + payload.RadiusRatio * envelope;
             Vector3 offset = ResolveWorldOffset(payload, plan, in input) * envelope;
             float pitch = plan.OrbitPitch;
@@ -94,8 +103,8 @@ namespace ThirdPersonCamera
         public float RetireDuration(CameraEffectRuntimeState active)
         {
             return m_Projection.TryGetStretch(active.Request.ResourceId, out CameraStretchPayload payload)
-                ? Mathf.Max(0.016f, payload.RecoilTime)
-                : 0.016f;
+                ? payload.RecoilTime
+                : 0f;
         }
     }
 }

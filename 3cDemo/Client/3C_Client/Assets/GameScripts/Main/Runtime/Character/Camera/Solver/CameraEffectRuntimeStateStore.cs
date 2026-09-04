@@ -60,8 +60,11 @@ namespace ThirdPersonCamera
                     string.Equals(effect.Request.SourceId, sourceId, StringComparison.Ordinal);
                 if (effect.Request.Generation != generation || !matchesEvent && !matchesSource)
                     continue;
+                if (effect.Retired)
+                    continue;
                 effect.Retired = true;
                 effect.RetireElapsed = 0f;
+                effect.RetireStartElapsed = effect.Elapsed;
             }
         }
 

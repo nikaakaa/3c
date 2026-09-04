@@ -11,5 +11,6 @@ namespace ThirdPersonCamera
         public float Elapsed;
         public bool Retired;
         public float RetireElapsed;
+        public float RetireStartElapsed;
     }
 }

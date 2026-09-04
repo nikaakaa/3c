@@ -94,6 +94,7 @@ namespace ThirdPersonCamera
                         existing.Request = request;
                         existing.Retired = false;
                         existing.RetireElapsed = 0f;
+                        existing.RetireStartElapsed = 0f;
                         continue;
                     }
                 }

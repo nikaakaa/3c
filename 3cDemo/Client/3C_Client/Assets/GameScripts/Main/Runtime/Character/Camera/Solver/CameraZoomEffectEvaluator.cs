@@ -28,19 +28,24 @@ namespace ThirdPersonCamera
             CameraEffectRuntimeState state = CameraEffectRuntimeStateStore.Select(active, Kind);
             if (state == null || !m_Projection.TryGetZoom(state.Request.ResourceId, out CameraZoomPayload payload))
                 return plan;
-            float progress = CameraEffectEvaluationMath.EffectProgress(
-                state.Elapsed,
-                payload.DelayTime,
-                payload.StartTime,
-                payload.EndTime);
-            if (progress <= 0f && state.Elapsed < payload.DelayTime + payload.StartTime)
-                return plan;
-            float start = payload.StartCurve.Evaluate(progress);
-            float end = payload.EndCurve.Evaluate(progress);
-            float envelope = Mathf.Clamp01(Mathf.LerpUnclamped(start, end, progress));
-            float weight = state.Request.Weight * envelope * CameraEffectEvaluationMath.ReleaseWeight(
-                state,
-                Mathf.Max(0.016f, payload.EndTime - payload.StartTime));
+            float envelope = state.Retired
+                ? CameraEffectEvaluationMath.ResolveRetiredWeight(
+                    state,
+                    payload.DelayTime,
+                    payload.StartTime,
+                    payload.LastTime,
+                    payload.EndTime,
+                    payload.StartCurve,
+                    payload.EndCurve)
+                : CameraEffectEvaluationMath.ResolvePhaseWeight(
+                    state.Elapsed,
+                    payload.DelayTime,
+                    payload.StartTime,
+                    payload.LastTime,
+                    payload.EndTime,
+                    payload.StartCurve,
+                    payload.EndCurve);
+            float weight = state.Request.Weight * envelope;
             float fov = payload.FovVariationType switch
             {
                 CameraFovVariationType.Additive => plan.FieldOfView + payload.FieldOfView * weight,
@@ -71,14 +76,15 @@ namespace ThirdPersonCamera
         public bool IsExpired(CameraEffectRuntimeState active)
         {
             return m_Projection.TryGetZoom(active.Request.ResourceId, out CameraZoomPayload payload) &&
-                   payload.LastTime >= 0f && active.Elapsed >= payload.LastTime;
+                   payload.LastTime >= 0f &&
+                   active.Elapsed >= payload.DelayTime + payload.StartTime + payload.LastTime + payload.EndTime;
         }
 
         public float RetireDuration(CameraEffectRuntimeState active)
         {
             return m_Projection.TryGetZoom(active.Request.ResourceId, out CameraZoomPayload payload)
-                ? Mathf.Max(0.016f, payload.EndTime - payload.StartTime)
-                : 0.016f;
+                ? payload.EndTime
+                : 0f;
         }
     }
 }

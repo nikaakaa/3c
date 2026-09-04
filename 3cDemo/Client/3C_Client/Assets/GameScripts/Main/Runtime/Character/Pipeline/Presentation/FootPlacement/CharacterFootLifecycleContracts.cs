@@ -988,6 +988,9 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         internal float Weight { get; }
         internal ulong EventIdentity { get; }
         internal CharacterFootLockRequestAvailability Availability { get; }
+        internal bool IsInZone => Contact > 0f;
+        internal bool IsSliding => Mode == AnimationFootStepObservationLockMode.Sliding;
+        internal bool LockNow => IsInZone && !IsSliding;
         internal bool RequestsLock =>
             Availability == CharacterFootLockRequestAvailability.Ready &&
             Contact > 0f &&
@@ -1006,10 +1009,23 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
     {
         internal bool HasPreviousRequest;
         internal bool PreviousRequestedLock;
+        internal bool PreviousIsInZone;
+        internal bool PreviousIsSliding;
         internal ulong PreviousEventIdentity;
         internal AnimationFootStepObservationLockMode PreviousMode;
         internal float PreviousWeight;
         internal float SecondsSinceEdge;
+        internal bool IsMoving;
+        internal bool IsLocking;
+        internal bool EnterGroundedZone;
+        internal bool LeaveGroundedZone;
+        internal bool IsBreakToGround;
+        internal bool EnterLockZone;
+        internal bool LeaveLockZone;
+        internal CharacterFootContactEdge CurrentContactEdge;
+        internal ulong CurrentEventIdentity;
+        internal float Time;
+        internal float RemainTime;
         internal ulong LatestContactEventIdentity;
         internal ulong LatestReleasedContactEventIdentity;
         internal ulong CompletedLockWeightEventIdentity;

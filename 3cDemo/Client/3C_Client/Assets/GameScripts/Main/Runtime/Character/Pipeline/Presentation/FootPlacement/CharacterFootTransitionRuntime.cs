@@ -51,6 +51,13 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             in CharacterFootStateFrame frame)
         {
             ulong eventIdentity = frame.LockRequest.EventIdentity;
+            bool isInZone = frame.LockRequest.IsInZone;
+            bool isSliding = frame.LockRequest.IsSliding;
+            bool lockNow = frame.LockRequest.LockNow;
+            bool previousIsMoving = !context.HasPreviousRequest || context.IsMoving;
+            bool previousIsLocking = context.IsLocking;
+            bool groundedEdge = false;
+            bool releasedEdge = false;
             if (eventIdentity != 0 &&
                 context.CompletedLockWeightEventIdentity != 0 &&
                 context.CompletedLockWeightEventIdentity != eventIdentity)
@@ -77,6 +84,56 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                         frame.LockRequest.EventIdentity;
                 }
             }
+            if (previousIsMoving)
+            {
+                if (isInZone)
+                {
+                    context.EnterLockZone = lockNow;
+                    context.EnterGroundedZone = true;
+                    context.IsBreakToGround = context.RemainTime > context.Time;
+                    context.Time = 0f;
+                    groundedEdge = true;
+                }
+                else
+                {
+                    context.EnterLockZone = false;
+                }
+            }
+            else if (previousIsLocking)
+            {
+                if (isInZone)
+                {
+                    context.LeaveLockZone = !lockNow;
+                }
+                else
+                {
+                    context.LeaveLockZone = true;
+                    context.LeaveGroundedZone = true;
+                    context.Time = 0f;
+                    releasedEdge = true;
+                }
+            }
+            else if (isInZone)
+            {
+                context.EnterLockZone = lockNow;
+            }
+            else
+            {
+                context.EnterLockZone = false;
+                context.LeaveGroundedZone = true;
+                context.Time = 0f;
+                releasedEdge = true;
+            }
+            context.CurrentContactEdge = groundedEdge
+                ? CharacterFootContactEdge.Rising
+                : releasedEdge
+                    ? CharacterFootContactEdge.Falling
+                    : CharacterFootContactEdge.None;
+            context.CurrentEventIdentity = eventIdentity;
+            context.IsMoving = !isInZone;
+            context.IsLocking = lockNow;
+            context.PreviousIsInZone = isInZone;
+            context.PreviousIsSliding = isSliding;
             context.HasPreviousRequest = true;
             context.PreviousRequestedLock = frame.LockRequest.RequestsLock;
             context.PreviousEventIdentity = frame.LockRequest.EventIdentity;

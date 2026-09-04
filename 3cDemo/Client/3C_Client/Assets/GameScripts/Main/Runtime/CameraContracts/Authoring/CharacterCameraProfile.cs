@@ -68,8 +68,17 @@ namespace ThirdPersonCamera
             {
                 var value = new StringBuilder(SchemaVersion).Append('|').Append(ProfileId);
                 value.Append('|').Append(DefaultSequence ? DefaultSequence.SequenceId : string.Empty);
+                AppendOrbit(value, DefaultSphere);
+                for (int i = 0; i < DefaultOrbitGroup.Count; i++)
+                    AppendOrbit(value, DefaultOrbitGroup[i]);
+                value.Append('|').Append(NearClipPlane.ToString("R", CultureInfo.InvariantCulture));
+                value.Append('|').Append(FarClipPlane.ToString("R", CultureInfo.InvariantCulture));
+                value.Append('|').Append(CameraLocateRadius.ToString("R", CultureInfo.InvariantCulture));
+                value.Append('|').Append(DefaultElevationAngle.ToString("R", CultureInfo.InvariantCulture));
                 value.Append('|').Append(DefaultFieldOfView.ToString("R", CultureInfo.InvariantCulture));
                 value.Append('|').Append(DefaultSmoothTime.ToString("R", CultureInfo.InvariantCulture));
+                value.Append('|').Append(RotationTransitionSeconds.ToString("R", CultureInfo.InvariantCulture));
+                value.Append('|').Append(ChangeAvatarTransitionSeconds.ToString("R", CultureInfo.InvariantCulture));
                 AppendAssetIds(value, Sequences);
                 AppendAssetIds(value, OverrideTracks);
                 AppendAssetIds(value, Zooms);
@@ -166,6 +175,18 @@ namespace ThirdPersonCamera
         {
             for (int i = 0; i < assets.Count; i++)
                 value.Append('|').Append(assets[i] ? assets[i].name : string.Empty);
+        }
+
+        static void AppendOrbit(StringBuilder value, CameraOrbitDescriptor orbit)
+        {
+            if (orbit == null)
+            {
+                value.Append("|missing-orbit");
+                return;
+            }
+            value.Append('|').Append(orbit.Height.ToString("R", CultureInfo.InvariantCulture));
+            value.Append('|').Append(orbit.Radius.ToString("R", CultureInfo.InvariantCulture));
+            value.Append('|').Append(orbit.ScreenY.ToString("R", CultureInfo.InvariantCulture));
         }
     }
 }

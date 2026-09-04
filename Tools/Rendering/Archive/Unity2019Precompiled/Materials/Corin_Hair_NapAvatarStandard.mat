@@ -1,0 +1,565 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!21 &2100000
+Material:
+  serializedVersion: 8
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_Name: Corin_Hair_NapAvatarStandard
+  m_Shader: {fileID: 4800000, guid: 2d242d6f2fd1ab141af997ab3471c4dd, type: 2}
+  m_Parent: {fileID: 0}
+  m_ModifiedSerializedProperties: 0
+  m_ValidKeywords: []
+  m_InvalidKeywords: []
+  m_LightmapFlags: 4
+  m_EnableInstancingVariants: 0
+  m_DoubleSidedGI: 0
+  m_CustomRenderQueue: -1
+  stringTagMap: {}
+  disabledShaderPasses: []
+  m_LockedProperties: 
+  m_SavedProperties:
+    serializedVersion: 3
+    m_TexEnvs:
+    - _BlockMaskTex:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _ChannelMixTex:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _CharacterRampTex:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _LightTex:
+        m_Texture: {fileID: 2800000, guid: 54f7dc2ceb43b6f4bb0d28baf9b4e37c, type: 3}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _MainTex:
+        m_Texture: {fileID: 2800000, guid: 818dede05f60de145b5d14f365d41992, type: 3}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _MatCap2DArray:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _MatCapBumpMapFx:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _MatCapTex:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _MatCapTex2:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _MatCapTex3:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _MatCapTex4:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _MatCapTex5:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _MatCapTexFallback:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _MatCapTexFx:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _OtherDataTex:
+        m_Texture: {fileID: 2800000, guid: 62873d364f682704da2fa8271cd19bfb, type: 3}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _OtherDataTex2:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _OverrideOutlineTex:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _OverrideRimGlowTexFX:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _ScreenMask:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _ScreenTex:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _SecondaryEmissionMaskTex:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _SecondaryEmissionMaskTexForCGLighting:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _SecondaryEmissionTex:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _SecondaryEmissionTexForCGLighting:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _StretchMask:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _ThreadMap:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _TransitionTex:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    m_Ints: []
+    m_Floats:
+    - _AbnormalProperty: 0
+    - _AbnormalPropertyBurn: 0
+    - _AbnormalPropertyElectro: 0
+    - _AbnormalPropertyFreeze: 0
+    - _AdditionalLightIntensity: 1
+    - _AlbedoSmoothness: 0.05
+    - _AlbedoSmoothness2: 0.05
+    - _AlbedoSmoothness3: 0.05
+    - _AlbedoSmoothness4: 0.05
+    - _AlbedoSmoothness5: 0.05
+    - _AlphaClip: 0
+    - _AmbientColorScale: 1
+    - _Anisotropy: 0.5
+    - _BShift: 0
+    - _Blink: 0
+    - _BlinkFrequency: 1
+    - _BrightMultiplier: 1
+    - _BrightMultiplier2: 1
+    - _BrightMultiplier3: 1
+    - _BrightMultiplier4: 1
+    - _BrightMultiplier5: 1
+    - _BumpScale: 1
+    - _CameraToLightRadian: 0
+    - _ChannelMixerUsingUV4: 0
+    - _CharacterSimplify: 0
+    - _CharacterStencil: 128
+    - _ClipPlane: 0
+    - _ClipPlaneXZ: 0
+    - _ColorBlocks: 0
+    - _Cull: 2
+    - _Cutoff: 0.5
+    - _DarkAOScale: 0.5
+    - _DiffuseFade: 1
+    - _DiffuseFade2: 1
+    - _DiffuseFade3: 1
+    - _DiffuseFade4: 1
+    - _DiffuseFade5: 1
+    - _Dither: 0
+    - _DitherAlpha: 1
+    - _DitherAlpha2: 1
+    - _DoubleSided: 0
+    - _Emission: 0
+    - _FresnelFlashing: 4
+    - _FresnelMaskWidth: 5
+    - _FresnelWidth: 3.5
+    - _GShift: 0
+    - _Glitch: 0
+    - _Glossiness: 1
+    - _HairMatId: 5
+    - _HairMatId2: 5
+    - _HardLight: 0
+    - _HardLightWidth: 0.1
+    - _HighlightShape: 1
+    - _HighlightShape2: 0
+    - _HighlightShape3: 0
+    - _HighlightShape4: 0
+    - _HighlightShape5: 0
+    - _IgnoreTimeScale: 0
+    - _LerpPosition: 0.5
+    - _LerpPositionForCGLighting: 0.5
+    - _LightDirectionFromCamera: 0
+    - _LightSource: 0
+    - _LightSourceForCGLighting: 0
+    - _LineBrightness: 1
+    - _LineGlitch: 0
+    - _LineThresholdMax: 0.2
+    - _LineThresholdMin: 0
+    - _MarkAsGhostMask: 0
+    - _MarkAsGlitchMask: 0
+    - _MarkAsIgnisFatuusMask: 0
+    - _MaskTexFactor: 1
+    - _MatCap: 0
+    - _MatCapAlphaBurst: 1
+    - _MatCapAlphaBurst2: 1
+    - _MatCapAlphaBurst3: 1
+    - _MatCapAlphaBurst4: 1
+    - _MatCapAlphaBurst5: 1
+    - _MatCapAlphaBurstFallback: 1
+    - _MatCapAlphaBurstFx: 1
+    - _MatCapBlendMode: 0
+    - _MatCapBlendMode2: 0
+    - _MatCapBlendMode3: 0
+    - _MatCapBlendMode4: 0
+    - _MatCapBlendMode5: 0
+    - _MatCapBlendModeFallback: 0
+    - _MatCapBlendModeFx: 0
+    - _MatCapBumpScaleFx: 1
+    - _MatCapColorBurst: 1
+    - _MatCapColorBurst2: 1
+    - _MatCapColorBurst3: 1
+    - _MatCapColorBurst4: 1
+    - _MatCapColorBurst5: 1
+    - _MatCapColorBurstFallback: 1
+    - _MatCapColorBurstFx: 1
+    - _MatCapFX: 0
+    - _MatCapId: 0
+    - _MatCapNormalUSpeedFx: 0
+    - _MatCapNormalVSpeedFx: 0
+    - _MatCapRefract: 0
+    - _MatCapRefract2: 0
+    - _MatCapRefract3: 0
+    - _MatCapRefract4: 0
+    - _MatCapRefract5: 0
+    - _MatCapRefractFallback: 0
+    - _MatCapTexID: 100
+    - _MatCapTexID2: 100
+    - _MatCapTexID3: 100
+    - _MatCapTexID4: 100
+    - _MatCapTexID5: 100
+    - _MatCapUSpeed: 0
+    - _MatCapUSpeed2: 0
+    - _MatCapUSpeed3: 0
+    - _MatCapUSpeed4: 0
+    - _MatCapUSpeed5: 0
+    - _MatCapUSpeedFallback: 0
+    - _MatCapUSpeedFx: 0
+    - _MatCapVSpeed: 0
+    - _MatCapVSpeed2: 0
+    - _MatCapVSpeed3: 0
+    - _MatCapVSpeed4: 0
+    - _MatCapVSpeed5: 0
+    - _MatCapVSpeedFallback: 0
+    - _MatCapVSpeedFx: 0
+    - _MaterialNum: 0
+    - _MaxOutlineZOffset: 0.01
+    - _Metallic: 1
+    - _ModelSize: 1
+    - _ModelSize2: 1
+    - _ModelSize3: 1
+    - _ModelSize4: 1
+    - _ModelSize5: 1
+    - _MultiplyAlbedo: 1
+    - _MultiplyAlbedoForCGLighting: 1
+    - _MultiplySrcColor: 0
+    - _NoiseScale: 1
+    - _NormalThreshold: 0
+    - _Outline: 1
+    - _OutlineFX: 0
+    - _OutlineWidth: 1
+    - _OutlineWidthFX: 1
+    - _OverlayTexScale: 30
+    - _Override: 0
+    - _Override2Tone: 0
+    - _Override2ToneBlendMode: 0
+    - _Override2ToneBlendModeForCGLighting: 0
+    - _Override2ToneForCGLighting: 0
+    - _Override2ToneMultiplyAlbedo: 0
+    - _Override2ToneMultiplyAlbedoForCGLighting: 0
+    - _OverrideMainLightParam: 0
+    - _OverrideMainLightParam2: 0
+    - _OverrideMainLightParam3: 0
+    - _OverrideMainLightParam4: 0
+    - _OverrideMainLightParam5: 0
+    - _OverrideOutline: 0
+    - _OverrideOutlineUseUV2: 1
+    - _OverrideRimGlow: 0
+    - _OverrideRimGlowMode: 0
+    - _OverrideRimGlowUseUV2: 0
+    - _PerObjectShadowData: 0
+    - _PerObjectShadowIntensity: 1
+    - _PerObjectShadowIntensity2: 1
+    - _PerObjectShadowIntensity3: 1
+    - _PerObjectShadowIntensity4: 1
+    - _PerObjectShadowIntensity5: 1
+    - _PlaneClipReverse: 0
+    - _PointSpace: 0
+    - _PointSpaceForCGLighting: 0
+    - _PowMax: 1.5
+    - _PowMin: 1.25
+    - _PropertyMask2Channel: 0
+    - _PropertyMask2UseUV2: 0
+    - _PropertyMaskChannel: 0
+    - _PropertyMaskUVFlipSpeed: 50
+    - _PropertyMaskUseUV2: 0
+    - _PropertyNormalUseUV2: 0
+    - _PropertyTexUVFlipSpeed: 25
+    - _PropertyTexUseUV2: 0
+    - _PropertyType: 0
+    - _RShift: 0
+    - _RampSource: 0
+    - _ReceiveAddShadows: 1
+    - _ReceiveShadows: 1
+    - _RefractDepth: 0.5
+    - _RefractDepth2: 0.5
+    - _RefractDepth3: 0.5
+    - _RefractDepth4: 0.5
+    - _RefractDepth5: 0.5
+    - _RefractDepthFallback: 0.5
+    - _RenderType: 0
+    - _ReversePlaneXZ: 0
+    - _RimGlow: 1
+    - _ScreenImage: 0
+    - _ScreenMaskUV: 0
+    - _ScreenScale: 1
+    - _ScreenTexRotation: 0
+    - _SecondaryEmission: 0
+    - _SecondaryEmissionChannel: 0
+    - _SecondaryEmissionChannelForCGLighting: 0
+    - _SecondaryEmissionForCGLighting: 0
+    - _SecondaryEmissionMaskChannel: 0
+    - _SecondaryEmissionMaskChannelForCGLighting: 0
+    - _SecondaryEmissionTexRotation: 0
+    - _SecondaryEmissionTexRotationForCGLighting: 0
+    - _SecondaryEmissionUseUV2: 0
+    - _SecondaryEmissionUseUV2ForCGLighting: 0
+    - _ShadowColorFadeByZ: 1
+    - _ShadowCull: 2
+    - _ShadowDitherOff: 0
+    - _ShadowNormalBias: 0.01
+    - _ShadowZOffset: 0
+    - _ShadowZOffsetWholeMesh: 0
+    - _ShadowmapSmoothness: 0.5
+    - _ShapeFresnelOffset: 1
+    - _ShapeFresnelOffset2: 1
+    - _ShapeFresnelOffset3: 1
+    - _ShapeFresnelOffset4: 1
+    - _ShapeFresnelOffset5: 1
+    - _ShapeFresnelScale: 0.9
+    - _ShapeFresnelScale2: 0.9
+    - _ShapeFresnelScale3: 0.9
+    - _ShapeFresnelScale4: 0.9
+    - _ShapeFresnelScale5: 0.9
+    - _ShapeSoftness: 0.1
+    - _ShapeSoftness2: 0.1
+    - _ShapeSoftness3: 0.1
+    - _ShapeSoftness4: 0.1
+    - _ShapeSoftness5: 0.1
+    - _ShiftAngle: 120
+    - _ShiftAngleForCGLighting: 120
+    - _SkinMatId: 1
+    - _SoftLight: 0
+    - _SoftLightWidth: 0.1
+    - _Softness: 0
+    - _SoftnessForCGLighting: 0
+    - _SpecIntensity: 0.2
+    - _SpecSocketBoneIndex: 0
+    - _SpecSocketGPUAnimInstanceID: 0
+    - _SpecSocketTotalNumberOfBones: 0
+    - _SpecularRange: 1
+    - _SpecularRange2: 1
+    - _SpecularRange3: 1
+    - _SpecularRange4: 1
+    - _SpecularRange5: 1
+    - _SssWidth: 0.1
+    - _SssWidth2: 0.1
+    - _SssWidth3: 0.1
+    - _SssWidth4: 0.1
+    - _SssWidth5: 0.1
+    - _StencilComFunc: 0
+    - _StencilReadMask: 1
+    - _StretchDirection: 0
+    - _StretchDistance: 0
+    - _StretchPercentage: 0
+    - _SymmetryUV: 0
+    - _TabSelection: 0
+    - _ToonSpecular: 0.38
+    - _ToonSpecular2: 0.01
+    - _ToonSpecular3: 0.01
+    - _ToonSpecular4: 0.01
+    - _ToonSpecular5: 0.01
+    - _TransSpeed: 1
+    - _Transition: 0
+    - _TransitionCompletion: 0
+    - _TransitionWidth: 0
+    - _UseChannelMixer: 0
+    - _UseClipPlane: 0
+    - _UseInvSecondaryEmissionMask: 0
+    - _UseMatCapMask: 0
+    - _UseOverlayTex: 1
+    - _UseShadowFadeMask: 0
+    - _VertexOffset: 0.5
+    - _VertexStretch: 0
+    - _VolumeLutScale: 1
+    - _ZTest: 3
+    - _ZTestPreZ: 4
+    - _ZWrite: 1
+    - _ZWritePreZ: 1
+    m_Colors:
+    - _AChannelColor: {r: 1, g: 0, b: 1, a: 1}
+    - _AChannelColorPrecomputed: {r: 0, g: 1, b: 0, a: 1}
+    - _AOParameters: {r: 1.25, g: 1.5, b: 1, a: 0.5}
+    - _AmbientColorCG: {r: 0, g: 0, b: 0, a: 1}
+    - _BChannelColor: {r: 0, g: 0, b: 1, a: 1}
+    - _BChannelColorPrecomputed: {r: 1, g: 1, b: 0, a: 1}
+    - _BlinkOpacity: {r: 0, g: 1, b: 0, a: 0}
+    - _BlockColorA: {r: 1, g: 0, b: 0, a: 1}
+    - _BlockColorB: {r: 0.5, g: 1, b: 0, a: 1}
+    - _BlockColorC: {r: 0, g: 1, b: 1, a: 1}
+    - _BlockColorD: {r: 0.5, g: 0, b: 1, a: 1}
+    - _BlockMoveSpeed: {r: 66, g: 88, b: 0, a: 0}
+    - _CharacterMainLightData: {r: -1, g: 0, b: 0, a: 0}
+    - _Color: {r: 1, g: 1, b: 1, a: 1}
+    - _ColorA: {r: 1, g: 1, b: 1, a: 1}
+    - _ColorAForCGLighting: {r: 1, g: 1, b: 1, a: 1}
+    - _ColorB: {r: 0, g: 0, b: 0, a: 1}
+    - _ColorBForCGLighting: {r: 0, g: 0, b: 0, a: 1}
+    - _ColorOverrideAlbedo: {r: 1, g: 1, b: 1, a: 0}
+    - _DetailColor: {r: 0.384, g: 0.565, b: 1.498, a: 1}
+    - _EmissionColor: {r: 0, g: 0, b: 0, a: 1}
+    - _EmissionColor2: {r: 1, g: 1, b: 1, a: 1}
+    - _EmissionColor3: {r: 1, g: 1, b: 1, a: 1}
+    - _EmissionColor4: {r: 1, g: 1, b: 1, a: 1}
+    - _EmissionColor5: {r: 1, g: 1, b: 1, a: 1}
+    - _FresnelColor: {r: 0, g: 0.2, b: 1.625, a: 1}
+    - _FrontColor: {r: 0.8, g: 0.8, b: 0.8, a: 1}
+    - _FrontColor2: {r: 0.8, g: 0.8, b: 0.8, a: 1}
+    - _FrontColor3: {r: 0.8, g: 0.8, b: 0.8, a: 1}
+    - _FrontColor4: {r: 0.8, g: 0.8, b: 0.8, a: 1}
+    - _FrontColor5: {r: 0.8, g: 0.8, b: 0.8, a: 1}
+    - _GChannelColor: {r: 0, g: 1, b: 0, a: 1}
+    - _GChannelColorPrecomputed: {r: 1, g: 0, b: 1, a: 1}
+    - _HardLightColor: {r: 1, g: 1, b: 1, a: 1}
+    - _HeadMatrixWS2OS0: {r: 1, g: 0, b: 0, a: 0}
+    - _HeadMatrixWS2OS1: {r: 0, g: 1, b: 0, a: 0}
+    - _HeadMatrixWS2OS2: {r: 0, g: 0, b: 1, a: 0}
+    - _HeadMatrixWS2OS3: {r: 1, g: 1, b: 1, a: 0}
+    - _LayerIDColor: {r: 1, g: 1, b: 1, a: 1}
+    - _LocalIndirectColor: {r: 1, g: 0.3, b: 0.2, a: 1}
+    - _LocalIndirectColor2: {r: 1, g: 0.3, b: 0.2, a: 1}
+    - _LocalIndirectColor3: {r: 1, g: 0.3, b: 0.2, a: 1}
+    - _LocalIndirectColor4: {r: 1, g: 0.3, b: 0.2, a: 1}
+    - _LocalIndirectColor5: {r: 1, g: 0.3, b: 0.2, a: 1}
+    - _MainPunctualLightData: {r: 0, g: 0, b: 0, a: -1}
+    - _MaskRChannelUVSpeed: {r: 1, g: 1, b: 0, a: 0}
+    - _MatCapColorTint: {r: 1, g: 1, b: 1, a: 1}
+    - _MatCapColorTint2: {r: 1, g: 1, b: 1, a: 1}
+    - _MatCapColorTint3: {r: 1, g: 1, b: 1, a: 1}
+    - _MatCapColorTint4: {r: 1, g: 1, b: 1, a: 1}
+    - _MatCapColorTint5: {r: 1, g: 1, b: 1, a: 1}
+    - _MatCapColorTintFallback: {r: 1, g: 1, b: 1, a: 1}
+    - _MatCapColorTintFx: {r: 1, g: 1, b: 1, a: 1}
+    - _MiddlePointPosition: {r: 0, g: 0, b: 0, a: 0}
+    - _OutlineColor: {r: 1, g: 1, b: 1, a: 1}
+    - _OutlineColor2: {r: 1, g: 1, b: 1, a: 1}
+    - _OutlineColor3: {r: 1, g: 1, b: 1, a: 1}
+    - _OutlineColor4: {r: 1, g: 1, b: 1, a: 1}
+    - _OutlineColor5: {r: 1, g: 1, b: 1, a: 1}
+    - _OutlineColorFX: {r: 0, g: 0, b: 0, a: 1}
+    - _OutlineShadowColor: {r: 0.38679248, g: 0.32293522, b: 0.32293522, a: 1}
+    - _OutlineShadowColor2: {r: 0, g: 0, b: 0, a: 1}
+    - _OutlineShadowColor3: {r: 0, g: 0, b: 0, a: 1}
+    - _OutlineShadowColor4: {r: 0, g: 0, b: 0, a: 1}
+    - _OutlineShadowColor5: {r: 0, g: 0, b: 0, a: 1}
+    - _OverrideColor: {r: 1, g: 1, b: 1, a: 1}
+    - _OverrideMainLightColor: {r: 1, g: 1, b: 1, a: 1}
+    - _OverrideMainLightColor2: {r: 1, g: 1, b: 1, a: 1}
+    - _OverrideMainLightColor3: {r: 1, g: 1, b: 1, a: 1}
+    - _OverrideMainLightColor4: {r: 1, g: 1, b: 1, a: 1}
+    - _OverrideMainLightColor5: {r: 1, g: 1, b: 1, a: 1}
+    - _OverrideOutlineColor: {r: 0, g: 0, b: 0, a: 0}
+    - _OverrideOutlineSpeed: {r: 0, g: 0, b: 0, a: 0}
+    - _OverrideRimGlowColor: {r: 1, g: 1, b: 1, a: 1}
+    - _OverrideRimGlowSpeed: {r: 0, g: 0, b: 0, a: 0}
+    - _PlaneXZScale: {r: 1, g: 1, b: 1, a: 1}
+    - _PointPosition: {r: 0, g: 0, b: 0, a: 0}
+    - _PointPositionForCGLighting: {r: 0, g: 0, b: 0, a: 0}
+    - _PropertyColor: {r: 2.635, g: 3.388, b: 23.968, a: 1}
+    - _PropertyMask2UVSpeed: {r: 0, g: 0, b: 0, a: 0}
+    - _PropertyMaskUVSpeed: {r: 8, g: 2, b: 0, a: 0}
+    - _PropertyNormalUVSpeed: {r: 0, g: 0, b: 0, a: 0}
+    - _PropertyTexUVSpeed: {r: 3, g: 3, b: 0, a: 0}
+    - _RChannelColor: {r: 1, g: 0, b: 0, a: 1}
+    - _RChannelColorPrecomputed: {r: 0, g: 1, b: 1, a: 1}
+    - _RampTexParams0: {r: 0, g: 0, b: 0, a: 0}
+    - _RampTexParams1: {r: 0, g: 0, b: 0, a: 0}
+    - _RefractParam: {r: 5, g: 5, b: 0, a: 0}
+    - _RefractParam2: {r: 5, g: 5, b: 0, a: 0}
+    - _RefractParam3: {r: 5, g: 5, b: 0, a: 0}
+    - _RefractParam4: {r: 5, g: 5, b: 0, a: 0}
+    - _RefractParam5: {r: 5, g: 5, b: 0, a: 0}
+    - _RefractParamFallback: {r: 5, g: 5, b: 0, a: 0}
+    - _RimGlowLightColor: {r: 1, g: 1, b: 1, a: 1}
+    - _RimGlowLightColor2: {r: 1, g: 1, b: 1, a: 1}
+    - _RimGlowLightColor3: {r: 1, g: 1, b: 1, a: 1}
+    - _RimGlowLightColor4: {r: 1, g: 1, b: 1, a: 1}
+    - _RimGlowLightColor5: {r: 1, g: 1, b: 1, a: 1}
+    - _RimGlowShadowColor: {r: 1, g: 1, b: 1, a: 1}
+    - _RimGlowShadowColor2: {r: 1, g: 1, b: 1, a: 1}
+    - _RimGlowShadowColor3: {r: 1, g: 1, b: 1, a: 1}
+    - _RimGlowShadowColor4: {r: 1, g: 1, b: 1, a: 1}
+    - _RimGlowShadowColor5: {r: 1, g: 1, b: 1, a: 1}
+    - _ScreenColor: {r: 1, g: 1, b: 1, a: 1}
+    - _ScreenImageUvMove: {r: 0, g: 0, b: 0, a: 0}
+    - _ScreenTexRotationAxis: {r: 0.5, g: 0.5, b: 0, a: 0}
+    - _SecondaryEmissionColor: {r: 1, g: 1, b: 1, a: 1}
+    - _SecondaryEmissionColorForCGLighting: {r: 1, g: 1, b: 1, a: 1}
+    - _SecondaryEmissionTexSpeed: {r: 0, g: 0, b: 0, a: 0}
+    - _ShadowColor: {r: 0.74105555, g: 0.7472364, b: 0.8584906, a: 1}
+    - _ShadowColor2: {r: 0.6, g: 0.6, b: 0.6, a: 1}
+    - _ShadowColor3: {r: 0.6, g: 0.6, b: 0.6, a: 1}
+    - _ShadowColor4: {r: 0.6, g: 0.6, b: 0.6, a: 1}
+    - _ShadowColor5: {r: 0.6, g: 0.6, b: 0.6, a: 1}
+    - _ShadowFadeColor: {r: 0.74105555, g: 0.7472364, b: 0.8584906, a: 1}
+    - _ShadowFadeColor2: {r: 0.6, g: 0.6, b: 0.6, a: 1}
+    - _ShadowFadeColor3: {r: 0.6, g: 0.6, b: 0.6, a: 1}
+    - _ShadowFadeColor4: {r: 0.6, g: 0.6, b: 0.6, a: 1}
+    - _ShadowFadeColor5: {r: 0.6, g: 0.6, b: 0.6, a: 1}
+    - _ShallowColor: {r: 0.8731501, g: 0.86774653, b: 0.9433962, a: 1}
+    - _ShallowColor2: {r: 0.8, g: 0.8, b: 0.8, a: 1}
+    - _ShallowColor3: {r: 0.8, g: 0.8, b: 0.8, a: 1}
+    - _ShallowColor4: {r: 0.8, g: 0.8, b: 0.8, a: 1}
+    - _ShallowColor5: {r: 0.8, g: 0.8, b: 0.8, a: 1}
+    - _ShallowFadeColor: {r: 0.8731501, g: 0.86774653, b: 0.9433962, a: 1}
+    - _ShallowFadeColor2: {r: 0.8, g: 0.8, b: 0.8, a: 1}
+    - _ShallowFadeColor3: {r: 0.8, g: 0.8, b: 0.8, a: 1}
+    - _ShallowFadeColor4: {r: 0.8, g: 0.8, b: 0.8, a: 1}
+    - _ShallowFadeColor5: {r: 0.8, g: 0.8, b: 0.8, a: 1}
+    - _SilkFresnelColorEdge: {r: 1, g: 1, b: 1, a: 1}
+    - _SilkFresnelColorFront: {r: 1, g: 1, b: 1, a: 1}
+    - _SilkPackedParams0: {r: 0.2, g: 0.2, b: 0.5, a: 1}
+    - _SoftLightColor: {r: 1, g: 1, b: 1, a: 1}
+    - _SpecSocketBindPoseMat0: {r: 1, g: 0, b: 0, a: 0}
+    - _SpecSocketBindPoseMat1: {r: 0, g: 1, b: 0, a: 0}
+    - _SpecSocketBindPoseMat2: {r: 0, g: 0, b: 1, a: 0}
+    - _SpecSocketBindPoseMat3: {r: 0, g: 0, b: 0, a: 1}
+    - _SpecSocketPosOffset: {r: 0, g: 0, b: 0, a: 1}
+    - _SpecularColor: {r: 0.5538003, g: 0.8962264, b: 0.76040477, a: 1}
+    - _SpecularColor2: {r: 1, g: 1, b: 1, a: 1}
+    - _SpecularColor3: {r: 1, g: 1, b: 1, a: 1}
+    - _SpecularColor4: {r: 1, g: 1, b: 1, a: 1}
+    - _SpecularColor5: {r: 1, g: 1, b: 1, a: 1}
+    - _SssColor: {r: 1, g: 1, b: 1, a: 1}
+    - _SssColor2: {r: 1, g: 1, b: 1, a: 1}
+    - _SssColor3: {r: 1, g: 1, b: 1, a: 1}
+    - _SssColor4: {r: 1, g: 1, b: 1, a: 1}
+    - _SssColor5: {r: 1, g: 1, b: 1, a: 1}
+    - _StretchToPoint: {r: 0, g: 0, b: 0, a: 1}
+    - _StretchVector: {r: 0, g: 0, b: 0, a: 0}
+    - _TransitionColor: {r: 1, g: 1, b: 1, a: 1}
+  m_BuildTextureStacks: []

@@ -2,7 +2,7 @@
 
 日期：2026-09-04。前半部分记录 Sol 首轮只读复核的证据与缺口；第 12 节记录随后实现窗口完成的离线解码及 Sol 复审。Sol 未修改游戏、导出器、3C 实现或 Unity 资产，未启动 Unity 或游戏采样。
 
-最新状态：8 个完整片段的 53,020 个 Scalar 样本已产出，可作为下一阶段离线数据源。旧稿中“尚未解码”“单轨道接口未实现”只描述首轮检查时的工具版本；当前覆盖与限制以第 12 节及 [解码复审记录](D:/Unity_Project_1/3C/openspec/changes/add-acl-animation-runtime/research/scalar-decoding-review.json) 为准。Unity 面部变形及 3C 标量发布仍未验收。
+最新状态：8 个完整片段的 53,020 个 Scalar 样本已产出，可作为下一阶段离线数据源。旧稿中“尚未解码”“单轨道接口未实现”只描述首轮检查时的工具版本；数据覆盖与限制以第 12 节及 [解码复审记录](D:/Unity_Project_1/3C/openspec/changes/add-acl-animation-runtime/research/scalar-decoding-review.json) 为准。第 13 节记录本次运行接入方案的定稿边界；Unity 面部变形及 3C 标量发布仍属于待实施验收。
 
 ## 结论与证据范围
 
@@ -163,11 +163,11 @@ Reference Pose、Root/Scale policy、Virtual Bone、速度历史和 completion �
 
 本轮不修改 current specs 来掩盖尚未实施的能力。后续应在本 change 下补充真正改变要求的 delta，并在 proposal 中声明；不能继续无条件写“本次不修改现有 capability”。
 
-## 11. 尚需用户明确的范围
+## 11. 范围取舍与定稿
 
 “迁移现有 3C 表现”和“补齐 Corin 原始表情”有不同交付内容：前者以当前正式素材为质量基准；后者还需要完整原始解码、表情名称/模型绑定、标量混合及统一发布。后者不能用目前 ScalarTracksDecoded=false 的素材作为完整参考。
 
-用户已要求解释该区别，尚未确认表情是否纳入本次验收。此处保留决定依据，不替用户选择优先级。Motion/Root 数据无论如何保留明确来源边界，不让 ACL decoder 成为第二个 Gameplay 位移 owner。
+在后续确认曲线混合职责后，本稿按“片段自带骨骼与表情作为完整动画源”收口，不扩张独立眨眼、说话或表情行为系统。具体接入合同见 design.md 第 8–11 节。Motion/Root 保留明确来源边界，不让 ACL decoder 成为第二个 Gameplay 位移 owner；这一定稿是实施范围说明，不是 Runtime 已完成或已经启动实施。
 
 ## 12. 实现窗口离线解码结果复审
 
@@ -194,10 +194,20 @@ Reference Pose、Root/Scale policy、Virtual Bone、速度历史和 completion �
 
 正式 DLL SHA-256：`d8afe819c8d139437d13cab14bbc339586f228f553cd9ec1763b989f28182c40`。报告及其 hash 已固化在 [scalar-decoding-review.json](D:/Unity_Project_1/3C/openspec/changes/add-acl-animation-runtime/research/scalar-decoding-review.json)。原始结果见 [批次报告](D:/Unity_Project_1/3C/.codex-artifacts/acl-scalar-decoding-20260904-complete/batch-summary.json) 和 [旧解码器对照](D:/Unity_Project_1/3C/.codex-artifacts/acl-scalar-decoding-20260904-complete/oracle-diff.json)。
 
-进入 3C 正式表情发布前，仍需明确以下业务合同：
+进入 3C 正式表情发布涉及以下业务合同，已在后续 design.md 第 8–11 节定稿，仍需通过实施建立实际运行证据：
 
 1. **素材与模型绑定**：把已解码曲线完整发布进正式 AnimationClip，核对当前 Mesh 的形变名称、顺序、reference/default 与权重单位。不能按名字猜索引、统一乘 100 或把超出 0–100 的值直接裁掉。
 2. **表情混合归属**：动作自带表情可以随同一动作计划混合；需要眨眼、说话等独立覆盖时，应在同一计划中显式表达 mask、权重和优先级。两者是不同业务表现，不能让 decoder 自行选规则，也不能由“Playable 会混”替代正式合同。
 3. **统一发布**：当前 Final Publication 主要拥有骨骼输出。表情要求扩展同一表现帧的标量结果与 Renderer 写入职责，同时保留唯一骨骼 Writer、completion、Seal/Discard 与 Fault 边界；不能让 native decoder 或 Preview 直接写 Renderer。
 4. **根运动归属**：14 条 Motion/Root 保留素材证据与明确编译用途，不直接变成 Gameplay 位移，也不复制 Foot/IK/Goal 曲线的原有消费者。
-5. **能力与验收范围**：正式 Scalar schema、Projection 绑定、默认值、混合数学、缺轨道行为和发布顺序需要设计/spec/tasks 同步。用户目前授权并完成的是离线数据解码，尚不能自动认定全部 Runtime 接入已获实施授权。
+5. **能力与验收范围**：正式 Scalar schema、Projection 绑定、默认值、既有混合规则、缺轨道行为和发布顺序已在设计/spec/tasks 中同步。本轮完成文档定稿，不自动开展 Runtime 实施。
+
+## 13. 曲线混合职责与运行方案定稿
+
+现有代码已经提供骨骼与参数分离：`CharacterPoseCompositionWorkerKernel.Blend/Additive` 在骨骼处理后保留 Base 参数；`CharacterPoseParameterResolveWorkerKernel` 先复制骨骼，再按显式策略解析参数；BlendStack 保存独立 scalar 与逐骨骼权重。因此本次新增属性不需要重写混合算法，也不追加 ALS 式末端修补节点。当前 Corin 的 Parameter Resolve 两端来自同一 Slot，Weighted 只沿用该 Slot 的结果，不能误称它已经接了另一条曲线恢复分支。
+
+当前 Source Module 在装配时执行 `output.SetWeight(0f)`，最终可见输出由 Final Publication 控制。定稿据此选择：NativeClip 的表情使用 Build 编译曲线，ACL 使用官方 Scalar，二者输出同一 typed Source 属性结果；Program 把该结果送入现有参数混合，最后同一 Publication 在整体预验证后写骨骼与 BlendShape。Graph 不恢复直接可见属性输出，不增加第二 Player、第二最终 Pose 或独立 Renderer writer。
+
+本次增加 `character-animation-scalar-presentation`，并在 presentation-pose-graph/runtime-architecture delta 中明确参数用途及属性发布。旧稿“不修改 Final writer”已收窄为“保持现有骨骼写入数学”，因为完整表情需要同一 owner 增加 Renderer 输出。骨骼与表情共用时间、readiness 和 Frame，Foot/IK/Goal、Simulation 与已有控制曲线消费者保持。
+
+规划完成仍不意味着没有行为影响：实际接入会改变资源和采样实现、参数布局、属性发布及性能，必须完成正式产物与运行结果验收。离线证据没有覆盖的格式、模型目标和边界继续按明确错误处理，不以文档定稿推导为已验证。

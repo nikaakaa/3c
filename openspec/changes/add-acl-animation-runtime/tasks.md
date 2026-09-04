@@ -1,4 +1,9 @@
-本清单正在复核。已补充确定的资源、质量、时间和生命周期缺口；用户尚未决定是否同时补齐 Corin 表情，因此标量消费者与发布任务未定，当前清单不能作为完成定稿进入 apply。此说明不是实施任务。
+本清单覆盖 Corin 当前正式 source 闭包的骨骼和片段自带 BlendShape，不新增独立表情行为系统。现有 8 片段离线解码是前置证据；以下任务均为尚待实施的项目接入，不以离线结果或格式校验代替完成状态。
+
+## 0. 正式目标与输入证据
+
+- [ ] 0.1 从当前 Corin Definition/Profile 编译闭包导出 Action、Clip、Blend Space 和已配置 provider 的正式资源身份清单；交付 source 到 Clip/原始 CAB/PathId 的对应记录，不替换现有动作以适配现成样本
+- [ ] 0.2 为目标清单补全缺失的离线 Scalar、数据库头/bulk 与模型映射，复用现有解码工具；交付逐条解码产物及有效覆盖报告，未覆盖位宽、segment 或轨道类型保持明确失败，不标为已还原
 
 ## 1. ACL 资源合同与 Editor 构建
 
@@ -9,6 +14,10 @@
 - [ ] 1.5 生成资源清单、源依赖、压缩设置、质量结果和 native 目标平台记录；用清单校验命令确认每个 payload 均可追溯且无未声明文件
 - [ ] 1.6 在现有 Presentation Profile 资源绑定中加入正式 backend 和压缩配置，覆盖完整 Clip 使用闭包；交付现有编辑入口与对应 Agent Document schema/exporter/reconciler/mutation/validator 的一致字段清单
 - [ ] 1.7 分开保存正式 start/stop/loop、采样网格与压缩覆盖范围，保留端点并关闭隐式 loop 优化；交付构建产物中的时间映射记录，Program effective time 只应用一次
+- [ ] 1.8 扩展 Graph 参数的 Control/AnimatedProperty 用途，以及 Profile 的参数到 Renderer/Mesh/BlendShape 映射，默认值仍由 Graph 唯一声明；交付完整 authoring schema 与 Agent Document 同步字段，拒绝重复身份和目标
+- [ ] 1.9 实现显式属性曲线导入命令，把目标来源数据写入正式 AnimationClip；交付源 hash、单位转换、时间范围和仅属性差异记录，已有骨骼/Foot/Phase 或人工属性冲突明确拒绝覆盖
+- [ ] 1.10 生成 NativeClip 编译标量曲线页与 ACL Scalar payload 的同一 typed binding，编译合法无动画通道的显式默认常量；交付完整参数/属性索引和存在性记录，14 条 Motion/Root 分类为来源证据
+- [ ] 1.11 将参数、资源、属性绑定、所有工作区/历史容量和最终属性输出纳入统一 Projection/Program schema/ABI/hash；交付正式 Build 的新产物清单与旧版本拒绝结果，不保留运行时兼容分支
 
 ## 2. Native ACL 解码桥
 
@@ -30,6 +39,11 @@
 - [ ] 3.7 保持 ACL backend 不写 Physical Transform、IK Goal、Foot Placement、Gameplay 或 Final Publication；用代码依赖扫描确认 ACL 模块只依赖 Source/Projection/资源接口
 - [ ] 3.8 统一资源解析在 Action、Direct Clip、Blend Space、MM 与 Preview 的使用点，移除 ACL 条目的运行时 Clip 强引用；交付编译资源闭包和依赖扫描结果
 - [ ] 3.9 让 ACL 采样复用现有 Root/Scale policy、Virtual Bone、Velocity、continuity 和 completion 处理，保持 Phase/Foot 注册曲线原消费者；交付单一调用链与 source 页布局记录
+- [ ] 3.10 在唯一 Source Module 中按同一 effective time 采样 NativeClip 编译标量页或 ACL Scalar，复用现有 ClipSamplePlan 的权重与归一化；交付同 lineage 的 typed 属性结果，骨骼和属性共同 Pending/Ready/Invalid
+- [ ] 3.11 让 Program 从 Source typed 结果写入现有 Player/Pose Value 参数页，并复用 State、BlendStack、Slot、Parameter Resolve 和 Inertialization 的既有参数规则；交付参数写入 owner 与容量记录，不新增表情混合算法或时钟
+- [ ] 3.12 保持 Layered Bone Blend/Additive 的 Base 参数传播和既有 scalar/bone 权重分离，属性不再次乘骨骼 Mask；交付对应编译节点与调用链记录，不自动补末端曲线覆盖
+- [ ] 3.13 在既有 Actor Factory 中显式装配 Renderer/Mesh/BlendShape binding，并扩展唯一 Final Publication 的属性页、整体预验证与同帧写入；交付统一 completion 和绑定错误结果，现有骨骼 Writer 数学保持
+- [ ] 3.14 保持 Source Graph 最终输出权重为 0，统一 Runtime/Preview/reset/teardown 的属性所有权；交付唯一 Renderer 写入入口扫描及同一 Frame 的骨骼/属性发布记录，不增加图外脚本 writer
 
 ## 4. 异步流入、预取与释放
 
@@ -45,11 +59,13 @@
 - [ ] 5.2 让诊断只复制已提交 Source 结果，排除 Pending Context、下一帧数据和未 Seal 数据；用故意未完成的准备阶段确认事实不提前出现
 - [ ] 5.3 关闭 ACL diagnostics interest 时跳过复制和事件而不跳过资源准备、解码、Transition、IK 或 Final Publication；用开关前后比较 Pose、source identity、release 和驻留行为
 - [ ] 5.4 将解码耗时、Context 数量、驻留字节和流入完成记录接入现有性能汇总，不把任何 ACL 事实接入 Foot、IK、Goal、State 或 Gameplay 决策；用依赖扫描确认无反向调用
+- [ ] 5.5 将属性源值、混合后值、目标索引与最终写入 completion 接入已有 interest-gated 事实，使用独立属性字段而不扩张 Foot 采样 schema；交付同 lineage 的已提交诊断及无 interest 时不复制的记录
 
 ## 6. 首批资源迁移与发布收口
 
-- [ ] 6.1 以 Corin 一条正式 source 为首批样本生成 ACL payload、manifest、Projection binding 和平台清单；用资源哈希、Rig/binding 身份和规范参考误差报告确认可复现
+- [ ] 6.1 以 Corin 当前闭包中的一条正式 source 发布骨骼/属性齐全的 ACL payload、manifest、Projection binding 和平台清单；交付当前模型绑定、正式参考误差与资源 hash 报告，不将 MainCity 样本强换成现有动作
 - [ ] 6.2 将批准的 Corin source 清单逐项切换为显式 ACL backend，清理同一 source 的展开运行包引用但保留 authoring Clip 作为构建输入；用编译产物扫描确认没有隐式 `.anim` fallback
 - [ ] 6.3 完成 native artifact 平台门禁与项目编译；dotnet build 必须加 `--disable-build-servers /nr:false /p:UseSharedCompilation=false` 并在结束后立即执行 `dotnet build-server shutdown`，交付编译日志，不把编译通过当作运行行为证明
 - [ ] 6.4 固化发布包的 Projection、ACL payload、manifest、native artifact、能力矩阵和哈希清单；用清单校验确认部署缺任一身份或平台产物即阻止发布
 - [ ] 6.5 记录从旧 Projection/资源包回滚的部署步骤，明确回滚依赖上一版完整 artifact 而非运行时 fallback；用两版清单对账确认回滚不会在同一 source identity 下并行两个播放器
+- [ ] 6.6 固化完整接入报告，记录原生/ACL source、共同过渡、属性默认值、骨骼 Mask 分离、Pending/Invalid、共享释放与最终骨骼/属性同帧结果的现有诊断证据；未通过的目标阻止发布，不新增测试工程或把手动操作步骤写入本清单

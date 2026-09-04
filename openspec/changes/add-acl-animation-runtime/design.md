@@ -1,12 +1,12 @@
 ## Context
 
-本稿正在根据 [ZZZ 复核记录](D:/Unity_Project_1/3C/openspec/changes/add-acl-animation-runtime/research.md) 修订。用户尚未确定本次是否补齐表情，相关消费者和发布合同未定；该范围明确前不进入 apply。以下先收口与该决定无关的资源、格式、时间和生命周期问题。
+本稿按“完整动画源接入现有播放链”的范围定稿：包含片段自带骨骼与 BlendShape，复用现有 Player、曲线混合和唯一 Final Publication；不增加独立眨眼、说话或表情状态机。数据依据见 [ZZZ 复核记录](D:/Unity_Project_1/3C/openspec/changes/add-acl-animation-runtime/research.md)。本文件定义待实施行为，不将规划完成等同于 Runtime 已验收。
 
-离线前置状态已更新：实现窗口补齐了 ZZZ Scalar 解码，8 个完整片段的结果已通过限定范围的离线数据复审。正式 3C AnimationClip、Mesh 对应关系、表情混合与统一发布仍未实施；该离线 fork 不替代下文规定的项目官方 ACL 版本和 C ABI。具体数值证据及尚未覆盖的边界见 research.md 第 12 节。
+离线前置已完成：8 个完整片段的 Scalar 结果已通过限定范围的数据复审。正式 3C AnimationClip 属性发布、当前 Mesh 对应关系和 Runtime 接入属于本稿实施任务；离线 fork 不替代下文规定的项目官方 ACL 版本和 C ABI。具体证据及未覆盖的格式边界见 research.md 第 12 节。
 
 当前表现链已经有明确的唯一 owner：`CharacterPoseSourceModule` 管理物理 source，`CharacterPoseProgramRuntime` 管理状态、过渡、slot 和权重，`CharacterPoseFrameCoordinator` 在唯一的 Animancer `PlayableGraph` 上执行 Evaluate Barrier，后面继续进入 Goal Assembly、FBBIK 和 Final Publication。`CharacterPoseProgramSourcePreparationRuntime` 还会把现有 `AnimationScriptPlayable` 工作插入同一张图。
 
-ZZZ 的已检查 UnityPlayer 含 ACL 家族解码、数据库接入和 LRU Sweep 相关代码。原始资源包含版本 8 的 Transform、版本 100 的 Scalar，以及与外置 bulk 分开的数据库头。当前独立导出漏了数据库头和完整绑定，展开 `.anim` 未完成 Scalar 解码；它们都不能直接证明原始动画已完整还原。项目继续采用正式 AnimationClip 作为 authoring 输入，构建自己的 ACL 资源；不把私有 ABI 或游戏偏移纳入项目依赖。
+ZZZ 的已检查 UnityPlayer 含 ACL 家族解码、数据库接入和 LRU Sweep 相关代码。原始资源包含版本 8 的 Transform、版本 100 的 Scalar，以及与外置 bulk 分开的数据库头。旧 `20260904_acl_native_v1` 和旧展开 `.anim` 存在数据库头或 Scalar 缺口；新的离线工具已修复对应输入/解码路径，仍需按正式目标清单逐项发布。项目继续以正式 AnimationClip 为 authoring 真相，不把私有 ABI 或游戏偏移纳入 Runtime。
 
 ## Goals / Non-Goals
 
@@ -18,15 +18,17 @@ ZZZ 的已检查 UnityPlayer 含 ACL 家族解码、数据库接入和 LRU Sweep
 - 让 ACL source 通过现有 `CharacterPoseSourceModule`、唯一 Pose Plan、唯一 Evaluate Barrier 和唯一 PlayableGraph 产生表现 Pose。
 - 让 Projection 在编译期决定 source backend，并让 Runtime 只消费 dense identity、格式和资源句柄。
 - 以只读事实记录资源状态、压缩体积和解码成本，且关闭诊断不改变正式结果。
+- 让片段自带 BlendShape 与骨骼共用 effective time、readiness、参数混合与同帧最终发布。
 
 **Non-Goals:**
 
 - 不修改 UnityPlayer，不接入 ZZZ 私有 `UnityPlayer.dll`、`AnimeStudio.ACLNative2.dll` 或 Animage 私有 ABI。
-- 不替换 Animator、Animancer、Pose Program、Transition、Goal、FBBIK 或 Final writer。
+- 不替换 Animator、Animancer、Pose Program、Transition、Goal、FBBIK 或现有骨骼 Writer 数学；允许唯一 Final Publication 的合同和内部写入流程增加 BlendShape。
 - 不为 ACL source 建立第二张 PlayableGraph、第二个 Player、第二个 Pose buffer、第二个最终写入器或独立 Preview 链。
 - 不在 ACL backend 中实现状态机、过渡、脚步锁、IK、Goal、Gameplay 或 Foot Placement 修正。
 - 不以最终 Pose 低通、IK 或脚步校正掩盖 ACL 解码误差。
 - 不在 ACL 资源未就绪时回退到展开 `.anim`、历史 Pose、默认 Idle 或其它播放器。
+- 不增加独立表情 Player、时钟、状态机、眨眼/说话逻辑或隐藏的末端曲线覆盖。
 
 ## Decisions
 
@@ -46,7 +48,7 @@ ACL runtime 不读取 AnimationClip 曲线、AssetDatabase 或作者字符串，
 
 C ABI 明确 struct size/version、固定宽度字段、calling convention、16 字节 aligned allocation、输出容量、错误码和唯一销毁入口；C++ 异常不越过边界。Context、scratch 和现有 source 页来自准备阶段及编译容量，帧内不进行托管或 native 堆分配。共享 payload/database 与每个活跃 source 的可变采样 Context 分开管理；同一个可变 Context 不被不同 Actor 或并行采样共同 seek。
 
-ACL 解码在 Source preparation 阶段消费 Program 已计算的 effective time、generation 和 lineage；它不推进第二时钟，也不再次乘 play rate。结果只进入现有 capture 合同的预分配 source 页，不能增加平行 Pose 真相。Barrier 内完成同一 source 的 Root/Scale policy、Virtual Bone、Velocity 和 completion；这些步骤必须与现有 capture 共用实现，不能仅写 Physical Pose 就宣告整个 source 完成。不得在 Graph Evaluate 中进行 I/O 或分配。
+ACL 解码在 Source preparation 阶段消费 Program 已计算的 effective time、generation 和 lineage；它不推进第二时钟，也不再次乘 play rate。结果只进入唯一 Source owner 的编译容量工作区及现有 capture 合同，不能增加独立播放器自持的 Pose buffer 或第二 Final Pose。所需 codec scratch 必须进入同一 Source 容量布局，不得绕过布局额外缓存可见 Pose。Barrier 内完成同一 source 的 Root/Scale policy、Virtual Bone、Velocity 和 completion；这些步骤与现有 capture 共用实现，不能仅写 Physical Pose 就宣告 source 完成。Graph Evaluate 内不进行 I/O 或分配。
 
 该边界使加载、native 失败与 Frame 提交分开，也避免在动画 Job 中引入外部阻塞调用。采用官方 native 库保留其现成压缩/解码能力，代价是维护平台构建和 ABI；纯托管实现减少 native 部署，但需要独立承担格式和数值实现。当前沿用原稿的 native 路线。性能收益必须测量，不能由算法名称直接承诺。
 
@@ -89,6 +91,55 @@ ACL backend 在 Source frame 成功 Seal 后，按现有 diagnostics interest �
 
 首个实现固定当前 Unity 2022.3.62f2c1 与 Windows x64，覆盖 Editor/Mono 和正式 IL2CPP Player；固定 ACL/数值依赖 revision、编译器/浮点选项、C ABI、plugin hash、Importer 平台声明和 manifest schema。其它平台或版本在 Build/准备阶段拒绝。可复现范围首先是同一平台和 artifact 的数值结果；Frame completion 和 source generation 是生命周期身份，不应要求不同帧或不同 Actor 数值相同就复用同一身份，也不承诺跨平台 bit-exact。
 
+### 8. 正式表情素材与参数绑定
+
+输入是明确 source identity 的解码曲线、目标 AnimationClip、Graph 参数声明和当前模型；输出是补齐属性曲线的正式 Clip，以及 Build 发布的 dense scalar/property binding。首批目标仍是 Corin 当前正式 source 闭包，不得为了复用已验证的 MainCity 样本而替换现有战斗/Locomotion source。8 份样本只证明解码能力；缺少正式目标对应数据时继续完成该目标的离线解码，不假借另一 Clip 的曲线。
+
+Graph 继续唯一拥有 ParameterId、类型、单位、默认值和允许来源；参数新增明确的 Control/AnimatedProperty 用途。Presentation Profile 只拥有参数到 RendererBindingId、Mesh identity 与 BlendShape 的映射。显式导入命令可以通过现有 authoring mutation 建立/更新声明与 Clip 曲线，但不能由 selection、Inspector 或 Build 隐式修改作者数据。导入只更新声明的 BlendShape 曲线；骨骼、Foot/Phase 和已有人工修订保持原样，冲突输出到具体曲线供作者决策。
+
+Actor binding 与现有 Rig binding 一起由正式 Factory 装配。运行对象显式提供 Renderer binding，Build 已固定对应 Mesh 内容 hash、BlendShape 名称身份和索引；装配校验实际 Mesh，不按名字搜索场景。单位以原始数据及模型形变记录为准，正式 Profile 映射不提供运行时缩放补偿开关。需要换单位时由一次明确导入转换完成并保存转换身份；不能猜测乘 100 或 clamp。
+
+对于项目声明的某属性，源绑定清单明确表示该片段没有动画该属性时，Build 编译声明默认值的常量通道，采样时它也是当前合法值。原始声明有 Scalar 却未解码、文件丢失或绑定不明仍是错误，不能走该规则。这样全身动作接管时能得到该动作明确的完整属性结果，结束时通过原有过渡回到 base，避免表情残留。
+
+14 条 Motion/Root 进入离线来源记录和用途分类，本次不作为 Renderer 属性、不导入新的 Gameplay 位移，也不覆盖现有 Simulation MotionCurve。项目正式标量运行集合只包含声明的 BlendShape；Foot/Phase 注册曲线仍走其现有编译/消费合同。
+
+### 9. 两种backend共用一条属性运输与混合链
+
+NativeClip 的骨骼仍由当前 Animancer/ManualMixer 采样；其 BlendShape 数值从正式 Clip 在 Build 时编译为不可变标量曲线页，Runtime 按同一 effective time 采样该页。ACL 条目则从官方 Scalar payload 得到对应值。两者都通过 Source Module 的同一 typed 属性结果交给 Program，由 Program 写入现有 Player/Pose Value 参数页；Source 不直接写 Program 页。不得同时再读 AnimationStream 中的同名属性作为第二结果源。
+
+选择编译标量页的业务收益是表情可以在资源准备边界完整校验，并与已有控制曲线保持相同的明确时间、存在性和数值语义；代价是 NativeClip backend 需要该页及属性采样成本。另一个成立的实现是从每个 source 的 AnimationStream 用属性 handle 捕获再进入同一 typed 页，它可以复用 Unity 属性采样，但会把属性完成移到 Barrier 内并增加 handle/曲线默认行为的绑定负担。本次采用前者，不并存两个采样入口。
+
+每个 prepared source 返回同 lineage 的骨骼采样计划与属性采样页。属性各 Clip 的采样时间、权重和归一化必须复用该 source 已生成的 ClipSamplePlan，不能重算 Blend Space 权重。属性值的 source-local 合成复用既有参数混合规则，typed handoff 后只有 Program 的参数页成为后续混合输入。资源缺失时完整 source Pending；骨骼和表情不分别宣布 Ready。
+
+| 阶段 | 骨骼 | 片段自带属性 |
+|---|---|---|
+| Source-local Clip/Blend Space | 原 NativeClip 或 ACL 采样计划 | 同一 effective sample 与归一化 Clip 权重 |
+| State Standard Blend | 原每骨骼 profile/过渡数学 | 原全局 transition weight 的参数插值 |
+| BlendStack/Slot | 原 pose/贡献混合 | 原 scalar contribution 与参数规则 |
+| Layered Bone Blend/Additive | 原 Mask 和叠加数学 | 原 Base 参数传播，不再乘骨骼 Mask |
+| Parameter Resolve | 保留 Base 骨骼结果 | 原 Base/Overlay/Weighted/Max/Min 显式规则 |
+| Inertialization/reset | 原历史和残差规则 | 复用已有参数响应与 generation/reset，不加 ACL 滤波 |
+
+上述规则复用已有算法，不重新实现一套表情混合器。新增属性改变的是参数布局、来源和发布目标；所有数组、source/history/default/diagnostics 容量必须由新布局一次分配。不能把 BlendShape 数值误当 `animation.action-weight`、Foot Weight 或 Phase，也不能为图自动追加所谓 ALS 曲线修正节点。
+
+### 10. 唯一最终发布扩展
+
+现有 `CharacterPoseSourceModule` 已在装配时把 Animancer Graph 的最终 output weight 设为 0，图只负责采样/capture，不直接驱动可见骨骼。该行为继续保持，并覆盖所有受管理 BlendShape；不能因为新增属性把 output weight 改回 1，或通过额外 AnimationPlayableOutput 写 Renderer。
+
+Program 在唯一 Output operation 把最终 Pose 与已解析属性通过 typed binding 交给同一个 `CharacterFinalPosePublication`。该 owner 内部增加属性 Pending/Committed 页、模型 binding 和写入记录；它们是骨骼之外的属性数据，不是第二 Final Pose 或第二 Publisher。现有骨骼 Writer 数学保持不变，最终 Apply 先整体预验证，再按固定顺序完成骨骼写入和 Renderer 形变权重写入，最后统一 Seal。数据生成、默认值解析、混合、容量、Mesh/索引和所有 lineage 检查都在首次可见写入之前完成。
+
+根事务、Frame completion 与原四个 owner 不变。属性失效与骨骼失效一样阻断整帧最终发布；Barrier 前 Discard，Barrier 内或之后 Fault。底层 Unity 写入出现不可预期异常时报告 Fault，不通过读回旧骨骼/Renderer 做恢复后继续。Writer 开始之后不再做可能失败的业务计算、资源请求或第二次参数解析。
+
+Preview 继续使用正式 Factory 和同一 Projection/Frame 事务；节点检查、编辑器查看或曲线诊断不调用 Renderer 写入。Reset 只通过既有 owner 的同 generation 重置及正式下一帧默认/采样结果恢复，不能保留另一个表情时钟或独立 LateUpdate writer。
+
+### 11. 与现行spec的差异和实施闭包
+
+本次修改的是 source 资源合同、动画属性参数声明和 Final Publication 的结果/目标范围；现有混合公式、Foot/IK/Goal、Simulation 与骨骼写入数学保持。差异已经在本 change 下的 selection-runtime、presentation-pose-graph 和 runtime-architecture 三份 delta 中明确，新增 scalar-presentation spec 约束同帧结果，不直接改 current specs 来伪装已实施。
+
+旧稿“不修改 Final writer”过宽：保持的是骨骼算法，Publication 必须增加属性输入和 Renderer 写入，否则表情只有数值而没有消费者。旧稿“没有现有 capability 变化”也已移除。新增参数用途/属性布局、resource binding 和 publication identity 要统一提升 schema/ABI，并由明确 Character Build 发布新 Program、Projection、资源包与 native artifact；旧版本拒绝装配，不提供字段缺省迁移或运行时兼容。
+
+`原始资料 → 离线导入 → 正式 Clip/Graph/Profile → Character Build → 资源服务准备 → Source typed 结果 → 原 Program/Pose Plan 混合 → 同一 Final Publication` 是唯一链路。发布验收必须同时覆盖资源闭包、属性数值、模型目标和最终可见结果；离线 8 份样本或编译通过都不能替代完整接入验收。
+
 ## Risks / Trade-offs
 
 - [格式或 ABI 漂移] → manifest 固定版本、绑定、Rig、哈希和 native artifact；不接受未声明版本，也不复用 ZZZ 私有 ABI。
@@ -99,17 +150,18 @@ ACL backend 在 Source frame 成功 Seal 后，按现有 diagnostics interest �
 - [过渡时两个 source 的缓存和释放交错] → 以 source identity、usage、retirement 和 Seal 严格配对，release completion 前不复用槽位；代价是短时峰值内存上升。
 - [ACL 资源与展开 `.anim` 重复打包] → Projection 明确 backend，ACL-backed source 禁止同时驱动展开 Clip；代价是迁移期间需要维护清晰的资源清单。
 - [把 ACL 误当作脚步修正方案] → source 层禁止访问 Foot/IK/Goal，诊断事实只读；脚步问题仍由原有链路单独验收。
+- [形变值正确但模型映射或单位错误] → 在正式导入和 Actor 装配时固定目标 Mesh/属性/单位，缺映射明确失败；不能用缩放或 clamp 掩盖错误。
+- [骨骼完成但表情失败] → 同一 source readiness 和整体发布预验证，代价是必需属性缺失也阻断该帧，而不会出现身体换动作、脸停在旧帧的半成品。
 
 ## Migration Plan
 
-1. 先为一条正式 Corin `AnimationClip` 生成 ACL manifest/payload，完成离线身份、绑定、采样和误差校验；此阶段不改变现有 Projection。
+1. 固定 Corin 当前正式 source 闭包，为目标 Clip 补齐可追溯的 BlendShape authoring 曲线和模型绑定；不替换已经验证的骨骼/Foot/Phase 曲线。以一条现有正式 source 生成完整 manifest/payload 和质量记录。
 2. 固定 ACL native revision，落地 C ABI、预分配 Context/Pose page 和资源准备/释放协调器；对格式、版本、哈希和确定性做构建门禁。
 3. 在 `CharacterPoseSourceModule` 和 source preparation 中接入 ACL backend，复用现有 Graph、output-job 安装和 Evaluate Barrier；先让 Projection 只对明确标记的 source 使用 ACL，非标记 source 保持现有 backend。
-4. 为目标资源编译显式 ACL binding，执行资源预取、过渡、retirement、Seal 和 release completion 的端到端验收；确认同一 source 不再同时驱动展开 `.anim`。
+4. 将属性接入既有参数布局、混合和唯一 Publication，编译显式 ACL binding；完成资源预取、骨骼/表情共同过渡、retirement、Seal 和 release completion 的接入验收。确认同一 source 无 `.anim` 备用播放，Graph 无直接可见属性输出。
 5. 发布 ACL 只读诊断和性能事实，扩展到批准的 Corin 资源清单；逐步删除已迁移 source 的展开运行包，但保留 authoring Clip 作为可复现构建输入。
 6. 回滚时部署上一版 Projection、资源清单和 native artifact；不在运行时增加 fallback，也不在同一 source identity 下混用两个播放器。
 
 ## Open Questions
 
-- 在表情范围确定后，首批按 Corin 已批准的 source 清单发布；其它角色何时迁移只影响资源清单和发布批次。
-- Windows x64 之外的平台何时加入；需以各平台独立 native artifact 和确定性验收为准，不改变 `Pending/Ready/Invalid` 语义。
+本次没有影响实施范围、owner 或输入输出合同的未决项。其它角色和 Windows x64 之外的平台属于后续扩展，需独立资源清单与 native artifact，不作为本次实施前置。

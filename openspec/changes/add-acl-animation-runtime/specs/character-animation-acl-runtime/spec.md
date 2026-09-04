@@ -2,7 +2,7 @@
 
 定义项目在不修改 UnityPlayer 的前提下保存、加载、解码和播放 ACL 动画数据的正式边界，使压缩动画能够进入现有唯一 Pose Source 与表现帧事务，同时保持资源身份、质量和生命周期可验证。
 
-规划状态：用户尚未决定本次是否补齐 Corin 表情；相关标量消费者和发布要求未定，当前草稿不是可实施定稿。
+本次范围包含片段自带骨骼与 BlendShape；属性运输、混合及发布合同由同 change 的 `character-animation-scalar-presentation` 规定，复用现有 Program/Pose Plan，不增加独立表情行为系统。
 
 ## ADDED Requirements
 
@@ -45,6 +45,8 @@ Editor-only 构建 MUST 从正式 AnimationClip 及明确的绑定/轨道覆盖�
 ACL Source MUST 接收编译产物确定的资源、source identity、effective time、采样策略和 Frame lineage，并发布匹配的 source sample。Program MUST 唯一推进时钟并计算 effective time；ACL Source MUST 不重复应用 play rate、选择 PoseState、Transition、Slot、Action winner、Foot Placement、IK、Goal 或 Final Pose，MUST 不读取作者字符串、AssetDatabase 或运行时 AnimationClip 作者曲线。
 
 ACL 输入 MUST 保留既有 Root/Scale policy、Virtual Bone 派生、source velocity、continuity 和 completion 语义。正式 Phase/Foot 注册曲线 MUST 继续使用既有 Build 与消费者；原始 Motion/Root 标量 MUST 不直接驱动 Gameplay 位移或绕过唯一模拟移动链。
+
+同一动画源的骨骼与动画属性 MUST 使用同一 effective time、资源 generation、Frame lineage 和 readiness。NativeClip 与 ACL 的属性采样 MUST 输出同一 typed 参数合同；backend MUST 不选择属性的跨 source 混合规则或直接写 Renderer。
 
 #### Scenario: 持续 Pose 使用 ACL Source
 

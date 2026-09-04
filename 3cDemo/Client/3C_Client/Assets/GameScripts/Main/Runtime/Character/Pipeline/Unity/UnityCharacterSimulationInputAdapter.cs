@@ -17,7 +17,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation
     {
         readonly CharacterInputProfile m_Profile;
         readonly CharacterSimulationProgram m_Program;
-        readonly CinemachineCameraRigAdapter m_CameraRig;
+        readonly ICameraRigAdapter m_CameraRig;
         readonly CharacterPipelineHost m_Owner;
         readonly string m_ActionTargetInputValueId;
         readonly ICharacterActionTargetInputProvider m_ActionTargetProvider;
@@ -41,14 +41,14 @@ namespace ThirdPersonCharacter.Pipeline.Simulation
         public UnityCharacterSimulationInputAdapter(
             CharacterInputProfile profile,
             CharacterSimulationProgram program,
-            CinemachineCameraRigAdapter cameraRig,
+            ICameraRigAdapter cameraRig,
             CharacterPipelineHost owner,
             string actionTargetInputValueId,
             ICharacterActionTargetInputProvider actionTargetProvider)
         {
             m_Profile = profile ? profile : throw new ArgumentNullException(nameof(profile));
             m_Program = program ?? throw new ArgumentNullException(nameof(program));
-            m_CameraRig = cameraRig ? cameraRig : throw new ArgumentNullException(nameof(cameraRig));
+            m_CameraRig = cameraRig ?? throw new ArgumentNullException(nameof(cameraRig));
             m_Owner = owner ? owner : throw new ArgumentNullException(nameof(owner));
             m_ActionTargetInputValueId = RequireIdentity(actionTargetInputValueId, nameof(actionTargetInputValueId));
             m_ActionTargetProvider = actionTargetProvider;

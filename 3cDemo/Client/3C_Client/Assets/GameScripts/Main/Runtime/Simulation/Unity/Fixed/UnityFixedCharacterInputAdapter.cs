@@ -23,7 +23,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
     {
         readonly CharacterInputProfile m_Profile;
         readonly ThirdPersonSimulation.Fixed.CharacterSimulationProgram m_Program;
-        readonly CinemachineCameraRigAdapter m_CameraRig;
+        readonly ICameraRigAdapter m_CameraRig;
         readonly ISimulationSessionActorHost m_Owner;
         readonly string m_ActionTargetInputValueId;
         readonly ICharacterActionTargetInputProvider m_ActionTargetProvider;
@@ -49,7 +49,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
         public UnityFixedCharacterInputAdapter(
             CharacterInputProfile profile,
             ThirdPersonSimulation.Fixed.CharacterSimulationProgram program,
-            CinemachineCameraRigAdapter cameraRig)
+            ICameraRigAdapter cameraRig)
             : this(profile, program, cameraRig, null, string.Empty, null)
         {
         }
@@ -57,14 +57,14 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
         public UnityFixedCharacterInputAdapter(
             CharacterInputProfile profile,
             ThirdPersonSimulation.Fixed.CharacterSimulationProgram program,
-            CinemachineCameraRigAdapter cameraRig,
+            ICameraRigAdapter cameraRig,
             ISimulationSessionActorHost owner,
             string actionTargetInputValueId,
             ICharacterActionTargetInputProvider actionTargetProvider)
         {
             m_Profile = profile ? profile : throw new ArgumentNullException(nameof(profile));
             m_Program = program ?? throw new ArgumentNullException(nameof(program));
-            m_CameraRig = cameraRig ? cameraRig : throw new ArgumentNullException(nameof(cameraRig));
+            m_CameraRig = cameraRig ?? throw new ArgumentNullException(nameof(cameraRig));
             m_Owner = owner;
             m_ActionTargetInputValueId = string.IsNullOrWhiteSpace(actionTargetInputValueId)
                 ? string.Empty

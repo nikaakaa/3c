@@ -7,6 +7,9 @@ namespace ThirdPersonCharacter.Pipeline.Diagnostics.FootAnalysis.Editor
 {
     public static class CharacterFootDiagnosticAnalysis
     {
+        public const string QualityScoreFileName =
+            CharacterFootQualityScorePublisher.FileName;
+
         public static DiagnosticAnalysisArtifacts Analyze(
             string capabilityManifestPath,
             string planPath,
@@ -38,9 +41,14 @@ namespace ThirdPersonCharacter.Pipeline.Diagnostics.FootAnalysis.Editor
             DiagnosticAnalysisResult result = new DiagnosticAnalysisRunner().Run(
                 compiled,
                 DiagnosticAnalyzerBinaryIdentity.Open(analyzerAssemblyPath));
-            return new DiagnosticAnalysisArtifactWriter().Publish(
+            DiagnosticAnalysisArtifacts artifacts = new DiagnosticAnalysisArtifactWriter().Publish(
                 result,
                 outputDirectory);
+            CharacterFootQualityScorePublisher.Publish(
+                result,
+                plan,
+                artifacts.Directory);
+            return artifacts;
         }
     }
 }

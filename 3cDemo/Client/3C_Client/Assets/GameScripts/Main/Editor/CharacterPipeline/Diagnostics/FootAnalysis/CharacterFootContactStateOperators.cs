@@ -142,6 +142,9 @@ namespace ThirdPersonCharacter.Pipeline.Diagnostics.FootAnalysis.Editor
             if (counters.TotalEligible == 0)
                 return DiagnosticOperatorResult.NotApplicable(
                     "No complete Contact support policy segment was eligible.");
+            if (counters.EligibleCount("contact-support-gap") == 0)
+                return DiagnosticOperatorResult.NotApplicable(
+                    "No complete full-weight Contact support episode was eligible.");
             findings.Sort((left, right) =>
             {
                 int sequence = left.SequenceStart.CompareTo(right.SequenceStart);
@@ -151,12 +154,13 @@ namespace ThirdPersonCharacter.Pipeline.Diagnostics.FootAnalysis.Editor
             });
             string summary =
                 $"{counters.TotalMatched} of {counters.TotalEligible} Contact support rule windows failed.";
+            double score = counters.Score("contact-support-gap");
             return new DiagnosticOperatorResult(
                 findings.Count == 0
                     ? DiagnosticRuleState.Passed
                     : DiagnosticRuleState.Failed,
                 summary,
-                null,
+                score,
                 counters.Evidence(inputs.Frame),
                 findings);
         }
@@ -452,6 +456,10 @@ namespace ThirdPersonCharacter.Pipeline.Diagnostics.FootAnalysis.Editor
                             scoredMaximum,
                             segment.ScoredMaximum);
                     }
+                    counters.Observe(
+                        s_Targets[0],
+                        first.Dimension,
+                        scoredMaximum);
                     if (scoredMaximum > policy.GapThreshold)
                     {
                         counters.Matched(s_Targets[0], first.Dimension);
@@ -905,6 +913,7 @@ namespace ThirdPersonCharacter.Pipeline.Diagnostics.FootAnalysis.Editor
             var previousByDimension = new Dictionary<string, DiagnosticDatasetRow>(
                 StringComparer.Ordinal);
             var findings = new List<DiagnosticFinding>();
+            var occurrences = new List<double>();
             int eligible = 0;
             DiagnosticDatasetCursor cursor = context.CreateCursor(0);
             while (cursor.MoveNext())
@@ -961,6 +970,7 @@ namespace ThirdPersonCharacter.Pipeline.Diagnostics.FootAnalysis.Editor
                             currentProbes.PhysicalToe,
                             epsilon);
                         double maximum = Math.Max(ankle, Math.Max(heel, toe));
+                        occurrences.Add(maximum);
                         if (maximum > threshold)
                         {
                             findings.Add(new DiagnosticFinding(
@@ -1024,12 +1034,15 @@ namespace ThirdPersonCharacter.Pipeline.Diagnostics.FootAnalysis.Editor
                     "No continuous Contact-state physical output frame pair was eligible.");
             string summary =
                 $"{findings.Count} of {eligible} Contact-state physical output frame pairs exceeded {CharacterFootDiagnosticOperatorSupport.Format(threshold)} m.";
+            double score = CharacterFootDiagnosticOperatorSupport.SeverityHealth(
+                occurrences,
+                eligible);
             return new DiagnosticOperatorResult(
                 findings.Count == 0
                     ? DiagnosticRuleState.Passed
                     : DiagnosticRuleState.Failed,
                 summary,
-                null,
+                score,
                 null,
                 findings);
         }
@@ -1245,6 +1258,45 @@ namespace ThirdPersonCharacter.Pipeline.Diagnostics.FootAnalysis.Editor
         internal int TotalEligible { get; private set; }
         internal int TotalMatched { get; private set; }
 
+        internal int EligibleCount(string target)
+        {
+            int count = 0;
+            foreach (Counter counter in m_Counters.Values)
+            {
+                if (counter.Target == target)
+                    count += counter.Eligible;
+            }
+            return count;
+        }
+
+        internal double Score(string target)
+        {
+            var occurrences = new List<double>();
+            foreach (Counter counter in m_Counters.Values)
+            {
+                if (counter.Target == target)
+                    occurrences.AddRange(counter.Occurrences);
+            }
+            if (occurrences.Count == 0)
+                throw new InvalidOperationException(
+                    "Contact quality score has no eligible episodes.");
+            return CharacterFootDiagnosticOperatorSupport.SeverityHealth(
+                occurrences,
+                occurrences.Count);
+        }
+
+        internal void Observe(
+            string target,
+            string dimension,
+            double occurrence)
+        {
+            if (!m_Targets.Contains(target) || !double.IsFinite(occurrence) || occurrence < 0d)
+                throw new InvalidOperationException("Contact quality occurrence is invalid.");
+            if (!m_Counters.TryGetValue(target + "|" + dimension, out Counter counter))
+                throw new InvalidOperationException("Contact quality counter is unavailable.");
+            counter.Occurrences.Add(occurrence);
+        }
+
         internal void Eligible(string target, CharacterFootContactSupportGapOperator.GapSegment segment) =>
             Eligible(
                 target,
@@ -1326,6 +1378,7 @@ namespace ThirdPersonCharacter.Pipeline.Diagnostics.FootAnalysis.Editor
             internal ulong SequenceEnd { get; set; }
             internal int Eligible { get; set; }
             internal int Matched { get; set; }
+            internal List<double> Occurrences { get; } = new List<double>();
         }
     }
 }

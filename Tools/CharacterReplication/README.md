@@ -38,3 +38,17 @@ python -X utf8 Tools/CharacterReplication/build_guide.py --sources Tools/Charact
 `decode_native_curves.py` 读取已确认的 Unity 原生 AnimationCurveLibrary 格式，校验完整文件消费。`analyze_corin_evidence.py` 保存此前 Corin 的变体和同版本有限函数证据；它不伪装成已分析其它角色的执行实例。
 
 对外部定位器与 Odin 简化输出的修改证据仍位于共享分析目录中的 `locator-terms.diff`、`odin-positional-fields.diff`。原始资源不改写。
+
+## 动画同步证据重建
+
+`animation_sync.py` 是同一资料生成器的分析模块。每个角色的正式输出增加 `动画同步.md` 和 `data/animation-sync.json`，包括全部状态的时间参数、层关系、多子节点、自动偏移和移动转场；动作页同步展示时间与循环参数绑定。
+
+```powershell
+python -X utf8 Tools/CharacterReplication/scan_animation_calls.py
+python -X utf8 Tools/CharacterReplication/analyze_animation_sync.py
+python -X utf8 Tools/CharacterReplication/build_index.py
+```
+
+扫描器查找已确认 Animator 方法入口和原生跳转槽，核对调用点所在指令边界。分析器复用既有 PE/快照读取器，校验同版本哈希，保存完整函数、字段偏移、静态参数 ID 和文件常量，并比较重新导出的控制器是否改动既有字段。手工核实的传值链路与仍缺的证据维护在 `evidence/animation-sync.md`，随分析器发布到资料总目录。
+
+新增的 `m_TimeParamID` 来自对原 AnimeStudio 类和结构化导出器的正式修正，来源配置统一指向同资源身份的完整导出。原导出仅保留作差异证据；没有新增 Unity 运行时导入链路。

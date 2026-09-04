@@ -6,6 +6,8 @@ import re
 from collections import Counter, defaultdict
 from pathlib import Path
 
+import animation_sync
+
 
 LABELS = {
     "m_TransitionDuration": "混合时长", "m_TransitionOffset": "目标切入偏移",
@@ -310,7 +312,9 @@ def main():
         duplicate_report.append({"name": name, "baselineSourceKey": baseline_key, "copies": len(copies), "rawHashes": sorted(raw_hashes),
                                  "sameRawBytes": len(raw_hashes) == 1, "paths": [e["relative"] for e in copies]})
         duplicate_report[-1]["variants"] = variants
+    synchronization = animation_sync.collect(controller)
     data_sets = {"controller": controller, "states": states, "transitions": transitions, "character": character,
+                 "animation-sync": synchronization,
                  "events": events, "windows": windows, "zones": selected["zones"],
                  "cameras": cameras, "attack-properties": attacks,
                  "animation-resources": animation_manifest["Clips"], "parameters": controller["Parameters"],
@@ -320,6 +324,7 @@ def main():
         write_json(out / "data" / f"{name}.json", data)
     sources.record("guide-sources", args.sources.resolve())
     sources.record("guide-builder", Path(__file__).resolve())
+    sources.record("animation-sync-builder", Path(__file__).with_name("animation_sync.py").resolve())
     write_json(out / "data/source-index.json", sources.records)
     summary = {"schema": "character-replication-guide/1", "character": settings["character"], "states": len(states), "focusedStates": len(scoped), "parameters": len(controller["Parameters"]),
                "transitions": len(transitions), "events": dict(Counter(e["source"] for e in events)),
@@ -333,6 +338,7 @@ def main():
     write_json(out / "data/summary.json", summary)
     render_actions(out, scoped, events, windows, cameras, sources.records, animation_manifest, attacks, settings, character)
     render_character(out, character)
+    animation_sync.render(out, settings["character"], synchronization, table, conditions)
     render_cameras(out, cameras, dependencies, sources.records)
     render_reference(out, summary, sources.records, settings)
     print(json.dumps({"output": str(out), **summary}, ensure_ascii=False))
@@ -383,7 +389,7 @@ def render_actions(out, states, events, windows, cameras, sources, animation_man
                    "；".join(f"[动画]({r['ExportedPath']})" for r in c["resources"] if r["Kind"] == "UnityAnimation")) for c in clips]),
                  "", "动画按 SerializedFile + PathID 对账，不按相似名字替换；无匹配时保留未解析身份。完整 BlendTree 参数随动作 JSON 保存。",
                  "", "## 动画播放", "", table(["字段", "原值"],
-                 [(f"{LABELS.get(k, k)} `{k}`", data[k]) for k in ("m_Speed", "m_CycleOffset", "m_Loop", "m_Mirror", "m_IKOnFeet", "SpeedParameter") if k in data]),
+                 [(f"{LABELS.get(k, k)} `{k}`", data[k]) for k in ("m_Speed", "m_CycleOffset", "m_Loop", "m_Mirror", "m_IKOnFeet", "SpeedParameter", "CycleOffsetParameter", "m_TimeParamID", "TimeParameter") if k in data]),
                  "", "## 转场与响应条件", "", table(["原顺序", "目标", "混合时长", "转场帧字段", "目标切入帧", "退出时间启用", "条件（原始比较模式）"],
                  [(t["Index"], t["DestinationStateName"], t["m_TransitionDuration"], t["m_FrameCount"], t["m_TransitionOffsetCount"], t["m_HasExitTime"], conditions(t)) for t in data["Transitions"]]),
                  "", "`special_*` 目标是原控制器保留的特殊目标编码，不直接当成具体动作。参数条件、退出门槛及中断规则须同时考虑；本表不是已经确认的输入缓冲窗口。",
@@ -435,6 +441,7 @@ def render_reference(out, summary, sources, settings):
     intro = [f"# {settings['character']} 复刻资料", "", "本包是现有离线资料的可重建阅读投影，不是另一套游戏配置。原始 dump、Unity authoring 和生成产物均不由本工具修改。", "",
              "## 阅读入口", "", "- [按动作查看混合、条件、窗口和镜头](动作索引.md)", "- [全部镜头原始参数](镜头参数.md)",
              "- [技能和点击／长按配置](技能与输入.md)",
+             "- [动画同步、自动偏移与移动转场](动画同步.md)",
              "- [公共镜头资源依赖](公共镜头依赖.md)", "- [字段说明与使用边界](字段说明.md)",
              "- [本角色资料缺口](资料缺口.md)", "- [机器可读数据与统计](data/summary.json)", "- [精确来源及 SHA-256](data/source-index.json)", "",
              "## 覆盖", "", table(["内容", "数量"], [(k, v) for k, v in summary.items() if k != "schema"]), "",
@@ -446,6 +453,7 @@ def render_reference(out, summary, sources, settings):
         "- 事件引用未匹配的镜头：[逐项记录](data/unresolved-event-references.json)。\n" +
         "- 同名资源与变体：[来源与差异](data/duplicate-sources.json)。\n" +
         "- 公共曲线、标准键：[依赖表](公共镜头依赖.md)。\n" +
+        "- 动画相位同步、自动偏移公式和运行代码：[同步证据](动画同步.md)。\n" +
         "- 本页不把源配置的点击/长按映射当成完整输入缓存逻辑；消费时点和未展开枚举仍需消费者证据。\n" +
         f"- 已有共享镜头与时间区域研究：[分析记录]({settings['sharedEvidenceRoot']}/README.md)。共享函数证据可以复用，角色配置不能借用其它角色的数值。\n", encoding="utf-8")
     analysis = out / "analysis"

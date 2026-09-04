@@ -8,7 +8,7 @@
   "focusedStatePattern": "^(Attack_(?!ParryAid|ParrySolo|AssaultAid|BeHitAid)|Evade_)",
   "eventBindingMode": "character-map",
   "sharedEvidenceRoot": "D:/ZZZ_Dump/output/corin_replication/replication-guide/analysis",
-  "controller": "output/anbi_replication/20260904_controller_structured/Avatar_Female_Size02_Anbi_Controller__3460639183_000637B7.json",
+  "controller": "output/character_replication/analysis/animation-sync/anbi/controller/Avatar_Female_Size02_Anbi_Controller__3460639183_000637B7.json",
   "animationManifest": "output/anbi_replication/20260904_animations_static/export-manifest.json",
   "animationDirectory": "output/anbi_replication/20260904_animations_static/animations",
   "rawConfigManifests": ["output/anbi_replication/20260904_configs_raw/manifest.json", "output/anbi_replication/20260904_camera/raw/manifest.json"],

@@ -8,7 +8,7 @@
   "focusedStatePattern": "^(Attack_(?!ParryAid|AssaultAid|BeHitAid)|Evade_)",
   "eventBindingMode": "character-map",
   "sharedEvidenceRoot": "D:/ZZZ_Dump/output/corin_replication/replication-guide/analysis",
-  "controller": "output/unagi_replication/20260904_controller_structured/Avatar_Female_Size02_Unagi_Controller__2022846129_00078476.json",
+  "controller": "output/character_replication/analysis/animation-sync/unagi/controller/Avatar_Female_Size02_Unagi_Controller__2022846129_00078476.json",
   "animationManifest": "output/unagi_replication/20260904_animations_static_v6/export-manifest.json",
   "animationDirectory": "output/unagi_replication/20260904_animations_static_v6/animations",
   "rawConfigManifests": ["output/unagi_replication/20260904_configs_raw/manifest.json", "output/unagi_replication/20260904_camera/raw/manifest.json"],

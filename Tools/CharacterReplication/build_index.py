@@ -17,6 +17,7 @@ def main():
     text += table(["角色", "重点动作页", "全部状态", "全部转场", "时间区域", "镜头配置", "已纳入技能"], rows)
     text += "\n\nnull 表示本包尚未纳入相应资料，不表示角色没有配置。切人不进入当前重点动作页；完整原控制器和事件仍保存。\n"
     text += "\n动画按 CAB/PathID 对账，事件按角色的正式映射关联。输入缓存、枚举和特殊时间规则没有用经验值补齐。\n"
+    text += "\n[动画同步与运行代码补缺](analysis/animation-sync/README.md)：TimeParameter、循环偏移、层关系、自动切入、CrossFade 参数来源和仍待确认的 SyncGroup。\n"
     (root / "README.md").write_text(text, encoding="utf-8")
     print(root / "README.md")
 

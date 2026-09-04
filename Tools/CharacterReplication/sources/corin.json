@@ -9,7 +9,7 @@
   "configRoots": {"attack":"AnimEvents","zones":"AnimatorZoneGroup","battle":"patterns","effect":"patterns","audio":"patterns","shake":"cameraShakes","zoom":"cameraZooms","stretch":"cameraStretchs","override":"config"},
   "dumpRoot": "D:/ZZZ_Dump",
   "output": "D:/ZZZ_Dump/output/corin_replication/replication-guide",
-  "controller": "output/corin_replication/20260903_controller_structured_v6/Avatar_Female_Size01_Corin_Controller__1291803240_00335DAA.json",
+  "controller": "output/character_replication/analysis/animation-sync/corin/controller/Avatar_Female_Size01_Corin_Controller__1291803240_00335DAA.json",
   "animationManifest": "output/corin_replication/20260904_replication-manifest.json",
   "configIndex": "output/corin_replication/20260904_corin_config_index_v1.json",
   "decodedRoot": "output/corin_replication/20260904_config_decoded_v6",

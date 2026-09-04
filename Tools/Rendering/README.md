@@ -106,4 +106,5 @@ Body `_MatCapTex` 至 `_MatCapTex5` 指向同一个引用：fileID 4、PathID `-
 - `export_zzz_render_metadata.py`：复用原有 829 离线解析器，只导出显式指定的类型到新目录；可补取 MatCap 静态表和已验证 System.String 字面量，保存源文件哈希及每次读取的字节。不重写旧分析包。
 - `export_zzz_container_nodes.ps1`：复用已验证 AnimeStudio mhy1 解码器，只提取指定资源节点，保留输入块、库和节点哈希；原始压缩 mip 数据与 PNG 预览分开。
 - `capture_zzz_renderer_snapshot.py`：读取已有 829 离线快照，验证模块身份与对象名称 getter，保存 ShaderConfig 和 NapEntityPrepare 原始计算程序。不访问活体，不向 Unity 导入。
+- `capture_zzz_shader_parameters.py`：按原 `PropertyToID` 哈希探测及 typed property sheet 布局读取指定阶段需要的全局参数，保存原始位值、查找过程与四路 RT 配置。区分已发布、未发布和线程局部数据；不把未发布字段填零。
 - `recover_dxbc_hlsl.py`：独立恢复现有 DXBC 阶段，输出位值源码与编译对照。`--decompiled-dir` 仅用于已知计算程序旧入口缺失的失败对照；补入口不代表修正旧数值语义。

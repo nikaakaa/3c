@@ -81,3 +81,57 @@ entry6 输出颜色和另一份运动相关结果；不是把 `_GBuffer0` 直接
 3. 接入原角色合成与 LUT / 曝光生产者，再做 Unity 导入、编译、绘制和前后截图；不得重新启用已导致崩溃的旧序列化 Shader 绘制路径。
 
 目前未完成以上接入，因此不交付“已可用”“与游戏一致”结论。零编译诊断不能代替最终画面，也不能保证原生崩溃问题已经由新源码路径经过实际绘制验证。
+
+## 后续：四路缓冲与全局参数已读取
+
+### 材质保留决定
+
+用户明确要求两套都保存，完成后使用还原版。当前 Corin 的 Body / Face / Hair / Weapon 四个正式材质均引用 GUID `7296a46efec407646afe9bc4aa0eb31c`，即社区 ZZZMiyabi 的 `CelShaders/ZZZShader`。这与上轮使用的安全材质状态不同。
+
+本次没有覆盖这些材质、社区 Shader 或 Face 朝向组件。之后应保留社区版资产，还原版另存；只有完成验证后才切换可琳的正式引用，不建立运行时 fallback。
+
+### 缓冲的名字与配置格式
+
+`20260904_shader_parameter_snapshot_v2/shader-parameters.json` 从原 `GlobalBufferManager.globalRTs`、`GlobalRTWrap` 和 `PropertyToID` 名字表交叉核对得到：
+
+| 槽 | 名称 | 原 GraphicsFormat 数值 | 当前 Unity 2022 同值枚举 |
+| --- | --- | ---: | --- |
+| 0 | `_GBuffer0` | 48 | R16G16B16A16_SFloat |
+| 1 | `_GBuffer1` | 4 | R8G8B8A8_SRGB |
+| 2 | `_GBuffer2` | 75 | A2B10G10R10_UNormPack32 |
+| 3 | `_CameraNormalTexture` | 75 | A2B10G10R10_UNormPack32 |
+
+不是按字段名称猜槽序：四个 wrapper 的 `rtNameHolder` 分别为 672～675，并与原名字表查找结果逐项相同。类型定义也验证为 GlobalRTWrap/type6028。Unity 2022 枚举值通过本机 UnityEngine.CoreModule.dll 反射核对。
+
+静态初始化入口 `GameAssembly+0x1E47D580` 同样验证后三路格式，第一路另有格式 74 的平台分支，不能把 48 宣称为全部平台的固定值。`UnityPlayer+0x93B34A–38B` 使用 `{0,1,2,3}` 创建四路目标；是否增加额外三路有独立条件。
+
+快照中四个 wrapper 的实际 RT handle、上次创建宽高均为 -1。因此这里只证明配置和身份，**不证明快照发生时存在已分配的四张目标纹理，更不证明一次原子 Corin Draw 的绑定状态**。
+
+### 参数读取不是猜默认值
+
+原链如下：
+
+- `Shader.PropertyToID`：GameAssembly `0x1E48CC20` → UnityPlayer `0xC58610` → `0x79FC40` → `0x919DF0` → `0xA440E0`。
+- 名字表查询：`0xA45F50`。采用 FNV-1a 32 位，起点按原 mask，后续探测步长 8、16、24。槽地址为 `base + 3 × index`，不是错误地把 mask 当作槽数量。
+- Vector 读取：`0xC5D360` → `0x79E260`；Matrix 读取：`0xC5D5F0` → `0x79E130`。
+- typed property 查找：`0x16D990` / `0x16DC60`。按类型范围找到同一 PropertyID，再由 descriptor 低 20 位定位 payload。
+- MatrixArray：`0xC5EA10` → `0x79E1F0` → `0x79B080`；数量 getter 最终到 `0x79B1D0`，数量为 `(descriptor >> 20) & 0x3FF`。已读取 `_MainLightWorldToShadow` 的实际五元素矩阵数组。
+
+对主体 MatCap 的 Vertex/Pixel 与普通角色合成的 50 项全局需求，本次结果为：
+
+- 44 项已发布，保存原字节、float 视图、uint 视图、名字查询地址和参数声明。
+- 5 项是线程局部储存的内建相机参数：`_WorldSpaceCameraPos`、`_ZBufferParams`、`unity_MatrixV`、`unity_MatrixVP`、`unity_WorldToCamera`。
+- `_MotionBlurMask` 在快照里未发布，没有用零值冒充已采到。
+
+已发布示例：`_PostFrontTint=(1,0.97647065,0.87450987,1)`，`_CharacterAmbient=(0.2,0.16,0.16,1)`，`_CharacterMatCapEnable=1`，`_is_apply_lut_character_on=1`。该快照中 `_is_main_light_shadows_on=0`、`_RimGlowIntensityForChara=0`；这只是该缓存的事实，不是可以全局写死的游戏规则。
+
+该读取仍不具备同次 Draw 的原子性。尤其 `_GlobalTimeParamsB`、相机与场景控制值不能直接当常量永久写入项目。两个数值视图也不等同于已证明上传至 GPU 的类型转换：最终仍须按原声明和 setter/upload 合同处理。
+
+### 当前仍须接入的具体对象
+
+1. 当前相机的矩阵 / 位置 / 深度参数，以及每帧时间输入。
+2. UnityNapCB 与 NapEntityGPUData 的实体输入及生命周期，不用别的角色或陈旧快照冒充当前可琳。
+3. 已证实的 MatCap 数组构造、角色 LUT 的原生成过程、对应纹理绑定。
+4. 按原 Stencil、Blend、Depth 状态执行角色绘制与合成，再验证实际画面。
+
+这次新增的是可重跑的数据读取工具和证据，没有提前交付一个缺输入但可误挂的 Shader 包装。

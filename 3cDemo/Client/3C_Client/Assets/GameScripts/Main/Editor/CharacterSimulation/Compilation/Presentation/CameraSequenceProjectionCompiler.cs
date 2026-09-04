@@ -9,6 +9,10 @@ namespace ThirdPersonCamera
         public static CameraSequencePayload Compile(CameraSequenceAsset asset)
         {
             asset.RequireValid();
+            if (asset.TimeDomain == CameraTimeDomain.OwnerScaled ||
+                asset.TimeDomain == CameraTimeDomain.LocalAvatarScaled)
+                throw new InvalidOperationException(
+                    $"Camera Sequence '{asset.SequenceId}' uses '{asset.TimeDomain}', but the current Presentation Tick has no formal source for that time domain.");
             var stages = new CameraSequenceStagePayload[asset.Stages.Count];
             for (int i = 0; i < stages.Length; i++)
                 stages[i] = CompileStage(asset.Stages[i]);

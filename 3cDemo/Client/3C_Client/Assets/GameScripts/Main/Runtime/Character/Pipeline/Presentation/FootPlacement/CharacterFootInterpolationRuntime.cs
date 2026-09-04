@@ -106,6 +106,10 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 state.HasPreviousResponseOutputPoint;
             Vector3 previousResponseOutputPoint =
                 state.PreviousResponseOutputPoint;
+            bool hasResponseBodyHeight = state.HasResponseBodyHeight;
+            float previousResponseBodyHeight =
+                state.PreviousResponseBodyHeight;
+            bool responseBodyMovingUp = state.ResponseBodyMovingUp;
             CharacterFootCorrectionResponseInitializationReason reason =
                 state.PendingCorrectionResponseInitializationReason;
             FixedString128Bytes sourceLineage =
@@ -123,6 +127,9 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             state.HasPreviousResponseOutputPoint =
                 hasPreviousResponseOutputPoint;
             state.PreviousResponseOutputPoint = previousResponseOutputPoint;
+            state.HasResponseBodyHeight = hasResponseBodyHeight;
+            state.PreviousResponseBodyHeight = previousResponseBodyHeight;
+            state.ResponseBodyMovingUp = responseBodyMovingUp;
             state.HasCorrectionResponseLineage = hasLineage;
             state.CorrectionResponseSourceLineage = sourceLineage;
             state.CorrectionResponseProfileRevision = profileRevision;
@@ -956,6 +963,17 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             Vector3 originalSole =
                 CharacterFootConstraintMath.ResolveOriginalSole(
                     frame.AnimatedFoot);
+            if (state.HasResponseBodyHeight)
+            {
+                float bodyHeightDelta = frame.AnimatedHip.y -
+                                        state.PreviousResponseBodyHeight;
+                if (bodyHeightDelta >= CharacterFootConstraintMath.GeometryEpsilon)
+                    state.ResponseBodyMovingUp = true;
+                else if (bodyHeightDelta <= -CharacterFootConstraintMath.GeometryEpsilon)
+                    state.ResponseBodyMovingUp = false;
+            }
+            state.HasResponseBodyHeight = true;
+            state.PreviousResponseBodyHeight = frame.AnimatedHip.y;
             bool previousOutputAvailable = state.HasPreviousResponseOutputPoint;
             Vector3 previousOutputPoint = state.HasPreviousResponseOutputPoint
                 ? state.PreviousResponseOutputPoint
@@ -1049,7 +1067,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     deltaDirection = delta > 0f
                         ? CharacterFootCorrectionResponseDeltaDirection.Increase
                         : CharacterFootCorrectionResponseDeltaDirection.Decrease;
-                    selectedSpeed = delta > 0f
+                    selectedSpeed = state.ResponseBodyMovingUp
                         ? frame.Settings.CorrectionResponseIncreaseSpeed
                         : frame.Settings.CorrectionResponseDecreaseSpeed;
                     float maximumDelta = selectedSpeed * frame.DeltaSeconds;
@@ -1170,6 +1188,9 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             state.ResponseHistory = default;
             state.HasPreviousResponseOutputPoint = false;
             state.PreviousResponseOutputPoint = default;
+            state.HasResponseBodyHeight = false;
+            state.PreviousResponseBodyHeight = 0f;
+            state.ResponseBodyMovingUp = false;
             state.PendingCorrectionResponseInitializationReason = reason;
         }
 

@@ -28,6 +28,18 @@
 | `MoleMole.MonoStageEnv.GetVirtualCamera` | virtual camera identity string | 通过 stage 环境查找并返回 `CinemachineVirtualCamera` | RVA `0x129CCBB0-0x129CCC8D`，函数 hash `90f63664bd08882cc70d953c7d9364b0aec48d96f0982a3500d7865289003f49` |
 | `MoleMole.MonoStageCamera.Awake` / `ActiveCam` | followName、lookAtName、virtualCamera、active bool | 取得承载实例并切换活动状态 | Awake RVA `0x1909D150-0x1909D1FE`，hash `80ddafb3287b177231289ba4f96ac0b62688b9d67d2cebb6d758b43b9b568f96`；ActiveCam RVA `0x1909D580-0x1909D5DB`，hash `0d25d4a3a9a5f39584f4f0d94edb89ee0a13e2f252089227d49ea070de7e2e90` |
 
+### 取景轨道采样的新增证据
+
+对同版本 `GameAssembly.dll` 的只读反汇编补齐了 `FrameOnePointInCorePolicy_ByTrack` 的采样骨架：
+
+- `GetData` 先解析 `aspectRatio`、`ElevationRatio`、`PolarAngle` 以及两个 context-dependent provider；轨道列表和屏幕偏移列表不会直接按整数下标读取。
+- `LAFFKCJNBDB`（RVA `0xF136C50`）把 `cameraOrbits` 转成三个键为 `0.0/0.5/1.0` 的轨道采样项；`BHALLONOACA`（RVA `0xF136570`）对 `screenOffset` 做同样处理。两个函数都实际写入三项，键值来自 `0x00000000/0x3F000000/0x3F800000`。
+- `0x10328820` 对这类轨道数据做区间查找；落在两个键之间时进入 `0x1036ECB0`，先计算 `(sample-key0)/(key1-key0)`，再按轨道的插值策略生成 `Vector2`。因此现有 `RoundToInt(ElevationRatio * (count - 1))` 不能代表原行为。
+- `GetData` 先分别取得轨道结果和屏幕偏移结果，再使用 `PolarAngle` 构造空间方向，计算轨道平面长度，最后进入相机数据构造和有效性/碰撞检查；结果不是只改变当前 `CameraOrbitComposition` 的半径。
+- `FrameMultiplePointsInCorePolicy_Chat.GetData` 的实际函数体在 RVA `0x12EF9204` 调用 `FrameTwoPointsInCorePolicy_Chat.GetData`（RVA `0x12A4B2F0`），说明多点策略存在来源明确的双点回退分支，不能把所有多点输入都强行压成单点。
+
+以上只闭合了采样骨架和一个回退调用关系；`WorldBasicCameraData` 的字段到当前 `CameraFramePlan` 的一一对应、插值策略枚举、`PolarAngle` 的最终角度单位以及碰撞结果如何写入活动 Cinemachine 实例仍未闭合。
+
 metadata 只证明类型、字段、方法身份和地址，不证明函数体之外的完整演出规则。上表把这种边界保留下来，不能把 metadata 名称当成公式或阶段顺序。
 
 ## 补充闭合的 Profile、阻尼、锁定和曲线数据

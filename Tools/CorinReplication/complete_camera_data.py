@@ -53,7 +53,6 @@ def main():
                   table(["time", "value", "inSlope", "outSlope", "weightedMode", "inWeight", "outWeight"],
                         [[k[f] for f in ("time", "value", "inSlope", "outSlope", "weightedMode", "inWeight", "outWeight")] for k in curve["keys"]]), ""]
     (analysis / "公共曲线.md").write_text("\n".join(lines), encoding="utf-8")
-    plot_curves(analysis, resolved)
     lines = ["# 基础镜头与公共效果", "", "新定位到 Pipeline_Camera_Avatar_Config 的三个来源。以下明确使用 Persistent/1021078955.blk 的资源作为阅读基准，所有变体均保留。Default_Normal 是配置键；本轮尚未证明当前 Corin 实例选择该键。", ""]
     profile_variants = variants["Pipeline_Camera_Avatar_Config"]
     base = next(v for v in profile_variants if "1021078955" in v["dataFile"])
@@ -81,36 +80,6 @@ def main():
                 "profileVariantDifferences": {x["dataFile"]: len(x["differences"]) for x in delta}}
     write_json(analysis / "camera-completion-summary.json", findings)
     print(json.dumps(findings, ensure_ascii=False))
-
-
-def plot_curves(analysis, resolved):
-    import matplotlib
-    matplotlib.use("Agg")
-    import matplotlib.pyplot as plt
-    import numpy as np
-    curves = [(key, r["variants"][0]["curve"]) for key, r in resolved.items() if r["status"] == "curve-values-confirmed"]
-    figure, axes = plt.subplots(3, 2, figsize=(12, 9), constrained_layout=True)
-    for axis, (name, curve) in zip(axes.flat, curves):
-        keys = curve["keys"]
-        if any(k["weightedMode"] != 0 for k in keys):
-            raise ValueError("此预览只表达本批已确认的非加权 Hermite 曲线")
-        for start, end in zip(keys, keys[1:]):
-            u = np.linspace(0, 1, 100)
-            duration = end["time"] - start["time"]
-            y = (2 * u**3 - 3 * u**2 + 1) * start["value"] + (u**3 - 2 * u**2 + u) * duration * start["outSlope"] + (-2 * u**3 + 3 * u**2) * end["value"] + (u**3 - u**2) * duration * end["inSlope"]
-            axis.plot(start["time"] + u * duration, y, color="#2563eb", linewidth=2)
-        axis.scatter([k["time"] for k in keys], [k["value"] for k in keys], color="#e11d48", s=22, zorder=3)
-        axis.set_title(name, fontsize=10)
-        axis.set_xlabel("Curve input (original domain)")
-        axis.set_ylabel("Value")
-        axis.grid(alpha=.18)
-    figure.suptitle("Corin camera curves | original keyframes + unweighted Hermite interpolation", fontsize=13)
-    figure.savefig(analysis / "camera-curves.png", dpi=160)
-    plt.close(figure)
-    path = analysis / "公共曲线.md"
-    content = path.read_text(encoding="utf-8")
-    intro = "\n\n曲线横轴保留原时间域，不统一假设为秒；例如空间曲线的横轴到 10。蓝线为原关键帧及切线的非加权 Hermite 插值，红点为原关键帧，未模拟完整相机。\n\n![公共镜头曲线](" + (analysis / "camera-curves.png").as_posix() + ")\n"
-    path.write_text(content + intro, encoding="utf-8")
 
 
 if __name__ == "__main__":

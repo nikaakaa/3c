@@ -1,6 +1,7 @@
 using ThirdPersonSimulation;
 using System;
 using System.Collections.Generic;
+using ThirdPersonPerformance.Instrumentation;
 using System.Linq;
 
 namespace ThirdPersonSimulation.Fixed
@@ -149,12 +150,12 @@ namespace ThirdPersonSimulation.Fixed
             binding.Require(binding.Program, binding.Layout, Specialization);
         }
 
+        [PerformanceProbe("simulation.kernel.evaluate")]
         public PendingCharacterEvaluation Evaluate(SimulationEvaluateRequest request)
         {
             if (request == null)
                 throw new ArgumentNullException(nameof(request));
-            using (request.Performance.Measure(SimulationPerformancePhase.KernelEvaluate))
-                return EvaluateMeasured(request);
+            return EvaluateMeasured(request);
         }
 
         PendingCharacterEvaluation EvaluateMeasured(SimulationEvaluateRequest request)
@@ -251,12 +252,12 @@ namespace ThirdPersonSimulation.Fixed
             public FixedOperationEvaluator Evaluator { get; }
         }
 
+        [PerformanceProbe("simulation.kernel.finalize")]
         public SimulationActorTickResult Finalize(SimulationFinalizeRequest request)
         {
             if (request == null)
                 throw new ArgumentNullException(nameof(request));
-            using (request.Performance.Measure(SimulationPerformancePhase.KernelFinalize))
-                return FinalizeMeasured(request);
+            return FinalizeMeasured(request);
         }
 
         SimulationActorTickResult FinalizeMeasured(SimulationFinalizeRequest request)

@@ -12,5 +12,6 @@
     <Compile Include="..\..\..\..\Client\3C_Client\Assets\GameScripts\Main\Runtime\Simulation\Core\**\*.cs"
              Exclude="..\..\..\..\Client\3C_Client\Assets\GameScripts\Main\Runtime\Simulation\Core\Fixed\**\*.cs;..\..\..\..\Client\3C_Client\Assets\GameScripts\Main\Runtime\Simulation\Core\Float32\**\*.cs" />
     <Compile Include="..\..\..\..\Client\3C_Client\Assets\GameScripts\Main\Runtime\Performance\PerformanceMetricDefinition.cs" />
+    <Compile Include="..\..\..\..\Client\3C_Client\Packages\com.thirdperson.performance-instrumentation\Runtime\Contracts\PerformanceInstrumentationContracts.cs" />
   </ItemGroup>
 </Project>

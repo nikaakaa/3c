@@ -9,9 +9,11 @@
     <RootNamespace>ThirdPersonSimulation</RootNamespace>
     <SimulationSourceRoot>$(MSBuildThisFileDirectory)..\..\..\3cDemo\Client\3C_Client\Assets\GameScripts\Main\Runtime\Simulation\Core</SimulationSourceRoot>
     <PerformanceContractSource>$(MSBuildThisFileDirectory)..\..\..\3cDemo\Client\3C_Client\Assets\GameScripts\Main\Runtime\Performance\PerformanceMetricDefinition.cs</PerformanceContractSource>
+    <InstrumentationContractSource>$(MSBuildThisFileDirectory)..\..\..\3cDemo\Client\3C_Client\Packages\com.thirdperson.performance-instrumentation\Runtime\Contracts\PerformanceInstrumentationContracts.cs</InstrumentationContractSource>
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="$(SimulationSourceRoot)\**\*.cs" Exclude="$(SimulationSourceRoot)\Float32\**\*.cs;$(SimulationSourceRoot)\Fixed\**\*.cs" LinkBase="Source" />
     <Compile Include="$(PerformanceContractSource)" Link="Source\Performance\PerformanceMetricDefinition.cs" />
+    <Compile Include="$(InstrumentationContractSource)" Link="Source\Performance\PerformanceInstrumentationContracts.cs" />
   </ItemGroup>
 </Project>

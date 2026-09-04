@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using ThirdPersonPerformance.Instrumentation;
 
 namespace ThirdPersonSimulation
 {
@@ -53,10 +54,10 @@ namespace ThirdPersonSimulation
             }
         }
 
+        [PerformanceProbe("simulation.pipeline.transaction")]
         public PipelineTransactionControlResult<TCommitBatch> Execute(SimulationSessionLogicTickContext outer)
         {
-            using (outer.Performance.Measure(SimulationPerformancePhase.PipelineTransaction))
-                return ExecuteTransaction(outer);
+            return ExecuteTransaction(outer);
         }
 
         PipelineTransactionControlResult<TCommitBatch> ExecuteTransaction(SimulationSessionLogicTickContext outer)

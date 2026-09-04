@@ -151,6 +151,9 @@ namespace BTSMTL.Timeline
         public static readonly TimelineCurveChannelId CameraResponseWeight = Id("camera-response.weight");
         public static readonly TimelineCurveChannelId CameraResponseEaseIn = Id("camera-response.ease-in");
         public static readonly TimelineCurveChannelId CameraResponseEaseOut = Id("camera-response.ease-out");
+        public static readonly TimelineCurveChannelId CameraEffectWeight = Id("camera-effect.weight");
+        public static readonly TimelineCurveChannelId CameraEffectEaseIn = Id("camera-effect.ease-in");
+        public static readonly TimelineCurveChannelId CameraEffectEaseOut = Id("camera-effect.ease-out");
 
         static readonly TimelineCurveValueDomain Unit = TimelineCurveValueDomain.Bounded(0f, 1f);
         static readonly TimelineCurveValueDomain Meters = TimelineCurveValueDomain.Unbounded(0f, "m");
@@ -210,7 +213,10 @@ namespace BTSMTL.Timeline
             D(CameraSequenceEaseOut, typeof(CameraSequenceClip), "Ease Out", C(226, 165, 79), Unit, ZeroOne),
             D(CameraResponseWeight, typeof(CameraResponseClip), "Weight", C(110, 201, 240), Unit, One),
             D(CameraResponseEaseIn, typeof(CameraResponseClip), "Ease In", C(102, 191, 153), Unit, ZeroOne),
-            D(CameraResponseEaseOut, typeof(CameraResponseClip), "Ease Out", C(226, 165, 79), Unit, ZeroOne)
+            D(CameraResponseEaseOut, typeof(CameraResponseClip), "Ease Out", C(226, 165, 79), Unit, ZeroOne),
+            D(CameraEffectWeight, typeof(CameraResourceClip), "Weight", C(255, 190, 120), Unit, One),
+            D(CameraEffectEaseIn, typeof(CameraResourceClip), "Ease In", C(102, 191, 153), Unit, ZeroOne),
+            D(CameraEffectEaseOut, typeof(CameraResourceClip), "Ease Out", C(226, 165, 79), Unit, ZeroOne)
         };
 
         static Dictionary<string, TimelineCurveChannelDescriptor> BuildIndex()
@@ -259,6 +265,9 @@ namespace BTSMTL.Timeline
                 CameraResponseClip clip when channelId == TimelineCurveChannelCatalog.CameraResponseWeight => clip.WeightCurve,
                 CameraResponseClip clip when channelId == TimelineCurveChannelCatalog.CameraResponseEaseIn => clip.EaseInCurve,
                 CameraResponseClip clip when channelId == TimelineCurveChannelCatalog.CameraResponseEaseOut => clip.EaseOutCurve,
+                CameraResourceClip clip when channelId == TimelineCurveChannelCatalog.CameraEffectWeight => clip.WeightCurve,
+                CameraResourceClip clip when channelId == TimelineCurveChannelCatalog.CameraEffectEaseIn => clip.EaseInCurve,
+                CameraResourceClip clip when channelId == TimelineCurveChannelCatalog.CameraEffectEaseOut => clip.EaseOutCurve,
                 _ => throw Unknown(owner, channelId)
             };
             return CopyCurve(curve);
@@ -288,6 +297,9 @@ namespace BTSMTL.Timeline
                 case CameraResponseClip clip when channelId == TimelineCurveChannelCatalog.CameraResponseWeight: clip.WeightCurve = copy; break;
                 case CameraResponseClip clip when channelId == TimelineCurveChannelCatalog.CameraResponseEaseIn: clip.EaseInCurve = copy; break;
                 case CameraResponseClip clip when channelId == TimelineCurveChannelCatalog.CameraResponseEaseOut: clip.EaseOutCurve = copy; break;
+                case CameraResourceClip clip when channelId == TimelineCurveChannelCatalog.CameraEffectWeight: clip.WeightCurve = copy; break;
+                case CameraResourceClip clip when channelId == TimelineCurveChannelCatalog.CameraEffectEaseIn: clip.EaseInCurve = copy; break;
+                case CameraResourceClip clip when channelId == TimelineCurveChannelCatalog.CameraEffectEaseOut: clip.EaseOutCurve = copy; break;
                 default: throw Unknown(owner, channelId);
             }
             owner.RebindTimeline();

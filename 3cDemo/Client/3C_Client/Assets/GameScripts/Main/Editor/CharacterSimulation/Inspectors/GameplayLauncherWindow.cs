@@ -62,6 +62,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
         double m_AutoSampleStopTime;
         bool m_LastSamplingCapturing;
         bool m_LastSamplingStarting;
+        bool m_LastSamplingAnalyzing;
         string m_LastSamplingSavedPath = string.Empty;
         string m_LastSamplingManifestPath = string.Empty;
         string m_LastSamplingDirectory = string.Empty;
@@ -91,6 +92,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
         {
             bool capturing = CharacterFootDiagnosticSampling.IsCapturing;
             bool finalizing = CharacterFootDiagnosticSampling.IsFinalizing;
+            bool analyzing = CharacterFootDiagnosticSampling.IsAnalyzing;
             string samplesPath = CharacterFootDiagnosticSampling.LastSavedPath;
             string manifestPath = CharacterFootDiagnosticSampling.LastManifestPath;
             string sampleDirectory = CharacterFootDiagnosticSampling.LastSavedDirectory;
@@ -102,6 +104,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             bool analysisAvailable = CharacterFootDiagnosticSampling.IsAnalysisAvailable;
             if (capturing == m_LastSamplingCapturing &&
                 finalizing == m_LastSamplingStarting &&
+                analyzing == m_LastSamplingAnalyzing &&
                 string.Equals(samplesPath, m_LastSamplingSavedPath, StringComparison.Ordinal) &&
                 string.Equals(manifestPath, m_LastSamplingManifestPath, StringComparison.Ordinal) &&
                 string.Equals(sampleDirectory, m_LastSamplingDirectory, StringComparison.Ordinal) &&
@@ -116,6 +119,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             }
             m_LastSamplingCapturing = capturing;
             m_LastSamplingStarting = finalizing;
+            m_LastSamplingAnalyzing = analyzing;
             m_LastSamplingSavedPath = samplesPath;
             m_LastSamplingManifestPath = manifestPath;
             m_LastSamplingDirectory = sampleDirectory;
@@ -212,7 +216,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
         {
             using (new EditorGUILayout.VerticalScope(EditorStyles.helpBox))
             {
-                EditorGUILayout.LabelField("4. 编辑器启动 / Bootstrap Play", EditorStyles.boldLabel);
+                EditorGUILayout.LabelField("5. 编辑器启动 / Bootstrap Play", EditorStyles.boldLabel);
                 ProductStartupProfile profile = AssetDatabase.LoadAssetAtPath<ProductStartupProfile>(
                     ClientBuildArtifactLayout.ProductStartupProfilePath);
                 bool profileValid = DrawProductProfileStatus(profile);

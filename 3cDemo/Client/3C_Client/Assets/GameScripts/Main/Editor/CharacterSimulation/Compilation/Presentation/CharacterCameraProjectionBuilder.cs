@@ -29,7 +29,7 @@ namespace ThirdPersonCamera
                 targetSlots[i] = new CameraTargetSlotPayload(profile.TargetSlots[i]);
 
             var orbits = profile.DefaultOrbitGroup
-                .Select(value => new CameraOrbitPayload(value.Height, value.Radius, value.ScreenY))
+                .Select(value => new CameraOrbitPayload(value.Height, value.Radius))
                 .ToArray();
             return new CharacterCameraProjectionPayload(
                 profile,
@@ -41,7 +41,7 @@ namespace ThirdPersonCamera
                 profile.Shakes.Select(value => CameraShakeProjectionCompiler.Compile(value, context)).ToArray(),
                 profile.Shots.Select(value => CameraShotProjectionCompiler.Compile(value, context)).ToArray(),
                 context.CompileCurves(profile.Curves),
-                new CameraOrbitPayload(profile.DefaultSphere.Height, profile.DefaultSphere.Radius, profile.DefaultSphere.ScreenY),
+                new CameraOrbitPayload(profile.DefaultSphere.Height, profile.DefaultSphere.Radius),
                 orbits,
                 targetSlots);
         }

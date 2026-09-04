@@ -10,7 +10,7 @@ namespace ThirdPersonCamera
 [Serializable]
     public sealed class CameraOverrideTrackSettings
     {
-        [SerializeField] CameraOrbitDescriptor m_TopOrbit = new CameraOrbitDescriptor(2f, 0.2f, 0.5f);
+        [SerializeField] CameraOrbitDescriptor m_TopOrbit = new CameraOrbitDescriptor(2f, 0.2f);
         [SerializeField] CameraOrbitDescriptor[] m_Orbits = Array.Empty<CameraOrbitDescriptor>();
         [SerializeField] float[] m_ScreenY = Array.Empty<float>();
         [SerializeField] Vector3 m_FollowOffset;

@@ -22,7 +22,7 @@ namespace ThirdPersonCamera
         [SerializeField] CameraShakeAsset[] m_Shakes = Array.Empty<CameraShakeAsset>();
         [SerializeField] CameraShotAsset[] m_Shots = Array.Empty<CameraShotAsset>();
         [SerializeField] CameraCurveAsset[] m_Curves = Array.Empty<CameraCurveAsset>();
-        [SerializeField] CameraOrbitDescriptor m_DefaultSphere = new CameraOrbitDescriptor(2f, 3f, 0.5f);
+        [SerializeField] CameraOrbitDescriptor m_DefaultSphere = new CameraOrbitDescriptor(2f, 3f);
         [SerializeField] CameraOrbitDescriptor[] m_DefaultOrbitGroup = Array.Empty<CameraOrbitDescriptor>();
         [SerializeField] float m_NearClipPlane = 0.05f;
         [SerializeField] float m_FarClipPlane = 1000f;
@@ -223,7 +223,6 @@ namespace ThirdPersonCamera
             }
             value.Append('|').Append(orbit.Height.ToString("R", CultureInfo.InvariantCulture));
             value.Append('|').Append(orbit.Radius.ToString("R", CultureInfo.InvariantCulture));
-            value.Append('|').Append(orbit.ScreenY.ToString("R", CultureInfo.InvariantCulture));
         }
     }
 }

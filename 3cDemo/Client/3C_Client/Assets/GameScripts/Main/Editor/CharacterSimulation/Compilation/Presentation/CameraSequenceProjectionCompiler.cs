@@ -42,8 +42,25 @@ namespace ThirdPersonCamera
                         byScreen.ScreenOffset,
                         byScreen.Radius);
                 case CameraFrameOnePointByTrackStage byTrack:
-                    throw new InvalidOperationException(
-                        $"Camera Sequence stage '{byTrack.StageId}' uses ZZZ ByTrack data, but its WorldBasicCameraData consumer is not closed.");
+                    var cameraOrbits = new CameraTrackOrbitPayload[byTrack.CameraOrbits.Count];
+                    for (int i = 0; i < cameraOrbits.Length; i++)
+                    {
+                        CameraTrackOrbitDescriptor orbit = byTrack.CameraOrbits[i];
+                        cameraOrbits[i] = new CameraTrackOrbitPayload(orbit.Height, orbit.Radius);
+                    }
+                    var screenOffsets = new Vector2[byTrack.ScreenOffsets.Count];
+                    for (int i = 0; i < screenOffsets.Length; i++)
+                        screenOffsets[i] = byTrack.ScreenOffsets[i];
+                    return new CameraFrameOnePointByTrackPayload(
+                        byTrack.StageId,
+                        byTrack.MakeContextDependent,
+                        byTrack.PlayLength,
+                        cameraOrbits,
+                        byTrack.AspectRatio,
+                        byTrack.FieldOfView,
+                        screenOffsets,
+                        byTrack.ElevationRatio,
+                        byTrack.PolarAngle);
                 case CameraRotationEulerOffsetStage euler:
                     return new CameraRotationEulerOffsetPayload(
                         euler.StageId,

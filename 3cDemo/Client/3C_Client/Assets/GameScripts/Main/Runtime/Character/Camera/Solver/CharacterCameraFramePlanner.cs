@@ -86,8 +86,14 @@ namespace ThirdPersonCamera
                         offset = byScreen.ScreenOffset;
                         break;
                     case CameraFrameOnePointByTrackPayload byTrack:
-                        throw new InvalidOperationException(
-                            $"Camera Sequence stage '{byTrack.StageId}' uses ZZZ ByTrack data, but its WorldBasicCameraData consumer is not closed.");
+                        CameraTrackOrbitPayload orbit = SampleTrack(byTrack.CameraOrbits, byTrack.ElevationRatio);
+                        offset = SampleTrack(byTrack.ScreenOffsets, byTrack.ElevationRatio);
+                        radius = Mathf.Sqrt(orbit.Height * orbit.Height + orbit.Radius * orbit.Radius);
+                        evaluatedPitch = Mathf.Atan2(orbit.Height, orbit.Radius) * Mathf.Rad2Deg;
+                        evaluatedYaw = byTrack.PolarAngle;
+                        evaluatedRoll = 0f;
+                        fieldOfView = byTrack.FieldOfView;
+                        break;
                     case CameraRotationEulerOffsetPayload euler:
                         if (euler.FlipForward)
                             throw new InvalidOperationException(
@@ -113,6 +119,20 @@ namespace ThirdPersonCamera
                 request.IsDefault ? 1f : request.Weight,
                 input.ResetHistory,
                 true);
+        }
+
+        static CameraTrackOrbitPayload SampleTrack(
+            IReadOnlyList<CameraTrackOrbitPayload> orbits,
+            float elevationRatio)
+        {
+            int index = Mathf.Clamp(Mathf.FloorToInt(Mathf.Clamp01(elevationRatio) * 2f), 0, 2);
+            return orbits[index];
+        }
+
+        static Vector2 SampleTrack(IReadOnlyList<Vector2> offsets, float elevationRatio)
+        {
+            int index = Mathf.Clamp(Mathf.FloorToInt(Mathf.Clamp01(elevationRatio) * 2f), 0, 2);
+            return offsets[index];
         }
 
     }

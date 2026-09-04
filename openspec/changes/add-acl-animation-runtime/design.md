@@ -171,6 +171,10 @@ Scope 关闭时先拒绝新请求并取消准备；已持有的 lease 仍可归�
 | Seal 后退休 | 消费原退休许可；确认所有相关工作完成；解绑本 source 的 Decoder、归还 lease、清空对应图输入；最后发布 release completion，随后才允许复用槽位 |
 | Fault / Actor 销毁 | 沿现有 worker 完成/终止边界收口，先释放本 Actor Decoder，再释放资源关系；不使其它 Actor 的共享数据失效 |
 
+readiness 以编译容量内的逐目标结果页保存，不用一个全局 Pending 代替所有 source。每项记录 Current 或 DeferredTarget、preparation key、ResourceIndex、GroupClipIndex、精确 resource generation、availability 和稳定 failure code；FrameResult 的 CurrentReadiness、TargetReadiness 只由这张已 Seal 的只读页派生为摘要。Resolver 必须从同一次资源查询返回结果及对应 index/generation，不能先聚合错误再另取第一项资源的 generation。
+
+Action 与普通 Player 在提交新 selection 前检查目标资源；Pending 时不推入新目标，已提交 source 继续按本帧时间采样。State-controlled provider 若会改变当前 State/Entry Graph，则在 PoseStateMachine 提交目标 transition 前检查该目标 state 的编译资源闭包：Pending 保持当前 Presentation state 及其 source 继续求值，不启动目标 state/transition clock；Ready 后按原 transition 规则开始；Invalid 发布对应资源错误。Gameplay、Action 事实和权威状态不因表现资源等待而回退或停顿。只有 Entry 没有可用当前 source 时，整体 SourceFrame 才返回 Pending 且不发布 Pose。
+
 资源 Store 以内容身份作键，不能使用 `UnityEngine.Object.GetInstanceID()`。每个 group entry 只含不可变数据、generation、准备状态、使用计数和 LRU 信息。只有无活跃 lease、无在途准备/解码引用的组可淘汰。预算不足返回明确结果，不能换低质量 tier 或同步等待。
 
 预取请求不等于永久使用 lease；活动 Decoder、可见 source 和保留中的 source 必须持有稳定 lease。Actor 的预取闭包不能被当成第二份动作选择树。

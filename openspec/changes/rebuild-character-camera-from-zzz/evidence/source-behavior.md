@@ -66,6 +66,7 @@
 - `CameraSequence.FixedInCoreSpace` 的 `activeChannel` 类型是 `WorldBasicCameraDataChannel`；`CameraShotData` 的进入/退出高级混合标记类型是 `WorldBasicCameraDataDeltaFlag`。这两处都以 WorldBasic 字段通道表达阶段选择或混合差异。
 - `MonoStageEnv` 的 `OPKELHFPFNI` 字段是 `Dictionary<string, CinemachineVirtualCamera>`，位于实例偏移 `0x90`。`GetVirtualCamera(string)` 从该字典按身份查找并返回 `CinemachineVirtualCamera`，不是返回 `CinemachineFreeLook`。
 - `MonoStageCamera` 的字段为 `followName`（`+0x20`）、`lookAtName`（`+0x28`）、`virtualCamera`（`+0x30`）和活动标记（`+0x38`）。`Awake`、`ActiveCam` 及其绑定辅助函数围绕这一个 `virtualCamera` 实例运行；目前只闭合了字段和承载身份，follow/look-at 名称最终解析到哪一个场景对象、WorldBasic 数据由哪一层写入该实例仍未闭合。
+- 默认第三人称相机 `MoleMole.Cameras.ScopedOverShoulderCamera` 持有 `CameraVariableSubModule<WorldBasicCameraData>`（字段 `+0x270`），其 `HJOEFCAMAD(float)` 与 `MCOJPGDGMPI(CameraVariableFetchContext<WorldBasicCameraData>)` 都返回 `WorldBasicCameraData`；配置侧同时包含 follow/camera offset、FOV、roll、位置阻尼、输入灵敏度以及 Shake/Zoom/Stretch 开关。由此可以确认默认相机的核心结果也经过 WorldBasic 数据子模块，而不是把相机轨道交给 FreeLook 自己求值。
 
 因此当前工程的 `CinemachineCameraRigAdapter` 仍不能把 `CinemachineFreeLook` 当作 ZZZ 活动承载的等价物。`CameraWorldBasicData` 已先作为独立核心合同落地，但在最终 virtual camera 写入点、阶段组件和回读顺序闭合前，不接入现有 FreeLook，也不增加第二条运行输出路径。
 

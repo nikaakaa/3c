@@ -116,39 +116,25 @@ namespace ThirdPersonSimulation
                 }
                 if (executionPlan.Restore != null)
                 {
-                    using (outer.Performance.Measure(SimulationPerformancePhase.PipelineRestore))
-                    {
-                        PipelineRestorePreparation preparation = m_Target.PrepareRestore(
-                            executionPlan.Restore,
-                            working,
-                            m_Services);
-                        restoreTransaction = preparation.Transaction;
-                        PublishPipeline(
-                            outer.Source,
-                            beforeCompletedTick,
-                            PipelineTransactionTraceKind.RestorePrepared,
-                            true,
-                            "Session restore transaction prepared.",
-                            scheduleStatus: executionPlan.Status,
-                            restoreRequested: true,
-                            stepCount: executionPlan.Steps.Count);
-                        solverTouched = true;
-                        restoreTransaction.ApplyAndValidate();
-                        PublishSnapshot(
-                            outer.Source,
-                            preparation.PipelineSnapshot,
-                            PipelineTransactionTraceKind.SnapshotRestored,
-                            "Pipeline snapshot restored and validated.");
-                        PublishPipeline(
-                            outer.Source,
-                            preparation.Tick.Value,
-                            PipelineTransactionTraceKind.RestoreApplied,
-                            true,
-                            "Session restore transaction applied and validated.",
-                            scheduleStatus: executionPlan.Status,
-                            restoreRequested: true,
-                            stepCount: executionPlan.Steps.Count);
-                    }
+                    PipelineRestorePreparation preparation = PrepareRestore(
+                        executionPlan.Restore,
+                        working);
+                    restoreTransaction = preparation.Transaction;
+                    PublishPipeline(
+                        outer.Source,
+                        beforeCompletedTick,
+                        PipelineTransactionTraceKind.RestorePrepared,
+                        true,
+                        "Session restore transaction prepared.",
+                        scheduleStatus: executionPlan.Status,
+                        restoreRequested: true,
+                        stepCount: executionPlan.Steps.Count);
+                    solverTouched = true;
+                    ApplyRestore(
+                        preparation,
+                        outer.Source,
+                        executionPlan.Status,
+                        executionPlan.Steps.Count);
                 }
                 ExecutionWorkspaceBuffer<TCompletedStep> completed = m_Workspace.CompletedSteps;
                 completed.EnsureCapacity(executionPlan.Steps.Count);
@@ -333,6 +319,41 @@ namespace ThirdPersonSimulation
         void CommitExternal(TCommitBatch commitBatch)
         {
             m_Target.Commit(commitBatch);
+        }
+
+        [PerformanceProbe("simulation.pipeline.restore")]
+        PipelineRestorePreparation PrepareRestore(
+            SimulationRestoreDirective directive,
+            TWorkingState working)
+        {
+            return m_Target.PrepareRestore(
+                directive,
+                working,
+                m_Services);
+        }
+
+        [PerformanceProbe("simulation.pipeline.restore")]
+        void ApplyRestore(
+            PipelineRestorePreparation preparation,
+            SimulationTickSourceIdentity source,
+            SimulationSessionExecutionPlanStatus scheduleStatus,
+            int stepCount)
+        {
+            preparation.Transaction.ApplyAndValidate();
+            PublishSnapshot(
+                source,
+                preparation.PipelineSnapshot,
+                PipelineTransactionTraceKind.SnapshotRestored,
+                "Pipeline snapshot restored and validated.");
+            PublishPipeline(
+                source,
+                preparation.Tick.Value,
+                PipelineTransactionTraceKind.RestoreApplied,
+                true,
+                "Session restore transaction applied and validated.",
+                scheduleStatus: scheduleStatus,
+                restoreRequested: true,
+                stepCount: stepCount);
         }
 
         [PerformanceProbe("simulation.pipeline.ingress")]

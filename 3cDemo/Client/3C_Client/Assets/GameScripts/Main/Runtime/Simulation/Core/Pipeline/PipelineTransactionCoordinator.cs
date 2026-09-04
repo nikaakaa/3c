@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using ThirdPersonPerformance.Instrumentation;
 
 namespace ThirdPersonSimulation
 {
@@ -76,13 +77,7 @@ namespace ThirdPersonSimulation
                 PipelineTransactionTraceKind.OuterTickStarted,
                 true,
                 "Outer Pipeline transaction started.");
-            SimulationPipelineStateCheckpointSet beforePipeline;
-            using (outer.Performance.Measure(SimulationPerformancePhase.PipelineCheckpointCapture))
-            {
-                beforePipeline = SimulationPipelineStateSnapshotCoordinator.CaptureCheckpoints(
-                    m_Services.Plan,
-                    m_Services.StateParticipants);
-            }
+            SimulationPipelineStateCheckpointSet beforePipeline = CapturePipelineCheckpoints();
             SimulationSessionRestoreTransaction restoreTransaction = null;
             ExecutionWorkspaceLease workspaceLease = default;
             bool solverTouched = false;
@@ -216,16 +211,8 @@ namespace ThirdPersonSimulation
                     scheduleStatus: executionPlan.Status,
                     restoreRequested: executionPlan.Restore != null,
                     stepCount: completed.Count);
-                TCommitBatch commitBatch;
-                using (outer.Performance.Measure(SimulationPerformancePhase.PipelineCommitFreeze))
-                {
-                    commitBatch = m_Target.FreezeCommitBatch(
-                        transactionIdentity,
-                        completed,
-                        m_Workspace);
-                }
-                using (outer.Performance.Measure(SimulationPerformancePhase.PipelineStatePublish))
-                    m_Target.PublishWorkingState(working);
+                TCommitBatch commitBatch = FreezeCommitBatch(transactionIdentity, completed);
+                PublishWorkingState(working);
                 statePublished = true;
                 PublishPipeline(
                     outer.Source,
@@ -237,8 +224,7 @@ namespace ThirdPersonSimulation
                 restoreTransaction?.CompleteAfterAtomicSessionPublish();
                 try
                 {
-                    using (outer.Performance.Measure(SimulationPerformancePhase.PipelineExternalCommit))
-                        m_Target.Commit(commitBatch);
+                    CommitExternal(commitBatch);
                     PublishPipeline(
                         outer.Source,
                         completedTick,
@@ -316,6 +302,37 @@ namespace ThirdPersonSimulation
                     }
                 }
             }
+        }
+
+        [PerformanceProbe("simulation.pipeline.checkpoint-capture")]
+        SimulationPipelineStateCheckpointSet CapturePipelineCheckpoints()
+        {
+            return SimulationPipelineStateSnapshotCoordinator.CaptureCheckpoints(
+                m_Services.Plan,
+                m_Services.StateParticipants);
+        }
+
+        [PerformanceProbe("simulation.pipeline.commit-freeze")]
+        TCommitBatch FreezeCommitBatch(
+            StableHash transactionIdentity,
+            ExecutionWorkspaceBuffer<TCompletedStep> completed)
+        {
+            return m_Target.FreezeCommitBatch(
+                transactionIdentity,
+                completed,
+                m_Workspace);
+        }
+
+        [PerformanceProbe("simulation.pipeline.state-publish")]
+        void PublishWorkingState(TWorkingState working)
+        {
+            m_Target.PublishWorkingState(working);
+        }
+
+        [PerformanceProbe("simulation.pipeline.external-commit")]
+        void CommitExternal(TCommitBatch commitBatch)
+        {
+            m_Target.Commit(commitBatch);
         }
 
         void ExecuteIngress(SimulationSessionLogicTickContext outer, ulong completedTick)

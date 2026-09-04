@@ -30,6 +30,17 @@
 
 `CameraShakes_Avatar_Corin.dat` 在 probe5 和 raw_v2 各有一份，两个文件均为 106492 字节且 hash 相同；这是同一资源的导出副本。
 
+## 已确认的 Corin Shot 身份
+
+原生 `CameraCutscenes` 表在五个 Block 副本中都包含以下两项，字段值一致：
+
+| Shot key | cine prefab | Near/Far | duration | Enter/Exit |
+|---|---|---:|---:|---:|
+| `Avatar_Corin_SwitchIn_Attack_Ex_Start_Cam_01` | `Assets/NapResources/CameraAnim/Combat/Avatar_Female_Size01_Corin_Cam_SwitchIn_Attack_Ex_Start.prefab` | `0.01/6000` | `-1` | `0.5/1.5` |
+| `QuestStart_Avatar_Corin_01` | `Assets/NapResources/CameraAnim/Combat/Avatar_Female_Size01_Corin_Cam_QuestStart.prefab` | `0.1/6000` | `-1` | `0.1/1.0` |
+
+表项身份和值已经闭合；prefab 本体、Timeline 绑定及 compact-blend-words 的未命名字段仍未闭合，因此不生成只保留名称的当前工程 Shot 资产。
+
 ## 重复与冲突
 
 | 依赖 | 数量 | 内容状态 | 处理 |

@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Globalization;
 using System.IO;
 using System.Security.Cryptography;
@@ -13,6 +12,7 @@ using ThirdPersonSimulation;
 using ThirdPersonSimulation.DeterministicRollback;
 using ThirdPersonSimulation.Fixed;
 using ThirdPersonPerformance.Instrumentation;
+using Stopwatch = System.Diagnostics.Stopwatch;
 using Unity.Profiling;
 using UnityEngine;
 using UnityEngine.Profiling;

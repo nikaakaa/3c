@@ -402,10 +402,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                     instrumentationManifestDirectory,
                     instrumentationManifestPath,
                     instrumentationInput);
-                buildIdentity = CaptureBuildIdentity(
-                    variant,
-                    instrumentationMode,
-                    instrumentationIdentity);
+                buildIdentity = buildIdentity.WithInstrumentationIdentity(instrumentationIdentity);
                 string scenarioRoot = Path.Combine(candidate, "Scenario");
                 CopyScenarioClosure(Path.GetDirectoryName(ScenarioPath), scenarioRoot);
                 PerformanceFileDocument[] files = BuildClosure(candidate);
@@ -1039,6 +1036,15 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             public string SolverIdentity { get; }
             public string InstrumentationIdentity { get; }
             public string InstrumentationMode { get; }
+
+            public PerformanceBuildIdentity WithInstrumentationIdentity(string identity) =>
+                new PerformanceBuildIdentity(
+                    ProgramIdentity,
+                    PipelineIdentity,
+                    ProjectionIdentity,
+                    SolverIdentity,
+                    identity,
+                    InstrumentationMode);
         }
     }
 }

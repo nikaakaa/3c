@@ -58,6 +58,8 @@
 
 `WorldBasicCameraData.get_Location`（源码段 RVA `0xA3F750`）不是存储字段读取：它把值类型负载交给 `0x1E88D780` 计算 `cameraToPivot`，再用 `pivotLocation - cameraToPivot` 得到位置。该计算读取 `_rotation`、`_radius` 和 `_offset`，其中局部向量由 `offset.x/offset.y/radius` 组成；因此 `Location` 不能用当前 FreeLook 的中心半径属性直接替代。工程侧合同提供同名的 `CameraToPivot` 与 `Location` 派生值。
 
+同一来源的 `MoleMole.CameraOrbit`（类型索引 `50865`）是只有 `m_Height float`（记录偏移 `+0x10`）和 `m_Radius float`（记录偏移 `+0x14`）的值类型；它没有 `ScreenY` 或其它屏幕构图字段。屏幕构图由独立的 `MoleMole.Config.ConfigCameraComposer`（类型索引 `57503`）承载，字段为 `BiasY`、`ScreenX`、`ScreenY`、`BiasX`（记录偏移 `+0x10/+0x14/+0x18/+0x1C`）。因此当前工程 `CameraOrbitPayload` 将 `ScreenY` 与轨道几何放在同一对象内，不是源结构的可直接对应；后续必须由独立构图 owner 消费屏幕数据，不能继续把它写进 FreeLook orbit 数组。
+
 ### WorldBasicCameraData 的序列消费者与活动承载
 
 新增的类型/字段证据把 `WorldBasicCameraData` 的归属进一步固定在相机数据管线，而不是 FreeLook 轨道：

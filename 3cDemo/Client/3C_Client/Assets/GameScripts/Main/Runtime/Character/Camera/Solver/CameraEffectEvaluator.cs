@@ -96,13 +96,15 @@ namespace ThirdPersonCamera
             ActiveEffect active = Select(CameraEffectKind.Override);
             if (active == null || !m_Projection.TryGetOverride(active.Request.ResourceId, out CameraOverrideTrackPayload payload))
                 return plan;
+            float envelopeTime = active.Retired ? active.RetireElapsed : active.Elapsed;
             float weight = Mathf.Clamp01(active.Request.Weight) * EvaluateEnvelope(
-                active.Elapsed,
+                envelopeTime,
                 payload.BlendInSeconds,
                 payload.BlendOutSeconds,
                 payload.BlendInCurve,
                 payload.BlendOutCurve,
                 active.Retired);
+            weight *= ReleaseWeight(active, payload.BlendOutSeconds);
             Vector3 follow = plan.FollowPoint + payload.Settings.FollowOffset * weight;
             Vector3 aim = plan.AimPoint + payload.Settings.AimOffset * weight;
             return plan
@@ -121,7 +123,7 @@ namespace ThirdPersonCamera
             float start = payload.StartCurve.Evaluate(progress);
             float end = payload.EndCurve.Evaluate(progress);
             float envelope = Mathf.Clamp01(Mathf.LerpUnclamped(start, end, progress));
-            float weight = active.Request.Weight * envelope;
+            float weight = active.Request.Weight * envelope * ReleaseWeight(active, Mathf.Max(0.016f, payload.EndTime - payload.StartTime));
             float fov = payload.FovVariationType switch
             {
                 CameraFovVariationType.Additive => plan.FieldOfView + payload.FieldOfView * weight,
@@ -140,6 +142,7 @@ namespace ThirdPersonCamera
             float start = payload.StartCurve.Evaluate(progress);
             float end = payload.EndCurve.Evaluate(progress);
             float envelope = Mathf.LerpUnclamped(start, end, progress) * active.Request.Weight;
+            envelope *= ReleaseWeight(active, Mathf.Max(0.016f, payload.RecoilTime));
             float radiusScale = plan.RadiusScale + payload.RadiusRatio * envelope;
             Vector3 offset = payload.CamOffset * envelope;
             float pitch = plan.OrbitPitch;
@@ -155,21 +158,38 @@ namespace ThirdPersonCamera
 
         CameraFramePlan ApplyShake(CameraFramePlan plan, in CameraFrameInput input)
         {
-            ActiveEffect active = Select(CameraEffectKind.Shake);
-            if (active == null || !m_Projection.TryGetShake(active.Request.ResourceId, out CameraShakePayload payload))
-                return plan;
-            float envelope = EvaluateShakeEnvelope(active.Elapsed, payload);
-            float seed = StableSeed(payload.ShakeId);
-            float phase = seed + active.Elapsed * payload.Frequency;
-            float yawNoise = Mathf.PerlinNoise(phase, seed * 0.37f) * 2f - 1f;
-            float pitchNoise = Mathf.PerlinNoise(seed * 0.61f, phase * 1.13f) * 2f - 1f;
-            float rollNoise = Mathf.PerlinNoise(phase * 0.83f, seed * 0.91f) * 2f - 1f;
-            return plan
-                .WithOrbit(
-                    plan.OrbitYaw + yawNoise * payload.YawAmplitude * envelope * active.Request.Weight,
-                    plan.OrbitPitch + pitchNoise * payload.PitchAmplitude * envelope * active.Request.Weight,
-                    plan.OrbitRadius)
-                .WithRoll(plan.RollDegrees + rollNoise * payload.RollAmplitude * envelope * active.Request.Weight);
+            for (int i = 0; i < m_Active.Count; i++)
+            {
+                ActiveEffect active = m_Active[i];
+                if (active.Request.Kind != CameraEffectKind.Shake ||
+                    !m_Projection.TryGetShake(active.Request.ResourceId, out CameraShakePayload payload))
+                    continue;
+                float time = active.Retired ? active.RetireElapsed : active.Elapsed;
+                float envelope = EvaluateShakeEnvelope(time, payload);
+                envelope *= active.Retired
+                    ? Mathf.Clamp01(1f - active.RetireElapsed / Mathf.Max(0.016f, payload.FadeOutDuration))
+                    : 1f;
+                float seed = StableSeed(payload.ShakeId);
+                float phase = seed + time * payload.Frequency;
+                float yawNoise = Mathf.PerlinNoise(phase, seed * 0.37f) * 2f - 1f;
+                float pitchNoise = Mathf.PerlinNoise(seed * 0.61f, phase * 1.13f) * 2f - 1f;
+                float rollNoise = Mathf.PerlinNoise(phase * 0.83f, seed * 0.91f) * 2f - 1f;
+                float angle = payload.NoiseAngle * Mathf.Deg2Rad + yawNoise * payload.NoiseRatio;
+                float radius = payload.RadiusLength * envelope * active.Request.Weight;
+                float distance = Mathf.Max(0.001f, payload.DistanceToPlane);
+                float radialYaw = Mathf.Atan2(Mathf.Sin(angle) * radius, distance) * Mathf.Rad2Deg;
+                float radialPitch = Mathf.Atan2(
+                    Mathf.Sin(payload.AngleVertical * Mathf.Deg2Rad) * radius,
+                    distance) * Mathf.Rad2Deg;
+                plan = plan
+                    .WithOrbit(
+                        plan.OrbitYaw + radialYaw + yawNoise * payload.YawAmplitude * envelope * active.Request.Weight,
+                        plan.OrbitPitch + radialPitch + pitchNoise * payload.PitchAmplitude * envelope * active.Request.Weight,
+                        plan.OrbitRadius)
+                    .WithRadiusScale(plan.RadiusScale + radius / Mathf.Max(0.001f, plan.OrbitRadius))
+                    .WithRoll(plan.RollDegrees + rollNoise * payload.RollAmplitude * envelope * active.Request.Weight);
+            }
+            return plan;
         }
 
         CameraFramePlan ApplyShot(CameraFramePlan plan, in CameraFrameInput input)
@@ -181,6 +201,7 @@ namespace ThirdPersonCamera
                 ? 1f
                 : Mathf.Clamp01(active.Elapsed / Mathf.Max(0.0001f, payload.Duration));
             float envelope = Mathf.Clamp01(active.Request.Weight) * progress;
+            envelope *= ReleaseWeight(active, payload.BlendOut.Duration);
             return plan
                 .WithTargets(
                     plan.FollowPoint + payload.FollowOffset * envelope,
@@ -240,12 +261,7 @@ namespace ThirdPersonCamera
         bool IsExpired(ActiveEffect active)
         {
             if (active.Retired)
-            {
-                if (active.Request.Kind == CameraEffectKind.Shake &&
-                    m_Projection.TryGetShake(active.Request.ResourceId, out CameraShakePayload shake))
-                    return active.RetireElapsed >= shake.FadeOutDuration;
-                return true;
-            }
+                return active.RetireElapsed >= RetireDuration(active);
             switch (active.Request.Kind)
             {
                 case CameraEffectKind.Shake:
@@ -274,7 +290,7 @@ namespace ThirdPersonCamera
             for (int i = 0; i < m_Active.Count; i++)
             {
                 ActiveEffect candidate = m_Active[i];
-                if (candidate.Request.Kind != kind || candidate.Retired ||
+                if (candidate.Request.Kind != kind ||
                     selected != null && candidate.Request.Priority <= selected.Request.Priority)
                     continue;
                 selected = candidate;
@@ -383,7 +399,38 @@ namespace ThirdPersonCamera
             }
         }
 
-        static float RemainingSeconds(ActiveEffect active) => active.Retired ? 0f : float.PositiveInfinity;
+        float RetireDuration(ActiveEffect active)
+        {
+            switch (active.Request.Kind)
+            {
+                case CameraEffectKind.Override:
+                    return m_Projection.TryGetOverride(active.Request.ResourceId, out CameraOverrideTrackPayload track)
+                        ? track.BlendOutSeconds
+                        : 0.016f;
+                case CameraEffectKind.Shake:
+                    return m_Projection.TryGetShake(active.Request.ResourceId, out CameraShakePayload shake)
+                        ? Mathf.Max(0.016f, shake.FadeOutDuration)
+                        : 0.016f;
+                case CameraEffectKind.Shot:
+                    return m_Projection.TryGetShot(active.Request.ResourceId, out CameraShotPayload shot)
+                        ? Mathf.Max(0.016f, shot.BlendOut.Duration)
+                        : 0.016f;
+                case CameraEffectKind.Stretch:
+                    return m_Projection.TryGetStretch(active.Request.ResourceId, out CameraStretchPayload stretch)
+                        ? Mathf.Max(0.016f, stretch.RecoilTime)
+                        : 0.016f;
+                default:
+                    return m_Projection.TryGetZoom(active.Request.ResourceId, out CameraZoomPayload zoom)
+                        ? Mathf.Max(0.016f, zoom.EndTime - zoom.StartTime)
+                        : 0.016f;
+            }
+        }
+
+        float ReleaseWeight(ActiveEffect active, float duration) =>
+            !active.Retired ? 1f : Mathf.Clamp01(1f - active.RetireElapsed / Mathf.Max(0.016f, duration));
+
+        float RemainingSeconds(ActiveEffect active) =>
+            active.Retired ? Mathf.Max(0f, RetireDuration(active) - active.RetireElapsed) : float.PositiveInfinity;
 
         sealed class ActiveEffect
         {

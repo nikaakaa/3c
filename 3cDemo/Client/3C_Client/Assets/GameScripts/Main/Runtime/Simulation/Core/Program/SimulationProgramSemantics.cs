@@ -252,6 +252,7 @@ namespace ThirdPersonSimulation
         TimelineCameraCue = 47,
         TimelineCameraResponse = 48,
         TimelineMotionWarp = 49,
+        TimelineCameraEffect = 50,
         BlackboardGet = 60,
         BlackboardSet = 61,
         InputBoolean = 70,
@@ -354,7 +355,7 @@ namespace ThirdPersonSimulation
     public static class CharacterGameplayOperationSet
     {
         public const string Id = "character-gameplay-operations";
-        public static readonly OperationSetVersion Version = new OperationSetVersion(Id + "/12");
+        public static readonly OperationSetVersion Version = new OperationSetVersion(Id + "/13");
 
         static readonly ReadOnlyCollection<SimulationOperationCode> s_Operations =
             Array.AsReadOnly(new[]
@@ -384,6 +385,7 @@ namespace ThirdPersonSimulation
                 SimulationOperationCode.TimelineCameraCue,
                 SimulationOperationCode.TimelineCameraResponse,
                 SimulationOperationCode.TimelineMotionWarp,
+                SimulationOperationCode.TimelineCameraEffect,
                 SimulationOperationCode.BlackboardGet,
                 SimulationOperationCode.BlackboardSet,
                 SimulationOperationCode.InputBoolean,

@@ -353,6 +353,7 @@ namespace ThirdPersonSimulation
                         break;
                     case SimulationOperationCode.TimelineCameraState:
                     case SimulationOperationCode.TimelineCameraResponse:
+                    case SimulationOperationCode.TimelineCameraEffect:
                         SampleCameraContinuous(clip.Handle, segment);
                         break;
                     case SimulationOperationCode.TimelineCameraCue:
@@ -596,6 +597,7 @@ namespace ThirdPersonSimulation
 
         void SampleCameraContinuous(OperationHandle clip, TimelineSegment<TTime> segment)
         {
+            OperationHandle timeline = RequireTimelineOwner(clip);
             TTime start = m_Target.ClipTime(clip, TimelineClipTimePoint.Start);
             TTime end = m_Target.ClipTime(clip, TimelineClipTimePoint.End);
             if (Less(segment.Current, start) || Greater(segment.Previous, end))
@@ -610,7 +612,18 @@ namespace ThirdPersonSimulation
                     m_Target.Clamp(m_Target.Divide(self, duration), m_Target.Zero, m_Target.One),
                     self,
                     m_Target.Max(m_Target.Zero, m_Target.Subtract(end, sample)));
-            EmitPresentation(clip, TimelinePresentationOutputKind.Camera, sample, weight, 0, segment.Cycle);
+            TimelineActionContextIdentity actionContext = m_State.ReadRetainedActionContext(timeline);
+            if (!actionContext.IsValid)
+                throw new InvalidOperationException(
+                    $"Camera Timeline '{m_Target.SourcePath(timeline)}' has no retained Action context.");
+            EmitPresentation(
+                clip,
+                TimelinePresentationOutputKind.Camera,
+                sample,
+                weight,
+                m_Target.ReadActivationGeneration(timeline),
+                segment.Cycle,
+                actionContext.InstanceId);
         }
 
         void SampleCameraCue(OperationHandle clip, TimelineSegment<TTime> segment)
@@ -656,11 +669,18 @@ namespace ThirdPersonSimulation
         void EmitTimelineCameraTerminal(OperationHandle timeline, TTime time)
         {
             IReadOnlyList<ProgramControlFlowEdge> clips = m_Target.Edges(timeline, ProgramControlFlowKind.Child);
+            int cycle = m_State.TryReadCycle(timeline, out int value) ? value : 0;
+            ulong generation = m_Target.ReadActivationGeneration(timeline);
+            TimelineActionContextIdentity actionContext = m_State.ReadRetainedActionContext(timeline);
+            if (!actionContext.IsValid)
+                throw new InvalidOperationException(
+                    $"Camera Timeline '{m_Target.SourcePath(timeline)}' has no retained Action context.");
             for (int i = 0; i < clips.Count; i++)
             {
                 OperationExecutionDescriptor clip = m_Target.Operation(clips[i].Target);
                 if ((clip.Code == SimulationOperationCode.TimelineCameraState ||
-                     clip.Code == SimulationOperationCode.TimelineCameraResponse) &&
+                     clip.Code == SimulationOperationCode.TimelineCameraResponse ||
+                     clip.Code == SimulationOperationCode.TimelineCameraEffect) &&
                     !m_Target.IsTrackMuted(clip.Handle))
                 {
                     EmitPresentation(
@@ -668,9 +688,9 @@ namespace ThirdPersonSimulation
                         TimelinePresentationOutputKind.Camera,
                         time,
                         m_Target.Zero,
-                        0,
-                        0,
-                        0,
+                        generation,
+                        cycle,
+                        actionContext.InstanceId,
                         m_Target.Zero);
                 }
             }

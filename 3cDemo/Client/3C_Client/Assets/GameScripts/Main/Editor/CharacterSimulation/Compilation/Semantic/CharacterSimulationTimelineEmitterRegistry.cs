@@ -654,7 +654,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             return DeclarePresentationClip(
                 clip,
                 context,
-                SimulationOperationCode.TimelineCameraCue,
+                SimulationOperationCode.TimelineCameraEffect,
                 new[]
                 {
                     context.Builder.ConstantField(source, "EffectKind", kind),

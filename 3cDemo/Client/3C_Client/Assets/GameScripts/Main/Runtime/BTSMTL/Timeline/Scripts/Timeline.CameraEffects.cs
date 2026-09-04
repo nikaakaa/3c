@@ -37,32 +37,31 @@ namespace BTSMTL.Timeline
     public abstract class CameraResourceTrack : Track
     {
         protected void SampleClip(
+            CameraResourceClip clip,
             float timelineTime,
             string sourceId,
             string sourceName,
             CameraEffectKind kind,
             string resourceId,
             int priority,
-            AnimationCurve weightCurve,
-            AnimationCurve easeInCurve,
-            AnimationCurve easeOutCurve,
-            float easeInTime,
-            float easeOutTime,
             ICollection<TimelineCameraEffectSample> samples)
         {
-            if (timelineTime < 0f || samples == null || string.IsNullOrWhiteSpace(resourceId))
+            if (clip == null || timelineTime < clip.StartTime || timelineTime > clip.EndTime ||
+                samples == null || string.IsNullOrWhiteSpace(resourceId))
                 return;
-            float duration = Mathf.Max(0.0001f, DurationTime);
-            float normalizedTime = Mathf.Clamp01(timelineTime / duration);
+            float duration = Mathf.Max(0.0001f, clip.DurationTime);
+            float selfTime = Mathf.Clamp(timelineTime - clip.StartTime, 0f, clip.DurationTime);
+            float remainTime = Mathf.Max(0f, clip.EndTime - timelineTime);
+            float normalizedTime = Mathf.Clamp01(selfTime / duration);
             float weight = CameraTimelineSampling.SampleWeight(
-                weightCurve,
-                easeInCurve,
-                easeOutCurve,
+                clip.WeightCurve,
+                clip.EaseInCurve,
+                clip.EaseOutCurve,
                 normalizedTime,
-                timelineTime,
-                Mathf.Max(0f, duration - timelineTime),
-                easeInTime,
-                easeOutTime);
+                selfTime,
+                remainTime,
+                clip.EaseInTime,
+                clip.EaseOutTime);
             if (weight <= 0f)
                 return;
             samples.Add(new TimelineCameraEffectSample(
@@ -75,9 +74,6 @@ namespace BTSMTL.Timeline
                 priority));
         }
 
-        float DurationTime => Clips.Count == 0
-            ? 0f
-            : Clips[Clips.Count - 1].EndTime;
     }
 
     [TrackGroup("Camera"), ScriptGuid("de0a9b796b3c4d1a8f5e02af91d63c74"), Ordered(7), Color(255, 196, 130)]
@@ -92,17 +88,13 @@ namespace BTSMTL.Timeline
                 if (!(value is CameraOverrideClip clip) || !clip.OverrideTrack)
                     continue;
                 SampleClip(
+                    clip,
                     timelineTime,
                     sourceId,
                     sourceName,
                     CameraEffectKind.Override,
                     clip.OverrideTrack.TrackId,
                     clip.OverrideTrack.Priority,
-                    clip.WeightCurve,
-                    clip.EaseInCurve,
-                    clip.EaseOutCurve,
-                    clip.EaseInTime,
-                    clip.EaseOutTime,
                     samples);
             }
         }
@@ -124,17 +116,13 @@ namespace BTSMTL.Timeline
                 if (!(value is CameraZoomClip clip) || !clip.Zoom)
                     continue;
                 SampleClip(
+                    clip,
                     timelineTime,
                     sourceId,
                     sourceName,
                     CameraEffectKind.Zoom,
                     clip.Zoom.ZoomId,
                     clip.Zoom.DataPriority,
-                    clip.WeightCurve,
-                    clip.EaseInCurve,
-                    clip.EaseOutCurve,
-                    clip.EaseInTime,
-                    clip.EaseOutTime,
                     samples);
             }
         }
@@ -156,17 +144,13 @@ namespace BTSMTL.Timeline
                 if (!(value is CameraStretchClip clip) || !clip.Stretch)
                     continue;
                 SampleClip(
+                    clip,
                     timelineTime,
                     sourceId,
                     sourceName,
                     CameraEffectKind.Stretch,
                     clip.Stretch.StretchId,
                     clip.Stretch.DataPriority,
-                    clip.WeightCurve,
-                    clip.EaseInCurve,
-                    clip.EaseOutCurve,
-                    clip.EaseInTime,
-                    clip.EaseOutTime,
                     samples);
             }
         }
@@ -188,17 +172,13 @@ namespace BTSMTL.Timeline
                 if (!(value is CameraShotClip clip) || !clip.Shot)
                     continue;
                 SampleClip(
+                    clip,
                     timelineTime,
                     sourceId,
                     sourceName,
                     CameraEffectKind.Shot,
                     clip.Shot.ShotId,
                     clip.Shot.Priority,
-                    clip.WeightCurve,
-                    clip.EaseInCurve,
-                    clip.EaseOutCurve,
-                    clip.EaseInTime,
-                    clip.EaseOutTime,
                     samples);
             }
         }
@@ -213,8 +193,6 @@ namespace BTSMTL.Timeline
         public AnimationCurve WeightCurve = AnimationCurve.Linear(0f, 1f, 1f, 1f);
         public AnimationCurve EaseInCurve = AnimationCurve.Linear(0f, 0f, 1f, 1f);
         public AnimationCurve EaseOutCurve = AnimationCurve.Linear(0f, 0f, 1f, 1f);
-        public float EaseInTime;
-        public float EaseOutTime;
 
 #if UNITY_EDITOR
         protected CameraResourceClip(Track track, int frame) : base(track, frame)

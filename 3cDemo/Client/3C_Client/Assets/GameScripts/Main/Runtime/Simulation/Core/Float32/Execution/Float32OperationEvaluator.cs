@@ -259,6 +259,7 @@ namespace ThirdPersonSimulation
 				case SimulationOperationCode.TimelineCameraState:
 				case SimulationOperationCode.TimelineCameraCue:
 				case SimulationOperationCode.TimelineCameraResponse:
+				case SimulationOperationCode.TimelineCameraEffect:
 					throw new InvalidOperationException(
 						$"Descriptor operation '{descriptor.Code}' cannot execute as a Runnable leaf.");
 				default:

@@ -4,7 +4,7 @@ BTSMTL 的目标已明确为重度技能编辑器：保留 Tree、Timeline、局
 
 ## What Changes
 
-- **BREAKING**：Character 的移动模式、动作选择、角色级切换与装备路由调度改由明确的 C# 控制模块承担，删除对应 RootTree／角色 StateMachine／Equipment Host 图编排和旧调用者。AI 的独立决策树继续只产生正式 Character 输入，Pose Graph 继续只负责表现。
+- **BREAKING**：Character 的 Gameplay Locomotion 控制改由 C# 显式 StateMachine／State／Transition 承担；输入消费、技能选择与装备路由由控制代码组织，经唯一准入与动作事务处理。控制状态转换与技能激活是独立操作，不新增统管 Locomotion 与技能的角色总状态机，不在 C# 中镜像技能阶段。删除对应 RootTree／角色 StateMachine／Equipment Host 作者图编排和旧调用者；AI 继续只产生正式 Character 输入，Pose Graph 继续只负责表现。
 - **BREAKING**：建立技能定义、只读 Skill Program 与实例执行状态的分工。技能定义拥有执行图并引用唯一 ActionProfile；Tree、Timeline、TreeClip、局部状态机、参数化子图保持一等作者能力。ActionInstance 继续是一次释放的唯一身份与生命周期，技能执行状态归属该实例，不新增第二个 Ability／Skill 生命周期。
 - 保留“作者数据 → numeric-neutral Semantic IR → Numeric Target Program → C# 解释器”的正式链。角色运行包继续锁定 C# 控制模块合同、技能目录、策略与状态布局；技能节点不调用 Unity 对象解释器，不运行原始作者图，不新增第二条解释路径。
 - **BREAKING**：将完整角色状态明确分为控制状态、ActionInstance／技能执行状态以及既有 GE／Equipment 聚合；补齐子图调用、并发释放、重复激活和停止中的状态隔离，并同步 Float32／Fixed codec、hash、checkpoint、snapshot 和发布身份。旧 Program／State ABI 不继续读取。
@@ -19,7 +19,7 @@ BTSMTL 的目标已明确为重度技能编辑器：保留 Tree、Timeline、局
 
 ### New Capabilities
 
-- `character-control-runtime`：C# 角色控制模块、输入与决策边界、显式控制状态、统一动作请求，以及版本化规则装配。
+- `character-control-runtime`：C# 显式控制状态机、State／Transition 合同、独立技能请求、完整状态恢复与版本化规则装配。
 - `btsmtl-skill-program-runtime`：技能定义、纯数据编译与解释执行、嵌套子图参数、实例状态隔离、组合请求及生命周期闭合。
 
 ### Modified Capabilities
@@ -31,7 +31,7 @@ BTSMTL 的目标已明确为重度技能编辑器：保留 Tree、Timeline、局
 - `character-action-activation-flow`：角色代码通过唯一准入与动作事务启动技能，技能后续请求不旁路激活。
 - `character-action-authoring-closure`：技能定义、ActionProfile、执行图、退出语义和输出工作面的作者闭合。
 - `btsmtl-runnable-timeline-node`：Timeline 与 TreeClip 在技能实例内推进，保持 Decision／Commit 和停止顺序。
-- `btsmtl-sm-node-authoring`：角色级状态机迁入代码，图内状态机保留为技能局部流程。
+- `btsmtl-sm-node-authoring`：Gameplay Locomotion 状态机迁入 C#，删除角色外层动作状态机，图内状态机保留为技能局部流程。
 - `character-pipeline-blackboard`：技能变量与 C# 控制状态分责，完整实例／调用作用域与输入只读投影。
 - `character-equipment-feature-authoring`：Feature 提供控制模块配置与技能绑定，删除 Persistent／Route 角色图入口。
 - `character-equipment-runtime`：装备路由由代码控制，保留唯一装备事务、GE 贡献及 Action Equipment Context。

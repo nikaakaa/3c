@@ -1,13 +1,13 @@
 ## 1. 固定迁移基线与边界
 
 - [ ] 1.1 记录当前工作区差异、有效Definition／Composition／Target／Program／Projection和既有输入trace，交付保护清单与可重建基线；明确TrainingEnemy等既有无效目标，不通过修补它们取得基线。
-- [ ] 1.2 沿角色RootTree、状态机、Action和装备Route列出“代码控制／技能内容／删除”的业务映射，交付每个正式入口及引用的迁移表。
+- [ ] 1.2 沿角色RootTree、状态机、Action和装备Route列出“C# Locomotion State／Transition、技能请求规则、技能内容、删除”的业务映射，明确外层动作状态机直接拆除，交付每个正式入口及引用的迁移表。
 - [ ] 1.3 对账设计中的33项capability及预览、Pose、装备后续change的共享接口，交付明确替换／保留项；同步接口描述不接管外部change功能。
 - [ ] 1.4 用既有Replay／Proof与业务观察确定同版本重复性和跨实现比较字段，交付输入／Body／动作阶段／输出基线及来源映射规则；不得以不同ABI的StateHash直接判定回归。
 
 ## 2. 角色与技能基础合同
 
-- [ ] 2.1 定义角色控制模块的输入、结果、参数、typed状态schema、能力、稳定代码来源和版本合同；通过既有登记／组合校验交付唯一模块目录。
+- [ ] 2.1 定义C#显式StateMachine／State／Transition及角色控制模块合同，覆盖Enter／Tick／Exit、来源／目标、纯条件、优先级和稳定顺序、输入／结果、参数、typed状态schema与代码版本；通过既有登记／组合校验交付唯一模块目录。
 - [ ] 2.2 定义SkillDefinition、入口签名、ActionProfile引用、子图依赖及允许的后续候选，交付相同策略被多个技能引用时仍可精确选中技能的作者／校验结果。
 - [ ] 2.3 明确ActionInstance与SkillExecutionState的唯一owner关系，交付Context、模板、实例、调用点和generation的typed地址及生命周期合同，删除第二生命周期候选设计。
 - [ ] 2.4 定义角色运行包中的控制binding、SkillProgram目录、组合布局与显式容量，交付缺失模块、非法依赖、并发／容量不符的正式诊断。
@@ -34,8 +34,8 @@
 
 ## 5. C#角色控制迁移
 
-- [ ] 5.1 将有效角色的普通移动与控制模式迁入声明状态的代码模块，保留原输入和数值规则；通过既有业务观察比较验证Body／Intent时序。
-- [ ] 5.2 将角色动作候选、输入消费和角色级状态选择迁入控制模块，交付旧角色图入口清理及输入到精确Skill请求的诊断链。
+- [ ] 5.1 将有效角色的Gameplay Locomotion迁入C#显式State／Transition，保留原输入、数值与同Tick转换顺序；通过既有业务观察比较核对控制状态、Body／Intent时序，不复制Presentation Pose State。
+- [ ] 5.2 将动作候选、输入消费、连段与取消迁为控制代码中的独立技能请求规则，允许State保持active时请求技能；删除外层动作图及角色级连招状态机，不新增角色总状态机或C#技能阶段镜像，交付输入到精确Skill请求的诊断链。
 - [ ] 5.3 复用唯一准入、Required Tag、TargetRequirement与目标快照规则，交付纯查询与最终提交读取同一候选的现有验证结果。
 - [ ] 5.4 接入显式replacement及source stop barrier，区分独立并发请求；交付来源、退出原因、停止进度和新实例建立顺序的事实。
 - [ ] 5.5 使当前Decision窗口在同Tick角色决策前可读，迁移原连段／取消规则；通过既有Replay业务事件核对不额外延后一渲染帧。
@@ -50,7 +50,7 @@
 ## 7. Session、状态与网络恢复
 
 - [ ] 7.1 在原Evaluate／WorldResolve／Finalize Step内接入控制模块和技能解释器，交付原四阶段、多Tick与Commit入口的调用图及Pipeline编译结果。
-- [ ] 7.2 扩展两个Target的状态transaction、copy、codec和hash，覆盖控制状态、ActionInstance、子图frame、参数、Timeline及停止进度；交付完整状态schema与旧版本拒绝结果。
+- [ ] 7.2 扩展两个Target的状态transaction、copy、codec和hash，覆盖控制State identity、必要进入Tick／转换进度／输入缓存、ActionInstance、子图frame、参数、Timeline及停止进度；恢复直接还原数据，不重放Enter／Exit或技能请求，交付完整状态schema与旧版本拒绝结果。
 - [ ] 7.3 更新Composition、ProgramCatalog和模块装配校验，交付缺模块、混版、能力不足及不兼容Target在Active前失败的正式报告。
 - [ ] 7.4 更新ServerAuthoritative owner checkpoint、Full／Delta与Correction恢复，交付完整技能状态恢复及原Remote观察体边界的现有证明。
 - [ ] 7.5 更新Fixed Rollback snapshot、history、分层hash与恢复投影，交付同输入重算中实例／调用状态一致的现有Proof；Relay继续只路由。
@@ -84,7 +84,7 @@
 
 - [ ] 11.1 将Action Workspace统一到SkillDefinition、ActionProfile及调用点上下文，支持Tree-only和多个／嵌套Timeline；交付不猜唯一Timeline的typed页面状态。
 - [ ] 11.2 打通技能到AnimationClip、producer、Profile和AnimationSlot的原owner导航，交付无镜像字段或第二动画资源配置的引用检查。
-- [ ] 11.3 扩展source map和Trace区分C#控制来源、技能模板、ActionInstance、调用点和generation，交付稳定来源与同模板多实例隔离的诊断输出。
+- [ ] 11.3 扩展source map和Trace区分C#模块／State／Transition来源、技能模板、ActionInstance、调用点和generation，交付控制转换与技能激活可分别追溯、同模板多实例隔离的诊断输出，不伪造角色图节点。
 - [ ] 11.4 更新IR Inspector、Live Debug和窗口Follow／Pin绑定，交付控制合同及技能执行根可查看、过期目标不选其他实例的状态报告。
 - [ ] 11.5 向独立场景预览提供精确技能选择、正式请求及只读实例接口，交付双方接口对账；不创建场景、SkillPreviewRuntime或重复实现旧播放器删除。
 

@@ -30,7 +30,7 @@ SimulationKernel MUST提供无外部副作用的Evaluate与Finalize。Evaluate M
 
 ### Requirement: Operation Evaluate 必须只有一个事务入口
 
-每个Numeric Target的Kernel MUST通过唯一Evaluate入口，按固定顺序协调typed ingress、GE推进、输入、技能Decision candidate、C#角色控制与动作生命周期、技能Tree／Timeline执行、Motion合成、GE保存、作用域清理与输出收集。全部控制和技能状态 MUST进入同一个Actor／Tick transaction。领域模块不得建立第二Evaluate loop、独立Tick或状态镜像，代码控制不得重新发射为角色RootTree。
+每个Numeric Target的Kernel MUST通过唯一Evaluate入口，按固定顺序协调typed ingress、GE推进、输入、技能Decision candidate、C#显式控制StateMachine与独立动作请求／生命周期、技能Tree／Timeline执行、Motion合成、GE保存、作用域清理与输出收集。控制State／Transition与技能解释 MUST使用同一SimulationTick及Actor／Tick transaction，状态转换和技能激活 MUST不互相隐式触发。领域模块不得建立第二Evaluate loop、独立Tick或状态镜像，代码控制不得重新发射为角色RootTree。
 
 #### Scenario: 角色控制与技能共同推进
 
@@ -42,7 +42,7 @@ SimulationKernel MUST提供无外部副作用的Evaluate与Finalize。Evaluate M
 
 - **WHEN** Kernel对Corin执行一个Float32 Evaluate
 - **THEN** MUST只创建一个Float32 evaluation transaction
-- **AND** C#控制、技能局部StateMachine／Timeline、Action、变量和GE MUST在同一事务按正式顺序推进
+- **AND** C#控制State／Transition、技能局部StateMachine／Timeline、Action、变量和GE MUST在同一事务按正式顺序推进
 - **AND** 失败不得返回部分staged state或外部输出
 
 

@@ -39,7 +39,7 @@
 
 ### Requirement: Corin角色主流程必须由代码控制与技能目录表达
 
-Corin输入、Gameplay移动模式、动作选择和角色级切换 MUST由明确C#控制模块组织。作者入口 MUST显示控制binding／参数和技能目录，不再提供角色RootTree。具体技能拥有Tree／Timeline等内容，持续Locomotion PoseStateMachine仍只属于Presentation。
+Corin Gameplay Locomotion MUST由C#显式StateMachine／State／Transition组织；输入消费、技能选择与装备路由 MUST由控制代码通过独立动作请求处理，不增加统管移动与技能的角色总状态机。作者入口 MUST显示控制binding／参数和技能目录，不再提供角色RootTree或可编辑的C#控制图。具体技能拥有Tree／Timeline等内容，持续Locomotion PoseStateMachine仍只属于Presentation。
 
 #### Scenario: 打开Corin RootTree
 
@@ -51,13 +51,19 @@ Corin输入、Gameplay移动模式、动作选择和角色级切换 MUST由明�
 
 ### Requirement: Corin移动控制必须由代码模块产生Gameplay运动
 
-Corin普通移动的输入准入、movement mode、Motion authority、转向与加速度约束及动作影响 MUST迁入C#控制模块并使用同一状态事务和Motion规则。需要Gameplay时序的移动技能可使用Timeline；纯Idle／Start／Loop／Stop／Turn动画仍由Pose source承担，不生成BaseLocomotion producer或ActionOverride。
+Corin普通移动的输入准入、movement mode、Motion authority、转向与加速度约束及动作影响 MUST迁入C#显式控制State／Transition，并使用同一状态事务和Motion规则。State MUST负责当前移动模式的Enter／Tick／Exit，Transition MUST显式声明来源、目标、条件、优先级与稳定顺序；技能激活、完成或停止 MUST不隐式触发控制状态切换。需要Gameplay时序的移动技能可使用Timeline；纯Idle／Start／Loop／Stop／Turn动画仍由Pose source承担，不生成同名Gameplay控制State、BaseLocomotion producer或ActionOverride。
 
 #### Scenario: 角色开始跑动
 
 - **WHEN** Gameplay接受移动输入并由Motor产生速度
 - **THEN** C#控制 MUST更新移动状态与正式运动意图
 - **AND** Presentation PoseStateMachine仍根据committed Fact选择Pose
+
+#### Scenario: 移动中接受攻击请求
+
+- **WHEN** 当前控制State允许Attack请求且准入通过，Gameplay移动模式未改变
+- **THEN** MUST保持当前控制State并通过唯一Action事务启动精确Attack技能
+- **AND** 攻击的前摇／后摇 MUST只在该技能内部推进，运动结果仍按同一Motion arbitration计算
 
 #### Scenario: FullBody Action活跃
 
@@ -68,7 +74,7 @@ Corin普通移动的输入准入、movement mode、Motion authority、转向与�
 
 ### Requirement: Corin基础连招必须由代码选择技能并统一执行
 
-Corin的Attack1至Attack5、DodgeBack和DodgeForward MUST成为明确技能定义，保留原ActionProfile、Tree／Timeline、窗口、Motion和输出内容。角色代码 MUST选择技能并处理连段、取消与replacement，不再保留外层None／Attack／Dodge图及角色级nested combo状态机。技能内部仍可使用局部状态机和子图，准入、source stop与Action生命周期规则必须保持。
+Corin的Attack1至Attack5、DodgeBack和DodgeForward MUST成为明确技能定义，保留原ActionProfile、Tree／Timeline、窗口、Motion和输出内容。角色代码 MUST通过技能请求规则选择技能并处理连段、取消与replacement，不再保留外层None／Attack／Dodge图及角色级nested combo状态机，也不得将它们逐项翻译成另一套C#动作状态机。控制State MAY形成这些请求，实际激活 MUST独立经过准入和Action事务。技能内部仍可使用局部状态机和子图，准入、source stop与Action生命周期规则必须保持。
 
 #### Scenario: Attack1进入Attack2
 

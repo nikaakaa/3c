@@ -35,7 +35,7 @@
 
 | 概念 | 拥有的数据 | 输入与输出 | 生命周期 |
 |---|---|---|---|
-| 角色控制模块 | 控制算法、参数合同、状态 schema 和稳定代码来源 | 正式输入、Body／GE／装备／动作观察 → 移动意图、动作候选、停止请求 | 按 Actor 装配；可变状态进入 Character State |
+| 角色控制模块 | C# 显式 Locomotion StateMachine／State／Transition、技能选择规则、参数／状态合同和稳定代码来源 | 正式输入、Body／GE／装备／动作观察 → 控制状态转换、移动意图、独立动作请求 | 按 Actor 装配；可变状态进入 Character State |
 | SkillDefinition | 稳定 SkillId、ActionProfile 引用、入口图、参数签名、技能依赖 | 作者内容 → validated skill semantic unit | 作者资产，不保存释放状态 |
 | SkillProgram | 技能 operation、Timeline、子图调用布局、常量、资源／producer 引用及 source map | 只读执行定义 → 被解释器读取 | 按内容和 Target 共享 |
 | ActionInstance | 既有 ActionId／InstanceId、来源、目标、PredictionKey、phase、生命周期与 Equipment Context；新增精确 SkillProgram 引用 | 唯一准入与 transition → 一次释放的身份和状态 | 继续是释放的唯一 owner |
@@ -46,17 +46,29 @@ SkillDefinition 的执行图表达技能内容，ActionInstanceId 表达一次�
 
 **取舍：** 全部改名并另建技能事务会产生较大迁移面且重复已有能力。这里保留仍有明确业务含义的 ActionProfile／ActionInstance，将技能执行状态放入唯一释放 owner；原本只服务角色图的类型和字段则按新职责改名或删除。
 
-### 2. 角色控制由代码组织，状态仍受统一事务约束
+### 2. 控制使用 C# 显式状态机，状态转换与技能激活分开
 
-代码控制模块负责移动模式、动作候选选择、角色级优先／切换、输入消费和装备路由调度。它使用正式的准入查询及 Action lifecycle 服务，不直接播放 Timeline、调用具体运动组件或向外发送消息。技能本身的伤害公式等已有业务实现继续通过正式领域叶子表达。
+Gameplay Locomotion 使用明确的 C# StateMachine／State／Transition 结构，维护移动模式及其转换。输入消费、技能候选选择、连段／取消与装备路由由控制代码组织，经唯一准入及 Action lifecycle 服务完成。不新增统管 Locomotion 与技能的角色总状态机，也不另建维护相同控制事实或技能阶段的并行逻辑状态机。
+
+| 结构 | 输入与职责 | 输出及所有权 |
+|---|---|---|
+| StateMachine | 读取当前控制状态、正式输入与角色事实，按确定顺序协调状态推进及转换 | 当前控制 State 与转换结果；不拥有技能播放进度 |
+| State | 表达当前移动模式的 Enter／Tick／Exit 行为，例如地面移动、空中控制；可按当前输入形成技能请求 | 运动意图及显式请求；不直接操作 Timeline、运动组件、场景或网络 |
+| Transition | 声明稳定身份、来源、目标、纯条件、优先级和稳定评估顺序 | 选中的控制状态转换；条件求值不消费输入、不激活技能、不执行退出效果 |
+
+状态转换按既有同 Tick 语义执行明确的 Exit／Enter。技能请求和控制 Transition 是两个独立操作：State 可以在持续 active 时请求技能，准入通过不强制切换 Locomotion；离开 State 也不隐式结束技能，需要打断时必须显式提交动作停止请求。两种操作确需同时发生时，由同一正式决策阶段明确组织顺序，不通过 OnEnter 隐式推断一次技能释放。
+
+例如边走边攻击，Locomotion 继续维护移动状态，ActionInstance 内的技能推进前摇、攻击窗口和后摇；动作的运动占用与位移贡献经过现有 Motion arbitration／合成链处理。只有实际移动模式改变时才执行对应控制 Transition，不建立 MovingAndAttacking 或 Attack1 前摇／后摇等重复控制状态。技能完成、取消与停止结果作为正式事实或结果参与控制决策，不自动重置 Locomotion。技能本身的伤害公式等已有业务实现继续通过正式领域叶子表达。
+
+Gameplay 控制状态机、技能内部局部状态机和 Presentation PoseStateMachine 各自拥有不同数据。PoseStateMachine 仍只按表现事实选择与混合姿态，不为了 Idle／Start／Loop／Stop／Turn 动画增加同名 Gameplay 控制状态。
 
 控制模块声明不可变合同：ModuleId、语义版本、参数／状态 schema、Input／Request 接口、所需能力与可引用的技能／producer 集合。Build 将 binding、参数和 schema 纳入角色运行包；运行时显式装配匹配实现。算法不伪装为一个万能图节点，也不被重新生成成角色状态机图。
 
-可变控制状态由模块声明的 typed layout 存放在 CharacterSimulationState 中，模块对象不保存影响下一 Tick 的私有游标、计时器或当前动作镜像。Float32 与 Fixed 通过已有 Target 数值／状态端口复用业务决策语义，不能各自复制一套角色控制规则。
+可变控制状态由模块声明的 typed layout 存放在 CharacterSimulationState 中，覆盖当前 State identity、业务需要的进入 Tick、确实跨 Tick 的转换进度及输入缓存等字段。模块对象不保存影响下一 Tick 的私有游标、计时器或当前动作镜像；已有 Body／Tag／Action 事实直接读取，不再复制一份。恢复只还原这些状态，不重新触发 Enter／Exit 或补发技能请求；后续实际推进与重算才按统一生命周期执行。Float32 与 Fixed 通过已有 Target 数值／状态端口复用业务决策语义，不能各自复制一套角色控制规则。
 
 普通移动无需为了获得身份创建空技能；有明确释放生命周期的攻击、闪避等继续使用 ActionInstance。AI 的 RootTree／AIIntentProgram 保持独立，唯一可写边界仍为 CharacterSimulationInput。
 
-**取舍：** 角色图便于作者重组全部控制关系；代码控制让程序员能直接审查状态推进及中断。这里选择代码控制，同时允许技能内容独立复用，接受角色级规则调整需要代码发布的代价。
+**取舍：** 显式 State／Transition 便于程序员审查移动模式、转换条件及同 Tick 顺序，代价是控制结构调整需要代码发布。技能请求与控制状态转换分开，使移动中攻击和技能变化不要求扩张一套组合状态；相应的准入、打断与运动占用必须通过正式动作和 Motion 规则明确表达。技能内容仍可独立编辑与复用。
 
 ### 3. Tree、Timeline、子图和技能局部状态机是正式作者能力
 
@@ -66,7 +78,7 @@ SkillDefinition 的执行图表达技能内容，ActionInstanceId 表达一次�
 
 首次迁移沿用现有按调用 occurrence 解析子图和连接入口的方法。纯定义／常量可以去重，执行位置和状态布局不得只按共享资产 GUID 合并。本次不新增递归调用；子图依赖环在 Build 失败，显式 Loop 节点继续表达重复执行。不同技能之间的组合引用与子图递归必须分别校验，合法连段不能被误报为子图环。
 
-角色级 StateMachine 和技能内部 StateMachine 的区别是控制范围：局部状态机只能组织当前技能实例的阶段，不能直接占有整个角色的控制模式。状态行为、OnEnter／Root／OnExit、graceful／force stop 的既有有效语义继续复用。
+C# 控制 StateMachine 组织 Gameplay 移动模式；技能内部 StateMachine 只组织当前技能实例的阶段和子流程，不能直接写入控制 State 或替代其 Transition。技能可提交正式请求并由控制阶段处理，不恢复角色外层 Action category／连招状态机。技能状态行为、OnEnter／Root／OnExit、graceful／force stop 的既有有效语义继续复用。
 
 **取舍：** 限制子图递归让状态容量、调用路径和恢复含义可预先确定，代价是递归算法需要用明确循环或领域代码表达。完整 Tree 能力保留，不将技能工具降成只有动画时间点的配置器。
 
@@ -120,7 +132,7 @@ SkillProgram 的构建工作明确为：引用和类型校验、子图 occurrenc
 
 1. 正式输入／typed ingress进入当前事务，建立控制与技能可读的输入事实。
 2. 已激活技能按当前 Tick 准备 Decision TreeClip 的 Frame candidate；Decision 仍不能 Running、启动动作或产生场景副作用。
-3. C# 控制模块读取输入、committed 观察和合法当前 candidate，经唯一准入服务决定动作启动、停止和角色控制变化。
+3. C# 控制模块读取输入、committed 观察和合法当前 candidate，推进显式控制 StateMachine 并独立处理技能候选。控制 Transition 按声明条件及顺序选择；动作启动／停止经唯一准入和 lifecycle 入口处理，两者不互相隐式触发。
 4. 技能 Tree／Timeline／局部状态机在其 Action Context 中执行，生成 Motion、GE／Equipment 事务请求和有限表现输出；结束的 owner 按现有 Frame／scope 规则失效。
    技能完成和停止结果在当前Evaluate内反馈给同一控制模块的收尾逻辑，以保留原同Tick控制／输出关系；不会重复采样输入、创建第二外层Tick或绕过后续动作候选的正式决策阶段。
 5. 既有 Motion 合成及 Body Motion Prepare 形成每 Actor 一个完整请求；WorldResolveBatch 统一求解；Finalize 提交角色、Body 和事实。
@@ -215,7 +227,7 @@ Graph／Node kind不可原地改变的现有规则继续有效。若旧角色图
 | character-action-instance-runtime 禁止技能定义持有执行图／禁止ActionTree | 改为允许纯数据技能作者图，网络身份仍来自ActionInstance | 旧Ability对象接口不恢复，实例身份和目标快照不变成模板身份 |
 | character-action-activation-flow 强制Graph operation激活 | 改由代码控制调用唯一动作事务，技能请求统一排队 | 单一准入、RequiredTag、显式停止、terminal区别 |
 | character-action-authoring-closure 的角色图request入口 | 改技能定义与控制binding入口 | ActionProfile唯一策略、TreeClip窗口、Motion主链 |
-| btsmtl-sm-node-authoring／runnable-timeline 的角色Root时序 | 限为技能局部状态机；Decision先于角色代码决策 | Tree、Timeline、局部State和停止语义 |
+| btsmtl-sm-node-authoring／runnable-timeline 的角色Root时序 | 图内状态机限为技能局部流程；Gameplay Locomotion迁为C#显式State／Transition；Decision先于角色代码决策 | Tree、Timeline、局部State和停止语义；不复制外层动作状态机 |
 | character-pipeline-blackboard 的所有角色变量都由图声明 | 控制状态改代码schema；技能变量沿声明与调用frame | 无字典镜像、Frame投影、GE唯一真值 |
 | Equipment Feature Persistent／Route graph与Host opcode | 替换为代码binding和技能引用 | 装备事务、Tag／Effect贡献、Context和已有数值逻辑 |
 | Kernel／Pipeline／Composition | 扩展代码合同、技能状态和能力校验 | 四阶段、多Tick、唯一WorldResolve／Commit |
@@ -223,6 +235,7 @@ Graph／Node kind不可原地改变的现有规则继续有效。若旧角色图
 | Graph Framework／Shell／Workspace／Diagnostics | 技能domain与实例来源；保留原窗口行为改进 | 共享画布、唯一Mutation、只读观察 |
 | Document v4及MCP／AI合同 | v5迁移技能作者正文；工具生命周期与AI输入边界保留 | 一份hash、一份计划、完整事务、Presentation独立owner |
 | agent-character-controller-synthesis／character-state-timeline-authoring-loop | 同步Agent生成目标与Corin样例的角色代码／技能划分 | 现有输入、连段、取消、窗口和有限动画结果；不重做正确Foot／Pose资产 |
+| character-state-timeline-authoring-loop 的RootTree内Locomotion与Action状态机 | Gameplay Locomotion保留显式状态机结构并迁入C#；外层Action状态机改为技能请求／动作事务，不增加角色总状态机 | 移动状态转换和技能激活各有正式入口；技能局部状态与Presentation PoseState不合并 |
 | agent-ai-controller-synthesis／MCP Bridge／Presentation作者／Pose编译中的Document v4引用 | 仅改为v5并保持原正文的其他约束 | 不扩展AI行为、不修改Pose算法和已正确的作者能力 |
 | rebuild-btsmtl-preview-with-scene-play | 在其后续实施前对账技能选择、动作请求及实例来源用语 | 本次不承担场景启动／旧播放器删除，预览不重写控制／技能 |
 | 预览change仍声明Document v4或原角色图调用点 | 接入新接口时必须同步为v5及技能调用点；本次规划不改写该独立change | 不能在后续安装预览delta时恢复旧包格式或RootTree |
@@ -236,6 +249,7 @@ Graph／Node kind不可原地改变的现有规则继续有效。若旧角色图
 - [旧角色图承载隐含顺序] → 按输入、窗口、准入、停止、Motion、装备和输出逐项迁移；保留同Tick顺序，不能只翻译节点名。
 - [并发或子图调用共享状态] → 以ActionInstance和调用generation隔离，使用完整typed恢复；模板只读。
 - [换成C#后私有字段漏出快照] → 控制模块只能通过声明状态端口读写跨Tick数据；模块装配与状态coverage在Build／Composition检查。
+- [控制状态与技能阶段重复建模] → Gameplay Locomotion使用显式State／Transition；技能阶段只归ActionInstance内执行状态，激活技能不强制控制切换，恢复不重放Enter／Exit副作用。
 - [新旧hash不能直接比较] → 新版本内检查重复运行一致性；跨版本比较业务输入／Body／动作阶段和输出，显式记录来源identity迁移，不把ABI变化误判为行为回归或反过来忽略业务差异。
 - [规则程序集未被Player或服务端完整装配] → 同一发布清单固定语义版本、依赖、Target能力和技能闭包；缺失时拒绝Active，不使用旧代码继续运行。
 - [重构侵入正确Pose／KCC实现或其他任务改动] → 锁定工作区差异与接口，必要冲突报告用户裁决，不重写算法。
@@ -246,7 +260,7 @@ Graph／Node kind不可原地改变的现有规则继续有效。若旧角色图
 1. 建立精确工作区与有效作者／产品基线，记录保护清单、角色图到代码／技能的业务映射，以及当前已无效的TrainingEnemy等目标。使用现有重复Replay结果确认基线可解释。
 2. 定义并接入角色控制合同、技能定义／签名、实例状态和新版角色运行包。所有迁移阶段只对完整转换的模块切换正式调用者；不建立可选择的新旧runtime。
 3. 迁移Tree／Timeline／子图编译与解释器，完成控制状态、ActionInstance、技能state、Equipment和两个Target codec／layout。
-4. 迁移Character控制代码、角色及装备入口，保持正式输入、准入、Frame窗口、Motion和停止顺序。
+4. 将Gameplay Locomotion迁为C#显式StateMachine／State／Transition，将外层动作选择与装备路由迁为独立技能请求规则；删除旧角色图及外层动作状态机，保持正式输入、准入、Frame窗口、Motion和停止顺序，不新建角色总状态机。
 5. 在同一Session Pipeline内切换Kernel调用，更新checkpoint、snapshot、hash、模块装配和产品发布闭包。
 6. 完成Document v5、技能工作区、来源诊断和有效资产转换；显式构建新的完整发布组，删除旧控制图引用、reader、菜单与不再使用的代码。
    作者资产转换必须早于旧serialized字段和原作者读取代码的清理：先利用既有正式读取／Snapshot记录旧源，以唯一typed Mutation构造新控制binding和技能目标，再完成引用迁移与旧字段删除。此过程不接受旧版本Document、不新增独立migrator或第二资产写入服务；尚未转换的根保持明确Invalid，不运行旧角色图兜底。

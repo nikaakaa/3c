@@ -2,7 +2,7 @@
 
 ### Requirement: 状态机层级角色分离
 
-BTSMTL StateMachine MUST只用于技能实例内部的局部阶段和子流程；角色级移动模式、动作选择与跨技能协调 MUST由C#控制模块承担。局部StateMachineGraph、StateNode、StateBehaviorSubTree和ConditionRuleGraph MUST保持现有结构分工，不提供角色RootTree状态机入口，也不承载Pose状态机语义。
+BTSMTL StateMachine MUST只用于技能实例内部的局部阶段和子流程。Gameplay Locomotion MUST由C#显式StateMachine／State／Transition控制；技能选择与跨技能协调 MUST由控制代码通过独立动作请求处理，MUST不恢复外层Action状态机或新增统管Locomotion与技能的角色总状态机。局部StateMachineGraph、StateNode、StateBehaviorSubTree和ConditionRuleGraph MUST保持现有结构分工，不提供角色RootTree状态机入口，也不承载Pose状态机语义。技能局部State MUST不直接修改控制State，C#控制State MUST不镜像技能阶段。
 
 #### Scenario: 技能包含局部阶段
 
@@ -32,7 +32,7 @@ BTSMTL StateMachine MUST只用于技能实例内部的局部阶段和子流程�
 
 ### Requirement: StateMachine 运行时必须由 Compiled Operation 执行
 
-StateMachineNode、StateMachineGraph、StateNode、TransitionEdge 和 ConditionRuleGraph MUST编译为 CharacterSimulationProgram operation/table。Active、pending、exiting、transition、nested path 和 stop barrier MUST存入 CharacterSimulationState slot，MUST不由 StateMachineGraph runtime clone 持有。
+技能内部的StateMachineNode、StateMachineGraph、StateNode、TransitionEdge和ConditionRuleGraph MUST编译为SkillProgram operation/table并纳入CharacterSimulationProgram静态运行包。Active、pending、exiting、transition、nested path和stop barrier MUST存入所属ActionInstance的CharacterSimulationState slot，MUST不由StateMachineGraph runtime clone持有。C#控制State／Transition MUST通过代码实现与声明状态执行，不为复用图解释器重新生成角色状态机operation。
 
 #### Scenario: 进入嵌套状态机
 

@@ -7,7 +7,7 @@
 
 ### Requirement: 角色控制必须通过唯一准入建立 ActionInstance
 
-角色代码 MUST通过唯一Action准入与activation服务建立ActionInstance，并传入精确SkillDefinition／Program、ActionProfile和来源。角色级ActivateActionInstance图节点与调用链 MUST删除。技能Tree／Timeline只能消费自己的Action Context或提交后续候选，不直接建立第二个释放循环。
+角色代码 MUST通过唯一Action准入与activation服务建立ActionInstance，并传入精确SkillDefinition／Program、ActionProfile和来源。C#控制State MAY在保持active时形成请求；activation MUST不隐式触发控制Transition，State进入或退出 MUST不被当作技能建立或终止的替代操作，需要同时发生时必须显式提交相应请求。角色级ActivateActionInstance图节点与调用链 MUST删除。技能Tree／Timeline只能消费自己的Action Context或提交后续候选，不直接建立第二个释放循环。
 
 #### Scenario: 从输入启动技能
 
@@ -111,4 +111,4 @@ Action事务服务 MUST只处理已选择技能的profile、admission、instance
 
 - **WHEN** 代码控制的Guard模式可选择Guard或ParryCounter技能
 - **THEN** 控制模块 MUST提交精确技能与不同activation请求
-- **AND** StateNode MUST NOT 静态绑定唯一 ActionProfile
+- **AND** 控制State MUST不静态等同于唯一ActionProfile或一次技能释放

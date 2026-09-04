@@ -17,6 +17,8 @@ namespace ThirdPersonPerformance.Editor
             "ThirdPersonGameplay",
             "ThirdPersonClient.Runtime",
             "ThirdPersonSimulation.Core",
+            "ThirdPersonSimulation.Fixed",
+            "ThirdPersonSimulation.Float32",
             "ThirdPersonSimulation.Unity"
         };
 

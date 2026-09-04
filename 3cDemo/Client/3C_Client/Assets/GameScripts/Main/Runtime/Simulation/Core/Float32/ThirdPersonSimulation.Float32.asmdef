@@ -2,6 +2,7 @@
     "name": "ThirdPersonSimulation.Float32",
     "rootNamespace": "ThirdPersonSimulation",
     "references": [
+        "ThirdPerson.Performance.Instrumentation.Contracts",
         "ThirdPersonSimulation.Core"
     ],
     "includePlatforms": [],

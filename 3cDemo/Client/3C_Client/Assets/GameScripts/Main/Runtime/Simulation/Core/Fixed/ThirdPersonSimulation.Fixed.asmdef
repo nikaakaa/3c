@@ -2,6 +2,7 @@
     "name": "ThirdPersonSimulation.Fixed",
     "rootNamespace": "ThirdPersonSimulation.Fixed",
     "references": [
+        "ThirdPerson.Performance.Instrumentation.Contracts",
         "ThirdPersonSimulation.Core"
     ],
     "includePlatforms": [],

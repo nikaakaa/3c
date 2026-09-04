@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using ThirdPersonPerformance.Instrumentation;
 
 namespace ThirdPersonSimulation
 {
@@ -91,6 +92,7 @@ namespace ThirdPersonSimulation
                 Float32SimulationCommitBatch>(services, target);
         }
 
+        [PerformanceProbe("simulation.pipeline.transaction")]
         public Float32PipelineTransactionResult Execute(SimulationSessionLogicTickContext outer)
         {
             PipelineTransactionControlResult<Float32SimulationCommitBatch> result = m_Coordinator.Execute(outer);

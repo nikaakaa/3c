@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 
+using ThirdPersonPerformance.Instrumentation;
 using ThirdPersonSimulation;
 
 namespace ThirdPersonSimulation.Fixed
@@ -93,6 +94,7 @@ namespace ThirdPersonSimulation.Fixed
                 FixedSimulationCommitBatch>(services, target);
         }
 
+        [PerformanceProbe("simulation.pipeline.transaction")]
         public FixedPipelineTransactionResult Execute(SimulationSessionLogicTickContext outer)
         {
             PipelineTransactionControlResult<FixedSimulationCommitBatch> result = m_Coordinator.Execute(outer);

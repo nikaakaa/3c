@@ -420,9 +420,7 @@ namespace ThirdPersonSimulation
                     SimulationSessionFailureStage.Step,
                     step.Source,
                     step.Tick.Value,
-                    performance,
-                    PerformancePhase(stage),
-                    true,
+                    stage,
                     () => pass.Execute(context));
             }
         }
@@ -460,14 +458,11 @@ namespace ThirdPersonSimulation
                 ICompiledSimulationPipelinePassRuntime pass = m_Services.Passes[i];
                 if (pass.Phase == phase)
                 {
-                    ExecutePass(
+                    ExecutePassCore(
                         pass,
                         failureStage,
                         source,
                         completedTick,
-                        null,
-                        default,
-                        false,
                         () => execute(pass));
                 }
             }
@@ -478,24 +473,82 @@ namespace ThirdPersonSimulation
             SimulationSessionFailureStage stage,
             SimulationTickSourceIdentity source,
             ulong completedTick,
-            ISimulationPerformanceSink performance,
-            SimulationPerformancePhase performancePhase,
-            bool measurePerformance,
+            PipelineTransactionStage pipelineStage,
+            Action execute)
+        {
+            switch (pipelineStage)
+            {
+                case PipelineTransactionStage.Evaluate:
+                    ExecuteEvaluatePass(pass, stage, source, completedTick, execute);
+                    return;
+                case PipelineTransactionStage.ResolveBatch:
+                    ExecuteWorldResolvePass(pass, stage, source, completedTick, execute);
+                    return;
+                case PipelineTransactionStage.Finalize:
+                    ExecuteFinalizePass(pass, stage, source, completedTick, execute);
+                    return;
+                default:
+                    ExecuteOtherPass(pass, stage, source, completedTick, execute);
+                    return;
+            }
+        }
+
+        [PerformanceProbe("simulation.pipeline.evaluate")]
+        void ExecuteEvaluatePass(
+            ICompiledSimulationPipelinePassRuntime pass,
+            SimulationSessionFailureStage stage,
+            SimulationTickSourceIdentity source,
+            ulong completedTick,
+            Action execute)
+        {
+            ExecutePassCore(pass, stage, source, completedTick, execute);
+        }
+
+        [PerformanceProbe("simulation.pipeline.world-resolve")]
+        void ExecuteWorldResolvePass(
+            ICompiledSimulationPipelinePassRuntime pass,
+            SimulationSessionFailureStage stage,
+            SimulationTickSourceIdentity source,
+            ulong completedTick,
+            Action execute)
+        {
+            ExecutePassCore(pass, stage, source, completedTick, execute);
+        }
+
+        [PerformanceProbe("simulation.pipeline.finalize")]
+        void ExecuteFinalizePass(
+            ICompiledSimulationPipelinePassRuntime pass,
+            SimulationSessionFailureStage stage,
+            SimulationTickSourceIdentity source,
+            ulong completedTick,
+            Action execute)
+        {
+            ExecutePassCore(pass, stage, source, completedTick, execute);
+        }
+
+        [PerformanceProbe("simulation.pipeline.step-other")]
+        void ExecuteOtherPass(
+            ICompiledSimulationPipelinePassRuntime pass,
+            SimulationSessionFailureStage stage,
+            SimulationTickSourceIdentity source,
+            ulong completedTick,
+            Action execute)
+        {
+            ExecutePassCore(pass, stage, source, completedTick, execute);
+        }
+
+        void ExecutePassCore(
+            ICompiledSimulationPipelinePassRuntime pass,
+            SimulationSessionFailureStage stage,
+            SimulationTickSourceIdentity source,
+            ulong completedTick,
             Action execute)
         {
             bool trace = m_Target.DiagnosticsEnabled;
             long started = trace ? Stopwatch.GetTimestamp() : 0;
             try
             {
-                if (measurePerformance)
-                {
-                    using (performance.Measure(performancePhase))
-                        execute();
-                }
-                else
-                {
-                    execute();
-                }
+                execute();
                 if (trace)
                     PublishPass(pass, source, completedTick, true, "Pipeline Pass completed.", Stopwatch.GetTimestamp() - started);
             }
@@ -515,21 +568,6 @@ namespace ThirdPersonSimulation
                     $"Pipeline Pass '{pass.Descriptor.PassId}' failed.",
                     exception,
                     pass.Descriptor.PassId.ToString());
-            }
-        }
-
-        static SimulationPerformancePhase PerformancePhase(PipelineTransactionStage stage)
-        {
-            switch (stage)
-            {
-                case PipelineTransactionStage.Evaluate:
-                    return SimulationPerformancePhase.PipelineEvaluate;
-                case PipelineTransactionStage.ResolveBatch:
-                    return SimulationPerformancePhase.PipelineWorldResolve;
-                case PipelineTransactionStage.Finalize:
-                    return SimulationPerformancePhase.PipelineFinalize;
-                default:
-                    return SimulationPerformancePhase.PipelineStepOther;
             }
         }
 

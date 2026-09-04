@@ -120,6 +120,7 @@ namespace ThirdPersonCamera
             Locking.RequireValid($"{name}.Locking");
             Collision.RequireValid($"{name}.Collision");
             RequireAssets(Sequences, "Sequence");
+            RequireUniqueSequenceIdentity();
             RequireAssets(OverrideTracks, "Override Track");
             RequireAssets(Zooms, "Zoom");
             RequireAssets(Stretches, "Stretch");
@@ -152,11 +153,12 @@ namespace ThirdPersonCamera
 
         static void RequireAssets<T>(IReadOnlyList<T> values, string label) where T : UnityEngine.Object
         {
-            var identities = new HashSet<int>();
+            var objectIdentities = new HashSet<int>();
+            var resourceIdentities = new Dictionary<string, string>(StringComparer.Ordinal);
             for (int i = 0; i < values.Count; i++)
             {
                 T value = values[i];
-                if (!value || !identities.Add(value.GetInstanceID()))
+                if (!value || !objectIdentities.Add(value.GetInstanceID()))
                     throw new InvalidOperationException($"Character Camera Profile contains missing or duplicated {label} asset #{i}.");
                 switch (value)
                 {
@@ -168,6 +170,41 @@ namespace ThirdPersonCamera
                     case CameraShotAsset shot: shot.RequireValid(); break;
                     case CameraCurveAsset curve: curve.RequireValid(); break;
                 }
+                string resourceIdentity = ResolveResourceIdentity(value);
+                if (resourceIdentities.TryGetValue(resourceIdentity, out string previousAssetName))
+                    throw new InvalidOperationException(
+                        $"Character Camera Profile contains duplicated {label} identity '{resourceIdentity}' on assets '{previousAssetName}' and '{value.name}'.");
+                resourceIdentities.Add(resourceIdentity, value.name);
+            }
+        }
+
+        static string ResolveResourceIdentity(UnityEngine.Object value)
+        {
+            string identity = value switch
+            {
+                CameraSequenceAsset sequence => sequence.SequenceId,
+                CameraOverrideTrackAsset overrideTrack => overrideTrack.TrackId,
+                CameraZoomAsset zoom => zoom.ZoomId,
+                CameraStretchAsset stretch => stretch.StretchId,
+                CameraShakeAsset shake => shake.ShakeId,
+                CameraShotAsset shot => shot.ShotId,
+                CameraCurveAsset curve => curve.CurveId,
+                _ => string.Empty
+            };
+            if (string.IsNullOrWhiteSpace(identity))
+                throw new InvalidOperationException($"Character Camera Profile resource '{value.name}' has no stable identity.");
+            return identity;
+        }
+
+        void RequireUniqueSequenceIdentity()
+        {
+            for (int i = 0; i < Sequences.Count; i++)
+            {
+                CameraSequenceAsset sequence = Sequences[i];
+                if (!string.Equals(DefaultSequence.SequenceId, sequence.SequenceId, StringComparison.Ordinal))
+                    continue;
+                throw new InvalidOperationException(
+                    $"Character Camera Profile contains duplicated Sequence identity '{sequence.SequenceId}' on assets '{DefaultSequence.name}' and '{sequence.name}'.");
             }
         }
 

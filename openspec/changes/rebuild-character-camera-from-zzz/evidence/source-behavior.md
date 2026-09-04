@@ -40,6 +40,20 @@
 
 以上只闭合了采样骨架和一个回退调用关系；`WorldBasicCameraData` 的字段到当前 `CameraFramePlan` 的一一对应、插值策略枚举、`PolarAngle` 的最终角度单位以及碰撞结果如何写入活动 Cinemachine 实例仍未闭合。
 
+### WorldBasicCameraData 字段布局
+
+同一 829 运行元堆中的 `PipelineCamera.WorldBasicCameraData` 类型索引为 `38261`，是 `60` 字节的值类型。字段记录的值类型负载偏移为：
+
+| 字段 | 类型 | 值类型负载偏移 | 记录偏移 |
+|---|---|---:|---:|
+| `_pivotLocation` | `Vector3` | `0x00` | `0x10` |
+| `_rotation` | `Quaternion` | `0x0C` | `0x1C` |
+| `_radius` | `float` | `0x1C` | `0x2C` |
+| `_offset` | `Vector2` | `0x20` | `0x30` |
+| `_fieldOfView` | `float` | `0x28` | `0x38` |
+
+同类型还存在一个静态 `Fallback` 字段，不能当作实例输出。上述值类型负载可解释 `ByTrack.GetData` 最终写回的 `44` 字节相机核心数据；但它们与当前 `CameraFramePlan` 的 `FollowPoint/AimPoint/Orbit` 字段尚未建立逐项合同，因此当前实现不能把现有计划字段声称为该结构的等价物。
+
 metadata 只证明类型、字段、方法身份和地址，不证明函数体之外的完整演出规则。上表把这种边界保留下来，不能把 metadata 名称当成公式或阶段顺序。
 
 ## 补充闭合的 Profile、阻尼、锁定和曲线数据

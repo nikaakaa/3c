@@ -176,13 +176,20 @@ namespace ThirdPersonCamera
 
     public sealed class CameraResponseRequestResolver
     {
+        readonly CameraInputSettings m_DefaultInput;
+
+        public CameraResponseRequestResolver(CameraInputSettings defaultInput)
+        {
+            m_DefaultInput = defaultInput ?? throw new ArgumentNullException(nameof(defaultInput));
+        }
+
         public CameraResponseRequest Resolve(IReadOnlyList<CameraResponseRequest> requests)
         {
             CameraResponseRequest selected = new CameraResponseRequest(
-                CameraResponseMode.Full,
-                1f,
-                1f,
-                1f,
+                CameraResponseMode.Weighted,
+                m_DefaultInput.DefaultResponseWeight,
+                m_DefaultInput.PitchResponseWeight,
+                m_DefaultInput.YawResponseWeight,
                 int.MinValue,
                 1f,
                 "camera.default.response",

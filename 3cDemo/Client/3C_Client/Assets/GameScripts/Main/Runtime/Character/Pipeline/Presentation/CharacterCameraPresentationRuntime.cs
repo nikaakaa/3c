@@ -15,7 +15,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         readonly CharacterCameraProjectionPayload m_CameraProjection;
         readonly CameraTargetBindingResolver m_TargetResolver;
         readonly CameraSequenceRequestResolver m_SequenceResolver = new CameraSequenceRequestResolver();
-        readonly CameraResponseRequestResolver m_ResponseResolver = new CameraResponseRequestResolver();
+        readonly CameraResponseRequestResolver m_ResponseResolver;
         readonly CharacterCameraSequenceEvaluator m_SequenceEvaluator;
         readonly CameraEffectEvaluator m_EffectEvaluator;
         readonly Vector3 m_FollowBindPosition;
@@ -53,6 +53,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             projection.RequireCameraPayload();
             m_CameraProjection = projection.Camera;
             m_CameraRig = cameraRig ?? throw new ArgumentNullException(nameof(cameraRig));
+            m_ResponseResolver = new CameraResponseRequestResolver(m_CameraProjection.Input);
             if (!followAnchor || !aimAnchor)
                 throw new ArgumentException("Presentation Camera requires explicit follow and aim anchors.");
             if (cameraTargetBindings == null)

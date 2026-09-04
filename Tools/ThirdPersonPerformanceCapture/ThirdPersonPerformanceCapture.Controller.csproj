@@ -1,0 +1,15 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>disable</Nullable>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <AssemblyName>ThirdPersonPerformanceCapture.Controller</AssemblyName>
+    <RootNamespace>ThirdPersonPerformanceCapture.Controller</RootNamespace>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="../../3cDemo/Client/3C_Client/Assets/GameScripts/Main/Runtime/Performance/PerformanceCaptureContracts.cs" Link="Shared/PerformanceCaptureContracts.cs" />
+    <Compile Include="../../3cDemo/Client/3C_Client/Packages/com.thirdperson.performance-instrumentation/Runtime/Contracts/PerformanceInstrumentationContracts.cs" Link="Shared/PerformanceInstrumentationContracts.cs" />
+  </ItemGroup>
+</Project>

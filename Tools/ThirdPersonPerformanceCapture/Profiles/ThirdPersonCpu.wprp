@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="utf-8"?>
+<WindowsPerformanceRecorder Version="1.0" Author="ThirdPerson" Company="ThirdPerson">
+  <Profiles>
+    <SystemCollector Id="SystemCollector_ThirdPerson" Name="NT Kernel Logger" Realtime="false">
+      <BufferSize Value="1024" />
+      <Buffers Value="256" />
+    </SystemCollector>
+    <SystemProvider Id="SystemProvider_ThirdPerson">
+      <Keywords>
+        <Keyword Value="CpuConfig" />
+        <Keyword Value="Loader" />
+        <Keyword Value="ProcessThread" />
+        <Keyword Value="CSwitch" />
+        <Keyword Value="ReadyThread" />
+        <Keyword Value="SampledProfile" />
+        <Keyword Value="DiskIO" />
+        <Keyword Value="FileIO" />
+      </Keywords>
+      <Stacks>
+        <Stack Value="CSwitch" />
+        <Stack Value="ReadyThread" />
+        <Stack Value="SampledProfile" />
+        <Stack Value="DiskReadInit" />
+        <Stack Value="DiskWriteInit" />
+        <Stack Value="FileCreate" />
+        <Stack Value="FileRead" />
+        <Stack Value="FileWrite" />
+      </Stacks>
+    </SystemProvider>
+    <Profile Id="ThirdPersonCpu.Verbose.File" Name="ThirdPersonCpu" Description="ThirdPerson CPU sampling, scheduling and file IO" LoggingMode="File" DetailLevel="Verbose">
+      <Collectors>
+        <SystemCollectorId Value="SystemCollector_ThirdPerson">
+          <SystemProviderId Value="SystemProvider_ThirdPerson" />
+        </SystemCollectorId>
+      </Collectors>
+    </Profile>
+    <Profile Id="ThirdPersonCpu.Light.File" Name="ThirdPersonCpu" Description="ThirdPerson CPU sampling, scheduling and file IO" Base="ThirdPersonCpu.Verbose.File" LoggingMode="File" DetailLevel="Light" />
+    <Profile Id="ThirdPersonCpu.Verbose.Memory" Name="ThirdPersonCpu" Description="ThirdPerson CPU sampling, scheduling and file IO" Base="ThirdPersonCpu.Verbose.File" LoggingMode="Memory" DetailLevel="Verbose" />
+    <Profile Id="ThirdPersonCpu.Light.Memory" Name="ThirdPersonCpu" Description="ThirdPerson CPU sampling, scheduling and file IO" Base="ThirdPersonCpu.Verbose.File" LoggingMode="Memory" DetailLevel="Light" />
+  </Profiles>
+</WindowsPerformanceRecorder>

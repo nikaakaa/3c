@@ -158,38 +158,8 @@ namespace ThirdPersonCamera
 
         CameraFramePlan ApplyShake(CameraFramePlan plan, in CameraFrameInput input)
         {
-            for (int i = 0; i < m_Active.Count; i++)
-            {
-                ActiveEffect active = m_Active[i];
-                if (active.Request.Kind != CameraEffectKind.Shake ||
-                    !m_Projection.TryGetShake(active.Request.ResourceId, out CameraShakePayload payload))
-                    continue;
-                float time = active.Retired ? active.RetireElapsed : active.Elapsed;
-                float envelope = EvaluateShakeEnvelope(time, payload);
-                envelope *= active.Retired
-                    ? Mathf.Clamp01(1f - active.RetireElapsed / Mathf.Max(0.016f, payload.FadeOutDuration))
-                    : 1f;
-                float seed = StableSeed(payload.ShakeId);
-                float phase = seed + time * payload.Frequency;
-                float yawNoise = Mathf.PerlinNoise(phase, seed * 0.37f) * 2f - 1f;
-                float pitchNoise = Mathf.PerlinNoise(seed * 0.61f, phase * 1.13f) * 2f - 1f;
-                float rollNoise = Mathf.PerlinNoise(phase * 0.83f, seed * 0.91f) * 2f - 1f;
-                float angle = payload.NoiseAngle * Mathf.Deg2Rad + yawNoise * payload.NoiseRatio;
-                float radius = payload.RadiusLength * envelope * active.Request.Weight;
-                float distance = Mathf.Max(0.001f, payload.DistanceToPlane);
-                float radialYaw = Mathf.Atan2(Mathf.Sin(angle) * radius, distance) * Mathf.Rad2Deg;
-                float radialPitch = Mathf.Atan2(
-                    Mathf.Sin(payload.AngleVertical * Mathf.Deg2Rad) * radius,
-                    distance) * Mathf.Rad2Deg;
-                plan = plan
-                    .WithOrbit(
-                        plan.OrbitYaw + radialYaw + yawNoise * payload.YawAmplitude * envelope * active.Request.Weight,
-                        plan.OrbitPitch + radialPitch + pitchNoise * payload.PitchAmplitude * envelope * active.Request.Weight,
-                        plan.OrbitRadius)
-                    .WithRadiusScale(plan.RadiusScale + radius / Mathf.Max(0.001f, plan.OrbitRadius))
-                    .WithRoll(plan.RollDegrees + rollNoise * payload.RollAmplitude * envelope * active.Request.Weight);
-            }
-            return plan;
+            throw new InvalidOperationException(
+                "Camera Shake evaluation is unavailable before its ZZZ consumer semantics are closed.");
         }
 
         CameraFramePlan ApplyShot(CameraFramePlan plan, in CameraFrameInput input)
@@ -361,30 +331,6 @@ namespace ThirdPersonCamera
         {
             float duration = Mathf.Max(0.0001f, end - start);
             return Mathf.Clamp01((elapsed - delay - start) / duration);
-        }
-
-        static float EvaluateShakeEnvelope(float elapsed, CameraShakePayload payload)
-        {
-            float fadeIn = payload.FadeInDuration <= 0f
-                ? 1f
-                : Mathf.Clamp01(payload.FadeInCurve.Evaluate(elapsed / payload.FadeInDuration));
-            float remaining = payload.ShakeTotalTime - elapsed;
-            float fadeOut = payload.FadeOutDuration <= 0f
-                ? 1f
-                : Mathf.Clamp01(payload.FadeOutCurve.Evaluate(remaining / payload.FadeOutDuration));
-            float curve = payload.Curve.Evaluate(elapsed);
-            return Mathf.Max(0f, fadeIn * fadeOut * curve);
-        }
-
-        static float StableSeed(string value)
-        {
-            unchecked
-            {
-                uint hash = 2166136261u;
-                for (int i = 0; i < value.Length; i++)
-                    hash = (hash ^ value[i]) * 16777619u;
-                return (hash & 0x00ffffffu) / 16777216f * 97f;
-            }
         }
 
         static CameraEffectStage ToStage(CameraEffectKind kind)

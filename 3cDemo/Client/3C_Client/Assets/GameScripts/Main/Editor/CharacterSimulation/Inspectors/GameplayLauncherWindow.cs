@@ -446,6 +446,15 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                     EditorStyles.textField,
                     GUILayout.Height(EditorGUIUtility.singleLineHeight));
             }
+            if (!string.IsNullOrEmpty(
+                    CharacterFootDiagnosticSampling.LastQualityScorePath))
+            {
+                EditorGUILayout.LabelField("Quality Score");
+                EditorGUILayout.SelectableLabel(
+                    CharacterFootDiagnosticSampling.LastQualityScorePath,
+                    EditorStyles.textField,
+                    GUILayout.Height(EditorGUIUtility.singleLineHeight));
+            }
             DrawFixedInputTrace();
             EditorGUILayout.Space(4f);
             EditorGUILayout.LabelField(

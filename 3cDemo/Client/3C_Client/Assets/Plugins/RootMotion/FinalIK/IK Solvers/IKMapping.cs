@@ -41,7 +41,7 @@ namespace RootMotion.FinalIK {
 			private IndexedBoneHandle planeBone1Handle = IndexedBoneHandle.Invalid;
 			private IndexedBoneHandle planeBone2Handle = IndexedBoneHandle.Invalid;
 			private IndexedBoneHandle planeBone3Handle = IndexedBoneHandle.Invalid;
-			private IKSolverFullBody solver;
+			[System.NonSerialized] private IKSolverFullBody solver;
 			private int plane1ChainIndex = -1;
 			private int plane1NodeIndex = -1;
 			private int plane2ChainIndex = -1;

@@ -356,8 +356,11 @@ def render_cameras(out, cameras, dependencies, sources):
         for key, data in entries.items():
             lines += [f"### {key}", "", table(["字段说明与原名", "原值"], [(f"{LABELS.get(field.split('.')[-1], field)} `{field}`", value) for field, value in flatten(data) if "$type" not in field]), ""]
     (out / "镜头参数.md").write_text("\n".join(lines), encoding="utf-8")
-    lines = ["# 公共镜头依赖", "", "按精确资源键聚合全部引用。此清单的出现表示需要该资源，不表示已取得其正文。补充导出和分析结果统一放在 analysis/。", "",
-             table(["资源键", "引用数量", "引用字段"], [(key, len(refs), sorted({r["field"] for r in refs})) for key, refs in sorted(dependencies.items())]), ""]
+    progress_file = out / "analysis/resolved-camera-dependencies.json"
+    progress = read_json(progress_file) if progress_file.exists() else {}
+    labels = {"curve-values-confirmed": "曲线关键帧与切线已取得，来源一致", "curve-variant-conflict": "曲线变体有差异", "standard-config-not-located": "标准配置正文未定位"}
+    lines = ["# 公共镜头依赖", "", "按精确资源键聚合全部引用。最新曲线数值与来源对账见 [公共曲线](analysis/公共曲线.md)。", "",
+             table(["资源键", "引用数量", "引用字段", "当前状态"], [(key, len(refs), sorted({r["field"] for r in refs}), labels.get(progress.get(key, {}).get("status"), "待定位")) for key, refs in sorted(dependencies.items())]), ""]
     (out / "公共镜头依赖.md").write_text("\n".join(lines), encoding="utf-8")
 
 

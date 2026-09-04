@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Globalization;
 using System.IO;
 using System.Security.Cryptography;
@@ -155,7 +156,6 @@ namespace ThirdPersonPerformance.Runtime
         {
             PerformanceCameraInputOverride.Clear();
             PerformanceInstrumentationSpanRuntime.CancelCapture();
-            PerformanceCaptureTelemetry.Cancel();
             DisposeRecorders();
             m_Transport?.Dispose();
             m_Transport = null;
@@ -445,12 +445,6 @@ namespace ThirdPersonPerformance.Runtime
                 m_Scenario.capture_logic_ticks,
                 m_Profile.logic_tick_rate,
                 m_Profile.sample_capacity_margin_percent);
-            int logicCapacity = Capacity(
-                m_Profile.logic_tick_rate,
-                m_Scenario.capture_logic_ticks,
-                m_Profile.logic_tick_rate,
-                m_Profile.sample_capacity_margin_percent);
-            PerformanceCaptureTelemetry.Begin(logicCapacity);
             PerformanceInstrumentationSpanRuntime.BeginCapture();
             StartRecorders(renderCapacity);
             string profilerPath = Path.Combine(m_Request.staging_root, "unity-profiler.raw");
@@ -516,8 +510,6 @@ namespace ThirdPersonPerformance.Runtime
                 throw new InvalidOperationException(
                     $"Performance instrumentation Span capture faulted. capacity={buffer?.Capacity ?? 0}, records={buffer?.Count ?? 0}, attempted={buffer?.AttemptedCount ?? 0}, last_sequence={buffer?.LastSequence ?? 0}, last_point={(buffer?.LastPointId ?? 0UL):x16}.");
             }
-            if (PerformanceCaptureTelemetry.Overflowed)
-                throw new InvalidOperationException("Performance LogicTick sample capacity overflowed.");
             if (trace.Mode != FixedCharacterInputTraceMode.Completed)
                 return;
             if (trace.ReplayedFrameCount != m_Scenario.warmup_logic_ticks + m_Scenario.capture_logic_ticks)
@@ -588,8 +580,10 @@ namespace ThirdPersonPerformance.Runtime
             string profilerPath = Path.Combine(m_Request.staging_root, "unity-profiler.raw");
             if (!File.Exists(profilerPath) || new FileInfo(profilerPath).Length == 0L)
                 throw new InvalidDataException("Unity binary Profiler capture was not published.");
-            PerformanceLogicTickSample[] logicSamples = PerformanceCaptureTelemetry.Complete();
-            WriteMetricSamples(logicSamples);
+            int logicTicks = CountMetricSamples(instrumentationSpans, "session.logic-tick");
+            if (logicTicks != m_Scenario.capture_logic_ticks)
+                throw new InvalidDataException("Performance Session LogicTick Span count does not match the capture scenario.");
+            WriteMetricSamples(instrumentationSpans);
             string catalogRevision = ComputeCatalogRevision();
             WriteMetricCatalog(catalogRevision);
             int dropped = GameplayTickSystem.Current.DroppedLocalLogicTicks - m_DroppedLogicTicksAtStart;
@@ -603,7 +597,7 @@ namespace ThirdPersonPerformance.Runtime
                 started_utc = m_StartedUtc,
                 completed_utc = DateTime.UtcNow.ToString("O", CultureInfo.InvariantCulture),
                 presentation_frames = Time.frameCount - m_CaptureStartFrame,
-                logic_ticks = logicSamples.Length,
+                logic_ticks = logicTicks,
                 dropped_logic_ticks = dropped,
                 capture_seconds = Math.Max(double.Epsilon, Time.realtimeSinceStartup - m_CaptureStartedRealtime),
                 metric_catalog_revision = catalogRevision,
@@ -626,7 +620,7 @@ namespace ThirdPersonPerformance.Runtime
             Shutdown(0);
         }
 
-        void WriteMetricSamples(PerformanceLogicTickSample[] logicSamples)
+        void WriteMetricSamples(PerformanceSpanRecord[] instrumentationSpans)
         {
             var builder = new StringBuilder(1024 * 1024);
             builder.AppendLine("metric_id,sample_scope,sample_index,identity,render_frame,value,count");
@@ -650,26 +644,27 @@ namespace ThirdPersonPerformance.Runtime
                         .Append(samples[sampleIndex].Count.ToString(CultureInfo.InvariantCulture)).AppendLine();
                 }
             }
-            for (int i = 0; i < logicSamples.Length; i++)
+            IReadOnlyList<PerformanceMetricDefinition> metrics = ThirdPersonRuntimePerformanceMetricCatalog.All;
+            var metricsByHash = new Dictionary<ulong, PerformanceMetricDefinition>();
+            for (int i = 0; i < metrics.Count; i++)
             {
-                builder.Append("session.logic-tick,LogicTick,")
+                PerformanceMetricDefinition metric = metrics[i];
+                ulong metricHash = PerformanceInstrumentationIdentity.Hash64(metric.MetricId);
+                if (!metricsByHash.TryAdd(metricHash, metric))
+                    throw new InvalidDataException($"Performance metric '{metric.MetricId}' has a duplicate hash.");
+            }
+            for (int i = 0; i < instrumentationSpans.Length; i++)
+            {
+                PerformanceSpanRecord span = instrumentationSpans[i];
+                if (!metricsByHash.TryGetValue(span.MetricId, out PerformanceMetricDefinition metric))
+                    throw new InvalidDataException($"Performance instrumentation Span metric hash '{span.MetricId:x16}' is not in the catalog.");
+                double nanoseconds = span.DurationTicks * 1000000000d / Stopwatch.Frequency;
+                builder.Append(Csv(metric.MetricId)).Append(',')
+                    .Append(metric.SampleScope).Append(',')
                     .Append(i.ToString(CultureInfo.InvariantCulture)).Append(',')
-                    .Append(logicSamples[i].Tick.ToString(CultureInfo.InvariantCulture)).Append(',')
-                    .Append(logicSamples[i].RenderFrame.ToString(CultureInfo.InvariantCulture)).Append(',')
-                    .Append(logicSamples[i].ElapsedNanoseconds.ToString(CultureInfo.InvariantCulture))
-                    .AppendLine(",1");
-                for (int phase = 1; phase < logicSamples[i].PhaseNanoseconds.Length; phase++)
-                {
-                    long value = logicSamples[i].PhaseNanoseconds[phase];
-                    if (value <= 0)
-                        continue;
-                    PerformanceMetricDefinition metric = SimulationPerformanceMetrics.Require((SimulationPerformancePhase)phase);
-                    builder.Append(Csv(metric.MetricId)).Append(",LogicTick,")
-                        .Append(i.ToString(CultureInfo.InvariantCulture)).Append(',')
-                        .Append(logicSamples[i].Tick.ToString(CultureInfo.InvariantCulture)).Append(',')
-                        .Append(logicSamples[i].RenderFrame.ToString(CultureInfo.InvariantCulture)).Append(',')
-                        .Append(value.ToString(CultureInfo.InvariantCulture)).AppendLine(",1");
-                }
+                    .Append(span.PointId.ToString("x16", CultureInfo.InvariantCulture)).Append(',')
+                    .Append(span.RenderFrame.ToString(CultureInfo.InvariantCulture)).Append(',')
+                    .Append(nanoseconds.ToString(CultureInfo.InvariantCulture)).AppendLine(",1");
             }
             File.WriteAllText(
                 Path.Combine(m_Request.staging_root, "metric-samples.csv"),
@@ -713,6 +708,20 @@ namespace ThirdPersonPerformance.Runtime
             WriteJson(
                 Path.Combine(m_Request.staging_root, "metric-catalog.json"),
                 new PerformanceMetricCatalogDocument { revision = revision, metrics = values });
+        }
+
+        int CountMetricSamples(
+            PerformanceSpanRecord[] instrumentationSpans,
+            string metricId)
+        {
+            ulong metricHash = PerformanceInstrumentationIdentity.Hash64(metricId);
+            int count = 0;
+            for (int i = 0; i < instrumentationSpans.Length; i++)
+            {
+                if (instrumentationSpans[i].MetricId == metricHash)
+                    count++;
+            }
+            return count;
         }
 
         void Fault(string stage, Exception exception)
@@ -814,7 +823,6 @@ namespace ThirdPersonPerformance.Runtime
             Profiler.enableBinaryLog = false;
             Profiler.logFile = string.Empty;
             PerformanceInstrumentationSpanRuntime.CancelCapture();
-            PerformanceCaptureTelemetry.Cancel();
             DisposeRecorders();
             PerformanceCameraInputOverride.Clear();
             FixedCharacterInputTraceModule.Stop();

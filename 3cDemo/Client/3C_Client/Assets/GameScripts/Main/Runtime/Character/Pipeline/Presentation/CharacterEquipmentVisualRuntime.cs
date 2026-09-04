@@ -4,6 +4,7 @@ using System.Linq;
 using BTSMTL.Diagnostics;
 using ThirdPersonCharacter.Equipment;
 using ThirdPersonCharacter.Pipeline.Animation;
+using ThirdPersonPerformance.Instrumentation;
 using ThirdPersonSimulation;
 using UnityEngine;
 using Object = UnityEngine.Object;
@@ -81,6 +82,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             m_HasPendingSelections = true;
         }
 
+        [PerformanceProbe("presentation.equipment")]
         public void Present()
         {
             RequireAlive();

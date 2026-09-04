@@ -2,6 +2,7 @@
     "name": "ThirdPersonSimulation.Unity",
     "rootNamespace": "ThirdPersonCharacter.Pipeline.Simulation",
     "references": [
+        "ThirdPersonPerformance.Contracts",
         "ThirdPersonSimulation.Core",
         "ThirdPersonSimulation.Float32"
     ],

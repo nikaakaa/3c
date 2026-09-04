@@ -4,6 +4,10 @@
     "references": [
         "ThirdPerson.Development.Gm.Contracts",
         "ThirdPerson.NetworkTest.Contracts",
+        "ThirdPersonPerformance.Contracts",
+        "ThirdPerson.Performance.Instrumentation.Contracts",
+        "ThirdPersonPerformance.Runtime",
+        "Unity.ThirdPerson.Performance.Instrumentation.CodeGen",
         "ThirdPersonClient.Runtime",
         "ThirdPersonSimulation.Core",
         "ThirdPersonSimulation.Float32",

@@ -1,6 +1,6 @@
 using System;
 using System.Collections.Generic;
-using Unity.Profiling;
+using ThirdPersonPerformance.Instrumentation;
 using UnityEngine;
 
 namespace ThirdPersonGameplay.Tick
@@ -35,10 +35,6 @@ namespace ThirdPersonGameplay.Tick
     public sealed class GameplayTickSystem : IDisposable
     {
         static GameplayTickSystem s_Current;
-        static readonly ProfilerMarker InputMarker = new ProfilerMarker("ThirdPerson.Gameplay.Input");
-        static readonly ProfilerMarker LogicMarker = new ProfilerMarker("ThirdPerson.Gameplay.Logic");
-        static readonly ProfilerMarker PresentationMarker = new ProfilerMarker("ThirdPerson.Gameplay.Presentation");
-
         readonly List<IGameplayRenderFrameInputTarget> m_InputTargets = new List<IGameplayRenderFrameInputTarget>();
         readonly List<IGameplayLogicTickTarget> m_LogicTargets = new List<IGameplayLogicTickTarget>();
         readonly List<IGameplayPresentationFrameTarget> m_PresentationTargets = new List<IGameplayPresentationFrameTarget>();
@@ -293,6 +289,22 @@ namespace ThirdPersonGameplay.Tick
                 return;
             m_PresentationFrameAdvanced = true;
             RenderFrame++;
+            PerformanceInstrumentationContextRuntime.BeginFrame(RenderFrame);
+            try
+            {
+                FrameUpdateCore(scaledDeltaSeconds, unscaledDeltaSeconds, scripted);
+            }
+            finally
+            {
+                PerformanceInstrumentationContextRuntime.EndFrame();
+            }
+        }
+
+        void FrameUpdateCore(
+            float scaledDeltaSeconds,
+            float unscaledDeltaSeconds,
+            bool scripted)
+        {
             m_LastScaledDeltaSeconds = Math.Max(0f, scaledDeltaSeconds);
             m_LastUnscaledDeltaSeconds = Math.Max(0f, unscaledDeltaSeconds);
             m_FrameStartLocalLogicTick = LocalLogicTick;
@@ -302,8 +314,7 @@ namespace ThirdPersonGameplay.Tick
                 PrepareScriptedPresentationFrame();
             int advancedLogicTicks = 0;
             AdmitAccumulatorDelta();
-            using (InputMarker.Auto())
-                BeginTargetRenderFrame(RenderFrame);
+            BeginTargetRenderFrame(RenderFrame);
 
             m_FrameLogicActive = true;
             try
@@ -351,30 +362,28 @@ namespace ThirdPersonGameplay.Tick
             }
         }
 
+        [PerformanceProbe("gameplay.presentation")]
         public void FrameLateUpdate()
         {
             if (m_Disposed || !m_PresentationFrameAdvanced)
                 return;
 
-            using (PresentationMarker.Auto())
+            var context = new GameplayPresentationFrameContext(
+                m_LastScaledDeltaSeconds,
+                m_LastUnscaledDeltaSeconds,
+                m_LastPresentationDeltaSeconds,
+                m_DrivePolicy.PresentationClockMode,
+                RenderFrame,
+                LocalLogicTick,
+                m_InterpolationAlpha);
+            for (int i = 0; i < m_PresentationTargets.Count; i++)
             {
-                var context = new GameplayPresentationFrameContext(
-                    m_LastScaledDeltaSeconds,
-                    m_LastUnscaledDeltaSeconds,
-                    m_LastPresentationDeltaSeconds,
-                    m_DrivePolicy.PresentationClockMode,
-                    RenderFrame,
-                    LocalLogicTick,
-                    m_InterpolationAlpha);
-                for (int i = 0; i < m_PresentationTargets.Count; i++)
-                {
-                    IGameplayPresentationFrameTarget target =
-                        m_PresentationTargets[i];
-                    if (target != null)
-                        target.PresentationFrame(context);
-                }
-                PublishPresentationScheduleFrame();
+                IGameplayPresentationFrameTarget target =
+                    m_PresentationTargets[i];
+                if (target != null)
+                    target.PresentationFrame(context);
             }
+            PublishPresentationScheduleFrame();
         }
 
         public void Dispose()
@@ -791,6 +800,7 @@ namespace ThirdPersonGameplay.Tick
             }
         }
 
+        [PerformanceProbe("gameplay.logic")]
         void TickTargets(float fixedDeltaSeconds)
         {
             for (int i = 0; i < m_LogicTargets.Count; i++)
@@ -813,8 +823,15 @@ namespace ThirdPersonGameplay.Tick
         void AdvanceLogicTick(float fixedDeltaSeconds)
         {
             LocalLogicTick++;
-            using (LogicMarker.Auto())
+            PerformanceInstrumentationContextRuntime.BeginLogicTick(LocalLogicTick);
+            try
+            {
                 TickTargets(fixedDeltaSeconds);
+            }
+            finally
+            {
+                PerformanceInstrumentationContextRuntime.EndLogicTick();
+            }
         }
 
         void BeforeTargetLogicTick(IGameplayLogicTickTarget target, GameplayLogicTickContext context)
@@ -844,6 +861,7 @@ namespace ThirdPersonGameplay.Tick
                 : m_LastScaledDeltaSeconds;
         }
 
+        [PerformanceProbe("gameplay.input")]
         void BeginTargetRenderFrame(ulong renderFrame)
         {
             for (int i = 0; i < m_InputTargets.Count; i++)

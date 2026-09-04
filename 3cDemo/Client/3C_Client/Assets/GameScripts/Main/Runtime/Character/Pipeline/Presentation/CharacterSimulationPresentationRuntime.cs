@@ -7,8 +7,8 @@ using ThirdPersonCharacter.Pipeline.Animation.Diagnostics;
 using ThirdPersonCharacter.Pipeline.Animation.MotionMatching;
 using ThirdPersonCharacter.Pipeline.Diagnostics;
 using ThirdPersonGameplay.Tick;
+using ThirdPersonPerformance.Instrumentation;
 using ThirdPersonSimulation;
-using Unity.Profiling;
 using UnityEngine;
 
 namespace ThirdPersonCharacter.Pipeline.Presentation
@@ -18,12 +18,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         ISimulationPresentationOutputPort,
         IAnimationPresentationRuntimeSnapshotProvider
     {
-        static readonly ProfilerMarker AnimationMarker = new ProfilerMarker(CharacterPerformanceMetrics.AnimationName);
-        static readonly ProfilerMarker EquipmentMarker = new ProfilerMarker(CharacterPerformanceMetrics.EquipmentName);
-        static readonly ProfilerMarker FactProjectionMarker = new ProfilerMarker(CharacterPerformanceMetrics.FactProjectionName);
-        static readonly ProfilerMarker FinalPoseMarker = new ProfilerMarker(CharacterPerformanceMetrics.FinalPoseName);
-        static readonly ProfilerMarker CameraMarker = new ProfilerMarker(CharacterPerformanceMetrics.CameraName);
-
         readonly ActorId m_ActorId;
         readonly CharacterPresentationProjection m_Projection;
         readonly CharacterBodyPresentationRuntime m_Body;
@@ -53,6 +47,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         bool m_PresentationFrameActive;
         bool m_PendingAnimationFrame;
         bool m_PendingCameraFrame;
+        bool m_PerformanceContextActive;
         bool m_Disposed;
 
         internal CharacterSimulationPresentationRuntime(
@@ -314,10 +309,14 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             m_PendingPresentationContext = context;
             m_PresentationFrameActive = true;
             m_Diagnostics.BeginPresentationFrame(context.RenderFrame);
+            PerformanceInstrumentationContextRuntime.BeginActor(
+                PerformanceInstrumentationIdentity.Hash64(m_ActorId.Value),
+                PerformanceInstrumentationIdentity.Hash64(m_Projection.ProgramId),
+                PerformanceInstrumentationIdentity.Hash64(m_Projection.ContractHash));
+            m_PerformanceContextActive = true;
             try
             {
-                using (EquipmentMarker.Auto())
-                    m_Equipment.Present();
+                m_Equipment.Present();
                 m_PendingBodyFrame = m_Body.Present(context);
                 if (!m_PendingBodyFrame.IsValid)
                 {
@@ -365,32 +364,25 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 m_PendingCameraFrame = m_Camera != null;
                 if (animationDeltaSeconds <= 0f)
                     return;
-                CharacterPresentationFactFrame factFrame;
-                using (FactProjectionMarker.Auto())
-                {
-                    factFrame = m_FactProjector.Project(
-                        context.RenderFrame,
-                        animationDeltaSeconds,
-                        in m_PendingBodyFrame);
-                }
+                CharacterPresentationFactFrame factFrame = m_FactProjector.Project(
+                    context.RenderFrame,
+                    animationDeltaSeconds,
+                    in m_PendingBodyFrame);
                 try
                 {
                     CharacterPresentationProgramParameterFrame parameterFrame =
                         CharacterPresentationProgramParameterFrame.FromFact(
                             in factFrame);
-                    using (AnimationMarker.Auto())
-                    {
-                        m_Animation.BeginPresentation(
-                            context.RenderFrame,
-                            m_PendingBodyFrame.AnimationSampleTick,
-                            m_PendingBodyFrame.AnimationSampleAlpha,
-                            animationDeltaSeconds,
-                            in m_PendingBodyFrame,
-                            in factFrame,
-                            in parameterFrame,
-                            m_LinkedPose.Session,
-                            m_Diagnostics);
-                    }
+                    m_Animation.BeginPresentation(
+                        context.RenderFrame,
+                        m_PendingBodyFrame.AnimationSampleTick,
+                        m_PendingBodyFrame.AnimationSampleAlpha,
+                        animationDeltaSeconds,
+                        in m_PendingBodyFrame,
+                        in factFrame,
+                        in parameterFrame,
+                        m_LinkedPose.Session,
+                        m_Diagnostics);
                     m_PendingAnimationFrame = true;
                 }
                 catch (Exception exception)
@@ -420,8 +412,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 return false;
             try
             {
-                using (AnimationMarker.Auto())
-                    return m_Animation.TryAdvancePresentation(out workerLease);
+                return m_Animation.TryAdvancePresentation(out workerLease);
             }
             catch (Exception exception)
             {
@@ -429,6 +420,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 throw;
             }
         }
+
 
         internal void CompletePresentationFrame()
         {
@@ -444,32 +436,23 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     ComposedAnimationPoseFrame animationPose;
                     try
                     {
-                        using (AnimationMarker.Auto())
-                            animationPose = m_Animation.CompletePresentation();
+                        animationPose = m_Animation.CompletePresentation();
                     }
                     catch (Exception exception)
                     {
                         ReportPresentationFailure(exception);
                         throw;
                     }
-                    using (FinalPoseMarker.Auto())
-                    {
-                        CommitFinalPose(
-                            m_PendingBodyFrame,
-                            m_PendingPresentationContext,
-                            in animationPose);
-                    }
+                    CommitFinalPose(
+                        m_PendingBodyFrame,
+                        m_PendingPresentationContext,
+                        in animationPose);
                 }
                 if (m_PendingCameraFrame)
-                {
-                    using (CameraMarker.Auto())
-                    {
-                        m_Camera.Present(
-                            m_PendingBodyFrame,
-                            m_PendingPresentationContext
-                                .PresentationDeltaSeconds);
-                    }
-                }
+                    m_Camera.Present(
+                        m_PendingBodyFrame,
+                        m_PendingPresentationContext
+                            .PresentationDeltaSeconds);
             }
             finally
             {
@@ -492,11 +475,20 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
 
         void ClearPendingPresentationFrame()
         {
+            EndPerformanceContext();
             m_PendingPresentationContext = default;
             m_PendingBodyFrame = default;
             m_PresentationFrameActive = false;
             m_PendingAnimationFrame = false;
             m_PendingCameraFrame = false;
+        }
+
+        void EndPerformanceContext()
+        {
+            if (!m_PerformanceContextActive)
+                return;
+            PerformanceInstrumentationContextRuntime.EndActor();
+            m_PerformanceContextActive = false;
         }
 
         void ReportPresentationFailure(Exception exception)
@@ -586,6 +578,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             return (float)deltaSeconds;
         }
 
+        [PerformanceProbe("presentation.final-pose")]
         void CommitFinalPose(
             CharacterBodyPresentationFrame bodyFrame,
             GameplayPresentationFrameContext context,

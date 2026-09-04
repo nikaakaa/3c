@@ -64,6 +64,14 @@
       "source": "embedded",
       "dependencies": {}
     },
+    "com.thirdperson.performance-instrumentation": {
+      "version": "file:com.thirdperson.performance-instrumentation",
+      "depth": 0,
+      "source": "embedded",
+      "dependencies": {
+        "com.unity.nuget.mono-cecil": "1.11.6"
+      }
+    },
     "com.thirdperson.tooling-contracts": {
       "version": "file:../../../Shared/UnityPackages/com.thirdperson.tooling-contracts",
       "depth": 0,

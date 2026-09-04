@@ -3,6 +3,9 @@
     "rootNamespace": "ThirdPersonCharacter",
     "references": [
         "KK.GeneratedDiagnosticSampling.Annotations",
+        "ThirdPerson.Performance.Instrumentation.Core",
+        "ThirdPerson.Performance.Instrumentation.Contracts",
+        "ThirdPersonPerformance.Contracts",
         "ThirdPersonSimulation.Core",
         "ThirdPersonSimulation.Float32",
         "ThirdPersonSimulation.Unity",

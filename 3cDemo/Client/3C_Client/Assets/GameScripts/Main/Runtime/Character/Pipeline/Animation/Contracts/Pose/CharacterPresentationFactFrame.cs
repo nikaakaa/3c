@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using ThirdPersonCharacter.Pipeline.Animation.MotionMatching;
 using ThirdPersonCharacter.Pipeline.Presentation;
+using ThirdPersonPerformance.Instrumentation;
 using ThirdPersonSimulation;
 using UnityEngine;
 
@@ -448,6 +449,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             m_LatestIntentTick = intent.CurrentTick.Value;
         }
 
+        [PerformanceProbe("presentation.fact-projection")]
         internal CharacterPresentationFactFrame Project(
             ulong renderFrame,
             float presentationDeltaSeconds,

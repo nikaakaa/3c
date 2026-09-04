@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using BTSMTL.Timeline;
 using ThirdPersonCamera;
 using ThirdPersonCharacter.Pipeline.Animation;
+using ThirdPersonPerformance.Instrumentation;
 using UnityEngine;
 
 namespace ThirdPersonCharacter.Pipeline.Presentation
@@ -172,6 +173,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             }
         }
 
+        [PerformanceProbe("presentation.camera")]
         public void Present(CharacterBodyPresentationFrame bodyFrame, float presentationDeltaSeconds)
         {
             RequireAlive();

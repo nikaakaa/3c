@@ -2,6 +2,9 @@
     "name": "ThirdPersonGameplay",
     "rootNamespace": "ThirdPersonGameplay",
     "references": [
+        "ThirdPerson.Performance.Instrumentation.Core",
+        "ThirdPerson.Performance.Instrumentation.Contracts",
+        "ThirdPersonPerformance.Contracts",
         "TEngine.Runtime"
     ],
     "includePlatforms": [],

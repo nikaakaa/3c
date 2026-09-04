@@ -1,8 +1,9 @@
 using System;
 using System.Collections.Generic;
 using BTSMTL.Diagnostics;
+using ThirdPersonCharacter.Pipeline.Diagnostics;
 using ThirdPersonGameplay.Tick;
-using Unity.Profiling;
+using ThirdPersonPerformance.Instrumentation;
 using UnityEngine;
 
 namespace ThirdPersonCharacter.Pipeline.Presentation
@@ -108,8 +109,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
 
     internal sealed class CharacterBodyPresentationRuntime : IDisposable
     {
-        static readonly ProfilerMarker BodyMarker = new ProfilerMarker("ThirdPerson.Presentation.Body");
-
         readonly ThirdPersonSimulation.ActorId m_ActorId;
         readonly int m_SimulationTickRate;
         readonly float m_TickDurationSeconds;
@@ -234,21 +233,19 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             }
         }
 
+        [PerformanceProbe("presentation.body")]
         public CharacterBodyPresentationFrame Present(GameplayPresentationFrameContext context)
         {
             RequireAlive();
             if (m_LatestTick == 0)
                 return default;
-            using (BodyMarker.Auto())
-            {
-                CharacterBodyPresentationFrame frame = m_SourceMode == CharacterBodyPresentationSourceMode.CommittedStream
-                    ? PresentCommitted(context)
-                    : PresentSelected(context);
-                m_LastPresentedFrame = frame;
-                ApplyVisualRoot(frame);
-                PublishDiagnostics(frame, context.PresentationDeltaSeconds);
-                return frame;
-            }
+            CharacterBodyPresentationFrame frame = m_SourceMode == CharacterBodyPresentationSourceMode.CommittedStream
+                ? PresentCommitted(context)
+                : PresentSelected(context);
+            m_LastPresentedFrame = frame;
+            ApplyVisualRoot(frame);
+            PublishDiagnostics(frame, context.PresentationDeltaSeconds);
+            return frame;
         }
 
         public void Reset()

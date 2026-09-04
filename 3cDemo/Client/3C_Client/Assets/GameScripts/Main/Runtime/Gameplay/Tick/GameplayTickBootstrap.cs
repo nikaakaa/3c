@@ -1,4 +1,5 @@
 using TEngine;
+using ThirdPersonPerformance.Instrumentation;
 using UnityEngine;
 
 namespace ThirdPersonGameplay.Tick
@@ -45,7 +46,18 @@ namespace ThirdPersonGameplay.Tick
 
         static void FrameLateUpdate()
         {
-            GameplayTickSystem.Current?.FrameLateUpdate();
+            GameplayTickSystem tick = GameplayTickSystem.Current;
+            if (tick == null)
+                return;
+            PerformanceInstrumentationContextRuntime.BeginFrame(tick.RenderFrame);
+            try
+            {
+                tick.FrameLateUpdate();
+            }
+            finally
+            {
+                PerformanceInstrumentationContextRuntime.EndFrame();
+            }
         }
     }
 }

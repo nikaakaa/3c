@@ -1,7 +1,9 @@
 {
     "name": "ThirdPersonSimulation.Core",
     "rootNamespace": "ThirdPersonSimulation",
-    "references": [],
+    "references": [
+        "ThirdPersonPerformance.Contracts"
+    ],
     "includePlatforms": [],
     "excludePlatforms": [],
     "allowUnsafeCode": false,

@@ -3260,6 +3260,7 @@ GameObject:
   m_Component:
   - component: {fileID: 57136606670616896}
   - component: {fileID: 268177363342442266}
+  - component: {fileID: 8800000000000010003}
   - component: {fileID: 5306894909396852544}
   - component: {fileID: 5449312224847304094}
   m_Layer: 7
@@ -3300,6 +3301,23 @@ MonoBehaviour:
   m_LogicRoot: {fileID: 57136606670616896}
   m_VisualRoot: {fileID: 8784676640723996954}
   m_PoseRoot: {fileID: 8532503528913021027}
+--- !u!114 &8800000000000010003
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4416566270723489921}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7cf23f86583b4e6cab4c6e9524d13ae1, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  m_headBone: {fileID: 4122314096116246405}
+  m_headForwardAxis: {x: 0, y: 1, z: 0}
+  m_headLeftAxis: {x: 0, y: 0, z: 1}
+  m_faceRenderers:
+  - {fileID: 1853718416523455373}
 --- !u!114 &5306894909396852544
 MonoBehaviour:
   m_ObjectHideFlags: 0

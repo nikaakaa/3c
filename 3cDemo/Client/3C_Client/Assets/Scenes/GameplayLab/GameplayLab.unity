@@ -425,7 +425,7 @@ PrefabInstance:
     - target: {fileID: -8679921383154817045, guid: c3a5ce34162b1294e9d35f20534cd050,
         type: 3}
       propertyPath: m_LocalRotation.w
-      value: 1
+      value: 0.47792548
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: c3a5ce34162b1294e9d35f20534cd050,
         type: 3}
@@ -435,12 +435,12 @@ PrefabInstance:
     - target: {fileID: -8679921383154817045, guid: c3a5ce34162b1294e9d35f20534cd050,
         type: 3}
       propertyPath: m_LocalRotation.y
-      value: -0
+      value: 0.8784004
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: c3a5ce34162b1294e9d35f20534cd050,
         type: 3}
       propertyPath: m_LocalRotation.z
-      value: -0
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: c3a5ce34162b1294e9d35f20534cd050,
         type: 3}
@@ -450,18 +450,38 @@ PrefabInstance:
     - target: {fileID: -8679921383154817045, guid: c3a5ce34162b1294e9d35f20534cd050,
         type: 3}
       propertyPath: m_LocalEulerAnglesHint.y
-      value: 0
+      value: 122.9
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: c3a5ce34162b1294e9d35f20534cd050,
         type: 3}
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: -5796575612631117253, guid: c3a5ce34162b1294e9d35f20534cd050,
+        type: 3}
+      propertyPath: m_Materials.Array.data[0]
+      value: 
+      objectReference: {fileID: 2100000, guid: 6a1226ad2e148c54f9449dfa4a280ee5, type: 2}
+    - target: {fileID: -2057885488166770031, guid: c3a5ce34162b1294e9d35f20534cd050,
+        type: 3}
+      propertyPath: m_Materials.Array.data[0]
+      value: 
+      objectReference: {fileID: 2100000, guid: b621e7d1eb5d4c67866efd9af0f3334f, type: 2}
     - target: {fileID: 919132149155446097, guid: c3a5ce34162b1294e9d35f20534cd050,
         type: 3}
       propertyPath: m_Name
       value: "\u53EF\u7433"
       objectReference: {fileID: 0}
+    - target: {fileID: 3279335799362821179, guid: c3a5ce34162b1294e9d35f20534cd050,
+        type: 3}
+      propertyPath: m_Materials.Array.data[0]
+      value: 
+      objectReference: {fileID: 2100000, guid: c7685f8654aee19499e3a7799e83fc99, type: 2}
+    - target: {fileID: 8401105251500419362, guid: c3a5ce34162b1294e9d35f20534cd050,
+        type: 3}
+      propertyPath: m_Materials.Array.data[0]
+      value: 
+      objectReference: {fileID: 2100000, guid: 2aef6dc16c3a45b297a00375d395f743, type: 2}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []

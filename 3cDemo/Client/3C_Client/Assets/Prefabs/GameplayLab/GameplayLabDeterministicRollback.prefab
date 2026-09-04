@@ -865,8 +865,8 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 5328815199575810606}
   serializedVersion: 2
-  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalRotation: {x: -0.03632495, y: 0, z: 0, w: 0.99934006}
+  m_LocalPosition: {x: 0, y: 0, z: -10}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
@@ -1207,6 +1207,21 @@ PrefabInstance:
       value: 
       objectReference: {fileID: 11400000, guid: f365735adcfd49c4e96070df6bcd3bc4,
         type: 2}
+    - target: {fileID: 8800000000000010004, guid: ba3673d85af17c34e871949782c81a04,
+        type: 3}
+      propertyPath: _mainLightColorOverrideValue.b
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 8800000000000010004, guid: ba3673d85af17c34e871949782c81a04,
+        type: 3}
+      propertyPath: _mainLightColorOverrideValue.g
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 8800000000000010004, guid: ba3673d85af17c34e871949782c81a04,
+        type: 3}
+      propertyPath: _mainLightColorOverrideValue.r
+      value: 1
+      objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []

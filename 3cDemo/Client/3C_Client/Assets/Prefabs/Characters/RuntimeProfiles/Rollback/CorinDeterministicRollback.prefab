@@ -2015,6 +2015,7 @@ GameObject:
   - component: {fileID: 4046611573928020424}
   - component: {fileID: 8819041415098219917}
   - component: {fileID: 1203345607023827491}
+  - component: {fileID: 5268310691034726327}
   m_Layer: 0
   m_Name: PoseRoot
   m_TagString: Untagged
@@ -2381,6 +2382,63 @@ MonoBehaviour:
     CompositeGpuMilliseconds: 0
     State: 0
     Fault: 
+--- !u!114 &5268310691034726327
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2493909065712362065}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a70e525c82ce9413fa4d940ad7fcf1db, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  fixTransforms: 1
+  references:
+    root: {fileID: 5305730279633917072}
+    pelvis: {fileID: 1570802263222709384}
+    leftThigh: {fileID: 1618637958864076879}
+    leftCalf: {fileID: 6702429855117299515}
+    leftFoot: {fileID: 8924571619662937751}
+    rightThigh: {fileID: 9182268633862568910}
+    rightCalf: {fileID: 5355263893880096664}
+    rightFoot: {fileID: 5220728311433568546}
+    leftUpperArm: {fileID: 2801848794048774517}
+    leftForearm: {fileID: 3650802879974743860}
+    leftHand: {fileID: 3012578606999800794}
+    rightUpperArm: {fileID: 8867879552731850707}
+    rightForearm: {fileID: 2854128952488160796}
+    rightHand: {fileID: 6010777600730736397}
+    head: {fileID: 6399002331264630197}
+    spine:
+    - {fileID: 4202424592513437820}
+    - {fileID: 1072265782496540508}
+    - {fileID: 2322439988913118289}
+    eyes: []
+  solver:
+    executedInEditor: 0
+    IKPosition: {x: 0, y: 0, z: 0}
+    IKPositionWeight: 1
+    root: {fileID: 0}
+    iterations: 4
+    chain: []
+    effectors: []
+    spineMapping:
+      spineBones: []
+      leftUpperArmBone: {fileID: 0}
+      rightUpperArmBone: {fileID: 0}
+      leftThighBone: {fileID: 0}
+      rightThighBone: {fileID: 0}
+      iterations: 3
+      twistWeight: 1
+    boneMappings: []
+    limbMappings: []
+    FABRIKPass: 1
+    rootNode: {fileID: 1072265782496540508}
+    spineStiffness: 0.5
+    pullBodyVertical: 0.5
+    pullBodyHorizontal: 0
 --- !u!1 &2598938356314745688
 GameObject:
   m_ObjectHideFlags: 0
@@ -2804,6 +2862,7 @@ GameObject:
   - component: {fileID: 2558453161078761465}
   - component: {fileID: 7433941062813063802}
   - component: {fileID: 910231010000000003}
+  - component: {fileID: 8800000000000010004}
   m_Layer: 7
   m_Name: CorinDeterministicRollback
   m_TagString: Untagged
@@ -2874,6 +2933,23 @@ MonoBehaviour:
   m_LogicRoot: {fileID: 2558453161078761465}
   m_VisualRoot: {fileID: 910231010000000002}
   m_PoseRoot: {fileID: 5305730279633917072}
+--- !u!114 &8800000000000010004
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3152955085780986447}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7cf23f86583b4e6cab4c6e9524d13ae1, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  m_headBone: {fileID: 6399002331264630197}
+  m_headForwardAxis: {x: 0, y: 1, z: 0}
+  m_headLeftAxis: {x: 0, y: 0, z: 1}
+  m_faceRenderers:
+  - {fileID: 9136480621315033978}
 --- !u!1 &3216796387984622026
 GameObject:
   m_ObjectHideFlags: 0

@@ -1,0 +1,83 @@
+#include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
+// for debug
+float _DebugValue1;
+float _DebugValue2;
+float _DebugValue3;
+
+#if defined(DEBUG_MODE)
+
+float4 _NoiseTillOffset;
+
+#endif
+
+
+
+// Texture
+TEXTURE2D(_AlbedoMap);      SAMPLER(sampler_AlbedoMap);
+TEXTURE2D(_NormalTex);      SAMPLER(sampler_NormalTex);
+TEXTURE2D(_MTex);           SAMPLER(sampler_MTex);
+TEXTURE2D(_RampTex);        SAMPLER(sampler_RampTex);
+TEXTURE2D(_360SDFTex);      SAMPLER(sampler_360SDFTex);
+TEXTURE2D(_2DSDFTex);       SAMPLER(sampler_2DSDFTex);
+
+// Switch
+int _Domain;
+
+// Attenuation Modes
+int _AttenuationMode;
+
+// Sigmoid Shadow
+float4 _SigmoidAttenuationColor;
+float _SigmoidAttenuationOffset;
+float _SigmoidAttenuationSmoothness;
+float _SigmoidAttenuationStrength;
+
+// Ramp Shadow
+float _RampAttenuationOffset;
+float _RampAttenuationSmoothness;
+float _RampAttenuationStrength;
+
+// Albedo
+float _DiffuseOffset;
+float _AlbedoSmoothness;
+            
+// Albedo Color
+float4 _ShadowColor1;
+float4 _ShadowColor2;
+float4 _ShadowColor3;
+float4 _ShadowColor4;
+float4 _ShadowColor5;
+float4 _ShallowColor1;
+float4 _ShallowColor2;
+float4 _ShallowColor3;
+float4 _ShallowColor4;
+float4 _ShallowColor5;
+
+float4 _PostShadowFadeTint;
+float4 _PostShadowTint;
+float4 _PostShallowFadeTint;
+float4 _PostShallowTint;
+float4 _PostSSSTint;
+float4 _PostFrontTint;
+
+// Normal 
+float _BumpScale;
+
+// M Texture Data (PBR Properties)
+float _Metallic;
+float _Smoothness;
+float _Specular;
+
+float _MetallicIntensity;
+float _SmoothnessIntensity;
+float _SpecularIntensity;
+
+// Render State Settings
+float _Cutoff;
+
+// SDF Settings
+float4 _SDFBrightColor;
+float4 _SDFShadowColor;
+// Head Vectors
+float3 _HeadForward;
+float3 _HeadLeft;

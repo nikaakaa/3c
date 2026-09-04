@@ -37,7 +37,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.DeterministicRollback
         [SerializeField] CharacterWorldAwarePresentationBinding m_WorldAwarePresentation;
         [SerializeField] AnimancerComponent m_Animancer;
         [SerializeField] CharacterAnimationRigBinding m_AnimationRigBinding;
-        [SerializeField] ThirdPersonCameraController m_CameraRig;
+        [SerializeField] CinemachineCameraRigAdapter m_CameraRig;
         [SerializeField] Transform m_CameraFollowAnchor;
         [SerializeField] Transform m_CameraAimAnchor;
         [SerializeField] List<CameraTargetBinding> m_CameraTargetBindings = new List<CameraTargetBinding>();
@@ -84,7 +84,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.DeterministicRollback
             string actorId,
             string worldBodyBindingId,
             CharacterRootHierarchyBinding rootHierarchy,
-            ThirdPersonCameraController cameraRig,
+            CinemachineCameraRigAdapter cameraRig,
             string cameraLookInputValueId)
         {
             m_SessionHost = sessionHost ? sessionHost : throw new ArgumentNullException(nameof(sessionHost));
@@ -188,7 +188,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.DeterministicRollback
                 {
                     CharacterInputProfile inputProfile = m_InputProfile ? m_InputProfile :
                         throw new InvalidOperationException($"Local Rollback Character Host '{name}' requires an Input Profile.");
-                    ThirdPersonCameraController cameraRig = m_CameraRig ? m_CameraRig :
+                    CinemachineCameraRigAdapter cameraRig = m_CameraRig ? m_CameraRig :
                         throw new InvalidOperationException($"Local Rollback Character Host '{name}' requires a Camera Rig.");
                     if (!m_CameraFollowAnchor || !m_CameraAimAnchor)
                         throw new InvalidOperationException($"Local Rollback Character Host '{name}' requires camera follow and aim anchors.");

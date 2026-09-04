@@ -17,7 +17,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation
     {
         readonly CharacterInputProfile m_Profile;
         readonly CharacterSimulationProgram m_Program;
-        readonly ThirdPersonCameraController m_CameraRig;
+        readonly CinemachineCameraRigAdapter m_CameraRig;
         readonly CharacterPipelineHost m_Owner;
         readonly string m_ActionTargetInputValueId;
         readonly ICharacterActionTargetInputProvider m_ActionTargetProvider;
@@ -41,7 +41,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation
         public UnityCharacterSimulationInputAdapter(
             CharacterInputProfile profile,
             CharacterSimulationProgram program,
-            ThirdPersonCameraController cameraRig,
+            CinemachineCameraRigAdapter cameraRig,
             CharacterPipelineHost owner,
             string actionTargetInputValueId,
             ICharacterActionTargetInputProvider actionTargetProvider)

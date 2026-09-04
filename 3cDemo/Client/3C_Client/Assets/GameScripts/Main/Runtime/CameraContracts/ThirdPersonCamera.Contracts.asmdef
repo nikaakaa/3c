@@ -1,0 +1,14 @@
+{
+    "name": "ThirdPersonCamera.Contracts",
+    "rootNamespace": "ThirdPersonCamera",
+    "references": [],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

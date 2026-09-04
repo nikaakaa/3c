@@ -36,7 +36,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
         [SerializeField] CharacterEquipmentRigBindingCatalog m_EquipmentRigBindings;
         [SerializeField] AnimancerComponent m_Animancer;
         [SerializeField] CharacterAnimationRigBinding m_AnimationRigBinding;
-        [SerializeField] ThirdPersonCameraController m_CameraRig;
+        [SerializeField] CinemachineCameraRigAdapter m_CameraRig;
         [SerializeField] Transform m_CameraFollowAnchor;
         [SerializeField] Transform m_CameraAimAnchor;
         [SerializeField] List<CameraTargetBinding> m_CameraTargetBindings = new List<CameraTargetBinding>();
@@ -51,7 +51,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
         public FixedCharacterSimulationProgramAsset ProgramAsset => m_Program;
         public CharacterPresentationProjectionAsset ProjectionAsset => m_PresentationProjection;
         public FixedCharacterControlSource ControlSource => m_ControlSource;
-        public ThirdPersonCameraController CameraRig => m_CameraRig;
+        public CinemachineCameraRigAdapter CameraRig => m_CameraRig;
         public CharacterPresentationRole PresentationRole => m_PresentationRole;
         public CharacterRootHierarchyBinding RootHierarchy => m_RootHierarchy;
         public Vector3 VisualPosition => m_RootHierarchy
@@ -122,7 +122,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
 
         public void SetSceneAuthoring(
             SimulationSessionHost sessionHost,
-            ThirdPersonCameraController cameraRig)
+            CinemachineCameraRigAdapter cameraRig)
         {
             m_SessionHost = sessionHost ? sessionHost : throw new ArgumentNullException(nameof(sessionHost));
             if (m_PresentationRole == CharacterPresentationRole.LocalOwner)
@@ -224,7 +224,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
                 {
                     case CharacterPresentationRole.LocalOwner:
                     {
-                        ThirdPersonCameraController cameraRig = m_CameraRig ? m_CameraRig :
+                        CinemachineCameraRigAdapter cameraRig = m_CameraRig ? m_CameraRig :
                             throw new InvalidOperationException($"Local Fixed Character Host '{name}' requires a Camera Rig.");
                         if (!m_CameraFollowAnchor || !m_CameraAimAnchor)
                             throw new InvalidOperationException($"Local Fixed Character Host '{name}' requires camera follow and aim anchors.");

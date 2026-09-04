@@ -6,12 +6,13 @@ namespace ThirdPersonCamera
 {
     public sealed class CameraTargetBindingResolver
     {
-        readonly Dictionary<string, Transform> m_Bindings = new Dictionary<string, Transform>(StringComparer.Ordinal);
+        readonly Dictionary<string, Transform> m_Bindings =
+            new Dictionary<string, Transform>(StringComparer.Ordinal);
 
         public CameraTargetBindingResolver(IReadOnlyList<CameraTargetBinding> bindings)
         {
             if (bindings == null)
-                return;
+                throw new ArgumentNullException(nameof(bindings));
             for (int i = 0; i < bindings.Count; i++)
             {
                 CameraTargetBinding binding = bindings[i] ??
@@ -34,30 +35,29 @@ namespace ThirdPersonCamera
         }
 
         public CameraResolvedTargetPlan Resolve(
-            CameraStateRequest state,
-            IEnumerable<CameraTargetRequest> requests)
+            CameraSequenceRequest sequence,
+            IEnumerable<CameraTargetSelectionRequest> requests)
         {
-            CameraTargetRequest selected = default;
+            CameraTargetSelectionRequest selected = default;
             if (requests != null)
             {
-                foreach (CameraTargetRequest candidate in requests)
+                foreach (CameraTargetSelectionRequest candidate in requests)
                 {
                     if (candidate.Active && ShouldReplace(selected, candidate))
                         selected = candidate;
                 }
             }
 
-            if (!selected.Active && string.IsNullOrEmpty(state.TargetKey))
+            if (!selected.Active && string.IsNullOrEmpty(sequence.TargetKey))
                 return CameraResolvedTargetPlan.NoOverride;
 
             string sourceKey = selected.Active
                 ? FirstKey(selected.AnchorKey, selected.AimPointKey, selected.PreferredBoneKey, selected.TargetKey)
-                : state.TargetKey;
+                : sequence.TargetKey;
             string followKey = selected.Active ? selected.AnchorKey : string.Empty;
             string aimKey = selected.Active
                 ? FirstKey(selected.AimPointKey, selected.PreferredBoneKey, selected.TargetKey)
-                : state.TargetKey;
-
+                : sequence.TargetKey;
             bool hasFollow = !string.IsNullOrEmpty(followKey);
             bool hasAim = !string.IsNullOrEmpty(aimKey);
             Vector3 follow = default;
@@ -67,6 +67,18 @@ namespace ThirdPersonCamera
             if (hasAim && !TryResolvePoint(aimKey, out aim, out string aimError))
                 return CameraResolvedTargetPlan.Invalid(sourceKey, aimError);
             return new CameraResolvedTargetPlan(true, hasFollow, follow, hasAim, aim, sourceKey, string.Empty);
+        }
+
+        public CameraTargetSnapshot CaptureSnapshot(string key)
+        {
+            if (string.IsNullOrEmpty(key) || !m_Bindings.TryGetValue(key, out Transform target) || !target)
+                return default;
+            return new CameraTargetSnapshot(
+                key,
+                target.position,
+                target.position,
+                Vector3.zero,
+                true);
         }
 
         bool TryResolvePoint(string key, out Vector3 point, out string error)
@@ -87,7 +99,9 @@ namespace ThirdPersonCamera
             return true;
         }
 
-        static bool ShouldReplace(CameraTargetRequest selected, CameraTargetRequest candidate)
+        static bool ShouldReplace(
+            CameraTargetSelectionRequest selected,
+            CameraTargetSelectionRequest candidate)
         {
             if (!selected.Active)
                 return true;
@@ -116,59 +130,39 @@ namespace ThirdPersonCamera
         }
     }
 
-    public sealed class CameraStateResolver
+    public sealed class CameraSequenceRequestResolver
     {
-        CameraMode m_CurrentMode = CameraMode.FreeLook;
-        string m_CurrentSourceId = string.Empty;
-        float m_BlendElapsed;
-        float m_BlendDuration;
-
-        public void Reset()
+        public CameraSequenceRequest Resolve(
+            IReadOnlyList<CameraSequenceRequest> requests,
+            string defaultSequenceId)
         {
-            m_CurrentMode = CameraMode.FreeLook;
-            m_CurrentSourceId = string.Empty;
-            m_BlendElapsed = 0f;
-            m_BlendDuration = 0f;
-        }
-
-        public CameraStateRequest Resolve(
-            IReadOnlyList<CameraStateRequest> requests,
-            HashSet<ulong> terminalActionInstances,
-            float deltaTime,
-            out float blendProgress)
-        {
-            CameraStateRequest selected = CameraStateRequest.FreeLookBase;
-
+            CameraSequenceRequest selected = default;
             if (requests != null)
             {
                 for (int i = 0; i < requests.Count; i++)
                 {
-                    CameraStateRequest candidate = requests[i];
-                    if (!candidate.Active || IsTerminal(candidate.SourceActionInstanceId, terminalActionInstances))
+                    CameraSequenceRequest candidate = requests[i];
+                    if (!candidate.Active || !ShouldReplace(selected, candidate))
                         continue;
-
-                    if (ShouldReplace(selected, candidate))
-                        selected = candidate;
+                    selected = candidate;
                 }
             }
-
-            if (selected.Mode != m_CurrentMode || selected.SourceId != m_CurrentSourceId)
-            {
-                m_CurrentMode = selected.Mode;
-                m_CurrentSourceId = selected.SourceId;
-                m_BlendElapsed = 0f;
-                m_BlendDuration = selected.BlendInSeconds;
-            }
-            else
-            {
-                m_BlendElapsed += Mathf.Max(0f, deltaTime);
-            }
-
-            blendProgress = m_BlendDuration <= 0f ? 1f : Mathf.Clamp01(m_BlendElapsed / m_BlendDuration);
-            return selected;
+            return selected.Active
+                ? selected
+                : new CameraSequenceRequest(
+                    defaultSequenceId,
+                    int.MinValue,
+                    1f,
+                    0f,
+                    0f,
+                    string.Empty,
+                    "camera.default.sequence",
+                    0,
+                    0,
+                    CameraSequenceInterruptPolicy.BlendOut);
         }
 
-        static bool ShouldReplace(CameraStateRequest selected, CameraStateRequest candidate)
+        static bool ShouldReplace(CameraSequenceRequest selected, CameraSequenceRequest candidate)
         {
             if (!selected.Active)
                 return true;
@@ -176,230 +170,35 @@ namespace ThirdPersonCamera
                 return candidate.Priority > selected.Priority;
             if (!Mathf.Approximately(candidate.Weight, selected.Weight))
                 return candidate.Weight > selected.Weight;
-            return false;
-        }
-
-        static bool IsTerminal(ulong actionInstanceId, HashSet<ulong> terminalActionInstances)
-        {
-            return actionInstanceId != 0 &&
-                   terminalActionInstances != null &&
-                   terminalActionInstances.Contains(actionInstanceId);
+            return string.CompareOrdinal(candidate.SourceId, selected.SourceId) < 0;
         }
     }
 
-    public sealed class CameraResponsePolicyResolver
+    public sealed class CameraResponseRequestResolver
     {
-        public CameraResponsePolicy Resolve(
-            CameraStateRequest selectedState,
-            IReadOnlyList<CameraResponsePolicy> policies,
-            HashSet<ulong> terminalActionInstances)
+        public CameraResponseRequest Resolve(IReadOnlyList<CameraResponseRequest> requests)
         {
-            CameraResponsePolicy selected = DefaultFor(selectedState);
-            if (policies == null)
+            CameraResponseRequest selected = new CameraResponseRequest(
+                CameraResponseMode.Full,
+                1f,
+                1f,
+                1f,
+                int.MinValue,
+                1f,
+                "camera.default.response",
+                0,
+                0);
+            if (requests == null)
                 return selected;
-
-            for (int i = 0; i < policies.Count; i++)
+            for (int i = 0; i < requests.Count; i++)
             {
-                CameraResponsePolicy candidate = policies[i];
-                if (!candidate.Active || IsTerminal(candidate.SourceActionInstanceId, terminalActionInstances))
+                CameraResponseRequest candidate = requests[i];
+                if (!candidate.Active || candidate.Priority < selected.Priority ||
+                    candidate.Priority == selected.Priority && candidate.Weight <= selected.Weight)
                     continue;
-
-                if (ShouldReplace(selected, candidate))
-                    selected = candidate;
+                selected = candidate;
             }
-
             return selected;
-        }
-
-        static CameraResponsePolicy DefaultFor(CameraStateRequest state)
-        {
-            if (state.Mode == CameraMode.SkillCloseup)
-            {
-                return new CameraResponsePolicy(
-                    CameraLookResponseMode.Suppressed,
-                    0f,
-                    0f,
-                    0f,
-                    state.Priority,
-                    1f,
-                    state.SourceId,
-                    state.SourceActionInstanceId);
-            }
-
-            return CameraResponsePolicy.Full;
-        }
-
-        static bool ShouldReplace(CameraResponsePolicy selected, CameraResponsePolicy candidate)
-        {
-            if (!selected.Active)
-                return true;
-            if (candidate.Priority != selected.Priority)
-                return candidate.Priority > selected.Priority;
-            return candidate.Weight > selected.Weight;
-        }
-
-        static bool IsTerminal(ulong actionInstanceId, HashSet<ulong> terminalActionInstances)
-        {
-            return actionInstanceId != 0 &&
-                   terminalActionInstances != null &&
-                   terminalActionInstances.Contains(actionInstanceId);
-        }
-    }
-
-    public sealed class CameraModifierResolver
-    {
-        static readonly CameraCueKind[] ApplyOrder =
-        {
-            CameraCueKind.Shake,
-            CameraCueKind.FovKick,
-            CameraCueKind.Recoil,
-            CameraCueKind.CollisionCorrection,
-            CameraCueKind.Custom
-        };
-
-        readonly List<ActiveCameraCue> m_ActiveCues = new List<ActiveCameraCue>();
-        readonly List<CameraCue> m_DebugCues = new List<CameraCue>();
-
-        public IReadOnlyList<CameraCue> DebugCues => m_DebugCues;
-
-        public void Reset()
-        {
-            m_ActiveCues.Clear();
-            m_DebugCues.Clear();
-        }
-
-        public void DiscardTerminal(HashSet<ulong> terminalActionInstances)
-        {
-            if (terminalActionInstances == null || terminalActionInstances.Count == 0)
-                return;
-
-            for (int i = m_ActiveCues.Count - 1; i >= 0; i--)
-            {
-                if (IsTerminal(m_ActiveCues[i].Cue.SourceActionInstanceId, terminalActionInstances))
-                    m_ActiveCues.RemoveAt(i);
-            }
-            RebuildDebugCues();
-        }
-
-        public void RetireSource(string sourceId)
-        {
-            if (string.IsNullOrEmpty(sourceId))
-                return;
-            for (int i = m_ActiveCues.Count - 1; i >= 0; i--)
-            {
-                if (string.Equals(m_ActiveCues[i].Cue.SourceId, sourceId, StringComparison.Ordinal))
-                    m_ActiveCues.RemoveAt(i);
-            }
-            RebuildDebugCues();
-        }
-
-        public CameraPosePlan Resolve(
-            CameraPosePlan basePlan,
-            IReadOnlyList<CameraCue> newCues,
-            HashSet<ulong> terminalActionInstances,
-            float deltaTime)
-        {
-            AddNewCues(newCues, terminalActionInstances);
-            UpdateCues(deltaTime, terminalActionInstances);
-
-            CameraPosePlan plan = basePlan;
-            for (int orderIndex = 0; orderIndex < ApplyOrder.Length; orderIndex++)
-            {
-                CameraCueKind cueKind = ApplyOrder[orderIndex];
-                for (int i = 0; i < m_ActiveCues.Count; i++)
-                {
-                    CameraCue cue = m_ActiveCues[i].Cue;
-                    if (cue.CueKind == cueKind)
-                        plan = ApplyCue(plan, cue);
-                }
-            }
-
-            RebuildDebugCues();
-            return plan;
-        }
-
-        void AddNewCues(IReadOnlyList<CameraCue> cues, HashSet<ulong> terminalActionInstances)
-        {
-            if (cues == null)
-                return;
-
-            for (int i = 0; i < cues.Count; i++)
-            {
-                CameraCue cue = cues[i];
-                if (!cue.Active || IsTerminal(cue.SourceActionInstanceId, terminalActionInstances))
-                    continue;
-
-                m_ActiveCues.Add(new ActiveCameraCue(cue));
-            }
-        }
-
-        void UpdateCues(float deltaTime, HashSet<ulong> terminalActionInstances)
-        {
-            float dt = Mathf.Max(0f, deltaTime);
-            for (int i = m_ActiveCues.Count - 1; i >= 0; i--)
-            {
-                ActiveCameraCue active = m_ActiveCues[i];
-                if (IsTerminal(active.Cue.SourceActionInstanceId, terminalActionInstances))
-                {
-                    m_ActiveCues.RemoveAt(i);
-                    continue;
-                }
-
-                active.RemainingSeconds -= dt;
-                if (active.RemainingSeconds <= 0f)
-                    m_ActiveCues.RemoveAt(i);
-            }
-        }
-
-        static CameraPosePlan ApplyCue(CameraPosePlan plan, CameraCue cue)
-        {
-            float intensity = cue.Intensity;
-            float fieldOfView = plan.FieldOfView;
-
-            switch (cue.CueKind)
-            {
-                case CameraCueKind.FovKick:
-                    fieldOfView += intensity;
-                    break;
-            }
-
-            return new CameraPosePlan(
-                plan.Mode,
-                plan.FollowPoint,
-                plan.AimPoint,
-                fieldOfView,
-                plan.ResponsePolicy,
-                plan.LookDelta,
-                plan.SourceId,
-                plan.SourceActionInstanceId,
-                plan.BlendProgress,
-                plan.Valid);
-        }
-
-        void RebuildDebugCues()
-        {
-            m_DebugCues.Clear();
-            for (int i = 0; i < m_ActiveCues.Count; i++)
-                m_DebugCues.Add(m_ActiveCues[i].Cue);
-        }
-
-        static bool IsTerminal(ulong actionInstanceId, HashSet<ulong> terminalActionInstances)
-        {
-            return actionInstanceId != 0 &&
-                   terminalActionInstances != null &&
-                   terminalActionInstances.Contains(actionInstanceId);
-        }
-
-        sealed class ActiveCameraCue
-        {
-            public ActiveCameraCue(CameraCue cue)
-            {
-                Cue = cue;
-                RemainingSeconds = cue.DurationSeconds > 0f ? cue.DurationSeconds : 0.016f;
-            }
-
-            public CameraCue Cue { get; }
-            public float RemainingSeconds;
         }
     }
 }

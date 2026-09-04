@@ -35,7 +35,7 @@ namespace ThirdPersonCharacter.Pipeline
 		[SerializeField] CharacterEquipmentPreviewFixture m_EquipmentPreviewFixture;
 		[SerializeField] CharacterBodyPresentationProfile m_BodyPresentationProfile;
 		[SerializeField] CharacterWorldAwarePresentationBinding m_WorldAwarePresentation;
-		[SerializeField] ThirdPersonCameraController m_CameraRig;
+		[SerializeField] CinemachineCameraRigAdapter m_CameraRig;
 		[SerializeField] Transform m_CameraFollowAnchor;
 		[SerializeField] Transform m_CameraAimAnchor;
 		[SerializeField] List<CameraTargetBinding> m_CameraTargetBindings = new List<CameraTargetBinding>();
@@ -64,7 +64,7 @@ namespace ThirdPersonCharacter.Pipeline
 		public CharacterEquipmentPreviewFixture EquipmentPreviewFixture => m_EquipmentPreviewFixture;
 		public CharacterBodyPresentationProfile BodyPresentationProfile => m_BodyPresentationProfile;
 		public CharacterWorldAwarePresentationBinding WorldAwarePresentation => m_WorldAwarePresentation;
-		public ThirdPersonCameraController CameraRig => m_CameraRig;
+		public CinemachineCameraRigAdapter CameraRig => m_CameraRig;
 		public Transform CameraFollowAnchor => m_CameraFollowAnchor;
 		public Transform CameraAimAnchor => m_CameraAimAnchor;
 		public IReadOnlyList<CameraTargetBinding> CameraTargetBindings => m_CameraTargetBindings;
@@ -198,7 +198,7 @@ namespace ThirdPersonCharacter.Pipeline
 		public void SetRuntimeAuthoring(
 			CharacterControlSource controlSource,
 			CharacterPresentationRole presentationRole,
-			ThirdPersonCameraController cameraRig)
+			CinemachineCameraRigAdapter cameraRig)
 		{
 			m_ControlSource = controlSource ? controlSource :
 				throw new ArgumentNullException(nameof(controlSource));

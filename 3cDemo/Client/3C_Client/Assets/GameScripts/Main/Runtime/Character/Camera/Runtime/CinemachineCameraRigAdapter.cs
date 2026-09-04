@@ -4,7 +4,7 @@ using UnityEngine;
 namespace ThirdPersonCamera
 {
     [DefaultExecutionOrder(-50)]
-    public sealed class ThirdPersonCameraController : MonoBehaviour, ICameraMovementBasisProvider, ICameraPitchProvider, ICameraRigAdapter
+    public sealed class CinemachineCameraRigAdapter : MonoBehaviour, ICameraMovementBasisProvider, ICameraPitchProvider, ICameraRigAdapter
     {
         [SerializeField] CinemachineFreeLook freeLook;
         [SerializeField] CinemachineBrain brain;
@@ -38,6 +38,8 @@ namespace ThirdPersonCamera
 
         void Awake()
         {
+            if (freeLook == null || brain == null)
+                ResetComponentReferences();
             ReportMissingFreeLook();
             ReportInvalidBrain();
             ReportMissingTargets();
@@ -54,15 +56,19 @@ namespace ThirdPersonCamera
             RefreshBasisSnapshot();
         }
 
-        void Reset()
+        void ResetComponentReferences()
         {
             freeLook = GetComponentInChildren<CinemachineFreeLook>(true);
             brain = GetComponent<CinemachineBrain>();
         }
 
-        public void Apply(CameraPosePlan plan) => Apply(plan, false);
-
-        public void ApplyAfterTrackingReset(CameraPosePlan plan) => Apply(plan, true);
+        void OnValidate()
+        {
+            if (!freeLook)
+                freeLook = GetComponentInChildren<CinemachineFreeLook>(true);
+            if (!brain)
+                brain = GetComponent<CinemachineBrain>();
+        }
 
         public void Apply(in CameraFramePlan plan)
         {
@@ -97,27 +103,6 @@ namespace ThirdPersonCamera
                 freeLook.PreviousStateIsValid = false;
                 RestoreInitialOrbitRadii();
             }
-        }
-
-        void Apply(CameraPosePlan plan, bool resetTracking)
-        {
-            if (!plan.Valid)
-            {
-                basisSnapshot = CameraBasisSnapshot.Invalid;
-                result = default;
-                return;
-            }
-
-            if (!CanApply())
-                return;
-
-            ApplyLookDelta(plan.LookDelta);
-            ApplyTargets(plan.FollowPoint, plan.AimPoint);
-            ApplyLens(plan.FieldOfView);
-            if (resetTracking)
-                freeLook.PreviousStateIsValid = false;
-            UpdateBrain();
-            RefreshBasisSnapshot(plan.AimPoint);
         }
 
         public void SnapTargets(Vector3 followPoint, Vector3 aimPoint)
@@ -168,20 +153,6 @@ namespace ThirdPersonCamera
             return true;
         }
 
-        void ApplyLookDelta(Vector2 lookDelta)
-        {
-            if (freeLook == null || lookDelta.sqrMagnitude <= 0f)
-                return;
-
-            freeLook.m_XAxis.Value = ResolveAxisValue(
-                freeLook.m_XAxis.Value + lookDelta.x * sensitivity.x,
-                freeLook.m_XAxis.m_MinValue,
-                freeLook.m_XAxis.m_MaxValue,
-                freeLook.m_XAxis.m_Wrap);
-            freeLook.m_YAxis.Value = Mathf.Clamp01(freeLook.m_YAxis.Value - lookDelta.y * sensitivity.y);
-            ClearFreeLookInput();
-        }
-
         void ApplyTargets(Vector3 followPoint, Vector3 aimPoint)
         {
             cameraFollowTarget.position = followPoint;
@@ -208,13 +179,6 @@ namespace ThirdPersonCamera
             freeLook.m_YAxis.m_InputAxisValue = 0f;
             freeLook.m_XAxis.SetInputAxisProvider(0, null);
             freeLook.m_YAxis.SetInputAxisProvider(1, null);
-        }
-
-        void ApplyLens(float fieldOfView)
-        {
-            LensSettings lens = freeLook.m_Lens;
-            lens.FieldOfView = Mathf.Max(1f, fieldOfView);
-            freeLook.m_Lens = lens;
         }
 
         void ApplyLens(float fieldOfView, float nearClipPlane, float farClipPlane)
@@ -279,14 +243,15 @@ namespace ThirdPersonCamera
 
         void RefreshBasisSnapshot(Vector3 aimPoint)
         {
-            if (freeLook == null || !freeLook.PreviousStateIsValid)
+            if (brain == null || brain.ActiveVirtualCamera == null)
             {
                 basisSnapshot = CameraBasisSnapshot.Invalid;
                 result = default;
                 return;
             }
 
-            Quaternion rotation = freeLook.State.FinalOrientation;
+            CameraState state = brain.CurrentCameraState;
+            Quaternion rotation = state.FinalOrientation;
             Vector3 lookDirection = (rotation * Vector3.forward).normalized;
             if (lookDirection.sqrMagnitude <= 0.000001f)
             {
@@ -306,9 +271,9 @@ namespace ThirdPersonCamera
                 planarForward.sqrMagnitude > 0.000001f && planarRight.sqrMagnitude > 0.000001f);
             result = new CameraRigResult(
                 basisSnapshot,
-                freeLook.State.FinalPosition,
+                state.FinalPosition,
                 rotation,
-                freeLook.m_Lens.FieldOfView,
+                state.Lens.FieldOfView,
                 basisSnapshot.Valid);
         }
 
@@ -341,7 +306,7 @@ namespace ThirdPersonCamera
                 return;
 
             missingFreeLookReported = true;
-            Debug.LogError("ThirdPersonCameraController requires an explicit CinemachineFreeLook.", this);
+            Debug.LogError("CinemachineCameraRigAdapter requires an explicit CinemachineFreeLook.", this);
         }
 
         void ReportMissingTargets()
@@ -350,7 +315,7 @@ namespace ThirdPersonCamera
                 return;
 
             missingTargetReported = true;
-            Debug.LogError("ThirdPersonCameraController requires explicit camera follow and aim targets.", this);
+            Debug.LogError("CinemachineCameraRigAdapter requires explicit camera follow and aim targets.", this);
         }
 
         void ReportInvalidBrain()
@@ -359,7 +324,7 @@ namespace ThirdPersonCamera
                 return;
 
             invalidBrainReported = true;
-            Debug.LogError("ThirdPersonCameraController requires an explicit CinemachineBrain with Update Method set to Manual Update.", this);
+            Debug.LogError("CinemachineCameraRigAdapter requires an explicit CinemachineBrain with Update Method set to Manual Update.", this);
         }
 
         float ResolveYaw()

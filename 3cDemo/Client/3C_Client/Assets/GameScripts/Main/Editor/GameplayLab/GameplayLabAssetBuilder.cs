@@ -423,7 +423,7 @@ namespace ThirdPersonGameplay.Editor.Lab
                 var root = new GameObject("GameplayLabLocalFixed");
                 SimulationSessionHost sessionHost = root.AddComponent<SimulationSessionHost>();
                 sessionHost.BindComposition(composition);
-                ThirdPersonCameraController cameraRig = CreateCameraRig(root.transform);
+                CinemachineCameraRigAdapter cameraRig = CreateCameraRig(root.transform);
                 FixedCharacterHost player = InstantiateFixedActor(
                     FixedPlayerProfilePrefabPath,
                     root.transform,
@@ -469,7 +469,7 @@ namespace ThirdPersonGameplay.Editor.Lab
                 var root = new GameObject("GameplayLabLocalFloat32");
                 SimulationSessionHost sessionHost = root.AddComponent<SimulationSessionHost>();
                 sessionHost.BindComposition(composition);
-                ThirdPersonCameraController cameraRig = CreateCameraRig(root.transform);
+                CinemachineCameraRigAdapter cameraRig = CreateCameraRig(root.transform);
                 CharacterPipelineHost player = InstantiateFloatActor(
                     PlayerPrefabPath,
                     root.transform,
@@ -522,7 +522,7 @@ namespace ThirdPersonGameplay.Editor.Lab
                 var root = new GameObject("GameplayLabDeterministicRollback");
                 SimulationSessionHost sessionHost = root.AddComponent<SimulationSessionHost>();
                 sessionHost.BindComposition(composition);
-                ThirdPersonCameraController cameraRig = CreateCameraRig(root.transform);
+                CinemachineCameraRigAdapter cameraRig = CreateCameraRig(root.transform);
                 DeterministicRollbackCharacterHost actorA = InstantiateRollbackActor(
                     root.transform,
                     "Corin Rollback Actor A",
@@ -572,7 +572,7 @@ namespace ThirdPersonGameplay.Editor.Lab
             RollbackEndpointAuthoringDefinition endpoint,
             FixedCharacterSimulationProgramAsset fixedProgram,
             CharacterPipelineDefinition definition,
-            ThirdPersonCameraController cameraRig)
+            CinemachineCameraRigAdapter cameraRig)
         {
             GameObject instance = InstantiatePrefab(AnimationRigTemplatePrefabPath, parent.gameObject.scene);
             instance.name = objectName;
@@ -611,7 +611,7 @@ namespace ThirdPersonGameplay.Editor.Lab
             Quaternion rotation,
             SimulationSessionHost sessionHost,
             CharacterPresentationRole role,
-            ThirdPersonCameraController cameraRig)
+            CinemachineCameraRigAdapter cameraRig)
         {
             GameObject instance = InstantiatePrefab(prefabPath, parent.gameObject.scene);
             instance.name = objectName;
@@ -632,7 +632,7 @@ namespace ThirdPersonGameplay.Editor.Lab
             Vector3 position,
             Quaternion rotation,
             SimulationSessionHost sessionHost,
-            ThirdPersonCameraController cameraRig)
+            CinemachineCameraRigAdapter cameraRig)
         {
             GameObject instance = InstantiatePrefab(prefabPath, parent.gameObject.scene);
             instance.name = objectName;
@@ -838,7 +838,7 @@ namespace ThirdPersonGameplay.Editor.Lab
             rigBinding.RequireValid(payload);
         }
 
-        static ThirdPersonCameraController CreateCameraRig(Transform parent)
+        static CinemachineCameraRigAdapter CreateCameraRig(Transform parent)
         {
             var targets = new GameObject("Gameplay Camera Targets");
             targets.transform.SetParent(parent, false);
@@ -883,7 +883,7 @@ namespace ThirdPersonGameplay.Editor.Lab
             CinemachineBrain brain = cameraObject.AddComponent<CinemachineBrain>();
             brain.m_UpdateMethod = CinemachineBrain.UpdateMethod.ManualUpdate;
             brain.m_BlendUpdateMethod = CinemachineBrain.BrainUpdateMethod.LateUpdate;
-            var controller = cameraObject.AddComponent<ThirdPersonCameraController>();
+            var controller = cameraObject.AddComponent<CinemachineCameraRigAdapter>();
             controller.FreeLook = freeLook;
             controller.Brain = brain;
             controller.CameraFollowTarget = follow;

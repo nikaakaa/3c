@@ -189,7 +189,7 @@ namespace ThirdPersonGameplay.Editor.Lab
                     throw new InvalidOperationException(
                         $"Gameplay Lab Variant '{variant.VariantId}' requires one bound committed Actor target provider.");
             }
-            if (root.GetComponentsInChildren<ThirdPersonCameraController>(true).Length != 1)
+            if (root.GetComponentsInChildren<CinemachineCameraRigAdapter>(true).Length != 1)
                 throw new InvalidOperationException($"Gameplay Lab Variant '{variant.VariantId}' requires exactly one gameplay camera controller.");
             int floatHosts = root.GetComponentsInChildren<CharacterPipelineHost>(true).Length;
             int fixedHosts = root.GetComponentsInChildren<FixedCharacterHost>(true).Length;

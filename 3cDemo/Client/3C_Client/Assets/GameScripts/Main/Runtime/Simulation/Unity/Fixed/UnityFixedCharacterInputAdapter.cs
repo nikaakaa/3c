@@ -23,7 +23,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
     {
         readonly CharacterInputProfile m_Profile;
         readonly ThirdPersonSimulation.Fixed.CharacterSimulationProgram m_Program;
-        readonly ThirdPersonCameraController m_CameraRig;
+        readonly CinemachineCameraRigAdapter m_CameraRig;
         readonly ISimulationSessionActorHost m_Owner;
         readonly string m_ActionTargetInputValueId;
         readonly ICharacterActionTargetInputProvider m_ActionTargetProvider;
@@ -49,7 +49,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
         public UnityFixedCharacterInputAdapter(
             CharacterInputProfile profile,
             ThirdPersonSimulation.Fixed.CharacterSimulationProgram program,
-            ThirdPersonCameraController cameraRig)
+            CinemachineCameraRigAdapter cameraRig)
             : this(profile, program, cameraRig, null, string.Empty, null)
         {
         }
@@ -57,7 +57,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
         public UnityFixedCharacterInputAdapter(
             CharacterInputProfile profile,
             ThirdPersonSimulation.Fixed.CharacterSimulationProgram program,
-            ThirdPersonCameraController cameraRig,
+            CinemachineCameraRigAdapter cameraRig,
             ISimulationSessionActorHost owner,
             string actionTargetInputValueId,
             ICharacterActionTargetInputProvider actionTargetProvider)

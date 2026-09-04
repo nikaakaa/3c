@@ -1,0 +1,20 @@
+{
+  "name": "Unity.ThirdPerson.Performance.Instrumentation.CodeGen",
+  "rootNamespace": "ThirdPersonPerformance.Instrumentation.Editor",
+  "references": [
+    "ThirdPerson.Performance.Instrumentation.Contracts"
+  ],
+  "includePlatforms": [
+    "Editor"
+  ],
+  "excludePlatforms": [],
+  "allowUnsafeCode": false,
+  "overrideReferences": true,
+  "precompiledReferences": [
+    "Mono.Cecil.dll"
+  ],
+  "autoReferenced": false,
+  "defineConstraints": [],
+  "versionDefines": [],
+  "noEngineReferences": false
+}

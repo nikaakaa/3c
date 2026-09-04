@@ -1,0 +1,11 @@
+{
+  "name": "com.thirdperson.performance-instrumentation",
+  "version": "1.0.0",
+  "displayName": "Third Person Performance Instrumentation",
+  "description": "Compile-time performance instrumentation for Unity gameplay assemblies.",
+  "unity": "2022.3",
+  "license": "MIT",
+  "dependencies": {
+    "com.unity.nuget.mono-cecil": "1.11.6"
+  }
+}

@@ -34,7 +34,7 @@
 
 - `GetData` 先解析 `aspectRatio`、`ElevationRatio`、`PolarAngle` 以及两个 context-dependent provider；轨道列表和屏幕偏移列表不会直接按整数下标读取。
 - `LAFFKCJNBDB`（RVA `0xF136C50`）把 `cameraOrbits` 的前三个 `height/radius` 转成三个键为 `0.0/0.5/1.0` 的轨道采样项；`BHALLONOACA`（RVA `0xF136570`）对 `screenOffset` 列表做同样处理。两个函数都实际写入三项，键值来自 `0x00000000/0x3F000000/0x3F800000`。
-- `0x10328820` 对这类轨道数据做区间查找；落在两个键之间时进入 `0x1036ECB0`，先计算 `(sample-key0)/(key1-key0)`，再按轨道的插值策略生成 `Vector2`。因此现有 `RoundToInt(ElevationRatio * (count - 1))` 不能代表原行为。
+- `PipelineCamera.InterpCurveMode` 的四个值为 `Linear`、`Cubic`、`Constant`、`Bezier`。ByTrack 通过 `0x10A1AC60` 把上述列表转换为运行曲线记录，该构造路径把记录的插值模式设为 `Constant`；`0x10328820` 仍会做区间查找并在落入区间时进入 `0x1036ECB0`，但当前这条来源轨道的实际曲线模式不是默认线性插值。采样比值在进入查找前被压到 `[0,1]`，因此现有 `RoundToInt(ElevationRatio * (count - 1))` 既不能代表原采样边界，也不能代表原曲线记录。
 - `GetData` 先分别取得轨道结果和屏幕偏移结果，再使用 `PolarAngle` 构造空间方向，计算轨道平面长度，最后进入相机数据构造和有效性/碰撞检查；结果不是只改变当前 `CameraOrbitComposition` 的半径。
 - `FrameMultiplePointsInCorePolicy_Chat.GetData` 的实际函数体在 RVA `0x12EF9204` 调用 `FrameTwoPointsInCorePolicy_Chat.GetData`（RVA `0x12A4B2F0`），说明多点策略存在来源明确的双点回退分支，不能把所有多点输入都强行压成单点。
 

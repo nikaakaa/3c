@@ -51,7 +51,12 @@ namespace ThirdPersonCamera
                 throw new InvalidOperationException($"{source} contains invalid Override track settings.");
             TopOrbit.RequireValid($"{source}.TopOrbit");
             for (int i = 0; i < Orbits.Count; i++)
-                Orbits[i]?.RequireValid($"{source}.Orbits[{i}]");
+            {
+                CameraOrbitDescriptor orbit = Orbits[i];
+                if (orbit == null)
+                    throw new InvalidOperationException($"{source}.Orbits[{i}] is missing.");
+                orbit.RequireValid($"{source}.Orbits[{i}]");
+            }
             for (int i = 0; i < ScreenY.Count; i++)
             {
                 if (!float.IsFinite(ScreenY[i]) || ScreenY[i] < 0f || ScreenY[i] > 1f)

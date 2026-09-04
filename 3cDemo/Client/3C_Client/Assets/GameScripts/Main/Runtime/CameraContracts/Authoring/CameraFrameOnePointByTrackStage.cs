@@ -33,7 +33,12 @@ namespace ThirdPersonCamera
                 !float.IsFinite(PolarAngle) || !float.IsFinite(ScreenOffset.x) || !float.IsFinite(ScreenOffset.y))
                 throw new InvalidOperationException($"{source} contains invalid single-point track framing.");
             for (int i = 0; i < CameraOrbits.Count; i++)
-                CameraOrbits[i]?.RequireValid($"{source}.CameraOrbits[{i}]");
+            {
+                CameraOrbitDescriptor orbit = CameraOrbits[i];
+                if (orbit == null)
+                    throw new InvalidOperationException($"{source}.CameraOrbits[{i}] is missing.");
+                orbit.RequireValid($"{source}.CameraOrbits[{i}]");
+            }
         }
     }
 }

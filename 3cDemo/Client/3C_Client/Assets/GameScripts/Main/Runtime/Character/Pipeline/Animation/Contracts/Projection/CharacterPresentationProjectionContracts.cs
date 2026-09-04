@@ -255,151 +255,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                    $"Animation={m_Animation != null} Camera={m_Camera != null} Cue={m_Cue != null} " +
                    $"CleanAnimationPayload={HasCleanAnimationPayload} IsValid={IsValid}";
         }
-    }
-
-    public enum CharacterPresentationCameraBindingKind
-    {
-        State,
-        Cue,
-        Response,
-        Target,
-        Sequence,
-        Override,
-        Zoom,
-        Stretch,
-        Shake,
-        Shot
-    }
-
-    public enum CharacterPresentationCameraEffectKind
-    {
-        Override,
-        Zoom,
-        Stretch,
-        Shake,
-        Shot
-    }
-
-    [Serializable]
-    public sealed class CharacterPresentationCameraBinding
-    {
-        [SerializeField] CharacterPresentationCameraBindingKind m_Kind;
-        [SerializeField] TimelineCameraMode m_Mode;
-        [SerializeField] int m_Priority;
-        [SerializeField] float m_BlendInSeconds;
-        [SerializeField] float m_BlendOutSeconds;
-        [SerializeField] string m_TargetKey = string.Empty;
-        [SerializeField] TimelineCameraInterruptPolicy m_InterruptPolicy;
-        [SerializeField] string m_CueId = string.Empty;
-        [SerializeField] TimelineCameraCueKind m_CueKind;
-        [SerializeField] string m_CueType = string.Empty;
-        [SerializeField] float m_DurationSeconds;
-        [SerializeField] CameraResponseMode m_LookResponse;
-        [SerializeField] float m_ManualOrbitWeight;
-        [SerializeField] float m_PitchResponseWeight;
-        [SerializeField] float m_YawResponseWeight;
-        [SerializeField] string m_AnchorKey = string.Empty;
-        [SerializeField] string m_AimPointKey = string.Empty;
-        [SerializeField] string m_PreferredBoneKey = string.Empty;
-        [SerializeField] string m_SequenceId = string.Empty;
-        [SerializeField] string m_ResourceId = string.Empty;
-        [SerializeField] CharacterPresentationCameraEffectKind m_EffectKind;
-
-        public CharacterPresentationCameraBindingKind Kind => m_Kind;
-        public TimelineCameraMode Mode => m_Mode;
-        public int Priority => m_Priority;
-        public float BlendInSeconds => m_BlendInSeconds;
-        public float BlendOutSeconds => m_BlendOutSeconds;
-        public string TargetKey => m_TargetKey;
-        public TimelineCameraInterruptPolicy InterruptPolicy => m_InterruptPolicy;
-        public string CueId => m_CueId;
-        public TimelineCameraCueKind CueKind => m_CueKind;
-        public string CueType => m_CueType;
-        public float DurationSeconds => m_DurationSeconds;
-        public CameraResponseMode LookResponse => m_LookResponse;
-        public float ManualOrbitWeight => m_ManualOrbitWeight;
-        public float PitchResponseWeight => m_PitchResponseWeight;
-        public float YawResponseWeight => m_YawResponseWeight;
-        public string AnchorKey => m_AnchorKey;
-        public string AimPointKey => m_AimPointKey;
-        public string PreferredBoneKey => m_PreferredBoneKey;
-        public string SequenceId => m_SequenceId ?? string.Empty;
-        public string ResourceId => m_ResourceId ?? string.Empty;
-        public CharacterPresentationCameraEffectKind EffectKind => m_EffectKind;
-
-        public static CharacterPresentationCameraBinding State(
-            TimelineCameraMode mode,
-            int priority,
-            float blendInSeconds,
-            float blendOutSeconds,
-            string targetKey,
-            TimelineCameraInterruptPolicy interruptPolicy)
-        {
-            return new CharacterPresentationCameraBinding
-            {
-                m_Kind = CharacterPresentationCameraBindingKind.State,
-                m_Mode = mode,
-                m_Priority = priority,
-                m_BlendInSeconds = blendInSeconds,
-                m_BlendOutSeconds = blendOutSeconds,
-                m_TargetKey = targetKey ?? string.Empty,
-                m_InterruptPolicy = interruptPolicy
-            };
-        }
-
-        public static CharacterPresentationCameraBinding Cue(
-            string cueId,
-            TimelineCameraCueKind cueKind,
-            string cueType,
-            float durationSeconds,
-            int priority)
-        {
-            return new CharacterPresentationCameraBinding
-            {
-                m_Kind = CharacterPresentationCameraBindingKind.Cue,
-                m_CueId = cueId ?? string.Empty,
-                m_CueKind = cueKind,
-                m_CueType = cueType ?? string.Empty,
-                m_DurationSeconds = durationSeconds,
-                m_Priority = priority
-            };
-        }
-
-        public static CharacterPresentationCameraBinding Response(
-            CameraResponseMode lookResponse,
-            float manualOrbitWeight,
-            float pitchResponseWeight,
-            float yawResponseWeight,
-            int priority)
-        {
-            return new CharacterPresentationCameraBinding
-            {
-                m_Kind = CharacterPresentationCameraBindingKind.Response,
-                m_LookResponse = lookResponse,
-                m_ManualOrbitWeight = manualOrbitWeight,
-                m_PitchResponseWeight = pitchResponseWeight,
-                m_YawResponseWeight = yawResponseWeight,
-                m_Priority = priority
-            };
-        }
-
-        public static CharacterPresentationCameraBinding Target(
-            string targetKey,
-            string anchorKey,
-            string aimPointKey,
-            string preferredBoneKey,
-            int priority)
-        {
-            return new CharacterPresentationCameraBinding
-            {
-                m_Kind = CharacterPresentationCameraBindingKind.Target,
-                m_TargetKey = targetKey ?? string.Empty,
-                m_AnchorKey = anchorKey ?? string.Empty,
-                m_AimPointKey = aimPointKey ?? string.Empty,
-                m_PreferredBoneKey = preferredBoneKey ?? string.Empty,
-                m_Priority = priority
-            };
-        }
 
         bool IsCameraBindingValid()
         {
@@ -407,12 +262,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 return false;
             switch (m_Camera.Kind)
             {
-                case CharacterPresentationCameraBindingKind.State:
-                    return true;
                 case CharacterPresentationCameraBindingKind.Response:
-                    return true;
-                case CharacterPresentationCameraBindingKind.Cue:
-                    return true;
                 case CharacterPresentationCameraBindingKind.Target:
                     return true;
                 case CharacterPresentationCameraBindingKind.Sequence:
@@ -426,47 +276,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 default:
                     return false;
             }
-        }
-
-        public static CharacterPresentationCameraBinding Sequence(
-            string sequenceId,
-            int priority,
-            float blendInSeconds,
-            float blendOutSeconds,
-            string targetKey,
-            TimelineCameraInterruptPolicy interruptPolicy)
-        {
-            return new CharacterPresentationCameraBinding
-            {
-                m_Kind = CharacterPresentationCameraBindingKind.Sequence,
-                m_SequenceId = sequenceId ?? string.Empty,
-                m_Priority = priority,
-                m_BlendInSeconds = blendInSeconds,
-                m_BlendOutSeconds = blendOutSeconds,
-                m_TargetKey = targetKey ?? string.Empty,
-                m_InterruptPolicy = interruptPolicy
-            };
-        }
-
-        public static CharacterPresentationCameraBinding Effect(
-            CharacterPresentationCameraBindingKind kind,
-            string resourceId,
-            int priority)
-        {
-            if (kind != CharacterPresentationCameraBindingKind.Override &&
-                kind != CharacterPresentationCameraBindingKind.Zoom &&
-                kind != CharacterPresentationCameraBindingKind.Stretch &&
-                kind != CharacterPresentationCameraBindingKind.Shake &&
-                kind != CharacterPresentationCameraBindingKind.Shot)
-                throw new ArgumentOutOfRangeException(nameof(kind));
-            return new CharacterPresentationCameraBinding
-            {
-                m_Kind = kind,
-                m_ResourceId = resourceId ?? string.Empty,
-                m_EffectKind = (CharacterPresentationCameraEffectKind)((int)kind -
-                    (int)CharacterPresentationCameraBindingKind.Override),
-                m_Priority = priority
-            };
         }
     }
 

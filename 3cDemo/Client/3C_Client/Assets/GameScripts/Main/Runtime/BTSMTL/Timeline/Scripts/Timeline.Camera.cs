@@ -5,38 +5,6 @@ using UnityEngine;
 
 namespace BTSMTL.Timeline
 {
-    public enum TimelineCameraMode
-    {
-        FreeLook,
-        Aim,
-        LockOn,
-        ActionFocus,
-        SkillCloseup
-    }
-
-    public enum TimelineCameraLookResponseMode
-    {
-        Full,
-        Suppressed,
-        Weighted
-    }
-
-    public enum TimelineCameraInterruptPolicy
-    {
-        BlendOut,
-        Cut,
-        HoldUntilSourceEnds
-    }
-
-    public enum TimelineCameraCueKind
-    {
-        Shake,
-        FovKick,
-        Recoil,
-        CollisionCorrection,
-        Custom
-    }
-
     public readonly struct TimelineCameraStateSample
     {
         public TimelineCameraStateSample(
@@ -49,7 +17,7 @@ namespace BTSMTL.Timeline
             float blendInSeconds,
             float blendOutSeconds,
             string targetKey,
-            TimelineCameraInterruptPolicy interruptPolicy)
+            CameraSequenceInterruptPolicy interruptPolicy)
         {
             SourceId = sourceId ?? string.Empty;
             SourceName = sourceName ?? string.Empty;
@@ -72,7 +40,7 @@ namespace BTSMTL.Timeline
         public float BlendInSeconds { get; }
         public float BlendOutSeconds { get; }
         public string TargetKey { get; }
-        public TimelineCameraInterruptPolicy InterruptPolicy { get; }
+        public CameraSequenceInterruptPolicy InterruptPolicy { get; }
     }
 
     public readonly struct TimelineCameraCueSample
@@ -199,7 +167,7 @@ namespace BTSMTL.Timeline
         [ShowInInspector, OnValueChanged("RebindTimeline")]
         public string TargetKey;
         [ShowInInspector, OnValueChanged("RebindTimeline")]
-        public TimelineCameraInterruptPolicy InterruptPolicy = TimelineCameraInterruptPolicy.BlendOut;
+        public CameraSequenceInterruptPolicy InterruptPolicy = CameraSequenceInterruptPolicy.BlendOut;
         [ShowInInspector, OnValueChanged("RebindTimeline")]
         public AnimationCurve WeightCurve = AnimationCurve.Linear(0f, 1f, 1f, 1f);
         [ShowInInspector, OnValueChanged("RebindTimeline")]

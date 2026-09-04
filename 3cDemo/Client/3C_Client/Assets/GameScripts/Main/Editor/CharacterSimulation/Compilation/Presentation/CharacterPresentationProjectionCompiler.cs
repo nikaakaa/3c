@@ -1889,7 +1889,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                         reader.RequireScalar(operation, "BlendInSeconds"),
                         reader.RequireScalar(operation, "BlendOutSeconds"),
                         reader.RequireString(operation, "TargetKey"),
-                        (TimelineCameraInterruptPolicy)operation.Flags),
+                        (CameraSequenceInterruptPolicy)operation.Flags),
                     SimulationOperationCode.CameraCue => CharacterPresentationCameraBinding.Effect(
                         CharacterPresentationCameraBindingKind.Shake,
                         reader.RequireString(operation, "ResourceId"),

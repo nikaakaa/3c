@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using UnityEngine;
 
 namespace ThirdPersonCamera
@@ -225,6 +226,8 @@ namespace ThirdPersonCamera
             float radius = m_Projection.DefaultSphere.Radius;
             float fieldOfView = m_Projection.DefaultFieldOfView;
             Vector2 compositionOffset = Vector2.zero;
+            IReadOnlyList<CameraOrbitPayload> orbitGroup = m_Projection.DefaultOrbitGroup;
+            bool orbitGroupUsesAbsoluteRadius = false;
             float evaluatedYaw = m_Yaw;
             float evaluatedPitch = m_Pitch;
             for (int stageIndex = 0; stageIndex < sequence.Stages.Count; stageIndex++)
@@ -251,6 +254,8 @@ namespace ThirdPersonCamera
                             0,
                             byTrack.CameraOrbits.Count - 1);
                         CameraOrbitPayload orbit = byTrack.CameraOrbits[orbitIndex];
+                        orbitGroup = byTrack.CameraOrbits;
+                        orbitGroupUsesAbsoluteRadius = true;
                         radius = orbit.Radius;
                         aim = anchor + input.BodyRotation * (Vector3.up * orbit.Height);
                         fieldOfView = byTrack.FieldOfView;
@@ -284,9 +289,9 @@ namespace ThirdPersonCamera
                 request.IsDefault ? 1f : request.Weight,
                 input.ResetHistory,
                 true,
-                m_Projection.DefaultSphere.Radius <= 0f
-                    ? 1f
-                    : radius / m_Projection.DefaultSphere.Radius);
+                radiusScale: 1f,
+                orbitGroup: orbitGroup,
+                orbitGroupUsesAbsoluteRadius: orbitGroupUsesAbsoluteRadius);
         }
 
         static CameraFramePlan Blend(CameraFramePlan from, CameraFramePlan to, float progress)
@@ -310,7 +315,31 @@ namespace ThirdPersonCamera
                 to.Valid,
                 Mathf.LerpUnclamped(from.RadiusScale, to.RadiusScale, t),
                 Vector3.LerpUnclamped(from.CameraOffset, to.CameraOffset, t),
-                Mathf.LerpUnclamped(from.RollDegrees, to.RollDegrees, t));
+                Mathf.LerpUnclamped(from.RollDegrees, to.RollDegrees, t),
+                BlendOrbitGroups(from.OrbitGroup, to.OrbitGroup, t),
+                to.OrbitGroupUsesAbsoluteRadius);
+        }
+
+        static IReadOnlyList<CameraOrbitPayload> BlendOrbitGroups(
+            IReadOnlyList<CameraOrbitPayload> from,
+            IReadOnlyList<CameraOrbitPayload> to,
+            float progress)
+        {
+            if (ReferenceEquals(from, to))
+                return to;
+            if (from.Count != to.Count)
+                throw new InvalidOperationException("Camera Sequence transition changed orbit group capacity.");
+            var result = new CameraOrbitPayload[to.Count];
+            for (int i = 0; i < result.Length; i++)
+            {
+                CameraOrbitPayload fromOrbit = from[i];
+                CameraOrbitPayload toOrbit = to[i];
+                result[i] = new CameraOrbitPayload(
+                    Mathf.LerpUnclamped(fromOrbit.Height, toOrbit.Height, progress),
+                    Mathf.LerpUnclamped(fromOrbit.Radius, toOrbit.Radius, progress),
+                    Mathf.LerpUnclamped(fromOrbit.ScreenY, toOrbit.ScreenY, progress));
+            }
+            return result;
         }
     }
 }

@@ -90,6 +90,7 @@ namespace ThirdPersonCamera
         {
             if (!string.Equals(Schema, SchemaVersion, StringComparison.Ordinal) || string.IsNullOrWhiteSpace(ProfileId) ||
                 !DefaultSequence || DefaultSphere == null || Input == null || Locking == null || Collision == null ||
+                DefaultOrbitGroup.Count != 3 ||
                 !float.IsFinite(NearClipPlane) || NearClipPlane < 0f || !float.IsFinite(FarClipPlane) ||
                 FarClipPlane <= NearClipPlane || !float.IsFinite(CameraLocateRadius) || CameraLocateRadius <= 0f ||
                 !float.IsFinite(DefaultElevationAngle) || !float.IsFinite(DefaultFieldOfView) || DefaultFieldOfView <= 0f ||
@@ -99,6 +100,13 @@ namespace ThirdPersonCamera
                 throw new InvalidOperationException($"Character Camera Profile '{name}' is incomplete.");
             DefaultSequence.RequireValid();
             DefaultSphere.RequireValid($"{name}.DefaultSphere");
+            for (int i = 0; i < DefaultOrbitGroup.Count; i++)
+            {
+                CameraOrbitDescriptor orbit = DefaultOrbitGroup[i];
+                if (orbit == null)
+                    throw new InvalidOperationException($"{name}.DefaultOrbitGroup[{i}] is missing.");
+                orbit.RequireValid($"{name}.DefaultOrbitGroup[{i}]");
+            }
             Input.RequireValid($"{name}.Input");
             Locking.RequireValid($"{name}.Locking");
             Collision.RequireValid($"{name}.Collision");

@@ -24,7 +24,9 @@ public readonly struct CameraFramePlan
             bool valid,
             float radiusScale = 1f,
             Vector3 cameraOffset = default,
-            float rollDegrees = 0f)
+            float rollDegrees = 0f,
+            IReadOnlyList<CameraOrbitPayload> orbitGroup = null,
+            bool orbitGroupUsesAbsoluteRadius = false)
         {
             FollowPoint = followPoint;
             AimPoint = aimPoint;
@@ -43,6 +45,8 @@ public readonly struct CameraFramePlan
             RadiusScale = radiusScale;
             CameraOffset = cameraOffset;
             RollDegrees = rollDegrees;
+            OrbitGroup = orbitGroup ?? Array.Empty<CameraOrbitPayload>();
+            OrbitGroupUsesAbsoluteRadius = orbitGroupUsesAbsoluteRadius;
             Valid = valid;
         }
 
@@ -63,6 +67,8 @@ public readonly struct CameraFramePlan
         public float RadiusScale { get; }
         public Vector3 CameraOffset { get; }
         public float RollDegrees { get; }
+        public IReadOnlyList<CameraOrbitPayload> OrbitGroup { get; }
+        public bool OrbitGroupUsesAbsoluteRadius { get; }
         public bool Valid { get; }
 
         public static CameraFramePlan Invalid => default;
@@ -85,7 +91,9 @@ public readonly struct CameraFramePlan
             Valid,
             RadiusScale,
             cameraOffset: CameraOffset,
-            rollDegrees: RollDegrees);
+            rollDegrees: RollDegrees,
+            orbitGroup: OrbitGroup,
+            orbitGroupUsesAbsoluteRadius: OrbitGroupUsesAbsoluteRadius);
 
         public CameraFramePlan WithFieldOfView(float fieldOfView) => new CameraFramePlan(
             FollowPoint,
@@ -105,7 +113,9 @@ public readonly struct CameraFramePlan
             Valid,
             RadiusScale,
             CameraOffset,
-            RollDegrees);
+            RollDegrees,
+            OrbitGroup,
+            OrbitGroupUsesAbsoluteRadius);
 
         public CameraFramePlan WithLookDelta(Vector2 lookDelta) => new CameraFramePlan(
             FollowPoint,
@@ -125,7 +135,9 @@ public readonly struct CameraFramePlan
             Valid,
             RadiusScale,
             CameraOffset,
-            RollDegrees);
+            RollDegrees,
+            OrbitGroup,
+            OrbitGroupUsesAbsoluteRadius);
 
         public CameraFramePlan WithResetHistory(bool resetHistory) => new CameraFramePlan(
             FollowPoint,
@@ -145,7 +157,9 @@ public readonly struct CameraFramePlan
             Valid,
             RadiusScale,
             CameraOffset,
-            RollDegrees);
+            RollDegrees,
+            OrbitGroup,
+            OrbitGroupUsesAbsoluteRadius);
 
         public CameraFramePlan WithOrbit(float yaw, float pitch, float radius) => new CameraFramePlan(
             FollowPoint,
@@ -165,7 +179,9 @@ public readonly struct CameraFramePlan
             Valid,
             RadiusScale,
             CameraOffset,
-            RollDegrees);
+            RollDegrees,
+            OrbitGroup,
+            OrbitGroupUsesAbsoluteRadius);
 
         public CameraFramePlan WithCameraOffset(Vector3 cameraOffset) => new CameraFramePlan(
             FollowPoint,
@@ -185,7 +201,9 @@ public readonly struct CameraFramePlan
             Valid,
             RadiusScale,
             cameraOffset,
-            RollDegrees);
+            RollDegrees,
+            OrbitGroup,
+            OrbitGroupUsesAbsoluteRadius);
 
         public CameraFramePlan WithRoll(float rollDegrees) => new CameraFramePlan(
             FollowPoint,
@@ -205,7 +223,9 @@ public readonly struct CameraFramePlan
             Valid,
             RadiusScale,
             CameraOffset,
-            rollDegrees);
+            rollDegrees,
+            OrbitGroup,
+            OrbitGroupUsesAbsoluteRadius);
 
         public CameraFramePlan WithRadiusScale(float radiusScale) => new CameraFramePlan(
             FollowPoint,
@@ -225,6 +245,8 @@ public readonly struct CameraFramePlan
             Valid,
             radiusScale,
             CameraOffset,
-            RollDegrees);
+            RollDegrees,
+            OrbitGroup,
+            OrbitGroupUsesAbsoluteRadius);
     }
 }

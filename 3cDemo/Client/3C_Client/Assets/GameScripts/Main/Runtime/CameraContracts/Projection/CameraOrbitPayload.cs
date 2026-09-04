@@ -21,5 +21,12 @@ namespace ThirdPersonCamera
         public float Height => m_Height;
         public float Radius => m_Radius;
         public float ScreenY => m_ScreenY;
+
+        public void RequireValid(string source)
+        {
+            if (!float.IsFinite(Height) || !float.IsFinite(Radius) || Radius <= 0f ||
+                !float.IsFinite(ScreenY) || ScreenY < 0f || ScreenY > 1f)
+                throw new InvalidOperationException($"{source} contains an invalid Camera orbit.");
+        }
     }
 }

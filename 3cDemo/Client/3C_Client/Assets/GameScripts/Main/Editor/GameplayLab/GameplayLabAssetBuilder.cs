@@ -423,7 +423,7 @@ namespace ThirdPersonGameplay.Editor.Lab
                 var root = new GameObject("GameplayLabLocalFixed");
                 SimulationSessionHost sessionHost = root.AddComponent<SimulationSessionHost>();
                 sessionHost.BindComposition(composition);
-                CinemachineCameraRigAdapter cameraRig = CreateCameraRig(root.transform);
+                CinemachineCameraRigAdapter cameraRig = CreateCameraRig(root.transform, definition.CameraProfile);
                 FixedCharacterHost player = InstantiateFixedActor(
                     FixedPlayerProfilePrefabPath,
                     root.transform,
@@ -459,6 +459,7 @@ namespace ThirdPersonGameplay.Editor.Lab
 
         static GameObject BuildFloatRuntimeRoot()
         {
+            CharacterPipelineDefinition definition = LoadRequired<CharacterPipelineDefinition>(CharacterDefinitionPath);
             SimulationSessionCompositionDefinition composition =
                 LoadRequired<SimulationSessionCompositionDefinition>(FloatCompositionPath);
             Scene previous = SceneManager.GetActiveScene();
@@ -469,7 +470,7 @@ namespace ThirdPersonGameplay.Editor.Lab
                 var root = new GameObject("GameplayLabLocalFloat32");
                 SimulationSessionHost sessionHost = root.AddComponent<SimulationSessionHost>();
                 sessionHost.BindComposition(composition);
-                CinemachineCameraRigAdapter cameraRig = CreateCameraRig(root.transform);
+                CinemachineCameraRigAdapter cameraRig = CreateCameraRig(root.transform, definition.CameraProfile);
                 CharacterPipelineHost player = InstantiateFloatActor(
                     PlayerPrefabPath,
                     root.transform,
@@ -522,7 +523,7 @@ namespace ThirdPersonGameplay.Editor.Lab
                 var root = new GameObject("GameplayLabDeterministicRollback");
                 SimulationSessionHost sessionHost = root.AddComponent<SimulationSessionHost>();
                 sessionHost.BindComposition(composition);
-                CinemachineCameraRigAdapter cameraRig = CreateCameraRig(root.transform);
+                CinemachineCameraRigAdapter cameraRig = CreateCameraRig(root.transform, definition.CameraProfile);
                 DeterministicRollbackCharacterHost actorA = InstantiateRollbackActor(
                     root.transform,
                     "Corin Rollback Actor A",
@@ -838,8 +839,13 @@ namespace ThirdPersonGameplay.Editor.Lab
             rigBinding.RequireValid(payload);
         }
 
-        static CinemachineCameraRigAdapter CreateCameraRig(Transform parent)
+        static CinemachineCameraRigAdapter CreateCameraRig(
+            Transform parent,
+            CharacterCameraProfile profile)
         {
+            if (!profile)
+                throw new InvalidOperationException("Gameplay Lab camera rig requires the formal Character Camera Profile.");
+            profile.RequireValid();
             var targets = new GameObject("Gameplay Camera Targets");
             targets.transform.SetParent(parent, false);
             Transform follow = new GameObject("Camera Follow Target").transform;
@@ -857,12 +863,9 @@ namespace ThirdPersonGameplay.Editor.Lab
             freeLook.m_XAxis.m_InputAxisName = string.Empty;
             freeLook.m_YAxis.Value = 0.5f;
             freeLook.m_YAxis.m_InputAxisName = string.Empty;
-            freeLook.m_Orbits = new[]
-            {
-                new CinemachineFreeLook.Orbit(3.2f, 3.2f),
-                new CinemachineFreeLook.Orbit(1.45f, 4f),
-                new CinemachineFreeLook.Orbit(-0.6f, 3f)
-            };
+            freeLook.m_Orbits = profile.DefaultOrbitGroup
+                .Select(orbit => new CinemachineFreeLook.Orbit(orbit.Height, orbit.Radius))
+                .ToArray();
             CinemachineCollider collider = freeLookObject.AddComponent<CinemachineCollider>();
             int groundLayer = LayerMask.NameToLayer("Ground");
             if (groundLayer < 0)

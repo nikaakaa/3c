@@ -28,7 +28,7 @@ namespace ThirdPersonCamera
         public override void RequireValid(string source)
         {
             base.RequireValid(source);
-            if (CameraOrbits.Count == 0 || !float.IsFinite(AspectRatio) || AspectRatio <= 0f ||
+            if (CameraOrbits.Count != 3 || !float.IsFinite(AspectRatio) || AspectRatio <= 0f ||
                 !float.IsFinite(FieldOfView) || FieldOfView <= 0f || !float.IsFinite(ElevationRatio) ||
                 !float.IsFinite(PolarAngle) || !float.IsFinite(ScreenOffset.x) || !float.IsFinite(ScreenOffset.y))
                 throw new InvalidOperationException($"{source} contains invalid single-point track framing.");

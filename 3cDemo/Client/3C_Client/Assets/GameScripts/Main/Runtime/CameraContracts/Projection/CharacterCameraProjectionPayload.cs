@@ -159,7 +159,8 @@ namespace ThirdPersonCamera
         {
             if (!string.Equals(Schema, SchemaVersion, StringComparison.Ordinal) || string.IsNullOrWhiteSpace(ProfileId) ||
                 string.IsNullOrWhiteSpace(ProfileRevision) || DefaultSequence == null || DefaultSphere == null ||
-                Input == null || Locking == null || Collision == null || !float.IsFinite(NearClipPlane) ||
+                Input == null || Locking == null || Collision == null || DefaultOrbitGroup.Count != 3 ||
+                !float.IsFinite(NearClipPlane) ||
                 NearClipPlane < 0f || !float.IsFinite(FarClipPlane) || FarClipPlane <= NearClipPlane ||
                 !float.IsFinite(CameraLocateRadius) || CameraLocateRadius <= 0f ||
                 !float.IsFinite(DefaultElevationAngle) || !float.IsFinite(DefaultFieldOfView) || DefaultFieldOfView <= 0f ||
@@ -167,6 +168,14 @@ namespace ThirdPersonCamera
                 !float.IsFinite(RotationTransitionSeconds) || RotationTransitionSeconds < 0f ||
                 !float.IsFinite(ChangeAvatarTransitionSeconds) || ChangeAvatarTransitionSeconds < 0f)
                 throw new InvalidOperationException("Character Camera Projection payload is incomplete.");
+            DefaultSphere.RequireValid("Character Camera Projection DefaultSphere");
+            for (int i = 0; i < DefaultOrbitGroup.Count; i++)
+            {
+                CameraOrbitPayload orbit = DefaultOrbitGroup[i];
+                if (orbit == null)
+                    throw new InvalidOperationException($"Character Camera Projection DefaultOrbitGroup[{i}] is missing.");
+                orbit.RequireValid($"Character Camera Projection DefaultOrbitGroup[{i}]");
+            }
         }
     }
 }

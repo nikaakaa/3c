@@ -1,3 +1,4 @@
+using System;
 using Cinemachine;
 using UnityEngine;
 
@@ -15,7 +16,7 @@ namespace ThirdPersonCamera
 
         CameraBasisSnapshot basisSnapshot;
         CameraRigResult result;
-        float[] initialOrbitRadii;
+        CinemachineFreeLook.Orbit[] formalOrbitGroup;
         bool missingFreeLookReported;
         bool missingTargetReported;
         bool invalidBrainReported;
@@ -52,7 +53,6 @@ namespace ThirdPersonCamera
 
             ClearFreeLookInput();
             BindFreeLookTargets();
-            CaptureInitialOrbitRadii();
             RefreshBasisSnapshot();
         }
 
@@ -84,7 +84,7 @@ namespace ThirdPersonCamera
 
             ApplyTargets(plan.FollowPoint + plan.CameraOffset, plan.AimPoint + plan.CameraOffset);
             ApplyOrbit(plan.OrbitYaw, plan.OrbitPitch);
-            ApplyOrbitRadius(plan.RadiusScale);
+            ApplyOrbitGroup(plan);
             ApplyLens(plan.FieldOfView, plan.NearClipPlane, plan.FarClipPlane);
             ApplyDutch(plan.RollDegrees);
             if (plan.ResetHistory)
@@ -101,7 +101,7 @@ namespace ThirdPersonCamera
             if (freeLook != null)
             {
                 freeLook.PreviousStateIsValid = false;
-                RestoreInitialOrbitRadii();
+                RestoreFormalOrbitGroup();
             }
         }
 
@@ -197,32 +197,40 @@ namespace ThirdPersonCamera
             freeLook.m_Lens = lens;
         }
 
-        void CaptureInitialOrbitRadii()
+        void ApplyOrbitGroup(in CameraFramePlan plan)
         {
-            if (freeLook == null || freeLook.m_Orbits == null)
-                return;
-            initialOrbitRadii = new float[freeLook.m_Orbits.Length];
-            for (int i = 0; i < initialOrbitRadii.Length; i++)
-                initialOrbitRadii[i] = freeLook.m_Orbits[i].m_Radius;
+            if (freeLook == null || freeLook.m_Orbits == null || plan.OrbitGroup.Count == 0)
+                throw new InvalidOperationException("Camera Frame Plan has no formal orbit group for the Cinemachine FreeLook.");
+            if (plan.OrbitGroup.Count != freeLook.m_Orbits.Length)
+                throw new InvalidOperationException("Camera Frame Plan orbit group does not match the Cinemachine FreeLook orbit capacity.");
+            CameraOrbitPayload centerOrbit = plan.OrbitGroup[plan.OrbitGroup.Count / 2];
+            if (centerOrbit == null || centerOrbit.Radius <= 0f || plan.OrbitRadius <= 0f)
+                throw new InvalidOperationException("Camera Frame Plan has an invalid orbit radius reference.");
+            float radiusScale = Mathf.Max(0f, plan.RadiusScale);
+            if (!plan.OrbitGroupUsesAbsoluteRadius)
+                radiusScale *= plan.OrbitRadius / centerOrbit.Radius;
+            for (int i = 0; i < freeLook.m_Orbits.Length; i++)
+            {
+                CameraOrbitPayload orbit = plan.OrbitGroup[i];
+                if (orbit == null)
+                    throw new InvalidOperationException($"Camera Frame Plan orbit #{i} is missing.");
+                freeLook.m_Orbits[i] = new CinemachineFreeLook.Orbit(
+                    orbit.Height,
+                    orbit.Radius * radiusScale);
+            }
+            if (formalOrbitGroup == null || formalOrbitGroup.Length != freeLook.m_Orbits.Length)
+            {
+                formalOrbitGroup = new CinemachineFreeLook.Orbit[freeLook.m_Orbits.Length];
+                Array.Copy(freeLook.m_Orbits, formalOrbitGroup, freeLook.m_Orbits.Length);
+            }
         }
 
-        void ApplyOrbitRadius(float radiusScale)
+        void RestoreFormalOrbitGroup()
         {
-            if (freeLook == null || freeLook.m_Orbits == null)
+            if (freeLook == null || freeLook.m_Orbits == null || formalOrbitGroup == null ||
+                formalOrbitGroup.Length != freeLook.m_Orbits.Length)
                 return;
-            if (initialOrbitRadii == null || initialOrbitRadii.Length != freeLook.m_Orbits.Length)
-                CaptureInitialOrbitRadii();
-            for (int i = 0; i < freeLook.m_Orbits.Length; i++)
-                freeLook.m_Orbits[i].m_Radius = initialOrbitRadii[i] * Mathf.Max(0f, radiusScale);
-        }
-
-        void RestoreInitialOrbitRadii()
-        {
-            if (freeLook == null || freeLook.m_Orbits == null || initialOrbitRadii == null ||
-                initialOrbitRadii.Length != freeLook.m_Orbits.Length)
-                return;
-            for (int i = 0; i < freeLook.m_Orbits.Length; i++)
-                freeLook.m_Orbits[i].m_Radius = initialOrbitRadii[i];
+            Array.Copy(formalOrbitGroup, freeLook.m_Orbits, formalOrbitGroup.Length);
         }
 
         void ApplyOrbit(float yaw, float pitch)

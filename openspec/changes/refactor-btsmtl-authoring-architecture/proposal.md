@@ -1,32 +1,66 @@
 ## Why
 
-当前 BTSMTL 作者链已经具备共享画布、Capability、Document v4、正式 Mutation 和编译执行基础，但节点规则、Document 对账、窗口导航、调参和 Projection 组装仍集中在多个大类中，一次业务修改需要理解过多无关状态。作者窗口还存在编译时直接关闭、重复订阅以及运行刷新重建控件的情况；本次在保持正式作者数据和既有运行行为的前提下，按业务所有权完成作者架构模块化。
+BTSMTL 的目标已明确为重度技能编辑器：保留 Tree、Timeline、局部状态机和子图嵌套，以纯数据编译后的 Program 解释执行复杂技能。原提案只拆分作者工具大类、保持整个角色控制图和 ABI 不变，已经不能表达新的职责边界；本变更将角色级控制迁入 C#，同时保留并重整已有技能编译、ActionInstance、Session／Pass 与状态恢复基础。
 
 ## What Changes
 
-- 按控制流、状态与条件、输入与黑板、Action、Motion、AI 分离 BTSMTL 节点作者规则。领域模块提供声明和正式配置操作，现有共享 Capability 与唯一 Port Shape Projector继续服务人工 UI、Document、Clipboard、Mutation 和 Validator；复用已安装的 Pose Node Definition，不重新设计 Pose 编译器或运行算法。
-- 将 Package Codec／Mapper、Gameplay 与 Presentation Reconciler、Mutation lowering 按业务内容拆分。入口只组织严格解析、引用索引、依赖顺序和完整计划，继续使用一个 Document hash、一份完整计划和唯一资产事务，不增加分片 apply 或领域专用 MCP。
-- 将 Tree、Pose、Action 窗口中的文档导航、领域命令、编辑资格、调参协调和只读诊断投影移入明确模块。共享 Shell 继续负责区域、画布和交互；每个窗口保留自己的选择、页面和 Follow／Pin，运行目标与数据版本通过正式上下文投影。
-- 修正作者可观察的窗口行为：脚本编译不再无条件关闭窗口；重载后恢复可解析的文档、页面与视图状态；只读运行刷新保留当前字段编辑、选择和滚动位置；关闭或重绑只释放本地绑定一次。
-- 按动画来源、有限 Action producer、混合目录、既有相机／Cue、装备等内容拆分外层 Presentation Projection 编译，继续汇入同一 Character Build。保持既有 dense index 分配、规范顺序、数学、ABI、产物身份算法和原子发布。
-- **BREAKING（Editor 内部扩展接口）**：迁移被替代的中央节点配置接口、窗口业务回调和不匹配的文件／类型命名，删除对应旧实现与转发别名。既有 Unity 作者资产、序列化节点类型、stable identity、Document v4 文件与五工具合同保持。
-- 场景预览属于独立的 `rebuild-btsmtl-preview-with-scene-play`：场景配置、启动／重建、正式输入、播放控件改接、Actor统一接入、运行权限调整和旧播放器／fixture删除全部由该变更负责。本变更只整理既有作者与观察实现并保持其当前行为；两份change仅做共享接口对账，不重复列实施任务，也不互相作为整体完成条件。
+- **BREAKING**：Character 的移动模式、动作选择、角色级切换与装备路由调度改由明确的 C# 控制模块承担，删除对应 RootTree／角色 StateMachine／Equipment Host 图编排和旧调用者。AI 的独立决策树继续只产生正式 Character 输入，Pose Graph 继续只负责表现。
+- **BREAKING**：建立技能定义、只读 Skill Program 与实例执行状态的分工。技能定义拥有执行图并引用唯一 ActionProfile；Tree、Timeline、TreeClip、局部状态机、参数化子图保持一等作者能力。ActionInstance 继续是一次释放的唯一身份与生命周期，技能执行状态归属该实例，不新增第二个 Ability／Skill 生命周期。
+- 保留“作者数据 → numeric-neutral Semantic IR → Numeric Target Program → C# 解释器”的正式链。角色运行包继续锁定 C# 控制模块合同、技能目录、策略与状态布局；技能节点不调用 Unity 对象解释器，不运行原始作者图，不新增第二条解释路径。
+- **BREAKING**：将完整角色状态明确分为控制状态、ActionInstance／技能执行状态以及既有 GE／Equipment 聚合；补齐子图调用、并发释放、重复激活和停止中的状态隔离，并同步 Float32／Fixed codec、hash、checkpoint、snapshot 和发布身份。旧 Program／State ABI 不继续读取。
+- 保留 Session Source、Ingress／Schedule／Step／Egress Pass、Evaluate／WorldResolve／Finalize 和唯一 Commit 边界；角色代码与技能解释器共同进入既有 Step，不创建控制器私有 Update、网络 Tick、物理写入或状态恢复链。
+- 按技能业务拆分作者规则、编译发射、运行叶子与编辑命令，继续使用共享 Graph Authoring Framework、唯一 Capability／Port Shape、整包 Document 事务和领域 Mutation。技能工作区提供定义、Tree／Timeline／子图导航及精确实例观察；保留原提案中窗口重载恢复和不打断字段编辑的行为改进。
+- **BREAKING**：Document 升级为唯一 v5，增加技能定义与 C# 控制配置的正式作者闭包，删除 Character 角色图正文入口；沿用 CharacterController／AIController 两个整包 domain 和五个生命周期工具，保留 Presentation 分片原有所有权，不提供 v4 兼容读写。
+- 明确数据更新与代码更新：技能数据经正式 Build／资源发布采用；可更新的角色规则与技能叶子通过版本化规则程序集接入现有启动加载和服务端发布。Session 锁定模块和产物版本，不新增对局中无损换代码／换状态能力。
+- 子图嵌套和 Tree 是本次范围。弹道、命中／伤害闭环、新 VFX／Audio consumer、通用蓝图与插件替换不在本次实施范围；以后新增能力必须进入现有模拟请求与状态所有权边界，不建立占位弹道 Pass。
+- 场景预览仍属于独立的 `rebuild-btsmtl-preview-with-scene-play`。本变更提供技能作者／实例观察及运行接口，预览 change 负责场景启动、控制、试验重建、运行权限与旧预览播放器删除；两者只对账共享接口，不重复实施预览，也不要求先完成整份预览 change。
 
 ## Capabilities
 
 ### New Capabilities
 
-无。内部模块拆分不作为新的运行或作者业务能力。
+- `character-control-runtime`：C# 角色控制模块、输入与决策边界、显式控制状态、统一动作请求，以及版本化规则装配。
+- `btsmtl-skill-program-runtime`：技能定义、纯数据编译与解释执行、嵌套子图参数、实例状态隔离、组合请求及生命周期闭合。
 
 ### Modified Capabilities
 
-- `graph-authoring-editor-shell`：明确编译与重载后的作者上下文恢复、只读刷新对编辑状态的保护，以及本地视图生命周期的单次订阅与释放行为。
-- `character-action-animation-authoring-workspace`：明确动作工作区恢复精确角色／动作／调用点上下文，以及 Preview／Live 数值刷新不打断现有编辑操作的行为。
+- `btsmtl-gameplay-semantic-ir`：角色控制改为代码合同，技能图成为执行语义根，装备入口不再是角色图 root。
+- `btsmtl-compiled-simulation-program`：角色运行包组成、Skill Program、完整状态布局、版本与原子发布。
+- `character-simulation-kernel`：统一 Step 内调用 C# 控制与技能解释器，保留事务、数值和世界边界。
+- `character-action-instance-runtime`：允许技能定义拥有执行图，继续以唯一 ActionInstance 拥有释放和技能状态。
+- `character-action-activation-flow`：角色代码通过唯一准入与动作事务启动技能，技能后续请求不旁路激活。
+- `character-action-authoring-closure`：技能定义、ActionProfile、执行图、退出语义和输出工作面的作者闭合。
+- `btsmtl-runnable-timeline-node`：Timeline 与 TreeClip 在技能实例内推进，保持 Decision／Commit 和停止顺序。
+- `btsmtl-sm-node-authoring`：角色级状态机迁入代码，图内状态机保留为技能局部流程。
+- `character-pipeline-blackboard`：技能变量与 C# 控制状态分责，完整实例／调用作用域与输入只读投影。
+- `character-equipment-feature-authoring`：Feature 提供控制模块配置与技能绑定，删除 Persistent／Route 角色图入口。
+- `character-equipment-runtime`：装备路由由代码控制，保留唯一装备事务、GE 贡献及 Action Equipment Context。
+- `gameplay-simulation-pipeline`：同一 Step 支持角色代码和技能执行，保持四阶段与输出提交合同。
+- `gameplay-simulation-session-composition`：Active 前锁定控制模块、技能闭包与完整状态合同。
+- `server-authoritative-prediction-correction-pipeline`：Owner baseline 和重算覆盖控制及技能实例状态，保持 Remote 观察体边界。
+- `deterministic-rollback-network-model`：完整 Fixed snapshot、哈希与兼容校验覆盖代码合同和技能执行状态。
+- `btsmtl-graph-core`：正式 Character 图作者范围变为技能，运行状态始终由编译后的实例存储拥有。
+- `graph-authoring-domain-framework`：共享框架装配技能、AI 和 Pose 等隔离领域，代码控制配置不伪装为角色图。
+- `graph-authoring-editor-shell`：窗口恢复、只读刷新和订阅生命周期继续保持明确边界。
+- `character-action-animation-authoring-workspace`：技能定义与子图导航、ActionInstance 观察及原有动画作者入口统一。
+- `btsmtl-agent-authoring-document-sync`：唯一 v5 技能／控制配置分片、严格对账和整包事务。
+- `btsmtl-ai-controller-authoring`：复用共享作者基础，继续只绑定正式 Character 输入合同。
+- `btsmtl-runtime-diagnostics`：区分 C# 控制来源、技能模板、子图调用点和具体 ActionInstance。
+- `btsmtl-semantic-ir-inspection`：查看控制模块合同与技能执行根，保留精确来源及构建状态。
+- `unity-simulation-assembly-ownership`：控制、技能、作者工具与可更新规则模块的单向依赖。
+- `agent-ai-controller-synthesis`：统一Document v5，保持AI独立输入与状态边界。
+- `agent-character-controller-synthesis`：Agent目标改为控制配置与技能内容，清理RootTree和旧输入镜像描述。
+- `btsmtl-agent-authoring-mcp-bridge`：五个工具透传唯一v5整包，不增加局部或技能专用工具。
+- `character-state-timeline-authoring-loop`：Corin角色图迁成代码控制和技能定义，保留既有移动／窗口／表现行为。
+- `character-animation-presentation-authoring`：导航来源改为技能目录，Document版本对齐，保持表现owner。
+- `character-presentation-pose-graph`：仅同步Document v5引用，保留当前Pose作者与执行语义。
+- `character-pose-plan-compilation`：仅同步Document v5引用，不改变Pose编译或运行算法。
 
 ## Impact
 
-- 代码范围：`Main/Runtime/BTSMTL/TreeDesigner/Editor`、`BTSMTL/Timeline/Editor`、`Main/Editor/CharacterPipeline/Authoring`、`AgentAuthoring`、`Main/Editor/CharacterSimulation/Compilation/Presentation/CharacterPresentationProjectionCompiler.cs` 及其直接调用者。完整迁移表、模块输入输出和目录归属见 `design.md`。
-- 正式数据：本次内部重构不要求迁移角色业务资产、不改变 Graph／Timeline／Profile 所有权、不升级 Document 或 Program ABI。若实现发现必须改变这些合同，应先报告具体冲突，不能隐式升级或保留兼容路径。
-- 关联变更：已有场景预览、Pose 架构、ZZZ IK、相机、ACL、诊断与性能工作分别保留其业务所有权；不接管它们的算法、资源接入或剩余验收，不要求场景预览实施完成后才能交付作者重构，不修改 TrainingEnemy 资产。通用解释器整体去留仍属于未作出的产品范围决定，本次不据“未找到挂载”推导删除整套执行能力。
-- 验证：复用现有 Validator、Document 往返、编译产物与正式 Replay／Proof。记录实现前完整工作区和资产基线，先证明同版本可重复，再对账每个迁移单元；不新增测试代码，不把手动验收写入任务，不用运行异常仍标记 Completed 的性能产物证明无回归。
-- 规划只写本 change 的文档和 delta specs，不提前改写 current specs、其它 active change 或项目代码。与现行规范的保持项、差异和已发现冲突见 `design.md` 的规范对账表。
+- 运行与构建：`Main/Runtime/Simulation/Core` 的 Program、Kernel、状态及共享控制执行模块；Numeric Target、Character Definition／Composition、编译 Frontend／Target Build、产品发布与现有网络 checkpoint 接入。
+- 作者与工具：BTSMTL Tree／Timeline、共享 Graph Framework、Action Workspace、Agent Document、Capability、Exporter／Reconciler／Mutation／Validator 及 `btsmtl-agent-authoring` 合同。
+- 数据迁移：正式可发布 Character composition 可达的角色控制图、技能图、装备入口和产物引用需要一次性迁移。保留业务稳定身份与作者引用；生成索引、ProgramHash、LayoutHash、EventId 来源映射及 ABI 可以随新结构变化，不要求跨 ABI 字节相同。
+- 保护范围：不改动已正确的 KCC、MotionWarp 数学、Pose／IK／Camera／渲染算法，不顺带修复 TrainingEnemy 的现有资产阻塞，也不实现尚缺的装备样例、网络装备业务或战斗 consumer。已存在的能力保留正式迁移接口；无效资产继续明确报错。
+- 规范对账：当前“技能资产不得拥有执行图”“角色动作只能由图 operation 激活”“角色／装备流程必须编译为图 root”“Document 固定 v4”等约束需要本 change 的 delta 替换。现行 Pipeline、世界求解和表现所有权继续保留。详细对账及独立预览／其它 active change 的重叠项见 `design.md`。
+- 本次只重写现有 change 的规划文件和 delta specs，不修改 current specs、其它 active change、项目代码或 Unity 资产，不开始 apply。验收复用已有构建、Validator 和 Replay／Proof；不新增测试代码，不把手动操作列为实施任务。

@@ -1,40 +1,73 @@
+## MODIFIED Requirements
+
+### Requirement: 有限Action动画必须提供统一作者工作面
+
+工作区 MUST以精确Character Definition、SkillDefinition、ActionProfile、子图／Timeline调用点、有限animation producer、AnimationClip、Presentation binding和Slot consumer建立typed作者上下文。技能可以没有Timeline，也可以具有多个或嵌套Timeline；工作区 MUST显示真实结构，并在需要单个编辑目标时要求明确选择。MUST不按名称、目录或首个候选猜目标，不创建新播放器或镜像资源。
+
+#### Scenario: 作者打开攻击技能
+
+- **WHEN** 从ActionProfile或角色技能目录进入工作区
+- **THEN** MUST显示关联技能、Tree／子图、Timeline和动画owner
+- **AND** 若策略关联多个技能 MUST显式区分
+
+#### Scenario: 技能没有Timeline
+
+- **WHEN** 当前技能只包含Tree逻辑
+- **THEN** MUST正常显示技能内容，不能视为缺失唯一Timeline的错误
+
+#### Scenario: 技能具有多个Timeline
+
+- **WHEN** 多个子图分别播放Timeline
+- **THEN** MUST按调用点列出，并按明确选择打开对应编辑器
+
+#### Scenario: 作者打开Attack动作动画
+
+- **WHEN** 作者从Corin Attack ActionProfile打开Action Animation Workspace
+- **THEN** Workspace MUST显示精确关联技能及该Action的Gameplay、Timeline Segment、direct Clip、Slot、Blend、Preview和Live关系
+- **AND** 每项关系 MUST解析到唯一正式owner
+
+#### Scenario: 缺少唯一Timeline
+
+- **WHEN** 技能没有Timeline或存在多个候选Timeline
+- **THEN** 技能工作区 MUST将这些情况作为合法内容结构显示
+- **AND** 需要单一Timeline编辑目标时 MUST显式选择调用点；缺少选择可报定位结果
+- **AND** MUST不按显示名、目录或首个候选猜Timeline
+
+
+### Requirement: Workspace必须保持跨owner唯一写入口
+
+Action admission策略 MUST由ActionProfile拥有；角色选择与替换流程由代码控制，技能内部退出与内容由SkillDefinition及技能图拥有；Animation Segment的Clip引用、Start/End、ClipIn、Weight与Ease MUST由有限Action Timeline拥有；AnimationClip骨骼内容与注册Curve MUST由原生AnimationClip拥有并通过Unity Animation Window编辑；Window、Motion、Warp和Cue MUST继续由Timeline拥有；producer identity、Rig与Analysis装配 MUST继续由Animation Presentation Profile拥有；Slot topology与Blend Policy MUST继续由Pose Graph拥有。Workspace mutation MUST写入对应正式owner，不得保存镜像字段或第二Undo。
+
+#### Scenario: 修改攻击动画引用
+
+- **WHEN** 作者在Workspace替换Animation Segment引用的Clip
+- **THEN** mutation MUST写入正式Timeline Segment
+- **AND** Workspace、ActionProfile与Pose Graph MUST不保存Clip副本
+
+#### Scenario: 修改Clip表现曲线
+
+- **WHEN** 作者从Workspace打开Foot Placement Weight
+- **THEN** Workspace MUST打开精确AnimationClip和Preview Target
+- **AND** MUST不在Timeline Segment或Profile创建Curve副本
+
+
 ## ADDED Requirements
 
-### Requirement: 动作工作区必须恢复精确作者上下文
+### Requirement: 技能工作区必须保持精确页面与实例上下文
 
-动作工作区 MUST在脚本编译与重载后恢复仍有效的Character Definition、Action、调用点、Timeline owner、当前页签和可解析选择。恢复 MUST使用已保存的稳定身份和正式引用关系，不得按当前场景、全局selection、显示名称或列表顺序重新猜测动作。恢复失败 MUST显示失效关系及其owner；恢复本身 MUST不修改作者资产、不Build、不发出动作输入，也不自动启动或重建运行。
+工作区 MUST分别保存角色／SkillDefinition／作者调用点和Actor／ActionInstance／运行调用generation绑定。重载后只恢复仍有效的稳定作者页面；运行刷新不得改变焦点、草稿、选择或滚动。找不到原实例或页面时必须显示失效位置，不能选择同模板的另一个实例。
 
-#### Scenario: 编辑攻击片段后发生重载
+#### Scenario: 两个释放使用同一技能
 
-- **WHEN** 作者在精确角色的攻击动作工作区选择一个Timeline片段，随后发生脚本重载
-- **THEN** 工作区 MUST恢复同一角色、Action、调用点和Timeline
-- **AND** 片段仍存在时 MUST恢复其选择与所在页面
-- **AND** MUST不因恢复再次触发攻击或发布构建产物
+- **WHEN** 当前窗口绑定其中一个ActionInstance
+- **THEN** 时间轴、局部变量和高亮 MUST只来自该实例
 
-#### Scenario: 原调用点已删除
+#### Scenario: 编译后恢复技能页面
 
-- **WHEN** 重载后保存的Action调用点已不存在
-- **THEN** 工作区 MUST显示该关系失效
-- **AND** MUST不自动绑定同名Action的其他调用点或任意Timeline
+- **WHEN** Editor重载后原子图仍存在
+- **THEN** MUST恢复作者页面和画布位置，但不恢复旧运行对象或自动Build
 
-### Requirement: 动作运行显示刷新必须保持作者操作连续
+#### Scenario: 字段编辑时运行刷新
 
-动作工作区 MUST在更新逻辑时间、表现时间、Slot状态和诊断时保持当前作者选择、Details编辑、页面滚动与区域折叠状态。只读数值刷新 MUST不重复重建完整编辑区域，也不得触发Timeline mutation、重置编辑游标或清除片段选择。作者数据或引用关系确实变化时 MUST按对应变化刷新，并继续服从当前模式的编辑权限；本要求不扩大Live模式可写字段范围。
-
-#### Scenario: Preview数值持续变化时编辑片段
-
-- **WHEN** 在允许编辑的模式中作者修改Timeline片段参数，同时底部Preview数值持续更新
-- **THEN** 片段选择、字段输入和滚动位置 MUST保持
-- **AND** 只有作者正式提交时才产生对应修改和Undo
-
-#### Scenario: Live模式下切换观察页签
-
-- **WHEN** 作者在Live观察期间切换Slot与诊断页签
-- **THEN** 页签 MUST读取同一合法运行绑定的当前事实
-- **AND** MUST不重建动作实例、不改变Timeline运行时间或扩大编辑权限
-
-#### Scenario: 底部区域折叠后继续播放
-
-- **WHEN** 底部运行显示区域保持折叠且收到新的运行快照
-- **THEN** 系统 MUST不反复清空并创建该区域全部控件
-- **AND** 当前角色和动作关系 MUST保持，展开后显示最新合法状态
+- **WHEN** 作者正在输入允许修改的数值
+- **THEN** 只读刷新 MUST保留未提交文本，且不产生额外Undo

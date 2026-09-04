@@ -1,84 +1,104 @@
-## 1. 实施基线与交接范围
+## 1. 固定迁移基线与边界
 
-- [ ] 1.1 核对实际工作区代码、未提交差异、作者资产、Program／Projection／Numeric Target、Rig、场景和输入trace，交付可重建的迁移基线记录及其他任务正确修改的保护清单。
-- [ ] 1.2 按design迁移表盘点每个目标模块的输入输出、现有调用者和待删除实现，交付覆盖节点、Document、窗口、调参与外层Projection的引用清单；通用解释器及TrainingEnemy不进入删除或资产迁移清单。
-- [ ] 1.3 核对与预览、Pose架构、相机、ACL和诊断变更共用文件的现有接口，交付本次作者职责与各外部change功能范围的边界表；不引入场景接入任务或预览完成依赖，有相反需求时保留冲突记录。
-- [ ] 1.4 使用既有正式Replay／Proof和比较入口取得同版本、同输入的完整重复运行结果，记录输入、Body、表现时间和采样身份；只有无运行错误且证据完整的结果进入本次行为保持基线。
+- [ ] 1.1 记录当前工作区差异、有效Definition／Composition／Target／Program／Projection和既有输入trace，交付保护清单与可重建基线；明确TrainingEnemy等既有无效目标，不通过修补它们取得基线。
+- [ ] 1.2 沿角色RootTree、状态机、Action和装备Route列出“代码控制／技能内容／删除”的业务映射，交付每个正式入口及引用的迁移表。
+- [ ] 1.3 对账设计中的33项capability及预览、Pose、装备后续change的共享接口，交付明确替换／保留项；同步接口描述不接管外部change功能。
+- [ ] 1.4 用既有Replay／Proof与业务观察确定同版本重复性和跨实现比较字段，交付输入／Body／动作阶段／输出基线及来源映射规则；不得以不同ABI的StateHash直接判定回归。
 
-## 2. BTSMTL节点作者模块
+## 2. 角色与技能基础合同
 
-- [ ] 2.1 在既有Framework内定义窄typed节点作者模块合同和显式装配，迁入共享Capability；交付单一登记／查找调用链，并通过登记完整性检查拒绝重复身份。
-- [ ] 2.2 迁移控制流节点的声明、默认值、创建和配置，删除对应中央分支；用既有catalog导出与节点Validator核对kind、字段、role及端口投影保持。
-- [ ] 2.3 迁移系统anchor、状态与条件节点作者规则，保留现有状态机／条件图数据与Mutation；通过正式Validator和引用清单确认没有第二状态／条件语义目录。
-- [ ] 2.4 迁移输入与黑板绑定规则，保持精确Input／Request／Declaration身份和Get／Set模式；通过现有Port Shape与Document导出结果核对条件端口及边端点。
-- [ ] 2.5 迁移Action激活、准入和生命周期节点作者配置，保持原Action／Context资源解析；交付同一typed Mutation调用链及对应catalog对账结果。
-- [ ] 2.6 迁移Motion节点的模式、曲线引用和参数组合校验，删除中央Motion特例；用原合法／非法配置的现有Validator结果核对值域和错误code。
-- [ ] 2.7 迁移AI感知、记忆、目标与Intent节点作者规则，保持AI domain过滤和受控Character合同；通过AI正式Validator与Document目录确认没有Character-only可写分片泄漏。
-- [ ] 2.8 将UI、Clipboard、Document和preflight全部接到同一模块投影，保留Pose现有Node Definition；交付引用搜索结果，确认中央配置分支、重复字段／端口表和转发alias已删除。
+- [ ] 2.1 定义角色控制模块的输入、结果、参数、typed状态schema、能力、稳定代码来源和版本合同；通过既有登记／组合校验交付唯一模块目录。
+- [ ] 2.2 定义SkillDefinition、入口签名、ActionProfile引用、子图依赖及允许的后续候选，交付相同策略被多个技能引用时仍可精确选中技能的作者／校验结果。
+- [ ] 2.3 明确ActionInstance与SkillExecutionState的唯一owner关系，交付Context、模板、实例、调用点和generation的typed地址及生命周期合同，删除第二生命周期候选设计。
+- [ ] 2.4 定义角色运行包中的控制binding、SkillProgram目录、组合布局与显式容量，交付缺失模块、非法依赖、并发／容量不符的正式诊断。
 
-## 3. Package解析与映射
+## 3. 语义与Target编译
 
-- [ ] 3.1 将Graph／layout与Timeline／curves的Codec和Mapper从总类提取为对应分片模块，保持原strict parser；用既有合法package的canonical文件、字段及hash对账证明往返不变。
-- [ ] 3.2 提取Presentation Profile、Pose Graph与PoseStateMachine分片映射，保持精确对象引用和稀疏layout；通过正式导出／解析核对有序数据、负localFileId和layout-only语义。
-- [ ] 3.3 提取Linked Pose与注册AnimationClip Curve分片处理，保留readonly Interface与完整Curve字段；用现有package校验器确认文件闭包、只读边界和删除语义保持。
-- [ ] 3.4 将合法local文件对的描述交给对应分片模块，保持Store唯一发现与manifest发布；通过现有严格解析入口核对完整配对与未知文件拒绝，不增加按目录放行。
-- [ ] 3.5 收敛Package Mapper和Codec总入口并按真实类型整理文件名，迁移所有调用者及技能引用候选；交付canonical hash对账和旧文件／重复解析分支的零引用结果。
+- [ ] 3.1 将角色组合Discovery改为读取控制合同和技能闭包，迁移原Character／Equipment graph roots；通过正式Frontend报告验证根目录唯一且旧角色root不再生成。
+- [ ] 3.2 提取技能节点业务族的语义发射与typed端口合同，复用唯一操作目录；交付UI能力、Emitter和Target支持集一致的验证结果。
+- [ ] 3.3 接入子图输入／输出签名、调用点及occurrence绑定，交付完整引用链与类型校验；子图递归被拒绝，显式Loop及跨技能候选分别验证。
+- [ ] 3.4 迁移Tree／Timeline／TreeClip／局部状态机发射和状态声明，保持Decision／Commit及停止顺序；通过正式IR Inspector和source map核对对应关系。
+- [ ] 3.5 将C#控制参数／state合同、GE／Equipment／Body Motion描述及技能目录纳入同一IR／角色运行包，交付canonical identity与依赖闭包结果。
+- [ ] 3.6 分别完成Float32与Fixed降低、组合state layout、SkillProgram与codec升级，交付同语义双Target的构建和旧ABI拒绝结果，不复制业务控制规则。
+- [ ] 3.7 更新既有.csir／.csim store、wrapper和原子发布组，交付精确重读及混版拒绝结果；Projection只迁移技能producer来源，保持当前Pose实现。
 
-## 4. 整包对账与Mutation lowering
+## 4. 技能解释器与实例状态
 
-- [ ] 4.1 从现有Index／Resolver／planning symbol提取本次请求的只读引用上下文，明确跨模块依赖；交付数据流与引用检查，模块不持有窗口、Application Service或其他模块的可写状态。
-- [ ] 4.2 提取Graph节点、属性边、流边和图引用对账，保留端口变化时的删边／配置／重连顺序；用现有dry-run计划和最终规范目标核对原相对顺序及身份。
-- [ ] 4.3 提取状态机、状态行为图与条件规则对账，保持inline／shared ownership和local owner先后关系；通过正式preflight／Validator核对计划引用闭合。
-- [ ] 4.4 提取黑板与Action对账，保持声明revision、默认值和request／profile规则；交付同目标下计划、机器诊断及最终作者投影的一致结果。
-- [ ] 4.5 提取Timeline、Track、Clip、Motion／Warp及Curve对账，保留TreeClip与Action producer跨owner依赖；通过既有dry-run和Timeline Validator核对完整目标与删除顺序。
-- [ ] 4.6 提取AI对账，保留纯schema normalization、Character产物过期与AI语义变化的不同准入；交付原错误／延迟编译状态保持的现有校验结果。
-- [ ] 4.7 将Presentation对账继续分为Graph／状态机、Slot／Binding／Profile、Linked Pose和Clip Curve结果，统一回到原准备结果与事务组；通过整包preflight和reverse export核对跨模块引用及local身份替换。
-- [ ] 4.8 按业务族迁移lowering实现并收敛Document Reconciler、Planner和Application Service调用链，删除旧中央实现；交付唯一hash锁定、完整计划、Undo／rollback／save／reverse export的引用检查和现有事务校验结果。
+- [ ] 4.1 将现有控制解释器的正式使用范围收至技能，迁移调用者并删除角色RootTree调度分支；以引用检查确认正式Character只走代码控制和同一技能解释器。
+- [ ] 4.2 接入ActionInstance拥有的节点、Timeline、局部状态机和等待状态，交付跨Tick字段清单及既有状态coverage校验结果。
+- [ ] 4.3 实现子图按值入参、声明返回值和中止不提交输出的调用frame，交付多个调用点复用同一子图时的独立地址与运行诊断。
+- [ ] 4.4 接入合法并发释放、重复激活与调用generation，交付模板共享、实例隔离和容量失败的现有Runtime／Validator结果，不增加对象clone。
+- [ ] 4.5 迁移技能变量与Frame投影，角色控制字段通过只读事实暴露；交付已删除Character Blackboard输入镜像、无跨实例写入的引用及布局检查。
+- [ ] 4.6 接通父级Complete／Cancel／Interrupt／Reject／Abort／teardown对全部子图与Timeline的停止，交付graceful进度、force释放和重复停止的生命周期事实。
+- [ ] 4.7 对技能内Motion、GE、Equipment与Presentation叶子收敛唯一请求／输出端口，交付无Transform、播放器、WorldSolver或网络旁路调用的定向检查。
 
-## 5. 外层Projection编译
+## 5. C#角色控制迁移
 
-- [ ] 5.1 提取Pose Source Catalog并明确唯一dense索引分配者，保持原稳定排序；用同输入编译产物核对source index、Slot／Binding解析和资源引用完全一致。
-- [ ] 5.2 提取有限Action producer与Timeline call-site投影，保持channel、播放模式和来源身份；交付同Semantic IR输入下producer表与诊断一致的结果。
-- [ ] 5.3 提取Source／Blend Space计划组装，保留Rig、Analysis和Phase编译调用顺序；用原canonical payload和既有Validator核对参数、曲线及脚步数据无变化。
-- [ ] 5.4 提取Blend Curve／Profile目录及混合payload编译，保持索引、路由规则和数学；通过同输入产物比较确认未引入第二混合规则目录。
-- [ ] 5.5 为当前已安装的相机／Cue／装备投影明确模块边界，复用已有Linked Pose／MM模块；交付正式依赖与payload对账，不实施相机或ACL的新业务。
-- [ ] 5.6 收敛Projection总入口，使其只组织typed结果、调用现有Pose Compiler、构造Tuning Layout和完整校验；通过现有Build核对原生成顺序、ABI、机器错误与唯一原子发布入口。
-- [ ] 5.7 对同一精确Definition和请求的Numeric Target比较重构前后Semantic IR、Program、Projection、revision与canonical内容，交付差异记录；未解释差异不得通过重新生成身份或放宽容差标记完成。
+- [ ] 5.1 将有效角色的普通移动与控制模式迁入声明状态的代码模块，保留原输入和数值规则；通过既有业务观察比较验证Body／Intent时序。
+- [ ] 5.2 将角色动作候选、输入消费和角色级状态选择迁入控制模块，交付旧角色图入口清理及输入到精确Skill请求的诊断链。
+- [ ] 5.3 复用唯一准入、Required Tag、TargetRequirement与目标快照规则，交付纯查询与最终提交读取同一候选的现有验证结果。
+- [ ] 5.4 接入显式replacement及source stop barrier，区分独立并发请求；交付来源、退出原因、停止进度和新实例建立顺序的事实。
+- [ ] 5.5 使当前Decision窗口在同Tick角色决策前可读，迁移原连段／取消规则；通过既有Replay业务事件核对不额外延后一渲染帧。
+- [ ] 5.6 保持AIIntentProgram与CharacterSimulationInput边界，更新只读输入合同引用；交付AI不访问控制／技能私有状态的依赖与Validator结果，不修复TrainingEnemy资产。
 
-## 6. 共享工作区与页面模块
+## 6. 装备核心接入
 
-- [ ] 6.1 从现有Graph Shell提取唯一可组合区域与生命周期宿主，迁移重复区域装配；交付Tree／Pose／Action使用同一实现的引用链，Canvas、Details、Navigator与Undo仍沿现有组件。
-- [ ] 6.2 提取文档定位、页面路由和窗口本地视图状态，保存精确owner、稳定页面／元素身份与布局；交付可重新解析的数据合同，不保存运行对象或作者数据副本。
-- [ ] 6.3 迁移Tree导航、业务Details和runtime overlay出窗口，保留原图下钻与黑板交互；通过现有domain投影和菜单／打开入口清单确认没有第二Graph或selection集合。
-- [ ] 6.4 迁移Pose窗口的Graph／状态机／规则页导航、创建命令和校验定位，保留独立Pose模型；交付各页面对共享宿主的适配及旧窗口业务分支删除结果。
-- [ ] 6.5 提取Action关系解析与页面Presenter，保持Definition／Action／call-site／Timeline精确关系；交付重载定位和失效关系结果，不按名称、selection或目录猜目标。
-- [ ] 6.6 实现编译期间暂停命令和重载后恢复页面／视图，删除无条件编译Close与创建时关闭通知；交付与delta场景对应的恢复处理、失败状态及相关旧分支零引用结果。
-- [ ] 6.7 将只读运行值、作者内容、layout和选择刷新分别路由，移除整块Details／Bottom Dock逐帧Clear；交付保持字段草稿、选择、滚动与折叠的更新路径，外部owner变化仍走原冲突规则。
-- [ ] 6.8 收敛Timeline窗口binding与订阅生命周期，删除重复时间定位订阅、Pause和Dispose；交付单次命令／通知的唯一调用链，保持Timeline交互、几何、曲线和本地selection所有权。
+- [ ] 6.1 将Feature Persistent／Route角色图入口迁成代码binding与Skill引用，更新作者目录及IR；交付稳定Slot／Route／Feature／参数身份和旧Host opcode零引用结果。
+- [ ] 6.2 保留装备Begin／Commit／Cancel事务、Tag／Effect贡献及Feature generation，将控制状态接入同一typed布局；交付既有事务和上下文合同的验证结果。
+- [ ] 6.3 更新Action Equipment Context、参数查找和已有效装备数据的调用者，交付精确Skill绑定与snapshot覆盖；不补做装备样例或网络装备业务。
 
-## 7. 既有调参与运行观察模块
+## 7. Session、状态与网络恢复
 
-本章只提取当前已有实现并保持其目标解析、字段资格、保存与采用规则；场景预览的统一Actor接入、多Actor规则和权限变化由独立预览change实施。
+- [ ] 7.1 在原Evaluate／WorldResolve／Finalize Step内接入控制模块和技能解释器，交付原四阶段、多Tick与Commit入口的调用图及Pipeline编译结果。
+- [ ] 7.2 扩展两个Target的状态transaction、copy、codec和hash，覆盖控制状态、ActionInstance、子图frame、参数、Timeline及停止进度；交付完整状态schema与旧版本拒绝结果。
+- [ ] 7.3 更新Composition、ProgramCatalog和模块装配校验，交付缺模块、混版、能力不足及不兼容Target在Active前失败的正式报告。
+- [ ] 7.4 更新ServerAuthoritative owner checkpoint、Full／Delta与Correction恢复，交付完整技能状态恢复及原Remote观察体边界的现有证明。
+- [ ] 7.5 更新Fixed Rollback snapshot、history、分层hash与恢复投影，交付同输入重算中实例／调用状态一致的现有Proof；Relay继续只路由。
+- [ ] 7.6 更新EventId来源、output disposition与state publish衔接，交付确认／替换／抑制及重复输出的既有诊断，保证代码来源不伪造Graph节点。
 
-- [ ] 7.1 从Pose预览视口提取字段到owner／Tuning Layout的映射及正式作者值读写，继续消费原Capability与Mutation；交付相同字段资格、值域和Undo结果。
-- [ ] 7.2 提取候选构造、精确Actor提交和generation管理，复用现有Candidate Compiler与Runtime协调器；交付窗口不再构造候选或读取Program私有表的引用检查。
-- [ ] 7.3 提取既有作者保存、运行排队、已采用、需Build和拒绝结果的状态投影，保留NextFrame／NextActivation；交付迁移前后相同采用结果与失败处理的调用链，不新增场景运行资格。
-- [ ] 7.4 迁移既有Undo／Redo和外部作者变化后的候选更新／失效处理，保持Document TreeDirty／Conflict及Play门禁；通过既有同步状态与调参报告核对无自动apply／rebase或产物写入。
-- [ ] 7.5 提取Tree／Pose／Action／Timeline共有的只读事实解析，窗口保留各自Follow／Pin与interest；交付相同source map下的观察投影及单窗口解绑不清理其他窗口状态的生命周期实现。
+## 8. 规则与数据发布
 
-## 8. 清理与合同同步
+- [ ] 8.1 将共享合同、稳定解释器与可更新控制／技能规则按设计分程序集，交付单向依赖及portable规则不引用Unity／Fantasy对象的编译结果。
+- [ ] 8.2 将规则程序集接入现有HybridCLR构建、依赖、裁剪／泛型生成与启动加载，交付精确模块版本和现有资源发布闭包；不新装热更框架。
+- [ ] 8.3 更新Unity客户端／Authority与普通.NET Authority产品的规则模块和技能产物发布清单，交付相同语义版本、完整依赖及缺失模块拒绝结果；Relay产品不安装Gameplay执行。
+- [ ] 8.4 接通新Session采用新代码／技能版本和活动Session版本锁定，交付正式manifest及加载状态报告，不增加对局中状态迁移、旧ABI读取或兼容开关。
 
-- [ ] 8.1 按design目录图完成Editor内部文件／类型职责整理，保留脚本meta、正式窗口类型和既有序列化身份；交付最终代码地图与旧文件名／转发alias清理结果。
-- [ ] 8.2 检查节点模块、Document模块和Projection模块的引用方向，交付公共Framework无Character／AI／Agent DTO反向依赖、无新增循环程序集引用的结果。
-- [ ] 8.3 检查正式作者资产、Document schema／文件集合、五MCP工具、Build和运行ABI保持；交付差异清单，发现必须改变的外部合同先更新明确范围，不能自动加兼容。
-- [ ] 8.4 随最终目录更新 `btsmtl-agent-authoring` 及其当前合同的代码地图，交付每个被引用文件／类型均可解析的检查结果；不增加新的可写字段或生命周期工具。
-- [ ] 8.5 按实际实施内容安装本change两份delta，并对账设计中列出的保持项和其他change已安装的共享接口；交付无相反重复实施要求的规范对账记录，不等待或实施外部场景预览能力。
-- [ ] 8.6 对全部作者迁移单元执行旧Editor实现、旧菜单、旧窗口状态键及资源引用定向搜索，交付逐项删除或保留业务依据；通用解释器和旧完整角色播放器的整体去留不计入本次清理。
+## 9. 技能作者模块与共享框架
 
-## 9. 集成证据与交付
+- [ ] 9.1 将技能定义、Flow／局部状态机、Timeline／TreeClip、变量／参数和领域叶子的作者规则从中央类迁出，交付各模块输入输出及唯一Capability装配。
+- [ ] 9.2 将节点创建、配置、复制粘贴和端口变化统一接入现有Port Shape与typed Mutation，交付作者目录／Validator一致结果并删除重复字段表。
+- [ ] 9.3 增加技能定义、签名与inline／shared子图编辑，交付从定义到Tree／Timeline／调用点的精确owner导航与原正式转换命令。
+- [ ] 9.4 将角色入口改为代码控制binding／参数及技能目录，删除角色图创建菜单和无效页面；交付无假RootTree及无任意代码调用节点的能力清单。
+- [ ] 9.5 保留AI／Pose共享画布及独立领域数据，实现窗口重载恢复、字段草稿保护和单次订阅释放；交付现有窗口状态／生命周期诊断，不在OnInspectorGUI执行重计算。
 
-- [ ] 9.1 完成现有Editor编译与程序集依赖检查；如使用dotnet／msbuild，命令带 `--disable-build-servers /nr:false /p:UseSharedCompilation=false`，结束后立即执行 `dotnet build-server shutdown`；Unity MCP每次显式传 `unity_instance`、CLI每次传 `--instance`，交付明确错误归属的构建记录，不运行Unity batchmode。
-- [ ] 9.2 使用现有Character／AI Validator和Document生命周期对账完整输入到最终作者结果，交付strict parse、hash、计划、同一事务和reverse export的适用证据，不新增测试代码。
-- [ ] 9.3 通过已有正式Replay／Proof比较固定基线和上一保留小步，交付输入／Body／时间／来源／Foot／Pelvis／Goal／Solved／Physical分层差异；运行错误、缺帧或缺少时间对齐条件均不得记为通过。
-- [ ] 9.4 执行本change严格校验及限定改动的 `git diff --check`，交付proposal、两份delta、design和tasks与作者重构范围一致的结果；完成条件不包含独立预览change的实施进度。
-- [ ] 9.5 为每个完整迁移单元形成详细中文小步提交，交付提交、文件跳转、删除清单和实际验证结果；不夹带其他任务修改，不以剩余类行数或文件数量声明完成。
+## 10. Document v5整包闭合
+
+- [ ] 10.1 定义v5控制配置与skill definition分片、精确允许文件族及local身份规则，交付schema与只读context／生成数据边界文档。
+- [ ] 10.2 更新Exporter与strict Codec／Mapper并按内容分责，交付canonical往返、整包hash和未知／旧字段拒绝的现有校验结果。
+- [ ] 10.3 更新Reconciler／planning symbol及Mutation lowering，使新技能、子图、Timeline和控制binding形成完整有序计划；交付dry-run依赖与删除顺序报告。
+- [ ] 10.4 接入所有新owner的同一Undo、保存、失败恢复和reverse export，交付任一分片失败不发布半包的既有事务结果。
+- [ ] 10.5 删除v4及更早reader／writer／manifest分支和角色RootTree正文入口，沿用两个domain与五生命周期工具；交付旧包明确拒绝、重新checkout生成v5的结果。
+- [ ] 10.6 更新btsmtl-agent-authoring技能、MCP合同描述和实际代码地图，交付路径／字段可解析且与唯一v5实现一致的检查结果，不新增局部写工具。
+
+## 11. 技能工作区与诊断
+
+- [ ] 11.1 将Action Workspace统一到SkillDefinition、ActionProfile及调用点上下文，支持Tree-only和多个／嵌套Timeline；交付不猜唯一Timeline的typed页面状态。
+- [ ] 11.2 打通技能到AnimationClip、producer、Profile和AnimationSlot的原owner导航，交付无镜像字段或第二动画资源配置的引用检查。
+- [ ] 11.3 扩展source map和Trace区分C#控制来源、技能模板、ActionInstance、调用点和generation，交付稳定来源与同模板多实例隔离的诊断输出。
+- [ ] 11.4 更新IR Inspector、Live Debug和窗口Follow／Pin绑定，交付控制合同及技能执行根可查看、过期目标不选其他实例的状态报告。
+- [ ] 11.5 向独立场景预览提供精确技能选择、正式请求及只读实例接口，交付双方接口对账；不创建场景、SkillPreviewRuntime或重复实现旧播放器删除。
+
+## 12. 资产迁移与旧路径清理
+
+- [ ] 12.1 通过现有正式作者事务转换全部选定有效Character根及其技能依赖，交付角色代码／技能映射、仍有效的稳定业务identity与完整引用报告；Graph／Node kind变化时创建新identity并替换引用，不能原地改kind，受保护无效资产继续明确报错。
+- [ ] 12.2 转换有效装备入口、输入／变量绑定及有限producer来源，交付新控制／技能目录可构建结果，保持既有Motion曲线、Warp及表现资源内容。
+- [ ] 12.3 显式构建并发布所选Target、技能目录和同组Projection，更新现有Launcher／Variant／Profile引用；交付exact artifact与产品引用一致报告。
+- [ ] 12.4 删除已替代角色控制图入口、activation／Equipment Host编译注册、旧schema、菜单、字段、别名及废弃文件，交付定向零引用与仍保留AI／Pose／独立预览依赖的业务清单。
+- [ ] 12.5 按设计整理最终目录、类型和公开命名，交付无临时桥接、双运行入口或兼容配置的最终代码地图。
+
+## 13. 集成证据与规范收口
+
+- [ ] 13.1 运行现有portable／Editor／产品构建和依赖检查，交付实际构建结果；dotnet／msbuild使用禁用build server参数并立即shutdown，本机Unity CLI按明确项目路径退出且保留主验收Editor，CI禁令不变。
+- [ ] 13.2 使用已有Validator、Document生命周期与Replay／Proof覆盖完整新链，交付同版本重复性及跨实现输入／Body／动作阶段／输出比较；不编写新测试、不忽略缺帧或运行错误、不把ProgramHash变化当作行为通过或失败。
+- [ ] 13.3 安装本change的delta并同步当前项目口径、Purpose及关联接口说明，交付现行规范与预览／其它change不存在相反共享要求的对账；保留独立预览和受保护任务范围。
+- [ ] 13.4 执行严格OpenSpec校验与限定改动diff检查，按完整迁移单元形成中文小步提交，交付文件跳转、删除清单、实际证据及剩余明确错误，不以类行数或文件数宣称完成。

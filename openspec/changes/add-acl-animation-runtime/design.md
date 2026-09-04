@@ -200,9 +200,11 @@ Scope 关闭时先拒绝新请求并取消准备；已持有的 lease 仍可归�
 - `CharacterPresentationProjectionCompiler.Compile` 使用现有 source 编译结果组成 BuildCatalog；资源编译结果通过 `CharacterPresentationProjectionCompileResult.AnimationArtifacts` 向现有 Build 发布阶段交付。
 - Projection 编译只生成内存产物和诊断。ArtifactPublisher 的发布由正式 Build 的发布阶段执行；不能在 `CompileCore`、Inspector、validator 或只读检查里落盘。
 - 扩展现有编译 request/result 的显式字段传递构建上下文，不使用静态临时字典、全局“当前 Build”、修改 Profile 后再读回等通信办法。
-- 现有公开 Character Build 调用链中的发布方若位于生成源码或包内，应修改对应源码/生成源以接收 AnimationArtifacts，不新建替代 Orchestrator。实现只需完成这个接线；不能自行更改发布 owner。
+- 正式入口源码为 `Main/Editor/CharacterSimulation/Build/CharacterSimulationBuildOrchestrator.cs`。其 `CompileProjection` 创建 Projection 编译请求；在此装配只读 SourceRigBinding、唯一参数布局与 AnimationBuildInput，接收 CompileResult.AnimationArtifacts，并经 Execute/Build 的显式结果传到原 Publish。该目录原有六个源码文件被通用 `[Bb]uild/` 规则误忽略，须将既有源码及 meta 正式纳管；不能据 worktree 缺文件而新建替代 Orchestrator。
+- 原 Orchestrator 的 Build 已有暂存阶段，Publish 已有 Commit、Complete、Rollback 和 Definition/Projection 恢复边界。ArtifactPublisher 返回本次动画产物的发布事务并加入这些既有边界：全部资源准备好后再更新 Projection/Definition，成功才 Complete，失败随原事务逆序 Rollback；不能在 CompileProjection 内直接发布。`CharacterTargetProgramArtifactStore` 继续负责原 Program 产物，动画发布不接管其编码或存储职责。
 - 删除草稿 `BuildSelected` 独立发布菜单。原 authoring 按钮和 Agent 命令调用正式 Character Build。资源重新编译不自动改变 Profile 的 backend 选择。
 - 只有全部动画资源、Program 和 Projection 合格才激活新发布清单。失败保留上一版完整发布，清理本次暂存；运行时不挑旧块补新产物。
+- 相同内容重复构建可复用经完整身份与内容校验的既有动画产物；相同地址但内容不一致直接报错。失败清理仅限本次创建的暂存与未完成发布，不删除先前已发布或复用的产物。
 
 #### 时间布局
 
@@ -231,6 +233,10 @@ Corin 的 ACL Transform 使用官方数据库。采用已锁定 ACL 的数据库
 Evaluator 分别输出原 Clip 到 SampleSet、SampleSet 到 ACL、原 Clip 到 ACL 的误差。验证时间包含正式端点、循环边界、全部相关原始关键帧和采样网格；合并排序后每个相邻区间再取四等分检查点。报告记录实际覆盖策略，不把有限采样写成无限时间范围的数学证明。
 
 原 Clip 到 SampleSet 的实现归通用 `CharacterAnimationSamplingQualityEvaluator`；ACL Evaluator 复用它的验证时刻和第一段结果，再增加解码比较。NativeClip 只编译属性页时也必须执行通用门禁，不能因未选择 ACL 而跳过表情曲线失真检查。
+
+编译请求明确本次实际转换的通道范围：ACL 为 Transform 与 AnimatedProperty，NativeClip 属性页为 AnimatedProperty。范围由构建目标决定，不开放成作者可关闭门禁的配置。Reader、Sampler、Evaluator 共用原实现，只读取、生成并检查该次转换的通道；NativeClip 未转换的骨骼不承担重采样误差门禁。参数布局、默认值和标量时间网格仍为同一份输入，不能再做一套 NativeClip 采样算法。
+
+每个验证时刻同时取得原曲线、SampleSet 与解码结果，三段误差分别记录并参与对应门禁。最终误差必须直接比较原曲线与解码结果，不能重复记录 SampleSet 到 ACL 的误差，也不能因为两个中间阶段各自合格就认定最终结果合格。
 
 以时间为外层循环：每个时间解码一次全部 Transform/Scalar，再逐轨道比较，避免每个骨骼都重复解码整段骨架。旋转必须参与拒绝发布。ZZZ 还原证据是独立必需输入；Corin 没有证据时保持失败，不以 `requireZzzRestoration=false` 发布“完整还原”。
 

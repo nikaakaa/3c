@@ -13,10 +13,12 @@ namespace ThirdPersonCamera
             float fieldOfView)
         {
             PivotLocation = pivotLocation;
-            Rotation = rotation;
+            float rotationLengthSquared = rotation.x * rotation.x + rotation.y * rotation.y +
+                rotation.z * rotation.z + rotation.w * rotation.w;
+            Rotation = rotationLengthSquared > 0.0001f ? rotation.normalized : Quaternion.identity;
             Radius = radius;
             Offset = offset;
-            FieldOfView = fieldOfView;
+            FieldOfView = Mathf.Clamp(fieldOfView, 5f, 170f);
         }
 
         public Vector3 PivotLocation { get; }

@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using ThirdPersonPerformance.Instrumentation;
 
 namespace ThirdPersonSimulation
 {
@@ -504,39 +505,19 @@ namespace ThirdPersonSimulation
 
         public CharacterOperationEvaluation Evaluate(SimulationEvaluateRequest request)
         {
-            using (request.Performance.Measure(SimulationPerformancePhase.OperationFrameBegin))
-                m_Frame.Begin(request);
+            BeginOperationFrame(request);
             try
             {
-                using (request.Performance.Measure(SimulationPerformancePhase.OperationSetup))
-                {
-                    m_Control.BeginEvaluation();
-                    m_Values.BeginEvaluation();
-                    m_GameplayEffects.BeginEvaluation();
-                    m_Equipment.BeginEvaluation();
-                    m_Blackboard.BeginFrame();
-                }
-                using (request.Performance.Measure(SimulationPerformancePhase.OperationIngress))
-                    ApplyIngress();
-                using (request.Performance.Measure(SimulationPerformancePhase.GameplayEffectAdvance))
-                    m_GameplayEffects.Advance();
-                using (request.Performance.Measure(SimulationPerformancePhase.InputRequestApply))
-                {
-                    m_Input.ApplyRequests();
-                    m_Input.ApplyBlackboardInputBindings(m_Blackboard);
-                }
-                using (request.Performance.Measure(SimulationPerformancePhase.TimelineDecision))
-                    m_Timeline.PrepareDecisionTimelines(m_Control.Cursor);
-                using (request.Performance.Measure(SimulationPerformancePhase.ControlTick))
-                    m_Control.Tick(m_Frame.Layout.RootOperation);
+                SetupOperation();
+                ApplyIngress();
+                AdvanceGameplayEffects();
+                ApplyInputRequests();
+                PrepareTimelineDecision();
+                TickOperationControl();
                 m_Equipment.EndEvaluation();
-                ResolvedGameplayMotion motion;
-                using (request.Performance.Measure(SimulationPerformancePhase.MotionResolve))
-                    motion = m_Motion.Resolve();
-                using (request.Performance.Measure(SimulationPerformancePhase.BlackboardFinalize))
-                    m_Blackboard.EndFrame();
-                using (request.Performance.Measure(SimulationPerformancePhase.EvaluationFreeze))
-                    return m_Frame.Complete(motion);
+                ResolvedGameplayMotion motion = ResolveMotion();
+                FinalizeBlackboard();
+                return CompleteOperationFrame(motion);
             }
             finally
             {
@@ -545,6 +526,23 @@ namespace ThirdPersonSimulation
             }
         }
 
+        [PerformanceProbe("simulation.operation.frame-begin")]
+        void BeginOperationFrame(SimulationEvaluateRequest request)
+        {
+            m_Frame.Begin(request);
+        }
+
+        [PerformanceProbe("simulation.operation.setup")]
+        void SetupOperation()
+        {
+            m_Control.BeginEvaluation();
+            m_Values.BeginEvaluation();
+            m_GameplayEffects.BeginEvaluation();
+            m_Equipment.BeginEvaluation();
+            m_Blackboard.BeginFrame();
+        }
+
+        [PerformanceProbe("simulation.operation.ingress")]
         void ApplyIngress()
         {
             for (int i = 0; i < m_Frame.Ingress.Count; i++)
@@ -555,6 +553,49 @@ namespace ThirdPersonSimulation
                 else
                     m_GameplayEffects.ApplyIngress(ingress);
             }
+        }
+
+        [PerformanceProbe("simulation.operation.gameplay-effect-advance")]
+        void AdvanceGameplayEffects()
+        {
+            m_GameplayEffects.Advance();
+        }
+
+        [PerformanceProbe("simulation.operation.input-request-apply")]
+        void ApplyInputRequests()
+        {
+            m_Input.ApplyRequests();
+            m_Input.ApplyBlackboardInputBindings(m_Blackboard);
+        }
+
+        [PerformanceProbe("simulation.operation.timeline-decision")]
+        void PrepareTimelineDecision()
+        {
+            m_Timeline.PrepareDecisionTimelines(m_Control.Cursor);
+        }
+
+        [PerformanceProbe("simulation.operation.control-tick")]
+        void TickOperationControl()
+        {
+            m_Control.Tick(m_Frame.Layout.RootOperation);
+        }
+
+        [PerformanceProbe("simulation.operation.motion-resolve")]
+        ResolvedGameplayMotion ResolveMotion()
+        {
+            return m_Motion.Resolve();
+        }
+
+        [PerformanceProbe("simulation.operation.blackboard-finalize")]
+        void FinalizeBlackboard()
+        {
+            m_Blackboard.EndFrame();
+        }
+
+        [PerformanceProbe("simulation.operation.frame-complete")]
+        CharacterOperationEvaluation CompleteOperationFrame(ResolvedGameplayMotion motion)
+        {
+            return m_Frame.Complete(motion);
         }
 
     }

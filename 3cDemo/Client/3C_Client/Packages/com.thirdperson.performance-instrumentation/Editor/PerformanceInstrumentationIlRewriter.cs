@@ -125,25 +125,19 @@ namespace ThirdPersonPerformance.Instrumentation.Editor
                 PerformanceInstrumentationWeaverConstants.RuntimeNamespace,
                 PerformanceInstrumentationWeaverConstants.RuntimeTypeName,
                 module,
-                new AssemblyNameReference(
-                    PerformanceInstrumentationWeaverConstants.RuntimeAssemblyName,
-                    new Version(0, 0, 0, 0)),
+                GetAssemblyReference(module, PerformanceInstrumentationWeaverConstants.RuntimeAssemblyName),
                 false);
             TypeReference scopeType = new TypeReference(
                 PerformanceInstrumentationWeaverConstants.RuntimeNamespace,
                 PerformanceInstrumentationWeaverConstants.ScopeTypeName,
                 module,
-                new AssemblyNameReference(
-                    PerformanceInstrumentationWeaverConstants.RuntimeAssemblyName,
-                    new Version(0, 0, 0, 0)),
+                GetAssemblyReference(module, PerformanceInstrumentationWeaverConstants.RuntimeAssemblyName),
                 true);
             TypeReference endStateType = new TypeReference(
                 PerformanceInstrumentationWeaverConstants.RuntimeNamespace,
                 PerformanceInstrumentationWeaverConstants.EndStateTypeName,
                 module,
-                new AssemblyNameReference(
-                    PerformanceInstrumentationWeaverConstants.RuntimeAssemblyName,
-                    new Version(0, 0, 0, 0)),
+                GetAssemblyReference(module, PerformanceInstrumentationIdentity.ContractsAssembly),
                 true);
             TypeReference markerType = CreateMarkerType(module);
             string enterName = mode == PerformanceInstrumentationMode.Span
@@ -365,7 +359,17 @@ namespace ThirdPersonPerformance.Instrumentation.Editor
                 PerformanceInstrumentationWeaverConstants.MarkerNamespace,
                 PerformanceInstrumentationWeaverConstants.MarkerTypeName,
                 module,
-                new AssemblyNameReference("UnityEngine.CoreModule", new Version(0, 0, 0, 0)),
+                GetAssemblyReference(module, "UnityEngine.CoreModule"),
                 true);
+
+        static AssemblyNameReference GetAssemblyReference(ModuleDefinition module, string name)
+        {
+            AssemblyNameReference reference = module.AssemblyReferences.FirstOrDefault(value => value.Name == name);
+            if (reference != null)
+                return reference;
+            reference = new AssemblyNameReference(name, new Version(0, 0, 0, 0));
+            module.AssemblyReferences.Add(reference);
+            return reference;
+        }
     }
 }

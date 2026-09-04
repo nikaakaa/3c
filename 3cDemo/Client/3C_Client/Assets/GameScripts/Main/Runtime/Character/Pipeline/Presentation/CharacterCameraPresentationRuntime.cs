@@ -14,6 +14,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         readonly ICameraRigAdapter m_CameraRig;
         readonly CharacterCameraProjectionPayload m_CameraProjection;
         readonly CharacterCameraSequenceEvaluator m_SequenceEvaluator;
+        readonly CameraEffectEvaluator m_EffectEvaluator;
         readonly CameraTargetBindingResolver m_CameraTargetResolver;
         readonly Vector3 m_FollowBindPosition;
         readonly Vector3 m_AimBindPosition;
@@ -55,6 +56,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             projection.RequireCameraPayload();
             m_CameraProjection = projection.Camera;
             m_SequenceEvaluator = new CharacterCameraSequenceEvaluator(m_CameraProjection);
+            m_EffectEvaluator = new CameraEffectEvaluator(m_CameraProjection);
             m_CameraRig = cameraRig ? cameraRig : throw new ArgumentNullException(nameof(cameraRig));
             if (!followAnchor || !aimAnchor)
                 throw new ArgumentException("Presentation Camera requires explicit follow and aim anchors.");
@@ -215,6 +217,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 case CharacterPresentationCameraBindingKind.Shake:
                 case CharacterPresentationCameraBindingKind.Shot:
                     RetireEffect(command.Header.EventId.ToString(), command.ProducerGeneration);
+                    m_EffectEvaluator.Retire(command.Header.EventId.ToString(), command.ProducerGeneration);
                     break;
                 case CharacterPresentationCameraBindingKind.Target:
                     m_CameraTargets.Remove(instance);
@@ -263,6 +266,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             m_CameraStateResolver.Reset();
             m_CameraModifierResolver.Reset();
             m_SequenceEvaluator.Reset();
+            m_EffectEvaluator.Reset();
             m_CameraRig.Reset();
             m_LastBodyResetSequence = 0;
         }
@@ -334,8 +338,13 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 in sequenceRequest,
                 in responseRequest);
             framePlan = framePlan.WithTargets(
-                targetPlan.HasFollowPoint ? targetPlan.FollowPoint : follow,
-                targetPlan.HasAimPoint ? targetPlan.AimPoint : aim);
+                    targetPlan.HasFollowPoint ? targetPlan.FollowPoint : follow,
+                    targetPlan.HasAimPoint ? targetPlan.AimPoint : aim);
+            framePlan = m_EffectEvaluator.Resolve(
+                framePlan,
+                m_PendingCameraEffects,
+                in frameInput);
+            m_PendingCameraEffects.Clear();
             var legacyPlan = new CameraPosePlan(
                 state.Mode,
                 framePlan.FollowPoint,

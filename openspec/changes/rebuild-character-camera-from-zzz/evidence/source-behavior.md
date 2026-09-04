@@ -38,6 +38,15 @@
 - `GetData` 先分别取得轨道结果和屏幕偏移结果，再使用 `PolarAngle` 构造空间方向，计算轨道平面长度，最后进入相机数据构造和有效性/碰撞检查。调用序列对应 `elevation = atan2(height, radius) * Rad2Deg`、`rotation = Quaternion.Euler(elevation, PolarAngle, 0)`、`radius = sqrt(height * height + radius * radius)`，并将屏幕偏移和 FOV 写入 `WorldBasicCameraData.Create`；结果不是只改变当前 FreeLook 轨道组的半径。
 - `FrameMultiplePointsInCorePolicy_Chat.GetData` 的实际函数体在 RVA `0x12EF9204` 调用 `FrameTwoPointsInCorePolicy_Chat.GetData`（RVA `0x12A4B2F0`），说明多点策略存在来源明确的双点回退分支，不能把所有多点输入都强行压成单点。
 
+### 双点取景的新增证据
+
+对 `FrameTwoPointsInCorePolicy_Chat.GetData`（RVA `0x12A4B2F0`）的函数体反汇编确认了以下链路：
+
+- 函数直接读取实例内的 `aspectRatio`、`heightRatio`、玩家/目标高度比例上下限、FOV、固定 pitch、主/副水平偏移、主垂直偏移、目标垂直偏移上下限、pitch 上下限、玩家高度、目标高度和 `BeginCameraData`；这些读取位置与 metadata 的字段布局一致。
+- `BeginCameraData` 先通过 `WorldBasicCameraData.get_Location`（RVA `0x1E88D780`）派生相机世界位置，再把两个输入点分别转换成相对该位置的水平方向并做长度归一化；归一化带有接近零长度的固定分支，不是直接对两个点取平均。
+- 两个方向随后进入角度比较、主/副点选择和水平/垂直构图计算，结果通过辅助构造函数 `0x12A50210` 写回 `WorldBasicCameraData`；代码同时保留无效或缺失依赖时的失败跳转。
+- 这条函数的最终角度夹取、相机半径计算和各偏移字段的精确组合仍需继续对 `0x12A50210` 及其调用者解码；当前证据足以拒绝“多点/双点统一取中点”的近似实现，但不足以发布双点 evaluator。
+
 以上闭合了 ByTrack 的采样骨架、曲线模式、角度换算和一个回退调用关系；其有效性检查的完整失败回退、碰撞阶段的世界输入以及结果如何在所有活动 Cinemachine 实例之间切换仍未闭合。
 
 ### WorldBasicCameraData 字段布局

@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using System.Threading.Tasks;
 using KK.GeneratedDiagnosticSampling;
 using KK.GeneratedDiagnosticSampling.Host;
 using ThirdPersonCharacter.Pipeline.Animation.Diagnostics;
@@ -17,6 +18,7 @@ namespace ThirdPersonCharacter.Pipeline.Diagnostics.FootIkSampling.Editor
             m_CoreLifecycle;
         readonly CharacterFootIkFullCaptureProgram.DiagnosticLifecycle
             m_FullLifecycle;
+        Task<DiagnosticHostFinalizationResult> m_HostFinalizationTask;
         bool m_Started;
         bool m_Stopped;
 
@@ -117,59 +119,81 @@ namespace ThirdPersonCharacter.Pipeline.Diagnostics.FootIkSampling.Editor
             string outputRoot,
             out DiagnosticHostFinalizationResult result)
         {
-            bool available = m_CoreLifecycle != null
-                ? m_CoreLifecycle.TryGetRuntimeManifest(
-                    out DiagnosticRuntimeManifest manifest,
-                    out DiagnosticSealedArtifact artifact)
-                : m_FullLifecycle.TryGetRuntimeManifest(
-                    out manifest,
-                    out artifact);
-            if (!available)
+            if (m_HostFinalizationTask == null)
+            {
+                bool available = m_CoreLifecycle != null
+                    ? m_CoreLifecycle.TryGetRuntimeManifest(
+                        out DiagnosticRuntimeManifest manifest,
+                        out DiagnosticSealedArtifact artifact)
+                    : m_FullLifecycle.TryGetRuntimeManifest(
+                        out manifest,
+                        out artifact);
+                if (!available)
+                {
+                    result = null;
+                    return false;
+                }
+                DiagnosticSchemaLayout schema;
+                DiagnosticCapabilityBuildDescriptor capability;
+                if (m_CoreLifecycle != null)
+                {
+                    schema = CharacterFootIkCoreCaptureProgram
+                        .CreateDiagnosticSchemaLayout();
+                    capability = CharacterFootIkCoreCaptureProgram
+                        .CreateDiagnosticCapabilityBuildDescriptor(
+                            m_Request.InterestIdentity,
+                            m_Request.CadenceIdentity,
+                            m_Request.LineageTypeIdentity,
+                            m_Request.PacketCapacity,
+                            m_Request.WriterTransportIdentity);
+                }
+                else
+                {
+                    schema = CharacterFootIkFullCaptureProgram
+                        .CreateDiagnosticSchemaLayout();
+                    capability = CharacterFootIkFullCaptureProgram
+                        .CreateDiagnosticCapabilityBuildDescriptor(
+                            m_Request.InterestIdentity,
+                            m_Request.CadenceIdentity,
+                            m_Request.LineageTypeIdentity,
+                            m_Request.PacketCapacity,
+                            m_Request.WriterTransportIdentity);
+                }
+                string finalOutputRoot = Path.GetFullPath(outputRoot);
+                m_HostFinalizationTask = Task.Run(() =>
+                    FinalizeHost(
+                        capability,
+                        artifact,
+                        schema,
+                        finalOutputRoot));
+                result = null;
+                return false;
+            }
+
+            if (!m_HostFinalizationTask.IsCompleted)
             {
                 result = null;
                 return false;
             }
-            DiagnosticSchemaLayout schema;
-            DiagnosticCapabilityBuildDescriptor capability;
-            if (m_CoreLifecycle != null)
-            {
-                schema = CharacterFootIkCoreCaptureProgram
-                    .CreateDiagnosticSchemaLayout();
-                capability = CharacterFootIkCoreCaptureProgram
-                    .CreateDiagnosticCapabilityBuildDescriptor(
-                        m_Request.InterestIdentity,
-                        m_Request.CadenceIdentity,
-                        m_Request.LineageTypeIdentity,
-                        m_Request.PacketCapacity,
-                        m_Request.WriterTransportIdentity);
-            }
-            else
-            {
-                schema = CharacterFootIkFullCaptureProgram
-                    .CreateDiagnosticSchemaLayout();
-                capability = CharacterFootIkFullCaptureProgram
-                    .CreateDiagnosticCapabilityBuildDescriptor(
-                        m_Request.InterestIdentity,
-                        m_Request.CadenceIdentity,
-                        m_Request.LineageTypeIdentity,
-                        m_Request.PacketCapacity,
-                        m_Request.WriterTransportIdentity);
-            }
-            result = new DiagnosticHostFinalizer().Finalize(
-                capability,
-                DiagnosticArtifactStore.Open(artifact),
-                schema,
-                outputRoot);
-            DiagnosticArtifactStore.Seal(
-                Path.Combine(
-                    Path.GetFullPath(outputRoot),
-                    "capability.manifest.json"),
-                result.EncodedManifest);
+
+            result = m_HostFinalizationTask.GetAwaiter().GetResult();
+            m_HostFinalizationTask = null;
             return result.Manifest.Status == DiagnosticCaptureStatus.Completed;
         }
 
         public void Dispose()
         {
+            if (m_HostFinalizationTask != null)
+            {
+                try
+                {
+                    m_HostFinalizationTask.GetAwaiter().GetResult();
+                }
+                catch
+                {
+                }
+                m_HostFinalizationTask = null;
+            }
             if (m_CoreLifecycle != null)
                 m_CoreLifecycle.Dispose();
             else
@@ -193,6 +217,24 @@ namespace ThirdPersonCharacter.Pipeline.Diagnostics.FootIkSampling.Editor
             }
             m_Started = true;
             return true;
+        }
+
+        static DiagnosticHostFinalizationResult FinalizeHost(
+            DiagnosticCapabilityBuildDescriptor capability,
+            DiagnosticSealedArtifact artifact,
+            DiagnosticSchemaLayout schema,
+            string outputRoot)
+        {
+            DiagnosticHostFinalizationResult result =
+                new DiagnosticHostFinalizer().Finalize(
+                    capability,
+                    DiagnosticArtifactStore.Open(artifact),
+                    schema,
+                    outputRoot);
+            DiagnosticArtifactStore.Seal(
+                Path.Combine(outputRoot, "capability.manifest.json"),
+                result.EncodedManifest);
+            return result;
         }
     }
 }

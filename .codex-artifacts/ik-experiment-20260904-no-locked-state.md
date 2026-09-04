@@ -16,4 +16,14 @@ Landing 完成前后的脚位应保持基本连续；如果 Locked 的 FullAncho
 
 ## 回放
 
-待固定 Trace 回放完成后补充实际 Samples 与逐字段对比。若 Landing 永不收口、事件链重排或脚位无收益，保留样本并精确回退本轮代码。
+固定 Trace `43357ff3cd384e5cba75d2c31175b116` 已完整消费 1044/1044 帧并封口：
+
+- Samples：`3cDemo/Client/3C_Client/Diagnostics/GeneratedFootSampling/20260904-010957-dfc311bf461d43a39c9a545ee0f7556c/character-foot-ik%2Ffull.csv`
+- capturing/finalizing/analyzing 均为 false，编辑器回到 Edit；Replay Proof `matched:1044`，Console 无新增错误。
+- `LandingCompleted` 从半步基线的 24 降为 0，`ReleaseCompleted` 保持 53；canonical Locked 状态为 0，Landing 状态覆盖 527 行。
+- 右 1916/1918 与半步基线完全一致：Plant residual after-decay/output `0.3408863/0.5647549m`、`0.231937334/0.384257972m`，target/solved extension `0.7801122/0.7801122`、`0.7238196/0.723819435`，bend `77.54771°/87.36483°`。
+- 左 2069 与半步基线一致：after/output `-0.0666096359/0.0728213042m`，sole/ankle/physical 跳变 `0.068029/0.074007/0.074006m`。
+- 全局 GroundPath 1796/292、Contact Edge 114、Plant positive 27、最大穿透 0.08324221m、Plant output max 0.5647549m、Bend 172.9645°、Extension 0.999992/1.19071、Pelvis 753/2088、Physical 2088/2088，均与半步基线一致。
+- 全局 final sole/ankle/physical 最大跳变也与半步一致；没有额外尾巴、穿透或左右脚变化。
+
+结论：取消 3C `Landing → Locked` 只改变生命周期事件计数，不改变固定 Trace 的可见脚位或主异常，无法支持“Locked 是主因”。保留本样本和结论，精确回退本轮代码，恢复半步行为。

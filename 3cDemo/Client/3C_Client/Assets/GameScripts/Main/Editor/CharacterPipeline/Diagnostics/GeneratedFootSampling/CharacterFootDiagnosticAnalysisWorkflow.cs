@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using System.Threading.Tasks;
 using KK.GeneratedDiagnosticSampling;
 using KK.GeneratedDiagnosticSampling.Host;
 using ThirdPersonCharacter.Pipeline.Diagnostics.FootAnalysis.Editor;
@@ -22,6 +23,8 @@ namespace ThirdPersonCharacter.Pipeline.Diagnostics.FootIkSampling.Editor
                 CharacterFootDiagnosticAnalysisWorkflow.LastResultDirectory;
             public string LastReportPath =>
                 CharacterFootDiagnosticAnalysisWorkflow.LastReportPath;
+            public string LastQualityScorePath =>
+                CharacterFootDiagnosticAnalysisWorkflow.LastQualityScorePath;
             public string LastFailure =>
                 CharacterFootDiagnosticAnalysisWorkflow.LastFailure;
             public void AnalyzeLast() =>
@@ -47,17 +50,23 @@ namespace ThirdPersonCharacter.Pipeline.Diagnostics.FootIkSampling.Editor
         static bool s_IsAnalyzing;
         static string s_LastResultDirectory = string.Empty;
         static string s_LastReportPath = string.Empty;
+        static string s_LastQualityScorePath = string.Empty;
         static string s_LastFailure = string.Empty;
+        static Task<DiagnosticAnalysisArtifacts> s_AnalysisTask;
 
         static CharacterFootDiagnosticAnalysisWorkflow()
         {
             DiagnosticAnalysisWorkflowRegistry.Register(s_Workflow);
             RestoreLastReport();
+            EditorApplication.update += PollAnalysis;
+            AssemblyReloadEvents.beforeAssemblyReload += WaitForAnalysis;
+            EditorApplication.quitting += WaitForAnalysis;
         }
 
         public static bool IsAnalyzing => s_IsAnalyzing;
         public static string LastResultDirectory => s_LastResultDirectory;
         public static string LastReportPath => s_LastReportPath;
+        public static string LastQualityScorePath => s_LastQualityScorePath;
         public static string LastFailure => s_LastFailure;
 
         [MenuItem(AnalyzeLastMenu)]
@@ -108,40 +117,24 @@ namespace ThirdPersonCharacter.Pipeline.Diagnostics.FootIkSampling.Editor
                     "Foot diagnostic analysis is already running.");
             s_IsAnalyzing = true;
             s_LastFailure = string.Empty;
-            try
-            {
-                string captureDirectory = Path.GetDirectoryName(
-                    Path.GetFullPath(manifestPath));
-                string outputRoot = Path.Combine(
-                    Path.GetDirectoryName(captureDirectory),
-                    "FootAnalysis");
-                string outputDirectory = Path.Combine(
-                    outputRoot,
-                    $"{Path.GetFileName(captureDirectory)}-{DateTime.UtcNow:yyyyMMdd-HHmmss}-{Guid.NewGuid():N}");
-                DiagnosticAnalysisArtifacts artifacts =
-                    CharacterFootDiagnosticAnalysis.Analyze(
-                        manifestPath,
-                        planPath,
-                        typeof(CharacterFootDiagnosticAnalysis)
-                            .Assembly.Location,
-                        outputDirectory);
-                s_LastResultDirectory = artifacts.Directory;
-                s_LastReportPath = artifacts.Report.Path;
-                EditorPrefs.SetString(
-                    LastReportPreference,
-                    Path.GetFullPath(s_LastReportPath));
-                Debug.Log(
-                    $"Foot diagnostic analysis completed: {s_LastReportPath}");
-            }
-            catch (Exception exception)
-            {
-                s_LastFailure = exception.Message;
-                throw;
-            }
-            finally
-            {
-                s_IsAnalyzing = false;
-            }
+            s_LastQualityScorePath = string.Empty;
+            string fullManifestPath = Path.GetFullPath(manifestPath);
+            string captureDirectory = Path.GetDirectoryName(fullManifestPath);
+            string outputRoot = Path.Combine(
+                Path.GetDirectoryName(captureDirectory),
+                "FootAnalysis");
+            string outputDirectory = Path.Combine(
+                outputRoot,
+                $"{Path.GetFileName(captureDirectory)}-{DateTime.UtcNow:yyyyMMdd-HHmmss}-{Guid.NewGuid():N}");
+            string fullPlanPath = Path.GetFullPath(planPath);
+            string analyzerAssemblyPath = typeof(CharacterFootDiagnosticAnalysis)
+                .Assembly.Location;
+            s_AnalysisTask = Task.Run(() =>
+                CharacterFootDiagnosticAnalysis.Analyze(
+                    fullManifestPath,
+                    fullPlanPath,
+                    analyzerAssemblyPath,
+                    outputDirectory));
         }
 
         [MenuItem(OpenReportMenu)]
@@ -191,6 +184,12 @@ namespace ThirdPersonCharacter.Pipeline.Diagnostics.FootIkSampling.Editor
                 return;
             s_LastReportPath = Path.GetFullPath(reportPath);
             s_LastResultDirectory = Path.GetDirectoryName(s_LastReportPath);
+            string qualityScorePath = Path.Combine(
+                s_LastResultDirectory,
+                CharacterFootDiagnosticAnalysis.QualityScoreFileName);
+            s_LastQualityScorePath = File.Exists(qualityScorePath)
+                ? qualityScorePath
+                : string.Empty;
         }
 
         static string CurrentPlanPath(string manifestPath)
@@ -213,6 +212,58 @@ namespace ThirdPersonCharacter.Pipeline.Diagnostics.FootIkSampling.Editor
                 Application.dataPath,
                 "..",
                 assetPath));
+        }
+
+        static void PollAnalysis()
+        {
+            if (!s_IsAnalyzing || s_AnalysisTask == null ||
+                !s_AnalysisTask.IsCompleted)
+            {
+                return;
+            }
+            Task<DiagnosticAnalysisArtifacts> task = s_AnalysisTask;
+            s_AnalysisTask = null;
+            try
+            {
+                DiagnosticAnalysisArtifacts artifacts =
+                    task.GetAwaiter().GetResult();
+                s_LastResultDirectory = artifacts.Directory;
+                s_LastReportPath = artifacts.Report.Path;
+                s_LastQualityScorePath = Path.Combine(
+                    artifacts.Directory,
+                    CharacterFootDiagnosticAnalysis.QualityScoreFileName);
+                if (!File.Exists(s_LastQualityScorePath))
+                    s_LastQualityScorePath = string.Empty;
+                EditorPrefs.SetString(
+                    LastReportPreference,
+                    Path.GetFullPath(s_LastReportPath));
+                Debug.Log(
+                    $"Foot diagnostic analysis completed: {s_LastReportPath}");
+            }
+            catch (Exception exception)
+            {
+                s_LastFailure = exception.Message;
+                Debug.LogException(exception);
+            }
+            finally
+            {
+                s_IsAnalyzing = false;
+            }
+        }
+
+        static void WaitForAnalysis()
+        {
+            if (s_AnalysisTask == null)
+                return;
+            try
+            {
+                s_AnalysisTask.GetAwaiter().GetResult();
+            }
+            catch
+            {
+            }
+            s_AnalysisTask = null;
+            s_IsAnalyzing = false;
         }
     }
 }

@@ -73,6 +73,10 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             TryGetAnalysis(out IDiagnosticAnalysisWorkflow workflow)
                 ? workflow.LastReportPath
                 : string.Empty;
+        public static string LastQualityScorePath =>
+            TryGetAnalysis(out IDiagnosticAnalysisWorkflow workflow)
+                ? workflow.LastQualityScorePath
+                : string.Empty;
         public static string LastAnalysisFailure =>
             TryGetAnalysis(out IDiagnosticAnalysisWorkflow workflow)
                 ? workflow.LastFailure

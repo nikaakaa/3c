@@ -9,6 +9,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         bool IsAnalyzing { get; }
         string LastResultDirectory { get; }
         string LastReportPath { get; }
+        string LastQualityScorePath { get; }
         string LastFailure { get; }
         void AnalyzeLast();
         void AnalyzeExisting(string manifestPath);

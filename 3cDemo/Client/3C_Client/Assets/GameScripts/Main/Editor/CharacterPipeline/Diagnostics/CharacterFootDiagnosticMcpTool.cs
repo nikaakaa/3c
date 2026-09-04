@@ -150,7 +150,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     CharacterFootDiagnosticSampling.LastAnalysisFailure,
                 analysis_directory =
                     CharacterFootDiagnosticSampling.LastAnalysisDirectory,
-                report_path = CharacterFootDiagnosticSampling.LastReportPath
+                report_path = CharacterFootDiagnosticSampling.LastReportPath,
+                quality_score_path =
+                    CharacterFootDiagnosticSampling.LastQualityScorePath
             });
     }
 }

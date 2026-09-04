@@ -1,0 +1,19 @@
+{
+  "dumpRoot": "D:/ZZZ_Dump",
+  "output": "D:/ZZZ_Dump/output/corin_replication/replication-guide",
+  "controller": "output/corin_replication/20260903_controller_structured_v6/Avatar_Female_Size01_Corin_Controller__1291803240_00335DAA.json",
+  "animationManifest": "output/corin_replication/20260904_replication-manifest.json",
+  "configIndex": "output/corin_replication/20260904_corin_config_index_v1.json",
+  "decodedRoot": "output/corin_replication/20260904_config_decoded_v6",
+  "selectedConfigs": {
+    "attack": "1387972831.blk_export/CAB-832e8e5134f60beec53d5ec90a82a04e/AttackProperty_Avatar_Female_Size01_Corin.json",
+    "zones": "1387972831.blk_export/CAB-747b46ca75fd1cf803f29ba087ecdb75/AnimatorZone_Avatar_Female_Size01_Corin.json",
+    "battle": "1510480920.blk_export/CAB-90d96064c277522f946d402de242a4b4/AnimatorEventPattern_Avatar_Female_Size01_Corin_Battle.json",
+    "effect": "2393852806.blk_export/CAB-24389a93e0718d00d679e4ffae70bf87/AnimatorEventPattern_Avatar_Female_Size01_Corin_Effect.json",
+    "audio": "290929137.blk_export/CAB-0df508e8e2b472add3a70728f2376d98/AnimatorEventPattern_Avatar_Female_Size01_Corin_Audio.json",
+    "shake": "1387972831.blk_export/CAB-fd532b3a2bb364f0cbc2496590111630/CameraShakes_Avatar_Corin.json",
+    "zoom": "1840230881.blk_export/CAB-09281bc15a3a1cffd8619639b815b8d3/CameraZooms_Avatar_Corin.json",
+    "stretch": "1840230881.blk_export/CAB-1da9ce6da334157fa1683bb6ae65876b/CameraStretchs_Avatar_Corin.json",
+    "override": "2158315646.blk_export/CAB-6dfda1a50aff1e471ab17801ef09e64e/CameraOverrideTracks_Avatar_Corin.json"
+  }
+}

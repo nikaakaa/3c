@@ -15,6 +15,8 @@ public readonly struct CameraFrameInput
             float presentationDeltaSeconds,
             float ownerTimeScale,
             float localAvatarTimeScale,
+            bool ownerTimeScaleAvailable,
+            bool localAvatarTimeScaleAvailable,
             bool paused,
             bool resetHistory,
             IReadOnlyList<CameraTargetSnapshot> targets)
@@ -27,6 +29,8 @@ public readonly struct CameraFrameInput
             PresentationDeltaSeconds = RequireDelta(presentationDeltaSeconds, nameof(presentationDeltaSeconds));
             OwnerTimeScale = RequireScale(ownerTimeScale, nameof(ownerTimeScale));
             LocalAvatarTimeScale = RequireScale(localAvatarTimeScale, nameof(localAvatarTimeScale));
+            HasOwnerTimeScale = ownerTimeScaleAvailable;
+            HasLocalAvatarTimeScale = localAvatarTimeScaleAvailable;
             Paused = paused;
             ResetHistory = resetHistory;
             Targets = targets ?? Array.Empty<CameraTargetSnapshot>();
@@ -40,6 +44,8 @@ public readonly struct CameraFrameInput
         public float PresentationDeltaSeconds { get; }
         public float OwnerTimeScale { get; }
         public float LocalAvatarTimeScale { get; }
+        public bool HasOwnerTimeScale { get; }
+        public bool HasLocalAvatarTimeScale { get; }
         public bool Paused { get; }
         public bool ResetHistory { get; }
         public IReadOnlyList<CameraTargetSnapshot> Targets { get; }
@@ -51,8 +57,12 @@ public readonly struct CameraFrameInput
                 case CameraTimeDomain.PresentationUnscaled:
                     return UnscaledDeltaSeconds;
                 case CameraTimeDomain.OwnerScaled:
+                    if (!HasOwnerTimeScale)
+                        throw new InvalidOperationException("Camera OwnerScaled time requires an OwnerTimeScale input.");
                     return PresentationDeltaSeconds * OwnerTimeScale;
                 case CameraTimeDomain.LocalAvatarScaled:
+                    if (!HasLocalAvatarTimeScale)
+                        throw new InvalidOperationException("Camera LocalAvatarScaled time requires a LocalAvatarTimeScale input.");
                     return PresentationDeltaSeconds * LocalAvatarTimeScale;
                 default:
                     return PresentationDeltaSeconds;

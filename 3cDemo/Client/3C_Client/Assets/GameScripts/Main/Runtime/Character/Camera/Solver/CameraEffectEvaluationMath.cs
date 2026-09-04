@@ -1,3 +1,4 @@
+using System;
 using UnityEngine;
 
 namespace ThirdPersonCamera
@@ -14,9 +15,17 @@ namespace ThirdPersonCamera
                 ? input.UnscaledDeltaSeconds
                 : input.PresentationDeltaSeconds;
             if (!ignoreOwnerTimeScale)
+            {
+                if (!input.HasOwnerTimeScale)
+                    throw new InvalidOperationException("Camera effect requires an OwnerTimeScale input.");
                 delta *= input.OwnerTimeScale;
+            }
             if (!ignoreLocalAvatar)
+            {
+                if (!input.HasLocalAvatarTimeScale)
+                    throw new InvalidOperationException("Camera effect requires a LocalAvatarTimeScale input.");
                 delta *= input.LocalAvatarTimeScale;
+            }
             return delta;
         }
 

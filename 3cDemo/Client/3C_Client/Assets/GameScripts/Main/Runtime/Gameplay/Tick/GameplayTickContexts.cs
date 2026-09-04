@@ -47,8 +47,10 @@ namespace ThirdPersonGameplay.Tick
                 renderFrame,
                 localLogicTick,
                 interpolationAlpha,
-                1f,
-                1f,
+                0f,
+                0f,
+                false,
+                false,
                 false)
         {
         }
@@ -69,8 +71,10 @@ namespace ThirdPersonGameplay.Tick
                 renderFrame,
                 localLogicTick,
                 interpolationAlpha,
-                1f,
-                1f,
+                0f,
+                0f,
+                false,
+                false,
                 false)
         {
         }
@@ -85,6 +89,8 @@ namespace ThirdPersonGameplay.Tick
             float interpolationAlpha,
             float ownerTimeScale,
             float localAvatarTimeScale,
+            bool ownerTimeScaleAvailable,
+            bool localAvatarTimeScaleAvailable,
             bool paused)
         {
             if (!float.IsFinite(scaledDeltaSeconds) || scaledDeltaSeconds < 0f ||
@@ -103,6 +109,8 @@ namespace ThirdPersonGameplay.Tick
             InterpolationAlpha = interpolationAlpha;
             OwnerTimeScale = ownerTimeScale;
             LocalAvatarTimeScale = localAvatarTimeScale;
+            HasOwnerTimeScale = ownerTimeScaleAvailable;
+            HasLocalAvatarTimeScale = localAvatarTimeScaleAvailable;
             Paused = paused;
         }
 
@@ -115,6 +123,8 @@ namespace ThirdPersonGameplay.Tick
         public float InterpolationAlpha { get; }
         public float OwnerTimeScale { get; }
         public float LocalAvatarTimeScale { get; }
+        public bool HasOwnerTimeScale { get; }
+        public bool HasLocalAvatarTimeScale { get; }
         public bool Paused { get; }
     }
 }

@@ -228,6 +228,11 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 context.ScaledDeltaSeconds,
                 context.UnscaledDeltaSeconds,
                 context.PresentationDeltaSeconds,
+                context.OwnerTimeScale,
+                context.LocalAvatarTimeScale,
+                context.HasOwnerTimeScale,
+                context.HasLocalAvatarTimeScale,
+                context.Paused,
                 resetHistory);
         }
 
@@ -260,7 +265,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
 
         void PresentInitial(Vector3 position, Quaternion rotation)
         {
-            Apply(position, rotation, Vector2.zero, 0f, 0f, 0f, true);
+            Apply(position, rotation, Vector2.zero, 0f, 0f, 0f, 0f, 0f, false, false, false, true);
         }
 
         void Apply(
@@ -270,6 +275,11 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             float scaledDeltaSeconds,
             float unscaledDeltaSeconds,
             float presentationDeltaSeconds,
+            float ownerTimeScale,
+            float localAvatarTimeScale,
+            bool ownerTimeScaleAvailable,
+            bool localAvatarTimeScaleAvailable,
+            bool paused,
             bool resetHistory)
         {
             Vector3 follow = position + rotation * m_FollowBindPosition;
@@ -318,9 +328,11 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 scaledDeltaSeconds,
                 unscaledDeltaSeconds,
                 presentationDeltaSeconds,
-                context.OwnerTimeScale,
-                context.LocalAvatarTimeScale,
-                context.Paused,
+                ownerTimeScale,
+                localAvatarTimeScale,
+                ownerTimeScaleAvailable,
+                localAvatarTimeScaleAvailable,
+                paused,
                 resetHistory,
                 m_FrameTargets);
             CameraFramePlan plan = m_SequenceEvaluator.Evaluate(

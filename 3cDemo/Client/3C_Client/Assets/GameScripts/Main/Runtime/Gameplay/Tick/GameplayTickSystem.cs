@@ -376,8 +376,10 @@ namespace ThirdPersonGameplay.Tick
                 RenderFrame,
                 LocalLogicTick,
                 m_InterpolationAlpha,
-                1f,
-                1f,
+                0f,
+                0f,
+                false,
+                false,
                 m_DrivePolicy.Mode == GameplayTickDriveMode.Paused);
             for (int i = 0; i < m_PresentationTargets.Count; i++)
             {

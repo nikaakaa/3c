@@ -201,16 +201,10 @@ namespace ThirdPersonCamera
 
         void ApplyOrbitGroup(in CameraFramePlan plan)
         {
-            if (freeLook == null || freeLook.m_Orbits == null || plan.OrbitGroup.Count == 0)
+            if (freeLook == null || freeLook.m_Orbits == null || plan.Orbit == null || plan.OrbitGroup.Count == 0)
                 throw new InvalidOperationException("Camera Frame Plan has no formal orbit group for the Cinemachine FreeLook.");
             if (plan.OrbitGroup.Count != freeLook.m_Orbits.Length)
                 throw new InvalidOperationException("Camera Frame Plan orbit group does not match the Cinemachine FreeLook orbit capacity.");
-            CameraOrbitPayload centerOrbit = plan.OrbitGroup[plan.OrbitGroup.Count / 2];
-            if (centerOrbit == null || centerOrbit.Radius <= 0f || plan.OrbitRadius <= 0f)
-                throw new InvalidOperationException("Camera Frame Plan has an invalid orbit radius reference.");
-            float radiusScale = Mathf.Max(0f, plan.RadiusScale);
-            if (!plan.OrbitGroupUsesAbsoluteRadius)
-                radiusScale *= plan.OrbitRadius / centerOrbit.Radius;
             for (int i = 0; i < freeLook.m_Orbits.Length; i++)
             {
                 CameraOrbitPayload orbit = plan.OrbitGroup[i];
@@ -218,7 +212,7 @@ namespace ThirdPersonCamera
                     throw new InvalidOperationException($"Camera Frame Plan orbit #{i} is missing.");
                 freeLook.m_Orbits[i] = new CinemachineFreeLook.Orbit(
                     orbit.Height,
-                    orbit.Radius * radiusScale);
+                    orbit.Radius);
             }
             ApplyScreenY(plan.OrbitGroup);
             if (formalOrbitGroup == null || formalOrbitGroup.Length != freeLook.m_Orbits.Length)

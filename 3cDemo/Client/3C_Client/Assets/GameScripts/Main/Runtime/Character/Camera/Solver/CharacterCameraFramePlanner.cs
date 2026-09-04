@@ -115,25 +115,27 @@ namespace ThirdPersonCamera
 
             Quaternion orbitRotation = Quaternion.Euler(evaluatedPitch, evaluatedYaw, 0f);
             aim += orbitRotation * new Vector3(compositionOffset.x, compositionOffset.y, 0f);
+            CameraOrbitComposition orbitComposition = CameraOrbitComposition.Create(
+                orbitGroup,
+                radius,
+                orbitGroupUsesAbsoluteRadius,
+                evaluatedYaw,
+                evaluatedPitch);
             return new CameraFramePlan(
                 anchor,
                 aim,
-                fieldOfView,
-                m_Projection.NearClipPlane,
-                m_Projection.FarClipPlane,
+                new CameraLensPlan(
+                    fieldOfView,
+                    m_Projection.NearClipPlane,
+                    m_Projection.FarClipPlane),
                 look,
-                evaluatedYaw,
-                evaluatedPitch,
-                radius,
+                orbitComposition,
                 sequence.SequenceId,
                 request.SourceId,
                 request.SourceActionInstanceId,
                 request.IsDefault ? 1f : request.Weight,
                 input.ResetHistory,
                 true,
-                radiusScale: 1f,
-                orbitGroup: orbitGroup,
-                orbitGroupUsesAbsoluteRadius: orbitGroupUsesAbsoluteRadius,
                 rollDegrees: evaluatedRoll);
         }
     }

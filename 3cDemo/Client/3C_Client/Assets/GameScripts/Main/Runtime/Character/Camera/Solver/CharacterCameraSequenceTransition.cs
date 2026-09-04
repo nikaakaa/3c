@@ -188,70 +188,20 @@ namespace ThirdPersonCamera
             return new CameraFramePlan(
                 Vector3.LerpUnclamped(from.FollowPoint, to.FollowPoint, t),
                 Vector3.LerpUnclamped(from.AimPoint, to.AimPoint, t),
-                Mathf.LerpUnclamped(from.FieldOfView, to.FieldOfView, t),
-                Mathf.LerpUnclamped(from.NearClipPlane, to.NearClipPlane, t),
-                Mathf.LerpUnclamped(from.FarClipPlane, to.FarClipPlane, t),
+                new CameraLensPlan(
+                    Mathf.LerpUnclamped(from.FieldOfView, to.FieldOfView, t),
+                    Mathf.LerpUnclamped(from.NearClipPlane, to.NearClipPlane, t),
+                    Mathf.LerpUnclamped(from.FarClipPlane, to.FarClipPlane, t)),
                 Vector2.LerpUnclamped(from.LookDelta, to.LookDelta, t),
-                Mathf.LerpAngle(from.OrbitYaw, to.OrbitYaw, t),
-                Mathf.LerpUnclamped(from.OrbitPitch, to.OrbitPitch, t),
-                Mathf.LerpUnclamped(
-                    ResolveEffectiveOrbitRadius(from),
-                    ResolveEffectiveOrbitRadius(to),
-                    t),
+                CameraOrbitComposition.Blend(from.Orbit, to.Orbit, t),
                 to.SequenceId,
                 to.SourceId,
                 to.SourceActionInstanceId,
                 t,
                 to.ResetHistory,
                 to.Valid,
-                1f,
                 Vector3.LerpUnclamped(from.CameraOffset, to.CameraOffset, t),
-                Mathf.LerpUnclamped(from.RollDegrees, to.RollDegrees, t),
-                BlendOrbitGroups(from, to, t),
-                true);
-        }
-
-        static IReadOnlyList<CameraOrbitPayload> BlendOrbitGroups(
-            CameraFramePlan from,
-            CameraFramePlan to,
-            float progress)
-        {
-            if (from.OrbitGroup.Count != to.OrbitGroup.Count)
-                throw new InvalidOperationException("Camera Sequence transition changed orbit group capacity.");
-            float fromScale = ResolveOrbitRadiusScale(from);
-            float toScale = ResolveOrbitRadiusScale(to);
-            if (ReferenceEquals(from.OrbitGroup, to.OrbitGroup) &&
-                Mathf.Approximately(fromScale, 1f) && Mathf.Approximately(toScale, 1f))
-                return to.OrbitGroup;
-            var result = new CameraOrbitPayload[to.OrbitGroup.Count];
-            for (int i = 0; i < result.Length; i++)
-            {
-                CameraOrbitPayload fromOrbit = from.OrbitGroup[i];
-                CameraOrbitPayload toOrbit = to.OrbitGroup[i];
-                result[i] = new CameraOrbitPayload(
-                    Mathf.LerpUnclamped(fromOrbit.Height, toOrbit.Height, progress),
-                    Mathf.LerpUnclamped(fromOrbit.Radius * fromScale, toOrbit.Radius * toScale, progress),
-                    Mathf.LerpUnclamped(fromOrbit.ScreenY, toOrbit.ScreenY, progress));
-            }
-            return result;
-        }
-
-        static float ResolveOrbitRadiusScale(CameraFramePlan plan)
-        {
-            if (plan.OrbitGroup.Count == 0)
-                throw new InvalidOperationException("Camera Sequence plan has no orbit group for blending.");
-            CameraOrbitPayload centerOrbit = plan.OrbitGroup[plan.OrbitGroup.Count / 2];
-            if (centerOrbit == null || centerOrbit.Radius <= 0f || plan.OrbitRadius <= 0f)
-                throw new InvalidOperationException("Camera Sequence plan has an invalid orbit radius reference.");
-            return plan.RadiusScale * (plan.OrbitGroupUsesAbsoluteRadius
-                ? 1f
-                : plan.OrbitRadius / centerOrbit.Radius);
-        }
-
-        static float ResolveEffectiveOrbitRadius(CameraFramePlan plan)
-        {
-            int centerIndex = plan.OrbitGroup.Count / 2;
-            return plan.OrbitGroup[centerIndex].Radius * ResolveOrbitRadiusScale(plan);
+                Mathf.LerpUnclamped(from.RollDegrees, to.RollDegrees, t));
         }
     }
 }

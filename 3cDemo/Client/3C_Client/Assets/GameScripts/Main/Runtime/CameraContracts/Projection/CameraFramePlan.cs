@@ -1,252 +1,149 @@
 using System;
-using System.Collections.Generic;
 using UnityEngine;
 
 namespace ThirdPersonCamera
 {
-public readonly struct CameraFramePlan
+    public readonly struct CameraLensPlan
     {
+        public CameraLensPlan(float fieldOfView, float nearClipPlane, float farClipPlane)
+        {
+            FieldOfView = fieldOfView;
+            NearClipPlane = nearClipPlane;
+            FarClipPlane = farClipPlane;
+        }
+
+        public float FieldOfView { get; }
+        public float NearClipPlane { get; }
+        public float FarClipPlane { get; }
+
+        public CameraLensPlan WithFieldOfView(float fieldOfView) =>
+            new CameraLensPlan(fieldOfView, NearClipPlane, FarClipPlane);
+    }
+
+    public struct CameraFramePlan
+    {
+        Vector3 m_FollowPoint;
+        Vector3 m_AimPoint;
+        CameraLensPlan m_Lens;
+        Vector2 m_LookDelta;
+        CameraOrbitComposition m_Orbit;
+        string m_SequenceId;
+        string m_SourceId;
+        ulong m_SourceActionInstanceId;
+        float m_BlendProgress;
+        bool m_ResetHistory;
+        Vector3 m_CameraOffset;
+        float m_RollDegrees;
+        bool m_Valid;
+
         public CameraFramePlan(
             Vector3 followPoint,
             Vector3 aimPoint,
-            float fieldOfView,
-            float nearClipPlane,
-            float farClipPlane,
+            CameraLensPlan lens,
             Vector2 lookDelta,
-            float orbitYaw,
-            float orbitPitch,
-            float orbitRadius,
+            CameraOrbitComposition orbit,
             string sequenceId,
             string sourceId,
             ulong sourceActionInstanceId,
             float blendProgress,
             bool resetHistory,
             bool valid,
-            float radiusScale = 1f,
             Vector3 cameraOffset = default,
-            float rollDegrees = 0f,
-            IReadOnlyList<CameraOrbitPayload> orbitGroup = null,
-            bool orbitGroupUsesAbsoluteRadius = false)
+            float rollDegrees = 0f)
         {
-            FollowPoint = followPoint;
-            AimPoint = aimPoint;
-            FieldOfView = fieldOfView;
-            NearClipPlane = nearClipPlane;
-            FarClipPlane = farClipPlane;
-            LookDelta = lookDelta;
-            OrbitYaw = orbitYaw;
-            OrbitPitch = orbitPitch;
-            OrbitRadius = orbitRadius;
-            SequenceId = sequenceId ?? string.Empty;
-            SourceId = sourceId ?? string.Empty;
-            SourceActionInstanceId = sourceActionInstanceId;
-            BlendProgress = Mathf.Clamp01(blendProgress);
-            ResetHistory = resetHistory;
-            RadiusScale = radiusScale;
-            CameraOffset = cameraOffset;
-            RollDegrees = rollDegrees;
-            OrbitGroup = orbitGroup ?? Array.Empty<CameraOrbitPayload>();
-            OrbitGroupUsesAbsoluteRadius = orbitGroupUsesAbsoluteRadius;
-            Valid = valid;
+            m_FollowPoint = followPoint;
+            m_AimPoint = aimPoint;
+            m_Lens = lens;
+            m_LookDelta = lookDelta;
+            m_Orbit = orbit;
+            m_SequenceId = sequenceId ?? string.Empty;
+            m_SourceId = sourceId ?? string.Empty;
+            m_SourceActionInstanceId = sourceActionInstanceId;
+            m_BlendProgress = Mathf.Clamp01(blendProgress);
+            m_ResetHistory = resetHistory;
+            m_CameraOffset = cameraOffset;
+            m_RollDegrees = rollDegrees;
+            m_Valid = valid;
         }
 
-        public Vector3 FollowPoint { get; }
-        public Vector3 AimPoint { get; }
-        public float FieldOfView { get; }
-        public float NearClipPlane { get; }
-        public float FarClipPlane { get; }
-        public Vector2 LookDelta { get; }
-        public float OrbitYaw { get; }
-        public float OrbitPitch { get; }
-        public float OrbitRadius { get; }
-        public string SequenceId { get; }
-        public string SourceId { get; }
-        public ulong SourceActionInstanceId { get; }
-        public float BlendProgress { get; }
-        public bool ResetHistory { get; }
-        public float RadiusScale { get; }
-        public Vector3 CameraOffset { get; }
-        public float RollDegrees { get; }
-        public IReadOnlyList<CameraOrbitPayload> OrbitGroup { get; }
-        public bool OrbitGroupUsesAbsoluteRadius { get; }
-        public bool Valid { get; }
+        public Vector3 FollowPoint => m_FollowPoint;
+        public Vector3 AimPoint => m_AimPoint;
+        public float FieldOfView => m_Lens.FieldOfView;
+        public float NearClipPlane => m_Lens.NearClipPlane;
+        public float FarClipPlane => m_Lens.FarClipPlane;
+        public Vector2 LookDelta => m_LookDelta;
+        public float OrbitYaw => m_Orbit != null ? m_Orbit.Yaw : 0f;
+        public float OrbitPitch => m_Orbit != null ? m_Orbit.Pitch : 0f;
+        public float OrbitRadius => m_Orbit != null ? m_Orbit.CenterRadius : 0f;
+        public string SequenceId => m_SequenceId ?? string.Empty;
+        public string SourceId => m_SourceId ?? string.Empty;
+        public ulong SourceActionInstanceId => m_SourceActionInstanceId;
+        public float BlendProgress => m_BlendProgress;
+        public bool ResetHistory => m_ResetHistory;
+        public Vector3 CameraOffset => m_CameraOffset;
+        public float RollDegrees => m_RollDegrees;
+        public CameraOrbitComposition Orbit => m_Orbit;
+        public bool Valid => m_Valid;
+        public System.Collections.Generic.IReadOnlyList<CameraOrbitPayload> OrbitGroup =>
+            m_Orbit != null ? m_Orbit.Orbits : Array.Empty<CameraOrbitPayload>();
 
         public static CameraFramePlan Invalid => default;
 
-        public CameraFramePlan WithTargets(Vector3 followPoint, Vector3 aimPoint) => new CameraFramePlan(
-            followPoint,
-            aimPoint,
-            FieldOfView,
-            NearClipPlane,
-            FarClipPlane,
-            LookDelta,
-            OrbitYaw,
-            OrbitPitch,
-            OrbitRadius,
-            SequenceId,
-            SourceId,
-            SourceActionInstanceId,
-            BlendProgress,
-            ResetHistory,
-            Valid,
-            RadiusScale,
-            cameraOffset: CameraOffset,
-            rollDegrees: RollDegrees,
-            orbitGroup: OrbitGroup,
-            orbitGroupUsesAbsoluteRadius: OrbitGroupUsesAbsoluteRadius);
+        public CameraFramePlan WithTargets(Vector3 followPoint, Vector3 aimPoint)
+        {
+            CameraFramePlan result = this;
+            result.m_FollowPoint = followPoint;
+            result.m_AimPoint = aimPoint;
+            return result;
+        }
 
-        public CameraFramePlan WithFieldOfView(float fieldOfView) => new CameraFramePlan(
-            FollowPoint,
-            AimPoint,
-            fieldOfView,
-            NearClipPlane,
-            FarClipPlane,
-            LookDelta,
-            OrbitYaw,
-            OrbitPitch,
-            OrbitRadius,
-            SequenceId,
-            SourceId,
-            SourceActionInstanceId,
-            BlendProgress,
-            ResetHistory,
-            Valid,
-            RadiusScale,
-            CameraOffset,
-            RollDegrees,
-            OrbitGroup,
-            OrbitGroupUsesAbsoluteRadius);
+        public CameraFramePlan WithFieldOfView(float fieldOfView)
+        {
+            CameraFramePlan result = this;
+            result.m_Lens = m_Lens.WithFieldOfView(fieldOfView);
+            return result;
+        }
 
-        public CameraFramePlan WithLookDelta(Vector2 lookDelta) => new CameraFramePlan(
-            FollowPoint,
-            AimPoint,
-            FieldOfView,
-            NearClipPlane,
-            FarClipPlane,
-            lookDelta,
-            OrbitYaw,
-            OrbitPitch,
-            OrbitRadius,
-            SequenceId,
-            SourceId,
-            SourceActionInstanceId,
-            BlendProgress,
-            ResetHistory,
-            Valid,
-            RadiusScale,
-            CameraOffset,
-            RollDegrees,
-            OrbitGroup,
-            OrbitGroupUsesAbsoluteRadius);
+        public CameraFramePlan WithLookDelta(Vector2 lookDelta)
+        {
+            CameraFramePlan result = this;
+            result.m_LookDelta = lookDelta;
+            return result;
+        }
 
-        public CameraFramePlan WithResetHistory(bool resetHistory) => new CameraFramePlan(
-            FollowPoint,
-            AimPoint,
-            FieldOfView,
-            NearClipPlane,
-            FarClipPlane,
-            LookDelta,
-            OrbitYaw,
-            OrbitPitch,
-            OrbitRadius,
-            SequenceId,
-            SourceId,
-            SourceActionInstanceId,
-            BlendProgress,
-            resetHistory,
-            Valid,
-            RadiusScale,
-            CameraOffset,
-            RollDegrees,
-            OrbitGroup,
-            OrbitGroupUsesAbsoluteRadius);
+        public CameraFramePlan WithResetHistory(bool resetHistory)
+        {
+            CameraFramePlan result = this;
+            result.m_ResetHistory = resetHistory;
+            return result;
+        }
 
-        public CameraFramePlan WithOrbit(float yaw, float pitch, float radius) => new CameraFramePlan(
-            FollowPoint,
-            AimPoint,
-            FieldOfView,
-            NearClipPlane,
-            FarClipPlane,
-            LookDelta,
-            yaw,
-            pitch,
-            radius,
-            SequenceId,
-            SourceId,
-            SourceActionInstanceId,
-            BlendProgress,
-            ResetHistory,
-            Valid,
-            RadiusScale,
-            CameraOffset,
-            RollDegrees,
-            OrbitGroup,
-            OrbitGroupUsesAbsoluteRadius);
+        public CameraFramePlan WithOrbit(float yaw, float pitch, float radius)
+        {
+            CameraFramePlan result = this;
+            result.m_Orbit = m_Orbit.WithPose(yaw, pitch, radius);
+            return result;
+        }
 
-        public CameraFramePlan WithCameraOffset(Vector3 cameraOffset) => new CameraFramePlan(
-            FollowPoint,
-            AimPoint,
-            FieldOfView,
-            NearClipPlane,
-            FarClipPlane,
-            LookDelta,
-            OrbitYaw,
-            OrbitPitch,
-            OrbitRadius,
-            SequenceId,
-            SourceId,
-            SourceActionInstanceId,
-            BlendProgress,
-            ResetHistory,
-            Valid,
-            RadiusScale,
-            cameraOffset,
-            RollDegrees,
-            OrbitGroup,
-            OrbitGroupUsesAbsoluteRadius);
+        public CameraFramePlan WithCameraOffset(Vector3 cameraOffset)
+        {
+            CameraFramePlan result = this;
+            result.m_CameraOffset = cameraOffset;
+            return result;
+        }
 
-        public CameraFramePlan WithRoll(float rollDegrees) => new CameraFramePlan(
-            FollowPoint,
-            AimPoint,
-            FieldOfView,
-            NearClipPlane,
-            FarClipPlane,
-            LookDelta,
-            OrbitYaw,
-            OrbitPitch,
-            OrbitRadius,
-            SequenceId,
-            SourceId,
-            SourceActionInstanceId,
-            BlendProgress,
-            ResetHistory,
-            Valid,
-            RadiusScale,
-            CameraOffset,
-            rollDegrees,
-            OrbitGroup,
-            OrbitGroupUsesAbsoluteRadius);
+        public CameraFramePlan WithRoll(float rollDegrees)
+        {
+            CameraFramePlan result = this;
+            result.m_RollDegrees = rollDegrees;
+            return result;
+        }
 
-        public CameraFramePlan WithRadiusScale(float radiusScale) => new CameraFramePlan(
-            FollowPoint,
-            AimPoint,
-            FieldOfView,
-            NearClipPlane,
-            FarClipPlane,
-            LookDelta,
-            OrbitYaw,
-            OrbitPitch,
-            OrbitRadius,
-            SequenceId,
-            SourceId,
-            SourceActionInstanceId,
-            BlendProgress,
-            ResetHistory,
-            Valid,
-            radiusScale,
-            CameraOffset,
-            RollDegrees,
-            OrbitGroup,
-            OrbitGroupUsesAbsoluteRadius);
+        public CameraFramePlan WithRadiusScale(float radiusScale)
+        {
+            CameraFramePlan result = this;
+            result.m_Orbit = m_Orbit.Scale(radiusScale);
+            return result;
+        }
     }
 }

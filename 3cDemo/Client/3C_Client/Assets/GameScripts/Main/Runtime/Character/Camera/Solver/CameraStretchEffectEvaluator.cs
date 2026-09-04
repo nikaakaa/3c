@@ -46,7 +46,7 @@ namespace ThirdPersonCamera
                     payload.StartCurve,
                     payload.EndCurve);
             envelope *= state.Request.Weight;
-            float radiusScale = plan.RadiusScale + payload.RadiusRatio * envelope;
+            float radiusScale = 1f + payload.RadiusRatio * envelope;
             Vector3 offset = ResolveWorldOffset(payload, plan, in input) * envelope;
             float pitch = plan.OrbitPitch;
             if (payload.IsElevationAngleAbsolute)
@@ -54,9 +54,9 @@ namespace ThirdPersonCamera
             else
                 pitch += Mathf.LerpUnclamped(payload.ElevationAngleMin, payload.ElevationAngleMax, envelope);
             return plan
+                .WithOrbit(plan.OrbitYaw, pitch, plan.OrbitRadius)
                 .WithRadiusScale(radiusScale)
-                .WithCameraOffset(offset)
-                .WithOrbit(plan.OrbitYaw, pitch, plan.OrbitRadius);
+                .WithCameraOffset(offset);
         }
 
         static Vector3 ResolveWorldOffset(

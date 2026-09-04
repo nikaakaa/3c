@@ -16,4 +16,13 @@
 
 ## 回放
 
-待固定 Trace 回放完成后补充实际 Samples 和完整对比。若首帧过伸、穿透或二次跳变增加，保留失败样本并精确回退本轮代码。
+固定 Trace `43357ff3cd384e5cba75d2c31175b116` 已完整消费 1044/1044 帧并封口：
+
+- Samples：`3cDemo/Client/3C_Client/Diagnostics/GeneratedFootSampling/20260904-000028-6eb2d0501932437aa15191f6c5823c26/character-foot-ik%2Ffull.csv`
+- capturing/finalizing/analyzing 均为 false，编辑器回到 Edit；Console 只有既有 FinalIK serialization-depth 日志。
+- 右 1916 确认命中首个 Contact 半衰期 `0.015s`，基准为 `0.03s`；右 1918 恢复 `0.03s`，左 2069 未改变。
+- 右 1916 captured residual Y 与半步候选相同 `0.5010123m`，但 after-decay `0.3408863 → 0.231937319m`，Plant output `0.5647549 → 0.384257972m`。
+- 右 1916 target/solved extension `0.7845701/0.7845701`，solved bend `76.72625°`；final sole/ankle/physical 首帧跳变 `0.453434/0.333839/0.333839m`，半步候选为 `0.273010/0.158563/0.158563m`，ankle/physical 已超过 0.3m。
+- GroundPath 1796/292，Contact Edge 114，Landing/Release 24/53，Plant positive 27，最大穿透 0.083242m，Bend 172.9645°，Extension 0.999992/1.19071，Pelvis 753/2088，Physical 2088/2088。
+
+结论：半衰期减半虽降低 Plant output，但制造明显首帧脚位跳变，判为失败。保留本样本和记录，精确回退 `ec6082841`，恢复 `706d83fd1` 半步行为。

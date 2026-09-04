@@ -243,6 +243,7 @@ namespace ThirdPersonCamera
             bool orbitGroupUsesAbsoluteRadius = false;
             float evaluatedYaw = m_Yaw;
             float evaluatedPitch = m_Pitch;
+            float evaluatedRoll = 0f;
             for (int stageIndex = 0; stageIndex < sequence.Stages.Count; stageIndex++)
             {
                 CameraSequenceStagePayload stage = sequence.Stages[stageIndex];
@@ -277,8 +278,12 @@ namespace ThirdPersonCamera
                         compositionOffset = byTrack.ScreenOffset;
                         break;
                     case CameraRotationEulerOffsetPayload euler:
+                        if (euler.FlipForward)
+                            throw new InvalidOperationException(
+                                $"Camera Sequence stage '{euler.StageId}' uses unsupported FlipForward semantics.");
                         evaluatedPitch += euler.Offset.x;
                         evaluatedYaw = Mathf.Repeat(evaluatedYaw + euler.Offset.y, 360f);
+                        evaluatedRoll += euler.Offset.z;
                         break;
                     default:
                         throw new InvalidOperationException(
@@ -306,7 +311,8 @@ namespace ThirdPersonCamera
                 true,
                 radiusScale: 1f,
                 orbitGroup: orbitGroup,
-                orbitGroupUsesAbsoluteRadius: orbitGroupUsesAbsoluteRadius);
+                orbitGroupUsesAbsoluteRadius: orbitGroupUsesAbsoluteRadius,
+                rollDegrees: evaluatedRoll);
         }
 
         static CameraFramePlan Blend(CameraFramePlan from, CameraFramePlan to, float progress)

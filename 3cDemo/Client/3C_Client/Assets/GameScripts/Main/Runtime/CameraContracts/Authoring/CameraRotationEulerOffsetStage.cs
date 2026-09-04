@@ -20,7 +20,7 @@ namespace ThirdPersonCamera
         public override void RequireValid(string source)
         {
             base.RequireValid(source);
-            if (!float.IsFinite(Offset.x) || !float.IsFinite(Offset.y) || !float.IsFinite(Offset.z))
+            if (!float.IsFinite(Offset.x) || !float.IsFinite(Offset.y) || !float.IsFinite(Offset.z) || FlipForward)
                 throw new InvalidOperationException($"{source} contains invalid Euler rotation offsets.");
         }
     }

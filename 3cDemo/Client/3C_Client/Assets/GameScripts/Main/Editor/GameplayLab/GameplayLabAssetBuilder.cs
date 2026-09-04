@@ -892,7 +892,6 @@ namespace ThirdPersonGameplay.Editor.Lab
             controller.CameraFollowTarget = follow;
             controller.CameraAimTarget = aim;
             controller.BindFreeLookToResolvedTargets = true;
-            controller.Sensitivity = new Vector2(0.12f, 0.0025f);
             return controller;
         }
 

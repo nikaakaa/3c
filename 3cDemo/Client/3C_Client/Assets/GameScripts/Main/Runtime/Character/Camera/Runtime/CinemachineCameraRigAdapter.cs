@@ -13,7 +13,6 @@ namespace ThirdPersonCamera
         [SerializeField] Transform cameraFollowTarget;
         [SerializeField] Transform cameraAimTarget;
         [SerializeField] bool bindFreeLookToResolvedTargets = true;
-        [SerializeField] Vector2 sensitivity = new Vector2(0.12f, 0.0025f);
 
         CameraBasisSnapshot basisSnapshot;
         CameraRigResult result;
@@ -28,7 +27,6 @@ namespace ThirdPersonCamera
         public Transform CameraFollowTarget { get => cameraFollowTarget; set => cameraFollowTarget = value; }
         public Transform CameraAimTarget { get => cameraAimTarget; set => cameraAimTarget = value; }
         public bool BindFreeLookToResolvedTargets { get => bindFreeLookToResolvedTargets; set => bindFreeLookToResolvedTargets = value; }
-        public Vector2 Sensitivity { get => sensitivity; set => sensitivity = value; }
         public float VerticalOrbitValue => freeLook != null ? Mathf.Clamp01(freeLook.m_YAxis.Value) : 0f;
         public float Yaw => ResolveYaw();
         public float Pitch => basisSnapshot.Valid ? basisSnapshot.Pitch : ResolveCurrentPitch();

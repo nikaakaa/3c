@@ -1,3 +1,5 @@
+using System;
+
 namespace ThirdPersonCamera
 {
     internal static class CameraShakeProjectionCompiler

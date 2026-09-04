@@ -30,6 +30,16 @@
 
 metadata 只证明类型、字段、方法身份和地址，不证明函数体之外的完整演出规则。上表把这种边界保留下来，不能把 metadata 名称当成公式或阶段顺序。
 
+## 补充闭合的 Profile、阻尼、锁定和曲线数据
+
+`replication-guide/analysis/基础镜头.md` 已从同一构建的原始对象读出 4 组角色镜头配置和 36 组球面/轨道配置。`Default_Normal` 的一组已确认值为：NearClipPlane `0.1`、FarClipPlane `2000`、CameraLocateRadius `3.75`、Default FOV `50`、Default elevation `0.60000002`、Default smooth time `0.15000001`；默认轨道为 `(height, radius) = (2.2249999, 2.5)`、`(0.22499999, 3.75)`、`(-0.77499998, 2.2)`，ScreenY 为 `0.34999999/0.5/0.5`。同一资料还记录了 `ROTATE_STATETRANSITION_TIME=3`、`CHANGEAVATAR_STATETRANSITION_TIME=0.30000001`、默认延迟组和普通目标/Boss 锁定曲线。
+
+`replication-guide/analysis/公共曲线.md` 已确认 6 条公共曲线的关键帧、切线、权重和边界模式，`Camera_Default_Curve_01/02/04` 与两条 Shake 衰减曲线及 `Camera_ShakeSpatial_Curve_01` 的三份来源数值一致。六个 `CamShake_A_01..03/E_01..03` 标准配置键仍没有定位到正文，不能当成已导入运行资源。
+
+`replication-guide/analysis/镜头原生参数.md` 已确认 5 份 CameraCutscenes、4 份 CameraLockDatas 和 3 份基础镜头对象均消费到原生数据末尾；其中 3 份 Shot 使用 compact-blend-words 布局，每条记录有 5 个未命名值。`replication-guide/analysis/镜头Shot参数.md` 已找到多个 prefab/动画/Timeline 候选，但同名候选尚未形成真实引用闭包。
+
+上述资料闭合的是来源字段和值，不等于已经闭合当前 Corin 实例的选择、完整算法分支或最终输出 owner。
+
 ## 已确认的 Corin 效果字段
 
 ### Shake
@@ -66,7 +76,7 @@ metadata 只证明类型、字段、方法身份和地址，不证明函数体�
 
 ## 未闭合项
 
-1. `CameraModuleAvatarDataConfig` 的完整 Profile 数值和球面/轨道组的实际资源闭包尚未从来源中完整解析。
+1. `CameraModuleAvatarDataConfig` 的多组 Profile 数值已解析，但当前 Corin 实例实际选择的配置键、区域变体和完整资源闭包尚未从消费者中确认。
 2. 单点/双点/多点函数的数学分支、位置/旋转阻尼历史、`BlendFromCurrent`/`MoveByBlending` 的起终点和取消规则尚未闭合。
 3. `CameraCutscenes` 的 5 个 block 内容不同，4 个 typetree 只有 identity，另 1 个 block 未找到 source block；Shot、公共曲线、Timeline 绑定不能按名字补齐。
 4. `AvatarTrack` 175 份副本有 52 个内容 hash，角色/场景消费者尚未逐项对账。

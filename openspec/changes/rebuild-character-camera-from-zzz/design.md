@@ -1,6 +1,12 @@
 ## Context
 
-动机与范围见 [proposal.md](proposal.md)。本设计只提出实现方案，当前未修改代码或 Unity 资产。
+动机与范围见 [proposal.md](proposal.md)。本设计对应当前专用 worktree 的增量实现；代码和规范必须以已经提交的唯一链路为准，未闭合的来源行为继续保留失败诊断。
+
+### 单角色边界
+
+BTSMTL Definition、Graph、StateMachine、Timeline 和 Presentation Camera Runtime 只为一个 Character 建立作者与运行归属。相机可以消费敌人、Boss 或多个目标的明确快照来构图，但不在本变更中实现队伍切人、主控 Actor 切换、跨角色相机接管或换人生命周期。`ChangeAvatar`、`SwitchIn`、`SwitchOut` 等来源身份只记录依赖，不能直接生成当前框架的运行路径。
+
+当前 `CameraSequenceAsset`、typed Stage 和 Timeline 相机 Clip 是工程适配模型，不视为 ZZZ 原版作者编排结构的已证实还原。相机时间、循环和事件如何归入现有 BTSMTL Timeline，待后续设计确认；本设计只要求已经接入的请求和效果沿同一 Presentation 链运行。
 
 ### 已核实的 3C 接入点
 
@@ -10,9 +16,9 @@
 |---|---|---|
 | `Assets/GameScripts/Main/Runtime/Character/Pipeline/Presentation/CharacterSimulationPresentationRuntime.cs` | 完成 Body 与最终动画后调用 Camera | 保留唯一顺序与外部协调边界 |
 | `.../Presentation/CharacterCameraPresentationRuntime.cs` | 收集 producer/generation 请求、解析目标、按模式硬编码 FOV，再调用具体 Controller | 保留 committed 命令入口，内部接入完整相机核心，依赖正式接口 |
-| `Assets/GameScripts/Main/Runtime/Character/Camera/Solver/CameraPipelineResolvers.cs` | 状态只统计 blendProgress；Cue 仅 FovKick 真正改变输出；新 Cue 先扣寿命 | 替换不完整状态/效果执行，不沿旧逻辑增加空枚举 |
-| `.../Camera/Runtime/ThirdPersonCameraController.cs` | 持有单 FreeLook，写 axis/target/lens，调用一次 Brain.ManualUpdate，从 FreeLook 读 basis | 迁为最终 Adapter；原算法要求的承载通过此处接入 |
-| `.../Camera/Contracts/ICameraRigAdapter.cs` | 存在接口，但 Camera Runtime、输入和多个 Host 仍依赖具体 Controller | 补齐应用、重置、结果读取合同，调用方只依赖所需窄接口 |
+| `Assets/GameScripts/Main/Runtime/Character/Camera/Solver/CameraPipelineResolvers.cs` | 旧状态只统计 blendProgress；旧 Cue 仅 FovKick 真正改变输出；新 Cue 先扣寿命 | 替换为 Sequence evaluator 与按效果 owner 拆分的生命周期执行，不沿旧逻辑增加空枚举 |
+| `.../Camera/Runtime/CinemachineCameraRigAdapter.cs` | 持有单 FreeLook，写 axis/target/lens，调用一次 Brain.ManualUpdate，从活动输出读 basis | 作为最终 Adapter；原算法要求的承载通过此处接入 |
+| `.../CameraContracts/CameraRigAdapterContract.cs` | 存在接口，但 Camera Runtime、输入和多个 Host 仍依赖具体 Adapter | 补齐应用、重置、结果读取合同，调用方只依赖所需窄接口 |
 | `.../Pipeline/Graph/CameraRuntimeNodes.cs` 与 `BTSMTL/Timeline/Scripts/Timeline.Camera.cs` | 有节点/轨道，但资源大多为字符串、固定 Mode/CueKind 与内联数值 | 迁为强类型资源引用和完整生命周期合同 |
 | `Assets/GameScripts/Main/Editor/CharacterSimulation/Compilation/Presentation/CharacterPresentationProjectionCompiler.cs` | 从 Graph/Clip 生成现有 CameraBinding | 接入独立相机计划编译模块，仍由现有 Build 原子发布 |
 | `BTSMTL/Timeline/Editor/Scripts/Preview/TimelinePreviewRuntimeSession.cs` | 已有正式 Preview 会话，尚无完整相机资源/历史接线 | 扩展同一会话的相机能力，不增加第二套播放器 |
@@ -38,9 +44,9 @@
 
 **Non-Goals:**
 
-- 不在本提案阶段实现算法、写 Unity YAML、构建角色或更改现行主 spec。
+- 不在来源证据未闭合时发布声称完整的算法、Corin 运行资源或 Unity YAML；已建立的代码只允许已闭合能力通过，未闭合能力必须给出明确错误。
 - 不复制 ZZZ 的无关游戏管理器、账号、UI 和剧情系统；已纳入 Shot 的镜头执行、绑定和依赖仍必须完整支持。
-- 不重写现有 Body/动画/Gameplay/网络求解，不新增相机网络状态，不创建独立 Camera Simulation Session。
+- 不重写现有 Body/动画/Gameplay/网络求解，不新增相机网络状态，不创建独立 Camera Simulation Session，不实现队伍切人或跨角色相机接管。
 - 不创建“简化移植版”、兼容开关、默认补齐配置、额外更新回路、独立 Camera Workbench 或运行中直改参数通道。
 - 不新增测试工程或测试代码，实施任务不包含用户手动验收。必要的取证数据、编译诊断和完整性报告属于实现产物。
 
@@ -189,10 +195,10 @@ Live Debug 使用已有正式诊断 provider，窗口本地 Follow/Pin 选定 Ac
 | 旧项 | 正式去向 |
 |---|---|
 | `ResolveFieldOfView(CameraMode)` 和硬编码 FreeLook base 参数 | Camera Profile 与 Sequence/效果资源 |
-| 只统计 blendProgress 的 `CameraStateResolver` | 实际维护进入/退出/中断的 Sequence 模块 |
-| `CameraModifierResolver` 的 FovKick-only 与空 Shake/Recoil/Custom 分支 | 按原类型分离的效果模块；旧引用逐项映射到有语义资源，不能无声丢弃 |
+| 只统计 blendProgress 的旧相机状态求值 | 实际维护进入/退出/中断的 `CharacterCameraSequenceEvaluator` |
+| 旧效果协调器的 FovKick-only 与空 Shake/Recoil/Custom 分支 | 按 Override/Zoom/Stretch/Shake/Shot owner 分离；旧引用逐项映射到有语义资源，不能无声丢弃 |
 | Runtime 依赖 `TimelineCamera*` 作者枚举 | 编译时唯一映射，Runtime 只读取相机计划合同 |
-| `ThirdPersonCameraController` / `FreeLook` / `VerticalOrbitValue` / `ResetOrbitState` 等公开依赖 | `CinemachineCameraRigAdapter`、只读 basis 与根 Runtime 的正式初始状态/重置接口 |
+| 旧具体 Controller / FreeLook 的公开依赖 | `CinemachineCameraRigAdapter`、只读 basis 与根 Runtime 的正式初始状态/重置接口 |
 | 旧资源字符串与未使用字段 | 强类型引用；确认无引用后删除数据与序列化字段 |
 | Editor/Runtime 内联相机配置 | Profile/资源及生成 Projection |
 
@@ -205,13 +211,13 @@ Live Debug 使用已有正式诊断 provider，窗口本地 Follow/Pin 选定 Ac
 | 当前规范/事实 | 对比结果 | 本变更处理 |
 |---|---|---|
 | `character-camera-pipeline` 的 modifier 禁止 resolver 计算 position/rotation/orbit | 与原算法核心求值冲突 | 删除旧 requirement，增加完整效果规范并修改 Adapter 分工 |
-| 同 spec 强制 Cinemachine 负责全部 orbit/damping，指定 ThirdPersonCameraController | 与按原职责分配及接口迁移冲突 | 修改完整 requirement，要求一项计算一个 owner |
+| 同 spec 强制 Cinemachine 负责全部 orbit/damping，指定旧具体 Controller | 与按原职责分配及接口迁移冲突 | 修改完整 requirement，要求一项计算一个 owner |
 | 同 spec 固定有限 Mode 与默认 FreeLook | 无法表达正式 Profile/Sequence | 删除旧仲裁 requirement，新增正式默认序列与真实混合，保留原场景语义 |
-| 同 spec 的 CameraStateClip/CameraResponseClip 曲线合同 | Clip 类型迁移且共享效果曲线不属于 Clip | 修改 requirement；保留 Weight/Ease 原 owner 和 Curve Lane，增加资源曲线边界 |
+| 同 spec 的 CameraSequenceClip/CameraResponseClip 曲线合同 | Clip 类型迁移且共享效果曲线不属于 Clip | 修改 requirement；保留 Weight/Ease 原 owner 和 Curve Lane，增加资源曲线边界 |
 | 同 spec 的 basis 从稳定输出采样 | 保持，现代码实际读具体 FreeLook 不足 | 补充同帧实际活动输出要求 |
 | `btsmtl-compiled-simulation-program` 的唯一 Frontend/Projection/Build | 保持，缺少完整 Camera payload 约束 | 只增加相机专属依赖/计划条款，不改其已修改的 Pose Program requirement |
 | `btsmtl-timeline-editor-preview` 的显式 target、会话隔离、禁止 Gameplay Preview | 保持，尚无完整 Camera Preview | 增加相机能力、历史重建和 Live 约束，不改现有动画求值 |
-| 同 spec 的 Continuous Curve Catalog 明确要求 CameraStateClip | 与删除旧类型的迁移冲突 | 修改完整 requirement，保留动画/Motion 原场景，将相机曲线迁入正式 Clip，资源曲线仅只读导航 |
+| 同 spec 的 Continuous Curve Catalog 明确要求旧 CameraStateClip | 与删除旧类型的迁移冲突 | 修改完整 requirement，保留动画/Motion 原场景，将相机曲线迁入正式 Clip，资源曲线仅只读导航 |
 | `btsmtl-agent-authoring-document-sync` 的 v4、唯一整包事务 | 保持，Camera 分片尚未注册 | 以同 v4 capability/context revision 扩展，完整接线，不新增工具 |
 | `graph-authoring-editor-shell` / `graph-authoring-domain-framework` | 与复用 Shell 和能力目录一致 | 在新增 Camera authoring spec 限定领域扩展，无须复制或更改通用框架原则 |
 | `btsmtl-timeline-editor-preview` 禁止动画 Sequence 模式 | 与 CameraSequence 仅为相机资源不冲突 | 明确命名与资源领域，不恢复旧动画模式 |

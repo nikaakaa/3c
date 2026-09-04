@@ -1,7 +1,7 @@
 # character-camera-pipeline Specification
 
 ## Purpose
-定义角色本地相机从 committed PresentationCommand、状态请求、表现 cue、响应策略和目标绑定到 CharacterSimulationPresentationRuntime、CameraPosePlan 与 ICameraRigAdapter 的唯一表现链路。
+定义角色本地相机从 committed PresentationCommand、CameraSequenceRequest、CameraShakeRequest、响应策略和目标绑定到 CharacterSimulationPresentationRuntime、CameraFramePlan 与 ICameraRigAdapter 的唯一表现链路。
 ## Requirements
 ### Requirement: Camera 必须是本地表现管线
 
@@ -21,19 +21,19 @@
 
 ### Requirement: BTSMTL 和 Timeline 必须只提交相机请求
 
-系统 MUST让 BTSMTL 自定义节点和 Timeline 相机轨道只提交强类型相机输出，包括 `CameraStateRequest`、`CameraCue`、`CameraResponsePolicy`、`CameraTargetRequest` 或读取 `CameraBasisSnapshot`。每个已公开 Camera Graph node MUST由唯一 Compiler emitter 降低为 versioned Program operation，并保留 Graph/Node authoring identity、端口与 Source Map；Float32与Fixed Target MUST按同一 operation 语义将其提交为现有 PresentationCommand。BTSMTL 节点、Timeline clip、compiled Camera operation 和 Action operation MUST NOT直接控制 Cinemachine、Unity Camera、camera Transform 或 virtual camera priority，也 MUST不把 Camera runtime state写入 Character/World simulation state。缺失字段、未知 operation 或 Target 未实现 MUST在 build/composition 明确失败，不得跳过或使用 runtime fallback。
+系统 MUST让 BTSMTL 自定义节点和 Timeline 相机轨道只提交强类型相机请求，包括 `CameraSequenceRequest`、`CameraShakeRequest`、`CameraResponseRequest`、`CameraTargetSelectionRequest` 或读取 `CameraBasisSnapshot`。每个已公开 Camera Graph node MUST由唯一 Compiler emitter 降低为 versioned Program operation，并保留 Graph/Node authoring identity、端口与 Source Map；Float32 与 Fixed Target MUST按同一 operation 语义将其提交为现有 PresentationCommand。BTSMTL 节点、Timeline clip、compiled Camera operation 和 Action operation MUST NOT直接控制 Cinemachine、Unity Camera、camera Transform 或 virtual camera priority，也 MUST不把 Camera runtime state写入 Character/World simulation state。缺失字段、未知 operation 或 Target 未实现 MUST在 build/composition 明确失败，不得跳过或使用 runtime fallback。
 
 #### Scenario: BTSMTL 请求瞄准相机
 
-- **WHEN** Aim 状态中的 RequestCameraState node 通过 Character Simulation Compiler 编译
-- **THEN** emitter MUST生成带稳定 Source Map 的 `CameraStateRequest(Aim)` Program operation
+- **WHEN** Aim 状态中的 RequestCameraSequence node 通过 Character Simulation Compiler 编译
+- **THEN** emitter MUST生成带稳定 Source Map 的 `CameraSequenceRequest(Aim)` Program operation
 - **AND** Target leaf MUST通过 PresentationCommand 提交该请求
 - **AND** 节点 MUST NOT调用 `CinemachineFreeLook`、`Camera.main` 或 scene camera object
 
 #### Scenario: Timeline 触发技能特写
 
 - **WHEN** Timeline camera clip 采样到 SkillCloseup 窗口
-- **THEN** clip MUST输出 `CameraStateRequest(SkillCloseup)` 或等价 sample
+- **THEN** clip MUST输出 `CameraSequenceRequest(SkillCloseup)` 或等价 sample
 - **AND** Timeline MUST NOT直接修改 Cinemachine virtual camera priority
 
 #### Scenario: Camera node 缺少目标配置
@@ -48,15 +48,31 @@
 - **THEN** Fixed Target MUST输出与 Float32 相同语义的强类型 PresentationCommand
 - **AND** Camera request MUST不进入 deterministic CharacterState、WorldState或Snapshot
 
+### Requirement: 相机范围必须保持单角色
+
+相机 runtime MUST由单个 Character 的 Presentation Runtime 拥有。相机 MAY使用同帧明确提供的敌人、Boss 或多个目标完成锁定和构图，但本要求不包含队伍切人、主控 Actor 切换、跨角色接管相机或换人生命周期。来源中的 `ChangeAvatar`、`SwitchIn`、`SwitchOut` 等字段和事件在没有后续正式设计前 MUST不被解释为本框架的换人能力；若保留来源字段，必须标明其当前没有运行时消费者。
+
+#### Scenario: 角色与敌人共同取景
+
+- **WHEN** 单个角色的序列需要角色与敌人共同构图
+- **THEN** 相机 MUST消费同帧明确的多目标输入
+- **AND** MUST不改变相机所有权或创建跨角色控制链
+
+#### Scenario: 来源包含换人事件
+
+- **WHEN** 来源资源包含 ChangeAvatar 或 SwitchIn/Out 名称
+- **THEN** 本变更 MUST只记录来源身份和未决依赖
+- **AND** MUST不自动生成换人请求、主控切换或第二角色相机 runtime
+
 ### Requirement: CharacterSimulationPresentationRuntime 必须是相机 runtime 唯一边界
 
-系统 MUST使用 `CharacterSimulationPresentationRuntime` 作为角色相机runtime的唯一公开编排边界。该协调器 MAY拥有不可被Host、Network adapter或Gameplay代码直接访问的内部 `CharacterCameraPresentationRuntime`；内部Camera Runtime MUST唯一拥有Camera State/Response/Target/Cue lifecycle、resolver、look input、bind offset和`ICameraRigAdapter`调用。协调器 MUST在`PresentationFrame`中使用同一 `CharacterBodyPresentationFrame` 的visible pose推进Animation与Camera，并把Camera结果交给rig adapter。Camera capability MUST通过Factory的完整显式binding创建，MUST不决定Body clock策略。系统 MUST不保留Camera MonoBehaviour自主`LateUpdate`、外部Camera resolver调用或无相机Actor分配Camera容器的路径。
+系统 MUST使用 `CharacterSimulationPresentationRuntime` 作为角色相机runtime的唯一公开编排边界。该协调器 MAY拥有不可被Host、Network adapter或Gameplay代码直接访问的内部 `CharacterCameraPresentationRuntime`；内部 Camera Runtime MUST唯一拥有 Camera Sequence/Response/Target/Effect lifecycle、resolver、look input、bind offset 和 `ICameraRigAdapter` 调用。协调器 MUST在`PresentationFrame`中使用同一 `CharacterBodyPresentationFrame` 的visible pose推进Animation与Camera，并把Camera结果交给rig adapter。Camera capability MUST通过Factory的完整显式binding创建，MUST不决定Body clock策略。系统 MUST不保留Camera MonoBehaviour自主`LateUpdate`、外部Camera resolver调用或无相机Actor分配Camera容器的路径。
 
 #### Scenario: Local Owner推进相机
 
 - **WHEN** `CharacterPresentationFrameTarget`调用唯一 `ICharacterPresentationRuntime.Present`
 - **THEN** 协调器 MUST先取得本帧唯一Body visible pose
-- **AND** 内部Camera Runtime MUST使用该pose、已提交camera command、target binding和look input生成并应用CameraPosePlan
+- **AND** 内部Camera Runtime MUST使用该pose、已提交camera command、target binding和look input生成并应用CameraFramePlan
 
 #### Scenario: 无相机 Simulated Actor
 
@@ -75,21 +91,21 @@
 - **WHEN** camera rig已由内部Camera Runtime驱动
 - **THEN** Host、Network adapter和旧相机控制器 MUST不再修改同一个follow、aim、FOV或priority状态
 
-### Requirement: CameraStateResolver 必须使用有限状态仲裁
-系统 MUST 使用有限 camera mode 和稳定仲裁规则决定当前相机状态。第一阶段 camera mode MUST 至少覆盖 `FreeLook`、`Aim`、`LockOn`、`ActionFocus` 和 `SkillCloseup`。Resolver MUST 支持 priority、weight、source identity、action instance lifecycle 和 blend 参数。系统 MUST NOT 使用动态脚本公式或场景对象 priority 作为相机状态真相。
+### Requirement: Camera Sequence 必须使用注册的有限算法组合
+系统 MUST 使用 Profile 注册的默认序列和 typed stage 组合决定当前相机计划。Resolver MUST支持 priority、weight、source identity、action instance lifecycle、Cut、BlendIn 和 BlendOut；进入、退出和抢占必须实际作用于 CameraFramePlan，而不能只记录进度。尚未有来源消费者证据的 stage、字段或公式 MUST在编译或运行时明确失败，不得静默跳过、硬编码补齐或使用 fallback。
 
-#### Scenario: 默认 FreeLook
-- **WHEN** 本帧没有 active camera state request
-- **THEN** resolver MUST 使用 `FreeLook` 作为 base state
+#### Scenario: 默认序列
+- **WHEN** 本帧没有 active camera sequence request
+- **THEN** resolver MUST 使用 Profile 的正式默认 Sequence
 - **AND** 该默认状态 MUST NOT 需要 BTSMTL 每帧显式提交
 
 #### Scenario: 技能特写覆盖瞄准
-- **WHEN** 同一帧存在 `Aim` 和更高优先级 `SkillCloseup`
-- **THEN** resolver MUST 选择或混合到 `SkillCloseup`
+- **WHEN** 同一帧存在 Aim Sequence 和更高优先级 SkillCloseup Sequence
+- **THEN** resolver MUST 选择或混合到 SkillCloseup Sequence
 - **AND** debug MUST 能追踪获胜请求的 source id 或 action instance id
 
 ### Requirement: 相机响应策略必须和输入采集分离
-系统 MUST 将输入采集和相机响应分离。`UnityCharacterSimulationInputAdapter` MUST继续采集 look 输入；Presentation camera resolver MUST根据 `CameraResponsePolicy` 决定是否消费 look delta。系统 MUST使用 `Full`、`Suppressed`、`Weighted` 或等价有限响应模式表达响应权，MUST NOT将技能特写这类表现需求实现为停止采集输入。
+系统 MUST 将输入采集和相机响应分离。`UnityCharacterSimulationInputAdapter` MUST继续采集 look 输入；Presentation camera resolver MUST根据 `CameraResponseRequest` 决定是否消费 look delta。系统 MUST使用 `Full`、`Suppressed`、`Weighted` 或等价有限响应模式表达响应权，MUST NOT将技能特写这类表现需求实现为停止采集输入。
 
 #### Scenario: 技能特写不响应 look
 - **WHEN** 当前 camera mode 为 `SkillCloseup`
@@ -129,37 +145,37 @@
 - **THEN** Host 或 camera target plan MUST 显式提供该绑定
 - **AND** 缺失绑定 MUST 报告配置错误
 
-### Requirement: Camera modifier 必须按有限顺序裁决相机表现意图
-系统 MUST 将 shake、FOV kick、recoil、collision correction 和类似表现修正作为 camera modifier 或 cue 进行生命周期和顺序裁决。Modifier MUST 在 `CameraStateResolver` 选定基础 camera state 后，按固定有限顺序作用于 `CameraPosePlan`。Presentation camera resolver MUST只生成 rig adapter 可消费的 follow point、aim point、lens/FOV、look response 和 cue 意图。系统 MUST NOT让 modifier 绕过该边界修改 Cinemachine 或 Unity Camera，也 MUST NOT让 resolver 自行计算 Unity Camera position、rotation、orbit radius、shoulder offset 或 collision distance。
+### Requirement: Camera Effect owner 必须按固定顺序裁决表现
+系统 MUST 将 Override、Zoom、Stretch、Shake、Shot 和碰撞修正作为独立效果 owner 进行生命周期和顺序裁决。效果 MUST 在 Camera Sequence 生成基础 CameraFramePlan 后按固定顺序作用于该计划；CameraEffectEvaluator 只负责状态、顺序和生命周期转发，各效果 owner 负责自己的资源、时间和空间语义。尚未闭合的效果公式 MUST在编译或运行时明确失败。效果 owner MUST不绕过边界修改 Cinemachine 或 Unity Camera，也 MUST不通过扰动角色或 Follow/LookAt 目标伪造 Shake。
 
 #### Scenario: 命中帧震屏
-- **WHEN** Timeline 或 Graph 提交 `CameraCue(Shake)`
-- **THEN** 内部 CharacterCameraPresentationRuntime MUST保留该 cue 的生命周期、顺序和 debug 来源
-- **AND** adapter 或 Cinemachine noise/impulse 配置 MUST 负责实际震屏表现
+- **WHEN** Timeline 或 Graph 提交 `CameraShakeRequest`
+- **THEN** 内部 CharacterCameraPresentationRuntime MUST保留该请求的生命周期、顺序和 debug 来源
+- **AND** 未闭合的 Shake 消费语义 MUST阻止资源发布或明确报告不可用
 - **AND** Presentation runtime MUST NOT通过扰动 Follow/LookAt target 伪造震屏
 
-#### Scenario: FOV kick 与 SkillCloseup 同帧存在
-- **WHEN** 当前 mode 为 `SkillCloseup`
-- **AND** 本帧存在 `FOVKick` cue
-- **THEN** CameraModifierResolver MUST 按固定顺序叠加 FOV 修正
+#### Scenario: FOV 效果与特写同帧存在
+- **WHEN** 当前 Sequence 为 SkillCloseup
+- **AND** 本帧存在 Zoom 或其它已注册 FOV effect
+- **THEN** Camera Effect owner MUST 按固定顺序叠加 FOV 修正
 - **AND** debug MUST 能显示 FOV 来源
 
 ### Requirement: Cinemachine 必须是 CameraRigAdapter 实现细节
-系统 MUST通过 `ICameraRigAdapter` 的正式实现 `ThirdPersonCameraController` 将 `CameraPosePlan` 应用到 Unity 相机系统。CharacterSimulationPresentationRuntime、BTSMTL 节点、Timeline clip 和 compiled Action operation MUST NOT直接依赖 Cinemachine 组件作为业务状态机。Adapter MAY使用 `CinemachineFreeLook`、virtual camera priority、FreeLook axis、Follow/LookAt、lens、noise 和 CinemachineBrain blend 实现输出。Adapter MUST NOT持有独立于 Presentation runtime 的 camera influence stack、target resolver 或动作生命周期裁决。
+系统 MUST通过 `ICameraRigAdapter` 的正式实现 `CinemachineCameraRigAdapter` 将 `CameraFramePlan` 应用到 Unity 相机系统。CharacterSimulationPresentationRuntime、BTSMTL 节点、Timeline clip 和 compiled Action operation MUST NOT直接依赖 Cinemachine 组件作为业务状态机。Adapter MAY使用 `CinemachineFreeLook`、virtual camera priority、FreeLook axis、Follow/LookAt、lens、noise 和 CinemachineBrain blend 实现输出。Adapter MUST NOT持有独立于 Presentation runtime 的 camera influence stack、target resolver 或动作生命周期裁决。
 
-#### Scenario: FreeLook 输出到 Cinemachine
-- **WHEN** `CameraPosePlan` 表达 FreeLook follow point、aim point、FOV 和裁决后的 look delta
+#### Scenario: 默认序列输出到 Cinemachine
+- **WHEN** `CameraFramePlan` 表达 follow point、aim point、FOV 和裁决后的 look delta
 - **THEN** Cinemachine adapter MAY 更新 FreeLook axis、Follow、LookAt 和 lens
 - **AND** Cinemachine MUST 负责最终相机位置、旋转、orbit 和 damping
 - **AND** FreeLook 是否生效 MUST来自 Presentation runtime 的计划而不是 Cinemachine 自己的业务判断
 
-#### Scenario: SkillCloseup 使用专用 virtual camera
-- **WHEN** `CameraPosePlan` 表达 SkillCloseup
+#### Scenario: Shot 使用专用 virtual camera
+- **WHEN** `CameraFramePlan` 表达需要专用 Shot 承载的镜头
 - **THEN** adapter MAY 提升专用 virtual camera priority
 - **AND** priority 的生命周期 MUST由 Presentation runtime 控制
 
 ### Requirement: Camera debug 必须解释状态和输出
-系统 MUST 提供或预留 camera debug 数据，说明当前 camera mode、active requests、active cues、source identity、action instance、priority、blend progress、response policy、target 来源、basis 和输出 pose plan。Debug MUST 服务于动作镜头、输入响应和技能取消排查。
+系统 MUST提供或预留 camera debug 数据，说明当前 active sequence、active requests、source identity、action instance、priority、blend progress、response policy、target 来源、basis 和输出 CameraFramePlan。Debug MUST服务于动作镜头、输入响应和技能取消排查；未闭合资源或旧 Projection MUST显示明确不可用原因。
 
 #### Scenario: 排查技能后镜头残留
 - **WHEN** 技能 action instance 已结束
@@ -185,7 +201,7 @@
 - **AND** Presentation runtime MUST NOT使用旧 logic anchor 世界坐标产生不同步的第二次贴合
 
 #### Scenario: 显式相机目标
-- **WHEN** 有效 `CameraTargetRequest.AnchorKey` 解析出正式世界点
+- **WHEN** 有效 `CameraTargetSelectionRequest.AnchorKey` 解析出正式世界点
 - **THEN** Presentation camera resolver MUST使用该显式 follow point
 - **AND** 系统 MUST NOT 把默认 camera anchor 绑定规则隐式应用到该世界点
 
@@ -196,7 +212,7 @@
 
 ### Requirement: Camera Timeline控制曲线必须作为typed Curve Channel编辑
 
-CameraStateClip与CameraResponseClip的Weight、Ease In与Ease Out曲线 MUST通过显式registered ChannelId进入Timeline Curve Editor。每条curve MUST继续由对应Camera Clip唯一拥有，使用ClipNormalized时间域和`[0,1]` bounded value domain，并通过Camera Clip正式mutation API原子替换。Camera Runtime MUST继续只消费既有compiled request与presentation policy；Curve Editor、Catalog与Agent MUST不直接控制Cinemachine、virtual camera priority、Camera Transform或创建第二个Camera influence stack。
+CameraSequenceClip与CameraResponseClip的Weight、Ease In与Ease Out曲线 MUST通过显式registered ChannelId进入Timeline Curve Editor。每条curve MUST继续由对应 Camera Clip 唯一拥有，使用 ClipNormalized 时间域和`[0,1]` bounded value domain，并通过 Camera Clip 正式 mutation API 原子替换。Camera Runtime MUST继续只消费既有 compiled request 与 presentation policy；Curve Editor、Catalog 与 Agent MUST不直接控制 Cinemachine、virtual camera priority、Camera Transform 或创建第二个 Camera influence stack。
 
 #### Scenario: 编辑Camera Ease In
 

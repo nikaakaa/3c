@@ -56,7 +56,7 @@
 
 工程侧以 `CameraWorldBasicData` 表达这五个实例字段，不携带静态 `Fallback`，并在真正接入计划前保留独立的有效性合同。
 
-`WorldBasicCameraData.get_Location`（源码段 RVA `0xA3F750`）不是存储字段读取：它把值类型负载交给 `0x1E88D780` 计算 `cameraToPivot`，再用 `pivotLocation - cameraToPivot` 得到位置。该计算读取 `_rotation`、`_radius` 和 `_offset`，所以 `Location` 不能用当前 FreeLook 的中心半径属性直接替代。
+`WorldBasicCameraData.get_Location`（源码段 RVA `0xA3F750`）不是存储字段读取：它把值类型负载交给 `0x1E88D780` 计算 `cameraToPivot`，再用 `pivotLocation - cameraToPivot` 得到位置。该计算读取 `_rotation`、`_radius` 和 `_offset`，其中局部向量由 `offset.x/offset.y/radius` 组成；因此 `Location` 不能用当前 FreeLook 的中心半径属性直接替代。工程侧合同提供同名的 `CameraToPivot` 与 `Location` 派生值。
 
 metadata 只证明类型、字段、方法身份和地址，不证明函数体之外的完整演出规则。上表把这种边界保留下来，不能把 metadata 名称当成公式或阶段顺序。
 

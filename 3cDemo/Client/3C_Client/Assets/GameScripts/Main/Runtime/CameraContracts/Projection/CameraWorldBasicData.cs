@@ -24,6 +24,8 @@ namespace ThirdPersonCamera
         public float Radius { get; }
         public Vector2 Offset { get; }
         public float FieldOfView { get; }
+        public Vector3 CameraToPivot => Rotation * new Vector3(Offset.x, Offset.y, Radius);
+        public Vector3 Location => PivotLocation - CameraToPivot;
 
         public bool IsValid =>
             Finite(PivotLocation) && Finite(Rotation) &&

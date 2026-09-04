@@ -116,6 +116,21 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             bool hasLineage = state.HasCorrectionResponseLineage;
             bool pendingReleaseResponseRebase =
                 transition.Reason == CharacterFootTransitionReason.ReleaseCompleted;
+            if (pendingReleaseResponseRebase &&
+                responseHistory.HasValue &&
+                responseHistory.Domain ==
+                CharacterFootCorrectionResponseDomain.AnimationRelativeScalar)
+            {
+                Vector3 releaseResponseOutput =
+                    responseHistory.AppliedDirection * responseHistory.Scalar;
+                correction -= releaseResponseOutput;
+                previousResponseOutputPoint -= releaseResponseOutput;
+                responseHistory = new CharacterFootCorrectionResponseHistory(
+                    0f,
+                    responseHistory.Domain,
+                    responseHistory.AppliedDirection);
+                pendingReleaseResponseRebase = false;
+            }
             state = default;
             state.HasOutput = true;
             state.EffectiveCorrection = correction;

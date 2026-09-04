@@ -80,17 +80,17 @@
 
 ### Requirement: Cinemachine 必须是 CameraRigAdapter 实现细节
 
-相机 MUST通过唯一正式 Rig Adapter 将相机计划应用到 Unity 输出。ZZZ 原调用链中属于相机核心的构图、球面/轨道、阻尼、转场和效果计算 MUST允许由核心执行；原本属于 Cinemachine 的承载、组件计算、碰撞或镜头混合 MUST通过 Adapter 的明确平台能力执行。每项计算 MUST只有一个确定 owner，同一种阻尼、效果、碰撞或过渡不得在核心与 Cinemachine 重复执行。Adapter MUST不另行裁决业务请求、寻找目标或维护技能生命周期；Graph、Timeline、Program 与相机核心 MUST不依赖具体 Cinemachine 组件作为业务状态机。旧 ThirdPersonCameraController 的 FreeLook 专用公开合同 MUST迁入新的正式输出合同后删除。
+系统 MUST通过 `ICameraRigAdapter` 的正式实现 `CinemachineCameraRigAdapter` 将 `CameraFramePlan` 应用到 Unity 相机系统。ZZZ 原调用链中属于相机核心的构图、球面/轨道、阻尼、转场和效果计算 MUST允许由核心执行；原本属于 Cinemachine 的承载、组件计算、碰撞或镜头混合 MUST通过 Adapter 的明确平台能力执行。每项计算 MUST只有一个确定 owner，同一种阻尼、效果、碰撞或过渡不得在核心与 Cinemachine 重复执行。Adapter MUST不另行裁决业务请求、寻找目标或维护技能生命周期；Graph、Timeline、Program 与相机核心 MUST不依赖具体 Cinemachine 组件作为业务状态机。旧具体 Controller 的 FreeLook 专用公开合同 MUST迁入新的正式输出合同后删除。
 
-#### Scenario: FreeLook 输出到 Cinemachine
+#### Scenario: 默认序列输出到 Cinemachine
 
-- **WHEN** 相机核心生成默认跟随的正式计划
+- **WHEN** `CameraFramePlan` 表达 follow point、aim point、FOV 和裁决后的 look delta
 - **THEN** Adapter MUST按已确认的原职责分工应用计划并更新唯一输出
 - **AND** 默认镜头是否活动 MUST来自相机 Runtime，Cinemachine MUST不再次作业务选择
 
-#### Scenario: SkillCloseup 使用专用 virtual camera
+#### Scenario: Shot 使用专用 virtual camera
 
-- **WHEN** Shot 资源明确要求专用虚拟相机承载
+- **WHEN** `CameraFramePlan` 表达需要专用 Shot 承载的镜头
 - **THEN** Adapter MUST使用正式绑定建立或复用该承载，激活、退出和混合请求 MUST来自相机 Runtime
 - **AND** 专用承载 MUST不注册独立更新或成为另一个 influence stack
 

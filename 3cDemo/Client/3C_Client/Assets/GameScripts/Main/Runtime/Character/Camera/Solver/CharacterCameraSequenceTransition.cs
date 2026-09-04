@@ -189,22 +189,17 @@ namespace ThirdPersonCamera
         {
             float t = Mathf.Clamp01(progress);
             return new CameraFramePlan(
-                Vector3.LerpUnclamped(from.FollowPoint, to.FollowPoint, t),
-                Vector3.LerpUnclamped(from.AimPoint, to.AimPoint, t),
+                CameraWorldBasicData.Lerp(from.WorldBasicData, to.WorldBasicData, t),
                 new CameraLensPlan(
-                    Mathf.LerpUnclamped(from.FieldOfView, to.FieldOfView, t),
                     Mathf.LerpUnclamped(from.NearClipPlane, to.NearClipPlane, t),
                     Mathf.LerpUnclamped(from.FarClipPlane, to.FarClipPlane, t)),
                 Vector2.LerpUnclamped(from.LookDelta, to.LookDelta, t),
-                CameraOrbitComposition.Blend(from.Orbit, to.Orbit, t),
                 to.SequenceId,
                 to.SourceId,
                 to.SourceActionInstanceId,
                 t,
                 to.ResetHistory,
-                to.Valid,
-                Vector3.LerpUnclamped(from.CameraOffset, to.CameraOffset, t),
-                Mathf.LerpUnclamped(from.RollDegrees, to.RollDegrees, t));
+                to.Valid);
         }
     }
 }

@@ -44,6 +44,20 @@ namespace ThirdPersonCamera
         public CameraWorldBasicData WithFieldOfView(float fieldOfView) =>
             new CameraWorldBasicData(PivotLocation, Rotation, Radius, Offset, fieldOfView);
 
+        public static CameraWorldBasicData Lerp(
+            CameraWorldBasicData source,
+            CameraWorldBasicData target,
+            float alpha)
+        {
+            float t = Mathf.Clamp01(alpha);
+            return new CameraWorldBasicData(
+                Vector3.LerpUnclamped(source.PivotLocation, target.PivotLocation, t),
+                Quaternion.SlerpUnclamped(source.Rotation, target.Rotation, t),
+                Mathf.LerpUnclamped(source.Radius, target.Radius, t),
+                Vector2.LerpUnclamped(source.Offset, target.Offset, t),
+                Mathf.LerpUnclamped(source.FieldOfView, target.FieldOfView, t));
+        }
+
         public bool IsValid =>
             Finite(PivotLocation) && Finite(Rotation) &&
             float.IsFinite(Radius) && Radius > 0f &&

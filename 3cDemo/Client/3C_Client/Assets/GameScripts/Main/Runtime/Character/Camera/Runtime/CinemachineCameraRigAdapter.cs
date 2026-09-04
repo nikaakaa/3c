@@ -1,4 +1,3 @@
-using System;
 using Cinemachine;
 using UnityEngine;
 
@@ -7,27 +6,17 @@ namespace ThirdPersonCamera
     [DefaultExecutionOrder(-50)]
     public sealed class CinemachineCameraRigAdapter : MonoBehaviour, ICameraMovementBasisProvider, ICameraPitchProvider, ICameraRigAdapter
     {
-        [SerializeField] CinemachineFreeLook freeLook;
+        [SerializeField] CinemachineVirtualCamera virtualCamera;
         [SerializeField] CinemachineBrain brain;
-        [SerializeField] Transform cameraFollowTarget;
-        [SerializeField] Transform cameraAimTarget;
-        [SerializeField] bool bindFreeLookToResolvedTargets = true;
 
         CameraBasisSnapshot basisSnapshot;
         CameraRigResult result;
-        CinemachineFreeLook.Orbit[] formalOrbitGroup;
-        float[] formalScreenY;
-        bool missingFreeLookReported;
-        bool missingTargetReported;
+        bool missingVirtualCameraReported;
         bool invalidBrainReported;
 
-        public CinemachineFreeLook FreeLook { get => freeLook; set => freeLook = value; }
+        public CinemachineVirtualCamera VirtualCamera { get => virtualCamera; set => virtualCamera = value; }
         public CinemachineBrain Brain { get => brain; set => brain = value; }
-        public Transform CameraFollowTarget { get => cameraFollowTarget; set => cameraFollowTarget = value; }
-        public Transform CameraAimTarget { get => cameraAimTarget; set => cameraAimTarget = value; }
-        public bool BindFreeLookToResolvedTargets { get => bindFreeLookToResolvedTargets; set => bindFreeLookToResolvedTargets = value; }
-        public float VerticalOrbitValue => freeLook != null ? Mathf.Clamp01(freeLook.m_YAxis.Value) : 0f;
-        public float Yaw => ResolveYaw();
+        public float Yaw => basisSnapshot.Valid ? basisSnapshot.Yaw : ResolveCurrentYaw();
         public float Pitch => basisSnapshot.Valid ? basisSnapshot.Pitch : ResolveCurrentPitch();
         public Vector3 CameraPlanarForward => basisSnapshot.Valid ? basisSnapshot.PlanarForward : Vector3.zero;
         public Vector3 CameraPlanarRight => basisSnapshot.Valid ? basisSnapshot.PlanarRight : Vector3.zero;
@@ -38,33 +27,31 @@ namespace ThirdPersonCamera
 
         void Awake()
         {
-            if (freeLook == null || brain == null)
+            if (virtualCamera == null || brain == null)
                 ResetComponentReferences();
-            ReportMissingFreeLook();
+            ReportMissingVirtualCamera();
             ReportInvalidBrain();
-            ReportMissingTargets();
-            if (freeLook == null || !HasValidBrain() || !HasTargets())
+            if (virtualCamera == null || !HasValidBrain())
             {
                 basisSnapshot = CameraBasisSnapshot.Invalid;
                 result = default;
                 return;
             }
 
-            ClearFreeLookInput();
-            BindFreeLookTargets();
+            virtualCamera.PreviousStateIsValid = false;
             RefreshBasisSnapshot();
         }
 
         void ResetComponentReferences()
         {
-            freeLook = GetComponentInChildren<CinemachineFreeLook>(true);
+            virtualCamera = GetComponentInChildren<CinemachineVirtualCamera>(true);
             brain = GetComponent<CinemachineBrain>();
         }
 
         void OnValidate()
         {
-            if (!freeLook)
-                freeLook = GetComponentInChildren<CinemachineFreeLook>(true);
+            if (!virtualCamera)
+                virtualCamera = GetComponentInChildren<CinemachineVirtualCamera>(true);
             if (!brain)
                 brain = GetComponent<CinemachineBrain>();
         }
@@ -81,206 +68,46 @@ namespace ThirdPersonCamera
             if (!CanApply())
                 return;
 
-            ApplyTargets(plan.FollowPoint + plan.CameraOffset, plan.AimPoint + plan.CameraOffset);
-            ApplyOrbit(plan.OrbitYaw, plan.OrbitPitch);
-            ApplyOrbitGroup(plan);
             ApplyLens(plan.FieldOfView, plan.NearClipPlane, plan.FarClipPlane);
-            ApplyDutch(plan.RollDegrees);
+            virtualCamera.ForceCameraPosition(plan.Location, plan.Rotation);
             if (plan.ResetHistory)
-                freeLook.PreviousStateIsValid = false;
+                virtualCamera.PreviousStateIsValid = false;
             UpdateBrain();
-            RefreshBasisSnapshot(plan.AimPoint + plan.CameraOffset);
+            RefreshBasisSnapshot(plan.AimPoint);
         }
 
         public void Reset()
         {
-            ClearFreeLookInput();
             basisSnapshot = CameraBasisSnapshot.Invalid;
             result = default;
-            if (freeLook != null)
-            {
-                freeLook.PreviousStateIsValid = false;
-                RestoreFormalOrbitGroup();
-            }
-        }
-
-        public void SnapTargets(Vector3 followPoint, Vector3 aimPoint)
-        {
-            ReportMissingTargets();
-            if (!HasTargets())
-                return;
-
-            ApplyTargets(followPoint, aimPoint);
-            BindFreeLookTargets();
-        }
-
-        public void ResetOrbitState(float yawValue, float verticalOrbitValue)
-        {
-            if (freeLook == null)
-            {
-                ReportMissingFreeLook();
-                basisSnapshot = CameraBasisSnapshot.Invalid;
-                result = default;
-                return;
-            }
-
-            freeLook.m_XAxis.Value = ResolveAxisValue(
-                yawValue,
-                freeLook.m_XAxis.m_MinValue,
-                freeLook.m_XAxis.m_MaxValue,
-                freeLook.m_XAxis.m_Wrap);
-            freeLook.m_YAxis.Value = Mathf.Clamp01(verticalOrbitValue);
-            freeLook.PreviousStateIsValid = false;
-            ClearFreeLookInput();
-            RefreshBasisSnapshot();
+            if (virtualCamera != null)
+                virtualCamera.PreviousStateIsValid = false;
         }
 
         bool CanApply()
         {
-            ReportMissingFreeLook();
+            ReportMissingVirtualCamera();
             ReportInvalidBrain();
-            ReportMissingTargets();
-            if (freeLook == null || !HasValidBrain() || !HasTargets())
+            if (virtualCamera == null || !HasValidBrain())
             {
                 basisSnapshot = CameraBasisSnapshot.Invalid;
                 result = default;
                 return false;
             }
 
-            ClearFreeLookInput();
-            BindFreeLookTargets();
             return true;
-        }
-
-        void ApplyTargets(Vector3 followPoint, Vector3 aimPoint)
-        {
-            cameraFollowTarget.position = followPoint;
-            cameraAimTarget.position = aimPoint;
-        }
-
-        void BindFreeLookTargets()
-        {
-            if (!bindFreeLookToResolvedTargets || freeLook == null || !HasTargets())
-                return;
-
-            freeLook.Follow = cameraFollowTarget;
-            freeLook.LookAt = cameraAimTarget;
-        }
-
-        void ClearFreeLookInput()
-        {
-            if (freeLook == null)
-                return;
-
-            freeLook.m_XAxis.m_InputAxisName = string.Empty;
-            freeLook.m_YAxis.m_InputAxisName = string.Empty;
-            freeLook.m_XAxis.m_InputAxisValue = 0f;
-            freeLook.m_YAxis.m_InputAxisValue = 0f;
-            freeLook.m_XAxis.SetInputAxisProvider(0, null);
-            freeLook.m_YAxis.SetInputAxisProvider(1, null);
         }
 
         void ApplyLens(float fieldOfView, float nearClipPlane, float farClipPlane)
         {
-            LensSettings lens = freeLook.m_Lens;
-            lens.FieldOfView = Mathf.Max(1f, fieldOfView);
+            LensSettings lens = virtualCamera.m_Lens;
+            lens.FieldOfView = Mathf.Clamp(fieldOfView, 5f, 170f);
             lens.NearClipPlane = Mathf.Max(0f, nearClipPlane);
             lens.FarClipPlane = Mathf.Max(lens.NearClipPlane + 0.001f, farClipPlane);
-            freeLook.m_Lens = lens;
+            virtualCamera.m_Lens = lens;
         }
 
-        void ApplyDutch(float rollDegrees)
-        {
-            LensSettings lens = freeLook.m_Lens;
-            lens.Dutch = rollDegrees;
-            freeLook.m_Lens = lens;
-        }
-
-        void ApplyOrbitGroup(in CameraFramePlan plan)
-        {
-            CameraOrbitComposition orbitComposition = plan.Orbit;
-            if (freeLook == null || freeLook.m_Orbits == null || !orbitComposition.IsValid || orbitComposition.Count == 0)
-                throw new InvalidOperationException("Camera Frame Plan has no formal orbit group for the Cinemachine FreeLook.");
-            if (orbitComposition.Count != freeLook.m_Orbits.Length)
-                throw new InvalidOperationException("Camera Frame Plan orbit group does not match the Cinemachine FreeLook orbit capacity.");
-            for (int i = 0; i < freeLook.m_Orbits.Length; i++)
-            {
-                orbitComposition.GetOrbit(
-                    i,
-                    out float height,
-                    out float radius,
-                    out _);
-                freeLook.m_Orbits[i] = new CinemachineFreeLook.Orbit(
-                    height,
-                    radius);
-            }
-            ApplyScreenY(in orbitComposition);
-            if (formalOrbitGroup == null || formalOrbitGroup.Length != freeLook.m_Orbits.Length)
-            {
-                formalOrbitGroup = new CinemachineFreeLook.Orbit[freeLook.m_Orbits.Length];
-                Array.Copy(freeLook.m_Orbits, formalOrbitGroup, freeLook.m_Orbits.Length);
-                formalScreenY = new float[orbitComposition.Count];
-                for (int i = 0; i < formalScreenY.Length; i++)
-                    orbitComposition.GetOrbit(i, out _, out _, out formalScreenY[i]);
-            }
-        }
-
-        void ApplyScreenY(in CameraOrbitComposition orbitComposition)
-        {
-            for (int i = 0; i < orbitComposition.Count; i++)
-            {
-                CinemachineVirtualCamera rig = freeLook.GetRig(i);
-                CinemachineComposer composer = rig != null
-                    ? rig.GetCinemachineComponent<CinemachineComposer>()
-                    : null;
-                if (composer == null)
-                    throw new InvalidOperationException($"Camera Frame Plan orbit #{i} has no Cinemachine Composer.");
-                orbitComposition.GetOrbit(i, out _, out _, out float screenY);
-                composer.m_ScreenY = screenY;
-            }
-        }
-
-        void RestoreFormalOrbitGroup()
-        {
-            if (freeLook == null || freeLook.m_Orbits == null || formalOrbitGroup == null ||
-                formalOrbitGroup.Length != freeLook.m_Orbits.Length || formalScreenY == null ||
-                formalScreenY.Length != formalOrbitGroup.Length)
-                return;
-            Array.Copy(formalOrbitGroup, freeLook.m_Orbits, formalOrbitGroup.Length);
-            ApplyFormalScreenY();
-        }
-
-        void ApplyFormalScreenY()
-        {
-            for (int i = 0; i < formalScreenY.Length; i++)
-            {
-                CinemachineVirtualCamera rig = freeLook.GetRig(i);
-                CinemachineComposer composer = rig != null
-                    ? rig.GetCinemachineComponent<CinemachineComposer>()
-                    : null;
-                if (composer == null)
-                    throw new InvalidOperationException($"Formal camera orbit #{i} has no Cinemachine Composer.");
-                composer.m_ScreenY = formalScreenY[i];
-            }
-        }
-
-        void ApplyOrbit(float yaw, float pitch)
-        {
-            freeLook.m_XAxis.Value = ResolveAxisValue(
-                yaw,
-                freeLook.m_XAxis.m_MinValue,
-                freeLook.m_XAxis.m_MaxValue,
-                freeLook.m_XAxis.m_Wrap);
-            freeLook.m_YAxis.Value = Mathf.InverseLerp(-70f, 70f, pitch);
-            ClearFreeLookInput();
-        }
-
-        void RefreshBasisSnapshot()
-        {
-            RefreshBasisSnapshot(cameraAimTarget != null ? cameraAimTarget.position : Vector3.zero);
-        }
-
-        void RefreshBasisSnapshot(Vector3 aimPoint)
+        void RefreshBasisSnapshot(Vector3 aimPoint = default)
         {
             if (brain == null || brain.ActiveVirtualCamera == null)
             {
@@ -305,7 +132,7 @@ namespace ThirdPersonCamera
                 planarRight,
                 lookDirection,
                 aimPoint,
-                Yaw,
+                ResolveYaw(lookDirection),
                 ResolvePitch(lookDirection),
                 planarForward.sqrMagnitude > 0.000001f && planarRight.sqrMagnitude > 0.000001f);
             result = new CameraRigResult(
@@ -316,15 +143,7 @@ namespace ThirdPersonCamera
                 basisSnapshot.Valid);
         }
 
-        bool HasTargets()
-        {
-            return cameraFollowTarget != null && cameraAimTarget != null;
-        }
-
-        bool HasValidBrain()
-        {
-            return brain != null && brain.m_UpdateMethod == CinemachineBrain.UpdateMethod.ManualUpdate;
-        }
+        bool HasValidBrain() => brain != null && brain.m_UpdateMethod == CinemachineBrain.UpdateMethod.ManualUpdate;
 
         void UpdateBrain()
         {
@@ -339,22 +158,13 @@ namespace ThirdPersonCamera
             brain.ManualUpdate();
         }
 
-        void ReportMissingFreeLook()
+        void ReportMissingVirtualCamera()
         {
-            if (freeLook != null || missingFreeLookReported)
+            if (virtualCamera != null || missingVirtualCameraReported)
                 return;
 
-            missingFreeLookReported = true;
-            Debug.LogError("CinemachineCameraRigAdapter requires an explicit CinemachineFreeLook.", this);
-        }
-
-        void ReportMissingTargets()
-        {
-            if (HasTargets() || missingTargetReported)
-                return;
-
-            missingTargetReported = true;
-            Debug.LogError("CinemachineCameraRigAdapter requires explicit camera follow and aim targets.", this);
+            missingVirtualCameraReported = true;
+            Debug.LogError("CinemachineCameraRigAdapter requires an explicit CinemachineVirtualCamera.", this);
         }
 
         void ReportInvalidBrain()
@@ -366,17 +176,28 @@ namespace ThirdPersonCamera
             Debug.LogError("CinemachineCameraRigAdapter requires an explicit CinemachineBrain with Update Method set to Manual Update.", this);
         }
 
-        float ResolveYaw()
+        float ResolveCurrentYaw()
         {
-            return freeLook != null ? Mathf.Repeat(freeLook.m_XAxis.Value, 360f) : 0f;
+            if (brain == null || brain.ActiveVirtualCamera == null)
+                return 0f;
+            return ResolveYaw(brain.CurrentCameraState.FinalOrientation * Vector3.forward);
         }
 
         float ResolveCurrentPitch()
         {
-            if (freeLook == null || !freeLook.PreviousStateIsValid)
+            if (brain == null || brain.ActiveVirtualCamera == null)
                 return 0f;
+            return ResolvePitch(brain.CurrentCameraState.FinalOrientation * Vector3.forward);
+        }
 
-            return ResolvePitch(freeLook.State.FinalOrientation * Vector3.forward);
+        static float ResolveYaw(Vector3 lookDirection)
+        {
+            if (lookDirection.sqrMagnitude <= 0.000001f)
+                return 0f;
+            Vector3 planar = Vector3.ProjectOnPlane(lookDirection.normalized, Vector3.up);
+            if (planar.sqrMagnitude <= 0.000001f)
+                return 0f;
+            return Mathf.Atan2(planar.x, planar.z) * Mathf.Rad2Deg;
         }
 
         static float ResolvePitch(Vector3 lookDirection)
@@ -385,18 +206,6 @@ namespace ThirdPersonCamera
                 return 0f;
 
             return Mathf.Asin(Mathf.Clamp(lookDirection.normalized.y, -1f, 1f)) * Mathf.Rad2Deg;
-        }
-
-        static float ResolveAxisValue(float value, float min, float max, bool wrap)
-        {
-            if (!wrap)
-                return Mathf.Clamp(value, min, max);
-
-            float range = max - min;
-            if (range <= 0.0001f)
-                return min;
-
-            return Mathf.Repeat(value - min, range) + min;
         }
     }
 }

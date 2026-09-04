@@ -6,14 +6,12 @@ namespace ThirdPersonCamera
     internal sealed class CharacterCameraFramePlanner
     {
         readonly CharacterCameraProjectionPayload m_Projection;
-        readonly CameraOrbitGeometry m_DefaultOrbitGeometry;
         float m_Yaw;
         float m_Pitch;
 
         public CharacterCameraFramePlanner(CharacterCameraProjectionPayload projection)
         {
             m_Projection = projection ?? throw new ArgumentNullException(nameof(projection));
-            m_DefaultOrbitGeometry = CameraOrbitGeometry.Create(m_Projection.DefaultOrbitGroup);
         }
 
         public void Reset()
@@ -47,9 +45,9 @@ namespace ThirdPersonCamera
             Vector2 look)
         {
             Vector3 anchor = input.BodyPosition;
-            Vector3 aim = input.BodyPosition + input.BodyRotation *
+            Vector3 pivot = input.BodyPosition + input.BodyRotation *
                 (Vector3.up * m_Projection.DefaultSphere.Height);
-            bool aimPointIsExplicit = false;
+            bool pivotIsExplicit = false;
             for (int i = 0; i < input.Targets.Count; i++)
             {
                 CameraTargetSnapshot target = input.Targets[i];
@@ -60,15 +58,13 @@ namespace ThirdPersonCamera
                 if (!target.Valid || !matchesDefaultBody && !matchesRequestedTarget)
                     continue;
                 anchor = target.AnchorPoint;
-                aim = target.AimPoint;
-                aimPointIsExplicit = target.AimPointIsExplicit;
+                pivot = target.AimPoint;
+                pivotIsExplicit = target.AimPointIsExplicit;
                 break;
             }
             float radius = m_Projection.DefaultSphere.Radius;
             float fieldOfView = m_Projection.DefaultFieldOfView;
-            Vector2 compositionOffset = Vector2.zero;
-            CameraOrbitGeometry orbitGeometry = m_DefaultOrbitGeometry;
-            bool orbitGroupUsesAbsoluteRadius = false;
+            Vector2 offset = Vector2.zero;
             float evaluatedYaw = m_Yaw;
             float evaluatedPitch = m_Pitch;
             float evaluatedRoll = 0f;
@@ -78,16 +74,16 @@ namespace ThirdPersonCamera
                 switch (stage)
                 {
                     case CameraFrameOnePointByHeightPayload byHeight:
-                        if (!aimPointIsExplicit)
-                            aim = anchor + input.BodyRotation *
+                        if (!pivotIsExplicit)
+                            pivot = anchor + input.BodyRotation *
                                 (Vector3.up * (byHeight.EntityHeight * byHeight.HeightRatio));
                         fieldOfView = byHeight.FieldOfView;
-                        compositionOffset = byHeight.ScreenOffset;
+                        offset = byHeight.ScreenOffset;
                         break;
                     case CameraFrameOnePointByScreenOffsetPayload byScreen:
                         radius = byScreen.Radius;
                         fieldOfView = byScreen.FieldOfView;
-                        compositionOffset = byScreen.ScreenOffset;
+                        offset = byScreen.ScreenOffset;
                         break;
                     case CameraFrameOnePointByTrackPayload byTrack:
                         throw new InvalidOperationException(
@@ -106,30 +102,17 @@ namespace ThirdPersonCamera
                 }
             }
 
-            Quaternion orbitRotation = Quaternion.Euler(evaluatedPitch, evaluatedYaw, 0f);
-            aim += orbitRotation * new Vector3(compositionOffset.x, compositionOffset.y, 0f);
-            CameraOrbitComposition orbitComposition = CameraOrbitComposition.CreateFromGeometry(
-                orbitGeometry,
-                radius,
-                orbitGroupUsesAbsoluteRadius,
-                evaluatedYaw,
-                evaluatedPitch);
+            Quaternion rotation = Quaternion.Euler(evaluatedPitch, evaluatedYaw, evaluatedRoll);
             return new CameraFramePlan(
-                anchor,
-                aim,
-                new CameraLensPlan(
-                    fieldOfView,
-                    m_Projection.NearClipPlane,
-                    m_Projection.FarClipPlane),
+                new CameraWorldBasicData(pivot, rotation, radius, offset, fieldOfView),
+                new CameraLensPlan(m_Projection.NearClipPlane, m_Projection.FarClipPlane),
                 look,
-                orbitComposition,
                 sequence.SequenceId,
                 request.SourceId,
                 request.SourceActionInstanceId,
                 request.IsDefault ? 1f : request.Weight,
                 input.ResetHistory,
-                true,
-                rollDegrees: evaluatedRoll);
+                true);
         }
 
     }

@@ -846,37 +846,15 @@ namespace ThirdPersonGameplay.Editor.Lab
             if (!profile)
                 throw new InvalidOperationException("Gameplay Lab camera rig requires the formal Character Camera Profile.");
             profile.RequireValid();
-            var targets = new GameObject("Gameplay Camera Targets");
-            targets.transform.SetParent(parent, false);
-            Transform follow = new GameObject("Camera Follow Target").transform;
-            follow.SetParent(targets.transform, false);
-            Transform aim = new GameObject("Camera Aim Target").transform;
-            aim.SetParent(targets.transform, false);
-
-            var freeLookObject = new GameObject("Character Camera FreeLook");
-            freeLookObject.transform.SetParent(parent, false);
-            CinemachineFreeLook freeLook = freeLookObject.AddComponent<CinemachineFreeLook>();
-            freeLook.Follow = follow;
-            freeLook.LookAt = aim;
-            freeLook.m_Priority = 10;
-            freeLook.m_XAxis.Value = 0f;
-            freeLook.m_XAxis.m_InputAxisName = string.Empty;
-            freeLook.m_YAxis.Value = 0.5f;
-            freeLook.m_YAxis.m_InputAxisName = string.Empty;
-            freeLook.m_Orbits = profile.DefaultOrbitGroup
-                .Select(orbit => new CinemachineFreeLook.Orbit(orbit.Height, orbit.Radius))
-                .ToArray();
-            CinemachineCollider collider = freeLookObject.AddComponent<CinemachineCollider>();
-            int groundLayer = LayerMask.NameToLayer("Ground");
-            if (groundLayer < 0)
-                throw new InvalidOperationException("Required layer 'Ground' is not configured.");
-            collider.m_CollideAgainst = 1 << groundLayer;
-            collider.m_MinimumDistanceFromTarget = 0.3f;
-            collider.m_CameraRadius = 0.25f;
-            collider.m_Strategy = CinemachineCollider.ResolutionStrategy.PreserveCameraHeight;
-            collider.m_SmoothingTime = 0.05f;
-            collider.m_Damping = 0.15f;
-            collider.m_DampingWhenOccluded = 0.05f;
+            var virtualCameraObject = new GameObject("Character Camera Virtual");
+            virtualCameraObject.transform.SetParent(parent, false);
+            CinemachineVirtualCamera virtualCamera = virtualCameraObject.AddComponent<CinemachineVirtualCamera>();
+            virtualCamera.m_Priority = 10;
+            LensSettings lens = virtualCamera.m_Lens;
+            lens.FieldOfView = profile.DefaultFieldOfView;
+            lens.NearClipPlane = profile.NearClipPlane;
+            lens.FarClipPlane = profile.FarClipPlane;
+            virtualCamera.m_Lens = lens;
 
             var cameraObject = new GameObject("Gameplay Camera");
             cameraObject.tag = "MainCamera";
@@ -887,11 +865,8 @@ namespace ThirdPersonGameplay.Editor.Lab
             brain.m_UpdateMethod = CinemachineBrain.UpdateMethod.ManualUpdate;
             brain.m_BlendUpdateMethod = CinemachineBrain.BrainUpdateMethod.LateUpdate;
             var controller = cameraObject.AddComponent<CinemachineCameraRigAdapter>();
-            controller.FreeLook = freeLook;
+            controller.VirtualCamera = virtualCamera;
             controller.Brain = brain;
-            controller.CameraFollowTarget = follow;
-            controller.CameraAimTarget = aim;
-            controller.BindFreeLookToResolvedTargets = true;
             return controller;
         }
 

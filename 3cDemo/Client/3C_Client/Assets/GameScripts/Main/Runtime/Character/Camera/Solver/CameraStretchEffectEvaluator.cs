@@ -48,15 +48,18 @@ namespace ThirdPersonCamera
             envelope *= state.Request.Weight;
             float radiusScale = 1f + payload.RadiusRatio * envelope;
             Vector3 offset = ResolveWorldOffset(payload, plan, in input) * envelope;
-            float pitch = plan.OrbitPitch;
+            Vector3 euler = plan.Rotation.eulerAngles;
+            float pitch = NormalizeAngle(euler.x);
             if (payload.IsElevationAngleAbsolute)
                 pitch = Mathf.LerpUnclamped(pitch, payload.ElevationAngleMax, envelope);
             else
                 pitch += Mathf.LerpUnclamped(payload.ElevationAngleMin, payload.ElevationAngleMax, envelope);
-            return plan
-                .WithOrbit(plan.OrbitYaw, pitch, plan.OrbitRadius)
-                .WithRadiusScale(radiusScale)
-                .WithCameraOffset(offset);
+            Quaternion rotation = Quaternion.Euler(pitch, euler.y, euler.z);
+            return plan.WithWorldBasicData(
+                plan.WorldBasicData
+                    .WithPivotLocation(plan.PivotLocation + offset)
+                    .WithRotation(rotation)
+                    .WithRadius(plan.Radius * radiusScale));
         }
 
         static Vector3 ResolveWorldOffset(
@@ -71,12 +74,14 @@ namespace ThirdPersonCamera
                 case CameraSpace.LocalAvatar:
                     return input.BodyRotation * payload.CamOffset;
                 case CameraSpace.Camera:
-                    return Quaternion.Euler(plan.OrbitPitch, plan.OrbitYaw, plan.RollDegrees) * payload.CamOffset;
+                    return plan.Rotation * payload.CamOffset;
                 default:
                     throw new InvalidOperationException(
                         $"Camera Stretch '{payload.StretchId}' has no supported offset space '{payload.CamOffsetSpace}'.");
             }
         }
+
+        static float NormalizeAngle(float angle) => Mathf.Repeat(angle + 180f, 360f) - 180f;
 
         public float ResolveDelta(CameraEffectRuntimeState active, in CameraFrameInput input)
         {

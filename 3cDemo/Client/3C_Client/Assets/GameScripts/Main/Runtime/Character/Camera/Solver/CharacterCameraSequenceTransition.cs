@@ -19,6 +19,7 @@ namespace ThirdPersonCamera
         CameraFramePlan m_RetireFrom;
         float m_RetireElapsed;
         float m_RetireDuration;
+        CameraTimeDomain m_RetireTimeDomain;
         bool m_Retiring;
 
         public CharacterCameraSequenceTransition(
@@ -42,6 +43,7 @@ namespace ThirdPersonCamera
             m_RetireFrom = default;
             m_RetireElapsed = 0f;
             m_RetireDuration = 0f;
+            m_RetireTimeDomain = CameraTimeDomain.PresentationScaled;
             m_Retiring = false;
         }
 
@@ -51,6 +53,7 @@ namespace ThirdPersonCamera
                 m_CurrentGeneration != generation ||
                 !string.Equals(m_CurrentSourceId, sourceId, StringComparison.Ordinal))
                 return;
+            m_RetireTimeDomain = ResolveSequence(m_CurrentSequenceId).TimeDomain;
             m_RetireFrom = m_LastPlan;
             m_RetireElapsed = 0f;
             m_RetireDuration = Mathf.Max(0f, blendOutSeconds);
@@ -70,6 +73,7 @@ namespace ThirdPersonCamera
                     m_RetireFrom = default;
                     m_RetireElapsed = 0f;
                     m_RetireDuration = 0f;
+                    m_RetireTimeDomain = CameraTimeDomain.PresentationScaled;
                     m_CurrentSequenceId = string.Empty;
                     m_BlendFrom = default;
                     m_TransitionElapsed = 0f;
@@ -89,15 +93,14 @@ namespace ThirdPersonCamera
                         ? retireTarget
                         : Blend(m_RetireFrom, retireTarget, retireProgress);
                     m_LastPlan = retiredResult;
-                    m_RetireElapsed += ResolveSequenceDelta(
-                        m_Projection.DefaultSequence,
-                        in input);
+                    m_RetireElapsed += ResolveTimeDelta(m_RetireTimeDomain, in input);
                     if (retireProgress >= 1f || m_RetireElapsed >= m_RetireDuration)
                     {
                         m_Retiring = false;
                         m_RetireFrom = default;
                         m_RetireElapsed = 0f;
                         m_RetireDuration = 0f;
+                        m_RetireTimeDomain = CameraTimeDomain.PresentationScaled;
                         m_CurrentSequenceId = m_Projection.DefaultSequence.SequenceId;
                         m_CurrentSourceId = request.SourceId;
                         m_CurrentGeneration = request.Generation;
@@ -144,7 +147,7 @@ namespace ThirdPersonCamera
             }
             else
             {
-                m_TransitionElapsed += ResolveSequenceDelta(sequence, in input);
+                m_TransitionElapsed += ResolveTimeDelta(sequence.TimeDomain, in input);
                 m_CurrentSourceId = request.SourceId;
                 m_CurrentGeneration = request.Generation;
                 m_CurrentIsDefault = request.IsDefault;
@@ -173,13 +176,13 @@ namespace ThirdPersonCamera
             throw new InvalidOperationException($"Camera Sequence '{sequenceId}' is not present in the Projection.");
         }
 
-        static float ResolveSequenceDelta(
-            CameraSequencePayload sequence,
+        static float ResolveTimeDelta(
+            CameraTimeDomain timeDomain,
             in CameraFrameInput input)
         {
-            if (!Enum.IsDefined(typeof(CameraTimeDomain), sequence.TimeDomain))
-                throw new InvalidOperationException($"Camera Sequence '{sequence.SequenceId}' has an invalid time domain.");
-            return input.Delta(sequence.TimeDomain);
+            if (!Enum.IsDefined(typeof(CameraTimeDomain), timeDomain))
+                throw new InvalidOperationException("Camera Sequence has an invalid time domain.");
+            return input.Delta(timeDomain);
         }
 
         static CameraFramePlan Blend(CameraFramePlan from, CameraFramePlan to, float progress)

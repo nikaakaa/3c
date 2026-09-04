@@ -25,6 +25,8 @@ namespace ThirdPersonCharacter.Pipeline.Diagnostics.FootAnalysis.Editor
             registry.Register(new CharacterFootStepTimeSelectionOperator());
             registry.Register(new CharacterFootLandingLegExtensionOperator());
             registry.Register(new CharacterFootSameLevelFeetPelvisDescentOperator());
+            registry.Register(new CharacterFootPelvisResponseChainOperator());
+            registry.Register(new CharacterFootContactLifecycleChatterOperator());
             registry.Register(new CharacterFootReleaseFlybackOperator());
             registry.Register(new CharacterFootSwingToLandingFloorHandoffOperator());
             registry.Register(new CharacterFootPlantInterpolationOutputJumpOperator());

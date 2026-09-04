@@ -3119,6 +3119,154 @@
         "minimumRows": 3,
         "maximumSequenceGap": 0
       }
+    },
+    {
+      "id": "pelvis-response-chain",
+      "operator": "foot/pelvis-response-chain",
+      "category": "pelvis",
+      "inputs": [
+        {
+          "slot": "frame-sequence",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/foot/resolved-frame-sequence"
+        },
+        {
+          "slot": "reset-sequence",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/input/body-reset-sequence"
+        },
+        {
+          "slot": "physical-write-available",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/physical/physical-write-available"
+        },
+        {
+          "slot": "physical-pelvis-available",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/physical-body/physical-body-available"
+        },
+        {
+          "slot": "physical-pelvis-position",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/physical-body/physical-pelvis-position"
+        },
+        {
+          "slot": "response-evaluated",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/stride/pelvis-response-evaluated"
+        },
+        {
+          "slot": "response-previous-output",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/stride/pelvis-response-previous-output"
+        },
+        {
+          "slot": "response-target",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/stride/pelvis-response-target"
+        },
+        {
+          "slot": "response-output",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/stride/pelvis-response-output"
+        },
+        {
+          "slot": "height-target-available",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/stride/pelvis-height-target-available"
+        },
+        {
+          "slot": "requested-height-offset",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/stride/pelvis-requested-height-offset"
+        }
+      ],
+      "parameters": {
+        "response-residual-threshold-meters": 0.02,
+        "response-output-step-threshold-meters": 0.02,
+        "physical-pelvis-step-threshold-meters": 0.02,
+        "response-history-threshold-meters": 0.001
+      },
+      "dimensions": [
+        "character-foot-ik/left",
+        "character-foot-ik/right"
+      ],
+      "window": {
+        "minimumRows": 2,
+        "maximumSequenceGap": 0
+      }
+    },
+    {
+      "id": "contact-lifecycle-chatter",
+      "operator": "foot/contact-lifecycle-chatter",
+      "category": "contact",
+      "inputs": [
+        {
+          "slot": "frame-sequence",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/foot/resolved-frame-sequence"
+        },
+        {
+          "slot": "reset-sequence",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/input/body-reset-sequence"
+        },
+        {
+          "slot": "constraint-state",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/foot/foot-motion-constraint-state"
+        },
+        {
+          "slot": "landing-event-identity",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/foot/foot-motion-landing-event-identity"
+        },
+        {
+          "slot": "contact-edge",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/foot/foot-motion-contact-edge"
+        },
+        {
+          "slot": "current-lock-requested",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/foot/foot-motion-current-lock-requested"
+        },
+        {
+          "slot": "current-lock-request-event-identity",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/foot/foot-motion-current-lock-request-event-identity"
+        },
+        {
+          "slot": "current-lock-request-mode",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/foot/foot-motion-current-lock-request-mode"
+        },
+        {
+          "slot": "current-lock-request-weight",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/foot/foot-motion-current-lock-request-weight"
+        },
+        {
+          "slot": "anchor-available",
+          "dataset": "foot",
+          "key": "character-foot-ik/main/foot/foot-motion-current-contact-anchor-available"
+        }
+      ],
+      "parameters": {
+        "landing-state": 1,
+        "locked-state": 2,
+        "releasing-state": 3,
+        "chatter-window-frames": 6,
+        "no-contact-edge": 0
+      },
+      "dimensions": [
+        "character-foot-ik/left",
+        "character-foot-ik/right"
+      ],
+      "window": {
+        "minimumRows": 3,
+        "maximumSequenceGap": 0
+      }
     }
   ],
   "scores": [

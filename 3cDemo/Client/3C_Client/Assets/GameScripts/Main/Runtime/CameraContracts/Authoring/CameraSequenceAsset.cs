@@ -14,7 +14,7 @@ namespace ThirdPersonCamera
 
         [SerializeField] string m_Schema = SchemaVersion;
         [SerializeField] string m_SequenceId = string.Empty;
-        [SerializeField] CameraSequenceStage[] m_Stages = Array.Empty<CameraSequenceStage>();
+        [SerializeReference] CameraSequenceStage[] m_Stages = Array.Empty<CameraSequenceStage>();
         [SerializeField] CameraTimeDomain m_TimeDomain = CameraTimeDomain.PresentationScaled;
 
         public string Schema => m_Schema ?? string.Empty;

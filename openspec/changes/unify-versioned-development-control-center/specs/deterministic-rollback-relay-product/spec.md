@@ -16,6 +16,12 @@ Rollback候选 MUST固定 Server 的 Product/Model/Protocol、roster、TickRate�
 - **THEN** Relay MUST拒绝锁定roster
 - **AND** MUST不从Client消息补齐或改写正式配置
 
+#### Scenario: Run引用错误Candidate
+
+- **WHEN** Relay Run Manifest的CandidateId或Candidate hash与所选Product不一致
+- **THEN** Server MUST以明确退出码拒绝监听
+- **AND** MUST不等待Client连接后猜测版本
+
 ### Requirement: Rollback Network Test Product必须包含精确Server Closure
 
 Rollback adapter MUST通过统一开发候选schema v4发布精确Client与Dedicated Relay artifact，并绑定独立GM工具及角色计划。Relay与Client文件闭包 MUST保持产品自己的业务边界；公共Build MUST不引用Rollback实现或按目录推断产品。实例配置 MUST只在Runs/<RunId>生成。
@@ -32,6 +38,18 @@ Rollback adapter MUST通过统一开发候选schema v4发布精确Client与Dedic
 - **THEN** Host MUST拒绝启动
 - **AND** MUST不重新publish或复制另一个版本修复
 
+#### Scenario: Candidate携带运行token
+
+- **WHEN** Candidate闭包包含GM访问token、Relay查询token或固定RunId
+- **THEN** Candidate validation MUST失败
+- **AND** MUST不把构建期token继续作为多会话配置
+
+#### Scenario: 构建包含 GM 的产品
+
+- **WHEN** 作者执行 Rollback Candidate Build
+- **THEN** MUST原子发布 Player、Relay、GM 与工具静态策略
+- **AND** Run MUST另行创建并验证本次配置，不把端口、token 或 SessionId 固化进 Candidate
+
 ### Requirement: Rollback Run必须只启动一个Dedicated Relay Server与两个Unity Client
 
 Rollback业务会话 MUST只有一个Dedicated Relay与两个Unity Client；另外的Development Run Host和开发GM是工具进程，不执行Gameplay。Host MUST按正式角色依赖先等待Relay Ready再启动两个Client，运行配置来自精确Run manifest。Run MUST不启动第三个Unity Player、不接受Client-host、不编译/publish；Relay退出 MUST使本次会话失败并由Host清理本Run，不能切换模型或影响其他Slot。
@@ -47,3 +65,21 @@ Rollback业务会话 MUST只有一个Dedicated Relay与两个Unity Client；另�
 - **WHEN** 本次Dedicated Relay异常结束
 - **THEN** 本Run MUST结束并保留故障记录
 - **AND** MUST不由Client接管，也不停止另一Slot
+
+#### Scenario: 两个Candidate并行运行
+
+- **WHEN** 两个合法Rollback Candidate分别使用不同Slot启动
+- **THEN** MUST形成两个Candidate/Run/Session/GM身份完全隔离的Run，每个Run由独立Host拥有Relay、GM和两个Client
+- **AND** 任一GM查询或Stop MUST不命中另一Run
+
+#### Scenario: GM 启动失败
+
+- **WHEN** 本Run的GM Tool、endpoint、token或目标身份不合法
+- **THEN** Development Run Host MUST把本Run标记Faulted并回收本Run已启动进程
+- **AND** MUST不启动无匹配工具的Peer或搜索另一GM
+
+#### Scenario: 运行中 GM 退出
+
+- **WHEN** Gameplay Session仍在运行而独立GM退出
+- **THEN** 本Run工具状态 MUST变为Unavailable且Relay与两个Client继续按原模型推进
+- **AND** Player MUST不接管控制台或获得GM凭据

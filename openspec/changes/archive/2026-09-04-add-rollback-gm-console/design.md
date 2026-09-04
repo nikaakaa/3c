@@ -1,3 +1,9 @@
+## 归档口径（2026-09-04）
+
+已完成 12/12 项任务：独立 GM 文本进程通过 HTTP 与 Relay 只读查询桥执行 help、session.info、actor.list、runtime.status，形成 Relay＋GM＋两个 Unity Client 的开发组合。命令、权限、异步查询与 Player 无工具凭据边界保留。原 Build 阶段生成端口、token 和 SessionId 的单场设计已由同批归档的 `add-versioned-network-test-orchestration` 替代；现行运行身份与配置只属于 Run，不恢复 schema v2 或固定产品目录。
+
+下文保留设计与实验过程；最终状态及被替代关系以同目录 proposal.md 的归档结果为准。
+
 ## Context
 
 本轮交付独立进程的 Rollback GM 文本控制台。用户明确不把输入窗口放在游戏里，图形 UI 留待后续。

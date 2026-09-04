@@ -2,7 +2,7 @@
 
 ## Purpose
 
-定义Network Model与可独立Build/Run的Network Test Product分离、schema v2 runtime artifact清单和公共构建工作流边界。
+定义 Network Model 与可独立构建和运行的 Product 边界，以及 schema v3 Candidate 的 runtime artifacts、Tool Bundles、Session Plan 和产品隔离规则。
 
 ## Requirements
 
@@ -18,46 +18,75 @@
 
 ### Requirement: Network Test Product必须由显式Runtime Artifact列表组成
 
-Network Test Product manifest MUST使用schema v2稳定记录NetworkModelIdentity、RuntimeTopologyIdentity与全部runtime artifacts。每个artifact MUST声明唯一RoleId、Kind、ProductId、受约束相对root、entry point、configuration identity及可选的artifact-owned manifest path/hash。公共系统 MUST不再使用固定`Player + Server`字段、含糊的顶层`hostIdentity`、`ServerShape`枚举、目录存在性或文件名猜测产品闭包。
+Network Test Candidate manifest MUST使用schema v3稳定记录Candidate源码身份、NetworkModelIdentity、RuntimeTopologyIdentity、全部runtime artifacts、Tool Bundles和Session Plan。每个runtime artifact MUST声明唯一RoleId、Kind、ProductId、受约束相对root、entry point、configuration identity及可选manifest path/hash；每个Tool Bundle MUST引用明确artifact、版本、合同和BundleHash。公共系统 MUST不使用固定Player/Server字段、顶层hostIdentity、目录存在性、文件名或仓库当前脚本猜测闭包。
+
+#### Scenario: Rollback Candidate包含独立工具
+
+- **WHEN** Build生成DeterministicRollback Candidate
+- **THEN** runtime artifacts MUST精确包含Unity Player、Dedicated Relay和独立GM
+- **AND** Tool Bundles MUST精确包含公共Orchestrator、Rollback启动adapter和GM工具身份
+
+#### Scenario: Tool路径逃逸
+
+- **WHEN** Tool Bundle的root、entry point或配置路径规范化后离开Candidate Root
+- **THEN** Build或Run MUST在启动前失败
+- **AND** MUST不搜索仓库Tools目录补齐
+
+#### Scenario: Artifact路径逃逸
+
+- **WHEN** 任一runtime artifact root、entry point或manifest path规范化后离开Candidate Root
+- **THEN** Build或Run MUST在启动前失败
+- **AND** MUST不搜索其它目录或修复路径
+
+#### Scenario: Rollback 开发产品包含独立 GM
+
+- **WHEN** Build 生成 Rollback 产品 manifest
+- **THEN** artifacts MUST精确包含 `unity-client-player`、`deterministic-relay-server`、`development-gm-server`
+- **AND** GM MUST是独立 ManagedExecutable，不能藏进 Relay 命令分支或 Player Scene
+
+#### Scenario: Artifact 路径逃逸
+
+- **WHEN** artifact 路径规范化后离开 ProductRoot
+- **THEN** Build 或 Run MUST在启动前失败，不修复或搜索路径
 
 #### Scenario: Rollback产品包含Dedicated Relay Server
 
 - **WHEN** Build生成DeterministicRollback产品manifest
-- **THEN** artifacts MUST精确包含一个Unity Client Player和一个portable .NET Dedicated Relay Server
+- **THEN** artifacts MUST精确包含Unity Client Player、portable .NET Dedicated Relay Server和独立GM Server三个artifact
 - **AND** manifest MUST不隐藏在Player Scene中的Server角色
-
-#### Scenario: Artifact路径逃逸
-
-- **WHEN** 任一artifact root、entry point或manifest path规范化后离开当前Product Root
-- **THEN** Build或Run MUST在启动进程前失败
-- **AND** MUST不搜索其它目录或修复路径
 
 ### Requirement: 公共Build Workflow必须与具体产品和服务器解耦
 
-公共Network Test Product Build Workflow MUST只拥有Unity Player构建、staging、hash、exact file closure、candidate validation、原子替换与产品目录隔离。具体adapter MUST显式发布零到多个附加runtime artifacts。Artifact Kind MUST只表达`UnityPlayer`或`ManagedExecutable`等启动载体，不得表达Fantasy、Authority、Rollback或Network Model。公共workflow MUST不引用具体Server Product、Rollback Relay Server、Unity Authority、DotRecast Authority、DeterministicRollback或具体adapter类型，也 MUST不包含按产品分支的构建逻辑。
+公共Network Test Build Workflow MUST只拥有源码Candidate身份、Unity Player构建、staging、hash、exact closure、Tool Bundle公共发布、schema v3 validation与版本目录原子发布。具体adapter MUST显式发布零到多个附加runtime artifacts、产品工具和类型化Session Plan。Artifact Kind与Tool Bundle合同 MUST不表达具体Network Model分支；公共workflow MUST不引用Fantasy、Authority、Rollback、GM或具体adapter类型。
 
 #### Scenario: 新增另一种Managed Executable产品
 
-- **WHEN** 新产品adapter返回一个受支持Kind的managed executable artifact
-- **THEN** 公共workflow MUST通过同一artifact合同完成staging、校验与产品manifest生成
-- **AND** MUST不修改公共workflow中的产品类型分支
+- **WHEN** 新Product adapter返回支持合同的runtime artifacts、tool bundles和Session plan
+- **THEN** 公共workflow MUST通过同一Candidate合同发布和验证
+- **AND** MUST不修改公共workflow增加产品类型switch
 
 ### Requirement: 三个产品必须拥有精确且隔离的Artifact闭包
 
-Unity Authority产品 MUST包含Unity Player与独立Fantasy Gate Server Product artifact；DotRecast Authority产品 MUST包含Unity Client Player与Fantasy Gate + DotRecast Authority Server Product artifact；DeterministicRollback产品 MUST包含Unity Client Player与portable Dedicated Relay Server artifact。不同产品 MUST使用不重叠的固定输出目录，同产品Build MAY原子替换自己的当前artifact与manifest并保留日志，MUST不修改其它产品。
+Unity Authority、DotRecast Authority与DeterministicRollback MUST分别在自己的Product根下保存一个或多个不可变Candidate。每个Candidate MUST包含该Product精确Player、附加runtime artifacts、Tool Bundles、Session Plan和schema v3 manifest。不同Product与Candidate不得互相覆盖；同CandidateId重复Build MUST失败。旧固定目录当前产物、schema v2和同产品替换语义 MUST不再支持。
 
 #### Scenario: 连续构建三个产品
 
-- **WHEN** 作者依次Build Unity Authority、DotRecast Authority与DeterministicRollback
-- **THEN** 三个Product Root MUST分别保留自己的Player、附加artifact与schema v2 manifest
-- **AND** 后一次Build MUST不覆盖前两个产品的产物或日志
+- **WHEN** 作者为三个Product分别构建多个Candidate
+- **THEN** 每份Candidate MUST保留独立源码、artifact和工具闭包
+- **AND** 任一新Build MUST不修改其它Product或同Product已有Candidate
+
+#### Scenario: 构建 Rollback GM 服务
+
+- **WHEN** Rollback adapter 发布独立 GM artifact
+- **THEN** 公共 workflow MUST照常执行文件集合、hash、候选验证及原子替换
+- **AND** MUST不修改 Authority 产品输出或默认附加 GM
 
 ### Requirement: Build与Run必须消费同一正式产品Manifest
 
-Build MUST生成并在原子替换前验证schema v2 product manifest、全部artifact manifest/hash和exact file closure，且 MUST不启动进程。Run MUST只读取并验证当前正式manifest后启动其中声明的进程角色，MUST不触发Unity Build、dotnet publish、配置导出、目录修复、schema迁移或fallback。
+Build MUST生成并验证schema v3 Candidate manifest且不启动进程。Run MUST显式选择一个Candidate和Slot，重新校验manifest、artifact、tool和Session Plan后创建独立RunManifest。Run MUST不publish、编译、修改Candidate、升级schema、选择latest或fallback；CandidateId、ProductId、Tool Bundle或Topology任一不匹配 MUST在启动业务进程前失败。
 
 #### Scenario: 使用旧schema v1产物运行
 
-- **WHEN** Run读取包含旧`player/server`字段或不支持schema version的产品manifest
-- **THEN** Run MUST在启动任何进程前明确失败
+- **WHEN** Run读取旧固定根、schema v1的player/server字段或schema v2 manifest
+- **THEN** MUST明确拒绝且不创建Run实例
 - **AND** MUST不兼容读取、自动升级或重新Build

@@ -16,6 +16,29 @@ Network Test MUST消费开发候选 schema v4，稳定保存 Source/构建身份
 - **THEN** 发布/运行 MUST拒绝
 - **AND** MUST不搜索其他目录补齐
 
+#### Scenario: Rollback Candidate包含独立工具
+
+- **WHEN** Build生成DeterministicRollback Candidate
+- **THEN** runtime artifacts MUST精确声明Unity Player、Dedicated Relay和独立GM的角色
+- **AND** 候选与Run请求 MUST精确绑定Development Run Host、Rollback启动adapter和GM工具产物
+
+#### Scenario: Tool路径逃逸
+
+- **WHEN** 工具的root、entry point或配置路径规范化后离开其已声明封存根
+- **THEN** Build或Run MUST在启动前失败
+- **AND** MUST不搜索仓库Tools目录补齐
+
+#### Scenario: Rollback 开发产品包含独立 GM
+
+- **WHEN** Build 生成 Rollback 产品 manifest
+- **THEN** artifacts MUST精确包含 `unity-client-player`、`deterministic-relay-server`、`development-gm-server`
+- **AND** GM MUST是独立 ManagedExecutable，不能藏进 Relay 命令分支或 Player Scene
+
+#### Scenario: Artifact 路径逃逸
+
+- **WHEN** artifact 路径规范化后离开 ProductRoot
+- **THEN** Build 或 Run MUST在启动前失败，不修复或搜索路径
+
 ### Requirement: 公共Build Workflow必须与具体产品和服务器解耦
 
 DevelopmentCandidateBuildWorkflow MUST统一源码固定、构建配方、Unity/外部编译、工具引用、staging、精确闭包与原子发布。产品 adapter MUST显式提供附加 artifacts、工具和角色计划，不相互调用 helper。公共合同 MUST只表达载体、输入输出和能力，不引入 Fantasy、Authority、Rollback 或具体 adapter 分支。
@@ -35,6 +58,12 @@ Unity Authority、DotRecast Authority、DeterministicRollback MUST分别在共�
 - **WHEN** 作者从不同提交为三个产品分别构建
 - **THEN** 所有合法候选 MUST各自保留来源与闭包
 - **AND** 任一发布或运行 MUST不修改其他候选
+
+#### Scenario: 构建 Rollback GM 服务
+
+- **WHEN** Rollback adapter 发布独立 GM artifact
+- **THEN** 公共 workflow MUST照常执行文件集合、hash、候选验证及原子替换
+- **AND** MUST不修改 Authority 产品输出或默认附加 GM
 
 ### Requirement: Build与Run必须消费同一正式产品Manifest
 

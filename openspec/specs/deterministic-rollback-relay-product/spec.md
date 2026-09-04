@@ -2,13 +2,19 @@
 
 ## Purpose
 
-定义DeterministicRollback纯.NET Dedicated Relay Server、portable runtime manifest、Network Test Product闭包与三进程启动边界。
+定义纯 .NET Dedicated Relay 的网络职责、Candidate 静态身份与 Run 配置、精确工具和产物闭包，以及 Relay、GM 和两个 Unity Client 的开发运行边界。
 
 ## Requirements
 
 ### Requirement: Rollback Dedicated Relay Server必须是纯.NET网络产品
 
-系统 MUST提供受版本控制的`ThirdPerson.DeterministicRollback.Server` .NET 8 executable。该产品 MUST只引用portable Core、Fixed identity、DeterministicRollback protocol与Endpoint/Relay runtime source set，MUST不引用UnityEngine、Unity程序集、Fantasy、ServerAuthoritative、DotRecast、Animancer或Editor程序集。Server MUST不加载Unity Scene、Asset、Character Program或Collision World内容，也 MUST不被实现或命名为Listen Host、Canonical Host或Gameplay Authority Host。
+系统 MUST提供受版本控制的`ThirdPerson.DeterministicRollback.Server` .NET 8 executable。该产品 MUST只引用既有 portable Core、Fixed identity、DeterministicRollback protocol、Endpoint/Relay runtime 及独立开发只读查询桥所需的 .NET HTTP 和查询合同。MUST不引用Unity、Fantasy、ServerAuthoritative、DotRecast、Animancer、Editor 或 GM 命令处理器程序集，不加载 Scene、Asset、Character Program 或 Collision World 内容。
+
+#### Scenario: Relay 查询运行状态
+
+- **WHEN** 独立 GM 服务提交已认证的只读查询
+- **THEN** Relay 查询桥 MUST 将读取排队到 Relay 运行线程并返回有身份的快照
+- **AND** 网络等待 MUST 不阻塞 Relay Pump，不增加 Gameplay 执行权威
 
 #### Scenario: 构建Dedicated Relay Server Project
 
@@ -24,48 +30,84 @@
 
 ### Requirement: Relay Server Runtime Manifest必须完整锁定会话身份
 
-Build adapter MUST生成portable `DeterministicRollbackServerManifest`，至少记录SchemaVersion、BuildId、ProductId、SessionId、listen endpoint、expected client/actor roster、Model/Protocol identity、TickRate、MaximumPredictionLeadTicks、SemanticHash、Fixed ProgramHash、LayoutHash、CollisionWorldHash、Kcc identity/capabilities、confirmation policy、capacity和snapshot source policy。Server MUST在监听前完整校验manifest，MUST不从Unity asset、环境目录、文件存在性或默认值补齐缺失事实。
+Rollback Build adapter MUST在Candidate中锁定CandidateId、ProductId、expected client/actor roster、Model/Protocol、TickRate、MaximumPredictionLeadTicks、SemanticHash、Fixed ProgramHash、LayoutHash、CollisionWorldHash、KCC identity/capabilities、confirmation policy、capacity和snapshot source policy。每次Run MUST另行生成绑定Candidate manifest/hash、RunId、SessionId、listen/peer endpoint和role配置hash的Relay Run Manifest。Server MUST在监听前共同校验Candidate与Run，MUST不从Unity asset、环境目录、默认值或另一Run补齐缺失事实。
+
+#### Scenario: Run引用错误Candidate
+
+- **WHEN** Relay Run Manifest的CandidateId或Candidate hash与所选Product不一致
+- **THEN** Server MUST以明确退出码拒绝监听
+- **AND** MUST不等待Client连接后猜测版本
 
 #### Scenario: Manifest缺少ProgramHash
 
-- **WHEN** Server runtime manifest缺少或包含无效Fixed ProgramHash
-- **THEN** Server MUST以明确退出码拒绝启动
-- **AND** MUST不等待Client连接后再猜测身份
+- **WHEN** Candidate静态身份缺少或包含无效Fixed ProgramHash
+- **THEN** Relay MUST在读取Run endpoint前明确拒绝启动
+- **AND** MUST不从Client handshake、文件名或默认值补齐
 
 #### Scenario: Client Handshake与Manifest不一致
 
-- **WHEN** Client提交的ProtocolVersion、roster或deterministic identity与manifest不一致
+- **WHEN** Client提交的CandidateId、RunId、SessionId、Protocol或deterministic identity与Run Manifest不一致
 - **THEN** Server MUST拒绝锁定roster
 - **AND** SimulationTick MUST不开始
 
 ### Requirement: Rollback Network Test Product必须包含精确Server Closure
 
-Rollback build adapter MUST通过公共model-neutral runtime artifact合同发布Server executable、依赖和runtime manifest，并将其exact closure与hash写入schema v2 Network Test Product manifest。ProductRoot MUST同时包含`Player`与`Server`目录。公共Build workflow MUST只验证adapter声明的identity、entrypoint、closure和hash，MUST不引用Rollback concrete type或按目录名猜测产品。
+Rollback adapter MUST通过公共合同发布Unity Player、Dedicated Relay、独立GM、candidate-owned启动adapter和公共Orchestrator。Candidate Root MUST包含全部runtime artifacts、Tool Bundles、静态策略、Session Plan及schema v3 exact closure，但 MUST不包含本次Run的endpoint、token、RunId或运行SessionId。Player MUST不包含GM连接配置或工具凭据。公共Build workflow MUST不引用Rollback concrete type或按目录名猜测产品。
 
 #### Scenario: 构建Rollback Product
 
-- **WHEN** 作者执行Deterministic Rollback Build
-- **THEN** MUST原子发布一个Player artifact与一个Dedicated Relay Server artifact
-- **AND** schema v2 product manifest MUST精确绑定两者BuildId和hash
+- **WHEN** 作者执行DeterministicRollback Candidate Build
+- **THEN** MUST原子发布Player、Relay、GM与Tool Bundles并绑定同一CandidateId
+- **AND** Candidate manifest MUST证明全部artifact、工具和Session Plan hash
+
+#### Scenario: Candidate携带运行token
+
+- **WHEN** Candidate闭包包含GM访问token、Relay查询token或固定RunId
+- **THEN** Candidate validation MUST失败
+- **AND** MUST不把构建期token继续作为多会话配置
 
 #### Scenario: Server文件在Build后变化
 
-- **WHEN** Run前Server executable、依赖或runtime manifest的hash与product manifest不一致
+- **WHEN** Run前Relay executable、依赖、Candidate静态配置或manifest hash与Candidate manifest不一致
 - **THEN** Run MUST拒绝启动
 - **AND** MUST不重新publish或复制文件修复产物
 
+#### Scenario: 构建包含 GM 的产品
+
+- **WHEN** 作者执行 Rollback Candidate Build
+- **THEN** MUST原子发布 Player、Relay、GM 与工具静态策略
+- **AND** Run MUST另行创建并验证本次配置，不把端口、token 或 SessionId 固化进 Candidate
+
 ### Requirement: Rollback Run必须只启动一个Dedicated Relay Server与两个Unity Client
 
-Rollback Run MUST先校验既有schema v2 product manifest，再启动Server executable并等待endpoint ready，随后启动带显式peer profile的Client A与Client B Player。Run MUST不启动第三个Unity Player，不接受`--deterministic-rollback-role=host`，不加载Canonical Host Scene，也不在运行阶段编译、publish或生成配置。Server退出 MUST结束当前Demo session，MUST不切换为Client-host、Local或ServerAuthoritative。
+每个Rollback Run MUST由Candidate携带的Orchestrator消费显式Slot，生成Relay、Peer、GM Server与GM Console运行配置，并按Session Plan启动一个Dedicated Relay、一个独立GM和两个Unity Client。只有两个进程是Unity Player。Run MUST校验Candidate、Tool、Slot、Run与Session身份，不运行时Build/publish，不支持旧三进程、Unity Host、固定ProductRoot或StopExisting。启动失败 MUST只清理本Run；GM故障只使本Run工具不可用，Relay故障保持既有Session失败语义。
 
-#### Scenario: 启动完整DS Demo
+#### Scenario: 两个Candidate并行运行
 
-- **WHEN** product manifest、Server和Player closure全部有效
-- **THEN** Run MUST启动三个进程，其中只有Client A与Client B是Unity Player
-- **AND** Server MUST使用独立日志文件和RunId
+- **WHEN** 两个合法Rollback Candidate分别使用不同Slot启动
+- **THEN** MUST形成两个Candidate/Run/Session/GM身份完全隔离的四进程组合
+- **AND** 任一GM查询或Stop MUST不命中另一Run
+
+#### Scenario: GM 启动失败
+
+- **WHEN** 本Run的GM Tool、endpoint、token或目标身份不合法
+- **THEN** Orchestrator MUST把本Run标记Faulted并回收本Run已启动进程
+- **AND** MUST不启动无匹配工具的Peer或搜索另一GM
 
 #### Scenario: Server在运行中退出
 
-- **WHEN** Dedicated Relay Server进程异常结束
-- **THEN** 两个Client MUST结束当前Rollback Session并报告relay server unavailable
-- **AND** MUST不由任一Client接管Server职责
+- **WHEN** Dedicated Relay异常结束
+- **THEN** 两个Client MUST结束当前Rollback Session并报告Relay unavailable
+- **AND** MUST不由任一Client接管Relay或切换其它Session
+
+#### Scenario: 运行中 GM 退出
+
+- **WHEN** Gameplay Session仍在运行而独立GM退出
+- **THEN** 本Run工具状态 MUST变为Unavailable且Relay与两个Client继续按原模型推进
+- **AND** Player MUST不接管控制台或获得GM凭据
+
+#### Scenario: 启动完整DS Demo
+
+- **WHEN** Candidate、Slot、Tool Bundle 与 Session Plan 均有效
+- **THEN** Orchestrator MUST启动 Relay、GM、Client A 与 Client B，只有两个进程是 Unity Player
+- **AND** 本 Run MUST拥有独立身份、配置、日志与进程生命周期

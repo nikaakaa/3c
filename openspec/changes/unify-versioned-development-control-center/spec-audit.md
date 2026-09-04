@@ -1,5 +1,9 @@
 # 现有规范、实现与交接对账
 
+## 2026-09-04 归档后基线
+
+基础 GM 与版本化网络编排已经归档，current 已安装 schema v3 Candidate／Run 合同。本次补齐后续 MODIFIED 的继承场景，并将 network-test-session-orchestration 的六项规则改为显式 RENAMED＋MODIFIED；不提前安装 schema v4、共享产物库或 Development Run Host。下方早期 CLI 统计只作历史快照。
+
 ## 审计范围
 
 依据 2026-09-04 的 current specs、active changes 和实际代码；active `add-gameplay-performance-capture-workflow` 正被其他任务修改。本提案只新增自己的目录，不改写其文本或任务状态。
@@ -22,17 +26,17 @@
 | current 文件与 Requirement | 已有约定 | 本提案处理 |
 |---|---|---|
 | `client-build-artifact-layout` / 客户端正式产物必须收敛到唯一 Build 根 | 商业与 Network 都放客户端 Build，Library 只作缓存 | 商业 Content/Player 保持；开发测试正式产物转到项目唯一外置库，明确不是第二商业发布根 |
-| 同文件 / Network Test Product 必须保留现行 Build/Network 合同 | 固定 ProductRoot、schema v2、原子替换 | 重命名并替换为开发候选共享产物库规则；删除 Build/Network 活动消费者 |
-| `gameplay-network-test-build-workflow` / 唯一 Editor Build Workflow、Build/Run 分离、Product Manifest | Network 专属公共构建、同产品覆盖、没有统一工具来源 | 提升共同 Development Workflow；保留显式 adapter、Build/Run 分离和严格闭包，候选不可覆盖 |
-| `network-test-runtime-product-boundary` / Runtime Artifact 列表、公共 Workflow、隔离闭包、同一 Manifest | schema v2、当前 Product、原子替换 | schema v4 开发候选合同引用运行 artifact 与工具；保留 Model/Product 分离与三种产品业务 |
-| `deterministic-rollback-relay-product` / Runtime Manifest、Server Closure、Run进程 | 构建期固定实例配置、schema v2、运行期禁止生成配置、只有三进程 | 静态业务身份不变；本Run配置由Host生成，声明独立GM/Host工具角色，共五进程且只有两个Unity Client |
+| 同文件 / Network Test Product 必须保留现行 Build/Network 合同 | Product根下不可变Candidate、schema v3、独立RunLogs | 重命名并替换为开发候选共享产物库规则；删除 Build/Network 活动消费者 |
+| `gameplay-network-test-build-workflow` / 唯一 Editor Build Workflow、Build/Run 分离、Product Manifest | Network 专属公共构建、不可变Candidate、精确Tool Bundle | 提升共同 Development Workflow；保留显式 adapter、Build/Run 分离和严格闭包，候选不可覆盖 |
+| `network-test-runtime-product-boundary` / Runtime Artifact 列表、公共 Workflow、隔离闭包、同一 Manifest | schema v3、不可变Candidate、显式runtime artifacts与Tool Bundles | schema v4 开发候选合同引用运行 artifact 与工具；保留 Model/Product 分离与三种产品业务 |
+| `deterministic-rollback-relay-product` / Runtime Manifest、Server Closure、Run进程 | Candidate静态身份与Run实例配置分离；Relay、GM和两个Unity Client由独立Orchestrator拥有 | 静态业务身份不变；本Run配置由Host生成，声明独立GM/Host工具角色，共五进程且只有两个Unity Client |
 | `repository-ci-foundation` / 被跟踪正式文件 | 生成目录禁止跟踪、精确工程允许项 | 保持；新增精确最终工具路径约束，不增加 CI job，不上传产物 |
 
-## active 重叠与归属
+## 已归档基线与 active 重叠
 
 | active change | 需要交接的内容 | 继续由原 change 拥有的内容 |
 |---|---|---|
-| `add-versioned-network-test-orchestration` | CandidateId 的 label/commit 键、Build/Network 路径、Network 专属 Host、Center、工具允许项、Relay实例配置与工具进程边界；其 `network-test-session-orchestration` 完整 delta 由本提案目标文本承接 | Relay/GM 业务协议、Authority/Server 产品语义及已经正确的角色适配 |
+| 已归档 `add-versioned-network-test-orchestration` | CandidateId 的 label/commit 键、Build/Network 路径、Network 专属 Host、Center、工具允许项、Relay实例配置与工具进程边界；其已安装 `network-test-session-orchestration` 由本提案的 RENAMED＋MODIFIED 继承 | Relay/GM 业务协议、Authority/Server 产品语义及已经正确的角色适配 |
 | `add-gameplay-performance-capture-workflow` | 独立顶层 Controller、Library 正式产物、内嵌 summary 成功条件、performance.* 顶层调度、绝对路径比较、工程允许项；完整性能能力 delta 在本提案内保存 | 现有采集/回放具体实现的修复；待完成 DiagnosticCapabilitySet 与框架接入由该 change 对接，不在此复制 |
 | `add-compile-time-performance-instrumentation` | 绑定 BuildIdentity 的比较身份、SourceMap 与测量身份混合；完整能力 delta 在本提案内保存 | 正确织入语义、AOT 支持、Disabled 零闭包与调用跨度实现 |
 | `extract-generated-diagnostic-sampling-package` | 不接管 | 独立 KK 包版本与解析、Generator/Host 合同；本提案只固定包/Program/Schema 身份并引用结果 |
@@ -45,7 +49,7 @@
 
 实施的第一个文档闭环是：将重叠 delta 的最终所有权移到本 change；从原 active 中移除对应重复 capability 文件或精确重叠 Requirement，给原任务留下迁移目标记录，不把未完成工作勾成完成。未重叠的领域要求保留。旧 Host/Controller 的 repository-ci ADDED 允许项同步移除，由本 change 最终工程清单替换。
 
-目前 current 尚无 `network-test-session-orchestration`、`gameplay-performance-capture-workflow`、`compile-time-performance-instrumentation`，所以本 change 对它们使用完整 ADDED，而不是对不存在的 current Requirement 写 MODIFIED。交接后只能由本 change 安装这三项；禁止原 active 再分别添加同名 capability。若审批前它们已被用户归档或同步为 current，必须先重新对账，将本 change 改为对真实 current 的 MODIFIED/REMOVED，不能用重复 ADDED 覆盖。
+current 已安装 `network-test-session-orchestration`，本 change 必须修改或重命名真实 current Requirement，不能再用 ADDED 安装另一份规则。`gameplay-performance-capture-workflow` 与 `compile-time-performance-instrumentation` 尚未安装，仍按其 active change 的真实完成状态协调唯一安装 Owner，不勾选或撤销其未完成任务。
 
 本提案不修改 archive、不推定用户已验收、不自动归档任何 change。原 active 其余 delta 在后续安装时也必须按已经安装的 current 重新核对，不能把旧路径或旧工具白名单写回来。
 
@@ -62,7 +66,7 @@
 
 - KK 外部消费 delta 首条声明 0.5.2，但后文仍存在“0.4 Schema/迁移/闭包”字样。版本与 ABI 的最终值由该接入 change 确认，本提案不猜测。
 - Performance active 当前仍描述 Generated Started/CommittedSample/Stopped Handler；KK 接入文本已要求 private static partial DiagnosticEvent、禁止事件 DTO/Bridge。接入应消费最终框架生命周期 API，本提案只要求能力清单与子 manifest 的公共边界。
-- current Network specs 仍要求 schema v2，而 project.md 已描述 schema v3 候选链。这是未归档 active 与 current 安装状态不一致，不证明磁盘上存在合法候选。
+- Network specs 与 project.md 已统一为 schema v3 Candidate／Run 合同；这次文档归档不重建磁盘上的旧产物，也不证明旧目录可运行。
 
 ## 实现证据定位
 

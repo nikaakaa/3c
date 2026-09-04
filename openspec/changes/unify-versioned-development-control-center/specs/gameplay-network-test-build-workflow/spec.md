@@ -22,6 +22,18 @@ Unity Authority、DotRecast Authority 与 DeterministicRollback MUST通过由原
 - **THEN** 它 MUST提供Unity Client、普通.NET Authority Host和正式Server产品描述
 - **AND** 公共工作流 MUST不改写Unity Authority的候选或adapter
 
+#### Scenario: 构建Rollback Candidate
+
+- **WHEN** 作者以合法CandidateLabel执行DeterministicRollback Build
+- **THEN** Rollback adapter MUST提供Player、Relay、GM和对应Session Plan/Tool Bundle描述
+- **AND** 公共workflow MUST按同一开发候选schema v4合同完成构建和发布
+
+#### Scenario: 构建Authority Candidate
+
+- **WHEN** 作者构建Unity Authority或DotRecast Authority Candidate
+- **THEN** 对应adapter MUST提供其精确Server Product和候选固定的启动adapter
+- **AND** 公共workflow MUST不引入Rollback或GM产品分支
+
 ### Requirement: Network Test Build与Run必须完全分离
 
 Build MUST只从固定干净源码与依赖构建不可变候选。Run MUST只消费明确 CandidateId、manifest/hash、工具、角色计划和 Slot，允许在本次 Runs/<RunId> 下生成 endpoint、token、进程与日志配置，但 MUST不编译、publish、生成 Program/Projection、修改候选或选择其他版本。旧同产品覆盖、backup 替换、当前版本猜测与 StopExisting MUST删除。
@@ -37,6 +49,12 @@ Build MUST只从固定干净源码与依赖构建不可变候选。Run MUST只�
 - **WHEN** 相同 CandidateId 已经存在
 - **THEN** 发布器 MUST验证已存在精确闭包后返回已有产物或报告内容冲突
 - **AND** MUST不覆盖或合并目录
+
+#### Scenario: 新建Run实例
+
+- **WHEN** Candidate和Slot全部合法
+- **THEN** Run MUST只在项目统一产物库的Runs下创建本次实例配置并启动请求固定的Development Run Host
+- **AND** Candidate目录 MUST保持exact-byte不变
 
 ### Requirement: 外部编译进程必须使用统一受控生命周期
 
@@ -57,3 +75,9 @@ Network 产品 MUST使用开发候选 schema v4，记录 CandidateId、SourceId/
 - **WHEN** DotRecast候选包含未声明的Unity Authority Worker
 - **THEN** 发布 MUST失败并列出文件
 - **AND** MUST不忽略文件或放宽闭包掩盖混合产物
+
+#### Scenario: Candidate混入另一版GM
+
+- **WHEN** Rollback GM工具引用与候选声明不一致或CommandCatalogHash不匹配
+- **THEN** Candidate validation MUST拒绝正式发布或Run
+- **AND** MUST不只校验Player/Relay后忽略工具差异

@@ -26,3 +26,28 @@ Demo MUST保留两个独立 Unity Client 与一个纯.NET Dedicated Relay Server
 
 - **WHEN** Scene closure、manifest 或参数包含旧 Canonical Host 或 Host Player role
 - **THEN** Build MUST失败，不保留 fallback
+
+#### Scenario: 两端 Handshake
+
+- **WHEN** Client A 与 Client B 加入 Demo
+- **THEN** Relay Server MUST校验全部deterministic identities后才允许SimulationTick推进
+- **AND** Server MUST不加载Fixed Program或Collision World内容
+
+#### Scenario: Demo 使用选择性输入时序
+
+- **WHEN** 双Client开始推进Rollback Session
+- **THEN** 连续移动与Immediate request MUST使用0 Tick模型延迟
+- **AND** Corin Offensive request MUST使用2 Tick延迟
+- **AND** confirmed frontier MUST使用独立confirmation delay
+
+#### Scenario: Demo 启动产品
+
+- **WHEN** 作者运行已经构建的DeterministicRollback network test product
+- **THEN** Run MUST启动Dedicated Relay Server、独立GM、Client A Player与Client B Player
+- **AND** 进程列表 MUST只有两个Unity Player
+
+#### Scenario: 旧 Unity Host 资产进入产品
+
+- **WHEN** Build scene closure、manifest或启动参数包含Canonical Host Scene或Host Player role
+- **THEN** Build MUST失败
+- **AND** MUST不把旧Host保留为fallback

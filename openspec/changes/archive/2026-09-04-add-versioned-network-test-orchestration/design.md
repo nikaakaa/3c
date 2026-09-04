@@ -1,3 +1,9 @@
+## 归档口径（2026-09-04）
+
+已完成 30/30 项任务：三个 Network Test Product 统一使用 schema v3、源码可证明的不可变 Candidate、精确 Tool Bundle 和独立 Orchestrator；Run 通过显式 Slot 创建配置并只管理本次进程。Rollback 支持 rollback-a／rollback-b 两个隔离槽位，Authority 保留 default 槽位，不声称支持多场 Authority 并行。GM 基础 change 同批归档；固定目录、schema v2、构建期 token 和 StopExisting 不再属于当前合同。统一 Development Control Center 与 Performance 后续工作仍由各自未完成 change 负责。
+
+下文保留设计与实验过程；最终状态及被替代关系以同目录 proposal.md 的归档结果为准。
+
 # Design
 
 ## 目标与非目标

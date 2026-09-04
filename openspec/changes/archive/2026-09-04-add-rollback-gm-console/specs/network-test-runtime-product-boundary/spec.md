@@ -15,6 +15,18 @@ Network Test Product manifest MUST使用 schema v2 记录 NetworkModelIdentity�
 - **WHEN** artifact 路径规范化后离开 ProductRoot
 - **THEN** Build 或 Run MUST在启动前失败，不修复或搜索路径
 
+#### Scenario: Rollback产品包含Dedicated Relay Server
+
+- **WHEN** Build生成DeterministicRollback产品manifest
+- **THEN** artifacts MUST精确包含Unity Client Player、portable .NET Dedicated Relay Server和独立GM Server三个artifact
+- **AND** manifest MUST不隐藏在Player Scene中的Server角色
+
+#### Scenario: Artifact路径逃逸
+
+- **WHEN** 任一artifact root、entry point或manifest path规范化后离开当前Product Root
+- **THEN** Build或Run MUST在启动进程前失败
+- **AND** MUST不搜索其它目录或修复路径
+
 ### Requirement: 三个产品必须拥有精确且隔离的Artifact闭包
 
 Unity Authority 与 DotRecast Authority 产品 MUST保持各自现有 artifact 闭包。Rollback Development 产品 MUST包含 Unity Client Player、portable Relay Server 与独立 GM Server。不同产品 MUST使用不重叠输出目录；修改 Rollback 工具配置不得改变其它产品。公共 workflow MUST通过既有附加 artifact 合同处理 GM，不增加产品类型分支。
@@ -24,3 +36,9 @@ Unity Authority 与 DotRecast Authority 产品 MUST保持各自现有 artifact �
 - **WHEN** Rollback adapter 发布独立 GM artifact
 - **THEN** 公共 workflow MUST照常执行文件集合、hash、候选验证及原子替换
 - **AND** MUST不修改 Authority 产品输出或默认附加 GM
+
+#### Scenario: 连续构建三个产品
+
+- **WHEN** 作者依次Build Unity Authority、DotRecast Authority与DeterministicRollback
+- **THEN** 三个Product Root MUST分别保留自己的Player、附加artifact与schema v2 manifest
+- **AND** 后一次Build MUST不覆盖前两个产品的产物或日志

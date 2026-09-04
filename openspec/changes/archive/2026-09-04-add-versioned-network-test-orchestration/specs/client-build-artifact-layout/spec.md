@@ -15,3 +15,9 @@
 - **WHEN** Product根直接存在旧Player、Server或schema v2 manifest
 - **THEN** Candidate Catalog与Run MUST拒绝把它解释为正式Candidate
 - **AND** MUST不自动迁移、复制到版本目录或创建latest链接
+
+#### Scenario: 构建任一 Network Test Product
+
+- **WHEN** 正式 Network Product adapter 构建新的 Candidate
+- **THEN** 产物 MUST发布到该 ProductRoot 下唯一 CandidateId 子目录
+- **AND** MUST不写入普通 Content／Players 分区或其它已发布 Candidate

@@ -1,5 +1,12 @@
 # Change: 建立版本化 Network Test 候选与并行会话编排
 
+## 归档结果（2026-09-04）
+
+已完成 30/30 项任务：三个 Network Test Product 统一使用 schema v3、源码可证明的不可变 Candidate、精确 Tool Bundle 和独立 Orchestrator；Run 通过显式 Slot 创建配置并只管理本次进程。Rollback 支持 rollback-a／rollback-b 两个隔离槽位，Authority 保留 default 槽位，不声称支持多场 Authority 并行。GM 基础 change 同批归档；固定目录、schema v2、构建期 token 和 StopExisting 不再属于当前合同。统一 Development Control Center 与 Performance 后续工作仍由各自未完成 change 负责。
+
+本次按用户指令视为已验收并归档。下文 Why、方案过程及原始验证记录保留为变更历史；被后续方案替代的实现不再作为当前实施要求。
+
+
 ## Why
 
 当前三个 Network Test Product 分别发布到一个固定目录，同产品下一次 Build 会原子替换上一版；`BuildId`由时间生成，只说明构建时刻，不能证明产物来自哪个 Git 提交。Run 又直接消费固定目录、固定端口和仓库中的启动脚本。并行任务即使分别完成代码，也无法同时保留精确 Player，更无法证明 GM、Relay、Player 和日志属于同一份源码候选。
@@ -31,16 +38,15 @@
 - 修改 `client-build-artifact-layout`、`gameplay-network-test-build-workflow`、`network-test-runtime-product-boundary`，把固定覆盖目录和 schema v2 替换为版本化候选与 schema v3。
 - 修改 `server-authoritative-host-product-boundary` 与 `dotrecast-authoritative-server-backend` 中按时间 `BuildId`、固定当前目录和同产品替换语义。
 - 修改 `deterministic-rollback-relay-product` 与 `deterministic-rollback-two-client-demo`，把构建期 endpoint/token/session 配置拆为 Candidate 静态身份和 Run 实例配置。
-- 为尚未安装到 current specs 的 `rollback-gm-console`增加工具版本与 Run 绑定要求。本 change 以已完成的 `add-rollback-gm-console`实现为前置；实施前必须由用户验收并归档该基础 change，或先把本提案严格 rebase 到其最终已安装规格。
+- 已为 `rollback-gm-console` 增加工具版本与 Run 绑定要求；基础 GM 与本 change 同批完成规范同步和归档，现行合同以 schema v3 Candidate 与 Run 配置为准。
 - 为 `repository-ci-foundation`增加 `Tools/ThirdPersonNetworkTest/ThirdPerson.NetworkTest.Orchestrator.csproj` 的精确允许项，不增加 CI job、Player Build 或集成测试。
-- active `add-gameplay-performance-capture-workflow`已经完成并拥有 Launcher Performance 区。本 change 只迁移 Network Test 区，不复制其 Controller、MCP、Capture、Toolchain 或产物模型。
+- active `add-gameplay-performance-capture-workflow`拥有 Launcher Performance 区，但仍有未完成任务。本 change 只迁移 Network Test 区，不复制其 Controller、MCP、Capture、Toolchain 或产物模型。
 - active Foot、IK 与 Pose Graph change 不被本提案修改；它们未来只能以干净 checkpoint commit 进入 Candidate Build，不能用编译宏从混合工作区伪造独立版本。
 
-## 与现行规格的对比
+## 提案时的规格差异（现已同步）
 
 - `client-build-artifact-layout`当前强制三个固定 Network Product 根；本 change 改为固定 Product 根下的不可变 Candidate 子目录，RunLogs 继续留在 `Build/Network/RunLogs`。
 - `gameplay-network-test-build-workflow`当前允许同产品新 Build 替换旧产物；本 change 改为同 Candidate 拒绝覆盖、不同 Candidate 并存。
 - `network-test-runtime-product-boundary`当前固定 schema v2 且没有源码与工具身份；本 change 升级为 schema v3，旧 reader 直接删除。
 - `server-authoritative-host-product-boundary`和`dotrecast-authoritative-server-backend`当前把 `BuildId=yyyyMMdd-HHmmss`作为产品身份；本 change 用 Git 可证明的 Candidate 身份替代，构建时间只作信息。
 - `add-rollback-gm-console`当前设计明确 Build 发布端口和 token、Run 不生成配置；本 change 将运行配置迁入 Run 实例，同时保留 GM 命令、权限、异步查询和 Player 无工具凭据边界。
-

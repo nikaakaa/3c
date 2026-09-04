@@ -10,13 +10,13 @@ Rollback Build adapter MUST在Candidate中锁定CandidateId、ProductId、expect
 - **THEN** Server MUST以明确退出码拒绝监听
 - **AND** MUST不等待Client连接后猜测版本
 
-#### Scenario: Candidate缺少ProgramHash
+#### Scenario: Manifest缺少ProgramHash
 
 - **WHEN** Candidate静态身份缺少或包含无效Fixed ProgramHash
 - **THEN** Relay MUST在读取Run endpoint前明确拒绝启动
 - **AND** MUST不从Client handshake、文件名或默认值补齐
 
-#### Scenario: Client Handshake与Run不一致
+#### Scenario: Client Handshake与Manifest不一致
 
 - **WHEN** Client提交的CandidateId、RunId、SessionId、Protocol或deterministic identity与Run Manifest不一致
 - **THEN** Server MUST拒绝锁定roster
@@ -26,7 +26,7 @@ Rollback Build adapter MUST在Candidate中锁定CandidateId、ProductId、expect
 
 Rollback adapter MUST通过公共合同发布Unity Player、Dedicated Relay、独立GM、candidate-owned启动adapter和公共Orchestrator。Candidate Root MUST包含全部runtime artifacts、Tool Bundles、静态策略、Session Plan及schema v3 exact closure，但 MUST不包含本次Run的endpoint、token、RunId或运行SessionId。Player MUST不包含GM连接配置或工具凭据。公共Build workflow MUST不引用Rollback concrete type或按目录名猜测产品。
 
-#### Scenario: 构建Rollback Candidate
+#### Scenario: 构建Rollback Product
 
 - **WHEN** 作者执行DeterministicRollback Candidate Build
 - **THEN** MUST原子发布Player、Relay、GM与Tool Bundles并绑定同一CandidateId
@@ -38,11 +38,17 @@ Rollback adapter MUST通过公共合同发布Unity Player、Dedicated Relay、�
 - **THEN** Candidate validation MUST失败
 - **AND** MUST不把构建期token继续作为多会话配置
 
-#### Scenario: Relay文件在Build后变化
+#### Scenario: Server文件在Build后变化
 
 - **WHEN** Run前Relay executable、依赖、Candidate静态配置或manifest hash与Candidate manifest不一致
 - **THEN** Run MUST拒绝启动
 - **AND** MUST不重新publish或复制文件修复产物
+
+#### Scenario: 构建包含 GM 的产品
+
+- **WHEN** 作者执行 Rollback Candidate Build
+- **THEN** MUST原子发布 Player、Relay、GM 与工具静态策略
+- **AND** Run MUST另行创建并验证本次配置，不把端口、token 或 SessionId 固化进 Candidate
 
 ### Requirement: Rollback Run必须只启动一个Dedicated Relay Server与两个Unity Client
 
@@ -54,20 +60,26 @@ Rollback adapter MUST通过公共合同发布Unity Player、Dedicated Relay、�
 - **THEN** MUST形成两个Candidate/Run/Session/GM身份完全隔离的四进程组合
 - **AND** 任一GM查询或Stop MUST不命中另一Run
 
-#### Scenario: GM启动失败
+#### Scenario: GM 启动失败
 
 - **WHEN** 本Run的GM Tool、endpoint、token或目标身份不合法
 - **THEN** Orchestrator MUST把本Run标记Faulted并回收本Run已启动进程
 - **AND** MUST不启动无匹配工具的Peer或搜索另一GM
 
-#### Scenario: Relay在运行中退出
+#### Scenario: Server在运行中退出
 
 - **WHEN** Dedicated Relay异常结束
 - **THEN** 两个Client MUST结束当前Rollback Session并报告Relay unavailable
 - **AND** MUST不由任一Client接管Relay或切换其它Session
 
-#### Scenario: GM在运行中退出
+#### Scenario: 运行中 GM 退出
 
 - **WHEN** Gameplay Session仍在运行而独立GM退出
 - **THEN** 本Run工具状态 MUST变为Unavailable且Relay与两个Client继续按原模型推进
 - **AND** Player MUST不接管控制台或获得GM凭据
+
+#### Scenario: 启动完整DS Demo
+
+- **WHEN** Candidate、Slot、Tool Bundle 与 Session Plan 均有效
+- **THEN** Orchestrator MUST启动 Relay、GM、Client A 与 Client B，只有两个进程是 Unity Player
+- **AND** 本 Run MUST拥有独立身份、配置、日志与进程生命周期

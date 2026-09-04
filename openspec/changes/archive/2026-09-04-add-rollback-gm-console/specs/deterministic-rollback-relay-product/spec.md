@@ -10,6 +10,18 @@
 - **THEN** Relay 查询桥 MUST 将读取排队到 Relay 运行线程并返回有身份的快照
 - **AND** 网络等待 MUST 不阻塞 Relay Pump，不增加 Gameplay 执行权威
 
+#### Scenario: 构建Dedicated Relay Server Project
+
+- **WHEN** 普通dotnet build编译DeterministicRollback Server产品
+- **THEN** MUST在不安装Unity Editor runtime的情况下完成编译
+- **AND** 产物依赖闭包 MUST不包含Unity或Fantasy程序集
+
+#### Scenario: Relay Server启动
+
+- **WHEN** Server读取合法portable runtime manifest并监听endpoint
+- **THEN** MUST只创建handshake、roster、input fanout、canonical/confirmation与snapshot routing runtime
+- **AND** MUST不创建SimulationSession、Program、KCC或Presentation
+
 ### Requirement: Rollback Network Test Product必须包含精确Server Closure
 
 Rollback adapter MUST通过公共 artifact 合同发布 Unity Player、Dedicated Relay Server 和独立 GM Server。ProductRoot MUST包含`Player`、`Server`和`Gm`，全部 executable、依赖和配置 MUST进入 schema v2 exact closure。Relay gameplay manifest 保持现有身份语义；Relay 查询、GM 服务和 GM 控制台 manifest MUST绑定同一 BuildId 和 SessionId，不纳入 Gameplay hash，也不向 Player 下发工具配置或凭据。
@@ -19,6 +31,18 @@ Rollback adapter MUST通过公共 artifact 合同发布 Unity Player、Dedicated
 - **WHEN** 作者执行 Rollback Build
 - **THEN** MUST 原子发布三个 artifact 和开发访问配置
 - **AND** Run MUST拒绝缺失、被修改或混用不同 Build 的工具配置，不生成配置修复产物
+
+#### Scenario: 构建Rollback Product
+
+- **WHEN** 作者执行Deterministic Rollback Build
+- **THEN** MUST原子发布Player、Dedicated Relay Server与独立GM Server三个artifact
+- **AND** schema v2 product manifest MUST精确绑定三者BuildId和hash
+
+#### Scenario: Server文件在Build后变化
+
+- **WHEN** Run前Server executable、依赖或runtime manifest的hash与product manifest不一致
+- **THEN** Run MUST拒绝启动
+- **AND** MUST不重新publish或复制文件修复产物
 
 ### Requirement: Rollback Run必须只启动一个Dedicated Relay Server与两个Unity Client
 
@@ -35,3 +59,15 @@ Rollback Development Run MUST启动一个 Dedicated Relay Server、一个独立 
 - **WHEN** Gameplay 已运行而 GM 服务退出
 - **THEN** GM 文本窗口随进程退出，MUST不由 Player 接管控制台
 - **AND** Relay 和客户端 MUST继续按既有模型推进，不把工具断线当成 Gameplay 断线
+
+#### Scenario: 启动完整DS Demo
+
+- **WHEN** product manifest、Server和Player closure全部有效
+- **THEN** Run MUST启动Relay、GM及两个Client共四个进程，其中只有Client A与Client B是Unity Player
+- **AND** Server MUST使用独立日志文件和RunId
+
+#### Scenario: Server在运行中退出
+
+- **WHEN** Dedicated Relay Server进程异常结束
+- **THEN** 两个Client MUST结束当前Rollback Session并报告relay server unavailable
+- **AND** MUST不由任一Client接管Server职责

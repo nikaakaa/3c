@@ -10,7 +10,7 @@
 
 ## Current State
 
-- `openspec/specs/` 当前包含 88 个 current spec，并与本文件共同表达已安装架构。active change 只记录尚未完全收口的实施增量；工作区中孤立的新类型、未接入的模块或未完成的配置不能单独成为 current truth。archive 只记录用户已验收并完成收口，当前架构仍只以本文件和 current specs 为准。
+- `openspec/specs/` 当前包含 96 个 current spec，并与本文件共同表达已安装架构。active change 只记录尚未完全收口的实施增量；工作区中孤立的新类型、未接入的模块或未完成的配置不能单独成为 current truth。archive 只记录用户已验收并完成收口，当前架构仍只以本文件和 current specs 为准。
 - Foot Placement当前工作区已经收敛为唯一深模块、单数Goal/FBBIK/Writer和根Bank事务；旧中央`CharacterFootStateMachine`已经删除，现行Foot内部固定为Transition Resolver/Runtime、State Target、唯一Interpolation与Post Constraint阶段。`build-character-foot-motion-data-foundation`已经由用户验收并归档，原生AnimationClip正式保存左右脚Step、Foot Height、Contact、Lock和Support数据。active `stabilize-character-foot-path-and-landing`已经完成Releasing到Swing顺序、Path Revision分型、Swing/Contact Landing所有权、canonical Observation、历史Surface偏好删除和共享Prediction Motion唯一运行链接管；Prediction当前速度来自committed Body Target，Continuation来自移动计划，合法输入在1044帧Replay中零诊断回归。当前优先让PreSwing、Swing和Approach Contact持续更新Prediction Landing，并在首次正式Contact Rising用一次Plant Verification建立Verified LastLanding与冻结Anchor；完成该边界后再闭合Landing/Lock垂直连续，使Ground目标不得绕过唯一Interpolation同帧抬升，普通Contact帧允许Profile显式的小范围穿透，超预算连续追赶且禁止Full Lock，Swing仍保留Ground Envelope硬最低约束，Reach只发布逐腿与交集观察并参与原Landing完成资格，不硬改Pelvis或Foot Goal。正式Foot Height、Support/Pelvis、Landing Reach和Contact/Lock旧语义清理仍未完成，停止边界显式静止移动计划由后续移动系统change处理。
 - Corin RootTree、nested StateMachine、Timeline、TreeClip、Blackboard、Action、GameplayEffect、motion curve 已由唯一 Frontend 编译为 numeric-neutral Semantic IR。其 canonical artifact 固定写入 `Library/CharacterSimulation/SemanticIr/<definition-guid>.csir`；Editor从该artifact建立唯一`CharacterPresentationSemanticContract`，再独立生成target-neutral `CharacterPresentationProjectionAsset`与Build Request显式声明的Float32/Fixed Target Program及wrapper。Projection不再等待或反读Float32 Program。
 - `CharacterPipelineDefinition`代码与authoring合同已收敛为角色配置装配根；Pose Graph唯一拥有typed Source Slot子资产，`CharacterAnimationPresentationProfile`唯一拥有对应Binding、动画资源、有限Action binding、节点Policy、Rig、FullBodyIK Profile与Foot Analysis Source。Projection只发布dense source index，Runtime不查作者字符串。Corin正式链固定为`Component Pose -> Foot/PoseBone Goal Contribution -> 唯一Goal Assembler -> 唯一Goal Set -> 唯一FullBodyIK -> OutputPose`。Rig v4唯一声明Physical/Virtual Bone和FBBIK biped映射。
@@ -215,6 +215,22 @@
 - Program/Projection 迁移不保留 runtime compile、stale artifact fallback、默认 Solver、Transform 搜索或双写资产。
 - `Ref` 中代码只能迁入正式模块后改名归属，不能作为运行时依赖。
 - archive 只作历史追溯，不作为当前实现目标。
+
+## 完成项归档（2026-09-04）
+
+本次按用户指令归档以下七个任务已全部完成的 change，并将最终结果同步到 current specs。活跃 change 从 25 个减少到 18 个；尚未完成的后续工作仍独立保留。
+
+| 已归档 change | 最终结果与后续边界 |
+|---|---|
+| [compact-foot-diagnostic-publication](changes/archive/2026-09-04-compact-foot-diagnostic-publication/proposal.md) | 小报告、唯一明细与索引已完成；旧发布实现已删除，证据规则由独立离线分析接续。 |
+| [consolidate-foot-diagnostic-scoring](changes/archive/2026-09-04-consolidate-foot-diagnostic-scoring/proposal.md) | 七维去重评分、固定权重与缺失边界已完成；新 Operator／Plan 的收口仍属于诊断分析 change。 |
+| [refactor-character-ik-maintenance-boundaries](changes/archive/2026-09-04-refactor-character-ik-maintenance-boundaries/proposal.md) | 请求、完成凭据、最终结果、运行历史与证据已分责；不恢复后续迁移已删除的采样结构。 |
+| [refine-character-pelvis-response](changes/archive/2026-09-04-refine-character-pelvis-response/proposal.md) | 有效 Foot 权重、双脚共同骨盆目标与唯一响应已完成；全部 Reach 硬夹紧、Primary 例外和末端夹脚已删除。 |
+| [integrate-zzz-miyabi-toon-character-rendering](changes/archive/2026-09-04-integrate-zzz-miyabi-toon-character-rendering/proposal.md) | Corin 本地 Toon 材质、纹理语义、面部朝向与主光接入完成，不等于完整复刻 ZZZ 渲染。 |
+| [add-rollback-gm-console](changes/archive/2026-09-04-add-rollback-gm-console/proposal.md) | 独立只读 GM 与四进程开发组合完成；构建期运行配置已被下一项替代。 |
+| [add-versioned-network-test-orchestration](changes/archive/2026-09-04-add-versioned-network-test-orchestration/proposal.md) | schema v3 Candidate、精确工具、Slot 与独立 Run 完成；Rollback 两槽并行，Authority 保持 default 槽位。 |
+
+归档不代表尚未完成的 PIK、Pose Graph、生成采样／离线分析、Preview、统一 Development Control Center 或 Performance 工作已经完成。历史实验、失败证据与验收覆盖限制保留在各归档目录。
 
 ## Pending Work
 

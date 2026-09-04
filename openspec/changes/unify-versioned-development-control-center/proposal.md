@@ -1,5 +1,9 @@
 # Change: 统一开发测试 Center、版本记录与性能实验
 
+## 2026-09-04 基线更新
+
+`add-rollback-gm-console` 与 `add-versioned-network-test-orchestration` 已按用户指令归档；schema v3 Candidate、Tool Bundle、Slot 和 Run 现为 current specs。该状态不证明磁盘上的旧产物已经被重建。本提案仍是未实施的 schema v4／共享产物库方案，本次只更新继承关系和场景，不修改任务进度，也不执行后台 Unity 构建。
+
 ## Why
 
 作者需要同时在多个 worktree 修改角色、动画或工具，并能回答：这次运行用了哪份代码、哪套采样工具、哪段输入；修改前后是否仍执行相同操作；性能差异是否来自业务改动。
@@ -26,7 +30,7 @@
 
 - 新增能力：`development-artifact-versioning`、`development-control-center`、`development-run-orchestration`、`versioned-performance-analysis`。
 - 修改 current specs：`client-build-artifact-layout`、`gameplay-network-test-build-workflow`、`network-test-runtime-product-boundary`、`deterministic-rollback-relay-product`、`repository-ci-foundation`。
-- 吸收尚未安装的重叠能力 delta：`network-test-session-orchestration`、`gameplay-performance-capture-workflow`、`compile-time-performance-instrumentation`；本 change 保存完整目标文本。审批前不修改原 active change，实施时按 `spec-audit.md` 先完成规范所有权交接，禁止分别归档两份重叠 ADDED。
+- 修改已经安装的 `network-test-session-orchestration`：以 RENAMED＋MODIFIED 继承六项 current Requirement；继续协调尚未安装的 `gameplay-performance-capture-workflow` 与 `compile-time-performance-instrumentation` delta，本 change 保存其目标文本。审批前不修改原 active change，实施时按 `spec-audit.md` 先完成规范所有权交接，禁止分别归档两份重叠 ADDED。
 - 保持独立：商业构建、Gameplay/Network Model、KK Generated Diagnostic Sampling Runtime/Host/Generator、领域 Plan/Operator、GM 业务命令。
 - 代码边界：Editor 的 ProductBuild、NetworkProducts、Performance、Launcher；共享 tooling-contracts；既有 Network Orchestrator 与 Performance Controller；性能织入包的身份生成；本地仓库策略精确工具项目允许项。
 - 不增加 CI job、云端构建、远程机器调度、GPU/全量 Heap 采集、常驻第二 Editor、Computer Use 或新测试代码。仅本机显式后台构建使用 batchmode；现行规则中的全禁文字必须在审批后同步为这项有界例外，CI 禁令保持。

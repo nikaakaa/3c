@@ -42,3 +42,15 @@ Network Test 与 Local Fixed 开发候选 MUST使用 `<ArtifactRoot>/<ProjectId>
 - **WHEN** 批准的迁移核对完旧产物所有权与保留证据
 - **THEN** 系统 MUST删除确认失效的旧根与活动消费者
 - **AND** MUST不保留 Build/Network 或 Library/Performance 的镜像、链接或兼容读取
+
+#### Scenario: 构建两个Rollback候选
+
+- **WHEN** 作者从两个不同干净提交分别构建DeterministicRollback Candidate
+- **THEN** 两份完整产物 MUST位于统一产物库中各自CandidateId目录并同时保留
+- **AND** 后一次Build MUST不修改前一Candidate或普通Content/Player
+
+#### Scenario: 旧固定根仍包含schema v2产物
+
+- **WHEN** 旧Build/Network固定根仍存在Player、Server或schema v2 manifest
+- **THEN** Candidate Catalog与Run MUST拒绝把它解释为正式Candidate
+- **AND** MUST不自动迁移、复制到版本目录或创建latest链接

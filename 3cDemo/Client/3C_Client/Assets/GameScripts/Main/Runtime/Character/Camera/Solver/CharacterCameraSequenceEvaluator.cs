@@ -51,7 +51,6 @@ namespace ThirdPersonCamera
             }
 
             Vector2 look = response.Apply(input.LookInput);
-            float lookDelta = input.Delta(CameraTimeDomain.PresentationScaled);
             m_Yaw = Mathf.Repeat(m_Yaw + look.x * m_Projection.Input.Sensitivity.x, 360f);
             m_Pitch = Mathf.Clamp(
                 m_Pitch - look.y * m_Projection.Input.Sensitivity.y,
@@ -60,14 +59,11 @@ namespace ThirdPersonCamera
 
             string sequenceId = request.Active ? request.SequenceId : m_Projection.DefaultSequence.SequenceId;
             CameraSequencePayload sequence = ResolveSequence(sequenceId);
-            CameraSequenceStagePayload stage = ResolveStage(sequence);
             CameraFramePlan target = BuildTargetPlan(
                 input,
                 request,
                 sequence,
-                stage,
-                look,
-                lookDelta);
+                look);
 
             if (!string.Equals(sequence.SequenceId, m_CurrentSequenceId, StringComparison.Ordinal))
             {
@@ -99,13 +95,6 @@ namespace ThirdPersonCamera
             return result;
         }
 
-        static CameraSequenceStagePayload ResolveStage(CameraSequencePayload sequence)
-        {
-            if (sequence == null || sequence.Stages.Count == 0)
-                throw new InvalidOperationException("Camera Sequence has no stages.");
-            return sequence.Stages[sequence.Stages.Count - 1];
-        }
-
         CameraSequencePayload ResolveSequence(string sequenceId)
         {
             if (string.Equals(sequenceId, m_Projection.DefaultSequence.SequenceId, StringComparison.Ordinal))
@@ -123,57 +112,75 @@ namespace ThirdPersonCamera
             in CameraFrameInput input,
             in CameraSequenceRequest request,
             CameraSequencePayload sequence,
-            CameraSequenceStagePayload stage,
-            Vector2 look,
-            float lookDelta)
+            Vector2 look)
         {
-            Vector3 aim = input.BodyPosition + input.BodyRotation * (Vector3.up * m_Projection.DefaultSphere.Height);
+            Vector3 anchor = input.BodyPosition;
+            Vector3 aim = input.BodyPosition + input.BodyRotation *
+                (Vector3.up * m_Projection.DefaultSphere.Height);
+            for (int i = 0; i < input.Targets.Count; i++)
+            {
+                CameraTargetSnapshot target = input.Targets[i];
+                if (!target.Valid || !string.Equals(target.Key, request.TargetKey, StringComparison.Ordinal))
+                    continue;
+                anchor = target.AnchorPoint;
+                aim = target.AimPoint;
+                break;
+            }
             float radius = m_Projection.DefaultSphere.Radius;
             float fieldOfView = m_Projection.DefaultFieldOfView;
             Vector2 compositionOffset = Vector2.zero;
-            switch (stage.Kind)
+            float evaluatedYaw = m_Yaw;
+            float evaluatedPitch = m_Pitch;
+            for (int stageIndex = 0; stageIndex < sequence.Stages.Count; stageIndex++)
             {
-                case CameraSequenceStageKind.FrameOnePointByHeight:
-                    aim = input.BodyPosition + input.BodyRotation *
-                        (Vector3.up * (stage.EntityHeight * stage.HeightRatio));
-                    fieldOfView = stage.FieldOfView;
-                    compositionOffset = stage.ScreenOffset;
-                    break;
-                case CameraSequenceStageKind.FrameOnePointByScreenOffset:
-                    radius = stage.Radius;
-                    fieldOfView = stage.FieldOfView;
-                    compositionOffset = stage.ScreenOffset;
-                    break;
-                case CameraSequenceStageKind.FrameOnePointByTrack:
-                    if (stage.CameraOrbits.Count == 0)
-                        throw new InvalidOperationException($"Camera Sequence stage '{stage.StageId}' has no orbit data.");
-                    int orbitIndex = Mathf.Clamp(
-                        Mathf.RoundToInt(stage.ElevationRatio * (stage.CameraOrbits.Count - 1)),
-                        0,
-                        stage.CameraOrbits.Count - 1);
-                    CameraOrbitPayload orbit = stage.CameraOrbits[orbitIndex];
-                    radius = orbit.Radius;
-                    aim += input.BodyRotation * (Vector3.up * orbit.Height);
-                    fieldOfView = stage.FieldOfView;
-                    compositionOffset = stage.ScreenOffset;
-                    break;
-                default:
-                    throw new InvalidOperationException(
-                        $"Camera Sequence stage '{stage.StageId}' kind '{stage.Kind}' has no closed evaluator.");
+                CameraSequenceStagePayload stage = sequence.Stages[stageIndex];
+                switch (stage)
+                {
+                    case CameraFrameOnePointByHeightPayload byHeight:
+                        aim = anchor + input.BodyRotation *
+                            (Vector3.up * (byHeight.EntityHeight * byHeight.HeightRatio));
+                        fieldOfView = byHeight.FieldOfView;
+                        compositionOffset = byHeight.ScreenOffset;
+                        break;
+                    case CameraFrameOnePointByScreenOffsetPayload byScreen:
+                        radius = byScreen.Radius;
+                        fieldOfView = byScreen.FieldOfView;
+                        compositionOffset = byScreen.ScreenOffset;
+                        break;
+                    case CameraFrameOnePointByTrackPayload byTrack:
+                        if (byTrack.CameraOrbits.Count == 0)
+                            throw new InvalidOperationException($"Camera Sequence stage '{byTrack.StageId}' has no orbit data.");
+                        int orbitIndex = Mathf.Clamp(
+                            Mathf.RoundToInt(byTrack.ElevationRatio * (byTrack.CameraOrbits.Count - 1)),
+                            0,
+                            byTrack.CameraOrbits.Count - 1);
+                        CameraOrbitPayload orbit = byTrack.CameraOrbits[orbitIndex];
+                        radius = orbit.Radius;
+                        aim = anchor + input.BodyRotation * (Vector3.up * orbit.Height);
+                        fieldOfView = byTrack.FieldOfView;
+                        compositionOffset = byTrack.ScreenOffset;
+                        break;
+                    case CameraRotationEulerOffsetPayload euler:
+                        evaluatedPitch += euler.Offset.x;
+                        evaluatedYaw = Mathf.Repeat(evaluatedYaw + euler.Offset.y, 360f);
+                        break;
+                    default:
+                        throw new InvalidOperationException(
+                            $"Camera Sequence stage '{stage.StageId}' kind '{stage.Kind}' has no closed evaluator.");
+                }
             }
 
-            Quaternion orbitRotation = Quaternion.Euler(m_Pitch, m_Yaw, 0f);
-            Vector3 follow = aim + orbitRotation * (Vector3.back * radius);
-            follow += orbitRotation * new Vector3(compositionOffset.x, compositionOffset.y, 0f);
+            Quaternion orbitRotation = Quaternion.Euler(evaluatedPitch, evaluatedYaw, 0f);
+            aim += orbitRotation * new Vector3(compositionOffset.x, compositionOffset.y, 0f);
             return new CameraFramePlan(
-                follow,
+                anchor,
                 aim,
                 fieldOfView,
                 m_Projection.NearClipPlane,
                 m_Projection.FarClipPlane,
                 look,
-                m_Yaw,
-                m_Pitch,
+                evaluatedYaw,
+                evaluatedPitch,
                 radius,
                 sequence.SequenceId,
                 request.SourceId,

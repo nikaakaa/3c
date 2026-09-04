@@ -184,8 +184,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             FixedCharacterInputTraceModule.Status.Mode == FixedCharacterInputTraceMode.Replaying ||
             FixedCharacterInputTraceModule.Status.Mode == FixedCharacterInputTraceMode.Completed ||
             s_ReplayFinalizing;
-        public static bool IsPending => !string.IsNullOrEmpty(EditorPrefs.GetString(PendingOperationKey, string.Empty));
-        public static string PendingOperation => EditorPrefs.GetString(PendingOperationKey, string.Empty);
+        public static bool IsPending => !string.IsNullOrEmpty(SessionState.GetString(PendingOperationKey, string.Empty));
+        public static string PendingOperation => SessionState.GetString(PendingOperationKey, string.Empty);
         public static string LastTracePath => s_LastTracePath;
         public static string LastTraceId => s_LastTraceId;
         public static string LastStatus => s_LastStatus;
@@ -409,7 +409,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 return;
             }
             RequirePoseMatchesBody(pose, initialBody);
-            if (EditorPrefs.GetInt(PendingVariantKey, -1) < 0)
+            if (SessionState.GetInt(PendingVariantKey, -1) < 0)
                 throw new InvalidOperationException("Canonical Fixed input recording has no Gameplay Lab variant identity.");
             if (host.SessionHost.LifecycleState != SimulationSessionLifecycleState.Active)
                 return;
@@ -1293,7 +1293,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 return;
             EnsurePendingTracePreparation();
             IGameplayLabLauncherOperations operations = RequireLauncher();
-            int variantIndex = EditorPrefs.GetInt(PendingVariantKey, -1);
+            int variantIndex = SessionState.GetInt(PendingVariantKey, -1);
             ResetPendingDeadline();
             WritePendingLaunchPhase(PendingLaunchPhase.AwaitingPlayMode);
             operations.Play(variantIndex);
@@ -1470,7 +1470,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 host.ProjectionAsset.SemanticHash,
                 host.ProjectionAsset.ContractHash,
                 host.SessionHost.Composition.WorldRevision,
-                EditorPrefs.GetInt(PendingVariantKey, -1));
+                SessionState.GetInt(PendingVariantKey, -1));
         }
 
         static PoseRecord PoseFromBody(FixedWorldBodyState body) => new PoseRecord
@@ -1663,7 +1663,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
 
         static TraceDocument ReadPendingReplayDocument()
         {
-            string traceId = EditorPrefs.GetString(
+            string traceId = SessionState.GetString(
                 PendingTraceIdKey,
                 string.Empty);
             if (string.IsNullOrWhiteSpace(traceId))
@@ -1676,9 +1676,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor
 
         static void ArmPending(string operation, string traceId, int variantIndex)
         {
-            EditorPrefs.SetString(PendingOperationKey, operation);
-            EditorPrefs.SetString(PendingTraceIdKey, traceId ?? string.Empty);
-            EditorPrefs.SetInt(PendingVariantKey, variantIndex);
+            SessionState.SetString(PendingOperationKey, operation);
+            SessionState.SetString(PendingTraceIdKey, traceId ?? string.Empty);
+            SessionState.SetInt(PendingVariantKey, variantIndex);
             WritePendingLaunchPhase(
                 EditorApplication.isPlayingOrWillChangePlaymode
                     ? PendingLaunchPhase.AwaitingEditMode
@@ -1788,7 +1788,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
 
         static PendingLaunchPhase ReadPendingLaunchPhase()
         {
-            var phase = (PendingLaunchPhase)EditorPrefs.GetInt(
+            var phase = (PendingLaunchPhase)SessionState.GetInt(
                 PendingLaunchPhaseKey,
                 0);
             if (phase < PendingLaunchPhase.AwaitingEditMode ||
@@ -1801,15 +1801,15 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         }
 
         static void WritePendingLaunchPhase(PendingLaunchPhase phase) =>
-            EditorPrefs.SetInt(PendingLaunchPhaseKey, (int)phase);
+            SessionState.SetInt(PendingLaunchPhaseKey, (int)phase);
 
-        static void ResetPendingDeadline() => EditorPrefs.SetString(
+        static void ResetPendingDeadline() => SessionState.SetString(
             PendingDeadlineKey,
             DateTime.UtcNow.AddSeconds(PendingSeconds).Ticks.ToString(CultureInfo.InvariantCulture));
 
         static long ReadPendingDeadline()
         {
-            string value = EditorPrefs.GetString(PendingDeadlineKey, string.Empty);
+            string value = SessionState.GetString(PendingDeadlineKey, string.Empty);
             return long.TryParse(value, NumberStyles.None, CultureInfo.InvariantCulture, out long ticks)
                 ? ticks
                 : 0L;
@@ -1817,13 +1817,11 @@ namespace ThirdPersonCharacter.Pipeline.Editor
 
         static void ClearPending()
         {
-            EditorPrefs.DeleteKey(PendingOperationKey);
-            EditorPrefs.DeleteKey(PendingTraceIdKey);
-            EditorPrefs.DeleteKey(
-                "ThirdPerson.CharacterInputTrace.PendingTracePath.v1");
-            EditorPrefs.DeleteKey(PendingVariantKey);
-            EditorPrefs.DeleteKey(PendingDeadlineKey);
-            EditorPrefs.DeleteKey(PendingLaunchPhaseKey);
+            SessionState.EraseString(PendingOperationKey);
+            SessionState.EraseString(PendingTraceIdKey);
+            SessionState.EraseInt(PendingVariantKey);
+            SessionState.EraseString(PendingDeadlineKey);
+            SessionState.EraseInt(PendingLaunchPhaseKey);
             s_PendingReplayDocument = null;
         }
 

@@ -12,6 +12,7 @@ using ThirdPersonPerformance.Editor;
 using ThirdPersonPerformance.Instrumentation;
 using ThirdPersonPerformance.Instrumentation.Editor;
 using ThirdPersonCharacter.Editor.ProductStartup;
+using ThirdPersonCharacter.Editor;
 using UnityEditor;
 using UnityEditor.Build.Reporting;
 using UnityEditorInternal;
@@ -53,15 +54,15 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
         {
         }
 
-        public static string ToolchainPath => EditorPrefs.GetString(ToolchainPreference, DefaultToolchainPath);
-        public static string ScenarioPath => EditorPrefs.GetString(ScenarioPreference, string.Empty);
+        public static string ToolchainPath => ProjectEditorPreferences.GetString(ToolchainPreference, DefaultToolchainPath);
+        public static string ScenarioPath => ProjectEditorPreferences.GetString(ScenarioPreference, string.Empty);
         public static string BudgetPath => string.IsNullOrEmpty(ScenarioPath) ? string.Empty : Path.Combine(Path.GetDirectoryName(ScenarioPath), "budget.json");
         public static string CaptureProfilePath => string.IsNullOrEmpty(ScenarioPath) ? string.Empty : Path.Combine(Path.GetDirectoryName(ScenarioPath), "capture-profile.json");
-        public static string PlayerManifestPath => EditorPrefs.GetString(PlayerPreference, string.Empty);
-        public static string BaselineManifestPath => EditorPrefs.GetString(BaselinePreference, string.Empty);
-        public static string LastSmokeManifestPath => EditorPrefs.GetString(SmokePreference, string.Empty);
-        public static string LastReplayManifestPath => EditorPrefs.GetString(ReplayPreference, string.Empty);
-        public static string LastCaptureManifestPath => EditorPrefs.GetString(CapturePreference, string.Empty);
+        public static string PlayerManifestPath => ProjectEditorPreferences.GetString(PlayerPreference, string.Empty);
+        public static string BaselineManifestPath => ProjectEditorPreferences.GetString(BaselinePreference, string.Empty);
+        public static string LastSmokeManifestPath => ProjectEditorPreferences.GetString(SmokePreference, string.Empty);
+        public static string LastReplayManifestPath => ProjectEditorPreferences.GetString(ReplayPreference, string.Empty);
+        public static string LastCaptureManifestPath => ProjectEditorPreferences.GetString(CapturePreference, string.Empty);
         public static bool SmokeGateReady => IsGateReady(LastSmokeManifestPath, PerformanceOperationKinds.Smoke);
         public static bool ReplayGateReady => IsGateReady(LastReplayManifestPath, PerformanceOperationKinds.Replay);
 
@@ -71,13 +72,13 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             {
                 if (IsRunRunning)
                 {
-                    string activeStatusPath = Path.Combine(EditorPrefs.GetString(ActiveStagingPreference, string.Empty), "status.json");
+                    string activeStatusPath = Path.Combine(ProjectEditorPreferences.GetString(ActiveStagingPreference, string.Empty), "status.json");
                     if (File.Exists(activeStatusPath))
                     {
                         PerformanceRunStatusDocument status = ReadJson<PerformanceRunStatusDocument>(activeStatusPath);
                         return $"{status.operation} {status.status}: {status.run_id} / {status.stage}";
                     }
-                    return $"Starting {EditorPrefs.GetString(ActiveOperationPreference, string.Empty)} {EditorPrefs.GetString(ActiveRunPreference, string.Empty)}";
+                    return $"Starting {ProjectEditorPreferences.GetString(ActiveOperationPreference, string.Empty)} {ProjectEditorPreferences.GetString(ActiveRunPreference, string.Empty)}";
                 }
                 if (File.Exists(LastCaptureManifestPath))
                 {
@@ -94,7 +95,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                     PerformanceGateManifestDocument gate = ReadJson<PerformanceGateManifestDocument>(LastSmokeManifestPath);
                     return $"{gate.operation} {gate.status}: {gate.run_id} / {gate.stage}";
                 }
-                if (!string.IsNullOrEmpty(EditorPrefs.GetString(ActiveRunPreference, string.Empty)))
+                if (!string.IsNullOrEmpty(ProjectEditorPreferences.GetString(ActiveRunPreference, string.Empty)))
                     return "Controller exited before publishing a run manifest.";
                 return "Idle";
             }
@@ -104,7 +105,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
         {
             get
             {
-                string staging = EditorPrefs.GetString(ActiveStagingPreference, string.Empty);
+                string staging = ProjectEditorPreferences.GetString(ActiveStagingPreference, string.Empty);
                 if (string.IsNullOrWhiteSpace(staging) || !Directory.Exists(staging))
                     return false;
                 try
@@ -115,7 +116,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                     PerformanceRunStatusDocument status = ReadJson<PerformanceRunStatusDocument>(statusPath);
                     if (!IsTerminalStatus(status.status))
                         return true;
-                    string manifestPath = EditorPrefs.GetString(ManifestPreference(status.operation), string.Empty);
+                    string manifestPath = ProjectEditorPreferences.GetString(ManifestPreference(status.operation), string.Empty);
                     return !File.Exists(manifestPath);
                 }
                 catch
@@ -177,7 +178,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             };
             Directory.CreateDirectory(Path.GetDirectoryName(DefaultToolchainPath));
             WriteJson(DefaultToolchainPath, toolchain);
-            EditorPrefs.SetString(ToolchainPreference, DefaultToolchainPath);
+            ProjectEditorPreferences.SetString(ToolchainPreference, DefaultToolchainPath);
             Debug.Log($"Performance Toolchain configured: {DefaultToolchainPath}");
         }
 
@@ -239,7 +240,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                 {
                     throw new InvalidDataException($"Published Performance Scenario '{scenarioId}' already exists with another identity.");
                 }
-                EditorPrefs.SetString(ScenarioPreference, scenarioPath);
+                ProjectEditorPreferences.SetString(ScenarioPreference, scenarioPath);
                 return;
             }
             Directory.CreateDirectory(root);
@@ -322,7 +323,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             };
             scenario.content_hash = PerformanceCaptureIdentity.Scenario(scenario);
             WriteJson(scenarioPath, scenario);
-            EditorPrefs.SetString(ScenarioPreference, scenarioPath);
+            ProjectEditorPreferences.SetString(ScenarioPreference, scenarioPath);
             Debug.Log($"Performance Scenario published: {scenarioPath}");
         }
 
@@ -454,7 +455,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                 Directory.Move(candidate, stage);
                 Directory.Move(stage, destination);
                 string publishedManifest = Path.Combine(destination, "player-manifest.json");
-                EditorPrefs.SetString(PlayerPreference, publishedManifest);
+                ProjectEditorPreferences.SetString(PlayerPreference, publishedManifest);
                 Debug.Log($"Performance Player published: {publishedManifest}");
             }
             catch
@@ -581,11 +582,11 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             try
             {
                 Process process = Process.Start(start) ?? throw new InvalidOperationException("Performance Controller did not start.");
-                EditorPrefs.SetString(ActiveRunPreference, runId);
-                EditorPrefs.SetString(ActiveOperationPreference, operation);
-                EditorPrefs.SetString(ActiveCancelPreference, cancelPath);
-                EditorPrefs.SetString(ActiveStagingPreference, staging);
-                EditorPrefs.SetString(ManifestPreference(operation), Path.Combine(result, "manifest.json"));
+                ProjectEditorPreferences.SetString(ActiveRunPreference, runId);
+                ProjectEditorPreferences.SetString(ActiveOperationPreference, operation);
+                ProjectEditorPreferences.SetString(ActiveCancelPreference, cancelPath);
+                ProjectEditorPreferences.SetString(ActiveStagingPreference, staging);
+                ProjectEditorPreferences.SetString(ManifestPreference(operation), Path.Combine(result, "manifest.json"));
                 process.Dispose();
                 Debug.Log($"Performance {operation} started: {runId}");
             }
@@ -600,9 +601,9 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
         {
             if (!IsRunRunning)
                 throw new InvalidOperationException("The Launcher has no active owned Performance run.");
-            string runId = EditorPrefs.GetString(ActiveRunPreference, string.Empty);
-            string cancelPath = EditorPrefs.GetString(ActiveCancelPreference, string.Empty);
-            string staging = EditorPrefs.GetString(ActiveStagingPreference, string.Empty);
+            string runId = ProjectEditorPreferences.GetString(ActiveRunPreference, string.Empty);
+            string cancelPath = ProjectEditorPreferences.GetString(ActiveCancelPreference, string.Empty);
+            string staging = ProjectEditorPreferences.GetString(ActiveStagingPreference, string.Empty);
             if (string.IsNullOrEmpty(runId) || string.IsNullOrEmpty(cancelPath) ||
                 !string.Equals(Path.GetDirectoryName(Path.GetFullPath(cancelPath)), Path.GetFullPath(staging), StringComparison.OrdinalIgnoreCase))
             {
@@ -625,12 +626,12 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             RequireSchema(manifest.schema, PerformanceCaptureSchemas.Manifest, "capture manifest");
             if (!string.Equals(manifest.status, PerformanceCaptureStatus.Completed.ToString(), StringComparison.Ordinal))
                 throw new InvalidDataException("Baseline Capture must be Completed.");
-            EditorPrefs.SetString(BaselinePreference, Path.GetFullPath(path));
+            ProjectEditorPreferences.SetString(BaselinePreference, Path.GetFullPath(path));
         }
 
         public static void ClearBaseline()
         {
-            EditorPrefs.DeleteKey(BaselinePreference);
+            ProjectEditorPreferences.DeleteKey(BaselinePreference);
         }
 
         public static void OpenSummary()

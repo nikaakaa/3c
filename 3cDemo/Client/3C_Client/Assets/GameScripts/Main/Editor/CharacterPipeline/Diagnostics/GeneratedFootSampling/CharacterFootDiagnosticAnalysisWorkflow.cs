@@ -5,6 +5,7 @@ using KK.GeneratedDiagnosticSampling;
 using KK.GeneratedDiagnosticSampling.Host;
 using ThirdPersonCharacter.Pipeline.Diagnostics.FootAnalysis.Editor;
 using ThirdPersonCharacter.Pipeline.Editor;
+using ThirdPersonCharacter.Editor;
 using UnityEditor;
 using UnityEngine;
 
@@ -153,7 +154,7 @@ namespace ThirdPersonCharacter.Pipeline.Diagnostics.FootIkSampling.Editor
 
         static void RestoreLastReport()
         {
-            string reportPath = EditorPrefs.GetString(
+            string reportPath = ProjectEditorPreferences.GetString(
                 LastReportPreference,
                 string.Empty);
             if (!File.Exists(reportPath))
@@ -234,7 +235,7 @@ namespace ThirdPersonCharacter.Pipeline.Diagnostics.FootIkSampling.Editor
                     CharacterFootDiagnosticAnalysis.QualityScoreFileName);
                 if (!File.Exists(s_LastQualityScorePath))
                     s_LastQualityScorePath = string.Empty;
-                EditorPrefs.SetString(
+                ProjectEditorPreferences.SetString(
                     LastReportPreference,
                     Path.GetFullPath(s_LastReportPath));
                 Debug.Log(

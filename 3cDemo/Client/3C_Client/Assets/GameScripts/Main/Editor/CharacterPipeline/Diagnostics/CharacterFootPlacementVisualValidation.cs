@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using ThirdPersonCharacter.Pipeline.Animation;
 using ThirdPersonCharacter.Pipeline.Animation.Diagnostics;
 using ThirdPersonCharacter.Pipeline.Presentation;
+using ThirdPersonCharacter.Editor;
 using UnityEditor;
 using UnityEngine;
 using UnityEngine.Rendering;
@@ -24,11 +25,11 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             AnimationPresentationRuntimeTargetRegistry.TargetRegistered += OnTargetRegistered;
         }
 
-        internal static bool IsEnabled => EditorPrefs.GetBool(EnabledKey, false);
+        internal static bool IsEnabled => ProjectEditorPreferences.GetBool(EnabledKey, false);
 
         internal static void Enable()
         {
-            EditorPrefs.SetBool(EnabledKey, true);
+            ProjectEditorPreferences.SetBool(EnabledKey, true);
             EnsureBehaviour();
             ConfigureTargets();
             SceneView.RepaintAll();
@@ -36,7 +37,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
 
         internal static void Disable()
         {
-            EditorPrefs.SetBool(EnabledKey, false);
+            ProjectEditorPreferences.SetBool(EnabledKey, false);
             RemoveDiagnosticsInterest();
             DestroyBehaviour();
             SceneView.RepaintAll();

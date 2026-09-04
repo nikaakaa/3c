@@ -195,7 +195,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     frame.DeltaSeconds;
                 float releaseResponseRebase = Mathf.Min(
                     Mathf.Abs(releaseResponseScalar),
-                    releaseResponseStep * 0.5f);
+                    releaseResponseStep * 0.25f);
                 Vector3 releaseResponseRebaseVector =
                     state.ResponseHistory.AppliedDirection *
                     Mathf.Sign(releaseResponseScalar) *

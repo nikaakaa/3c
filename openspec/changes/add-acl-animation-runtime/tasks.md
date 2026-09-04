@@ -1,7 +1,5 @@
 本清单覆盖 Corin 当前正式 source 闭包的骨骼和片段自带 BlendShape，不新增独立表情行为系统。现有 8 片段离线解码是前置证据；以下任务均为尚待实施的项目接入，不以离线结果或格式校验代替完成状态。
 
-实现必须同时遵守 `implementation-design.md` 的模块、接口、数据归属和迁移顺序；不得把本次模块拆分留给未来重构。
-
 ## 0. 正式目标与输入证据
 
 - [ ] 0.1 从当前 Corin Definition/Profile 编译闭包导出 Action、Clip、Blend Space 和已配置 provider 的正式资源身份清单；交付 source 到 Clip/原始 CAB/PathId 的对应记录，不替换现有动作以适配现成样本
@@ -71,10 +69,3 @@
 - [ ] 6.4 固化发布包的 Projection、ACL payload、manifest、native artifact、能力矩阵和哈希清单；用清单校验确认部署缺任一身份或平台产物即阻止发布
 - [ ] 6.5 记录从旧 Projection/资源包回滚的部署步骤，明确回滚依赖上一版完整 artifact 而非运行时 fallback；用两版清单对账确认回滚不会在同一 source identity 下并行两个播放器
 - [ ] 6.6 固化完整接入报告，记录原生/ACL source、共同过渡、属性默认值、骨骼 Mask 分离、Pending/Invalid、共享释放与最终骨骼/属性同帧结果的现有诊断证据；未通过的目标阻止发布，不新增测试工程或把手动操作步骤写入本清单
-
-## 7. 模块化实施约束
-
-- [ ] 7.1 按实施设计拆分 Editor 读取、采样、压缩、质量评价与产物发布，去重当前三个草稿文件和旧 Builder；交付各模块输入输出与唯一引用链
-- [ ] 7.2 按实施设计拆分共享 native group、独占 Decoder、资源 Scope/Store/Loader、ACL pool/graph/journal；交付 Native ABI 2 与资源/Context 所有权记录
-- [ ] 7.3 删除 Router 登记字典、重复 backend 配置和 ACL C# 骨骼混合，复用原 Registry、图内 Mixer、capture 与 Program 参数规则；交付没有分裂 source/发布入口的依赖扫描结果
-- [ ] 7.4 按可构建批次完成中文小步提交和结构复核，提供提交、构建日志、编译容量及已关闭缺陷清单；最终拒绝旧 schema 工件，删除被替代的草稿实现

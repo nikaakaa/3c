@@ -32,8 +32,6 @@ ZZZ 的已检查 UnityPlayer 含 ACL 家族解码、数据库接入和 LRU Sweep
 
 ## Decisions
 
-具体模块、接口、所有权和对当前草稿的拆分迁移顺序见 [ACL 模块化实施设计](implementation-design.md)。该文件由设计窗口定稿，实现窗口按其落实；它保留本稿全部范围，并将共享资源/独占 Decoder、统一采样和唯一发布细化为可执行边界。
-
 ### 1. authoring、资源和 Projection 身份分层
 
 `AnimationClip` 继续拥有 authoring 时间曲线。现有 Presentation Profile 的资源绑定明确选择 backend 与压缩配置，Editor builder 从正式 Clip、Rig 和完整 binding 生成不可变资源。manifest 分别声明 Transform、可选 Scalar、Database Header、各 quality tier 的 Bulk，保存存在标记、字节范围、16 字节对齐、各块版本/hash、track-to-bone 或 scalar binding、reference/default 值、源身份、正式 start/stop/loop、采样网格、误差设置和构建身份。无 Scalar 或某 tier 长度为零必须显式声明；不能与必需文件丢失混为一谈。

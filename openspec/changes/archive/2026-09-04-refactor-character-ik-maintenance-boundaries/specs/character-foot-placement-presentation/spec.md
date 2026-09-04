@@ -64,17 +64,21 @@ Pelvis MUST继续使用233436组合中用户已接受的共同目标、软姿态
 
 ### Requirement: Foot Placement诊断必须只显示正式结果
 
-Runtime运行历史、内部typed请求、最终结果与只读过程证据 MUST严格分型。运行Owner MUST在计算时捕获本帧实际发生的证据；Diagnostics MUST在唯一根事务内从同一Pending的Observation、请求、最终Foot/Pelvis结果与后续阶段结果完成固定容量冻结和验证。Writer成功时 MUST仅补入同Completion的实际写入事实，Seal后消费者 MUST只读取Committed页，不延迟重算Foot业务。
+Runtime Result MUST与Diagnostics严格分型。Constraint Module MAY按Frame开始冻结的interest，从Pending Context、Observation、Resolved Result和Constraint阶段Result单向深冻结Phase Progress、Baseline、Envelope、Swing Correction、Residual、Anchor、Contact Progress、Ownership、Support Eligibility、Support、Pelvis、Goal与Solved结果；这些事实只能进入`CharacterPoseConstraintCommittedResult`。Physical Write与最终Physical Bone结果 MUST只由Final Publication冻结进`CharacterFinalPosePublicationCommittedResult`。
 
-响应、Contact、Support与Reach过程证据 MAY按业务分组保存，但 MUST不在多份记录中维护同义平铺真相。Gizmo、Trace与Pose Watch MUST只读各自允许的Committed页；Foot采样 MUST只消费PoseGraph-owned具体短租约View。任何诊断消费者不得查询世界、选择Support、生成Goal、执行FBBIK或改写运行历史。Diagnostics布局与显示兴趣 MUST不改变Runtime输出，公开Diagnostics不得被读取为下一帧状态。
-
-已经完成的紧凑发布 MUST保留Analyzer到Publisher的内存事实交接、`analysis.json`小清单、`details.jsonl`唯一明细、`details-index.json`及按正式source index的随机查询业务。Generated Sampling迁移后，这些能力 MUST消费同一次框架Reader产生的typed事实，不得恢复展开facts.json、全量报告复制、磁盘全文重读、旧CSV字节范围事实读取或第二条Reader链。
+Gizmo、Trace与Pose Watch MUST只读取各自允许的Committed页。Foot采样 MUST在成功Seal后的同步Commit调用栈内，从相同Frame、Completion、Program、Projection、Rig和Actor lineage的Constraint、Final Publication与当前Source已提交状态直接取得Left／Right与公共Fact Root，并以`in`执行一行target-scoped `DiagnosticEvent` partial调用；MUST不先组合或消费`CharacterFootIkCommittedCaptureViewLease`、Runtime Snapshot、Dimension View、Consumer／Binding或第二事实页。帧开始的可选partial Query只在匹配target订阅时要求Physical Writer冻结真实Physical Ankle事实；未订阅和Disabled构建不得执行该读取。`character-foot-ik-diagnostic-sampling`只提供字段／Sampler／Program Definitions与Editor workflow；`generated-diagnostic-sampling-framework`只拥有生成程序、typed packet、Capability Session与Writer／Reader。PoseGraph与Constraint不得拥有任一下游编译器、Schema、packet或Host知识。旧Foot单体Analyzer／Publisher、Diagnosis Store、旧CSV与历史兼容Reader直接删除；独立Foot Analysis只在Completed Artifact之后执行当前Plan、Operator、评分和报告。Diagnostics MUST不查询世界、修改Context、选择Support、生成Goal、执行FBBIK、读取未冻结Physical Transform反推结果或把Constraint与Physical事实写回同一业务Bank。
 
 #### Scenario: 捕获正式Foot事实
 
-- **WHEN** Foot、Pelvis、Goal、FBBIK和Pending Pose准备进入正式Writer
-- **THEN** 已完成阶段的输入、请求、Transition、连续Correction、Reach、最终Resolved与Solved证据 MUST属于同一Pending帧并已完成冻结校验
-- **AND** Writer完成后Physical事实 MUST补入同一页，Seal后才作为Committed结果发布
+- **WHEN** Foot、Pelvis、Goal、FBBIK、Pending Pose与Physical Writer均成功提交
+- **THEN** Foot采样 MUST从同一lineage的Constraint、Final Publication与当前Source已提交状态直接传入可对账冻结基线的正式事实；Live／Trace Projector MAY独立发布只读View
+- **AND** Diagnostics页归属变化 MUST不改变Runtime Result、Final Pose或Physical Writer输入
+
+#### Scenario: Writer失败
+
+- **WHEN** Constraint Result已经完成但Final Publication在Physical Writer前或Writer中失败
+- **THEN** Diagnostics MUST不发布本帧Pending Constraint或Physical结果
+- **AND** Projector MUST不为Foot Capture借用上一帧或发布第二Snapshot；Live／Pose Watch只能按各自既有合同保留上一Committed事实或正式Actor Fault
 
 #### Scenario: 增加响应解释字段
 
@@ -131,7 +135,7 @@ Root MUST只调度和提交，不执行业务数学；Encoder、Assembler、Solv
 
 下一帧必须读取的方向、响应、残差和有效性 MUST保存在固定布局typed运行状态中，每项字段具有唯一写入Owner及明确初始化/Reset语义。过程Fact MUST只表达本帧前值、采用值、结果与理由，不能成为隐藏的跨帧状态容器。
 
-全部状态和证据 MUST仍属于同一根Bank；拆分不得创建独立Committed/Pending生命周期、全局缓存、字符串状态Key或新的外部可变Context。Pending事务开放与Committed结果可读 MUST分别判断，不得以已经关闭的Pending标志否定正式历史。其它active拥有的连续性参考不得由本change新增旁路消费。
+Foot运行状态和过程证据 MUST仍属于同一根帧事务下的Constraint Bank；拆分不得创建独立Committed/Pending生命周期、全局缓存、字符串状态Key或新的外部可变Context。Pending事务开放与Committed结果可读 MUST分别判断，不得以已经关闭的Pending标志否定正式历史。其它active拥有的连续性参考不得由本change新增旁路消费。
 
 #### Scenario: 从过程记录移出上一帧方向
 
@@ -147,9 +151,9 @@ Root MUST只调度和提交，不执行业务数学；Encoder、Assembler、Solv
 
 ### Requirement: Foot诊断字段与分析消费必须只有一个Schema Owner
 
-每个Foot诊断字段 MUST只声明一次稳定identity、类型、单位、业务分组、availability与提取语义；主记录与Geometry表 MUST分别拥有明确布局。Runtime Result与Committed View MUST不引用列名、CSV、Analyzer或Publisher。采样迁移 MAY把已验证typed列绑定替换为通用Attribute、Schema descriptor、Generated Capture Program和Host typed view，但 MUST同时删除被替换的Header、Column getter/setter、CSV Reader与必需列手工清单，不得让二者并存为两份Schema真相。
+每个Foot诊断字段 MUST只声明一次稳定identity、类型、单位、业务分组、availability与提取语义；主表与真实子表 MUST分别拥有明确布局。Runtime Result与正式Fact Root MUST不引用列名、CSV、Analyzer或Publisher。采样迁移 MAY把已验证typed列绑定替换为通用Attribute、Schema descriptor、Generated Capture Program和通用Schema Reader，但 MUST同时删除被替换的Header、Column getter/setter、CSV Reader与必需列手工清单，不得让二者并存为两份Schema真相。
 
-Schema MUST在编译或明确初始化入口完成闭包校验；sealed输入 MUST只在框架Reader边界核对identity、布局与hash，不在每次字段搬运或记录转交时重复重检，也不在OnInspectorGUI进行重操作。主记录与Geometry表 MUST沿同一Foot Capability packet流分别投影，保留紧凑明细和随机查询业务；Extractor、Reader与Host Adapter不得执行第二份Foot数学或生成评分。
+Schema MUST在编译或明确初始化入口完成闭包校验；sealed输入 MUST只在框架Reader边界核对identity、布局与hash，不在每次字段搬运或记录转交时重复重检，也不在OnInspectorGUI进行重操作。主表与真实子表 MUST沿同一Foot Capability packet流分别投影，保留紧凑明细和随机查询业务；Extractor与Reader不得执行第二份Foot数学或生成评分。
 
 字段布局或含义变化 MUST显式升级版本，缺列、重复列、非法类型或不匹配版本 MUST拒绝，不建立旧reader、别名或默认值补全。历史原包及其旧结果 MUST保留为证据，不自动覆盖或用新语义重新解释。现有评分维度、权重、分母和Unavailable规则 MUST保持原Owner。
 
@@ -158,17 +162,17 @@ Schema MUST在编译或明确初始化入口完成闭包校验；sealed输入 MU
 #### Scenario: 新增普通证据字段
 
 - **WHEN** 当前版本新增一个正式响应证据字段
-- **THEN** 字段identity、Generated写入位置、Host typed读取和必需字段校验 MUST由同一Schema descriptor得到
-- **AND** 不改变质量规则时 MUST不新增评分Target或修改Publisher业务规则
+- **THEN** 字段identity、Generated写入位置、Schema驱动读取和必需字段校验 MUST由同一Schema descriptor得到
+- **AND** 不改变质量规则时 MUST不新增评分Target或修改报告业务规则
 
 #### Scenario: Schema字段不完整或重复
 
-- **WHEN** 当前Schema存在重复identity、缺失Extractor／Host typed view或类型不一致
+- **WHEN** 当前Schema存在重复identity、缺失Extractor／Schema Reader或类型不一致
 - **THEN** 编译或Capability preflight MUST明确失败，不开始生成看似合法的packet或采样文件
 - **AND** MUST不靠空值、零值或忽略该列继续运行
 
 #### Scenario: 从旧typed列绑定迁移到Generated Schema
 
-- **WHEN** 已验证的旧typed列绑定被Generated Schema与Host typed view整体替换且字段业务含义未变
-- **THEN** 新Schema MUST使用新的正式identity，逐字段业务值、availability、Analyzer规则和评分语义 MUST保持
-- **AND** 原有紧凑分析存储和只读查询业务 MUST由唯一Foot Host Adapter继续提供，旧Reader MUST不兼容解释新Schema
+- **WHEN** 已验证的旧typed列绑定被Generated Schema与Schema Reader整体替换且字段业务含义未变
+- **THEN** 新Schema MUST使用新的正式identity，逐字段业务值、availability、离线诊断规则和评分语义 MUST保持
+- **AND** 原有紧凑分析存储和只读查询业务 MUST由唯一离线Foot Analysis继续提供，旧Reader MUST不兼容解释新Schema

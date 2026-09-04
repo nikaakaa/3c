@@ -1,7 +1,7 @@
 # character-action-animation-authoring-workspace Specification
 
 ## Purpose
-TBD - created by archiving change add-action-animation-authoring-workspace. Update Purpose after archive.
+定义有限 Action 动画的统一作者工作面，聚合 Action、Timeline、原生 AnimationClip、Slot、预览与调试关系，并将每次修改交给对应正式 Owner。
 ## Requirements
 ### Requirement: 有限Action动画必须提供统一作者工作面
 

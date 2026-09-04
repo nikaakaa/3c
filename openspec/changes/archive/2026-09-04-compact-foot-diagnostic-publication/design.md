@@ -1,3 +1,9 @@
+## 归档口径（2026-09-04）
+
+已完成 7/7 项任务：取消展开 facts.json 的写入与全文回读，发布小报告、唯一明细和索引，保留全部事件与原始证据。旧 Analyzer／Publisher／Diagnosis Store 后来已随生成采样迁移删除；归档保留报告证据规则，当前分析入口由 `add-schema-driven-diagnostic-analysis` 接续，不恢复旧采样器、旧 Reader 或自动停止后分析。该后续 change 尚未完成收口。
+
+下文保留设计与实验过程；最终状态及被替代关系以同目录 proposal.md 的归档结果为准。
+
 # Design
 
 ## 唯一链路

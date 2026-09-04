@@ -1,14 +1,20 @@
-## ADDED Requirements
+# character-foot-diagnostic-storage Specification
+
+## Purpose
+
+规定 Foot 诊断报告的事实复用、紧凑明细、索引、身份与历史证据保存规则。旧工具已经删除，当前分析实现由独立 Schema-driven Analysis 承接；本规范不恢复旧 Reader 或承诺采样停止后自动分析。
+
+## Requirements
 
 ### Requirement: Foot 诊断必须共享一次解析的正式事实
 
-停止采样后的唯一后台 Analyzer MUST 完整读取校验 Sealed CSV 和 geometry，并将同次内存事实直接交给唯一 Publisher。Publisher MUST NOT 先写出完整 facts.json 再全文读取，也 MUST NOT 重新计算 Foot Runtime 或查询世界。
+对已完成采样的正式产物，离线分析 MUST 由唯一 Reader 校验身份并读取一次正式事实，同次内存结果直接用于规则计算和报告发布。报告生成 MUST NOT 先写出展开 facts.json 再全文读回，也 MUST NOT 重算 Foot Runtime 或查询世界。当前生成采样以 Completed Artifact 为输入，分析由独立 Host workflow 显式触发；历史 Analyzer、Publisher、Diagnosis Store、旧 CSV Reader 与自动停止后分析入口 MUST 不因本合同恢复。
 
-#### Scenario: 录制完成后自动分析
+#### Scenario: 对完成的录制显式分析
 
-- **WHEN** CSV writer 已封口且至少存在一帧
-- **THEN** 现有后台 Finalizer MUST 自动执行一次 Analyzer 和 Publisher
-- **AND** 所有 Target MUST 消费相同输入身份和既有完整统计规则
+- **WHEN** 作者通过正式 Host workflow 分析合法 Completed Artifact
+- **THEN** 唯一 Reader MUST 校验并解析一次输入，规则和报告共享同次事实
+- **AND** 所有报告 MUST 绑定同一份采样、Schema 与分析规则身份
 
 ### Requirement: 小报告与完整明细必须分离且可追溯
 
@@ -28,13 +34,13 @@
 
 ### Requirement: 发布必须保持身份和完整性
 
-唯一 manifest MUST 保存输入与几何 hash、schema、Analyzer 版本、coverage和明细索引身份。报告、明细、索引、manifest MUST 在同次完整发布中生效。缺失或损坏的正式记录 MUST typed 拒绝，不提供旧 JSON fallback。
+分析报告索引 MUST 引用唯一正式采样 manifest，记录输入及子表 hash、Schema、分析版本、coverage和明细索引身份，不生成第二采样 manifest。报告、明细与索引 MUST 在同次完整发布中生效。缺失或损坏的正式记录 MUST typed 拒绝，不提供旧 JSON fallback。
 
 #### Scenario: 旧包缺少新存储
 
 - **WHEN** 新 Reader 收到旧 facts.json 或缺索引的目录
 - **THEN** MUST 明确拒绝，历史包 MUST 不被改写
-- **AND** 所需原始 CSV 合同时可在显式新目录离线生成新版本报告
+- **AND** 原始输入满足当前 Schema Reader 合同时 MAY 在显式新目录离线生成新版本报告，不增加旧格式 Reader
 
 ### Requirement: 存储迁移不得改变质量结论
 

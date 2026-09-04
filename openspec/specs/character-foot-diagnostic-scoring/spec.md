@@ -1,4 +1,10 @@
-## ADDED Requirements
+# character-foot-diagnostic-scoring Specification
+
+## Purpose
+
+规定 Foot 七维质量评分的去重、固定权重、接触分域、缺失证据和历史版本解释规则。分数仅作辅助比较，不代表视觉验收；实现由唯一离线 Foot Analysis 的当前 Plan 拥有，不绑定旧 Analyzer 或 Publisher。
+
+## Requirements
 
 ### Requirement: Foot质量评分必须按唯一业务维度去重
 
@@ -12,7 +18,7 @@ Foot Diagnostics MUST只将下陷穿透20%、接触未贴合20%、普通Swing平
 
 ### Requirement: Foot加权总分必须保持浅层参考与缺失边界
 
-唯一Publisher MUST按固定权重发布版本化`quality-score.json`并保留所有维度Health、Evidence、次数、分母、规则、贡献和代表事实引用。总分 MUST明确为暂定粗略参考，不得名为Pass/Fail或代替视觉验收。旧文件级无权聚合 MUST删除。
+唯一离线Foot分析器 MUST按固定权重发布版本化`quality-score.json`并保留所有维度Health、Evidence、次数、分母、规则、贡献和代表事实引用。总分 MUST明确为暂定粗略参考，不得名为Pass/Fail或代替视觉验收。旧文件级无权聚合 MUST删除。
 
 #### Scenario: 全部维度可计算
 
@@ -46,12 +52,12 @@ Foot Diagnostics MUST只将下陷穿透20%、接触未贴合20%、普通Swing平
 
 ### Requirement: Foot评分必须只消费正式事实且保留版本证据
 
-采样、Analyzer、Publisher MUST保持一条链。接触未贴合 MUST使用同Event已验证Anchor与最终物理Heel/Toe；Releasing只作退出测量，不参与保持贴合评分，缺接触面不得补默认值。FullAnchor与Sliding政策 MUST分型。质量规则升级 MUST保留历史原包，不兼容伪造新列，不把换规则后的分差解释成行为改善。
+采样、离线规则与报告 MUST保持一条链。接触未贴合 MUST使用同Event已验证Anchor与最终物理Heel/Toe；Releasing只作退出测量，不参与保持贴合评分，缺接触面不得补默认值。FullAnchor与Sliding政策 MUST分型。质量规则升级 MUST保留历史原包，不兼容伪造新列，不把换规则后的分差解释成行为改善。
 
 #### Scenario: 回算同一旧原始样本
 
 - **WHEN** 当前CSV包含新规则所需的全部正式事实
-- **THEN** Analyzer MAY在独立副本生成新版本结果
+- **THEN** 当前离线分析器 MAY在独立副本生成新版本结果
 - **AND** 原包及原评分 MUST保持不变，比较 MUST明确规则版本差异
 
 ### Requirement: 接触间隙必须区分职责与可观察过程

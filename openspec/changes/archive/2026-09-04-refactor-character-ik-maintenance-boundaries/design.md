@@ -1,3 +1,9 @@
+## 归档口径（2026-09-04）
+
+已完成 30/30 项任务：Foot 初步请求、Landing 完成凭据、最终结果和 Goal 编码分型，运行历史与诊断证据分离，Solver Reset 不再继承 Vendor 残留方向。保留原有 Foot／Pelvis／膝向行为及已知误差。固定基线回放及 Reset 观测范围以 execution.md 为准，未覆盖的退化／重置组合不扩大为已验证。后续 Pose Graph 与生成采样已改变外层 Owner 和采样接点，现行规范保留其直接 Fact Root、独立 Final Publication 与 Schema 合同，不恢复旧根页、Capture View 采样或列绑定。
+
+下文保留设计与实验过程；最终状态及被替代关系以同目录 proposal.md 的归档结果为准。
+
 # IK权威数据流与控制权设计
 
 ## Context

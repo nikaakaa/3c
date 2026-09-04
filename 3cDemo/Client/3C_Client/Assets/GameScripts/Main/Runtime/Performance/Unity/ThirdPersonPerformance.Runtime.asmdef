@@ -1,0 +1,27 @@
+{
+    "name": "ThirdPersonPerformance.Runtime",
+    "rootNamespace": "ThirdPersonPerformance.Runtime",
+    "references": [
+        "ThirdPersonPerformance.Contracts",
+        "ThirdPerson.Performance.Instrumentation.Core",
+        "ThirdPerson.Performance.Instrumentation.Contracts",
+        "ThirdPersonClient.Runtime",
+        "ThirdPersonGameplay",
+        "ThirdPersonSimulation.Core",
+        "ThirdPersonSimulation.Fixed",
+        "ThirdPersonSimulation.Fixed.Unity",
+        "ThirdPersonSimulation.DeterministicRollback"
+    ],
+    "includePlatforms": [
+        "WindowsStandalone64",
+        "Editor"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

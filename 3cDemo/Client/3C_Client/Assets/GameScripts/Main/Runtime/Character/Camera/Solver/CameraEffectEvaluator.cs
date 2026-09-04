@@ -104,7 +104,6 @@ namespace ThirdPersonCamera
                 payload.BlendInCurve,
                 payload.BlendOutCurve,
                 active.Retired);
-            weight *= ReleaseWeight(active, payload.BlendOutSeconds);
             Vector3 follow = plan.FollowPoint + payload.Settings.FollowOffset * weight;
             Vector3 aim = plan.AimPoint + payload.Settings.AimOffset * weight;
             return plan

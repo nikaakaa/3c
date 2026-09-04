@@ -58,7 +58,7 @@
 
 `WorldBasicCameraData.get_Location`（源码段 RVA `0xA3F750`）不是存储字段读取：它把值类型负载交给 `0x1E88D780` 计算 `cameraToPivot`，再用 `pivotLocation - cameraToPivot` 得到位置。该计算读取 `_rotation`、`_radius` 和 `_offset`，其中局部向量由 `offset.x/offset.y/radius` 组成；因此 `Location` 不能用当前 FreeLook 的中心半径属性直接替代。工程侧合同提供同名的 `CameraToPivot` 与 `Location` 派生值。
 
-同一来源的 `MoleMole.CameraOrbit`（类型索引 `50865`）是只有 `m_Height float`（记录偏移 `+0x10`）和 `m_Radius float`（记录偏移 `+0x14`）的值类型；它没有 `ScreenY` 或其它屏幕构图字段。屏幕构图由独立的 `MoleMole.Config.ConfigCameraComposer`（类型索引 `57503`）承载，字段为 `BiasY`、`ScreenX`、`ScreenY`、`BiasX`（记录偏移 `+0x10/+0x14/+0x18/+0x1C`）。因此当前工程 `CameraOrbitPayload` 将 `ScreenY` 与轨道几何放在同一对象内，不是源结构的可直接对应；后续必须由独立构图 owner 消费屏幕数据，不能继续把它写进 FreeLook orbit 数组。
+同一来源的 `MoleMole.CameraOrbit`（类型索引 `50865`）是只有 `m_Height float`（记录偏移 `+0x10`）和 `m_Radius float`（记录偏移 `+0x14`）的值类型；它没有 `ScreenY` 或其它屏幕构图字段。屏幕构图由独立的 `MoleMole.Config.ConfigCameraComposer`（类型索引 `57503`）承载，字段为 `BiasY`、`ScreenX`、`ScreenY`、`BiasX`（记录偏移 `+0x10/+0x14/+0x18/+0x1C`）。工程侧 `CameraOrbitPayload` 现已只保留 `Height/Radius` 与源轨道几何对齐；`CameraOverrideTrackSettings` 中的 `ScreenY` 仍属于尚未闭合的 Override 构图输入，不能重新写回轨道 payload 或旧 FreeLook 轨道数组。
 
 ### WorldBasicCameraData 的序列消费者与活动承载
 
@@ -93,9 +93,9 @@
 
 `PipelineCamera.CameraContext<,>` 还保存 `_lastCameraData`、`_lastReferenceCameraData` 和 `_mCamera Camera`，并提供 `GetLastFinalCameraData()`；`PipelineCamera.FinalCameraData` 是 `48` 字节值类型，实例字段只有 `location Vector3`、`rotation Quaternion`、`fieldOfView float`。这把源侧阶段关系固定为“核心 WorldBasic 数据 → Pipeline VCam/CameraState → FinalCameraData”，但当前快照还没有证明 `FinalCameraData` 写回 Unity `Camera` 属性的唯一函数和同帧回读点。
 
-因此标准 `CinemachineVirtualCamera`（`MonoStageEnv` 的字典返回类型）与默认 `NapVirtualPipelineCamera` 是两个已确认但职责不同的承载类型：前者是 stage 资源的 virtual-camera 身份返回值，后者是默认相机管线的活动计算载体。工程侧在唯一写入 owner 和最终回读顺序闭合前，不能把二者合并成一个 FreeLook 适配入口，也不能在现有适配器旁边再加一条并行输出路径。
+因此标准 `CinemachineVirtualCamera`（`MonoStageEnv` 的字典返回类型）与默认 `NapVirtualPipelineCamera` 是两个已确认但职责不同的承载类型：前者是 stage 资源的 virtual-camera 身份返回值，后者是默认相机管线的活动计算载体。工程侧在唯一写入 owner 和最终回读顺序闭合前，不能把二者合并成一个适配入口，也不能在现有适配器旁边再加一条并行输出路径。
 
-因此当前工程的 `CinemachineCameraRigAdapter` 仍不能把 `CinemachineFreeLook` 当作 ZZZ 活动承载的等价物。`CameraWorldBasicData` 已先作为独立核心合同落地，但在最终 virtual camera 写入点、阶段组件和回读顺序闭合前，不接入现有 FreeLook，也不增加第二条运行输出路径。
+工程侧当前已将 `CinemachineCameraRigAdapter` 和六个当前产品资源切换到标准 `CinemachineVirtualCamera`，并由 Adapter 直接应用 `WorldBasicCameraData.Location/Rotation`、镜头参数和一次手动 Brain 推进；这只闭合了当前平台绑定，不等于已经还原源侧 `NapVirtualPipelineCamera` 的阶段组件、最终 `FinalCameraData` 写回和同帧回读顺序。后续仍必须沿唯一 Adapter/Brain 输出链补齐这些来源证据，不能恢复 FreeLook 或增加第二条运行输出路径。
 
 metadata 只证明类型、字段、方法身份和地址，不证明函数体之外的完整演出规则。上表把这种边界保留下来，不能把 metadata 名称当成公式或阶段顺序。
 

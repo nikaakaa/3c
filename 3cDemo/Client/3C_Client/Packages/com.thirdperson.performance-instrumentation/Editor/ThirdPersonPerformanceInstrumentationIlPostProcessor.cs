@@ -37,8 +37,10 @@ namespace ThirdPersonPerformance.Instrumentation.Editor
             {
                 bool readSymbols = pdbData != null && pdbData.Length > 0;
                 using var pdbStream = readSymbols ? new MemoryStream(pdbData, false) : null;
+                using var resolver = new PerformanceInstrumentationAssemblyResolver(compiledAssembly.References);
                 var readerParameters = new ReaderParameters
                 {
+                    AssemblyResolver = resolver,
                     ReadSymbols = readSymbols,
                     SymbolStream = pdbStream,
                     ReadWrite = false,
@@ -50,6 +52,7 @@ namespace ThirdPersonPerformance.Instrumentation.Editor
                 using (var peStream = new MemoryStream(peData, false))
                 using (AssemblyDefinition assembly = AssemblyDefinition.ReadAssembly(peStream, readerParameters))
                 {
+                    resolver.SetCurrent(assembly);
                     List<PerformanceInstrumentationProbeTarget> targets =
                         PerformanceInstrumentationProbeScanner.Find(assembly);
                     if (targets.Count == 0)
@@ -168,7 +171,7 @@ namespace ThirdPersonPerformance.Instrumentation.Editor
             {
                 diagnostics.Add(PerformanceInstrumentationProbeScanner.Error(
                     compiledAssembly.Name,
-                    $"Performance instrumentation post-processing failed: {exception.Message}"));
+                    $"Performance instrumentation post-processing failed: {exception}"));
                 return Original(peData, pdbData, diagnostics);
             }
         }

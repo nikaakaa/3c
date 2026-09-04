@@ -318,9 +318,9 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 scaledDeltaSeconds,
                 unscaledDeltaSeconds,
                 presentationDeltaSeconds,
-                1f,
-                1f,
-                false,
+                context.OwnerTimeScale,
+                context.LocalAvatarTimeScale,
+                context.Paused,
                 resetHistory,
                 m_FrameTargets);
             CameraFramePlan plan = m_SequenceEvaluator.Evaluate(

@@ -1,3 +1,5 @@
+using System;
+
 namespace ThirdPersonGameplay.Tick
 {
     public readonly struct GameplayLogicTickContext
@@ -44,7 +46,10 @@ namespace ThirdPersonGameplay.Tick
                 GameplayPresentationDebugClockMode.LivePresentation,
                 renderFrame,
                 localLogicTick,
-                interpolationAlpha)
+                interpolationAlpha,
+                1f,
+                1f,
+                false)
         {
         }
 
@@ -56,7 +61,39 @@ namespace ThirdPersonGameplay.Tick
             ulong renderFrame,
             ulong localLogicTick,
             float interpolationAlpha)
+            : this(
+                scaledDeltaSeconds,
+                unscaledDeltaSeconds,
+                presentationDeltaSeconds,
+                presentationClockMode,
+                renderFrame,
+                localLogicTick,
+                interpolationAlpha,
+                1f,
+                1f,
+                false)
         {
+        }
+
+        public GameplayPresentationFrameContext(
+            float scaledDeltaSeconds,
+            float unscaledDeltaSeconds,
+            float presentationDeltaSeconds,
+            GameplayPresentationDebugClockMode presentationClockMode,
+            ulong renderFrame,
+            ulong localLogicTick,
+            float interpolationAlpha,
+            float ownerTimeScale,
+            float localAvatarTimeScale,
+            bool paused)
+        {
+            if (!float.IsFinite(scaledDeltaSeconds) || scaledDeltaSeconds < 0f ||
+                !float.IsFinite(unscaledDeltaSeconds) || unscaledDeltaSeconds < 0f ||
+                !float.IsFinite(presentationDeltaSeconds) || presentationDeltaSeconds < 0f ||
+                !float.IsFinite(interpolationAlpha) || interpolationAlpha < 0f || interpolationAlpha > 1f ||
+                !float.IsFinite(ownerTimeScale) || ownerTimeScale < 0f ||
+                !float.IsFinite(localAvatarTimeScale) || localAvatarTimeScale < 0f)
+                throw new ArgumentOutOfRangeException(nameof(ownerTimeScale));
             ScaledDeltaSeconds = scaledDeltaSeconds;
             UnscaledDeltaSeconds = unscaledDeltaSeconds;
             PresentationDeltaSeconds = presentationDeltaSeconds;
@@ -64,6 +101,9 @@ namespace ThirdPersonGameplay.Tick
             RenderFrame = renderFrame;
             LocalLogicTick = localLogicTick;
             InterpolationAlpha = interpolationAlpha;
+            OwnerTimeScale = ownerTimeScale;
+            LocalAvatarTimeScale = localAvatarTimeScale;
+            Paused = paused;
         }
 
         public float ScaledDeltaSeconds { get; }
@@ -73,5 +113,8 @@ namespace ThirdPersonGameplay.Tick
         public ulong RenderFrame { get; }
         public ulong LocalLogicTick { get; }
         public float InterpolationAlpha { get; }
+        public float OwnerTimeScale { get; }
+        public float LocalAvatarTimeScale { get; }
+        public bool Paused { get; }
     }
 }

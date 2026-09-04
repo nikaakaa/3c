@@ -10,9 +10,14 @@ namespace ThirdPersonCamera
             bool ignoreLocalAvatar,
             in CameraFrameInput input)
         {
-            if (ignoreWorldTimeScale || ignoreOwnerTimeScale || ignoreLocalAvatar)
-                return input.UnscaledDeltaSeconds;
-            return input.PresentationDeltaSeconds;
+            float delta = ignoreWorldTimeScale
+                ? input.UnscaledDeltaSeconds
+                : input.PresentationDeltaSeconds;
+            if (!ignoreOwnerTimeScale)
+                delta *= input.OwnerTimeScale;
+            if (!ignoreLocalAvatar)
+                delta *= input.LocalAvatarTimeScale;
+            return delta;
         }
 
         public static float EffectProgress(float elapsed, float delay, float start, float end)

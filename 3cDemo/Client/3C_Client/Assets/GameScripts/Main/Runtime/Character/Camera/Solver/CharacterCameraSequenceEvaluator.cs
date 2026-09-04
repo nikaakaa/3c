@@ -95,6 +95,10 @@ namespace ThirdPersonCamera
                     m_RetireFrom = default;
                     m_RetireElapsed = 0f;
                     m_RetireDuration = 0f;
+                    m_CurrentSequenceId = string.Empty;
+                    m_BlendFrom = default;
+                    m_TransitionElapsed = 0f;
+                    m_TransitionDuration = 0f;
                 }
                 else
                 {
@@ -121,6 +125,9 @@ namespace ThirdPersonCamera
                         m_CurrentSequenceId = m_Projection.DefaultSequence.SequenceId;
                         m_CurrentSourceId = defaultRequest.SourceId;
                         m_CurrentGeneration = defaultRequest.Generation;
+                        m_BlendFrom = default;
+                        m_TransitionElapsed = 0f;
+                        m_TransitionDuration = 0f;
                     }
                     return retiredResult;
                 }

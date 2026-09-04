@@ -158,11 +158,11 @@
 
 相机 MUST从明确 Profile 取得默认序列及有限的已注册算法组合；没有活动覆盖请求时 MUST使用该正式默认配置，不要求 Graph 每帧重发，也不使用硬编码参数补齐缺失 Profile。请求 MUST根据已确认的优先级、权重、稳定顺序和生命周期规则确定活动序列。进入、退出、抢占、恢复和 Cut MUST实际作用于构图、位置、旋转、轨道与镜头参数，混合进度不得只作为诊断数字。需要从当前镜头进入时 MUST使用对应原规则指定的当前输出阶段，不能把临时震动误当成持久轨道状态。
 
-#### Scenario: 默认 FreeLook
+#### Scenario: 默认角色镜头
 
 - **WHEN** 本帧没有活动序列覆盖请求
 - **THEN** 相机 MUST执行 Profile 的正式默认跟随序列
-- **AND** 默认序列 MUST不依赖额外 Gameplay producer 或旧 FreeLook 参数补齐
+- **AND** 默认序列 MUST不依赖额外 Gameplay producer 或旧平台镜头参数补齐
 
 #### Scenario: 技能特写覆盖瞄准
 

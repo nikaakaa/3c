@@ -31,12 +31,16 @@ namespace ThirdPersonCamera
             return false;
         }
 
-        public CameraEffectRuntimeState FindSource(string sourceId, ulong generation)
+        public CameraEffectRuntimeState FindSource(
+            CameraEffectKind kind,
+            string sourceId,
+            ulong generation)
         {
             for (int i = 0; i < m_Active.Count; i++)
             {
                 CameraEffectRuntimeState active = m_Active[i];
-                if (active.Request.Generation == generation &&
+                if (active.Request.Kind == kind &&
+                    active.Request.Generation == generation &&
                     string.Equals(active.Request.SourceId, sourceId, StringComparison.Ordinal))
                     return active;
             }

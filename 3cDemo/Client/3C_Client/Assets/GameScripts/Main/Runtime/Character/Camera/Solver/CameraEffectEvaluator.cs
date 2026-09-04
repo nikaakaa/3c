@@ -86,6 +86,7 @@ namespace ThirdPersonCamera
                 if (owner.UpdatesBySource)
                 {
                     CameraEffectRuntimeState existing = m_States.FindSource(
+                        request.Kind,
                         request.SourceId,
                         request.Generation);
                     if (existing != null)

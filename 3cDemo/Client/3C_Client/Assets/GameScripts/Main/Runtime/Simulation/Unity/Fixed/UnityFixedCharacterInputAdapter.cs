@@ -23,7 +23,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
     {
         readonly CharacterInputProfile m_Profile;
         readonly ThirdPersonSimulation.Fixed.CharacterSimulationProgram m_Program;
-        readonly ICameraRigAdapter m_CameraRig;
+        readonly ICameraBasisSnapshotProvider m_CameraBasis;
         readonly ISimulationSessionActorHost m_Owner;
         readonly string m_ActionTargetInputValueId;
         readonly ICharacterActionTargetInputProvider m_ActionTargetProvider;
@@ -49,22 +49,22 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
         public UnityFixedCharacterInputAdapter(
             CharacterInputProfile profile,
             ThirdPersonSimulation.Fixed.CharacterSimulationProgram program,
-            ICameraRigAdapter cameraRig)
-            : this(profile, program, cameraRig, null, string.Empty, null)
+            ICameraBasisSnapshotProvider cameraBasis)
+            : this(profile, program, cameraBasis, null, string.Empty, null)
         {
         }
 
         public UnityFixedCharacterInputAdapter(
             CharacterInputProfile profile,
             ThirdPersonSimulation.Fixed.CharacterSimulationProgram program,
-            ICameraRigAdapter cameraRig,
+            ICameraBasisSnapshotProvider cameraBasis,
             ISimulationSessionActorHost owner,
             string actionTargetInputValueId,
             ICharacterActionTargetInputProvider actionTargetProvider)
         {
             m_Profile = profile ? profile : throw new ArgumentNullException(nameof(profile));
             m_Program = program ?? throw new ArgumentNullException(nameof(program));
-            m_CameraRig = cameraRig ?? throw new ArgumentNullException(nameof(cameraRig));
+            m_CameraBasis = cameraBasis ?? throw new ArgumentNullException(nameof(cameraBasis));
             m_Owner = owner;
             m_ActionTargetInputValueId = string.IsNullOrWhiteSpace(actionTargetInputValueId)
                 ? string.Empty
@@ -134,7 +134,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
             foreach (KeyValuePair<string, InputValueBinding> pair in m_ValueBindings)
                 m_LatchedValues.Add(pair.Key, ReadValue(pair.Value));
             if (m_RequiresCameraBasis || m_CameraRelativeVector2Ids.Count != 0)
-                m_LatchedCameraBasis = m_CameraRig.BasisSnapshot;
+                m_LatchedCameraBasis = m_CameraBasis.BasisSnapshot;
             for (int i = 0; i < m_RequestBindings.Count; i++)
             {
                 RequestBinding binding = m_RequestBindings[i];

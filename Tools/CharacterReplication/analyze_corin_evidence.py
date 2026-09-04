@@ -162,6 +162,7 @@ def render_notes():
 | 基础镜头 | 4 组角色镜头配置、36 组球面/轨道配置已解码；包含真实 FOV、偏移、阻尼和内嵌曲线 | [基础镜头](基础镜头.md) |
 | 公共镜头资源 | 扫描 10,399 个 block，0 个扫描错误；精确导出 27 个原始对象，0 个导出错误 | [定位与身份](camera-resource-search/export-plan.json) |
 | 原生曲线格式 | AnimationCurveLibrary 空 Odin 之后的原生列表已完整解码，三个文件分别 307、298、306 条曲线 | [原生曲线清单](camera-resource-search/native-curves/manifest.json) |
+| 镜头原生正文 | 5 份 Shot、4 份锁定列表、3 份基础镜头尾部均消费到文件末尾；3 份 Shot 仍有未命名字 | [镜头原生参数](镜头原生参数.md) |
 | Odin 简化输出 | 修正 Vector/Quaternion/Color 未命名分量、内嵌曲线被丢弃的问题；原字节不变，阅读包已重建 | [解码器改动](camera-resource-search/odin-positional-fields.diff) |
 | 时间区域采样 | 已读取实际函数：帧分支以调用参数 stateFrameCount 换算，另有归一化分支 | [时间区域规则](时间区域规则.md) |
 | 同名资源差异 | 战斗事件按稳定 guid 对账后实际有 3 项增删；区域配置也有变体差异 | [资源变体](资源变体.md) |
@@ -179,8 +180,8 @@ def render_notes():
 | 缺口 | 已有入口 | 下一步要确认的事实 |
 | --- | --- | --- |
 | 六个 CamShake 标准配置键 | 全部引用和同版本资源扫描结果已保留 | 定位模板定义，或从消费者证明 StandardConfigKey 是否只供作者阶段使用；不能先假设运行时覆盖 |
-| CameraCutscenes / CameraLockDatas | 9 个原始对象已按 MonoBehaviour 身份取得 | 解析 Unity 原生列表、Shot 参数及其资源引用 |
-| 基础镜头的原生尾部 | 三个 Pipeline_Camera_Avatar_Config 原始对象 | 解析 Odin 字典以外的普通目标/Boss 锁定等字段 |
+| Shot 布局差异和镜头资源 | 5 份 Shot 列表与 4 份锁定列表已完整读取，真实 prefab 路径已取得 | 解释 3 份紧凑布局中每条记录的 5 个未命名字；定位 prefab 动画和绑定对象 |
+| 普通目标/Boss 锁定 | 3 份基础镜头原生尾部已完整读取并合入同一数据文件 | 确认角度、距离、曲线及锁定退出条件在消费者中的组合方式 |
 | Corin 的实际镜头组和变体 | Default_Normal 等 4 组值已读，来源差异已对账 | 沿角色加载与状态选择函数确认实际使用键和资源版本 |
 | 枚举与特殊值 | 原值、枚举成员名、字段布局和方法地址已整理 | 展开常量或读消费者，确认 -1、叠加类型、FOV 变化类型、帧条件模式 9 |
 | 镜头执行过程 | 触发、结束事件、配置和有限函数体 | 确认时间缩放、重入/打断、效果叠加顺序与最终 Cinemachine 输出 |

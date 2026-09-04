@@ -237,6 +237,9 @@ def main():
     configs = {key: sources.decoded(key, path) for key, path in settings["selectedConfigs"].items()}
     selected = {key: value[settings["configRoots"][key]] for key, value in configs.items() if key in settings["configRoots"]}
     cameras = {category: selected[category] for category in CATEGORIES if category in selected}
+    shared_camera_path = Path(settings["sharedEvidenceRoot"]) / "shared-camera-index.json"
+    sources.record("shared-camera-index", shared_camera_path)
+    shared_camera = read_json(shared_camera_path)
     character = configs.get("character", {})
     attacks = selected["attack"]
     events = []
@@ -246,6 +249,18 @@ def main():
                 camera_refs = [{"field": field, "category": category, "key": event[field],
                                 "resolved": event[field] in cameras.get(category, {})}
                                for field, category in CAMERA_FIELDS.items() if event.get(field)]
+                for reference in camera_refs:
+                    if reference["category"] == "shot":
+                        definitions = [] if event.get("IsGroupShotData", False) else shared_camera["shot"].get(reference["key"], [])
+                        reference.update(scope="shared", definitions=definitions, resolved=bool(definitions),
+                                         resolution="definition-located" if definitions else "definition-not-located")
+                    elif not reference["resolved"]:
+                        definitions = shared_camera[reference["category"]].get(reference["key"], [])
+                        if definitions:
+                            reference.update(scope="shared", definitions=definitions, resolved=True, resolution="definition-located")
+                        else:
+                            other_categories = [c for c, values in cameras.items() if reference["key"] in values]
+                            reference.update(resolution="category-mismatch" if other_categories else "definition-not-located", foundCategories=other_categories)
                 attack_key = next((event.get(field) for field in ("AnimEventID", "EventKey") if event.get(field) in attacks), None)
                 if attack_key:
                     attack = attacks[attack_key]
@@ -338,6 +353,7 @@ def main():
     write_json(out / "data/summary.json", summary)
     render_actions(out, scoped, events, windows, cameras, sources.records, animation_manifest, attacks, settings, character)
     render_character(out, character)
+    render_native_camera_references(out, events, settings)
     animation_sync.render(out, settings["character"], synchronization, table, conditions)
     render_cameras(out, cameras, dependencies, sources.records)
     render_reference(out, summary, sources.records, settings)
@@ -370,7 +386,7 @@ def render_actions(out, states, events, windows, cameras, sources, animation_man
             raise ValueError("未注册的事件绑定方式")
         matching_events = [e for e in events if e["pattern"] in pattern_names]
         matching_windows = [w for w in windows if w["state"] == name and w["layer"] in layer_ids]
-        camera_keys = sorted({(r["category"], r["key"]) for e in matching_events for r in e["cameraReferences"] if r["resolved"]})
+        camera_keys = sorted({(r["category"], r["key"]) for e in matching_events for r in e["cameraReferences"] if r["resolved"] and r.get("scope") != "shared"})
         clips = []
         for tree in data["BlendTrees"]:
             for node in tree["Nodes"]:
@@ -442,6 +458,7 @@ def render_reference(out, summary, sources, settings):
              "## 阅读入口", "", "- [按动作查看混合、条件、窗口和镜头](动作索引.md)", "- [全部镜头原始参数](镜头参数.md)",
              "- [技能和点击／长按配置](技能与输入.md)",
              "- [动画同步、自动偏移与移动转场](动画同步.md)",
+             "- [Shot 引用与公共锁定参数](镜头补缺.md)",
              "- [公共镜头资源依赖](公共镜头依赖.md)", "- [字段说明与使用边界](字段说明.md)",
              "- [本角色资料缺口](资料缺口.md)", "- [机器可读数据与统计](data/summary.json)", "- [精确来源及 SHA-256](data/source-index.json)", "",
              "## 覆盖", "", table(["内容", "数量"], [(k, v) for k, v in summary.items() if k != "schema"]), "",
@@ -479,6 +496,28 @@ def render_character(out, character):
             lines += [f"### {key}", "", table(["原字段", "原值"], list(flatten(character[key]))), ""]
     lines += ["完整角色根字段、事件组绑定和相机覆盖见 [角色数据](data/character.json)。", ""]
     (out / "技能与输入.md").write_text("\n".join(lines), encoding="utf-8")
+
+
+def render_native_camera_references(out, events, settings):
+    references = [{"eventId": e["id"], "pattern": e["pattern"], "frame": e["data"].get("frame"), **r}
+                  for e in events for r in e["cameraReferences"] if r.get("scope") == "shared"]
+    write_json(out / "data/shared-camera-references.json", references)
+    shared = settings["sharedEvidenceRoot"]
+    mismatches = [{"eventId": e["id"], "pattern": e["pattern"], **r} for e in events for r in e["cameraReferences"] if r.get("resolution") == "category-mismatch"]
+    lines = [f"# {settings['character']} 镜头补缺", "", "Shot 和 Common 镜头按事件中的类型及精确键对上公共定义。resolved 表示配置正文已定位，尚不代表 prefab 动画、绑定对象和运行时变体选择已核实。", "",
+             table(["事件", "事件组", "帧", "类型", "资源键", "正文已定位", "定义来源数"],
+             [(r["eventId"], r["pattern"], r["frame"], r["category"], r["key"], r["resolved"], len(r["definitions"])) for r in references]), "",
+             "## 原引用类型不一致", "", table(["事件", "字段", "资源键", "引用类型", "实际找到的类型"],
+             [(r["eventId"], r["field"], r["key"], r["category"], r["foundCategories"]) for r in mismatches]), "",
+             "类型不一致项保留原事件与原键，不转换成另一类镜头；仍需原消费者证明实际处理方式。", "",
+             f"- [Shot 完整参数与真实 prefab 路径]({shared}/镜头Shot参数.md)",
+             f"- [prefab、动画与 Timeline 资源候选对账]({shared}/镜头资源对账.md)",
+             f"- [普通目标和 Boss 锁定、基础镜头]({shared}/基础镜头.md)",
+             f"- [全部锁定覆盖配置]({shared}/锁定配置.md)",
+             f"- [原生对象解析范围与缺口]({shared}/镜头原生参数.md)",
+             "- [事件和定义来源对账](data/shared-camera-references.json)", "",
+             "这里只登记已有事件；切人没有新增重点动作页，也没有据资源名称给角色增加事件。", ""]
+    (out / "镜头补缺.md").write_text("\n".join(lines), encoding="utf-8")
 
 
 if __name__ == "__main__":

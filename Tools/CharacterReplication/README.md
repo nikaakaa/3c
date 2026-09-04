@@ -30,6 +30,7 @@ python -X utf8 Tools/CharacterReplication/build_guide.py --sources Tools/Charact
 
 ```powershell
 python -X utf8 Tools/CharacterReplication/decode_native_curves.py
+python -X utf8 Tools/CharacterReplication/decode_native_camera.py
 python -X utf8 Tools/CharacterReplication/complete_camera_data.py
 python -X utf8 Tools/CharacterReplication/analyze_corin_evidence.py
 python -X utf8 Tools/CharacterReplication/build_guide.py --sources Tools/CharacterReplication/sources/corin.json
@@ -52,3 +53,13 @@ python -X utf8 Tools/CharacterReplication/build_index.py
 扫描器查找已确认 Animator 方法入口和原生跳转槽，核对调用点所在指令边界。分析器复用既有 PE/快照读取器，校验同版本哈希，保存完整函数、字段偏移、静态参数 ID 和文件常量，并比较重新导出的控制器是否改动既有字段。手工核实的传值链路与仍缺的证据维护在 `evidence/animation-sync.md`，随分析器发布到资料总目录。
 
 新增的 `m_TimeParamID` 来自对原 AnimeStudio 类和结构化导出器的正式修正，来源配置统一指向同资源身份的完整导出。原导出仅保留作差异证据；没有新增 Unity 运行时导入链路。
+
+## 镜头原生正文
+
+`decode_native_camera.py` 的输入是既有 raw-camera 清单和同版本元数据，输出是原始字段值、每字段字节范围、来源哈希和格式清单。它复用已有 Odin 头部、Unity 曲线读取器及元数据导出器，读取 Shot、锁定 JSON 列表与基础镜头尾部。
+
+Shot 两种布局按已核对的源文件 SHA-256 显式登记，不通过解析失败尝试另一种布局。三份紧凑布局中每条记录的 5 个字保留为未命名 uint；不猜字段名、不借新格式填值。所有对象要求消费到文件末尾。
+
+`complete_camera_data.py` 将基础镜头原生字段并入原 camera-data 文件，同时生成共享 Shot/锁定索引及中文参数页。角色资料生成器按事件精确键引用共享 Shot，`resolved` 仅表示定义正文已定位；prefab 动画和运行时资源选择另行对账。
+
+镜头资源扫描继续使用原 `CorinParryAssetLocator`，搜索词由 `complete_camera_data.py` 写入 `camera-resource-search/native-camera/prefab-terms.txt`。扫描结果存入 `camera-resource-search/shot-resource-search`，运行 `python -X utf8 Tools/CharacterReplication/index_shot_resources.py` 生成对账页。对象名匹配只登记候选，不伪装成 prefab、Timeline 与动画的引用闭环；扫描错误与对象解析错误分别保留。

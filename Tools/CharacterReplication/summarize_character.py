@@ -77,7 +77,7 @@ def main():
     lines += ["## 来源变体", "", table(["资源", "来源数", "相对基准的字段差异数"], [(r["name"], r["copies"], [v["differencesFromBaseline"] for v in r["variants"]]) for r in duplicates]), "",
               "完整差异与每个版本正文见 [变体目录](../data/duplicate-sources.json)。这里的计数包括字段存在性与诊断字段，不等于同样数量的业务差异。读取基准在 sources 配置中显式指定；本轮不替用户决定实际运行应采用哪个来源。", "",
               "## 仍需继续分析", "", "- 未定位的标准模板或其它资源键，见上面的逐项清单。", "- 输入缓冲、长按释放、Trigger 消费与清除时点。",
-              "- 原始比较模式、叠加枚举、负时间与镜头中断/恢复规则。", "- Shot 的原生序列化正文及实际镜头绑定；切人暂不进入本轮重点。",
+              "- 原始比较模式、叠加枚举、负时间与镜头中断/恢复规则。", "- Shot 正文已接入公共索引；仍需紧凑布局未命名字和 prefab 动画/绑定对账，见 [镜头补缺](../镜头补缺.md)。",
               f"- 同版本共用的镜头与时间区域函数证据：[共享分析]({shared.as_posix()}/README.md)。", ""]
     (out / "analysis/README.md").write_text("\n".join(lines), encoding="utf-8")
     print(json.dumps({"character": settings["character"], "actions": summary["focusedStates"], "missingClips": len(missing_clips), "missingFiles": len(missing_files), "sharedEventPatterns": len(shared_patterns), "unresolvedFocusedCameras": len(unresolved_cameras), "publicCurves": len(report["resolvedPublicCurves"])}, ensure_ascii=False))

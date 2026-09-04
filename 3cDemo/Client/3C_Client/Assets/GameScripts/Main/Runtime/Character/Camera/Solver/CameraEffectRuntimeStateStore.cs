@@ -73,9 +73,19 @@ namespace ThirdPersonCamera
             for (int i = 0; i < active.Count; i++)
             {
                 CameraEffectRuntimeState candidate = active[i];
-                if (candidate.Request.Kind != kind ||
-                    selected != null && candidate.Request.Priority <= selected.Request.Priority)
+                if (candidate.Request.Kind != kind)
                     continue;
+                if (selected != null)
+                {
+                    if (selected.Retired != candidate.Retired)
+                    {
+                        if (selected.Retired)
+                            selected = candidate;
+                        continue;
+                    }
+                    if (candidate.Request.Priority <= selected.Request.Priority)
+                        continue;
+                }
                 selected = candidate;
             }
             return selected;

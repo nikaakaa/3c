@@ -110,8 +110,12 @@ namespace ThirdPersonCamera
                 float delta = owner.ResolveDelta(active, in input);
                 active.Elapsed += delta;
                 if (active.Retired)
+                {
                     active.RetireElapsed += delta;
-                if (owner.IsExpired(active))
+                    if (active.RetireElapsed >= owner.RetireDuration(active))
+                        m_States.RemoveAt(i);
+                }
+                else if (owner.IsExpired(active))
                     m_States.RemoveAt(i);
             }
         }

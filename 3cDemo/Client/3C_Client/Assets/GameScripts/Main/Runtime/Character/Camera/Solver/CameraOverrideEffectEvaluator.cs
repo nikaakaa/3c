@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using UnityEngine;
 
 namespace ThirdPersonCamera
 {
@@ -25,22 +24,11 @@ namespace ThirdPersonCamera
             IReadOnlyList<CameraEffectRuntimeState> active,
             in CameraFrameInput input)
         {
-            CameraEffectRuntimeState state = CameraEffectRuntimeStateStore.Select(active, Kind);
-            if (state == null || !m_Projection.TryGetOverride(state.Request.ResourceId, out CameraOverrideTrackPayload payload))
-                return plan;
-            float elapsed = state.Retired ? state.RetireElapsed : state.Elapsed;
-            float weight = Mathf.Clamp01(state.Request.Weight) * EvaluateEnvelope(
-                elapsed,
-                payload.BlendInSeconds,
-                payload.BlendOutSeconds,
-                payload.BlendInCurve,
-                payload.BlendOutCurve,
-                state.Retired);
-            Vector3 follow = plan.FollowPoint + payload.Settings.FollowOffset * weight;
-            Vector3 aim = plan.AimPoint + payload.Settings.AimOffset * weight;
-            return plan
-                .WithTargets(follow, aim)
-                .WithFieldOfView(Mathf.LerpUnclamped(plan.FieldOfView, payload.Settings.FieldOfView, weight));
+            for (int i = 0; i < active.Count; i++)
+                if (active[i].Request.Kind == Kind)
+                    throw new InvalidOperationException(
+                        "Camera Override evaluation is unavailable before its ZZZ track and tag consumer semantics are closed.");
+            return plan;
         }
 
         public float ResolveDelta(CameraEffectRuntimeState active, in CameraFrameInput input)
@@ -71,25 +59,5 @@ namespace ThirdPersonCamera
                 : 0.016f;
         }
 
-        static float EvaluateEnvelope(
-            float elapsed,
-            float blendInSeconds,
-            float blendOutSeconds,
-            CameraCurvePayload blendInCurve,
-            CameraCurvePayload blendOutCurve,
-            bool retired)
-        {
-            if (retired)
-            {
-                if (blendOutSeconds <= 0f)
-                    return 0f;
-                return 1f - Mathf.Clamp01(blendOutCurve.Evaluate(
-                    Mathf.Clamp01(elapsed / blendOutSeconds)));
-            }
-            if (blendInSeconds <= 0f)
-                return 1f;
-            return Mathf.Clamp01(blendInCurve.Evaluate(
-                Mathf.Clamp01(elapsed / blendInSeconds)));
-        }
     }
 }

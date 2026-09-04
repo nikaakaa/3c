@@ -1,3 +1,5 @@
+using System;
+
 namespace ThirdPersonCamera
 {
     internal static class CameraShotProjectionCompiler
@@ -7,38 +9,8 @@ namespace ThirdPersonCamera
             CameraProjectionCompilationContext context)
         {
             asset.RequireValid();
-            return new CameraShotPayload(
-                asset.ShotId,
-                asset.CinePrefabPath,
-                asset.FollowTargetSlotId,
-                asset.LookAtTargetSlotId,
-                asset.NearClipPlane,
-                asset.FarClipPlane,
-                asset.Duration,
-                asset.TimeDomain,
-                asset.IgnoreCameraCollision,
-                asset.ApplyEntityTimeScale,
-                asset.FollowOffset,
-                asset.LookAtOffset,
-                asset.OffsetRotation,
-                asset.FieldOfView,
-                CompileBlend(asset.BlendIn, context),
-                CompileBlend(asset.BlendOut, context),
-                asset.BlendWithIgnoreLookAtTarget,
-                asset.Priority,
-                asset.Tag);
-        }
-
-        static CameraShotBlendPayload CompileBlend(
-            CameraShotBlendSettings source,
-            CameraProjectionCompilationContext context)
-        {
-            source.RequireValid("Camera Shot blend");
-            return new CameraShotBlendPayload(
-                source.Duration,
-                context.CompileCurve(context.RequireCurve(source.Curve)),
-                source.UseCoreSpace,
-                source.UseDelta);
+            throw new InvalidOperationException(
+                $"Camera Shot '{asset.ShotId}' cannot be compiled before its CinePrefab and virtual-camera consumer semantics are closed.");
         }
     }
 }

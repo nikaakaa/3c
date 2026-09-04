@@ -25,19 +25,11 @@ namespace ThirdPersonCamera
             IReadOnlyList<CameraEffectRuntimeState> active,
             in CameraFrameInput input)
         {
-            CameraEffectRuntimeState state = CameraEffectRuntimeStateStore.Select(active, Kind);
-            if (state == null || !m_Projection.TryGetShot(state.Request.ResourceId, out CameraShotPayload payload))
-                return plan;
-            float progress = payload.Duration < 0f
-                ? 1f
-                : Mathf.Clamp01(state.Elapsed / Mathf.Max(0.0001f, payload.Duration));
-            float envelope = Mathf.Clamp01(state.Request.Weight) * progress;
-            envelope *= CameraEffectEvaluationMath.ReleaseWeight(state, payload.BlendOut.Duration);
-            return plan
-                .WithTargets(
-                    plan.FollowPoint + payload.FollowOffset * envelope,
-                    plan.AimPoint + payload.LookAtOffset * envelope)
-                .WithFieldOfView(Mathf.LerpUnclamped(plan.FieldOfView, payload.FieldOfView, envelope));
+            for (int i = 0; i < active.Count; i++)
+                if (active[i].Request.Kind == Kind)
+                    throw new InvalidOperationException(
+                        "Camera Shot evaluation is unavailable before its CinePrefab and virtual-camera consumer semantics are closed.");
+            return plan;
         }
 
         public float ResolveDelta(CameraEffectRuntimeState active, in CameraFrameInput input)

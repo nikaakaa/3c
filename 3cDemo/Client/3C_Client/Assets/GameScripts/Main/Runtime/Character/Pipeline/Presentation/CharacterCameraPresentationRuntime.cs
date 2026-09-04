@@ -310,7 +310,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 follow,
                 aim,
                 Vector3.zero,
-                true));
+                true,
+                false));
             if (!string.IsNullOrEmpty(resolvedTarget.SourceKey))
             {
                 m_FrameTargets.Add(new CameraTargetSnapshot(
@@ -318,7 +319,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     resolvedTarget.HasFollowPoint ? resolvedTarget.FollowPoint : follow,
                     resolvedTarget.HasAimPoint ? resolvedTarget.AimPoint : aim,
                     Vector3.zero,
-                    true));
+                    true,
+                    resolvedTarget.HasAimPoint));
                 sequence = sequence.WithTargetKey(resolvedTarget.SourceKey);
             }
             var frameInput = new CameraFrameInput(

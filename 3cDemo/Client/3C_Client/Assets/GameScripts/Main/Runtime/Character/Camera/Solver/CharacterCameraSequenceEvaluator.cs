@@ -210,6 +210,7 @@ namespace ThirdPersonCamera
             Vector3 anchor = input.BodyPosition;
             Vector3 aim = input.BodyPosition + input.BodyRotation *
                 (Vector3.up * m_Projection.DefaultSphere.Height);
+            bool aimPointIsExplicit = false;
             for (int i = 0; i < input.Targets.Count; i++)
             {
                 CameraTargetSnapshot target = input.Targets[i];
@@ -221,6 +222,7 @@ namespace ThirdPersonCamera
                     continue;
                 anchor = target.AnchorPoint;
                 aim = target.AimPoint;
+                aimPointIsExplicit = target.AimPointIsExplicit;
                 break;
             }
             float radius = m_Projection.DefaultSphere.Radius;
@@ -236,8 +238,9 @@ namespace ThirdPersonCamera
                 switch (stage)
                 {
                     case CameraFrameOnePointByHeightPayload byHeight:
-                        aim = anchor + input.BodyRotation *
-                            (Vector3.up * (byHeight.EntityHeight * byHeight.HeightRatio));
+                        if (!aimPointIsExplicit)
+                            aim = anchor + input.BodyRotation *
+                                (Vector3.up * (byHeight.EntityHeight * byHeight.HeightRatio));
                         fieldOfView = byHeight.FieldOfView;
                         compositionOffset = byHeight.ScreenOffset;
                         break;
@@ -257,7 +260,8 @@ namespace ThirdPersonCamera
                         orbitGroup = byTrack.CameraOrbits;
                         orbitGroupUsesAbsoluteRadius = true;
                         radius = orbit.Radius;
-                        aim = anchor + input.BodyRotation * (Vector3.up * orbit.Height);
+                        if (!aimPointIsExplicit)
+                            aim = anchor + input.BodyRotation * (Vector3.up * orbit.Height);
                         fieldOfView = byTrack.FieldOfView;
                         compositionOffset = byTrack.ScreenOffset;
                         break;

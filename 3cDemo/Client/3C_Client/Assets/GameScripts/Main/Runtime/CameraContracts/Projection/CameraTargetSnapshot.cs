@@ -11,13 +11,15 @@ public readonly struct CameraTargetSnapshot
             Vector3 anchorPoint,
             Vector3 aimPoint,
             Vector3 velocity,
-            bool valid)
+            bool valid,
+            bool aimPointIsExplicit = false)
         {
             Key = key ?? string.Empty;
             AnchorPoint = anchorPoint;
             AimPoint = aimPoint;
             Velocity = velocity;
             Valid = valid;
+            AimPointIsExplicit = aimPointIsExplicit;
         }
 
         public string Key { get; }
@@ -25,5 +27,6 @@ public readonly struct CameraTargetSnapshot
         public Vector3 AimPoint { get; }
         public Vector3 Velocity { get; }
         public bool Valid { get; }
+        public bool AimPointIsExplicit { get; }
     }
 }

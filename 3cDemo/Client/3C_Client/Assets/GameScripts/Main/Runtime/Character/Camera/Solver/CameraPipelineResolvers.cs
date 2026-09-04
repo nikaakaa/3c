@@ -78,6 +78,7 @@ namespace ThirdPersonCamera
                 target.position,
                 target.position,
                 Vector3.zero,
+                true,
                 true);
         }
 

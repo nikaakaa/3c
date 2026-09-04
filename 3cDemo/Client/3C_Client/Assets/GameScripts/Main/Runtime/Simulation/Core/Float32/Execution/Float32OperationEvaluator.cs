@@ -27,8 +27,8 @@ namespace ThirdPersonSimulation
             ProgramProducer producer = RequireProducer(operation);
             Float32Scalar weight = operation.Code switch
             {
-                SimulationOperationCode.CameraStateRequest => RequireScalar(operation, OperationNamedConstant.Weight),
-                SimulationOperationCode.CameraCue => RequireScalar(operation, OperationNamedConstant.Intensity),
+                SimulationOperationCode.CameraSequenceRequest => RequireScalar(operation, OperationNamedConstant.Weight),
+                SimulationOperationCode.CameraShakeRequest => RequireScalar(operation, OperationNamedConstant.Intensity),
                 SimulationOperationCode.CameraResponse => RequireScalar(operation, OperationNamedConstant.Weight),
                 SimulationOperationCode.CameraTarget => RequireScalar(operation, OperationNamedConstant.Weight),
                 _ => throw new InvalidOperationException($"Camera operation '{operation.Code}' is unsupported.")
@@ -203,8 +203,8 @@ namespace ThirdPersonSimulation
 						return m_Equipment.TickHost(cursor, operation, equipmentInputs);
 				case SimulationOperationCode.LocomotionInputMotion:
 					return TickLocomotion(cursor, operation);
-				case SimulationOperationCode.CameraStateRequest:
-				case SimulationOperationCode.CameraCue:
+				case SimulationOperationCode.CameraSequenceRequest:
+				case SimulationOperationCode.CameraShakeRequest:
 				case SimulationOperationCode.CameraResponse:
 				case SimulationOperationCode.CameraTarget:
 					m_Camera.Submit(operation);
@@ -256,8 +256,8 @@ namespace ThirdPersonSimulation
 				case SimulationOperationCode.TimelineMotionCurve:
 				case SimulationOperationCode.TimelineTreeClip:
 				case SimulationOperationCode.TimelineCue:
-				case SimulationOperationCode.TimelineCameraState:
-				case SimulationOperationCode.TimelineCameraCue:
+				case SimulationOperationCode.TimelineCameraSequence:
+				case SimulationOperationCode.TimelineCameraShake:
 				case SimulationOperationCode.TimelineCameraResponse:
 				case SimulationOperationCode.TimelineCameraEffect:
 					throw new InvalidOperationException(

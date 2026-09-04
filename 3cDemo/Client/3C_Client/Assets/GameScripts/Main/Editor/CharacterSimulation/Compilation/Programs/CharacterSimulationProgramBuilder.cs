@@ -676,8 +676,8 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                    code == SimulationOperationCode.ActivateActionInstance ||
                    code == SimulationOperationCode.SubmitActionLifecycle ||
                    code == SimulationOperationCode.LocomotionInputMotion ||
-                   code == SimulationOperationCode.CameraStateRequest ||
-                   code == SimulationOperationCode.CameraCue ||
+                   code == SimulationOperationCode.CameraSequenceRequest ||
+                   code == SimulationOperationCode.CameraShakeRequest ||
                    code == SimulationOperationCode.CameraResponse ||
                    code == SimulationOperationCode.CameraTarget ||
                    code == SimulationOperationCode.RequestEquipmentChange ||

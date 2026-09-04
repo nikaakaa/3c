@@ -248,8 +248,8 @@ namespace ThirdPersonSimulation
         TimelineMotionCurve = 43,
         TimelineTreeClip = 44,
         TimelineCue = 45,
-        TimelineCameraState = 46,
-        TimelineCameraCue = 47,
+        TimelineCameraSequence = 46,
+        TimelineCameraShake = 47,
         TimelineCameraResponse = 48,
         TimelineMotionWarp = 49,
         TimelineCameraEffect = 50,
@@ -278,8 +278,8 @@ namespace ThirdPersonSimulation
         GameplayAttributeRead = 112,
         GameplayEffectApply = 113,
         GameplayEffectRemove = 114,
-        CameraStateRequest = 120,
-        CameraCue = 121,
+        CameraSequenceRequest = 120,
+        CameraShakeRequest = 121,
         CameraResponse = 122,
         CameraTarget = 123,
         CameraBasisRead = 124,
@@ -381,8 +381,8 @@ namespace ThirdPersonSimulation
                 SimulationOperationCode.TimelineMotionCurve,
                 SimulationOperationCode.TimelineTreeClip,
                 SimulationOperationCode.TimelineCue,
-                SimulationOperationCode.TimelineCameraState,
-                SimulationOperationCode.TimelineCameraCue,
+                SimulationOperationCode.TimelineCameraSequence,
+                SimulationOperationCode.TimelineCameraShake,
                 SimulationOperationCode.TimelineCameraResponse,
                 SimulationOperationCode.TimelineMotionWarp,
                 SimulationOperationCode.TimelineCameraEffect,
@@ -411,8 +411,8 @@ namespace ThirdPersonSimulation
                 SimulationOperationCode.GameplayAttributeRead,
                 SimulationOperationCode.GameplayEffectApply,
                 SimulationOperationCode.GameplayEffectRemove,
-                SimulationOperationCode.CameraStateRequest,
-                SimulationOperationCode.CameraCue,
+                SimulationOperationCode.CameraSequenceRequest,
+                SimulationOperationCode.CameraShakeRequest,
                 SimulationOperationCode.CameraResponse,
                 SimulationOperationCode.CameraTarget,
                 SimulationOperationCode.CameraBasisRead,
@@ -489,8 +489,8 @@ namespace ThirdPersonSimulation
 
         public static bool IsCameraPresentationOperation(SimulationOperationCode code)
         {
-            return code == SimulationOperationCode.CameraStateRequest ||
-                   code == SimulationOperationCode.CameraCue ||
+            return code == SimulationOperationCode.CameraSequenceRequest ||
+                   code == SimulationOperationCode.CameraShakeRequest ||
                    code == SimulationOperationCode.CameraResponse ||
                    code == SimulationOperationCode.CameraTarget;
         }
@@ -544,7 +544,7 @@ namespace ThirdPersonSimulation
 
             switch (operation.Code)
             {
-                case SimulationOperationCode.CameraStateRequest:
+                case SimulationOperationCode.CameraSequenceRequest:
                     RequireEnum(operation, checked((int)operation.Flags), 0, 2, "InterruptPolicy");
                     RequireInt32(operation, literals, "Priority");
                     RequireUnit(operation, literals, "Weight");
@@ -555,7 +555,7 @@ namespace ThirdPersonSimulation
                     RequireString(operation, literals, "ActionContext", false);
                     RequireFieldCount(operation, 7);
                     break;
-                case SimulationOperationCode.CameraCue:
+                case SimulationOperationCode.CameraShakeRequest:
                     RequireEnum(operation, operation.Integer1, 4, 4, "EffectKind");
                     RequireFlags(operation, 0);
                     RequireString(operation, literals, "ResourceId", true);

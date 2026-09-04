@@ -1762,7 +1762,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
         {
             if (TryFindSourceClip(source, timelines, out Clip clip))
             {
-                if (clip is CameraStateClip state)
+                if (clip is CameraSequenceClip state)
                 {
                     if (!state.Sequence)
                     {
@@ -1782,7 +1782,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                         state.TargetKey,
                         state.InterruptPolicy);
                 }
-                if (clip is CameraCueClip cue)
+                if (clip is CameraShakeClip cue)
                 {
                     if (!cue.Shake)
                     {
@@ -1869,13 +1869,13 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 SemanticOperation operation = reader.RequireProducerOperation(producer);
                 if (operation.Integer0 != CameraProgramOperationSchema.PayloadVersion)
                     throw new InvalidOperationException($"payload version '{operation.Integer0}' is unsupported");
-                if (operation.Code == SimulationOperationCode.CameraStateRequest)
+                if (operation.Code == SimulationOperationCode.CameraSequenceRequest)
                 {
                     string sequenceId = reader.RequireString(operation, "SequenceId");
                     if (cameraProjection == null || !cameraProjection.TryGetSequence(sequenceId, out _))
                         throw new InvalidOperationException($"Camera Sequence '{sequenceId}' is not registered by the Character Camera Profile.");
                 }
-                if (operation.Code == SimulationOperationCode.CameraCue)
+                if (operation.Code == SimulationOperationCode.CameraShakeRequest)
                 {
                     string resourceId = reader.RequireString(operation, "ResourceId");
                     if (cameraProjection == null || !cameraProjection.TryGetShake(resourceId, out _))
@@ -1883,14 +1883,14 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 }
                 return operation.Code switch
                 {
-                    SimulationOperationCode.CameraStateRequest => CharacterPresentationCameraBinding.Sequence(
+                    SimulationOperationCode.CameraSequenceRequest => CharacterPresentationCameraBinding.Sequence(
                         reader.RequireString(operation, "SequenceId"),
                         reader.RequireInt32(operation, "Priority"),
                         reader.RequireScalar(operation, "BlendInSeconds"),
                         reader.RequireScalar(operation, "BlendOutSeconds"),
                         reader.RequireString(operation, "TargetKey"),
                         (CameraSequenceInterruptPolicy)operation.Flags),
-                    SimulationOperationCode.CameraCue => CharacterPresentationCameraBinding.Effect(
+                    SimulationOperationCode.CameraShakeRequest => CharacterPresentationCameraBinding.Effect(
                         CharacterPresentationCameraBindingKind.Shake,
                         reader.RequireString(operation, "ResourceId"),
                         reader.RequireInt32(operation, "Priority")),

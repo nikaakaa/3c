@@ -351,13 +351,13 @@ namespace ThirdPersonSimulation
                     case SimulationOperationCode.TimelineCue:
                         SampleCue(clip.Handle, segment);
                         break;
-                    case SimulationOperationCode.TimelineCameraState:
+                    case SimulationOperationCode.TimelineCameraSequence:
                     case SimulationOperationCode.TimelineCameraResponse:
                     case SimulationOperationCode.TimelineCameraEffect:
                         SampleCameraContinuous(clip.Handle, segment);
                         break;
-                    case SimulationOperationCode.TimelineCameraCue:
-                        SampleCameraCue(clip.Handle, segment);
+                    case SimulationOperationCode.TimelineCameraShake:
+                        SampleCameraShakeRequest(clip.Handle, segment);
                         break;
                 }
             }
@@ -626,7 +626,7 @@ namespace ThirdPersonSimulation
                 actionContext.InstanceId);
         }
 
-        void SampleCameraCue(OperationHandle clip, TimelineSegment<TTime> segment)
+        void SampleCameraShakeRequest(OperationHandle clip, TimelineSegment<TTime> segment)
         {
             TTime start = m_Target.ClipTime(clip, TimelineClipTimePoint.Start);
             if (!Crosses(segment, start) && !(segment.StartsCycle && Equal(start, m_Target.Zero)))
@@ -678,7 +678,7 @@ namespace ThirdPersonSimulation
             for (int i = 0; i < clips.Count; i++)
             {
                 OperationExecutionDescriptor clip = m_Target.Operation(clips[i].Target);
-                if ((clip.Code == SimulationOperationCode.TimelineCameraState ||
+                if ((clip.Code == SimulationOperationCode.TimelineCameraSequence ||
                      clip.Code == SimulationOperationCode.TimelineCameraResponse ||
                      clip.Code == SimulationOperationCode.TimelineCameraEffect) &&
                     !m_Target.IsTrackMuted(clip.Handle))

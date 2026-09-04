@@ -392,8 +392,8 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             }));
             registry.Register(new SimpleTrackEmitter<TreeTrack>(context => context.DeclareTrackCatalog()));
             registry.Register(new SimpleTrackEmitter<ActionCueTrack>(context => context.DeclareTrackCatalog()));
-            registry.Register(new SimpleTrackEmitter<CameraStateTrack>(context => context.DeclareTrackCatalog()));
-            registry.Register(new SimpleTrackEmitter<CameraCueTrack>(context => context.DeclareTrackCatalog()));
+            registry.Register(new SimpleTrackEmitter<CameraSequenceTrack>(context => context.DeclareTrackCatalog()));
+            registry.Register(new SimpleTrackEmitter<CameraShakeTrack>(context => context.DeclareTrackCatalog()));
             registry.Register(new SimpleTrackEmitter<CameraResponseTrack>(context => context.DeclareTrackCatalog()));
             registry.Register(new SimpleTrackEmitter<CameraOverrideTrack>(context => context.DeclareTrackCatalog()));
             registry.Register(new SimpleTrackEmitter<CameraZoomTrack>(context => context.DeclareTrackCatalog()));
@@ -558,13 +558,13 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 }
                 return operation;
             }));
-            registry.Register(new SimpleClipEmitter<CameraStateClip>((clip, context) =>
+            registry.Register(new SimpleClipEmitter<CameraSequenceClip>((clip, context) =>
             {
                 CharacterSimulationSourceLocation source = context.ClipSource(clip);
                 return DeclarePresentationClip(
                     clip,
                     context,
-                    SimulationOperationCode.TimelineCameraState,
+                    SimulationOperationCode.TimelineCameraSequence,
                     new[]
                     {
                         context.Builder.ConstantField(source, "SequenceId", clip.Sequence ? clip.Sequence.SequenceId : string.Empty),
@@ -578,13 +578,13 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                         context.Builder.ConstantField(source, "EaseOutCurve", context.BakeCurve(clip, "EaseOutCurve", clip.EaseOutCurve))
                     });
             }));
-            registry.Register(new SimpleClipEmitter<CameraCueClip>((clip, context) =>
+            registry.Register(new SimpleClipEmitter<CameraShakeClip>((clip, context) =>
             {
                 CharacterSimulationSourceLocation source = context.ClipSource(clip);
                 return DeclarePresentationClip(
                     clip,
                     context,
-                    SimulationOperationCode.TimelineCameraCue,
+                    SimulationOperationCode.TimelineCameraShake,
                     new[]
                     {
                         context.Builder.ConstantField(source, "EffectKind", CameraEffectKind.Shake),

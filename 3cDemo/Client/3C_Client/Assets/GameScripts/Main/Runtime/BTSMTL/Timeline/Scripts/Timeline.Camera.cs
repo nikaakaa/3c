@@ -5,9 +5,9 @@ using UnityEngine;
 
 namespace BTSMTL.Timeline
 {
-    public readonly struct TimelineCameraStateSample
+    public readonly struct TimelineCameraSequenceSample
     {
-        public TimelineCameraStateSample(
+        public TimelineCameraSequenceSample(
             string sourceId,
             string sourceName,
             string trackName,
@@ -43,9 +43,9 @@ namespace BTSMTL.Timeline
         public CameraSequenceInterruptPolicy InterruptPolicy { get; }
     }
 
-    public readonly struct TimelineCameraCueSample
+    public readonly struct TimelineCameraShakeSample
     {
-        public TimelineCameraCueSample(
+        public TimelineCameraShakeSample(
             string sourceId,
             string sourceName,
             string trackName,
@@ -105,22 +105,22 @@ namespace BTSMTL.Timeline
     }
 
     [TrackGroup("Base"), ScriptGuid("54a348faecf94a2ea8ec2b06146e74c2"), Ordered(4), Color(180, 160, 255)]
-    public sealed class CameraStateTrack : Track
+    public sealed class CameraSequenceTrack : Track
     {
-        public void Sample(float timelineTime, string sourceId, string sourceName, ICollection<TimelineCameraStateSample> states)
+        public void Sample(float timelineTime, string sourceId, string sourceName, ICollection<TimelineCameraSequenceSample> states)
         {
             if (m_PersistentMuted || states == null)
                 return;
 
             foreach (var clip in Clips)
             {
-                if (clip is not CameraStateClip cameraClip)
+                if (clip is not CameraSequenceClip cameraClip)
                     continue;
 
                 if (!TrySampleClip(cameraClip, timelineTime, out float weight))
                     continue;
 
-                states.Add(new TimelineCameraStateSample(
+                states.Add(new TimelineCameraSequenceSample(
                     sourceId,
                     sourceName,
                     Name,
@@ -134,7 +134,7 @@ namespace BTSMTL.Timeline
             }
         }
 
-        static bool TrySampleClip(CameraStateClip clip, float timelineTime, out float weight)
+        static bool TrySampleClip(CameraSequenceClip clip, float timelineTime, out float weight)
         {
             weight = 0f;
             if (timelineTime < clip.StartTime || timelineTime > clip.EndTime)
@@ -149,12 +149,12 @@ namespace BTSMTL.Timeline
         }
 
 #if UNITY_EDITOR
-        public override Type ClipType => typeof(CameraStateClip);
+        public override Type ClipType => typeof(CameraSequenceClip);
 #endif
     }
 
     [ScriptGuid("54a348faecf94a2ea8ec2b06146e74c2"), Color(180, 160, 255)]
-    public sealed class CameraStateClip : Clip
+    public sealed class CameraSequenceClip : Clip
     {
         [ShowInInspector, OnValueChanged("RebindTimeline")]
         public CameraSequenceAsset Sequence;
@@ -178,23 +178,23 @@ namespace BTSMTL.Timeline
 #if UNITY_EDITOR
         public override ClipCapabilities Capabilities => ClipCapabilities.Resizable | ClipCapabilities.Mixable;
 
-        public CameraStateClip(Track track, int frame) : base(track, frame)
+        public CameraSequenceClip(Track track, int frame) : base(track, frame)
         {
         }
 #endif
     }
 
     [TrackGroup("Base"), ScriptGuid("54a348faecf94a2ea8ec2b06146e74c2"), Ordered(5), Color(255, 168, 214)]
-    public sealed class CameraCueTrack : Track
+    public sealed class CameraShakeTrack : Track
     {
-        public void Sample(float previousTime, float timelineTime, string sourceId, string sourceName, ICollection<TimelineCameraCueSample> cues)
+        public void Sample(float previousTime, float timelineTime, string sourceId, string sourceName, ICollection<TimelineCameraShakeSample> cues)
         {
             if (m_PersistentMuted || cues == null)
                 return;
 
             foreach (var clip in Clips)
             {
-                if (clip is not CameraCueClip cueClip)
+                if (clip is not CameraShakeClip cueClip)
                     continue;
 
                 if (previousTime < cueClip.StartTime && cueClip.StartTime <= timelineTime)
@@ -202,7 +202,7 @@ namespace BTSMTL.Timeline
                     if (!cueClip.Shake)
                         continue;
 
-                    cues.Add(new TimelineCameraCueSample(
+                    cues.Add(new TimelineCameraShakeSample(
                         sourceId,
                         sourceName,
                         Name,
@@ -214,12 +214,12 @@ namespace BTSMTL.Timeline
         }
 
 #if UNITY_EDITOR
-        public override Type ClipType => typeof(CameraCueClip);
+        public override Type ClipType => typeof(CameraShakeClip);
 #endif
     }
 
     [ScriptGuid("54a348faecf94a2ea8ec2b06146e74c2"), Color(255, 168, 214)]
-    public sealed class CameraCueClip : SignalClip
+    public sealed class CameraShakeClip : SignalClip
     {
         [ShowInInspector, OnValueChanged("RebindTimeline")]
         public CameraShakeAsset Shake;
@@ -229,7 +229,7 @@ namespace BTSMTL.Timeline
         public int Priority;
 
 #if UNITY_EDITOR
-        public CameraCueClip(Track track, int frame) : base(track, frame)
+        public CameraShakeClip(Track track, int frame) : base(track, frame)
         {
         }
 #endif

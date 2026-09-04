@@ -26,7 +26,7 @@ namespace ThirdPersonCharacter.Pipeline.Graph
     [NodeName("Request Camera Sequence")]
     [NodePath("Base/Action/Camera/Request Camera Sequence")]
     [NodeAuthoringCapability(NodeAuthoringCapability.CharacterExecution)]
-    public sealed class RequestCameraStateNode : CharacterSimulationOperationNode
+    public sealed class RequestCameraSequenceNode : CharacterSimulationOperationNode
     {
         [SerializeField, ShowInPanel("Sequence")]
         CameraSequenceAsset m_Sequence;
@@ -72,7 +72,7 @@ namespace ThirdPersonCharacter.Pipeline.Graph
     [NodeName("Emit Camera Shake")]
     [NodePath("Base/Action/Camera/Emit Camera Shake")]
     [NodeAuthoringCapability(NodeAuthoringCapability.CharacterExecution)]
-    public sealed class EmitCameraCueNode : CharacterSimulationOperationNode
+    public sealed class EmitCameraShakeNode : CharacterSimulationOperationNode
     {
         [SerializeField, ShowInPanel("Shake")]
         CameraShakeAsset m_Shake;

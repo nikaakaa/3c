@@ -145,9 +145,9 @@ namespace BTSMTL.Timeline
         public static readonly TimelineCurveChannelId MotionEaseOut = Id("motion.ease-out");
         public static readonly TimelineCurveChannelId MotionWarpPositionProgress = Id("motion-warp.position-progress");
         public static readonly TimelineCurveChannelId MotionWarpYawProgress = Id("motion-warp.yaw-progress");
-        public static readonly TimelineCurveChannelId CameraStateWeight = Id("camera-state.weight");
-        public static readonly TimelineCurveChannelId CameraStateEaseIn = Id("camera-state.ease-in");
-        public static readonly TimelineCurveChannelId CameraStateEaseOut = Id("camera-state.ease-out");
+        public static readonly TimelineCurveChannelId CameraSequenceWeight = Id("camera-sequence.weight");
+        public static readonly TimelineCurveChannelId CameraSequenceEaseIn = Id("camera-sequence.ease-in");
+        public static readonly TimelineCurveChannelId CameraSequenceEaseOut = Id("camera-sequence.ease-out");
         public static readonly TimelineCurveChannelId CameraResponseWeight = Id("camera-response.weight");
         public static readonly TimelineCurveChannelId CameraResponseEaseIn = Id("camera-response.ease-in");
         public static readonly TimelineCurveChannelId CameraResponseEaseOut = Id("camera-response.ease-out");
@@ -205,9 +205,9 @@ namespace BTSMTL.Timeline
                 clip => ((MotionWarpClip)clip).UsesPositionProgress),
             D(MotionWarpYawProgress, typeof(MotionWarpClip), "Yaw Progress", C(232, 110, 101), Unit, ZeroOne,
                 clip => ((MotionWarpClip)clip).UsesYawProgress),
-            D(CameraStateWeight, typeof(CameraStateClip), "Weight", C(184, 161, 252), Unit, One),
-            D(CameraStateEaseIn, typeof(CameraStateClip), "Ease In", C(102, 191, 153), Unit, ZeroOne),
-            D(CameraStateEaseOut, typeof(CameraStateClip), "Ease Out", C(226, 165, 79), Unit, ZeroOne),
+            D(CameraSequenceWeight, typeof(CameraSequenceClip), "Weight", C(184, 161, 252), Unit, One),
+            D(CameraSequenceEaseIn, typeof(CameraSequenceClip), "Ease In", C(102, 191, 153), Unit, ZeroOne),
+            D(CameraSequenceEaseOut, typeof(CameraSequenceClip), "Ease Out", C(226, 165, 79), Unit, ZeroOne),
             D(CameraResponseWeight, typeof(CameraResponseClip), "Weight", C(110, 201, 240), Unit, One),
             D(CameraResponseEaseIn, typeof(CameraResponseClip), "Ease In", C(102, 191, 153), Unit, ZeroOne),
             D(CameraResponseEaseOut, typeof(CameraResponseClip), "Ease Out", C(226, 165, 79), Unit, ZeroOne)
@@ -253,9 +253,9 @@ namespace BTSMTL.Timeline
                 MotionCurveClip clip when channelId == TimelineCurveChannelCatalog.MotionEaseOut => clip.EaseOutCurve,
                 MotionWarpClip clip when channelId == TimelineCurveChannelCatalog.MotionWarpPositionProgress && clip.UsesPositionProgress => clip.PositionProgressCurve,
                 MotionWarpClip clip when channelId == TimelineCurveChannelCatalog.MotionWarpYawProgress && clip.UsesYawProgress => clip.YawProgressCurve,
-                CameraStateClip clip when channelId == TimelineCurveChannelCatalog.CameraStateWeight => clip.WeightCurve,
-                CameraStateClip clip when channelId == TimelineCurveChannelCatalog.CameraStateEaseIn => clip.EaseInCurve,
-                CameraStateClip clip when channelId == TimelineCurveChannelCatalog.CameraStateEaseOut => clip.EaseOutCurve,
+                CameraSequenceClip clip when channelId == TimelineCurveChannelCatalog.CameraSequenceWeight => clip.WeightCurve,
+                CameraSequenceClip clip when channelId == TimelineCurveChannelCatalog.CameraSequenceEaseIn => clip.EaseInCurve,
+                CameraSequenceClip clip when channelId == TimelineCurveChannelCatalog.CameraSequenceEaseOut => clip.EaseOutCurve,
                 CameraResponseClip clip when channelId == TimelineCurveChannelCatalog.CameraResponseWeight => clip.WeightCurve,
                 CameraResponseClip clip when channelId == TimelineCurveChannelCatalog.CameraResponseEaseIn => clip.EaseInCurve,
                 CameraResponseClip clip when channelId == TimelineCurveChannelCatalog.CameraResponseEaseOut => clip.EaseOutCurve,
@@ -282,9 +282,9 @@ namespace BTSMTL.Timeline
                 case MotionCurveClip clip when channelId == TimelineCurveChannelCatalog.MotionEaseOut: clip.EaseOutCurve = copy; break;
                 case MotionWarpClip clip when channelId == TimelineCurveChannelCatalog.MotionWarpPositionProgress: clip.PositionProgressCurve = copy; break;
                 case MotionWarpClip clip when channelId == TimelineCurveChannelCatalog.MotionWarpYawProgress: clip.YawProgressCurve = copy; break;
-                case CameraStateClip clip when channelId == TimelineCurveChannelCatalog.CameraStateWeight: clip.WeightCurve = copy; break;
-                case CameraStateClip clip when channelId == TimelineCurveChannelCatalog.CameraStateEaseIn: clip.EaseInCurve = copy; break;
-                case CameraStateClip clip when channelId == TimelineCurveChannelCatalog.CameraStateEaseOut: clip.EaseOutCurve = copy; break;
+                case CameraSequenceClip clip when channelId == TimelineCurveChannelCatalog.CameraSequenceWeight: clip.WeightCurve = copy; break;
+                case CameraSequenceClip clip when channelId == TimelineCurveChannelCatalog.CameraSequenceEaseIn: clip.EaseInCurve = copy; break;
+                case CameraSequenceClip clip when channelId == TimelineCurveChannelCatalog.CameraSequenceEaseOut: clip.EaseOutCurve = copy; break;
                 case CameraResponseClip clip when channelId == TimelineCurveChannelCatalog.CameraResponseWeight: clip.WeightCurve = copy; break;
                 case CameraResponseClip clip when channelId == TimelineCurveChannelCatalog.CameraResponseEaseIn: clip.EaseInCurve = copy; break;
                 case CameraResponseClip clip when channelId == TimelineCurveChannelCatalog.CameraResponseEaseOut: clip.EaseOutCurve = copy; break;

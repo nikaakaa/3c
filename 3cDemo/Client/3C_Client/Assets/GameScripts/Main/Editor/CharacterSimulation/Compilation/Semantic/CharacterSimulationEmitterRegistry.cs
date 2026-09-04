@@ -356,8 +356,8 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 integer0: (int)node.TransitionType,
                 text0: node.Reason,
                 constants: Fields(("ActionContext", AssetIdentity(node.ActionContext))))));
-            registry.Register(Camera<RequestCameraStateNode>(RequestCameraState));
-            registry.Register(Camera<EmitCameraCueNode>(EmitCameraCue));
+            registry.Register(Camera<RequestCameraSequenceNode>(RequestCameraSequence));
+            registry.Register(Camera<EmitCameraShakeNode>(EmitCameraShake));
             registry.Register(Camera<SetCameraResponseNode>(SetCameraResponse));
             registry.Register(Camera<SetCameraTargetNode>(SetCameraTarget));
             registry.Register(new CameraBasisCharacterSimulationNodeEmitter());
@@ -540,7 +540,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 constants: constants);
         }
 
-        static CharacterSimulationNodeEmission RequestCameraState(RequestCameraStateNode node)
+        static CharacterSimulationNodeEmission RequestCameraSequence(RequestCameraSequenceNode node)
         {
             if (!node.Sequence)
                 throw new InvalidOperationException("Request Camera Sequence requires an explicit Sequence resource.");
@@ -551,7 +551,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             RequireNonNegative(node.BlendOutSeconds, nameof(node.BlendOutSeconds));
             RequireOptionalIdentity(node.TargetKey, nameof(node.TargetKey));
             return new CharacterSimulationNodeEmission(
-                SimulationOperationCode.CameraStateRequest,
+                SimulationOperationCode.CameraSequenceRequest,
                 integer0: CameraProgramOperationSchema.PayloadVersion,
                 integer1: 0,
                 flags: (uint)node.InterruptPolicy,
@@ -565,14 +565,14 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                     ("ActionContext", AssetIdentity(node.ActionContext))));
         }
 
-        static CharacterSimulationNodeEmission EmitCameraCue(EmitCameraCueNode node)
+        static CharacterSimulationNodeEmission EmitCameraShake(EmitCameraShakeNode node)
         {
             if (!node.Shake)
                 throw new InvalidOperationException("Emit Camera Shake requires an explicit Shake resource.");
             RequireIdentity(node.ResourceId, nameof(node.ResourceId));
             RequireNonNegative(node.Intensity, nameof(node.Intensity));
             return new CharacterSimulationNodeEmission(
-                SimulationOperationCode.CameraCue,
+                SimulationOperationCode.CameraShakeRequest,
                 integer0: CameraProgramOperationSchema.PayloadVersion,
                 integer1: (int)CameraEffectKind.Shake,
                 constants: Fields(

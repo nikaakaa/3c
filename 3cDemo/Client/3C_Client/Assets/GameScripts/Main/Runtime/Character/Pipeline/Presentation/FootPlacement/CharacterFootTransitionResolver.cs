@@ -113,20 +113,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             }
             if (discrete.State == CharacterFootConstraintState.Releasing)
             {
-                if (context.Contact.HasContact &&
-                    !frame.LockRequest.RequestsLock &&
-                    frame.LockRequest.EventIdentity ==
-                    context.Contact.EventIdentity &&
-                    frame.SwingMotion.Accepted &&
-                    frame.SwingMotion.LandingEventIdentity != 0 &&
-                    frame.SwingMotion.LandingEventIdentity !=
-                    context.Contact.EventIdentity)
-                {
-                    return NoChange(
-                        in discrete,
-                        CharacterFootContactEdge.None,
-                        CharacterFootTransitionPhase.PostInterpolation);
-                }
                 return Decision(
                     CharacterFootTransitionReason.ReleaseCompleted,
                     discrete.State,

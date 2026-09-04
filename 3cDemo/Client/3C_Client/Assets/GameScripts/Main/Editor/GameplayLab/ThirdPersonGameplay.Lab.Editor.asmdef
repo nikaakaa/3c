@@ -4,6 +4,7 @@
     "references": [
         "ThirdPersonClient.Editor",
         "ThirdPersonClient.Runtime",
+        "GUID:8f6e9e98d8b94eb8a793b692eaf18b6b",
         "ThirdPersonSimulation.Core",
         "ThirdPersonSimulation.Float32",
         "ThirdPersonSimulation.Unity",

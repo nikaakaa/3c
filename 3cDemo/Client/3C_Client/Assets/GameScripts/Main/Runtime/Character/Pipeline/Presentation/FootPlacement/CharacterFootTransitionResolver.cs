@@ -100,15 +100,9 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     return NoChange(in discrete, CharacterFootContactEdge.None,
                         CharacterFootTransitionPhase.PostInterpolation);
                 }
-                return Decision(
-                    CharacterFootTransitionReason.LandingCompleted,
-                    discrete.State,
-                    CharacterFootConstraintState.Locked,
-                    frame.LockRequest.Response,
+                return NoChange(
+                    in discrete,
                     CharacterFootContactEdge.None,
-                    CharacterFootAnchorCommand.Retain,
-                    false,
-                    false,
                     CharacterFootTransitionPhase.PostInterpolation);
             }
             if (discrete.State == CharacterFootConstraintState.Releasing)

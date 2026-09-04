@@ -217,7 +217,10 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 case CharacterPresentationCameraBindingKind.Shake:
                 case CharacterPresentationCameraBindingKind.Shot:
                     RetireEffect(command.Header.EventId.ToString(), command.ProducerGeneration);
-                    m_EffectEvaluator.Retire(command.Header.EventId.ToString(), command.ProducerGeneration);
+                    m_EffectEvaluator.Retire(
+                        command.Header.EventId.ToString(),
+                        command.ProducerGeneration,
+                        producer.ProgramProducerIdentity);
                     break;
                 case CharacterPresentationCameraBindingKind.Target:
                     m_CameraTargets.Remove(instance);
@@ -492,12 +495,12 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             }
         }
 
-        static CameraLookResponseMode ToCameraResponseMode(TimelineCameraLookResponseMode mode)
+        static CameraLookResponseMode ToCameraResponseMode(CameraResponseMode mode)
         {
             switch (mode)
             {
-                case TimelineCameraLookResponseMode.Suppressed: return CameraLookResponseMode.Suppressed;
-                case TimelineCameraLookResponseMode.Weighted: return CameraLookResponseMode.Weighted;
+                case CameraResponseMode.Suppressed: return CameraLookResponseMode.Suppressed;
+                case CameraResponseMode.Weighted: return CameraLookResponseMode.Weighted;
                 default: return CameraLookResponseMode.Full;
             }
         }

@@ -496,6 +496,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                     reader,
                     reader.Producers[i],
                     profile,
+                    camera,
                     footAnalysisCompilation,
                     timelines,
                     timelineCallSites,
@@ -1421,6 +1422,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             CharacterPresentationSemanticReader reader,
             ProgramProducer producer,
             CharacterAnimationPresentationProfile profile,
+            CharacterCameraProjectionPayload cameraProjection,
             CharacterFootPlacementAnalysisCompilation footAnalysisCompilation,
             IReadOnlyDictionary<string, TimelineData> timelines,
             IReadOnlyDictionary<string, IReadOnlyList<AnimationTimelineCallSite>> timelineCallSites,
@@ -1436,7 +1438,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             if (kind.Value != CharacterPresentationProducerKind.Animation)
             {
                 CharacterPresentationCameraBinding camera = kind.Value == CharacterPresentationProducerKind.Camera
-                    ? BuildCameraBinding(reader, producer, source, timelines, errors)
+                    ? BuildCameraBinding(reader, producer, source, timelines, cameraProjection, errors)
                     : null;
                 CharacterPresentationCueBinding cue = kind.Value == CharacterPresentationProducerKind.Cue
                     ? BuildCueBinding(producer, source, timelines, errors)
@@ -1755,14 +1757,25 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             ProgramProducer producer,
             ProgramSourceMapEntry source,
             IReadOnlyDictionary<string, TimelineData> timelines,
+            CharacterCameraProjectionPayload cameraProjection,
             List<string> errors)
         {
             if (TryFindSourceClip(source, timelines, out Clip clip))
             {
                 if (clip is CameraStateClip state)
                 {
-                    return CharacterPresentationCameraBinding.State(
-                        state.Mode,
+                    if (!state.Sequence)
+                    {
+                        errors?.Add($"Camera Sequence Clip '{state.AuthoringId}' has no Sequence resource.");
+                        return null;
+                    }
+                    if (cameraProjection == null || !cameraProjection.TryGetSequence(state.Sequence.SequenceId, out _))
+                    {
+                        errors?.Add($"Camera Sequence '{state.Sequence.SequenceId}' is not registered by the Character Camera Profile.");
+                        return null;
+                    }
+                    return CharacterPresentationCameraBinding.Sequence(
+                        state.Sequence.SequenceId,
                         state.Priority,
                         state.BlendInSeconds,
                         state.BlendOutSeconds,
@@ -1771,12 +1784,72 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 }
                 if (clip is CameraCueClip cue)
                 {
-                    return CharacterPresentationCameraBinding.Cue(
-                        cue.CueId,
-                        cue.CueKind,
-                        cue.CueType,
-                        cue.DurationSeconds,
+                    if (!cue.Shake)
+                    {
+                        errors?.Add($"Camera Shake Clip '{cue.AuthoringId}' has no Shake resource.");
+                        return null;
+                    }
+                    if (cameraProjection == null || !cameraProjection.TryGetShake(cue.Shake.ShakeId, out _))
+                    {
+                        errors?.Add($"Camera Shake '{cue.Shake.ShakeId}' is not registered by the Character Camera Profile.");
+                        return null;
+                    }
+                    return CharacterPresentationCameraBinding.Effect(
+                        CharacterPresentationCameraBindingKind.Shake,
+                        cue.Shake.ShakeId,
                         cue.Priority);
+                }
+                if (clip is CameraOverrideClip overrideClip)
+                {
+                    if (!overrideClip.OverrideTrack || cameraProjection == null ||
+                        !cameraProjection.TryGetOverride(overrideClip.OverrideTrack.TrackId, out _))
+                    {
+                        errors?.Add($"Camera Override Clip '{overrideClip.AuthoringId}' has no registered Override resource.");
+                        return null;
+                    }
+                    return CharacterPresentationCameraBinding.Effect(
+                        CharacterPresentationCameraBindingKind.Override,
+                        overrideClip.OverrideTrack.TrackId,
+                        overrideClip.OverrideTrack.Priority);
+                }
+                if (clip is CameraZoomClip zoomClip)
+                {
+                    if (!zoomClip.Zoom || cameraProjection == null ||
+                        !cameraProjection.TryGetZoom(zoomClip.Zoom.ZoomId, out _))
+                    {
+                        errors?.Add($"Camera Zoom Clip '{zoomClip.AuthoringId}' has no registered Zoom resource.");
+                        return null;
+                    }
+                    return CharacterPresentationCameraBinding.Effect(
+                        CharacterPresentationCameraBindingKind.Zoom,
+                        zoomClip.Zoom.ZoomId,
+                        zoomClip.Zoom.DataPriority);
+                }
+                if (clip is CameraStretchClip stretchClip)
+                {
+                    if (!stretchClip.Stretch || cameraProjection == null ||
+                        !cameraProjection.TryGetStretch(stretchClip.Stretch.StretchId, out _))
+                    {
+                        errors?.Add($"Camera Stretch Clip '{stretchClip.AuthoringId}' has no registered Stretch resource.");
+                        return null;
+                    }
+                    return CharacterPresentationCameraBinding.Effect(
+                        CharacterPresentationCameraBindingKind.Stretch,
+                        stretchClip.Stretch.StretchId,
+                        stretchClip.Stretch.DataPriority);
+                }
+                if (clip is CameraShotClip shotClip)
+                {
+                    if (!shotClip.Shot || cameraProjection == null ||
+                        !cameraProjection.TryGetShot(shotClip.Shot.ShotId, out _))
+                    {
+                        errors?.Add($"Camera Shot Clip '{shotClip.AuthoringId}' has no registered Shot resource.");
+                        return null;
+                    }
+                    return CharacterPresentationCameraBinding.Effect(
+                        CharacterPresentationCameraBindingKind.Shot,
+                        shotClip.Shot.ShotId,
+                        shotClip.Shot.Priority);
                 }
                 if (clip is CameraResponseClip response)
                 {
@@ -1796,23 +1869,33 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 SemanticOperation operation = reader.RequireProducerOperation(producer);
                 if (operation.Integer0 != CameraProgramOperationSchema.PayloadVersion)
                     throw new InvalidOperationException($"payload version '{operation.Integer0}' is unsupported");
+                if (operation.Code == SimulationOperationCode.CameraStateRequest)
+                {
+                    string sequenceId = reader.RequireString(operation, "SequenceId");
+                    if (cameraProjection == null || !cameraProjection.TryGetSequence(sequenceId, out _))
+                        throw new InvalidOperationException($"Camera Sequence '{sequenceId}' is not registered by the Character Camera Profile.");
+                }
+                if (operation.Code == SimulationOperationCode.CameraCue)
+                {
+                    string resourceId = reader.RequireString(operation, "ResourceId");
+                    if (cameraProjection == null || !cameraProjection.TryGetShake(resourceId, out _))
+                        throw new InvalidOperationException($"Camera Shake '{resourceId}' is not registered by the Character Camera Profile.");
+                }
                 return operation.Code switch
                 {
-                    SimulationOperationCode.CameraStateRequest => CharacterPresentationCameraBinding.State(
-                        (TimelineCameraMode)operation.Integer1,
+                    SimulationOperationCode.CameraStateRequest => CharacterPresentationCameraBinding.Sequence(
+                        reader.RequireString(operation, "SequenceId"),
                         reader.RequireInt32(operation, "Priority"),
                         reader.RequireScalar(operation, "BlendInSeconds"),
                         reader.RequireScalar(operation, "BlendOutSeconds"),
                         reader.RequireString(operation, "TargetKey"),
                         (TimelineCameraInterruptPolicy)operation.Flags),
-                    SimulationOperationCode.CameraCue => CharacterPresentationCameraBinding.Cue(
-                        reader.RequireString(operation, "CueId"),
-                        (TimelineCameraCueKind)operation.Integer1,
-                        reader.RequireString(operation, "CueType"),
-                        reader.RequireScalar(operation, "DurationSeconds"),
+                    SimulationOperationCode.CameraCue => CharacterPresentationCameraBinding.Effect(
+                        CharacterPresentationCameraBindingKind.Shake,
+                        reader.RequireString(operation, "ResourceId"),
                         reader.RequireInt32(operation, "Priority")),
                     SimulationOperationCode.CameraResponse => CharacterPresentationCameraBinding.Response(
-                        (TimelineCameraLookResponseMode)operation.Integer1,
+                        (CameraResponseMode)operation.Integer1,
                         reader.RequireScalar(operation, "ManualOrbitWeight"),
                         reader.RequireScalar(operation, "PitchResponseWeight"),
                         reader.RequireScalar(operation, "YawResponseWeight"),

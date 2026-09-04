@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using Animancer;
 using BTSMTL.Diagnostics;
 using BTSMTL.Timeline;
+using ThirdPersonCamera;
 using ThirdPersonSimulation;
 using UnityEngine;
 
@@ -293,7 +294,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         [SerializeField] TimelineCameraCueKind m_CueKind;
         [SerializeField] string m_CueType = string.Empty;
         [SerializeField] float m_DurationSeconds;
-        [SerializeField] TimelineCameraLookResponseMode m_LookResponse;
+        [SerializeField] CameraResponseMode m_LookResponse;
         [SerializeField] float m_ManualOrbitWeight;
         [SerializeField] float m_PitchResponseWeight;
         [SerializeField] float m_YawResponseWeight;
@@ -315,7 +316,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         public TimelineCameraCueKind CueKind => m_CueKind;
         public string CueType => m_CueType;
         public float DurationSeconds => m_DurationSeconds;
-        public TimelineCameraLookResponseMode LookResponse => m_LookResponse;
+        public CameraResponseMode LookResponse => m_LookResponse;
         public float ManualOrbitWeight => m_ManualOrbitWeight;
         public float PitchResponseWeight => m_PitchResponseWeight;
         public float YawResponseWeight => m_YawResponseWeight;
@@ -365,7 +366,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         }
 
         public static CharacterPresentationCameraBinding Response(
-            TimelineCameraLookResponseMode lookResponse,
+            CameraResponseMode lookResponse,
             float manualOrbitWeight,
             float pitchResponseWeight,
             float yawResponseWeight,

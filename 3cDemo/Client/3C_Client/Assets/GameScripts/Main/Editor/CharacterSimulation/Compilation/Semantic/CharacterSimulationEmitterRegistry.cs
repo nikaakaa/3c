@@ -6,6 +6,7 @@ using ThirdPersonCharacter.Pipeline.Graph;
 using ThirdPersonCharacter.Pipeline.Input;
 using ThirdPersonCharacter.Pipeline.Motion;
 using ThirdPersonCharacter.Pipeline.Motion.RootMotion;
+using ThirdPersonCamera;
 using ThirdPersonGameplay.Tags;
 using ThirdPersonSimulation;
 using TreeDesigner;
@@ -541,7 +542,9 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
 
         static CharacterSimulationNodeEmission RequestCameraState(RequestCameraStateNode node)
         {
-            RequireDefined(node.Mode, nameof(node.Mode));
+            if (!node.Sequence)
+                throw new InvalidOperationException("Request Camera Sequence requires an explicit Sequence resource.");
+            RequireIdentity(node.SequenceId, nameof(node.SequenceId));
             RequireDefined(node.InterruptPolicy, nameof(node.InterruptPolicy));
             RequireUnit(node.Weight, nameof(node.Weight));
             RequireNonNegative(node.BlendInSeconds, nameof(node.BlendInSeconds));
@@ -550,33 +553,31 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             return new CharacterSimulationNodeEmission(
                 SimulationOperationCode.CameraStateRequest,
                 integer0: CameraProgramOperationSchema.PayloadVersion,
-                integer1: (int)node.Mode,
+                integer1: 0,
                 flags: (uint)node.InterruptPolicy,
                 constants: Fields(
                     ("Priority", node.Priority),
                     ("Weight", node.Weight),
                     ("BlendInSeconds", node.BlendInSeconds),
                     ("BlendOutSeconds", node.BlendOutSeconds),
+                    ("SequenceId", node.SequenceId),
                     ("TargetKey", node.TargetKey),
                     ("ActionContext", AssetIdentity(node.ActionContext))));
         }
 
         static CharacterSimulationNodeEmission EmitCameraCue(EmitCameraCueNode node)
         {
-            RequireIdentity(node.CueId, nameof(node.CueId));
-            RequireDefined(node.CueKind, nameof(node.CueKind));
-            RequireIdentity(node.CueType, nameof(node.CueType));
+            if (!node.Shake)
+                throw new InvalidOperationException("Emit Camera Shake requires an explicit Shake resource.");
+            RequireIdentity(node.ResourceId, nameof(node.ResourceId));
             RequireNonNegative(node.Intensity, nameof(node.Intensity));
-            RequireNonNegative(node.DurationSeconds, nameof(node.DurationSeconds));
             return new CharacterSimulationNodeEmission(
                 SimulationOperationCode.CameraCue,
                 integer0: CameraProgramOperationSchema.PayloadVersion,
-                integer1: (int)node.CueKind,
+                integer1: (int)CameraEffectKind.Shake,
                 constants: Fields(
-                    ("CueId", node.CueId),
-                    ("CueType", node.CueType),
+                    ("ResourceId", node.ResourceId),
                     ("Intensity", node.Intensity),
-                    ("DurationSeconds", node.DurationSeconds),
                     ("Priority", node.Priority),
                     ("ActionContext", AssetIdentity(node.ActionContext))));
         }

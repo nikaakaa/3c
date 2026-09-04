@@ -6,9 +6,9 @@ namespace ThirdPersonCamera
 {
     public enum CameraSequenceInterruptPolicy : byte
     {
-        BlendOut = 1,
-        Cut = 2,
-        HoldUntilSourceEnds = 3
+        BlendOut = 0,
+        Cut = 1,
+        HoldUntilSourceEnds = 2
     }
 
     public enum CameraResponseMode : byte
@@ -1010,6 +1010,26 @@ namespace ThirdPersonCamera
         public CameraLockingSettings Locking => m_Locking;
         public CameraCollisionSettings Collision => m_Collision;
         public IReadOnlyList<CameraTargetSlotPayload> TargetSlots => m_TargetSlots ?? Array.Empty<CameraTargetSlotPayload>();
+
+        public bool TryGetSequence(string sequenceId, out CameraSequencePayload payload)
+        {
+            if (DefaultSequence != null && string.Equals(DefaultSequence.SequenceId, sequenceId, StringComparison.Ordinal))
+            {
+                payload = DefaultSequence;
+                return true;
+            }
+            for (int i = 0; i < Sequences.Count; i++)
+            {
+                CameraSequencePayload candidate = Sequences[i];
+                if (candidate != null && string.Equals(candidate.SequenceId, sequenceId, StringComparison.Ordinal))
+                {
+                    payload = candidate;
+                    return true;
+                }
+            }
+            payload = null;
+            return false;
+        }
 
         public bool TryGetOverride(string resourceId, out CameraOverrideTrackPayload payload) =>
             TryFind(OverrideTracks, resourceId, value => value.TrackId, out payload);

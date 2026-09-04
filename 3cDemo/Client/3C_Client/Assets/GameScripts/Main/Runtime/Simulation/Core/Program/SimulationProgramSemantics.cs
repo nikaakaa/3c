@@ -462,7 +462,7 @@ namespace ThirdPersonSimulation
 
     public static class CameraProgramOperationSchema
     {
-        public const int PayloadVersion = 1;
+        public const int PayloadVersion = 2;
         public static readonly AnimationChannelId ChannelId = new AnimationChannelId("Camera");
         public const string OutputPortId = "Submitted";
         public const string BasisValidPortId = "Valid";
@@ -543,29 +543,27 @@ namespace ThirdPersonSimulation
             switch (operation.Code)
             {
                 case SimulationOperationCode.CameraStateRequest:
-                    RequireEnum(operation, operation.Integer1, 0, 4, "Mode");
                     RequireEnum(operation, checked((int)operation.Flags), 0, 2, "InterruptPolicy");
                     RequireInt32(operation, literals, "Priority");
                     RequireUnit(operation, literals, "Weight");
                     RequireNonNegative(operation, literals, "BlendInSeconds");
                     RequireNonNegative(operation, literals, "BlendOutSeconds");
+                    RequireString(operation, literals, "SequenceId", true);
                     RequireString(operation, literals, "TargetKey", false);
                     RequireString(operation, literals, "ActionContext", false);
-                    RequireFieldCount(operation, 6);
+                    RequireFieldCount(operation, 7);
                     break;
                 case SimulationOperationCode.CameraCue:
-                    RequireEnum(operation, operation.Integer1, 0, 4, "CueKind");
+                    RequireEnum(operation, operation.Integer1, 4, 4, "EffectKind");
                     RequireFlags(operation, 0);
-                    RequireString(operation, literals, "CueId", true);
-                    RequireString(operation, literals, "CueType", true);
+                    RequireString(operation, literals, "ResourceId", true);
                     RequireNonNegative(operation, literals, "Intensity");
-                    RequireNonNegative(operation, literals, "DurationSeconds");
                     RequireInt32(operation, literals, "Priority");
                     RequireString(operation, literals, "ActionContext", false);
-                    RequireFieldCount(operation, 6);
+                    RequireFieldCount(operation, 4);
                     break;
                 case SimulationOperationCode.CameraResponse:
-                    RequireEnum(operation, operation.Integer1, 0, 2, "LookResponse");
+                    RequireEnum(operation, operation.Integer1, 1, 3, "LookResponse");
                     RequireFlags(operation, 0);
                     RequireUnit(operation, literals, "ManualOrbitWeight");
                     RequireUnit(operation, literals, "PitchResponseWeight");

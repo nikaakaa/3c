@@ -23,13 +23,15 @@ namespace ThirdPersonCamera
             m_Contributions.Clear();
         }
 
-        public void Retire(string eventId, ulong generation)
+        public void Retire(string eventId, ulong generation, string sourceId = null)
         {
             for (int i = m_Active.Count - 1; i >= 0; i--)
             {
                 ActiveEffect effect = m_Active[i];
-                if (string.Equals(effect.Request.EventId, eventId, StringComparison.Ordinal) &&
-                    effect.Request.Generation == generation)
+                if (effect.Request.Generation == generation &&
+                    (string.Equals(effect.Request.EventId, eventId, StringComparison.Ordinal) ||
+                     !string.IsNullOrEmpty(sourceId) &&
+                     string.Equals(effect.Request.SourceId, sourceId, StringComparison.Ordinal)))
                 {
                     effect.Retired = true;
                     effect.RetireElapsed = 0f;
@@ -71,9 +73,20 @@ namespace ThirdPersonCamera
             for (int i = 0; i < requests.Count; i++)
             {
                 CameraEffectRequest request = requests[i];
-                if (!request.Active || ContainsEvent(request.EventId, request.Generation))
+                if (!request.Active || ContainsRequest(request))
                     continue;
                 RequireResource(request);
+                if (request.Kind != CameraEffectKind.Shake)
+                {
+                    ActiveEffect existing = FindSource(request.SourceId, request.Generation);
+                    if (existing != null)
+                    {
+                        existing.Request = request;
+                        existing.Retired = false;
+                        existing.RetireElapsed = 0f;
+                        continue;
+                    }
+                }
                 m_Active.Add(new ActiveEffect(request));
             }
         }
@@ -269,15 +282,29 @@ namespace ThirdPersonCamera
             return selected;
         }
 
-        bool ContainsEvent(string eventId, ulong generation)
+        bool ContainsRequest(CameraEffectRequest request)
         {
             for (int i = 0; i < m_Active.Count; i++)
             {
-                CameraEffectRequest request = m_Active[i].Request;
-                if (request.Generation == generation && string.Equals(request.EventId, eventId, StringComparison.Ordinal))
+                CameraEffectRequest active = m_Active[i].Request;
+                if (request.Kind == CameraEffectKind.Shake &&
+                    active.Generation == request.Generation &&
+                    string.Equals(active.EventId, request.EventId, StringComparison.Ordinal))
                     return true;
             }
             return false;
+        }
+
+        ActiveEffect FindSource(string sourceId, ulong generation)
+        {
+            for (int i = 0; i < m_Active.Count; i++)
+            {
+                ActiveEffect active = m_Active[i];
+                if (active.Request.Generation == generation &&
+                    string.Equals(active.Request.SourceId, sourceId, StringComparison.Ordinal))
+                    return active;
+            }
+            return null;
         }
 
         void RequireResource(CameraEffectRequest request)
@@ -365,7 +392,7 @@ namespace ThirdPersonCamera
                 Request = request;
             }
 
-            public CameraEffectRequest Request { get; }
+            public CameraEffectRequest Request { get; set; }
             public float Elapsed;
             public bool Retired;
             public float RetireElapsed;

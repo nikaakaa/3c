@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using ThirdPersonCamera;
 using UnityEngine;
 
 namespace BTSMTL.Timeline
@@ -42,7 +43,7 @@ namespace BTSMTL.Timeline
             string sourceId,
             string sourceName,
             string trackName,
-            TimelineCameraMode mode,
+            string sequenceId,
             int priority,
             float weight,
             float blendInSeconds,
@@ -53,7 +54,7 @@ namespace BTSMTL.Timeline
             SourceId = sourceId ?? string.Empty;
             SourceName = sourceName ?? string.Empty;
             TrackName = trackName ?? string.Empty;
-            Mode = mode;
+            SequenceId = sequenceId ?? string.Empty;
             Priority = priority;
             Weight = Mathf.Clamp01(weight);
             BlendInSeconds = Mathf.Max(0f, blendInSeconds);
@@ -65,7 +66,7 @@ namespace BTSMTL.Timeline
         public string SourceId { get; }
         public string SourceName { get; }
         public string TrackName { get; }
-        public TimelineCameraMode Mode { get; }
+        public string SequenceId { get; }
         public int Priority { get; }
         public float Weight { get; }
         public float BlendInSeconds { get; }
@@ -80,32 +81,23 @@ namespace BTSMTL.Timeline
             string sourceId,
             string sourceName,
             string trackName,
-            string cueId,
-            TimelineCameraCueKind cueKind,
-            string cueType,
+            string resourceId,
             float intensity,
-            float durationSeconds,
             int priority)
         {
             SourceId = sourceId ?? string.Empty;
             SourceName = sourceName ?? string.Empty;
             TrackName = trackName ?? string.Empty;
-            CueId = cueId ?? string.Empty;
-            CueKind = cueKind;
-            CueType = cueType ?? string.Empty;
+            ResourceId = resourceId ?? string.Empty;
             Intensity = Mathf.Max(0f, intensity);
-            DurationSeconds = Mathf.Max(0f, durationSeconds);
             Priority = priority;
         }
 
         public string SourceId { get; }
         public string SourceName { get; }
         public string TrackName { get; }
-        public string CueId { get; }
-        public TimelineCameraCueKind CueKind { get; }
-        public string CueType { get; }
+        public string ResourceId { get; }
         public float Intensity { get; }
-        public float DurationSeconds { get; }
         public int Priority { get; }
     }
 
@@ -115,7 +107,7 @@ namespace BTSMTL.Timeline
             string sourceId,
             string sourceName,
             string trackName,
-            TimelineCameraLookResponseMode lookResponse,
+            CameraResponseMode lookResponse,
             float manualOrbitWeight,
             float pitchResponseWeight,
             float yawResponseWeight,
@@ -136,7 +128,7 @@ namespace BTSMTL.Timeline
         public string SourceId { get; }
         public string SourceName { get; }
         public string TrackName { get; }
-        public TimelineCameraLookResponseMode LookResponse { get; }
+        public CameraResponseMode LookResponse { get; }
         public float ManualOrbitWeight { get; }
         public float PitchResponseWeight { get; }
         public float YawResponseWeight { get; }
@@ -164,7 +156,7 @@ namespace BTSMTL.Timeline
                     sourceId,
                     sourceName,
                     Name,
-                    cameraClip.Mode,
+                    cameraClip.Sequence ? cameraClip.Sequence.SequenceId : string.Empty,
                     cameraClip.Priority,
                     weight,
                     cameraClip.BlendInSeconds,
@@ -197,7 +189,7 @@ namespace BTSMTL.Timeline
     public sealed class CameraStateClip : Clip
     {
         [ShowInInspector, OnValueChanged("RebindTimeline")]
-        public TimelineCameraMode Mode = TimelineCameraMode.SkillCloseup;
+        public CameraSequenceAsset Sequence;
         [ShowInInspector, OnValueChanged("RebindTimeline")]
         public int Priority = 100;
         [ShowInInspector, OnValueChanged("RebindTimeline")]
@@ -239,15 +231,15 @@ namespace BTSMTL.Timeline
 
                 if (previousTime < cueClip.StartTime && cueClip.StartTime <= timelineTime)
                 {
+                    if (!cueClip.Shake)
+                        continue;
+
                     cues.Add(new TimelineCameraCueSample(
                         sourceId,
                         sourceName,
                         Name,
-                        cueClip.CueId,
-                        cueClip.CueKind,
-                        cueClip.CueType,
+                        cueClip.Shake.ShakeId,
                         cueClip.Intensity,
-                        cueClip.DurationSeconds,
                         cueClip.Priority));
                 }
             }
@@ -262,15 +254,9 @@ namespace BTSMTL.Timeline
     public sealed class CameraCueClip : SignalClip
     {
         [ShowInInspector, OnValueChanged("RebindTimeline")]
-        public string CueId = "CameraCue";
-        [ShowInInspector, OnValueChanged("RebindTimeline")]
-        public TimelineCameraCueKind CueKind = TimelineCameraCueKind.Shake;
-        [ShowInInspector, OnValueChanged("RebindTimeline")]
-        public string CueType = "Camera";
+        public CameraShakeAsset Shake;
         [ShowInInspector, OnValueChanged("RebindTimeline")]
         public float Intensity = 1f;
-        [ShowInInspector, OnValueChanged("RebindTimeline")]
-        public float DurationSeconds = 0.2f;
         [ShowInInspector, OnValueChanged("RebindTimeline")]
         public int Priority;
 
@@ -333,7 +319,7 @@ namespace BTSMTL.Timeline
     public sealed class CameraResponseClip : Clip
     {
         [ShowInInspector, OnValueChanged("RebindTimeline")]
-        public TimelineCameraLookResponseMode LookResponse = TimelineCameraLookResponseMode.Suppressed;
+        public CameraResponseMode LookResponse = CameraResponseMode.Suppressed;
         [ShowInInspector, OnValueChanged("RebindTimeline")]
         public float ManualOrbitWeight;
         [ShowInInspector, OnValueChanged("RebindTimeline")]

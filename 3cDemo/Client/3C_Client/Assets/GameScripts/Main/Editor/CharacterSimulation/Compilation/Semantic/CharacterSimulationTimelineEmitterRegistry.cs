@@ -395,6 +395,10 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             registry.Register(new SimpleTrackEmitter<CameraStateTrack>(context => context.DeclareTrackCatalog()));
             registry.Register(new SimpleTrackEmitter<CameraCueTrack>(context => context.DeclareTrackCatalog()));
             registry.Register(new SimpleTrackEmitter<CameraResponseTrack>(context => context.DeclareTrackCatalog()));
+            registry.Register(new SimpleTrackEmitter<CameraOverrideTrack>(context => context.DeclareTrackCatalog()));
+            registry.Register(new SimpleTrackEmitter<CameraZoomTrack>(context => context.DeclareTrackCatalog()));
+            registry.Register(new SimpleTrackEmitter<CameraStretchTrack>(context => context.DeclareTrackCatalog()));
+            registry.Register(new SimpleTrackEmitter<CameraShotTrack>(context => context.DeclareTrackCatalog()));
             registry.Register(new SimpleClipEmitter<BTSMTL.Timeline.AnimationClip>((clip, context) =>
             {
                 CharacterSimulationSourceLocation source = context.ClipSource(clip);
@@ -563,7 +567,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                     SimulationOperationCode.TimelineCameraState,
                     new[]
                     {
-                        context.Builder.ConstantField(source, "Mode", clip.Mode),
+                        context.Builder.ConstantField(source, "SequenceId", clip.Sequence ? clip.Sequence.SequenceId : string.Empty),
                         context.Builder.ConstantField(source, "Priority", clip.Priority),
                         context.Builder.ConstantField(source, "BlendInSeconds", clip.BlendInSeconds),
                         context.Builder.ConstantField(source, "BlendOutSeconds", clip.BlendOutSeconds),
@@ -583,14 +587,40 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                     SimulationOperationCode.TimelineCameraCue,
                     new[]
                     {
-                        context.Builder.ConstantField(source, "CueId", clip.CueId),
-                        context.Builder.ConstantField(source, "CueKind", clip.CueKind),
-                        context.Builder.ConstantField(source, "CueType", clip.CueType),
+                        context.Builder.ConstantField(source, "EffectKind", CameraEffectKind.Shake),
+                        context.Builder.ConstantField(source, "ResourceId", clip.Shake ? clip.Shake.ShakeId : string.Empty),
                         context.Builder.ConstantField(source, "Intensity", clip.Intensity),
-                        context.Builder.ConstantField(source, "DurationSeconds", clip.DurationSeconds),
                         context.Builder.ConstantField(source, "Priority", clip.Priority)
                     });
             }));
+            registry.Register(new SimpleClipEmitter<CameraOverrideClip>((clip, context) =>
+                DeclareCameraResourceClip(
+                    clip,
+                    context,
+                    CameraEffectKind.Override,
+                    clip.OverrideTrack ? clip.OverrideTrack.TrackId : string.Empty,
+                    clip.OverrideTrack ? clip.OverrideTrack.Priority : 0)));
+            registry.Register(new SimpleClipEmitter<CameraZoomClip>((clip, context) =>
+                DeclareCameraResourceClip(
+                    clip,
+                    context,
+                    CameraEffectKind.Zoom,
+                    clip.Zoom ? clip.Zoom.ZoomId : string.Empty,
+                    clip.Zoom ? clip.Zoom.DataPriority : 0)));
+            registry.Register(new SimpleClipEmitter<CameraStretchClip>((clip, context) =>
+                DeclareCameraResourceClip(
+                    clip,
+                    context,
+                    CameraEffectKind.Stretch,
+                    clip.Stretch ? clip.Stretch.StretchId : string.Empty,
+                    clip.Stretch ? clip.Stretch.DataPriority : 0)));
+            registry.Register(new SimpleClipEmitter<CameraShotClip>((clip, context) =>
+                DeclareCameraResourceClip(
+                    clip,
+                    context,
+                    CameraEffectKind.Shot,
+                    clip.Shot ? clip.Shot.ShotId : string.Empty,
+                    clip.Shot ? clip.Shot.Priority : 0)));
             registry.Register(new SimpleClipEmitter<CameraResponseClip>((clip, context) =>
             {
                 CharacterSimulationSourceLocation source = context.ClipSource(clip);
@@ -611,6 +641,29 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                     });
             }));
             return registry;
+        }
+
+        static OperationHandle DeclareCameraResourceClip(
+            CameraResourceClip clip,
+            CharacterSimulationTimelineEmitterContext context,
+            CameraEffectKind kind,
+            string resourceId,
+            int priority)
+        {
+            CharacterSimulationSourceLocation source = context.ClipSource(clip);
+            return DeclarePresentationClip(
+                clip,
+                context,
+                SimulationOperationCode.TimelineCameraCue,
+                new[]
+                {
+                    context.Builder.ConstantField(source, "EffectKind", kind),
+                    context.Builder.ConstantField(source, "ResourceId", resourceId),
+                    context.Builder.ConstantField(source, "Priority", priority),
+                    context.Builder.ConstantField(source, "WeightCurve", context.BakeCurve(clip, "WeightCurve", clip.WeightCurve)),
+                    context.Builder.ConstantField(source, "EaseInCurve", context.BakeCurve(clip, "EaseInCurve", clip.EaseInCurve)),
+                    context.Builder.ConstantField(source, "EaseOutCurve", context.BakeCurve(clip, "EaseOutCurve", clip.EaseOutCurve))
+                });
         }
 
         static OperationHandle DeclarePresentationClip(

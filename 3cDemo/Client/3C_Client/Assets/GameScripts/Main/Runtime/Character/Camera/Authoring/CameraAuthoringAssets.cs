@@ -661,7 +661,7 @@ namespace ThirdPersonCamera
                 !float.IsFinite(HeightRatio) || HeightRatio <= 0f || !float.IsFinite(PlayerHeight) ||
                 PlayerHeight <= 0f || !float.IsFinite(AngleRange.x) || !float.IsFinite(AngleRange.y) ||
                 AngleRange.x >= AngleRange.y || !float.IsFinite(FieldOfView) || FieldOfView <= 0f ||
-                string.IsNullOrWhiteSpace(BeginCameraDataId) || !DeltaHeightToPitch || !FallbackTwoPoints)
+                string.IsNullOrWhiteSpace(BeginCameraDataId) || !DeltaHeightToPitch || FallbackTwoPoints == null)
                 throw new InvalidOperationException($"{source} contains invalid multiple-point framing.");
             DeltaHeightToPitch.RequireValid();
             FallbackTwoPoints.RequireValid($"{source}.FallbackTwoPoints");

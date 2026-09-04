@@ -74,7 +74,7 @@ Body `_MatCapTex` 至 `_MatCapTex5` 指向同一个引用：fileID 4、PathID `-
 - `NapRenderEntity.RefreshMatCapData`：`0x1C98D2E0`。
 - `NapRenderEntity.RefreshMatCapVectorArrayProperties`：`0x1C98F570`。
 
-这些是入口定位，不是对其内部算法已完成反汇编证明。不能仅凭名字复刻纹理去重、层索引和向量打包。
+后续只读工作已完成这些入口及关键被调方法的定点提取，并补解旧快照中的参数表。最新的已闭合规则与仍有限制的部分见 [MatCap 恢复合同](ZZZ-MatCap恢复合同.md)，包括实际原图、四组数组排列、缓存层号覆盖、mip 复制及按材质/PropertyBlock 写入的边界。该文没有宣称当前游戏一定采用 Simplify 分支。
 
 主 Pass 还依赖 `UnityNapCB`、`_NapEntityGPUData`、角色专用光照、级联/单角色阴影。`SV_Target0..3` 的后级消费和纹理格式尚未恢复。不能把最终颜色以外的三路丢掉后宣称完整还原。
 
@@ -95,3 +95,9 @@ Body `_MatCapTex` 至 `_MatCapTex5` 指向同一个引用：fileID 4、PathID `-
 工具支持本次实际验证的布局；不宣称是通用 Unity Shader / Material 转换器。原始 Shader 的来源证据、工具和 DLL 哈希、各阶段编译诊断保存在 `recovery.json`；字段偏移见 `entry*.bindings.json`；材质完整字段见 `MAT_Corin_*.complete.json`。
 
 常量偏移采用 [Microsoft HLSL packoffset 定义](https://learn.microsoft.com/en-us/windows/win32/direct3dhlsl/dx-graphics-hlsl-variable-packoffset)；多目标输出采用 [Unity Shader semantics 中的 SV_TargetN 定义](https://docs.unity.cn/2022.2/Documentation/Manual/SL-ShaderSemantics.html)。这两项说明语法和绑定合同，不提供 ZZZ 的运行时参数值。
+
+## MatCap 证据工具
+
+- `inspect_zzz_native.py`：必须提供匹配的 PE SHA-256；按 `.pdata` 提取显式指定函数，或对指定的 thunk 槽/目标建立方法身份。不读取活体。
+- `export_zzz_render_metadata.py`：复用原有 829 离线解析器，只导出显式指定的类型到新目录；可补取 MatCap 静态表和已验证 System.String 字面量，保存源文件哈希及每次读取的字节。不重写旧分析包。
+- `export_zzz_container_nodes.ps1`：复用已验证 AnimeStudio mhy1 解码器，只提取指定资源节点，保留输入块、库和节点哈希；原始压缩 mip 数据与 PNG 预览分开。

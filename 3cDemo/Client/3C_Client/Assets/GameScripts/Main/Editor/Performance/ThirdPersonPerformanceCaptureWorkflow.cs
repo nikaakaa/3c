@@ -366,26 +366,13 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             Directory.CreateDirectory(candidate);
             string executable = Path.Combine(candidate, "ThirdPersonPerformancePlayer.exe");
             ScriptingImplementation backend = PlayerSettings.GetScriptingBackend(BuildTargetGroup.Standalone);
-            string previousDefines = PlayerSettings.GetScriptingDefineSymbolsForGroup(BuildTargetGroup.Standalone);
-            string previousInputPath = Environment.GetEnvironmentVariable(
-                PerformanceInstrumentationBuildInput.EnvironmentVariable);
-            string previousManifestDirectory = Environment.GetEnvironmentVariable(
-                PerformanceInstrumentationBuildInput.ManifestDirectoryEnvironmentVariable);
             try
             {
                 ThirdPersonPerformanceInstrumentationCatalog.WriteBuildInput(
                     instrumentationInputPath,
+                    instrumentationManifestDirectory,
                     instrumentationMode,
                     ThirdPersonPerformanceInstrumentationCatalog.AssemblyNames);
-                PlayerSettings.SetScriptingDefineSymbolsForGroup(
-                    BuildTargetGroup.Standalone,
-                    AddDefine(previousDefines, PerformanceInstrumentationIdentity.Define));
-                Environment.SetEnvironmentVariable(
-                    PerformanceInstrumentationBuildInput.EnvironmentVariable,
-                    instrumentationInputPath);
-                Environment.SetEnvironmentVariable(
-                    PerformanceInstrumentationBuildInput.ManifestDirectoryEnvironmentVariable,
-                    instrumentationManifestDirectory);
                 PlayerSettings.SetScriptingBackend(BuildTargetGroup.Standalone, ScriptingImplementation.IL2CPP);
                 var options = new BuildPlayerOptions
                 {
@@ -393,7 +380,8 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                     locationPathName = executable,
                     target = BuildTarget.StandaloneWindows64,
                     targetGroup = BuildTargetGroup.Standalone,
-                    options = BuildOptions.Development | BuildOptions.StrictMode
+                    options = BuildOptions.Development | BuildOptions.StrictMode,
+                    extraScriptingDefines = PerformanceInstrumentationBuildInput.CreateBuildDefines(instrumentationInputPath)
                 };
                 BuildReport report;
                 using (ProductBuildValidationContext.Enter(ProductBuildKind.PerformancePlayer))
@@ -480,15 +468,6 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             }
             finally
             {
-                PlayerSettings.SetScriptingDefineSymbolsForGroup(
-                    BuildTargetGroup.Standalone,
-                    previousDefines);
-                Environment.SetEnvironmentVariable(
-                    PerformanceInstrumentationBuildInput.EnvironmentVariable,
-                    previousInputPath);
-                Environment.SetEnvironmentVariable(
-                    PerformanceInstrumentationBuildInput.ManifestDirectoryEnvironmentVariable,
-                    previousManifestDirectory);
                 if (PlayerSettings.GetScriptingBackend(BuildTargetGroup.Standalone) != backend)
                     PlayerSettings.SetScriptingBackend(BuildTargetGroup.Standalone, backend);
             }
@@ -805,18 +784,6 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                 variant.SolverId,
                 instrumentationIdentity,
                 instrumentationMode.ToString());
-        }
-
-        static string AddDefine(string current, string define)
-        {
-            string[] values = (current ?? string.Empty)
-                .Split(new[] { ';' }, StringSplitOptions.RemoveEmptyEntries)
-                .Select(value => value.Trim())
-                .Where(value => value.Length > 0)
-                .ToArray();
-            if (values.Contains(define, StringComparer.Ordinal))
-                return string.Join(";", values);
-            return string.Join(";", values.Concat(new[] { define }));
         }
 
         static void CopyScenarioClosure(string source, string destination)

@@ -11,10 +11,8 @@ namespace ThirdPersonPerformance.Instrumentation.Editor
 {
     public sealed class PerformanceInstrumentationBuildInput
     {
-        public const string EnvironmentVariable = "THIRDPERSON_PERFORMANCE_INSTRUMENTATION_INPUT";
-        public const string ManifestDirectoryEnvironmentVariable =
-            "THIRDPERSON_PERFORMANCE_INSTRUMENTATION_MANIFEST_DIR";
-        public const string Schema = "third-person-performance-instrumentation-build/1";
+        const string InputDefinePrefix = "THIRDPERSON_PERFORMANCE_INPUT_";
+        public const string Schema = "third-person-performance-instrumentation-build/2";
 
         readonly HashSet<string> m_Assemblies;
         readonly Dictionary<string, PerformanceInstrumentationMetricDescriptor> m_Metrics;
@@ -63,13 +61,14 @@ namespace ThirdPersonPerformance.Instrumentation.Editor
                 catalogRevision ?? string.Empty,
                 assemblies ?? Array.Empty<string>(),
                 metrics ?? Array.Empty<PerformanceInstrumentationMetricDescriptor>(),
-                Environment.GetEnvironmentVariable(ManifestDirectoryEnvironmentVariable));
+                string.Empty);
             input.Validate();
             return input;
         }
 
         public static void Write(
             string path,
+            string manifestDirectory,
             PerformanceInstrumentationMode mode,
             string catalogRevision,
             IEnumerable<string> assemblies,
@@ -85,7 +84,8 @@ namespace ThirdPersonPerformance.Instrumentation.Editor
                 "schema=" + Schema,
                 "mode=" + input.Mode,
                 "catalog_revision=" + input.CatalogRevision,
-                "identity=" + input.Identity
+                "identity=" + input.Identity,
+                "manifest_directory=" + Path.GetFullPath(manifestDirectory)
             };
             lines.AddRange(input.m_Assemblies.OrderBy(value => value, StringComparer.Ordinal)
                 .Select(value => "assembly=" + value));
@@ -104,18 +104,34 @@ namespace ThirdPersonPerformance.Instrumentation.Editor
             File.WriteAllText(fullPath, string.Join("\n", lines) + "\n", new UTF8Encoding(false));
         }
 
+        public static string[] CreateBuildDefines(string path)
+        {
+            byte[] bytes = Encoding.UTF8.GetBytes(Path.GetFullPath(path));
+            var builder = new StringBuilder(InputDefinePrefix);
+            for (int i = 0; i < bytes.Length; i++)
+                builder.Append(bytes[i].ToString("x2", CultureInfo.InvariantCulture));
+            return new[] { PerformanceInstrumentationIdentity.Define, builder.ToString() };
+        }
+
         public static bool TryLoad(
+            string[] defines,
             out PerformanceInstrumentationBuildInput input,
             out string error)
         {
             input = null;
             error = string.Empty;
-            string path = Environment.GetEnvironmentVariable(EnvironmentVariable);
-            if (string.IsNullOrWhiteSpace(path))
+            string[] inputDefines = defines.Where(value =>
+                value.StartsWith(InputDefinePrefix, StringComparison.Ordinal)).ToArray();
+            if (inputDefines.Length != 1)
             {
-                error = $"Environment variable '{EnvironmentVariable}' is missing.";
+                error = "Performance compilation requires exactly one explicit build input define.";
                 return false;
             }
+            string encodedPath = inputDefines[0].Substring(InputDefinePrefix.Length);
+            var pathBytes = new byte[encodedPath.Length / 2];
+            for (int i = 0; i < pathBytes.Length; i++)
+                pathBytes[i] = byte.Parse(encodedPath.Substring(i * 2, 2), NumberStyles.HexNumber, CultureInfo.InvariantCulture);
+            string path = Encoding.UTF8.GetString(pathBytes);
             if (!File.Exists(path))
             {
                 error = $"Performance instrumentation build input does not exist: {path}";
@@ -126,7 +142,7 @@ namespace ThirdPersonPerformance.Instrumentation.Editor
             string mode = string.Empty;
             string catalogRevision = string.Empty;
             string identity = string.Empty;
-            string manifestDirectory = Environment.GetEnvironmentVariable(ManifestDirectoryEnvironmentVariable);
+            string manifestDirectory = string.Empty;
             var assemblies = new List<string>();
             var metrics = new List<PerformanceInstrumentationMetricDescriptor>();
             string[] lines = File.ReadAllLines(path, Encoding.UTF8);
@@ -156,6 +172,9 @@ namespace ThirdPersonPerformance.Instrumentation.Editor
                         break;
                     case "identity":
                         identity = value;
+                        break;
+                    case "manifest_directory":
+                        manifestDirectory = value;
                         break;
                     case "assembly":
                         assemblies.Add(value);
@@ -203,7 +222,7 @@ namespace ThirdPersonPerformance.Instrumentation.Editor
                 input.Validate();
                 if (string.IsNullOrWhiteSpace(input.ManifestDirectory))
                 {
-                    error = $"Environment variable '{ManifestDirectoryEnvironmentVariable}' is missing.";
+                    error = "Performance build input manifest directory is missing.";
                     input = null;
                     return false;
                 }

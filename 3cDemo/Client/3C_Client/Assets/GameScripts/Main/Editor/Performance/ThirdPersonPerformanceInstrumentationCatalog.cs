@@ -75,10 +75,12 @@ namespace ThirdPersonPerformance.Editor
 
         public static void WriteBuildInput(
             string path,
+            string manifestDirectory,
             PerformanceInstrumentationMode mode,
             IReadOnlyList<string> assemblies) =>
             PerformanceInstrumentationBuildInput.Write(
                 path,
+                manifestDirectory,
                 mode,
                 Revision,
                 assemblies,

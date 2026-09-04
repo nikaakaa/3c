@@ -55,6 +55,7 @@ namespace ThirdPersonPerformance.Instrumentation.Editor
                     if (targets.Count == 0)
                         return Original(peData, pdbData, diagnostics);
                     if (!PerformanceInstrumentationBuildInput.TryLoad(
+                        compiledAssembly.Defines,
                         out PerformanceInstrumentationBuildInput input,
                         out string inputError))
                     {

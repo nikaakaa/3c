@@ -154,9 +154,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             Vector3 originalSole =
                 CharacterFootConstraintMath.ResolveOriginalSole(
                     frame.AnimatedFoot);
-            bool releaseContactHandoff =
-                state.PendingReleaseResponseRebase &&
-                state.HasPreviousResponseOutputPoint;
             CharacterFootSupportIntent supportIntent = target.SupportIntent;
             CharacterFootInterpolationResult swing = EvaluateSwing(
                 ref state,
@@ -205,12 +202,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     releaseResponseRebase;
                 currentOutputBefore -= releaseResponseRebaseVector;
                 state.PendingReleaseResponseRebase = false;
-            }
-            if (releaseContactHandoff)
-            {
-                currentOutputBefore =
-                    Vector3.ProjectOnPlane(originalSole + swing.Correction, up) +
-                    up * Vector3.Dot(currentOutputBefore, up);
             }
             Vector3 effectiveCorrectionBefore =
                 currentOutputBefore - originalSole;

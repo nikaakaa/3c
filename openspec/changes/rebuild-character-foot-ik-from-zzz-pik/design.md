@@ -154,8 +154,8 @@ CalculateFootTarget 中另有 `k=clamp01((1-pelvisIkWeight)×IKWeight)`：候选
 | 67–70 DoCalculateTarget 至 FinalizeFootIk | 方向、标量、位置／旋转、控制量和收尾 | 唯一脚响应、目标编码与状态提交准备 |
 | 71–75 Min／MaxHipsDelta 与三种骨盆入口 | 两脚候选、模式、响应、查询、权重和骨盆输出 | 唯一骨盆模块 |
 | 76、区域 OnUpdate／FindNextSegmentIndex | 单脚状态、事件、时间与作者脚点 | 正式区域输入与事件应用 |
-| 00–18、43–45、77–81 | 构造／绑定／参数 setter／重置／启停／Update 与调用壳 | Profile、Rig、生命周期与宿主适配；原内部算法不遗漏 |
-| 19–42、46、51及绘制分支 | 调试 accessor、选脚观察与绘制 | 映射现有只读 Diagnostics；不移植第二运行组件 |
+| 00–16、43–45、77–81 | 构造／绑定／参数 setter／重置／启停／Update 与调用壳 | Profile、Rig、生命周期与宿主适配；原内部算法不遗漏 |
+| 17–42、46、51及绘制分支 | 调试 accessor、选脚观察与绘制 | 映射现有只读 Diagnostics；不移植第二运行组件 |
 
 82 方法逐项 disposition 必须展开在同一 design 的实施对账记录中，不能仅靠组表把未翻译函数标为完成。
 
@@ -273,3 +273,96 @@ Corin效果对账沿用现有Replay和诊断程序，保存逐脚穿透、接触
 ## Open Questions
 
 没有待选的替代算法方向：用户已选择完整复刻。第8节的具体资料恢复、复杂函数翻译和最终消费核对必须完成；取得与本文不同的原始证据时，先修正文档与对应任务，不凭猜测维持旧结论。
+
+## 实施对账：82个原方法
+
+2026-09-04 展开任务1.4。下表只表示每个方法的迁移归属与已知缺项，不表示其算法已经实现。签名、RVA和指令数来自E1的命名阅读版与方法JSON；入参中的引用属性继续以原签名为准。错误／热替换／运行壳按design既定边界处理，表内“待迁移”包含对应普通计算分支与必要外部primitive；不可从函数存在推断动态分支已覆盖。
+
+原列表17／18也是Pelvis调试accessor，故调试范围为17–42；00–16是参数／初始化接口。分类纠正不改变运行代码。
+
+| 序号 | 原方法签名／证据 | 指令数 | 输入 → 输出 | 计划Owner与状态写入 | 当前缺项 |
+|---:|---|---:|---|---|---|
+| 0 | [void .ctor()](D:/ZZZ_Dump/PIK分析包/源码重建/真名阅读版/methods/00__ctor_171DBD10.asm) | 48 | 公开初值与构造常量 → 初始化后的实例参数 | Profile／Foot初始化；写实例初值 | 原初值、数组与初始化分支待迁移 |
+| 1 | [void .cctor()](D:/ZZZ_Dump/PIK分析包/源码重建/真名阅读版/methods/01__cctor_171DBE60.asm) | 15 | 静态常量／缓存定义 → 类静态初始状态 | 固定参数与有界共享资源初始化 | 原静态写入需逐项归属，不复制全局可变Foot状态 |
+| 2 | [float get_RealRayCastHeight()](D:/ZZZ_Dump/PIK分析包/源码重建/真名阅读版/methods/02_get_RealRayCastHeight_171CD970.asm) | 60 | 查询高度状态／平台状态 → 普通查询高度 | 查询参数；只读有效配置 | 场景／平台分支待迁移 |
+| 3 | [float get_RealPredictRayCastHeight()](D:/ZZZ_Dump/PIK分析包/源码重建/真名阅读版/methods/03_get_RealPredictRayCastHeight_171CDA70.asm) | 60 | 查询高度状态／平台状态 → 预测查询高度 | 查询参数；只读有效配置 | 场景／平台分支待迁移 |
+| 4 | [float get_IKWeight()](D:/ZZZ_Dump/PIK分析包/源码重建/真名阅读版/methods/04_get_IKWeight_171CDB70.asm) | 2 | 实例IKWeight → float | 正式表现参数；只读 | 值来源与绑定待接入 |
+| 5 | [void set_IKWeight(float value)](D:/ZZZ_Dump/PIK分析包/源码重建/真名阅读版/methods/05_set_IKWeight_171CDB80.asm) | 2 | value → IKWeight | 正式表现参数；写IKWeight | 原setter调用来源待接入 |
+| 6 | [Vector3 get_HipDelta()](D:/ZZZ_Dump/PIK分析包/源码重建/真名阅读版/methods/06_get_HipDelta_171CDB90.asm) | 6 | 实例HipDelta → Vector3 | Foot公共结果／状态；只读 | 原消费者待对账 |
+| 7 | [void set_HipDelta(Vector3 value)](D:/ZZZ_Dump/PIK分析包/源码重建/真名阅读版/methods/07_set_HipDelta_171CDBB0.asm) | 5 | value → HipDelta | Foot公共状态；写HipDelta | 原调用者与消费顺序待对账 |
+| 8 | [void set_DisableDamping(bool value)](D:/ZZZ_Dump/PIK分析包/源码重建/真名阅读版/methods/08_set_DisableDamping_171CDBD0.asm) | 2 | value → disableDamping | 原一次性命令；写disableDamping | 原触发者及脚／骨盆消费顺序待接入 |
+| 9 | [void set_IsOnMovingPlatform(bool value)](D:/ZZZ_Dump/PIK分析包/源码重建/真名阅读版/methods/09_set_IsOnMovingPlatform_171CDBE0.asm) | 87 | value／原平台状态 → 平台及逐脚离开记录 | 平台输入应用；写平台与查询状态 | 保留20条补回指令对应的离开分支 |
+| 10 | [bool get_EnableLockFootReal()](D:/ZZZ_Dump/PIK分析包/源码重建/真名阅读版/methods/10_get_EnableLockFootReal_171CDD30.asm) | 27 | EnableLockFoot／isOnMovingPlatform → bool | 脚锁门控；只读 | 按原getter接入，不等同区域isLocking |
+| 11 | [void set_EnablePelvisIkRot(bool value)](D:/ZZZ_Dump/PIK分析包/源码重建/真名阅读版/methods/11_set_EnablePelvisIkRot_171CDD90.asm) | 2 | value → enablePelvisIkRotTarget | 骨盆参数；写旋转目标开关 | 目标到当前状态推进待接入 |
+| 12 | [void set_PelvisIkWeight(float value)](D:/ZZZ_Dump/PIK分析包/源码重建/真名阅读版/methods/12_set_PelvisIkWeight_171CDDA0.asm) | 2 | value → pelvisIkWeightTarget | 骨盆参数；写权重目标 | Prepare内当前权重响应待接入 |
+| 13 | [void set_PelvisCastDist(float value)](D:/ZZZ_Dump/PIK分析包/源码重建/真名阅读版/methods/13_set_PelvisCastDist_171CDDB0.asm) | 2 | value → pelvisCastDist | 骨盆参数；写查询距离 | 原调用来源与查询消费待接入 |
+| 14 | [void SetStateDependParams(bool enableStrideWrapping, float footOnGroundHeight, float footOffGroundHeight, float footUpVelocityLimit, float footDownVelocityLimit, float pelvisUpVelLimit, float pelvisDownVelLimit)](D:/ZZZ_Dump/PIK分析包/源码重建/真名阅读版/methods/14_SetStateDependParams_171CDDC0.asm) | 53 | 七个显式参数 → 当前状态参数 | Tuning应用；写当前七项 | 独立于默认参数；原调用来源待接入 |
+| 15 | [ValueTuple<bool, float, float, float, float, float, float> GetStateDependParams()](D:/ZZZ_Dump/PIK分析包/源码重建/真名阅读版/methods/15_GetStateDependParams_171CDEF0.asm) | 44 | 当前七项 → 原七元素tuple | Tuning读取；只读 | 原tuple字段顺序与调用者待对账 |
+| 16 | [void ResetStateDependParams()](D:/ZZZ_Dump/PIK分析包/源码重建/真名阅读版/methods/16_ResetStateDependParams_171CDFB0.asm) | 25 | 公开默认七项 → 当前状态七项 | 参数重置；写当前七项 | 仅原字段恢复，不清理其它Foot历史 |
+| 17 | [bool get_EnablePelvisDebug()](D:/ZZZ_Dump/PIK分析包/源码重建/真名阅读版/methods/17_get_EnablePelvisDebug_171CE020.asm) | 2 | EnablePelvisDebug → 原返回类型 | 现有只读诊断／视图设置；不写Foot业务历史 | 只读观察映射未接入 |
+| 18 | [void set_EnablePelvisDebug(bool value)](D:/ZZZ_Dump/PIK分析包/源码重建/真名阅读版/methods/18_set_EnablePelvisDebug_171CE030.asm) | 2 | value → EnablePelvisDebug | 现有只读诊断／视图设置；不写Foot业务历史 | 调试设置映射未接入；不新增运行参数 |
+| 19 | [bool get_EnableLockFootDebug()](D:/ZZZ_Dump/PIK分析包/源码重建/真名阅读版/methods/19_get_EnableLockFootDebug_171CE040.asm) | 2 | EnableLockFootDebug → 原返回类型 | 现有只读诊断／视图设置；不写Foot业务历史 | 只读观察映射未接入 |
+| 20 | [void set_EnableLockFootDebug(bool value)](D:/ZZZ_Dump/PIK分析包/源码重建/真名阅读版/methods/20_set_EnableLockFootDebug_171CE050.asm) | 2 | value → EnableLockFootDebug | 现有只读诊断／视图设置；不写Foot业务历史 | 调试设置映射未接入；不新增运行参数 |
+| 21 | [bool get_EnableFootMovingDebug()](D:/ZZZ_Dump/PIK分析包/源码重建/真名阅读版/methods/21_get_EnableFootMovingDebug_171CE060.asm) | 2 | EnableFootMovingDebug → 原返回类型 | 现有只读诊断／视图设置；不写Foot业务历史 | 只读观察映射未接入 |
+| 22 | [void set_EnableFootMovingDebug(bool value)](D:/ZZZ_Dump/PIK分析包/源码重建/真名阅读版/methods/22_set_EnableFootMovingDebug_171CE070.asm) | 2 | value → EnableFootMovingDebug | 现有只读诊断／视图设置；不写Foot业务历史 | 调试设置映射未接入；不新增运行参数 |
+| 23 | [bool get_EnableOrdinaryHitGroundDebug()](D:/ZZZ_Dump/PIK分析包/源码重建/真名阅读版/methods/23_get_EnableOrdinaryHitGroundDebug_171CE080.asm) | 2 | EnableOrdinaryHitGroundDebug → 原返回类型 | 现有只读诊断／视图设置；不写Foot业务历史 | 只读观察映射未接入 |
+| 24 | [void set_EnableOrdinaryHitGroundDebug(bool value)](D:/ZZZ_Dump/PIK分析包/源码重建/真名阅读版/methods/24_set_EnableOrdinaryHitGroundDebug_171CE090.asm) | 2 | value → EnableOrdinaryHitGroundDebug | 现有只读诊断／视图设置；不写Foot业务历史 | 调试设置映射未接入；不新增运行参数 |
+| 25 | [bool get_EnablePikHitGroundDebug()](D:/ZZZ_Dump/PIK分析包/源码重建/真名阅读版/methods/25_get_EnablePikHitGroundDebug_171CE0A0.asm) | 2 | EnablePikHitGroundDebug → 原返回类型 | 现有只读诊断／视图设置；不写Foot业务历史 | 只读观察映射未接入 |
+| 26 | [void set_EnablePikHitGroundDebug(bool value)](D:/ZZZ_Dump/PIK分析包/源码重建/真名阅读版/methods/26_set_EnablePikHitGroundDebug_171CE0B0.asm) | 2 | value → EnablePikHitGroundDebug | 现有只读诊断／视图设置；不写Foot业务历史 | 调试设置映射未接入；不新增运行参数 |
+| 27 | [bool get_EnableFinalHitGroundDebug()](D:/ZZZ_Dump/PIK分析包/源码重建/真名阅读版/methods/27_get_EnableFinalHitGroundDebug_171CE0C0.asm) | 2 | EnableFinalHitGroundDebug → 原返回类型 | 现有只读诊断／视图设置；不写Foot业务历史 | 只读观察映射未接入 |
+| 28 | [void set_EnableFinalHitGroundDebug(bool value)](D:/ZZZ_Dump/PIK分析包/源码重建/真名阅读版/methods/28_set_EnableFinalHitGroundDebug_171CE0D0.asm) | 2 | value → EnableFinalHitGroundDebug | 现有只读诊断／视图设置；不写Foot业务历史 | 调试设置映射未接入；不新增运行参数 |
+| 29 | [bool get_EnableTargetDebug()](D:/ZZZ_Dump/PIK分析包/源码重建/真名阅读版/methods/29_get_EnableTargetDebug_171CE0E0.asm) | 2 | EnableTargetDebug → 原返回类型 | 现有只读诊断／视图设置；不写Foot业务历史 | 只读观察映射未接入 |
+| 30 | [void set_EnableTargetDebug(bool value)](D:/ZZZ_Dump/PIK分析包/源码重建/真名阅读版/methods/30_set_EnableTargetDebug_171CE0F0.asm) | 2 | value → EnableTargetDebug | 现有只读诊断／视图设置；不写Foot业务历史 | 调试设置映射未接入；不新增运行参数 |
+| 31 | [bool get_EnableRaycastDebug()](D:/ZZZ_Dump/PIK分析包/源码重建/真名阅读版/methods/31_get_EnableRaycastDebug_171CE100.asm) | 2 | EnableRaycastDebug → 原返回类型 | 现有只读诊断／视图设置；不写Foot业务历史 | 只读观察映射未接入 |
+| 32 | [void set_EnableRaycastDebug(bool value)](D:/ZZZ_Dump/PIK分析包/源码重建/真名阅读版/methods/32_set_EnableRaycastDebug_171CE110.asm) | 2 | value → EnableRaycastDebug | 现有只读诊断／视图设置；不写Foot业务历史 | 调试设置映射未接入；不新增运行参数 |
+| 33 | [bool get_EnableAnimDebug()](D:/ZZZ_Dump/PIK分析包/源码重建/真名阅读版/methods/33_get_EnableAnimDebug_171CE120.asm) | 2 | EnableAnimDebug → 原返回类型 | 现有只读诊断／视图设置；不写Foot业务历史 | 只读观察映射未接入 |
+| 34 | [void set_EnableAnimDebug(bool value)](D:/ZZZ_Dump/PIK分析包/源码重建/真名阅读版/methods/34_set_EnableAnimDebug_171CE130.asm) | 2 | value → EnableAnimDebug | 现有只读诊断／视图设置；不写Foot业务历史 | 调试设置映射未接入；不新增运行参数 |
+| 35 | [bool get_EnablePIKDrawDebug()](D:/ZZZ_Dump/PIK分析包/源码重建/真名阅读版/methods/35_get_EnablePIKDrawDebug_171CE140.asm) | 2 | EnablePIKDrawDebug → 原返回类型 | 现有只读诊断／视图设置；不写Foot业务历史 | 只读观察映射未接入 |
+| 36 | [void set_EnablePIKDrawDebug(bool value)](D:/ZZZ_Dump/PIK分析包/源码重建/真名阅读版/methods/36_set_EnablePIKDrawDebug_171CE150.asm) | 2 | value → EnablePIKDrawDebug | 现有只读诊断／视图设置；不写Foot业务历史 | 调试设置映射未接入；不新增运行参数 |
+| 37 | [bool get_EnablePredictiveMovingDebug()](D:/ZZZ_Dump/PIK分析包/源码重建/真名阅读版/methods/37_get_EnablePredictiveMovingDebug_171CE160.asm) | 2 | EnablePredictiveMovingDebug → 原返回类型 | 现有只读诊断／视图设置；不写Foot业务历史 | 只读观察映射未接入 |
+| 38 | [void set_EnablePredictiveMovingDebug(bool value)](D:/ZZZ_Dump/PIK分析包/源码重建/真名阅读版/methods/38_set_EnablePredictiveMovingDebug_171CE170.asm) | 2 | value → EnablePredictiveMovingDebug | 现有只读诊断／视图设置；不写Foot业务历史 | 调试设置映射未接入；不新增运行参数 |
+| 39 | [float get_GizmosLastTime()](D:/ZZZ_Dump/PIK分析包/源码重建/真名阅读版/methods/39_get_GizmosLastTime_171CE180.asm) | 2 | GizmosLastTime → 原返回类型 | 现有只读诊断／视图设置；不写Foot业务历史 | 只读观察映射未接入 |
+| 40 | [void set_GizmosLastTime(float value)](D:/ZZZ_Dump/PIK分析包/源码重建/真名阅读版/methods/40_set_GizmosLastTime_171CE190.asm) | 2 | value → GizmosLastTime | 现有只读诊断／视图设置；不写Foot业务历史 | 调试设置映射未接入；不新增运行参数 |
+| 41 | [int get_FootIndexToWatch()](D:/ZZZ_Dump/PIK分析包/源码重建/真名阅读版/methods/41_get_FootIndexToWatch_171CE1A0.asm) | 2 | FootIndexToWatch → 原返回类型 | 现有只读诊断／视图设置；不写Foot业务历史 | 只读观察映射未接入 |
+| 42 | [void set_FootIndexToWatch(int value)](D:/ZZZ_Dump/PIK分析包/源码重建/真名阅读版/methods/42_set_FootIndexToWatch_171CE1B0.asm) | 2 | value → FootIndexToWatch | 现有只读诊断／视图设置；不写Foot业务历史 | 调试设置映射未接入；不新增运行参数 |
+| 43 | [void Initialize()](D:/ZZZ_Dump/PIK分析包/源码重建/真名阅读版/methods/43_Initialize_171CE1C0.asm) | 944 | 骨骼／Animage／配置 → 绑定、缓存和初始化结果 | Rig绑定与Foot初始化 | 944条指令的绑定／退化／外部接口待迁移 |
+| 44 | [void InitializeFootLockState()](D:/ZZZ_Dump/PIK分析包/源码重建/真名阅读版/methods/44_InitializeFootLockState_171CF3E0.asm) | 193 | 初始骨骼／实例记录 → FootLockInfo及相应初值 | Foot初始化；写原脚锁记录 | 默认记录与初始化位置待核对 |
+| 45 | [void InitSceneDependParams()](D:/ZZZ_Dump/PIK分析包/源码重建/真名阅读版/methods/45_InitSceneDependParams_171CF760.asm) | 107 | 场景条件／默认高度 → 生效查询参数 | 场景参数应用 | 48条补回指令及原场景分支待迁移 |
+| 46 | [bool DebugFocusedFoot(int footIndex)](D:/ZZZ_Dump/PIK分析包/源码重建/真名阅读版/methods/46_DebugFocusedFoot_171CF960.asm) | 30 | 调试选择 → 是否关注当前实例／脚 | 现有只读诊断选择 | 不进入脚目标算法；原显示能力另行映射 |
+| 47 | [void ApplyPlayerMotion()](D:/ZZZ_Dump/PIK分析包/源码重建/真名阅读版/methods/47_ApplyPlayerMotion_171CF9C0.asm) | 86 | Owner世界高度／lastHeight → isMoving、isRaising、lastHeight | Foot实例运动；写运动历史 | 对象绑定、死区、保留isRaising分支待迁移 |
+| 48 | [void Prepare()](D:/ZZZ_Dump/PIK分析包/源码重建/真名阅读版/methods/48_Prepare_171CFB80.asm) | 581 | 动画／运动／当前参数 → 本轮脚与骨盆输入、当前权重 | Foot输入准备；写原准备状态 | 581条指令、原骨骼读取与权重响应待迁移 |
+| 49 | [Vector3 CalculatePredictFootTarget(int footIndex)](D:/ZZZ_Dump/PIK分析包/源码重建/真名阅读版/methods/49_CalculatePredictFootTarget_171D0650.asm) | 442 | 脚点／时间／运动／几何 → 预测脚目标 | Foot预测计算 | 442条指令及原坐标／预测移动分支待迁移 |
+| 50 | [void PredictFoot(int currentFootIdx)](D:/ZZZ_Dump/PIK分析包/源码重建/真名阅读版/methods/50_PredictFoot_171D0EE0.asm) | 564 | 单脚PredictState／运动／查询 → 原预测记录 | Foot预测更新；写PredictState | 564条指令、记录／平台／enablePIK分支待迁移 |
+| 51 | [void PredictDrawDebug()](D:/ZZZ_Dump/PIK分析包/源码重建/真名阅读版/methods/51_PredictDrawDebug_171D1B70.asm) | 37 | 预测记录／显示开关 → 调试绘制 | 现有只读诊断视图 | 不建立运行组件；16条补回指令仅作为显示依据 |
+| 52 | [bool IsInPIKState(float& stateIKWeight)](D:/ZZZ_Dump/PIK分析包/源码重建/真名阅读版/methods/52_IsInPIKState_171D1BF0.asm) | 158 | 原状态／PIK标签／过渡／平台 → bool及stateIKWeight | 模式计算；写返回权重 | 四类过渡及原bool返回判据待接入 |
+| 53 | [bool PreprocessPredictionIK(float& pIkWeight)](D:/ZZZ_Dump/PIK分析包/源码重建/真名阅读版/methods/53_PreprocessPredictionIK_171D1EB0.asm) | 79 | 状态／pIkWeight／EnablePIKWarp → needPIK及逐脚enablePIK | 模式准备；条件调用PredictFoot | 原调用、清理及权重淡出分支待迁移 |
+| 54 | [bool CrossCheck()](D:/ZZZ_Dump/PIK分析包/源码重建/真名阅读版/methods/54_CrossCheck_171D1FB0.asm) | 96 | 原双脚几何／配置 → CrossCheck结果 | 交叉判断；只读本轮输入 | 96条指令的原判断待迁移 |
+| 55 | [void LockFoot(int footIndex, Vector3 footPosLocal, bool isCross, Vector3& footLockXZLocalOffset)](D:/ZZZ_Dump/PIK分析包/源码重建/真名阅读版/methods/55_LockFoot_171D2160.asm) | 444 | 单脚几何／PIK／阻塞／锁定参数 → 锁脚位置及FootLockInfo | 原脚锁更新；写单脚锁记录 | 444条指令、进入／保持／退出及坐标待迁移 |
+| 56 | [void PreprocessAnimPos(int footIndex, bool needPIK, bool isCross, float pIkWeight)](D:/ZZZ_Dump/PIK分析包/源码重建/真名阅读版/methods/56_PreprocessAnimPos_171D29C0.asm) | 212 | footIndex／needPIK／isCross／pIkWeight → 锁脚后Foot／Toe输入 | 单脚预处理；写本轮缓存 | 原LockFoot调用门和212条指令待迁移 |
+| 57 | [float HipHeightLiftingDelta(float straightestLegLength, Vector3 rootJointPos, Vector3 endJointPos)](D:/ZZZ_Dump/PIK分析包/源码重建/真名阅读版/methods/57_HipHeightLiftingDelta_171D2DB0.asm) | 100 | 原脚几何／当前参数 → 抬升高度结果 | 脚几何候选 | 100条指令含24条补回指令待迁移 |
+| 58 | [ValueTuple<float, bool> HipHeightLiftingDeltaByMinDist(int footIndex, float shortestAllowableDist, Vector3 rootJointPos, Vector3 endJointPos)](D:/ZZZ_Dump/PIK分析包/源码重建/真名阅读版/methods/58_HipHeightLiftingDeltaByMinDist_171D2F40.asm) | 149 | 脚编号／最小距／骨盆及目标 → 腿距抬升候选 | 脚几何候选；供骨盆消费 | 原有效性／距离分支待迁移 |
+| 59 | [bool IsFootMoving(int footIndex, Vector3 footPos, Vector3& posDelta)](D:/ZZZ_Dump/PIK分析包/源码重建/真名阅读版/methods/59_IsFootMoving_171D31A0.asm) | 273 | 本轮／上次脚输入及门控 → 是否移动与原输出参数 | 普通查询门 | 273条指令、缓存／阈值／平台分支待迁移 |
+| 60 | [RaycastHit GetRaycastHit(Vector3 startPoint, float castDistance)](D:/ZZZ_Dump/PIK分析包/源码重建/真名阅读版/methods/60_GetRaycastHit_171D3680.asm) | 88 | startPoint／castDistance／层 → 原RaycastHit | 唯一世界查询adapter | 原生重载、过滤及无命中语义待核对 |
+| 61 | [Vector3 GetDeltaFromRigidbodyToTransform(Transform transform, Rigidbody rigidbody)](D:/ZZZ_Dump/PIK分析包/源码重建/真名阅读版/methods/61_GetDeltaFromRigidbodyToTransform_171D3830.asm) | 150 | 原Rigidbody与Transform及命中 → 对应位置差量 | 世界输入／几何primitive | 150条指令、对象与坐标绑定待迁移 |
+| 62 | [void HitGround(int footIndex, Vector3 footGlobalPos, Quaternion footGlobalRot, Vector3 toeGlobalPos, float castHeight, Vector3& hitPos, Vector3& hitNormal)](D:/ZZZ_Dump/PIK分析包/源码重建/真名阅读版/methods/62_HitGround_171D19A0.asm) | 101 | Foot／Toe／高度／质量配置 → hitPos、hitNormal | 查询分派；只选择原明确模式 | 完整／低质量两分支待接入 |
+| 63 | [void HitGroundSimpleImpl(int footIndex, Vector3 footGlobalPos, Quaternion footGlobalRot, Vector3 toeGlobalPos, float castHeight, Vector3& hitPos, Vector3& hitNormal)](D:/ZZZ_Dump/PIK分析包/源码重建/真名阅读版/methods/63_HitGroundSimpleImpl_171D3B40.asm) | 803 | 原多点实参与查询结果 → 简化模式支撑位置／方向 | 普通地面几何 | 803条指令的组合／退化／无命中出口待翻译 |
+| 64 | [void HitGroundImpl(int footIndex, Vector3 footGlobalPos, Quaternion footGlobalRot, Vector3 toeGlobalPos, float castHeight, Vector3& hitPos, Vector3& hitNormal)](D:/ZZZ_Dump/PIK分析包/源码重建/真名阅读版/methods/64_HitGroundImpl_171D4BA0.asm) | 1237 | 原多点实参与查询结果 → 完整模式支撑位置／方向 | 普通地面几何 | 1237条指令的组合／退化／无命中出口待翻译 |
+| 65 | [ValueTuple<Vector3, Vector3> OrdinaryIkHitGround(int footIndex)](D:/ZZZ_Dump/PIK分析包/源码重建/真名阅读版/methods/65_OrdinaryIkHitGround_171D65E0.asm) | 173 | 单脚输入／是否移动／历史 → 普通支撑位置／方向 | 普通支撑计算与缓存 | 重新查询、缓存使用与出口待迁移 |
+| 66 | [ValueTuple<Vector3, Vector3> PredictIkHitGround(int footIndex, bool needPIK, Vector3 ordinaryHitPos, Vector3 ordinaryHitNormal)](D:/ZZZ_Dump/PIK分析包/源码重建/真名阅读版/methods/66_PredictIkHitGround_171D6920.asm) | 819 | 普通支撑／needPIK／PredictState → 预测支撑与记录历史 | 预测支撑与高度历史 | 接触极性／3倍阈值已核对；819条指令整体待迁移 |
+| 67 | [void DoCalculateTarget(int footIndex, Vector3 hitPos, Vector3 hitNormal, Vector3& targetPos, Quaternion& targetRot)](D:/ZZZ_Dump/PIK分析包/源码重建/真名阅读版/methods/67_DoCalculateTarget_171D7910.asm) | 879 | 支撑输入／原方向和标量历史／当前参数 → 脚位置旋转及新历史 | 唯一脚目标响应 | 879条指令的坐标、两类角限制、高度区间与旁路待迁移 |
+| 68 | [ValueTuple<Vector3, Quaternion> CalculateFootTarget(int footIndex, Vector3 finalHitPos, Vector3 finalHitNormal)](D:/ZZZ_Dump/PIK分析包/源码重建/真名阅读版/methods/68_CalculateFootTarget_171D8A00.asm) | 286 | 目标／动画基准／IK及骨盆权重 → 混合目标与回归历史 | 原脚基准混合 | 位置、quaternion与缓存回归待迁移 |
+| 69 | [void SetFootControlParam(int footIndex, Vector3 targetPos, Quaternion targetRot)](D:/ZZZ_Dump/PIK分析包/源码重建/真名阅读版/methods/69_SetFootControlParam_171D8F30.asm) | 132 | 脚目标／脚高／句柄 → 控制参数位置、旋转及InScale | 唯一Goal编码边界 | 原标量消费者未核对完成；不能直接当权重 |
+| 70 | [void FinalizeFootIk(int footIndex, bool needPIK, Vector3 ordinaryHitPos, Vector3 targetPos, Quaternion targetRot, Vector3 finalHitPos, Vector3 finalHitNormal)](D:/ZZZ_Dump/PIK分析包/源码重建/真名阅读版/methods/70_FinalizeFootIk_171D9160.asm) | 258 | 普通／最终支撑与目标 → 原缓存、time和事件清理 | 单脚收尾；写该脚Pending历史 | 258条指令、变换与先脚后骨盆顺序待迁移 |
+| 71 | [float MinHipsDelta()](D:/ZZZ_Dump/PIK分析包/源码重建/真名阅读版/methods/71_MinHipsDelta_171D95F0.asm) | 59 | 原双脚hipsDelta → 最小候选 | 骨盆候选归并 | 有效性与最小选择待迁移 |
+| 72 | [float MaxHipsDelta()](D:/ZZZ_Dump/PIK分析包/源码重建/真名阅读版/methods/72_MaxHipsDelta_171D96D0.asm) | 59 | 原双脚hipsDelta → 最大候选 | 骨盆候选归并 | 有效性与最大选择待迁移 |
+| 73 | [float CalculatePelvisTargetLegacy()](D:/ZZZ_Dump/PIK分析包/源码重建/真名阅读版/methods/73_CalculatePelvisTargetLegacy_171D97B0.asm) | 198 | 原脚候选／骨盆输入 → 普通模式标量候选 | 唯一骨盆候选 | 198条指令待迁移；不保留3C旧Spring |
+| 74 | [float CalculatePelvisTargetAdcance()](D:/ZZZ_Dump/PIK分析包/源码重建/真名阅读版/methods/74_CalculatePelvisTargetAdcance_171D9AF0.asm) | 229 | 原脚候选／骨盆输入 → Advance模式标量候选 | 唯一骨盆候选 | 229条指令待迁移；与外层响应分开 |
+| 75 | [ValueTuple<Vector3, Quaternion> CalculatePelvisTarget()](D:/ZZZ_Dump/PIK分析包/源码重建/真名阅读版/methods/75_CalculatePelvisTarget_171D9EE0.asm) | 618 | 候选／历史／原参数／查询 → 骨盆位置旋转与新历史 | 唯一骨盆响应 | 618条指令、PD／速率／权重／disableDamping消费待迁移 |
+| 76 | [void OnFootPlant(FootType footType, bool isInZone, bool isSliding)](D:/ZZZ_Dump/PIK分析包/源码重建/真名阅读版/methods/76_OnFootPlant_171DAB60.asm) | 159 | footType／isInZone／isSliding／旧time和remainTime → 单脚状态与事件 | 单脚区域应用；写PredictState原事件 | 现有槽位仅部分存在；保留位／正式输入／Finalize尚未闭合 |
+| 77 | [void Start()](D:/ZZZ_Dump/PIK分析包/源码重建/真名阅读版/methods/77_Start_171DADE0.asm) | 89 | 初始配置／绑定 → 原启用初始状态 | 既有角色初始化接入 | 原Initialize／脚锁／参数复制顺序待接入 |
+| 78 | [void OnEnable()](D:/ZZZ_Dump/PIK分析包/源码重建/真名阅读版/methods/78_OnEnable_171DAFB0.asm) | 89 | 重新启用配置／绑定 → 原启用初始状态 | 既有角色启用接入 | 不新建MonoBehaviour；原重置范围待接入 |
+| 79 | [void Update()](D:/ZZZ_Dump/PIK分析包/源码重建/真名阅读版/methods/79_Update_171DB180.asm) | 231 | Owner位置／时间／历史 → 实例运动量与lastPos | 既有表现准备阶段 | 231条指令、原时钟与运动计算待迁移 |
+| 80 | [void OnAnimatorIK(int layerIndex)](D:/ZZZ_Dump/PIK分析包/源码重建/真名阅读版/methods/80_OnAnimatorIK_171DB640.asm) | 306 | 全套正式本轮输入 → 两脚／骨盆控制量与历史 | 唯一Foot Operation内部顺序 | 306条指令的算法依赖分批接入；不复制引擎回调 |
+| 81 | [void LateUpdate()](D:/ZZZ_Dump/PIK分析包/源码重建/真名阅读版/methods/81_LateUpdate_171DBCB0.asm) | 26 | OnLateUpdate委托 → 原条件分派 | 既有生命周期／明确回调适配 | 当前绑定为空不推定永远为空；禁止新增第二骨骼写入 |
+
+覆盖核对：序号0–81各一次，合计82方法、11978条指令。区域OnUpdate、FindNextSegmentIndex和原生控制参数消费者属于额外直接依赖，继续按任务4／10登记，不伪装为上述82方法已经覆盖的内容。

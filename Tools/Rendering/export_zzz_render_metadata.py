@@ -25,7 +25,7 @@ def main():
     by_index = {row["type_index"]: row for row in catalog["types"]}
     session = exporter.GameplaySession("829")
     errors = {}
-    records = [exporter.exported_type(session, by_index, index, ["MatCap生产者定点离线核对"], errors)
+    records = [exporter.exported_type(session, by_index, index, ["ZZZ渲染生产者定点离线核对"], errors)
                for index in args.types]
     args.output.mkdir(parents=True, exist_ok=False)
     if args.matcap_statics:

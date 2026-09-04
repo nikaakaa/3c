@@ -11,23 +11,27 @@
 1. 解析 D3D11 的六个 LZ4 段，按段号、偏移、长度读取程序目录。
 2. 读取程序自身版本、类型、全局和局部关键字，不用文件名猜程序变体。
 3. 按 `m_BlobIndex` 找到 Pass、阶段、原参数名称表和常量布局。
-4. 提取 DXBC，恢复 HLSL，并保存原始 DXBC 的反汇编。
-5. 按原字节偏移恢复常量名称、整数位表达、矩阵列和数组访问；恢复纹理及 StructuredBuffer 名称。未解析的访问直接报错，不填零、不猜默认值。
-6. 用本机 `d3dcompiler_47.dll` 分别编译反编译原文和带名字源码，保存全部警告、DXBC、反汇编和指令块比较结果。
+4. 提取 DXBC，保存原始反汇编及已有反编译器的原文。原文只作失败对照，不再作为正式恢复源码。
+5. `recover_dxbc_hlsl.py` 按十六进制指令常量、原始接口签名和逐条操作恢复源码。寄存器与结构化数据保留 `uint` 位值，只有浮点操作使用 `asfloat`，有符号操作使用 `asint`；不把位解释误写成数值转换。
+6. 按原字节偏移恢复常量名称、矩阵列、数组及纹理名称。对原文、位值源码、具名源码分别 D3DCompile，保存诊断、DXBC、反汇编、指令来源表和原始输出签名。未支持的指令或绑定直接报错。
 7. 单独读取 Unity 2019 ZZZ Material 的序列化前缀及属性表，对引用、属性名和 float32 数值逐项核对现有 JSON，保留关键字、队列、禁用 Pass、enabledPassMask 和原始偏移。
 
 输出中的 `runtime_bound=false` 是明确边界。编译通过不等于 Unity 导入、绑定正确，更不等于原画面已复现。
 
 ## 2026-09-04 已完成的恢复
 
-最终记录位于 `D:/ZZZ_Dump/output/corin_replication/20260904_named_shader_recovery_v9`。
+旧反编译对照记录为 `D:/ZZZ_Dump/output/corin_replication/20260904_named_shader_recovery_v9`。该记录不再是正式源码候选。
 
 - Shader JSON SHA-256：`e5d5ea77a8536a15568e40ab2a4338683c82373ebee1f72416a68a0250cfc468`。
 - D3D11 程序目录完整读取 4026 项；不是恢复了 4026 份源码。
 - 10 个阶段的反编译原文和带名字源码均完成独立 D3DCompile，零编译错误。不是 Unity 编译验证。
-- entry 24 有 X3578 未完全初始化输出警告；48、2700、2705 有反编译表达式负数转无符号的 X4115 警告。警告未压制，也未擅自更改原计算。
+- 旧 entry 24 有 X3578 输出未初始化警告；48、2700、2705 有 X4115 负数转无符号警告。后续已证明不是可忽略的格式问题：前者错误增加了输出 W；后者使材质位标记在编译后归零。
 - 带名字源码和反编译原文重新编译后的指令块，只有 entry 16 完全相同。其它结果含声明次序、交换操作数、动态矩阵索引等差异；不能声明字节相等或已经证明全部数值等价。
 - 原始 DXBC 和重新编译 DXBC 分开保存。此记录不证明反编译器已无损恢复原程序。
+
+新位值恢复记录为 `20260904_typed_named_shader_v3`，上述 10 个阶段均零警告、零错误，输出签名逐项相同。描边 TEXCOORD5 保持原来的三维，材质位标记按原整数操作处理。它取代逐个修补旧反编译表达式的候选；旧输出目录仅作为不可覆盖的失败证据保留。
+
+完整缺陷、计算程序及后级角色合成证据见 [恢复进度与接入边界](ZZZ-Shader恢复进度.md)。这些结果仍不是 Unity 实际绘制验收。
 
 | Pass / 已恢复关键字条件 | Vertex entry | Pixel entry |
 | --- | --- | --- |
@@ -76,7 +80,7 @@ Body `_MatCapTex` 至 `_MatCapTex5` 指向同一个引用：fileID 4、PathID `-
 
 后续只读工作已完成这些入口及关键被调方法的定点提取，并补解旧快照中的参数表。最新的已闭合规则与仍有限制的部分见 [MatCap 恢复合同](ZZZ-MatCap恢复合同.md)，包括实际原图、四组数组排列、缓存层号覆盖、mip 复制及按材质/PropertyBlock 写入的边界。该文没有宣称当前游戏一定采用 Simplify 分支。
 
-主 Pass 还依赖 `UnityNapCB`、`_NapEntityGPUData`、角色专用光照、级联/单角色阴影。`SV_Target0..3` 的后级消费和纹理格式尚未恢复。不能把最终颜色以外的三路丢掉后宣称完整还原。
+主 Pass 还依赖 `UnityNapCB`、`_NapEntityGPUData`、角色专用光照、级联/单角色阴影。后级 `DeferredShadingForCharacter` 的实际源程序已恢复，确认消费 GBuffer、深度、法线和角色 LUT；原生绘制调用的各 RT 绑定身份、格式和当前项目运行时生产者尚未全部闭合。不能把主 Pass 的 RGB 当成原游戏最终画面。
 
 在这些输入输出接清之前，不生成可挂载的运行时 Shader 包装、不恢复原始预编译 `.asset` 绘制，也不新增猜测光照、纹理数组或绕过现有渲染系统的临时 RendererFeature。
 
@@ -98,6 +102,8 @@ Body `_MatCapTex` 至 `_MatCapTex5` 指向同一个引用：fileID 4、PathID `-
 
 ## MatCap 证据工具
 
-- `inspect_zzz_native.py`：必须提供匹配的 PE SHA-256；按 `.pdata` 提取显式指定函数，或对指定的 thunk 槽/目标建立方法身份。不读取活体。
+- `inspect_zzz_native.py`：必须提供匹配的 PE SHA-256；按 `.pdata` 和 `UNW_FLAG_CHAININFO` 提取显式指定函数的全部关联片段，保存各片段地址与拼接偏移；不会将主序言的结束误当完整函数结束。不读取活体。
 - `export_zzz_render_metadata.py`：复用原有 829 离线解析器，只导出显式指定的类型到新目录；可补取 MatCap 静态表和已验证 System.String 字面量，保存源文件哈希及每次读取的字节。不重写旧分析包。
 - `export_zzz_container_nodes.ps1`：复用已验证 AnimeStudio mhy1 解码器，只提取指定资源节点，保留输入块、库和节点哈希；原始压缩 mip 数据与 PNG 预览分开。
+- `capture_zzz_renderer_snapshot.py`：读取已有 829 离线快照，验证模块身份与对象名称 getter，保存 ShaderConfig 和 NapEntityPrepare 原始计算程序。不访问活体，不向 Unity 导入。
+- `recover_dxbc_hlsl.py`：独立恢复现有 DXBC 阶段，输出位值源码与编译对照。`--decompiled-dir` 仅用于已知计算程序旧入口缺失的失败对照；补入口不代表修正旧数值语义。

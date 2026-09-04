@@ -216,13 +216,13 @@ def compile_hlsl(source, profile):
     return compiled, messages
 
 
-def disassemble(dxbc):
+def disassemble(dxbc, flags=0):
     fn = ctypes.WinDLL("d3dcompiler_47.dll").D3DDisassemble
     fn.argtypes = [ctypes.c_void_p, ctypes.c_size_t, ctypes.c_uint, ctypes.c_char_p,
                    ctypes.POINTER(ctypes.c_void_p)]
     fn.restype = ctypes.c_long
     blob = ctypes.c_void_p()
-    result = fn(dxbc, len(dxbc), 0, None, ctypes.byref(blob))
+    result = fn(dxbc, len(dxbc), flags, None, ctypes.byref(blob))
     if result < 0:
         raise RuntimeError(f"Disassembly failed: {result}")
     return blob_bytes(blob).decode("utf-8").rstrip("\x00")
@@ -344,10 +344,12 @@ def restore_names(source, metadata):
             old, name = f"t{p['m_Index']}", names[p["m_NameIndex"]]
             source = re.sub(rf"(?<!register\()\b{old}\b", name, source)
             source = re.sub(rf"\b{old}_t\b", name + "_Element", source)
+            source = re.sub(rf"\b{old}_Element\b", name + "_Element", source)
             resources.append({"name": name, "category": category, **p})
     for p in program["m_Samplers"]:
         source = re.sub(rf"\bs{p['bindPoint']}_s\b", f"ZZZSampler_{p['sampler']}", source)
-    main_position = source.index("void main(")
+        source = re.sub(rf"(?<!register\()\bs{p['bindPoint']}\b", f"ZZZSampler_{p['sampler']}", source)
+    main_position = re.search(r"(?:void|ShaderOutput) main\(", source).start()
     source = source[:main_position] + "\n".join(helpers.values()) + source[main_position:]
     return "\n".join(declarations) + source, {
         "parameters": parameters, "resources": resources, "samplers": program["m_Samplers"],
@@ -355,6 +357,8 @@ def restore_names(source, metadata):
 
 
 def main():
+    from recover_dxbc_hlsl import opcode_counts, signature_records, translate
+
     parser = argparse.ArgumentParser()
     parser.add_argument("--shader-json", type=Path, required=True)
     parser.add_argument("--output", type=Path, required=True)
@@ -388,6 +392,7 @@ def main():
     write_json(args.output / "program_inventory.json", manifest)
     result = {"shader_path": str(args.shader_json.resolve()), "shader_sha256": sha256(raw),
               "tool_sha256": sha256(Path(__file__).read_bytes()), "platform": "D3D11",
+              "translator_sha256": sha256(Path(__file__).with_name("recover_dxbc_hlsl.py").read_bytes()),
               "segment_sizes": [len(s) for s in segments], "entry_count": count,
               "runtime_bound": False, "recovered": [], "materials": []}
     if args.entries:
@@ -410,17 +415,25 @@ def main():
         prefix = args.output / f"entry{index}"
         prefix.with_suffix(".original.dxbc").write_bytes(dxbc)
         prefix.with_suffix(".decompiled.hlsl").write_text(source, encoding="utf-8")
-        restored, binding = restore_names(source, meta)
+        compiler_source, instruction_map, translated_profile = translate(disassemble(dxbc, 128))
+        prefix.with_suffix(".registers.hlsl").write_text(compiler_source, encoding="utf-8")
+        write_json(prefix.with_suffix(".instruction-map.json"), instruction_map)
+        restored, binding = restore_names(compiler_source, meta)
         prefix.with_suffix(".named.hlsl").write_text(restored, encoding="utf-8")
         write_json(prefix.with_suffix(".bindings.json"), binding)
         write_json(prefix.with_suffix(".render_state.json"), meta["state"])
         profile = {15: "vs_4_0", 16: "vs_5_0", 17: "ps_4_0", 18: "ps_5_0"}[manifest[index]["type"]]
+        if profile != translated_profile:
+            raise ValueError("Program container and DXBC profile differ")
         generic, generic_messages = compile_hlsl(source, profile)
+        register_code, register_messages = compile_hlsl(compiler_source, profile)
         named, named_messages = compile_hlsl(restored, profile)
         prefix.with_suffix(".generic-recompiled.dxbc").write_bytes(generic)
+        prefix.with_suffix(".registers-recompiled.dxbc").write_bytes(register_code)
         prefix.with_suffix(".named-recompiled.dxbc").write_bytes(named)
         generic_chunks, named_chunks = chunks(generic), chunks(named)
         assemblies = {"original": disassemble(dxbc), "generic-recompiled": disassemble(generic),
+                      "registers-recompiled": disassemble(register_code),
                       "named-recompiled": disassemble(named)}
         for name, assembly in assemblies.items():
             prefix.with_suffix(f".{name}.asm").write_text(assembly, encoding="utf-8")
@@ -430,9 +443,19 @@ def main():
             "original_chunks": chunks(dxbc), "generic_chunks": generic_chunks, "named_chunks": named_chunks,
             "named_vs_generic_instruction_tokens_equal": generic_chunks[executable_tag] == named_chunks[executable_tag],
             "named_vs_generic_instructions_excluding_declarations_equal": instructions(assemblies["generic-recompiled"]) == instructions(assemblies["named-recompiled"]),
+            "canonical_recovery": "DXBC hexadecimal instructions with uint register storage",
+            "register_compiler_messages": register_messages,
+            "original_opcodes": opcode_counts(assemblies["original"]),
+            "named_opcodes": opcode_counts(assemblies["named-recompiled"]),
+            "original_output_signature": signature_records(assemblies["original"], "Output"),
+            "named_output_signature": signature_records(assemblies["named-recompiled"], "Output"),
+            "named_material_flag_output": [line for line in assemblies["named-recompiled"].splitlines() if re.match(r"\w+\s+o2\.z\b", line.strip())],
             "generic_compiler_messages": generic_messages, "named_compiler_messages": named_messages})
     write_json(args.output / "recovery.json", result)
-    print(json.dumps(result, ensure_ascii=False, indent=2))
+    print(json.dumps({"output": str(args.output.resolve()), "entries": count,
+        "stages": [{"entry": row["entry"], "profile": row["profile"],
+                    "messages": row["named_compiler_messages"]} for row in result["recovered"]],
+        "runtime_bound": False}, ensure_ascii=False, indent=2))
 
 
 if __name__ == "__main__":

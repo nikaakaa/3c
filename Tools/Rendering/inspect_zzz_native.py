@@ -52,6 +52,26 @@ def main():
                      for offset in range(exception_offset, exception_offset + exception_size, 12)]
         functions.sort()
         starts = [f[0] for f in functions]
+        roots = {}
+
+        def unwind_root(record):
+            if record in roots:
+                return roots[record]
+            unwind_offset = file_offset(record[2])
+            flags = data[unwind_offset] >> 3
+            if flags & 4:
+                code_slots = data[unwind_offset + 2]
+                chain_offset = unwind_offset + 4 + ((code_slots + 1) & ~1) * 2
+                parent = struct.unpack_from("<III", data, chain_offset)
+                root = unwind_root(parent)
+            else:
+                root = record
+            roots[record] = root
+            return root
+
+        unwind_groups = {}
+        for record in functions:
+            unwind_groups.setdefault(unwind_root(record), []).append(record)
         methods = {}
         with args.methods.open(encoding="utf-8-sig", newline="") as stream:
             for record in csv.DictReader(stream):
@@ -97,12 +117,25 @@ def main():
             begin, end, unwind = functions[position]
             if begin != requested or not begin < end:
                 raise ValueError(f"Requested RVA {requested:#x} is not an exact .pdata function start")
-            offset = file_offset(begin)
-            code = data[offset:offset + end - begin]
+            root = unwind_root(functions[position])
+            if root[0] != requested:
+                raise ValueError(f"Requested RVA is a chained fragment; use primary RVA {root[0]:#x}")
+            segments = unwind_groups[root]
+            end = max(segment[1] for segment in segments)
+            code_parts, instructions, segment_records = [], [], []
+            for segment_begin, segment_end, segment_unwind in segments:
+                offset = file_offset(segment_begin)
+                part = data[offset:offset + segment_end - segment_begin]
+                decoded = list(disassembler.disasm(part, segment_begin))
+                if sum(i.size for i in decoded) != len(part):
+                    raise ValueError(f"Incomplete decoding at {segment_begin:#x}")
+                segment_records.append({"begin_rva": hex(segment_begin), "end_rva": hex(segment_end),
+                    "unwind_rva": hex(segment_unwind), "binary_offset": sum(map(len, code_parts)),
+                    "bytes": len(part), "sha256": hashlib.sha256(part).hexdigest()})
+                code_parts.append(part)
+                instructions.extend(decoded)
+            code = b"".join(code_parts)
             lines, calls, references = [], [], []
-            instructions = list(disassembler.disasm(code, begin))
-            if sum(i.size for i in instructions) != len(code):
-                raise ValueError(f"Incomplete decoding at {begin:#x}")
             for instruction in instructions:
                 notes = []
                 if instruction.mnemonic in ("call", "jmp") and instruction.operands[0].type == X86_OP_IMM:
@@ -132,6 +165,7 @@ def main():
             (args.output / (filename + ".asm")).write_text("\n".join(lines) + "\n", encoding="utf-8")
             result["functions"].append({"rva": hex(begin), "end_rva": hex(end), "unwind_rva": hex(unwind),
                 "bytes": len(code), "code_sha256": hashlib.sha256(code).hexdigest(),
+                "unwind_segments": segment_records,
                 "metadata": methods.get(begin, []), "calls": calls, "rip_references": references})
         (args.output / "native_evidence.json").write_text(json.dumps(result, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
         print(json.dumps({"functions": [{k: f[k] for k in ("rva", "end_rva", "bytes", "code_sha256")} for f in result["functions"]],

@@ -3,7 +3,7 @@ using System.Collections.Generic;
 
 namespace ThirdPersonCamera
 {
-    internal sealed class CameraOrbitGeometry
+    public sealed class CameraOrbitGeometry
     {
         readonly CameraOrbitPayload[] m_Orbits;
 
@@ -37,7 +37,7 @@ namespace ThirdPersonCamera
             return new CameraOrbitGeometry(orbits);
         }
 
-        public static CameraOrbitGeometry Own(CameraOrbitPayload[] orbits) =>
+        internal static CameraOrbitGeometry Own(CameraOrbitPayload[] orbits) =>
             new CameraOrbitGeometry(orbits);
     }
 }

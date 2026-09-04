@@ -124,7 +124,7 @@ namespace ThirdPersonCamera
 
             Quaternion orbitRotation = Quaternion.Euler(evaluatedPitch, evaluatedYaw, 0f);
             aim += orbitRotation * new Vector3(compositionOffset.x, compositionOffset.y, 0f);
-            CameraOrbitComposition orbitComposition = CameraOrbitComposition.Create(
+            CameraOrbitComposition orbitComposition = CameraOrbitComposition.CreateFromGeometry(
                 orbitGeometry,
                 radius,
                 orbitGroupUsesAbsoluteRadius,

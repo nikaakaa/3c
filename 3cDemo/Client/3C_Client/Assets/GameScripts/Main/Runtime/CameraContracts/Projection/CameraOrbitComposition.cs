@@ -73,14 +73,14 @@ namespace ThirdPersonCamera
             bool sourceUsesAbsoluteRadius,
             float yaw,
             float pitch) =>
-            Create(
+            CreateFromGeometry(
                 CameraOrbitGeometry.Create(source),
                 centerRadius,
                 sourceUsesAbsoluteRadius,
                 yaw,
                 pitch);
 
-        internal static CameraOrbitComposition Create(
+        public static CameraOrbitComposition CreateFromGeometry(
             CameraOrbitGeometry geometry,
             float centerRadius,
             bool sourceUsesAbsoluteRadius,

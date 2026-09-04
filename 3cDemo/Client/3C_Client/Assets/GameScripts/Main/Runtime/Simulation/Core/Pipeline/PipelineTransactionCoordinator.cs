@@ -156,7 +156,6 @@ namespace ThirdPersonSimulation
                         stepIndex,
                         executionPlan.Steps.Count,
                         transactionIdentity,
-                        outer.Performance,
                         ref solverTouched);
                     TCompletedStep completedStep = m_Target.CompleteStep(
                         executionPlan,
@@ -393,7 +392,6 @@ namespace ThirdPersonSimulation
             int stepIndex,
             int stepCount,
             StableHash transactionIdentity,
-            ISimulationPerformanceSink performance,
             ref bool solverTouched)
         {
             var context = new SimulationPipelineStepTransactionContext(
@@ -403,8 +401,7 @@ namespace ThirdPersonSimulation
                 step.ExecutionKind,
                 stepIndex,
                 stepCount,
-                transactionIdentity,
-                performance);
+                transactionIdentity);
             for (int i = 0; i < m_Services.Passes.Count; i++)
             {
                 ICompiledSimulationPipelinePassRuntime pass = m_Services.Passes[i];

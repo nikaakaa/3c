@@ -92,8 +92,7 @@ namespace ThirdPersonSimulation
                             m_Ingress[i],
                             state.Actors[i].State,
                             state.WorldState.Bodies[i],
-                            readPorts.Diagnostics.Sink.IsEnabled,
-                            context.Performance));
+                            readPorts.Diagnostics.Sink.IsEnabled));
                     m_Pending[i] = evaluation;
                     m_Requests[i] = evaluation.WorldRequest;
                 }

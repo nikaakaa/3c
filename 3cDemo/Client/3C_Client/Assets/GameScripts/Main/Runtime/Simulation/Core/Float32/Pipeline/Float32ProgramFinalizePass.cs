@@ -62,7 +62,7 @@ namespace ThirdPersonSimulation
                 if (!evaluation.ActorId.Equals(actor.ActorId) || !worldResult.ActorId.Equals(actor.ActorId))
                     throw new InvalidOperationException("Program Finalize Pass Actor order does not match the locked roster.");
                 SimulationActorTickResult result = readPorts.ProgramRuntime.Kernel.Finalize(
-                    new SimulationFinalizeRequest(evaluation, worldResult, world.SolverId, context.Performance));
+                    new SimulationFinalizeRequest(evaluation, worldResult, world.SolverId));
                 Float32PipelineDiagnostics.PublishOperations(
                     readPorts.Diagnostics.Sink,
                     result.TraceRecords,

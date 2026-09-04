@@ -17,8 +17,7 @@ namespace ThirdPersonSimulation.Fixed
             IEnumerable<SimulationIngress> ingress,
             CharacterSimulationState currentState,
             WorldBodyState previousBody,
-            bool diagnosticsEnabled,
-            ISimulationPerformanceSink performance = null)
+            bool diagnosticsEnabled)
         {
             Binding = binding ?? throw new ArgumentNullException(nameof(binding));
             Program = binding.Program;
@@ -39,7 +38,6 @@ namespace ThirdPersonSimulation.Fixed
             Tick = tick;
             PreviousBody = previousBody;
             DiagnosticsEnabled = diagnosticsEnabled;
-            Performance = performance ?? NullSimulationPerformanceSink.Instance;
             var copied = ingress == null ? new List<SimulationIngress>() : new List<SimulationIngress>(ingress);
             copied.Sort(CompareIngress);
             for (int i = 0; i < copied.Count; i++)
@@ -66,7 +64,6 @@ namespace ThirdPersonSimulation.Fixed
         public CharacterSimulationState CurrentState { get; }
         public WorldBodyState PreviousBody { get; }
         public bool DiagnosticsEnabled { get; }
-        public ISimulationPerformanceSink Performance { get; }
 
         internal static int CompareIngress(SimulationIngress left, SimulationIngress right)
         {
@@ -210,21 +207,18 @@ namespace ThirdPersonSimulation.Fixed
         public SimulationFinalizeRequest(
             PendingCharacterEvaluation pending,
             CharacterWorldSolveResult worldResult,
-            SolverImplementationId expectedSolverId,
-            ISimulationPerformanceSink performance = null)
+            SolverImplementationId expectedSolverId)
         {
             Pending = pending ?? throw new ArgumentNullException(nameof(pending));
             WorldResult = worldResult ?? throw new ArgumentNullException(nameof(worldResult));
             if (string.IsNullOrEmpty(expectedSolverId.Value))
                 throw new ArgumentException("Expected Solver identity is missing.", nameof(expectedSolverId));
             ExpectedSolverId = expectedSolverId;
-            Performance = performance ?? NullSimulationPerformanceSink.Instance;
         }
 
         public PendingCharacterEvaluation Pending { get; }
         public CharacterWorldSolveResult WorldResult { get; }
         public SolverImplementationId ExpectedSolverId { get; }
-        public ISimulationPerformanceSink Performance { get; }
     }
 
     public readonly struct CharacterBodySample

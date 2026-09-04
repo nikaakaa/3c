@@ -103,8 +103,7 @@ namespace ThirdPersonSimulation
             SimulationPipelineStepExecutionKind executionKind,
             int stepIndex,
             int stepCount,
-            StableHash transactionIdentity,
-            ISimulationPerformanceSink performance)
+            StableHash transactionIdentity)
         {
             if (!session.IsValid || !pipeline.IsValid || !tick.IsValid ||
                 !Enum.IsDefined(typeof(SimulationPipelineStepExecutionKind), executionKind) ||
@@ -119,7 +118,6 @@ namespace ThirdPersonSimulation
             StepIndex = stepIndex;
             StepCount = stepCount;
             TransactionIdentity = transactionIdentity;
-            Performance = performance ?? NullSimulationPerformanceSink.Instance;
         }
 
         public SimulationSessionCompositionIdentity Session { get; }
@@ -129,7 +127,6 @@ namespace ThirdPersonSimulation
         public int StepIndex { get; }
         public int StepCount { get; }
         public StableHash TransactionIdentity { get; }
-        public ISimulationPerformanceSink Performance { get; }
     }
 
     public readonly struct SimulationPipelineEgressContext

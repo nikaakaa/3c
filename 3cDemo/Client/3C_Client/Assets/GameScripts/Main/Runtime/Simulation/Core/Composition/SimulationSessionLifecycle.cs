@@ -82,8 +82,7 @@ namespace ThirdPersonSimulation
         public SimulationSessionLogicTickContext(
             SimulationTickSourceIdentity source,
             WorldRevision worldRevision,
-            long elapsedTimeTicks,
-            ISimulationPerformanceSink performance = null)
+            long elapsedTimeTicks)
         {
             if (string.IsNullOrEmpty(source.ClockId) || source.SourceTick == 0 ||
                 string.IsNullOrEmpty(worldRevision.Value) || elapsedTimeTicks <= 0)
@@ -93,13 +92,11 @@ namespace ThirdPersonSimulation
             Source = source;
             WorldRevision = worldRevision;
             ElapsedTimeTicks = elapsedTimeTicks;
-            Performance = performance ?? NullSimulationPerformanceSink.Instance;
         }
 
         public SimulationTickSourceIdentity Source { get; }
         public WorldRevision WorldRevision { get; }
         public long ElapsedTimeTicks { get; }
-        public ISimulationPerformanceSink Performance { get; }
     }
 
     public interface ISimulationSessionPreparation : IDisposable

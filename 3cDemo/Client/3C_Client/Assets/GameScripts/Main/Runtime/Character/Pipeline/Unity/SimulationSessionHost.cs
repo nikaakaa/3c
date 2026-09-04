@@ -13,8 +13,6 @@ namespace ThirdPersonCharacter.Pipeline
     public sealed class SimulationSessionHost : MonoBehaviour, IGameplayRenderFrameInputTarget, IGameplayLogicTickTarget,
         ICharacterFutureBodyTranslationSource
     {
-        static readonly ISimulationPerformanceSink Performance = UnitySimulationPerformanceSink.Instance;
-
         [SerializeField] SimulationSessionCompositionDefinition m_Composition;
 
         readonly List<ISimulationActorRegistration> m_Registrations =
@@ -341,8 +339,7 @@ namespace ThirdPersonCharacter.Pipeline
             return new SimulationSessionLogicTickContext(
                 new SimulationTickSourceIdentity(m_OuterTickKind, sourceClock.Value, context.LocalLogicTick),
                 new WorldRevision(m_Composition.WorldRevision),
-                ToElapsedTicks(context.FixedDeltaSeconds),
-                Performance);
+                ToElapsedTicks(context.FixedDeltaSeconds));
         }
 
         void ActivateActorPorts()

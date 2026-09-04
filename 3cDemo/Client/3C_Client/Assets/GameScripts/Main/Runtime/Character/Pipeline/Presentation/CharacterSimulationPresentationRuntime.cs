@@ -283,7 +283,10 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     m_Animation.Replace(current, replacement, currentProducer, replacementProducer);
                     break;
                 case CharacterPresentationCommandKind.Camera:
-                    RequireCamera().Retire(current, currentProducer);
+                    if (!string.Equals(current.ProducerId, replacement.ProducerId, StringComparison.Ordinal) ||
+                        current.ProducerGeneration != replacement.ProducerGeneration)
+                        throw new InvalidOperationException(
+                            "Camera replacement must preserve the same producer playback instance.");
                     RequireCamera().Publish(replacement, replacementProducer);
                     break;
                 case CharacterPresentationCommandKind.Cue:

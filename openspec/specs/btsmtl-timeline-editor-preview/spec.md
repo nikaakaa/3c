@@ -258,7 +258,7 @@ Timeline Editor MUST将本地作者内容明确分为占据起止区间的`Span 
 
 ### Requirement: Timeline Editor 必须完整编辑显式注册的 Continuous Curve Channel
 
-Timeline Editor MUST通过显式typed Curve Channel Catalog显示和编辑Timeline owner已经正式拥有的Continuous Curve。每个descriptor MUST声明稳定ChannelId、owner类型、显示名、颜色、time domain、value domain、单位、完整curve读取、正式owner mutation和领域validator。Catalog MUST覆盖Animation Segment的Weight、Ease In和Ease Out，MotionCurve Clip的Weight、Position X/Y/Z、Yaw和Ease In/Out，MotionWarp Clip的Position Progress与Yaw Progress，以及CameraSequenceClip与CameraResponseClip的Weight和Ease In/Out。`presentation.locomotion-phase`、`presentation.foot-placement-weight`、AnimationClip骨骼曲线和其它Clip内注册Curve MUST只由Unity Animation Window编辑，不得进入Timeline Catalog。
+Timeline Editor MUST通过显式typed Curve Channel Catalog显示和编辑Timeline owner已经正式拥有的Continuous Curve。每个descriptor MUST声明稳定ChannelId、owner类型、显示名、颜色、time domain、value domain、单位、完整curve读取、正式owner mutation和领域validator。Catalog MUST覆盖Animation Segment的Weight、Ease In和Ease Out，MotionCurve Clip的Weight、Position X/Y/Z、Yaw和Ease In/Out，MotionWarp Clip的Position Progress与Yaw Progress，CameraSequenceClip与CameraResponseClip的Weight和Ease In/Out，以及CameraResourceClip的Weight和Ease In/Out。共享相机效果资源的曲线仍 MUST只提供只读引用与真实 owner 导航。`presentation.locomotion-phase`、`presentation.foot-placement-weight`、AnimationClip骨骼曲线和其它Clip内注册Curve MUST只由Unity Animation Window编辑，不得进入Timeline Catalog。
 
 每个具有registered Timeline channel的Track MUST显示可折叠`CURVES`分组，展开后每个ChannelId拥有独立lane。每个Clip或Segment MUST只在自己的StartFrame..EndFrame范围显示自己的Timeline-local curve、key与边界；重叠内容 MUST不在作者层合并curve。Curve Lane MUST按完整`AnimationCurve.Evaluate`结果绘制插值，显示原始key、tangent handle、当前游标time/value、value reference与单位。
 

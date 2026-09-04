@@ -118,7 +118,7 @@
 
 ### Requirement: Camera Timeline控制曲线必须作为typed Curve Channel编辑
 
-相机 Sequence/Response 等 Clip 的 Timeline-local Weight、Ease In 与 Ease Out MUST继续通过显式 registered ChannelId 进入 Timeline Curve Editor，使用 ClipNormalized 时间域和 `[0,1]` 值域，并由该 Clip 的正式 Mutation 原子替换。共享 Camera Curve 与效果资源的曲线 MUST由各自真实 owner 保存，声明自身单位、时间和值域，不得强制套用 Clip 的归一化合同。Curve Editor、Catalog 与 Agent MUST只写作者数据；Runtime MUST只消费编译后的相机计划，不直接读取 Editor 曲线或形成第二套效果求值。
+相机 Sequence/Response/Resource Clip 的 Timeline-local Weight、Ease In 与 Ease Out MUST继续通过显式 registered ChannelId 进入 Timeline Curve Editor，使用 ClipNormalized 时间域和 `[0,1]` 值域，并由该 Clip 的正式 Mutation 原子替换。共享 Camera Curve 与效果资源的曲线 MUST由各自真实 owner 保存，声明自身单位、时间和值域，不得强制套用 Clip 的归一化合同。Curve Editor、Catalog 与 Agent MUST只写作者数据；Runtime MUST只消费编译后的相机计划，不直接读取 Editor 曲线或形成第二套效果求值。
 
 #### Scenario: 编辑Camera Ease In
 

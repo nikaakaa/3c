@@ -6,6 +6,8 @@ using ThirdPersonSimulation;
 using ThirdPersonSimulation.Fixed;
 using FixedPresentationCommand = ThirdPersonSimulation.Fixed.PresentationCommand;
 using FixedWorldBodyState = ThirdPersonSimulation.Fixed.WorldBodyState;
+using ActivePresentationRecord = ThirdPersonCharacter.Pipeline.Simulation.Fixed.FixedCameraPresentationRecord;
+using PresentationStateKey = ThirdPersonCharacter.Pipeline.Simulation.Fixed.FixedCameraPresentationStateKey;
 using UnityEngine;
 
 namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
@@ -266,7 +268,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
             return records;
         }
 
-        List<PresentationStateKey> CollectCameraScopeKeys(CharacterPresentationCommand command)
+        List<PresentationStateKey> CollectCameraStateKeys(CharacterPresentationCommand command)
         {
             var keys = new List<PresentationStateKey>();
             foreach (PresentationStateKey key in m_ByState.Keys)
@@ -286,8 +288,26 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
             PresentationStateKey key,
             ulong confirmedTick) => CollectCameraRecords(key, confirmedTick);
 
-        List<PresentationStateKey> IFixedCameraPresentationHistory.CollectCameraScopeKeys(
-            CharacterPresentationCommand command) => CollectCameraScopeKeys(command);
+        List<PresentationStateKey> IFixedCameraPresentationHistory.CollectCameraStateKeys(
+            CharacterPresentationCommand command) => CollectCameraStateKeys(command);
+
+        bool IFixedCameraPresentationHistory.HasCameraForceScope(
+            CharacterPresentationCommand command,
+            ulong confirmedTick)
+        {
+            FixedCameraPresentationScopeKey scope = new FixedCameraPresentationScopeKey(
+                command.ProducerId,
+                command.ProducerGeneration,
+                command.SourceActionInstanceId);
+            foreach (PresentationStateKey key in m_ByState.Keys)
+            {
+                if (!key.IsCameraForce || !key.Scope.Equals(scope))
+                    continue;
+                if (CollectCameraRecords(key, confirmedTick).Count > 0)
+                    return true;
+            }
+            return false;
+        }
 
         void PublishOrRestore(ActivePresentationRecord record)
         {
@@ -643,87 +663,6 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
                 command.VisualTimeScale.ToSingle());
         }
 
-        internal readonly struct ActivePresentationRecord
-        {
-            public ActivePresentationRecord(PresentationStateKey key, CharacterPresentationCommand command)
-            {
-                Key = key;
-                Command = command;
-            }
-
-            public PresentationStateKey Key { get; }
-            public CharacterPresentationCommand Command { get; }
-        }
-
-        internal readonly struct PresentationStateKey : IEquatable<PresentationStateKey>, IComparable<PresentationStateKey>
-        {
-            public PresentationStateKey(
-                string channel,
-                string producer,
-                ulong generation,
-                ulong sourceActionInstanceId = 0,
-                int cycle = 0)
-            {
-                Channel = channel ?? string.Empty;
-                Producer = producer ?? string.Empty;
-                Generation = generation;
-                SourceActionInstanceId = sourceActionInstanceId;
-                Cycle = cycle;
-            }
-
-            public string Channel { get; }
-            public string Producer { get; }
-            public ulong Generation { get; }
-            public ulong SourceActionInstanceId { get; }
-            public int Cycle { get; }
-            public bool IsCameraForce => string.Equals(Channel, "camera-force", StringComparison.Ordinal);
-            public bool Equals(PresentationStateKey other) =>
-                Generation == other.Generation &&
-                SourceActionInstanceId == other.SourceActionInstanceId &&
-                Cycle == other.Cycle &&
-                string.Equals(Channel, other.Channel, StringComparison.Ordinal) &&
-                string.Equals(Producer, other.Producer, StringComparison.Ordinal);
-            public override bool Equals(object obj) => obj is PresentationStateKey other && Equals(other);
-            public override int GetHashCode() => HashCode.Combine(
-                Channel,
-                Producer,
-                Generation,
-                SourceActionInstanceId,
-                Cycle);
-            public int CompareTo(PresentationStateKey other)
-            {
-                int channel = ChannelOrder(Channel).CompareTo(ChannelOrder(other.Channel));
-                if (channel != 0)
-                    return channel;
-                channel = string.CompareOrdinal(Channel, other.Channel);
-                if (channel != 0)
-                    return channel;
-                int producer = string.CompareOrdinal(Producer, other.Producer);
-                if (producer != 0)
-                    return producer;
-                int generation = Generation.CompareTo(other.Generation);
-                if (generation != 0)
-                    return generation;
-                int action = SourceActionInstanceId.CompareTo(other.SourceActionInstanceId);
-                return action != 0 ? action : Cycle.CompareTo(other.Cycle);
-            }
-            public override string ToString() =>
-                $"{Channel}/{Producer}/{Generation}/{SourceActionInstanceId}/{Cycle}";
-
-            static int ChannelOrder(string channel)
-            {
-                return channel switch
-                {
-                    "animation-selection" => 0,
-                    "animation-sample" => 1,
-                    "animation-terminal" => 2,
-                    "camera-force" => 3,
-                    "camera" => 4,
-                    _ => throw new InvalidOperationException(
-                        $"Fixed Presentation state channel '{channel}' has no reconciliation order.")
-                };
-            }
-        }
     }
 
     public static class FixedUnityPresentationBoundary

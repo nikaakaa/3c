@@ -286,7 +286,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     if (producer.Kind != CharacterPresentationProducerKind.Camera)
                         throw new InvalidOperationException(
                             $"Force release retirement targets non-camera producer '{producer.ProgramProducerIdentity}'.");
-                    RequireCamera().ForceTeardown(command, producer);
+                    RequireCamera().ResumeForceTeardown(command, producer);
                     break;
                 case CharacterPresentationCommandKind.Camera:
                     RequireCamera().Retire(command, producer);

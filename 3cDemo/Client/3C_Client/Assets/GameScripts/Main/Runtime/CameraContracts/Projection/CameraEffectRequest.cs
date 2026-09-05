@@ -50,6 +50,10 @@ public readonly struct CameraEffectRequest
         public ulong SourceActionInstanceId { get; }
         public int Cycle { get; }
         public float SampleTime { get; }
+        public CameraPresentationScopeKey Scope => new CameraPresentationScopeKey(
+            SourceId,
+            Generation,
+            SourceActionInstanceId);
         public bool Active => Weight > 0f && !string.IsNullOrWhiteSpace(ResourceId);
     }
 }

@@ -5,6 +5,7 @@ namespace ThirdPersonCamera
 {
     public sealed class CharacterCameraSequenceEvaluator
     {
+        readonly CharacterCameraProjectionPayload m_Projection;
         readonly CharacterCameraFramePlanner m_FramePlanner;
         readonly CharacterCameraSequenceTransition m_Transition;
         readonly CameraWorldBasicHistory m_WorldBasicHistory;
@@ -15,6 +16,7 @@ namespace ThirdPersonCamera
             if (projection == null)
                 throw new ArgumentNullException(nameof(projection));
             projection.RequireValid();
+            m_Projection = projection;
             m_FramePlanner = new CharacterCameraFramePlanner(projection);
             m_Transition = new CharacterCameraSequenceTransition(projection, m_FramePlanner);
             m_WorldBasicHistory = new CameraWorldBasicHistory(projection.DefaultSmoothTime);
@@ -72,6 +74,67 @@ namespace ThirdPersonCamera
             CameraFramePlan target = m_Transition.Evaluate(in input, in request, look);
             return m_WorldBasicHistory.Apply(target, in input);
         }
+
+        public CameraFramePlan EvaluateSuppressed(
+            in CameraFrameInput input,
+            in CameraResponseRequest response)
+        {
+            State state = CaptureState();
+            try
+            {
+                CameraSequenceRequest request = new CameraSequenceRequest(
+                    m_Projection.DefaultSequence.SequenceId,
+                    int.MinValue,
+                    1f,
+                    0f,
+                    0f,
+                    string.Empty,
+                    "camera.default.sequence",
+                    0,
+                    0,
+                    CameraSequenceInterruptPolicy.BlendOut,
+                    true);
+                return Evaluate(in input, in request, in response);
+            }
+            finally
+            {
+                RestoreState(state);
+            }
+        }
+
+        State CaptureState() => new State(
+            m_FramePlanner.CaptureState(),
+            m_Transition.CaptureState(),
+            m_WorldBasicHistory.CaptureState(),
+            m_Initialized);
+
+        void RestoreState(State state)
+        {
+            m_FramePlanner.RestoreState(state.FramePlanner);
+            m_Transition.RestoreState(state.Transition);
+            m_WorldBasicHistory.RestoreState(state.WorldBasicHistory);
+            m_Initialized = state.Initialized;
+        }
+
+        readonly struct State
+        {
+            public State(
+                CharacterCameraFramePlanner.State framePlanner,
+                CharacterCameraSequenceTransition.State transition,
+                CameraWorldBasicHistory.State worldBasicHistory,
+                bool initialized)
+            {
+                FramePlanner = framePlanner;
+                Transition = transition;
+                WorldBasicHistory = worldBasicHistory;
+                Initialized = initialized;
+            }
+
+            public CharacterCameraFramePlanner.State FramePlanner { get; }
+            public CharacterCameraSequenceTransition.State Transition { get; }
+            public CameraWorldBasicHistory.State WorldBasicHistory { get; }
+            public bool Initialized { get; }
+        }
     }
 
     sealed class CameraWorldBasicHistory
@@ -97,6 +160,24 @@ namespace ThirdPersonCamera
             m_OffsetVelocity = Vector2.zero;
             m_FieldOfViewVelocity = 0f;
             m_Initialized = false;
+        }
+
+        public State CaptureState() => new State(
+            m_Current,
+            m_PivotVelocity,
+            m_RadiusVelocity,
+            m_OffsetVelocity,
+            m_FieldOfViewVelocity,
+            m_Initialized);
+
+        public void RestoreState(State state)
+        {
+            m_Current = state.Current;
+            m_PivotVelocity = state.PivotVelocity;
+            m_RadiusVelocity = state.RadiusVelocity;
+            m_OffsetVelocity = state.OffsetVelocity;
+            m_FieldOfViewVelocity = state.FieldOfViewVelocity;
+            m_Initialized = state.Initialized;
         }
 
         public CameraFramePlan Apply(CameraFramePlan target, in CameraFrameInput input)
@@ -158,6 +239,32 @@ namespace ThirdPersonCamera
             m_OffsetVelocity = Vector2.zero;
             m_FieldOfViewVelocity = 0f;
             m_Initialized = true;
+        }
+
+        public readonly struct State
+        {
+            public State(
+                CameraWorldBasicData current,
+                Vector3 pivotVelocity,
+                float radiusVelocity,
+                Vector2 offsetVelocity,
+                float fieldOfViewVelocity,
+                bool initialized)
+            {
+                Current = current;
+                PivotVelocity = pivotVelocity;
+                RadiusVelocity = radiusVelocity;
+                OffsetVelocity = offsetVelocity;
+                FieldOfViewVelocity = fieldOfViewVelocity;
+                Initialized = initialized;
+            }
+
+            public CameraWorldBasicData Current { get; }
+            public Vector3 PivotVelocity { get; }
+            public float RadiusVelocity { get; }
+            public Vector2 OffsetVelocity { get; }
+            public float FieldOfViewVelocity { get; }
+            public bool Initialized { get; }
         }
     }
 }

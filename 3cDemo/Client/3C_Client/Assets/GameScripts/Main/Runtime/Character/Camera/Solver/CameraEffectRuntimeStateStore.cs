@@ -56,6 +56,8 @@ namespace ThirdPersonCamera
             int cycle,
             CameraPresentationStopReason reason)
         {
+            if (reason == CameraPresentationStopReason.ForceTeardown)
+                return;
             bool hasEventId = !string.IsNullOrEmpty(eventId);
             bool hasSourceId = !string.IsNullOrEmpty(sourceId);
             for (int i = m_Active.Count - 1; i >= 0; i--)
@@ -77,11 +79,6 @@ namespace ThirdPersonCamera
                     !matchesIdentity ||
                     !matchesScope)
                     continue;
-                if (reason == CameraPresentationStopReason.ForceTeardown)
-                {
-                    m_Active.RemoveAt(i);
-                    continue;
-                }
                 if (effect.Retired)
                     continue;
                 effect.Retired = true;

@@ -51,6 +51,42 @@ namespace ThirdPersonCamera
             m_Retiring = false;
         }
 
+        public State CaptureState() => new State(
+            m_LastPlan,
+            m_BlendFrom,
+            m_CurrentSequenceId,
+            m_CurrentSourceId,
+            m_CurrentGeneration,
+            m_CurrentSourceActionInstanceId,
+            m_CurrentCycle,
+            m_CurrentIsDefault,
+            m_TransitionElapsed,
+            m_TransitionDuration,
+            m_RetireFrom,
+            m_RetireElapsed,
+            m_RetireDuration,
+            m_RetireTimeDomain,
+            m_Retiring);
+
+        public void RestoreState(State state)
+        {
+            m_LastPlan = state.LastPlan;
+            m_BlendFrom = state.BlendFrom;
+            m_CurrentSequenceId = state.CurrentSequenceId;
+            m_CurrentSourceId = state.CurrentSourceId;
+            m_CurrentGeneration = state.CurrentGeneration;
+            m_CurrentSourceActionInstanceId = state.CurrentSourceActionInstanceId;
+            m_CurrentCycle = state.CurrentCycle;
+            m_CurrentIsDefault = state.CurrentIsDefault;
+            m_TransitionElapsed = state.TransitionElapsed;
+            m_TransitionDuration = state.TransitionDuration;
+            m_RetireFrom = state.RetireFrom;
+            m_RetireElapsed = state.RetireElapsed;
+            m_RetireDuration = state.RetireDuration;
+            m_RetireTimeDomain = state.RetireTimeDomain;
+            m_Retiring = state.Retiring;
+        }
+
         public bool Retire(
             string sourceId,
             ulong generation,
@@ -267,6 +303,59 @@ namespace ThirdPersonCamera
                 t,
                 to.ResetHistory,
                 to.Valid);
+        }
+
+        public readonly struct State
+        {
+            public State(
+                CameraFramePlan lastPlan,
+                CameraFramePlan blendFrom,
+                string currentSequenceId,
+                string currentSourceId,
+                ulong currentGeneration,
+                ulong currentSourceActionInstanceId,
+                int currentCycle,
+                bool currentIsDefault,
+                float transitionElapsed,
+                float transitionDuration,
+                CameraFramePlan retireFrom,
+                float retireElapsed,
+                float retireDuration,
+                CameraTimeDomain retireTimeDomain,
+                bool retiring)
+            {
+                LastPlan = lastPlan;
+                BlendFrom = blendFrom;
+                CurrentSequenceId = currentSequenceId;
+                CurrentSourceId = currentSourceId;
+                CurrentGeneration = currentGeneration;
+                CurrentSourceActionInstanceId = currentSourceActionInstanceId;
+                CurrentCycle = currentCycle;
+                CurrentIsDefault = currentIsDefault;
+                TransitionElapsed = transitionElapsed;
+                TransitionDuration = transitionDuration;
+                RetireFrom = retireFrom;
+                RetireElapsed = retireElapsed;
+                RetireDuration = retireDuration;
+                RetireTimeDomain = retireTimeDomain;
+                Retiring = retiring;
+            }
+
+            public CameraFramePlan LastPlan { get; }
+            public CameraFramePlan BlendFrom { get; }
+            public string CurrentSequenceId { get; }
+            public string CurrentSourceId { get; }
+            public ulong CurrentGeneration { get; }
+            public ulong CurrentSourceActionInstanceId { get; }
+            public int CurrentCycle { get; }
+            public bool CurrentIsDefault { get; }
+            public float TransitionElapsed { get; }
+            public float TransitionDuration { get; }
+            public CameraFramePlan RetireFrom { get; }
+            public float RetireElapsed { get; }
+            public float RetireDuration { get; }
+            public CameraTimeDomain RetireTimeDomain { get; }
+            public bool Retiring { get; }
         }
     }
 }

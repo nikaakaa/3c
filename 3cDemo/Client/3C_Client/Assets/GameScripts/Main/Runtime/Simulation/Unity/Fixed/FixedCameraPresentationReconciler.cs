@@ -3,21 +3,11 @@ using System.Collections.Generic;
 using ThirdPersonCharacter.Pipeline.Presentation;
 using ThirdPersonSimulation;
 
-using ActivePresentationRecord = ThirdPersonCharacter.Pipeline.Simulation.Fixed.FixedUnityPresentationOutputAdapter.ActivePresentationRecord;
-using PresentationStateKey = ThirdPersonCharacter.Pipeline.Simulation.Fixed.FixedUnityPresentationOutputAdapter.PresentationStateKey;
+using ActivePresentationRecord = ThirdPersonCharacter.Pipeline.Simulation.Fixed.FixedCameraPresentationRecord;
+using PresentationStateKey = ThirdPersonCharacter.Pipeline.Simulation.Fixed.FixedCameraPresentationStateKey;
 
 namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
 {
-    internal interface IFixedCameraPresentationHistory
-    {
-        List<ActivePresentationRecord> CollectCameraRecords(
-            PresentationStateKey key,
-            ulong confirmedTick);
-
-        List<PresentationStateKey> CollectCameraScopeKeys(
-            CharacterPresentationCommand command);
-    }
-
     internal sealed class FixedCameraPresentationReconciler
     {
         readonly ICharacterPresentationRuntime m_Runtime;
@@ -62,15 +52,18 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
                 }
                 if (!SameCommand(previous.Command, replacement.Command))
                 {
-                    requiresReplay = true;
-                    if (!IsTerminal(previous.Command))
-                        m_Runtime.Retire(previous.Command);
+                    if (!forced)
+                        m_Runtime.Replace(previous.Command, replacement.Command);
                 }
             }
 
             if (key.IsCameraForce && applied.Count > 0 && current.Count == 0)
             {
                 m_Applied.Remove(key);
+                if (HasAppliedForceScope(applied[0].Command) ||
+                    history.HasCameraForceScope(applied[0].Command, confirmedTick))
+                    return;
+                m_Runtime.Retire(applied[0].Command);
                 RestoreCameraScope(applied[0].Command, confirmedTick, history);
                 return;
             }
@@ -146,7 +139,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
             ulong confirmedTick,
             IFixedCameraPresentationHistory history)
         {
-            List<PresentationStateKey> keys = history.CollectCameraScopeKeys(force);
+            List<PresentationStateKey> keys = history.CollectCameraStateKeys(force);
             keys.Sort();
             for (int i = 0; i < keys.Count; i++)
             {
@@ -159,14 +152,24 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
         {
             if (key.IsCameraForce)
                 return false;
-            var forceKey = new PresentationStateKey(
-                "camera-force",
-                key.Producer,
-                key.Generation,
-                key.SourceActionInstanceId,
-                key.Cycle);
-            return m_Applied.TryGetValue(forceKey, out List<ActivePresentationRecord> force) &&
-                   force.Count > 0;
+            FixedCameraPresentationScopeKey scope = key.Scope;
+            return HasAppliedForceScope(scope);
+        }
+
+        bool HasAppliedForceScope(CharacterPresentationCommand command) =>
+            HasAppliedForceScope(new FixedCameraPresentationScopeKey(
+                command.ProducerId,
+                command.ProducerGeneration,
+                command.SourceActionInstanceId));
+
+        bool HasAppliedForceScope(FixedCameraPresentationScopeKey scope)
+        {
+            foreach (KeyValuePair<PresentationStateKey, List<ActivePresentationRecord>> pair in m_Applied)
+            {
+                if (pair.Key.IsCameraForce && pair.Key.Scope.Equals(scope) && pair.Value.Count > 0)
+                    return true;
+            }
+            return false;
         }
 
         static bool SameCommand(

@@ -26,6 +26,14 @@ namespace ThirdPersonCamera
             m_Pitch = m_Projection.DefaultElevationAngle;
         }
 
+        public State CaptureState() => new State(m_Yaw, m_Pitch);
+
+        public void RestoreState(State state)
+        {
+            m_Yaw = state.Yaw;
+            m_Pitch = state.Pitch;
+        }
+
         public Vector2 ResolveLook(
             Vector2 lookInput,
             in CameraResponseRequest response)
@@ -134,6 +142,18 @@ namespace ThirdPersonCamera
         {
             int index = Mathf.Clamp(Mathf.FloorToInt(Mathf.Clamp01(elevationRatio) * 2f), 0, 2);
             return offsets[index];
+        }
+
+        public readonly struct State
+        {
+            public State(float yaw, float pitch)
+            {
+                Yaw = yaw;
+                Pitch = pitch;
+            }
+
+            public float Yaw { get; }
+            public float Pitch { get; }
         }
 
     }

@@ -149,12 +149,12 @@ namespace ThirdPersonCamera
                 for (int i = 0; i < requests.Count; i++)
                 {
                     CameraSequenceRequest candidate = requests[i];
-                    if (!candidate.Active || !ShouldReplace(selected, candidate))
+                    if (string.IsNullOrWhiteSpace(candidate.SequenceId) || !ShouldReplace(selected, candidate))
                         continue;
                     selected = candidate;
                 }
             }
-            return selected.Active
+            return !string.IsNullOrWhiteSpace(selected.SequenceId)
                 ? selected
                 : new CameraSequenceRequest(
                     defaultSequenceId,
@@ -175,7 +175,7 @@ namespace ThirdPersonCamera
 
         static bool ShouldReplace(CameraSequenceRequest selected, CameraSequenceRequest candidate)
         {
-            if (!selected.Active)
+            if (string.IsNullOrWhiteSpace(selected.SequenceId))
                 return true;
             if (candidate.Priority != selected.Priority)
                 return candidate.Priority > selected.Priority;

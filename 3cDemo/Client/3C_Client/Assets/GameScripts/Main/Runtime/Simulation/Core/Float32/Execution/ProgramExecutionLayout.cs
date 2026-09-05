@@ -310,7 +310,9 @@ namespace ThirdPersonSimulation
                 throw new InvalidOperationException("Constant Value input has no source output port.");
             RequireOperation(binding.SourceOperation);
             IReadOnlyList<OperationValuePortDefinition> outputs = CharacterGameplayValuePortContracts.Require(
-                m_Program.Operations[binding.SourceOperation.Value].Code).Outputs;
+                m_Program.Operations[binding.SourceOperation.Value].Code,
+                binding.SourceOperation,
+                m_Program.GraphCallFrames).Outputs;
             if (binding.SourceOutputPortIndex < 0 || binding.SourceOutputPortIndex >= outputs.Count)
                 throw new InvalidOperationException("Compiled Value source output port index is invalid.");
             return outputs[binding.SourceOutputPortIndex].Identity;
@@ -755,7 +757,11 @@ namespace ThirdPersonSimulation
             int operationCount = program.Operations.Count;
             var grouped = new CompiledValueInputBinding?[operationCount][];
             for (int i = 0; i < operationCount; i++)
-                grouped[i] = new CompiledValueInputBinding?[CharacterGameplayValuePortContracts.Require(program.Operations[i].Code).Inputs.Count];
+                grouped[i] = new CompiledValueInputBinding?[
+                    CharacterGameplayValuePortContracts.Require(
+                        program.Operations[i].Code,
+                        program.Operations[i].Handle,
+                        program.GraphCallFrames).Inputs.Count];
             for (int i = 0; i < program.ControlFlow.Count; i++)
             {
                 ProgramControlFlowEdge edge = program.ControlFlow[i];
@@ -763,8 +769,12 @@ namespace ThirdPersonSimulation
                     continue;
                 SimulationOperation source = program.Operations[edge.Source.Value];
                 SimulationOperation target = program.Operations[edge.Target.Value];
-                OperationValuePortDefinition sourcePort = CharacterGameplayValuePortContracts.Require(source.Code).RequireSelection(edge.SourcePort);
-                OperationValuePortDefinition targetPort = CharacterGameplayValuePortContracts.Require(target.Code).RequireInput(edge.TargetPort);
+                OperationValuePortDefinition sourcePort = CharacterGameplayValuePortContracts
+                    .Require(source.Code, source.Handle, program.GraphCallFrames)
+                    .RequireSelection(edge.SourcePort);
+                OperationValuePortDefinition targetPort = CharacterGameplayValuePortContracts
+                    .Require(target.Code, target.Handle, program.GraphCallFrames)
+                    .RequireInput(edge.TargetPort);
                 SemanticValueKind kind = CharacterSimulationProgramValueResolver.ResolveOutputKind(program, source, sourcePort);
                 CharacterSimulationProgramValueResolver.RequireInputKind(program, target, targetPort, kind);
                 Add(grouped[target.Handle.Value], targetPort.Order, new CompiledValueInputBinding(
@@ -779,7 +789,9 @@ namespace ThirdPersonSimulation
             {
                 ProgramConstantInputBinding input = program.ConstantInputBindings[i];
                 SimulationOperation target = program.Operations[input.TargetOperation.Value];
-                OperationValuePortDefinition targetPort = CharacterGameplayValuePortContracts.Require(target.Code).RequireInput(input.TargetPort);
+                OperationValuePortDefinition targetPort = CharacterGameplayValuePortContracts
+                    .Require(target.Code, target.Handle, program.GraphCallFrames)
+                    .RequireInput(input.TargetPort);
                 CharacterSimulationProgramValueResolver.RequireInputKind(program, target, targetPort, input.ResolvedValueKind);
                 Add(grouped[target.Handle.Value], targetPort.Order, new CompiledValueInputBinding(
                     targetPort.Order,

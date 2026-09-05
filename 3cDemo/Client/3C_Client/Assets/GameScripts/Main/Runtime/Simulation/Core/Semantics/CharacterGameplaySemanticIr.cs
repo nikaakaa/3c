@@ -334,10 +334,10 @@ namespace ThirdPersonSimulation
                 throw new InvalidDataException("Semantic IR Body Motion capability is missing from the manifest.");
             m_Operations = Indexed(operations, value => value.Handle.Value, "semantic operation");
             m_Literals = Indexed(literals, value => value.Index, "semantic literal");
-            m_ConstantInputBindings = SortConstantInputs(constantInputBindings, m_Operations);
+            m_GraphCallFrames = Indexed(graphCallFrames, value => value.Index, "graph call frame");
+            m_ConstantInputBindings = SortConstantInputs(constantInputBindings, m_Operations, m_GraphCallFrames);
             m_ControlFlow = ByIdentity(controlFlow, value => value.Identity, "control-flow edge");
             m_References = ByIdentity(references, value => value.Identity, "reference");
-            m_GraphCallFrames = Indexed(graphCallFrames, value => value.Index, "graph call frame");
             m_StateDeclarations = Indexed(stateDeclarations, value => value.Index, "state declaration");
             m_Scopes = ByIdentity(scopes, value => value.Identity, "scope");
             m_WorldRequests = Indexed(worldRequests, value => value.Index, "world request");
@@ -404,7 +404,7 @@ namespace ThirdPersonSimulation
                 throw new InvalidDataException($"Value edge '{edge.Identity}' references an operation outside the table.");
             SemanticOperation source = m_Operations[edge.Source.Value];
             OperationValuePortDefinition sourcePort = CharacterGameplayValuePortContracts
-                .Require(source.Code)
+                .Require(source.Code, source.Handle, m_GraphCallFrames)
                 .RequireSelection(edge.SourcePort);
             return ResolveOutputKind(source, sourcePort);
         }
@@ -467,8 +467,12 @@ namespace ThirdPersonSimulation
                 if (edge.Kind != ProgramControlFlowKind.Value)
                     continue;
                 SemanticOperation target = m_Operations[edge.Target.Value];
-                OperationValuePortDefinition sourcePort = CharacterGameplayValuePortContracts.Require(source.Code).RequireSelection(edge.SourcePort);
-                OperationValuePortDefinition targetPort = CharacterGameplayValuePortContracts.Require(target.Code).RequireInput(edge.TargetPort);
+                OperationValuePortDefinition sourcePort = CharacterGameplayValuePortContracts
+                    .Require(source.Code, source.Handle, m_GraphCallFrames)
+                    .RequireSelection(edge.SourcePort);
+                OperationValuePortDefinition targetPort = CharacterGameplayValuePortContracts
+                    .Require(target.Code, target.Handle, m_GraphCallFrames)
+                    .RequireInput(edge.TargetPort);
                 SemanticValueKind sourceKind = ResolveOutputKind(source, sourcePort);
                 SemanticValueKind targetKind = ResolveInputKind(target, targetPort, sourceKind);
                 if (!targetPort.Accepts(sourceKind) || !KindsCanFlow(sourceKind, targetKind, targetPort.Constraint))
@@ -485,7 +489,9 @@ namespace ThirdPersonSimulation
                 if (binding.ConstantIndex < 0 || binding.ConstantIndex >= m_Literals.Count)
                     throw new InvalidDataException($"Constant input binding targets unknown literal '{binding.ConstantIndex}'.");
                 SemanticOperation target = m_Operations[binding.TargetOperation.Value];
-                OperationValuePortDefinition port = CharacterGameplayValuePortContracts.Require(target.Code).RequireInput(binding.TargetPort);
+                OperationValuePortDefinition port = CharacterGameplayValuePortContracts
+                    .Require(target.Code, target.Handle, m_GraphCallFrames)
+                    .RequireInput(binding.TargetPort);
                 SemanticValueKind literalKind = CharacterGameplayValuePortContracts.FromLiteral(m_Literals[binding.ConstantIndex].Kind);
                 SemanticValueKind expectedKind = ResolveInputKind(target, port, binding.ResolvedValueKind);
                 if (binding.ResolvedValueKind != literalKind ||
@@ -602,7 +608,8 @@ namespace ThirdPersonSimulation
 
         static ReadOnlyCollection<SemanticConstantInputBinding> SortConstantInputs(
             IEnumerable<SemanticConstantInputBinding> source,
-            IReadOnlyList<SemanticOperation> operations)
+            IReadOnlyList<SemanticOperation> operations,
+            IReadOnlyList<ProgramGraphCallFrame> graphCallFrames)
         {
             var values = new List<SemanticConstantInputBinding>(source ?? Array.Empty<SemanticConstantInputBinding>());
             values.Sort((left, right) =>
@@ -613,8 +620,12 @@ namespace ThirdPersonSimulation
                 if (left.TargetOperation.Value < 0 || left.TargetOperation.Value >= operations.Count ||
                     right.TargetOperation.Value < 0 || right.TargetOperation.Value >= operations.Count)
                     return string.CompareOrdinal(left.TargetPort, right.TargetPort);
-                OperationValuePortDefinition leftPort = CharacterGameplayValuePortContracts.Require(operations[left.TargetOperation.Value].Code).RequireInput(left.TargetPort);
-                OperationValuePortDefinition rightPort = CharacterGameplayValuePortContracts.Require(operations[right.TargetOperation.Value].Code).RequireInput(right.TargetPort);
+                OperationValuePortDefinition leftPort = CharacterGameplayValuePortContracts
+                    .Require(operations[left.TargetOperation.Value].Code, operations[left.TargetOperation.Value].Handle, graphCallFrames)
+                    .RequireInput(left.TargetPort);
+                OperationValuePortDefinition rightPort = CharacterGameplayValuePortContracts
+                    .Require(operations[right.TargetOperation.Value].Code, operations[right.TargetOperation.Value].Handle, graphCallFrames)
+                    .RequireInput(right.TargetPort);
                 int byOrder = leftPort.Order.CompareTo(rightPort.Order);
                 return byOrder != 0 ? byOrder : string.CompareOrdinal(left.TargetPort, right.TargetPort);
             });

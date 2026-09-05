@@ -205,6 +205,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             var outputs = new List<ProgramGraphParameterBinding>();
             BindGraphParameters(reference, reference.CallFrame.Inputs, inputs);
             BindGraphParameters(reference, reference.CallFrame.Outputs, outputs);
+            EmitGraphCallInputDefaults(reference, owner);
             m_Builder.DeclareGraphCallFrame(
                 reference.CallFrame.Identity,
                 owner,
@@ -213,6 +214,61 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 inputs,
                 outputs,
                 CharacterSemanticSourceFactory.Node(reference.Owner.Owner as BaseTree, reference.Owner, reference.Route));
+        }
+
+        void EmitGraphCallInputDefaults(
+            CharacterAuthoringGraphReferenceRecord reference,
+            OperationHandle owner)
+        {
+            if (reference.Owner is not SubTreeNode subTreeNode)
+                return;
+            BaseGraph graph = reference.Owner.Owner;
+            for (int i = 0; i < reference.CallFrame.Inputs.Count; i++)
+            {
+                CharacterAuthoringGraphParameterBinding binding = reference.CallFrame.Inputs[i];
+                PropertyPort port = null;
+                for (int portIndex = 0; portIndex < subTreeNode.InputPropertyPorts.Count; portIndex++)
+                {
+                    PropertyPort candidate = subTreeNode.InputPropertyPorts[portIndex];
+                    if (candidate != null && string.Equals(candidate.PortId, binding.PortId, StringComparison.Ordinal))
+                    {
+                        port = candidate;
+                        break;
+                    }
+                }
+                if (port == null || IsGraphCallInputLinked(graph, subTreeNode, binding.PortId))
+                    continue;
+                if (!TryMapValueKind(binding.ValueType, out SemanticValueKind kind))
+                {
+                    m_Report.Error(
+                        "graph_call_parameter_default_type_unsupported",
+                        reference.Route,
+                        $"Graph call parameter '{binding.ParameterName}' default uses unsupported type '{binding.ValueType?.FullName}'.");
+                    continue;
+                }
+                CharacterSimulationSourceLocation source = CharacterSemanticSourceFactory.Node(
+                    graph as BaseTree,
+                    subTreeNode,
+                    reference.Route + "/input:" + binding.PortId);
+                int constant = m_Builder.DeclareConstant(source, "default-value", port.GetValue());
+                if (constant >= 0)
+                    m_Builder.DeclareConstantInputBinding(owner, binding.PortId, constant, kind, source);
+            }
+        }
+
+        static bool IsGraphCallInputLinked(BaseGraph graph, SubTreeNode node, string portId)
+        {
+            if (graph == null)
+                return false;
+            for (int i = 0; i < graph.PropertyEdges.Count; i++)
+            {
+                PropertyEdge edge = graph.PropertyEdges[i];
+                if (edge != null &&
+                    string.Equals(edge.EndNodeGUID, node.GUID, StringComparison.Ordinal) &&
+                    string.Equals(edge.EndPortName, portId, StringComparison.Ordinal))
+                    return true;
+            }
+            return false;
         }
 
         void BindGraphParameters(

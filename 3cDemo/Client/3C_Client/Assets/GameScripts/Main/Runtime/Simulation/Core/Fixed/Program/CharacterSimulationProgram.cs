@@ -262,7 +262,8 @@ namespace ThirdPersonSimulation.Fixed
             m_OperationDefinitions = SortIndexed(operationDefinitions, value => value.Index, "operation definition");
             m_Operations = SortIndexed(operations, value => value.Handle.Value, "operation");
             m_Constants = SortIndexed(constants, value => value.Index, "constant");
-            m_ConstantInputBindings = SortConstantInputs(constantInputBindings, m_Operations);
+            m_GraphCallFrames = SortIndexed(graphCallFrames, value => value.Index, "graph call frame");
+            m_ConstantInputBindings = SortConstantInputs(constantInputBindings, m_Operations, m_GraphCallFrames);
             m_StateSlots = SortIndexed(stateSlots, value => value.Index, "state slot");
             m_WorldRequests = SortIndexed(worldRequests, value => value.Index, "world request");
             m_OutputChannels = SortIndexed(outputChannels, value => value.Index, "output channel");
@@ -271,7 +272,6 @@ namespace ThirdPersonSimulation.Fixed
             m_Producers = SortIndexed(producers, value => value.Index, "producer");
             m_ControlFlow = SortByIdentity(controlFlow, value => value.Identity, "control-flow edge");
             m_References = SortByIdentity(references, value => value.Identity, "reference");
-            m_GraphCallFrames = SortIndexed(graphCallFrames, value => value.Index, "graph call frame");
             m_Scopes = SortByIdentity(scopes, value => value.Identity, "scope");
             m_SourceMap = SortSourceMap(sourceMap);
             ControlModuleBinding = CharacterControlProgramCatalogValidator.Resolve(m_CatalogEntries, m_StateSlots);
@@ -342,15 +342,24 @@ namespace ThirdPersonSimulation.Fixed
                 string key = edge.Target.Value.ToString() + ":" + edge.TargetPort;
                 if (!valueSources.Add(key))
                     throw new ArgumentException($"Operation '{edge.Target}' input port '{edge.TargetPort}' has multiple linked Value sources.");
-                CharacterGameplayValuePortContracts.Require(m_Operations[edge.Source.Value].Code).RequireSelection(edge.SourcePort);
-                CharacterGameplayValuePortContracts.Require(m_Operations[edge.Target.Value].Code).RequireInput(edge.TargetPort);
+                CharacterGameplayValuePortContracts
+                    .Require(m_Operations[edge.Source.Value].Code, m_Operations[edge.Source.Value].Handle, m_GraphCallFrames)
+                    .RequireSelection(edge.SourcePort);
+                CharacterGameplayValuePortContracts
+                    .Require(m_Operations[edge.Target.Value].Code, m_Operations[edge.Target.Value].Handle, m_GraphCallFrames)
+                    .RequireInput(edge.TargetPort);
             }
             for (int i = 0; i < m_ConstantInputBindings.Count; i++)
             {
                 ProgramConstantInputBinding binding = m_ConstantInputBindings[i];
                 RequireIndex(binding.TargetOperation.Value, m_Operations.Count, "constant input operation");
                 RequireIndex(binding.ConstantIndex, m_Constants.Count, "constant input constant");
-                OperationValuePortDefinition port = CharacterGameplayValuePortContracts.Require(m_Operations[binding.TargetOperation.Value].Code).RequireInput(binding.TargetPort);
+                OperationValuePortDefinition port = CharacterGameplayValuePortContracts
+                    .Require(
+                        m_Operations[binding.TargetOperation.Value].Code,
+                        m_Operations[binding.TargetOperation.Value].Handle,
+                        m_GraphCallFrames)
+                    .RequireInput(binding.TargetPort);
                 if (!port.Accepts(binding.ResolvedValueKind) || ConstantKind(m_Constants[binding.ConstantIndex].Kind) != binding.ResolvedValueKind)
                     throw new ArgumentException($"Constant input '{binding.TargetOperation}/{binding.TargetPort}' has incompatible kind '{binding.ResolvedValueKind}'.");
                 string key = binding.TargetOperation.Value.ToString() + ":" + binding.TargetPort;
@@ -512,7 +521,8 @@ namespace ThirdPersonSimulation.Fixed
 
         static ReadOnlyCollection<ProgramConstantInputBinding> SortConstantInputs(
             IEnumerable<ProgramConstantInputBinding> source,
-            IReadOnlyList<SimulationOperation> operations)
+            IReadOnlyList<SimulationOperation> operations,
+            IReadOnlyList<ProgramGraphCallFrame> graphCallFrames)
         {
             var values = new List<ProgramConstantInputBinding>(source ?? Array.Empty<ProgramConstantInputBinding>());
             values.Sort((left, right) =>
@@ -523,8 +533,18 @@ namespace ThirdPersonSimulation.Fixed
                 if (left.TargetOperation.Value < 0 || left.TargetOperation.Value >= operations.Count ||
                     right.TargetOperation.Value < 0 || right.TargetOperation.Value >= operations.Count)
                     return string.CompareOrdinal(left.TargetPort, right.TargetPort);
-                OperationValuePortDefinition leftPort = CharacterGameplayValuePortContracts.Require(operations[left.TargetOperation.Value].Code).RequireInput(left.TargetPort);
-                OperationValuePortDefinition rightPort = CharacterGameplayValuePortContracts.Require(operations[right.TargetOperation.Value].Code).RequireInput(right.TargetPort);
+                OperationValuePortDefinition leftPort = CharacterGameplayValuePortContracts
+                    .Require(
+                        operations[left.TargetOperation.Value].Code,
+                        operations[left.TargetOperation.Value].Handle,
+                        graphCallFrames)
+                    .RequireInput(left.TargetPort);
+                OperationValuePortDefinition rightPort = CharacterGameplayValuePortContracts
+                    .Require(
+                        operations[right.TargetOperation.Value].Code,
+                        operations[right.TargetOperation.Value].Handle,
+                        graphCallFrames)
+                    .RequireInput(right.TargetPort);
                 int byOrder = leftPort.Order.CompareTo(rightPort.Order);
                 return byOrder != 0 ? byOrder : string.CompareOrdinal(left.TargetPort, right.TargetPort);
             });

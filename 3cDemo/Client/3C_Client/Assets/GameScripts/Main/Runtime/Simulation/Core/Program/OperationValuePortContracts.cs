@@ -212,6 +212,50 @@ namespace ThirdPersonSimulation
             return contract;
         }
 
+        public static OperationValuePortContract Require(
+            SimulationOperationCode code,
+            OperationHandle operation,
+            IReadOnlyList<ProgramGraphCallFrame> graphCallFrames)
+        {
+            if (code != SimulationOperationCode.SubGraph)
+                return Require(code);
+            if (!operation.IsValid)
+                throw new ArgumentException("A valid SubGraph operation is required.", nameof(operation));
+
+            ProgramGraphCallFrame frame = null;
+            for (int i = 0; i < (graphCallFrames?.Count ?? 0); i++)
+            {
+                ProgramGraphCallFrame candidate = graphCallFrames[i];
+                if (!candidate.OwnerOperation.Equals(operation))
+                    continue;
+                if (frame != null)
+                    throw new InvalidOperationException($"SubGraph operation '{operation}' has multiple graph call frames.");
+                frame = candidate;
+            }
+            if (frame == null)
+                throw new InvalidOperationException($"SubGraph operation '{operation}' has no graph call frame.");
+            return new OperationValuePortContract(
+                code,
+                BuildGraphPorts(frame.Inputs),
+                BuildGraphPorts(frame.Outputs));
+        }
+
+        static OperationValuePortDefinition[] BuildGraphPorts(
+            IReadOnlyList<ProgramGraphParameterBinding> bindings)
+        {
+            var result = new OperationValuePortDefinition[bindings?.Count ?? 0];
+            for (int i = 0; i < result.Length; i++)
+            {
+                ProgramGraphParameterBinding binding = bindings[i];
+                result[i] = new OperationValuePortDefinition(
+                    binding.PortId,
+                    i,
+                    OperationValuePortConstraint.Fixed,
+                    binding.ValueKind);
+            }
+            return result;
+        }
+
         public static SemanticValueKind FromLiteral(SemanticLiteralKind kind)
         {
             return kind switch

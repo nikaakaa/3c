@@ -100,7 +100,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             Array.Empty<CharacterPresentationPoseSourceSlot>();
 #if UNITY_EDITOR
         [Serializable]
-        sealed class LegacyPoseNode
+        internal sealed class LegacyPoseNode
         {
             [SerializeField] string m_NodeId = string.Empty;
             [SerializeField] string m_DisplayName = string.Empty;
@@ -118,7 +118,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         }
 
         [Serializable]
-        sealed class LegacyPoseEdge
+        internal sealed class LegacyPoseEdge
         {
             [SerializeField] string m_EdgeId = string.Empty;
             [SerializeField] string m_SourceNodeId = string.Empty;
@@ -142,7 +142,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         }
 
         [Serializable]
-        sealed class LegacyPoseGraph
+        internal sealed class LegacyPoseGraph
         {
             [SerializeField] string m_GraphId = string.Empty;
             [SerializeField] string m_ContentRevision = string.Empty;
@@ -173,7 +173,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
 
         internal sealed class LegacyCanvasMigrationState
         {
-            LegacyCanvasMigrationState(
+            internal LegacyCanvasMigrationState(
                 LegacyPoseGraph legacyRoot,
                 LegacyPoseGraph[] legacyCatalog,
                 CharacterPoseCanvasGraph canvasRoot,
@@ -192,6 +192,78 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 asset.m_TypedGraph = m_LegacyRoot;
                 asset.m_TypedGraphCatalog = m_LegacyCatalog;
             }
+        }
+
+        internal sealed class LegacyCanvasMigrationSource
+        {
+            internal LegacyCanvasMigrationSource(
+                LegacyCanvasMigrationGraph root,
+                LegacyCanvasMigrationGraph[] catalog)
+            {
+                Root = root;
+                Catalog = catalog ?? Array.Empty<LegacyCanvasMigrationGraph>();
+            }
+
+            internal LegacyCanvasMigrationGraph Root { get; }
+            internal IReadOnlyList<LegacyCanvasMigrationGraph> Catalog { get; }
+        }
+
+        internal sealed class LegacyCanvasMigrationGraph
+        {
+            internal LegacyCanvasMigrationGraph(LegacyPoseGraph graph)
+            {
+                GraphId = graph.GraphId;
+                ContentRevision = graph.ContentRevision;
+                Parameters = graph.Parameters.ToArray();
+                Nodes = graph.Nodes
+                    .Select(value => new LegacyCanvasMigrationNode(value))
+                    .ToArray();
+                Edges = graph.Edges
+                    .Select(value => new LegacyCanvasMigrationEdge(value))
+                    .ToArray();
+                Layout = graph.Layout.ToArray();
+            }
+
+            internal PoseGraphId GraphId { get; }
+            internal string ContentRevision { get; }
+            internal IReadOnlyList<CharacterPoseParameterDeclaration> Parameters { get; }
+            internal IReadOnlyList<LegacyCanvasMigrationNode> Nodes { get; }
+            internal IReadOnlyList<LegacyCanvasMigrationEdge> Edges { get; }
+            internal IReadOnlyList<CharacterPoseGraphLayoutEntry> Layout { get; }
+        }
+
+        internal sealed class LegacyCanvasMigrationNode
+        {
+            internal LegacyCanvasMigrationNode(LegacyPoseNode node)
+            {
+                NodeId = node.NodeId;
+                DisplayName = node.DisplayName;
+                Payload = node.Payload;
+                DynamicPorts = node.DynamicPorts.ToArray();
+            }
+
+            internal PoseNodeId NodeId { get; }
+            internal string DisplayName { get; }
+            internal CharacterPoseNodePayload Payload { get; }
+            internal IReadOnlyList<CharacterPoseDynamicPort> DynamicPorts { get; }
+        }
+
+        internal sealed class LegacyCanvasMigrationEdge
+        {
+            internal LegacyCanvasMigrationEdge(LegacyPoseEdge edge)
+            {
+                EdgeId = edge.EdgeId;
+                SourceNodeId = edge.SourceNodeId;
+                SourcePortId = edge.SourcePortId;
+                TargetNodeId = edge.TargetNodeId;
+                TargetPortId = edge.TargetPortId;
+            }
+
+            internal string EdgeId { get; }
+            internal PoseNodeId SourceNodeId { get; }
+            internal PosePortId SourcePortId { get; }
+            internal PoseNodeId TargetNodeId { get; }
+            internal PosePortId TargetPortId { get; }
         }
 #endif
 
@@ -334,6 +406,17 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 m_TypedGraphCatalog,
                 m_Graph,
                 m_GraphCatalog);
+        }
+
+        internal LegacyCanvasMigrationSource CaptureLegacyCanvasMigrationSource()
+        {
+            RequireLegacyCanvasMigrationInput();
+            LegacyPoseGraph[] catalog = m_TypedGraphCatalog ??
+                Array.Empty<LegacyPoseGraph>();
+            return new LegacyCanvasMigrationSource(
+                new LegacyCanvasMigrationGraph(m_TypedGraph),
+                catalog.Select(value => new LegacyCanvasMigrationGraph(value))
+                    .ToArray());
         }
 
         internal void RequireLegacyCanvasMigrationInput()

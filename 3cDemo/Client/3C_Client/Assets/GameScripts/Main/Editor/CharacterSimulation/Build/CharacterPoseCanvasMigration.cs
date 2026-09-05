@@ -12,8 +12,6 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
 {
     public static class CharacterPoseCanvasMigration
     {
-        const string CanonicalExpressionSchema =
-            "character-pose-canvas-migration-canonical.v1";
         const string CorinPoseGraphPath =
             "Assets/Configs/Character/Corin/Pipeline/Presentation/PoseGraphs/CorinPresentationPoseGraph.asset";
 
@@ -29,6 +27,11 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             string assetPath = AssetDatabase.GetAssetPath(asset);
             CharacterPresentationPoseGraphAsset.LegacyCanvasMigrationState state =
                 asset.CaptureLegacyCanvasMigrationState();
+            CharacterPresentationPoseGraphAsset.LegacyCanvasMigrationSource source =
+                asset.CaptureLegacyCanvasMigrationSource();
+            JObject sourceCanonical = CaptureLegacyCanonicalExpression(
+                asset,
+                source);
             HashSet<string> originalCanvasGraphIdentities =
                 CaptureGraphSubassetIdentities(assetPath);
             CharacterPoseCanvasGraph[] graphs = null;
@@ -48,10 +51,19 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                     graph.RequireValid();
                 }
 
-                JObject expected = CaptureCanonicalExpression(
+                JObject convertedSemantic = CaptureCanonicalExpression(
                     asset,
                     graphs[0],
-                    graphs);
+                    graphs,
+                    includeNativeSerialization: false);
+                if (!JToken.DeepEquals(sourceCanonical, convertedSemantic))
+                    throw new InvalidOperationException(
+                        "Corin Pose Graph migration changed its canonical authoring expression during Legacy conversion.");
+                JObject convertedCanonical = CaptureCanonicalExpression(
+                    asset,
+                    graphs[0],
+                    graphs,
+                    includeNativeSerialization: true);
                 asset.SetMigratedCanvasGraphs(
                     graphs[0],
                     graphs.Skip(1).ToArray());
@@ -88,8 +100,9 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 JObject actual = CaptureCanonicalExpression(
                     reloaded,
                     reloaded.Graph,
-                    reloadedGraphs);
-                if (!JToken.DeepEquals(expected, actual))
+                    reloadedGraphs,
+                    includeNativeSerialization: true);
+                if (!JToken.DeepEquals(convertedCanonical, actual))
                     throw new InvalidOperationException(
                         "Corin Pose Graph migration changed its canonical authoring expression after reload.");
                 UnityEngine.Debug.Log(
@@ -118,7 +131,8 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
         static JObject CaptureCanonicalExpression(
             CharacterPresentationPoseGraphAsset asset,
             CharacterPoseCanvasGraph root,
-            IEnumerable<CharacterPoseCanvasGraph> graphs)
+            IEnumerable<CharacterPoseCanvasGraph> graphs,
+            bool includeNativeSerialization)
         {
             if (!asset || !root)
                 throw new ArgumentNullException(!asset ? nameof(asset) : nameof(root));
@@ -132,35 +146,87 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                     "Pose Canvas canonical expression has no root graph in its catalog.");
             return new JObject
             {
-                ["schema"] = CanonicalExpressionSchema,
                 ["rootGraphId"] = root.GraphId.Value,
-                ["graphs"] = new JArray(values.Select(CaptureGraphExpression)),
+                ["graphs"] = new JArray(values.Select(value =>
+                    CaptureGraphExpression(value, includeNativeSerialization))),
                 ["sourceSlots"] = CaptureSourceSlots(asset),
                 ["stateMachineLayouts"] = CaptureStateMachineLayouts(asset)
             };
         }
 
-        static JObject CaptureGraphExpression(CharacterPoseCanvasGraph graph)
+        static JObject CaptureLegacyCanonicalExpression(
+            CharacterPresentationPoseGraphAsset asset,
+            CharacterPresentationPoseGraphAsset.LegacyCanvasMigrationSource source)
         {
-            if (!graph)
+            if (!asset || source == null || source.Root == null)
                 throw new InvalidOperationException(
-                    "Pose Canvas canonical expression contains a missing graph.");
-            graph.RequireValid();
-            var references = new List<UnityEngine.Object>();
-            string serialized = graph.Serialize(references);
+                    "Pose Legacy canonical expression has no root graph.");
+            CharacterPresentationPoseGraphAsset.LegacyCanvasMigrationGraph[] graphs =
+                new[] { source.Root }
+                    .Concat(source.Catalog ??
+                        Array.Empty<CharacterPresentationPoseGraphAsset.LegacyCanvasMigrationGraph>())
+                    .OrderBy(value => value.GraphId.Value, StringComparer.Ordinal)
+                    .ToArray();
+            return new JObject
+            {
+                ["rootGraphId"] = source.Root.GraphId.Value,
+                ["graphs"] = new JArray(graphs.Select(CaptureLegacyGraphExpression)),
+                ["sourceSlots"] = CaptureSourceSlots(asset),
+                ["stateMachineLayouts"] = CaptureStateMachineLayouts(asset)
+            };
+        }
+
+        static JObject CaptureLegacyGraphExpression(
+            CharacterPresentationPoseGraphAsset.LegacyCanvasMigrationGraph graph)
+        {
+            if (graph == null)
+                throw new InvalidOperationException(
+                    "Pose Legacy canonical expression contains a missing graph.");
             return new JObject
             {
                 ["graphId"] = graph.GraphId.Value,
                 ["contentRevision"] = graph.ContentRevision,
                 ["parameters"] = new JArray(
                     graph.Parameters
-                        .OrderBy(value => value?.ParameterId.Value, StringComparer.Ordinal)
+                        .OrderBy(value => value == null
+                            ? string.Empty
+                            : value.ParameterId.Value,
+                            StringComparer.Ordinal)
                         .Select(CaptureParameter)),
-                ["serializedGraph"] = JToken.Parse(serialized),
-                ["serializedReferences"] = new JArray(
-                    references.Select(value => CaptureAssetReference(
-                        value,
-                        $"graph '{graph.GraphId}' serialized reference"))),
+                ["nodes"] = new JArray(
+                    graph.Nodes
+                        .OrderBy(value => value.NodeId.Value, StringComparer.Ordinal)
+                        .Select(CaptureLegacyNodeExpression)),
+                ["edges"] = new JArray(
+                    graph.Edges
+                        .OrderBy(value => value.EdgeId, StringComparer.Ordinal)
+                        .Select(CaptureLegacyEdge)),
+                ["layout"] = new JArray(
+                    graph.Layout
+                        .OrderBy(value => value.NodeId.Value, StringComparer.Ordinal)
+                        .Select(CaptureLayoutEntry))
+            };
+        }
+
+        static JObject CaptureGraphExpression(
+            CharacterPoseCanvasGraph graph,
+            bool includeNativeSerialization)
+        {
+            if (!graph)
+                throw new InvalidOperationException(
+                    "Pose Canvas canonical expression contains a missing graph.");
+            graph.RequireValid();
+            var expression = new JObject
+            {
+                ["graphId"] = graph.GraphId.Value,
+                ["contentRevision"] = graph.ContentRevision,
+                ["parameters"] = new JArray(
+                    graph.Parameters
+                        .OrderBy(value => value == null
+                            ? string.Empty
+                            : value.ParameterId.Value,
+                            StringComparer.Ordinal)
+                        .Select(CaptureParameter)),
                 ["nodes"] = new JArray(
                     graph.Nodes
                         .OrderBy(value => value.NodeId.Value, StringComparer.Ordinal)
@@ -174,6 +240,17 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                         .OrderBy(value => value.NodeId.Value, StringComparer.Ordinal)
                         .Select(CaptureLayoutEntry))
             };
+            if (includeNativeSerialization)
+            {
+                var references = new List<UnityEngine.Object>();
+                string serialized = graph.Serialize(references);
+                expression["serializedGraph"] = JToken.Parse(serialized);
+                expression["serializedReferences"] = new JArray(
+                    references.Select(value => CaptureAssetReference(
+                        value,
+                        $"graph '{graph.GraphId}' serialized reference")));
+            }
+            return expression;
         }
 
         static JObject CaptureNodeExpression(CharacterPoseCanvasNode node)
@@ -181,8 +258,42 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             if (!node || node.Payload == null)
                 throw new InvalidOperationException(
                     "Pose Canvas canonical expression contains an incomplete node.");
+            return CaptureNodeExpression(
+                node.NodeId,
+                node.DisplayName,
+                node.Payload,
+                node.DynamicPorts);
+        }
+
+        static JObject CaptureLegacyNodeExpression(
+            CharacterPresentationPoseGraphAsset.LegacyCanvasMigrationNode node)
+        {
+            if (node == null)
+                throw new InvalidOperationException(
+                    "Pose Legacy canonical expression contains an incomplete node.");
+            return CaptureNodeExpression(
+                node.NodeId,
+                node.DisplayName,
+                node.Payload,
+                node.DynamicPorts);
+        }
+
+        static JObject CaptureNodeExpression(
+            PoseNodeId nodeId,
+            string displayName,
+            CharacterPoseNodePayload payload,
+            IReadOnlyList<CharacterPoseDynamicPort> dynamicPorts)
+        {
+            if (!nodeId.IsValid || payload == null)
+                throw new InvalidOperationException(
+                    "Pose canonical expression contains an incomplete node.");
+            CharacterPoseCanvasNode projectionNode = new CharacterPoseCanvasNode(
+                nodeId,
+                displayName,
+                payload,
+                (dynamicPorts ?? Array.Empty<CharacterPoseDynamicPort>()).ToArray());
             CharacterPoseCanvasDefinitionProjection definition =
-                CharacterPoseCanvasDefinitionProjection.For(node);
+                CharacterPoseCanvasDefinitionProjection.For(projectionNode);
             GraphAuthoringCapabilityDescriptor capability = definition.Capability;
             var fields = new JObject();
             foreach (GraphAuthoringFieldDescriptor field in capability.Fields
@@ -191,29 +302,28 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 fields[field.FieldId.Value] =
                     CharacterPoseAuthoringPayloadCodec.EncodeValue(
                         CharacterPoseAuthoringPayloadCodec.Read(
-                            node.Payload,
+                            payload,
                             field.FieldId.Value),
                         value => CaptureAssetReference(
                             value,
-                            $"node '{node.NodeId}' field '{field.FieldId}'"));
+                            $"node '{nodeId}' field '{field.FieldId}'"));
             }
             return new JObject
             {
-                ["nodeId"] = node.NodeId.Value,
-                ["displayName"] = node.DisplayName,
-                ["kind"] = node.Kind.ToString(),
-                ["payloadType"] = node.Payload.GetType().FullName,
+                ["nodeId"] = nodeId.Value,
+                ["displayName"] = displayName,
+                ["kind"] = payload.Kind.ToString(),
+                ["payloadType"] = payload.GetType().FullName,
                 ["capability"] = capability.CapabilityId.Value,
                 ["fields"] = fields,
                 ["dynamicPorts"] = new JArray(
-                    node.DynamicPorts
+                    (dynamicPorts ?? Array.Empty<CharacterPoseDynamicPort>())
                         .OrderBy(value => value.PortId.Value, StringComparer.Ordinal)
                         .Select(CaptureDynamicPort)),
                 ["definitionPorts"] = new JArray(
                     definition.Ports
                         .OrderBy(value => value.PortId.Value, StringComparer.Ordinal)
-                        .Select(CaptureProjectedPort)),
-                ["position"] = CaptureVector2(node.position)
+                        .Select(CaptureProjectedPort))
             };
         }
 
@@ -253,6 +363,22 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             if (edge == null)
                 throw new InvalidOperationException(
                     "Pose Canvas canonical expression contains a missing edge.");
+            return new JObject
+            {
+                ["edgeId"] = edge.EdgeId,
+                ["sourceNodeId"] = edge.SourceNodeId.Value,
+                ["sourcePortId"] = edge.SourcePortId.Value,
+                ["targetNodeId"] = edge.TargetNodeId.Value,
+                ["targetPortId"] = edge.TargetPortId.Value
+            };
+        }
+
+        static JObject CaptureLegacyEdge(
+            CharacterPresentationPoseGraphAsset.LegacyCanvasMigrationEdge edge)
+        {
+            if (edge == null)
+                throw new InvalidOperationException(
+                    "Pose Legacy canonical expression contains a missing edge.");
             return new JObject
             {
                 ["edgeId"] = edge.EdgeId,

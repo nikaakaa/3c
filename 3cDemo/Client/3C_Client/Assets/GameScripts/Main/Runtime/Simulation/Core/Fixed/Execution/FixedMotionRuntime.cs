@@ -212,7 +212,8 @@ namespace ThirdPersonSimulation.Fixed
                     contribution.Source,
                     "motion_contribution",
                     SimulationTraceSeverity.Detail,
-                    $"channel={contribution.Channel};blend={contribution.BlendMode};priority={contribution.Priority};weight={contribution.Weight};delta={contribution.Displacement};yaw={contribution.YawDegrees};claim={contribution.ClaimsLowerChannels};movementClock={FormatMovementClock(contribution.MovementPlaybackClock)}");
+                    $"channel={contribution.Channel};blend={contribution.BlendMode};priority={contribution.Priority};weight={contribution.Weight};delta={contribution.Displacement};yaw={contribution.YawDegrees};claim={contribution.ClaimsLowerChannels};movementClock={FormatMovementClock(contribution.MovementPlaybackClock)}",
+                    SourceGeneration(contribution.Source));
             }
         }
 
@@ -383,7 +384,8 @@ namespace ThirdPersonSimulation.Fixed
                 channel.TraceSource,
                 "motion_channel_resolved",
                 SimulationTraceSeverity.Detail,
-                $"channel={channel.Channel};owner={channel.ResolvedOwnerIdentity};delta={channel.Displacement};yaw={channel.YawDegrees};planarBasis={channel.PlanarBasis};claim={channel.ClaimsLowerChannels};sources={channel.ParticipatingSourceCount};fingerprint={channel.ParticipatingSourceFingerprint:x16};movementClock={FormatMovementClock(channel.MovementPlaybackClock)}");
+                $"channel={channel.Channel};owner={channel.ResolvedOwnerIdentity};delta={channel.Displacement};yaw={channel.YawDegrees};planarBasis={channel.PlanarBasis};claim={channel.ClaimsLowerChannels};sources={channel.ParticipatingSourceCount};fingerprint={channel.ParticipatingSourceFingerprint:x16};movementClock={FormatMovementClock(channel.MovementPlaybackClock)}",
+                SourceGeneration(channel.TraceSource));
         }
 
         void TraceResolvedGameplayMotion(ResolvedGameplayMotion motion, ResolvedMotionChannel action)
@@ -397,7 +399,19 @@ namespace ThirdPersonSimulation.Fixed
                 source,
                 "resolved_gameplay_motion",
                 SimulationTraceSeverity.Information,
-                $"delta={motion.Displacement};yaw={motion.YawDegrees};hasMotion={motion.HasMotion};movementClock={FormatMovementClock(motion.MovementPlaybackClock)}");
+                $"delta={motion.Displacement};yaw={motion.YawDegrees};hasMotion={motion.HasMotion};movementClock={FormatMovementClock(motion.MovementPlaybackClock)}",
+                SourceGeneration(source));
+        }
+
+        ulong SourceGeneration(SimulationExecutionSource source)
+        {
+            if (!source.IsSkillOperation)
+                return 1;
+            int slot = m_Frame.Layout.FindOperationStateSlot(
+                source.Operation,
+                ProgramStateSemantic.RunnableActivationGeneration);
+            ulong generation = slot < 0 ? 1UL : m_Frame.Transaction.Get(slot).UInt64;
+            return generation == 0 ? 1UL : generation;
         }
 
         static string FormatMovementClock(CommittedMovementPlaybackClock clock) =>

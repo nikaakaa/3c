@@ -268,7 +268,7 @@ namespace ThirdPersonSimulation.Fixed
             m_Actions.WriteState(next);
             EmitActionFact(source, next);
             if (m_Trace.Enabled)
-                m_Trace.Add(source, "action_lifecycle", SimulationTraceSeverity.Information, $"{next.ActionId}:{next.InstanceId}:{transition}:{next.Reason}:equipment={next.EquipmentContext}");
+                m_Trace.Add(source, "action_lifecycle", SimulationTraceSeverity.Information, $"{next.ActionId}:{next.InstanceId}:{transition}:{next.Reason}:equipment={next.EquipmentContext}", SourceGeneration(source));
             if (!next.IsActive)
             {
                 m_GameplayEffectActions.RemoveActionTags(next.InstanceId);
@@ -279,7 +279,7 @@ namespace ThirdPersonSimulation.Fixed
 
         void EmitActionFact(SimulationExecutionSource source, FixedActionInstanceState action)
         {
-            SimulationEventHeader header = m_Facts.Next(source);
+            SimulationEventHeader header = m_Facts.Next(source, SourceGeneration(source));
             m_Facts.Add(new GameplayFact(header, new ActionFact(
                 action.InstanceId,
                 action.PredictionKey,
@@ -290,6 +290,17 @@ namespace ThirdPersonSimulation.Fixed
                 action.State,
                 action.Reason,
                 action.EquipmentContext)));
+        }
+
+        ulong SourceGeneration(SimulationExecutionSource source)
+        {
+            if (!source.IsSkillOperation)
+                return 1;
+            int slot = m_Frame.Layout.FindOperationStateSlot(
+                source.Operation,
+                ProgramStateSemantic.RunnableActivationGeneration);
+            ulong generation = slot < 0 ? 1UL : m_Frame.Transaction.Get(slot).UInt64;
+            return generation == 0 ? 1UL : generation;
         }
 
         ActionAdmissionProfile RequireActionProfile(SimulationOperation operation) =>

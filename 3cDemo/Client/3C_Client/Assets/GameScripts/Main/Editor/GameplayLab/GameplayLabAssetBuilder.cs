@@ -91,8 +91,7 @@ namespace ThirdPersonGameplay.Editor.Lab
             NormalizeTrainingEnemyTimeline();
             CharacterRuntimeProfileRootHierarchyBuilder.Synchronize();
             CharacterPipelineDefinition definition = LoadRequired<CharacterPipelineDefinition>(CharacterDefinitionPath);
-            FixedCharacterSimulationProgramAsset fixedProgram =
-                FixedCharacterSimulationProgramBuildService.Build(definition, FixedProgramPath);
+            FixedCharacterSimulationProgramAsset fixedProgram = BuildCharacterSimulationPrograms(definition);
             CharacterPresentationProjectionAsset projection = definition.PresentationProjection
                 ? definition.PresentationProjection
                 : throw new InvalidOperationException("Gameplay Lab Character Definition has no published Projection.");
@@ -148,6 +147,29 @@ namespace ThirdPersonGameplay.Editor.Lab
             AssetDatabase.Refresh();
             GameplayLabEditorLauncher.Validate();
             Debug.Log("Shared Gameplay Lab synchronized: Local Fixed Q32.32, Local Float32 AI and Deterministic Rollback.");
+        }
+
+        static FixedCharacterSimulationProgramAsset BuildCharacterSimulationPrograms(
+            CharacterPipelineDefinition definition)
+        {
+            CharacterSimulationBuildResult result = CharacterSimulationBuildOrchestrator.Build(
+                new CharacterSimulationBuildRequest(
+                    definition,
+                    CharacterSimulationBuildPublicationMode.Publish,
+                    new ICharacterSimulationTargetBuildAdapter[]
+                    {
+                        CharacterSimulationTargetCatalog.Float32(definition),
+                        new FixedCharacterSimulationTargetBuildAdapter(FixedProgramPath)
+                    }));
+            if (!result.IsValid)
+            {
+                string details = string.Join(
+                    Environment.NewLine,
+                    result.Report.Messages.Select(message => message.ToString()));
+                throw new InvalidOperationException(
+                    $"Gameplay Lab Character Simulation build failed.{Environment.NewLine}{details}");
+            }
+            return LoadRequired<FixedCharacterSimulationProgramAsset>(FixedProgramPath);
         }
 
         public static void SyncFloat32EnemyVariant()

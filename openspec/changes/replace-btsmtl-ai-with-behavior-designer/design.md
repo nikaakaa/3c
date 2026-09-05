@@ -210,6 +210,18 @@ Input/Action 的共同输出仍是 ActorId、RequestId、capture sequence 到排
 
 Document 的规范安装必须与唯一 schema owner 合并 v5 基础及 Timeline 增量，不能单独安装本提案的局部 v5 条款而留下 current spec 中的 v4-only 要求，也不能重复应用已完成的 requirement rename。合并依据实际已安装条款，最终删除 AI、保留其余正式领域；这项文档发布顺序不要求其它无关主重构任务全部完成。
 
+已从实际 delta 核对的三组安装冲突：
+
+| 条款迁移 | 当前重复/交叉位置 | 安装规则 |
+|---|---|---|
+| `Document v4必须原子替代v3` → `Document v5必须原子替代v4` | 主重构和 Timeline 的 `btsmtl-agent-authoring-document-sync` 都声明 RENAMED | 由 v5/schema owner 执行一次；后安装的 delta 必须对齐已安装标题，不能重复旧 FROM |
+| `Document v4失败恢复必须同时覆盖Unity owner与正式package` → `Document v5失败恢复必须同时覆盖Unity owner与正式package` | 主重构和 Timeline 的同一能力都声明 RENAMED | 同样只执行一次；保留完整 Unity owner/package 失败恢复正文 |
+| `MCP bridge必须透传同一Document Character与AI事务` → `MCP bridge必须透传同一Document整包事务` | 主重构仍 MODIFIED 旧标题，本提案 RENAMED 后提供完整正文 | 整包标题只改一次；之后所有相关 MODIFIED 都对齐实际新标题 |
+
+规范安装时先读取当时的 installed 标题和完整正文，再合并主重构的 Skill/控制配置、Timeline 的独立根增量和本提案的 AI 退役语义。同标题 MODIFIED 不能按文件先后整段覆盖，否则会丢失另一变更的有效字段/场景或恢复旧 AI。已完成改名必须从后安装的待应用 delta 中消除重复操作；这是作者阶段对齐实际规范，不是运行时保留两种名称或 reader。
+
+组合安装的检查记录必须包含安装前标题、每组只执行一次的改名、逐条合并后的正文/场景，以及安装后仍保留 Skill 和 Timeline、已移除游戏 AI domain 的结果。三个 change 分别通过严格校验只能证明各自 delta 的校验结果，不能替代上述组合检查。截至本次规划，本提案独立严格校验已通过，三份变更的组合安装尚未执行或验证。该责任属于规范安装/对账，不要求三份实现一起完成，也不扩大本提案仅规划的授权。
+
 2026-09-05 已按主规划 owner 的明确要求，将以上接口交接发送给主实现任务 `01a06b30-aa8c-7cf3-8e05-cedfbfbbee2f`，限定为规划协调，不授权本提案实施或删除代码。Timeline 的 AIController 保留文字由其规划 owner 对齐。本轮不修改这些 current/active 文件；上表指出的是安装本提案时必须合并的语义，不把仍然存在的旧文本当作已完成迁移。
 
 ## Risks / Trade-offs

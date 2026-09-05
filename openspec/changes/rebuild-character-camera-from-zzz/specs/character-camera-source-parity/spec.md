@@ -54,7 +54,7 @@
 
 ### Requirement: Corin 相机资源与事件必须完整接入同一角色配置
 
-Corin 已解码的 81 项 Shake、18 项 Zoom、18 项 Stretch、4 项 Override，以及其余可达 Profile、Curve、Sequence、Shot 与事件 MUST逐项对账并进入正式角色配置。事件 MUST迁入现有角色 Graph/Action Timeline 的已提交请求链，原 Animator 事件表 MUST不成为第二个运行调度器。完整性 MUST同时覆盖资源、时间、绑定、作者编辑、运行消费和诊断来源。
+Corin 已解码的 81 项 Shake、18 项 Zoom、18 项 Stretch、4 项 Override，以及其余可达 Profile、Curve、Sequence、Shot 与事件 MUST逐项对账并进入正式角色配置。事件 MUST迁入SkillProgram Root、技能局部 Graph 与 TreeClip/Timeline 的已提交请求链，原 Animator 事件表 MUST不成为第二个运行调度器。完整性 MUST同时覆盖资源、时间、绑定、作者编辑、运行消费和诊断来源。
 
 #### Scenario: AssaultAid 相机时点
 

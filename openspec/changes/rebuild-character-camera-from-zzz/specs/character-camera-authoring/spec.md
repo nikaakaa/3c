@@ -1,6 +1,6 @@
 ## Purpose
 
-定义作者如何在现有 Character、Graph 与 Timeline 工作区内配置角色相机资源、编排技能镜头、编辑曲线、预览表现并定位运行来源，确保人工编辑和 Agent 修改进入同一正式数据与事务链。
+定义作者如何在 SkillProgram Root、技能局部 Graph、TreeClip/Timeline 与 Character 工作区内配置角色相机资源、编排技能镜头、编辑曲线、预览表现并定位运行来源，确保人工编辑和 Agent 修改进入同一正式数据与事务链。C# Locomotion 控制拓扑不提供 Camera 图节点，也不维护平行控制图。
 
 ## ADDED Requirements
 
@@ -22,13 +22,13 @@
 
 ### Requirement: 相机编辑必须接入现有工作区与唯一 Mutation
 
-相机资源目录、Details、引用导航和诊断 MUST通过现有 Character/Graph 工作区的领域扩展进入共享 Shell；Gameplay Graph MUST继续使用已有画布、搜索、端口、selection 和 Undo。CameraSequence MUST作为有限相机算法及组合的作者资源编辑，不创建第二套 GraphView、Workbench、动画 Sequence 或 Timeline Sequence 模式。所有编辑、创建、删除、引用替换和导入 MUST经同一正式相机 Mutation 与资产事务。
+相机资源目录、Details、引用导航和诊断 MUST通过现有 Character 工作区以及 SkillProgram/技能局部 Graph/TreeClip/Timeline 的领域扩展进入共享 Shell；Gameplay 图 MUST继续使用已有画布、搜索、端口、selection 和 Undo。CameraSequence MUST作为有限相机算法及组合的作者资源编辑，不创建第二套 GraphView、Workbench、动画 Sequence 或 Timeline Sequence 模式。所有编辑、创建、删除、引用替换和导入 MUST经同一正式相机 Mutation 与资产事务。
 
 #### Scenario: 从技能节点打开镜头资源
 
-- **WHEN** 作者选中引用 CameraSequence 的 Graph 节点或 Timeline Clip
+- **WHEN** 作者选中引用 CameraSequence 的技能局部 Graph 节点、TreeClip 或 Timeline Clip
 - **THEN** Details MUST提供精确资源选择和打开资源/返回引用处的导航
-- **AND** MUST保持原 Graph/Timeline 与资源各自的真实 owner 和 Undo
+- **AND** MUST保持技能局部 Graph/TreeClip/Timeline 与资源各自的真实 owner 和 Undo
 
 #### Scenario: 撤销共享资源修改
 
@@ -36,9 +36,9 @@
 - **THEN** Undo MUST恢复该真实资源及同一事务中的引用变化
 - **AND** 其它引用者 MUST读取恢复后的同一资产，不从窗口副本恢复
 
-### Requirement: Graph 与 Timeline 必须提供可编译的强类型镜头编排
+### Requirement: SkillProgram与TreeClip/Timeline必须提供可编译的强类型镜头编排
 
-Graph MUST提供序列请求、目标/响应设置、效果触发和 basis 读取的正式能力；Timeline MUST提供有持续生命周期的 Sequence/Override/Zoom/Stretch/Shot 编排和按事件时点触发的 Shake。资源选择 MUST通过 Profile 允许的强类型引用，目标 MUST通过已声明槽位或正式上下文选择；完整 capability MUST同时覆盖创建菜单、字段、端口、校验、Compiler 和 Document。缺少运行支持的类型 MUST不能作为可成功发布的作者能力。
+SkillProgram Root 与技能局部 Graph MUST提供序列请求、目标/响应设置、效果触发和 basis 读取的正式能力；TreeClip/Timeline MUST提供有持续生命周期的 Sequence/Override/Zoom/Stretch/Shot 编排和按事件时点触发的 Shake。资源选择 MUST通过 Profile 允许的强类型引用，目标 MUST通过已声明槽位或正式上下文选择；完整 capability MUST同时覆盖创建菜单、字段、端口、校验、Compiler 和 Document。C# Locomotion 控制拓扑不得提供 Camera 图节点。缺少运行支持的类型 MUST不能作为可成功发布的作者能力。
 
 #### Scenario: 编排完整技能镜头
 

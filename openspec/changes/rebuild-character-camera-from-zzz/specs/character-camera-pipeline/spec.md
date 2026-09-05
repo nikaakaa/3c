@@ -2,7 +2,7 @@
 
 ### Requirement: BTSMTL 和 Timeline 必须只提交相机请求
 
-系统 MUST让 BTSMTL 节点和 Timeline 相机轨道只声明强类型序列请求、效果触发、响应策略、目标请求或读取 CameraBasisSnapshot。每个公开能力 MUST经唯一 Compiler 降低为版本化 Program operation，并保留 Graph/Node/Timeline/Track/Clip identity、端口和 Source Map；Float32 与 Fixed MUST按同一语义提交现有 PresentationCommand。序列、Override、Zoom、Stretch、Shake、Shot 和曲线的实际表现参数 MUST从同一 Projection 的正式相机资源绑定取得。节点、Clip、编译 operation 与 Action MUST不直接控制 Cinemachine、Unity Camera、相机 Transform 或优先级，不将本地相机状态写入 Character/World state。未知类型、缺失字段、无效资源引用和 Target 未实现 MUST在 build/composition 明确失败。
+系统 MUST让 SkillProgram Root、技能局部 Graph、TreeClip/Timeline 的相机入口只声明强类型序列请求、效果触发、响应策略、目标请求或读取 CameraBasisSnapshot。每个公开能力 MUST经唯一 Compiler 降低为版本化 Program operation，并保留 Graph/Node/TreeClip/Timeline/Track/Clip identity、端口和 Source Map；Float32 与 Fixed MUST按同一语义提交现有 PresentationCommand。序列、Override、Zoom、Stretch、Shake、Shot 和曲线的实际表现参数 MUST从同一 Projection 的正式相机资源绑定取得。C# Locomotion 控制拓扑不得提供 Camera 图节点。节点、Clip、编译 operation 与 Action MUST不直接控制 Cinemachine、Unity Camera、相机 Transform 或优先级，不将本地相机状态写入 Character/World state。未知类型、缺失字段、无效资源引用和 Target 未实现 MUST在 build/composition 明确失败。
 
 #### Scenario: BTSMTL 请求瞄准相机
 

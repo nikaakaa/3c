@@ -21,14 +21,14 @@
 
 ## 3. 统一作者能力与 Mutation
 
-- [ ] 3.1 为全部 Camera 资源和 Graph/Timeline 能力注册字段、类型、单位、空间、时间域和端口，交付人工 UI、Compiler、Document 共用的唯一 capability 目录。
+- [ ] 3.1 为全部 Camera 资源和 SkillProgram/技能局部 Graph/TreeClip/Timeline 能力注册字段、类型、单位、空间、时间域和端口，交付人工 UI、Compiler、Document 共用的唯一 capability 目录。
 - [ ] 3.2 实现 Profile/资源的创建、修改、删除和强类型引用 Mutation，交付与现有事务服务接线的 handlers，创建对象和引用变更属于同一 Undo owner 集合。
 - [ ] 3.3 实现原数据到正式作者目标的明确 Import 命令，交付依赖预检、逐项映射和同一事务计划；缺失依赖或来源冲突时报告失败且不发布半套资产。
 - [ ] 3.4 注册 Timeline-local Weight/Ease 与资源曲线各自的 Channel/Mutation owner，交付无重复可写曲线的 Catalog 和完整曲线替换接口。
 
 ## 4. 接入 Semantic IR 与唯一 Projection Build
 
-- [ ] 4.1 迁移 Camera Graph/Timeline 的请求 payload，分离 portable 命令语义与 Presentation 资源引用，交付带完整 source mapping 的新版本相机 operation 合同。
+- [ ] 4.1 迁移 SkillProgram Root、技能局部 Graph、TreeClip/Timeline 的 Camera 请求 payload，分离 portable 命令语义与 Presentation 资源引用，交付带完整 source mapping 的新版本相机 operation 合同。
 - [ ] 4.2 同步 Float32/Fixed 相机 emitter、evaluator 和命令 disposition，交付两个 Target 同语义的生成结果，未知/旧版本 payload 明确拒绝。
 - [ ] 4.3 实现 Camera Projection 编译模块，交付同一 CharacterPresentationProjection 内的 dense 资源/曲线/序列/目标/Shot 计划和唯一阶段顺序，不新增独立 loader。
 - [ ] 4.4 补齐资源类型、来源闭包、数值/时间域、阶段和容量预检，交付能定位 Profile、资源、节点或 Clip 的正式 Compiler 诊断。
@@ -66,35 +66,35 @@
 - [ ] 8.4 从实际活动输出发布同帧 CameraBasisSnapshot 和正式重置结果，交付 Shot/blend 后一致的方向/yaw/pitch，输入不再读取未活动 FreeLook。
 - [ ] 8.5 将完整相机装配接回 CharacterCameraPresentationRuntime 与 Factory，交付保持 Body/最终动画/Camera 顺序的唯一调用链，无相机 Actor 不分配相机能力。
 
-## 9. 接入现有作者工作区与 Timeline
+## 9. 接入正式作者入口与 Timeline
 
-- [ ] 9.1 在现有 Character/Graph 工作区接入 Camera Navigator、资源 Details、引用导航与 source mapping，交付复用原 Shell/Canvas/selection 的领域 adapter，无独立 Workbench。
-- [ ] 9.2 迁移 Graph 的 Sequence、效果、响应、目标和 basis 节点，交付菜单/字段/端口/编译/Document 一致的正式能力，保留其它节点依赖的共用基类。
+- [ ] 9.1 在 SkillProgram Root、技能局部 Graph 与 TreeClip/Timeline 入口接入 Camera Navigator、资源 Details、引用导航与 source mapping，交付复用原 Shell/Canvas/selection 的领域 adapter，无独立 Workbench；C# Locomotion 控制拓扑不提供 Camera 图节点。
+- [ ] 9.2 迁移正式 SkillProgram Camera producer 的 Sequence、效果、响应、目标和 basis 能力，交付菜单/字段/端口/编译/Document 一致的正式能力；producer 通过 SkillProgram 与新 SourceMap 衔接，消费已提交 PresentationCommand、ActionInstance 来源和 generation。
 - [ ] 9.3 接入 Timeline 的 Sequence/Override/Zoom/Stretch/Shot 区间与 Shake 时点，交付明确资源、时序、同帧顺序和生命周期编辑，不创建原 Animator 事件播放器。
 - [ ] 9.4 接入 Clip Curve Lane 与共享资源 Curve owner 导航，交付带单位/时间/值域的原交互与唯一 Mutation，不生成隐式曲线副本。
-- [ ] 9.5 接入明确 Import/Build/预览准备命令与 Stale/错误显示，交付可定位资源的轻量状态；OnInspectorGUI、selection 和恢复调用链不含重操作。
+- [ ] 9.5 接入明确 Import/Build/统一 ScenePlay Preview 准备命令与 Stale/错误显示，交付可定位资源的轻量状态；Camera 不拥有 Preview session、fixture executor 或 seek controller，OnInspectorGUI、selection 和恢复调用链不含重操作。
 
-## 10. 接入 Preview 与 Live Debug
+## 10. 接入统一 ScenePlay Preview 与 Live Debug
 
-- [ ] 10.1 将相机能力装配进现有 Preview 会话和明确目标，交付同 Projection、Body、最终动画与相机的顺序接线，Preview 不执行 Gameplay Program。
-- [ ] 10.2 实现初始镜头、目标/输入轨迹、时间和随机种子的 Camera fixture，交付明确可重建输入和会话状态，不从当前场景偷取隐式历史。
-- [ ] 10.3 实现播放、暂停、循环与可取消的分步 seek 重建，交付同会话历史/目标时点结果和准备状态，复用正式 Runtime 而无简化 evaluator。
-- [ ] 10.4 实现 Camera/Shot 输出独占绑定、Stop/Dispose/重绑/domain reload 清理，交付占用/释放与缺少上下文的明确结果，第二个会话不能写同一输出。
-- [ ] 10.5 接入正式相机诊断 provider 与窗口本地 Follow/Pin，交付资源/producer/generation/时间/退出/碰撞/最终 basis 快照和作者导航，Live 不调用 Preview。
+- [ ] 10.1 对账 `rebuild-btsmtl-preview-with-scene-play` 的统一 Preview owner 接口，交付 Camera Runtime、Projection、Rig/目标/物理绑定、Reset 和只读诊断的接入边界；BTSMTL 实际签名未提交前不写桥接或占位接口。
+- [ ] 10.2 由统一 ScenePlay owner 提供初始镜头、目标/输入轨迹、时间和随机种子等可复用 fixture，交付明确输入来源；Camera 不创建第二份 fixture executor，也不从当前场景偷取隐式历史。
+- [ ] 10.3 由统一 ScenePlay owner 调度播放、暂停、循环与可取消的分步 seek 重建，Camera 只执行正式 Runtime 的 Reset/逐帧求值；Timeline 游标只定位作者内容或观察历史，seek 不直接修改 Simulation。
+- [ ] 10.4 由统一 ScenePlay owner 管理 Camera/Shot 输出独占绑定、Stop/Dispose/重绑/domain reload 清理，交付占用/释放与缺少上下文的明确结果；Camera 不拥有第二个会话或角色执行链。
+- [ ] 10.5 接入正式相机诊断 provider 与窗口本地 Follow/Pin，交付资源/producer/generation/时间/退出/碰撞/最终 basis 快照和作者导航，Live 不调用 Preview，Preview owner 不把 Live 伪装成 Authoring Preview。
 
-## 11. 完成 Agent Document v4 全链
+## 11. 完成 Agent Document v5 目标对账
 
-- [ ] 11.1 注册 Camera Profile/资源/曲线分片、Definition 引用和 capability/context revision，交付同 v4 精确 manifest 闭包，AI domain 拒绝 Camera 可写分片。
-- [ ] 11.2 同步 Exporter、严格 Codec、Catalog 和本地新资源 identity 发现，交付完整可解析包及未知字段/非法引用/多余文件诊断，不开放任意目录写入。
-- [ ] 11.3 同步 Reconciler、typed Mutation、Validator、owner 锁定与 Undo/失败恢复，交付完整 planned/applied diff 和原子事务报告，共享资源冲突不自动覆盖。
-- [ ] 11.4 完成反向导出、稳定对象身份、package hash 和 Clean 状态发布，交付经重读校验的完整包，Camera apply 不触发 Build 或运行相机。
-- [ ] 11.5 同步五个生命周期工具的机器诊断、现有窗口和 btsmtl-agent-authoring skill/current-contract，交付同一字段与流程说明，不增加 Camera 局部编辑 MCP。
+- [ ] 11.1 盘点当前已安装 Document v4 中可达的 Camera 语义、资源身份、引用和 owner，交付迁入最终 v5 Camera domain 的完整对账表；不为过渡建立 v4 Camera 分片。
+- [ ] 11.2 在 BTSMTL v5 实际接口提交后，注册 Camera Profile/Sequence/Effect/Curve、Definition 引用、结构化引用语义和 capability/context revision，交付 v5 owner 统一装配的精确 manifest 闭包，AI domain 拒绝 Camera 可写分片。
+- [ ] 11.3 在 v5 实际接口提交后，同步 v5 owner 的 Exporter、严格 Codec、Catalog、local identity 发现、Reconciler、typed Mutation、Validator、owner 锁定与 Undo/失败恢复；Camera domain 不拥有第二套 schema/codec/Mutation。
+- [ ] 11.4 在 v5 实际接口提交后完成整包反向导出、稳定对象身份、package hash 和 Clean 状态发布，交付经重读校验的完整包，Camera apply 不触发 Build 或运行相机。
+- [ ] 11.5 在 v5 实际接口提交后同步五个生命周期工具的机器诊断、现有窗口和 skill/current-contract；在接口未提交前只维护边界说明和失败诊断，不写 v5 占位代码或把未安装能力写成 current truth。
 
 ## 12. 迁移 Corin 内容与全部相机调用者
 
 - [ ] 12.1 通过正式 Import/作者事务迁入 Corin 的 81 项 Shake、18 项 Zoom、18 项 Stretch、4 项 Override，交付逐资源身份、数值和消费者对应报告。
 - [ ] 12.2 补齐 Corin Profile、Sequence、公共 Curve、Shot 与绑定依赖，交付完整可达作者配置，无默认替代或仅保留名字的资源。
-- [ ] 12.3 将已确认属于单角色动作演出的 Corin 相机事件迁入正式 Graph/Action Timeline，交付保留原帧率/时点/顺序的对账结果，先覆盖 AssaultAid 与 ParryAid；SwitchInAttack 只保留来源事件证据，待换人/跨角色归属设计确认后再决定是否迁入。
+- [ ] 12.3 将已确认属于单角色动作演出的 Corin 相机事件迁入正式技能局部 Graph/TreeClip/Timeline 请求链，交付保留原帧率/时点/顺序的对账结果，先覆盖 AssaultAid 与 ParryAid；SwitchInAttack 只保留来源事件证据，待换人/跨角色归属设计确认后再决定是否迁入。
 - [ ] 12.4 迁移 Float32/Fixed 输入、Local/Fixed/Rollback Host、Control Source 和 Factory 的 Camera/basis 接口，交付无具体旧 Controller 依赖的调用清单，输入与网络原逻辑保持原样。
 - [ ] 12.5 迁移 GameplayLab Builder、性能采集/回放的初始相机接口及全部明确 Scene/Prefab bindings，交付无旧 FreeLook axis 直写的引用清单及正式绑定校验结果。
 - [ ] 12.6 完整切换唯一正式入口并删除旧 Controller、State/Modifier 空实现、Mode/FOV 映射、旧 Cue/字符串/序列化配置和过期 generated 合同；交付旧符号与资产引用搜索结果，无法映射的既有正确行为先报告冲突。
@@ -103,5 +103,5 @@
 
 - [ ] 13.1 通过精确 Definition 的既有 Build 发布请求的 Float32/Fixed 与唯一 Projection，交付通过原子发布和相机依赖校验的完整产物组；不运行 Unity batchmode。
 - [ ] 13.2 汇总来源、资源、编译、运行消费者、编辑入口和诊断的完整性报告，所有已纳入项无未解析/无消费者/旧路径状态，未达到则保持变更未完成。
-- [ ] 13.3 对照本 delta 与最新主 spec/其它 active change，同步 Camera 相关主规范及 project context，交付冲突对账结果，不覆盖 Pose、Body、PIK、Performance 已有正确变更。
+- [ ] 13.3 对照本 delta、current v4 spec、未来 v5 owner 边界、ScenePlay active change（若已安装）和其它 active change，同步 Camera 相关主规范及 project context，交付冲突对账结果；不覆盖 Pose、Body、PIK、Performance 已有正确变更，也不把 v5/ScenePlay 未安装接口写成 current truth。
 - [ ] 13.4 整理本变更各小步中文提交、作者资源和生成产物身份，交付精确变更范围及用户可跳转的最终作者/运行入口；如使用 .NET 构建，命令带 `--disable-build-servers /nr:false /p:UseSharedCompilation=false` 并立即执行 `dotnet build-server shutdown`。

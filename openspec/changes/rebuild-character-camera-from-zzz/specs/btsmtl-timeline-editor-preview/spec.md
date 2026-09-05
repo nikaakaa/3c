@@ -26,25 +26,25 @@ Timeline Editor MUST通过显式 typed Curve Channel Catalog 显示和编辑 Tim
 
 ## ADDED Requirements
 
-### Requirement: 相机预览必须与动画共享唯一 Preview 生命周期
+### Requirement: 相机预览必须由统一 ScenePlay owner 装配
 
-TimelinePreviewSession MUST在现有显式角色预览目标上装配相机能力，使同一会话的已发布 Projection、Body 可见姿态、最终动画目标、相机请求、时间和镜头输出保持一致。相机 MUST复用正式 Runtime 的序列、效果、阻尼、碰撞与 Adapter 实现，只将外部输入替换为明确 Preview fixture。预览 MUST不执行 Gameplay Program、TreeClip、AI、GameplayEffect 或 WorldSolver，也不得直接解释相机作者对象形成另一个播放器。
+`rebuild-btsmtl-preview-with-scene-play` MUST统一拥有 Preview 会话、独立预览命令源、可复用 ScenePlay fixture、seek 重建、物理输出租约和会话清理。Camera MUST只提供正式 Runtime、Projection、Rig/目标/物理绑定、Reset 和只读诊断，并复用正式 Runtime 的序列、效果、阻尼、碰撞与 Adapter 实现。相机不得创建第二个 TimelinePreviewSession owner、fixture executor、seek controller 或角色执行链。共享接口尚未实际提交前，本变更只记录依赖，不写桥接或占位签名。
 
 #### Scenario: 预览技能镜头和动作
 
-- **WHEN** 作者在有效角色目标上播放包含相机轨道的有限 Action Timeline
-- **THEN** 同一会话 MUST先发布 Body 与最终动画姿态，再推进相机并显示结果
-- **AND** 相机事件 MUST由该会话的明确预览命令源提交，不能读取真实运行 Actor 的请求容器
+- **WHEN** ScenePlay owner 使用明确 fixture 播放包含 Camera producer 的 SkillProgram/TreeClip/Timeline 内容
+- **THEN** 统一会话 MUST先发布 Body 与最终动画姿态，再推进 Camera 正式 Runtime 并显示结果
+- **AND** Camera MUST消费统一 owner 提供的已提交输入，不能读取真实运行 Actor 的请求容器或创建自己的命令源
 
 #### Scenario: 预览 Profile 默认跟随
 
-- **WHEN** 作者从 Character 工作区明确启动默认相机预览并提供目标与输入 fixture
+- **WHEN** 作者从 Character 工作区明确启动 ScenePlay Preview 并提供目标与输入 fixture
 - **THEN** 预览 MUST使用同一已发布相机计划与正式求值实现
-- **AND** MUST不伪造 Gameplay Timeline 或另建 Simulation Session
+- **AND** MUST不伪造 Gameplay Timeline、直接修改 Simulation 或另建第二角色执行链
 
 ### Requirement: 有状态相机的 seek 必须重建同一运行历史
 
-相机 Preview MUST显式保存会话初始镜头、目标轨迹、输入轨迹、时间尺度、随机种子和命令顺序。向后 seek、任意跳转、循环或重新播放 MUST从同一会话初始状态或精确匹配的会话检查点，经正式相机 Runtime 按该 fixture 的时间步骤重建到目标时间；不能仅对最终时点采一次曲线。重建 MUST可取消且不在 Inspector 绘制中同步阻塞，过程中 MUST明确显示准备状态而不声称已完成采样。
+ScenePlay owner MUST显式保存会话初始镜头、目标轨迹、输入轨迹、时间尺度、随机种子和命令顺序。向后 seek、任意跳转、循环或重新播放 MUST从同一会话初始状态或精确匹配的会话检查点，驱动正式相机 Runtime 按 fixture 的时间步骤重建到目标时间；Camera 只提供 Reset 和逐帧求值，不拥有 seek 状态。重建 MUST可取消且不在 Inspector 绘制中同步阻塞，过程中 MUST明确显示准备状态而不声称已完成采样。
 
 #### Scenario: 从技能尾部拖回震屏之前
 
@@ -60,7 +60,7 @@ TimelinePreviewSession MUST在现有显式角色预览目标上装配相机能�
 
 ### Requirement: 相机 Preview 必须独占明确物理输出并报告缺失上下文
 
-预览目标 MUST明确提供相机输出、Rig、目标绑定、必要物理场景及已发布 Projection，并对其物理输出建立独占会话归属。第二个预览或 Live Runtime 占用相同输出时 MUST拒绝绑定。没有目标、资源过期、缺少碰撞场景或 Shot 绑定时 MUST显示具体不可用原因；数据仍可编辑，但 MUST不搜索场景、关闭必要效果或采用默认镜头补齐。Stop、Dispose、target 切换和 domain reload MUST释放会话拥有的相机资源与状态并恢复其接管前输出绑定，不修改作者资产。
+ScenePlay owner MUST明确提供相机输出、Rig、目标绑定、必要物理场景及已发布 Projection，并对物理输出建立独占会话归属。第二个预览或 Live Runtime 占用相同输出时 MUST拒绝绑定。Camera MUST报告目标、资源、碰撞场景或 Shot 绑定缺失原因，但不拥有会话租约；数据仍可编辑，但 MUST不搜索场景、关闭必要效果或采用默认镜头补齐。Stop、Dispose、target 切换和 domain reload 的会话清理由 ScenePlay owner 完成，Camera只重置自身正式Runtime状态，不修改作者资产。
 
 #### Scenario: 两个窗口预览同一个相机
 

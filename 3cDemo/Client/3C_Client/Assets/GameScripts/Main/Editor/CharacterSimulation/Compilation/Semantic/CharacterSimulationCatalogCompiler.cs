@@ -34,6 +34,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
         readonly CharacterSemanticActionCatalogEmitter m_ActionCatalog;
         readonly CharacterSemanticGameplayEffectCatalogEmitter m_GameplayEffects;
         readonly CharacterSemanticEquipmentCatalogEmitter m_EquipmentCatalog;
+        readonly CharacterSemanticGlobalStateEmitter m_GlobalState;
 
         public CharacterSimulationCatalogCompiler(
             CharacterAuthoringCompilationModel model,
@@ -48,6 +49,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             m_ActionCatalog = new CharacterSemanticActionCatalogEmitter(model, builder, report, m_Index);
             m_GameplayEffects = new CharacterSemanticGameplayEffectCatalogEmitter(model, builder, report, m_Index);
             m_EquipmentCatalog = new CharacterSemanticEquipmentCatalogEmitter(model, builder, report, m_Index);
+            m_GlobalState = new CharacterSemanticGlobalStateEmitter(model, builder);
         }
 
         public CharacterSimulationCatalogIndex Compile()
@@ -57,27 +59,8 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             m_ActionCatalog.Emit();
             m_GameplayEffects.Emit();
             m_EquipmentCatalog.Emit();
-            DeclareGlobalState();
+            m_GlobalState.Emit();
             return m_Index;
-        }
-
-        void DeclareGlobalState()
-        {
-            CharacterSimulationSourceLocation source = DefinitionSource;
-            m_Builder.DeclareStandaloneStateSlot(source, ProgramStateValueKind.UInt64, ProgramStateOwnerKind.Action, ProgramStateSemantic.ActionEventSequence, "action:event-sequence");
-            m_Builder.DeclareStandaloneStateSlot(source, ProgramStateValueKind.GameplayEffectAggregate, ProgramStateOwnerKind.GameplayEffect, ProgramStateSemantic.GameplayEffectAggregate, "gameplay-effect:aggregate");
-            if (m_Model.Definition.EquipmentCapabilityEnabled)
-                m_Builder.DeclareStandaloneStateSlot(source, ProgramStateValueKind.EquipmentAggregate, ProgramStateOwnerKind.Equipment, ProgramStateSemantic.EquipmentAggregate, "equipment:aggregate");
-            m_Builder.DeclareStandaloneStateSlot(source, ProgramStateValueKind.UInt64, ProgramStateOwnerKind.Random, ProgramStateSemantic.RandomState, "runtime:rng");
-            m_Builder.DeclareStandaloneStateSlot(source, ProgramStateValueKind.UInt64, ProgramStateOwnerKind.Runtime, ProgramStateSemantic.HandleAllocator, "runtime:handle-allocator");
-            m_Builder.DeclareStandaloneStateSlot(source, ProgramStateValueKind.UInt64, ProgramStateOwnerKind.Fact, ProgramStateSemantic.FactSequence, "runtime:fact-sequence");
-            m_Builder.RequireGameplayCapability("RunnableTree");
-            m_Builder.RequireGameplayCapability("StateMachine");
-            m_Builder.RequireGameplayCapability("Timeline");
-            m_Builder.RequireGameplayCapability("PipelineBlackboard");
-            m_Builder.RequireGameplayCapability("Action");
-            m_Builder.RequireGameplayCapability("GameplayEffect");
-            m_Builder.RequireWorldRequest("CharacterBodyMotion", WorldCapability.BodyMotion | WorldCapability.Grounding | WorldCapability.Collision);
         }
 
         CharacterSimulationSourceLocation DefinitionSource => AssetSource(m_Model.Definition, $"definition:{m_Model.Definition.name}");

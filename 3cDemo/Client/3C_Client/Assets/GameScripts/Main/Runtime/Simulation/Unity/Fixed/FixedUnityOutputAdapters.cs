@@ -468,6 +468,8 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
             for (int keyIndex = 0; keyIndex < keys.Count; keyIndex++)
             {
                 PresentationStateKey key = keys[keyIndex];
+                if (key.IsCamera && HasUnconfirmedCameraForceScope(key, confirmedTick))
+                    continue;
                 if (!m_ByState.TryGetValue(key, out List<EventId> events))
                     continue;
                 ActivePresentationRecord baseline = default;
@@ -516,6 +518,28 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
                     RemoveCameraScope(baseline.Command);
                 }
             }
+        }
+
+        bool HasUnconfirmedCameraForceScope(
+            PresentationStateKey key,
+            ulong confirmedTick)
+        {
+            foreach (PresentationStateKey candidate in m_ByState.Keys)
+            {
+                if (!candidate.IsCameraForce || !candidate.Scope.Equals(key.Scope))
+                    continue;
+                if (!m_ByState.TryGetValue(candidate, out List<EventId> events))
+                    continue;
+                for (int i = 0; i < events.Count; i++)
+                {
+                    if (!m_ByEvent.TryGetValue(events[i], out ActivePresentationRecord record))
+                        throw new InvalidOperationException(
+                            $"Fixed Camera force state '{candidate}' references a missing EventId '{events[i]}'.");
+                    if (record.Command.Header.Tick.Value > confirmedTick)
+                        return true;
+                }
+            }
+            return false;
         }
 
         void RemoveHistoryRecord(EventId eventId)

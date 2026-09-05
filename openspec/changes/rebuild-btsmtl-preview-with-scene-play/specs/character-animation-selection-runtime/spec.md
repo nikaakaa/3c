@@ -9,7 +9,7 @@
 
 ### Requirement: 场景预览必须使用真实Actor的Selection与Pose Plan
 
-Action Timeline、Pose Graph、Blend Space 与 Motion Matching 的完整角色预览 MUST连接独立场景 Play 中的真实 Actor，使用其正式 Projection、readiness、Player、Routing、Slot、Inertialization、source、release 和 reset 结果。作者输入 MUST经正式角色输入链产生 Action 与 Presentation Fact，不能由窗口替代选择。预览 MUST不创建 BaseLocomotion Timeline、手动 Gameplay winner、简化 Player、隐藏 Stack、临时 PlayableGraph 或 Animancer direct Play 路径。
+Action Timeline、Pose Graph、Blend Space 与 Motion Matching 的完整角色预览 MUST连接独立场景 Play 中的真实 Actor，使用其正式 Projection、readiness、Player、Routing、Slot、Inertialization、source、release 和 reset 结果。作者输入 MUST经正式角色输入、C#控制与唯一Action服务产生ActionInstance及技能输出，Presentation Fact MUST来自实际角色提交；窗口不能替代选择。state-local Locomotion source MUST不要求技能或ActionInstance，有限技能动画 MUST关联其准确释放和调用generation。预览 MUST不创建 BaseLocomotion Timeline、手动 Gameplay winner、简化 Player、隐藏 Stack、临时 PlayableGraph 或 Animancer direct Play 路径。
 
 #### Scenario: Pose预览改变移动输入
 

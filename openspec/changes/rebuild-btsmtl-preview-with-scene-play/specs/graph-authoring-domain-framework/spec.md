@@ -2,7 +2,7 @@
 
 ### Requirement: 运行期间字段编辑资格必须由领域正式合同提供
 
-领域 MUST根据共享 Capability 和正式参数合同，向所有作者入口一致提供运行可调参数、需要 Build 的作者字段、纯编辑布局与只读运行观察的区别。窗口 MUST不按字段名、数值类型或 C# 反射猜测可热更新能力。运行可调参数 MUST复用真实作者 Mutation、Validator、Undo 和正式运行端口；其输入范围和生效时机 MUST与领域原有合同一致。
+领域 MUST消费主重构后 Document v5 的共享 Capability、技能/控制配置owner和正式参数合同，向所有作者入口一致提供运行可调参数、需要 Build 的作者字段、纯编辑布局与只读运行观察的区别。窗口 MUST不按字段名、数值类型或 C# 反射猜测可热更新能力。运行可调参数 MUST复用真实作者 Mutation、Validator、Undo 和正式运行端口；其输入范围和生效时机 MUST与领域原有合同一致。
 
 #### Scenario: 同一字段从两个页面修改
 
@@ -25,3 +25,13 @@
 - **WHEN** 作者在运行中修改合法作者参数
 - **THEN** UI MUST分别显示作者修改状态和运行采用状态
 - **AND** 当前状态、速度 Fact、运行句柄和诊断 snapshot MUST仍不可编辑
+
+### Requirement: 预览字段资格不得把配置可写等同于局内程序替换
+
+控制 binding/参数与 SkillDefinition/技能 Root 内容 MUST使用主重构的唯一作者入口。可写字段没有正式运行更新合同时 MUST要求 Build/发布后由新 Session 采用；代码实现、控制状态 schema、生成 SkillProgram 与 ActionInstance/调用状态 MUST保持只读。C# 控制流程 MUST不被映射为可编辑角色总控 Graph；技能局部状态机与 PoseState MUST分别保留原有领域合同。
+
+#### Scenario: 修改可编译的技能参数
+
+- **WHEN** 技能作者参数属于 Program 内容且没有正式局内更新接口
+- **THEN** 作者工具 MUST明确标记构建采用规则
+- **AND** MUST不通过 Actor Pose 调参接口或反射写入当前 SkillExecutionState

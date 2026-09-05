@@ -1,6 +1,6 @@
 ## Purpose
 
-定义 BTSMTL 完整角色预览使用可配置独立 Unity 场景和 Play Mode 的作者行为，统一场景选择、正式运行、角色输入、多窗口观察、直接作者调参、试验重建与退出恢复，使预览结果具有明确的场景、配置、输入和运行来源。
+定义 BTSMTL 在可配置独立 Unity 场景和 Play Mode 中的完整角色与技能预览，统一正式输入、代码控制、唯一动作生命周期、技能作者与释放实例绑定、直接作者调参、相机接入、试验重建及退出恢复，使每份结果具有可核对的场景、版本和执行来源。
 
 ## ADDED Requirements
 
@@ -22,7 +22,7 @@
 
 ### Requirement: 场景预览必须由正式角色运行链产生结果
 
-预览 MUST进入 Unity Play Mode，由场景明确配置的正式 Session、Numeric Target、输入、世界求解和角色表现产生结果。角色状态、Timeline、TreeClip、Motion、Window、GameplayEffect、动画、IK 及已安装的相机能力 MUST通过正式运行链执行；预览窗口 MUST不创建表现专用替代会话、不直接求值作者对象，也不为缺失能力补造简化结果。
+预览 MUST进入 Unity Play Mode，由场景明确配置的正式 Session、Numeric Target、输入、世界求解和角色表现产生结果。C# 显式 Locomotion StateMachine/State/Transition、唯一 Action 服务、ActionInstance 内的技能 Root/局部状态机/子图/Timeline/TreeClip，以及 Motion、Window、GameplayEffect、动画、IK 和已安装相机 MUST在同一 Session/Pipeline、Evaluate/WorldResolve/Finalize 与 Commit 边界执行；预览窗口 MUST不创建表现专用替代会话、不直接求值作者对象，也不为缺失能力补造简化结果。
 
 #### Scenario: 动作位移被障碍阻挡
 
@@ -75,7 +75,7 @@
 
 ### Requirement: 预览动作必须通过正式输入和准入产生
 
-作者操作 MUST经所选角色的明确输入映射进入正式输入链，同一角色同一阶段 MUST保持唯一输入 owner。动作能否开始、进入哪个状态、产生什么 Timeline 或表现请求 MUST由正式业务决定。缺少输入映射、目标或准入条件时 MUST显示真实原因，不得直接设置 Action winner、当前 State、Grounded、动画 Selection 或相机效果。
+作者操作 MUST经所选角色的明确输入映射进入正式输入链，同一角色同一阶段 MUST保持唯一输入 owner。C# 控制 MUST选择技能，唯一 Action 服务 MUST负责准入、激活、替换、取消/打断和 ActionInstance 生命周期，再将上下文交给技能 Root。控制状态转换与技能激活 MUST保持独立；SkillExecutionState MUST只归属于 ActionInstance，不新增 SkillInstance 生命周期。AI MUST继续只提供正式 CharacterSimulationInput。缺少输入映射、目标或准入条件时 MUST显示真实原因，不得直接设置 Action winner、当前 State、Grounded、动画 Selection 或相机效果。
 
 #### Scenario: 动作请求被拒绝
 
@@ -91,7 +91,7 @@
 
 ### Requirement: 暂停和重建试验必须保持正式生命周期
 
-暂停与继续 MUST使用真实 Play 暂停状态和正式调度。正式产物仍匹配时，重建试验 MUST在同一次 Play 中完整结束原预览场景 Session 并重新加载所选场景，从保存的初始条件建立新 Session；旧输入、角色、物理、Action、表现、事件和观察绑定 MUST按正式 owner 释放。新场景 generation 产生前 MUST不接受对旧目标的命令，失败 MUST停止受控预览并报告原因。调参后正式构造检查要求重新发布时 MUST显示构建并重启，不得使用旧产物加补丁绕过校验。
+暂停与继续 MUST使用真实 Play 暂停状态和正式调度。正式产物仍匹配时，重建试验 MUST在同一次 Play 中完整结束原预览场景 Session 并重新加载所选场景，从保存的初始条件建立新 Session；旧输入、C# 控制状态、ActionInstance 内的技能/调用/嵌套 Timeline/停止状态、物理、表现、事件和观察绑定 MUST按正式 owner 释放。新场景 generation 产生前 MUST不接受对旧目标的命令，失败 MUST停止受控预览并报告原因。调参后正式构造检查要求重新发布时 MUST显示构建并重启，不得使用旧产物加补丁绕过校验。
 
 #### Scenario: 攻击中途重建试验
 
@@ -119,7 +119,7 @@
 
 ### Requirement: 运行中调参必须直接保存正式作者数据
 
-运行中作者参数修改 MUST通过现有共享能力、领域验证、正式 Mutation 与 Undo 写入并保留真实作者资产。系统 MUST不创建预览试用资产、作者值镜像或第二个保存入口。运行观察字段 MUST保持只读，运行状态 MUST不反写成作者默认值。
+运行中允许的作者参数修改 MUST消费目标 Document v5 的共享 Capability、领域验证、正式 Mutation 与 Undo，写入并保留真实作者资产。控制配置、SkillDefinition/技能正文与 Presentation MUST保持各自唯一 owner；C# 实现、控制 state schema、生成 SkillProgram 和实例状态 MUST不可作为作者参数写入。系统 MUST不创建预览试用资产、作者值镜像或第二个保存入口。运行观察字段 MUST保持只读，运行状态 MUST不反写成作者默认值。
 
 #### Scenario: 调参后退出Play
 
@@ -157,7 +157,7 @@
 
 ### Requirement: 结构变化必须经过明确构建和重新启动
 
-图结构、资源装配或参数布局变化 MUST保持正式构建要求。普通开始预览、参数修改、选择和窗口刷新 MUST不自动构建。需要构建的字段 MUST在 Edit Mode 编辑；外部修改或 Undo 导致运行拓扑过期时 MUST使预览失效。明确的构建并开始／重启操作 MUST在 Edit Mode 针对精确 Definition 和 Target 构建，成功后才进入预览，失败保持编辑状态。
+技能 Root/子图/Timeline、控制 binding/语义版本、资源装配或参数/状态布局变化 MUST服从主重构后的正式 Build 与资源/代码发布合同，不把 C# 控制翻译成角色 RootTree。普通开始预览、参数修改、选择和窗口刷新 MUST不自动构建。需要构建的字段 MUST在 Edit Mode 编辑；外部修改或 Undo 导致运行拓扑过期时 MUST使预览失效。明确的构建并开始／重启操作 MUST在 Edit Mode 针对精确 Definition 和 Target 构建，成功后才进入预览，失败保持编辑状态。
 
 #### Scenario: 产物过期时开始预览
 
@@ -189,7 +189,7 @@
 
 ### Requirement: 预览等待和失败必须显示真实阶段
 
-系统 MUST分别报告配置检查、数据编译、分析产物生成或复用、产物发布、进入 Play、Session 准备、目标连接和试验重建的实际状态与耗时。没有测量值 MUST显示未测量。编译轮询等待、C# 重载和场景启动 MUST不合并伪装成图编译耗时；失败 MUST定位实际阶段，不自动重跑构建或更改 Unity 重载设置。
+系统 MUST分别报告控制 binding/版本/参数和技能依赖检查、技能数据编译/确定性检查、Numeric Target lowering、表现计划、分析产物生成或复用、组合发布、进入 Play、Session 准备中的正式 PipelineCompiler 工作、目标连接和试验重建的实际状态与耗时。没有测量值 MUST显示未测量。编译轮询等待、C# 重载和场景启动 MUST不合并伪装成图编译耗时；失败 MUST定位实际阶段，不自动重跑构建或更改 Unity 重载设置。
 
 #### Scenario: 分析生成与数据构建分别计时
 
@@ -206,3 +206,101 @@
 - **WHEN** 作者分别从 Timeline、Pose Graph、Blend Space 或 Action Workspace 请求完整角色预览
 - **THEN** 各入口 MUST使用同一场景预览合同和正式运行链
 - **AND** MUST不因页面不同而选择不同的角色执行器
+
+### Requirement: 作者技能与运行释放必须分别精确绑定
+
+作者上下文 MUST按 Character Definition、SkillDefinition、技能 Root 和稳定作者调用路径定位；运行上下文 MUST按场景 generation、Session、Actor、ActionInstance、SkillProgram identity/版本和运行调用 generation 定位。Timeline 观察 MUST进一步明确 playback/activation 与 cycle。ActionProfile 被多个技能引用、同技能并发释放或 shared 子图多调用时 MUST显式区分；失效绑定 MUST显示原目标失效，不选择首个同模板实例替代。
+
+#### Scenario: 同一个技能并发释放
+
+- **WHEN** 正式准入允许同 Actor 同时运行两次相同技能
+- **THEN** 两次释放 MUST共享只读技能模板并使用各自 ActionInstance/调用状态，窗口 MUST只显示明确绑定的实例
+- **AND** 一个实例结束 MUST不将窗口静默切到另一个实例
+
+#### Scenario: 重建场景后恢复作者页面
+
+- **WHEN** 场景重建后同一 SkillDefinition 仍存在但旧释放已销毁
+- **THEN** 作者页面和稳定调用路径 MUST可以恢复，旧 ActionInstance 观察绑定 MUST失效
+- **AND** MUST不重新发起旧请求或创建替代 SkillInstance
+
+### Requirement: 技能内容结构不得受唯一Timeline限制
+
+技能 MUST可以是 Tree-only，也可以包含多个或嵌套 Timeline、TreeClip、技能局部状态机和参数化子图。工作区 MUST以 SkillDefinition/Root 为内容入口，显示真实作者调用路径；只有需要编辑或观察一个 Timeline 时才要求明确选择。技能是否可试验 MUST由有效技能/输入/准入及正式产物决定，不以唯一 Timeline 为条件。
+
+#### Scenario: Tree-only技能试验
+
+- **WHEN** 作者选择一个没有 Timeline 的合法技能并经正式输入成功激活
+- **THEN** 工作区 MUST观察该 ActionInstance 的 Tree、等待和完成/停止进度
+- **AND** MUST不报告缺少唯一 Timeline 或补建空 Timeline
+
+#### Scenario: 技能调用多个嵌套Timeline
+
+- **WHEN** 技能 Root 经子图和 TreeClip 调用多个 Timeline，且 shared Timeline 被重复使用
+- **THEN** 作者目录 MUST按调用路径列出内容，运行观察 MUST按 ActionInstance/调用 generation/playback 区分
+- **AND** 选择其中一个 Timeline MUST不改变其它调用或整个技能的执行
+
+### Requirement: 代码控制观察不得恢复角色总控图
+
+C# 控制 MUST只通过正式 binding/参数配置和已登记的代码来源被编辑或观察，不提供角色总控 RootTree、角色外层 Action/连招 FSM 或代码/图双拓扑。普通 Locomotion、整体 Pose 和默认相机观察 MUST可以只绑定 Actor；技能未激活 MUST是正常状态，不能创建空技能或 ActionInstance 来取得观察身份。控制 State 转换、技能阶段与 PoseState MUST明确区分。
+
+#### Scenario: 只观察普通移动
+
+- **WHEN** Actor 没有活动技能但正在执行 C# Locomotion 控制
+- **THEN** 预览 MUST显示真实控制 State/Transition、代码来源和角色表现
+- **AND** MUST不要求技能或 Timeline，不生成可编辑角色图
+
+#### Scenario: 移动状态中攻击
+
+- **WHEN** 正式控制在不改变移动模式时接受一次攻击技能
+- **THEN** 观察 MUST分别显示原控制 State 与新 ActionInstance 的技能进度
+- **AND** MUST不构造移动加攻击的镜像状态或将技能后摇写成控制状态
+
+### Requirement: 预览必须消费统一发布与执行来源合同
+
+预览 MUST消费主重构拥有的角色运行包、控制模块 binding/语义/参数/状态版本、SkillProgram 目录与完整依赖、策略/资源目录、状态布局、Numeric Target、Projection 和统一代码/operation 来源。Active 前 MUST经正式 Composition 校验完整组合，不只核对旧 Graph hash 或角色外壳 ProgramId。运行观察 MUST关联已登记代码位置或准确技能 operation/作者调用点，并绑定对应 ActionInstance/调用 generation；不匹配 MUST报告具体来源而不伪造 Graph 节点。
+
+Session 和已激活技能 MUST保持锁定的代码、Program 与状态版本；新技能内容和控制实现 MUST在正式发布后由新的 Session 采用。已有合法运行参数更新继续按专属协议执行，不能当作局内替换技能模板或代码的通道。
+
+#### Scenario: 角色包相同但控制实现混版
+
+- **WHEN** 角色外壳 ProgramId 相同而实际控制模块版本或技能目录不匹配
+- **THEN** 预览准备 MUST拒绝 Active 并显示精确模块或技能依赖
+- **AND** MUST不回退旧 RootTree、旧 ABI 或其它模块实现
+
+#### Scenario: 控制代码发起技能
+
+- **WHEN** 正式诊断记录控制模块代码来源及其接受的 ActionInstance
+- **THEN** 窗口 MUST能导航代码来源，再观察该释放的技能 Root/operation/Timeline
+- **AND** MUST不要求角色 Graph 节点才能建立关系
+
+#### Scenario: 技能数据重新发布
+
+- **WHEN** 新构建改变了当前技能或其共享子图
+- **THEN** 当前释放 MUST不被原地换成新 Program；预览采用新版本 MUST明确结束并建立新 Session
+- **AND** MUST不通过调参候选写入生成技能数据
+
+### Requirement: 相机必须作为场景正式表现提供者接入
+
+场景预览 MUST唯一拥有受控 Play 的启动、暂停、重建和结束。Camera MUST只提供正式 Runtime、Projection、Rig/目标/物理绑定、正式重置/释放与只读诊断，其内部效果生命周期仍由正式相机 Runtime 拥有。技能相机请求 MUST来自唯一正式技能/Action 输出，默认跟随 MUST读取 Actor 和正式视角输入。可复用 fixture MUST只作为场景条件或既有输入源，不创建另一套命令容器、播放器、时钟或状态 seek。
+
+#### Scenario: 预览技能镜头
+
+- **WHEN** 正式技能输出相机请求
+- **THEN** 镜头 MUST使用同次运行提交的 Body/最终动画和相机计划
+- **AND** Timeline 或 Camera 窗口 MUST不再注入独立预览命令
+
+#### Scenario: 相机观察窗口关闭
+
+- **WHEN** 作者关闭相机观察区域而场景继续运行
+- **THEN** 只读观察 interest MUST释放，场景与正式相机 MUST继续由其 owner 管理
+- **AND** Camera 观察窗口 MUST不停止整个 Play 或清空角色状态
+
+### Requirement: 跨重构比较必须区分身份变化与业务变化
+
+同版本的产物和运行重复性 MUST继续按正式 identity 与状态规则核对。跨主重构版本的 ProgramHash、LayoutHash、EventId 和 source identity 改变时，既有比较工具 MUST明确记录来源/版本映射并比较语义输入、Body、动作阶段、窗口与输出；不同 hash 不能单独证明回归，也不能用 identity 已变为理由忽略业务差异。历史视图 MUST使用记录对应的来源版本，不用新 Source Map 解释旧事件。
+
+#### Scenario: 主重构前后业务比较
+
+- **WHEN** 两份已有记录跨越角色图到代码控制/技能运行包的迁移
+- **THEN** 比较 MUST标明 schema/identity 变化并按可映射业务事实报告差异
+- **AND** 无法映射的项 MUST明确不可比较，不能计为通过或业务失败

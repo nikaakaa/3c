@@ -39,7 +39,7 @@
 
 ### Requirement: Timeline 资产不保存编辑器播放状态
 
-Inline TimelineData、shared TimelineAsset 及其持有的 TimelineData MUST只保存作者数据，不得保存预览场景运行、Actor、playback generation、当前运行时间或动画资源状态。编辑游标和窗口选择 MUST保存在本地视图；真实运行状态 MUST由场景正式 Session 与 Actor 拥有。
+Inline TimelineData、shared TimelineAsset 及其持有的 TimelineData MUST只保存作者数据，不得保存预览场景运行、Actor、playback generation、当前运行时间或动画资源状态。编辑游标和窗口选择 MUST保存在本地视图；真实运行状态 MUST位于场景正式 Actor 的 ActionInstance 所有的 SkillExecutionState，调用路径、generation、Timeline activation 和 cycle MUST区分共享模板的每次使用。
 
 #### Scenario: 两个页面预览同一个 shared Timeline
 
@@ -49,7 +49,7 @@ Inline TimelineData、shared TimelineAsset 及其持有的 TimelineData MUST只�
 
 #### Scenario: 预览 inline Timeline
 
-- **WHEN** 正式角色执行 TimelineNode 的 inline Timeline
+- **WHEN** 正式角色的技能 Root 经所属 ActionInstance 执行 TimelineNode 的 inline Timeline
 - **THEN** 运行时间、Track/TreeClip 状态 MUST只存在于正式运行数据
 - **AND** MUST不创建作者 Timeline 工作副本作为另一套运行源
 
@@ -69,6 +69,43 @@ Inline TimelineData、shared TimelineAsset 及其持有的 TimelineData MUST只�
 - **THEN** MUST不存在旧 TimelinePlayer、自主 Timeline 绑定或窗口级完整角色预览播放器
 - **AND** 所有完整角色播放入口 MUST指向统一场景运行操作
 
+### Requirement: Timeline Live Debug 必须显示真实 runtime membership
+
+Timeline Live Debug MUST从共享provider的current Action playback summary显示当前playback instance/generation、SkillDefinition/SkillProgram、Actor/ActionInstance、完整作者调用路径及运行调用generation、技能Graph/Node source、关联控制代码来源、active Track/Clip、TreeClip phase/runtime、Action Selection、PendingFirstSample/Selected/Retained/Retired、AnimationSlot/PoseNode identity与terminal state。控制来源 MUST消费主重构的代码/operation来源合同，不伪造角色总控Graph节点。技能模板相同不得合并实例；Tree-only技能没有Timeline必须正常显示未执行，而非缺少唯一Timeline错误。PoseState source usage属于Pose Graph Live Debug；Timeline MAY提供只读导航但不得伪装成Timeline playback。停止Capture后，它 MUST在共享Capture history position显示对应历史事实，不得根据当前authoring time重新采样来猜测membership。
+
+#### Scenario: Decision TreeClip active
+
+- **WHEN** 所属ActionInstance的SkillProgram在某SimulationTick按正式阶段评估Decision TreeClip operation
+- **THEN** Timeline Live Debug MUST在对应 Clip 上显示该 tick 的 Decision evaluation
+- **AND** UI MUST能关联写入的 Blackboard declaration identity
+
+#### Scenario: visual time 位于两个 logic tick 之间
+
+- **WHEN** PresentationFrame 以 interpolation alpha 计算 visual Timeline time
+- **THEN** Timeline Live Debug MUST分别显示 logic time 与 visual time
+- **AND** animation playhead MUST使用 visual time
+- **AND** gameplay window/TreeClip decision 标记 MUST使用 logic tick
+
+#### Scenario: 多个 playback 使用同一 Timeline source
+
+- **WHEN** 同一 Timeline source 同时存在多个 playback instances
+- **THEN** Timeline Editor MUST 为每个 playback 显示 SkillDefinition/SkillProgram、ActionInstance、完整调用路径、playback id、来源 Graph/Node 及关联代码来源、activation generation 与 terminal/lifecycle 摘要
+- **AND** Timeline 窗口 MUST 要求作者在本地 binding 中 Pin 其中一个，或显式保持 Follow
+- **AND** 系统 MUST NOT 按列表顺序静默选择赢家
+
+#### Scenario: 当前 Timeline 未执行
+
+- **WHEN** 已附着 target 的共享 current state 不包含当前 Timeline 的 playback
+- **THEN** Timeline Editor MUST 显示当前角色未执行该 Timeline 的状态
+- **AND** MUST NOT 调用 TimelinePreviewSession、preview evaluator 或 authoring time 重采样
+
+#### Scenario: 同一子图中Timeline被两次调用
+
+- **WHEN** 同一技能释放的两个合法调用复用 shared Timeline
+- **THEN** Timeline 观察 MUST按完整调用路径/运行 generation 和 playback activation 区分进度
+- **AND** MUST不因 Timeline source 相同而合并两份状态
+
+
 ## ADDED Requirements
 
 ### Requirement: Timeline必须区分作者编辑与真实运行观察
@@ -77,29 +114,29 @@ Timeline 页面 MUST明确区分编辑游标、当前正式运行标记和 Captu
 
 #### Scenario: 多个playback使用同一Timeline
 
-- **WHEN** 当前角色存在多个指向同一 Timeline source 的正式 playback
+- **WHEN** 当前 Actor 的多个 ActionInstance 或技能调用指向同一 Timeline source
 - **THEN** 窗口 MUST明确选择 playback instance 并显示其实际来源
 - **AND** MUST不按当前编辑游标推断正在执行哪个实例
 
 #### Scenario: 重载后恢复Timeline页面
 
 - **WHEN** 页面经历 Domain Reload 或预览场景重建
-- **THEN** 页面 MUST从稳定作者 owner/path 恢复文档并创建新的本地运行绑定
+- **THEN** 页面 MUST从 SkillDefinition/技能 Root/稳定作者调用路径恢复文档，按新 Session/Actor 和明确 ActionInstance/调用generation 创建本地运行绑定
 - **AND** 定位无效时 MUST显示不可用，不猜测另一个 Timeline 或恢复旧播放器
 
 ### Requirement: Inline与Shared Timeline必须复用同一场景预览入口
 
-Inline Timeline、shared Timeline 与 TreeClip 下钻页面 MUST复用同一场景运行操作，页面导航 MUST不启动、接管或销毁正式运行。只有能精确关联所选角色和正式调用点的 Timeline 才能提供动作试验输入；缺少关联时 MUST保留编辑并报告不能直接运行的原因。
+Inline Timeline、shared Timeline 与 TreeClip 下钻页面 MUST复用同一场景运行操作，页面导航 MUST不启动、接管或销毁正式运行。只有能关联所选 Actor 的 SkillDefinition/技能调用点与合法输入的内容才提供技能试验入口；入口 MUST经过 C# 控制与唯一 Action 服务启动技能，再观察实际产生的 Timeline，不能直接播放该 Timeline。Tree-only 技能仍可从技能 Root 试验，多个/嵌套 Timeline 只要求明确选择编辑和观察目标。
 
 #### Scenario: 直接打开未被角色引用的shared Timeline
 
-- **WHEN** shared Timeline 在当前预览角色中没有正式调用点
-- **THEN** 作者 MUST能够编辑该资产，但动作试验入口 MUST显示缺少角色调用点
+- **WHEN** shared Timeline 在当前预览 Actor 的技能目录中没有可定位调用点
+- **THEN** 作者 MUST能够编辑该资产，但动作试验入口 MUST显示缺少技能定义或调用点关联
 - **AND** MUST不临时创建 producer、Action 或图节点
 
 ### Requirement: Timeline场景预览必须按正式阶段展示TreeClip
 
-Timeline Editor MUST继续显示 TreeClip 的 Decision/Commit 阶段、inline/shared ownership 和 Blackboard 声明摘要。完整场景预览中 TreeClip、Gameplay Program、Action、Blackboard、GameplayEffect、Motion 与世界求解 MUST只由正式场景 Session 执行；窗口 MUST只观察正式输出，不创建临时图上下文、运行树副本或第二解释器。编辑游标 MUST不执行 TreeClip，也不写作者默认值。
+Timeline Editor MUST继续显示 TreeClip 的 Decision/Commit 阶段、inline/shared ownership 和 Blackboard 声明摘要。完整场景预览 MUST保留 Tree → Timeline → TreeClip → 子树，TreeClip运行状态归准确ActionInstance及调用frame。Decision TreeClip MUST在控制决策前只准备本Tick合法窗口候选，Commit内容 MUST在正式技能阶段执行，父级停止覆盖嵌套内容。C#控制、技能Program、Action服务、Blackboard、GameplayEffect、Motion与世界求解 MUST只由同一正式Session/Pipeline推进；窗口 MUST只观察正式输出，不创建临时图上下文、运行树副本或第二解释器。编辑游标 MUST不执行 TreeClip，也不写作者默认值。
 
 #### Scenario: 场景预览执行Decision TreeClip
 
@@ -121,7 +158,7 @@ Timeline Editor MUST继续显示 TreeClip 的 Decision/Commit 阶段、inline/sh
 
 ### Requirement: Timeline Field必须隔离作者交互、几何绘制与场景运行观察
 
-Timeline Editor MUST保留现有窗口、Timeline Field、Inspector 和真实运行观察入口；selection/drag/move/resize、time/frame/clip geometry 与 hit-test、track/clip/playhead/overlay rendering、窗口本地运行绑定 MUST由职责独立的模块拥有。selection MUST只读暴露并通过命令修改；interaction MUST依赖窄 host port；rendering MUST显式消费 geometry、viewport、playhead 和 overlay 输入，不反向读取完整 Timeline Field。作者修改 MUST通过唯一 Mutation/Undo；geometry 和 rendering MUST不写资产。场景运行控制 MUST交给共享场景操作，本地 binding MUST不拥有播放器。迁移 MUST保持 Timeline/Track/Clip identity、Source Map、Inspector selection 和多窗口页签行为。
+Timeline Editor MUST保留现有窗口、Timeline Field、Inspector 和真实运行观察入口；selection/drag/move/resize、time/frame/clip geometry 与 hit-test、track/clip/playhead/overlay rendering、窗口本地运行绑定 MUST由职责独立的模块拥有。selection MUST只读暴露并通过命令修改；interaction MUST依赖窄 host port；rendering MUST显式消费 geometry、viewport、playhead 和 overlay 输入，不反向读取完整 Timeline Field。作者修改 MUST通过唯一 Mutation/Undo；geometry 和 rendering MUST不写资产。场景运行控制 MUST交给共享场景操作，本地 binding MUST不拥有播放器。运行只读刷新 MUST保留焦点、未提交作者文本、选择、滚动和合法草稿，外部owner变化使草稿失效时 MUST明确报告，不写回过期数据。迁移 MUST保持 Timeline/Track/Clip identity、Source Map、Inspector selection 和多窗口页签行为。
 
 #### Scenario: Resize一个Animation Clip
 

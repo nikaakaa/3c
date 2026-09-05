@@ -2,7 +2,7 @@
 
 ### Requirement: Pose Graph工作区必须准确映射Authoring、Live与References
 
-正式窗口 MUST提供 Definition-scoped Navigator、唯一共享画布、Details 和可折叠 Bottom Dock。Authoring MUST只通过正式 Presentation Mutation 修改当前 owner；Live MUST只读取匹配正式 Pose Graph、Projection 和当前参数采用身份的 snapshot；References MUST只读显示 Source Slot、Profile binding、资源、source map、Action producer、Rig、Policy 和 call site。稳定 identity、GUID、revision、hash 与 compiled index MUST默认隐藏。
+正式窗口 MUST提供 Definition-scoped Navigator、唯一共享画布、Details 和可折叠 Bottom Dock。Authoring MUST只通过正式 Presentation Mutation 修改当前 owner；Live MUST只读取匹配正式 Pose Graph、Projection 和当前参数采用身份的 snapshot；References MUST只读显示 Source Slot、Profile binding、资源、source map、技能Action producer、Rig、Policy和技能作者调用路径；有限动画运行观察 MUST精确关联Actor/ActionInstance及调用generation。Gameplay控制代码与PoseState MUST分开显示，普通Locomotion Pose观察不依赖活动技能。稳定 identity、GUID、revision、hash 与 compiled index MUST默认隐藏。
 
 场景预览期间 MUST在作者区域允许已有正式运行调参合同支持的字段，并保持原有生效时机和 Undo；Live snapshot、状态和 Fact MUST仍只读。结构和装配编辑 MUST在 Edit Mode 完成。合法参数修改 MUST分别显示作者版本与实际采用状态；真正的拓扑或 Projection 不匹配 MUST显示过期并清空错误关联，不能将参数提交成功伪装成全部版本一致。
 

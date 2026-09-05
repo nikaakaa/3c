@@ -490,7 +490,8 @@ namespace ThirdPersonSimulation
                 skills.Require(contract.Skills[i]);
             for (int i = 0; i < skills.Bindings.Count; i++)
             {
-                CharacterSkillId skill = skills.Bindings[i].SkillId;
+                CharacterSkillProgramBinding binding = skills.Bindings[i];
+                CharacterSkillId skill = binding.SkillId;
                 bool declared = false;
                 for (int skillIndex = 0; skillIndex < contract.Skills.Count; skillIndex++)
                 {
@@ -502,6 +503,21 @@ namespace ThirdPersonSimulation
                 }
                 if (!declared)
                     throw new InvalidDataException($"SkillProgram '{skill}' is not declared by control module '{contract.ModuleId}'.");
+                for (int followUpIndex = 0; followUpIndex < binding.AllowedFollowUps.Count; followUpIndex++)
+                {
+                    CharacterSkillId followUp = binding.AllowedFollowUps[followUpIndex];
+                    bool followUpDeclared = false;
+                    for (int skillIndex = 0; skillIndex < contract.Skills.Count; skillIndex++)
+                    {
+                        if (contract.Skills[skillIndex] == followUp)
+                        {
+                            followUpDeclared = true;
+                            break;
+                        }
+                    }
+                    if (!followUpDeclared)
+                        throw new InvalidDataException($"SkillProgram '{skill}' follow-up '{followUp}' is not declared by control module '{contract.ModuleId}'.");
+                }
             }
         }
     }

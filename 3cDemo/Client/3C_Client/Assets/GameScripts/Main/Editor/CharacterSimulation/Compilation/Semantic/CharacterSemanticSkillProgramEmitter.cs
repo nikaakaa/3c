@@ -5,6 +5,7 @@ using BTSMTL.Diagnostics;
 using ThirdPersonCharacter.ActionSystem;
 using ThirdPersonCharacter.Control.Authoring;
 using ThirdPersonSimulation;
+using TreeDesigner;
 
 namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
 {
@@ -78,6 +79,44 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                     string.Empty,
                     $"{record.EntryGraph.Route}/skill:{skillId.Value}",
                     contentHash: GraphAuthoringFingerprint.Compute(record.EntryGraph.Graph));
+                var dependencies = new List<CharacterSkillDependency>();
+                for (int dependencyIndex = 0; dependencyIndex < definition.SubgraphDependencies.Count; dependencyIndex++)
+                {
+                    CharacterSkillSubgraphDependencyConfiguration configuration = definition.SubgraphDependencies[dependencyIndex];
+                    if (configuration == null)
+                        continue;
+                    try
+                    {
+                        dependencies.Add(new CharacterSkillDependency(
+                            configuration.SubgraphIdentity,
+                            configuration.CallSiteIdentity));
+                    }
+                    catch (Exception exception)
+                    {
+                        m_Report.Error("skill_dependency_invalid", source.Identity, exception.Message);
+                    }
+                }
+                var allowedFollowUps = new List<CharacterSkillId>();
+                for (int followUpIndex = 0; followUpIndex < definition.AllowedFollowUpSkillIds.Count; followUpIndex++)
+                {
+                    try
+                    {
+                        CharacterSkillId followUp = new CharacterSkillId(definition.AllowedFollowUpSkillIds[followUpIndex]);
+                        if (!contract.Skills.Contains(followUp))
+                        {
+                            m_Report.Error(
+                                "control_skill_follow_up_missing",
+                                source.Identity,
+                                $"Skill '{skillId}' references follow-up skill '{followUp}' that is not declared by control module '{contract.ModuleId}'.");
+                            continue;
+                        }
+                        allowedFollowUps.Add(followUp);
+                    }
+                    catch (Exception exception)
+                    {
+                        m_Report.Error("skill_follow_up_invalid", source.Identity, exception.Message);
+                    }
+                }
                 var fields = new List<ProgramCatalogField>
                 {
                     m_Builder.IdentityField("ActionProfile", $"action:{definition.ActionProfile.ActionId}"),
@@ -86,6 +125,19 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                     m_Builder.IdentityField("SourceInputRequest", definition.SourceInputRequestId),
                     m_Builder.IdentityField("ConsumeSourceInputRequest", definition.ConsumeSourceInputRequest ? "true" : "false")
                 };
+                for (int dependencyIndex = 0; dependencyIndex < dependencies.Count; dependencyIndex++)
+                {
+                    CharacterSkillDependency dependency = dependencies[dependencyIndex];
+                    fields.Add(m_Builder.IdentityField(
+                        $"Dependency:{dependencyIndex:D4}:Subgraph",
+                        dependency.SubgraphIdentity));
+                    fields.Add(m_Builder.IdentityField(
+                        $"Dependency:{dependencyIndex:D4}:CallSite",
+                        dependency.CallSiteIdentity));
+                }
+                allowedFollowUps.Sort();
+                for (int followUpIndex = 0; followUpIndex < allowedFollowUps.Count; followUpIndex++)
+                    fields.Add(m_Builder.IdentityField($"FollowUp:{followUpIndex:D4}", $"skill:{allowedFollowUps[followUpIndex].Value}"));
                 if (!string.IsNullOrEmpty(definition.TargetInputValueId))
                     fields.Add(m_Builder.IdentityField("TargetInputValue", definition.TargetInputValueId));
                 if (!string.IsNullOrEmpty(definition.TargetKey))

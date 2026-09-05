@@ -169,15 +169,21 @@ namespace ThirdPersonCharacter.Pipeline
             {
                 CharacterSkillAuthoringDefinition skill = SkillDefinitions[i];
                 if (skill == null)
-                {
-                    errors?.Add($"{name}: skill definition #{i} is missing.");
-                    valid = false;
                     continue;
-                }
                 if (string.IsNullOrEmpty(skill.SkillId) || !skillIds.Add(skill.SkillId))
                 {
                     errors?.Add($"{name}: skill definition '{skill.SkillId}' is missing or duplicated.");
                     valid = false;
+                }
+            }
+            for (int i = 0; i < SkillDefinitions.Count; i++)
+            {
+                CharacterSkillAuthoringDefinition skill = SkillDefinitions[i];
+                if (skill == null)
+                {
+                    errors?.Add($"{name}: skill definition #{i} is missing.");
+                    valid = false;
+                    continue;
                 }
                 if (string.IsNullOrEmpty(skill.EntryGraphAuthoringId))
                 {
@@ -193,6 +199,45 @@ namespace ThirdPersonCharacter.Pipeline
                 {
                     errors?.Add($"{name}: skill '{skill.SkillId}' ActionContext is missing.");
                     valid = false;
+                }
+
+                var dependencyIds = new HashSet<string>(StringComparer.Ordinal);
+                for (int dependencyIndex = 0; dependencyIndex < skill.SubgraphDependencies.Count; dependencyIndex++)
+                {
+                    CharacterSkillSubgraphDependencyConfiguration dependency = skill.SubgraphDependencies[dependencyIndex];
+                    if (dependency == null ||
+                        string.IsNullOrWhiteSpace(dependency.SubgraphIdentity) ||
+                        string.IsNullOrWhiteSpace(dependency.CallSiteIdentity))
+                    {
+                        errors?.Add($"{name}: skill '{skill.SkillId}' contains an incomplete subgraph dependency.");
+                        valid = false;
+                        continue;
+                    }
+                    string dependencyId = $"{dependency.SubgraphIdentity}\u001f{dependency.CallSiteIdentity}";
+                    if (!dependencyIds.Add(dependencyId))
+                    {
+                        errors?.Add($"{name}: skill '{skill.SkillId}' contains duplicate subgraph dependency '{dependency.SubgraphIdentity}/{dependency.CallSiteIdentity}'.");
+                        valid = false;
+                    }
+                }
+
+                var followUps = new HashSet<string>(StringComparer.Ordinal);
+                for (int followUpIndex = 0; followUpIndex < skill.AllowedFollowUpSkillIds.Count; followUpIndex++)
+                {
+                    string followUpId = skill.AllowedFollowUpSkillIds[followUpIndex];
+                    if (string.IsNullOrWhiteSpace(followUpId) ||
+                        string.Equals(followUpId, skill.SkillId, StringComparison.Ordinal) ||
+                        !followUps.Add(followUpId))
+                    {
+                        errors?.Add($"{name}: skill '{skill.SkillId}' contains an invalid, recursive, or duplicate follow-up skill '{followUpId}'.");
+                        valid = false;
+                        continue;
+                    }
+                    if (!skillIds.Contains(followUpId))
+                    {
+                        errors?.Add($"{name}: skill '{skill.SkillId}' references missing follow-up skill '{followUpId}'.");
+                        valid = false;
+                    }
                 }
             }
             IReadOnlyList<ActionProfile> profiles = ActionProfiles;

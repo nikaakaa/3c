@@ -174,15 +174,13 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
             if (string.IsNullOrEmpty(candidate))
                 throw new InvalidOperationException("SkillDefinition local identity不能为空。");
             var used = new HashSet<string>(StringComparer.Ordinal);
-            foreach (CharacterSkillAuthoringDefinition existing in
-                     session?.Definition?.SkillDefinitions ??
-                     Array.Empty<CharacterSkillAuthoringDefinition>())
+            foreach (string existing in session?.InitialSkillIds ?? Array.Empty<string>())
             {
-                if (existing == null)
+                if (string.IsNullOrWhiteSpace(existing))
                     continue;
-                used.Add(existing.SkillId.StartsWith("local:", StringComparison.Ordinal)
-                    ? existing.SkillId.Substring("local:".Length)
-                    : existing.SkillId);
+                used.Add(existing.StartsWith("local:", StringComparison.Ordinal)
+                    ? existing.Substring("local:".Length)
+                    : existing);
             }
             foreach (AgentSetSkillDefinitionMutation planned in
                      session?.Plan?.Commands?.OfType<AgentSetSkillDefinitionMutation>() ??

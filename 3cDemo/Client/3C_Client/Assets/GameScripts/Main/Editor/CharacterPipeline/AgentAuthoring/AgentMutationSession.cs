@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using BTSMTL.Diagnostics;
 using ThirdPersonCharacter.AI;
+using ThirdPersonCharacter.Control.Authoring;
 using ThirdPersonCharacter.Pipeline.Graph;
 using TreeDesigner;
 using UnityEditor;
@@ -15,6 +16,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
         readonly Dictionary<string, AgentResolvedIdentity> m_ResolvedIdentities =
             new Dictionary<string, AgentResolvedIdentity>(StringComparer.Ordinal);
         readonly HashSet<UnityEngine.Object> m_TouchedOwners = new HashSet<UnityEngine.Object>();
+        readonly HashSet<string> m_InitialSkillIds = new HashSet<string>(StringComparer.Ordinal);
         readonly Dictionary<string, AgentPlannedBlackboardDeclaration> m_PlannedBlackboardDeclarations =
             new Dictionary<string, AgentPlannedBlackboardDeclaration>(StringComparer.Ordinal);
         readonly HashSet<string> m_PlannedGameplayTags = new HashSet<string>(StringComparer.Ordinal);
@@ -36,6 +38,11 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
             PresentationPlan = presentationPlan;
             Resolver = new AgentAssetResolver(definition, snapshot);
             Index = new AgentGraphAuthoringIndex();
+            foreach (CharacterSkillAuthoringDefinition skill in definition?.SkillDefinitions ?? Array.Empty<CharacterSkillAuthoringDefinition>())
+            {
+                if (skill != null && !string.IsNullOrWhiteSpace(skill.SkillId))
+                    m_InitialSkillIds.Add(skill.SkillId);
+            }
         }
 
         public AgentMutationSession(
@@ -67,6 +74,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
         public AgentGraphAuthoringIndex Index { get; }
         public BaseTree RootTree { get; private set; }
         public IReadOnlyCollection<UnityEngine.Object> TouchedOwners => m_TouchedOwners;
+        public IReadOnlyCollection<string> InitialSkillIds => m_InitialSkillIds;
 
         public bool Initialize()
         {

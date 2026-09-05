@@ -179,6 +179,22 @@ ProgramHash／LayoutHash 除技能布局外必须覆盖控制模块语义版本�
 
 ### 10. 作者模块与 Document 保持一个真相
 
+#### Agent作者工具独立实施归属
+
+按用户确认，现有重构中的Agent工具部分交由规划任务`01a07206-ec83-74e3-866a-7ccb6a158217`及其唯一实现任务`01a0720a-6105-72b1-bf2f-bbfeb6654773`负责。原BTSMTL实现任务`01a06b30-aa8c-7cf3-8e05-cedfbfbbee2f`继续普通重构；双方在`D:/Unity_Project_1/3C`当前目录实施，已移交的正确提交和未提交成果继续保留。
+
+| 现有任务／代码范围 | Agent作者工具任务负责 | 原BTSMTL任务负责 |
+|---|---|---|
+| 10.1–10.6 | v5模型、允许文件族、Exporter、Codec、Mapper、Reconciler／Planner、整包事务、Agent专属窗口、五工具及作者技能全部实施 | 提供控制、技能、Graph等正式共享合同 |
+| 9.1及共享作者规则 | Document侧消费相同Capability、Port Shape和Mutation规则，删除Agent侧重复字段判断 | 普通UI／节点／技能作者模块及其公共规则、签名与能力目录 |
+| 12.4、12.5 | 删除Document旧schema／reader／writer／正文入口和旧命名；交付Agent大类职责迁移、调用者及删除地图 | 清理普通角色／装备图入口、运行与编译旧分支、菜单和其它模块；汇总完整结构地图 |
+| 13.1、13.2、13.4 | 本范围源码构建、既有Document严格校验／往返／有序计划／事务恢复证据、限定diff与中文小步提交 | 其它模块构建、正式产物重建、全链Replay及整体结构审查 |
+| 13.3与最终交付 | 提供Agent规范、工具描述、技能代码地图的一致结果 | 组合两侧交付，统一安装delta和更新项目口径，完成最终集成验收 |
+
+Agent代码范围以`Main/Editor/CharacterPipeline/AgentAuthoring/`及其`Mcp/`、`.codex/skills/btsmtl-agent-authoring/`为主。五个独立工具保持`checkout_document`、`rebase_document`、`dry_run_document`、`apply_document`、`validate`；`status`是已有异步工具的轮询动作。Runtime中的SkillDefinition／CharacterDefinition、Graph签名与调用合同、主编译器和解释器由原BTSMTL任务维护；Agent通过正式接口读写，公共业务合同有冲突时由两个规划任务对账，不复制模型或建立第二Mutation／事务入口。
+
+已移交的v5／SkillDefinition分片、ActionContext身份和唯一SkillDefinition Mutation沿现有成果继续完成。任务10的进度由Agent任务维护；主进度、其它任务和全链Replay由原BTSMTL任务维护。常规实现依文档推进，不逐类发送消息；Agent整体交付经其规划审查后，再进入本change的最终集成。
+
 | 模块 | 正式输入 | 正式输出／所有权 |
 |---|---|---|
 | 技能定义与签名 | ActionProfile、入口图、子图参数、共享资源引用 | 唯一 SkillDefinition 与依赖闭包 |

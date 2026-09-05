@@ -104,6 +104,10 @@ flowchart TD
 
 Semantic IR 包含角色控制模块合同和技能语义根；不会包含 C# 代码正文、角色 RootTree 或 Equipment Persistent／Route 图 root。数值字面量、技能 operation、子图参数绑定、变量／状态声明、producer、Motion／GE 请求等继续经过同一 semantic contract。Target 只处理数值、布局与已登记能力。
 
+Float32 与 Fixed 的共同业务流程必须在共享模块中实现。Action 的准入、来源检查、replacement 与 stop barrier、输入消费、请求暂存、最终提交以及 lifecycle 转换不因数值表示不同而复制。两端适配器提供 typed 状态读写及实际需要的数值操作，共享流程决定调用顺序和业务结果；两套 Program、状态布局与 codec 保留各自的 Target 身份。提取时保持现有已正确的同 Tick 顺序、实例／技能／generation 身份及恢复语义，不能借合并流程改变取消或提交行为。
+
+**取舍：** 共用流程使一次准入或取消规则修改只改一个业务实现，减少两个 Target 演化不一致的风险；代价是维护少量明确的状态与数值端口。不同数值精度、布局和编码仍分别实现，不把所有 Target 能力塞进万能 Context，也不通过巨型基类或要求具体角色规则承担 Target 泛型来隐藏重复流程。
+
 SkillProgram 的构建工作明确为：引用和类型校验、子图 occurrence／参数绑定、时间与曲线整理、局部状态布局、操作／常量索引、能力合并、版本与 source map。保留稳定编号和初始化期索引，不追求新增优化器、机器码生成或新的中间语言。
 
 技能内部使用自己的定义索引域；角色输入、事实、GE／Equipment与其他外部资源通过显式typed binding链接，不能把某个角色包的全局可变slot固化到共享SkillProgram。角色包仍负责组合和发布，实例存储仍归属当前Actor／ActionInstance。
@@ -208,8 +212,11 @@ Graph／Node kind不可原地改变的现有规则继续有效。若旧角色图
 | 现有职责聚集处 | 迁移后的边界 | 必须删除的旧内容 |
 |---|---|---|
 | Character Root／State／Equipment Host 图及相关节点 | Character Control 模块、typed 控制配置与技能 binding | 角色 RootTree entry、角色级图激活节点、Equipment Persistent／Route flow root |
+| FixedActionRuntime／Float32ActionRuntime | 一份共享 Action 事务流程＋各 Target 的窄状态／数值适配器 | 两端重复的准入到请求提交、replacement、输入消费及生命周期转换分支 |
 | CharacterSemanticEmitter 与中央节点发射登记 | 角色组合 Discovery＋技能语义发射模块 | 将 C# 控制重新发射为角色图的分支、重复节点表 |
-| OperationControlRuntime／TimelineControlRuntime | 技能执行控制与局部生命周期；公共算法按真实复用保留 | Character 对作者对象解释器的调用、第二 TreeClip scheduler |
+| CharacterSimulationProgramBuilder | 通用 IR 写入、索引和一致性约束；领域模块提交已确定的语义记录 | Builder 内的角色控制／技能选择／Timeline 特例和重复领域分派 |
+| OperationControlRuntime | 技能组合控制、局部状态机与执行范围生命周期各自成模块，共用同一状态和调度入口 | 角色 RootTree 调度、中央类内混合的业务族实现、重复激活／停止处理 |
+| TimelineControlRuntime 与 Timeline 发射 | 独立 Timeline change 拥有公共 Timeline 执行／发射；本 change 消费正式技能调用接口 | Character 对作者对象解释器的调用、第二 TreeClip scheduler |
 | CharacterSimulationProgram／State／Kernel | 角色静态运行包、声明式控制状态、技能目录与实例执行 | 唯一角色 root handle、控制状态镜像、旧 ABI reader |
 | BtsmtlGraphAuthoringCapabilities 与 Editor 中央回调 | Flow、Skill、Timeline、参数／变量、领域叶子作者模块 | 原中央特例、旧角色图菜单、转发 alias |
 | Agent Package Codec／Reconciler／Planner | v5 分片模块＋唯一整包准备／事务 | v4 分支、角色图正文与局部 apply |
@@ -217,6 +224,26 @@ Graph／Node kind不可原地改变的现有规则继续有效。若旧角色图
 | 外层 Projection组装 | 保留现有内容模块，只替换技能producer来源与合同 | 角色State path决定动作producer的旧来源假设 |
 
 仅为技能服务的新增类型使用 Skill 前缀；ActionProfile／ActionInstance保留其策略与释放含义；CharacterSimulationProgram保留角色组合包含义。字段名、目录和文档必须与这些职责一致，不保留 obsolete forwarding type。AI／Pose复用的Graph基础不能按BTSMTL目录整块删除。已明确由独立预览change删除的旧播放器不能被本次重复实现或作为技能运行路径。
+
+#### 结构完成条件
+
+本次重构包含下列实际职责迁移，不能只交付新接口或新增文件。表中的现有类型用于定位待处理代码，最终名称按迁移后的业务含义确定。
+
+| 现有聚集处 | 模块的输入与输出 | 中央入口最后保留什么 |
+|---|---|---|
+| FixedActionRuntime／Float32ActionRuntime | 精确技能请求、catalog／profile、当前 Action 与准入事实 → 准入结果、待提交请求及实例生命周期变化 | 仅 Target 状态／数值适配；ActivateFromControl、TryCommitPendingControl、ApplyActionTransition 及终止流程中与数值无关的分支归共享实现 |
+| CharacterSemanticEmitter | 已发现的控制 binding、技能 Graph、变量与领域依赖 → 同一 IR 的操作、声明、来源及依赖记录 | 角色／技能装配和正式模块调用；Graph 业务族、变量／装备／GE 绑定、Timeline 发射按领域迁出，不保留镜像节点表 |
+| CharacterSimulationProgramBuilder | 发射模块提供的 typed 语义记录及稳定引用 → canonical IR 表、索引和完整性诊断 | 通用写入与一致性约束；不识别 Corin、装备 Route 或具体技能来决定业务流程 |
+| OperationControlRuntime | 已编译 topology、当前实例执行状态、typed 执行端口 → 节点状态、局部状态转换及执行范围启停 | 唯一控制分派与公共遍历骨架；组合节点、局部状态机和范围启停的实现由明确模块承担，不新增 scheduler 或实例状态镜像 |
+| AgentAuthoringPackageMapper、AgentDocumentReconciler 及 Package Codec／Planner | 同一 v5 整包、live projection、Capability 与只读引用索引 → typed 内容、领域差异及完整有序 Mutation 计划 | 整包解析／映射／对账协调和跨分片引用；控制配置、技能、Graph、Timeline、Presentation 的字段规则由各自内容模块处理，仍只有一次 apply／Undo／rollback／reverse export |
+
+每个对应任务完成时必须同时说明：原中央类删掉了什么业务责任；新模块接收什么、产出什么；正式调用者已如何迁入；原实现、废弃字段和旧入口是否删除。类／文件行数变化只作为辅助证据；纯 DTO 集合不因文件长而机械拆分，较短的类也不能混合多个业务所有权。
+
+只把方法搬进 partial、由原中央类继续控制全部细节的转发 helper、吸收所有依赖的 Context、巨型继承树，或两套同义流程同步修改，均不满足完成条件。新增一个已有业务族中的能力应修改所属模块及必要的唯一注册，不应再次在窗口、Codec、Mapper、Reconciler 和 Compiler 中各补一套相同字段／能力判断。
+
+模块化不得分裂已确定的运行和作者链：共享 Action 流程仍写同一 ActionInstance；各发射模块仍写同一 IR；Document 分片仍先形成完整计划，再进入唯一事务。已经分配给独立 Timeline、Pose、IK、Camera 或预览 change 的实现由对应 owner 修改，本 change 只迁移自己拥有的装配与消费接口，不把拆大类扩展为改写其它领域算法。
+
+构建通过证明可编译，Replay 证明指定输入下的行为，二者都不能单独证明上述结构已完成。任务 3.2、3.6、4.1、5.3、9.1、10.2、10.3、12.5 和 13.4 必须附上各自的职责迁移及删除证据；尚未迁出的部分明确保留未完成状态。
 
 ### 13. 现行规范与并行 change 对账
 

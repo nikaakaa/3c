@@ -1203,6 +1203,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             int count = m_Definition ? 1 : 0;
             if (m_Resolution?.Action != null)
                 count++;
+            if (!string.IsNullOrEmpty(m_Resolution?.Action?.SkillId))
+                count++;
             if (m_Resolution?.Timeline != null)
                 count++;
             return count;
@@ -1222,6 +1224,12 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 entries.Add(new GraphAuthoringBreadcrumbEntry(
                     m_Resolution.Action.ActionId,
                     "Action Profile"));
+            }
+            if (!string.IsNullOrEmpty(m_Resolution?.Action?.SkillId))
+            {
+                entries.Add(new GraphAuthoringBreadcrumbEntry(
+                    m_Resolution.Action.SkillId,
+                    "Skill Definition"));
             }
             if (m_Resolution?.Timeline != null)
             {
@@ -1250,6 +1258,15 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 if (index == 0)
                 {
                     SelectOwner(m_Resolution.Action.Profile);
+                    return;
+                }
+                index--;
+            }
+            if (!string.IsNullOrEmpty(m_Resolution?.Action?.SkillId))
+            {
+                if (index == 0)
+                {
+                    SelectOwner(m_Definition);
                     return;
                 }
                 index--;

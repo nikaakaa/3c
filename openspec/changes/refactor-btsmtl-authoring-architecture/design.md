@@ -64,6 +64,10 @@ Gameplay 控制状态机、技能内部局部状态机和 Presentation PoseState
 
 控制模块声明不可变合同：ModuleId、语义版本、参数／状态 schema、Input／Request 接口、所需能力与可引用的技能／producer 集合。Build 将 binding、参数和 schema 纳入角色运行包；运行时显式装配匹配实现。算法不伪装为一个万能图节点，也不被重新生成成角色状态机图。
 
+控制binding与允许作者修改的参数值以CharacterPipelineDefinition中的正式配置为唯一真值；模块代码、参数schema、状态schema及默认定义保持只读。普通作者UI、Agent Mutation和Build必须共用已登记模块查询与同一参数解析／校验入口。Definition提供明确的配置写入API；Build发射实际解析后的配置值，不能仍读取代码默认值而忽略作者修改。未知参数、重复身份、类型不匹配、非法值或切换模块后不适用的配置按正式声明明确失败，不静默丢弃或增加私有回退规则。合法配置修改进入既有来源／Program身份链，运行时仍只消费正式Program。
+
+上述Definition配置、公共解析／校验和Frontend／Emitter消费由原BTSMTL实现负责，关联任务3.5与9.4；Agent任务只负责文档字段、快照、strict映射、有序Mutation及事务接入。现有CharacterControlModuleCatalog.Require和CharacterControlParameterDescriptor可作为共享基础，尚缺的作者API必须由原实现提交后提供真实成员清单，不能把规划中的接口名当作已经可用，也不能让Agent通过反射写字段或自建模块登记。
+
 可变控制状态由模块声明的 typed layout 存放在 CharacterSimulationState 中，覆盖当前 State identity、业务需要的进入 Tick、确实跨 Tick 的转换进度及输入缓存等字段。模块对象不保存影响下一 Tick 的私有游标、计时器或当前动作镜像；已有 Body／Tag／Action 事实直接读取，不再复制一份。恢复只还原这些状态，不重新触发 Enter／Exit 或补发技能请求；后续实际推进与重算才按统一生命周期执行。Float32 与 Fixed 通过已有 Target 数值／状态端口复用业务决策语义，不能各自复制一套角色控制规则。
 
 普通移动无需为了获得身份创建空技能；有明确释放生命周期的攻击、闪避等继续使用 ActionInstance。AI 的 RootTree／AIIntentProgram 保持独立，唯一可写边界仍为 CharacterSimulationInput。

@@ -88,19 +88,19 @@ Build MUST负责typed拓扑、静态写冲突、Family／Value／Workspace布局
 
 ### Requirement: Pose Program Runtime必须是唯一Operation执行Owner
 
-`CharacterPoseProgramRuntime` MUST按Program Image的Stage Schedule执行每个Operation恰好一次，并在唯一Operation Completion页记录结果。Foot Placement、PoseBone Contribution、Goal Assembler与FBBIK等Constraint Family MUST各自在自己的Operation位置通过typed编译Handle调用Constraint Module一次；Constraint `Complete`只能验证完整闭包并发布最终Constraint Result，不得重新执行Operation。外层Runtime MUST不预执行World-aware Operation，Source Module MUST不扫描Operation决定逻辑状态，Constraint Module MUST不反向扫描Program或拥有第二Schedule，Diagnostics与Pose Watch MUST不重放Operation。Program Runtime MUST使用持久Executor Implementation，不得每帧通过巨型构造重新展开Program和Workspace全部页。
+`CharacterPoseProgramRuntime` MUST按Program Image的Stage Schedule与Worker Batch Plan执行每个Operation恰好一次，并在唯一Operation Completion页记录结果。Pure Pose Family MUST只由匹配Program Image identity的Worker Kernel执行；Foot Placement、PoseBone Contribution、Goal Assembler与FBBIK等Constraint Family MUST各自在自己的Operation位置通过typed编译Handle调用Constraint Module一次；Constraint `Complete`只能验证完整闭包并发布最终Constraint Result，不得重新执行Operation。外层Runtime MUST不预执行World-aware Operation，Source Module MUST不扫描Operation决定逻辑状态，Constraint Module MUST不反向扫描Program或拥有第二Schedule，Diagnostics与Pose Watch MUST不重放Operation。Program Runtime MUST持久拥有执行Implementation与actor-local页，不得每帧通过巨型构造重新展开Program、Workspace或Job图。
 
 #### Scenario: World-aware Foot节点
 
-- **WHEN** Stage Schedule包含一个Foot Placement Operation
-- **THEN** Program Runtime MUST在该Operation位置调用一次Constraint Module并写入唯一completion
-- **AND** 后续FBBIK MUST消费该次结果而不是外层提前写入的副本
+- **WHEN** Stage Schedule包含一个位于Worker批次之后的Foot Placement Operation
+- **THEN** Program Runtime MUST先取得匹配Actor Frame的前置Worker Completion，再在该Operation位置调用一次Constraint Module并写入唯一completion
+- **AND** 后续FBBIK MUST消费该次结果而不是外层提前写入或Worker Kernel伪造的副本
 
 #### Scenario: 同一Operation重复完成
 
-- **WHEN** 任一路径尝试在同一Frame第二次写入同一Operation completion
+- **WHEN** Worker、Managed或任一路径尝试在同一Frame第二次写入同一Operation completion
 - **THEN** Program Runtime MUST使当前Frame Invalid并阻止Final Publication
-- **AND** MUST不按最后写入覆盖第一次结果
+- **AND** MUST不按最后写入覆盖第一次结果或选择另一个Executor继续
 
 ### Requirement: Source Module必须独占物理source与release生命周期
 
@@ -154,19 +154,53 @@ Compiler MUST只证明唯一OutputPose、唯一Final Publication requirement与�
 
 ### Requirement: 所有Module必须服从唯一表现帧事务和Barrier
 
-每个Actor MUST继续使用唯一`Apply Pending Tuning -> Prepare -> Validate -> Animancer Evaluate Barrier -> Seal`表现事务。Tuning Candidate MUST在根Frame打开前完成原子Generation提升；Frame内不得变更Tuning Generation。Module MAY拥有内部预分配双页、pending state、journal和prepared resource，但 MUST共享根Frame lineage与Tuning Generation并只由根事务决定Seal/Discard。Barrier前失败 MUST丢弃Pending且保持Committed；Barrier内或之后失败 MUST阻止Pending发布并使Actor Animation Runtime进入Faulted；Writer成功后的Seal MUST只执行已验证的no-throw页切换、journal、acknowledgement与deferred release。
+每个Actor MUST继续使用唯一`Apply Pending Tuning -> Prepare -> Validate -> Animancer Evaluate Barrier -> Worker/Managed Program Execution -> Final Publication -> Seal`表现事务。Tuning Candidate MUST在根Frame打开前完成原子Generation提升；Frame内不得变更Tuning Generation。Module MAY拥有内部预分配双页、pending state、journal、prepared resource与Job lease，但 MUST共享根Frame lineage与Tuning Generation并只由根事务决定Seal/Discard。Barrier前失败 MUST丢弃Pending且保持Committed；Animancer Evaluate、Worker Batch、Managed Operation或Writer期间／之后失败 MUST阻止Pending发布并使Actor Animation Runtime进入Faulted；Writer成功后的Seal MUST只执行已验证的no-throw页切换、journal、acknowledgement与deferred release。
 
 #### Scenario: Source准备阶段失败
 
 - **WHEN** Source Module在Barrier前报告Invalid binding或容量不足
-- **THEN** 根事务 MUST Discard全部Program、Source、Constraint和Publication Pending结果
+- **THEN** 根事务 MUST Discard全部Program、Source、Constraint和Publication Pending结果并不得提交Worker批次
 - **AND** Animancer Evaluate与Physical Writer MUST不执行
+
+#### Scenario: Worker Batch失败
+
+- **WHEN** Animancer Evaluate已经产生同帧Source结果但任一Program Worker批次报告Invalid、Fault或缺少Completion
+- **THEN** 根事务 MUST阻断后续Managed Operation与Final Publication、Discard Pending并使Actor Runtime Faulted
+- **AND** MUST不提交已经推进的Program、Source、Actor State或Constraint局部状态
 
 #### Scenario: FBBIK在Barrier内失败
 
-- **WHEN** Animancer Evaluate已经产生同帧Pose但Constraint Module报告Solver Invalid
+- **WHEN** 前置Worker批次已经完成但Constraint Module报告Solver Invalid
 - **THEN** 根事务 MUST阻止Final Publication、Discard Pending并使Actor Runtime Faulted
-- **AND** MUST不只回滚Constraint后继续提交Source或Program状态
+- **AND** MUST不把成功Worker页单独提升为Committed
+
+### Requirement: 动画Worker调度必须具有唯一会话级Owner
+
+系统 MUST由唯一会话级`CharacterPoseWorkerScheduler`收集当前表现帧内已就绪的Actor Program工作，按Program Image、Rig执行布局、Stage依赖波次与Family Kernel identity形成跨Actor固定批次，并只提交Program Image已经证明的Completion依赖。Actor Program Runtime MUST不自行创建独立线程池、临时Job图或逐Actor`Schedule`后立即`Complete`；actor帧级协调根 MUST只提交typed工作并接收匹配lineage的结果，不得理解Kernel内部Bone、Value或Workspace布局。
+
+Worker批次 MUST只读取Program Image和actor-local只读Execution View中的不可变数据，以及当前Actor Program Frame页中已声明的typed输入，并只写Compiler分配给该批次的唯一write set。Unity场景对象、Physics查询、World Context、FinalIK Vendor对象、可变托管集合、AssetDatabase、Transform写入和任何未声明side effect MUST不进入Worker Kernel。Worker资源紧张 MUST不改变Actor更新频率、Delta、source时间、Transition、Blend、Constraint或Final Publication语义；动画预算、Phase Offset、跳帧、旧Pose复用与插值补帧属于独立能力。
+
+#### Scenario: 多个Actor共享同一Program Image
+
+- **WHEN** 当前表现帧有多个Actor使用相同Program Image、Rig执行布局和Pure Pose依赖波次
+- **THEN** 唯一Scheduler MUST把它们加入同identity Worker批次并发布各自独立Actor／Frame／Completion结果
+- **AND** 任一Actor的Fault、Reset、Tuning Generation、Replacement或Dispose MUST不修改其它Actor状态
+
+#### Scenario: 一个Actor的Worker Batch失败
+
+- **WHEN** 同一跨Actor批次中Actor A返回Invalid而Actor B成功
+- **THEN** Actor A MUST进入现有Frame失败路径且不得写Physical Pose，Actor B MAY按自己的完整lineage继续
+- **AND** Scheduler MUST不把A的失败、页或Completion传播给B
+
+### Requirement: Runtime不得保留Managed与Worker双执行路径
+
+Program Runtime、Preview与正式Runtime MUST只消费Program Image声明的唯一Execution Policy和Kernel Set。Worker迁移完成后，旧串行Staged Executor、运行时Operation switch、旧reader、Managed重算、Burst缺失fallback和按平台隐式改走另一算法的路径 MUST删除；Managed执行域只包含Compiler明确归属的Source、World-aware、Constraint和Final Publication工作。Reset、Projection Replacement与Dispose MUST先经唯一Scheduler fence完成全部Outstanding Job，再释放actor-local Execution View与Frame页。
+
+#### Scenario: Worker Kernel不可用
+
+- **WHEN** Runtime无法解析Program Image要求的Kernel、Execution Policy或平台执行身份
+- **THEN** Runtime创建 MUST失败并要求显式Build
+- **AND** MUST不把Pure Pose Operation交给旧Managed switch执行
 
 ### Requirement: 在线调参必须使用actor-local原子Snapshot
 
@@ -210,17 +244,23 @@ Runtime Projector MUST在Frame开始冻结Foot IK typed interest与View固定容
 
 ### Requirement: Preview与正式Runtime必须复用同一Module Factory和Program Image
 
-Pose Graph Preview与正式Runtime MUST使用同一Program Image schema、actor-local Execution View规则、Program Runtime、Source Module、Constraint Module、Final Publication、根Frame Transaction、actor-local Tuning Snapshot和completion语义。两者 MAY通过正式Adapter提供不同Presentation Fact、Action、World Context、source sample与Physical Rig host；Preview MUST不创建逐Preview第二Native Program、简化Executor、临时Program、第二PlayableGraph、默认Foot结果或Stale Projection fallback。
+Scene Play Preview与正式Gameplay MUST通过正式Character Session使用同一Program Image schema、actor-local Execution View规则、Program Runtime、Source Module、Constraint Module、Final Publication、根Frame Transaction、actor-local Tuning Snapshot和completion语义。Scene Play MAY装配独立场景实例与已选择的正式输入序列，但 MUST不创建Preview专用Runtime、逐Preview第二Native Program、简化Executor、临时Program、第二PlayableGraph、默认Foot结果或Stale Projection fallback。Pose作者窗口 MUST不拥有Scene、Session、播放时钟或Gameplay状态，只能发起Preview命令并读取Committed结果。
 
 #### Scenario: Preview缺少world context
 
 - **WHEN** Preview执行到需要精确World Context的Foot Placement Operation但Adapter不可用
 - **THEN** 同一Program Runtime MUST发布typed Unavailable并停止该Frame publication
-- **AND** Preview MUST不跳过Constraint或伪造地面结果
+- **AND** Scene Play Preview MUST不跳过Constraint或伪造地面结果
+
+#### Scenario: Pose窗口请求非连续时间定位
+
+- **WHEN** Pose窗口请求Scene Play Preview定位到非连续目标时间
+- **THEN** Scene Play MUST重建正式场景实例并按已选输入推进同一Session到目标时间
+- **AND** Pose窗口 MUST不直接修改任何Program、Source、Constraint或Gameplay状态
 
 ### Requirement: Reset、Replacement与Dispose必须按Owner清理状态
 
-Program replacement、Projection revision变化、Preview非连续seek、Actor reset、Fault和Dispose MUST由根Runtime生成typed reset reason，并按固定顺序让Program Runtime、Source Module、Constraint Module和Final Publication各自清理Owned状态。Reset MUST提升相关generation并使旧Frame lease、Tuning Candidate、source completion、constraint result和diagnostics失效；Projection replacement MUST由Program Runtime释放自己的旧Execution View并只按新Image/hash建立一份新View。系统 MUST不由一个Module直接清空另一Module内部页，也 MUST不保留旧Program reader、旧Execution View或source资源fallback。
+Program replacement、Projection revision变化、Scene Play Preview实例重建、Actor reset、Fault和Dispose MUST由正式Session或根Runtime生成typed reset reason，并按固定顺序让Program Runtime、Source Module、Constraint Module和Final Publication各自清理Owned状态。Reset MUST提升相关generation并使旧Frame lease、Tuning Candidate、source completion、constraint result和diagnostics失效；Projection replacement MUST由Program Runtime释放自己的旧Execution View并只按新Image/hash建立一份新View。系统 MUST不由Pose作者窗口或一个Module直接清空另一Module内部页，也 MUST不保留旧Program reader、旧Execution View或source资源fallback。
 
 Constraint的成功Reset MUST保持第一阶段IK维护重构已通过的初始化结果，并引用其相对固定总基线的独立Reset证据；不得借外层Reset协议迁移再实施其它BendHistory／Vendor方向修正，也不得恢复第一阶段已删除的旧Vendor读取。
 

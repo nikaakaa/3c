@@ -2,7 +2,7 @@
 
 ### Requirement: 每种Pose节点必须只有一个Node Definition真相
 
-Editor MUST提供唯一`CharacterPoseNodeDefinitionModule`，并为每个正式Node Kind注册恰好一个`CharacterPoseNodeDefinition` Adapter。Definition MUST集中声明Capability identity、Payload类型、字段合同、固定端口、条件`portVariants`、动态端口政策、允许Graph Role、Execution Domain、Operation Family、Authoring codec、Graph dependency投影、局部Payload/Rig校验、typed lowering和Source Map命名。Definition MUST先投影共享`GraphAuthoringCapabilityCatalog`，再由唯一`GraphAuthoringNodePortShapeProjector`把完整端口形状提供给Canvas、Document v4、Clipboard、Reconciler、Mutation preflight与局部Validator；Compiler MUST只从同一Definition读取Graph dependency与typed lowering。系统不得复制第二字段表、端口表、compiler binding或NodeKind特例目录。
+Editor MUST提供唯一`CharacterPoseNodeDefinitionModule`，并为每个正式Node Kind注册恰好一个`CharacterPoseNodeDefinition` Adapter。Definition MUST集中声明Capability identity、Payload类型、字段合同、固定端口、条件`portVariants`、动态端口政策、允许Graph Role、Execution Domain、Operation Family、Authoring codec、Graph dependency投影、局部Payload/Rig校验、typed lowering和Source Map命名。Definition MUST先投影共享`GraphAuthoringCapabilityCatalog`，再由唯一`GraphAuthoringNodePortShapeProjector`把完整端口形状提供给唯一Pose Canvas、Document v4、Clipboard、Reconciler、Mutation preflight与局部Validator；Compiler MUST只从同一Definition读取Graph dependency与typed lowering。Pose Canvas节点类型、运行委托或反射方法 MUST不建立第二字段表、端口表、compiler binding或NodeKind特例目录。
 
 #### Scenario: 新增正式Pose节点
 
@@ -34,23 +34,29 @@ Node Definition MUST只拥有单节点局部语义与该节点直接引用的Gra
 
 ### Requirement: Pose Compiler必须使用固定不可逆Pass链
 
-唯一Pose Compiler Module MUST按`Graph Closure -> Typed Lowering -> Topology -> Symbolic Family Lowering -> Stage Schedule -> Value Lifetime -> Workspace Plan -> Bind Family Payload -> Seal Program Image`顺序执行。Graph Closure MUST只通过root catalog、PoseState引用与Node Definition Graph dependency投影展开Subgraph和Linked Pose call，不得中央switch具体Payload。Symbolic Family Lowering MUST先固定每个Operation的Family、symbolic typed value依赖、跨帧状态需求、Frame页需求与Workspace需求；Stage固定后 Value Lifetime才能计算真实消费寿命，Workspace Plan才能分配容量，Bind Family Payload只能绑定既有typed handle而不得发现新的Operation或容量需求。每个Pass MUST只消费上一个或明确前置Pass的不可变Result，不得原地修改共享`CompilationState`、回读后续Pass的临时字段或让多个Pass共同拥有同一可变集合。Compiler外部Interface MUST只接受一个typed Compilation Request并返回一个Program Image或结构化失败。
+唯一Pose Compiler Module MUST按`Graph Closure -> Typed Lowering -> Topology -> Symbolic Family Lowering -> Stage Schedule -> Value Lifetime -> Workspace Plan -> Worker Batch Plan -> Bind Family Payload -> Seal Program Image`顺序执行。Graph Closure MUST只通过root catalog、PoseState引用与Node Definition Graph dependency投影展开Subgraph和Linked Pose call，不得中央switch具体Payload。Symbolic Family Lowering MUST先固定每个Operation的Family、symbolic typed value依赖、跨帧状态需求、Frame页需求与Workspace需求；Stage固定后Value Lifetime才能计算真实消费寿命，Workspace Plan才能分配容量，Worker Batch Plan才能按Execution Domain、Rig执行布局、typed read/write range与平台Kernel能力生成固定批次；Bind Family Payload只能绑定既有typed handle而不得发现新的Operation、批次或容量需求。每个Pass MUST只消费上一个或明确前置Pass的不可变Result，不得原地修改共享`CompilationState`、回读后续Pass的临时字段或让多个Pass共同拥有同一可变集合。Compiler外部Interface MUST只接受一个typed Compilation Request并返回一个Program Image或结构化失败。
 
 #### Scenario: Value规划失败
 
 - **WHEN** Typed Topology合法但Value生命周期或类型无法分配
 - **THEN** Value Plan Pass MUST返回带Pass、GraphId、NodeId、PortId和reason的失败
-- **AND** 已生成的前置不可变Result MUST只作为本次失败的内部诊断上下文而不得发布，Workspace、Payload和Program Image MUST不生成部分产物
+- **AND** 已生成的前置不可变Result MUST只作为本次失败的内部诊断上下文而不得发布，Workspace、Worker Batch、Payload和Program Image MUST不生成部分产物
+
+#### Scenario: Worker Batch规划失败
+
+- **WHEN** Stage与Workspace合法但某个Pure Pose Operation无法映射到唯一线程安全Kernel、Actor Batch Key或互斥write set
+- **THEN** Worker Batch Plan MUST返回结构化失败并定位Operation、Definition、Execution Domain与缺失能力
+- **AND** Compiler MUST不把该Operation留给Runtime现场决定或串行fallback
 
 #### Scenario: Compiler入口调用
 
 - **WHEN** Character Build编译一个合法Pose Graph
-- **THEN** 唯一Compiler Module MUST依次产生不可变Pass Result并Seal一个Program Image
+- **THEN** 唯一Compiler Module MUST依次产生不可变Pass Result并Seal一个包含Worker计划的Program Image
 - **AND** 其它Compiler facade MUST不复制参数、重跑Pass或现场修改Result
 
 ### Requirement: Graph Closure Pass必须唯一展开全部可达图
 
-Graph Closure Pass MUST从root-owned flat graph catalog、PoseState inline GraphId和每个Node Definition发布的Graph dependency建立稳定可达闭包。Subgraph call与Linked Pose call target MUST只由匹配Definition从typed Payload投影，中央Compiler不得按NodeKind、Payload C#类型或显示名解释目标。Closure MUST验证GraphId、Entry、Output、call identity、递归与悬空引用，并按稳定identity生成唯一call-site lineage；后续Pass MUST只读取该Closure，不得再次遍历authoring对象树或动态展开Subgraph。
+Graph Closure Pass MUST从唯一Pose作者资产中的root graph catalog、PoseState inline GraphId和每个Node Definition发布的Graph dependency建立稳定可达闭包。Subgraph call与Linked Pose call target MUST只由匹配Definition从typed Payload投影，中央Compiler不得按Canvas节点C#类型、显示名或运行委托解释目标。Closure MUST验证GraphId、Entry、Output、call identity、递归与悬空引用，并按稳定identity生成唯一call-site lineage；后续Pass MUST只读取该Closure，不得再次遍历作者资产对象树或动态展开Subgraph。
 
 #### Scenario: Subgraph递归
 
@@ -60,13 +66,19 @@ Graph Closure Pass MUST从root-owned flat graph catalog、PoseState inline Graph
 
 ### Requirement: Typed Lowering Pass必须只通过Node Definition生成IR
 
-Typed Lowering Pass MUST把Closure中的authoring node、payload和edge降低为不引用Unity Editor对象的typed Pose IR。每个节点 MUST通过匹配Node Definition完成Payload读取、局部校验和lowering；IR MUST保存稳定Graph/Node/call-site identity、typed ports、Graph Role、Execution Domain和source path。Compiler MUST不在中央switch中再次解释同一Payload字段。
+Typed Lowering Pass MUST把Closure中的Pose authoring node、payload和edge降低为不引用Unity Editor或Canvas运行对象的typed Pose IR。每个节点 MUST通过匹配Node Definition完成Payload读取、局部校验和lowering；IR MUST保存稳定Graph/Node/call-site identity、typed ports、Graph Role、Execution Domain和source path。Compiler MUST不执行Canvas flow、value getter、event或反射方法，也 MUST不在中央switch中再次解释同一Payload字段。
 
 #### Scenario: Payload类型与Definition不匹配
 
 - **WHEN** authoring node的Payload类型不符合其唯一Node Definition
 - **THEN** Typed Lowering Pass MUST在进入Topology前报告稳定失败
 - **AND** MUST不通过Activator默认创建Payload或按NodeKind猜测字段
+
+#### Scenario: Canvas包含非Pose运行节点
+
+- **WHEN** 唯一Pose作者资产包含没有正式Pose Node Definition的flow、event、method或其它运行节点
+- **THEN** Typed Lowering Pass MUST在生成IR前报告该Node identity与不支持的kind
+- **AND** Compiler MUST不执行该节点或把它包装为Managed Pose Operation
 
 ### Requirement: Topology Pass必须统一证明全局执行闭包
 
@@ -130,27 +142,45 @@ ABI切换前 MUST为全部现行Operation Code建立并封存唯一迁移表，�
 
 Stage Schedule Pass MUST按Topology Plan、Symbolic Operation依赖、Pose空间和Execution Domain生成固定`FactAndDemand`、`SourceCapture`、`PurePose`、`WorldAwareValue`、`PureValue`与`FinalPublication`Stage，并为每个Operation分配恰好一个Stage位置。Schedule MUST静态保证source每帧最多capture一次、每Operation最多执行一次、每个Constraint Family Operation在自己的位置调用一次、Constraint完整结果先于消费者、唯一Output layout在全部依赖完成后产生。Physical Writer由Runtime Factory装配的Final Publication在该结果之后执行，不属于Graph Operation。Runtime与Preview MUST只执行该Schedule，不得现场重新排序。
 
+在Stage固定后，Worker Batch Plan MUST只把线程安全、依赖兼容且write set互斥的Operation降低为固定Family Kernel批次，并保存Actor Batch Key、Rig执行布局、typed read/write range、前置Completion与输出Completion。SourceCapture、World-aware、Vendor Solver与Final Publication仍保留各自正式执行域；Compiler MUST为跨域交接生成显式依赖，不得把整个Stage名称直接等同于一个线程或为每个Node／Bone生成独立Job。
+
 #### Scenario: Operation出现在两个Stage
 
 - **WHEN** Stage Schedule生成结果包含重复Operation index或遗漏可达Operation
 - **THEN** Seal Program Image Pass MUST拒绝Program
 - **AND** Runtime MUST不通过completion检查跳过重复项或后台补执行遗漏项
 
+#### Scenario: Worker Batch写入范围冲突
+
+- **WHEN** 两个候选Worker批次在相同依赖波次写入重叠Pose、Value、Workspace或Completion范围
+- **THEN** Worker Batch Plan MUST拒绝Program并定位两个Operation与冲突范围
+- **AND** Runtime MUST不按提交顺序串行化、关闭安全检查或最后写入覆盖来补救非法计划
+
 ### Requirement: Program Image必须在Seal后不可变且自描述完整
 
-Seal Program Image Pass MUST验证全部Pass identity、schema、Rig、Operation Header、Family Payload、typed Value、Workspace handle、Stage、Source Map、容量和PoseProgramImageHash，并把不可变`CharacterPoseProgramImage`作为`CharacterPresentationProjection`内部唯一语义Pose程序随同一ProjectionRevision发布。Program Image MUST包含Runtime装配所需的完整固定数据，不得保存authoring asset、Editor对象、Actor状态、Frame页、运行时Tuning或运行时编译器。Runtime MUST不重新编译、重排或构造第二语义Program；如需不可序列化执行存储，每个Program Runtime只能建立最多一份同identity、actor-local、只读的Execution View并唯一Dispose。任何内容或schema变化 MUST提升PoseProgramImageHash与ProjectionRevision并要求显式Build。
+Seal Program Image Pass MUST验证全部Pass identity、schema、Rig、Operation Header、Family Payload、typed Value、Workspace handle、Stage、Worker Batch Plan、Family Kernel、Rig执行布局、Execution Policy、Source Map、容量和PoseProgramImageHash，并把不可变`CharacterPoseProgramImage`作为`CharacterPresentationProjection`内部唯一语义Pose程序随同一ProjectionRevision发布。Program Image MUST包含Runtime装配所需的完整固定数据，不得保存authoring asset、Editor对象、Actor状态、Frame页、运行时Tuning、运行时编译器或平台线程对象。Runtime MUST不重新编译、重排、拆批或构造第二语义Program；如需不可序列化执行存储，每个Program Runtime只能建立最多一份同identity、actor-local、只读的Execution View并唯一Dispose。任何内容、Kernel Set、Execution Policy或schema变化 MUST提升PoseProgramImageHash与ProjectionRevision并要求显式Build。
 
 #### Scenario: Runtime加载Program Image
 
-- **WHEN** Character Presentation Runtime加载匹配Profile、Rig和Projection revision的Program Image
-- **THEN** Runtime MUST只按Image容量建立自己的actor-local Execution View、Actor State、Program Frame Pages、根Frame Transaction和Module实例
-- **AND** MUST不读取Pose Graph资产、Capability Catalog、Node Definition或Compiler
+- **WHEN** Character Presentation Runtime加载匹配Profile、Rig、Projection revision与Worker执行身份的Program Image
+- **THEN** Runtime MUST只按Image容量建立自己的actor-local Execution View、Actor State、Program Frame Pages、根Frame Transaction和Module实例，并向唯一Worker调度Owner注册固定批次
+- **AND** MUST不读取Pose Graph资产、Capability Catalog、Node Definition、Compiler或现场推导batch
 
 #### Scenario: Program Image与Rig不匹配
 
-- **WHEN** Program Image的Rig identity或PoseBone layout与运行角色不一致
+- **WHEN** Program Image的Rig identity、PoseBone layout或Rig执行布局与运行角色不一致
 - **THEN** Runtime创建 MUST失败并报告typed配置错误
-- **AND** MUST不现场重绑骨骼、重编Program或使用旧Image
+- **AND** MUST不现场重绑骨骼、重编Program、重排层级或使用旧Image
+
+### Requirement: Compiler必须静态证明Worker Batch线程安全
+
+Node Definition MUST为每个Operation Family提供唯一Execution Domain与线程安全能力事实；Topology、Value Lifetime、Workspace Plan和Worker Batch Plan MUST共同证明每个Worker Kernel只读写声明的typed范围、不捕获托管或场景对象、不跨越未完成依赖，并能在目标平台AOT闭包内解析。线程安全是Compiler证明，不是作者属性或Runtime猜测；作者Document、Inspector与MCP MUST不提供Burst、线程、Job或Batch开关。
+
+#### Scenario: Definition错误声明Pure Pose
+
+- **WHEN** typed lowering产生的Operation需要World Context、Unity对象或未声明side effect却被标为Pure Pose Worker候选
+- **THEN** Character Build MUST在Seal Program Image前失败并定位Definition、Node与非法依赖
+- **AND** MUST不把该Operation降级到旧Executor后继续发布部分Worker计划
 
 ### Requirement: Compiler Diagnostic必须保留稳定source lineage
 

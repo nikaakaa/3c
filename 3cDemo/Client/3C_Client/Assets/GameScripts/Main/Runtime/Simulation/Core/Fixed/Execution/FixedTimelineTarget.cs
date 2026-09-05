@@ -70,14 +70,28 @@ namespace ThirdPersonSimulation.Fixed
                 .Get(Require(operation, ProgramStateSemantic.TimelineRetentionIdentity))
                 .ActionInstanceReference;
             return value.IsValid
-                ? new TimelineActionContextIdentity(value.ActionId, value.ContextId, value.InstanceId, value.PredictionKey)
+                ? new TimelineActionContextIdentity(
+                    value.ActionId,
+                    value.ContextId,
+                    value.InstanceId,
+                    value.PredictionKey,
+                    value.SkillId,
+                    value.SkillEntryOperation,
+                    value.SkillExecutionGeneration)
                 : default;
         }
 
         public void WriteRetainedActionContext(OperationHandle operation, TimelineActionContextIdentity identity)
         {
             FixedActionInstanceReference value = identity.IsValid
-                ? new FixedActionInstanceReference(identity.ActionId, identity.ContextId, identity.InstanceId, identity.PredictionKey)
+                ? new FixedActionInstanceReference(
+                    identity.ActionId,
+                    identity.ContextId,
+                    identity.InstanceId,
+                    identity.PredictionKey,
+                    identity.SkillId,
+                    identity.SkillEntryOperation,
+                    identity.SkillExecutionGeneration)
                 : default;
             m_State.Set(
                 Require(operation, ProgramStateSemantic.TimelineRetentionIdentity),
@@ -288,7 +302,10 @@ namespace ThirdPersonSimulation.Fixed
                     skillAction.ActionId,
                     skillAction.ContextId,
                     skillAction.InstanceId,
-                    skillAction.PredictionKey);
+                    skillAction.PredictionKey,
+                    skillAction.SkillId,
+                    skillAction.SkillEntryOperation,
+                    skillAction.SkillExecutionGeneration);
                 return true;
             }
             if (m_Actions.FindActive(contextId, out FixedActionInstanceState action) < 0)
@@ -296,7 +313,14 @@ namespace ThirdPersonSimulation.Fixed
                 identity = default;
                 return false;
             }
-            identity = new TimelineActionContextIdentity(action.ActionId, action.ContextId, action.InstanceId, action.PredictionKey);
+            identity = new TimelineActionContextIdentity(
+                action.ActionId,
+                action.ContextId,
+                action.InstanceId,
+                action.PredictionKey,
+                action.SkillId,
+                action.SkillEntryOperation,
+                action.SkillExecutionGeneration);
             return true;
         }
 
@@ -518,7 +542,10 @@ namespace ThirdPersonSimulation.Fixed
                 identity.ActionId,
                 identity.ContextId,
                 identity.InstanceId,
-                identity.PredictionKey));
+                identity.PredictionKey,
+                identity.SkillId,
+                identity.SkillEntryOperation,
+                identity.SkillExecutionGeneration));
         }
 
         FixedScalar SampleClipWeight(

@@ -9,9 +9,9 @@ namespace ThirdPersonSimulation
     public static class CharacterSimulationStateCodec
     {
         const uint Magic = 0x54534343;
-		const int Version = 11;
-		public const string CodecIdentity = "character-state/float32/v11";
-		const string HashIdentity = "character-state-hash/float32/v10";
+		const int Version = 12;
+		public const string CodecIdentity = "character-state/float32/v12";
+		const string HashIdentity = "character-state-hash/float32/v11";
 
         public static byte[] Write(CharacterSimulationState state)
         {
@@ -351,17 +351,41 @@ namespace ThirdPersonSimulation
             writer.WriteString(value.ContextId);
             writer.WriteUInt64(value.InstanceId);
             writer.WriteUInt64(value.PredictionKey);
+            writer.WriteBoolean(value.HasSkillExecution);
+            if (value.HasSkillExecution)
+            {
+                writer.WriteString(value.SkillId.Value);
+                writer.WriteInt32(value.SkillEntryOperation.Value);
+                writer.WriteUInt64(value.SkillExecutionGeneration);
+            }
         }
 
         static Float32ActionInstanceReference ReadActionReference(CanonicalReader reader)
         {
             if (!reader.ReadBoolean())
                 return default;
+            string actionId = reader.ReadString();
+            string contextId = reader.ReadString();
+            ulong instanceId = reader.ReadUInt64();
+            ulong predictionKey = reader.ReadUInt64();
+            bool hasSkillExecution = reader.ReadBoolean();
+            CharacterSkillId skillId = default;
+            OperationHandle skillEntryOperation = OperationHandle.Invalid;
+            ulong skillExecutionGeneration = 0;
+            if (hasSkillExecution)
+            {
+                skillId = new CharacterSkillId(reader.ReadString());
+                skillEntryOperation = new OperationHandle(reader.ReadInt32());
+                skillExecutionGeneration = reader.ReadUInt64();
+            }
             var value = new Float32ActionInstanceReference(
-                reader.ReadString(),
-                reader.ReadString(),
-                reader.ReadUInt64(),
-                reader.ReadUInt64());
+                actionId,
+                contextId,
+                instanceId,
+                predictionKey,
+                skillId,
+                skillEntryOperation,
+                skillExecutionGeneration);
             if (!value.IsValid)
                 throw new InvalidDataException("Character state Action instance reference identity is invalid.");
             return value;

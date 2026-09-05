@@ -475,7 +475,10 @@ namespace ThirdPersonSimulation.Fixed
                 action.ActionId,
                 action.ContextId,
                 action.InstanceId,
-                action.PredictionKey);
+                action.PredictionKey,
+                action.SkillId,
+                action.SkillEntryOperation,
+                action.SkillExecutionGeneration);
             if (!action.IsActive ||
                 !currentAction.Equals(sample.ActionContext) ||
                 !string.Equals(action.ContextId, descriptor.ActionContextIdentity, StringComparison.Ordinal))
@@ -502,7 +505,14 @@ namespace ThirdPersonSimulation.Fixed
             bool initialized = Read(descriptor, ProgramStateSemantic.MotionWarpInitialized).Boolean;
             FixedActionInstanceReference storedReference = Read(descriptor, ProgramStateSemantic.MotionWarpActionInstance).ActionInstanceReference;
             var storedAction = storedReference.IsValid
-                ? new TimelineActionContextIdentity(storedReference.ActionId, storedReference.ContextId, storedReference.InstanceId, storedReference.PredictionKey)
+                ? new TimelineActionContextIdentity(
+                    storedReference.ActionId,
+                    storedReference.ContextId,
+                    storedReference.InstanceId,
+                    storedReference.PredictionKey,
+                    storedReference.SkillId,
+                    storedReference.SkillEntryOperation,
+                    storedReference.SkillExecutionGeneration)
                 : default;
             MotionWarpLifecycleDecision lifecycle;
             try

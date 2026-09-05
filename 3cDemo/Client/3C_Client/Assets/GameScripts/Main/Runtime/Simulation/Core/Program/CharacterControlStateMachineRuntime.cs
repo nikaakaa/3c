@@ -54,7 +54,7 @@ namespace ThirdPersonSimulation
                 if (candidate.Source != current || !m_Module.EvaluateTransition(in context, candidate.Id, read, state))
                     continue;
                 if (selected == null ||
-                    candidate.Priority > selected.Priority ||
+                    candidate.Priority < selected.Priority ||
                     candidate.Priority == selected.Priority &&
                     (candidate.EvaluationOrder < selected.EvaluationOrder ||
                      candidate.EvaluationOrder == selected.EvaluationOrder && candidate.Id.CompareTo(selected.Id) < 0))

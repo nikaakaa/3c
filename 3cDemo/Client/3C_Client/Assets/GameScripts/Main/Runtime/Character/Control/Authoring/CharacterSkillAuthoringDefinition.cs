@@ -25,5 +25,27 @@ namespace ThirdPersonCharacter.Control.Authoring
         public bool ConsumeSourceInputRequest => m_ConsumeSourceInputRequest;
         public string TargetInputValueId => m_TargetInputValueId ?? string.Empty;
         public string TargetKey => m_TargetKey ?? string.Empty;
+
+#if UNITY_EDITOR
+        public void ConfigureAuthoring(
+            string skillId,
+            string entryGraphAuthoringId,
+            ActionProfile actionProfile,
+            ActionContextSlot actionContext,
+            string sourceInputRequestId,
+            bool consumeSourceInputRequest,
+            string targetInputValueId,
+            string targetKey)
+        {
+            m_SkillId = skillId ?? string.Empty;
+            m_EntryGraphAuthoringId = entryGraphAuthoringId ?? string.Empty;
+            m_ActionProfile = actionProfile;
+            m_ActionContext = actionContext;
+            m_SourceInputRequestId = sourceInputRequestId ?? string.Empty;
+            m_ConsumeSourceInputRequest = consumeSourceInputRequest;
+            m_TargetInputValueId = targetInputValueId ?? string.Empty;
+            m_TargetKey = targetKey ?? string.Empty;
+        }
+#endif
     }
 }

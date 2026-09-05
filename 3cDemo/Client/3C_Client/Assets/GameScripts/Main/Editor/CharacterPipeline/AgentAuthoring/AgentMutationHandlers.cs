@@ -74,6 +74,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                 AgentMutationKind.SetActionProfileCancelQuery,
                 AgentMutationKind.SetActionProfileTargetRequirement,
                 AgentMutationKind.SetActionRequestTimingClass);
+            Register(new AgentSkillDefinitionMutationHandler(),
+                AgentMutationKind.SetSkillDefinition,
+                AgentMutationKind.DeleteSkillDefinition);
             Register(new AgentAIControllerMutationHandler(),
                 AgentMutationKind.EnsureAIControllerDefinition,
                 AgentMutationKind.EnsureAIControllerTree,

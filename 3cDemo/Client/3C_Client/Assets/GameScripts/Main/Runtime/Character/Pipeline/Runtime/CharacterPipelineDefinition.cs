@@ -292,6 +292,11 @@ namespace ThirdPersonCharacter.Pipeline
         {
             m_PresentationProjection = presentationProjection;
         }
+
+        public void SetSkillDefinitions(CharacterSkillAuthoringDefinition[] skillDefinitions)
+        {
+            m_SkillDefinitions = skillDefinitions ?? Array.Empty<CharacterSkillAuthoringDefinition>();
+        }
 #endif
     }
 }

@@ -173,6 +173,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                 [AgentMutationKind.SetActionProfileCancelQuery] = new AgentMutationDraftDescriptor(AgentMutationKind.SetActionProfileCancelQuery, AgentMutationOutputKind.None, LowerSetActionProfileCancelQuery),
                 [AgentMutationKind.SetActionProfileTargetRequirement] = new AgentMutationDraftDescriptor(AgentMutationKind.SetActionProfileTargetRequirement, AgentMutationOutputKind.None, LowerSetActionProfileTargetRequirement),
                 [AgentMutationKind.SetActionRequestTimingClass] = new AgentMutationDraftDescriptor(AgentMutationKind.SetActionRequestTimingClass, AgentMutationOutputKind.None, LowerSetActionRequestTimingClass),
+                [AgentMutationKind.SetSkillDefinition] = new AgentMutationDraftDescriptor(AgentMutationKind.SetSkillDefinition, AgentMutationOutputKind.SkillDefinition, LowerSetSkillDefinition),
+                [AgentMutationKind.DeleteSkillDefinition] = new AgentMutationDraftDescriptor(AgentMutationKind.DeleteSkillDefinition, AgentMutationOutputKind.None, LowerDeleteSkillDefinition),
                 [AgentMutationKind.EnsureAIControllerDefinition] = new AgentMutationDraftDescriptor(AgentMutationKind.EnsureAIControllerDefinition, AgentMutationOutputKind.None, LowerEnsureAIControllerDefinition, AgentMutationDomainMask.AIController),
                 [AgentMutationKind.EnsureAIControllerTree] = new AgentMutationDraftDescriptor(AgentMutationKind.EnsureAIControllerTree, AgentMutationOutputKind.None, LowerEnsureAIControllerTree, AgentMutationDomainMask.AIController),
                 [AgentMutationKind.BindAIControllerAssets] = new AgentMutationDraftDescriptor(AgentMutationKind.BindAIControllerAssets, AgentMutationOutputKind.None, LowerBindAIControllerAssets, AgentMutationDomainMask.AIController),
@@ -1147,6 +1149,58 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                 out CharacterActionRequestTimingClass timingClass);
             return context.IsValid
                 ? new AgentSetActionRequestTimingClassMutation(operation.id, context.Path, requestId, timingClass)
+                : null;
+        }
+
+        static AgentMutation LowerSetSkillDefinition(
+            AgentMutationPlanningContext context,
+            AgentMutationDraft operation)
+        {
+            string skillId = context.RequiredText(operation.skillId, string.Empty, "skillId", "set_skill_definition 缺少 skillId。");
+            string entryGraphAuthoringId = context.RequiredText(
+                operation.entryGraphAuthoringId,
+                string.Empty,
+                "entryGraphAuthoringId",
+                "set_skill_definition 缺少 entryGraphAuthoringId。");
+            string actionProfileId = context.RequiredText(
+                operation.actionProfile,
+                string.Empty,
+                "actionProfile",
+                "set_skill_definition 缺少 ActionProfile identity。");
+            string actionContext = context.RequiredText(
+                operation.actionContext,
+                string.Empty,
+                "actionContext",
+                "set_skill_definition 缺少 ActionContext identity。");
+            return context.IsValid
+                ? new AgentSetSkillDefinitionMutation(
+                    operation.id,
+                    context.Path,
+                    new AgentSnapshotSkillDefinition
+                    {
+                        skillId = skillId,
+                        entryGraphAuthoringId = entryGraphAuthoringId,
+                        actionProfileId = actionProfileId,
+                        actionProfileAssetPath = operation.actionProfileAssetPath,
+                        actionProfileAssetGuid = operation.actionProfileAssetGuid,
+                        actionContext = actionContext,
+                        actionContextAssetPath = operation.actionContextAssetPath,
+                        actionContextAssetGuid = operation.actionContextAssetGuid,
+                        sourceInputRequestId = operation.sourceInputRequestId,
+                        consumeSourceInputRequest = operation.consumeSourceInputRequest,
+                        targetInputValueId = operation.targetInputValueId,
+                        targetKey = operation.targetKey
+                    })
+                : null;
+        }
+
+        static AgentMutation LowerDeleteSkillDefinition(
+            AgentMutationPlanningContext context,
+            AgentMutationDraft operation)
+        {
+            string skillId = context.RequiredText(operation.skillId, string.Empty, "skillId", "delete_skill_definition 缺少 skillId。");
+            return context.IsValid
+                ? new AgentDeleteSkillDefinitionMutation(operation.id, context.Path, skillId)
                 : null;
         }
 

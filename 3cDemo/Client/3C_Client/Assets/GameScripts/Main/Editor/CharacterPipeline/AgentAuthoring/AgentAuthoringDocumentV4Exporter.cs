@@ -24,6 +24,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                 CharacterSimulationProgramBuildService
                     .EvaluateExactArtifactStaleness(definition);
             AgentGraphSnapshot snapshot = new AgentGraphSnapshotExporter().ExportFull(definition);
+            List<AgentSnapshotSkillDefinition> skills = ExportSkills(definition.SkillDefinitions);
+            snapshot.skills = skills;
             var editable = new AgentDocumentEditable
             {
                 blackboardSchemaRevision = TreeDesigner.PipelineBlackboardAuthoringSchema.CurrentRevision,
@@ -34,7 +36,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                 timelineTreeClips = snapshot.timelineTreeClips,
                 actionRequests = snapshot.actionRequests,
                 actionProfiles = snapshot.actionProfiles,
-                skills = ExportSkills(definition.SkillDefinitions),
+                skills = skills,
                 presentation = new AgentAuthoringPresentationExporter().Export(definition)
             };
             var context = new AgentDocumentContext

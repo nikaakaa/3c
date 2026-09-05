@@ -128,6 +128,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
             BuildCharacterGraphMutations(current.graphs, target.graphs, target.stateMachines, mutations, report);
             BuildTimelineMutations(current, target, mutations, report);
             BuildActionMutations(current, target, mutations, report);
+            BuildSkillDefinitionMutations(current, target, mutations, report);
         }
 
         static void BuildStateMachineMutations(
@@ -537,6 +538,70 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
             }
             foreach (string removed in oldProfiles.Keys.Except(newProfiles.Keys, StringComparer.Ordinal))
                 report.Error($"document.editable.actionProfiles[{Escape(removed)}]", "action_profile_delete_unsupported", "ActionProfile资产不可由Document删除。");
+        }
+
+        static void BuildSkillDefinitionMutations(
+            AgentGraphSnapshot current,
+            AgentDocumentEditable target,
+            AgentMutationDraftSet mutations,
+            AgentCompileReport report)
+        {
+            var oldSkills = Index(
+                current.skills,
+                value => value.skillId,
+                "document.editable.skills",
+                report);
+            var newSkills = Index(
+                target.skills,
+                value => value.skillId,
+                "document.editable.skills",
+                report);
+            foreach (AgentSnapshotSkillDefinition skill in target.skills ?? new List<AgentSnapshotSkillDefinition>())
+            {
+                if (skill == null)
+                    continue;
+                if (oldSkills.TryGetValue(skill.skillId, out AgentSnapshotSkillDefinition oldSkill) &&
+                    SameSkill(oldSkill, skill))
+                    continue;
+                string path = $"document.editable.skills[{Escape(skill.skillId)}]";
+                Add(mutations, path, AgentMutationKind.SetSkillDefinition, operation =>
+                {
+                    operation.skillId = skill.skillId;
+                    operation.entryGraphAuthoringId = skill.entryGraphAuthoringId;
+                    operation.actionProfile = skill.actionProfileId;
+                    operation.actionProfileAssetPath = skill.actionProfileAssetPath;
+                    operation.actionProfileAssetGuid = skill.actionProfileAssetGuid;
+                    operation.actionContext = skill.actionContext;
+                    operation.actionContextAssetPath = skill.actionContextAssetPath;
+                    operation.actionContextAssetGuid = skill.actionContextAssetGuid;
+                    operation.sourceInputRequestId = skill.sourceInputRequestId;
+                    operation.consumeSourceInputRequest = skill.consumeSourceInputRequest;
+                    operation.targetInputValueId = skill.targetInputValueId;
+                    operation.targetKey = skill.targetKey;
+                });
+            }
+            foreach (string removed in oldSkills.Keys.Except(newSkills.Keys, StringComparer.Ordinal))
+            {
+                string path = $"document.editable.skills[{Escape(removed)}]";
+                Add(mutations, path, AgentMutationKind.DeleteSkillDefinition, operation => operation.skillId = removed);
+            }
+        }
+
+        static bool SameSkill(
+            AgentSnapshotSkillDefinition left,
+            AgentSnapshotSkillDefinition right)
+        {
+            return string.Equals(left.entryGraphAuthoringId, right.entryGraphAuthoringId, StringComparison.Ordinal) &&
+                   string.Equals(left.actionProfileId, right.actionProfileId, StringComparison.Ordinal) &&
+                   string.Equals(left.actionProfileAssetPath, right.actionProfileAssetPath, StringComparison.Ordinal) &&
+                   string.Equals(left.actionProfileAssetGuid, right.actionProfileAssetGuid, StringComparison.Ordinal) &&
+                   string.Equals(left.actionContext, right.actionContext, StringComparison.Ordinal) &&
+                   string.Equals(left.actionContextAssetPath, right.actionContextAssetPath, StringComparison.Ordinal) &&
+                   string.Equals(left.actionContextAssetGuid, right.actionContextAssetGuid, StringComparison.Ordinal) &&
+                   string.Equals(left.sourceInputRequestId, right.sourceInputRequestId, StringComparison.Ordinal) &&
+                   left.consumeSourceInputRequest == right.consumeSourceInputRequest &&
+                   string.Equals(left.targetInputValueId, right.targetInputValueId, StringComparison.Ordinal) &&
+                   string.Equals(left.targetKey, right.targetKey, StringComparison.Ordinal);
         }
 
         static void BuildAIMutations(

@@ -60,6 +60,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
         SetActionProfileCancelQuery,
         SetActionProfileTargetRequirement,
         SetActionRequestTimingClass,
+        SetSkillDefinition,
+        DeleteSkillDefinition,
         EnsureAIControllerDefinition,
         EnsureAIControllerTree,
         BindAIControllerAssets,
@@ -93,7 +95,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
         TimelineTrack,
         TimelineClip,
         FlowEdge,
-        PropertyEdge
+        PropertyEdge,
+        SkillDefinition
     }
 
     public enum AgentAIObservationNodeKind
@@ -1484,6 +1487,45 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
 
         public string RequestId { get; }
         public CharacterActionRequestTimingClass TimingClass { get; }
+    }
+
+    public sealed class AgentSetSkillDefinitionMutation : AgentMutation
+    {
+        public AgentSetSkillDefinitionMutation(
+            string id,
+            string path,
+            AgentSnapshotSkillDefinition definition)
+            : base(
+                id,
+                AgentMutationKind.SetSkillDefinition,
+                "set_skill_definition",
+                AgentMutationOutputKind.SkillDefinition,
+                path,
+                "CharacterSkillDefinitions",
+                Vector2.zero)
+        {
+            Definition = definition ?? throw new ArgumentNullException(nameof(definition));
+        }
+
+        public AgentSnapshotSkillDefinition Definition { get; }
+    }
+
+    public sealed class AgentDeleteSkillDefinitionMutation : AgentMutation
+    {
+        public AgentDeleteSkillDefinitionMutation(string id, string path, string skillId)
+            : base(
+                id,
+                AgentMutationKind.DeleteSkillDefinition,
+                "delete_skill_definition",
+                AgentMutationOutputKind.None,
+                path,
+                "CharacterSkillDefinitions",
+                Vector2.zero)
+        {
+            SkillId = skillId ?? string.Empty;
+        }
+
+        public string SkillId { get; }
     }
 
     public abstract class AgentGraphLinkMutation : AgentMutation

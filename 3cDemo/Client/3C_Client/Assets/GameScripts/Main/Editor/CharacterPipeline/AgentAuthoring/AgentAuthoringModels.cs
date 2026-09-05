@@ -83,6 +83,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
         public List<AgentSnapshotInputValue> inputValues = new List<AgentSnapshotInputValue>();
         public List<AgentSnapshotActionRequest> actionRequests = new List<AgentSnapshotActionRequest>();
         public List<AgentSnapshotActionProfile> actionProfiles = new List<AgentSnapshotActionProfile>();
+        public List<AgentSnapshotSkillDefinition> skills = new List<AgentSnapshotSkillDefinition>();
         public AgentSnapshotAnimationPresentation presentation = new AgentSnapshotAnimationPresentation();
         public List<AgentSnapshotBlackboardDeclaration> blackboardDeclarations = new List<AgentSnapshotBlackboardDeclaration>();
         public List<AgentSnapshotTimeline> timelines = new List<AgentSnapshotTimeline>();
@@ -847,6 +848,10 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
         public string timelineAssetPath;
         public string timelineAssetGuid;
         public string actionProfile;
+        public string skillId;
+        public string entryGraphAuthoringId;
+        public string actionProfileAssetPath;
+        public string actionProfileAssetGuid;
         public string targetRequirement;
         public string actionContext;
         public string actionContextAssetPath;
@@ -916,6 +921,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
         public List<AgentConditionGroup> cancelConditionGroups = new List<AgentConditionGroup>();
         public string sourceInputRequestId;
         public bool consumeSourceInputRequest = true;
+        public string targetInputValueId;
         public string targetKey;
         public string targetSnapshotBlackboardKey;
         public string targetSnapshotBlackboardDeclarationId;

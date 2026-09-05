@@ -98,6 +98,79 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             Array.Empty<CharacterPoseStateMachineLayout>();
         [SerializeField] CharacterPresentationPoseSourceSlot[] m_SourceSlots =
             Array.Empty<CharacterPresentationPoseSourceSlot>();
+#if UNITY_EDITOR
+        [Serializable]
+        sealed class LegacyPoseNode
+        {
+            [SerializeField] string m_NodeId = string.Empty;
+            [SerializeField] string m_DisplayName = string.Empty;
+            [SerializeReference] CharacterPoseNodePayload m_Payload;
+            [SerializeField] CharacterPoseDynamicPort[] m_DynamicPorts =
+                Array.Empty<CharacterPoseDynamicPort>();
+
+            public PoseNodeId NodeId => string.IsNullOrWhiteSpace(m_NodeId)
+                ? default
+                : new PoseNodeId(m_NodeId);
+            public string DisplayName => m_DisplayName ?? string.Empty;
+            public CharacterPoseNodePayload Payload => m_Payload;
+            public IReadOnlyList<CharacterPoseDynamicPort> DynamicPorts =>
+                m_DynamicPorts ?? Array.Empty<CharacterPoseDynamicPort>();
+        }
+
+        [Serializable]
+        sealed class LegacyPoseEdge
+        {
+            [SerializeField] string m_EdgeId = string.Empty;
+            [SerializeField] string m_SourceNodeId = string.Empty;
+            [SerializeField] string m_SourcePortId = string.Empty;
+            [SerializeField] string m_TargetNodeId = string.Empty;
+            [SerializeField] string m_TargetPortId = string.Empty;
+
+            public string EdgeId => m_EdgeId ?? string.Empty;
+            public PoseNodeId SourceNodeId => string.IsNullOrWhiteSpace(m_SourceNodeId)
+                ? default
+                : new PoseNodeId(m_SourceNodeId);
+            public PosePortId SourcePortId => string.IsNullOrWhiteSpace(m_SourcePortId)
+                ? default
+                : new PosePortId(m_SourcePortId);
+            public PoseNodeId TargetNodeId => string.IsNullOrWhiteSpace(m_TargetNodeId)
+                ? default
+                : new PoseNodeId(m_TargetNodeId);
+            public PosePortId TargetPortId => string.IsNullOrWhiteSpace(m_TargetPortId)
+                ? default
+                : new PosePortId(m_TargetPortId);
+        }
+
+        [Serializable]
+        sealed class LegacyPoseGraph
+        {
+            [SerializeField] string m_GraphId = string.Empty;
+            [SerializeField] string m_ContentRevision = string.Empty;
+            [SerializeField] CharacterPoseParameterDeclaration[] m_Parameters =
+                Array.Empty<CharacterPoseParameterDeclaration>();
+            [SerializeField] LegacyPoseNode[] m_Nodes = Array.Empty<LegacyPoseNode>();
+            [SerializeField] LegacyPoseEdge[] m_Edges = Array.Empty<LegacyPoseEdge>();
+            [SerializeField] CharacterPoseGraphLayoutEntry[] m_Layout =
+                Array.Empty<CharacterPoseGraphLayoutEntry>();
+
+            public PoseGraphId GraphId => string.IsNullOrWhiteSpace(m_GraphId)
+                ? default
+                : new PoseGraphId(m_GraphId);
+            public string ContentRevision => m_ContentRevision ?? string.Empty;
+            public IReadOnlyList<CharacterPoseParameterDeclaration> Parameters =>
+                m_Parameters ?? Array.Empty<CharacterPoseParameterDeclaration>();
+            public IReadOnlyList<LegacyPoseNode> Nodes =>
+                m_Nodes ?? Array.Empty<LegacyPoseNode>();
+            public IReadOnlyList<LegacyPoseEdge> Edges =>
+                m_Edges ?? Array.Empty<LegacyPoseEdge>();
+            public IReadOnlyList<CharacterPoseGraphLayoutEntry> Layout =>
+                m_Layout ?? Array.Empty<CharacterPoseGraphLayoutEntry>();
+        }
+
+        [SerializeField] LegacyPoseGraph m_TypedGraph;
+        [SerializeField] LegacyPoseGraph[] m_TypedGraphCatalog =
+            Array.Empty<LegacyPoseGraph>();
+#endif
 
         public CharacterPoseCanvasGraph Graph => m_Graph;
         public IReadOnlyList<CharacterPoseCanvasGraph> GraphCatalog => m_GraphCatalog ?? Array.Empty<CharacterPoseCanvasGraph>();
@@ -228,6 +301,72 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                     $"Pose Canvas graph '{graph.GraphId}' belongs to another asset.");
 #endif
         }
+
+#if UNITY_EDITOR
+        internal CharacterPoseCanvasGraph[] CreateLegacyCanvasGraphs()
+        {
+            if (m_TypedGraph == null)
+                throw new InvalidOperationException(
+                    $"Pose asset '{name}' has no legacy root graph to migrate.");
+            var legacyGraphs = new List<LegacyPoseGraph> { m_TypedGraph };
+            legacyGraphs.AddRange(m_TypedGraphCatalog ?? Array.Empty<LegacyPoseGraph>());
+            var graphs = new CharacterPoseCanvasGraph[legacyGraphs.Count];
+            for (int graphIndex = 0; graphIndex < legacyGraphs.Count; graphIndex++)
+            {
+                LegacyPoseGraph legacy = legacyGraphs[graphIndex] ??
+                    throw new InvalidOperationException(
+                        $"Pose asset '{name}' contains a missing legacy graph at index {graphIndex}.");
+                CharacterPoseCanvasNode[] nodes = legacy.Nodes
+                    .Select(node => node == null
+                        ? throw new InvalidOperationException(
+                            $"Pose asset '{name}' contains a missing legacy node.")
+                        : new CharacterPoseCanvasNode(
+                            node.NodeId,
+                            node.DisplayName,
+                            node.Payload,
+                            node.DynamicPorts.ToArray()))
+                    .ToArray();
+                CharacterPoseCanvasConnection[] edges = legacy.Edges
+                    .Select(edge => edge == null
+                        ? throw new InvalidOperationException(
+                            $"Pose asset '{name}' contains a missing legacy edge.")
+                        : new CharacterPoseCanvasConnection(
+                            edge.EdgeId,
+                            edge.SourceNodeId,
+                            edge.SourcePortId,
+                            edge.TargetNodeId,
+                            edge.TargetPortId))
+                    .ToArray();
+                graphs[graphIndex] = CharacterPoseCanvasGraph.CreateAuthoring(
+                    legacy.GraphId,
+                    legacy.ContentRevision,
+                    legacy.Parameters.ToArray(),
+                    nodes,
+                    edges,
+                    legacy.Layout);
+            }
+            return graphs;
+        }
+
+        internal void SetMigratedCanvasGraphs(
+            CharacterPoseCanvasGraph root,
+            CharacterPoseCanvasGraph[] catalog)
+        {
+            if (!root)
+                throw new ArgumentNullException(nameof(root));
+            CharacterPoseCanvasGraph[] values = catalog ??
+                Array.Empty<CharacterPoseCanvasGraph>();
+            AttachGraph(root);
+            for (int i = 0; i < values.Length; i++)
+                AttachGraph(values[i] ?? throw new ArgumentException(
+                    $"Migrated Pose Graph catalog entry #{i} is missing.",
+                    nameof(catalog)));
+            m_Graph = root;
+            m_GraphCatalog = values;
+            m_TypedGraph = null;
+            m_TypedGraphCatalog = Array.Empty<LegacyPoseGraph>();
+        }
+#endif
 
         public IEnumerable<CharacterPoseStateMachineDefinition>
             EnumerateStateMachines() =>

@@ -10,7 +10,7 @@ using UnityEngine;
 
 namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
 {
-    public sealed class FixedUnityPresentationOutputAdapter : IFixedPresentationCommitOutputPort
+    public sealed class FixedUnityPresentationOutputAdapter : IFixedPresentationCommitOutputPort, IFixedCameraPresentationHistory
     {
         readonly ActorId m_ActorId;
         readonly CharacterPresentationProjection m_Projection;
@@ -22,8 +22,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
             new Dictionary<PresentationStateKey, List<EventId>>();
         readonly Dictionary<PresentationStateKey, ActivePresentationRecord> m_Applied =
             new Dictionary<PresentationStateKey, ActivePresentationRecord>();
-        readonly Dictionary<PresentationStateKey, List<ActivePresentationRecord>> m_AppliedCamera =
-            new Dictionary<PresentationStateKey, List<ActivePresentationRecord>>();
+        readonly FixedCameraPresentationReconciler m_CameraReconciler;
         readonly Dictionary<EventId, ActivePresentationRecord> m_DeferredAnimationRetirements =
             new Dictionary<EventId, ActivePresentationRecord>();
         readonly HashSet<PresentationStateKey> m_Dirty = new HashSet<PresentationStateKey>();
@@ -46,6 +45,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
             m_ActorId = actorId;
             m_Projection = projection ?? throw new ArgumentNullException(nameof(projection));
             m_Runtime = runtime ?? throw new ArgumentNullException(nameof(runtime));
+            m_CameraReconciler = new FixedCameraPresentationReconciler(m_Runtime);
             m_MaximumTrackedRecords = maximumActiveRecords;
         }
 
@@ -123,7 +123,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
             m_ByEvent.Clear();
             m_ByState.Clear();
             m_Applied.Clear();
-            m_AppliedCamera.Clear();
+            m_CameraReconciler.Reset();
             m_DeferredAnimationRetirements.Clear();
             m_Dirty.Clear();
             m_ConfirmedAnimationTerminals.Clear();
@@ -181,7 +181,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
                 PresentationStateKey key = keys[i];
                 if (IsCameraStateKey(key))
                 {
-                    ReconcileCameraState(key, confirmedTick);
+                    m_CameraReconciler.Reconcile(key, confirmedTick, this);
                     continue;
                 }
                 bool hasCurrent = TryResolveLatest(key, out ActivePresentationRecord current);
@@ -244,71 +244,6 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
             }
         }
 
-        void ReconcileCameraState(PresentationStateKey key, ulong confirmedTick)
-        {
-            List<ActivePresentationRecord> current = CollectCameraRecords(key, confirmedTick);
-            m_AppliedCamera.TryGetValue(key, out List<ActivePresentationRecord> applied);
-            applied = applied ?? new List<ActivePresentationRecord>();
-            bool forced = IsCameraScopeForced(key);
-            bool requiresReplay = false;
-            var currentByEvent = new Dictionary<EventId, ActivePresentationRecord>();
-            for (int i = 0; i < current.Count; i++)
-                currentByEvent[current[i].Command.Header.EventId] = current[i];
-            var appliedByEvent = new Dictionary<EventId, ActivePresentationRecord>();
-            for (int i = 0; i < applied.Count; i++)
-                appliedByEvent[applied[i].Command.Header.EventId] = applied[i];
-
-            for (int i = 0; i < applied.Count; i++)
-            {
-                ActivePresentationRecord previous = applied[i];
-                if (!currentByEvent.TryGetValue(
-                        previous.Command.Header.EventId,
-                        out ActivePresentationRecord replacement))
-                {
-                    requiresReplay = true;
-                    if (!IsTerminal(previous.Command))
-                        m_Runtime.Retire(previous.Command);
-                    continue;
-                }
-                if (!SameCommand(previous.Command, replacement.Command))
-                {
-                    requiresReplay = true;
-                    if (!IsTerminal(previous.Command))
-                        m_Runtime.Retire(previous.Command);
-                }
-            }
-
-            if (key.IsCameraForce && applied.Count > 0 && current.Count == 0)
-            {
-                m_AppliedCamera.Remove(key);
-                RestoreCameraScope(applied[0].Command, confirmedTick);
-                return;
-            }
-
-            if (!forced)
-            {
-                if (requiresReplay)
-                {
-                    for (int i = 0; i < current.Count; i++)
-                        m_Runtime.Publish(current[i].Command);
-                }
-                else
-                {
-                    for (int i = 0; i < current.Count; i++)
-                    {
-                        ActivePresentationRecord next = current[i];
-                        if (!appliedByEvent.ContainsKey(next.Command.Header.EventId))
-                            m_Runtime.Publish(next.Command);
-                    }
-                }
-            }
-
-            if (current.Count == 0)
-                m_AppliedCamera.Remove(key);
-            else
-                m_AppliedCamera[key] = new List<ActivePresentationRecord>(current);
-        }
-
         List<ActivePresentationRecord> CollectCameraRecords(
             PresentationStateKey key,
             ulong confirmedTick)
@@ -331,54 +266,28 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
             return records;
         }
 
-        void RestoreCameraScope(CharacterPresentationCommand force, ulong confirmedTick)
+        List<PresentationStateKey> CollectCameraScopeKeys(CharacterPresentationCommand command)
         {
             var keys = new List<PresentationStateKey>();
             foreach (PresentationStateKey key in m_ByState.Keys)
             {
                 if (key.IsCameraForce ||
                     !string.Equals(key.Channel, "camera", StringComparison.Ordinal) ||
-                    !string.Equals(key.Producer, force.ProducerId, StringComparison.Ordinal) ||
-                    key.Generation != force.ProducerGeneration ||
-                    key.SourceActionInstanceId != force.SourceActionInstanceId)
+                    !string.Equals(key.Producer, command.ProducerId, StringComparison.Ordinal) ||
+                    key.Generation != command.ProducerGeneration ||
+                    key.SourceActionInstanceId != command.SourceActionInstanceId)
                     continue;
                 keys.Add(key);
             }
-            keys.Sort();
-            for (int i = 0; i < keys.Count; i++)
-            {
-                m_AppliedCamera.Remove(keys[i]);
-                ReconcileCameraState(keys[i], confirmedTick);
-            }
+            return keys;
         }
 
-        bool IsCameraScopeForced(PresentationStateKey key)
-        {
-            if (key.IsCameraForce)
-                return false;
-            var forceKey = new PresentationStateKey(
-                "camera-force",
-                key.Producer,
-                key.Generation,
-                key.SourceActionInstanceId,
-                key.Cycle);
-            return m_AppliedCamera.TryGetValue(forceKey, out List<ActivePresentationRecord> force) &&
-                   force.Count > 0;
-        }
+        List<ActivePresentationRecord> IFixedCameraPresentationHistory.CollectCameraRecords(
+            PresentationStateKey key,
+            ulong confirmedTick) => CollectCameraRecords(key, confirmedTick);
 
-        static bool SameCommand(
-            CharacterPresentationCommand left,
-            CharacterPresentationCommand right)
-        {
-            return left.Kind == right.Kind &&
-                   string.Equals(left.ProducerId, right.ProducerId, StringComparison.Ordinal) &&
-                   left.SampleTime.Equals(right.SampleTime) &&
-                   left.Weight.Equals(right.Weight) &&
-                   left.ProducerGeneration == right.ProducerGeneration &&
-                   left.Cycle == right.Cycle &&
-                   left.SourceActionInstanceId == right.SourceActionInstanceId &&
-                   left.VisualTimeScale.Equals(right.VisualTimeScale);
-        }
+        List<PresentationStateKey> IFixedCameraPresentationHistory.CollectCameraScopeKeys(
+            CharacterPresentationCommand command) => CollectCameraScopeKeys(command);
 
         void PublishOrRestore(ActivePresentationRecord record)
         {
@@ -581,7 +490,6 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
                          IsCameraTerminal(baseline.Command))
                 {
                     RemoveHistory(key);
-                    m_AppliedCamera.Remove(key);
                 }
                 else if (string.Equals(key.Channel, "camera-force", StringComparison.Ordinal))
                 {
@@ -595,12 +503,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
             if (!m_ByEvent.TryGetValue(eventId, out ActivePresentationRecord record))
                 return;
             m_ByEvent.Remove(eventId);
-            if (m_AppliedCamera.TryGetValue(record.Key, out List<ActivePresentationRecord> applied))
-            {
-                applied.RemoveAll(value => value.Command.Header.EventId.Equals(eventId));
-                if (applied.Count == 0)
-                    m_AppliedCamera.Remove(record.Key);
-            }
+            m_CameraReconciler.RemoveAppliedEvent(record.Key, eventId);
             if (!m_ByState.TryGetValue(record.Key, out List<EventId> events))
                 return;
             events.Remove(eventId);
@@ -615,7 +518,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
             for (int i = 0; i < events.Count; i++)
                 m_ByEvent.Remove(events[i]);
             m_ByState.Remove(key);
-            m_AppliedCamera.Remove(key);
+            m_CameraReconciler.ClearState(key);
         }
 
         void RemoveCameraScope(CharacterPresentationCommand command)
@@ -632,9 +535,9 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
                 {
                     RemoveHistory(key);
                     m_Applied.Remove(key);
-                    m_AppliedCamera.Remove(key);
                 }
             }
+            m_CameraReconciler.ClearScope(command);
         }
 
         void RequireCommit()
@@ -740,7 +643,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
                 command.VisualTimeScale.ToSingle());
         }
 
-        readonly struct ActivePresentationRecord
+        internal readonly struct ActivePresentationRecord
         {
             public ActivePresentationRecord(PresentationStateKey key, CharacterPresentationCommand command)
             {
@@ -752,7 +655,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
             public CharacterPresentationCommand Command { get; }
         }
 
-        readonly struct PresentationStateKey : IEquatable<PresentationStateKey>, IComparable<PresentationStateKey>
+        internal readonly struct PresentationStateKey : IEquatable<PresentationStateKey>, IComparable<PresentationStateKey>
         {
             public PresentationStateKey(
                 string channel,

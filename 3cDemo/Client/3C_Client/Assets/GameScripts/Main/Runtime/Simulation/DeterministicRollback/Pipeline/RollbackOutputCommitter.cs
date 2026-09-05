@@ -300,6 +300,10 @@ namespace ThirdPersonSimulation.DeterministicRollback
             PresentationCommand right)
         {
             return left.Kind == right.Kind &&
+                   left.Header.Tick.Value == right.Header.Tick.Value &&
+                   left.Header.Sequence == right.Header.Sequence &&
+                   left.Header.Activation.Equals(right.Header.Activation) &&
+                   string.Equals(left.Header.Channel, right.Header.Channel, StringComparison.Ordinal) &&
                    string.Equals(left.ProducerId, right.ProducerId, StringComparison.Ordinal) &&
                    left.SampleTime.Equals(right.SampleTime) &&
                    left.Weight.Equals(right.Weight) &&

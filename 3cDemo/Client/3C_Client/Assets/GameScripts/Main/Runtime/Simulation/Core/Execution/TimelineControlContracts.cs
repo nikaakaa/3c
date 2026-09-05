@@ -80,18 +80,30 @@ namespace ThirdPersonSimulation
             string actionId,
             string contextId,
             ulong instanceId,
-            ulong predictionKey)
+            ulong predictionKey,
+            CharacterSkillId skillId = default,
+            OperationHandle skillEntryOperation = default,
+            ulong skillExecutionGeneration = 0)
         {
+            if (skillId.IsValid != skillEntryOperation.IsValid || !skillId.IsValid && skillExecutionGeneration != 0)
+                throw new ArgumentException("Timeline Action Context skill execution identity is incomplete.");
             ActionId = actionId ?? string.Empty;
             ContextId = contextId ?? string.Empty;
             InstanceId = instanceId;
             PredictionKey = predictionKey;
+            SkillId = skillId;
+            SkillEntryOperation = skillEntryOperation;
+            SkillExecutionGeneration = skillExecutionGeneration;
         }
 
         public string ActionId { get; }
         public string ContextId { get; }
         public ulong InstanceId { get; }
         public ulong PredictionKey { get; }
+        public CharacterSkillId SkillId { get; }
+        public OperationHandle SkillEntryOperation { get; }
+        public ulong SkillExecutionGeneration { get; }
+        public bool HasSkillExecution => SkillId.IsValid && SkillEntryOperation.IsValid;
         public bool IsValid =>
             !string.IsNullOrEmpty(ActionId) &&
             !string.IsNullOrEmpty(ContextId) &&
@@ -102,9 +114,12 @@ namespace ThirdPersonSimulation
             string.Equals(ActionId, other.ActionId, StringComparison.Ordinal) &&
             string.Equals(ContextId, other.ContextId, StringComparison.Ordinal) &&
             InstanceId == other.InstanceId &&
-            PredictionKey == other.PredictionKey;
+            PredictionKey == other.PredictionKey &&
+            SkillId == other.SkillId &&
+            SkillEntryOperation.Equals(other.SkillEntryOperation) &&
+            SkillExecutionGeneration == other.SkillExecutionGeneration;
 
-        public override int GetHashCode() => HashCode.Combine(ActionId, ContextId, InstanceId, PredictionKey);
+        public override int GetHashCode() => HashCode.Combine(ActionId, ContextId, InstanceId, PredictionKey, SkillId, SkillEntryOperation, SkillExecutionGeneration);
     }
 
     internal readonly struct TimelineSegment<TTime>

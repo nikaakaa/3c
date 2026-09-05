@@ -195,28 +195,57 @@ namespace ThirdPersonSimulation
 
     internal readonly struct Float32ActionInstanceReference
     {
-        public Float32ActionInstanceReference(string actionId, string contextId, ulong instanceId, ulong predictionKey)
+        public Float32ActionInstanceReference(
+            string actionId,
+            string contextId,
+            ulong instanceId,
+            ulong predictionKey,
+            CharacterSkillId skillId = default,
+            OperationHandle skillEntryOperation = default,
+            ulong skillExecutionGeneration = 0)
         {
+            if (skillId.IsValid != skillEntryOperation.IsValid || !skillId.IsValid && skillExecutionGeneration != 0)
+                throw new ArgumentException("Action instance skill execution identity is incomplete.");
             ActionId = actionId ?? string.Empty;
             ContextId = contextId ?? string.Empty;
             InstanceId = instanceId;
             PredictionKey = predictionKey;
+            SkillId = skillId;
+            SkillEntryOperation = skillEntryOperation;
+            SkillExecutionGeneration = skillExecutionGeneration;
         }
 
         public string ActionId { get; }
         public string ContextId { get; }
         public ulong InstanceId { get; }
         public ulong PredictionKey { get; }
+        public CharacterSkillId SkillId { get; }
+        public OperationHandle SkillEntryOperation { get; }
+        public ulong SkillExecutionGeneration { get; }
+        public bool HasSkillExecution => SkillId.IsValid && SkillEntryOperation.IsValid;
         public bool IsValid =>
             !string.IsNullOrEmpty(ActionId) &&
             !string.IsNullOrEmpty(ContextId) &&
             InstanceId != 0 &&
             PredictionKey != 0;
 
+        public bool MatchesSkillExecution(Float32ActionInstanceState state) =>
+            !HasSkillExecution ||
+            state.SkillId == SkillId &&
+            state.SkillEntryOperation.Equals(SkillEntryOperation) &&
+            (SkillExecutionGeneration == 0 || state.SkillExecutionGeneration == SkillExecutionGeneration);
+
         public static Float32ActionInstanceReference FromInstance(Float32ActionInstanceState state)
         {
             return state.IsValid
-                ? new Float32ActionInstanceReference(state.ActionId, state.ContextId, state.InstanceId, state.PredictionKey)
+                ? new Float32ActionInstanceReference(
+                    state.ActionId,
+                    state.ContextId,
+                    state.InstanceId,
+                    state.PredictionKey,
+                    state.SkillId,
+                    state.SkillEntryOperation,
+                    state.SkillExecutionGeneration)
                 : default;
         }
     }
@@ -348,7 +377,8 @@ namespace ThirdPersonSimulation
             return current.IsActive &&
                    string.Equals(current.ContextId, reference.ContextId, StringComparison.Ordinal) &&
                    current.InstanceId == reference.InstanceId &&
-                   current.PredictionKey == reference.PredictionKey
+                   current.PredictionKey == reference.PredictionKey &&
+                   reference.MatchesSkillExecution(current)
                 ? current
                 : default;
         }

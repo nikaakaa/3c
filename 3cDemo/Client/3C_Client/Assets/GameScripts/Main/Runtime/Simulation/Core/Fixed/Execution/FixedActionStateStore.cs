@@ -196,28 +196,57 @@ namespace ThirdPersonSimulation.Fixed
 
     internal readonly struct FixedActionInstanceReference
     {
-        public FixedActionInstanceReference(string actionId, string contextId, ulong instanceId, ulong predictionKey)
+        public FixedActionInstanceReference(
+            string actionId,
+            string contextId,
+            ulong instanceId,
+            ulong predictionKey,
+            CharacterSkillId skillId = default,
+            OperationHandle skillEntryOperation = default,
+            ulong skillExecutionGeneration = 0)
         {
+            if (skillId.IsValid != skillEntryOperation.IsValid || !skillId.IsValid && skillExecutionGeneration != 0)
+                throw new ArgumentException("Action instance skill execution identity is incomplete.");
             ActionId = actionId ?? string.Empty;
             ContextId = contextId ?? string.Empty;
             InstanceId = instanceId;
             PredictionKey = predictionKey;
+            SkillId = skillId;
+            SkillEntryOperation = skillEntryOperation;
+            SkillExecutionGeneration = skillExecutionGeneration;
         }
 
         public string ActionId { get; }
         public string ContextId { get; }
         public ulong InstanceId { get; }
         public ulong PredictionKey { get; }
+        public CharacterSkillId SkillId { get; }
+        public OperationHandle SkillEntryOperation { get; }
+        public ulong SkillExecutionGeneration { get; }
+        public bool HasSkillExecution => SkillId.IsValid && SkillEntryOperation.IsValid;
         public bool IsValid =>
             !string.IsNullOrEmpty(ActionId) &&
             !string.IsNullOrEmpty(ContextId) &&
             InstanceId != 0 &&
             PredictionKey != 0;
 
+        public bool MatchesSkillExecution(FixedActionInstanceState state) =>
+            !HasSkillExecution ||
+            state.SkillId == SkillId &&
+            state.SkillEntryOperation.Equals(SkillEntryOperation) &&
+            (SkillExecutionGeneration == 0 || state.SkillExecutionGeneration == SkillExecutionGeneration);
+
         public static FixedActionInstanceReference FromInstance(FixedActionInstanceState state)
         {
             return state.IsValid
-                ? new FixedActionInstanceReference(state.ActionId, state.ContextId, state.InstanceId, state.PredictionKey)
+                ? new FixedActionInstanceReference(
+                    state.ActionId,
+                    state.ContextId,
+                    state.InstanceId,
+                    state.PredictionKey,
+                    state.SkillId,
+                    state.SkillEntryOperation,
+                    state.SkillExecutionGeneration)
                 : default;
         }
     }
@@ -349,7 +378,8 @@ namespace ThirdPersonSimulation.Fixed
             return current.IsActive &&
                    string.Equals(current.ContextId, reference.ContextId, StringComparison.Ordinal) &&
                    current.InstanceId == reference.InstanceId &&
-                   current.PredictionKey == reference.PredictionKey
+                   current.PredictionKey == reference.PredictionKey &&
+                   reference.MatchesSkillExecution(current)
                 ? current
                 : default;
         }

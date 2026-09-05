@@ -25,29 +25,36 @@ namespace ThirdPersonCamera
             {
                 CameraEffectRequest active = m_Active[i].Request;
                 if (active.Generation == request.Generation &&
+                    active.SourceActionInstanceId == request.SourceActionInstanceId &&
+                    active.Cycle == request.Cycle &&
                     string.Equals(active.EventId, request.EventId, StringComparison.Ordinal))
                     return true;
             }
             return false;
         }
 
-        public CameraEffectRuntimeState FindSource(
-            CameraEffectKind kind,
-            string sourceId,
-            ulong generation)
+        public CameraEffectRuntimeState FindSource(CameraEffectRequest request)
         {
             for (int i = 0; i < m_Active.Count; i++)
             {
                 CameraEffectRuntimeState active = m_Active[i];
-                if (active.Request.Kind == kind &&
-                    active.Request.Generation == generation &&
-                    string.Equals(active.Request.SourceId, sourceId, StringComparison.Ordinal))
+                if (active.Request.Kind == request.Kind &&
+                    active.Request.Generation == request.Generation &&
+                    active.Request.SourceActionInstanceId == request.SourceActionInstanceId &&
+                    active.Request.Cycle == request.Cycle &&
+                    string.Equals(active.Request.SourceId, request.SourceId, StringComparison.Ordinal))
                     return active;
             }
             return null;
         }
 
-        public void Retire(string eventId, ulong generation, string sourceId)
+        public void Retire(
+            string eventId,
+            ulong generation,
+            string sourceId,
+            ulong sourceActionInstanceId,
+            int cycle,
+            CameraPresentationStopReason reason)
         {
             bool hasEventId = !string.IsNullOrEmpty(eventId);
             bool hasSourceId = !string.IsNullOrEmpty(sourceId);
@@ -58,8 +65,16 @@ namespace ThirdPersonCamera
                     string.Equals(effect.Request.EventId, eventId, StringComparison.Ordinal);
                 bool matchesSource = hasSourceId &&
                     string.Equals(effect.Request.SourceId, sourceId, StringComparison.Ordinal);
-                if (effect.Request.Generation != generation || !matchesEvent && !matchesSource)
+                if (effect.Request.Generation != generation ||
+                    effect.Request.SourceActionInstanceId != sourceActionInstanceId ||
+                    effect.Request.Cycle != cycle ||
+                    !matchesEvent && !matchesSource)
                     continue;
+                if (reason == CameraPresentationStopReason.ForceTeardown)
+                {
+                    m_Active.RemoveAt(i);
+                    continue;
+                }
                 if (effect.Retired)
                     continue;
                 effect.Retired = true;
@@ -77,6 +92,8 @@ namespace ThirdPersonCamera
             {
                 CameraEffectRuntimeState candidate = active[i];
                 if (candidate.Request.Kind != kind)
+                    continue;
+                if (!candidate.Retired && !candidate.Request.Active)
                     continue;
                 if (selected != null)
                 {

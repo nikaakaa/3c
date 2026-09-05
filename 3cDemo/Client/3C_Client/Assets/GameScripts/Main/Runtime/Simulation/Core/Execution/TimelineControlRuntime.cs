@@ -192,7 +192,10 @@ namespace ThirdPersonSimulation
                 if (context.Cause == OperationStopCause.ActionContextEnded && m_Target.DiagnosticsEnabled)
                     Trace(timeline, "timeline_action_context_ended", TimelineTraceSeverity.Information, m_Target.Operation(timeline).Text0);
                 EmitTimelineAnimationTerminal(timeline, TimelinePresentationOutputKind.ReleaseProducer, m_Target.Zero);
-                EmitTimelineCameraTerminal(timeline, m_Target.Zero);
+                EmitTimelineCameraTerminal(
+                    timeline,
+                    TimelinePresentationOutputKind.ReleaseProducer,
+                    m_Target.Zero);
             }
             OperationStopStatus result = ContinueTimelineTreeStops(cursor, timeline, context);
             if (result != OperationStopStatus.Completed)
@@ -216,7 +219,10 @@ namespace ThirdPersonSimulation
                 playback != TimelinePlaybackStatus.Stopping)
             {
                 EmitTimelineAnimationTerminal(timeline, TimelinePresentationOutputKind.ReleaseProducer, m_Target.Zero);
-                EmitTimelineCameraTerminal(timeline, m_Target.Zero);
+                EmitTimelineCameraTerminal(
+                    timeline,
+                    TimelinePresentationOutputKind.ReleaseProducer,
+                    m_Target.Zero);
             }
             IReadOnlyList<ProgramControlFlowEdge> clips = m_Target.Edges(timeline, ProgramControlFlowKind.Child);
             for (int i = 0; i < clips.Count; i++)
@@ -234,7 +240,10 @@ namespace ThirdPersonSimulation
         {
             m_State.WritePlayback(timeline, TimelinePlaybackStatus.Completing);
             EmitTimelineAnimationTerminal(timeline, TimelinePresentationOutputKind.CompleteProducer, time);
-            EmitTimelineCameraTerminal(timeline, time);
+            EmitTimelineCameraTerminal(
+                timeline,
+                TimelinePresentationOutputKind.CompleteProducer,
+                time);
             return ToOperationResult(ContinueTimelineCompletion(cursor, timeline));
         }
 
@@ -628,16 +637,22 @@ namespace ThirdPersonSimulation
 
         void SampleCameraShakeRequest(OperationHandle clip, TimelineSegment<TTime> segment)
         {
+            OperationHandle timeline = RequireTimelineOwner(clip);
             TTime start = m_Target.ClipTime(clip, TimelineClipTimePoint.Start);
             if (!Crosses(segment, start) && !(segment.StartsCycle && Equal(start, m_Target.Zero)))
                 return;
+            TimelineActionContextIdentity actionContext = m_State.ReadRetainedActionContext(timeline);
+            if (!actionContext.IsValid)
+                throw new InvalidOperationException(
+                    $"Camera Shake Timeline '{m_Target.SourcePath(timeline)}' has no retained Action context.");
             EmitPresentation(
                 clip,
                 TimelinePresentationOutputKind.Camera,
                 start,
                 m_Target.ClipScalar(clip, TimelineClipScalarValue.Intensity),
-                0,
-                segment.Cycle);
+                m_Target.ReadActivationGeneration(timeline),
+                segment.Cycle,
+                actionContext.InstanceId);
         }
 
         void EmitTimelineAnimationTerminal(
@@ -666,7 +681,10 @@ namespace ThirdPersonSimulation
                     m_Target.Zero);
         }
 
-        void EmitTimelineCameraTerminal(OperationHandle timeline, TTime time)
+        void EmitTimelineCameraTerminal(
+            OperationHandle timeline,
+            TimelinePresentationOutputKind terminalKind,
+            TTime time)
         {
             IReadOnlyList<ProgramControlFlowEdge> clips = m_Target.Edges(timeline, ProgramControlFlowKind.Child);
             int cycle = m_State.TryReadCycle(timeline, out int value) ? value : 0;
@@ -685,7 +703,7 @@ namespace ThirdPersonSimulation
                 {
                     EmitPresentation(
                         clip.Handle,
-                        TimelinePresentationOutputKind.Camera,
+                        terminalKind,
                         time,
                         m_Target.Zero,
                         generation,

@@ -82,20 +82,15 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         {
             RequireAlive();
             CharacterPresentationCameraBinding binding = RequireCameraBinding(producer);
-            var instance = new PresentationProducerInstanceId(command.ProducerId, command.ProducerGeneration);
+            var instance = new PresentationProducerInstanceId(
+                command.ProducerId,
+                command.ProducerGeneration,
+                command.SourceActionInstanceId,
+                command.Cycle);
             float weight = Mathf.Clamp01(command.Weight);
             switch (binding.Kind)
             {
                 case CharacterPresentationCameraBindingKind.Sequence:
-                    if (weight <= 0f)
-                    {
-                        m_SequenceEvaluator.Retire(
-                            producer.ProgramProducerIdentity,
-                            command.ProducerGeneration,
-                            binding.BlendOutSeconds);
-                        m_Sequences.Remove(instance);
-                        return;
-                    }
                     m_Sequences[instance] = new CameraSequenceRequest(
                         binding.SequenceId,
                         binding.Priority,
@@ -106,14 +101,13 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                         producer.ProgramProducerIdentity,
                         command.ProducerGeneration,
                         command.SourceActionInstanceId,
-                        binding.InterruptPolicy);
+                        binding.InterruptPolicy,
+                        false,
+                        command.Header.EventId.ToString(),
+                        command.Cycle,
+                        command.SampleTime);
                     break;
                 case CharacterPresentationCameraBindingKind.Response:
-                    if (weight <= 0f)
-                    {
-                        m_Responses.Remove(instance);
-                        return;
-                    }
                     m_Responses[instance] = new CameraResponseRequest(
                         binding.ResponseMode,
                         binding.ManualOrbitWeight,
@@ -123,14 +117,12 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                         weight,
                         producer.ProgramProducerIdentity,
                         command.ProducerGeneration,
-                        command.SourceActionInstanceId);
+                        command.SourceActionInstanceId,
+                        command.Header.EventId.ToString(),
+                        command.Cycle,
+                        command.SampleTime);
                     break;
                 case CharacterPresentationCameraBindingKind.Target:
-                    if (weight <= 0f)
-                    {
-                        m_Targets.Remove(instance);
-                        return;
-                    }
                     m_Targets[instance] = new CameraTargetSelectionRequest(
                         binding.TargetKey,
                         binding.AnchorKey,
@@ -139,22 +131,16 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                         binding.Priority,
                         weight,
                         producer.ProgramProducerIdentity,
-                        command.ProducerGeneration);
+                        command.ProducerGeneration,
+                        command.SourceActionInstanceId,
+                        command.Cycle,
+                        command.Header.EventId.ToString());
                     break;
                 case CharacterPresentationCameraBindingKind.Override:
                 case CharacterPresentationCameraBindingKind.Zoom:
                 case CharacterPresentationCameraBindingKind.Stretch:
                 case CharacterPresentationCameraBindingKind.Shake:
                 case CharacterPresentationCameraBindingKind.Shot:
-                    if (weight <= 0f)
-                    {
-                        m_EffectEvaluator.Retire(
-                            string.Empty,
-                            command.ProducerGeneration,
-                            producer.ProgramProducerIdentity);
-                        RemovePendingEffects(producer.ProgramProducerIdentity, command.ProducerGeneration);
-                        return;
-                    }
                     m_PendingEffects.Add(new CameraEffectRequest(
                         binding.EffectKind,
                         binding.ResourceId,
@@ -163,7 +149,9 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                         producer.ProgramProducerIdentity,
                         command.ProducerGeneration,
                         command.Header.EventId.ToString(),
-                        command.SourceActionInstanceId));
+                        command.SourceActionInstanceId,
+                        command.Cycle,
+                        command.SampleTime));
                     break;
                 default:
                     throw new ArgumentOutOfRangeException(nameof(binding.Kind), binding.Kind, null);
@@ -174,16 +162,45 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             CharacterPresentationCommand command,
             CharacterPresentationProducerEntry producer)
         {
+            Terminate(command, producer, CameraPresentationStopReason.EventRevoked);
+        }
+
+        public void Complete(
+            CharacterPresentationCommand command,
+            CharacterPresentationProducerEntry producer)
+        {
+            Terminate(command, producer, CameraPresentationStopReason.NaturalComplete);
+        }
+
+        public void Release(
+            CharacterPresentationCommand command,
+            CharacterPresentationProducerEntry producer)
+        {
+            Terminate(command, producer, CameraPresentationStopReason.Cancel);
+        }
+
+        void Terminate(
+            CharacterPresentationCommand command,
+            CharacterPresentationProducerEntry producer,
+            CameraPresentationStopReason reason)
+        {
             RequireAlive();
             CharacterPresentationCameraBinding binding = RequireCameraBinding(producer);
-            var instance = new PresentationProducerInstanceId(command.ProducerId, command.ProducerGeneration);
+            var instance = new PresentationProducerInstanceId(
+                command.ProducerId,
+                command.ProducerGeneration,
+                command.SourceActionInstanceId,
+                command.Cycle);
             switch (binding.Kind)
             {
                 case CharacterPresentationCameraBindingKind.Sequence:
                     m_SequenceEvaluator.Retire(
                         producer.ProgramProducerIdentity,
                         command.ProducerGeneration,
-                        binding.BlendOutSeconds);
+                        command.SourceActionInstanceId,
+                        command.Cycle,
+                        binding.BlendOutSeconds,
+                        reason);
                     m_Sequences.Remove(instance);
                     break;
                 case CharacterPresentationCameraBindingKind.Response:
@@ -200,8 +217,15 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     m_EffectEvaluator.Retire(
                         command.Header.EventId.ToString(),
                         command.ProducerGeneration,
-                        producer.ProgramProducerIdentity);
-                    RemovePendingEffect(command.Header.EventId.ToString(), command.ProducerGeneration);
+                        producer.ProgramProducerIdentity,
+                        command.SourceActionInstanceId,
+                        command.Cycle,
+                        reason);
+                    RemovePendingEffects(
+                        producer.ProgramProducerIdentity,
+                        command.ProducerGeneration,
+                        command.SourceActionInstanceId,
+                        command.Cycle);
                     break;
                 default:
                     throw new ArgumentOutOfRangeException(nameof(binding.Kind), binding.Kind, null);
@@ -347,23 +371,18 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             m_Debug.Set(plan, m_CameraRig.Result, resolvedTarget.SourceKey, m_CameraProjection.ProfileRevision);
         }
 
-        void RemovePendingEffect(string eventId, ulong generation)
+        void RemovePendingEffects(
+            string sourceId,
+            ulong generation,
+            ulong sourceActionInstanceId,
+            int cycle)
         {
             for (int i = m_PendingEffects.Count - 1; i >= 0; i--)
             {
                 CameraEffectRequest request = m_PendingEffects[i];
                 if (request.Generation == generation &&
-                    string.Equals(request.EventId, eventId, StringComparison.Ordinal))
-                    m_PendingEffects.RemoveAt(i);
-            }
-        }
-
-        void RemovePendingEffects(string sourceId, ulong generation)
-        {
-            for (int i = m_PendingEffects.Count - 1; i >= 0; i--)
-            {
-                CameraEffectRequest request = m_PendingEffects[i];
-                if (request.Generation == generation &&
+                    request.SourceActionInstanceId == sourceActionInstanceId &&
+                    request.Cycle == cycle &&
                     string.Equals(request.SourceId, sourceId, StringComparison.Ordinal))
                     m_PendingEffects.RemoveAt(i);
             }
@@ -410,17 +429,27 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
 
         readonly struct PresentationProducerInstanceId : IEquatable<PresentationProducerInstanceId>
         {
-            public PresentationProducerInstanceId(string producerId, ulong generation)
+            public PresentationProducerInstanceId(
+                string producerId,
+                ulong generation,
+                ulong sourceActionInstanceId,
+                int cycle)
             {
                 ProducerId = producerId ?? string.Empty;
                 Generation = generation;
+                SourceActionInstanceId = sourceActionInstanceId;
+                Cycle = cycle;
             }
 
             public string ProducerId { get; }
             public ulong Generation { get; }
+            public ulong SourceActionInstanceId { get; }
+            public int Cycle { get; }
 
             public bool Equals(PresentationProducerInstanceId other) =>
                 Generation == other.Generation &&
+                SourceActionInstanceId == other.SourceActionInstanceId &&
+                Cycle == other.Cycle &&
                 string.Equals(ProducerId, other.ProducerId, StringComparison.Ordinal);
 
             public override bool Equals(object obj) =>
@@ -428,6 +457,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
 
             public override int GetHashCode() => HashCode.Combine(
                 Generation,
+                SourceActionInstanceId,
+                Cycle,
                 StringComparer.Ordinal.GetHashCode(ProducerId));
         }
     }

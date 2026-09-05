@@ -7,14 +7,19 @@ namespace ThirdPersonSimulation
     internal sealed class Float32CameraOperationRuntime : Float32OperationModule
     {
         readonly Float32PresentationSink m_Presentation;
+        readonly Float32ActionStateStore m_Actions;
 
-        public Float32CameraOperationRuntime(Float32ProgramAccess access, Float32PresentationSink presentation)
+        public Float32CameraOperationRuntime(
+            Float32ProgramAccess access,
+            Float32ActionStateStore actions,
+            Float32PresentationSink presentation)
             : base(access)
         {
+            m_Actions = actions ?? throw new ArgumentNullException(nameof(actions));
             m_Presentation = presentation ?? throw new ArgumentNullException(nameof(presentation));
         }
 
-        public void Submit(SimulationOperation operation)
+        public void Submit(SimulationOperation operation, ulong producerGeneration)
         {
             if (operation == null)
                 throw new ArgumentNullException(nameof(operation));
@@ -25,6 +30,11 @@ namespace ThirdPersonSimulation
                     $"Camera operation '{SourcePath(operation)}' payload version '{operation.Integer0}' is unsupported.");
 
             ProgramProducer producer = RequireProducer(operation);
+            string actionContext = GetStringConstant(operation, OperationNamedConstant.ActionContext, string.Empty);
+            if (string.IsNullOrEmpty(actionContext) ||
+                m_Actions.FindActive(actionContext, out Float32ActionInstanceState action) < 0)
+                throw new InvalidOperationException(
+                    $"Camera operation '{SourcePath(operation)}' has no active formal Action Context.");
             Float32Scalar weight = operation.Code switch
             {
                 SimulationOperationCode.CameraSequenceRequest => RequireScalar(operation, OperationNamedConstant.Weight),
@@ -38,7 +48,11 @@ namespace ThirdPersonSimulation
                 PresentationCommandKind.Camera,
                 producer.Identity,
                 Float32Scalar.Zero,
-                weight));
+                weight,
+                producerGeneration,
+                0,
+                action.InstanceId,
+                Float32Scalar.Zero));
         }
 
         Float32Scalar RequireScalar(SimulationOperation operation, OperationNamedConstant field)
@@ -207,7 +221,10 @@ namespace ThirdPersonSimulation
 				case SimulationOperationCode.CameraShakeRequest:
 				case SimulationOperationCode.CameraResponse:
 				case SimulationOperationCode.CameraTarget:
-					m_Camera.Submit(operation);
+                    int generationSlot = m_Access.RequireOperationSlot(
+                        operation.Handle,
+                        ProgramStateSemantic.RunnableActivationGeneration);
+                    m_Camera.Submit(operation, m_ControlState.ReadUInt64(generationSlot));
 					return OperationExecutionResult.Success;
 				case SimulationOperationCode.StateRootCompleted:
 				case SimulationOperationCode.StateExitCause:
@@ -449,7 +466,7 @@ namespace ThirdPersonSimulation
                 workspace.MotionContributions,
                 workspace.MotionWarpSamples);
             var locomotion = new Float32LocomotionRuntime(access, m_Values, m_Motion, m_Frame);
-            var camera = new Float32CameraOperationRuntime(access, m_Frame.Presentation);
+            var camera = new Float32CameraOperationRuntime(access, actionStore, m_Frame.Presentation);
             Float32StatePort timelineState = m_Frame.CreateStatePort("Timeline", services.TimelinePolicy);
             var timelineControlState = new Float32TimelineControlStatePort(access, timelineState);
             var timelineTarget = new Float32TimelineTargetLeaf(

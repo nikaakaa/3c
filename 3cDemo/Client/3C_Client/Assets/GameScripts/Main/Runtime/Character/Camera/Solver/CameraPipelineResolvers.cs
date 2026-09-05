@@ -110,6 +110,12 @@ namespace ThirdPersonCamera
                 return candidate.Priority > selected.Priority;
             if (!Mathf.Approximately(candidate.Weight, selected.Weight))
                 return candidate.Weight > selected.Weight;
+            if (candidate.Generation != selected.Generation)
+                return candidate.Generation > selected.Generation;
+            if (candidate.SourceActionInstanceId != selected.SourceActionInstanceId)
+                return candidate.SourceActionInstanceId > selected.SourceActionInstanceId;
+            if (candidate.Cycle != selected.Cycle)
+                return candidate.Cycle > selected.Cycle;
             return string.CompareOrdinal(candidate.SourceId, selected.SourceId) < 0;
         }
 
@@ -161,7 +167,10 @@ namespace ThirdPersonCamera
                     0,
                     0,
                     CameraSequenceInterruptPolicy.BlendOut,
-                    true);
+                    true,
+                    string.Empty,
+                    0,
+                    0f);
         }
 
         static bool ShouldReplace(CameraSequenceRequest selected, CameraSequenceRequest candidate)
@@ -172,6 +181,12 @@ namespace ThirdPersonCamera
                 return candidate.Priority > selected.Priority;
             if (!Mathf.Approximately(candidate.Weight, selected.Weight))
                 return candidate.Weight > selected.Weight;
+            if (candidate.Generation != selected.Generation)
+                return candidate.Generation > selected.Generation;
+            if (candidate.SourceActionInstanceId != selected.SourceActionInstanceId)
+                return candidate.SourceActionInstanceId > selected.SourceActionInstanceId;
+            if (candidate.Cycle != selected.Cycle)
+                return candidate.Cycle > selected.Cycle;
             return string.CompareOrdinal(candidate.SourceId, selected.SourceId) < 0;
         }
     }
@@ -196,7 +211,10 @@ namespace ThirdPersonCamera
                 1f,
                 "camera.default.response",
                 0,
-                0);
+                0,
+                string.Empty,
+                0,
+                0f);
             if (requests == null)
                 return selected;
             for (int i = 0; i < requests.Count; i++)
@@ -204,6 +222,21 @@ namespace ThirdPersonCamera
                 CameraResponseRequest candidate = requests[i];
                 if (!candidate.Active || candidate.Priority < selected.Priority ||
                     candidate.Priority == selected.Priority && candidate.Weight <= selected.Weight)
+                    continue;
+                if (candidate.Priority == selected.Priority &&
+                    Mathf.Approximately(candidate.Weight, selected.Weight) &&
+                    candidate.Generation < selected.Generation)
+                    continue;
+                if (candidate.Priority == selected.Priority &&
+                    Mathf.Approximately(candidate.Weight, selected.Weight) &&
+                    candidate.Generation == selected.Generation &&
+                    candidate.SourceActionInstanceId < selected.SourceActionInstanceId)
+                    continue;
+                if (candidate.Priority == selected.Priority &&
+                    Mathf.Approximately(candidate.Weight, selected.Weight) &&
+                    candidate.Generation == selected.Generation &&
+                    candidate.SourceActionInstanceId == selected.SourceActionInstanceId &&
+                    candidate.Cycle < selected.Cycle)
                     continue;
                 selected = candidate;
             }

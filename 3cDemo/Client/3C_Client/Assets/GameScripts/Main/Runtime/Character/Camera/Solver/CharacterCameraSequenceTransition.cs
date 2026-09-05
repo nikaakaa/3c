@@ -13,6 +13,8 @@ namespace ThirdPersonCamera
         string m_CurrentSequenceId = string.Empty;
         string m_CurrentSourceId = string.Empty;
         ulong m_CurrentGeneration;
+        ulong m_CurrentSourceActionInstanceId;
+        int m_CurrentCycle;
         bool m_CurrentIsDefault;
         float m_TransitionElapsed;
         float m_TransitionDuration;
@@ -37,6 +39,8 @@ namespace ThirdPersonCamera
             m_CurrentSequenceId = string.Empty;
             m_CurrentSourceId = string.Empty;
             m_CurrentGeneration = 0;
+            m_CurrentSourceActionInstanceId = 0;
+            m_CurrentCycle = 0;
             m_CurrentIsDefault = false;
             m_TransitionElapsed = 0f;
             m_TransitionDuration = 0f;
@@ -47,12 +51,27 @@ namespace ThirdPersonCamera
             m_Retiring = false;
         }
 
-        public void Retire(string sourceId, ulong generation, float blendOutSeconds)
+        public void Retire(
+            string sourceId,
+            ulong generation,
+            ulong sourceActionInstanceId,
+            int cycle,
+            float blendOutSeconds,
+            CameraPresentationStopReason reason)
         {
             if (!m_LastPlan.Valid ||
                 m_CurrentGeneration != generation ||
+                m_CurrentSourceActionInstanceId != sourceActionInstanceId ||
+                m_CurrentCycle != cycle ||
                 !string.Equals(m_CurrentSourceId, sourceId, StringComparison.Ordinal))
                 return;
+            if (reason == CameraPresentationStopReason.ForceTeardown)
+            {
+                m_Retiring = false;
+                m_RetireFrom = default;
+                m_LastPlan = default;
+                return;
+            }
             m_RetireTimeDomain = ResolveSequence(m_CurrentSequenceId).TimeDomain;
             m_RetireFrom = m_LastPlan;
             m_RetireElapsed = 0f;
@@ -104,6 +123,8 @@ namespace ThirdPersonCamera
                         m_CurrentSequenceId = m_Projection.DefaultSequence.SequenceId;
                         m_CurrentSourceId = request.SourceId;
                         m_CurrentGeneration = request.Generation;
+                        m_CurrentSourceActionInstanceId = request.SourceActionInstanceId;
+                        m_CurrentCycle = request.Cycle;
                         m_CurrentIsDefault = true;
                         m_BlendFrom = default;
                         m_TransitionElapsed = 0f;
@@ -126,6 +147,8 @@ namespace ThirdPersonCamera
             bool sequenceChanged = !string.Equals(sequence.SequenceId, m_CurrentSequenceId, StringComparison.Ordinal) ||
                 request.IsDefault != m_CurrentIsDefault ||
                 request.Generation != m_CurrentGeneration ||
+                request.SourceActionInstanceId != m_CurrentSourceActionInstanceId ||
+                request.Cycle != m_CurrentCycle ||
                 !string.Equals(request.SourceId, m_CurrentSourceId, StringComparison.Ordinal);
             if (sequenceChanged)
             {
@@ -142,6 +165,8 @@ namespace ThirdPersonCamera
                 m_CurrentSequenceId = sequence.SequenceId;
                 m_CurrentSourceId = request.SourceId;
                 m_CurrentGeneration = request.Generation;
+                m_CurrentSourceActionInstanceId = request.SourceActionInstanceId;
+                m_CurrentCycle = request.Cycle;
                 m_CurrentIsDefault = request.IsDefault;
                 m_TransitionElapsed = 0f;
             }
@@ -150,6 +175,8 @@ namespace ThirdPersonCamera
                 m_TransitionElapsed += ResolveTimeDelta(sequence.TimeDomain, in input);
                 m_CurrentSourceId = request.SourceId;
                 m_CurrentGeneration = request.Generation;
+                m_CurrentSourceActionInstanceId = request.SourceActionInstanceId;
+                m_CurrentCycle = request.Cycle;
                 m_CurrentIsDefault = request.IsDefault;
             }
 

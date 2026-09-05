@@ -34,9 +34,21 @@ namespace ThirdPersonCamera
             m_Contributions.Clear();
         }
 
-        public void Retire(string eventId, ulong generation, string sourceId = null)
+        public void Retire(
+            string eventId,
+            ulong generation,
+            string sourceId,
+            ulong sourceActionInstanceId,
+            int cycle,
+            CameraPresentationStopReason reason)
         {
-            m_States.Retire(eventId, generation, sourceId);
+            m_States.Retire(
+                eventId,
+                generation,
+                sourceId,
+                sourceActionInstanceId,
+                cycle,
+                reason);
         }
 
         public CameraFramePlan Resolve(
@@ -62,7 +74,7 @@ namespace ThirdPersonCamera
                     active.Request.Weight,
                     remaining,
                     active.Request.Priority,
-                    true));
+                    active.Request.Active && !active.Retired));
             }
             Advance(in input);
             return plan;
@@ -75,20 +87,10 @@ namespace ThirdPersonCamera
             for (int i = 0; i < requests.Count; i++)
             {
                 CameraEffectRequest request = requests[i];
-                if (!request.Active)
-                    continue;
                 ICameraEffectOwner owner = RequireOwner(request.Kind);
-                if (!owner.UpdatesBySource && m_States.ContainsEvent(request))
-                    continue;
-                if (!owner.HasResource(request.ResourceId))
-                    throw new InvalidOperationException(
-                        $"Camera effect resource '{request.ResourceId}' is not present in the Projection.");
                 if (owner.UpdatesBySource)
                 {
-                    CameraEffectRuntimeState existing = m_States.FindSource(
-                        request.Kind,
-                        request.SourceId,
-                        request.Generation);
+                    CameraEffectRuntimeState existing = m_States.FindSource(request);
                     if (existing != null)
                     {
                         existing.Request = request;
@@ -98,6 +100,13 @@ namespace ThirdPersonCamera
                         continue;
                     }
                 }
+                if (!request.Active)
+                    continue;
+                if (!owner.UpdatesBySource && m_States.ContainsEvent(request))
+                    continue;
+                if (!owner.HasResource(request.ResourceId))
+                    throw new InvalidOperationException(
+                        $"Camera effect resource '{request.ResourceId}' is not present in the Projection.");
                 m_States.Add(request);
             }
         }

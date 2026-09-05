@@ -4,6 +4,14 @@ using UnityEngine;
 
 namespace ThirdPersonCamera
 {
+    public enum CameraPresentationStopReason : byte
+    {
+        NaturalComplete = 1,
+        Cancel = 2,
+        EventRevoked = 3,
+        ForceTeardown = 4
+    }
+
 public readonly struct CameraEffectRequest
     {
         public CameraEffectRequest(
@@ -14,8 +22,12 @@ public readonly struct CameraEffectRequest
             string sourceId,
             ulong generation,
             string eventId,
-            ulong sourceActionInstanceId)
+            ulong sourceActionInstanceId,
+            int cycle = 0,
+            float sampleTime = 0f)
         {
+            if (cycle < 0 || !float.IsFinite(sampleTime) || sampleTime < 0f)
+                throw new ArgumentOutOfRangeException(nameof(sampleTime));
             Kind = kind;
             ResourceId = resourceId ?? string.Empty;
             Weight = Mathf.Max(0f, weight);
@@ -24,6 +36,8 @@ public readonly struct CameraEffectRequest
             Generation = generation;
             EventId = eventId ?? string.Empty;
             SourceActionInstanceId = sourceActionInstanceId;
+            Cycle = cycle;
+            SampleTime = sampleTime;
         }
 
         public CameraEffectKind Kind { get; }
@@ -34,6 +48,8 @@ public readonly struct CameraEffectRequest
         public ulong Generation { get; }
         public string EventId { get; }
         public ulong SourceActionInstanceId { get; }
+        public int Cycle { get; }
+        public float SampleTime { get; }
         public bool Active => Weight > 0f && !string.IsNullOrWhiteSpace(ResourceId);
     }
 }

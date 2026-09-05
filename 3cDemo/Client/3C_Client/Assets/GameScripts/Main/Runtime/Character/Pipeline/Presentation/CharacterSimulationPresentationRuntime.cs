@@ -213,9 +213,19 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             {
                 case CharacterPresentationCommandKind.SelectProducer:
                 case CharacterPresentationCommandKind.SampleProducer:
-                case CharacterPresentationCommandKind.CompleteProducer:
-                case CharacterPresentationCommandKind.ReleaseProducer:
                     m_Animation.Publish(command, producer);
+                    break;
+                case CharacterPresentationCommandKind.CompleteProducer:
+                    if (producer.Kind == CharacterPresentationProducerKind.Camera)
+                        RequireCamera().Complete(command, producer);
+                    else
+                        m_Animation.Publish(command, producer);
+                    break;
+                case CharacterPresentationCommandKind.ReleaseProducer:
+                    if (producer.Kind == CharacterPresentationProducerKind.Camera)
+                        RequireCamera().Release(command, producer);
+                    else
+                        m_Animation.Publish(command, producer);
                     break;
                 case CharacterPresentationCommandKind.Camera:
                     RequireCamera().Publish(command, producer);
@@ -249,7 +259,10 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 case CharacterPresentationCommandKind.SampleProducer:
                 case CharacterPresentationCommandKind.CompleteProducer:
                 case CharacterPresentationCommandKind.ReleaseProducer:
-                    m_Animation.Retire(command, producer);
+                    if (producer.Kind == CharacterPresentationProducerKind.Camera)
+                        RequireCamera().Retire(command, producer);
+                    else
+                        m_Animation.Retire(command, producer);
                     break;
                 case CharacterPresentationCommandKind.Camera:
                     RequireCamera().Retire(command, producer);

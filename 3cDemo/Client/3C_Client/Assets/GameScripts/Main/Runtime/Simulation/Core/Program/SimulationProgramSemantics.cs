@@ -552,7 +552,7 @@ namespace ThirdPersonSimulation
                     RequireNonNegative(operation, literals, "BlendOutSeconds");
                     RequireString(operation, literals, "SequenceId", true);
                     RequireString(operation, literals, "TargetKey", false);
-                    RequireString(operation, literals, "ActionContext", false);
+                    RequireString(operation, literals, "ActionContext", true);
                     RequireFieldCount(operation, 7);
                     break;
                 case SimulationOperationCode.CameraShakeRequest:
@@ -561,7 +561,7 @@ namespace ThirdPersonSimulation
                     RequireString(operation, literals, "ResourceId", true);
                     RequireNonNegative(operation, literals, "Intensity");
                     RequireInt32(operation, literals, "Priority");
-                    RequireString(operation, literals, "ActionContext", false);
+                    RequireString(operation, literals, "ActionContext", true);
                     RequireFieldCount(operation, 4);
                     break;
                 case SimulationOperationCode.CameraResponse:
@@ -572,7 +572,7 @@ namespace ThirdPersonSimulation
                     RequireUnit(operation, literals, "YawResponseWeight");
                     RequireInt32(operation, literals, "Priority");
                     RequireUnit(operation, literals, "Weight");
-                    RequireString(operation, literals, "ActionContext", false);
+                    RequireString(operation, literals, "ActionContext", true);
                     RequireFieldCount(operation, 6);
                     break;
                 case SimulationOperationCode.CameraTarget:
@@ -591,7 +591,7 @@ namespace ThirdPersonSimulation
                         throw Invalid(operation, $"target key mask '{operation.Integer1}' does not match configured target identities '{expectedMask}'");
                     RequireInt32(operation, literals, "Priority");
                     RequireUnit(operation, literals, "Weight");
-                    RequireString(operation, literals, "ActionContext", false);
+                    RequireString(operation, literals, "ActionContext", true);
                     RequireFieldCount(operation, 7);
                     break;
                 case SimulationOperationCode.CameraBasisRead:

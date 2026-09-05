@@ -28,11 +28,23 @@ namespace ThirdPersonCamera
             m_Initialized = false;
         }
 
-        public void Retire(string sourceId, ulong generation, float blendOutSeconds)
+        public void Retire(
+            string sourceId,
+            ulong generation,
+            ulong sourceActionInstanceId,
+            int cycle,
+            float blendOutSeconds,
+            CameraPresentationStopReason reason)
         {
             if (!m_Initialized)
                 return;
-            m_Transition.Retire(sourceId, generation, blendOutSeconds);
+            m_Transition.Retire(
+                sourceId,
+                generation,
+                sourceActionInstanceId,
+                cycle,
+                blendOutSeconds,
+                reason);
         }
 
         public CameraFramePlan Evaluate(

@@ -347,7 +347,8 @@ namespace ThirdPersonSimulation
             kind == TimelinePresentationOutputKind.SelectProducer ||
             kind == TimelinePresentationOutputKind.SampleProducer ||
             kind == TimelinePresentationOutputKind.CompleteProducer ||
-            kind == TimelinePresentationOutputKind.ReleaseProducer;
+            kind == TimelinePresentationOutputKind.ReleaseProducer ||
+            kind == TimelinePresentationOutputKind.Camera;
     }
 
     internal readonly struct TimelineCueOutput<TTime>

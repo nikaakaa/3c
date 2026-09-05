@@ -8,14 +8,19 @@ namespace ThirdPersonSimulation.Fixed
     internal sealed class FixedCameraOperationRuntime : FixedOperationModule
     {
         readonly FixedPresentationSink m_Presentation;
+        readonly FixedActionStateStore m_Actions;
 
-        public FixedCameraOperationRuntime(FixedProgramAccess access, FixedPresentationSink presentation)
+        public FixedCameraOperationRuntime(
+            FixedProgramAccess access,
+            FixedActionStateStore actions,
+            FixedPresentationSink presentation)
             : base(access)
         {
+            m_Actions = actions ?? throw new ArgumentNullException(nameof(actions));
             m_Presentation = presentation ?? throw new ArgumentNullException(nameof(presentation));
         }
 
-        public void Submit(SimulationOperation operation)
+        public void Submit(SimulationOperation operation, ulong producerGeneration)
         {
             if (operation == null)
                 throw new ArgumentNullException(nameof(operation));
@@ -26,6 +31,11 @@ namespace ThirdPersonSimulation.Fixed
                     $"Camera operation '{SourcePath(operation)}' payload version '{operation.Integer0}' is unsupported.");
 
             ProgramProducer producer = RequireProducer(operation);
+            string actionContext = GetStringConstant(operation, OperationNamedConstant.ActionContext, string.Empty);
+            if (string.IsNullOrEmpty(actionContext) ||
+                m_Actions.FindActive(actionContext, out FixedActionInstanceState action) < 0)
+                throw new InvalidOperationException(
+                    $"Camera operation '{SourcePath(operation)}' has no active formal Action Context.");
             FixedScalar weight = operation.Code switch
             {
                 SimulationOperationCode.CameraSequenceRequest => RequireScalar(operation, OperationNamedConstant.Weight),
@@ -39,7 +49,11 @@ namespace ThirdPersonSimulation.Fixed
                 PresentationCommandKind.Camera,
                 producer.Identity,
                 FixedScalar.Zero,
-                weight));
+                weight,
+                producerGeneration,
+                0,
+                action.InstanceId,
+                FixedScalar.Zero));
         }
 
         FixedScalar RequireScalar(SimulationOperation operation, OperationNamedConstant field)
@@ -212,7 +226,10 @@ namespace ThirdPersonSimulation.Fixed
 				case SimulationOperationCode.CameraShakeRequest:
 				case SimulationOperationCode.CameraResponse:
 				case SimulationOperationCode.CameraTarget:
-					m_Camera.Submit(operation);
+                    int generationSlot = m_Access.RequireOperationSlot(
+                        operation.Handle,
+                        ProgramStateSemantic.RunnableActivationGeneration);
+                    m_Camera.Submit(operation, m_ControlState.ReadUInt64(generationSlot));
 					return OperationExecutionResult.Success;
 				case SimulationOperationCode.StateRootCompleted:
 				case SimulationOperationCode.StateExitCause:
@@ -454,7 +471,7 @@ namespace ThirdPersonSimulation.Fixed
                 workspace.MotionContributions,
                 workspace.MotionWarpSamples);
             var locomotion = new FixedLocomotionRuntime(access, m_Values, m_Motion, m_Frame);
-            var camera = new FixedCameraOperationRuntime(access, m_Frame.Presentation);
+            var camera = new FixedCameraOperationRuntime(access, actionStore, m_Frame.Presentation);
             FixedStatePort timelineState = m_Frame.CreateStatePort("Timeline", services.TimelinePolicy);
             var timelineControlState = new FixedTimelineControlStatePort(access, timelineState);
             var timelineTarget = new FixedTimelineTargetLeaf(

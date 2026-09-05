@@ -15,8 +15,13 @@ public readonly struct CameraResponseRequest
             float weight,
             string sourceId,
             ulong generation,
-            ulong sourceActionInstanceId)
+            ulong sourceActionInstanceId,
+            string eventId = "",
+            int cycle = 0,
+            float sampleTime = 0f)
         {
+            if (cycle < 0 || !float.IsFinite(sampleTime) || sampleTime < 0f)
+                throw new ArgumentOutOfRangeException(nameof(sampleTime));
             Mode = mode;
             ManualOrbitWeight = Mathf.Clamp01(manualOrbitWeight);
             PitchWeight = Mathf.Clamp01(pitchWeight);
@@ -26,6 +31,9 @@ public readonly struct CameraResponseRequest
             SourceId = sourceId ?? string.Empty;
             Generation = generation;
             SourceActionInstanceId = sourceActionInstanceId;
+            EventId = eventId ?? string.Empty;
+            Cycle = cycle;
+            SampleTime = sampleTime;
         }
 
         public CameraResponseMode Mode { get; }
@@ -37,6 +45,9 @@ public readonly struct CameraResponseRequest
         public string SourceId { get; }
         public ulong Generation { get; }
         public ulong SourceActionInstanceId { get; }
+        public string EventId { get; }
+        public int Cycle { get; }
+        public float SampleTime { get; }
         public bool Active => Weight > 0f;
 
         public Vector2 Apply(Vector2 lookInput)

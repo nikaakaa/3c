@@ -24,6 +24,9 @@ namespace ThirdPersonSimulation
                 ProgramStateSlot slot = stateSlots[i];
                 if (slot.OwnerKind != ProgramStateOwnerKind.Control)
                     continue;
+                if (!string.Equals(slot.OwnerIdentity, contract.ModuleId.Value, StringComparison.Ordinal))
+                    throw new InvalidDataException(
+                        $"Control state slot '{slot.Identity}' belongs to module '{slot.OwnerIdentity}', not '{contract.ModuleId}'.");
                 var fieldId = new CharacterControlStateFieldId(slot.Identity);
                 CharacterControlStateFieldDescriptor field = FindField(contract, fieldId);
                 if (field == null)

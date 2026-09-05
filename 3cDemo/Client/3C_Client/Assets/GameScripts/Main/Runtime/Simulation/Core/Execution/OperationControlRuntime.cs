@@ -4,7 +4,7 @@ using System.Globalization;
 
 namespace ThirdPersonSimulation
 {
-    public sealed class OperationControlRuntime<TTarget> : IOperationExecutionLifecycleHost<TTarget>
+    public sealed class OperationControlRuntime<TTarget> : IOperationExecutionLifecycleHost<TTarget>, IOperationCompositeRuntimeHost<TTarget>
         where TTarget : struct, IOperationControlTarget<TTarget>
     {
         readonly OperationExecutionTopology m_Topology;
@@ -12,6 +12,7 @@ namespace ThirdPersonSimulation
         readonly OperationControlCursor<TTarget> m_Cursor;
         readonly OperationStateMachineRuntime<TTarget> m_StateMachine;
         readonly OperationExecutionLifecycleRuntime<TTarget> m_Lifecycle;
+        readonly OperationCompositeRuntime<TTarget> m_Composite;
         readonly Stack<StateExecutionContext> m_StateExecution = new Stack<StateExecutionContext>();
         readonly int m_MaxExecutionCount;
         int m_ExecutionCount;
@@ -26,6 +27,7 @@ namespace ThirdPersonSimulation
             m_Cursor = new OperationControlCursor<TTarget>(this);
             m_StateMachine = new OperationStateMachineRuntime<TTarget>(this);
             m_Lifecycle = new OperationExecutionLifecycleRuntime<TTarget>(this, m_StateMachine);
+            m_Composite = new OperationCompositeRuntime<TTarget>(this);
         }
 
         public OperationControlCursor<TTarget> Cursor => m_Cursor;
@@ -220,13 +222,13 @@ namespace ThirdPersonSimulation
                 case SimulationOperationCode.TimelineEnter:
                     return TickSingleChild(operation, ProgramControlFlowKind.Child);
                 case SimulationOperationCode.Loop:
-                    return TickLoop(operation);
+                    return m_Composite.TickLoop(operation);
                 case SimulationOperationCode.Parallel:
-                    return TickParallel(operation);
+                    return m_Composite.TickParallel(operation);
                 case SimulationOperationCode.Sequence:
-                    return TickSequence(operation);
+                    return m_Composite.TickSequence(operation);
                 case SimulationOperationCode.Selector:
-                    return TickSelector(operation);
+                    return m_Composite.TickSelector(operation);
                 case SimulationOperationCode.Succeed:
                     return OperationExecutionResult.Success;
                 case SimulationOperationCode.StateMachine:
@@ -250,187 +252,6 @@ namespace ThirdPersonSimulation
             if (!EvaluateCondition(edge))
                 return OperationExecutionResult.Failure;
             return Tick(edge.Target);
-        }
-
-        OperationExecutionResult TickLoop(OperationExecutionDescriptor operation)
-        {
-            IReadOnlyList<ProgramControlFlowEdge> children = Edges(operation.Handle, ProgramControlFlowKind.Child);
-            if (children.Count != 1 || !EvaluateCondition(children[0]))
-                return OperationExecutionResult.Failure;
-            OperationExecutionResult child = Tick(children[0].Target);
-            if (operation.Integer0 == 1 && child == OperationExecutionResult.Success)
-                return OperationExecutionResult.Success;
-            if (operation.Integer0 == 2 && child == OperationExecutionResult.Failure)
-                return OperationExecutionResult.Failure;
-            return OperationExecutionResult.Running;
-        }
-
-        OperationExecutionResult TickSequence(OperationExecutionDescriptor operation)
-        {
-            IReadOnlyList<ProgramControlFlowEdge> children = Edges(operation.Handle, ProgramControlFlowKind.Child);
-            int slot = RequireOperationSlot(operation, ProgramStateSemantic.RunnableChildCursor);
-            int cursor = Math.Max(0, m_Target.ReadInt32(slot));
-            OperationStopContext pending = m_Lifecycle.ReadStopContext(operation);
-            if (pending.IsValid && cursor < children.Count)
-            {
-                OperationStopStatus stop = RequestStop(children[cursor].Target, pending);
-                if (stop == OperationStopStatus.Running)
-                    return OperationExecutionResult.Running;
-                m_Lifecycle.ClearStopContext(operation);
-                return OperationExecutionResult.Failure;
-            }
-            while (cursor < children.Count)
-            {
-                ProgramControlFlowEdge edge = children[cursor];
-                if (!EvaluateCondition(edge))
-                {
-                    if (UsesSelfAbort(edge.AbortPolicy) && IsActive(edge.Target))
-                    {
-                        OperationStopContext context = OperationStopContext.SelfAbort(edge.Target);
-                        m_Lifecycle.WriteStopContext(operation, context);
-                        OperationStopStatus stop = RequestStop(edge.Target, context);
-                        if (stop == OperationStopStatus.Running)
-                            return OperationExecutionResult.Running;
-                        m_Lifecycle.ClearStopContext(operation);
-                        if (stop == OperationStopStatus.Failed)
-                            return OperationExecutionResult.Failure;
-                    }
-                    return OperationExecutionResult.Failure;
-                }
-                OperationExecutionResult result = Tick(edge.Target);
-                if (result == OperationExecutionResult.Running)
-                {
-                    m_Target.WriteInt32(slot, cursor);
-                    return result;
-                }
-                if (result == OperationExecutionResult.Failure)
-                    return result;
-                cursor++;
-                m_Target.WriteInt32(slot, cursor);
-            }
-            return OperationExecutionResult.Success;
-        }
-
-        OperationExecutionResult TickSelector(OperationExecutionDescriptor operation)
-        {
-            IReadOnlyList<ProgramControlFlowEdge> children = Edges(operation.Handle, ProgramControlFlowKind.Child);
-            int slot = RequireOperationSlot(operation, ProgramStateSemantic.RunnableChildCursor);
-            int cursor = m_Target.ReadInt32(slot);
-            OperationStopContext pending = m_Lifecycle.ReadStopContext(operation);
-            if (pending.IsValid && cursor >= 0 && cursor < children.Count)
-            {
-                OperationStopStatus stop = RequestStop(children[cursor].Target, pending);
-                if (stop == OperationStopStatus.Running)
-                    return OperationExecutionResult.Running;
-                m_Lifecycle.ClearStopContext(operation);
-                m_Target.WriteInt32(slot, -1);
-                if (stop == OperationStopStatus.Failed)
-                    return OperationExecutionResult.Failure;
-                int replacement = FindChildIndex(children, pending.Replacement);
-                return TickSelectorFrom(operation, children, slot,
-                    pending.Cause == OperationStopCause.LowerPriorityAbort && replacement >= 0 ? replacement : 0);
-            }
-            if (cursor >= 0 && cursor < children.Count && IsRunning(children[cursor].Target))
-            {
-                ProgramControlFlowEdge current = children[cursor];
-                if (UsesSelfAbort(current.AbortPolicy) && !EvaluateCondition(current))
-                {
-                    OperationStopContext context = OperationStopContext.SelfAbort(current.Target);
-                    m_Lifecycle.WriteStopContext(operation, context);
-                    OperationStopStatus stop = RequestStop(current.Target, context);
-                    if (stop == OperationStopStatus.Running)
-                        return OperationExecutionResult.Running;
-                    m_Lifecycle.ClearStopContext(operation);
-                    m_Target.WriteInt32(slot, -1);
-                    if (stop == OperationStopStatus.Failed)
-                        return OperationExecutionResult.Failure;
-                    return TickSelectorFrom(operation, children, slot, 0);
-                }
-                for (int i = 0; i < cursor; i++)
-                {
-                    if (!UsesLowerPriorityAbort(children[i].AbortPolicy) || !EvaluateCondition(children[i]))
-                        continue;
-                    OperationStopContext context = OperationStopContext.LowerPriorityAbort(current.Target, children[i].Target);
-                    m_Lifecycle.WriteStopContext(operation, context);
-                    OperationStopStatus stop = RequestStop(current.Target, context);
-                    if (stop == OperationStopStatus.Running)
-                        return OperationExecutionResult.Running;
-                    m_Lifecycle.ClearStopContext(operation);
-                    m_Target.WriteInt32(slot, -1);
-                    if (stop == OperationStopStatus.Failed)
-                        return OperationExecutionResult.Failure;
-                    return TickSelectorFrom(operation, children, slot, i);
-                }
-                OperationExecutionResult currentResult = Tick(current.Target);
-                if (currentResult != OperationExecutionResult.Failure)
-                    return currentResult;
-                cursor++;
-            }
-            return TickSelectorFrom(operation, children, slot, cursor < 0 ? 0 : cursor);
-        }
-
-        OperationExecutionResult TickParallel(OperationExecutionDescriptor operation)
-        {
-            IReadOnlyList<ProgramControlFlowEdge> children = Edges(operation.Handle, ProgramControlFlowKind.Child);
-            int slot = RequireOperationSlot(operation, ProgramStateSemantic.RunnableChildCursor);
-            int completedMask = m_Target.ReadInt32(slot);
-            bool running = false;
-            for (int i = 0; i < children.Count; i++)
-            {
-                if (i >= 31)
-                    throw new InvalidOperationException($"Parallel operation '{operation.Handle}' exceeds the portable 31-child completion mask.");
-                ProgramControlFlowEdge edge = children[i];
-                if (!EvaluateCondition(edge))
-                {
-                    if (IsStopping(edge.Target))
-                    {
-                        OperationStopStatus pendingStop = ContinueStop(edge.Target);
-                        if (pendingStop == OperationStopStatus.Failed)
-                            return OperationExecutionResult.Failure;
-                        if (pendingStop == OperationStopStatus.Running)
-                            running = true;
-                    }
-                    else if (UsesSelfAbort(edge.AbortPolicy) && IsActive(edge.Target))
-                    {
-                        OperationStopStatus stop = RequestStop(edge.Target, OperationStopContext.SelfAbort(edge.Target));
-                        if (stop == OperationStopStatus.Failed)
-                            return OperationExecutionResult.Failure;
-                        if (stop == OperationStopStatus.Running)
-                            running = true;
-                    }
-                    completedMask &= ~(1 << i);
-                    continue;
-                }
-                if (operation.Integer0 == 0 && (completedMask & (1 << i)) != 0)
-                    continue;
-                OperationExecutionResult result = Tick(edge.Target);
-                if (result == OperationExecutionResult.Running)
-                    running = true;
-                else if (operation.Integer0 == 0)
-                    completedMask |= 1 << i;
-            }
-            m_Target.WriteInt32(slot, completedMask);
-            return running ? OperationExecutionResult.Running : OperationExecutionResult.Success;
-        }
-
-        OperationExecutionResult TickSelectorFrom(
-            OperationExecutionDescriptor operation,
-            IReadOnlyList<ProgramControlFlowEdge> children,
-            int cursorSlot,
-            int start)
-        {
-            for (int i = Math.Max(0, start); i < children.Count; i++)
-            {
-                if (!EvaluateCondition(children[i]))
-                    continue;
-                OperationExecutionResult result = Tick(children[i].Target);
-                if (result == OperationExecutionResult.Failure)
-                    continue;
-                m_Target.WriteInt32(cursorSlot, i);
-                return result;
-            }
-            m_Target.WriteInt32(cursorSlot, -1);
-            return OperationExecutionResult.Failure;
         }
 
         bool EvaluateCondition(ProgramControlFlowEdge edge)
@@ -493,28 +314,6 @@ namespace ThirdPersonSimulation
         OperationExecutionResult IOperationExecutionLifecycleHost<TTarget>.Execute(OperationExecutionDescriptor operation) => Execute(operation);
         void IOperationExecutionLifecycleHost<TTarget>.RequireExecution(OperationHandle handle) => RequireExecution(handle);
 
-        static int FindChildIndex(IReadOnlyList<ProgramControlFlowEdge> children, OperationHandle target)
-        {
-            if (!target.IsValid)
-                return -1;
-            for (int i = 0; i < children.Count; i++)
-            {
-                if (children[i].Target.Equals(target))
-                    return i;
-            }
-            return -1;
-        }
-
-        static bool UsesSelfAbort(ProgramAbortPolicy policy)
-        {
-            return policy == ProgramAbortPolicy.Self || policy == ProgramAbortPolicy.Both;
-        }
-
-        static bool UsesLowerPriorityAbort(ProgramAbortPolicy policy)
-        {
-            return policy == ProgramAbortPolicy.LowerPriority || policy == ProgramAbortPolicy.Both;
-        }
-
         static string FormatHandle(OperationHandle value)
         {
             return value.IsValid ? value.Value.ToString(CultureInfo.InvariantCulture) : string.Empty;
@@ -526,6 +325,14 @@ namespace ThirdPersonSimulation
                 ? new OperationHandle(parsed)
                 : OperationHandle.Invalid;
         }
+
+        OperationExecutionTopology IOperationCompositeRuntimeHost<TTarget>.Topology => m_Topology;
+        int IOperationCompositeRuntimeHost<TTarget>.ReadInt32(int slotIndex) => m_Target.ReadInt32(slotIndex);
+        void IOperationCompositeRuntimeHost<TTarget>.WriteInt32(int slotIndex, int value) => m_Target.WriteInt32(slotIndex, value);
+        bool IOperationCompositeRuntimeHost<TTarget>.EvaluateCondition(ProgramControlFlowEdge edge) => EvaluateCondition(edge);
+        OperationStopContext IOperationCompositeRuntimeHost<TTarget>.ReadStopContext(OperationExecutionDescriptor operation) => m_Lifecycle.ReadStopContext(operation);
+        void IOperationCompositeRuntimeHost<TTarget>.WriteStopContext(OperationExecutionDescriptor operation, OperationStopContext context) => m_Lifecycle.WriteStopContext(operation, context);
+        void IOperationCompositeRuntimeHost<TTarget>.ClearStopContext(OperationExecutionDescriptor operation) => m_Lifecycle.ClearStopContext(operation);
 
         readonly struct StateExecutionContext
         {

@@ -38,6 +38,23 @@ MonoBehaviour:
   - {fileID: 11400000, guid: 8ee80f5fe707436294bdd632a46e456d, type: 2}
   m_Stretches:
   - {fileID: 11400000, guid: bc08288692d54a769bb8d1d420fc9157, type: 2}
+  - {fileID: 11400000, guid: 66d84878291e4f26986fde082535d919, type: 2}
+  - {fileID: 11400000, guid: 34ad9270c6174dd18933705d4f39d0b5, type: 2}
+  - {fileID: 11400000, guid: 1dab74fa73694ca0af3e62b4d087f12a, type: 2}
+  - {fileID: 11400000, guid: ed8c282cbb30461ca15ae61f08df3bff, type: 2}
+  - {fileID: 11400000, guid: 35e14f9af0694a659d3457827ea732e4, type: 2}
+  - {fileID: 11400000, guid: a6a9c56444c14eceba6ed0daeaab611b, type: 2}
+  - {fileID: 11400000, guid: 3c0b6bf1727d45adb5bce042c3a21ab8, type: 2}
+  - {fileID: 11400000, guid: b9a963806e1b45b3b35abcff4fca6905, type: 2}
+  - {fileID: 11400000, guid: c24fa8b3873d4ac7b19b33f184f7c2a9, type: 2}
+  - {fileID: 11400000, guid: c2325a55262e4b008bf68d6184b3462f, type: 2}
+  - {fileID: 11400000, guid: 6135dcc1253e44b39caca690acdff481, type: 2}
+  - {fileID: 11400000, guid: 9efce5e15dd543dc8d27d8ad6135d3af, type: 2}
+  - {fileID: 11400000, guid: f76eb604ba7d47fdb1e7f65b6c2a561c, type: 2}
+  - {fileID: 11400000, guid: 09fcf9b856df49d69642c54019a4488d, type: 2}
+  - {fileID: 11400000, guid: 50a95d93dc3549dfa250f5abecab291b, type: 2}
+  - {fileID: 11400000, guid: 22888a80d7e04178a09768be62af92be, type: 2}
+  - {fileID: 11400000, guid: bccc68648e194901bbd09d174895d5ae, type: 2}
   m_Shakes: []
   m_Shots: []
   m_Curves:

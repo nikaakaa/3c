@@ -335,6 +335,9 @@ namespace ThirdPersonSimulation.Fixed
             return slot;
         }
 
+        public CharacterControlStateLayout CreateControlStateLayout(CharacterControlModuleContract contract) =>
+            new CharacterControlStateLayout(contract, m_Program.StateSlots);
+
         public TypedStateAddress Address(int slotIndex)
         {
             if (slotIndex < 0 || slotIndex >= m_TypedAddresses.Length)

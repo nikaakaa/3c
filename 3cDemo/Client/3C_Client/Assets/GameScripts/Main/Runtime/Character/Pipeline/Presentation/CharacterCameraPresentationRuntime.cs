@@ -38,7 +38,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         readonly CameraDebugSnapshot m_Debug = new CameraDebugSnapshot();
         readonly HashSet<CameraPresentationScopeKey> m_ForcedScopes =
             new HashSet<CameraPresentationScopeKey>();
-        readonly Dictionary<CameraPresentationScopeKey, CharacterCameraSequenceTransition.State> m_SuspendedSequenceStates =
+        readonly Dictionary<CameraPresentationScopeKey, CharacterCameraSequenceTransition.State> m_SequenceRecoveryStates =
             new Dictionary<CameraPresentationScopeKey, CharacterCameraSequenceTransition.State>();
 
         ulong m_LastBodyResetSequence;
@@ -213,11 +213,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 command.SourceActionInstanceId);
             if (!m_ForcedScopes.Remove(scope))
                 return;
-            if (m_SuspendedSequenceStates.TryGetValue(scope, out CharacterCameraSequenceTransition.State state))
-            {
-                m_SequenceEvaluator.RestoreScopeState(state);
-                m_SuspendedSequenceStates.Remove(scope);
-            }
             m_EffectEvaluator.ResumeScope(scope);
         }
 
@@ -232,7 +227,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 command.ProducerGeneration,
                 command.SourceActionInstanceId);
             m_ForcedScopes.Remove(scope);
-            m_SuspendedSequenceStates.Remove(scope);
+            m_SequenceRecoveryStates.Remove(scope);
             m_EffectEvaluator.ConfirmScope(scope);
             m_SequenceEvaluator.ForceTeardown(
                 producer.ProgramProducerIdentity,
@@ -256,7 +251,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 command.SourceActionInstanceId);
             if (m_ForcedScopes.Add(scope) &&
                 m_SequenceEvaluator.TryCaptureScopeState(scope, out CharacterCameraSequenceTransition.State state))
-                m_SuspendedSequenceStates[scope] = state;
+                m_SequenceRecoveryStates[scope] = state;
             m_EffectEvaluator.SuspendScope(scope);
             RemovePendingSequenceTerminations(scope);
         }
@@ -281,8 +276,16 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             switch (binding.Kind)
             {
                 case CharacterPresentationCameraBindingKind.Sequence:
-                    if (!m_Sequences.TryGetValue(instance, out CameraSequenceRequest sequenceRequest) ||
-                        reason == CameraPresentationStopReason.EventRevoked &&
+                    CameraPresentationScopeKey sequenceScope = new CameraPresentationScopeKey(
+                        producer.ProgramProducerIdentity,
+                        command.ProducerGeneration,
+                        command.SourceActionInstanceId);
+                    if (!m_Sequences.TryGetValue(instance, out CameraSequenceRequest sequenceRequest))
+                    {
+                        m_SequenceRecoveryStates.Remove(sequenceScope);
+                        return;
+                    }
+                    if (reason == CameraPresentationStopReason.EventRevoked &&
                         !string.Equals(sequenceRequest.EventId, command.Header.EventId.ToString(), StringComparison.Ordinal))
                     {
                         return;
@@ -295,7 +298,10 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                         binding.BlendOutSeconds,
                         reason);
                     if (retired || reason == CameraPresentationStopReason.EventRevoked)
+                    {
                         m_Sequences.Remove(instance);
+                        m_SequenceRecoveryStates.Remove(sequenceScope);
+                    }
                     else
                         m_PendingSequenceTerminations[instance] = new PendingSequenceTermination(
                             producer.ProgramProducerIdentity,
@@ -383,7 +389,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             m_Targets.Clear();
             m_PendingSequenceTerminations.Clear();
             m_ForcedScopes.Clear();
-            m_SuspendedSequenceStates.Clear();
+            m_SequenceRecoveryStates.Clear();
             m_SequenceBuffer.Clear();
             m_ResponseBuffer.Clear();
             m_TargetBuffer.Clear();
@@ -434,6 +440,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 m_SequenceBuffer,
                 m_CameraProjection.DefaultSequence.SequenceId);
             PrunePendingSequenceCandidates(sequence);
+            RestoreSelectedSequenceState(sequence);
             m_ResponseBuffer.Clear();
             foreach (CameraResponseRequest request in m_Responses.Values)
                 if (request.Active && !IsForced(request.SourceId, request.Generation, request.SourceActionInstanceId))
@@ -536,12 +543,13 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             var applied = new List<PresentationProducerInstanceId>();
             foreach (KeyValuePair<PresentationProducerInstanceId, PendingSequenceTermination> pair in m_PendingSequenceTerminations)
             {
+                PendingSequenceTermination termination = pair.Value;
                 if (!m_Sequences.ContainsKey(pair.Key))
                 {
+                    RemoveSequenceRecoveryState(termination);
                     applied.Add(pair.Key);
                     continue;
                 }
-                PendingSequenceTermination termination = pair.Value;
                 if (m_SequenceEvaluator.Retire(
                         termination.SourceId,
                         termination.Generation,
@@ -551,6 +559,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                         termination.Reason))
                 {
                     m_Sequences.Remove(pair.Key);
+                    RemoveSequenceRecoveryState(termination);
                     applied.Add(pair.Key);
                 }
             }
@@ -571,9 +580,33 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             }
             for (int i = 0; i < remove.Count; i++)
             {
+                PendingSequenceTermination termination = m_PendingSequenceTerminations[remove[i]];
                 m_PendingSequenceTerminations.Remove(remove[i]);
                 m_Sequences.Remove(remove[i]);
+                RemoveSequenceRecoveryState(termination);
             }
+        }
+
+        void RestoreSelectedSequenceState(CameraSequenceRequest sequence)
+        {
+            if (sequence.IsDefault || IsForced(sequence.SourceId, sequence.Generation, sequence.SourceActionInstanceId))
+                return;
+            CameraPresentationScopeKey scope = new CameraPresentationScopeKey(
+                sequence.SourceId,
+                sequence.Generation,
+                sequence.SourceActionInstanceId);
+            if (!m_SequenceRecoveryStates.TryGetValue(scope, out CharacterCameraSequenceTransition.State state))
+                return;
+            m_SequenceEvaluator.RestoreScopeState(state);
+            m_SequenceRecoveryStates.Remove(scope);
+        }
+
+        void RemoveSequenceRecoveryState(PendingSequenceTermination termination)
+        {
+            m_SequenceRecoveryStates.Remove(new CameraPresentationScopeKey(
+                termination.SourceId,
+                termination.Generation,
+                termination.SourceActionInstanceId));
         }
 
         void RemovePendingSequenceTerminations(CameraPresentationScopeKey scope)

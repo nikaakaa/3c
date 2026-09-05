@@ -27,8 +27,6 @@ namespace ThirdPersonCamera
 
         void Awake()
         {
-            if (virtualCamera == null || brain == null)
-                ResetComponentReferences();
             ReportMissingVirtualCamera();
             ReportInvalidBrain();
             if (virtualCamera == null || !HasValidBrain())
@@ -40,12 +38,6 @@ namespace ThirdPersonCamera
 
             virtualCamera.PreviousStateIsValid = false;
             RefreshBasisSnapshot();
-        }
-
-        void ResetComponentReferences()
-        {
-            virtualCamera = GetComponentInChildren<CinemachineVirtualCamera>(true);
-            brain = GetComponent<CinemachineBrain>();
         }
 
         void OnValidate()

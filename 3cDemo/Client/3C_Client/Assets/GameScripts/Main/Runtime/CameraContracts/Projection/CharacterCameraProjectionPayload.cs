@@ -176,6 +176,8 @@ namespace ThirdPersonCamera
                     throw new InvalidOperationException($"Character Camera Projection DefaultOrbitGroup[{i}] is missing.");
                 orbit.RequireValid($"Character Camera Projection DefaultOrbitGroup[{i}]");
             }
+            if (Collision.Enabled)
+                throw new InvalidOperationException("Character Camera Projection enables collision, but the formal camera collision consumer is not published.");
         }
     }
 }

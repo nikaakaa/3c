@@ -119,6 +119,8 @@ namespace ThirdPersonCamera
             Input.RequireValid($"{name}.Input");
             Locking.RequireValid($"{name}.Locking");
             Collision.RequireValid($"{name}.Collision");
+            if (Collision.Enabled)
+                throw new InvalidOperationException($"Character Camera Profile '{name}' enables collision, but the formal camera collision consumer is not published.");
             RequireAssets(Sequences, "Sequence");
             RequireUniqueSequenceIdentity();
             RequireAssets(OverrideTracks, "Override Track");

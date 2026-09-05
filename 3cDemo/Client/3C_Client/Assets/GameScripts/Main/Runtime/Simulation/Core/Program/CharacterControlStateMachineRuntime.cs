@@ -16,7 +16,9 @@ namespace ThirdPersonSimulation
                 throw new ArgumentException("Character control module has no contract.", nameof(module));
             m_ActiveStateField = module.Contract.RequireStateField(ProgramStateSemantic.ControlActiveState);
             m_EnteredTickField = module.Contract.RequireStateField(ProgramStateSemantic.ControlEnteredTick);
-            m_TransitionField = module.Contract.FindStateField(ProgramStateSemantic.ControlTransition);
+            m_TransitionField = module.Contract.Transitions.Count == 0
+                ? null
+                : module.Contract.RequireStateField(ProgramStateSemantic.ControlTransition);
         }
 
         public CharacterControlModuleContract Contract => m_Module.Contract;

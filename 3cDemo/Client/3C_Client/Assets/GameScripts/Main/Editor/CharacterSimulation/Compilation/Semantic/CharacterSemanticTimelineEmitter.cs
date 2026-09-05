@@ -1,5 +1,4 @@
 using System;
-using BTSMTL.Diagnostics;
 using BTSMTL.Timeline;
 using ThirdPersonCharacter.ActionSystem;
 using ThirdPersonSimulation;
@@ -65,7 +64,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                     ProgramReferenceKind.CatalogEntry,
                     timelineCatalog,
                     $"timeline:{timeline.AuthoringId}",
-                    NodeSource(node.Owner as BaseTree, node, record.GraphRoute));
+                    CharacterSemanticSourceFactory.Node(node.Owner as BaseTree, node, record.GraphRoute));
             }
 
             var timelineEmission = new CharacterSimulationTimelineEmissionSession(timeline, m_Builder);
@@ -171,19 +170,6 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                     OperationHandle.Invalid,
                     source);
             }
-        }
-
-        static CharacterSimulationSourceLocation NodeSource(BaseTree graph, BaseNode node, string route)
-        {
-            return new CharacterSimulationSourceLocation(
-                node.GetType().FullName,
-                graph?.GraphAuthoringId ?? node.Owner?.GraphAuthoringId ?? string.Empty,
-                node.GUID,
-                string.Empty,
-                string.Empty,
-                string.Empty,
-                $"{route}/node:{node.GUID}",
-                contentHash: GraphAuthoringFingerprint.Compute(graph ?? node.Owner));
         }
 
         static ProgramCatalogField[] Fields(params ProgramCatalogField[] values) =>

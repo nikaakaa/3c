@@ -6,8 +6,6 @@ using ThirdPersonCharacter.Behavior;
 using ThirdPersonSimulation;
 using ThirdPersonGameplay.Contracts;
 using ThirdPersonGameplay.Tags;
-using UnityEditor;
-using UnityEngine;
 
 namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
 {
@@ -17,7 +15,6 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
         readonly CharacterSimulationProgramBuilder m_Builder;
         readonly CharacterSimulationCompileReport m_Report;
         readonly CharacterSimulationCatalogIndex m_Index;
-        readonly string m_RootGraphId;
 
         public CharacterSemanticActionCatalogEmitter(
             CharacterAuthoringCompilationModel model,
@@ -29,7 +26,6 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             m_Builder = builder ?? throw new ArgumentNullException(nameof(builder));
             m_Report = report ?? throw new ArgumentNullException(nameof(report));
             m_Index = index ?? throw new ArgumentNullException(nameof(index));
-            m_RootGraphId = model.Root.Graph.GraphAuthoringId;
         }
 
         public void Emit()
@@ -40,7 +36,8 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                     continue;
                 m_Index.Actions.Add(profile.ActionId);
                 m_Index.Behaviors.Add(profile.BehaviorId);
-                CharacterSimulationSourceLocation source = AssetSource(profile, $"action:{profile.ActionId}");
+                CharacterSimulationSourceLocation source =
+                    CharacterSemanticSourceFactory.Asset(m_Model, profile, $"action:{profile.ActionId}");
                 var fields = CharacterSemanticBehaviorCatalogFields.Emit(profile, m_Builder, source).ToList();
                 fields.Add(m_Builder.ConstantField(source, "TargetRequirement", profile.TargetRequirement));
                 AddQueryFields(fields, source, "Required", profile.RequiredTags);
@@ -71,7 +68,8 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 if (!profile || string.IsNullOrEmpty(profile.BehaviorId))
                     continue;
                 m_Index.Behaviors.Add(profile.BehaviorId);
-                CharacterSimulationSourceLocation source = AssetSource(profile, $"behavior:{profile.BehaviorId}");
+                CharacterSimulationSourceLocation source =
+                    CharacterSemanticSourceFactory.Asset(m_Model, profile, $"behavior:{profile.BehaviorId}");
                 m_Builder.DeclareCatalogEntry(
                     ProgramCatalogEntryKind.Behavior,
                     $"behavior:{profile.BehaviorId}",
@@ -101,19 +99,6 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
         {
             for (int i = 0; i < tags.Count; i++)
                 fields.Add(m_Builder.IdentityField($"{prefix}:{i:D4}", $"tag:{tags[i].Value}"));
-        }
-
-        CharacterSimulationSourceLocation AssetSource(UnityEngine.Object asset, string identity)
-        {
-            string guid = asset ? m_Model.GetAssetGuid(asset) : string.Empty;
-            return new CharacterSimulationSourceLocation(
-                asset ? asset.GetType().FullName : "MissingAsset",
-                m_RootGraphId,
-                string.Empty,
-                string.Empty,
-                string.Empty,
-                string.Empty,
-                $"asset:{guid}/{identity}");
         }
 
         static ProgramCatalogField[] Fields(IEnumerable<ProgramCatalogField> fields) =>

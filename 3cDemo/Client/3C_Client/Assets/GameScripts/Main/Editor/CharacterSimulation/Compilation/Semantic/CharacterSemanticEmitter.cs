@@ -165,7 +165,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                         ProgramAbortPolicy.None,
                         false,
                         OperationHandle.Invalid,
-                        NodeSource(graph, reference.Owner, route));
+                        CharacterSemanticSourceFactory.Node(graph, reference.Owner, route));
                     if (reference.Owner is StateMachineNode && reference.Child.Graph is StateMachineGraph stateMachine &&
                         stateMachine.AnyStateNode != null &&
                         TryGetCompiledOperation(reference.Route, stateMachine.AnyStateNode.GUID, out OperationHandle anyState))
@@ -182,7 +182,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                             ProgramAbortPolicy.None,
                             false,
                             OperationHandle.Invalid,
-                            NodeSource(graph, reference.Owner, route));
+                            CharacterSemanticSourceFactory.Node(graph, reference.Owner, route));
                     }
                 }
                 OperationHandle graphEntry = FindEntry(occurrence, operations);
@@ -203,7 +203,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             string childRoute,
             OperationHandle root)
         {
-            CharacterSimulationSourceLocation source = NodeSource(graph, node, childRoute);
+            CharacterSimulationSourceLocation source = CharacterSemanticSourceFactory.Node(graph, node, childRoute);
             if (!TryGetCompiledOperation(childRoute, stateBehavior.OnEnterGUID, out OperationHandle onEnter) ||
                 !TryGetCompiledOperation(childRoute, stateBehavior.OnExitGUID, out OperationHandle onExit))
             {
@@ -318,19 +318,6 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 return operation;
             m_Report.EmissionError("graph_entry_missing", occurrence.Route, $"Discovered entry Node '{occurrence.EntryNodeId}' was not emitted.");
             return OperationHandle.Invalid;
-        }
-
-        static CharacterSimulationSourceLocation NodeSource(BaseTree graph, BaseNode node, string route)
-        {
-            return new CharacterSimulationSourceLocation(
-                node.GetType().FullName,
-                graph?.GraphAuthoringId ?? node.Owner?.GraphAuthoringId ?? string.Empty,
-                node.GUID,
-                string.Empty,
-                string.Empty,
-                string.Empty,
-                $"{route}/node:{node.GUID}",
-                contentHash: GraphAuthoringFingerprint.Compute(graph ?? node.Owner));
         }
 
     }

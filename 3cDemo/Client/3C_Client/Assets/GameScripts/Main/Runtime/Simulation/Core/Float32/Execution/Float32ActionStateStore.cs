@@ -270,86 +270,61 @@ namespace ThirdPersonSimulation
         }
     }
 
-	internal sealed class Float32ActionStateStore : Float32OperationModule, IFloat32ActionContextReader, IFloat32SkillExecutionStateAccess
+	internal sealed class Float32ActionStateStore : Float32OperationModule, IFloat32ActionContextReader, IFloat32SkillExecutionStateAccess, IActionSkillExecutionStorage<CharacterStateValue>
 	{
 		readonly Float32StatePort m_State;
 		readonly Stack<Float32ActionInstanceReference> m_SkillExecutionStack = new Stack<Float32ActionInstanceReference>();
-		Float32SkillExecutionStateAggregate m_SkillExecutionStates;
-		Float32SkillExecutionStateFrame m_ActiveSkillExecution;
+		readonly ActionSkillExecutionManager<CharacterStateValue> m_SkillExecution;
 
         public Float32ActionStateStore(
             Float32ProgramAccess access,
             Float32StatePort state,
             Float32EvaluationFrame frame)
             : base(access)
-        {
-            m_State = state ?? throw new ArgumentNullException(nameof(state));
+		{
+			m_State = state ?? throw new ArgumentNullException(nameof(state));
+			m_SkillExecution = new ActionSkillExecutionManager<CharacterStateValue>(this);
 			(frame ?? throw new ArgumentNullException(nameof(frame)))
 				.BindSkillExecutionStateAccess(this);
 		}
 
 		public void BeginEvaluation()
 		{
-			if (m_ActiveSkillExecution != null || m_SkillExecutionStack.Count != 0)
-				throw new InvalidOperationException("Skill execution state retained transient execution state across evaluations.");
-			m_SkillExecutionStates = null;
+			if (m_SkillExecutionStack.Count != 0)
+				throw new InvalidOperationException("Skill execution stack retained transient state across evaluations.");
+			m_SkillExecution.BeginEvaluation();
 		}
 
 		public void EndEvaluation()
 		{
-			if (m_ActiveSkillExecution != null || m_SkillExecutionStack.Count != 0)
-				throw new InvalidOperationException("Skill execution state has an unclosed runtime scope.");
-			m_SkillExecutionStates = null;
+			if (m_SkillExecutionStack.Count != 0)
+				throw new InvalidOperationException("Skill execution stack has an unclosed runtime scope.");
+			m_SkillExecution.EndEvaluation();
 		}
 
 		public IDisposable EnterSkillExecution(Float32ActionInstanceState action)
 		{
 			if (!action.IsValid || !action.SkillId.IsValid || !action.SkillEntryOperation.IsValid)
 				throw new ArgumentException("Skill execution action identity is incomplete.", nameof(action));
-			if (m_ActiveSkillExecution != null)
-				throw new InvalidOperationException("Skill execution frames cannot be nested.");
-			EnsureSkillExecutionStates();
-			Float32SkillExecutionStateFrame frame = m_SkillExecutionStates.Find(action.InstanceId);
-			if (frame == null)
-			{
-				frame = new Float32SkillExecutionStateFrame(
-					action.SkillId,
-					action.SkillEntryOperation,
-					action.InstanceId,
-					action.PredictionKey,
-					action.SkillExecutionGeneration);
-				m_SkillExecutionStates.Add(frame);
-				WriteSkillExecutionStates();
-			}
-			else
-			{
-				if (frame.SkillId != action.SkillId ||
-					!frame.EntryOperation.Equals(action.SkillEntryOperation) ||
-					frame.PredictionKey != action.PredictionKey ||
-					frame.Generation != 0 && action.SkillExecutionGeneration != 0 &&
-					frame.Generation != action.SkillExecutionGeneration)
-				{
-					throw new InvalidOperationException($"Skill execution frame does not match Action instance '{action.InstanceId}'.");
-				}
-			}
-			m_ActiveSkillExecution = frame;
-			return new SkillExecutionFrameScope(this, frame);
+			return m_SkillExecution.Enter(new ActionSkillExecutionIdentity(
+				action.SkillId,
+				action.SkillEntryOperation,
+				action.InstanceId,
+				action.PredictionKey,
+				action.SkillExecutionGeneration));
 		}
 
 		public bool RemoveSkillExecution(ulong actionInstanceId)
 		{
-			if (m_ActiveSkillExecution != null)
-				throw new InvalidOperationException("Skill execution frame cannot be removed while active.");
-			EnsureSkillExecutionStates();
-			if (!m_SkillExecutionStates.Remove(actionInstanceId))
-				return false;
-			WriteSkillExecutionStates();
-			return true;
+			return m_SkillExecution.Remove(actionInstanceId);
 		}
 
 		public bool IsContextActive(string contextId) => FindActive(contextId, out _) >= 0;
 
 		public bool IsSkillActive(CharacterSkillId skillId) => FindActive(skillId, out _) >= 0;
+
+		public bool IsSkillExecutionActive(ulong actionInstanceId) =>
+			m_SkillExecution.IsActive(actionInstanceId);
 
 		public bool IsSkillCompleted(CharacterSkillId skillId) => CompletedSkillInstanceId(skillId) != 0;
 
@@ -405,12 +380,9 @@ namespace ThirdPersonSimulation
 				throw new InvalidOperationException($"Skill '{action.SkillId}' changed EntryOperation for Action instance '{action.InstanceId}'.");
 			if (action.SkillExecutionGeneration != 0 && action.SkillExecutionGeneration != generation)
 				throw new InvalidOperationException($"Skill '{action.SkillId}' changed execution generation for Action instance '{action.InstanceId}'.");
-			if (m_ActiveSkillExecution != null && m_ActiveSkillExecution.ActionInstanceId == action.InstanceId)
-				m_ActiveSkillExecution.BindGeneration(generation);
+			m_SkillExecution.BindGeneration(action.InstanceId, generation);
 			Float32ActionInstanceState next = action.WithSkillExecution(entryOperation, generation);
 			WriteState(next);
-			if (m_ActiveSkillExecution != null && m_ActiveSkillExecution.ActionInstanceId == action.InstanceId)
-				WriteSkillExecutionStates();
 			return next;
 		}
 
@@ -492,35 +464,17 @@ namespace ThirdPersonSimulation
 
 		bool IFloat32SkillExecutionStateAccess.TryGet(int slotIndex, out CharacterStateValue value)
 		{
-			if (m_ActiveSkillExecution == null || !m_Layout.IsSkillExecutionStateSlot(slotIndex))
-			{
-				value = default;
-				return false;
-			}
-			if (m_ActiveSkillExecution.TryGetValue(slotIndex, out value))
-				return true;
-			value = DefaultSkillExecutionState(slotIndex);
-			return true;
+			return m_SkillExecution.TryGet(slotIndex, out value);
 		}
 
 		bool IFloat32SkillExecutionStateAccess.TrySet(int slotIndex, CharacterStateValue value)
 		{
-			if (m_ActiveSkillExecution == null || !m_Layout.IsSkillExecutionStateSlot(slotIndex))
-				return false;
-			if (value.Kind != m_Program.StateSlots[slotIndex].ValueKind)
-				throw new InvalidOperationException($"Skill execution state slot '{slotIndex}' expects '{m_Program.StateSlots[slotIndex].ValueKind}', received '{value.Kind}'.");
-			m_ActiveSkillExecution.SetValue(slotIndex, value);
-			WriteSkillExecutionStates();
-			return true;
+			return m_SkillExecution.TrySet(slotIndex, value);
 		}
 
 		bool IFloat32SkillExecutionStateAccess.TryReset(int slotIndex)
 		{
-			if (m_ActiveSkillExecution == null || !m_Layout.IsSkillExecutionStateSlot(slotIndex))
-				return false;
-			m_ActiveSkillExecution.SetValue(slotIndex, DefaultSkillExecutionState(slotIndex));
-			WriteSkillExecutionStates();
-			return true;
+			return m_SkillExecution.TryReset(slotIndex);
 		}
 
         public Float32ActionInstanceState RequireActiveTransient(Float32ActionInstanceReference reference)
@@ -606,25 +560,15 @@ namespace ThirdPersonSimulation
 			return value;
 		}
 
-		void EnsureSkillExecutionStates()
-		{
-			if (m_SkillExecutionStates != null)
-				return;
-			m_SkillExecutionStates = m_State
-				.Get(m_Layout.SkillExecutionStateAddress.SlotIndex)
-				.SkillExecutionState
-				.Clone();
-			WriteSkillExecutionStates();
-		}
+		bool IActionSkillExecutionStorage<CharacterStateValue>.IsSkillStateSlot(int slotIndex) =>
+			m_Layout.IsSkillExecutionStateSlot(slotIndex);
 
-		void WriteSkillExecutionStates()
-		{
-			m_State.Set(
-				m_Layout.SkillExecutionStateAddress.SlotIndex,
-				CharacterStateValue.FromSkillExecutionState(m_SkillExecutionStates));
-		}
+		bool IActionSkillExecutionStorage<CharacterStateValue>.IsValueValid(
+			int slotIndex,
+			CharacterStateValue value) =>
+			value.Kind == m_Program.StateSlots[slotIndex].ValueKind;
 
-		CharacterStateValue DefaultSkillExecutionState(int slotIndex)
+		CharacterStateValue IActionSkillExecutionStorage<CharacterStateValue>.DefaultValue(int slotIndex)
 		{
 			ProgramStateSlot slot = m_Program.StateSlots[slotIndex];
 			return slot.DefaultConstantIndex >= 0
@@ -634,15 +578,14 @@ namespace ThirdPersonSimulation
 				: CharacterStateValue.Default(slot.ValueKind);
 		}
 
-		void ExitSkillExecution(Float32SkillExecutionStateFrame frame)
-		{
-			if (!ReferenceEquals(m_ActiveSkillExecution, frame))
-				throw new InvalidOperationException("Skill execution frame scope is unbalanced.");
-			if (frame.Generation == 0)
-				m_SkillExecutionStates.Remove(frame.ActionInstanceId);
-			WriteSkillExecutionStates();
-			m_ActiveSkillExecution = null;
-		}
+		ActionSkillExecutionAggregate<CharacterStateValue> IActionSkillExecutionStorage<CharacterStateValue>.ReadAggregate() =>
+			m_State.Get(m_Layout.SkillExecutionStateAddress.SlotIndex).SkillExecutionState;
+
+		void IActionSkillExecutionStorage<CharacterStateValue>.WriteAggregate(
+			ActionSkillExecutionAggregate<CharacterStateValue> aggregate) =>
+			m_State.Set(
+				m_Layout.SkillExecutionStateAddress.SlotIndex,
+				CharacterStateValue.FromSkillExecutionState(aggregate));
 
 		void MatchActive(
 			TypedStateAddress address,
@@ -702,27 +645,5 @@ namespace ThirdPersonSimulation
 			}
 		}
 
-		sealed class SkillExecutionFrameScope : IDisposable
-		{
-			readonly Float32ActionStateStore m_Owner;
-			readonly Float32SkillExecutionStateFrame m_Frame;
-			bool m_Disposed;
-
-			public SkillExecutionFrameScope(
-				Float32ActionStateStore owner,
-				Float32SkillExecutionStateFrame frame)
-			{
-				m_Owner = owner;
-				m_Frame = frame;
-			}
-
-			public void Dispose()
-			{
-				if (m_Disposed)
-					return;
-				m_Disposed = true;
-				m_Owner.ExitSkillExecution(m_Frame);
-			}
-		}
 	}
 }

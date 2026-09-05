@@ -462,7 +462,8 @@ namespace ThirdPersonSimulation.Fixed
                 m_Frame,
                 m_Frame.CreateStatePort("MotionModifier", services.MotionModifierPolicy),
                 workspace.MotionContributions,
-                workspace.MotionWarpSamples);
+                workspace.MotionWarpSamples,
+                m_ActionStore);
             var locomotion = new FixedLocomotionRuntime(access, m_Values, m_Motion, m_Frame);
             if (program.ControlModuleBinding.IsValid)
             {
@@ -620,17 +621,13 @@ namespace ThirdPersonSimulation.Fixed
                 return;
             }
             IReadOnlyList<CharacterSkillProgramBinding> skills = m_Frame.Program.SkillPrograms.Bindings;
-            bool preparedSkill = false;
             for (int i = 0; i < skills.Count; i++)
             {
                 if (m_ActionStore.FindActive(skills[i].SkillId, out FixedActionInstanceState action) < 0)
                     continue;
-                preparedSkill = true;
                 using (m_ActionStore.EnterSkillExecution(action))
                     m_Timeline.PrepareDecisionTimelines(m_Control.Cursor);
             }
-            if (!preparedSkill)
-                m_Timeline.PrepareDecisionTimelines(m_Control.Cursor);
         }
 
         [PerformanceProbe("simulation.operation.control-tick")]
@@ -665,34 +662,22 @@ namespace ThirdPersonSimulation.Fixed
             {
                 CharacterSkillProgramBinding skill = skills[i];
                 int actionSlot = m_ActionStore.FindCurrent(skill.SkillId, out FixedActionInstanceState action);
-                if (m_Control.IsStopping(skill.EntryOperation))
-                {
-                    OperationStopStatus stop = m_Control.ContinueStop(skill.EntryOperation);
-                    if (stop == OperationStopStatus.Failed)
-                        throw new InvalidOperationException($"Skill '{skill.SkillId}' EntryOperation stop failed.");
-                    if (stop == OperationStopStatus.Running)
-                        stoppingContexts.Add(skill.ActionContextId);
-                    else if (actionSlot >= 0 && !m_Control.IsActive(skill.EntryOperation))
-                        m_ActionStore.RemoveSkillExecution(action.InstanceId);
-                    continue;
-                }
                 if (actionSlot < 0)
-                {
-                    if (!m_Control.IsActive(skill.EntryOperation))
-                        continue;
-                    OperationStopStatus stop = m_Control.RequestStop(
-                        skill.EntryOperation,
-                        OperationStopContext.ActionContextEnded(skill.EntryOperation));
-                    if (stop == OperationStopStatus.Failed)
-                        throw new InvalidOperationException($"Skill '{skill.SkillId}' EntryOperation stop failed.");
-                    if (stop == OperationStopStatus.Running)
-                        stoppingContexts.Add(skill.ActionContextId);
                     continue;
-                }
                 bool removeFrame = false;
                 using (m_ActionStore.EnterSkillExecution(action))
                 {
-                    if (!action.IsActive)
+                    if (m_Control.IsStopping(skill.EntryOperation))
+                    {
+                        OperationStopStatus stop = m_Control.ContinueStop(skill.EntryOperation);
+                        if (stop == OperationStopStatus.Failed)
+                            throw new InvalidOperationException($"Skill '{skill.SkillId}' EntryOperation stop failed.");
+                        if (stop == OperationStopStatus.Running)
+                            stoppingContexts.Add(skill.ActionContextId);
+                        else if (!m_Control.IsActive(skill.EntryOperation))
+                            removeFrame = true;
+                    }
+                    else if (!action.IsActive)
                     {
                         if (m_Control.IsActive(skill.EntryOperation))
                         {
@@ -810,17 +795,6 @@ namespace ThirdPersonSimulation.Fixed
         [PerformanceProbe("simulation.operation.motion-resolve")]
         ResolvedGameplayMotion ResolveMotion()
         {
-            if (m_CharacterControl != null)
-            {
-                IReadOnlyList<CharacterSkillProgramBinding> skills = m_Frame.Program.SkillPrograms.Bindings;
-                for (int i = 0; i < skills.Count; i++)
-                {
-                    if (m_ActionStore.FindCurrent(skills[i].SkillId, out FixedActionInstanceState action) < 0)
-                        continue;
-                    using (m_ActionStore.EnterSkillExecution(action))
-                        return m_Motion.Resolve();
-                }
-            }
             return m_Motion.Resolve();
         }
 

@@ -191,13 +191,14 @@ namespace ThirdPersonSimulation
             Float32EvaluationFrame frame,
             Float32StatePort modifierState,
             List<SimulationMotionContribution> contributions,
-            List<MotionWarpSample<Float32Scalar, Float32ActionInstanceState>> warpSamples)
+            List<MotionWarpSample<Float32Scalar, Float32ActionInstanceState>> warpSamples,
+            Float32ActionStateStore actions)
             : base(access)
         {
             m_Frame = frame ?? throw new ArgumentNullException(nameof(frame));
             m_Contributions = contributions ?? throw new ArgumentNullException(nameof(contributions));
             m_WarpSamples = warpSamples ?? throw new ArgumentNullException(nameof(warpSamples));
-            m_MotionWarp = new Float32MotionWarpTarget(access, frame, modifierState);
+            m_MotionWarp = new Float32MotionWarpTarget(access, frame, modifierState, actions);
         }
 
         public void Submit(SimulationMotionContribution contribution)
@@ -438,18 +439,39 @@ namespace ThirdPersonSimulation
     {
         readonly Float32EvaluationFrame m_Frame;
         readonly Float32StatePort m_State;
+        readonly Float32ActionStateStore m_Actions;
 
         public Float32MotionWarpTarget(
             Float32ProgramAccess access,
             Float32EvaluationFrame frame,
-            Float32StatePort state)
+            Float32StatePort state,
+            Float32ActionStateStore actions)
             : base(access)
         {
             m_Frame = frame ?? throw new ArgumentNullException(nameof(frame));
             m_State = state ?? throw new ArgumentNullException(nameof(state));
+            m_Actions = actions ?? throw new ArgumentNullException(nameof(actions));
         }
 
         public void Reset(ProgramMotionModifierDescriptor descriptor)
+        {
+            if (HasSkillExecutionState(descriptor))
+            {
+                if (m_Actions.FindActive(descriptor.ActionContextIdentity, out Float32ActionInstanceState action) < 0)
+                    return;
+                if (m_Actions.IsSkillExecutionActive(action.InstanceId))
+                {
+                    ResetState(descriptor);
+                    return;
+                }
+                using (m_Actions.EnterSkillExecution(action))
+                    ResetState(descriptor);
+                return;
+            }
+            ResetState(descriptor);
+        }
+
+        void ResetState(ProgramMotionModifierDescriptor descriptor)
         {
             for (int i = 0; i < descriptor.StateSlotCount; i++)
                 m_State.Reset(descriptor.StateSlotStart + i);
@@ -465,6 +487,24 @@ namespace ThirdPersonSimulation
         }
 
         public void ApplyMotionWarp(
+            ProgramMotionModifierDescriptor descriptor,
+            MotionWarpSample<Float32Scalar, Float32ActionInstanceState> sample,
+            ref ResolvedMotionChannel channel)
+        {
+            IDisposable scope = sample.Action.SkillId.IsValid
+                ? m_Actions.EnterSkillExecution(sample.Action)
+                : null;
+            try
+            {
+                ApplyMotionWarpCore(descriptor, sample, ref channel);
+            }
+            finally
+            {
+                scope?.Dispose();
+            }
+        }
+
+        void ApplyMotionWarpCore(
             ProgramMotionModifierDescriptor descriptor,
             MotionWarpSample<Float32Scalar, Float32ActionInstanceState> sample,
             ref ResolvedMotionChannel channel)
@@ -650,6 +690,14 @@ namespace ThirdPersonSimulation
                 limitResult == ProgramMotionWarpLimitResult.AppliedClamped ? MotionModifierDiagnosticCode.AppliedClamped : MotionModifierDiagnosticCode.Applied,
                 SimulationTraceSeverity.Information,
                 $"source={descriptor.SourceMotionOperation};action={action.InstanceId};target={action.TargetSnapshot.TargetId};normalized={currentProgress};translation={descriptor.TranslationMode};offsetSpace={descriptor.TargetOffsetSpace};rotation={descriptor.RotationMode};rotationMethod={descriptor.RotationMethod};limit={limitResult};sourceWindowStartPosition={sourceWindowStartPosition};sourceWindowStartYaw={sourceWindowStartYaw};sourceCurrentRelative={currentSourceRelative};sourceCurrentYawRelative={currentSourceYawRelative};previousWarpedPosition={previousWarpedPosition};previousWarpedYaw={previousWarpedYaw};warpedCumulativePosition={currentWarpedPosition};warpedCumulativeYaw={currentWarpedYaw};warpedDelta={warpedSourceDelta};rawSourceDelta={rawSourceDelta};correction={modifierPositionCorrection};warpedYawDelta={warpedSourceYawDelta};rawSourceYawDelta={rawSourceYawDelta};yawCorrection={modifierYawCorrection};positionProgress={positionProgress};yawProgress={yawProgress};finalActionDisplacement={channel.Displacement};finalActionYaw={channel.YawDegrees}");
+        }
+
+        bool HasSkillExecutionState(ProgramMotionModifierDescriptor descriptor)
+        {
+            for (int i = 0; i < descriptor.StateSlotCount; i++)
+                if (m_Layout.IsSkillExecutionStateSlot(descriptor.StateSlotStart + i))
+                    return true;
+            return false;
         }
 
         public void Fail(string code, ProgramMotionModifierDescriptor descriptor, string detail)

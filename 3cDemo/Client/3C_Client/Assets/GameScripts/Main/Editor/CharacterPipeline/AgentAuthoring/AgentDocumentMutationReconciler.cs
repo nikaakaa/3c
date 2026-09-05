@@ -244,7 +244,10 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                         Add(mutations, path, AgentMutationKind.EnsureState, operation =>
                         {
                             operation.id = LocalIdentity(state.stateAuthoringId);
-                            SetStateMachine(operation, machineGraph);
+                            SetStateMachine(
+                                operation,
+                                machineGraph,
+                                machine.graphAuthoringId);
                             operation.state = state.state;
                             operation.position = FindNodePosition(targetGraphs, state.stateAuthoringId);
                         });
@@ -257,7 +260,10 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                     {
                         Add(mutations, path, AgentMutationKind.EnsureState, operation =>
                         {
-                            SetStateMachine(operation, machineGraph);
+                            SetStateMachine(
+                                operation,
+                                machineGraph,
+                                machine.graphAuthoringId);
                             operation.stateAuthoringId = state.stateAuthoringId;
                             operation.state = state.state;
                             operation.position = FindNodePosition(targetGraphs, state.stateAuthoringId);
@@ -353,7 +359,10 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                         continue;
                     Add(mutations, $"{machinePath}.states[{Escape(state.stateAuthoringId)}]", AgentMutationKind.DeleteState, operation =>
                     {
-                        SetStateMachine(operation, machineGraph);
+                        SetStateMachine(
+                            operation,
+                            machineGraph,
+                            machine.graphAuthoringId);
                         operation.stateAuthoringId = state.stateAuthoringId;
                     });
                 }
@@ -385,7 +394,10 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                             AgentMutationKind.RewireTransition,
                             operation =>
                             {
-                                SetStateMachine(operation, machineGraph);
+                                SetStateMachine(
+                                    operation,
+                                    machineGraph,
+                                    machine.graphAuthoringId);
                                 SetElement(operation, transition.fromElementAuthoringId, true);
                                 SetElement(operation, transition.toElementAuthoringId, false);
                                 operation.targetElementAuthoringId =
@@ -424,7 +436,10 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                     }
                     Add(mutations, path, transition.conditionTerms != null && transition.conditionTerms.Count > 0 ? AgentMutationKind.EnsureConditionRule : AgentMutationKind.EnsureTransition, operation =>
                     {
-                        SetStateMachine(operation, machineGraph);
+                        SetStateMachine(
+                            operation,
+                            machineGraph,
+                            machine.graphAuthoringId);
                         SetElement(operation, transition.fromElementAuthoringId, true);
                         SetElement(operation, transition.toElementAuthoringId, false);
                         operation.targetElementAuthoringId = transition.edgeAuthoringId;
@@ -441,7 +456,10 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                         continue;
                     Add(mutations, $"{machinePath}.transitions[{Escape(transition.edgeAuthoringId)}]", AgentMutationKind.DeleteTransition, operation =>
                     {
-                        SetStateMachine(operation, machineGraph);
+                        SetStateMachine(
+                            operation,
+                            machineGraph,
+                            machine.graphAuthoringId);
                         operation.targetElementAuthoringId = transition.edgeAuthoringId;
                     });
                 }
@@ -2713,6 +2731,19 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                 return;
             }
             SetStateMachine(operation, graph?.graphAuthoringId);
+        }
+
+        static void SetStateMachine(
+            AgentMutationDraft operation,
+            AgentSnapshotGraph graph,
+            string fallbackIdentity)
+        {
+            if (graph != null)
+            {
+                SetStateMachine(operation, graph);
+                return;
+            }
+            SetStateMachine(operation, fallbackIdentity);
         }
 
         static void SetElement(AgentMutationDraft operation, string identity, bool source)

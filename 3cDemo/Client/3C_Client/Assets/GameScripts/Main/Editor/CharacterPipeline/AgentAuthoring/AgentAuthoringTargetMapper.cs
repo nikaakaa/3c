@@ -169,14 +169,42 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
             if (!valid)
                 return false;
 
-            target.editable.stateMachines = controller.stateMachines ?? new List<AgentSnapshotStateMachineSummary>();
-            target.editable.timelineTreeClips = controller.timelineTreeClips ?? new List<AgentSnapshotTimelineTreeClip>();
-            target.editable.control = AgentControlDocumentMapper.ReadController(controller, report);
-            target.editable.blackboardSchemaRevision = blackboard.schemaRevision;
-            target.editable.blackboardDeclarations = blackboard.declarations ?? new List<AgentSnapshotBlackboardDeclaration>();
-            target.editable.actionRequests = actions.requests ?? new List<AgentSnapshotActionRequest>();
-            target.editable.actionProfiles = actions.profiles ?? new List<AgentSnapshotActionProfile>();
-            valid &= AgentSkillDocumentMapper.TryRead(files, target.editable, report);
+            if (string.Equals(
+                    manifest.domain,
+                    AgentAuthoringSchema.CharacterControllerDomain,
+                    StringComparison.Ordinal))
+            {
+                target.editable.stateMachines = controller.stateMachines ?? new List<AgentSnapshotStateMachineSummary>();
+                target.editable.timelineTreeClips = controller.timelineTreeClips ?? new List<AgentSnapshotTimelineTreeClip>();
+                target.editable.control = AgentControlDocumentMapper.ReadController(controller, report);
+                target.editable.blackboardSchemaRevision = blackboard.schemaRevision;
+                target.editable.blackboardDeclarations = blackboard.declarations ?? new List<AgentSnapshotBlackboardDeclaration>();
+                target.editable.actionRequests = actions.requests ?? new List<AgentSnapshotActionRequest>();
+                target.editable.actionProfiles = actions.profiles ?? new List<AgentSnapshotActionProfile>();
+                valid &= AgentSkillDocumentMapper.TryRead(files, target.editable, report);
+            }
+            else
+            {
+                target.editable.stateMachines = new List<AgentSnapshotStateMachineSummary>();
+                target.editable.timelineTreeClips = new List<AgentSnapshotTimelineTreeClip>();
+                target.editable.control = new AgentDocumentControlConfiguration();
+                target.editable.blackboardSchemaRevision = 0;
+                target.editable.blackboardDeclarations = new List<AgentSnapshotBlackboardDeclaration>();
+                target.editable.actionRequests = new List<AgentSnapshotActionRequest>();
+                target.editable.actionProfiles = new List<AgentSnapshotActionProfile>();
+                if (files.Keys.Any(path =>
+                            string.Equals(path, "editable/controller.json", StringComparison.Ordinal) ||
+                            string.Equals(path, "editable/blackboard.json", StringComparison.Ordinal) ||
+                            string.Equals(path, "editable/actions.json", StringComparison.Ordinal) ||
+                            AgentSkillDocumentMapper.IsDefinitionPath(path)))
+                {
+                    report.Error(
+                        "editable",
+                        "document_domain_file_invalid",
+                        "AIController文档包不能包含CharacterController的controller、blackboard、actions或skills分片。");
+                    valid = false;
+                }
+            }
             if (string.Equals(
                     manifest.domain,
                     AgentAuthoringSchema.CharacterControllerDomain,

@@ -60,6 +60,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
         SetActionProfileCancelQuery,
         SetActionProfileTargetRequirement,
         SetActionRequestTimingClass,
+        ConfigureControlConfiguration,
         SetSkillDefinition,
         DeleteSkillDefinition,
         EnsureAIControllerDefinition,
@@ -1345,7 +1346,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
             string id,
             string path,
             AgentTimelineTargetReference target,
-            AgentPackageAssetReferenceV4 clip,
+            AgentPackageObjectReference clip,
             int startFrame,
             int endFrame,
             int clipInFrame,
@@ -1359,7 +1360,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
             ExtraPolationMode = extraPolationMode;
         }
 
-        public AgentPackageAssetReferenceV4 Clip { get; }
+        public AgentPackageObjectReference Clip { get; }
         public int StartFrame { get; }
         public int EndFrame { get; }
         public int ClipInFrame { get; }
@@ -1508,6 +1509,27 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
         }
 
         public AgentSnapshotSkillDefinition Definition { get; }
+    }
+
+    public sealed class AgentConfigureControlConfigurationMutation : AgentMutation
+    {
+        public AgentConfigureControlConfigurationMutation(
+            string id,
+            string path,
+            AgentDocumentControlConfiguration configuration)
+            : base(
+                id,
+                AgentMutationKind.ConfigureControlConfiguration,
+                "configure_control_configuration",
+                AgentMutationOutputKind.None,
+                path,
+                "CharacterControlConfiguration",
+                Vector2.zero)
+        {
+            Configuration = configuration ?? throw new ArgumentNullException(nameof(configuration));
+        }
+
+        public AgentDocumentControlConfiguration Configuration { get; }
     }
 
     public sealed class AgentDeleteSkillDefinitionMutation : AgentMutation

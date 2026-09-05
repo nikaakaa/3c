@@ -209,24 +209,24 @@
 
 实施归属：任务 10.1–10.6 由规划窗口 `01a07206-ec83-74e3-866a-7ccb6a158217` 与唯一同目录实现窗口 `01a0720a-6105-72b1-bf2f-bbfeb6654773` 独立负责；原 BTSMTL 实现不再修改本节，最终集成与全链 Replay 仍由原 BTSMTL 实施负责。
 
-- [ ] 10.1 定义v5控制配置与skill definition分片、精确允许文件族及local身份规则，交付schema与只读context／生成数据边界文档。
+- [x] 10.1 定义v5控制配置与skill definition分片、精确允许文件族及local身份规则，交付schema与只读context／生成数据边界文档。
 
-  当前状态：**尚未完成**。proposal/design/delta已有v5方向，但正式schema/模型仍是v4；本项完整字段与允许文件族的实现合同尚未落地。
-- [ ] 10.2 更新Exporter与strict Codec／Mapper，按控制配置、技能、Graph、Timeline及Presentation内容分责；AgentAuthoringPackageMapper及Package Codec只保留整包协调和跨分片引用。交付模块输入输出、中央字段分支删除清单、canonical往返、整包hash和未知／旧字段拒绝的现有校验结果，保持Presentation原owner。
+  当前状态：**已完成实现，待13.2整链复核**。`AgentDocumentControlConfiguration`、控制参数、Skill definition、Graph/Timeline完整分片和local canonical目录已落地；`SKILL.md`与current contract已同步v5，代码实现明确只读context与generated边界。
+- [x] 10.2 更新Exporter与strict Codec／Mapper，按控制配置、技能、Graph、Timeline及Presentation内容分责；AgentAuthoringPackageMapper及Package Codec只保留整包协调和跨分片引用。交付模块输入输出、中央字段分支删除清单、canonical往返、整包hash和未知／旧字段拒绝的现有校验结果，保持Presentation原owner。
 
-  当前状态：**尚未完成**。Exporter、Codec、Mapper仍以现有v4中央实现为主，尚未迁入完整v5内容模块及完成canonical往返。
+  当前状态：**已完成实现，待13.2整链复核**。Exporter按技能、控制配置和技能可达Graph/Timeline选集；strict codec拒绝未知字段、注释、非有限数值、旧schema与未登记文件；package hash固定由规范路径和内容hash计算。Presentation仍由原Presentation owner负责。
 - [ ] 10.3 将AgentDocumentReconciler／Planner中的领域diff、依赖计划和Mutation lowering迁入对应内容模块，中央服务只协调完整有序计划与跨分片引用；新技能、子图、Timeline和控制binding仍共用同一事务。交付模块调用链、原中央业务分支删除清单及dry-run依赖／删除顺序报告，不新增分片apply入口。
 
-  当前状态：**尚未完成**。Reconciler/Planner仍集中领域diff与Mutation lowering；尚未交付v5完整有序计划和中央分支删除。
+  当前状态：**部分完成**。Skill diff/export与Control configuration diff/handler已迁出并注册到同一MutationHandlers；Graph/Timeline既有lowering仍由中央Reconciler协调，新增通用Graph创建尚未形成正式Mutation闭包，故不宣称本项闭合。
 - [ ] 10.4 接入所有新owner的同一Undo、保存、失败恢复和reverse export，交付任一分片失败不发布半包的既有事务结果。
 
-  当前状态：**尚未完成**。既有整包事务保留；新控制/技能owner的Undo、保存、rollback及reverse export尚未接通到v5完整闭包。
-- [ ] 10.5 删除v4及更早reader／writer／manifest分支和角色RootTree正文入口，沿用两个domain与五生命周期工具；交付旧包明确拒绝、重新checkout生成v5的结果。
+  当前状态：**部分完成，待整链验证**。控制与Skill owner已进入同一Store staging、Undo、rollback与reverse export路径；真实apply失败回滚仍需在Unity编译恢复后复验，不能用源码静态检查替代。
+- [x] 10.5 删除v4及更早reader／writer／manifest分支和角色RootTree正文入口，沿用两个domain与五生命周期工具；交付旧包明确拒绝、重新checkout生成v5的结果。
 
-  当前状态：**尚未完成**。V4 Models/Exporter/Codec/Transaction文件仍在，旧reader/writer与角色RootTree正文入口尚未完成删除。
-- [ ] 10.6 更新btsmtl-agent-authoring技能、MCP合同描述和实际代码地图，交付路径／字段可解析且与唯一v5实现一致的检查结果，不新增局部写工具。
+  当前状态：**已完成实现，待13.2整链复核**。AgentAuthoring下V4文件、V4类型名与正文入口已删除；strict reader对旧schema明确报unsupported，Character checkout只保留技能可达Graph/Timeline正文，RootTree路径仅在context保存。
+- [x] 10.6 更新btsmtl-agent-authoring技能、MCP合同描述和实际代码地图，交付路径／字段可解析且与唯一v5实现一致的检查结果，不新增局部写工具。
 
-  当前状态：**尚未完成**。btsmtl-agent-authoring技能和MCP作者合同尚未随唯一v5实现更新；不把规划中的v5描述当成当前工具已支持。
+  当前状态：**已完成实现，待最终对账**。技能说明、current contract、MCP五个独立工具描述和代码地图已同步；`status`只作为异步轮询动作，不是第六个工具，也未增加局部写入口。
 
 ## 11. 技能工作区与诊断
 
@@ -268,13 +268,13 @@
 
 - [ ] 13.1 运行现有portable／Editor／产品构建和依赖检查，交付实际构建结果；dotnet／msbuild使用禁用build server参数并立即shutdown，本机Unity CLI按明确项目路径退出且保留主验收Editor，CI禁令不变。
 
-  当前状态：**部分完成**。Runtime构建已有通过报告；当前实施按要求构建`ThirdPersonSimulation.Core.csproj`和`ThirdPersonClient.Editor.csproj`，结果均为0错误，且执行后立即关闭MSBuild服务器。主审已确认新增语义目录/节点登记、目录绑定和运行时职责模块进入实际工程；最新一次Editor工程构建产生0错误，警告来自既有依赖与既有字段。正式Rebuild在本轮新文件导入期间尚未形成新的两Target产物receipt；产品构建和完整运行receipt尚未全部交付，不能以源码构建替代正式资产与产品验证。
+  当前状态：**部分完成**。按要求执行的`ThirdPersonClient.Editor.csproj --disable-build-servers /nr:false /p:UseSharedCompilation=false`最近一次完整构建受共享工作区`OperationExecutionTopology.cs(665)`错误阻断；Agent范围使用`--no-dependencies`定向构建为0错误并立即执行`dotnet build-server shutdown`。此前完整Editor构建曾为0错误，新增源码静态检查已通过；正式Rebuild、产品构建和Unity编译恢复后的完整receipt仍待交付。
 - [ ] 13.2 使用已有Validator、Document生命周期与Replay／Proof覆盖完整新链，交付同版本重复性及跨实现输入／Body／动作阶段／输出比较；不编写新测试、不忽略缺帧或运行错误、不把ProgramHash变化当作行为通过或失败。
 
-  当前状态：**待验证**。当前没有经过本规划复核的完整新候选Corin Replay/比较结果；旧baseline Proof、编译成功或菜单完成日志均不能替代它。
+  当前状态：**部分完成，待整链复核**。明确实例`e852139597e42532`上的v5 Character checkout成功（root `c7a7c1e3f7e64d81b5a04a90cbeb8d4e`，`editableHash=07390110c2c6173f43f0f92f208cc558e428a84069c44a0ea434900ef0917930`，`contextHash=05a7444d544becb03c6e3431ef214d277b8d49060c8c24336f14e5e7349e2994`，`documentHash=b04cd5547d92a9b0709fc343a89fe03f2fe8f785463813416868f62c385e2f51`）与formal validate成功；dry-run尚受Unity实例未加载最新Reconciler及外部`generated-diagnostic-sampling`编译错误影响，Replay/Proof未开始。
 - [ ] 13.3 安装本change的delta并同步当前项目口径、Purpose及关联接口说明，交付现行规范与预览／其它change不存在相反共享要求的对账；保留独立预览和受保护任务范围。
 
   当前状态：**尚未完成**。尚未安装本change全部delta和更新最终项目口径；AI/Timeline/预览/Pose等并行规范仍需按实际采用版本完成组合对账。
 - [ ] 13.4 执行严格OpenSpec校验与限定改动diff检查，按完整迁移单元形成中文小步提交；分别交付设计12的结构迁移证据和构建／Replay行为证据，附文件跳转、删除清单及剩余明确错误。仍有重复业务流程或未迁出的中央职责时保持对应任务未完成，不以编译通过、类行数或文件数宣称整个重构完成。
 
-  当前状态：**部分完成**。已有中文小步提交、限定diff和逐步静态审查；本次补齐逐项进度。最终结构/删除清单与全部行为证据尚未交付，保持整项未完成。
+  当前状态：**部分完成**。V4路径零引用、v5工具数量、strict文件族和定向构建结果已完成静态收口；源码改动尚未按本实现窗口形成最终中文小步提交，且共享工作区仍有外部编译错误与dry-run复验缺口，保持整项未完成。

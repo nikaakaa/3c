@@ -77,6 +77,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
             Register(new AgentSkillDefinitionMutationHandler(),
                 AgentMutationKind.SetSkillDefinition,
                 AgentMutationKind.DeleteSkillDefinition);
+            Register(new AgentControlConfigurationMutationHandler(),
+                AgentMutationKind.ConfigureControlConfiguration);
             Register(new AgentAIControllerMutationHandler(),
                 AgentMutationKind.EnsureAIControllerDefinition,
                 AgentMutationKind.EnsureAIControllerTree,

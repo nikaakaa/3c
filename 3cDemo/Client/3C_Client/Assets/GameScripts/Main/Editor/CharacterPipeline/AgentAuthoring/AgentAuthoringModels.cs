@@ -68,6 +68,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
         public string definitionAssetPath;
         public string rootTreeAssetPath;
         public string rootGraphAuthoringId;
+        public string controlModuleId;
+        public int controlSemanticVersion;
+        public List<AgentSnapshotControlParameter> controlParameters = new List<AgentSnapshotControlParameter>();
         public int blackboardSchemaRevision;
         public string programId;
         public string sourceRevision;
@@ -399,7 +402,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
         public int easeOutFrame;
         public int clipInFrame;
         public string extraPolationMode;
-        public AgentPackageAssetReferenceV4 animationClip;
+        public AgentPackageObjectReference animationClip;
         public string curveId;
         public int curveEndFrame;
         public string motionSpace;
@@ -546,6 +549,17 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
         public string scopeId;
         public string sharedAssetPath;
         public bool required;
+        public List<AgentSnapshotGraphParameterBinding> inputBindings = new List<AgentSnapshotGraphParameterBinding>();
+        public List<AgentSnapshotGraphParameterBinding> outputBindings = new List<AgentSnapshotGraphParameterBinding>();
+    }
+
+    [Serializable]
+    public sealed class AgentSnapshotGraphParameterBinding
+    {
+        public string parameterName;
+        public string declarationId;
+        public string portId;
+        public string valueType;
     }
 
     [Serializable]
@@ -637,6 +651,15 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
         public bool consumeSourceInputRequest = true;
         public string targetInputValueId;
         public string targetKey;
+        public List<AgentSnapshotSkillSubgraphDependency> subgraphDependencies = new List<AgentSnapshotSkillSubgraphDependency>();
+        public List<string> allowedFollowUpSkillIds = new List<string>();
+    }
+
+    [Serializable]
+    public sealed class AgentSnapshotSkillSubgraphDependency
+    {
+        public string subgraphIdentity;
+        public string callSiteIdentity;
     }
 
     [Serializable]
@@ -852,6 +875,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
         public string entryGraphAuthoringId;
         public string actionProfileAssetPath;
         public string actionProfileAssetGuid;
+        public string controlModuleId;
+        public int controlSemanticVersion;
+        public List<AgentSnapshotControlParameter> controlParameters = new List<AgentSnapshotControlParameter>();
         public string targetRequirement;
         public string actionContext;
         public string actionContextAssetPath;
@@ -884,7 +910,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
         public int clipInFrame;
         public string extraPolationMode;
         public string animationChannelId;
-        public AgentPackageAssetReferenceV4 animationClip;
+        public AgentPackageObjectReference animationClip;
         public int frameOffset;
         public int selfEaseInFrame;
         public int selfEaseOutFrame;
@@ -923,6 +949,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
         public bool consumeSourceInputRequest = true;
         public string targetInputValueId;
         public string targetKey;
+        public List<AgentSnapshotSkillSubgraphDependency> subgraphDependencies = new List<AgentSnapshotSkillSubgraphDependency>();
+        public List<string> allowedFollowUpSkillIds = new List<string>();
         public string targetSnapshotBlackboardKey;
         public string targetSnapshotBlackboardDeclarationId;
         public string targetSnapshotBlackboardDeclarationPlannedIdentity;

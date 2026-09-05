@@ -105,6 +105,12 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                     "document.editable.blackboardSchemaRevision",
                     "blackboard_schema_revision_outdated",
                     $"Blackboard schema revision必须是{PipelineBlackboardAuthoringSchema.CurrentRevision}；请重新checkout Document后再apply。");
+            if (string.Equals(
+                    target.domain,
+                    AgentAuthoringSchema.CharacterControllerDomain,
+                    StringComparison.Ordinal) &&
+                target.editable != null)
+                AgentControlDocumentMapper.Validate(target.editable.control, report);
             return report;
         }
 
@@ -124,16 +130,62 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                 report,
                 normalizeBlackboard);
             BuildBlackboardSchemaRevisionMutation(current, target, mutations, normalizeBlackboard);
-            BuildStateMachineMutations(current.stateMachines, target.stateMachines, target.graphs, mutations, report);
+            BuildStateMachineMutations(
+                current.rootGraphAuthoringId,
+                current.stateMachines,
+                target.stateMachines,
+                current.graphs,
+                target.graphs,
+                mutations,
+                report);
             BuildCharacterGraphMutations(current.graphs, target.graphs, target.stateMachines, mutations, report);
             BuildTimelineMutations(current, target, mutations, report);
             BuildActionMutations(current, target, mutations, report);
-            BuildSkillDefinitionMutations(current, target, mutations, report);
+            AgentSkillDocumentMutationPlanner.Build(
+                current.skills,
+                target.skills,
+                mutations,
+                report);
+            BuildControlConfigurationMutations(current, target, mutations, report);
+        }
+
+        static void BuildControlConfigurationMutations(
+            AgentGraphSnapshot current,
+            AgentDocumentEditable target,
+            AgentMutationDraftSet mutations,
+            AgentCompileReport report)
+        {
+            var currentControl = new AgentDocumentControlConfiguration
+            {
+                moduleId = current?.controlModuleId,
+                semanticVersion = current?.controlSemanticVersion ?? 0,
+                parameters = current?.controlParameters ?? new List<AgentSnapshotControlParameter>()
+            };
+            if (AgentControlDocumentMapper.SemanticEquals(currentControl, target?.control))
+                return;
+            if (target?.control == null)
+            {
+                report.Error(
+                    "document.editable.controller.control",
+                    "control_configuration_missing",
+                    "控制配置缺失，不能创建Control Definition Mutation。");
+                return;
+            }
+            Add(mutations, "document.editable.controller.control", AgentMutationKind.ConfigureControlConfiguration, operation =>
+            {
+                operation.controlModuleId = target.control.moduleId;
+                operation.controlSemanticVersion = target.control.semanticVersion;
+                operation.controlParameters = target.control.parameters
+                    ?.Select(value => AgentAuthoringDocumentCodec.Clone(value))
+                    .ToList() ?? new List<AgentSnapshotControlParameter>();
+            });
         }
 
         static void BuildStateMachineMutations(
+            string rootGraphAuthoringId,
             IReadOnlyList<AgentSnapshotStateMachineSummary> current,
             IReadOnlyList<AgentSnapshotStateMachineSummary> target,
+            IReadOnlyList<AgentSnapshotGraph> currentGraphs,
             IReadOnlyList<AgentSnapshotGraph> targetGraphs,
             AgentMutationDraftSet mutations,
             AgentCompileReport report)
@@ -395,7 +447,14 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                 }
             }
             foreach (string removedMachine in currentMachines.Keys.Except(targetMachines.Keys, StringComparer.Ordinal))
+            {
+                if (AgentSkillDocumentMapper.IsRootCompositionStateMachine(
+                        currentMachines[removedMachine],
+                        rootGraphAuthoringId,
+                        currentGraphs))
+                    continue;
                 report.Error($"document.editable.stateMachines[{Escape(removedMachine)}]", "state_machine_delete_unsupported", "当前正式authoring API不支持删除整个StateMachine；请删除其owner节点。");
+            }
         }
 
         static void BuildCharacterBlackboardMutations(
@@ -538,70 +597,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
             }
             foreach (string removed in oldProfiles.Keys.Except(newProfiles.Keys, StringComparer.Ordinal))
                 report.Error($"document.editable.actionProfiles[{Escape(removed)}]", "action_profile_delete_unsupported", "ActionProfile资产不可由Document删除。");
-        }
-
-        static void BuildSkillDefinitionMutations(
-            AgentGraphSnapshot current,
-            AgentDocumentEditable target,
-            AgentMutationDraftSet mutations,
-            AgentCompileReport report)
-        {
-            var oldSkills = Index(
-                current.skills,
-                value => value.skillId,
-                "document.editable.skills",
-                report);
-            var newSkills = Index(
-                target.skills,
-                value => value.skillId,
-                "document.editable.skills",
-                report);
-            foreach (AgentSnapshotSkillDefinition skill in target.skills ?? new List<AgentSnapshotSkillDefinition>())
-            {
-                if (skill == null)
-                    continue;
-                if (oldSkills.TryGetValue(skill.skillId, out AgentSnapshotSkillDefinition oldSkill) &&
-                    SameSkill(oldSkill, skill))
-                    continue;
-                string path = $"document.editable.skills[{Escape(skill.skillId)}]";
-                Add(mutations, path, AgentMutationKind.SetSkillDefinition, operation =>
-                {
-                    operation.skillId = skill.skillId;
-                    operation.entryGraphAuthoringId = skill.entryGraphAuthoringId;
-                    operation.actionProfile = skill.actionProfileId;
-                    operation.actionProfileAssetPath = skill.actionProfileAssetPath;
-                    operation.actionProfileAssetGuid = skill.actionProfileAssetGuid;
-                    operation.actionContext = skill.actionContext;
-                    operation.actionContextAssetPath = skill.actionContextAssetPath;
-                    operation.actionContextAssetGuid = skill.actionContextAssetGuid;
-                    operation.sourceInputRequestId = skill.sourceInputRequestId;
-                    operation.consumeSourceInputRequest = skill.consumeSourceInputRequest;
-                    operation.targetInputValueId = skill.targetInputValueId;
-                    operation.targetKey = skill.targetKey;
-                });
-            }
-            foreach (string removed in oldSkills.Keys.Except(newSkills.Keys, StringComparer.Ordinal))
-            {
-                string path = $"document.editable.skills[{Escape(removed)}]";
-                Add(mutations, path, AgentMutationKind.DeleteSkillDefinition, operation => operation.skillId = removed);
-            }
-        }
-
-        static bool SameSkill(
-            AgentSnapshotSkillDefinition left,
-            AgentSnapshotSkillDefinition right)
-        {
-            return string.Equals(left.entryGraphAuthoringId, right.entryGraphAuthoringId, StringComparison.Ordinal) &&
-                   string.Equals(left.actionProfileId, right.actionProfileId, StringComparison.Ordinal) &&
-                   string.Equals(left.actionProfileAssetPath, right.actionProfileAssetPath, StringComparison.Ordinal) &&
-                   string.Equals(left.actionProfileAssetGuid, right.actionProfileAssetGuid, StringComparison.Ordinal) &&
-                   string.Equals(left.actionContext, right.actionContext, StringComparison.Ordinal) &&
-                   string.Equals(left.actionContextAssetPath, right.actionContextAssetPath, StringComparison.Ordinal) &&
-                   string.Equals(left.actionContextAssetGuid, right.actionContextAssetGuid, StringComparison.Ordinal) &&
-                   string.Equals(left.sourceInputRequestId, right.sourceInputRequestId, StringComparison.Ordinal) &&
-                   left.consumeSourceInputRequest == right.consumeSourceInputRequest &&
-                   string.Equals(left.targetInputValueId, right.targetInputValueId, StringComparison.Ordinal) &&
-                   string.Equals(left.targetKey, right.targetKey, StringComparison.Ordinal);
         }
 
         static void BuildAIMutations(
@@ -892,6 +887,20 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
         {
             var oldGraphs = Index(current, value => value.graphAuthoringId, "document.editable.graphs", report);
             var targetGraphs = Index(target, value => value.graphAuthoringId, "document.editable.graphs", report);
+            var targetOwnerIds = new HashSet<string>(
+                (target ?? Array.Empty<AgentSnapshotGraph>())
+                    .SelectMany(value => value.nodes ?? new List<AgentSnapshotNode>())
+                    .Where(value => value != null && !string.IsNullOrEmpty(value.elementAuthoringId))
+                    .Select(value => value.elementAuthoringId),
+                StringComparer.Ordinal);
+            foreach (AgentSnapshotStateMachineSummary machine in targetStateMachines ?? Array.Empty<AgentSnapshotStateMachineSummary>())
+            {
+                foreach (AgentSnapshotStateSummary state in machine?.states ?? new List<AgentSnapshotStateSummary>())
+                {
+                    if (!string.IsNullOrEmpty(state?.stateAuthoringId))
+                        targetOwnerIds.Add(state.stateAuthoringId);
+                }
+            }
             var specializedNodeIds = new HashSet<string>(
                 (targetStateMachines ?? Array.Empty<AgentSnapshotStateMachineSummary>())
                     .SelectMany(machine => machine.states ?? new List<AgentSnapshotStateSummary>())
@@ -947,10 +956,10 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                 if (targetGraphs.ContainsKey(graph.graphAuthoringId) ||
                     string.Equals(graph.kind, AgentGraphKind.ConditionRuleGraph.ToString(), StringComparison.Ordinal))
                     continue;
+                if (string.IsNullOrEmpty(graph.ownerElementAuthoringId))
+                    continue;
                 if (!string.IsNullOrEmpty(graph.ownerElementAuthoringId) &&
-                    !(target ?? Array.Empty<AgentSnapshotGraph>())
-                        .SelectMany(value => value.nodes ?? new List<AgentSnapshotNode>())
-                        .Any(node => string.Equals(node.elementAuthoringId, graph.ownerElementAuthoringId, StringComparison.Ordinal)))
+                    !targetOwnerIds.Contains(graph.ownerElementAuthoringId))
                     continue;
                 report.Error($"document.editable.graphs[{Escape(graph.graphAuthoringId)}]", "graph_delete_requires_owner", "Graph只能通过删除拥有它的State或节点级联删除。");
             }

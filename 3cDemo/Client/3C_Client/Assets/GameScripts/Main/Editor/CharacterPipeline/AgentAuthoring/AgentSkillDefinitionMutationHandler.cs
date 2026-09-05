@@ -66,6 +66,21 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                 session.Report.Error(command.Path + ".actionContext", "skill_action_context_not_found", $"ActionContext无法解析：{definition.actionContext}");
                 valid = false;
             }
+            foreach (AgentSnapshotSkillSubgraphDependency dependency in
+                     definition.subgraphDependencies ?? new List<AgentSnapshotSkillSubgraphDependency>())
+            {
+                if (dependency == null || string.IsNullOrWhiteSpace(dependency.subgraphIdentity))
+                    continue;
+                if (dependency.subgraphIdentity.StartsWith("local:", StringComparison.Ordinal) ||
+                    !session.Index.TryGetGraph(dependency.subgraphIdentity, out _))
+                {
+                    session.Report.Error(
+                        command.Path + ".subgraphDependencies",
+                        "skill_subgraph_dependency_not_found",
+                        $"Skill子图依赖无法解析：{dependency.subgraphIdentity}");
+                    valid = false;
+                }
+            }
             int matches = session.Definition.SkillDefinitions.Count(value =>
                 value != null && string.Equals(value.SkillId, definition.skillId, StringComparison.Ordinal));
             if (matches > 1)
@@ -102,7 +117,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
             List<CharacterSkillAuthoringDefinition> values = session.Definition.SkillDefinitions
                 .Where(value => value != null)
                 .ToList();
+            string skillId = ResolveStableSkillId(session, definition.skillId);
             CharacterSkillAuthoringDefinition target = values.FirstOrDefault(value =>
+                string.Equals(value.SkillId, skillId, StringComparison.Ordinal) ||
                 string.Equals(value.SkillId, definition.skillId, StringComparison.Ordinal));
             if (target == null)
             {
@@ -115,7 +132,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                     out ActionContextSlot actionContext))
                 throw new InvalidOperationException($"SkillDefinition '{definition.skillId}' assets changed after preflight.");
             target.ConfigureAuthoring(
-                definition.skillId,
+                skillId,
                 definition.entryGraphAuthoringId,
                 actionProfile,
                 actionContext,
@@ -123,8 +140,17 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                 definition.consumeSourceInputRequest,
                 definition.targetInputValueId,
                 definition.targetKey);
+            target.ConfigureSkillRelations(
+                (definition.subgraphDependencies ?? new List<AgentSnapshotSkillSubgraphDependency>())
+                    .Select(value => value == null
+                        ? null
+                        : new CharacterSkillSubgraphDependencyConfiguration(
+                            value.subgraphIdentity,
+                            value.callSiteIdentity)),
+                (definition.allowedFollowUpSkillIds ?? new List<string>())
+                    .Select(value => ResolveStableSkillId(session, value)));
             session.Definition.SetSkillDefinitions(values.ToArray());
-            session.AddAppliedAuthoring(command, session.Definition, target, definition.skillId, definition.entryGraphAuthoringId);
+            session.AddAppliedAuthoring(command, session.Definition, target, skillId, definition.entryGraphAuthoringId);
         }
 
         static void ApplyDelete(AgentMutationSession session, AgentDeleteSkillDefinitionMutation command)
@@ -136,6 +162,43 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                 throw new InvalidOperationException($"SkillDefinition '{command.SkillId}' changed after preflight.");
             session.Definition.SetSkillDefinitions(values.ToArray());
             session.AddAppliedAuthoring(command, session.Definition, null, command.SkillId, "removed");
+        }
+
+        static string ResolveStableSkillId(
+            AgentMutationSession session,
+            string identity)
+        {
+            if (string.IsNullOrEmpty(identity) || !identity.StartsWith("local:", StringComparison.Ordinal))
+                return identity;
+            string candidate = identity.Substring("local:".Length);
+            if (string.IsNullOrEmpty(candidate))
+                throw new InvalidOperationException("SkillDefinition local identity不能为空。");
+            var used = new HashSet<string>(StringComparer.Ordinal);
+            foreach (CharacterSkillAuthoringDefinition existing in
+                     session?.Definition?.SkillDefinitions ??
+                     Array.Empty<CharacterSkillAuthoringDefinition>())
+            {
+                if (existing == null)
+                    continue;
+                used.Add(existing.SkillId.StartsWith("local:", StringComparison.Ordinal)
+                    ? existing.SkillId.Substring("local:".Length)
+                    : existing.SkillId);
+            }
+            foreach (AgentSetSkillDefinitionMutation planned in
+                     session?.Plan?.Commands?.OfType<AgentSetSkillDefinitionMutation>() ??
+                     Array.Empty<AgentSetSkillDefinitionMutation>())
+            {
+                if (string.Equals(planned.Definition.skillId, identity, StringComparison.Ordinal))
+                    continue;
+                if (planned.Definition.skillId.StartsWith("local:", StringComparison.Ordinal))
+                    used.Add(planned.Definition.skillId.Substring("local:".Length));
+                else
+                    used.Add(planned.Definition.skillId);
+            }
+            if (!used.Contains(candidate))
+                return candidate;
+            string suffix = AgentAuthoringDocumentCodec.Hash(identity).Substring(0, 12);
+            return candidate + "-" + suffix;
         }
     }
 }

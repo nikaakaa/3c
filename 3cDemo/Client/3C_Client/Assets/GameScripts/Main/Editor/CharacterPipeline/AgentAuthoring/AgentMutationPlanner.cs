@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using BTSMTL.Timeline;
 using BTSMTL.Diagnostics;
 using ThirdPersonCharacter.ActionSystem;
@@ -173,6 +174,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                 [AgentMutationKind.SetActionProfileCancelQuery] = new AgentMutationDraftDescriptor(AgentMutationKind.SetActionProfileCancelQuery, AgentMutationOutputKind.None, LowerSetActionProfileCancelQuery),
                 [AgentMutationKind.SetActionProfileTargetRequirement] = new AgentMutationDraftDescriptor(AgentMutationKind.SetActionProfileTargetRequirement, AgentMutationOutputKind.None, LowerSetActionProfileTargetRequirement),
                 [AgentMutationKind.SetActionRequestTimingClass] = new AgentMutationDraftDescriptor(AgentMutationKind.SetActionRequestTimingClass, AgentMutationOutputKind.None, LowerSetActionRequestTimingClass),
+                [AgentMutationKind.ConfigureControlConfiguration] = new AgentMutationDraftDescriptor(AgentMutationKind.ConfigureControlConfiguration, AgentMutationOutputKind.None, LowerConfigureControlConfiguration),
                 [AgentMutationKind.SetSkillDefinition] = new AgentMutationDraftDescriptor(AgentMutationKind.SetSkillDefinition, AgentMutationOutputKind.SkillDefinition, LowerSetSkillDefinition),
                 [AgentMutationKind.DeleteSkillDefinition] = new AgentMutationDraftDescriptor(AgentMutationKind.DeleteSkillDefinition, AgentMutationOutputKind.None, LowerDeleteSkillDefinition),
                 [AgentMutationKind.EnsureAIControllerDefinition] = new AgentMutationDraftDescriptor(AgentMutationKind.EnsureAIControllerDefinition, AgentMutationOutputKind.None, LowerEnsureAIControllerDefinition, AgentMutationDomainMask.AIController),
@@ -1044,7 +1046,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
             AgentPlannedIdentityReference clipOutput = context.OptionalPlannedIdentity(operation.clipPlannedIdentity, "clipPlannedIdentity", AgentMutationOutputKind.TimelineClip);
             if (string.IsNullOrEmpty(clip) == !clipOutput.IsValid)
                 context.Error("clip", "animation_clip_segment_reference_invalid", "AnimationClip Segment必须且只能提供clipAuthoringId或clipPlannedIdentity。");
-            AgentPackageAssetReferenceV4 clipReference = operation.animationClip;
+            AgentPackageObjectReference clipReference = operation.animationClip;
             bool externalClip = clipReference != null &&
                                 string.IsNullOrWhiteSpace(clipReference.localId) &&
                                 !string.IsNullOrWhiteSpace(clipReference.assetPath) &&
@@ -1152,6 +1154,45 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                 : null;
         }
 
+        static AgentMutation LowerConfigureControlConfiguration(
+            AgentMutationPlanningContext context,
+            AgentMutationDraft operation)
+        {
+            string moduleId = context.RequiredText(
+                operation.controlModuleId,
+                string.Empty,
+                "controlModuleId",
+                "configure_control_configuration 缺少 control module id。");
+            var configuration = new AgentDocumentControlConfiguration
+            {
+                moduleId = moduleId,
+                semanticVersion = operation.controlSemanticVersion,
+                parameters = new List<AgentSnapshotControlParameter>()
+            };
+            foreach (AgentSnapshotControlParameter parameter in operation.controlParameters ?? new List<AgentSnapshotControlParameter>())
+            {
+                if (parameter == null)
+                {
+                    context.Error("controlParameters", "control_parameter_missing", "控制参数不能为空。");
+                    continue;
+                }
+                if (!Enum.TryParse(parameter.valueType, false, out SemanticValueKind _))
+                    context.Error("controlParameters.valueType", "control_parameter_type_invalid", $"控制参数值类型无效：{parameter.valueType}");
+                configuration.parameters.Add(new AgentSnapshotControlParameter
+                {
+                    id = parameter.id,
+                    valueType = parameter.valueType,
+                    numericValue = parameter.numericValue
+                });
+            }
+            return context.IsValid
+                ? new AgentConfigureControlConfigurationMutation(
+                    operation.id,
+                    context.Path,
+                    configuration)
+                : null;
+        }
+
         static AgentMutation LowerSetSkillDefinition(
             AgentMutationPlanningContext context,
             AgentMutationDraft operation)
@@ -1189,7 +1230,11 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                         sourceInputRequestId = operation.sourceInputRequestId,
                         consumeSourceInputRequest = operation.consumeSourceInputRequest,
                         targetInputValueId = operation.targetInputValueId,
-                        targetKey = operation.targetKey
+                        targetKey = operation.targetKey,
+                        subgraphDependencies = operation.subgraphDependencies
+                            ?.Select(value => AgentAuthoringDocumentCodec.Clone(value))
+                            .ToList() ?? new List<AgentSnapshotSkillSubgraphDependency>(),
+                        allowedFollowUpSkillIds = operation.allowedFollowUpSkillIds?.ToList() ?? new List<string>()
                     })
                 : null;
         }

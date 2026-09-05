@@ -179,6 +179,13 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             Terminate(command, producer, CameraPresentationStopReason.Cancel);
         }
 
+        public void ForceTeardown(
+            CharacterPresentationCommand command,
+            CharacterPresentationProducerEntry producer)
+        {
+            Terminate(command, producer, CameraPresentationStopReason.ForceTeardown);
+        }
+
         void Terminate(
             CharacterPresentationCommand command,
             CharacterPresentationProducerEntry producer,

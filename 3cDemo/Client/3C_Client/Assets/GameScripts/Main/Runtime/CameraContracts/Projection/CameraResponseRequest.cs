@@ -58,10 +58,12 @@ public readonly struct CameraResponseRequest
                     return Vector2.zero;
                 case CameraResponseMode.Weighted:
                     return new Vector2(
-                        lookInput.x * ManualOrbitWeight * YawWeight,
-                        lookInput.y * ManualOrbitWeight * PitchWeight);
+                        lookInput.x * ManualOrbitWeight * YawWeight * Weight,
+                        lookInput.y * ManualOrbitWeight * PitchWeight * Weight);
+                case CameraResponseMode.Full:
+                    return lookInput * Weight;
                 default:
-                    return lookInput;
+                    throw new InvalidOperationException($"Camera Response mode '{Mode}' is unsupported.");
             }
         }
     }

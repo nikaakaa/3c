@@ -186,6 +186,27 @@ namespace ThirdPersonCamera
             CameraFramePlan result = progress >= 1f || !m_BlendFrom.Valid
                 ? target
                 : Blend(m_BlendFrom, target, progress);
+            if (!request.IsDefault && request.Weight < 1f)
+            {
+                CameraSequenceRequest defaultRequest = new CameraSequenceRequest(
+                    m_Projection.DefaultSequence.SequenceId,
+                    int.MinValue,
+                    1f,
+                    0f,
+                    0f,
+                    string.Empty,
+                    "camera.default.sequence",
+                    0,
+                    0,
+                    CameraSequenceInterruptPolicy.BlendOut,
+                    true);
+                CameraFramePlan defaultPlan = m_Planner.BuildTargetPlan(
+                    in input,
+                    in defaultRequest,
+                    m_Projection.DefaultSequence,
+                    look);
+                result = Blend(defaultPlan, result, request.Weight);
+            }
             m_LastPlan = result;
             return result;
         }

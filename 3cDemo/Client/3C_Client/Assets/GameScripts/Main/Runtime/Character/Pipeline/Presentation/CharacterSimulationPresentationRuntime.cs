@@ -277,6 +277,18 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             }
         }
 
+        public void ForceTeardown(CharacterPresentationCommand command)
+        {
+            RequireAlive();
+            if (command.Header.ActorId != m_ActorId)
+                throw new InvalidOperationException("Presentation force teardown targets another Actor.");
+            CharacterPresentationProducerEntry producer = RequireProducer(command.ProducerId);
+            if (producer.Kind != CharacterPresentationProducerKind.Camera)
+                throw new InvalidOperationException(
+                    $"Presentation force teardown targets non-camera producer '{producer.ProgramProducerIdentity}'.");
+            RequireCamera().ForceTeardown(command, producer);
+        }
+
         public void Replace(
             CharacterPresentationCommand current,
             CharacterPresentationCommand replacement)

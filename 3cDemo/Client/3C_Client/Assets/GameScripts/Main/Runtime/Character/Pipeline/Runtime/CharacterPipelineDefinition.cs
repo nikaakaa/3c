@@ -154,6 +154,7 @@ namespace ThirdPersonCharacter.Pipeline
         public bool CollectConfigurationErrors(List<string> errors)
         {
             bool valid = true;
+            IReadOnlyList<ActionProfile> compiledActionProfiles = BuildCompiledActionProfileCatalog();
             if (string.IsNullOrEmpty(ControlModuleId))
             {
                 errors?.Add($"{name}: control module id is missing.");
@@ -194,6 +195,23 @@ namespace ThirdPersonCharacter.Pipeline
                 {
                     errors?.Add($"{name}: skill '{skill.SkillId}' ActionProfile is missing.");
                     valid = false;
+                }
+                else
+                {
+                    bool actionProfileRegistered = false;
+                    for (int profileIndex = 0; profileIndex < compiledActionProfiles.Count; profileIndex++)
+                    {
+                        if (ReferenceEquals(compiledActionProfiles[profileIndex], skill.ActionProfile))
+                        {
+                            actionProfileRegistered = true;
+                            break;
+                        }
+                    }
+                    if (!actionProfileRegistered)
+                    {
+                        errors?.Add($"{name}: skill '{skill.SkillId}' ActionProfile '{skill.ActionProfile.ActionId}' is not registered by the Definition catalog.");
+                        valid = false;
+                    }
                 }
                 if (!skill.ActionContext)
                 {

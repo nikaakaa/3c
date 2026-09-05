@@ -1,9 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Linq;
-using ThirdPersonSimulation;
-using TreeDesigner;
-using UnityEngine;
 
 namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
 {
@@ -25,9 +21,6 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
 
     public sealed class CharacterSimulationCatalogCompiler
     {
-        readonly CharacterAuthoringCompilationModel m_Model;
-        readonly CharacterSimulationProgramBuilder m_Builder;
-        readonly CharacterSimulationCompileReport m_Report;
         readonly CharacterSimulationCatalogIndex m_Index = new CharacterSimulationCatalogIndex();
         readonly CharacterSemanticInputCatalogEmitter m_InputCatalog;
         readonly CharacterSemanticTagAttributeCatalogEmitter m_TagAttributes;
@@ -41,9 +34,12 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             CharacterSimulationProgramBuilder builder,
             CharacterSimulationCompileReport report)
         {
-            m_Model = model ?? throw new ArgumentNullException(nameof(model));
-            m_Builder = builder ?? throw new ArgumentNullException(nameof(builder));
-            m_Report = report ?? throw new ArgumentNullException(nameof(report));
+            if (model == null)
+                throw new ArgumentNullException(nameof(model));
+            if (builder == null)
+                throw new ArgumentNullException(nameof(builder));
+            if (report == null)
+                throw new ArgumentNullException(nameof(report));
             m_InputCatalog = new CharacterSemanticInputCatalogEmitter(model, builder, report, m_Index);
             m_TagAttributes = new CharacterSemanticTagAttributeCatalogEmitter(model, builder, report, m_Index);
             m_ActionCatalog = new CharacterSemanticActionCatalogEmitter(model, builder, report, m_Index);
@@ -62,15 +58,5 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             m_GlobalState.Emit();
             return m_Index;
         }
-
-        CharacterSimulationSourceLocation DefinitionSource => AssetSource(m_Model.Definition, $"definition:{m_Model.Definition.name}");
-
-        CharacterSimulationSourceLocation AssetSource(UnityEngine.Object asset, string identity)
-        {
-            return CharacterSemanticSourceFactory.Asset(m_Model, asset, identity);
-        }
-
-        static ProgramCatalogField[] Fields(params ProgramCatalogField[] fields) => Fields((IEnumerable<ProgramCatalogField>)fields);
-        static ProgramCatalogField[] Fields(IEnumerable<ProgramCatalogField> fields) => fields?.Where(value => value != null).ToArray() ?? Array.Empty<ProgramCatalogField>();
     }
 }

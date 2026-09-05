@@ -4,7 +4,8 @@
     "references": [
         "ThirdPersonPerformance.Contracts",
         "ThirdPersonSimulation.Core",
-        "ThirdPersonSimulation.Float32"
+        "ThirdPersonSimulation.Float32",
+        "ThirdPersonCharacter.Control.Rules"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

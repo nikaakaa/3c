@@ -4,6 +4,7 @@
     "references": [
         "ThirdPersonSimulation.Core",
         "ThirdPersonSimulation.Fixed",
+        "ThirdPersonCharacter.Control.Rules",
         "ThirdPersonSimulation.Unity",
         "ThirdPersonSimulation.DeterministicKcc",
         "ThirdPersonClient.Runtime",

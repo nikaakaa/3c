@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using BTSMTL.Timeline;
 using ThirdPersonCharacter.ActionSystem;
+using ThirdPersonCharacter.Control.Authoring;
 using ThirdPersonCharacter.Pipeline.Animation;
 using ThirdPersonCharacter.Pipeline.Graph;
 using TreeDesigner.Editor;
@@ -128,6 +129,47 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             var candidates = new List<Candidate>();
             var seen =
                 new HashSet<string>(StringComparer.Ordinal);
+            CharacterSkillAuthoringDefinition[] skillDefinitions = definition.SkillDefinitions
+                .Where(value =>
+                    value != null &&
+                    value.ActionProfile &&
+                    !string.IsNullOrWhiteSpace(value.SkillId))
+                .OrderBy(value => value.SkillId, StringComparer.Ordinal)
+                .ToArray();
+            if (skillDefinitions.Length != 0)
+            {
+                for (int skillIndex = 0; skillIndex < skillDefinitions.Length; skillIndex++)
+                {
+                    CharacterSkillAuthoringDefinition skill = skillDefinitions[skillIndex];
+                    if (!seen.Add(skill.SkillId))
+                        continue;
+                    ActionAnimationWorkspaceResolution resolution;
+                    try
+                    {
+                        resolution =
+                            ActionAnimationAuthoringWorkspaceResolver
+                                .Resolve(
+                                    new ActionAnimationWorkspaceOpenRequest(
+                                        definition,
+                                        skill.ActionProfile.ActionId,
+                                        skillId: skill.SkillId));
+                    }
+                    catch (Exception)
+                    {
+                        continue;
+                    }
+                    if (!accept(resolution))
+                        continue;
+                    candidates.Add(
+                        new Candidate(
+                            $"{skill.SkillId} ({skill.ActionProfile.ActionId})",
+                            ExactRequest(
+                                definition,
+                                skill.ActionProfile.ActionId,
+                                resolution)));
+                }
+                return candidates;
+            }
             foreach (ActionProfile profile in definition.ActionProfiles
                          .Where(value => value)
                          .OrderBy(
@@ -179,7 +221,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 resolution?.Producer?.Track.AuthoringId ??
                 string.Empty,
                 resolution?.Slot?.SlotId.Value ??
-                string.Empty);
+                string.Empty,
+                resolution?.Action?.SkillId ?? string.Empty);
 
         static void OpenOrChoose(
             string emptyMessage,

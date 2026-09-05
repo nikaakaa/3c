@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using System.Linq;
+using ThirdPersonCharacter.Control.Authoring;
 using ThirdPersonCharacter.Pipeline;
 using ThirdPersonCharacter.Pipeline.Editor;
 using UnityEditor;
@@ -117,10 +118,50 @@ namespace ThirdPersonCharacter.ActionSystem.Editor
             CharacterPipelineDefinition definition,
             ActionProfile profile)
         {
+            CharacterSkillAuthoringDefinition[] skills = definition.SkillDefinitions
+                .Where(value =>
+                    value != null &&
+                    value.ActionProfile &&
+                    ReferenceEquals(value.ActionProfile, profile) &&
+                    !string.IsNullOrWhiteSpace(value.SkillId))
+                .OrderBy(value => value.SkillId, System.StringComparer.Ordinal)
+                .ToArray();
+            if (skills.Length == 1)
+            {
+                OpenWorkspace(definition, profile, skills[0].SkillId);
+                return;
+            }
+            if (skills.Length > 1)
+            {
+                var menu = new GenericMenu();
+                for (int i = 0; i < skills.Length; i++)
+                {
+                    CharacterSkillAuthoringDefinition skill = skills[i];
+                    CharacterSkillAuthoringDefinition captured = skill;
+                    menu.AddItem(
+                        new GUIContent($"{captured.SkillId} ({profile.ActionId})"),
+                        false,
+                        () => OpenWorkspace(definition, profile, captured.SkillId));
+                }
+                menu.ShowAsContext();
+                return;
+            }
             ActionAnimationAuthoringWorkspaceWindow.Open(
                 new ActionAnimationWorkspaceOpenRequest(
                     definition,
                     profile.ActionId));
+        }
+
+        static void OpenWorkspace(
+            CharacterPipelineDefinition definition,
+            ActionProfile profile,
+            string skillId)
+        {
+            ActionAnimationAuthoringWorkspaceWindow.Open(
+                new ActionAnimationWorkspaceOpenRequest(
+                    definition,
+                    profile.ActionId,
+                    skillId: skillId));
         }
     }
 }

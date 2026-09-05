@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using ThirdPersonCharacter.ActionSystem;
+using ThirdPersonCharacter.Control.Authoring;
 using ThirdPersonCharacter.Pipeline.Animation;
 using ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring;
 using ThirdPersonCharacter.Pipeline.Simulation;
@@ -345,33 +346,60 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             if (GUILayout.Button("Open Agent Controller"))
                 AgentCharacterControllerSynthesisWindow.Open(definition);
             using (new EditorGUI.DisabledScope(
-                       definition.ActionProfiles.Count == 0))
+                       definition.ActionProfiles.Count == 0 &&
+                       definition.SkillDefinitions.Count == 0))
             {
                 if (GUILayout.Button("Open Action Animation Workspace"))
                 {
                     var menu = new GenericMenu();
-                    for (int i = 0;
-                         i < definition.ActionProfiles.Count;
-                         i++)
+                    if (definition.SkillDefinitions.Count != 0)
                     {
-                        ActionProfile profile =
-                            definition.ActionProfiles[i];
-                        if (!profile ||
-                            string.IsNullOrWhiteSpace(profile.ActionId))
-                            continue;
-                        ActionProfile captured = profile;
-                        menu.AddItem(
-                            new GUIContent(
-                                string.IsNullOrWhiteSpace(
-                                    captured.DisplayName)
-                                    ? captured.ActionId
-                                    : $"{captured.DisplayName} ({captured.ActionId})"),
-                            false,
-                            () =>
-                                ActionAnimationAuthoringWorkspaceWindow.Open(
-                                    new ActionAnimationWorkspaceOpenRequest(
-                                        definition,
-                                        captured.ActionId)));
+                        for (int i = 0; i < definition.SkillDefinitions.Count; i++)
+                        {
+                            CharacterSkillAuthoringDefinition skill =
+                                definition.SkillDefinitions[i];
+                            if (skill == null ||
+                                !skill.ActionProfile ||
+                                string.IsNullOrWhiteSpace(skill.SkillId))
+                                continue;
+                            CharacterSkillAuthoringDefinition capturedSkill = skill;
+                            menu.AddItem(
+                                new GUIContent(
+                                    $"{capturedSkill.SkillId} ({capturedSkill.ActionProfile.ActionId})"),
+                                false,
+                                () =>
+                                    ActionAnimationAuthoringWorkspaceWindow.Open(
+                                        new ActionAnimationWorkspaceOpenRequest(
+                                            definition,
+                                            capturedSkill.ActionProfile.ActionId,
+                                            skillId: capturedSkill.SkillId)));
+                        }
+                    }
+                    else
+                    {
+                        for (int i = 0;
+                             i < definition.ActionProfiles.Count;
+                             i++)
+                        {
+                            ActionProfile profile =
+                                definition.ActionProfiles[i];
+                            if (!profile ||
+                                string.IsNullOrWhiteSpace(profile.ActionId))
+                                continue;
+                            ActionProfile captured = profile;
+                            menu.AddItem(
+                                new GUIContent(
+                                    string.IsNullOrWhiteSpace(
+                                        captured.DisplayName)
+                                        ? captured.ActionId
+                                        : $"{captured.DisplayName} ({captured.ActionId})"),
+                                false,
+                                () =>
+                                    ActionAnimationAuthoringWorkspaceWindow.Open(
+                                        new ActionAnimationWorkspaceOpenRequest(
+                                            definition,
+                                            captured.ActionId)));
+                        }
                     }
                     menu.ShowAsContext();
                 }

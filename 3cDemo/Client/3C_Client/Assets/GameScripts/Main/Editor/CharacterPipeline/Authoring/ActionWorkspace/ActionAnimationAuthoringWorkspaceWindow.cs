@@ -6,6 +6,7 @@ using BTSMTL.Diagnostics.Editor;
 using BTSMTL.Timeline;
 using BTSMTL.Timeline.Editor;
 using ThirdPersonCharacter.ActionSystem;
+using ThirdPersonCharacter.Control.Authoring;
 using ThirdPersonCharacter.Pipeline.Animation;
 using ThirdPersonCharacter.Pipeline.Animation.Diagnostics;
 using ThirdPersonCharacter.Pipeline.Presentation;
@@ -38,6 +39,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
 
         [SerializeField] CharacterPipelineDefinition m_Definition;
         [SerializeField] string m_ActionId = string.Empty;
+        [SerializeField] string m_SkillId = string.Empty;
         [SerializeField] string m_TimelineAuthoringId = string.Empty;
         [SerializeField] string m_TrackAuthoringId = string.Empty;
         [SerializeField] string m_SlotId = string.Empty;
@@ -90,6 +92,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 GetWindow<ActionAnimationAuthoringWorkspaceWindow>();
             window.m_Definition = request.Definition;
             window.m_ActionId = request.ActionId;
+            window.m_SkillId = request.SkillId;
             window.m_TimelineAuthoringId = request.TimelineAuthoringId;
             window.m_TrackAuthoringId = request.TrackAuthoringId;
             window.m_SlotId = request.SlotId;
@@ -373,7 +376,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     m_ActionId,
                     m_TimelineAuthoringId,
                     m_TrackAuthoringId,
-                    m_SlotId);
+                    m_SlotId,
+                    m_SkillId);
                 m_Resolution =
                     ActionAnimationAuthoringWorkspaceResolver.Resolve(request);
             }
@@ -417,8 +421,37 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             m_ActionMenu.menu.MenuItems().Clear();
             m_ActionMenu.text = string.IsNullOrWhiteSpace(m_ActionId)
                 ? "Action"
-                : m_ActionId;
+                : string.IsNullOrWhiteSpace(m_SkillId)
+                    ? m_ActionId
+                    : $"{m_ActionId} / {m_SkillId}";
             if (!m_Definition)
+                return;
+            CharacterSkillAuthoringDefinition[] skills = m_Definition.SkillDefinitions
+                .Where(value =>
+                    value != null &&
+                    value.ActionProfile &&
+                    !string.IsNullOrWhiteSpace(value.SkillId))
+                .OrderBy(value => value.SkillId, StringComparer.Ordinal)
+                .ToArray();
+            for (int i = 0; i < skills.Length; i++)
+            {
+                CharacterSkillAuthoringDefinition skill = skills[i];
+                ActionProfile profile = skill.ActionProfile;
+                CharacterSkillAuthoringDefinition capturedSkill = skill;
+                m_ActionMenu.menu.AppendAction(
+                    $"{capturedSkill.SkillId} ({profile.ActionId})",
+                    _ =>
+                    {
+                        m_ActionId = profile.ActionId;
+                        m_SkillId = capturedSkill.SkillId;
+                        ClearExactSelectors();
+                        ResolveAndBind();
+                    },
+                    _ => string.Equals(m_SkillId, capturedSkill.SkillId, StringComparison.Ordinal)
+                        ? DropdownMenuAction.Status.Checked
+                        : DropdownMenuAction.Status.Normal);
+            }
+            if (skills.Length != 0)
                 return;
             foreach (ActionProfile profile in m_Definition.ActionProfiles
                          .Where(value => value)
@@ -432,6 +465,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     _ =>
                     {
                         m_ActionId = captured.ActionId;
+                        m_SkillId = string.Empty;
                         ClearExactSelectors();
                         ResolveAndBind();
                     },
@@ -605,6 +639,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         {
             AddDetailHeader("Identity");
             AddDetailText($"Action: {m_Resolution.Action?.ActionId ?? "unresolved"}");
+            AddDetailText($"Skill: {m_Resolution.Action?.SkillId ?? "unresolved"}");
             AddDetailText(
                 $"Timeline: {m_Resolution.Timeline?.Timeline.AuthoringId ?? "unresolved"}");
             AddDetailText(
@@ -1079,6 +1114,11 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         {
             if (m_Resolution?.CallSite == null)
                 return;
+            if (m_Resolution.CallSite.Node == null)
+            {
+                SelectOwner(m_Resolution.CallSite.Graph.SerializedOwner);
+                return;
+            }
             NavigateGraphNode(
                 m_Resolution.CallSite.Graph,
                 m_Resolution.CallSite.Node.GUID);

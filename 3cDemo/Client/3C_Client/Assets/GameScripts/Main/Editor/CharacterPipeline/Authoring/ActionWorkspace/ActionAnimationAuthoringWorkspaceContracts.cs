@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using BTSMTL.Timeline;
 using BTSMTL.Timeline.Editor;
 using ThirdPersonCharacter.ActionSystem;
+using ThirdPersonCharacter.Control.Authoring;
 using ThirdPersonCharacter.Pipeline.Animation;
 using ThirdPersonCharacter.Pipeline.Graph;
 using ThirdPersonCharacter.Pipeline.Simulation;
@@ -26,31 +27,29 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             string definitionAssetGuid,
             string actionId,
             AnimationProducerId producerId,
-            AnimationSlotId slotId)
+            AnimationSlotId slotId,
+            string skillId = "")
         {
             DefinitionAssetGuid = Require(definitionAssetGuid, nameof(definitionAssetGuid));
             ActionId = Require(actionId, nameof(actionId));
-            ProducerId = producerId.IsValid
-                ? producerId
-                : throw new ArgumentException("Workspace producer identity is invalid.", nameof(producerId));
-            SlotId = slotId.IsValid
-                ? slotId
-                : throw new ArgumentException("Workspace Slot identity is invalid.", nameof(slotId));
+            ProducerId = producerId;
+            SlotId = slotId;
+            SkillId = Normalize(skillId);
         }
 
         public string DefinitionAssetGuid { get; }
         public string ActionId { get; }
+        public string SkillId { get; }
         public AnimationProducerId ProducerId { get; }
         public AnimationSlotId SlotId { get; }
         public bool IsValid =>
             !string.IsNullOrEmpty(DefinitionAssetGuid) &&
-            !string.IsNullOrEmpty(ActionId) &&
-            ProducerId.IsValid &&
-            SlotId.IsValid;
+            !string.IsNullOrEmpty(ActionId);
 
         public bool Equals(ActionAnimationWorkspaceId other) =>
             string.Equals(DefinitionAssetGuid, other.DefinitionAssetGuid, StringComparison.Ordinal) &&
             string.Equals(ActionId, other.ActionId, StringComparison.Ordinal) &&
+            string.Equals(SkillId, other.SkillId, StringComparison.Ordinal) &&
             ProducerId.Equals(other.ProducerId) &&
             SlotId.Equals(other.SlotId);
 
@@ -63,6 +62,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             {
                 int hash = StringComparer.Ordinal.GetHashCode(DefinitionAssetGuid);
                 hash = (hash * 397) ^ StringComparer.Ordinal.GetHashCode(ActionId);
+                hash = (hash * 397) ^ StringComparer.Ordinal.GetHashCode(SkillId);
                 hash = (hash * 397) ^ ProducerId.GetHashCode();
                 return (hash * 397) ^ SlotId.GetHashCode();
             }
@@ -70,7 +70,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
 
         public override string ToString() =>
             IsValid
-                ? $"{DefinitionAssetGuid}/{ActionId}/{ProducerId}/{SlotId}"
+                ? $"{DefinitionAssetGuid}/{ActionId}/{SkillId}/{ProducerId}/{SlotId}"
                 : string.Empty;
 
         static string Require(string value, string parameterName)
@@ -80,6 +80,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 ? throw new ArgumentException("Workspace identity is missing.", parameterName)
                 : normalized;
         }
+
+        static string Normalize(string value) => value?.Trim() ?? string.Empty;
     }
 
     public sealed class ActionAnimationWorkspaceOpenRequest
@@ -89,7 +91,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             string actionId,
             string timelineAuthoringId = "",
             string trackAuthoringId = "",
-            string slotId = "")
+            string slotId = "",
+            string skillId = "")
         {
             Definition = definition
                 ? definition
@@ -98,6 +101,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             TimelineAuthoringId = Normalize(timelineAuthoringId);
             TrackAuthoringId = Normalize(trackAuthoringId);
             SlotId = Normalize(slotId);
+            SkillId = Normalize(skillId);
             if (!string.IsNullOrEmpty(TrackAuthoringId) &&
                 string.IsNullOrEmpty(TimelineAuthoringId))
                 throw new ArgumentException(
@@ -110,6 +114,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         public string TimelineAuthoringId { get; }
         public string TrackAuthoringId { get; }
         public string SlotId { get; }
+        public string SkillId { get; }
 
         static string Normalize(string value) => value?.Trim() ?? string.Empty;
 
@@ -129,11 +134,14 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         RootGraphMissing,
         ActionProfileMissing,
         ActionProfileAmbiguous,
+        SkillDefinitionMissing,
+        SkillDefinitionAmbiguous,
         ActionIdentityInvalid,
         AuthoringTopologyInvalid,
         ActionCallSiteMissing,
         ActionCallSiteAmbiguous,
         ActionContextMissing,
+        SkillEntryGraphMissing,
         FiniteTimelineMissing,
         FiniteTimelineAmbiguous,
         TimelineIdentityMismatch,
@@ -203,34 +211,43 @@ namespace ThirdPersonCharacter.Pipeline.Editor
 
     public sealed class ActionAnimationProfileContext
     {
-        public ActionAnimationProfileContext(ActionProfile profile)
+        public ActionAnimationProfileContext(
+            ActionProfile profile,
+            CharacterSkillAuthoringDefinition skill = null)
         {
             Profile = profile ? profile : throw new ArgumentNullException(nameof(profile));
             ActionId = string.IsNullOrWhiteSpace(profile.ActionId)
                 ? throw new ArgumentException("ActionProfile identity is missing.", nameof(profile))
                 : profile.ActionId;
+            Skill = skill;
+            SkillId = skill?.SkillId?.Trim() ?? string.Empty;
+            EntryGraphAuthoringId = skill?.EntryGraphAuthoringId?.Trim() ?? string.Empty;
         }
 
         public ActionProfile Profile { get; }
         public string ActionId { get; }
+        public CharacterSkillAuthoringDefinition Skill { get; }
+        public string SkillId { get; }
+        public string EntryGraphAuthoringId { get; }
     }
 
     public sealed class ActionAnimationCallSiteContext
     {
         public ActionAnimationCallSiteContext(
             CharacterAuthoringGraphEntry graphEntry,
-            ActivateActionInstanceNode node)
+            BaseNode node,
+            ActionContextSlot actionContext = null)
         {
             GraphEntry = graphEntry;
-            Node = node ?? throw new ArgumentNullException(nameof(node));
-            ActionContext = node.ActionContext
-                ? node.ActionContext
-                : throw new ArgumentException("Action call site has no Action Context.", nameof(node));
+            Node = node;
+            ActionContext = actionContext ?? (node as ActivateActionInstanceNode)?.ActionContext;
+            if (!ActionContext)
+                throw new ArgumentException("Action call site has no Action Context.", nameof(node));
         }
 
         public CharacterAuthoringGraphEntry GraphEntry { get; }
         public BaseTree Graph => GraphEntry.Graph;
-        public ActivateActionInstanceNode Node { get; }
+        public BaseNode Node { get; }
         public ActionContextSlot ActionContext { get; }
     }
 
@@ -383,13 +400,13 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 : throw new ArgumentException("Workspace identity is invalid.", nameof(workspaceId));
             Definition = definition ?? throw new ArgumentNullException(nameof(definition));
             Action = action ?? throw new ArgumentNullException(nameof(action));
-            CallSite = callSite ?? throw new ArgumentNullException(nameof(callSite));
-            Timeline = timeline ?? throw new ArgumentNullException(nameof(timeline));
-            Producer = producer ?? throw new ArgumentNullException(nameof(producer));
-            Presentation = presentation ?? throw new ArgumentNullException(nameof(presentation));
-            Slot = slot ?? throw new ArgumentNullException(nameof(slot));
-            RuntimeDebug = runtimeDebug ?? throw new ArgumentNullException(nameof(runtimeDebug));
-            PreviewTarget = previewTarget ?? throw new ArgumentNullException(nameof(previewTarget));
+            CallSite = callSite;
+            Timeline = timeline;
+            Producer = producer;
+            Presentation = presentation;
+            Slot = slot;
+            RuntimeDebug = runtimeDebug;
+            PreviewTarget = previewTarget;
         }
 
         public ActionAnimationWorkspaceId WorkspaceId { get; }

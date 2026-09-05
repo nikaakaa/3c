@@ -71,9 +71,11 @@ namespace ThirdPersonCharacter.Pipeline.Diagnostics
             if (!IsEnabled)
                 return;
             m_Context.BeginLogicTick(record.Header.Tick.Value);
+            if (!record.Header.Activation.Source.IsSkillOperation)
+                throw new InvalidOperationException("Operation trace requires a Skill operation execution source.");
             var target = new RuntimeSourceTarget(
                 RuntimeSourceTargetKind.Operation,
-                record.Header.Activation.Operation.Value);
+                record.Header.Activation.Source.Operation.Value);
             if (!m_SourceMap.TryGetProgramTarget(target, out RuntimeSourceElementHandle source))
                 throw new InvalidOperationException($"Operation trace target '{target}' is absent from the Debug Source Map.");
             RuntimeTraceEventKind kind = ResolveOperationKind(record.Code);
@@ -85,7 +87,7 @@ namespace ThirdPersonCharacter.Pipeline.Diagnostics
                 RuntimeInstanceKey.Runnable(
                     m_Context.CharacterRuntimeId,
                     m_ExecutionId,
-                    record.Header.Activation.Operation.Value.ToString(),
+                    record.Header.Activation.Source.Operation.Value.ToString(),
                     record.Header.Activation.Generation),
                 new RuntimeTracePayload
                 {

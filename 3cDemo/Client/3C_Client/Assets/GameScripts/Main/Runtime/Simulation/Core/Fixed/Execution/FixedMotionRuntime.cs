@@ -59,8 +59,7 @@ namespace ThirdPersonSimulation.Fixed
     internal readonly struct SimulationMotionContribution
     {
         public SimulationMotionContribution(
-            string sourceIdentity,
-            OperationHandle sourceOperation,
+            SimulationExecutionSource source,
             FixedVector3 displacement,
             FixedScalar yawDegrees,
             FixedVector2 planarBasis,
@@ -73,10 +72,9 @@ namespace ThirdPersonSimulation.Fixed
             CommittedMovementPlaybackClock movementPlaybackClock,
             CommittedLocomotionPlanarMotionTimeline locomotionTimeline)
         {
-            SourceIdentity = SimulationIdentity.Require(sourceIdentity, nameof(sourceIdentity));
-            if (!sourceOperation.IsValid)
-                throw new ArgumentException("Motion contribution source operation is invalid.", nameof(sourceOperation));
-            SourceOperation = sourceOperation;
+            if (!source.IsValid)
+                throw new ArgumentException("Motion contribution source is invalid.", nameof(source));
+            Source = source;
             Displacement = displacement;
             YawDegrees = yawDegrees;
             PlanarBasis = planarBasis;
@@ -101,8 +99,8 @@ namespace ThirdPersonSimulation.Fixed
             LocomotionTimeline = locomotionTimeline;
         }
 
-        public string SourceIdentity { get; }
-        public OperationHandle SourceOperation { get; }
+        public SimulationExecutionSource Source { get; }
+        public string SourceIdentity => Source.Identity;
         public FixedVector3 Displacement { get; }
         public FixedScalar YawDegrees { get; }
         public FixedVector2 PlanarBasis { get; }
@@ -131,13 +129,12 @@ namespace ThirdPersonSimulation.Fixed
             FixedVector2 planarBasis,
             bool hasContribution,
             bool claimsLowerChannels,
-            OperationHandle resolvedOwnerOperation,
-            string resolvedOwnerIdentity,
+            SimulationExecutionSource resolvedOwnerSource,
             CommittedMovementPlaybackClock movementPlaybackClock,
             CommittedLocomotionPlanarMotionTimeline locomotionTimeline,
             FixedVector3 resolvedOwnerDisplacement,
             FixedScalar resolvedOwnerYawDegrees,
-            OperationHandle traceOperation,
+            SimulationExecutionSource traceSource,
             int participatingSourceCount,
             ulong participatingSourceFingerprint)
         {
@@ -147,13 +144,12 @@ namespace ThirdPersonSimulation.Fixed
             PlanarBasis = planarBasis;
             HasContribution = hasContribution;
             ClaimsLowerChannels = claimsLowerChannels;
-            ResolvedOwnerOperation = resolvedOwnerOperation;
-            ResolvedOwnerIdentity = resolvedOwnerIdentity ?? string.Empty;
+            ResolvedOwnerSource = resolvedOwnerSource;
             MovementPlaybackClock = movementPlaybackClock;
             LocomotionTimeline = locomotionTimeline;
             ResolvedOwnerDisplacement = resolvedOwnerDisplacement;
             ResolvedOwnerYawDegrees = resolvedOwnerYawDegrees;
-            TraceOperation = traceOperation;
+            TraceSource = traceSource;
             ParticipatingSourceCount = participatingSourceCount;
             ParticipatingSourceFingerprint = participatingSourceFingerprint;
         }
@@ -164,13 +160,13 @@ namespace ThirdPersonSimulation.Fixed
         public FixedVector2 PlanarBasis { get; }
         public bool HasContribution { get; }
         public bool ClaimsLowerChannels { get; }
-        public OperationHandle ResolvedOwnerOperation { get; }
-        public string ResolvedOwnerIdentity { get; }
+        public SimulationExecutionSource ResolvedOwnerSource { get; }
+        public string ResolvedOwnerIdentity => ResolvedOwnerSource.IsValid ? ResolvedOwnerSource.Identity : string.Empty;
         public CommittedMovementPlaybackClock MovementPlaybackClock { get; }
         public CommittedLocomotionPlanarMotionTimeline LocomotionTimeline { get; }
         public FixedVector3 ResolvedOwnerDisplacement { get; }
         public FixedScalar ResolvedOwnerYawDegrees { get; }
-        public OperationHandle TraceOperation { get; }
+        public SimulationExecutionSource TraceSource { get; }
         public int ParticipatingSourceCount { get; }
         public ulong ParticipatingSourceFingerprint { get; }
         public bool HasDelta => Displacement != FixedVector3.Zero || YawDegrees != FixedScalar.Zero;
@@ -213,7 +209,7 @@ namespace ThirdPersonSimulation.Fixed
             if (m_Frame.Trace.Enabled)
             {
                 m_Frame.Trace.Add(
-                    Access.Operation(contribution.SourceOperation),
+                    contribution.Source,
                     "motion_contribution",
                     SimulationTraceSeverity.Detail,
                     $"channel={contribution.Channel};blend={contribution.BlendMode};priority={contribution.Priority};weight={contribution.Weight};delta={contribution.Displacement};yaw={contribution.YawDegrees};claim={contribution.ClaimsLowerChannels};movementClock={FormatMovementClock(contribution.MovementPlaybackClock)}");
@@ -231,7 +227,7 @@ namespace ThirdPersonSimulation.Fixed
             ProgramMotionModifierRuntime.ApplyActionWarp<FixedScalar, FixedActionInstanceState, ResolvedMotionChannel, FixedMotionWarpTarget>(
                 m_Layout.MotionModifiers(ProgramMotionModifierChannel.Action),
                 m_WarpSamples,
-                action.ResolvedOwnerOperation,
+                action.ResolvedOwnerSource.IsSkillOperation ? action.ResolvedOwnerSource.Operation : OperationHandle.Invalid,
                 ref action,
                 m_MotionWarp);
             RequireNoUnsupportedModifiers(ProgramMotionModifierChannel.GameplayResult);
@@ -266,7 +262,7 @@ namespace ThirdPersonSimulation.Fixed
             SimulationMotionContribution overrideWinner = default;
             FixedVector3 overrideDisplacement = FixedVector3.Zero;
             FixedScalar overrideYaw = FixedScalar.Zero;
-            OperationHandle traceOperation = OperationHandle.Invalid;
+            SimulationExecutionSource traceSource = default;
             int sourceCount = 0;
             ulong sourceFingerprint = 1469598103934665603UL;
             bool hasAdditive = false;
@@ -277,10 +273,10 @@ namespace ThirdPersonSimulation.Fixed
                 SimulationMotionContribution contribution = m_Contributions[i];
                 if (contribution.Channel != channel || !contribution.CanResolve)
                     continue;
-                if (!traceOperation.IsValid)
-                    traceOperation = contribution.SourceOperation;
+                if (!traceSource.IsValid)
+                    traceSource = contribution.Source;
                 sourceCount++;
-                sourceFingerprint = MixSource(sourceFingerprint, contribution.SourceOperation.Value);
+                sourceFingerprint = MixSource(sourceFingerprint, contribution.Source.Identity);
                 FixedVector3 resolved = contribution.Space == SimulationMotionContributionSpace.ActorLocal
                     ? FixedAngle.RotatePlanar(contribution.Displacement, m_Frame.Body.Yaw)
                     : contribution.Displacement;
@@ -312,7 +308,7 @@ namespace ThirdPersonSimulation.Fixed
                 }
             }
             if (!hasAdditive && !hasWeighted && !hasOverride)
-                return new ResolvedMotionChannel(channel, FixedVector3.Zero, FixedScalar.Zero, FixedVector2.Zero, false, false, OperationHandle.Invalid, string.Empty, default, default, FixedVector3.Zero, FixedScalar.Zero, OperationHandle.Invalid, 0, 0);
+                return new ResolvedMotionChannel(channel, FixedVector3.Zero, FixedScalar.Zero, FixedVector2.Zero, false, false, default, default, default, FixedVector3.Zero, FixedScalar.Zero, default, 0, 0);
 
             FixedVector3 channelDisplacement = additiveDisplacement;
             FixedScalar channelYaw = additiveYaw;
@@ -342,15 +338,14 @@ namespace ThirdPersonSimulation.Fixed
                 hasOverride ? overrideWinner.PlanarBasis : FixedVector2.Zero,
                 true,
                 hasOverride && overrideWinner.ConsumeLowerChannels,
-                hasOverride ? overrideWinner.SourceOperation : OperationHandle.Invalid,
-                hasOverride ? overrideWinner.SourceIdentity : string.Empty,
+                hasOverride ? overrideWinner.Source : default,
                 movementPlaybackClock,
                 channel == SimulationMotionChannel.Locomotion && hasOverride
                     ? overrideWinner.LocomotionTimeline
                     : default,
                 hasOverride ? overrideDisplacement : FixedVector3.Zero,
                 hasOverride ? overrideYaw : FixedScalar.Zero,
-                hasOverride ? overrideWinner.SourceOperation : traceOperation,
+                hasOverride ? overrideWinner.Source : traceSource,
                 sourceCount,
                 sourceFingerprint);
             TraceChannel(result);
@@ -382,10 +377,10 @@ namespace ThirdPersonSimulation.Fixed
 
         void TraceChannel(ResolvedMotionChannel channel)
         {
-            if (!m_Frame.Trace.Enabled || !channel.TraceOperation.IsValid)
+            if (!m_Frame.Trace.Enabled || !channel.TraceSource.IsValid)
                 return;
             m_Frame.Trace.Add(
-                Access.Operation(channel.TraceOperation),
+                channel.TraceSource,
                 "motion_channel_resolved",
                 SimulationTraceSeverity.Detail,
                 $"channel={channel.Channel};owner={channel.ResolvedOwnerIdentity};delta={channel.Displacement};yaw={channel.YawDegrees};planarBasis={channel.PlanarBasis};claim={channel.ClaimsLowerChannels};sources={channel.ParticipatingSourceCount};fingerprint={channel.ParticipatingSourceFingerprint:x16};movementClock={FormatMovementClock(channel.MovementPlaybackClock)}");
@@ -395,11 +390,11 @@ namespace ThirdPersonSimulation.Fixed
         {
             if (!m_Frame.Trace.Enabled)
                 return;
-            OperationHandle operation = action.TraceOperation.IsValid ? action.TraceOperation : m_Frame.Layout.RootOperation;
-            if (!operation.IsValid)
-                operation = m_Layout.RootOperation;
+            SimulationExecutionSource source = action.TraceSource.IsValid
+                ? action.TraceSource
+                : SimulationExecutionSource.FromSkillOperation(m_Layout.RootOperation, "resolved_gameplay_motion");
             m_Frame.Trace.Add(
-                Access.Operation(operation),
+                source,
                 "resolved_gameplay_motion",
                 SimulationTraceSeverity.Information,
                 $"delta={motion.Displacement};yaw={motion.YawDegrees};hasMotion={motion.HasMotion};movementClock={FormatMovementClock(motion.MovementPlaybackClock)}");
@@ -410,12 +405,16 @@ namespace ThirdPersonSimulation.Fixed
                 ? $"{clock.OwnerIdentity}@{clock.Generation}:{clock.ContinuousTicks}/{clock.TickRate}#tick{clock.AuthorityTick.Value}"
                 : "none";
 
-        static ulong MixSource(ulong hash, int operation)
+        static ulong MixSource(ulong hash, string identity)
         {
             unchecked
             {
-                hash ^= (uint)operation;
-                return hash * 1099511628211UL;
+                for (int i = 0; i < identity.Length; i++)
+                {
+                    hash ^= identity[i];
+                    hash *= 1099511628211UL;
+                }
+                return hash;
             }
         }
 
@@ -1123,8 +1122,7 @@ namespace ThirdPersonSimulation.Fixed
                 delta,
                 generation);
             m_Motion.Submit(new SimulationMotionContribution(
-                SourcePath(operation),
-                operation.Handle,
+                SimulationExecutionSource.FromSkillOperation(operation.Handle, SourcePath(operation)),
                 displacement,
                 yaw,
                 move,

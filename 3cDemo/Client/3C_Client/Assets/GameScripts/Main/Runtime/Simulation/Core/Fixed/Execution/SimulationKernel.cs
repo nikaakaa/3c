@@ -465,7 +465,9 @@ namespace ThirdPersonSimulation.Fixed
                 ProgramStateSemantic.RunnableActivationGeneration);
             if (generationSlot >= 0)
                 generation = Math.Max(1UL, transaction.Get(generationSlot).UInt64);
-            var activation = new ActivationId(root, generation, "kernel:finalize");
+            var activation = new ActivationId(
+                SimulationExecutionSource.FromSkillOperation(root, "kernel:finalize"),
+                generation);
             EventId eventId = EventId.Create(
                 pending.Program.ProgramHash,
                 pending.ActorId,
@@ -499,7 +501,9 @@ namespace ThirdPersonSimulation.Fixed
             int generationSlot = pending.ExecutionLayout.FindOperationStateSlot(operation.Handle, ProgramStateSemantic.RunnableActivationGeneration);
             if (generationSlot >= 0)
                 generation = Math.Max(1UL, transaction.Get(generationSlot).UInt64);
-            var activation = new ActivationId(root, generation, "kernel:finalize");
+            var activation = new ActivationId(
+                SimulationExecutionSource.FromSkillOperation(root, "kernel:finalize"),
+                generation);
             EventId eventId = EventId.Create(
                 pending.Program.ProgramHash,
                 pending.ActorId,

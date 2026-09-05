@@ -303,9 +303,10 @@ namespace ThirdPersonCharacter.Pipeline
             m_ReleasedPreviewPlaybacks.Clear();
             var tick = new SimulationTick(session.EvaluationTick);
             var activation = new ActivationId(
-                m_TimelineOperation,
-                session.Generation,
-                $"timeline-preview:{session.Timeline.AuthoringId}");
+                SimulationExecutionSource.FromSkillOperation(
+                    m_TimelineOperation,
+                    $"timeline-preview:{session.Timeline.AuthoringId}"),
+                session.Generation);
             for (int trackIndex = 0; trackIndex < session.Timeline.Tracks.Count; trackIndex++)
             {
                 if (session.Timeline.Tracks[trackIndex] is not AnimationTrack track)
@@ -713,9 +714,10 @@ namespace ThirdPersonCharacter.Pipeline
                     active.Generation,
                     tick,
                     new ActivationId(
-                        m_TimelineOperation,
-                        active.Generation,
-                        $"timeline-preview:{timelineIdentity}"),
+                        SimulationExecutionSource.FromSkillOperation(
+                            m_TimelineOperation,
+                            $"timeline-preview:{timelineIdentity}"),
+                        active.Generation),
                     sampleTime,
                     channel),
                 active.Producer);

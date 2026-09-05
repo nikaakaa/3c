@@ -243,7 +243,7 @@ namespace ThirdPersonSimulation
             writer.WriteUInt64(value.StartTick);
             writer.WriteString(value.TargetKey);
             WriteTargetSnapshot(writer, value.TargetSnapshot);
-            writer.WriteInt32(value.SourceOperation.Value);
+            SimulationExecutionSourceCodec.Write(writer, value.Source);
             EquipmentActionContextCodec.Write(writer, value.EquipmentContext);
         }
 
@@ -260,7 +260,7 @@ namespace ThirdPersonSimulation
             ulong startTick = reader.ReadUInt64();
             string targetKey = reader.ReadString();
             SimulationActionTargetSnapshot target = ReadTargetSnapshot(reader);
-            OperationHandle source = ReadOperation(reader, layout);
+            SimulationExecutionSource source = SimulationExecutionSourceCodec.Read(reader);
             EquipmentActionContext equipmentContext = EquipmentActionContextCodec.Read(reader, layout.Equipment);
             return new Float32ActionActivationRequestState(
                 actionId,
@@ -288,7 +288,7 @@ namespace ThirdPersonSimulation
             writer.WriteUInt64(value.StartTick);
             writer.WriteString(value.TargetKey);
             WriteTargetSnapshot(writer, value.TargetSnapshot);
-            writer.WriteInt32(value.SourceOperation.Value);
+            SimulationExecutionSourceCodec.Write(writer, value.Source);
             writer.WriteByte((byte)value.Phase);
             writer.WriteByte((byte)value.State);
             writer.WriteByte((byte)value.LastTransition);
@@ -314,7 +314,7 @@ namespace ThirdPersonSimulation
                 reader.ReadUInt64(),
                 reader.ReadString(),
                 ReadTargetSnapshot(reader),
-                ReadOperation(reader, layout),
+                SimulationExecutionSourceCodec.Read(reader),
                 ReadEnum<SimulationActionPhase>(reader.ReadByte()),
                 ReadEnum<SimulationActionState>(reader.ReadByte()),
                 ReadEnum<SimulationActionLifecycleTransitionType>(reader.ReadByte()),
@@ -365,14 +365,6 @@ namespace ThirdPersonSimulation
                 reader.ReadString(),
                 reader.ReadVector3(),
                 reader.ReadYaw());
-        }
-
-        static OperationHandle ReadOperation(CanonicalReader reader, ProgramExecutionLayout layout)
-        {
-            int value = reader.ReadInt32();
-            if (value < 0 || value >= layout.Program.Operations.Count)
-                throw new InvalidDataException($"Character state operation handle '{value}' is invalid.");
-            return new OperationHandle(value);
         }
 
         static T ReadEnum<T>(int value) where T : struct

@@ -13,19 +13,19 @@ namespace ThirdPersonSimulation
             ulong startTick,
             string targetKey,
             SimulationActionTargetSnapshot targetSnapshot,
-            OperationHandle sourceOperation,
+            SimulationExecutionSource source,
             EquipmentActionContext equipmentContext = default)
         {
             ActionId = SimulationIdentity.Require(actionId, nameof(actionId));
             ContextId = SimulationIdentity.Require(contextId, nameof(contextId));
             SourceInputRequestId = sourceInputRequestId ?? string.Empty;
-            if (inputSequence == 0 || startTick == 0 || !sourceOperation.IsValid)
+            if (inputSequence == 0 || startTick == 0 || !source.IsValid)
                 throw new ArgumentException("Action activation request identity is incomplete.");
             InputSequence = inputSequence;
             StartTick = startTick;
             TargetKey = targetKey ?? string.Empty;
             TargetSnapshot = targetSnapshot;
-            SourceOperation = sourceOperation;
+            Source = source;
             EquipmentContext = equipmentContext;
         }
 
@@ -36,14 +36,14 @@ namespace ThirdPersonSimulation
         public ulong StartTick { get; }
         public string TargetKey { get; }
         public SimulationActionTargetSnapshot TargetSnapshot { get; }
-        public OperationHandle SourceOperation { get; }
+        public SimulationExecutionSource Source { get; }
         public EquipmentActionContext EquipmentContext { get; }
         public bool IsValid =>
             !string.IsNullOrEmpty(ActionId) &&
             !string.IsNullOrEmpty(ContextId) &&
             InputSequence != 0 &&
             StartTick != 0 &&
-            SourceOperation.IsValid;
+            Source.IsValid;
     }
 
     internal readonly struct Float32ActionInstanceState
@@ -58,7 +58,7 @@ namespace ThirdPersonSimulation
             ulong startTick,
             string targetKey,
             SimulationActionTargetSnapshot targetSnapshot,
-            OperationHandle sourceOperation,
+            SimulationExecutionSource source,
             SimulationActionPhase phase,
             SimulationActionState state,
             SimulationActionLifecycleTransitionType lastTransition,
@@ -76,7 +76,7 @@ namespace ThirdPersonSimulation
             StartTick = startTick;
             TargetKey = targetKey ?? string.Empty;
             TargetSnapshot = targetSnapshot;
-            SourceOperation = sourceOperation;
+            Source = source;
             Phase = phase;
             State = state;
             LastTransition = lastTransition;
@@ -95,7 +95,7 @@ namespace ThirdPersonSimulation
         public ulong StartTick { get; }
         public string TargetKey { get; }
         public SimulationActionTargetSnapshot TargetSnapshot { get; }
-        public OperationHandle SourceOperation { get; }
+        public SimulationExecutionSource Source { get; }
         public SimulationActionPhase Phase { get; }
         public SimulationActionState State { get; }
         public SimulationActionLifecycleTransitionType LastTransition { get; }
@@ -110,7 +110,7 @@ namespace ThirdPersonSimulation
             PredictionKey != 0 &&
             InputSequence != 0 &&
             StartTick != 0 &&
-            SourceOperation.IsValid;
+            Source.IsValid;
         public bool IsTerminal =>
             State == SimulationActionState.Rejected ||
             State == SimulationActionState.Cancelled ||
@@ -137,7 +137,7 @@ namespace ThirdPersonSimulation
                 StartTick,
                 TargetKey,
                 TargetSnapshot,
-                SourceOperation,
+                Source,
                 phase,
                 state,
                 transition,

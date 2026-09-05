@@ -356,17 +356,20 @@ namespace ThirdPersonSimulation.ServerAuthoritative
             {
                 throw new InvalidDataException("Remote sample command does not match the routine snapshot route.");
             }
-            OperationHandle operation = header.Activation.Operation;
+            if (!header.Activation.Source.IsSkillOperation)
+                throw new InvalidDataException("Remote sample command requires a Skill operation execution source.");
+            OperationHandle operation = header.Activation.Source.Operation;
             ProgramProducer producer = ResolveCompactProducer(layout, operation);
             string executionPath = layout.ExecutionLayout.SourcePath(operation);
+            SimulationExecutionSource source = SimulationExecutionSource.FromSkillOperation(operation, executionPath);
             var expectedEventId = EventId.Create(
                 layout.ProgramHash,
                 actorId,
-                new ActivationId(operation, header.Activation.Generation, executionPath),
+                new ActivationId(source, header.Activation.Generation),
                 authorityTick,
                 header.Sequence,
                 PresentationChannel);
-            if (!string.Equals(header.Activation.ExecutionPath, executionPath, StringComparison.Ordinal) ||
+            if (header.Activation.Source != source ||
                 !string.Equals(header.Channel, PresentationChannel, StringComparison.Ordinal) ||
                 !string.Equals(command.ProducerId, producer.Identity, StringComparison.Ordinal) ||
                 !header.EventId.Equals(expectedEventId))
@@ -392,7 +395,9 @@ namespace ThirdPersonSimulation.ServerAuthoritative
         {
             var operation = new OperationHandle(reader.ReadInt32());
             ProgramProducer producer = ResolveCompactProducer(layout, operation);
-            var activation = new ActivationId(operation, reader.ReadUInt64(), layout.ExecutionLayout.SourcePath(operation));
+            var activation = new ActivationId(
+                SimulationExecutionSource.FromSkillOperation(operation, layout.ExecutionLayout.SourcePath(operation)),
+                reader.ReadUInt64());
             ulong sequence = reader.ReadUInt64();
             var header = new SimulationEventHeader(
                 layout.Program.Manifest.NumericProfile,

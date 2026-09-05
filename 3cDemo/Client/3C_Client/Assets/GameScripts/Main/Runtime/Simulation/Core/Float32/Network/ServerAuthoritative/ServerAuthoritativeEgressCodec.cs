@@ -258,9 +258,8 @@ namespace ThirdPersonSimulation.ServerAuthoritative
             writer.WriteString(header.EventId.ToString());
             writer.WriteString(header.ActorId.Value);
             writer.WriteUInt64(header.Tick.Value);
-            writer.WriteInt32(header.Activation.Operation.Value);
+            SimulationExecutionSourceCodec.Write(writer, header.Activation.Source);
             writer.WriteUInt64(header.Activation.Generation);
-            writer.WriteString(header.Activation.ExecutionPath);
             writer.WriteUInt64(header.Sequence);
             writer.WriteString(header.Channel);
         }
@@ -270,7 +269,7 @@ namespace ThirdPersonSimulation.ServerAuthoritative
             new EventId(new StableHash(reader.ReadString())),
             new ActorId(reader.ReadString()),
             new SimulationTick(reader.ReadUInt64()),
-            new ActivationId(new OperationHandle(reader.ReadInt32()), reader.ReadUInt64(), reader.ReadString()),
+            new ActivationId(SimulationExecutionSourceCodec.Read(reader), reader.ReadUInt64()),
             reader.ReadUInt64(),
             reader.ReadString());
 

@@ -458,22 +458,20 @@ namespace ThirdPersonSimulation
 
     public readonly struct ActivationId : IEquatable<ActivationId>
     {
-        public ActivationId(OperationHandle operation, ulong generation, string executionPath)
+        public ActivationId(SimulationExecutionSource source, ulong generation)
         {
-            if (generation == 0)
-                throw new ArgumentOutOfRangeException(nameof(generation));
-            Operation = operation;
+            if (!source.IsValid || generation == 0)
+                throw new ArgumentException("Activation identity is incomplete.");
+            Source = source;
             Generation = generation;
-            ExecutionPath = executionPath ?? string.Empty;
         }
-        public OperationHandle Operation { get; }
+        public SimulationExecutionSource Source { get; }
         public ulong Generation { get; }
-        public string ExecutionPath { get; }
-        public bool IsValid => Generation != 0;
-        public bool Equals(ActivationId other) => Operation.Equals(other.Operation) && Generation == other.Generation && string.Equals(ExecutionPath, other.ExecutionPath, StringComparison.Ordinal);
+        public bool IsValid => Source.IsValid && Generation != 0;
+        public bool Equals(ActivationId other) => Source.Equals(other.Source) && Generation == other.Generation;
         public override bool Equals(object obj) => obj is ActivationId other && Equals(other);
-        public override int GetHashCode() => HashCode.Combine(Operation, Generation, ExecutionPath == null ? 0 : StringComparer.Ordinal.GetHashCode(ExecutionPath));
-        public override string ToString() => $"{Operation}/{Generation}/{ExecutionPath}";
+        public override int GetHashCode() => HashCode.Combine(Source, Generation);
+        public override string ToString() => $"{Source}/{Generation}";
     }
 
     public readonly struct WorldRequestId : IEquatable<WorldRequestId>

@@ -272,6 +272,13 @@ namespace ThirdPersonSimulation
         {
         }
 
+        public void PrepareSubGraph(
+            OperationControlCursor<Float32OperationTarget> cursor,
+            OperationExecutionDescriptor descriptor)
+        {
+            m_Values.PrepareSubGraph(cursor, m_Access.Operation(descriptor.Handle));
+        }
+
 		public void ActivateScopes(
 			OperationControlCursor<Float32OperationTarget> cursor,
 			OperationExecutionDescriptor descriptor,

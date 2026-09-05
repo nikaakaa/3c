@@ -99,6 +99,7 @@ namespace ThirdPersonSimulation
         bool EvaluateCondition(OperationControlCursor<TTarget> cursor, ProgramControlFlowEdge edge);
         OperationExecutionResult ExecuteLeaf(OperationControlCursor<TTarget> cursor, OperationExecutionDescriptor operation);
         void PrepareActivation(OperationExecutionDescriptor operation);
+        void PrepareSubGraph(OperationControlCursor<TTarget> cursor, OperationExecutionDescriptor operation);
         void ActivateScopes(OperationControlCursor<TTarget> cursor, OperationExecutionDescriptor operation, ulong generation);
         void CompleteScopes(OperationExecutionDescriptor operation);
         void ClearStateScope(OperationExecutionDescriptor state);

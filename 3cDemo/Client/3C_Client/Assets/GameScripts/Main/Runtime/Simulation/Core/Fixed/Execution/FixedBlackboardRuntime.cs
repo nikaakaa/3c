@@ -139,6 +139,20 @@ namespace ThirdPersonSimulation.Fixed
             m_ActionWindowProjectionKeys.Clear();
         }
 
+        public void WriteGraphCallParameter(int valueSlot, CharacterStateValue value)
+        {
+            SimulationBlackboardSlotGroup group = RequireBlackboardGroup(valueSlot);
+            if (value.Kind != m_Program.StateSlots[valueSlot].ValueKind)
+                throw new InvalidOperationException($"Graph call parameter state '{valueSlot}' expects '{m_Program.StateSlots[valueSlot].ValueKind}', received '{value.Kind}'.");
+            m_State.Set(group.Value, value);
+        }
+
+        public CharacterStateValue ReadGraphCallParameter(int valueSlot)
+        {
+            SimulationBlackboardSlotGroup group = RequireBlackboardGroup(valueSlot);
+            return m_State.Get(group.Value);
+        }
+
         public void ActivateOperationScopes<TTarget>(
             OperationControlCursor<TTarget> cursor,
             SimulationOperation operation,
@@ -205,10 +219,35 @@ namespace ThirdPersonSimulation.Fixed
             where TTarget : struct, IOperationControlTarget<TTarget>
         {
             SimulationBlackboardSlotGroup group = RequireBlackboardGroup(valueSlot);
+            if (TryReadActiveGraphCallInput(cursor, valueSlot, out CharacterStateValue graphInput))
+                return graphInput;
             BlackboardOwnerToken expected = ResolveBlackboardOwnerToken(cursor, operation, group, false, out _);
             if (m_State.Get(group.OwnerToken).BlackboardOwnerToken != expected)
                 return DefaultValue(group);
             return m_State.Get(valueSlot);
+        }
+
+        bool TryReadActiveGraphCallInput<TTarget>(
+            OperationControlCursor<TTarget> cursor,
+            int valueSlot,
+            out CharacterStateValue value)
+            where TTarget : struct, IOperationControlTarget<TTarget>
+        {
+            for (int i = 0; i < m_Program.GraphCallFrames.Count; i++)
+            {
+                ProgramGraphCallFrame frame = m_Program.GraphCallFrames[i];
+                if (!cursor.IsActive(frame.OwnerOperation))
+                    continue;
+                for (int bindingIndex = 0; bindingIndex < frame.Inputs.Count; bindingIndex++)
+                {
+                    if (frame.Inputs[bindingIndex].StateSlot != valueSlot)
+                        continue;
+                    value = ReadGraphCallParameter(valueSlot);
+                    return true;
+                }
+            }
+            value = default;
+            return false;
         }
 
         public void Write<TTarget>(

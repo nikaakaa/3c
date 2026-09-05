@@ -56,6 +56,9 @@ namespace ThirdPersonSimulation
 
     internal interface IFloat32BlackboardPort
     {
+        void WriteGraphCallParameter(int valueSlot, CharacterStateValue value);
+        CharacterStateValue ReadGraphCallParameter(int valueSlot);
+
         CharacterStateValue Read<TTarget>(
             OperationControlCursor<TTarget> cursor,
             SimulationOperation operation,

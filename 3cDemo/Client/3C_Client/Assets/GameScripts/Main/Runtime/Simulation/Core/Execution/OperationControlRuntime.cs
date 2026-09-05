@@ -232,6 +232,7 @@ namespace ThirdPersonSimulation
                 case SimulationOperationCode.Succeed:
                     return OperationExecutionResult.Success;
                 case SimulationOperationCode.SubGraph:
+                    m_Target.PrepareSubGraph(m_Cursor, operation);
                     return TickSingleChild(operation, ProgramControlFlowKind.Enter);
                 case SimulationOperationCode.StateMachine:
                     return m_StateMachine.Tick(operation);

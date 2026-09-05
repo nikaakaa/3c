@@ -277,6 +277,13 @@ namespace ThirdPersonSimulation.Fixed
         {
         }
 
+        public void PrepareSubGraph(
+            OperationControlCursor<FixedOperationTarget> cursor,
+            OperationExecutionDescriptor descriptor)
+        {
+            m_Values.PrepareSubGraph(cursor, m_Access.Operation(descriptor.Handle));
+        }
+
         public void ActivateScopes(
             OperationControlCursor<FixedOperationTarget> cursor,
             OperationExecutionDescriptor descriptor,

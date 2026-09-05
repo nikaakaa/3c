@@ -6,7 +6,8 @@
     "ThirdPersonSimulation.Float32",
     "ThirdPersonSimulation.ServerAuthoritative",
     "ThirdPersonSimulation.ServerAuthoritative.Transport",
-    "ThirdPersonSimulation.DotRecast"
+    "ThirdPersonSimulation.DotRecast",
+    "ThirdPersonCharacter.Control.Rules"
   ],
   "autoReferenced": true,
   "overrideReferences": false,

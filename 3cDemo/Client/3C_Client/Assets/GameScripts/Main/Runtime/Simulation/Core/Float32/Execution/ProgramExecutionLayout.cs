@@ -172,7 +172,8 @@ namespace ThirdPersonSimulation
                 program.References,
                 program.StateSlots,
                 program.SourceMap,
-                RootOperation);
+                RootOperation,
+                program.GraphCallFrames);
             m_TimelineAnimationProducers = new TimelineAnimationProducerIndex(
                 topology,
                 operation => IsTimelineAnimationTrackMuted(program, m_CatalogIndex, operation),

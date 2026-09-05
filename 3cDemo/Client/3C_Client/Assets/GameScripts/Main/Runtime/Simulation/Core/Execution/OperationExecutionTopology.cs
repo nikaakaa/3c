@@ -289,6 +289,7 @@ namespace ThirdPersonSimulation
         readonly ProgramControlFlowEdge[] m_StateOnEnter;
         readonly ProgramControlFlowEdge[] m_StateRoot;
         readonly ProgramControlFlowEdge[] m_StateOnExit;
+        readonly IReadOnlyList<ProgramGraphCallFrame>[] m_GraphCallFrames;
 
         public OperationExecutionTopology(
             IEnumerable<OperationExecutionDescriptor> operations,
@@ -296,7 +297,8 @@ namespace ThirdPersonSimulation
             IEnumerable<ProgramReference> references,
             IReadOnlyList<ProgramStateSlot> stateSlots,
             IReadOnlyList<ProgramSourceMapEntry> sourceMap,
-            OperationHandle rootOperation)
+            OperationHandle rootOperation,
+            IReadOnlyList<ProgramGraphCallFrame> graphCallFrames = null)
         {
             var operationList = operations == null
                 ? new List<OperationExecutionDescriptor>()
@@ -336,11 +338,19 @@ namespace ThirdPersonSimulation
             BuildTimelineIndexes(operationList, edges, out m_TimelineOperations, out m_TimelineOwners);
             m_StateMachineOwners = BuildStateMachineOwners(operationList, sourceMap);
             BuildStateEdges(operationList, edges, out m_StateOnEnter, out m_StateRoot, out m_StateOnExit);
+            m_GraphCallFrames = BuildGraphCallFrames(operationList.Count, graphCallFrames);
             RootOperation = rootOperation;
         }
 
         public IReadOnlyList<OperationExecutionDescriptor> Operations => m_Operations;
         public OperationHandle RootOperation { get; }
+
+        public IReadOnlyList<ProgramGraphCallFrame> GraphCallFrames(OperationHandle owner)
+        {
+            if (!owner.IsValid || owner.Value >= m_GraphCallFrames.Length)
+                return Array.Empty<ProgramGraphCallFrame>();
+            return m_GraphCallFrames[owner.Value];
+        }
 
         public OperationExecutionDescriptor Operation(OperationHandle handle)
         {
@@ -642,6 +652,37 @@ namespace ThirdPersonSimulation
                 else if (edge.Kind == ProgramControlFlowKind.Exit && string.Equals(edge.SourcePort, "OnExit", StringComparison.Ordinal))
                     Assign(onExit, edge);
             }
+        }
+
+        static IReadOnlyList<ProgramGraphCallFrame>[] BuildGraphCallFrames(
+            int operationCount,
+            IReadOnlyList<ProgramGraphCallFrame> frames)
+        {
+            var result = new IReadOnlyList<ProgramGraphCallFrame>[operationCount];
+            if (frames == null || frames.Count == 0)
+                return result;
+            var grouped = new List<ProgramGraphCallFrame>[operationCount];
+            for (int i = 0; i < frames.Count; i++)
+            {
+                ProgramGraphCallFrame frame = frames[i];
+                if (frame.OwnerOperation.Value < 0 || frame.OwnerOperation.Value >= operationCount)
+                    throw new ArgumentException($"Graph call frame '{frame.Identity}' owner is outside the operation table.", nameof(frames));
+                List<ProgramGraphCallFrame> values = grouped[frame.OwnerOperation.Value];
+                if (values == null)
+                {
+                    values = new List<ProgramGraphCallFrame>();
+                    grouped[frame.OwnerOperation.Value] = values;
+                }
+                values.Add(frame);
+            }
+            for (int i = 0; i < grouped.Length; i++)
+            {
+                if (grouped[i] == null)
+                    continue;
+                grouped[i].Sort((left, right) => left.Index.CompareTo(right.Index));
+                result[i] = grouped[i].AsReadOnly();
+            }
+            return result;
         }
 
         static void Assign(ProgramControlFlowEdge[] values, ProgramControlFlowEdge edge)

@@ -837,6 +837,10 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     m_StateMachineBinding.Document,
                     source,
                     target);
+                bool entryLink = source.Equals(
+                    m_StateMachineBinding.Document.Entry.ElementId);
+                if (!entryLink && payload == null)
+                    continue;
                 requests.Add(new GraphAuthoringMutationRequest(
                     GraphAuthoringMutationKind.CreateTransition,
                     source,

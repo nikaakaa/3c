@@ -227,6 +227,8 @@
 
 复审后重新打开的项为：`9.1`、`9.2`、`10.2`、`10.3`、`10.8`、`10.10`、`10.11`、`11.4`、`11.9`、`11.11`、`11.12`、`12.9`、`13.8`、`13.9`、`14.6`、`14.7`、`17.3`、`18.1`。`14.1`、`14.2`及已确认形成深度的Runtime Module不撤回；`19.x`继续保持未完成。
 
+ACL依赖边界：当前Pose Graph迁移和质量整改没有直接引用ACL类型、路径或资产，现行Pose仍使用项目自己的typed Source Slot、AnimationClip、Pose Projection和Runtime链。`codex/acl`对共享Runtime/Projection文件的修改属于重叠源码，不自动构成Pose前置，也不能用其Program或Projection替代本分支产物。若后续`21.1`或`21.3`实际跨入ACL修改过的Source/Projection合同，必须接入完整ACL祖先链和作者版本，再通过唯一正式Character Build重建对应Target与同组Projection；不得只取最后五个收尾提交或复制脏工作区文件。ACL现有19/19质量报告可发布，但最终发布后的Build状态是`job_lost_after_publication_domain_reload`，不作为正常结束或游戏画面E2E证据；已确认的Scalar门限固定为`0.001`。
+
 ## 21. 后续架构质量收口
 
 以下每一步都必须同时闭合Interface、Implementation、Depth和Locality，再进入下一步；不通过拆文件把同一个中央Owner改名成多个浅Module，不把未闭合的Runtime编译当成业务完成。
@@ -239,3 +241,4 @@
 - [ ] 21.6 为CanvasCore非virtual增删API的所有权形成同级方案决策并实现：方案A保留CanvasCore Graph并把可变对象限制在唯一Editor Mutation Owner，作者和Compiler只读Projection，改动较小但无法从类型层彻底阻止基类绕过；方案B增加隔离的CanvasCore Editor Adapter/组合边界，物理上收窄写入口，所有权更强但Canvas交互接入成本更高。未完成方案决策前不得把`17.3`或`18.1`描述为完成。
 - [ ] 21.7 明确`CharacterPoseCanvasView`仍是877行自建GraphView的当前取舍；要么接入ParadoxNotion现成Graph Editor交互并保留typed Mutation，要么明确接受自建交互维护成本。无论选择哪一项，都不得把当前实现描述成完整CanvasCore编辑表面。
 - [ ] 21.8 在Compiler与Runtime依赖闭合后，让唯一正式`CharacterSimulationBuildOrchestrator.Build(request)`同时生成所选Numeric Target和同组Presentation Projection，按同一Definition、Semantic IR、Contract和identity发布；旧Program/Projection产物只由该入口替换，不复制主目录生成文件或建立第二Builder。
+- [ ] 21.9 只有在后续Pose整改实际依赖ACL修改过的共享Source/Projection合同时，才接入完整ACL源码与作者版本；保留ACL的资源归属、Scalar门限和发布生命周期，不把ACL Program/Projection或发布证据直接当作本分支产物与E2E结果。

@@ -83,6 +83,7 @@ MonoBehaviour:
     type: 2}
   m_AnimationPresentationProfile: {fileID: 11400000, guid: 2fbcf34b8e3d4f46a91fd81d62b9241e,
     type: 2}
+  m_CameraProfile: {fileID: 11400000, guid: 7736f41e1b5846f685ce4cb049373532, type: 2}
   m_EquipmentCapabilityEnabled: 0
   m_EquipmentProfile: {fileID: 0}
   m_EquipmentPresentationProfile: {fileID: 0}

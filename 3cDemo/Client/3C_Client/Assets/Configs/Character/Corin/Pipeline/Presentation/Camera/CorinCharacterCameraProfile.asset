@@ -1,0 +1,66 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 0efd719533d742faa5b613a057cbd08c, type: 3}
+  m_Name: CorinCharacterCameraProfile
+  m_EditorClassIdentifier: 
+  m_Schema: character-camera-profile/v1
+  m_ProfileId: corin.camera.profile
+  m_DefaultSequence: {fileID: 11400000, guid: b3351f824e49467c893d83d326b392b3, type: 2}
+  m_Sequences: []
+  m_OverrideTracks: []
+  m_Zooms:
+  - {fileID: 11400000, guid: fab08c3883cc49c2af5dd60a5d6f18e2, type: 2}
+  m_Stretches:
+  - {fileID: 11400000, guid: bc08288692d54a769bb8d1d420fc9157, type: 2}
+  m_Shakes: []
+  m_Shots: []
+  m_Curves:
+  - {fileID: 11400000, guid: f8baca8f539149579421eebd926e3191, type: 2}
+  - {fileID: 11400000, guid: c6b42d6548944e6e82c6b6f6f4611871, type: 2}
+  - {fileID: 11400000, guid: bc02ce801a8044d4a630ff3d3244f87b, type: 2}
+  m_DefaultSphere:
+    m_Height: 0.22499999
+    m_Radius: 3.75
+  m_DefaultOrbitGroup:
+  - m_Height: 2.2249999
+    m_Radius: 2.5
+  - m_Height: 0.22499999
+    m_Radius: 3.75
+  - m_Height: -0.77499998
+    m_Radius: 2.2
+  m_NearClipPlane: 0.1
+  m_FarClipPlane: 2000
+  m_CameraLocateRadius: 3.75
+  m_DefaultElevationAngle: 3.4336302
+  m_DefaultFieldOfView: 50
+  m_DefaultSmoothTime: 0.15
+  m_RotationTransitionSeconds: 3
+  m_ChangeAvatarTransitionSeconds: 0.3
+  m_Input:
+    m_Sensitivity: {x: 0.12, y: 0.0025}
+    m_PitchLimit: {x: -70, y: 70}
+    m_DefaultResponseWeight: 1
+    m_PitchResponseWeight: 1
+    m_YawResponseWeight: 1
+  m_Locking:
+    m_EnableTargetLock: 0
+    m_EnableBossLock: 0
+    m_TransitionSeconds: 0.2
+    m_Weight: 1
+  m_Collision:
+    m_Enabled: 0
+    m_LayerMask: -1
+    m_Radius: 0.2
+    m_NearClipPlane: 0.05
+    m_SmoothTime: 0.08
+    m_TimeDomain: 1
+  m_TargetSlots: []

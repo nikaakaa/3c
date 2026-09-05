@@ -198,7 +198,14 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
             if (!used.Contains(candidate))
                 return candidate;
             string suffix = AgentAuthoringDocumentCodec.Hash(identity).Substring(0, 12);
-            return candidate + "-" + suffix;
+            string stable = candidate + "-" + suffix;
+            int collision = 0;
+            while (used.Contains(stable))
+            {
+                collision++;
+                stable = candidate + "-" + suffix + "-" + collision.ToString(System.Globalization.CultureInfo.InvariantCulture);
+            }
+            return stable;
         }
     }
 }

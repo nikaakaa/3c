@@ -2,13 +2,11 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using ThirdPersonCharacter.ActionSystem;
-using ThirdPersonCharacter.Behavior;
 using ThirdPersonCharacter.Equipment;
 using ThirdPersonCharacter.Pipeline.Graph;
 using ThirdPersonCharacter.Pipeline.GameplayEffect;
 using ThirdPersonCharacter.Pipeline.Input;
 using ThirdPersonGameplay.Attributes;
-using ThirdPersonGameplay.Contracts;
 using ThirdPersonGameplay.Effects;
 using ThirdPersonGameplay.Tags;
 using ThirdPersonSimulation;
@@ -40,6 +38,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
         readonly CharacterSimulationCompileReport m_Report;
         readonly string m_RootGraphId;
         readonly CharacterSimulationCatalogIndex m_Index = new CharacterSimulationCatalogIndex();
+        readonly CharacterSemanticActionCatalogEmitter m_ActionCatalog;
 
         public CharacterSimulationCatalogCompiler(
             CharacterAuthoringCompilationModel model,
@@ -50,14 +49,14 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             m_RootGraphId = model.Root.Graph.GraphAuthoringId;
             m_Builder = builder ?? throw new ArgumentNullException(nameof(builder));
             m_Report = report ?? throw new ArgumentNullException(nameof(report));
+            m_ActionCatalog = new CharacterSemanticActionCatalogEmitter(model, builder, report, m_Index);
         }
 
         public CharacterSimulationCatalogIndex Compile()
         {
             CompileInput();
             CompileGameplayTagsAndAttributes();
-            CompileActions();
-            CompileBehaviors();
+            m_ActionCatalog.Emit();
             CompileGameplayEffects();
             CompileEquipment();
             DeclareGlobalState();
@@ -200,43 +199,6 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             throw new InvalidOperationException($"Blackboard Input Binding type '{type?.FullName}' has no portable input kind.");
         }
 
-        void CompileActions()
-        {
-            foreach (ActionProfile profile in m_Model.ActionProfiles)
-            {
-                if (!profile || string.IsNullOrEmpty(profile.ActionId))
-                    continue;
-                m_Index.Actions.Add(profile.ActionId);
-                m_Index.Behaviors.Add(profile.BehaviorId);
-                CharacterSimulationSourceLocation source = AssetSource(profile, $"action:{profile.ActionId}");
-                var fields = BehaviorFields(profile, source).ToList();
-                fields.Add(m_Builder.ConstantField(source, "TargetRequirement", profile.TargetRequirement));
-                AddQueryFields(fields, source, "Required", profile.RequiredTags);
-                AddQueryFields(fields, source, "Block", profile.BlockTags);
-                AddQueryFields(fields, source, "Cancel", profile.CancelTags);
-                m_Builder.DeclareCatalogEntry(ProgramCatalogEntryKind.Action, $"action:{profile.ActionId}", 3, Fields(fields), source);
-                m_Builder.DeclareStandaloneStateSlot(source, ProgramStateValueKind.ActionActivationRequest, ProgramStateOwnerKind.Action, ProgramStateSemantic.ActionRequestBuffer, $"action:{profile.ActionId}");
-                m_Builder.DeclareStandaloneStateSlot(source, ProgramStateValueKind.ActionInstance, ProgramStateOwnerKind.Action, ProgramStateSemantic.ActionInstance, $"action:{profile.ActionId}");
-            }
-        }
-
-        void CompileBehaviors()
-        {
-            foreach (GameplayBehaviorProfile profile in m_Model.BehaviorProfiles)
-            {
-                if (!profile || string.IsNullOrEmpty(profile.BehaviorId))
-                    continue;
-                m_Index.Behaviors.Add(profile.BehaviorId);
-                CharacterSimulationSourceLocation source = AssetSource(profile, $"behavior:{profile.BehaviorId}");
-                m_Builder.DeclareCatalogEntry(
-                    ProgramCatalogEntryKind.Behavior,
-                    $"behavior:{profile.BehaviorId}",
-                    1,
-                    BehaviorFields(profile, source),
-                    source);
-            }
-        }
-
         void CompileGameplayTagsAndAttributes()
         {
             CharacterGameplayEffectProfile profile = m_Model.GameplayEffectProfile;
@@ -306,7 +268,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 m_Index.Behaviors.Add(effect.BehaviorId);
                 CharacterSimulationSourceLocation source = AssetSource(effect, $"effect:{effect.EffectId.Value}");
                 SemanticDataDocument definition = EncodeEffect(effect, source);
-                var fields = BehaviorFields(effect, source).ToList();
+                var fields = CharacterSemanticBehaviorCatalogFields.Emit(effect, m_Builder, source).ToList();
                 fields.Add(m_Builder.ConstantField(source, "Definition", definition));
                 m_Builder.DeclareCatalogEntry(
                     ProgramCatalogEntryKind.GameplayEffect,
@@ -574,33 +536,6 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             m_Builder.RequireGameplayCapability("Action");
             m_Builder.RequireGameplayCapability("GameplayEffect");
             m_Builder.RequireWorldRequest("CharacterBodyMotion", WorldCapability.BodyMotion | WorldCapability.Grounding | WorldCapability.Collision);
-        }
-
-        IEnumerable<ProgramCatalogField> BehaviorFields(IGameplayBehaviorProfile profile, CharacterSimulationSourceLocation source)
-        {
-            yield return m_Builder.ConstantField(source, "BehaviorKind", profile.BehaviorKind);
-            yield return m_Builder.ConstantField(source, "DisplayName", profile.DisplayName);
-            yield return m_Builder.ConstantField(source, "DebugCategory", profile.DebugCategory);
-            for (int i = 0; i < profile.Tags.Count; i++)
-                yield return m_Builder.IdentityField($"Tag:{i:D4}", $"tag:{profile.Tags[i].Value}");
-        }
-
-        void AddQueryFields(List<ProgramCatalogField> fields, CharacterSimulationSourceLocation source, string prefix, GameplayTagQuery query)
-        {
-            if (query == null)
-            {
-                m_Report.Error("tag_query_missing", source.Identity, $"{prefix} tag query is missing.");
-                return;
-            }
-            AddTags(fields, $"{prefix}:All", query.All);
-            AddTags(fields, $"{prefix}:Any", query.Any);
-            AddTags(fields, $"{prefix}:None", query.None);
-        }
-
-        void AddTags(List<ProgramCatalogField> fields, string prefix, IReadOnlyList<GameplayTagId> tags)
-        {
-            for (int i = 0; i < tags.Count; i++)
-                fields.Add(m_Builder.IdentityField($"{prefix}:{i:D4}", $"tag:{tags[i].Value}"));
         }
 
         void AddBoundFields(List<ProgramCatalogField> fields, CharacterSimulationSourceLocation source, string prefix, GameplayAttributeBoundDefinition bound)

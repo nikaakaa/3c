@@ -404,9 +404,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
             CharacterPresentationCommand right)
         {
             return string.Equals(left.ProducerId, right.ProducerId, StringComparison.Ordinal) &&
-                   left.ProducerGeneration == right.ProducerGeneration &&
-                   left.SourceActionInstanceId == right.SourceActionInstanceId &&
-                   left.Cycle == right.Cycle;
+                   left.ProducerGeneration == right.ProducerGeneration;
         }
 
         bool TryResolveLatest(PresentationStateKey key, out ActivePresentationRecord latest)

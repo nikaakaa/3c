@@ -28,13 +28,13 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
         [MenuItem("Tools/3C/Build/Compile All Stale Character Simulation Programs")]
         static void CompileAllStale()
         {
-            EditorApplication.delayCall += BuildAllStale;
+            BuildAllStale();
         }
 
         [MenuItem("Tools/3C/Build/Compile All Character Simulation Programs")]
         static void CompileAll()
         {
-            EditorApplication.delayCall += BuildAll;
+            BuildAll();
         }
 
         public static bool Build(CharacterPipelineDefinition definition, bool logReport)

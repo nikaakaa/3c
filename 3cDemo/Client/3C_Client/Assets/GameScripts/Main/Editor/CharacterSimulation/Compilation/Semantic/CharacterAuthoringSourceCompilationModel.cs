@@ -76,6 +76,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             ProgramId programId,
             ProgramRevision sourceRevision,
             IEnumerable<CharacterCompositionRoot> roots,
+            IEnumerable<CharacterSkillCompilationRecord> skills,
             IDictionary<string, CharacterAuthoringBlackboardDeclaration> declarations,
             IDictionary<string, TimelineData> timelines,
             IDictionary<UnityEngine.Object, string> assetGuids,
@@ -94,6 +95,9 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 throw new ArgumentException("Character compilation requires exactly one Character root.", nameof(roots));
             Roots = Array.AsReadOnly(stableRoots);
             Root = stableRoots.Single(value => value.Role == CharacterCompositionRootRole.Character).Occurrence;
+            SkillRecords = Array.AsReadOnly((skills ?? throw new ArgumentNullException(nameof(skills)))
+                .OrderBy(value => value.SkillId)
+                .ToArray());
             m_Declarations = new ReadOnlyDictionary<string, CharacterAuthoringBlackboardDeclaration>(
                 new SortedDictionary<string, CharacterAuthoringBlackboardDeclaration>(declarations, StringComparer.Ordinal));
             m_Timelines = new ReadOnlyDictionary<string, TimelineData>(
@@ -137,6 +141,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
         public int TickRate => Definition.SimulationTickRate;
         public CharacterAuthoringGraphOccurrence Root { get; }
         public IReadOnlyList<CharacterCompositionRoot> Roots { get; }
+        public IReadOnlyList<CharacterSkillCompilationRecord> SkillRecords { get; }
         public IReadOnlyDictionary<string, CharacterAuthoringBlackboardDeclaration> Declarations => m_Declarations;
         public IReadOnlyDictionary<string, TimelineData> Timelines => m_Timelines;
         public CharacterInputProfile InputProfile { get; }
@@ -348,6 +353,12 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             DiscoverEquipmentRoots(definition, roots);
             if (roots.Count == 0 || !m_Report.IsValid)
                 return null;
+            IReadOnlyList<CharacterSkillCompilationRecord> skills = CharacterSkillCompilationDiscovery.Discover(
+                definition.SkillDefinitions,
+                roots,
+                m_Report);
+            if (!m_Report.IsValid)
+                return null;
             return new CharacterAuthoringCompilationModel(
                 definition,
                 definitionPath,
@@ -355,6 +366,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 new ProgramId($"character:{definitionGuid}"),
                 sourceRevision,
                 roots,
+                skills,
                 m_Declarations,
                 m_Timelines,
                 m_AssetGuids,

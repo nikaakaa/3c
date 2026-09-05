@@ -1,17 +1,17 @@
 ## 当前进度
 
-更新于 2026-09-05 21:29（Asia/Shanghai）。本次核对代码到 `51b3a07c0f5cac439993b5f6ee5626ac3599507c`，生成的Gameplay Lab根资产仍到 `6ca8e09a718a9823d43518b9087bbb14481661e8`，位置为主目录 `D:/Unity_Project_1/3C` 的 `main`。后续提交必须继续更新下面对应任务，不能把这里的时点当成永久状态。
+更新于 2026-09-05（Asia/Shanghai）。本次核对代码到 `6b94d16f231d03dc3e8cba51f7dc54f55bebadd7`，生成的Gameplay Lab根资产仍到 `6ca8e09a718a9823d43518b9087bbb14481661e8`，位置为主目录 `D:/Unity_Project_1/3C` 的 `main`。后续提交必须继续更新下面对应任务，不能把这里的时点当成永久状态。
 
 本文件是本 change 的当前执行进度；`baseline.md`保留实施起点的历史身份。勾选只表示该条完整要求已满足；未勾任务另外写明“已实现，待验证”“部分完成”“尚未完成”或“待验证”，不再用同一个空框掩盖不同阶段。静态审查、源码编译、产物发布和Replay分别记录，不互相替代。
 
-按原66项完整要求记录：已完成4项，已实现待验证6项，部分完成33项，尚未完成20项，单独待验证3项。该计数不是工作量百分比；具体已落地部分和剩余条件见每条任务下的说明。
+按原66项完整要求记录：已完成4项，已实现待验证8项，部分完成33项，尚未完成18项，单独待验证3项。该计数不是工作量百分比；具体已落地部分和剩余条件见每条任务下的说明。
 
 ### 已有代码交付与剩余边界
 
 | 工作块 | 已有交付与审查 | 尚未完成 |
 |---|---|---|
 | C#控制合同与接线 | 显式State/Transition、typed状态和唯一模块目录；Corin规则经两Target进入同一Evaluate | 原输入/移动时序比较、所有旧作者入口清理及完整装备迁移 |
-| Action与技能实例状态 | `6db20c5f2`共用Activation/Commit/Lifecycle、SlotMap和实例状态管理；`ce72111f2`修正窗口Fact/Trace来源，局部静态审查通过 | 参数化子图调用frame、合法并发/容量、完整停止与恢复运行证据 |
+| Action与技能实例状态 | `6db20c5f2`共用Activation/Commit/Lifecycle、SlotMap和实例状态管理；`ce72111f2`修正窗口Fact/Trace来源；`1b80885e3`、`c26a15721`和`0a4bc76b3`已接入参数化子图调用frame及按值输入/成功输出边界 | 合法并发/容量、完整停止与恢复运行证据 |
 | 编译器职责拆分 | `b419fcdb9 → 770ecfc51`迁出Blackboard声明/状态及领域绑定；`3e1355410`迁出技能目录；`51aed878f → be440e2f5`迁出控制合同发射；`adc29ea30`迁出Timeline/TreeClip编排；`705f01d82`迁出Action/Behavior目录；`bf1289be3`统一Asset/Node来源；`ae28b8998`迁出Equipment目录；`147556f2f`迁出Input目录；`0c416ac24 → a23eb2ae8`迁出Tag/Attribute目录与协调器；`9a036e8ad`迁出全局状态；`475cfa9d0 → 51b3a07c0`按领域拆分节点登记与目录绑定。各模块已参与Editor/Frontend构建，局部代码对照确认原语义保留 | UI能力／Emitter／Target支持集一致性报告；解释器本体的大类拆分与作者/发布职责 |
 | 状态与网络身份 | `121ec4a49`、`6dcdfd82a`、`304d83880`等已迁移codec/source/skill/generation及恢复读取边界 | 当前完整控制/技能状态的checkpoint、Rollback及输出对账Proof |
 | 当前Corin产物发布 | `00c47f3c`统一两Target与Projection的一次Publish，`31ac3821`提交正式产物；后续控制、Timeline及Action目录拆分后分别正式重建，Program身份不变，最新根Prefab/Scene生成提交为`6ca8e09a7`；12.3已关闭 | 本组实际运行和Replay比较仍归13.2；不等同于全部产品发布完成 |
@@ -80,16 +80,16 @@
   当前状态：**部分完成**。b419fcdb9→770ecfc51、3e1355410已迁出Blackboard声明/状态/作用域、领域绑定和技能目录；51aed878f→be440e2f5迁出控制合同；adc29ea30迁出Timeline编排并通过窄回调复用Graph拓扑。705f01d82进一步把Action/Behavior目录、标签条件及动作状态槽发射移入CharacterSemanticActionCatalogEmitter；`bf1289be3`统一Node/Asset来源工厂；`ae28b8998`、`147556f2f`、`0c416ac24 → a23eb2ae8`、`9a036e8ad`分别迁出Equipment、Input、Tag/Attribute及全局状态目录。`475cfa9d0 → 51b3a07c0`将节点登记和目录绑定继续按领域拆开，所有模块仍写入共享CatalogIndex与Builder，中央业务分支已删除。各模块进入实际Editor构建，局部对照确认语义保留；UI/Emitter/Target能力一致性报告、其余作者目录和最终发布证据尚未完整交付。
 - [ ] 3.3 接入子图输入／输出签名、调用点及occurrence绑定，交付完整引用链与类型校验；子图递归被拒绝，显式Loop及跨技能候选分别验证。
 
-  当前状态：**尚未完成**。当前已有Graph occurrence编译基础；本项要求的子图输入/输出签名、参数绑定和完整类型/依赖验证尚无对应实施交付。
+  当前状态：**已实现，待验证**。`1b80885e3`接入Graph signature、occurrence CallFrame、IR/两Target codec及类型绑定；`c26a15721`建立SubGraph动态输入/输出值端口并将未连接输入转为正式默认常量，`0a4bc76b3`接通编译布局；递归拒绝沿既有Discovery的`graph_cycle`路径保留。显式Loop、跨技能候选及运行行为仍待Validator/Replay核对。
 - [ ] 3.4 迁移Tree／Timeline／TreeClip／局部状态机发射和状态声明，保持Decision／Commit及停止顺序；通过正式IR Inspector和source map核对对应关系。
 
   当前状态：**部分完成**。既有Tree/Timeline/TreeClip/局部状态机继续经过同一IR，6dcdfd82a等已迁移精确实例来源；adc29ea30将Timeline编排与TreeClip生命周期发射从中央类迁出，`6f7216303`又将边、状态生命周期编排交给独立GraphFlow emitter，代码对照确认入口/启用/停用/销毁顺序、状态owner及EmissionSession.Complete顺序保留；`bdedba175`将状态机运行、状态切换和状态停止迁出OperationControlRuntime。局部状态机调用参数、状态声明及IR Inspector完整核对仍未完成；本步未改公共Timeline运行或另建发射注册表，公共部分继续按独立owner接口对齐。
 - [ ] 3.5 将C#控制参数／state合同、GE／Equipment／Body Motion描述及技能目录纳入同一IR／角色运行包，交付canonical identity与依赖闭包结果。
 
-  当前状态：**部分完成**。ceb50eb9e及后续目录发射提交已写入控制合同、参数/state、Body Motion和技能目录；51aed878f→be440e2f5将控制描述与来源发射集中到独立模块。`705f01d82`之后Action、GE、Equipment、Input、Tag/Attribute和全局状态目录继续共用同一IR；Action与GE的Behavior字段来自同一实现，节点绑定也经共享目录引用模块进入同一Builder。当前正式重建的canonical SemanticHash保持fe5bbbd7c89aec250a7d0eabbd24ea7392bbd964a6b9bb3ce8e19e059428e969，Float32/Fixed身份已直接核对；最新拆分后的正式产物及GE/Equipment完整依赖闭包报告仍未交付。
+  当前状态：**部分完成**。ceb50eb9e及后续目录发射提交已写入控制合同、参数/state、Body Motion和技能目录；51aed878f→be440e2f5将控制描述与来源发射集中到独立模块，`05a7471ae`、`d344670ac`又把控制配置解析和默认参数收进正式Contract/IR链。`705f01d82`之后Action、GE、Equipment、Input、Tag/Attribute和全局状态目录继续共用同一IR；Action与GE的Behavior字段来自同一实现，节点绑定也经共享目录引用模块进入同一Builder。当前正式重建的canonical SemanticHash保持fe5bbbd7c89aec250a7d0eabbd24ea7392bbd964a6b9bb3ce8e19e059428e969，Float32/Fixed身份已直接核对；最新拆分后的正式产物及GE/Equipment完整依赖闭包报告仍未交付。
 - [ ] 3.6 分别完成Float32与Fixed降低、组合state layout、SkillProgram与codec升级，交付同语义双Target构建和旧ABI拒绝结果；列明两端保留差异的数值／存储／编码原因，控制与Action业务流程必须调用共享实现，不能复制后要求同步维护。
 
-  当前状态：**部分完成**。两Target的技能状态和codec已有实现；00c47f3c、31ac3821已完成同一IR的Float32/Fixed构建和产物身份核对。旧ABI拒绝及完整Target能力一致性结果尚未收口。
+  当前状态：**部分完成**。两Target的技能状态、Graph CallFrame、动态Value端口和codec已有实现；`00c47f3c`、`31ac3821`完成同一IR的Float32/Fixed构建和产物身份核对，`1b80885e3`、`c26a15721`、`0a4bc76b3`继续保持两端同一调用合同。旧ABI拒绝及完整Target能力一致性结果尚未收口。
 - [ ] 3.7 更新既有.csir／.csim store、wrapper和原子发布组，交付精确重读及混版拒绝结果；Projection只迁移技能producer来源，保持当前Pose实现。
 
   当前状态：**部分完成**。00c47f3c改为一次正式Publish同时生成两Target和Projection，31ac3821已提交本轮同组产物并核对实际引用；完整store重读、混版拒绝及发布失败边界的结果仍待整理，不能将有效组构建成功扩大为所有失败条件已验证。
@@ -98,16 +98,16 @@
 
 - [ ] 4.1 将现有控制解释器的正式使用范围收至技能，从OperationControlRuntime按组合控制、局部状态机、执行范围生命周期迁出职责，保留唯一分派／状态／调度入口；迁移调用者并删除角色RootTree调度及重复启停分支，交付模块输入输出、实际调用链和删除证据，不以partial或转发壳替代拆分。
 
-  当前状态：**部分完成**。C#控制/技能入口及实例作用域已迁移；`bdedba175`将局部状态机运行从OperationControlRuntime移入OperationStateMachineRuntime，`f56974a63`又将激活、停止、强制释放和执行范围完成移入OperationExecutionLifecycleRuntime，OperationControlRuntime保留组合遍历与唯一公开Cursor/分派入口。组合控制还未单独收敛，角色RootTree调度、重复启停分支、子图调用frame及旧作者入口仍未清理。
+  当前状态：**部分完成**。C#控制/技能入口及实例作用域已迁移；`bdedba175`将局部状态机运行从OperationControlRuntime移入OperationStateMachineRuntime，`f56974a63`又将激活、停止、强制释放和执行范围完成移入OperationExecutionLifecycleRuntime，`603a5951e`进一步拆出组合节点执行，`cc1eb16f6`和`0a4bc76b3`接入SubGraph调用入口及调用帧。OperationControlRuntime保留组合遍历与唯一公开Cursor/分派入口。角色RootTree调度、重复启停分支及旧作者入口仍未清理。
 - [ ] 4.2 接入ActionInstance拥有的节点、Timeline、局部状态机和等待状态，交付跨Tick字段清单及既有状态coverage校验结果。
 
   当前状态：**已实现，待验证**。d90da602b→6db20c5f2已接入ActionSkillExecutionFrame/Aggregate/Manager及两端state/layout/codec；跨Tick覆盖清单和现有coverage/运行证据尚未完整交付。
 - [ ] 4.3 实现子图按值入参、声明返回值和中止不提交输出的调用frame，交付多个调用点复用同一子图时的独立地址与运行诊断。
 
-  当前状态：**尚未完成**。已有技能实例frame不等同于子图调用frame；按值入参、返回值及中止不提交输出的完整调用机制尚无对应实施交付。
+  当前状态：**已实现，待验证**。`1b80885e3`建立调用点、输入/输出绑定、IR/Target codec与拓扑索引；`c26a15721`将SubGraph值端口按调用frame签名解析，并编译未连接输入默认值；`0a4bc76b3`在两Target的控制Tick前写入输入，成功后读取输出，失败/停止时以默认值隔离旧输出；`6b94d16f`在重复激活前重置输出状态。多个调用点通过occurrence route拥有独立state slot，完整运行诊断和中止/并发覆盖仍待验证。
 - [ ] 4.4 接入合法并发释放、重复激活与调用generation，交付模板共享、实例隔离和容量失败的现有Runtime／Validator结果，不增加对象clone。
 
-  当前状态：**部分完成**。6dcdfd82a、304d83880、6db20c5f2已加强重复激活与实例/generation隔离；当前仍有单active Action查找约束，合法并发、多个调用点及容量边界尚未闭合。
+  当前状态：**部分完成**。6dcdfd82a、304d83880、6db20c5f2已加强重复激活与实例/generation隔离；`1b80885e3`及后续调用帧按occurrence保持状态地址隔离，重复激活时输出状态也会重置。当前仍有单active Action查找约束，合法并发、容量边界及完整运行结果尚未闭合。
 - [ ] 4.5 迁移技能变量与Frame投影，角色控制字段通过只读事实暴露；交付已删除Character Blackboard输入镜像、无跨实例写入的引用及布局检查。
 
   当前状态：**部分完成**。技能局部slot已禁止缺实例时回落全局状态，ce72111f2修正Frame窗口发布来源；角色输入镜像清理、变量作用域完整迁移及全量布局检查未完成。
@@ -158,7 +158,7 @@
   当前状态：**已实现，待验证**。c2d9a203d及后续提交已在同一Evaluate依次执行C#控制和技能，再走原WorldResolve/Finalize；两者共用Actor/Tick transaction。完整Pipeline编译及当前候选运行证据尚待交付。
 - [ ] 7.2 扩展两个Target的状态transaction、copy、codec和hash，覆盖控制State identity、必要进入Tick／转换进度／输入缓存、ActionInstance、子图frame、参数、Timeline及停止进度；恢复直接还原数据，不重放Enter／Exit或技能请求，交付完整状态schema与旧版本拒绝结果。
 
-  当前状态：**部分完成**。121ec4a49、6dcdfd82a、304d83880、d90da602b、6db20c5f2已扩展两端codec/hash与控制/Action/技能frame身份；子图参数frame及完整状态覆盖/旧版本拒绝结果仍缺。
+  当前状态：**部分完成**。121ec4a49、6dcdfd82a、304d83880、d90da602b、6db20c5f2已扩展两端codec/hash与控制/Action/技能frame身份；`1b80885e3`已加入Graph CallFrame codec/hash，`c26a15721`和`0a4bc76b3`接通动态端口与调用状态；完整状态覆盖及旧版本拒绝结果仍缺。
 - [ ] 7.3 更新Composition、ProgramCatalog和模块装配校验，交付缺模块、混版、能力不足及不兼容Target在Active前失败的正式报告。
 
   当前状态：**部分完成**。模块目录、绑定版本和Program/State基础组合检查已落地；本轮产物混版已通过统一Publish修复。缺模块、混版、能力不足和Target不兼容的完整正式拒绝报告仍待交付。
@@ -194,7 +194,7 @@
   当前状态：**尚未完成**。编译发射器拆分不等于作者规则拆分；中央Capability、窗口及领域作者规则尚未完成本项迁移和重复特例删除。
 - [ ] 9.2 将节点创建、配置、复制粘贴和端口变化统一接入现有Port Shape与typed Mutation，交付作者目录／Validator一致结果并删除重复字段表。
 
-  当前状态：**尚未完成**。继续复用既有Port Shape/Mutation基础；本轮技能创建、配置、复制和动态端口的统一迁移及重复字段表清理尚未交付。
+  当前状态：**尚未完成**。SubTree运行编译已复用既有PropertyPort/PropertyEdge身份并接入动态值合同；技能创建、配置、复制和作者侧动态端口的统一Mutation迁移及重复字段表清理尚未交付。
 - [ ] 9.3 增加技能定义、签名与inline／shared子图编辑，交付从定义到Tree／Timeline／调用点的精确owner导航与原正式转换命令。
 
   当前状态：**尚未完成**。尚无技能签名、inline/shared子图工作面及精确owner导航的完整实施交付。
@@ -206,6 +206,8 @@
   当前状态：**尚未完成**。既有AI/Pose共享作者框架保留；窗口重载、草稿保护及订阅生命周期这一轮改进尚无实施/验证交付。
 
 ## 10. Document v5整包闭合
+
+实施归属：任务 10.1–10.6 由规划窗口 `01a07206-ec83-74e3-866a-7ccb6a158217` 与唯一同目录实现窗口 `01a0720a-6105-72b1-bf2f-bbfeb6654773` 独立负责；原 BTSMTL 实现不再修改本节，最终集成与全链 Replay 仍由原 BTSMTL 实施负责。
 
 - [ ] 10.1 定义v5控制配置与skill definition分片、精确允许文件族及local身份规则，交付schema与只读context／生成数据边界文档。
 

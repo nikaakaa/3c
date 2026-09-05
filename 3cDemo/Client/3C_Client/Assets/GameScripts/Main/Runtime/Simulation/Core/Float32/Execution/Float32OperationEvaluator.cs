@@ -707,7 +707,7 @@ namespace ThirdPersonSimulation
 				using (m_ActionStore.PushSkillExecution(action))
 				{
 					OperationExecutionResult result = m_Control.Tick(skill.EntryOperation);
-					Float32ActionInstanceState current = m_ActionStore.RequireActive(
+                    Float32ActionInstanceState current = m_ActionStore.RequireActiveTransient(
 						Float32ActionInstanceReference.FromInstance(action));
 					if (current.IsActive)
 					{

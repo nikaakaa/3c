@@ -344,6 +344,8 @@ namespace ThirdPersonSimulation.Fixed
 
         static void WriteActionReference(CanonicalWriter writer, FixedActionInstanceReference value)
         {
+            if (!value.IsValid && value.HasAnyIdentity)
+                throw new InvalidDataException("Character state Action instance reference has an incomplete execution identity.");
             writer.WriteBoolean(value.IsValid);
             if (!value.IsValid)
                 return;

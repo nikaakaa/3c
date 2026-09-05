@@ -151,16 +151,38 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                 }
                 var dependencies = new HashSet<string>(StringComparer.Ordinal);
                 var reachableCallSites = new HashSet<string>(StringComparer.Ordinal);
-                var visitedGraphs = new HashSet<string>(StringComparer.Ordinal);
-                var pendingGraphs = new Stack<string>();
-                pendingGraphs.Push(skill.entryGraphAuthoringId);
+                var graphStates = new Dictionary<string, int>(StringComparer.Ordinal);
+                var recursiveGraphs = new HashSet<string>(StringComparer.Ordinal);
+                var pendingGraphs = new Stack<(string GraphId, bool Exit)>();
+                if (!string.IsNullOrEmpty(skill.entryGraphAuthoringId))
+                    pendingGraphs.Push((skill.entryGraphAuthoringId, false));
                 while (pendingGraphs.Count > 0)
                 {
-                    string graphId = pendingGraphs.Pop();
-                    if (!visitedGraphs.Add(graphId))
+                    (string graphId, bool exit) = pendingGraphs.Pop();
+                    if (exit)
+                    {
+                        graphStates[graphId] = 2;
                         continue;
+                    }
+                    if (graphStates.TryGetValue(graphId, out int state))
+                    {
+                        if (state == 1 && recursiveGraphs.Add(graphId))
+                        {
+                            report.Error(
+                                path + ".entryGraphAuthoringId",
+                                "skill_subgraph_recursive",
+                                $"Skill入口Graph包含循环子图引用：{graphId}");
+                            valid = false;
+                        }
+                        continue;
+                    }
+                    graphStates[graphId] = 1;
                     if (!graphById.TryGetValue(graphId, out AgentSnapshotGraph graph))
+                    {
+                        graphStates[graphId] = 2;
                         continue;
+                    }
+                    pendingGraphs.Push((graphId, true));
                     foreach (AgentSnapshotNode node in graph.nodes ?? new List<AgentSnapshotNode>())
                     {
                         foreach (AgentSnapshotGraphReference reference in node?.graphReferences ?? new List<AgentSnapshotGraphReference>())
@@ -173,7 +195,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                                 graph.graphAuthoringId,
                                 node.elementAuthoringId,
                                 reference.key));
-                            pendingGraphs.Push(reference.graphAuthoringId);
+                            pendingGraphs.Push((reference.graphAuthoringId, false));
                         }
                     }
                 }

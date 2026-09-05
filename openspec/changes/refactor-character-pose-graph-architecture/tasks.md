@@ -182,7 +182,7 @@
 
 - [x] 15.1 补齐`character-targeted-motion-warp-demo` delta，删除Standalone双Actor、玩家绑定训练敌人和训练敌人范围Requirement，并把正式结果固定为只保留Corin、target input为None、五段攻击继续执行原始MotionCurve
 - [ ] 15.2 按`TrainingEnemy`名称、`corin-training-enemy` ActorId、`gameplay-lab-target`绑定、资产路径和GUID建立完整引用闭包，确认删除范围覆盖GameplayLab composition、Variant、AssetBundle collector、默认目录、构建入口、Profile、Prefab与generated数据
-- [x] 15.3 从GameplayLab prefab与Session composition删除TrainingEnemy嵌套实例、roster注册、AI control source和玩家target-provider绑定，使保留的Corin按既有`OptionalSnapshot`无目标语义运行且不新增占位目标
+- [ ] 15.3 从GameplayLab prefab与Session composition删除TrainingEnemy嵌套实例、roster注册、AI control source和玩家target-provider绑定，使保留的Corin按既有`OptionalSnapshot`无目标语义运行且不新增占位目标
 - [x] 15.4 删除`3cDemo/Client/3C_Client/Assets/Configs/Character/TrainingEnemy`、`TrainingEnemyMonster.prefab`、`TrainingEnemyMonsterPresentation.prefab`及对应meta和generated产物，不迁移其中PoseGraph、动画、AI、Rig、Foot或Profile资产
 - [ ] 15.5 删除`TrainingEnemyAnimationAssetAuthoring`、`TrainingEnemyRuntimeSceneBuilder`及仅为TrainingEnemy存在的作者／构建代码，并从GameplayLab builder、launcher、startup validator、root hierarchy builder、Shape Projection installer、collector和默认目录配置删除其专用分支、路径与GUID
 - [ ] 15.6 使用`rg`和Unity资产依赖结果确认项目不再包含TrainingEnemy路径、类型、ActorId、Prefab／Profile GUID、Missing Script、Missing Asset或collector条目；随后把`openspec/project.md`更新为单Corin且TrainingEnemy已退役的实际真相

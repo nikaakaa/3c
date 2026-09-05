@@ -151,11 +151,14 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                 }
                 var dependencies = new HashSet<string>(StringComparer.Ordinal);
                 var reachableCallSites = new HashSet<string>(StringComparer.Ordinal);
+                var visitedGraphs = new HashSet<string>(StringComparer.Ordinal);
                 var pendingGraphs = new Stack<string>();
                 pendingGraphs.Push(skill.entryGraphAuthoringId);
                 while (pendingGraphs.Count > 0)
                 {
                     string graphId = pendingGraphs.Pop();
+                    if (!visitedGraphs.Add(graphId))
+                        continue;
                     if (!graphById.TryGetValue(graphId, out AgentSnapshotGraph graph))
                         continue;
                     foreach (AgentSnapshotNode node in graph.nodes ?? new List<AgentSnapshotNode>())

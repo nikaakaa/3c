@@ -99,6 +99,7 @@ namespace ThirdPersonSimulation
         public CharacterControlModuleContract(
             CharacterControlModuleId moduleId,
             int semanticVersion,
+            CharacterControlStateId initialState,
             IEnumerable<CharacterControlStateDescriptor> states,
             IEnumerable<CharacterControlTransitionDescriptor> transitions,
             IEnumerable<CharacterControlStateFieldDescriptor> stateFields,
@@ -116,16 +117,55 @@ namespace ThirdPersonSimulation
             m_Parameters = Freeze(parameters, value => value.Id, "parameter");
             m_InputValues = Freeze(inputValues, value => value, "input value");
             m_Skills = Freeze(skills, value => value, "skill");
+            InitialState = initialState;
+            ValidateStateGraph();
         }
 
         public CharacterControlModuleId ModuleId { get; }
         public int SemanticVersion { get; }
+        public CharacterControlStateId InitialState { get; }
         public IReadOnlyList<CharacterControlStateDescriptor> States => m_States;
         public IReadOnlyList<CharacterControlTransitionDescriptor> Transitions => m_Transitions;
         public IReadOnlyList<CharacterControlStateFieldDescriptor> StateFields => m_StateFields;
         public IReadOnlyList<CharacterControlParameterDescriptor> Parameters => m_Parameters;
         public IReadOnlyList<SimulationInputValueId> InputValues => m_InputValues;
         public IReadOnlyList<CharacterSkillId> Skills => m_Skills;
+
+        public CharacterControlStateFieldDescriptor FindStateField(ProgramStateSemantic semantic)
+        {
+            CharacterControlStateFieldDescriptor result = null;
+            for (int i = 0; i < m_StateFields.Count; i++)
+            {
+                CharacterControlStateFieldDescriptor field = m_StateFields[i];
+                if (field.Semantic != semantic)
+                    continue;
+                if (result != null)
+                    throw new InvalidOperationException($"Character control module '{ModuleId}' has duplicate state field semantic '{semantic}'.");
+                result = field;
+            }
+            return result;
+        }
+
+        public CharacterControlStateFieldDescriptor RequireStateField(ProgramStateSemantic semantic) =>
+            FindStateField(semantic) ?? throw new InvalidOperationException(
+                $"Character control module '{ModuleId}' has no state field for semantic '{semantic}'.");
+
+        void ValidateStateGraph()
+        {
+            var stateIds = new HashSet<CharacterControlStateId>();
+            for (int i = 0; i < m_States.Count; i++)
+                stateIds.Add(m_States[i].Id);
+            if (!InitialState.IsValid || !stateIds.Contains(InitialState))
+                throw new ArgumentException("Character control module initial state is not declared.", nameof(InitialState));
+            for (int i = 0; i < m_Transitions.Count; i++)
+            {
+                CharacterControlTransitionDescriptor transition = m_Transitions[i];
+                if (!stateIds.Contains(transition.Source) || !stateIds.Contains(transition.Target))
+                    throw new ArgumentException(
+                        $"Character control transition '{transition.Id}' references an undeclared state.",
+                        nameof(m_Transitions));
+            }
+        }
 
         static ReadOnlyCollection<T> Freeze<T, TKey>(IEnumerable<T> source, Func<T, TKey> key, string label)
             where T : class

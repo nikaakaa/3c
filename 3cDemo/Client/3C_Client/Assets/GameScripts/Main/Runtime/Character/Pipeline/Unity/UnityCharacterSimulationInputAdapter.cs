@@ -192,6 +192,8 @@ namespace ThirdPersonCharacter.Pipeline.Simulation
 
         public bool TryGetLatchedVector2(string inputId, out Vector2 value)
         {
+            if (PerformanceCameraInputOverride.TryGet(inputId, out value))
+                return true;
             value = Vector2.zero;
             if (string.IsNullOrEmpty(inputId) ||
                 !m_LatchedValues.TryGetValue(inputId, out LatchedInputValue input) ||

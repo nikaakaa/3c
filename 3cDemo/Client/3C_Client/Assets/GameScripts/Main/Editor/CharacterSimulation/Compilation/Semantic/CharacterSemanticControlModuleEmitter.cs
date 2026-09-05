@@ -15,10 +15,13 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
 
         public int Emit(
             CharacterControlModuleContract contract,
+            CharacterControlParameterSet parameters,
             CharacterSimulationSourceLocation source)
         {
             if (contract == null)
                 throw new ArgumentNullException(nameof(contract));
+            if (parameters == null)
+                throw new ArgumentNullException(nameof(parameters));
             var fields = new List<ProgramCatalogField>
             {
                 m_Builder.ConstantField(source, "SemanticVersion", contract.SemanticVersion),
@@ -28,7 +31,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             {
                 CharacterControlParameterDescriptor parameter = contract.Parameters[i];
                 fields.Add(m_Builder.ConstantField(source, $"Parameter:{parameter.Id.Value}:ValueKind", parameter.ValueKind));
-                fields.Add(m_Builder.ConstantField(source, $"Parameter:{parameter.Id.Value}:NumericValue", parameter.NumericValue));
+                fields.Add(m_Builder.ConstantField(source, $"Parameter:{parameter.Id.Value}:NumericValue", parameters.ReadNumeric(parameter.Id)));
             }
             for (int i = 0; i < contract.Motions.Count; i++)
             {

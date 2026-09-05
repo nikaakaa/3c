@@ -18,11 +18,36 @@ using UnityEngine;
 
 namespace ThirdPersonCharacter.Pipeline
 {
+    [Serializable]
+    public sealed class CharacterControlParameterConfiguration
+    {
+        [SerializeField] string m_ParameterId;
+        [SerializeField] SemanticValueKind m_ValueKind = SemanticValueKind.Number;
+        [SerializeField] double m_NumericValue;
+
+        public CharacterControlParameterConfiguration() { }
+
+        public CharacterControlParameterConfiguration(
+            string parameterId,
+            SemanticValueKind valueKind,
+            double numericValue)
+        {
+            m_ParameterId = parameterId ?? string.Empty;
+            m_ValueKind = valueKind;
+            m_NumericValue = numericValue;
+        }
+
+        public string ParameterId => m_ParameterId ?? string.Empty;
+        public SemanticValueKind ValueKind => m_ValueKind;
+        public double NumericValue => m_NumericValue;
+    }
+
     [CreateAssetMenu(fileName = "CharacterPipelineDefinition", menuName = "3C/Character/Pipeline Definition")]
     public sealed partial class CharacterPipelineDefinition : ScriptableObject
     {
         [SerializeField] BaseTreeAsset m_RootTreeAsset;
         [SerializeField] string m_ControlModuleId;
+        [SerializeField] CharacterControlParameterConfiguration[] m_ControlParameters = Array.Empty<CharacterControlParameterConfiguration>();
         [SerializeField] CharacterSkillAuthoringDefinition[] m_SkillDefinitions = Array.Empty<CharacterSkillAuthoringDefinition>();
         [SerializeField, Min(1)] int m_SimulationTickRate = GameplayTickSettings.DefaultLocalLogicTickRate;
         [SerializeField] CharacterSimulationProgramAsset m_SimulationProgram;
@@ -41,6 +66,8 @@ namespace ThirdPersonCharacter.Pipeline
         public string ControlModuleId => string.IsNullOrWhiteSpace(m_ControlModuleId)
             ? string.Empty
             : m_ControlModuleId.Trim();
+        public IReadOnlyList<CharacterControlParameterConfiguration> ControlParameters =>
+            m_ControlParameters ?? Array.Empty<CharacterControlParameterConfiguration>();
         public IReadOnlyList<CharacterSkillAuthoringDefinition> SkillDefinitions =>
             m_SkillDefinitions ?? Array.Empty<CharacterSkillAuthoringDefinition>();
         public int SimulationTickRate => Math.Max(1, m_SimulationTickRate);
@@ -283,6 +310,40 @@ namespace ThirdPersonCharacter.Pipeline
         }
 
 #if UNITY_EDITOR
+        public void SetControlConfiguration(
+            CharacterControlModuleCatalog catalog,
+            string controlModuleId,
+            IEnumerable<CharacterControlParameterConfiguration> parameters)
+        {
+            if (catalog == null)
+                throw new ArgumentNullException(nameof(catalog));
+            string moduleId = string.IsNullOrWhiteSpace(controlModuleId)
+                ? string.Empty
+                : controlModuleId.Trim();
+            ICharacterControlModule module = catalog.Require(new CharacterControlModuleId(moduleId));
+            var configurations = new List<CharacterControlParameterConfiguration>();
+            var values = new List<CharacterControlParameterValue>();
+            foreach (CharacterControlParameterConfiguration configuration in parameters ?? Array.Empty<CharacterControlParameterConfiguration>())
+            {
+                if (configuration == null)
+                    throw new ArgumentException("Character control configuration contains a missing parameter.", nameof(parameters));
+                if (string.IsNullOrWhiteSpace(configuration.ParameterId))
+                    throw new ArgumentException("Character control configuration contains a parameter without an identity.", nameof(parameters));
+                configurations.Add(new CharacterControlParameterConfiguration(
+                    configuration.ParameterId.Trim(),
+                    configuration.ValueKind,
+                    configuration.NumericValue));
+                values.Add(new CharacterControlParameterValue(
+                    new CharacterControlParameterId(configuration.ParameterId.Trim()),
+                    configuration.ValueKind,
+                    configuration.NumericValue));
+            }
+            if (!module.Contract.TryResolveParameterSet(values, out _, out IReadOnlyList<string> errors))
+                throw new ArgumentException(string.Join(" ", errors), nameof(parameters));
+            m_ControlModuleId = moduleId;
+            m_ControlParameters = configurations.ToArray();
+        }
+
         public void SetSimulationProgram(CharacterSimulationProgramAsset simulationProgram)
         {
             m_SimulationProgram = simulationProgram;

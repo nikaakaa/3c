@@ -126,7 +126,21 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                     string.Empty,
                     $"control:{controlModule.Contract.ModuleId.Value}",
                     contentHash: controlModule.Contract.SemanticVersion.ToString());
-                new CharacterSemanticControlModuleEmitter(builder).Emit(controlModule.Contract, controlSource);
+                if (!TryResolveControlParameters(model.Definition.ControlParameters, controlModule.Contract, report, model.DefinitionPath, out CharacterControlParameterSet controlParameters))
+                    return null;
+                controlSource = new CharacterSimulationSourceLocation(
+                    controlSource.SourceType,
+                    controlSource.GraphId,
+                    controlSource.NodeId,
+                    controlSource.EdgeId,
+                    controlSource.TimelineId,
+                    controlSource.ClipId,
+                    controlSource.DisplayPath,
+                    trackId: controlSource.TrackId,
+                    declarationId: controlSource.DeclarationId,
+                    portId: controlSource.PortId,
+                    contentHash: controlParameters.ContentHash.ToString());
+                new CharacterSemanticControlModuleEmitter(builder).Emit(controlModule.Contract, controlParameters, controlSource);
                 IReadOnlyList<CharacterControlMotionCompilationRecord> motions = CharacterControlMotionCompilationDiscovery.Discover(
                     controlModule.Contract.Motions,
                     model.Roots,
@@ -245,10 +259,58 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             CharacterSimulationCompileReport report,
             string source)
         {
-            if (string.Equals(moduleId, CorinCharacterControlModule.ModuleId.Value, StringComparison.Ordinal))
-                return new CorinCharacterControlModule();
-            report.Error("control_module_uninstalled", source, $"Character control module '{moduleId}' is not installed.");
-            return null;
+            try
+            {
+                return CorinCharacterControlModuleCatalog.Create().Require(new CharacterControlModuleId(moduleId));
+            }
+            catch (Exception exception)
+            {
+                report.Error("control_module_uninstalled", source, exception.Message);
+                return null;
+            }
+        }
+
+        static bool TryResolveControlParameters(
+            IReadOnlyList<CharacterControlParameterConfiguration> configurations,
+            CharacterControlModuleContract contract,
+            CharacterSimulationCompileReport report,
+            string source,
+            out CharacterControlParameterSet parameters)
+        {
+            var values = new List<CharacterControlParameterValue>();
+            for (int i = 0; i < configurations.Count; i++)
+            {
+                CharacterControlParameterConfiguration configuration = configurations[i];
+                if (configuration == null || string.IsNullOrWhiteSpace(configuration.ParameterId))
+                {
+                    report.Error("control_parameter_configuration_invalid", source, $"Control parameter configuration #{i} has no identity.");
+                    continue;
+                }
+                try
+                {
+                    values.Add(new CharacterControlParameterValue(
+                        new CharacterControlParameterId(configuration.ParameterId.Trim()),
+                        configuration.ValueKind,
+                        configuration.NumericValue));
+                }
+                catch (Exception exception)
+                {
+                    report.Error("control_parameter_configuration_invalid", source, exception.Message);
+                }
+            }
+            if (!report.IsValid)
+            {
+                parameters = null;
+                return false;
+            }
+            if (!contract.TryResolveParameterSet(values, out parameters, out IReadOnlyList<string> errors))
+            {
+                for (int i = 0; i < errors.Count; i++)
+                    report.Error("control_parameter_configuration_invalid", source, errors[i]);
+                parameters = null;
+                return false;
+            }
+            return true;
         }
 
         static bool TryResolveRoot(

@@ -89,6 +89,70 @@ namespace ThirdPersonSimulation
         public double NumericValue { get; }
     }
 
+    public sealed class CharacterControlParameterValue
+    {
+        public CharacterControlParameterValue(
+            CharacterControlParameterId id,
+            SemanticValueKind valueKind,
+            double numericValue)
+        {
+            if (!id.IsValid ||
+                !Enum.IsDefined(typeof(SemanticValueKind), valueKind) ||
+                double.IsNaN(numericValue) ||
+                double.IsInfinity(numericValue))
+            {
+                throw new ArgumentException("Character control parameter value is incomplete.");
+            }
+            Id = id;
+            ValueKind = valueKind;
+            NumericValue = numericValue;
+        }
+
+        public CharacterControlParameterId Id { get; }
+        public SemanticValueKind ValueKind { get; }
+        public double NumericValue { get; }
+    }
+
+    public sealed class CharacterControlParameterSet
+    {
+        readonly ReadOnlyCollection<CharacterControlParameterValue> m_Values;
+        readonly Dictionary<CharacterControlParameterId, CharacterControlParameterValue> m_ById;
+
+        public CharacterControlParameterSet(IEnumerable<CharacterControlParameterValue> values)
+        {
+            var sorted = new List<CharacterControlParameterValue>(values ?? Array.Empty<CharacterControlParameterValue>());
+            sorted.Sort((left, right) => left.Id.CompareTo(right.Id));
+            m_ById = new Dictionary<CharacterControlParameterId, CharacterControlParameterValue>();
+            for (int i = 0; i < sorted.Count; i++)
+            {
+                CharacterControlParameterValue value = sorted[i]
+                    ?? throw new ArgumentException("Character control parameter set contains a missing value.", nameof(values));
+                if (!m_ById.TryAdd(value.Id, value))
+                    throw new ArgumentException($"Character control parameter '{value.Id}' is duplicated.", nameof(values));
+            }
+            m_Values = sorted.AsReadOnly();
+            var hashParts = new List<string> { "character-control-parameters/1" };
+            for (int i = 0; i < sorted.Count; i++)
+            {
+                CharacterControlParameterValue value = sorted[i];
+                hashParts.Add(value.Id.Value);
+                hashParts.Add(((int)value.ValueKind).ToString(System.Globalization.CultureInfo.InvariantCulture));
+                hashParts.Add(value.NumericValue.ToString("R", System.Globalization.CultureInfo.InvariantCulture));
+            }
+            ContentHash = StableHash.Compute(hashParts.ToArray());
+        }
+
+        public IReadOnlyList<CharacterControlParameterValue> Values => m_Values;
+        public StableHash ContentHash { get; }
+
+        public CharacterControlParameterValue Require(CharacterControlParameterId id) =>
+            m_ById.TryGetValue(id, out CharacterControlParameterValue value)
+                ? value
+                : throw new InvalidOperationException($"Character control parameter '{id}' is not declared.");
+
+        public double ReadNumeric(CharacterControlParameterId id) => Require(id).NumericValue;
+    }
+
     public enum CharacterControlMotionExecutionMode : byte
     {
         Once = 1,
@@ -209,6 +273,52 @@ namespace ThirdPersonSimulation
         public IReadOnlyList<CharacterControlMotionDescriptor> Motions => m_Motions;
         public IReadOnlyList<CharacterSkillId> Skills => m_Skills;
 
+        public bool TryResolveParameterSet(
+            IEnumerable<CharacterControlParameterValue> overrides,
+            out CharacterControlParameterSet resolved,
+            out IReadOnlyList<string> errors)
+        {
+            var messages = new List<string>();
+            var declared = new Dictionary<CharacterControlParameterId, CharacterControlParameterDescriptor>();
+            for (int i = 0; i < m_Parameters.Count; i++)
+                declared.Add(m_Parameters[i].Id, m_Parameters[i]);
+
+            var values = new Dictionary<CharacterControlParameterId, CharacterControlParameterValue>();
+            foreach (CharacterControlParameterValue value in overrides ?? Array.Empty<CharacterControlParameterValue>())
+            {
+                if (value == null)
+                {
+                    messages.Add("Character control parameter configuration contains a missing value.");
+                    continue;
+                }
+                if (!declared.TryGetValue(value.Id, out CharacterControlParameterDescriptor descriptor))
+                {
+                    messages.Add($"Character control parameter '{value.Id}' is not declared by module '{ModuleId}'.");
+                    continue;
+                }
+                if (value.ValueKind != descriptor.ValueKind)
+                {
+                    messages.Add($"Character control parameter '{value.Id}' has kind '{value.ValueKind}', expected '{descriptor.ValueKind}'.");
+                    continue;
+                }
+                if (!values.TryAdd(value.Id, value))
+                    messages.Add($"Character control parameter '{value.Id}' is configured more than once.");
+            }
+
+            var resolvedValues = new List<CharacterControlParameterValue>(m_Parameters.Count);
+            for (int i = 0; i < m_Parameters.Count; i++)
+            {
+                CharacterControlParameterDescriptor descriptor = m_Parameters[i];
+                resolvedValues.Add(values.TryGetValue(descriptor.Id, out CharacterControlParameterValue value)
+                    ? value
+                    : new CharacterControlParameterValue(descriptor.Id, descriptor.ValueKind, descriptor.NumericValue));
+            }
+
+            errors = messages.AsReadOnly();
+            resolved = messages.Count == 0 ? new CharacterControlParameterSet(resolvedValues) : null;
+            return messages.Count == 0;
+        }
+
         public CharacterControlStateFieldDescriptor FindStateField(ProgramStateSemantic semantic)
         {
             CharacterControlStateFieldDescriptor result = null;
@@ -319,6 +429,15 @@ namespace ThirdPersonSimulation
             if (module.Contract.SemanticVersion != binding.SemanticVersion)
                 throw new InvalidOperationException(
                     $"Character control module '{binding.ModuleId}' version '{module.Contract.SemanticVersion}' does not match Program version '{binding.SemanticVersion}'.");
+            return module;
+        }
+
+        public ICharacterControlModule Require(CharacterControlModuleId moduleId)
+        {
+            if (!moduleId.IsValid)
+                throw new ArgumentException("Character control module identity is invalid.", nameof(moduleId));
+            if (!m_Modules.TryGetValue(moduleId, out ICharacterControlModule module))
+                throw new InvalidOperationException($"Character control module '{moduleId}' is not installed.");
             return module;
         }
     }

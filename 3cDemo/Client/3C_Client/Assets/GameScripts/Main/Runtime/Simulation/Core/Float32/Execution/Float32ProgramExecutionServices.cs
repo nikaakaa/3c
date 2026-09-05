@@ -87,7 +87,12 @@ namespace ThirdPersonSimulation
                 ProgramStateSemantic.StateMachinePending,
                 ProgramStateSemantic.StateMachineExiting,
                 ProgramStateSemantic.StateMachineTransition,
-                ProgramStateSemantic.StateMachineExecutionPath);
+                ProgramStateSemantic.StateMachineExecutionPath,
+                ProgramStateSemantic.ControlState,
+                ProgramStateSemantic.ControlActiveState,
+                ProgramStateSemantic.ControlEnteredTick,
+                ProgramStateSemantic.ControlTransition,
+                ProgramStateSemantic.ControlTransitionProgress);
             ActionPolicy = new Float32StateAccessPolicy(
                 ProgramStateSemantic.ActionRequestBuffer,
                 ProgramStateSemantic.ActionInstance,

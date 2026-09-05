@@ -28,6 +28,7 @@
 - `gameplay-ai-control-source`：改为插件输入生产者、冻结观察、不可改写输入事实与正式失败语义。
 - `character-input-pipeline`：玩家与插件共用输入、请求时序、结果关联及输入生产/消费状态边界。
 - `gameplay-simulation-session-composition`：锁定行为内容、输入所有权、观察能力和批量准备合同。
+- `gameplay-simulation-pipeline`：正式区分外部输入生产事实与可恢复消费状态，替换旧 Local AI 候选状态回滚要求。
 - `btsmtl-graph-core`：删除 AIControllerTree 的领域注册，保留技能及其它正式树能力。
 - `graph-authoring-editor-shell`：删除自研 AI 窗口装配，保留共享编辑行为。
 - `graph-authoring-domain-framework`：插件 AI 使用插件自身作者框架，不进入 BTSMTL Capability/Mutation。

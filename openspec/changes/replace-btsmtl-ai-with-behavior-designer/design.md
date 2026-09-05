@@ -174,6 +174,7 @@ Authority Replication 对完整 Actor roster 产生既有状态/动作/结果。
 |---|---|---|
 | btsmtl-ai-controller-authoring：独立 Definition/RootTree、BTSMTL AI 窗口、AI Blackboard | 用户已选择停止维护这套作者框架 | 全部要求移除，旧 spec 能力在安装时退役 |
 | gameplay-ai-control-source：AI 必须编译为 portable Program；失败恢复 AI 候选状态 | 与插件直接执行及一次性输入事实冲突 | 替换为外部输入生产/消费分责；插件故障终止，角色回滚复用输入 |
+| gameplay-simulation-pipeline：有状态 Pass 恢复、Standard Local 的 AI 候选状态和外层原子性 | 单改 AI Source 规范会留下相反的 Pipeline 要求 | 同步限定 ExternalSource 输入生产边界；保留全部消费/调度/玩法结果事务，删除旧 AI 候选状态恢复 |
 | character-input-pipeline：AI 来源固定 AIIntentProgram；pending 请求恢复 | 来源改为插件；已发布输入不得再由恢复改变 | 保留请求捕获顺序和 timing class，明确 pending 与已冻结事实的边界 |
 | gameplay-simulation-session-composition：AI Program/ControllerId/ABI binding | 已删除 Program/Definition | 改锁定行为内容、游戏任务/input catalog、观察、所有权与 Source 能力 |
 | btsmtl-graph-core、editor shell、domain framework 的 AI 示例/领域装配 | 插件 AI 不再复用 BTSMTL 图框架 | 删除 AI 注册与承诺，保留其它领域的共享行为 |

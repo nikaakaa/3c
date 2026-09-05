@@ -1,12 +1,9 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using BTSMTL.Timeline;
+using BTSMTL.Diagnostics;
 using ThirdPersonCharacter.Pipeline.Graph;
 using ThirdPersonCharacter.Pipeline.Input;
-using ThirdPersonCharacter.Pipeline.Motion;
-using ThirdPersonCharacter.Pipeline.Motion.RootMotion;
-using ThirdPersonGameplay.Tags;
 using ThirdPersonSimulation;
 using TreeDesigner;
 using UnityEditor;
@@ -286,425 +283,34 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
         public static CharacterSimulationNodeEmitterRegistry CreateDefault()
         {
             var registry = new CharacterSimulationNodeEmitterRegistry();
-            registry.Register(Simple<RootNode>(node => new CharacterSimulationNodeEmission(SimulationOperationCode.Root)));
-            registry.Register(Simple<LoopNode>(node => new CharacterSimulationNodeEmission(SimulationOperationCode.Loop, integer0: (int)node.LoopStopType)));
-            registry.Register(Simple<ParallelNode>(node => new CharacterSimulationNodeEmission(SimulationOperationCode.Parallel, integer0: (int)node.Mode)));
-            registry.Register(Simple<SequenceNode>(node => new CharacterSimulationNodeEmission(SimulationOperationCode.Sequence)));
-            registry.Register(Simple<SelectorNode>(node => new CharacterSimulationNodeEmission(SimulationOperationCode.Selector)));
-            registry.Register(Simple<SucceedNode>(node => new CharacterSimulationNodeEmission(SimulationOperationCode.Succeed)));
-            registry.Register(Simple<StateMachineNode>(node => new CharacterSimulationNodeEmission(SimulationOperationCode.StateMachine, text0: node.Graph?.GraphAuthoringId)));
-            registry.Register(Simple<StateNode>(node => new CharacterSimulationNodeEmission(SimulationOperationCode.State, text0: node.SubTree?.GraphAuthoringId)));
-            registry.Register(Simple<StateMachineEnterNode>(node => new CharacterSimulationNodeEmission(SimulationOperationCode.StateEnter)));
-            registry.Register(Simple<StateMachineAnyStateNode>(node => new CharacterSimulationNodeEmission(SimulationOperationCode.StateAny)));
-            registry.Register(Simple<StateMachineExitNode>(node => new CharacterSimulationNodeEmission(SimulationOperationCode.StateExit)));
-            registry.Register(Simple<StateOnEnterNode>(node => new CharacterSimulationNodeEmission(SimulationOperationCode.StateOnEnter)));
-            registry.Register(Simple<StateOnExitNode>(node => new CharacterSimulationNodeEmission(SimulationOperationCode.StateOnExit)));
-            registry.Register(Simple<StateRootCompletedNode>(node => new CharacterSimulationNodeEmission(SimulationOperationCode.StateRootCompleted)));
-            registry.Register(Simple<StateExitCauseInfoNode>(node => new CharacterSimulationNodeEmission(SimulationOperationCode.StateExitCause, integer0: (int)node.Cause)));
-            registry.Register(Simple<TimelineEnterNode>(node => new CharacterSimulationNodeEmission(SimulationOperationCode.TimelineEnter, integer0: (int)node.EnterType)));
-            registry.Register(Simple<TimelineNode>(node => new CharacterSimulationNodeEmission(
-                SimulationOperationCode.Timeline,
-                integer0: (int)node.PlaybackMode,
-                text0: node.Timeline?.AuthoringId,
-                constants: Fields(("ActionContext", AssetIdentity(node.ActionContext))))));
-            registry.Register(Simple<ExposedPropertyNode>(node => new CharacterSimulationNodeEmission(
-                node.NodeType == ExposedPropertyNodeType.Get ? SimulationOperationCode.BlackboardGet : SimulationOperationCode.BlackboardSet,
-                integer0: (int)node.NodeType,
-                text0: node.BlackboardVariable.DeclarationId,
-                constants: Fields(
-                    ("DeclarationOwner", node.BlackboardVariable.DeclarationOwnerId),
-                    ("FactContext", AssetIdentity(node.FactContext))))));
-            registry.Register(Simple<CharacterInputBoolInfoNode>(node => new CharacterSimulationNodeEmission(SimulationOperationCode.InputBoolean, text0: node.InputValueId)));
-            registry.Register(Simple<CharacterInputFloatInfoNode>(node => new CharacterSimulationNodeEmission(SimulationOperationCode.InputScalar, text0: node.InputValueId)));
-            registry.Register(Simple<CharacterInputVector2InfoNode>(node => new CharacterSimulationNodeEmission(SimulationOperationCode.InputVector2, text0: node.InputValueId)));
-            registry.Register(Simple<CharacterInputVector2MagnitudeInfoNode>(node => new CharacterSimulationNodeEmission(SimulationOperationCode.InputVector2Magnitude, text0: node.InputValueId)));
-            registry.Register(Simple<CharacterActionRequestInfoNode>(node => new CharacterSimulationNodeEmission(SimulationOperationCode.InputRequest, text0: node.RequestId)));
-            registry.Register(Simple<PipelineBlackboardBoolInfoNode>(node => BlackboardRead(node)));
-            registry.Register(Simple<PipelineBlackboardIntInfoNode>(node => BlackboardRead(node)));
-            registry.Register(Simple<PipelineBlackboardFloatInfoNode>(node => BlackboardRead(node)));
-            registry.Register(Simple<PipelineBlackboardStringInfoNode>(node => BlackboardRead(node)));
-            registry.Register(Simple<PipelineBlackboardVector2InfoNode>(node => BlackboardRead(node)));
-            registry.Register(Simple<PipelineBlackboardVector3InfoNode>(node => BlackboardRead(node)));
-            registry.Register(Simple<CharacterMoveFacingAngleInfoNode>(node => new CharacterSimulationNodeEmission(SimulationOperationCode.MoveFacingAngle)));
-            registry.Register(Simple<ActionContextActiveInfoNode>(node => new CharacterSimulationNodeEmission(
-                SimulationOperationCode.ActionContextActive,
-                text0: AssetIdentity(node.ActionContext))));
-            registry.Register(Simple<ActionWindowActiveInfoNode>(node => new CharacterSimulationNodeEmission(
-                SimulationOperationCode.ActionWindowActive,
-                text0: node.WindowType)));
-            registry.Register(Simple<CanActivateActionInfoNode>(node => new CharacterSimulationNodeEmission(
-                SimulationOperationCode.CanActivateAction,
-                text0: node.ActionProfile ? node.ActionProfile.ActionId : string.Empty,
-                constants: Fields(
-                    ("ActionProfile", AssetIdentity(node.ActionProfile)),
-                    ("TargetSnapshotDeclaration", node.TargetSnapshotVariable.DeclarationId),
-                    ("TargetSnapshotOwner", node.TargetSnapshotVariable.DeclarationOwnerId)))));
-            registry.Register(Simple<ActivateActionInstanceNode>(node => new CharacterSimulationNodeEmission(
-                SimulationOperationCode.ActivateActionInstance,
-                text0: node.ActionProfile ? node.ActionProfile.ActionId : string.Empty,
-                constants: Fields(
-                    ("ActionProfile", AssetIdentity(node.ActionProfile)),
-                    ("SourceInputRequest", node.SourceInputRequestId),
-                    ("ConsumeSourceInputRequest", node.ConsumeSourceInputRequest),
-                    ("TargetKey", node.TargetKey),
-                    ("TargetSnapshotDeclaration", node.TargetSnapshotVariable.DeclarationId),
-                    ("TargetSnapshotOwner", node.TargetSnapshotVariable.DeclarationOwnerId),
-                    ("ActionContext", AssetIdentity(node.ActionContext))))));
-            registry.Register(Simple<SubmitActionLifecycleTransitionNode>(node => new CharacterSimulationNodeEmission(
-                SimulationOperationCode.SubmitActionLifecycle,
-                integer0: (int)node.TransitionType,
-                text0: node.Reason,
-                constants: Fields(("ActionContext", AssetIdentity(node.ActionContext))))));
-            registry.Register(Camera<RequestCameraStateNode>(RequestCameraState));
-            registry.Register(Camera<EmitCameraCueNode>(EmitCameraCue));
-            registry.Register(Camera<SetCameraResponseNode>(SetCameraResponse));
-            registry.Register(Camera<SetCameraTargetNode>(SetCameraTarget));
-            registry.Register(new CameraBasisCharacterSimulationNodeEmitter());
-            registry.Register(Simple<HasGameplayTagNode>(node => new CharacterSimulationNodeEmission(
-                SimulationOperationCode.GameplayEffectHasTag,
-                text0: TagIdentity(node.Tag.Value))));
-            registry.Register(Simple<MatchGameplayTagQueryNode>(node => new CharacterSimulationNodeEmission(
-                SimulationOperationCode.GameplayEffectMatchTags,
-                constants: QueryFields(node.Query, "Query"))));
-            registry.Register(Simple<ReadGameplayAttributeNode>(node => new CharacterSimulationNodeEmission(
-                SimulationOperationCode.GameplayAttributeRead,
-                text0: AttributeIdentity(node.Attribute.Value))));
-            registry.Register(Simple<ApplyGameplayEffectNode>(ApplyGameplayEffect));
-            registry.Register(Simple<RemoveGameplayEffectNode>(RemoveGameplayEffect));
-            registry.Register(Simple<ReadEquipmentIdentityNode>(node => new CharacterSimulationNodeEmission(
-                SimulationOperationCode.ReadEquipmentIdentity,
-                text0: node.SlotId)));
-            registry.Register(Simple<ReadEquipmentParameterNode>(node => new CharacterSimulationNodeEmission(
-                SimulationOperationCode.ReadEquipmentParameter,
-                integer0: (int)node.ValueKind,
-                text0: node.ParameterId)));
-            registry.Register(Simple<RequestEquipmentChangeNode>(node => EquipmentChange(
-                SimulationOperationCode.RequestEquipmentChange,
-                node)));
-            registry.Register(Simple<BeginEquipmentChangeNode>(node => EquipmentChange(
-                SimulationOperationCode.BeginEquipmentChange,
-                node)));
-            registry.Register(Simple<CommitEquipmentChangeNode>(node => new CharacterSimulationNodeEmission(SimulationOperationCode.CommitEquipmentChange)));
-            registry.Register(Simple<CancelEquipmentChangeNode>(node => new CharacterSimulationNodeEmission(SimulationOperationCode.CancelEquipmentChange)));
-            registry.Register(Simple<EnterEquipmentFeatureHostNode>(node => new CharacterSimulationNodeEmission(
-                SimulationOperationCode.EnterEquipmentFeatureHost,
-                text0: node.SlotId)));
-            registry.Register(Simple<ExitEquipmentFeatureHostNode>(node => new CharacterSimulationNodeEmission(
-                SimulationOperationCode.ExitEquipmentFeatureHost,
-                text0: node.SlotId)));
-            registry.Register(Simple<ResolveEquipmentActionRouteNode>(node => new CharacterSimulationNodeEmission(
-                SimulationOperationCode.ResolveEquipmentActionRoute,
-                text0: node.RouteId)));
-            registry.Register(Simple<LocomotionInputMotionNode>(Locomotion));
-            registry.Register(Simple<ConditionRuleResultNode>(node => new CharacterSimulationNodeEmission(SimulationOperationCode.ConditionResult)));
-            registry.Register(Simple<CompareNode>(node => new CharacterSimulationNodeEmission(SimulationOperationCode.Compare, integer0: (int)node.Comparison)));
-            registry.Register(Simple<AndNode>(node => new CharacterSimulationNodeEmission(SimulationOperationCode.And)));
-            registry.Register(Simple<OrNode>(node => new CharacterSimulationNodeEmission(SimulationOperationCode.Or)));
-            registry.Register(Simple<NotNode>(node => new CharacterSimulationNodeEmission(SimulationOperationCode.Not)));
+            CharacterSimulationCoreNodeEmitterRegistration.Register(registry);
+            CharacterSimulationInputNodeEmitterRegistration.Register(registry);
+            CharacterSimulationBlackboardNodeEmitterRegistration.Register(registry);
+            CharacterSimulationActionNodeEmitterRegistration.Register(registry);
+            CharacterSimulationCameraNodeEmitterRegistration.Register(registry);
+            CharacterSimulationGameplayNodeEmitterRegistration.Register(registry);
+            CharacterSimulationEquipmentNodeEmitterRegistration.Register(registry);
+            CharacterSimulationMotionNodeEmitterRegistration.Register(registry);
             return registry;
         }
 
-        static LocomotionInputMotionExecutionMode RequireLocomotionExecution(LocomotionInputMotionNode node)
-        {
-            LocomotionInputMotionExecutionMode mode = node.ExecutionMode;
-            if (!Enum.IsDefined(typeof(LocomotionInputMotionExecutionMode), mode))
-                throw new InvalidOperationException($"Locomotion execution mode '{mode}' is invalid.");
-            if (!float.IsFinite(node.DurationSeconds) || node.DurationSeconds < 0f)
-                throw new InvalidOperationException("Locomotion duration must be a non-negative finite value.");
-            if (mode == LocomotionInputMotionExecutionMode.Timed && node.DurationSeconds <= 0f)
-                throw new InvalidOperationException("Timed Locomotion Input Motion requires a positive duration.");
-            if (mode != LocomotionInputMotionExecutionMode.Timed && node.DurationSeconds != 0f)
-                throw new InvalidOperationException("Only Timed Locomotion Input Motion may declare a duration.");
-            return mode;
-        }
-
-        static CharacterSimulationNodeEmission Locomotion(LocomotionInputMotionNode node)
-        {
-            LocomotionInputMotionExecutionMode execution = RequireLocomotionExecution(node);
-            LocomotionInputMotionDisplacementMode displacement = node.DisplacementMode;
-            if (!Enum.IsDefined(typeof(LocomotionInputMotionDisplacementMode), displacement))
-                throw new InvalidOperationException($"Locomotion displacement mode '{displacement}' is invalid.");
-            if (!float.IsFinite(node.TurnSpeedDegrees) || node.TurnSpeedDegrees <= 0f)
-                throw new InvalidOperationException("Locomotion turn speed must be a positive finite value.");
-
-            var constants = new List<KeyValuePair<string, object>>
-            {
-                new KeyValuePair<string, object>("TurnSpeedDegrees", node.TurnSpeedDegrees),
-                new KeyValuePair<string, object>("DurationSeconds", node.DurationSeconds)
-            };
-            if (displacement == LocomotionInputMotionDisplacementMode.ConstantSpeed)
-            {
-                if (!float.IsFinite(node.MoveSpeed) || node.MoveSpeed < 0f)
-                    throw new InvalidOperationException("Constant Speed locomotion requires a non-negative finite Move Speed.");
-                if (node.ActionMotionCurve)
-                    throw new InvalidOperationException("Constant Speed locomotion cannot declare an Action Motion Curve.");
-                constants.Add(new KeyValuePair<string, object>("MoveSpeed", node.MoveSpeed));
-            }
-            else
-            {
-                RootMotionCurveAsset curve = node.ActionMotionCurve;
-                if (!curve || curve.EvaluationMode != RootMotionCurveEvaluationMode.FullLocalDelta)
-                    throw new InvalidOperationException("Action Motion Curve locomotion requires a FullLocalDelta curve.");
-                if (node.MoveSpeed != 0f)
-                    throw new InvalidOperationException("Action Motion Curve locomotion cannot declare Move Speed.");
-                if (!float.IsFinite(curve.Duration) || curve.Duration <= 0f)
-                    throw new InvalidOperationException("Action Motion Curve locomotion requires a positive finite curve duration.");
-                if (execution == LocomotionInputMotionExecutionMode.Timed && node.DurationSeconds > curve.Duration + 0.0001f)
-                    throw new InvalidOperationException("Timed locomotion cannot exceed its Action Motion Curve duration.");
-                constants.Add(new KeyValuePair<string, object>("ActionMotionPositionX", BakeCurve(curve.LocalPositionX, $"{node.GUID}/ActionMotionPositionX")));
-                constants.Add(new KeyValuePair<string, object>("ActionMotionPositionZ", BakeCurve(curve.LocalPositionZ, $"{node.GUID}/ActionMotionPositionZ")));
-                constants.Add(new KeyValuePair<string, object>("ActionMotionDuration", curve.Duration));
-            }
-
-            return new CharacterSimulationNodeEmission(
-                SimulationOperationCode.LocomotionInputMotion,
-                integer0: (int)execution,
-                integer1: (int)displacement,
-                flags: node.CameraRelative ? 1U : 0U,
-                constants: constants);
-        }
-
-        static SemanticDataDocument BakeCurve(AnimationCurve curve, string identity)
-        {
-            if (curve == null || curve.length == 0)
-                throw new InvalidOperationException($"Curve '{identity}' is empty.");
-            var writer = new SemanticDataWriter();
-            writer.WriteUInt32(0x56525543);
-            writer.WriteInt32(1);
-            writer.WriteInt32((int)curve.preWrapMode);
-            writer.WriteInt32((int)curve.postWrapMode);
-            writer.WriteInt32(curve.length);
-            for (int i = 0; i < curve.length; i++)
-            {
-                Keyframe key = curve.keys[i];
-                if (key.weightedMode != WeightedMode.None)
-                    throw new InvalidOperationException($"Curve '{identity}' key #{i} uses unsupported weighted tangents.");
-                writer.WriteNumber(key.time, $"{identity}[{i}].time");
-                writer.WriteNumber(key.value, $"{identity}[{i}].value");
-                writer.WriteNumber(key.inTangent, $"{identity}[{i}].inTangent");
-                writer.WriteNumber(key.outTangent, $"{identity}[{i}].outTangent");
-                writer.WriteNumber(key.inWeight, $"{identity}[{i}].inWeight");
-                writer.WriteNumber(key.outWeight, $"{identity}[{i}].outWeight");
-                writer.WriteInt32((int)key.weightedMode);
-            }
-            return writer.Build();
-        }
-
-        static CharacterSimulationNodeEmission BlackboardRead(PipelineBlackboardValueInfoNode node)
-        {
-            return new CharacterSimulationNodeEmission(
-                SimulationOperationCode.BlackboardGet,
-                text0: node.BlackboardVariable.DeclarationId,
-                constants: Fields(("DeclarationOwner", node.BlackboardVariable.DeclarationOwnerId)));
-        }
-
-        static CharacterSimulationNodeEmission EquipmentChange(SimulationOperationCode code, EquipmentChangeOperationNode node)
-        {
-            return new CharacterSimulationNodeEmission(
-                code,
-                text0: node.SlotId,
-                constants: Fields(("ActionContext", AssetIdentity(node.ActionContext))));
-        }
-
-        static CharacterSimulationNodeEmission ApplyGameplayEffect(ApplyGameplayEffectNode node)
-        {
-            var constants = new List<KeyValuePair<string, object>>
-            {
-                new KeyValuePair<string, object>("DefinitionRevision", node.Effect ? node.Effect.DefinitionRevision : 0U),
-                new KeyValuePair<string, object>("ActionContext", AssetIdentity(node.ActionContext)),
-                new KeyValuePair<string, object>("Predicted", node.Predicted)
-            };
-            for (int i = 0; i < node.SetByCallerValues.Count; i++)
-            {
-                string parameterId = node.SetByCallerValues[i].ParameterId;
-                constants.Add(new KeyValuePair<string, object>($"SetByCaller:{parameterId}", node.SetByCallerValues[i].Value));
-            }
-            return new CharacterSimulationNodeEmission(
-                SimulationOperationCode.GameplayEffectApply,
-                text0: EffectIdentity(node.Effect ? node.Effect.EffectId.Value : string.Empty),
-                constants: constants);
-        }
-
-        static CharacterSimulationNodeEmission RemoveGameplayEffect(RemoveGameplayEffectNode node)
-        {
-            var constants = new List<KeyValuePair<string, object>>
-            {
-                new KeyValuePair<string, object>("Handle", node.Handle),
-                new KeyValuePair<string, object>("Effect", EffectIdentity(node.Effect ? node.Effect.EffectId.Value : string.Empty))
-            };
-            constants.AddRange(QueryFields(node.EffectTagQuery, "Query"));
-            return new CharacterSimulationNodeEmission(
-                SimulationOperationCode.GameplayEffectRemove,
-                integer0: (int)node.Selector,
-                constants: constants);
-        }
-
-        static CharacterSimulationNodeEmission RequestCameraState(RequestCameraStateNode node)
-        {
-            RequireDefined(node.Mode, nameof(node.Mode));
-            RequireDefined(node.InterruptPolicy, nameof(node.InterruptPolicy));
-            RequireUnit(node.Weight, nameof(node.Weight));
-            RequireNonNegative(node.BlendInSeconds, nameof(node.BlendInSeconds));
-            RequireNonNegative(node.BlendOutSeconds, nameof(node.BlendOutSeconds));
-            RequireOptionalIdentity(node.TargetKey, nameof(node.TargetKey));
-            return new CharacterSimulationNodeEmission(
-                SimulationOperationCode.CameraStateRequest,
-                integer0: CameraProgramOperationSchema.PayloadVersion,
-                integer1: (int)node.Mode,
-                flags: (uint)node.InterruptPolicy,
-                constants: Fields(
-                    ("Priority", node.Priority),
-                    ("Weight", node.Weight),
-                    ("BlendInSeconds", node.BlendInSeconds),
-                    ("BlendOutSeconds", node.BlendOutSeconds),
-                    ("TargetKey", node.TargetKey),
-                    ("ActionContext", AssetIdentity(node.ActionContext))));
-        }
-
-        static CharacterSimulationNodeEmission EmitCameraCue(EmitCameraCueNode node)
-        {
-            RequireIdentity(node.CueId, nameof(node.CueId));
-            RequireDefined(node.CueKind, nameof(node.CueKind));
-            RequireIdentity(node.CueType, nameof(node.CueType));
-            RequireNonNegative(node.Intensity, nameof(node.Intensity));
-            RequireNonNegative(node.DurationSeconds, nameof(node.DurationSeconds));
-            return new CharacterSimulationNodeEmission(
-                SimulationOperationCode.CameraCue,
-                integer0: CameraProgramOperationSchema.PayloadVersion,
-                integer1: (int)node.CueKind,
-                constants: Fields(
-                    ("CueId", node.CueId),
-                    ("CueType", node.CueType),
-                    ("Intensity", node.Intensity),
-                    ("DurationSeconds", node.DurationSeconds),
-                    ("Priority", node.Priority),
-                    ("ActionContext", AssetIdentity(node.ActionContext))));
-        }
-
-        static CharacterSimulationNodeEmission SetCameraResponse(SetCameraResponseNode node)
-        {
-            RequireDefined(node.LookResponse, nameof(node.LookResponse));
-            RequireUnit(node.ManualOrbitWeight, nameof(node.ManualOrbitWeight));
-            RequireUnit(node.PitchResponseWeight, nameof(node.PitchResponseWeight));
-            RequireUnit(node.YawResponseWeight, nameof(node.YawResponseWeight));
-            RequireUnit(node.Weight, nameof(node.Weight));
-            return new CharacterSimulationNodeEmission(
-                SimulationOperationCode.CameraResponse,
-                integer0: CameraProgramOperationSchema.PayloadVersion,
-                integer1: (int)node.LookResponse,
-                constants: Fields(
-                    ("ManualOrbitWeight", node.ManualOrbitWeight),
-                    ("PitchResponseWeight", node.PitchResponseWeight),
-                    ("YawResponseWeight", node.YawResponseWeight),
-                    ("Priority", node.Priority),
-                    ("Weight", node.Weight),
-                    ("ActionContext", AssetIdentity(node.ActionContext))));
-        }
-
-        static CharacterSimulationNodeEmission SetCameraTarget(SetCameraTargetNode node)
-        {
-            RequireOptionalIdentity(node.TargetKey, nameof(node.TargetKey));
-            RequireOptionalIdentity(node.AnchorKey, nameof(node.AnchorKey));
-            RequireOptionalIdentity(node.AimPointKey, nameof(node.AimPointKey));
-            RequireOptionalIdentity(node.PreferredBoneKey, nameof(node.PreferredBoneKey));
-            RequireUnit(node.Weight, nameof(node.Weight));
-            int targetMask = (string.IsNullOrEmpty(node.TargetKey) ? 0 : CameraProgramOperationSchema.TargetKeyMask) |
-                             (string.IsNullOrEmpty(node.AnchorKey) ? 0 : CameraProgramOperationSchema.AnchorKeyMask) |
-                             (string.IsNullOrEmpty(node.AimPointKey) ? 0 : CameraProgramOperationSchema.AimPointKeyMask) |
-                             (string.IsNullOrEmpty(node.PreferredBoneKey) ? 0 : CameraProgramOperationSchema.PreferredBoneKeyMask);
-            if (targetMask == 0)
-                throw new InvalidOperationException("SetCameraTarget requires at least one formal target identity.");
-            return new CharacterSimulationNodeEmission(
-                SimulationOperationCode.CameraTarget,
-                integer0: CameraProgramOperationSchema.PayloadVersion,
-                integer1: targetMask,
-                constants: Fields(
-                    ("TargetKey", node.TargetKey),
-                    ("AnchorKey", node.AnchorKey),
-                    ("AimPointKey", node.AimPointKey),
-                    ("PreferredBoneKey", node.PreferredBoneKey),
-                    ("Priority", node.Priority),
-                    ("Weight", node.Weight),
-                    ("ActionContext", AssetIdentity(node.ActionContext))));
-        }
-
-        internal static CharacterSimulationNodeEmission ReadCameraBasis(ReadCameraBasisNode node)
-        {
-            return new CharacterSimulationNodeEmission(
-                SimulationOperationCode.CameraBasisRead,
-                integer0: CameraProgramOperationSchema.PayloadVersion);
-        }
-
-        static KeyValuePair<string, object>[] QueryFields(GameplayTagQuery query, string prefix)
-        {
-            var fields = new List<KeyValuePair<string, object>>();
-            Add(query?.All, "All");
-            Add(query?.Any, "Any");
-            Add(query?.None, "None");
-            return fields.ToArray();
-
-            void Add(IReadOnlyList<GameplayTagId> values, string kind)
-            {
-                if (values == null)
-                    return;
-                for (int i = 0; i < values.Count; i++)
-                    fields.Add(new KeyValuePair<string, object>($"{prefix}:{kind}:{i:D4}", TagIdentity(values[i].Value)));
-            }
-        }
-
-        static string TagIdentity(string value) => string.IsNullOrWhiteSpace(value) ? string.Empty : $"tag:{value.Trim()}";
-        static string AttributeIdentity(string value) => string.IsNullOrWhiteSpace(value) ? string.Empty : $"attribute:{value.Trim()}";
-        static string EffectIdentity(string value) => string.IsNullOrWhiteSpace(value) ? string.Empty : $"effect:{value.Trim()}";
-
-        static ICharacterSimulationNodeEmitter Simple<T>(Func<T, CharacterSimulationNodeEmission> emit) where T : BaseNode
+        internal static ICharacterSimulationNodeEmitter Simple<T>(Func<T, CharacterSimulationNodeEmission> emit) where T : BaseNode
         {
             return new SimpleCharacterSimulationNodeEmitter<T>(emit);
         }
 
-        static ICharacterSimulationNodeEmitter Camera<T>(Func<T, CharacterSimulationNodeEmission> emit) where T : BaseNode
+        internal static ICharacterSimulationNodeEmitter Camera<T>(Func<T, CharacterSimulationNodeEmission> emit) where T : BaseNode
         {
             return new CameraCharacterSimulationNodeEmitter<T>(emit);
         }
 
-        static void RequireDefined<T>(T value, string field) where T : struct, Enum
-        {
-            if (!Enum.IsDefined(typeof(T), value))
-                throw new InvalidOperationException($"Camera field '{field}' contains unknown enum value '{Convert.ToInt32(value)}'.");
-        }
-
-        static void RequireUnit(float value, string field)
-        {
-            if (float.IsNaN(value) || float.IsInfinity(value) || value < 0f || value > 1f)
-                throw new InvalidOperationException($"Camera field '{field}' must be finite and in [0, 1].");
-        }
-
-        static void RequireNonNegative(float value, string field)
-        {
-            if (float.IsNaN(value) || float.IsInfinity(value) || value < 0f)
-                throw new InvalidOperationException($"Camera field '{field}' must be finite and non-negative.");
-        }
-
-        static void RequireIdentity(string value, string field)
-        {
-            if (string.IsNullOrWhiteSpace(value) || !string.Equals(value, value.Trim(), StringComparison.Ordinal))
-                throw new InvalidOperationException($"Camera field '{field}' requires a trimmed identity.");
-        }
-
-        static void RequireOptionalIdentity(string value, string field)
-        {
-            if (value != null && !string.Equals(value, value.Trim(), StringComparison.Ordinal))
-                throw new InvalidOperationException($"Camera field '{field}' must not contain leading or trailing whitespace.");
-        }
-
-        static KeyValuePair<string, object>[] Fields(params (string Name, object Value)[] values)
+        internal static KeyValuePair<string, object>[] Fields(params (string Name, object Value)[] values)
         {
             var result = new KeyValuePair<string, object>[values.Length];
             for (int i = 0; i < values.Length; i++)
                 result[i] = new KeyValuePair<string, object>(values[i].Name, values[i].Value);
             return result;
         }
-
-        static string AssetIdentity(UnityEngine.Object asset) => CharacterSimulationNodeEmitterContext.AssetIdentity(asset);
     }
 
     sealed class SimpleCharacterSimulationNodeEmitter<T> : ICharacterSimulationNodeEmitter where T : BaseNode
@@ -767,7 +373,9 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             var cameraBasis = (ReadCameraBasisNode)node;
             OperationHandle operation = context.Emit(
                 cameraBasis,
-                CharacterSimulationNodeEmitterRegistry.ReadCameraBasis(cameraBasis));
+                new CharacterSimulationNodeEmission(
+                    SimulationOperationCode.CameraBasisRead,
+                    integer0: CameraProgramOperationSchema.PayloadVersion));
             context.RecordOutputPorts(
                 cameraBasis,
                 operation,

@@ -75,8 +75,9 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                     route,
                     source,
                     ProgramCatalogEntryKind.EquipmentFeatureParameter,
-                    key,
-                    m_CatalogIndex.EquipmentParameters.Contains(key));
+                    $"equipment:feature:{equipmentParameter.FeatureId}:parameter:{equipmentParameter.ParameterId}",
+                    m_CatalogIndex.EquipmentParameters.Contains(key),
+                    "equipment-parameter");
                 return;
             }
             if (node is EquipmentChangeOperationNode equipmentChange)
@@ -89,8 +90,9 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                         route,
                         source,
                         ProgramCatalogEntryKind.EquipmentDefinition,
-                        $"equipment:{equipmentChange.EquipmentId}",
-                        m_CatalogIndex.EquipmentItems.Contains(equipmentChange.EquipmentId));
+                        $"equipment:item:{equipmentChange.EquipmentId}",
+                        m_CatalogIndex.EquipmentItems.Contains(equipmentChange.EquipmentId),
+                        "equipment-item");
                 }
                 return;
             }
@@ -106,8 +108,9 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                     route,
                     source,
                     ProgramCatalogEntryKind.EquipmentRoute,
-                    $"route:{equipmentRoute.RouteId}",
-                    m_CatalogIndex.EquipmentRoutes.Contains(equipmentRoute.RouteId));
+                    $"equipment:route:{equipmentRoute.RouteId}",
+                    m_CatalogIndex.EquipmentRoutes.Contains(equipmentRoute.RouteId),
+                    "equipment-route");
                 return;
             }
             if (node is ActivateActionInstanceNode activate)
@@ -259,8 +262,9 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 route,
                 source,
                 ProgramCatalogEntryKind.EquipmentSlot,
-                $"slot:{slotId}",
-                m_CatalogIndex.EquipmentSlots.Contains(slotId));
+                $"equipment:slot:{slotId}",
+                m_CatalogIndex.EquipmentSlots.Contains(slotId),
+                "equipment-slot");
         }
 
         void BindCatalog(

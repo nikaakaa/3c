@@ -35,7 +35,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             foreach (BlackboardDeclaration item in m_Declarations.Values)
             {
                 BaseExposedProperty declaration = item.Declaration;
-                CharacterSimulationSourceLocation source = DeclarationSource(item);
+                CharacterSimulationSourceLocation source = DeclarationSource(item, item.Route);
                 string identity = DeclarationIdentity(item.Graph.GraphAuthoringId, declaration.DeclarationId);
                 var fields = new List<ProgramCatalogField>
                 {
@@ -174,7 +174,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             if (!TryMapValueKind(item.Declaration.ValueType, out ProgramStateValueKind valueKind))
                 return -1;
 
-            CharacterSimulationSourceLocation source = DeclarationSource(item);
+            CharacterSimulationSourceLocation source = DeclarationSource(item, route);
             int value = m_Builder.DeclareStandaloneStateSlot(
                 source,
                 valueKind,
@@ -286,7 +286,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
 
         static string DeclarationIdentity(string ownerId, string declarationId) => $"blackboard:{ownerId}:{declarationId}";
 
-        static CharacterSimulationSourceLocation DeclarationSource(BlackboardDeclaration item)
+        static CharacterSimulationSourceLocation DeclarationSource(BlackboardDeclaration item, string route)
         {
             return new CharacterSimulationSourceLocation(
                 item.Declaration.GetType().FullName,
@@ -295,7 +295,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 string.Empty,
                 string.Empty,
                 string.Empty,
-                $"{item.Route}/blackboard:{item.Declaration.DeclarationId}",
+                $"{route}/blackboard:{item.Declaration.DeclarationId}",
                 declarationId: item.Declaration.DeclarationId,
                 contentHash: GraphAuthoringFingerprint.Compute(item.Graph));
         }

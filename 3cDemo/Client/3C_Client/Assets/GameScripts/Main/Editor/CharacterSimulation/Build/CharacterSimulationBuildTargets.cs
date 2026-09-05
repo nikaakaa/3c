@@ -147,7 +147,8 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                         artifact.Header.OperationSetVersion,
                         artifact.Header.SourceRevision,
                         artifact.Header.SemanticHash,
-                        Float32SimulationNumericProfile.Value));
+                        Float32SimulationNumericProfile.Value,
+                        artifact.Header.Root));
                 if (!roundTrip.ProgramHash.Equals(result.Program.ProgramHash) || !roundTrip.LayoutHash.Equals(result.Program.LayoutHash))
                     throw new InvalidDataException("Float32 Program round-trip identity mismatch.");
                 var partitions = new HashSet<ProgramStateValueKind>();

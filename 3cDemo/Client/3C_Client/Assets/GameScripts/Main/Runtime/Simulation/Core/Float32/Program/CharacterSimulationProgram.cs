@@ -191,7 +191,8 @@ namespace ThirdPersonSimulation
             ProgramRevision sourceRevision,
             SemanticHash semanticHash,
             SimulationNumericProfile numericProfile,
-            ProgramCapabilityManifest capabilities)
+            ProgramCapabilityManifest capabilities,
+            SimulationProgramRootDescriptor root)
         {
             if (!programId.IsValid || !operationSetVersion.IsValid || tickRate <= 0 || string.IsNullOrEmpty(sourceRevision.Value) || !semanticHash.IsValid)
                 throw new ArgumentException("Program manifest is incomplete.");
@@ -206,6 +207,9 @@ namespace ThirdPersonSimulation
             SemanticHash = semanticHash;
             NumericProfile = numericProfile;
             Capabilities = capabilities ?? throw new ArgumentNullException(nameof(capabilities));
+            if (!root.IsValid)
+                throw new ArgumentException("Program root descriptor is invalid.", nameof(root));
+            Root = root;
         }
         public ProgramId ProgramId { get; }
         public string CompilerVersion { get; }
@@ -215,6 +219,7 @@ namespace ThirdPersonSimulation
         public SemanticHash SemanticHash { get; }
         public SimulationNumericProfile NumericProfile { get; }
         public ProgramCapabilityManifest Capabilities { get; }
+        public SimulationProgramRootDescriptor Root { get; }
     }
 
     public sealed class CharacterSimulationProgram
@@ -255,8 +260,13 @@ namespace ThirdPersonSimulation
             IEnumerable<ProgramGraphCallFrame> graphCallFrames = null)
         {
             Manifest = manifest ?? throw new ArgumentNullException(nameof(manifest));
-            BodyMotion = bodyMotion ?? throw new ArgumentNullException(nameof(bodyMotion));
-            if ((Manifest.Capabilities.RequiredWorldCapabilities & WorldCapability.AirborneVerticalMotion) == 0)
+            if (Manifest.Root.IsCharacter && bodyMotion == null)
+                throw new ArgumentNullException(nameof(bodyMotion));
+            if (Manifest.Root.IsTimeline && bodyMotion != null)
+                throw new ArgumentException("Timeline Program cannot contain Character Body Motion.", nameof(bodyMotion));
+            BodyMotion = bodyMotion;
+            if (Manifest.Root.IsCharacter &&
+                (Manifest.Capabilities.RequiredWorldCapabilities & WorldCapability.AirborneVerticalMotion) == 0)
                 throw new ArgumentException("Program Body Motion requires AirborneVerticalMotion capability.", nameof(manifest));
             m_OperationDefinitions = SortIndexed(operationDefinitions, value => value.Index, "operation definition");
             m_Operations = SortIndexed(operations, value => value.Handle.Value, "operation");

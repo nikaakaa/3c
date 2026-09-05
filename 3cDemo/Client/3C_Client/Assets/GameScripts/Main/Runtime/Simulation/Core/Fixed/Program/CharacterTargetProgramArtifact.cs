@@ -17,7 +17,8 @@ namespace ThirdPersonSimulation.Fixed
             SimulationNumericProfile numericProfile,
             ProgramHash programHash,
             LayoutHash layoutHash,
-            WorldCapability requiredWorldCapabilities)
+            WorldCapability requiredWorldCapabilities,
+            SimulationProgramRootDescriptor root)
         {
             DefinitionGuid = CharacterTargetProgramArtifactLoader.RequireDefinitionGuid(definitionGuid);
             if (!programId.IsValid)
@@ -28,7 +29,8 @@ namespace ThirdPersonSimulation.Fixed
                 operationSetVersion,
                 sourceRevision,
                 semanticHash,
-                numericProfile);
+                numericProfile,
+                root);
             if (!programHash.IsValid)
                 throw new ArgumentException("ProgramHash is required.", nameof(programHash));
             if (!layoutHash.IsValid)
@@ -36,6 +38,9 @@ namespace ThirdPersonSimulation.Fixed
             ProgramHash = programHash;
             LayoutHash = layoutHash;
             RequiredWorldCapabilities = requiredWorldCapabilities;
+            if (!root.IsValid)
+                throw new ArgumentException("Target Program root descriptor is invalid.", nameof(root));
+            Root = root;
         }
 
         public string DefinitionGuid { get; }
@@ -44,6 +49,7 @@ namespace ThirdPersonSimulation.Fixed
         public ProgramHash ProgramHash { get; }
         public LayoutHash LayoutHash { get; }
         public WorldCapability RequiredWorldCapabilities { get; }
+        public SimulationProgramRootDescriptor Root { get; }
     }
 
     public readonly struct CharacterTargetProgramArtifactDescriptor : IEquatable<CharacterTargetProgramArtifactDescriptor>
@@ -69,6 +75,7 @@ namespace ThirdPersonSimulation.Fixed
             ProgramHash = program.ProgramHash;
             LayoutHash = program.LayoutHash;
             RequiredWorldCapabilities = program.Manifest.Capabilities.RequiredWorldCapabilities;
+            Root = program.Manifest.Root;
             CanonicalBytesHash = canonicalBytesHash;
             CanonicalByteLength = canonicalByteLength;
         }
@@ -84,6 +91,7 @@ namespace ThirdPersonSimulation.Fixed
         public ProgramHash ProgramHash { get; }
         public LayoutHash LayoutHash { get; }
         public WorldCapability RequiredWorldCapabilities { get; }
+        public SimulationProgramRootDescriptor Root { get; }
         public StableHash CanonicalBytesHash { get; }
         public int CanonicalByteLength { get; }
 
@@ -100,6 +108,7 @@ namespace ThirdPersonSimulation.Fixed
                    ProgramHash.Equals(other.ProgramHash) &&
                    LayoutHash.Equals(other.LayoutHash) &&
                    RequiredWorldCapabilities == other.RequiredWorldCapabilities &&
+                   Root.Equals(other.Root) &&
                    CanonicalBytesHash.Equals(other.CanonicalBytesHash) &&
                    CanonicalByteLength == other.CanonicalByteLength;
         }
@@ -147,6 +156,7 @@ namespace ThirdPersonSimulation.Fixed
                 !descriptor.TargetAbiVersion.Equals(program.NumericProfile.AbiVersion) ||
                 !descriptor.ProgramHash.Equals(expectation.ProgramHash) ||
                 !descriptor.LayoutHash.Equals(expectation.LayoutHash) ||
+                !descriptor.Root.Equals(expectation.Root) ||
                 descriptor.RequiredWorldCapabilities != expectation.RequiredWorldCapabilities)
             {
                 throw new InvalidDataException("Target Program artifact does not match its build expectation.");
@@ -174,7 +184,8 @@ namespace ThirdPersonSimulation.Fixed
                 header.OperationSetVersion,
                 header.SourceRevision,
                 header.SemanticHash,
-                header.NumericProfile);
+                header.NumericProfile,
+                header.Root);
             CharacterSimulationProgram program = CharacterSimulationProgramCodec.ReadArtifact(canonicalBytes, expectation);
             var descriptor = new CharacterTargetProgramArtifactDescriptor(
                 definitionGuid,

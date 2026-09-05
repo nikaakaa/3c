@@ -89,7 +89,12 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                     OperationSetVersion,
                     model.TickRate,
                     model.SourceRevision,
-                    report);
+                    report,
+                    new SimulationProgramRootDescriptor(
+                        SimulationProgramRootKind.Character,
+                        model.DefinitionGuid,
+                        $"control:{model.Definition.ControlModuleId}",
+                        model.SourceRevision.Value));
                 builder.SetBodyMotion(
                     new CharacterBodyMotionSemanticDescriptor(
                         model.BodyMotionSourceIdentity,
@@ -184,7 +189,8 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                         semanticIr.Manifest.OperationSetVersion,
                         semanticIr.Manifest.TickRate,
                         semanticIr.Manifest.SourceRevision,
-                        semanticIr.SemanticHash));
+                        semanticIr.SemanticHash,
+                        semanticIr.Manifest.Root));
             }
             catch (Exception exception)
             {

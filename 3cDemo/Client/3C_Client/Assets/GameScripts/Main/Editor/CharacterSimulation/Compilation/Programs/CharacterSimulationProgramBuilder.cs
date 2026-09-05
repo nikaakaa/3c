@@ -76,6 +76,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
         readonly OperationSetVersion m_OperationSetVersion;
         readonly int m_TickRate;
         readonly ProgramRevision m_SourceRevision;
+        readonly SimulationProgramRootDescriptor m_Root;
         readonly CharacterSimulationCompileReport m_Report;
         readonly List<SemanticOperation> m_Operations = new List<SemanticOperation>();
         readonly List<SemanticLiteral> m_Literals = new List<SemanticLiteral>();
@@ -106,13 +107,17 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             OperationSetVersion operationSetVersion,
             int tickRate,
             ProgramRevision sourceRevision,
-            CharacterSimulationCompileReport report)
+            CharacterSimulationCompileReport report,
+            SimulationProgramRootDescriptor root)
         {
             m_ProgramId = programId;
             m_CompilerVersion = compilerVersion;
             m_OperationSetVersion = operationSetVersion;
             m_TickRate = tickRate;
             m_SourceRevision = sourceRevision;
+            if (!root.IsValid)
+                throw new ArgumentException("Simulation Program root descriptor is invalid.", nameof(root));
+            m_Root = root;
             m_Report = report ?? throw new ArgumentNullException(nameof(report));
             m_OutputChannels.Add(new ProgramOutputChannelLayout(0, "Gameplay", ProgramOutputChannelKind.GameplayFact));
             m_OutputChannels.Add(new ProgramOutputChannelLayout(1, "Presentation", ProgramOutputChannelKind.Presentation));
@@ -486,8 +491,10 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
         public CharacterGameplaySemanticIr Build()
         {
             ValidateSingleChildControlFlow();
-            if (m_BodyMotion == null)
+            if (m_Root.IsCharacter && m_BodyMotion == null)
                 m_Report.Error("body_motion_missing", m_ProgramId.Value, "Body Motion descriptor is required.");
+            if (m_Root.IsTimeline && m_BodyMotion != null)
+                m_Report.Error("timeline_body_motion_forbidden", m_ProgramId.Value, "Timeline root cannot declare Character Body Motion.");
             if (!m_Report.IsValid)
                 return null;
             try
@@ -498,7 +505,8 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                     m_OperationSetVersion,
                     m_TickRate,
                     m_SourceRevision,
-                    new ProgramCapabilityManifest(m_GameplayCapabilities, m_RequiredWorldCapabilities));
+                    new ProgramCapabilityManifest(m_GameplayCapabilities, m_RequiredWorldCapabilities),
+                    m_Root);
                 return new CharacterGameplaySemanticIr(
                     manifest,
                     m_BodyMotion,

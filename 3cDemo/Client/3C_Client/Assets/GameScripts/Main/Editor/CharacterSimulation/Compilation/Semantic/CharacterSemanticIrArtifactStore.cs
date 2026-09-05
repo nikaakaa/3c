@@ -285,7 +285,8 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 header.OperationSetVersion,
                 header.TickRate,
                 header.SourceRevision,
-                header.SemanticHash);
+                header.SemanticHash,
+                header.Root);
         }
 
         static bool Matches(CharacterGameplaySemanticIrArtifactHeader header, SemanticIrLoadExpectation expectation)
@@ -295,7 +296,8 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                    header.OperationSetVersion.Equals(expectation.OperationSetVersion) &&
                    header.TickRate == expectation.TickRate &&
                    header.SourceRevision.Equals(expectation.SourceRevision) &&
-                   header.SemanticHash.Equals(expectation.SemanticHash);
+                   header.SemanticHash.Equals(expectation.SemanticHash) &&
+                   header.Root.Equals(expectation.Root);
         }
 
         static void RequireGuid(string definitionGuid)

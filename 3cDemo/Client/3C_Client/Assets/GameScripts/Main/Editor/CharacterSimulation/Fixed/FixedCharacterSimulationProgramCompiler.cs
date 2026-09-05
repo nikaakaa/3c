@@ -103,7 +103,8 @@ namespace ThirdPersonSimulation.Fixed
                     header.OperationSetVersion,
                     header.SourceRevision,
                     header.SemanticHash,
-                    header.NumericProfile));
+                    header.NumericProfile,
+                    header.Root));
             if (!loaded.ProgramHash.Equals(result.Program.ProgramHash) ||
                 !loaded.LayoutHash.Equals(result.Program.LayoutHash))
             {
@@ -189,21 +190,24 @@ namespace ThirdPersonSimulation.Fixed
                 semanticIr.Manifest.SourceRevision,
                 semanticIr.SemanticHash,
                 target.Profile,
-                semanticIr.Manifest.Capabilities);
-            var bodyMotion = new ProgramBodyMotionDescriptor(
-                semanticIr.BodyMotion.SourceIdentity,
-                semanticIr.BodyMotion.ContentRevision,
-                semanticIr.BodyMotion.SemanticVersion,
-                LowerNumber(
-                    semanticIr.BodyMotion.GravityAcceleration,
-                    $"{semanticIr.BodyMotion.SourceIdentity}/gravity-acceleration",
-                    SemanticNumericPrecision.TargetRounded,
-                    conversions),
-                LowerNumber(
-                    semanticIr.BodyMotion.MaximumFallSpeed,
-                    $"{semanticIr.BodyMotion.SourceIdentity}/maximum-fall-speed",
-                    SemanticNumericPrecision.TargetRounded,
-                    conversions));
+                semanticIr.Manifest.Capabilities,
+                semanticIr.Manifest.Root);
+            ProgramBodyMotionDescriptor bodyMotion = semanticIr.BodyMotion == null
+                ? null
+                : new ProgramBodyMotionDescriptor(
+                    semanticIr.BodyMotion.SourceIdentity,
+                    semanticIr.BodyMotion.ContentRevision,
+                    semanticIr.BodyMotion.SemanticVersion,
+                    LowerNumber(
+                        semanticIr.BodyMotion.GravityAcceleration,
+                        $"{semanticIr.BodyMotion.SourceIdentity}/gravity-acceleration",
+                        SemanticNumericPrecision.TargetRounded,
+                        conversions),
+                    LowerNumber(
+                        semanticIr.BodyMotion.MaximumFallSpeed,
+                        $"{semanticIr.BodyMotion.SourceIdentity}/maximum-fall-speed",
+                        SemanticNumericPrecision.TargetRounded,
+                        conversions));
             var stateSlots = new ProgramStateSlot[semanticIr.StateDeclarations.Count];
             for (int i = 0; i < stateSlots.Length; i++)
             {

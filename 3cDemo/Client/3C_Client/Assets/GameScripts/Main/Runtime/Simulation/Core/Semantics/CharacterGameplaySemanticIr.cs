@@ -275,7 +275,8 @@ namespace ThirdPersonSimulation
             OperationSetVersion operationSetVersion,
             int tickRate,
             ProgramRevision sourceRevision,
-            ProgramCapabilityManifest capabilities)
+            ProgramCapabilityManifest capabilities,
+            SimulationProgramRootDescriptor root)
         {
             if (!programId.IsValid || !operationSetVersion.IsValid || tickRate <= 0 || string.IsNullOrEmpty(sourceRevision.Value))
                 throw new ArgumentException("Semantic IR manifest is incomplete.");
@@ -285,6 +286,9 @@ namespace ThirdPersonSimulation
             TickRate = tickRate;
             SourceRevision = sourceRevision;
             Capabilities = capabilities ?? throw new ArgumentNullException(nameof(capabilities));
+            if (!root.IsValid)
+                throw new ArgumentException("Semantic IR root descriptor is invalid.", nameof(root));
+            Root = root;
         }
 
         public ProgramId ProgramId { get; }
@@ -293,6 +297,7 @@ namespace ThirdPersonSimulation
         public int TickRate { get; }
         public ProgramRevision SourceRevision { get; }
         public ProgramCapabilityManifest Capabilities { get; }
+        public SimulationProgramRootDescriptor Root { get; }
     }
 
     public sealed class CharacterGameplaySemanticIr
@@ -329,8 +334,13 @@ namespace ThirdPersonSimulation
             IEnumerable<ProgramGraphCallFrame> graphCallFrames = null)
         {
             Manifest = manifest ?? throw new ArgumentNullException(nameof(manifest));
-            BodyMotion = bodyMotion ?? throw new ArgumentNullException(nameof(bodyMotion));
-            if ((Manifest.Capabilities.RequiredWorldCapabilities & BodyMotion.RequiredWorldCapability) != BodyMotion.RequiredWorldCapability)
+            if (Manifest.Root.IsCharacter && bodyMotion == null)
+                throw new ArgumentNullException(nameof(bodyMotion));
+            if (Manifest.Root.IsTimeline && bodyMotion != null)
+                throw new ArgumentException("Timeline Semantic IR cannot contain Character Body Motion.", nameof(bodyMotion));
+            BodyMotion = bodyMotion;
+            if (BodyMotion != null &&
+                (Manifest.Capabilities.RequiredWorldCapabilities & BodyMotion.RequiredWorldCapability) != BodyMotion.RequiredWorldCapability)
                 throw new InvalidDataException("Semantic IR Body Motion capability is missing from the manifest.");
             m_Operations = Indexed(operations, value => value.Handle.Value, "semantic operation");
             m_Literals = Indexed(literals, value => value.Index, "semantic literal");

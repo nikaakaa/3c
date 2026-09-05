@@ -184,6 +184,8 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
         {
             if (program == null)
                 throw new ArgumentNullException(nameof(program));
+            if (!string.Equals(definitionGuid, program.Manifest.Root.RootIdentity, StringComparison.Ordinal))
+                throw new ArgumentException("Target Program cache key does not match the Program root identity.", nameof(definitionGuid));
             string path = GetPath(
                 definitionGuid,
                 program.Manifest.NumericProfile.Id,

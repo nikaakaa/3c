@@ -83,6 +83,11 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 return null;
             try
             {
+                var root = new SimulationProgramRootDescriptor(
+                    SimulationProgramRootKind.Character,
+                    model.DefinitionGuid,
+                    $"control:{model.Definition.ControlModuleId}",
+                    model.SourceRevision.Value);
                 var builder = new CharacterSimulationProgramBuilder(
                     model.ProgramId,
                     CompilerVersion,
@@ -90,11 +95,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                     model.TickRate,
                     model.SourceRevision,
                     report,
-                    new SimulationProgramRootDescriptor(
-                        SimulationProgramRootKind.Character,
-                        model.DefinitionGuid,
-                        $"control:{model.Definition.ControlModuleId}",
-                        model.SourceRevision.Value));
+                    root);
                 builder.SetBodyMotion(
                     new CharacterBodyMotionSemanticDescriptor(
                         model.BodyMotionSourceIdentity,
@@ -122,6 +123,14 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 ICharacterControlModule controlModule = ResolveControlModule(model.Definition.ControlModuleId, report, model.DefinitionPath);
                 if (controlModule == null)
                     return null;
+                if (!string.Equals(controlModule.Contract.ModuleId.Value, model.Definition.ControlModuleId, StringComparison.Ordinal))
+                {
+                    report.Error(
+                        "control_module_identity_mismatch",
+                        model.DefinitionPath,
+                        $"Resolved control module '{controlModule.Contract.ModuleId.Value}' does not match Definition entry '{model.Definition.ControlModuleId}'.");
+                    return null;
+                }
                 CharacterSimulationSourceLocation controlSource = new CharacterSimulationSourceLocation(
                     typeof(ICharacterControlModule).FullName,
                     $"control:{controlModule.Contract.ModuleId.Value}",
@@ -160,7 +169,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                     OperationHandle.Invalid,
                     ProgramReferenceKind.Operation,
                     controlRoot.Value,
-                    controlModule.Contract.ModuleId.Value,
+                    root.EntryIdentity,
                     controlSource);
                 return builder.Build();
             }

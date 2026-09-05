@@ -1,4 +1,6 @@
 using System;
+using System.Collections.Generic;
+using System.IO;
 
 namespace ThirdPersonSimulation
 {
@@ -30,9 +32,9 @@ namespace ThirdPersonSimulation
         public string ContentIdentity { get; }
         public bool IsValid =>
             Enum.IsDefined(typeof(SimulationProgramRootKind), Kind) &&
-            !string.IsNullOrEmpty(RootIdentity) &&
-            !string.IsNullOrEmpty(EntryIdentity) &&
-            !string.IsNullOrEmpty(ContentIdentity);
+            IsGuid(RootIdentity) &&
+            IsEntryIdentity(Kind, EntryIdentity) &&
+            IsHash(ContentIdentity);
         public bool IsCharacter => Kind == SimulationProgramRootKind.Character;
         public bool IsTimeline => Kind == SimulationProgramRootKind.Timeline;
 
@@ -60,6 +62,76 @@ namespace ThirdPersonSimulation
         public static bool operator !=(
             SimulationProgramRootDescriptor left,
             SimulationProgramRootDescriptor right) => !left.Equals(right);
+
+        static bool IsEntryIdentity(SimulationProgramRootKind kind, string value)
+        {
+            string prefix = kind == SimulationProgramRootKind.Character
+                ? "control:"
+                : kind == SimulationProgramRootKind.Timeline
+                    ? "timeline:"
+                    : string.Empty;
+            return prefix.Length > 0 &&
+                   !string.IsNullOrEmpty(value) &&
+                   value.StartsWith(prefix, StringComparison.Ordinal) &&
+                   value.Length > prefix.Length;
+        }
+
+        static bool IsGuid(string value) => IsHex(value, 32);
+
+        static bool IsHash(string value) => IsHex(value, 64);
+
+        static bool IsHex(string value, int length)
+        {
+            if (string.IsNullOrEmpty(value) || value.Length != length)
+                return false;
+            for (int i = 0; i < value.Length; i++)
+            {
+                char character = value[i];
+                if (!((character >= '0' && character <= '9') ||
+                      (character >= 'a' && character <= 'f')))
+                    return false;
+            }
+            return true;
+        }
+    }
+
+    public static class SimulationProgramRootValidation
+    {
+        public static ProgramReference RequireEntryReference(
+            SimulationProgramRootDescriptor root,
+            IReadOnlyList<ProgramReference> references,
+            IReadOnlyList<SemanticOperation> operations)
+        {
+            if (!root.IsValid)
+                throw new ArgumentException("Simulation Program root descriptor is invalid.", nameof(root));
+            if (references == null)
+                throw new ArgumentNullException(nameof(references));
+            if (operations == null)
+                throw new ArgumentNullException(nameof(operations));
+            ProgramReference match = null;
+            for (int i = 0; i < references.Count; i++)
+            {
+                ProgramReference reference = references[i];
+                if (reference != null &&
+                    !reference.HasSourceOperation &&
+                    reference.Kind == ProgramReferenceKind.Operation &&
+                    string.Equals(reference.Identity, "program:root-operation", StringComparison.Ordinal))
+                {
+                    if (match != null)
+                        throw new InvalidDataException("Simulation Program root operation reference is duplicated.");
+                    match = reference;
+                }
+            }
+            if (match == null)
+                throw new InvalidDataException("Simulation Program root operation reference is missing.");
+            if (match.TargetIndex < 0 || match.TargetIndex >= operations.Count)
+                throw new InvalidDataException("Simulation Program root operation reference targets an invalid operation.");
+            if (!string.Equals(match.ExternalIdentity, root.EntryIdentity, StringComparison.Ordinal))
+                throw new InvalidDataException("Simulation Program root operation reference does not match the root entry identity.");
+            if (operations[match.TargetIndex].Code != SimulationOperationCode.Root)
+                throw new InvalidDataException("Simulation Program root operation reference does not target a Root operation.");
+            return match;
+        }
     }
 
     public static class SimulationProgramRootDescriptorCodec

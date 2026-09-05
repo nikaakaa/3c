@@ -72,6 +72,13 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
         {
             try
             {
+                if (!string.Equals(content.AssetGuid, guid, StringComparison.Ordinal))
+                    throw new InvalidOperationException("Timeline content asset identity does not match the compiled root identity.");
+                var rootDescriptor = new SimulationProgramRootDescriptor(
+                    SimulationProgramRootKind.Timeline,
+                    guid,
+                    $"timeline:{content.Timeline.AuthoringId}",
+                    content.ContentHash);
                 var builder = new CharacterSimulationProgramBuilder(
                     new ProgramId($"timeline:{guid}"),
                     CompilerVersion,
@@ -79,11 +86,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                     TimelineUtility.FrameRate,
                     sourceRevision,
                     report,
-                    new SimulationProgramRootDescriptor(
-                        SimulationProgramRootKind.Timeline,
-                        guid,
-                        $"timeline:{content.Timeline.AuthoringId}",
-                        content.ContentHash));
+                    rootDescriptor);
                 var rootSource = new CharacterSimulationSourceLocation(
                     typeof(TimelineAsset).FullName,
                     $"timeline-root:{guid}",
@@ -119,7 +122,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                     OperationHandle.Invalid,
                     ProgramReferenceKind.Operation,
                     root.Value,
-                    content.Route,
+                    rootDescriptor.EntryIdentity,
                     rootSource);
                 return builder.Build();
             }

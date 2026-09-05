@@ -287,6 +287,7 @@ namespace ThirdPersonSimulation.Fixed
             ControlModuleBinding = CharacterControlProgramCatalogValidator.Resolve(m_CatalogEntries, m_StateSlots);
             for (int i = 0; i < m_StateSlots.Count; i++)
                 FixedProgramStateSchema.RequireCodec(m_StateSlots[i]);
+            ValidateRootReference();
             ValidateReferences();
             LayoutHash = CharacterSimulationProgramCodec.ComputeLayoutHash(this);
             ProgramHash = CharacterSimulationProgramCodec.ComputeProgramHash(this);
@@ -314,6 +315,30 @@ namespace ThirdPersonSimulation.Fixed
         public IReadOnlyList<ProgramProducer> Producers => m_Producers;
         public LayoutHash LayoutHash { get; }
         public ProgramHash ProgramHash { get; }
+
+        void ValidateRootReference()
+        {
+            ProgramReference root = null;
+            for (int i = 0; i < m_References.Count; i++)
+            {
+                ProgramReference reference = m_References[i];
+                if (!reference.HasSourceOperation &&
+                    reference.Kind == ProgramReferenceKind.Operation &&
+                    string.Equals(reference.Identity, "program:root-operation", StringComparison.Ordinal))
+                {
+                    if (root != null)
+                        throw new InvalidDataException("Program root operation reference is duplicated.");
+                    root = reference;
+                }
+            }
+            if (root == null)
+                throw new InvalidDataException("Program root operation reference is missing.");
+            if (root.TargetIndex < 0 || root.TargetIndex >= m_Operations.Count ||
+                m_Operations[root.TargetIndex].Code != SimulationOperationCode.Root)
+                throw new InvalidDataException("Program root operation reference does not target a Root operation.");
+            if (!string.Equals(root.ExternalIdentity, Manifest.Root.EntryIdentity, StringComparison.Ordinal))
+                throw new InvalidDataException("Program root operation reference does not match the root entry identity.");
+        }
 
         void ValidateReferences()
         {

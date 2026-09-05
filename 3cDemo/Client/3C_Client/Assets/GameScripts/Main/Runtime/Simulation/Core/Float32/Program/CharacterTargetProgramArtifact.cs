@@ -186,6 +186,8 @@ namespace ThirdPersonSimulation
                 header.NumericProfile,
                 header.Root);
             CharacterSimulationProgram program = CharacterSimulationProgramCodec.ReadArtifact(canonicalBytes, expectation);
+            if (!string.Equals(program.Manifest.Root.RootIdentity, definitionGuid, StringComparison.Ordinal))
+                throw new InvalidDataException("Target Program artifact root identity does not match its cache key.");
             var descriptor = new CharacterTargetProgramArtifactDescriptor(
                 definitionGuid,
                 program,

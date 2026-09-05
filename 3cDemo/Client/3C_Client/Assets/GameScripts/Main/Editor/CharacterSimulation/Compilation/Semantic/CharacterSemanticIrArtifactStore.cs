@@ -185,6 +185,10 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             ValidatedSemanticIrArtifact artifact)
         {
             RequireGuid(definitionGuid);
+            if (artifact == null)
+                throw new ArgumentNullException(nameof(artifact));
+            if (!string.Equals(definitionGuid, artifact.Header.Root.RootIdentity, StringComparison.Ordinal))
+                throw new ArgumentException("Semantic IR cache key does not match the root identity.", nameof(definitionGuid));
             ValidatedSemanticIrArtifact verified = RoundTrip(artifact);
             byte[] bytes = verified.ToArray();
             string path = GetPath(definitionGuid);
@@ -238,6 +242,8 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             {
                 byte[] bytes = File.ReadAllBytes(path);
                 CharacterGameplaySemanticIrArtifactHeader header = CharacterGameplaySemanticIrCodec.ReadArtifactHeader(bytes);
+                if (!string.Equals(header.Root.RootIdentity, definitionGuid, StringComparison.Ordinal))
+                    return new CharacterSemanticIrCacheResult(CharacterSemanticIrCacheStatus.Stale, path, header, null, "Semantic IR cache root identity does not match its cache key.");
                 if (!Matches(header, expectation))
                     return new CharacterSemanticIrCacheResult(CharacterSemanticIrCacheStatus.Stale, path, header, null, "Semantic IR cache identity does not match the current build expectation.");
                 ValidatedSemanticIrArtifact artifact = CharacterGameplaySemanticIrCodec.ReadValidatedArtifact(bytes, expectation);
@@ -262,6 +268,8 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             {
                 byte[] bytes = File.ReadAllBytes(path);
                 CharacterGameplaySemanticIrArtifactHeader header = CharacterGameplaySemanticIrCodec.ReadArtifactHeader(bytes);
+                if (!string.Equals(header.Root.RootIdentity, definitionGuid, StringComparison.Ordinal))
+                    return new CharacterSemanticIrCacheResult(CharacterSemanticIrCacheStatus.Stale, path, header, null, "Semantic IR cache root identity does not match its cache key.");
                 ValidatedSemanticIrArtifact artifact = CharacterGameplaySemanticIrCodec.ReadValidatedArtifact(bytes);
                 return new CharacterSemanticIrCacheResult(CharacterSemanticIrCacheStatus.Current, path, header, artifact, string.Empty);
             }

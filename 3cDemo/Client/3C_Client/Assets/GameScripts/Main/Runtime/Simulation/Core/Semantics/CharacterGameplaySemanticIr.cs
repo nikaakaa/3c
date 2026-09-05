@@ -355,6 +355,10 @@ namespace ThirdPersonSimulation
             m_CatalogEntries = Indexed(catalogEntries, value => value.Index, "catalog entry");
             m_SourceMap = SortSourceMap(sourceMap);
             m_Producers = Indexed(producers, value => value.Index, "producer");
+            SimulationProgramRootValidation.RequireEntryReference(
+                Manifest.Root,
+                m_References,
+                m_Operations);
             ValidateReferences();
             ValidateGraphCallFrames();
             SemanticHash = CharacterGameplaySemanticIrCodec.ComputeHash(this);

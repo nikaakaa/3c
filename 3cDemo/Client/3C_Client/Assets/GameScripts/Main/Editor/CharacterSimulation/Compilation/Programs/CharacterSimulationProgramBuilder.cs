@@ -491,6 +491,17 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
         public CharacterGameplaySemanticIr Build()
         {
             ValidateSingleChildControlFlow();
+            try
+            {
+                SimulationProgramRootValidation.RequireEntryReference(
+                    m_Root,
+                    m_References,
+                    m_Operations);
+            }
+            catch (Exception exception)
+            {
+                m_Report.Error("program_root_reference_invalid", m_ProgramId.Value, exception.Message);
+            }
             if (m_Root.IsCharacter && m_BodyMotion == null)
                 m_Report.Error("body_motion_missing", m_ProgramId.Value, "Body Motion descriptor is required.");
             if (m_Root.IsTimeline && m_BodyMotion != null)

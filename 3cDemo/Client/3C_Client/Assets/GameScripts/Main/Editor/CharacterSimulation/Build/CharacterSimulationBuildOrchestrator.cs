@@ -163,6 +163,12 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 report.ArtifactError("semantic_ir_validation_failed", artifactPath, exception.Message);
                 return Failed(report);
             }
+            if (!artifact.Header.Root.IsCharacter ||
+                !string.Equals(artifact.Header.Root.RootIdentity, frontend.CompilationModel.DefinitionGuid, StringComparison.Ordinal))
+            {
+                report.ArtifactError("character_root_identity_invalid", artifactPath, "Character Semantic IR root does not match the Definition cache identity.");
+                return Failed(report);
+            }
             semanticArtifact = artifact;
 
             CharacterPresentationProjection projection = CompileProjection(
@@ -228,6 +234,14 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             catch (Exception exception)
             {
                 report.ArtifactError("semantic_ir_validation_failed", artifactPath, exception.Message);
+                return FailedTimeline(report);
+            }
+            if (!artifact.Header.Root.IsTimeline ||
+                !string.Equals(artifact.Header.Root.RootIdentity, frontend.RootGuid, StringComparison.Ordinal) ||
+                !string.Equals(artifact.Header.Root.EntryIdentity, $"timeline:{frontend.Content.Timeline.AuthoringId}", StringComparison.Ordinal) ||
+                !string.Equals(artifact.Header.Root.ContentIdentity, frontend.Content.ContentHash, StringComparison.Ordinal))
+            {
+                report.ArtifactError("timeline_root_identity_invalid", artifactPath, "Timeline Semantic IR root does not match the persisted content, entry, or cache identity.");
                 return FailedTimeline(report);
             }
             semanticArtifact = artifact;

@@ -816,6 +816,101 @@ namespace ThirdPersonSimulation
         public string ExternalIdentity { get; }
     }
 
+    public enum ProgramGraphParameterDirection : byte
+    {
+        Input = 1,
+        Output = 2
+    }
+
+    public sealed class ProgramGraphParameterBinding
+    {
+        public ProgramGraphParameterBinding(
+            ProgramGraphParameterDirection direction,
+            string parameterName,
+            string declarationIdentity,
+            int stateSlot,
+            string portId,
+            SemanticValueKind valueKind)
+        {
+            if (!Enum.IsDefined(typeof(ProgramGraphParameterDirection), direction) ||
+                stateSlot < 0 ||
+                !Enum.IsDefined(typeof(SemanticValueKind), valueKind))
+            {
+                throw new ArgumentException("Program graph parameter binding is incomplete.");
+            }
+            Direction = direction;
+            ParameterName = SimulationIdentity.Require(parameterName, nameof(parameterName));
+            DeclarationIdentity = SimulationIdentity.Require(declarationIdentity, nameof(declarationIdentity));
+            StateSlot = stateSlot;
+            PortId = SimulationIdentity.Require(portId, nameof(portId));
+            ValueKind = valueKind;
+        }
+
+        public ProgramGraphParameterDirection Direction { get; }
+        public string ParameterName { get; }
+        public string DeclarationIdentity { get; }
+        public int StateSlot { get; }
+        public string PortId { get; }
+        public SemanticValueKind ValueKind { get; }
+    }
+
+    public sealed class ProgramGraphCallFrame
+    {
+        readonly ReadOnlyCollection<ProgramGraphParameterBinding> m_Inputs;
+        readonly ReadOnlyCollection<ProgramGraphParameterBinding> m_Outputs;
+
+        public ProgramGraphCallFrame(
+            int index,
+            string identity,
+            OperationHandle ownerOperation,
+            OperationHandle entryOperation,
+            string childGraphIdentity,
+            IEnumerable<ProgramGraphParameterBinding> inputs,
+            IEnumerable<ProgramGraphParameterBinding> outputs)
+        {
+            if (index < 0 || !ownerOperation.IsValid || !entryOperation.IsValid)
+                throw new ArgumentException("Program graph call frame identity is incomplete.");
+            Index = index;
+            Identity = SimulationIdentity.Require(identity, nameof(identity));
+            OwnerOperation = ownerOperation;
+            EntryOperation = entryOperation;
+            ChildGraphIdentity = SimulationIdentity.Require(childGraphIdentity, nameof(childGraphIdentity));
+            m_Inputs = Freeze(inputs, ProgramGraphParameterDirection.Input, "input");
+            m_Outputs = Freeze(outputs, ProgramGraphParameterDirection.Output, "output");
+        }
+
+        public int Index { get; }
+        public string Identity { get; }
+        public OperationHandle OwnerOperation { get; }
+        public OperationHandle EntryOperation { get; }
+        public string ChildGraphIdentity { get; }
+        public IReadOnlyList<ProgramGraphParameterBinding> Inputs => m_Inputs;
+        public IReadOnlyList<ProgramGraphParameterBinding> Outputs => m_Outputs;
+
+        static ReadOnlyCollection<ProgramGraphParameterBinding> Freeze(
+            IEnumerable<ProgramGraphParameterBinding> source,
+            ProgramGraphParameterDirection direction,
+            string label)
+        {
+            var values = new List<ProgramGraphParameterBinding>(source ?? Array.Empty<ProgramGraphParameterBinding>());
+            values.Sort((left, right) =>
+            {
+                int byParameter = string.CompareOrdinal(left.ParameterName, right.ParameterName);
+                return byParameter != 0 ? byParameter : string.CompareOrdinal(left.PortId, right.PortId);
+            });
+            var names = new HashSet<string>(StringComparer.Ordinal);
+            var ports = new HashSet<string>(StringComparer.Ordinal);
+            for (int i = 0; i < values.Count; i++)
+            {
+                ProgramGraphParameterBinding value = values[i]
+                    ?? throw new ArgumentException($"Program graph call frame {label} binding is missing.", nameof(source));
+                if (value.Direction != direction || !names.Add(value.ParameterName) || !ports.Add(value.PortId))
+                    throw new ArgumentException($"Program graph call frame {label} bindings are duplicated or use the wrong direction.", nameof(source));
+            }
+            return values.AsReadOnly();
+        }
+    }
+
     public enum ProgramStateValueKind : byte
     {
         Boolean = 1,

@@ -82,6 +82,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
         readonly List<SemanticConstantInputBinding> m_ConstantInputBindings = new List<SemanticConstantInputBinding>();
         readonly List<ProgramControlFlowEdge> m_ControlFlow = new List<ProgramControlFlowEdge>();
         readonly List<ProgramReference> m_References = new List<ProgramReference>();
+        readonly List<ProgramGraphCallFrame> m_GraphCallFrames = new List<ProgramGraphCallFrame>();
         readonly List<ProgramStateSlot> m_StateSlots = new List<ProgramStateSlot>();
         readonly List<ProgramScopeLayout> m_Scopes = new List<ProgramScopeLayout>();
         readonly List<ProgramWorldRequestLayout> m_WorldRequests = new List<ProgramWorldRequestLayout>();
@@ -314,6 +315,32 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             }
         }
 
+        public void DeclareGraphCallFrame(
+            string identity,
+            OperationHandle ownerOperation,
+            OperationHandle entryOperation,
+            string childGraphIdentity,
+            IEnumerable<ProgramGraphParameterBinding> inputs,
+            IEnumerable<ProgramGraphParameterBinding> outputs,
+            CharacterSimulationSourceLocation source)
+        {
+            try
+            {
+                m_GraphCallFrames.Add(new ProgramGraphCallFrame(
+                    m_GraphCallFrames.Count,
+                    identity,
+                    ownerOperation,
+                    entryOperation,
+                    childGraphIdentity,
+                    inputs,
+                    outputs));
+            }
+            catch (Exception exception)
+            {
+                m_Report.Error("graph_call_frame_invalid", source.Identity, exception.Message);
+            }
+        }
+
         public int DeclareProducer(
             string identity,
             AnimationChannelId animationChannelId,
@@ -486,7 +513,8 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                     m_OutputChannels,
                     m_CatalogEntries,
                     m_SourceMap,
-                    m_Producers);
+                    m_Producers,
+                    m_GraphCallFrames);
             }
             catch (Exception exception)
             {

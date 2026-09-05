@@ -58,6 +58,63 @@ namespace ThirdPersonSimulation
             return new ProgramReference(identity, sourceOperation, ReadEnum<ProgramReferenceKind>(reader.ReadByte()), reader.ReadInt32(), reader.ReadString());
         }
 
+        internal static void WriteGraphCallFrame(CanonicalWriter writer, ProgramGraphCallFrame value)
+        {
+            writer.WriteInt32(value.Index);
+            writer.WriteString(value.Identity);
+            writer.WriteInt32(value.OwnerOperation.Value);
+            writer.WriteInt32(value.EntryOperation.Value);
+            writer.WriteString(value.ChildGraphIdentity);
+            WriteGraphParameterBindings(writer, value.Inputs);
+            WriteGraphParameterBindings(writer, value.Outputs);
+        }
+
+        internal static ProgramGraphCallFrame ReadGraphCallFrame(CanonicalReader reader)
+        {
+            return new ProgramGraphCallFrame(
+                reader.ReadInt32(),
+                reader.ReadString(),
+                new OperationHandle(reader.ReadInt32()),
+                new OperationHandle(reader.ReadInt32()),
+                reader.ReadString(),
+                ReadGraphParameterBindings(reader),
+                ReadGraphParameterBindings(reader));
+        }
+
+        static void WriteGraphParameterBindings(
+            CanonicalWriter writer,
+            IReadOnlyList<ProgramGraphParameterBinding> values)
+        {
+            writer.WriteInt32(values.Count);
+            for (int i = 0; i < values.Count; i++)
+            {
+                ProgramGraphParameterBinding value = values[i];
+                writer.WriteByte((byte)value.Direction);
+                writer.WriteString(value.ParameterName);
+                writer.WriteString(value.DeclarationIdentity);
+                writer.WriteInt32(value.StateSlot);
+                writer.WriteString(value.PortId);
+                writer.WriteByte((byte)value.ValueKind);
+            }
+        }
+
+        static ProgramGraphParameterBinding[] ReadGraphParameterBindings(CanonicalReader reader)
+        {
+            int count = ReadCount(reader);
+            var values = new ProgramGraphParameterBinding[count];
+            for (int i = 0; i < count; i++)
+            {
+                values[i] = new ProgramGraphParameterBinding(
+                    ReadEnum<ProgramGraphParameterDirection>(reader.ReadByte()),
+                    reader.ReadString(),
+                    reader.ReadString(),
+                    reader.ReadInt32(),
+                    reader.ReadString(),
+                    ReadEnum<SemanticValueKind>(reader.ReadByte()));
+            }
+            return values;
+        }
+
         internal static void WriteStateSlot(CanonicalWriter writer, ProgramStateSlot value, bool includeDefault)
         {
             writer.WriteInt32(value.Index);

@@ -225,6 +225,7 @@ namespace ThirdPersonSimulation
         readonly ReadOnlyCollection<ProgramConstantInputBinding> m_ConstantInputBindings;
         readonly ReadOnlyCollection<ProgramControlFlowEdge> m_ControlFlow;
         readonly ReadOnlyCollection<ProgramReference> m_References;
+        readonly ReadOnlyCollection<ProgramGraphCallFrame> m_GraphCallFrames;
         readonly ReadOnlyCollection<ProgramStateSlot> m_StateSlots;
         readonly ReadOnlyCollection<ProgramScopeLayout> m_Scopes;
         readonly ReadOnlyCollection<ProgramWorldRequestLayout> m_WorldRequests;
@@ -250,7 +251,8 @@ namespace ThirdPersonSimulation
             IEnumerable<ProgramCatalogEntry> catalogEntries,
             IEnumerable<ProgramMotionModifierDescriptor> motionModifiers,
             IEnumerable<ProgramSourceMapEntry> sourceMap,
-            IEnumerable<ProgramProducer> producers)
+            IEnumerable<ProgramProducer> producers,
+            IEnumerable<ProgramGraphCallFrame> graphCallFrames = null)
         {
             Manifest = manifest ?? throw new ArgumentNullException(nameof(manifest));
             BodyMotion = bodyMotion ?? throw new ArgumentNullException(nameof(bodyMotion));
@@ -268,6 +270,7 @@ namespace ThirdPersonSimulation
             m_Producers = SortIndexed(producers, value => value.Index, "producer");
             m_ControlFlow = SortByIdentity(controlFlow, value => value.Identity, "control-flow edge");
             m_References = SortByIdentity(references, value => value.Identity, "reference");
+            m_GraphCallFrames = SortIndexed(graphCallFrames, value => value.Index, "graph call frame");
             m_Scopes = SortByIdentity(scopes, value => value.Identity, "scope");
             m_SourceMap = SortSourceMap(sourceMap);
             ControlModuleBinding = CharacterControlProgramCatalogValidator.Resolve(m_CatalogEntries, m_StateSlots);
@@ -285,6 +288,7 @@ namespace ThirdPersonSimulation
         public IReadOnlyList<ProgramConstantInputBinding> ConstantInputBindings => m_ConstantInputBindings;
         public IReadOnlyList<ProgramControlFlowEdge> ControlFlow => m_ControlFlow;
         public IReadOnlyList<ProgramReference> References => m_References;
+        public IReadOnlyList<ProgramGraphCallFrame> GraphCallFrames => m_GraphCallFrames;
         public IReadOnlyList<ProgramStateSlot> StateSlots => m_StateSlots;
         public IReadOnlyList<ProgramScopeLayout> Scopes => m_Scopes;
         public IReadOnlyList<ProgramWorldRequestLayout> WorldRequests => m_WorldRequests;
@@ -370,6 +374,13 @@ namespace ThirdPersonSimulation
                 };
                 RequireIndex(reference.TargetIndex, count, $"reference '{reference.Identity}' target");
             }
+            for (int i = 0; i < m_GraphCallFrames.Count; i++)
+            {
+                ProgramGraphCallFrame frame = m_GraphCallFrames[i];
+                RequireIndex(frame.OwnerOperation.Value, m_Operations.Count, $"graph call frame '{frame.Identity}' owner");
+                RequireIndex(frame.EntryOperation.Value, m_Operations.Count, $"graph call frame '{frame.Identity}' entry");
+                ValidateGraphParameterBindings(frame);
+            }
             for (int i = 0; i < m_StateSlots.Count; i++)
             {
                 int defaultIndex = m_StateSlots[i].DefaultConstantIndex;
@@ -389,6 +400,26 @@ namespace ThirdPersonSimulation
                 }
             }
             ValidateMotionModifiers();
+        }
+
+        void ValidateGraphParameterBindings(ProgramGraphCallFrame frame)
+        {
+            ValidateGraphParameterBindings(frame, frame.Inputs);
+            ValidateGraphParameterBindings(frame, frame.Outputs);
+        }
+
+        void ValidateGraphParameterBindings(
+            ProgramGraphCallFrame frame,
+            IReadOnlyList<ProgramGraphParameterBinding> bindings)
+        {
+            for (int i = 0; i < bindings.Count; i++)
+            {
+                ProgramGraphParameterBinding binding = bindings[i];
+                RequireIndex(binding.StateSlot, m_StateSlots.Count, $"graph call frame '{frame.Identity}' parameter '{binding.ParameterName}' state");
+                SemanticValueKind actualKind = CharacterGameplayValuePortContracts.FromState(m_StateSlots[binding.StateSlot].ValueKind);
+                if (actualKind != binding.ValueKind)
+                    throw new ArgumentException($"Graph call frame '{frame.Identity}' parameter '{binding.ParameterName}' has incompatible state kind '{actualKind}'.");
+            }
         }
 
         void ValidateMotionModifiers()

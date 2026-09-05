@@ -148,6 +148,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                     OperationHandle entry = CompileGraph(reference.Child, childStateOwner);
                     if (!entry.IsValid)
                         continue;
+                    EmitGraphCallFrame(reference, owner, entry);
                     if (reference.Owner is StateNode && reference.Child.Graph is StateBehaviorSubTree stateBehavior)
                     {
                         m_Flow.EmitStateBehavior(graph, reference.Owner, owner, stateBehavior, reference.Route, entry);
@@ -193,6 +194,82 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             {
                 m_Blackboard.EndGraph();
             }
+        }
+
+        void EmitGraphCallFrame(
+            CharacterAuthoringGraphReferenceRecord reference,
+            OperationHandle owner,
+            OperationHandle entry)
+        {
+            var inputs = new List<ProgramGraphParameterBinding>();
+            var outputs = new List<ProgramGraphParameterBinding>();
+            BindGraphParameters(reference, reference.CallFrame.Inputs, inputs);
+            BindGraphParameters(reference, reference.CallFrame.Outputs, outputs);
+            m_Builder.DeclareGraphCallFrame(
+                reference.CallFrame.Identity,
+                owner,
+                entry,
+                reference.Child.Graph.GraphAuthoringId,
+                inputs,
+                outputs,
+                CharacterSemanticSourceFactory.Node(reference.Owner.Owner as BaseTree, reference.Owner, reference.Route));
+        }
+
+        void BindGraphParameters(
+            CharacterAuthoringGraphReferenceRecord reference,
+            IReadOnlyList<CharacterAuthoringGraphParameterBinding> source,
+            List<ProgramGraphParameterBinding> destination)
+        {
+            for (int i = 0; i < source.Count; i++)
+            {
+                CharacterAuthoringGraphParameterBinding binding = source[i];
+                if (!m_Blackboard.TryGetValueSlot(
+                        reference.Child.Graph,
+                        reference.Child.Route,
+                        binding.DeclarationId,
+                        out int stateSlot))
+                {
+                    m_Report.Error(
+                        "graph_call_parameter_state_missing",
+                        reference.Route,
+                        $"Graph call parameter '{binding.ParameterName}' has no compiled child state address.");
+                    continue;
+                }
+                if (!TryMapValueKind(binding.ValueType, out SemanticValueKind valueKind))
+                {
+                    m_Report.Error(
+                        "graph_call_parameter_type_unsupported",
+                        reference.Route,
+                        $"Graph call parameter '{binding.ParameterName}' uses unsupported type '{binding.ValueType?.FullName}'.");
+                    continue;
+                }
+                destination.Add(new ProgramGraphParameterBinding(
+                    binding.Direction == CharacterAuthoringGraphParameterDirection.Input
+                        ? ProgramGraphParameterDirection.Input
+                        : ProgramGraphParameterDirection.Output,
+                    binding.ParameterName,
+                    $"blackboard:{reference.Child.Graph.GraphAuthoringId}:{binding.DeclarationId}",
+                    stateSlot,
+                    binding.PortId,
+                    valueKind));
+            }
+        }
+
+        static bool TryMapValueKind(Type type, out SemanticValueKind kind)
+        {
+            if (type == typeof(bool)) kind = SemanticValueKind.Boolean;
+            else if (type == typeof(int)) kind = SemanticValueKind.Int32;
+            else if (type == typeof(uint) || type == typeof(ulong)) kind = SemanticValueKind.UInt64;
+            else if (type == typeof(float) || type == typeof(double)) kind = SemanticValueKind.Number;
+            else if (type == typeof(UnityEngine.Vector2)) kind = SemanticValueKind.Vector2;
+            else if (type == typeof(UnityEngine.Vector3)) kind = SemanticValueKind.Vector3;
+            else if (type == typeof(string)) kind = SemanticValueKind.Identity;
+            else
+            {
+                kind = default;
+                return false;
+            }
+            return true;
         }
 
         bool TryGetCompiledOperation(string route, string nodeId, out OperationHandle operation)

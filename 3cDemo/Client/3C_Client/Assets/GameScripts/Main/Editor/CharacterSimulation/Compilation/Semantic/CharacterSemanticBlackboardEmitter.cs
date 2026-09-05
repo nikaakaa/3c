@@ -102,6 +102,25 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 scope.SetOwnerOperation(graphEntry);
         }
 
+        public bool TryGetValueSlot(
+            BaseTree graph,
+            string route,
+            string declarationId,
+            out int slot)
+        {
+            slot = -1;
+            if (graph == null || string.IsNullOrEmpty(route) || string.IsNullOrEmpty(declarationId))
+                return false;
+            BaseExposedProperty declaration = graph.ExposedProperties
+                .FirstOrDefault(value => value != null && string.Equals(value.DeclarationId, declarationId, StringComparison.Ordinal));
+            if (declaration == null)
+                return false;
+            string key = declaration.BlackboardScope == PipelineBlackboardVariableScope.Character
+                ? DeclarationIdentity(graph.GraphAuthoringId, declaration.DeclarationId)
+                : $"{route}/declaration:{declaration.DeclarationId}";
+            return m_ValueSlots.TryGetValue(key, out slot);
+        }
+
         public void DeclareScopes()
         {
             foreach (ScopeRecord scope in m_Scopes.Values.OrderBy(value => value.Identity, StringComparer.Ordinal))

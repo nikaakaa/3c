@@ -113,8 +113,8 @@ namespace ThirdPersonSimulation
     public static class CharacterGameplaySemanticIrCodec
     {
         const uint ArtifactMagic = 0x52495343;
-        const int ArtifactVersion = 12;
-        const int PayloadVersion = 12;
+        const int ArtifactVersion = 13;
+        const int PayloadVersion = 13;
 
         public static byte[] WriteArtifact(CharacterGameplaySemanticIr semanticIr)
         {
@@ -299,6 +299,7 @@ namespace ThirdPersonSimulation
             WriteTable(writer, semanticIr.ConstantInputBindings, WriteConstantInputBinding);
             WriteTable(writer, semanticIr.ControlFlow, SimulationProgramSemanticsCodec.WriteControlFlow);
             WriteTable(writer, semanticIr.References, SimulationProgramSemanticsCodec.WriteReference);
+            WriteTable(writer, semanticIr.GraphCallFrames, SimulationProgramSemanticsCodec.WriteGraphCallFrame);
             WriteTable(writer, semanticIr.StateDeclarations, (target, value) => SimulationProgramSemanticsCodec.WriteStateSlot(target, value, true));
             WriteTable(writer, semanticIr.Scopes, SimulationProgramSemanticsCodec.WriteScope);
             WriteTable(writer, semanticIr.WorldRequests, SimulationProgramSemanticsCodec.WriteWorldRequest);
@@ -320,6 +321,7 @@ namespace ThirdPersonSimulation
             SemanticConstantInputBinding[] constantInputBindings = ReadTable(reader, ReadConstantInputBinding);
             ProgramControlFlowEdge[] controlFlow = ReadTable(reader, SimulationProgramSemanticsCodec.ReadControlFlow);
             ProgramReference[] references = ReadTable(reader, SimulationProgramSemanticsCodec.ReadReference);
+            ProgramGraphCallFrame[] graphCallFrames = ReadTable(reader, SimulationProgramSemanticsCodec.ReadGraphCallFrame);
             ProgramStateSlot[] stateDeclarations = ReadTable(reader, SimulationProgramSemanticsCodec.ReadStateSlot);
             ProgramScopeLayout[] scopes = ReadTable(reader, SimulationProgramSemanticsCodec.ReadScope);
             ProgramWorldRequestLayout[] worldRequests = ReadTable(reader, SimulationProgramSemanticsCodec.ReadWorldRequest);
@@ -342,7 +344,8 @@ namespace ThirdPersonSimulation
                 outputChannels,
                 catalogEntries,
                 sourceMap,
-                producers);
+                producers,
+                graphCallFrames);
         }
 
         static void WriteBodyMotion(CanonicalWriter writer, CharacterBodyMotionSemanticDescriptor descriptor)

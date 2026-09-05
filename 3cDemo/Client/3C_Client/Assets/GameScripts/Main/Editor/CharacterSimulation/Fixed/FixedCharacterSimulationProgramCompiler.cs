@@ -244,7 +244,8 @@ namespace ThirdPersonSimulation.Fixed
                 semanticIr.CatalogEntries,
                 ProgramMotionModifierCompiler.Compile(semanticIr),
                 semanticIr.SourceMap,
-                semanticIr.Producers);
+                semanticIr.Producers,
+                semanticIr.GraphCallFrames);
             return new FixedProgramLoweringResult(program, conversions);
         }
 

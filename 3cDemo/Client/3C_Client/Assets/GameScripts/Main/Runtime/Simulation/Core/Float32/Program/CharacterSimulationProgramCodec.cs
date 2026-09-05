@@ -114,8 +114,8 @@ namespace ThirdPersonSimulation
     public static class CharacterSimulationProgramCodec
     {
         const uint ArtifactMagic = 0x4d495343;
-        const int ArtifactVersion = 15;
-        const int ProgramFormatVersion = 17;
+        const int ArtifactVersion = 16;
+        const int ProgramFormatVersion = 18;
         const int LayoutFormatVersion = 10;
         const int SourceMapStringTableVersion = 3;
 
@@ -258,6 +258,7 @@ namespace ThirdPersonSimulation
                 WriteScope(writer, program.Scopes[i]);
             WriteTable(writer, program.ConstantInputBindings, WriteConstantInputBinding);
             WriteTable(writer, program.MotionModifiers, WriteMotionModifier);
+            WriteTable(writer, program.GraphCallFrames, WriteGraphCallFrame);
             return new LayoutHash(writer.ComputeHash());
         }
 
@@ -280,6 +281,7 @@ namespace ThirdPersonSimulation
             WriteTable(writer, program.ConstantInputBindings, WriteConstantInputBinding);
             WriteTable(writer, program.ControlFlow, WriteControlFlow);
             WriteTable(writer, program.References, WriteReference);
+            WriteTable(writer, program.GraphCallFrames, WriteGraphCallFrame);
             WriteTable(writer, program.StateSlots, (target, value) => WriteStateSlot(target, value, true));
             WriteTable(writer, program.Scopes, WriteScope);
             WriteTable(writer, program.WorldRequests, WriteWorldRequest);
@@ -307,6 +309,7 @@ namespace ThirdPersonSimulation
             ProgramConstantInputBinding[] constantInputBindings = ReadTable(reader, ReadConstantInputBinding);
             ProgramControlFlowEdge[] controlFlow = ReadTable(reader, ReadControlFlow);
             ProgramReference[] references = ReadTable(reader, ReadReference);
+            ProgramGraphCallFrame[] graphCallFrames = ReadTable(reader, ReadGraphCallFrame);
             ProgramStateSlot[] stateSlots = ReadTable(reader, ReadStateSlot);
             ProgramScopeLayout[] scopes = ReadTable(reader, ReadScope);
             ProgramWorldRequestLayout[] worldRequests = ReadTable(reader, ReadWorldRequest);
@@ -332,7 +335,8 @@ namespace ThirdPersonSimulation
                 catalogEntries,
                 motionModifiers,
                 sourceMap,
-                producers);
+                producers,
+                graphCallFrames);
             if (!program.LayoutHash.Equals(expectedLayoutHash))
                 throw new InvalidDataException($"Program payload layout hash mismatch. Expected '{expectedLayoutHash}', actual '{program.LayoutHash}'.");
             return program;

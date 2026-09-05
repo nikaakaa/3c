@@ -191,7 +191,8 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             IEnumerable<CharacterAuthoringEdgeRecord> propertyEdges,
             IEnumerable<CharacterAuthoringGraphReferenceRecord> graphReferences,
             IEnumerable<CharacterAuthoringTimelineRecord> timelines,
-            string entryNodeId)
+            string entryNodeId,
+            CharacterAuthoringGraphSignature signature)
         {
             Graph = graph ?? throw new ArgumentNullException(nameof(graph));
             Route = route ?? throw new ArgumentNullException(nameof(route));
@@ -202,6 +203,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             GraphReferences = Array.AsReadOnly((graphReferences ?? Array.Empty<CharacterAuthoringGraphReferenceRecord>()).ToArray());
             Timelines = Array.AsReadOnly((timelines ?? Array.Empty<CharacterAuthoringTimelineRecord>()).ToArray());
             EntryNodeId = entryNodeId ?? string.Empty;
+            Signature = signature ?? throw new ArgumentNullException(nameof(signature));
         }
 
         public BaseTree Graph { get; }
@@ -213,6 +215,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
         public IReadOnlyList<CharacterAuthoringGraphReferenceRecord> GraphReferences { get; }
         public IReadOnlyList<CharacterAuthoringTimelineRecord> Timelines { get; }
         public string EntryNodeId { get; }
+        public CharacterAuthoringGraphSignature Signature { get; }
     }
 
     public sealed class CharacterAuthoringEdgeRecord
@@ -231,18 +234,25 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
 
     public sealed class CharacterAuthoringGraphReferenceRecord
     {
-        internal CharacterAuthoringGraphReferenceRecord(BaseNode owner, NodeGraphReference reference, string route, CharacterAuthoringGraphOccurrence child)
+        internal CharacterAuthoringGraphReferenceRecord(
+            BaseNode owner,
+            NodeGraphReference reference,
+            string route,
+            CharacterAuthoringGraphOccurrence child,
+            CharacterAuthoringGraphCallFrame callFrame)
         {
             Owner = owner ?? throw new ArgumentNullException(nameof(owner));
             Reference = reference;
             Route = route ?? throw new ArgumentNullException(nameof(route));
             Child = child ?? throw new ArgumentNullException(nameof(child));
+            CallFrame = callFrame ?? throw new ArgumentNullException(nameof(callFrame));
         }
 
         public BaseNode Owner { get; }
         public NodeGraphReference Reference { get; }
         public string Route { get; }
         public CharacterAuthoringGraphOccurrence Child { get; }
+        public CharacterAuthoringGraphCallFrame CallFrame { get; }
     }
 
     public sealed class CharacterAuthoringTimelineRecord
@@ -583,6 +593,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
 
                 CharacterAuthoringEdgeRecord[] edges = DiscoverEdges(graph.Edges, graph, route, stack);
                 CharacterAuthoringEdgeRecord[] propertyEdges = DiscoverEdges(graph.PropertyEdges, graph, route, stack);
+                CharacterAuthoringGraphSignature signature = new CharacterAuthoringGraphSignature(declarations);
                 var graphReferences = new List<CharacterAuthoringGraphReferenceRecord>();
                 var timelines = new List<CharacterAuthoringTimelineRecord>();
                 for (int i = 0; i < nodes.Length; i++)
@@ -612,11 +623,34 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                             m_Report.DiscoveryError("graph_scope_missing", referenceRoute, "State graph reference requires a stable scope identity.");
                         CharacterAuthoringGraphOccurrence child = DiscoverGraph(reference.Tree, referenceRoute, stack);
                         if (child != null)
-                            graphReferences.Add(new CharacterAuthoringGraphReferenceRecord(node, reference, referenceRoute, child));
+                        {
+                            CharacterAuthoringGraphCallFrame callFrame = CharacterAuthoringGraphCallFrameFactory.Create(
+                                node,
+                                reference,
+                                child,
+                                referenceRoute,
+                                m_Report);
+                            graphReferences.Add(new CharacterAuthoringGraphReferenceRecord(
+                                node,
+                                reference,
+                                referenceRoute,
+                                child,
+                                callFrame));
+                        }
                     }
                 }
                 string entryNodeId = ResolveEntryNodeId(graph, nodes, route);
-                return new CharacterAuthoringGraphOccurrence(graph, route, declarations, nodes, edges, propertyEdges, graphReferences, timelines, entryNodeId);
+                return new CharacterAuthoringGraphOccurrence(
+                    graph,
+                    route,
+                    declarations,
+                    nodes,
+                    edges,
+                    propertyEdges,
+                    graphReferences,
+                    timelines,
+                    entryNodeId,
+                    signature);
             }
             catch (Exception exception)
             {

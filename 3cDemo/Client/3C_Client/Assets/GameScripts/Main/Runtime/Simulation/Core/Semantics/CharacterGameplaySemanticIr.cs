@@ -302,6 +302,7 @@ namespace ThirdPersonSimulation
         readonly ReadOnlyCollection<SemanticConstantInputBinding> m_ConstantInputBindings;
         readonly ReadOnlyCollection<ProgramControlFlowEdge> m_ControlFlow;
         readonly ReadOnlyCollection<ProgramReference> m_References;
+        readonly ReadOnlyCollection<ProgramGraphCallFrame> m_GraphCallFrames;
         readonly ReadOnlyCollection<ProgramStateSlot> m_StateDeclarations;
         readonly ReadOnlyCollection<ProgramScopeLayout> m_Scopes;
         readonly ReadOnlyCollection<ProgramWorldRequestLayout> m_WorldRequests;
@@ -324,7 +325,8 @@ namespace ThirdPersonSimulation
             IEnumerable<ProgramOutputChannelLayout> outputChannels,
             IEnumerable<ProgramCatalogEntry> catalogEntries,
             IEnumerable<ProgramSourceMapEntry> sourceMap,
-            IEnumerable<ProgramProducer> producers)
+            IEnumerable<ProgramProducer> producers,
+            IEnumerable<ProgramGraphCallFrame> graphCallFrames = null)
         {
             Manifest = manifest ?? throw new ArgumentNullException(nameof(manifest));
             BodyMotion = bodyMotion ?? throw new ArgumentNullException(nameof(bodyMotion));
@@ -335,6 +337,7 @@ namespace ThirdPersonSimulation
             m_ConstantInputBindings = SortConstantInputs(constantInputBindings, m_Operations);
             m_ControlFlow = ByIdentity(controlFlow, value => value.Identity, "control-flow edge");
             m_References = ByIdentity(references, value => value.Identity, "reference");
+            m_GraphCallFrames = Indexed(graphCallFrames, value => value.Index, "graph call frame");
             m_StateDeclarations = Indexed(stateDeclarations, value => value.Index, "state declaration");
             m_Scopes = ByIdentity(scopes, value => value.Identity, "scope");
             m_WorldRequests = Indexed(worldRequests, value => value.Index, "world request");
@@ -343,6 +346,7 @@ namespace ThirdPersonSimulation
             m_SourceMap = SortSourceMap(sourceMap);
             m_Producers = Indexed(producers, value => value.Index, "producer");
             ValidateReferences();
+            ValidateGraphCallFrames();
             SemanticHash = CharacterGameplaySemanticIrCodec.ComputeHash(this);
         }
 
@@ -353,6 +357,7 @@ namespace ThirdPersonSimulation
         public IReadOnlyList<SemanticConstantInputBinding> ConstantInputBindings => m_ConstantInputBindings;
         public IReadOnlyList<ProgramControlFlowEdge> ControlFlow => m_ControlFlow;
         public IReadOnlyList<ProgramReference> References => m_References;
+        public IReadOnlyList<ProgramGraphCallFrame> GraphCallFrames => m_GraphCallFrames;
         public IReadOnlyList<ProgramStateSlot> StateDeclarations => m_StateDeclarations;
         public IReadOnlyList<ProgramScopeLayout> Scopes => m_Scopes;
         public IReadOnlyList<ProgramWorldRequestLayout> WorldRequests => m_WorldRequests;
@@ -361,6 +366,34 @@ namespace ThirdPersonSimulation
         public IReadOnlyList<ProgramSourceMapEntry> SourceMap => m_SourceMap;
         public IReadOnlyList<ProgramProducer> Producers => m_Producers;
         public SemanticHash SemanticHash { get; }
+
+        void ValidateGraphCallFrames()
+        {
+            for (int i = 0; i < m_GraphCallFrames.Count; i++)
+            {
+                ProgramGraphCallFrame frame = m_GraphCallFrames[i];
+                if (frame.OwnerOperation.Value >= m_Operations.Count || frame.EntryOperation.Value >= m_Operations.Count)
+                    throw new InvalidDataException($"Graph call frame '{frame.Identity}' references an operation outside the table.");
+                ValidateGraphParameterBindings(frame, frame.Inputs);
+                ValidateGraphParameterBindings(frame, frame.Outputs);
+            }
+        }
+
+        void ValidateGraphParameterBindings(
+            ProgramGraphCallFrame frame,
+            IReadOnlyList<ProgramGraphParameterBinding> bindings)
+        {
+            for (int i = 0; i < bindings.Count; i++)
+            {
+                ProgramGraphParameterBinding binding = bindings[i];
+                if (binding.StateSlot >= m_StateDeclarations.Count)
+                    throw new InvalidDataException($"Graph call frame '{frame.Identity}' parameter '{binding.ParameterName}' references an unknown state slot.");
+                SemanticValueKind actualKind = CharacterGameplayValuePortContracts.FromState(
+                    m_StateDeclarations[binding.StateSlot].ValueKind);
+                if (actualKind != binding.ValueKind)
+                    throw new InvalidDataException($"Graph call frame '{frame.Identity}' parameter '{binding.ParameterName}' state kind '{actualKind}' does not match '{binding.ValueKind}'.");
+            }
+        }
 
         public SemanticValueKind ResolveLinkedValueKind(ProgramControlFlowEdge edge)
         {

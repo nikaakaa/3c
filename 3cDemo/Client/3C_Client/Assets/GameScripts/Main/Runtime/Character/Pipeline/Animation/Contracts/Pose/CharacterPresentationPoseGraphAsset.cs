@@ -170,6 +170,29 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         [SerializeField] LegacyPoseGraph m_TypedGraph;
         [SerializeField] LegacyPoseGraph[] m_TypedGraphCatalog =
             Array.Empty<LegacyPoseGraph>();
+
+        internal sealed class LegacyCanvasMigrationState
+        {
+            LegacyCanvasMigrationState(
+                LegacyPoseGraph legacyRoot,
+                LegacyPoseGraph[] legacyCatalog,
+                CharacterPoseCanvasGraph canvasRoot,
+                CharacterPoseCanvasGraph[] canvasCatalog)
+            {
+                m_LegacyRoot = legacyRoot;
+                m_LegacyCatalog = legacyCatalog;
+                m_CanvasRoot = canvasRoot;
+                m_CanvasCatalog = canvasCatalog;
+            }
+
+            internal void RestoreTo(CharacterPresentationPoseGraphAsset asset)
+            {
+                asset.m_Graph = m_CanvasRoot;
+                asset.m_GraphCatalog = m_CanvasCatalog;
+                asset.m_TypedGraph = m_LegacyRoot;
+                asset.m_TypedGraphCatalog = m_LegacyCatalog;
+            }
+        }
 #endif
 
         public CharacterPoseCanvasGraph Graph => m_Graph;
@@ -303,49 +326,148 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         }
 
 #if UNITY_EDITOR
-        internal CharacterPoseCanvasGraph[] CreateLegacyCanvasGraphs()
+        internal LegacyCanvasMigrationState CaptureLegacyCanvasMigrationState()
         {
+            RequireLegacyCanvasMigrationInput();
+            return new LegacyCanvasMigrationState(
+                m_TypedGraph,
+                m_TypedGraphCatalog,
+                m_Graph,
+                m_GraphCatalog);
+        }
+
+        internal void RequireLegacyCanvasMigrationInput()
+        {
+            string assetPath = AssetDatabase.GetAssetPath(this);
+            if (string.IsNullOrWhiteSpace(assetPath))
+                throw new InvalidOperationException(
+                    $"Pose asset '{name}' must be saved before migration.");
             if (m_TypedGraph == null)
                 throw new InvalidOperationException(
                     $"Pose asset '{name}' has no legacy root graph to migrate.");
+            if (m_Graph != null ||
+                (m_GraphCatalog != null && m_GraphCatalog.Length != 0))
+            {
+                throw new InvalidOperationException(
+                    $"Pose asset '{name}' already contains Canvas Graph references; mixed migration is rejected.");
+            }
+            if (AssetDatabase.LoadAllAssetsAtPath(assetPath)
+                    .OfType<CharacterPoseCanvasGraph>()
+                    .Any())
+            {
+                throw new InvalidOperationException(
+                    $"Pose asset '{name}' already contains Canvas Graph subassets; migration is rejected.");
+            }
+
+            var identities = new HashSet<PoseGraphId>();
+            RequireLegacyGraph(m_TypedGraph, "root", identities);
+            LegacyPoseGraph[] catalog = m_TypedGraphCatalog ??
+                Array.Empty<LegacyPoseGraph>();
+            for (int i = 0; i < catalog.Length; i++)
+                RequireLegacyGraph(catalog[i], $"catalog[{i}]", identities);
+        }
+
+        static void RequireLegacyGraph(
+            LegacyPoseGraph graph,
+            string identity,
+            HashSet<PoseGraphId> graphIdentities)
+        {
+            if (graph == null || !graph.GraphId.IsValid ||
+                string.IsNullOrWhiteSpace(graph.ContentRevision) ||
+                graph.m_Parameters == null || graph.m_Nodes == null ||
+                graph.m_Edges == null || graph.m_Layout == null ||
+                !graphIdentities.Add(graph.GraphId))
+            {
+                throw new InvalidOperationException(
+                    $"Legacy Pose Graph '{identity}' is missing, invalid or duplicated.");
+            }
+            for (int i = 0; i < graph.m_Nodes.Length; i++)
+            {
+                LegacyPoseNode node = graph.m_Nodes[i];
+                if (node == null || string.IsNullOrWhiteSpace(node.m_NodeId) ||
+                    node.m_Payload == null || node.m_DynamicPorts == null)
+                {
+                    throw new InvalidOperationException(
+                        $"Legacy Pose Graph '{graph.GraphId}' contains an incomplete node at index {i}.");
+                }
+            }
+            for (int i = 0; i < graph.m_Edges.Length; i++)
+            {
+                LegacyPoseEdge edge = graph.m_Edges[i];
+                if (edge == null || string.IsNullOrWhiteSpace(edge.m_EdgeId) ||
+                    string.IsNullOrWhiteSpace(edge.m_SourceNodeId) ||
+                    string.IsNullOrWhiteSpace(edge.m_SourcePortId) ||
+                    string.IsNullOrWhiteSpace(edge.m_TargetNodeId) ||
+                    string.IsNullOrWhiteSpace(edge.m_TargetPortId))
+                {
+                    throw new InvalidOperationException(
+                        $"Legacy Pose Graph '{graph.GraphId}' contains an incomplete edge at index {i}.");
+                }
+            }
+            if (graph.m_Layout.Any(value => value == null))
+                throw new InvalidOperationException(
+                    $"Legacy Pose Graph '{graph.GraphId}' contains an incomplete layout.");
+        }
+
+        internal CharacterPoseCanvasGraph[] CreateLegacyCanvasGraphs()
+        {
+            RequireLegacyCanvasMigrationInput();
             var legacyGraphs = new List<LegacyPoseGraph> { m_TypedGraph };
             legacyGraphs.AddRange(m_TypedGraphCatalog ?? Array.Empty<LegacyPoseGraph>());
             var graphs = new CharacterPoseCanvasGraph[legacyGraphs.Count];
-            for (int graphIndex = 0; graphIndex < legacyGraphs.Count; graphIndex++)
+            try
             {
-                LegacyPoseGraph legacy = legacyGraphs[graphIndex] ??
-                    throw new InvalidOperationException(
-                        $"Pose asset '{name}' contains a missing legacy graph at index {graphIndex}.");
-                CharacterPoseCanvasNode[] nodes = legacy.Nodes
-                    .Select(node => node == null
-                        ? throw new InvalidOperationException(
-                            $"Pose asset '{name}' contains a missing legacy node.")
-                        : new CharacterPoseCanvasNode(
-                            node.NodeId,
-                            node.DisplayName,
-                            node.Payload,
-                            node.DynamicPorts.ToArray()))
-                    .ToArray();
-                CharacterPoseCanvasConnection[] edges = legacy.Edges
-                    .Select(edge => edge == null
-                        ? throw new InvalidOperationException(
-                            $"Pose asset '{name}' contains a missing legacy edge.")
-                        : new CharacterPoseCanvasConnection(
-                            edge.EdgeId,
-                            edge.SourceNodeId,
-                            edge.SourcePortId,
-                            edge.TargetNodeId,
-                            edge.TargetPortId))
-                    .ToArray();
-                graphs[graphIndex] = CharacterPoseCanvasGraph.CreateAuthoring(
-                    legacy.GraphId,
-                    legacy.ContentRevision,
-                    legacy.Parameters.ToArray(),
-                    nodes,
-                    edges,
-                    legacy.Layout);
+                for (int graphIndex = 0; graphIndex < legacyGraphs.Count; graphIndex++)
+                {
+                    LegacyPoseGraph legacy = legacyGraphs[graphIndex] ??
+                        throw new InvalidOperationException(
+                            $"Pose asset '{name}' contains a missing legacy graph at index {graphIndex}.");
+                    CharacterPoseCanvasNode[] nodes = legacy.Nodes
+                        .Select(node => node == null
+                            ? throw new InvalidOperationException(
+                                $"Pose asset '{name}' contains a missing legacy node.")
+                            : new CharacterPoseCanvasNode(
+                                node.NodeId,
+                                node.DisplayName,
+                                node.Payload,
+                                node.DynamicPorts.ToArray()))
+                        .ToArray();
+                    CharacterPoseCanvasConnection[] edges = legacy.Edges
+                        .Select(edge => edge == null
+                            ? throw new InvalidOperationException(
+                                $"Pose asset '{name}' contains a missing legacy edge.")
+                            : new CharacterPoseCanvasConnection(
+                                edge.EdgeId,
+                                edge.SourceNodeId,
+                                edge.SourcePortId,
+                                edge.TargetNodeId,
+                                edge.TargetPortId))
+                        .ToArray();
+                    graphs[graphIndex] = CharacterPoseCanvasGraph.CreateAuthoring(
+                        legacy.GraphId,
+                        legacy.ContentRevision,
+                        legacy.Parameters.ToArray(),
+                        nodes,
+                        edges,
+                        legacy.Layout);
+                }
+            }
+            catch
+            {
+                foreach (CharacterPoseCanvasGraph graph in graphs)
+                    if (graph)
+                        UnityEngine.Object.DestroyImmediate(graph);
+                throw;
             }
             return graphs;
+        }
+
+        internal void RestoreLegacyCanvasMigrationState(
+            LegacyCanvasMigrationState state)
+        {
+            if (state == null)
+                throw new ArgumentNullException(nameof(state));
+            state.RestoreTo(this);
         }
 
         internal void SetMigratedCanvasGraphs(

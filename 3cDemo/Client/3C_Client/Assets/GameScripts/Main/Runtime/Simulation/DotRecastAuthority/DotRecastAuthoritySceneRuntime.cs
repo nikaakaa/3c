@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Net;
+using ThirdPersonCharacter.Control.Rules;
 using ThirdPersonSimulation.DotRecast;
 using ThirdPersonSimulation.ServerAuthoritative;
 using ThirdPersonSimulation.ServerAuthoritative.Transport;
@@ -186,7 +187,7 @@ namespace ThirdPersonSimulation.DotRecastAuthority
 
             var programRuntime = Float32ProgramRuntime.Create(
                 actorBindings,
-                ThirdPersonCharacter.Pipeline.Simulation.CorinCharacterControlModuleCatalog.Create());
+                CorinCharacterControlModuleCatalog.Create());
             DotRecastWorldSolver solver = null;
             try
             {

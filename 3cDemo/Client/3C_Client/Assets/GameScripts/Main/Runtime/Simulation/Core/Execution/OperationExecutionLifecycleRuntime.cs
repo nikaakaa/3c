@@ -138,8 +138,11 @@ namespace ThirdPersonSimulation
                 case SimulationOperationCode.Timeline:
                     status = m_Host.ContinueLeafStop(m_Host.Cursor, operation, context);
                     break;
+                case SimulationOperationCode.SubGraph:
+                    status = ContinueDirectChildStop(operation, context, ProgramControlFlowKind.Enter);
+                    break;
                 default:
-                    status = ContinueDirectChildStop(operation, context);
+                    status = ContinueDirectChildStop(operation, context, ProgramControlFlowKind.Child);
                     break;
             }
             if (status == OperationStopStatus.Running)
@@ -175,10 +178,13 @@ namespace ThirdPersonSimulation
             }
         }
 
-        OperationStopStatus ContinueDirectChildStop(OperationExecutionDescriptor operation, OperationStopContext context)
+        OperationStopStatus ContinueDirectChildStop(
+            OperationExecutionDescriptor operation,
+            OperationStopContext context,
+            ProgramControlFlowKind kind = ProgramControlFlowKind.Child)
         {
             OperationStopStatus aggregate = OperationStopStatus.Completed;
-            IReadOnlyList<ProgramControlFlowEdge> children = Edges(operation.Handle, ProgramControlFlowKind.Child);
+            IReadOnlyList<ProgramControlFlowEdge> children = Edges(operation.Handle, kind);
             for (int i = 0; i < children.Count; i++)
             {
                 if (!m_Host.IsActive(children[i].Target))
@@ -212,7 +218,10 @@ namespace ThirdPersonSimulation
             }
             else
             {
-                IReadOnlyList<ProgramControlFlowEdge> children = Edges(operation.Handle, ProgramControlFlowKind.Child);
+                ProgramControlFlowKind kind = operation.Code == SimulationOperationCode.SubGraph
+                    ? ProgramControlFlowKind.Enter
+                    : ProgramControlFlowKind.Child;
+                IReadOnlyList<ProgramControlFlowEdge> children = Edges(operation.Handle, kind);
                 for (int i = 0; i < children.Count; i++)
                 {
                     if (IsActive(children[i].Target))

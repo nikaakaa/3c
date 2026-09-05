@@ -231,6 +231,8 @@ namespace ThirdPersonSimulation
                     return m_Composite.TickSelector(operation);
                 case SimulationOperationCode.Succeed:
                     return OperationExecutionResult.Success;
+                case SimulationOperationCode.SubGraph:
+                    return TickSingleChild(operation, ProgramControlFlowKind.Enter);
                 case SimulationOperationCode.StateMachine:
                     return m_StateMachine.Tick(operation);
                 case SimulationOperationCode.State:

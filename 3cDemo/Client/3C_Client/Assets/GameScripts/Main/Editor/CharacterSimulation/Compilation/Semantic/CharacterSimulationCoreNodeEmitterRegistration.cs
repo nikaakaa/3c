@@ -16,6 +16,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             registry.Register(CharacterSimulationNodeEmitterRegistry.Simple<SequenceNode>(node => new CharacterSimulationNodeEmission(SimulationOperationCode.Sequence)));
             registry.Register(CharacterSimulationNodeEmitterRegistry.Simple<SelectorNode>(node => new CharacterSimulationNodeEmission(SimulationOperationCode.Selector)));
             registry.Register(CharacterSimulationNodeEmitterRegistry.Simple<SucceedNode>(node => new CharacterSimulationNodeEmission(SimulationOperationCode.Succeed)));
+            registry.Register(CharacterSimulationNodeEmitterRegistry.Simple<SubTreeNode>(node => new CharacterSimulationNodeEmission(SimulationOperationCode.SubGraph)));
             registry.Register(CharacterSimulationNodeEmitterRegistry.Simple<StateMachineNode>(node => new CharacterSimulationNodeEmission(SimulationOperationCode.StateMachine, text0: node.Graph?.GraphAuthoringId)));
             registry.Register(CharacterSimulationNodeEmitterRegistry.Simple<StateNode>(node => new CharacterSimulationNodeEmission(SimulationOperationCode.State, text0: node.SubTree?.GraphAuthoringId)));
             registry.Register(CharacterSimulationNodeEmitterRegistry.Simple<StateMachineEnterNode>(node => new CharacterSimulationNodeEmission(SimulationOperationCode.StateEnter)));

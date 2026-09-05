@@ -247,6 +247,7 @@ namespace ThirdPersonSimulation.Fixed
 				case SimulationOperationCode.Sequence:
 				case SimulationOperationCode.Selector:
 				case SimulationOperationCode.Succeed:
+				case SimulationOperationCode.SubGraph:
 				case SimulationOperationCode.StateMachine:
 				case SimulationOperationCode.State:
 				case SimulationOperationCode.StateOnEnter:

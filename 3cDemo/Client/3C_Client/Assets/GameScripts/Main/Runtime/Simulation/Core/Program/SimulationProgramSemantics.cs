@@ -233,6 +233,7 @@ namespace ThirdPersonSimulation
         Sequence = 4,
         Selector = 5,
         Succeed = 6,
+        SubGraph = 7,
         StateMachine = 20,
         State = 21,
         StateEnter = 22,
@@ -354,7 +355,7 @@ namespace ThirdPersonSimulation
     public static class CharacterGameplayOperationSet
     {
         public const string Id = "character-gameplay-operations";
-        public static readonly OperationSetVersion Version = new OperationSetVersion(Id + "/12");
+        public static readonly OperationSetVersion Version = new OperationSetVersion(Id + "/13");
 
         static readonly ReadOnlyCollection<SimulationOperationCode> s_Operations =
             Array.AsReadOnly(new[]
@@ -365,6 +366,7 @@ namespace ThirdPersonSimulation
                 SimulationOperationCode.Sequence,
                 SimulationOperationCode.Selector,
                 SimulationOperationCode.Succeed,
+                SimulationOperationCode.SubGraph,
                 SimulationOperationCode.StateMachine,
                 SimulationOperationCode.State,
                 SimulationOperationCode.StateEnter,

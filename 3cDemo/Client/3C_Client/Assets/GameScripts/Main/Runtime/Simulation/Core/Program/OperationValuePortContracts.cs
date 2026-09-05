@@ -254,6 +254,7 @@ namespace ThirdPersonSimulation
 			}
 
 			Set(values, Output(SimulationOperationCode.StateRootCompleted, Fixed("m_Output", 0, SemanticValueKind.Boolean)));
+			Set(values, Empty(SimulationOperationCode.SubGraph));
 			Set(values, Output(SimulationOperationCode.StateExitCause, Fixed("m_Output", 0, SemanticValueKind.Boolean)));
 			Set(values, Output(SimulationOperationCode.BlackboardGet, Dynamic("m_Output", 0)));
 			Set(values, Input(SimulationOperationCode.BlackboardSet, Dynamic("m_Value", 0)));

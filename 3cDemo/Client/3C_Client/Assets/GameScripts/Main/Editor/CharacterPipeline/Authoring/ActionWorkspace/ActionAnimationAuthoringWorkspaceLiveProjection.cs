@@ -160,7 +160,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             ActionAnimationWorkspaceResolution resolution,
             RuntimeDebugViewModel runtimeView,
             out ActionAnimationWorkspaceLiveView live,
-            out string failure)
+            out string failure,
+            ulong selectedActionInstanceId = 0)
         {
             live = null;
             failure = string.Empty;
@@ -227,7 +228,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     out AnimationBlendStackSnapshot stack,
                     out bool hasStack,
                     out AnimationPresentationRuntimeSnapshot posePlan,
-                    out failure))
+                    out failure,
+                    selectedActionInstanceId))
                 return false;
             ActionAnimationNumericTargetView numericTarget =
                 ResolveNumericTarget(
@@ -319,7 +321,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     out AnimationBlendStackSnapshot stack,
                     out bool hasStack,
                     out posePlan,
-                    out failure))
+                    out failure,
+                    0))
                 return false;
             preview = new ActionAnimationWorkspacePreviewView(
                 playback,
@@ -342,7 +345,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             out AnimationBlendStackSnapshot stack,
             out bool hasStack,
             out AnimationPresentationRuntimeSnapshot posePlan,
-            out string failure)
+            out string failure,
+            ulong selectedActionInstanceId)
         {
             playback = null;
             time = default;
@@ -352,26 +356,22 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             posePlan = default;
             failure = string.Empty;
             ActionAnimationPlaybackLifecycleSnapshot[] playbacks =
-                debug.ActionPlaybacks
+                GetPlaybackCandidates(resolution, debug)
                     .Where(value =>
-                        value != null &&
-                        value.PlaybackId.ProducerId.Equals(
-                            resolution.Producer.ProducerId))
-                    .OrderByDescending(value =>
-                        value.LatestCommandSequence)
+                        selectedActionInstanceId == 0 ||
+                        value.ActionInstanceId == selectedActionInstanceId)
                     .ToArray();
             if (playbacks.Length == 0)
             {
-                failure =
-                    $"Trace 中没有 producer '{resolution.Producer.ProducerId}' 的 Action playback。";
+                failure = selectedActionInstanceId == 0
+                    ? $"Trace 中没有 producer '{resolution.Producer.ProducerId}' 的 Action playback。"
+                    : $"Trace 中没有选中的 Action instance '{selectedActionInstanceId}' 对应的 producer playback。";
                 return false;
             }
-            if (playbacks.Length > 1 &&
-                playbacks[0].LatestCommandSequence ==
-                playbacks[1].LatestCommandSequence)
+            if (selectedActionInstanceId == 0 && playbacks.Length > 1)
             {
                 failure =
-                    $"Trace 中 producer '{resolution.Producer.ProducerId}' 的最新 playback 不唯一。";
+                    $"Trace 中 producer '{resolution.Producer.ProducerId}' 有 {playbacks.Length} 个 Action instance，请显式选择。";
                 return false;
             }
             playback = playbacks[0];
@@ -419,6 +419,22 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             hasStack = stacks.Length == 1;
             stack = hasStack ? stacks[0] : default;
             return true;
+        }
+
+        public static IReadOnlyList<ActionAnimationPlaybackLifecycleSnapshot> GetPlaybackCandidates(
+            ActionAnimationWorkspaceResolution resolution,
+            AnimationPresentationDebugView debug)
+        {
+            if (resolution?.Producer == null || debug == null)
+                return Array.Empty<ActionAnimationPlaybackLifecycleSnapshot>();
+            return debug.ActionPlaybacks
+                .Where(value =>
+                    value != null &&
+                    value.PlaybackId.ProducerId.Equals(
+                        resolution.Producer.ProducerId))
+                .OrderByDescending(value => value.LatestCommandSequence)
+                .ThenBy(value => value.ActionInstanceId)
+                .ToArray();
         }
 
         static ActionAnimationNumericTargetView ResolveNumericTarget(

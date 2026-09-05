@@ -67,6 +67,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         RuntimeDebugViewBinding m_RuntimeBinding;
         RuntimeDebugTargetResolution m_RuntimeResolution;
         ActionAnimationWorkspaceLiveView m_LiveView;
+        [SerializeField] ulong m_LiveActionInstanceId;
         string m_LiveFailure = string.Empty;
         ActionAnimationWorkspacePreviewView m_PreviewView;
         string m_PreviewFailure = string.Empty;
@@ -359,6 +360,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             InvalidateLiveState();
             m_Resolution = null;
             m_TimelineSelection = default;
+            m_LiveActionInstanceId = 0;
             m_StatusHost?.Clear();
             m_TimelineHost?.Clear();
             ConfigureActionMenu();
@@ -983,6 +985,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             if (!string.IsNullOrWhiteSpace(m_LiveFailure))
                 AddBottomText(m_LiveFailure);
             AddLiveTargetChoices();
+            AddLivePlaybackChoices();
             if (m_LiveView == null)
                 return;
 
@@ -1063,6 +1066,42 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                         $"{candidate.Target.DisplayName} ({candidate.Match})"
                 };
                 button.SetEnabled(candidate.IsExact);
+                m_BottomHost.Add(button);
+            }
+        }
+
+        void AddLivePlaybackChoices()
+        {
+            if (m_AnimationDiagnosticsTarget == null ||
+                !m_AnimationDiagnosticsTarget.TryGetDebugView(
+                    out AnimationPresentationDebugView debug))
+                return;
+            IReadOnlyList<ActionAnimationPlaybackLifecycleSnapshot> candidates =
+                ActionAnimationAuthoringWorkspaceLiveProjection.GetPlaybackCandidates(
+                    m_Resolution,
+                    debug);
+            if (candidates.Count == 0)
+                return;
+            AddBottomText(
+                candidates.Count == 1
+                    ? $"Action Instance: {candidates[0].ActionInstanceId}"
+                    : "同一 producer 存在多个 Action instance，请显式选择：");
+            for (int i = 0; i < candidates.Count; i++)
+            {
+                ActionAnimationPlaybackLifecycleSnapshot captured = candidates[i];
+                var button = new Button(() =>
+                {
+                    m_LiveActionInstanceId = captured.ActionInstanceId;
+                    RefreshLiveState();
+                    RefreshBottom();
+                })
+                {
+                    text =
+                        $"{captured.ActionInstanceId} / {captured.Phase} / {captured.LogicTerminal} / seq {captured.LatestCommandSequence}"
+                };
+                button.SetEnabled(
+                    m_LiveActionInstanceId != captured.ActionInstanceId ||
+                    m_LiveView == null);
                 m_BottomHost.Add(button);
             }
         }
@@ -1415,7 +1454,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                         m_Resolution,
                         runtimeView,
                         out m_LiveView,
-                        out m_LiveFailure))
+                        out m_LiveFailure,
+                        m_LiveActionInstanceId))
             {
                 m_TimelineView.ClearRuntimeOverlay();
                 return;

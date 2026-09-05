@@ -186,12 +186,21 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
             {
                 if (skill == null)
                     continue;
-                if (graphById.ContainsKey(skill.entryGraphAuthoringId))
+                if (graphById.ContainsKey(skill.entryGraphAuthoringId) &&
+                    !string.Equals(
+                        skill.entryGraphAuthoringId,
+                        snapshot?.rootGraphAuthoringId,
+                        StringComparison.Ordinal))
                     selected.Add(skill.entryGraphAuthoringId);
                 foreach (AgentSnapshotSkillSubgraphDependency dependency in
                          skill.subgraphDependencies ?? new List<AgentSnapshotSkillSubgraphDependency>())
                 {
-                    if (dependency != null && graphById.ContainsKey(dependency.subgraphIdentity))
+                    if (dependency != null &&
+                        graphById.ContainsKey(dependency.subgraphIdentity) &&
+                        !string.Equals(
+                            dependency.subgraphIdentity,
+                            snapshot?.rootGraphAuthoringId,
+                            StringComparison.Ordinal))
                         selected.Add(dependency.subgraphIdentity);
                 }
             }
@@ -224,7 +233,11 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
 
                 foreach (AgentSnapshotGraph candidate in graphById.Values)
                 {
-                    if (selected.Contains(candidate.graphAuthoringId))
+                    if (selected.Contains(candidate.graphAuthoringId) ||
+                        string.Equals(
+                            candidate.graphAuthoringId,
+                            snapshot?.rootGraphAuthoringId,
+                            StringComparison.Ordinal))
                         continue;
                     bool ownedBySelectedEntity = !string.IsNullOrEmpty(candidate.ownerElementAuthoringId) &&
                         entities.Contains(candidate.ownerElementAuthoringId);

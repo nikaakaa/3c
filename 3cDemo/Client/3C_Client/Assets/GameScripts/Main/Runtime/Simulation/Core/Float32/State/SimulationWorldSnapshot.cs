@@ -28,15 +28,18 @@ namespace ThirdPersonSimulation
             ProgramHash programHash,
             LayoutHash layoutHash,
             CharacterStateHash stateHash,
+            string stateCodecIdentity,
             byte[] stateBytes)
         {
-            if (!actorId.IsValid || !programId.IsValid || !programHash.IsValid || !layoutHash.IsValid || !stateHash.IsValid)
+            if (!actorId.IsValid || !programId.IsValid || !programHash.IsValid || !layoutHash.IsValid || !stateHash.IsValid ||
+                !string.Equals(stateCodecIdentity, CharacterSimulationStateCodec.CodecIdentity, StringComparison.Ordinal))
                 throw new ArgumentException("Actor snapshot identity is incomplete.");
             ActorId = actorId;
             ProgramId = programId;
             ProgramHash = programHash;
             LayoutHash = layoutHash;
             StateHash = stateHash;
+            StateCodecIdentity = stateCodecIdentity;
             m_StateBytes = stateBytes == null ? throw new ArgumentNullException(nameof(stateBytes)) : (byte[])stateBytes.Clone();
         }
 
@@ -45,12 +48,14 @@ namespace ThirdPersonSimulation
         public ProgramHash ProgramHash { get; }
         public LayoutHash LayoutHash { get; }
         public CharacterStateHash StateHash { get; }
+        public string StateCodecIdentity { get; }
         public ReadOnlyMemory<byte> StateBytes => m_StateBytes;
         internal byte[] StateBytesBuffer => m_StateBytes;
 
         public CharacterSimulationState Decode(CharacterSimulationProgram program)
         {
-            if (program == null || program.Manifest.ProgramId != ProgramId || !program.ProgramHash.Equals(ProgramHash) || !program.LayoutHash.Equals(LayoutHash))
+            if (!string.Equals(StateCodecIdentity, CharacterSimulationStateCodec.CodecIdentity, StringComparison.Ordinal) ||
+                program == null || program.Manifest.ProgramId != ProgramId || !program.ProgramHash.Equals(ProgramHash) || !program.LayoutHash.Equals(LayoutHash))
                 throw new InvalidDataException($"Actor '{ActorId}' snapshot Program binding is stale or mismatched.");
             CharacterSimulationState state = CharacterSimulationStateCodec.Read(m_StateBytes, program);
             CharacterStateHash hash = CharacterSimulationStateCodec.ComputeHash(state);
@@ -163,6 +168,7 @@ namespace ThirdPersonSimulation
                     program.ProgramHash,
                     program.LayoutHash,
                     CharacterSimulationStateCodec.ComputeHash(actor.State),
+                    CharacterSimulationStateCodec.CodecIdentity,
                     stateBytes);
                 programsDeterministic &= program.Manifest.NumericProfile.DeterministicReplay && program.Manifest.Capabilities.HasGameplayCapability("DeterministicReplay");
             }
@@ -328,7 +334,7 @@ namespace ThirdPersonSimulation
     public static class SimulationWorldSnapshotCodec
     {
         const uint Magic = 0x504e5343;
-        const int Version = 3;
+        const int Version = 4;
 
         public static byte[] Write(SimulationWorldSnapshot snapshot)
         {
@@ -367,6 +373,7 @@ namespace ThirdPersonSimulation
                     new ProgramHash(new StableHash(reader.ReadString())),
                     new LayoutHash(new StableHash(reader.ReadString())),
                     new CharacterStateHash(new StableHash(reader.ReadString())),
+                    reader.ReadString(),
                     reader.ReadBytes());
             }
             byte[] worldStateBytes = reader.ReadBytes();
@@ -402,6 +409,7 @@ namespace ThirdPersonSimulation
                 writer.WriteString(actor.ProgramHash.ToString());
                 writer.WriteString(actor.LayoutHash.ToString());
                 writer.WriteString(actor.StateHash.ToString());
+                writer.WriteString(actor.StateCodecIdentity);
                 writer.WriteBytes(actor.StateBytesBuffer);
             }
             writer.WriteBytes(snapshot.WorldStateBytesBuffer);

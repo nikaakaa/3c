@@ -184,7 +184,9 @@ namespace ThirdPersonSimulation.DotRecastAuthority
                 outputRoutes[i] = actor.Binding.OutputRoute;
             }
 
-            var programRuntime = Float32ProgramRuntime.Create(actorBindings);
+            var programRuntime = Float32ProgramRuntime.Create(
+                actorBindings,
+                ThirdPersonCharacter.Pipeline.Simulation.CorinCharacterControlModuleCatalog.Create());
             DotRecastWorldSolver solver = null;
             try
             {

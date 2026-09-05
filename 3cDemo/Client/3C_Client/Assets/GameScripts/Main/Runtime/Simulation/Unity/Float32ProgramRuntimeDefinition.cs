@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using ThirdPersonSimulation;
 using UnityEngine;
@@ -22,7 +23,9 @@ namespace ThirdPersonCharacter.Pipeline.Simulation
             var bindings = new List<SimulationActorBinding>(registrations?.Count ?? 0);
             for (int i = 0; i < registrations.Count; i++)
                 bindings.Add(registrations[i].ProgramIdentity);
-            return Float32ProgramRuntime.Create(bindings);
+            return Float32ProgramRuntime.Create(
+                bindings,
+                ThirdPersonCharacter.Pipeline.Simulation.CorinCharacterControlModuleCatalog.Create());
         }
     }
 }

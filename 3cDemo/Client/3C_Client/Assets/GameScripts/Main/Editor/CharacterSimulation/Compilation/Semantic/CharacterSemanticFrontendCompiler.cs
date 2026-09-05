@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using ThirdPersonCharacter.Pipeline.Animation;
+using ThirdPersonCharacter.Pipeline.Simulation;
 using ThirdPersonSimulation;
 using TreeDesigner;
 using UnityEditor;
@@ -11,7 +12,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
 {
     public static class CharacterSemanticFrontendCompiler
     {
-        public const string CompilerVersion = "character-simulation-compiler/22";
+        public const string CompilerVersion = "character-simulation-compiler/23";
         public static readonly OperationSetVersion OperationSetVersion = CharacterGameplayOperationSet.Version;
 
         public static CharacterSemanticFrontendResult Compile(CharacterPipelineDefinition definition)
@@ -108,6 +109,33 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 var catalogCompiler = new CharacterSimulationCatalogCompiler(model, builder, report);
                 CharacterSimulationCatalogIndex catalog = catalogCompiler.Compile();
                 var emitter = new CharacterSemanticEmitter(model, builder, report, catalog);
+                if (!string.IsNullOrEmpty(model.Definition.ControlModuleId))
+                {
+                    ICharacterControlModule controlModule = ResolveControlModule(model.Definition.ControlModuleId, report, model.DefinitionPath);
+                    if (controlModule == null)
+                        return null;
+                    CharacterSimulationSourceLocation controlSource = new CharacterSimulationSourceLocation(
+                        typeof(ICharacterControlModule).FullName,
+                        $"control:{controlModule.Contract.ModuleId.Value}",
+                        string.Empty,
+                        string.Empty,
+                        string.Empty,
+                        string.Empty,
+                        $"control:{controlModule.Contract.ModuleId.Value}",
+                        contentHash: controlModule.Contract.SemanticVersion.ToString());
+                    builder.DeclareControlModule(controlModule.Contract, controlSource);
+                    OperationHandle controlRoot = emitter.EmitControlSkillPrograms(controlModule.Contract);
+                    if (!controlRoot.IsValid)
+                        return null;
+                    builder.DeclareReference(
+                        "program:root-operation",
+                        OperationHandle.Invalid,
+                        ProgramReferenceKind.Operation,
+                        controlRoot.Value,
+                        controlModule.Contract.ModuleId.Value,
+                        controlSource);
+                    return builder.Build();
+                }
                 IReadOnlyDictionary<string, OperationHandle> rootOperations = emitter.EmitCompositionRoots();
                 for (int rootIndex = 0; rootIndex < model.Roots.Count; rootIndex++)
                 {
@@ -236,6 +264,17 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             Type type = AssetDatabase.GetMainAssetTypeAtPath(path);
             return type != typeof(CharacterSimulationProgramAsset) &&
                    type != typeof(CharacterPresentationProjectionAsset);
+        }
+
+        static ICharacterControlModule ResolveControlModule(
+            string moduleId,
+            CharacterSimulationCompileReport report,
+            string source)
+        {
+            if (string.Equals(moduleId, CorinCharacterControlModule.ModuleId.Value, StringComparison.Ordinal))
+                return new CorinCharacterControlModule();
+            report.Error("control_module_uninstalled", source, $"Character control module '{moduleId}' is not installed.");
+            return null;
         }
 
         static bool TryResolveRoot(

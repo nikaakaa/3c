@@ -48,6 +48,137 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 : OperationHandle.Invalid;
         }
 
+        public OperationHandle EmitControlSkillPrograms(CharacterControlModuleContract contract)
+        {
+            if (contract == null)
+                throw new ArgumentNullException(nameof(contract));
+            CompileDeclarationCatalogs();
+            IReadOnlyList<CharacterAuthoringGraphOccurrence> occurrences = FindOccurrences();
+            var emittedSkills = new HashSet<CharacterSkillId>();
+            for (int skillIndex = 0; skillIndex < contract.Skills.Count; skillIndex++)
+            {
+                CharacterSkillId skillId = contract.Skills[skillIndex];
+                CharacterAuthoringGraphOccurrence occurrence = occurrences
+                    .Where(value => string.Equals(SkillId(value), skillId.Value, StringComparison.Ordinal))
+                    .SingleOrDefault();
+                if (occurrence == null)
+                {
+                    m_Report.Error("control_skill_graph_missing", skillId.Value, $"Control module skill '{skillId}' has no matching Skill graph.");
+                    continue;
+                }
+                ActivateActionInstanceNode activation = occurrence.Nodes
+                    .OfType<ActivateActionInstanceNode>()
+                    .SingleOrDefault();
+                if (activation == null || !activation.ActionProfile || !activation.ActionContext)
+                {
+                    m_Report.Error("control_skill_entry_invalid", occurrence.Route, $"Skill graph '{skillId}' must contain exactly one complete Activate Action entry.");
+                    continue;
+                }
+                if (!emittedSkills.Add(skillId))
+                {
+                    m_Report.Error("control_skill_duplicate", skillId.Value, $"Control module skill '{skillId}' is emitted more than once.");
+                    continue;
+                }
+                OperationHandle entry = CompileGraph(occurrence, OperationHandle.Invalid);
+                if (!entry.IsValid)
+                    continue;
+                CharacterSimulationSourceLocation source = NodeSource(occurrence.Graph, activation, occurrence.Route);
+                string targetInput = ResolveInputBinding(activation.TargetSnapshotVariable);
+                var fields = new List<ProgramCatalogField>
+                {
+                    m_Builder.IdentityField("ActionProfile", $"action:{activation.ActionProfile.ActionId}"),
+                    m_Builder.IdentityField("EntryIdentity", occurrence.Graph.GraphAuthoringId),
+                    m_Builder.IdentityField("ActionContext", CharacterSimulationNodeEmitterContext.AssetIdentity(activation.ActionContext)),
+                    m_Builder.IdentityField("SourceInputRequest", activation.SourceInputRequestId),
+                    m_Builder.IdentityField("ConsumeSourceInputRequest", activation.ConsumeSourceInputRequest ? "true" : "false")
+                };
+                if (!string.IsNullOrEmpty(targetInput))
+                    fields.Add(m_Builder.IdentityField("TargetInputValue", targetInput));
+                if (!string.IsNullOrEmpty(activation.TargetKey))
+                    fields.Add(m_Builder.IdentityField("TargetKey", activation.TargetKey));
+                int catalog = m_Builder.DeclareCatalogEntry(
+                    ProgramCatalogEntryKind.SkillProgram,
+                    $"skill:{skillId.Value}",
+                    1,
+                    Fields(fields.ToArray()),
+                    source);
+                if (catalog >= 0)
+                {
+                    m_Builder.DeclareReference(
+                        $"skill:{skillId.Value}/entry",
+                        entry,
+                        ProgramReferenceKind.CatalogEntry,
+                        catalog,
+                        $"skill:{skillId.Value}",
+                        source);
+                }
+            }
+            if (emittedSkills.Count != contract.Skills.Count)
+                return OperationHandle.Invalid;
+            foreach (ScopeRecord scope in m_Scopes.Values.OrderBy(value => value.Identity, StringComparer.Ordinal))
+                m_Builder.DeclareScope(scope.Identity, scope.Kind, scope.OwnerIdentity, scope.OwnerOperation, scope.StateSlots, scope.Source);
+            CharacterSimulationSourceLocation rootSource = new CharacterSimulationSourceLocation(
+                typeof(ICharacterControlModule).FullName,
+                $"control:{contract.ModuleId.Value}",
+                string.Empty,
+                string.Empty,
+                string.Empty,
+                string.Empty,
+                $"control:{contract.ModuleId.Value}/root",
+                contentHash: contract.SemanticVersion.ToString());
+            return m_Builder.DeclareOperation(rootSource, SimulationOperationCode.Root, Array.Empty<int>());
+        }
+
+        IReadOnlyList<CharacterAuthoringGraphOccurrence> FindOccurrences()
+        {
+            var values = new List<CharacterAuthoringGraphOccurrence>();
+            var visited = new HashSet<string>(StringComparer.Ordinal);
+            for (int rootIndex = 0; rootIndex < m_Model.Roots.Count; rootIndex++)
+                Collect(m_Model.Roots[rootIndex].Occurrence);
+            return values;
+
+            void Collect(CharacterAuthoringGraphOccurrence occurrence)
+            {
+                if (occurrence == null || !visited.Add(occurrence.Route))
+                    return;
+                values.Add(occurrence);
+                for (int referenceIndex = 0; referenceIndex < occurrence.GraphReferences.Count; referenceIndex++)
+                    Collect(occurrence.GraphReferences[referenceIndex].Child);
+                for (int edgeIndex = 0; edgeIndex < occurrence.Edges.Count; edgeIndex++)
+                    Collect(occurrence.Edges[edgeIndex].ConditionGraph);
+                for (int propertyEdgeIndex = 0; propertyEdgeIndex < occurrence.PropertyEdges.Count; propertyEdgeIndex++)
+                    Collect(occurrence.PropertyEdges[propertyEdgeIndex].ConditionGraph);
+                for (int timelineIndex = 0; timelineIndex < occurrence.Timelines.Count; timelineIndex++)
+                {
+                    IReadOnlyList<CharacterAuthoringClipRecord> clips = occurrence.Timelines[timelineIndex].Tracks
+                        .SelectMany(value => value.Clips)
+                        .ToArray();
+                    for (int clipIndex = 0; clipIndex < clips.Count; clipIndex++)
+                        Collect(clips[clipIndex].TreeGraph);
+                }
+            }
+        }
+
+        static string SkillId(CharacterAuthoringGraphOccurrence occurrence)
+        {
+            const string suffix = " State Body";
+            string name = occurrence.Graph.name ?? string.Empty;
+            return name.EndsWith(suffix, StringComparison.Ordinal)
+                ? name.Substring(0, name.Length - suffix.Length)
+                : string.Empty;
+        }
+
+        string ResolveInputBinding(PipelineBlackboardVariableReference reference)
+        {
+            if (!reference.IsValid)
+                return string.Empty;
+            string identity = DeclarationIdentity(reference.DeclarationOwnerId, reference.DeclarationId);
+            return m_Model.Declarations.TryGetValue(identity, out BlackboardDeclaration declaration) &&
+                   declaration.Declaration.InputBinding != null
+                ? declaration.Declaration.InputBinding.InputValueId
+                : string.Empty;
+        }
+
         public IReadOnlyDictionary<string, OperationHandle> EmitCompositionRoots()
         {
             CompileDeclarationCatalogs();

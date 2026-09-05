@@ -13,12 +13,14 @@ namespace ThirdPersonSimulation.Fixed
         static readonly SimulationProgramRuntimeDescriptor s_Descriptor = BuildDescriptor();
         readonly ReadOnlyCollection<SimulationActorBinding> m_Roster;
         readonly IReadOnlyDictionary<ProgramId, KernelProgramBinding> m_Bindings;
+        readonly CharacterControlModuleCatalog m_ControlModules;
 
         FixedProgramRuntime(
             SimulationProgramCatalog catalog,
             SimulationKernel kernel,
             IEnumerable<SimulationActorBinding> roster,
-            IReadOnlyDictionary<ProgramId, KernelProgramBinding> bindings)
+            IReadOnlyDictionary<ProgramId, KernelProgramBinding> bindings,
+            CharacterControlModuleCatalog controlModules)
         {
             Descriptor = s_Descriptor;
             Catalog = catalog ?? throw new ArgumentNullException(nameof(catalog));
@@ -27,12 +29,14 @@ namespace ThirdPersonSimulation.Fixed
             values.Sort((left, right) => left.ActorId.CompareTo(right.ActorId));
             m_Roster = values.AsReadOnly();
             m_Bindings = bindings ?? throw new ArgumentNullException(nameof(bindings));
+            m_ControlModules = controlModules ?? throw new ArgumentNullException(nameof(controlModules));
         }
 
         public static SimulationProgramRuntimeDescriptor DescriptorDefinition => s_Descriptor;
         public SimulationProgramRuntimeDescriptor Descriptor { get; }
         public SimulationProgramCatalog Catalog { get; }
         public SimulationKernel Kernel { get; }
+        public CharacterControlModuleCatalog ControlModules => m_ControlModules;
         public IReadOnlyList<SimulationActorBinding> Roster => m_Roster;
         public KernelProgramBinding GetBinding(ProgramId programId)
         {
@@ -41,8 +45,12 @@ namespace ThirdPersonSimulation.Fixed
             return binding;
         }
 
-        public static FixedProgramRuntime Create(IEnumerable<SimulationActorBinding> roster)
+        public static FixedProgramRuntime Create(
+            IEnumerable<SimulationActorBinding> roster,
+            CharacterControlModuleCatalog controlModules)
         {
+            if (controlModules == null)
+                throw new ArgumentNullException(nameof(controlModules));
             var bindings = roster == null
                 ? new List<SimulationActorBinding>()
                 : new List<SimulationActorBinding>(roster);
@@ -62,6 +70,11 @@ namespace ThirdPersonSimulation.Fixed
                     throw new InvalidOperationException($"Actor '{binding.ActorId}' Program is not Fixed.");
                 if (!program.Manifest.OperationSetVersion.Equals(SimulationKernel.SpecializationManifest.OperationSetVersion))
                     throw new InvalidOperationException($"Actor '{binding.ActorId}' Program operation-set does not match the Fixed Kernel.");
+                if (program.ControlModuleBinding.IsValid)
+                {
+                    ICharacterControlModule module = controlModules.Require(program.ControlModuleBinding);
+                    CharacterControlProgramCatalogValidator.ValidateSkillPrograms(module.Contract, program.SkillPrograms);
+                }
                 if (!program.Manifest.ProgramId.Equals(binding.ProgramId) ||
                     !program.ProgramHash.Equals(binding.ProgramHash) ||
                     !program.LayoutHash.Equals(binding.LayoutHash))
@@ -80,7 +93,7 @@ namespace ThirdPersonSimulation.Fixed
             }
 
             var catalog = new SimulationProgramCatalog(programs.Values);
-            var kernel = SimulationKernel.CreateFixed();
+            var kernel = SimulationKernel.CreateFixed(controlModules);
             var kernelBindings = new KernelProgramBinding[catalog.Programs.Count];
             var bindingsByProgram = new Dictionary<ProgramId, KernelProgramBinding>();
             for (int i = 0; i < catalog.Programs.Count; i++)
@@ -92,7 +105,7 @@ namespace ThirdPersonSimulation.Fixed
                 bindingsByProgram.Add(program.Manifest.ProgramId, kernelBinding);
             }
             kernel.BindPrograms(kernelBindings);
-            return new FixedProgramRuntime(catalog, kernel, bindings, bindingsByProgram);
+            return new FixedProgramRuntime(catalog, kernel, bindings, bindingsByProgram, controlModules);
         }
 
         public SimulationWorldStateSet CreateInitialState(WorldSimulationState worldState)

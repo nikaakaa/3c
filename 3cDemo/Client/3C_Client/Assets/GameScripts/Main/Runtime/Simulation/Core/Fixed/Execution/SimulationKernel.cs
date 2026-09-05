@@ -113,18 +113,23 @@ namespace ThirdPersonSimulation.Fixed
         readonly HashSet<KernelProgramBinding> m_BoundPrograms = new HashSet<KernelProgramBinding>();
         readonly Dictionary<ActorId, ActorEvaluator> m_Evaluators =
             new Dictionary<ActorId, ActorEvaluator>();
+        readonly CharacterControlModuleCatalog m_ControlModules;
         bool m_ProgramBindingsSealed;
 
-        SimulationKernel(SimulationKernelSpecializationManifest specialization)
+        SimulationKernel(
+            SimulationKernelSpecializationManifest specialization,
+            CharacterControlModuleCatalog controlModules)
         {
             Specialization = specialization ?? throw new ArgumentNullException(nameof(specialization));
+            m_ControlModules = controlModules ?? throw new ArgumentNullException(nameof(controlModules));
             if (specialization.NumericProfile != FixedSimulationNumericProfile.Value)
                 throw new InvalidOperationException("This assembly installs only the Fixed Kernel specialization.");
         }
 
         public SimulationKernelSpecializationManifest Specialization { get; }
         public static SimulationKernelSpecializationManifest SpecializationManifest => s_Fixed;
-        public static SimulationKernel CreateFixed() => new SimulationKernel(s_Fixed);
+        public static SimulationKernel CreateFixed(CharacterControlModuleCatalog controlModules) =>
+            new SimulationKernel(s_Fixed, controlModules);
 
         internal void BindPrograms(IReadOnlyList<KernelProgramBinding> bindings)
         {
@@ -247,7 +252,7 @@ namespace ThirdPersonSimulation.Fixed
                 if (!m_Evaluators.TryGetValue(request.ActorId, out ActorEvaluator evaluator) ||
                     !evaluator.Evaluator.Matches(request))
                 {
-                    evaluator = new ActorEvaluator(request);
+                evaluator = new ActorEvaluator(request, m_ControlModules);
                     m_Evaluators[request.ActorId] = evaluator;
                 }
                 return evaluator;
@@ -256,14 +261,17 @@ namespace ThirdPersonSimulation.Fixed
 
         sealed class ActorEvaluator
         {
-            public ActorEvaluator(SimulationEvaluateRequest request)
+            public ActorEvaluator(
+                SimulationEvaluateRequest request,
+                CharacterControlModuleCatalog controlModules)
             {
                 Workspace = new FixedEvaluationWorkspace(request.ExecutionLayout);
                 Evaluator = new FixedOperationEvaluator(
                     request.Program,
                     request.ExecutionLayout,
                     request.ActorId,
-                    Workspace);
+                    Workspace,
+                    controlModules);
             }
 
             public FixedEvaluationWorkspace Workspace { get; }

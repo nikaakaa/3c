@@ -274,6 +274,7 @@ namespace ThirdPersonSimulation
             ValidateReferences();
             LayoutHash = CharacterSimulationProgramCodec.ComputeLayoutHash(this);
             ProgramHash = CharacterSimulationProgramCodec.ComputeProgramHash(this);
+            SkillPrograms = new CharacterSkillProgramCatalog(m_CatalogEntries, m_References);
         }
 
         public CharacterSimulationProgramManifest Manifest { get; }
@@ -290,6 +291,7 @@ namespace ThirdPersonSimulation
         public IReadOnlyList<ProgramOutputChannelLayout> OutputChannels => m_OutputChannels;
         public IReadOnlyList<ProgramCatalogEntry> CatalogEntries => m_CatalogEntries;
         public CharacterControlModuleBinding ControlModuleBinding { get; }
+        public CharacterSkillProgramCatalog SkillPrograms { get; }
         public IReadOnlyList<ProgramMotionModifierDescriptor> MotionModifiers => m_MotionModifiers;
         public IReadOnlyList<ProgramSourceMapEntry> SourceMap => m_SourceMap;
         public IReadOnlyList<ProgramProducer> Producers => m_Producers;

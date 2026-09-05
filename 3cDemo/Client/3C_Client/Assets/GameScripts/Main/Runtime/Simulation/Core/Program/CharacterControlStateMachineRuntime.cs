@@ -8,6 +8,7 @@ namespace ThirdPersonSimulation
         readonly CharacterControlStateFieldDescriptor m_ActiveStateField;
         readonly CharacterControlStateFieldDescriptor m_EnteredTickField;
         readonly CharacterControlStateFieldDescriptor m_TransitionField;
+        readonly CharacterControlStateFieldDescriptor m_TransitionProgressField;
 
         public CharacterControlStateMachineRuntime(ICharacterControlModule module)
         {
@@ -19,6 +20,7 @@ namespace ThirdPersonSimulation
             m_TransitionField = module.Contract.Transitions.Count == 0
                 ? null
                 : module.Contract.RequireStateField(ProgramStateSemantic.ControlTransition);
+            m_TransitionProgressField = module.Contract.RequireStateField(ProgramStateSemantic.ControlTransitionProgress);
         }
 
         public CharacterControlModuleContract Contract => m_Module.Contract;
@@ -42,9 +44,16 @@ namespace ThirdPersonSimulation
                 current = Contract.InitialState;
                 state.WriteState(m_ActiveStateField.Id, current);
                 state.WriteUInt64(m_EnteredTickField.Id, context.Tick.Value);
+                state.WriteInt32(m_TransitionProgressField.Id, 0);
                 m_Module.Enter(in context, current, read, state, output);
+                state.WriteInt32(m_TransitionProgressField.Id, 1);
             }
             RequireState(current);
+            if (state.ReadInt32(m_TransitionProgressField.Id) == 0)
+            {
+                m_Module.Enter(in context, current, read, state, output);
+                state.WriteInt32(m_TransitionProgressField.Id, 1);
+            }
             m_Module.Tick(in context, current, read, state, output);
 
             CharacterControlTransitionDescriptor selected = null;
@@ -68,7 +77,7 @@ namespace ThirdPersonSimulation
                 state.WriteTransition(m_TransitionField.Id, selected.Id);
             state.WriteState(m_ActiveStateField.Id, selected.Target);
             state.WriteUInt64(m_EnteredTickField.Id, context.Tick.Value);
-            m_Module.Enter(in context, selected.Target, read, state, output);
+            state.WriteInt32(m_TransitionProgressField.Id, 0);
         }
 
         void RequireState(CharacterControlStateId stateId)

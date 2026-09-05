@@ -1150,6 +1150,70 @@ namespace ThirdPersonSimulation.Fixed
                 locomotionTimeline));
         }
 
+        public void SubmitControl(
+            FixedInputRuntime input,
+            CharacterControlMotionRequest request,
+            CharacterControlMotionDescriptor descriptor)
+        {
+            if (input == null)
+                throw new ArgumentNullException(nameof(input));
+            if (request.Input != descriptor.Input || !string.Equals(request.Binding, descriptor.Binding, StringComparison.Ordinal))
+                throw new InvalidOperationException($"Control motion request '{request.Binding}' does not match its declared motion.");
+            FixedVector2 move = input.ReadValue(request.Input.Value, SimulationInputValueKind.Vector2).Vector2;
+            if (move.SqrMagnitude > FixedScalar.One)
+                move = move.Normalized;
+            FixedScalar delta = FixedScalar.One / FixedScalar.FromInt64(m_Program.Manifest.TickRate);
+            FixedScalar moveSpeed = FixedScalar.FromDouble(descriptor.MoveSpeed);
+            FixedScalar turnSpeed = FixedScalar.FromDouble(descriptor.TurnSpeedDegrees);
+            FixedScalar maxYaw = turnSpeed * delta;
+            FixedVector3 displacement = new FixedVector3(
+                move.X * moveSpeed * delta,
+                FixedScalar.Zero,
+                move.Y * moveSpeed * delta);
+            FixedScalar yaw = FixedScalar.Zero;
+            if (move != FixedVector2.Zero && maxYaw > FixedScalar.Zero)
+            {
+                FixedYaw desired = FixedAngle.FromPlanarDirection(move);
+                yaw = FixedScalar.Clamp(FixedAngle.Delta(m_Frame.Body.Yaw, desired), -maxYaw, maxYaw);
+            }
+            int continuousTicks = checked(request.ContinuousTicks + 1);
+            int durationTicks = descriptor.ExecutionMode == CharacterControlMotionExecutionMode.Timed
+                ? checked((int)Math.Ceiling(descriptor.DurationSeconds * m_Program.Manifest.TickRate))
+                : 0;
+            var movementPlaybackClock = new CommittedMovementPlaybackClock(
+                request.Source.Identity,
+                1,
+                m_Frame.Tick,
+                continuousTicks,
+                m_Program.Manifest.TickRate);
+            var locomotionTimeline = new CommittedLocomotionPlanarMotionTimeline(
+                request.Source.Identity,
+                1,
+                m_Frame.Tick,
+                m_Program.Manifest.TickRate,
+                (displacement.X / delta).ToSingle(),
+                (displacement.Z / delta).ToSingle(),
+                (yaw / delta).ToSingle(),
+                turnSpeed.ToSingle(),
+                durationTicks,
+                string.Empty,
+                0f,
+                0f);
+            m_Motion.Submit(new SimulationMotionContribution(
+                request.Source,
+                displacement,
+                yaw,
+                move,
+                SimulationMotionContributionSpace.World,
+                FixedScalar.One,
+                0,
+                SimulationMotionChannel.Locomotion,
+                SimulationMotionBlendMode.Override,
+                false,
+                movementPlaybackClock,
+                locomotionTimeline));
+        }
+
         CommittedLocomotionPlanarMotionTimeline ResolveMotionTimeline<TTarget>(
             OperationControlCursor<TTarget> cursor,
             SimulationOperation operation,

@@ -374,13 +374,20 @@ namespace ThirdPersonSimulation.Fixed
         readonly TimelineControlRuntime<FixedOperationTarget, FixedScalar> m_Timeline;
         readonly FixedMotionAccumulator m_Motion;
         readonly OperationControlRuntime<FixedOperationTarget> m_Control;
+        readonly CharacterControlStateMachineRuntime m_CharacterControl;
+        readonly FixedCharacterControlReadPort m_CharacterControlRead;
+        readonly ICharacterControlStatePort m_CharacterControlState;
+        readonly FixedCharacterControlOutputPort m_CharacterControlOutput;
 
         public FixedOperationEvaluator(
             CharacterSimulationProgram program,
             ProgramExecutionLayout layout,
             ActorId actorId,
-            FixedEvaluationWorkspace workspace)
+            FixedEvaluationWorkspace workspace,
+            CharacterControlModuleCatalog controlModules)
         {
+            if (controlModules == null)
+                throw new ArgumentNullException(nameof(controlModules));
             m_Frame = new FixedEvaluationFrame(program, layout, actorId, workspace);
             FixedProgramExecutionServices services = m_Frame.Services;
             FixedProgramAccess access = services.Access;
@@ -453,6 +460,24 @@ namespace ThirdPersonSimulation.Fixed
                 workspace.MotionContributions,
                 workspace.MotionWarpSamples);
             var locomotion = new FixedLocomotionRuntime(access, m_Values, m_Motion, m_Frame);
+            if (program.ControlModuleBinding.IsValid)
+            {
+                ICharacterControlModule module = controlModules.Require(program.ControlModuleBinding);
+                FixedStatePort characterControlState = m_Frame.CreateStatePort("CharacterControl", services.ControlPolicy);
+                CharacterControlStateLayout characterControlLayout = layout.CreateControlStateLayout(module.Contract);
+                m_CharacterControl = new CharacterControlStateMachineRuntime(module);
+                m_CharacterControlRead = new FixedCharacterControlReadPort(
+                    m_Input,
+                    m_Frame,
+                    parameter => FixedScalar.FromDouble(RequireControlParameter(module.Contract, parameter).NumericValue),
+                    skill => m_Actions.IsContextActive(m_Frame.Program.SkillPrograms.Require(skill).ActionContextId));
+                m_CharacterControlState = new FixedCharacterControlStatePort(characterControlState, characterControlLayout);
+                m_CharacterControlOutput = new FixedCharacterControlOutputPort(
+                    module.Contract,
+                    m_Input,
+                    locomotion,
+                    m_Actions);
+            }
             var camera = new FixedCameraOperationRuntime(access, m_Frame.Presentation);
             FixedStatePort timelineState = m_Frame.CreateStatePort("Timeline", services.TimelinePolicy);
             var timelineControlState = new FixedTimelineControlStatePort(access, timelineState);
@@ -518,6 +543,8 @@ namespace ThirdPersonSimulation.Fixed
                 AdvanceGameplayEffects();
                 ApplyInputRequests();
                 PrepareTimelineDecision();
+                TickCharacterControl();
+                TickSkillPrograms();
                 TickOperationControl();
                 m_Equipment.EndEvaluation();
                 ResolvedGameplayMotion motion = ResolveMotion();
@@ -582,7 +609,56 @@ namespace ThirdPersonSimulation.Fixed
         [PerformanceProbe("simulation.operation.control-tick")]
         void TickOperationControl()
         {
-            m_Control.Tick(m_Frame.Layout.RootOperation);
+            if (m_CharacterControl == null)
+                m_Control.Tick(m_Frame.Layout.RootOperation);
+        }
+
+        [PerformanceProbe("simulation.operation.character-control-tick")]
+        void TickCharacterControl()
+        {
+            if (m_CharacterControl == null)
+                return;
+            var context = new CharacterControlTickContext(
+                m_Frame.ActorId,
+                m_Frame.Tick,
+                m_Frame.Program.Manifest.TickRate);
+            m_CharacterControl.Tick(
+                in context,
+                m_CharacterControlRead,
+                m_CharacterControlState,
+                m_CharacterControlOutput);
+        }
+
+        [PerformanceProbe("simulation.operation.skill-program-tick")]
+        void TickSkillPrograms()
+        {
+            if (m_CharacterControl == null)
+                return;
+            IReadOnlyList<CharacterSkillProgramBinding> skills = m_Frame.Program.SkillPrograms.Bindings;
+            for (int i = 0; i < skills.Count; i++)
+            {
+                CharacterSkillProgramBinding skill = skills[i];
+                bool actionActive = m_Actions.IsContextActive(skill.ActionContextId);
+                if (!actionActive)
+                {
+                    if (m_Control.IsActive(skill.EntryOperation))
+                        m_Control.RequestStop(skill.EntryOperation, OperationStopContext.ActionContextEnded(skill.EntryOperation));
+                    continue;
+                }
+                m_Control.Tick(skill.EntryOperation);
+            }
+        }
+
+        static CharacterControlParameterDescriptor RequireControlParameter(
+            CharacterControlModuleContract contract,
+            CharacterControlParameterId parameter)
+        {
+            for (int i = 0; i < contract.Parameters.Count; i++)
+            {
+                if (contract.Parameters[i].Id == parameter)
+                    return contract.Parameters[i];
+            }
+            throw new InvalidOperationException($"Character control parameter '{parameter}' is absent from module '{contract.ModuleId}'.");
         }
 
         [PerformanceProbe("simulation.operation.motion-resolve")]

@@ -9,9 +9,9 @@ namespace ThirdPersonSimulation
     public static class CharacterSimulationStateCodec
     {
         const uint Magic = 0x54534343;
-        const int Version = 9;
-        public const string CodecIdentity = "character-state/float32/v9";
-        const string HashIdentity = "character-state-hash/float32/v8";
+		const int Version = 11;
+		public const string CodecIdentity = "character-state/float32/v11";
+		const string HashIdentity = "character-state-hash/float32/v10";
 
         public static byte[] Write(CharacterSimulationState state)
         {
@@ -237,6 +237,8 @@ namespace ThirdPersonSimulation
             if (!value.IsValid)
                 return;
             writer.WriteString(value.ActionId);
+            writer.WriteString(value.SkillId.Value ?? string.Empty);
+            writer.WriteInt32(value.SkillEntryOperation.Value);
             writer.WriteString(value.ContextId);
             writer.WriteString(value.SourceInputRequestId);
             writer.WriteUInt64(value.InputSequence);
@@ -254,6 +256,8 @@ namespace ThirdPersonSimulation
             if (!reader.ReadBoolean())
                 return default;
             string actionId = reader.ReadString();
+            CharacterSkillId skillId = ReadOptionalSkillId(reader.ReadString());
+            OperationHandle skillEntryOperation = new OperationHandle(reader.ReadInt32());
             string contextId = reader.ReadString();
             string sourceInputRequestId = reader.ReadString();
             ulong inputSequence = reader.ReadUInt64();
@@ -264,6 +268,8 @@ namespace ThirdPersonSimulation
             EquipmentActionContext equipmentContext = EquipmentActionContextCodec.Read(reader, layout.Equipment);
             return new Float32ActionActivationRequestState(
                 actionId,
+                skillId,
+                skillEntryOperation,
                 contextId,
                 sourceInputRequestId,
                 inputSequence,
@@ -280,6 +286,9 @@ namespace ThirdPersonSimulation
             if (!value.IsValid)
                 return;
             writer.WriteString(value.ActionId);
+            writer.WriteString(value.SkillId.Value ?? string.Empty);
+            writer.WriteInt32(value.SkillEntryOperation.Value);
+            writer.WriteUInt64(value.SkillExecutionGeneration);
             writer.WriteString(value.ContextId);
             writer.WriteUInt64(value.InstanceId);
             writer.WriteUInt64(value.PredictionKey);
@@ -306,6 +315,9 @@ namespace ThirdPersonSimulation
                 return default;
             var value = new Float32ActionInstanceState(
                 reader.ReadString(),
+                ReadOptionalSkillId(reader.ReadString()),
+                new OperationHandle(reader.ReadInt32()),
+                reader.ReadUInt64(),
                 reader.ReadString(),
                 reader.ReadUInt64(),
                 reader.ReadUInt64(),
@@ -326,6 +338,9 @@ namespace ThirdPersonSimulation
                 throw new InvalidDataException("Character state Action instance identity is invalid.");
             return value;
         }
+
+        static CharacterSkillId ReadOptionalSkillId(string value) =>
+            string.IsNullOrEmpty(value) ? default : new CharacterSkillId(value);
 
         static void WriteActionReference(CanonicalWriter writer, Float32ActionInstanceReference value)
         {

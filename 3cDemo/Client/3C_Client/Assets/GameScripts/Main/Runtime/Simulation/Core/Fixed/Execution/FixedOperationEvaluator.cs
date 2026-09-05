@@ -367,6 +367,7 @@ namespace ThirdPersonSimulation.Fixed
         readonly FixedEvaluationFrame m_Frame;
         readonly FixedBlackboardRuntime m_Blackboard;
         readonly FixedActionRuntime m_Actions;
+        readonly FixedActionStateStore m_ActionStore;
         readonly FixedGameplayEffectOperationRuntime m_GameplayEffects;
         readonly FixedEquipmentRuntime m_Equipment;
         readonly FixedInputRuntime m_Input;
@@ -397,6 +398,7 @@ namespace ThirdPersonSimulation.Fixed
             var actionStore = new FixedActionStateStore(
                 access,
                 m_Frame.CreateStatePort("Action", services.ActionPolicy));
+            m_ActionStore = actionStore;
             m_Input = new FixedInputRuntime(
                 access,
                 m_Frame.CreateStatePort("Input", services.InputPolicy),
@@ -463,17 +465,22 @@ namespace ThirdPersonSimulation.Fixed
             if (program.ControlModuleBinding.IsValid)
             {
                 ICharacterControlModule module = controlModules.Require(program.ControlModuleBinding);
+                ProgramCatalogEntry controlCatalog = program.CatalogEntries[program.ControlModuleBinding.CatalogEntryIndex];
                 FixedStatePort characterControlState = m_Frame.CreateStatePort("CharacterControl", services.ControlPolicy);
                 CharacterControlStateLayout characterControlLayout = layout.CreateControlStateLayout(module.Contract);
                 m_CharacterControl = new CharacterControlStateMachineRuntime(module);
                 m_CharacterControlRead = new FixedCharacterControlReadPort(
                     m_Input,
                     m_Frame,
-                    parameter => FixedScalar.FromDouble(RequireControlParameter(module.Contract, parameter).NumericValue),
-                    skill => m_Actions.IsContextActive(m_Frame.Program.SkillPrograms.Require(skill).ActionContextId));
+                    parameter => ReadControlParameter(controlCatalog, parameter),
+                    skill => m_Actions.IsSkillActive(skill),
+                    skill => m_Actions.IsSkillCompleted(skill),
+                    skill => m_Actions.CompletedSkillInstanceId(skill),
+                    (skill, window) => m_Blackboard.IsActionWindowActive(skill, window));
                 m_CharacterControlState = new FixedCharacterControlStatePort(characterControlState, characterControlLayout);
                 m_CharacterControlOutput = new FixedCharacterControlOutputPort(
-                    module.Contract,
+                    access,
+                    controlCatalog,
                     m_Input,
                     locomotion,
                     m_Actions);
@@ -609,8 +616,6 @@ namespace ThirdPersonSimulation.Fixed
         [PerformanceProbe("simulation.operation.control-tick")]
         void TickOperationControl()
         {
-            if (m_CharacterControl == null)
-                m_Control.Tick(m_Frame.Layout.RootOperation);
         }
 
         [PerformanceProbe("simulation.operation.character-control-tick")]
@@ -635,30 +640,117 @@ namespace ThirdPersonSimulation.Fixed
             if (m_CharacterControl == null)
                 return;
             IReadOnlyList<CharacterSkillProgramBinding> skills = m_Frame.Program.SkillPrograms.Bindings;
+            var stoppingContexts = new HashSet<string>(StringComparer.Ordinal);
             for (int i = 0; i < skills.Count; i++)
             {
                 CharacterSkillProgramBinding skill = skills[i];
-                bool actionActive = m_Actions.IsContextActive(skill.ActionContextId);
-                if (!actionActive)
+                if (m_Control.IsStopping(skill.EntryOperation))
                 {
-                    if (m_Control.IsActive(skill.EntryOperation))
-                        m_Control.RequestStop(skill.EntryOperation, OperationStopContext.ActionContextEnded(skill.EntryOperation));
+                    OperationStopStatus stop = m_Control.ContinueStop(skill.EntryOperation);
+                    if (stop == OperationStopStatus.Failed)
+                        throw new InvalidOperationException($"Skill '{skill.SkillId}' EntryOperation stop failed.");
+                    if (stop == OperationStopStatus.Running)
+                        stoppingContexts.Add(skill.ActionContextId);
                     continue;
                 }
-                m_Control.Tick(skill.EntryOperation);
+                if (!m_ActionStore.IsSkillActive(skill.SkillId) && m_Control.IsActive(skill.EntryOperation))
+                {
+                    OperationStopStatus stop = m_Control.RequestStop(
+                        skill.EntryOperation,
+                        OperationStopContext.ActionContextEnded(skill.EntryOperation));
+                    if (stop == OperationStopStatus.Failed)
+                        throw new InvalidOperationException($"Skill '{skill.SkillId}' EntryOperation stop failed.");
+                    if (stop == OperationStopStatus.Running)
+                        stoppingContexts.Add(skill.ActionContextId);
+                }
+            }
+            for (int i = 0; i < skills.Count; i++)
+            {
+                CharacterSkillProgramBinding skill = skills[i];
+                if (stoppingContexts.Contains(skill.ActionContextId))
+                    continue;
+                bool actionActive = m_ActionStore.FindActive(skill.SkillId, out FixedActionInstanceState action) >= 0;
+                if (!actionActive)
+                {
+                    m_Actions.TryCommitPendingControl(skill.SkillId);
+                    actionActive = m_ActionStore.FindActive(skill.SkillId, out action) >= 0;
+                }
+                if (!actionActive)
+                    continue;
+                if (!action.SkillEntryOperation.Equals(skill.EntryOperation))
+                    throw new InvalidOperationException($"Skill '{skill.SkillId}' Action instance is bound to a different EntryOperation.");
+                OperationRunnableStatus status = m_Control.ReadStatus(skill.EntryOperation);
+                if (status == OperationRunnableStatus.Success || status == OperationRunnableStatus.Failure)
+                {
+                    if (action.SkillExecutionGeneration == 0)
+                    {
+                        OperationStopStatus reset = m_Control.RequestStop(
+                            skill.EntryOperation,
+                            OperationStopContext.ActionContextEnded(skill.EntryOperation));
+                        if (reset != OperationStopStatus.Completed)
+                            throw new InvalidOperationException($"Skill '{skill.SkillId}' previous EntryOperation state could not reset.");
+                        status = m_Control.ReadStatus(skill.EntryOperation);
+                    }
+                    else
+                    {
+                        m_Actions.FinishFromControl(
+                            skill.SkillId,
+                            SimulationExecutionSource.FromSkillOperation(
+                                skill.EntryOperation,
+                                m_Frame.Services.SourcePath(skill.EntryOperation)),
+                            status == OperationRunnableStatus.Success,
+                            status == OperationRunnableStatus.Success ? "SkillCompleted" : "SkillExecutionFailed");
+                        continue;
+                    }
+                }
+                if (action.SkillExecutionGeneration != 0 && status == OperationRunnableStatus.Dormant)
+                    throw new InvalidOperationException($"Skill '{skill.SkillId}' Action instance lost its EntryOperation state.");
+                if (action.SkillExecutionGeneration != 0 &&
+                    m_Control.ReadGeneration(skill.EntryOperation) != action.SkillExecutionGeneration)
+                    throw new InvalidOperationException($"Skill '{skill.SkillId}' Action instance generation does not match its EntryOperation.");
+                using (m_ActionStore.PushSkillExecution(action))
+                {
+                    OperationExecutionResult result = m_Control.Tick(skill.EntryOperation);
+                    FixedActionInstanceState current = m_ActionStore.RequireActive(
+                        FixedActionInstanceReference.FromInstance(action));
+                    if (current.IsActive)
+                    {
+                        current = m_ActionStore.BindSkillExecution(
+                            current,
+                            skill.EntryOperation,
+                            m_Control.ReadGeneration(skill.EntryOperation));
+                        if (result == OperationExecutionResult.Success || result == OperationExecutionResult.Failure)
+                            m_Actions.FinishFromControl(
+                                skill.SkillId,
+                                SimulationExecutionSource.FromSkillOperation(
+                                    skill.EntryOperation,
+                                    m_Frame.Services.SourcePath(skill.EntryOperation)),
+                                result == OperationExecutionResult.Success,
+                                result == OperationExecutionResult.Success ? "SkillCompleted" : "SkillExecutionFailed");
+                    }
+                }
             }
         }
 
-        static CharacterControlParameterDescriptor RequireControlParameter(
-            CharacterControlModuleContract contract,
+        FixedScalar ReadControlParameter(
+            ProgramCatalogEntry controlCatalog,
             CharacterControlParameterId parameter)
         {
-            for (int i = 0; i < contract.Parameters.Count; i++)
+            string name = $"Parameter:{parameter.Value}:NumericValue";
+            for (int i = 0; i < controlCatalog.Fields.Count; i++)
             {
-                if (contract.Parameters[i].Id == parameter)
-                    return contract.Parameters[i];
+                ProgramCatalogField field = controlCatalog.Fields[i];
+                if (!string.Equals(field.Name, name, StringComparison.Ordinal))
+                    continue;
+                if (field.Kind != ProgramCatalogFieldKind.Constant || field.ConstantIndex < 0 ||
+                    field.ConstantIndex >= m_Frame.Program.Constants.Count)
+                    throw new InvalidOperationException($"Control module field '{name}' is not a valid constant.");
+                ProgramConstant value = m_Frame.Program.Constants[field.ConstantIndex];
+                if (value.Kind != ProgramConstantKind.Scalar)
+                    throw new InvalidOperationException($"Control module field '{name}' is not Scalar.");
+                return value.Scalar;
             }
-            throw new InvalidOperationException($"Character control parameter '{parameter}' is absent from module '{contract.ModuleId}'.");
+            throw new InvalidOperationException($"Control module '{controlCatalog.Identity}' has no '{name}' field.");
         }
 
         [PerformanceProbe("simulation.operation.motion-resolve")]

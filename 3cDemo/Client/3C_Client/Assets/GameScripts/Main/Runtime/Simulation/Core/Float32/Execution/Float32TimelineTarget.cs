@@ -278,6 +278,18 @@ namespace ThirdPersonSimulation
                 identity = default;
                 return true;
             }
+            if (m_Actions.TryGetCurrentSkillExecution(out Float32ActionInstanceState skillAction))
+            {
+                if (!string.Equals(skillAction.ContextId, contextId, StringComparison.Ordinal))
+                    throw new InvalidOperationException(
+                        $"Skill Timeline '{SourcePath(operation)}' Action Context does not match its Action instance.");
+                identity = new TimelineActionContextIdentity(
+                    skillAction.ActionId,
+                    skillAction.ContextId,
+                    skillAction.InstanceId,
+                    skillAction.PredictionKey);
+                return true;
+            }
             if (m_Actions.FindActive(contextId, out Float32ActionInstanceState action) < 0)
             {
                 identity = default;

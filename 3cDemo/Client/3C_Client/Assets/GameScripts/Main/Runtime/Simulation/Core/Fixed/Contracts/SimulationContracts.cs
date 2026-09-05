@@ -394,6 +394,7 @@ namespace ThirdPersonSimulation.Fixed
             ulong predictionKey,
             ulong inputSequence,
             string actionId,
+            CharacterSkillId skillId,
             SimulationActionLifecycleTransitionType transitionType,
             SimulationActionPhase phase,
             SimulationActionState state,
@@ -406,6 +407,7 @@ namespace ThirdPersonSimulation.Fixed
             PredictionKey = predictionKey;
             InputSequence = inputSequence;
             ActionId = SimulationIdentity.Require(actionId, nameof(actionId));
+            SkillId = skillId;
             TransitionType = transitionType;
             Phase = phase;
             State = state;
@@ -417,6 +419,7 @@ namespace ThirdPersonSimulation.Fixed
         public ulong PredictionKey { get; }
         public ulong InputSequence { get; }
         public string ActionId { get; }
+        public CharacterSkillId SkillId { get; }
         public SimulationActionLifecycleTransitionType TransitionType { get; }
         public SimulationActionPhase Phase { get; }
         public SimulationActionState State { get; }

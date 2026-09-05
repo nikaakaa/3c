@@ -183,6 +183,17 @@ namespace ThirdPersonSimulation
             return status == OperationRunnableStatus.Running || status == OperationRunnableStatus.Stopping;
         }
 
+        public OperationRunnableStatus ReadStatus(OperationHandle handle)
+        {
+            if (!handle.IsValid)
+                return OperationRunnableStatus.Dormant;
+            OperationExecutionDescriptor operation = m_Topology.Operation(handle);
+            int slot = FindOperationSlot(operation, ProgramStateSemantic.RunnableLifecycle);
+            return slot < 0
+                ? OperationRunnableStatus.Dormant
+                : (OperationRunnableStatus)m_Target.ReadInt32(slot);
+        }
+
         public bool IsRunning(OperationHandle handle)
         {
             if (!handle.IsValid)

@@ -1136,12 +1136,12 @@ namespace ThirdPersonSimulation
                 displacement,
                 yaw,
                 move,
-                SimulationMotionContributionSpace.World,
-                Float32Scalar.One,
-                0,
-                SimulationMotionChannel.Locomotion,
-                SimulationMotionBlendMode.Override,
-                false,
+				SimulationMotionContributionSpace.World,
+				Float32Scalar.One,
+				0,
+				SimulationMotionChannel.Locomotion,
+				SimulationMotionBlendMode.Override,
+				false,
                 movementPlaybackClock,
                 locomotionTimeline));
         }
@@ -1160,20 +1160,31 @@ namespace ThirdPersonSimulation
                 move = move.Normalized;
             Float32Scalar delta = Float32Scalar.One / Float32Scalar.FromInt64(m_Program.Manifest.TickRate);
             Float32Scalar moveSpeed = Float32Scalar.FromDouble(descriptor.MoveSpeed);
-            Float32Scalar turnSpeed = Float32Scalar.FromDouble(descriptor.TurnSpeedDegrees);
-            Float32Scalar maxYaw = turnSpeed * delta;
-            Float32Vector3 displacement = new Float32Vector3(
-                move.X * moveSpeed * delta,
-                Float32Scalar.Zero,
-                move.Y * moveSpeed * delta);
-            Float32Scalar yaw = Float32Scalar.Zero;
-            if (move != Float32Vector2.Zero && maxYaw > Float32Scalar.Zero)
-            {
-                Float32Yaw desired = Float32Angle.FromPlanarDirection(move);
-                yaw = Float32Scalar.Clamp(Float32Angle.Delta(m_Frame.Body.Yaw, desired), -maxYaw, maxYaw);
-            }
+			Float32Scalar turnSpeed = Float32Scalar.FromDouble(descriptor.TurnSpeedDegrees);
+			Float32Scalar maxYaw = turnSpeed * delta;
+			Float32Vector3 displacement;
+			Float32Scalar yaw;
+			if (descriptor.DisplacementMode == CharacterControlMotionDisplacementMode.SourceCurve)
+			{
+				ResolveControlSourceCurve(request, descriptor, out displacement, out yaw);
+			}
+			else
+			{
+				displacement = new Float32Vector3(
+					move.X * moveSpeed * delta,
+					Float32Scalar.Zero,
+					move.Y * moveSpeed * delta);
+				yaw = Float32Scalar.Zero;
+				if (move != Float32Vector2.Zero && maxYaw > Float32Scalar.Zero)
+				{
+					Float32Yaw desired = Float32Angle.FromPlanarDirection(move);
+					yaw = Float32Scalar.Clamp(Float32Angle.Delta(m_Frame.Body.Yaw, desired), -maxYaw, maxYaw);
+				}
+			}
             int continuousTicks = checked(request.ContinuousTicks + 1);
-            int durationTicks = descriptor.ExecutionMode == CharacterControlMotionExecutionMode.Timed
+			int durationTicks = descriptor.DisplacementMode == CharacterControlMotionDisplacementMode.SourceCurve
+				? 0
+				: descriptor.ExecutionMode == CharacterControlMotionExecutionMode.Timed
                 ? checked((int)Math.Ceiling(descriptor.DurationSeconds * m_Program.Manifest.TickRate))
                 : 0;
             var movementPlaybackClock = new CommittedMovementPlaybackClock(
@@ -1199,16 +1210,63 @@ namespace ThirdPersonSimulation
                 request.Source,
                 displacement,
                 yaw,
-                move,
-                SimulationMotionContributionSpace.World,
+				descriptor.DisplacementMode == CharacterControlMotionDisplacementMode.SourceCurve
+					? Float32Vector2.Zero
+					: move,
+                descriptor.Space == CharacterControlMotionSpace.ActorLocal
+                    ? SimulationMotionContributionSpace.ActorLocal
+                    : SimulationMotionContributionSpace.World,
                 Float32Scalar.One,
-                0,
+                descriptor.Priority,
                 SimulationMotionChannel.Locomotion,
                 SimulationMotionBlendMode.Override,
-                false,
+                descriptor.ConsumeLowerChannels,
                 movementPlaybackClock,
-                locomotionTimeline));
-        }
+				locomotionTimeline));
+		}
+
+		void ResolveControlSourceCurve(
+			CharacterControlMotionRequest request,
+			CharacterControlMotionDescriptor descriptor,
+			out Float32Vector3 displacement,
+			out Float32Scalar yaw)
+		{
+			ProgramCatalogEntry source = FindCatalog(ProgramCatalogEntryKind.MotionCurve, descriptor.SourceMotionIdentity) ??
+				throw new InvalidOperationException($"Control motion source '{descriptor.SourceMotionIdentity}' is absent from the Program catalog.");
+			ProgramCatalogEntry track = RequireCatalog(
+				ProgramCatalogEntryKind.TimelineTrack,
+				CatalogIdentity(source, ProgramCatalogFieldId.Track));
+			ProgramCatalogEntry timeline = RequireCatalog(
+				ProgramCatalogEntryKind.Timeline,
+				CatalogIdentity(track, ProgramCatalogFieldId.Timeline));
+			int frameRate = CatalogInt32(timeline, ProgramCatalogFieldId.FrameRate);
+			Float32Scalar start = Float32Scalar.FromInt64(CatalogInt32(source, ProgramCatalogFieldId.StartFrame)) / Float32Scalar.FromInt64(frameRate);
+			Float32Scalar curveEnd = Float32Scalar.FromInt64(CatalogInt32(source, ProgramCatalogFieldId.CurveEndFrame)) / Float32Scalar.FromInt64(frameRate);
+			Float32Scalar duration = Float32Scalar.Max(Float32Scalar.FromDouble(0.000001d), curveEnd - start);
+			Float32Scalar tickRate = Float32Scalar.FromInt64(m_Program.Manifest.TickRate);
+			Float32Scalar previous = Float32Scalar.Clamp(Float32Scalar.FromInt64(request.ContinuousTicks) / tickRate, Float32Scalar.Zero, duration);
+			Float32Scalar current = Float32Scalar.Clamp(Float32Scalar.FromInt64(request.ContinuousTicks + 1) / tickRate, Float32Scalar.Zero, duration);
+			Float32Scalar previousNormalized = previous / duration;
+			Float32Scalar currentNormalized = current / duration;
+			displacement = new Float32Vector3(
+				SampleControlCurve(source, ProgramCatalogFieldId.PositionX, currentNormalized) - SampleControlCurve(source, ProgramCatalogFieldId.PositionX, previousNormalized),
+				SampleControlCurve(source, ProgramCatalogFieldId.PositionY, currentNormalized) - SampleControlCurve(source, ProgramCatalogFieldId.PositionY, previousNormalized),
+				SampleControlCurve(source, ProgramCatalogFieldId.PositionZ, currentNormalized) - SampleControlCurve(source, ProgramCatalogFieldId.PositionZ, previousNormalized));
+			yaw = SampleControlCurve(source, ProgramCatalogFieldId.Yaw, currentNormalized) -
+				  SampleControlCurve(source, ProgramCatalogFieldId.Yaw, previousNormalized);
+		}
+
+		Float32Scalar SampleControlCurve(
+			ProgramCatalogEntry source,
+			ProgramCatalogFieldId field,
+			Float32Scalar normalized)
+		{
+			ProgramConstant constant = CatalogConstant(source, field);
+			if (constant.Kind != ProgramConstantKind.Bytes)
+				throw new InvalidOperationException($"Control motion curve '{source.Identity}/{field}' is not a curve constant.");
+			return Access.Services.RequireTimelineCurve(constant, $"{source.Identity}/{field}")
+				.Evaluate(normalized, Float32Scalar.Zero);
+		}
 
         CommittedLocomotionPlanarMotionTimeline ResolveMotionTimeline<TTarget>(
             OperationControlCursor<TTarget> cursor,

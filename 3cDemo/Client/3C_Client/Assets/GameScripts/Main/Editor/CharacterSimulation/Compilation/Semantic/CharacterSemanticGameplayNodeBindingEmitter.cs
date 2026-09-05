@@ -1,6 +1,7 @@
 using ThirdPersonCharacter.Pipeline.Graph;
 using ThirdPersonGameplay.Effects;
 using ThirdPersonSimulation;
+using TreeDesigner;
 
 namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
 {
@@ -74,7 +75,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             }
             if (node is RemoveGameplayEffectNode removeEffect)
             {
-                if (removeEffect.Selector == GameplayEffectRemoveSelector.EffectId)
+                if (removeEffect.Selector == ThirdPersonGameplay.Effects.GameplayEffectRemoveSelector.EffectId)
                 {
                     string effectId = removeEffect.Effect ? removeEffect.Effect.EffectId.Value : string.Empty;
                     m_Catalog.Bind(
@@ -85,7 +86,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                         $"effect:{effectId}",
                         m_CatalogIndex.GameplayEffects.Contains(effectId));
                 }
-                else if (removeEffect.Selector == GameplayEffectRemoveSelector.EffectTagQuery)
+                else if (removeEffect.Selector == ThirdPersonGameplay.Effects.GameplayEffectRemoveSelector.EffectTagQuery)
                     m_Catalog.BindTagQuery(operation, route, source, removeEffect.EffectTagQuery);
                 return true;
             }

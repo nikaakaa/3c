@@ -236,7 +236,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 string.Empty,
                 resolution?.Slot?.SlotId.Value ??
                 string.Empty,
-                resolution?.Action?.SkillId ?? string.Empty);
+                resolution?.Action?.SkillId ?? string.Empty,
+                resolution?.Timeline?.RouteIdentity ?? string.Empty);
 
         static void OpenOrChoose(
             string emptyMessage,

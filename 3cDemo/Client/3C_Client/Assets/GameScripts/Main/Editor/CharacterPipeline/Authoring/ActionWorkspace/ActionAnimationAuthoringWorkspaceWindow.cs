@@ -41,6 +41,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         [SerializeField] string m_ActionId = string.Empty;
         [SerializeField] string m_SkillId = string.Empty;
         [SerializeField] string m_TimelineAuthoringId = string.Empty;
+        [SerializeField] string m_TimelineRouteId = string.Empty;
         [SerializeField] string m_TrackAuthoringId = string.Empty;
         [SerializeField] string m_SlotId = string.Empty;
         [SerializeField] DetailsPage m_DetailsPage;
@@ -52,6 +53,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         ObjectField m_DefinitionField;
         ToolbarMenu m_ActionMenu;
         Label m_TimelineTitle;
+        ToolbarMenu m_TimelineMenu;
         ToolbarToggle m_PreviewToggle;
         ToolbarToggle m_LiveToggle;
         VisualElement m_StatusHost;
@@ -94,6 +96,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             window.m_ActionId = request.ActionId;
             window.m_SkillId = request.SkillId;
             window.m_TimelineAuthoringId = request.TimelineAuthoringId;
+            window.m_TimelineRouteId = request.TimelineRouteId;
             window.m_TrackAuthoringId = request.TrackAuthoringId;
             window.m_SlotId = request.SlotId;
             window.titleContent = new GUIContent("Action Animation");
@@ -228,6 +231,10 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             m_TimelineTitle.style.unityTextAlign = TextAnchor.MiddleLeft;
             toolbar.Add(m_TimelineTitle);
 
+            m_TimelineMenu = new ToolbarMenu { text = "Timeline" };
+            m_TimelineMenu.style.minWidth = 180f;
+            toolbar.Add(m_TimelineMenu);
+
             m_PreviewToggle = new ToolbarToggle
             {
                 text = "Preview",
@@ -355,6 +362,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             m_StatusHost?.Clear();
             m_TimelineHost?.Clear();
             ConfigureActionMenu();
+            ConfigureTimelineMenu(null);
             if (!m_Definition || string.IsNullOrWhiteSpace(m_ActionId))
             {
                 AddStatus(
@@ -377,7 +385,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     m_TimelineAuthoringId,
                     m_TrackAuthoringId,
                     m_SlotId,
-                    m_SkillId);
+                    m_SkillId,
+                    m_TimelineRouteId);
                 m_Resolution =
                     ActionAnimationAuthoringWorkspaceResolver.Resolve(request);
             }
@@ -393,7 +402,15 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             for (int i = 0; i < m_Resolution.Failures.Count; i++)
                 AddFailure(m_Resolution.Failures[i]);
             if (m_Resolution.Failures.Count == 0)
-                AddStatus("Typed session 已完整解析，所有关系均指向正式 owner。", false);
+                AddStatus(
+                    m_Resolution.PageState?.RequiresTimelineSelection == true
+                        ? "Typed session 已建立，请选择精确 Timeline route。"
+                        : m_Resolution.IsComplete
+                            ? "Typed session 已完整解析，所有关系均指向正式 owner。"
+                            : "Typed session 已建立，当前页面仍缺少可选 Timeline。",
+                    false);
+
+            ConfigureTimelineMenu(m_Resolution.PageState);
 
             if (m_Resolution.Timeline != null)
             {
@@ -404,8 +421,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             else
             {
                 m_TimelineTitle.text = "Timeline: unresolved";
-                AddTimelinePlaceholder(
-                    "有限 Action Timeline 未唯一解析，Timeline Core 未绑定。");
+                AddTimelineSelectionState(m_Resolution.PageState);
             }
             RenderBreadcrumb();
             RefreshLiveState();
@@ -478,9 +494,73 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             }
         }
 
+        void ConfigureTimelineMenu(ActionAnimationWorkspacePageState pageState)
+        {
+            if (m_TimelineMenu == null)
+                return;
+            m_TimelineMenu.menu.MenuItems().Clear();
+            ActionAnimationTimelineCandidate[] candidates = pageState?.TimelineCandidates?.ToArray() ??
+                Array.Empty<ActionAnimationTimelineCandidate>();
+            m_TimelineMenu.text = pageState?.SelectedTimeline != null
+                ? $"Timeline: {pageState.SelectedTimeline.AuthoringId}"
+                : candidates.Length == 0
+                    ? "Timeline"
+                    : "Timeline: choose";
+            for (int i = 0; i < candidates.Length; i++)
+            {
+                ActionAnimationTimelineCandidate captured = candidates[i];
+                m_TimelineMenu.menu.AppendAction(
+                    captured.DisplayName,
+                    _ => SelectTimelineCandidate(captured),
+                    _ => pageState?.SelectedTimeline != null &&
+                         string.Equals(
+                             pageState.SelectedTimeline.RouteIdentity,
+                             captured.RouteIdentity,
+                             StringComparison.Ordinal)
+                        ? DropdownMenuAction.Status.Checked
+                        : DropdownMenuAction.Status.Normal);
+            }
+        }
+
+        void AddTimelineSelectionState(ActionAnimationWorkspacePageState pageState)
+        {
+            if (pageState?.RequiresTimelineSelection != true)
+            {
+                AddTimelinePlaceholder(
+                    pageState?.TimelineSelectionState == ActionAnimationWorkspaceSelectionState.Unavailable
+                        ? "当前 Skill 没有可编辑的有限 Action Timeline。"
+                        : "有限 Action Timeline 未解析，Timeline Core 未绑定。");
+                return;
+            }
+            AddTimelinePlaceholder("当前 Skill 有多个有限 Timeline，请选择精确 route：");
+            for (int i = 0; i < pageState.TimelineCandidates.Count; i++)
+            {
+                ActionAnimationTimelineCandidate captured = pageState.TimelineCandidates[i];
+                var button = new Button(() => SelectTimelineCandidate(captured))
+                {
+                    text = captured.DisplayName
+                };
+                button.style.marginLeft = 12f;
+                button.style.marginRight = 12f;
+                m_TimelineHost.Add(button);
+            }
+        }
+
+        void SelectTimelineCandidate(ActionAnimationTimelineCandidate candidate)
+        {
+            if (candidate == null)
+                return;
+            m_TimelineAuthoringId = candidate.AuthoringId;
+            m_TimelineRouteId = candidate.RouteIdentity;
+            m_TrackAuthoringId = string.Empty;
+            m_SlotId = string.Empty;
+            ResolveAndBind();
+        }
+
         void ClearExactSelectors()
         {
             m_TimelineAuthoringId = string.Empty;
+            m_TimelineRouteId = string.Empty;
             m_TrackAuthoringId = string.Empty;
             m_SlotId = string.Empty;
         }

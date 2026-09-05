@@ -28,18 +28,21 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             string actionId,
             AnimationProducerId producerId,
             AnimationSlotId slotId,
-            string skillId = "")
+            string skillId = "",
+            string timelineRouteId = "")
         {
             DefinitionAssetGuid = Require(definitionAssetGuid, nameof(definitionAssetGuid));
             ActionId = Require(actionId, nameof(actionId));
             ProducerId = producerId;
             SlotId = slotId;
             SkillId = Normalize(skillId);
+            TimelineRouteId = Normalize(timelineRouteId);
         }
 
         public string DefinitionAssetGuid { get; }
         public string ActionId { get; }
         public string SkillId { get; }
+        public string TimelineRouteId { get; }
         public AnimationProducerId ProducerId { get; }
         public AnimationSlotId SlotId { get; }
         public bool IsValid =>
@@ -50,6 +53,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             string.Equals(DefinitionAssetGuid, other.DefinitionAssetGuid, StringComparison.Ordinal) &&
             string.Equals(ActionId, other.ActionId, StringComparison.Ordinal) &&
             string.Equals(SkillId, other.SkillId, StringComparison.Ordinal) &&
+            string.Equals(TimelineRouteId, other.TimelineRouteId, StringComparison.Ordinal) &&
             ProducerId.Equals(other.ProducerId) &&
             SlotId.Equals(other.SlotId);
 
@@ -63,6 +67,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 int hash = StringComparer.Ordinal.GetHashCode(DefinitionAssetGuid);
                 hash = (hash * 397) ^ StringComparer.Ordinal.GetHashCode(ActionId);
                 hash = (hash * 397) ^ StringComparer.Ordinal.GetHashCode(SkillId);
+                hash = (hash * 397) ^ StringComparer.Ordinal.GetHashCode(TimelineRouteId);
                 hash = (hash * 397) ^ ProducerId.GetHashCode();
                 return (hash * 397) ^ SlotId.GetHashCode();
             }
@@ -70,7 +75,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
 
         public override string ToString() =>
             IsValid
-                ? $"{DefinitionAssetGuid}/{ActionId}/{SkillId}/{ProducerId}/{SlotId}"
+                ? $"{DefinitionAssetGuid}/{ActionId}/{SkillId}/{TimelineRouteId}/{ProducerId}/{SlotId}"
                 : string.Empty;
 
         static string Require(string value, string parameterName)
@@ -92,7 +97,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             string timelineAuthoringId = "",
             string trackAuthoringId = "",
             string slotId = "",
-            string skillId = "")
+            string skillId = "",
+            string timelineRouteId = "")
         {
             Definition = definition
                 ? definition
@@ -102,11 +108,17 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             TrackAuthoringId = Normalize(trackAuthoringId);
             SlotId = Normalize(slotId);
             SkillId = Normalize(skillId);
+            TimelineRouteId = Normalize(timelineRouteId);
             if (!string.IsNullOrEmpty(TrackAuthoringId) &&
                 string.IsNullOrEmpty(TimelineAuthoringId))
                 throw new ArgumentException(
                     "Track identity requires an exact Timeline identity.",
                     nameof(trackAuthoringId));
+            if (!string.IsNullOrEmpty(TimelineRouteId) &&
+                string.IsNullOrEmpty(TimelineAuthoringId))
+                throw new ArgumentException(
+                    "Timeline route identity requires an exact Timeline identity.",
+                    nameof(timelineRouteId));
         }
 
         public CharacterPipelineDefinition Definition { get; }
@@ -115,6 +127,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         public string TrackAuthoringId { get; }
         public string SlotId { get; }
         public string SkillId { get; }
+        public string TimelineRouteId { get; }
 
         static string Normalize(string value) => value?.Trim() ?? string.Empty;
 
@@ -161,6 +174,79 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         ProjectionMissing,
         ProjectionRevisionMissing,
         RigMissing
+    }
+
+    public enum ActionAnimationWorkspaceSelectionState
+    {
+        Unavailable,
+        RequiresSelection,
+        Selected
+    }
+
+    public sealed class ActionAnimationTimelineCandidate
+    {
+        public ActionAnimationTimelineCandidate(CharacterAuthoringTimelineEntry entry)
+        {
+            Entry = entry;
+            AuthoringId = entry.Timeline?.AuthoringId?.Trim() ?? string.Empty;
+            RouteIdentity = entry.Route?.ToString() ?? string.Empty;
+            GraphAuthoringId = entry.Graph?.GraphAuthoringId?.Trim() ?? string.Empty;
+        }
+
+        public CharacterAuthoringTimelineEntry Entry { get; }
+        public string AuthoringId { get; }
+        public string RouteIdentity { get; }
+        public string GraphAuthoringId { get; }
+        public bool IsFinite =>
+            Entry.Node != null &&
+            Entry.Node.PlaybackMode == TimelinePlaybackMode.Once &&
+            Entry.Timeline != null &&
+            Entry.Timeline.MaxFrame > 0;
+        public bool HasStableIdentity =>
+            !string.IsNullOrEmpty(AuthoringId) &&
+            !string.IsNullOrEmpty(RouteIdentity);
+        public string DisplayName =>
+            string.IsNullOrEmpty(GraphAuthoringId)
+                ? AuthoringId
+                : $"{AuthoringId} · {GraphAuthoringId} · {RouteIdentity}";
+    }
+
+    public sealed class ActionAnimationWorkspacePageState
+    {
+        readonly ActionAnimationTimelineCandidate[] m_TimelineCandidates;
+
+        public ActionAnimationWorkspacePageState(
+            IEnumerable<ActionAnimationTimelineCandidate> timelineCandidates,
+            ActionAnimationTimelineCandidate selectedTimeline)
+        {
+            var values = timelineCandidates == null
+                ? Array.Empty<ActionAnimationTimelineCandidate>()
+                : new List<ActionAnimationTimelineCandidate>(timelineCandidates).ToArray();
+            for (int i = 0; i < values.Length; i++)
+            {
+                if (values[i] == null)
+                    throw new ArgumentException("Timeline candidate is missing.", nameof(timelineCandidates));
+            }
+            m_TimelineCandidates = values;
+            SelectedTimeline = selectedTimeline;
+            if (selectedTimeline != null &&
+                !Array.Exists(values, value => ReferenceEquals(value, selectedTimeline)))
+                throw new ArgumentException(
+                    "Selected Timeline is not in the candidate list.",
+                    nameof(selectedTimeline));
+        }
+
+        public IReadOnlyList<ActionAnimationTimelineCandidate> TimelineCandidates => m_TimelineCandidates;
+        public ActionAnimationTimelineCandidate SelectedTimeline { get; }
+        public ActionAnimationWorkspaceSelectionState TimelineSelectionState =>
+            SelectedTimeline != null
+                ? ActionAnimationWorkspaceSelectionState.Selected
+                : m_TimelineCandidates.Length == 0
+                    ? ActionAnimationWorkspaceSelectionState.Unavailable
+                    : ActionAnimationWorkspaceSelectionState.RequiresSelection;
+        public bool RequiresTimelineSelection =>
+            TimelineSelectionState == ActionAnimationWorkspaceSelectionState.RequiresSelection;
+        public bool IsReady => TimelineSelectionState == ActionAnimationWorkspaceSelectionState.Selected;
     }
 
     public sealed class ActionAnimationWorkspaceFailure
@@ -271,6 +357,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         public UnityEngine.Object SerializedOwner => Timeline.SerializedOwner;
         public string SerializedPropertyPath => Timeline.SerializedPropertyPath;
         public TimelineOwnership Ownership => Node.TimelineOwnership;
+        public string RouteIdentity => Entry.Route?.ToString() ?? string.Empty;
     }
 
     public sealed class ActionAnimationProducerContext
@@ -393,7 +480,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             ActionAnimationPresentationBindingContext presentation,
             ActionAnimationSlotConsumerContext slot,
             ActionAnimationRuntimeDebugBinding runtimeDebug,
-            ActionAnimationPreviewTargetContext previewTarget)
+            ActionAnimationPreviewTargetContext previewTarget,
+            ActionAnimationWorkspacePageState pageState = null)
         {
             WorkspaceId = workspaceId.IsValid
                 ? workspaceId
@@ -407,6 +495,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             Slot = slot;
             RuntimeDebug = runtimeDebug;
             PreviewTarget = previewTarget;
+            PageState = pageState;
         }
 
         public ActionAnimationWorkspaceId WorkspaceId { get; }
@@ -419,6 +508,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         public ActionAnimationSlotConsumerContext Slot { get; }
         public ActionAnimationRuntimeDebugBinding RuntimeDebug { get; }
         public ActionAnimationPreviewTargetContext PreviewTarget { get; }
+        public ActionAnimationWorkspacePageState PageState { get; }
     }
 
     public sealed class ActionAnimationWorkspaceResolution
@@ -434,7 +524,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             ActionAnimationPresentationBindingContext presentation = null,
             ActionAnimationSlotConsumerContext slot = null,
             ActionAnimationRuntimeDebugBinding runtimeDebug = null,
-            ActionAnimationPreviewTargetContext previewTarget = null)
+            ActionAnimationPreviewTargetContext previewTarget = null,
+            ActionAnimationWorkspacePageState pageState = null)
         {
             Session = session;
             Failures = failures ?? Array.Empty<ActionAnimationWorkspaceFailure>();
@@ -447,6 +538,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             Slot = session?.Slot ?? slot;
             RuntimeDebug = session?.RuntimeDebug ?? runtimeDebug;
             PreviewTarget = session?.PreviewTarget ?? previewTarget;
+            PageState = session?.PageState ?? pageState;
         }
 
         public ActionAnimationWorkspaceSession Session { get; }
@@ -460,6 +552,10 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         public ActionAnimationSlotConsumerContext Slot { get; }
         public ActionAnimationRuntimeDebugBinding RuntimeDebug { get; }
         public ActionAnimationPreviewTargetContext PreviewTarget { get; }
-        public bool IsComplete => Session != null && Failures.Count == 0;
+        public ActionAnimationWorkspacePageState PageState { get; }
+        public bool IsComplete =>
+            Session != null &&
+            Failures.Count == 0 &&
+            (PageState == null || PageState.IsReady);
     }
 }

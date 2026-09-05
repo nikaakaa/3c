@@ -1,6 +1,6 @@
 ## 当前进度
 
-更新于 2026-09-05 19:38（Asia/Shanghai）。本次核对代码到 `adc29ea30f18df5f6016c825d316a5eab104b5ff`，生成的Gameplay Lab根资产到 `fc0654d7ce616ced04a01e2b16cacdd0d134829c`，位置为主目录 `D:/Unity_Project_1/3C` 的 `main`。后续提交必须继续更新下面对应任务，不能把这里的时点当成永久状态。
+更新于 2026-09-05 19:55（Asia/Shanghai）。本次核对代码到 `705f01d825ffbeb1ef28716046607bded0f4fcb2`，生成的Gameplay Lab根资产到 `6ca8e09a718a9823d43518b9087bbb14481661e8`，位置为主目录 `D:/Unity_Project_1/3C` 的 `main`。后续提交必须继续更新下面对应任务，不能把这里的时点当成永久状态。
 
 本文件是本 change 的当前执行进度；`baseline.md`保留实施起点的历史身份。勾选只表示该条完整要求已满足；未勾任务另外写明“已实现，待验证”“部分完成”“尚未完成”或“待验证”，不再用同一个空框掩盖不同阶段。静态审查、源码编译、产物发布和Replay分别记录，不互相替代。
 
@@ -12,18 +12,19 @@
 |---|---|---|
 | C#控制合同与接线 | 显式State/Transition、typed状态和唯一模块目录；Corin规则经两Target进入同一Evaluate | 原输入/移动时序比较、所有旧作者入口清理及完整装备迁移 |
 | Action与技能实例状态 | `6db20c5f2`共用Activation/Commit/Lifecycle、SlotMap和实例状态管理；`ce72111f2`修正窗口Fact/Trace来源，局部静态审查通过 | 参数化子图调用frame、合法并发/容量、完整停止与恢复运行证据 |
-| 编译器职责拆分 | `b419fcdb9 → 770ecfc51`迁出Blackboard声明/状态及领域绑定；`3e1355410`迁出技能目录；`51aed878f → be440e2f5`从Builder迁出控制模块合同发射；`adc29ea30`迁出Timeline/TreeClip编排。五个模块均已参与当前Editor/Frontend构建，局部代码对照确认原语义保留 | 新Timeline模块复制的NodeSource规则待收敛；其余节点业务族与能力一致性报告；解释器本体的大类拆分 |
+| 编译器职责拆分 | `b419fcdb9 → 770ecfc51`迁出Blackboard声明/状态及领域绑定；`3e1355410`迁出技能目录；`51aed878f → be440e2f5`迁出控制合同发射；`adc29ea30`迁出Timeline/TreeClip编排；`705f01d82`迁出Action/Behavior目录，Action与GE共用Behavior字段规则。各模块已参与当前Editor/Frontend构建，局部代码对照确认原语义保留 | NodeSource及本轮新增重复的AssetSource规则待收敛；其余目录/节点业务族与能力一致性报告；解释器本体的大类拆分 |
 | 状态与网络身份 | `121ec4a49`、`6dcdfd82a`、`304d83880`等已迁移codec/source/skill/generation及恢复读取边界 | 当前完整控制/技能状态的checkpoint、Rollback及输出对账Proof |
-| 当前Corin产物发布 | `00c47f3c`统一两Target与Projection的一次Publish，`31ac3821`提交正式产物；控制模块和Timeline编排拆分后分别正式重建，Program身份不变，`bb41cb4ca`、`fc0654d7c`提交根Prefab/Scene；12.3已关闭 | 本组实际运行和Replay比较仍归13.2；不等同于全部产品发布完成 |
+| 当前Corin产物发布 | `00c47f3c`统一两Target与Projection的一次Publish，`31ac3821`提交正式产物；后续控制、Timeline及Action目录拆分后分别正式重建，Program身份不变，最新根Prefab/Scene生成提交为`6ca8e09a7`；12.3已关闭 | 本组实际运行和Replay比较仍归13.2；不等同于全部产品发布完成 |
 | 作者工具、Document、发布 | 规划边界已明确；Control.Rules程序集与部分产品装配已有代码 | 作者模块/工作区、唯一Document v5、旧schema删除、热更发布和全部产品装配仍有实质实施工作 |
 
 ### 当前构建与回放证据
 
-- Runtime源码编译由实施任务报告通过。Timeline编排拆分后实施再次报告Editor.csproj编译0错误、58个既有警告；主审已确认Blackboard/DomainBinding/SkillProgram/ControlModule/Timeline五个新Emitter与原Emitter均在生成的Editor工程中，正式Frontend也已生成当前产物。Editor编译、构建调用与产品receipt的完整日志归位仍由13.1收口。
+- Runtime源码编译由实施任务报告通过。Action/Behavior目录拆分后实施再次报告Editor.csproj编译0错误、58个既有警告；主审已确认各新Emitter及共享BehaviorCatalogFields均在实际Editor工程中，正式Frontend也已生成当前产物。Editor编译、构建调用与产品receipt的完整日志归位仍由13.1收口。
 - 正式资产操作在项目`D:/Unity_Project_1/3C/3cDemo/Client/3C_Client`的主Editor执行。首轮Gameplay Lab重建因旧端点字段抛异常，已由`c3b2e3ed0`修正。后续唯一重建请求虽CLI超时，日志后来明确出现`Shared Gameplay Lab synchronized`；不能继续记为“尚未执行完”，也不能据此直接判定产物一致。
 - 18:17核对曾发现新Fixed与旧Float32语义不一致。有效修复代码在`00c47f3c`：同一`CharacterSimulationBuildOrchestrator`请求同时声明Float32和Fixed Target，沿原原子发布组生成Projection；后继`f56064f3`与其Git tree相同，不另算代码进展。正式产物于`31ac3821`提交，之前的混版状态已关闭。
 - 控制模块迁出Builder的首步`51aed878f`将控制状态SourceMap误写为普通StateSlot；`be440e2f5`已恢复ControlState，Builder通过显式来源种类保留通用写入。主审对照迁出前代码确认目录字段、状态默认值、顺序及State/Transition来源身份保留，并在当前`Editor.log:44118`看到修正后的正式重建完成，调用栈为`GameplayLabAssetBuilder.cs:149`。实施报告Console为0错误。首轮错误来源类型生成的临时产物不作为交付；下列Program身份已恢复并由主审直接读取核对，根资产更新见`bb41cb4ca`。
 - Timeline编排迁移`adc29ea30`保留同一Track/Clip注册表、EmissionSession及Builder；主审对照父提交确认TreeClip入口为Enter/order 0，OnEnable为Enter/order 1，OnDisable与OnDestroy分别为Exit/order 0和1，嵌套CompileGraph继续传递原stateScopeOwner。原中央Timeline与生命周期方法已删除；NodeSource生成逻辑现有两份，列入3.2和12.5继续收敛。本轮正式重建完成日志为当前`Editor.log:45734`，调用栈为`GameplayLabAssetBuilder.cs:149`；两Program身份直接读取仍与下列有效组一致，`fc0654d7c`提交生成根资产。此处只确认代码编排与构建身份，不作为Replay行为通过。
+- Action/Behavior目录迁移`705f01d82`保留action/behavior稳定ID、版本3/1、Required/Block/Cancel下的All/Any/None字段、ActionRequestBuffer及ActionInstance状态归属和声明顺序。原CompileActions/CompileBehaviors及公共BehaviorFields已删除，Action/Behavior/GE实际共用CharacterSemanticBehaviorCatalogFields；新Action模块复制的AssetSource仍须与原CatalogCompiler归一。本轮正式重建完成日志为当前`Editor.log:49375`，调用栈为`GameplayLabAssetBuilder.cs:149`；两Program身份直接读取与下列有效组一致，`6ca8e09a7`提交生成根资产。GE/Equipment/Input/Global目录迁移和Replay仍未完成。
 - 当前两Program均为compiler/24、ProgramId `character:c7a7c1e3f7e64d81b5a04a90cbeb8d4e`、SourceRevision `ba8dcda4ece0f958a5b78cd6f2ad1d2ee8b0ca0b2c5f1efb3a0a31701cb7c68b`、SemanticHash `fe5bbbd7c89aec250a7d0eabbd24ea7392bbd964a6b9bb3ce8e19e059428e969`。Float32 ProgramHash为`00ca45fd7f86f03516b30aef09edfaa4bbccb99291c9d9a2521bc28cf06328e9`，Fixed为`63f7ee3716847d7ebd3c1458fad3a96f16c5c9a1f65c24d6e1d111c7a23e1091`；Target ProgramHash不同是正常数值/布局差异。
 - 主审核对三个Variant：LocalFloat32引用Program GUID `5740a6cfbfb0fe542ad6a6cb66fe1a80`，LocalFixed及Rollback引用`91063668fd0eaa84d9b7d688aadbc90a`，三者均引用Projection GUID `f365735adcfd49c4e96070df6bcd3bc4`。实施已报告同组Projection与Launcher Validate完成，代码审查确认原统一Publish检查路径；此结论关闭12.3，不关闭13.2。
 - 本轮Corin Replay尚无完整通过证据。历史输入/Proof的精确路径见`baseline.md`，其中比较帧数为0的旧Proof不作为本轮回归通过。
@@ -70,7 +71,7 @@
   当前状态：**部分完成**。ceb50eb9e已将Corin Discovery接到C#控制合同与技能记录；旧Character/Equipment作者入口和编译注册尚未全部删除，正式根目录唯一性报告未交付。
 - [ ] 3.2 按设计12的职责迁移表，从CharacterSemanticEmitter迁出技能节点业务族及变量／装备／GE绑定发射，复用唯一操作目录与typed端口；CharacterSimulationProgramBuilder仅保留通用IR写入／索引／一致性约束。交付模块输入输出、实际调用链、中央分支删除清单及UI能力／Emitter／Target支持集一致结果；Timeline发射按已分配的owner接口接入。
 
-  当前状态：**部分完成**。b419fcdb9→770ecfc51、3e1355410已迁出Blackboard声明/状态/作用域、领域catalog绑定和技能目录发射。51aed878f→be440e2f5把控制合同发射移入CharacterSemanticControlModuleEmitter，原Builder中的DeclareControlModule业务分支已删除。adc29ea30将Timeline/TreeClip编排移入CharacterSemanticTimelineEmitter；输入为已发现的Timeline记录、owner与stateScopeOwner，调用原Track/Clip注册表，通过编译子图和查找operation两个回调复用中央拓扑，输出仍写入同一Builder。五个模块均进入实际Editor/Frontend构建，局部对照确认语义保留；新旧Emitter各有一份NodeSource生成逻辑，须继续收敛，不能把该重复项计为结构完成。节点业务族及UI/Emitter/Target能力一致性报告仍未完整交付。
+  当前状态：**部分完成**。b419fcdb9→770ecfc51、3e1355410已迁出Blackboard声明/状态/作用域、领域绑定和技能目录；51aed878f→be440e2f5迁出控制合同；adc29ea30迁出Timeline编排并通过窄回调复用Graph拓扑。705f01d82进一步把Action/Behavior目录、标签条件及动作状态槽发射移入CharacterSemanticActionCatalogEmitter；输入为原编译模型中的Profile目录，输出仍写入共享catalog index及同一Builder，中央CompileActions/CompileBehaviors旧分支已删除，Action/Behavior/GE共用唯一BehaviorCatalogFields。各模块进入实际Editor/Frontend构建，局部对照确认语义保留；NodeSource及新增AssetSource重复构造规则仍须收敛，GE/Equipment/Input/Global目录、其余节点业务族及UI/Emitter/Target能力一致性报告尚未完整交付。
 - [ ] 3.3 接入子图输入／输出签名、调用点及occurrence绑定，交付完整引用链与类型校验；子图递归被拒绝，显式Loop及跨技能候选分别验证。
 
   当前状态：**尚未完成**。当前已有Graph occurrence编译基础；本项要求的子图输入/输出签名、参数绑定和完整类型/依赖验证尚无对应实施交付。
@@ -79,7 +80,7 @@
   当前状态：**部分完成**。既有Tree/Timeline/TreeClip/局部状态机继续经过同一IR，6dcdfd82a等已迁移精确实例来源；adc29ea30将Timeline编排与TreeClip生命周期发射从中央类迁出，代码对照确认入口/启用/停用/销毁顺序、状态owner及EmissionSession.Complete顺序保留，正式重建后的双Target身份保持一致。局部状态机职责、调用参数、状态声明及IR Inspector完整核对仍未完成；本步未改公共Timeline运行或另建发射注册表，公共部分继续按独立owner接口对齐。
 - [ ] 3.5 将C#控制参数／state合同、GE／Equipment／Body Motion描述及技能目录纳入同一IR／角色运行包，交付canonical identity与依赖闭包结果。
 
-  当前状态：**部分完成**。ceb50eb9e及后续目录发射提交已写入控制合同、参数/state、Body Motion和技能目录；51aed878f→be440e2f5将控制参数、运动描述、状态及Transition来源发射集中到独立模块，修正后正式重建的canonical SemanticHash保持fe5bbbd7c89aec250a7d0eabbd24ea7392bbd964a6b9bb3ce8e19e059428e969，Float32/Fixed身份已直接核对。GE/Equipment完整依赖闭包及全部组合identity报告仍未交付。
+  当前状态：**部分完成**。ceb50eb9e及后续目录发射提交已写入控制合同、参数/state、Body Motion和技能目录；51aed878f→be440e2f5将控制描述与来源发射集中到独立模块。705f01d82迁出Action/Behavior目录后仍共用同一IR，Action与GE的Behavior字段来自同一实现；当前正式重建的canonical SemanticHash保持fe5bbbd7c89aec250a7d0eabbd24ea7392bbd964a6b9bb3ce8e19e059428e969，Float32/Fixed身份已直接核对。GE/Equipment完整依赖闭包及全部组合identity报告仍未交付。
 - [ ] 3.6 分别完成Float32与Fixed降低、组合state layout、SkillProgram与codec升级，交付同语义双Target构建和旧ABI拒绝结果；列明两端保留差异的数值／存储／编码原因，控制与Action业务流程必须调用共享实现，不能复制后要求同步维护。
 
   当前状态：**部分完成**。两Target的技能状态和codec已有实现；00c47f3c、31ac3821已完成同一IR的Float32/Fixed构建和产物身份核对。旧ABI拒绝及完整Target能力一致性结果尚未收口。
@@ -247,19 +248,19 @@
   当前状态：**部分完成**。Corin移动/动作来源已有接线并保留原Motion/Pose资源；有效装备入口及全部输入/变量/producer引用迁移尚未闭合。
 - [x] 12.3 显式构建并发布所选Target、技能目录和同组Projection，更新现有Launcher／Variant／Profile引用；交付exact artifact与产品引用一致报告。
 
-  当前状态：**已完成**。00c47f3c将Gameplay Lab接入一次正式Publish，31ac3821提交两Target Program、Projection及场景/prefab产物；两Program的ProgramId/SourceRevision/SemanticHash相同，Variant仍精确引用对应wrapper与共享Projection，Launcher校验已由实施报告完成。be440e2f5及adc29ea30后分别正式重建，Program身份保持一致，bb41cb4ca、fc0654d7c提交三个根Prefab及GameplayLab场景的生成更新。该条是构建/发布/引用闭合，运行行为仍由13.2验证。
+  当前状态：**已完成**。00c47f3c将Gameplay Lab接入一次正式Publish，31ac3821提交两Target Program、Projection及场景/prefab产物；两Program的ProgramId/SourceRevision/SemanticHash相同，Variant仍精确引用对应wrapper与共享Projection，Launcher校验已由实施报告完成。be440e2f5、adc29ea30及705f01d82后分别正式重建，Program身份保持一致，最新三个根Prefab及GameplayLab场景生成更新见6ca8e09a7。该条是构建/发布/引用闭合，运行行为仍由13.2验证。
 - [ ] 12.4 删除已替代角色控制图入口、activation／Equipment Host编译注册、旧schema、菜单、字段、别名及废弃文件，交付定向零引用与仍保留AI／Pose／独立预览依赖的业务清单。
 
   当前状态：**部分完成**。已删除部分旧控制代码位置、重复Action流程及中央发射分支；旧角色图、Equipment Host注册、v4 schema、菜单和别名尚未全量清除。
 - [ ] 12.5 按设计12逐项核对最终目录、类型和公开命名，交付原职责→正式模块→输入输出→调用者→已删除旧实现的代码地图；确认没有重复Action业务流程、中央领域特例、partial拆分、转发壳、万能Context、临时桥接、双运行入口或兼容配置，不能只以新增类数或行数降低收口。
 
-  当前状态：**部分完成**。公共Action模块及Blackboard、DomainBinding、SkillProgram、ControlModule、Timeline五类Emitter已形成实际职责迁移；控制合同及Timeline编排旧分支已删除，字段、SourceMap及TreeClip顺序经局部代码对照保留。新Timeline Emitter与中央Emitter复制的NodeSource规则仍须归一；OperationControlRuntime、作者中央类、Document及最终目录/命名地图仍待收口。
+  当前状态：**部分完成**。公共Action运行模块及Blackboard、DomainBinding、SkillProgram、ControlModule、Timeline、ActionCatalog发射模块已形成实际职责迁移，Behavior字段规则由Action与GE共用；对应旧分支已删除，字段、SourceMap及生命周期顺序经局部对照保留。新旧Timeline/中央Emitter的NodeSource、新旧Action/CatalogCompiler的AssetSource仍各有重复实现，须归一；OperationControlRuntime、作者中央类、Document及最终目录/命名地图仍待收口。
 
 ## 13. 集成证据与规范收口
 
 - [ ] 13.1 运行现有portable／Editor／产品构建和依赖检查，交付实际构建结果；dotnet／msbuild使用禁用build server参数并立即shutdown，本机Unity CLI按明确项目路径退出且保留主验收Editor，CI禁令不变。
 
-  当前状态：**部分完成**。Runtime构建已有通过报告；实施在Timeline编排迁移后再次报告Editor.csproj编译0错误、58个既有警告。主审已确认五个新Emitter进入实际Editor工程，其中Timeline列于ThirdPersonClient.Editor.csproj:279；adc29ea30后正式Rebuild完成日志见本轮Editor.log:45734，实际两Target产物身份已核对。产品构建和完整运行receipt尚未全部交付；不能以这一组Editor产物替代全部产品验证。
+  当前状态：**部分完成**。Runtime构建已有通过报告；实施在Action/Behavior目录迁移后再次报告Editor.csproj编译0错误、58个既有警告。主审已确认新ActionCatalogEmitter与BehaviorCatalogFields进入实际Editor工程，分别列于ThirdPersonClient.Editor.csproj:155及96；705f01d82后正式Rebuild完成日志见本轮Editor.log:49375，实际两Target产物身份已核对。产品构建和完整运行receipt尚未全部交付；不能以这一组Editor产物替代全部产品验证。
 - [ ] 13.2 使用已有Validator、Document生命周期与Replay／Proof覆盖完整新链，交付同版本重复性及跨实现输入／Body／动作阶段／输出比较；不编写新测试、不忽略缺帧或运行错误、不把ProgramHash变化当作行为通过或失败。
 
   当前状态：**待验证**。当前没有经过本规划复核的完整新候选Corin Replay/比较结果；旧baseline Proof、编译成功或菜单完成日志均不能替代它。

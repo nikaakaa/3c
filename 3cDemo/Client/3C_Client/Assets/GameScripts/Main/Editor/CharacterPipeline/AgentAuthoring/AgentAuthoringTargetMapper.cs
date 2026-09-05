@@ -196,12 +196,13 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                             string.Equals(path, "editable/controller.json", StringComparison.Ordinal) ||
                             string.Equals(path, "editable/blackboard.json", StringComparison.Ordinal) ||
                             string.Equals(path, "editable/actions.json", StringComparison.Ordinal) ||
+                            path.StartsWith("editable/timelines/", StringComparison.Ordinal) ||
                             AgentSkillDocumentMapper.IsDefinitionPath(path)))
                 {
                     report.Error(
                         "editable",
                         "document_domain_file_invalid",
-                        "AIController文档包不能包含CharacterController的controller、blackboard、actions或skills分片。");
+                        "AIController文档包不能包含CharacterController的controller、blackboard、actions、skills或timelines分片。");
                     valid = false;
                 }
             }

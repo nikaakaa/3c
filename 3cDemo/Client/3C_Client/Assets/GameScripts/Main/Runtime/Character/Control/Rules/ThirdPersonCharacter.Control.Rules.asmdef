@@ -1,0 +1,16 @@
+{
+    "name": "ThirdPersonCharacter.Control.Rules",
+    "rootNamespace": "ThirdPersonCharacter.Control.Rules",
+    "references": [
+        "ThirdPersonSimulation.Core"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": true
+}

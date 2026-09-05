@@ -13,6 +13,64 @@ MonoBehaviour:
   m_Name: CorinCharacterPipelineDefinition
   m_EditorClassIdentifier: 
   m_RootTreeAsset: {fileID: 11400000, guid: ea4ccf43cafa4fe42aff8dfc08208d52, type: 2}
+  m_ControlModuleId: character.corin.control
+  m_SkillDefinitions:
+  - m_SkillId: Attack1
+    m_EntryGraphAuthoringId: cf79f885-4e1f-4a3b-8bf7-8a21620959b1
+    m_ActionProfile: {fileID: 11400000, guid: 450722665af79c2468ff212811859458, type: 2}
+    m_ActionContext: {fileID: 11400000, guid: 2639a9c0228ef404389f9fd9a36561f5, type: 2}
+    m_SourceInputRequestId: Attack
+    m_ConsumeSourceInputRequest: 1
+    m_TargetInputValueId: ActionTarget
+    m_TargetKey: 
+  - m_SkillId: Attack2
+    m_EntryGraphAuthoringId: cbe6f984-5d7a-48e7-89b9-f30bc6c91325
+    m_ActionProfile: {fileID: 11400000, guid: 450722665af79c2468ff212811859458, type: 2}
+    m_ActionContext: {fileID: 11400000, guid: 2639a9c0228ef404389f9fd9a36561f5, type: 2}
+    m_SourceInputRequestId: Attack
+    m_ConsumeSourceInputRequest: 1
+    m_TargetInputValueId: ActionTarget
+    m_TargetKey: 
+  - m_SkillId: Attack3
+    m_EntryGraphAuthoringId: 451f8513-596d-416c-a685-fff57e9fe51f
+    m_ActionProfile: {fileID: 11400000, guid: 450722665af79c2468ff212811859458, type: 2}
+    m_ActionContext: {fileID: 11400000, guid: 2639a9c0228ef404389f9fd9a36561f5, type: 2}
+    m_SourceInputRequestId: Attack
+    m_ConsumeSourceInputRequest: 1
+    m_TargetInputValueId: ActionTarget
+    m_TargetKey: 
+  - m_SkillId: Attack4
+    m_EntryGraphAuthoringId: 87cc7381-11cd-4631-a1b1-99114073ede9
+    m_ActionProfile: {fileID: 11400000, guid: 450722665af79c2468ff212811859458, type: 2}
+    m_ActionContext: {fileID: 11400000, guid: 2639a9c0228ef404389f9fd9a36561f5, type: 2}
+    m_SourceInputRequestId: Attack
+    m_ConsumeSourceInputRequest: 1
+    m_TargetInputValueId: ActionTarget
+    m_TargetKey: 
+  - m_SkillId: Attack5
+    m_EntryGraphAuthoringId: 3dfd9a99-a63f-4df6-9689-b9b9789e2171
+    m_ActionProfile: {fileID: 11400000, guid: 450722665af79c2468ff212811859458, type: 2}
+    m_ActionContext: {fileID: 11400000, guid: 2639a9c0228ef404389f9fd9a36561f5, type: 2}
+    m_SourceInputRequestId: Attack
+    m_ConsumeSourceInputRequest: 1
+    m_TargetInputValueId: ActionTarget
+    m_TargetKey: 
+  - m_SkillId: DodgeBack
+    m_EntryGraphAuthoringId: ee909991-5be0-4961-838a-a2854baca30d
+    m_ActionProfile: {fileID: 11400000, guid: add8a25636588a543a6770231bea14b6, type: 2}
+    m_ActionContext: {fileID: 11400000, guid: 7294b270a227b32429a8159cdbfd96b3, type: 2}
+    m_SourceInputRequestId: Dodge
+    m_ConsumeSourceInputRequest: 1
+    m_TargetInputValueId: 
+    m_TargetKey: 
+  - m_SkillId: DodgeForward
+    m_EntryGraphAuthoringId: b2328afd-40a8-467d-91f8-784c461f6137
+    m_ActionProfile: {fileID: 11400000, guid: add8a25636588a543a6770231bea14b6, type: 2}
+    m_ActionContext: {fileID: 11400000, guid: 7294b270a227b32429a8159cdbfd96b3, type: 2}
+    m_SourceInputRequestId: Dodge
+    m_ConsumeSourceInputRequest: 1
+    m_TargetInputValueId: 
+    m_TargetKey: 
   m_SimulationTickRate: 60
   m_SimulationProgram: {fileID: 11400000, guid: 5740a6cfbfb0fe542ad6a6cb66fe1a80,
     type: 2}

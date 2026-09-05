@@ -1,5 +1,7 @@
 using System;
 using System.Collections.Generic;
+using BTSMTL.Timeline;
+using ThirdPersonCharacter.Control.Authoring;
 using ThirdPersonCharacter.ActionSystem;
 using ThirdPersonCharacter.Behavior;
 using ThirdPersonCharacter.Equipment;
@@ -20,7 +22,8 @@ namespace ThirdPersonCharacter.Pipeline
     public sealed partial class CharacterPipelineDefinition : ScriptableObject
     {
         [SerializeField] BaseTreeAsset m_RootTreeAsset;
-        [SerializeField] string m_ControlModuleId = "character.corin.control";
+        [SerializeField] string m_ControlModuleId;
+        [SerializeField] CharacterSkillAuthoringDefinition[] m_SkillDefinitions = Array.Empty<CharacterSkillAuthoringDefinition>();
         [SerializeField, Min(1)] int m_SimulationTickRate = GameplayTickSettings.DefaultLocalLogicTickRate;
         [SerializeField] CharacterSimulationProgramAsset m_SimulationProgram;
         [SerializeField] CharacterPresentationProjectionAsset m_PresentationProjection;
@@ -38,6 +41,8 @@ namespace ThirdPersonCharacter.Pipeline
         public string ControlModuleId => string.IsNullOrWhiteSpace(m_ControlModuleId)
             ? string.Empty
             : m_ControlModuleId.Trim();
+        public IReadOnlyList<CharacterSkillAuthoringDefinition> SkillDefinitions =>
+            m_SkillDefinitions ?? Array.Empty<CharacterSkillAuthoringDefinition>();
         public int SimulationTickRate => Math.Max(1, m_SimulationTickRate);
         public CharacterSimulationProgramAsset SimulationProgram => m_SimulationProgram;
         public CharacterPresentationProjectionAsset PresentationProjection => m_PresentationProjection;
@@ -125,6 +130,42 @@ namespace ThirdPersonCharacter.Pipeline
             {
                 errors?.Add($"{name}: control module id is missing.");
                 valid = false;
+            }
+            HashSet<string> skillIds = new HashSet<string>(StringComparer.Ordinal);
+            if (SkillDefinitions.Count == 0)
+            {
+                errors?.Add($"{name}: skill definition list is missing.");
+                valid = false;
+            }
+            for (int i = 0; i < SkillDefinitions.Count; i++)
+            {
+                CharacterSkillAuthoringDefinition skill = SkillDefinitions[i];
+                if (skill == null)
+                {
+                    errors?.Add($"{name}: skill definition #{i} is missing.");
+                    valid = false;
+                    continue;
+                }
+                if (string.IsNullOrEmpty(skill.SkillId) || !skillIds.Add(skill.SkillId))
+                {
+                    errors?.Add($"{name}: skill definition '{skill.SkillId}' is missing or duplicated.");
+                    valid = false;
+                }
+                if (string.IsNullOrEmpty(skill.EntryGraphAuthoringId))
+                {
+                    errors?.Add($"{name}: skill '{skill.SkillId}' entry graph identity is missing.");
+                    valid = false;
+                }
+                if (!skill.ActionProfile)
+                {
+                    errors?.Add($"{name}: skill '{skill.SkillId}' ActionProfile is missing.");
+                    valid = false;
+                }
+                if (!skill.ActionContext)
+                {
+                    errors?.Add($"{name}: skill '{skill.SkillId}' ActionContext is missing.");
+                    valid = false;
+                }
             }
             IReadOnlyList<ActionProfile> profiles = ActionProfiles;
             IReadOnlyList<GameplayBehaviorProfile> behaviorProfiles = BehaviorProfiles;

@@ -256,6 +256,11 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 fields.Add(ConstantField(source, $"Motion:{motion.Binding}:TurnSpeedDegrees", motion.TurnSpeedDegrees));
                 fields.Add(ConstantField(source, $"Motion:{motion.Binding}:ExecutionMode", motion.ExecutionMode));
                 fields.Add(ConstantField(source, $"Motion:{motion.Binding}:DurationSeconds", motion.DurationSeconds));
+                fields.Add(IdentityField($"Motion:{motion.Binding}:SourceMotion", motion.SourceMotionIdentity));
+                fields.Add(ConstantField(source, $"Motion:{motion.Binding}:DisplacementMode", motion.DisplacementMode));
+                fields.Add(ConstantField(source, $"Motion:{motion.Binding}:Space", motion.Space));
+                fields.Add(ConstantField(source, $"Motion:{motion.Binding}:Priority", motion.Priority));
+                fields.Add(ConstantField(source, $"Motion:{motion.Binding}:ConsumeLowerChannels", motion.ConsumeLowerChannels));
             }
             int catalog = DeclareCatalogEntry(
                 ProgramCatalogEntryKind.ControlModule,

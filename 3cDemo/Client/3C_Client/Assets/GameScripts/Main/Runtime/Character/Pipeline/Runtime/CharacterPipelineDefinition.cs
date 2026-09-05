@@ -21,6 +21,7 @@ namespace ThirdPersonCharacter.Pipeline
     public sealed partial class CharacterPipelineDefinition : ScriptableObject
     {
         [SerializeField] BaseTreeAsset m_RootTreeAsset;
+        [SerializeField] string m_ControlModuleId = "character.corin.control";
         [SerializeField, Min(1)] int m_SimulationTickRate = GameplayTickSettings.DefaultLocalLogicTickRate;
         [SerializeField] CharacterSimulationProgramAsset m_SimulationProgram;
         [SerializeField] CharacterPresentationProjectionAsset m_PresentationProjection;
@@ -36,6 +37,9 @@ namespace ThirdPersonCharacter.Pipeline
         [SerializeField] GameplayBehaviorProfile[] m_BehaviorProfiles = Array.Empty<GameplayBehaviorProfile>();
 
         public BaseTreeAsset RootTreeAsset => m_RootTreeAsset;
+        public string ControlModuleId => string.IsNullOrWhiteSpace(m_ControlModuleId)
+            ? string.Empty
+            : m_ControlModuleId.Trim();
         public int SimulationTickRate => Math.Max(1, m_SimulationTickRate);
         public CharacterSimulationProgramAsset SimulationProgram => m_SimulationProgram;
         public CharacterPresentationProjectionAsset PresentationProjection => m_PresentationProjection;
@@ -120,6 +124,11 @@ namespace ThirdPersonCharacter.Pipeline
         public bool CollectConfigurationErrors(List<string> errors)
         {
             bool valid = true;
+            if (string.IsNullOrEmpty(ControlModuleId))
+            {
+                errors?.Add($"{name}: control module id is missing.");
+                valid = false;
+            }
             IReadOnlyList<ActionProfile> profiles = ActionProfiles;
             IReadOnlyList<GameplayBehaviorProfile> behaviorProfiles = BehaviorProfiles;
             if (profiles.Count == 0)

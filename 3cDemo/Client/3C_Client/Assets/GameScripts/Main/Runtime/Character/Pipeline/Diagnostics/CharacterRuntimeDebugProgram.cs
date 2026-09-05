@@ -219,6 +219,9 @@ namespace ThirdPersonCharacter.Pipeline.Diagnostics
                 ProgramSourceTargetKind.Producer => RuntimeSourceTargetKind.Producer,
                 ProgramSourceTargetKind.CatalogEntry => RuntimeSourceTargetKind.CatalogEntry,
                 ProgramSourceTargetKind.BodyMotion => RuntimeSourceTargetKind.BodyMotion,
+                ProgramSourceTargetKind.ControlModule => RuntimeSourceTargetKind.ControlModule,
+                ProgramSourceTargetKind.ControlState => RuntimeSourceTargetKind.ControlState,
+                ProgramSourceTargetKind.ControlTransition => RuntimeSourceTargetKind.ControlTransition,
                 _ => throw new ArgumentOutOfRangeException(nameof(source.TargetKind))
             };
             return new RuntimeSourceTarget(kind, source.TargetIndex);

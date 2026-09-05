@@ -22,7 +22,9 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
             var bindings = new ThirdPersonSimulation.Fixed.SimulationActorBinding[registrations.Count];
             for (int i = 0; i < registrations.Count; i++)
                 bindings[i] = registrations[i].ProgramIdentity;
-            return FixedProgramRuntime.Create(bindings);
+            return FixedProgramRuntime.Create(
+                bindings,
+                ThirdPersonCharacter.Pipeline.Simulation.CorinCharacterControlModuleCatalog.Create());
         }
     }
 }

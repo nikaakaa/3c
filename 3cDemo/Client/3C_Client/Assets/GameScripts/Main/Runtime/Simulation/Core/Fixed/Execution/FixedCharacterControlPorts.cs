@@ -8,16 +8,22 @@ namespace ThirdPersonSimulation.Fixed
         readonly FixedInputRuntime m_Input;
         readonly FixedEvaluationFrame m_Frame;
         readonly Func<CharacterControlParameterId, FixedScalar> m_ReadParameter;
+        readonly Func<CharacterSkillId, bool> m_IsSkillActive;
 
         public FixedCharacterControlReadPort(
             FixedInputRuntime input,
             FixedEvaluationFrame frame,
-            Func<CharacterControlParameterId, FixedScalar> readParameter)
+            Func<CharacterControlParameterId, FixedScalar> readParameter,
+            Func<CharacterSkillId, bool> isSkillActive)
         {
             m_Input = input ?? throw new ArgumentNullException(nameof(input));
             m_Frame = frame ?? throw new ArgumentNullException(nameof(frame));
             m_ReadParameter = readParameter ?? throw new ArgumentNullException(nameof(readParameter));
+            m_IsSkillActive = isSkillActive ?? throw new ArgumentNullException(nameof(isSkillActive));
         }
+
+        public bool HasInputRequest(string requestId) => m_Input.HasRequest(requestId, out _);
+        public bool IsSkillActive(CharacterSkillId skillId) => m_IsSkillActive(skillId);
 
         public bool CompareInputVector2Magnitude(
             SimulationInputValueId input,
@@ -38,6 +44,15 @@ namespace ThirdPersonSimulation.Fixed
                 ? FixedScalar.Zero
                 : FixedScalar.Abs(FixedAngle.Delta(m_Frame.Body.Yaw, FixedAngle.FromPlanarDirection(value)));
             return Compare(angle, m_ReadParameter(threshold), comparison);
+        }
+
+        public bool IsInputDirectionBehindBodyYaw(SimulationInputValueId input)
+        {
+            FixedVector2 value = m_Input.ReadValue(input.Value, SimulationInputValueKind.Vector2).Vector2;
+            if (value == FixedVector2.Zero)
+                return false;
+            FixedScalar angle = FixedScalar.Abs(FixedAngle.Delta(m_Frame.Body.Yaw, FixedAngle.FromPlanarDirection(value)));
+            return angle >= FixedScalar.FromInt64(90);
         }
 
         static bool Compare(
@@ -90,10 +105,22 @@ namespace ThirdPersonSimulation.Fixed
             return string.IsNullOrEmpty(value) ? default : new CharacterControlTransitionId(value);
         }
 
+        public bool ReadBoolean(CharacterControlStateFieldId field)
+        {
+            RequireKind(field, ProgramStateValueKind.Boolean);
+            return m_State.Get(m_Layout.RequireSlot(field)).Boolean;
+        }
+
         public void WriteTransition(CharacterControlStateFieldId field, CharacterControlTransitionId value)
         {
             RequireKind(field, ProgramStateValueKind.Identity);
             m_State.Set(m_Layout.RequireSlot(field), CharacterStateValue.FromIdentity(value.Value));
+        }
+
+        public void WriteBoolean(CharacterControlStateFieldId field, bool value)
+        {
+            RequireKind(field, ProgramStateValueKind.Boolean);
+            m_State.Set(m_Layout.RequireSlot(field), CharacterStateValue.FromBoolean(value));
         }
 
         public int ReadInt32(CharacterControlStateFieldId field)

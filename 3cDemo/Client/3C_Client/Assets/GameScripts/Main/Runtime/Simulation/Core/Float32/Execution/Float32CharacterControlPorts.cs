@@ -4,21 +4,27 @@ namespace ThirdPersonSimulation
 {
     internal sealed class Float32CharacterControlReadPort : ICharacterControlReadPort
     {
-        readonly Float32InputRuntime m_Input;
-        readonly Float32EvaluationFrame m_Frame;
-        readonly Func<CharacterControlParameterId, Float32Scalar> m_ReadParameter;
+		readonly Float32InputRuntime m_Input;
+		readonly Float32EvaluationFrame m_Frame;
+		readonly Func<CharacterControlParameterId, Float32Scalar> m_ReadParameter;
+		readonly Func<CharacterSkillId, bool> m_IsSkillActive;
 
         public Float32CharacterControlReadPort(
-            Float32InputRuntime input,
-            Float32EvaluationFrame frame,
-            Func<CharacterControlParameterId, Float32Scalar> readParameter)
-        {
-            m_Input = input ?? throw new ArgumentNullException(nameof(input));
-            m_Frame = frame ?? throw new ArgumentNullException(nameof(frame));
-            m_ReadParameter = readParameter ?? throw new ArgumentNullException(nameof(readParameter));
-        }
+			Float32InputRuntime input,
+			Float32EvaluationFrame frame,
+			Func<CharacterControlParameterId, Float32Scalar> readParameter,
+			Func<CharacterSkillId, bool> isSkillActive)
+		{
+			m_Input = input ?? throw new ArgumentNullException(nameof(input));
+			m_Frame = frame ?? throw new ArgumentNullException(nameof(frame));
+			m_ReadParameter = readParameter ?? throw new ArgumentNullException(nameof(readParameter));
+			m_IsSkillActive = isSkillActive ?? throw new ArgumentNullException(nameof(isSkillActive));
+		}
 
-        public bool CompareInputVector2Magnitude(
+		public bool HasInputRequest(string requestId) => m_Input.HasRequest(requestId, out _);
+		public bool IsSkillActive(CharacterSkillId skillId) => m_IsSkillActive(skillId);
+
+		public bool CompareInputVector2Magnitude(
             SimulationInputValueId input,
             CharacterControlParameterId threshold,
             CharacterControlNumericComparison comparison)
@@ -27,17 +33,26 @@ namespace ThirdPersonSimulation
             return Compare(value.Magnitude, m_ReadParameter(threshold), comparison);
         }
 
-        public bool CompareInputDirectionToBodyYaw(
-            SimulationInputValueId input,
-            CharacterControlParameterId threshold,
-            CharacterControlNumericComparison comparison)
+		public bool CompareInputDirectionToBodyYaw(
+			SimulationInputValueId input,
+			CharacterControlParameterId threshold,
+			CharacterControlNumericComparison comparison)
         {
             Float32Vector2 value = m_Input.ReadValue(input.Value, SimulationInputValueKind.Vector2).Vector2;
             Float32Scalar angle = value == Float32Vector2.Zero
                 ? Float32Scalar.Zero
                 : Float32Scalar.Abs(Float32Angle.Delta(m_Frame.Body.Yaw, Float32Angle.FromPlanarDirection(value)));
-            return Compare(angle, m_ReadParameter(threshold), comparison);
-        }
+			return Compare(angle, m_ReadParameter(threshold), comparison);
+		}
+
+		public bool IsInputDirectionBehindBodyYaw(SimulationInputValueId input)
+		{
+			Float32Vector2 value = m_Input.ReadValue(input.Value, SimulationInputValueKind.Vector2).Vector2;
+			if (value == Float32Vector2.Zero)
+				return false;
+			Float32Scalar angle = Float32Scalar.Abs(Float32Angle.Delta(m_Frame.Body.Yaw, Float32Angle.FromPlanarDirection(value)));
+			return angle >= Float32Scalar.FromInt64(90);
+		}
 
         static bool Compare(
             Float32Scalar value,
@@ -89,10 +104,22 @@ namespace ThirdPersonSimulation
             return string.IsNullOrEmpty(value) ? default : new CharacterControlTransitionId(value);
         }
 
+        public bool ReadBoolean(CharacterControlStateFieldId field)
+        {
+            RequireKind(field, ProgramStateValueKind.Boolean);
+            return m_State.Get(m_Layout.RequireSlot(field)).Boolean;
+        }
+
         public void WriteTransition(CharacterControlStateFieldId field, CharacterControlTransitionId value)
         {
             RequireKind(field, ProgramStateValueKind.Identity);
             m_State.Set(m_Layout.RequireSlot(field), CharacterStateValue.FromIdentity(value.Value));
+        }
+
+        public void WriteBoolean(CharacterControlStateFieldId field, bool value)
+        {
+            RequireKind(field, ProgramStateValueKind.Boolean);
+            m_State.Set(m_Layout.RequireSlot(field), CharacterStateValue.FromBoolean(value));
         }
 
         public int ReadInt32(CharacterControlStateFieldId field)

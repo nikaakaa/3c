@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.IO;
 
 namespace ThirdPersonSimulation
 {
@@ -55,7 +56,11 @@ namespace ThirdPersonSimulation
             string entryIdentity,
             CharacterSkillEntrySignature entrySignature,
             IEnumerable<CharacterSkillDependency> dependencies,
-            IEnumerable<CharacterSkillId> allowedFollowUps)
+            IEnumerable<CharacterSkillId> allowedFollowUps,
+            string sourceInputRequestId = "",
+            bool consumeSourceInputRequest = true,
+            string targetInputValueId = "",
+            string targetKey = "")
         {
             if (!skillId.IsValid)
                 throw new ArgumentException("Character skill identity is invalid.", nameof(skillId));
@@ -63,6 +68,10 @@ namespace ThirdPersonSimulation
             ActionProfileId = SimulationIdentity.Require(actionProfileId, nameof(actionProfileId));
             EntryIdentity = SimulationIdentity.Require(entryIdentity, nameof(entryIdentity));
             EntrySignature = entrySignature ?? throw new ArgumentNullException(nameof(entrySignature));
+            SourceInputRequestId = sourceInputRequestId ?? string.Empty;
+            TargetInputValueId = targetInputValueId ?? string.Empty;
+            TargetKey = targetKey ?? string.Empty;
+            ConsumeSourceInputRequest = consumeSourceInputRequest;
             m_Dependencies = FreezeDependencies(dependencies);
             m_AllowedFollowUps = FreezeFollowUps(skillId, allowedFollowUps);
         }
@@ -71,6 +80,10 @@ namespace ThirdPersonSimulation
         public string ActionProfileId { get; }
         public string EntryIdentity { get; }
         public CharacterSkillEntrySignature EntrySignature { get; }
+        public string SourceInputRequestId { get; }
+        public bool ConsumeSourceInputRequest { get; }
+        public string TargetInputValueId { get; }
+        public string TargetKey { get; }
         public IReadOnlyList<CharacterSkillDependency> Dependencies => m_Dependencies;
         public IReadOnlyList<CharacterSkillId> AllowedFollowUps => m_AllowedFollowUps;
 
@@ -111,6 +124,156 @@ namespace ThirdPersonSimulation
             }
             values.Sort();
             return values.AsReadOnly();
+        }
+    }
+
+    public sealed class CharacterSkillProgramBinding
+    {
+        public CharacterSkillProgramBinding(
+            CharacterSkillId skillId,
+            string actionProfileId,
+            string entryIdentity,
+            OperationHandle entryOperation,
+            string actionContextId,
+            string sourceInputRequestId,
+            bool consumeSourceInputRequest,
+            string targetInputValueId,
+            string targetKey)
+        {
+            if (!skillId.IsValid || !entryOperation.IsValid)
+                throw new ArgumentException("Character SkillProgram binding is incomplete.");
+            SkillId = skillId;
+            ActionProfileId = SimulationIdentity.Require(actionProfileId, nameof(actionProfileId));
+            EntryIdentity = SimulationIdentity.Require(entryIdentity, nameof(entryIdentity));
+            EntryOperation = entryOperation;
+            ActionContextId = SimulationIdentity.Require(actionContextId, nameof(actionContextId));
+            SourceInputRequestId = sourceInputRequestId ?? string.Empty;
+            ConsumeSourceInputRequest = consumeSourceInputRequest;
+            TargetInputValueId = targetInputValueId ?? string.Empty;
+            TargetKey = targetKey ?? string.Empty;
+        }
+
+        public CharacterSkillId SkillId { get; }
+        public string ActionProfileId { get; }
+        public string EntryIdentity { get; }
+        public OperationHandle EntryOperation { get; }
+        public string ActionContextId { get; }
+        public string SourceInputRequestId { get; }
+        public bool ConsumeSourceInputRequest { get; }
+        public string TargetInputValueId { get; }
+        public string TargetKey { get; }
+    }
+
+    public sealed class CharacterSkillProgramCatalog
+    {
+        readonly ReadOnlyCollection<CharacterSkillProgramBinding> m_Bindings;
+
+        public CharacterSkillProgramCatalog(
+            IReadOnlyList<ProgramCatalogEntry> entries,
+            IReadOnlyList<ProgramReference> references)
+        {
+            if (entries == null)
+                throw new ArgumentNullException(nameof(entries));
+            if (references == null)
+                throw new ArgumentNullException(nameof(references));
+            var values = new List<CharacterSkillProgramBinding>();
+            for (int i = 0; i < entries.Count; i++)
+            {
+                ProgramCatalogEntry entry = entries[i];
+                if (entry.Kind != ProgramCatalogEntryKind.SkillProgram)
+                    continue;
+                OperationHandle operation = OperationHandle.Invalid;
+                for (int referenceIndex = 0; referenceIndex < references.Count; referenceIndex++)
+                {
+                    ProgramReference reference = references[referenceIndex];
+                    if (reference.Kind != ProgramReferenceKind.CatalogEntry ||
+                        reference.TargetIndex != entry.Index || !reference.SourceOperation.IsValid)
+                        continue;
+                    if (operation.IsValid)
+                        throw new InvalidDataException($"SkillProgram '{entry.Identity}' has multiple entry operations.");
+                    operation = reference.SourceOperation;
+                }
+                if (!operation.IsValid)
+                    throw new InvalidDataException($"SkillProgram '{entry.Identity}' has no entry operation reference.");
+                string skillValue = RequirePrefix(entry.Identity, "skill:");
+                values.Add(new CharacterSkillProgramBinding(
+                    new CharacterSkillId(skillValue),
+                    RequireIdentity(entry, "ActionProfile", "action:"),
+                    RequireIdentity(entry, "EntryIdentity", null),
+                    operation,
+                    RequireIdentity(entry, "ActionContext", null),
+                    OptionalIdentity(entry, "SourceInputRequest", null),
+                    OptionalBoolean(entry, "ConsumeSourceInputRequest", true),
+                    OptionalIdentity(entry, "TargetInputValue", null),
+                    OptionalIdentity(entry, "TargetKey", null)));
+            }
+            values.Sort((left, right) => left.SkillId.CompareTo(right.SkillId));
+            for (int i = 1; i < values.Count; i++)
+            {
+                if (values[i - 1].SkillId == values[i].SkillId)
+                    throw new InvalidDataException($"SkillProgram '{values[i].SkillId}' is duplicated.");
+            }
+            m_Bindings = values.AsReadOnly();
+        }
+
+        public IReadOnlyList<CharacterSkillProgramBinding> Bindings => m_Bindings;
+
+        public CharacterSkillProgramBinding Require(CharacterSkillId skillId)
+        {
+            for (int i = 0; i < m_Bindings.Count; i++)
+            {
+                if (m_Bindings[i].SkillId == skillId)
+                    return m_Bindings[i];
+            }
+            throw new InvalidOperationException($"SkillProgram '{skillId}' is absent from the Program catalog.");
+        }
+
+        static string RequirePrefix(string value, string prefix)
+        {
+            if (value == null || !value.StartsWith(prefix, StringComparison.Ordinal))
+                throw new InvalidDataException($"SkillProgram identity '{value}' has no '{prefix}' prefix.");
+            return SimulationIdentity.Require(value.Substring(prefix.Length), nameof(value));
+        }
+
+        static string RequireIdentity(ProgramCatalogEntry entry, string name, string prefix)
+        {
+            string value = OptionalIdentity(entry, name, prefix);
+            return value.Length == 0
+                ? throw new InvalidDataException($"SkillProgram '{entry.Identity}' has no '{name}' field.")
+                : value;
+        }
+
+        static string OptionalIdentity(ProgramCatalogEntry entry, string name, string prefix)
+        {
+            for (int i = 0; i < entry.Fields.Count; i++)
+            {
+                ProgramCatalogField field = entry.Fields[i];
+                if (!string.Equals(field.Name, name, StringComparison.Ordinal))
+                    continue;
+                if (field.Kind != ProgramCatalogFieldKind.Identity)
+                    throw new InvalidDataException($"SkillProgram '{entry.Identity}' field '{name}' is not an identity.");
+                if (string.IsNullOrEmpty(field.Identity))
+                    return string.Empty;
+                if (prefix != null)
+                    return RequirePrefix(field.Identity, prefix);
+                return field.Identity;
+            }
+            return string.Empty;
+        }
+
+        static bool OptionalBoolean(ProgramCatalogEntry entry, string name, bool defaultValue)
+        {
+            for (int i = 0; i < entry.Fields.Count; i++)
+            {
+                ProgramCatalogField field = entry.Fields[i];
+                if (!string.Equals(field.Name, name, StringComparison.Ordinal))
+                    continue;
+                if (field.Kind != ProgramCatalogFieldKind.Identity ||
+                    !bool.TryParse(field.Identity, out bool value))
+                    throw new InvalidDataException($"SkillProgram '{entry.Identity}' field '{name}' is not a Boolean identity.");
+                return value;
+            }
+            return defaultValue;
         }
     }
 

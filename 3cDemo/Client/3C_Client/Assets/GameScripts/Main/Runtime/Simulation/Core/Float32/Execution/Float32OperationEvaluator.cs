@@ -384,17 +384,24 @@ namespace ThirdPersonSimulation
         readonly Float32EquipmentRuntime m_Equipment;
         readonly Float32InputRuntime m_Input;
         readonly Float32ValueRuntime m_Values;
-        readonly TimelineControlRuntime<Float32OperationTarget, Float32Scalar> m_Timeline;
-        readonly Float32MotionAccumulator m_Motion;
-        readonly OperationControlRuntime<Float32OperationTarget> m_Control;
+		readonly TimelineControlRuntime<Float32OperationTarget, Float32Scalar> m_Timeline;
+		readonly Float32MotionAccumulator m_Motion;
+		readonly OperationControlRuntime<Float32OperationTarget> m_Control;
+		readonly CharacterControlStateMachineRuntime m_CharacterControl;
+		readonly Float32CharacterControlReadPort m_CharacterControlRead;
+		readonly ICharacterControlStatePort m_CharacterControlState;
+		readonly Float32CharacterControlOutputPort m_CharacterControlOutput;
 
         public Float32OperationEvaluator(
-            CharacterSimulationProgram program,
-            ProgramExecutionLayout layout,
-            ActorId actorId,
-            Float32EvaluationWorkspace workspace)
-        {
-            m_Frame = new Float32EvaluationFrame(program, layout, actorId, workspace);
+			CharacterSimulationProgram program,
+			ProgramExecutionLayout layout,
+			ActorId actorId,
+			Float32EvaluationWorkspace workspace,
+			CharacterControlModuleCatalog controlModules)
+		{
+			if (controlModules == null)
+				throw new ArgumentNullException(nameof(controlModules));
+			m_Frame = new Float32EvaluationFrame(program, layout, actorId, workspace);
             Float32ProgramExecutionServices services = m_Frame.Services;
             Float32ProgramAccess access = services.Access;
             var controlState = new Float32ControlStateAccess(
@@ -466,6 +473,24 @@ namespace ThirdPersonSimulation
                 workspace.MotionContributions,
                 workspace.MotionWarpSamples);
             var locomotion = new Float32LocomotionRuntime(access, m_Values, m_Motion, m_Frame);
+            if (program.ControlModuleBinding.IsValid)
+            {
+                ICharacterControlModule module = controlModules.Require(program.ControlModuleBinding);
+                Float32StatePort characterControlState = m_Frame.CreateStatePort("CharacterControl", services.ControlPolicy);
+                CharacterControlStateLayout characterControlLayout = layout.CreateControlStateLayout(module.Contract);
+                m_CharacterControl = new CharacterControlStateMachineRuntime(module);
+                m_CharacterControlRead = new Float32CharacterControlReadPort(
+                    m_Input,
+                    m_Frame,
+                    parameter => Float32Scalar.FromDouble(RequireControlParameter(module.Contract, parameter).NumericValue),
+                    skill => m_Actions.IsContextActive(m_Frame.Program.SkillPrograms.Require(skill).ActionContextId));
+                m_CharacterControlState = new Float32CharacterControlStatePort(characterControlState, characterControlLayout);
+                m_CharacterControlOutput = new Float32CharacterControlOutputPort(
+                    module.Contract,
+                    m_Input,
+                    locomotion,
+                    m_Actions);
+            }
             var camera = new Float32CameraOperationRuntime(access, actionStore, m_Frame.Presentation);
             Float32StatePort timelineState = m_Frame.CreateStatePort("Timeline", services.TimelinePolicy);
             var timelineControlState = new Float32TimelineControlStatePort(access, timelineState);
@@ -529,9 +554,11 @@ namespace ThirdPersonSimulation
                 SetupOperation();
                 ApplyIngress();
                 AdvanceGameplayEffects();
-                ApplyInputRequests();
-                PrepareTimelineDecision();
-                TickOperationControl();
+				ApplyInputRequests();
+				PrepareTimelineDecision();
+				TickCharacterControl();
+				TickSkillPrograms();
+				TickOperationControl();
                 m_Equipment.EndEvaluation();
                 ResolvedGameplayMotion motion = ResolveMotion();
                 FinalizeBlackboard();
@@ -593,10 +620,59 @@ namespace ThirdPersonSimulation
         }
 
         [PerformanceProbe("simulation.operation.control-tick")]
-        void TickOperationControl()
-        {
-            m_Control.Tick(m_Frame.Layout.RootOperation);
-        }
+		void TickOperationControl()
+		{
+			if (m_CharacterControl == null)
+				m_Control.Tick(m_Frame.Layout.RootOperation);
+		}
+
+		[PerformanceProbe("simulation.operation.character-control-tick")]
+		void TickCharacterControl()
+		{
+			if (m_CharacterControl == null)
+				return;
+			var context = new CharacterControlTickContext(
+				m_Frame.ActorId,
+				m_Frame.Tick,
+				m_Frame.Program.Manifest.TickRate);
+			m_CharacterControl.Tick(
+				in context,
+				m_CharacterControlRead,
+				m_CharacterControlState,
+				m_CharacterControlOutput);
+		}
+
+		[PerformanceProbe("simulation.operation.skill-program-tick")]
+		void TickSkillPrograms()
+		{
+			if (m_CharacterControl == null)
+				return;
+			IReadOnlyList<CharacterSkillProgramBinding> skills = m_Frame.Program.SkillPrograms.Bindings;
+			for (int i = 0; i < skills.Count; i++)
+			{
+				CharacterSkillProgramBinding skill = skills[i];
+				bool actionActive = m_Actions.IsContextActive(skill.ActionContextId);
+				if (!actionActive)
+				{
+					if (m_Control.IsActive(skill.EntryOperation))
+						m_Control.RequestStop(skill.EntryOperation, OperationStopContext.ActionContextEnded(skill.EntryOperation));
+					continue;
+				}
+				m_Control.Tick(skill.EntryOperation);
+			}
+		}
+
+		static CharacterControlParameterDescriptor RequireControlParameter(
+			CharacterControlModuleContract contract,
+			CharacterControlParameterId parameter)
+		{
+			for (int i = 0; i < contract.Parameters.Count; i++)
+			{
+				if (contract.Parameters[i].Id == parameter)
+					return contract.Parameters[i];
+			}
+			throw new InvalidOperationException($"Character control parameter '{parameter}' is absent from module '{contract.ModuleId}'.");
+		}
 
         [PerformanceProbe("simulation.operation.motion-resolve")]
         ResolvedGameplayMotion ResolveMotion()

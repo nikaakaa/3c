@@ -112,18 +112,23 @@ namespace ThirdPersonSimulation
         readonly HashSet<KernelProgramBinding> m_BoundPrograms = new HashSet<KernelProgramBinding>();
         readonly Dictionary<ActorId, ActorEvaluator> m_Evaluators =
             new Dictionary<ActorId, ActorEvaluator>();
+        readonly CharacterControlModuleCatalog m_ControlModules;
         bool m_ProgramBindingsSealed;
 
-        SimulationKernel(SimulationKernelSpecializationManifest specialization)
+        SimulationKernel(
+            SimulationKernelSpecializationManifest specialization,
+            CharacterControlModuleCatalog controlModules)
         {
             Specialization = specialization ?? throw new ArgumentNullException(nameof(specialization));
+            m_ControlModules = controlModules ?? throw new ArgumentNullException(nameof(controlModules));
             if (specialization.NumericProfile != Float32SimulationNumericProfile.Value)
                 throw new InvalidOperationException("This assembly installs only the Float32 Kernel specialization.");
         }
 
         public SimulationKernelSpecializationManifest Specialization { get; }
         public static SimulationKernelSpecializationManifest SpecializationManifest => s_Float32;
-        public static SimulationKernel CreateFloat32() => new SimulationKernel(s_Float32);
+        public static SimulationKernel CreateFloat32(CharacterControlModuleCatalog controlModules) =>
+            new SimulationKernel(s_Float32, controlModules);
 
         internal void BindPrograms(IReadOnlyList<KernelProgramBinding> bindings)
         {
@@ -246,7 +251,7 @@ namespace ThirdPersonSimulation
                 if (!m_Evaluators.TryGetValue(request.ActorId, out ActorEvaluator evaluator) ||
                     !evaluator.Evaluator.Matches(request))
                 {
-                    evaluator = new ActorEvaluator(request);
+                    evaluator = new ActorEvaluator(request, m_ControlModules);
                     m_Evaluators[request.ActorId] = evaluator;
                 }
                 return evaluator;
@@ -255,14 +260,17 @@ namespace ThirdPersonSimulation
 
         sealed class ActorEvaluator
         {
-            public ActorEvaluator(SimulationEvaluateRequest request)
+            public ActorEvaluator(
+                SimulationEvaluateRequest request,
+                CharacterControlModuleCatalog controlModules)
             {
                 Workspace = new Float32EvaluationWorkspace(request.ExecutionLayout);
                 Evaluator = new Float32OperationEvaluator(
                     request.Program,
                     request.ExecutionLayout,
                     request.ActorId,
-                    Workspace);
+                    Workspace,
+                    controlModules);
             }
 
             public Float32EvaluationWorkspace Workspace { get; }

@@ -1146,6 +1146,70 @@ namespace ThirdPersonSimulation
                 locomotionTimeline));
         }
 
+        public void SubmitControl(
+            Float32InputRuntime input,
+            CharacterControlMotionRequest request,
+            CharacterControlMotionDescriptor descriptor)
+        {
+            if (input == null)
+                throw new ArgumentNullException(nameof(input));
+            if (request.Input != descriptor.Input || !string.Equals(request.Binding, descriptor.Binding, StringComparison.Ordinal))
+                throw new InvalidOperationException($"Control motion request '{request.Binding}' does not match its declared motion.");
+            Float32Vector2 move = input.ReadValue(request.Input.Value, SimulationInputValueKind.Vector2).Vector2;
+            if (move.SqrMagnitude > Float32Scalar.One)
+                move = move.Normalized;
+            Float32Scalar delta = Float32Scalar.One / Float32Scalar.FromInt64(m_Program.Manifest.TickRate);
+            Float32Scalar moveSpeed = Float32Scalar.FromDouble(descriptor.MoveSpeed);
+            Float32Scalar turnSpeed = Float32Scalar.FromDouble(descriptor.TurnSpeedDegrees);
+            Float32Scalar maxYaw = turnSpeed * delta;
+            Float32Vector3 displacement = new Float32Vector3(
+                move.X * moveSpeed * delta,
+                Float32Scalar.Zero,
+                move.Y * moveSpeed * delta);
+            Float32Scalar yaw = Float32Scalar.Zero;
+            if (move != Float32Vector2.Zero && maxYaw > Float32Scalar.Zero)
+            {
+                Float32Yaw desired = Float32Angle.FromPlanarDirection(move);
+                yaw = Float32Scalar.Clamp(Float32Angle.Delta(m_Frame.Body.Yaw, desired), -maxYaw, maxYaw);
+            }
+            int continuousTicks = checked(request.ContinuousTicks + 1);
+            int durationTicks = descriptor.ExecutionMode == CharacterControlMotionExecutionMode.Timed
+                ? checked((int)Math.Ceiling(descriptor.DurationSeconds * m_Program.Manifest.TickRate))
+                : 0;
+            var movementPlaybackClock = new CommittedMovementPlaybackClock(
+                request.Source.Identity,
+                1,
+                m_Frame.Tick,
+                continuousTicks,
+                m_Program.Manifest.TickRate);
+            var locomotionTimeline = new CommittedLocomotionPlanarMotionTimeline(
+                request.Source.Identity,
+                1,
+                m_Frame.Tick,
+                m_Program.Manifest.TickRate,
+                (displacement.X / delta).ToSingle(),
+                (displacement.Z / delta).ToSingle(),
+                (yaw / delta).ToSingle(),
+                turnSpeed.ToSingle(),
+                durationTicks,
+                string.Empty,
+                0f,
+                0f);
+            m_Motion.Submit(new SimulationMotionContribution(
+                request.Source,
+                displacement,
+                yaw,
+                move,
+                SimulationMotionContributionSpace.World,
+                Float32Scalar.One,
+                0,
+                SimulationMotionChannel.Locomotion,
+                SimulationMotionBlendMode.Override,
+                false,
+                movementPlaybackClock,
+                locomotionTimeline));
+        }
+
         CommittedLocomotionPlanarMotionTimeline ResolveMotionTimeline<TTarget>(
             OperationControlCursor<TTarget> cursor,
             SimulationOperation operation,

@@ -49,7 +49,10 @@ namespace BTSMTL.Diagnostics
         Reference,
         Producer,
         CatalogEntry,
-        BodyMotion
+        BodyMotion,
+        ControlModule,
+        ControlState,
+        ControlTransition
     }
 
     public readonly struct RuntimeSourceTarget : IEquatable<RuntimeSourceTarget>

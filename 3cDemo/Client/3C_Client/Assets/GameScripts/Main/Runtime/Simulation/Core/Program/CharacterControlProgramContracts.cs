@@ -75,16 +75,57 @@ namespace ThirdPersonSimulation
 
     public sealed class CharacterControlParameterDescriptor
     {
-        public CharacterControlParameterDescriptor(CharacterControlParameterId id, SemanticValueKind valueKind)
+        public CharacterControlParameterDescriptor(CharacterControlParameterId id, SemanticValueKind valueKind, double numericValue = 0d)
         {
-            if (!id.IsValid || !Enum.IsDefined(typeof(SemanticValueKind), valueKind))
+            if (!id.IsValid || !Enum.IsDefined(typeof(SemanticValueKind), valueKind) || double.IsNaN(numericValue) || double.IsInfinity(numericValue))
                 throw new ArgumentException("Character control parameter descriptor is incomplete.");
             Id = id;
             ValueKind = valueKind;
+            NumericValue = numericValue;
         }
 
         public CharacterControlParameterId Id { get; }
         public SemanticValueKind ValueKind { get; }
+        public double NumericValue { get; }
+    }
+
+    public enum CharacterControlMotionExecutionMode : byte
+    {
+        Once = 1,
+        Timed = 2,
+        Continuous = 3
+    }
+
+    public sealed class CharacterControlMotionDescriptor
+    {
+        public CharacterControlMotionDescriptor(
+            string binding,
+            SimulationInputValueId input,
+            double moveSpeed,
+            double turnSpeedDegrees,
+            CharacterControlMotionExecutionMode executionMode,
+            double durationSeconds)
+        {
+            Binding = SimulationIdentity.Require(binding, nameof(binding));
+            if (!input.IsValid || moveSpeed < 0d || turnSpeedDegrees < 0d ||
+                !Enum.IsDefined(typeof(CharacterControlMotionExecutionMode), executionMode) ||
+                double.IsNaN(durationSeconds) || double.IsInfinity(durationSeconds) || durationSeconds < 0d)
+                throw new ArgumentException("Character control motion descriptor is incomplete.");
+            if (executionMode == CharacterControlMotionExecutionMode.Timed && durationSeconds <= 0d)
+                throw new ArgumentException("Timed character control motion requires a duration.", nameof(durationSeconds));
+            Input = input;
+            MoveSpeed = moveSpeed;
+            TurnSpeedDegrees = turnSpeedDegrees;
+            ExecutionMode = executionMode;
+            DurationSeconds = durationSeconds;
+        }
+
+        public string Binding { get; }
+        public SimulationInputValueId Input { get; }
+        public double MoveSpeed { get; }
+        public double TurnSpeedDegrees { get; }
+        public CharacterControlMotionExecutionMode ExecutionMode { get; }
+        public double DurationSeconds { get; }
     }
 
     public sealed class CharacterControlModuleContract
@@ -94,6 +135,7 @@ namespace ThirdPersonSimulation
         readonly ReadOnlyCollection<CharacterControlStateFieldDescriptor> m_StateFields;
         readonly ReadOnlyCollection<CharacterControlParameterDescriptor> m_Parameters;
         readonly ReadOnlyCollection<SimulationInputValueId> m_InputValues;
+        readonly ReadOnlyCollection<CharacterControlMotionDescriptor> m_Motions;
         readonly ReadOnlyCollection<CharacterSkillId> m_Skills;
 
         public CharacterControlModuleContract(
@@ -105,6 +147,7 @@ namespace ThirdPersonSimulation
             IEnumerable<CharacterControlStateFieldDescriptor> stateFields,
             IEnumerable<CharacterControlParameterDescriptor> parameters,
             IEnumerable<SimulationInputValueId> inputValues,
+            IEnumerable<CharacterControlMotionDescriptor> motions,
             IEnumerable<CharacterSkillId> skills)
         {
             if (!moduleId.IsValid || semanticVersion <= 0)
@@ -116,6 +159,7 @@ namespace ThirdPersonSimulation
             m_StateFields = Freeze(stateFields, value => value.Id, "state field");
             m_Parameters = Freeze(parameters, value => value.Id, "parameter");
             m_InputValues = Freeze(inputValues, value => value, "input value");
+            m_Motions = Freeze(motions, value => value.Binding, "motion");
             m_Skills = Freeze(skills, value => value, "skill");
             InitialState = initialState;
             ValidateStateGraph();
@@ -129,6 +173,7 @@ namespace ThirdPersonSimulation
         public IReadOnlyList<CharacterControlStateFieldDescriptor> StateFields => m_StateFields;
         public IReadOnlyList<CharacterControlParameterDescriptor> Parameters => m_Parameters;
         public IReadOnlyList<SimulationInputValueId> InputValues => m_InputValues;
+        public IReadOnlyList<CharacterControlMotionDescriptor> Motions => m_Motions;
         public IReadOnlyList<CharacterSkillId> Skills => m_Skills;
 
         public CharacterControlStateFieldDescriptor FindStateField(ProgramStateSemantic semantic)
@@ -279,6 +324,33 @@ namespace ThirdPersonSimulation
                     throw new InvalidDataException($"Control state slot '{slot.Identity}' has no matching ControlModule catalog binding.");
             }
             return binding;
+        }
+
+        public static void ValidateSkillPrograms(
+            CharacterControlModuleContract contract,
+            CharacterSkillProgramCatalog skills)
+        {
+            if (contract == null)
+                throw new ArgumentNullException(nameof(contract));
+            if (skills == null)
+                throw new ArgumentNullException(nameof(skills));
+            for (int i = 0; i < contract.Skills.Count; i++)
+                skills.Require(contract.Skills[i]);
+            for (int i = 0; i < skills.Bindings.Count; i++)
+            {
+                CharacterSkillId skill = skills.Bindings[i].SkillId;
+                bool declared = false;
+                for (int skillIndex = 0; skillIndex < contract.Skills.Count; skillIndex++)
+                {
+                    if (contract.Skills[skillIndex] == skill)
+                    {
+                        declared = true;
+                        break;
+                    }
+                }
+                if (!declared)
+                    throw new InvalidDataException($"SkillProgram '{skill}' is not declared by control module '{contract.ModuleId}'.");
+            }
         }
     }
 }

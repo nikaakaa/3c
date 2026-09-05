@@ -48,6 +48,8 @@ namespace ThirdPersonSimulation
 
     public interface ICharacterControlReadPort
     {
+        bool HasInputRequest(string requestId);
+        bool IsSkillActive(CharacterSkillId skillId);
         bool CompareInputVector2Magnitude(
             SimulationInputValueId input,
             CharacterControlParameterId threshold,
@@ -56,12 +58,14 @@ namespace ThirdPersonSimulation
             SimulationInputValueId input,
             CharacterControlParameterId threshold,
             CharacterControlNumericComparison comparison);
+        bool IsInputDirectionBehindBodyYaw(SimulationInputValueId input);
     }
 
     public interface ICharacterControlStateReadPort
     {
         CharacterControlStateId ReadState(CharacterControlStateFieldId field);
         CharacterControlTransitionId ReadTransition(CharacterControlStateFieldId field);
+        bool ReadBoolean(CharacterControlStateFieldId field);
         int ReadInt32(CharacterControlStateFieldId field);
         ulong ReadUInt64(CharacterControlStateFieldId field);
     }
@@ -70,8 +74,65 @@ namespace ThirdPersonSimulation
     {
         void WriteState(CharacterControlStateFieldId field, CharacterControlStateId value);
         void WriteTransition(CharacterControlStateFieldId field, CharacterControlTransitionId value);
+        void WriteBoolean(CharacterControlStateFieldId field, bool value);
         void WriteInt32(CharacterControlStateFieldId field, int value);
         void WriteUInt64(CharacterControlStateFieldId field, ulong value);
+    }
+
+    public readonly struct CharacterControlSkillRequest
+    {
+        public CharacterControlSkillRequest(
+            SimulationExecutionSource source,
+            CharacterSkillId skillId,
+            string sourceInputRequestId,
+            bool consumeSourceInputRequest,
+            string targetInputValueId = "",
+            string targetKey = "")
+        {
+            if (!source.IsCharacterControl || !skillId.IsValid)
+                throw new ArgumentException("Character control skill request identity is incomplete.");
+            Source = source;
+            SkillId = skillId;
+            SourceInputRequestId = sourceInputRequestId ?? string.Empty;
+            ConsumeSourceInputRequest = consumeSourceInputRequest;
+            TargetInputValueId = targetInputValueId ?? string.Empty;
+            TargetKey = targetKey ?? string.Empty;
+        }
+
+        public SimulationExecutionSource Source { get; }
+        public CharacterSkillId SkillId { get; }
+        public string SourceInputRequestId { get; }
+        public bool ConsumeSourceInputRequest { get; }
+        public string TargetInputValueId { get; }
+        public string TargetKey { get; }
+    }
+
+    public enum CharacterControlSkillStopMode : byte
+    {
+        Graceful = 1,
+        Force = 2
+    }
+
+    public readonly struct CharacterControlSkillStopRequest
+    {
+        public CharacterControlSkillStopRequest(
+            SimulationExecutionSource source,
+            CharacterSkillId skillId,
+            CharacterControlSkillStopMode mode,
+            string reason = "")
+        {
+            if (!source.IsCharacterControl || !skillId.IsValid || !Enum.IsDefined(typeof(CharacterControlSkillStopMode), mode))
+                throw new ArgumentException("Character control skill stop request is incomplete.");
+            Source = source;
+            SkillId = skillId;
+            Mode = mode;
+            Reason = reason ?? string.Empty;
+        }
+
+        public SimulationExecutionSource Source { get; }
+        public CharacterSkillId SkillId { get; }
+        public CharacterControlSkillStopMode Mode { get; }
+        public string Reason { get; }
     }
 
     public readonly struct CharacterControlMotionRequest
@@ -83,7 +144,7 @@ namespace ThirdPersonSimulation
             int continuousTicks,
             int phase)
         {
-            if (!source.IsValid || string.IsNullOrEmpty(binding) || !input.IsValid || continuousTicks < 0 || phase < 0)
+            if (!source.IsCharacterControl || string.IsNullOrEmpty(binding) || !input.IsValid || continuousTicks < 0 || phase < 0)
                 throw new ArgumentException("Character control motion request is incomplete.");
             Source = source;
             Binding = SimulationIdentity.Require(binding, nameof(binding));
@@ -102,5 +163,7 @@ namespace ThirdPersonSimulation
     public interface ICharacterControlOutputPort
     {
         void SubmitMotion(CharacterControlMotionRequest request);
+        bool SubmitSkill(CharacterControlSkillRequest request);
+        void SubmitSkillStop(CharacterControlSkillStopRequest request);
     }
 }

@@ -1238,7 +1238,10 @@ namespace ThirdPersonSimulation
         Reference = 4,
         Producer = 5,
         CatalogEntry = 6,
-        BodyMotion = 7
+        BodyMotion = 7,
+        ControlModule = 8,
+        ControlState = 9,
+        ControlTransition = 10
     }
 
 	public sealed class ProgramSourceMapEntry
@@ -1343,7 +1346,8 @@ namespace ThirdPersonSimulation
         EquipmentParameterValue = 28,
         EquipmentInitialLoadout = 29,
         EquipmentVisualBinding = 30,
-        ControlModule = 31
+        ControlModule = 31,
+        SkillProgram = 32
     }
 
     public enum ProgramCatalogFieldKind : byte

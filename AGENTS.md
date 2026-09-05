@@ -1,6 +1,6 @@
 # 3C 项目 Agent 指令
 
-根目录只保留执行规则和入口。项目业务、架构方向、技术取舍写在 `openspec/project.md`；OpenSpec 工具规则写在 `openspec/AGENTS.md`。
+根目录只保留执行规则和入口。项目业务、架构方向、技术取舍写在 `openspec/project.md`；OpenSpec 工作流由 `.agents/skills/openspec-*` 与 `openspec/config.yaml` 定义。
 
 ## 必读规则
 
@@ -29,7 +29,7 @@
 
 ## OpenSpec
 
-- 涉及新能力、破坏性变更、架构调整、计划、proposal、spec 或含糊的大改动时，只有在你明确要求我执行 OpenSpec workflow（例如你明确指定使用 openspec skill）时，才先读 `openspec/AGENTS.md` 和 `openspec/project.md`。
+- 涉及新能力、破坏性变更、架构调整、计划、proposal、spec 或含糊的大改动时，只有在你明确要求我执行 OpenSpec workflow（例如你明确指定使用 openspec skill）时，才读取 `openspec/project.md` 并使用对应 OpenSpec skill。
 - OpenSpec 内容除固定格式关键字外使用中文。
 - proposal 阶段只写设计文档，不写代码。
 - 不把手动验证写进 OpenSpec `tasks.md`。

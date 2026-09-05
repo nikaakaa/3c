@@ -301,6 +301,19 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             }
         }
 
+        public void Confirm(CharacterPresentationCommand command)
+        {
+            RequireAlive();
+            if (command.Header.ActorId != m_ActorId)
+                throw new InvalidOperationException("Presentation confirmation targets another Actor.");
+            CharacterPresentationProducerEntry producer = RequireProducer(command.ProducerId);
+            if (command.Kind != CharacterPresentationCommandKind.ForceReleaseProducer ||
+                producer.Kind != CharacterPresentationProducerKind.Camera)
+                throw new InvalidOperationException(
+                    $"Presentation confirmation targets invalid producer '{producer.ProgramProducerIdentity}'.");
+            RequireCamera().ConfirmForceTeardown(command, producer);
+        }
+
         public void Replace(
             CharacterPresentationCommand current,
             CharacterPresentationCommand replacement)

@@ -567,6 +567,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
 
         void RemoveCameraScope(CharacterPresentationCommand command)
         {
+            m_Runtime.Confirm(command);
             var keys = new List<PresentationStateKey>(m_ByState.Keys);
             for (int i = 0; i < keys.Count; i++)
             {

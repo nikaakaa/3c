@@ -87,6 +87,11 @@ namespace ThirdPersonCamera
             m_Retiring = state.Retiring;
         }
 
+        public bool IsCurrentScope(CameraPresentationScopeKey scope) =>
+            m_CurrentGeneration == scope.Generation &&
+            m_CurrentSourceActionInstanceId == scope.SourceActionInstanceId &&
+            string.Equals(m_CurrentSourceId, scope.SourceId, StringComparison.Ordinal);
+
         public bool Retire(
             string sourceId,
             ulong generation,

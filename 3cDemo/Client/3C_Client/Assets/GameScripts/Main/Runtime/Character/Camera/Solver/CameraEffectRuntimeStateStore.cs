@@ -17,6 +17,13 @@ namespace ThirdPersonCamera
 
         public void RemoveAt(int index) => m_Active.RemoveAt(index);
 
+        public void ClearScope(CameraPresentationScopeKey scope)
+        {
+            for (int i = m_Active.Count - 1; i >= 0; i--)
+                if (m_Active[i].Request.Scope.Equals(scope))
+                    m_Active.RemoveAt(i);
+        }
+
         public CameraEffectRuntimeState FindEvent(CameraEffectRequest request)
         {
             for (int i = 0; i < m_Active.Count; i++)

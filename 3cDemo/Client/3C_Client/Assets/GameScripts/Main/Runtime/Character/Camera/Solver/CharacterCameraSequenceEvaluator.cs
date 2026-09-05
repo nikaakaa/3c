@@ -59,6 +59,9 @@ namespace ThirdPersonCamera
             m_Transition.ForceTeardown(sourceId, generation, sourceActionInstanceId);
         }
 
+        public bool IsCurrentScope(CameraPresentationScopeKey scope) =>
+            m_Initialized && m_Transition.IsCurrentScope(scope);
+
         public CameraFramePlan Evaluate(
             in CameraFrameInput input,
             in CameraSequenceRequest request,
@@ -102,13 +105,26 @@ namespace ThirdPersonCamera
             }
         }
 
+        public bool TryCaptureScopeState(
+            CameraPresentationScopeKey scope,
+            out State state)
+        {
+            if (!m_Initialized || !m_Transition.IsCurrentScope(scope))
+            {
+                state = default;
+                return false;
+            }
+            state = CaptureState();
+            return true;
+        }
+
         State CaptureState() => new State(
             m_FramePlanner.CaptureState(),
             m_Transition.CaptureState(),
             m_WorldBasicHistory.CaptureState(),
             m_Initialized);
 
-        void RestoreState(State state)
+        public void RestoreState(State state)
         {
             m_FramePlanner.RestoreState(state.FramePlanner);
             m_Transition.RestoreState(state.Transition);
@@ -116,7 +132,7 @@ namespace ThirdPersonCamera
             m_Initialized = state.Initialized;
         }
 
-        readonly struct State
+        public readonly struct State
         {
             public State(
                 CharacterCameraFramePlanner.State framePlanner,

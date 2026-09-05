@@ -49,6 +49,21 @@ namespace ThirdPersonCamera
         public void ResumeScope(CameraPresentationScopeKey scope) =>
             m_SuspendedScopes.Remove(scope);
 
+        public void ConfirmScope(CameraPresentationScopeKey scope)
+        {
+            m_SuspendedScopes.Remove(scope);
+            m_States.ClearScope(scope);
+            for (int i = m_PendingRetirements.Count - 1; i >= 0; i--)
+            {
+                PendingRetirement pending = m_PendingRetirements[i];
+                if (new CameraPresentationScopeKey(
+                        pending.SourceId,
+                        pending.Generation,
+                        pending.SourceActionInstanceId).Equals(scope))
+                    m_PendingRetirements.RemoveAt(i);
+            }
+        }
+
         public void Retire(
             string eventId,
             ulong generation,

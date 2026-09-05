@@ -165,6 +165,14 @@ namespace ThirdPersonSimulation
 		public bool IsSkillCompleted(CharacterSkillId skillId) => m_Actions.IsSkillCompleted(skillId);
 		public ulong CompletedSkillInstanceId(CharacterSkillId skillId) => m_Actions.CompletedSkillInstanceId(skillId);
 
+		public void BindCurrentSkillExecution(OperationHandle operation, ulong generation)
+		{
+			if (!m_Actions.TryGetCurrentSkillExecution(out Float32ActionInstanceState action) ||
+				!action.SkillEntryOperation.Equals(operation))
+				return;
+			m_Actions.BindSkillExecution(action, operation, generation);
+		}
+
 		public void FinishFromControl(
 			CharacterSkillId skillId,
 			SimulationExecutionSource source,

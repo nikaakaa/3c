@@ -271,13 +271,14 @@ namespace ThirdPersonSimulation
         {
         }
 
-        public void ActivateScopes(
-            OperationControlCursor<Float32OperationTarget> cursor,
-            OperationExecutionDescriptor descriptor,
-            ulong generation)
-        {
-            m_Blackboard.ActivateOperationScopes(cursor, m_Access.Operation(descriptor.Handle), generation);
-        }
+		public void ActivateScopes(
+			OperationControlCursor<Float32OperationTarget> cursor,
+			OperationExecutionDescriptor descriptor,
+			ulong generation)
+		{
+			m_Actions.BindCurrentSkillExecution(descriptor.Handle, generation);
+			m_Blackboard.ActivateOperationScopes(cursor, m_Access.Operation(descriptor.Handle), generation);
+		}
 
         public void CompleteScopes(OperationExecutionDescriptor descriptor)
         {

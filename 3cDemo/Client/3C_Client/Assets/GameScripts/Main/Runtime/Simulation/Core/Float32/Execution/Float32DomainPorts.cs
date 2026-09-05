@@ -37,10 +37,13 @@ namespace ThirdPersonSimulation
     {
         bool IsContextActive(string contextId);
         int FindActive(string contextId, out Float32ActionInstanceState state);
+        int FindActive(CharacterSkillId skillId, out Float32ActionInstanceState state);
         Float32ActionInstanceState FindOnlyActive();
         Float32ActionInstanceState RequireActive(Float32ActionInstanceState expected);
         Float32ActionInstanceState RequireActive(Float32ActionInstanceReference reference);
         bool ContainsInstance(ulong instanceId);
+        IDisposable PushSkillExecution(Float32ActionInstanceState action);
+        bool TryGetCurrentSkillExecution(out Float32ActionInstanceState action);
     }
 
     internal interface IFloat32ActionAdmissionQuery

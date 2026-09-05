@@ -96,6 +96,18 @@ namespace ThirdPersonSimulation
         Continuous = 3
     }
 
+    public enum CharacterControlMotionDisplacementMode : byte
+    {
+        ConstantSpeed = 1,
+        SourceCurve = 2
+    }
+
+    public enum CharacterControlMotionSpace : byte
+    {
+        ActorLocal = 0,
+        World = 1
+    }
+
     public sealed class CharacterControlMotionDescriptor
     {
         public CharacterControlMotionDescriptor(
@@ -104,20 +116,36 @@ namespace ThirdPersonSimulation
             double moveSpeed,
             double turnSpeedDegrees,
             CharacterControlMotionExecutionMode executionMode,
-            double durationSeconds)
+            double durationSeconds,
+            string sourceMotionIdentity = "",
+            CharacterControlMotionDisplacementMode displacementMode = CharacterControlMotionDisplacementMode.ConstantSpeed,
+            CharacterControlMotionSpace space = CharacterControlMotionSpace.World,
+            int priority = 0,
+            bool consumeLowerChannels = false)
         {
             Binding = SimulationIdentity.Require(binding, nameof(binding));
             if (!input.IsValid || moveSpeed < 0d || turnSpeedDegrees < 0d ||
                 !Enum.IsDefined(typeof(CharacterControlMotionExecutionMode), executionMode) ||
+                !Enum.IsDefined(typeof(CharacterControlMotionDisplacementMode), displacementMode) ||
+                !Enum.IsDefined(typeof(CharacterControlMotionSpace), space) ||
                 double.IsNaN(durationSeconds) || double.IsInfinity(durationSeconds) || durationSeconds < 0d)
                 throw new ArgumentException("Character control motion descriptor is incomplete.");
             if (executionMode == CharacterControlMotionExecutionMode.Timed && durationSeconds <= 0d)
                 throw new ArgumentException("Timed character control motion requires a duration.", nameof(durationSeconds));
+            if (displacementMode == CharacterControlMotionDisplacementMode.SourceCurve && string.IsNullOrEmpty(sourceMotionIdentity))
+                throw new ArgumentException("Source curve character control motion requires a source identity.", nameof(sourceMotionIdentity));
+            if (displacementMode == CharacterControlMotionDisplacementMode.ConstantSpeed && !string.IsNullOrEmpty(sourceMotionIdentity))
+                throw new ArgumentException("Constant speed character control motion cannot declare a source identity.", nameof(sourceMotionIdentity));
             Input = input;
             MoveSpeed = moveSpeed;
             TurnSpeedDegrees = turnSpeedDegrees;
             ExecutionMode = executionMode;
             DurationSeconds = durationSeconds;
+            SourceMotionIdentity = sourceMotionIdentity ?? string.Empty;
+            DisplacementMode = displacementMode;
+            Space = space;
+            Priority = priority;
+            ConsumeLowerChannels = consumeLowerChannels;
         }
 
         public string Binding { get; }
@@ -126,6 +154,11 @@ namespace ThirdPersonSimulation
         public double TurnSpeedDegrees { get; }
         public CharacterControlMotionExecutionMode ExecutionMode { get; }
         public double DurationSeconds { get; }
+        public string SourceMotionIdentity { get; }
+        public CharacterControlMotionDisplacementMode DisplacementMode { get; }
+        public CharacterControlMotionSpace Space { get; }
+        public int Priority { get; }
+        public bool ConsumeLowerChannels { get; }
     }
 
     public sealed class CharacterControlModuleContract

@@ -1166,18 +1166,29 @@ namespace ThirdPersonSimulation.Fixed
             FixedScalar moveSpeed = FixedScalar.FromDouble(descriptor.MoveSpeed);
             FixedScalar turnSpeed = FixedScalar.FromDouble(descriptor.TurnSpeedDegrees);
             FixedScalar maxYaw = turnSpeed * delta;
-            FixedVector3 displacement = new FixedVector3(
-                move.X * moveSpeed * delta,
-                FixedScalar.Zero,
-                move.Y * moveSpeed * delta);
-            FixedScalar yaw = FixedScalar.Zero;
-            if (move != FixedVector2.Zero && maxYaw > FixedScalar.Zero)
+            FixedVector3 displacement;
+            FixedScalar yaw;
+            if (descriptor.DisplacementMode == CharacterControlMotionDisplacementMode.SourceCurve)
             {
-                FixedYaw desired = FixedAngle.FromPlanarDirection(move);
-                yaw = FixedScalar.Clamp(FixedAngle.Delta(m_Frame.Body.Yaw, desired), -maxYaw, maxYaw);
+                ResolveControlSourceCurve(request, descriptor, out displacement, out yaw);
+            }
+            else
+            {
+                displacement = new FixedVector3(
+                    move.X * moveSpeed * delta,
+                    FixedScalar.Zero,
+                    move.Y * moveSpeed * delta);
+                yaw = FixedScalar.Zero;
+                if (move != FixedVector2.Zero && maxYaw > FixedScalar.Zero)
+                {
+                    FixedYaw desired = FixedAngle.FromPlanarDirection(move);
+                    yaw = FixedScalar.Clamp(FixedAngle.Delta(m_Frame.Body.Yaw, desired), -maxYaw, maxYaw);
+                }
             }
             int continuousTicks = checked(request.ContinuousTicks + 1);
-            int durationTicks = descriptor.ExecutionMode == CharacterControlMotionExecutionMode.Timed
+            int durationTicks = descriptor.DisplacementMode == CharacterControlMotionDisplacementMode.SourceCurve
+                ? 0
+                : descriptor.ExecutionMode == CharacterControlMotionExecutionMode.Timed
                 ? checked((int)Math.Ceiling(descriptor.DurationSeconds * m_Program.Manifest.TickRate))
                 : 0;
             var movementPlaybackClock = new CommittedMovementPlaybackClock(
@@ -1203,15 +1214,62 @@ namespace ThirdPersonSimulation.Fixed
                 request.Source,
                 displacement,
                 yaw,
-                move,
-                SimulationMotionContributionSpace.World,
+                descriptor.DisplacementMode == CharacterControlMotionDisplacementMode.SourceCurve
+                    ? FixedVector2.Zero
+                    : move,
+                descriptor.Space == CharacterControlMotionSpace.ActorLocal
+                    ? SimulationMotionContributionSpace.ActorLocal
+                    : SimulationMotionContributionSpace.World,
                 FixedScalar.One,
-                0,
+                descriptor.Priority,
                 SimulationMotionChannel.Locomotion,
                 SimulationMotionBlendMode.Override,
-                false,
+                descriptor.ConsumeLowerChannels,
                 movementPlaybackClock,
                 locomotionTimeline));
+        }
+
+        void ResolveControlSourceCurve(
+            CharacterControlMotionRequest request,
+            CharacterControlMotionDescriptor descriptor,
+            out FixedVector3 displacement,
+            out FixedScalar yaw)
+        {
+            ProgramCatalogEntry source = FindCatalog(ProgramCatalogEntryKind.MotionCurve, descriptor.SourceMotionIdentity) ??
+                throw new InvalidOperationException($"Control motion source '{descriptor.SourceMotionIdentity}' is absent from the Program catalog.");
+            ProgramCatalogEntry track = RequireCatalog(
+                ProgramCatalogEntryKind.TimelineTrack,
+                CatalogIdentity(source, ProgramCatalogFieldId.Track));
+            ProgramCatalogEntry timeline = RequireCatalog(
+                ProgramCatalogEntryKind.Timeline,
+                CatalogIdentity(track, ProgramCatalogFieldId.Timeline));
+            int frameRate = CatalogInt32(timeline, ProgramCatalogFieldId.FrameRate);
+            FixedScalar start = FixedScalar.FromInt64(CatalogInt32(source, ProgramCatalogFieldId.StartFrame)) / FixedScalar.FromInt64(frameRate);
+            FixedScalar curveEnd = FixedScalar.FromInt64(CatalogInt32(source, ProgramCatalogFieldId.CurveEndFrame)) / FixedScalar.FromInt64(frameRate);
+            FixedScalar duration = FixedScalar.Max(FixedScalar.FromRatio(1, 1000000), curveEnd - start);
+            FixedScalar tickRate = FixedScalar.FromInt64(m_Program.Manifest.TickRate);
+            FixedScalar previous = FixedScalar.Clamp(FixedScalar.FromInt64(request.ContinuousTicks) / tickRate, FixedScalar.Zero, duration);
+            FixedScalar current = FixedScalar.Clamp(FixedScalar.FromInt64(request.ContinuousTicks + 1) / tickRate, FixedScalar.Zero, duration);
+            FixedScalar previousNormalized = previous / duration;
+            FixedScalar currentNormalized = current / duration;
+            displacement = new FixedVector3(
+                SampleControlCurve(source, ProgramCatalogFieldId.PositionX, currentNormalized) - SampleControlCurve(source, ProgramCatalogFieldId.PositionX, previousNormalized),
+                SampleControlCurve(source, ProgramCatalogFieldId.PositionY, currentNormalized) - SampleControlCurve(source, ProgramCatalogFieldId.PositionY, previousNormalized),
+                SampleControlCurve(source, ProgramCatalogFieldId.PositionZ, currentNormalized) - SampleControlCurve(source, ProgramCatalogFieldId.PositionZ, previousNormalized));
+            yaw = SampleControlCurve(source, ProgramCatalogFieldId.Yaw, currentNormalized) -
+                  SampleControlCurve(source, ProgramCatalogFieldId.Yaw, previousNormalized);
+        }
+
+        FixedScalar SampleControlCurve(
+            ProgramCatalogEntry source,
+            ProgramCatalogFieldId field,
+            FixedScalar normalized)
+        {
+            ProgramConstant constant = CatalogConstant(source, field);
+            if (constant.Kind != ProgramConstantKind.Bytes)
+                throw new InvalidOperationException($"Control motion curve '{source.Identity}/{field}' is not a curve constant.");
+            return Access.Services.RequireTimelineCurve(constant, $"{source.Identity}/{field}")
+                .Evaluate(normalized, FixedScalar.Zero);
         }
 
         CommittedLocomotionPlanarMotionTimeline ResolveMotionTimeline<TTarget>(

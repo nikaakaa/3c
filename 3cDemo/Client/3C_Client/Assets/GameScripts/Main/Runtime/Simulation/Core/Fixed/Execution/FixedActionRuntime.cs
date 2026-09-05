@@ -92,6 +92,8 @@ namespace ThirdPersonSimulation.Fixed
 
             var request = new FixedActionActivationRequestState(
                 actionId,
+                default,
+                OperationHandle.Invalid,
                 contextId,
                 requestId,
                 inputSequence,
@@ -109,6 +111,9 @@ namespace ThirdPersonSimulation.Fixed
                 ulong predictionKey = m_Actions.NextSequence();
                 var instance = new FixedActionInstanceState(
                     staged.ActionId,
+                    staged.SkillId,
+                    OperationHandle.Invalid,
+                    0,
                     staged.ContextId,
                     instanceId,
                     predictionKey,
@@ -139,6 +144,28 @@ namespace ThirdPersonSimulation.Fixed
         }
 
         public bool IsContextActive(string contextId) => m_Actions.IsContextActive(contextId);
+        public bool IsSkillActive(CharacterSkillId skillId) => m_Actions.IsSkillActive(skillId);
+        public bool IsSkillCompleted(CharacterSkillId skillId) => m_Actions.IsSkillCompleted(skillId);
+        public ulong CompletedSkillInstanceId(CharacterSkillId skillId) => m_Actions.CompletedSkillInstanceId(skillId);
+
+        public void FinishFromControl(
+            CharacterSkillId skillId,
+            SimulationExecutionSource source,
+            bool completed,
+            string reason)
+        {
+            int slot = m_Actions.FindActive(skillId, out FixedActionInstanceState action);
+            if (slot < 0)
+                return;
+            ApplyActionTransition(
+                source,
+                action,
+                completed
+                    ? SimulationActionLifecycleTransitionType.Complete
+                    : SimulationActionLifecycleTransitionType.Abort,
+                reason,
+                0);
+        }
 
         public ActionAdmissionDecision PreviewActivation<TTarget>(
             OperationControlCursor<TTarget> cursor,
@@ -165,7 +192,6 @@ namespace ThirdPersonSimulation.Fixed
         public bool ActivateFromControl(CharacterControlSkillRequest controlRequest)
         {
             CharacterSkillProgramBinding skill = m_Program.SkillPrograms.Require(controlRequest.SkillId);
-            SimulationOperation operation = Access.Operation(skill.EntryOperation);
             ActionAdmissionProfile profile = RequireActionProfile(skill.ActionProfileId);
             string requestId = string.IsNullOrEmpty(controlRequest.SourceInputRequestId)
                 ? skill.SourceInputRequestId
@@ -182,7 +208,8 @@ namespace ThirdPersonSimulation.Fixed
                             : controlRequest.TargetInputValueId,
                         SimulationInputValueKind.ActionTargetSnapshot).ActionTargetSnapshot;
             return ActivateFromControl(
-                operation,
+                skill.SkillId,
+                skill.EntryOperation,
                 profile,
                 skill.ActionContextId,
                 requestId,
@@ -195,7 +222,7 @@ namespace ThirdPersonSimulation.Fixed
         public void StopFromControl(CharacterControlSkillStopRequest controlRequest)
         {
             CharacterSkillProgramBinding skill = m_Program.SkillPrograms.Require(controlRequest.SkillId);
-            int slot = m_Actions.FindActive(skill.ActionContextId, out FixedActionInstanceState action);
+            int slot = m_Actions.FindActive(skill.SkillId, out FixedActionInstanceState action);
             if (slot < 0)
                 return;
             SimulationActionLifecycleTransitionType transition = controlRequest.Mode == CharacterControlSkillStopMode.Force
@@ -210,7 +237,8 @@ namespace ThirdPersonSimulation.Fixed
         }
 
         bool ActivateFromControl(
-            SimulationOperation operation,
+            CharacterSkillId skillId,
+            OperationHandle skillEntryOperation,
             ActionAdmissionProfile profile,
             string contextId,
             string requestId,
@@ -224,11 +252,33 @@ namespace ThirdPersonSimulation.Fixed
                 profile,
                 new ActionAdmissionTargetCandidate(targetSnapshot.TargetId),
                 ActionAdmissionEvaluationMode.CommitActivation));
+            bool replacementPending = false;
             if (!admission.Allowed)
             {
-                if (m_Trace.Enabled)
-                    m_Trace.Add(source, "action_activation_rejected", SimulationTraceSeverity.Information, $"{actionId}:{admission.RejectReason}:{admission.ActiveSourceActionId}");
-                return false;
+                if (admission.RejectReason != ActionAdmissionRejectReason.SourceActionStillActive)
+                {
+                    if (m_Trace.Enabled)
+                        m_Trace.Add(source, "action_activation_rejected", SimulationTraceSeverity.Information, $"{actionId}:{admission.RejectReason}:{admission.ActiveSourceActionId}");
+                    return false;
+                }
+                ActionAdmissionDecision replacement = m_Admission.Evaluate(new ActionAdmissionRequest(
+                    profile,
+                    new ActionAdmissionTargetCandidate(targetSnapshot.TargetId),
+                    ActionAdmissionEvaluationMode.PreviewReplacement));
+                if (!replacement.Allowed)
+                {
+                    if (m_Trace.Enabled)
+                        m_Trace.Add(source, "action_replacement_rejected", SimulationTraceSeverity.Information, $"{actionId}:{replacement.RejectReason}:{replacement.ActiveSourceActionId}");
+                    return false;
+                }
+                FixedActionInstanceState active = m_Actions.FindOnlyActive();
+                ApplyActionTransition(
+                    source,
+                    active,
+                    SimulationActionLifecycleTransitionType.Interrupt,
+                    "SkillReplacement",
+                    0);
+                replacementPending = true;
             }
 
             ulong inputSequence = m_Frame.Input.Sequence;
@@ -247,6 +297,8 @@ namespace ThirdPersonSimulation.Fixed
 
             var request = new FixedActionActivationRequestState(
                 actionId,
+                skillId,
+                skillEntryOperation,
                 contextId,
                 requestId,
                 inputSequence,
@@ -256,41 +308,70 @@ namespace ThirdPersonSimulation.Fixed
                 source,
                 m_EquipmentContext.Current);
             int requestSlot = m_Actions.RequireSlot(actionId, ProgramStateSemantic.ActionRequestBuffer);
+            if (m_Actions.ReadRequest(requestSlot).IsValid)
+                throw new InvalidOperationException($"Action '{actionId}' already has a pending activation request.");
             m_Actions.WriteRequest(requestSlot, request);
-            try
+            return !replacementPending;
+        }
+
+        public bool TryCommitPendingControl(CharacterSkillId skillId)
+        {
+            int requestSlot = m_Actions.FindPendingSkill(skillId, out FixedActionActivationRequestState request);
+            if (requestSlot < 0)
+                return false;
+            CharacterSkillProgramBinding skill = m_Program.SkillPrograms.Require(skillId);
+            ActionAdmissionProfile profile = RequireActionProfile(skill.ActionProfileId);
+            ActionAdmissionDecision admission = m_Admission.Evaluate(new ActionAdmissionRequest(
+                profile,
+                new ActionAdmissionTargetCandidate(request.TargetSnapshot.TargetId),
+                ActionAdmissionEvaluationMode.CommitActivation));
+            if (!admission.Allowed)
             {
-                FixedActionActivationRequestState staged = m_Actions.ReadRequest(requestSlot);
-                ulong instanceId = m_Handles.Next();
-                ulong predictionKey = m_Actions.NextSequence();
-                var instance = new FixedActionInstanceState(
-                    staged.ActionId,
-                    staged.ContextId,
-                    instanceId,
-                    predictionKey,
-                    staged.SourceInputRequestId,
-                    staged.InputSequence,
-                    staged.StartTick,
-                    staged.TargetKey,
-                    staged.TargetSnapshot,
-                    staged.Source,
-                    SimulationActionPhase.Startup,
-                    SimulationActionState.Predicted,
-                    SimulationActionLifecycleTransitionType.None,
-                    staged.StartTick,
-                    0,
-                    string.Empty,
-                    staged.EquipmentContext);
-                m_Actions.WriteState(instance);
-                m_GameplayEffectActions.SetActionTags(instanceId, profile.Tags);
-                EmitActionFact(instance.Source, instance);
-                if (m_Trace.Enabled)
-                    m_Trace.Add(source, "action_activated", SimulationTraceSeverity.Information, $"{actionId}:{instanceId}:request={requestId}:sequence={inputSequence}:requirement={profile.TargetRequirement}:candidate={targetSnapshot.TargetId}:captured={instance.TargetSnapshot.TargetId}:captureTick={instance.StartTick}:targetPosition={instance.TargetSnapshot.Position}:targetYaw={instance.TargetSnapshot.Yaw}:equipment={instance.EquipmentContext}");
-                return true;
-            }
-            finally
-            {
+                if (admission.RejectReason == ActionAdmissionRejectReason.SourceActionStillActive)
+                    return false;
                 m_Actions.ClearRequest(requestSlot);
+                if (m_Trace.Enabled)
+                    m_Trace.Add(request.Source, "action_activation_rejected", SimulationTraceSeverity.Information, $"{skillId}:{admission.RejectReason}:{admission.ActiveSourceActionId}");
+                return false;
             }
+            CommitControlActivation(requestSlot, request, profile);
+            return true;
+        }
+
+        void CommitControlActivation(
+            int requestSlot,
+            FixedActionActivationRequestState staged,
+            ActionAdmissionProfile profile)
+        {
+            ulong instanceId = m_Handles.Next();
+            ulong predictionKey = m_Actions.NextSequence();
+            var instance = new FixedActionInstanceState(
+                staged.ActionId,
+                staged.SkillId,
+                staged.SkillEntryOperation,
+                0,
+                staged.ContextId,
+                instanceId,
+                predictionKey,
+                staged.SourceInputRequestId,
+                staged.InputSequence,
+                staged.StartTick,
+                staged.TargetKey,
+                staged.TargetSnapshot,
+                staged.Source,
+                SimulationActionPhase.Startup,
+                SimulationActionState.Predicted,
+                SimulationActionLifecycleTransitionType.None,
+                staged.StartTick,
+                0,
+                string.Empty,
+                staged.EquipmentContext);
+            m_Actions.WriteState(instance);
+            m_GameplayEffectActions.SetActionTags(instanceId, profile.Tags);
+            m_Actions.ClearRequest(requestSlot);
+            EmitActionFact(instance.Source, instance);
+            if (m_Trace.Enabled)
+                m_Trace.Add(staged.Source, "action_activated", SimulationTraceSeverity.Information, $"{staged.ActionId}:{instanceId}:request={staged.SourceInputRequestId}:sequence={staged.InputSequence}:requirement={profile.TargetRequirement}:candidate={staged.TargetSnapshot.TargetId}:captured={instance.TargetSnapshot.TargetId}:captureTick={instance.StartTick}:targetPosition={instance.TargetSnapshot.Position}:targetYaw={instance.TargetSnapshot.Yaw}:equipment={instance.EquipmentContext}");
         }
 
         public bool SubmitLifecycle(SimulationOperation operation)
@@ -418,6 +499,7 @@ namespace ThirdPersonSimulation.Fixed
                 action.PredictionKey,
                 action.InputSequence,
                 action.ActionId,
+                action.SkillId,
                 action.LastTransition,
                 action.Phase,
                 action.State,

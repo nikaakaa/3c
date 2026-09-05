@@ -38,10 +38,13 @@ namespace ThirdPersonSimulation.Fixed
     {
         bool IsContextActive(string contextId);
         int FindActive(string contextId, out FixedActionInstanceState state);
+        int FindActive(CharacterSkillId skillId, out FixedActionInstanceState state);
         FixedActionInstanceState FindOnlyActive();
         FixedActionInstanceState RequireActive(FixedActionInstanceState expected);
         FixedActionInstanceState RequireActive(FixedActionInstanceReference reference);
         bool ContainsInstance(ulong instanceId);
+        IDisposable PushSkillExecution(FixedActionInstanceState action);
+        bool TryGetCurrentSkillExecution(out FixedActionInstanceState action);
     }
 
     internal interface IFixedActionAdmissionQuery

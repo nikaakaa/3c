@@ -139,6 +139,7 @@ namespace ThirdPersonSimulation
         public OperationStopStatus ContinueStop(OperationHandle operation) => m_Runtime.ContinueStop(operation);
         public void ForceStop(OperationHandle operation, OperationStopContext context) => m_Runtime.ForceStop(operation, context);
         public bool IsActive(OperationHandle operation) => m_Runtime.IsActive(operation);
+        public OperationRunnableStatus ReadStatus(OperationHandle operation) => m_Runtime.ReadStatus(operation);
         public bool IsRunning(OperationHandle operation) => m_Runtime.IsRunning(operation);
         public bool IsStopping(OperationHandle operation) => m_Runtime.IsStopping(operation);
         public ulong ReadGeneration(OperationHandle operation) => m_Runtime.ReadGeneration(operation);

@@ -111,7 +111,7 @@ AI `apply_document`只在受控Character Program为当前版本时校验并按�
 
 `layout.json`只保存可选位置。新节点不写layout时使用确定性排布。Document不暴露C#类型名、serialized field、冗余property port镜像、系统节点对象或不可编辑运行时字段。
 
-`context/node-catalog.json`是kind、允许property和logical port的机器可读能力目录；`context/graph-kinds.json`声明graph kind、owner slot和anchor。两个文件由同一个`AgentAuthoringCapabilityCatalog`按Document domain过滤生成，AIController只公开`BaseTree`与`ConditionRuleGraph`，不会看到Timeline、Action等Character-only capability，不能和Package Mapper、Reconciler或Validator能力分叉。
+`context/node-catalog.json`是kind、允许property和logical port的机器可读能力目录；`context/graph-kinds.json`声明graph kind、owner slot和anchor。两个文件由同一个`BtsmtlGraphAuthoringCapabilities`按Document domain过滤生成，AIController只公开`BaseTree`与`ConditionRuleGraph`，不会看到Timeline、Action等Character-only capability，不能和Package Mapper、Reconciler或Validator能力分叉。
 
 节点端口形状只能来自`GraphAuthoringNodePortShapeProjector`。Capability可声明固定端口、由strict typed property discriminator决定的`portVariants`，以及作者拥有的node-local动态端口；projector只接受capability与typed properties，必须唯一命中条件变体并拒绝三类端口的identity重叠。Canvas、Exporter、Package Mapper、Reconciler、Mutation preflight与Validator全部消费该结果，不读取默认构造节点、当前edge或Unity snapshot作为端口fallback。
 
@@ -231,7 +231,7 @@ Character generated product发布是上述Document事务之外的显式精确Def
 | `AgentAuthoringDocumentCodec.cs` | strict parse、canonical write、整包hash |
 | `AgentAuthoringPackageStore.cs` | 确定目录、文件闭包、staging校验、package内容镜像与rollback恢复 |
 | `AgentAuthoringTargetMapper.cs` | 稀疏package与内部完整target双向映射 |
-| `AgentAuthoringCapabilityCatalog.cs` | stable node kind、typed property、port与system anchor唯一目录 |
+| `../Authoring/SharedGraph/BtsmtlGraphAuthoringCapabilities.cs` | stable node kind、typed property、port与system anchor唯一目录 |
 | `AgentAuthoringDocumentExporter.cs` | Character/AI canonical package投影 |
 | `AgentControlDocumentMapper.cs` | controller.json控制模块binding与作者参数的严格映射、正式模块校验 |
 | `AgentSkillDocumentExporter.cs`、`AgentSkillDocumentMapper.cs`、`AgentSkillDocumentMutationPlanner.cs` | SkillDefinition分片导出、strict解析/local发现与技能差异计划 |

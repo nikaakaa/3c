@@ -1,8 +1,8 @@
 * text=auto
 
 *.cs text diff=csharp
-Packages/YooAsset/*.cs -text diff=csharp
-Packages/YooAsset/**/*.cs -text diff=csharp
+3cDemo/Client/3C_Client/Packages/YooAsset/*.cs -text diff=csharp
+3cDemo/Client/3C_Client/Packages/YooAsset/**/*.cs -text diff=csharp
 *.asmdef text
 *.asmref text
 *.shader text

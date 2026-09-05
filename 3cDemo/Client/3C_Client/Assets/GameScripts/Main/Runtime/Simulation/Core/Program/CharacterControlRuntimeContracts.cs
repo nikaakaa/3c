@@ -168,5 +168,6 @@ namespace ThirdPersonSimulation
         void SubmitMotion(CharacterControlMotionRequest request);
         bool SubmitSkill(CharacterControlSkillRequest request);
         void SubmitSkillStop(CharacterControlSkillStopRequest request);
+        void Trace(SimulationExecutionSource source, string code, string detail);
     }
 }

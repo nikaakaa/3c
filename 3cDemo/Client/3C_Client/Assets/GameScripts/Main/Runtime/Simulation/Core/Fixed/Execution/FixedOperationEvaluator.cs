@@ -494,7 +494,8 @@ namespace ThirdPersonSimulation.Fixed
                     controlCatalog,
                     m_Input,
                     locomotion,
-                    m_Actions);
+                    m_Actions,
+                    m_Frame.Trace);
             }
             var camera = new FixedCameraOperationRuntime(access, m_Frame.Presentation);
             FixedStatePort timelineState = m_Frame.CreateStatePort("Timeline", services.TimelinePolicy);

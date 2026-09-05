@@ -487,9 +487,10 @@ namespace ThirdPersonSimulation
 				m_CharacterControlOutput = new Float32CharacterControlOutputPort(
 					access,
 					controlCatalog,
-					m_Input,
-					locomotion,
-					m_Actions);
+                    m_Input,
+                    locomotion,
+                    m_Actions,
+                    m_Frame.Trace);
 			}
 			var camera = new Float32CameraOperationRuntime(access, m_Frame.Presentation);
             Float32StatePort timelineState = m_Frame.CreateStatePort("Timeline", services.TimelinePolicy);

@@ -9,19 +9,22 @@ namespace ThirdPersonSimulation
         readonly Float32InputRuntime m_Input;
         readonly Float32LocomotionRuntime m_Locomotion;
         readonly Float32ActionRuntime m_Actions;
+        readonly Float32TraceSink m_Trace;
 
         public Float32CharacterControlOutputPort(
             Float32ProgramAccess access,
             ProgramCatalogEntry controlModule,
             Float32InputRuntime input,
             Float32LocomotionRuntime locomotion,
-            Float32ActionRuntime actions)
+            Float32ActionRuntime actions,
+            Float32TraceSink trace)
         {
             m_Access = access ?? throw new ArgumentNullException(nameof(access));
             m_ControlModule = controlModule ?? throw new ArgumentNullException(nameof(controlModule));
             m_Input = input ?? throw new ArgumentNullException(nameof(input));
             m_Locomotion = locomotion ?? throw new ArgumentNullException(nameof(locomotion));
             m_Actions = actions ?? throw new ArgumentNullException(nameof(actions));
+            m_Trace = trace ?? throw new ArgumentNullException(nameof(trace));
         }
 
         public void SubmitMotion(CharacterControlMotionRequest request)
@@ -33,6 +36,9 @@ namespace ThirdPersonSimulation
         public bool SubmitSkill(CharacterControlSkillRequest request) => m_Actions.ActivateFromControl(request);
 
         public void SubmitSkillStop(CharacterControlSkillStopRequest request) => m_Actions.StopFromControl(request);
+
+        public void Trace(SimulationExecutionSource source, string code, string detail) =>
+            m_Trace.Add(source, code, SimulationTraceSeverity.Information, detail);
 
         CharacterControlMotionDescriptor RequireMotion(string binding)
         {

@@ -71,8 +71,13 @@ namespace ThirdPersonCharacter.Pipeline.Diagnostics
             if (!IsEnabled)
                 return;
             m_Context.BeginLogicTick(record.Header.Tick.Value);
+            if (record.Header.Activation.Source.IsCharacterControl)
+            {
+                PublishControl(record);
+                return;
+            }
             if (!record.Header.Activation.Source.IsSkillOperation)
-                throw new InvalidOperationException("Operation trace requires a Skill operation execution source.");
+                throw new InvalidOperationException("Operation trace requires a Skill operation or Character control execution source.");
             var target = new RuntimeSourceTarget(
                 RuntimeSourceTargetKind.Operation,
                 record.Header.Activation.Source.Operation.Value);
@@ -98,6 +103,29 @@ namespace ThirdPersonCharacter.Pipeline.Diagnostics
                     OwnerId = record.Header.ActorId.Value,
                     Flag = record.Severity != SimulationTraceSeverity.Error,
                     Value = DebugValueSnapshot.Capture(record.Header.Sequence)
+                });
+        }
+
+        void PublishControl(SimulationTraceRecord record)
+        {
+            SimulationExecutionSource source = record.Header.Activation.Source;
+            m_Context.Publish(
+                RuntimeTraceChannel.StateMachine,
+                RuntimeTraceDomain.Logic,
+                ResolveControlKind(record.Code),
+                RuntimeSourceElementHandle.Invalid,
+                RuntimeInstanceKey.Character(m_Context.CharacterRuntimeId),
+                new RuntimeTracePayload
+                {
+                    Status = record.Severity.ToString(),
+                    Name = record.Code,
+                    Detail = $"{record.Detail} | Source={source.Identity}",
+                    OwnerId = source.ModuleId.Value,
+                    RelatedElementId = source.TransitionId.IsValid
+                        ? source.TransitionId.Value
+                        : source.StateId.Value,
+                    Flag = record.Severity != SimulationTraceSeverity.Error,
+                    Value = DebugValueSnapshot.Capture(record.Header.Activation.Generation)
                 });
         }
 
@@ -243,6 +271,18 @@ namespace ThirdPersonCharacter.Pipeline.Diagnostics
                 "world_result_applied" => RuntimeTraceEventKind.MotionResolved,
                 _ when code.StartsWith("motion_warp_", StringComparison.Ordinal) => RuntimeTraceEventKind.MotionResolved,
                 _ when code.StartsWith("gameplay_effect", StringComparison.Ordinal) => RuntimeTraceEventKind.GameplayEffectLifecycle,
+                _ => RuntimeTraceEventKind.NodeStatus
+            };
+        }
+
+        static RuntimeTraceEventKind ResolveControlKind(string code)
+        {
+            return code switch
+            {
+                "control_state_entered" => RuntimeTraceEventKind.StateScopeEntered,
+                "control_state_exited" => RuntimeTraceEventKind.StateScopeExited,
+                "control_transition_evaluated" => RuntimeTraceEventKind.StateTransitionEvaluated,
+                "control_transition_selected" => RuntimeTraceEventKind.StateTransitionSelected,
                 _ => RuntimeTraceEventKind.NodeStatus
             };
         }

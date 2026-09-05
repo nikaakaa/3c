@@ -151,6 +151,7 @@ namespace ThirdPersonGameplay.Networking.ServerAuthoritative
         public void Replace(EventId targetEventId, GameplayFact fact) => Throw(fact.Header.EventId);
         public void Retire(ActorId actorId, EventId sourceEventId, EventId targetEventId) => Throw(sourceEventId);
         public void Publish(PresentationCommand command) => Throw(command.Header.EventId);
+        public void Confirm(PresentationCommand command) => Throw(command.Header.EventId);
 
         static void Throw(EventId eventId)
         {

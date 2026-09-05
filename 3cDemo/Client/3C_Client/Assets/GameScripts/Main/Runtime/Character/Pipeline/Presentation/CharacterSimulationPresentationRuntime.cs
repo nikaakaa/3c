@@ -203,6 +203,9 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         public void Publish(PresentationCommand command) =>
             Publish(CharacterPresentationCommand.FromFloat32(command));
 
+        public void Confirm(PresentationCommand command) =>
+            Confirm(CharacterPresentationCommand.FromFloat32(command));
+
         public void Publish(CharacterPresentationCommand command)
         {
             RequireAlive();

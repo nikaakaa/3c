@@ -73,7 +73,10 @@ namespace ThirdPersonSimulation.Fixed
                 if (program.ControlModuleBinding.IsValid)
                 {
                     ICharacterControlModule module = controlModules.Require(program.ControlModuleBinding);
-                    CharacterControlProgramCatalogValidator.ValidateSkillPrograms(module.Contract, program.SkillPrograms);
+                    CharacterControlProgramCatalogValidator.ValidateSkillPrograms(
+                        module.Contract,
+                        program.SkillPrograms,
+                        program.GraphCallFrames);
                 }
                 if (!program.Manifest.ProgramId.Equals(binding.ProgramId) ||
                     !program.ProgramHash.Equals(binding.ProgramHash) ||

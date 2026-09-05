@@ -480,12 +480,15 @@ namespace ThirdPersonSimulation
 
         public static void ValidateSkillPrograms(
             CharacterControlModuleContract contract,
-            CharacterSkillProgramCatalog skills)
+            CharacterSkillProgramCatalog skills,
+            IReadOnlyList<ProgramGraphCallFrame> graphCallFrames)
         {
             if (contract == null)
                 throw new ArgumentNullException(nameof(contract));
             if (skills == null)
                 throw new ArgumentNullException(nameof(skills));
+            if (graphCallFrames == null)
+                throw new ArgumentNullException(nameof(graphCallFrames));
             for (int i = 0; i < contract.Skills.Count; i++)
                 skills.Require(contract.Skills[i]);
             for (int i = 0; i < skills.Bindings.Count; i++)
@@ -517,6 +520,24 @@ namespace ThirdPersonSimulation
                     }
                     if (!followUpDeclared)
                         throw new InvalidDataException($"SkillProgram '{skill}' follow-up '{followUp}' is not declared by control module '{contract.ModuleId}'.");
+                }
+                for (int dependencyIndex = 0; dependencyIndex < binding.Dependencies.Count; dependencyIndex++)
+                {
+                    CharacterSkillDependency dependency = binding.Dependencies[dependencyIndex];
+                    ProgramGraphCallFrame match = null;
+                    for (int frameIndex = 0; frameIndex < graphCallFrames.Count; frameIndex++)
+                    {
+                        ProgramGraphCallFrame frame = graphCallFrames[frameIndex];
+                        if (!string.Equals(frame.Identity, dependency.CallSiteIdentity, StringComparison.Ordinal))
+                            continue;
+                        if (match != null)
+                            throw new InvalidDataException($"SkillProgram '{skill}' dependency call site '{dependency.CallSiteIdentity}' is duplicated.");
+                        match = frame;
+                    }
+                    if (match == null)
+                        throw new InvalidDataException($"SkillProgram '{skill}' dependency call site '{dependency.CallSiteIdentity}' is missing from the Program.");
+                    if (!string.Equals(match.ChildGraphIdentity, dependency.SubgraphIdentity, StringComparison.Ordinal))
+                        throw new InvalidDataException($"SkillProgram '{skill}' dependency call site '{dependency.CallSiteIdentity}' targets '{match.ChildGraphIdentity}', expected '{dependency.SubgraphIdentity}'.");
                 }
             }
         }

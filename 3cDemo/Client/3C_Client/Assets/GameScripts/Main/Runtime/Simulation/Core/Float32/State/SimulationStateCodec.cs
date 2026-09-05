@@ -9,9 +9,9 @@ namespace ThirdPersonSimulation
     public static class CharacterSimulationStateCodec
     {
         const uint Magic = 0x54534343;
-		const int Version = 12;
-		public const string CodecIdentity = "character-state/float32/v12";
-		const string HashIdentity = "character-state-hash/float32/v11";
+		const int Version = 13;
+		public const string CodecIdentity = "character-state/float32/v13";
+		const string HashIdentity = "character-state-hash/float32/v12";
 
         public static byte[] Write(CharacterSimulationState state)
         {
@@ -114,6 +114,7 @@ namespace ThirdPersonSimulation
                 case ProgramStateValueKind.ActionInstance: WriteActionInstance(writer, value.ActionInstance); break;
                 case ProgramStateValueKind.ActionInstanceReference: WriteActionReference(writer, value.ActionInstanceReference); break;
                 case ProgramStateValueKind.ActionTargetSnapshot: WriteTargetSnapshot(writer, value.ActionTargetSnapshot); break;
+                case ProgramStateValueKind.SkillExecutionState: WriteSkillExecutionState(writer, value.SkillExecutionState, layout); break;
                 case ProgramStateValueKind.GameplayEffectAggregate:
                     GameplayEffectStateAggregateCodec.Write(writer, value.GameplayEffectAggregate, layout.GameplayEffectProgram);
                     break;
@@ -146,6 +147,7 @@ namespace ThirdPersonSimulation
                 case ProgramStateValueKind.ActionInstance: return CharacterStateValue.FromActionInstance(ReadActionInstance(reader, layout));
                 case ProgramStateValueKind.ActionInstanceReference: return CharacterStateValue.FromActionInstanceReference(ReadActionReference(reader));
                 case ProgramStateValueKind.ActionTargetSnapshot: return CharacterStateValue.FromActionTargetSnapshot(ReadTargetSnapshot(reader));
+                case ProgramStateValueKind.SkillExecutionState: return CharacterStateValue.FromSkillExecutionState(ReadSkillExecutionState(reader, layout));
                 case ProgramStateValueKind.GameplayEffectAggregate:
                     return CharacterStateValue.FromGameplayEffectAggregate(
                         GameplayEffectStateAggregateCodec.Read(reader, layout.GameplayEffectProgram));
@@ -391,6 +393,79 @@ namespace ThirdPersonSimulation
             if (!value.IsValid)
                 throw new InvalidDataException("Character state Action instance reference identity is invalid.");
             return value;
+        }
+
+        static void WriteSkillExecutionState(
+            CanonicalWriter writer,
+            Float32SkillExecutionStateAggregate value,
+            ProgramExecutionLayout layout)
+        {
+            if (value == null)
+                throw new InvalidDataException("Character state Skill execution aggregate is missing.");
+            writer.WriteInt32(value.Frames.Count);
+            for (int frameIndex = 0; frameIndex < value.Frames.Count; frameIndex++)
+            {
+                Float32SkillExecutionStateFrame frame = value.Frames[frameIndex];
+                if (frame == null || frame.Generation == 0)
+                    throw new InvalidDataException("Character state Skill execution frame is incomplete.");
+                writer.WriteString(frame.SkillId.Value);
+                writer.WriteInt32(frame.EntryOperation.Value);
+                writer.WriteUInt64(frame.ActionInstanceId);
+                writer.WriteUInt64(frame.PredictionKey);
+                writer.WriteUInt64(frame.Generation);
+                writer.WriteInt32(frame.Values.Count);
+                foreach (KeyValuePair<int, CharacterStateValue> state in frame.Values)
+                {
+                    if (state.Key < 0 || state.Key >= layout.Program.StateSlots.Count ||
+                        state.Value.Kind != layout.Program.StateSlots[state.Key].ValueKind)
+                        throw new InvalidDataException("Character state Skill execution frame contains an invalid state value.");
+                    writer.WriteInt32(state.Key);
+                    WriteValue(writer, state.Value, layout);
+                }
+            }
+        }
+
+        static Float32SkillExecutionStateAggregate ReadSkillExecutionState(
+            CanonicalReader reader,
+            ProgramExecutionLayout layout)
+        {
+            int frameCount = reader.ReadInt32();
+            if (frameCount < 0)
+                throw new InvalidDataException("Character state Skill execution frame count is invalid.");
+            var frames = new List<Float32SkillExecutionStateFrame>(frameCount);
+            for (int frameIndex = 0; frameIndex < frameCount; frameIndex++)
+            {
+                CharacterSkillId skillId = new CharacterSkillId(reader.ReadString());
+                OperationHandle entryOperation = new OperationHandle(reader.ReadInt32());
+                ulong actionInstanceId = reader.ReadUInt64();
+                ulong predictionKey = reader.ReadUInt64();
+                ulong generation = reader.ReadUInt64();
+                if (generation == 0)
+                    throw new InvalidDataException("Character state Skill execution frame generation is missing.");
+                int valueCount = reader.ReadInt32();
+                if (valueCount < 0)
+                    throw new InvalidDataException("Character state Skill execution frame value count is invalid.");
+                var values = new List<KeyValuePair<int, CharacterStateValue>>(valueCount);
+                var seen = new HashSet<int>();
+                for (int valueIndex = 0; valueIndex < valueCount; valueIndex++)
+                {
+                    int slotIndex = reader.ReadInt32();
+                    if (slotIndex < 0 || slotIndex >= layout.Program.StateSlots.Count || !seen.Add(slotIndex))
+                        throw new InvalidDataException("Character state Skill execution frame state address is invalid or duplicated.");
+                    CharacterStateValue value = ReadValue(reader, layout);
+                    if (value.Kind != layout.Program.StateSlots[slotIndex].ValueKind)
+                        throw new InvalidDataException("Character state Skill execution frame state value kind does not match its address.");
+                    values.Add(new KeyValuePair<int, CharacterStateValue>(slotIndex, value));
+                }
+                frames.Add(new Float32SkillExecutionStateFrame(
+                    skillId,
+                    entryOperation,
+                    actionInstanceId,
+                    predictionKey,
+                    generation,
+                    values));
+            }
+            return new Float32SkillExecutionStateAggregate(frames);
         }
 
         static void WriteTargetSnapshot(CanonicalWriter writer, SimulationActionTargetSnapshot value)

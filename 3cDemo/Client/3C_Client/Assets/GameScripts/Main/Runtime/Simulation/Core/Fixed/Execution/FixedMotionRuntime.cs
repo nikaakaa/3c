@@ -410,7 +410,7 @@ namespace ThirdPersonSimulation.Fixed
             int slot = m_Frame.Layout.FindOperationStateSlot(
                 source.Operation,
                 ProgramStateSemantic.RunnableActivationGeneration);
-            ulong generation = slot < 0 ? 1UL : m_Frame.Transaction.Get(slot).UInt64;
+            ulong generation = slot < 0 ? 1UL : m_Frame.ReadState(slot).UInt64;
             return generation == 0 ? 1UL : generation;
         }
 

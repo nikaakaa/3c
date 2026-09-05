@@ -5,7 +5,7 @@ using System.Globalization;
 
 namespace ThirdPersonSimulation.Fixed
 {
-    internal sealed class FixedActionRuntime : FixedOperationModule, IFixedActionAdmissionQuery, IActionAdmissionReadPort
+    internal sealed class FixedActionRuntime : FixedOperationModule, IFixedActionAdmissionQuery, IActionAdmissionReadPort, IActionSkillActivationPort<SimulationActionTargetSnapshot, SimulationOperation>
     {
         readonly FixedEvaluationFrame m_Frame;
         readonly IFixedInputPort m_InputRuntime;
@@ -17,7 +17,7 @@ namespace ThirdPersonSimulation.Fixed
         readonly FixedFactSink m_Facts;
         readonly FixedTraceSink m_Trace;
         readonly IEquipmentActionContextProvider m_EquipmentContext;
-        readonly ActionAdmissionControl m_Admission;
+        readonly ActionSkillActivationFlow<SimulationActionTargetSnapshot, SimulationOperation> m_Activation;
 
         public FixedActionRuntime(
             FixedProgramAccess access,
@@ -43,104 +43,26 @@ namespace ThirdPersonSimulation.Fixed
             m_Facts = facts ?? throw new ArgumentNullException(nameof(facts));
             m_Trace = trace ?? throw new ArgumentNullException(nameof(trace));
             m_EquipmentContext = equipmentContext ?? throw new ArgumentNullException(nameof(equipmentContext));
-            m_Admission = new ActionAdmissionControl(this);
+            m_Activation = new ActionSkillActivationFlow<SimulationActionTargetSnapshot, SimulationOperation>(new ActionAdmissionControl(this), this);
         }
 
         public bool Activate<TTarget>(OperationControlCursor<TTarget> cursor, SimulationOperation operation)
             where TTarget : struct, IOperationControlTarget<TTarget>
         {
             ActionAdmissionProfile profile = RequireActionProfile(operation);
-            string actionId = profile.ActionId;
-            string contextId = GetStringConstant(operation, OperationNamedConstant.ActionContext, string.Empty);
-            if (string.IsNullOrEmpty(contextId))
-                throw new InvalidOperationException($"Action operation '{SourcePath(operation)}' has no formal Action Context.");
-
-            SimulationActionTargetSnapshot targetSnapshot = SelectTargetSnapshot(
-                profile,
-                ReadActionTargetSnapshot(cursor, operation));
-            ActionAdmissionDecision admission = m_Admission.Evaluate(new ActionAdmissionRequest(
-                profile,
-                new ActionAdmissionTargetCandidate(targetSnapshot.TargetId),
-                ActionAdmissionEvaluationMode.CommitActivation));
-            if (!admission.Allowed)
-            {
-                if (m_Trace.Enabled)
-                {
-                    m_Trace.Add(
-                        operation,
-                        "action_activation_rejected",
-                        SimulationTraceSeverity.Information,
-                        $"{actionId}:{admission.RejectReason}:{admission.ActiveSourceActionId}");
-                }
-                return false;
-            }
-
-            string requestId = GetStringConstant(operation, OperationNamedConstant.SourceInputRequest, string.Empty);
-            ulong inputSequence = m_Frame.Input.Sequence;
-            if (!string.IsNullOrEmpty(requestId))
-            {
-                if (!m_InputRuntime.HasRequest(requestId, out FixedInputRequestState inputRequest))
-                {
-                    if (m_Trace.Enabled)
-                        m_Trace.Add(operation, "action_request_unavailable", SimulationTraceSeverity.Detail, $"{requestId}:{m_Frame.Tick.Value}");
-                    return false;
-                }
-                inputSequence = inputRequest.Sequence;
-                if (GetBooleanConstant(operation, OperationNamedConstant.ConsumeSourceInputRequest, true))
-                    m_InputRuntime.ClearRequest(requestId);
-            }
-
-            var request = new FixedActionActivationRequestState(
-                actionId,
-                default,
-                OperationHandle.Invalid,
-                contextId,
-                requestId,
-                inputSequence,
-                m_Frame.Tick.Value,
-                GetStringConstant(operation, OperationNamedConstant.TargetKey, string.Empty),
-                targetSnapshot,
-                SimulationExecutionSource.FromSkillOperation(operation.Handle, SourcePath(operation)),
-                m_EquipmentContext.Current);
-            int requestSlot = m_Actions.RequireSlot(actionId, ProgramStateSemantic.ActionRequestBuffer);
-            m_Actions.WriteRequest(requestSlot, request);
-            try
-            {
-                FixedActionActivationRequestState staged = m_Actions.ReadRequest(requestSlot);
-                ulong instanceId = m_Handles.Next();
-                ulong predictionKey = m_Actions.NextSequence();
-                var instance = new FixedActionInstanceState(
-                    staged.ActionId,
-                    staged.SkillId,
+            return m_Activation.ActivateImmediate(
+                new ActionSkillActivationCandidate<SimulationActionTargetSnapshot, SimulationOperation>(
+                    default,
                     OperationHandle.Invalid,
-                    0,
-                    staged.ContextId,
-                    instanceId,
-                    predictionKey,
-                    staged.SourceInputRequestId,
-                    staged.InputSequence,
-                    staged.StartTick,
-                    staged.TargetKey,
-                    staged.TargetSnapshot,
-                    staged.Source,
-                    SimulationActionPhase.Startup,
-                    SimulationActionState.Predicted,
-                    SimulationActionLifecycleTransitionType.None,
-                    staged.StartTick,
-                    0,
-                    string.Empty,
-                    staged.EquipmentContext);
-                m_Actions.WriteState(instance);
-                m_GameplayEffectActions.SetActionTags(instanceId, profile.Tags);
-                EmitActionFact(instance.Source, instance);
-                if (m_Trace.Enabled)
-                    m_Trace.Add(operation, "action_activated", SimulationTraceSeverity.Information, $"{actionId}:{instanceId}:request={requestId}:sequence={inputSequence}:requirement={profile.TargetRequirement}:candidate={targetSnapshot.TargetId}:captured={instance.TargetSnapshot.TargetId}:captureTick={instance.StartTick}:targetPosition={instance.TargetSnapshot.Position}:targetYaw={instance.TargetSnapshot.Yaw}:equipment={instance.EquipmentContext}");
-                return true;
-            }
-            finally
-            {
-                m_Actions.ClearRequest(requestSlot);
-            }
+                    GetStringConstant(operation, OperationNamedConstant.ActionContext, string.Empty),
+                    GetStringConstant(operation, OperationNamedConstant.SourceInputRequest, string.Empty),
+                    GetBooleanConstant(operation, OperationNamedConstant.ConsumeSourceInputRequest, true),
+                    GetStringConstant(operation, OperationNamedConstant.TargetKey, string.Empty),
+                    ReadActionTargetSnapshot(cursor, operation),
+                    SimulationExecutionSource.FromSkillOperation(operation.Handle, SourcePath(operation)),
+                    m_EquipmentContext.Current,
+                    operation),
+                profile);
         }
 
         public bool IsContextActive(string contextId) => m_Actions.IsContextActive(contextId);
@@ -181,50 +103,14 @@ namespace ThirdPersonSimulation.Fixed
             where TTarget : struct, IOperationControlTarget<TTarget>
         {
             ActionAdmissionProfile profile = RequireActionProfile(operation);
-            SimulationActionTargetSnapshot targetSnapshot = SelectTargetSnapshot(profile, ReadActionTargetSnapshot(cursor, operation));
-            ActionAdmissionDecision decision = m_Admission.Evaluate(new ActionAdmissionRequest(
-                profile,
-                new ActionAdmissionTargetCandidate(targetSnapshot.TargetId),
-                ActionAdmissionEvaluationMode.PreviewReplacement));
-            if (m_Trace.Enabled)
-            {
-                m_Trace.Add(
-                    operation,
-                    "action_admission_preview",
-                    SimulationTraceSeverity.Detail,
-                    $"{profile.ActionId}:{decision.Allowed}:{decision.RejectReason}:{decision.ActiveSourceActionId}");
-            }
-            return decision;
+            return m_Activation.Preview(operation, profile, ReadActionTargetSnapshot(cursor, operation));
         }
 
         public bool ActivateFromControl(CharacterControlSkillRequest controlRequest)
         {
             CharacterSkillProgramBinding skill = m_Program.SkillPrograms.Require(controlRequest.SkillId);
             ActionAdmissionProfile profile = RequireActionProfile(skill.ActionProfileId);
-            string requestId = string.IsNullOrEmpty(controlRequest.SourceInputRequestId)
-                ? skill.SourceInputRequestId
-                : controlRequest.SourceInputRequestId;
-            bool consumeRequest = string.IsNullOrEmpty(controlRequest.SourceInputRequestId)
-                ? skill.ConsumeSourceInputRequest
-                : controlRequest.ConsumeSourceInputRequest;
-            SimulationActionTargetSnapshot targetSnapshot = profile.TargetRequirement == ActionTargetRequirement.None ||
-                string.IsNullOrEmpty(controlRequest.TargetInputValueId) && string.IsNullOrEmpty(skill.TargetInputValueId)
-                    ? SimulationActionTargetSnapshot.None
-                    : m_InputRuntime.ReadValue(
-                        string.IsNullOrEmpty(controlRequest.TargetInputValueId)
-                            ? skill.TargetInputValueId
-                            : controlRequest.TargetInputValueId,
-                        SimulationInputValueKind.ActionTargetSnapshot).ActionTargetSnapshot;
-            return ActivateFromControl(
-                skill.SkillId,
-                skill.EntryOperation,
-                profile,
-                skill.ActionContextId,
-                requestId,
-                consumeRequest,
-                string.IsNullOrEmpty(controlRequest.TargetKey) ? skill.TargetKey : controlRequest.TargetKey,
-                targetSnapshot,
-                controlRequest.Source);
+            return m_Activation.ActivateFromControl(controlRequest, skill, profile);
         }
 
         public void StopFromControl(CharacterControlSkillStopRequest controlRequest)
@@ -244,142 +130,11 @@ namespace ThirdPersonSimulation.Fixed
                 0);
         }
 
-        bool ActivateFromControl(
-            CharacterSkillId skillId,
-            OperationHandle skillEntryOperation,
-            ActionAdmissionProfile profile,
-            string contextId,
-            string requestId,
-            bool consumeRequest,
-            string targetKey,
-            SimulationActionTargetSnapshot targetSnapshot,
-            SimulationExecutionSource source)
-        {
-            string actionId = profile.ActionId;
-            ActionAdmissionDecision admission = m_Admission.Evaluate(new ActionAdmissionRequest(
-                profile,
-                new ActionAdmissionTargetCandidate(targetSnapshot.TargetId),
-                ActionAdmissionEvaluationMode.CommitActivation));
-            bool replacementPending = false;
-            if (!admission.Allowed)
-            {
-                if (admission.RejectReason != ActionAdmissionRejectReason.SourceActionStillActive)
-                {
-                    if (m_Trace.Enabled)
-                        m_Trace.Add(source, "action_activation_rejected", SimulationTraceSeverity.Information, $"{actionId}:{admission.RejectReason}:{admission.ActiveSourceActionId}");
-                    return false;
-                }
-                ActionAdmissionDecision replacement = m_Admission.Evaluate(new ActionAdmissionRequest(
-                    profile,
-                    new ActionAdmissionTargetCandidate(targetSnapshot.TargetId),
-                    ActionAdmissionEvaluationMode.PreviewReplacement));
-                if (!replacement.Allowed)
-                {
-                    if (m_Trace.Enabled)
-                        m_Trace.Add(source, "action_replacement_rejected", SimulationTraceSeverity.Information, $"{actionId}:{replacement.RejectReason}:{replacement.ActiveSourceActionId}");
-                    return false;
-                }
-                FixedActionInstanceState active = m_Actions.FindOnlyActive();
-                ApplyActionTransition(
-                    source,
-                    active,
-                    SimulationActionLifecycleTransitionType.Interrupt,
-                    "SkillReplacement",
-                    0);
-                replacementPending = true;
-            }
-
-            ulong inputSequence = m_Frame.Input.Sequence;
-            if (!string.IsNullOrEmpty(requestId))
-            {
-                if (!m_InputRuntime.HasRequest(requestId, out FixedInputRequestState inputRequest))
-                {
-                    if (m_Trace.Enabled)
-                        m_Trace.Add(source, "action_request_unavailable", SimulationTraceSeverity.Detail, $"{requestId}:{m_Frame.Tick.Value}");
-                    return false;
-                }
-                inputSequence = inputRequest.Sequence;
-                if (consumeRequest)
-                    m_InputRuntime.ClearRequest(requestId);
-            }
-
-            var request = new FixedActionActivationRequestState(
-                actionId,
-                skillId,
-                skillEntryOperation,
-                contextId,
-                requestId,
-                inputSequence,
-                m_Frame.Tick.Value,
-                targetKey,
-                targetSnapshot,
-                source,
-                m_EquipmentContext.Current);
-            int requestSlot = m_Actions.RequireSlot(actionId, ProgramStateSemantic.ActionRequestBuffer);
-            if (m_Actions.ReadRequest(requestSlot).IsValid)
-                throw new InvalidOperationException($"Action '{actionId}' already has a pending activation request.");
-            m_Actions.WriteRequest(requestSlot, request);
-            return !replacementPending;
-        }
-
         public bool TryCommitPendingControl(CharacterSkillId skillId)
         {
-            int requestSlot = m_Actions.FindPendingSkill(skillId, out FixedActionActivationRequestState request);
-            if (requestSlot < 0)
-                return false;
             CharacterSkillProgramBinding skill = m_Program.SkillPrograms.Require(skillId);
             ActionAdmissionProfile profile = RequireActionProfile(skill.ActionProfileId);
-            ActionAdmissionDecision admission = m_Admission.Evaluate(new ActionAdmissionRequest(
-                profile,
-                new ActionAdmissionTargetCandidate(request.TargetSnapshot.TargetId),
-                ActionAdmissionEvaluationMode.CommitActivation));
-            if (!admission.Allowed)
-            {
-                if (admission.RejectReason == ActionAdmissionRejectReason.SourceActionStillActive)
-                    return false;
-                m_Actions.ClearRequest(requestSlot);
-                if (m_Trace.Enabled)
-                    m_Trace.Add(request.Source, "action_activation_rejected", SimulationTraceSeverity.Information, $"{skillId}:{admission.RejectReason}:{admission.ActiveSourceActionId}");
-                return false;
-            }
-            CommitControlActivation(requestSlot, request, profile);
-            return true;
-        }
-
-        void CommitControlActivation(
-            int requestSlot,
-            FixedActionActivationRequestState staged,
-            ActionAdmissionProfile profile)
-        {
-            ulong instanceId = m_Handles.Next();
-            ulong predictionKey = m_Actions.NextSequence();
-            var instance = new FixedActionInstanceState(
-                staged.ActionId,
-                staged.SkillId,
-                staged.SkillEntryOperation,
-                0,
-                staged.ContextId,
-                instanceId,
-                predictionKey,
-                staged.SourceInputRequestId,
-                staged.InputSequence,
-                staged.StartTick,
-                staged.TargetKey,
-                staged.TargetSnapshot,
-                staged.Source,
-                SimulationActionPhase.Startup,
-                SimulationActionState.Predicted,
-                SimulationActionLifecycleTransitionType.None,
-                staged.StartTick,
-                0,
-                string.Empty,
-                staged.EquipmentContext);
-            m_Actions.WriteState(instance);
-            m_GameplayEffectActions.SetActionTags(instanceId, profile.Tags);
-            m_Actions.ClearRequest(requestSlot);
-            EmitActionFact(instance.Source, instance);
-            if (m_Trace.Enabled)
-                m_Trace.Add(staged.Source, "action_activated", SimulationTraceSeverity.Information, $"{staged.ActionId}:{instanceId}:request={staged.SourceInputRequestId}:sequence={staged.InputSequence}:requirement={profile.TargetRequirement}:candidate={staged.TargetSnapshot.TargetId}:captured={instance.TargetSnapshot.TargetId}:captureTick={instance.StartTick}:targetPosition={instance.TargetSnapshot.Position}:targetYaw={instance.TargetSnapshot.Yaw}:equipment={instance.EquipmentContext}");
+            return m_Activation.TryCommitPendingControl(skillId, profile);
         }
 
         public bool SubmitLifecycle(SimulationOperation operation)
@@ -522,7 +277,7 @@ namespace ThirdPersonSimulation.Fixed
             int slot = m_Frame.Layout.FindOperationStateSlot(
                 source.Operation,
                 ProgramStateSemantic.RunnableActivationGeneration);
-            ulong generation = slot < 0 ? 1UL : m_Frame.Transaction.Get(slot).UInt64;
+            ulong generation = slot < 0 ? 1UL : m_Frame.ReadState(slot).UInt64;
             return generation == 0 ? 1UL : generation;
         }
 
@@ -531,15 +286,6 @@ namespace ThirdPersonSimulation.Fixed
 
         ActionAdmissionProfile RequireActionProfile(string actionId) =>
             Access.Services.RequireActionProfile(actionId);
-
-        static SimulationActionTargetSnapshot SelectTargetSnapshot(
-            ActionAdmissionProfile profile,
-            SimulationActionTargetSnapshot candidate)
-        {
-            return profile.TargetRequirement == ActionTargetRequirement.None
-                ? SimulationActionTargetSnapshot.None
-                : candidate;
-        }
 
         ProgramCatalogEntry FindGameplayTag(string identity)
         {
@@ -569,6 +315,162 @@ namespace ThirdPersonSimulation.Fixed
             return false;
         }
 
+        ulong IActionSkillActivationPort<SimulationActionTargetSnapshot, SimulationOperation>.InputSequence => m_Frame.Input.Sequence;
+
+        ulong IActionSkillActivationPort<SimulationActionTargetSnapshot, SimulationOperation>.Tick => m_Frame.Tick.Value;
+
+        bool IActionSkillActivationPort<SimulationActionTargetSnapshot, SimulationOperation>.TraceEnabled => m_Trace.Enabled;
+
+        bool IActionSkillActivationPort<SimulationActionTargetSnapshot, SimulationOperation>.TryReadInputSequence(string requestId, out ulong sequence)
+        {
+            if (!m_InputRuntime.HasRequest(requestId, out FixedInputRequestState request))
+            {
+                sequence = 0;
+                return false;
+            }
+            sequence = request.Sequence;
+            return true;
+        }
+
+        void IActionSkillActivationPort<SimulationActionTargetSnapshot, SimulationOperation>.ClearInputRequest(string requestId) => m_InputRuntime.ClearRequest(requestId);
+
+        SimulationActionTargetSnapshot IActionSkillActivationPort<SimulationActionTargetSnapshot, SimulationOperation>.NoneTarget =>
+            SimulationActionTargetSnapshot.None;
+
+        SimulationActionTargetSnapshot IActionSkillActivationPort<SimulationActionTargetSnapshot, SimulationOperation>.ReadTargetSnapshot(string inputValueId) =>
+            m_InputRuntime.ReadValue(inputValueId, SimulationInputValueKind.ActionTargetSnapshot).ActionTargetSnapshot;
+
+        string IActionSkillActivationPort<SimulationActionTargetSnapshot, SimulationOperation>.TargetId(
+            SimulationActionTargetSnapshot targetSnapshot) => targetSnapshot.TargetId;
+
+        string IActionSkillActivationPort<SimulationActionTargetSnapshot, SimulationOperation>.FormatTarget(
+            SimulationActionTargetSnapshot targetSnapshot) =>
+            $"targetPosition={targetSnapshot.Position}:targetYaw={targetSnapshot.Yaw}";
+
+        bool IActionSkillActivationPort<SimulationActionTargetSnapshot, SimulationOperation>.HasPendingRequest(string actionId)
+        {
+            int slot = m_Actions.RequireSlot(actionId, ProgramStateSemantic.ActionRequestBuffer);
+            return m_Actions.ReadRequest(slot).IsValid;
+        }
+
+        void IActionSkillActivationPort<SimulationActionTargetSnapshot, SimulationOperation>.StageRequest(
+            ActionSkillActivationRequest<SimulationActionTargetSnapshot> request)
+        {
+            int slot = m_Actions.RequireSlot(request.ActionId, ProgramStateSemantic.ActionRequestBuffer);
+            m_Actions.WriteRequest(
+                slot,
+                new FixedActionActivationRequestState(
+                    request.ActionId,
+                    request.SkillId,
+                    request.SkillEntryOperation,
+                    request.ContextId,
+                    request.SourceInputRequestId,
+                    request.InputSequence,
+                    request.StartTick,
+                    request.TargetKey,
+                    request.TargetSnapshot,
+                    request.Source,
+                    request.EquipmentContext));
+        }
+
+        bool IActionSkillActivationPort<SimulationActionTargetSnapshot, SimulationOperation>.TryReadPendingRequest(
+            CharacterSkillId skillId,
+            out ActionSkillActivationRequest<SimulationActionTargetSnapshot> request)
+        {
+            int slot = m_Actions.FindPendingSkill(skillId, out FixedActionActivationRequestState staged);
+            if (slot < 0)
+            {
+                request = default;
+                return false;
+            }
+            request = new ActionSkillActivationRequest<SimulationActionTargetSnapshot>(
+                staged.ActionId,
+                staged.SkillId,
+                staged.SkillEntryOperation,
+                staged.ContextId,
+                staged.SourceInputRequestId,
+                staged.InputSequence,
+                staged.StartTick,
+                staged.TargetKey,
+                staged.TargetSnapshot,
+                staged.Source,
+                staged.EquipmentContext);
+            return true;
+        }
+
+        void IActionSkillActivationPort<SimulationActionTargetSnapshot, SimulationOperation>.ClearPendingRequest(
+            ActionSkillActivationRequest<SimulationActionTargetSnapshot> request)
+        {
+            int slot = m_Actions.RequireSlot(request.ActionId, ProgramStateSemantic.ActionRequestBuffer);
+            m_Actions.ClearRequest(slot);
+        }
+
+        ulong IActionSkillActivationPort<SimulationActionTargetSnapshot, SimulationOperation>.CommitRequest(
+            ActionSkillActivationRequest<SimulationActionTargetSnapshot> request,
+            ActionAdmissionProfile profile)
+        {
+            int requestSlot = m_Actions.RequireSlot(request.ActionId, ProgramStateSemantic.ActionRequestBuffer);
+            ulong instanceId = m_Handles.Next();
+            ulong predictionKey = m_Actions.NextSequence();
+            var instance = new FixedActionInstanceState(
+                request.ActionId,
+                request.SkillId,
+                request.SkillEntryOperation,
+                0,
+                request.ContextId,
+                instanceId,
+                predictionKey,
+                request.SourceInputRequestId,
+                request.InputSequence,
+                request.StartTick,
+                request.TargetKey,
+                request.TargetSnapshot,
+                request.Source,
+                SimulationActionPhase.Startup,
+                SimulationActionState.Predicted,
+                SimulationActionLifecycleTransitionType.None,
+                request.StartTick,
+                0,
+                string.Empty,
+                request.EquipmentContext);
+            try
+            {
+                m_Actions.WriteState(instance);
+                m_GameplayEffectActions.SetActionTags(instanceId, profile.Tags);
+                m_Actions.ClearRequest(requestSlot);
+                EmitActionFact(instance.Source, instance);
+                return instanceId;
+            }
+            finally
+            {
+                m_Actions.ClearRequest(requestSlot);
+            }
+        }
+
+        void IActionSkillActivationPort<SimulationActionTargetSnapshot, SimulationOperation>.InterruptActive(
+            SimulationExecutionSource source,
+            string reason)
+        {
+            ApplyActionTransition(
+                source,
+                m_Actions.FindOnlyActive(),
+                SimulationActionLifecycleTransitionType.Interrupt,
+                reason,
+                0);
+        }
+
+        void IActionSkillActivationPort<SimulationActionTargetSnapshot, SimulationOperation>.Trace(
+            SimulationOperation operation,
+            string code,
+            ActionSkillTraceSeverity severity,
+            string detail) => m_Trace.Add(operation, code, ToTraceSeverity(severity), detail);
+
+        void IActionSkillActivationPort<SimulationActionTargetSnapshot, SimulationOperation>.Trace(
+            SimulationExecutionSource source,
+            string code,
+            ActionSkillTraceSeverity severity,
+            string detail) => m_Trace.Add(source, code, ToTraceSeverity(severity), detail);
+
         SimulationActionTargetSnapshot ReadActionTargetSnapshot<TTarget>(
             OperationControlCursor<TTarget> cursor,
             SimulationOperation operation)
@@ -588,6 +490,11 @@ namespace ThirdPersonSimulation.Fixed
                    (ingress.PredictionKey == 0 || ingress.PredictionKey == action.PredictionKey) &&
                    (ingress.InputSequence == 0 || ingress.InputSequence == action.InputSequence);
         }
+
+        static SimulationTraceSeverity ToTraceSeverity(ActionSkillTraceSeverity severity) =>
+            severity == ActionSkillTraceSeverity.Detail
+                ? SimulationTraceSeverity.Detail
+                : SimulationTraceSeverity.Information;
 
         static SimulationActionLifecycleTransitionType RequireActionTransition(int value)
         {

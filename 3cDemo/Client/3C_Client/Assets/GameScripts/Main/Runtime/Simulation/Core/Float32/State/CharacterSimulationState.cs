@@ -10,6 +10,7 @@ namespace ThirdPersonSimulation
 		readonly Float32ActionActivationRequestState m_ActionActivationRequest;
 		readonly Float32ActionInstanceState m_ActionInstance;
 		readonly Float32ActionInstanceReference m_ActionInstanceReference;
+		readonly Float32SkillExecutionStateAggregate m_SkillExecutionState;
 		readonly GameplayEffectStateAggregate m_GameplayEffectAggregate;
 		readonly EquipmentStateAggregate m_EquipmentAggregate;
 		readonly BlackboardOwnerToken m_BlackboardOwnerToken;
@@ -31,6 +32,7 @@ namespace ThirdPersonSimulation
 			Float32ActionActivationRequestState actionActivationRequest,
 			Float32ActionInstanceState actionInstance,
 			Float32ActionInstanceReference actionInstanceReference,
+			Float32SkillExecutionStateAggregate skillExecutionState,
 			SimulationActionTargetSnapshot actionTargetSnapshot,
 			GameplayEffectStateAggregate gameplayEffectAggregate,
 			EquipmentStateAggregate equipmentAggregate)
@@ -50,6 +52,7 @@ namespace ThirdPersonSimulation
 			m_ActionActivationRequest = actionActivationRequest;
 			m_ActionInstance = actionInstance;
 			m_ActionInstanceReference = actionInstanceReference;
+			m_SkillExecutionState = skillExecutionState;
 			ActionTargetSnapshot = actionTargetSnapshot;
 			m_GameplayEffectAggregate = gameplayEffectAggregate;
 			m_EquipmentAggregate = equipmentAggregate;
@@ -71,6 +74,10 @@ namespace ThirdPersonSimulation
 		internal Float32ActionActivationRequestState ActionActivationRequest => Require(ProgramStateValueKind.ActionActivationRequest, m_ActionActivationRequest);
 		internal Float32ActionInstanceState ActionInstance => Require(ProgramStateValueKind.ActionInstance, m_ActionInstance);
 		internal Float32ActionInstanceReference ActionInstanceReference => Require(ProgramStateValueKind.ActionInstanceReference, m_ActionInstanceReference);
+		internal Float32SkillExecutionStateAggregate SkillExecutionState =>
+			Kind == ProgramStateValueKind.SkillExecutionState
+				? m_SkillExecutionState ?? throw new InvalidOperationException("Skill execution state aggregate is missing.")
+				: throw new InvalidOperationException($"State value is '{Kind}', expected SkillExecutionState.");
 		internal GameplayEffectStateAggregate GameplayEffectAggregate =>
 			Kind == ProgramStateValueKind.GameplayEffectAggregate
 				? m_GameplayEffectAggregate ?? throw new InvalidOperationException("Gameplay Effect state aggregate is missing.")
@@ -94,6 +101,8 @@ namespace ThirdPersonSimulation
 		internal static CharacterStateValue FromActionActivationRequest(Float32ActionActivationRequestState value) => Create(ProgramStateValueKind.ActionActivationRequest, actionActivationRequest: value);
 		internal static CharacterStateValue FromActionInstance(Float32ActionInstanceState value) => Create(ProgramStateValueKind.ActionInstance, actionInstance: value);
 		internal static CharacterStateValue FromActionInstanceReference(Float32ActionInstanceReference value) => Create(ProgramStateValueKind.ActionInstanceReference, actionInstanceReference: value);
+		internal static CharacterStateValue FromSkillExecutionState(Float32SkillExecutionStateAggregate value) =>
+			Create(ProgramStateValueKind.SkillExecutionState, skillExecutionState: value ?? throw new ArgumentNullException(nameof(value)));
 		public static CharacterStateValue FromActionTargetSnapshot(SimulationActionTargetSnapshot value) => Create(ProgramStateValueKind.ActionTargetSnapshot, actionTargetSnapshot: value);
 		internal static CharacterStateValue FromGameplayEffectAggregate(GameplayEffectStateAggregate value)
 		{
@@ -126,6 +135,7 @@ namespace ThirdPersonSimulation
 				ProgramStateValueKind.ActionActivationRequest => FromActionActivationRequest(default),
 				ProgramStateValueKind.ActionInstance => FromActionInstance(default),
 				ProgramStateValueKind.ActionInstanceReference => FromActionInstanceReference(default),
+				ProgramStateValueKind.SkillExecutionState => FromSkillExecutionState(new Float32SkillExecutionStateAggregate()),
 				ProgramStateValueKind.ActionTargetSnapshot => FromActionTargetSnapshot(SimulationActionTargetSnapshot.None),
 				ProgramStateValueKind.GameplayEffectAggregate => throw new InvalidOperationException("Gameplay Effect aggregate requires the Program catalog."),
 				ProgramStateValueKind.EquipmentAggregate => throw new InvalidOperationException("Equipment aggregate requires the Program catalog."),
@@ -171,6 +181,7 @@ namespace ThirdPersonSimulation
 			Float32ActionActivationRequestState actionActivationRequest = default,
 			Float32ActionInstanceState actionInstance = default,
 			Float32ActionInstanceReference actionInstanceReference = default,
+			Float32SkillExecutionStateAggregate skillExecutionState = null,
 			SimulationActionTargetSnapshot actionTargetSnapshot = default,
 			GameplayEffectStateAggregate gameplayEffectAggregate = null,
 			EquipmentStateAggregate equipmentAggregate = null)
@@ -191,6 +202,7 @@ namespace ThirdPersonSimulation
 				actionActivationRequest,
 				actionInstance,
 				actionInstanceReference,
+				skillExecutionState,
 				actionTargetSnapshot,
 				gameplayEffectAggregate,
 				equipmentAggregate);
@@ -470,13 +482,128 @@ namespace ThirdPersonSimulation
 				throw new InvalidOperationException("Typed state address does not belong to this Character state layout.");
 		}
 
-		static int CountSlots(IReadOnlyList<TypedStatePartitionDescriptor> partitions)
+	static int CountSlots(IReadOnlyList<TypedStatePartitionDescriptor> partitions)
+	{
+		int count = 0;
+		for (int i = 0; i < partitions.Count; i++)
+			count = checked(count + partitions[i].SlotCount);
+		return count;
+	}
+	}
+
+	internal sealed class Float32SkillExecutionStateFrame
+	{
+		readonly SortedDictionary<int, CharacterStateValue> m_Values;
+
+		public Float32SkillExecutionStateFrame(
+			CharacterSkillId skillId,
+			OperationHandle entryOperation,
+			ulong actionInstanceId,
+			ulong predictionKey,
+			ulong generation,
+			IEnumerable<KeyValuePair<int, CharacterStateValue>> values = null)
 		{
-			int count = 0;
-			for (int i = 0; i < partitions.Count; i++)
-				count = checked(count + partitions[i].SlotCount);
-			return count;
+			if (!skillId.IsValid || !entryOperation.IsValid || actionInstanceId == 0 || predictionKey == 0)
+				throw new ArgumentException("Skill execution frame identity is incomplete.");
+			SkillId = skillId;
+			EntryOperation = entryOperation;
+			ActionInstanceId = actionInstanceId;
+			PredictionKey = predictionKey;
+			Generation = generation;
+			m_Values = new SortedDictionary<int, CharacterStateValue>();
+			if (values == null)
+				return;
+			foreach (KeyValuePair<int, CharacterStateValue> value in values)
+			{
+				if (value.Key < 0 || !m_Values.TryAdd(value.Key, value.Value))
+					throw new ArgumentException("Skill execution frame state values are invalid or duplicated.", nameof(values));
+			}
 		}
+
+		public CharacterSkillId SkillId { get; }
+		public OperationHandle EntryOperation { get; }
+		public ulong ActionInstanceId { get; }
+		public ulong PredictionKey { get; }
+		public ulong Generation { get; private set; }
+		public IReadOnlyDictionary<int, CharacterStateValue> Values => m_Values;
+
+		public bool TryGetValue(int slotIndex, out CharacterStateValue value) =>
+			m_Values.TryGetValue(slotIndex, out value);
+
+		public void SetValue(int slotIndex, CharacterStateValue value) =>
+			m_Values[slotIndex] = value;
+
+		public void BindGeneration(ulong generation)
+		{
+			if (generation == 0)
+				throw new ArgumentOutOfRangeException(nameof(generation));
+			if (Generation != 0 && Generation != generation)
+				throw new InvalidOperationException($"Skill '{SkillId}' execution frame generation changed.");
+			Generation = generation;
+		}
+
+		public Float32SkillExecutionStateFrame Clone() =>
+			new Float32SkillExecutionStateFrame(
+				SkillId,
+				EntryOperation,
+				ActionInstanceId,
+				PredictionKey,
+				Generation,
+				m_Values);
+	}
+
+	internal sealed class Float32SkillExecutionStateAggregate
+	{
+		readonly List<Float32SkillExecutionStateFrame> m_Frames;
+		readonly System.Collections.ObjectModel.ReadOnlyCollection<Float32SkillExecutionStateFrame> m_ReadOnlyFrames;
+
+		public Float32SkillExecutionStateAggregate(
+			IEnumerable<Float32SkillExecutionStateFrame> frames = null)
+		{
+			m_Frames = new List<Float32SkillExecutionStateFrame>();
+			if (frames != null)
+			{
+				foreach (Float32SkillExecutionStateFrame frame in frames)
+				{
+					if (frame == null || Find(frame.ActionInstanceId) != null)
+						throw new ArgumentException("Skill execution state frames are invalid or duplicated.", nameof(frames));
+					m_Frames.Add(frame.Clone());
+				}
+			}
+			m_ReadOnlyFrames = m_Frames.AsReadOnly();
+		}
+
+		public IReadOnlyList<Float32SkillExecutionStateFrame> Frames => m_ReadOnlyFrames;
+
+		public Float32SkillExecutionStateFrame Find(ulong actionInstanceId)
+		{
+			for (int i = 0; i < m_Frames.Count; i++)
+				if (m_Frames[i].ActionInstanceId == actionInstanceId)
+					return m_Frames[i];
+			return null;
+		}
+
+		public void Add(Float32SkillExecutionStateFrame frame)
+		{
+			if (frame == null || Find(frame.ActionInstanceId) != null)
+				throw new ArgumentException("Skill execution state frame is invalid or duplicated.", nameof(frame));
+			m_Frames.Add(frame);
+		}
+
+		public bool Remove(ulong actionInstanceId)
+		{
+			for (int i = 0; i < m_Frames.Count; i++)
+			{
+				if (m_Frames[i].ActionInstanceId != actionInstanceId)
+					continue;
+				m_Frames.RemoveAt(i);
+				return true;
+			}
+			return false;
+		}
+
+		public Float32SkillExecutionStateAggregate Clone() =>
+			new Float32SkillExecutionStateAggregate(m_Frames);
 	}
 }
 

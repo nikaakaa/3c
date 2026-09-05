@@ -97,6 +97,7 @@ namespace ThirdPersonSimulation.Fixed
             ActionPolicy = new FixedStateAccessPolicy(
                 ProgramStateSemantic.ActionRequestBuffer,
                 ProgramStateSemantic.ActionInstance,
+                ProgramStateSemantic.SkillExecutionState,
                 ProgramStateSemantic.ActionEventSequence);
             InputPolicy = new FixedStateAccessPolicy(ProgramStateSemantic.InputRequestBuffer);
             HandleAllocatorPolicy = new FixedStateAccessPolicy(ProgramStateSemantic.HandleAllocator);

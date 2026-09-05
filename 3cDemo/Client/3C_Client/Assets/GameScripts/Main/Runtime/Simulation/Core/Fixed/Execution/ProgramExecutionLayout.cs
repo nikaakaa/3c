@@ -110,9 +110,11 @@ namespace ThirdPersonSimulation.Fixed
         readonly IReadOnlyDictionary<string, TypedActionStateAddresses> m_Actions;
         readonly IReadOnlyDictionary<string, IReadOnlyList<TypedStateAddress>> m_ActionContexts;
         readonly IReadOnlyDictionary<int, TypedStateAddress> m_TimelineRetention;
+        readonly HashSet<int> m_SkillExecutionStateSlots;
         readonly IReadOnlyList<BlackboardInputStateBinding> m_BlackboardInputBindings;
         readonly TypedStateAddress[] m_ActionTargetSnapshotByOperation;
         readonly TypedStateAddress m_GameplayEffectAggregate;
+        readonly TypedStateAddress m_SkillExecutionState;
         readonly TypedStateAddress m_EquipmentAggregate;
         readonly ProgramCatalogRuntimeIndex m_CatalogIndex;
         readonly TimelineAnimationProducerIndex m_TimelineAnimationProducers;
@@ -137,6 +139,11 @@ namespace ThirdPersonSimulation.Fixed
             m_NamedConstantIndexes = BuildNamedConstantIndexes(program);
             BuildGlobalStateSlots(program, stateSemanticCount, out m_FirstStateSlots, out m_StateSlotsByOwner);
             BuildTypedStateLayout(program, out m_TypedAddresses, out m_Partitions);
+            int skillExecutionStateSlot = FindStateSlot(ProgramStateSemantic.SkillExecutionState, "action:skill-execution");
+            if (skillExecutionStateSlot < 0)
+                throw new InvalidDataException("Program has no Skill execution state aggregate.");
+            m_SkillExecutionState = m_TypedAddresses[skillExecutionStateSlot];
+            m_SkillExecutionStateSlots = BuildSkillExecutionStateSlots(program);
             m_BlackboardInputBindings = BuildBlackboardInputBindings(program, m_CatalogIndex, m_TypedAddresses);
             BuildDomainIndexes(
                 program,
@@ -181,6 +188,8 @@ namespace ThirdPersonSimulation.Fixed
         internal FixedProgramExecutionServices Services { get; }
         public IReadOnlyList<TypedStatePartitionDescriptor> StatePartitions => m_Partitions;
         public TypedStateAddress GameplayEffectAggregateAddress => m_GameplayEffectAggregate;
+        public TypedStateAddress SkillExecutionStateAddress => m_SkillExecutionState;
+        internal bool IsSkillExecutionStateSlot(int slotIndex) => m_SkillExecutionStateSlots.Contains(slotIndex);
         public EquipmentProgramLayout Equipment { get; }
         public TypedStateAddress EquipmentAggregateAddress => Equipment.CapabilityEnabled
             ? m_EquipmentAggregate
@@ -651,6 +660,101 @@ namespace ThirdPersonSimulation.Fixed
             actionContexts = frozenContexts;
             timelineRetention = timeline;
             actionTargetSnapshots = targets;
+        }
+
+        static HashSet<int> BuildSkillExecutionStateSlots(CharacterSimulationProgram program)
+        {
+            var result = new HashSet<int>();
+            var characterScoped = new HashSet<int>();
+            for (int i = 0; i < program.Scopes.Count; i++)
+            {
+                ProgramScopeLayout scope = program.Scopes[i];
+                if (scope.Kind != ProgramScopeKind.Character)
+                    continue;
+                for (int slotIndex = 0; slotIndex < scope.StateSlots.Count; slotIndex++)
+                    characterScoped.Add(scope.StateSlots[slotIndex]);
+            }
+
+            var outgoing = new List<int>[program.Operations.Count];
+            for (int i = 0; i < program.ControlFlow.Count; i++)
+            {
+                ProgramControlFlowEdge edge = program.ControlFlow[i];
+                if (!edge.Source.IsValid || !edge.Target.IsValid)
+                    continue;
+                List<int> targets = outgoing[edge.Source.Value];
+                if (targets == null)
+                {
+                    targets = new List<int>();
+                    outgoing[edge.Source.Value] = targets;
+                }
+                targets.Add(edge.Target.Value);
+            }
+
+            var visited = new bool[program.Operations.Count];
+            for (int i = 0; i < program.SkillPrograms.Bindings.Count; i++)
+                VisitSkillOperation(program.SkillPrograms.Bindings[i].EntryOperation, outgoing, visited);
+
+            for (int operationIndex = 0; operationIndex < visited.Length; operationIndex++)
+            {
+                if (!visited[operationIndex])
+                    continue;
+                SimulationOperation operation = program.Operations[operationIndex];
+                for (int slotIndex = 0; slotIndex < operation.StateSlots.Count; slotIndex++)
+                    AddSkillExecutionStateSlot(program, operation.StateSlots[slotIndex], characterScoped, result);
+                for (int referenceIndex = 0; referenceIndex < program.References.Count; referenceIndex++)
+                {
+                    ProgramReference reference = program.References[referenceIndex];
+                    if (!reference.HasSourceOperation ||
+                        !reference.SourceOperation.Equals(operation.Handle) ||
+                        reference.Kind != ProgramReferenceKind.StateSlot)
+                        continue;
+                    AddSkillExecutionStateSlot(program, reference.TargetIndex, characterScoped, result);
+                }
+            }
+
+            for (int scopeIndex = 0; scopeIndex < program.Scopes.Count; scopeIndex++)
+            {
+                ProgramScopeLayout scope = program.Scopes[scopeIndex];
+                if (scope.Kind == ProgramScopeKind.Character ||
+                    !scope.OwnerOperation.IsValid ||
+                    !visited[scope.OwnerOperation.Value])
+                    continue;
+                for (int slotIndex = 0; slotIndex < scope.StateSlots.Count; slotIndex++)
+                    AddSkillExecutionStateSlot(program, scope.StateSlots[slotIndex], characterScoped, result);
+            }
+            return result;
+        }
+
+        static void VisitSkillOperation(
+            OperationHandle operation,
+            List<int>[] outgoing,
+            bool[] visited)
+        {
+            if (!operation.IsValid || operation.Value < 0 || operation.Value >= visited.Length || visited[operation.Value])
+                return;
+            visited[operation.Value] = true;
+            List<int> targets = outgoing[operation.Value];
+            if (targets == null)
+                return;
+            for (int i = 0; i < targets.Count; i++)
+                VisitSkillOperation(new OperationHandle(targets[i]), outgoing, visited);
+        }
+
+        static void AddSkillExecutionStateSlot(
+            CharacterSimulationProgram program,
+            int slotIndex,
+            HashSet<int> characterScoped,
+            HashSet<int> result)
+        {
+            if (slotIndex < 0 || slotIndex >= program.StateSlots.Count || characterScoped.Contains(slotIndex))
+                return;
+            ProgramStateOwnerKind owner = program.StateSlots[slotIndex].OwnerKind;
+            if (owner == ProgramStateOwnerKind.Runnable ||
+                owner == ProgramStateOwnerKind.StateMachine ||
+                owner == ProgramStateOwnerKind.Timeline ||
+                owner == ProgramStateOwnerKind.MotionModifier ||
+                owner == ProgramStateOwnerKind.Blackboard)
+                result.Add(slotIndex);
         }
 
         static ActionAddressBuilder RequireActionBuilder(

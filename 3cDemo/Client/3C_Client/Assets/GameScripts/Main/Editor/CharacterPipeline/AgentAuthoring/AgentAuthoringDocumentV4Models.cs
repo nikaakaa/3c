@@ -55,6 +55,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
         public List<AgentSnapshotTimelineTreeClip> timelineTreeClips = new List<AgentSnapshotTimelineTreeClip>();
         public List<AgentSnapshotActionRequest> actionRequests = new List<AgentSnapshotActionRequest>();
         public List<AgentSnapshotActionProfile> actionProfiles = new List<AgentSnapshotActionProfile>();
+        public List<AgentSnapshotSkillDefinition> skills = new List<AgentSnapshotSkillDefinition>();
         public AgentDocumentPresentationEditable presentation;
         public AgentDocumentAIEditable aiController;
     }
@@ -255,6 +256,21 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
     {
         public List<AgentSnapshotActionRequest> requests = new List<AgentSnapshotActionRequest>();
         public List<AgentSnapshotActionProfile> profiles = new List<AgentSnapshotActionProfile>();
+    }
+
+    [Serializable]
+    public sealed class AgentPackageSkillDefinitionFile
+    {
+        public string skillId;
+        public string entryGraphAuthoringId;
+        public string actionProfileId;
+        public string actionProfileAssetPath;
+        public string actionProfileAssetGuid;
+        public string actionContext;
+        public string sourceInputRequestId;
+        public bool consumeSourceInputRequest = true;
+        public string targetInputValueId;
+        public string targetKey;
     }
 
     [Serializable]

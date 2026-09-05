@@ -45,6 +45,25 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                     requests = target.editable.actionRequests,
                     profiles = target.editable.actionProfiles
                 });
+                foreach (AgentSnapshotSkillDefinition skill in target.editable.skills ?? new List<AgentSnapshotSkillDefinition>())
+                {
+                    if (skill == null)
+                        continue;
+                    string directory = $"editable/skills/{Segment(skill.skillId)}";
+                    files[directory + "/definition.json"] = AgentAuthoringDocumentCodec.ToToken(new AgentPackageSkillDefinitionFile
+                    {
+                        skillId = skill.skillId,
+                        entryGraphAuthoringId = skill.entryGraphAuthoringId,
+                        actionProfileId = skill.actionProfileId,
+                        actionProfileAssetPath = skill.actionProfileAssetPath,
+                        actionProfileAssetGuid = skill.actionProfileAssetGuid,
+                        actionContext = skill.actionContext,
+                        sourceInputRequestId = skill.sourceInputRequestId,
+                        consumeSourceInputRequest = skill.consumeSourceInputRequest,
+                        targetInputValueId = skill.targetInputValueId,
+                        targetKey = skill.targetKey
+                    });
+                }
                 AgentAuthoringPresentationPackageCodec.Write(
                     files,
                     target.editable.presentation,
@@ -178,6 +197,37 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
             target.editable.blackboardDeclarations = blackboard.declarations ?? new List<AgentSnapshotBlackboardDeclaration>();
             target.editable.actionRequests = actions.requests ?? new List<AgentSnapshotActionRequest>();
             target.editable.actionProfiles = actions.profiles ?? new List<AgentSnapshotActionProfile>();
+            foreach (string skillPath in files.Keys
+                         .Where(path => path.StartsWith("editable/skills/", StringComparison.Ordinal) &&
+                                        path.EndsWith("/definition.json", StringComparison.Ordinal))
+                         .OrderBy(path => path, StringComparer.Ordinal))
+            {
+                if (!TryFile(files, skillPath, report, out AgentPackageSkillDefinitionFile skillFile))
+                {
+                    valid = false;
+                    continue;
+                }
+                string expectedSkillPath = $"editable/skills/{Segment(skillFile.skillId)}/definition.json";
+                if (!string.Equals(skillPath, expectedSkillPath, StringComparison.Ordinal))
+                {
+                    report.Error(skillPath, "skill_package_path_mismatch", "Skill目录与skillId必须一致。");
+                    valid = false;
+                    continue;
+                }
+                target.editable.skills.Add(new AgentSnapshotSkillDefinition
+                {
+                    skillId = skillFile.skillId,
+                    entryGraphAuthoringId = skillFile.entryGraphAuthoringId,
+                    actionProfileId = skillFile.actionProfileId,
+                    actionProfileAssetPath = skillFile.actionProfileAssetPath,
+                    actionProfileAssetGuid = skillFile.actionProfileAssetGuid,
+                    actionContext = skillFile.actionContext,
+                    sourceInputRequestId = skillFile.sourceInputRequestId,
+                    consumeSourceInputRequest = skillFile.consumeSourceInputRequest,
+                    targetInputValueId = skillFile.targetInputValueId,
+                    targetKey = skillFile.targetKey
+                });
+            }
             if (string.Equals(
                     manifest.domain,
                     AgentAuthoringSchema.CharacterControllerDomain,
@@ -313,6 +363,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
             }
 
             valid &= ValidateGraphRelationships(target.editable, report);
+            valid &= ValidateSkillRelationships(target.editable, report);
             valid &= ValidateTimelineRelationships(target.editable, report);
             valid &= ValidatePrimaryIdentities(target.editable, report);
             if (packageAI != null && valid)
@@ -675,6 +726,55 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
             return valid;
         }
 
+        static bool ValidateSkillRelationships(
+            AgentDocumentEditable editable,
+            AgentCompileReport report)
+        {
+            var graphIds = new HashSet<string>(
+                (editable?.graphs ?? new List<AgentSnapshotGraph>())
+                    .Where(value => value != null)
+                    .Select(value => value.graphAuthoringId),
+                StringComparer.Ordinal);
+            var skillIds = new HashSet<string>(StringComparer.Ordinal);
+            bool valid = true;
+            int index = 0;
+            foreach (AgentSnapshotSkillDefinition skill in editable?.skills ?? new List<AgentSnapshotSkillDefinition>())
+            {
+                string path = $"editable/skills[{index}]";
+                if (skill == null ||
+                    !IsIdentity(skill.skillId) ||
+                    !skillIds.Add(skill.skillId))
+                {
+                    report.Error(path, "skill_identity_invalid", "Skill definition identity缺失或重复。");
+                    valid = false;
+                    index++;
+                    continue;
+                }
+                if (!IsIdentity(skill.entryGraphAuthoringId) || !graphIds.Contains(skill.entryGraphAuthoringId))
+                {
+                    report.Error(path + ".entryGraphAuthoringId", "skill_entry_graph_invalid", "Skill必须引用当前Document中的入口Graph。");
+                    valid = false;
+                }
+                if (!IsIdentity(skill.actionProfileId))
+                {
+                    report.Error(path + ".actionProfileId", "skill_action_profile_invalid", "Skill必须引用稳定ActionProfile identity。");
+                    valid = false;
+                }
+                if (!string.IsNullOrEmpty(skill.sourceInputRequestId) && !IsIdentity(skill.sourceInputRequestId))
+                {
+                    report.Error(path + ".sourceInputRequestId", "skill_input_request_invalid", "Skill的sourceInputRequestId必须使用稳定identity。");
+                    valid = false;
+                }
+                if (!string.IsNullOrEmpty(skill.targetInputValueId) && !IsIdentity(skill.targetInputValueId))
+                {
+                    report.Error(path + ".targetInputValueId", "skill_target_input_invalid", "Skill的targetInputValueId必须使用稳定identity。");
+                    valid = false;
+                }
+                index++;
+            }
+            return valid;
+        }
+
         static bool ValidateTimelineTreeClipGraphOwner(
             AgentDocumentEditable editable,
             AgentSnapshotGraph graph,
@@ -819,6 +919,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
             }
             foreach (AgentSnapshotBlackboardDeclaration declaration in editable.blackboardDeclarations ?? new List<AgentSnapshotBlackboardDeclaration>())
                 Add(declaration?.declarationId, "editable.blackboard.declarations");
+            foreach (AgentSnapshotSkillDefinition skill in editable.skills ?? new List<AgentSnapshotSkillDefinition>())
+                Add(skill?.skillId, "editable.skills");
             foreach (AgentSnapshotAIBlackboardDeclaration declaration in editable.aiController?.blackboardDeclarations ?? new List<AgentSnapshotAIBlackboardDeclaration>())
                 Add(declaration?.declarationAuthoringId, "editable.ai.blackboard");
             foreach (AgentSnapshotTimeline timeline in editable.timelines ?? new List<AgentSnapshotTimeline>())
@@ -2095,6 +2197,12 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                     path.EndsWith("/curves.json", StringComparison.Ordinal));
         }
 
+        internal static bool IsDiscoverableSkillFragment(string path)
+        {
+            return path.StartsWith("editable/skills/", StringComparison.Ordinal) &&
+                   path.EndsWith("/definition.json", StringComparison.Ordinal);
+        }
+
         internal static bool TryDiscoverRemovedAuthoringFragments(
             IReadOnlyCollection<string> missingPaths,
             AgentCompileReport report,
@@ -2205,6 +2313,46 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                 }
                 result.Add(timelinePath);
                 result.Add(curvesPath);
+            }
+            discovered = result;
+            return valid;
+        }
+
+        internal static bool TryDiscoverNewSkillFragments(
+            IReadOnlyDictionary<string, JToken> candidates,
+            AgentCompileReport report,
+            out IReadOnlyCollection<string> discovered)
+        {
+            var result = new HashSet<string>(StringComparer.Ordinal);
+            bool valid = true;
+            foreach (string directory in candidates.Keys
+                         .Select(path => path.Substring(0, path.LastIndexOf('/')))
+                         .Distinct(StringComparer.Ordinal)
+                         .OrderBy(value => value, StringComparer.Ordinal))
+            {
+                string definitionPath = directory + "/definition.json";
+                if (!candidates.TryGetValue(definitionPath, out JToken definitionToken) ||
+                    !AgentAuthoringDocumentCodec.TryConvertToken(
+                        definitionToken,
+                        definitionPath,
+                        report,
+                        out AgentPackageSkillDefinitionFile definition))
+                {
+                    report.Error(directory, "skill_new_definition_missing", "新增Skill必须提供同目录definition.json。");
+                    valid = false;
+                    continue;
+                }
+                string expectedDirectory = $"editable/skills/{Segment(definition.skillId)}";
+                if (!IsIdentity(definition.skillId) || !string.Equals(directory, expectedDirectory, StringComparison.Ordinal))
+                {
+                    report.Error(
+                        definitionPath,
+                        "skill_new_definition_invalid",
+                        "新增Skill必须使用稳定identity，并放在由skillId确定的canonical目录。");
+                    valid = false;
+                    continue;
+                }
+                result.Add(definitionPath);
             }
             discovered = result;
             return valid;

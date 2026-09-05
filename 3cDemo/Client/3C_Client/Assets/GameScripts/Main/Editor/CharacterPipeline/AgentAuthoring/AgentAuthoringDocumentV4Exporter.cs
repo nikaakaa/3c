@@ -1,6 +1,8 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using ThirdPersonCharacter.ActionSystem;
+using ThirdPersonCharacter.Control.Authoring;
 using ThirdPersonCharacter.Editor.CharacterSimulation;
 using ThirdPersonCharacter.AI;
 using ThirdPersonCharacter.Pipeline.Animation;
@@ -32,6 +34,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                 timelineTreeClips = snapshot.timelineTreeClips,
                 actionRequests = snapshot.actionRequests,
                 actionProfiles = snapshot.actionProfiles,
+                skills = ExportSkills(definition.SkillDefinitions),
                 presentation = new AgentAuthoringPresentationExporter().Export(definition)
             };
             var context = new AgentDocumentContext
@@ -192,6 +195,35 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                         snapshot.aiController?.intentProgramStale ??
                         string.IsNullOrEmpty(snapshot.programHash)
             };
+        }
+
+        static List<AgentSnapshotSkillDefinition> ExportSkills(
+            IReadOnlyList<CharacterSkillAuthoringDefinition> definitions)
+        {
+            return (definitions ?? Array.Empty<CharacterSkillAuthoringDefinition>())
+                .Where(value => value != null)
+                .OrderBy(value => value.SkillId, StringComparer.Ordinal)
+                .Select(value =>
+                {
+                    ActionProfile profile = value.ActionProfile;
+                    string profilePath = profile ? AssetDatabase.GetAssetPath(profile) : string.Empty;
+                    return new AgentSnapshotSkillDefinition
+                    {
+                        skillId = value.SkillId,
+                        entryGraphAuthoringId = value.EntryGraphAuthoringId,
+                        actionProfileId = profile ? profile.ActionId : string.Empty,
+                        actionProfileAssetPath = profilePath,
+                        actionProfileAssetGuid = string.IsNullOrEmpty(profilePath)
+                            ? string.Empty
+                            : AssetDatabase.AssetPathToGUID(profilePath),
+                        actionContext = value.ActionContext.ToString(),
+                        sourceInputRequestId = value.SourceInputRequestId,
+                        consumeSourceInputRequest = value.ConsumeSourceInputRequest,
+                        targetInputValueId = value.TargetInputValueId,
+                        targetKey = value.TargetKey
+                    };
+                })
+                .ToList();
         }
 
         static AgentDocumentPresentationContext ExportPresentationContext(

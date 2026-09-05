@@ -39,6 +39,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
             "authoringId",
             "nodeAuthoringId",
             "actionId",
+            "skillId",
             "requestId",
             "inputValueId",
             "channelId"

@@ -622,6 +622,21 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
     }
 
     [Serializable]
+    public sealed class AgentSnapshotSkillDefinition
+    {
+        public string skillId;
+        public string entryGraphAuthoringId;
+        public string actionProfileId;
+        public string actionProfileAssetPath;
+        public string actionProfileAssetGuid;
+        public string actionContext;
+        public string sourceInputRequestId;
+        public bool consumeSourceInputRequest = true;
+        public string targetInputValueId;
+        public string targetKey;
+    }
+
+    [Serializable]
     public sealed class AgentSnapshotGameplayTagQuery
     {
         public List<string> all = new List<string>();

@@ -82,74 +82,45 @@ namespace ThirdPersonCamera
             in CameraFrameInput input,
             in CameraResponseRequest response)
         {
-            State state = CaptureState();
-            try
+            if (input.ResetHistory || !m_Initialized)
             {
-                CameraSequenceRequest request = new CameraSequenceRequest(
-                    m_Projection.DefaultSequence.SequenceId,
-                    int.MinValue,
-                    1f,
-                    0f,
-                    0f,
-                    string.Empty,
-                    "camera.default.sequence",
-                    0,
-                    0,
-                    CameraSequenceInterruptPolicy.BlendOut,
-                    true);
-                return Evaluate(in input, in request, in response);
+                m_FramePlanner.Reset(input.BodyRotation);
+                m_Transition.Reset();
+                m_Initialized = true;
             }
-            finally
-            {
-                RestoreState(state);
-            }
+            Vector2 look = m_FramePlanner.ResolveLook(input.LookInput, in response);
+            CameraSequenceRequest request = new CameraSequenceRequest(
+                m_Projection.DefaultSequence.SequenceId,
+                int.MinValue,
+                1f,
+                0f,
+                0f,
+                string.Empty,
+                "camera.default.sequence",
+                0,
+                0,
+                CameraSequenceInterruptPolicy.BlendOut,
+                true);
+            CameraFramePlan target = m_Transition.EvaluateSuppressed(in input, in request, look);
+            return m_WorldBasicHistory.Apply(target, in input);
         }
 
         internal bool TryCaptureScopeState(
             CameraPresentationScopeKey scope,
-            out State state)
+            out CharacterCameraSequenceTransition.State state)
         {
             if (!m_Initialized || !m_Transition.IsCurrentScope(scope))
             {
                 state = default;
                 return false;
             }
-            state = CaptureState();
+            state = m_Transition.CaptureState();
             return true;
         }
 
-        State CaptureState() => new State(
-            m_FramePlanner.CaptureState(),
-            m_Transition.CaptureState(),
-            m_WorldBasicHistory.CaptureState(),
-            m_Initialized);
-
-        internal void RestoreState(State state)
+        internal void RestoreScopeState(CharacterCameraSequenceTransition.State state)
         {
-            m_FramePlanner.RestoreState(state.FramePlanner);
-            m_Transition.RestoreState(state.Transition);
-            m_WorldBasicHistory.RestoreState(state.WorldBasicHistory);
-            m_Initialized = state.Initialized;
-        }
-
-        internal readonly struct State
-        {
-            public State(
-                CharacterCameraFramePlanner.State framePlanner,
-                CharacterCameraSequenceTransition.State transition,
-                CameraWorldBasicHistory.State worldBasicHistory,
-                bool initialized)
-            {
-                FramePlanner = framePlanner;
-                Transition = transition;
-                WorldBasicHistory = worldBasicHistory;
-                Initialized = initialized;
-            }
-
-            public CharacterCameraFramePlanner.State FramePlanner { get; }
-            public CharacterCameraSequenceTransition.State Transition { get; }
-            public CameraWorldBasicHistory.State WorldBasicHistory { get; }
-            public bool Initialized { get; }
+            m_Transition.RestoreState(state);
         }
     }
 
@@ -176,24 +147,6 @@ namespace ThirdPersonCamera
             m_OffsetVelocity = Vector2.zero;
             m_FieldOfViewVelocity = 0f;
             m_Initialized = false;
-        }
-
-        public State CaptureState() => new State(
-            m_Current,
-            m_PivotVelocity,
-            m_RadiusVelocity,
-            m_OffsetVelocity,
-            m_FieldOfViewVelocity,
-            m_Initialized);
-
-        internal void RestoreState(State state)
-        {
-            m_Current = state.Current;
-            m_PivotVelocity = state.PivotVelocity;
-            m_RadiusVelocity = state.RadiusVelocity;
-            m_OffsetVelocity = state.OffsetVelocity;
-            m_FieldOfViewVelocity = state.FieldOfViewVelocity;
-            m_Initialized = state.Initialized;
         }
 
         public CameraFramePlan Apply(CameraFramePlan target, in CameraFrameInput input)
@@ -257,30 +210,5 @@ namespace ThirdPersonCamera
             m_Initialized = true;
         }
 
-        internal readonly struct State
-        {
-            public State(
-                CameraWorldBasicData current,
-                Vector3 pivotVelocity,
-                float radiusVelocity,
-                Vector2 offsetVelocity,
-                float fieldOfViewVelocity,
-                bool initialized)
-            {
-                Current = current;
-                PivotVelocity = pivotVelocity;
-                RadiusVelocity = radiusVelocity;
-                OffsetVelocity = offsetVelocity;
-                FieldOfViewVelocity = fieldOfViewVelocity;
-                Initialized = initialized;
-            }
-
-            public CameraWorldBasicData Current { get; }
-            public Vector3 PivotVelocity { get; }
-            public float RadiusVelocity { get; }
-            public Vector2 OffsetVelocity { get; }
-            public float FieldOfViewVelocity { get; }
-            public bool Initialized { get; }
-        }
     }
 }

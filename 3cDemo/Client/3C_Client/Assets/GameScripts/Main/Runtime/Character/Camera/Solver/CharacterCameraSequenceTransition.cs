@@ -271,6 +271,19 @@ namespace ThirdPersonCamera
             return result;
         }
 
+        internal CameraFramePlan EvaluateSuppressed(
+            in CameraFrameInput input,
+            in CameraSequenceRequest request,
+            Vector2 look)
+        {
+            m_Retiring = false;
+            m_RetireFrom = default;
+            m_RetireElapsed = 0f;
+            m_RetireDuration = 0f;
+            m_RetireTimeDomain = CameraTimeDomain.PresentationScaled;
+            return Evaluate(in input, in request, look);
+        }
+
         CameraSequencePayload ResolveSequence(string sequenceId)
         {
             if (string.Equals(sequenceId, m_Projection.DefaultSequence.SequenceId, StringComparison.Ordinal))

@@ -38,8 +38,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         readonly CameraDebugSnapshot m_Debug = new CameraDebugSnapshot();
         readonly HashSet<CameraPresentationScopeKey> m_ForcedScopes =
             new HashSet<CameraPresentationScopeKey>();
-        readonly Dictionary<CameraPresentationScopeKey, CharacterCameraSequenceEvaluator.State> m_SuspendedSequenceStates =
-            new Dictionary<CameraPresentationScopeKey, CharacterCameraSequenceEvaluator.State>();
+        readonly Dictionary<CameraPresentationScopeKey, CharacterCameraSequenceTransition.State> m_SuspendedSequenceStates =
+            new Dictionary<CameraPresentationScopeKey, CharacterCameraSequenceTransition.State>();
 
         ulong m_LastBodyResetSequence;
         bool m_Disposed;
@@ -213,9 +213,9 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 command.SourceActionInstanceId);
             if (!m_ForcedScopes.Remove(scope))
                 return;
-            if (m_SuspendedSequenceStates.TryGetValue(scope, out CharacterCameraSequenceEvaluator.State state))
+            if (m_SuspendedSequenceStates.TryGetValue(scope, out CharacterCameraSequenceTransition.State state))
             {
-                m_SequenceEvaluator.RestoreState(state);
+                m_SequenceEvaluator.RestoreScopeState(state);
                 m_SuspendedSequenceStates.Remove(scope);
             }
             m_EffectEvaluator.ResumeScope(scope);
@@ -255,7 +255,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 command.ProducerGeneration,
                 command.SourceActionInstanceId);
             if (m_ForcedScopes.Add(scope) &&
-                m_SequenceEvaluator.TryCaptureScopeState(scope, out CharacterCameraSequenceEvaluator.State state))
+                m_SequenceEvaluator.TryCaptureScopeState(scope, out CharacterCameraSequenceTransition.State state))
                 m_SuspendedSequenceStates[scope] = state;
             m_EffectEvaluator.SuspendScope(scope);
             RemovePendingSequenceTerminations(scope);

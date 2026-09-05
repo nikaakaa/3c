@@ -344,10 +344,7 @@ namespace ThirdPersonGameplay.Editor.Lab
         static void ConfigureRollbackEndpoint(RollbackEndpointAuthoringDefinition endpoint)
         {
             var serialized = new SerializedObject(endpoint);
-            serialized.FindProperty("m_RelayServerAddress").stringValue = "127.0.0.1";
-            serialized.FindProperty("m_RelayServerPort").intValue = 24100;
             serialized.FindProperty("m_RelayServerPeerId").stringValue = "rollback-input-relay";
-            serialized.FindProperty("m_SessionId").stringValue = RollbackSessionId;
             serialized.FindProperty("m_MaximumDatagramBytes").intValue = 1200;
             serialized.FindProperty("m_MaximumQueuedMessages").intValue = 512;
             serialized.FindProperty("m_MaximumFragmentsPerMessage").intValue = 512;
@@ -361,18 +358,15 @@ namespace ThirdPersonGameplay.Editor.Lab
                 "peer-a",
                 "rollback-peer-a",
                 "rollback-player-a",
-                "rollback-actor-a",
-                24101);
+                "rollback-actor-a");
             ConfigureRollbackProfile(
                 profiles.GetArrayElementAtIndex(1),
                 "peer-b",
                 "rollback-peer-b",
                 "rollback-player-b",
-                "rollback-actor-b",
-                24102);
+                "rollback-actor-b");
             serialized.ApplyModifiedPropertiesWithoutUndo();
             EditorUtility.SetDirty(endpoint);
-            endpoint.Build();
             endpoint.BuildRoster();
         }
 
@@ -381,15 +375,12 @@ namespace ThirdPersonGameplay.Editor.Lab
             string profileId,
             string peerId,
             string playerId,
-            string actorId,
-            int port)
+            string actorId)
         {
             profile.FindPropertyRelative("m_ProfileId").stringValue = profileId;
             profile.FindPropertyRelative("m_PeerId").stringValue = peerId;
             profile.FindPropertyRelative("m_PlayerId").stringValue = playerId;
             profile.FindPropertyRelative("m_ActorId").stringValue = actorId;
-            profile.FindPropertyRelative("m_LocalAddress").stringValue = "127.0.0.1";
-            profile.FindPropertyRelative("m_LocalPort").intValue = port;
         }
 
         static void ConfigureRollbackSource(

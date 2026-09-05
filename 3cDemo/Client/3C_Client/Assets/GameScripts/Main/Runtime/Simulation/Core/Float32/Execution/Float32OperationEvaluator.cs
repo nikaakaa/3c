@@ -19,7 +19,7 @@ namespace ThirdPersonSimulation
             m_Presentation = presentation ?? throw new ArgumentNullException(nameof(presentation));
         }
 
-        public void Submit(SimulationOperation operation, ulong producerGeneration)
+        public void Submit(SimulationOperation operation)
         {
             if (operation == null)
                 throw new ArgumentNullException(nameof(operation));
@@ -30,11 +30,12 @@ namespace ThirdPersonSimulation
                     $"Camera operation '{SourcePath(operation)}' payload version '{operation.Integer0}' is unsupported.");
 
             ProgramProducer producer = RequireProducer(operation);
-            string actionContext = GetStringConstant(operation, OperationNamedConstant.ActionContext, string.Empty);
-            if (string.IsNullOrEmpty(actionContext) ||
-                m_Actions.FindActive(actionContext, out Float32ActionInstanceState action) < 0)
+            if (!m_Actions.TryGetCurrentSkillExecution(out Float32ActionInstanceState action))
                 throw new InvalidOperationException(
-                    $"Camera operation '{SourcePath(operation)}' has no active formal Action Context.");
+                    $"Camera operation '{SourcePath(operation)}' has no active typed Skill execution.");
+            if (!action.SkillEntryOperation.IsValid || action.SkillExecutionGeneration == 0)
+                throw new InvalidOperationException(
+                    $"Camera operation '{SourcePath(operation)}' has an incomplete typed Skill execution identity.");
             Float32Scalar weight = operation.Code switch
             {
                 SimulationOperationCode.CameraSequenceRequest => RequireScalar(operation, OperationNamedConstant.Weight),
@@ -49,7 +50,7 @@ namespace ThirdPersonSimulation
                 producer.Identity,
                 Float32Scalar.Zero,
                 weight,
-                producerGeneration,
+                action.SkillExecutionGeneration,
                 0,
                 action.InstanceId,
                 Float32Scalar.Zero));
@@ -219,12 +220,9 @@ namespace ThirdPersonSimulation
 					return TickLocomotion(cursor, operation);
 				case SimulationOperationCode.CameraSequenceRequest:
 				case SimulationOperationCode.CameraShakeRequest:
-				case SimulationOperationCode.CameraResponse:
-				case SimulationOperationCode.CameraTarget:
-                    int generationSlot = m_Access.RequireOperationSlot(
-                        operation.Handle,
-                        ProgramStateSemantic.RunnableActivationGeneration);
-                    m_Camera.Submit(operation, m_ControlState.ReadUInt64(generationSlot));
+                case SimulationOperationCode.CameraResponse:
+                case SimulationOperationCode.CameraTarget:
+                    m_Camera.Submit(operation);
 					return OperationExecutionResult.Success;
 				case SimulationOperationCode.StateRootCompleted:
 				case SimulationOperationCode.StateExitCause:

@@ -126,7 +126,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                     string.Empty,
                     $"control:{controlModule.Contract.ModuleId.Value}",
                     contentHash: controlModule.Contract.SemanticVersion.ToString());
-                builder.DeclareControlModule(controlModule.Contract, controlSource);
+                new CharacterSemanticControlModuleEmitter(builder).Emit(controlModule.Contract, controlSource);
                 IReadOnlyList<CharacterControlMotionCompilationRecord> motions = CharacterControlMotionCompilationDiscovery.Discover(
                     controlModule.Contract.Motions,
                     model.Roots,

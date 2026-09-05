@@ -231,82 +231,33 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             }
         }
 
-        public int DeclareControlModule(
-            CharacterControlModuleContract contract,
+        internal int DeclareStateSlot(
+            string identity,
+            ProgramStateValueKind valueKind,
+            ProgramStateOwnerKind ownerKind,
+            ProgramStateSemantic semantic,
+            string ownerIdentity,
             CharacterSimulationSourceLocation source)
         {
-            if (contract == null)
-                throw new ArgumentNullException(nameof(contract));
-            var fields = new List<ProgramCatalogField>
-            {
-                ConstantField(source, "SemanticVersion", contract.SemanticVersion),
-                IdentityField("InitialState", contract.InitialState.Value)
-            };
-            for (int i = 0; i < contract.Parameters.Count; i++)
-            {
-                CharacterControlParameterDescriptor parameter = contract.Parameters[i];
-                fields.Add(ConstantField(source, $"Parameter:{parameter.Id.Value}:ValueKind", parameter.ValueKind));
-                fields.Add(ConstantField(source, $"Parameter:{parameter.Id.Value}:NumericValue", parameter.NumericValue));
-            }
-            for (int i = 0; i < contract.Motions.Count; i++)
-            {
-                CharacterControlMotionDescriptor motion = contract.Motions[i];
-                fields.Add(IdentityField($"Motion:{motion.Binding}:Input", motion.Input.Value));
-                fields.Add(ConstantField(source, $"Motion:{motion.Binding}:MoveSpeed", motion.MoveSpeed));
-                fields.Add(ConstantField(source, $"Motion:{motion.Binding}:TurnSpeedDegrees", motion.TurnSpeedDegrees));
-                fields.Add(ConstantField(source, $"Motion:{motion.Binding}:ExecutionMode", motion.ExecutionMode));
-                fields.Add(ConstantField(source, $"Motion:{motion.Binding}:DurationSeconds", motion.DurationSeconds));
-                fields.Add(IdentityField($"Motion:{motion.Binding}:SourceMotion", motion.SourceMotionIdentity));
-                fields.Add(ConstantField(source, $"Motion:{motion.Binding}:DisplacementMode", motion.DisplacementMode));
-                fields.Add(ConstantField(source, $"Motion:{motion.Binding}:Space", motion.Space));
-                fields.Add(ConstantField(source, $"Motion:{motion.Binding}:Priority", motion.Priority));
-                fields.Add(ConstantField(source, $"Motion:{motion.Binding}:ConsumeLowerChannels", motion.ConsumeLowerChannels));
-            }
-            int catalog = DeclareCatalogEntry(
-                ProgramCatalogEntryKind.ControlModule,
-                contract.ModuleId.Value,
-                contract.SemanticVersion,
-                fields,
-                source);
-            AddSourceMap(ProgramSourceTargetKind.ControlModule, catalog, source);
-            for (int i = 0; i < contract.StateFields.Count; i++)
-            {
-                CharacterControlStateFieldDescriptor field = contract.StateFields[i];
-                int index = m_StateSlots.Count;
-                m_StateSlots.Add(new ProgramStateSlot(
-                    index,
-                    field.Id.Value,
-                    field.ValueKind,
-                    ProgramStateOwnerKind.Control,
-                    field.Semantic,
-                    contract.ModuleId.Value,
-                    GetDefaultConstant(field.ValueKind)));
-                CharacterSimulationSourceLocation fieldSource = new CharacterSimulationSourceLocation(
-                    source.SourceType,
-                    source.GraphId,
-                    field.Id.Value,
-                    string.Empty,
-                    string.Empty,
-                    string.Empty,
-                    $"{source.DisplayPath}/state:{field.Id.Value}",
-                    contentHash: source.ContentHash);
-                AddSourceMap(ProgramSourceTargetKind.ControlState, index, fieldSource);
-            }
-            for (int i = 0; i < contract.Transitions.Count; i++)
-            {
-                CharacterControlTransitionDescriptor transition = contract.Transitions[i];
-                CharacterSimulationSourceLocation transitionSource = new CharacterSimulationSourceLocation(
-                    source.SourceType,
-                    source.GraphId,
-                    transition.Id.Value,
-                    string.Empty,
-                    string.Empty,
-                    string.Empty,
-                    $"{source.DisplayPath}/transition:{transition.Id.Value}",
-                    contentHash: source.ContentHash);
-                AddSourceMap(ProgramSourceTargetKind.ControlTransition, i, transitionSource);
-            }
-            return catalog;
+            int index = m_StateSlots.Count;
+            m_StateSlots.Add(new ProgramStateSlot(
+                index,
+                identity,
+                valueKind,
+                ownerKind,
+                semantic,
+                ownerIdentity,
+                GetDefaultConstant(valueKind)));
+            AddSourceMap(ProgramSourceTargetKind.StateSlot, index, source);
+            return index;
+        }
+
+        internal void DeclareSourceMap(
+            ProgramSourceTargetKind targetKind,
+            int targetIndex,
+            CharacterSimulationSourceLocation source)
+        {
+            AddSourceMap(targetKind, targetIndex, source);
         }
 
         public ProgramCatalogField ConstantField(CharacterSimulationSourceLocation source, string name, object value)

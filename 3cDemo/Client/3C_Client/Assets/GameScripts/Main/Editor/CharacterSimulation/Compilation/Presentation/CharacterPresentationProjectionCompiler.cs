@@ -363,11 +363,11 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             }
         }
 
-        static IEnumerable<CharacterTypedPoseGraph> EnumerateReachablePoseGraphs(
+        static IEnumerable<CharacterPoseCanvasGraph> EnumerateReachablePoseGraphs(
             CharacterAnimationPresentationProfile profile)
         {
             var visited = new HashSet<string>(StringComparer.Ordinal);
-            foreach (CharacterTypedPoseGraph graph in EnumerateReachablePoseGraphs(profile.PoseGraph, profile.PoseGraph.Graph, visited))
+            foreach (CharacterPoseCanvasGraph graph in EnumerateReachablePoseGraphs(profile.PoseGraph, profile.PoseGraph.Graph, visited))
                 yield return graph;
             for (int implementationIndex = 0; implementationIndex < profile.LinkedPoseImplementations.Count; implementationIndex++)
             {
@@ -379,16 +379,16 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                     CharacterLinkedPoseImplementationEntryBinding entry = implementation.Entries[entryIndex];
                     if (entry == null || !entry.GraphOwner)
                         continue;
-                    CharacterTypedPoseGraph entryGraph = entry.GraphOwner.RequireGraph(entry.GraphId);
-                    foreach (CharacterTypedPoseGraph graph in EnumerateReachablePoseGraphs(entry.GraphOwner, entryGraph, visited))
+                    CharacterPoseCanvasGraph entryGraph = entry.GraphOwner.RequireGraph(entry.GraphId);
+                    foreach (CharacterPoseCanvasGraph graph in EnumerateReachablePoseGraphs(entry.GraphOwner, entryGraph, visited))
                         yield return graph;
                 }
             }
         }
 
-        static IEnumerable<CharacterTypedPoseGraph> EnumerateReachablePoseGraphs(
+        static IEnumerable<CharacterPoseCanvasGraph> EnumerateReachablePoseGraphs(
             CharacterPresentationPoseGraphAsset owner,
-            CharacterTypedPoseGraph graph,
+            CharacterPoseCanvasGraph graph,
             HashSet<string> visited)
         {
             string key = CharacterPresentationAssetObjectIdentity.Require(owner) + "\0" + graph.GraphId.Value;
@@ -397,10 +397,10 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             yield return graph;
             for (int nodeIndex = 0; nodeIndex < graph.Nodes.Count; nodeIndex++)
             {
-                CharacterTypedPoseNode node = graph.Nodes[nodeIndex];
+                CharacterPoseCanvasNode node = graph.Nodes[nodeIndex];
                 if (node?.Payload is CharacterPoseSubgraphPayload subgraph && subgraph.Subgraph != null && subgraph.Subgraph.PoseGraphId.IsValid)
                 {
-                    foreach (CharacterTypedPoseGraph child in EnumerateReachablePoseGraphs(owner, owner.RequireGraph(subgraph.Subgraph.PoseGraphId), visited))
+                    foreach (CharacterPoseCanvasGraph child in EnumerateReachablePoseGraphs(owner, owner.RequireGraph(subgraph.Subgraph.PoseGraphId), visited))
                         yield return child;
                     continue;
                 }
@@ -411,7 +411,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                     CharacterPoseStateDefinition state = stateMachine.StateMachine.States[stateIndex];
                     if (state == null || !state.PoseGraphId.IsValid)
                         continue;
-                    foreach (CharacterTypedPoseGraph child in EnumerateReachablePoseGraphs(owner, owner.RequireGraph(state.PoseGraphId), visited))
+                    foreach (CharacterPoseCanvasGraph child in EnumerateReachablePoseGraphs(owner, owner.RequireGraph(state.PoseGraphId), visited))
                         yield return child;
                 }
             }
@@ -539,7 +539,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                     equipmentProfile,
                     errors);
             var poseRequest = new CharacterPoseCompilationRequest(
-                profile.PoseGraph,
+                new CharacterPoseCanvasAuthoringView(profile.PoseGraph),
                 profile.RigDefinition,
                 animationChannels,
                 blendNodes,
@@ -1863,7 +1863,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
 
         sealed class CompiledBlendAuthoringNode
         {
-            public CompiledBlendAuthoringNode(PoseNodeId nodeId, CharacterTypedPoseNode node, SelectionEndpoint selection)
+            public CompiledBlendAuthoringNode(PoseNodeId nodeId, CharacterPoseCanvasNode node, SelectionEndpoint selection)
             {
                 NodeId = nodeId;
                 Node = node;
@@ -1871,7 +1871,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             }
 
             public PoseNodeId NodeId { get; }
-            public CharacterTypedPoseNode Node { get; }
+            public CharacterPoseCanvasNode Node { get; }
             public SelectionEndpoint Selection { get; }
         }
 
@@ -1882,7 +1882,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
         {
             if (!graphAsset || graphAsset.Graph == null || !rig)
                 return null;
-            CharacterTypedPoseGraph graph = graphAsset.Graph;
+            CharacterPoseCanvasGraph graph = graphAsset.Graph;
             var curves = new SortedDictionary<string, AnimationBlendCurvePayload>(StringComparer.Ordinal);
             var profiles = new SortedDictionary<string, AnimationBlendProfilePayload>(StringComparer.Ordinal);
             var profileIdentityKeys = new Dictionary<string, string>(StringComparer.Ordinal);
@@ -1897,7 +1897,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 for (int overrideIndex = 0; overrideIndex < policy.Overrides.Count; overrideIndex++)
                     CollectBlendRule(policy.Overrides[overrideIndex]?.Rule, rig, curves, profiles, profileIdentityKeys, errors);
             }
-            foreach (CharacterTypedPoseGraph authoredGraph in graphAsset.EnumerateGraphs())
+            foreach (CharacterPoseCanvasGraph authoredGraph in graphAsset.EnumerateGraphs())
             {
                 for (int nodeIndex = 0; nodeIndex < authoredGraph.Nodes.Count; nodeIndex++)
                 {
@@ -1931,7 +1931,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                     }
                 }
             }
-            foreach (CharacterTypedPoseGraph authoredGraph in graphAsset.EnumerateGraphs())
+            foreach (CharacterPoseCanvasGraph authoredGraph in graphAsset.EnumerateGraphs())
             {
                 for (int nodeIndex = 0; nodeIndex < authoredGraph.Nodes.Count; nodeIndex++)
                 {
@@ -2490,19 +2490,19 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
 
         static void CollectInertializationPolicies(
             CharacterPresentationPoseGraphAsset owner,
-            CharacterTypedPoseGraph graph,
+            CharacterPoseCanvasGraph graph,
             List<CharacterPoseInertializationPolicy> result)
         {
             for (int i = 0; i < graph.Nodes.Count; i++)
             {
-                CharacterTypedPoseNode node = graph.Nodes[i];
+                CharacterPoseCanvasNode node = graph.Nodes[i];
                 if (node.Kind == CharacterPoseNodeKind.Inertialization && node.InertializationPolicy)
                     result.Add(node.InertializationPolicy);
                 if (node.Kind != CharacterPoseNodeKind.PoseSubgraph ||
                     node.Subgraph == null ||
                     !node.Subgraph.PoseGraphId.IsValid)
                     continue;
-                CharacterTypedPoseGraph child =
+                CharacterPoseCanvasGraph child =
                     owner.RequireGraph(node.Subgraph.PoseGraphId);
                 CollectInertializationPolicies(owner, child, result);
             }
@@ -2624,21 +2624,21 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
 
         static Dictionary<PoseInterfacePortId, SelectionEndpoint> CollectBlendAuthoringNodes(
             CharacterPresentationPoseGraphAsset owner,
-            CharacterTypedPoseGraph graph,
+            CharacterPoseCanvasGraph graph,
             string scope,
             IReadOnlyDictionary<PoseInterfacePortId, SelectionEndpoint> imports,
             List<CompiledBlendAuthoringNode> result)
         {
-            Dictionary<string, CharacterPoseEdge> incoming = graph.Edges.ToDictionary(
+            Dictionary<string, CharacterPoseCanvasConnection> incoming = graph.Edges.ToDictionary(
                 edge => edge.TargetNodeId.Value + "\0" + edge.TargetPortId.Value,
                 edge => edge,
                 StringComparer.Ordinal);
             var values = new Dictionary<string, SelectionEndpoint>(StringComparer.Ordinal);
             var exports = new Dictionary<PoseInterfacePortId, SelectionEndpoint>();
-            List<CharacterTypedPoseNode> ordered = TopologicalPoseNodes(graph);
+            List<CharacterPoseCanvasNode> ordered = TopologicalPoseNodes(graph);
             for (int nodeIndex = 0; nodeIndex < ordered.Count; nodeIndex++)
             {
-                CharacterTypedPoseNode node = ordered[nodeIndex];
+                CharacterPoseCanvasNode node = ordered[nodeIndex];
                 if (node.Kind ==
                     CharacterPoseNodeKind.ActionPlaybackInput)
                 {
@@ -2692,7 +2692,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                             TryResolveSelection(node, port, incoming, scope, values, out SelectionEndpoint endpoint))
                             childImports.Add(port.InterfacePortId, endpoint);
                     }
-                    CharacterTypedPoseGraph child =
+                    CharacterPoseCanvasGraph child =
                         owner.RequireGraph(node.Subgraph.PoseGraphId);
                     PoseNodeId callSite = ScopePoseNodeId(node.NodeId, scope);
                     string childScope = callSite.Value + "/" + child.GraphId;
@@ -2776,7 +2776,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
         }
 
         static void BindSelectionOutputs(
-            CharacterTypedPoseNode node,
+            CharacterPoseCanvasNode node,
             string scope,
             SelectionEndpoint endpoint,
             Dictionary<string, SelectionEndpoint> values)
@@ -2795,26 +2795,26 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             kind == CharacterPosePortKind.ActionPlayback;
 
         static bool TryResolveSelection(
-            CharacterTypedPoseNode node,
+            CharacterPoseCanvasNode node,
             CharacterPosePortDefinition port,
-            IReadOnlyDictionary<string, CharacterPoseEdge> incoming,
+            IReadOnlyDictionary<string, CharacterPoseCanvasConnection> incoming,
             string scope,
             IReadOnlyDictionary<string, SelectionEndpoint> values,
             out SelectionEndpoint endpoint)
         {
             endpoint = default;
-            return incoming.TryGetValue(node.NodeId.Value + "\0" + port.PortId.Value, out CharacterPoseEdge edge) &&
+            return incoming.TryGetValue(node.NodeId.Value + "\0" + port.PortId.Value, out CharacterPoseCanvasConnection edge) &&
                    values.TryGetValue(ScopedEndpoint(edge.SourceNodeId, edge.SourcePortId, scope), out endpoint);
         }
 
-        static List<CharacterTypedPoseNode> TopologicalPoseNodes(CharacterTypedPoseGraph graph)
+        static List<CharacterPoseCanvasNode> TopologicalPoseNodes(CharacterPoseCanvasGraph graph)
         {
             var nodes = graph.Nodes.ToDictionary(node => node.NodeId);
             var indegree = nodes.Keys.ToDictionary(node => node, _ => 0);
             var outgoing = new Dictionary<PoseNodeId, List<PoseNodeId>>();
             for (int i = 0; i < graph.Edges.Count; i++)
             {
-                CharacterPoseEdge edge = graph.Edges[i];
+                CharacterPoseCanvasConnection edge = graph.Edges[i];
                 indegree[edge.TargetNodeId]++;
                 if (!outgoing.TryGetValue(edge.SourceNodeId, out List<PoseNodeId> targets))
                 {
@@ -2824,7 +2824,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 targets.Add(edge.TargetNodeId);
             }
             var ready = new SortedSet<PoseNodeId>(indegree.Where(pair => pair.Value == 0).Select(pair => pair.Key));
-            var result = new List<CharacterTypedPoseNode>(nodes.Count);
+            var result = new List<CharacterPoseCanvasNode>(nodes.Count);
             while (ready.Count > 0)
             {
                 PoseNodeId current = ready.Min;

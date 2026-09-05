@@ -229,12 +229,12 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             return implementation?.Entries.FirstOrDefault(value => value != null && value.EntryId.Value == parts[1]);
         }
 
-        (CharacterTypedPoseNode Node, PoseGraphId GraphId) FindCall(string selectionId)
+        (CharacterPoseCanvasNode Node, PoseGraphId GraphId) FindCall(string selectionId)
         {
             string[] parts = selectionId.Substring("linked-call:".Length).Split(':');
-            if (parts.Length != 2 || !m_Window.AssetContext.TryGetGraph(new PoseGraphId(parts[0]), out CharacterTypedPoseGraph graph))
+            if (parts.Length != 2 || !m_Window.AssetContext.TryGetGraph(new PoseGraphId(parts[0]), out CharacterPoseCanvasGraph graph))
                 throw new InvalidOperationException("Linked Pose Call graph no longer exists.");
-            CharacterTypedPoseNode node = graph.Nodes.FirstOrDefault(value => value.NodeId.Value == parts[1]);
+            CharacterPoseCanvasNode node = graph.Nodes.FirstOrDefault(value => value.NodeId.Value == parts[1]);
             if (node == null)
                 throw new InvalidOperationException("Linked Pose Call node no longer exists.");
             return (node, graph.GraphId);
@@ -642,17 +642,17 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 if (entry.GraphOwner)
                     m_Window.FocusLinkedPoseEntry(entry.GraphOwner, entry.GraphId);
             }, !entry.GraphOwner);
-            if (entry.GraphOwner && entry.GraphOwner.TryGetGraph(entry.GraphId, out CharacterTypedPoseGraph graph))
+            if (entry.GraphOwner && entry.GraphOwner.TryGetGraph(entry.GraphId, out CharacterPoseCanvasGraph graph))
             {
                 AddSection("Boundary");
-                foreach (CharacterTypedPoseNode node in graph.Nodes)
+                foreach (CharacterPoseCanvasNode node in graph.Nodes)
                     AddLink(node.DisplayName, "linked-entry:" + m_Window.FindImplementationId(entry) + ":" + entry.EntryId.Value);
                 AddHelp("Entry Graph 初始只拥有 Graph Input/Graph Output。", HelpBoxMessageType.Info);
             }
             AddDiagnostics(CollectEntryDiagnostics(entry));
         }
 
-        void RenderCall((CharacterTypedPoseNode Node, PoseGraphId GraphId) call)
+        void RenderCall((CharacterPoseCanvasNode Node, PoseGraphId GraphId) call)
         {
             if (!(call.Node.Payload is CharacterLinkedPoseCallPayload payload))
             {
@@ -747,7 +747,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             {
                 foreach (CharacterLinkedPoseInterfaceEntryDescriptor entry in group.Interface.Entries.Where(value => value != null))
                 {
-                    int callCount = (m_Window.AssetContext.Graph?.Nodes ?? Array.Empty<CharacterTypedPoseNode>())
+                    int callCount = (m_Window.AssetContext.Graph?.Nodes ?? Array.Empty<CharacterPoseCanvasNode>())
                         .Count(value => value?.Payload is CharacterLinkedPoseCallPayload payload &&
                                         payload.GroupId == group.GroupId &&
                                         payload.EntryId == entry.EntryId);
@@ -815,7 +815,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 }
                 if (!binding.GraphOwner)
                     diagnostics.Add($"Entry '{entry.EntryId}' Graph owner is missing.");
-                else if (!binding.GraphOwner.TryGetGraph(binding.GraphId, out CharacterTypedPoseGraph graph))
+                else if (!binding.GraphOwner.TryGetGraph(binding.GraphId, out CharacterPoseCanvasGraph graph))
                     diagnostics.Add($"Entry '{entry.EntryId}' Graph is missing.");
                 else
                 {
@@ -843,7 +843,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 diagnostics.Add("Graph owner is missing.");
                 return diagnostics;
             }
-            if (!entry.GraphOwner.TryGetGraph(entry.GraphId, out CharacterTypedPoseGraph graph))
+            if (!entry.GraphOwner.TryGetGraph(entry.GraphId, out CharacterPoseCanvasGraph graph))
             {
                 diagnostics.Add("Graph is missing.");
                 return diagnostics;
@@ -870,7 +870,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         }
 
         List<string> CollectCallDiagnostics(
-            (CharacterTypedPoseNode Node, PoseGraphId GraphId) call,
+            (CharacterPoseCanvasNode Node, PoseGraphId GraphId) call,
             CharacterLinkedPoseGroupBinding group)
         {
             var diagnostics = new List<string>();
@@ -887,7 +887,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             {
                 diagnostics.Add($"Call typed ports are invalid: {exception.Message}");
             }
-            foreach (CharacterPoseEdge edge in m_Window.AssetContext.Graph?.Edges ?? Array.Empty<CharacterPoseEdge>())
+            foreach (CharacterPoseCanvasConnection edge in m_Window.AssetContext.Graph?.Edges ?? Array.Empty<CharacterPoseCanvasConnection>())
             {
                 if (edge == null || edge.SourceNodeId != call.Node.NodeId && edge.TargetNodeId != call.Node.NodeId)
                     continue;

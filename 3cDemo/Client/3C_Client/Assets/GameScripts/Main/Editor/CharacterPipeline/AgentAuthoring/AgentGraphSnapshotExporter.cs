@@ -381,7 +381,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
         static void ExportPresentationPoseGraphContext(
             CharacterAnimationPresentationProfile profile,
             CharacterPresentationPoseGraphAsset owner,
-            CharacterTypedPoseGraph graph,
+            CharacterPoseCanvasGraph graph,
             string scope,
             HashSet<PoseGraphId> path,
             AgentSnapshotAnimationPresentation destination)
@@ -390,7 +390,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                 return;
             for (int i = 0; i < graph.Nodes.Count; i++)
             {
-                CharacterTypedPoseNode node = graph.Nodes[i];
+                CharacterPoseCanvasNode node = graph.Nodes[i];
                 if (node == null)
                     continue;
                 PoseNodeId scopedNodeId = string.IsNullOrEmpty(scope)
@@ -471,7 +471,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                         dependencies[dependencyIndex];
                     if (!dependency.GraphId.IsValid)
                         continue;
-                    CharacterTypedPoseGraph child =
+                    CharacterPoseCanvasGraph child =
                         owner.RequireGraph(dependency.GraphId);
                     ExportPresentationPoseGraphContext(
                         profile,
@@ -491,7 +491,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
 
         static string ResolveStateLocalPoseSourceKind(
             CharacterAnimationPresentationProfile profile,
-            CharacterTypedPoseNode node)
+            CharacterPoseCanvasNode node)
         {
             if (node == null || profile == null)
                 return string.Empty;

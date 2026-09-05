@@ -2,9 +2,11 @@
 
 ### Requirement: Pose Plan必须按拓扑编译为有序执行阶段
 
-唯一Pose Compiler Module MUST通过`Graph Closure -> Typed IR -> Topology -> Symbolic Family Lowering -> Stage Schedule -> Value Lifetime -> Workspace Plan -> Bind Family Payload -> Seal Program Image`固定Pass链，把同一Pose DAG编译为`CharacterPresentationProjection`内部唯一不可变`CharacterPoseProgramImage`。Graph Closure MUST只通过root catalog、PoseState引用与Node Definition Graph dependency投影展开Subgraph/Linked Pose call。Program Image MUST按typed依赖、Pose空间与Execution Domain保存有序`FactAndDemand`、`SourceCapture`、`PurePose`、`WorldAwareValue`、`PureValue`与`FinalPublication`Stage，并使用公共Operation Header、typed Value Reference和分段Operation Family Payload；MUST不保存万能Operation可选字段、Actor State、Frame Pending页或运行时Tuning。Runtime MUST不构造第二语义Program，每个Program Runtime只可建立最多一份同identity、actor-local、只读Execution View。
+唯一Pose Compiler Module MUST通过`Graph Closure -> Typed Lowering -> Topology -> Symbolic Family Lowering -> Stage Schedule -> Value Lifetime -> Workspace Plan -> Worker Batch Plan -> Bind Family Payload -> Seal Program Image`固定Pass链，把同一Pose DAG编译为`CharacterPresentationProjection`内部唯一不可变`CharacterPoseProgramImage`。Graph Closure MUST只通过root catalog、PoseState引用与Node Definition Graph dependency投影展开Subgraph/Linked Pose call。Program Image MUST按typed依赖、Pose空间与Execution Domain保存有序`FactAndDemand`、`SourceCapture`、`PurePose`、`WorldAwareValue`、`PureValue`与`FinalPublication`Stage，并使用公共Operation Header、typed Value Reference、分段Operation Family Payload、Worker Batch Plan、Kernel Set、Rig执行布局与Execution Policy；MUST不保存万能Operation可选字段、Actor State、Frame Pending页、平台线程对象或运行时Tuning。Runtime MUST不构造第二语义Program，每个Program Runtime只可建立最多一份同identity、actor-local、只读Execution View。
 
 Goal Contribution收集、唯一Goal Assembler、唯一Goal Set、FBBIK和OutputPose MUST进入固定阶段，Projection MUST静态证明每条正式路径最多一个Assembler、一个Goal Set、一个FBBIK、一个OutputPose和一个Final Publication requirement。每个Constraint Family Operation MUST在自己的Stage位置通过typed编译Handle调用Constraint Module一次，Constraint不得扫描Program或维护第二Schedule。Output Family MUST只保存稳定`CharacterFinalPosePublicationLayoutHandle`，不得保存Actor页指针或分配第二Final Pose buffer。具体Final Publication、Physical Bone binding与Writer唯一性 MUST由Runtime Factory和Final Publication构造验证，Compiler不得创建Writer Graph节点。每个source每帧 MUST最多capture一次，每个Operation MUST恰好执行一次，PlayableGraph MUST最多Evaluate一次，Physical Transform MUST只由Final Publication中的唯一Writer写一次。Runtime MUST不重新编译、重排、补执行或解释authoring Graph。
+
+Worker Batch Plan MUST只把Compiler静态证明线程安全的Pure Pose Operation归入AOT可知Family Kernel，并为跨域交接保存精确Completion依赖。会话级唯一Worker Scheduler MAY按相同Program、Rig执行布局、依赖波次与Kernel identity跨Actor组成批次，但 MUST保持每个Actor内部Stage、Operation次数、source时间、Fault和Final Publication语义；不得为每个Node／Bone创建Job，不得让每Actor独立调度后立即等待，也不得通过跳帧、旧Pose复用或插值补帧形成动画预算。
 
 #### Scenario: Foot Placement后执行FullBodyIK
 
@@ -23,6 +25,12 @@ Goal Contribution收集、唯一Goal Assembler、唯一Goal Set、FBBIK和Output
 - **WHEN** Stage Schedule包含重复Operation index、遗漏可达Operation或不匹配Execution Domain
 - **THEN** Program Image Seal MUST拒绝Projection发布
 - **AND** Runtime MUST不通过completion检查掩盖非法Schedule
+
+#### Scenario: Pure Pose Operation缺少线程安全Kernel
+
+- **WHEN** 可达Pure Pose Operation无法映射到唯一Family Kernel或其write set与同波次批次冲突
+- **THEN** Program Image Seal MUST拒绝Projection发布并定位Definition、Operation与冲突范围
+- **AND** Runtime MUST不把该Operation交给旧串行Executor或Managed fallback
 
 ### Requirement: Pose Watch必须只观察已完成Pose与typed目标Value
 
@@ -48,23 +56,35 @@ Editor MUST允许按稳定PoseNodeId与call-site订阅Pose Watch，并允许Goal
 
 ### Requirement: Preview、Runtime与Live Debug必须复用同一固定Pose Plan
 
-Projection Compiler MUST把Pose Graph降低为`CharacterPresentationProjection`内部唯一不可变`CharacterPoseProgramImage`，并由同一Factory装配actor-local Execution View、`CharacterPoseProgramRuntime`、`CharacterPoseSourceModule`、`CharacterPoseConstraintRuntime`、`CharacterFinalPosePublication`、根Frame Transaction和actor-local Tuning Snapshot。正式Runtime与Preview MUST直接读取同一Projection内Program Image并让各自Program Runtime遵守同一Execution View materialization/Dispose规则，不得创建第二语义Program；二者 MUST使用同一Program Image schema、Stage Schedule、Operation Family evaluator、source backend、world-query Adapter、FinalIK Pose Buffer backend、Final Writer和completion语义；Live Debug MUST只读取对应Committed Result。每帧每个source、Player、Action lifecycle、Transition、Slot、composition、转换、Goal Source、Assembler、FBBIK和Writer MUST只执行一次正式计划。Graph mutation或Stale Projection时Preview MUST停止并等待显式Build。
+Projection Compiler MUST把Pose Graph降低为`CharacterPresentationProjection`内部唯一不可变`CharacterPoseProgramImage`。正式Runtime与Scene Play Preview MUST通过正式Character Session运行同一Simulation Program、Presentation Projection、Program Image、Stage Schedule、Worker Batch Plan、Family Kernel、Execution Policy、Operation Family evaluator、source backend、world-query backend、FinalIK Pose Buffer backend、Final Writer和completion语义。Pose作者窗口 MUST只发起Scene Play、选择观察目标并读取全部Job完成且根事务成功Seal后的Committed Result；MUST不创建独立Animation Preview Runtime、第二播放时钟、第二语义Program或直接修改Gameplay状态的Seek路径。每帧每个source、Player、Action lifecycle、Transition、Slot、composition、转换、Goal Source、Assembler、FBBIK和Writer MUST只由正式Session执行一次。Graph mutation、Kernel Set变化或Stale Projection时Scene Play Preview MUST停止并等待显式Build。
 
 #### Scenario: Graph修改后继续Preview
 
-- **WHEN** 作者修改State、Slot、Rig、Pose空间、Node Definition字段或Foot Placement使Projection变为Stale
-- **THEN** Preview MUST停止消费旧Program Image
-- **AND** MUST不创建临时Program、旧ABI reader、默认空间转换或旧Projection fallback
+- **WHEN** 作者修改State、Slot、Rig、Pose空间、Node Definition字段、Execution Domain或Foot Placement使Projection变为Stale
+- **THEN** Scene Play Preview MUST停止消费旧Program Image与旧Worker Kernel
+- **AND** MUST不创建临时Program、串行Executor、旧ABI reader、默认空间转换或旧Projection fallback
 
 #### Scenario: Preview缺少world context
 
-- **WHEN** Preview执行同一Program Image到Foot Placement但精确World Context Adapter不可用
+- **WHEN** Preview执行同一Program Image的前置Worker批次后到达Foot Placement但精确World Context Adapter不可用
 - **THEN** Program Runtime MUST发布typed Unavailable并停止该Frame publication
-- **AND** Preview MUST不使用简化Constraint或跳过该Operation
+- **AND** Scene Play Preview MUST不使用简化Constraint、跳过该Operation或以Worker Kernel伪造地面结果
+
+#### Scenario: 作者定位到非连续时间
+
+- **WHEN** 作者要求Scene Play Preview定位到与当前时间不连续的目标时间
+- **THEN** Preview MUST从正式场景初始状态按已选输入重新推进Session到目标时间
+- **AND** Pose窗口 MUST不直接写PoseState、Action、Player、Inertialization、Foot、Goal或FBBIK状态
+
+#### Scenario: Live Debug观察Worker Pose
+
+- **WHEN** 当前Frame的Worker与Managed批次全部成功并由根事务Seal
+- **THEN** Live Debug与Pose Watch MUST只读取同Program／Batch／Completion lineage的Committed Pose与Operation结果
+- **AND** MUST不等待、重放或再次调度Worker Kernel以补齐诊断
 
 ### Requirement: Pose authoring必须使用共享Capability与类型化Presentation Mutation
 
-Pose Graph、PoseStateMachine、Node、Port与Edge MUST继续使用共享typed domain document。每个正式Node Kind MUST通过唯一`CharacterPoseNodeDefinition` Adapter声明Payload字段、固定端口、条件`portVariants`、动态端口政策、Graph Role、Execution Domain、Operation Family、Graph dependency与typed lowering。Definition MUST先投影共享`GraphAuthoringCapabilityCatalog`，再由唯一`GraphAuthoringNodePortShapeProjector`把完整端口形状提供给Canvas、Document v4 Exporter/strict parser/Target Mapper、Clipboard、Reconciler、Mutation preflight与局部Validator；Compiler MUST只从同一Definition读取Graph dependency、typed lowering与Source Map。系统 MUST不保留第二节点目录、重复字段switch、`ICharacterPoseCompilerHandler`布尔能力矩阵或独立Compiler binding真相。跨节点拓扑规则 MUST只属于唯一Topology Pass。
+Pose Graph、PoseStateMachine、Node、Port、Edge、布局与子图 MUST只保存在唯一Pose作者资产模型中，并由唯一Pose Canvas编辑。每个正式Node Kind MUST通过唯一`CharacterPoseNodeDefinition` Adapter声明Payload字段、固定端口、条件`portVariants`、动态端口政策、Graph Role、Execution Domain、线程安全能力、Operation Family、Graph dependency与typed lowering。Definition MUST先投影共享`GraphAuthoringCapabilityCatalog`，再由唯一`GraphAuthoringNodePortShapeProjector`把完整端口形状提供给Pose Canvas、Document v4 Exporter/strict parser/Target Mapper、Clipboard、Reconciler、Mutation preflight与局部Validator；Compiler MUST只从同一Definition读取Graph dependency、typed lowering、线程安全事实与Source Map。Canvas创建、连线、删除、复制粘贴、Undo和Details编辑 MUST通过typed Presentation Mutation提交；Canvas运行委托、反射方法和事件流 MUST不成为Pose执行语义。旧Pose作者资产和旧Canvas在迁移后 MUST删除，系统 MUST不保留第二节点目录、镜像Graph、双写、反向同步、`ICharacterPoseCompilerHandler`布尔能力矩阵或独立Compiler binding真相。迁移清单 MUST只包含明确保留并能进入正式Character Build的Pose内容；被批准整套退役的内容 MUST在迁移前删除，迁移器 MUST不为其生成Canvas资产、空Profile或兼容占位。
 
 #### Scenario: 新增Pose节点能力
 
@@ -77,3 +97,25 @@ Pose Graph、PoseStateMachine、Node、Port与Edge MUST继续使用共享typed d
 - **WHEN** 一个Definition无法为正式Document/Mutation合同提供完整typed字段、条件端口或Graph dependency
 - **THEN** Definition目录或Character Build MUST失败并定位Node Kind
 - **AND** Agent authoring MUST不使用通用SerializedProperty或自由文本绕过
+
+#### Scenario: 迁移保留的旧Pose作者资产
+
+- **WHEN** 一个明确保留的现有Pose Graph被迁入新的唯一作者资产
+- **THEN** Graph、StateMachine、Node、Port、Edge、布局、子图、稳定identity和资源引用 MUST完整保留
+- **AND** 迁移成功后旧资产入口 MUST不可再读写且不得成为运行时fallback
+
+#### Scenario: 遇到已退役的TrainingEnemy PoseGraph
+
+- **WHEN** 作者迁移清单发现`TrainingEnemy`配置或其PoseGraph引用
+- **THEN** 该内容 MUST从GameplayLab、构建清单与作者资产中整套删除
+- **AND** 迁移器 MUST不读取、转换或保留该Graph
+
+### Requirement: Pose Graph UI必须保留准确术语和serialized identity
+
+Pose Canvas、Document、Mutation、Compiler source map和Diagnostics MUST对同一节点使用相同稳定identity与业务术语，包括Clip Player、Blend Space Player、Selected Pose Player、Animation State Machine、Slot、Layered Blend Per Bone、Inertialization、Locomotion Phase Group、Pose Watch和Output Pose。Canvas MAY提供领域图标、颜色、节点折叠和搜索表现，但 MUST不改变serialized kind、端口identity或Pose空间；MUST不保留旧node kind alias或按Canvas类型名生成业务kind。
+
+#### Scenario: 作者添加单Clip播放器
+
+- **WHEN** 作者在Pose Canvas添加单AnimationClip state-local player
+- **THEN** Capability、节点标题、Document kind和编译诊断 MUST统一显示Clip Player
+- **AND** MUST不存在Clip Player兼容名称

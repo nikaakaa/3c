@@ -2,6 +2,9 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
+#if UNITY_EDITOR
+using UnityEditor;
+#endif
 
 namespace ThirdPersonCharacter.Pipeline.Animation
 {
@@ -89,26 +92,28 @@ namespace ThirdPersonCharacter.Pipeline.Animation
     [CreateAssetMenu(fileName = "CharacterPresentationPoseGraph", menuName = "3C/Character/Presentation Pose Graph")]
     public sealed class CharacterPresentationPoseGraphAsset : ScriptableObject
     {
-        [SerializeField] CharacterTypedPoseGraph m_TypedGraph;
-        [SerializeField] CharacterTypedPoseGraph[] m_TypedGraphCatalog = Array.Empty<CharacterTypedPoseGraph>();
+        [SerializeField] CharacterPoseCanvasGraph m_Graph;
+        [SerializeField] CharacterPoseCanvasGraph[] m_GraphCatalog = Array.Empty<CharacterPoseCanvasGraph>();
         [SerializeField] CharacterPoseStateMachineLayout[] m_StateMachineLayouts =
             Array.Empty<CharacterPoseStateMachineLayout>();
         [SerializeField] CharacterPresentationPoseSourceSlot[] m_SourceSlots =
             Array.Empty<CharacterPresentationPoseSourceSlot>();
 
-        public CharacterTypedPoseGraph Graph => m_TypedGraph;
-        public IReadOnlyList<CharacterTypedPoseGraph> GraphCatalog => m_TypedGraphCatalog ?? Array.Empty<CharacterTypedPoseGraph>();
+        public CharacterPoseCanvasGraph Graph => m_Graph;
+        public IReadOnlyList<CharacterPoseCanvasGraph> GraphCatalog => m_GraphCatalog ?? Array.Empty<CharacterPoseCanvasGraph>();
         public IReadOnlyList<CharacterPoseStateMachineLayout> StateMachineLayouts =>
             m_StateMachineLayouts ?? Array.Empty<CharacterPoseStateMachineLayout>();
         public IReadOnlyList<CharacterPresentationPoseSourceSlot> SourceSlots =>
             m_SourceSlots ?? Array.Empty<CharacterPresentationPoseSourceSlot>();
 
-        public void SetGraph(CharacterTypedPoseGraph graph)
+        internal void SetGraph(CharacterPoseCanvasGraph graph)
         {
-            m_TypedGraph = graph ?? throw new ArgumentNullException(nameof(graph));
+            graph = graph ?? throw new ArgumentNullException(nameof(graph));
+            AttachGraph(graph);
+            m_Graph = graph;
         }
 
-        public void SetSourceSlots(CharacterPresentationPoseSourceSlot[] slots)
+        internal void SetSourceSlots(CharacterPresentationPoseSourceSlot[] slots)
         {
             CharacterPresentationPoseSourceSlot[] values = slots ??
                 Array.Empty<CharacterPresentationPoseSourceSlot>();
@@ -126,27 +131,27 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             m_SourceSlots = values;
         }
 
-        public CharacterTypedPoseGraph RequireGraph(PoseGraphId graphId)
+        public CharacterPoseCanvasGraph RequireGraph(PoseGraphId graphId)
         {
-            if (!TryGetGraph(graphId, out CharacterTypedPoseGraph graph))
+            if (!TryGetGraph(graphId, out CharacterPoseCanvasGraph graph))
                 throw new InvalidOperationException($"Pose Graph '{graphId}' does not exist in '{name}'.");
             return graph;
         }
 
-        public bool TryGetGraph(PoseGraphId graphId, out CharacterTypedPoseGraph graph)
+        public bool TryGetGraph(PoseGraphId graphId, out CharacterPoseCanvasGraph graph)
         {
             graph = null;
             if (!graphId.IsValid)
                 return false;
-            if (m_TypedGraph != null && m_TypedGraph.GraphId == graphId)
+            if (m_Graph != null && m_Graph.GraphId == graphId)
             {
-                graph = m_TypedGraph;
+                graph = m_Graph;
                 return true;
             }
-            CharacterTypedPoseGraph[] catalog = m_TypedGraphCatalog ?? Array.Empty<CharacterTypedPoseGraph>();
+            CharacterPoseCanvasGraph[] catalog = m_GraphCatalog ?? Array.Empty<CharacterPoseCanvasGraph>();
             for (int i = 0; i < catalog.Length; i++)
             {
-                CharacterTypedPoseGraph candidate = catalog[i];
+                CharacterPoseCanvasGraph candidate = catalog[i];
                 if (candidate != null && candidate.GraphId == graphId)
                 {
                     graph = candidate;
@@ -156,52 +161,72 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             return false;
         }
 
-        public void AddGraph(CharacterTypedPoseGraph graph)
+        internal void AddGraph(CharacterPoseCanvasGraph graph)
         {
             if (graph == null || !graph.GraphId.IsValid)
                 throw new ArgumentException("Pose Graph catalog record is invalid.", nameof(graph));
             if (TryGetGraph(graph.GraphId, out _))
                 throw new InvalidOperationException($"Pose Graph '{graph.GraphId}' already exists in '{name}'.");
-            m_TypedGraphCatalog = (m_TypedGraphCatalog ?? Array.Empty<CharacterTypedPoseGraph>()).Concat(new[] { graph }).ToArray();
+            AttachGraph(graph);
+            m_GraphCatalog = (m_GraphCatalog ?? Array.Empty<CharacterPoseCanvasGraph>()).Concat(new[] { graph }).ToArray();
         }
 
-        public void ReplaceGraph(CharacterTypedPoseGraph graph)
+        internal void ReplaceGraph(CharacterPoseCanvasGraph graph)
         {
             if (graph == null || !graph.GraphId.IsValid)
                 throw new ArgumentException("Pose Graph replacement is invalid.", nameof(graph));
-            if (m_TypedGraph != null && m_TypedGraph.GraphId == graph.GraphId)
+            AttachGraph(graph);
+            if (m_Graph != null && m_Graph.GraphId == graph.GraphId)
             {
-                m_TypedGraph = graph;
+                m_Graph = graph;
                 return;
             }
-            CharacterTypedPoseGraph[] catalog = m_TypedGraphCatalog ?? Array.Empty<CharacterTypedPoseGraph>();
+            CharacterPoseCanvasGraph[] catalog = m_GraphCatalog ?? Array.Empty<CharacterPoseCanvasGraph>();
             int index = Array.FindIndex(catalog, value => value != null && value.GraphId == graph.GraphId);
             if (index < 0)
                 throw new InvalidOperationException($"Pose Graph '{graph.GraphId}' does not exist in '{name}'.");
             catalog[index] = graph;
-            m_TypedGraphCatalog = catalog;
+            m_GraphCatalog = catalog;
         }
 
-        public void RemoveGraph(PoseGraphId graphId)
+        internal void RemoveGraph(PoseGraphId graphId)
         {
             if (!graphId.IsValid)
                 throw new ArgumentException("Pose Graph identity is invalid.", nameof(graphId));
-            if (m_TypedGraph != null && m_TypedGraph.GraphId == graphId)
+            if (m_Graph != null && m_Graph.GraphId == graphId)
                 throw new InvalidOperationException("The root Pose Graph cannot be removed.");
-            CharacterTypedPoseGraph[] catalog = m_TypedGraphCatalog ?? Array.Empty<CharacterTypedPoseGraph>();
-            CharacterTypedPoseGraph[] next = catalog.Where(value => value != null && value.GraphId != graphId).ToArray();
+            CharacterPoseCanvasGraph[] catalog = m_GraphCatalog ?? Array.Empty<CharacterPoseCanvasGraph>();
+            CharacterPoseCanvasGraph[] next = catalog.Where(value => value != null && value.GraphId != graphId).ToArray();
             if (next.Length == catalog.Length)
                 throw new InvalidOperationException($"Pose Graph '{graphId}' does not exist in '{name}'.");
-            m_TypedGraphCatalog = next;
+            m_GraphCatalog = next;
         }
 
-        public IEnumerable<CharacterTypedPoseGraph> EnumerateGraphs()
+        public IEnumerable<CharacterPoseCanvasGraph> EnumerateGraphs()
         {
-            if (m_TypedGraph != null)
-                yield return m_TypedGraph;
-            CharacterTypedPoseGraph[] catalog = m_TypedGraphCatalog ?? Array.Empty<CharacterTypedPoseGraph>();
+            if (m_Graph != null)
+                yield return m_Graph;
+            CharacterPoseCanvasGraph[] catalog = m_GraphCatalog ?? Array.Empty<CharacterPoseCanvasGraph>();
             for (int i = 0; i < catalog.Length; i++)
                 yield return catalog[i];
+        }
+
+        void AttachGraph(CharacterPoseCanvasGraph graph)
+        {
+#if UNITY_EDITOR
+            string ownerPath = AssetDatabase.GetAssetPath(this);
+            if (string.IsNullOrEmpty(ownerPath))
+                return;
+            string graphPath = AssetDatabase.GetAssetPath(graph);
+            if (string.IsNullOrEmpty(graphPath))
+            {
+                AssetDatabase.AddObjectToAsset(graph, this);
+                return;
+            }
+            if (!string.Equals(ownerPath, graphPath, StringComparison.Ordinal))
+                throw new InvalidOperationException(
+                    $"Pose Canvas graph '{graph.GraphId}' belongs to another asset.");
+#endif
         }
 
         public IEnumerable<CharacterPoseStateMachineDefinition>
@@ -270,7 +295,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 $"Pose StateMachine '{stateMachine.StateMachineId}' has no layout element '{elementId}'.");
         }
 
-        public void SetStateMachineLayoutElement(
+        internal void SetStateMachineLayoutElement(
             PoseStateMachineId stateMachineId,
             string elementId,
             Vector2 position)
@@ -293,7 +318,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             SetStateMachineLayout(stateMachineId, elements);
         }
 
-        public void RemoveStateMachineLayoutElement(
+        internal void RemoveStateMachineLayoutElement(
             PoseStateMachineId stateMachineId,
             string elementId)
         {
@@ -313,7 +338,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             SetStateMachineLayout(stateMachineId, elements);
         }
 
-        public void SetStateMachineLayout(
+        internal void SetStateMachineLayout(
             PoseStateMachineId stateMachineId,
             CharacterPoseStateMachineLayoutElement[] elements)
         {

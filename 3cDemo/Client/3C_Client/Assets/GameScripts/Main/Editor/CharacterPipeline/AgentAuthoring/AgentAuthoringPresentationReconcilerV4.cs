@@ -757,7 +757,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                         graph.id,
                         out AgentPackagePoseGraphFile oldGraph))
                 {
-                    CharacterTypedPoseGraph created = ConvertGraph(
+                    CharacterPoseCanvasGraph created = ConvertGraph(
                         graph,
                         layout,
                         target,
@@ -900,7 +900,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                         StringComparison.Ordinal);
                 if (recreate)
                 {
-                    CharacterTypedPoseNode created = ConvertNode(
+                    CharacterPoseCanvasNode created = ConvertNode(
                         node,
                         target.role,
                         presentation,
@@ -932,7 +932,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                             new PoseNodeId(node.id),
                             node.name));
                 }
-                CharacterTypedPoseNode decodedTarget = null;
+                CharacterPoseCanvasNode decodedTarget = null;
                 foreach (JProperty property in node.properties.Properties()
                              .OrderBy(value => value.Name, StringComparer.Ordinal))
                 {
@@ -1284,7 +1284,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                             "Linked Pose Call引用了未声明或Interface context无效的Group。");
                         continue;
                     }
-                    CharacterTypedPoseNode typed = ConvertNode(
+                    CharacterPoseCanvasNode typed = ConvertNode(
                         node,
                         graph.role,
                         presentation,
@@ -1891,7 +1891,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                     valid = false;
                     continue;
                 }
-                CharacterTypedPoseGraph typed = ConvertGraph(
+                CharacterPoseCanvasGraph typed = ConvertGraph(
                     graph,
                     layout,
                     closure,
@@ -2072,17 +2072,17 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
             }
         }
 
-        CharacterTypedPoseGraph ConvertGraph(
+        CharacterPoseCanvasGraph ConvertGraph(
             AgentPackagePoseGraphFile graph,
             AgentPackagePoseGraphLayoutFile layout,
             AgentDocumentPresentationEditable presentation,
             AgentCompileReport report,
             string path)
         {
-            var nodes = new List<CharacterTypedPoseNode>();
+            var nodes = new List<CharacterPoseCanvasNode>();
             foreach (AgentPackagePoseNode node in graph.nodes)
             {
-                CharacterTypedPoseNode converted = ConvertNode(
+                CharacterPoseCanvasNode converted = ConvertNode(
                     node,
                     graph.role,
                     presentation,
@@ -2095,12 +2095,12 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                 return null;
             Dictionary<string, AgentPackagePoseNodeLayout> positions =
                 Index(layout.nodes, value => value.id);
-            return new CharacterTypedPoseGraph(
+            return CharacterPoseCanvasGraph.CreateAuthoring(
                 new PoseGraphId(graph.id),
                 graph.contentRevision,
                 graph.parameters.Select(ConvertParameter).ToArray(),
                 nodes.ToArray(),
-                graph.edges.Select(value => new CharacterPoseEdge(
+                graph.edges.Select(value => new CharacterPoseCanvasConnection(
                     value.id,
                     new PoseNodeId(value.from.node),
                     new PosePortId(value.from.port),
@@ -2115,7 +2115,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                 }).ToArray());
         }
 
-        CharacterTypedPoseNode ConvertNode(
+        CharacterPoseCanvasNode ConvertNode(
             AgentPackagePoseNode node,
             string role,
             AgentDocumentPresentationEditable presentation,
@@ -2148,7 +2148,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                                             node,
                                             presentation)))
                                 : null));
-                return new CharacterTypedPoseNode(
+                return new CharacterPoseCanvasNode(
                     new PoseNodeId(node.id),
                     node.name,
                     payload,

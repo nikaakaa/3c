@@ -57,8 +57,8 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
         readonly struct ScopedNode
         {
             internal ScopedNode(
-                CharacterTypedPoseGraph graph,
-                CharacterTypedPoseNode node,
+                CharacterPoseCanvasGraph graph,
+                CharacterPoseCanvasNode node,
                 PoseNodeId scopedNodeId,
                 string scope)
             {
@@ -68,8 +68,8 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                 Scope = scope ?? string.Empty;
             }
 
-            internal CharacterTypedPoseGraph Graph { get; }
-            internal CharacterTypedPoseNode Node { get; }
+            internal CharacterPoseCanvasGraph Graph { get; }
+            internal CharacterPoseCanvasNode Node { get; }
             internal PoseNodeId ScopedNodeId { get; }
             internal string Scope { get; }
         }
@@ -124,10 +124,10 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                     operations,
                     scoped.ScopedNodeId,
                     CharacterPoseOperationCode.MotionMatchingPose);
-                CharacterPoseEdge historyEdge = scoped.Graph.Edges.Single(edge =>
+                CharacterPoseCanvasConnection historyEdge = scoped.Graph.Edges.Single(edge =>
                     edge != null && edge.TargetNodeId == scoped.Node.NodeId &&
                     CharacterMotionMatchingPosePorts.History.Equals(edge.TargetPortId));
-                CharacterTypedPoseNode collectorNode = scoped.Graph.Nodes.Single(value =>
+                CharacterPoseCanvasNode collectorNode = scoped.Graph.Nodes.Single(value =>
                     value != null && value.NodeId == historyEdge.SourceNodeId &&
                     value.Payload is CharacterPoseHistoryCollectorPayload);
                 PoseNodeId scopedCollectorId = Scope(collectorNode.NodeId, scoped.Scope);
@@ -160,7 +160,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                 PoseGraphId entryGraphId = payload.EntryGraph.PoseGraphId;
                 if (!entryGraphIds.Add(entryGraphId))
                     throw new InvalidOperationException($"Motion Matching entry graph '{entryGraphId}' has more than one owner.");
-                CharacterTypedPoseGraph entryGraph = graphAsset.RequireGraph(entryGraphId);
+                CharacterPoseCanvasGraph entryGraph = graphAsset.RequireGraph(entryGraphId);
                 CharacterMotionMatchingEntryGraphPolicy.RequireValid(entryGraph);
                 int entryProgramIndex = entryPrograms.Count;
                 entryPrograms.Add(new CharacterMotionMatchingEntryProgramDescriptor(
@@ -261,13 +261,13 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
 
         static void Collect(
             CharacterPresentationPoseGraphAsset owner,
-            CharacterTypedPoseGraph graph,
+            CharacterPoseCanvasGraph graph,
             string scope,
             ICollection<ScopedNode> result)
         {
             for (int i = 0; i < graph.Nodes.Count; i++)
             {
-                CharacterTypedPoseNode node = graph.Nodes[i];
+                CharacterPoseCanvasNode node = graph.Nodes[i];
                 if (node == null)
                     continue;
                 PoseNodeId scopedNodeId = Scope(node.NodeId, scope);
@@ -290,7 +290,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                 if (node.Payload is CharacterPoseSubgraphPayload subgraph &&
                     subgraph.Subgraph?.PoseGraphId.IsValid == true)
                 {
-                    CharacterTypedPoseGraph child = owner.RequireGraph(subgraph.Subgraph.PoseGraphId);
+                    CharacterPoseCanvasGraph child = owner.RequireGraph(subgraph.Subgraph.PoseGraphId);
                     Collect(
                         owner,
                         child,
@@ -300,7 +300,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             }
         }
 
-        static int CountEntryStateCapacity(CharacterTypedPoseGraph graph) =>
+        static int CountEntryStateCapacity(CharacterPoseCanvasGraph graph) =>
             graph.Nodes.Count(value => value != null &&
                 value.Kind != CharacterPoseNodeKind.EntryPoseInput &&
                 value.Kind != CharacterPoseNodeKind.GraphOutput &&

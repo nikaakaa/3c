@@ -295,8 +295,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
     {
         public ActionAnimationSlotConsumerContext(
             CharacterPresentationPoseGraphAsset asset,
-            CharacterTypedPoseGraph graph,
-            CharacterTypedPoseNode node,
+            CharacterPoseCanvasGraph graph,
+            CharacterPoseCanvasNode node,
             CharacterAnimationSlotPosePayload payload)
         {
             Asset = asset ? asset : throw new ArgumentNullException(nameof(asset));
@@ -306,8 +306,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         }
 
         public CharacterPresentationPoseGraphAsset Asset { get; }
-        public CharacterTypedPoseGraph Graph { get; }
-        public CharacterTypedPoseNode Node { get; }
+        public CharacterPoseCanvasGraph Graph { get; }
+        public CharacterPoseCanvasNode Node { get; }
         public CharacterAnimationSlotPosePayload Payload { get; }
         public AnimationSlotId SlotId => Payload.SlotId;
         public AnimationChannelId AnimationChannelId => Payload.AnimationChannelId;

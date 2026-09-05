@@ -455,14 +455,14 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             if (producer == null)
                 return null;
             var candidates =
-                new List<(CharacterTypedPoseGraph graph, CharacterTypedPoseNode node, CharacterAnimationSlotPosePayload payload)>();
-            foreach (CharacterTypedPoseGraph graph in poseGraph.EnumerateGraphs())
+                new List<(CharacterPoseCanvasGraph graph, CharacterPoseCanvasNode node, CharacterAnimationSlotPosePayload payload)>();
+            foreach (CharacterPoseCanvasGraph graph in poseGraph.EnumerateGraphs())
             {
                 if (graph == null)
                     continue;
                 for (int nodeIndex = 0; nodeIndex < graph.Nodes.Count; nodeIndex++)
                 {
-                    CharacterTypedPoseNode node = graph.Nodes[nodeIndex];
+                    CharacterPoseCanvasNode node = graph.Nodes[nodeIndex];
                     if (node?.Payload is CharacterAnimationSlotPosePayload payload &&
                         payload.AnimationChannelId == producer.AnimationChannelId)
                         candidates.Add((graph, node, payload));

@@ -18,7 +18,7 @@
     "com.inspiaaa.unityhfsm": "https://github.com/Inspiaaa/UnityHFSM.git#upm",
     "com.thirdperson.dotrecast": "file:com.thirdperson.dotrecast",
     "com.thirdperson.performance-instrumentation": "file:com.thirdperson.performance-instrumentation",
-    "com.kk.generated-diagnostic-sampling": "file:../../../../../generated-diagnostic-sampling/Packages/com.kk.generated-diagnostic-sampling",
+    "com.kk.generated-diagnostic-sampling": "file:D:/Unity_Project_1/generated-diagnostic-sampling/Packages/com.kk.generated-diagnostic-sampling",
     "com.thirdperson.tooling-contracts": "file:../../../Shared/UnityPackages/com.thirdperson.tooling-contracts",
     "com.tuyoogame.yooasset": "file:YooAsset",
     "com.unity.burst": "1.8.29",

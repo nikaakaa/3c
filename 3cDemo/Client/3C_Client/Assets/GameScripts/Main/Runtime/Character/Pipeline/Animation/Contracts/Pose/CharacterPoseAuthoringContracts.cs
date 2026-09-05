@@ -367,33 +367,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation
     }
 
     [Serializable]
-    public sealed class CharacterPoseEdge
-    {
-        [SerializeField] string m_EdgeId = string.Empty;
-        [SerializeField] string m_SourceNodeId = string.Empty;
-        [SerializeField] string m_SourcePortId = string.Empty;
-        [SerializeField] string m_TargetNodeId = string.Empty;
-        [SerializeField] string m_TargetPortId = string.Empty;
-
-        public string EdgeId => m_EdgeId ?? string.Empty;
-        public PoseNodeId SourceNodeId => string.IsNullOrWhiteSpace(m_SourceNodeId) ? default : new PoseNodeId(m_SourceNodeId);
-        public PosePortId SourcePortId => string.IsNullOrWhiteSpace(m_SourcePortId) ? default : new PosePortId(m_SourcePortId);
-        public PoseNodeId TargetNodeId => string.IsNullOrWhiteSpace(m_TargetNodeId) ? default : new PoseNodeId(m_TargetNodeId);
-        public PosePortId TargetPortId => string.IsNullOrWhiteSpace(m_TargetPortId) ? default : new PosePortId(m_TargetPortId);
-
-        public CharacterPoseEdge() { }
-
-        public CharacterPoseEdge(string edgeId, PoseNodeId sourceNodeId, PosePortId sourcePortId, PoseNodeId targetNodeId, PosePortId targetPortId)
-        {
-            m_EdgeId = PoseIdentity.Require(edgeId, nameof(edgeId));
-            m_SourceNodeId = sourceNodeId.IsValid ? sourceNodeId.Value : throw new ArgumentException("Source node is invalid.", nameof(sourceNodeId));
-            m_SourcePortId = sourcePortId.IsValid ? sourcePortId.Value : throw new ArgumentException("Source port is invalid.", nameof(sourcePortId));
-            m_TargetNodeId = targetNodeId.IsValid ? targetNodeId.Value : throw new ArgumentException("Target node is invalid.", nameof(targetNodeId));
-            m_TargetPortId = targetPortId.IsValid ? targetPortId.Value : throw new ArgumentException("Target port is invalid.", nameof(targetPortId));
-        }
-    }
-
-    [Serializable]
     public sealed class CharacterPoseSubgraphReference
     {
         [SerializeField] string m_PoseGraphId = string.Empty;

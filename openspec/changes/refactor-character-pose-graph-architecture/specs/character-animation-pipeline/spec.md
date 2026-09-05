@@ -118,37 +118,43 @@ PoseGraph MUST只把成功Seal后的具体`CharacterFootIkCommittedCaptureViewLe
 
 ### Requirement: Animancer Evaluate必须是唯一不可逆提交门槛
 
-唯一正式Animancer Graph Evaluate MUST继续作为动画表现帧不可逆Barrier。进入Barrier前，根Runtime MUST先完成Program/Source/Constraint Tuning Candidate原子Generation提升，再完成Program Image/Execution View/Profile/Rig/World Context、Module容量、source readiness/ownership、Diagnostics interest、Constraint静态binding、Final Writer binding和Frame lineage验证；Program Runtime MUST完成Control与Source Demand，Source Module MUST完成sample/Playable/capture准备，但不得提交Actor State、source ownership、Constraint Bank、Final Pose或command acknowledgement。打开Frame后 MUST不改变Tuning Generation。
+唯一正式Animancer Graph Evaluate MUST继续作为动画表现帧不可逆Barrier。进入Barrier前，根Runtime MUST先完成Program/Source/Constraint Tuning Candidate原子Generation提升，再完成Program Image/Execution View/Profile/Rig/World Context、Worker Execution Policy与Kernel Set、Module容量、source readiness/ownership、Diagnostics interest、Constraint静态binding、Final Writer binding和Frame lineage验证；Program Runtime MUST完成Control、Source Demand与Worker Batch lease准备，Source Module MUST完成sample/Playable/capture准备，但不得提交Actor State、source ownership、Constraint Bank、Final Pose或command acknowledgement。打开Frame后 MUST不改变Tuning Generation、Execution Policy或Actor Batch Key。
 
-Barrier内 MUST按唯一Program Stage Schedule完成source capture、Pose Operation、world-aware Constraint、Goal Assembly、FBBIK、Output和Final Publication。每个Operation MUST由Program Runtime调度一次；每个Constraint Family Operation MUST在自己的Stage位置调用一次Constraint Module对应入口，Constraint `Complete`只验证完整闭包；Writer MUST只由Final Publication执行一次。Barrier之后只可统一提升已验证Pending页、应用journal、acknowledge command、执行deferred release并发布结果；不得动态查找、编译、扩容、再次执行Operation或补算Diagnostics。
+Barrier内 MUST先由唯一Animancer Evaluate完成source capture，再按Program Image唯一Stage与Worker Batch依赖执行Pure Pose Kernel和Compiler明确归属的Managed Operation，最后完成world-aware Constraint、Goal Assembly、FBBIK、Output和Final Publication。每个Operation MUST由Program Runtime调度一次；每个Constraint Family Operation MUST在自己的Stage位置调用一次Constraint Module对应入口，Constraint `Complete`只验证完整闭包；Writer MUST只由Final Publication执行一次。根Runtime可以等待Program Image声明的精确Job Completion，但不得动态查找、重编、拆批、扩容、再次执行Operation或补算Diagnostics。Barrier之后只可统一提升已验证Pending页、应用journal、acknowledge command、执行deferred release并发布结果。
 
 #### Scenario: Barrier前Source Module失败
 
-- **WHEN** Source sample或Prepared Resource在Barrier前Invalid
-- **THEN** Runtime MUST不调用Animancer Evaluate并Discard全部Pending结果
-- **AND** Program Runtime MUST不使用历史sample或默认Playable继续
+- **WHEN** Source sample、Prepared Resource或Worker执行产物身份在Barrier前Invalid
+- **THEN** Runtime MUST不调用Animancer Evaluate、不提交Worker批次并Discard全部Pending结果
+- **AND** Program Runtime MUST不使用历史sample、旧Kernel或默认Playable继续
+
+#### Scenario: Barrier内Worker失败
+
+- **WHEN** Animancer Evaluate已经产生Source结果，但Program Worker批次在World-aware Stage之前Invalid、Fault或未完成
+- **THEN** Runtime MUST阻断Constraint、Output和Final Publication、Discard全部Pending并使Actor Runtime Faulted
+- **AND** MUST不使用上一Committed Value或在调用线程重跑对应Operation
 
 #### Scenario: Barrier内Constraint失败
 
-- **WHEN** Animancer Evaluate已经产生Component Pose但Constraint Result Invalid
+- **WHEN** 前置Worker批次已经完成并产生Component Pose，但Constraint Result Invalid
 - **THEN** Runtime MUST阻断后续Operation和Final Publication、Discard Pending并使Actor Runtime Faulted
 - **AND** MUST不提交已经推进的Program、Source或BendHistory局部状态
 
 #### Scenario: Barrier成功完成
 
-- **WHEN** Program、Source、Constraint和Final Publication Result全部匹配同一lineage并完成
+- **WHEN** Animancer、全部Worker／Managed Program批次、Source、Constraint和Final Publication Result均匹配同一lineage并完成
 - **THEN** 根Seal MUST只执行预验证的no-throw页切换、journal、acknowledgement与deferred release
-- **AND** Writer成功后 MUST不再运行可能失败的动画业务逻辑
+- **AND** Writer成功后 MUST不再运行可能失败的动画业务逻辑或等待未声明Job
 
 #### Scenario: Barrier前Foot Placement静态准备失败
 
 - **WHEN** Foot Placement的Profile、Rig、World Context、编译容量、静态Goal Slot或binding在进入Barrier前Invalid
-- **THEN** Runtime MUST不执行FBBIK或Physical Writer
+- **THEN** Runtime MUST不执行FBBIK、对应后续Worker批次或Physical Writer
 - **AND** 根Pending Bank MUST被Discard
 
 #### Scenario: Barrier内Foot Placement运行结果失败
 
-- **WHEN** Animancer Evaluate已经产生Component Pose，但Foot Placement Patch、运行时Goal lineage、Goal Assembler或FBBIK outcome在Barrier内Invalid
+- **WHEN** Animancer Evaluate和前置Pure Pose Worker已经产生Component Pose，但Foot Placement Patch、运行时Goal lineage、Goal Assembler或FBBIK outcome在Barrier内Invalid
 - **THEN** Runtime MUST阻断后续Pose stage与Physical Writer并Discard根Pending Bank
 - **AND** 同一Actor Animation Runtime MUST进入Faulted，不得把该失败降级成可恢复的Barrier前Discard
 

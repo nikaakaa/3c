@@ -42,8 +42,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         public static void OpenFromPoseSlot(
             CharacterPipelineDefinition definition,
             CharacterPresentationPoseGraphAsset asset,
-            CharacterTypedPoseGraph graph,
-            CharacterTypedPoseNode node)
+            CharacterPoseCanvasGraph graph,
+            CharacterPoseCanvasNode node)
         {
             if (!definition || !asset || graph == null || node == null)
             {

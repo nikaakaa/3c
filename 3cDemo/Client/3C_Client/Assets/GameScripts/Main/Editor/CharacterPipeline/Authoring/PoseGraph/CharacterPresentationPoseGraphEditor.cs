@@ -32,8 +32,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         [SerializeField] CharacterPipelineDefinition m_Definition;
         [SerializeField] string m_CurrentGraphId = string.Empty;
 
-        GraphAuthoringCanvasView m_Canvas;
-        GraphAuthoringCanvasView m_StateMachineSurface;
+        CharacterPoseCanvasView m_Canvas;
+        CharacterPoseCanvasView m_StateMachineSurface;
         GraphAuthoringDetailsRegion m_Details;
         GraphAuthoringNavigatorPresenter m_Navigator;
         GraphAuthoringBreadcrumbHost m_BreadcrumbHost;
@@ -42,8 +42,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         Label m_Status;
         ToolbarToggle m_LiveDebugToggle;
         CharacterPoseGraphAssetMutationOwner m_Owner;
-        CharacterTypedPoseGraphDocument m_Document;
-        CharacterPoseGraphEditorMutationAdapter m_Mutation;
+        CharacterPoseCanvasGraphDocument m_Document;
+        CharacterPoseCanvasEditorMutationAdapter m_Mutation;
         CharacterPoseRuntimeTraceProjection m_RuntimeTrace;
         CharacterPosePreviewViewport m_PreviewPanel;
         CharacterPoseStateMachineDocument m_StateMachineDocument;
@@ -153,11 +153,11 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             VisualElement canvasHost = Require("pose-graph-content");
             VisualElement detailsHost = Require("pose-details-content");
 
-            m_Canvas = new GraphAuthoringCanvasView
+            m_Canvas = new CharacterPoseCanvasView
             {
                 name = "tree-view"
             };
-            m_StateMachineSurface = new GraphAuthoringCanvasView();
+            m_StateMachineSurface = new CharacterPoseCanvasView();
             m_StateMachineSurface.style.display = DisplayStyle.None;
             m_Details = new GraphAuthoringDetailsRegion
             {
@@ -259,7 +259,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         }
 
         public void FocusStatePlayer(
-            CharacterTypedPoseNode machine,
+            CharacterPoseCanvasNode machine,
             CharacterPoseStateDefinition state,
             PoseNodeId sequenceNodeId)
         {
@@ -285,7 +285,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             PoseGraphId graphId = string.IsNullOrWhiteSpace(m_CurrentGraphId)
                 ? m_Asset.Graph.GraphId
                 : new PoseGraphId(m_CurrentGraphId);
-            CharacterTypedPoseGraph graph = m_Asset.RequireGraph(graphId);
+            CharacterPoseCanvasGraph graph = m_Asset.RequireGraph(graphId);
             m_ShowingStateMachine = false;
             m_ShowingTransitionRule = false;
             m_RuleDocument = null;
@@ -295,13 +295,13 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             m_Details.style.display = DisplayStyle.Flex;
             m_Owner = new CharacterPoseGraphAssetMutationOwner(m_Asset, m_Profile);
             string graphDisplayName = ResolveGraphDisplayName(graph);
-            m_Document = new CharacterTypedPoseGraphDocument(
+            m_Document = new CharacterPoseCanvasGraphDocument(
                 m_Owner,
                 graph.GraphId.Value,
                 ResolveRole(graph),
                 graphDisplayName);
-            m_Mutation = new CharacterPoseGraphEditorMutationAdapter(
-                new CharacterTypedPoseGraphMutationAdapter(),
+            m_Mutation = new CharacterPoseCanvasEditorMutationAdapter(
+                new CharacterPoseCanvasMutationAdapter(),
                 m_PreviewPanel.TryApplySelectionTuning);
             m_Mutation.ReadOnly =
                 m_LiveDebugToggle != null && m_LiveDebugToggle.value;
@@ -313,14 +313,14 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 m_Document,
                 catalog,
                 m_Mutation,
-                new CharacterTypedPoseConnectionPolicy(),
-                new CharacterTypedPoseGraphClipboardCodec(
+                new CharacterPoseCanvasConnectionPolicy(),
+                new CharacterPoseCanvasGraphClipboardCodec(
                     m_Mutation)));
             m_Details.Bind(new GraphAuthoringDetailsBinding(
                 m_Document,
                 catalog,
                 m_Mutation,
-                new CharacterTypedPoseDetailsDataSource(
+                new CharacterPoseCanvasDetailsDataSource(
                     m_RuntimeTrace,
                     m_Profile?.RigDefinition,
                     m_Profile,
@@ -360,7 +360,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             }
         }
 
-        GraphAuthoringDocumentRoleId ResolveRole(CharacterTypedPoseGraph graph)
+        GraphAuthoringDocumentRoleId ResolveRole(CharacterPoseCanvasGraph graph)
         {
             if (ReferenceEquals(graph, m_Asset.Graph))
                 return CharacterPoseGraphAuthoringCapabilities.RootGraph;
@@ -374,7 +374,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 : CharacterPoseGraphAuthoringCapabilities.Subgraph;
         }
 
-        string ResolveGraphDisplayName(CharacterTypedPoseGraph graph)
+        string ResolveGraphDisplayName(CharacterPoseCanvasGraph graph)
         {
             if (ReferenceEquals(graph, m_Asset.Graph))
                 return "Root Pose Graph";
@@ -404,7 +404,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 return $"{subgraphOwners[0]} Subgraph";
             if (subgraphOwners.Length > 1)
                 return "Shared Pose Subgraph";
-            CharacterTypedPoseGraph[] graphs = m_Asset.EnumerateGraphs()
+            CharacterPoseCanvasGraph[] graphs = m_Asset.EnumerateGraphs()
                 .Where(value => value != null &&
                                 !ReferenceEquals(value, m_Asset.Graph))
                 .OrderBy(value => value.GraphId)
@@ -463,7 +463,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             }
             CharacterPoseNodePayload payload =
                 definition.CreateDefaultPayload();
-            var node = new CharacterTypedPoseNode(new PoseNodeId(Guid.NewGuid().ToString("N")), capability.DisplayName, payload);
+            var node = new CharacterPoseCanvasNode(new PoseNodeId(Guid.NewGuid().ToString("N")), capability.DisplayName, payload);
             Vector2 graphPosition = m_Canvas.contentViewContainer.WorldToLocal(screenPosition - position.position);
             m_Canvas.CreateNode(capability.CapabilityId, node, graphPosition);
             m_Status.text =
@@ -512,7 +512,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     current.Value.Kind == GraphAuthoringSelectionKind.Node &&
                     m_Document.Graph.Nodes.FirstOrDefault(value =>
                         value.NodeId.Value == current.Value.ElementId.Value) is
-                        CharacterTypedPoseNode selectedNode &&
+                        CharacterPoseCanvasNode selectedNode &&
                     CharacterPoseNodeDefinitionModule.Shared
                         .Require(selectedNode.Kind).CanvasCreation ==
                     CharacterPoseCanvasCreationKind.DedicatedSurface)
@@ -627,7 +627,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 !request.CommandId.Equals(
                     CharacterPoseGraphAuthoringCapabilities.OpenFullBodyIkProfile))
                 return false;
-            CharacterTypedPoseNode typed =
+            CharacterPoseCanvasNode typed =
                 m_Document.Graph.Nodes.Single(value =>
                     value.NodeId.Value == nodeId.Value);
             _ = typed.Payload as CharacterFullBodyIkPosePayload ??
@@ -670,7 +670,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 return true;
             }
 
-            CharacterTypedPoseNode typed =
+            CharacterPoseCanvasNode typed =
                 m_Document.Graph.Nodes.Single(value =>
                     value.NodeId.Value == nodeId.Value);
             CharacterPresentationPoseSourceSlot slot =
@@ -705,7 +705,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             GraphAuthoringNodeProjection node,
             GraphAuthoringChildSurfaceDescriptor child)
         {
-            CharacterTypedPoseNode typed =
+            CharacterPoseCanvasNode typed =
                 m_Document.Graph.Nodes.Single(value =>
                     value.NodeId.Value == node.NodeId.Value);
             if (child.DocumentRoleId.Equals(
@@ -723,7 +723,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 subgraph.Subgraph != null &&
                 subgraph.Subgraph.PoseGraphId.IsValid)
             {
-                CharacterTypedPoseGraph graph =
+                CharacterPoseCanvasGraph graph =
                     m_Asset.RequireGraph(
                         subgraph.Subgraph.PoseGraphId);
                 m_PageStack.Push(new GraphAuthoringPageProjection(
@@ -799,7 +799,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
 
         void OpenStateGraph(CharacterPoseStateDefinition state)
         {
-            CharacterTypedPoseGraph graph =
+            CharacterPoseCanvasGraph graph =
                 m_Asset.RequireGraph(state.PoseGraphId);
             m_PageStack.Push(new GraphAuthoringPageProjection(
                 new GraphAuthoringElementId(graph.GraphId.Value),
@@ -935,16 +935,16 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             var graphId = new PoseGraphId(suffix);
             var outputNodeId = new PoseNodeId(
                 Guid.NewGuid().ToString("N"));
-            var outputNode = new CharacterTypedPoseNode(
+            var outputNode = new CharacterPoseCanvasNode(
                 outputNodeId,
                 "Output Pose",
                 new CharacterOutputPosePayload());
-            var graph = new CharacterTypedPoseGraph(
+            var graph = CharacterPoseCanvasGraph.CreateAuthoring(
                 graphId,
                 Guid.NewGuid().ToString("N"),
                 Array.Empty<CharacterPoseParameterDeclaration>(),
                 new[] { outputNode },
-                Array.Empty<CharacterPoseEdge>(),
+                Array.Empty<CharacterPoseCanvasConnection>(),
                 new[]
                 {
                     new CharacterPoseGraphLayoutEntry(
@@ -1136,7 +1136,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 CharacterPoseStateMachineDefinition machine,
                 CharacterPoseStateTransition transition) =
                 FindTransitionRuleOwner(ruleGraphId);
-            CharacterTypedPoseGraph root = m_Asset.Graph ??
+            CharacterPoseCanvasGraph root = m_Asset.Graph ??
                 throw new InvalidOperationException(
                     "Presentation Pose Graph root is missing.");
             m_PageStack.Reset(
@@ -1218,8 +1218,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     CharacterPoseAuthoringPortProjection.Get);
             int issueCount = capabilityErrors.Count + report.Issues.Count;
             if (TryFindStateMachineValidationIssue(
-                    out CharacterTypedPoseGraph ownerGraph,
-                    out CharacterTypedPoseNode ownerNode,
+                    out CharacterPoseCanvasGraph ownerGraph,
+                    out CharacterPoseCanvasNode ownerNode,
                     out CharacterPoseStateMachineDefinition machine,
                     out CharacterPoseStateMachineValidationIssue
                         stateMachineIssue))
@@ -1275,17 +1275,17 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         }
 
         bool TryFindStateMachineValidationIssue(
-            out CharacterTypedPoseGraph ownerGraph,
-            out CharacterTypedPoseNode ownerNode,
+            out CharacterPoseCanvasGraph ownerGraph,
+            out CharacterPoseCanvasNode ownerNode,
             out CharacterPoseStateMachineDefinition machine,
             out CharacterPoseStateMachineValidationIssue issue)
         {
-            foreach (CharacterTypedPoseGraph graph in
+            foreach (CharacterPoseCanvasGraph graph in
                      m_Asset.EnumerateGraphs())
             {
                 if (graph == null)
                     continue;
-                foreach (CharacterTypedPoseNode node in graph.Nodes)
+                foreach (CharacterPoseCanvasNode node in graph.Nodes)
                 {
                     if (node?.Payload is not
                         CharacterPoseStateMachineNodePayload payload)
@@ -1313,8 +1313,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         }
 
         void LocateStateMachineValidationIssue(
-            CharacterTypedPoseGraph ownerGraph,
-            CharacterTypedPoseNode ownerNode,
+            CharacterPoseCanvasGraph ownerGraph,
+            CharacterPoseCanvasNode ownerNode,
             CharacterPoseStateMachineDefinition machine,
             CharacterPoseStateMachineValidationIssue issue)
         {
@@ -1378,9 +1378,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                 !portId.IsValid ||
                 !m_Asset.TryGetGraph(
                     graphId,
-                    out CharacterTypedPoseGraph graph))
+                    out CharacterPoseCanvasGraph graph))
                 return string.Empty;
-            CharacterTypedPoseNode node = graph.Nodes
+            CharacterPoseCanvasNode node = graph.Nodes
                 .SingleOrDefault(value =>
                     value != null && value.NodeId == nodeId);
             if (node == null)
@@ -1392,7 +1392,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         }
 
         static void AddValidationHighlight(
-            GraphAuthoringCanvasView canvas,
+            CharacterPoseCanvasView canvas,
             GraphAuthoringElementId elementId,
             string portName = "")
         {
@@ -1426,7 +1426,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         }
 
         static void ClearValidationHighlights(
-            GraphAuthoringCanvasView canvas)
+            CharacterPoseCanvasView canvas)
         {
             if (canvas == null)
                 return;
@@ -1533,7 +1533,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
 
         internal void RefreshRuntimeHighlight()
         {
-            GraphAuthoringCanvasView canvas = m_ShowingStateMachine
+            CharacterPoseCanvasView canvas = m_ShowingStateMachine
                 ? m_StateMachineSurface
                 : m_Canvas;
             if (canvas == null)
@@ -2081,7 +2081,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                                     : $"{entry.GraphOwner?.name} {entry.GraphId} {entry.GraphOwnerIdentity}"));
                         }
                     }
-                    foreach (CharacterTypedPoseNode call in (m_Window.m_Asset.Graph?.Nodes ?? Array.Empty<CharacterTypedPoseNode>())
+                    foreach (CharacterPoseCanvasNode call in (m_Window.m_Asset.Graph?.Nodes ?? Array.Empty<CharacterPoseCanvasNode>())
                                  .Where(value => value?.Payload is CharacterLinkedPoseCallPayload payload && payload.GroupId == group.GroupId))
                         items.Add(new GraphAuthoringNavigatorItem(
                             new GraphAuthoringElementId("linked-call:" + m_Window.m_Asset.Graph.GraphId.Value + ":" + call.NodeId.Value),
@@ -2095,7 +2095,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     {
                         foreach (CharacterLinkedPoseInterfaceEntryDescriptor requiredEntry in group.Interface.Entries.Where(value => value != null))
                         {
-                            int callCount = (m_Window.m_Asset.Graph?.Nodes ?? Array.Empty<CharacterTypedPoseNode>())
+                            int callCount = (m_Window.m_Asset.Graph?.Nodes ?? Array.Empty<CharacterPoseCanvasNode>())
                                 .Count(value => value?.Payload is CharacterLinkedPoseCallPayload payload &&
                                                 payload.GroupId == group.GroupId &&
                                                 payload.EntryId == requiredEntry.EntryId);

@@ -177,3 +177,46 @@
 - [x] 14.11 将Reset、Projection Replacement与Dispose接入唯一Scheduler fence，完成Outstanding Job后再释放actor-local Execution View、Frame页与Module状态；搜索并消除悬空Native页与跨Actor状态污染
 - [ ] 14.12 执行正式IL2CPP／Burst AOT产物闭包检查和Performance Capture，分别记录总Presentation、Main Thread、Worker、Job等待与多Actor批次规模；不通过运行时fallback适配缺失平台能力
 - [x] 14.13 搜索并确认不存在动画预算、Phase Offset、跳帧、旧Pose复用或插值补帧路径；Worker资源压力只按现有精确Completion与Fault政策处理
+
+## 15. 退役TrainingEnemy完整内容岛
+
+- [ ] 15.1 补齐`character-targeted-motion-warp-demo` delta，删除Standalone双Actor、玩家绑定训练敌人和训练敌人范围Requirement，并把正式结果固定为只保留Corin、target input为None、五段攻击继续执行原始MotionCurve
+- [ ] 15.2 按`TrainingEnemy`名称、`corin-training-enemy` ActorId、`gameplay-lab-target`绑定、资产路径和GUID建立完整引用闭包，确认删除范围覆盖GameplayLab composition、Variant、AssetBundle collector、默认目录、构建入口、Profile、Prefab与generated数据
+- [ ] 15.3 从GameplayLab prefab与Session composition删除TrainingEnemy嵌套实例、roster注册、AI control source和玩家target-provider绑定，使保留的Corin按既有`OptionalSnapshot`无目标语义运行且不新增占位目标
+- [ ] 15.4 删除`3cDemo/Client/3C_Client/Assets/Configs/Character/TrainingEnemy`、`TrainingEnemyMonster.prefab`、`TrainingEnemyMonsterPresentation.prefab`及对应meta和generated产物，不迁移其中PoseGraph、动画、AI、Rig、Foot或Profile资产
+- [ ] 15.5 删除`TrainingEnemyAnimationAssetAuthoring`、`TrainingEnemyRuntimeSceneBuilder`及仅为TrainingEnemy存在的作者／构建代码，并从GameplayLab builder、launcher、startup validator、root hierarchy builder、Shape Projection installer、collector和默认目录配置删除其专用分支、路径与GUID
+- [ ] 15.6 使用`rg`和Unity资产依赖结果确认项目不再包含TrainingEnemy路径、类型、ActorId、Prefab／Profile GUID、Missing Script、Missing Asset或collector条目；随后把`openspec/project.md`更新为单Corin且TrainingEnemy已退役的实际真相
+
+## 16. 建立唯一CanvasCore Pose作者资产
+
+- [ ] 16.1 在Pose作者程序集建立正式CanvasCore依赖和唯一`CharacterPoseCanvasGraph`、`CharacterPoseCanvasNode`、`CharacterPoseCanvasConnection`，输入为Pose Node Definition与typed payload，输出为可序列化的稳定Graph／Node／Port／Edge identity
+- [ ] 16.2 让`CharacterPresentationPoseGraphAsset`只拥有Canvas Graph与flat graph catalog，移除`CharacterTypedPoseGraph`字段和第二拓扑存储；资源引用、StateMachine、子图和布局全部进入同一作者资产
+- [ ] 16.3 限制Pose Canvas只使用CanvasCore图数据、选择和视图生命周期，禁止FlowCanvas Flow／Value执行、自动类型转换、反射方法、事件和Graph Update进入Character运行装配
+- [ ] 16.4 让资产反序列化、复制和保存保持NodeId、EdgeId、logical port identity、Pose空间与Graph Role，任一未知Node Definition或非法端口在写入前返回稳定诊断
+
+## 17. 将Pose作者交互接入唯一Mutation链
+
+- [ ] 17.1 实现`CharacterPoseCanvasDefinitionProjection`，从唯一Node Definition和`GraphAuthoringNodePortShapeProjector`生成标题、字段、固定／条件／动态端口、创建菜单、颜色与只读执行域，不在Canvas重复维护NodeKind表
+- [ ] 17.2 实现`CharacterPoseCanvasMutationAdapter`，把创建、拖线、删除、复制粘贴、移动、Details和StateMachine编辑转换为typed Presentation Mutation，再由Document Transaction／Undo修改唯一Canvas Graph
+- [ ] 17.3 关闭Pose Graph子类中CanvasCore直接增删节点、连接、字段写入和独立Undo入口，确保人工UI、Document、MCP与Clipboard只通过同一Mutation preflight和Reconciler写资产
+- [ ] 17.4 用受影响投影刷新替换`OnInspectorGUI`或普通Repaint中的整图扫描与重建，Selection、Navigator、Pose Watch和Details只保存Editor view-state
+
+## 18. 让Compiler直接消费Canvas作者数据
+
+- [ ] 18.1 实现只读`CharacterPoseCanvasAuthoringView`，只输出稳定Graph、Node、Payload、Port、Edge、Graph Role、资源引用和Source Map，不暴露Canvas运行委托、GraphOwner或运行状态
+- [ ] 18.2 将`CharacterPoseCompilationRequest`、Graph Closure和Typed Lowering原子切换到Canvas Authoring View与唯一Node Definition，拒绝通用Flow、Event、Method、反射节点和Canvas自动转换
+- [ ] 18.3 只把保留的Corin Pose Graph、PoseStateMachine、节点、端口、边、布局、子图、identity和资源引用一次性迁入Canvas Graph，并通过正式Character Build生成新的ProjectionRevision与PoseProgramImageHash
+- [ ] 18.4 对账迁移前后Corin Graph closure、typed IR、Stage、Operation Family、Program Image source map和资源引用一一对应；TrainingEnemy不得出现在迁移输入、输出或generated manifest
+- [ ] 18.5 新Compiler输入闭合后删除`CharacterTypedPoseGraph`、旧Pose `GraphAuthoringCanvasView`、旧StateMachine画布、旧codec、迁移器临时入口及全部镜像、双写、反向同步和兼容读取
+
+## 19. 通过正式Scene Play提供Pose预览
+
+- [ ] 19.1 让Pose窗口只调用`rebuild-btsmtl-preview-with-scene-play`提供的场景启动、暂停、单步、输入与重建入口，并以稳定Actor／Node identity选择观察目标
+- [ ] 19.2 让预览只读取正式Session在Worker与Managed Completion完成且根事务Seal后的Committed Result，Graph或Kernel Set变更后停止旧Projection并等待显式Character Build
+- [ ] 19.3 删除Pose窗口独立`AnimationPreviewRuntime`、第二播放时钟、简化Executor、默认World Context、临时Program和直接修改PoseState／Action／Player／IK状态的Seek路径
+
+## 20. 收口Canvas迁移一致性
+
+- [ ] 20.1 搜索并确认Pose只有一个Canvas作者资产、一个Mutation写入Owner、一个Node Definition目录、一个Compiler输入和一个Runtime Program链；BTSMTL与AI具体Canvas及资产未被迁移
+- [ ] 20.2 同步`openspec/project.md`与受影响Agent作者合同中的实际Canvas、Compiler、Scene Play和TrainingEnemy退役边界，不把未实施结构提前写成current truth
+- [ ] 20.3 执行`git diff --check`、本change严格OpenSpec校验和全量严格OpenSpec校验，确认没有fallback、兼容alias、旧Canvas入口或TrainingEnemy残留清单

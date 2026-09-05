@@ -45,7 +45,7 @@
       "hash": "f8fdc2efb862522acd26fab6cd940886c84cde37"
     },
     "com.kk.generated-diagnostic-sampling": {
-      "version": "file:../../../../../generated-diagnostic-sampling/Packages/com.kk.generated-diagnostic-sampling",
+      "version": "file:D:/Unity_Project_1/generated-diagnostic-sampling/Packages/com.kk.generated-diagnostic-sampling",
       "depth": 0,
       "source": "local",
       "dependencies": {}

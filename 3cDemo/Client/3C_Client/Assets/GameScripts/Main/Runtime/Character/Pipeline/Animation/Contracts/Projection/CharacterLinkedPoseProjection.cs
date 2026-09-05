@@ -120,7 +120,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
 
         public CharacterLinkedPoseEntryFragmentDescriptor(CharacterLinkedPoseImplementationEntryBinding source)
         {
-            CharacterTypedPoseGraph graph = source?.RequireValid();
+            CharacterPoseCanvasGraph graph = source?.RequireValid();
             if (source == null)
                 throw new ArgumentNullException(nameof(source));
             m_EntryId = source.EntryId.Value;

@@ -24,7 +24,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             }
             if (profile.LinkedPoseGroups.Count == 0 && profile.LinkedPoseImplementations.Count == 0 && profile.LinkedPoseSelectors.Count == 0)
             {
-                CharacterTypedPoseNode strayCall = profile.PoseGraph?.Graph?.Nodes
+                CharacterPoseCanvasNode strayCall = profile.PoseGraph?.Graph?.Nodes
                     .FirstOrDefault(value => value?.Kind == CharacterPoseNodeKind.LinkedPoseCall);
                 if (strayCall != null)
                 {
@@ -94,7 +94,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
         }
 
         static CharacterLinkedPoseCallProjectionDescriptor[] CompileCalls(
-            CharacterTypedPoseGraph rootGraph,
+            CharacterPoseCanvasGraph rootGraph,
             IReadOnlyDictionary<LinkedPoseGroupId, CharacterLinkedPoseGroupBinding> groups)
         {
             if (rootGraph == null)
@@ -103,7 +103,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             var callByEntry = new Dictionary<string, PoseNodeId>(StringComparer.Ordinal);
             for (int nodeIndex = 0; nodeIndex < rootGraph.Nodes.Count; nodeIndex++)
             {
-                CharacterTypedPoseNode node = rootGraph.Nodes[nodeIndex];
+                CharacterPoseCanvasNode node = rootGraph.Nodes[nodeIndex];
                 if (node?.Payload is not CharacterLinkedPoseCallPayload payload)
                     continue;
                 if (!groups.TryGetValue(payload.GroupId, out CharacterLinkedPoseGroupBinding group))

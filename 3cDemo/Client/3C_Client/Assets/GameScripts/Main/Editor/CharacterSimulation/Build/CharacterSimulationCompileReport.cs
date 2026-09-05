@@ -134,4 +134,29 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
         public CharacterSimulationCompileReport Report { get; }
         public bool IsValid => Artifact != null && TargetProducts.Count > 0 && PresentationProjection != null && PresentationProjection.IsValid && Report.IsValid;
     }
+
+    public sealed class TimelineSimulationBuildResult
+    {
+        public TimelineSimulationBuildResult(
+            CharacterSemanticIrArtifactDescriptor artifact,
+            string rootGuid,
+            IReadOnlyList<CharacterSimulationTargetBuildProduct> targetProducts,
+            CharacterSimulationCompileReport report)
+        {
+            Artifact = artifact;
+            RootGuid = rootGuid ?? string.Empty;
+            TargetProducts = targetProducts ?? Array.Empty<CharacterSimulationTargetBuildProduct>();
+            Report = report ?? throw new ArgumentNullException(nameof(report));
+        }
+
+        public CharacterSemanticIrArtifactDescriptor Artifact { get; }
+        public string RootGuid { get; }
+        public IReadOnlyList<CharacterSimulationTargetBuildProduct> TargetProducts { get; }
+        public CharacterSimulationCompileReport Report { get; }
+        public bool IsValid => Artifact != null &&
+                               Artifact.Header.Root.IsTimeline &&
+                               !string.IsNullOrEmpty(RootGuid) &&
+                               TargetProducts.Count > 0 &&
+                               Report.IsValid;
+    }
 }

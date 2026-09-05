@@ -167,12 +167,8 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             m_TimelineContentHash = TimelineAuthoringFingerprint.Compute(m_Timeline);
             m_Track = track ?? throw new ArgumentNullException(nameof(track));
             m_TrackIndex = trackIndex;
-            m_OwnerGraphId = string.IsNullOrEmpty(ownerGraphId)
-                ? throw new ArgumentException("Timeline owner Graph identity is required.", nameof(ownerGraphId))
-                : ownerGraphId;
-            m_OwnerNodeId = string.IsNullOrEmpty(ownerNodeId)
-                ? throw new ArgumentException("Timeline owner Node identity is required.", nameof(ownerNodeId))
-                : ownerNodeId;
+            m_OwnerGraphId = ownerGraphId ?? string.Empty;
+            m_OwnerNodeId = ownerNodeId ?? string.Empty;
             m_Route = route ?? string.Empty;
             m_Builder = builder ?? throw new ArgumentNullException(nameof(builder));
             TimelineOperation = timelineOperation.IsValid

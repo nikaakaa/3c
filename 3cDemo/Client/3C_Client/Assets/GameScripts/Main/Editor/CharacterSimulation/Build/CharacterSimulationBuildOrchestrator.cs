@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using BTSMTL.Timeline;
 using ThirdPersonCharacter.Pipeline.Animation;
 using ThirdPersonCharacter.Pipeline.Simulation;
 using ThirdPersonSimulation;
@@ -65,6 +66,47 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             return result;
         }
 
+        public static TimelineSimulationBuildResult Build(TimelineSimulationBuildRequest request)
+        {
+            if (request == null)
+                throw new ArgumentNullException(nameof(request));
+            bool publish = request.PublicationMode == CharacterSimulationBuildPublicationMode.Publish;
+            TimelineSimulationBuildResult result = ExecuteTimeline(
+                request,
+                out ValidatedSemanticIrArtifact semanticArtifact);
+            if (!result.IsValid || !publish)
+                return result;
+            var stages = new List<ICharacterSimulationTargetPublishStage>();
+            CharacterSemanticIrArtifactPublishTransaction semanticStage = null;
+            try
+            {
+                semanticStage = CharacterSemanticIrArtifactStore.Stage(result.RootGuid, semanticArtifact);
+                for (int i = 0; i < request.Targets.Count; i++)
+                    stages.Add(request.Targets[i].Stage(result.RootGuid, result.TargetProducts[i]));
+                semanticStage.Commit();
+                for (int i = 0; i < stages.Count; i++)
+                    stages[i].Commit();
+                for (int i = 0; i < stages.Count; i++)
+                    stages[i].Complete();
+                semanticStage.Complete();
+            }
+            catch (Exception exception)
+            {
+                for (int i = stages.Count - 1; i >= 0; i--)
+                    stages[i].Dispose();
+                semanticStage?.Dispose();
+                result.Report.ArtifactError(
+                    "timeline_artifact_group_publish_failed",
+                    AssetDatabase.GetAssetPath(request.Timeline),
+                    exception.Message);
+                return FailedTimeline(result.Report);
+            }
+            for (int i = 0; i < stages.Count; i++)
+                stages[i].Dispose();
+            semanticStage.Dispose();
+            return result;
+        }
+
         public static CharacterSimulationBuildResult DryRun(CharacterPipelineDefinition definition)
         {
             return Build(new CharacterSimulationBuildRequest(
@@ -82,6 +124,21 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 result.CompilationModel.DefinitionGuid,
                 result.Artifact);
             return new CharacterSemanticFrontendResult(persisted, result.CompilationModel, result.Report);
+        }
+
+        public static TimelineSemanticFrontendResult CompileTimelineSemanticIr(TimelineAsset timeline, bool persistCache)
+        {
+            TimelineSemanticFrontendResult result = TimelineSemanticFrontendCompiler.Compile(timeline);
+            if (!result.IsValid || !persistCache)
+                return result;
+            ValidatedSemanticIrArtifact persisted = CharacterSemanticIrArtifactStore.Write(
+                result.RootGuid,
+                result.Artifact);
+            return new TimelineSemanticFrontendResult(
+                persisted,
+                result.Content,
+                result.RootGuid,
+                result.Report);
         }
 
         static CharacterSimulationBuildResult Execute(
@@ -151,6 +208,71 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             }
             var descriptor = new CharacterSemanticIrArtifactDescriptor(artifactPath, artifact.Header);
             return new CharacterSimulationBuildResult(descriptor, targetProducts, projection, report);
+        }
+
+        static TimelineSimulationBuildResult ExecuteTimeline(
+            TimelineSimulationBuildRequest request,
+            out ValidatedSemanticIrArtifact semanticArtifact)
+        {
+            semanticArtifact = null;
+            TimelineSemanticFrontendResult frontend = TimelineSemanticFrontendCompiler.Compile(request.Timeline);
+            CharacterSimulationCompileReport report = frontend.Report;
+            if (!frontend.IsValid)
+                return FailedTimeline(report);
+            string artifactPath = CharacterSemanticIrArtifactStore.GetPath(frontend.RootGuid);
+            ValidatedSemanticIrArtifact artifact;
+            try
+            {
+                artifact = CharacterSemanticIrArtifactStore.RoundTrip(frontend.Artifact);
+            }
+            catch (Exception exception)
+            {
+                report.ArtifactError("semantic_ir_validation_failed", artifactPath, exception.Message);
+                return FailedTimeline(report);
+            }
+            semanticArtifact = artifact;
+            var targetProducts = new List<CharacterSimulationTargetBuildProduct>(request.Targets.Count);
+            for (int i = 0; i < request.Targets.Count; i++)
+            {
+                ICharacterSimulationTargetBuildAdapter adapter = request.Targets[i];
+                CharacterSimulationTargetBuildProduct product = adapter.Compile(artifact, report);
+                if (product == null || !report.IsValid)
+                    return FailedTimeline(report);
+                if (!product.NumericProfileId.Equals(adapter.NumericProfileId))
+                {
+                    report.TargetError(
+                        "target_product_identity_mismatch",
+                        adapter.NumericProfileId.Value,
+                        $"Target Adapter returned product '{product.NumericProfileId}' instead of '{adapter.NumericProfileId}'.");
+                    return FailedTimeline(report);
+                }
+                if (!ProductMatchesRoot(product, artifact.Header.Root))
+                {
+                    report.TargetError(
+                        "target_root_identity_mismatch",
+                        adapter.NumericProfileId.Value,
+                        "Target Program root does not match the Timeline Semantic IR root.");
+                    return FailedTimeline(report);
+                }
+                targetProducts.Add(product);
+            }
+            return new TimelineSimulationBuildResult(
+                new CharacterSemanticIrArtifactDescriptor(artifactPath, artifact.Header),
+                frontend.RootGuid,
+                targetProducts,
+                report);
+        }
+
+        static bool ProductMatchesRoot(
+            CharacterSimulationTargetBuildProduct product,
+            SimulationProgramRootDescriptor root)
+        {
+            return product switch
+            {
+                Float32CharacterSimulationTargetBuildProduct float32 => float32.Program.Manifest.Root == root,
+                FixedCharacterSimulationTargetBuildProduct fixedTarget => fixedTarget.Program.Manifest.Root == root,
+                _ => false
+            };
         }
 
         static CharacterPresentationProjection CompileProjection(
@@ -318,6 +440,15 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 null,
                 Array.Empty<CharacterSimulationTargetBuildProduct>(),
                 null,
+                report);
+        }
+
+        static TimelineSimulationBuildResult FailedTimeline(CharacterSimulationCompileReport report)
+        {
+            return new TimelineSimulationBuildResult(
+                null,
+                string.Empty,
+                Array.Empty<CharacterSimulationTargetBuildProduct>(),
                 report);
         }
 

@@ -1,10 +1,12 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using BTSMTL.Timeline;
 using MCPForUnity.Editor.Helpers;
 using MCPForUnity.Editor.Tools;
 using Newtonsoft.Json.Linq;
 using ThirdPersonCharacter.Pipeline.Simulation.Fixed;
+using ThirdPersonSimulation;
 using UnityEditor;
 using UnityEngine;
 
@@ -56,6 +58,55 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             return CharacterSimulationBuildMcpJobScheduler.Handle(
                 @params,
                 CharacterSimulationBuildKind.Fixed);
+        }
+    }
+
+    [McpForUnityTool("timeline.build_float32_program", Description = "Build and publish the Float32 Program wrapper for one exact TimelineAsset path through the shared Semantic IR pipeline.", StructuredOutput = true, RequiresPolling = true, BackgroundPollingStatus = true, PollAction = "status", MaxPollSeconds = 600, HasBehaviorAnnotations = true, ReadOnlyHint = false, DestructiveHint = true, IdempotentHint = false, OpenWorldHint = false)]
+    public static class BuildTimelineFloat32ProgramMcpTool
+    {
+        public sealed class Parameters
+        {
+            [ToolParameter("Omit or use start to create a job; use status to poll one job.", Required = false)]
+            public string action { get; set; }
+
+            [ToolParameter("Stable job identity returned by the initial call; required for status.", Required = false)]
+            public string job_id { get; set; }
+
+            [ToolParameter("Exact Assets/... path to one TimelineAsset required for start.", Required = false)]
+            public string timeline_asset_path { get; set; }
+        }
+
+        public static object HandleCommand(JObject @params)
+        {
+            return CharacterSimulationBuildMcpJobScheduler.Handle(
+                @params,
+                CharacterSimulationBuildKind.TimelineFloat32);
+        }
+    }
+
+    [McpForUnityTool("timeline.build_fixed_program", Description = "Build and publish the Fixed Program wrapper for one exact TimelineAsset and one exact wrapper destination through the shared Semantic IR pipeline.", StructuredOutput = true, RequiresPolling = true, BackgroundPollingStatus = true, PollAction = "status", MaxPollSeconds = 600, HasBehaviorAnnotations = true, ReadOnlyHint = false, DestructiveHint = true, IdempotentHint = false, OpenWorldHint = false)]
+    public static class BuildTimelineFixedProgramMcpTool
+    {
+        public sealed class Parameters
+        {
+            [ToolParameter("Omit or use start to create a job; use status to poll one job.", Required = false)]
+            public string action { get; set; }
+
+            [ToolParameter("Stable job identity returned by the initial call; required for status.", Required = false)]
+            public string job_id { get; set; }
+
+            [ToolParameter("Exact Assets/... path to one TimelineAsset required for start.", Required = false)]
+            public string timeline_asset_path { get; set; }
+
+            [ToolParameter("Exact Assets/... .asset destination for the Fixed Timeline Program wrapper required for start.", Required = false)]
+            public string wrapper_asset_path { get; set; }
+        }
+
+        public static object HandleCommand(JObject @params)
+        {
+            return CharacterSimulationBuildMcpJobScheduler.Handle(
+                @params,
+                CharacterSimulationBuildKind.TimelineFixed);
         }
     }
 
@@ -197,6 +248,137 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             }
         }
 
+        public static object BuildTimelineFloat32(JObject parameters)
+        {
+            object validation = ValidateTimelineRequest(
+                parameters,
+                new HashSet<string>(StringComparer.Ordinal) { "timeline_asset_path" },
+                false,
+                out TimelineAsset timeline,
+                out string timelinePath,
+                out _);
+            if (validation != null)
+                return validation;
+            if (!TryEnter(out object busy))
+                return busy;
+            try
+            {
+                ICharacterSimulationTargetBuildAdapter target =
+                    CharacterSimulationTargetCatalog.Float32(timeline);
+                TimelineSimulationBuildResult result = CharacterSimulationBuildOrchestrator.Build(
+                    new TimelineSimulationBuildRequest(
+                        timeline,
+                        CharacterSimulationBuildPublicationMode.Publish,
+                        new[] { target }));
+                if (!result.IsValid)
+                    return TimelineBuildFailure(timelinePath, target.UnityWrapperDestination, result);
+                TimelineSimulationProgramAsset wrapper =
+                    AssetDatabase.LoadAssetAtPath<TimelineSimulationProgramAsset>(target.UnityWrapperDestination);
+                if (!wrapper)
+                {
+                    return new ErrorResponse(
+                        "timeline_float32_wrapper_missing_after_build",
+                        new { timelineAssetPath = timelinePath, wrapperAssetPath = target.UnityWrapperDestination });
+                }
+                return new SuccessResponse(
+                    "Exact Float32 Timeline Program was published.",
+                    CreateTimelineResponse(
+                        timelinePath,
+                        target.UnityWrapperDestination,
+                        wrapper.NumericProfileId,
+                        wrapper.TargetAbiVersion,
+                        wrapper.ProgramId,
+                        wrapper.SourceRevision,
+                        wrapper.SemanticHash,
+                        wrapper.ProgramHash,
+                        wrapper.LayoutHash,
+                        wrapper.CanonicalBytesHash,
+                        wrapper.CanonicalByteLength,
+                        result));
+            }
+            catch (Exception exception)
+            {
+                return new ErrorResponse(
+                    "timeline_build_exception",
+                    new { timelineAssetPath = timelinePath, message = exception.Message });
+            }
+            finally
+            {
+                s_Building = false;
+            }
+        }
+
+        public static object BuildTimelineFixed(JObject parameters)
+        {
+            object validation = ValidateTimelineRequest(
+                parameters,
+                new HashSet<string>(StringComparer.Ordinal)
+                {
+                    "timeline_asset_path",
+                    "wrapper_asset_path"
+                },
+                true,
+                out TimelineAsset timeline,
+                out string timelinePath,
+                out string wrapperPath);
+            if (validation != null)
+                return validation;
+            if (!TryEnter(out object busy))
+                return busy;
+            try
+            {
+                ICharacterSimulationTargetBuildAdapter target =
+                    new FixedCharacterSimulationTargetBuildAdapter(
+                        wrapperPath,
+                        SimulationProgramRootKind.Timeline);
+                TimelineSimulationBuildResult result = CharacterSimulationBuildOrchestrator.Build(
+                    new TimelineSimulationBuildRequest(
+                        timeline,
+                        CharacterSimulationBuildPublicationMode.Publish,
+                        new[] { target }));
+                if (!result.IsValid)
+                    return TimelineBuildFailure(timelinePath, wrapperPath, result);
+                FixedTimelineSimulationProgramAsset wrapper =
+                    AssetDatabase.LoadAssetAtPath<FixedTimelineSimulationProgramAsset>(wrapperPath);
+                if (!wrapper)
+                {
+                    return new ErrorResponse(
+                        "timeline_fixed_wrapper_missing_after_build",
+                        new { timelineAssetPath = timelinePath, wrapperAssetPath = wrapperPath });
+                }
+                return new SuccessResponse(
+                    "Exact Fixed Timeline Program was published.",
+                    CreateTimelineResponse(
+                        timelinePath,
+                        wrapperPath,
+                        ThirdPersonSimulation.Fixed.FixedSimulationNumericProfile.Value.Id.Value,
+                        ThirdPersonSimulation.Fixed.FixedSimulationNumericProfile.Value.AbiVersion.Value,
+                        wrapper.ProgramId,
+                        wrapper.SourceRevision,
+                        wrapper.SemanticHash,
+                        wrapper.ProgramHash,
+                        wrapper.LayoutHash,
+                        wrapper.CanonicalBytesHash,
+                        wrapper.CanonicalByteLength,
+                        result));
+            }
+            catch (Exception exception)
+            {
+                return new ErrorResponse(
+                    "timeline_build_exception",
+                    new
+                    {
+                        timelineAssetPath = timelinePath,
+                        wrapperAssetPath = wrapperPath,
+                        message = exception.Message
+                    });
+            }
+            finally
+            {
+                s_Building = false;
+            }
+        }
+
         static object ValidateRequest(
             JObject parameters,
             HashSet<string> allowed,
@@ -229,6 +411,40 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 return null;
             if (!TryGetExactAssetPath(parameters, "wrapper_asset_path", out wrapperPath))
                 return new ErrorResponse("wrapper_asset_path_required", new { definitionAssetPath = definitionPath });
+            return null;
+        }
+
+        static object ValidateTimelineRequest(
+            JObject parameters,
+            HashSet<string> allowed,
+            bool requiresWrapper,
+            out TimelineAsset timeline,
+            out string timelinePath,
+            out string wrapperPath)
+        {
+            timeline = null;
+            timelinePath = string.Empty;
+            wrapperPath = string.Empty;
+            if (parameters == null)
+                return new ErrorResponse("request_missing");
+            string unknown = parameters.Properties()
+                .Select(property => property.Name)
+                .FirstOrDefault(name => !allowed.Contains(name));
+            if (!string.IsNullOrEmpty(unknown))
+                return new ErrorResponse("unknown_parameter", new { parameter = unknown });
+            if (!TryGetExactAssetPath(parameters, "timeline_asset_path", out timelinePath))
+                return new ErrorResponse("timeline_asset_path_required");
+            timeline = AssetDatabase.LoadAssetAtPath<TimelineAsset>(timelinePath);
+            if (!timeline || !string.Equals(AssetDatabase.GetAssetPath(timeline), timelinePath, StringComparison.Ordinal))
+            {
+                return new ErrorResponse(
+                    "timeline_asset_not_found",
+                    new { timelineAssetPath = timelinePath });
+            }
+            if (!requiresWrapper)
+                return null;
+            if (!TryGetExactAssetPath(parameters, "wrapper_asset_path", out wrapperPath))
+                return new ErrorResponse("wrapper_asset_path_required", new { timelineAssetPath = timelinePath });
             return null;
         }
 
@@ -293,6 +509,21 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 });
         }
 
+        static object TimelineBuildFailure(
+            string timelinePath,
+            string wrapperPath,
+            TimelineSimulationBuildResult result)
+        {
+            return new ErrorResponse(
+                "timeline_build_failed",
+                new
+                {
+                    timelineAssetPath = timelinePath,
+                    wrapperAssetPath = wrapperPath,
+                    diagnostics = Messages(result)
+                });
+        }
+
         static object CreateResponse(
             CharacterPipelineDefinition definition,
             string definitionPath,
@@ -338,11 +569,57 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             };
         }
 
+        static object CreateTimelineResponse(
+            string timelinePath,
+            string wrapperPath,
+            string numericProfileId,
+            int targetAbiVersion,
+            string programId,
+            string sourceRevision,
+            string semanticHash,
+            string programHash,
+            string layoutHash,
+            string canonicalBytesHash,
+            int canonicalByteLength,
+            TimelineSimulationBuildResult result)
+        {
+            SimulationProgramRootDescriptor root = result.Artifact.Header.Root;
+            return new
+            {
+                timelineAssetPath = timelinePath,
+                wrapperAssetPath = wrapperPath,
+                numericProfileId,
+                targetAbiVersion,
+                programId,
+                sourceRevision,
+                semanticHash,
+                programHash,
+                layoutHash,
+                canonicalBytesHash,
+                canonicalByteLength,
+                rootKind = root.Kind.ToString(),
+                rootIdentity = root.RootIdentity,
+                entryIdentity = root.EntryIdentity,
+                contentIdentity = root.ContentIdentity,
+                diagnostics = Messages(result)
+            };
+        }
+
         static object[] Messages(CharacterSimulationBuildResult result)
         {
-            if (result?.Report == null)
+            return Messages(result?.Report);
+        }
+
+        static object[] Messages(TimelineSimulationBuildResult result)
+        {
+            return Messages(result?.Report);
+        }
+
+        static object[] Messages(CharacterSimulationCompileReport report)
+        {
+            if (report == null)
                 return Array.Empty<object>();
-            return result.Report.Messages
+            return report.Messages
                 .Select(message => (object)new
                 {
                     stage = message.Stage.ToString(),

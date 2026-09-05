@@ -10,7 +10,9 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
     enum CharacterSimulationBuildKind
     {
         Float32,
-        Fixed
+        Fixed,
+        TimelineFloat32,
+        TimelineFixed
     }
 
     static class CharacterSimulationBuildMcpJobScheduler
@@ -20,6 +22,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             public string Id;
             public CharacterSimulationBuildKind Kind;
             public string DefinitionAssetPath;
+            public string TimelineAssetPath;
             public string WrapperAssetPath;
             public JObject Parameters;
             public bool Started;
@@ -68,16 +71,18 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                     "job_id_not_allowed_for_start",
                     new { build_kind = kind.ToString() });
             }
-            if (!TryGetString(canonical, "definition_asset_path", out string definitionPath))
-                return new ErrorResponse("definition_asset_path_required");
+            bool timeline = IsTimeline(kind);
+            string rootAssetParameter = timeline ? "timeline_asset_path" : "definition_asset_path";
+            if (!TryGetString(canonical, rootAssetParameter, out string rootAssetPath))
+                return new ErrorResponse($"{rootAssetParameter}_required");
 
             string wrapperPath = string.Empty;
-            if (kind == CharacterSimulationBuildKind.Fixed &&
+            if (IsFixed(kind) &&
                 !TryGetString(canonical, "wrapper_asset_path", out wrapperPath))
             {
                 return new ErrorResponse(
                     "wrapper_asset_path_required",
-                    new { definitionAssetPath = definitionPath });
+                    new { rootAssetPath });
             }
 
             var businessParameters = (JObject)canonical.DeepClone();
@@ -101,7 +106,8 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 {
                     Id = Guid.NewGuid().ToString("N"),
                     Kind = kind,
-                    DefinitionAssetPath = definitionPath,
+                    DefinitionAssetPath = timeline ? string.Empty : rootAssetPath,
+                    TimelineAssetPath = timeline ? rootAssetPath : string.Empty,
                     WrapperAssetPath = wrapperPath,
                     Parameters = businessParameters
                 };
@@ -176,9 +182,14 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             object response;
             try
             {
-                response = job.Kind == CharacterSimulationBuildKind.Float32
-                    ? CharacterSimulationBuildMcpBridge.BuildFloat32(job.Parameters)
-                    : CharacterSimulationBuildMcpBridge.BuildFixed(job.Parameters);
+                response = job.Kind switch
+                {
+                    CharacterSimulationBuildKind.Float32 => CharacterSimulationBuildMcpBridge.BuildFloat32(job.Parameters),
+                    CharacterSimulationBuildKind.Fixed => CharacterSimulationBuildMcpBridge.BuildFixed(job.Parameters),
+                    CharacterSimulationBuildKind.TimelineFloat32 => CharacterSimulationBuildMcpBridge.BuildTimelineFloat32(job.Parameters),
+                    CharacterSimulationBuildKind.TimelineFixed => CharacterSimulationBuildMcpBridge.BuildTimelineFixed(job.Parameters),
+                    _ => new ErrorResponse("character_build_kind_unsupported")
+                };
             }
             catch (Exception exception)
             {
@@ -189,6 +200,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                         job_id = job.Id,
                         build_kind = job.Kind.ToString(),
                         definition_asset_path = job.DefinitionAssetPath,
+                        timeline_asset_path = job.TimelineAssetPath,
                         wrapper_asset_path = job.WrapperAssetPath,
                         error = exception.Message
                     });
@@ -215,7 +227,10 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 "job_id",
                 "definition_asset_path"
             };
-            if (kind == CharacterSimulationBuildKind.Fixed)
+            string rootAssetParameter = IsTimeline(kind) ? "timeline_asset_path" : "definition_asset_path";
+            allowed.Remove("definition_asset_path");
+            allowed.Add(rootAssetParameter);
+            if (IsFixed(kind))
                 allowed.Add("wrapper_asset_path");
 
             foreach (JProperty property in parameters.Properties())
@@ -254,6 +269,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 job_id = job.Id,
                 build_kind = job.Kind.ToString(),
                 definition_asset_path = job.DefinitionAssetPath,
+                timeline_asset_path = job.TimelineAssetPath,
                 wrapper_asset_path = job.WrapperAssetPath,
                 started = job.Started,
                 completed = job.Completed
@@ -272,5 +288,13 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             value = token.Value<string>();
             return !string.IsNullOrWhiteSpace(value);
         }
+
+        static bool IsTimeline(CharacterSimulationBuildKind kind) =>
+            kind == CharacterSimulationBuildKind.TimelineFloat32 ||
+            kind == CharacterSimulationBuildKind.TimelineFixed;
+
+        static bool IsFixed(CharacterSimulationBuildKind kind) =>
+            kind == CharacterSimulationBuildKind.Fixed ||
+            kind == CharacterSimulationBuildKind.TimelineFixed;
     }
 }

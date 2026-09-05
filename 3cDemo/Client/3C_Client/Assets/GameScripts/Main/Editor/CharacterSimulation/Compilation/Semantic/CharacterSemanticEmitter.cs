@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using BTSMTL.Diagnostics;
 using BTSMTL.Timeline;
+using ThirdPersonCharacter.Control.Authoring;
 using ThirdPersonCharacter.ActionSystem;
 using ThirdPersonCharacter.Pipeline.Graph;
 using ThirdPersonCharacter.Pipeline.Input;
@@ -25,6 +26,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
         readonly Dictionary<string, ScopeRecord> m_Scopes = new Dictionary<string, ScopeRecord>(StringComparer.Ordinal);
         readonly Dictionary<string, Dictionary<string, OperationHandle>> m_CompiledGraphOperations = new Dictionary<string, Dictionary<string, OperationHandle>>(StringComparer.Ordinal);
         readonly List<GraphRoute> m_CompileStack = new List<GraphRoute>();
+        int m_SkillCompilationDepth;
 
         public CharacterSemanticEmitter(
             CharacterAuthoringCompilationModel model,
@@ -40,38 +42,36 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             m_TimelineEmitters = model.TimelineEmitters;
         }
 
-        public OperationHandle Emit()
-        {
-            IReadOnlyDictionary<string, OperationHandle> roots = EmitCompositionRoots();
-            return roots.TryGetValue(m_Model.Roots.Single(value => value.Role == CharacterCompositionRootRole.Character).Identity, out OperationHandle entry)
-                ? entry
-                : OperationHandle.Invalid;
-        }
-
-        public OperationHandle EmitControlSkillPrograms(CharacterControlModuleContract contract)
+        public OperationHandle EmitControlSkillPrograms(
+            CharacterControlModuleContract contract,
+            IReadOnlyList<CharacterControlMotionCompilationRecord> motions)
         {
             if (contract == null)
                 throw new ArgumentNullException(nameof(contract));
+            if (motions == null)
+                throw new ArgumentNullException(nameof(motions));
             CompileDeclarationCatalogs();
-            IReadOnlyList<CharacterAuthoringGraphOccurrence> occurrences = FindOccurrences();
+            for (int motionIndex = 0; motionIndex < motions.Count; motionIndex++)
+            {
+                m_SkillCompilationDepth++;
+                try
+                {
+                    CompileGraph(motions[motionIndex].Graph, OperationHandle.Invalid);
+                }
+                finally
+                {
+                    m_SkillCompilationDepth--;
+                }
+            }
             var emittedSkills = new HashSet<CharacterSkillId>();
             for (int skillIndex = 0; skillIndex < contract.Skills.Count; skillIndex++)
             {
                 CharacterSkillId skillId = contract.Skills[skillIndex];
-                CharacterAuthoringGraphOccurrence occurrence = occurrences
-                    .Where(value => string.Equals(SkillId(value), skillId.Value, StringComparison.Ordinal))
-                    .SingleOrDefault();
-                if (occurrence == null)
+                CharacterSkillCompilationRecord record = m_Model.SkillRecords
+                    .SingleOrDefault(value => value.SkillId == skillId);
+                if (record == null)
                 {
-                    m_Report.Error("control_skill_graph_missing", skillId.Value, $"Control module skill '{skillId}' has no matching Skill graph.");
-                    continue;
-                }
-                ActivateActionInstanceNode activation = occurrence.Nodes
-                    .OfType<ActivateActionInstanceNode>()
-                    .SingleOrDefault();
-                if (activation == null || !activation.ActionProfile || !activation.ActionContext)
-                {
-                    m_Report.Error("control_skill_entry_invalid", occurrence.Route, $"Skill graph '{skillId}' must contain exactly one complete Activate Action entry.");
+                    m_Report.Error("control_skill_definition_missing", skillId.Value, $"Control module skill '{skillId}' has no formal Skill definition.");
                     continue;
                 }
                 if (!emittedSkills.Add(skillId))
@@ -79,23 +79,40 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                     m_Report.Error("control_skill_duplicate", skillId.Value, $"Control module skill '{skillId}' is emitted more than once.");
                     continue;
                 }
-                OperationHandle entry = CompileGraph(occurrence, OperationHandle.Invalid);
+                OperationHandle entry;
+                m_SkillCompilationDepth++;
+                try
+                {
+                    entry = CompileGraph(record.EntryGraph, OperationHandle.Invalid);
+                }
+                finally
+                {
+                    m_SkillCompilationDepth--;
+                }
                 if (!entry.IsValid)
                     continue;
-                CharacterSimulationSourceLocation source = NodeSource(occurrence.Graph, activation, occurrence.Route);
-                string targetInput = ResolveInputBinding(activation.TargetSnapshotVariable);
+                CharacterSkillAuthoringDefinition definition = record.Definition;
+                CharacterSimulationSourceLocation source = new CharacterSimulationSourceLocation(
+                    typeof(CharacterSkillAuthoringDefinition).FullName,
+                    record.EntryGraph.Graph.GraphAuthoringId,
+                    string.Empty,
+                    string.Empty,
+                    string.Empty,
+                    string.Empty,
+                    $"{record.EntryGraph.Route}/skill:{skillId.Value}",
+                    contentHash: GraphAuthoringFingerprint.Compute(record.EntryGraph.Graph));
                 var fields = new List<ProgramCatalogField>
                 {
-                    m_Builder.IdentityField("ActionProfile", $"action:{activation.ActionProfile.ActionId}"),
-                    m_Builder.IdentityField("EntryIdentity", occurrence.Graph.GraphAuthoringId),
-                    m_Builder.IdentityField("ActionContext", CharacterSimulationNodeEmitterContext.AssetIdentity(activation.ActionContext)),
-                    m_Builder.IdentityField("SourceInputRequest", activation.SourceInputRequestId),
-                    m_Builder.IdentityField("ConsumeSourceInputRequest", activation.ConsumeSourceInputRequest ? "true" : "false")
+                    m_Builder.IdentityField("ActionProfile", $"action:{definition.ActionProfile.ActionId}"),
+                    m_Builder.IdentityField("EntryIdentity", definition.EntryGraphAuthoringId),
+                    m_Builder.IdentityField("ActionContext", CharacterSimulationNodeEmitterContext.AssetIdentity(definition.ActionContext)),
+                    m_Builder.IdentityField("SourceInputRequest", definition.SourceInputRequestId),
+                    m_Builder.IdentityField("ConsumeSourceInputRequest", definition.ConsumeSourceInputRequest ? "true" : "false")
                 };
-                if (!string.IsNullOrEmpty(targetInput))
-                    fields.Add(m_Builder.IdentityField("TargetInputValue", targetInput));
-                if (!string.IsNullOrEmpty(activation.TargetKey))
-                    fields.Add(m_Builder.IdentityField("TargetKey", activation.TargetKey));
+                if (!string.IsNullOrEmpty(definition.TargetInputValueId))
+                    fields.Add(m_Builder.IdentityField("TargetInputValue", definition.TargetInputValueId));
+                if (!string.IsNullOrEmpty(definition.TargetKey))
+                    fields.Add(m_Builder.IdentityField("TargetKey", definition.TargetKey));
                 int catalog = m_Builder.DeclareCatalogEntry(
                     ProgramCatalogEntryKind.SkillProgram,
                     $"skill:{skillId.Value}",
@@ -127,70 +144,6 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 $"control:{contract.ModuleId.Value}/root",
                 contentHash: contract.SemanticVersion.ToString());
             return m_Builder.DeclareOperation(rootSource, SimulationOperationCode.Root, Array.Empty<int>());
-        }
-
-        IReadOnlyList<CharacterAuthoringGraphOccurrence> FindOccurrences()
-        {
-            var values = new List<CharacterAuthoringGraphOccurrence>();
-            var visited = new HashSet<string>(StringComparer.Ordinal);
-            for (int rootIndex = 0; rootIndex < m_Model.Roots.Count; rootIndex++)
-                Collect(m_Model.Roots[rootIndex].Occurrence);
-            return values;
-
-            void Collect(CharacterAuthoringGraphOccurrence occurrence)
-            {
-                if (occurrence == null || !visited.Add(occurrence.Route))
-                    return;
-                values.Add(occurrence);
-                for (int referenceIndex = 0; referenceIndex < occurrence.GraphReferences.Count; referenceIndex++)
-                    Collect(occurrence.GraphReferences[referenceIndex].Child);
-                for (int edgeIndex = 0; edgeIndex < occurrence.Edges.Count; edgeIndex++)
-                    Collect(occurrence.Edges[edgeIndex].ConditionGraph);
-                for (int propertyEdgeIndex = 0; propertyEdgeIndex < occurrence.PropertyEdges.Count; propertyEdgeIndex++)
-                    Collect(occurrence.PropertyEdges[propertyEdgeIndex].ConditionGraph);
-                for (int timelineIndex = 0; timelineIndex < occurrence.Timelines.Count; timelineIndex++)
-                {
-                    IReadOnlyList<CharacterAuthoringClipRecord> clips = occurrence.Timelines[timelineIndex].Tracks
-                        .SelectMany(value => value.Clips)
-                        .ToArray();
-                    for (int clipIndex = 0; clipIndex < clips.Count; clipIndex++)
-                        Collect(clips[clipIndex].TreeGraph);
-                }
-            }
-        }
-
-        static string SkillId(CharacterAuthoringGraphOccurrence occurrence)
-        {
-            const string suffix = " State Body";
-            string name = occurrence.Graph.name ?? string.Empty;
-            return name.EndsWith(suffix, StringComparison.Ordinal)
-                ? name.Substring(0, name.Length - suffix.Length)
-                : string.Empty;
-        }
-
-        string ResolveInputBinding(PipelineBlackboardVariableReference reference)
-        {
-            if (!reference.IsValid)
-                return string.Empty;
-            string identity = DeclarationIdentity(reference.DeclarationOwnerId, reference.DeclarationId);
-            return m_Model.Declarations.TryGetValue(identity, out BlackboardDeclaration declaration) &&
-                   declaration.Declaration.InputBinding != null
-                ? declaration.Declaration.InputBinding.InputValueId
-                : string.Empty;
-        }
-
-        public IReadOnlyDictionary<string, OperationHandle> EmitCompositionRoots()
-        {
-            CompileDeclarationCatalogs();
-            var entries = new SortedDictionary<string, OperationHandle>(StringComparer.Ordinal);
-            for (int i = 0; i < m_Model.Roots.Count; i++)
-            {
-                CharacterCompositionRoot root = m_Model.Roots[i];
-                entries.Add(root.Identity, CompileGraph(root.Occurrence, OperationHandle.Invalid));
-            }
-            foreach (ScopeRecord scope in m_Scopes.Values.OrderBy(value => value.Identity, StringComparer.Ordinal))
-                m_Builder.DeclareScope(scope.Identity, scope.Kind, scope.OwnerIdentity, scope.OwnerOperation, scope.StateSlots, scope.Source);
-            return entries;
         }
 
         void CompileDeclarationCatalogs()
@@ -227,7 +180,8 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                     2,
                     fields.ToArray(),
                     source);
-                if (declaration.BlackboardScope == PipelineBlackboardVariableScope.Character)
+                if (declaration.BlackboardScope == PipelineBlackboardVariableScope.Character ||
+                    declaration.BlackboardScope == PipelineBlackboardVariableScope.Frame)
                     EnsureDeclarationState(item, item.Route);
             }
         }
@@ -260,6 +214,8 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 var operations = new Dictionary<string, OperationHandle>(StringComparer.Ordinal);
                 foreach (BaseNode node in occurrence.Nodes)
                 {
+                    if (m_SkillCompilationDepth != 0 && node is ActivateActionInstanceNode)
+                        continue;
                     if (!m_NodeEmitters.TryGet(node.GetType(), out ICharacterSimulationNodeEmitter emitter))
                         throw new InvalidOperationException($"Discovered Node '{node.GUID}' has no emitter.");
                     var context = new CharacterSimulationNodeEmitterContext(graph, route, m_Builder);
@@ -424,7 +380,11 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             BaseEdge edge = record.Edge;
             string edgeRoute = record.Route;
             if (!operations.TryGetValue(edge.StartNodeGUID, out OperationHandle source) || !operations.TryGetValue(edge.EndNodeGUID, out OperationHandle target))
+            {
+                if (m_SkillCompilationDepth != 0)
+                    return;
                 throw new InvalidOperationException($"Discovered Edge '{edge.GUID}' has an operation endpoint mismatch.");
+            }
             bool hasCondition = false;
             OperationHandle condition = OperationHandle.Invalid;
             if (record.ConditionGraph != null)
@@ -863,12 +823,14 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
         {
             if (declaration.Declaration.BlackboardScope == PipelineBlackboardVariableScope.Character)
                 return DeclarationIdentity(declaration.Graph.GraphAuthoringId, declaration.Declaration.DeclarationId);
+            if (declaration.Declaration.BlackboardScope == PipelineBlackboardVariableScope.Frame)
+                return $"{declaration.Route}/declaration:{declaration.Declaration.DeclarationId}";
             for (int i = m_CompileStack.Count - 1; i >= 0; i--)
             {
                 if (string.Equals(m_CompileStack[i].GraphId, declaration.Graph.GraphAuthoringId, StringComparison.Ordinal))
                     return $"{m_CompileStack[i].Route}/declaration:{declaration.Declaration.DeclarationId}";
             }
-            return $"{accessRoute}/declaration:{declaration.Declaration.DeclarationId}";
+            return $"{declaration.Route}/declaration:{declaration.Declaration.DeclarationId}";
         }
 
         OperationHandle FindEntry(CharacterAuthoringGraphOccurrence occurrence, Dictionary<string, OperationHandle> operations)

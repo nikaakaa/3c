@@ -2,8 +2,8 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using ThirdPersonCharacter.Control.Rules;
 using ThirdPersonCharacter.Pipeline.Animation;
-using ThirdPersonCharacter.Pipeline.Simulation;
 using ThirdPersonSimulation;
 using TreeDesigner;
 using UnityEditor;
@@ -12,7 +12,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
 {
     public static class CharacterSemanticFrontendCompiler
     {
-        public const string CompilerVersion = "character-simulation-compiler/23";
+        public const string CompilerVersion = "character-simulation-compiler/24";
         public static readonly OperationSetVersion OperationSetVersion = CharacterGameplayOperationSet.Version;
 
         public static CharacterSemanticFrontendResult Compile(CharacterPipelineDefinition definition)
@@ -109,66 +109,40 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 var catalogCompiler = new CharacterSimulationCatalogCompiler(model, builder, report);
                 CharacterSimulationCatalogIndex catalog = catalogCompiler.Compile();
                 var emitter = new CharacterSemanticEmitter(model, builder, report, catalog);
-                if (!string.IsNullOrEmpty(model.Definition.ControlModuleId))
+                if (string.IsNullOrEmpty(model.Definition.ControlModuleId))
                 {
-                    ICharacterControlModule controlModule = ResolveControlModule(model.Definition.ControlModuleId, report, model.DefinitionPath);
-                    if (controlModule == null)
-                        return null;
-                    CharacterSimulationSourceLocation controlSource = new CharacterSimulationSourceLocation(
-                        typeof(ICharacterControlModule).FullName,
-                        $"control:{controlModule.Contract.ModuleId.Value}",
-                        string.Empty,
-                        string.Empty,
-                        string.Empty,
-                        string.Empty,
-                        $"control:{controlModule.Contract.ModuleId.Value}",
-                        contentHash: controlModule.Contract.SemanticVersion.ToString());
-                    builder.DeclareControlModule(controlModule.Contract, controlSource);
-                    OperationHandle controlRoot = emitter.EmitControlSkillPrograms(controlModule.Contract);
-                    if (!controlRoot.IsValid)
-                        return null;
-                    builder.DeclareReference(
-                        "program:root-operation",
-                        OperationHandle.Invalid,
-                        ProgramReferenceKind.Operation,
-                        controlRoot.Value,
-                        controlModule.Contract.ModuleId.Value,
-                        controlSource);
-                    return builder.Build();
+                    report.Error("control_module_missing", model.DefinitionPath, "Character Pipeline requires an installed control module.");
+                    return null;
                 }
-                IReadOnlyDictionary<string, OperationHandle> rootOperations = emitter.EmitCompositionRoots();
-                for (int rootIndex = 0; rootIndex < model.Roots.Count; rootIndex++)
-                {
-                    CharacterCompositionRoot root = model.Roots[rootIndex];
-                    if (!rootOperations.TryGetValue(root.Identity, out OperationHandle rootOperation) || !rootOperation.IsValid)
-                        continue;
-                    var source = new CharacterSimulationSourceLocation(
-                        root.Occurrence.Graph.GetType().FullName,
-                        root.Occurrence.Graph.GraphAuthoringId,
-                        string.Empty,
-                        string.Empty,
-                        string.Empty,
-                        string.Empty,
-                        root.SourcePath,
-                        contentHash: GraphAuthoringFingerprint.Compute(root.Occurrence.Graph));
-                    builder.DeclareReference(
-                        $"program:composition-root:{root.Identity}",
-                        OperationHandle.Invalid,
-                        ProgramReferenceKind.Operation,
-                        rootOperation.Value,
-                        root.Identity,
-                        source);
-                    if (root.Role == CharacterCompositionRootRole.Character)
-                    {
-                        builder.DeclareReference(
-                            "program:root-operation",
-                            OperationHandle.Invalid,
-                            ProgramReferenceKind.Operation,
-                            rootOperation.Value,
-                            root.Identity,
-                            source);
-                    }
-                }
+                ICharacterControlModule controlModule = ResolveControlModule(model.Definition.ControlModuleId, report, model.DefinitionPath);
+                if (controlModule == null)
+                    return null;
+                CharacterSimulationSourceLocation controlSource = new CharacterSimulationSourceLocation(
+                    typeof(ICharacterControlModule).FullName,
+                    $"control:{controlModule.Contract.ModuleId.Value}",
+                    string.Empty,
+                    string.Empty,
+                    string.Empty,
+                    string.Empty,
+                    $"control:{controlModule.Contract.ModuleId.Value}",
+                    contentHash: controlModule.Contract.SemanticVersion.ToString());
+                builder.DeclareControlModule(controlModule.Contract, controlSource);
+                IReadOnlyList<CharacterControlMotionCompilationRecord> motions = CharacterControlMotionCompilationDiscovery.Discover(
+                    controlModule.Contract.Motions,
+                    model.Roots,
+                    report);
+                if (!report.IsValid)
+                    return null;
+                OperationHandle controlRoot = emitter.EmitControlSkillPrograms(controlModule.Contract, motions);
+                if (!controlRoot.IsValid)
+                    return null;
+                builder.DeclareReference(
+                    "program:root-operation",
+                    OperationHandle.Invalid,
+                    ProgramReferenceKind.Operation,
+                    controlRoot.Value,
+                    controlModule.Contract.ModuleId.Value,
+                    controlSource);
                 return builder.Build();
             }
             catch (Exception exception)

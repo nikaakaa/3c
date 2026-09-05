@@ -391,8 +391,7 @@ namespace ThirdPersonSimulation
                     0f)
                 : default;
             var contribution = new SimulationMotionContribution(
-                SourcePath(operation),
-                operation,
+                SimulationExecutionSource.FromSkillOperation(operation, SourcePath(operation)),
                 positionDelta,
                 yaw,
                 Float32Vector2.Zero,

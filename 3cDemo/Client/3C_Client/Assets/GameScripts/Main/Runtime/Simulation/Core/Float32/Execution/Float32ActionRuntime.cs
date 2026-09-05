@@ -103,7 +103,7 @@ namespace ThirdPersonSimulation
 				m_Frame.Tick.Value,
 				GetStringConstant(operation, OperationNamedConstant.TargetKey, string.Empty),
 				targetSnapshot,
-				operation.Handle,
+                SimulationExecutionSource.FromSkillOperation(operation.Handle, SourcePath(operation)),
 				m_EquipmentContext.Current);
 			int requestSlot = m_Actions.RequireSlot(actionId, ProgramStateSemantic.ActionRequestBuffer);
 			m_Actions.WriteRequest(requestSlot, request);
@@ -122,7 +122,7 @@ namespace ThirdPersonSimulation
 					staged.StartTick,
 					staged.TargetKey,
 					staged.TargetSnapshot,
-					staged.SourceOperation,
+					staged.Source,
 					SimulationActionPhase.Startup,
 					SimulationActionState.Predicted,
 					SimulationActionLifecycleTransitionType.None,
@@ -132,7 +132,7 @@ namespace ThirdPersonSimulation
 					staged.EquipmentContext);
 				m_Actions.WriteState(instance);
 				m_GameplayEffectActions.SetActionTags(instanceId, profile.Tags);
-				EmitActionFact(operation, instance);
+				EmitActionFact(instance.Source, instance);
 				if (m_Trace.Enabled)
 					m_Trace.Add(operation, "action_activated", SimulationTraceSeverity.Information, $"{actionId}:{instanceId}:request={requestId}:sequence={inputSequence}:requirement={profile.TargetRequirement}:candidate={targetSnapshot.TargetId}:captured={instance.TargetSnapshot.TargetId}:captureTick={instance.StartTick}:targetPosition={instance.TargetSnapshot.Position}:targetYaw={instance.TargetSnapshot.Yaw}:equipment={instance.EquipmentContext}");
 				return new ActionActivationOutcome(true, ActionAdmissionRejectReason.None);
@@ -184,7 +184,12 @@ namespace ThirdPersonSimulation
 			if (slot < 0)
 				return false;
 			SimulationActionLifecycleTransitionType transition = RequireActionTransition(operation.Integer0);
-			ApplyActionTransition(operation, action, transition, operation.Text0, 0);
+			ApplyActionTransition(
+				SimulationExecutionSource.FromSkillOperation(operation.Handle, SourcePath(operation)),
+				action,
+				transition,
+				operation.Text0,
+				0);
 			return true;
 		}
 
@@ -212,7 +217,7 @@ namespace ThirdPersonSimulation
 			}
 			if (matches != 1)
 				throw new InvalidOperationException($"Action lifecycle ingress '{ingress.Header.FactIdentity}' matched {matches} active Action instances.");
-			SimulationOperation source = m_Program.Operations[match.SourceOperation.Value];
+			SimulationExecutionSource source = match.Source;
 			ApplyActionTransition(
 				source,
 				match,
@@ -222,7 +227,7 @@ namespace ThirdPersonSimulation
 		}
 
 		void ApplyActionTransition(
-			SimulationOperation source,
+			SimulationExecutionSource source,
 			Float32ActionInstanceState action,
 			SimulationActionLifecycleTransitionType transition,
 			string reason,
@@ -289,7 +294,7 @@ namespace ThirdPersonSimulation
 			}
 		}
 
-		void EmitActionFact(SimulationOperation source, Float32ActionInstanceState action)
+		void EmitActionFact(SimulationExecutionSource source, Float32ActionInstanceState action)
 		{
 			SimulationEventHeader header = m_Facts.Next(source);
 			m_Facts.Add(new GameplayFact(header, new ActionFact(

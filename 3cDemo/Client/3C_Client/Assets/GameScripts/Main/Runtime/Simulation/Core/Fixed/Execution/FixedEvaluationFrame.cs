@@ -241,17 +241,25 @@ namespace ThirdPersonSimulation.Fixed
 
         public SimulationEventHeader Next(SimulationOperation operation, string channel)
         {
-            ulong sequence = checked(m_State.Get(m_SequenceSlot).UInt64 + 1);
-            if (sequence == 0)
-                throw new OverflowException("Simulation event sequence overflowed.");
-            m_State.Set(m_SequenceSlot, CharacterStateValue.FromUInt64(sequence));
             int generationSlot = m_Frame.Layout.FindOperationStateSlot(
                 operation.Handle,
                 ProgramStateSemantic.RunnableActivationGeneration);
             ulong generation = generationSlot < 0 ? 1UL : m_Frame.Transaction.Get(generationSlot).UInt64;
+            return Next(
+                SimulationExecutionSource.FromSkillOperation(operation.Handle, SourcePath(operation)),
+                generation,
+                channel);
+        }
+
+        public SimulationEventHeader Next(SimulationExecutionSource source, ulong generation, string channel)
+        {
+            ulong sequence = checked(m_State.Get(m_SequenceSlot).UInt64 + 1);
+            if (sequence == 0)
+                throw new OverflowException("Simulation event sequence overflowed.");
+            m_State.Set(m_SequenceSlot, CharacterStateValue.FromUInt64(sequence));
             if (generation == 0)
                 generation = 1;
-            var activation = new ActivationId(operation.Handle, generation, SourcePath(operation));
+            var activation = new ActivationId(source, generation);
             var eventId = EventId.Create(
                 m_Frame.Program.ProgramHash,
                 m_Frame.ActorId,
@@ -287,6 +295,7 @@ namespace ThirdPersonSimulation.Fixed
         }
 
         public SimulationEventHeader Next(SimulationOperation operation) => m_Sequence.Next(operation, "Gameplay");
+        public SimulationEventHeader Next(SimulationExecutionSource source, ulong generation = 1) => m_Sequence.Next(source, generation, "Gameplay");
         public void Add(GameplayFact value) => m_Frame.AddFact(value);
     }
 
@@ -302,6 +311,7 @@ namespace ThirdPersonSimulation.Fixed
         }
 
         public SimulationEventHeader Next(SimulationOperation operation) => m_Sequence.Next(operation, "Presentation");
+        public SimulationEventHeader Next(SimulationExecutionSource source, ulong generation = 1) => m_Sequence.Next(source, generation, "Presentation");
         public void Add(PresentationCommand value) => m_Frame.AddPresentation(value);
     }
 
@@ -322,17 +332,23 @@ namespace ThirdPersonSimulation.Fixed
 
         public SimulationEventHeader Next(SimulationOperation operation)
         {
-            ulong sequence = checked(++m_Sequence);
             int generationSlot = m_Frame.Layout.FindOperationStateSlot(
                 operation.Handle,
                 ProgramStateSemantic.RunnableActivationGeneration);
             ulong generation = generationSlot < 0 ? 1UL : m_Frame.Transaction.Get(generationSlot).UInt64;
+            return Next(
+                SimulationExecutionSource.FromSkillOperation(
+                    operation.Handle,
+                    m_Frame.Services.SourcePath(operation.Handle)),
+                generation);
+        }
+
+        public SimulationEventHeader Next(SimulationExecutionSource source, ulong generation = 1)
+        {
+            ulong sequence = checked(++m_Sequence);
             if (generation == 0)
                 generation = 1;
-            var activation = new ActivationId(
-                operation.Handle,
-                generation,
-                m_Frame.Services.SourcePath(operation.Handle));
+            var activation = new ActivationId(source, generation);
             var eventId = EventId.Create(
                 m_Frame.Program.ProgramHash,
                 m_Frame.ActorId,
@@ -378,6 +394,14 @@ namespace ThirdPersonSimulation.Fixed
             if (!m_Enabled)
                 return;
             SimulationEventHeader header = m_Sequence.Next(operation);
+            m_Frame.AddTrace(new SimulationTraceRecord(header, severity, "Kernel.Operation", code, detail));
+        }
+
+        public void Add(SimulationExecutionSource source, string code, SimulationTraceSeverity severity, string detail, ulong generation = 1)
+        {
+            if (!m_Enabled)
+                return;
+            SimulationEventHeader header = m_Sequence.Next(source, generation);
             m_Frame.AddTrace(new SimulationTraceRecord(header, severity, "Kernel.Operation", code, detail));
         }
     }

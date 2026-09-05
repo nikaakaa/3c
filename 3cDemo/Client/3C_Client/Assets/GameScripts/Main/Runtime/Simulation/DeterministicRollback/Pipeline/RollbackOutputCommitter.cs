@@ -340,6 +340,8 @@ namespace ThirdPersonSimulation.DeterministicRollback
                 return;
             RollbackOutputRecord output = operation.Output;
             SimulationEventHeader header = output.Header;
+            if (!header.Activation.Source.IsSkillOperation)
+                throw new InvalidOperationException("Rollback output diagnostics requires a Skill operation execution source.");
             m_Diagnostics.PublishModel(new SimulationModelTraceRecord(
                 SimulationModelTraceKind.OutputDisposition,
                 $"rollback_output_{operation.Kind.ToString().ToLowerInvariant()}",
@@ -347,7 +349,7 @@ namespace ThirdPersonSimulation.DeterministicRollback
                 output.Slot.ActorId,
                 output.Slot.Tick.Value,
                 m_State.ConfirmedTick,
-                checked((ulong)header.Activation.Operation.Value),
+                checked((ulong)header.Activation.Source.Operation.Value),
                 header.Sequence,
                 recordCount,
                 operation.ExecutionKind == SimulationPipelineStepExecutionKind.Replay ? 1 : 0));

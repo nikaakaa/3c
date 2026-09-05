@@ -26,9 +26,9 @@ namespace ThirdPersonCamera
             m_Pitch = m_Projection.DefaultElevationAngle;
         }
 
-        public State CaptureState() => new State(m_Yaw, m_Pitch);
+        internal State CaptureState() => new State(m_Yaw, m_Pitch);
 
-        public void RestoreState(State state)
+        internal void RestoreState(State state)
         {
             m_Yaw = state.Yaw;
             m_Pitch = state.Pitch;
@@ -144,7 +144,7 @@ namespace ThirdPersonCamera
             return offsets[index];
         }
 
-        public readonly struct State
+        internal readonly struct State
         {
             public State(float yaw, float pitch)
             {

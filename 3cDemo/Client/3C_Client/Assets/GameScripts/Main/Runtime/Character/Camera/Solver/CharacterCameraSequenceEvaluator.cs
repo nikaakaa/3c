@@ -105,7 +105,7 @@ namespace ThirdPersonCamera
             }
         }
 
-        public bool TryCaptureScopeState(
+        internal bool TryCaptureScopeState(
             CameraPresentationScopeKey scope,
             out State state)
         {
@@ -124,7 +124,7 @@ namespace ThirdPersonCamera
             m_WorldBasicHistory.CaptureState(),
             m_Initialized);
 
-        public void RestoreState(State state)
+        internal void RestoreState(State state)
         {
             m_FramePlanner.RestoreState(state.FramePlanner);
             m_Transition.RestoreState(state.Transition);
@@ -132,7 +132,7 @@ namespace ThirdPersonCamera
             m_Initialized = state.Initialized;
         }
 
-        public readonly struct State
+        internal readonly struct State
         {
             public State(
                 CharacterCameraFramePlanner.State framePlanner,
@@ -186,7 +186,7 @@ namespace ThirdPersonCamera
             m_FieldOfViewVelocity,
             m_Initialized);
 
-        public void RestoreState(State state)
+        internal void RestoreState(State state)
         {
             m_Current = state.Current;
             m_PivotVelocity = state.PivotVelocity;
@@ -257,7 +257,7 @@ namespace ThirdPersonCamera
             m_Initialized = true;
         }
 
-        public readonly struct State
+        internal readonly struct State
         {
             public State(
                 CameraWorldBasicData current,

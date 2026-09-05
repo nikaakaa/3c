@@ -51,7 +51,7 @@ namespace ThirdPersonCamera
             m_Retiring = false;
         }
 
-        public State CaptureState() => new State(
+        internal State CaptureState() => new State(
             m_LastPlan,
             m_BlendFrom,
             m_CurrentSequenceId,
@@ -68,7 +68,7 @@ namespace ThirdPersonCamera
             m_RetireTimeDomain,
             m_Retiring);
 
-        public void RestoreState(State state)
+        internal void RestoreState(State state)
         {
             m_LastPlan = state.LastPlan;
             m_BlendFrom = state.BlendFrom;
@@ -87,7 +87,7 @@ namespace ThirdPersonCamera
             m_Retiring = state.Retiring;
         }
 
-        public bool IsCurrentScope(CameraPresentationScopeKey scope) =>
+        internal bool IsCurrentScope(CameraPresentationScopeKey scope) =>
             m_CurrentGeneration == scope.Generation &&
             m_CurrentSourceActionInstanceId == scope.SourceActionInstanceId &&
             string.Equals(m_CurrentSourceId, scope.SourceId, StringComparison.Ordinal);
@@ -310,7 +310,7 @@ namespace ThirdPersonCamera
                 to.Valid);
         }
 
-        public readonly struct State
+        internal readonly struct State
         {
             public State(
                 CameraFramePlan lastPlan,

@@ -299,6 +299,7 @@ namespace ThirdPersonSimulation.Fixed
             OperationExecutionDescriptor descriptor,
             ulong generation)
         {
+            m_Actions.BindCurrentSkillExecution(descriptor.Handle, generation);
             m_Blackboard.ActivateOperationScopes(cursor, m_Access.Operation(descriptor.Handle), generation);
         }
 

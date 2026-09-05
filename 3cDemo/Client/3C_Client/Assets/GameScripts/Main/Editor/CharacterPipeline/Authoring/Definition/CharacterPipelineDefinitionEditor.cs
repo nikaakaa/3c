@@ -26,6 +26,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         SerializedProperty m_RootTreeAsset;
         SerializedProperty m_ControlModuleId;
         SerializedProperty m_ControlParameters;
+        SerializedProperty m_SkillDefinitions;
         SerializedProperty m_SimulationTickRate;
         SerializedProperty m_SimulationProgram;
         SerializedProperty m_PresentationProjection;
@@ -55,6 +56,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             m_RootTreeAsset = serializedObject.FindProperty("m_RootTreeAsset");
             m_ControlModuleId = serializedObject.FindProperty("m_ControlModuleId");
             m_ControlParameters = serializedObject.FindProperty("m_ControlParameters");
+            m_SkillDefinitions = serializedObject.FindProperty("m_SkillDefinitions");
             m_SimulationTickRate = serializedObject.FindProperty("m_SimulationTickRate");
             m_SimulationProgram = serializedObject.FindProperty("m_SimulationProgram");
             m_PresentationProjection = serializedObject.FindProperty("m_PresentationProjection");
@@ -97,6 +99,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             EditorGUILayout.LabelField("Control", EditorStyles.boldLabel);
             EditorGUILayout.PropertyField(m_ControlModuleId, new GUIContent("Control Module"));
             EditorGUILayout.PropertyField(m_ControlParameters, new GUIContent("Parameters"), true);
+            EditorGUILayout.Space(3f);
+            EditorGUILayout.LabelField("Skills", EditorStyles.boldLabel);
+            EditorGUILayout.PropertyField(m_SkillDefinitions, new GUIContent("Definitions"), true);
             EditorGUILayout.Space(6f);
         }
 

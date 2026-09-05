@@ -57,7 +57,8 @@ namespace ThirdPersonSimulation
     internal readonly struct SimulationActionWindowProjectionCandidate
     {
         public SimulationActionWindowProjectionCandidate(
-            OperationHandle source,
+            SimulationExecutionSource source,
+            ulong generation,
             ActorId actorId,
             ulong logicTick,
             string declarationId,
@@ -68,6 +69,7 @@ namespace ThirdPersonSimulation
             ulong digest)
         {
             Source = source;
+            Generation = generation;
             ActorId = actorId;
             LogicTick = logicTick;
             DeclarationId = declarationId;
@@ -78,7 +80,8 @@ namespace ThirdPersonSimulation
             Digest = digest;
         }
 
-        public OperationHandle Source { get; }
+        public SimulationExecutionSource Source { get; }
+        public ulong Generation { get; }
         public ActorId ActorId { get; }
         public ulong LogicTick { get; }
         public string DeclarationId { get; }
@@ -232,7 +235,7 @@ namespace ThirdPersonSimulation
             }
             m_State.Set(valueSlot, value);
             m_State.Set(group.WriteStamp, CharacterStateValue.FromBlackboardWriteStamp(BuildBlackboardWriteStamp(operation, action)));
-            ProjectBlackboardWrite(operation, valueSlot, value, action);
+            ProjectBlackboardWrite(cursor, operation, valueSlot, value, action);
         }
 
         BlackboardOwnerToken ResolveBlackboardOwnerToken<TTarget>(
@@ -344,11 +347,13 @@ namespace ThirdPersonSimulation
                 context.Cycle);
         }
 
-        void ProjectBlackboardWrite(
+        void ProjectBlackboardWrite<TTarget>(
+            OperationControlCursor<TTarget> cursor,
             SimulationOperation operation,
             int valueSlot,
             CharacterStateValue value,
             Float32ActionInstanceState action)
+            where TTarget : struct, IOperationControlTarget<TTarget>
         {
             ProgramCatalogEntry declaration = RequireBlackboardDeclaration(operation);
             if (!TryCatalogInt32(declaration, ProgramCatalogFieldId.Projection, out int projectionValue))
@@ -378,7 +383,8 @@ namespace ThirdPersonSimulation
             if (!m_ActionWindowProjectionKeys.Add(key))
                 return;
             m_ActionWindowProjections.Add(new SimulationActionWindowProjectionCandidate(
-                operation.Handle,
+                SimulationExecutionSource.FromSkillOperation(operation.Handle, SourcePath(operation)),
+                cursor.ReadGeneration(operation.Handle),
                 m_Frame.ActorId,
                 m_Frame.Tick.Value,
                 declaration.Identity,
@@ -458,8 +464,7 @@ namespace ThirdPersonSimulation
             for (int i = 0; i < m_ActionWindowProjections.Count; i++)
             {
                 SimulationActionWindowProjectionCandidate candidate = m_ActionWindowProjections[i];
-                SimulationOperation source = m_Program.Operations[candidate.Source.Value];
-                SimulationEventHeader header = m_Facts.Next(source);
+                SimulationEventHeader header = m_Facts.Next(candidate.Source, candidate.Generation);
                 var window = new ActionWindowFact(
                     candidate.ActionInstanceId,
                     candidate.ActionId,
@@ -470,7 +475,7 @@ namespace ThirdPersonSimulation
                     candidate.Digest);
                 m_Facts.Add(new GameplayFact(header, window));
                 if (m_Trace.Enabled)
-                    m_Trace.Add(source, "blackboard_action_window_projected", SimulationTraceSeverity.Information, candidate.DeclarationId);
+                    m_Trace.Add(candidate.Source, "blackboard_action_window_projected", SimulationTraceSeverity.Information, candidate.DeclarationId, candidate.Generation);
             }
         }
 

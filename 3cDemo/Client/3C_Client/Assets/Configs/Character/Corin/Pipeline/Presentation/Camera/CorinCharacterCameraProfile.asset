@@ -19,6 +19,23 @@ MonoBehaviour:
   m_OverrideTracks: []
   m_Zooms:
   - {fileID: 11400000, guid: fab08c3883cc49c2af5dd60a5d6f18e2, type: 2}
+  - {fileID: 11400000, guid: 39dd3a734e9c498f8dc45fa2ee64b026, type: 2}
+  - {fileID: 11400000, guid: 646202ba81874aa9b4b44b3ccd42ee30, type: 2}
+  - {fileID: 11400000, guid: 4e2e35a48c224f14ad29ad52d2861e5a, type: 2}
+  - {fileID: 11400000, guid: e8e8d1282d7445699805f8b12937b801, type: 2}
+  - {fileID: 11400000, guid: 9a8072a67d84452da17fa587db195a5a, type: 2}
+  - {fileID: 11400000, guid: 6ac748e37f034bb3b7eea90529399e3b, type: 2}
+  - {fileID: 11400000, guid: 0f50b611cc824e54841b455bc47844db, type: 2}
+  - {fileID: 11400000, guid: e1943a4b957a4c15bcf129d5bbe3d00e, type: 2}
+  - {fileID: 11400000, guid: f1539af696114de18468230f4335b54a, type: 2}
+  - {fileID: 11400000, guid: f44d086af3e3493a86c496c9cb2c1853, type: 2}
+  - {fileID: 11400000, guid: b5898d5109f4455e936ef35611cd80e9, type: 2}
+  - {fileID: 11400000, guid: 446bec5c76b8465fa30c1e44e6f69408, type: 2}
+  - {fileID: 11400000, guid: 306e52d3851b49f1bd0826b7bf956aa1, type: 2}
+  - {fileID: 11400000, guid: 74913cff86d2426087d0685dded8dece, type: 2}
+  - {fileID: 11400000, guid: 50f1783936ab4ce896e57bb591cfa425, type: 2}
+  - {fileID: 11400000, guid: 2b4eb77df4a14da39ce3333bb4791f89, type: 2}
+  - {fileID: 11400000, guid: 8ee80f5fe707436294bdd632a46e456d, type: 2}
   m_Stretches:
   - {fileID: 11400000, guid: bc08288692d54a769bb8d1d420fc9157, type: 2}
   m_Shakes: []

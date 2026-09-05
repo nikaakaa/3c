@@ -50,6 +50,19 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 throw new ArgumentNullException(nameof(contract));
             if (motions == null)
                 throw new ArgumentNullException(nameof(motions));
+            m_Builder.DeclareStandaloneStateSlot(
+                new CharacterSimulationSourceLocation(
+                    typeof(CharacterSkillProgramBinding).FullName,
+                    "SkillExecutionState",
+                    string.Empty,
+                    string.Empty,
+                    string.Empty,
+                    string.Empty,
+                    "character/skill-execution-state"),
+                ProgramStateValueKind.SkillExecutionState,
+                ProgramStateOwnerKind.Action,
+                ProgramStateSemantic.SkillExecutionState,
+                "action:skill-execution");
             CompileDeclarationCatalogs();
             for (int motionIndex = 0; motionIndex < motions.Count; motionIndex++)
             {

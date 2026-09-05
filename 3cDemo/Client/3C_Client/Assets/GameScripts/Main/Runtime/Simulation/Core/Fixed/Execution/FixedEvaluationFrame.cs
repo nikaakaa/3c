@@ -4,6 +4,13 @@ using System.Collections.Generic;
 
 namespace ThirdPersonSimulation.Fixed
 {
+    internal interface IFixedSkillExecutionStateAccess
+    {
+        bool TryGet(int slotIndex, out CharacterStateValue value);
+        bool TrySet(int slotIndex, CharacterStateValue value);
+        bool TryReset(int slotIndex);
+    }
+
     internal readonly struct FixedEvaluationOutputSavepoint
     {
         public FixedEvaluationOutputSavepoint(int factCount, int presentationCount)
@@ -36,6 +43,7 @@ namespace ThirdPersonSimulation.Fixed
         readonly List<PresentationCommand> m_Presentation;
         readonly List<SimulationTraceRecord> m_Trace;
         readonly FixedCharacterStateTransactionWorkspace m_StateTransactions;
+        IFixedSkillExecutionStateAccess m_SkillExecutionStateAccess;
 
         public FixedEvaluationFrame(
             CharacterSimulationProgram program,
@@ -136,6 +144,45 @@ namespace ThirdPersonSimulation.Fixed
         internal void AddPresentation(PresentationCommand value) => m_Presentation.Add(value);
         internal void AddTrace(SimulationTraceRecord value) => m_Trace.Add(value);
 
+        internal void BindSkillExecutionStateAccess(IFixedSkillExecutionStateAccess access)
+        {
+            if (access == null)
+                throw new ArgumentNullException(nameof(access));
+            if (m_SkillExecutionStateAccess != null && !ReferenceEquals(m_SkillExecutionStateAccess, access))
+                throw new InvalidOperationException("Fixed evaluation frame is already bound to another Skill execution state owner.");
+            m_SkillExecutionStateAccess = access;
+        }
+
+        internal bool TryGetSkillExecutionState(int slotIndex, out CharacterStateValue value)
+        {
+            if (m_SkillExecutionStateAccess == null)
+            {
+                value = default;
+                return false;
+            }
+            return m_SkillExecutionStateAccess.TryGet(slotIndex, out value);
+        }
+
+        internal bool TrySetSkillExecutionState(int slotIndex, CharacterStateValue value) =>
+            m_SkillExecutionStateAccess != null && m_SkillExecutionStateAccess.TrySet(slotIndex, value);
+
+        internal bool TryResetSkillExecutionState(int slotIndex) =>
+            m_SkillExecutionStateAccess != null && m_SkillExecutionStateAccess.TryReset(slotIndex);
+
+        internal void ResetState(int slotIndex)
+        {
+            if (TryResetSkillExecutionState(slotIndex))
+                return;
+            Transaction.Reset(slotIndex);
+        }
+
+        internal CharacterStateValue ReadState(int slotIndex)
+        {
+            return TryGetSkillExecutionState(slotIndex, out CharacterStateValue value)
+                ? value
+                : Transaction.Get(slotIndex);
+        }
+
         internal FixedEvaluationOutputSavepoint CreateOutputSavepoint() =>
             new FixedEvaluationOutputSavepoint(m_Facts.Count, m_Presentation.Count);
 
@@ -172,7 +219,7 @@ namespace ThirdPersonSimulation.Fixed
                 ProgramStateSlot slot = m_Frame.Program.StateSlots[slotIndex];
                 if (slot.Semantic == ProgramStateSemantic.RunnableActivationGeneration)
                     continue;
-                m_Frame.Transaction.Reset(slotIndex);
+                m_Frame.ResetState(slotIndex);
             }
         }
     }
@@ -196,18 +243,24 @@ namespace ThirdPersonSimulation.Fixed
         public CharacterStateValue Get(int slotIndex)
         {
             Require(slotIndex);
+            if (m_Frame.TryGetSkillExecutionState(slotIndex, out CharacterStateValue value))
+                return value;
             return m_Frame.Transaction.Get(slotIndex);
         }
 
         public void Set(int slotIndex, CharacterStateValue value)
         {
             Require(slotIndex);
+            if (m_Frame.TrySetSkillExecutionState(slotIndex, value))
+                return;
             m_Frame.Transaction.Set(slotIndex, value);
         }
 
         public void Reset(int slotIndex)
         {
             Require(slotIndex);
+            if (m_Frame.TryResetSkillExecutionState(slotIndex))
+                return;
             m_Frame.Transaction.Reset(slotIndex);
         }
 
@@ -244,7 +297,7 @@ namespace ThirdPersonSimulation.Fixed
             int generationSlot = m_Frame.Layout.FindOperationStateSlot(
                 operation.Handle,
                 ProgramStateSemantic.RunnableActivationGeneration);
-            ulong generation = generationSlot < 0 ? 1UL : m_Frame.Transaction.Get(generationSlot).UInt64;
+            ulong generation = generationSlot < 0 ? 1UL : m_Frame.ReadState(generationSlot).UInt64;
             return Next(
                 SimulationExecutionSource.FromSkillOperation(operation.Handle, SourcePath(operation)),
                 generation,
@@ -335,7 +388,7 @@ namespace ThirdPersonSimulation.Fixed
             int generationSlot = m_Frame.Layout.FindOperationStateSlot(
                 operation.Handle,
                 ProgramStateSemantic.RunnableActivationGeneration);
-            ulong generation = generationSlot < 0 ? 1UL : m_Frame.Transaction.Get(generationSlot).UInt64;
+            ulong generation = generationSlot < 0 ? 1UL : m_Frame.ReadState(generationSlot).UInt64;
             return Next(
                 SimulationExecutionSource.FromSkillOperation(
                     operation.Handle,

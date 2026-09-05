@@ -398,7 +398,8 @@ namespace ThirdPersonSimulation.Fixed
                 m_Frame.CreateStatePort("Control", services.ControlPolicy));
             var actionStore = new FixedActionStateStore(
                 access,
-                m_Frame.CreateStatePort("Action", services.ActionPolicy));
+                m_Frame.CreateStatePort("Action", services.ActionPolicy),
+                m_Frame);
             m_ActionStore = actionStore;
             m_Input = new FixedInputRuntime(
                 access,
@@ -562,6 +563,7 @@ namespace ThirdPersonSimulation.Fixed
             finally
             {
                 m_GameplayEffects.EndEvaluation();
+                m_ActionStore.EndEvaluation();
                 m_Frame.End();
             }
         }
@@ -576,6 +578,7 @@ namespace ThirdPersonSimulation.Fixed
         void SetupOperation()
         {
             m_Control.BeginEvaluation();
+            m_ActionStore.BeginEvaluation();
             m_Values.BeginEvaluation();
             m_GameplayEffects.BeginEvaluation();
             m_Equipment.BeginEvaluation();
@@ -611,7 +614,23 @@ namespace ThirdPersonSimulation.Fixed
         [PerformanceProbe("simulation.operation.timeline-decision")]
         void PrepareTimelineDecision()
         {
-            m_Timeline.PrepareDecisionTimelines(m_Control.Cursor);
+            if (m_CharacterControl == null)
+            {
+                m_Timeline.PrepareDecisionTimelines(m_Control.Cursor);
+                return;
+            }
+            IReadOnlyList<CharacterSkillProgramBinding> skills = m_Frame.Program.SkillPrograms.Bindings;
+            bool preparedSkill = false;
+            for (int i = 0; i < skills.Count; i++)
+            {
+                if (m_ActionStore.FindActive(skills[i].SkillId, out FixedActionInstanceState action) < 0)
+                    continue;
+                preparedSkill = true;
+                using (m_ActionStore.EnterSkillExecution(action))
+                    m_Timeline.PrepareDecisionTimelines(m_Control.Cursor);
+            }
+            if (!preparedSkill)
+                m_Timeline.PrepareDecisionTimelines(m_Control.Cursor);
         }
 
         [PerformanceProbe("simulation.operation.control-tick")]
@@ -645,6 +664,7 @@ namespace ThirdPersonSimulation.Fixed
             for (int i = 0; i < skills.Count; i++)
             {
                 CharacterSkillProgramBinding skill = skills[i];
+                int actionSlot = m_ActionStore.FindCurrent(skill.SkillId, out FixedActionInstanceState action);
                 if (m_Control.IsStopping(skill.EntryOperation))
                 {
                     OperationStopStatus stop = m_Control.ContinueStop(skill.EntryOperation);
@@ -652,10 +672,14 @@ namespace ThirdPersonSimulation.Fixed
                         throw new InvalidOperationException($"Skill '{skill.SkillId}' EntryOperation stop failed.");
                     if (stop == OperationStopStatus.Running)
                         stoppingContexts.Add(skill.ActionContextId);
+                    else if (actionSlot >= 0 && !m_Control.IsActive(skill.EntryOperation))
+                        m_ActionStore.RemoveSkillExecution(action.InstanceId);
                     continue;
                 }
-                if (!m_ActionStore.IsSkillActive(skill.SkillId) && m_Control.IsActive(skill.EntryOperation))
+                if (actionSlot < 0)
                 {
+                    if (!m_Control.IsActive(skill.EntryOperation))
+                        continue;
                     OperationStopStatus stop = m_Control.RequestStop(
                         skill.EntryOperation,
                         OperationStopContext.ActionContextEnded(skill.EntryOperation));
@@ -663,7 +687,33 @@ namespace ThirdPersonSimulation.Fixed
                         throw new InvalidOperationException($"Skill '{skill.SkillId}' EntryOperation stop failed.");
                     if (stop == OperationStopStatus.Running)
                         stoppingContexts.Add(skill.ActionContextId);
+                    continue;
                 }
+                bool removeFrame = false;
+                using (m_ActionStore.EnterSkillExecution(action))
+                {
+                    if (!action.IsActive)
+                    {
+                        if (m_Control.IsActive(skill.EntryOperation))
+                        {
+                            OperationStopStatus stop = m_Control.RequestStop(
+                                skill.EntryOperation,
+                                OperationStopContext.ActionContextEnded(skill.EntryOperation));
+                            if (stop == OperationStopStatus.Failed)
+                                throw new InvalidOperationException($"Skill '{skill.SkillId}' EntryOperation stop failed.");
+                            if (stop == OperationStopStatus.Running)
+                                stoppingContexts.Add(skill.ActionContextId);
+                            else
+                                removeFrame = true;
+                        }
+                        else
+                        {
+                            removeFrame = true;
+                        }
+                    }
+                }
+                if (removeFrame)
+                    m_ActionStore.RemoveSkillExecution(action.InstanceId);
             }
             for (int i = 0; i < skills.Count; i++)
             {
@@ -678,56 +728,59 @@ namespace ThirdPersonSimulation.Fixed
                 }
                 if (!actionActive)
                     continue;
-                if (!action.SkillEntryOperation.Equals(skill.EntryOperation))
-                    throw new InvalidOperationException($"Skill '{skill.SkillId}' Action instance is bound to a different EntryOperation.");
-                OperationRunnableStatus status = m_Control.ReadStatus(skill.EntryOperation);
-                if (status == OperationRunnableStatus.Success || status == OperationRunnableStatus.Failure)
+                using (m_ActionStore.EnterSkillExecution(action))
                 {
-                    if (action.SkillExecutionGeneration == 0)
+                    if (!action.SkillEntryOperation.Equals(skill.EntryOperation))
+                        throw new InvalidOperationException($"Skill '{skill.SkillId}' Action instance is bound to a different EntryOperation.");
+                    OperationRunnableStatus status = m_Control.ReadStatus(skill.EntryOperation);
+                    if (status == OperationRunnableStatus.Success || status == OperationRunnableStatus.Failure)
                     {
-                        OperationStopStatus reset = m_Control.RequestStop(
-                            skill.EntryOperation,
-                            OperationStopContext.ActionContextEnded(skill.EntryOperation));
-                        if (reset != OperationStopStatus.Completed)
-                            throw new InvalidOperationException($"Skill '{skill.SkillId}' previous EntryOperation state could not reset.");
-                        status = m_Control.ReadStatus(skill.EntryOperation);
-                    }
-                    else
-                    {
-                        m_Actions.FinishFromControl(
-                            skill.SkillId,
-                            SimulationExecutionSource.FromSkillOperation(
+                        if (action.SkillExecutionGeneration == 0)
+                        {
+                            OperationStopStatus reset = m_Control.RequestStop(
                                 skill.EntryOperation,
-                                m_Frame.Services.SourcePath(skill.EntryOperation)),
-                            status == OperationRunnableStatus.Success,
-                            status == OperationRunnableStatus.Success ? "SkillCompleted" : "SkillExecutionFailed");
-                        continue;
-                    }
-                }
-                if (action.SkillExecutionGeneration != 0 && status == OperationRunnableStatus.Dormant)
-                    throw new InvalidOperationException($"Skill '{skill.SkillId}' Action instance lost its EntryOperation state.");
-                if (action.SkillExecutionGeneration != 0 &&
-                    m_Control.ReadGeneration(skill.EntryOperation) != action.SkillExecutionGeneration)
-                    throw new InvalidOperationException($"Skill '{skill.SkillId}' Action instance generation does not match its EntryOperation.");
-                using (m_ActionStore.PushSkillExecution(action))
-                {
-                    OperationExecutionResult result = m_Control.Tick(skill.EntryOperation);
-                    FixedActionInstanceState current = m_ActionStore.RequireActiveTransient(
-                        FixedActionInstanceReference.FromInstance(action));
-                    if (current.IsActive)
-                    {
-                        current = m_ActionStore.BindSkillExecution(
-                            current,
-                            skill.EntryOperation,
-                            m_Control.ReadGeneration(skill.EntryOperation));
-                        if (result == OperationExecutionResult.Success || result == OperationExecutionResult.Failure)
+                                OperationStopContext.ActionContextEnded(skill.EntryOperation));
+                            if (reset != OperationStopStatus.Completed)
+                                throw new InvalidOperationException($"Skill '{skill.SkillId}' previous EntryOperation state could not reset.");
+                            status = m_Control.ReadStatus(skill.EntryOperation);
+                        }
+                        else
+                        {
                             m_Actions.FinishFromControl(
                                 skill.SkillId,
                                 SimulationExecutionSource.FromSkillOperation(
                                     skill.EntryOperation,
                                     m_Frame.Services.SourcePath(skill.EntryOperation)),
-                                result == OperationExecutionResult.Success,
-                                result == OperationExecutionResult.Success ? "SkillCompleted" : "SkillExecutionFailed");
+                                status == OperationRunnableStatus.Success,
+                                status == OperationRunnableStatus.Success ? "SkillCompleted" : "SkillExecutionFailed");
+                            continue;
+                        }
+                    }
+                    if (action.SkillExecutionGeneration != 0 && status == OperationRunnableStatus.Dormant)
+                        throw new InvalidOperationException($"Skill '{skill.SkillId}' Action instance lost its EntryOperation state.");
+                    if (action.SkillExecutionGeneration != 0 &&
+                        m_Control.ReadGeneration(skill.EntryOperation) != action.SkillExecutionGeneration)
+                        throw new InvalidOperationException($"Skill '{skill.SkillId}' Action instance generation does not match its EntryOperation.");
+                    using (m_ActionStore.PushSkillExecution(action))
+                    {
+                        OperationExecutionResult result = m_Control.Tick(skill.EntryOperation);
+                        FixedActionInstanceState current = m_ActionStore.RequireActiveTransient(
+                            FixedActionInstanceReference.FromInstance(action));
+                        if (current.IsActive)
+                        {
+                            current = m_ActionStore.BindSkillExecution(
+                                current,
+                                skill.EntryOperation,
+                                m_Control.ReadGeneration(skill.EntryOperation));
+                            if (result == OperationExecutionResult.Success || result == OperationExecutionResult.Failure)
+                                m_Actions.FinishFromControl(
+                                    skill.SkillId,
+                                    SimulationExecutionSource.FromSkillOperation(
+                                        skill.EntryOperation,
+                                        m_Frame.Services.SourcePath(skill.EntryOperation)),
+                                    result == OperationExecutionResult.Success,
+                                    result == OperationExecutionResult.Success ? "SkillCompleted" : "SkillExecutionFailed");
+                        }
                     }
                 }
             }
@@ -757,6 +810,17 @@ namespace ThirdPersonSimulation.Fixed
         [PerformanceProbe("simulation.operation.motion-resolve")]
         ResolvedGameplayMotion ResolveMotion()
         {
+            if (m_CharacterControl != null)
+            {
+                IReadOnlyList<CharacterSkillProgramBinding> skills = m_Frame.Program.SkillPrograms.Bindings;
+                for (int i = 0; i < skills.Count; i++)
+                {
+                    if (m_ActionStore.FindCurrent(skills[i].SkillId, out FixedActionInstanceState action) < 0)
+                        continue;
+                    using (m_ActionStore.EnterSkillExecution(action))
+                        return m_Motion.Resolve();
+                }
+            }
             return m_Motion.Resolve();
         }
 

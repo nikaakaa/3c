@@ -271,15 +271,81 @@ namespace ThirdPersonSimulation.Fixed
         }
     }
 
-    internal sealed class FixedActionStateStore : FixedOperationModule, IFixedActionContextReader
+    internal sealed class FixedActionStateStore : FixedOperationModule, IFixedActionContextReader, IFixedSkillExecutionStateAccess
     {
         readonly FixedStatePort m_State;
         readonly Stack<FixedActionInstanceReference> m_SkillExecutionStack = new Stack<FixedActionInstanceReference>();
+        FixedSkillExecutionStateAggregate m_SkillExecutionStates;
+        FixedSkillExecutionStateFrame m_ActiveSkillExecution;
 
-        public FixedActionStateStore(FixedProgramAccess access, FixedStatePort state)
+        public FixedActionStateStore(
+            FixedProgramAccess access,
+            FixedStatePort state,
+            FixedEvaluationFrame frame)
             : base(access)
         {
             m_State = state ?? throw new ArgumentNullException(nameof(state));
+            (frame ?? throw new ArgumentNullException(nameof(frame)))
+                .BindSkillExecutionStateAccess(this);
+        }
+
+        public void BeginEvaluation()
+        {
+            if (m_ActiveSkillExecution != null || m_SkillExecutionStack.Count != 0)
+                throw new InvalidOperationException("Skill execution state retained transient execution state across evaluations.");
+            m_SkillExecutionStates = null;
+        }
+
+        public void EndEvaluation()
+        {
+            if (m_ActiveSkillExecution != null || m_SkillExecutionStack.Count != 0)
+                throw new InvalidOperationException("Skill execution state has an unclosed runtime scope.");
+            m_SkillExecutionStates = null;
+        }
+
+        public IDisposable EnterSkillExecution(FixedActionInstanceState action)
+        {
+            if (!action.IsValid || !action.SkillId.IsValid || !action.SkillEntryOperation.IsValid)
+                throw new ArgumentException("Skill execution action identity is incomplete.", nameof(action));
+            if (m_ActiveSkillExecution != null)
+                throw new InvalidOperationException("Skill execution frames cannot be nested.");
+            EnsureSkillExecutionStates();
+            FixedSkillExecutionStateFrame frame = m_SkillExecutionStates.Find(action.InstanceId);
+            if (frame == null)
+            {
+                frame = new FixedSkillExecutionStateFrame(
+                    action.SkillId,
+                    action.SkillEntryOperation,
+                    action.InstanceId,
+                    action.PredictionKey,
+                    action.SkillExecutionGeneration);
+                m_SkillExecutionStates.Add(frame);
+                WriteSkillExecutionStates();
+            }
+            else
+            {
+                if (frame.SkillId != action.SkillId ||
+                    !frame.EntryOperation.Equals(action.SkillEntryOperation) ||
+                    frame.PredictionKey != action.PredictionKey ||
+                    frame.Generation != 0 && action.SkillExecutionGeneration != 0 &&
+                    frame.Generation != action.SkillExecutionGeneration)
+                {
+                    throw new InvalidOperationException($"Skill execution frame does not match Action instance '{action.InstanceId}'.");
+                }
+            }
+            m_ActiveSkillExecution = frame;
+            return new SkillExecutionFrameScope(this, frame);
+        }
+
+        public bool RemoveSkillExecution(ulong actionInstanceId)
+        {
+            if (m_ActiveSkillExecution != null)
+                throw new InvalidOperationException("Skill execution frame cannot be removed while active.");
+            EnsureSkillExecutionStates();
+            if (!m_SkillExecutionStates.Remove(actionInstanceId))
+                return false;
+            WriteSkillExecutionStates();
+            return true;
         }
 
         public bool IsContextActive(string contextId) => FindActive(contextId, out _) >= 0;
@@ -312,6 +378,23 @@ namespace ThirdPersonSimulation.Fixed
             return found;
         }
 
+        public int FindCurrent(CharacterSkillId skillId, out FixedActionInstanceState state)
+        {
+            int found = -1;
+            state = default;
+            foreach (TypedActionStateAddresses addresses in m_Layout.ActionStateIndex.Values)
+            {
+                FixedActionInstanceState candidate = m_State.Get(addresses.Instance.SlotIndex).ActionInstance;
+                if (!candidate.IsValid || candidate.SkillId != skillId)
+                    continue;
+                if (found >= 0)
+                    throw new InvalidOperationException($"Skill '{skillId}' resolves multiple Action instances.");
+                found = addresses.Instance.SlotIndex;
+                state = candidate;
+            }
+            return found;
+        }
+
         public FixedActionInstanceState BindSkillExecution(
             FixedActionInstanceState action,
             OperationHandle entryOperation,
@@ -323,8 +406,12 @@ namespace ThirdPersonSimulation.Fixed
                 throw new InvalidOperationException($"Skill '{action.SkillId}' changed EntryOperation for Action instance '{action.InstanceId}'.");
             if (action.SkillExecutionGeneration != 0 && action.SkillExecutionGeneration != generation)
                 throw new InvalidOperationException($"Skill '{action.SkillId}' changed execution generation for Action instance '{action.InstanceId}'.");
+            if (m_ActiveSkillExecution != null && m_ActiveSkillExecution.ActionInstanceId == action.InstanceId)
+                m_ActiveSkillExecution.BindGeneration(generation);
             FixedActionInstanceState next = action.WithSkillExecution(entryOperation, generation);
             WriteState(next);
+            if (m_ActiveSkillExecution != null && m_ActiveSkillExecution.ActionInstanceId == action.InstanceId)
+                WriteSkillExecutionStates();
             return next;
         }
 
@@ -419,6 +506,39 @@ namespace ThirdPersonSimulation.Fixed
                 : default;
         }
 
+        bool IFixedSkillExecutionStateAccess.TryGet(int slotIndex, out CharacterStateValue value)
+        {
+            if (m_ActiveSkillExecution == null || !m_Layout.IsSkillExecutionStateSlot(slotIndex))
+            {
+                value = default;
+                return false;
+            }
+            if (m_ActiveSkillExecution.TryGetValue(slotIndex, out value))
+                return true;
+            value = DefaultSkillExecutionState(slotIndex);
+            return true;
+        }
+
+        bool IFixedSkillExecutionStateAccess.TrySet(int slotIndex, CharacterStateValue value)
+        {
+            if (m_ActiveSkillExecution == null || !m_Layout.IsSkillExecutionStateSlot(slotIndex))
+                return false;
+            if (value.Kind != m_Program.StateSlots[slotIndex].ValueKind)
+                throw new InvalidOperationException($"Skill execution state slot '{slotIndex}' expects '{m_Program.StateSlots[slotIndex].ValueKind}', received '{value.Kind}'.");
+            m_ActiveSkillExecution.SetValue(slotIndex, value);
+            WriteSkillExecutionStates();
+            return true;
+        }
+
+        bool IFixedSkillExecutionStateAccess.TryReset(int slotIndex)
+        {
+            if (m_ActiveSkillExecution == null || !m_Layout.IsSkillExecutionStateSlot(slotIndex))
+                return false;
+            m_ActiveSkillExecution.SetValue(slotIndex, DefaultSkillExecutionState(slotIndex));
+            WriteSkillExecutionStates();
+            return true;
+        }
+
         public bool ContainsInstance(ulong instanceId)
         {
             foreach (TypedActionStateAddresses addresses in m_Layout.ActionStateIndex.Values)
@@ -487,6 +607,44 @@ namespace ThirdPersonSimulation.Fixed
             return value;
         }
 
+        void EnsureSkillExecutionStates()
+        {
+            if (m_SkillExecutionStates != null)
+                return;
+            m_SkillExecutionStates = m_State
+                .Get(m_Layout.SkillExecutionStateAddress.SlotIndex)
+                .SkillExecutionState
+                .Clone();
+            WriteSkillExecutionStates();
+        }
+
+        void WriteSkillExecutionStates()
+        {
+            m_State.Set(
+                m_Layout.SkillExecutionStateAddress.SlotIndex,
+                CharacterStateValue.FromSkillExecutionState(m_SkillExecutionStates));
+        }
+
+        CharacterStateValue DefaultSkillExecutionState(int slotIndex)
+        {
+            ProgramStateSlot slot = m_Program.StateSlots[slotIndex];
+            return slot.DefaultConstantIndex >= 0
+                ? CharacterStateValue.FromConstant(
+                    m_Program.Constants[slot.DefaultConstantIndex],
+                    slot.ValueKind)
+                : CharacterStateValue.Default(slot.ValueKind);
+        }
+
+        void ExitSkillExecution(FixedSkillExecutionStateFrame frame)
+        {
+            if (!ReferenceEquals(m_ActiveSkillExecution, frame))
+                throw new InvalidOperationException("Skill execution frame scope is unbalanced.");
+            if (frame.Generation == 0)
+                m_SkillExecutionStates.Remove(frame.ActionInstanceId);
+            WriteSkillExecutionStates();
+            m_ActiveSkillExecution = null;
+        }
+
         void MatchActive(
             TypedStateAddress address,
             string contextId,
@@ -542,6 +700,29 @@ namespace ThirdPersonSimulation.Fixed
                     return;
                 m_Disposed = true;
                 m_Owner.PopSkillExecution(m_Expected);
+            }
+        }
+
+        sealed class SkillExecutionFrameScope : IDisposable
+        {
+            readonly FixedActionStateStore m_Owner;
+            readonly FixedSkillExecutionStateFrame m_Frame;
+            bool m_Disposed;
+
+            public SkillExecutionFrameScope(
+                FixedActionStateStore owner,
+                FixedSkillExecutionStateFrame frame)
+            {
+                m_Owner = owner;
+                m_Frame = frame;
+            }
+
+            public void Dispose()
+            {
+                if (m_Disposed)
+                    return;
+                m_Disposed = true;
+                m_Owner.ExitSkillExecution(m_Frame);
             }
         }
     }

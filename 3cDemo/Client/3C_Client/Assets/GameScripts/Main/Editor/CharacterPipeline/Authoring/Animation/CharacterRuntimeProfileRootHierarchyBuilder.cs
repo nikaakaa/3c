@@ -18,7 +18,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor
     {
         const string LocalCorinPath = "Assets/Prefabs/Characters/RuntimeProfiles/Local/CorinStandalonePlayer.prefab";
         const string RollbackCorinPath = "Assets/Prefabs/Characters/RuntimeProfiles/Rollback/CorinDeterministicRollback.prefab";
-        const string TrainingEnemyPath = "Assets/Prefabs/Characters/RuntimeProfiles/AI/TrainingEnemyMonster.prefab";
         const string UnityAuthorityCorinPath = "Assets/Prefabs/Characters/RuntimeProfiles/ServerAuthoritative/UnityAuthority/CorinServerAuthoritativeUnityClient.prefab";
         const string DotRecastCorinPath = "Assets/Prefabs/Characters/RuntimeProfiles/ServerAuthoritative/DotRecast/CorinServerAuthoritativeDotRecastClient.prefab";
         const string UnityAuthorityClientScenePath = "Assets/Scenes/ServerAuthoritative/ServerAuthoritativeClient.unity";
@@ -27,7 +26,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         static readonly string[] PipelineProfiles =
         {
             LocalCorinPath,
-            TrainingEnemyPath,
             UnityAuthorityCorinPath,
             DotRecastCorinPath
         };

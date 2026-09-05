@@ -82,8 +82,7 @@ public static class GameApp
             GameplayScene,
             new[]
             {
-                PreloadItem.Prefab("Assets/Prefabs/Characters/RuntimeProfiles/Local/CorinStandalonePlayer.prefab"),
-                PreloadItem.Prefab("Assets/Prefabs/Characters/RuntimeProfiles/AI/CorinStandaloneTrainingEnemy.prefab")
+                PreloadItem.Prefab("Assets/Prefabs/Characters/RuntimeProfiles/Local/CorinStandalonePlayer.prefab")
             });
         return new ProductRuntimeDefinition(
             ProductShellScene,

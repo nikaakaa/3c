@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using ThirdPersonCamera;
-using ThirdPersonCharacter.AI;
 using ThirdPersonCharacter.Editor.CharacterSimulation;
 using ThirdPersonCharacter.Editor.ProductStartup;
 using ThirdPersonCharacter.Pipeline;
@@ -163,7 +162,7 @@ namespace ThirdPersonGameplay.Editor.Lab
                 .OfType<ISimulationSessionActorHost>()
                 .ToArray();
             int distinctActorCount = actors.Select(actor => actor.SimulationActorId).Distinct().Count();
-            const int expectedActorCount = 2;
+            int expectedActorCount = floatVariant ? 1 : 2;
             if (actors.Length != expectedActorCount || distinctActorCount != expectedActorCount)
             {
                 string actorSummary = actors.Length == 0
@@ -175,7 +174,7 @@ namespace ThirdPersonGameplay.Editor.Lab
             }
             if (actors.Any(actor => !ReferenceEquals(actor.SessionHost, hosts[0])))
                 throw new InvalidOperationException($"Gameplay Lab Variant '{variant.VariantId}' contains an Actor outside its Session Host.");
-            if (!rollbackVariant)
+            if (!rollbackVariant && !floatVariant)
             {
                 int localOwners = root.GetComponentsInChildren<FixedCharacterHost>(true)
                     .Count(host => host.PresentationRole == CharacterPresentationRole.LocalOwner) +
@@ -194,7 +193,7 @@ namespace ThirdPersonGameplay.Editor.Lab
             int floatHosts = root.GetComponentsInChildren<CharacterPipelineHost>(true).Length;
             int fixedHosts = root.GetComponentsInChildren<FixedCharacterHost>(true).Length;
             int rollbackHosts = root.GetComponentsInChildren<DeterministicRollbackCharacterHost>(true).Length;
-            if ((floatVariant && (floatHosts != 2 || fixedHosts != 0 || rollbackHosts != 0)) ||
+            if ((floatVariant && (floatHosts != 1 || fixedHosts != 0 || rollbackHosts != 0)) ||
                 (!floatVariant && !rollbackVariant &&
                  (fixedHosts != 2 || rollbackHosts != 0 || floatHosts != 0)) ||
                 (rollbackVariant && (rollbackHosts != 2 || fixedHosts != 0 || floatHosts != 0)))
@@ -218,19 +217,9 @@ namespace ThirdPersonGameplay.Editor.Lab
             {
                 CharacterPipelineHost[] characters = root.GetComponentsInChildren<CharacterPipelineHost>(true);
                 if (characters.Any(character => !character.ControlSource) ||
-                    characters.Count(character => character.ControlSource is PlayerCharacterControlSource) != 1 ||
-                    characters.Count(character => character.ControlSource is AICharacterControlSource) != 1)
+                    characters.Count(character => character.ControlSource is PlayerCharacterControlSource) != 1)
                 {
-                    throw new InvalidOperationException($"Gameplay Lab Variant '{variant.VariantId}' requires one Float32 Player and one formal AI Control Source.");
-                }
-                CharacterPipelineHost enemy = characters.Single(
-                    character => character.ControlSource is AICharacterControlSource);
-                AICharacterControlSource ai = (AICharacterControlSource)enemy.ControlSource;
-                if (enemy.ActorId != "gameplay-lab-target" ||
-                    !ai.Controller ||
-                    !ai.Controller.PerceptionProfile.CandidateActorIds.Contains("gameplay-lab-player"))
-                {
-                    throw new InvalidOperationException($"Gameplay Lab Variant '{variant.VariantId}' AI target closure is not bound to the Gameplay Lab player roster.");
+                    throw new InvalidOperationException($"Gameplay Lab Variant '{variant.VariantId}' requires one Float32 Player Control Source.");
                 }
             }
             variant.ValidateComposition(hosts[0].Composition);
@@ -273,12 +262,6 @@ namespace ThirdPersonGameplay.Editor.Lab
         static void RebuildAssets()
         {
             GameplayLabAssetBuilder.Rebuild();
-        }
-
-        [MenuItem("Tools/3C/Characters/Sync Training Enemy to Gameplay Lab Float32")]
-        static void SyncTrainingEnemy()
-        {
-            GameplayLabAssetBuilder.SyncFloat32EnemyVariant();
         }
 
         [MenuItem("Tools/3C/Internal/Rebuild Gameplay Lab Fixed Character Prefabs")]

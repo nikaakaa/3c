@@ -1,0 +1,16 @@
+Corin_Body_A
+Corin_Body_D
+Corin_Body_M
+Corin_Body_N
+Corin_Face_D
+Corin_Hair_A
+Corin_Hair_D
+Corin_Hair_M
+Corin_Hair_N
+Corin_Weapon_A
+Corin_Weapon_D
+Corin_Weapon_M
+Corin_Weapon_N
+Eff_MatCap_019
+Eye_E
+Female_Face_Lightmap

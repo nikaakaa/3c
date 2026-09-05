@@ -1,0 +1,14 @@
+{
+  "schemaVersion": 1,
+  "source": "D:\\ZZZ_Dump\\output\\corin_replication\\20260905_typed_deferred_character_v3\\recovery.json",
+  "sourceSha256": "9b71996d5c645b5ec5500ae7e1bb72c809a446f9a60e3322f720d3ae715acd36",
+  "entries": [
+    6,
+    4664
+  ],
+  "passes": [
+    "DeferredShadingForCharacter",
+    "CharacterPostProcess"
+  ],
+  "runtimeBound": false
+}

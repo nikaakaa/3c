@@ -1,0 +1,30 @@
+{
+  "schemaVersion": 1,
+  "runtimeBound": false,
+  "face": {
+    "shader": "miHoYo/Character/NapAvatarStandardFace",
+    "entries": [
+      0,
+      8,
+      12,
+      44,
+      60,
+      1980,
+      2940,
+      2946
+    ],
+    "source": "D:\\ZZZ_Dump\\output\\corin_replication\\20260905_corin_face_eye_shader_json_v3\\1122012970.blk_export\\CAB-6f0adea15b5b68788c4dcf3500233f2c\\miHoYo_Character_NapAvatarStandardFace.json",
+    "sourceSha256": "6413b5af3ab884f0cb6d3cda364e255c96b7a3a1cdcba692733d41682b1d2f2c",
+    "recoverySha256": "a0fefe12228549d01d118d076d4e0139ea26e580f3b97ef1760ad03832d967fd"
+  },
+  "eye": {
+    "shader": "miHoYo/Character/NapAvatarStandardEye",
+    "entries": [
+      0,
+      480
+    ],
+    "source": "D:\\ZZZ_Dump\\output\\corin_replication\\20260905_corin_face_eye_shader_json_v3\\1122012970.blk_export\\CAB-cecdf75022a9f6081f5a0815bdbe8154\\miHoYo_Character_NapAvatarStandardEye.json",
+    "sourceSha256": "b8ef78eb8fd16806f69c3c02bdb11cf56498c1c7959e713aeb4bea42583f4108",
+    "recoverySha256": "15744a1a83394d629417514a24efc30edd52c88be0c2892916a793169ef54425"
+  }
+}

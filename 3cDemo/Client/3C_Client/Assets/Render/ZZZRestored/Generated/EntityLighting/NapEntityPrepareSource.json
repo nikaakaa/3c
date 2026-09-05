@@ -1,0 +1,21 @@
+{
+  "schemaVersion": 1,
+  "sourceCompute": "D:\\ZZZ_Dump\\output\\corin_replication\\20260904_compute_typetree_v1\\NapEntityPrepare.json",
+  "sourceComputeSha256": "1fad7d087523c2a4b47a17a1611e1bd8bbfd17358dfd06f67c4a1f5b0b0255d5",
+  "namedRecovery": "D:\\ZZZ_Dump\\output\\corin_replication\\20260905_entity_prepare_named_v3\\recovery.json",
+  "namedRecoverySha256": "00092385b3b71b4409bbd01dcc4f114e614378e8b1b9771dacedca9a6fa1d2ab",
+  "selectedKernel": "NapEntityPrepareDev2",
+  "selectionEvidence": {
+    "pipelineField": "UniversalRenderPipelineAsset.m_OptimizeBlendLightOb0103",
+    "pipelineFieldOffset": 712,
+    "snapshotValue": false,
+    "nativeSelectorRva": "0x1BC70740",
+    "defaultAndSelectedProgramIdentical": true
+  },
+  "runtimeBound": false,
+  "samplerAdaptations": {
+    "1": "linear-repeat",
+    "340": "point-clamp-compare"
+  },
+  "computeSha256": "e8517f79d106f14f26f4b517d348e6f310b596855a9daae0ef094b27018d134b"
+}

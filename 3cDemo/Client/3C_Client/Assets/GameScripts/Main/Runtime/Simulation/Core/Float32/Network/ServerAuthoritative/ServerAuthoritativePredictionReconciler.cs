@@ -57,6 +57,7 @@ namespace ThirdPersonSimulation.ServerAuthoritative
                 baseline.ProgramHash,
                 baseline.LayoutHash,
                 baseline.StateHash,
+                CharacterSimulationStateCodec.CodecIdentity,
                 baseline.CopyCharacterStateBytes());
             _ = actorSnapshot.Decode(m_Program);
             if (firstHistory == null)
@@ -189,6 +190,7 @@ namespace ThirdPersonSimulation.ServerAuthoritative
                 baseline.ProgramHash,
                 baseline.LayoutHash,
                 baseline.StateHash,
+                CharacterSimulationStateCodec.CodecIdentity,
                 baseline.CopyCharacterStateBytes());
             WorldSimulationState localWorld = local.DecodeWorldState();
             var world = new WorldSimulationState(

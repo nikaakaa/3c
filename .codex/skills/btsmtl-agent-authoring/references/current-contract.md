@@ -50,7 +50,7 @@ AgentAuthoring/Documents/<domain>/<root-key>.btsmtl/
 
 `manifest.json`声明schema、domain、root identity与精确文件闭包；`.sync.json`保存整包同步基线。两者、`context/`和`readonly/`由service拥有。`editable/`是AI唯一可写区域。整个目录仍是一个逻辑Document：hash、同步状态、dry-run、apply和冲突判定都以整包为单位；`readonly/`与`context/`共同进入context hash。
 
-CharacterController的`editable/controller.json`保存已登记控制模块binding及作者参数覆盖；控制模块代码、参数schema、默认值和状态schema来自正式模块合同，不在Document中复制。每个`editable/skills/<canonical-id>/definition.json`保存唯一SkillDefinition、ActionProfile引用、入口Graph、ActionContext、输入/目标绑定、子图依赖和允许的后续技能；技能Graph、局部StateMachine、Timeline和子图仍通过同一整包文件闭包引用。
+CharacterController的`editable/controller.json`保存已登记控制模块binding及作者参数覆盖；控制模块代码、参数schema、默认值和状态schema来自正式模块合同，不在Document中复制。每个`editable/skills/<canonical-id>/definition.json`保存唯一SkillDefinition、ActionProfile引用、入口Graph、ActionContext、输入/目标绑定、子图依赖和允许的后续技能；子图依赖的`callSiteIdentity`按`<ownerGraphId>/node:<nodeId>/<referenceKey>/call`寻址，并由入口Graph闭包与Graph reference目标同时校验。技能Graph、局部StateMachine、Timeline和子图仍通过同一整包文件闭包引用。
 
 新增Pose Graph、Graph-owned Inline Timeline或Linked Pose Implementation/Entry Graph分片不要求也不允许AI编辑manifest。AI必须使用`local:<meaningful-id>`作为新对象identity，并在其canonical segment目录中创建完整文件对或Implementation闭包。canonical segment算法为：
 

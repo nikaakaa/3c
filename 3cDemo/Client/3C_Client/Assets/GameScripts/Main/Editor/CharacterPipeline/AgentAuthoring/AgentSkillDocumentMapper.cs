@@ -88,7 +88,37 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
             AgentCompileReport report)
         {
             var skillIds = new HashSet<string>(StringComparer.Ordinal);
+            var graphById = (editable?.graphs ?? new List<AgentSnapshotGraph>())
+                .Where(value => value != null && !string.IsNullOrEmpty(value.graphAuthoringId))
+                .GroupBy(value => value.graphAuthoringId, StringComparer.Ordinal)
+                .ToDictionary(group => group.Key, group => group.First(), StringComparer.Ordinal);
+            var callSiteTargets = new Dictionary<string, string>(StringComparer.Ordinal);
             bool valid = true;
+            foreach (AgentSnapshotGraph graph in graphById.Values)
+            {
+                foreach (AgentSnapshotNode node in graph.nodes ?? new List<AgentSnapshotNode>())
+                {
+                    foreach (AgentSnapshotGraphReference reference in node?.graphReferences ?? new List<AgentSnapshotGraphReference>())
+                    {
+                        if (reference == null ||
+                            string.IsNullOrWhiteSpace(reference.key) ||
+                            string.IsNullOrWhiteSpace(reference.graphAuthoringId))
+                            continue;
+                        string callSiteIdentity = CallSiteIdentity(
+                            graph.graphAuthoringId,
+                            node.elementAuthoringId,
+                            reference.key);
+                        if (!callSiteTargets.TryAdd(callSiteIdentity, reference.graphAuthoringId))
+                        {
+                            report.Error(
+                                $"editable.graphs[{graph.graphAuthoringId}].nodes[{node.elementAuthoringId}].graphReferences[{reference.key}]",
+                                "skill_call_site_duplicate",
+                                $"Graph call site identity重复：{callSiteIdentity}");
+                            valid = false;
+                        }
+                    }
+                }
+            }
             int index = 0;
             foreach (AgentSnapshotSkillDefinition skill in editable?.skills ?? new List<AgentSnapshotSkillDefinition>())
             {
@@ -120,6 +150,30 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                     valid = false;
                 }
                 var dependencies = new HashSet<string>(StringComparer.Ordinal);
+                var reachableCallSites = new HashSet<string>(StringComparer.Ordinal);
+                var pendingGraphs = new Stack<string>();
+                pendingGraphs.Push(skill.entryGraphAuthoringId);
+                while (pendingGraphs.Count > 0)
+                {
+                    string graphId = pendingGraphs.Pop();
+                    if (!graphById.TryGetValue(graphId, out AgentSnapshotGraph graph))
+                        continue;
+                    foreach (AgentSnapshotNode node in graph.nodes ?? new List<AgentSnapshotNode>())
+                    {
+                        foreach (AgentSnapshotGraphReference reference in node?.graphReferences ?? new List<AgentSnapshotGraphReference>())
+                        {
+                            if (reference == null ||
+                                string.IsNullOrWhiteSpace(reference.key) ||
+                                string.IsNullOrWhiteSpace(reference.graphAuthoringId))
+                                continue;
+                            reachableCallSites.Add(CallSiteIdentity(
+                                graph.graphAuthoringId,
+                                node.elementAuthoringId,
+                                reference.key));
+                            pendingGraphs.Push(reference.graphAuthoringId);
+                        }
+                    }
+                }
                 foreach (AgentSnapshotSkillSubgraphDependency dependency in skill.subgraphDependencies ?? new List<AgentSnapshotSkillSubgraphDependency>())
                 {
                     string dependencyPath = path + ".subgraphDependencies";
@@ -131,6 +185,32 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                         !dependencies.Add((dependency.subgraphIdentity ?? string.Empty) + "\0" + (dependency.callSiteIdentity ?? string.Empty)))
                     {
                         report.Error(dependencyPath, "skill_subgraph_dependency_invalid", "Skill subgraph dependency必须具有唯一的Graph与call site identity。");
+                        valid = false;
+                        continue;
+                    }
+                    if (!callSiteTargets.TryGetValue(dependency.callSiteIdentity, out string targetGraphId))
+                    {
+                        report.Error(
+                            dependencyPath,
+                            "skill_subgraph_call_site_missing",
+                            $"Skill引用的Graph call site不存在：{dependency.callSiteIdentity}");
+                        valid = false;
+                        continue;
+                    }
+                    if (!reachableCallSites.Contains(dependency.callSiteIdentity))
+                    {
+                        report.Error(
+                            dependencyPath,
+                            "skill_subgraph_call_site_unreachable",
+                            $"Skill引用的Graph call site不在入口Graph闭包：{dependency.callSiteIdentity}");
+                        valid = false;
+                    }
+                    if (!string.Equals(targetGraphId, dependency.subgraphIdentity, StringComparison.Ordinal))
+                    {
+                        report.Error(
+                            dependencyPath,
+                            "skill_subgraph_mismatch",
+                            $"Skill call site '{dependency.callSiteIdentity}'实际指向Graph '{targetGraphId}'，不是'{dependency.subgraphIdentity}'。");
                         valid = false;
                     }
                 }
@@ -171,6 +251,14 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                 index++;
             }
             return valid;
+        }
+
+        static string CallSiteIdentity(
+            string graphAuthoringId,
+            string nodeAuthoringId,
+            string referenceKey)
+        {
+            return graphAuthoringId + "/node:" + nodeAuthoringId + "/" + referenceKey + "/call";
         }
 
         public static HashSet<string> SelectGraphIds(

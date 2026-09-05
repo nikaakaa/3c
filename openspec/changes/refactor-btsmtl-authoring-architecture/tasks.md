@@ -268,7 +268,7 @@
 
 - [ ] 13.1 运行现有portable／Editor／产品构建和依赖检查，交付实际构建结果；dotnet／msbuild使用禁用build server参数并立即shutdown，本机Unity CLI按明确项目路径退出且保留主验收Editor，CI禁令不变。
 
-  当前状态：**部分完成**。按要求执行的`ThirdPersonClient.Editor.csproj --disable-build-servers /nr:false /p:UseSharedCompilation=false`最近一次完整构建受共享工作区`ActionAnimationAuthoringWorkspaceResolver.cs(29/31)`错误阻断（缺少`ResolveTimelineCandidates`，且`ResolveTimeline`调用缺少`failures`参数）；Agent范围使用`--no-dependencies`定向构建为0警告/0错误并立即执行`dotnet build-server shutdown`。此前完整Editor构建曾为0错误，新增源码静态检查已通过；正式Rebuild、产品构建和Unity编译恢复后的完整receipt仍待交付。
+  当前状态：**部分完成**。按要求执行的`ThirdPersonClient.Editor.csproj --disable-build-servers /nr:false /p:UseSharedCompilation=false`在补齐共享Action Workspace路由后最近一次完整构建成功（58个既有警告、0个错误）；Agent范围`--no-dependencies`定向构建同样为0警告/0错误，两个构建结束后均立即执行`dotnet build-server shutdown`。正式Rebuild、产品构建和Unity编译恢复后的完整receipt仍待交付。
 - [ ] 13.2 使用已有Validator、Document生命周期与Replay／Proof覆盖完整新链，交付同版本重复性及跨实现输入／Body／动作阶段／输出比较；不编写新测试、不忽略缺帧或运行错误、不把ProgramHash变化当作行为通过或失败。
 
   当前状态：**部分完成，待整链复核**。明确实例`e852139597e42532`上的v5 Character checkout成功（root `c7a7c1e3f7e64d81b5a04a90cbeb8d4e`，`editableHash=07390110c2c6173f43f0f92f208cc558e428a84069c44a0ea434900ef0917930`，`contextHash=05a7444d544becb03c6e3431ef214d277b8d49060c8c24336f14e5e7349e2994`，`documentHash=b04cd5547d92a9b0709fc343a89fe03f2fe8f785463813416868f62c385e2f51`）与formal validate成功；dry-run尚受Unity实例未加载最新Reconciler及外部`generated-diagnostic-sampling`编译错误影响，Replay/Proof未开始。

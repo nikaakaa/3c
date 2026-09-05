@@ -207,6 +207,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                 {
                     ActionProfile profile = value.ActionProfile;
                     string profilePath = profile ? AssetDatabase.GetAssetPath(profile) : string.Empty;
+                    string actionContextPath = value.ActionContext ? AssetDatabase.GetAssetPath(value.ActionContext) : string.Empty;
                     return new AgentSnapshotSkillDefinition
                     {
                         skillId = value.SkillId,
@@ -216,7 +217,11 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                         actionProfileAssetGuid = string.IsNullOrEmpty(profilePath)
                             ? string.Empty
                             : AssetDatabase.AssetPathToGUID(profilePath),
-                        actionContext = value.ActionContext.ToString(),
+                        actionContext = value.ActionContext ? value.ActionContext.name : string.Empty,
+                        actionContextAssetPath = actionContextPath,
+                        actionContextAssetGuid = string.IsNullOrEmpty(actionContextPath)
+                            ? string.Empty
+                            : AssetDatabase.AssetPathToGUID(actionContextPath),
                         sourceInputRequestId = value.SourceInputRequestId,
                         consumeSourceInputRequest = value.ConsumeSourceInputRequest,
                         targetInputValueId = value.TargetInputValueId,

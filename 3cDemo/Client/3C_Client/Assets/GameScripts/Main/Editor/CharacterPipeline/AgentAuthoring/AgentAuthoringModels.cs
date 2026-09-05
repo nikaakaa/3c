@@ -630,6 +630,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
         public string actionProfileAssetPath;
         public string actionProfileAssetGuid;
         public string actionContext;
+        public string actionContextAssetPath;
+        public string actionContextAssetGuid;
         public string sourceInputRequestId;
         public bool consumeSourceInputRequest = true;
         public string targetInputValueId;

@@ -268,7 +268,7 @@
 
 - [ ] 13.1 运行现有portable／Editor／产品构建和依赖检查，交付实际构建结果；dotnet／msbuild使用禁用build server参数并立即shutdown，本机Unity CLI按明确项目路径退出且保留主验收Editor，CI禁令不变。
 
-  当前状态：**部分完成**。按要求执行的`ThirdPersonClient.Editor.csproj --disable-build-servers /nr:false /p:UseSharedCompilation=false`最近一次完整构建受共享工作区`OperationExecutionTopology.cs(665)`错误阻断；Agent范围使用`--no-dependencies`定向构建为0错误并立即执行`dotnet build-server shutdown`。此前完整Editor构建曾为0错误，新增源码静态检查已通过；正式Rebuild、产品构建和Unity编译恢复后的完整receipt仍待交付。
+  当前状态：**部分完成**。按要求执行的`ThirdPersonClient.Editor.csproj --disable-build-servers /nr:false /p:UseSharedCompilation=false`最近一次完整构建受共享工作区`ActionAnimationAuthoringWorkspaceResolver.cs(29/31)`错误阻断（缺少`ResolveTimelineCandidates`，且`ResolveTimeline`调用缺少`failures`参数）；Agent范围使用`--no-dependencies`定向构建为0警告/0错误并立即执行`dotnet build-server shutdown`。此前完整Editor构建曾为0错误，新增源码静态检查已通过；正式Rebuild、产品构建和Unity编译恢复后的完整receipt仍待交付。
 - [ ] 13.2 使用已有Validator、Document生命周期与Replay／Proof覆盖完整新链，交付同版本重复性及跨实现输入／Body／动作阶段／输出比较；不编写新测试、不忽略缺帧或运行错误、不把ProgramHash变化当作行为通过或失败。
 
   当前状态：**部分完成，待整链复核**。明确实例`e852139597e42532`上的v5 Character checkout成功（root `c7a7c1e3f7e64d81b5a04a90cbeb8d4e`，`editableHash=07390110c2c6173f43f0f92f208cc558e428a84069c44a0ea434900ef0917930`，`contextHash=05a7444d544becb03c6e3431ef214d277b8d49060c8c24336f14e5e7349e2994`，`documentHash=b04cd5547d92a9b0709fc343a89fe03f2fe8f785463813416868f62c385e2f51`）与formal validate成功；dry-run尚受Unity实例未加载最新Reconciler及外部`generated-diagnostic-sampling`编译错误影响，Replay/Proof未开始。
@@ -277,4 +277,4 @@
   当前状态：**尚未完成**。尚未安装本change全部delta和更新最终项目口径；AI/Timeline/预览/Pose等并行规范仍需按实际采用版本完成组合对账。
 - [ ] 13.4 执行严格OpenSpec校验与限定改动diff检查，按完整迁移单元形成中文小步提交；分别交付设计12的结构迁移证据和构建／Replay行为证据，附文件跳转、删除清单及剩余明确错误。仍有重复业务流程或未迁出的中央职责时保持对应任务未完成，不以编译通过、类行数或文件数宣称整个重构完成。
 
-  当前状态：**部分完成**。V4路径零引用、v5工具数量、strict文件族和定向构建结果已完成静态收口；源码改动尚未按本实现窗口形成最终中文小步提交，且共享工作区仍有外部编译错误与dry-run复验缺口，保持整项未完成。
+  当前状态：**部分完成**。V4路径零引用、v5工具数量、strict文件族和定向构建结果已完成静态收口；本实现窗口已形成中文小步提交`84812507b`、`346e4024d`和`5538b80fc`，但共享工作区仍有Action Workspace编译错误、Unity最新assembly reload与dry-run复验缺口，保持整项未完成。

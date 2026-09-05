@@ -730,7 +730,7 @@ namespace ThirdPersonSimulation.Fixed
                 using (m_ActionStore.PushSkillExecution(action))
                 {
                     OperationExecutionResult result = m_Control.Tick(skill.EntryOperation);
-                    FixedActionInstanceState current = m_ActionStore.RequireActive(
+                    FixedActionInstanceState current = m_ActionStore.RequireActiveTransient(
                         FixedActionInstanceReference.FromInstance(action));
                     if (current.IsActive)
                     {

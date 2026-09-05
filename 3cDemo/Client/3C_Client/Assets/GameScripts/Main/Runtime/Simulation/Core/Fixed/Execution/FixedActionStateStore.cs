@@ -224,14 +224,34 @@ namespace ThirdPersonSimulation.Fixed
         public OperationHandle SkillEntryOperation { get; }
         public ulong SkillExecutionGeneration { get; }
         public bool HasSkillExecution => SkillId.IsValid && SkillEntryOperation.IsValid;
-        public bool IsValid =>
+        public bool HasAnyIdentity =>
+            !string.IsNullOrEmpty(ActionId) ||
+            !string.IsNullOrEmpty(ContextId) ||
+            InstanceId != 0 ||
+            PredictionKey != 0 ||
+            SkillId.IsValid ||
+            SkillEntryOperation.IsValid ||
+            SkillExecutionGeneration != 0;
+        public bool IsTransientValid =>
             !string.IsNullOrEmpty(ActionId) &&
             !string.IsNullOrEmpty(ContextId) &&
             InstanceId != 0 &&
-            PredictionKey != 0;
+            PredictionKey != 0 &&
+            (!HasSkillExecution && SkillExecutionGeneration == 0 || HasSkillExecution);
+        public bool IsValid =>
+            IsTransientValid &&
+            (!HasSkillExecution || SkillExecutionGeneration != 0);
 
         public bool MatchesSkillExecution(FixedActionInstanceState state) =>
-            !HasSkillExecution ||
+            IsValid &&
+            state.IsValid &&
+            state.SkillId == SkillId &&
+            state.SkillEntryOperation.Equals(SkillEntryOperation) &&
+            (!HasSkillExecution || state.SkillExecutionGeneration == SkillExecutionGeneration);
+
+        public bool MatchesTransientSkillExecution(FixedActionInstanceState state) =>
+            IsTransientValid &&
+            state.IsValid &&
             state.SkillId == SkillId &&
             state.SkillEntryOperation.Equals(SkillEntryOperation) &&
             (SkillExecutionGeneration == 0 || state.SkillExecutionGeneration == SkillExecutionGeneration);
@@ -324,7 +344,7 @@ namespace ThirdPersonSimulation.Fixed
                 action = default;
                 return false;
             }
-            action = RequireActive(m_SkillExecutionStack.Peek());
+            action = RequireActiveTransient(m_SkillExecutionStack.Peek());
             return action.IsActive;
         }
 
@@ -380,6 +400,21 @@ namespace ThirdPersonSimulation.Fixed
                    current.InstanceId == reference.InstanceId &&
                    current.PredictionKey == reference.PredictionKey &&
                    reference.MatchesSkillExecution(current)
+                ? current
+                   : default;
+        }
+
+        public FixedActionInstanceState RequireActiveTransient(FixedActionInstanceReference reference)
+        {
+            if (!reference.IsTransientValid)
+                return default;
+            TypedActionStateAddresses addresses = m_Layout.RequireAction(reference.ActionId);
+            FixedActionInstanceState current = m_State.Get(addresses.Instance.SlotIndex).ActionInstance;
+            return current.IsActive &&
+                   string.Equals(current.ContextId, reference.ContextId, StringComparison.Ordinal) &&
+                   current.InstanceId == reference.InstanceId &&
+                   current.PredictionKey == reference.PredictionKey &&
+                   reference.MatchesTransientSkillExecution(current)
                 ? current
                 : default;
         }

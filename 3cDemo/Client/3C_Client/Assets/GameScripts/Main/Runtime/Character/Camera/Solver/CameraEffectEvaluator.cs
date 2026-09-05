@@ -13,8 +13,6 @@ namespace ThirdPersonCamera
             new List<CameraEffectContribution>();
         readonly List<PendingRetirement> m_PendingRetirements =
             new List<PendingRetirement>();
-        readonly HashSet<CameraPresentationScopeKey> m_SuspendedScopes =
-            new HashSet<CameraPresentationScopeKey>();
         readonly List<CameraEffectRuntimeState> m_VisibleStates =
             new List<CameraEffectRuntimeState>();
 
@@ -39,19 +37,11 @@ namespace ThirdPersonCamera
             m_States.Reset();
             m_Contributions.Clear();
             m_PendingRetirements.Clear();
-            m_SuspendedScopes.Clear();
             m_VisibleStates.Clear();
         }
 
-        public void SuspendScope(CameraPresentationScopeKey scope) =>
-            m_SuspendedScopes.Add(scope);
-
-        public void ResumeScope(CameraPresentationScopeKey scope) =>
-            m_SuspendedScopes.Remove(scope);
-
-        public void ConfirmScope(CameraPresentationScopeKey scope)
+        public void StopScope(CameraPresentationScopeKey scope)
         {
-            m_SuspendedScopes.Remove(scope);
             m_States.ClearScope(scope);
             for (int i = m_PendingRetirements.Count - 1; i >= 0; i--)
             {
@@ -72,14 +62,6 @@ namespace ThirdPersonCamera
             int cycle,
             CameraPresentationStopReason reason)
         {
-            if (reason == CameraPresentationStopReason.ForceTeardown)
-            {
-                SuspendScope(new CameraPresentationScopeKey(
-                    sourceId,
-                    generation,
-                    sourceActionInstanceId));
-                return;
-            }
             m_States.Retire(
                 eventId,
                 generation,
@@ -87,16 +69,13 @@ namespace ThirdPersonCamera
                 sourceActionInstanceId,
                 cycle,
                 reason);
-            if (reason != CameraPresentationStopReason.ForceTeardown)
-            {
-                m_PendingRetirements.Add(new PendingRetirement(
-                    eventId,
-                    generation,
-                    sourceId,
-                    sourceActionInstanceId,
-                    cycle,
-                    reason));
-            }
+            m_PendingRetirements.Add(new PendingRetirement(
+                eventId,
+                generation,
+                sourceId,
+                sourceActionInstanceId,
+                cycle,
+                reason));
         }
 
         public CameraFramePlan Resolve(
@@ -108,8 +87,7 @@ namespace ThirdPersonCamera
             ApplyPendingRetirements();
             m_VisibleStates.Clear();
             for (int i = 0; i < m_States.Active.Count; i++)
-                if (!m_SuspendedScopes.Contains(m_States.Active[i].Request.Scope))
-                    m_VisibleStates.Add(m_States.Active[i]);
+                m_VisibleStates.Add(m_States.Active[i]);
             CameraFramePlan plan = basePlan;
             for (int i = 0; i < m_Owners.Length; i++)
                 plan = m_Owners[i].Apply(plan, m_VisibleStates, in input);
@@ -183,8 +161,6 @@ namespace ThirdPersonCamera
             for (int i = m_States.Active.Count - 1; i >= 0; i--)
             {
                 CameraEffectRuntimeState active = m_States.Active[i];
-                if (m_SuspendedScopes.Contains(active.Request.Scope))
-                    continue;
                 ICameraEffectOwner owner = RequireOwner(active.Request.Kind);
                 float delta = owner.ResolveDelta(active, in input);
                 active.Elapsed += delta;

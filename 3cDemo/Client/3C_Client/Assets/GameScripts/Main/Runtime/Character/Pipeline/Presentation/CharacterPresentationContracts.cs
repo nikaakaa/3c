@@ -330,7 +330,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         void Publish(CharacterPresentationCommand command);
         void Replace(CharacterPresentationCommand current, CharacterPresentationCommand replacement);
         void Retire(CharacterPresentationCommand command);
-        void Confirm(CharacterPresentationCommand command);
         CharacterPresentationRuntimeDiagnosticsSnapshot CaptureDiagnostics();
         void Reset();
     }

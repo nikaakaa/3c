@@ -13,7 +13,6 @@ namespace ThirdPersonSimulation
     public interface ISimulationPresentationOutputPort
     {
         void Publish(PresentationCommand command);
-        void Confirm(PresentationCommand command);
     }
 
     public sealed class SimulationCommitException : InvalidOperationException
@@ -117,8 +116,6 @@ namespace ThirdPersonSimulation
             {
                 case SimulationOutputDispositionKind.Publish:
                     m_PresentationPort.Publish(command);
-                    if (command.Kind == PresentationCommandKind.ForceReleaseProducer)
-                        m_PresentationPort.Confirm(command);
                     break;
                 case SimulationOutputDispositionKind.Replace:
                 case SimulationOutputDispositionKind.Retire:

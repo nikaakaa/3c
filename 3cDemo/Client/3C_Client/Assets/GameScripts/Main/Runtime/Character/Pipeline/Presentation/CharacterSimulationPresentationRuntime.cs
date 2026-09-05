@@ -203,9 +203,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         public void Publish(PresentationCommand command) =>
             Publish(CharacterPresentationCommand.FromFloat32(command));
 
-        public void Confirm(PresentationCommand command) =>
-            Confirm(CharacterPresentationCommand.FromFloat32(command));
-
         public void Publish(CharacterPresentationCommand command)
         {
             RequireAlive();
@@ -289,7 +286,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     if (producer.Kind != CharacterPresentationProducerKind.Camera)
                         throw new InvalidOperationException(
                             $"Force release retirement targets non-camera producer '{producer.ProgramProducerIdentity}'.");
-                    RequireCamera().ResumeForceTeardown(command, producer);
+                    RequireCamera().ForceTeardown(command, producer);
                     break;
                 case CharacterPresentationCommandKind.Camera:
                     RequireCamera().Retire(command, producer);
@@ -302,19 +299,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 default:
                     throw new ArgumentOutOfRangeException(nameof(command.Kind), command.Kind, null);
             }
-        }
-
-        public void Confirm(CharacterPresentationCommand command)
-        {
-            RequireAlive();
-            if (command.Header.ActorId != m_ActorId)
-                throw new InvalidOperationException("Presentation confirmation targets another Actor.");
-            CharacterPresentationProducerEntry producer = RequireProducer(command.ProducerId);
-            if (command.Kind != CharacterPresentationCommandKind.ForceReleaseProducer ||
-                producer.Kind != CharacterPresentationProducerKind.Camera)
-                throw new InvalidOperationException(
-                    $"Presentation confirmation targets invalid producer '{producer.ProgramProducerIdentity}'.");
-            RequireCamera().ConfirmForceTeardown(command, producer);
         }
 
         public void Replace(

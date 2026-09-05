@@ -59,9 +59,6 @@ namespace ThirdPersonCamera
             m_Transition.ForceTeardown(sourceId, generation, sourceActionInstanceId);
         }
 
-        public bool IsCurrentScope(CameraPresentationScopeKey scope) =>
-            m_Initialized && m_Transition.IsCurrentScope(scope);
-
         public CameraFramePlan Evaluate(
             in CameraFrameInput input,
             in CameraSequenceRequest request,
@@ -78,50 +75,6 @@ namespace ThirdPersonCamera
             return m_WorldBasicHistory.Apply(target, in input);
         }
 
-        public CameraFramePlan EvaluateSuppressed(
-            in CameraFrameInput input,
-            in CameraResponseRequest response)
-        {
-            if (input.ResetHistory || !m_Initialized)
-            {
-                m_FramePlanner.Reset(input.BodyRotation);
-                m_Transition.Reset();
-                m_Initialized = true;
-            }
-            Vector2 look = m_FramePlanner.ResolveLook(input.LookInput, in response);
-            CameraSequenceRequest request = new CameraSequenceRequest(
-                m_Projection.DefaultSequence.SequenceId,
-                int.MinValue,
-                1f,
-                0f,
-                0f,
-                string.Empty,
-                "camera.default.sequence",
-                0,
-                0,
-                CameraSequenceInterruptPolicy.BlendOut,
-                true);
-            CameraFramePlan target = m_Transition.EvaluateSuppressed(in input, in request, look);
-            return m_WorldBasicHistory.Apply(target, in input);
-        }
-
-        internal bool TryCaptureScopeState(
-            CameraPresentationScopeKey scope,
-            out CharacterCameraSequenceTransition.State state)
-        {
-            if (!m_Initialized || !m_Transition.IsCurrentScope(scope))
-            {
-                state = default;
-                return false;
-            }
-            state = m_Transition.CaptureState();
-            return true;
-        }
-
-        internal void RestoreScopeState(CharacterCameraSequenceTransition.State state)
-        {
-            m_Transition.RestoreState(state);
-        }
     }
 
     sealed class CameraWorldBasicHistory

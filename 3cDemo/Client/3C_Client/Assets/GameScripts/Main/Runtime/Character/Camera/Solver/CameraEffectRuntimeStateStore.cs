@@ -63,8 +63,6 @@ namespace ThirdPersonCamera
             int cycle,
             CameraPresentationStopReason reason)
         {
-            if (reason == CameraPresentationStopReason.ForceTeardown)
-                return;
             bool hasEventId = !string.IsNullOrEmpty(eventId);
             bool hasSourceId = !string.IsNullOrEmpty(sourceId);
             for (int i = m_Active.Count - 1; i >= 0; i--)
@@ -81,7 +79,6 @@ namespace ThirdPersonCamera
                     : matchesSource;
                 if (effect.Request.Generation != generation ||
                     effect.Request.SourceActionInstanceId != sourceActionInstanceId ||
-                    reason != CameraPresentationStopReason.ForceTeardown &&
                     effect.Request.Cycle != cycle ||
                     !matchesIdentity ||
                     !matchesScope)

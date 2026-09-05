@@ -51,47 +51,6 @@ namespace ThirdPersonCamera
             m_Retiring = false;
         }
 
-        internal State CaptureState() => new State(
-            m_LastPlan,
-            m_BlendFrom,
-            m_CurrentSequenceId,
-            m_CurrentSourceId,
-            m_CurrentGeneration,
-            m_CurrentSourceActionInstanceId,
-            m_CurrentCycle,
-            m_CurrentIsDefault,
-            m_TransitionElapsed,
-            m_TransitionDuration,
-            m_RetireFrom,
-            m_RetireElapsed,
-            m_RetireDuration,
-            m_RetireTimeDomain,
-            m_Retiring);
-
-        internal void RestoreState(State state)
-        {
-            m_LastPlan = state.LastPlan;
-            m_BlendFrom = state.BlendFrom;
-            m_CurrentSequenceId = state.CurrentSequenceId;
-            m_CurrentSourceId = state.CurrentSourceId;
-            m_CurrentGeneration = state.CurrentGeneration;
-            m_CurrentSourceActionInstanceId = state.CurrentSourceActionInstanceId;
-            m_CurrentCycle = state.CurrentCycle;
-            m_CurrentIsDefault = state.CurrentIsDefault;
-            m_TransitionElapsed = state.TransitionElapsed;
-            m_TransitionDuration = state.TransitionDuration;
-            m_RetireFrom = state.RetireFrom;
-            m_RetireElapsed = state.RetireElapsed;
-            m_RetireDuration = state.RetireDuration;
-            m_RetireTimeDomain = state.RetireTimeDomain;
-            m_Retiring = state.Retiring;
-        }
-
-        internal bool IsCurrentScope(CameraPresentationScopeKey scope) =>
-            m_CurrentGeneration == scope.Generation &&
-            m_CurrentSourceActionInstanceId == scope.SourceActionInstanceId &&
-            string.Equals(m_CurrentSourceId, scope.SourceId, StringComparison.Ordinal);
-
         public bool Retire(
             string sourceId,
             ulong generation,
@@ -106,13 +65,6 @@ namespace ThirdPersonCamera
                 m_CurrentCycle != cycle ||
                 !string.Equals(m_CurrentSourceId, sourceId, StringComparison.Ordinal))
                 return false;
-            if (reason == CameraPresentationStopReason.ForceTeardown)
-            {
-                m_Retiring = false;
-                m_RetireFrom = default;
-                m_LastPlan = default;
-                return true;
-            }
             m_RetireTimeDomain = ResolveSequence(m_CurrentSequenceId).TimeDomain;
             m_RetireFrom = m_LastPlan;
             m_RetireElapsed = 0f;
@@ -271,19 +223,6 @@ namespace ThirdPersonCamera
             return result;
         }
 
-        internal CameraFramePlan EvaluateSuppressed(
-            in CameraFrameInput input,
-            in CameraSequenceRequest request,
-            Vector2 look)
-        {
-            m_Retiring = false;
-            m_RetireFrom = default;
-            m_RetireElapsed = 0f;
-            m_RetireDuration = 0f;
-            m_RetireTimeDomain = CameraTimeDomain.PresentationScaled;
-            return Evaluate(in input, in request, look);
-        }
-
         CameraSequencePayload ResolveSequence(string sequenceId)
         {
             if (string.Equals(sequenceId, m_Projection.DefaultSequence.SequenceId, StringComparison.Ordinal))
@@ -323,57 +262,5 @@ namespace ThirdPersonCamera
                 to.Valid);
         }
 
-        internal readonly struct State
-        {
-            public State(
-                CameraFramePlan lastPlan,
-                CameraFramePlan blendFrom,
-                string currentSequenceId,
-                string currentSourceId,
-                ulong currentGeneration,
-                ulong currentSourceActionInstanceId,
-                int currentCycle,
-                bool currentIsDefault,
-                float transitionElapsed,
-                float transitionDuration,
-                CameraFramePlan retireFrom,
-                float retireElapsed,
-                float retireDuration,
-                CameraTimeDomain retireTimeDomain,
-                bool retiring)
-            {
-                LastPlan = lastPlan;
-                BlendFrom = blendFrom;
-                CurrentSequenceId = currentSequenceId;
-                CurrentSourceId = currentSourceId;
-                CurrentGeneration = currentGeneration;
-                CurrentSourceActionInstanceId = currentSourceActionInstanceId;
-                CurrentCycle = currentCycle;
-                CurrentIsDefault = currentIsDefault;
-                TransitionElapsed = transitionElapsed;
-                TransitionDuration = transitionDuration;
-                RetireFrom = retireFrom;
-                RetireElapsed = retireElapsed;
-                RetireDuration = retireDuration;
-                RetireTimeDomain = retireTimeDomain;
-                Retiring = retiring;
-            }
-
-            public CameraFramePlan LastPlan { get; }
-            public CameraFramePlan BlendFrom { get; }
-            public string CurrentSequenceId { get; }
-            public string CurrentSourceId { get; }
-            public ulong CurrentGeneration { get; }
-            public ulong CurrentSourceActionInstanceId { get; }
-            public int CurrentCycle { get; }
-            public bool CurrentIsDefault { get; }
-            public float TransitionElapsed { get; }
-            public float TransitionDuration { get; }
-            public CameraFramePlan RetireFrom { get; }
-            public float RetireElapsed { get; }
-            public float RetireDuration { get; }
-            public CameraTimeDomain RetireTimeDomain { get; }
-            public bool Retiring { get; }
-        }
     }
 }

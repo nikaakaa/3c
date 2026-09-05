@@ -56,11 +56,6 @@ namespace ThirdPersonCharacter.Pipeline.Simulation
             Route(command.Header.ActorId).PresentationOutput.Publish(command);
         }
 
-        public void Confirm(PresentationCommand command)
-        {
-            Route(command.Header.ActorId).PresentationOutput.Confirm(command);
-        }
-
         public void ObservePublished(SimulationActorTickResult result)
         {
             if (result == null)

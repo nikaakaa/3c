@@ -4,17 +4,16 @@ using System.Globalization;
 
 namespace ThirdPersonSimulation
 {
-    public sealed class OperationControlRuntime<TTarget> : IOperationStateMachineHost<TTarget>
+    public sealed class OperationControlRuntime<TTarget> : IOperationExecutionLifecycleHost<TTarget>
         where TTarget : struct, IOperationControlTarget<TTarget>
     {
         readonly OperationExecutionTopology m_Topology;
         readonly TTarget m_Target;
         readonly OperationControlCursor<TTarget> m_Cursor;
         readonly OperationStateMachineRuntime<TTarget> m_StateMachine;
+        readonly OperationExecutionLifecycleRuntime<TTarget> m_Lifecycle;
         readonly Stack<StateExecutionContext> m_StateExecution = new Stack<StateExecutionContext>();
-        readonly HashSet<int> m_ForceStopVisited;
         readonly int m_MaxExecutionCount;
-        int m_ForceStopDepth;
         int m_ExecutionCount;
 
         public OperationControlRuntime(OperationExecutionTopology topology, TTarget target, int maxExecutionCount)
@@ -25,153 +24,27 @@ namespace ThirdPersonSimulation
             m_Target = target;
             m_MaxExecutionCount = maxExecutionCount;
             m_Cursor = new OperationControlCursor<TTarget>(this);
-            m_ForceStopVisited = new HashSet<int>(m_Topology.Operations.Count);
             m_StateMachine = new OperationStateMachineRuntime<TTarget>(this);
+            m_Lifecycle = new OperationExecutionLifecycleRuntime<TTarget>(this, m_StateMachine);
         }
 
         public OperationControlCursor<TTarget> Cursor => m_Cursor;
         public void BeginEvaluation()
         {
-            if (m_StateExecution.Count != 0 || m_ForceStopDepth != 0 || m_ForceStopVisited.Count != 0)
+            if (m_StateExecution.Count != 0 || m_Lifecycle.HasTransientState)
                 throw new InvalidOperationException("Operation control runtime retained transient execution state across evaluations.");
             m_ExecutionCount = 0;
         }
 
-        public OperationExecutionResult Tick(OperationHandle handle)
-        {
-            RequireExecution(handle);
-            OperationExecutionDescriptor operation = m_Topology.Operation(handle);
-            int lifecycleSlot = FindOperationSlot(operation, ProgramStateSemantic.RunnableLifecycle);
-            if (lifecycleSlot < 0)
-                return Execute(operation);
-            var status = (OperationRunnableStatus)m_Target.ReadInt32(lifecycleSlot);
-            if (status == OperationRunnableStatus.Stopping)
-                return OperationExecutionResult.Running;
-            bool entering = status != OperationRunnableStatus.Running;
-            if (entering)
-            {
-                PrepareActivation(operation);
-                ulong generation = IncrementGeneration(operation);
-                m_Target.ActivateScopes(m_Cursor, operation, generation);
-                m_Target.WriteInt32(lifecycleSlot, (int)OperationRunnableStatus.Running);
-                if (m_Target.DiagnosticsEnabled)
-                    m_Target.EmitTrace(operation, "operation_enter", OperationControlTraceSeverity.Detail, operation.Code.ToString());
-            }
-            OperationExecutionResult result = Execute(operation);
-            if (result == OperationExecutionResult.Success || result == OperationExecutionResult.Failure)
-            {
-                m_Target.WriteInt32(
-                    lifecycleSlot,
-                    result == OperationExecutionResult.Success
-                        ? (int)OperationRunnableStatus.Success
-                        : (int)OperationRunnableStatus.Failure);
-                m_Target.CompleteScopes(operation);
-                if (m_Target.DiagnosticsEnabled)
-                    m_Target.EmitTrace(operation, "operation_complete", OperationControlTraceSeverity.Detail, result.ToString());
-            }
-            return result;
-        }
+        public OperationExecutionResult Tick(OperationHandle handle) => m_Lifecycle.Tick(handle);
 
-        public OperationExecutionResult TickPersistent(OperationHandle handle)
-        {
-            OperationExecutionDescriptor operation = m_Topology.Operation(handle);
-            int slot = FindOperationSlot(operation, ProgramStateSemantic.RunnableLifecycle);
-            if (slot >= 0)
-            {
-                var status = (OperationRunnableStatus)m_Target.ReadInt32(slot);
-                if (status == OperationRunnableStatus.Success)
-                    return OperationExecutionResult.Success;
-                if (status == OperationRunnableStatus.Failure)
-                    return OperationExecutionResult.Failure;
-            }
-            return Tick(handle);
-        }
+        public OperationExecutionResult TickPersistent(OperationHandle handle) => m_Lifecycle.TickPersistent(handle);
 
-        public OperationStopStatus RequestStop(OperationHandle handle, OperationStopContext context)
-        {
-            if (!handle.IsValid)
-                return OperationStopStatus.Completed;
-            OperationExecutionDescriptor operation = m_Topology.Operation(handle);
-            int lifecycle = FindOperationSlot(operation, ProgramStateSemantic.RunnableLifecycle);
-            if (lifecycle < 0)
-                return OperationStopStatus.Completed;
-            var status = (OperationRunnableStatus)m_Target.ReadInt32(lifecycle);
-            if (status == OperationRunnableStatus.Dormant ||
-                status == OperationRunnableStatus.Success ||
-                status == OperationRunnableStatus.Failure)
-            {
-                m_Target.ResetOperationState(operation);
-                return OperationStopStatus.Completed;
-            }
-            if (status == OperationRunnableStatus.Running)
-            {
-                m_Target.WriteInt32(lifecycle, (int)OperationRunnableStatus.Stopping);
-                WriteStopContext(operation, context);
-                if (m_Target.DiagnosticsEnabled)
-                    m_Target.EmitTrace(operation, "operation_stop_requested", OperationControlTraceSeverity.Detail, context.Cause.ToString());
-            }
-            else if (context.IsValid)
-            {
-                WriteStopContext(operation, context);
-            }
-            return ContinueStop(handle);
-        }
+        public OperationStopStatus RequestStop(OperationHandle handle, OperationStopContext context) => m_Lifecycle.RequestStop(handle, context);
 
-        public OperationStopStatus ContinueStop(OperationHandle handle)
-        {
-            OperationExecutionDescriptor operation = m_Topology.Operation(handle);
-            int lifecycle = FindOperationSlot(operation, ProgramStateSemantic.RunnableLifecycle);
-            if (lifecycle < 0 || m_Target.ReadInt32(lifecycle) != (int)OperationRunnableStatus.Stopping)
-                return OperationStopStatus.Completed;
-            OperationStopContext context = ReadStopContext(operation);
-            OperationStopStatus status;
-            switch (operation.Code)
-            {
-                case SimulationOperationCode.State:
-                    status = m_StateMachine.ContinueStateStop(operation, context);
-                    break;
-                case SimulationOperationCode.StateMachine:
-                    status = m_StateMachine.ContinueStateMachineStop(operation, context);
-                    break;
-                case SimulationOperationCode.Timeline:
-                    status = m_Target.ContinueLeafStop(m_Cursor, operation, context);
-                    break;
-                default:
-                    status = ContinueDirectChildStop(operation, context);
-                    break;
-            }
-            if (status == OperationStopStatus.Running)
-                return status;
-            m_Target.CompleteScopes(operation);
-            if (m_Target.DiagnosticsEnabled)
-            {
-                m_Target.EmitTrace(
-                    operation,
-                    "operation_stopped",
-                    status == OperationStopStatus.Failed ? OperationControlTraceSeverity.Error : OperationControlTraceSeverity.Detail,
-                    context.Cause.ToString());
-            }
-            m_Target.ResetOperationState(operation);
-            return status;
-        }
+        public OperationStopStatus ContinueStop(OperationHandle handle) => m_Lifecycle.ContinueStop(handle);
 
-        public void ForceStop(OperationHandle handle, OperationStopContext context)
-        {
-            bool ownsVisited = m_ForceStopDepth == 0;
-            if (ownsVisited)
-                m_ForceStopVisited.Clear();
-            m_ForceStopDepth++;
-            try
-            {
-                ForceStopCore(handle, context);
-            }
-            finally
-            {
-                m_ForceStopDepth--;
-                if (ownsVisited)
-                    m_ForceStopVisited.Clear();
-            }
-        }
+        public void ForceStop(OperationHandle handle, OperationStopContext context) => m_Lifecycle.ForceStop(handle, context);
 
         public bool IsActive(OperationHandle handle)
         {
@@ -397,13 +270,13 @@ namespace ThirdPersonSimulation
             IReadOnlyList<ProgramControlFlowEdge> children = Edges(operation.Handle, ProgramControlFlowKind.Child);
             int slot = RequireOperationSlot(operation, ProgramStateSemantic.RunnableChildCursor);
             int cursor = Math.Max(0, m_Target.ReadInt32(slot));
-            OperationStopContext pending = ReadStopContext(operation);
+            OperationStopContext pending = m_Lifecycle.ReadStopContext(operation);
             if (pending.IsValid && cursor < children.Count)
             {
                 OperationStopStatus stop = RequestStop(children[cursor].Target, pending);
                 if (stop == OperationStopStatus.Running)
                     return OperationExecutionResult.Running;
-                ClearStopContext(operation);
+                m_Lifecycle.ClearStopContext(operation);
                 return OperationExecutionResult.Failure;
             }
             while (cursor < children.Count)
@@ -414,11 +287,11 @@ namespace ThirdPersonSimulation
                     if (UsesSelfAbort(edge.AbortPolicy) && IsActive(edge.Target))
                     {
                         OperationStopContext context = OperationStopContext.SelfAbort(edge.Target);
-                        WriteStopContext(operation, context);
+                        m_Lifecycle.WriteStopContext(operation, context);
                         OperationStopStatus stop = RequestStop(edge.Target, context);
                         if (stop == OperationStopStatus.Running)
                             return OperationExecutionResult.Running;
-                        ClearStopContext(operation);
+                        m_Lifecycle.ClearStopContext(operation);
                         if (stop == OperationStopStatus.Failed)
                             return OperationExecutionResult.Failure;
                     }
@@ -443,13 +316,13 @@ namespace ThirdPersonSimulation
             IReadOnlyList<ProgramControlFlowEdge> children = Edges(operation.Handle, ProgramControlFlowKind.Child);
             int slot = RequireOperationSlot(operation, ProgramStateSemantic.RunnableChildCursor);
             int cursor = m_Target.ReadInt32(slot);
-            OperationStopContext pending = ReadStopContext(operation);
+            OperationStopContext pending = m_Lifecycle.ReadStopContext(operation);
             if (pending.IsValid && cursor >= 0 && cursor < children.Count)
             {
                 OperationStopStatus stop = RequestStop(children[cursor].Target, pending);
                 if (stop == OperationStopStatus.Running)
                     return OperationExecutionResult.Running;
-                ClearStopContext(operation);
+                m_Lifecycle.ClearStopContext(operation);
                 m_Target.WriteInt32(slot, -1);
                 if (stop == OperationStopStatus.Failed)
                     return OperationExecutionResult.Failure;
@@ -463,11 +336,11 @@ namespace ThirdPersonSimulation
                 if (UsesSelfAbort(current.AbortPolicy) && !EvaluateCondition(current))
                 {
                     OperationStopContext context = OperationStopContext.SelfAbort(current.Target);
-                    WriteStopContext(operation, context);
+                    m_Lifecycle.WriteStopContext(operation, context);
                     OperationStopStatus stop = RequestStop(current.Target, context);
                     if (stop == OperationStopStatus.Running)
                         return OperationExecutionResult.Running;
-                    ClearStopContext(operation);
+                    m_Lifecycle.ClearStopContext(operation);
                     m_Target.WriteInt32(slot, -1);
                     if (stop == OperationStopStatus.Failed)
                         return OperationExecutionResult.Failure;
@@ -478,11 +351,11 @@ namespace ThirdPersonSimulation
                     if (!UsesLowerPriorityAbort(children[i].AbortPolicy) || !EvaluateCondition(children[i]))
                         continue;
                     OperationStopContext context = OperationStopContext.LowerPriorityAbort(current.Target, children[i].Target);
-                    WriteStopContext(operation, context);
+                    m_Lifecycle.WriteStopContext(operation, context);
                     OperationStopStatus stop = RequestStop(current.Target, context);
                     if (stop == OperationStopStatus.Running)
                         return OperationExecutionResult.Running;
-                    ClearStopContext(operation);
+                    m_Lifecycle.ClearStopContext(operation);
                     m_Target.WriteInt32(slot, -1);
                     if (stop == OperationStopStatus.Failed)
                         return OperationExecutionResult.Failure;
@@ -540,77 +413,6 @@ namespace ThirdPersonSimulation
             return running ? OperationExecutionResult.Running : OperationExecutionResult.Success;
         }
 
-        OperationStopStatus ContinueDirectChildStop(OperationExecutionDescriptor operation, OperationStopContext context)
-        {
-            OperationStopStatus aggregate = OperationStopStatus.Completed;
-            IReadOnlyList<ProgramControlFlowEdge> children = Edges(operation.Handle, ProgramControlFlowKind.Child);
-            for (int i = 0; i < children.Count; i++)
-            {
-                if (!IsActive(children[i].Target))
-                    continue;
-                OperationStopStatus status = RequestStop(children[i].Target, context);
-                if (status == OperationStopStatus.Failed)
-                    return status;
-                if (status == OperationStopStatus.Running)
-                    aggregate = status;
-            }
-            return aggregate;
-        }
-
-        void ForceStopCore(OperationHandle handle, OperationStopContext context)
-        {
-            if (!handle.IsValid || !m_ForceStopVisited.Add(handle.Value))
-                return;
-            OperationExecutionDescriptor operation = m_Topology.Operation(handle);
-            bool active = IsActive(handle);
-            if (operation.Code == SimulationOperationCode.Timeline)
-            {
-                m_Target.ForceStopLeaf(m_Cursor, operation, context);
-            }
-            else if (operation.Code == SimulationOperationCode.StateMachine)
-            {
-                m_StateMachine.ForceStopStateMachine(operation, context);
-            }
-            else if (operation.Code == SimulationOperationCode.State)
-            {
-                m_StateMachine.ForceStopState(operation, context);
-            }
-            else
-            {
-                IReadOnlyList<ProgramControlFlowEdge> children = Edges(operation.Handle, ProgramControlFlowKind.Child);
-                for (int i = 0; i < children.Count; i++)
-                {
-                    if (IsActive(children[i].Target))
-                        ForceStopCore(children[i].Target, context);
-                }
-            }
-            if (active && m_Target.DiagnosticsEnabled)
-                m_Target.EmitTrace(operation, "operation_force_stopped", OperationControlTraceSeverity.Detail, context.Cause.ToString());
-            m_Target.CompleteScopes(operation);
-            m_Target.ResetOperationState(operation);
-        }
-
-        void PrepareActivation(OperationExecutionDescriptor operation)
-        {
-            m_Target.ResetOperationState(operation);
-            int cursor = FindOperationSlot(operation, ProgramStateSemantic.RunnableChildCursor);
-            if (cursor >= 0)
-                m_Target.WriteInt32(cursor, operation.Code == SimulationOperationCode.Selector ? -1 : 0);
-            m_Target.PrepareActivation(operation);
-        }
-
-        ulong IncrementGeneration(OperationExecutionDescriptor operation)
-        {
-            int slot = FindOperationSlot(operation, ProgramStateSemantic.RunnableActivationGeneration);
-            if (slot < 0)
-                return 1;
-            ulong generation = checked(m_Target.ReadUInt64(slot) + 1);
-            if (generation == 0)
-                generation = 1;
-            m_Target.WriteUInt64(slot, generation);
-            return generation;
-        }
-
         OperationExecutionResult TickSelectorFrom(
             OperationExecutionDescriptor operation,
             IReadOnlyList<ProgramControlFlowEdge> children,
@@ -662,39 +464,6 @@ namespace ThirdPersonSimulation
             return m_Topology.RequireOperationStateSlot(operation.Handle, semantic);
         }
 
-        void WriteStopContext(OperationExecutionDescriptor operation, OperationStopContext context)
-        {
-            int slot = FindOperationSlot(operation, ProgramStateSemantic.RunnableStopBarrier);
-            if (slot < 0)
-                return;
-            int replacement = context.Replacement.IsValid ? checked(context.Replacement.Value + 1) : 0;
-            if (replacement > 0x007fffff)
-                throw new InvalidOperationException($"Stop replacement operation '{context.Replacement}' exceeds the portable barrier range.");
-            int encoded = ((int)context.Cause & 0xff) | (replacement << 8);
-            m_Target.WriteInt32(slot, encoded);
-        }
-
-        OperationStopContext ReadStopContext(OperationExecutionDescriptor operation)
-        {
-            int slot = FindOperationSlot(operation, ProgramStateSemantic.RunnableStopBarrier);
-            if (slot < 0)
-                return default;
-            int encoded = m_Target.ReadInt32(slot);
-            var cause = (OperationStopCause)(encoded & 0xff);
-            int replacement = (encoded >> 8) - 1;
-            return new OperationStopContext(
-                cause,
-                operation.Handle,
-                replacement >= 0 ? new OperationHandle(replacement) : OperationHandle.Invalid);
-        }
-
-        void ClearStopContext(OperationExecutionDescriptor operation)
-        {
-            int slot = FindOperationSlot(operation, ProgramStateSemantic.RunnableStopBarrier);
-            if (slot >= 0)
-                m_Target.WriteInt32(slot, 0);
-        }
-
         OperationExecutionTopology IOperationStateMachineHost<TTarget>.Topology => m_Topology;
         bool IOperationStateMachineHost<TTarget>.DiagnosticsEnabled => m_Target.DiagnosticsEnabled;
         int IOperationStateMachineHost<TTarget>.ReadInt32(int slotIndex) => m_Target.ReadInt32(slotIndex);
@@ -712,6 +481,17 @@ namespace ThirdPersonSimulation
             hasRootCompletedOverride
                 ? PushStateExecutionScope(state, exitCause, rootCompletedOverride)
                 : PushStateExecutionScope(state, exitCause);
+        OperationControlCursor<TTarget> IOperationExecutionLifecycleHost<TTarget>.Cursor => m_Cursor;
+        ulong IOperationExecutionLifecycleHost<TTarget>.ReadUInt64(int slotIndex) => m_Target.ReadUInt64(slotIndex);
+        void IOperationExecutionLifecycleHost<TTarget>.WriteUInt64(int slotIndex, ulong value) => m_Target.WriteUInt64(slotIndex, value);
+        void IOperationExecutionLifecycleHost<TTarget>.PrepareActivation(OperationExecutionDescriptor operation) => m_Target.PrepareActivation(operation);
+        void IOperationExecutionLifecycleHost<TTarget>.ActivateScopes(OperationControlCursor<TTarget> cursor, OperationExecutionDescriptor operation, ulong generation) => m_Target.ActivateScopes(cursor, operation, generation);
+        void IOperationExecutionLifecycleHost<TTarget>.CompleteScopes(OperationExecutionDescriptor operation) => m_Target.CompleteScopes(operation);
+        void IOperationExecutionLifecycleHost<TTarget>.ResetOperationState(OperationExecutionDescriptor operation) => m_Target.ResetOperationState(operation);
+        OperationStopStatus IOperationExecutionLifecycleHost<TTarget>.ContinueLeafStop(OperationControlCursor<TTarget> cursor, OperationExecutionDescriptor operation, OperationStopContext context) => m_Target.ContinueLeafStop(cursor, operation, context);
+        void IOperationExecutionLifecycleHost<TTarget>.ForceStopLeaf(OperationControlCursor<TTarget> cursor, OperationExecutionDescriptor operation, OperationStopContext context) => m_Target.ForceStopLeaf(cursor, operation, context);
+        OperationExecutionResult IOperationExecutionLifecycleHost<TTarget>.Execute(OperationExecutionDescriptor operation) => Execute(operation);
+        void IOperationExecutionLifecycleHost<TTarget>.RequireExecution(OperationHandle handle) => RequireExecution(handle);
 
         static int FindChildIndex(IReadOnlyList<ProgramControlFlowEdge> children, OperationHandle target)
         {

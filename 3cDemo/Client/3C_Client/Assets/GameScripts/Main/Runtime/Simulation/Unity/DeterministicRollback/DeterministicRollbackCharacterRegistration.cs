@@ -97,6 +97,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.DeterministicRollback
                 throw new ArgumentException("Rollback Presentation Runtime does not expose the Animation Presentation snapshot provider.", nameof(presentationRuntime));
             m_AnimationDiagnosticsTarget = new AnimationPresentationRuntimeTarget(
                 diagnosticsTarget.CharacterRuntimeId,
+                actorId,
                 ownerInstanceId,
                 ownerName,
                 presentationProgramIdentity,

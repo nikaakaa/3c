@@ -71,6 +71,7 @@ namespace ThirdPersonCharacter.Pipeline
 				throw new ArgumentException("Local Presentation Runtime does not expose the Animation Presentation snapshot provider.", nameof(presentationRuntime));
 			m_AnimationDiagnosticsTarget = new AnimationPresentationRuntimeTarget(
 				diagnosticsTarget.CharacterRuntimeId,
+				actorId,
 				ownerInstanceId,
 				ownerName,
 				new AnimationPresentationProgramIdentity(projection),

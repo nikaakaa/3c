@@ -51,7 +51,7 @@ namespace ThirdPersonCamera
             m_Retiring = false;
         }
 
-        public void Retire(
+        public bool Retire(
             string sourceId,
             ulong generation,
             ulong sourceActionInstanceId,
@@ -64,19 +64,20 @@ namespace ThirdPersonCamera
                 m_CurrentSourceActionInstanceId != sourceActionInstanceId ||
                 m_CurrentCycle != cycle ||
                 !string.Equals(m_CurrentSourceId, sourceId, StringComparison.Ordinal))
-                return;
+                return false;
             if (reason == CameraPresentationStopReason.ForceTeardown)
             {
                 m_Retiring = false;
                 m_RetireFrom = default;
                 m_LastPlan = default;
-                return;
+                return true;
             }
             m_RetireTimeDomain = ResolveSequence(m_CurrentSequenceId).TimeDomain;
             m_RetireFrom = m_LastPlan;
             m_RetireElapsed = 0f;
             m_RetireDuration = Mathf.Max(0f, blendOutSeconds);
             m_Retiring = true;
+            return true;
         }
 
         public void ForceTeardown(

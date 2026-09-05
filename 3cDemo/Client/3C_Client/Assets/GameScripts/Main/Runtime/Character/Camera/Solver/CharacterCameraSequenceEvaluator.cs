@@ -28,7 +28,7 @@ namespace ThirdPersonCamera
             m_Initialized = false;
         }
 
-        public void Retire(
+        public bool Retire(
             string sourceId,
             ulong generation,
             ulong sourceActionInstanceId,
@@ -37,8 +37,8 @@ namespace ThirdPersonCamera
             CameraPresentationStopReason reason)
         {
             if (!m_Initialized)
-                return;
-            m_Transition.Retire(
+                return false;
+            return m_Transition.Retire(
                 sourceId,
                 generation,
                 sourceActionInstanceId,

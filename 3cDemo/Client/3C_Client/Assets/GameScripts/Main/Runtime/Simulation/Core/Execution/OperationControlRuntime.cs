@@ -4,12 +4,13 @@ using System.Globalization;
 
 namespace ThirdPersonSimulation
 {
-    public sealed class OperationControlRuntime<TTarget>
+    public sealed class OperationControlRuntime<TTarget> : IOperationStateMachineHost<TTarget>
         where TTarget : struct, IOperationControlTarget<TTarget>
     {
         readonly OperationExecutionTopology m_Topology;
         readonly TTarget m_Target;
         readonly OperationControlCursor<TTarget> m_Cursor;
+        readonly OperationStateMachineRuntime<TTarget> m_StateMachine;
         readonly Stack<StateExecutionContext> m_StateExecution = new Stack<StateExecutionContext>();
         readonly HashSet<int> m_ForceStopVisited;
         readonly int m_MaxExecutionCount;
@@ -25,6 +26,7 @@ namespace ThirdPersonSimulation
             m_MaxExecutionCount = maxExecutionCount;
             m_Cursor = new OperationControlCursor<TTarget>(this);
             m_ForceStopVisited = new HashSet<int>(m_Topology.Operations.Count);
+            m_StateMachine = new OperationStateMachineRuntime<TTarget>(this);
         }
 
         public OperationControlCursor<TTarget> Cursor => m_Cursor;
@@ -126,10 +128,10 @@ namespace ThirdPersonSimulation
             switch (operation.Code)
             {
                 case SimulationOperationCode.State:
-                    status = ContinueStateStop(operation, context);
+                    status = m_StateMachine.ContinueStateStop(operation, context);
                     break;
                 case SimulationOperationCode.StateMachine:
-                    status = ContinueStateMachineStop(operation, context);
+                    status = m_StateMachine.ContinueStateMachineStop(operation, context);
                     break;
                 case SimulationOperationCode.Timeline:
                     status = m_Target.ContinueLeafStop(m_Cursor, operation, context);
@@ -238,9 +240,7 @@ namespace ThirdPersonSimulation
         {
             if (m_StateExecution.Count == 0)
                 return null;
-            OperationHandle state = m_StateExecution.Peek().State;
-            using (PushStateExecutionScope(state, -1, true))
-                return SelectTransition(state);
+            return m_StateMachine.PredictCurrentStateRootCompletionTransition(m_StateExecution.Peek().State);
         }
 
         public int CurrentStateExitCause()
@@ -357,9 +357,9 @@ namespace ThirdPersonSimulation
                 case SimulationOperationCode.Succeed:
                     return OperationExecutionResult.Success;
                 case SimulationOperationCode.StateMachine:
-                    return TickStateMachine(operation);
+                    return m_StateMachine.Tick(operation);
                 case SimulationOperationCode.State:
-                    return TickState(operation);
+                    return m_StateMachine.TickState(operation);
                 default:
                     return m_Target.ExecuteLeaf(m_Cursor, operation);
             }
@@ -540,148 +540,6 @@ namespace ThirdPersonSimulation
             return running ? OperationExecutionResult.Running : OperationExecutionResult.Success;
         }
 
-        OperationExecutionResult TickStateMachine(OperationExecutionDescriptor operation)
-        {
-            int activeSlot = RequireOperationSlot(operation, ProgramStateSemantic.StateMachineActive);
-            int pendingSlot = RequireOperationSlot(operation, ProgramStateSemantic.StateMachinePending);
-            int exitingSlot = RequireOperationSlot(operation, ProgramStateSemantic.StateMachineExiting);
-            int transitionSlot = RequireOperationSlot(operation, ProgramStateSemantic.StateMachineTransition);
-            OperationHandle exiting = ParseHandle(m_Target.ReadIdentity(exitingSlot));
-            if (exiting.IsValid)
-                return ContinueStateTransition(operation, activeSlot, pendingSlot, exitingSlot, transitionSlot, exiting);
-
-            OperationHandle active = ParseHandle(m_Target.ReadIdentity(activeSlot));
-            if (!active.IsValid)
-            {
-                OperationHandle enter = FindOwnedEntry(operation, "AnyState", false);
-                IReadOnlyList<ProgramControlFlowEdge> ownerEntries = Edges(operation.Handle, ProgramControlFlowKind.Enter);
-                for (int i = 0; i < ownerEntries.Count; i++)
-                {
-                    if (!string.Equals(ownerEntries[i].SourcePort, "AnyState", StringComparison.Ordinal))
-                    {
-                        enter = ownerEntries[i].Target;
-                        break;
-                    }
-                }
-                ProgramControlFlowEdge initial = SelectTransition(enter);
-                if (initial == null || m_Topology.Operation(initial.Target).Code != SimulationOperationCode.State)
-                    return OperationExecutionResult.Failure;
-                active = initial.Target;
-                ActivateState(operation, activeSlot, active);
-            }
-
-            OperationHandle anyState = FindOwnedEntry(operation, "AnyState", true);
-            ProgramControlFlowEdge transition = anyState.IsValid ? SelectTransition(anyState, active, active) : null;
-            if (transition == null)
-            {
-                OperationExecutionResult stateResult = Tick(active);
-                if (stateResult == OperationExecutionResult.Failure)
-                    return stateResult;
-                transition = SelectTransition(active, default, active);
-            }
-            if (transition == null)
-                return OperationExecutionResult.Running;
-
-            if (m_Target.DiagnosticsEnabled)
-            {
-                m_Target.EmitTrace(
-                    operation,
-                    "state_transition_selected",
-                    OperationControlTraceSeverity.Detail,
-                    $"{transition.Identity}:{FormatHandle(active)}->{FormatHandle(transition.Target)}");
-            }
-            m_Target.WriteIdentity(exitingSlot, FormatHandle(active));
-            m_Target.WriteIdentity(pendingSlot, FormatHandle(transition.Target));
-            m_Target.WriteIdentity(transitionSlot, transition.Identity);
-            return ContinueStateTransition(operation, activeSlot, pendingSlot, exitingSlot, transitionSlot, active);
-        }
-
-        OperationExecutionResult ContinueStateTransition(
-            OperationExecutionDescriptor machine,
-            int activeSlot,
-            int pendingSlot,
-            int exitingSlot,
-            int transitionSlot,
-            OperationHandle exiting)
-        {
-            OperationHandle target = ParseHandle(m_Target.ReadIdentity(pendingSlot));
-            OperationStopContext context = OperationStopContext.StateTransition(exiting, target);
-            OperationStopStatus stop = RequestStop(exiting, context);
-            if (stop == OperationStopStatus.Running)
-                return OperationExecutionResult.Running;
-            if (stop == OperationStopStatus.Failed)
-                return OperationExecutionResult.Failure;
-            m_Target.WriteIdentity(exitingSlot, string.Empty);
-            m_Target.WriteIdentity(pendingSlot, string.Empty);
-            m_Target.WriteIdentity(transitionSlot, string.Empty);
-            if (!target.IsValid || m_Topology.Operation(target).Code == SimulationOperationCode.StateExit)
-            {
-                m_Target.WriteIdentity(activeSlot, string.Empty);
-                ClearStateMachineExecutionPath(machine);
-                m_Target.NotifyStateLifecycle(machine, exiting, OperationStateLifecyclePhase.Exited);
-                return OperationExecutionResult.Success;
-            }
-            m_Target.NotifyStateLifecycle(machine, exiting, OperationStateLifecyclePhase.Exited);
-            ActivateState(machine, activeSlot, target);
-            return OperationExecutionResult.Running;
-        }
-
-        OperationExecutionResult TickState(OperationExecutionDescriptor operation)
-        {
-            int cursorSlot = RequireOperationSlot(operation, ProgramStateSemantic.RunnableChildCursor);
-            int phase = m_Target.ReadInt32(cursorSlot);
-            if (phase <= 0)
-            {
-                ProgramControlFlowEdge enter = m_Topology.StateOnEnter(operation.Handle);
-                if (enter != null)
-                {
-                    OperationExecutionResult result = TickInStateContext(operation, enter.Target, -1);
-                    if (result != OperationExecutionResult.Success)
-                        return result;
-                    ForceStop(enter.Target, OperationStopContext.Reset(enter.Target));
-                }
-                phase = 1;
-                m_Target.WriteInt32(cursorSlot, phase);
-            }
-            ProgramControlFlowEdge root = m_Topology.StateRoot(operation.Handle);
-            if (root == null)
-                return OperationExecutionResult.Running;
-            OperationExecutionResult rootResult;
-            using (PushStateExecutionScope(operation.Handle, -1))
-                rootResult = TickPersistent(root.Target);
-            return rootResult == OperationExecutionResult.Failure
-                ? OperationExecutionResult.Failure
-                : OperationExecutionResult.Running;
-        }
-
-        ProgramControlFlowEdge SelectTransition(
-            OperationHandle source,
-            OperationHandle excludedTarget = default,
-            OperationHandle stateContext = default)
-        {
-            if (!source.IsValid)
-                return null;
-            IReadOnlyList<ProgramControlFlowEdge> transitions = Edges(source, ProgramControlFlowKind.Transition);
-            StateExecutionScope scope = stateContext.IsValid
-                ? PushStateExecutionScope(stateContext, -1)
-                : default;
-            try
-            {
-                for (int i = 0; i < transitions.Count; i++)
-                {
-                    if (excludedTarget.IsValid && transitions[i].Target.Equals(excludedTarget))
-                        continue;
-                    if (EvaluateCondition(transitions[i]))
-                        return transitions[i];
-                }
-                return null;
-            }
-            finally
-            {
-                scope.Dispose();
-            }
-        }
-
         OperationStopStatus ContinueDirectChildStop(OperationExecutionDescriptor operation, OperationStopContext context)
         {
             OperationStopStatus aggregate = OperationStopStatus.Completed;
@@ -699,68 +557,6 @@ namespace ThirdPersonSimulation
             return aggregate;
         }
 
-        OperationStopStatus ContinueStateStop(OperationExecutionDescriptor state, OperationStopContext context)
-        {
-            int cursorSlot = RequireOperationSlot(state, ProgramStateSemantic.RunnableChildCursor);
-            int phase = m_Target.ReadInt32(cursorSlot);
-            if (phase < 2)
-            {
-                ProgramControlFlowEdge active = phase <= 0
-                    ? m_Topology.StateOnEnter(state.Handle)
-                    : m_Topology.StateRoot(state.Handle);
-                if (active != null)
-                {
-                    OperationStopStatus activeStop = RequestStop(active.Target, context);
-                    if (activeStop != OperationStopStatus.Completed)
-                        return activeStop;
-                }
-                phase = 2;
-                m_Target.WriteInt32(cursorSlot, phase);
-            }
-
-            ProgramControlFlowEdge exit = m_Topology.StateOnExit(state.Handle);
-            if (exit != null)
-            {
-                OperationExecutionResult result = TickInStateContext(state, exit.Target, MapExitCause(context.Cause));
-                if (result == OperationExecutionResult.Running)
-                    return OperationStopStatus.Running;
-                if (result == OperationExecutionResult.Failure)
-                    return OperationStopStatus.Failed;
-                ForceStop(exit.Target, OperationStopContext.Reset(exit.Target));
-            }
-            m_Target.WriteInt32(cursorSlot, 3);
-            m_Target.ClearStateScope(state);
-            return OperationStopStatus.Completed;
-        }
-
-        OperationStopStatus ContinueStateMachineStop(OperationExecutionDescriptor machine, OperationStopContext context)
-        {
-            int activeSlot = RequireOperationSlot(machine, ProgramStateSemantic.StateMachineActive);
-            int pendingSlot = RequireOperationSlot(machine, ProgramStateSemantic.StateMachinePending);
-            int exitingSlot = RequireOperationSlot(machine, ProgramStateSemantic.StateMachineExiting);
-            int transitionSlot = RequireOperationSlot(machine, ProgramStateSemantic.StateMachineTransition);
-            OperationHandle exiting = ParseHandle(m_Target.ReadIdentity(exitingSlot));
-            if (!exiting.IsValid)
-                exiting = ParseHandle(m_Target.ReadIdentity(activeSlot));
-            m_Target.WriteIdentity(pendingSlot, string.Empty);
-            m_Target.WriteIdentity(transitionSlot, string.Empty);
-            if (!exiting.IsValid)
-            {
-                m_Target.WriteIdentity(activeSlot, string.Empty);
-                ClearStateMachineExecutionPath(machine);
-                return OperationStopStatus.Completed;
-            }
-            m_Target.WriteIdentity(exitingSlot, FormatHandle(exiting));
-            OperationStopStatus stop = RequestStop(exiting, context);
-            if (stop != OperationStopStatus.Completed)
-                return stop;
-            m_Target.WriteIdentity(activeSlot, string.Empty);
-            m_Target.WriteIdentity(exitingSlot, string.Empty);
-            ClearStateMachineExecutionPath(machine);
-            m_Target.NotifyStateLifecycle(machine, exiting, OperationStateLifecyclePhase.Exited);
-            return OperationStopStatus.Completed;
-        }
-
         void ForceStopCore(OperationHandle handle, OperationStopContext context)
         {
             if (!handle.IsValid || !m_ForceStopVisited.Add(handle.Value))
@@ -773,11 +569,11 @@ namespace ThirdPersonSimulation
             }
             else if (operation.Code == SimulationOperationCode.StateMachine)
             {
-                ForceStopStateMachine(operation, context);
+                m_StateMachine.ForceStopStateMachine(operation, context);
             }
             else if (operation.Code == SimulationOperationCode.State)
             {
-                ForceStopState(operation, context);
+                m_StateMachine.ForceStopState(operation, context);
             }
             else
             {
@@ -792,30 +588,6 @@ namespace ThirdPersonSimulation
                 m_Target.EmitTrace(operation, "operation_force_stopped", OperationControlTraceSeverity.Detail, context.Cause.ToString());
             m_Target.CompleteScopes(operation);
             m_Target.ResetOperationState(operation);
-        }
-
-        void ForceStopState(OperationExecutionDescriptor state, OperationStopContext context)
-        {
-            IReadOnlyList<ProgramControlFlowEdge> entries = Edges(state.Handle, ProgramControlFlowKind.Enter);
-            for (int i = 0; i < entries.Count; i++)
-                ForceStopCore(entries[i].Target, context);
-            IReadOnlyList<ProgramControlFlowEdge> exits = Edges(state.Handle, ProgramControlFlowKind.Exit);
-            for (int i = 0; i < exits.Count; i++)
-                ForceStopCore(exits[i].Target, context);
-            m_Target.ClearStateScope(state);
-        }
-
-        void ForceStopStateMachine(OperationExecutionDescriptor machine, OperationStopContext context)
-        {
-            int activeSlot = FindOperationSlot(machine, ProgramStateSemantic.StateMachineActive);
-            int exitingSlot = FindOperationSlot(machine, ProgramStateSemantic.StateMachineExiting);
-            OperationHandle active = activeSlot >= 0 ? ParseHandle(m_Target.ReadIdentity(activeSlot)) : OperationHandle.Invalid;
-            OperationHandle exiting = exitingSlot >= 0 ? ParseHandle(m_Target.ReadIdentity(exitingSlot)) : OperationHandle.Invalid;
-            if (active.IsValid)
-                ForceStopCore(active, context);
-            if (exiting.IsValid && !exiting.Equals(active))
-                ForceStopCore(exiting, context);
-            ClearStateMachineExecutionPath(machine);
         }
 
         void PrepareActivation(OperationExecutionDescriptor operation)
@@ -839,26 +611,6 @@ namespace ThirdPersonSimulation
             return generation;
         }
 
-        void ActivateState(OperationExecutionDescriptor machine, int activeSlot, OperationHandle state)
-        {
-            m_Target.WriteIdentity(activeSlot, FormatHandle(state));
-            ulong generation = checked(ReadGeneration(state) + 1);
-            if (generation == 0)
-                generation = 1;
-            string parent = m_StateExecution.Count == 0 ? string.Empty : m_StateExecution.Peek().Path;
-            string path = $"{parent}/sm:{machine.Handle.Value.ToString(CultureInfo.InvariantCulture)}/state:{state.Value.ToString(CultureInfo.InvariantCulture)}@{generation.ToString(CultureInfo.InvariantCulture)}";
-            int pathSlot = RequireOperationSlot(machine, ProgramStateSemantic.StateMachineExecutionPath);
-            m_Target.WriteIdentity(pathSlot, path);
-            m_Target.NotifyStateLifecycle(machine, state, OperationStateLifecyclePhase.Entered);
-        }
-
-        void ClearStateMachineExecutionPath(OperationExecutionDescriptor machine)
-        {
-            int slot = FindOperationSlot(machine, ProgramStateSemantic.StateMachineExecutionPath);
-            if (slot >= 0)
-                m_Target.WriteIdentity(slot, string.Empty);
-        }
-
         OperationExecutionResult TickSelectorFrom(
             OperationExecutionDescriptor operation,
             IReadOnlyList<ProgramControlFlowEdge> children,
@@ -879,12 +631,6 @@ namespace ThirdPersonSimulation
             return OperationExecutionResult.Failure;
         }
 
-        OperationExecutionResult TickInStateContext(OperationExecutionDescriptor state, OperationHandle target, int exitCause)
-        {
-            using (PushStateExecutionScope(state.Handle, exitCause))
-                return Tick(target);
-        }
-
         bool EvaluateCondition(ProgramControlFlowEdge edge)
         {
             bool result = !edge.HasCondition || m_Target.EvaluateCondition(m_Cursor, edge);
@@ -899,18 +645,6 @@ namespace ThirdPersonSimulation
                     $"{edge.Identity}:{FormatHandle(edge.Source)}->{FormatHandle(edge.Target)}:condition={FormatHandle(edge.Condition)}:result={result}");
             }
             return result;
-        }
-
-        OperationHandle FindOwnedEntry(OperationExecutionDescriptor operation, string sourcePort, bool requireSourcePort)
-        {
-            IReadOnlyList<ProgramControlFlowEdge> edges = Edges(operation.Handle, ProgramControlFlowKind.Enter);
-            for (int i = 0; i < edges.Count; i++)
-            {
-                bool matches = string.Equals(edges[i].SourcePort, sourcePort, StringComparison.Ordinal);
-                if (matches || !requireSourcePort && !string.Equals(edges[i].SourcePort, "AnyState", StringComparison.Ordinal))
-                    return edges[i].Target;
-            }
-            return OperationHandle.Invalid;
         }
 
         IReadOnlyList<ProgramControlFlowEdge> Edges(OperationHandle source, ProgramControlFlowKind kind)
@@ -961,6 +695,24 @@ namespace ThirdPersonSimulation
                 m_Target.WriteInt32(slot, 0);
         }
 
+        OperationExecutionTopology IOperationStateMachineHost<TTarget>.Topology => m_Topology;
+        bool IOperationStateMachineHost<TTarget>.DiagnosticsEnabled => m_Target.DiagnosticsEnabled;
+        int IOperationStateMachineHost<TTarget>.ReadInt32(int slotIndex) => m_Target.ReadInt32(slotIndex);
+        void IOperationStateMachineHost<TTarget>.WriteInt32(int slotIndex, int value) => m_Target.WriteInt32(slotIndex, value);
+        string IOperationStateMachineHost<TTarget>.ReadIdentity(int slotIndex) => m_Target.ReadIdentity(slotIndex);
+        void IOperationStateMachineHost<TTarget>.WriteIdentity(int slotIndex, string value) => m_Target.WriteIdentity(slotIndex, value);
+        bool IOperationStateMachineHost<TTarget>.EvaluateCondition(ProgramControlFlowEdge edge) => EvaluateCondition(edge);
+        int IOperationStateMachineHost<TTarget>.RequireOperationSlot(OperationExecutionDescriptor operation, ProgramStateSemantic semantic) => RequireOperationSlot(operation, semantic);
+        void IOperationStateMachineHost<TTarget>.ClearStateScope(OperationHandle state) => m_Target.ClearStateScope(m_Topology.Operation(state));
+        void IOperationStateMachineHost<TTarget>.NotifyStateLifecycle(OperationExecutionDescriptor machine, OperationHandle state, OperationStateLifecyclePhase phase) => m_Target.NotifyStateLifecycle(machine, state, phase);
+        void IOperationStateMachineHost<TTarget>.EmitTrace(OperationExecutionDescriptor operation, string code, OperationControlTraceSeverity severity, string detail) => m_Target.EmitTrace(operation, code, severity, detail);
+        string IOperationStateMachineHost<TTarget>.CurrentStateExecutionPath => m_StateExecution.Count == 0 ? string.Empty : m_StateExecution.Peek().Path;
+        IDisposable IOperationStateMachineHost<TTarget>.PushStateScope(OperationHandle state, int exitCause) => PushStateExecutionScope(state, exitCause);
+        IDisposable IOperationStateMachineHost<TTarget>.PushStateScope(OperationHandle state, int exitCause, bool hasRootCompletedOverride, bool rootCompletedOverride) =>
+            hasRootCompletedOverride
+                ? PushStateExecutionScope(state, exitCause, rootCompletedOverride)
+                : PushStateExecutionScope(state, exitCause);
+
         static int FindChildIndex(IReadOnlyList<ProgramControlFlowEdge> children, OperationHandle target)
         {
             if (!target.IsValid)
@@ -993,17 +745,6 @@ namespace ThirdPersonSimulation
             return int.TryParse(value, NumberStyles.Integer, CultureInfo.InvariantCulture, out int parsed) && parsed >= 0
                 ? new OperationHandle(parsed)
                 : OperationHandle.Invalid;
-        }
-
-        static int MapExitCause(OperationStopCause cause)
-        {
-            switch (cause)
-            {
-                case OperationStopCause.StateTransition: return 0;
-                case OperationStopCause.SelfAbort: return 1;
-                case OperationStopCause.LowerPriorityAbort: return 2;
-                default: return 3;
-            }
         }
 
         readonly struct StateExecutionContext

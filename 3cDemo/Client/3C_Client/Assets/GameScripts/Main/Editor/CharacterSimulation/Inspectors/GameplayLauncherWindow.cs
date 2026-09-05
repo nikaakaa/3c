@@ -1,9 +1,11 @@
 using System;
 using System.IO;
+using System.Linq;
 using ThirdPerson.ProductStartup;
 using ThirdPersonCharacter.Editor.ProductBuild;
 using ThirdPersonCharacter.Editor.ProductStartup;
 using ThirdPersonCharacter.Pipeline.Editor;
+using ThirdPersonPerformance.Instrumentation;
 using UnityEditor;
 using UnityEngine;
 
@@ -72,6 +74,19 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
         bool m_LastEditorCompiling;
         bool m_LastSamplingAvailable;
         bool m_LastAnalysisAvailable;
+        string m_LastPerformanceStatus = string.Empty;
+        readonly NetworkTestControlCenterGui m_NetworkTestControlCenter = new NetworkTestControlCenterGui();
+        [SerializeField]
+        string m_SelectedInputTraceId = string.Empty;
+        CharacterFixedInputTraceSummary[] m_InputTraces = Array.Empty<CharacterFixedInputTraceSummary>();
+        string[] m_InputTraceLabels = Array.Empty<string>();
+        int m_SelectedInputTraceIndex = -1;
+        string m_LastObservedInputTraceId = string.Empty;
+        string m_InputTraceCatalogError = string.Empty;
+
+        string SelectedInputTracePath => m_SelectedInputTraceIndex < 0
+            ? string.Empty
+            : m_InputTraces[m_SelectedInputTraceIndex].Path;
 
         [MenuItem("Tools/3C/Launcher", false, -1000)]
         public static void Open()
@@ -86,6 +101,8 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             m_BuildTarget = EditorUserBuildSettings.activeBuildTarget;
             RefreshGameplayLab();
             CaptureSamplingUiState();
+            m_LastPerformanceStatus = ThirdPersonPerformanceCaptureWorkflow.Status;
+            RefreshInputTraces();
         }
 
         void OnInspectorUpdate()
@@ -102,6 +119,9 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             bool editorCompiling = EditorApplication.isCompiling;
             bool samplingAvailable = CharacterFootDiagnosticSampling.IsAvailable;
             bool analysisAvailable = CharacterFootDiagnosticSampling.IsAnalysisAvailable;
+            string performanceStatus = ThirdPersonPerformanceCaptureWorkflow.Status;
+            bool networkChanged = m_NetworkTestControlCenter.Poll();
+            bool inputTraceChanged = PollInputTraces();
             if (capturing == m_LastSamplingCapturing &&
                 finalizing == m_LastSamplingStarting &&
                 analyzing == m_LastSamplingAnalyzing &&
@@ -113,7 +133,10 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                 editorPlaying == m_LastEditorPlaying &&
                 editorCompiling == m_LastEditorCompiling &&
                 samplingAvailable == m_LastSamplingAvailable &&
-                analysisAvailable == m_LastAnalysisAvailable)
+                analysisAvailable == m_LastAnalysisAvailable &&
+                string.Equals(performanceStatus, m_LastPerformanceStatus, StringComparison.Ordinal) &&
+                !inputTraceChanged &&
+                !networkChanged)
             {
                 return;
             }
@@ -129,12 +152,14 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             m_LastEditorCompiling = editorCompiling;
             m_LastSamplingAvailable = samplingAvailable;
             m_LastAnalysisAvailable = analysisAvailable;
+            m_LastPerformanceStatus = performanceStatus;
             Repaint();
         }
 
         void OnDisable()
         {
             EditorApplication.update -= TickAutoSample;
+            EditorApplication.delayCall -= RefreshInputTraces;
             if (m_AutoSampleStopTime != 0d &&
                 CharacterFootDiagnosticSampling.IsCapturing)
             {
@@ -151,6 +176,8 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             m_Scroll = EditorGUILayout.BeginScrollView(m_Scroll);
             DrawGameplayLab();
             EditorGUILayout.Space(10f);
+            DrawPerformanceCapture();
+            EditorGUILayout.Space(10f);
             DrawNetworkTests();
             EditorGUILayout.Space(10f);
             DrawFormalStartup();
@@ -163,7 +190,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
         {
             using (new EditorGUILayout.VerticalScope(EditorStyles.helpBox))
             {
-                EditorGUILayout.LabelField("3. 正式启动 / Published Player", EditorStyles.boldLabel);
+                EditorGUILayout.LabelField("4. 正式启动 / Published Player", EditorStyles.boldLabel);
                 ProductStartupProfile profile = AssetDatabase.LoadAssetAtPath<ProductStartupProfile>(
                     ClientBuildArtifactLayout.ProductStartupProfilePath);
                 bool profileValid = DrawProductProfileStatus(profile);
@@ -497,7 +524,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             }
         }
 
-        static void DrawFixedInputTrace()
+        void DrawFixedInputTrace()
         {
             bool recording = CharacterFixedInputTraceWorkflow.IsRecording;
             bool replaying = CharacterFixedInputTraceWorkflow.IsReplaying;
@@ -513,6 +540,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                         : "Idle";
             EditorGUILayout.Space(6f);
             EditorGUILayout.LabelField("Fixed Input Trace", state);
+            DrawInputTraceSelection(recording, replaying, pending, sampling);
             using (new EditorGUILayout.HorizontalScope())
             {
                 using (new EditorGUI.DisabledScope(
@@ -528,11 +556,10 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                 }
                 using (new EditorGUI.DisabledScope(
                            EditorApplication.isCompiling || recording || replaying || pending || sampling ||
-                           string.IsNullOrEmpty(CharacterFixedInputTraceWorkflow.LastTracePath) ||
-                           !File.Exists(CharacterFixedInputTraceWorkflow.LastTracePath)))
+                           m_SelectedInputTraceIndex < 0))
                 {
-                    if (GUILayout.Button("Replay Last"))
-                        ExecuteSampling(CharacterFixedInputTraceWorkflow.ReplayLast);
+                    if (GUILayout.Button("Replay Selected"))
+                        ReplaySelectedInputTrace(false);
                 }
             }
             using (new EditorGUILayout.HorizontalScope())
@@ -540,15 +567,10 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                 using (new EditorGUI.DisabledScope(
                            EditorApplication.isCompiling || recording || replaying || pending || sampling ||
                            !CharacterFootDiagnosticSampling.IsAvailable ||
-                           string.IsNullOrEmpty(CharacterFixedInputTraceWorkflow.LastTracePath) ||
-                           !File.Exists(CharacterFixedInputTraceWorkflow.LastTracePath)))
+                           m_SelectedInputTraceIndex < 0))
                 {
-                    if (GUILayout.Button("Replay + Foot Diagnostics"))
-                    {
-                        ExecuteSampling(
-                            CharacterFixedInputTraceWorkflow
-                                .ReplayLastWithDiagnostics);
-                    }
+                    if (GUILayout.Button("Replay Selected + Foot Diagnostics"))
+                        ReplaySelectedInputTrace(true);
                 }
                 using (new EditorGUI.DisabledScope(!replaying && !pending))
                 {
@@ -565,52 +587,258 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                 EditorGUILayout.HelpBox(CharacterFixedInputTraceWorkflow.LastFailure, MessageType.Error);
             else if (!string.IsNullOrEmpty(CharacterFixedInputTraceWorkflow.LastStatus))
                 EditorGUILayout.HelpBox(CharacterFixedInputTraceWorkflow.LastStatus, MessageType.Info);
-            if (!string.IsNullOrEmpty(CharacterFixedInputTraceWorkflow.LastTracePath))
+            if (m_SelectedInputTraceIndex >= 0)
             {
-                EditorGUILayout.LabelField("Last Input Trace");
+                EditorGUILayout.LabelField("Selected Input Trace");
                 EditorGUILayout.SelectableLabel(
-                    CharacterFixedInputTraceWorkflow.LastTracePath,
+                    SelectedInputTracePath,
                     EditorStyles.textField,
                     GUILayout.Height(EditorGUIUtility.singleLineHeight));
             }
         }
 
-        static void DrawNetworkTests()
+        void DrawNetworkTests()
+        {
+            m_NetworkTestControlCenter.Draw(IsBusy);
+        }
+
+        void DrawPerformanceCapture()
         {
             using (new EditorGUILayout.VerticalScope(EditorStyles.helpBox))
             {
-                EditorGUILayout.LabelField("2. 双端验证 / Network Test Products", EditorStyles.boldLabel);
+                EditorGUILayout.LabelField("2. 性能诊断 / Performance Capture", EditorStyles.boldLabel);
                 EditorGUILayout.HelpBox(
-                    "Build uses each product's explicit scripting backend and Development + StrictMode options. Run only validates and consumes the existing artifacts.",
+                    "Run the non-elevated Smoke gate, then the exact Replay gate. Capture remains locked until both Completed gates match the selected Scenario and Player; only Capture elevates and starts WPR after Warmup.",
                     MessageType.Info);
-                using (new EditorGUI.DisabledScope(IsBusy))
+                bool toolchainValid = ThirdPersonPerformanceCaptureWorkflow.TryValidateToolchain(out string toolchainStatus);
+                EditorGUILayout.LabelField("Toolchain", toolchainValid ? "Configured" : "Invalid");
+                if (!toolchainValid)
+                    EditorGUILayout.HelpBox(toolchainStatus, MessageType.Warning);
+                DrawPerformancePath("Toolchain Definition", ThirdPersonPerformanceCaptureWorkflow.ToolchainPath);
+                DrawPerformancePath("Input Recording", SelectedInputTracePath);
+                DrawPerformancePath("Scenario", ThirdPersonPerformanceCaptureWorkflow.ScenarioPath);
+                DrawPerformancePath("Capture Profile", ThirdPersonPerformanceCaptureWorkflow.CaptureProfilePath);
+                DrawPerformancePath("Budget", ThirdPersonPerformanceCaptureWorkflow.BudgetPath);
+                DrawPerformancePath("Player", ThirdPersonPerformanceCaptureWorkflow.PlayerManifestPath);
+                DrawPerformancePath("Smoke Gate", ThirdPersonPerformanceCaptureWorkflow.LastSmokeManifestPath);
+                DrawPerformancePath("Replay Gate", ThirdPersonPerformanceCaptureWorkflow.LastReplayManifestPath);
+                DrawPerformancePath("Baseline", ThirdPersonPerformanceCaptureWorkflow.BaselineManifestPath);
+                EditorGUILayout.LabelField("Run", ThirdPersonPerformanceCaptureWorkflow.Status);
+                using (new EditorGUILayout.HorizontalScope())
                 {
-                    DrawNetworkRow(
-                        "Deterministic Rollback",
-                        DeterministicRollbackNetworkTestBuildAndRun.Build,
-                        DeterministicRollbackNetworkTestBuildAndRun.Run);
-                    DrawNetworkRow(
-                        "Unity Authority",
-                        UnityAuthorityNetworkTestBuildAndRun.Build,
-                        UnityAuthorityNetworkTestBuildAndRun.Run);
-                    DrawNetworkRow(
-                        "DotRecast Authority",
-                        DotRecastAuthorityNetworkTestBuildAndRun.Build,
-                        DotRecastAuthorityNetworkTestBuildAndRun.Run);
+                    using (new EditorGUI.DisabledScope(IsBusy || ThirdPersonPerformanceCaptureWorkflow.IsRunRunning))
+                    {
+                        if (GUILayout.Button("Configure Toolchain"))
+                            SchedulePerformance(ThirdPersonPerformanceCaptureWorkflow.ConfigureToolchain);
+                        using (new EditorGUI.DisabledScope(
+                                   m_LabVariantLabels.Length == 0 ||
+                                   m_SelectedInputTraceIndex < 0))
+                        {
+                            if (GUILayout.Button("Publish Scenario"))
+                            {
+                                string variantId = m_LabVariantLabels[Mathf.Clamp(m_LabVariantIndex, 0, m_LabVariantLabels.Length - 1)];
+                                string tracePath = SelectedInputTracePath;
+                                SchedulePerformance(() => ThirdPersonPerformanceCaptureWorkflow.PublishScenario(variantId, tracePath));
+                            }
+                        }
+                    }
+                }
+                using (new EditorGUILayout.HorizontalScope())
+                {
+                    using (new EditorGUI.DisabledScope(
+                               IsBusy ||
+                               ThirdPersonPerformanceCaptureWorkflow.IsRunRunning ||
+                               m_LabVariantLabels.Length == 0 ||
+                               string.IsNullOrEmpty(ThirdPersonPerformanceCaptureWorkflow.ScenarioPath) ||
+                               !File.Exists(ThirdPersonPerformanceCaptureWorkflow.ScenarioPath)))
+                    {
+                        if (GUILayout.Button("Build MarkerOnly Player"))
+                        {
+                            string variantId = m_LabVariantLabels[Mathf.Clamp(m_LabVariantIndex, 0, m_LabVariantLabels.Length - 1)];
+                            SchedulePerformance(() => ThirdPersonPerformanceCaptureWorkflow.BuildPlayer(
+                                variantId,
+                                PerformanceInstrumentationMode.MarkerOnly));
+                        }
+                        if (GUILayout.Button("Build Span Player"))
+                        {
+                            string variantId = m_LabVariantLabels[Mathf.Clamp(m_LabVariantIndex, 0, m_LabVariantLabels.Length - 1)];
+                            SchedulePerformance(() => ThirdPersonPerformanceCaptureWorkflow.BuildPlayer(
+                                variantId,
+                                PerformanceInstrumentationMode.Span));
+                        }
+                    }
+                    using (new EditorGUI.DisabledScope(!ThirdPersonPerformanceCaptureWorkflow.IsRunRunning))
+                    {
+                        if (GUILayout.Button("Cancel Owned Run"))
+                            Execute(ThirdPersonPerformanceCaptureWorkflow.CancelOwnedRun);
+                    }
+                }
+                bool playerReady = !IsBusy && !ThirdPersonPerformanceCaptureWorkflow.IsRunRunning &&
+                                   !string.IsNullOrEmpty(ThirdPersonPerformanceCaptureWorkflow.PlayerManifestPath) &&
+                                   File.Exists(ThirdPersonPerformanceCaptureWorkflow.PlayerManifestPath);
+                using (new EditorGUILayout.HorizontalScope())
+                {
+                    using (new EditorGUI.DisabledScope(!playerReady))
+                    {
+                        if (GUILayout.Button("1. Smoke"))
+                            SchedulePerformance(ThirdPersonPerformanceCaptureWorkflow.StartSmoke);
+                    }
+                    using (new EditorGUI.DisabledScope(
+                               !playerReady || !ThirdPersonPerformanceCaptureWorkflow.SmokeGateReady))
+                    {
+                        if (GUILayout.Button("2. Replay"))
+                            SchedulePerformance(ThirdPersonPerformanceCaptureWorkflow.StartReplay);
+                    }
+                    using (new EditorGUI.DisabledScope(
+                               !playerReady || !toolchainValid ||
+                               !ThirdPersonPerformanceCaptureWorkflow.SmokeGateReady ||
+                               !ThirdPersonPerformanceCaptureWorkflow.ReplayGateReady))
+                    {
+                        if (GUILayout.Button(string.IsNullOrEmpty(ThirdPersonPerformanceCaptureWorkflow.BaselineManifestPath)
+                                ? "3. Capture"
+                                : "3. Capture + Compare"))
+                            SchedulePerformance(ThirdPersonPerformanceCaptureWorkflow.StartCapture);
+                    }
+                }
+                using (new EditorGUILayout.HorizontalScope())
+                {
+                    using (new EditorGUI.DisabledScope(ThirdPersonPerformanceCaptureWorkflow.IsRunRunning))
+                    {
+                        if (GUILayout.Button("Select Baseline"))
+                            Execute(ThirdPersonPerformanceCaptureWorkflow.SelectBaseline);
+                        using (new EditorGUI.DisabledScope(string.IsNullOrEmpty(ThirdPersonPerformanceCaptureWorkflow.BaselineManifestPath)))
+                        {
+                            if (GUILayout.Button("Clear Baseline"))
+                                Execute(ThirdPersonPerformanceCaptureWorkflow.ClearBaseline);
+                        }
+                    }
+                    using (new EditorGUI.DisabledScope(!File.Exists(ThirdPersonPerformanceCaptureWorkflow.LastCaptureManifestPath)))
+                    {
+                        if (GUILayout.Button("Reveal Capture"))
+                            Execute(ThirdPersonPerformanceCaptureWorkflow.RevealLastCapture);
+                    }
+                }
+                using (new EditorGUILayout.HorizontalScope())
+                using (new EditorGUI.DisabledScope(!File.Exists(ThirdPersonPerformanceCaptureWorkflow.LastCaptureManifestPath)))
+                {
+                    if (GUILayout.Button("Open Summary"))
+                        Execute(ThirdPersonPerformanceCaptureWorkflow.OpenSummary);
+                    if (GUILayout.Button("Open Comparison"))
+                        Execute(ThirdPersonPerformanceCaptureWorkflow.OpenComparison);
+                    if (GUILayout.Button("Open Unity Profiler"))
+                        Execute(ThirdPersonPerformanceCaptureWorkflow.OpenUnityProfiler);
+                    if (GUILayout.Button("Open WPA"))
+                        Execute(ThirdPersonPerformanceCaptureWorkflow.OpenWpa);
                 }
             }
         }
 
-        static void DrawNetworkRow(string label, Action build, Action run)
+        void DrawInputTraceSelection(
+            bool recording,
+            bool replaying,
+            bool pending,
+            bool sampling)
         {
             using (new EditorGUILayout.HorizontalScope())
             {
-                EditorGUILayout.LabelField(label, GUILayout.Width(190f));
-                if (GUILayout.Button("Build Incremental", GUILayout.Width(120f)))
-                    Execute(build);
-                if (GUILayout.Button("Run", GUILayout.Width(90f)))
-                    Execute(run);
+                using (new EditorGUI.DisabledScope(
+                           EditorApplication.isCompiling || recording || replaying || pending || sampling ||
+                           m_InputTraces.Length == 0))
+                {
+                    int selected = EditorGUILayout.Popup(
+                        "Recording",
+                        m_SelectedInputTraceIndex,
+                        m_InputTraceLabels);
+                    if (selected >= 0 && selected != m_SelectedInputTraceIndex)
+                    {
+                        m_SelectedInputTraceIndex = selected;
+                        m_SelectedInputTraceId = m_InputTraces[selected].TraceId;
+                    }
+                }
+                if (GUILayout.Button("Refresh", GUILayout.Width(72f)))
+                {
+                    EditorApplication.delayCall -= RefreshInputTraces;
+                    EditorApplication.delayCall += RefreshInputTraces;
+                }
             }
+            if (!string.IsNullOrEmpty(m_InputTraceCatalogError))
+                EditorGUILayout.HelpBox(m_InputTraceCatalogError, MessageType.Error);
+            else if (m_InputTraces.Length == 0)
+                EditorGUILayout.HelpBox("No saved input recordings.", MessageType.Info);
+            else if (m_SelectedInputTraceIndex < 0)
+                EditorGUILayout.HelpBox("The selected recording is no longer available. Select another recording.", MessageType.Warning);
+        }
+
+        void ReplaySelectedInputTrace(bool withDiagnostics)
+        {
+            string traceId = m_InputTraces[m_SelectedInputTraceIndex].TraceId;
+            ExecuteSampling(() =>
+            {
+                if (withDiagnostics)
+                    CharacterFixedInputTraceWorkflow.ReplayTraceWithDiagnostics(traceId);
+                else
+                    CharacterFixedInputTraceWorkflow.ReplayTrace(traceId);
+            });
+        }
+
+        bool PollInputTraces()
+        {
+            string traceId = CharacterFixedInputTraceWorkflow.LastTraceId;
+            if (string.Equals(traceId, m_LastObservedInputTraceId, StringComparison.Ordinal))
+                return false;
+            m_SelectedInputTraceId = traceId;
+            RefreshInputTraces();
+            return true;
+        }
+
+        void RefreshInputTraces()
+        {
+            m_LastObservedInputTraceId = CharacterFixedInputTraceWorkflow.LastTraceId;
+            try
+            {
+                m_InputTraces = CharacterFixedInputTraceWorkflow.ListTraces().ToArray();
+                m_InputTraceLabels = new string[m_InputTraces.Length];
+                m_SelectedInputTraceIndex = -1;
+                for (int i = 0; i < m_InputTraces.Length; i++)
+                {
+                    CharacterFixedInputTraceSummary trace = m_InputTraces[i];
+                    double seconds = (double)trace.FrameCount / trace.TickRate;
+                    m_InputTraceLabels[i] =
+                        $"{trace.CreatedUtc.ToLocalTime():yyyy-MM-dd HH:mm:ss.fff} | {seconds:0.0}s | {trace.FrameCount} frames";
+                    if (string.Equals(trace.TraceId, m_SelectedInputTraceId, StringComparison.Ordinal))
+                        m_SelectedInputTraceIndex = i;
+                }
+                if (string.IsNullOrEmpty(m_SelectedInputTraceId) && m_InputTraces.Length > 0)
+                {
+                    m_SelectedInputTraceIndex = 0;
+                    m_SelectedInputTraceId = m_InputTraces[0].TraceId;
+                }
+                m_InputTraceCatalogError = string.Empty;
+            }
+            catch (Exception exception)
+            {
+                m_InputTraces = Array.Empty<CharacterFixedInputTraceSummary>();
+                m_InputTraceLabels = Array.Empty<string>();
+                m_SelectedInputTraceIndex = -1;
+                m_InputTraceCatalogError = exception.Message;
+            }
+            Repaint();
+        }
+
+        static void DrawPerformancePath(string label, string path)
+        {
+            EditorGUILayout.LabelField(label);
+            EditorGUILayout.SelectableLabel(
+                string.IsNullOrEmpty(path) ? "Not selected" : path,
+                EditorStyles.textField,
+                GUILayout.Height(EditorGUIUtility.singleLineHeight));
+        }
+
+        static void SchedulePerformance(Action action)
+        {
+            if (action == null || IsBusy)
+                return;
+            EditorApplication.delayCall += () => Execute(action);
         }
 
         void RunProductStartup()

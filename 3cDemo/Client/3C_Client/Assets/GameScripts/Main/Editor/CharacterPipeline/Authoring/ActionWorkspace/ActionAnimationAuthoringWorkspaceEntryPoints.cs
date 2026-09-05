@@ -89,11 +89,25 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     $"ActivateActionInstanceNode '{node.GUID}'没有ActionProfile。");
                 return;
             }
+            string skillId = string.Empty;
+            CharacterSkillAuthoringDefinition[] skills = definition.SkillDefinitions
+                .Where(value =>
+                    value != null &&
+                    value.ActionProfile &&
+                    ReferenceEquals(value.ActionProfile, node.ActionProfile) &&
+                    string.Equals(
+                        value.EntryGraphAuthoringId,
+                        window.Tree?.GraphAuthoringId,
+                        StringComparison.Ordinal))
+                .ToArray();
+            if (skills.Length == 1)
+                skillId = skills[0].SkillId;
             ActionAnimationWorkspaceResolution resolution =
                 ActionAnimationAuthoringWorkspaceResolver.Resolve(
                     new ActionAnimationWorkspaceOpenRequest(
                         definition,
-                        node.ActionProfile.ActionId));
+                        node.ActionProfile.ActionId,
+                        skillId: skillId));
             ActionAnimationAuthoringWorkspaceWindow.Open(
                 ExactRequest(
                     definition,

@@ -123,10 +123,15 @@ namespace ThirdPersonSimulation
             var values = definitions == null
                 ? new List<CharacterSkillDefinition>()
                 : new List<CharacterSkillDefinition>(definitions);
+            for (int i = 0; i < values.Count; i++)
+            {
+                if (values[i] == null)
+                    throw new ArgumentException("Character skill catalog contains a missing definition.", nameof(definitions));
+            }
             values.Sort((left, right) => left.SkillId.CompareTo(right.SkillId));
             for (int i = 0; i < values.Count; i++)
             {
-                if (values[i] == null || i > 0 && values[i - 1].SkillId == values[i].SkillId)
+                if (i > 0 && values[i - 1].SkillId == values[i].SkillId)
                     throw new ArgumentException("Character skill catalog contains an invalid or duplicated definition.", nameof(definitions));
             }
             m_Definitions = values.AsReadOnly();

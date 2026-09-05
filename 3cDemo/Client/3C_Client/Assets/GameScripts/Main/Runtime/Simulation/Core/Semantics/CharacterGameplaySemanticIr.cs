@@ -369,6 +369,7 @@ namespace ThirdPersonSimulation
 
         void ValidateGraphCallFrames()
         {
+            var operationCodes = new SimulationOperationCode[m_Operations.Count];
             for (int i = 0; i < m_GraphCallFrames.Count; i++)
             {
                 ProgramGraphCallFrame frame = m_GraphCallFrames[i];
@@ -377,6 +378,9 @@ namespace ThirdPersonSimulation
                 ValidateGraphParameterBindings(frame, frame.Inputs);
                 ValidateGraphParameterBindings(frame, frame.Outputs);
             }
+            for (int i = 0; i < m_Operations.Count; i++)
+                operationCodes[i] = m_Operations[i].Code;
+            ProgramGraphCallFrameContract.ValidateCoverage(operationCodes, m_GraphCallFrames);
         }
 
         void ValidateGraphParameterBindings(

@@ -386,6 +386,9 @@ namespace ThirdPersonSimulation.Fixed
                 };
                 RequireIndex(reference.TargetIndex, count, $"reference '{reference.Identity}' target");
             }
+            var operationCodes = new SimulationOperationCode[m_Operations.Count];
+            for (int i = 0; i < m_Operations.Count; i++)
+                operationCodes[i] = m_Operations[i].Code;
             for (int i = 0; i < m_GraphCallFrames.Count; i++)
             {
                 ProgramGraphCallFrame frame = m_GraphCallFrames[i];
@@ -393,6 +396,7 @@ namespace ThirdPersonSimulation.Fixed
                 RequireIndex(frame.EntryOperation.Value, m_Operations.Count, $"graph call frame '{frame.Identity}' entry");
                 ValidateGraphParameterBindings(frame);
             }
+            ProgramGraphCallFrameContract.ValidateCoverage(operationCodes, m_GraphCallFrames);
             for (int i = 0; i < m_StateSlots.Count; i++)
             {
                 int defaultIndex = m_StateSlots[i].DefaultConstantIndex;

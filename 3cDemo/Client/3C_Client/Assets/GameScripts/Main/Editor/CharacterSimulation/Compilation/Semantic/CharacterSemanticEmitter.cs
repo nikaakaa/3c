@@ -148,7 +148,8 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                     OperationHandle entry = CompileGraph(reference.Child, childStateOwner);
                     if (!entry.IsValid)
                         continue;
-                    EmitGraphCallFrame(reference, owner, entry);
+                    if (reference.Owner is SubTreeNode)
+                        EmitGraphCallFrame(reference, owner, entry);
                     if (reference.Owner is StateNode && reference.Child.Graph is StateBehaviorSubTree stateBehavior)
                     {
                         m_Flow.EmitStateBehavior(graph, reference.Owner, owner, stateBehavior, reference.Route, entry);

@@ -338,7 +338,7 @@ namespace ThirdPersonSimulation
             BuildTimelineIndexes(operationList, edges, out m_TimelineOperations, out m_TimelineOwners);
             m_StateMachineOwners = BuildStateMachineOwners(operationList, sourceMap);
             BuildStateEdges(operationList, edges, out m_StateOnEnter, out m_StateRoot, out m_StateOnExit);
-            m_GraphCallFrames = BuildGraphCallFrames(operationList.Count, graphCallFrames);
+            m_GraphCallFrames = BuildGraphCallFrames(operationList, graphCallFrames);
             RootOperation = rootOperation;
         }
 
@@ -655,18 +655,24 @@ namespace ThirdPersonSimulation
         }
 
         static IReadOnlyList<ProgramGraphCallFrame>[] BuildGraphCallFrames(
-            int operationCount,
+            IReadOnlyList<OperationExecutionDescriptor> operations,
             IReadOnlyList<ProgramGraphCallFrame> frames)
         {
+            int operationCount = operations.Count;
             var result = new IReadOnlyList<ProgramGraphCallFrame>[operationCount];
-            if (frames == null || frames.Count == 0)
+            IReadOnlyList<ProgramGraphCallFrame> frameList = frames ?? Array.Empty<ProgramGraphCallFrame>();
+            var operationCodes = new SimulationOperationCode[operationCount];
+            for (int i = 0; i < operationCount; i++)
+                operationCodes[i] = operations[i].Code;
+            ProgramGraphCallFrameContract.ValidateCoverage(operationCodes, frameList);
+            if (frameList.Count == 0)
                 return result;
             var grouped = new List<ProgramGraphCallFrame>[operationCount];
-            for (int i = 0; i < frames.Count; i++)
+            for (int i = 0; i < frameList.Count; i++)
             {
-                ProgramGraphCallFrame frame = frames[i];
+                ProgramGraphCallFrame frame = frameList[i];
                 if (frame.OwnerOperation.Value < 0 || frame.OwnerOperation.Value >= operationCount)
-                    throw new ArgumentException($"Graph call frame '{frame.Identity}' owner is outside the operation table.", nameof(frames));
+                    throw new ArgumentException($"Graph call frame '{frame.Identity}' owner is outside the operation table.", nameof(frameList));
                 List<ProgramGraphCallFrame> values = grouped[frame.OwnerOperation.Value];
                 if (values == null)
                 {

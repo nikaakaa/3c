@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.IO;
 
 namespace ThirdPersonSimulation
 {
@@ -910,6 +911,56 @@ namespace ThirdPersonSimulation
                     throw new ArgumentException($"Program graph call frame {label} bindings are duplicated or use the wrong direction.", nameof(source));
             }
             return values.AsReadOnly();
+        }
+    }
+
+    public static class ProgramGraphCallFrameContract
+    {
+        public static void ValidateCoverage(
+            IReadOnlyList<SimulationOperationCode> operationCodes,
+            IReadOnlyList<ProgramGraphCallFrame> frames)
+        {
+            if (operationCodes == null)
+                throw new ArgumentNullException(nameof(operationCodes));
+            if (frames == null)
+                throw new ArgumentNullException(nameof(frames));
+            var counts = new int[operationCodes.Count];
+            for (int i = 0; i < frames.Count; i++)
+            {
+                ProgramGraphCallFrame frame = frames[i]
+                    ?? throw new ArgumentException("Graph call frame collection contains a missing frame.", nameof(frames));
+                if (frame.OwnerOperation.Value < 0 || frame.OwnerOperation.Value >= operationCodes.Count ||
+                    frame.EntryOperation.Value < 0 || frame.EntryOperation.Value >= operationCodes.Count)
+                {
+                    throw new InvalidDataException($"Graph call frame '{frame.Identity}' references an operation outside the table.");
+                }
+                Validate(
+                    frame,
+                    operationCodes[frame.OwnerOperation.Value],
+                    operationCodes[frame.EntryOperation.Value]);
+                counts[frame.OwnerOperation.Value]++;
+            }
+            for (int i = 0; i < operationCodes.Count; i++)
+            {
+                bool isSubGraph = operationCodes[i] == SimulationOperationCode.SubGraph;
+                if (isSubGraph && counts[i] != 1)
+                    throw new InvalidDataException($"SubGraph operation '{i}' requires exactly one graph call frame, received '{counts[i]}'.");
+                if (!isSubGraph && counts[i] != 0)
+                    throw new InvalidDataException($"Operation '{i}' is not a SubGraph but owns a graph call frame.");
+            }
+        }
+
+        public static void Validate(
+            ProgramGraphCallFrame frame,
+            SimulationOperationCode ownerCode,
+            SimulationOperationCode entryCode)
+        {
+            if (frame == null)
+                throw new ArgumentNullException(nameof(frame));
+            if (ownerCode != SimulationOperationCode.SubGraph)
+                throw new InvalidDataException($"Graph call frame '{frame.Identity}' owner operation must be SubGraph, received '{ownerCode}'.");
+            if (entryCode != SimulationOperationCode.Root)
+                throw new InvalidDataException($"Graph call frame '{frame.Identity}' entry operation must be Root, received '{entryCode}'.");
         }
     }
 

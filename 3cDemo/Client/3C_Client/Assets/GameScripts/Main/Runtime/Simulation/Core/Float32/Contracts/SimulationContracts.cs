@@ -390,14 +390,15 @@ namespace ThirdPersonSimulation
     {
         public ActionFact(
             ulong actionInstanceId,
-            ulong predictionKey,
-            ulong inputSequence,
-            string actionId,
-            SimulationActionLifecycleTransitionType transitionType,
-            SimulationActionPhase phase,
-            SimulationActionState state,
-            string reason,
-            EquipmentActionContext equipmentContext = default)
+			ulong predictionKey,
+			ulong inputSequence,
+			string actionId,
+			CharacterSkillId skillId,
+			SimulationActionLifecycleTransitionType transitionType,
+			SimulationActionPhase phase,
+			SimulationActionState state,
+			string reason,
+			EquipmentActionContext equipmentContext = default)
         {
             if (actionInstanceId == 0 || predictionKey == 0 || inputSequence == 0)
                 throw new ArgumentException("Action fact identity is incomplete.");
@@ -405,6 +406,7 @@ namespace ThirdPersonSimulation
             PredictionKey = predictionKey;
             InputSequence = inputSequence;
             ActionId = SimulationIdentity.Require(actionId, nameof(actionId));
+            SkillId = skillId;
             TransitionType = transitionType;
             Phase = phase;
             State = state;
@@ -416,6 +418,7 @@ namespace ThirdPersonSimulation
         public ulong PredictionKey { get; }
         public ulong InputSequence { get; }
         public string ActionId { get; }
+        public CharacterSkillId SkillId { get; }
         public SimulationActionLifecycleTransitionType TransitionType { get; }
         public SimulationActionPhase Phase { get; }
         public SimulationActionState State { get; }

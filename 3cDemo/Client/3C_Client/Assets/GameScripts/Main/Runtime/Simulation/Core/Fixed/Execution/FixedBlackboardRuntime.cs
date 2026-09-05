@@ -301,6 +301,16 @@ namespace ThirdPersonSimulation.Fixed
                 return m_Actions.RequireActive(timeline.Action);
             }
 
+            if (m_Actions.TryGetCurrentSkillExecution(out FixedActionInstanceState skillAction))
+            {
+                string skillContext = GetStringConstant(operation, OperationNamedConstant.FactContext, string.Empty);
+                if (!string.IsNullOrEmpty(skillContext) &&
+                    !string.Equals(skillContext, skillAction.ContextId, StringComparison.Ordinal))
+                    throw new InvalidOperationException(
+                        $"Skill operation '{SourcePath(operation)}' Action Context does not match its Action instance.");
+                return skillAction;
+            }
+
             string contextId = GetStringConstant(operation, OperationNamedConstant.FactContext, string.Empty);
             if (!string.IsNullOrEmpty(contextId))
             {
@@ -407,6 +417,25 @@ namespace ThirdPersonSimulation.Fixed
             }
             if (m_Trace.Enabled)
                 m_Trace.Add(operation, "action_window_inactive", SimulationTraceSeverity.Detail, $"{windowType}:action={active.ActionId}:instance={active.InstanceId}:tick={m_Frame.Tick.Value}");
+            return false;
+        }
+
+        public bool IsActionWindowActive(CharacterSkillId skillId, string windowType)
+        {
+            if (string.IsNullOrWhiteSpace(windowType))
+                throw new ArgumentException("Action window type is missing.", nameof(windowType));
+            int actionSlot = m_Actions.FindActive(skillId, out FixedActionInstanceState active);
+            if (actionSlot < 0)
+                return false;
+            for (int i = 0; i < m_ActionWindowProjections.Count; i++)
+            {
+                SimulationActionWindowProjectionCandidate candidate = m_ActionWindowProjections[i];
+                if (candidate.ActorId == m_Frame.ActorId &&
+                    candidate.LogicTick == m_Frame.Tick.Value &&
+                    candidate.ActionInstanceId == active.InstanceId &&
+                    string.Equals(candidate.WindowType, windowType, StringComparison.Ordinal))
+                    return true;
+            }
             return false;
         }
 

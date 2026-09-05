@@ -50,6 +50,9 @@ namespace ThirdPersonSimulation
     {
         bool HasInputRequest(string requestId);
         bool IsSkillActive(CharacterSkillId skillId);
+        bool IsSkillCompleted(CharacterSkillId skillId);
+        ulong CompletedSkillInstanceId(CharacterSkillId skillId);
+        bool IsActionWindowActive(CharacterSkillId skillId, string windowType);
         bool CompareInputVector2Magnitude(
             SimulationInputValueId input,
             CharacterControlParameterId threshold,

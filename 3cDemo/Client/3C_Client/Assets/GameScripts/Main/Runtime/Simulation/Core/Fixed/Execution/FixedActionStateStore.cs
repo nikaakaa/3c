@@ -8,6 +8,8 @@ namespace ThirdPersonSimulation.Fixed
     {
         public FixedActionActivationRequestState(
             string actionId,
+            CharacterSkillId skillId,
+            OperationHandle skillEntryOperation,
             string contextId,
             string sourceInputRequestId,
             ulong inputSequence,
@@ -18,6 +20,8 @@ namespace ThirdPersonSimulation.Fixed
             EquipmentActionContext equipmentContext = default)
         {
             ActionId = SimulationIdentity.Require(actionId, nameof(actionId));
+            SkillId = skillId;
+            SkillEntryOperation = skillEntryOperation;
             ContextId = SimulationIdentity.Require(contextId, nameof(contextId));
             SourceInputRequestId = sourceInputRequestId ?? string.Empty;
             if (inputSequence == 0 || startTick == 0 || !source.IsValid)
@@ -31,6 +35,8 @@ namespace ThirdPersonSimulation.Fixed
         }
 
         public string ActionId { get; }
+        public CharacterSkillId SkillId { get; }
+        public OperationHandle SkillEntryOperation { get; }
         public string ContextId { get; }
         public string SourceInputRequestId { get; }
         public ulong InputSequence { get; }
@@ -44,13 +50,17 @@ namespace ThirdPersonSimulation.Fixed
             !string.IsNullOrEmpty(ContextId) &&
             InputSequence != 0 &&
             StartTick != 0 &&
-            Source.IsValid;
+            Source.IsValid &&
+            (!Source.IsCharacterControl || SkillId.IsValid && SkillEntryOperation.IsValid);
     }
 
     internal readonly struct FixedActionInstanceState
     {
         public FixedActionInstanceState(
             string actionId,
+            CharacterSkillId skillId,
+            OperationHandle skillEntryOperation,
+            ulong skillExecutionGeneration,
             string contextId,
             ulong instanceId,
             ulong predictionKey,
@@ -69,6 +79,9 @@ namespace ThirdPersonSimulation.Fixed
             EquipmentActionContext equipmentContext = default)
         {
             ActionId = actionId ?? string.Empty;
+            SkillId = skillId;
+            SkillEntryOperation = skillEntryOperation;
+            SkillExecutionGeneration = skillExecutionGeneration;
             ContextId = contextId ?? string.Empty;
             InstanceId = instanceId;
             PredictionKey = predictionKey;
@@ -88,6 +101,9 @@ namespace ThirdPersonSimulation.Fixed
         }
 
         public string ActionId { get; }
+        public CharacterSkillId SkillId { get; }
+        public OperationHandle SkillEntryOperation { get; }
+        public ulong SkillExecutionGeneration { get; }
         public string ContextId { get; }
         public ulong InstanceId { get; }
         public ulong PredictionKey { get; }
@@ -111,7 +127,8 @@ namespace ThirdPersonSimulation.Fixed
             PredictionKey != 0 &&
             InputSequence != 0 &&
             StartTick != 0 &&
-            Source.IsValid;
+            Source.IsValid &&
+            (!Source.IsCharacterControl || SkillId.IsValid && SkillEntryOperation.IsValid);
         public bool IsTerminal =>
             State == SimulationActionState.Rejected ||
             State == SimulationActionState.Cancelled ||
@@ -130,6 +147,9 @@ namespace ThirdPersonSimulation.Fixed
         {
             return new FixedActionInstanceState(
                 ActionId,
+                SkillId,
+                SkillEntryOperation,
+                SkillExecutionGeneration,
                 ContextId,
                 InstanceId,
                 PredictionKey,
@@ -145,6 +165,31 @@ namespace ThirdPersonSimulation.Fixed
                 transitionTick,
                 sourceTick,
                 reason,
+                EquipmentContext);
+        }
+
+        public FixedActionInstanceState WithSkillExecution(OperationHandle entryOperation, ulong generation)
+        {
+            return new FixedActionInstanceState(
+                ActionId,
+                SkillId,
+                entryOperation,
+                generation,
+                ContextId,
+                InstanceId,
+                PredictionKey,
+                SourceInputRequestId,
+                InputSequence,
+                StartTick,
+                TargetKey,
+                TargetSnapshot,
+                Source,
+                Phase,
+                State,
+                LastTransition,
+                LastTransitionTick,
+                LastTransitionSourceTick,
+                Reason,
                 EquipmentContext);
         }
     }
@@ -180,6 +225,7 @@ namespace ThirdPersonSimulation.Fixed
     internal sealed class FixedActionStateStore : FixedOperationModule, IFixedActionContextReader
     {
         readonly FixedStatePort m_State;
+        readonly Stack<FixedActionInstanceReference> m_SkillExecutionStack = new Stack<FixedActionInstanceReference>();
 
         public FixedActionStateStore(FixedProgramAccess access, FixedStatePort state)
             : base(access)
@@ -188,6 +234,70 @@ namespace ThirdPersonSimulation.Fixed
         }
 
         public bool IsContextActive(string contextId) => FindActive(contextId, out _) >= 0;
+
+        public bool IsSkillActive(CharacterSkillId skillId) => FindActive(skillId, out _) >= 0;
+
+        public bool IsSkillCompleted(CharacterSkillId skillId) => CompletedSkillInstanceId(skillId) != 0;
+
+        public ulong CompletedSkillInstanceId(CharacterSkillId skillId)
+        {
+            ulong result = 0;
+            foreach (TypedActionStateAddresses addresses in m_Layout.ActionStateIndex.Values)
+            {
+                FixedActionInstanceState action = m_State.Get(addresses.Instance.SlotIndex).ActionInstance;
+                if (action.SkillId != skillId || action.State != SimulationActionState.Ended)
+                    continue;
+                if (result != 0)
+                    throw new InvalidOperationException($"Skill '{skillId}' resolves multiple completed Action instances.");
+                result = action.InstanceId;
+            }
+            return result;
+        }
+
+        public int FindActive(CharacterSkillId skillId, out FixedActionInstanceState state)
+        {
+            int found = -1;
+            state = default;
+            foreach (TypedActionStateAddresses addresses in m_Layout.ActionStateIndex.Values)
+                MatchActive(addresses.Instance, skillId, ref found, ref state);
+            return found;
+        }
+
+        public FixedActionInstanceState BindSkillExecution(
+            FixedActionInstanceState action,
+            OperationHandle entryOperation,
+            ulong generation)
+        {
+            if (!action.IsActive || !action.SkillId.IsValid || !entryOperation.IsValid || generation == 0)
+                throw new ArgumentException("Skill execution binding is incomplete.", nameof(action));
+            if (action.SkillEntryOperation.IsValid && !action.SkillEntryOperation.Equals(entryOperation))
+                throw new InvalidOperationException($"Skill '{action.SkillId}' changed EntryOperation for Action instance '{action.InstanceId}'.");
+            if (action.SkillExecutionGeneration != 0 && action.SkillExecutionGeneration != generation)
+                throw new InvalidOperationException($"Skill '{action.SkillId}' changed execution generation for Action instance '{action.InstanceId}'.");
+            FixedActionInstanceState next = action.WithSkillExecution(entryOperation, generation);
+            WriteState(next);
+            return next;
+        }
+
+        public IDisposable PushSkillExecution(FixedActionInstanceState action)
+        {
+            if (!action.IsActive || !action.SkillId.IsValid || !action.SkillEntryOperation.IsValid)
+                throw new ArgumentException("Skill execution owner is incomplete.", nameof(action));
+            FixedActionInstanceReference reference = FixedActionInstanceReference.FromInstance(action);
+            m_SkillExecutionStack.Push(reference);
+            return new SkillExecutionScope(this, reference);
+        }
+
+        public bool TryGetCurrentSkillExecution(out FixedActionInstanceState action)
+        {
+            if (m_SkillExecutionStack.Count == 0)
+            {
+                action = default;
+                return false;
+            }
+            action = RequireActive(m_SkillExecutionStack.Peek());
+            return action.IsActive;
+        }
 
         public int FindActive(string contextId, out FixedActionInstanceState state)
         {
@@ -279,6 +389,25 @@ namespace ThirdPersonSimulation.Fixed
         public FixedActionActivationRequestState ReadRequest(int slot) =>
             m_State.Get(slot).ActionActivationRequest;
 
+        public int FindPendingSkill(
+            CharacterSkillId skillId,
+            out FixedActionActivationRequestState request)
+        {
+            int found = -1;
+            request = default;
+            foreach (TypedActionStateAddresses addresses in m_Layout.ActionStateIndex.Values)
+            {
+                FixedActionActivationRequestState candidate = m_State.Get(addresses.Request.SlotIndex).ActionActivationRequest;
+                if (!candidate.IsValid || !candidate.Source.IsCharacterControl || candidate.SkillId != skillId)
+                    continue;
+                if (found >= 0)
+                    throw new InvalidOperationException($"Skill '{skillId}' has multiple pending Action activation requests.");
+                found = addresses.Request.SlotIndex;
+                request = candidate;
+            }
+            return found;
+        }
+
         public void ClearRequest(int slot) => m_State.Set(slot, CharacterStateValue.FromActionActivationRequest(default));
 
         public FixedActionInstanceState ReadSlot(int slot) => m_State.Get(slot).ActionInstance;
@@ -307,6 +436,48 @@ namespace ThirdPersonSimulation.Fixed
                 throw new InvalidOperationException($"Action Context '{contextId}' resolves multiple active Action instances.");
             found = address.SlotIndex;
             state = candidate;
+        }
+
+        void MatchActive(
+            TypedStateAddress address,
+            CharacterSkillId skillId,
+            ref int found,
+            ref FixedActionInstanceState state)
+        {
+            FixedActionInstanceState candidate = m_State.Get(address.SlotIndex).ActionInstance;
+            if (!candidate.IsActive || candidate.SkillId != skillId)
+                return;
+            if (found >= 0)
+                throw new InvalidOperationException($"Skill '{skillId}' resolves multiple active Action instances.");
+            found = address.SlotIndex;
+            state = candidate;
+        }
+
+        void PopSkillExecution(FixedActionInstanceReference expected)
+        {
+            if (m_SkillExecutionStack.Count == 0 || !m_SkillExecutionStack.Pop().Equals(expected))
+                throw new InvalidOperationException("Skill execution scope is unbalanced.");
+        }
+
+        sealed class SkillExecutionScope : IDisposable
+        {
+            readonly FixedActionStateStore m_Owner;
+            readonly FixedActionInstanceReference m_Expected;
+            bool m_Disposed;
+
+            public SkillExecutionScope(FixedActionStateStore owner, FixedActionInstanceReference expected)
+            {
+                m_Owner = owner;
+                m_Expected = expected;
+            }
+
+            public void Dispose()
+            {
+                if (m_Disposed)
+                    return;
+                m_Disposed = true;
+                m_Owner.PopSkillExecution(m_Expected);
+            }
         }
     }
 }

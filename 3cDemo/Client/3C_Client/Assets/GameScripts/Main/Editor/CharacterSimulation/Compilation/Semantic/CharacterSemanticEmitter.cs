@@ -1,7 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Linq;
-using BTSMTL.Diagnostics;
 using ThirdPersonCharacter.Control.Authoring;
 using ThirdPersonCharacter.ActionSystem;
 using ThirdPersonCharacter.Pipeline.Graph;
@@ -21,6 +19,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
         readonly CharacterSemanticBlackboardEmitter m_Blackboard;
         readonly CharacterSemanticDomainBindingEmitter m_DomainBindings;
         readonly CharacterSemanticSkillProgramEmitter m_SkillPrograms;
+        readonly CharacterSemanticGraphFlowEmitter m_Flow;
         readonly Dictionary<string, Dictionary<string, OperationHandle>> m_CompiledGraphOperations = new Dictionary<string, Dictionary<string, OperationHandle>>(StringComparer.Ordinal);
         int m_SkillCompilationDepth;
 
@@ -43,6 +42,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 report,
                 CompileGraph,
                 TryGetCompiledOperation);
+            m_Flow = new CharacterSemanticGraphFlowEmitter(builder, report, CompileGraph, TryGetCompiledOperation);
         }
 
         public OperationHandle EmitControlSkillPrograms(
@@ -128,9 +128,9 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 m_CompiledGraphOperations[route] = operations;
 
                 foreach (CharacterAuthoringEdgeRecord edge in occurrence.Edges)
-                    CompileEdge(occurrence, edge, operations, stateScopeOwner);
+                    m_Flow.EmitEdge(occurrence, edge, operations, stateScopeOwner, m_SkillCompilationDepth != 0);
                 foreach (CharacterAuthoringEdgeRecord edge in occurrence.PropertyEdges)
-                    CompileEdge(occurrence, edge, operations, stateScopeOwner);
+                    m_Flow.EmitEdge(occurrence, edge, operations, stateScopeOwner, m_SkillCompilationDepth != 0);
 
                 foreach (CharacterAuthoringTimelineRecord timeline in occurrence.Timelines)
                 {
@@ -150,7 +150,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                         continue;
                     if (reference.Owner is StateNode && reference.Child.Graph is StateBehaviorSubTree stateBehavior)
                     {
-                        DeclareStateBehaviorControlFlow(graph, reference.Owner, owner, stateBehavior, reference.Route, entry);
+                        m_Flow.EmitStateBehavior(graph, reference.Owner, owner, stateBehavior, reference.Route, entry);
                         continue;
                     }
                     m_Builder.DeclareControlFlow(
@@ -195,121 +195,12 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             }
         }
 
-        void DeclareStateBehaviorControlFlow(
-            BaseTree graph,
-            BaseNode node,
-            OperationHandle owner,
-            StateBehaviorSubTree stateBehavior,
-            string childRoute,
-            OperationHandle root)
-        {
-            CharacterSimulationSourceLocation source = CharacterSemanticSourceFactory.Node(graph, node, childRoute);
-            if (!TryGetCompiledOperation(childRoute, stateBehavior.OnEnterGUID, out OperationHandle onEnter) ||
-                !TryGetCompiledOperation(childRoute, stateBehavior.OnExitGUID, out OperationHandle onExit))
-            {
-                m_Report.Error("state_lifecycle_operation_missing", childRoute, "State behavior requires compiled OnEnter and OnExit operations.");
-                return;
-            }
-            m_Builder.DeclareControlFlow(
-                $"{childRoute}/state-on-enter",
-                owner,
-                onEnter,
-                "OnEnter",
-                "Entry",
-                ProgramControlFlowKind.Enter,
-                0,
-                0,
-                ProgramAbortPolicy.None,
-                false,
-                OperationHandle.Invalid,
-                source);
-            m_Builder.DeclareControlFlow(
-                $"{childRoute}/state-root",
-                owner,
-                root,
-                "Root",
-                "Entry",
-                ProgramControlFlowKind.Enter,
-                1,
-                0,
-                ProgramAbortPolicy.None,
-                false,
-                OperationHandle.Invalid,
-                source);
-            m_Builder.DeclareControlFlow(
-                $"{childRoute}/state-on-exit",
-                owner,
-                onExit,
-                "OnExit",
-                "Entry",
-                ProgramControlFlowKind.Exit,
-                2,
-                0,
-                ProgramAbortPolicy.None,
-                false,
-                OperationHandle.Invalid,
-                source);
-        }
-
         bool TryGetCompiledOperation(string route, string nodeId, out OperationHandle operation)
         {
             operation = OperationHandle.Invalid;
             return !string.IsNullOrEmpty(nodeId) &&
                    m_CompiledGraphOperations.TryGetValue(route, out Dictionary<string, OperationHandle> operations) &&
                    operations.TryGetValue(nodeId, out operation);
-        }
-
-        void CompileEdge(
-            CharacterAuthoringGraphOccurrence occurrence,
-            CharacterAuthoringEdgeRecord record,
-            Dictionary<string, OperationHandle> operations,
-            OperationHandle stateScopeOwner)
-        {
-            BaseTree graph = occurrence.Graph;
-            BaseEdge edge = record.Edge;
-            string edgeRoute = record.Route;
-            if (!operations.TryGetValue(edge.StartNodeGUID, out OperationHandle source) || !operations.TryGetValue(edge.EndNodeGUID, out OperationHandle target))
-            {
-                if (m_SkillCompilationDepth != 0)
-                    return;
-                throw new InvalidOperationException($"Discovered Edge '{edge.GUID}' has an operation endpoint mismatch.");
-            }
-            bool hasCondition = false;
-            OperationHandle condition = OperationHandle.Invalid;
-            if (record.ConditionGraph != null)
-            {
-                OperationHandle conditionStateOwner = occurrence.Nodes.Any(value => value is StateNode && value.GUID == edge.StartNodeGUID)
-                    ? source
-                    : stateScopeOwner;
-                condition = CompileGraph(record.ConditionGraph, conditionStateOwner);
-                hasCondition = condition.IsValid;
-            }
-            ProgramControlFlowKind kind = edge is PropertyEdge
-                ? ProgramControlFlowKind.Value
-                : graph is StateMachineGraph stateMachine && stateMachine.IsTransitionEdge(edge)
-                    ? ProgramControlFlowKind.Transition
-                    : ProgramControlFlowKind.Child;
-            m_Builder.DeclareControlFlow(
-                edgeRoute,
-                source,
-                target,
-                edge.StartPortName,
-                edge.EndPortName,
-                kind,
-                edge.FlowOrder,
-                edge.TransitionPriority,
-                (ProgramAbortPolicy)(int)edge.AbortPolicy,
-                hasCondition,
-                condition,
-                new CharacterSimulationSourceLocation(
-                    edge.GetType().FullName,
-                    graph.GraphAuthoringId,
-                    string.Empty,
-                    edge.GUID,
-                    string.Empty,
-                    string.Empty,
-                    edgeRoute,
-                    contentHash: GraphAuthoringFingerprint.Compute(graph)));
         }
 
         OperationHandle FindEntry(CharacterAuthoringGraphOccurrence occurrence, Dictionary<string, OperationHandle> operations)
@@ -319,6 +210,5 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             m_Report.EmissionError("graph_entry_missing", occurrence.Route, $"Discovered entry Node '{occurrence.EntryNodeId}' was not emitted.");
             return OperationHandle.Invalid;
         }
-
     }
 }

@@ -21,6 +21,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             "Operations",
             "Literals",
             "Value Inputs",
+            "Graph Calls",
             "References",
             "Control Flow",
             "State Slots",
@@ -256,7 +257,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             AddField(
                 foldout,
                 "Counts",
-                $"Operations {m_SemanticIr.Operations.Count} | Literals {m_SemanticIr.Literals.Count} | ValueInputs {CountValueInputs()} | ControlFlow {m_SemanticIr.ControlFlow.Count} | References {m_SemanticIr.References.Count} | StateSlots {m_SemanticIr.StateDeclarations.Count} | Scopes {m_SemanticIr.Scopes.Count} | WorldRequests {m_SemanticIr.WorldRequests.Count} | Outputs {m_SemanticIr.OutputChannels.Count} | Catalog {m_SemanticIr.CatalogEntries.Count} | Producers {m_SemanticIr.Producers.Count} | SourceMap {m_SemanticIr.SourceMap.Count}");
+                $"Operations {m_SemanticIr.Operations.Count} | Literals {m_SemanticIr.Literals.Count} | ValueInputs {CountValueInputs()} | GraphCalls {m_SemanticIr.GraphCallFrames.Count} | ControlFlow {m_SemanticIr.ControlFlow.Count} | References {m_SemanticIr.References.Count} | StateSlots {m_SemanticIr.StateDeclarations.Count} | Scopes {m_SemanticIr.Scopes.Count} | WorldRequests {m_SemanticIr.WorldRequests.Count} | Outputs {m_SemanticIr.OutputChannels.Count} | Catalog {m_SemanticIr.CatalogEntries.Count} | Producers {m_SemanticIr.Producers.Count} | SourceMap {m_SemanticIr.SourceMap.Count}");
             return foldout;
         }
 
@@ -314,6 +315,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 case "Operations": BuildOperations(); break;
                 case "Literals": BuildLiterals(); break;
                 case "Value Inputs": BuildValueInputs(); break;
+                case "Graph Calls": BuildGraphCallFrames(); break;
                 case "References": BuildReferences(); break;
                 case "Control Flow": BuildControlFlow(); break;
                 case "State Slots": BuildStateSlots(); break;
@@ -437,6 +439,31 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 string details =
                     $"Target Operation: {value.TargetOperation.Value}\nTarget Port: {value.TargetPort}\nResolved Value Kind: {value.ResolvedValueKind}\nConstant Index: {value.ConstantIndex}\nConstant Source Identity: {constant.Identity}";
                 AddTargetRow($"{value.TargetOperation.Value:D4}  {value.TargetPort}  {value.ResolvedValueKind}  <-  {constant.Identity}", details, ProgramSourceTargetKind.Constant, value.ConstantIndex);
+            }
+        }
+
+        void BuildGraphCallFrames()
+        {
+            for (int i = 0; i < m_SemanticIr.GraphCallFrames.Count; i++)
+            {
+                ProgramGraphCallFrame value = m_SemanticIr.GraphCallFrames[i];
+                string inputs = string.Join(
+                    ", ",
+                    value.Inputs.Select(binding =>
+                        $"{binding.ParameterName}:{binding.ValueKind}/slot={binding.StateSlot}/port={binding.PortId}"));
+                string outputs = string.Join(
+                    ", ",
+                    value.Outputs.Select(binding =>
+                        $"{binding.ParameterName}:{binding.ValueKind}/slot={binding.StateSlot}/port={binding.PortId}"));
+                string details =
+                    $"Index: {value.Index}\nIdentity: {value.Identity}\nOwner Operation: {value.OwnerOperation.Value}\nEntry Operation: {value.EntryOperation.Value}\nChild Graph: {value.ChildGraphIdentity}\nInputs: {inputs}\nOutputs: {outputs}";
+                m_Sources.TryGetValue(
+                    TargetKey(ProgramSourceTargetKind.Operation, value.OwnerOperation.Value),
+                    out List<ProgramSourceMapEntry> sources);
+                AddRow(
+                    $"{value.Index:D4}  {value.Identity}  {value.OwnerOperation.Value}->{value.EntryOperation.Value}",
+                    details,
+                    sources != null && sources.Count == 1 ? sources[0] : null);
             }
         }
 

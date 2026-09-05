@@ -101,6 +101,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 FramePages,
                 m_Action,
                 m_PresentationWorkspace,
+                source,
                 m_SourcePreparation);
             Executor = new CharacterPoseProgramExecutor(
                 ExecutionView,

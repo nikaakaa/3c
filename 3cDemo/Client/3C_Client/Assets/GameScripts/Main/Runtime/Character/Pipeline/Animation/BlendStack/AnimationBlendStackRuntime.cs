@@ -1311,6 +1311,14 @@ namespace ThirdPersonCharacter.Pipeline.Animation.BlendStack
             for (int i = m_EntryCount - 1; i >= 0; i--)
             {
                 AnimationBlendEntryState entry = ReadEntry(i);
+                bool sourceAvailable = entry.IsSourcePose ||
+                    m_EntrySourceCaptureIndices[i] >= 0;
+                if (!sourceAvailable)
+                {
+                    m_EntryScalarWeights[i] = 0f;
+                    m_PlannedEntryMaximumWeights[i] = 0f;
+                    continue;
+                }
                 AnimationBlendProfilePayload profile = m_ProfileCatalog.Require(entry.BlendProfileIndex);
                 float rawAlpha = entry.GetOutputNormalizedTime(profile);
                 float alpha = AnimationBlendCurveEvaluator.Evaluate(
@@ -1339,19 +1347,22 @@ namespace ThirdPersonCharacter.Pipeline.Animation.BlendStack
             {
                 float residual = 1f;
                 float boneOutputWeight = 0f;
-                for (int i = m_EntryCount - 1; i >= 0; i--)
-                {
-                    AnimationBlendEntryState entry = ReadEntry(i);
-                    float alpha = entry.EvaluateBoneAlpha(
-                        boneIndex,
-                        m_CurveCatalog.Require(entry.CanonicalCurveIndex),
-                        m_ProfileCatalog.Require(entry.BlendProfileIndex));
-                    RequireNormalized(alpha);
-                    float weight = residual * alpha;
-                    m_EntryBoneWeights[i * m_Rig.PoseBoneCount + boneIndex] = weight;
-                    m_PlannedEntryMaximumWeights[i] = Mathf.Max(m_PlannedEntryMaximumWeights[i], weight);
-                    if (!entry.IsSourcePose)
-                        boneOutputWeight += weight;
+            for (int i = m_EntryCount - 1; i >= 0; i--)
+            {
+                AnimationBlendEntryState entry = ReadEntry(i);
+                bool sourceAvailable = entry.IsSourcePose ||
+                    m_EntrySourceCaptureIndices[i] >= 0;
+                float alpha = entry.EvaluateBoneAlpha(
+                    boneIndex,
+                    m_CurveCatalog.Require(entry.CanonicalCurveIndex),
+                    m_ProfileCatalog.Require(entry.BlendProfileIndex));
+                RequireNormalized(alpha);
+                float weight = sourceAvailable ? residual * alpha : 0f;
+                m_EntryBoneWeights[i * m_Rig.PoseBoneCount + boneIndex] = weight;
+                m_PlannedEntryMaximumWeights[i] = Mathf.Max(m_PlannedEntryMaximumWeights[i], weight);
+                if (!entry.IsSourcePose)
+                    boneOutputWeight += weight;
+                if (sourceAvailable)
                     residual *= 1f - alpha;
                 }
                 float storedWeight = usesStored ? residual * storedBoneWeights[boneIndex] : 0f;
@@ -1472,8 +1483,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation.BlendStack
                 AnimationBlendEntryState entry = ReadEntry(i);
                 if (entry.IsSourcePose)
                     continue;
-                int captureIndex = RequireSourceCaptureIndex(i);
-                    AnimationPhysicalSourceIdentity physical = RequirePhysicalSource(sourceModule, entry);
+                int captureIndex = m_EntrySourceCaptureIndices[i];
+                if (captureIndex < 0)
+                    continue;
+                AnimationPhysicalSourceIdentity physical = RequirePhysicalSource(sourceModule, entry);
                 m_SlotWorkspace.SetPreparedEntry(
                     preparation,
                     contributionIndex,
@@ -1730,14 +1743,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation.BlendStack
             return identity;
         }
 
-        int RequireSourceCaptureIndex(int entryIndex)
-        {
-            int index = m_EntrySourceCaptureIndices[entryIndex];
-            if (index < 0)
-                throw new InvalidOperationException($"Animation Blend source entry #{entryIndex} has no prepared capture index.");
-            return index;
-        }
-
         int FindSourceCaptureIndex(AnimationPoseSourceId sourceId)
         {
             if (!sourceId.IsValid)
@@ -1756,7 +1761,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.BlendStack
             int count = usesStored ? 1 : 0;
             for (int i = 0; i < m_EntryCount; i++)
             {
-                if (!ReadEntry(i).IsSourcePose)
+                if (!ReadEntry(i).IsSourcePose &&
+                    m_EntrySourceCaptureIndices[i] >= 0)
                     count++;
             }
             return count;

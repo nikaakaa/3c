@@ -63,7 +63,10 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         CreateLinkedPoseInterface = 47,
         ConfigureLinkedPoseInterface = 48,
         RemoveLinkedPoseInterface = 49,
-        ConfigureLinkedPoseCall = 50
+        ConfigureLinkedPoseCall = 50,
+        SetProfileSourceResourceBindings = 51,
+        SetProfileAnimationCompression = 52,
+        SetProfileAnimationPropertyBindings = 53
     }
 
     public abstract class CharacterPresentationMutation
@@ -560,6 +563,51 @@ namespace ThirdPersonCharacter.Pipeline.Editor
 
         public CharacterFootPlacementAnalysisMode Mode { get; }
         public string SourceAssetGuid { get; }
+    }
+
+    public sealed class SetProfileSourceResourceBindingsMutation : CharacterPresentationMutation
+    {
+        public SetProfileSourceResourceBindingsMutation(
+            string profileId,
+            CharacterAnimationSourceResourceBinding[] bindings)
+            : base(
+                CharacterPresentationMutationKind.SetProfileSourceResourceBindings,
+                profileId)
+        {
+            Bindings = bindings ?? Array.Empty<CharacterAnimationSourceResourceBinding>();
+        }
+
+        public IReadOnlyList<CharacterAnimationSourceResourceBinding> Bindings { get; }
+    }
+
+    public sealed class SetProfileAnimationCompressionMutation : CharacterPresentationMutation
+    {
+        public SetProfileAnimationCompressionMutation(
+            string profileId,
+            CharacterAclCompressionSettings compression)
+            : base(
+                CharacterPresentationMutationKind.SetProfileAnimationCompression,
+                profileId)
+        {
+            Compression = compression ?? throw new ArgumentNullException(nameof(compression));
+        }
+
+        public CharacterAclCompressionSettings Compression { get; }
+    }
+
+    public sealed class SetProfileAnimationPropertyBindingsMutation : CharacterPresentationMutation
+    {
+        public SetProfileAnimationPropertyBindingsMutation(
+            string profileId,
+            CharacterAnimationPropertyAuthoringBinding[] bindings)
+            : base(
+                CharacterPresentationMutationKind.SetProfileAnimationPropertyBindings,
+                profileId)
+        {
+            Bindings = bindings ?? Array.Empty<CharacterAnimationPropertyAuthoringBinding>();
+        }
+
+        public IReadOnlyList<CharacterAnimationPropertyAuthoringBinding> Bindings { get; }
     }
 
     public sealed class CreateLinkedPoseImplementationMutation :
@@ -1265,6 +1313,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             value.Kind <= CharacterPresentationMutationKind.RemoveProfileProducerBinding ||
             value.Kind == CharacterPresentationMutationKind.CreateProfileSourceBinding ||
             value.Kind == CharacterPresentationMutationKind.RenameProfileSourceBinding ||
+            value.Kind == CharacterPresentationMutationKind.SetProfileSourceResourceBindings ||
+            value.Kind == CharacterPresentationMutationKind.SetProfileAnimationCompression ||
+            value.Kind == CharacterPresentationMutationKind.SetProfileAnimationPropertyBindings ||
             value.Kind >= CharacterPresentationMutationKind.CreateLinkedPoseImplementation &&
             value.Kind <= CharacterPresentationMutationKind.RemoveEquipmentLinkedPoseMapping ||
             value.Kind >= CharacterPresentationMutationKind.CreateLinkedPoseInterface &&

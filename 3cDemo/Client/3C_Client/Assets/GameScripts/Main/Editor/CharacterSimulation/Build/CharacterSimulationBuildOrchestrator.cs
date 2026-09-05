@@ -3,7 +3,9 @@ using System.Collections.Generic;
 using System.IO;
 using BTSMTL.Timeline;
 using ThirdPersonCharacter.Pipeline.Animation;
+using ThirdPersonCharacter.Pipeline.Editor;
 using ThirdPersonCharacter.Pipeline.Simulation;
+using ThirdPersonCharacter.Editor.CharacterSimulation.Compilation.Animation;
 using ThirdPersonSimulation;
 using UnityEditor;
 using UnityEngine;
@@ -38,6 +40,9 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             {
                 string definitionGuid = AssetDatabase.AssetPathToGUID(AssetDatabase.GetAssetPath(request.Definition));
                 semanticStage = CharacterSemanticIrArtifactStore.Stage(definitionGuid, semanticArtifact);
+                stages.Add(new CharacterAclAnimationArtifactPublishStage(
+                    definitionGuid,
+                    result.AnimationCatalog));
                 for (int i = 0; i < request.Targets.Count; i++)
                     stages.Add(request.Targets[i].Stage(definitionGuid, result.TargetProducts[i]));
                 CharacterPresentationProjection publishedProjection = Publish(
@@ -50,7 +55,8 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                     result.Artifact,
                     result.TargetProducts,
                     publishedProjection,
-                    result.Report);
+                    result.Report,
+                    result.AnimationCatalog);
             }
             catch (Exception exception)
             {
@@ -60,10 +66,47 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 result.Report.ArtifactError("artifact_group_publish_failed", AssetDatabase.GetAssetPath(request.Definition), exception.Message);
                 return Failed(result.Report);
             }
+            FinalizePublication(
+                request.Definition,
+                stages,
+                result.Report);
             for (int i = 0; i < stages.Count; i++)
                 stages[i].Dispose();
             semanticStage.Dispose();
             return result;
+        }
+
+        static void FinalizePublication(
+            CharacterPipelineDefinition definition,
+            IReadOnlyList<ICharacterSimulationTargetPublishStage> stages,
+            CharacterSimulationCompileReport report)
+        {
+            string sourceIdentity = AssetDatabase.GetAssetPath(definition);
+            for (int i = 0; i < stages.Count; i++)
+            {
+                if (!(stages[i] is ICharacterSimulationTargetPublishFinalizer finalizer))
+                    continue;
+                try
+                {
+                    if (finalizer.TryFinalizePublication(out string warning))
+                        continue;
+                    Debug.LogWarning(
+                        $"Character Simulation publication cleanup deferred for '{sourceIdentity}': {warning}");
+                    report.Warning(
+                        "target_publish_cleanup_deferred",
+                        sourceIdentity,
+                        warning);
+                }
+                catch (Exception exception)
+                {
+                    Debug.LogWarning(
+                        $"Character Simulation publication cleanup deferred for '{sourceIdentity}': {exception.Message}");
+                    report.Warning(
+                        "target_publish_cleanup_deferred",
+                        sourceIdentity,
+                        exception.Message);
+                }
+            }
         }
 
         public static TimelineSimulationBuildResult Build(TimelineSimulationBuildRequest request)
@@ -171,12 +214,29 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             }
             semanticArtifact = artifact;
 
+            CharacterAnimationBuildInput animationBuildInput;
+            try
+            {
+                animationBuildInput = CreateAnimationBuildInput(frontend.CompilationModel);
+            }
+            catch (Exception exception)
+            {
+                report.PresentationError(
+                    "animation_build_input_invalid",
+                    AssetDatabase.AssetPathToGUID(
+                        AssetDatabase.GetAssetPath(definition)),
+                    exception.Message);
+                return Failed(report);
+            }
+
             CharacterPresentationProjection projection = CompileProjection(
                 frontend.CompilationModel,
                 artifact,
+                animationBuildInput,
                 request.PublicationMode == CharacterSimulationBuildPublicationMode.Publish,
                 report,
-                out CharacterPresentationSemanticContract frontendContract);
+                out CharacterPresentationSemanticContract frontendContract,
+                out CharacterAnimationBuildCatalog animationCatalog);
             if (projection == null || !projection.IsValid || frontendContract == null || !report.IsValid)
                 return Failed(report);
             var targetProducts = new List<CharacterSimulationTargetBuildProduct>(request.Targets.Count);
@@ -213,7 +273,12 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 targetProducts.Add(product);
             }
             var descriptor = new CharacterSemanticIrArtifactDescriptor(artifactPath, artifact.Header);
-            return new CharacterSimulationBuildResult(descriptor, targetProducts, projection, report);
+            return new CharacterSimulationBuildResult(
+                descriptor,
+                targetProducts,
+                projection,
+                report,
+                animationCatalog);
         }
 
         static TimelineSimulationBuildResult ExecuteTimeline(
@@ -292,11 +357,14 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
         static CharacterPresentationProjection CompileProjection(
             CharacterAuthoringCompilationModel model,
             ValidatedSemanticIrArtifact artifact,
+            CharacterAnimationBuildInput animationBuildInput,
             bool generateMissingOrStaleArtifacts,
             CharacterSimulationCompileReport report,
-            out CharacterPresentationSemanticContract contract)
+            out CharacterPresentationSemanticContract contract,
+            out CharacterAnimationBuildCatalog animationCatalog)
         {
             contract = null;
+            animationCatalog = null;
             var errors = new List<string>();
             var footAnalysisDiagnostics = new List<CharacterFootAnalysisArtifactDiagnostic>();
             CharacterFootPlacementAnalysisCompilation footAnalysis =
@@ -329,8 +397,10 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                     new CharacterPresentationProjectionCompileRequest(
                         artifact,
                         model,
-                        footAnalysis));
+                        footAnalysis,
+                        animationBuildInput));
             contract = compileResult.Contract;
+            animationCatalog = compileResult.AnimationCatalog;
             for (int i = 0; i < compileResult.Diagnostics.Count; i++)
             {
                 CharacterPresentationProjectionDiagnostic diagnostic = compileResult.Diagnostics[i];
@@ -363,6 +433,32 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 }
             }
             return projection;
+        }
+
+        static CharacterAnimationBuildInput CreateAnimationBuildInput(
+            CharacterAuthoringCompilationModel model)
+        {
+            CharacterAnimationPresentationProfile profile =
+                model.AnimationPresentationProfile ??
+                throw new InvalidOperationException("Animation Presentation Profile is missing.");
+            CharacterAnimationRigPayload rig = new CharacterAnimationRigPayload(
+                profile.RigDefinition ??
+                throw new InvalidOperationException("Animation Rig Definition is missing."));
+            CharacterAnimationParameterLayout layout =
+                CharacterAnimationParameterLayoutCompiler.Build(profile.PoseGraph.Graph);
+            CharacterAnimationRigBinding sourceRigBinding =
+                CharacterRuntimeProfileRootHierarchyBuilder
+                    .RequireLocalCorinAnimationRigBinding(rig);
+            CharacterAnimationSourceRig sourceRig =
+                CharacterAnimationSourceRig.FromRuntimeRig(rig, sourceRigBinding);
+            return new CharacterAnimationBuildInput(
+                model.DefinitionGuid,
+                CharacterAnimationBuildInput.RequireNativeArtifactIdentity(),
+                profile,
+                sourceRig,
+                layout,
+                profile.AnimationCompression ??
+                throw new InvalidOperationException("Animation compression settings are missing."));
         }
 
         static string ArtifactDiagnosticCode(AnimationFootAnalysisArtifactStatus status)

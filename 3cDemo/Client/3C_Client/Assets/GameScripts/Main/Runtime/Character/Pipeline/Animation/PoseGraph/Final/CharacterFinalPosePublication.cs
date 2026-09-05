@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using ThirdPersonCharacter.Pipeline.Animation.Diagnostics;
 using ThirdPersonCharacter.Pipeline.Animation.Lifecycle;
 using ThirdPersonCharacter.Pipeline.Animation.Sources;
@@ -355,6 +356,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         readonly CharacterPoseBoneKind[] m_BoneKinds;
         readonly FinalAnimationPoseFramePageLease[] m_PageLeases;
         readonly CharacterFinalPosePhysicalWriter m_PhysicalWriter;
+        readonly CharacterFinalPosePropertyWriter m_PropertyWriter;
         readonly CharacterPoseSourceModule m_SourceModule;
         readonly CommittedDiagnosticsPage m_CommittedDiagnostics =
             new CommittedDiagnosticsPage();
@@ -379,7 +381,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             CharacterAnimationRigPayload rig,
             CharacterAnimationRigBinding rigBinding,
             CharacterRootHierarchyBinding rootHierarchy,
-            CharacterPoseSourceModule sourceModule)
+            CharacterPoseSourceModule sourceModule,
+            IReadOnlyList<CharacterPresentationAnimationPropertyBinding> animationProperties)
         {
             if (program == null)
                 throw new ArgumentNullException(nameof(program));
@@ -389,6 +392,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 rigBinding,
                 rig,
                 rootHierarchy);
+            m_PropertyWriter = new CharacterFinalPosePropertyWriter(
+                rigBinding,
+                program,
+                animationProperties ?? Array.Empty<CharacterPresentationAnimationPropertyBinding>());
             program.RequireValid();
             rig.RequireValid();
             CharacterFinalPosePublicationLayoutHandle layout =
@@ -540,12 +547,17 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             m_PhysicalWriter.ValidateBindingsBeforeEvaluate(
                 HasCommittedPhysicalPose,
                 in m_CommittedFrame);
+            m_PropertyWriter.ValidateBindingsBeforeEvaluate();
         }
 
         internal void WritePhysicalPose(
             CharacterFinalPosePublicationFrameLease lease)
         {
             m_Pending.RequirePrepared(lease);
+            bool publishProperties = m_Pending.Result.IsPublished &&
+                                     m_Pending.ProgramOutput.IsCompleted;
+            if (publishProperties)
+                m_PropertyWriter.ValidateFrame(in m_Pending.Frame);
             m_PhysicalWriter.Write(
                 in m_Pending.ProgramOutput,
                 in m_Pending.Frame,
@@ -553,6 +565,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 in m_CommittedFrame,
                 m_Pending.CaptureFootIkDiagnostics);
             m_Pending.PhysicalWrite = m_PhysicalWriter.Diagnostics;
+            if (publishProperties)
+                m_PropertyWriter.Write(in m_Pending.Frame);
         }
 
         internal void WriteProgramOutputPose(
@@ -1067,6 +1081,18 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             return m_CommittedFrame;
         }
 
+        internal bool TryGetCommittedFrame(
+            out ComposedAnimationPoseFrame frame)
+        {
+            if (!m_CommittedResult.IsPublished)
+            {
+                frame = default;
+                return false;
+            }
+            frame = m_CommittedFrame;
+            return true;
+        }
+
         internal CharacterFootIkPhysicalCapture
             RequireCommittedFootIkPhysical(
             in CharacterFinalPosePublicationResult result)
@@ -1119,7 +1145,31 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             m_Pending.Clear();
         }
 
-        internal void Invalidate()
+        internal void ResetToDefaults()
+        {
+            try
+            {
+                m_PropertyWriter.WriteDefaults();
+            }
+            finally
+            {
+                InvalidateState();
+            }
+        }
+
+        internal void RestoreInitialAndInvalidate()
+        {
+            try
+            {
+                m_PropertyWriter.RestoreInitial();
+            }
+            finally
+            {
+                InvalidateState();
+            }
+        }
+
+        void InvalidateState()
         {
             for (int i = 0; i < m_PageLeases.Length; i++)
                 m_PageLeases[i].Invalidate();

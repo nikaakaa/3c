@@ -116,23 +116,28 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
 
     public sealed class CharacterSimulationBuildResult
     {
-        public CharacterSimulationBuildResult(
+        internal CharacterSimulationBuildResult(
             CharacterSemanticIrArtifactDescriptor artifact,
             IReadOnlyList<CharacterSimulationTargetBuildProduct> targetProducts,
             ThirdPersonCharacter.Pipeline.Animation.CharacterPresentationProjection presentationProjection,
-            CharacterSimulationCompileReport report)
+            CharacterSimulationCompileReport report,
+            ThirdPersonCharacter.Editor.CharacterSimulation.Compilation.Animation.CharacterAnimationBuildCatalog animationCatalog = null)
         {
             Artifact = artifact;
             TargetProducts = targetProducts ?? Array.Empty<CharacterSimulationTargetBuildProduct>();
             PresentationProjection = presentationProjection;
             Report = report ?? throw new ArgumentNullException(nameof(report));
+            AnimationCatalog = animationCatalog;
         }
 
         public CharacterSemanticIrArtifactDescriptor Artifact { get; }
         public IReadOnlyList<CharacterSimulationTargetBuildProduct> TargetProducts { get; }
         public ThirdPersonCharacter.Pipeline.Animation.CharacterPresentationProjection PresentationProjection { get; }
         public CharacterSimulationCompileReport Report { get; }
-        public bool IsValid => Artifact != null && TargetProducts.Count > 0 && PresentationProjection != null && PresentationProjection.IsValid && Report.IsValid;
+        internal ThirdPersonCharacter.Editor.CharacterSimulation.Compilation.Animation.CharacterAnimationBuildCatalog AnimationCatalog { get; }
+        internal IReadOnlyList<ThirdPersonCharacter.Editor.CharacterSimulation.Compilation.Animation.ACL.CharacterAclAnimationGroupArtifact> AnimationArtifacts =>
+            AnimationCatalog?.AnimationArtifacts ?? Array.Empty<ThirdPersonCharacter.Editor.CharacterSimulation.Compilation.Animation.ACL.CharacterAclAnimationGroupArtifact>();
+        public bool IsValid => Artifact != null && TargetProducts.Count > 0 && PresentationProjection != null && PresentationProjection.IsValid && AnimationCatalog != null && Report.IsValid;
     }
 
     public sealed class TimelineSimulationBuildResult

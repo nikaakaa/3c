@@ -453,7 +453,19 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 frame.PoseParameters,
                 frame.PoseParameterAvailability);
             if (select)
-                route.PushSelection(stack, in request);
+            {
+                CharacterPoseSourceReadinessTarget target =
+                    CharacterPoseSourceReadinessTarget.FromClips(
+                        CharacterPoseSourcePreparationKind.Action,
+                        sourceId,
+                        binding.SlotNodeId,
+                        -1,
+                        request.Clips);
+                if (!m_SourceModule.TryDeferSource(in target))
+                {
+                    route.PushSelection(stack, in request);
+                }
+            }
             var key = new AnimationPlayerSourceSampleKey(
                 binding.SlotNodeId,
                 sourceId);

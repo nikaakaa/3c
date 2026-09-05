@@ -4,6 +4,7 @@ using System.Globalization;
 using System.Linq;
 using BTSMTL.Timeline;
 using ThirdPersonCharacter.Animation.TransitionRouting;
+using ThirdPersonCharacter.Editor.CharacterSimulation.Compilation.Animation;
 using ThirdPersonCharacter.Pipeline.Animation;
 using ThirdPersonCharacter.Pipeline.Editor;
 using ThirdPersonCharacter.Pipeline.Simulation.Editor;
@@ -175,7 +176,9 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             CharacterAnimationRigDefinition rig = request.Rig;
             AnimationBlendNodePayload[] blendNodes = request.BlendNodes;
             CharacterTypedPoseGraph graph = asset.Graph;
-            CharacterPoseParameterDeclaration[] authoredParameters = graph.Parameters.OrderBy(value => value.ParameterId).ToArray();
+            CharacterAnimationParameterLayout parameterLayout =
+                CharacterAnimationParameterLayoutCompiler.Build(graph);
+            CharacterPoseParameterDeclaration[] authoredParameters = parameterLayout.Declarations;
             var parameters = new CharacterPresentationPoseParameterEntry[authoredParameters.Length];
             var parameterIndices = new Dictionary<PoseParameterId, int>();
             for (int i = 0; i < authoredParameters.Length; i++)
@@ -186,7 +189,8 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                     parameter.ParameterId,
                     parameter.ValueType,
                     parameter.DefaultValue,
-                    parameter.Unit);
+                    parameter.Unit,
+                    parameter.Usage);
                 parameterIndices.Add(parameter.ParameterId, i);
             }
             var state = new BindingBuilder(
@@ -1460,6 +1464,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                 CharacterPresentationPoseParameterEntry expected = parameters[i];
                 if (!authored.TryGetValue(expected.ParameterId, out CharacterPoseParameterDeclaration actual) ||
                     actual.ValueType != expected.ValueType ||
+                    actual.Usage != expected.Usage ||
                     !string.Equals(actual.Unit, expected.Unit, StringComparison.Ordinal) ||
                     actual.DefaultValue != expected.DefaultValue)
                 {

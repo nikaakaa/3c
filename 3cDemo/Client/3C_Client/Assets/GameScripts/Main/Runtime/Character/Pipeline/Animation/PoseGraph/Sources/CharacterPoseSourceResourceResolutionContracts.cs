@@ -1,0 +1,224 @@
+using System;
+using System.Collections.Generic;
+
+namespace ThirdPersonCharacter.Pipeline.Animation.Sources
+{
+    internal enum CharacterPoseSourceReadinessTargetInput : byte
+    {
+        ClipSamples = 1,
+        Resource = 2,
+        BlendSpaceSamples = 3
+    }
+
+    internal readonly struct CharacterPoseSourceReadinessTarget
+    {
+        CharacterPoseSourceReadinessTarget(
+            CharacterPoseSourcePreparationKind kind,
+            AnimationPoseSourceId sourceId,
+            PoseNodeId poseNodeId,
+            int bindingIndex,
+            CharacterPoseSourceReadinessTargetInput input,
+            AnimationReadOnlyBuffer<ClipSamplePlan> clips,
+            CharacterAnimationSamplingBackendKind backend,
+            int resourceIndex,
+            int groupClipIndex,
+            IReadOnlyList<CharacterAnimationBlendSpaceSamplePlan> samples)
+        {
+            if (!Enum.IsDefined(typeof(CharacterPoseSourcePreparationKind), kind) ||
+                !poseNodeId.IsValid || bindingIndex < -1 ||
+                (!sourceId.IsValid && bindingIndex < 0) ||
+                !Enum.IsDefined(typeof(CharacterPoseSourceReadinessTargetInput), input))
+            {
+                throw new ArgumentException(
+                    "Character Pose source readiness target is invalid.");
+            }
+            Kind = kind;
+            SourceId = sourceId;
+            PoseNodeId = poseNodeId;
+            BindingIndex = bindingIndex;
+            Input = input;
+            Clips = clips;
+            Backend = backend;
+            ResourceIndex = resourceIndex;
+            GroupClipIndex = groupClipIndex;
+            Samples = samples;
+            if (!IsValid)
+                throw new ArgumentException(
+                    "Character Pose source readiness target is invalid.");
+        }
+
+        internal CharacterPoseSourcePreparationKind Kind { get; }
+        internal AnimationPoseSourceId SourceId { get; }
+        internal PoseNodeId PoseNodeId { get; }
+        internal int BindingIndex { get; }
+        internal CharacterPoseSourceReadinessTargetInput Input { get; }
+        internal AnimationReadOnlyBuffer<ClipSamplePlan> Clips { get; }
+        internal CharacterAnimationSamplingBackendKind Backend { get; }
+        internal int ResourceIndex { get; }
+        internal int GroupClipIndex { get; }
+        internal IReadOnlyList<CharacterAnimationBlendSpaceSamplePlan> Samples { get; }
+        internal bool IsValid =>
+            Enum.IsDefined(typeof(CharacterPoseSourcePreparationKind), Kind) &&
+            PoseNodeId.IsValid &&
+            BindingIndex >= -1 &&
+            (SourceId.IsValid || BindingIndex >= 0) &&
+            (Input == CharacterPoseSourceReadinessTargetInput.ClipSamples
+                ? Clips.Count > 0
+                : Input == CharacterPoseSourceReadinessTargetInput.Resource
+                    ? Enum.IsDefined(
+                      typeof(CharacterAnimationSamplingBackendKind),
+                        Backend) &&
+                      (Backend == CharacterAnimationSamplingBackendKind.NativeClip
+                          ? ResourceIndex == -1 && GroupClipIndex == -1
+                          : ResourceIndex >= 0 && GroupClipIndex >= 0)
+                    : Input == CharacterPoseSourceReadinessTargetInput.BlendSpaceSamples &&
+                      Samples != null && Samples.Count > 0);
+
+        internal static CharacterPoseSourceReadinessTarget FromClips(
+            CharacterPoseSourcePreparationKind kind,
+            AnimationPoseSourceId sourceId,
+            PoseNodeId poseNodeId,
+            int bindingIndex,
+            AnimationReadOnlyBuffer<ClipSamplePlan> clips) =>
+            new CharacterPoseSourceReadinessTarget(
+                kind,
+                sourceId,
+                poseNodeId,
+                bindingIndex,
+                CharacterPoseSourceReadinessTargetInput.ClipSamples,
+                clips,
+                CharacterAnimationSamplingBackendKind.NativeClip,
+                -1,
+                -1,
+                null);
+
+        internal static CharacterPoseSourceReadinessTarget FromResource(
+            CharacterPoseSourcePreparationKind kind,
+            AnimationPoseSourceId sourceId,
+            PoseNodeId poseNodeId,
+            int bindingIndex,
+            CharacterAnimationSamplingBackendKind backend,
+            int resourceIndex,
+            int groupClipIndex) =>
+            new CharacterPoseSourceReadinessTarget(
+                kind,
+                sourceId,
+                poseNodeId,
+                bindingIndex,
+                CharacterPoseSourceReadinessTargetInput.Resource,
+                default,
+                backend,
+                resourceIndex,
+                groupClipIndex,
+                null);
+
+        internal static CharacterPoseSourceReadinessTarget FromBlendSpaceSamples(
+            CharacterPoseSourcePreparationKind kind,
+            AnimationPoseSourceId sourceId,
+            PoseNodeId poseNodeId,
+            int bindingIndex,
+            IReadOnlyList<CharacterAnimationBlendSpaceSamplePlan> samples) =>
+            new CharacterPoseSourceReadinessTarget(
+                kind,
+                sourceId,
+                poseNodeId,
+                bindingIndex,
+                CharacterPoseSourceReadinessTargetInput.BlendSpaceSamples,
+                default,
+                CharacterAnimationSamplingBackendKind.NativeClip,
+                -1,
+                -1,
+                samples);
+
+        internal static CharacterPoseSourceReadinessTarget FromPreparation(
+            in CharacterPoseSourcePreparation preparation)
+        {
+            if (!preparation.IsValid)
+                throw new ArgumentException(
+                    "Character Pose source preparation is invalid.",
+                    nameof(preparation));
+            return FromClips(
+                preparation.Kind,
+                preparation.Kind == CharacterPoseSourcePreparationKind.Action ||
+                preparation.Kind == CharacterPoseSourcePreparationKind.Provider
+                    ? preparation.Request.SourceId
+                    : preparation.SourceId,
+                preparation.PoseNodeId,
+                preparation.Kind == CharacterPoseSourcePreparationKind.Action ||
+                preparation.Kind == CharacterPoseSourcePreparationKind.Provider
+                    ? -1
+                    : preparation.BindingIndex,
+                preparation.Kind == CharacterPoseSourcePreparationKind.Action ||
+                preparation.Kind == CharacterPoseSourcePreparationKind.Provider
+                    ? preparation.Request.Clips
+                    : preparation.Clips);
+        }
+    }
+
+    internal readonly struct CharacterPoseSourceResourceResolution
+    {
+        internal CharacterPoseSourceResourceResolution(
+            CharacterAclResourceReadinessResult resource,
+            int resourceCatalogIndex,
+            int groupClipIndex,
+            ulong resourceGeneration)
+        {
+            Resource = resource;
+            ResourceCatalogIndex = resourceCatalogIndex;
+            GroupClipIndex = groupClipIndex;
+            ResourceGeneration = resourceGeneration;
+            if (!IsValid)
+                throw new ArgumentException(
+                    "Character Pose source resource resolution is invalid.");
+        }
+
+        internal CharacterAclResourceReadinessResult Resource { get; }
+        internal int ResourceCatalogIndex { get; }
+        internal int GroupClipIndex { get; }
+        internal ulong ResourceGeneration { get; }
+        internal bool IsReady => Resource.IsReady;
+        internal bool IsPending => Resource.IsPending;
+        internal bool IsInvalid => Resource.IsInvalid;
+        internal bool IsValid =>
+            (IsReady ? 1 : 0) +
+            (IsPending ? 1 : 0) +
+            (IsInvalid ? 1 : 0) == 1 &&
+            (ResourceCatalogIndex == -1 &&
+             GroupClipIndex == -1 &&
+             ResourceGeneration == 0 ||
+             ResourceCatalogIndex >= 0 &&
+             GroupClipIndex >= 0 &&
+             ResourceGeneration != 0);
+
+        internal CharacterPoseSourceReadinessView ToReadiness(
+            ulong completionIdentity)
+        {
+            if (!IsValid)
+                throw new InvalidOperationException(
+                    "Character Pose source resource resolution is invalid.");
+            return IsInvalid
+                ? CharacterPoseSourceReadinessView.Invalid(
+                    completionIdentity,
+                    ResourceCatalogIndex,
+                    GroupClipIndex,
+                    ResourceGeneration,
+                    Resource.FailureCode,
+                    Resource.Message)
+                : IsPending
+                    ? CharacterPoseSourceReadinessView.Pending(
+                        completionIdentity,
+                        ResourceCatalogIndex,
+                        GroupClipIndex,
+                        ResourceGeneration,
+                        Resource.Message)
+                    : ResourceCatalogIndex >= 0
+                        ? CharacterPoseSourceReadinessView.Ready(
+                            completionIdentity,
+                            ResourceCatalogIndex,
+                            GroupClipIndex,
+                            ResourceGeneration)
+                        : CharacterPoseSourceReadinessView.Ready(
+                            completionIdentity);
+        }
+    }
+}

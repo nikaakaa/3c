@@ -161,12 +161,17 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             CharacterSimulationProgramBuilder builder,
             OperationHandle timelineOperation,
             string actionContextIdentity,
-            CharacterSimulationTimelineEmissionSession session)
+            CharacterSimulationTimelineEmissionSession session,
+            bool requireOwnerIdentity = true)
         {
             m_Timeline = timeline ?? throw new ArgumentNullException(nameof(timeline));
             m_TimelineContentHash = TimelineAuthoringFingerprint.Compute(m_Timeline);
             m_Track = track ?? throw new ArgumentNullException(nameof(track));
             m_TrackIndex = trackIndex;
+            if (requireOwnerIdentity && string.IsNullOrEmpty(ownerGraphId))
+                throw new ArgumentException("Timeline owner Graph identity is required.", nameof(ownerGraphId));
+            if (requireOwnerIdentity && string.IsNullOrEmpty(ownerNodeId))
+                throw new ArgumentException("Timeline owner Node identity is required.", nameof(ownerNodeId));
             m_OwnerGraphId = ownerGraphId ?? string.Empty;
             m_OwnerNodeId = ownerNodeId ?? string.Empty;
             m_Route = route ?? string.Empty;

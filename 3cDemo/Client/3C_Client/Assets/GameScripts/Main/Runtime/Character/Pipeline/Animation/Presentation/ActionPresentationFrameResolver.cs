@@ -62,7 +62,18 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             }
             row.PoseParameters[
                 row.ParameterOffset + footPlacementWeightParameterIndex] =
-                    footPlacement.Weight;
+                footPlacement.Weight;
+            binding.Animation.SampleNativeProperties(
+                new AnimationReadOnlyBuffer<ClipSamplePlan>(
+                    row.Clips,
+                    row.ClipOffset,
+                    clipCount,
+                    workspace,
+                    row.LeaseIdentity),
+                row.PoseParameters,
+                row.PoseParameterAvailability,
+                row.ParameterOffset,
+                row.ParameterCount);
             row.FootFeatures[row.FootFeatureOffset] = footPlacement.Left;
             row.FootFeatures[row.FootFeatureOffset + 1] = footPlacement.Right;
 

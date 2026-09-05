@@ -374,11 +374,14 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                     RequiresDirectSource(player)
                         ? preparedSources.RequireDirectBinding(playerIndex)
                         : default;
+                CharacterPoseSourceScalarReadView scalarReadView =
+                    sourceBinding.ScalarReadView;
                 m_DirectPlayerJobs[playerIndex] = player.PrepareJob(
                     completionIdentity,
                     in write,
                     sourceBinding.PhysicalIdentity,
-                    sourceBinding.SourceIndex);
+                    sourceBinding.SourceIndex,
+                    in scalarReadView);
             }
             for (int playerIndex = 0;
                  playerIndex < m_ActorState.PoseStateSources.ClipPlayers.Length;
@@ -394,11 +397,14 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                     RequiresClipSource(playerIndex, player)
                         ? preparedSources.RequireClipBinding(playerIndex)
                         : default;
+                CharacterPoseSourceScalarReadView scalarReadView =
+                    sourceBinding.ScalarReadView;
                 m_ClipPlayerJobs[playerIndex] = player.PrepareJob(
                     completionIdentity,
                     in write,
                     sourceBinding.PhysicalIdentity,
-                    sourceBinding.SourceIndex);
+                    sourceBinding.SourceIndex,
+                    in scalarReadView);
             }
             for (int playerIndex = 0;
                  playerIndex <
@@ -416,11 +422,14 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                     RequiresBlendSpaceSource(player)
                         ? preparedSources.RequireBlendSpaceBinding(playerIndex)
                         : default;
+                CharacterPoseSourceScalarReadView scalarReadView =
+                    sourceBinding.ScalarReadView;
                 m_BlendSpacePlayerJobs[playerIndex] = player.PrepareJob(
                     completionIdentity,
                     in write,
                     sourceBinding.PhysicalIdentity,
-                    sourceBinding.SourceIndex);
+                    sourceBinding.SourceIndex,
+                    in scalarReadView);
             }
         }
 
@@ -597,6 +606,11 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             in CharacterPoseSourcePreparationView preparations,
             in CharacterPoseSourcePreparation preparation)
         {
+            CharacterPoseSourceReadinessTarget target =
+                CharacterPoseSourceReadinessTarget.FromPreparation(
+                    in preparation);
+            if (m_Source.TryDeferSource(in target))
+                return;
             int index = m_FramePages.AddSourcePreparation(in preparation);
             m_Source.Prepare(sourceLease, in preparations, index);
         }

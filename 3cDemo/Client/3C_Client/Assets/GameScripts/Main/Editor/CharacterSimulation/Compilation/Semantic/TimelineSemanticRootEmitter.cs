@@ -79,7 +79,8 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                     m_Builder,
                     timelineOperation,
                     string.Empty,
-                    emission);
+                    emission,
+                    false);
                 if (!m_Emitters.TryGetTrack(track.GetType(), out ICharacterSimulationTimelineTrackEmitter trackEmitter))
                     throw new InvalidOperationException($"Discovered Track '{track.AuthoringId}' has no emitter.");
                 trackEmitter.Emit(track, context);

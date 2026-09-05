@@ -1,6 +1,7 @@
 using System;
 using ThirdPersonCharacter.Pipeline.Animation.BlendStack;
 using ThirdPersonCharacter.Pipeline.Animation.Presentation;
+using ThirdPersonCharacter.Pipeline.Diagnostics;
 using ThirdPersonCharacter.Pipeline.Presentation;
 using ThirdPersonSimulation;
 using Unity.Collections;
@@ -75,25 +76,25 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         CharacterPoseManagedValuePage
     {
         static readonly ProfilerMarker ValueResetMarker =
-            new ProfilerMarker("ThirdPerson.Presentation.Animation.PoseGraph.ValueReset");
+            new ProfilerMarker(CharacterPerformanceMetrics.ValueResetName);
         static readonly ProfilerMarker PlayerInputMarker =
-            new ProfilerMarker("ThirdPerson.Presentation.Animation.PoseGraph.PlayerInput");
+            new ProfilerMarker(CharacterPerformanceMetrics.PlayerInputName);
         static readonly ProfilerMarker SlotMarker =
-            new ProfilerMarker("ThirdPerson.Presentation.Animation.PoseGraph.Slot");
+            new ProfilerMarker(CharacterPerformanceMetrics.SlotName);
         static readonly ProfilerMarker StateMarker =
-            new ProfilerMarker("ThirdPerson.Presentation.Animation.PoseGraph.State");
+            new ProfilerMarker(CharacterPerformanceMetrics.StateName);
         static readonly ProfilerMarker InertializationMarker =
-            new ProfilerMarker("ThirdPerson.Presentation.Animation.PoseGraph.Inertialization");
+            new ProfilerMarker(CharacterPerformanceMetrics.InertializationName);
         static readonly ProfilerMarker IkGoalMarker =
-            new ProfilerMarker("ThirdPerson.Presentation.Animation.PoseGraph.IKGoal");
+            new ProfilerMarker(CharacterPerformanceMetrics.IkGoalName);
         static readonly ProfilerMarker LinkedPoseMarker =
-            new ProfilerMarker("ThirdPerson.Presentation.Animation.PoseGraph.LinkedPose");
+            new ProfilerMarker(CharacterPerformanceMetrics.LinkedPoseName);
         static readonly ProfilerMarker FullBodyIkMarker =
-            new ProfilerMarker("ThirdPerson.Presentation.Animation.PoseGraph.FinalIKFullBody");
+            new ProfilerMarker(CharacterPerformanceMetrics.FullBodyIkName);
         static readonly ProfilerMarker OutputMarker =
-            new ProfilerMarker("ThirdPerson.Presentation.Animation.PoseGraph.Output");
+            new ProfilerMarker(CharacterPerformanceMetrics.OutputName);
         static readonly ProfilerMarker ValueValidationMarker =
-            new ProfilerMarker("ThirdPerson.Presentation.Animation.PoseGraph.ValueValidation");
+            new ProfilerMarker(CharacterPerformanceMetrics.ValueValidationName);
         readonly CharacterPoseConstraintOperationModule
             m_ConstraintOperations;
         readonly CharacterPoseLinkedOperationModule m_LinkedOperations;

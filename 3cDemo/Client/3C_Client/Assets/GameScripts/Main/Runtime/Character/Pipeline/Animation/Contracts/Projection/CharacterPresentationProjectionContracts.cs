@@ -18,7 +18,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
     [Serializable]
     public sealed partial class CharacterPresentationProjection : ISerializationCallbackReceiver
     {
-        public const string CurrentAbiVersion = "character-presentation-projection/v13";
+        public const string CurrentAbiVersion = "character-presentation-projection/v14";
 
         [SerializeField] string m_AbiVersion = string.Empty;
         [SerializeField] string m_ProgramId = string.Empty;
@@ -421,6 +421,44 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         public float LastSampleTimeSeconds => m_LastSampleTimeSeconds;
         public IReadOnlyList<CharacterPresentationAnimationClipBinding> Clips => m_Clips ?? Array.Empty<CharacterPresentationAnimationClipBinding>();
 
+        internal void SampleNativeProperties(
+            AnimationReadOnlyBuffer<ClipSamplePlan> clips,
+            float[] values,
+            byte[] availability,
+            int parameterOffset,
+            int parameterCount)
+        {
+            if (values == null || availability == null || values.Length != availability.Length ||
+                parameterOffset < 0 || parameterCount < 0 ||
+                parameterOffset > values.Length - parameterCount)
+                throw new ArgumentException("Animation property sample page is invalid.");
+            float totalWeight = 0f;
+            for (int i = 0; i < clips.Count; i++)
+            {
+                ClipSamplePlan sample = clips[i];
+                if (sample.IsValid && !sample.IsAcl && sample.Weight > 0f)
+                    totalWeight += sample.Weight;
+            }
+            if (!float.IsFinite(totalWeight) || totalWeight <= 0f)
+                return;
+            bool hasNativeProperties = false;
+            for (int i = 0; i < clips.Count; i++)
+            {
+                ClipSamplePlan sample = clips[i];
+                if (!sample.IsValid || sample.IsAcl)
+                    continue;
+                Clips[sample.ClipBindingIndex].SampleNativeProperties(
+                    sample.NormalizedTime,
+                    sample.Weight / totalWeight,
+                    values,
+                    availability,
+                    parameterOffset,
+                    parameterCount,
+                    !hasNativeProperties);
+                hasNativeProperties = true;
+            }
+        }
+
         public int Sample(
             float sampleTime,
             int cycle,
@@ -490,6 +528,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation
     {
         [SerializeField] string m_ClipAuthoringId = string.Empty;
         [SerializeField] UnityEngine.AnimationClip m_Clip;
+        [SerializeField] CharacterAnimationSamplingBackendKind m_Backend = CharacterAnimationSamplingBackendKind.NativeClip;
+        [SerializeField] int m_ResourceCatalogIndex = -1;
+        [SerializeField] int m_GroupClipIndex = -1;
+        [SerializeField] bool m_Looping;
         [SerializeField] string m_ClipIdentity = string.Empty;
         [SerializeField] string m_FullClipDependencyHash = string.Empty;
         [SerializeField] string m_AnalysisInputHash = string.Empty;
@@ -509,9 +551,14 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         [SerializeField] AnimationFootFeatureCurveSet m_LeftFootFeatures;
         [SerializeField] AnimationFootFeatureCurveSet m_RightFootFeatures;
         [SerializeField] AnimationFootStepObservationCurvePair m_FootStepObservation;
+        [SerializeReference] CharacterAnimationScalarCurvePage m_ScalarPage;
 
         public string ClipAuthoringId => m_ClipAuthoringId;
         public UnityEngine.AnimationClip Clip => m_Clip;
+        public CharacterAnimationSamplingBackendKind Backend => m_Backend;
+        public int ResourceCatalogIndex => m_ResourceCatalogIndex;
+        public int GroupClipIndex => m_GroupClipIndex;
+        public bool IsAcl => Backend == CharacterAnimationSamplingBackendKind.Acl;
         public float StartTime => m_StartTime;
         public float EndTime => m_EndTime;
         public float ClipInTime => m_ClipInTime;
@@ -524,7 +571,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         public string FullClipDependencyHash => m_FullClipDependencyHash ?? string.Empty;
         public string AnalysisInputHash => m_AnalysisInputHash ?? string.Empty;
         public string RegisteredCurveHash => m_RegisteredCurveHash ?? string.Empty;
-        public float SourceDurationSeconds => m_SourceDurationSeconds > 0f ? m_SourceDurationSeconds : m_Clip ? m_Clip.length : 0f;
+        public float SourceDurationSeconds => m_SourceDurationSeconds;
+        public bool IsLooping => m_Looping;
+        public CharacterAnimationScalarCurvePage ScalarPage => m_ScalarPage;
 
         internal CharacterPresentationAnimationClipBinding(
             string clipAuthoringId,
@@ -546,14 +595,26 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             AnimationCurve easeOutCurve,
             AnimationCurve footPlacementWeightCurve,
             AnimationFootFeaturePair footFeatures,
-            AnimationFootStepObservationCurvePair footStepObservation)
+            AnimationFootStepObservationCurvePair footStepObservation,
+            CharacterAnimationSamplingBackendKind backend = CharacterAnimationSamplingBackendKind.NativeClip,
+            CharacterAnimationScalarCurvePage scalarPage = null,
+            int resourceCatalogIndex = -1,
+            int groupClipIndex = -1)
         {
             m_ClipAuthoringId = clipAuthoringId ?? string.Empty;
             m_ClipIdentity = clipIdentity ?? string.Empty;
             m_FullClipDependencyHash = fullClipDependencyHash ?? string.Empty;
             m_AnalysisInputHash = analysisInputHash ?? string.Empty;
             m_RegisteredCurveHash = registeredCurveHash ?? string.Empty;
-            m_Clip = clip;
+            m_Backend = backend;
+            m_ResourceCatalogIndex = backend == CharacterAnimationSamplingBackendKind.Acl
+                ? resourceCatalogIndex
+                : -1;
+            m_Clip = backend == CharacterAnimationSamplingBackendKind.Acl ? null : clip;
+            m_GroupClipIndex = backend == CharacterAnimationSamplingBackendKind.Acl
+                ? groupClipIndex
+                : -1;
+            m_Looping = clip && clip.isLooping;
             m_SourceDurationSeconds = sourceDurationSeconds;
             m_StartTime = startTime;
             m_EndTime = endTime;
@@ -568,6 +629,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             m_FootPlacementWeightCurve = CopyCurve(footPlacementWeightCurve);
             m_FootStepObservation = footStepObservation ??
                 throw new ArgumentNullException(nameof(footStepObservation));
+            m_ScalarPage = scalarPage;
             if (footFeatures.IsValid)
             {
                 m_LeftFootFeatures = footFeatures.Left;
@@ -583,8 +645,12 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 string.IsNullOrWhiteSpace(AnalysisInputHash) ||
                 string.IsNullOrWhiteSpace(RegisteredCurveHash) ||
                 !float.IsFinite(SourceDurationSeconds) || SourceDurationSeconds <= 0f ||
-                !m_Clip ||
-                !float.IsFinite(m_Clip.length) || m_Clip.length <= 0f ||
+                !Enum.IsDefined(typeof(CharacterAnimationSamplingBackendKind), Backend) ||
+                Backend == CharacterAnimationSamplingBackendKind.NativeClip &&
+                (!m_Clip || !float.IsFinite(m_Clip.length) || m_Clip.length <= 0f) ||
+                Backend == CharacterAnimationSamplingBackendKind.Acl &&
+                (m_ResourceCatalogIndex < 0 ||
+                 m_GroupClipIndex < 0) ||
                 !float.IsFinite(m_StartTime) || !float.IsFinite(m_EndTime) || m_EndTime < m_StartTime ||
                 !float.IsFinite(m_ClipInTime) || m_ClipInTime < 0f ||
                 !float.IsFinite(m_DurationTime) || m_DurationTime <= 0f ||
@@ -598,6 +664,38 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 throw new InvalidOperationException($"Presentation Projection animation clip binding #{clipBindingIndex} is not sampleable.");
             }
             m_FootStepObservation.RequireValid();
+            if (ScalarPage != null)
+                ScalarPage.RequireValid();
+        }
+
+        internal void SampleNativeProperties(
+            float normalizedTime,
+            float weight,
+            float[] values,
+            byte[] availability,
+            int parameterOffset,
+            int parameterCount,
+            bool reset)
+        {
+            if (IsAcl || ScalarPage == null || !float.IsFinite(weight) || weight <= 0f ||
+                values == null || availability == null || values.Length != availability.Length ||
+                parameterOffset < 0 || parameterCount < 0 ||
+                parameterOffset > values.Length - parameterCount)
+                return;
+            for (int i = 0; i < ScalarPage.Tracks.Count; i++)
+            {
+                CharacterAnimationScalarCurveTrack track = ScalarPage.Tracks[i];
+                if (track.ParameterIndex < 0 || track.ParameterIndex >= parameterCount)
+                    throw new InvalidOperationException("Presentation animation scalar page parameter index is outside the Program page.");
+                int parameterIndex = parameterOffset + track.ParameterIndex;
+                if (reset)
+                {
+                    values[parameterIndex] = 0f;
+                    availability[parameterIndex] = 0;
+                }
+                values[parameterIndex] += track.Sample(normalizedTime) * weight;
+                availability[parameterIndex] = 1;
+            }
         }
 
         internal int WriteSample(
@@ -620,7 +718,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             {
                 throw new ArgumentException("Animation clip sample request is invalid.");
             }
-            if (!m_Clip || timelineTime < m_StartTime)
+            if (timelineTime < m_StartTime)
                 return 0;
             bool hold = timelineTime > m_EndTime && m_Extrapolation == ExtraPolationMode.Hold;
             if (timelineTime > m_EndTime && !hold)
@@ -645,20 +743,31 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             double continuousClipTime = (double)m_ClipInTime + selfTime + (double)cycle * m_DurationTime;
             if (double.IsNaN(continuousClipTime) || double.IsInfinity(continuousClipTime) || continuousClipTime < 0d)
                 throw new InvalidOperationException($"Presentation Projection animation clip '{m_ClipAuthoringId}' produced an invalid continuous time.");
-            bool isLooping = m_Clip.isLooping || isTrackLooping;
+            bool isLooping = m_Looping || isTrackLooping;
             double effectiveClipTime = isLooping
                 ? continuousClipTime % SourceDurationSeconds
                 : Math.Min(continuousClipTime, SourceDurationSeconds);
             float clipTime = (float)effectiveClipTime;
             float animationNormalized = clipTime / SourceDurationSeconds;
-            var plan = new ClipSamplePlan(
-                clipBindingIndex,
-                m_Clip,
-                clipTime,
-                continuousClipTime,
-                animationNormalized,
-                weight,
-                isLooping);
+            var plan = IsAcl
+                ? new ClipSamplePlan(
+                    clipBindingIndex,
+                    m_ResourceCatalogIndex,
+                    m_GroupClipIndex,
+                    SourceDurationSeconds,
+                    clipTime,
+                    continuousClipTime,
+                    animationNormalized,
+                    weight,
+                    isLooping)
+                : new ClipSamplePlan(
+                    clipBindingIndex,
+                    m_Clip,
+                    clipTime,
+                    continuousClipTime,
+                    animationNormalized,
+                    weight,
+                    isLooping);
             var footSample = new AnimationFootPlacementSample(
                 EvaluateRequired(m_FootPlacementWeightCurve, animationNormalized, nameof(m_FootPlacementWeightCurve)),
                 m_LeftFootFeatures.Sample(animationNormalized).BindPredictionSource(

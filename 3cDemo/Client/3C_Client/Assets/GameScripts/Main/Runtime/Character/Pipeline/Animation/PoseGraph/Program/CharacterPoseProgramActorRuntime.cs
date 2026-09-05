@@ -18,6 +18,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         readonly CharacterPoseProgramFramePages m_FramePages;
         readonly CharacterPoseProgramActionRuntime m_Action;
         readonly PresentationFrameWorkspace m_PresentationWorkspace;
+        readonly CharacterPoseSourceModule m_SourceModule;
         readonly CharacterPoseProgramSourcePreparationRuntime
             m_SourcePreparation;
 
@@ -28,6 +29,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             CharacterPoseProgramFramePages framePages,
             CharacterPoseProgramActionRuntime action,
             PresentationFrameWorkspace presentationWorkspace,
+            CharacterPoseSourceModule sourceModule,
             CharacterPoseProgramSourcePreparationRuntime sourcePreparation)
         {
             m_Image = image ?? throw new ArgumentNullException(nameof(image));
@@ -41,6 +43,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 throw new ArgumentNullException(nameof(action));
             m_PresentationWorkspace = presentationWorkspace ??
                 throw new ArgumentNullException(nameof(presentationWorkspace));
+            m_SourceModule = sourceModule ??
+                throw new ArgumentNullException(nameof(sourceModule));
             m_SourcePreparation = sourcePreparation ??
                 throw new ArgumentNullException(nameof(sourcePreparation));
         }
@@ -97,6 +101,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 }
             }
             m_ActorState.PoseStateSources.AdvanceSources(
+                m_SourceModule,
                 presentationDeltaSeconds,
                 in factFrame,
                 in parameterFrame,

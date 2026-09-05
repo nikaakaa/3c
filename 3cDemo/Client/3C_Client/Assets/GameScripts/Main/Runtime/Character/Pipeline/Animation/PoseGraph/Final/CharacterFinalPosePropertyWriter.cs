@@ -1,0 +1,127 @@
+using System;
+using System.Collections.Generic;
+using UnityEngine;
+
+namespace ThirdPersonCharacter.Pipeline.Animation
+{
+    internal sealed class CharacterFinalPosePropertyWriter
+    {
+        readonly CharacterAnimationRigBinding m_RigBinding;
+        readonly CharacterPresentationAnimationPropertyBinding[] m_Bindings;
+        readonly CharacterAnimationRendererBinding[] m_Renderers;
+        readonly float[] m_InitialWeights;
+
+        internal CharacterFinalPosePropertyWriter(
+            CharacterAnimationRigBinding rigBinding,
+            CharacterPoseProgramImage program,
+            IReadOnlyList<CharacterPresentationAnimationPropertyBinding> bindings)
+        {
+            m_RigBinding = rigBinding ? rigBinding : throw new ArgumentNullException(nameof(rigBinding));
+            if (program == null)
+                throw new ArgumentNullException(nameof(program));
+            if (bindings == null)
+                throw new ArgumentNullException(nameof(bindings));
+            m_Bindings = new CharacterPresentationAnimationPropertyBinding[bindings.Count];
+            m_Renderers = new CharacterAnimationRendererBinding[bindings.Count];
+            m_InitialWeights = new float[bindings.Count];
+            var bindingIds = new HashSet<string>(StringComparer.Ordinal);
+            for (int i = 0; i < m_Bindings.Length; i++)
+            {
+                CharacterPresentationAnimationPropertyBinding binding = bindings[i] ??
+                    throw new InvalidOperationException("Final animation property binding is missing.");
+                binding.RequireValid(program);
+                if (!bindingIds.Add(binding.BindingId))
+                    throw new InvalidOperationException("Final animation property binding identity is duplicated.");
+                CharacterAnimationRendererBinding renderer =
+                    rigBinding.FindRendererBinding(binding.RendererBindingId);
+                if (renderer == null)
+                    throw new InvalidOperationException($"Final animation property '{binding.BindingId}' has no Renderer binding '{binding.RendererBindingId}'.");
+                m_Bindings[i] = binding;
+                m_Renderers[i] = renderer;
+                ValidateBinding(binding, renderer);
+                float initialWeight = renderer.Renderer.GetBlendShapeWeight(binding.BlendShapeIndex);
+                if (!float.IsFinite(initialWeight))
+                    throw new InvalidOperationException($"Final animation property '{binding.BindingId}' initial BlendShape weight is not finite.");
+                m_InitialWeights[i] = initialWeight;
+            }
+        }
+
+        internal int BindingCount => m_Bindings.Length;
+
+        internal void ValidateBindingsBeforeEvaluate()
+        {
+            for (int i = 0; i < m_Renderers.Length; i++)
+            {
+                CharacterPresentationAnimationPropertyBinding binding = m_Bindings[i];
+                CharacterAnimationRendererBinding renderer = m_Renderers[i];
+                ValidateBinding(binding, renderer);
+            }
+        }
+
+        void ValidateBinding(
+            CharacterPresentationAnimationPropertyBinding binding,
+            CharacterAnimationRendererBinding renderer)
+        {
+            renderer.RequireValid(m_RigBinding.Animator ? m_RigBinding.Animator.transform : null);
+            if (renderer.ExpectedMesh != binding.ExpectedMesh ||
+                !string.Equals(renderer.MeshContentHash, binding.MeshContentHash, StringComparison.Ordinal) ||
+                renderer.Renderer.sharedMesh != binding.ExpectedMesh ||
+                renderer.Renderer.sharedMesh.blendShapeCount <= binding.BlendShapeIndex ||
+                !string.Equals(
+                    renderer.Renderer.sharedMesh.GetBlendShapeName(binding.BlendShapeIndex),
+                    binding.BlendShapeName,
+                    StringComparison.Ordinal))
+                throw new InvalidOperationException($"Final animation property '{binding.BindingId}' Renderer binding is stale.");
+        }
+
+        internal void ValidateFrame(in ComposedAnimationPoseFrame frame)
+        {
+            if (frame.Availability != AnimationPoseAvailability.Pose ||
+                frame.PoseParameters.Count <= 0 ||
+                frame.PoseParameterAvailability.Count != frame.PoseParameters.Count)
+                throw new InvalidOperationException("Final animation property frame is not a complete Pose page.");
+            for (int i = 0; i < m_Bindings.Length; i++)
+            {
+                CharacterPresentationAnimationPropertyBinding binding = m_Bindings[i];
+                if (binding.ParameterIndex < 0 || binding.ParameterIndex >= frame.PoseParameters.Count ||
+                    frame.PoseParameterAvailability[binding.ParameterIndex] != 1 ||
+                    !float.IsFinite(frame.PoseParameters[binding.ParameterIndex]))
+                    throw new InvalidOperationException($"Final animation property '{binding.BindingId}' has no valid committed source value.");
+            }
+        }
+
+        internal void Write(in ComposedAnimationPoseFrame frame)
+        {
+            for (int i = 0; i < m_Bindings.Length; i++)
+            {
+                CharacterPresentationAnimationPropertyBinding binding = m_Bindings[i];
+                m_Renderers[i].Renderer.SetBlendShapeWeight(
+                    binding.BlendShapeIndex,
+                    frame.PoseParameters[binding.ParameterIndex]);
+            }
+        }
+
+        internal void WriteDefaults()
+        {
+            ValidateBindingsBeforeEvaluate();
+            for (int i = 0; i < m_Bindings.Length; i++)
+            {
+                CharacterPresentationAnimationPropertyBinding binding = m_Bindings[i];
+                m_Renderers[i].Renderer.SetBlendShapeWeight(
+                    binding.BlendShapeIndex,
+                    binding.DefaultValue);
+            }
+        }
+
+        internal void RestoreInitial()
+        {
+            ValidateBindingsBeforeEvaluate();
+            for (int i = 0; i < m_Bindings.Length; i++)
+            {
+                m_Renderers[i].Renderer.SetBlendShapeWeight(
+                    m_Bindings[i].BlendShapeIndex,
+                    m_InitialWeights[i]);
+            }
+        }
+    }
+}

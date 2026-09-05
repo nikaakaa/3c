@@ -12,7 +12,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
 {
     internal interface IPoseStateSourceSelectionSink
     {
-        void PushMotionMatchingSelection(
+        CharacterPoseSourceResourceResolution PushMotionMatchingSelection(
             PoseNodeId playerNodeId,
             in PresentationPoseSourceSample sample);
     }
@@ -197,6 +197,19 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                         Usage.ProviderId);
             }
 
+            internal void MarkPending(ulong presentationFrame)
+            {
+                if (!Relevant || presentationFrame == 0)
+                {
+                    throw new InvalidOperationException(
+                        "Motion Matching provider cannot become pending outside an active demand.");
+                }
+                LastResolvedFrame = presentationFrame;
+                Status =
+                    PoseSourceProviderStatus.Pending(
+                        Usage.ProviderId);
+            }
+
             internal void MarkInvalid(
                 ulong presentationFrame,
                 PresentationPoseSourceFailureReason failureReason)
@@ -280,6 +293,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
         readonly MotionMatchingPoseStateDemand[] m_MotionMatchingDemands;
         readonly CharacterPoseLinkedFragmentState m_LinkedFragments;
         readonly bool[] m_StateControlledPlayers;
+        CharacterPoseSourceModule m_SourceModule;
         int m_SourceSyncRelationJournalCount;
         bool m_FrameOpen;
 
@@ -382,6 +396,17 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
         }
         internal int MotionMatchingProviderCount =>
             m_MotionMatching.Length;
+
+        internal void BindResourceModule(
+            CharacterPoseSourceModule sourceModule)
+        {
+            if (sourceModule == null)
+                throw new ArgumentNullException(nameof(sourceModule));
+            if (m_SourceModule != null)
+                throw new InvalidOperationException(
+                    "Pose State source resource module is already bound.");
+            m_SourceModule = sourceModule;
+        }
 
         internal void BeginFrame()
         {
@@ -562,8 +587,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                     resolution.GetSelection(i);
                 MotionMatchingRelevance relevance =
                     RequireMotionMatching(item);
-                relevance.MarkReady(
-                    resolution.PresentationFrame);
                 PresentationPoseSourceSample sample =
                     item.SourceSample;
                 if (item.SubmitToPlayer)
@@ -571,9 +594,24 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                     workspace.SetProviderSample(
                         lease,
                         sample);
-                    selectionSink.PushMotionMatchingSelection(
-                        item.PlayerNodeId,
-                        in sample);
+                    CharacterPoseSourceResourceResolution acceptance =
+                        selectionSink.PushMotionMatchingSelection(
+                            item.PlayerNodeId,
+                            in sample);
+                    if (acceptance.IsPending)
+                        relevance.MarkPending(
+                            resolution.PresentationFrame);
+                    else if (acceptance.IsInvalid)
+                    {
+                        relevance.MarkInvalid(
+                            resolution.PresentationFrame,
+                            PresentationPoseSourceFailureReason.BackendFailure);
+                    }
+                    else
+                    {
+                        relevance.MarkReady(
+                            resolution.PresentationFrame);
+                    }
                 }
                 var key =
                     new AnimationPlayerSourceSampleKey(
@@ -627,13 +665,15 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
         }
 
         internal void AdvanceSources(
+            CharacterPoseSourceModule sourceModule,
             float presentationDeltaSeconds,
             in CharacterPresentationFactFrame factFrame,
             in CharacterPresentationProgramParameterFrame
                 parameterFrame,
             in CharacterPoseSourceTuningView sourceTuning)
         {
-            if (!float.IsFinite(presentationDeltaSeconds) ||
+            if (sourceModule == null ||
+                !float.IsFinite(presentationDeltaSeconds) ||
                 presentationDeltaSeconds < 0f ||
                 !factFrame.IsValid ||
                 !parameterFrame.IsValid ||
@@ -650,6 +690,21 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                     m_ClipPlayers[i];
                 bool active =
                     IsPlayerActive(player.PlayerIndex);
+                if (active &&
+                    !m_StateControlledPlayers[player.PlayerIndex])
+                {
+                    CharacterPoseSourceReadinessTarget target =
+                        CharacterPoseSourceReadinessTarget.FromResource(
+                            CharacterPoseSourcePreparationKind.ClipPlayer,
+                            default,
+                            player.NodeId,
+                            i,
+                            player.Backend,
+                            player.ResourceCatalogIndex,
+                            player.GroupClipIndex);
+                    if (sourceModule.TryDeferSource(in target))
+                        continue;
+                }
                 if (!m_StateControlledPlayers[player.PlayerIndex])
                     player.SetRelevant(active);
                 if (!active)
@@ -677,6 +732,19 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                     m_BlendSpacePlayers[i];
                 bool active =
                     IsPlayerActive(player.PlayerIndex);
+                if (active &&
+                    !m_StateControlledPlayers[player.PlayerIndex])
+                {
+                    CharacterPoseSourceReadinessTarget target =
+                        CharacterPoseSourceReadinessTarget.FromBlendSpaceSamples(
+                            CharacterPoseSourcePreparationKind.BlendSpacePlayer,
+                            default,
+                            player.NodeId,
+                            i,
+                            player.ResourceSamples);
+                    if (sourceModule.TryDeferSource(in target))
+                        continue;
+                }
                 if (!m_StateControlledPlayers[player.PlayerIndex])
                     player.SetRelevant(active);
                 if (!active)
@@ -905,6 +973,56 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             }
             RequireClip(usage)
                 .SetRelevant(relevant, demandKind);
+        }
+
+        bool ICharacterPoseStateSourceRuntime.TryStageStateTarget(
+            IReadOnlyList<PoseStateSourceProviderPlan> providers)
+        {
+            if (m_SourceModule == null)
+                throw new InvalidOperationException(
+                    "Pose State source resource module is not bound.");
+            if (providers == null)
+                throw new ArgumentNullException(nameof(providers));
+            bool ready = true;
+            for (int i = 0; i < providers.Count; i++)
+            {
+                PoseStateSourceProviderPlan provider = providers[i];
+                if (provider.SourceKind ==
+                    AnimationPoseSourceKind.MotionMatching)
+                {
+                    continue;
+                }
+                if (provider.SourceKind ==
+                    AnimationPoseSourceKind.BlendSpace)
+                {
+                    AnimationBlendSpacePlayerRuntime player =
+                        RequireBlendSpace(provider);
+                    CharacterPoseSourceReadinessTarget target =
+                        CharacterPoseSourceReadinessTarget.FromBlendSpaceSamples(
+                            CharacterPoseSourcePreparationKind.BlendSpacePlayer,
+                            default,
+                            provider.PlayerNodeId,
+                            provider.PlayerIndex,
+                            player.ResourceSamples);
+                    if (m_SourceModule.TryDeferSource(in target))
+                        ready = false;
+                    continue;
+                }
+                AnimationClipPlayerRuntime clipPlayer =
+                    RequireClip(provider);
+                CharacterPoseSourceReadinessTarget clipTarget =
+                    CharacterPoseSourceReadinessTarget.FromResource(
+                        CharacterPoseSourcePreparationKind.ClipPlayer,
+                        default,
+                        provider.PlayerNodeId,
+                        provider.PlayerIndex,
+                        clipPlayer.Backend,
+                        clipPlayer.ResourceCatalogIndex,
+                        clipPlayer.GroupClipIndex);
+                if (m_SourceModule.TryDeferSource(in clipTarget))
+                    ready = false;
+            }
+            return ready;
         }
 
         void ICharacterPoseStateSourceRuntime.Reset(

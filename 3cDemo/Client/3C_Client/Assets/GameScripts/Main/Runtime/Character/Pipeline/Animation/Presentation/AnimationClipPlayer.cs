@@ -306,7 +306,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             if (descriptor.PresentationPoseSourceIndex != source.SourceIndex ||
                 !string.Equals(source.RigId, rig.RigId, StringComparison.Ordinal) ||
                 !string.Equals(source.RigRevision, rig.RigRevision, StringComparison.Ordinal) ||
-                descriptor.InitialTime > source.Clip.length)
+                descriptor.InitialTime > source.SourceDurationSeconds)
             {
                 throw new InvalidOperationException($"Clip Player '{descriptor.NodeId}' source binding does not match its compiled descriptor.");
             }
@@ -343,6 +343,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
         internal PoseNodeId NodeId => m_Descriptor.NodeId;
         internal int PlayerIndex => m_Descriptor.PlayerIndex;
         internal PresentationPoseSourceIndex SourceIndex => m_Source.SourceIndex;
+        internal CharacterAnimationSamplingBackendKind Backend => m_Source.Backend;
+        internal int ResourceCatalogIndex => m_Source.ResourceCatalogIndex;
+        internal int GroupClipIndex => m_Source.GroupClipIndex;
         internal int FootPlacementWeightParameterIndex { get; }
         internal AnimationPoseSourceId SourceId => m_SourceId;
         internal bool IsRelevant => m_Relevant;
@@ -352,8 +355,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
         internal double ContinuousTime => m_ContinuousTime;
         internal double RawContinuousTime => m_RawContinuousTime;
         internal int Cycle => m_Cycle;
-        internal float RemainingTime => Math.Max(0f, m_Source.Clip.length - m_SampleTime);
-        internal float Duration => m_Source.Clip.length;
+        internal float RemainingTime => Math.Max(0f, m_Source.SourceDurationSeconds - m_SampleTime);
+        internal float Duration => m_Source.SourceDurationSeconds;
         internal CharacterClipPlayerClockSource ClockSource => m_Descriptor.ClockSource;
         internal AnimationFootStepObservationRuntimeSnapshot CreateFootStepObservationSnapshot(
             float sourceWeight)
@@ -404,12 +407,12 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                 normalizedTime,
                 Cycle,
                 Duration,
-                m_Source.Clip.isLooping);
+                m_Source.IsLooping);
             right = m_Source.FootStepObservation.Right.Sample(
                 normalizedTime,
                 Cycle,
                 Duration,
-                m_Source.Clip.isLooping);
+                m_Source.IsLooping);
         }
 
         internal AnimationReadOnlyBuffer<ClipSamplePlan> ClipSamples =>
@@ -676,17 +679,32 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             RequireOpenFrame();
             if (!m_Relevant)
                 throw new InvalidOperationException($"Clip Player '{NodeId}' is not relevant.");
-            float normalizedTime = m_Source.Clip.length > 0f ? m_SampleTime / m_Source.Clip.length : 0f;
+            float normalizedTime = m_Source.SourceDurationSeconds > 0f ? m_SampleTime / m_Source.SourceDurationSeconds : 0f;
+            m_Source.SampleNativeProperties(
+                normalizedTime,
+                m_Parameters,
+                m_ParameterAvailability);
             m_Parameters[FootPlacementWeightParameterIndex] =
                 m_Source.SampleFootPlacementWeightPrepared(normalizedTime);
-            m_ClipSamples[0] = new ClipSamplePlan(
-                0,
-                m_Source.Clip,
-                m_SampleTime,
-                m_ContinuousTime,
-                normalizedTime,
-                1f,
-                m_Source.Clip.isLooping);
+            m_ClipSamples[0] = m_Source.IsAcl
+                ? new ClipSamplePlan(
+                    0,
+                    m_Source.ResourceCatalogIndex,
+                    m_Source.GroupClipIndex,
+                    m_Source.SourceDurationSeconds,
+                    m_SampleTime,
+                    m_ContinuousTime,
+                    normalizedTime,
+                    1f,
+                    m_Source.IsLooping)
+                : new ClipSamplePlan(
+                    0,
+                    m_Source.Clip,
+                    m_SampleTime,
+                    m_ContinuousTime,
+                    normalizedTime,
+                    1f,
+                    m_Source.IsLooping);
             AnimationPoseSourceCaptureBinding binding = m_SourceWorkspace.PrepareCapture(
                 m_SourceId,
                 m_ContinuityIdentity,
@@ -721,7 +739,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             catch (ArgumentException exception)
             {
                 throw new InvalidOperationException(
-                    $"Foot feature sampling failed. Clip={m_Source.Clip.name}, Side={side}, " +
+                    $"Foot feature sampling failed. Source={m_Source.DisplayName}, Side={side}, " +
                     $"NormalizedTime={normalizedTime:R}, Cycle={m_Cycle}.",
                     exception);
             }
@@ -741,7 +759,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             ulong completionIdentity,
             in AnimationPlayerPoseNativeWriteBinding output,
             AnimationPhysicalSourceIdentity physicalSource,
-            int sourceIndex)
+            int sourceIndex,
+            in CharacterPoseSourceScalarReadView scalarReadView)
         {
             RequireAlive();
             RequireOpenFrame();
@@ -750,6 +769,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                 in output,
                 physicalSource,
                 sourceIndex,
+                in scalarReadView,
                 m_ContinuityIdentity,
                 BuildDiscontinuity(completionIdentity),
                 m_Relevant
@@ -823,9 +843,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
         {
             if (double.IsNaN(continuousTime) || double.IsInfinity(continuousTime) || continuousTime < 0d)
                 throw new ArgumentOutOfRangeException(nameof(continuousTime));
-            double duration = m_Source.Clip.length;
+            double duration = m_Source.SourceDurationSeconds;
             m_ContinuousTime = continuousTime;
-            if (m_Source.Clip.isLooping)
+            if (m_Source.IsLooping)
             {
                 m_Cycle = checked((int)Math.Floor(continuousTime / duration));
                 m_SampleTime = (float)(continuousTime - m_Cycle * duration);

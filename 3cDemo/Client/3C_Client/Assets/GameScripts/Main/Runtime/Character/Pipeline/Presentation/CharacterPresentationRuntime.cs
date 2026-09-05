@@ -7,7 +7,10 @@ using ThirdPersonCharacter.Pipeline.Animation.Diagnostics;
 using ThirdPersonCharacter.Pipeline.Animation.Lifecycle;
 using ThirdPersonCharacter.Pipeline.Animation.MotionMatching;
 using ThirdPersonCharacter.Pipeline.Animation.Presentation;
+using ThirdPersonCharacter.Pipeline.Animation.Resources;
 using ThirdPersonCharacter.Pipeline.Animation.Sources;
+using ThirdPersonCharacter.Pipeline.Diagnostics;
+using ThirdPersonPerformance.Instrumentation;
 using ThirdPersonSimulation;
 using Unity.Profiling;
 
@@ -16,21 +19,21 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
     public sealed class CharacterAnimationPresentationRuntime : IDisposable
     {
         static readonly ProfilerMarker ActionLifecycleMarker =
-            new ProfilerMarker("ThirdPerson.Presentation.Animation.ActionLifecycle");
+            new ProfilerMarker(CharacterPerformanceMetrics.ActionLifecycleName);
         static readonly ProfilerMarker TransactionBeginMarker =
-            new ProfilerMarker("ThirdPerson.Presentation.Animation.TransactionBegin");
+            new ProfilerMarker(CharacterPerformanceMetrics.TransactionBeginName);
         static readonly ProfilerMarker ActionSamplingMarker =
-            new ProfilerMarker("ThirdPerson.Presentation.Animation.ActionSampling");
+            new ProfilerMarker(CharacterPerformanceMetrics.ActionSamplingName);
         static readonly ProfilerMarker PoseRoutingMarker =
-            new ProfilerMarker("ThirdPerson.Presentation.Animation.PoseRouting");
+            new ProfilerMarker(CharacterPerformanceMetrics.PoseRoutingName);
         static readonly ProfilerMarker MotionMatchingMarker =
-            new ProfilerMarker("ThirdPerson.Presentation.Animation.MotionMatching");
+            new ProfilerMarker(CharacterPerformanceMetrics.MotionMatchingName);
         static readonly ProfilerMarker ReleaseProtocolMarker =
-            new ProfilerMarker("ThirdPerson.Presentation.Animation.ReleaseProtocol");
+            new ProfilerMarker(CharacterPerformanceMetrics.ReleaseProtocolName);
         static readonly ProfilerMarker FrameCommitMarker =
-            new ProfilerMarker("ThirdPerson.Presentation.Animation.FrameCommit");
+            new ProfilerMarker(CharacterPerformanceMetrics.FrameCommitName);
         static readonly ProfilerMarker PostCommitMarker =
-            new ProfilerMarker("ThirdPerson.Presentation.Animation.PostCommit");
+            new ProfilerMarker(CharacterPerformanceMetrics.PostCommitName);
 
         readonly ActorId m_ActorId;
         readonly CharacterAnimationPresentationBindings m_Bindings;
@@ -78,7 +81,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             CharacterRootHierarchyBinding rootHierarchy,
             CharacterFootPlacementModule footPlacement,
             bool ownsGraphClock,
-            CharacterPoseWorkerScheduler workerScheduler)
+            CharacterPoseWorkerScheduler workerScheduler,
+            CharacterAnimationResourceScope resourceScope)
         {
             m_ActorId = actorId.IsValid
                 ? actorId
@@ -89,6 +93,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 throw new ArgumentNullException(nameof(bindings));
             workerScheduler = workerScheduler ??
                 throw new ArgumentNullException(nameof(workerScheduler));
+            resourceScope = resourceScope ??
+                throw new ArgumentNullException(nameof(resourceScope));
             var actionPlayback =
                 new CharacterActionPlaybackRuntime(
                     bindings.ActionPlayback);
@@ -131,6 +137,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     rigBinding,
                     rootHierarchy,
                     bindings.Projection,
+                    resourceScope,
                     actionPlayback,
                     motionMatching,
                     animationSlots,
@@ -385,7 +392,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 in replacementCommand);
         }
 
-        internal void BeginPresentation(
+        [PerformanceProbe("presentation.animation")]
+        internal bool BeginPresentation(
             ulong presentationFrame,
             ulong latestSimulationTick,
             float interpolationAlpha,
@@ -509,6 +517,22 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                         m_ActionSourceSamples,
                         diagnosticsInterest !=
                             AnimationPresentationDiagnosticsInterest.None);
+                if (!m_PendingPreparedPose.IsReady)
+                {
+                    if (!m_PendingPreparedPose.IsValid ||
+                        m_PendingPreparedPose.Outcome !=
+                            CharacterPoseSourceFrameOutcome.AwaitingSample)
+                    {
+                        throw new InvalidOperationException(
+                            $"Animation Presentation source preparation is invalid: outcome={m_PendingPreparedPose.Outcome}, failure={m_PendingPreparedPose.SourceFrame.FailureReason}.");
+                    }
+                    Exception pendingCleanup = CleanupPendingPresentation();
+                    if (pendingCleanup != null)
+                        throw new AggregateException(
+                            "Animation Presentation pending source cleanup failed.",
+                            pendingCleanup);
+                    return false;
+                }
                 CharacterPoseSourceFrameResult sourceFrame =
                     m_PendingPreparedPose.SourceFrame;
                 m_PendingTransaction.BindSourceResults(
@@ -546,6 +570,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     m_PendingTransaction.SourceLease,
                     in m_PendingPreparedPose,
                     m_EnterEvaluateBarrier);
+                return true;
             }
             catch (Exception frameFailure)
             {
@@ -553,6 +578,11 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             }
         }
 
+        internal bool TryGetCommittedPose(
+            out ComposedAnimationPoseFrame frame) =>
+            m_PoseModules.Publication.TryGetCommittedFrame(out frame);
+
+        [PerformanceProbe("presentation.animation")]
         internal bool TryAdvancePresentation(
             out CharacterPoseWorkerStageLease workerLease)
         {
@@ -573,6 +603,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             }
         }
 
+        [PerformanceProbe("presentation.animation")]
         internal ComposedAnimationPoseFrame CompletePresentation()
         {
             if (!m_PresentationActive)
@@ -702,23 +733,17 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 if (transaction.Phase <
                     AnimationPresentationFramePhase.EvaluateBarrier)
                 {
-                    cleanupFailure = DiscardFrameTransaction(
+                    cleanupFailure = CleanupFrameTransaction(
                         transaction,
-                        linkedPose);
+                        linkedPose,
+                        false);
                 }
                 else
                 {
-                    DiscardStep(
-                        () => m_PoseFrame.DiscardAfterBarrier(
-                            transaction.ConstraintLease,
-                            transaction.PublicationLease),
-                        ref cleanupFailure);
-                    DiscardStep(
-                        () => MarkFaulted(transaction),
-                        ref cleanupFailure);
-                    DiscardStep(
-                        linkedPose.Discard,
-                        ref cleanupFailure);
+                    cleanupFailure = CleanupFrameTransaction(
+                        transaction,
+                        linkedPose,
+                        true);
                 }
             }
             ClearPendingPresentation();
@@ -783,7 +808,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             m_PoseFrame.RequireNoOpenMutation();
             if (reason == PoseDiscontinuityResetReason.None)
                 throw new ArgumentOutOfRangeException(nameof(reason));
-            PosePublication.Invalidate();
+            PosePublication.ResetToDefaults();
             PoseDiagnostics.Reset();
             PoseSource.CancelReleaseDiagnostics();
             PoseSource.ClearActionSlotReleaseCompletions();
@@ -1064,9 +1089,10 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             transaction.MarkSealed();
         }
 
-        Exception DiscardFrameTransaction(
+        Exception CleanupFrameTransaction(
             CharacterPoseFrameTransaction transaction,
-            CharacterLinkedPoseRuntimeSession linkedPose)
+            CharacterLinkedPoseRuntimeSession linkedPose,
+            bool faulted)
         {
             if (transaction == null ||
                 transaction.Closed)
@@ -1104,11 +1130,22 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             DiscardStep(
                 linkedPose.Discard,
                 ref failure);
-            transaction.MarkDiscarded();
-            m_LastFrameOutcome =
-                AnimationPresentationFrameOutcome.None;
-            if (m_DiscardCount != ulong.MaxValue)
-                m_DiscardCount++;
+            if (faulted)
+            {
+                DiscardStep(
+                    () => MarkFaulted(transaction),
+                    ref failure);
+            }
+            else
+            {
+                DiscardStep(
+                    transaction.MarkDiscarded,
+                    ref failure);
+                m_LastFrameOutcome =
+                    AnimationPresentationFrameOutcome.None;
+                if (m_DiscardCount != ulong.MaxValue)
+                    m_DiscardCount++;
+            }
             return failure;
         }
 

@@ -103,7 +103,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                 nodeId,
                 out sourceOwnerIndex);
 
-        internal void PushMotionMatchingSelection(
+        internal CharacterPoseSourceResourceResolution
+            PushMotionMatchingSelection(
             CharacterPoseSourceModule sourceModule,
             PoseNodeId playerNodeId,
             in PresentationPoseSourceSample sample)
@@ -129,17 +130,44 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                         in sample,
                         sourceOwnerIndex);
                 AnimationPoseSampleRequest request = resolved.Request;
+                CharacterPoseSourceReadinessTarget target =
+                    CharacterPoseSourceReadinessTarget.FromClips(
+                        CharacterPoseSourcePreparationKind.Provider,
+                        request.SourceId,
+                        playerNodeId,
+                        -1,
+                        request.Clips);
+                if (sourceModule.TryDeferSource(
+                        in target,
+                        out CharacterPoseSourceResourceResolution resolution))
+                    return resolution;
                 m_Routes[playerNodeId].PushSelection(
                     stack,
                     in request);
-                return;
+                return resolution;
             }
             if (m_DirectPlayers.TryGetValue(
                     playerNodeId,
                     out AnimationSelectedPosePlayerRuntime player))
             {
+                AnimationPoseSourceId sourceId = new AnimationPoseSourceId(
+                    sample.SourceIndex,
+                    sample.SourceKind,
+                    new AnimationPoseSelectionGeneration(
+                        sample.SourceGeneration.Value));
+                CharacterPoseSourceReadinessTarget target =
+                    CharacterPoseSourceReadinessTarget.FromClips(
+                        CharacterPoseSourcePreparationKind.DirectPlayer,
+                        sourceId,
+                        playerNodeId,
+                        player.PlayerIndex,
+                        sample.Clips);
+                if (sourceModule.TryDeferSource(
+                        in target,
+                        out CharacterPoseSourceResourceResolution resolution))
+                    return resolution;
                 player.PushSelection(in sample);
-                return;
+                return resolution;
             }
             throw new InvalidOperationException(
                 $"Motion Matching Pose State Player '{playerNodeId}' is not installed in the active Pose Plan.");

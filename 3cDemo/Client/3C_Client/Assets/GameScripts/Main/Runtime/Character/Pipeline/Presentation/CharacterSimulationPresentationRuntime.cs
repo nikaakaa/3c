@@ -373,7 +373,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     CharacterPresentationProgramParameterFrame parameterFrame =
                         CharacterPresentationProgramParameterFrame.FromFact(
                             in factFrame);
-                    m_Animation.BeginPresentation(
+                    m_PendingAnimationFrame = m_Animation.BeginPresentation(
                         context.RenderFrame,
                         m_PendingBodyFrame.AnimationSampleTick,
                         m_PendingBodyFrame.AnimationSampleAlpha,
@@ -383,7 +383,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                         in parameterFrame,
                         m_LinkedPose.Session,
                         m_Diagnostics);
-                    m_PendingAnimationFrame = true;
                 }
                 catch (Exception exception)
                 {

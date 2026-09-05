@@ -5,6 +5,7 @@ using ThirdPersonCharacter.Pipeline.Animation.Diagnostics;
 using ThirdPersonCharacter.Pipeline.Animation.Lifecycle;
 using ThirdPersonCharacter.Pipeline.Animation.MotionMatching;
 using ThirdPersonCharacter.Pipeline.Animation.Presentation;
+using ThirdPersonCharacter.Pipeline.Animation.Resources;
 using ThirdPersonCharacter.Pipeline.Presentation;
 using ThirdPersonCharacter.Pipeline.Presentation.Animancer;
 using UnityEngine.Animations;
@@ -103,7 +104,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Sources
                     m_HasResult ||
                     m_ConsumedPreparationCount !=
                         m_Demand.Preparations.Count ||
-                    !result.IsReady ||
+                    !result.IsValid ||
                     result.Lineage != m_Demand.Lineage)
                 {
                     throw new ArgumentException(
@@ -484,7 +485,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Sources
         readonly AnimancerComponent m_Animancer;
         readonly CharacterPoseSourceCatalog m_Catalog;
         readonly CharacterPoseSourceTuningState m_Tuning;
-        readonly AnimancerPoseSamplingBackend m_Backend;
+        readonly CharacterPoseSourceReadinessJournal m_Readiness;
+        readonly CharacterPoseSourceBackendSet m_Backends;
+        readonly AnimancerPoseSamplingBackend m_NativeClipBackend;
         readonly PhysicalPoseSourceRegistry m_PhysicalSources;
         readonly CharacterPoseSourceBindingPage m_BindingPage;
         readonly CharacterPoseSourceUsagePage m_UsagePage;
@@ -500,6 +503,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Sources
         SourceFramePage m_FramePage;
         ActionPresentationSamplingFrameTransaction m_ActionSamplingFrame;
         AnimationMixerPlayable m_SourceFanIn;
+        int m_PreparedSourceCount;
         bool m_Disposed;
 
         internal CharacterPoseSourceModule(
@@ -513,13 +517,21 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Sources
             int clipCapacity,
             int directBindingCapacity,
             int clipBindingCapacity,
-            int blendSpaceBindingCapacity)
+            int blendSpaceBindingCapacity,
+            CharacterAnimationResourceScope resourceScope,
+            int parameterCapacity)
         {
             m_Animancer = animancer
                 ? animancer
                 : throw new ArgumentNullException(nameof(animancer));
             if (projection == null)
                 throw new ArgumentNullException(nameof(projection));
+            if (resourceScope == null)
+                throw new ArgumentNullException(nameof(resourceScope));
+            m_Readiness = new CharacterPoseSourceReadinessJournal(
+                resourceScope.Store,
+                sourceCapacity,
+                clipCapacity);
             m_Catalog = new CharacterPoseSourceCatalog(
                 projection,
                 clipCapacity);
@@ -535,18 +547,35 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Sources
                 1);
             var physicalSources = new PhysicalPoseSourceRegistry(
                 sourceCapacity);
-            AnimancerPoseSamplingBackend backend = null;
+            AnimancerPoseSamplingBackend nativeClipBackend = null;
+            CharacterAclPoseSamplingBackend aclBackend = null;
+            CharacterPoseSourceBackendSet backendSet = null;
             AnimationMixerPlayable sourceFanIn = default;
             Playable previousOutputSource = default;
             float previousOutputWeight = 1f;
             try
             {
-                backend = new AnimancerPoseSamplingBackend(
+                nativeClipBackend = new AnimancerPoseSamplingBackend(
                     animancer,
                     rigBinding,
                     rig,
                     sourceCapacity,
                     clipCapacity);
+                if (m_Catalog.HasAclResources)
+                {
+                    aclBackend = new CharacterAclPoseSamplingBackend(
+                        animancer,
+                        rigBinding,
+                        rig,
+                        sourceCapacity,
+                        clipCapacity,
+                        resourceScope,
+                        parameterCapacity);
+                    aclBackend.RegisterResourceClosure(m_Catalog);
+                }
+                backendSet = new CharacterPoseSourceBackendSet(
+                    nativeClipBackend,
+                    aclBackend);
                 PlayableGraph graph = animancer.Graph.PlayableGraph;
                 if (!graph.IsValid())
                 {
@@ -577,12 +606,19 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Sources
                 }
                 if (sourceFanIn.IsValid())
                     sourceFanIn.Destroy();
-                backend?.Dispose();
+                if (backendSet != null)
+                    backendSet.Dispose();
+                else
+                {
+                    aclBackend?.Dispose();
+                    nativeClipBackend?.Dispose();
+                }
                 physicalSources.Dispose();
                 throw;
             }
 
-            m_Backend = backend;
+            m_NativeClipBackend = nativeClipBackend;
+            m_Backends = backendSet;
             m_PhysicalSources = physicalSources;
             m_BindingPage = new CharacterPoseSourceBindingPage(
                 directBindingCapacity,
@@ -724,16 +760,18 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Sources
                 m_FramePage.Begin(in lineage);
             try
             {
-                m_Backend.BeginFrame(lease);
+                m_Backends.BeginFrame(lease);
                 try
                 {
                     m_PhysicalSources.BeginFrame();
                 }
                 catch
                 {
-                    m_Backend.DiscardFrame(lease);
+                    m_Backends.DiscardFrame(lease);
                     throw;
                 }
+                m_Readiness.Clear();
+                m_PreparedSourceCount = 0;
                 return lease;
             }
             catch
@@ -754,6 +792,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Sources
         {
             BeginBindingFrame(demand.Lineage.CompletionIdentity);
             m_FramePage.BindDemand(lease, in demand);
+            m_Readiness.BeginDemand(demand.Lineage.CompletionIdentity);
         }
 
         internal CharacterPoseSourceDemand RequireDemand(
@@ -766,7 +805,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Sources
             IReadOnlyDictionary<AnimationPlayerSourceSampleKey,
                 AnimationResolvedPoseSourceSample> actionSources,
             IReadOnlyDictionary<AnimationPlayerSourceSampleKey,
-                PresentationPoseSourceSample> providerSources)
+                PresentationPoseSourceSample> providerSources,
+            in CharacterPoseSourceReadinessPageView readinessPage)
         {
             CharacterPoseSourceDemand demand =
                 m_FramePage.RequireDemand(lease);
@@ -774,9 +814,34 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Sources
                 in demand,
                 in preparedResources,
                 actionSources,
-                providerSources);
+                providerSources,
+                in readinessPage,
+                m_PreparedSourceCount > 0);
             m_FramePage.BindResult(lease, in result);
             return result;
+        }
+
+        internal CharacterPoseSourceReadinessPageView SealReadiness(
+            in CharacterPoseSourcePreparationView preparations)
+        {
+            return m_Readiness.Seal(
+                preparations.CompletionIdentity,
+                in preparations);
+        }
+
+        internal bool HasPreparedSource => m_PreparedSourceCount > 0;
+
+        internal bool TryDeferSource(
+            in CharacterPoseSourceReadinessTarget target)
+        {
+            return TryDeferSource(in target, out _);
+        }
+
+        internal bool TryDeferSource(
+            in CharacterPoseSourceReadinessTarget target,
+            out CharacterPoseSourceResourceResolution resolution)
+        {
+            return m_Readiness.TryDefer(in target, out resolution);
         }
 
         internal CharacterPoseSourcePreparedResources
@@ -810,14 +875,14 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Sources
             CharacterPoseSourceFrameLease lease)
         {
             m_FramePage.RequireOpen(lease);
-            m_Backend.RequireOpenFrame(lease);
+            m_Backends.RequireOpenFrame(lease);
         }
 
         internal void RequirePendingReady(
             CharacterPoseSourceFrameLease lease)
         {
             m_FramePage.RequireReady(lease);
-            m_Backend.RequireOpenFrame(lease);
+            m_Backends.RequireOpenFrame(lease);
         }
 
         internal AnimationResolvedPoseSourceSample ResolveProviderSample(
@@ -875,6 +940,17 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Sources
                     "Character Pose source preparation is invalid.",
                     nameof(preparation));
             }
+            CharacterPoseSourceResourceResolution resolution =
+                m_Readiness.ResolveCurrent(
+                    preparation.Capture.CompletionIdentity,
+                    in preparation);
+            CharacterPoseSourceReadinessView readiness =
+                resolution.ToReadiness(preparation.Capture.CompletionIdentity);
+            if (!readiness.IsReady)
+            {
+                throw new InvalidOperationException(
+                    $"Character Pose source preparation resource is '{readiness.Availability}'.");
+            }
             switch (preparation.Kind)
             {
                 case CharacterPoseSourcePreparationKind.Action:
@@ -922,6 +998,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Sources
                     throw new InvalidOperationException(
                         "Character Pose source preparation kind is invalid.");
             }
+            m_PreparedSourceCount++;
         }
 
         void PrepareActionAndConnect(
@@ -929,17 +1006,24 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Sources
             AnimationPoseSourceCaptureBinding capture,
             PoseNodeId poseNodeId)
         {
+            IAnimationPoseSamplingBackend backend =
+                ResolveBackend(request.Clips, request.SourceId, poseNodeId);
+            bool committed = m_PhysicalSources.ContainsCommitted(
+                request.SourceId,
+                poseNodeId);
             AnimationPhysicalSourceIdentity physical =
-                m_PhysicalSources.Register(
+                RegisterSource(
                     request.SourceId,
                     poseNodeId,
-                    request.SourceOwnerIndex);
+                    request.SourceOwnerIndex,
+                    backend,
+                    request.Clips,
+                    default);
             AnimationPoseSourcePrepareResult prepared =
-                m_Backend.PrepareOrUpdate(
+                backend.PrepareOrUpdate(
                     in request,
-                    m_Backend.ContainsCommitted(
-                        request.SourceId,
-                        poseNodeId)
+                    physical,
+                    committed
                         ? default
                         : m_Catalog.RequireAction(
                             request.SourceOwnerIndex),
@@ -954,17 +1038,22 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Sources
             AnimationPoseSourceCaptureBinding capture,
             PoseNodeId poseNodeId)
         {
+            bool committed = m_PhysicalSources.ContainsCommitted(
+                request.SourceId,
+                poseNodeId);
             AnimationPhysicalSourceIdentity physical =
-                m_PhysicalSources.Register(
+                RegisterSource(
                     request.SourceId,
                     poseNodeId,
-                    request.SourceOwnerIndex);
+                    request.SourceOwnerIndex,
+                    m_NativeClipBackend,
+                    request.Clips,
+                    default);
             AnimationPoseSourcePrepareResult prepared =
-                m_Backend.PrepareOrUpdate(
+                m_NativeClipBackend.PrepareOrUpdate(
                     in request,
-                    m_Backend.ContainsCommitted(
-                        request.SourceId,
-                        poseNodeId)
+                    physical,
+                    committed
                         ? default
                         : m_Catalog.RequireMotionMatching(
                             in sample),
@@ -987,7 +1076,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Sources
                 sourceId,
                 sourceOwnerIndex,
                 clips,
-                m_Backend.ContainsCommitted(sourceId, poseNodeId)
+                m_PhysicalSources.ContainsCommitted(sourceId, poseNodeId)
                     ? default
                     : m_Catalog.RequireMotionMatching(in sample),
                 in capture,
@@ -1008,7 +1097,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Sources
                 sourceId,
                 sourceOwnerIndex,
                 clips,
-                m_Backend.ContainsCommitted(sourceId, poseNodeId)
+                m_PhysicalSources.ContainsCommitted(sourceId, poseNodeId)
                     ? default
                     : m_Catalog.RequireClip(sourceId),
                 in capture,
@@ -1029,9 +1118,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Sources
                     sourceId,
                     sourceOwnerIndex,
                     clips,
-                    m_Backend.ContainsCommitted(
-                        sourceId,
-                        poseNodeId)
+                m_PhysicalSources.ContainsCommitted(sourceId, poseNodeId)
                         ? default
                         : m_Catalog.RequireBlendSpace(bindingIndex),
                     in capture,
@@ -1057,22 +1144,41 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Sources
                 throw new InvalidOperationException(
                     "Pose source binding frame is stale.");
             }
+            IAnimationPoseSamplingBackend backend =
+                ResolveBackend(clips, sourceId, poseNodeId, clipCatalog);
+            bool committed = m_PhysicalSources.ContainsCommitted(
+                sourceId,
+                poseNodeId);
             AnimationPhysicalSourceIdentity physical =
-                m_PhysicalSources.Register(
+                RegisterSource(
                     sourceId,
                     poseNodeId,
-                    sourceOwnerIndex);
-            AnimationPoseSourcePrepareResult prepared =
-                m_Backend.PrepareOrUpdate(
-                    sourceId,
+                    sourceOwnerIndex,
+                    backend,
                     clips,
-                    clipCatalog,
+                    clipCatalog);
+            AnimationPoseSourcePrepareResult prepared =
+                backend.PrepareOrUpdate(
+                    sourceId,
+                    physical,
+                    clips,
+                    committed ? default : clipCatalog,
                     in capture,
                     poseNodeId);
+            if (!prepared.ScalarReadView.IsValid ||
+                prepared.ScalarReadView.PhysicalIdentity != physical ||
+                prepared.ScalarReadView.SourceId != sourceId)
+            {
+                throw new InvalidOperationException(
+                    "Pose source scalar read view does not match its physical source.");
+            }
+            CharacterPoseSourceScalarReadView scalarReadView =
+                prepared.ScalarReadView;
             Connect(physical, prepared);
             return new CharacterPoseSourceBinding(
                 physical,
-                capture.SourceIndex);
+                capture.SourceIndex,
+                in scalarReadView);
         }
 
         internal void ValidatePhysicalFrame() =>
@@ -1083,23 +1189,24 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Sources
         {
             m_FramePage.RequireReady(lease);
             m_ReleaseValidationIdentities.Clear();
-            m_Backend.ValidateFrame(lease);
+            m_Backends.ValidateFrame(lease);
         }
 
         internal void EnterEvaluateBarrier(
             CharacterPoseSourceFrameLease lease)
         {
             m_FramePage.RequireReady(lease);
-            m_Backend.EnterEvaluateBarrier(lease);
+            m_Backends.EnterEvaluateBarrier(lease);
         }
 
         internal void CommitFrame(
             CharacterPoseSourceFrameLease lease)
         {
             m_FramePage.RequireReady(lease);
-            m_Backend.CommitFrame(lease);
+            m_Backends.CommitFrame(lease);
             m_FramePage.Seal(lease);
             m_PhysicalSources.CommitFrame();
+            m_PreparedSourceCount = 0;
         }
 
         internal void DiscardFrame(
@@ -1123,7 +1230,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Sources
                     DiscardStep(() => Disconnect(physical), ref failure);
             }
             DiscardStep(
-                () => m_Backend.DiscardFrame(lease),
+                () => m_Backends.DiscardFrame(lease),
                 ref failure);
             DiscardStep(
                 () => m_FramePage.Discard(lease),
@@ -1134,6 +1241,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Sources
             m_BindingPage.Clear();
             m_ReleasePage.Clear();
             m_ReleaseValidationIdentities.Clear();
+            m_Readiness.Clear();
+            m_PreparedSourceCount = 0;
             if (failure != null)
             {
                 throw new AggregateException(
@@ -1181,7 +1290,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Sources
             int port = checked(current.Index.Value + 1);
             if (port <= 0 ||
                 port >= m_SourceFanIn.GetInputCount() ||
-                !m_Backend.ContainsCommitted(
+                !IsCommittedInAnyBackend(
                     permission.SourceId,
                     permission.PoseNodeId) ||
                 !m_ReleaseValidationIdentities.Add(current))
@@ -1202,9 +1311,12 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Sources
                     physical,
                     permission.SourceId);
             AnimationPoseSourceReleaseToken backendRelease =
-                m_Backend.StageRelease(
+                RequireCommittedBackend(
                     permission.SourceId,
-                    permission.PoseNodeId);
+                    permission.PoseNodeId).StageRelease(
+                    permission.SourceId,
+                    permission.PoseNodeId,
+                    physical);
             return m_ReleasePage.Prepare(
                 physical,
                 in permission,
@@ -1218,7 +1330,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Sources
             ReleaseEntry prepared =
                 m_ReleasePage.Require(in retirement);
             Disconnect(prepared.PhysicalIdentity);
-            m_Backend.Release(in prepared.BackendRelease);
+            RequireBackend(prepared.BackendRelease.Backend).Release(
+                in prepared.BackendRelease);
             m_PhysicalSources.ApplyPreparedRelease(
                 in prepared.PhysicalRelease);
             m_ReleasePage.Complete(in retirement);
@@ -1257,7 +1370,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Sources
         internal void CompleteDeferredReleases()
         {
             m_ReleasePage.RequireEmpty();
-            m_Backend.ExecuteDeferredReleases();
+            m_Backends.ExecuteDeferredReleases();
             m_PhysicalSources.CompleteReleaseDiagnostics();
         }
 
@@ -1322,18 +1435,20 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Sources
             AnimationPoseSourceId sourceId,
             PoseNodeId poseNodeId,
             ulong completionIdentity) =>
-            m_Backend.RequireDominantClipSample(
+            RequireCommittedBackend(sourceId, poseNodeId).RequireDominantClipSample(
                 sourceId,
                 poseNodeId,
                 completionIdentity);
 
         internal void Clear()
         {
-            m_Backend.Clear();
+            m_Backends.Clear();
             m_FramePage.Clear();
             m_PhysicalSources.Reset();
             m_BindingPage.Clear();
             m_UsagePage.Clear();
+            m_Readiness.Clear();
+            m_PreparedSourceCount = 0;
             for (int port = 1;
                  port < m_SourceFanIn.GetInputCount();
                  port++)
@@ -1368,6 +1483,105 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Sources
             m_SourceFanIn.SetInputWeight(port, 1f);
         }
 
+        AnimationPhysicalSourceIdentity RegisterSource(
+            AnimationPoseSourceId sourceId,
+            PoseNodeId poseNodeId,
+            int sourceOwnerIndex,
+            IAnimationPoseSamplingBackend backend,
+            AnimationReadOnlyBuffer<ClipSamplePlan> clips,
+            AnimationReadOnlyBuffer<AnimationPoseSourceClipBinding> catalog)
+        {
+            CharacterAnimationSamplingBackendKind backendKind =
+                backend == m_NativeClipBackend
+                    ? CharacterAnimationSamplingBackendKind.NativeClip
+                    : CharacterAnimationSamplingBackendKind.Acl;
+            int resourceCatalogIndex = backendKind == CharacterAnimationSamplingBackendKind.Acl
+                ? RequireResourceCatalogIndex(clips, catalog)
+                : -1;
+            return m_PhysicalSources.Register(
+                sourceId,
+                poseNodeId,
+                sourceOwnerIndex,
+                backendKind,
+                resourceCatalogIndex);
+        }
+
+        int RequireResourceCatalogIndex(
+            AnimationReadOnlyBuffer<ClipSamplePlan> clips,
+            AnimationReadOnlyBuffer<AnimationPoseSourceClipBinding> catalog)
+        {
+            if (clips.Count > 0)
+            {
+                for (int i = 0; i < clips.Count; i++)
+                {
+                    if (clips[i].IsAcl)
+                        return clips[i].ResourceCatalogIndex;
+                }
+            }
+            for (int i = 0; i < catalog.Count; i++)
+            {
+                if (catalog[i].IsAcl)
+                    return catalog[i].ResourceCatalogIndex;
+            }
+            throw new InvalidOperationException(
+                "ACL pose source has no registered resource catalog entry.");
+        }
+
+        IAnimationPoseSamplingBackend ResolveBackend(
+            AnimationReadOnlyBuffer<ClipSamplePlan> clips,
+            AnimationPoseSourceId sourceId,
+            PoseNodeId poseNodeId,
+            AnimationReadOnlyBuffer<AnimationPoseSourceClipBinding> catalog = default)
+        {
+            if (m_PhysicalSources.ContainsCommitted(sourceId, poseNodeId))
+            {
+                AnimationPhysicalSourceIdentity physical =
+                    m_PhysicalSources.RequireIdentity(sourceId, poseNodeId);
+                return RequireBackend(
+                    m_PhysicalSources.RequireBackendKind(physical));
+            }
+            if (clips.Count > 0)
+            {
+                bool acl = clips[0].IsAcl;
+                for (int i = 1; i < clips.Count; i++)
+                {
+                    if (clips[i].IsAcl != acl)
+                        throw new InvalidOperationException("Animation pose source mixes Native Clip and ACL backends.");
+                }
+                if (acl)
+                    return RequireAclBackend();
+                return m_NativeClipBackend;
+            }
+            if (catalog.Count > 0 && catalog[0].IsAcl)
+                return RequireAclBackend();
+            if (catalog.Count > 0 && !catalog[0].IsAcl)
+                return m_NativeClipBackend;
+            throw new InvalidOperationException(
+                "Animation pose source has no backend declaration.");
+        }
+
+        IAnimationPoseSamplingBackend RequireCommittedBackend(
+            AnimationPoseSourceId sourceId,
+            PoseNodeId poseNodeId)
+        {
+            AnimationPhysicalSourceIdentity physical =
+                m_PhysicalSources.RequireIdentity(sourceId, poseNodeId);
+            return RequireBackend(
+                m_PhysicalSources.RequireBackendKind(physical));
+        }
+
+        bool IsCommittedInAnyBackend(
+            AnimationPoseSourceId sourceId,
+            PoseNodeId poseNodeId) =>
+            m_PhysicalSources.ContainsCommitted(sourceId, poseNodeId);
+
+        IAnimationPoseSamplingBackend RequireBackend(
+            CharacterAnimationSamplingBackendKind backend)
+            => m_Backends.Require(backend);
+
+        IAnimationPoseSamplingBackend RequireAclBackend() =>
+            m_Backends.Require(CharacterAnimationSamplingBackendKind.Acl);
+
         void RequireAlive()
         {
             if (m_Disposed)
@@ -1381,7 +1595,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Sources
                 return;
             RequireAlive();
             Exception failure = null;
-            DisposeStep(m_Backend.Dispose, ref failure);
+            DisposeStep(m_Backends.Dispose, ref failure);
             if (m_MotionMatching != null)
                 DisposeStep(m_MotionMatching.Dispose, ref failure);
             m_FramePage.Clear();

@@ -22,7 +22,9 @@
         "Cinemachine",
         "Unity.InputSystem",
         "Unity.Collections",
-        "Unity.Burst"
+        "Unity.Burst",
+        "TEngine.Runtime",
+        "YooAsset"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

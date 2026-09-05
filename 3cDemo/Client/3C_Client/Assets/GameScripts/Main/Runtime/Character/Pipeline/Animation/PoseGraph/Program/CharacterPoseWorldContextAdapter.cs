@@ -114,7 +114,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                         throw new InvalidOperationException(
                             $"Timeline Foot Step source '{contribution.SourceId}' Clip binding is missing.");
                     binding.RequireSampleable(clipSample.ClipBindingIndex);
-                    if (!ReferenceEquals(binding.Clip, clipSample.Clip))
+                    if (binding.Backend != clipSample.Backend ||
+                        binding.ResourceCatalogIndex != clipSample.ResourceCatalogIndex ||
+                        binding.GroupClipIndex != clipSample.GroupClipIndex ||
+                        !ReferenceEquals(binding.Clip, clipSample.Clip))
                     {
                         throw new InvalidOperationException(
                             $"Timeline Foot Step source '{contribution.SourceId}' Clip sample does not match its compiled binding.");
@@ -129,6 +132,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                             contribution.SourceId.PresentationPoseSourceIndex,
                             out CharacterPresentationPoseSourcePlan source) ||
                         clipSample.ClipBindingIndex != 0 ||
+                        source.IsAcl != clipSample.IsAcl ||
+                        source.ResourceCatalogIndex != clipSample.ResourceCatalogIndex ||
+                        source.GroupClipIndex != clipSample.GroupClipIndex ||
                         !ReferenceEquals(source.Clip, clipSample.Clip))
                     {
                         throw new InvalidOperationException(
@@ -146,7 +152,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             }
             curves.RequireValid();
             int cycle = checked((int)Math.Floor(
-                clipSample.ContinuousClipTime / clipSample.Clip.length));
+                clipSample.ContinuousClipTime / clipSample.DurationSeconds));
             return new AnimationFootMotionRuntimeFrame(
                 completionIdentity,
                 contribution.NodeId,
@@ -161,13 +167,13 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 curves.Left.Sample(
                     clipSample.NormalizedTime,
                     cycle,
-                    clipSample.Clip.length,
-                    clipSample.Clip.isLooping),
+                    clipSample.DurationSeconds,
+                    clipSample.IsLooping),
                 curves.Right.Sample(
                     clipSample.NormalizedTime,
                     cycle,
-                    clipSample.Clip.length,
-                    clipSample.Clip.isLooping));
+                    clipSample.DurationSeconds,
+                    clipSample.IsLooping));
         }
 
         static AnimationPoseSourceContribution

@@ -1,6 +1,7 @@
 using System;
 using Animancer;
 using ThirdPersonCharacter.Pipeline.Animation;
+using ThirdPersonCharacter.Pipeline.Animation.Lifecycle;
 using Unity.Collections;
 using UnityEngine;
 using UnityEngine.Animations;
@@ -8,81 +9,7 @@ using UnityEngine.Playables;
 
 namespace ThirdPersonCharacter.Pipeline.Presentation.Animancer
 {
-    internal enum AnimationPoseSourcePrepareKind : byte
-    {
-        CommittedUpdate = 1,
-        PreparedResource = 2
-    }
-
-    internal readonly struct AnimationPoseSourceClipBinding
-    {
-        internal AnimationPoseSourceClipBinding(
-            int clipBindingIndex,
-            AnimationClip clip)
-        {
-            if (clipBindingIndex < 0 || !clip ||
-                !float.IsFinite(clip.length) || clip.length <= 0f)
-                throw new ArgumentException("Animation pose source clip binding is invalid.");
-            ClipBindingIndex = clipBindingIndex;
-            Clip = clip;
-        }
-
-        internal int ClipBindingIndex { get; }
-        internal AnimationClip Clip { get; }
-        internal bool IsValid => ClipBindingIndex >= 0 && Clip &&
-                                 float.IsFinite(Clip.length) && Clip.length > 0f;
-    }
-
-    internal readonly struct AnimationPoseSourceReleaseToken
-    {
-        internal AnimationPoseSourceReleaseToken(int permissionIndex, ulong generation)
-        {
-            if (permissionIndex < 0 || generation == 0)
-                throw new ArgumentException("Animation pose source release token is invalid.");
-            PermissionIndex = permissionIndex;
-            Generation = generation;
-        }
-
-        internal int PermissionIndex { get; }
-        internal ulong Generation { get; }
-        internal bool IsValid => PermissionIndex >= 0 && Generation != 0;
-    }
-
-    internal readonly struct AnimationPoseSourcePrepareResult
-    {
-        internal AnimationPoseSourcePrepareResult(
-            AnimationPoseSourceId sourceId,
-            PoseNodeId playerNodeId,
-            ulong frameIdentity,
-            ulong completionIdentity,
-            AnimationScriptPlayable output,
-            AnimationPoseSourcePrepareKind kind)
-        {
-            SourceId = sourceId;
-            PlayerNodeId = playerNodeId;
-            FrameIdentity = frameIdentity;
-            CompletionIdentity = completionIdentity;
-            Output = output;
-            Kind = kind;
-            if (!IsValid)
-                throw new ArgumentException("Animation pose source prepare result is invalid.");
-        }
-
-        internal AnimationPoseSourceId SourceId { get; }
-        internal PoseNodeId PlayerNodeId { get; }
-        internal ulong FrameIdentity { get; }
-        internal ulong CompletionIdentity { get; }
-        internal AnimationScriptPlayable Output { get; }
-        internal AnimationPoseSourcePrepareKind Kind { get; }
-        internal bool IsPreparedResource => Kind == AnimationPoseSourcePrepareKind.PreparedResource;
-        internal bool IsValid => SourceId.IsValid && PlayerNodeId.IsValid &&
-                                 FrameIdentity != 0 && CompletionIdentity != 0 &&
-                                 Output.IsValid() && Output.GetInputCount() == 1 &&
-                                 (Kind == AnimationPoseSourcePrepareKind.CommittedUpdate ||
-                                  Kind == AnimationPoseSourcePrepareKind.PreparedResource);
-    }
-
-    internal sealed class AnimancerPoseSamplingBackend : IDisposable
+    internal sealed class AnimancerPoseSamplingBackend : IAnimationPoseSamplingBackend
     {
         enum SourceFramePhase : byte
         {
@@ -175,6 +102,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation.Animancer
         ulong m_LastReleasePermissionGeneration;
         ulong m_FrameIdentity;
         SourceFramePhase m_FramePhase;
+        bool m_FrameApplied;
         bool m_Disposed;
 
         internal AnimancerPoseSamplingBackend(
@@ -322,11 +250,11 @@ namespace ThirdPersonCharacter.Pipeline.Presentation.Animancer
             }
         }
 
-        internal int SourceCapacity => m_SourceCapacity;
-        internal int ClipCapacity => m_ClipCapacity;
-        internal bool HasOpenFrame => m_FramePhase != SourceFramePhase.Closed;
+        public int SourceCapacity => m_SourceCapacity;
+        public int ClipCapacity => m_ClipCapacity;
+        public bool HasOpenFrame => m_FramePhase != SourceFramePhase.Closed;
 
-        internal void BeginFrame(
+        public void BeginFrame(
             CharacterPoseSourceFrameLease lease)
         {
             RequireAvailable();
@@ -338,10 +266,11 @@ namespace ThirdPersonCharacter.Pipeline.Presentation.Animancer
                 m_DeferredReleaseCount != 0)
                 throw new InvalidOperationException("Animancer pose source lifecycle from the committed frame is not finalized.");
             m_FrameIdentity = lease.FrameIdentity;
+            m_FrameApplied = false;
             m_FramePhase = SourceFramePhase.Preparing;
         }
 
-        internal void RequireOpenFrame(
+        public void RequireOpenFrame(
             CharacterPoseSourceFrameLease lease)
         {
             RequireAvailable();
@@ -352,8 +281,9 @@ namespace ThirdPersonCharacter.Pipeline.Presentation.Animancer
             }
         }
 
-        internal AnimationPoseSourcePrepareResult PrepareOrUpdate(
+        public AnimationPoseSourcePrepareResult PrepareOrUpdate(
             in AnimationPoseSampleRequest request,
+            AnimationPhysicalSourceIdentity physicalIdentity,
             AnimationReadOnlyBuffer<AnimationPoseSourceClipBinding> clipCatalog,
             in AnimationPoseSourceCaptureBinding capture,
             PoseNodeId playerNodeId)
@@ -363,14 +293,16 @@ namespace ThirdPersonCharacter.Pipeline.Presentation.Animancer
                 throw new ArgumentException("Resolved animation pose request is invalid.", nameof(request));
             return PrepareOrUpdate(
                 request.SourceId,
+                physicalIdentity,
                 request.Clips,
                 clipCatalog,
                 in capture,
                 playerNodeId);
         }
 
-        internal AnimationPoseSourcePrepareResult PrepareOrUpdate(
+        public AnimationPoseSourcePrepareResult PrepareOrUpdate(
             AnimationPoseSourceId sourceId,
+            AnimationPhysicalSourceIdentity physicalIdentity,
             AnimationReadOnlyBuffer<ClipSamplePlan> clips,
             AnimationReadOnlyBuffer<AnimationPoseSourceClipBinding> clipCatalog,
             in AnimationPoseSourceCaptureBinding capture,
@@ -451,7 +383,10 @@ namespace ThirdPersonCharacter.Pipeline.Presentation.Animancer
                     m_FrameIdentity,
                     capture.CompletionIdentity,
                     visual.CapturePlayable,
-                    kind);
+                    kind,
+                    new CharacterPoseSourceScalarReadView(
+                        physicalIdentity,
+                        in capture));
             }
             catch
             {
@@ -470,9 +405,10 @@ namespace ThirdPersonCharacter.Pipeline.Presentation.Animancer
             }
         }
 
-        internal AnimationPoseSourceReleaseToken StageRelease(
+        public AnimationPoseSourceReleaseToken StageRelease(
             AnimationPoseSourceId sourceId,
-            PoseNodeId playerNodeId)
+            PoseNodeId playerNodeId,
+            AnimationPhysicalSourceIdentity physicalIdentity)
         {
             RequireAvailable();
             RequireFramePhase(SourceFramePhase.Preparing);
@@ -501,7 +437,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation.Animancer
                 generation);
         }
 
-        internal void ValidateFrame(
+        public void ValidateFrame(
             CharacterPoseSourceFrameLease lease)
         {
             RequireAvailable();
@@ -585,7 +521,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation.Animancer
             m_FramePhase = SourceFramePhase.Validated;
         }
 
-        internal void EnterEvaluateBarrier(
+        public void EnterEvaluateBarrier(
             CharacterPoseSourceFrameLease lease)
         {
             RequireAvailable();
@@ -617,11 +553,13 @@ namespace ThirdPersonCharacter.Pipeline.Presentation.Animancer
             }
         }
 
-        internal void CommitFrame(
+        public void ApplyFrame(
             CharacterPoseSourceFrameLease lease)
         {
             RequireAvailable();
             RequireFrame(lease.FrameIdentity, SourceFramePhase.EvaluateBarrier);
+            if (m_FrameApplied)
+                throw new InvalidOperationException("Animancer pose source frame was already applied.");
             for (int i = 0; i < m_FrameMutationCount; i++)
             {
                 SourceFrameMutation mutation = m_FrameMutations[i];
@@ -636,12 +574,64 @@ namespace ThirdPersonCharacter.Pipeline.Presentation.Animancer
                     m_CommittedSourceCount++;
                 }
             }
-            ClearFrameMutations(false);
+            m_FrameApplied = true;
+        }
+
+        public void ValidateAppliedFrame(
+            CharacterPoseSourceFrameLease lease)
+        {
+            RequireAvailable();
+            RequireFrame(lease.FrameIdentity, SourceFramePhase.EvaluateBarrier);
+            if (!m_FrameApplied)
+                throw new InvalidOperationException("Animancer pose source frame was not applied.");
+        }
+
+        public void FinalizeAppliedFrame(
+            CharacterPoseSourceFrameLease lease)
+        {
+            if (m_FramePhase != SourceFramePhase.EvaluateBarrier ||
+                !m_FrameApplied)
+                return;
+            Array.Clear(m_PendingOwnerSlotReservations, 0, m_PendingOwnerSlotReservations.Length);
+            Array.Clear(m_PendingClipPlans, 0, m_PendingClipPlans.Length);
+            Array.Clear(m_PendingClipStates, 0, m_PendingClipStates.Length);
+            Array.Clear(
+                m_PendingNormalizedClipWeights,
+                0,
+                m_PendingNormalizedClipWeights.Length);
+            Array.Clear(m_FrameMutations, 0, m_FrameMutations.Length);
+            m_FrameMutationCount = 0;
             m_FrameIdentity = 0;
+            m_FrameApplied = false;
             m_FramePhase = SourceFramePhase.Closed;
         }
 
-        internal void DiscardFrame(
+        public void RollbackAppliedFrame(
+            CharacterPoseSourceFrameLease lease)
+        {
+            RequireAvailable();
+            if (m_FramePhase == SourceFramePhase.Closed)
+                return;
+            RequireFrame(lease.FrameIdentity, SourceFramePhase.EvaluateBarrier);
+            for (int i = 0; i < m_FrameMutationCount; i++)
+            {
+                SourceFrameMutation mutation = m_FrameMutations[i];
+                if (mutation.Kind != AnimationPoseSourcePrepareKind.PreparedResource)
+                    continue;
+                SourceOwnerSlot slot = m_SourceOwnerSlots[mutation.OwnerSlotIndex];
+                if (!ReferenceEquals(slot.Visual, mutation.Visual))
+                    continue;
+                m_SourceOwnerSlots[mutation.OwnerSlotIndex].Clear();
+                m_CommittedSourceCount--;
+            }
+            ClearFrameMutations(true);
+            ClearReleasePermissions();
+            m_FrameIdentity = 0;
+            m_FrameApplied = false;
+            m_FramePhase = SourceFramePhase.Closed;
+        }
+
+        public void DiscardFrame(
             CharacterPoseSourceFrameLease lease)
         {
             RequireAvailable();
@@ -655,10 +645,11 @@ namespace ThirdPersonCharacter.Pipeline.Presentation.Animancer
             ClearFrameMutations(true);
             ClearReleasePermissions();
             m_FrameIdentity = 0;
+            m_FrameApplied = false;
             m_FramePhase = SourceFramePhase.Closed;
         }
 
-        internal void Release(in AnimationPoseSourceReleaseToken token)
+        public void Release(in AnimationPoseSourceReleaseToken token)
         {
             RequireAvailable();
             RequireClosedFrame();
@@ -679,7 +670,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation.Animancer
             m_UnconsumedReleasePermissionCount--;
         }
 
-        internal bool ContainsCommitted(
+        public bool ContainsCommitted(
             AnimationPoseSourceId sourceId,
             PoseNodeId playerNodeId)
         {
@@ -688,7 +679,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation.Animancer
                 RequireKey(sourceId, playerNodeId)) >= 0;
         }
 
-        internal ClipSamplePlan RequireDominantClipSample(
+        public ClipSamplePlan RequireDominantClipSample(
             AnimationPoseSourceId sourceId,
             PoseNodeId playerNodeId,
             ulong completionIdentity)
@@ -729,7 +720,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation.Animancer
             return sample;
         }
 
-        internal void ExecuteDeferredReleases()
+        public void ExecuteDeferredReleases()
         {
             RequireAvailable();
             RequireClosedFrame();
@@ -739,7 +730,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation.Animancer
             ClearReleasePermissions();
         }
 
-        internal void Clear()
+        public void Clear()
         {
             RequireNotDisposed();
             RequireClosedFrame();

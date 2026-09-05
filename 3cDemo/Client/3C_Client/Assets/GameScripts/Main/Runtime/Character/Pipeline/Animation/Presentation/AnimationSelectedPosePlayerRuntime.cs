@@ -265,7 +265,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             ulong completionIdentity,
             in AnimationPlayerPoseNativeWriteBinding output,
             AnimationPhysicalSourceIdentity physicalSource,
-            int sourceIndex)
+            int sourceIndex,
+            in CharacterPoseSourceScalarReadView scalarReadView)
         {
             RequireAlive();
             return new AnimationSelectedPosePlayerJob(
@@ -273,6 +274,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                 in output,
                 physicalSource,
                 sourceIndex,
+                in scalarReadView,
                 m_HasSelection ? m_SourcePoseContinuityIdentity : completionIdentity,
                 BuildDiscontinuity(completionIdentity),
                 Availability,
@@ -439,6 +441,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
     internal struct AnimationSelectedPosePlayerJob : IAnimationJob
     {
         [ReadOnly] readonly AnimationBlendSourcePoseNativeReadBinding m_Source;
+        [ReadOnly] readonly NativeSlice<float> m_SourceScalarValues;
+        [ReadOnly] readonly NativeSlice<byte> m_SourceScalarAvailability;
         [NativeDisableContainerSafetyRestriction] NativeSlice<AnimationLocalBonePose> m_Pose;
         [NativeDisableContainerSafetyRestriction] NativeSlice<AnimationBlendBoneVelocity> m_Velocity;
         [NativeDisableContainerSafetyRestriction] NativeSlice<float> m_Parameters;
@@ -456,11 +460,13 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
         [NativeDisableContainerSafetyRestriction] NativeSlice<AnimationPoseNativeInvalidReason> m_InvalidReason;
         [NativeDisableContainerSafetyRestriction] NativeSlice<ulong> m_CompletedAt;
         readonly AnimationPhysicalSourceIdentity m_PhysicalSource;
+        readonly AnimationPhysicalSourceIdentity m_ScalarPhysicalSource;
         readonly int m_SourceIndex;
         readonly int m_PlayerIndex;
         readonly ulong m_ContinuityIdentity;
         readonly PoseDiscontinuityNative m_PoseDiscontinuity;
         readonly ulong m_CompletionIdentity;
+        readonly ulong m_ScalarCompletionIdentity;
         readonly AnimationSelectionAvailabilityPolicy m_AvailabilityPolicy;
         readonly bool m_HasSelection;
         readonly bool m_Empty;
@@ -470,6 +476,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             in AnimationPlayerPoseNativeWriteBinding output,
             AnimationPhysicalSourceIdentity physicalSource,
             int sourceIndex,
+            in CharacterPoseSourceScalarReadView scalarReadView,
             ulong continuityIdentity,
             PoseDiscontinuity discontinuity,
             AnimationSelectionAvailabilityPolicy availabilityPolicy,
@@ -477,6 +484,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             bool empty)
         {
             m_Source = source;
+            m_SourceScalarValues = scalarReadView.Values;
+            m_SourceScalarAvailability = scalarReadView.Availability;
             m_Pose = output.DenseLocalPoses;
             m_Velocity = output.DenseVelocities;
             m_Parameters = output.PoseParameters;
@@ -494,12 +503,14 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             m_InvalidReason = output.InvalidReason;
             m_CompletedAt = output.CompletedAt;
             m_PhysicalSource = physicalSource;
+            m_ScalarPhysicalSource = scalarReadView.PhysicalIdentity;
             m_SourceIndex = sourceIndex;
             m_PlayerIndex = output.Range.PhysicalPlayerIndex;
             m_ContinuityIdentity = continuityIdentity;
             m_PoseDiscontinuity =
                 PoseDiscontinuityNative.From(in discontinuity);
             m_CompletionIdentity = output.CompletionIdentity;
+            m_ScalarCompletionIdentity = scalarReadView.CompletionIdentity;
             m_AvailabilityPolicy = availabilityPolicy;
             m_HasSelection = hasSelection;
             m_Empty = empty;
@@ -522,8 +533,16 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                 PublishInvalid(AnimationPoseNativeInvalidReason.SourceIncomplete);
                 return;
             }
+            if (!m_ScalarPhysicalSource.IsValid ||
+                m_ScalarPhysicalSource != m_PhysicalSource ||
+                m_ScalarCompletionIdentity != m_CompletionIdentity ||
+                m_SourceScalarValues.Length != m_Source.ParameterCount ||
+                m_SourceScalarAvailability.Length != m_Source.ParameterCount)
+            {
+                PublishInvalid(AnimationPoseNativeInvalidReason.SourceIncomplete);
+                return;
+            }
             int poseOffset = m_SourceIndex * m_Source.BoneCount;
-            int parameterOffset = m_SourceIndex * m_Source.ParameterCount;
             for (int bone = 0; bone < m_Source.BoneCount; bone++)
             {
                 AnimationLocalBonePose pose = m_Source.CurrentPose[poseOffset + bone];
@@ -539,8 +558,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             }
             for (int parameter = 0; parameter < m_Source.ParameterCount; parameter++)
             {
-                float value = m_Source.PoseParameters[parameterOffset + parameter];
-                byte available = m_Source.PoseParameterAvailability[parameterOffset + parameter];
+                float value = m_SourceScalarValues[parameter];
+                byte available = m_SourceScalarAvailability[parameter];
                 if (!float.IsFinite(value) || available > 1)
                 {
                     PublishInvalid(AnimationPoseNativeInvalidReason.SlotParameterInvalid);

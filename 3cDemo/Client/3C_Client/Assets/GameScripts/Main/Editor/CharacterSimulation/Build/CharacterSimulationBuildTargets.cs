@@ -127,6 +127,11 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
         void Rollback();
     }
 
+    public interface ICharacterSimulationTargetPublishFinalizer
+    {
+        bool TryFinalizePublication(out string warning);
+    }
+
     public sealed class Float32CharacterSimulationTargetBuildProduct : CharacterSimulationTargetBuildProduct
     {
         public Float32CharacterSimulationTargetBuildProduct(

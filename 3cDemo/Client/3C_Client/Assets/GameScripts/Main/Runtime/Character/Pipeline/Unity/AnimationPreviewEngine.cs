@@ -7,10 +7,13 @@ using ThirdPersonCharacter.Pipeline.Animation;
 using ThirdPersonCharacter.Pipeline.Animation.Diagnostics;
 using ThirdPersonCharacter.Pipeline.Animation.Lifecycle;
 using ThirdPersonCharacter.Pipeline.Animation.MotionMatching;
+using ThirdPersonCharacter.Pipeline.Animation.Resources;
 using ThirdPersonCharacter.Pipeline.Diagnostics;
 using ThirdPersonCharacter.Pipeline.Presentation;
 using ThirdPersonCharacter.Pipeline.Simulation;
+using ThirdPersonCharacter.Pipeline.Unity.Resources;
 using ThirdPersonSimulation;
+using TEngine;
 using UnityEngine;
 
 namespace ThirdPersonCharacter.Pipeline
@@ -61,6 +64,7 @@ namespace ThirdPersonCharacter.Pipeline
         readonly CharacterEquipmentPreviewFixture
             m_EquipmentFixture;
         readonly CharacterPoseWorkerPreviewAdapter m_WorkerAdapter;
+        readonly CharacterAnimationResourceScope m_AnimationResources;
         readonly bool m_WorldContextAvailable;
         readonly ActorId m_PreviewActorId;
         readonly Guid m_DiagnosticsOwnerId;
@@ -144,9 +148,16 @@ namespace ThirdPersonCharacter.Pipeline
             CharacterAnimationPresentationRuntime playback = null;
             CharacterFootPlacementModule footPlacement = null;
             CharacterPoseWorkerPreviewAdapter workerAdapter = null;
+            CharacterAnimationResourceScope animationResources = null;
             try
             {
                 workerAdapter = new CharacterPoseWorkerPreviewAdapter();
+                IResourceModule resourceModule = ModuleSystem.GetModule<IResourceModule>();
+                animationResources = new CharacterAnimationResourceScope(
+                    new YooAssetCharacterAnimationAssetLoader(
+                        resourceModule,
+                        resourceModule.DefaultPackageName),
+                    CharacterAnimationResourceSettings.CorinInitial);
                 if (m_Projection.PosePlan.FootPlacements.Count == 1 && worldAwareBinding)
                 {
                     worldAwareBinding.RequireValid();
@@ -185,7 +196,8 @@ namespace ThirdPersonCharacter.Pipeline
                     rootHierarchy,
                     footPlacement,
                     false,
-                    workerAdapter.Scheduler);
+                    workerAdapter.Scheduler,
+                    animationResources);
                 footPlacement = null;
                 playback.SetDiagnosticsInterest(
                     m_DiagnosticsOwnerId,
@@ -209,7 +221,9 @@ namespace ThirdPersonCharacter.Pipeline
                         m_Projection.PublishedParameterRevision));
                 m_Playback = playback;
                 m_WorkerAdapter = workerAdapter;
+                m_AnimationResources = animationResources;
                 workerAdapter = null;
+                animationResources = null;
                 m_WorldContextAvailable =
                     m_Projection.PosePlan.FootPlacements.Count == 0 ||
                     m_Playback.HasFootPlacement;
@@ -220,6 +234,7 @@ namespace ThirdPersonCharacter.Pipeline
                 playback?.Dispose();
                 workerAdapter?.Dispose();
                 motionMatching?.Dispose();
+                animationResources?.Dispose();
                 throw;
             }
         }
@@ -631,7 +646,7 @@ namespace ThirdPersonCharacter.Pipeline
             CharacterLinkedPoseRuntimeSession linkedPose,
             RuntimeDiagnosticsContext diagnostics)
         {
-            m_Playback.BeginPresentation(
+            bool animationStarted = m_Playback.BeginPresentation(
                 presentationFrame,
                 latestSimulationTick,
                 interpolationAlpha,
@@ -641,6 +656,14 @@ namespace ThirdPersonCharacter.Pipeline
                 in parameterFrame,
                 linkedPose,
                 diagnostics);
+            if (!animationStarted)
+            {
+                if (m_Playback.TryGetCommittedPose(
+                        out ComposedAnimationPoseFrame committed))
+                    return committed;
+                throw new InvalidOperationException(
+                    "Pose Preview has no committed frame while animation resources are pending.");
+            }
             return m_WorkerAdapter.Complete(m_Playback);
         }
 
@@ -659,7 +682,14 @@ namespace ThirdPersonCharacter.Pipeline
             }
             finally
             {
-                m_WorkerAdapter.Dispose();
+                try
+                {
+                    m_WorkerAdapter.Dispose();
+                }
+                finally
+                {
+                    m_AnimationResources.Dispose();
+                }
             }
         }
 

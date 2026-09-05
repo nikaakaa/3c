@@ -74,6 +74,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             PoseStateSourceProviderPlan provider,
             bool relevant,
             PoseSourceProviderDemandKind demandKind);
+        bool TryStageStateTarget(
+            IReadOnlyList<PoseStateSourceProviderPlan> providers);
         void Reset(PoseStateSourceProviderPlan provider);
         PoseSourceProviderStatus GetStatus(PoseStateSourceProviderPlan provider);
         float GetRemainingTime(PoseStateSourceProviderPlan provider);
@@ -1046,6 +1048,14 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                     true,
                     PoseSourceProviderDemandKind.Active,
                     sources);
+                return;
+            }
+            if (!sources.TryStageStateTarget(
+                    m_Descriptor.States[selected.TargetStateIndex]
+                        .SourceProviders))
+            {
+                if (m_HasPendingTarget)
+                    ClearPendingTarget(sources);
                 return;
             }
             bool firstDemand =

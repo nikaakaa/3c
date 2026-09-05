@@ -52,6 +52,12 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             Array.Empty<AnimationProducerPresentationBinding>();
         [SerializeField] CharacterPresentationPoseSourceBinding[] m_PoseSourceBindings =
             Array.Empty<CharacterPresentationPoseSourceBinding>();
+        [SerializeField] CharacterAnimationSourceResourceBinding[] m_SourceResourceBindings =
+            Array.Empty<CharacterAnimationSourceResourceBinding>();
+        [SerializeField] CharacterAnimationPropertyAuthoringBinding[] m_AnimationPropertyBindings =
+            Array.Empty<CharacterAnimationPropertyAuthoringBinding>();
+        [SerializeField] CharacterAclCompressionSettings m_AnimationCompression =
+            new CharacterAclCompressionSettings();
         [SerializeField] CharacterLocomotionSyncGroup[] m_LocomotionSyncGroups =
             Array.Empty<CharacterLocomotionSyncGroup>();
         [SerializeField] CharacterFootPlacementAnalysisMode m_FootPlacementAnalysisMode;
@@ -71,6 +77,12 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             m_ProducerBindings ?? Array.Empty<AnimationProducerPresentationBinding>();
         public IReadOnlyList<CharacterPresentationPoseSourceBinding> PoseSourceBindings =>
             m_PoseSourceBindings ?? Array.Empty<CharacterPresentationPoseSourceBinding>();
+        public IReadOnlyList<CharacterAnimationSourceResourceBinding> SourceResourceBindings =>
+            m_SourceResourceBindings ?? Array.Empty<CharacterAnimationSourceResourceBinding>();
+        public IReadOnlyList<CharacterAnimationPropertyAuthoringBinding> AnimationPropertyBindings =>
+            m_AnimationPropertyBindings ?? Array.Empty<CharacterAnimationPropertyAuthoringBinding>();
+        public CharacterAclCompressionSettings AnimationCompression =>
+            m_AnimationCompression;
         public IReadOnlyList<CharacterLocomotionSyncGroup> LocomotionSyncGroups =>
             m_LocomotionSyncGroups ?? Array.Empty<CharacterLocomotionSyncGroup>();
         public CharacterFootPlacementAnalysisMode FootPlacementAnalysisMode => m_FootPlacementAnalysisMode;
@@ -107,6 +119,39 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         public void SetPoseSourceBindings(CharacterPresentationPoseSourceBinding[] bindings)
         {
             m_PoseSourceBindings = bindings ?? Array.Empty<CharacterPresentationPoseSourceBinding>();
+        }
+
+        public CharacterAnimationSourceResourceBinding FindSourceResourceBinding(AnimationClip clip)
+        {
+            if (!clip)
+                return null;
+            CharacterAnimationSourceResourceBinding result = null;
+            for (int i = 0; i < SourceResourceBindings.Count; i++)
+            {
+                CharacterAnimationSourceResourceBinding candidate = SourceResourceBindings[i];
+                if (candidate?.AuthoringClip != clip)
+                    continue;
+                if (result != null)
+                    throw new InvalidOperationException($"AnimationClip '{clip.name}' has more than one source resource binding.");
+                result = candidate;
+            }
+            return result;
+        }
+
+        public void SetSourceResourceBindings(CharacterAnimationSourceResourceBinding[] bindings)
+        {
+            m_SourceResourceBindings = bindings ?? Array.Empty<CharacterAnimationSourceResourceBinding>();
+        }
+
+        public void SetAnimationPropertyBindings(CharacterAnimationPropertyAuthoringBinding[] bindings)
+        {
+            m_AnimationPropertyBindings = bindings ?? Array.Empty<CharacterAnimationPropertyAuthoringBinding>();
+        }
+
+        public void SetAnimationCompression(CharacterAclCompressionSettings compression)
+        {
+            m_AnimationCompression = compression ??
+                throw new ArgumentNullException(nameof(compression));
         }
 
         public void SetLocomotionSyncGroups(CharacterLocomotionSyncGroup[] groups)
@@ -262,6 +307,59 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 catch (Exception exception)
                 {
                     errors?.Add($"{name}: Presentation Pose source binding #{i} is invalid: {exception.Message}");
+                    valid = false;
+                }
+            }
+
+            var sourceResourceClips = new HashSet<AnimationClip>();
+            for (int i = 0; i < SourceResourceBindings.Count; i++)
+            {
+                CharacterAnimationSourceResourceBinding binding = SourceResourceBindings[i];
+                try
+                {
+                    if (binding == null || !sourceResourceClips.Add(binding.AuthoringClip))
+                        throw new InvalidOperationException("authoring Clip is missing or duplicated.");
+                    binding.RequireValid();
+                }
+                catch (Exception exception)
+                {
+                    errors?.Add($"{name}: Animation source resource binding #{i} is invalid: {exception.Message}");
+                    valid = false;
+                }
+            }
+
+            var propertyIds = new HashSet<PoseParameterId>();
+            var propertyBindingIds = new HashSet<string>(StringComparer.Ordinal);
+            if (m_AnimationCompression == null)
+            {
+                errors?.Add($"{name}: Animation compression settings are missing.");
+                valid = false;
+            }
+            else
+            {
+                try
+                {
+                    m_AnimationCompression.RequireValid();
+                }
+                catch (Exception exception)
+                {
+                    errors?.Add($"{name}: Animation compression settings are invalid: {exception.Message}");
+                    valid = false;
+                }
+            }
+            for (int i = 0; i < AnimationPropertyBindings.Count; i++)
+            {
+                CharacterAnimationPropertyAuthoringBinding binding = AnimationPropertyBindings[i];
+                try
+                {
+                    if (binding == null || !propertyIds.Add(binding.ParameterId) ||
+                        !propertyBindingIds.Add(binding.RendererBindingId + ":" + binding.BlendShapeName))
+                        throw new InvalidOperationException("property binding is missing or duplicated.");
+                    binding.RequireValid(m_PoseGraph?.Graph);
+                }
+                catch (Exception exception)
+                {
+                    errors?.Add($"{name}: Animation property binding #{i} is invalid: {exception.Message}");
                     valid = false;
                 }
             }

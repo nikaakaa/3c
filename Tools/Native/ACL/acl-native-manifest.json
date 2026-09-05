@@ -1,0 +1,57 @@
+{
+  "schema": "3c-acl-native-artifact/v2",
+  "library": "3c_acl_runtime",
+  "aclVersion": "2.1.0",
+  "aclCommit": "414689d5cff4286a7898487a46dc5e48005d38da",
+  "rtmVersion": "2.2.0",
+  "rtmCommit": "d7982f2b2524feeb322f424b29cf43df30b5d5b7",
+  "payloadFormatVersion": 10,
+  "abiVersion": 2,
+  "structVersion": 1,
+  "platform": "Windows-x64",
+  "artifact": {
+    "path": "Assets/Plugins/3C/ACL/Windows/x86_64/3c_acl_runtime.dll",
+    "sizeBytes": 332288,
+    "sha256": "53e48c0f34fd67f6db14e90e6e83f49b7141ae8dda47fa324a8f9ada0815d789"
+  },
+  "editor": ["Mono", "Windows-x64"],
+  "player": ["IL2CPP", "Windows-x64"],
+  "compiler": "MSVC 19.38.33145.0",
+  "buildOptions": ["ACL_NO_ASSERT_CHECKS", "/O2", "/EHsc", "/MD", "/fp:precise", "/GR-", "/std:c++17", "/permissive-"],
+  "floatingPoint": "precise",
+  "simd": true,
+  "callingConvention": "cdecl",
+  "alignment": 16,
+  "capabilities": [
+    "transform-compression",
+    "scalar-compression",
+    "database",
+    "groups",
+    "decoder",
+    "split-bulk"
+  ],
+  "abiStructs": {
+    "abiInfo": "acl_project_abi_info",
+    "transformInput": "acl_project_transform_input",
+    "scalarInput": "acl_project_scalar_input",
+    "groupBuildInput": "acl_project_group_build_input",
+    "groupBuildOutput": "acl_project_group_build_output",
+    "groupPayloadInput": "acl_project_group_payload_input",
+    "decoderBindInput": "acl_project_decoder_bind_input"
+  },
+  "exportedSymbols": [
+    "acl_project_get_abi",
+    "acl_project_group_build",
+    "acl_project_group_build_get_output",
+    "acl_project_group_build_release",
+    "acl_project_group_create",
+    "acl_project_group_get_clip_count",
+    "acl_project_group_release",
+    "acl_project_decoder_create",
+    "acl_project_decoder_bind",
+    "acl_project_decoder_unbind",
+    "acl_project_decoder_sample_transform",
+    "acl_project_decoder_sample_scalar",
+    "acl_project_decoder_destroy"
+  ]
+}

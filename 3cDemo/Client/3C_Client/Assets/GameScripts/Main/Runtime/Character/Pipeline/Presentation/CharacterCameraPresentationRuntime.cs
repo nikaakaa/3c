@@ -282,7 +282,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                         command.SourceActionInstanceId);
                     if (!m_Sequences.TryGetValue(instance, out CameraSequenceRequest sequenceRequest))
                     {
-                        m_SequenceRecoveryStates.Remove(sequenceScope);
+                        RemoveSequenceRecoveryState(sequenceScope, command.Cycle);
                         return;
                     }
                     if (reason == CameraPresentationStopReason.EventRevoked &&
@@ -300,7 +300,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     if (retired || reason == CameraPresentationStopReason.EventRevoked)
                     {
                         m_Sequences.Remove(instance);
-                        m_SequenceRecoveryStates.Remove(sequenceScope);
+                        RemoveSequenceRecoveryState(sequenceScope, command.Cycle);
                     }
                     else
                         m_PendingSequenceTerminations[instance] = new PendingSequenceTermination(
@@ -597,16 +597,29 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 sequence.SourceActionInstanceId);
             if (!m_SequenceRecoveryStates.TryGetValue(scope, out CharacterCameraSequenceTransition.State state))
                 return;
+            if (state.CurrentCycle != sequence.Cycle)
+                return;
             m_SequenceEvaluator.RestoreScopeState(state);
             m_SequenceRecoveryStates.Remove(scope);
         }
 
         void RemoveSequenceRecoveryState(PendingSequenceTermination termination)
         {
-            m_SequenceRecoveryStates.Remove(new CameraPresentationScopeKey(
-                termination.SourceId,
-                termination.Generation,
-                termination.SourceActionInstanceId));
+            RemoveSequenceRecoveryState(
+                new CameraPresentationScopeKey(
+                    termination.SourceId,
+                    termination.Generation,
+                    termination.SourceActionInstanceId),
+                termination.Cycle);
+        }
+
+        void RemoveSequenceRecoveryState(
+            CameraPresentationScopeKey scope,
+            int cycle)
+        {
+            if (m_SequenceRecoveryStates.TryGetValue(scope, out CharacterCameraSequenceTransition.State state) &&
+                state.CurrentCycle == cycle)
+                m_SequenceRecoveryStates.Remove(scope);
         }
 
         void RemovePendingSequenceTerminations(CameraPresentationScopeKey scope)

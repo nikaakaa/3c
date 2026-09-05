@@ -1,8 +1,8 @@
 ## 1. 固定迁移基线与边界
 
 - [ ] 1.1 记录当前工作区差异、有效Definition／Composition／Target／Program／Projection和既有输入trace，交付保护清单与可重建基线；明确TrainingEnemy等既有无效目标，不通过修补它们取得基线。
-- [ ] 1.2 沿角色RootTree、状态机、Action和装备Route列出“C# Locomotion State／Transition、技能请求规则、技能内容、删除”的业务映射，明确外层动作状态机直接拆除，交付每个正式入口及引用的迁移表。
-- [ ] 1.3 对账设计中的33项capability及预览、Pose、装备后续change的共享接口，交付明确替换／保留项；同步接口描述不接管外部change功能。
+- [x] 1.2 沿角色RootTree、状态机、Action和装备Route列出“C# Locomotion State／Transition、技能请求规则、技能内容、删除”的业务映射，明确外层动作状态机直接拆除，交付每个正式入口及引用的迁移表。
+- [x] 1.3 对账设计中的33项capability及预览、Pose、装备后续change的共享接口，交付明确替换／保留项；同步接口描述不接管外部change功能。
 - [ ] 1.4 用既有Replay／Proof与业务观察确定同版本重复性和跨实现比较字段，交付输入／Body／动作阶段／输出基线及来源映射规则；不得以不同ABI的StateHash直接判定回归。
 
 ## 2. 角色与技能基础合同

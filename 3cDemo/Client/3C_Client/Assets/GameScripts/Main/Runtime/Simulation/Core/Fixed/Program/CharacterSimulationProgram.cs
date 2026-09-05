@@ -271,6 +271,7 @@ namespace ThirdPersonSimulation.Fixed
             m_References = SortByIdentity(references, value => value.Identity, "reference");
             m_Scopes = SortByIdentity(scopes, value => value.Identity, "scope");
             m_SourceMap = SortSourceMap(sourceMap);
+            ControlModuleBinding = CharacterControlProgramCatalogValidator.Resolve(m_CatalogEntries, m_StateSlots);
             for (int i = 0; i < m_StateSlots.Count; i++)
                 FixedProgramStateSchema.RequireCodec(m_StateSlots[i]);
             ValidateReferences();
@@ -291,6 +292,7 @@ namespace ThirdPersonSimulation.Fixed
         public IReadOnlyList<ProgramWorldRequestLayout> WorldRequests => m_WorldRequests;
         public IReadOnlyList<ProgramOutputChannelLayout> OutputChannels => m_OutputChannels;
         public IReadOnlyList<ProgramCatalogEntry> CatalogEntries => m_CatalogEntries;
+        public CharacterControlModuleBinding ControlModuleBinding { get; }
         public IReadOnlyList<ProgramMotionModifierDescriptor> MotionModifiers => m_MotionModifiers;
         public IReadOnlyList<ProgramSourceMapEntry> SourceMap => m_SourceMap;
         public IReadOnlyList<ProgramProducer> Producers => m_Producers;

@@ -55,3 +55,13 @@ Timeline Editor Core MUST只拥有时间几何、Track/Clip/注册本地曲线�
 
 - **WHEN** 作者把不满足目标轨道合同的片段粘贴到轨道
 - **THEN** MUST与构建/Document 相同地拒绝，原作者内容保持不变
+
+### Requirement: 作者必须能够逐 Clip 配置动画表现修正
+
+Animation Clip 作者表面 MUST以业务含义展示跟随逻辑进度和保持连续播放两种选择，允许同一 Track 内不同 Clip 独立配置。字段 MUST沿现有 Mutation、Undo、Document 和正式构建保持一致，不得要求作者配置网络服务或另一播放器。该字段 MUST只控制动画表现，不能作为伤害、位移或技能状态跳过恢复的开关。
+
+#### Scenario: 修改单个动画片段的策略
+
+- **WHEN** 作者将一个 Animation Clip 改为保持连续播放并完成正式文档对账
+- **THEN** 该 Clip 的配置 MUST在作者资产和构建内容中一致保留
+- **AND** 同一 Track 的其他 Clip 配置 MUST保持不变

@@ -13,6 +13,7 @@
 - [ ] 2.3 按领域迁移现有动画、MotionCurve/MotionWarp、Cue 和相机片段的定义与执行登记，交付前后字段/语义映射；不得改变正确的领域数学和输出规则。
 - [ ] 2.4 完成内容全闭包的依赖汇总与 typed 绑定校验，覆盖 TreeClip 和嵌套子树；以正式 Validator 对缺失目标、类型错误和缺失能力的精确诊断验证。
 - [ ] 2.5 分开固定调用值、领域绑定与本 Tick 执行视图，预解析运行使用的 typed index/handle；以状态/输入合同和调用链证明不存在对象字典、场景搜索或跨 Tick 事务引用。
+- [ ] 2.6 在 Animation Clip 的唯一领域合同中加入明确的表现修正策略，同步作者字段、Document v5、Mutation、Validator 与旧内容的正式迁移；以同轨不同策略的导出/对账及编译记录验证，禁止通用 Clip 跳过模拟恢复的开关。
 
 ## 3. 提取共用编译与产物发布
 
@@ -30,6 +31,7 @@
 - [ ] 4.4 保持活动 Timeline Decision、C# 控制决策和技能 Commit 的原顺序，以及唯一 Evaluate/WorldResolve/Finalize/Commit；用正式已有回放报告比较窗口、动作阶段和输出。
 - [ ] 4.5 接管自然完成、graceful/force stop、实例失效和嵌套清理，移除被替代的时间/停止实现；以已有回放中的停止来源和状态诊断确认完整 owner 范围。
 - [ ] 4.6 按相机提供的正式版本接通持续/瞬时片段的真实调用身份、sample/cycle、单次权重采样和显式停止，覆盖零权重进入、跨完整短片段、逐实例 force 及视觉尾段归属；以相机领域诊断和已提交事件对账证明未重建同实例时钟、未延长 Action 生命周期。
+- [ ] 4.7 在唯一动画消费链接入 Clip 本次播放身份与表现修正策略，保留 Track 通道/混合、技能模拟恢复和既有分支撤销/确认终态规则；用正式已有回放及 Trace 验证进度跟随、连续播放、重复调用隔离和取消收尾，不新增播放器或恢复器。
 
 ## 5. 完成共用 TreeClip 与非 Skill 调用
 
@@ -60,6 +62,7 @@
 - [ ] 8.2 在 Timeline/Graph 只读观察中接入新播放来源，向 ScenePlay owner 提供带精确提交的正式根/产物、owner、identity/callsite/generation、绑定和生命周期/观察合同；生命周期按钮与运行绑定归预览、内容与独立根入口归 Timeline，以代码接线证明窗口不拥有时间执行、会话或 Gameplay seek。
 - [ ] 8.3 按实际职责迁移 Timeline 核心、Tree 扩展、Character/Scene 接入与 Editor 程序集，同步项目既有 portable 构建清单；以正式依赖图和构建输出确认单向依赖。
 - [ ] 8.4 通过正式 Editor 迁移更新受影响 serialized/managed-reference 类型、shared/inline 引用和内容版本；以完整资产引用/Validator 报告确认旧类型引用清零且作者 identity 保持。
+- [ ] 8.5 在现有只读 Trace 中展示 Clip 来源、本次播放身份、表现修正策略和进度处理结果；以同轨不同策略及同资产重复调用的记录证明未把 Track、Clip 资源与执行实例混为一项。
 
 ## 9. 清理、对账和交付证据
 

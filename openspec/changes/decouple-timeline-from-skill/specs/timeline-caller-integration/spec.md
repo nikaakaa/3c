@@ -81,6 +81,8 @@ Skill 调用 MUST由当前角色及唯一 ActionInstance 的技能执行范围�
 
 Skill 相机片段 MUST经相机领域正式编译绑定和已提交输出传递内容调用来源、ActionInstance 关联、producer generation、cycle 和具有明确含义的采样时间。不同释放/调用/cycle 必须可区分，MUST不以零值或资源 identity 代替缺失来源。Clip 权重/缓动采样必须有唯一 owner，相机资源自身包络与表现时间由相机领域处理。自然完成、取消/中断、事件撤回/替换和 force teardown MUST按同一领域合同传递，不能仅以零权重表达全部停止。非 Skill 缺少正式相机能力时必须在开始前拒绝。
 
+模拟纠正后，上游 MUST沿唯一表现输出链提供当前有效请求和失效来源的停止。Camera MUST使用既有本地播放、更新、混合和淡出处理结果，MUST不保存或恢复网络历史镜头；角色及动画既有恢复链 MUST保留。
+
 #### Scenario: 同一相机片段由两个技能释放使用
 
 - **WHEN** 两个合法释放或调用同时使用同一资源
@@ -95,6 +97,12 @@ Skill 相机片段 MUST经相机领域正式编译绑定和已提交输出传递
 
 - **WHEN** 一个 Timeline 来源被 force teardown
 - **THEN** MUST精确通知相机清理该来源的活动与待发内容，不能重置整个相机或影响其他释放
+
+#### Scenario: 预测来源在模拟纠正后失效
+
+- **WHEN** 已开始的相机效果对应来源被最终模拟结果撤销
+- **THEN** 上游 MUST提交该来源的正常停止，相机按既有规则从当前画面过渡
+- **AND** 相机 MUST不倒回或重放历史镜头
 
 ### Requirement: 非 Skill 帧与领域输出必须具有明确权限
 

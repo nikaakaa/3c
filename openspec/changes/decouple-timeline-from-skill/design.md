@@ -26,7 +26,7 @@
 - `refactor-btsmtl-authoring-architecture` 仍拥有 C# 控制、SkillDefinition/SkillProgram、ActionInstance/SkillExecutionState、完整角色状态与 Document v5 的基础迁移。本变更消费这些合同，负责 Timeline 共用内容与执行拆分；不得把所有 Tree 控制代码整体迁回另一套技能运行时。
 - `rebuild-btsmtl-preview-with-scene-play` 独占预览会话。它的角色预览仍选择 Skill/ActionInstance；本变更增加可供其消费的非 Skill 播放观察合同，场景启动和试验重建不归 Timeline 窗口。
 - 相机只消费正式已提交来源及 producer generation。独立 Timeline 不自动获得相机控制权，不重写相机数学。
-- `replace-btsmtl-ai-with-behavior-designer` 规划将游戏 AI 改为插件执行并删除旧 AI domain/Program。本变更不替它实施删除、不保留其拟退役入口，也不以非 Skill 调用绕过 AI 只产生正式角色输入的边界。调查时该变更已有 proposal/design，尚无 delta specs；下方按实际现有文档列出交集，不声称其全部规范已经完成。
+- `replace-btsmtl-ai-with-behavior-designer` 规划将游戏 AI 改为插件执行并删除旧 AI domain/Program。本变更不替它实施删除、不保留其拟退役入口，也不以非 Skill 调用绕过 AI 只产生正式角色输入的边界。首次对账时只有 proposal/design；后续已读取其实际 20 份 delta 中与本变更相关的 Document/MCP、Graph、程序集与 Pipeline 条款。它仍只有规划授权，不能把规范交接描述为 AI 已实施。
 
 ### 主重构接口交接
 
@@ -220,7 +220,8 @@ TreeClip 与子树采用相同父子停止语义。Once 达到终点后，必须
 | 主重构把 Timeline/Tree 的状态限定到技能实例 | 该限制保留在 Skill 适用范围；共用执行和独立 owner 是新增范围 | 不建立第二 SkillInstance，不重复实施角色控制 |
 | ScenePlay 提案以 Skill/ActionInstance 观察 Timeline | 角色观察保持；由其负责提供的场景 owner 挂接本次正式非 Skill 合同 | 当前无新代码合同，不重建临时预览引擎，不以 seek 改 Gameplay |
 | 相机 change 的 Action 来源合同 | 非 Skill 场景参数例子不消费角色相机；需要时必须另有正式来源合同 | producer generation、已提交命令、正确相机数学 |
-| 新 AI proposal 的 What Changes：删除 AIController/AIProgram 与游戏 AI Document；design 第 8/9 节 | 本次原 Document/MCP 正文硬编码保留 AIController 与之冲突，现修正为只增加 Timeline、其他域按正式退役合同处理 | 插件 AI 不直接调用 Skill/非 Skill Timeline；共享 TreeClip/树执行不随 AI 删除 |
+| 新 AI 的 Document/MCP delta 删除 AIController/AIProgram 与游戏 AI Document | 本次原正文硬编码保留 AIController 与之冲突，已修正为只增加 Timeline、其他域按正式退役合同处理 | 插件 AI 不直接调用 Skill/非 Skill Timeline；共享 TreeClip/树执行不随 AI 删除 |
+| 新 AI 的 `gameplay-simulation-pipeline` delta 将不可改写输入生产事实与可恢复消费状态分责 | 该 Source 边界不适用于剔除 Skill/Timeline 的模拟状态 | 影响未来模拟的播放/树状态仍进入角色事务与恢复，不能标成 ExternalSource 绕开 snapshot |
 
 上述差异在本 change 的 delta 中表达；未安装前不改写 current specs/project.md 为已完成。与主重构/ScenePlay 共同修改同一 Requirement 时，安装以“主重构基础目标 + 本次适用范围扩展”的完整正文合并，不能按归档先后用旧正文覆盖。准备 apply 时核对实际提供接口；真实代码冲突报告用户，不代替其他窗口重写已正确实现。
 
@@ -237,9 +238,17 @@ TreeClip 与子树采用相同父子停止语义。Once 达到终点后，必须
 | `btsmtl-agent-authoring-document-sync`：`Agent Authoring Document必须是按需生成的持久化目录包`、`文档包必须分离可编辑authoring、只读context与service基线`、v5 迁移/失败恢复条款 | 主重构原两域、本次原三域与 AI 移除目标交叉；重复负责 v5 会形成两份迁移 | 主重构唯一实现基础 v5；Timeline 只加自身根/分片；AI owner 删除游戏 AI 根/正文；共用整包事务不分叉 |
 | `btsmtl-agent-authoring-mcp-bridge`：`Bridge 必须复用正式 Agent compiler 与 BTSMTL authoring API`、`Definition 目标必须由调用上下文显式提供` | 后归档的文档可能重新恢复 AIController 路由 | 五工具同一分派，Timeline 只新增自身精确 root；已退役 AI 路由不得恢复，不增加插件 AI Document |
 
-新 AI 的 delta 文件尚未形成，以上 AI 交集依据其当前 proposal/design 的明确删除范围；该 owner 发布 delta 后需按实际 Requirement 标题再核对。不得提前把它的删除任务标为完成，也不得由 Timeline 实现方顺手接管插件输入/网络工作。
+新 AI 的实际 delta 已完成以下标题复核：
+
+- `btsmtl-agent-authoring-document-sync` 保留并修改 `Agent Authoring Document必须是按需生成的持久化目录包`，新增 `游戏AI作者领域必须完整退役且不影响其它Document领域`。最终组合为其非 AI 领域集合加本次正式 Timeline 根；共享时间/树内容和事务不能随 AI 删除。
+- `btsmtl-agent-authoring-mcp-bridge` 保留 `Definition 目标必须由调用上下文显式提供`、`Document Apply必须执行hash门禁、预检和资产级事务`，仅由 AI delta 将 `MCP bridge必须透传同一Document Character与AI事务` 改名为 `MCP bridge必须透传同一Document整包事务`。Timeline 不重复 RENAMED，也不在后归档时恢复旧 AI 标题或 domain。
+- `gameplay-simulation-pipeline` 的 `有状态 Pass 必须进入正式 Snapshot 或重建合同`、`Standard Local Pipeline 必须保持唯一正式单机执行链`、`Pipeline 失败必须保持外层事务原子` 继续保护角色模拟；ExternalSource 只容纳其影响已完整冻结为不可改写输入的生产者状态，不能用于藏起 Timeline/Skill 的未来模拟状态。
+
+唯一 v5 基础仍由主重构 schema owner 实现和合并发布，Timeline 增量不另执行基础迁移，AI 退役也不再独立重跑 v4→v5。上述复核不授权 AI 实施，也不由 Timeline 接管插件输入、checkpoint 或网络工作。
 
 ### 11. 相机 Clip 接口交接
+
+后续用户已明确取消 Camera 自己的网络历史恢复。当前交接以本地播放、更新、停止、混合和淡出为准：模拟纠正后，上游沿唯一表现输出链提交当前有效请求及失效来源的停止，Camera 使用既有混合与尾段处理。保留真实来源、generation、cycle、正常去重和 CameraBasis 输入，不要求 Camera 保存回滚快照或新增 Confirm/历史恢复接口。下方旧提交只用于追溯当时的接口问题，不能将后来取消的 Camera 恢复包作为前置依赖；角色和动画既有网络恢复仍保留。
 
 接口审查来源为相机方案窗口 2026-09-05 的 DESIGN_ANSWER，检查目标为 `D:/Unity_Project_1/camera-zzz`、分支 `codex/rebuild-character-camera-from-zzz`、HEAD `462bb0e33`。下列当前实现与缺口由该 owner 按实际文件报告，本窗口没有据此宣称完成运行验证；最终签名和版本以相机领域后续正式提交为准，不建立第二事件格式。
 
@@ -277,6 +286,34 @@ Timeline 的释放完成不等待 Camera 的普通 BlendOut/FadeOut，也不为�
 Timeline 方须提供已提交的精确内容产物/根、业务 owner、播放 identity/callsite/generation、目标/参数绑定、开始/状态/停止/teardown 以及按需只读观察。内容 Advance 始终由业务 owner 的正式帧调用；预览协调器只控制场景与整体运行，不持有时间执行或直接求值内容。预览公开操作按原 change 的 Start/Pause/Resume/Reset/Stop，不新增预览单步接口；Unity 原生暂停/调度不能被解释为双方新增的 Step API。
 
 `TimelineEditorWorkspaceView.cs` 和 `Tree/TimelineEditorMainWindow.cs` 的生命周期按钮与运行绑定归预览；内容编辑、绑定声明、独立根作者入口归 Timeline。共同区域先报告实际冲突，不覆盖整文件。角色场景的 SessionHost/Actor、ActionInstance、Skill 和 Character Build 限制继续有效；独立内容由 Timeline 正式合同表达，不伪造角色。
+
+### 13. Clip 表现修正与技能模拟恢复
+
+用户进一步明确，同一 Track 中某些动画可能不应随网络纠正倒退。本节把作者选择放在 Animation Clip 上，运行时按该 Clip 的一次播放处理；不增加通用 Clip 的“跳过所有网络恢复”开关。核对的 `887038f01` 中，动画 producer 仍由 Timeline/Track identity 组成，输出适配按 producer/generation 对账，尚未提供本节要求的逐 Clip 策略。
+
+| 作者选择 | 网络修正后同次播放仍有效 | 业务取舍 |
+|---|---|---|
+| 跟随逻辑进度 | 动画模块按修正后的逻辑采样时间更新，使用既有过渡规则 | 动作画面更贴近修正后的技能阶段，但较大修正可能造成可见的进度变化 |
+| 保持连续播放 | 保留本地已播放进度，继续使用现有表现时钟；不因重算而倒退或从头播放 | 画面连续，但这段动画的可见进度可能暂时偏离技能逻辑，适用于业务允许这种偏差的表现 |
+
+两种选择都消费最终有效的动作分支。重算撤销某次播放时，动画模块按既有分支撤销和过渡规则退出该来源；正式技能取消、死亡或 owner 销毁仍按既有停止/淡出规则处理。保持连续播放不意味着保留已经失效的控制权，也不改变已确认终态的拒绝规则。旧内容通过正式迁移显式记录原有跟随逻辑策略，不增加运行时旧 reader 或缺失字段 fallback。
+
+恢复角色快照时，Skill 的实例状态、Timeline/TreeClip 的逻辑状态以及伤害、位移等模拟结果继续进入原事务与恢复链。本节只决定动画消费这些结果时如何处理本地播放进度；不能用动画策略删除模拟状态或让动画播放头反向决定伤害、位移。相机按第 11 节的本地请求消费处理，不随本节增加相机恢复机制。
+
+Track 保持原有动画通道、混合及重叠规则。编译内容在每个 Clip 上保留策略和稳定来源，消费链以真实调用来源、调用/激活 generation、cycle 和 Clip 来源识别本次播放；同一资产的重复释放、嵌套调用或循环不能共用本地播放记录。实现可以保留 Track producer，但不能在聚合时丢失 Clip 的选择；只把 producer 字符串改为 Clip ID 也不能代替本次执行身份。
+
+字段必须沿同一领域合同进入作者界面、Document v5、Mutation、Validator、编译结果和动画消费。时间核心只提供时间、来源和生命周期，动画模块封装表现策略；不增加第二播放器、网络恢复器或诊断状态表。共享 Projection/AnimationSlot/IR 合同的具体类型及提交范围由现有 owner 交接，本节没有把尚未交付的 API 当成已存在。
+
+本节与现行 spec 对账：
+
+| 现行条款 | 本次处理 |
+|---|---|
+| `character-presentation-interpolation` 的“Rollback 动画同步必须来自同一 Gameplay 输入模拟” | 保留。仍从修正后的动作/Body 产生表现，不向网络协议增加 AnimationClip、normalized time 或最终 Pose 字段 |
+| 同 spec 的“Rollback Action 分支必须以确认边界提交终态” | 保留。新增策略只区分仍有效播放的进度处理，不用普通 Release 冒充预测分支撤销，不复活已确认结束的 generation |
+| `timeline-runtime-core` 的实例时间/停止规则与 `character-simulation-kernel` 的唯一事务 | 保留。Clip 的表现选择不改变逻辑播放头、Tree 状态和模拟恢复义务 |
+| 当前 Track producer 聚合实现 | 存在能力缺口：尚未承载逐 Clip 策略。必须补齐身份与消费接线，不能用现有编译或双面板运行成功证明该能力已经完成 |
+
+新增 delta 扩展现行表现条款，没有删除现行恢复要求。若把“保持连续播放”实现为跳过最终分支撤销或模拟恢复，将与上述现行 spec 冲突，不能作为本设计的实现。
 
 ## Risks / Trade-offs
 

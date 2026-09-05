@@ -9,6 +9,7 @@ Timeline 已有可单独编辑的数据和共享资产，但编译入口、运�
 - 保留数据编译：Track、Clip 与嵌套树经同一能力目录、语义发射、数值降低和产物校验形成只读内容。Skill 引用与独立 Timeline 资产构建复用该链；独立构建不伪造 Character Definition、TimelineNode 或 Skill Root。
 - 明确调用参数：作者只配置内容及确实需要外部提供的目标/参数；程序装配领域执行接口。Skill 调用自动沿当前角色和 ActionInstance 取得已有信息；非 Skill 调用显式提供实际目标和参数，TreeClip 复用同次绑定，不通过场景搜索或万能上下文取值。
 - Skill 路径保持唯一 Action 准入、ActionInstance/SkillExecutionState、SimulationTick、Decision/Commit、WorldResolve/Finalize 和提交链。多个或嵌套 Timeline 继续是技能内部内容，不新增 SkillInstance 生命周期。
+- 动画表现的修正策略由每个 Animation Clip 明确选择：跟随修正后的逻辑进度，或让仍有效的同次播放保持连续。同一 Track 可以包含不同策略；运行时区分 Clip 的每次播放。Skill、伤害窗口和位移等模拟状态仍按角色管线恢复，动画策略不授予跳过模拟恢复的权限。
 - 建立正式非 Skill 调用入口，完整提供准备、开始、推进、查询、停止、销毁和只读诊断；同一资产的并发播放各自保存状态。直接调用使用共用执行模块，不恢复作者对象解释器或第二 TreeClip scheduler。
 - 非 Skill 可用能力由内容依赖与调用环境共同校验。交付一个有真实目标绑定、曲线片段和条件 TreeClip 的本地场景表现用例；伤害、ActionWindow、角色 MotionWarp、角色动画及相机输出继续要求其正式领域合同。独立播放不授予修改 Character/World 状态的权限，不补齐完整机关碰撞、战斗、Audio/VFX 或网络业务。
 - **BREAKING**：Track/Clip 的字段、允许组合、重叠规则、绑定需求和执行能力进入唯一领域合同，供编辑器、Document、编译器与运行装配共同使用。新增片段必须完成整条接入，不能只登记菜单或留下空执行器。
@@ -29,6 +30,7 @@ Timeline 已有可单独编辑的数据和共享资产，但编译入口、运�
 - `btsmtl-compiled-simulation-program`：共享 Timeline 内容单元、独立产物根、相同校验与发布基础，以及 Character 绑定/状态布局的边界。
 - `btsmtl-graph-core`：TreeClip 在两类调用方中均使用编译后的树执行，不借用非 Character 作者对象解释器。
 - `character-simulation-kernel`：Character 在唯一事务内接入提取后的执行模块，领域输出权限不扩大。
+- `character-presentation-interpolation`：按 Clip 区分动画表现的进度修正策略，保留本次播放身份、最终动作分支、取消及既有确认终态规则。
 - `btsmtl-timeline-animation-authoring-surface`：通用片段目录、外部目标/参数表面、独立编辑和精确运行实例观察。
 - `btsmtl-agent-authoring-document-sync`：在唯一 v5 增加独立 Timeline 整包目标及其依赖闭包，保持共享资产与运行绑定的区别。
 - `btsmtl-agent-authoring-mcp-bridge`：原五个生命周期工具接受正式 Timeline domain，精确资产构建仍与 apply 分离。

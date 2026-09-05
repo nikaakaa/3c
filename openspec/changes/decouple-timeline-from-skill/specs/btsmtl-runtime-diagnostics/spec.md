@@ -39,3 +39,9 @@ Diagnostics MUST区分稳定作者来源、调用路径与运行实例。树内�
 - **WHEN** 两个非 Skill 调用复用同一 Timeline
 - **THEN** 观察 MUST按 owner、播放 identity 和 generation 分离
 - **AND** C# 调用不得伪造 Graph 节点作为来源
+
+#### Scenario: 观察不同 Clip 的动画修正行为
+
+- **WHEN** 同一 Track 的不同 Clip 使用不同表现修正策略
+- **THEN** 只读 Trace MUST分别标明 Clip 来源、本次播放身份、所用策略和进度处理结果
+- **AND** MUST能够区分保持连续进度与忽略模拟恢复，不能按 Track 聚合成一个策略结论

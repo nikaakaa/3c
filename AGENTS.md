@@ -6,7 +6,7 @@
 
 - 读取文档必须显式使用 UTF-8：PowerShell 用 `Get-Content -Encoding UTF8`。
 - 修改代码用系统文件工具，不通过 Unity MCP 写文件。
-- 永远不要运行 Unity batchmode。
+- 允许通过正式 CLI/executeMethod 按明确项目路径运行本机 Unity batchmode，任务结束后退出；保留主验收 Editor，CI 的 Unity 禁令不变。
 - 搜索优先 `rg`。
 - 不回退用户改动，不使用破坏性 git 命令。
 - 生成代码尽量少写注释，只在关键复杂边界写少量注释。
@@ -29,7 +29,7 @@
 
 ## OpenSpec
 
-- 涉及新能力、破坏性变更、架构调整、计划、proposal、spec 或含糊的大改动时，先读 `openspec/AGENTS.md` 和 `openspec/project.md`。
+- 涉及新能力、破坏性变更、架构调整、计划、proposal、spec 或含糊的大改动时，只有在你明确要求我执行 OpenSpec workflow（例如你明确指定使用 openspec skill）时，才先读 `openspec/AGENTS.md` 和 `openspec/project.md`。
 - OpenSpec 内容除固定格式关键字外使用中文。
 - proposal 阶段只写设计文档，不写代码。
 - 不把手动验证写进 OpenSpec `tasks.md`。

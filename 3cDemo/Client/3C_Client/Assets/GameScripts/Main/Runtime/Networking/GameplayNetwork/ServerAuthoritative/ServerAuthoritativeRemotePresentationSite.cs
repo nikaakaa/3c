@@ -132,6 +132,7 @@ namespace ThirdPersonGameplay.Networking.ServerAuthoritative
                     actorId,
                     tickRate,
                     diagnostics,
+                    program,
                     runtime,
                     diagnosticsTarget,
                     characterObject,
@@ -238,6 +239,7 @@ namespace ThirdPersonGameplay.Networking.ServerAuthoritative
     internal sealed class ServerAuthoritativeRemotePresentationRegistration : IDisposable
     {
         readonly int m_TickRate;
+        readonly CharacterSimulationProgram m_Program;
         readonly ICharacterPresentationRuntime m_Runtime;
         readonly CharacterSimulationGameplayOutputBuffer m_Gameplay = new CharacterSimulationGameplayOutputBuffer();
         readonly ISimulationDiagnosticsSink m_Diagnostics;
@@ -263,6 +265,7 @@ namespace ThirdPersonGameplay.Networking.ServerAuthoritative
             ActorId actorId,
             int tickRate,
             ISimulationDiagnosticsSink diagnostics,
+            CharacterSimulationProgram program,
             ICharacterPresentationRuntime runtime,
             RuntimeDiagnosticsTarget diagnosticsTarget,
             GameObject characterObject,
@@ -279,6 +282,7 @@ namespace ThirdPersonGameplay.Networking.ServerAuthoritative
             ActorId = actorId;
             m_TickRate = tickRate;
             m_Diagnostics = diagnostics ?? throw new ArgumentNullException(nameof(diagnostics));
+            m_Program = program ?? throw new ArgumentNullException(nameof(program));
             m_Runtime = runtime ?? throw new ArgumentNullException(nameof(runtime));
             m_DiagnosticsTarget = diagnosticsTarget ?? throw new ArgumentNullException(nameof(diagnosticsTarget));
             m_CharacterObject = characterObject ? characterObject : throw new ArgumentNullException(nameof(characterObject));
@@ -397,8 +401,11 @@ namespace ThirdPersonGameplay.Networking.ServerAuthoritative
                 m_Gameplay.Publish(value.GameplayFact);
                 return;
             }
-            if (value.PresentationCommand.Kind == PresentationCommandKind.Camera)
-                throw new InvalidOperationException("Remote replication cannot contain Camera commands.");
+            if (value.PresentationCommand.Kind == PresentationCommandKind.Camera ||
+                ServerAuthoritativeReplicationPolicy.IsCameraProducer(
+                    m_Program,
+                    value.PresentationCommand.ProducerId))
+                throw new InvalidOperationException("Remote replication cannot contain Camera producer commands.");
             m_Runtime.Publish(CharacterPresentationCommand.FromFloat32(value.PresentationCommand));
         }
 

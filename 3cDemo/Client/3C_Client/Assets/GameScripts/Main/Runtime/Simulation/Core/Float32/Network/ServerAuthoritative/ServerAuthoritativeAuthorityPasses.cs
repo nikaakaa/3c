@@ -523,6 +523,8 @@ namespace ThirdPersonSimulation.ServerAuthoritative
                 for (int i = 0; i < completed.Result.Actors.Count; i++)
                 {
                     SimulationActorTickResult actor = completed.Result.Actors[i];
+                    CharacterSimulationProgram program = readPorts.ProgramRuntime.GetProgram(
+                        readPorts.ProgramRuntime.GetActorIndex(actor.ActorId));
                     m_SampleCommands.Clear();
                     m_ReliableEvents.Clear();
                     for (int eventIndex = 0; eventIndex < actor.GameplayFacts.Count; eventIndex++)
@@ -539,9 +541,9 @@ namespace ThirdPersonSimulation.ServerAuthoritative
                     for (int eventIndex = 0; eventIndex < actor.PresentationCommands.Count; eventIndex++)
                     {
                         PresentationCommand command = actor.PresentationCommands[eventIndex];
-                        if (m_ReplicationPolicy.ShouldStream(command))
+                        if (m_ReplicationPolicy.ShouldStream(command, program))
                             m_SampleCommands.Add(command);
-                        if (m_ReplicationPolicy.ShouldReplicateReliably(command))
+                        if (m_ReplicationPolicy.ShouldReplicateReliably(command, program))
                             m_ReliableEvents.Add(new ServerAuthoritativeReliableEvent(command));
                         m_Dispositions.Add(new SimulationOutputDisposition(
                             command.Header.EventId,

@@ -100,17 +100,4 @@ namespace ThirdPersonSimulation
         public static bool operator !=(CharacterControlStateFieldId left, CharacterControlStateFieldId right) => !left.Equals(right);
     }
 
-    public readonly struct CharacterControlMotionBindingId : IEquatable<CharacterControlMotionBindingId>, IComparable<CharacterControlMotionBindingId>
-    {
-        public CharacterControlMotionBindingId(string value) => Value = SimulationIdentity.Require(value, nameof(value));
-        public string Value { get; }
-        public bool IsValid => !string.IsNullOrEmpty(Value);
-        public int CompareTo(CharacterControlMotionBindingId other) => string.CompareOrdinal(Value, other.Value);
-        public bool Equals(CharacterControlMotionBindingId other) => string.Equals(Value, other.Value, StringComparison.Ordinal);
-        public override bool Equals(object obj) => obj is CharacterControlMotionBindingId other && Equals(other);
-        public override int GetHashCode() => Value == null ? 0 : StringComparer.Ordinal.GetHashCode(Value);
-        public override string ToString() => Value ?? string.Empty;
-        public static bool operator ==(CharacterControlMotionBindingId left, CharacterControlMotionBindingId right) => left.Equals(right);
-        public static bool operator !=(CharacterControlMotionBindingId left, CharacterControlMotionBindingId right) => !left.Equals(right);
-    }
 }

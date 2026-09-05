@@ -78,22 +78,22 @@ namespace ThirdPersonSimulation
     {
         public CharacterControlMotionRequest(
             SimulationExecutionSource source,
-            CharacterControlMotionBindingId binding,
+            string binding,
             SimulationInputValueId input,
             int continuousTicks,
             int phase)
         {
-            if (!source.IsValid || !binding.IsValid || !input.IsValid || continuousTicks < 0 || phase < 0)
+            if (!source.IsValid || string.IsNullOrEmpty(binding) || !input.IsValid || continuousTicks < 0 || phase < 0)
                 throw new ArgumentException("Character control motion request is incomplete.");
             Source = source;
-            Binding = binding;
+            Binding = SimulationIdentity.Require(binding, nameof(binding));
             Input = input;
             ContinuousTicks = continuousTicks;
             Phase = phase;
         }
 
         public SimulationExecutionSource Source { get; }
-        public CharacterControlMotionBindingId Binding { get; }
+        public string Binding { get; }
         public SimulationInputValueId Input { get; }
         public int ContinuousTicks { get; }
         public int Phase { get; }

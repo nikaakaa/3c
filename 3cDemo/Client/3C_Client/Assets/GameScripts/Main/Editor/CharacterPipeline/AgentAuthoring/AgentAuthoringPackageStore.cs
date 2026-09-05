@@ -46,6 +46,14 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                 if (!string.IsNullOrWhiteSpace(schemaVersion) &&
                     !string.Equals(schemaVersion, AgentAuthoringSchema.Version, StringComparison.Ordinal))
                     return true;
+                string controllerPath = Path.Combine(packagePath, "editable", "controller.json");
+                if (File.Exists(controllerPath))
+                {
+                    JObject controller = JObject.Parse(
+                        File.ReadAllText(controllerPath, Encoding.UTF8));
+                    if (string.IsNullOrWhiteSpace(controller.Value<string>("controlModuleId")))
+                        return true;
+                }
                 string profilePath = Path.Combine(
                     packagePath,
                     "editable",
@@ -137,7 +145,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                                 DuplicatePropertyNameHandling =
                                     DuplicatePropertyNameHandling.Error,
                                 LineInfoHandling = LineInfoHandling.Load,
-                                CommentHandling = CommentHandling.Ignore
+                                CommentHandling = CommentHandling.Load
                             }));
                 }
             }
@@ -254,7 +262,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
 
             HashSet<string> declared = new HashSet<string>(manifest.files.Select(AgentAuthoringDocumentCodec.NormalizeRelativePath), StringComparer.Ordinal);
             HashSet<string> actual = new HashSet<string>(
-                Directory.GetFiles(packagePath, "*.json", SearchOption.AllDirectories)
+                Directory.GetFiles(packagePath, "*", SearchOption.AllDirectories)
                     .Select(path => AgentAuthoringDocumentCodec.NormalizeRelativePath(Path.GetRelativePath(packagePath, path)))
                     .Where(path => !string.Equals(path, "manifest.json", StringComparison.Ordinal) &&
                                    !string.Equals(path, ".sync.json", StringComparison.Ordinal)),
@@ -299,13 +307,15 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
             {
                 var poseCandidates = new Dictionary<string, JToken>(StringComparer.Ordinal);
                 var linkedPoseCandidates = new Dictionary<string, JToken>(StringComparer.Ordinal);
+                var graphCandidates = new Dictionary<string, JToken>(StringComparer.Ordinal);
                 var timelineCandidates = new Dictionary<string, JToken>(StringComparer.Ordinal);
                 var skillCandidates = new Dictionary<string, JToken>(StringComparer.Ordinal);
                 foreach (string relativePath in unknownPaths.Where(path =>
                              AgentAuthoringPresentationPackageCodec.IsDiscoverablePoseGraphFragment(path) ||
                              AgentAuthoringPresentationPackageCodec.IsDiscoverableLinkedPoseFragment(path) ||
-                             AgentAuthoringPackageMapper.IsDiscoverableTimelineFragment(path) ||
-                             AgentAuthoringPackageMapper.IsDiscoverableSkillFragment(path)))
+                             AgentGraphDocumentFragments.IsDefinitionFragment(path) ||
+                             AgentTimelineDocumentFragments.IsDefinitionFragment(path) ||
+                             AgentSkillDocumentMapper.IsDefinitionPath(path)))
                 {
                     string fullPath = ResolveInside(packagePath, relativePath);
                     if (!TryReadContent(
@@ -318,7 +328,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                         poseCandidates.Add(relativePath, raw);
                     else if (AgentAuthoringPresentationPackageCodec.IsDiscoverableLinkedPoseFragment(relativePath))
                         linkedPoseCandidates.Add(relativePath, raw);
-                    else if (AgentAuthoringPackageMapper.IsDiscoverableTimelineFragment(relativePath))
+                    else if (AgentGraphDocumentFragments.IsDefinitionFragment(relativePath))
+                        graphCandidates.Add(relativePath, raw);
+                    else if (AgentTimelineDocumentFragments.IsDefinitionFragment(relativePath))
                         timelineCandidates.Add(relativePath, raw);
                     else
                         skillCandidates.Add(relativePath, raw);
@@ -328,22 +340,27 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                             poseCandidates,
                             report,
                             out IReadOnlyCollection<string> discoveredPoseGraphs) ||
-                    !AgentAuthoringPresentationPackageCodec
-                        .TryDiscoverNewLinkedPoseFragments(
+                     !AgentAuthoringPresentationPackageCodec
+                         .TryDiscoverNewLinkedPoseFragments(
                             linkedPoseCandidates,
-                            report,
-                            out IReadOnlyCollection<string> discoveredLinkedPose) ||
-                    !AgentAuthoringPackageMapper.TryDiscoverNewTimelineFragments(
+                             report,
+                             out IReadOnlyCollection<string> discoveredLinkedPose) ||
+                     !AgentGraphDocumentFragments.TryDiscoverNew(
+                             graphCandidates,
+                             report,
+                             out IReadOnlyCollection<string> discoveredGraphs) ||
+                     !AgentTimelineDocumentFragments.TryDiscoverNew(
                             timelineCandidates,
                             report,
                             out IReadOnlyCollection<string> discoveredTimelines) ||
-                    !AgentAuthoringPackageMapper.TryDiscoverNewSkillFragments(
+                     !AgentSkillDocumentMapper.TryDiscoverNewFragments(
                             skillCandidates,
                             report,
                             out IReadOnlyCollection<string> discoveredSkills))
                     return false;
                 discovered = discoveredPoseGraphs
                     .Concat(discoveredLinkedPose)
+                    .Concat(discoveredGraphs)
                     .Concat(discoveredTimelines)
                     .Concat(discoveredSkills)
                     .ToArray();

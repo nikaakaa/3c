@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using BTSMTL.Timeline;
 using ThirdPersonCharacter.ActionSystem;
+using ThirdPersonCharacter.Control.Rules;
 using ThirdPersonCharacter.AI;
 using ThirdPersonCharacter.Editor.CharacterSimulation;
 using ThirdPersonCharacter.Pipeline;
@@ -63,6 +64,23 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
             snapshot.rootAssetPath = snapshot.definitionAssetPath;
             snapshot.rootIdentity = AssetDatabase.AssetPathToGUID(snapshot.definitionAssetPath);
             snapshot.rootTreeAssetPath = definition.RootTreeAsset ? AssetDatabase.GetAssetPath(definition.RootTreeAsset) : string.Empty;
+            snapshot.controlModuleId = definition.ControlModuleId;
+            if (!string.IsNullOrEmpty(snapshot.controlModuleId))
+            {
+                ICharacterControlModule controlModule =
+                    CorinCharacterControlModuleCatalog.Create().Require(
+                        new CharacterControlModuleId(snapshot.controlModuleId));
+                snapshot.controlSemanticVersion = controlModule.Contract.SemanticVersion;
+                snapshot.controlParameters = definition.ControlParameters
+                    .Where(value => value != null)
+                    .Select(value => new AgentSnapshotControlParameter
+                    {
+                        id = value.ParameterId,
+                        valueType = value.ValueKind.ToString(),
+                        numericValue = value.NumericValue
+                    })
+                    .ToList();
+            }
 
             ExportBodyMotion(definition.BodyMotionProfile, mode, snapshot);
             ExportInputs(definition.InputProfile, snapshot);
@@ -1666,7 +1684,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                 BaseTree referenceTree = reference.Tree;
                 string childPath = FindGraphPath(referenceTree);
                 string childGraphId = referenceTree ? GraphId(childPath, referenceTree) : string.Empty;
-                result.graphReferences.Add(new AgentSnapshotGraphReference
+                AgentSnapshotGraphReference graphReference = new AgentSnapshotGraphReference
                 {
                     key = reference.Key,
                     label = reference.Label,
@@ -1677,7 +1695,18 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                     scopeId = reference.ScopeId,
                     sharedAssetPath = AssetPath(reference.SharedAsset),
                     required = reference.Required
-                });
+                };
+                if (referenceTree)
+                {
+                    CharacterAuthoringGraphCallFrame callFrame = CharacterAuthoringGraphCallFrameFactory.CreateForExport(
+                        node,
+                        reference,
+                        referenceTree,
+                        node.Owner?.GraphAuthoringId + "/node:" + node.GUID + "/" + reference.Key);
+                    graphReference.inputBindings = ExportParameterBindings(callFrame.Inputs);
+                    graphReference.outputBindings = ExportParameterBindings(callFrame.Outputs);
+                }
+                result.graphReferences.Add(graphReference);
 
             }
 
@@ -1696,6 +1725,20 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                 assetType = reference.Asset ? reference.Asset.GetType().FullName : string.Empty,
                 required = reference.Required
             };
+        }
+
+        static List<AgentSnapshotGraphParameterBinding> ExportParameterBindings(
+            IReadOnlyList<CharacterAuthoringGraphParameterBinding> bindings)
+        {
+            return (bindings ?? Array.Empty<CharacterAuthoringGraphParameterBinding>())
+                .Select(value => new AgentSnapshotGraphParameterBinding
+                {
+                    parameterName = value.ParameterName,
+                    declarationId = value.DeclarationId,
+                    portId = value.PortId,
+                    valueType = value.ValueType?.FullName ?? string.Empty
+                })
+                .ToList();
         }
 
         void RegisterKnownAsset(AgentSnapshotAssetReference reference, AgentGraphSnapshot snapshot)
@@ -1790,7 +1833,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
             return string.IsNullOrEmpty(path) ? string.Empty : AssetDatabase.AssetPathToGUID(path);
         }
 
-        static AgentPackageAssetReferenceV4 AssetReference(UnityEngine.Object asset)
+        static AgentPackageObjectReference AssetReference(UnityEngine.Object asset)
         {
             if (!asset ||
                 !AssetDatabase.TryGetGUIDAndLocalFileIdentifier(
@@ -1798,7 +1841,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                     out string guid,
                     out long localFileId))
                 return null;
-            return new AgentPackageAssetReferenceV4
+            return new AgentPackageObjectReference
             {
                 assetPath = AssetDatabase.GetAssetPath(asset),
                 assetGuid = guid,

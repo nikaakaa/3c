@@ -308,7 +308,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                 (target.profile?.locomotionSyncGroups ??
                  new List<AgentPackageLocomotionSyncGroup>())
                 .SelectMany(value => value.members ??
-                    new List<AgentPackageAssetReferenceV4>())
+                    new List<AgentPackageObjectReference>())
                 .Select(ReferenceIdentity),
                 StringComparer.Ordinal);
             Dictionary<string, AgentPackageAnimationClipCurvesFile> currentById =
@@ -550,7 +550,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                         !sources.Contains(
                             ReferenceIdentity(
                                 node.properties["pose-source-slot"]
-                                    ?.ToObject<AgentPackageAssetReferenceV4>())))
+                                    ?.ToObject<AgentPackageObjectReference>())))
                     {
                         report.Error(
                             path + ".properties.pose-source-slot",
@@ -2347,7 +2347,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                         report);
                 CharacterMotionMatchingDatabaseDefinition[] databases =
                     (value.databases ??
-                     new List<AgentPackageAssetReferenceV4>())
+                     new List<AgentPackageObjectReference>())
                     .Select((reference, index) =>
                         Resolve<CharacterMotionMatchingDatabaseDefinition>(
                             reference,
@@ -2387,7 +2387,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
 
         CharacterPresentationPoseSourceSlot ResolveSourceSlot(
             CharacterPresentationPoseGraphAsset poseGraph,
-            AgentPackageAssetReferenceV4 reference,
+            AgentPackageObjectReference reference,
             PresentationPoseSourceKind kind,
             string path,
             AgentCompileReport report)
@@ -2419,7 +2419,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
         }
 
         CharacterPresentationPoseSourceBinding RegisterLocalBinding(
-            AgentPackageAssetReferenceV4 reference,
+            AgentPackageObjectReference reference,
             CharacterPresentationPoseSourceBinding binding,
             string path,
             AgentCompileReport report)
@@ -2436,7 +2436,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
             return null;
         }
 
-        static string ReferenceIdentity(AgentPackageAssetReferenceV4 value) =>
+        static string ReferenceIdentity(AgentPackageObjectReference value) =>
             value == null
                 ? string.Empty
                 : !string.IsNullOrWhiteSpace(value.localId)
@@ -2581,8 +2581,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
         {
             if (token == null || token.Type == JTokenType.Null)
                 return null;
-            AgentPackageAssetReferenceV4 reference =
-                token.ToObject<AgentPackageAssetReferenceV4>();
+            AgentPackageObjectReference reference =
+                token.ToObject<AgentPackageObjectReference>();
             Type expected = field.ObjectType ?? field.PickerKind switch
             {
                 "animation-blend-policy" =>
@@ -2867,7 +2867,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
         }
 
         static T Resolve<T>(
-            AgentPackageAssetReferenceV4 reference,
+            AgentPackageObjectReference reference,
             string path,
             AgentCompileReport report)
             where T : UnityEngine.Object =>
@@ -2976,7 +2976,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
         }
 
         static T ResolveOptional<T>(
-            AgentPackageAssetReferenceV4 reference,
+            AgentPackageObjectReference reference,
             string path,
             AgentCompileReport report)
             where T : UnityEngine.Object =>
@@ -2985,7 +2985,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                 : Resolve<T>(reference, path, report);
 
         static UnityEngine.Object Resolve(
-            AgentPackageAssetReferenceV4 reference,
+            AgentPackageObjectReference reference,
             Type expected,
             string path,
             AgentCompileReport report)
@@ -3037,7 +3037,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
         }
 
         static bool Matches(
-            AgentPackageAssetReferenceV4 reference,
+            AgentPackageObjectReference reference,
             UnityEngine.Object asset,
             string guid) =>
             reference != null &&

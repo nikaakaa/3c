@@ -693,7 +693,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
 
         static bool TryResolveAnimationClip(
             AgentMutationSession session,
-            AgentPackageAssetReferenceV4 reference,
+            AgentPackageObjectReference reference,
             string path,
             out UnityEngine.AnimationClip clip)
         {

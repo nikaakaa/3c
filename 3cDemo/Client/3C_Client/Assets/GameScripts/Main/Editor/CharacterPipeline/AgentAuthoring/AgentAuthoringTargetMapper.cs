@@ -30,11 +30,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
             var files = new Dictionary<string, JToken>(StringComparer.Ordinal);
             if (string.Equals(target.domain, AgentAuthoringSchema.CharacterControllerDomain, StringComparison.Ordinal))
             {
-                files["editable/controller.json"] = AgentAuthoringDocumentCodec.ToToken(new AgentPackageControllerFile
-                {
-                    stateMachines = target.editable.stateMachines,
-                    timelineTreeClips = target.editable.timelineTreeClips
-                });
+                files["editable/controller.json"] = AgentControlDocumentMapper.ToToken(target.editable);
                 files["editable/blackboard.json"] = AgentAuthoringDocumentCodec.ToToken(new AgentPackageBlackboardFile
                 {
                     schemaRevision = target.editable.blackboardSchemaRevision,
@@ -45,27 +41,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                     requests = target.editable.actionRequests,
                     profiles = target.editable.actionProfiles
                 });
-                foreach (AgentSnapshotSkillDefinition skill in target.editable.skills ?? new List<AgentSnapshotSkillDefinition>())
-                {
-                    if (skill == null)
-                        continue;
-                    string directory = $"editable/skills/{Segment(skill.skillId)}";
-                    files[directory + "/definition.json"] = AgentAuthoringDocumentCodec.ToToken(new AgentPackageSkillDefinitionFile
-                    {
-                        skillId = skill.skillId,
-                        entryGraphAuthoringId = skill.entryGraphAuthoringId,
-                        actionProfileId = skill.actionProfileId,
-                        actionProfileAssetPath = skill.actionProfileAssetPath,
-                        actionProfileAssetGuid = skill.actionProfileAssetGuid,
-                        actionContext = skill.actionContext,
-                        actionContextAssetPath = skill.actionContextAssetPath,
-                        actionContextAssetGuid = skill.actionContextAssetGuid,
-                        sourceInputRequestId = skill.sourceInputRequestId,
-                        consumeSourceInputRequest = skill.consumeSourceInputRequest,
-                        targetInputValueId = skill.targetInputValueId,
-                        targetKey = skill.targetKey
-                    });
-                }
+                AgentSkillDocumentMapper.Write(files, target.editable.skills);
                 AgentAuthoringPresentationPackageCodec.Write(
                     files,
                     target.editable.presentation,
@@ -195,43 +171,12 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
 
             target.editable.stateMachines = controller.stateMachines ?? new List<AgentSnapshotStateMachineSummary>();
             target.editable.timelineTreeClips = controller.timelineTreeClips ?? new List<AgentSnapshotTimelineTreeClip>();
+            target.editable.control = AgentControlDocumentMapper.ReadController(controller, report);
             target.editable.blackboardSchemaRevision = blackboard.schemaRevision;
             target.editable.blackboardDeclarations = blackboard.declarations ?? new List<AgentSnapshotBlackboardDeclaration>();
             target.editable.actionRequests = actions.requests ?? new List<AgentSnapshotActionRequest>();
             target.editable.actionProfiles = actions.profiles ?? new List<AgentSnapshotActionProfile>();
-            foreach (string skillPath in files.Keys
-                         .Where(path => path.StartsWith("editable/skills/", StringComparison.Ordinal) &&
-                                        path.EndsWith("/definition.json", StringComparison.Ordinal))
-                         .OrderBy(path => path, StringComparer.Ordinal))
-            {
-                if (!TryFile(files, skillPath, report, out AgentPackageSkillDefinitionFile skillFile))
-                {
-                    valid = false;
-                    continue;
-                }
-                string expectedSkillPath = $"editable/skills/{Segment(skillFile.skillId)}/definition.json";
-                if (!string.Equals(skillPath, expectedSkillPath, StringComparison.Ordinal))
-                {
-                    report.Error(skillPath, "skill_package_path_mismatch", "Skill目录与skillId必须一致。");
-                    valid = false;
-                    continue;
-                }
-                target.editable.skills.Add(new AgentSnapshotSkillDefinition
-                {
-                    skillId = skillFile.skillId,
-                    entryGraphAuthoringId = skillFile.entryGraphAuthoringId,
-                    actionProfileId = skillFile.actionProfileId,
-                    actionProfileAssetPath = skillFile.actionProfileAssetPath,
-                    actionProfileAssetGuid = skillFile.actionProfileAssetGuid,
-                    actionContext = skillFile.actionContext,
-                    actionContextAssetPath = skillFile.actionContextAssetPath,
-                    actionContextAssetGuid = skillFile.actionContextAssetGuid,
-                    sourceInputRequestId = skillFile.sourceInputRequestId,
-                    consumeSourceInputRequest = skillFile.consumeSourceInputRequest,
-                    targetInputValueId = skillFile.targetInputValueId,
-                    targetKey = skillFile.targetKey
-                });
-            }
+            valid &= AgentSkillDocumentMapper.TryRead(files, target.editable, report);
             if (string.Equals(
                     manifest.domain,
                     AgentAuthoringSchema.CharacterControllerDomain,
@@ -367,7 +312,13 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
             }
 
             valid &= ValidateGraphRelationships(target.editable, report);
-            valid &= ValidateSkillRelationships(target.editable, report);
+            valid &= AgentSkillDocumentMapper.Validate(
+                target.editable,
+                target.editable.graphs
+                    .Where(value => value != null)
+                    .Select(value => value.graphAuthoringId)
+                    .ToHashSet(StringComparer.Ordinal),
+                report);
             valid &= ValidateTimelineRelationships(target.editable, report);
             valid &= ValidatePrimaryIdentities(target.editable, report);
             if (packageAI != null && valid)
@@ -590,6 +541,14 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
             var ownerIds = new HashSet<string>(
                 nodes.Keys.Concat(flowEdges.Keys),
                 StringComparer.Ordinal);
+            foreach (AgentSnapshotStateMachineSummary stateMachine in editable.stateMachines ?? new List<AgentSnapshotStateMachineSummary>())
+            {
+                foreach (AgentSnapshotStateSummary state in stateMachine?.states ?? new List<AgentSnapshotStateSummary>())
+                {
+                    if (!string.IsNullOrEmpty(state?.stateAuthoringId))
+                        ownerIds.Add(state.stateAuthoringId);
+                }
+            }
             bool valid = true;
             foreach (AgentSnapshotGraph graph in graphs ?? Array.Empty<AgentSnapshotGraph>())
             {
@@ -674,6 +633,18 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                     continue;
                 }
 
+                if (IsSkillGraph(editable, graph))
+                {
+                    if (ValidateSkillGraphOwner(editable, graph))
+                        continue;
+                    report.Error(
+                        $"editable.graphs[{graph.graphAuthoringId}].owner",
+                        "skill_graph_owner_invalid",
+                        "Skill入口Graph必须由对应State的behaviorGraph反向指向。");
+                    valid = false;
+                    continue;
+                }
+
                 List<(AgentSnapshotNode Owner, AgentSnapshotGraphReference Reference)> nodeReferences =
                     nodes.Values
                         .SelectMany(owner => (owner.graphReferences ?? new List<AgentSnapshotGraphReference>())
@@ -730,53 +701,29 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
             return valid;
         }
 
-        static bool ValidateSkillRelationships(
-            AgentDocumentEditable editable,
-            AgentCompileReport report)
+        static bool ValidateSkillGraphOwner(AgentDocumentEditable editable, AgentSnapshotGraph graph)
         {
-            var graphIds = new HashSet<string>(
-                (editable?.graphs ?? new List<AgentSnapshotGraph>())
-                    .Where(value => value != null)
-                    .Select(value => value.graphAuthoringId),
-                StringComparer.Ordinal);
-            var skillIds = new HashSet<string>(StringComparer.Ordinal);
-            bool valid = true;
-            int index = 0;
-            foreach (AgentSnapshotSkillDefinition skill in editable?.skills ?? new List<AgentSnapshotSkillDefinition>())
+            foreach (AgentSnapshotStateMachineSummary stateMachine in editable.stateMachines ?? new List<AgentSnapshotStateMachineSummary>())
             {
-                string path = $"editable/skills[{index}]";
-                if (skill == null ||
-                    !IsIdentity(skill.skillId) ||
-                    !skillIds.Add(skill.skillId))
+                foreach (AgentSnapshotStateSummary state in stateMachine?.states ?? new List<AgentSnapshotStateSummary>())
                 {
-                    report.Error(path, "skill_identity_invalid", "Skill definition identity缺失或重复。");
-                    valid = false;
-                    index++;
-                    continue;
+                    if (state != null &&
+                        string.Equals(state.stateAuthoringId, graph.ownerElementAuthoringId, StringComparison.Ordinal) &&
+                        string.Equals(state.behaviorGraphAuthoringId, graph.graphAuthoringId, StringComparison.Ordinal))
+                        return true;
                 }
-                if (!IsIdentity(skill.entryGraphAuthoringId) || !graphIds.Contains(skill.entryGraphAuthoringId))
-                {
-                    report.Error(path + ".entryGraphAuthoringId", "skill_entry_graph_invalid", "Skill必须引用当前Document中的入口Graph。");
-                    valid = false;
-                }
-                if (!IsIdentity(skill.actionProfileId))
-                {
-                    report.Error(path + ".actionProfileId", "skill_action_profile_invalid", "Skill必须引用稳定ActionProfile identity。");
-                    valid = false;
-                }
-                if (!string.IsNullOrEmpty(skill.sourceInputRequestId) && !IsIdentity(skill.sourceInputRequestId))
-                {
-                    report.Error(path + ".sourceInputRequestId", "skill_input_request_invalid", "Skill的sourceInputRequestId必须使用稳定identity。");
-                    valid = false;
-                }
-                if (!string.IsNullOrEmpty(skill.targetInputValueId) && !IsIdentity(skill.targetInputValueId))
-                {
-                    report.Error(path + ".targetInputValueId", "skill_target_input_invalid", "Skill的targetInputValueId必须使用稳定identity。");
-                    valid = false;
-                }
-                index++;
             }
-            return valid;
+            return false;
+        }
+
+        static bool IsSkillGraph(AgentDocumentEditable editable, AgentSnapshotGraph graph)
+        {
+            return (editable?.stateMachines ?? new List<AgentSnapshotStateMachineSummary>())
+                .Any(stateMachine => (stateMachine?.states ?? new List<AgentSnapshotStateSummary>())
+                    .Any(state => state != null && string.Equals(
+                        state.behaviorGraphAuthoringId,
+                        graph?.graphAuthoringId,
+                        StringComparison.Ordinal)));
         }
 
         static bool ValidateTimelineTreeClipGraphOwner(
@@ -925,6 +872,21 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                 Add(declaration?.declarationId, "editable.blackboard.declarations");
             foreach (AgentSnapshotSkillDefinition skill in editable.skills ?? new List<AgentSnapshotSkillDefinition>())
                 Add(skill?.skillId, "editable.skills");
+            foreach (AgentSnapshotStateMachineSummary stateMachine in editable.stateMachines ?? new List<AgentSnapshotStateMachineSummary>())
+            {
+                if (stateMachine == null)
+                    continue;
+                if (!(editable.graphs ?? new List<AgentSnapshotGraph>())
+                    .Any(graph => graph != null && string.Equals(
+                        graph.graphAuthoringId,
+                        stateMachine.graphAuthoringId,
+                        StringComparison.Ordinal)))
+                {
+                    Add(stateMachine.graphAuthoringId, "editable.controller.stateMachines");
+                }
+                foreach (AgentSnapshotStateSummary state in stateMachine.states ?? new List<AgentSnapshotStateSummary>())
+                    Add(state?.stateAuthoringId, "editable.controller.stateMachines.states");
+            }
             foreach (AgentSnapshotAIBlackboardDeclaration declaration in editable.aiController?.blackboardDeclarations ?? new List<AgentSnapshotAIBlackboardDeclaration>())
                 Add(declaration?.declarationAuthoringId, "editable.ai.blackboard");
             foreach (AgentSnapshotTimeline timeline in editable.timelines ?? new List<AgentSnapshotTimeline>())
@@ -1192,7 +1154,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                             key = reference.key,
                             graphId = reference.graphAuthoringId,
                             ownership = reference.ownership,
-                            sharedAssetPath = reference.sharedAssetPath
+                            sharedAssetPath = reference.sharedAssetPath,
+                            inputBindings = AgentAuthoringDocumentCodec.Clone(reference.inputBindings) ?? new List<AgentSnapshotGraphParameterBinding>(),
+                            outputBindings = AgentAuthoringDocumentCodec.Clone(reference.outputBindings) ?? new List<AgentSnapshotGraphParameterBinding>()
                         }).ToList());
                 }
                 if (editAssetReferences)
@@ -1557,6 +1521,11 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                         path + $".nodes[{node.id}]",
                         allowExistingEmptyActionContext))
                     return false;
+                if (!ValidateGraphReferenceBindings(
+                        node.properties,
+                        path + $".nodes[{node.id}].properties.graphReferences",
+                        report))
+                    return false;
                 if (!m_Catalog.TryProjectDocumentPortShape(
                         node.kind,
                         node.properties,
@@ -1622,6 +1591,109 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                     return false;
             }
             return ValidatePortCapacities(nodes, graphFile, path, report);
+        }
+
+        static bool ValidateGraphReferenceBindings(
+            JObject properties,
+            string path,
+            AgentCompileReport report)
+        {
+            if (properties?["graphReferences"] is not JArray references)
+                return true;
+            bool valid = true;
+            for (int referenceIndex = 0; referenceIndex < references.Count; referenceIndex++)
+            {
+                if (references[referenceIndex] is not JObject reference)
+                {
+                    report.Error(path, "graph_reference_invalid", "Graph reference必须是object。");
+                    valid = false;
+                    continue;
+                }
+                foreach (JProperty property in reference.Properties())
+                {
+                    if (property.Name != "key" &&
+                        property.Name != "graphId" &&
+                        property.Name != "ownership" &&
+                        property.Name != "sharedAssetPath" &&
+                        property.Name != "inputBindings" &&
+                        property.Name != "outputBindings")
+                    {
+                        report.Error(
+                            $"{path}[{referenceIndex}].{property.Name}",
+                            "graph_reference_field_unknown",
+                            "Graph reference包含未登记字段。");
+                        valid = false;
+                    }
+                }
+                if (string.IsNullOrWhiteSpace(reference.Value<string>("key")))
+                {
+                    report.Error($"{path}[{referenceIndex}].key", "graph_reference_key_missing", "Graph reference必须声明key。");
+                    valid = false;
+                }
+                string graphId = reference.Value<string>("graphId");
+                if (!AgentSkillDocumentMapper.IsIdentity(graphId))
+                {
+                    report.Error($"{path}[{referenceIndex}].graphId", "graph_reference_identity_invalid", "Graph reference必须使用稳定或local identity。");
+                    valid = false;
+                }
+                valid &= ValidateGraphParameterBindings(
+                    reference["inputBindings"] as JArray,
+                    $"{path}[{referenceIndex}].inputBindings",
+                    report);
+                valid &= ValidateGraphParameterBindings(
+                    reference["outputBindings"] as JArray,
+                    $"{path}[{referenceIndex}].outputBindings",
+                    report);
+            }
+            return valid;
+        }
+
+        static bool ValidateGraphParameterBindings(
+            JArray bindings,
+            string path,
+            AgentCompileReport report)
+        {
+            if (bindings == null)
+                return true;
+            var names = new HashSet<string>(StringComparer.Ordinal);
+            bool valid = true;
+            for (int index = 0; index < bindings.Count; index++)
+            {
+                if (bindings[index] is not JObject binding)
+                {
+                    report.Error($"{path}[{index}]", "graph_parameter_binding_invalid", "Graph parameter binding必须是object。");
+                    valid = false;
+                    continue;
+                }
+                foreach (JProperty property in binding.Properties())
+                {
+                    if (property.Name != "parameterName" &&
+                        property.Name != "declarationId" &&
+                        property.Name != "portId" &&
+                        property.Name != "valueType")
+                    {
+                        report.Error(
+                            $"{path}[{index}].{property.Name}",
+                            "graph_parameter_binding_field_unknown",
+                            "Graph parameter binding包含未登记字段。");
+                        valid = false;
+                    }
+                }
+                string parameterName = binding.Value<string>("parameterName");
+                string declarationId = binding.Value<string>("declarationId");
+                string portId = binding.Value<string>("portId");
+                string valueType = binding.Value<string>("valueType");
+                if (string.IsNullOrWhiteSpace(parameterName) ||
+                    !names.Add(parameterName) ||
+                    !AgentSkillDocumentMapper.IsIdentity(declarationId) ||
+                    string.IsNullOrWhiteSpace(portId) ||
+                    string.IsNullOrWhiteSpace(valueType))
+                {
+                    report.Error($"{path}[{index}]", "graph_parameter_binding_invalid", "Graph parameter binding必须具有唯一parameterName、declarationId、portId和valueType。");
+                    valid = false;
+                }
+            }
+            return valid;
         }
 
         bool AllowsExistingEmptyActionContext(
@@ -1768,7 +1840,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                 char.IsLetterOrDigit(character) || character == '-' || character == '_' || character == '.');
         }
 
-        static bool IsAssetReference(AgentPackageAssetReferenceV4 reference)
+        static bool IsAssetReference(AgentPackageObjectReference reference)
         {
             if (reference == null)
                 return false;
@@ -2030,7 +2102,9 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                 ownership = source.ownership,
                 scopeId = existing?.scopeId,
                 sharedAssetPath = source.sharedAssetPath,
-                required = existing?.required ?? false
+                required = existing?.required ?? false,
+                inputBindings = AgentAuthoringDocumentCodec.Clone(source.inputBindings) ?? new List<AgentSnapshotGraphParameterBinding>(),
+                outputBindings = AgentAuthoringDocumentCodec.Clone(source.outputBindings) ?? new List<AgentSnapshotGraphParameterBinding>()
             };
         }
 
@@ -2194,19 +2268,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
             return "root";
         }
 
-        internal static bool IsDiscoverableTimelineFragment(string path)
-        {
-            return path.StartsWith("editable/timelines/", StringComparison.Ordinal) &&
-                   (path.EndsWith("/timeline.json", StringComparison.Ordinal) ||
-                    path.EndsWith("/curves.json", StringComparison.Ordinal));
-        }
-
-        internal static bool IsDiscoverableSkillFragment(string path)
-        {
-            return path.StartsWith("editable/skills/", StringComparison.Ordinal) &&
-                   path.EndsWith("/definition.json", StringComparison.Ordinal);
-        }
-
         internal static bool TryDiscoverRemovedAuthoringFragments(
             IReadOnlyCollection<string> missingPaths,
             AgentCompileReport report,
@@ -2257,109 +2318,11 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                 else if (path.EndsWith("/curves.json", StringComparison.Ordinal))
                     companion = path.Substring(0, path.Length - "curves.json".Length) + "timeline.json";
             }
+            else if (AgentSkillDocumentMapper.IsDefinitionPath(path))
+            {
+                companion = path;
+            }
             return companion != null;
-        }
-
-        internal static bool TryDiscoverNewTimelineFragments(
-            IReadOnlyDictionary<string, JToken> candidates,
-            AgentCompileReport report,
-            out IReadOnlyCollection<string> discovered)
-        {
-            var result = new HashSet<string>(StringComparer.Ordinal);
-            bool valid = true;
-            foreach (string directory in candidates.Keys
-                         .Select(path => path.Substring(0, path.LastIndexOf('/')))
-                         .Distinct(StringComparer.Ordinal)
-                         .OrderBy(value => value, StringComparer.Ordinal))
-            {
-                string timelinePath = directory + "/timeline.json";
-                string curvesPath = directory + "/curves.json";
-                if (!candidates.TryGetValue(timelinePath, out JToken timelineToken) ||
-                    !candidates.TryGetValue(curvesPath, out JToken curvesToken))
-                {
-                    report.Error(directory, "timeline_new_pair_incomplete", "新增Timeline必须同时提供同目录timeline.json与curves.json。");
-                    valid = false;
-                    continue;
-                }
-                if (!AgentAuthoringDocumentCodec.TryConvertToken(timelineToken, timelinePath, report, out AgentPackageTimelineFile timeline) ||
-                    !AgentAuthoringDocumentCodec.TryConvertToken(curvesToken, curvesPath, report, out AgentPackageCurvesFile curves))
-                {
-                    valid = false;
-                    continue;
-                }
-                bool localTimeline = timeline.id?.StartsWith("local:", StringComparison.Ordinal) == true;
-                bool localCallSite = timeline.callSites?.Count == 1 &&
-                                     timeline.callSites[0] != null &&
-                                     timeline.callSites[0].nodeAuthoringId?.StartsWith("local:", StringComparison.Ordinal) == true &&
-                                     !string.IsNullOrWhiteSpace(timeline.callSites[0].graphPath);
-                bool localContents = timeline.sections != null &&
-                    timeline.sections.All(section =>
-                        section != null &&
-                        section.sectionAuthoringId?.StartsWith("local:", StringComparison.Ordinal) == true) &&
-                    timeline.tracks != null && timeline.tracks.All(track =>
-                    track != null &&
-                    track.trackAuthoringId?.StartsWith("local:", StringComparison.Ordinal) == true &&
-                    track.clips != null &&
-                    track.clips.All(clip => clip != null && clip.clipAuthoringId?.StartsWith("local:", StringComparison.Ordinal) == true));
-                string expectedDirectory = $"editable/timelines/{Segment(timeline.id)}";
-                if (!localTimeline ||
-                    !localCallSite ||
-                    !localContents ||
-                    !string.Equals(curves.timelineId, timeline.id, StringComparison.Ordinal) ||
-                    !string.Equals(directory, expectedDirectory, StringComparison.Ordinal))
-                {
-                    report.Error(
-                        timelinePath,
-                        "timeline_new_pair_invalid",
-                        "新增Timeline必须使用canonical local identity目录、唯一local TimelineNode调用点、local Section/Track/Clip，并保持curves timelineId一致。");
-                    valid = false;
-                    continue;
-                }
-                result.Add(timelinePath);
-                result.Add(curvesPath);
-            }
-            discovered = result;
-            return valid;
-        }
-
-        internal static bool TryDiscoverNewSkillFragments(
-            IReadOnlyDictionary<string, JToken> candidates,
-            AgentCompileReport report,
-            out IReadOnlyCollection<string> discovered)
-        {
-            var result = new HashSet<string>(StringComparer.Ordinal);
-            bool valid = true;
-            foreach (string directory in candidates.Keys
-                         .Select(path => path.Substring(0, path.LastIndexOf('/')))
-                         .Distinct(StringComparer.Ordinal)
-                         .OrderBy(value => value, StringComparer.Ordinal))
-            {
-                string definitionPath = directory + "/definition.json";
-                if (!candidates.TryGetValue(definitionPath, out JToken definitionToken) ||
-                    !AgentAuthoringDocumentCodec.TryConvertToken(
-                        definitionToken,
-                        definitionPath,
-                        report,
-                        out AgentPackageSkillDefinitionFile definition))
-                {
-                    report.Error(directory, "skill_new_definition_missing", "新增Skill必须提供同目录definition.json。");
-                    valid = false;
-                    continue;
-                }
-                string expectedDirectory = $"editable/skills/{Segment(definition.skillId)}";
-                if (!IsIdentity(definition.skillId) || !string.Equals(directory, expectedDirectory, StringComparison.Ordinal))
-                {
-                    report.Error(
-                        definitionPath,
-                        "skill_new_definition_invalid",
-                        "新增Skill必须使用稳定identity，并放在由skillId确定的canonical目录。");
-                    valid = false;
-                    continue;
-                }
-                result.Add(definitionPath);
-            }
-            discovered = result;
-            return valid;
         }
 
         internal static string Segment(string identity)
@@ -2390,18 +2353,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                 report.Error(path, "document_file_missing", $"Manifest缺少必需文件：{path}");
                 return false;
             }
-            try
-            {
-                value = token.ToObject<T>();
-                if (value == null)
-                    throw new InvalidOperationException("文件内容为空。");
-                return true;
-            }
-            catch (Exception exception)
-            {
-                report.Error(path, "document_json_invalid", exception.Message);
-                return false;
-            }
+            return AgentAuthoringDocumentCodec.TryConvertToken(token, path, report, out value);
         }
     }
 }

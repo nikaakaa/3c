@@ -60,8 +60,12 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                 {
                     DuplicatePropertyNameHandling = DuplicatePropertyNameHandling.Error,
                     LineInfoHandling = LineInfoHandling.Load,
-                    CommentHandling = CommentHandling.Ignore
+                    CommentHandling = CommentHandling.Load
                 });
+                if (raw.Type != JTokenType.Object)
+                    throw new JsonSerializationException("Document文件根必须是JSON object。");
+                if (ContainsComment(raw))
+                    throw new JsonSerializationException("Document文件不允许JSON comment。");
                 ValidateFinite(raw, raw.Path);
                 value = raw.ToObject<T>(s_Serializer);
                 if (value == null)
@@ -94,6 +98,10 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
             }
             try
             {
+                if (raw.Type != JTokenType.Object)
+                    throw new JsonSerializationException("Document文件根必须是JSON object。");
+                if (ContainsComment(raw))
+                    throw new JsonSerializationException("Document文件不允许JSON comment。");
                 ValidateFinite(raw, path);
                 value = raw.ToObject<T>(s_Serializer);
                 if (value == null)
@@ -176,13 +184,21 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
             string rootIdentity,
             AgentCompileReport report)
         {
-            if (manifest == null ||
-                !string.Equals(manifest.schemaVersion, AgentAuthoringSchema.Version, StringComparison.Ordinal) ||
-                !AgentAuthoringSchema.IsDomain(manifest.domain) ||
+            if (manifest == null)
+            {
+                report.Error("manifest.json", "document_manifest_invalid", "Document package manifest缺失。");
+                return false;
+            }
+            if (!string.Equals(manifest.schemaVersion, AgentAuthoringSchema.Version, StringComparison.Ordinal))
+            {
+                report.Error("manifest.json.schemaVersion", "unsupported_schema_version", $"Document只接受{AgentAuthoringSchema.Version}，当前为{manifest.schemaVersion}。");
+                return false;
+            }
+            if (!AgentAuthoringSchema.IsDomain(manifest.domain) ||
                 string.IsNullOrWhiteSpace(manifest.rootIdentity) ||
                 manifest.files == null)
             {
-                report.Error("manifest.json", "document_manifest_invalid", "Document package manifest字段不完整或schema不匹配。");
+                report.Error("manifest.json", "document_manifest_invalid", "Document package manifest字段不完整。");
                 return false;
             }
             if (!string.Equals(manifest.domain, domain, StringComparison.Ordinal) ||
@@ -197,7 +213,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                 string raw = (path ?? string.Empty).Replace('\\', '/');
                 return string.IsNullOrEmpty(raw) ||
                        raw.StartsWith("/", StringComparison.Ordinal) ||
-                       Path.IsPathRooted(path) ||
+                       Path.IsPathRooted(raw) ||
                        raw.Split('/').Any(segment => segment == "." || segment == ".." || string.IsNullOrEmpty(segment));
             });
             if (invalidPath ||
@@ -215,16 +231,24 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
             string rootAssetPath,
             AgentCompileReport report)
         {
-            if (sync == null ||
-                !string.Equals(sync.schemaVersion, AgentAuthoringSchema.Version, StringComparison.Ordinal) ||
-                !string.Equals(sync.domain, manifest.domain, StringComparison.Ordinal) ||
+            if (sync == null)
+            {
+                report.Error(".sync.json", "document_sync_invalid", "Document package同步基线缺失。");
+                return false;
+            }
+            if (!string.Equals(sync.schemaVersion, AgentAuthoringSchema.Version, StringComparison.Ordinal))
+            {
+                report.Error(".sync.json.schemaVersion", "unsupported_schema_version", $"Document只接受{AgentAuthoringSchema.Version}，当前为{sync.schemaVersion}。");
+                return false;
+            }
+            if (!string.Equals(sync.domain, manifest.domain, StringComparison.Ordinal) ||
                 !string.Equals(sync.rootIdentity, manifest.rootIdentity, StringComparison.Ordinal) ||
                 !string.Equals(sync.rootAssetPath, rootAssetPath, StringComparison.Ordinal) ||
                 string.IsNullOrWhiteSpace(sync.baseSourceRevision) ||
                 string.IsNullOrWhiteSpace(sync.baseEditableHash) ||
                 string.IsNullOrWhiteSpace(sync.baseContextHash))
             {
-                report.Error(".sync.json", "document_sync_invalid", "Document package同步基线缺失、被修改或与root不一致。");
+                report.Error(".sync.json", "document_sync_invalid", "Document package同步基线被修改或与root不一致。");
                 return false;
             }
             return true;
@@ -260,6 +284,20 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                 foreach (JToken child in container.Children())
                     ValidateFinite(child, child.Path);
             }
+        }
+
+        static bool ContainsComment(JToken token)
+        {
+            if (token == null)
+                return false;
+            if (token.Type == JTokenType.Comment)
+                return true;
+            foreach (JToken child in token.Children())
+            {
+                if (ContainsComment(child))
+                    return true;
+            }
+            return false;
         }
 
         static JToken Canonicalize(JToken token)

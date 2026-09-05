@@ -57,7 +57,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                 report.Error(
                     ProfilePath,
                     "presentation_profile_missing",
-                    "Character Document v4缺少Presentation Profile目标状态。");
+                    "Character Document v5缺少Presentation Profile目标状态。");
                 return;
             }
             files.Add(
@@ -590,7 +590,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
             report.Error(
                 relativePath,
                 "presentation_file_unknown",
-                "Document v4包含未知Presentation文件。");
+                "Document v5包含未知Presentation文件。");
             return false;
         }
 
@@ -866,7 +866,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                         report.Error(
                             pair.Key,
                             "presentation_readonly_file_unknown",
-                            "Document v4包含未知Presentation readonly文件。");
+                            "Document v5包含未知Presentation readonly文件。");
                         valid = false;
                     }
                     valid &= RejectInternalFields(pair.Value, pair.Key, report);
@@ -895,7 +895,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                     report.Error(
                         pair.Key,
                         "presentation_file_unknown",
-                        "Document v4包含未知Presentation文件。");
+                        "Document v5包含未知Presentation文件。");
                     valid = false;
                 }
                 valid &= RejectInternalFields(pair.Value, pair.Key, report);
@@ -1627,8 +1627,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
         }
 
         static bool SameAssetReference(
-            AgentPackageAssetReferenceV4 left,
-            AgentPackageAssetReferenceV4 right) =>
+            AgentPackageObjectReference left,
+            AgentPackageObjectReference right) =>
             string.Equals(
                 ReferenceIdentity(left),
                 ReferenceIdentity(right),
@@ -2504,7 +2504,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
         {
             if (!(token is JObject value))
                 return false;
-            var reference = new AgentPackageAssetReferenceV4
+            var reference = new AgentPackageObjectReference
             {
                 assetPath = value["assetPath"]?.Value<string>(),
                 assetGuid = value["assetGuid"]?.Value<string>(),
@@ -2519,7 +2519,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                            : new[] { "assetPath", "assetGuid", "localFileId" });
         }
 
-        static bool Asset(AgentPackageAssetReferenceV4 value) =>
+        static bool Asset(AgentPackageObjectReference value) =>
             value != null &&
             string.IsNullOrWhiteSpace(value.localId) &&
             !string.IsNullOrWhiteSpace(value.assetPath) &&
@@ -2530,14 +2530,14 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                 character >= '0' && character <= '9' ||
                 character >= 'a' && character <= 'f');
 
-        static bool AssetReference(AgentPackageAssetReferenceV4 value) =>
+        static bool AssetReference(AgentPackageObjectReference value) =>
             Asset(value) ||
             value != null && LocalIdentity(value.localId) &&
             string.IsNullOrWhiteSpace(value.assetPath) &&
             string.IsNullOrWhiteSpace(value.assetGuid) &&
             value.localFileId == 0;
 
-        static string ReferenceIdentity(AgentPackageAssetReferenceV4 value) =>
+        static string ReferenceIdentity(AgentPackageObjectReference value) =>
             value == null
                 ? string.Empty
                 : LocalIdentity(value.localId)

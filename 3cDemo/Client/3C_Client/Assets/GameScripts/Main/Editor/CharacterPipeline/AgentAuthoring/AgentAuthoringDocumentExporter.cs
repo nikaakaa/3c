@@ -24,16 +24,38 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                 CharacterSimulationProgramBuildService
                     .EvaluateExactArtifactStaleness(definition);
             AgentGraphSnapshot snapshot = new AgentGraphSnapshotExporter().ExportFull(definition);
-            List<AgentSnapshotSkillDefinition> skills = ExportSkills(definition.SkillDefinitions);
+            snapshot.controlModuleId = definition.ControlModuleId;
+            List<AgentSnapshotSkillDefinition> skills = AgentSkillDocumentExporter.Export(definition.SkillDefinitions);
             snapshot.skills = skills;
+            HashSet<string> skillGraphIds = AgentSkillDocumentMapper.SelectGraphIds(snapshot, skills);
+            List<AgentSnapshotGraph> editableGraphs = snapshot.graphs
+                .Where(value => value != null && skillGraphIds.Contains(value.graphAuthoringId))
+                .ToList();
+            List<AgentSnapshotStateMachineSummary> editableStateMachines = AgentSkillDocumentMapper.SelectStateMachines(
+                snapshot,
+                skillGraphIds,
+                skills);
+            HashSet<string> skillTimelineIds = SelectSkillTimelineIds(snapshot.timelines, editableGraphs);
+            List<AgentSnapshotTimeline> editableTimelines = snapshot.timelines
+                .Where(value => value != null && skillTimelineIds.Contains(value.timelineAuthoringId))
+                .ToList();
+            List<AgentSnapshotTimelineTreeClip> editableTimelineTreeClips = snapshot.timelineTreeClips
+                .Where(value => value != null && skillTimelineIds.Contains(value.timelineAuthoringId))
+                .ToList();
             var editable = new AgentDocumentEditable
             {
+                control = new AgentDocumentControlConfiguration
+                {
+                    moduleId = snapshot.controlModuleId,
+                    semanticVersion = snapshot.controlSemanticVersion,
+                    parameters = snapshot.controlParameters
+                },
                 blackboardSchemaRevision = TreeDesigner.PipelineBlackboardAuthoringSchema.CurrentRevision,
-                graphs = snapshot.graphs,
-                stateMachines = snapshot.stateMachines,
+                graphs = editableGraphs,
+                stateMachines = editableStateMachines,
                 blackboardDeclarations = snapshot.blackboardDeclarations,
-                timelines = snapshot.timelines,
-                timelineTreeClips = snapshot.timelineTreeClips,
+                timelines = editableTimelines,
+                timelineTreeClips = editableTimelineTreeClips,
                 actionRequests = snapshot.actionRequests,
                 actionProfiles = snapshot.actionProfiles,
                 skills = skills,
@@ -57,7 +79,33 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                     generatedProductStale),
                 capabilities = CharacterCapabilities()
             };
-            return Finish(snapshot, editable, context);
+            AgentGraphSnapshot projectionSnapshot = AgentAuthoringDocumentCodec.Clone(snapshot);
+            projectionSnapshot.graphs = editableGraphs;
+            projectionSnapshot.stateMachines = editableStateMachines;
+            projectionSnapshot.timelines = editableTimelines;
+            projectionSnapshot.timelineTreeClips = editableTimelineTreeClips;
+            projectionSnapshot.skills = skills;
+            return Finish(projectionSnapshot, editable, context);
+        }
+
+        static HashSet<string> SelectSkillTimelineIds(
+            IReadOnlyList<AgentSnapshotTimeline> timelines,
+            IReadOnlyList<AgentSnapshotGraph> graphs)
+        {
+            string[] graphPaths = (graphs ?? Array.Empty<AgentSnapshotGraph>())
+                .Where(value => value != null && !string.IsNullOrEmpty(value.path))
+                .Select(value => value.path)
+                .Distinct(StringComparer.Ordinal)
+                .ToArray();
+            return (timelines ?? Array.Empty<AgentSnapshotTimeline>())
+                .Where(value => value != null &&
+                    (value.callSites ?? new List<AgentSnapshotTimelineCallSite>()).Any(callSite =>
+                        callSite != null && graphPaths.Any(path =>
+                            string.Equals(callSite.graphPath, path, StringComparison.Ordinal) ||
+                            callSite.graphPath?.StartsWith(path + "/", StringComparison.Ordinal) == true)))
+                .Select(value => value.timelineAuthoringId)
+                .Where(value => !string.IsNullOrEmpty(value))
+                .ToHashSet(StringComparer.Ordinal);
         }
 
         public AgentAuthoringPackageProjection Export(AIControllerDefinition definition)
@@ -199,40 +247,6 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
             };
         }
 
-        static List<AgentSnapshotSkillDefinition> ExportSkills(
-            IReadOnlyList<CharacterSkillAuthoringDefinition> definitions)
-        {
-            return (definitions ?? Array.Empty<CharacterSkillAuthoringDefinition>())
-                .Where(value => value != null)
-                .OrderBy(value => value.SkillId, StringComparer.Ordinal)
-                .Select(value =>
-                {
-                    ActionProfile profile = value.ActionProfile;
-                    string profilePath = profile ? AssetDatabase.GetAssetPath(profile) : string.Empty;
-                    string actionContextPath = value.ActionContext ? AssetDatabase.GetAssetPath(value.ActionContext) : string.Empty;
-                    return new AgentSnapshotSkillDefinition
-                    {
-                        skillId = value.SkillId,
-                        entryGraphAuthoringId = value.EntryGraphAuthoringId,
-                        actionProfileId = profile ? profile.ActionId : string.Empty,
-                        actionProfileAssetPath = profilePath,
-                        actionProfileAssetGuid = string.IsNullOrEmpty(profilePath)
-                            ? string.Empty
-                            : AssetDatabase.AssetPathToGUID(profilePath),
-                        actionContext = value.ActionContext ? value.ActionContext.name : string.Empty,
-                        actionContextAssetPath = actionContextPath,
-                        actionContextAssetGuid = string.IsNullOrEmpty(actionContextPath)
-                            ? string.Empty
-                            : AssetDatabase.AssetPathToGUID(actionContextPath),
-                        sourceInputRequestId = value.SourceInputRequestId,
-                        consumeSourceInputRequest = value.ConsumeSourceInputRequest,
-                        targetInputValueId = value.TargetInputValueId,
-                        targetKey = value.TargetKey
-                    };
-                })
-                .ToList();
-        }
-
         static AgentDocumentPresentationContext ExportPresentationContext(
             CharacterPipelineDefinition definition,
             AgentSnapshotAnimationPresentation snapshot)
@@ -244,7 +258,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
             string rigPath = AssetDatabase.GetAssetPath(rig);
             return new AgentDocumentPresentationContext
             {
-                rig = new AgentPackageAssetReferenceV4
+                rig = new AgentPackageObjectReference
                 {
                     assetPath = rigPath,
                     assetGuid = AssetDatabase.AssetPathToGUID(rigPath),
@@ -327,6 +341,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
             return CharacterPoseGraphAuthoringCapabilities.Catalog.Descriptors
                 .Where(value => value.DomainId.Equals(
                     CharacterPoseGraphAuthoringCapabilities.Domain))
+                .Where(value => value.AuthoringType != null)
                 .OrderBy(value => value.CapabilityId.Value, StringComparer.Ordinal)
                 .Select(value => new AgentDocumentPoseCapabilityContext
                 {
@@ -459,7 +474,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
             CharacterLinkedPoseInterfaceAsset value)
         {
             value.RequireValid();
-            AgentPackageAssetReferenceV4 asset =
+            AgentPackageObjectReference asset =
                 AgentAuthoringPresentationExporter.ExportAsset(value, true);
             return new AgentPackageLinkedPoseInterfaceFile
             {

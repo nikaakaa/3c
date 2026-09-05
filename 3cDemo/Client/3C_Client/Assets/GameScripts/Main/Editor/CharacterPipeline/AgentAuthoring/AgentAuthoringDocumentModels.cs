@@ -47,6 +47,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
     [Serializable]
     public sealed class AgentDocumentEditable
     {
+        public AgentDocumentControlConfiguration control = new AgentDocumentControlConfiguration();
         public int blackboardSchemaRevision;
         public List<AgentSnapshotGraph> graphs = new List<AgentSnapshotGraph>();
         public List<AgentSnapshotStateMachineSummary> stateMachines = new List<AgentSnapshotStateMachineSummary>();
@@ -102,7 +103,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
     [Serializable]
     public sealed class AgentDocumentPresentationContext
     {
-        public AgentPackageAssetReferenceV4 rig;
+        public AgentPackageObjectReference rig;
         public string rigId;
         public string rigRevision;
         public string rootBonePolicy;
@@ -157,7 +158,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
     {
         public string id;
         public string name;
-        public AgentPackageAssetReferenceV4 clip;
+        public AgentPackageObjectReference clip;
         public bool writable;
         public string dependencyBaseline;
         public string analysisInputHash;
@@ -240,8 +241,35 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
     [Serializable]
     public sealed class AgentPackageControllerFile
     {
+        public string controlModuleId;
+        public int controlSemanticVersion;
+        public List<AgentPackageControlParameter> controlParameters = new List<AgentPackageControlParameter>();
         public List<AgentSnapshotStateMachineSummary> stateMachines = new List<AgentSnapshotStateMachineSummary>();
         public List<AgentSnapshotTimelineTreeClip> timelineTreeClips = new List<AgentSnapshotTimelineTreeClip>();
+    }
+
+    [Serializable]
+    public sealed class AgentDocumentControlConfiguration
+    {
+        public string moduleId;
+        public int semanticVersion;
+        public List<AgentSnapshotControlParameter> parameters = new List<AgentSnapshotControlParameter>();
+    }
+
+    [Serializable]
+    public sealed class AgentSnapshotControlParameter
+    {
+        public string id;
+        public string valueType;
+        public double numericValue;
+    }
+
+    [Serializable]
+    public sealed class AgentPackageControlParameter
+    {
+        public string id;
+        public string valueType;
+        public double numericValue;
     }
 
     [Serializable]
@@ -273,6 +301,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
         public bool consumeSourceInputRequest = true;
         public string targetInputValueId;
         public string targetKey;
+        public List<AgentSnapshotSkillSubgraphDependency> subgraphDependencies = new List<AgentSnapshotSkillSubgraphDependency>();
+        public List<string> allowedFollowUpSkillIds = new List<string>();
     }
 
     [Serializable]
@@ -361,6 +391,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
         public string graphId;
         public string ownership;
         public string sharedAssetPath;
+        public List<AgentSnapshotGraphParameterBinding> inputBindings = new List<AgentSnapshotGraphParameterBinding>();
+        public List<AgentSnapshotGraphParameterBinding> outputBindings = new List<AgentSnapshotGraphParameterBinding>();
     }
 
     [Serializable]

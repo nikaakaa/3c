@@ -279,11 +279,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                 bool ownsSkillEntry = (stateMachine.states ?? new List<AgentSnapshotStateSummary>())
                     .Any(state => state != null && entryGraphIds.Contains(state.behaviorGraphAuthoringId));
                 bool explicitlySelected = graphIds?.Contains(stateMachine.graphAuthoringId) == true;
-                if ((explicitlySelected || ownsSkillEntry) &&
-                    (!ownsSkillEntry || explicitlySelected || !IsRootCompositionStateMachine(
-                        stateMachine,
-                        snapshot?.rootGraphAuthoringId,
-                        snapshot?.graphs)))
+                if (explicitlySelected || ownsSkillEntry)
                     selected.Add(stateMachine.graphAuthoringId);
             }
 

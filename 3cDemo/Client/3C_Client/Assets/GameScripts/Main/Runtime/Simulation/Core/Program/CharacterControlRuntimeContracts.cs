@@ -21,8 +21,26 @@ namespace ThirdPersonSimulation
     public interface ICharacterControlModule
     {
         CharacterControlModuleContract Contract { get; }
+        void Enter(
+            in CharacterControlTickContext context,
+            CharacterControlStateId stateId,
+            ICharacterControlReadPort read,
+            ICharacterControlStatePort state,
+            ICharacterControlOutputPort output);
         void Tick(
             in CharacterControlTickContext context,
+            CharacterControlStateId stateId,
+            ICharacterControlReadPort read,
+            ICharacterControlStatePort state,
+            ICharacterControlOutputPort output);
+        bool EvaluateTransition(
+            in CharacterControlTickContext context,
+            CharacterControlTransitionId transitionId,
+            ICharacterControlReadPort read,
+            ICharacterControlStateReadPort state);
+        void Exit(
+            in CharacterControlTickContext context,
+            CharacterControlStateId stateId,
             ICharacterControlReadPort read,
             ICharacterControlStatePort state,
             ICharacterControlOutputPort output);
@@ -40,34 +58,41 @@ namespace ThirdPersonSimulation
             CharacterControlNumericComparison comparison);
     }
 
-    public interface ICharacterControlStatePort
+    public interface ICharacterControlStateReadPort
     {
         CharacterControlStateId ReadState(CharacterControlStateFieldId field);
-        void WriteState(CharacterControlStateFieldId field, CharacterControlStateId value);
         CharacterControlTransitionId ReadTransition(CharacterControlStateFieldId field);
-        void WriteTransition(CharacterControlStateFieldId field, CharacterControlTransitionId value);
         int ReadInt32(CharacterControlStateFieldId field);
-        void WriteInt32(CharacterControlStateFieldId field, int value);
         ulong ReadUInt64(CharacterControlStateFieldId field);
+    }
+
+    public interface ICharacterControlStatePort : ICharacterControlStateReadPort
+    {
+        void WriteState(CharacterControlStateFieldId field, CharacterControlStateId value);
+        void WriteTransition(CharacterControlStateFieldId field, CharacterControlTransitionId value);
+        void WriteInt32(CharacterControlStateFieldId field, int value);
         void WriteUInt64(CharacterControlStateFieldId field, ulong value);
     }
 
     public readonly struct CharacterControlMotionRequest
     {
         public CharacterControlMotionRequest(
+            SimulationExecutionSource source,
             CharacterControlMotionBindingId binding,
             SimulationInputValueId input,
             int continuousTicks,
             int phase)
         {
-            if (!binding.IsValid || !input.IsValid || continuousTicks < 0 || phase < 0)
+            if (!source.IsValid || !binding.IsValid || !input.IsValid || continuousTicks < 0 || phase < 0)
                 throw new ArgumentException("Character control motion request is incomplete.");
+            Source = source;
             Binding = binding;
             Input = input;
             ContinuousTicks = continuousTicks;
             Phase = phase;
         }
 
+        public SimulationExecutionSource Source { get; }
         public CharacterControlMotionBindingId Binding { get; }
         public SimulationInputValueId Input { get; }
         public int ContinuousTicks { get; }

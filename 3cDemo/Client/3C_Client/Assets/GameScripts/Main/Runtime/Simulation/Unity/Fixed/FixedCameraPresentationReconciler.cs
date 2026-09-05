@@ -31,6 +31,8 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
             applied = applied ?? new List<ActivePresentationRecord>();
             bool forced = IsCameraScopeForced(key);
             bool requiresReplay = false;
+            bool requiresCorrectionReplay = false;
+            CharacterPresentationEventHeader correctionBoundary = default;
             var currentByEvent = new Dictionary<EventId, ActivePresentationRecord>();
             for (int i = 0; i < current.Count; i++)
                 currentByEvent[current[i].Command.Header.EventId] = current[i];
@@ -53,7 +55,17 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
                 if (!SameCommand(previous.Command, replacement.Command))
                 {
                     if (!forced)
+                    {
                         m_Runtime.Replace(previous.Command, replacement.Command);
+                        if (current.Count > 0 &&
+                            IsNewer(current[current.Count - 1].Command.Header, replacement.Command.Header) &&
+                            (!requiresCorrectionReplay ||
+                             IsNewer(correctionBoundary, replacement.Command.Header)))
+                        {
+                            requiresCorrectionReplay = true;
+                            correctionBoundary = replacement.Command.Header;
+                        }
+                    }
                 }
             }
 
@@ -96,7 +108,10 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
                     for (int i = 0; i < current.Count; i++)
                     {
                         ActivePresentationRecord next = current[i];
-                        if (!appliedByEvent.ContainsKey(next.Command.Header.EventId))
+                        if ((requiresCorrectionReplay &&
+                             IsNewer(next.Command.Header, correctionBoundary)) ||
+                            (!requiresCorrectionReplay &&
+                             !appliedByEvent.ContainsKey(next.Command.Header.EventId)))
                             m_Runtime.Publish(next.Command);
                     }
                 }

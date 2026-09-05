@@ -17,20 +17,20 @@ namespace ThirdPersonCamera
 
         public void RemoveAt(int index) => m_Active.RemoveAt(index);
 
-        public bool ContainsEvent(CameraEffectRequest request)
+        public CameraEffectRuntimeState FindEvent(CameraEffectRequest request)
         {
-            if (request.Kind != CameraEffectKind.Shake)
-                return false;
             for (int i = 0; i < m_Active.Count; i++)
             {
                 CameraEffectRequest active = m_Active[i].Request;
-                if (active.Generation == request.Generation &&
+                if (active.Kind == request.Kind &&
+                    active.Generation == request.Generation &&
                     active.SourceActionInstanceId == request.SourceActionInstanceId &&
                     active.Cycle == request.Cycle &&
+                    string.Equals(active.SourceId, request.SourceId, StringComparison.Ordinal) &&
                     string.Equals(active.EventId, request.EventId, StringComparison.Ordinal))
-                    return true;
+                    return m_Active[i];
             }
-            return false;
+            return null;
         }
 
         public CameraEffectRuntimeState FindSource(CameraEffectRequest request)

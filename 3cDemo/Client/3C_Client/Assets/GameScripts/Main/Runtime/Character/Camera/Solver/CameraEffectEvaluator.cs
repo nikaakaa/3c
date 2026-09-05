@@ -122,13 +122,25 @@ namespace ThirdPersonCamera
                         existing.Retired = false;
                         existing.RetireElapsed = 0f;
                         existing.RetireStartElapsed = 0f;
+                        RemovePendingRetirement(request);
                         continue;
                     }
                 }
                 if (!request.Active)
                     continue;
-                if (!owner.UpdatesBySource && m_States.ContainsEvent(request))
-                    continue;
+                if (!owner.UpdatesBySource)
+                {
+                    CameraEffectRuntimeState existing = m_States.FindEvent(request);
+                    if (existing != null)
+                    {
+                        existing.Request = request;
+                        existing.Retired = false;
+                        existing.RetireElapsed = 0f;
+                        existing.RetireStartElapsed = 0f;
+                        RemovePendingRetirement(request);
+                        continue;
+                    }
+                }
                 if (!owner.HasResource(request.ResourceId))
                     throw new InvalidOperationException(
                         $"Camera effect resource '{request.ResourceId}' is not present in the Projection.");
@@ -169,6 +181,20 @@ namespace ThirdPersonCamera
                     retirement.Reason);
             }
             m_PendingRetirements.Clear();
+        }
+
+        void RemovePendingRetirement(CameraEffectRequest request)
+        {
+            for (int i = m_PendingRetirements.Count - 1; i >= 0; i--)
+            {
+                PendingRetirement pending = m_PendingRetirements[i];
+                if (pending.Generation == request.Generation &&
+                    pending.SourceActionInstanceId == request.SourceActionInstanceId &&
+                    pending.Cycle == request.Cycle &&
+                    string.Equals(pending.SourceId, request.SourceId, StringComparison.Ordinal) &&
+                    string.Equals(pending.EventId, request.EventId, StringComparison.Ordinal))
+                    m_PendingRetirements.RemoveAt(i);
+            }
         }
 
         ICameraEffectOwner RequireOwner(CameraEffectKind kind)

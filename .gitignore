@@ -4,6 +4,8 @@
 [Oo]bj/
 [Bb]in/
 [Bb]uild/
+!3cDemo/Client/3C_Client/Assets/GameScripts/Main/Editor/CharacterSimulation/Build/
+!3cDemo/Client/3C_Client/Assets/GameScripts/Main/Editor/CharacterSimulation/Build/**
 [Bb]uilds/
 [Bb]undles/
 [Hh]ybrid[Cc][Ll][Rr][Dd]ata/

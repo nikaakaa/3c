@@ -213,19 +213,34 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             {
                 case CharacterPresentationCommandKind.SelectProducer:
                 case CharacterPresentationCommandKind.SampleProducer:
+                    if (producer.Kind != CharacterPresentationProducerKind.Animation)
+                        throw new InvalidOperationException(
+                            $"Animation playback command targets '{producer.Kind}' producer '{producer.ProgramProducerIdentity}'.");
                     m_Animation.Publish(command, producer);
                     break;
                 case CharacterPresentationCommandKind.CompleteProducer:
                     if (producer.Kind == CharacterPresentationProducerKind.Camera)
                         RequireCamera().Complete(command, producer);
-                    else
+                    else if (producer.Kind == CharacterPresentationProducerKind.Animation)
                         m_Animation.Publish(command, producer);
+                    else
+                        throw new InvalidOperationException(
+                            $"Complete command targets '{producer.Kind}' producer '{producer.ProgramProducerIdentity}'.");
                     break;
                 case CharacterPresentationCommandKind.ReleaseProducer:
                     if (producer.Kind == CharacterPresentationProducerKind.Camera)
                         RequireCamera().Release(command, producer);
-                    else
+                    else if (producer.Kind == CharacterPresentationProducerKind.Animation)
                         m_Animation.Publish(command, producer);
+                    else
+                        throw new InvalidOperationException(
+                            $"Release command targets '{producer.Kind}' producer '{producer.ProgramProducerIdentity}'.");
+                    break;
+                case CharacterPresentationCommandKind.ForceReleaseProducer:
+                    if (producer.Kind != CharacterPresentationProducerKind.Camera)
+                        throw new InvalidOperationException(
+                            $"Force release targets non-camera producer '{producer.ProgramProducerIdentity}'.");
+                    RequireCamera().ForceTeardown(command, producer);
                     break;
                 case CharacterPresentationCommandKind.Camera:
                     RequireCamera().Publish(command, producer);
@@ -261,8 +276,17 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 case CharacterPresentationCommandKind.ReleaseProducer:
                     if (producer.Kind == CharacterPresentationProducerKind.Camera)
                         RequireCamera().Retire(command, producer);
-                    else
+                    else if (producer.Kind == CharacterPresentationProducerKind.Animation)
                         m_Animation.Retire(command, producer);
+                    else
+                        throw new InvalidOperationException(
+                            $"Presentation retirement targets '{producer.Kind}' producer '{producer.ProgramProducerIdentity}'.");
+                    break;
+                case CharacterPresentationCommandKind.ForceReleaseProducer:
+                    if (producer.Kind != CharacterPresentationProducerKind.Camera)
+                        throw new InvalidOperationException(
+                            $"Force release retirement targets non-camera producer '{producer.ProgramProducerIdentity}'.");
+                    RequireCamera().ForceTeardown(command, producer);
                     break;
                 case CharacterPresentationCommandKind.Camera:
                     RequireCamera().Retire(command, producer);
@@ -275,18 +299,6 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 default:
                     throw new ArgumentOutOfRangeException(nameof(command.Kind), command.Kind, null);
             }
-        }
-
-        public void ForceTeardown(CharacterPresentationCommand command)
-        {
-            RequireAlive();
-            if (command.Header.ActorId != m_ActorId)
-                throw new InvalidOperationException("Presentation force teardown targets another Actor.");
-            CharacterPresentationProducerEntry producer = RequireProducer(command.ProducerId);
-            if (producer.Kind != CharacterPresentationProducerKind.Camera)
-                throw new InvalidOperationException(
-                    $"Presentation force teardown targets non-camera producer '{producer.ProgramProducerIdentity}'.");
-            RequireCamera().ForceTeardown(command, producer);
         }
 
         public void Replace(
@@ -302,16 +314,34 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             {
                 case CharacterPresentationCommandKind.SelectProducer:
                 case CharacterPresentationCommandKind.SampleProducer:
-                case CharacterPresentationCommandKind.CompleteProducer:
-                case CharacterPresentationCommandKind.ReleaseProducer:
                     m_AnimationBranchReplacementCount = checked(m_AnimationBranchReplacementCount + 1);
                     m_Animation.Replace(current, replacement, currentProducer, replacementProducer);
                     break;
-                case CharacterPresentationCommandKind.Camera:
-                    if (!string.Equals(current.ProducerId, replacement.ProducerId, StringComparison.Ordinal) ||
-                        current.ProducerGeneration != replacement.ProducerGeneration)
+                case CharacterPresentationCommandKind.CompleteProducer:
+                case CharacterPresentationCommandKind.ReleaseProducer:
+                    if (replacementProducer.Kind == CharacterPresentationProducerKind.Camera)
+                    {
+                        RequireCameraReplacement(current, replacement, currentProducer, replacementProducer);
+                        if (replacement.Kind == CharacterPresentationCommandKind.CompleteProducer)
+                            RequireCamera().Complete(replacement, replacementProducer);
+                        else
+                            RequireCamera().Release(replacement, replacementProducer);
+                    }
+                    else
+                    {
+                        m_AnimationBranchReplacementCount = checked(m_AnimationBranchReplacementCount + 1);
+                        m_Animation.Replace(current, replacement, currentProducer, replacementProducer);
+                    }
+                    break;
+                case CharacterPresentationCommandKind.ForceReleaseProducer:
+                    if (replacementProducer.Kind != CharacterPresentationProducerKind.Camera)
                         throw new InvalidOperationException(
-                            "Camera replacement must preserve the same producer playback instance.");
+                            $"Force release replacement targets non-camera producer '{replacementProducer.ProgramProducerIdentity}'.");
+                    RequireCameraReplacement(current, replacement, currentProducer, replacementProducer, true);
+                    RequireCamera().ForceTeardown(replacement, replacementProducer);
+                    break;
+                case CharacterPresentationCommandKind.Camera:
+                    RequireCameraReplacement(current, replacement, currentProducer, replacementProducer);
                     RequireCamera().Publish(replacement, replacementProducer);
                     break;
                 case CharacterPresentationCommandKind.Cue:
@@ -322,6 +352,25 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     break;
                 default:
                     throw new ArgumentOutOfRangeException(nameof(replacement.Kind), replacement.Kind, null);
+            }
+        }
+
+        static void RequireCameraReplacement(
+            CharacterPresentationCommand current,
+            CharacterPresentationCommand replacement,
+            CharacterPresentationProducerEntry currentProducer,
+            CharacterPresentationProducerEntry replacementProducer,
+            bool force = false)
+        {
+            if (currentProducer.Kind != CharacterPresentationProducerKind.Camera ||
+                replacementProducer.Kind != CharacterPresentationProducerKind.Camera ||
+                !string.Equals(current.ProducerId, replacement.ProducerId, StringComparison.Ordinal) ||
+                current.ProducerGeneration != replacement.ProducerGeneration ||
+                current.SourceActionInstanceId != replacement.SourceActionInstanceId ||
+                !force && current.Cycle != replacement.Cycle)
+            {
+                throw new InvalidOperationException(
+                    "Camera replacement must preserve the same formal producer playback instance.");
             }
         }
 

@@ -11,6 +11,8 @@ namespace ThirdPersonCamera
         readonly ICameraEffectOwner[] m_Owners;
         readonly List<CameraEffectContribution> m_Contributions =
             new List<CameraEffectContribution>();
+        readonly List<PendingRetirement> m_PendingRetirements =
+            new List<PendingRetirement>();
 
         public CameraEffectEvaluator(CharacterCameraProjectionPayload projection)
         {
@@ -32,6 +34,7 @@ namespace ThirdPersonCamera
         {
             m_States.Reset();
             m_Contributions.Clear();
+            m_PendingRetirements.Clear();
         }
 
         public void Retire(
@@ -42,6 +45,17 @@ namespace ThirdPersonCamera
             int cycle,
             CameraPresentationStopReason reason)
         {
+            if (reason == CameraPresentationStopReason.ForceTeardown)
+            {
+                for (int i = m_PendingRetirements.Count - 1; i >= 0; i--)
+                {
+                    PendingRetirement pending = m_PendingRetirements[i];
+                    if (pending.Generation == generation &&
+                        pending.SourceActionInstanceId == sourceActionInstanceId &&
+                        string.Equals(pending.SourceId, sourceId, StringComparison.Ordinal))
+                        m_PendingRetirements.RemoveAt(i);
+                }
+            }
             m_States.Retire(
                 eventId,
                 generation,
@@ -49,6 +63,16 @@ namespace ThirdPersonCamera
                 sourceActionInstanceId,
                 cycle,
                 reason);
+            if (reason != CameraPresentationStopReason.ForceTeardown)
+            {
+                m_PendingRetirements.Add(new PendingRetirement(
+                    eventId,
+                    generation,
+                    sourceId,
+                    sourceActionInstanceId,
+                    cycle,
+                    reason));
+            }
         }
 
         public CameraFramePlan Resolve(
@@ -57,6 +81,7 @@ namespace ThirdPersonCamera
             in CameraFrameInput input)
         {
             AddRequests(newRequests);
+            ApplyPendingRetirements();
             CameraFramePlan plan = basePlan;
             for (int i = 0; i < m_Owners.Length; i++)
                 plan = m_Owners[i].Apply(plan, m_States.Active, in input);
@@ -130,12 +155,54 @@ namespace ThirdPersonCamera
             }
         }
 
+        void ApplyPendingRetirements()
+        {
+            for (int i = 0; i < m_PendingRetirements.Count; i++)
+            {
+                PendingRetirement retirement = m_PendingRetirements[i];
+                m_States.Retire(
+                    retirement.EventId,
+                    retirement.Generation,
+                    retirement.SourceId,
+                    retirement.SourceActionInstanceId,
+                    retirement.Cycle,
+                    retirement.Reason);
+            }
+            m_PendingRetirements.Clear();
+        }
+
         ICameraEffectOwner RequireOwner(CameraEffectKind kind)
         {
             for (int i = 0; i < m_Owners.Length; i++)
                 if (m_Owners[i].Kind == kind)
                     return m_Owners[i];
             throw new ArgumentOutOfRangeException(nameof(kind), kind, "No camera effect owner is registered.");
+        }
+
+        readonly struct PendingRetirement
+        {
+            public PendingRetirement(
+                string eventId,
+                ulong generation,
+                string sourceId,
+                ulong sourceActionInstanceId,
+                int cycle,
+                CameraPresentationStopReason reason)
+            {
+                EventId = eventId;
+                Generation = generation;
+                SourceId = sourceId;
+                SourceActionInstanceId = sourceActionInstanceId;
+                Cycle = cycle;
+                Reason = reason;
+            }
+
+            public string EventId { get; }
+            public ulong Generation { get; }
+            public string SourceId { get; }
+            public ulong SourceActionInstanceId { get; }
+            public int Cycle { get; }
+            public CameraPresentationStopReason Reason { get; }
         }
     }
 }

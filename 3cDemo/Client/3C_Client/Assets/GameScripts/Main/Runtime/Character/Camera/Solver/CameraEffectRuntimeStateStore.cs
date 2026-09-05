@@ -67,6 +67,7 @@ namespace ThirdPersonCamera
                     string.Equals(effect.Request.SourceId, sourceId, StringComparison.Ordinal);
                 if (effect.Request.Generation != generation ||
                     effect.Request.SourceActionInstanceId != sourceActionInstanceId ||
+                    reason != CameraPresentationStopReason.ForceTeardown &&
                     effect.Request.Cycle != cycle ||
                     !matchesEvent && !matchesSource)
                     continue;

@@ -47,6 +47,16 @@ namespace ThirdPersonCamera
                 reason);
         }
 
+        public void ForceTeardown(
+            string sourceId,
+            ulong generation,
+            ulong sourceActionInstanceId)
+        {
+            if (!m_Initialized)
+                return;
+            m_Transition.ForceTeardown(sourceId, generation, sourceActionInstanceId);
+        }
+
         public CameraFramePlan Evaluate(
             in CameraFrameInput input,
             in CameraSequenceRequest request,

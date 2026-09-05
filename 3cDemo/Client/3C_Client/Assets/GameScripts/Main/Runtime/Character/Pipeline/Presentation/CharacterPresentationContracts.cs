@@ -392,7 +392,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         Camera = 5,
         Cue = 6,
         Vfx = 7,
-        Ui = 8
+        Ui = 8,
+        ForceReleaseProducer = 9
     }
 
     public readonly struct CharacterPresentationCommand
@@ -465,7 +466,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             return kind == CharacterPresentationCommandKind.SelectProducer ||
                    kind == CharacterPresentationCommandKind.SampleProducer ||
                    kind == CharacterPresentationCommandKind.CompleteProducer ||
-                   kind == CharacterPresentationCommandKind.ReleaseProducer;
+                   kind == CharacterPresentationCommandKind.ReleaseProducer ||
+                   kind == CharacterPresentationCommandKind.ForceReleaseProducer;
         }
 
         static string RequireIdentity(string value, string parameterName)

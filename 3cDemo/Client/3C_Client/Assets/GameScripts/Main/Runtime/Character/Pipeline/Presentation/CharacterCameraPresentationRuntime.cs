@@ -198,6 +198,45 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 command.ProducerGeneration,
                 command.SourceActionInstanceId,
                 command.Cycle);
+            if (reason == CameraPresentationStopReason.ForceTeardown)
+            {
+                switch (binding.Kind)
+                {
+                    case CharacterPresentationCameraBindingKind.Sequence:
+                        m_SequenceEvaluator.ForceTeardown(
+                            producer.ProgramProducerIdentity,
+                            command.ProducerGeneration,
+                            command.SourceActionInstanceId);
+                        RemoveSequenceInstances(command);
+                        break;
+                    case CharacterPresentationCameraBindingKind.Response:
+                        RemoveResponseInstances(command);
+                        break;
+                    case CharacterPresentationCameraBindingKind.Target:
+                        RemoveTargetInstances(command);
+                        break;
+                    case CharacterPresentationCameraBindingKind.Override:
+                    case CharacterPresentationCameraBindingKind.Zoom:
+                    case CharacterPresentationCameraBindingKind.Stretch:
+                    case CharacterPresentationCameraBindingKind.Shake:
+                    case CharacterPresentationCameraBindingKind.Shot:
+                        m_EffectEvaluator.Retire(
+                            command.Header.EventId.ToString(),
+                            command.ProducerGeneration,
+                            producer.ProgramProducerIdentity,
+                            command.SourceActionInstanceId,
+                            command.Cycle,
+                            reason);
+                        RemovePendingEffectsAllCycles(
+                            producer.ProgramProducerIdentity,
+                            command.ProducerGeneration,
+                            command.SourceActionInstanceId);
+                        break;
+                    default:
+                        throw new ArgumentOutOfRangeException(nameof(binding.Kind), binding.Kind, null);
+                }
+                return;
+            }
             switch (binding.Kind)
             {
                 case CharacterPresentationCameraBindingKind.Sequence:
@@ -228,11 +267,15 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                         command.SourceActionInstanceId,
                         command.Cycle,
                         reason);
-                    RemovePendingEffects(
-                        producer.ProgramProducerIdentity,
-                        command.ProducerGeneration,
-                        command.SourceActionInstanceId,
-                        command.Cycle);
+                    if (reason == CameraPresentationStopReason.EventRevoked)
+                    {
+                        RemovePendingEffect(
+                            command.Header.EventId.ToString(),
+                            producer.ProgramProducerIdentity,
+                            command.ProducerGeneration,
+                            command.SourceActionInstanceId,
+                            command.Cycle);
+                    }
                     break;
                 default:
                     throw new ArgumentOutOfRangeException(nameof(binding.Kind), binding.Kind, null);
@@ -317,7 +360,7 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             Vector3 aim = position + rotation * m_AimBindPosition;
             m_SequenceBuffer.Clear();
             foreach (CameraSequenceRequest request in m_Sequences.Values)
-                if (request.Active)
+                if (!string.IsNullOrWhiteSpace(request.SequenceId))
                     m_SequenceBuffer.Add(request);
             CameraSequenceRequest sequence = m_SequenceResolver.Resolve(
                 m_SequenceBuffer,
@@ -378,7 +421,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             m_Debug.Set(plan, m_CameraRig.Result, resolvedTarget.SourceKey, m_CameraProjection.ProfileRevision);
         }
 
-        void RemovePendingEffects(
+        void RemovePendingEffect(
+            string eventId,
             string sourceId,
             ulong generation,
             ulong sourceActionInstanceId,
@@ -390,9 +434,70 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 if (request.Generation == generation &&
                     request.SourceActionInstanceId == sourceActionInstanceId &&
                     request.Cycle == cycle &&
+                    string.Equals(request.EventId, eventId, StringComparison.Ordinal) &&
                     string.Equals(request.SourceId, sourceId, StringComparison.Ordinal))
                     m_PendingEffects.RemoveAt(i);
             }
+        }
+
+        void RemovePendingEffectsAllCycles(
+            string sourceId,
+            ulong generation,
+            ulong sourceActionInstanceId)
+        {
+            for (int i = m_PendingEffects.Count - 1; i >= 0; i--)
+            {
+                CameraEffectRequest request = m_PendingEffects[i];
+                if (request.Generation == generation &&
+                    request.SourceActionInstanceId == sourceActionInstanceId &&
+                    string.Equals(request.SourceId, sourceId, StringComparison.Ordinal))
+                    m_PendingEffects.RemoveAt(i);
+            }
+        }
+
+        void RemoveSequenceInstances(CharacterPresentationCommand command)
+        {
+            var remove = new List<PresentationProducerInstanceId>();
+            foreach (KeyValuePair<PresentationProducerInstanceId, CameraSequenceRequest> pair in m_Sequences)
+            {
+                PresentationProducerInstanceId key = pair.Key;
+                if (key.Generation == command.ProducerGeneration &&
+                    key.SourceActionInstanceId == command.SourceActionInstanceId &&
+                    string.Equals(key.ProducerId, command.ProducerId, StringComparison.Ordinal))
+                    remove.Add(key);
+            }
+            for (int i = 0; i < remove.Count; i++)
+                m_Sequences.Remove(remove[i]);
+        }
+
+        void RemoveResponseInstances(CharacterPresentationCommand command)
+        {
+            var remove = new List<PresentationProducerInstanceId>();
+            foreach (KeyValuePair<PresentationProducerInstanceId, CameraResponseRequest> pair in m_Responses)
+            {
+                PresentationProducerInstanceId key = pair.Key;
+                if (key.Generation == command.ProducerGeneration &&
+                    key.SourceActionInstanceId == command.SourceActionInstanceId &&
+                    string.Equals(key.ProducerId, command.ProducerId, StringComparison.Ordinal))
+                    remove.Add(key);
+            }
+            for (int i = 0; i < remove.Count; i++)
+                m_Responses.Remove(remove[i]);
+        }
+
+        void RemoveTargetInstances(CharacterPresentationCommand command)
+        {
+            var remove = new List<PresentationProducerInstanceId>();
+            foreach (KeyValuePair<PresentationProducerInstanceId, CameraTargetSelectionRequest> pair in m_Targets)
+            {
+                PresentationProducerInstanceId key = pair.Key;
+                if (key.Generation == command.ProducerGeneration &&
+                    key.SourceActionInstanceId == command.SourceActionInstanceId &&
+                    string.Equals(key.ProducerId, command.ProducerId, StringComparison.Ordinal))
+                    remove.Add(key);
+            }
+            for (int i = 0; i < remove.Count; i++)
+                m_Targets.Remove(remove[i]);
         }
 
         static CharacterPresentationCameraBinding RequireCameraBinding(

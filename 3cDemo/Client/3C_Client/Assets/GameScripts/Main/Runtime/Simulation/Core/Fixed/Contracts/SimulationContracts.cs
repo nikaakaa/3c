@@ -578,7 +578,8 @@ namespace ThirdPersonSimulation.Fixed
         Camera = 5,
         Cue = 6,
         Vfx = 7,
-        Ui = 8
+        Ui = 8,
+        ForceReleaseProducer = 9
     }
 
     public readonly struct PresentationCommand
@@ -625,7 +626,8 @@ namespace ThirdPersonSimulation.Fixed
             return kind == PresentationCommandKind.SelectProducer ||
                    kind == PresentationCommandKind.SampleProducer ||
                    kind == PresentationCommandKind.CompleteProducer ||
-                   kind == PresentationCommandKind.ReleaseProducer;
+                   kind == PresentationCommandKind.ReleaseProducer ||
+                   kind == PresentationCommandKind.ForceReleaseProducer;
         }
 
         static bool IsPlaybackSample(PresentationCommandKind kind) =>

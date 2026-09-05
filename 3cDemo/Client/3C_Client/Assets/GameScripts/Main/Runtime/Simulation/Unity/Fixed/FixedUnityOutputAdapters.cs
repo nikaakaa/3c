@@ -166,6 +166,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
             {
                 if (!TryResolveLatest(keys[i], out ActivePresentationRecord current) ||
                     !IsTerminal(current.Command) ||
+                    !IsAnimationProducer(current.Command) ||
                     current.Command.Header.Tick.Value > confirmedTick)
                 {
                     continue;
@@ -187,7 +188,14 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
                 {
                     if (!current.Command.Header.EventId.Equals(applied.Command.Header.EventId))
                     {
-                        if (IsAnimationPlaybackCommand(current.Command) &&
+                        if (IsCameraStateKey(key))
+                        {
+                            m_Applied[key] = PublishCameraRecords(key, applied);
+                            if (current.Command.Kind == CharacterPresentationCommandKind.ForceReleaseProducer)
+                                RemoveCameraScope(current.Command);
+                            continue;
+                        }
+                        else if (IsAnimationPlaybackCommand(current.Command) &&
                             IsAnimationPlaybackCommand(applied.Command) &&
                             !SamePlayback(current.Command, applied.Command))
                         {
@@ -206,10 +214,19 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
                 }
                 else if (hasCurrent)
                 {
-                    if (IsTerminal(current.Command))
+                    if (IsCameraStateKey(key))
+                    {
+                        m_Applied[key] = PublishCameraRecords(key, default);
+                        if (current.Command.Kind == CharacterPresentationCommandKind.ForceReleaseProducer)
+                            RemoveCameraScope(current.Command);
+                        continue;
+                    }
+                    else if (IsTerminal(current.Command))
                     {
                         RemoveDeferredAnimationRetirements(current.Command);
                         m_Runtime.Publish(current.Command);
+                        if (current.Command.Kind == CharacterPresentationCommandKind.ForceReleaseProducer)
+                            RemoveCameraScope(current.Command);
                     }
                     else
                         PublishOrRestore(current);
@@ -231,6 +248,32 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
                     m_Applied.Remove(key);
                 }
             }
+        }
+
+        ActivePresentationRecord PublishCameraRecords(
+            PresentationStateKey key,
+            ActivePresentationRecord baseline)
+        {
+            if (!m_ByState.TryGetValue(key, out List<EventId> events) || events.Count == 0)
+                return baseline;
+            var records = new List<ActivePresentationRecord>();
+            bool hasBaseline = baseline.Command.Header.EventId.IsValid;
+            for (int i = 0; i < events.Count; i++)
+            {
+                if (!m_ByEvent.TryGetValue(events[i], out ActivePresentationRecord record))
+                    throw new InvalidOperationException(
+                        $"Fixed Camera state '{key}' references a missing EventId '{events[i]}'.");
+                if (!hasBaseline || IsNewer(record.Command.Header, baseline.Command.Header))
+                    records.Add(record);
+            }
+            records.Sort((left, right) => CompareHeaders(left.Command.Header, right.Command.Header));
+            ActivePresentationRecord latest = baseline;
+            for (int i = 0; i < records.Count; i++)
+            {
+                m_Runtime.Publish(records[i].Command);
+                latest = records[i];
+            }
+            return latest;
         }
 
         void PublishOrRestore(ActivePresentationRecord record)
@@ -324,25 +367,46 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
                     command.ProducerGeneration));
         }
 
-        static bool IsAnimationPlaybackCommand(CharacterPresentationCommand command)
+        bool IsAnimationPlaybackCommand(CharacterPresentationCommand command)
         {
-            return command.Kind == CharacterPresentationCommandKind.SelectProducer ||
-                   command.Kind == CharacterPresentationCommandKind.SampleProducer ||
-                   IsTerminal(command);
+            if (command.Kind == CharacterPresentationCommandKind.SelectProducer ||
+                command.Kind == CharacterPresentationCommandKind.SampleProducer)
+                return IsAnimationProducer(command);
+            return IsTerminal(command) && IsAnimationProducer(command);
         }
 
         static bool IsTerminal(CharacterPresentationCommand command)
         {
             return command.Kind == CharacterPresentationCommandKind.CompleteProducer ||
-                   command.Kind == CharacterPresentationCommandKind.ReleaseProducer;
+                   command.Kind == CharacterPresentationCommandKind.ReleaseProducer ||
+                   command.Kind == CharacterPresentationCommandKind.ForceReleaseProducer;
         }
+
+        bool IsAnimationProducer(CharacterPresentationCommand command)
+        {
+            return m_Projection.TryGetProducer(command.ProducerId, out CharacterPresentationProducerEntry producer) &&
+                   producer.Kind == CharacterPresentationProducerKind.Animation;
+        }
+
+        bool IsCameraTerminal(CharacterPresentationCommand command)
+        {
+            return IsTerminal(command) &&
+                   m_Projection.TryGetProducer(command.ProducerId, out CharacterPresentationProducerEntry producer) &&
+                   producer.Kind == CharacterPresentationProducerKind.Camera;
+        }
+
+        static bool IsCameraStateKey(PresentationStateKey key) =>
+            string.Equals(key.Channel, "camera", StringComparison.Ordinal) ||
+            string.Equals(key.Channel, "camera-force", StringComparison.Ordinal);
 
         static bool SamePlayback(
             CharacterPresentationCommand left,
             CharacterPresentationCommand right)
         {
             return string.Equals(left.ProducerId, right.ProducerId, StringComparison.Ordinal) &&
-                   left.ProducerGeneration == right.ProducerGeneration;
+                   left.ProducerGeneration == right.ProducerGeneration &&
+                   left.SourceActionInstanceId == right.SourceActionInstanceId &&
+                   left.Cycle == right.Cycle;
         }
 
         bool TryResolveLatest(PresentationStateKey key, out ActivePresentationRecord latest)
@@ -412,10 +476,14 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
                     m_Applied.Remove(sampleKey);
                 }
                 else if (string.Equals(key.Channel, "camera", StringComparison.Ordinal) &&
-                         baseline.Command.Weight <= 0f)
+                         IsCameraTerminal(baseline.Command))
                 {
                     RemoveHistory(key);
                     m_Applied.Remove(key);
+                }
+                else if (string.Equals(key.Channel, "camera-force", StringComparison.Ordinal))
+                {
+                    RemoveCameraScope(baseline.Command);
                 }
             }
         }
@@ -441,6 +509,24 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
             m_ByState.Remove(key);
         }
 
+        void RemoveCameraScope(CharacterPresentationCommand command)
+        {
+            var keys = new List<PresentationStateKey>(m_ByState.Keys);
+            for (int i = 0; i < keys.Count; i++)
+            {
+                PresentationStateKey key = keys[i];
+                if ((string.Equals(key.Channel, "camera", StringComparison.Ordinal) ||
+                     string.Equals(key.Channel, "camera-force", StringComparison.Ordinal)) &&
+                    string.Equals(key.Producer, command.ProducerId, StringComparison.Ordinal) &&
+                    key.Generation == command.ProducerGeneration &&
+                    key.SourceActionInstanceId == command.SourceActionInstanceId)
+                {
+                    RemoveHistory(key);
+                    m_Applied.Remove(key);
+                }
+            }
+        }
+
         void RequireCommit()
         {
             if (!m_CommitActive)
@@ -455,6 +541,14 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
                    candidate.Tick.Value == current.Tick.Value && candidate.Sequence > current.Sequence;
         }
 
+        static int CompareHeaders(
+            CharacterPresentationEventHeader left,
+            CharacterPresentationEventHeader right)
+        {
+            int tick = left.Tick.Value.CompareTo(right.Tick.Value);
+            return tick != 0 ? tick : left.Sequence.CompareTo(right.Sequence);
+        }
+
         bool TryBuildStateKey(CharacterPresentationCommand command, out PresentationStateKey key)
         {
             if (!m_Projection.TryGetProducer(command.ProducerId, out CharacterPresentationProducerEntry producer))
@@ -462,17 +556,46 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
             switch (command.Kind)
             {
                 case CharacterPresentationCommandKind.SelectProducer:
+                    if (producer.Kind != CharacterPresentationProducerKind.Animation)
+                        throw new InvalidOperationException("Selection state requires an Animation producer.");
                     key = new PresentationStateKey("animation-selection", producer.AnimationChannelId.Value, 0);
                     return true;
                 case CharacterPresentationCommandKind.SampleProducer:
+                    if (producer.Kind != CharacterPresentationProducerKind.Animation)
+                        throw new InvalidOperationException("Sample state requires an Animation producer.");
                     key = new PresentationStateKey("animation-sample", command.ProducerId, command.ProducerGeneration);
                     return true;
                 case CharacterPresentationCommandKind.CompleteProducer:
                 case CharacterPresentationCommandKind.ReleaseProducer:
+                    if (producer.Kind == CharacterPresentationProducerKind.Camera)
+                    {
+                        key = new PresentationStateKey(
+                            "camera",
+                            command.ProducerId,
+                            command.ProducerGeneration,
+                            command.SourceActionInstanceId,
+                            command.Cycle);
+                        return true;
+                    }
                     key = new PresentationStateKey("animation-terminal", command.ProducerId, command.ProducerGeneration);
                     return true;
+                case CharacterPresentationCommandKind.ForceReleaseProducer:
+                    if (producer.Kind != CharacterPresentationProducerKind.Camera)
+                        throw new InvalidOperationException("Force release state requires a Camera producer.");
+                    key = new PresentationStateKey(
+                        "camera-force",
+                        command.ProducerId,
+                        command.ProducerGeneration,
+                        command.SourceActionInstanceId,
+                        command.Cycle);
+                    return true;
                 case CharacterPresentationCommandKind.Camera:
-                    key = new PresentationStateKey("camera", command.ProducerId, command.ProducerGeneration);
+                    key = new PresentationStateKey(
+                        "camera",
+                        command.ProducerId,
+                        command.ProducerGeneration,
+                        command.SourceActionInstanceId,
+                        command.Cycle);
                     return true;
                 case CharacterPresentationCommandKind.Cue:
                 case CharacterPresentationCommandKind.Vfx:
@@ -521,22 +644,38 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
 
         readonly struct PresentationStateKey : IEquatable<PresentationStateKey>, IComparable<PresentationStateKey>
         {
-            public PresentationStateKey(string channel, string producer, ulong generation)
+            public PresentationStateKey(
+                string channel,
+                string producer,
+                ulong generation,
+                ulong sourceActionInstanceId = 0,
+                int cycle = 0)
             {
                 Channel = channel ?? string.Empty;
                 Producer = producer ?? string.Empty;
                 Generation = generation;
+                SourceActionInstanceId = sourceActionInstanceId;
+                Cycle = cycle;
             }
 
             public string Channel { get; }
             public string Producer { get; }
             public ulong Generation { get; }
+            public ulong SourceActionInstanceId { get; }
+            public int Cycle { get; }
             public bool Equals(PresentationStateKey other) =>
                 Generation == other.Generation &&
+                SourceActionInstanceId == other.SourceActionInstanceId &&
+                Cycle == other.Cycle &&
                 string.Equals(Channel, other.Channel, StringComparison.Ordinal) &&
                 string.Equals(Producer, other.Producer, StringComparison.Ordinal);
             public override bool Equals(object obj) => obj is PresentationStateKey other && Equals(other);
-            public override int GetHashCode() => HashCode.Combine(Channel, Producer, Generation);
+            public override int GetHashCode() => HashCode.Combine(
+                Channel,
+                Producer,
+                Generation,
+                SourceActionInstanceId,
+                Cycle);
             public int CompareTo(PresentationStateKey other)
             {
                 int channel = ChannelOrder(Channel).CompareTo(ChannelOrder(other.Channel));
@@ -546,9 +685,16 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
                 if (channel != 0)
                     return channel;
                 int producer = string.CompareOrdinal(Producer, other.Producer);
-                return producer != 0 ? producer : Generation.CompareTo(other.Generation);
+                if (producer != 0)
+                    return producer;
+                int generation = Generation.CompareTo(other.Generation);
+                if (generation != 0)
+                    return generation;
+                int action = SourceActionInstanceId.CompareTo(other.SourceActionInstanceId);
+                return action != 0 ? action : Cycle.CompareTo(other.Cycle);
             }
-            public override string ToString() => $"{Channel}/{Producer}/{Generation}";
+            public override string ToString() =>
+                $"{Channel}/{Producer}/{Generation}/{SourceActionInstanceId}/{Cycle}";
 
             static int ChannelOrder(string channel)
             {
@@ -558,6 +704,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
                     "animation-sample" => 1,
                     "animation-terminal" => 2,
                     "camera" => 3,
+                    "camera-force" => 4,
                     _ => throw new InvalidOperationException(
                         $"Fixed Presentation state channel '{channel}' has no reconciliation order.")
                 };

@@ -79,6 +79,24 @@ namespace ThirdPersonCamera
             m_Retiring = true;
         }
 
+        public void ForceTeardown(
+            string sourceId,
+            ulong generation,
+            ulong sourceActionInstanceId)
+        {
+            if (!m_LastPlan.Valid ||
+                m_CurrentGeneration != generation ||
+                m_CurrentSourceActionInstanceId != sourceActionInstanceId ||
+                !string.Equals(m_CurrentSourceId, sourceId, StringComparison.Ordinal))
+                return;
+            m_Retiring = false;
+            m_RetireFrom = default;
+            m_LastPlan = default;
+            m_BlendFrom = default;
+            m_TransitionElapsed = 0f;
+            m_TransitionDuration = 0f;
+        }
+
         public CameraFramePlan Evaluate(
             in CameraFrameInput input,
             in CameraSequenceRequest request,

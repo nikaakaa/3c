@@ -141,6 +141,7 @@ namespace ThirdPersonSimulation.ServerAuthoritative
             return command.Kind == PresentationCommandKind.SelectProducer ||
                    command.Kind == PresentationCommandKind.CompleteProducer ||
                    command.Kind == PresentationCommandKind.ReleaseProducer ||
+                   command.Kind == PresentationCommandKind.ForceReleaseProducer ||
                    command.Kind == PresentationCommandKind.Cue ||
                    command.Kind == PresentationCommandKind.Vfx ||
                    command.Kind == PresentationCommandKind.Ui;

@@ -69,6 +69,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                     ProgramStateOwnerKind.Control,
                     field.Semantic,
                     contract.ModuleId.Value,
+                    ProgramSourceTargetKind.ControlState,
                     fieldSource);
             }
             for (int i = 0; i < contract.Transitions.Count; i++)

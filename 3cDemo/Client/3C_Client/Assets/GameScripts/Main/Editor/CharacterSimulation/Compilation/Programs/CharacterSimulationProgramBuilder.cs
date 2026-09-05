@@ -237,6 +237,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             ProgramStateOwnerKind ownerKind,
             ProgramStateSemantic semantic,
             string ownerIdentity,
+            ProgramSourceTargetKind sourceTargetKind,
             CharacterSimulationSourceLocation source)
         {
             int index = m_StateSlots.Count;
@@ -248,7 +249,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 semantic,
                 ownerIdentity,
                 GetDefaultConstant(valueKind)));
-            AddSourceMap(ProgramSourceTargetKind.StateSlot, index, source);
+            AddSourceMap(sourceTargetKind, index, source);
             return index;
         }
 

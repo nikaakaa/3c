@@ -58,6 +58,7 @@ namespace ThirdPersonSimulation.Fixed
     internal interface IFixedBlackboardPort
     {
         void WriteGraphCallParameter(int valueSlot, CharacterStateValue value);
+        void ResetGraphCallParameter(int valueSlot);
         CharacterStateValue ReadGraphCallParameter(int valueSlot);
 
         CharacterStateValue Read<TTarget>(

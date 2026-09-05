@@ -123,6 +123,8 @@ namespace ThirdPersonSimulation.Fixed
             using FixedValueInputLease inputs = ReadInputs(cursor, operation);
             if (inputs.Count != frame.Inputs.Count)
                 throw new InvalidOperationException($"Graph call frame '{frame.Identity}' received '{inputs.Count}' inputs, expected '{frame.Inputs.Count}'.");
+            for (int i = 0; i < frame.Outputs.Count; i++)
+                m_Blackboard.ResetGraphCallParameter(frame.Outputs[i].StateSlot);
             for (int i = 0; i < frame.Inputs.Count; i++)
                 m_Blackboard.WriteGraphCallParameter(frame.Inputs[i].StateSlot, inputs[i]);
         }

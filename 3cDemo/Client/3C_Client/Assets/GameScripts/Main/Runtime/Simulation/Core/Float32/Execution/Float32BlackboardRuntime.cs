@@ -152,6 +152,12 @@ namespace ThirdPersonSimulation
             return m_State.Get(group.Value);
         }
 
+        public void ResetGraphCallParameter(int valueSlot)
+        {
+            SimulationBlackboardSlotGroup group = RequireBlackboardGroup(valueSlot);
+            m_State.Reset(group.Value);
+        }
+
         public void ActivateOperationScopes<TTarget>(
             OperationControlCursor<TTarget> cursor,
             SimulationOperation operation,

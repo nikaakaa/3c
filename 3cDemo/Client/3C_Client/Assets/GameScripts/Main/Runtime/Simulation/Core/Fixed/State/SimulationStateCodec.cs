@@ -260,7 +260,7 @@ namespace ThirdPersonSimulation.Fixed
             ulong startTick = reader.ReadUInt64();
             string targetKey = reader.ReadString();
             SimulationActionTargetSnapshot target = ReadTargetSnapshot(reader);
-            SimulationExecutionSource source = SimulationExecutionSourceCodec.Read(reader);
+            SimulationExecutionSource source = ReadExecutionSource(reader, layout);
             EquipmentActionContext equipmentContext = EquipmentActionContextCodec.Read(reader, layout.Equipment);
             return new FixedActionActivationRequestState(
                 actionId,
@@ -314,7 +314,7 @@ namespace ThirdPersonSimulation.Fixed
                 reader.ReadUInt64(),
                 reader.ReadString(),
                 ReadTargetSnapshot(reader),
-                SimulationExecutionSourceCodec.Read(reader),
+                ReadExecutionSource(reader, layout),
                 ReadEnum<SimulationActionPhase>(reader.ReadByte()),
                 ReadEnum<SimulationActionState>(reader.ReadByte()),
                 ReadEnum<SimulationActionLifecycleTransitionType>(reader.ReadByte()),
@@ -365,6 +365,14 @@ namespace ThirdPersonSimulation.Fixed
                 reader.ReadString(),
                 reader.ReadVector3(),
                 reader.ReadYaw());
+        }
+
+        static SimulationExecutionSource ReadExecutionSource(CanonicalReader reader, ProgramExecutionLayout layout)
+        {
+            SimulationExecutionSource source = SimulationExecutionSourceCodec.Read(reader);
+            if (source.IsSkillOperation && source.Operation.Value >= layout.Program.Operations.Count)
+                throw new InvalidDataException($"Character state operation handle '{source.Operation.Value}' is invalid.");
+            return source;
         }
 
         static T ReadEnum<T>(int value) where T : struct

@@ -212,6 +212,39 @@ namespace ThirdPersonSimulation
         public bool IsValid => CatalogEntryIndex >= 0 && ModuleId.IsValid && SemanticVersion > 0;
     }
 
+    public sealed class CharacterControlModuleCatalog
+    {
+        readonly Dictionary<CharacterControlModuleId, ICharacterControlModule> m_Modules;
+
+        public CharacterControlModuleCatalog(IEnumerable<ICharacterControlModule> modules)
+        {
+            m_Modules = new Dictionary<CharacterControlModuleId, ICharacterControlModule>();
+            if (modules == null)
+                return;
+            foreach (ICharacterControlModule module in modules)
+            {
+                if (module == null || module.Contract == null)
+                    throw new ArgumentException("Character control module catalog contains an incomplete module.", nameof(modules));
+                if (!m_Modules.TryAdd(module.Contract.ModuleId, module))
+                    throw new ArgumentException(
+                        $"Character control module '{module.Contract.ModuleId}' is registered more than once.",
+                        nameof(modules));
+            }
+        }
+
+        public ICharacterControlModule Require(CharacterControlModuleBinding binding)
+        {
+            if (!binding.IsValid)
+                throw new ArgumentException("Character control module binding is invalid.", nameof(binding));
+            if (!m_Modules.TryGetValue(binding.ModuleId, out ICharacterControlModule module))
+                throw new InvalidOperationException($"Character control module '{binding.ModuleId}' is not installed.");
+            if (module.Contract.SemanticVersion != binding.SemanticVersion)
+                throw new InvalidOperationException(
+                    $"Character control module '{binding.ModuleId}' version '{module.Contract.SemanticVersion}' does not match Program version '{binding.SemanticVersion}'.");
+            return module;
+        }
+    }
+
     public static class CharacterControlProgramCatalogValidator
     {
         public static CharacterControlModuleBinding Resolve(

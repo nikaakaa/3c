@@ -1472,7 +1472,11 @@ namespace MagicaCloth2
             {
                 contactList.Clear();
                 if (contactQueue.Count > 0)
-                    contactList.AddRange(contactQueue.ToArray(Allocator.Temp));
+                {
+                    var contacts = contactQueue.ToArray(Allocator.Temp);
+                    contactList.AddRange(contacts);
+                    contacts.Dispose();
+                }
 
                 //Debug.Log($"contact count:{contactList.Length}");
             }
@@ -2196,7 +2200,11 @@ namespace MagicaCloth2
             {
                 intersectList.Clear();
                 if (intersectQueue.Count > 0)
-                    intersectList.AddRange(intersectQueue.ToArray(Allocator.Temp));
+                {
+                    var intersects = intersectQueue.ToArray(Allocator.Temp);
+                    intersectList.AddRange(intersects);
+                    intersects.Dispose();
+                }
 
                 //Debug.Log($"intersect count:{intersectList.Length}");
             }

@@ -247,8 +247,8 @@ namespace MagicaCloth2
 
             public void Execute()
             {
-                var keySet = new NativeParallelHashSet<T>(hashMap.Count(), Allocator.Temp); // ここが問題となる可能性がある(unity2023.1.5事件)
-                var keyArray = hashMap.GetKeyArray(Allocator.Temp); // ここが問題となる可能性がある(unity2023.1.5事件)
+                using var keySet = new NativeParallelHashSet<T>(hashMap.Count(), Allocator.Temp); // ここが問題となる可能性がある(unity2023.1.5事件)
+                using var keyArray = hashMap.GetKeyArray(Allocator.Temp); // ここが問題となる可能性がある(unity2023.1.5事件)
                 // GetKeyArray()の結果はキーが重複しまた順不同なので注意！
                 for (int i = 0; i < keyArray.Length; i++)
                     keySet.Add(keyArray[i]);

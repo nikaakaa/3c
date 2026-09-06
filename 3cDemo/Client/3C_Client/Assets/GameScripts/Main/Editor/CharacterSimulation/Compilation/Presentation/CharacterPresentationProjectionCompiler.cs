@@ -103,43 +103,6 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             public TimelinePlaybackMode PlaybackMode { get; }
         }
 
-        sealed class PoseSourceCompilationEntry
-        {
-            public PoseSourceCompilationEntry(
-                PresentationPoseSourceIndex sourceIndex,
-                CharacterPresentationPoseSourceSlot slot,
-                CharacterPresentationPoseSourceBinding binding)
-            {
-                SourceIndex = sourceIndex;
-                Slot = slot;
-                Binding = binding;
-            }
-
-            public PresentationPoseSourceIndex SourceIndex { get; }
-            public CharacterPresentationPoseSourceSlot Slot { get; }
-            public CharacterPresentationPoseSourceBinding Binding { get; }
-        }
-
-        sealed class PoseSourceCompilationCatalog
-        {
-            readonly Dictionary<CharacterPresentationPoseSourceSlot, PoseSourceCompilationEntry> m_BySlot;
-
-            public PoseSourceCompilationCatalog(PoseSourceCompilationEntry[] entries)
-            {
-                Entries = entries ?? Array.Empty<PoseSourceCompilationEntry>();
-                m_BySlot = Entries.ToDictionary(value => value.Slot);
-            }
-
-            public IReadOnlyList<PoseSourceCompilationEntry> Entries { get; }
-            public IReadOnlyDictionary<CharacterPresentationPoseSourceSlot, PresentationPoseSourceIndex> SourceIndices =>
-                m_BySlot.ToDictionary(value => value.Key, value => value.Value.SourceIndex);
-
-            public bool TryGet(
-                CharacterPresentationPoseSourceSlot slot,
-                out PoseSourceCompilationEntry entry) =>
-                m_BySlot.TryGetValue(slot, out entry);
-        }
-
         sealed class AnimationBlendCatalogCompilation
         {
             public AnimationBlendCatalogCompilation(
@@ -171,9 +134,12 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             var errors = new List<string>();
             CharacterAuthoringCompilationModel model = request.Model;
             var reader = new CharacterPresentationSemanticReader(request.Artifact);
-            PoseSourceCompilationCatalog sourceCatalog = CompilePoseSourceCatalog(
-                model.AnimationPresentationProfile,
-                errors);
+            CharacterPresentationPoseSourceCompilationResult sourceCompilation =
+                CharacterPresentationPoseSourceCompiler.Compile(
+                    model.AnimationPresentationProfile);
+            errors.AddRange(sourceCompilation.Diagnostics);
+            CharacterPresentationPoseSourceCompilationCatalog sourceCatalog =
+                sourceCompilation.Catalog;
             MotionMatchingProjectionPayload motionMatching = CompileMotionMatchingPayload(
                 model.AnimationPresentationProfile,
                 sourceCatalog,
@@ -248,176 +214,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             return true;
         }
 
-        static PoseSourceCompilationCatalog CompilePoseSourceCatalog(
-            CharacterAnimationPresentationProfile profile,
-            List<string> errors)
-        {
-            if (!profile || !profile.PoseGraph)
-            {
-                errors?.Add("Presentation Profile has no Pose Graph for Pose Source compilation.");
-                return new PoseSourceCompilationCatalog(Array.Empty<PoseSourceCompilationEntry>());
-            }
-
-            string profilePath = AssetDatabase.GetAssetPath(profile);
-            var ownedSlots = new HashSet<CharacterPresentationPoseSourceSlot>();
-            CharacterPresentationPoseGraphAsset[] graphOwners = EnumeratePoseGraphOwners(profile)
-                .Distinct()
-                .OrderBy(CharacterPresentationAssetObjectIdentity.Require, StringComparer.Ordinal)
-                .ToArray();
-            for (int ownerIndex = 0; ownerIndex < graphOwners.Length; ownerIndex++)
-            {
-                CharacterPresentationPoseGraphAsset graphOwner = graphOwners[ownerIndex];
-                string graphPath = AssetDatabase.GetAssetPath(graphOwner);
-                for (int slotIndex = 0; slotIndex < graphOwner.SourceSlots.Count; slotIndex++)
-                {
-                    CharacterPresentationPoseSourceSlot slot = graphOwner.SourceSlots[slotIndex];
-                    if (!slot || !ownedSlots.Add(slot) ||
-                        !string.Equals(AssetDatabase.GetAssetPath(slot), graphPath, StringComparison.Ordinal))
-                    {
-                        errors?.Add($"Pose Graph '{graphOwner.name}' Source Slot #{slotIndex} is missing, duplicated or not owned by that asset.");
-                        continue;
-                    }
-                    try
-                    {
-                        slot.RequireValid();
-                    }
-                    catch (Exception exception)
-                    {
-                        errors?.Add($"Pose Graph Source Slot '{slot.name}' is invalid: {exception.Message}");
-                    }
-                }
-            }
-
-            CharacterPresentationPoseSourceSlot[] reachable = EnumerateReachablePoseGraphs(profile)
-                .Where(value => value != null)
-                .SelectMany(value => value.Nodes)
-                .Where(value => value != null && value.PresentationPoseSourceSlot)
-                .Select(value => value.PresentationPoseSourceSlot)
-                .Distinct()
-                .ToArray();
-            Array.Sort(reachable, (left, right) =>
-                string.CompareOrdinal(
-                    CharacterPresentationAssetObjectIdentity.Require(left),
-                    CharacterPresentationAssetObjectIdentity.Require(right)));
-
-            var bindingsBySlot = new Dictionary<CharacterPresentationPoseSourceSlot, CharacterPresentationPoseSourceBinding>();
-            for (int i = 0; i < profile.PoseSourceBindings.Count; i++)
-            {
-                CharacterPresentationPoseSourceBinding binding = profile.PoseSourceBindings[i];
-                if (!binding || !binding.Slot ||
-                    !string.Equals(AssetDatabase.GetAssetPath(binding), profilePath, StringComparison.Ordinal) ||
-                    !bindingsBySlot.TryAdd(binding.Slot, binding))
-                {
-                    errors?.Add($"Presentation Profile Pose Source binding #{i} is missing, duplicated or not owned by the Profile asset.");
-                    continue;
-                }
-                if (!ownedSlots.Contains(binding.Slot) || !binding.Slot.Accepts(binding))
-                    errors?.Add($"Pose Source binding '{binding.name}' references a foreign or type-incompatible Slot.");
-                try
-                {
-                    binding.RequireValid(profile.RigDefinition);
-                }
-                catch (Exception exception)
-                {
-                    errors?.Add($"Pose Source binding '{binding.name}' is invalid: {exception.Message}");
-                }
-            }
-
-            var entries = new PoseSourceCompilationEntry[reachable.Length];
-            for (int i = 0; i < reachable.Length; i++)
-            {
-                CharacterPresentationPoseSourceSlot slot = reachable[i];
-                if (!ownedSlots.Contains(slot))
-                    errors?.Add($"Pose Player references Source Slot '{slot.name}' outside the Pose Graph owner.");
-                if (!bindingsBySlot.TryGetValue(slot, out CharacterPresentationPoseSourceBinding binding))
-                    errors?.Add($"Pose Source Slot '{slot.name}' has no Profile binding.");
-                entries[i] = new PoseSourceCompilationEntry(
-                    new PresentationPoseSourceIndex(i),
-                    slot,
-                    binding);
-            }
-
-            foreach (KeyValuePair<CharacterPresentationPoseSourceSlot, CharacterPresentationPoseSourceBinding> pair in bindingsBySlot)
-            {
-                if (!reachable.Contains(pair.Key))
-                    errors?.Add($"Pose Source binding '{pair.Value.name}' is orphaned from every reachable Pose Player.");
-            }
-            return new PoseSourceCompilationCatalog(entries);
-        }
-
-        static IEnumerable<CharacterPresentationPoseGraphAsset> EnumeratePoseGraphOwners(
-            CharacterAnimationPresentationProfile profile)
-        {
-            yield return profile.PoseGraph;
-            for (int implementationIndex = 0; implementationIndex < profile.LinkedPoseImplementations.Count; implementationIndex++)
-            {
-                CharacterLinkedPoseImplementationAsset implementation = profile.LinkedPoseImplementations[implementationIndex];
-                if (!implementation)
-                    continue;
-                for (int entryIndex = 0; entryIndex < implementation.Entries.Count; entryIndex++)
-                {
-                    CharacterPresentationPoseGraphAsset graphOwner = implementation.Entries[entryIndex]?.GraphOwner;
-                    if (graphOwner)
-                        yield return graphOwner;
-                }
-            }
-        }
-
-        static IEnumerable<CharacterPoseCanvasGraph> EnumerateReachablePoseGraphs(
-            CharacterAnimationPresentationProfile profile)
-        {
-            var visited = new HashSet<string>(StringComparer.Ordinal);
-            foreach (CharacterPoseCanvasGraph graph in EnumerateReachablePoseGraphs(profile.PoseGraph, profile.PoseGraph.Graph, visited))
-                yield return graph;
-            for (int implementationIndex = 0; implementationIndex < profile.LinkedPoseImplementations.Count; implementationIndex++)
-            {
-                CharacterLinkedPoseImplementationAsset implementation = profile.LinkedPoseImplementations[implementationIndex];
-                if (!implementation)
-                    continue;
-                for (int entryIndex = 0; entryIndex < implementation.Entries.Count; entryIndex++)
-                {
-                    CharacterLinkedPoseImplementationEntryBinding entry = implementation.Entries[entryIndex];
-                    if (entry == null || !entry.GraphOwner)
-                        continue;
-                    CharacterPoseCanvasGraph entryGraph = entry.GraphOwner.RequireGraph(entry.GraphId);
-                    foreach (CharacterPoseCanvasGraph graph in EnumerateReachablePoseGraphs(entry.GraphOwner, entryGraph, visited))
-                        yield return graph;
-                }
-            }
-        }
-
-        static IEnumerable<CharacterPoseCanvasGraph> EnumerateReachablePoseGraphs(
-            CharacterPresentationPoseGraphAsset owner,
-            CharacterPoseCanvasGraph graph,
-            HashSet<string> visited)
-        {
-            string key = CharacterPresentationAssetObjectIdentity.Require(owner) + "\0" + graph.GraphId.Value;
-            if (!visited.Add(key))
-                yield break;
-            yield return graph;
-            for (int nodeIndex = 0; nodeIndex < graph.Nodes.Count; nodeIndex++)
-            {
-                CharacterPoseCanvasNode node = graph.Nodes[nodeIndex];
-                if (node?.Payload is CharacterPoseSubgraphPayload subgraph && subgraph.Subgraph != null && subgraph.Subgraph.PoseGraphId.IsValid)
-                {
-                    foreach (CharacterPoseCanvasGraph child in EnumerateReachablePoseGraphs(owner, owner.RequireGraph(subgraph.Subgraph.PoseGraphId), visited))
-                        yield return child;
-                    continue;
-                }
-                if (node?.Payload is not CharacterPoseStateMachineNodePayload stateMachine || stateMachine.StateMachine == null)
-                    continue;
-                for (int stateIndex = 0; stateIndex < stateMachine.StateMachine.States.Count; stateIndex++)
-                {
-                    CharacterPoseStateDefinition state = stateMachine.StateMachine.States[stateIndex];
-                    if (state == null || !state.PoseGraphId.IsValid)
-                        continue;
-                    foreach (CharacterPoseCanvasGraph child in EnumerateReachablePoseGraphs(owner, owner.RequireGraph(state.PoseGraphId), visited))
-                        yield return child;
-                }
-            }
-        }
-
-        static CharacterPresentationProjection CompileCore(
+       static CharacterPresentationProjection CompileCore(
             CharacterPresentationSemanticReader reader,
             CharacterAnimationPresentationProfile profile,
             CharacterEquipmentProfile equipmentProfile,
@@ -425,7 +222,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             string projectionRevision,
             CharacterFootPlacementAnalysisCompilation footAnalysisCompilation,
             MotionMatchingProjectionPayload motionMatching,
-            PoseSourceCompilationCatalog sourceCatalog,
+            CharacterPresentationPoseSourceCompilationCatalog sourceCatalog,
             IReadOnlyDictionary<string, TimelineData> timelines,
             IReadOnlyDictionary<string, IReadOnlyList<AnimationTimelineCallSite>> timelineCallSites,
             List<string> errors)
@@ -606,7 +403,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
         }
 
         static Dictionary<PresentationPoseSourceIndex, int> CompileBlendSpacePoseSources(
-            PoseSourceCompilationCatalog sourceCatalog,
+            CharacterPresentationPoseSourceCompilationCatalog sourceCatalog,
             CharacterAnimationRigDefinition rig,
             CharacterFootPlacementAnalysisCompilation footAnalysisCompilation,
             List<CharacterAnimationBlendSpacePlan> blendSpaces,
@@ -617,7 +414,8 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             AnimationFootAnalysisProjectionBuildData footAnalysis = footAnalysisCompilation?.BuildData;
             for (int bindingIndex = 0; bindingIndex < sourceCatalog.Entries.Count; bindingIndex++)
             {
-                PoseSourceCompilationEntry entry = sourceCatalog.Entries[bindingIndex];
+                CharacterPresentationPoseSourceCompilationEntry entry =
+                    sourceCatalog.Entries[bindingIndex];
                 if (!(entry.Binding is CharacterBlendSpacePoseSourceBinding binding))
                     continue;
                 try
@@ -678,7 +476,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
         }
 
         static CharacterPresentationPoseSourcePlan[] CompilePoseSources(
-            PoseSourceCompilationCatalog sourceCatalog,
+            CharacterPresentationPoseSourceCompilationCatalog sourceCatalog,
             CharacterAnimationRigDefinition rig,
             CharacterFootPlacementAnalysisCompilation footAnalysisCompilation,
             List<string> errors)
@@ -689,7 +487,8 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             var sourceIndices = new HashSet<PresentationPoseSourceIndex>();
             for (int i = 0; i < sourceCatalog.Entries.Count; i++)
             {
-                PoseSourceCompilationEntry entry = sourceCatalog.Entries[i];
+                CharacterPresentationPoseSourceCompilationEntry entry =
+                    sourceCatalog.Entries[i];
                 CharacterPresentationPoseSourceBinding binding = entry.Binding;
                 try
                 {
@@ -2925,7 +2724,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
 
         static MotionMatchingProjectionPayload CompileMotionMatchingPayload(
             CharacterAnimationPresentationProfile profile,
-            PoseSourceCompilationCatalog sourceCatalog,
+            CharacterPresentationPoseSourceCompilationCatalog sourceCatalog,
             List<string> errors)
         {
             if (!profile || sourceCatalog == null)

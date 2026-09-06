@@ -11,6 +11,7 @@
         "ThirdPersonSimulation.Unity",
         "ThirdPersonGameplay",
         "ThirdPersonCharacter.Animation.TransitionRouting",
+        "ThirdPerson.ProductStartup",
         "ThirdPersonCharacter.Pipeline.RootMotion",
         "RootMotion",
         "BTSMTL",

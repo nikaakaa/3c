@@ -4,6 +4,7 @@ using System.Linq;
 using Animancer;
 using BTSMTL.Timeline;
 using Cinemachine;
+using ThirdPerson.ProductStartup;
 using ThirdPersonCamera;
 using ThirdPersonCharacter.AI;
 using ThirdPersonCharacter.Editor.CharacterSimulation;
@@ -31,6 +32,7 @@ namespace ThirdPersonGameplay.Editor.Lab
     internal static class GameplayLabAssetBuilder
     {
         const string ConfigDirectory = "Assets/Configs/Simulation/GameplayLab";
+        const string ResourceProfilePath = "Assets/Configs/ProductStartup/ProductStartupProfile.asset";
         const string CompositionDirectory = ConfigDirectory + "/Compositions";
         const string PipelineDirectory = ConfigDirectory + "/Pipelines";
         const string SourceDirectory = ConfigDirectory + "/Sources";
@@ -241,6 +243,7 @@ namespace ThirdPersonGameplay.Editor.Lab
                     variants,
                     variant => string.Equals(variant.VariantId, selectedId, StringComparison.Ordinal));
                 bootstrap.SetVariants(selectedIndex >= 0 ? selectedIndex : 0, variants);
+                bootstrap.SetResourceProfile(LoadRequired<ProductStartupProfile>(ResourceProfilePath));
                 EditorUtility.SetDirty(bootstrap);
                 EditorSceneManager.MarkSceneDirty(scene);
                 if (!EditorSceneManager.SaveScene(scene))
@@ -971,6 +974,7 @@ namespace ThirdPersonGameplay.Editor.Lab
                     var bootstrapObject = new GameObject("Gameplay Lab Bootstrap");
                     GameplayLabBootstrap bootstrap = bootstrapObject.AddComponent<GameplayLabBootstrap>();
                     bootstrap.SetVariants(0, variants);
+                    bootstrap.SetResourceProfile(LoadRequired<ProductStartupProfile>(ResourceProfilePath));
                 }
                 Scene loadedScene = SceneManager.GetSceneByPath(GameplayLabEditorLauncher.ScenePath);
                 bool targetIsOpen = loadedScene.IsValid() && loadedScene.isLoaded;

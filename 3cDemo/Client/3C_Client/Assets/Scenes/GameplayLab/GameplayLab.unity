@@ -274,6 +274,7 @@ MonoBehaviour:
   - {fileID: 11400000, guid: 0fd8bd434b4bed0408f8276c8c7fde08, type: 2}
   - {fileID: 11400000, guid: 0bdf6435f09d2654987f51931b4371fa, type: 2}
   m_StartupVariantIndex: 0
+  m_ResourceProfile: {fileID: 11400000, guid: 1aecc695ee754e73ad1308cb2094f85f, type: 2}
 --- !u!4 &1176611437
 Transform:
   m_ObjectHideFlags: 0

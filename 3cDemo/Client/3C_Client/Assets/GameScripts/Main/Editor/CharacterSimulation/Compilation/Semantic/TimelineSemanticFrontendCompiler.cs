@@ -13,10 +13,12 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
         public const string CompilerVersion = "timeline-simulation-compiler/1";
         public static readonly OperationSetVersion OperationSetVersion = CharacterGameplayOperationSet.Version;
 
-        public static TimelineSemanticFrontendResult Compile(TimelineAsset asset)
+        public static TimelineSemanticFrontendResult Compile(
+            TimelineAsset asset,
+            TimelinePlaybackMode playbackMode = TimelinePlaybackMode.Once)
         {
             var report = new CharacterSimulationCompileReport();
-            if (!TryResolveRoot(asset, report, out string path, out string guid))
+            if (!TryResolveRoot(asset, playbackMode, report, out string path, out string guid, out TimelineData timeline))
                 return TimelineSemanticFrontendResult.Failed(report);
             ProgramRevision sourceRevision;
             try
@@ -28,18 +30,29 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 report.DiscoveryError("timeline_source_revision_failed", path, exception.Message);
                 return TimelineSemanticFrontendResult.Failed(report);
             }
-            TimelineSemanticContentRecord content = TimelineSemanticContentDiscovery.Discover(asset, report);
-            if (content == null || !report.IsValid)
+            TimelineSemanticEmitterRegistry emitters = TimelineSemanticEmitterRegistry.CreateDefault();
+            TimelineSemanticContentDiscoveryResult discovery = TimelineSemanticContentDiscovery.Discover(
+                timeline,
+                $"timeline:{timeline.AuthoringId}",
+                emitters,
+                report);
+            TimelineSemanticContentRecord content = discovery.Content;
+            if (!discovery.IsValid || content == null || !report.IsValid)
                 return TimelineSemanticFrontendResult.Failed(report);
-            CharacterGameplaySemanticIr first = Emit(content, guid, sourceRevision, report);
+            CharacterGameplaySemanticIr first = Emit(content, guid, sourceRevision, playbackMode, emitters, report);
             ValidatedSemanticIrArtifact firstArtifact = ValidateArtifact(first, report, path);
             if (firstArtifact == null || !report.IsValid)
                 return TimelineSemanticFrontendResult.Failed(report);
             var verificationReport = new CharacterSimulationCompileReport();
-            TimelineSemanticContentRecord secondContent = TimelineSemanticContentDiscovery.Discover(asset, verificationReport);
-            CharacterGameplaySemanticIr second = secondContent == null
+            TimelineSemanticContentDiscoveryResult secondDiscovery = TimelineSemanticContentDiscovery.Discover(
+                timeline,
+                $"timeline:{timeline.AuthoringId}",
+                emitters,
+                verificationReport);
+            TimelineSemanticContentRecord secondContent = secondDiscovery.Content;
+            CharacterGameplaySemanticIr second = secondContent == null || !secondDiscovery.IsValid
                 ? null
-                : Emit(secondContent, guid, sourceRevision, verificationReport);
+                : Emit(secondContent, guid, sourceRevision, playbackMode, emitters, verificationReport);
             ValidatedSemanticIrArtifact secondArtifact = ValidateArtifact(second, verificationReport, path);
             if (secondArtifact == null || !verificationReport.IsValid)
             {
@@ -68,17 +81,12 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             TimelineSemanticContentRecord content,
             string guid,
             ProgramRevision sourceRevision,
+            TimelinePlaybackMode playbackMode,
+            TimelineSemanticEmitterRegistry emitters,
             CharacterSimulationCompileReport report)
         {
             try
             {
-                if (!string.Equals(content.AssetGuid, guid, StringComparison.Ordinal))
-                    throw new InvalidOperationException("Timeline content asset identity does not match the compiled root identity.");
-                var rootDescriptor = new SimulationProgramRootDescriptor(
-                    SimulationProgramRootKind.Timeline,
-                    guid,
-                    $"timeline:{content.Timeline.AuthoringId}",
-                    content.ContentHash);
                 var builder = new CharacterSimulationProgramBuilder(
                     new ProgramId($"timeline:{guid}"),
                     CompilerVersion,
@@ -86,7 +94,11 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                     TimelineUtility.FrameRate,
                     sourceRevision,
                     report,
-                    rootDescriptor);
+                    new SimulationProgramRootDescriptor(
+                        SimulationProgramRootKind.Timeline,
+                        guid,
+                        $"timeline:{content.Timeline.AuthoringId}",
+                        content.ContentUnit.ContentHash));
                 var rootSource = new CharacterSimulationSourceLocation(
                     typeof(TimelineAsset).FullName,
                     $"timeline-root:{guid}",
@@ -95,34 +107,66 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                     string.Empty,
                     string.Empty,
                     $"timeline:{content.Timeline.AuthoringId}/root",
-                    contentHash: content.ContentHash);
+                    contentHash: content.ContentUnit.ContentHash);
                 OperationHandle root = builder.DeclareOperation(
                     rootSource,
                     SimulationOperationCode.Root,
                     Array.Empty<int>());
-                OperationHandle timeline = new TimelineSemanticRootEmitter(
-                    CharacterSimulationTimelineEmitterRegistry.CreateDefault(),
-                    builder,
-                    report).Emit(content);
-                builder.DeclareControlFlow(
-                    $"timeline:{content.Timeline.AuthoringId}/root-entry",
-                    root,
-                    timeline,
-                    "Entry",
-                    "Entry",
-                    ProgramControlFlowKind.Child,
-                    0,
-                    0,
-                    ProgramAbortPolicy.None,
-                    false,
-                    OperationHandle.Invalid,
-                    rootSource);
+                for (int bindingIndex = 0; bindingIndex < content.ContentUnit.Bindings.Count; bindingIndex++)
+                {
+                    TimelineBindingDeclaration binding = content.ContentUnit.Bindings[bindingIndex];
+                    CharacterSimulationSourceLocation bindingSource = new CharacterSimulationSourceLocation(
+                        typeof(TimelineBindingDeclaration).FullName,
+                        string.Empty,
+                        string.Empty,
+                        string.Empty,
+                        content.Timeline.AuthoringId,
+                        string.Empty,
+                        $"{content.Route}/binding:{binding.BindingId}",
+                        contentHash: content.ContentUnit.ContentHash);
+                    var fields = new List<ProgramCatalogField>
+                    {
+                        builder.ConstantField(bindingSource, "Domain", binding.Domain),
+                        builder.ConstantField(bindingSource, "ParameterId", binding.ParameterId),
+                        builder.ConstantField(bindingSource, "ValueKind", binding.ValueKind),
+                        builder.ConstantField(bindingSource, "Access", binding.Access),
+                        builder.ConstantField(bindingSource, "Lifetime", binding.Lifetime)
+                    };
+                    string targetBindingId = FindTargetBindingId(content.ContentUnit, binding.BindingId);
+                    if (!string.IsNullOrEmpty(targetBindingId))
+                        fields.Add(builder.IdentityField("TargetBinding", targetBindingId));
+                    builder.DeclareCatalogEntry(
+                        ProgramCatalogEntryKind.TimelineBinding,
+                        $"timeline:{content.Timeline.AuthoringId}/binding:{binding.BindingId}",
+                        1,
+                        fields,
+                        bindingSource);
+                }
+                var treeCompiler = new TimelineSemanticTreeCompiler(builder, report);
+                TimelineSemanticInvocation invocation = TimelineSemanticInvocation.ForIndependentRoot(
+                    content.Route,
+                    playbackMode,
+                    guid,
+                    $"timeline:{content.Timeline.AuthoringId}",
+                    content.ContentUnit.ContentHash);
+                TimelineSemanticRootEmissionResult rootResult = new TimelineSemanticRootEmitter(
+                    new TimelineSemanticEmitter(emitters)).Emit(
+                    new TimelineSemanticRootEmissionRequest(
+                        content,
+                        builder,
+                        invocation,
+                        root,
+                        OperationHandle.Invalid,
+                        string.Empty,
+                        treeCompiler.Compile));
+                if (!rootResult.IsValid)
+                    return null;
                 builder.DeclareReference(
                     "program:root-operation",
                     OperationHandle.Invalid,
                     ProgramReferenceKind.Operation,
                     root.Value,
-                    rootDescriptor.EntryIdentity,
+                    content.Route,
                     rootSource);
                 return builder.Build();
             }
@@ -164,12 +208,15 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
 
         static bool TryResolveRoot(
             TimelineAsset asset,
+            TimelinePlaybackMode playbackMode,
             CharacterSimulationCompileReport report,
             out string path,
-            out string guid)
+            out string guid,
+            out TimelineData timeline)
         {
             path = string.Empty;
             guid = string.Empty;
+            timeline = null;
             if (!asset)
             {
                 report.DiscoveryError("timeline_root_missing", "TimelineAsset", "Timeline build root is missing.");
@@ -187,6 +234,12 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 report.DiscoveryError("timeline_data_missing", path, "Timeline asset has no TimelineData.");
                 return false;
             }
+            if (!Enum.IsDefined(typeof(TimelinePlaybackMode), playbackMode))
+            {
+                report.DiscoveryError("timeline_playback_mode_invalid", path, $"Timeline playback mode '{playbackMode}' is invalid.");
+                return false;
+            }
+            timeline = asset.Data;
             return true;
         }
 
@@ -224,6 +277,26 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             string extension = Path.GetExtension(path);
             return string.Equals(extension, ".asset", StringComparison.OrdinalIgnoreCase) ||
                    string.Equals(extension, ".inputactions", StringComparison.OrdinalIgnoreCase);
+        }
+
+        static string FindTargetBindingId(TimelineContentUnit content, string bindingId)
+        {
+            string targetBindingId = string.Empty;
+            for (int clipIndex = 0; clipIndex < content.Clips.Count; clipIndex++)
+            {
+                IReadOnlyList<TimelineContentBindingUse> uses = content.Clips[clipIndex].Bindings;
+                for (int useIndex = 0; useIndex < uses.Count; useIndex++)
+                {
+                    TimelineContentBindingUse use = uses[useIndex];
+                    if (!string.Equals(use.BindingId, bindingId, StringComparison.Ordinal) ||
+                        string.IsNullOrEmpty(use.TargetBindingId))
+                        continue;
+                    if (targetBindingId.Length != 0 && !string.Equals(targetBindingId, use.TargetBindingId, StringComparison.Ordinal))
+                        throw new InvalidOperationException($"Timeline binding '{bindingId}' targets more than one binding.");
+                    targetBindingId = use.TargetBindingId;
+                }
+            }
+            return targetBindingId;
         }
     }
 

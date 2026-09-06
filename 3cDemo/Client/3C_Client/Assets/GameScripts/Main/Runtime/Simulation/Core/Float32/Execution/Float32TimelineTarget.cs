@@ -495,6 +495,16 @@ namespace ThirdPersonSimulation
                 action));
         }
 
+        public void SampleTimelineClip(
+            OperationHandle timeline,
+            OperationHandle operation,
+            TimelineSegment<Float32Scalar> segment) =>
+            throw new InvalidOperationException($"Timeline clip '{SourcePath(operation)}' is not supported by the character simulation target.");
+
+        public void CompleteTimeline(OperationHandle timeline, Float32Scalar time) { }
+
+        public void ReleaseTimeline(OperationHandle timeline) { }
+
         public void EmitPresentation(TimelinePresentationOutput<Float32Scalar> output)
         {
             PresentationCommandKind kind = output.Kind switch

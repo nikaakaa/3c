@@ -254,6 +254,7 @@ namespace ThirdPersonSimulation
         TimelineCameraCue = 47,
         TimelineCameraResponse = 48,
         TimelineMotionWarp = 49,
+        TimelineScenePresentationParameter = 50,
         BlackboardGet = 60,
         BlackboardSet = 61,
         InputBoolean = 70,
@@ -1549,7 +1550,8 @@ namespace ThirdPersonSimulation
         EquipmentInitialLoadout = 29,
         EquipmentVisualBinding = 30,
         ControlModule = 31,
-        SkillProgram = 32
+        SkillProgram = 32,
+        TimelineBinding = 33
     }
 
     public enum ProgramCatalogFieldKind : byte

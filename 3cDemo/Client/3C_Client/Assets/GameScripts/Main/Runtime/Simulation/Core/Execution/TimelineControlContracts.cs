@@ -3,7 +3,7 @@ using System.Collections.Generic;
 
 namespace ThirdPersonSimulation
 {
-    internal enum TimelinePlaybackStatus : byte
+    public enum TimelinePlaybackStatus : byte
     {
         Dormant = 0,
         Running = 2,
@@ -13,7 +13,7 @@ namespace ThirdPersonSimulation
         Completing = 6
     }
 
-    internal enum TimelineTreeClipStatus : byte
+    public enum TimelineTreeClipStatus : byte
     {
         Dormant = 0,
         Enabling = 1,
@@ -23,7 +23,7 @@ namespace ThirdPersonSimulation
         Destroying = 5
     }
 
-    internal enum TimelineClipTimePoint : byte
+    public enum TimelineClipTimePoint : byte
     {
         Start = 1,
         End = 2,
@@ -32,7 +32,7 @@ namespace ThirdPersonSimulation
         EaseOut = 5
     }
 
-    internal enum TimelineCurveChannel : byte
+    public enum TimelineCurveChannel : byte
     {
         Weight = 1,
         EaseIn = 2,
@@ -43,12 +43,12 @@ namespace ThirdPersonSimulation
         Yaw = 7
     }
 
-    internal enum TimelineClipScalarValue : byte
+    public enum TimelineClipScalarValue : byte
     {
         Intensity = 1
     }
 
-    internal enum TimelineTreeClipEdgeKind : byte
+    public enum TimelineTreeClipEdgeKind : byte
     {
         Root = 1,
         Enable = 2,
@@ -56,7 +56,7 @@ namespace ThirdPersonSimulation
         Destroy = 4
     }
 
-    internal enum TimelinePresentationOutputKind : byte
+    public enum TimelinePresentationOutputKind : byte
     {
         SelectProducer = 1,
         SampleProducer = 2,
@@ -67,7 +67,7 @@ namespace ThirdPersonSimulation
         ForceProducer = 7
     }
 
-    internal enum TimelineTraceSeverity : byte
+    public enum TimelineTraceSeverity : byte
     {
         Detail = 1,
         Information = 2,
@@ -75,7 +75,7 @@ namespace ThirdPersonSimulation
         Error = 4
     }
 
-    internal readonly struct TimelineActionContextIdentity : IEquatable<TimelineActionContextIdentity>
+    public readonly struct TimelineActionContextIdentity : IEquatable<TimelineActionContextIdentity>
     {
         public TimelineActionContextIdentity(
             string actionId,
@@ -123,7 +123,7 @@ namespace ThirdPersonSimulation
         public override int GetHashCode() => HashCode.Combine(ActionId, ContextId, InstanceId, PredictionKey, SkillId, SkillEntryOperation, SkillExecutionGeneration);
     }
 
-    internal readonly struct TimelineSegment<TTime>
+    public readonly struct TimelineSegment<TTime>
         where TTime : struct
     {
         public TimelineSegment(TTime previous, TTime current, int cycle, bool startsCycle)
@@ -321,7 +321,7 @@ namespace ThirdPersonSimulation
         }
     }
 
-    internal readonly struct TimelinePresentationOutput<TTime>
+    public readonly struct TimelinePresentationOutput<TTime>
         where TTime : struct
     {
         public TimelinePresentationOutput(
@@ -374,7 +374,7 @@ namespace ThirdPersonSimulation
             kind == TimelinePresentationOutputKind.ForceProducer;
     }
 
-    internal readonly struct TimelineCueOutput<TTime>
+    public readonly struct TimelineCueOutput<TTime>
         where TTime : struct
     {
         public TimelineCueOutput(
@@ -409,7 +409,7 @@ namespace ThirdPersonSimulation
         public ulong SourceActionInstanceId { get; }
     }
 
-    internal readonly struct TimelineTraceOutput
+    public readonly struct TimelineTraceOutput
     {
         public TimelineTraceOutput(
             OperationHandle operation,
@@ -431,7 +431,7 @@ namespace ThirdPersonSimulation
         public string Detail { get; }
     }
 
-    internal interface ITimelineControlStatePort
+    public interface ITimelineControlStatePort
     {
         TimelinePlaybackStatus ReadPlayback(OperationHandle operation);
         bool TryReadPlayback(OperationHandle operation, out TimelinePlaybackStatus status);
@@ -448,7 +448,7 @@ namespace ThirdPersonSimulation
         void WriteRetainedActionContext(OperationHandle operation, TimelineActionContextIdentity identity);
     }
 
-    internal interface ITimelineTargetLeaf<TTime>
+    public interface ITimelineTargetLeaf<TTime>
         where TTime : struct
     {
         bool DiagnosticsEnabled { get; }
@@ -499,6 +499,12 @@ namespace ThirdPersonSimulation
             OperationHandle operation,
             TimelineSegment<TTime> segment,
             TimelineActionContextIdentity actionContext);
+        void SampleTimelineClip(
+            OperationHandle timeline,
+            OperationHandle operation,
+            TimelineSegment<TTime> segment);
+        void CompleteTimeline(OperationHandle timeline, TTime time);
+        void ReleaseTimeline(OperationHandle timeline);
         void EmitPresentation(TimelinePresentationOutput<TTime> output);
         void EmitCue(TimelineCueOutput<TTime> output);
         void EmitTrace(TimelineTraceOutput output);

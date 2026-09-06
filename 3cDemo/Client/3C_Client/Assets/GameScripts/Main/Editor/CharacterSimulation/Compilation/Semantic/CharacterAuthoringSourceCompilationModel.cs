@@ -66,7 +66,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             IDictionary<string, TimelineData> timelines,
             IDictionary<UnityEngine.Object, string> assetGuids,
             CharacterSimulationNodeEmitterRegistry nodeEmitters,
-            CharacterSimulationTimelineEmitterRegistry timelineEmitters)
+            TimelineSemanticEmitterRegistry timelineEmitters)
         {
             Definition = definition ? definition : throw new ArgumentNullException(nameof(definition));
             DefinitionPath = definitionPath ?? throw new ArgumentNullException(nameof(definitionPath));
@@ -157,7 +157,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
         }
 
         internal CharacterSimulationNodeEmitterRegistry NodeEmitters { get; }
-        internal CharacterSimulationTimelineEmitterRegistry TimelineEmitters { get; }
+        internal TimelineSemanticEmitterRegistry TimelineEmitters { get; }
         internal string GetAssetGuid(UnityEngine.Object asset)
         {
             if (!asset || !m_AssetGuids.TryGetValue(asset, out string guid))
@@ -241,54 +241,107 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
         public CharacterAuthoringGraphCallFrame CallFrame { get; }
     }
 
+    public sealed class TimelineSemanticContentRecord
+    {
+        internal TimelineSemanticContentRecord(
+            TimelineData timeline,
+            string route,
+            int maxFrame,
+            TimelineContentUnit contentUnit,
+            IEnumerable<TimelineSemanticTrackRecord> tracks,
+            IReadOnlyDictionary<string, TimelineSemanticTreeRecord> treeRecords)
+        {
+            Timeline = timeline ?? throw new ArgumentNullException(nameof(timeline));
+            Route = route ?? throw new ArgumentNullException(nameof(route));
+            if (maxFrame < 0)
+                throw new ArgumentOutOfRangeException(nameof(maxFrame));
+            ContentUnit = contentUnit ?? throw new ArgumentNullException(nameof(contentUnit));
+            MaxFrame = maxFrame;
+            Tracks = Array.AsReadOnly((tracks ?? Array.Empty<TimelineSemanticTrackRecord>()).ToArray());
+            TreeRecords = new ReadOnlyDictionary<string, TimelineSemanticTreeRecord>(
+                new Dictionary<string, TimelineSemanticTreeRecord>(treeRecords ?? new Dictionary<string, TimelineSemanticTreeRecord>(), StringComparer.Ordinal));
+        }
+
+        public TimelineData Timeline { get; }
+        public string Route { get; }
+        public int MaxFrame { get; }
+        public TimelineContentUnit ContentUnit { get; }
+        public IReadOnlyList<TimelineSemanticTrackRecord> Tracks { get; }
+        public IReadOnlyDictionary<string, TimelineSemanticTreeRecord> TreeRecords { get; }
+    }
+
+    public sealed class TimelineSemanticTreeRecord
+    {
+        internal TimelineSemanticTreeRecord(TreeClip clip, TimelineRunningTree tree, string route)
+        {
+            Clip = clip ?? throw new ArgumentNullException(nameof(clip));
+            Tree = tree ?? throw new ArgumentNullException(nameof(tree));
+            Route = route ?? throw new ArgumentNullException(nameof(route));
+        }
+
+        public TreeClip Clip { get; }
+        public TimelineRunningTree Tree { get; }
+        public string Route { get; }
+    }
+
     public sealed class CharacterAuthoringTimelineRecord
     {
-        internal CharacterAuthoringTimelineRecord(TimelineNode node, TimelineData timeline, string graphRoute, string route, IEnumerable<CharacterAuthoringTrackRecord> tracks)
+        internal CharacterAuthoringTimelineRecord(
+            TimelineNode node,
+            TimelineSemanticContentRecord content,
+            string graphRoute,
+            string route,
+            IReadOnlyDictionary<string, CharacterAuthoringGraphOccurrence> treeGraphs)
         {
             Node = node ?? throw new ArgumentNullException(nameof(node));
-            Timeline = timeline ?? throw new ArgumentNullException(nameof(timeline));
+            Content = content ?? throw new ArgumentNullException(nameof(content));
             GraphRoute = graphRoute ?? throw new ArgumentNullException(nameof(graphRoute));
             Route = route ?? throw new ArgumentNullException(nameof(route));
-            Tracks = Array.AsReadOnly((tracks ?? Array.Empty<CharacterAuthoringTrackRecord>()).ToArray());
+            TreeGraphs = new ReadOnlyDictionary<string, CharacterAuthoringGraphOccurrence>(
+                new Dictionary<string, CharacterAuthoringGraphOccurrence>(treeGraphs ?? new Dictionary<string, CharacterAuthoringGraphOccurrence>(), StringComparer.Ordinal));
         }
 
         public TimelineNode Node { get; }
-        public TimelineData Timeline { get; }
+        public TimelineSemanticContentRecord Content { get; }
+        public TimelineData Timeline => Content.Timeline;
         public string GraphRoute { get; }
         public string Route { get; }
-        public IReadOnlyList<CharacterAuthoringTrackRecord> Tracks { get; }
+        public IReadOnlyList<TimelineSemanticTrackRecord> Tracks => Content.Tracks;
+        public IReadOnlyDictionary<string, CharacterAuthoringGraphOccurrence> TreeGraphs { get; }
     }
 
-    public sealed class CharacterAuthoringTrackRecord
+    public sealed class TimelineSemanticTrackRecord
     {
-        internal CharacterAuthoringTrackRecord(Track track, int authoringIndex, string route, IEnumerable<CharacterAuthoringClipRecord> clips)
+        internal TimelineSemanticTrackRecord(
+            Track track,
+            int authoringIndex,
+            string route,
+            IEnumerable<TimelineSemanticClipRecord> clips)
         {
             Track = track ?? throw new ArgumentNullException(nameof(track));
             AuthoringIndex = authoringIndex;
             Route = route ?? throw new ArgumentNullException(nameof(route));
-            Clips = Array.AsReadOnly((clips ?? Array.Empty<CharacterAuthoringClipRecord>()).ToArray());
+            Clips = Array.AsReadOnly((clips ?? Array.Empty<TimelineSemanticClipRecord>()).ToArray());
         }
 
         public Track Track { get; }
         public int AuthoringIndex { get; }
         public string Route { get; }
-        public IReadOnlyList<CharacterAuthoringClipRecord> Clips { get; }
+        public IReadOnlyList<TimelineSemanticClipRecord> Clips { get; }
     }
 
-    public sealed class CharacterAuthoringClipRecord
+    public sealed class TimelineSemanticClipRecord
     {
-        internal CharacterAuthoringClipRecord(Clip clip, int authoringIndex, string route, CharacterAuthoringGraphOccurrence treeGraph)
+        internal TimelineSemanticClipRecord(Clip clip, int authoringIndex, string route)
         {
             Clip = clip ?? throw new ArgumentNullException(nameof(clip));
             AuthoringIndex = authoringIndex;
             Route = route ?? throw new ArgumentNullException(nameof(route));
-            TreeGraph = treeGraph;
         }
 
         public Clip Clip { get; }
         public int AuthoringIndex { get; }
         public string Route { get; }
-        public CharacterAuthoringGraphOccurrence TreeGraph { get; }
     }
 
     public sealed class CharacterAuthoringBlackboardDeclaration
@@ -309,7 +362,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
     {
         readonly CharacterSimulationCompileReport m_Report;
         readonly CharacterSimulationNodeEmitterRegistry m_NodeEmitters;
-        readonly CharacterSimulationTimelineEmitterRegistry m_TimelineEmitters;
+        readonly TimelineSemanticEmitterRegistry m_TimelineEmitters;
         readonly Dictionary<string, IdentityOwner> m_Identities = new Dictionary<string, IdentityOwner>(StringComparer.Ordinal);
         readonly Dictionary<string, CharacterAuthoringBlackboardDeclaration> m_Declarations = new Dictionary<string, CharacterAuthoringBlackboardDeclaration>(StringComparer.Ordinal);
         readonly Dictionary<string, TimelineData> m_Timelines = new Dictionary<string, TimelineData>(StringComparer.Ordinal);
@@ -320,7 +373,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
         {
             m_Report = report ?? throw new ArgumentNullException(nameof(report));
             m_NodeEmitters = CharacterSimulationNodeEmitterRegistry.CreateDefault();
-            m_TimelineEmitters = CharacterSimulationTimelineEmitterRegistry.CreateDefault();
+            m_TimelineEmitters = TimelineSemanticEmitterRegistry.CreateDefault();
         }
 
         public CharacterAuthoringCompilationModel Discover(
@@ -644,68 +697,58 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             if (node.TimelineOwnership == TimelineOwnership.Shared && !ReferenceEquals(timeline.SerializedOwner, node.SharedTimelineAsset))
                 m_Report.DiscoveryError("timeline_shared_owner_mismatch", nodeRoute, "Shared Timeline serialized owner does not match its Timeline asset.");
             ValidateSerializedOwner(timeline.SerializedOwner, "Timeline", nodeRoute);
-            timeline.Init();
-            var timelineErrors = new List<string>();
-            if (!timeline.ValidateAuthoringIdentities(timelineErrors))
-            {
-                for (int i = 0; i < timelineErrors.Count; i++)
-                    m_Report.DiscoveryError("timeline_identity_invalid", nodeRoute, timelineErrors[i]);
-            }
             string timelineRoute = $"{nodeRoute}/timeline:{timeline.AuthoringId}";
+            TimelineSemanticContentDiscoveryResult discovered = TimelineSemanticContentDiscovery.Discover(
+                timeline,
+                timelineRoute,
+                m_TimelineEmitters,
+                m_Report);
+            if (!discovered.IsValid)
+                return null;
+            var treeGraphs = new Dictionary<string, CharacterAuthoringGraphOccurrence>(StringComparer.Ordinal);
+            int treeDiscoveryMessageCount = m_Report.Messages.Count;
+            foreach (TimelineSemanticTreeRecord treeRecord in discovered.Content.TreeRecords.Values.OrderBy(value => value.Route, StringComparer.Ordinal))
+            {
+                TreeClip treeClip = treeRecord.Clip;
+                if (treeClip.Ownership == TimelineTreeOwnership.Inline && !ReferenceEquals(treeRecord.Tree.SerializedOwner, timeline.SerializedOwner))
+                    m_Report.DiscoveryError("tree_clip_inline_owner_mismatch", treeRecord.Route, "Inline TreeClip graph serialized owner does not match its Timeline owner.");
+                if (treeClip.Ownership == TimelineTreeOwnership.Shared && !ReferenceEquals(treeRecord.Tree.SerializedOwner, treeClip.SharedTreeAsset))
+                    m_Report.DiscoveryError("tree_clip_shared_owner_mismatch", treeRecord.Route, "Shared TreeClip graph serialized owner does not match its Tree asset.");
+                CharacterAuthoringGraphOccurrence tree = DiscoverGraph(treeRecord.Tree, treeRecord.Route, stack);
+                if (tree == null)
+                    m_Report.DiscoveryError("tree_clip_graph_compile_failed", treeRecord.Route, "TreeClip did not produce a Character graph discovery record.");
+                else
+                    treeGraphs[treeClip.AuthoringId] = tree;
+            }
+            if (treeGraphs.Count != discovered.Content.TreeRecords.Count || m_Report.Messages.Count != treeDiscoveryMessageCount)
+                return null;
             RegisterIdentity(timeline.AuthoringId, timeline, "Timeline", timelineRoute);
             if (m_Timelines.TryGetValue(timeline.AuthoringId, out TimelineData existing) && !ReferenceEquals(existing, timeline))
                 m_Report.DiscoveryError("timeline_identity_duplicate", nodeRoute, $"Timeline identity '{timeline.AuthoringId}' belongs to multiple authoring objects.");
             else
                 m_Timelines[timeline.AuthoringId] = timeline;
-            var tracks = new List<CharacterAuthoringTrackRecord>();
-            Track[] stableTracks = timeline.Tracks.Where(value => value != null).OrderBy(value => value.AuthoringId, StringComparer.Ordinal).ToArray();
-            if (stableTracks.Length != timeline.Tracks.Count)
-                m_Report.DiscoveryError("timeline_track_missing", timelineRoute, "Timeline contains a missing Track.");
-            for (int i = 0; i < stableTracks.Length; i++)
+            for (int trackIndex = 0; trackIndex < discovered.Content.Tracks.Count; trackIndex++)
             {
-                Track track = stableTracks[i];
-                int authoringIndex = IndexOfReference(timeline.Tracks, track);
-                string trackRoute = $"{timelineRoute}/track:{track.AuthoringId}";
+                TimelineSemanticTrackRecord trackRecord = discovered.Content.Tracks[trackIndex];
+                Track track = trackRecord.Track;
+                string trackRoute = trackRecord.Route;
                 RegisterIdentity(track.AuthoringId, track, "TimelineTrack", trackRoute);
-                if (!m_TimelineEmitters.TryGetTrack(track.GetType(), out _))
-                    m_Report.DiscoveryError("timeline_track_emitter_missing", trackRoute, $"Track type '{track.GetType().FullName}' has no Character Simulation emitter.");
-                var clips = new List<CharacterAuthoringClipRecord>();
-                Clip[] stableClips = track.Clips.Where(value => value != null).OrderBy(value => value.AuthoringId, StringComparer.Ordinal).ToArray();
-                if (stableClips.Length != track.Clips.Count)
-                    m_Report.DiscoveryError("timeline_clip_missing", trackRoute, "Timeline Track contains a missing Clip.");
-                for (int clipIndex = 0; clipIndex < stableClips.Length; clipIndex++)
+                for (int clipIndex = 0; clipIndex < trackRecord.Clips.Count; clipIndex++)
                 {
-                    Clip clip = stableClips[clipIndex];
-                    string clipRoute = $"{trackRoute}/clip:{clip.AuthoringId}";
+                    TimelineSemanticClipRecord clipRecord = trackRecord.Clips[clipIndex];
+                    Clip clip = clipRecord.Clip;
+                    string clipRoute = clipRecord.Route;
                     RegisterIdentity(clip.AuthoringId, clip, "TimelineClip", clipRoute);
-                    if (!m_TimelineEmitters.TryGetClip(clip.GetType(), out _))
-                        m_Report.DiscoveryError("timeline_clip_emitter_missing", clipRoute, $"Clip type '{clip.GetType().FullName}' has no Character Simulation emitter.");
-                    if (clip.EndFrame <= clip.StartFrame)
-                        m_Report.DiscoveryError("timeline_clip_range_invalid", clipRoute, "Timeline Clip requires EndFrame greater than StartFrame.");
-                    if (clip is BTSMTL.Timeline.AnimationClip animation &&
-                        !animation.Clip)
-                        m_Report.DiscoveryError("animation_clip_missing", clipRoute, "AnimationClip resource is missing from the authoring source.");
-                    CharacterAuthoringGraphOccurrence treeGraph = null;
-                    if (clip is TreeClip treeClip)
-                    {
-                        if (treeClip.Ownership == TimelineTreeOwnership.Missing || treeClip.ResolvedTree == null)
-                            m_Report.DiscoveryError("tree_clip_graph_missing", clipRoute, "TreeClip is missing its formal inline/shared Tree.");
-                        else
-                        {
-                            if (treeClip.Ownership == TimelineTreeOwnership.Inline && !ReferenceEquals(treeClip.ResolvedTree.SerializedOwner, timeline.SerializedOwner))
-                                m_Report.DiscoveryError("tree_clip_inline_owner_mismatch", clipRoute, "Inline TreeClip graph serialized owner does not match its Timeline owner.");
-                            if (treeClip.Ownership == TimelineTreeOwnership.Shared && !ReferenceEquals(treeClip.ResolvedTree.SerializedOwner, treeClip.SharedTreeAsset))
-                                m_Report.DiscoveryError("tree_clip_shared_owner_mismatch", clipRoute, "Shared TreeClip graph serialized owner does not match its Tree asset.");
-                            treeGraph = DiscoverGraph(treeClip.ResolvedTree, $"{clipRoute}/tree:{treeClip.ResolvedTree.GraphAuthoringId}", stack);
-                        }
-                    }
-                    clips.Add(new CharacterAuthoringClipRecord(clip, IndexOfReference(track.Clips, clip), clipRoute, treeGraph));
                 }
-                tracks.Add(new CharacterAuthoringTrackRecord(track, authoringIndex, trackRoute, clips));
             }
-            if (node.PlaybackMode == TimelinePlaybackMode.Loop && timeline.MaxFrame <= 0)
+            if (node.PlaybackMode == TimelinePlaybackMode.Loop && discovered.Content.MaxFrame <= 0)
                 m_Report.DiscoveryError("timeline_loop_duration_invalid", timelineRoute, "Loop Timeline duration must be greater than zero.");
-            return new CharacterAuthoringTimelineRecord(node, timeline, graphRoute, timelineRoute, tracks);
+            return new CharacterAuthoringTimelineRecord(
+                node,
+                discovered.Content,
+                graphRoute,
+                timelineRoute,
+                treeGraphs);
         }
 
         void DiscoverDeclaration(BaseTree graph, BaseExposedProperty declaration, string route)

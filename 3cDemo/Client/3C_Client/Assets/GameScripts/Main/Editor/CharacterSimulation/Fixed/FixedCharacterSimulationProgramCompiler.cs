@@ -50,7 +50,8 @@ namespace ThirdPersonSimulation.Fixed
             "StateMachine",
             "Timeline",
             "TimelineMotionCurve",
-            "TimelineMotionWarp"
+            "TimelineMotionWarp",
+            "TimelineScenePresentationParameter"
         };
 
         public static FixedProgramLoweringResult Compile(ValidatedSemanticIrArtifact artifact)

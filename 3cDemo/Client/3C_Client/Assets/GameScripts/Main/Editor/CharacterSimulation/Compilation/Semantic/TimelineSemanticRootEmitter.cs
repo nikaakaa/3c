@@ -5,121 +5,114 @@ using ThirdPersonSimulation;
 
 namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
 {
-    internal sealed class TimelineSemanticRootEmitter
+    public sealed class TimelineSemanticRootEmissionRequest
     {
-        readonly CharacterSimulationTimelineEmitterRegistry m_Emitters;
-        readonly CharacterSimulationProgramBuilder m_Builder;
-        readonly CharacterSimulationCompileReport m_Report;
-
-        public TimelineSemanticRootEmitter(
-            CharacterSimulationTimelineEmitterRegistry emitters,
+        public TimelineSemanticRootEmissionRequest(
+            TimelineSemanticContentRecord content,
             CharacterSimulationProgramBuilder builder,
-            CharacterSimulationCompileReport report)
+            TimelineSemanticInvocation invocation,
+            OperationHandle rootOperation,
+            OperationHandle treeStateScopeOwner,
+            string actionContextIdentity,
+            Func<TimelineSemanticClipRecord, OperationHandle, TimelineSemanticTreeCompilation> treeCompiler)
         {
-            m_Emitters = emitters ?? throw new ArgumentNullException(nameof(emitters));
-            m_Builder = builder ?? throw new ArgumentNullException(nameof(builder));
-            m_Report = report ?? throw new ArgumentNullException(nameof(report));
+            Content = content ?? throw new ArgumentNullException(nameof(content));
+            Builder = builder ?? throw new ArgumentNullException(nameof(builder));
+            Invocation = invocation;
+            if (!invocation.IsValid || invocation.Kind != TimelineSemanticInvocationKind.IndependentRoot)
+                throw new ArgumentException("Timeline root invocation is invalid.", nameof(invocation));
+            if (!string.Equals(invocation.ContentIdentity, content.ContentUnit.ContentHash, StringComparison.Ordinal))
+                throw new ArgumentException("Timeline root invocation content identity does not match the discovered content.", nameof(invocation));
+            RootOperation = rootOperation.IsValid
+                ? rootOperation
+                : throw new ArgumentException("Timeline root operation is required.", nameof(rootOperation));
+            TreeStateScopeOwner = treeStateScopeOwner;
+            ActionContextIdentity = actionContextIdentity?.Trim() ?? string.Empty;
+            TreeCompiler = treeCompiler;
         }
 
-        public OperationHandle Emit(TimelineSemanticContentRecord content)
+        public TimelineSemanticContentRecord Content { get; }
+        public CharacterSimulationProgramBuilder Builder { get; }
+        public TimelineSemanticInvocation Invocation { get; }
+        public OperationHandle RootOperation { get; }
+        public OperationHandle TreeStateScopeOwner { get; }
+        public string ActionContextIdentity { get; }
+        public Func<TimelineSemanticClipRecord, OperationHandle, TimelineSemanticTreeCompilation> TreeCompiler { get; }
+    }
+
+    internal sealed class TimelineSemanticRootEmitter
+    {
+        readonly TimelineSemanticEmitter m_Emitter;
+
+        public TimelineSemanticRootEmitter(TimelineSemanticEmitter emitter)
         {
-            if (content == null)
-                throw new ArgumentNullException(nameof(content));
-            TimelineData timeline = content.Timeline;
-            var source = new CharacterSimulationSourceLocation(
-                typeof(TimelineAsset).FullName,
+            m_Emitter = emitter ?? throw new ArgumentNullException(nameof(emitter));
+        }
+
+        public TimelineSemanticRootEmissionResult Emit(TimelineSemanticRootEmissionRequest request)
+        {
+            if (request == null)
+                throw new ArgumentNullException(nameof(request));
+            TimelineData timeline = request.Content.Timeline;
+            CharacterSimulationSourceLocation source = new CharacterSimulationSourceLocation(
+                typeof(TimelineData).FullName,
                 string.Empty,
                 string.Empty,
                 string.Empty,
                 timeline.AuthoringId,
                 string.Empty,
-                content.Route,
-                contentHash: content.ContentHash);
-            int timelineCatalog = m_Builder.DeclareCatalogEntry(
-                ProgramCatalogEntryKind.Timeline,
-                $"timeline:{timeline.AuthoringId}",
-                1,
-                new[]
-                {
-                    m_Builder.ConstantField(source, "Name", timeline.Name),
-                    m_Builder.ConstantField(source, "Scale", timeline.Scale),
-                    m_Builder.ConstantField(source, "MaxFrame", timeline.MaxFrame),
-                    m_Builder.ConstantField(source, "FrameRate", TimelineUtility.FrameRate)
-                },
-                source);
-            OperationHandle timelineOperation = m_Builder.DeclareOperation(
+                $"{request.Invocation.Route}/root:{request.Invocation.RootIdentity}/entry:{request.Invocation.EntryIdentity}",
+                contentHash: request.Content.ContentUnit.ContentHash);
+            int actionContext = request.ActionContextIdentity.Length == 0
+                ? -1
+                : request.Builder.DeclareConstant(source, "ActionContext", request.ActionContextIdentity);
+            OperationHandle timelineOperation = request.Builder.DeclareOperation(
                 source,
                 SimulationOperationCode.Timeline,
-                Array.Empty<int>(),
-                integer0: (int)TimelinePlaybackMode.Once,
+                actionContext >= 0 ? new[] { actionContext } : Array.Empty<int>(),
+                integer0: (int)request.Invocation.PlaybackMode,
                 text0: timeline.AuthoringId);
-            if (timelineCatalog >= 0)
-            {
-                m_Builder.DeclareReference(
-                    $"{content.Route}/timeline-catalog",
+            TimelineSemanticEmissionResult timelineResult = m_Emitter.Emit(
+                new TimelineSemanticEmissionRequest(
+                    request.Content,
+                    request.Builder,
+                    request.Invocation,
                     timelineOperation,
-                    ProgramReferenceKind.CatalogEntry,
-                    timelineCatalog,
-                    $"timeline:{timeline.AuthoringId}",
-                    source);
-            }
+                    request.TreeStateScopeOwner,
+                    request.ActionContextIdentity,
+                    request.TreeCompiler));
 
-            var emission = new CharacterSimulationTimelineEmissionSession(timeline, m_Builder);
-            for (int trackIndex = 0; trackIndex < content.Tracks.Count; trackIndex++)
-            {
-                CharacterAuthoringTrackRecord trackRecord = content.Tracks[trackIndex];
-                Track track = trackRecord.Track;
-                var context = new CharacterSimulationTimelineEmitterContext(
-                    timeline,
-                    track,
-                    trackRecord.AuthoringIndex,
-                    string.Empty,
-                    string.Empty,
-                    content.Route,
-                    m_Builder,
-                    timelineOperation,
-                    string.Empty,
-                    emission,
-                    false);
-                if (!m_Emitters.TryGetTrack(track.GetType(), out ICharacterSimulationTimelineTrackEmitter trackEmitter))
-                    throw new InvalidOperationException($"Discovered Track '{track.AuthoringId}' has no emitter.");
-                trackEmitter.Emit(track, context);
-                for (int clipIndex = 0; clipIndex < trackRecord.Clips.Count; clipIndex++)
-                {
-                    CharacterAuthoringClipRecord clipRecord = trackRecord.Clips[clipIndex];
-                    Clip clip = clipRecord.Clip;
-                    if (!m_Emitters.TryGetClip(clip.GetType(), out ICharacterSimulationTimelineClipEmitter clipEmitter))
-                        throw new InvalidOperationException($"Discovered Clip '{clip.AuthoringId}' has no emitter.");
-                    OperationHandle clipOperation;
-                    try
-                    {
-                        clipOperation = clipEmitter.Emit(clip, context);
-                    }
-                    catch (Exception exception)
-                    {
-                        m_Report.EmissionError(
-                            "timeline_clip_emit_failed",
-                            context.ClipSource(clip).Identity,
-                            exception.Message);
-                        continue;
-                    }
-                    m_Builder.DeclareControlFlow(
-                        $"{context.ClipSource(clip).Identity}/segment",
-                        timelineOperation,
-                        clipOperation,
-                        track.AuthoringId,
-                        clip.AuthoringId,
-                        ProgramControlFlowKind.Child,
-                        clipRecord.AuthoringIndex,
-                        0,
-                        ProgramAbortPolicy.None,
-                        false,
-                        OperationHandle.Invalid,
-                        context.ClipSource(clip));
-                }
-            }
-            emission.Complete();
-            return timelineOperation;
+            request.Builder.DeclareControlFlow(
+                request.Invocation.ReferenceIdentity($"root-entry:{request.Invocation.EntryIdentity}"),
+                request.RootOperation,
+                timelineOperation,
+                "Entry",
+                "Entry",
+                ProgramControlFlowKind.Child,
+                0,
+                0,
+                ProgramAbortPolicy.None,
+                false,
+                OperationHandle.Invalid,
+                source);
+            return new TimelineSemanticRootEmissionResult(request.RootOperation, timelineResult);
         }
+    }
+
+    public sealed class TimelineSemanticRootEmissionResult
+    {
+        internal TimelineSemanticRootEmissionResult(
+            OperationHandle rootOperation,
+            TimelineSemanticEmissionResult timeline)
+        {
+            RootOperation = rootOperation;
+            Timeline = timeline ?? throw new ArgumentNullException(nameof(timeline));
+        }
+
+        public OperationHandle RootOperation { get; }
+        public TimelineSemanticEmissionResult Timeline { get; }
+        public OperationHandle TimelineOperation => Timeline.TimelineOperation;
+        public IReadOnlyList<OperationHandle> ClipOperations => Timeline.ClipOperations;
+        public bool IsValid => RootOperation.IsValid && Timeline.IsValid;
     }
 }

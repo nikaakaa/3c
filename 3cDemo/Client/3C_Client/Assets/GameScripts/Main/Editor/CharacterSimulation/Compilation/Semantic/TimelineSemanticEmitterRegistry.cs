@@ -7,20 +7,26 @@ using UnityEngine;
 
 namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
 {
-    sealed class CharacterSimulationTimelineEmissionSession
+    sealed class TimelineSemanticEmissionSession
     {
         readonly TimelineData m_Timeline;
         readonly CharacterSimulationProgramBuilder m_Builder;
+        readonly string m_InvocationIdentity;
         readonly Dictionary<string, EmittedClip> m_Clips = new Dictionary<string, EmittedClip>(StringComparer.Ordinal);
+        readonly List<OperationHandle> m_ClipOperations = new List<OperationHandle>();
         readonly List<PendingMotionSource> m_PendingMotionSources = new List<PendingMotionSource>();
         bool m_MotionWarpValidated;
 
-        public CharacterSimulationTimelineEmissionSession(
+        public TimelineSemanticEmissionSession(
             TimelineData timeline,
-            CharacterSimulationProgramBuilder builder)
+            CharacterSimulationProgramBuilder builder,
+            TimelineSemanticInvocation invocation)
         {
             m_Timeline = timeline ?? throw new ArgumentNullException(nameof(timeline));
             m_Builder = builder ?? throw new ArgumentNullException(nameof(builder));
+            m_InvocationIdentity = invocation.IsValid
+                ? invocation.Identity
+                : throw new ArgumentException("Timeline invocation is invalid.", nameof(invocation));
         }
 
         public void RecordClip(
@@ -31,7 +37,11 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
         {
             if (!m_Clips.TryAdd(clip.AuthoringId, new EmittedClip(clip, operation, identity, source)))
                 m_Builder.Report.Error("timeline_clip_identity_duplicate", source.Identity, $"Timeline clip identity '{clip.AuthoringId}' is duplicated.");
+            else
+                m_ClipOperations.Add(operation);
         }
+
+        public IReadOnlyList<OperationHandle> ClipOperations => m_ClipOperations;
 
         public void DeferMotionSource(
             MotionWarpClip warp,
@@ -80,7 +90,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                     continue;
                 }
                 m_Builder.DeclareReference(
-                    $"timeline:{m_Timeline.AuthoringId}/clip:{pending.Warp.AuthoringId}/motion-source",
+                    $"{m_InvocationIdentity}/timeline:{m_Timeline.AuthoringId}/clip:{pending.Warp.AuthoringId}/motion-source",
                     pending.Operation,
                     ProgramReferenceKind.MotionSourceOperation,
                     source.Operation.Value,
@@ -127,19 +137,19 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
         }
     }
 
-    public interface ICharacterSimulationTimelineTrackEmitter
+    public interface ITimelineSemanticTrackEmitter
     {
         Type SourceType { get; }
-        void Emit(Track track, CharacterSimulationTimelineEmitterContext context);
+        void Emit(Track track, TimelineSemanticEmitterContext context);
     }
 
-    public interface ICharacterSimulationTimelineClipEmitter
+    public interface ITimelineSemanticClipEmitter
     {
         Type SourceType { get; }
-        OperationHandle Emit(Clip clip, CharacterSimulationTimelineEmitterContext context);
+        OperationHandle Emit(Clip clip, TimelineSemanticEmitterContext context);
     }
 
-    public sealed class CharacterSimulationTimelineEmitterContext
+    public sealed class TimelineSemanticEmitterContext
     {
         readonly TimelineData m_Timeline;
         readonly string m_TimelineContentHash;
@@ -149,32 +159,29 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
         readonly string m_OwnerNodeId;
         readonly string m_Route;
         readonly CharacterSimulationProgramBuilder m_Builder;
-        readonly CharacterSimulationTimelineEmissionSession m_Session;
+        readonly TimelineSemanticEmissionSession m_Session;
 
-        internal CharacterSimulationTimelineEmitterContext(
+        internal TimelineSemanticEmitterContext(
             TimelineData timeline,
             Track track,
             int trackIndex,
-            string ownerGraphId,
-            string ownerNodeId,
-            string route,
+            TimelineSemanticInvocation invocation,
             CharacterSimulationProgramBuilder builder,
             OperationHandle timelineOperation,
             string actionContextIdentity,
-            CharacterSimulationTimelineEmissionSession session,
-            bool requireOwnerIdentity = true)
+            TimelineSemanticEmissionSession session,
+            string timelineContentHash)
         {
             m_Timeline = timeline ?? throw new ArgumentNullException(nameof(timeline));
-            m_TimelineContentHash = TimelineAuthoringFingerprint.Compute(m_Timeline);
+            m_TimelineContentHash = string.IsNullOrWhiteSpace(timelineContentHash)
+                ? throw new ArgumentException("Timeline content hash is required.", nameof(timelineContentHash))
+                : timelineContentHash;
             m_Track = track ?? throw new ArgumentNullException(nameof(track));
             m_TrackIndex = trackIndex;
-            if (requireOwnerIdentity && string.IsNullOrEmpty(ownerGraphId))
-                throw new ArgumentException("Timeline owner Graph identity is required.", nameof(ownerGraphId));
-            if (requireOwnerIdentity && string.IsNullOrEmpty(ownerNodeId))
-                throw new ArgumentException("Timeline owner Node identity is required.", nameof(ownerNodeId));
-            m_OwnerGraphId = ownerGraphId ?? string.Empty;
-            m_OwnerNodeId = ownerNodeId ?? string.Empty;
-            m_Route = route ?? string.Empty;
+            Invocation = invocation;
+            m_OwnerGraphId = invocation.GraphId;
+            m_OwnerNodeId = invocation.NodeId;
+            m_Route = invocation.Route;
             m_Builder = builder ?? throw new ArgumentNullException(nameof(builder));
             TimelineOperation = timelineOperation.IsValid
                 ? timelineOperation
@@ -186,6 +193,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
         public TimelineData Timeline => m_Timeline;
         public Track Track => m_Track;
         public CharacterSimulationProgramBuilder Builder => m_Builder;
+        public TimelineSemanticInvocation Invocation { get; }
         public OperationHandle TimelineOperation { get; }
         public string ActionContextIdentity { get; }
         public CharacterSimulationSourceLocation TrackSource => new CharacterSimulationSourceLocation(
@@ -238,7 +246,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             ProgramCatalogField[] values = CommonClipFields(clip, source).Concat(Valid(fields)).ToArray();
             int catalog = m_Builder.DeclareCatalogEntry(
                 clip is MotionCurveClip ? ProgramCatalogEntryKind.MotionCurve : ProgramCatalogEntryKind.TimelineClip,
-                ClipIdentity(clip),
+                CatalogIdentity(clip),
                 1,
                 values,
                 source);
@@ -261,11 +269,11 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             if (catalog >= 0)
             {
                 m_Builder.DeclareReference(
-                    $"{ClipIdentity(clip)}/catalog",
+                    ReferenceIdentity($"{ClipIdentity(clip)}/catalog"),
                     operation,
                     ProgramReferenceKind.CatalogEntry,
                     catalog,
-                    ClipIdentity(clip),
+                    CatalogIdentity(clip),
                     source);
             }
             m_Session.RecordClip(clip, operation, ClipIdentity(clip), source);
@@ -319,8 +327,35 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
 
         public string TrackIdentity => $"timeline:{m_Timeline.AuthoringId}/track:{m_Track.AuthoringId}";
         public string ClipIdentity(Clip clip) => $"{TrackIdentity}/clip:{clip.AuthoringId}";
-        public string ProducerIdentity(Clip clip) => $"producer:{m_Timeline.AuthoringId}:{m_Track.AuthoringId}:{clip.AuthoringId}";
-        public string AnimationProducerIdentity => $"producer:{m_Timeline.AuthoringId}:{m_Track.AuthoringId}";
+        public string InvocationIdentity => Invocation.Identity;
+        public string ReferenceIdentity(string identity) => Invocation.ReferenceIdentity(identity);
+        public string CatalogIdentity(Clip clip)
+        {
+            if (clip == null)
+                throw new ArgumentNullException(nameof(clip));
+            return $"{ClipIdentity(clip)}/invocation:{Invocation.Identity}";
+        }
+
+        public CharacterSimulationSourceLocation InvocationConstantSource(Clip clip, string fieldName)
+        {
+            if (clip == null)
+                throw new ArgumentNullException(nameof(clip));
+            if (string.IsNullOrWhiteSpace(fieldName))
+                throw new ArgumentException("Timeline invocation constant field is required.", nameof(fieldName));
+            return new CharacterSimulationSourceLocation(
+                clip.GetType().FullName,
+                string.Empty,
+                string.Empty,
+                string.Empty,
+                m_Timeline.AuthoringId,
+                string.Empty,
+                string.Empty,
+                $"{Invocation.Route}/timeline:{m_Timeline.AuthoringId}/track:{m_Track.AuthoringId}/clip:{clip.AuthoringId}/invocation:{Invocation.Identity}/constant:{fieldName.Trim()}",
+                contentHash: m_TimelineContentHash);
+        }
+
+        public string ProducerIdentity(Clip clip) => $"{Invocation.Identity}/producer:{m_Timeline.AuthoringId}:{m_Track.AuthoringId}:{clip.AuthoringId}";
+        public string AnimationProducerIdentity => $"{Invocation.Identity}/producer:{m_Timeline.AuthoringId}:{m_Track.AuthoringId}";
 
         IEnumerable<ProgramCatalogField> CommonTrackFields(CharacterSimulationSourceLocation source)
         {
@@ -347,12 +382,12 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
 
     }
 
-    public sealed class CharacterSimulationTimelineEmitterRegistry
+    public sealed class TimelineSemanticEmitterRegistry
     {
-        readonly Dictionary<Type, ICharacterSimulationTimelineTrackEmitter> m_TrackEmitters = new Dictionary<Type, ICharacterSimulationTimelineTrackEmitter>();
-        readonly Dictionary<Type, ICharacterSimulationTimelineClipEmitter> m_ClipEmitters = new Dictionary<Type, ICharacterSimulationTimelineClipEmitter>();
+        readonly Dictionary<Type, ITimelineSemanticTrackEmitter> m_TrackEmitters = new Dictionary<Type, ITimelineSemanticTrackEmitter>();
+        readonly Dictionary<Type, ITimelineSemanticClipEmitter> m_ClipEmitters = new Dictionary<Type, ITimelineSemanticClipEmitter>();
 
-        public void Register(ICharacterSimulationTimelineTrackEmitter emitter)
+        public void Register(ITimelineSemanticTrackEmitter emitter)
         {
             if (emitter == null)
                 throw new ArgumentNullException(nameof(emitter));
@@ -360,7 +395,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 throw new InvalidOperationException($"Timeline Track emitter for '{emitter.SourceType.FullName}' is already registered.");
         }
 
-        public void Register(ICharacterSimulationTimelineClipEmitter emitter)
+        public void Register(ITimelineSemanticClipEmitter emitter)
         {
             if (emitter == null)
                 throw new ArgumentNullException(nameof(emitter));
@@ -368,12 +403,12 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 throw new InvalidOperationException($"Timeline Clip emitter for '{emitter.SourceType.FullName}' is already registered.");
         }
 
-        public bool TryGetTrack(Type type, out ICharacterSimulationTimelineTrackEmitter emitter) => m_TrackEmitters.TryGetValue(type, out emitter);
-        public bool TryGetClip(Type type, out ICharacterSimulationTimelineClipEmitter emitter) => m_ClipEmitters.TryGetValue(type, out emitter);
+        public bool TryGetTrack(Type type, out ITimelineSemanticTrackEmitter emitter) => m_TrackEmitters.TryGetValue(type, out emitter);
+        public bool TryGetClip(Type type, out ITimelineSemanticClipEmitter emitter) => m_ClipEmitters.TryGetValue(type, out emitter);
 
-        public static CharacterSimulationTimelineEmitterRegistry CreateDefault()
+        public static TimelineSemanticEmitterRegistry CreateDefault()
         {
-            var registry = new CharacterSimulationTimelineEmitterRegistry();
+            var registry = new TimelineSemanticEmitterRegistry();
             registry.Register(new SimpleTrackEmitter<AnimationTrack>(context =>
             {
                 var track = (AnimationTrack)context.Track;
@@ -396,6 +431,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             registry.Register(new SimpleTrackEmitter<CameraStateTrack>(context => context.DeclareTrackCatalog()));
             registry.Register(new SimpleTrackEmitter<CameraCueTrack>(context => context.DeclareTrackCatalog()));
             registry.Register(new SimpleTrackEmitter<CameraResponseTrack>(context => context.DeclareTrackCatalog()));
+            registry.Register(new SimpleTrackEmitter<ScenePresentationParameterTrack>(context => context.DeclareTrackCatalog()));
             registry.Register(new SimpleClipEmitter<BTSMTL.Timeline.AnimationClip>((clip, context) =>
             {
                 CharacterSimulationSourceLocation source = context.ClipSource(clip);
@@ -421,7 +457,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 if (producerIndex >= 0)
                 {
                     context.Builder.DeclareReference(
-                        $"{context.ClipIdentity(clip)}/producer",
+                        context.ReferenceIdentity($"{context.ClipIdentity(clip)}/producer"),
                         operation,
                         ProgramReferenceKind.Producer,
                         producerIndex,
@@ -474,7 +510,10 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                     context.Builder.IdentityField("SourceMotionClip", $"timeline:{context.Timeline.AuthoringId}/clip:{clip.SourceMotionClipId}"),
                     context.Builder.IdentityField("TimelineOwner", $"timeline:{context.Timeline.AuthoringId}"),
                     context.Builder.IdentityField("ActionContext", context.ActionContextIdentity),
-                    context.Builder.ConstantField(source, "TimelineOwnerOperation", context.TimelineOperation.Value),
+                    context.Builder.ConstantField(
+                        context.InvocationConstantSource(clip, "TimelineOwnerOperation"),
+                        "TimelineOwnerOperation",
+                        context.TimelineOperation.Value),
                     context.Builder.ConstantField(source, "TranslationMode", clip.TranslationMode),
                     context.Builder.ConstantField(source, "TargetOffsetSpace", offsetSpace),
                     context.Builder.ConstantField(source, "RotationMode", clip.RotationMode),
@@ -523,6 +562,20 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                     integer0: (int)clip.ExecutionPhase,
                     integer1: (int)clip.Ownership);
             }));
+            registry.Register(new SimpleClipEmitter<ScenePresentationParameterCurveClip>((clip, context) =>
+            {
+                CharacterSimulationSourceLocation source = context.ClipSource(clip);
+                context.Builder.RequireGameplayCapability("TimelineScenePresentationParameter");
+                return context.DeclareClipOperation(
+                    clip,
+                    SimulationOperationCode.TimelineScenePresentationParameter,
+                    new[]
+                    {
+                        context.Builder.IdentityField("TargetBinding", clip.TargetBindingId),
+                        context.Builder.IdentityField("ParameterBinding", clip.ParameterBindingId),
+                        context.Builder.ConstantField(source, "ValueCurve", context.BakeCurve(clip, "ValueCurve", clip.ValueCurve))
+                    });
+            }));
             registry.Register(new SimpleClipEmitter<ActionCueClip>((clip, context) =>
             {
                 CharacterSimulationSourceLocation source = context.ClipSource(clip);
@@ -546,7 +599,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 if (producerIndex >= 0)
                 {
                     context.Builder.DeclareReference(
-                        $"{context.ClipIdentity(clip)}/producer",
+                        context.ReferenceIdentity($"{context.ClipIdentity(clip)}/producer"),
                         operation,
                         ProgramReferenceKind.Producer,
                         producerIndex,
@@ -616,7 +669,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
 
         static OperationHandle DeclarePresentationClip(
             Clip clip,
-            CharacterSimulationTimelineEmitterContext context,
+            TimelineSemanticEmitterContext context,
             SimulationOperationCode code,
             IEnumerable<ProgramCatalogField> fields)
         {
@@ -636,7 +689,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             if (producerIndex >= 0)
             {
                 context.Builder.DeclareReference(
-                    $"{context.ClipIdentity(clip)}/producer",
+                    context.ReferenceIdentity($"{context.ClipIdentity(clip)}/producer"),
                     operation,
                     ProgramReferenceKind.Producer,
                     producerIndex,
@@ -646,20 +699,228 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             return operation;
         }
 
-        sealed class SimpleTrackEmitter<T> : ICharacterSimulationTimelineTrackEmitter where T : Track
+        sealed class SimpleTrackEmitter<T> : ITimelineSemanticTrackEmitter where T : Track
         {
-            readonly Action<CharacterSimulationTimelineEmitterContext> m_Emit;
-            public SimpleTrackEmitter(Action<CharacterSimulationTimelineEmitterContext> emit) => m_Emit = emit ?? throw new ArgumentNullException(nameof(emit));
+            readonly Action<TimelineSemanticEmitterContext> m_Emit;
+            public SimpleTrackEmitter(Action<TimelineSemanticEmitterContext> emit) => m_Emit = emit ?? throw new ArgumentNullException(nameof(emit));
             public Type SourceType => typeof(T);
-            public void Emit(Track track, CharacterSimulationTimelineEmitterContext context) => m_Emit(context);
+            public void Emit(Track track, TimelineSemanticEmitterContext context) => m_Emit(context);
         }
 
-        sealed class SimpleClipEmitter<T> : ICharacterSimulationTimelineClipEmitter where T : Clip
+        sealed class SimpleClipEmitter<T> : ITimelineSemanticClipEmitter where T : Clip
         {
-            readonly Func<T, CharacterSimulationTimelineEmitterContext, OperationHandle> m_Emit;
-            public SimpleClipEmitter(Func<T, CharacterSimulationTimelineEmitterContext, OperationHandle> emit) => m_Emit = emit ?? throw new ArgumentNullException(nameof(emit));
+            readonly Func<T, TimelineSemanticEmitterContext, OperationHandle> m_Emit;
+            public SimpleClipEmitter(Func<T, TimelineSemanticEmitterContext, OperationHandle> emit) => m_Emit = emit ?? throw new ArgumentNullException(nameof(emit));
             public Type SourceType => typeof(T);
-            public OperationHandle Emit(Clip clip, CharacterSimulationTimelineEmitterContext context) => m_Emit((T)clip, context);
+            public OperationHandle Emit(Clip clip, TimelineSemanticEmitterContext context) => m_Emit((T)clip, context);
+        }
+    }
+
+    public readonly struct TimelineSemanticTreeCompilation
+    {
+        readonly Func<string, OperationHandle> m_LifecycleResolver;
+
+        public TimelineSemanticTreeCompilation(
+            string route,
+            OperationHandle entry,
+            Func<string, OperationHandle> lifecycleResolver)
+        {
+            Route = route ?? string.Empty;
+            Entry = entry;
+            m_LifecycleResolver = lifecycleResolver;
+        }
+
+        public string Route { get; }
+        public OperationHandle Entry { get; }
+        public bool IsValid => Entry.IsValid;
+
+        public OperationHandle Lifecycle(string port)
+        {
+            return m_LifecycleResolver == null
+                ? OperationHandle.Invalid
+                : m_LifecycleResolver(port);
+        }
+    }
+
+    public sealed class TimelineSemanticEmitter
+    {
+        readonly TimelineSemanticEmitterRegistry m_Registry;
+
+        public TimelineSemanticEmitter(TimelineSemanticEmitterRegistry registry)
+        {
+            m_Registry = registry ?? throw new ArgumentNullException(nameof(registry));
+        }
+
+        public TimelineSemanticEmissionResult Emit(TimelineSemanticEmissionRequest request)
+        {
+            if (request == null)
+                throw new ArgumentNullException(nameof(request));
+            TimelineSemanticContentRecord content = request.Content;
+            CharacterSimulationProgramBuilder builder = request.Builder;
+            TimelineSemanticInvocation invocation = request.Invocation;
+            OperationHandle timelineOperation = request.TimelineOperation;
+            OperationHandle treeStateScopeOwner = request.TreeStateScopeOwner;
+            string actionContextIdentity = request.ActionContextIdentity;
+            Func<TimelineSemanticClipRecord, OperationHandle, TimelineSemanticTreeCompilation> treeCompiler = request.TreeCompiler;
+            TimelineData timeline = content.Timeline;
+            if (timeline == null)
+                throw new ArgumentNullException(nameof(timeline));
+            if (!invocation.IsValid)
+                throw new ArgumentException("Timeline invocation is invalid.", nameof(request));
+
+            string timelineRoute = invocation.Route;
+            var timelineSource = new CharacterSimulationSourceLocation(
+                timeline.GetType().FullName,
+                invocation.GraphId,
+                invocation.NodeId,
+                string.Empty,
+                timeline.AuthoringId,
+                string.Empty,
+                timelineRoute,
+                contentHash: content.ContentUnit.ContentHash);
+            int timelineCatalog = builder.DeclareCatalogEntry(
+                ProgramCatalogEntryKind.Timeline,
+                $"timeline:{timeline.AuthoringId}",
+                1,
+                new[]
+                {
+                    builder.ConstantField(timelineSource, "Name", timeline.Name),
+                    builder.ConstantField(timelineSource, "Scale", timeline.Scale),
+                    builder.ConstantField(timelineSource, "MaxFrame", content.MaxFrame),
+                    builder.ConstantField(timelineSource, "FrameRate", content.ContentUnit.FrameRate)
+                },
+                timelineSource);
+            if (timelineCatalog >= 0)
+            {
+                builder.DeclareReference(
+                    invocation.ReferenceIdentity($"{timelineRoute}/timeline-catalog"),
+                    timelineOperation,
+                    ProgramReferenceKind.CatalogEntry,
+                    timelineCatalog,
+                    $"timeline:{timeline.AuthoringId}",
+                    timelineSource);
+            }
+
+            var emission = new TimelineSemanticEmissionSession(timeline, builder, invocation);
+            for (int trackIndex = 0; trackIndex < content.Tracks.Count; trackIndex++)
+            {
+                TimelineSemanticTrackRecord trackRecord = content.Tracks[trackIndex];
+                Track track = trackRecord.Track;
+                var context = new TimelineSemanticEmitterContext(
+                    timeline,
+                    track,
+                    trackRecord.AuthoringIndex,
+                    invocation,
+                    builder,
+                    timelineOperation,
+                    actionContextIdentity,
+                    emission,
+                    content.ContentUnit.ContentHash);
+                if (!m_Registry.TryGetTrack(track.GetType(), out ITimelineSemanticTrackEmitter trackEmitter))
+                    throw new InvalidOperationException($"Discovered Track '{track.AuthoringId}' has no emitter.");
+                trackEmitter.Emit(track, context);
+
+                for (int clipIndex = 0; clipIndex < trackRecord.Clips.Count; clipIndex++)
+                {
+                    TimelineSemanticClipRecord clipRecord = trackRecord.Clips[clipIndex];
+                    Clip clip = clipRecord.Clip;
+                    if (!m_Registry.TryGetClip(clip.GetType(), out ITimelineSemanticClipEmitter clipEmitter))
+                        throw new InvalidOperationException($"Discovered Clip '{clip.AuthoringId}' has no emitter.");
+                    OperationHandle clipOperation;
+                    try
+                    {
+                        clipOperation = clipEmitter.Emit(clip, context);
+                    }
+                    catch (Exception exception)
+                    {
+                        builder.Report.EmissionError("timeline_clip_emit_failed", context.ClipSource(clip).Identity, exception.Message);
+                        continue;
+                    }
+                    builder.DeclareControlFlow(
+                        $"{context.ClipSource(clip).Identity}/segment",
+                        timelineOperation,
+                        clipOperation,
+                        track.AuthoringId,
+                        clip.AuthoringId,
+                        ProgramControlFlowKind.Child,
+                        clipRecord.AuthoringIndex,
+                        0,
+                        ProgramAbortPolicy.None,
+                        false,
+                        OperationHandle.Invalid,
+                        context.ClipSource(clip));
+                    if (!(clip is TreeClip))
+                        continue;
+                    if (treeCompiler == null)
+                    {
+                        builder.Report.Error("tree_clip_compiler_missing", context.ClipSource(clip).Identity, "TreeClip has no shared semantic tree compiler.");
+                        continue;
+                    }
+                    TimelineSemanticTreeCompilation tree;
+                    try
+                    {
+                        tree = treeCompiler(clipRecord, treeStateScopeOwner);
+                    }
+                    catch (Exception exception)
+                    {
+                        builder.Report.Error("tree_clip_compile_failed", context.ClipSource(clip).Identity, exception.Message);
+                        continue;
+                    }
+                    if (!tree.IsValid)
+                    {
+                        builder.Report.Error("tree_clip_compile_failed", context.ClipSource(clip).Identity, "TreeClip did not produce a compiled tree entry.");
+                        continue;
+                    }
+                    builder.DeclareControlFlow(
+                        $"{tree.Route}/entry",
+                        clipOperation,
+                        tree.Entry,
+                        "TreeClip",
+                        "Entry",
+                        ProgramControlFlowKind.Enter,
+                        0,
+                        0,
+                        ProgramAbortPolicy.None,
+                        false,
+                        OperationHandle.Invalid,
+                        context.ClipSource(clip));
+                    DeclareLifecycle(builder, tree, clipOperation, context.ClipSource(clip), "OnEnable", 1, ProgramControlFlowKind.Enter);
+                    DeclareLifecycle(builder, tree, clipOperation, context.ClipSource(clip), "OnDisable", 0, ProgramControlFlowKind.Exit);
+                    DeclareLifecycle(builder, tree, clipOperation, context.ClipSource(clip), "OnDestroy", 1, ProgramControlFlowKind.Exit);
+                }
+            }
+            emission.Complete();
+            return new TimelineSemanticEmissionResult(timelineOperation, emission.ClipOperations, builder.Report);
+        }
+
+        static void DeclareLifecycle(
+            CharacterSimulationProgramBuilder builder,
+            TimelineSemanticTreeCompilation tree,
+            OperationHandle clipOperation,
+            CharacterSimulationSourceLocation source,
+            string port,
+            int order,
+            ProgramControlFlowKind kind)
+        {
+            OperationHandle target = tree.Lifecycle(port);
+            if (!target.IsValid)
+            {
+                builder.Report.Error("tree_clip_lifecycle_missing", tree.Route, $"TreeClip graph is missing compiled '{port}' lifecycle operation.");
+                return;
+            }
+            builder.DeclareControlFlow(
+                $"{tree.Route}/{port}",
+                clipOperation,
+                target,
+                port,
+                "Entry",
+                kind,
+                order,
+                0,
+                ProgramAbortPolicy.None,
+                false,
+                OperationHandle.Invalid,
+                source);
         }
     }
 }

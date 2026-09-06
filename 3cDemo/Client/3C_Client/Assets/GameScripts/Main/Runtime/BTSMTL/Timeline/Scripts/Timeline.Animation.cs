@@ -69,6 +69,8 @@ namespace BTSMTL.Timeline
     [TrackGroup("Base"), ScriptGuid("3f0d14cafa6f2c84389c42789ec00083"), IconGuid("e6435fa591ae4414eb0f26dc6410086e"), Ordered(0), Color(127, 253, 228)]
     public partial class AnimationTrack : Track
     {
+        public override string ContractKind => TimelineContractKinds.AnimationTrack;
+
         [SerializeField, ShowInInspector, OnValueChanged("RebindTimeline")]
         string m_AnimationChannelId = string.Empty;
 
@@ -203,6 +205,8 @@ namespace BTSMTL.Timeline
     [ScriptGuid("3f0d14cafa6f2c84389c42789ec00083"), Color(127, 253, 228)]
     public partial class AnimationClip : Clip
     {
+        public override string ContractKind => TimelineContractKinds.AnimationClip;
+
         [ShowInInspector, OnValueChanged("OnClipChanged", "RebindTimeline")]
         public UnityEngine.AnimationClip Clip;
         [ShowInInspector, OnValueChanged("RebindTimeline")]
@@ -231,5 +235,28 @@ namespace BTSMTL.Timeline
             OnNameChanged?.Invoke();
         }
 #endif
+    }
+
+    public static class AnimationTimelineContracts
+    {
+        public static readonly ITimelineContractProvider Provider = new TimelineContractProvider(
+            new[]
+            {
+                new TimelineTrackContract(
+                    TimelineContractKinds.AnimationTrack,
+                    TimelineTrackOverlapPolicy.Blend,
+                    TimelineCapability.Animation,
+                    TimelineContractKinds.AnimationClip)
+            },
+            new[]
+            {
+                new TimelineClipContract(
+                    TimelineContractKinds.AnimationClip,
+                    TimelineContractKinds.AnimationTrack,
+                    TimelineClipExecutionPhase.Commit,
+                    TimelineCapability.Animation,
+                    true,
+                    true)
+            });
     }
 }

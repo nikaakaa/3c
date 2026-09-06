@@ -304,7 +304,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             if (!artifact.Header.Root.IsTimeline ||
                 !string.Equals(artifact.Header.Root.RootIdentity, frontend.RootGuid, StringComparison.Ordinal) ||
                 !string.Equals(artifact.Header.Root.EntryIdentity, $"timeline:{frontend.Content.Timeline.AuthoringId}", StringComparison.Ordinal) ||
-                !string.Equals(artifact.Header.Root.ContentIdentity, frontend.Content.ContentHash, StringComparison.Ordinal))
+                !string.Equals(artifact.Header.Root.ContentIdentity, frontend.Content.ContentUnit.ContentHash, StringComparison.Ordinal))
             {
                 report.ArtifactError("timeline_root_identity_invalid", artifactPath, "Timeline Semantic IR root does not match the persisted content, entry, or cache identity.");
                 return FailedTimeline(report);

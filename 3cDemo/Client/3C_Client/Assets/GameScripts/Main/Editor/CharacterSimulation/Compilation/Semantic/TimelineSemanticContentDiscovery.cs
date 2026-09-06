@@ -2,132 +2,115 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using BTSMTL.Timeline;
-using ThirdPersonSimulation;
-using UnityEditor;
 
 namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
 {
-    public sealed class TimelineSemanticContentRecord
+    public sealed class TimelineSemanticContentDiscoveryResult
     {
-        internal TimelineSemanticContentRecord(
-            TimelineAsset asset,
-            string assetGuid,
-            string route,
-            string contentHash,
-            IEnumerable<CharacterAuthoringTrackRecord> tracks)
+        internal TimelineSemanticContentDiscoveryResult(
+            TimelineSemanticContentRecord content,
+            bool isValid,
+            IReadOnlyList<string> errors)
         {
-            Asset = asset ?? throw new ArgumentNullException(nameof(asset));
-            Timeline = asset.Data ?? throw new ArgumentException("Timeline asset has no data.", nameof(asset));
-            AssetGuid = SimulationIdentity.Require(assetGuid, nameof(assetGuid));
-            Route = SimulationIdentity.Require(route, nameof(route));
-            ContentHash = SimulationIdentity.Require(contentHash, nameof(contentHash));
-            Tracks = Array.AsReadOnly((tracks ?? Array.Empty<CharacterAuthoringTrackRecord>()).ToArray());
+            Content = content;
+            IsValid = content != null && isValid;
+            Errors = new System.Collections.ObjectModel.ReadOnlyCollection<string>(
+                new List<string>(errors ?? Array.Empty<string>()));
         }
 
-        public TimelineAsset Asset { get; }
-        public TimelineData Timeline { get; }
-        public string AssetGuid { get; }
-        public string Route { get; }
-        public string ContentHash { get; }
-        public IReadOnlyList<CharacterAuthoringTrackRecord> Tracks { get; }
+        public TimelineSemanticContentRecord Content { get; }
+        public IReadOnlyList<string> Errors { get; }
+        public bool IsValid { get; }
     }
 
     public static class TimelineSemanticContentDiscovery
     {
-        public static TimelineSemanticContentRecord Discover(
-            TimelineAsset asset,
+        public static TimelineSemanticContentDiscoveryResult Discover(
+            TimelineData timeline,
+            string route,
+            TimelineSemanticEmitterRegistry emitters,
             CharacterSimulationCompileReport report)
         {
-            if (!asset)
-                throw new ArgumentNullException(nameof(asset));
+            if (timeline == null)
+                throw new ArgumentNullException(nameof(timeline));
+            if (emitters == null)
+                throw new ArgumentNullException(nameof(emitters));
             if (report == null)
                 throw new ArgumentNullException(nameof(report));
-            string path = AssetDatabase.GetAssetPath(asset);
-            string guid = string.IsNullOrEmpty(path)
-                ? string.Empty
-                : AssetDatabase.AssetPathToGUID(path);
-            if (string.IsNullOrEmpty(path) || string.IsNullOrEmpty(guid))
+
+            string timelineRoute = route ?? string.Empty;
+            var errors = new List<string>();
+            bool isValid = true;
+            void AddError(string code, string sourcePath, string message)
             {
-                report.DiscoveryError(
-                    "timeline_root_identity_missing",
-                    asset.name,
-                    "Timeline root must be a persisted asset with a GUID.");
-                return null;
+                isValid = false;
+                errors.Add($"{code}:{sourcePath}:{message}");
+                report.DiscoveryError(code, sourcePath, message);
             }
-            TimelineData timeline = asset.Data;
-            if (timeline == null)
+
+            TimelineContentDiscoveryResult closure = TimelineContentDiscovery.Discover(
+                timeline,
+                TimelineTreeContractComposition.Create());
+            if (!closure.IsValid)
             {
-                report.DiscoveryError(
-                    "timeline_data_missing",
-                    path,
-                    "Timeline asset has no TimelineData.");
-                return null;
+                for (int i = 0; i < closure.Errors.Count; i++)
+                    AddError("timeline_content_invalid", timelineRoute, closure.Errors[i]);
+                return new TimelineSemanticContentDiscoveryResult(null, false, errors);
             }
-            var identityErrors = new List<string>();
-            if (!timeline.ValidateAuthoringIdentities(identityErrors))
-            {
-                for (int i = 0; i < identityErrors.Count; i++)
-                    report.DiscoveryError("timeline_authoring_identity_invalid", path, identityErrors[i]);
-                return null;
-            }
-            timeline.Init();
-            CharacterSimulationTimelineEmitterRegistry emitters =
-                CharacterSimulationTimelineEmitterRegistry.CreateDefault();
-            var tracks = new List<CharacterAuthoringTrackRecord>();
-            Track[] orderedTracks = timeline.Tracks
+
+            var tracks = new List<TimelineSemanticTrackRecord>();
+            var trees = new Dictionary<string, TimelineSemanticTreeRecord>(StringComparer.Ordinal);
+            Track[] stableTracks = timeline.Tracks
                 .Where(value => value != null)
                 .OrderBy(value => value.AuthoringId, StringComparer.Ordinal)
                 .ToArray();
-            for (int trackIndex = 0; trackIndex < orderedTracks.Length; trackIndex++)
+            if (stableTracks.Length != timeline.Tracks.Count)
+                AddError("timeline_track_missing", timelineRoute, "Timeline contains a missing Track.");
+
+            for (int trackIndex = 0; trackIndex < stableTracks.Length; trackIndex++)
             {
-                Track track = orderedTracks[trackIndex];
+                Track track = stableTracks[trackIndex];
                 int authoringIndex = timeline.Tracks.IndexOf(track);
-                string trackRoute = $"timeline:{timeline.AuthoringId}/track:{track.AuthoringId}";
+                string trackRoute = $"{timelineRoute}/track:{track.AuthoringId}";
                 if (!emitters.TryGetTrack(track.GetType(), out _))
-                    report.DiscoveryError("timeline_track_emitter_missing", trackRoute, $"Track type '{track.GetType().FullName}' has no semantic emitter.");
-                var clips = new List<CharacterAuthoringClipRecord>();
-                Clip[] orderedClips = track.Clips
+                    AddError("timeline_track_emitter_missing", trackRoute, $"Track type '{track.GetType().FullName}' has no Timeline semantic emitter.");
+                Clip[] stableClips = track.Clips
                     .Where(value => value != null)
                     .OrderBy(value => value.AuthoringId, StringComparer.Ordinal)
                     .ToArray();
-                for (int clipIndex = 0; clipIndex < orderedClips.Length; clipIndex++)
+                if (stableClips.Length != track.Clips.Count)
+                    AddError("timeline_clip_missing", trackRoute, "Timeline Track contains a missing Clip.");
+                var clips = new List<TimelineSemanticClipRecord>();
+                for (int clipIndex = 0; clipIndex < stableClips.Length; clipIndex++)
                 {
-                    Clip clip = orderedClips[clipIndex];
+                    Clip clip = stableClips[clipIndex];
                     string clipRoute = $"{trackRoute}/clip:{clip.AuthoringId}";
                     if (!emitters.TryGetClip(clip.GetType(), out _))
-                        report.DiscoveryError("timeline_clip_emitter_missing", clipRoute, $"Clip type '{clip.GetType().FullName}' has no semantic emitter.");
+                        AddError("timeline_clip_emitter_missing", clipRoute, $"Clip type '{clip.GetType().FullName}' has no Timeline semantic emitter.");
                     if (clip.EndFrame <= clip.StartFrame)
-                        report.DiscoveryError("timeline_clip_range_invalid", clipRoute, "Clip EndFrame must be greater than StartFrame.");
+                        AddError("timeline_clip_range_invalid", clipRoute, "Timeline Clip requires EndFrame greater than StartFrame.");
                     if (clip is BTSMTL.Timeline.AnimationClip animation && !animation.Clip)
-                        report.DiscoveryError("timeline_animation_clip_missing", clipRoute, "Animation clip resource is missing.");
-                    if (clip is MotionCurveClip || clip is MotionWarpClip)
-                        report.DiscoveryError("timeline_character_capability_required", clipRoute, "MotionCurve and MotionWarp require the Character Body Motion or Action binding and cannot be a standalone Timeline root.");
-                    if (clip is TreeClip treeClip)
+                        AddError("animation_clip_missing", clipRoute, "AnimationClip resource is missing from the authoring source.");
+                    if (clip is TreeClip treeClip && treeClip.ResolvedTree != null)
                     {
-                        string code = treeClip.ResolvedTree == null
-                            ? "timeline_tree_clip_missing"
-                            : "timeline_tree_clip_content_unavailable";
-                        string message = treeClip.ResolvedTree == null
-                            ? "TreeClip graph is missing."
-                            : "Standalone Timeline content closure does not yet include TreeClip graph operations.";
-                        report.DiscoveryError(code, clipRoute, message);
+                        string treeRoute = $"{clipRoute}/tree:{treeClip.ResolvedTree.GraphAuthoringId}";
+                        trees[clip.AuthoringId] = new TimelineSemanticTreeRecord(treeClip, treeClip.ResolvedTree, treeRoute);
                     }
-                    clips.Add(new CharacterAuthoringClipRecord(
-                        clip,
-                        track.Clips.IndexOf(clip),
-                        clipRoute,
-                        null));
+                    clips.Add(new TimelineSemanticClipRecord(clip, track.Clips.IndexOf(clip), clipRoute));
                 }
-                tracks.Add(new CharacterAuthoringTrackRecord(track, authoringIndex, trackRoute, clips));
+                tracks.Add(new TimelineSemanticTrackRecord(track, authoringIndex, trackRoute, clips));
             }
-            if (!report.IsValid)
-                return null;
-            return new TimelineSemanticContentRecord(
-                asset,
-                guid,
-                $"timeline:{timeline.AuthoringId}",
-                TimelineAuthoringFingerprint.Compute(timeline),
-                tracks);
+
+            return new TimelineSemanticContentDiscoveryResult(
+                new TimelineSemanticContentRecord(
+                    timeline,
+                    timelineRoute,
+                    closure.Content.MaxFrame,
+                    closure.Content,
+                    tracks,
+                    trees),
+                isValid,
+                errors);
         }
     }
 }

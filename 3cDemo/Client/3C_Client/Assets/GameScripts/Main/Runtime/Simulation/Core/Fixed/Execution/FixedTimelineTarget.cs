@@ -500,6 +500,16 @@ namespace ThirdPersonSimulation.Fixed
                 action));
         }
 
+        public void SampleTimelineClip(
+            OperationHandle timeline,
+            OperationHandle operation,
+            TimelineSegment<FixedScalar> segment) =>
+            throw new InvalidOperationException($"Timeline clip '{SourcePath(operation)}' is not supported by the character simulation target.");
+
+        public void CompleteTimeline(OperationHandle timeline, FixedScalar time) { }
+
+        public void ReleaseTimeline(OperationHandle timeline) { }
+
         public void EmitPresentation(TimelinePresentationOutput<FixedScalar> output)
         {
             PresentationCommandKind kind = output.Kind switch

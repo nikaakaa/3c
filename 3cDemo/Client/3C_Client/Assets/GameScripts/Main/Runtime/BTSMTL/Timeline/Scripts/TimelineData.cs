@@ -22,7 +22,13 @@ namespace BTSMTL.Timeline
         List<TimelineSection> m_Sections = new List<TimelineSection>();
 
         [SerializeField]
+        List<TimelineExternalBindingDeclaration> m_ExternalBindings = new List<TimelineExternalBindingDeclaration>();
+
+        [SerializeField]
         float m_Scale = 1f;
+
+        [SerializeField]
+        bool m_Loop;
 
         [NonSerialized]
         UnityEngine.Object m_SerializedOwner;
@@ -34,7 +40,9 @@ namespace BTSMTL.Timeline
         public string AuthoringId => m_AuthoringId ?? string.Empty;
         public List<Track> Tracks => m_Tracks;
         public IReadOnlyList<TimelineSection> Sections => m_Sections;
+        public IReadOnlyList<TimelineExternalBindingDeclaration> ExternalBindings => m_ExternalBindings;
         public float Scale { get => m_Scale; set => m_Scale = value; }
+        public bool Loop { get => m_Loop; set => m_Loop = value; }
         public UnityEngine.Object SerializedOwner => m_SerializedOwner;
         public string SerializedPropertyPath => m_SerializedPropertyPath ?? string.Empty;
 
@@ -84,6 +92,8 @@ namespace BTSMTL.Timeline
             }
             for (int i = 0; i < m_Sections.Count; i++)
                 changed |= m_Sections[i]?.EnsureAuthoringIdentity() ?? false;
+            for (int i = 0; i < m_ExternalBindings.Count; i++)
+                changed |= m_ExternalBindings[i]?.EnsureAuthoringIdentity() ?? false;
             return changed;
         }
 
@@ -108,6 +118,8 @@ namespace BTSMTL.Timeline
             }
             for (int i = 0; i < m_Sections.Count; i++)
                 m_Sections[i]?.RegenerateAuthoringIdentity();
+            for (int i = 0; i < m_ExternalBindings.Count; i++)
+                m_ExternalBindings[i]?.RegenerateAuthoringIdentity();
         }
 #endif
 
@@ -121,26 +133,45 @@ namespace BTSMTL.Timeline
             }
             var identities = new HashSet<string>(StringComparer.Ordinal);
             var sectionNames = new HashSet<string>(StringComparer.Ordinal);
-            for (int i = 0; i < m_Tracks.Count; i++)
+            if (m_Tracks == null)
             {
-                Track track = m_Tracks[i];
-                if (track == null || !AuthoringIdentity.IsValid(track.AuthoringId) || !identities.Add(track.AuthoringId))
+                errors?.Add($"Timeline '{Name}' has no track list.");
+                valid = false;
+            }
+            else
+            {
+                for (int i = 0; i < m_Tracks.Count; i++)
                 {
-                    errors?.Add($"Timeline '{Name}' track #{i} has a missing or duplicate authoring identity.");
-                    valid = false;
-                    continue;
-                }
-                for (int clipIndex = 0; clipIndex < track.Clips.Count; clipIndex++)
-                {
-                    Clip clip = track.Clips[clipIndex];
-                    if (clip == null || !AuthoringIdentity.IsValid(clip.AuthoringId) || !identities.Add(clip.AuthoringId))
+                    Track track = m_Tracks[i];
+                    if (track == null || !AuthoringIdentity.IsValid(track.AuthoringId) || !identities.Add(track.AuthoringId))
                     {
-                        errors?.Add($"Timeline '{Name}' clip #{i}:{clipIndex} has a missing or duplicate authoring identity.");
+                        errors?.Add($"Timeline '{Name}' track #{i} has a missing or duplicate authoring identity.");
                         valid = false;
+                        continue;
+                    }
+                    if (track.Clips == null)
+                    {
+                        errors?.Add($"Timeline '{Name}' track '{track.AuthoringId}' has no clip list.");
+                        valid = false;
+                        continue;
+                    }
+                    for (int clipIndex = 0; clipIndex < track.Clips.Count; clipIndex++)
+                    {
+                        Clip clip = track.Clips[clipIndex];
+                        if (clip == null || !AuthoringIdentity.IsValid(clip.AuthoringId) || !identities.Add(clip.AuthoringId))
+                        {
+                            errors?.Add($"Timeline '{Name}' clip #{i}:{clipIndex} has a missing or duplicate authoring identity.");
+                            valid = false;
+                        }
                     }
                 }
             }
-            for (int i = 0; i < m_Sections.Count; i++)
+            if (m_Sections == null)
+            {
+                errors?.Add($"Timeline '{Name}' has no section list.");
+                valid = false;
+            }
+            else for (int i = 0; i < m_Sections.Count; i++)
             {
                 TimelineSection section = m_Sections[i];
                 if (section == null || !section.RequireValid() || !identities.Add(section.AuthoringId) ||
@@ -150,13 +181,68 @@ namespace BTSMTL.Timeline
                     valid = false;
                 }
             }
+            if (m_ExternalBindings == null)
+            {
+                errors?.Add($"Timeline '{Name}' has no external binding list.");
+                valid = false;
+            }
+            else for (int i = 0; i < m_ExternalBindings.Count; i++)
+            {
+                TimelineExternalBindingDeclaration binding = m_ExternalBindings[i];
+                if (binding == null || !AuthoringIdentity.IsValid(binding.AuthoringId) || !identities.Add(binding.AuthoringId))
+                {
+                    errors?.Add($"Timeline '{Name}' external binding #{i} has a missing or duplicate authoring identity.");
+                    valid = false;
+                }
+            }
             return valid;
+        }
+
+        public bool ValidateContent(TimelineContractCatalog catalog, List<string> errors)
+        {
+            if (catalog == null)
+                throw new ArgumentNullException(nameof(catalog));
+            bool valid = ValidateAuthoringIdentities(errors);
+            int count = errors?.Count ?? 0;
+            catalog.Validate(this, errors);
+            return valid && (errors == null || errors.Count == count);
+        }
+
+        public bool TryGetExternalBinding(string bindingId, out TimelineExternalBindingDeclaration binding)
+        {
+            for (int i = 0; i < (m_ExternalBindings?.Count ?? 0); i++)
+            {
+                TimelineExternalBindingDeclaration candidate = m_ExternalBindings[i];
+                if (candidate != null && string.Equals(candidate.BindingId, bindingId, StringComparison.Ordinal))
+                {
+                    binding = candidate;
+                    return true;
+                }
+            }
+            binding = null;
+            return false;
         }
 
         public void BindSerializedOwner(UnityEngine.Object owner, string propertyPath)
         {
             m_SerializedOwner = owner;
             m_SerializedPropertyPath = propertyPath ?? string.Empty;
+            for (int trackIndex = 0; trackIndex < m_Tracks.Count; trackIndex++)
+            {
+                Track track = m_Tracks[trackIndex];
+                if (track == null)
+                    continue;
+                for (int clipIndex = 0; clipIndex < track.Clips.Count; clipIndex++)
+                {
+                    if (track.Clips[clipIndex] is ITimelineNestedSerializedOwner nestedOwner)
+                    {
+                        nestedOwner.BindNestedSerializedOwner(
+                            owner,
+                            GetSerializedPropertyPath(
+                                $"m_Tracks.Array.data[{trackIndex}].m_Clips.Array.data[{clipIndex}]"));
+                    }
+                }
+            }
         }
 
         public string GetSerializedPropertyPath(string relativePath)
@@ -245,5 +331,10 @@ namespace BTSMTL.Timeline
         bool EnsureOwnedAuthoringIdentities();
         void RegenerateOwnedAuthoringIdentities();
 #endif
+    }
+
+    public interface ITimelineNestedSerializedOwner
+    {
+        void BindNestedSerializedOwner(UnityEngine.Object owner, string propertyPath);
     }
 }

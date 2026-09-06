@@ -44,6 +44,8 @@ namespace BTSMTL.Timeline
     [TrackGroup("Base"), ScriptGuid("79b8da4acfeb4d1994d019eacf6d5de3"), Ordered(1), Color(248, 177, 91)]
     public sealed class MotionWarpTrack : Track
     {
+        public override string ContractKind => TimelineContractKinds.MotionWarpTrack;
+
 #if UNITY_EDITOR
         public override Type ClipType => typeof(MotionWarpClip);
 #endif
@@ -52,6 +54,8 @@ namespace BTSMTL.Timeline
     [ScriptGuid("79b8da4acfeb4d1994d019eacf6d5de3"), ClipInspectorView("MotionWarpClipInspectorView"), Color(248, 177, 91)]
     public sealed class MotionWarpClip : Clip
     {
+        public override string ContractKind => TimelineContractKinds.MotionWarpClip;
+
         [SerializeField, ShowInInspector, ReadOnly]
         string m_SourceMotionClipId;
 
@@ -574,5 +578,28 @@ namespace BTSMTL.Timeline
         {
             issues?.Add(new MotionWarpAuthoringIssue(code, message, warp, source));
         }
+    }
+
+    public static class MotionWarpTimelineContracts
+    {
+        public static readonly ITimelineContractProvider Provider = new TimelineContractProvider(
+            new[]
+            {
+                new TimelineTrackContract(
+                    TimelineContractKinds.MotionWarpTrack,
+                    TimelineTrackOverlapPolicy.Parallel,
+                    TimelineCapability.MotionWarp,
+                    TimelineContractKinds.MotionWarpClip)
+            },
+            new[]
+            {
+                new TimelineClipContract(
+                    TimelineContractKinds.MotionWarpClip,
+                    TimelineContractKinds.MotionWarpTrack,
+                    TimelineClipExecutionPhase.Commit,
+                    TimelineCapability.MotionWarp,
+                    true,
+                    true)
+            });
     }
 }

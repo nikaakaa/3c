@@ -23,8 +23,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
             string keySource = $"{domain}\n{rootAssetPath}\n{rootIdentity}";
             string hash = Hash(keySource).Substring(0, 16);
             string readable = Sanitize(rootIdentity);
-            if (readable.Length > 48)
-                readable = readable.Substring(0, 48);
+            if (readable.Length > 8)
+                readable = readable.Substring(0, 8);
             string directoryName = $"{readable}-{hash}.btsmtl";
             return Path.GetFullPath(Path.Combine(projectRoot, "AgentAuthoring", "Documents", domain, directoryName));
         }

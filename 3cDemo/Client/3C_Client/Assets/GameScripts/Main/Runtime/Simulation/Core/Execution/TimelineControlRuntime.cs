@@ -3,7 +3,7 @@ using System.Collections.Generic;
 
 namespace ThirdPersonSimulation
 {
-    internal sealed class TimelineControlRuntime<TOperationTarget, TTime>
+    public sealed class TimelineControlRuntime<TOperationTarget, TTime>
         where TOperationTarget : struct, IOperationControlTarget<TOperationTarget>
         where TTime : struct
     {
@@ -193,6 +193,7 @@ namespace ThirdPersonSimulation
                     Trace(timeline, "timeline_action_context_ended", TimelineTraceSeverity.Information, m_Target.Operation(timeline).Text0);
                 EmitTimelineAnimationTerminal(timeline, TimelinePresentationOutputKind.ReleaseProducer, m_Target.Zero);
                 EmitTimelineCameraTerminal(timeline, m_Target.Zero, TimelinePresentationOutputKind.Camera);
+                m_Target.ReleaseTimeline(timeline);
             }
             OperationStopStatus result = ContinueTimelineTreeStops(cursor, timeline, context);
             if (result != OperationStopStatus.Completed)
@@ -217,6 +218,7 @@ namespace ThirdPersonSimulation
             {
                 EmitTimelineAnimationTerminal(timeline, TimelinePresentationOutputKind.ReleaseProducer, m_Target.Zero);
                 EmitTimelineCameraTerminal(timeline, m_Target.Zero, TimelinePresentationOutputKind.ForceProducer);
+                m_Target.ReleaseTimeline(timeline);
             }
             IReadOnlyList<ProgramControlFlowEdge> clips = m_Target.Edges(timeline, ProgramControlFlowKind.Child);
             for (int i = 0; i < clips.Count; i++)
@@ -233,6 +235,7 @@ namespace ThirdPersonSimulation
             TTime time)
         {
             m_State.WritePlayback(timeline, TimelinePlaybackStatus.Completing);
+            m_Target.CompleteTimeline(timeline, time);
             EmitTimelineAnimationTerminal(timeline, TimelinePresentationOutputKind.CompleteProducer, time);
             EmitTimelineCameraTerminal(timeline, time, TimelinePresentationOutputKind.Camera);
             return ToOperationResult(ContinueTimelineCompletion(cursor, timeline));
@@ -357,6 +360,9 @@ namespace ThirdPersonSimulation
                         break;
                     case SimulationOperationCode.TimelineCameraCue:
                         SampleCameraCue(clip.Handle, segment);
+                        break;
+                    default:
+                        m_Target.SampleTimelineClip(timeline, clip.Handle, segment);
                         break;
                 }
             }

@@ -29,7 +29,8 @@ namespace ThirdPersonSimulation
             "StateMachine",
             "Timeline",
             "TimelineMotionCurve",
-            "TimelineMotionWarp"
+            "TimelineMotionWarp",
+            "TimelineScenePresentationParameter"
         };
 
         public static Float32ProgramLoweringResult Compile(ValidatedSemanticIrArtifact artifact)

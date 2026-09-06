@@ -926,11 +926,11 @@ namespace BTSMTL.Timeline.Editor
         #region Add Clip
         public void AddClip(Track track, int startFrame)
         {
-            AdjustClip(TimelineData.AddClip(track, startFrame));
+            AdjustClip(TimelineData.AddClip(EditorWindow.ContractCatalog, track, startFrame));
         }
         public void AddClip(UnityEngine.Object referenceObject, Track track, int startFrame)
         {
-            AdjustClip(TimelineData.AddClip(referenceObject, track, startFrame));
+            AdjustClip(TimelineData.AddClip(EditorWindow.ContractCatalog, referenceObject, track, startFrame));
         }
         void AdjustClip(Clip clip)
         {

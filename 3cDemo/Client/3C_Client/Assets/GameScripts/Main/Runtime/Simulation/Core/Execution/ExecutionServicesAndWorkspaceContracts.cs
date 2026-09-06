@@ -528,7 +528,7 @@ namespace ThirdPersonSimulation
         }
     }
 
-    internal sealed class NestedExecutionWorkspaceBuffer<T>
+    public sealed class NestedExecutionWorkspaceBuffer<T>
     {
         readonly List<List<T>> m_Buffers = new List<List<T>>();
         int m_Depth;

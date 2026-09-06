@@ -129,11 +129,8 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                     Collect(occurrence.PropertyEdges[edgeIndex].ConditionGraph);
                 for (int timelineIndex = 0; timelineIndex < occurrence.Timelines.Count; timelineIndex++)
                 {
-                    IReadOnlyList<CharacterAuthoringClipRecord> clips = occurrence.Timelines[timelineIndex].Tracks
-                        .SelectMany(value => value.Clips)
-                        .ToArray();
-                    for (int clipIndex = 0; clipIndex < clips.Count; clipIndex++)
-                        Collect(clips[clipIndex].TreeGraph);
+                    foreach (CharacterAuthoringGraphOccurrence tree in occurrence.Timelines[timelineIndex].TreeGraphs.Values)
+                        Collect(tree);
                 }
             }
         }

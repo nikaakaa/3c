@@ -339,6 +339,9 @@ namespace ThirdPersonSimulation
                 }
                 switch (clip.Code)
                 {
+                    case SimulationOperationCode.TimelineAnimation:
+                    case SimulationOperationCode.TimelineTreeClip when clip.Integer0 == 0:
+                        break;
                     case SimulationOperationCode.TimelineMotionCurve:
                         m_Target.SampleMotionCurve(timeline, clip.Handle, segment);
                         break;

@@ -102,10 +102,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         [Serializable]
         internal sealed class LegacyPoseNode
         {
-            [SerializeField] string m_NodeId = string.Empty;
-            [SerializeField] string m_DisplayName = string.Empty;
-            [SerializeReference] CharacterPoseNodePayload m_Payload;
-            [SerializeField] CharacterPoseDynamicPort[] m_DynamicPorts =
+            [SerializeField] internal string m_NodeId = string.Empty;
+            [SerializeField] internal string m_DisplayName = string.Empty;
+            [SerializeReference] internal CharacterPoseNodePayload m_Payload;
+            [SerializeField] internal CharacterPoseDynamicPort[] m_DynamicPorts =
                 Array.Empty<CharacterPoseDynamicPort>();
 
             public PoseNodeId NodeId => string.IsNullOrWhiteSpace(m_NodeId)
@@ -120,11 +120,11 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         [Serializable]
         internal sealed class LegacyPoseEdge
         {
-            [SerializeField] string m_EdgeId = string.Empty;
-            [SerializeField] string m_SourceNodeId = string.Empty;
-            [SerializeField] string m_SourcePortId = string.Empty;
-            [SerializeField] string m_TargetNodeId = string.Empty;
-            [SerializeField] string m_TargetPortId = string.Empty;
+            [SerializeField] internal string m_EdgeId = string.Empty;
+            [SerializeField] internal string m_SourceNodeId = string.Empty;
+            [SerializeField] internal string m_SourcePortId = string.Empty;
+            [SerializeField] internal string m_TargetNodeId = string.Empty;
+            [SerializeField] internal string m_TargetPortId = string.Empty;
 
             public string EdgeId => m_EdgeId ?? string.Empty;
             public PoseNodeId SourceNodeId => string.IsNullOrWhiteSpace(m_SourceNodeId)
@@ -144,13 +144,13 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         [Serializable]
         internal sealed class LegacyPoseGraph
         {
-            [SerializeField] string m_GraphId = string.Empty;
-            [SerializeField] string m_ContentRevision = string.Empty;
-            [SerializeField] CharacterPoseParameterDeclaration[] m_Parameters =
+            [SerializeField] internal string m_GraphId = string.Empty;
+            [SerializeField] internal string m_ContentRevision = string.Empty;
+            [SerializeField] internal CharacterPoseParameterDeclaration[] m_Parameters =
                 Array.Empty<CharacterPoseParameterDeclaration>();
-            [SerializeField] LegacyPoseNode[] m_Nodes = Array.Empty<LegacyPoseNode>();
-            [SerializeField] LegacyPoseEdge[] m_Edges = Array.Empty<LegacyPoseEdge>();
-            [SerializeField] CharacterPoseGraphLayoutEntry[] m_Layout =
+            [SerializeField] internal LegacyPoseNode[] m_Nodes = Array.Empty<LegacyPoseNode>();
+            [SerializeField] internal LegacyPoseEdge[] m_Edges = Array.Empty<LegacyPoseEdge>();
+            [SerializeField] internal CharacterPoseGraphLayoutEntry[] m_Layout =
                 Array.Empty<CharacterPoseGraphLayoutEntry>();
 
             public PoseGraphId GraphId => string.IsNullOrWhiteSpace(m_GraphId)
@@ -173,6 +173,11 @@ namespace ThirdPersonCharacter.Pipeline.Animation
 
         internal sealed class LegacyCanvasMigrationState
         {
+            readonly LegacyPoseGraph m_LegacyRoot;
+            readonly LegacyPoseGraph[] m_LegacyCatalog;
+            readonly CharacterPoseCanvasGraph m_CanvasRoot;
+            readonly CharacterPoseCanvasGraph[] m_CanvasCatalog;
+
             internal LegacyCanvasMigrationState(
                 LegacyPoseGraph legacyRoot,
                 LegacyPoseGraph[] legacyCatalog,

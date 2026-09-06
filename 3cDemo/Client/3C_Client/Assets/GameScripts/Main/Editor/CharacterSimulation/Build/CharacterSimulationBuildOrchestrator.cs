@@ -19,6 +19,16 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 CharacterSimulationTargetCatalog.DefaultEditor(definition)));
         }
 
+        public static CharacterSimulationBuildResult Build(
+            CharacterPipelineDefinition definition,
+            IReadOnlyList<ICharacterSimulationTargetBuildAdapter> targets)
+        {
+            return Build(new CharacterSimulationBuildRequest(
+                definition,
+                CharacterSimulationBuildPublicationMode.Publish,
+                targets));
+        }
+
         public static CharacterSimulationBuildResult Build(CharacterSimulationBuildRequest request)
         {
             if (request == null)
@@ -71,6 +81,16 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 definition,
                 CharacterSimulationBuildPublicationMode.DryRun,
                 CharacterSimulationTargetCatalog.DefaultEditor(definition)));
+        }
+
+        public static CharacterSimulationBuildResult DryRun(
+            CharacterPipelineDefinition definition,
+            IReadOnlyList<ICharacterSimulationTargetBuildAdapter> targets)
+        {
+            return Build(new CharacterSimulationBuildRequest(
+                definition,
+                CharacterSimulationBuildPublicationMode.DryRun,
+                targets));
         }
 
         public static CharacterSemanticFrontendResult CompileSemanticIr(CharacterPipelineDefinition definition, bool persistCache)

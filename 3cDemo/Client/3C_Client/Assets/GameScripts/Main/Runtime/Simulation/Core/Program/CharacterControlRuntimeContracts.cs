@@ -130,7 +130,8 @@ namespace ThirdPersonSimulation
             SimulationExecutionSource source,
             CharacterSkillId skillId,
             CharacterControlSkillStopMode mode,
-            string reason = "")
+            string reason = "",
+            ulong actionInstanceId = 0)
         {
             if (!source.IsCharacterControl || !skillId.IsValid || !Enum.IsDefined(typeof(CharacterControlSkillStopMode), mode))
                 throw new ArgumentException("Character control skill stop request is incomplete.");
@@ -138,12 +139,14 @@ namespace ThirdPersonSimulation
             SkillId = skillId;
             Mode = mode;
             Reason = reason ?? string.Empty;
+            ActionInstanceId = actionInstanceId;
         }
 
         public SimulationExecutionSource Source { get; }
         public CharacterSkillId SkillId { get; }
         public CharacterControlSkillStopMode Mode { get; }
         public string Reason { get; }
+        public ulong ActionInstanceId { get; }
     }
 
     public readonly struct CharacterControlMotionRequest

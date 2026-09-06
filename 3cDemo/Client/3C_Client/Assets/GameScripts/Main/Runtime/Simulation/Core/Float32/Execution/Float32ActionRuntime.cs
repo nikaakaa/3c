@@ -93,6 +93,15 @@ namespace ThirdPersonSimulation
 			m_Lifecycle.Finish(skillId, source, completed, reason);
 		}
 
+		public void FinishFromControl(
+			Float32ActionInstanceState action,
+			SimulationExecutionSource source,
+			bool completed,
+			string reason)
+		{
+			m_Lifecycle.Finish(action, source, completed, reason);
+		}
+
 		public ActionAdmissionDecision PreviewActivation<TTarget>(
 			OperationControlCursor<TTarget> cursor,
 			SimulationOperation operation)
@@ -123,6 +132,15 @@ namespace ThirdPersonSimulation
         public void StopFromControl(CharacterControlSkillStopRequest controlRequest)
         {
             CharacterSkillProgramBinding skill = m_Program.SkillPrograms.Require(controlRequest.SkillId);
+            if (controlRequest.ActionInstanceId != 0)
+            {
+                if (!m_Actions.TryGetInstance(controlRequest.ActionInstanceId, out Float32ActionInstanceState action))
+                    return;
+                if (action.SkillId != skill.SkillId)
+                    throw new InvalidOperationException($"Action instance '{controlRequest.ActionInstanceId}' does not belong to Skill '{skill.SkillId}'.");
+                m_Lifecycle.Stop(action, controlRequest.Mode, controlRequest.Source, controlRequest.Reason);
+                return;
+            }
             m_Lifecycle.Stop(skill.SkillId, controlRequest.Mode, controlRequest.Source, controlRequest.Reason);
         }
 
@@ -131,7 +149,7 @@ namespace ThirdPersonSimulation
             if (!action.IsActive || !action.EquipmentContext.IsValid || m_EquipmentContext.IsCurrentActionContext(action.EquipmentContext))
                 return false;
             m_Lifecycle.Stop(
-                action.SkillId,
+                action,
                 CharacterControlSkillStopMode.Force,
                 action.Source,
                 "EquipmentGenerationChanged");
@@ -217,8 +235,21 @@ namespace ThirdPersonSimulation
 		{
 			if (!m_Actions.TryGetInstance(actionInstanceId, out Float32ActionInstanceState action))
 				return true;
-			return !action.IsActive &&
-				   (!action.SkillEntryOperation.IsValid || m_IsOperationStopComplete(action.SkillEntryOperation));
+			if (action.IsActive || !action.SkillEntryOperation.IsValid)
+				return false;
+			if (m_Actions.IsSkillExecutionActive(actionInstanceId))
+				return m_IsOperationStopComplete(action.SkillEntryOperation);
+			if (!m_Actions.HasSkillExecutionFrame(actionInstanceId))
+				return true;
+			try
+			{
+				using (m_Actions.EnterSkillExecution(action))
+					return m_IsOperationStopComplete(action.SkillEntryOperation);
+			}
+			catch (InvalidOperationException)
+			{
+				return false;
+			}
 		}
 
 		ActionAdmissionProfile IActionAdmissionReadPort.RequireActionProfile(string actionId)
@@ -269,14 +300,13 @@ namespace ThirdPersonSimulation
 
 		bool IActionSkillActivationPort<SimulationActionTargetSnapshot, SimulationOperation>.HasPendingRequest(string actionId)
 		{
-			int slot = m_Actions.RequireSlot(actionId, ProgramStateSemantic.ActionRequestBuffer);
-			return m_Actions.ReadRequest(slot).IsValid;
+			return m_Actions.HasPendingRequest(actionId);
 		}
 
 		void IActionSkillActivationPort<SimulationActionTargetSnapshot, SimulationOperation>.StageRequest(
 			ActionSkillActivationRequest<SimulationActionTargetSnapshot> request)
 		{
-			int slot = m_Actions.RequireSlot(request.ActionId, ProgramStateSemantic.ActionRequestBuffer);
+			int slot = m_Actions.RequireRequestSlot(request.ActionId);
 			m_Actions.WriteRequest(
 				slot,
 				new Float32ActionActivationRequestState(
@@ -323,7 +353,16 @@ namespace ThirdPersonSimulation
 		void IActionSkillActivationPort<SimulationActionTargetSnapshot, SimulationOperation>.ClearPendingRequest(
 			ActionSkillActivationRequest<SimulationActionTargetSnapshot> request)
 		{
-			int slot = m_Actions.RequireSlot(request.ActionId, ProgramStateSemantic.ActionRequestBuffer);
+			int slot = m_Actions.FindPendingRequest(
+				request.ActionId,
+				request.SkillId,
+				request.SkillEntryOperation,
+				request.ContextId,
+				request.InputSequence,
+				request.StartTick,
+				request.ReplacementActionInstanceId);
+			if (slot < 0)
+				throw new InvalidOperationException($"Action '{request.ActionId}' has no matching pending activation request.");
 			m_Actions.ClearRequest(slot);
 		}
 
@@ -366,9 +405,16 @@ namespace ThirdPersonSimulation
             ulong actionInstanceId,
             IEnumerable<string> tags) => m_GameplayEffectActions.SetActionTags(actionInstanceId, tags);
 
-        void IActionSkillCommitPort<SimulationActionTargetSnapshot, Float32ActionInstanceState>.ClearRequest(
-            ActionSkillActivationRequest<SimulationActionTargetSnapshot> request) =>
-            m_Actions.ClearRequest(m_Actions.RequireSlot(request.ActionId, ProgramStateSemantic.ActionRequestBuffer));
+		void IActionSkillCommitPort<SimulationActionTargetSnapshot, Float32ActionInstanceState>.ClearRequest(
+			ActionSkillActivationRequest<SimulationActionTargetSnapshot> request) =>
+			m_Actions.ClearRequest(m_Actions.FindPendingRequest(
+				request.ActionId,
+				request.SkillId,
+				request.SkillEntryOperation,
+				request.ContextId,
+				request.InputSequence,
+				request.StartTick,
+				request.ReplacementActionInstanceId));
 
         void IActionSkillCommitPort<SimulationActionTargetSnapshot, Float32ActionInstanceState>.EmitActionFact(
             SimulationExecutionSource source,
@@ -490,7 +536,7 @@ namespace ThirdPersonSimulation
 
 		IEnumerable<Float32ActionInstanceState> EnumerateActionStates()
 		{
-			foreach (TypedActionStateAddresses addresses in m_Layout.ActionStateIndex.Values)
+			foreach (TypedActionStateAddresses addresses in m_Layout.AllActionStateAddresses)
 				yield return m_Actions.ReadSlot(addresses.Instance.SlotIndex);
 		}
 

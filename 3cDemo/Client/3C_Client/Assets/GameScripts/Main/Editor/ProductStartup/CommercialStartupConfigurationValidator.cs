@@ -12,7 +12,8 @@ namespace ThirdPersonCharacter.Editor.ProductStartup
     internal enum ProductBuildKind
     {
         CommercialClient = 1,
-        NetworkTestPlayer = 2
+        NetworkTestPlayer = 2,
+        PerformancePlayer = 3
     }
 
     internal static class ProductBuildValidationContext

@@ -9,6 +9,7 @@
         "ThirdPersonPerformance.Runtime",
         "Unity.ThirdPerson.Performance.Instrumentation.CodeGen",
         "ThirdPersonClient.Runtime",
+        "ThirdPersonCharacter.Control.Rules",
         "ThirdPersonSimulation.Core",
         "ThirdPersonSimulation.Float32",
         "ThirdPersonSimulation.Unity",

@@ -354,4 +354,3 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             parameter.ValueType == axis.ValueType && string.Equals(parameter.Unit, axis.Unit, StringComparison.Ordinal);
     }
 }
-

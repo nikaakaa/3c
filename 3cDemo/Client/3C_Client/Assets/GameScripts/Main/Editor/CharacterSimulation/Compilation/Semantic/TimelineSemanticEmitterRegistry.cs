@@ -354,8 +354,12 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 contentHash: m_TimelineContentHash);
         }
 
-        public string ProducerIdentity(Clip clip) => $"{Invocation.Identity}/producer:{m_Timeline.AuthoringId}:{m_Track.AuthoringId}:{clip.AuthoringId}";
-        public string AnimationProducerIdentity => $"{Invocation.Identity}/producer:{m_Timeline.AuthoringId}:{m_Track.AuthoringId}";
+        string ProducerPrefix => Invocation.Kind == TimelineSemanticInvocationKind.CharacterGraph
+            ? string.Empty
+            : Invocation.Identity + "/";
+
+        public string ProducerIdentity(Clip clip) => $"{ProducerPrefix}producer:{m_Timeline.AuthoringId}:{m_Track.AuthoringId}:{clip.AuthoringId}";
+        public string AnimationProducerIdentity => $"{ProducerPrefix}producer:{m_Timeline.AuthoringId}:{m_Track.AuthoringId}";
 
         IEnumerable<ProgramCatalogField> CommonTrackFields(CharacterSimulationSourceLocation source)
         {

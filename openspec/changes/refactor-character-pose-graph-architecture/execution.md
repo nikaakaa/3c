@@ -78,7 +78,7 @@
 - 21.8入口：`CharacterSimulationBuildOrchestrator.Build(definition, targets)`与`DryRun(definition, targets)`显式接收有序Target Adapter列表；正式`Build(request)`继续先编译同一Semantic IR和Presentation Projection，再为全部Target建立Publish Stage，最后由同一事务发布，未复制主目录generated文件。当前没有用该入口重建Corin产物。
 - 资源/状态归属：Family Adapter只拥有编译期payload；Projection Validator只拥有验证诊断；Frame Coordinator只拥有actor-local根帧状态；Formal Build只拥有一次Semantic/Target/Projection原子发布。外部Fixed/Float32未提交Runtime修改、`Runtime/Character/Pipeline/Simulation/`目录和Unity生成meta均未纳入提交。
 - 验证：各代码小步执行`git diff --check`通过；当前worktree不存在Unity生成的`ThirdPersonClient.Editor.csproj`，尝试的dotnet命令因项目文件不存在退出，并已执行`dotnet build-server shutdown`；RunHost旧记录仍指向`D:/Unity_Project_1/camera-zzz/3cDemo/Client/3C_Client`，直接Unity batchmode仍因Licensing Client validation/access token失败。因此本批没有当前worktree编译通过、正式Build、Corin产物或E2E证据。
-- 剩余项：21.2需在有效Editor编译后确认所有Family Adapter调用和ABI未变；21.3需继续删除/收窄旧Pose Graph Validator中的重复职责；21.5 Pose窗口与旧`AnimationPreviewRuntime`仍未迁入正式Scene Play；21.6需保留并实现CanvasCore Option A的唯一Mutation Owner决策；21.7仍需明确自建GraphView维护边界；21.8需实际执行一次多Target正式Build；21.9当前没有Pose对ACL共享Source/Projection合同的直接引用，不接入ACL。
+- 剩余项：21.2需在有效Editor编译后确认所有Family Adapter调用和ABI未变；21.3需继续删除/收窄Topology与Definition中的重复职责；21.5 Pose窗口与旧`AnimationPreviewRuntime`仍未迁入正式Scene Play；21.8需实际执行一次多Target正式Build；21.9当前没有Pose对ACL共享Source/Projection合同的直接引用，不接入ACL。
 
 ## 21.5–21.7作者表面与Preview边界审计（POSE-EXEC-20260906-06）
 

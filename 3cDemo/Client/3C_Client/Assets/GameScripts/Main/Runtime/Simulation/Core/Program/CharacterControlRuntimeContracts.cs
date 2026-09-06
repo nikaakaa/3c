@@ -53,6 +53,7 @@ namespace ThirdPersonSimulation
         bool IsSkillCompleted(CharacterSkillId skillId);
         ulong CompletedSkillInstanceId(CharacterSkillId skillId);
         bool IsActionWindowActive(CharacterSkillId skillId, string windowType);
+        bool TryReadEquipmentActionContext(EquipmentActionRouteId routeId, out EquipmentActionContext context);
         bool CompareInputVector2Magnitude(
             SimulationInputValueId input,
             CharacterControlParameterId threshold,
@@ -90,7 +91,8 @@ namespace ThirdPersonSimulation
             string sourceInputRequestId,
             bool consumeSourceInputRequest,
             string targetInputValueId = "",
-            string targetKey = "")
+            string targetKey = "",
+            EquipmentActionContext equipmentContext = default)
         {
             if (!source.IsCharacterControl || !skillId.IsValid)
                 throw new ArgumentException("Character control skill request identity is incomplete.");
@@ -100,6 +102,7 @@ namespace ThirdPersonSimulation
             ConsumeSourceInputRequest = consumeSourceInputRequest;
             TargetInputValueId = targetInputValueId ?? string.Empty;
             TargetKey = targetKey ?? string.Empty;
+            EquipmentContext = equipmentContext;
         }
 
         public SimulationExecutionSource Source { get; }
@@ -108,6 +111,7 @@ namespace ThirdPersonSimulation
         public bool ConsumeSourceInputRequest { get; }
         public string TargetInputValueId { get; }
         public string TargetKey { get; }
+        public EquipmentActionContext EquipmentContext { get; }
     }
 
     public enum CharacterControlSkillStopMode : byte
@@ -168,6 +172,6 @@ namespace ThirdPersonSimulation
         void SubmitMotion(CharacterControlMotionRequest request);
         bool SubmitSkill(CharacterControlSkillRequest request);
         void SubmitSkillStop(CharacterControlSkillStopRequest request);
-        void Trace(SimulationExecutionSource source, string code, string detail);
+        void Trace(SimulationExecutionSource source, string code, string detail, ulong generation);
     }
 }

@@ -184,7 +184,10 @@ namespace BTSMTL.Diagnostics
         RunnableActivation,
         StateActivation,
         TimelinePlayback,
-        TreeClip
+        TreeClip,
+        ControlModule,
+        ControlState,
+        ControlTransition
     }
 
     public readonly struct RuntimeInstanceKey : IEquatable<RuntimeInstanceKey>
@@ -222,6 +225,9 @@ namespace BTSMTL.Diagnostics
         public static RuntimeInstanceKey State(Guid characterId, Guid graphId, string stateId, ulong generation) => new RuntimeInstanceKey(RuntimeInstanceKind.StateActivation, characterId, graphId, stateId, generation, 0, -1);
         public static RuntimeInstanceKey Timeline(Guid characterId, ulong playbackId) => new RuntimeInstanceKey(RuntimeInstanceKind.TimelinePlayback, characterId, Guid.Empty, string.Empty, 0, playbackId, -1);
         public static RuntimeInstanceKey TreeClip(Guid characterId, Guid graphId, ulong playbackId, int cycle) => new RuntimeInstanceKey(RuntimeInstanceKind.TreeClip, characterId, graphId, string.Empty, 0, playbackId, cycle);
+        public static RuntimeInstanceKey ControlModule(Guid characterId, Guid moduleRuntimeId) => new RuntimeInstanceKey(RuntimeInstanceKind.ControlModule, characterId, moduleRuntimeId, string.Empty, 0, 0, -1);
+        public static RuntimeInstanceKey ControlState(Guid characterId, Guid moduleRuntimeId, string stateId, ulong generation) => new RuntimeInstanceKey(RuntimeInstanceKind.ControlState, characterId, moduleRuntimeId, stateId, generation, 0, -1);
+        public static RuntimeInstanceKey ControlTransition(Guid characterId, Guid moduleRuntimeId, string transitionId, ulong generation) => new RuntimeInstanceKey(RuntimeInstanceKind.ControlTransition, characterId, moduleRuntimeId, transitionId, generation, 0, -1);
 
         public bool Equals(RuntimeInstanceKey other)
         {
@@ -263,6 +269,12 @@ namespace BTSMTL.Diagnostics
                     return $"Timeline:{TimelinePlaybackId}";
                 case RuntimeInstanceKind.TreeClip:
                     return $"TreeClip:{TimelinePlaybackId}/{TreeClipCycle}/{GraphRuntimeId:N}";
+                case RuntimeInstanceKind.ControlModule:
+                    return $"ControlModule:{GraphRuntimeId:N}";
+                case RuntimeInstanceKind.ControlState:
+                    return $"ControlState:{GraphRuntimeId:N}/{StateId}/{ActivationGeneration}";
+                case RuntimeInstanceKind.ControlTransition:
+                    return $"ControlTransition:{GraphRuntimeId:N}/{StateId}/{ActivationGeneration}";
                 default:
                     return "None";
             }

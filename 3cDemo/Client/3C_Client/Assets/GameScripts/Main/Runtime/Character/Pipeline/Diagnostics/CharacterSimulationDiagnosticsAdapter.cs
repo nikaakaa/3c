@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using BTSMTL.Diagnostics;
 using ThirdPersonSimulation;
 
@@ -9,6 +10,9 @@ namespace ThirdPersonCharacter.Pipeline.Diagnostics
         readonly RuntimeDiagnosticsContext m_Context;
         readonly IDebugSourceMap m_SourceMap;
         readonly Guid m_ExecutionId;
+        readonly Dictionary<string, RuntimeSourceElementHandle> m_ControlModules = new Dictionary<string, RuntimeSourceElementHandle>(StringComparer.Ordinal);
+        readonly Dictionary<string, RuntimeSourceElementHandle> m_ControlStates = new Dictionary<string, RuntimeSourceElementHandle>(StringComparer.Ordinal);
+        readonly Dictionary<string, RuntimeSourceElementHandle> m_ControlTransitions = new Dictionary<string, RuntimeSourceElementHandle>(StringComparer.Ordinal);
 
         public CharacterSimulationDiagnosticsAdapter(
             RuntimeDiagnosticsContext context,
@@ -19,6 +23,25 @@ namespace ThirdPersonCharacter.Pipeline.Diagnostics
             if (program == null)
                 throw new ArgumentNullException(nameof(program));
             m_ExecutionId = context.SessionId;
+            for (int i = 0; i < program.SourceMap.Count; i++)
+            {
+                ProgramSourceMapEntry entry = program.SourceMap[i];
+                RuntimeSourceTarget target = entry.TargetKind switch
+                {
+                    ProgramSourceTargetKind.ControlModule => new RuntimeSourceTarget(RuntimeSourceTargetKind.ControlModule, entry.TargetIndex),
+                    ProgramSourceTargetKind.ControlState => new RuntimeSourceTarget(RuntimeSourceTargetKind.ControlState, entry.TargetIndex),
+                    ProgramSourceTargetKind.ControlTransition => new RuntimeSourceTarget(RuntimeSourceTargetKind.ControlTransition, entry.TargetIndex),
+                    _ => default
+                };
+                if (!target.IsProgramTarget || !m_SourceMap.TryGetProgramTarget(target, out RuntimeSourceElementHandle handle))
+                    continue;
+                if (entry.TargetKind == ProgramSourceTargetKind.ControlModule)
+                    m_ControlModules[entry.GraphId] = handle;
+                else if (entry.TargetKind == ProgramSourceTargetKind.ControlState)
+                    m_ControlStates[entry.NodeId] = handle;
+                else
+                    m_ControlTransitions[entry.EdgeId] = handle;
+            }
             for (int i = 0; i < program.Operations.Count; i++)
             {
                 if (!m_SourceMap.TryGetProgramTarget(
@@ -108,12 +131,26 @@ namespace ThirdPersonCharacter.Pipeline.Diagnostics
         void PublishControl(SimulationTraceRecord record)
         {
             SimulationExecutionSource source = record.Header.Activation.Source;
+            RuntimeSourceElementHandle sourceHandle = ResolveControlSource(source);
+            RuntimeInstanceKey instance = source.TransitionId.IsValid
+                ? RuntimeInstanceKey.ControlTransition(
+                    m_Context.CharacterRuntimeId,
+                    m_ExecutionId,
+                    source.TransitionId.Value,
+                    record.Header.Activation.Generation)
+                : source.StateId.IsValid
+                    ? RuntimeInstanceKey.ControlState(
+                        m_Context.CharacterRuntimeId,
+                        m_ExecutionId,
+                        source.StateId.Value,
+                        record.Header.Activation.Generation)
+                    : RuntimeInstanceKey.ControlModule(m_Context.CharacterRuntimeId, m_ExecutionId);
             m_Context.Publish(
                 RuntimeTraceChannel.StateMachine,
                 RuntimeTraceDomain.Logic,
                 ResolveControlKind(record.Code),
-                RuntimeSourceElementHandle.Invalid,
-                RuntimeInstanceKey.Character(m_Context.CharacterRuntimeId),
+                sourceHandle,
+                instance,
                 new RuntimeTracePayload
                 {
                     Status = record.Severity.ToString(),
@@ -126,6 +163,17 @@ namespace ThirdPersonCharacter.Pipeline.Diagnostics
                     Flag = record.Severity != SimulationTraceSeverity.Error,
                     Value = DebugValueSnapshot.Capture(record.Header.Activation.Generation)
                 });
+        }
+
+        RuntimeSourceElementHandle ResolveControlSource(SimulationExecutionSource source)
+        {
+            if (source.TransitionId.IsValid && m_ControlTransitions.TryGetValue(source.TransitionId.Value, out RuntimeSourceElementHandle transition))
+                return transition;
+            if (source.StateId.IsValid && m_ControlStates.TryGetValue(source.StateId.Value, out RuntimeSourceElementHandle state))
+                return state;
+            return m_ControlModules.TryGetValue(source.ModuleId.Value, out RuntimeSourceElementHandle module)
+                ? module
+                : throw new InvalidOperationException($"Control source '{source.Identity}' is absent from the Debug Source Map.");
         }
 
         public void PublishPipeline(SimulationPipelineTraceRecord record)

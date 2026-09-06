@@ -81,8 +81,8 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 CharacterSimulationSourceLocation transitionSource = new CharacterSimulationSourceLocation(
                     source.SourceType,
                     source.GraphId,
-                    transition.Id.Value,
                     string.Empty,
+                    transition.Id.Value,
                     string.Empty,
                     string.Empty,
                     $"{source.DisplayPath}/transition:{transition.Id.Value}",

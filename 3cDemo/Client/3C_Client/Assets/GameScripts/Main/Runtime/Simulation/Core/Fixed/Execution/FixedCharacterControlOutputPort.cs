@@ -37,8 +37,8 @@ namespace ThirdPersonSimulation.Fixed
 
         public void SubmitSkillStop(CharacterControlSkillStopRequest request) => m_Actions.StopFromControl(request);
 
-        public void Trace(SimulationExecutionSource source, string code, string detail) =>
-            m_Trace.Add(source, code, SimulationTraceSeverity.Information, detail);
+        public void Trace(SimulationExecutionSource source, string code, string detail, ulong generation) =>
+            m_Trace.Add(source, code, SimulationTraceSeverity.Information, detail, generation);
 
         CharacterControlMotionDescriptor RequireMotion(string binding)
         {

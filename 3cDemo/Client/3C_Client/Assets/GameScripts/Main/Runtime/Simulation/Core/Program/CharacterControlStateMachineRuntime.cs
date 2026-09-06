@@ -52,7 +52,8 @@ namespace ThirdPersonSimulation
                     current,
                     default,
                     "control_state_entered",
-                    $"state={current.Value}:tick={context.Tick.Value}");
+                    $"state={current.Value}:tick={context.Tick.Value}",
+                    context.Tick.Value);
             }
             RequireState(current);
             if (state.ReadInt32(m_TransitionProgressField.Id) == 0)
@@ -64,7 +65,8 @@ namespace ThirdPersonSimulation
                     current,
                     default,
                     "control_state_entered",
-                    $"state={current.Value}:tick={context.Tick.Value}");
+                    $"state={current.Value}:tick={context.Tick.Value}",
+                    state.ReadUInt64(m_EnteredTickField.Id));
             }
             m_Module.Tick(in context, current, read, state, output);
 
@@ -80,7 +82,8 @@ namespace ThirdPersonSimulation
                     current,
                     candidate.Id,
                     "control_transition_evaluated",
-                    $"source={candidate.Source.Value}:target={candidate.Target.Value}:result={evaluated}");
+                    $"source={candidate.Source.Value}:target={candidate.Target.Value}:result={evaluated}",
+                    state.ReadUInt64(m_EnteredTickField.Id));
                 if (!evaluated)
                     continue;
                 if (selected == null ||
@@ -99,7 +102,8 @@ namespace ThirdPersonSimulation
                 current,
                 default,
                 "control_state_exited",
-                $"state={current.Value}:tick={context.Tick.Value}");
+                $"state={current.Value}:tick={context.Tick.Value}",
+                state.ReadUInt64(m_EnteredTickField.Id));
             if (m_TransitionField != null)
                 state.WriteTransition(m_TransitionField.Id, selected.Id);
             state.WriteState(m_ActiveStateField.Id, selected.Target);
@@ -110,7 +114,17 @@ namespace ThirdPersonSimulation
                 current,
                 selected.Id,
                 "control_transition_selected",
-                $"source={current.Value}:target={selected.Target.Value}:tick={context.Tick.Value}");
+                $"source={current.Value}:target={selected.Target.Value}:tick={context.Tick.Value}",
+                context.Tick.Value);
+            m_Module.Enter(in context, selected.Target, read, state, output);
+            state.WriteInt32(m_TransitionProgressField.Id, 1);
+            Trace(
+                output,
+                selected.Target,
+                default,
+                "control_state_entered",
+                $"state={selected.Target.Value}:tick={context.Tick.Value}",
+                context.Tick.Value);
         }
 
         void Trace(
@@ -118,7 +132,8 @@ namespace ThirdPersonSimulation
             CharacterControlStateId stateId,
             CharacterControlTransitionId transitionId,
             string code,
-            string detail)
+            string detail,
+            ulong generation)
         {
             output.Trace(
                 SimulationExecutionSource.FromCharacterControl(
@@ -126,7 +141,8 @@ namespace ThirdPersonSimulation
                     stateId,
                     transitionId),
                 code,
-                detail);
+                detail,
+                generation == 0 ? 1 : generation);
         }
 
         void RequireState(CharacterControlStateId stateId)

@@ -174,13 +174,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             m_WorkspaceFrame = default;
         }
 
-        internal void ClearLeaseState()
-        {
-            m_ActionFrame = null;
-            m_SlotFrame = default;
-            m_WorkspaceFrame = default;
-        }
-
         internal void Publish(in ActionAnimationPlaybackCommand command) =>
             m_ActorState.ActionPlayback.Publish(command);
 

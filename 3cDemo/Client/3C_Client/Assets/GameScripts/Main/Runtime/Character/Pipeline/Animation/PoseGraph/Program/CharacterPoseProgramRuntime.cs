@@ -586,7 +586,6 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 AnimationPresentationDiagnosticsInterest.None;
             m_ActiveFrameLease = default;
             m_CommittingFrameLease = default;
-            m_Action.ClearLeaseState();
             if (failure != null)
             {
                 throw new AggregateException(

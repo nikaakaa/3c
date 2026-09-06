@@ -490,9 +490,8 @@ namespace ThirdPersonSimulation
             state = default;
             if (!string.IsNullOrEmpty(contextId))
             {
-                IReadOnlyList<TypedStateAddress> addresses = m_Layout.ActionInstances(contextId);
-                for (int i = 0; i < addresses.Count; i++)
-                    MatchActive(addresses[i], contextId, ref found, ref state);
+                foreach (TypedActionStateAddresses addresses in m_Layout.AllActionStateAddresses)
+                    MatchActive(addresses.Instance, contextId, ref found, ref state);
             }
             else
             {
@@ -602,7 +601,7 @@ namespace ThirdPersonSimulation
                 m_State.Set(existingSlot, CharacterStateValue.FromActionInstance(action));
                 return;
             }
-			int slot = FindPendingRequest(
+			int slot = FindPendingRequestInstanceSlot(
 				action.ActionId,
 				action.SkillId,
 				action.SkillEntryOperation,
@@ -697,6 +696,30 @@ namespace ThirdPersonSimulation
 					(replacementActionInstanceId == ulong.MaxValue ||
 					 candidate.ReplacementActionInstanceId == replacementActionInstanceId))
 					return addresses.Request.SlotIndex;
+			}
+			return -1;
+		}
+
+		int FindPendingRequestInstanceSlot(
+			string actionId,
+			CharacterSkillId skillId,
+			OperationHandle entryOperation,
+			string contextId,
+			ulong inputSequence,
+			ulong startTick,
+			ulong replacementActionInstanceId)
+		{
+			foreach (TypedActionStateAddresses addresses in m_Layout.ActionStateSlots(actionId))
+			{
+				Float32ActionActivationRequestState candidate = m_State.Get(addresses.Request.SlotIndex).ActionActivationRequest;
+				if (candidate.IsValid && candidate.SkillId == skillId &&
+					candidate.SkillEntryOperation.Equals(entryOperation) &&
+					string.Equals(candidate.ContextId, contextId, StringComparison.Ordinal) &&
+					candidate.InputSequence == inputSequence &&
+					candidate.StartTick == startTick &&
+					(replacementActionInstanceId == ulong.MaxValue ||
+					 candidate.ReplacementActionInstanceId == replacementActionInstanceId))
+					return addresses.Instance.SlotIndex;
 			}
 			return -1;
 		}

@@ -122,6 +122,25 @@ namespace ThirdPersonCharacter.Pipeline.Animation.MotionMatching
             if (string.IsNullOrWhiteSpace(ownerIdentity))
                 return StationaryMovementModeId;
 
+            const string characterControlPrefix = "character-control:";
+            if (ownerIdentity.StartsWith(characterControlPrefix, StringComparison.Ordinal))
+            {
+                string controlIdentity = ownerIdentity.Substring(characterControlPrefix.Length);
+                int moduleEnd = controlIdentity.IndexOf(':');
+                int stateStart = moduleEnd + 1;
+                int stateEnd = controlIdentity.IndexOf(':', stateStart);
+                if (moduleEnd <= 0 || stateStart >= controlIdentity.Length || stateEnd < stateStart)
+                    throw new InvalidOperationException(
+                        $"Committed movement owner '{ownerIdentity}' has an invalid Character Control identity.");
+                string characterControlStateId = controlIdentity.Substring(stateStart, stateEnd - stateStart);
+                if (string.IsNullOrWhiteSpace(characterControlStateId))
+                {
+                    throw new InvalidOperationException(
+                        $"Committed movement owner '{ownerIdentity}' has an empty Gameplay State identity.");
+                }
+                return $"presentation.movement-mode.state/{characterControlStateId}";
+            }
+
             const string stateGraphReference = "/reference:stateBehaviorGraph.";
             int referenceIndex = ownerIdentity.IndexOf(
                 stateGraphReference,

@@ -10,6 +10,10 @@ namespace ThirdPersonGameplay.Lab
     [DisallowMultipleComponent]
     public sealed class GameplayLabBootstrap : MonoBehaviour
     {
+        const string PerformanceVariantArgument = "--third-person-performance-variant=";
+
+        public static GameplayLabBootstrap Current { get; private set; }
+
         [SerializeField] GameplayLabSessionVariantDefinition[] m_Variants =
             Array.Empty<GameplayLabSessionVariantDefinition>();
         [SerializeField, Min(0)] int m_StartupVariantIndex;
@@ -48,6 +52,9 @@ namespace ThirdPersonGameplay.Lab
 
         void Awake()
         {
+            if (Current && Current != this)
+                throw new InvalidOperationException("Gameplay Lab contains more than one active Bootstrap.");
+            Current = this;
             GameplayLabSessionVariantDefinition variant = RequireVariant();
             SimulationSessionHost[] existing = FindObjectsOfType<SimulationSessionHost>(true);
             if (existing.Length != 0)
@@ -79,6 +86,8 @@ namespace ThirdPersonGameplay.Lab
                 Destroy(m_RuntimeRoot);
             m_RuntimeRoot = null;
             m_SessionHost = null;
+            if (Current == this)
+                Current = null;
         }
 
         GameplayLabSessionVariantDefinition RequireVariant()
@@ -90,6 +99,24 @@ namespace ThirdPersonGameplay.Lab
         int ResolveVariantIndex()
         {
             string[] arguments = Environment.GetCommandLineArgs();
+            string performanceVariant = string.Empty;
+            for (int i = 0; i < arguments.Length; i++)
+            {
+                if (!arguments[i].StartsWith(PerformanceVariantArgument, StringComparison.Ordinal))
+                    continue;
+                if (!string.IsNullOrEmpty(performanceVariant))
+                    throw new InvalidOperationException("Gameplay Lab Performance Variant argument is duplicated.");
+                performanceVariant = arguments[i].Substring(PerformanceVariantArgument.Length).Trim('"');
+            }
+            if (!string.IsNullOrEmpty(performanceVariant))
+            {
+                for (int i = 0; i < m_Variants.Length; i++)
+                {
+                    if (string.Equals(m_Variants[i].VariantId, performanceVariant, StringComparison.Ordinal))
+                        return i;
+                }
+                throw new InvalidOperationException($"Gameplay Lab Performance Variant '{performanceVariant}' is unknown.");
+            }
             int matchedIndex = -1;
             for (int i = 0; i < m_Variants.Length; i++)
             {

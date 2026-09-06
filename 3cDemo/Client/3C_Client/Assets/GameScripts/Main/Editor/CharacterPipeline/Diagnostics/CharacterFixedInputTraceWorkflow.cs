@@ -378,7 +378,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             TraceDocument document = ReadDocument(path, true);
             FixedCharacterInputTrace trace = ToRuntimeTrace(document);
             s_ActiveReplayDocument = document;
-            FixedCharacterInputTraceModule.PrepareReplay(trace);
+            FixedCharacterInputTraceModule.PrepareReplay(trace, 0);
             s_PendingReplayDocument = document;
             s_LastFailure = string.Empty;
             s_LastTracePath = path;
@@ -1658,7 +1658,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             }
             s_PendingReplayDocument ??= ReadPendingReplayDocument();
             FixedCharacterInputTraceModule.PrepareReplay(
-                ToRuntimeTrace(s_PendingReplayDocument));
+                ToRuntimeTrace(s_PendingReplayDocument),
+                0);
         }
 
         static TraceDocument ReadPendingReplayDocument()

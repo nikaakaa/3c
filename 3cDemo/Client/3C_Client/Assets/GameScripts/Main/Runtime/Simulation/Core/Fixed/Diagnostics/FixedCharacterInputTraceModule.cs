@@ -13,7 +13,8 @@ namespace ThirdPersonSimulation.Fixed
         PreparingReplay = 3,
         Replaying = 4,
         Completed = 5,
-        Faulted = 6
+        Faulted = 6,
+        ReplayPaused = 7
     }
 
     public readonly struct FixedCharacterInputTraceFrame
@@ -237,6 +238,7 @@ namespace ThirdPersonSimulation.Fixed
         static ulong s_ReplayStartTick;
         static int s_ReplayIndex;
         static int s_ReplayBodyCount;
+        static int s_ReplayPauseAfterFrameCount;
         static ReplayFrameBuilder[] s_ReplayEvidence =
             Array.Empty<ReplayFrameBuilder>();
         static string s_TraceId = string.Empty;
@@ -303,15 +305,18 @@ namespace ThirdPersonSimulation.Fixed
             return trace;
         }
 
-        public static void PrepareReplay(FixedCharacterInputTrace trace)
+        public static void PrepareReplay(FixedCharacterInputTrace trace, int pauseAfterFrameCount)
         {
             if (trace == null)
                 throw new ArgumentNullException(nameof(trace));
+            if (pauseAfterFrameCount < 0 || pauseAfterFrameCount >= trace.Frames.Count)
+                throw new ArgumentOutOfRangeException(nameof(pauseAfterFrameCount));
             RequireIdle();
             ResetState();
             s_Replay = trace;
             s_ActorId = trace.ActorId;
             s_TraceId = trace.TraceId;
+            s_ReplayPauseAfterFrameCount = pauseAfterFrameCount;
             s_ReplayEvidence = new ReplayFrameBuilder[trace.Frames.Count];
             for (int i = 0; i < s_ReplayEvidence.Length; i++)
                 s_ReplayEvidence[i] = new ReplayFrameBuilder();
@@ -329,6 +334,18 @@ namespace ThirdPersonSimulation.Fixed
             }
             s_Mode = FixedCharacterInputTraceMode.Replaying;
             s_Message = "Waiting for the first canonical Fixed replay input frame.";
+        }
+
+        public static void ResumeReplay()
+        {
+            if (s_Mode != FixedCharacterInputTraceMode.ReplayPaused ||
+                s_ReplayIndex != s_ReplayPauseAfterFrameCount ||
+                s_ReplayBodyCount != s_ReplayPauseAfterFrameCount)
+            {
+                throw new InvalidOperationException("Fixed character input replay is not paused at its capture boundary.");
+            }
+            s_Mode = FixedCharacterInputTraceMode.Replaying;
+            s_Message = "Fixed character input replay resumed for capture.";
         }
 
         public static WorldBodyState ResolveInitialBody(WorldBodyState authoredBody)
@@ -352,6 +369,7 @@ namespace ThirdPersonSimulation.Fixed
             actorId != s_ActorId ||
             s_Mode != FixedCharacterInputTraceMode.PreparingRecording &&
             s_Mode != FixedCharacterInputTraceMode.PreparingReplay &&
+            s_Mode != FixedCharacterInputTraceMode.ReplayPaused &&
             s_Mode != FixedCharacterInputTraceMode.Completed;
 
         public static void ObservePublishedBody(
@@ -385,7 +403,13 @@ namespace ThirdPersonSimulation.Fixed
                 builder.BodyHash =
                     FixedCharacterInputTrace.ComputeBodyHash(body);
                 s_ReplayBodyCount++;
-                if (s_ReplayIndex == s_Replay.Frames.Count &&
+                if (s_ReplayPauseAfterFrameCount > 0 &&
+                    s_ReplayBodyCount == s_ReplayPauseAfterFrameCount)
+                {
+                    s_Mode = FixedCharacterInputTraceMode.ReplayPaused;
+                    s_Message = $"Fixed character input replay paused after {s_ReplayBodyCount} warmup frames.";
+                }
+                else if (s_ReplayIndex == s_Replay.Frames.Count &&
                     s_ReplayBodyCount == s_Replay.Frames.Count)
                 {
                     s_Mode = FixedCharacterInputTraceMode.Completed;
@@ -461,6 +485,9 @@ namespace ThirdPersonSimulation.Fixed
                             "Fixed character input replay consumed input before start release."),
                     FixedCharacterInputTraceMode.Replaying =>
                         Replay(context),
+                    FixedCharacterInputTraceMode.ReplayPaused =>
+                        throw new InvalidOperationException(
+                            "Fixed character input replay consumed input while paused at the capture boundary."),
                     FixedCharacterInputTraceMode.Completed =>
                         HoldLastReplayFrame(context),
                     FixedCharacterInputTraceMode.Faulted =>
@@ -678,6 +705,7 @@ namespace ThirdPersonSimulation.Fixed
             s_ReplayStartTick = 0;
             s_ReplayIndex = 0;
             s_ReplayBodyCount = 0;
+            s_ReplayPauseAfterFrameCount = 0;
             s_ReplayEvidence = Array.Empty<ReplayFrameBuilder>();
             s_TraceId = string.Empty;
             s_Message = string.Empty;

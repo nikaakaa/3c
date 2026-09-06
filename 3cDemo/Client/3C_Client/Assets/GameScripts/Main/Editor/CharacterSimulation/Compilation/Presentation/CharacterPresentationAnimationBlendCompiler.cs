@@ -16,6 +16,29 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
 {
     internal static class CharacterPresentationAnimationBlendCompiler
     {
+        internal sealed class Compilation
+        {
+            public Compilation(
+                AnimationBlendCurveCatalogPayload curveCatalog,
+                AnimationBlendProfileCatalogPayload profileCatalog,
+                Dictionary<string, int> curveIndices,
+                Dictionary<string, int> profileIndices,
+                Dictionary<string, int> profileIndicesByIdentity)
+            {
+                CurveCatalog = curveCatalog;
+                ProfileCatalog = profileCatalog;
+                CurveIndices = curveIndices;
+                ProfileIndices = profileIndices;
+                ProfileIndicesByIdentity = profileIndicesByIdentity;
+            }
+
+            public AnimationBlendCurveCatalogPayload CurveCatalog { get; }
+            public AnimationBlendProfileCatalogPayload ProfileCatalog { get; }
+            public Dictionary<string, int> CurveIndices { get; }
+            public Dictionary<string, int> ProfileIndices { get; }
+            public Dictionary<string, int> ProfileIndicesByIdentity { get; }
+        }
+
         readonly struct SelectionEndpoint
         {
             public SelectionEndpoint(

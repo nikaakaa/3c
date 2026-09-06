@@ -230,7 +230,9 @@ Character generated product发布是上述Document事务之外的显式精确Def
 | `AgentAuthoringDocumentModels.cs` | manifest、sync、package file与内部target |
 | `AgentAuthoringDocumentCodec.cs` | strict parse、canonical write、整包hash |
 | `AgentAuthoringPackageStore.cs` | 确定目录、文件闭包、staging校验、package内容镜像与rollback恢复 |
-| `AgentAuthoringTargetMapper.cs` | 稀疏package与内部完整target双向映射 |
+| `AgentAuthoringTargetMapper.cs` | 整包分片顺序、manifest闭包与跨分片协调；具体Graph、Timeline、AI、Blackboard映射由对应Mapper负责 |
+| `AgentGraphDocumentMapper.cs`、`AgentTimelineDocumentMapper.cs`、`AgentAIDocumentMapper.cs`、`AgentBlackboardDocumentMapper.cs` | 各自领域的sparse package与完整target映射、关系校验与正式能力投影 |
+| `AgentPackageMappingSupport.cs` | package主identity与引用的共享严格校验 |
 | `../Authoring/SharedGraph/BtsmtlGraphAuthoringCapabilities.cs` | stable node kind、typed property、port与system anchor唯一目录 |
 | `AgentAuthoringDocumentExporter.cs` | Character/AI canonical package投影 |
 | `AgentControlDocumentMapper.cs` | controller.json控制模块binding与作者参数的严格映射、正式模块校验 |
@@ -240,10 +242,12 @@ Character generated product发布是上述Document事务之外的显式精确Def
 | `AgentAuthoringPresentationPackageExporter.cs` | Presentation正式资产到canonical editable目标的投影 |
 | `AgentAuthoringPresentationReconciler.cs` | Presentation完整目标对账与typed Mutation事务规划 |
 | `AgentGraphDocumentFragments.cs`、`AgentTimelineDocumentFragments.cs` | 新增Graph/Timeline文件对的canonical local发现与strict闭包检查 |
-| `AgentDocumentMutationReconciler.cs` | 完整目标集合对账与最小Mutation计划入口 |
-| `AgentMutationPlanner.cs`、`AgentMutations.cs` | typed Mutation lowering与immutable plan |
+| `AgentDocumentMutationReconciler.cs` | 完整目标集合对账入口与有序领域模块协调 |
+| `Agent*DocumentMutationModule.cs`、`AgentSkillDocumentMutationPlanner.cs` | Graph、Timeline、Blackboard、Action、Control、AI与Skill各自的目标差异与依赖计划 |
+| `AgentMutationPlanner.cs`、`Agent*MutationLowering.cs`、`AgentMutations.cs` | typed Mutation lowering、Graph/State/Node planned identity与immutable plan；Blackboard lowering独立于Action lowering |
 | `AgentMutationSession.cs` | 单次Index、anchor/reference resolver、symbol、diff、touched owner |
 | `AgentGraphLinkMutationHandler.cs` | flow/property edge创建、删除与改接 |
+| `AgentGraphReferenceMutationHandler.cs` | StateMachine/StateBehavior/TreeReference正式setter的Graph创建与引用配置；SubTree挂载及动态binding等待共享authoring API并明确失败 |
 | 其余`Agent*MutationHandler.cs` | 正式typed authoring API适配 |
 
 ## 修改示例

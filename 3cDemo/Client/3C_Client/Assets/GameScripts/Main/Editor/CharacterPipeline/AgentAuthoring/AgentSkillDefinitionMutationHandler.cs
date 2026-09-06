@@ -47,11 +47,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                 return false;
             }
             bool valid = true;
-            if (!session.Index.TryGetGraph(definition.entryGraphAuthoringId, out BaseTree graph))
-            {
-                session.Report.Error(command.Path + ".entryGraphAuthoringId", "skill_entry_graph_not_found", $"Skill入口Graph无法解析：{definition.entryGraphAuthoringId}");
+            if (!session.TryResolveGraph(command.EntryGraph, command.Path + ".entryGraphAuthoringId", out BaseTree graph))
                 valid = false;
-            }
             if (!session.Resolver.TryResolveActionProfile(definition.actionProfileId, out ActionProfile _))
             {
                 session.Report.Error(command.Path + ".actionProfileId", "skill_action_profile_not_found", $"ActionProfile无法解析：{definition.actionProfileId}");
@@ -71,8 +68,11 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
             {
                 if (dependency == null || string.IsNullOrWhiteSpace(dependency.subgraphIdentity))
                     continue;
-                if (dependency.subgraphIdentity.StartsWith("local:", StringComparison.Ordinal) ||
-                    !session.Index.TryGetGraph(dependency.subgraphIdentity, out _))
+                bool resolved = dependency.subgraphIdentity.StartsWith("local:", StringComparison.Ordinal)
+                    ? session.Plan.Commands.OfType<AgentEnsureGraphMutation>().Any(value =>
+                        string.Equals(value.Id, dependency.subgraphIdentity, StringComparison.Ordinal))
+                    : session.Index.TryGetGraph(dependency.subgraphIdentity, out _);
+                if (!resolved)
                 {
                     session.Report.Error(
                         command.Path + ".subgraphDependencies",
@@ -80,6 +80,8 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                         $"Skill子图依赖无法解析：{dependency.subgraphIdentity}");
                     valid = false;
                 }
+                if (!ValidateCallSiteIdentity(session, dependency.callSiteIdentity, command.Path + ".subgraphDependencies"))
+                    valid = false;
             }
             int matches = session.Definition.SkillDefinitions.Count(value =>
                 value != null && string.Equals(value.SkillId, definition.skillId, StringComparison.Ordinal));
@@ -131,9 +133,12 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                     new AgentAssetReference(definition.actionContext, definition.actionContextAssetPath, definition.actionContextAssetGuid),
                     out ActionContextSlot actionContext))
                 throw new InvalidOperationException($"SkillDefinition '{definition.skillId}' assets changed after preflight.");
+            if (!session.TryResolveGraph(command.EntryGraph, command.Path + ".entryGraphAuthoringId", out BaseTree entryGraph) ||
+                entryGraph == null)
+                return;
             target.ConfigureAuthoring(
                 skillId,
-                definition.entryGraphAuthoringId,
+                entryGraph.GraphAuthoringId,
                 actionProfile,
                 actionContext,
                 definition.sourceInputRequestId,
@@ -145,12 +150,12 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                     .Select(value => value == null
                         ? null
                         : new CharacterSkillSubgraphDependencyConfiguration(
-                            value.subgraphIdentity,
-                            value.callSiteIdentity)),
+                            ResolveStableGraphId(session, value.subgraphIdentity, command.Path + ".subgraphDependencies"),
+                            session.ResolveStableCallSiteIdentity(value.callSiteIdentity, command.Path + ".subgraphDependencies"))),
                 (definition.allowedFollowUpSkillIds ?? new List<string>())
                     .Select(value => ResolveStableSkillId(session, value)));
             session.Definition.SetSkillDefinitions(values.ToArray());
-            session.AddAppliedAuthoring(command, session.Definition, target, skillId, definition.entryGraphAuthoringId);
+            session.AddAppliedAuthoring(command, session.Definition, target, skillId, entryGraph.GraphAuthoringId);
         }
 
         static void ApplyDelete(AgentMutationSession session, AgentDeleteSkillDefinitionMutation command)
@@ -204,6 +209,46 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                 stable = candidate + "-" + suffix + "-" + collision.ToString(System.Globalization.CultureInfo.InvariantCulture);
             }
             return stable;
+        }
+
+        static string ResolveStableGraphId(AgentMutationSession session, string identity, string path)
+        {
+            if (string.IsNullOrEmpty(identity) || !identity.StartsWith("local:", StringComparison.Ordinal))
+                return identity;
+            AgentGraphTargetReference reference = new AgentGraphTargetReference(
+                new AgentAuthoringReference(string.Empty, AgentPlannedIdentityReference.Parse(identity)));
+            if (!session.TryResolveGraph(reference, path, out BaseTree graph) || graph == null)
+                throw new InvalidOperationException($"Graph local identity无法解析：{identity}");
+            return graph.GraphAuthoringId;
+        }
+
+        static bool ValidateCallSiteIdentity(AgentMutationSession session, string identity, string path)
+        {
+            int marker = identity?.IndexOf("/node:", StringComparison.Ordinal) ?? -1;
+            int nodeStart = marker < 0 ? -1 : marker + "/node:".Length;
+            int nodeEnd = nodeStart < 0 ? -1 : identity.IndexOf('/', nodeStart);
+            if (marker < 0 || nodeEnd < 0)
+                return true;
+            string graphId = identity.Substring(0, marker);
+            string nodeId = identity.Substring(nodeStart, nodeEnd - nodeStart);
+            string nodeBaseId = nodeId;
+            int roleSeparator = nodeId.LastIndexOf('#');
+            if (roleSeparator > "local:".Length)
+                nodeBaseId = nodeId.Substring(0, roleSeparator);
+            bool graphValid = !graphId.StartsWith("local:", StringComparison.Ordinal) ||
+                session.Plan.Commands.Any(value => value.Id == graphId &&
+                    (value.OutputKind == AgentMutationOutputKind.Graph ||
+                     value.OutputKind == AgentMutationOutputKind.State ||
+                     value.OutputKind == AgentMutationOutputKind.StateMachine));
+            bool nodeValid = !nodeBaseId.StartsWith("local:", StringComparison.Ordinal) ||
+                session.Plan.Commands.Any(value => value.Id == nodeBaseId &&
+                    (value.OutputKind == AgentMutationOutputKind.Node ||
+                     value.OutputKind == AgentMutationOutputKind.State ||
+                     value.OutputKind == AgentMutationOutputKind.StateMachine));
+            if (graphValid && nodeValid)
+                return true;
+            session.Report.Error(path, "skill_call_site_local_identity_missing", $"Skill call site使用了未计划的local identity：{identity}");
+            return false;
         }
     }
 }

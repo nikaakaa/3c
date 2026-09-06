@@ -824,6 +824,17 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
         public AgentMutationKind kind;
         public string graphAuthoringId;
         public string graphPlannedIdentity;
+        public string graphKind;
+        public string graphOwnership;
+        public string graphReferenceKey;
+        public string graphReferenceSharedAssetPath;
+        public string graphOwnerElementAuthoringId;
+        public string graphOwnerElementPlannedIdentity;
+        public string graphReferenceGraphAuthoringId;
+        public string graphReferenceGraphPlannedIdentity;
+        public string entryGraphPlannedIdentity;
+        public List<AgentSnapshotGraphParameterBinding> graphReferenceInputBindings = new List<AgentSnapshotGraphParameterBinding>();
+        public List<AgentSnapshotGraphParameterBinding> graphReferenceOutputBindings = new List<AgentSnapshotGraphParameterBinding>();
         public string targetGraphAuthoringId;
         public string targetGraphPlannedIdentity;
         public string stateMachineGraphAuthoringId;

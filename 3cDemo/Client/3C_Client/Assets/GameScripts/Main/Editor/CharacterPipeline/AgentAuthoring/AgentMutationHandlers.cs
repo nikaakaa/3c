@@ -93,6 +93,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                 AgentMutationKind.EnsureAIActionRequest);
             Register(new AgentBTConditionRuleMutationHandler(conditionBuilder), AgentMutationKind.EnsureBTConditionRule);
             Register(new AgentGraphNodeMutationHandler(emitters), AgentMutationKind.EnsureGraphNode, AgentMutationKind.DeleteGraphNode);
+            Register(new AgentGraphReferenceMutationHandler(), AgentMutationKind.EnsureGraph, AgentMutationKind.ConfigureGraphReference);
             Register(new AgentGraphLinkMutationHandler(), AgentMutationKind.DeleteFlowEdge, AgentMutationKind.DeletePropertyEdge, AgentMutationKind.LinkFlow, AgentMutationKind.LinkProperty);
         }
 

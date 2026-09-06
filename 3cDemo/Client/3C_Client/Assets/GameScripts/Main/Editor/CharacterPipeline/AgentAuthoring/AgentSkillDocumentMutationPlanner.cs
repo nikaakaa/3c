@@ -24,7 +24,10 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                 Add(mutations, $"document.editable.skills[{Escape(skill.skillId)}]", AgentMutationKind.SetSkillDefinition, operation =>
                 {
                     operation.skillId = skill.skillId;
-                    operation.entryGraphAuthoringId = skill.entryGraphAuthoringId;
+                    if (IsLocal(skill.entryGraphAuthoringId))
+                        operation.entryGraphPlannedIdentity = skill.entryGraphAuthoringId;
+                    else
+                        operation.entryGraphAuthoringId = skill.entryGraphAuthoringId;
                     operation.actionProfile = skill.actionProfileId;
                     operation.actionProfileAssetPath = skill.actionProfileAssetPath;
                     operation.actionProfileAssetGuid = skill.actionProfileAssetGuid;
@@ -87,5 +90,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
         {
             return value?.Replace("\\", "\\\\").Replace("]", "\\]") ?? string.Empty;
         }
+
+        static bool IsLocal(string value) => value != null && value.StartsWith("local:", StringComparison.Ordinal);
     }
 }

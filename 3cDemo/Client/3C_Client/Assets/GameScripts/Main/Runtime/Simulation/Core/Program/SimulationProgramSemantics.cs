@@ -1469,6 +1469,9 @@ namespace ThirdPersonSimulation
                     case ProgramSourceTargetKind.StateSlot:
                         RequireTarget(entry.TargetIndex, stateSlots, "state slot");
                         break;
+                    case ProgramSourceTargetKind.ControlState:
+                        RequireTarget(entry.TargetIndex, stateSlots, "control state");
+                        break;
                 }
             }
 

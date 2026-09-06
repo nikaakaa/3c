@@ -125,6 +125,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
         }
 
         public CharacterSimulationCompileReport Report => m_Report;
+        public SimulationProgramRootDescriptor Root => m_Root;
 
         public bool TryGetCatalogEntry(ProgramCatalogEntryKind kind, string identity, out int index)
         {

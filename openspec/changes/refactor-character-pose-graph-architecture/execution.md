@@ -32,6 +32,20 @@
 - 直接Unity batchmode也未形成当前worktree编译结果，只记录Licensing Client validation/access token失败。日志：`C:/Users/Lenovo/.codex/visualizations/pose-source-compile-20260906.log`。
 - 剩余项：未执行Corin迁移、正式Build或Projection重建；21.1的Foot事件、Producer/Camera/Cue、Blend/State、Motion Matching、Equipment和Revision Compiler尚未分域。外部未提交Runtime改动和Unity生成meta继续保留，不纳入本步。
 
+## 21.1 Animation Blend Compiler分域小步（POSE-EXEC-20260906-03）
+
+状态：提交`494f80280`、`b82e472b9`和`78158c722`完成21.1的Animation Blend子步；21.1整体仍未完成。
+
+- 输入：现有Pose Graph、Animation Blend Policy、Pose StateMachine Transition、Direct Inertialization Policy、Motion Matching Jump Blend Policy、Rig和Semantic Producer entries。
+- 处理：新增`CharacterPresentationAnimationBlendCompiler` Module，整体承接Blend curve/profile catalog、State Transition与Inertialization规则收集、Blend authoring selection拓扑、AnimationSlot/Source producer endpoint解析、BlendStack transition payload与Transition Routing plan生成。
+- 输出：Module提供typed `Compilation`，包含Curve/Profile catalog和稳定index字典；Projection总Compiler只调用`CompileCatalog`与`CompileNodes`，把结果传给既有Blend Space、Pose Source和Pose Program组装链。
+- 资源/状态归属：该Module只处理Editor编译期canonical payload和诊断，不创建Runtime BlendStack、Playable、Writer、第二Projection或fallback；现有Blend曲线、Profile、State Transition、Inertialization和Motion Matching语义保持原实现。
+- 删除旧路径：总Compiler中的Animation Blend catalog类型、Blend authoring selection拓扑、Transition Routing和Node payload编译实现已删除，没有保留转发类或双写路径。
+- 修改文件：`C:/Users/Lenovo/.codex/worktrees/a323/3C/3cDemo/Client/3C_Client/Assets/GameScripts/Main/Editor/CharacterSimulation/Compilation/Presentation/CharacterPresentationProjectionCompiler.cs`、`C:/Users/Lenovo/.codex/worktrees/a323/3C/3cDemo/Client/3C_Client/Assets/GameScripts/Main/Editor/CharacterSimulation/Compilation/Presentation/CharacterPresentationAnimationBlendCompiler.cs`及其`.meta`。
+- 静态证据：`git diff --check`通过；三个中文小提交只包含上述Pose Editor文件，外部Runtime未提交现场未暂存。
+- Compile证据：本小步未获得当前worktree的有效Unity编译结果；既有RunHost编译记录错误指向其他项目，直接batchmode受Licensing阻断。源码移动未执行Corin迁移、正式Build或产物重建，不能把该小步描述为整体21.1完成。
+- 剩余项：21.1仍剩Producer/Camera/Cue、Foot事件、Motion Matching、Equipment和Projection Revision分域；21.2 Family Binding、21.3 Validator、21.4 Runtime根、21.5–21.9继续未完成。
+
 以下为原有历史实施记录。
 
 ## 固定接入

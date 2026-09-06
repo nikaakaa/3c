@@ -480,7 +480,6 @@ namespace ThirdPersonSimulation.Fixed
 
         public void EmitPresentation(TimelinePresentationOutput<FixedScalar> output)
         {
-            SimulationOperation operation = Access.Operation(output.Operation);
             PresentationCommandKind kind = output.Kind switch
             {
                 TimelinePresentationOutputKind.SelectProducer => PresentationCommandKind.SelectProducer,
@@ -489,9 +488,10 @@ namespace ThirdPersonSimulation.Fixed
                 TimelinePresentationOutputKind.ReleaseProducer => PresentationCommandKind.ReleaseProducer,
                 TimelinePresentationOutputKind.Camera => PresentationCommandKind.Camera,
                 TimelinePresentationOutputKind.Cue => PresentationCommandKind.Cue,
+                TimelinePresentationOutputKind.ForceProducer => PresentationCommandKind.ForceProducer,
                 _ => throw new ArgumentOutOfRangeException(nameof(output))
             };
-            SimulationEventHeader header = m_Presentation.Next(operation);
+            SimulationEventHeader header = m_Presentation.Next(output.Source, output.ProducerGeneration);
             m_Presentation.Add(new PresentationCommand(
                 header,
                 kind,
@@ -510,16 +510,19 @@ namespace ThirdPersonSimulation.Fixed
             ProgramCatalogEntry definition = RequireClipCatalog(operation);
             string cueId = CatalogString(definition, ProgramCatalogFieldId.CueId);
             string cueType = CatalogString(definition, ProgramCatalogFieldId.CueType);
-            SimulationEventHeader factHeader = m_Facts.Next(operation);
+            SimulationEventHeader factHeader = m_Facts.Next(
+                output.Source,
+                output.ProducerGeneration);
             m_Facts.Add(new GameplayFact(factHeader, new GameplayCueFact(cueId, cueType, definition.Identity, 0)));
             EmitPresentation(new TimelinePresentationOutput<FixedScalar>(
                 output.Operation,
+                output.Source,
                 TimelinePresentationOutputKind.Cue,
                 output.SampleTime,
                 FixedScalar.One,
-                0,
+                output.ProducerGeneration,
                 output.Cycle,
-                0,
+                output.SourceActionInstanceId,
                 FixedScalar.Zero));
         }
 

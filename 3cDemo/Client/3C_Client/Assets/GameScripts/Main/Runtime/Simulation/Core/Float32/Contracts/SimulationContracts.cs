@@ -580,7 +580,8 @@ namespace ThirdPersonSimulation
         Camera = 5,
         Cue = 6,
         Vfx = 7,
-        Ui = 8
+        Ui = 8,
+        ForceProducer = 9
     }
 
     public readonly struct PresentationCommand
@@ -605,8 +606,12 @@ namespace ThirdPersonSimulation
             Cycle = cycle;
             SourceActionInstanceId = sourceActionInstanceId;
             VisualTimeScale = visualTimeScale;
-            if (IsPlaybackCommand(kind) && producerGeneration == 0)
+            if (RequiresProducerGeneration(kind) && producerGeneration == 0)
                 throw new ArgumentOutOfRangeException(nameof(producerGeneration));
+            if (RequiresProducerGeneration(kind) && producerGeneration != header.Activation.Generation)
+                throw new ArgumentException("Presentation producer generation does not match the event activation.", nameof(producerGeneration));
+            if (IsPlaybackCommand(kind) && sourceActionInstanceId == 0)
+                throw new ArgumentOutOfRangeException(nameof(sourceActionInstanceId));
             if (cycle < 0)
                 throw new ArgumentOutOfRangeException(nameof(cycle));
             if (IsPlaybackSample(kind) && visualTimeScale < Float32Scalar.Zero)
@@ -629,6 +634,12 @@ namespace ThirdPersonSimulation
                    kind == PresentationCommandKind.CompleteProducer ||
                    kind == PresentationCommandKind.ReleaseProducer;
         }
+
+        static bool RequiresProducerGeneration(PresentationCommandKind kind) =>
+            IsPlaybackCommand(kind) ||
+            kind == PresentationCommandKind.Camera ||
+            kind == PresentationCommandKind.Cue ||
+            kind == PresentationCommandKind.ForceProducer;
 
         static bool IsPlaybackSample(PresentationCommandKind kind) =>
             kind == PresentationCommandKind.SampleProducer;

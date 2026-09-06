@@ -33,12 +33,14 @@ namespace ThirdPersonSimulation
                 SimulationOperationCode.CameraTarget => RequireScalar(operation, OperationNamedConstant.Weight),
                 _ => throw new InvalidOperationException($"Camera operation '{operation.Code}' is unsupported.")
             };
+            SimulationEventHeader header = m_Presentation.Next(operation);
             m_Presentation.Add(new PresentationCommand(
-                m_Presentation.Next(operation),
+                header,
                 PresentationCommandKind.Camera,
                 producer.Identity,
                 Float32Scalar.Zero,
-                weight));
+                weight,
+                header.Activation.Generation));
         }
 
         Float32Scalar RequireScalar(SimulationOperation operation, OperationNamedConstant field)

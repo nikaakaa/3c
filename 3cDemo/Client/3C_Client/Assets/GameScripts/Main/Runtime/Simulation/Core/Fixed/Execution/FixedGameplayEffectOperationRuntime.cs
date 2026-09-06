@@ -270,7 +270,8 @@ namespace ThirdPersonSimulation.Fixed
                                 PresentationCommandKind.Cue,
                                 producer.Identity,
                                 FixedScalar.Zero,
-                                FixedScalar.One));
+                                FixedScalar.One,
+                                presentationHeader.Activation.Generation));
                             break;
                         }
                         case PortableEffectFailureRuntimeChange failure:

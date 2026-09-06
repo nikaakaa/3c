@@ -63,7 +63,8 @@ namespace ThirdPersonSimulation
         CompleteProducer = 3,
         ReleaseProducer = 4,
         Camera = 5,
-        Cue = 6
+        Cue = 6,
+        ForceProducer = 7
     }
 
     internal enum TimelineTraceSeverity : byte
@@ -325,6 +326,7 @@ namespace ThirdPersonSimulation
     {
         public TimelinePresentationOutput(
             OperationHandle operation,
+            SimulationExecutionSource source,
             TimelinePresentationOutputKind kind,
             TTime sampleTime,
             TTime weight,
@@ -335,11 +337,14 @@ namespace ThirdPersonSimulation
         {
             if (!operation.IsValid)
                 throw new ArgumentException("Timeline presentation output requires a valid operation.", nameof(operation));
+            if (!source.IsValid)
+                throw new ArgumentException("Timeline presentation output source is invalid.", nameof(source));
             if (cycle < 0)
                 throw new ArgumentOutOfRangeException(nameof(cycle));
             if (RequiresGeneration(kind) && producerGeneration == 0)
                 throw new ArgumentOutOfRangeException(nameof(producerGeneration));
             Operation = operation;
+            Source = source;
             Kind = kind;
             SampleTime = sampleTime;
             Weight = weight;
@@ -350,6 +355,7 @@ namespace ThirdPersonSimulation
         }
 
         public OperationHandle Operation { get; }
+        public SimulationExecutionSource Source { get; }
         public TimelinePresentationOutputKind Kind { get; }
         public TTime SampleTime { get; }
         public TTime Weight { get; }
@@ -362,26 +368,45 @@ namespace ThirdPersonSimulation
             kind == TimelinePresentationOutputKind.SelectProducer ||
             kind == TimelinePresentationOutputKind.SampleProducer ||
             kind == TimelinePresentationOutputKind.CompleteProducer ||
-            kind == TimelinePresentationOutputKind.ReleaseProducer;
+            kind == TimelinePresentationOutputKind.ReleaseProducer ||
+            kind == TimelinePresentationOutputKind.Camera ||
+            kind == TimelinePresentationOutputKind.Cue ||
+            kind == TimelinePresentationOutputKind.ForceProducer;
     }
 
     internal readonly struct TimelineCueOutput<TTime>
         where TTime : struct
     {
-        public TimelineCueOutput(OperationHandle operation, TTime sampleTime, int cycle)
+        public TimelineCueOutput(
+            OperationHandle operation,
+            SimulationExecutionSource source,
+            TTime sampleTime,
+            int cycle,
+            ulong producerGeneration,
+            ulong sourceActionInstanceId)
         {
             if (!operation.IsValid)
                 throw new ArgumentException("Timeline cue output requires a valid operation.", nameof(operation));
+            if (!source.IsValid)
+                throw new ArgumentException("Timeline cue output source is invalid.", nameof(source));
+            if (producerGeneration == 0)
+                throw new ArgumentOutOfRangeException(nameof(producerGeneration));
             if (cycle < 0)
                 throw new ArgumentOutOfRangeException(nameof(cycle));
             Operation = operation;
+            Source = source;
             SampleTime = sampleTime;
             Cycle = cycle;
+            ProducerGeneration = producerGeneration;
+            SourceActionInstanceId = sourceActionInstanceId;
         }
 
         public OperationHandle Operation { get; }
+        public SimulationExecutionSource Source { get; }
         public TTime SampleTime { get; }
         public int Cycle { get; }
+        public ulong ProducerGeneration { get; }
+        public ulong SourceActionInstanceId { get; }
     }
 
     internal readonly struct TimelineTraceOutput

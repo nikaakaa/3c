@@ -192,7 +192,7 @@ namespace ThirdPersonSimulation
                 if (context.Cause == OperationStopCause.ActionContextEnded && m_Target.DiagnosticsEnabled)
                     Trace(timeline, "timeline_action_context_ended", TimelineTraceSeverity.Information, m_Target.Operation(timeline).Text0);
                 EmitTimelineAnimationTerminal(timeline, TimelinePresentationOutputKind.ReleaseProducer, m_Target.Zero);
-                EmitTimelineCameraTerminal(timeline, m_Target.Zero);
+                EmitTimelineCameraTerminal(timeline, m_Target.Zero, TimelinePresentationOutputKind.Camera);
             }
             OperationStopStatus result = ContinueTimelineTreeStops(cursor, timeline, context);
             if (result != OperationStopStatus.Completed)
@@ -216,7 +216,7 @@ namespace ThirdPersonSimulation
                 playback != TimelinePlaybackStatus.Stopping)
             {
                 EmitTimelineAnimationTerminal(timeline, TimelinePresentationOutputKind.ReleaseProducer, m_Target.Zero);
-                EmitTimelineCameraTerminal(timeline, m_Target.Zero);
+                EmitTimelineCameraTerminal(timeline, m_Target.Zero, TimelinePresentationOutputKind.ForceProducer);
             }
             IReadOnlyList<ProgramControlFlowEdge> clips = m_Target.Edges(timeline, ProgramControlFlowKind.Child);
             for (int i = 0; i < clips.Count; i++)
@@ -234,7 +234,7 @@ namespace ThirdPersonSimulation
         {
             m_State.WritePlayback(timeline, TimelinePlaybackStatus.Completing);
             EmitTimelineAnimationTerminal(timeline, TimelinePresentationOutputKind.CompleteProducer, time);
-            EmitTimelineCameraTerminal(timeline, time);
+            EmitTimelineCameraTerminal(timeline, time, TimelinePresentationOutputKind.Camera);
             return ToOperationResult(ContinueTimelineCompletion(cursor, timeline));
         }
 
@@ -370,7 +370,6 @@ namespace ThirdPersonSimulation
             IReadOnlyList<OperationHandle> representatives = m_Target.AnimationProducerRepresentatives(timeline);
             if (representatives.Count == 0)
                 return;
-            ulong generation = m_Target.ReadActivationGeneration(timeline);
             TimelineActionContextIdentity actionContext = m_State.ReadRetainedActionContext(timeline);
             if (!actionContext.IsValid)
                 throw new InvalidOperationException(
@@ -384,21 +383,21 @@ namespace ThirdPersonSimulation
                 if (select)
                 {
                     EmitPresentation(
+                        timeline,
                         representative,
                         TimelinePresentationOutputKind.SelectProducer,
                         segment.Current,
                         m_Target.One,
-                        generation,
                         segment.Cycle,
                         actionContext.InstanceId,
                         visualTimeScale);
                 }
                 EmitPresentation(
+                    timeline,
                     representative,
                     TimelinePresentationOutputKind.SampleProducer,
                     segment.Current,
                     m_Target.One,
-                    generation,
                     segment.Cycle,
                     actionContext.InstanceId,
                     visualTimeScale);
@@ -591,11 +590,19 @@ namespace ThirdPersonSimulation
             TTime start = m_Target.ClipTime(clip, TimelineClipTimePoint.Start);
             if (!Crosses(segment, start) && !(segment.StartsCycle && Equal(start, m_Target.Zero)))
                 return;
-            m_Target.EmitCue(new TimelineCueOutput<TTime>(clip, start, segment.Cycle));
+            OperationHandle timeline = RequireTimelineOwner(clip);
+            m_Target.EmitCue(new TimelineCueOutput<TTime>(
+                clip,
+                PresentationSource(timeline),
+                start,
+                segment.Cycle,
+                RequirePresentationGeneration(timeline),
+                PresentationActionInstanceId(timeline)));
         }
 
         void SampleCameraContinuous(OperationHandle clip, TimelineSegment<TTime> segment)
         {
+            OperationHandle timeline = RequireTimelineOwner(clip);
             TTime start = m_Target.ClipTime(clip, TimelineClipTimePoint.Start);
             TTime end = m_Target.ClipTime(clip, TimelineClipTimePoint.End);
             if (Less(segment.Current, start) || Greater(segment.Previous, end))
@@ -610,21 +617,30 @@ namespace ThirdPersonSimulation
                     m_Target.Clamp(m_Target.Divide(self, duration), m_Target.Zero, m_Target.One),
                     self,
                     m_Target.Max(m_Target.Zero, m_Target.Subtract(end, sample)));
-            EmitPresentation(clip, TimelinePresentationOutputKind.Camera, sample, weight, 0, segment.Cycle);
+            EmitPresentation(
+                timeline,
+                clip,
+                TimelinePresentationOutputKind.Camera,
+                sample,
+                weight,
+                segment.Cycle,
+                PresentationActionInstanceId(timeline));
         }
 
         void SampleCameraCue(OperationHandle clip, TimelineSegment<TTime> segment)
         {
+            OperationHandle timeline = RequireTimelineOwner(clip);
             TTime start = m_Target.ClipTime(clip, TimelineClipTimePoint.Start);
             if (!Crosses(segment, start) && !(segment.StartsCycle && Equal(start, m_Target.Zero)))
                 return;
             EmitPresentation(
+                timeline,
                 clip,
                 TimelinePresentationOutputKind.Camera,
                 start,
                 m_Target.ClipScalar(clip, TimelineClipScalarValue.Intensity),
-                0,
-                segment.Cycle);
+                segment.Cycle,
+                PresentationActionInstanceId(timeline));
         }
 
         void EmitTimelineAnimationTerminal(
@@ -636,25 +652,28 @@ namespace ThirdPersonSimulation
             if (representatives.Count == 0)
                 return;
             int cycle = m_State.TryReadCycle(timeline, out int value) ? value : 0;
-            ulong generation = m_Target.ReadActivationGeneration(timeline);
             TimelineActionContextIdentity actionContext = m_State.ReadRetainedActionContext(timeline);
             if (!actionContext.IsValid)
                 throw new InvalidOperationException(
                     $"Animation Timeline '{m_Target.SourcePath(timeline)}' has no retained Action context.");
             for (int i = 0; i < representatives.Count; i++)
                 EmitPresentation(
+                    timeline,
                     representatives[i],
                     kind,
                     time,
                     m_Target.Zero,
-                    generation,
                     cycle,
                     actionContext.InstanceId,
                     m_Target.Zero);
         }
 
-        void EmitTimelineCameraTerminal(OperationHandle timeline, TTime time)
+        void EmitTimelineCameraTerminal(
+            OperationHandle timeline,
+            TTime time,
+            TimelinePresentationOutputKind kind)
         {
+            ulong sourceActionInstanceId = PresentationActionInstanceId(timeline);
             IReadOnlyList<ProgramControlFlowEdge> clips = m_Target.Edges(timeline, ProgramControlFlowKind.Child);
             for (int i = 0; i < clips.Count; i++)
             {
@@ -664,30 +683,32 @@ namespace ThirdPersonSimulation
                     !m_Target.IsTrackMuted(clip.Handle))
                 {
                     EmitPresentation(
+                        timeline,
                         clip.Handle,
-                        TimelinePresentationOutputKind.Camera,
+                        kind,
                         time,
                         m_Target.Zero,
                         0,
-                        0,
-                        0,
+                        sourceActionInstanceId,
                         m_Target.Zero);
                 }
             }
         }
 
         void EmitPresentation(
+            OperationHandle sourceOperation,
             OperationHandle operation,
             TimelinePresentationOutputKind kind,
             TTime time,
             TTime weight,
-            ulong generation,
             int cycle,
             ulong sourceActionInstanceId = 0,
             TTime visualTimeScale = default)
         {
+            ulong generation = RequirePresentationGeneration(sourceOperation);
             m_Target.EmitPresentation(new TimelinePresentationOutput<TTime>(
                 operation,
+                PresentationSource(sourceOperation),
                 kind,
                 time,
                 weight,
@@ -695,6 +716,24 @@ namespace ThirdPersonSimulation
                 cycle,
                 sourceActionInstanceId,
                 visualTimeScale));
+        }
+
+        SimulationExecutionSource PresentationSource(OperationHandle timeline) =>
+            SimulationExecutionSource.FromSkillOperation(timeline, m_Target.SourcePath(timeline));
+
+        ulong RequirePresentationGeneration(OperationHandle timeline)
+        {
+            ulong generation = m_Target.ReadActivationGeneration(timeline);
+            if (generation == 0)
+                throw new InvalidOperationException(
+                    $"Timeline '{m_Target.SourcePath(timeline)}' has no active activation generation.");
+            return generation;
+        }
+
+        ulong PresentationActionInstanceId(OperationHandle timeline)
+        {
+            TimelineActionContextIdentity actionContext = m_State.ReadRetainedActionContext(timeline);
+            return actionContext.IsValid ? actionContext.InstanceId : 0;
         }
 
         bool CaptureTimelineActionContext(OperationHandle timeline)

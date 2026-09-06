@@ -296,7 +296,13 @@ namespace ThirdPersonSimulation
             int generationSlot = m_Frame.Layout.FindOperationStateSlot(
                 operation.Handle,
                 ProgramStateSemantic.RunnableActivationGeneration);
-            ulong generation = generationSlot < 0 ? 1UL : m_Frame.ReadState(generationSlot).UInt64;
+            if (generationSlot < 0)
+                throw new InvalidOperationException(
+                    $"Operation '{SourcePath(operation)}' has no activation generation state.");
+            ulong generation = m_Frame.ReadState(generationSlot).UInt64;
+            if (generation == 0)
+                throw new InvalidOperationException(
+                    $"Operation '{SourcePath(operation)}' has no active activation generation.");
             return Next(
                 SimulationExecutionSource.FromSkillOperation(operation.Handle, SourcePath(operation)),
                 generation,
@@ -310,7 +316,7 @@ namespace ThirdPersonSimulation
                 throw new OverflowException("Simulation event sequence overflowed.");
             m_State.Set(m_SequenceSlot, CharacterStateValue.FromUInt64(sequence));
             if (generation == 0)
-                generation = 1;
+                throw new ArgumentOutOfRangeException(nameof(generation));
             var activation = new ActivationId(source, generation);
             var eventId = EventId.Create(
                 m_Frame.Program.ProgramHash,
@@ -362,7 +368,8 @@ namespace ThirdPersonSimulation
             m_Sequence = sequence;
         }
 
-        public SimulationEventHeader Next(SimulationOperation operation) => m_Sequence.Next(operation, "Presentation");
+        public SimulationEventHeader Next(SimulationOperation operation) =>
+            m_Sequence.Next(operation, "Presentation");
         public SimulationEventHeader Next(SimulationExecutionSource source, ulong generation = 1) => m_Sequence.Next(source, generation, "Presentation");
         public void Add(PresentationCommand value) => m_Frame.AddPresentation(value);
     }

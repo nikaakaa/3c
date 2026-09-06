@@ -28,10 +28,9 @@ namespace ThirdPersonCharacter.Pipeline.Diagnostics
             }
             for (int i = 0; i < program.StateSlots.Count; i++)
             {
-                if (!m_SourceMap.TryGetProgramTarget(
-                        new RuntimeSourceTarget(RuntimeSourceTargetKind.StateSlot, i),
-                        out _))
-                    throw new InvalidOperationException($"Program state slot '{i}' is absent from the Debug Source Map.");
+                RuntimeSourceTarget target = CharacterRuntimeDebugTargetResolver.ForStateSlot(program.StateSlots[i]);
+                if (!m_SourceMap.TryGetProgramTarget(target, out _))
+                    throw new InvalidOperationException($"Program state target '{target}' for slot '{i}' is absent from the Debug Source Map.");
             }
         }
 

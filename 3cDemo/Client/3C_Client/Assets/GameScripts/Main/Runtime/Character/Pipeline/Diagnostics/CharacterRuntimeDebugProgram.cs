@@ -6,6 +6,19 @@ using ThirdPersonSimulation;
 
 namespace ThirdPersonCharacter.Pipeline.Diagnostics
 {
+    public static class CharacterRuntimeDebugTargetResolver
+    {
+        public static RuntimeSourceTarget ForStateSlot(ProgramStateSlot slot)
+        {
+            if (slot == null)
+                throw new ArgumentNullException(nameof(slot));
+            RuntimeSourceTargetKind kind = slot.OwnerKind == ProgramStateOwnerKind.Control
+                ? RuntimeSourceTargetKind.ControlState
+                : RuntimeSourceTargetKind.StateSlot;
+            return new RuntimeSourceTarget(kind, slot.Index);
+        }
+    }
+
     public sealed class CharacterRuntimeDebugProgram : IRuntimeDebugProgram
     {
         public CharacterRuntimeDebugProgram(RuntimeProgramRevision revision, DebugSourceMap sourceMap)

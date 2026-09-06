@@ -88,6 +88,14 @@
 - 21.7当前实现边界：`CharacterPoseCanvasView.cs`为877行自建GraphView，负责Node/Port/Edge投影和交互事件；它不提供通用Flow执行、反射调用、自动类型转换或第二Graph数据源。选择保留它是因为现有Pose专用端口、StateMachine页面和typed Mutation已经接通；代价是节点渲染、端口交互、GraphView版本变化和交互回归由项目自行维护。未宣称接入ParadoxNotion现成Graph Editor。
 - 21.5当前实现边界：`CharacterPoseAuthoringBottomDock`仍持有`CharacterAnimationPreviewFixtureSession`、播放/暂停/单步/seek和Edit Mode Preview Scene；`AnimationPreviewRuntime`仍存在于`CharacterPipelineAuthoringPreviewController`和相关查询Fixture。它不是正式Scene Play Session，因此不删除这些路径，也不建立第二Preview入口，等待共享Scene Play change的唯一协调器和明确提交。
 
+## Center当前worktree编译闭环（POSE-EXEC-20260906-07）
+
+状态：使用正式 Center change `faadf46ee02e41b99c38eca310e7f923`和正确 worktree `C:/Users/Lenovo/.codex/worktrees/a323/3C`连续执行 compile。Run `f96920fe5295479a8e462e45260a266a`首次实际进入当前工程并暴露`RuntimeDiagnosticsContext`引用；提交`912eddd9e`修复后，Run `a8fc23a8a28f42ad976803473ee292c0`暴露Canvas migration state、Legacy字段访问级别和主角色注册漏传ActorId；提交`66162de95`、`ed60d8f98`后，Run `1748ac596c604b4a8f7b217122932b1a`只剩Fixed注册漏传ActorId；提交`ccdf754b1`后，Run `9c436bdc999b4877b958cc3f79970bf9`只剩并行DeterministicRollback注册与Performance Capture链错误；提交`7a17e03aa`修复Rollback注册后，最终Run `e9c992969065417db8feb5e667427f44`确认Pose/Presentation/Fixed/Rollback相关错误已消失。
+
+- 当前 Center 失败原因只剩`ThirdPersonPerformanceCaptureAgent.cs`引用缺失的并行性能API：`PerformanceCameraInputOverride`、`PrepareReplay`双参数重载、`FixedCharacterInputTraceMode.ReplayPaused`、`GameplayLabBootstrap.Current`和`FixedCharacterInputTraceModule.ResumeReplay`。这些属于性能链现有接口不一致，不属于本Pose改动；没有新增fallback、兼容入口或临时API。
+- 本次编译同时确认：`CharacterPresentationFrameCoordinator`、`CharacterPoseGraphProjectionValidator`、Canvas migration state、`CharacterSimulationActorRegistration`、Fixed和DeterministicRollback注册器均已进入编译，当前没有它们的错误。Center证据目录：`D:/Unity_Project_1/3C-Artifacts/3c-gameplay/Runs/e9c992969065417db8feb5e667427f44/`。
+- 结论：当前 worktree 的 Pose/Presentation 代码已通过“无本域编译错误”的边界，但整个 Unity Runtime/Performance 程序集仍不能宣称编译通过；未执行正式 Corin Build、Scene Play或E2E。
+
 以下为原有历史实施记录。
 
 ## 固定接入

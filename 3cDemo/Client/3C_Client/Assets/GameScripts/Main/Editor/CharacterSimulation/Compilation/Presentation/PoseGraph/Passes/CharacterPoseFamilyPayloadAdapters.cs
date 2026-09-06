@@ -199,6 +199,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
         public override CharacterPoseFamilyPayloadBindingResult Bind(
             CharacterPoseFamilyPayloadBindingRequest request)
         {
+            int boneMaskIndex = CompileMask(request);
             int index = request.Handler.Requires(
                     CharacterPoseNodeRuntimeRequirement.AnimationSlot)
                 ? CharacterPoseFamilyPayloadPlanPass.CompileAnimationSlot(
@@ -213,7 +214,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                 : -1;
             return new CharacterPoseFamilyPayloadBindingResult(
                 animationSlotIndex: index,
-                boneMaskIndex: CompileMask(request));
+                boneMaskIndex: boneMaskIndex);
         }
     }
 
@@ -250,6 +251,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
         public override CharacterPoseFamilyPayloadBindingResult Bind(
             CharacterPoseFamilyPayloadBindingRequest request)
         {
+            int boneMaskIndex = CompileMask(request);
             int additiveIndex = request.Handler.Requires(
                     CharacterPoseNodeRuntimeRequirement.Additive)
                 ? CharacterPoseFamilyPayloadPlanPass.CompileAdditiveReference(
@@ -259,7 +261,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                     request.State.AdditiveReferences)
                 : -1;
             return new CharacterPoseFamilyPayloadBindingResult(
-                boneMaskIndex: CompileMask(request),
+                boneMaskIndex: boneMaskIndex,
                 additiveReferenceIndex: additiveIndex);
         }
     }
@@ -275,6 +277,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
         public override CharacterPoseFamilyPayloadBindingResult Bind(
             CharacterPoseFamilyPayloadBindingRequest request)
         {
+            int boneMaskIndex = CompileMask(request);
             int modifyIndex = request.Handler.Requires(
                     CharacterPoseNodeRuntimeRequirement.ModifyBone)
                 ? CharacterPoseFamilyPayloadPlanPass.CompileModifyBone(
@@ -292,7 +295,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                     request.State)
                 : -1;
             return new CharacterPoseFamilyPayloadBindingResult(
-                boneMaskIndex: CompileMask(request),
+                boneMaskIndex: boneMaskIndex,
                 modifyBoneIndex: modifyIndex,
                 rootOrientationWarpIndex: rootOrientationWarpIndex);
         }
@@ -309,6 +312,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
         public override CharacterPoseFamilyPayloadBindingResult Bind(
             CharacterPoseFamilyPayloadBindingRequest request)
         {
+            int boneMaskIndex = CompileMask(request);
             int poseBoneIkGoalsIndex = request.Handler.Kind ==
                     CharacterPoseNodeKind.PoseBoneIKGoals
                 ? CharacterPoseFamilyPayloadPlanPass.CompilePoseBoneIkGoals(
@@ -326,7 +330,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                     request.State)
                 : -1;
             return new CharacterPoseFamilyPayloadBindingResult(
-                boneMaskIndex: CompileMask(request),
+                boneMaskIndex: boneMaskIndex,
                 poseBoneIkGoalsIndex: poseBoneIkGoalsIndex,
                 footPlacementIndex: footPlacementIndex);
         }
@@ -343,13 +347,14 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
         public override CharacterPoseFamilyPayloadBindingResult Bind(
             CharacterPoseFamilyPayloadBindingRequest request)
         {
+            int boneMaskIndex = CompileMask(request);
             int index = request.Handler.Kind == CharacterPoseNodeKind.FullBodyIK
                 ? CharacterPoseFamilyPayloadPlanPass.CompileFullBodyIk(
                     request.ScopedNodeId,
                     request.State)
                 : -1;
             return new CharacterPoseFamilyPayloadBindingResult(
-                boneMaskIndex: CompileMask(request),
+                boneMaskIndex: boneMaskIndex,
                 fullBodyIkIndex: index);
         }
     }

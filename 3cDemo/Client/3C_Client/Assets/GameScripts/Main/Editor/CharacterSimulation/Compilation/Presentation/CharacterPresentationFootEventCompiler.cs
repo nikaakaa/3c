@@ -492,7 +492,5 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             int result = value % modulus;
             return result < 0 ? result + modulus : result;
         }
-
     }
 }
-

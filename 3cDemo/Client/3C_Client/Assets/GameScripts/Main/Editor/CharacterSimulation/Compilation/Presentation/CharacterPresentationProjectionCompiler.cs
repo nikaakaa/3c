@@ -117,10 +117,12 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             errors.AddRange(sourceCompilation.Diagnostics);
             CharacterPresentationPoseSourceCompilationCatalog sourceCatalog =
                 sourceCompilation.Catalog;
-            MotionMatchingProjectionPayload motionMatching = CompileMotionMatchingPayload(
-                model.AnimationPresentationProfile,
-                sourceCatalog,
-                errors);
+            CharacterPresentationMotionMatchingCompilationResult motionMatchingCompilation =
+                CharacterPresentationMotionMatchingCompiler.Compile(
+                    model.AnimationPresentationProfile);
+            errors.AddRange(motionMatchingCompilation.Diagnostics);
+            MotionMatchingProjectionPayload motionMatching =
+                motionMatchingCompilation.Payload;
             string projectionRevision = ComputeProjectionRevision(
                 model.AnimationPresentationProfile,
                 model.Definition.EquipmentPresentationProfile,
@@ -1670,83 +1672,15 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             };
             AddProjectionAssetRevision(animationProfile, values);
             AddProjectionAssetRevision(equipmentPresentationProfile, values);
-            AddMotionMatchingRevision(motionMatching, values);
+            CharacterPresentationMotionMatchingCompiler.AppendRevisionValues(
+                motionMatching,
+                values);
             if (footAnalysisTokens != null)
             {
                 for (int i = 0; i < footAnalysisTokens.Count; i++)
                     values.Add(footAnalysisTokens[i]);
             }
             return StableHash.Compute(values.ToArray()).ToString();
-        }
-
-        static MotionMatchingProjectionPayload CompileMotionMatchingPayload(
-            CharacterAnimationPresentationProfile profile,
-            CharacterPresentationPoseSourceCompilationCatalog sourceCatalog,
-            List<string> errors)
-        {
-            if (!profile || sourceCatalog == null)
-                return null;
-            CharacterMotionMatchingBinding[] bindings = profile.PoseGraph.EnumerateGraphs()
-                .SelectMany(value => value.Nodes)
-                .Select(value => (value?.Payload as CharacterMotionMatchingPosePayload)?.Binding)
-                .Where(value => value)
-                .Distinct()
-                .ToArray();
-            if (bindings.Length == 0)
-                return null;
-            CharacterMotionMatchingProfile[] profiles = bindings
-                .Select(value => value.Profile)
-                .Where(value => value)
-                .Distinct()
-                .ToArray();
-            if (profiles.Length != 1)
-            {
-                errors?.Add("Motion Matching Pose nodes must resolve one exact Motion Matching Profile.");
-                return null;
-            }
-            if (profile.FootPlacementAnalysisMode != CharacterFootPlacementAnalysisMode.GeneratedPerFootFeatures ||
-                !CharacterFootPlacementAnalysisSource.IsAssetGuid(profile.FootPlacementAnalysisSourceAssetGuid))
-            {
-                errors?.Add("Motion Matching Projection requires the Presentation Profile generated Foot Analysis Source.");
-                return null;
-            }
-            string path = AssetDatabase.GUIDToAssetPath(profile.FootPlacementAnalysisSourceAssetGuid);
-            CharacterFootPlacementAnalysisSource analysisSource =
-                AssetDatabase.LoadAssetAtPath<CharacterFootPlacementAnalysisSource>(path);
-            if (!analysisSource)
-            {
-                errors?.Add("Motion Matching Projection Foot Analysis Source is missing.");
-                return null;
-            }
-            try
-            {
-                return MotionMatchingProjectionPayloadCompiler.Compile(
-                    profiles[0],
-                    profile.PoseGraph,
-                    profile.RigDefinition,
-                    analysisSource,
-                    AnimationClipMotionMatchingParameterCurveResolver.Instance);
-            }
-            catch (Exception exception)
-            {
-                errors?.Add(exception.Message);
-                return null;
-            }
-        }
-
-        static void AddMotionMatchingRevision(MotionMatchingProjectionPayload payload, List<string> values)
-        {
-            if (payload == null)
-            {
-                values.Add("motion-matching:none");
-                return;
-            }
-            values.Add($"motion-matching:{payload.ProfileId.Value}:{payload.ProfileRevision}");
-            for (int i = 0; i < payload.DatabaseCount; i++)
-            {
-                CharacterMotionMatchingDatabaseArtifactIdentity identity = payload.GetDatabase(i).ArtifactIdentity;
-                values.Add($"{identity.DatabaseId.Value}:{identity.DatabaseRevision}:{identity.AnalysisInputHash}:{identity.OrderedClipDependencyHash}:{identity.ContentHash}");
-            }
         }
 
         static void AddProjectionAssetRevision(UnityEngine.Object root, List<string> values)

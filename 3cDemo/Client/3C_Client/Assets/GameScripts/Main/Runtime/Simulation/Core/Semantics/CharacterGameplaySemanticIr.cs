@@ -355,6 +355,10 @@ namespace ThirdPersonSimulation
             m_CatalogEntries = Indexed(catalogEntries, value => value.Index, "catalog entry");
             m_SourceMap = SortSourceMap(sourceMap);
             m_Producers = Indexed(producers, value => value.Index, "producer");
+            ProgramSourceMapCoverage.Require(
+                m_SourceMap,
+                m_Operations.Count,
+                m_StateDeclarations.Count);
             SimulationProgramRootValidation.RequireEntryReference(
                 Manifest.Root,
                 m_References,

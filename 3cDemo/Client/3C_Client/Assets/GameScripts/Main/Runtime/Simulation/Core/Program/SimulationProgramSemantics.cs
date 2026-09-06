@@ -1447,6 +1447,59 @@ namespace ThirdPersonSimulation
 		public string ContentHash { get; }
 	}
 
+    public static class ProgramSourceMapCoverage
+    {
+        public static void Require(
+            IReadOnlyList<ProgramSourceMapEntry> entries,
+            int operationCount,
+            int stateSlotCount)
+        {
+            if (entries == null)
+                throw new ArgumentNullException(nameof(entries));
+            if (operationCount < 0)
+                throw new ArgumentOutOfRangeException(nameof(operationCount));
+            if (stateSlotCount < 0)
+                throw new ArgumentOutOfRangeException(nameof(stateSlotCount));
+
+            var operations = new bool[operationCount];
+            var stateSlots = new bool[stateSlotCount];
+            for (int i = 0; i < entries.Count; i++)
+            {
+                ProgramSourceMapEntry entry = entries[i] ??
+                    throw new InvalidDataException("Program source map contains a missing entry.");
+                switch (entry.TargetKind)
+                {
+                    case ProgramSourceTargetKind.Operation:
+                        RequireTarget(entry.TargetIndex, operations, "operation");
+                        break;
+                    case ProgramSourceTargetKind.StateSlot:
+                        RequireTarget(entry.TargetIndex, stateSlots, "state slot");
+                        break;
+                }
+            }
+
+            for (int i = 0; i < operations.Length; i++)
+            {
+                if (!operations[i])
+                    throw new InvalidDataException($"Program operation '{i}' is absent from the source map.");
+            }
+            for (int i = 0; i < stateSlots.Length; i++)
+            {
+                if (!stateSlots[i])
+                    throw new InvalidDataException($"Program state slot '{i}' is absent from the source map.");
+            }
+        }
+
+        static void RequireTarget(int index, bool[] targets, string kind)
+        {
+            if ((uint)index >= (uint)targets.Length)
+                throw new InvalidDataException($"Program source map {kind} target '{index}' is outside the Program.");
+            if (targets[index])
+                throw new InvalidDataException($"Program source map {kind} target '{index}' is duplicated.");
+            targets[index] = true;
+        }
+    }
+
     public sealed class ProgramProducer
     {
         public ProgramProducer(

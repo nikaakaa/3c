@@ -285,6 +285,10 @@ namespace ThirdPersonSimulation.Fixed
             m_References = SortByIdentity(references, value => value.Identity, "reference");
             m_Scopes = SortByIdentity(scopes, value => value.Identity, "scope");
             m_SourceMap = SortSourceMap(sourceMap);
+            ProgramSourceMapCoverage.Require(
+                m_SourceMap,
+                m_Operations.Count,
+                m_StateSlots.Count);
             ControlModuleBinding = CharacterControlProgramCatalogValidator.Resolve(m_CatalogEntries, m_StateSlots);
             for (int i = 0; i < m_StateSlots.Count; i++)
                 FixedProgramStateSchema.RequireCodec(m_StateSlots[i]);

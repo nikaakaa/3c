@@ -4,9 +4,12 @@ using System.Linq;
 using System.Reflection;
 using System.Text;
 using MCPForUnity.Runtime.Helpers;
+using MCPForUnity.Editor.Tools;
 using Newtonsoft.Json.Linq;
 using UnityEditor;
 using UnityEngine;
+using UnityEngine.Rendering;
+using UnityEngine.Rendering.Universal;
 using Object = UnityEngine.Object;
 
 namespace ZZZ.Rendering.Restored.Editor
@@ -30,31 +33,73 @@ namespace ZZZ.Rendering.Restored.Editor
         public static void CaptureOutlineComparison()
         {
             var camera = Object.FindObjectsOfType<Camera>().Single(value => value.name == "ZZZ_RenderCheck_Camera");
+            CaptureOutlineComparison(camera);
+        }
+
+        [MenuItem("Tools/ZZZ/Restored/Capture Scene Outline Comparison")]
+        public static void CaptureSceneOutlineComparison()
+        {
+            CaptureOutlineComparison(SceneView.lastActiveSceneView.camera);
+        }
+
+        static void CaptureOutlineComparison(Camera camera)
+        {
+            CapturePassComparison(camera, new[] { "CharacterOutlineDeferred", "FaceOutlineDeferred" }, "outline");
+        }
+
+        [MenuItem("Tools/ZZZ/Restored/Capture Scene Depth Interface Comparison")]
+        public static void CaptureSceneDepthInterfaceComparison()
+        {
+            CapturePassComparison(SceneView.lastActiveSceneView.camera, new[] { "DepthNormalsOnly" }, "depth-interface");
+        }
+
+        static void CapturePassComparison(Camera camera, string[] passes, string label)
+        {
             var entries = Object.FindObjectsOfType<CorinRestoredRenderEntity>()
                 .SelectMany(entity => entity.GetComponentsInChildren<SkinnedMeshRenderer>(true))
                 .SelectMany(renderer => renderer.sharedMaterials).Distinct()
-                .SelectMany(material => new[] { "CharacterOutlineDeferred", "FaceOutlineDeferred" }
+                .SelectMany(material => passes
                     .Where(pass => material.FindPass(pass) >= 0)
                     .Select(pass => (Material: material, Pass: pass, Enabled: material.GetShaderPassEnabled(pass))))
                 .ToArray();
             if (entries.Length == 0 || entries.Any(entry => !entry.Enabled))
-                throw new InvalidOperationException("描边对照要求原材质的描边 Pass 均已启用。");
-            var folder = "Diagnostics/Rendering/ZZZRestored/" + DateTime.UtcNow.ToString("yyyyMMdd-HHmmss-fffffff") + "-outline-pair";
-            var before = ScreenshotUtility.CaptureFromCameraToProjectFolder(camera, "OutlineOn", folderOverride: folder);
+                throw new InvalidOperationException("通道对照要求所选原材质 Pass 均已启用。");
+            var folder = "Diagnostics/Rendering/ZZZRestored/" + DateTime.UtcNow.ToString("yyyyMMdd-HHmmss-fffffff") + "-" + camera.cameraType + "-" + label + "-pair";
+            CaptureImage(camera, "On", folder);
             try
             {
                 foreach (var entry in entries)
                     entry.Material.SetShaderPassEnabled(entry.Pass, false);
-                ScreenshotUtility.CaptureFromCameraToProjectFolder(camera, "OutlineOff", folderOverride: folder);
+                CaptureImage(camera, "Off", folder);
             }
             finally
             {
                 foreach (var entry in entries)
                     entry.Material.SetShaderPassEnabled(entry.Pass, entry.Enabled);
             }
-            ScreenshotUtility.CaptureFromCameraToProjectFolder(camera, "OutlineRestored", folderOverride: folder);
+            CaptureImage(camera, "Restored", folder);
+            File.WriteAllText(Path.Combine(folder, "camera.json"), CameraState(camera).ToString(), new UTF8Encoding(false));
             Capture();
-            Debug.Log("原描边同参数开关对照完成，材质开关已恢复，未保存场景：" + before.ProjectRelativePath);
+            Debug.Log("原渲染通道开关对照完成，材质开关已恢复，未保存场景：" + folder);
+        }
+
+        static void CaptureImage(Camera camera, string name, string folder)
+        {
+            if (camera.cameraType != CameraType.SceneView)
+            {
+                ScreenshotUtility.CaptureFromCameraToProjectFolder(camera, name, folderOverride: folder);
+                return;
+            }
+            var result = JObject.FromObject(ManageScene.HandleCommand(new JObject
+            {
+                ["action"] = "screenshot",
+                ["captureSource"] = "scene_view",
+                ["fileName"] = name,
+                ["outputFolder"] = folder,
+                ["includeImage"] = false
+            }));
+            if ((bool?)result["success"] != true)
+                throw new InvalidOperationException("Scene 实际视口捕获失败：" + result);
         }
 
         [MenuItem("Tools/ZZZ/Restored/Audit Current Original Corin Rendering")]
@@ -157,6 +202,17 @@ namespace ZZZ.Rendering.Restored.Editor
                 ["editorLog"] = Application.consoleLogPath,
                 ["unityVersion"] = Application.unityVersion,
                 ["graphicsDevice"] = SystemInfo.graphicsDeviceVersion,
+                ["sceneViews"] = new JArray(SceneView.sceneViews.Cast<SceneView>().Select(view => new JObject
+                {
+                    ["name"] = view.titleContent.text,
+                    ["drawMode"] = view.cameraMode.drawMode.ToString(),
+                    ["sceneLighting"] = view.sceneLighting,
+                    ["gizmos"] = view.drawGizmos,
+                    ["orthographic"] = view.orthographic,
+                    ["camera"] = CameraState(view.camera)
+                })),
+                ["gameCameras"] = new JArray(Object.FindObjectsOfType<Camera>().Select(CameraState)),
+                ["pipeline"] = PipelineState(),
                 ["loadedProfileInitializeParameterCount"] = typeof(CorinRestoredRenderProfile)
                     .GetMethod("Initialize").GetParameters().Length,
                 ["profileConfiguredMatrices"] = configuredMatrices,
@@ -193,6 +249,53 @@ namespace ZZZ.Rendering.Restored.Editor
         }
 
         static JArray Vector(Vector4 value) => new(value.x, value.y, value.z, value.w);
+
+        static JObject CameraState(Camera camera)
+        {
+            camera.TryGetComponent<UniversalAdditionalCameraData>(out var additional);
+            return new JObject
+            {
+                ["name"] = camera.name,
+                ["type"] = camera.cameraType.ToString(),
+                ["position"] = Vector(camera.transform.position),
+                ["rotation"] = Vector(camera.transform.eulerAngles),
+                ["fieldOfView"] = camera.fieldOfView,
+                ["orthographic"] = camera.orthographic,
+                ["pixelWidth"] = camera.pixelWidth,
+                ["pixelHeight"] = camera.pixelHeight,
+                ["allowHDR"] = camera.allowHDR,
+                ["allowMSAA"] = camera.allowMSAA,
+                ["projection"] = new JArray(Enumerable.Range(0, 4).Select(row => Vector(camera.projectionMatrix.GetRow(row)))),
+                ["rendererIndex"] = additional == null ? JValue.CreateNull() : new SerializedObject(additional).FindProperty("m_RendererIndex").intValue,
+                ["postProcessing"] = additional == null ? JValue.CreateNull() : additional.renderPostProcessing
+            };
+        }
+
+        static JObject PipelineState()
+        {
+            var asset = GraphicsSettings.currentRenderPipeline as UniversalRenderPipelineAsset;
+            var serialized = new SerializedObject(asset);
+            var rendererData = serialized.FindProperty("m_RendererDataList");
+            return new JObject
+            {
+                ["asset"] = AssetDatabase.GetAssetPath(asset),
+                ["defaultRendererIndex"] = serialized.FindProperty("m_DefaultRendererIndex").intValue,
+                ["renderers"] = new JArray(Enumerable.Range(0, rendererData.arraySize).Select(index =>
+                {
+                    var data = (ScriptableRendererData)rendererData.GetArrayElementAtIndex(index).objectReferenceValue;
+                    return new JObject
+                    {
+                        ["asset"] = AssetDatabase.GetAssetPath(data),
+                        ["features"] = new JArray(data.rendererFeatures.Select(feature => new JObject
+                        {
+                            ["name"] = feature.name,
+                            ["active"] = feature.isActive,
+                            ["type"] = feature.GetType().FullName
+                        }))
+                    };
+                }))
+            };
+        }
 
         static JToken Texture(Texture texture) => texture == null ? JValue.CreateNull() : new JObject
         {

@@ -14,6 +14,7 @@ namespace ZZZ.Rendering.Restored
         Material compositeMaterial;
         Material copyDepthMaterial;
         CorinRestoredEntityLighting entityLighting;
+        CharacterPreparePass preparePass;
         CharacterBufferPass bufferPass;
         CopyDepthPass copyDepthPass;
         CharacterCompositePass compositePass;
@@ -45,6 +46,7 @@ namespace ZZZ.Rendering.Restored
                 compositePass == null || renderingData.cameraData.isPreviewCamera ||
                 renderingData.cameraData.cameraType == CameraType.Reflection)
                 return;
+            renderer.EnqueuePass(preparePass);
             renderer.EnqueuePass(bufferPass);
             renderer.EnqueuePass(copyDepthPass);
             renderer.EnqueuePass(compositePass);
@@ -98,6 +100,7 @@ namespace ZZZ.Rendering.Restored
             compositeMaterial = null;
             copyDepthMaterial = null;
             entityLighting = null;
+            preparePass = null;
             bufferPass = null;
             copyDepthPass = null;
             compositePass = null;
@@ -121,11 +124,41 @@ namespace ZZZ.Rendering.Restored
             if (profile.CharacterOverlay == null)
                 throw new System.InvalidOperationException("原角色渲染缺少 CharacterOverlayTex，请重建原材质资源。");
             profile.Materials.ApplyRuntimeArrays();
-            bufferPass = new CharacterBufferPass(profile, entityLighting, RenderPassEvent.AfterRenderingOpaques);
+            preparePass = new CharacterPreparePass(profile, entityLighting,
+                (RenderPassEvent)((int)RenderPassEvent.BeforeRenderingPrePasses - 1));
+            bufferPass = new CharacterBufferPass(RenderPassEvent.AfterRenderingOpaques);
             copyDepthPass = new CopyDepthPass((RenderPassEvent)((int)RenderPassEvent.AfterRenderingOpaques + 1),
                 copyDepthMaterial);
             compositePass = new CharacterCompositePass(profile, compositeMaterial,
                 (RenderPassEvent)((int)RenderPassEvent.AfterRenderingOpaques + 2));
+        }
+
+        sealed class CharacterPreparePass : ScriptableRenderPass
+        {
+            readonly CorinRestoredRenderProfile profile;
+            readonly CorinRestoredEntityLighting entityLighting;
+            readonly ProfilingSampler sampler = new("ZZZ Corin Prepare Inputs");
+
+            public CharacterPreparePass(CorinRestoredRenderProfile renderProfile,
+                CorinRestoredEntityLighting lighting, RenderPassEvent passEvent)
+            {
+                profile = renderProfile;
+                entityLighting = lighting;
+                renderPassEvent = passEvent;
+            }
+
+            public override void Execute(ScriptableRenderContext context, ref RenderingData renderingData)
+            {
+                var command = CommandBufferPool.Get();
+                using (new ProfilingScope(command, sampler))
+                {
+                    profile.ApplyGlobals(command, ref renderingData);
+                    profile.ResolveMainLight(ref renderingData, out var position, out var color);
+                    entityLighting.Prepare(command, ref renderingData, position, color);
+                }
+                context.ExecuteCommandBuffer(command);
+                CommandBufferPool.Release(command);
+            }
         }
 
         sealed class CharacterBufferPass : ScriptableRenderPass
@@ -149,18 +182,12 @@ namespace ZZZ.Rendering.Restored
                 new ShaderTagId("FaceToonDeferredWithStencilShadow")
             };
 
-            readonly CorinRestoredRenderProfile profile;
-            readonly CorinRestoredEntityLighting entityLighting;
             FilteringSettings filtering = new(RenderQueueRange.opaque);
-            readonly ProfilingSampler sampler = new("ZZZ Corin Character Buffers");
             RTHandle depth;
             RTHandle[] buffers;
 
-            public CharacterBufferPass(CorinRestoredRenderProfile renderProfile,
-                CorinRestoredEntityLighting lighting, RenderPassEvent passEvent)
+            public CharacterBufferPass(RenderPassEvent passEvent)
             {
-                profile = renderProfile;
-                entityLighting = lighting;
                 renderPassEvent = passEvent;
                 ConfigureInput(ScriptableRenderPassInput.Depth);
             }
@@ -180,14 +207,6 @@ namespace ZZZ.Rendering.Restored
             public override void Execute(ScriptableRenderContext context, ref RenderingData renderingData)
             {
                 var command = CommandBufferPool.Get();
-                using (new ProfilingScope(command, sampler))
-                {
-                    profile.ApplyGlobals(command, ref renderingData);
-                    profile.ResolveMainLight(ref renderingData, out var mainLightPosition, out var mainLightColor);
-                    entityLighting.Prepare(command, ref renderingData, mainLightPosition, mainLightColor);
-                }
-                context.ExecuteCommandBuffer(command);
-                command.Clear();
                 var drawing = CreateDrawingSettings(Tags, ref renderingData, SortingCriteria.CommonOpaque);
                 context.DrawRenderers(renderingData.cullResults, ref drawing, ref filtering);
                 command.SetGlobalFloat("_CharacterStencilReadMask", 128f);

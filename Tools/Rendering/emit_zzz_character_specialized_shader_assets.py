@@ -2,7 +2,7 @@ import argparse
 import json
 from pathlib import Path
 
-from emit_zzz_character_shader_assets import adapt_stage, pass_source, property_line
+from emit_zzz_character_shader_assets import adapt_stage, pass_source, property_line, depth_normals_source, depth_normals_pass_source
 from recover_zzz_shader import sha256
 
 
@@ -46,8 +46,11 @@ def generate_face(shader, recovery, root):
         pass_source("FaceOutlineDeferred", "FaceOutlineDeferred", 12, 44, states[1]),
         pass_source("FaceToonDeferred", "FaceToonDeferred", 60, 1980, states[2]),
         pass_source("FaceToonDeferredWithStencilShadow", "FaceToonDeferredWithStencilShadow", 60, 1980, states[3]),
-        pass_source("CharDepthOnly", "CharDepthOnly", 2940, 2946, states[4])
+        pass_source("CharDepthOnly", "DepthOnly", 2940, 2946, states[4]),
+        depth_normals_pass_source(states[4])
     ]
+    files[face_root / "UrpDepthNormals.hlsl"] = depth_normals_source(
+        files[face_root / "OriginalStage2940.hlsl"], files[face_root / "OriginalStage2946.hlsl"], 2940, 2946)
     properties = "\n".join(property_line(prop) for prop in shader["m_ParsedForm"]["m_PropInfo"]["m_Props"])
     files[face_root / "NapAvatarStandardFace.shader"] = shader_source("NapAvatarStandardFace", properties, passes)
     return files, entries
@@ -62,9 +65,15 @@ def generate_eye(shader, recovery, root):
         files[eye_root / f"OriginalStage{entry}.hlsl"] = specialized_stage(source, entry)
     state = shader["m_ParsedForm"]["m_SubShaders"][0]["m_Passes"][0]["m_State"]
     properties = "\n".join(property_line(prop) for prop in shader["m_ParsedForm"]["m_PropInfo"]["m_Props"])
+    depth_state = json.loads(json.dumps(state))
+    depth_state["zWrite"] = {"val": 1, "name": "<noninit>"}
+    files[eye_root / "UrpDepthNormals.hlsl"] = depth_normals_source(
+        files[eye_root / "OriginalStage0.hlsl"], files[eye_root / "OriginalStage480.hlsl"], 0, 480)
     files[eye_root / "NapAvatarStandardEye.shader"] = shader_source(
         "NapAvatarStandardEye", properties,
-        [pass_source("CharacterOpaqueEye", "CharacterOpaqueEye", 0, 480, state)])
+        [pass_source("CharacterOpaqueEye", "CharacterOpaqueEye", 0, 480, state),
+         pass_source("DepthOnly", "DepthOnly", 0, 480, depth_state).replace("            HLSLPROGRAM", "            ColorMask 0\n            HLSLPROGRAM"),
+         depth_normals_pass_source(depth_state)])
     return files, entries
 
 

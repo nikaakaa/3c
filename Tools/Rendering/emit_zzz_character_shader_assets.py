@@ -138,6 +138,72 @@ def pass_source(name, tag, vertex, fragment, state, conditional=False):
 """
 
 
+def depth_normals_source(vertex_source, fragment_source, vertex, fragment):
+    vertex_parameters = re.search(r"ShaderOutput main\(([^\n]+)\)", vertex_source)[1]
+    fragment_parameters = re.search(r"ShaderOutput main\(([^\n]+)\)", fragment_source)[1]
+    vertex_arguments = ", ".join(re.findall(r"\b(input\d+)\s*:", vertex_parameters))
+    fragment_arguments = ", ".join(re.findall(r"\b(input\d+)\s*:", fragment_parameters))
+    return f'''#if defined(SHADER_STAGE_VERTEX)
+#define main ZZZOriginalDepthVertex
+#define ShaderOutput ZZZOriginalDepthVertexOutput
+#include "OriginalStage{vertex}.hlsl"
+#undef ShaderOutput
+#undef main
+struct ZZZDepthNormalsVertexOutput
+{{
+    ZZZOriginalDepthVertexOutput original;
+    float3 normalWS : TEXCOORD15;
+}};
+ZZZDepthNormalsVertexOutput ZZZDepthNormalsVertex({vertex_parameters})
+{{
+    ZZZDepthNormalsVertexOutput result;
+    result.original = ZZZOriginalDepthVertex({vertex_arguments});
+    result.normalWS = normalize(mul(input1, (float3x3)unity_WorldToObject));
+    return result;
+}}
+#elif defined(SHADER_STAGE_FRAGMENT)
+#include "Packages/com.unity.render-pipelines.core/ShaderLibrary/Common.hlsl"
+#include "Packages/com.unity.render-pipelines.core/ShaderLibrary/Packing.hlsl"
+#define main ZZZOriginalDepthFragment
+#define ShaderOutput ZZZOriginalDepthFragmentOutput
+#include "OriginalStage{fragment}.hlsl"
+#undef ShaderOutput
+#undef main
+float4 ZZZDepthNormalsFragment(float3 normalWS : TEXCOORD15, {fragment_parameters}) : SV_Target0
+{{
+    ZZZOriginalDepthFragment({fragment_arguments});
+    float3 normal = normalize(normalWS);
+#if defined(_GBUFFER_NORMALS_OCT)
+    return float4(PackFloat2To888(saturate(PackNormalOctQuadEncode(normal) * 0.5 + 0.5)), 0);
+#else
+    return float4(normal, 0);
+#endif
+}}
+#endif
+'''
+
+
+def depth_normals_pass_source(state):
+    cull = state_value(state["culling"], {0: "Off", 1: "Front", 2: "Back"})
+    return f'''        Pass
+        {{
+            Name "DepthNormalsOnly"
+            Tags {{ "LightMode"="DepthNormalsOnly" }}
+            Cull {cull}
+            ZTest LEqual
+            ZWrite On
+            HLSLPROGRAM
+            #pragma target 5.0
+            #pragma only_renderers d3d11
+            #pragma vertex ZZZDepthNormalsVertex
+            #pragma fragment ZZZDepthNormalsFragment
+            #pragma multi_compile_fragment _ _GBUFFER_NORMALS_OCT
+            #include "UrpDepthNormals.hlsl"
+            ENDHLSL
+        }}
+'''
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--shader-json", type=Path, required=True)
@@ -154,6 +220,8 @@ def main():
     properties = "\n".join(property_line(prop) for prop in shader["m_ParsedForm"]["m_PropInfo"]["m_Props"])
     states = {entry: json.loads((args.recovery / f"entry{entry}.render_state.json").read_text(encoding="utf-8"))
               for entry in (0, 24, 60, 4020)}
+    files[root / "UrpDepthNormals.hlsl"] = depth_normals_source(
+        files[root / "OriginalStage4020.hlsl"], files[root / "OriginalStage4024.hlsl"], 4020, 4024)
     wrapper = f"""Shader \"ZZZ/Restored/NapAvatarStandard\"
 {{
     Properties
@@ -166,7 +234,8 @@ def main():
 {pass_source("ShadowCaster", "ShadowCaster", 0, 16, states[0])}
 {pass_source("CharacterOutlineDeferred", "CharacterOutlineDeferred", 24, 48, states[24])}
 {pass_source("CharacterToonDeferred", "CharacterToonDeferred", 60, 2700, states[60], True)}
-{pass_source("CharDepthOnly", "CharDepthOnly", 4020, 4024, states[4020])}
+{pass_source("CharDepthOnly", "DepthOnly", 4020, 4024, states[4020])}
+{depth_normals_pass_source(states[4020])}
     }}
 }}
 """

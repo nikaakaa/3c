@@ -530,7 +530,7 @@ Shader "ZZZ/Restored/NapAvatarStandard"
         Pass
         {
             Name "CharDepthOnly"
-            Tags { "LightMode"="CharDepthOnly" }
+            Tags { "LightMode"="DepthOnly" }
             Cull [_Cull]
             ZTest LEqual
             ZWrite On
@@ -565,5 +565,21 @@ Shader "ZZZ/Restored/NapAvatarStandard"
             ENDHLSL
         }
 
+        Pass
+        {
+            Name "DepthNormalsOnly"
+            Tags { "LightMode"="DepthNormalsOnly" }
+            Cull [_Cull]
+            ZTest LEqual
+            ZWrite On
+            HLSLPROGRAM
+            #pragma target 5.0
+            #pragma only_renderers d3d11
+            #pragma vertex ZZZDepthNormalsVertex
+            #pragma fragment ZZZDepthNormalsFragment
+            #pragma multi_compile_fragment _ _GBUFFER_NORMALS_OCT
+            #include "UrpDepthNormals.hlsl"
+            ENDHLSL
+        }
     }
 }

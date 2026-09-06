@@ -150,17 +150,20 @@ namespace ZZZ.Rendering.Restored.Editor
                 [0] = Array.Empty<string>(),
                 [1] = Array.Empty<string>(),
                 [2] = Array.Empty<string>(),
-                [3] = Array.Empty<string>()
+                [3] = Array.Empty<string>(),
+                [4] = Array.Empty<string>()
             });
             ValidateShader(Shader.Find("ZZZ/Restored/NapAvatarStandard"), new Dictionary<int, string[]>
             {
                 [2] = new[] { "_MATCAP_ON" }
             });
-            ValidateShader(Shader.Find("ZZZ/Restored/NapAvatarStandardFace"), Enumerable.Range(0, 5)
+            ValidateShader(Shader.Find("ZZZ/Restored/NapAvatarStandardFace"), Enumerable.Range(0, 6)
                 .ToDictionary(index => index, _ => Array.Empty<string>()));
             ValidateShader(Shader.Find("ZZZ/Restored/NapAvatarStandardEye"), new Dictionary<int, string[]>
             {
-                [0] = Array.Empty<string>()
+                [0] = Array.Empty<string>(),
+                [1] = Array.Empty<string>(),
+                [2] = Array.Empty<string>()
             });
             ValidateShader(Shader.Find("ZZZ/Restored/NapStencilShadowCaster"), new Dictionary<int, string[]>
             {

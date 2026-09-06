@@ -381,7 +381,7 @@ Shader "ZZZ/Restored/NapAvatarStandardFace"
         Pass
         {
             Name "CharDepthOnly"
-            Tags { "LightMode"="CharDepthOnly" }
+            Tags { "LightMode"="DepthOnly" }
             Cull Back
             ZTest LEqual
             ZWrite On
@@ -413,6 +413,22 @@ Shader "ZZZ/Restored/NapAvatarStandardFace"
             #elif defined(SHADER_STAGE_FRAGMENT)
                 #include "OriginalStage2946.hlsl"
             #endif
+            ENDHLSL
+        }
+        Pass
+        {
+            Name "DepthNormalsOnly"
+            Tags { "LightMode"="DepthNormalsOnly" }
+            Cull Back
+            ZTest LEqual
+            ZWrite On
+            HLSLPROGRAM
+            #pragma target 5.0
+            #pragma only_renderers d3d11
+            #pragma vertex ZZZDepthNormalsVertex
+            #pragma fragment ZZZDepthNormalsFragment
+            #pragma multi_compile_fragment _ _GBUFFER_NORMALS_OCT
+            #include "UrpDepthNormals.hlsl"
             ENDHLSL
         }
     }

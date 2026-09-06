@@ -238,5 +238,49 @@ Shader "ZZZ/Restored/NapAvatarStandardEye"
             #endif
             ENDHLSL
         }
+        Pass
+        {
+            Name "DepthOnly"
+            Tags { "LightMode"="DepthOnly" }
+            Cull Back
+            ZTest LEqual
+            ZWrite On
+            Blend 0 [_SrcBlend] [_DstBlend], [_AlphaSrcBlend] [_AlphaDstBlend]
+            Blend 1 One Zero, One Zero
+            Blend 2 Zero One, Zero One
+            Blend 3 Zero One, Zero One
+            Blend 4 One Zero, One Zero
+            Blend 5 One Zero, One Zero
+            Blend 6 One Zero, One Zero
+            Blend 7 One Zero, One Zero
+            ColorMask 0
+            HLSLPROGRAM
+            #pragma target 5.0
+            #pragma only_renderers d3d11
+            #pragma vertex main
+            #pragma fragment main
+            #if defined(SHADER_STAGE_VERTEX)
+                #include "OriginalStage0.hlsl"
+            #elif defined(SHADER_STAGE_FRAGMENT)
+                #include "OriginalStage480.hlsl"
+            #endif
+            ENDHLSL
+        }
+        Pass
+        {
+            Name "DepthNormalsOnly"
+            Tags { "LightMode"="DepthNormalsOnly" }
+            Cull Back
+            ZTest LEqual
+            ZWrite On
+            HLSLPROGRAM
+            #pragma target 5.0
+            #pragma only_renderers d3d11
+            #pragma vertex ZZZDepthNormalsVertex
+            #pragma fragment ZZZDepthNormalsFragment
+            #pragma multi_compile_fragment _ _GBUFFER_NORMALS_OCT
+            #include "UrpDepthNormals.hlsl"
+            ENDHLSL
+        }
     }
 }

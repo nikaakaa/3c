@@ -349,8 +349,8 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 string.Empty,
                 m_Timeline.AuthoringId,
                 string.Empty,
-                string.Empty,
-                $"{Invocation.Route}/timeline:{m_Timeline.AuthoringId}/track:{m_Track.AuthoringId}/clip:{clip.AuthoringId}/invocation:{Invocation.Identity}/constant:{fieldName.Trim()}",
+                displayPath: $"{Invocation.Route}/timeline:{m_Timeline.AuthoringId}/track:{m_Track.AuthoringId}/clip:{clip.AuthoringId}/invocation:{Invocation.Identity}/constant:{fieldName.Trim()}",
+                trackId: m_Track.AuthoringId,
                 contentHash: m_TimelineContentHash);
         }
 

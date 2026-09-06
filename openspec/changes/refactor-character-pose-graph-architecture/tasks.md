@@ -238,7 +238,7 @@ ACL依赖边界：当前Pose Graph迁移和质量整改没有直接引用ACL类�
 - [ ] 21.3 将`CharacterPoseGraphProjectionValidator`收窄为sealed Program/Projection身份、容量和发布合同验证；节点局部规则归Definition，跨节点edge/reachability与唯一Output/Assembler/FBBIK规则只归Topology Pass，删除第二套递归拓扑Compiler。业务取舍：错误归属更清楚，代价是Build错误需要携带完整Pass和Source Map路径。
 - [ ] 21.4 将`CharacterPresentationRuntime`收敛为typed根事务调用；Workspace、Action Sampling、Slot、Motion Matching、Linked Pose Commit/Discard等知识留在对应Module Implementation，根只管理固定阶段、lineage、Result和Seal/Discard/Fault。业务取舍：根Runtime更稳定，代价是各Module必须提供足够完整的typed Result，不能让根读取内部字段补逻辑。
 - [ ] 21.5 将Pose窗口拆为Graph、StateMachine、TransitionRule和Tuning/Diagnostics Presenter，窗口只负责页面组合与导航；Scene Play接入前不改变`19.x`未完成状态，接入后删除旧Preview的target、fixture、时钟、seek和简化Executor职责。业务取舍：作者操作与预览生命周期分离，代价是需要把旧Preview状态迁入正式Scene/Session入口。
-- [ ] 21.6 为CanvasCore非virtual增删API的所有权形成同级方案决策并实现：方案A保留CanvasCore Graph并把可变对象限制在唯一Editor Mutation Owner，作者和Compiler只读Projection，改动较小但无法从类型层彻底阻止基类绕过；方案B增加隔离的CanvasCore Editor Adapter/组合边界，物理上收窄写入口，所有权更强但Canvas交互接入成本更高。未完成方案决策前不得把`17.3`或`18.1`描述为完成。
-- [ ] 21.7 明确`CharacterPoseCanvasView`仍是877行自建GraphView的当前取舍；要么接入ParadoxNotion现成Graph Editor交互并保留typed Mutation，要么明确接受自建交互维护成本。无论选择哪一项，都不得把当前实现描述成完整CanvasCore编辑表面。
+- [x] 21.6 选择方案A并固化实现边界：保留CanvasCore Graph，把可变对象限制在唯一Editor Mutation Owner，作者和Compiler只读Projection；接受GraphView非virtual增删API无法从基类类型层彻底阻止绕过，依靠源码审计守住唯一写入口。方案B不引入第二层Adapter或第二写链，因此不把`17.3`或`18.1`错误描述为完成。
+- [x] 21.7 明确`CharacterPoseCanvasView`仍是877行自建GraphView，保留Pose专用Node/Port/StateMachine交互与typed Mutation，并接受项目自行维护GraphView交互成本；未宣称接入ParadoxNotion现成Graph Editor，也未把当前实现描述成完整CanvasCore编辑表面。
 - [ ] 21.8 在Compiler与Runtime依赖闭合后，让唯一正式`CharacterSimulationBuildOrchestrator.Build(request)`同时生成所选Numeric Target和同组Presentation Projection，按同一Definition、Semantic IR、Contract和identity发布；旧Program/Projection产物只由该入口替换，不复制主目录生成文件或建立第二Builder。
 - [ ] 21.9 只有在后续Pose整改实际依赖ACL修改过的共享Source/Projection合同时，才接入完整ACL源码与作者版本；保留ACL的资源归属、Scalar门限和发布生命周期，不把ACL Program/Projection或发布证据直接当作本分支产物与E2E结果。

@@ -80,6 +80,14 @@
 - 验证：各代码小步执行`git diff --check`通过；当前worktree不存在Unity生成的`ThirdPersonClient.Editor.csproj`，尝试的dotnet命令因项目文件不存在退出，并已执行`dotnet build-server shutdown`；RunHost旧记录仍指向`D:/Unity_Project_1/camera-zzz/3cDemo/Client/3C_Client`，直接Unity batchmode仍因Licensing Client validation/access token失败。因此本批没有当前worktree编译通过、正式Build、Corin产物或E2E证据。
 - 剩余项：21.2需在有效Editor编译后确认所有Family Adapter调用和ABI未变；21.3需继续删除/收窄旧Pose Graph Validator中的重复职责；21.5 Pose窗口与旧`AnimationPreviewRuntime`仍未迁入正式Scene Play；21.6需保留并实现CanvasCore Option A的唯一Mutation Owner决策；21.7仍需明确自建GraphView维护边界；21.8需实际执行一次多Target正式Build；21.9当前没有Pose对ACL共享Source/Projection合同的直接引用，不接入ACL。
 
+## 21.5–21.7作者表面与Preview边界审计（POSE-EXEC-20260906-06）
+
+状态：本次不修改作者资产或Preview运行路径，只固定现有代码事实和决策边界。21.5仍等待`rebuild-btsmtl-preview-with-scene-play`的正式Scene Play协调器，不能把当前Preview Fixture Scene误记为Scene Play完成；21.6选择方案A；21.7接受当前自建GraphView并明确维护成本，不能把它描述成完整CanvasCore编辑器。
+
+- 21.6方案A的现行证据：`CharacterPoseCanvasView`的投影创建、拖线、删除、移动、StateMachine transition和节点创建都把请求交给`CharacterPoseCanvasEditorMutationAdapter`/StateMachine Adapter；Clipboard使用同一`IGraphAuthoringDomainMutation`，Document、Undo和MCP继续通过既有Mutation Owner。CanvasCore GraphView的非virtual物理API仍无法从基类类型层禁止，但当前源码没有第二个Pose Graph对象写入Owner或绕过Mutation的Pose Canvas路径。业务取舍是保留GraphView交互和较低迁移成本，接受以后需要用源码审计守住唯一写入口。
+- 21.7当前实现边界：`CharacterPoseCanvasView.cs`为877行自建GraphView，负责Node/Port/Edge投影和交互事件；它不提供通用Flow执行、反射调用、自动类型转换或第二Graph数据源。选择保留它是因为现有Pose专用端口、StateMachine页面和typed Mutation已经接通；代价是节点渲染、端口交互、GraphView版本变化和交互回归由项目自行维护。未宣称接入ParadoxNotion现成Graph Editor。
+- 21.5当前实现边界：`CharacterPoseAuthoringBottomDock`仍持有`CharacterAnimationPreviewFixtureSession`、播放/暂停/单步/seek和Edit Mode Preview Scene；`AnimationPreviewRuntime`仍存在于`CharacterPipelineAuthoringPreviewController`和相关查询Fixture。它不是正式Scene Play Session，因此不删除这些路径，也不建立第二Preview入口，等待共享Scene Play change的唯一协调器和明确提交。
+
 以下为原有历史实施记录。
 
 ## 固定接入

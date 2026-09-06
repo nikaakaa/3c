@@ -46,6 +46,27 @@
 - Compile证据：本小步未获得当前worktree的有效Unity编译结果；既有RunHost编译记录错误指向其他项目，直接batchmode受Licensing阻断。源码移动未执行Corin迁移、正式Build或产物重建，不能把该小步描述为整体21.1完成。
 - 剩余项：21.1仍剩Producer/Camera/Cue、Foot事件、Motion Matching、Equipment和Projection Revision分域；21.2 Family Binding、21.3 Validator、21.4 Runtime根、21.5–21.9继续未完成。
 
+## 21.1 Projection领域Compiler分域收口候选（POSE-EXEC-20260906-04）
+
+状态：提交`55ccc309c`、`e38a7b523`、`e21ebe0d3`、`8125bcad5`、`c658cf7f7`、`ce82d2169`、`0b0aec097`和`6889c30fa`完成Projection领域Compiler分域候选，任务21.1仍未勾选，因为当前worktree尚未获得有效Unity编译结果。
+
+- 输入：既有`CharacterAnimationPresentationProfile`、Canvas Pose Graph、Semantic Producer、Foot Analysis、Rig、Blend/State、Motion Matching、Equipment和Projection ABI输入。
+- 处理与输出：
+  - `CharacterPresentationAnimationBlendCompiler`输出Blend curve/profile、State Transition、Inertialization、BlendStack routing和typed Blend Node payload。
+  - `CharacterPresentationFootEventCompiler`输出注册曲线归一化、Foot Step observation curves和Landing phase边界。
+  - `CharacterPresentationProducerCompiler`输出Animation/Camera/Cue Producer、Timeline call site和Playback mode typed result。
+  - `CharacterPresentationMotionMatchingCompiler`输出Motion Matching payload、Foot Analysis Source依赖和revision tokens。
+  - `CharacterPresentationEquipmentCompiler`输出Equipment visual binding typed result与未解析引用诊断。
+  - `CharacterPresentationProjectionRevisionCompiler`输出Projection ABI、Profile/Equipment依赖、Motion Matching和Foot Analysis组成的Revision。
+  - `CharacterPresentationPoseSourcePlanCompiler`输出Blend Space plan、Clip source plan、Clip Player一致性和Blend Space parameter contract诊断。
+  - `CharacterPresentationProjectionCompiler`只保留根请求检查、各Module调用、诊断合并、Pose Compiler调用、Projection对象组合与唯一发布。
+- 资源/状态归属：上述Module只拥有Editor编译期typed result和diagnostics；Runtime Source、Program、Constraint、Writer、Playable、缓存、第二Projection和fallback均未新增。Projection根仍是唯一发布Owner。
+- 删除旧路径：总Compiler中的对应Blend、Foot Event、Producer、Motion Matching、Equipment、Revision和Source Plan实现已删除，没有保留转发类型、镜像结果或反向同步。
+- 修改文件：上述提交只涉及Projection Editor源码和对应`.meta`，外部Fixed/Float32未提交Runtime现场未暂存。
+- 静态证据：每个小步提交前执行`git diff --check`；Projection总Compiler已由3051行缩至约379行，剩余内容是组合、诊断合并和唯一发布。
+- Compile证据：既有RunHost compile记录`e2a433e9d7144452b6c61c13865768de`错误使用`D:/Unity_Project_1/camera-zzz/3cDemo/Client/3C_Client`，不能作为当前worktree依据；直接Unity batchmode受Licensing Client validation/access token阻断，日志为`C:/Users/Lenovo/.codex/visualizations/pose-source-compile-20260906.log`。本批没有有效当前worktree编译通过证据。
+- 剩余项：21.1需要有效编译闭环；21.2 Family Binding、21.3 Validator、21.4 Runtime根、21.5–21.9作者/Canvas/Scene Play/正式Build和迁移删除继续未完成。没有执行Corin迁移、正式Build或生成Projection/Program产物。
+
 以下为原有历史实施记录。
 
 ## 固定接入

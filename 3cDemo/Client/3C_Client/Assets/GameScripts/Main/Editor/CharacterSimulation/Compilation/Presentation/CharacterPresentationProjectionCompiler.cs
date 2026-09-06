@@ -129,6 +129,11 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 model.Timelines,
                 CharacterPresentationProducerCompiler.CollectTimelineCallSites(model.Root),
                 errors);
+            CharacterPresentationProjectionValidationResult validation =
+                CharacterPresentationProjectionValidator.Validate(
+                    projection,
+                    reader.Contract);
+            errors.AddRange(validation.Diagnostics);
             var diagnostics = new CharacterPresentationProjectionDiagnostic[errors.Count];
             for (int i = 0; i < errors.Count; i++)
             {

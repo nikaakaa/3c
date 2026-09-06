@@ -338,14 +338,27 @@ namespace ThirdPersonSimulation
             if (m_TimelineBlackboardContexts.Count > 0)
             {
                 SimulationTimelineBlackboardContext timeline = m_TimelineBlackboardContexts.Peek();
+                Float32ActionInstanceState action = m_Actions.RequireActive(timeline.Action);
+                if (!action.IsActive)
+                {
+                    string timelineContext = GetStringConstant(
+                        m_Program.Operations[timeline.Timeline.Value],
+                        OperationNamedConstant.ActionContext,
+                        string.Empty);
+                    if (!string.IsNullOrEmpty(timelineContext))
+                    {
+                        int slot = m_Actions.FindActive(timelineContext, out Float32ActionInstanceState current);
+                        action = slot >= 0 ? current : default;
+                    }
+                }
                 string explicitContext = GetStringConstant(operation, OperationNamedConstant.FactContext, string.Empty);
                 if (!string.IsNullOrEmpty(explicitContext) &&
-                    !string.Equals(explicitContext, timeline.Action.ContextId, StringComparison.Ordinal))
+                    !string.Equals(explicitContext, action.ContextId, StringComparison.Ordinal))
                 {
                     throw new InvalidOperationException(
                         $"TreeClip Blackboard write '{SourcePath(operation)}' Action Context does not match its Timeline playback context.");
                 }
-                return m_Actions.RequireActive(timeline.Action);
+                return action;
             }
 
             if (m_Actions.TryGetCurrentSkillExecution(out Float32ActionInstanceState skillAction))

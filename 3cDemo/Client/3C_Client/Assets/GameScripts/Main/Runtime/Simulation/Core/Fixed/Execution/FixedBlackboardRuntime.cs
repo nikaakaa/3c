@@ -339,14 +339,27 @@ namespace ThirdPersonSimulation.Fixed
             if (m_TimelineBlackboardContexts.Count > 0)
             {
                 SimulationTimelineBlackboardContext timeline = m_TimelineBlackboardContexts.Peek();
+                FixedActionInstanceState action = m_Actions.RequireActive(timeline.Action);
+                if (!action.IsActive)
+                {
+                    string timelineContext = GetStringConstant(
+                        m_Program.Operations[timeline.Timeline.Value],
+                        OperationNamedConstant.ActionContext,
+                        string.Empty);
+                    if (!string.IsNullOrEmpty(timelineContext))
+                    {
+                        int slot = m_Actions.FindActive(timelineContext, out FixedActionInstanceState current);
+                        action = slot >= 0 ? current : default;
+                    }
+                }
                 string explicitContext = GetStringConstant(operation, OperationNamedConstant.FactContext, string.Empty);
                 if (!string.IsNullOrEmpty(explicitContext) &&
-                    !string.Equals(explicitContext, timeline.Action.ContextId, StringComparison.Ordinal))
+                    !string.Equals(explicitContext, action.ContextId, StringComparison.Ordinal))
                 {
                     throw new InvalidOperationException(
                         $"TreeClip Blackboard write '{SourcePath(operation)}' Action Context does not match its Timeline playback context.");
                 }
-                return m_Actions.RequireActive(timeline.Action);
+                return action;
             }
 
             if (m_Actions.TryGetCurrentSkillExecution(out FixedActionInstanceState skillAction))
@@ -417,7 +430,23 @@ namespace ThirdPersonSimulation.Fixed
             if (group.Scope.Kind != ProgramScopeKind.Frame || group.LifetimeKind != ProgramBlackboardLifetime.Frame)
                 throw new InvalidOperationException($"ActionWindow projection '{declaration.Identity}' is not Frame/Frame.");
             if (!action.IsActive)
-                throw new InvalidOperationException($"ActionWindow projection '{declaration.Identity}' has no explicit active Action Context.");
+            {
+                SimulationTimelineBlackboardContext timeline = m_TimelineBlackboardContexts.Peek();
+                SimulationOperation timelineOperation = m_Program.Operations[timeline.Timeline.Value];
+                string timelineContext = GetStringConstant(
+                    timelineOperation,
+                    OperationNamedConstant.ActionContext,
+                    string.Empty);
+                FixedActionInstanceState activeAction = default;
+                int activeSlot = string.IsNullOrEmpty(timelineContext)
+                    ? -1
+                    : m_Actions.FindActive(timelineContext, out activeAction);
+                string active = activeSlot < 0
+                    ? string.Empty
+                    : $"{activeAction.ContextId}/{activeAction.InstanceId}/{activeAction.State}";
+                throw new InvalidOperationException(
+                    $"ActionWindow projection '{declaration.Identity}' has no explicit active Action Context. Timeline='{SourcePath(timelineOperation)}', declared='{timelineContext}', retained='{timeline.Action.ContextId}/{timeline.Action.InstanceId}/{timeline.Action.State}', action='{action.ContextId}/{action.InstanceId}/{action.State}', active='{active}', activeSlot='{activeSlot}', clip='{timeline.Clip.Value}'.");
+            }
             BlackboardWriteStamp stamp = m_State.Get(group.WriteStamp).BlackboardWriteStamp;
             if (!stamp.IsValid || !stamp.SourceOperation.Equals(operation.Handle) || stamp.LogicTick != m_Frame.Tick.Value ||
                 stamp.ActionInstanceId != action.InstanceId)

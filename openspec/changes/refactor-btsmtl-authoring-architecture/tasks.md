@@ -1,10 +1,17 @@
 ## 当前进度
 
-更新于 2026-09-05（Asia/Shanghai）。本次核对代码到 `6b94d16f231d03dc3e8cba51f7dc54f55bebadd7`，生成的Gameplay Lab根资产仍到 `6ca8e09a718a9823d43518b9087bbb14481661e8`，位置为主目录 `D:/Unity_Project_1/3C` 的 `main`。后续提交必须继续更新下面对应任务，不能把这里的时点当成永久状态。
+更新于 2026-09-06（Asia/Shanghai）。本次任务记录核对基准为主目录 `D:/Unity_Project_1/3C` 的 `main` 提交 `cafb5ee4306b7668c7a4769ba25153c3c64ab99e`，已核对的 ACL 接收修正到 `466967dff02b92858b5401c50c802214473105c4`。本次分别记录清单关闭状态、代码交付与正式构建证据，不把旧生成组当作当前候选，也不把部分代码落地当作整项完成。
 
 本文件是本 change 的当前执行进度；`baseline.md`保留实施起点的历史身份。勾选只表示该条完整要求已满足；未勾任务另外写明“已实现，待验证”“部分完成”“尚未完成”或“待验证”，不再用同一个空框掩盖不同阶段。静态审查、源码编译、产物发布和Replay分别记录，不互相替代。
 
-按原66项完整要求记录：已完成3项，已实现待验证8项，部分完成33项，尚未完成19项，单独待验证3项。该计数不是工作量百分比；具体已落地部分和剩余条件见每条任务下的说明。
+按当前清单实际勾选统计：共66项，7项已勾选，59项未关闭。已勾选项是1.2、1.3、2.1及Agent任务10.1、10.2、10.5、10.6；后四项仍明确保留整链复核或最终对账条件。未关闭项包含已实现待验证、部分完成和未完成，不能据此计算实现完成率。下面各条的历史状态说明仍须随业务提交更新，不能仅修改总览数字。
+
+### 本轮确认的进展与剩余工作
+
+- 公共根、入口与缓存身份校验已有`31f111d7e`、`8f3294561`及`6bcf16aa2`交付；ACL接入已有`dc7e720bc`，`b2d0e0d09`补齐资源配置入口并将组合Projection升级为`v15`，`466967dff`修正Unity可选资源读取。254项ACL来源路径均存在；244项与原固定索引相同，10项为公共Build、受保护运行时、Projection版本和明确资源补丁的接收差异。这是来源范围核对，不是整个接收组合已通过运行验收。
+- 实施报告本轮Runtime、Editor源码构建均为0错误，并按要求关闭build servers。正式Unity构建job `25a237be85b34263b2704289e0de245e`在主实例`e852139597e42532`返回19条`PresentationProjection`错误，原因均为当前Sampling Rig或Calibration Preview Pose的几何验证identity过期；尚未证明具体哪个输入变化。原始返回证据保存在`D:/Unity_Project_1/3C/.codex-tmp/bts-acl-main-build-25a237be.review.json`。
+- 此前成功返回的Projection仍为`v13`、PosePlan `v24`、PoseRuntime `v27`，不能作为当前源码Projection `v15`、PosePlan `v25`、PoseRuntime `v28`的构建证据。Float与Fixed也尚未形成当前版本的同组发布；12.3保持未关闭，完整Replay仍未通过。
+- 普通重构继续按原任务收口，包括装备入口迁移、规则热更与产品装配、作者规则和技能工作区、旧路径删除、中央职责迁移及最终结构审查。相机公共命令交接、公共诊断来源修复继续按已确认边界推进；Timeline内容和Agent Document仍由各自任务负责。脚部几何问题只阻塞相关产物构建，不能作为整项重构停止的条件。
 
 ### 已有代码交付与剩余边界
 
@@ -17,7 +24,9 @@
 | 当前Corin产物发布 | `00c47f3c`统一两Target与Projection的一次Publish，`31ac3821`提交过正式产物；后续控制、Timeline及Action目录拆分、公共 Projection ABI v15 后，旧产物身份不再是当前候选，12.3待正式重建 | 本组实际运行和Replay比较仍归13.2；不等同于全部产品发布完成 |
 | 作者工具、Document、发布 | 规划边界已明确；Control.Rules程序集与部分产品装配已有代码 | 作者模块/工作区、唯一Document v5、旧schema删除、热更发布和全部产品装配仍有实质实施工作 |
 
-### 当前构建与回放证据
+### 历史构建与回放证据
+
+本节保留先前迁移阶段的检查记录。当前候选以“本轮确认的进展与剩余工作”为准；旧版本构建、引用检查和曾经关闭的任务不能替代新版本的验收。
 
 - Runtime源码编译由实施任务报告通过。当前按要求构建`ThirdPersonClient.Editor.csproj`及其新增语义模块，结果为0错误；输出中的警告均为现有依赖或既有字段警告。主审已确认各新Emitter、节点登记模块、目录绑定模块及共享BehaviorCatalogFields均进入实际Editor工程，正式Frontend的上一次有效产物仍为6ca8e09a7。Editor编译、构建调用与产品receipt的完整日志归位仍由13.1收口。
 - 正式资产操作在项目`D:/Unity_Project_1/3C/3cDemo/Client/3C_Client`的主Editor执行。首轮Gameplay Lab重建因旧端点字段抛异常，已由`c3b2e3ed0`修正。后续唯一重建请求虽CLI超时，日志后来明确出现`Shared Gameplay Lab synchronized`；不能继续记为“尚未执行完”，也不能据此直接判定产物一致。
@@ -26,8 +35,8 @@
 - Timeline编排迁移`adc29ea30`保留同一Track/Clip注册表、EmissionSession及Builder；主审对照父提交确认TreeClip入口为Enter/order 0，OnEnable为Enter/order 1，OnDisable与OnDestroy分别为Exit/order 0和1，嵌套CompileGraph继续传递原stateScopeOwner。原中央Timeline与生命周期方法已删除；`bf1289be3`将Node/Asset来源收敛到`CharacterSemanticSourceFactory`。本轮正式重建完成日志为此前`Editor.log:45734`，调用栈为`GameplayLabAssetBuilder.cs:149`；此处只确认代码编排与构建身份，不作为Replay行为通过。
 - Action/Behavior目录迁移`705f01d82`保留action/behavior稳定ID、版本3/1、Required/Block/Cancel下的All/Any/None字段、ActionRequestBuffer及ActionInstance状态归属和声明顺序。原CompileActions/CompileBehaviors及公共BehaviorFields已删除，Action/Behavior/GE实际共用CharacterSemanticBehaviorCatalogFields；`bf1289be3`之后Action、GE、目录Compiler共用唯一Asset来源工厂。
 - `ae28b8998`迁出Equipment目录，`147556f2f`迁出Input目录，`0c416ac24 → a23eb2ae8`迁出Tag/Attribute目录，`9a036e8ad`迁出全局状态；这些模块仍写入同一个CatalogIndex与Builder，原中央分支已删除。`475cfa9d0`及`51b3a07c0`又把Root/State/Timeline、Input/Blackboard、Action、Camera、Gameplay、Equipment、Motion的节点登记按领域拆开，并把目录绑定拆成共享目录引用、Input、Equipment、Action、Gameplay模块。当前仅有源码构建证据，最新拆分后尚未重新正式发布产物。
-- 当前有效两Program均为compiler/24、ProgramId `character:c7a7c1e3f7e64d81b5a04a90cbeb8d4e`、SourceRevision `ba8dcda4ece0f958a5b78cd6f2ad1d2ee8b0ca0b2c5f1efb3a0a31701cb7c68b`、SemanticHash `fe5bbbd7c89aec250a7d0eabbd24ea7392bbd964a6b9bb3ce8e19e059428e969`。Float32 ProgramHash为`00ca45fd7f86f03516b30aef09edfaa4bbccb99291c9d9a2521bc28cf06328e9`，Fixed为`63f7ee3716847d7ebd3c1458fad3a96f16c5c9a1f65c24d6e1d111c7a23e1091`；Target ProgramHash不同是正常数值/布局差异。该身份是上一次有效产物的记录，不能替代本轮正式重建。
-- 主审核对三个Variant：LocalFloat32引用Program GUID `5740a6cfbfb0fe542ad6a6cb66fe1a80`，LocalFixed及Rollback引用`91063668fd0eaa84d9b7d688aadbc90a`，三者均引用Projection GUID `f365735adcfd49c4e96070df6bcd3bc4`。实施已报告同组Projection与Launcher Validate完成，代码审查确认原统一Publish检查路径；此结论关闭12.3，不关闭13.2。
+- 先前有效两Program均为compiler/24、ProgramId `character:c7a7c1e3f7e64d81b5a04a90cbeb8d4e`、SourceRevision `ba8dcda4ece0f958a5b78cd6f2ad1d2ee8b0ca0b2c5f1efb3a0a31701cb7c68b`、SemanticHash `fe5bbbd7c89aec250a7d0eabbd24ea7392bbd964a6b9bb3ce8e19e059428e969`。Float32 ProgramHash为`00ca45fd7f86f03516b30aef09edfaa4bbccb99291c9d9a2521bc28cf06328e9`，Fixed为`63f7ee3716847d7ebd3c1458fad3a96f16c5c9a1f65c24d6e1d111c7a23e1091`；Target ProgramHash不同是正常数值/布局差异。该身份是历史产物记录，不能替代本轮正式重建。
+- 主审此前核对三个Variant：LocalFloat32引用Program GUID `5740a6cfbfb0fe542ad6a6cb66fe1a80`，LocalFixed及Rollback引用`91063668fd0eaa84d9b7d688aadbc90a`，三者均引用Projection GUID `f365735adcfd49c4e96070df6bcd3bc4`。实施当时报告同组Projection与Launcher Validate完成，代码审查确认原统一Publish检查路径；该历史结论曾关闭12.3，当前ABI变化后12.3已重新打开，13.2也未关闭。
 - 本轮Corin Replay尚无完整通过证据。历史输入/Proof的精确路径见`baseline.md`，其中比较帧数为0的旧Proof不作为本轮回归通过。
 - 下一份可交付验证结果应包含对应任务号、代码提交、正式入口/日志、实际产物身份及Replay运行/比较位置。遇到一次请求超时先查该请求最终结果，不重复发起有副作用的构建，不手改生成资产。
 

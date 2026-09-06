@@ -218,6 +218,7 @@ namespace ThirdPersonSimulation
         readonly ReadOnlyCollection<EquipmentProgramOperationBinding> m_OperationBindings;
         readonly Dictionary<EquipmentSlotId, EquipmentProgramSlot> m_SlotById;
         readonly Dictionary<EquipmentFeatureId, EquipmentProgramFeature> m_FeatureById;
+        readonly Dictionary<string, EquipmentProgramFeature> m_FeatureByCodeBinding;
         readonly Dictionary<EquipmentId, EquipmentProgramItem> m_ItemById;
         readonly Dictionary<EquipmentActionRouteId, EquipmentProgramRoute> m_RouteById;
         readonly Dictionary<(EquipmentFeatureId, EquipmentActionRouteId), EquipmentProgramRouteImplementation> m_RouteImplementationByKey;
@@ -250,6 +251,13 @@ namespace ThirdPersonSimulation
                 throw new InvalidDataException("Equipment capability has no Slot catalog.");
             m_SlotById = m_Slots.ToDictionary(value => value.SlotId);
             m_FeatureById = m_Features.ToDictionary(value => value.FeatureId);
+            m_FeatureByCodeBinding = new Dictionary<string, EquipmentProgramFeature>(StringComparer.Ordinal);
+            for (int i = 0; i < m_Features.Count; i++)
+            {
+                EquipmentProgramFeature feature = m_Features[i];
+                if (!m_FeatureByCodeBinding.TryAdd(feature.CodeBindingId, feature))
+                    throw new InvalidDataException($"Equipment Feature code binding '{feature.CodeBindingId}' is duplicated.");
+            }
             m_ItemById = m_Items.ToDictionary(value => value.EquipmentId);
             m_RouteById = m_Routes.ToDictionary(value => value.RouteId);
             m_RouteImplementationByKey = m_RouteImplementations.ToDictionary(value => (value.FeatureId, value.RouteId));
@@ -274,6 +282,10 @@ namespace ThirdPersonSimulation
             m_SlotById.TryGetValue(slotId, out EquipmentProgramSlot value) ? value : throw new InvalidOperationException($"Equipment Slot '{slotId}' is absent from Program.");
         public EquipmentProgramFeature RequireFeature(EquipmentFeatureId featureId) =>
             m_FeatureById.TryGetValue(featureId, out EquipmentProgramFeature value) ? value : throw new InvalidOperationException($"Equipment Feature '{featureId}' is absent from Program.");
+        public EquipmentProgramFeature RequireFeatureByCodeBinding(string codeBindingId) =>
+            m_FeatureByCodeBinding.TryGetValue(SimulationIdentity.Require(codeBindingId, nameof(codeBindingId)), out EquipmentProgramFeature value)
+                ? value
+                : throw new InvalidOperationException($"Equipment Feature code binding '{codeBindingId}' is absent from Program.");
         public EquipmentProgramItem RequireItem(EquipmentId equipmentId) =>
             m_ItemById.TryGetValue(equipmentId, out EquipmentProgramItem value) ? value : throw new InvalidOperationException($"Equipment '{equipmentId}' is absent from Program.");
         public EquipmentProgramRoute RequireRoute(EquipmentActionRouteId routeId) =>
@@ -340,13 +352,16 @@ namespace ThirdPersonSimulation
                 EquipmentProgramRouteImplementation implementation = m_RouteImplementations[i];
                 if (!m_FeatureById.ContainsKey(implementation.FeatureId) || !m_RouteById.ContainsKey(implementation.RouteId))
                     throw new InvalidDataException($"Equipment Route implementation '{implementation.FeatureId}/{implementation.RouteId}' has a dangling Feature or Route.");
+                if (m_RouteById[implementation.RouteId].OwnerSlotId.IsValid &&
+                    !m_SlotById.ContainsKey(m_RouteById[implementation.RouteId].OwnerSlotId))
+                    throw new InvalidDataException($"Equipment Route implementation '{implementation.FeatureId}/{implementation.RouteId}' has a dangling owner Slot.");
             }
         }
 
         StableHash ComputeHash()
         {
             using var writer = new CanonicalWriter();
-            writer.WriteString("equipment-program-layout/v1");
+            writer.WriteString("equipment-program-layout/v2");
             writer.WriteBoolean(CapabilityEnabled);
             writer.WriteInt32(m_Slots.Count);
             for (int i = 0; i < m_Slots.Count; i++)
@@ -794,6 +809,8 @@ namespace ThirdPersonSimulation
             EquipmentProgramItem item = layout.RequireItem(context.EquipmentId);
             EquipmentProgramFeature feature = layout.RequireFeature(context.FeatureId);
             EquipmentProgramRoute route = layout.RequireRoute(context.RouteId);
+            if (!layout.TryGetRouteImplementation(context.FeatureId, context.RouteId, out _))
+                throw new InvalidDataException($"Equipment Action Context '{context}' has no Feature route implementation.");
             if (item.SlotId != context.SlotId || item.FeatureId != context.FeatureId ||
                 route.OwnerSlotId != context.SlotId || feature.FeatureId != context.FeatureId)
             {

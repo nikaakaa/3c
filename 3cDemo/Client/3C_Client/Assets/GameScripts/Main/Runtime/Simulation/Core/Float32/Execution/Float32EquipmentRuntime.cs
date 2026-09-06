@@ -37,7 +37,45 @@ namespace ThirdPersonSimulation
 			m_Control = new EquipmentRuntimeControl(this);
 		}
 
-		public EquipmentActionContext Current => default;
+		public bool TryReadActionContext(EquipmentActionRouteId routeId, out EquipmentActionContext context)
+		{
+			context = default;
+			if (!m_Layout.Equipment.CapabilityEnabled || !routeId.IsValid)
+				return false;
+			EquipmentProgramRoute route = m_Layout.Equipment.RequireRoute(routeId);
+			EquipmentSlotState slot = ReadState().RequireSlot(route.OwnerSlotId);
+			if (!slot.IsEquipped)
+				return false;
+			if (!m_Layout.Equipment.TryGetRouteImplementation(slot.FeatureId, routeId, out _))
+			{
+				if (route.MissingImplementation == EquipmentRouteMissingImplementation.RejectComposition)
+					throw new InvalidOperationException($"Equipment Route '{routeId}' has no implementation for Feature '{slot.FeatureId}'.");
+				return false;
+			}
+			context = slot.ActionContext(routeId);
+			return context.IsValid;
+		}
+
+		public bool IsSkillBinding(EquipmentActionContext context, CharacterSkillId skillId)
+		{
+			if (!context.IsValid || !skillId.IsValid || !IsCurrentActionContext(context))
+				return false;
+			return m_Layout.Equipment.TryGetRouteImplementation(context.FeatureId, context.RouteId, out EquipmentProgramRouteImplementation implementation) &&
+				implementation.SkillId == skillId;
+		}
+
+		public bool IsCurrentActionContext(EquipmentActionContext context)
+		{
+			if (!context.IsValid || !m_Layout.Equipment.TryGetRouteImplementation(context.FeatureId, context.RouteId, out _))
+				return false;
+			EquipmentProgramRoute route = m_Layout.Equipment.RequireRoute(context.RouteId);
+			EquipmentSlotState slot = ReadState().RequireSlot(route.OwnerSlotId);
+			return slot.IsEquipped &&
+				slot.SlotId == context.SlotId &&
+				slot.EquipmentId == context.EquipmentId &&
+				slot.FeatureId == context.FeatureId &&
+				slot.Revision == context.EquipmentRevision;
+		}
 
 		public void BeginEvaluation()
 		{

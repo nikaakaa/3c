@@ -472,10 +472,15 @@ namespace ThirdPersonSimulation.Fixed
                     m_Input,
                     m_Frame,
                     parameter => ReadControlParameter(controlCatalog, parameter),
-                    skill => m_Actions.IsSkillActive(skill),
-                    skill => m_Actions.IsSkillCompleted(skill),
-                    skill => m_Actions.CompletedSkillInstanceId(skill),
-                    (skill, window) => m_Blackboard.IsActionWindowActive(skill, window));
+					skill => m_Actions.IsSkillActive(skill),
+					skill => m_Actions.IsSkillCompleted(skill),
+					skill => m_Actions.CompletedSkillInstanceId(skill),
+					(skill, window) => m_Blackboard.IsActionWindowActive(skill, window),
+					route =>
+					{
+						bool found = m_Equipment.TryReadActionContext(route, out EquipmentActionContext context);
+						return (found, context);
+					});
                 m_CharacterControlState = new FixedCharacterControlStatePort(characterControlState, characterControlLayout);
                 m_CharacterControlOutput = new FixedCharacterControlOutputPort(
                     access,
@@ -666,27 +671,47 @@ namespace ThirdPersonSimulation.Fixed
                 {
                     if (m_Control.IsStopping(skill.EntryOperation))
                     {
-                        OperationStopStatus stop = m_Control.ContinueStop(skill.EntryOperation);
-                        if (stop == OperationStopStatus.Failed)
-                            throw new InvalidOperationException($"Skill '{skill.SkillId}' EntryOperation stop failed.");
-                        if (stop == OperationStopStatus.Running)
-                            stoppingContexts.Add(skill.ActionContextId);
-                        else if (!m_Control.IsActive(skill.EntryOperation))
+                        if (action.State == SimulationActionState.Aborted || action.State == SimulationActionState.Rejected)
+                        {
+                            m_Control.ForceStop(
+                                skill.EntryOperation,
+                                OperationStopContext.ActionContextEnded(skill.EntryOperation));
                             removeFrame = true;
+                        }
+                        else
+                        {
+                            OperationStopStatus stop = m_Control.ContinueStop(skill.EntryOperation);
+                            if (stop == OperationStopStatus.Failed)
+                                throw new InvalidOperationException($"Skill '{skill.SkillId}' EntryOperation stop failed.");
+                            if (stop == OperationStopStatus.Running)
+                                stoppingContexts.Add(skill.ActionContextId);
+                            else if (!m_Control.IsActive(skill.EntryOperation))
+                                removeFrame = true;
+                        }
                     }
                     else if (!action.IsActive)
                     {
                         if (m_Control.IsActive(skill.EntryOperation))
                         {
-                            OperationStopStatus stop = m_Control.RequestStop(
-                                skill.EntryOperation,
-                                OperationStopContext.ActionContextEnded(skill.EntryOperation));
-                            if (stop == OperationStopStatus.Failed)
-                                throw new InvalidOperationException($"Skill '{skill.SkillId}' EntryOperation stop failed.");
-                            if (stop == OperationStopStatus.Running)
-                                stoppingContexts.Add(skill.ActionContextId);
-                            else
+                            if (action.State == SimulationActionState.Aborted || action.State == SimulationActionState.Rejected)
+                            {
+                                m_Control.ForceStop(
+                                    skill.EntryOperation,
+                                    OperationStopContext.ActionContextEnded(skill.EntryOperation));
                                 removeFrame = true;
+                            }
+                            else
+                            {
+                                OperationStopStatus stop = m_Control.RequestStop(
+                                    skill.EntryOperation,
+                                    OperationStopContext.ActionContextEnded(skill.EntryOperation));
+                                if (stop == OperationStopStatus.Failed)
+                                    throw new InvalidOperationException($"Skill '{skill.SkillId}' EntryOperation stop failed.");
+                                if (stop == OperationStopStatus.Running)
+                                    stoppingContexts.Add(skill.ActionContextId);
+                                else
+                                    removeFrame = true;
+                            }
                         }
                         else
                         {

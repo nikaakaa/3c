@@ -64,7 +64,7 @@ namespace ThirdPersonSimulation.Fixed
                     GetStringConstant(operation, OperationNamedConstant.TargetKey, string.Empty),
                     ReadActionTargetSnapshot(cursor, operation),
                     SimulationExecutionSource.FromSkillOperation(operation.Handle, SourcePath(operation)),
-                    m_EquipmentContext.Current,
+                    default,
                     operation),
                 profile);
         }
@@ -102,6 +102,17 @@ namespace ThirdPersonSimulation.Fixed
 
         public bool ActivateFromControl(CharacterControlSkillRequest controlRequest)
         {
+            if (controlRequest.EquipmentContext.IsValid &&
+                !m_EquipmentContext.IsSkillBinding(controlRequest.EquipmentContext, controlRequest.SkillId))
+            {
+                if (m_Trace.Enabled)
+                    m_Trace.Add(
+                        controlRequest.Source,
+                        "equipment_skill_binding_invalid",
+                        SimulationTraceSeverity.Warning,
+                        $"skill={controlRequest.SkillId}:context={controlRequest.EquipmentContext}");
+                return false;
+            }
             CharacterSkillProgramBinding skill = m_Program.SkillPrograms.Require(controlRequest.SkillId);
             ActionAdmissionProfile profile = RequireActionProfile(skill.ActionProfileId);
             return m_Activation.ActivateFromControl(controlRequest, skill, profile);

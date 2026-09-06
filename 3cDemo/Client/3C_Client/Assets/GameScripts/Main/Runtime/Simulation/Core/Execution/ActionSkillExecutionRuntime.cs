@@ -512,7 +512,7 @@ namespace ThirdPersonSimulation
                     string.IsNullOrEmpty(controlRequest.TargetKey) ? skill.TargetKey : controlRequest.TargetKey,
                     targetSnapshot,
                     controlRequest.Source,
-                    default),
+                    controlRequest.EquipmentContext),
                 profile);
         }
 
@@ -878,4 +878,3 @@ namespace ThirdPersonSimulation
 
     }
 }
-

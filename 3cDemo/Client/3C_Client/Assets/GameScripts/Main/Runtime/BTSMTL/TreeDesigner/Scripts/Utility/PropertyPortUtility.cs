@@ -2,6 +2,7 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
 using UnityEditor;
 using UnityEngine;
 using BTSMTL;
@@ -64,6 +65,35 @@ namespace TreeDesigner
             if (s_TargetTypeMap.TryGetValue(type, out Type targetType))
                 return targetType;
             return null;
+        }
+
+        public static bool TryGetPropertyPortType(Type valueType, out Type propertyPortType)
+        {
+            propertyPortType = null;
+            if (valueType == null)
+                return false;
+
+            Type[] matches = s_TargetTypeMap
+                .Where(pair => pair.Value == valueType)
+                .Select(pair => pair.Key)
+                .ToArray();
+            if (matches.Length != 1)
+                return false;
+
+            propertyPortType = matches[0];
+            return true;
+        }
+
+        public static IReadOnlyList<Type> GetPropertyPortTypes(Type valueType)
+        {
+            if (valueType == null)
+                return Array.Empty<Type>();
+
+            return s_TargetTypeMap
+                .Where(pair => pair.Value == valueType)
+                .Select(pair => pair.Key)
+                .OrderBy(type => type.FullName, StringComparer.Ordinal)
+                .ToArray();
         }
         public static Color Color(this PropertyPort propertyPort)
         {

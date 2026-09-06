@@ -10,7 +10,7 @@ namespace ThirdPersonSimulation.Fixed
     {
         const uint Magic = 0x54534343;
 		const int Version = 14;
-		public const string CodecIdentity = "character-state/fixed-q32.32/v12";
+		public const string CodecIdentity = "character-state/fixed-q32.32/v13";
 		const string HashIdentity = "character-state-hash/fixed-q32.32/v11";
 
         public static byte[] Write(CharacterSimulationState state)

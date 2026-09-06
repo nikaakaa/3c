@@ -10,7 +10,7 @@ namespace ThirdPersonSimulation
     {
         const uint Magic = 0x54534343;
 		const int Version = 13;
-		public const string CodecIdentity = "character-state/float32/v13";
+		public const string CodecIdentity = "character-state/float32/v14";
 		const string HashIdentity = "character-state-hash/float32/v12";
 
         public static byte[] Write(CharacterSimulationState state)

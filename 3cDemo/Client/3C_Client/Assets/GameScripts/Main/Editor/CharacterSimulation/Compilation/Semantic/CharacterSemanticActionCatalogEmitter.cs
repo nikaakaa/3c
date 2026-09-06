@@ -40,27 +40,34 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                     CharacterSemanticSourceFactory.Asset(m_Model, profile, $"action:{profile.ActionId}");
                 var fields = CharacterSemanticBehaviorCatalogFields.Emit(profile, m_Builder, source).ToList();
                 fields.Add(m_Builder.ConstantField(source, "TargetRequirement", profile.TargetRequirement));
+                fields.Add(m_Builder.ConstantField(source, "MaxConcurrentInstances", profile.MaxConcurrentInstances));
                 AddQueryFields(fields, source, "Required", profile.RequiredTags);
                 AddQueryFields(fields, source, "Block", profile.BlockTags);
                 AddQueryFields(fields, source, "Cancel", profile.CancelTags);
                 m_Builder.DeclareCatalogEntry(
                     ProgramCatalogEntryKind.Action,
                     $"action:{profile.ActionId}",
-                    3,
+                    4,
                     Fields(fields),
                     source);
-                m_Builder.DeclareStandaloneStateSlot(
-                    source,
-                    ProgramStateValueKind.ActionActivationRequest,
-                    ProgramStateOwnerKind.Action,
-                    ProgramStateSemantic.ActionRequestBuffer,
-                    $"action:{profile.ActionId}");
-                m_Builder.DeclareStandaloneStateSlot(
-                    source,
-                    ProgramStateValueKind.ActionInstance,
-                    ProgramStateOwnerKind.Action,
-                    ProgramStateSemantic.ActionInstance,
-                    $"action:{profile.ActionId}");
+                for (int instanceIndex = 0; instanceIndex < profile.MaxConcurrentInstances; instanceIndex++)
+                {
+                    string ownerIdentity = instanceIndex == 0
+                        ? $"action:{profile.ActionId}"
+                        : $"action:{profile.ActionId}:slot:{instanceIndex:D4}";
+                    m_Builder.DeclareStandaloneStateSlot(
+                        source,
+                        ProgramStateValueKind.ActionActivationRequest,
+                        ProgramStateOwnerKind.Action,
+                        ProgramStateSemantic.ActionRequestBuffer,
+                        ownerIdentity);
+                    m_Builder.DeclareStandaloneStateSlot(
+                        source,
+                        ProgramStateValueKind.ActionInstance,
+                        ProgramStateOwnerKind.Action,
+                        ProgramStateSemantic.ActionInstance,
+                        ownerIdentity);
+                }
             }
 
             foreach (GameplayBehaviorProfile profile in m_Model.BehaviorProfiles)

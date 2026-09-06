@@ -120,6 +120,7 @@ namespace ThirdPersonSimulation
         public ActionAdmissionProfile(
             string actionId,
             ActionTargetRequirement targetRequirement,
+            int maxConcurrentInstances,
             string[] tags,
             ActionTagQuery required,
             ActionTagQuery block,
@@ -128,7 +129,10 @@ namespace ThirdPersonSimulation
             ActionId = SimulationIdentity.Require(actionId, nameof(actionId));
             if (!Enum.IsDefined(typeof(ActionTargetRequirement), targetRequirement))
                 throw new ArgumentOutOfRangeException(nameof(targetRequirement));
+            if (maxConcurrentInstances <= 0)
+                throw new ArgumentOutOfRangeException(nameof(maxConcurrentInstances));
             TargetRequirement = targetRequirement;
+            MaxConcurrentInstances = maxConcurrentInstances;
             Tags = tags ?? Array.Empty<string>();
             Required = required ?? throw new ArgumentNullException(nameof(required));
             Block = block ?? throw new ArgumentNullException(nameof(block));
@@ -137,6 +141,7 @@ namespace ThirdPersonSimulation
 
         public string ActionId { get; }
         public ActionTargetRequirement TargetRequirement { get; }
+        public int MaxConcurrentInstances { get; }
         public string[] Tags { get; }
         public ActionTagQuery Required { get; }
         public ActionTagQuery Block { get; }
@@ -168,6 +173,8 @@ namespace ThirdPersonSimulation
             var cancelNone = new List<string>();
             ActionTargetRequirement targetRequirement = default;
             bool hasTargetRequirement = false;
+            int maxConcurrentInstances = 0;
+            bool hasMaxConcurrentInstances = false;
             for (int i = 0; i < entry.Fields.Count; i++)
             {
                 ProgramCatalogField field = entry.Fields[i];
@@ -180,6 +187,16 @@ namespace ThirdPersonSimulation
                     if (!Enum.IsDefined(typeof(ActionTargetRequirement), targetRequirement))
                         throw new InvalidOperationException($"Action catalog '{entry.Identity}' has unknown target requirement '{value}'.");
                     hasTargetRequirement = true;
+                    continue;
+                }
+                if (string.Equals(field.Name, "MaxConcurrentInstances", StringComparison.Ordinal))
+                {
+                    if (hasMaxConcurrentInstances || field.Kind != ProgramCatalogFieldKind.Constant)
+                        throw new InvalidOperationException($"Action catalog '{entry.Identity}' has an invalid MaxConcurrentInstances field.");
+                    maxConcurrentInstances = readInt32Constant(field.ConstantIndex);
+                    if (maxConcurrentInstances <= 0)
+                        throw new InvalidOperationException($"Action catalog '{entry.Identity}' has non-positive MaxConcurrentInstances '{maxConcurrentInstances}'.");
+                    hasMaxConcurrentInstances = true;
                     continue;
                 }
                 if (field.Kind != ProgramCatalogFieldKind.Identity || string.IsNullOrWhiteSpace(field.Identity))
@@ -207,9 +224,12 @@ namespace ThirdPersonSimulation
             }
             if (!hasTargetRequirement)
                 throw new InvalidOperationException($"Action catalog '{entry.Identity}' has no TargetRequirement field.");
+            if (!hasMaxConcurrentInstances)
+                throw new InvalidOperationException($"Action catalog '{entry.Identity}' has no MaxConcurrentInstances field.");
             return new ActionAdmissionProfile(
                 entry.Identity.Substring(ActionPrefix.Length),
                 targetRequirement,
+                maxConcurrentInstances,
                 tags.ToArray(),
                 new ActionTagQuery(requiredAll.ToArray(), requiredAny.ToArray(), requiredNone.ToArray()),
                 new ActionTagQuery(blockAll.ToArray(), blockAny.ToArray(), blockNone.ToArray()),
@@ -288,7 +308,7 @@ namespace ThirdPersonSimulation
                         : Reject(ActionAdmissionRejectReason.ActiveSourceNotCancelable, replacementSource.ActionId, replacementSource.InstanceId);
                 }
 
-                if (activeTargetCount != 0)
+                if (activeTargetCount >= request.TargetProfile.MaxConcurrentInstances)
                     return Reject(ActionAdmissionRejectReason.ActionCapacityExceeded, request.TargetProfile.ActionId, 0);
                 return new ActionAdmissionDecision(true, ActionAdmissionRejectReason.None, string.Empty);
             }

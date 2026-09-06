@@ -20,6 +20,7 @@ namespace ThirdPersonCharacter.ActionSystem.Editor
         SerializedProperty m_BlockTags;
         SerializedProperty m_CancelTags;
         SerializedProperty m_TargetRequirement;
+        SerializedProperty m_MaxConcurrentInstances;
 
         void OnEnable()
         {
@@ -30,6 +31,7 @@ namespace ThirdPersonCharacter.ActionSystem.Editor
             m_BlockTags = serializedObject.FindProperty("m_BlockTags");
             m_CancelTags = serializedObject.FindProperty("m_CancelTags");
             m_TargetRequirement = serializedObject.FindProperty("m_TargetRequirement");
+            m_MaxConcurrentInstances = serializedObject.FindProperty("m_MaxConcurrentInstances");
         }
 
         public override void OnInspectorGUI()
@@ -40,6 +42,7 @@ namespace ThirdPersonCharacter.ActionSystem.Editor
             EditorGUILayout.PropertyField(m_DisplayName);
             EditorGUILayout.PropertyField(m_DebugCategory);
             EditorGUILayout.PropertyField(m_TargetRequirement);
+            EditorGUILayout.PropertyField(m_MaxConcurrentInstances);
 
             DrawHeader("Gameplay Tags");
             EditorGUILayout.PropertyField(m_Tags, true);

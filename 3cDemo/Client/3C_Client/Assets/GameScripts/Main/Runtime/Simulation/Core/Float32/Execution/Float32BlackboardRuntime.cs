@@ -474,15 +474,14 @@ namespace ThirdPersonSimulation
 		{
 			if (string.IsNullOrWhiteSpace(windowType))
 				throw new ArgumentException("Action window type is missing.", nameof(windowType));
-			int actionSlot = m_Actions.FindActive(skillId, out Float32ActionInstanceState active);
-			if (actionSlot < 0)
+			if (!m_Actions.TryGetActiveSkillInstanceId(skillId, out ulong activeInstanceId))
 				return false;
 			for (int i = 0; i < m_ActionWindowProjections.Count; i++)
 			{
 				SimulationActionWindowProjectionCandidate candidate = m_ActionWindowProjections[i];
 				if (candidate.ActorId == m_Frame.ActorId &&
 					candidate.LogicTick == m_Frame.Tick.Value &&
-					candidate.ActionInstanceId == active.InstanceId &&
+					candidate.ActionInstanceId == activeInstanceId &&
 					string.Equals(candidate.WindowType, windowType, StringComparison.Ordinal))
 					return true;
 			}

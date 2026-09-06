@@ -245,10 +245,13 @@ namespace ThirdPersonSimulation
                 if (!operation.IsValid)
                     throw new InvalidDataException($"SkillProgram '{entry.Identity}' has no entry operation reference.");
                 string skillValue = RequirePrefix(entry.Identity, "skill:");
+                string actionProfileIdentity = RequireIdentity(entry, "ActionProfile", "action:");
+                if (!ContainsEntry(entries, ProgramCatalogEntryKind.Action, actionProfileIdentity))
+                    throw new InvalidDataException($"SkillProgram '{entry.Identity}' references missing Action profile '{actionProfileIdentity}'.");
                 ReadRelations(entry, out List<CharacterSkillDependency> dependencies, out List<CharacterSkillId> allowedFollowUps);
                 values.Add(new CharacterSkillProgramBinding(
                     new CharacterSkillId(skillValue),
-                    RequireIdentity(entry, "ActionProfile", "action:"),
+                    actionProfileIdentity,
                     RequireIdentity(entry, "EntryIdentity", null),
                     operation,
                     RequireIdentity(entry, "ActionContext", null),
@@ -285,6 +288,19 @@ namespace ThirdPersonSimulation
             if (value == null || !value.StartsWith(prefix, StringComparison.Ordinal))
                 throw new InvalidDataException($"SkillProgram identity '{value}' has no '{prefix}' prefix.");
             return SimulationIdentity.Require(value.Substring(prefix.Length), nameof(value));
+        }
+
+        static bool ContainsEntry(
+            IReadOnlyList<ProgramCatalogEntry> entries,
+            ProgramCatalogEntryKind kind,
+            string identity)
+        {
+            for (int i = 0; i < entries.Count; i++)
+            {
+                if (entries[i].Kind == kind && string.Equals(entries[i].Identity, identity, StringComparison.Ordinal))
+                    return true;
+            }
+            return false;
         }
 
         static string RequireIdentity(ProgramCatalogEntry entry, string name, string prefix)

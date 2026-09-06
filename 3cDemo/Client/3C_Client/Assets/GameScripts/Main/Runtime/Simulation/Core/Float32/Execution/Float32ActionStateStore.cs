@@ -326,26 +326,52 @@ namespace ThirdPersonSimulation
 			return m_SkillExecution.Remove(actionInstanceId);
 		}
 
-		public bool IsContextActive(string contextId) => FindActive(contextId, out _) >= 0;
+		public bool IsContextActive(string contextId)
+		{
+			foreach (TypedActionStateAddresses addresses in m_Layout.AllActionStateAddresses)
+			{
+				Float32ActionInstanceState action = m_State.Get(addresses.Instance.SlotIndex).ActionInstance;
+				if (action.IsActive && string.Equals(action.ContextId, contextId ?? string.Empty, StringComparison.Ordinal))
+					return true;
+			}
+			return false;
+		}
 
-		public bool IsSkillActive(CharacterSkillId skillId) => FindActive(skillId, out _) >= 0;
+		public bool IsSkillActive(CharacterSkillId skillId)
+		{
+			foreach (TypedActionStateAddresses addresses in m_Layout.AllActionStateAddresses)
+			{
+				Float32ActionInstanceState action = m_State.Get(addresses.Instance.SlotIndex).ActionInstance;
+				if (action.IsActive && action.SkillId == skillId)
+					return true;
+			}
+			return false;
+		}
 
 		public bool IsSkillExecutionActive(ulong actionInstanceId) =>
 			m_SkillExecution.IsActive(actionInstanceId);
+
+		public bool HasSkillExecutionFrame(ulong actionInstanceId) =>
+			m_SkillExecution.HasFrame(actionInstanceId);
 
 		public bool IsSkillCompleted(CharacterSkillId skillId) => CompletedSkillInstanceId(skillId) != 0;
 
 		public ulong CompletedSkillInstanceId(CharacterSkillId skillId)
 		{
 			ulong result = 0;
-			foreach (TypedActionStateAddresses addresses in m_Layout.ActionStateIndex.Values)
+			ulong resultTick = 0;
+			foreach (TypedActionStateAddresses addresses in m_Layout.AllActionStateAddresses)
 			{
 				Float32ActionInstanceState action = m_State.Get(addresses.Instance.SlotIndex).ActionInstance;
 				if (action.SkillId != skillId || action.State != SimulationActionState.Ended)
 					continue;
-				if (result != 0)
-					throw new InvalidOperationException($"Skill '{skillId}' resolves multiple completed Action instances.");
-				result = action.InstanceId;
+				if (result == 0 ||
+					action.LastTransitionTick > resultTick ||
+					action.LastTransitionTick == resultTick && action.InstanceId > result)
+				{
+					result = action.InstanceId;
+					resultTick = action.LastTransitionTick;
+				}
 			}
 			return result;
 		}
@@ -354,27 +380,35 @@ namespace ThirdPersonSimulation
 		{
 			int found = -1;
 			state = default;
-			foreach (TypedActionStateAddresses addresses in m_Layout.ActionStateIndex.Values)
+			foreach (TypedActionStateAddresses addresses in m_Layout.AllActionStateAddresses)
 				MatchActive(addresses.Instance, skillId, ref found, ref state);
 			return found;
 		}
 
 		public bool TryGetActiveSkillInstanceId(CharacterSkillId skillId, out ulong instanceId)
 		{
-			if (FindActive(skillId, out Float32ActionInstanceState state) < 0)
+			ulong found = 0;
+			foreach (TypedActionStateAddresses addresses in m_Layout.AllActionStateAddresses)
 			{
-				instanceId = 0;
-				return false;
+				Float32ActionInstanceState state = m_State.Get(addresses.Instance.SlotIndex).ActionInstance;
+				if (!state.IsActive || state.SkillId != skillId)
+					continue;
+				if (found != 0)
+				{
+					instanceId = 0;
+					return false;
+				}
+				found = state.InstanceId;
 			}
-			instanceId = state.InstanceId;
-			return true;
+			instanceId = found;
+			return found != 0;
 		}
 
 		public int FindCurrent(CharacterSkillId skillId, out Float32ActionInstanceState state)
 		{
 			int found = -1;
 			state = default;
-			foreach (TypedActionStateAddresses addresses in m_Layout.ActionStateIndex.Values)
+			foreach (TypedActionStateAddresses addresses in m_Layout.AllActionStateAddresses)
 			{
 				Float32ActionInstanceState candidate = m_State.Get(addresses.Instance.SlotIndex).ActionInstance;
 				if (!candidate.IsValid || candidate.SkillId != skillId)
@@ -385,6 +419,29 @@ namespace ThirdPersonSimulation
 				state = candidate;
 			}
 			return found;
+		}
+
+		public IReadOnlyList<Float32ActionInstanceState> CurrentActions(CharacterSkillId skillId)
+		{
+			var result = new List<Float32ActionInstanceState>();
+			foreach (TypedActionStateAddresses addresses in m_Layout.AllActionStateAddresses)
+			{
+				Float32ActionInstanceState candidate = m_State.Get(addresses.Instance.SlotIndex).ActionInstance;
+				if (candidate.IsValid && candidate.SkillId == skillId)
+					result.Add(candidate);
+			}
+			result.Sort((left, right) => left.InstanceId.CompareTo(right.InstanceId));
+			return result.AsReadOnly();
+		}
+
+		public IEnumerable<Float32ActionInstanceState> EnumerateActiveActions()
+		{
+			foreach (TypedActionStateAddresses addresses in m_Layout.AllActionStateAddresses)
+			{
+				Float32ActionInstanceState action = m_State.Get(addresses.Instance.SlotIndex).ActionInstance;
+				if (action.IsActive)
+					yield return action;
+			}
 		}
 
 		public Float32ActionInstanceState BindSkillExecution(
@@ -439,7 +496,7 @@ namespace ThirdPersonSimulation
             }
             else
             {
-                foreach (TypedActionStateAddresses addresses in m_Layout.ActionStateIndex.Values)
+                foreach (TypedActionStateAddresses addresses in m_Layout.AllActionStateAddresses)
                     MatchActive(addresses.Instance, string.Empty, ref found, ref state);
             }
             return found;
@@ -448,7 +505,7 @@ namespace ThirdPersonSimulation
         public Float32ActionInstanceState FindOnlyActive()
         {
             Float32ActionInstanceState result = default;
-            foreach (TypedActionStateAddresses addresses in m_Layout.ActionStateIndex.Values)
+            foreach (TypedActionStateAddresses addresses in m_Layout.AllActionStateAddresses)
             {
                 Float32ActionInstanceState current = m_State.Get(addresses.Instance.SlotIndex).ActionInstance;
                 if (!current.IsActive)
@@ -472,14 +529,14 @@ namespace ThirdPersonSimulation
         {
             if (!reference.IsValid)
                 return default;
-            TypedActionStateAddresses addresses = m_Layout.RequireAction(reference.ActionId);
-            Float32ActionInstanceState current = m_State.Get(addresses.Instance.SlotIndex).ActionInstance;
+			if (!TryGetInstance(reference.InstanceId, out Float32ActionInstanceState current))
+				return default;
 			return current.IsActive &&
+				   string.Equals(current.ActionId, reference.ActionId, StringComparison.Ordinal) &&
                    string.Equals(current.ContextId, reference.ContextId, StringComparison.Ordinal) &&
-                   current.InstanceId == reference.InstanceId &&
                    current.PredictionKey == reference.PredictionKey &&
                    reference.MatchesSkillExecution(current)
-                ? current
+				? current
 				: default;
 		}
 
@@ -502,11 +559,11 @@ namespace ThirdPersonSimulation
         {
             if (!reference.IsTransientValid)
                 return default;
-            TypedActionStateAddresses addresses = m_Layout.RequireAction(reference.ActionId);
-            Float32ActionInstanceState current = m_State.Get(addresses.Instance.SlotIndex).ActionInstance;
+			if (!TryGetInstance(reference.InstanceId, out Float32ActionInstanceState current))
+				return default;
             return current.IsActive &&
+                   string.Equals(current.ActionId, reference.ActionId, StringComparison.Ordinal) &&
                    string.Equals(current.ContextId, reference.ContextId, StringComparison.Ordinal) &&
-                   current.InstanceId == reference.InstanceId &&
                    current.PredictionKey == reference.PredictionKey &&
                    reference.MatchesTransientSkillExecution(current)
                 ? current
@@ -515,7 +572,7 @@ namespace ThirdPersonSimulation
 
         public bool ContainsInstance(ulong instanceId)
         {
-            foreach (TypedActionStateAddresses addresses in m_Layout.ActionStateIndex.Values)
+            foreach (TypedActionStateAddresses addresses in m_Layout.AllActionStateAddresses)
             {
                 Float32ActionInstanceState current = m_State.Get(addresses.Instance.SlotIndex).ActionInstance;
                 if (current.InstanceId == instanceId)
@@ -526,7 +583,7 @@ namespace ThirdPersonSimulation
 
         public bool TryGetInstance(ulong instanceId, out Float32ActionInstanceState state)
         {
-            foreach (TypedActionStateAddresses addresses in m_Layout.ActionStateIndex.Values)
+            foreach (TypedActionStateAddresses addresses in m_Layout.AllActionStateAddresses)
             {
                 Float32ActionInstanceState current = m_State.Get(addresses.Instance.SlotIndex).ActionInstance;
                 if (current.InstanceId != instanceId)
@@ -540,9 +597,48 @@ namespace ThirdPersonSimulation
 
         public void WriteState(Float32ActionInstanceState action)
         {
-            TypedActionStateAddresses addresses = m_Layout.RequireAction(action.ActionId);
-            m_State.Set(addresses.Instance.SlotIndex, CharacterStateValue.FromActionInstance(action));
+            if (TryFindInstanceSlot(action.InstanceId, out int existingSlot))
+            {
+                m_State.Set(existingSlot, CharacterStateValue.FromActionInstance(action));
+                return;
+            }
+			int slot = FindPendingRequest(
+				action.ActionId,
+				action.SkillId,
+				action.SkillEntryOperation,
+				action.ContextId,
+				action.InputSequence,
+				action.StartTick,
+				ulong.MaxValue);
+			if (slot < 0)
+				slot = FindEmptyInstanceSlot(action.ActionId);
+			if (slot < 0)
+				throw new InvalidOperationException($"Action '{action.ActionId}' has no free instance state slot.");
+			Float32ActionInstanceState previous = m_State.Get(slot).ActionInstance;
+			if (previous.IsValid && previous.IsTerminal)
+				m_SkillExecution.Remove(previous.InstanceId);
+			m_State.Set(slot, CharacterStateValue.FromActionInstance(action));
         }
+
+		public int RequireRequestSlot(string actionId)
+		{
+			foreach (TypedActionStateAddresses addresses in m_Layout.ActionStateSlots(actionId))
+			{
+				if (!m_State.Get(addresses.Request.SlotIndex).ActionActivationRequest.IsValid)
+					return addresses.Request.SlotIndex;
+			}
+			throw new InvalidOperationException($"Action '{actionId}' has no free activation request slot.");
+		}
+
+		public bool HasPendingRequest(string actionId)
+		{
+			foreach (TypedActionStateAddresses addresses in m_Layout.ActionStateSlots(actionId))
+			{
+				if (m_State.Get(addresses.Request.SlotIndex).ActionActivationRequest.IsValid)
+					return true;
+			}
+			return false;
+		}
 
         public int RequireSlot(string actionId, ProgramStateSemantic semantic)
         {
@@ -568,7 +664,7 @@ namespace ThirdPersonSimulation
 		{
 			int found = -1;
 			request = default;
-			foreach (TypedActionStateAddresses addresses in m_Layout.ActionStateIndex.Values)
+			foreach (TypedActionStateAddresses addresses in m_Layout.AllActionStateAddresses)
 			{
 				Float32ActionActivationRequestState candidate = m_State.Get(addresses.Request.SlotIndex).ActionActivationRequest;
 				if (!candidate.IsValid || !candidate.Source.IsCharacterControl || candidate.SkillId != skillId)
@@ -581,9 +677,58 @@ namespace ThirdPersonSimulation
 			return found;
 		}
 
+		public int FindPendingRequest(
+			string actionId,
+			CharacterSkillId skillId,
+			OperationHandle entryOperation,
+			string contextId,
+			ulong inputSequence,
+			ulong startTick,
+			ulong replacementActionInstanceId)
+		{
+			foreach (TypedActionStateAddresses addresses in m_Layout.ActionStateSlots(actionId))
+			{
+				Float32ActionActivationRequestState candidate = m_State.Get(addresses.Request.SlotIndex).ActionActivationRequest;
+				if (candidate.IsValid && candidate.SkillId == skillId &&
+					candidate.SkillEntryOperation.Equals(entryOperation) &&
+					string.Equals(candidate.ContextId, contextId, StringComparison.Ordinal) &&
+					candidate.InputSequence == inputSequence &&
+					candidate.StartTick == startTick &&
+					(replacementActionInstanceId == ulong.MaxValue ||
+					 candidate.ReplacementActionInstanceId == replacementActionInstanceId))
+					return addresses.Request.SlotIndex;
+			}
+			return -1;
+		}
+
 		public void ClearRequest(int slot) => m_State.Set(slot, CharacterStateValue.FromActionActivationRequest(default));
 
         public Float32ActionInstanceState ReadSlot(int slot) => m_State.Get(slot).ActionInstance;
+
+		bool TryFindInstanceSlot(ulong instanceId, out int slot)
+		{
+			foreach (TypedActionStateAddresses addresses in m_Layout.AllActionStateAddresses)
+			{
+				if (m_State.Get(addresses.Instance.SlotIndex).ActionInstance.InstanceId == instanceId)
+				{
+					slot = addresses.Instance.SlotIndex;
+					return true;
+				}
+			}
+			slot = -1;
+			return false;
+		}
+
+		int FindEmptyInstanceSlot(string actionId)
+		{
+			foreach (TypedActionStateAddresses addresses in m_Layout.ActionStateSlots(actionId))
+			{
+				Float32ActionInstanceState action = m_State.Get(addresses.Instance.SlotIndex).ActionInstance;
+				if (!action.IsValid || action.IsTerminal)
+					return addresses.Instance.SlotIndex;
+			}
+			return -1;
+		}
 
 		public ulong NextSequence()
 		{

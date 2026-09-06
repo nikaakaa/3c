@@ -282,8 +282,8 @@ namespace ThirdPersonSimulation
 
         public bool Remove(ulong actionInstanceId)
         {
-            if (m_Active != null)
-                throw new InvalidOperationException("Skill execution frame cannot be removed while active.");
+            if (m_Active != null && m_Active.ActionInstanceId == actionInstanceId)
+                throw new InvalidOperationException("Active Skill execution frame cannot be removed while active.");
             EnsureStates();
             if (!m_States.Remove(actionInstanceId))
                 return false;
@@ -293,6 +293,9 @@ namespace ThirdPersonSimulation
 
         public bool IsActive(ulong actionInstanceId) =>
             m_Active != null && m_Active.ActionInstanceId == actionInstanceId;
+
+        public bool HasFrame(ulong actionInstanceId) =>
+            m_Storage.ReadAggregate().Find(actionInstanceId) != null;
 
         public bool BindGeneration(ulong actionInstanceId, ulong generation)
         {
@@ -407,7 +410,6 @@ namespace ThirdPersonSimulation
             {
                 m_Port.WriteAction(action);
                 m_Port.SetActionTags(instanceId, profile.Tags);
-                m_Port.ClearRequest(request);
                 m_Port.EmitActionFact(request.Source, action);
                 return instanceId;
             }
@@ -452,7 +454,7 @@ namespace ThirdPersonSimulation
                     candidate,
                     "action_activation_rejected",
                     ActionSkillTraceSeverity.Information,
-                    $"{profile.ActionId}:{admission.RejectReason}:{admission.ActiveSourceActionId}");
+                    $"{profile.ActionId}:{admission.RejectReason}:{admission.ActiveSourceActionId}:{admission.ActiveSourceActionInstanceId}");
                 return false;
             }
             if (!TryCreateRequest(candidate, profile, targetSnapshot, out ActionSkillActivationRequest<TTargetSnapshot> request))
@@ -479,7 +481,7 @@ namespace ThirdPersonSimulation
                     operation,
                     "action_admission_preview",
                     ActionSkillTraceSeverity.Detail,
-                    $"{profile.ActionId}:{decision.Allowed}:{decision.RejectReason}:{decision.ActiveSourceActionId}");
+                    $"{profile.ActionId}:{decision.Allowed}:{decision.RejectReason}:{decision.ActiveSourceActionId}:{decision.ActiveSourceActionInstanceId}");
             }
             return decision;
         }
@@ -512,7 +514,8 @@ namespace ThirdPersonSimulation
                     string.IsNullOrEmpty(controlRequest.TargetKey) ? skill.TargetKey : controlRequest.TargetKey,
                     targetSnapshot,
                     controlRequest.Source,
-                    controlRequest.EquipmentContext),
+                    controlRequest.EquipmentContext,
+                    replacementActionInstanceId: controlRequest.ReplacementActionInstanceId),
                 profile);
         }
 
@@ -522,10 +525,14 @@ namespace ThirdPersonSimulation
         {
             if (!m_Port.TryReadPendingRequest(skillId, out ActionSkillActivationRequest<TTargetSnapshot> request))
                 return false;
+            if (request.ReplacementActionInstanceId != 0 &&
+                !m_Port.IsActionInstanceStopComplete(request.ReplacementActionInstanceId))
+                return false;
             ActionAdmissionDecision admission = Evaluate(
                 profile,
                 request.TargetSnapshot,
-                ActionAdmissionEvaluationMode.CommitActivation);
+                ActionAdmissionEvaluationMode.CommitActivation,
+                0);
             if (!admission.Allowed)
             {
                 if (admission.RejectReason == ActionAdmissionRejectReason.SourceActionStillActive)
@@ -535,7 +542,7 @@ namespace ThirdPersonSimulation
                     request.Source,
                     "action_activation_rejected",
                     ActionSkillTraceSeverity.Information,
-                    $"{skillId}:{admission.RejectReason}:{admission.ActiveSourceActionId}");
+                    $"{skillId}:{admission.RejectReason}:{admission.ActiveSourceActionId}:{admission.ActiveSourceActionInstanceId}");
                 return false;
             }
             ulong instanceId = m_Commit.Commit(request, profile);
@@ -551,7 +558,8 @@ namespace ThirdPersonSimulation
             ActionAdmissionDecision admission = Evaluate(
                 profile,
                 targetSnapshot,
-                ActionAdmissionEvaluationMode.CommitActivation);
+                ActionAdmissionEvaluationMode.CommitActivation,
+                candidate.ReplacementActionInstanceId);
             bool replacementPending = false;
             if (!admission.Allowed)
             {
@@ -561,23 +569,27 @@ namespace ThirdPersonSimulation
                         candidate,
                         "action_activation_rejected",
                         ActionSkillTraceSeverity.Information,
-                        $"{profile.ActionId}:{admission.RejectReason}:{admission.ActiveSourceActionId}");
+                        $"{profile.ActionId}:{admission.RejectReason}:{admission.ActiveSourceActionId}:{admission.ActiveSourceActionInstanceId}");
                     return false;
                 }
                 ActionAdmissionDecision replacement = Evaluate(
                     profile,
                     targetSnapshot,
-                    ActionAdmissionEvaluationMode.PreviewReplacement);
+                    ActionAdmissionEvaluationMode.PreviewReplacement,
+                    candidate.ReplacementActionInstanceId);
                 if (!replacement.Allowed)
                 {
                     Trace(
                         candidate,
                         "action_replacement_rejected",
                         ActionSkillTraceSeverity.Information,
-                        $"{profile.ActionId}:{replacement.RejectReason}:{replacement.ActiveSourceActionId}");
+                        $"{profile.ActionId}:{replacement.RejectReason}:{replacement.ActiveSourceActionId}:{replacement.ActiveSourceActionInstanceId}");
                     return false;
                 }
-                m_Port.InterruptActive(candidate.Source, "SkillReplacement");
+                m_Port.InterruptActive(
+                    candidate.ReplacementActionInstanceId,
+                    candidate.Source,
+                    "SkillReplacement");
                 replacementPending = true;
             }
             if (!TryCreateRequest(candidate, profile, targetSnapshot, out ActionSkillActivationRequest<TTargetSnapshot> request))
@@ -591,12 +603,14 @@ namespace ThirdPersonSimulation
         ActionAdmissionDecision Evaluate(
             ActionAdmissionProfile profile,
             TTargetSnapshot targetSnapshot,
-            ActionAdmissionEvaluationMode mode)
+            ActionAdmissionEvaluationMode mode,
+            ulong replacementActionInstanceId = 0)
         {
             return m_Admission.Evaluate(new ActionAdmissionRequest(
                 profile,
                 new ActionAdmissionTargetCandidate(m_Port.TargetId(targetSnapshot)),
-                mode));
+                mode,
+                replacementActionInstanceId));
         }
 
         bool TryCreateRequest(
@@ -632,7 +646,8 @@ namespace ThirdPersonSimulation
                 candidate.TargetKey,
                 targetSnapshot,
                 candidate.Source,
-                candidate.EquipmentContext);
+                candidate.EquipmentContext,
+                candidate.ReplacementActionInstanceId);
             return true;
         }
 
@@ -755,6 +770,22 @@ namespace ThirdPersonSimulation
                 0);
         }
 
+        public void Finish(
+            TActionState action,
+            SimulationExecutionSource source,
+            bool completed,
+            string reason)
+        {
+            if (!m_Port.IsActive(action))
+                return;
+            Apply(
+                source,
+                action,
+                completed ? ActionSkillLifecycleTransition.Complete : ActionSkillLifecycleTransition.Abort,
+                reason,
+                0);
+        }
+
         public void Stop(
             CharacterSkillId skillId,
             CharacterControlSkillStopMode mode,
@@ -762,6 +793,24 @@ namespace ThirdPersonSimulation
             string reason)
         {
             if (!m_Port.TryFindActive(skillId, out TActionState action))
+                return;
+            Apply(
+                source,
+                action,
+                mode == CharacterControlSkillStopMode.Force
+                    ? ActionSkillLifecycleTransition.Abort
+                    : ActionSkillLifecycleTransition.Cancel,
+                reason,
+                0);
+        }
+
+        public void Stop(
+            TActionState action,
+            CharacterControlSkillStopMode mode,
+            SimulationExecutionSource source,
+            string reason)
+        {
+            if (!m_Port.IsActive(action))
                 return;
             Apply(
                 source,

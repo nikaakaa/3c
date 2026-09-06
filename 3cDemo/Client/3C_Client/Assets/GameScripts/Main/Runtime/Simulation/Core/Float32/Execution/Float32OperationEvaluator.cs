@@ -624,10 +624,15 @@ namespace ThirdPersonSimulation
 			IReadOnlyList<CharacterSkillProgramBinding> skills = m_Frame.Program.SkillPrograms.Bindings;
 			for (int i = 0; i < skills.Count; i++)
 			{
-				if (m_ActionStore.FindActive(skills[i].SkillId, out Float32ActionInstanceState action) < 0)
-					continue;
-				using (m_ActionStore.EnterSkillExecution(action))
-					m_Timeline.PrepareDecisionTimelines(m_Control.Cursor);
+				IReadOnlyList<Float32ActionInstanceState> actions = m_ActionStore.CurrentActions(skills[i].SkillId);
+				for (int actionIndex = 0; actionIndex < actions.Count; actionIndex++)
+				{
+					Float32ActionInstanceState action = actions[actionIndex];
+					if (!action.IsActive)
+						continue;
+					using (m_ActionStore.EnterSkillExecution(action))
+						m_Timeline.PrepareDecisionTimelines(m_Control.Cursor);
+				}
 			}
 		}
 
@@ -658,23 +663,29 @@ namespace ThirdPersonSimulation
 			if (m_CharacterControl == null)
 				return;
 			IReadOnlyList<CharacterSkillProgramBinding> skills = m_Frame.Program.SkillPrograms.Bindings;
-			var stoppingContexts = new HashSet<string>(StringComparer.Ordinal);
+			var stoppingInstances = new HashSet<ulong>();
 			for (int i = 0; i < skills.Count; i++)
 			{
 				CharacterSkillProgramBinding skill = skills[i];
-				int actionSlot = m_ActionStore.FindCurrent(skill.SkillId, out Float32ActionInstanceState action);
-				if (actionSlot < 0)
+				IReadOnlyList<Float32ActionInstanceState> actions = m_ActionStore.CurrentActions(skill.SkillId);
+				for (int actionIndex = 0; actionIndex < actions.Count; actionIndex++)
+				{
+				Float32ActionInstanceState action = actions[actionIndex];
+				if (!action.IsValid)
 					continue;
+				bool removeFrame = false;
 				if (m_Actions.StopIfEquipmentContextStale(action))
 				{
-					if (m_Control.IsActive(skill.EntryOperation))
-						m_Control.ForceStop(
-							skill.EntryOperation,
-							OperationStopContext.ActionContextEnded(skill.EntryOperation));
+					using (m_ActionStore.EnterSkillExecution(action))
+					{
+						if (m_Control.IsActive(skill.EntryOperation))
+							m_Control.ForceStop(
+								skill.EntryOperation,
+								OperationStopContext.ActionContextEnded(skill.EntryOperation));
+					}
 					m_ActionStore.RemoveSkillExecution(action.InstanceId);
 					continue;
 				}
-				bool removeFrame = false;
 				using (m_ActionStore.EnterSkillExecution(action))
 				{
 					if (m_Control.IsStopping(skill.EntryOperation))
@@ -692,7 +703,7 @@ namespace ThirdPersonSimulation
 							if (stop == OperationStopStatus.Failed)
 								throw new InvalidOperationException($"Skill '{skill.SkillId}' EntryOperation stop failed.");
 							if (stop == OperationStopStatus.Running)
-								stoppingContexts.Add(skill.ActionContextId);
+								stoppingInstances.Add(action.InstanceId);
 							else if (!m_Control.IsActive(skill.EntryOperation))
 								removeFrame = true;
 						}
@@ -716,7 +727,7 @@ namespace ThirdPersonSimulation
 								if (stop == OperationStopStatus.Failed)
 									throw new InvalidOperationException($"Skill '{skill.SkillId}' EntryOperation stop failed.");
 								if (stop == OperationStopStatus.Running)
-									stoppingContexts.Add(skill.ActionContextId);
+								stoppingInstances.Add(action.InstanceId);
 								else
 									removeFrame = true;
 							}
@@ -729,20 +740,18 @@ namespace ThirdPersonSimulation
 				}
 				if (removeFrame)
 					m_ActionStore.RemoveSkillExecution(action.InstanceId);
+				}
 			}
 			for (int i = 0; i < skills.Count; i++)
 			{
 				CharacterSkillProgramBinding skill = skills[i];
-				if (stoppingContexts.Contains(skill.ActionContextId))
-					continue;
-				bool actionActive = m_ActionStore.FindActive(skill.SkillId, out Float32ActionInstanceState action) >= 0;
-				if (!actionActive)
+				m_Actions.TryCommitPendingControl(skill.SkillId);
+				IReadOnlyList<Float32ActionInstanceState> actions = m_ActionStore.CurrentActions(skill.SkillId);
+				for (int actionIndex = 0; actionIndex < actions.Count; actionIndex++)
 				{
-					m_Actions.TryCommitPendingControl(skill.SkillId);
-					actionActive = m_ActionStore.FindActive(skill.SkillId, out action) >= 0;
-				}
-				if (!actionActive)
-					continue;
+					Float32ActionInstanceState action = actions[actionIndex];
+					if (!action.IsActive || stoppingInstances.Contains(action.InstanceId))
+						continue;
 				using (m_ActionStore.EnterSkillExecution(action))
 				{
 					if (!action.SkillEntryOperation.Equals(skill.EntryOperation))
@@ -762,7 +771,7 @@ namespace ThirdPersonSimulation
 						else
 						{
 							m_Actions.FinishFromControl(
-								skill.SkillId,
+								action,
 								SimulationExecutionSource.FromSkillOperation(
 									skill.EntryOperation,
 									m_Frame.Services.SourcePath(skill.EntryOperation)),
@@ -789,7 +798,7 @@ namespace ThirdPersonSimulation
 								m_Control.ReadGeneration(skill.EntryOperation));
 							if (result == OperationExecutionResult.Success || result == OperationExecutionResult.Failure)
 								m_Actions.FinishFromControl(
-									skill.SkillId,
+									current,
 									SimulationExecutionSource.FromSkillOperation(
 										skill.EntryOperation,
 										m_Frame.Services.SourcePath(skill.EntryOperation)),
@@ -797,6 +806,7 @@ namespace ThirdPersonSimulation
 									result == OperationExecutionResult.Success ? "SkillCompleted" : "SkillExecutionFailed");
 						}
 					}
+				}
 				}
 			}
 		}

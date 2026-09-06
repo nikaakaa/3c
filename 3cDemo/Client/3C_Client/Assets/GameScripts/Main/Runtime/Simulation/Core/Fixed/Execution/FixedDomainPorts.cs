@@ -37,6 +37,7 @@ namespace ThirdPersonSimulation.Fixed
     internal interface IFixedActionContextReader
     {
         bool IsContextActive(string contextId);
+        bool TryGetActiveSkillInstanceId(CharacterSkillId skillId, out ulong instanceId);
         int FindActive(string contextId, out FixedActionInstanceState state);
         int FindActive(CharacterSkillId skillId, out FixedActionInstanceState state);
         FixedActionInstanceState FindOnlyActive();

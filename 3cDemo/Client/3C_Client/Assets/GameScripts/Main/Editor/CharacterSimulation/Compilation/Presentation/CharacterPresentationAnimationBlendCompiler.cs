@@ -1038,7 +1038,5 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
 
         static PoseNodeId ScopePoseNodeId(PoseNodeId nodeId, string scope) =>
             string.IsNullOrEmpty(scope) ? nodeId : new PoseNodeId(scope + "/" + nodeId.Value);
-
     }
 }
-

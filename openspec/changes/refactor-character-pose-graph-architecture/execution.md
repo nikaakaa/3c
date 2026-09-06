@@ -69,7 +69,7 @@
 
 ## 21.2–21.4 Family、Projection Validator与根帧协调小步（POSE-EXEC-20260906-05）
 
-状态：提交`1f59e899a`完成Family payload按真实Operation Family下沉的候选；提交`7e4ac5c4b`完成sealed Projection身份、Producer集合和语义合同验证的独立Owner；提交`e171ae5f7`把旧递归图规则Owner明确命名为`CharacterPoseTopologyValidator`，把Projection sealed验证Owner明确命名为`CharacterPoseGraphProjectionValidator`；提交`2a3b413fa`完成Presentation根帧事务的typed Coordinator收口；提交`c972496fa`补齐按显式Numeric Target列表调用正式Character Build的入口。21.2、21.3、21.4仍不能勾选，原因是当前worktree没有有效Unity/Editor编译证据，且21.3的Topology职责仍需继续拆至最终目标边界、21.5–21.9仍未全部完成。
+状态：提交`1f59e899a`和`2864ff961`完成Family payload按真实Operation Family下沉并保持原descriptor索引顺序的候选；提交`7e4ac5c4b`完成sealed Projection身份、Producer集合和语义合同验证的独立Owner；提交`e171ae5f7`把旧递归图规则Owner明确命名为`CharacterPoseTopologyValidator`，把Projection sealed验证Owner明确命名为`CharacterPoseGraphProjectionValidator`；提交`2a3b413fa`完成Presentation根帧事务的typed Coordinator收口；提交`c972496fa`补齐按显式Numeric Target列表调用正式Character Build的入口。21.2、21.3、21.4仍不能勾选，原因是当前worktree没有有效Unity/Editor编译证据，且21.3的Topology职责仍需继续拆至最终目标边界、21.5–21.9仍未全部完成。
 
 - 21.2输入：`CharacterPoseSymbolicOperation`、Node Definition声明的`CharacterPoseOperationFamily`、当前图节点payload、Graph/StateMachine作用域和已分配的通用Value索引。处理：新增`CharacterPoseFamilyPayloadBindingAdapters`注册表，按Player、StateMachine、AnimationSlot、Inertialization、Composition、ComponentControl、GoalContribution、FullBodyIK分别编译所属typed payload，并返回单一`CharacterPoseFamilyPayloadBindingResult`；主Plan Pass只分配通用句柄、保留Symbolic顺序并汇总结果。StateMachine adapter在消费外层symbolic operation前执行，保持原递归State Graph的Symbolic cursor、Value index和payload排序。
 - 21.2输出：`CharacterPoseBoundOperation`字段来源不变，`CharacterPoseFamilyPayloadPlan`、Worker Plan、Seal和Runtime ABI仍只消费一份绑定结果。Adapter只拥有Editor编译期descriptor数组和索引，不创建Runtime页、Playable、Writer或第二Projection；旧的主遍历内按Requirement直接调用各类payload编译路径已删除，没有兼容转发。

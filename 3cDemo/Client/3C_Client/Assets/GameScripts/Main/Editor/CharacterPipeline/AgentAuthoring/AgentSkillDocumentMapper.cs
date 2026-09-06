@@ -524,15 +524,15 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                 skillId = source.skillId,
                 entryGraphAuthoringId = source.entryGraphAuthoringId,
                 actionProfileId = source.actionProfileId,
-                actionProfileAssetPath = source.actionProfileAssetPath,
-                actionProfileAssetGuid = source.actionProfileAssetGuid,
-                actionContext = source.actionContext,
-                actionContextAssetPath = source.actionContextAssetPath,
-                actionContextAssetGuid = source.actionContextAssetGuid,
-                sourceInputRequestId = source.sourceInputRequestId,
+                actionProfileAssetPath = source.actionProfileAssetPath ?? string.Empty,
+                actionProfileAssetGuid = source.actionProfileAssetGuid ?? string.Empty,
+                actionContext = source.actionContext ?? string.Empty,
+                actionContextAssetPath = source.actionContextAssetPath ?? string.Empty,
+                actionContextAssetGuid = source.actionContextAssetGuid ?? string.Empty,
+                sourceInputRequestId = source.sourceInputRequestId ?? string.Empty,
                 consumeSourceInputRequest = source.consumeSourceInputRequest,
-                targetInputValueId = source.targetInputValueId,
-                targetKey = source.targetKey,
+                targetInputValueId = source.targetInputValueId ?? string.Empty,
+                targetKey = source.targetKey ?? string.Empty,
                 subgraphDependencies = (source.subgraphDependencies ?? new List<AgentSnapshotSkillSubgraphDependency>())
                     .Select(value => value == null
                         ? null

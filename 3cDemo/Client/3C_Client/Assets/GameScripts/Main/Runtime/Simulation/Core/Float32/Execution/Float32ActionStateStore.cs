@@ -275,6 +275,7 @@ namespace ThirdPersonSimulation
 
 	internal sealed class Float32ActionStateStore : Float32OperationModule, IFloat32ActionContextReader, IFloat32SkillExecutionStateAccess, IActionSkillExecutionStorage<CharacterStateValue>
 	{
+		readonly Float32EvaluationFrame m_Frame;
 		readonly Float32StatePort m_State;
 		readonly Stack<Float32ActionInstanceReference> m_SkillExecutionStack = new Stack<Float32ActionInstanceReference>();
 		readonly ActionSkillExecutionManager<CharacterStateValue> m_SkillExecution;
@@ -285,10 +286,10 @@ namespace ThirdPersonSimulation
             Float32EvaluationFrame frame)
             : base(access)
 		{
+			m_Frame = frame ?? throw new ArgumentNullException(nameof(frame));
 			m_State = state ?? throw new ArgumentNullException(nameof(state));
 			m_SkillExecution = new ActionSkillExecutionManager<CharacterStateValue>(this);
-			(frame ?? throw new ArgumentNullException(nameof(frame)))
-				.BindSkillExecutionStateAccess(this);
+			m_Frame.BindSkillExecutionStateAccess(this);
 		}
 
 		public void BeginEvaluation()
@@ -309,12 +310,15 @@ namespace ThirdPersonSimulation
 		{
 			if (!action.IsValid || !action.SkillId.IsValid || !action.SkillEntryOperation.IsValid)
 				throw new ArgumentException("Skill execution action identity is incomplete.", nameof(action));
-			return m_SkillExecution.Enter(new ActionSkillExecutionIdentity(
+			IDisposable execution = m_SkillExecution.Enter(new ActionSkillExecutionIdentity(
 				action.SkillId,
 				action.SkillEntryOperation,
 				action.InstanceId,
 				action.PredictionKey,
 				action.SkillExecutionGeneration));
+			return new TraceExecutionScope(
+				execution,
+				m_Frame.PushActionTraceContext(action.InstanceId, action.SkillId));
 		}
 
 		public bool RemoveSkillExecution(ulong actionInstanceId)
@@ -406,7 +410,10 @@ namespace ThirdPersonSimulation
 				throw new ArgumentException("Skill execution owner is incomplete.", nameof(action));
 			Float32ActionInstanceReference reference = Float32ActionInstanceReference.FromInstance(action);
 			m_SkillExecutionStack.Push(reference);
-			return new SkillExecutionScope(this, reference);
+		return new SkillExecutionScope(
+			this,
+			reference,
+			m_Frame.PushActionTraceContext(action.InstanceId, action.SkillId));
 		}
 
 		public bool TryGetCurrentSkillExecution(out Float32ActionInstanceState action)
@@ -656,12 +663,17 @@ namespace ThirdPersonSimulation
 		{
 			readonly Float32ActionStateStore m_Owner;
 			readonly Float32ActionInstanceReference m_Expected;
+			readonly IDisposable m_TraceScope;
 			bool m_Disposed;
 
-			public SkillExecutionScope(Float32ActionStateStore owner, Float32ActionInstanceReference expected)
+			public SkillExecutionScope(
+				Float32ActionStateStore owner,
+				Float32ActionInstanceReference expected,
+				IDisposable traceScope)
 			{
 				m_Owner = owner;
 				m_Expected = expected;
+				m_TraceScope = traceScope;
 			}
 
 			public void Dispose()
@@ -670,6 +682,29 @@ namespace ThirdPersonSimulation
 					return;
 				m_Disposed = true;
 				m_Owner.PopSkillExecution(m_Expected);
+				m_TraceScope.Dispose();
+			}
+		}
+
+		sealed class TraceExecutionScope : IDisposable
+		{
+			readonly IDisposable m_Execution;
+			readonly IDisposable m_Trace;
+			bool m_Disposed;
+
+			public TraceExecutionScope(IDisposable execution, IDisposable trace)
+			{
+				m_Execution = execution;
+				m_Trace = trace;
+			}
+
+			public void Dispose()
+			{
+				if (m_Disposed)
+					return;
+				m_Disposed = true;
+				m_Execution.Dispose();
+				m_Trace.Dispose();
 			}
 		}
 

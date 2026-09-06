@@ -106,16 +106,25 @@ namespace ThirdPersonCharacter.Pipeline.Diagnostics
             if (!m_SourceMap.TryGetProgramTarget(target, out RuntimeSourceElementHandle source))
                 throw new InvalidOperationException($"Operation trace target '{target}' is absent from the Debug Source Map.");
             RuntimeTraceEventKind kind = ResolveOperationKind(record.Code);
+            RuntimeInstanceKey runtimeInstance = record.ActionInstanceId != 0
+                ? RuntimeInstanceKey.SkillExecution(
+                    m_Context.CharacterRuntimeId,
+                    m_ExecutionId,
+                    record.SkillId,
+                    record.ActionInstanceId,
+                    record.Header.Activation.Source.Operation.Value.ToString(),
+                    record.Header.Activation.Generation)
+                : RuntimeInstanceKey.Runnable(
+                    m_Context.CharacterRuntimeId,
+                    m_ExecutionId,
+                    record.Header.Activation.Source.Operation.Value.ToString(),
+                    record.Header.Activation.Generation);
             m_Context.Publish(
                 ResolveOperationChannel(kind, record.Code),
                 RuntimeTraceDomain.Logic,
                 kind,
                 source,
-                RuntimeInstanceKey.Runnable(
-                    m_Context.CharacterRuntimeId,
-                    m_ExecutionId,
-                    record.Header.Activation.Source.Operation.Value.ToString(),
-                    record.Header.Activation.Generation),
+                runtimeInstance,
                 new RuntimeTracePayload
                 {
                     Status = record.Severity.ToString(),
@@ -123,6 +132,10 @@ namespace ThirdPersonCharacter.Pipeline.Diagnostics
                     Detail = record.Detail,
                     Cause = record.Boundary,
                     OwnerId = record.Header.ActorId.Value,
+                    SkillId = record.SkillId,
+                    ActionInstanceId = record.ActionInstanceId,
+                    CallSiteId = record.Header.Activation.Source.Operation.Value.ToString(),
+                    ActivationGeneration = record.Header.Activation.Generation,
                     Flag = record.Severity != SimulationTraceSeverity.Error,
                     Value = DebugValueSnapshot.Capture(record.Header.Sequence)
                 });
@@ -132,7 +145,14 @@ namespace ThirdPersonCharacter.Pipeline.Diagnostics
         {
             SimulationExecutionSource source = record.Header.Activation.Source;
             RuntimeSourceElementHandle sourceHandle = ResolveControlSource(source);
-            RuntimeInstanceKey instance = source.TransitionId.IsValid
+            RuntimeInstanceKey instance = record.ActionInstanceId != 0
+                ? RuntimeInstanceKey.ActionInstance(
+                    m_Context.CharacterRuntimeId,
+                    m_ExecutionId,
+                    record.SkillId,
+                    record.ActionInstanceId,
+                    record.Header.Activation.Generation)
+                : source.TransitionId.IsValid
                 ? RuntimeInstanceKey.ControlTransition(
                     m_Context.CharacterRuntimeId,
                     m_ExecutionId,
@@ -160,6 +180,9 @@ namespace ThirdPersonCharacter.Pipeline.Diagnostics
                     RelatedElementId = source.TransitionId.IsValid
                         ? source.TransitionId.Value
                         : source.StateId.Value,
+                    SkillId = record.SkillId,
+                    ActionInstanceId = record.ActionInstanceId,
+                    ActivationGeneration = record.Header.Activation.Generation,
                     Flag = record.Severity != SimulationTraceSeverity.Error,
                     Value = DebugValueSnapshot.Capture(record.Header.Activation.Generation)
                 });

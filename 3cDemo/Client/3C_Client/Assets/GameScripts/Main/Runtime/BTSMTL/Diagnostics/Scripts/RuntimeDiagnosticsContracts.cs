@@ -187,7 +187,9 @@ namespace BTSMTL.Diagnostics
         TreeClip,
         ControlModule,
         ControlState,
-        ControlTransition
+        ControlTransition,
+        ActionInstance,
+        SkillExecution
     }
 
     public readonly struct RuntimeInstanceKey : IEquatable<RuntimeInstanceKey>
@@ -199,7 +201,9 @@ namespace BTSMTL.Diagnostics
             string stateId,
             ulong activationGeneration,
             ulong timelinePlaybackId,
-            int treeClipCycle)
+            int treeClipCycle,
+            ulong actionInstanceId = 0,
+            string callSiteId = "")
         {
             Kind = kind;
             CharacterRuntimeId = characterRuntimeId;
@@ -208,6 +212,8 @@ namespace BTSMTL.Diagnostics
             ActivationGeneration = activationGeneration;
             TimelinePlaybackId = timelinePlaybackId;
             TreeClipCycle = treeClipCycle;
+            ActionInstanceId = actionInstanceId;
+            CallSiteId = callSiteId ?? string.Empty;
         }
 
         public RuntimeInstanceKind Kind { get; }
@@ -217,6 +223,8 @@ namespace BTSMTL.Diagnostics
         public ulong ActivationGeneration { get; }
         public ulong TimelinePlaybackId { get; }
         public int TreeClipCycle { get; }
+        public ulong ActionInstanceId { get; }
+        public string CallSiteId { get; }
         public bool IsValid => Kind != RuntimeInstanceKind.None && CharacterRuntimeId != Guid.Empty;
 
         public static RuntimeInstanceKey Character(Guid characterId) => new RuntimeInstanceKey(RuntimeInstanceKind.Character, characterId, Guid.Empty, string.Empty, 0, 0, -1);
@@ -228,12 +236,18 @@ namespace BTSMTL.Diagnostics
         public static RuntimeInstanceKey ControlModule(Guid characterId, Guid moduleRuntimeId) => new RuntimeInstanceKey(RuntimeInstanceKind.ControlModule, characterId, moduleRuntimeId, string.Empty, 0, 0, -1);
         public static RuntimeInstanceKey ControlState(Guid characterId, Guid moduleRuntimeId, string stateId, ulong generation) => new RuntimeInstanceKey(RuntimeInstanceKind.ControlState, characterId, moduleRuntimeId, stateId, generation, 0, -1);
         public static RuntimeInstanceKey ControlTransition(Guid characterId, Guid moduleRuntimeId, string transitionId, ulong generation) => new RuntimeInstanceKey(RuntimeInstanceKind.ControlTransition, characterId, moduleRuntimeId, transitionId, generation, 0, -1);
+        public static RuntimeInstanceKey ActionInstance(Guid characterId, Guid actionRuntimeId, string skillId, ulong instanceId, ulong generation) =>
+            new RuntimeInstanceKey(RuntimeInstanceKind.ActionInstance, characterId, actionRuntimeId, skillId, generation, 0, -1, instanceId);
+        public static RuntimeInstanceKey SkillExecution(Guid characterId, Guid actionRuntimeId, string skillId, ulong instanceId, string callSiteId, ulong generation) =>
+            new RuntimeInstanceKey(RuntimeInstanceKind.SkillExecution, characterId, actionRuntimeId, skillId, generation, 0, -1, instanceId, callSiteId);
 
         public bool Equals(RuntimeInstanceKey other)
         {
             return Kind == other.Kind && CharacterRuntimeId.Equals(other.CharacterRuntimeId) && GraphRuntimeId.Equals(other.GraphRuntimeId) &&
                    ActivationGeneration == other.ActivationGeneration && TimelinePlaybackId == other.TimelinePlaybackId && TreeClipCycle == other.TreeClipCycle &&
-                   string.Equals(StateId, other.StateId, StringComparison.Ordinal);
+                   ActionInstanceId == other.ActionInstanceId &&
+                   string.Equals(StateId, other.StateId, StringComparison.Ordinal) &&
+                   string.Equals(CallSiteId, other.CallSiteId, StringComparison.Ordinal);
         }
 
         public override bool Equals(object obj) => obj is RuntimeInstanceKey other && Equals(other);
@@ -249,6 +263,8 @@ namespace BTSMTL.Diagnostics
                 hash = hash * 31 + ActivationGeneration.GetHashCode();
                 hash = hash * 31 + TimelinePlaybackId.GetHashCode();
                 hash = hash * 31 + TreeClipCycle;
+                hash = hash * 31 + ActionInstanceId.GetHashCode();
+                hash = hash * 31 + (CallSiteId?.GetHashCode() ?? 0);
                 return hash;
             }
         }
@@ -275,6 +291,10 @@ namespace BTSMTL.Diagnostics
                     return $"ControlState:{GraphRuntimeId:N}/{StateId}/{ActivationGeneration}";
                 case RuntimeInstanceKind.ControlTransition:
                     return $"ControlTransition:{GraphRuntimeId:N}/{StateId}/{ActivationGeneration}";
+                case RuntimeInstanceKind.ActionInstance:
+                    return $"Action:{GraphRuntimeId:N}/{StateId}/{ActionInstanceId}/{ActivationGeneration}";
+                case RuntimeInstanceKind.SkillExecution:
+                    return $"Skill:{GraphRuntimeId:N}/{StateId}/{ActionInstanceId}/{CallSiteId}/{ActivationGeneration}";
                 default:
                     return "None";
             }
@@ -568,6 +588,10 @@ namespace BTSMTL.Diagnostics
         public string AnimationChannelId;
         public string OwnerId;
         public string RelatedElementId;
+        public string SkillId;
+        public ulong ActionInstanceId;
+        public string CallSiteId;
+        public ulong ActivationGeneration;
         public float Time;
         public float SecondaryTime;
         public float NormalizedTime;

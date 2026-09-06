@@ -276,6 +276,7 @@ namespace ThirdPersonSimulation.Fixed
 
     internal sealed class FixedActionStateStore : FixedOperationModule, IFixedActionContextReader, IFixedSkillExecutionStateAccess, IActionSkillExecutionStorage<CharacterStateValue>
     {
+        readonly FixedEvaluationFrame m_Frame;
         readonly FixedStatePort m_State;
         readonly Stack<FixedActionInstanceReference> m_SkillExecutionStack = new Stack<FixedActionInstanceReference>();
         readonly ActionSkillExecutionManager<CharacterStateValue> m_SkillExecution;
@@ -286,10 +287,10 @@ namespace ThirdPersonSimulation.Fixed
             FixedEvaluationFrame frame)
             : base(access)
         {
+            m_Frame = frame ?? throw new ArgumentNullException(nameof(frame));
             m_State = state ?? throw new ArgumentNullException(nameof(state));
             m_SkillExecution = new ActionSkillExecutionManager<CharacterStateValue>(this);
-            (frame ?? throw new ArgumentNullException(nameof(frame)))
-                .BindSkillExecutionStateAccess(this);
+            m_Frame.BindSkillExecutionStateAccess(this);
         }
 
         public void BeginEvaluation()
@@ -310,12 +311,15 @@ namespace ThirdPersonSimulation.Fixed
         {
             if (!action.IsValid || !action.SkillId.IsValid || !action.SkillEntryOperation.IsValid)
                 throw new ArgumentException("Skill execution action identity is incomplete.", nameof(action));
-            return m_SkillExecution.Enter(new ActionSkillExecutionIdentity(
+            IDisposable execution = m_SkillExecution.Enter(new ActionSkillExecutionIdentity(
                 action.SkillId,
                 action.SkillEntryOperation,
                 action.InstanceId,
                 action.PredictionKey,
                 action.SkillExecutionGeneration));
+            return new TraceExecutionScope(
+                execution,
+                m_Frame.PushActionTraceContext(action.InstanceId, action.SkillId));
         }
 
         public bool RemoveSkillExecution(ulong actionInstanceId)
@@ -407,7 +411,10 @@ namespace ThirdPersonSimulation.Fixed
                 throw new ArgumentException("Skill execution owner is incomplete.", nameof(action));
             FixedActionInstanceReference reference = FixedActionInstanceReference.FromInstance(action);
             m_SkillExecutionStack.Push(reference);
-            return new SkillExecutionScope(this, reference);
+            return new SkillExecutionScope(
+                this,
+                reference,
+                m_Frame.PushActionTraceContext(action.InstanceId, action.SkillId));
         }
 
         public bool TryGetCurrentSkillExecution(out FixedActionInstanceState action)
@@ -657,12 +664,17 @@ namespace ThirdPersonSimulation.Fixed
         {
             readonly FixedActionStateStore m_Owner;
             readonly FixedActionInstanceReference m_Expected;
+            readonly IDisposable m_TraceScope;
             bool m_Disposed;
 
-            public SkillExecutionScope(FixedActionStateStore owner, FixedActionInstanceReference expected)
+            public SkillExecutionScope(
+                FixedActionStateStore owner,
+                FixedActionInstanceReference expected,
+                IDisposable traceScope)
             {
                 m_Owner = owner;
                 m_Expected = expected;
+                m_TraceScope = traceScope;
             }
 
             public void Dispose()
@@ -671,6 +683,29 @@ namespace ThirdPersonSimulation.Fixed
                     return;
                 m_Disposed = true;
                 m_Owner.PopSkillExecution(m_Expected);
+                m_TraceScope.Dispose();
+            }
+        }
+
+        sealed class TraceExecutionScope : IDisposable
+        {
+            readonly IDisposable m_Execution;
+            readonly IDisposable m_Trace;
+            bool m_Disposed;
+
+            public TraceExecutionScope(IDisposable execution, IDisposable trace)
+            {
+                m_Execution = execution;
+                m_Trace = trace;
+            }
+
+            public void Dispose()
+            {
+                if (m_Disposed)
+                    return;
+                m_Disposed = true;
+                m_Execution.Dispose();
+                m_Trace.Dispose();
             }
         }
 

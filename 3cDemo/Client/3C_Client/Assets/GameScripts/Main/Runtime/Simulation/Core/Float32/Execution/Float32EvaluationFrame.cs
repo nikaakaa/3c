@@ -43,6 +43,8 @@ namespace ThirdPersonSimulation
         readonly List<SimulationTraceRecord> m_Trace;
         readonly Float32CharacterStateTransactionWorkspace m_StateTransactions;
         IFloat32SkillExecutionStateAccess m_SkillExecutionStateAccess;
+        ulong m_ActionTraceInstanceId;
+        string m_ActionTraceSkillId = string.Empty;
 
         public Float32EvaluationFrame(
             CharacterSimulationProgram program,
@@ -136,12 +138,26 @@ namespace ThirdPersonSimulation
             Input = null;
             Ingress = Array.Empty<SimulationIngress>();
             Body = default;
+            m_ActionTraceInstanceId = 0;
+            m_ActionTraceSkillId = string.Empty;
             Trace.End();
         }
 
         internal void AddFact(GameplayFact value) => m_Facts.Add(value);
         internal void AddPresentation(PresentationCommand value) => m_Presentation.Add(value);
         internal void AddTrace(SimulationTraceRecord value) => m_Trace.Add(value);
+
+        internal ulong CurrentActionTraceInstanceId => m_ActionTraceInstanceId;
+        internal string CurrentActionTraceSkillId => m_ActionTraceSkillId;
+
+        internal IDisposable PushActionTraceContext(ulong actionInstanceId, CharacterSkillId skillId)
+        {
+            ulong previousInstanceId = m_ActionTraceInstanceId;
+            string previousSkillId = m_ActionTraceSkillId;
+            m_ActionTraceInstanceId = actionInstanceId;
+            m_ActionTraceSkillId = skillId.IsValid ? skillId.Value : string.Empty;
+            return new ActionTraceContextScope(this, previousInstanceId, previousSkillId);
+        }
 
         internal void BindSkillExecutionStateAccess(IFloat32SkillExecutionStateAccess access)
         {
@@ -194,6 +210,30 @@ namespace ThirdPersonSimulation
             }
             m_Facts.RemoveRange(savepoint.FactCount, m_Facts.Count - savepoint.FactCount);
             m_Presentation.RemoveRange(savepoint.PresentationCount, m_Presentation.Count - savepoint.PresentationCount);
+        }
+
+        sealed class ActionTraceContextScope : IDisposable
+        {
+            readonly Float32EvaluationFrame m_Owner;
+            readonly ulong m_PreviousInstanceId;
+            readonly string m_PreviousSkillId;
+            bool m_Disposed;
+
+            public ActionTraceContextScope(Float32EvaluationFrame owner, ulong previousInstanceId, string previousSkillId)
+            {
+                m_Owner = owner;
+                m_PreviousInstanceId = previousInstanceId;
+                m_PreviousSkillId = previousSkillId;
+            }
+
+            public void Dispose()
+            {
+                if (m_Disposed)
+                    return;
+                m_Disposed = true;
+                m_Owner.m_ActionTraceInstanceId = m_PreviousInstanceId;
+                m_Owner.m_ActionTraceSkillId = m_PreviousSkillId;
+            }
         }
     }
 
@@ -453,7 +493,14 @@ namespace ThirdPersonSimulation
             if (!m_Enabled)
                 return;
             SimulationEventHeader header = m_Sequence.Next(operation);
-            m_Frame.AddTrace(new SimulationTraceRecord(header, severity, "Kernel.Operation", code, detail));
+            m_Frame.AddTrace(new SimulationTraceRecord(
+                header,
+                severity,
+                "Kernel.Operation",
+                code,
+                detail,
+                m_Frame.CurrentActionTraceInstanceId,
+                m_Frame.CurrentActionTraceSkillId));
         }
 
         public void Add(SimulationExecutionSource source, string code, SimulationTraceSeverity severity, string detail, ulong generation = 1)
@@ -461,7 +508,14 @@ namespace ThirdPersonSimulation
             if (!m_Enabled)
                 return;
             SimulationEventHeader header = m_Sequence.Next(source, generation);
-            m_Frame.AddTrace(new SimulationTraceRecord(header, severity, "Kernel.Operation", code, detail));
+            m_Frame.AddTrace(new SimulationTraceRecord(
+                header,
+                severity,
+                "Kernel.Operation",
+                code,
+                detail,
+                m_Frame.CurrentActionTraceInstanceId,
+                m_Frame.CurrentActionTraceSkillId));
         }
     }
 }

@@ -655,18 +655,29 @@ namespace ThirdPersonSimulation
 
     public readonly struct SimulationTraceRecord
     {
-        public SimulationTraceRecord(SimulationEventHeader header, SimulationTraceSeverity severity, string boundary, string code, string detail)
+        public SimulationTraceRecord(
+            SimulationEventHeader header,
+            SimulationTraceSeverity severity,
+            string boundary,
+            string code,
+            string detail,
+            ulong actionInstanceId = 0,
+            string skillId = "")
         {
             Header = header;
             Severity = severity;
             Boundary = SimulationIdentity.Require(boundary, nameof(boundary));
             Code = SimulationIdentity.Require(code, nameof(code));
             Detail = detail ?? string.Empty;
+            ActionInstanceId = actionInstanceId;
+            SkillId = skillId ?? string.Empty;
         }
         public SimulationEventHeader Header { get; }
         public SimulationTraceSeverity Severity { get; }
         public string Boundary { get; }
         public string Code { get; }
         public string Detail { get; }
+        public ulong ActionInstanceId { get; }
+        public string SkillId { get; }
     }
 }

@@ -67,6 +67,19 @@
 - Compile证据：既有RunHost compile记录`e2a433e9d7144452b6c61c13865768de`错误使用`D:/Unity_Project_1/camera-zzz/3cDemo/Client/3C_Client`，不能作为当前worktree依据；直接Unity batchmode受Licensing Client validation/access token阻断，日志为`C:/Users/Lenovo/.codex/visualizations/pose-source-compile-20260906.log`。本批没有有效当前worktree编译通过证据。
 - 剩余项：21.1需要有效编译闭环；21.2 Family Binding、21.3 Validator、21.4 Runtime根、21.5–21.9作者/Canvas/Scene Play/正式Build和迁移删除继续未完成。没有执行Corin迁移、正式Build或生成Projection/Program产物。
 
+## 21.2–21.4 Family、Projection Validator与根帧协调小步（POSE-EXEC-20260906-05）
+
+状态：提交`1f59e899a`完成Family payload按真实Operation Family下沉的候选；提交`7e4ac5c4b`完成sealed Projection身份、Producer集合和语义合同验证的独立Owner；提交`2a3b413fa`完成Presentation根帧事务的typed Coordinator收口；提交`c972496fa`补齐按显式Numeric Target列表调用正式Character Build的入口。21.2、21.3、21.4仍不能勾选，原因是当前worktree没有有效Unity/Editor编译证据，且21.3的旧Pose Graph Validator、21.5–21.9仍未全部完成。
+
+- 21.2输入：`CharacterPoseSymbolicOperation`、Node Definition声明的`CharacterPoseOperationFamily`、当前图节点payload、Graph/StateMachine作用域和已分配的通用Value索引。处理：新增`CharacterPoseFamilyPayloadBindingAdapters`注册表，按Player、StateMachine、AnimationSlot、Inertialization、Composition、ComponentControl、GoalContribution、FullBodyIK分别编译所属typed payload，并返回单一`CharacterPoseFamilyPayloadBindingResult`；主Plan Pass只分配通用句柄、保留Symbolic顺序并汇总结果。StateMachine adapter在消费外层symbolic operation前执行，保持原递归State Graph的Symbolic cursor、Value index和payload排序。
+- 21.2输出：`CharacterPoseBoundOperation`字段来源不变，`CharacterPoseFamilyPayloadPlan`、Worker Plan、Seal和Runtime ABI仍只消费一份绑定结果。Adapter只拥有Editor编译期descriptor数组和索引，不创建Runtime页、Playable、Writer或第二Projection；旧的主遍历内按Requirement直接调用各类payload编译路径已删除，没有兼容转发。
+- 21.3输入：编译后的`CharacterPresentationProjection`与`CharacterPresentationSemanticContract`。处理：新增`CharacterPresentationProjectionValidator`，集中验证Projection ABI、非空身份、Projection/Contract hash、Producer数量、稳定index、Producer identity、channel/source合同，并在这些检查通过后调用`RequireContract`完成最终sealed合同验证；`CharacterSimulationBuildOrchestrator`删除同一组字段的第二份解释。旧`CharacterPresentationPoseGraphValidator`仍被Topology Pass和作者编辑器使用，尚未把节点局部规则、Topology规则和Projection sealed验证完全拆成最终目标的三个Owner。
+- 21.4输入：Body、Fact、Animation、Equipment、Linked Pose Session、Camera、Diagnostics和PoseRoot正式模块。处理：新增`CharacterPresentationFrameCoordinator`，整体拥有Frame active、Pending Body/Animation/Camera、sample clock、pose output、Pose Plan diagnostics、performance context和Begin/Advance/Complete/Abort/Reset/Dispose；`CharacterSimulationPresentationRuntime`只保留输入接入、Producer/Camera/Cue命令分发、模块装配和Coordinator转交。所有Root Frame阶段仍沿用原lineage、Result、唯一Complete/Abort和Failure日志边界，没有新增第二事务或fallback。
+- 21.8入口：`CharacterSimulationBuildOrchestrator.Build(definition, targets)`与`DryRun(definition, targets)`显式接收有序Target Adapter列表；正式`Build(request)`继续先编译同一Semantic IR和Presentation Projection，再为全部Target建立Publish Stage，最后由同一事务发布，未复制主目录generated文件。当前没有用该入口重建Corin产物。
+- 资源/状态归属：Family Adapter只拥有编译期payload；Projection Validator只拥有验证诊断；Frame Coordinator只拥有actor-local根帧状态；Formal Build只拥有一次Semantic/Target/Projection原子发布。外部Fixed/Float32未提交Runtime修改、`Runtime/Character/Pipeline/Simulation/`目录和Unity生成meta均未纳入提交。
+- 验证：各代码小步执行`git diff --check`通过；当前worktree不存在Unity生成的`ThirdPersonClient.Editor.csproj`，尝试的dotnet命令因项目文件不存在退出，并已执行`dotnet build-server shutdown`；RunHost旧记录仍指向`D:/Unity_Project_1/camera-zzz/3cDemo/Client/3C_Client`，直接Unity batchmode仍因Licensing Client validation/access token失败。因此本批没有当前worktree编译通过、正式Build、Corin产物或E2E证据。
+- 剩余项：21.2需在有效Editor编译后确认所有Family Adapter调用和ABI未变；21.3需继续删除/收窄旧Pose Graph Validator中的重复职责；21.5 Pose窗口与旧`AnimationPreviewRuntime`仍未迁入正式Scene Play；21.6需保留并实现CanvasCore Option A的唯一Mutation Owner决策；21.7仍需明确自建GraphView维护边界；21.8需实际执行一次多Target正式Build；21.9当前没有Pose对ACL共享Source/Projection合同的直接引用，不接入ACL。
+
 以下为原有历史实施记录。
 
 ## 固定接入

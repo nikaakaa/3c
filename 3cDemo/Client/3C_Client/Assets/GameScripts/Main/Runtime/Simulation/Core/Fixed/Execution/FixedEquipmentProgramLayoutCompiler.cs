@@ -15,6 +15,7 @@ namespace ThirdPersonSimulation.Fixed
                 program.CatalogEntries,
                 program.StateSlots,
                 program.References,
+                program.Producers,
                 index => Read(program, index));
         }
 

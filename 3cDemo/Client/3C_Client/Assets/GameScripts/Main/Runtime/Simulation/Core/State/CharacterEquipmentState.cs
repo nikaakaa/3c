@@ -120,21 +120,50 @@ namespace ThirdPersonSimulation
 
     public sealed class EquipmentProgramRouteImplementation
     {
+        readonly ReadOnlyCollection<EquipmentParameterId> m_RequiredParameterIds;
+        readonly ReadOnlyCollection<string> m_RequiredProducerIds;
+
         public EquipmentProgramRouteImplementation(
             EquipmentFeatureId featureId,
             EquipmentActionRouteId routeId,
-            CharacterSkillId skillId)
+            CharacterSkillId skillId,
+            IEnumerable<EquipmentParameterId> requiredParameterIds = null,
+            IEnumerable<string> requiredProducerIds = null)
         {
             if (!featureId.IsValid || !routeId.IsValid || !skillId.IsValid)
                 throw new ArgumentException("Equipment Route implementation is invalid.");
             FeatureId = featureId;
             RouteId = routeId;
             SkillId = skillId;
+            m_RequiredParameterIds = StableParameters(requiredParameterIds);
+            m_RequiredProducerIds = StableIdentities(requiredProducerIds, "Equipment required Producer");
         }
 
         public EquipmentFeatureId FeatureId { get; }
         public EquipmentActionRouteId RouteId { get; }
         public CharacterSkillId SkillId { get; }
+        public IReadOnlyList<EquipmentParameterId> RequiredParameterIds => m_RequiredParameterIds;
+        public IReadOnlyList<string> RequiredProducerIds => m_RequiredProducerIds;
+
+        static ReadOnlyCollection<EquipmentParameterId> StableParameters(IEnumerable<EquipmentParameterId> source)
+        {
+            EquipmentParameterId[] values = (source ?? Array.Empty<EquipmentParameterId>()).OrderBy(value => value.Value, StringComparer.Ordinal).ToArray();
+            for (int i = 0; i < values.Length; i++)
+            {
+                if (!values[i].IsValid || i > 0 && values[i - 1] == values[i])
+                    throw new InvalidDataException("Equipment required Parameter identities are invalid or duplicated.");
+            }
+            return Array.AsReadOnly(values);
+        }
+
+        static ReadOnlyCollection<string> StableIdentities(IEnumerable<string> source, string label)
+        {
+            string[] values = (source ?? Array.Empty<string>()).Select(value => SimulationIdentity.Require(value, label)).OrderBy(value => value, StringComparer.Ordinal).ToArray();
+            for (int i = 1; i < values.Length; i++)
+                if (string.Equals(values[i - 1], values[i], StringComparison.Ordinal))
+                    throw new InvalidDataException($"{label} '{values[i]}' is duplicated.");
+            return Array.AsReadOnly(values);
+        }
     }
 
     public sealed class EquipmentProgramParameter
@@ -355,7 +384,30 @@ namespace ThirdPersonSimulation
                 if (m_RouteById[implementation.RouteId].OwnerSlotId.IsValid &&
                     !m_SlotById.ContainsKey(m_RouteById[implementation.RouteId].OwnerSlotId))
                     throw new InvalidDataException($"Equipment Route implementation '{implementation.FeatureId}/{implementation.RouteId}' has a dangling owner Slot.");
+                for (int parameterIndex = 0; parameterIndex < implementation.RequiredParameterIds.Count; parameterIndex++)
+                {
+                    EquipmentParameterId parameterId = implementation.RequiredParameterIds[parameterIndex];
+                    if (!m_Parameters.Any(value => value.FeatureId == implementation.FeatureId && value.ParameterId == parameterId))
+                        throw new InvalidDataException($"Equipment Route implementation '{implementation.FeatureId}/{implementation.RouteId}' requires unknown Parameter '{parameterId}'.");
+                    for (int itemIndex = 0; itemIndex < m_Items.Count; itemIndex++)
+                    {
+                        EquipmentProgramItem item = m_Items[itemIndex];
+                        if (item.FeatureId == implementation.FeatureId && !m_ParameterByKey.ContainsKey((item.EquipmentId, parameterId)))
+                            throw new InvalidDataException($"Equipment Route implementation '{implementation.FeatureId}/{implementation.RouteId}' requires Parameter '{parameterId}' on Equipment '{item.EquipmentId}'.");
+                    }
+                }
             }
+        }
+
+        internal void ValidateProducerBindings(IReadOnlyList<ProgramProducer> producers)
+        {
+            if (producers == null)
+                throw new ArgumentNullException(nameof(producers));
+            var identities = new HashSet<string>(producers.Select(value => value.Identity), StringComparer.Ordinal);
+            for (int i = 0; i < m_RouteImplementations.Count; i++)
+                for (int producerIndex = 0; producerIndex < m_RouteImplementations[i].RequiredProducerIds.Count; producerIndex++)
+                    if (!identities.Contains(m_RouteImplementations[i].RequiredProducerIds[producerIndex]))
+                        throw new InvalidDataException($"Equipment Route implementation '{m_RouteImplementations[i].FeatureId}/{m_RouteImplementations[i].RouteId}' requires unknown Producer '{m_RouteImplementations[i].RequiredProducerIds[producerIndex]}'.");
         }
 
         StableHash ComputeHash()
@@ -406,6 +458,12 @@ namespace ThirdPersonSimulation
                 writer.WriteString(m_RouteImplementations[i].FeatureId.Value);
                 writer.WriteString(m_RouteImplementations[i].RouteId.Value);
                 writer.WriteString(m_RouteImplementations[i].SkillId.Value);
+                writer.WriteInt32(m_RouteImplementations[i].RequiredParameterIds.Count);
+                for (int parameter = 0; parameter < m_RouteImplementations[i].RequiredParameterIds.Count; parameter++)
+                    writer.WriteString(m_RouteImplementations[i].RequiredParameterIds[parameter].Value);
+                writer.WriteInt32(m_RouteImplementations[i].RequiredProducerIds.Count);
+                for (int producer = 0; producer < m_RouteImplementations[i].RequiredProducerIds.Count; producer++)
+                    writer.WriteString(m_RouteImplementations[i].RequiredProducerIds[producer]);
             }
             writer.WriteInt32(m_Parameters.Count);
             for (int i = 0; i < m_Parameters.Count; i++)

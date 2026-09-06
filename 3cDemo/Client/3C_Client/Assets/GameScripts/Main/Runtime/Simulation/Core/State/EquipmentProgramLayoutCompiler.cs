@@ -38,11 +38,12 @@ namespace ThirdPersonSimulation
             IReadOnlyList<ProgramCatalogEntry> catalog,
             IReadOnlyList<ProgramStateSlot> stateSlots,
             IReadOnlyList<ProgramReference> references,
+            IReadOnlyList<ProgramProducer> producers,
             Func<int, EquipmentCatalogConstant> constant)
         {
             if (!capabilityEnabled)
                 return new EquipmentProgramLayout(false, null, null, null, null, null, null, null, null);
-            if (catalog == null || stateSlots == null || references == null || constant == null)
+            if (catalog == null || stateSlots == null || references == null || producers == null || constant == null)
                 throw new ArgumentNullException();
             var initial = new Dictionary<string, string>(StringComparer.Ordinal);
             foreach (ProgramCatalogEntry entry in catalog.Where(value => value.Kind == ProgramCatalogEntryKind.EquipmentInitialLoadout))
@@ -102,10 +103,21 @@ namespace ThirdPersonSimulation
                 CharacterSkillId skillId = new CharacterSkillId(Trim(Identity(entry, "Skill"), "skill:"));
                 if (!catalog.Any(value => value.Kind == ProgramCatalogEntryKind.SkillProgram && string.Equals(value.Identity, $"skill:{skillId.Value}", StringComparison.Ordinal)))
                     throw new InvalidDataException($"Equipment Route implementation '{featureId}/{routeId}' references an unknown Skill '{skillId}'.");
+                var requiredParameters = new List<EquipmentParameterId>();
+                foreach (string identity in Identities(entry, "RequiredParameter:"))
+                {
+                    ParseParameterSchema(identity, out EquipmentFeatureId parameterFeatureId, out EquipmentParameterId parameterId);
+                    if (parameterFeatureId != featureId)
+                        throw new InvalidDataException($"Equipment Route implementation '{featureId}/{routeId}' references Parameter '{identity}' from another Feature.");
+                    requiredParameters.Add(parameterId);
+                }
+                IReadOnlyList<string> requiredProducers = Identities(entry, "RequiredProducer:").ToArray();
                 routeImplementations.Add(new EquipmentProgramRouteImplementation(
                     featureId,
                     routeId,
-                    skillId));
+                    skillId,
+                    requiredParameters,
+                    requiredProducers));
             }
             var parameters = new List<EquipmentProgramParameter>();
             foreach (ProgramCatalogEntry entry in catalog.Where(value => value.Kind == ProgramCatalogEntryKind.EquipmentParameterValue))
@@ -141,7 +153,9 @@ namespace ThirdPersonSimulation
                 localStates.Add(new EquipmentProgramLocalState(featureId, stateId, slot));
             }
             IReadOnlyList<EquipmentProgramOperationBinding> operationBindings = CompileOperationBindings(catalog, references);
-            return new EquipmentProgramLayout(true, slots, features, items, routes, routeImplementations, parameters, localStates, operationBindings);
+            var layout = new EquipmentProgramLayout(true, slots, features, items, routes, routeImplementations, parameters, localStates, operationBindings);
+            layout.ValidateProducerBindings(producers);
+            return layout;
         }
 
         static IReadOnlyList<EquipmentProgramOperationBinding> CompileOperationBindings(

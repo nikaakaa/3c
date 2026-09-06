@@ -4,7 +4,7 @@
 
 本文件是本 change 的当前执行进度；`baseline.md`保留实施起点的历史身份。勾选只表示该条完整要求已满足；未勾任务另外写明“已实现，待验证”“部分完成”“尚未完成”或“待验证”，不再用同一个空框掩盖不同阶段。静态审查、源码编译、产物发布和Replay分别记录，不互相替代。
 
-按原66项完整要求记录：已完成4项，已实现待验证8项，部分完成33项，尚未完成18项，单独待验证3项。该计数不是工作量百分比；具体已落地部分和剩余条件见每条任务下的说明。
+按原66项完整要求记录：已完成3项，已实现待验证8项，部分完成33项，尚未完成19项，单独待验证3项。该计数不是工作量百分比；具体已落地部分和剩余条件见每条任务下的说明。
 
 ### 已有代码交付与剩余边界
 
@@ -14,7 +14,7 @@
 | Action与技能实例状态 | `6db20c5f2`共用Activation/Commit/Lifecycle、SlotMap和实例状态管理；`ce72111f2`修正窗口Fact/Trace来源；`1b80885e3`、`c26a15721`和`0a4bc76b3`已接入参数化子图调用frame及按值输入/成功输出边界 | 合法并发/容量、完整停止与恢复运行证据 |
 | 编译器职责拆分 | `b419fcdb9 → 770ecfc51`迁出Blackboard声明/状态及领域绑定；`3e1355410`迁出技能目录；`51aed878f → be440e2f5`迁出控制合同发射；`adc29ea30`迁出Timeline/TreeClip编排；`705f01d82`迁出Action/Behavior目录；`bf1289be3`统一Asset/Node来源；`ae28b8998`迁出Equipment目录；`147556f2f`迁出Input目录；`0c416ac24 → a23eb2ae8`迁出Tag/Attribute目录与协调器；`9a036e8ad`迁出全局状态；`475cfa9d0 → 51b3a07c0`按领域拆分节点登记与目录绑定。各模块已参与Editor/Frontend构建，局部代码对照确认原语义保留 | UI能力／Emitter／Target支持集一致性报告；解释器本体的大类拆分与作者/发布职责 |
 | 状态与网络身份 | `121ec4a49`、`6dcdfd82a`、`304d83880`等已迁移codec/source/skill/generation及恢复读取边界 | 当前完整控制/技能状态的checkpoint、Rollback及输出对账Proof |
-| 当前Corin产物发布 | `00c47f3c`统一两Target与Projection的一次Publish，`31ac3821`提交正式产物；后续控制、Timeline及Action目录拆分后分别正式重建，Program身份不变，最新根Prefab/Scene生成提交为`6ca8e09a7`；12.3已关闭 | 本组实际运行和Replay比较仍归13.2；不等同于全部产品发布完成 |
+| 当前Corin产物发布 | `00c47f3c`统一两Target与Projection的一次Publish，`31ac3821`提交过正式产物；后续控制、Timeline及Action目录拆分、公共 Projection ABI v15 后，旧产物身份不再是当前候选，12.3待正式重建 | 本组实际运行和Replay比较仍归13.2；不等同于全部产品发布完成 |
 | 作者工具、Document、发布 | 规划边界已明确；Control.Rules程序集与部分产品装配已有代码 | 作者模块/工作区、唯一Document v5、旧schema删除、热更发布和全部产品装配仍有实质实施工作 |
 
 ### 当前构建与回放证据
@@ -254,9 +254,9 @@
 - [ ] 12.2 转换有效装备入口、输入／变量绑定及有限producer来源，交付新控制／技能目录可构建结果，保持既有Motion曲线、Warp及表现资源内容。
 
   当前状态：**部分完成**。Corin移动/动作来源已有接线并保留原Motion/Pose资源；有效装备入口及全部输入/变量/producer引用迁移尚未闭合。
-- [x] 12.3 显式构建并发布所选Target、技能目录和同组Projection，更新现有Launcher／Variant／Profile引用；交付exact artifact与产品引用一致报告。
+- [ ] 12.3 显式构建并发布所选Target、技能目录和同组Projection，更新现有Launcher／Variant／Profile引用；交付exact artifact与产品引用一致报告。
 
-  当前状态：**已完成**。00c47f3c将Gameplay Lab接入一次正式Publish，31ac3821提交两Target Program、Projection及场景/prefab产物；两Program的ProgramId/SourceRevision/SemanticHash相同，Variant仍精确引用对应wrapper与共享Projection，Launcher校验已由实施报告完成。be440e2f5、adc29ea30及705f01d82后分别正式重建，Program身份保持一致，最新三个根Prefab及GameplayLab场景生成更新见6ca8e09a7。该条是构建/发布/引用闭合，运行行为仍由13.2验证。
+  当前状态：**待正式重建**。旧6ca8e09a7产物是在公共 Projection ABI v15、ACL接收修正和当前脚部几何前置之前生成，不能继续作为当前交付；新正式构建需在脚部几何验证身份闭合后，由同一入口生成两Target与同组Projection并重新核对Variant/Launcher引用。该条的旧代码接线仍保留，运行行为仍由13.2验证。
 - [ ] 12.4 删除已替代角色控制图入口、activation／Equipment Host编译注册、旧schema、菜单、字段、别名及废弃文件，交付定向零引用与仍保留AI／Pose／独立预览依赖的业务清单。
 
   当前状态：**部分完成**。已删除部分旧控制代码位置、重复Action流程及中央发射分支；旧角色图、Equipment Host注册、v4 schema、菜单和别名尚未全量清除。

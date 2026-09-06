@@ -17,7 +17,7 @@
 - [ ] 1.8 扩展 Graph 参数的 Control/AnimatedProperty 用途，以及 Profile 的参数到 Renderer/Mesh/BlendShape 映射，默认值仍由 Graph 唯一声明；交付完整 authoring schema 与 Agent Document 同步字段，拒绝重复身份和目标；明确分开 RendererBindingId 与 AnimationCurvePath，参数 dense index 复用唯一 ParameterLayout
 - [ ] 1.9 实现显式属性曲线导入命令，把目标来源数据写入正式 AnimationClip；交付源 hash、单位转换、时间范围和仅属性差异记录，已有骨骼/Foot/Phase 或人工属性冲突明确拒绝覆盖
 - [ ] 1.10 生成 NativeClip 编译标量曲线页与 ACL Scalar payload 的同一 typed binding，编译合法无动画通道的显式默认常量；交付完整参数/属性索引和存在性记录，14 条 Motion/Root 分类为来源证据
-- [ ] 1.11 将参数、资源、属性绑定、所有工作区/历史容量和最终属性输出纳入统一 Projection/Program schema/ABI/hash；交付正式 Build 的新产物清单与旧版本拒绝结果，不保留运行时兼容分支；最终固定 Projection v14、PosePlan v25、PoseRuntime v28、ACL manifest v2 与 Native ABI 2
+- [ ] 1.11 将参数、资源、属性绑定、所有工作区/历史容量和最终属性输出纳入统一 Projection/Program schema/ABI/hash；交付正式 Build 的新产物清单与旧版本拒绝结果，不保留运行时兼容分支；最终固定公共组合 Projection v15、PosePlan v25、PoseRuntime v28、ACL manifest v2 与 Native ABI 2
 
 ## 2. Native ACL 解码桥
 

@@ -18,7 +18,23 @@ namespace ThirdPersonSimulation
         ActiveSourceNotCancelable = 2,
         SourceActionStillActive = 3,
         TargetSnapshotRequired = 4,
-        RequiredTagsMissing = 5
+        RequiredTagsMissing = 5,
+        ActionCapacityExceeded = 6,
+        ReplacementSourceMissing = 7
+    }
+
+    internal readonly struct ActionAdmissionActiveAction
+    {
+        public ActionAdmissionActiveAction(string actionId, ulong instanceId)
+        {
+            ActionId = SimulationIdentity.Require(actionId, nameof(actionId));
+            if (instanceId == 0)
+                throw new ArgumentOutOfRangeException(nameof(instanceId));
+            InstanceId = instanceId;
+        }
+
+        public string ActionId { get; }
+        public ulong InstanceId { get; }
     }
 
     internal readonly struct ActionAdmissionTargetCandidate
@@ -37,16 +53,19 @@ namespace ThirdPersonSimulation
         public ActionAdmissionRequest(
             ActionAdmissionProfile targetProfile,
             ActionAdmissionTargetCandidate targetCandidate,
-            ActionAdmissionEvaluationMode mode)
+            ActionAdmissionEvaluationMode mode,
+            ulong replacementActionInstanceId = 0)
         {
             TargetProfile = targetProfile ?? throw new ArgumentNullException(nameof(targetProfile));
             TargetCandidate = targetCandidate;
             Mode = mode;
+            ReplacementActionInstanceId = replacementActionInstanceId;
         }
 
         public ActionAdmissionProfile TargetProfile { get; }
         public ActionAdmissionTargetCandidate TargetCandidate { get; }
         public ActionAdmissionEvaluationMode Mode { get; }
+        public ulong ReplacementActionInstanceId { get; }
     }
 
     internal readonly struct ActionAdmissionDecision
@@ -54,7 +73,8 @@ namespace ThirdPersonSimulation
         public ActionAdmissionDecision(
             bool allowed,
             ActionAdmissionRejectReason rejectReason,
-            string activeSourceActionId)
+            string activeSourceActionId,
+            ulong activeSourceActionInstanceId = 0)
         {
             if (allowed && rejectReason != ActionAdmissionRejectReason.None)
                 throw new ArgumentException("Allowed Action admission cannot carry a rejection reason.", nameof(rejectReason));
@@ -63,17 +83,19 @@ namespace ThirdPersonSimulation
             Allowed = allowed;
             RejectReason = rejectReason;
             ActiveSourceActionId = activeSourceActionId ?? string.Empty;
+            ActiveSourceActionInstanceId = activeSourceActionInstanceId;
         }
 
         public bool Allowed { get; }
         public ActionAdmissionRejectReason RejectReason { get; }
         public string ActiveSourceActionId { get; }
+        public ulong ActiveSourceActionInstanceId { get; }
     }
 
     internal interface IActionAdmissionReadPort
     {
         IEnumerable<string> OwnedGameplayTags { get; }
-        bool TryGetActiveAction(out string actionId);
+        IEnumerable<ActionAdmissionActiveAction> ActiveActions { get; }
         ActionAdmissionProfile RequireActionProfile(string actionId);
         bool TryGetGameplayTagParent(string tag, out string parentTag);
     }
@@ -226,34 +248,49 @@ namespace ThirdPersonSimulation
                     AddTag(m_OwnedTags, tag);
 
                 if (!request.TargetProfile.Required.IsEmpty && !MatchesQuery(request.TargetProfile.Required, m_OwnedTags))
-                    return Reject(ActionAdmissionRejectReason.RequiredTagsMissing, string.Empty);
+                    return Reject(ActionAdmissionRejectReason.RequiredTagsMissing, string.Empty, 0);
 
                 if (!request.TargetProfile.Block.IsEmpty && MatchesQuery(request.TargetProfile.Block, m_OwnedTags))
-                    return Reject(ActionAdmissionRejectReason.TargetBlocked, string.Empty);
+                    return Reject(ActionAdmissionRejectReason.TargetBlocked, string.Empty, 0);
 
                 if (request.TargetProfile.TargetRequirement == ActionTargetRequirement.SnapshotRequired &&
                     !request.TargetCandidate.HasTarget)
                 {
-                    return Reject(ActionAdmissionRejectReason.TargetSnapshotRequired, string.Empty);
+                    return Reject(ActionAdmissionRejectReason.TargetSnapshotRequired, string.Empty, 0);
                 }
 
-                bool hasActiveSource = m_Port.TryGetActiveAction(out string activeSourceActionId);
-                if (hasActiveSource)
+                int activeTargetCount = 0;
+                ActionAdmissionActiveAction replacementSource = default;
+                bool hasReplacementSource = false;
+                foreach (ActionAdmissionActiveAction active in m_Port.ActiveActions)
                 {
-                    ActionAdmissionProfile activeSourceProfile = m_Port.RequireActionProfile(activeSourceActionId);
-                    AddTags(m_ActiveSourceTags, activeSourceProfile.Tags);
+                    if (string.Equals(active.ActionId, request.TargetProfile.ActionId, StringComparison.Ordinal))
+                        activeTargetCount++;
+                    if (request.ReplacementActionInstanceId == active.InstanceId)
+                    {
+                        replacementSource = active;
+                        hasReplacementSource = true;
+                    }
                 }
 
-                if (!hasActiveSource)
-                    return new ActionAdmissionDecision(true, ActionAdmissionRejectReason.None, string.Empty);
+                if (request.ReplacementActionInstanceId != 0)
+                {
+                    if (!hasReplacementSource)
+                        return Reject(ActionAdmissionRejectReason.ReplacementSourceMissing, string.Empty, 0);
 
-                if (request.Mode == ActionAdmissionEvaluationMode.CommitActivation)
-                    return Reject(ActionAdmissionRejectReason.SourceActionStillActive, activeSourceActionId);
+                    ActionAdmissionProfile activeSourceProfile = m_Port.RequireActionProfile(replacementSource.ActionId);
+                    AddTags(m_ActiveSourceTags, activeSourceProfile.Tags);
+                    if (request.Mode == ActionAdmissionEvaluationMode.CommitActivation)
+                        return Reject(ActionAdmissionRejectReason.SourceActionStillActive, replacementSource.ActionId, replacementSource.InstanceId);
+                    return !request.TargetProfile.Cancel.IsEmpty &&
+                           MatchesQuery(request.TargetProfile.Cancel, m_ActiveSourceTags)
+                        ? new ActionAdmissionDecision(true, ActionAdmissionRejectReason.None, replacementSource.ActionId, replacementSource.InstanceId)
+                        : Reject(ActionAdmissionRejectReason.ActiveSourceNotCancelable, replacementSource.ActionId, replacementSource.InstanceId);
+                }
 
-                return !request.TargetProfile.Cancel.IsEmpty &&
-                       MatchesQuery(request.TargetProfile.Cancel, m_ActiveSourceTags)
-                    ? new ActionAdmissionDecision(true, ActionAdmissionRejectReason.None, activeSourceActionId)
-                    : Reject(ActionAdmissionRejectReason.ActiveSourceNotCancelable, activeSourceActionId);
+                if (activeTargetCount != 0)
+                    return Reject(ActionAdmissionRejectReason.ActionCapacityExceeded, request.TargetProfile.ActionId, 0);
+                return new ActionAdmissionDecision(true, ActionAdmissionRejectReason.None, string.Empty);
             }
             finally
             {
@@ -262,9 +299,12 @@ namespace ThirdPersonSimulation
             }
         }
 
-        ActionAdmissionDecision Reject(ActionAdmissionRejectReason reason, string activeSourceActionId)
+        ActionAdmissionDecision Reject(
+            ActionAdmissionRejectReason reason,
+            string activeSourceActionId,
+            ulong activeSourceActionInstanceId)
         {
-            return new ActionAdmissionDecision(false, reason, activeSourceActionId);
+            return new ActionAdmissionDecision(false, reason, activeSourceActionId, activeSourceActionInstanceId);
         }
 
         bool MatchesQuery(ActionTagQuery query, HashSet<string> owned)
@@ -633,4 +673,3 @@ namespace ThirdPersonSimulation
     }
 
 }
-

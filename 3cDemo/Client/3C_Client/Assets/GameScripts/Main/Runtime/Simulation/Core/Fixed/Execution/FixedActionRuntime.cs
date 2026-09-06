@@ -17,6 +17,7 @@ namespace ThirdPersonSimulation.Fixed
         readonly FixedFactSink m_Facts;
         readonly FixedTraceSink m_Trace;
         readonly IEquipmentActionContextProvider m_EquipmentContext;
+        readonly Func<OperationHandle, bool> m_IsOperationStopComplete;
         readonly ActionSkillActivationFlow<SimulationActionTargetSnapshot, SimulationOperation, FixedActionInstanceState> m_Activation;
         readonly ActionSkillCommitFlow<SimulationActionTargetSnapshot, FixedActionInstanceState> m_Commit;
         readonly ActionSkillLifecycleFlow<FixedActionInstanceState> m_Lifecycle;
@@ -32,7 +33,8 @@ namespace ThirdPersonSimulation.Fixed
             FixedHandleAllocator handles,
             FixedFactSink facts,
             FixedTraceSink trace,
-            IEquipmentActionContextProvider equipmentContext)
+            IEquipmentActionContextProvider equipmentContext,
+            Func<OperationHandle, bool> isOperationStopComplete = null)
             : base(access)
         {
             m_Frame = frame ?? throw new ArgumentNullException(nameof(frame));
@@ -45,6 +47,7 @@ namespace ThirdPersonSimulation.Fixed
             m_Facts = facts ?? throw new ArgumentNullException(nameof(facts));
             m_Trace = trace ?? throw new ArgumentNullException(nameof(trace));
             m_EquipmentContext = equipmentContext ?? throw new ArgumentNullException(nameof(equipmentContext));
+            m_IsOperationStopComplete = isOperationStopComplete ?? (operation => true);
             m_Commit = new ActionSkillCommitFlow<SimulationActionTargetSnapshot, FixedActionInstanceState>(this);
             m_Lifecycle = new ActionSkillLifecycleFlow<FixedActionInstanceState>(this);
             m_Activation = new ActionSkillActivationFlow<SimulationActionTargetSnapshot, SimulationOperation, FixedActionInstanceState>(new ActionAdmissionControl(this), this, m_Commit);
@@ -124,6 +127,18 @@ namespace ThirdPersonSimulation.Fixed
             m_Lifecycle.Stop(skill.SkillId, controlRequest.Mode, controlRequest.Source, controlRequest.Reason);
         }
 
+        public bool StopIfEquipmentContextStale(FixedActionInstanceState action)
+        {
+            if (!action.IsActive || !action.EquipmentContext.IsValid || m_EquipmentContext.IsCurrentActionContext(action.EquipmentContext))
+                return false;
+            m_Lifecycle.Stop(
+                action.SkillId,
+                CharacterControlSkillStopMode.Force,
+                action.Source,
+                "EquipmentGenerationChanged");
+            return true;
+        }
+
         public bool TryCommitPendingControl(CharacterSkillId skillId)
         {
             CharacterSkillProgramBinding skill = m_Program.SkillPrograms.Require(skillId);
@@ -197,11 +212,14 @@ namespace ThirdPersonSimulation.Fixed
 
         IEnumerable<string> IActionAdmissionReadPort.OwnedGameplayTags => m_GameplayTags.OwnedTags;
 
-        bool IActionAdmissionReadPort.TryGetActiveAction(out string actionId)
+        IEnumerable<ActionAdmissionActiveAction> IActionAdmissionReadPort.ActiveActions => EnumerateActiveActions();
+
+        public bool IsActionInstanceStopComplete(ulong actionInstanceId)
         {
-            FixedActionInstanceState active = m_Actions.FindOnlyActive();
-            actionId = active.IsActive ? active.ActionId : string.Empty;
-            return active.IsActive;
+            if (!m_Actions.TryGetInstance(actionInstanceId, out FixedActionInstanceState action))
+                return true;
+            return !action.IsActive &&
+                   (!action.SkillEntryOperation.IsValid || m_IsOperationStopComplete(action.SkillEntryOperation));
         }
 
         ActionAdmissionProfile IActionAdmissionReadPort.RequireActionProfile(string actionId)
@@ -273,7 +291,8 @@ namespace ThirdPersonSimulation.Fixed
                     request.TargetKey,
                     request.TargetSnapshot,
                     request.Source,
-                    request.EquipmentContext));
+                    request.EquipmentContext,
+                    request.ReplacementActionInstanceId));
         }
 
         bool IActionSkillActivationPort<SimulationActionTargetSnapshot, SimulationOperation>.TryReadPendingRequest(
@@ -297,7 +316,8 @@ namespace ThirdPersonSimulation.Fixed
                 staged.TargetKey,
                 staged.TargetSnapshot,
                 staged.Source,
-                staged.EquipmentContext);
+                staged.EquipmentContext,
+                staged.ReplacementActionInstanceId);
             return true;
         }
 
@@ -356,11 +376,17 @@ namespace ThirdPersonSimulation.Fixed
             FixedActionInstanceState action) => EmitActionFact(source, action);
 
         void IActionSkillActivationPort<SimulationActionTargetSnapshot, SimulationOperation>.InterruptActive(
+            ulong actionInstanceId,
             SimulationExecutionSource source,
             string reason)
         {
-            m_Lifecycle.Interrupt(m_Actions.FindOnlyActive(), source, reason);
+            if (!m_Actions.TryGetInstance(actionInstanceId, out FixedActionInstanceState action) || !action.IsActive)
+                throw new InvalidOperationException($"Action instance '{actionInstanceId}' is not active for replacement.");
+            m_Lifecycle.Interrupt(action, source, reason);
         }
+
+        bool IActionSkillActivationPort<SimulationActionTargetSnapshot, SimulationOperation>.IsActionInstanceStopComplete(ulong actionInstanceId) =>
+            IsActionInstanceStopComplete(actionInstanceId);
 
         void IActionSkillActivationPort<SimulationActionTargetSnapshot, SimulationOperation>.Trace(
             SimulationOperation operation,
@@ -467,6 +493,15 @@ namespace ThirdPersonSimulation.Fixed
         {
             foreach (TypedActionStateAddresses addresses in m_Layout.ActionStateIndex.Values)
                 yield return m_Actions.ReadSlot(addresses.Instance.SlotIndex);
+        }
+
+        IEnumerable<ActionAdmissionActiveAction> EnumerateActiveActions()
+        {
+            foreach (FixedActionInstanceState action in EnumerateActionStates())
+            {
+                if (action.IsActive)
+                    yield return new ActionAdmissionActiveAction(action.ActionId, action.InstanceId);
+            }
         }
 
         SimulationActionTargetSnapshot ReadActionTargetSnapshot<TTarget>(

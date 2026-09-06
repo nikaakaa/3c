@@ -9,6 +9,7 @@ namespace ThirdPersonSimulation.Fixed
         readonly FixedEvaluationFrame m_Frame;
         readonly Func<CharacterControlParameterId, FixedScalar> m_ReadParameter;
         readonly Func<CharacterSkillId, bool> m_IsSkillActive;
+        readonly Func<CharacterSkillId, (bool Found, ulong InstanceId)> m_TryGetActiveSkillInstanceId;
         readonly Func<CharacterSkillId, bool> m_IsSkillCompleted;
         readonly Func<CharacterSkillId, ulong> m_CompletedSkillInstanceId;
         readonly Func<CharacterSkillId, string, bool> m_IsActionWindowActive;
@@ -19,6 +20,7 @@ namespace ThirdPersonSimulation.Fixed
             FixedEvaluationFrame frame,
             Func<CharacterControlParameterId, FixedScalar> readParameter,
             Func<CharacterSkillId, bool> isSkillActive,
+            Func<CharacterSkillId, (bool Found, ulong InstanceId)> tryGetActiveSkillInstanceId,
             Func<CharacterSkillId, bool> isSkillCompleted,
             Func<CharacterSkillId, ulong> completedSkillInstanceId,
             Func<CharacterSkillId, string, bool> isActionWindowActive,
@@ -28,6 +30,7 @@ namespace ThirdPersonSimulation.Fixed
             m_Frame = frame ?? throw new ArgumentNullException(nameof(frame));
             m_ReadParameter = readParameter ?? throw new ArgumentNullException(nameof(readParameter));
             m_IsSkillActive = isSkillActive ?? throw new ArgumentNullException(nameof(isSkillActive));
+            m_TryGetActiveSkillInstanceId = tryGetActiveSkillInstanceId ?? throw new ArgumentNullException(nameof(tryGetActiveSkillInstanceId));
             m_IsSkillCompleted = isSkillCompleted ?? throw new ArgumentNullException(nameof(isSkillCompleted));
             m_CompletedSkillInstanceId = completedSkillInstanceId ?? throw new ArgumentNullException(nameof(completedSkillInstanceId));
             m_IsActionWindowActive = isActionWindowActive ?? throw new ArgumentNullException(nameof(isActionWindowActive));
@@ -36,6 +39,12 @@ namespace ThirdPersonSimulation.Fixed
 
         public bool HasInputRequest(string requestId) => m_Input.HasRequest(requestId, out _);
         public bool IsSkillActive(CharacterSkillId skillId) => m_IsSkillActive(skillId);
+        public bool TryGetActiveSkillInstanceId(CharacterSkillId skillId, out ulong instanceId)
+        {
+            (bool found, ulong value) = m_TryGetActiveSkillInstanceId(skillId);
+            instanceId = value;
+            return found;
+        }
         public bool IsSkillCompleted(CharacterSkillId skillId) => m_IsSkillCompleted(skillId);
         public ulong CompletedSkillInstanceId(CharacterSkillId skillId) => m_CompletedSkillInstanceId(skillId);
         public bool IsActionWindowActive(CharacterSkillId skillId, string windowType) => m_IsActionWindowActive(skillId, windowType);

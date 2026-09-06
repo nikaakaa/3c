@@ -437,7 +437,10 @@ namespace ThirdPersonSimulation
                 handles,
                 m_Frame.Facts,
                 m_Frame.Trace,
-                m_Equipment);
+                m_Equipment,
+                operation => m_Control == null ||
+                    !m_Control.IsActive(operation) &&
+                    !m_Control.IsStopping(operation));
             m_Values = new Float32ValueRuntime(
                 access,
                 m_Input,
@@ -468,6 +471,7 @@ namespace ThirdPersonSimulation
 					m_Frame,
 					parameter => ReadControlParameter(controlCatalog, parameter),
 					skill => m_Actions.IsSkillActive(skill),
+					skill => (m_ActionStore.TryGetActiveSkillInstanceId(skill, out ulong instanceId), instanceId),
 					skill => m_Actions.IsSkillCompleted(skill),
 					skill => m_Actions.CompletedSkillInstanceId(skill),
 					(skill, window) => m_Blackboard.IsActionWindowActive(skill, window),
@@ -661,6 +665,15 @@ namespace ThirdPersonSimulation
 				int actionSlot = m_ActionStore.FindCurrent(skill.SkillId, out Float32ActionInstanceState action);
 				if (actionSlot < 0)
 					continue;
+				if (m_Actions.StopIfEquipmentContextStale(action))
+				{
+					if (m_Control.IsActive(skill.EntryOperation))
+						m_Control.ForceStop(
+							skill.EntryOperation,
+							OperationStopContext.ActionContextEnded(skill.EntryOperation));
+					m_ActionStore.RemoveSkillExecution(action.InstanceId);
+					continue;
+				}
 				bool removeFrame = false;
 				using (m_ActionStore.EnterSkillExecution(action))
 				{

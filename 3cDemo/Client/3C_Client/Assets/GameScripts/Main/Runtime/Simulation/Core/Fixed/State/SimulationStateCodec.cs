@@ -9,9 +9,9 @@ namespace ThirdPersonSimulation.Fixed
     public static class CharacterSimulationStateCodec
     {
         const uint Magic = 0x54534343;
-		const int Version = 14;
-		public const string CodecIdentity = "character-state/fixed-q32.32/v13";
-		const string HashIdentity = "character-state-hash/fixed-q32.32/v11";
+		const int Version = 15;
+		public const string CodecIdentity = "character-state/fixed-q32.32/v14";
+		const string HashIdentity = "character-state-hash/fixed-q32.32/v12";
 
         public static byte[] Write(CharacterSimulationState state)
         {
@@ -249,6 +249,7 @@ namespace ThirdPersonSimulation.Fixed
             WriteTargetSnapshot(writer, value.TargetSnapshot);
             SimulationExecutionSourceCodec.Write(writer, value.Source);
             EquipmentActionContextCodec.Write(writer, value.EquipmentContext);
+            writer.WriteUInt64(value.ReplacementActionInstanceId);
         }
 
         static FixedActionActivationRequestState ReadActionRequest(
@@ -268,6 +269,7 @@ namespace ThirdPersonSimulation.Fixed
             SimulationActionTargetSnapshot target = ReadTargetSnapshot(reader);
             SimulationExecutionSource source = ReadExecutionSource(reader, layout);
             EquipmentActionContext equipmentContext = EquipmentActionContextCodec.Read(reader, layout.Equipment);
+            ulong replacementActionInstanceId = reader.ReadUInt64();
             return new FixedActionActivationRequestState(
                 actionId,
                 skillId,
@@ -279,7 +281,8 @@ namespace ThirdPersonSimulation.Fixed
                 targetKey,
                 target,
                 source,
-                equipmentContext);
+                equipmentContext,
+                replacementActionInstanceId);
         }
 
         static void WriteActionInstance(CanonicalWriter writer, FixedActionInstanceState value)

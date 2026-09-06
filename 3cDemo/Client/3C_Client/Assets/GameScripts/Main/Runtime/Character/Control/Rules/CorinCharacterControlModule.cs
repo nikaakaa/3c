@@ -145,30 +145,76 @@ namespace ThirdPersonCharacter.Control.Rules
             if (read.HasInputRequest(s_DodgeRequest))
             {
                 CharacterSkillId skill = read.IsInputDirectionBehindBodyYaw(s_MoveAxis) ? DodgeBack : DodgeForward;
-                bool accepted = output.SubmitSkill(new CharacterControlSkillRequest(source, skill, s_DodgeRequest, true));
+                ulong replacementActionInstanceId = 0;
+                TryGetActiveAttackInstance(read, out replacementActionInstanceId);
+                bool accepted = output.SubmitSkill(new CharacterControlSkillRequest(
+                    source,
+                    skill,
+                    s_DodgeRequest,
+                    true,
+                    replacementActionInstanceId: replacementActionInstanceId));
                 return;
             }
             if (read.HasInputRequest(s_AttackRequest))
             {
-                CharacterSkillId skill = SelectAttackSkill(read);
+                CharacterSkillId skill = SelectAttackSkill(read, out ulong replacementActionInstanceId);
                 if (skill.IsValid)
-                    output.SubmitSkill(new CharacterControlSkillRequest(source, skill, s_AttackRequest, true, s_ActionTarget));
+                    output.SubmitSkill(new CharacterControlSkillRequest(
+                        source,
+                        skill,
+                        s_AttackRequest,
+                        true,
+                        s_ActionTarget,
+                        replacementActionInstanceId: replacementActionInstanceId));
             }
         }
 
-        CharacterSkillId SelectAttackSkill(ICharacterControlReadPort read)
+        CharacterSkillId SelectAttackSkill(ICharacterControlReadPort read, out ulong replacementActionInstanceId)
         {
+            replacementActionInstanceId = 0;
             if (read.IsSkillActive(Attack1))
-                return read.IsActionWindowActive(Attack1, "ComboAccept") ? Attack2 : default;
+            {
+                if (!read.IsActionWindowActive(Attack1, "ComboAccept"))
+                    return default;
+                read.TryGetActiveSkillInstanceId(Attack1, out replacementActionInstanceId);
+                return Attack2;
+            }
             if (read.IsSkillActive(Attack2))
-                return read.IsActionWindowActive(Attack2, "ComboAccept") ? Attack3 : default;
+            {
+                if (!read.IsActionWindowActive(Attack2, "ComboAccept"))
+                    return default;
+                read.TryGetActiveSkillInstanceId(Attack2, out replacementActionInstanceId);
+                return Attack3;
+            }
             if (read.IsSkillActive(Attack3))
-                return read.IsActionWindowActive(Attack3, "ComboAccept") ? Attack4 : default;
+            {
+                if (!read.IsActionWindowActive(Attack3, "ComboAccept"))
+                    return default;
+                read.TryGetActiveSkillInstanceId(Attack3, out replacementActionInstanceId);
+                return Attack4;
+            }
             if (read.IsSkillActive(Attack4))
-                return read.IsActionWindowActive(Attack4, "ComboAccept") ? Attack5 : default;
+            {
+                if (!read.IsActionWindowActive(Attack4, "ComboAccept"))
+                    return default;
+                read.TryGetActiveSkillInstanceId(Attack4, out replacementActionInstanceId);
+                return Attack5;
+            }
             if (read.IsSkillActive(Attack5))
                 return default;
             return Attack1;
+        }
+
+        bool TryGetActiveAttackInstance(ICharacterControlReadPort read, out ulong instanceId)
+        {
+            if (read.TryGetActiveSkillInstanceId(Attack1, out instanceId) ||
+                read.TryGetActiveSkillInstanceId(Attack2, out instanceId) ||
+                read.TryGetActiveSkillInstanceId(Attack3, out instanceId) ||
+                read.TryGetActiveSkillInstanceId(Attack4, out instanceId) ||
+                read.TryGetActiveSkillInstanceId(Attack5, out instanceId))
+                return true;
+            instanceId = 0;
+            return false;
         }
 
         bool IsAttackActive(ICharacterControlReadPort read) =>

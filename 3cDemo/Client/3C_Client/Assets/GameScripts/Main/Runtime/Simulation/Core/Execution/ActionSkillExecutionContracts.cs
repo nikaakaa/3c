@@ -57,7 +57,8 @@ namespace ThirdPersonSimulation
             TTargetSnapshot targetSnapshot,
             SimulationExecutionSource source,
             EquipmentActionContext equipmentContext,
-            TOperation operation = null)
+            TOperation operation = null,
+            ulong replacementActionInstanceId = 0)
         {
             if (!source.IsValid)
                 throw new ArgumentException("Action activation source is invalid.", nameof(source));
@@ -71,6 +72,7 @@ namespace ThirdPersonSimulation
             Source = source;
             EquipmentContext = equipmentContext;
             Operation = operation;
+            ReplacementActionInstanceId = replacementActionInstanceId;
         }
 
         public CharacterSkillId SkillId { get; }
@@ -83,6 +85,7 @@ namespace ThirdPersonSimulation
         public SimulationExecutionSource Source { get; }
         public EquipmentActionContext EquipmentContext { get; }
         public TOperation Operation { get; }
+        public ulong ReplacementActionInstanceId { get; }
     }
 
     internal readonly struct ActionSkillActivationRequest<TTargetSnapshot>
@@ -99,7 +102,8 @@ namespace ThirdPersonSimulation
             string targetKey,
             TTargetSnapshot targetSnapshot,
             SimulationExecutionSource source,
-            EquipmentActionContext equipmentContext)
+            EquipmentActionContext equipmentContext,
+            ulong replacementActionInstanceId = 0)
         {
             ActionId = SimulationIdentity.Require(actionId, nameof(actionId));
             ContextId = SimulationIdentity.Require(contextId, nameof(contextId));
@@ -117,6 +121,7 @@ namespace ThirdPersonSimulation
             TargetSnapshot = targetSnapshot;
             Source = source;
             EquipmentContext = equipmentContext;
+            ReplacementActionInstanceId = replacementActionInstanceId;
         }
 
         public string ActionId { get; }
@@ -130,6 +135,7 @@ namespace ThirdPersonSimulation
         public TTargetSnapshot TargetSnapshot { get; }
         public SimulationExecutionSource Source { get; }
         public EquipmentActionContext EquipmentContext { get; }
+        public ulong ReplacementActionInstanceId { get; }
     }
 
     internal interface IActionSkillCommitPort<TTargetSnapshot, TActionState>
@@ -165,7 +171,8 @@ namespace ThirdPersonSimulation
         void StageRequest(ActionSkillActivationRequest<TTargetSnapshot> request);
         bool TryReadPendingRequest(CharacterSkillId skillId, out ActionSkillActivationRequest<TTargetSnapshot> request);
         void ClearPendingRequest(ActionSkillActivationRequest<TTargetSnapshot> request);
-        void InterruptActive(SimulationExecutionSource source, string reason);
+        void InterruptActive(ulong actionInstanceId, SimulationExecutionSource source, string reason);
+        bool IsActionInstanceStopComplete(ulong actionInstanceId);
         void Trace(TOperation operation, string code, ActionSkillTraceSeverity severity, string detail);
         void Trace(SimulationExecutionSource source, string code, ActionSkillTraceSeverity severity, string detail);
     }
@@ -290,4 +297,3 @@ namespace ThirdPersonSimulation
         void Trace(SimulationExecutionSource source, string code, ActionSkillTraceSeverity severity, string detail, ulong generation);
     }
 }
-

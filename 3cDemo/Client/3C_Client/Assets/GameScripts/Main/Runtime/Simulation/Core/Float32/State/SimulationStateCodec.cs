@@ -9,9 +9,9 @@ namespace ThirdPersonSimulation
     public static class CharacterSimulationStateCodec
     {
         const uint Magic = 0x54534343;
-		const int Version = 13;
-		public const string CodecIdentity = "character-state/float32/v14";
-		const string HashIdentity = "character-state-hash/float32/v12";
+		const int Version = 14;
+		public const string CodecIdentity = "character-state/float32/v15";
+		const string HashIdentity = "character-state-hash/float32/v13";
 
         public static byte[] Write(CharacterSimulationState state)
         {
@@ -249,6 +249,7 @@ namespace ThirdPersonSimulation
             WriteTargetSnapshot(writer, value.TargetSnapshot);
             SimulationExecutionSourceCodec.Write(writer, value.Source);
             EquipmentActionContextCodec.Write(writer, value.EquipmentContext);
+            writer.WriteUInt64(value.ReplacementActionInstanceId);
         }
 
         static Float32ActionActivationRequestState ReadActionRequest(
@@ -268,6 +269,7 @@ namespace ThirdPersonSimulation
             SimulationActionTargetSnapshot target = ReadTargetSnapshot(reader);
             SimulationExecutionSource source = ReadExecutionSource(reader, layout);
             EquipmentActionContext equipmentContext = EquipmentActionContextCodec.Read(reader, layout.Equipment);
+            ulong replacementActionInstanceId = reader.ReadUInt64();
             return new Float32ActionActivationRequestState(
                 actionId,
                 skillId,
@@ -279,7 +281,8 @@ namespace ThirdPersonSimulation
                 targetKey,
                 target,
                 source,
-                equipmentContext);
+                equipmentContext,
+                replacementActionInstanceId);
         }
 
         static void WriteActionInstance(CanonicalWriter writer, Float32ActionInstanceState value)

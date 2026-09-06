@@ -17,7 +17,8 @@ namespace ThirdPersonSimulation.Fixed
             string targetKey,
             SimulationActionTargetSnapshot targetSnapshot,
             SimulationExecutionSource source,
-            EquipmentActionContext equipmentContext = default)
+            EquipmentActionContext equipmentContext = default,
+            ulong replacementActionInstanceId = 0)
         {
             ActionId = SimulationIdentity.Require(actionId, nameof(actionId));
             SkillId = skillId;
@@ -32,6 +33,7 @@ namespace ThirdPersonSimulation.Fixed
             TargetSnapshot = targetSnapshot;
             Source = source;
             EquipmentContext = equipmentContext;
+            ReplacementActionInstanceId = replacementActionInstanceId;
         }
 
         public string ActionId { get; }
@@ -45,6 +47,7 @@ namespace ThirdPersonSimulation.Fixed
         public SimulationActionTargetSnapshot TargetSnapshot { get; }
         public SimulationExecutionSource Source { get; }
         public EquipmentActionContext EquipmentContext { get; }
+        public ulong ReplacementActionInstanceId { get; }
         public bool IsValid =>
             !string.IsNullOrEmpty(ActionId) &&
             !string.IsNullOrEmpty(ContextId) &&
@@ -353,6 +356,17 @@ namespace ThirdPersonSimulation.Fixed
             return found;
         }
 
+        public bool TryGetActiveSkillInstanceId(CharacterSkillId skillId, out ulong instanceId)
+        {
+            if (FindActive(skillId, out FixedActionInstanceState state) < 0)
+            {
+                instanceId = 0;
+                return false;
+            }
+            instanceId = state.InstanceId;
+            return true;
+        }
+
         public int FindCurrent(CharacterSkillId skillId, out FixedActionInstanceState state)
         {
             int found = -1;
@@ -501,6 +515,20 @@ namespace ThirdPersonSimulation.Fixed
                 if (current.InstanceId == instanceId)
                     return true;
             }
+            return false;
+        }
+
+        public bool TryGetInstance(ulong instanceId, out FixedActionInstanceState state)
+        {
+            foreach (TypedActionStateAddresses addresses in m_Layout.ActionStateIndex.Values)
+            {
+                FixedActionInstanceState current = m_State.Get(addresses.Instance.SlotIndex).ActionInstance;
+                if (current.InstanceId != instanceId)
+                    continue;
+                state = current;
+                return true;
+            }
+            state = default;
             return false;
         }
 

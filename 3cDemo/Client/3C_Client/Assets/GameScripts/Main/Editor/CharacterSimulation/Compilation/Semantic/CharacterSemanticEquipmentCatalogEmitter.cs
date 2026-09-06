@@ -97,9 +97,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                     Fields(
                         m_Builder.ConstantField(source, "Role", root.Role),
                         m_Builder.IdentityField("Owner", root.OwnerIdentity),
-                        m_Builder.IdentityField("Graph", root.Occurrence.Graph.GraphAuthoringId),
-                        m_Builder.IdentityField("Feature", root.FeatureId.IsValid ? $"equipment:feature:{root.FeatureId.Value}" : string.Empty),
-                        m_Builder.IdentityField("Route", root.RouteId.IsValid ? $"equipment:route:{root.RouteId.Value}" : string.Empty)),
+                        m_Builder.IdentityField("Graph", root.Occurrence.Graph.GraphAuthoringId)),
                     source);
             }
             m_Builder.RequireGameplayCapability("Equipment");
@@ -112,6 +110,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             var fields = new List<ProgramCatalogField>
             {
                 m_Builder.ConstantField(source, "FeatureRevision", feature.FeatureRevision.Value),
+                m_Builder.IdentityField("CodeBinding", $"equipment:code:{feature.CodeBindingIdValue}"),
                 m_Builder.ConstantField(source, "RequiredWorldCapabilities", (ulong)feature.RequiredWorldCapabilities)
             };
             for (int i = 0; i < feature.GrantedTags.Count; i++)
@@ -168,8 +167,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 {
                     m_Builder.IdentityField("Feature", $"equipment:feature:{feature.FeatureIdValue}"),
                     m_Builder.IdentityField("Route", $"equipment:route:{route.RouteIdValue}"),
-                    m_Builder.IdentityField("Action", $"action:{route.ActionProfile.ActionId}"),
-                    m_Builder.IdentityField("Graph", route.InlineGraph.GraphAuthoringId)
+                    m_Builder.IdentityField("Skill", $"skill:{route.SkillIdValue}")
                 };
                 for (int i = 0; i < route.RequiredParameterIds.Count; i++)
                     routeFields.Add(m_Builder.IdentityField($"RequiredParameter:{i:D4}", $"equipment:feature:{feature.FeatureIdValue}:parameter:{EquipmentSlotDefinition.Normalize(route.RequiredParameterIds[i])}"));

@@ -17,23 +17,6 @@ namespace ThirdPersonCharacter.Pipeline
                 if (coreProfiles[i])
                     profiles.Add(coreProfiles[i]);
             }
-            if (m_EquipmentCapabilityEnabled && m_EquipmentProfile)
-            {
-                IReadOnlyList<CharacterEquipmentFeatureDefinition> features = m_EquipmentProfile.Features;
-                for (int featureIndex = 0; featureIndex < features.Count; featureIndex++)
-                {
-                    CharacterEquipmentFeatureDefinition feature = features[featureIndex];
-                    if (!feature)
-                        continue;
-                    IReadOnlyList<EquipmentFeatureRouteImplementation> routes = feature.RouteImplementations;
-                    for (int routeIndex = 0; routeIndex < routes.Count; routeIndex++)
-                    {
-                        ActionProfile actionProfile = routes[routeIndex]?.ActionProfile;
-                        if (actionProfile && !profiles.Contains(actionProfile))
-                            profiles.Add(actionProfile);
-                    }
-                }
-            }
             profiles.Sort((left, right) => string.CompareOrdinal(left.ActionId, right.ActionId));
             return profiles;
         }
@@ -75,7 +58,6 @@ namespace ThirdPersonCharacter.Pipeline
             if (!m_EquipmentProfile)
                 return valid;
 
-            var equipmentActionIds = new Dictionary<string, ActionProfile>(StringComparer.Ordinal);
             IReadOnlyList<CharacterEquipmentFeatureDefinition> features = m_EquipmentProfile.Features;
             for (int featureIndex = 0; featureIndex < features.Count; featureIndex++)
             {
@@ -85,43 +67,17 @@ namespace ThirdPersonCharacter.Pipeline
                 IReadOnlyList<EquipmentFeatureRouteImplementation> routes = feature.RouteImplementations;
                 for (int routeIndex = 0; routeIndex < routes.Count; routeIndex++)
                 {
-                    ActionProfile profile = routes[routeIndex]?.ActionProfile;
-                    if (!profile)
+                    EquipmentFeatureRouteImplementation route = routes[routeIndex];
+                    if (route == null || string.IsNullOrEmpty(route.SkillIdValue))
                         continue;
-                    valid &= profile.CollectConfigurationErrors(errors);
-                    if (gameplayTagCatalog != null)
-                        valid &= profile.CollectTagConfigurationErrors(gameplayTagCatalog, errors);
-                    if (string.IsNullOrEmpty(profile.ActionId))
-                        continue;
-                    if (equipmentActionIds.TryGetValue(profile.ActionId, out ActionProfile existing))
+                    if (!behaviorIds.Contains(route.SkillIdValue))
                     {
-                        if (existing != profile)
-                        {
-                            errors?.Add($"{name}: Equipment Features define duplicate ActionId '{profile.ActionId}' with different ActionProfile assets.");
-                            valid = false;
-                        }
-                        continue;
-                    }
-                    equipmentActionIds.Add(profile.ActionId, profile);
-                    if (!behaviorIds.Add(profile.ActionId) && !IsSharedCoreAction(profile))
-                    {
-                        errors?.Add($"{name}: duplicate core/Equipment behavior id '{profile.ActionId}'.");
+                        errors?.Add($"{name}: Equipment Route '{route.RouteIdValue}' references Skill '{route.SkillIdValue}' outside the Definition catalog.");
                         valid = false;
                     }
                 }
             }
             return valid;
-        }
-
-        bool IsSharedCoreAction(ActionProfile profile)
-        {
-            IReadOnlyList<ActionProfile> profiles = ActionProfiles;
-            for (int i = 0; i < profiles.Count; i++)
-            {
-                if (profiles[i] == profile)
-                    return true;
-            }
-            return false;
         }
     }
 }

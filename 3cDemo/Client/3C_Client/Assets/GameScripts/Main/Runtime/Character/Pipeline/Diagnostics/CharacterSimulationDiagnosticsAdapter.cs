@@ -262,7 +262,6 @@ namespace ThirdPersonCharacter.Pipeline.Diagnostics
                 "action_lifecycle" => RuntimeTraceEventKind.ActionLifecycleTransitioned,
                 "equipment_snapshot" => RuntimeTraceEventKind.EquipmentSnapshot,
                 "equipment_change" => RuntimeTraceEventKind.EquipmentChange,
-                "equipment_host" => RuntimeTraceEventKind.EquipmentHost,
                 "motion_contribution" => RuntimeTraceEventKind.MotionContribution,
                 "motion_channel_resolved" or
                 "resolved_gameplay_motion" or
@@ -331,8 +330,7 @@ namespace ThirdPersonCharacter.Pipeline.Diagnostics
                 code.StartsWith("gameplay_", StringComparison.Ordinal))
                 return RuntimeTraceChannel.GameplayEffect;
             if (kind == RuntimeTraceEventKind.EquipmentSnapshot ||
-                kind == RuntimeTraceEventKind.EquipmentChange ||
-                kind == RuntimeTraceEventKind.EquipmentHost)
+                kind == RuntimeTraceEventKind.EquipmentChange)
                 return RuntimeTraceChannel.Equipment;
             return RuntimeTraceChannel.Graph;
         }

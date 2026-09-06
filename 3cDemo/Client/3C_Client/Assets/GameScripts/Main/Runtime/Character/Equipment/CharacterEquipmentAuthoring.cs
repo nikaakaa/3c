@@ -1,12 +1,10 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using ThirdPersonCharacter.ActionSystem;
 using ThirdPersonCharacter.Pipeline;
 using ThirdPersonGameplay.Effects;
 using ThirdPersonGameplay.Tags;
 using ThirdPersonSimulation;
-using TreeDesigner;
 using UnityEngine;
 
 namespace ThirdPersonCharacter.Equipment
@@ -208,46 +206,28 @@ namespace ThirdPersonCharacter.Equipment
     public sealed class EquipmentFeatureRouteImplementation
     {
         [SerializeField] string m_RouteId;
-        [SerializeField] ActionProfile m_ActionProfile;
-        [SerializeReference] SubTree m_InlineGraph;
+        [SerializeField] string m_SkillId;
         [SerializeField] string[] m_RequiredParameterIds = Array.Empty<string>();
         [SerializeField] string[] m_RequiredProducerIds = Array.Empty<string>();
 
         public string RouteIdValue => EquipmentSlotDefinition.Normalize(m_RouteId);
         public EquipmentActionRouteId RouteId => new EquipmentActionRouteId(RouteIdValue);
-        public ActionProfile ActionProfile => m_ActionProfile;
-        public SubTree InlineGraph => m_InlineGraph;
+        public string SkillIdValue => EquipmentSlotDefinition.Normalize(m_SkillId);
+        public CharacterSkillId SkillId => new CharacterSkillId(SkillIdValue);
         public IReadOnlyList<string> RequiredParameterIds => m_RequiredParameterIds ?? Array.Empty<string>();
         public IReadOnlyList<string> RequiredProducerIds => m_RequiredProducerIds ?? Array.Empty<string>();
-
-        internal void BindSerializedOwner(CharacterEquipmentFeatureDefinition owner, int index)
-        {
-            if (m_InlineGraph == null)
-                return;
-            m_InlineGraph.BindSerializedOwner(owner, $"m_RouteImplementations.Array.data[{index}].m_InlineGraph");
-        }
-
-#if UNITY_EDITOR
-        public void CreateInlineGraph(CharacterEquipmentFeatureDefinition owner, int index)
-        {
-            if (m_InlineGraph != null)
-                throw new InvalidOperationException("Equipment Route inline graph already exists.");
-            m_InlineGraph = CharacterEquipmentFeatureDefinition.CreateDefaultFeatureGraph("Equipment Route");
-            BindSerializedOwner(owner, index);
-        }
-#endif
     }
 
     [CreateAssetMenu(fileName = "CharacterEquipmentFeatureDefinition", menuName = "3C/Character/Equipment Feature")]
-    public sealed class CharacterEquipmentFeatureDefinition : ScriptableObject, ISerializationCallbackReceiver
+    public sealed class CharacterEquipmentFeatureDefinition : ScriptableObject
     {
         [SerializeField] string m_FeatureId;
         [SerializeField, Min(1)] ulong m_FeatureRevision = 1;
+        [SerializeField] string m_CodeBindingId;
         [SerializeField] EquipmentParameterSchema[] m_Parameters = Array.Empty<EquipmentParameterSchema>();
         [SerializeField] EquipmentLocalStateDeclaration[] m_LocalStates = Array.Empty<EquipmentLocalStateDeclaration>();
         [SerializeField] GameplayTagId[] m_GrantedTags = Array.Empty<GameplayTagId>();
         [SerializeField] GameplayEffectDefinition[] m_PassiveEffects = Array.Empty<GameplayEffectDefinition>();
-        [SerializeReference] SubTree m_PersistentGraph;
         [SerializeField] EquipmentFeatureRouteImplementation[] m_RouteImplementations = Array.Empty<EquipmentFeatureRouteImplementation>();
         [SerializeField] string[] m_RequiredGameplayCapabilities = Array.Empty<string>();
         [SerializeField] WorldCapability m_RequiredWorldCapabilities;
@@ -255,35 +235,14 @@ namespace ThirdPersonCharacter.Equipment
         public string FeatureIdValue => EquipmentSlotDefinition.Normalize(m_FeatureId);
         public EquipmentFeatureId FeatureId => new EquipmentFeatureId(FeatureIdValue);
         public EquipmentFeatureRevision FeatureRevision => new EquipmentFeatureRevision(Math.Max(1UL, m_FeatureRevision));
+        public string CodeBindingIdValue => EquipmentSlotDefinition.Normalize(m_CodeBindingId);
         public IReadOnlyList<EquipmentParameterSchema> Parameters => m_Parameters ?? Array.Empty<EquipmentParameterSchema>();
         public IReadOnlyList<EquipmentLocalStateDeclaration> LocalStates => m_LocalStates ?? Array.Empty<EquipmentLocalStateDeclaration>();
         public IReadOnlyList<GameplayTagId> GrantedTags => m_GrantedTags ?? Array.Empty<GameplayTagId>();
         public IReadOnlyList<GameplayEffectDefinition> PassiveEffects => m_PassiveEffects ?? Array.Empty<GameplayEffectDefinition>();
-        public SubTree PersistentGraph => m_PersistentGraph;
         public IReadOnlyList<EquipmentFeatureRouteImplementation> RouteImplementations => m_RouteImplementations ?? Array.Empty<EquipmentFeatureRouteImplementation>();
         public IReadOnlyList<string> RequiredGameplayCapabilities => m_RequiredGameplayCapabilities ?? Array.Empty<string>();
         public WorldCapability RequiredWorldCapabilities => m_RequiredWorldCapabilities;
-
-        void OnEnable() => BindGraphs();
-        void OnValidate() => BindGraphs();
-        public void OnBeforeSerialize() => BindGraphs();
-
-        public void OnAfterDeserialize()
-        {
-            BindGraphs();
-            m_PersistentGraph?.OnAfterDeserializeGraph();
-            IReadOnlyList<EquipmentFeatureRouteImplementation> routes = RouteImplementations;
-            for (int i = 0; i < routes.Count; i++)
-                routes[i]?.InlineGraph?.OnAfterDeserializeGraph();
-        }
-
-        void BindGraphs()
-        {
-            m_PersistentGraph?.BindSerializedOwner(this, "m_PersistentGraph");
-            IReadOnlyList<EquipmentFeatureRouteImplementation> routes = RouteImplementations;
-            for (int i = 0; i < routes.Count; i++)
-                routes[i]?.BindSerializedOwner(this, i);
-        }
 
         public bool CollectConfigurationErrors(
             CharacterPipelineDefinition definition,
@@ -300,6 +259,11 @@ namespace ThirdPersonCharacter.Equipment
             if (m_FeatureRevision == 0)
             {
                 errors?.Add($"{name}: Equipment Feature revision must be positive.");
+                valid = false;
+            }
+            if (string.IsNullOrEmpty(CodeBindingIdValue))
+            {
+                errors?.Add($"{name}: Equipment Feature code binding identity is missing.");
                 valid = false;
             }
             var parameterIds = new HashSet<string>(StringComparer.Ordinal);
@@ -325,7 +289,7 @@ namespace ThirdPersonCharacter.Equipment
                 else valid &= states[i].CollectConfigurationErrors(owner, stateIds, errors);
             }
             valid &= ValidateTagsAndEffects(definition, owner, errors);
-            valid &= ValidateRoutes(equipmentProfile, owner, parameterIds, errors);
+            valid &= ValidateRoutes(definition, equipmentProfile, owner, parameterIds, errors);
             var capabilities = new HashSet<string>(StringComparer.Ordinal);
             IReadOnlyList<string> requiredCapabilities = RequiredGameplayCapabilities;
             for (int i = 0; i < requiredCapabilities.Count; i++)
@@ -374,7 +338,7 @@ namespace ThirdPersonCharacter.Equipment
             return valid;
         }
 
-        bool ValidateRoutes(CharacterEquipmentProfile equipmentProfile, string owner, HashSet<string> parameterIds, List<string> errors)
+        bool ValidateRoutes(CharacterPipelineDefinition definition, CharacterEquipmentProfile equipmentProfile, string owner, HashSet<string> parameterIds, List<string> errors)
         {
             bool valid = true;
             var routeIds = new HashSet<string>(StringComparer.Ordinal);
@@ -396,19 +360,15 @@ namespace ThirdPersonCharacter.Equipment
                     errors?.Add($"{owner}: Route implementation '{routeId}' is absent from the Character Equipment Profile.");
                     valid = false;
                 }
-                if (!route.ActionProfile)
+                if (string.IsNullOrEmpty(route.SkillIdValue))
                 {
-                    errors?.Add($"{owner}: Route implementation '{routeId}' has no ActionProfile.");
+                    errors?.Add($"{owner}: Route implementation '{routeId}' has no SkillId.");
                     valid = false;
                 }
-                if (route.InlineGraph == null)
+                else if (definition == null || !definition.SkillDefinitions.Any(value =>
+                             value != null && string.Equals(value.SkillId, route.SkillIdValue, StringComparison.Ordinal)))
                 {
-                    errors?.Add($"{owner}: Route implementation '{routeId}' has no inline graph.");
-                    valid = false;
-                }
-                else if (!ReferenceEquals(route.InlineGraph.SerializedOwner, this))
-                {
-                    errors?.Add($"{owner}: Route implementation '{routeId}' inline graph owner is invalid.");
+                    errors?.Add($"{owner}: Route implementation '{routeId}' references unknown Skill '{route.SkillIdValue}'.");
                     valid = false;
                 }
                 for (int parameterIndex = 0; parameterIndex < route.RequiredParameterIds.Count; parameterIndex++)
@@ -421,32 +381,9 @@ namespace ThirdPersonCharacter.Equipment
                     }
                 }
             }
-            if (m_PersistentGraph != null && !ReferenceEquals(m_PersistentGraph.SerializedOwner, this))
-            {
-                errors?.Add($"{owner}: Persistent graph owner is invalid.");
-                valid = false;
-            }
             return valid;
         }
 
-#if UNITY_EDITOR
-        public void CreatePersistentGraph()
-        {
-            if (m_PersistentGraph != null)
-                throw new InvalidOperationException("Equipment Persistent graph already exists.");
-            m_PersistentGraph = CreateDefaultFeatureGraph("Equipment Persistent");
-            BindGraphs();
-        }
-
-        public static SubTree CreateDefaultFeatureGraph(string graphName)
-        {
-            var tree = new SubTree { name = graphName };
-            RootNode root = tree.CreateNode(typeof(RootNode)) as RootNode;
-            root.Position = Vector2.zero;
-            tree.RootGUID = root.GUID;
-            return tree;
-        }
-#endif
     }
 
     [CreateAssetMenu(fileName = "EquipmentDefinition", menuName = "3C/Character/Equipment Definition")]

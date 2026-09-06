@@ -189,59 +189,6 @@ namespace ThirdPersonCharacter.Pipeline.Graph
         EquipmentChangeFailurePropertyPort m_Failure = new EquipmentChangeFailurePropertyPort();
     }
 
-    [Serializable]
-    public abstract class EquipmentSlotHostNode : CharacterSimulationOperationNode
-    {
-        [SerializeField, ShowInPanel("Slot Id")]
-        string m_SlotId;
-
-        public string SlotId => ReadEquipmentIdentityNode.Normalize(m_SlotId);
-
-#if UNITY_EDITOR
-        public void ConfigureAuthoring(string slotId)
-        {
-            m_SlotId = ReadEquipmentIdentityNode.Normalize(slotId);
-            OnNodeChangedCallback();
-        }
-#endif
-    }
-
-    [Serializable]
-    [NodeName("Enter Equipment Feature Host")]
-    [NodePath("Base/Action/Equipment/Enter Feature Host")]
-    [NodeAuthoringCapability(NodeAuthoringCapability.CharacterExecution)]
-    public sealed class EnterEquipmentFeatureHostNode : EquipmentSlotHostNode
-    {
-    }
-
-    [Serializable]
-    [NodeName("Exit Equipment Feature Host")]
-    [NodePath("Base/Action/Equipment/Exit Feature Host")]
-    [NodeAuthoringCapability(NodeAuthoringCapability.CharacterExecution)]
-    public sealed class ExitEquipmentFeatureHostNode : EquipmentSlotHostNode
-    {
-    }
-
-    [Serializable]
-    [NodeName("Resolve Equipment Action Route")]
-    [NodePath("Base/Action/Equipment/Resolve Action Route")]
-    [NodeAuthoringCapability(NodeAuthoringCapability.CharacterExecution)]
-    public sealed class ResolveEquipmentActionRouteNode : CharacterSimulationOperationNode
-    {
-        [SerializeField, ShowInPanel("Route Id")]
-        string m_RouteId;
-
-        public string RouteId => ReadEquipmentIdentityNode.Normalize(m_RouteId);
-
-#if UNITY_EDITOR
-        public void ConfigureAuthoring(string routeId)
-        {
-            m_RouteId = ReadEquipmentIdentityNode.Normalize(routeId);
-            OnNodeChangedCallback();
-        }
-#endif
-    }
-
     static class EquipmentNodeValueTypes
     {
         static readonly Type[] s_Boolean = { typeof(bool) };

@@ -203,11 +203,10 @@ namespace ThirdPersonSimulation.Fixed
 				case SimulationOperationCode.BeginEquipmentChange:
 				case SimulationOperationCode.CommitEquipmentChange:
 				case SimulationOperationCode.CancelEquipmentChange:
-				case SimulationOperationCode.EnterEquipmentFeatureHost:
-				case SimulationOperationCode.ExitEquipmentFeatureHost:
-				case SimulationOperationCode.ResolveEquipmentActionRoute:
 					using (FixedValueInputLease equipmentInputs = m_Values.ReadInputs(cursor, operation))
-						return m_Equipment.TickHost(cursor, operation, equipmentInputs);
+						return m_Equipment.Execute(cursor, operation, equipmentInputs)
+							? OperationExecutionResult.Success
+							: OperationExecutionResult.Failure;
 				case SimulationOperationCode.LocomotionInputMotion:
 					return TickLocomotion(cursor, operation);
 				case SimulationOperationCode.CameraStateRequest:
@@ -315,13 +314,7 @@ namespace ThirdPersonSimulation.Fixed
             OperationExecutionDescriptor descriptor,
             OperationStopContext context)
         {
-            if (descriptor.Code == SimulationOperationCode.EnterEquipmentFeatureHost ||
-                descriptor.Code == SimulationOperationCode.ResolveEquipmentActionRoute)
-            {
-                m_Equipment.ForceStopHost(cursor, m_Access.Operation(descriptor.Handle), context);
-                return OperationStopStatus.Completed;
-            }
-            if (descriptor.Code != SimulationOperationCode.Timeline)
+			if (descriptor.Code != SimulationOperationCode.Timeline)
                 throw new InvalidOperationException($"Leaf '{descriptor.Code}' does not own a graceful stop lifecycle.");
             return m_Timeline.ContinueTimelineStop(cursor, descriptor.Handle, context);
         }
@@ -331,13 +324,7 @@ namespace ThirdPersonSimulation.Fixed
             OperationExecutionDescriptor descriptor,
             OperationStopContext context)
         {
-            if (descriptor.Code == SimulationOperationCode.EnterEquipmentFeatureHost ||
-                descriptor.Code == SimulationOperationCode.ResolveEquipmentActionRoute)
-            {
-                m_Equipment.ForceStopHost(cursor, m_Access.Operation(descriptor.Handle), context);
-                return;
-            }
-            if (descriptor.Code != SimulationOperationCode.Timeline)
+			if (descriptor.Code != SimulationOperationCode.Timeline)
                 throw new InvalidOperationException($"Leaf '{descriptor.Code}' does not own a force-stop lifecycle.");
             m_Timeline.ForceStopTimeline(cursor, descriptor.Handle, context);
         }
@@ -440,7 +427,6 @@ namespace ThirdPersonSimulation.Fixed
                 m_Frame,
                 m_Frame.CreateStatePort("Equipment", services.EquipmentPolicy),
                 actionStore,
-                m_Input,
                 handles,
                 m_GameplayEffects,
                 m_Frame.Facts,

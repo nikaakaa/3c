@@ -380,7 +380,6 @@ namespace BTSMTL.Diagnostics
         FootPlacementSnapshot,
         EquipmentSnapshot,
         EquipmentChange,
-        EquipmentHost,
         EquipmentVisual,
         MotionMatchingFrame
     }

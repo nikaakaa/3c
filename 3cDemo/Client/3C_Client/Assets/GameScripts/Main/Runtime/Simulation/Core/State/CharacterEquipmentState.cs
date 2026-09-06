@@ -32,27 +32,27 @@ namespace ThirdPersonSimulation
         public EquipmentProgramFeature(
             EquipmentFeatureId featureId,
             EquipmentFeatureRevision revision,
+            string codeBindingId,
             IEnumerable<string> grantedTags,
             IEnumerable<string> passiveEffects,
-            WorldCapability requiredWorldCapabilities,
-            OperationHandle persistentEntry)
+            WorldCapability requiredWorldCapabilities)
         {
-            if (!featureId.IsValid || !revision.IsValid)
+            if (!featureId.IsValid || !revision.IsValid || string.IsNullOrEmpty(codeBindingId))
                 throw new ArgumentException("Equipment Program Feature identity is invalid.");
             FeatureId = featureId;
             Revision = revision;
+            CodeBindingId = SimulationIdentity.Require(codeBindingId, nameof(codeBindingId));
             m_GrantedTags = StableIdentities(grantedTags, "Equipment granted Tag");
             m_PassiveEffects = StableIdentities(passiveEffects, "Equipment passive Effect");
             RequiredWorldCapabilities = requiredWorldCapabilities;
-            PersistentEntry = persistentEntry;
         }
 
         public EquipmentFeatureId FeatureId { get; }
         public EquipmentFeatureRevision Revision { get; }
+        public string CodeBindingId { get; }
         public IReadOnlyList<string> GrantedTags => m_GrantedTags;
         public IReadOnlyList<string> PassiveEffects => m_PassiveEffects;
         public WorldCapability RequiredWorldCapabilities { get; }
-        public OperationHandle PersistentEntry { get; }
 
         static ReadOnlyCollection<string> StableIdentities(IEnumerable<string> source, string label)
         {
@@ -123,21 +123,18 @@ namespace ThirdPersonSimulation
         public EquipmentProgramRouteImplementation(
             EquipmentFeatureId featureId,
             EquipmentActionRouteId routeId,
-            string actionId,
-            OperationHandle entryOperation)
+            CharacterSkillId skillId)
         {
-            if (!featureId.IsValid || !routeId.IsValid || string.IsNullOrEmpty(actionId) || !entryOperation.IsValid)
+            if (!featureId.IsValid || !routeId.IsValid || !skillId.IsValid)
                 throw new ArgumentException("Equipment Route implementation is invalid.");
             FeatureId = featureId;
             RouteId = routeId;
-            ActionId = actionId;
-            EntryOperation = entryOperation;
+            SkillId = skillId;
         }
 
         public EquipmentFeatureId FeatureId { get; }
         public EquipmentActionRouteId RouteId { get; }
-        public string ActionId { get; }
-        public OperationHandle EntryOperation { get; }
+        public CharacterSkillId SkillId { get; }
     }
 
     public sealed class EquipmentProgramParameter
@@ -338,6 +335,12 @@ namespace ThirdPersonSimulation
                 if (!m_SlotById.ContainsKey(m_Routes[i].OwnerSlotId))
                     throw new InvalidDataException($"Equipment Route '{m_Routes[i].RouteId}' owner Slot is absent.");
             }
+            for (int i = 0; i < m_RouteImplementations.Count; i++)
+            {
+                EquipmentProgramRouteImplementation implementation = m_RouteImplementations[i];
+                if (!m_FeatureById.ContainsKey(implementation.FeatureId) || !m_RouteById.ContainsKey(implementation.RouteId))
+                    throw new InvalidDataException($"Equipment Route implementation '{implementation.FeatureId}/{implementation.RouteId}' has a dangling Feature or Route.");
+            }
         }
 
         StableHash ComputeHash()
@@ -358,8 +361,8 @@ namespace ThirdPersonSimulation
                 EquipmentProgramFeature feature = m_Features[i];
                 writer.WriteString(feature.FeatureId.Value);
                 writer.WriteUInt64(feature.Revision.Value);
+                writer.WriteString(feature.CodeBindingId);
                 writer.WriteUInt64((ulong)feature.RequiredWorldCapabilities);
-                writer.WriteInt32(feature.PersistentEntry.IsValid ? feature.PersistentEntry.Value : -1);
                 writer.WriteInt32(feature.GrantedTags.Count);
                 for (int tag = 0; tag < feature.GrantedTags.Count; tag++) writer.WriteString(feature.GrantedTags[tag]);
                 writer.WriteInt32(feature.PassiveEffects.Count);
@@ -387,8 +390,7 @@ namespace ThirdPersonSimulation
             {
                 writer.WriteString(m_RouteImplementations[i].FeatureId.Value);
                 writer.WriteString(m_RouteImplementations[i].RouteId.Value);
-                writer.WriteString(m_RouteImplementations[i].ActionId);
-                writer.WriteInt32(m_RouteImplementations[i].EntryOperation.Value);
+                writer.WriteString(m_RouteImplementations[i].SkillId.Value);
             }
             writer.WriteInt32(m_Parameters.Count);
             for (int i = 0; i < m_Parameters.Count; i++)
@@ -507,12 +509,12 @@ namespace ThirdPersonSimulation
             EquipmentFeatureRevision featureRevision,
             EquipmentVisualBindingId visualBindingId,
             ulong revision,
-            ulong hostGeneration,
+            ulong generation,
             bool contributionsInstalled,
             string tagSource,
             IEnumerable<ulong> passiveEffectHandles)
         {
-            if (!slotId.IsValid || revision == 0 || hostGeneration == 0)
+            if (!slotId.IsValid || revision == 0 || generation == 0)
                 throw new ArgumentException("Equipment Slot state is invalid.");
             bool empty = !equipmentId.IsValid;
             bool hasAnyContributionIdentity = featureId.IsValid || featureRevision.IsValid || visualBindingId.IsValid;
@@ -527,7 +529,7 @@ namespace ThirdPersonSimulation
             FeatureRevision = featureRevision;
             VisualBindingId = visualBindingId;
             Revision = revision;
-            HostGeneration = hostGeneration;
+            Generation = generation;
             ContributionsInstalled = contributionsInstalled;
             TagSource = tagSource ?? string.Empty;
             m_PassiveEffectHandles = (passiveEffectHandles ?? Array.Empty<ulong>()).ToArray();
@@ -543,7 +545,7 @@ namespace ThirdPersonSimulation
         public EquipmentFeatureRevision FeatureRevision { get; }
         public EquipmentVisualBindingId VisualBindingId { get; }
         public ulong Revision { get; }
-        public ulong HostGeneration { get; }
+        public ulong Generation { get; }
         public bool ContributionsInstalled { get; }
         public string TagSource { get; }
         public IReadOnlyList<ulong> PassiveEffectHandles => m_PassiveEffectHandles ?? Array.Empty<ulong>();
@@ -663,7 +665,7 @@ namespace ThirdPersonSimulation
                 writer.WriteUInt64(slot.FeatureRevision.Value);
                 writer.WriteString(slot.VisualBindingId.Value);
                 writer.WriteUInt64(slot.Revision);
-                writer.WriteUInt64(slot.HostGeneration);
+                writer.WriteUInt64(slot.Generation);
                 writer.WriteBoolean(slot.ContributionsInstalled);
                 writer.WriteString(slot.TagSource);
                 writer.WriteInt32(slot.PassiveEffectHandles.Count);

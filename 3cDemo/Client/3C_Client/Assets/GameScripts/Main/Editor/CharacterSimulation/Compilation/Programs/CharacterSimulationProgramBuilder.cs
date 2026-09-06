@@ -762,10 +762,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                    code == SimulationOperationCode.RequestEquipmentChange ||
                    code == SimulationOperationCode.BeginEquipmentChange ||
                    code == SimulationOperationCode.CommitEquipmentChange ||
-                   code == SimulationOperationCode.CancelEquipmentChange ||
-                   code == SimulationOperationCode.EnterEquipmentFeatureHost ||
-                   code == SimulationOperationCode.ExitEquipmentFeatureHost ||
-                   code == SimulationOperationCode.ResolveEquipmentActionRoute;
+                   code == SimulationOperationCode.CancelEquipmentChange;
         }
     }
 }

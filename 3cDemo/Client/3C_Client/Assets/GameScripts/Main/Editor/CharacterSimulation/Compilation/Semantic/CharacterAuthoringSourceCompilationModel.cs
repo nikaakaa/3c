@@ -22,9 +22,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
 {
     public enum CharacterCompositionRootRole : byte
     {
-        Character = 1,
-        EquipmentPersistent = 2,
-        EquipmentRoute = 3
+        Character = 1
     }
 
     public sealed class CharacterCompositionRoot
@@ -32,8 +30,6 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
         public CharacterCompositionRoot(
             CharacterCompositionRootRole role,
             string ownerIdentity,
-            EquipmentFeatureId featureId,
-            EquipmentActionRouteId routeId,
             string sourcePath,
             CharacterAuthoringGraphOccurrence occurrence)
         {
@@ -41,25 +37,15 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 throw new ArgumentOutOfRangeException(nameof(role));
             Role = role;
             OwnerIdentity = SimulationIdentity.Require(ownerIdentity, nameof(ownerIdentity));
-            FeatureId = featureId;
-            RouteId = routeId;
             SourcePath = SimulationIdentity.Require(sourcePath, nameof(sourcePath));
             Occurrence = occurrence ?? throw new ArgumentNullException(nameof(occurrence));
-            if (role == CharacterCompositionRootRole.Character && (featureId.IsValid || routeId.IsValid) ||
-                role == CharacterCompositionRootRole.EquipmentPersistent && (!featureId.IsValid || routeId.IsValid) ||
-                role == CharacterCompositionRootRole.EquipmentRoute && (!featureId.IsValid || !routeId.IsValid))
-            {
-                throw new ArgumentException("Character composition root identity is inconsistent.");
-            }
         }
 
         public CharacterCompositionRootRole Role { get; }
         public string OwnerIdentity { get; }
-        public EquipmentFeatureId FeatureId { get; }
-        public EquipmentActionRouteId RouteId { get; }
         public string SourcePath { get; }
         public CharacterAuthoringGraphOccurrence Occurrence { get; }
-        public string Identity => $"{(byte)Role}:{OwnerIdentity}:{FeatureId.Value}:{RouteId.Value}:{Occurrence.Graph.GraphAuthoringId}";
+        public string Identity => $"{(byte)Role}:{OwnerIdentity}:{Occurrence.Graph.GraphAuthoringId}";
     }
 
     public sealed class CharacterAuthoringCompilationModel
@@ -352,12 +338,9 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 roots,
                 CharacterCompositionRootRole.Character,
                 $"asset:{definitionGuid}",
-                default,
-                default,
                 definitionPath,
                 root,
                 $"root:{root.GraphAuthoringId}");
-            DiscoverEquipmentRoots(definition, roots);
             if (roots.Count == 0 || !m_Report.IsValid)
                 return null;
             IReadOnlyList<CharacterSkillCompilationRecord> skills = CharacterSkillCompilationDiscovery.Discover(
@@ -381,59 +364,10 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 m_TimelineEmitters);
         }
 
-        void DiscoverEquipmentRoots(CharacterPipelineDefinition definition, List<CharacterCompositionRoot> roots)
-        {
-            if (!definition.EquipmentCapabilityEnabled || !definition.EquipmentProfile)
-                return;
-            CharacterEquipmentFeatureDefinition[] features = definition.EquipmentProfile.Features
-                .Where(value => value)
-                .OrderBy(value => value.FeatureIdValue, StringComparer.Ordinal)
-                .ToArray();
-            for (int featureIndex = 0; featureIndex < features.Length; featureIndex++)
-            {
-                CharacterEquipmentFeatureDefinition feature = features[featureIndex];
-                string featureGuid = AssetDatabase.AssetPathToGUID(AssetDatabase.GetAssetPath(feature));
-                string ownerIdentity = $"asset:{featureGuid}";
-                if (feature.PersistentGraph != null)
-                {
-                    DiscoverCompositionRoot(
-                        roots,
-                        CharacterCompositionRootRole.EquipmentPersistent,
-                        ownerIdentity,
-                        feature.FeatureId,
-                        default,
-                        $"{AssetDatabase.GetAssetPath(feature)}#persistent",
-                        feature.PersistentGraph,
-                        $"equipment:feature:{feature.FeatureIdValue}:persistent:{feature.PersistentGraph.GraphAuthoringId}");
-                }
-                EquipmentFeatureRouteImplementation[] routes = feature.RouteImplementations
-                    .Where(value => value != null)
-                    .OrderBy(value => value.RouteIdValue, StringComparer.Ordinal)
-                    .ToArray();
-                for (int routeIndex = 0; routeIndex < routes.Length; routeIndex++)
-                {
-                    EquipmentFeatureRouteImplementation route = routes[routeIndex];
-                    if (route.InlineGraph == null)
-                        continue;
-                    DiscoverCompositionRoot(
-                        roots,
-                        CharacterCompositionRootRole.EquipmentRoute,
-                        ownerIdentity,
-                        feature.FeatureId,
-                        route.RouteId,
-                        $"{AssetDatabase.GetAssetPath(feature)}#route:{route.RouteIdValue}",
-                        route.InlineGraph,
-                        $"equipment:feature:{feature.FeatureIdValue}:route:{route.RouteIdValue}:{route.InlineGraph.GraphAuthoringId}");
-                }
-            }
-        }
-
         void DiscoverCompositionRoot(
             List<CharacterCompositionRoot> roots,
             CharacterCompositionRootRole role,
             string ownerIdentity,
-            EquipmentFeatureId featureId,
-            EquipmentActionRouteId routeId,
             string sourcePath,
             BaseTree graph,
             string route)
@@ -464,13 +398,13 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             }
             if (occurrence == null)
                 return;
-            string identity = $"{(byte)role}:{ownerIdentity}:{featureId.Value}:{routeId.Value}:{graph.GraphAuthoringId}";
+            string identity = $"{(byte)role}:{ownerIdentity}:{graph.GraphAuthoringId}";
             if (roots.Any(value => string.Equals(value.Identity, identity, StringComparison.Ordinal)))
             {
                 m_Report.DiscoveryError("composition_root_duplicate", route, $"Composition root '{identity}' is duplicated.");
                 return;
             }
-            roots.Add(new CharacterCompositionRoot(role, ownerIdentity, featureId, routeId, sourcePath, occurrence));
+            roots.Add(new CharacterCompositionRoot(role, ownerIdentity, sourcePath, occurrence));
         }
 
         void ValidateActionWindowQueries(CharacterAuthoringTopologyProjection topology)

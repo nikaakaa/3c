@@ -22,15 +22,6 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 node)));
             registry.Register(CharacterSimulationNodeEmitterRegistry.Simple<CommitEquipmentChangeNode>(node => new CharacterSimulationNodeEmission(SimulationOperationCode.CommitEquipmentChange)));
             registry.Register(CharacterSimulationNodeEmitterRegistry.Simple<CancelEquipmentChangeNode>(node => new CharacterSimulationNodeEmission(SimulationOperationCode.CancelEquipmentChange)));
-            registry.Register(CharacterSimulationNodeEmitterRegistry.Simple<EnterEquipmentFeatureHostNode>(node => new CharacterSimulationNodeEmission(
-                SimulationOperationCode.EnterEquipmentFeatureHost,
-                text0: node.SlotId)));
-            registry.Register(CharacterSimulationNodeEmitterRegistry.Simple<ExitEquipmentFeatureHostNode>(node => new CharacterSimulationNodeEmission(
-                SimulationOperationCode.ExitEquipmentFeatureHost,
-                text0: node.SlotId)));
-            registry.Register(CharacterSimulationNodeEmitterRegistry.Simple<ResolveEquipmentActionRouteNode>(node => new CharacterSimulationNodeEmission(
-                SimulationOperationCode.ResolveEquipmentActionRoute,
-                text0: node.RouteId)));
         }
 
         static CharacterSimulationNodeEmission EquipmentChange(SimulationOperationCode code, EquipmentChangeOperationNode node)

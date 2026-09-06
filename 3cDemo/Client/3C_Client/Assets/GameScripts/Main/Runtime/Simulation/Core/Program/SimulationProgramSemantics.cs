@@ -290,9 +290,6 @@ namespace ThirdPersonSimulation
         BeginEquipmentChange = 133,
         CommitEquipmentChange = 134,
         CancelEquipmentChange = 135,
-        EnterEquipmentFeatureHost = 136,
-        ExitEquipmentFeatureHost = 137,
-        ResolveEquipmentActionRoute = 138,
         AIReadSelfObservation = 200,
         AIEnumerateConfiguredCandidates = 201,
         AISelectNearestCandidate = 202,
@@ -356,7 +353,7 @@ namespace ThirdPersonSimulation
     public static class CharacterGameplayOperationSet
     {
         public const string Id = "character-gameplay-operations";
-        public static readonly OperationSetVersion Version = new OperationSetVersion(Id + "/13");
+        public static readonly OperationSetVersion Version = new OperationSetVersion(Id + "/14");
 
         static readonly ReadOnlyCollection<SimulationOperationCode> s_Operations =
             Array.AsReadOnly(new[]
@@ -422,10 +419,7 @@ namespace ThirdPersonSimulation
                 SimulationOperationCode.RequestEquipmentChange,
                 SimulationOperationCode.BeginEquipmentChange,
                 SimulationOperationCode.CommitEquipmentChange,
-                SimulationOperationCode.CancelEquipmentChange,
-                SimulationOperationCode.EnterEquipmentFeatureHost,
-                SimulationOperationCode.ExitEquipmentFeatureHost,
-                SimulationOperationCode.ResolveEquipmentActionRoute
+                SimulationOperationCode.CancelEquipmentChange
             });
 
         public static IReadOnlyList<SimulationOperationCode> Operations => s_Operations;

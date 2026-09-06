@@ -10,21 +10,17 @@ namespace ThirdPersonSimulation
 		readonly Float32EvaluationFrame m_Frame;
 		readonly Float32StatePort m_State;
 		readonly Float32ActionStateStore m_Actions;
-		readonly IFloat32InputPort m_Input;
 		readonly Float32HandleAllocator m_Handles;
 		readonly Float32GameplayEffectOperationRuntime m_GameplayEffects;
 		readonly Float32FactSink m_Facts;
 		readonly Float32TraceSink m_Trace;
 		readonly EquipmentRuntimeControl m_Control;
 		readonly Dictionary<int, EquipmentChangeOutcome> m_Outcomes = new Dictionary<int, EquipmentChangeOutcome>();
-		EquipmentActionContext m_CurrentContext;
-
 		public Float32EquipmentRuntime(
 			Float32ProgramAccess access,
 			Float32EvaluationFrame frame,
 			Float32StatePort state,
 			Float32ActionStateStore actions,
-			IFloat32InputPort input,
 			Float32HandleAllocator handles,
 			Float32GameplayEffectOperationRuntime gameplayEffects,
 			Float32FactSink facts,
@@ -34,7 +30,6 @@ namespace ThirdPersonSimulation
 			m_Frame = frame ?? throw new ArgumentNullException(nameof(frame));
 			m_State = state ?? throw new ArgumentNullException(nameof(state));
 			m_Actions = actions ?? throw new ArgumentNullException(nameof(actions));
-			m_Input = input ?? throw new ArgumentNullException(nameof(input));
 			m_Handles = handles ?? throw new ArgumentNullException(nameof(handles));
 			m_GameplayEffects = gameplayEffects ?? throw new ArgumentNullException(nameof(gameplayEffects));
 			m_Facts = facts ?? throw new ArgumentNullException(nameof(facts));
@@ -42,12 +37,10 @@ namespace ThirdPersonSimulation
 			m_Control = new EquipmentRuntimeControl(this);
 		}
 
-		public EquipmentActionContext Current => m_CurrentContext;
+		public EquipmentActionContext Current => default;
 
 		public void BeginEvaluation()
 		{
-			if (m_CurrentContext.IsValid)
-				throw new InvalidOperationException("Equipment Action Context leaked across evaluations.");
 			m_Outcomes.Clear();
 			if (!m_Layout.Equipment.CapabilityEnabled)
 				return;
@@ -108,8 +101,7 @@ namespace ThirdPersonSimulation
 				{
 					EquipmentChangeOutcome outcome = m_Control.Commit(
 						operation.Handle,
-						new EquipmentChangeId(ReadUInt64(inputs)),
-						outgoing => AbortPersistent(cursor, outgoing, operation.Handle));
+						new EquipmentChangeId(ReadUInt64(inputs)));
 					return Capture(operation, outcome).Succeeded;
 				}
 				case SimulationOperationCode.CancelEquipmentChange:
@@ -119,64 +111,20 @@ namespace ThirdPersonSimulation
 						new EquipmentChangeId(ReadUInt64(inputs)));
 					return Capture(operation, outcome).Succeeded;
 				}
-				case SimulationOperationCode.EnterEquipmentFeatureHost:
-					return TickPersistent(cursor, operation) == OperationExecutionResult.Running;
-				case SimulationOperationCode.ExitEquipmentFeatureHost:
-					StopPersistent(cursor, operation, operation.Handle);
-					return true;
-				case SimulationOperationCode.ResolveEquipmentActionRoute:
-					return TickRoute(cursor, operation) != OperationExecutionResult.Failure;
 				default:
 					throw new InvalidOperationException($"Operation '{operation.Code}' is not an Equipment execution operation.");
 			}
 		}
 
-		public OperationExecutionResult TickHost<TTarget>(OperationControlCursor<TTarget> cursor, SimulationOperation operation, Float32ValueInputLease inputs)
-			where TTarget : struct, IOperationControlTarget<TTarget>
-		{
-			return operation.Code switch
-			{
-				SimulationOperationCode.EnterEquipmentFeatureHost => TickPersistent(cursor, operation),
-				SimulationOperationCode.ResolveEquipmentActionRoute => TickRoute(cursor, operation),
-				_ => Execute(cursor, operation, inputs) ? OperationExecutionResult.Success : OperationExecutionResult.Failure
-			};
-		}
-
-		public void ForceStopHost<TTarget>(
-			OperationControlCursor<TTarget> cursor,
-			SimulationOperation operation,
-			OperationStopContext context)
-			where TTarget : struct, IOperationControlTarget<TTarget>
-		{
-			if (operation.Code == SimulationOperationCode.EnterEquipmentFeatureHost)
-				StopPersistent(cursor, operation, context.Source);
-			else if (operation.Code == SimulationOperationCode.ResolveEquipmentActionRoute)
-			{
-				EquipmentProgramRoute route = RequireRoute(operation);
-				EquipmentSlotState slot = ReadState().RequireSlot(route.OwnerSlotId);
-				if (slot.IsEquipped && m_Layout.Equipment.TryGetRouteImplementation(slot.FeatureId, route.RouteId, out EquipmentProgramRouteImplementation implementation))
-					cursor.ForceStop(implementation.EntryOperation, context);
-			}
-		}
 
 		CharacterStateValue ReadParameter(SimulationOperation operation, Float32ValueInputLease inputs)
 		{
-			EquipmentSlotState slot;
-			if (m_CurrentContext.IsValid)
-			{
-				slot = ReadState().RequireSlot(m_CurrentContext.SlotId);
-				if (!slot.IsEquipped || slot.EquipmentId != m_CurrentContext.EquipmentId || slot.FeatureId != m_CurrentContext.FeatureId || slot.Revision != m_CurrentContext.EquipmentRevision)
-					throw new InvalidOperationException($"Equipment parameter context '{m_CurrentContext}' is stale.");
-			}
-			else
-			{
-				slot = RequireSlotState(operation);
-				ulong expectedRevision = ReadUInt64(inputs);
-				if (!slot.IsEquipped || expectedRevision == 0)
-					throw new InvalidOperationException($"Equipment parameter operation '{SourcePath(operation)}' requires Action Context or explicit Slot revision.");
-				if (slot.Revision != expectedRevision)
-					throw new InvalidOperationException($"Equipment parameter operation '{SourcePath(operation)}' revision is stale.");
-			}
+			EquipmentSlotState slot = RequireSlotState(operation);
+			ulong expectedRevision = ReadUInt64(inputs);
+			if (!slot.IsEquipped || expectedRevision == 0)
+				throw new InvalidOperationException($"Equipment parameter operation '{SourcePath(operation)}' requires an explicit Slot revision.");
+			if (slot.Revision != expectedRevision)
+				throw new InvalidOperationException($"Equipment parameter operation '{SourcePath(operation)}' revision is stale.");
 			EquipmentParameterId parameterId = m_Layout.Equipment.RequireOperationParameter(operation.Handle);
 			EquipmentProgramParameter parameter = m_Layout.Equipment.RequireParameter(slot.EquipmentId, parameterId);
 			if (parameter.FeatureId != slot.FeatureId)
@@ -191,15 +139,8 @@ namespace ThirdPersonSimulation
 			EquipmentId target = TryRequireItem(operation, out EquipmentProgramItem item) ? item.EquipmentId : default;
 			EquipmentSlotState current = ReadState().RequireSlot(slot.SlotId);
 			ulong expectedRevision = ReadUInt64(inputs);
-			if (m_CurrentContext.IsValid)
-			{
-				if (m_CurrentContext.SlotId != slot.SlotId || m_CurrentContext.EquipmentRevision != current.Revision)
-					throw new InvalidOperationException($"Equipment change context '{m_CurrentContext}' does not match Slot '{slot.SlotId}'.");
-				if (expectedRevision == 0)
-					expectedRevision = m_CurrentContext.EquipmentRevision;
-			}
 			if (expectedRevision == 0)
-				throw new InvalidOperationException($"Equipment change operation '{SourcePath(operation)}' requires an explicit revision outside a Route Context.");
+				throw new InvalidOperationException($"Equipment change operation '{SourcePath(operation)}' requires an explicit revision.");
 			ulong actionInstanceId = 0;
 			string actionContext = GetStringConstant(operation, OperationNamedConstant.ActionContext, string.Empty);
 			if (!string.IsNullOrEmpty(actionContext) && m_Actions.FindActive(actionContext, out Float32ActionInstanceState action) >= 0)
@@ -236,94 +177,12 @@ namespace ThirdPersonSimulation
 			return outcome;
 		}
 
-		OperationExecutionResult TickPersistent<TTarget>(OperationControlCursor<TTarget> cursor, SimulationOperation operation)
-			where TTarget : struct, IOperationControlTarget<TTarget>
-		{
-			EquipmentSlotState slot = RequireSlotState(operation);
-			if (!slot.IsEquipped)
-				return OperationExecutionResult.Running;
-			EquipmentProgramFeature feature = m_Layout.Equipment.RequireFeature(slot.FeatureId);
-			if (m_Trace.Enabled)
-				m_Trace.Add(operation, "equipment_host", SimulationTraceSeverity.Detail, $"persistent:{slot.SlotId}:{slot.EquipmentId}:{slot.FeatureId}:revision={slot.Revision}:generation={slot.HostGeneration}:entry={feature.PersistentEntry}");
-			if (!feature.PersistentEntry.IsValid)
-				return OperationExecutionResult.Running;
-			cursor.Tick(feature.PersistentEntry);
-			return OperationExecutionResult.Running;
-		}
-
-		OperationExecutionResult TickRoute<TTarget>(OperationControlCursor<TTarget> cursor, SimulationOperation operation)
-			where TTarget : struct, IOperationControlTarget<TTarget>
-		{
-			EquipmentProgramRoute route = RequireRoute(operation);
-			EquipmentSlotState slot = ReadState().RequireSlot(route.OwnerSlotId);
-			EquipmentProgramRouteImplementation implementation = null;
-			bool hasImplementation = slot.IsEquipped &&
-				m_Layout.Equipment.TryGetRouteImplementation(slot.FeatureId, route.RouteId, out implementation);
-			if (!hasImplementation)
-			{
-				if (route.RequestConsumption == EquipmentRouteRequestConsumption.Always)
-					m_Input.ClearRequest(route.InputRequestId);
-				if (route.MissingImplementation == EquipmentRouteMissingImplementation.RejectComposition)
-					throw new InvalidOperationException($"Equipment Route '{route.RouteId}' has no implementation for Feature '{slot.FeatureId}'.");
-				return OperationExecutionResult.Failure;
-			}
-			bool active = cursor.IsActive(implementation.EntryOperation);
-			if (!active && !m_Input.HasRequest(route.InputRequestId, out _))
-				return OperationExecutionResult.Failure;
-			using (PushContext(slot.ActionContext(route.RouteId)))
-			{
-				if (m_Trace.Enabled)
-					m_Trace.Add(operation, "equipment_host", SimulationTraceSeverity.Detail, $"route:{slot.SlotId}:{slot.EquipmentId}:{slot.FeatureId}:revision={slot.Revision}:generation={slot.HostGeneration}:route={route.RouteId}:entry={implementation.EntryOperation}");
-				OperationExecutionResult result = cursor.Tick(implementation.EntryOperation);
-				if (!active && result != OperationExecutionResult.Failure &&
-					route.RequestConsumption == EquipmentRouteRequestConsumption.OnActivated)
-				{
-					m_Input.ClearRequest(route.InputRequestId);
-				}
-				else if (route.RequestConsumption == EquipmentRouteRequestConsumption.Always)
-				{
-					m_Input.ClearRequest(route.InputRequestId);
-				}
-				return result;
-			}
-		}
-
-		void StopPersistent<TTarget>(OperationControlCursor<TTarget> cursor, SimulationOperation operation, OperationHandle source)
-			where TTarget : struct, IOperationControlTarget<TTarget>
-		{
-			EquipmentSlotState slot = RequireSlotState(operation);
-			AbortPersistent(cursor, slot, source);
-		}
-
-		void AbortPersistent<TTarget>(OperationControlCursor<TTarget> cursor, EquipmentSlotState slot, OperationHandle source)
-			where TTarget : struct, IOperationControlTarget<TTarget>
-		{
-			if (!slot.IsEquipped)
-				return;
-			EquipmentProgramFeature feature = m_Layout.Equipment.RequireFeature(slot.FeatureId);
-			if (feature.PersistentEntry.IsValid)
-				cursor.ForceStop(feature.PersistentEntry, OperationStopContext.ParentStop(source));
-		}
-
-		IDisposable PushContext(EquipmentActionContext context)
-		{
-			if (m_CurrentContext.IsValid)
-				throw new InvalidOperationException("Equipment Route Context is nested.");
-			m_CurrentContext = context;
-			return new ContextScope(this);
-		}
-
 		EquipmentProgramSlot RequireSlot(SimulationOperation operation)
 		{
 			return m_Layout.Equipment.RequireSlot(m_Layout.Equipment.RequireOperationSlot(operation.Handle));
 		}
 
 		EquipmentSlotState RequireSlotState(SimulationOperation operation) => ReadState().RequireSlot(RequireSlot(operation).SlotId);
-
-		EquipmentProgramRoute RequireRoute(SimulationOperation operation)
-		{
-			return m_Layout.Equipment.RequireRoute(m_Layout.Equipment.RequireOperationRoute(operation.Handle));
-		}
 
 		bool TryRequireItem(SimulationOperation operation, out EquipmentProgramItem item)
 		{
@@ -350,7 +209,7 @@ namespace ThirdPersonSimulation
 			for (int i = 0; i < aggregate.Slots.Count; i++)
 			{
 				EquipmentSlotState slot = aggregate.Slots[i];
-				m_Trace.Add(source, "equipment_snapshot", SimulationTraceSeverity.Detail, $"slot={slot.SlotId}:equipment={slot.EquipmentId}:feature={slot.FeatureId}:revision={slot.Revision}:generation={slot.HostGeneration}:tagSource={slot.TagSource}:effects={string.Join(",", slot.PassiveEffectHandles)}");
+				m_Trace.Add(source, "equipment_snapshot", SimulationTraceSeverity.Detail, $"slot={slot.SlotId}:equipment={slot.EquipmentId}:feature={slot.FeatureId}:revision={slot.Revision}:generation={slot.Generation}:tagSource={slot.TagSource}:effects={string.Join(",", slot.PassiveEffectHandles)}");
 			}
 			PendingEquipmentChange pending = aggregate.PendingChange;
 			if (pending.IsValid)
@@ -418,19 +277,6 @@ namespace ThirdPersonSimulation
 			if (!operation.Handle.Equals(source))
 				throw new InvalidOperationException($"Equipment source Operation '{source}' does not match Program order.");
 			return operation;
-		}
-
-		sealed class ContextScope : IDisposable
-		{
-			Float32EquipmentRuntime m_Owner;
-			public ContextScope(Float32EquipmentRuntime owner) { m_Owner = owner; }
-			public void Dispose()
-			{
-				if (m_Owner == null)
-					return;
-				m_Owner.m_CurrentContext = default;
-				m_Owner = null;
-			}
 		}
 
 		sealed class MutationScope : IEquipmentMutationScope

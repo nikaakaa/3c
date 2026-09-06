@@ -103,27 +103,6 @@ namespace ThirdPersonCharacter.Pipeline
                 }
             }
 
-            if (m_EquipmentCapabilityEnabled && m_EquipmentProfile)
-            {
-                IReadOnlyList<CharacterEquipmentFeatureDefinition> features = m_EquipmentProfile.Features;
-                for (int featureIndex = 0; featureIndex < features.Count; featureIndex++)
-                {
-                    CharacterEquipmentFeatureDefinition feature = features[featureIndex];
-                    if (!feature)
-                        continue;
-                    IReadOnlyList<EquipmentFeatureRouteImplementation> routes = feature.RouteImplementations;
-                    for (int routeIndex = 0; routeIndex < routes.Count; routeIndex++)
-                    {
-                        ActionProfile actionProfile = routes[routeIndex]?.ActionProfile;
-                        if (actionProfile && string.Equals(actionProfile.BehaviorId, behaviorId, StringComparison.Ordinal))
-                        {
-                            profile = actionProfile;
-                            return true;
-                        }
-                    }
-                }
-            }
-
             IReadOnlyList<GameplayBehaviorProfile> behaviorProfiles = BehaviorProfiles;
             for (int i = 0; i < behaviorProfiles.Count; i++)
             {

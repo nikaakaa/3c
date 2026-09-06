@@ -58,23 +58,6 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 }
                 return true;
             }
-            if (node is EquipmentSlotHostNode equipmentHost)
-            {
-                BindEquipmentSlot(operation, route, source, equipmentHost.SlotId);
-                return true;
-            }
-            if (node is ResolveEquipmentActionRouteNode equipmentRoute)
-            {
-                m_Catalog.Bind(
-                    operation,
-                    route,
-                    source,
-                    ProgramCatalogEntryKind.EquipmentRoute,
-                    $"equipment:route:{equipmentRoute.RouteId}",
-                    m_CatalogIndex.EquipmentRoutes.Contains(equipmentRoute.RouteId),
-                    "equipment-route");
-                return true;
-            }
             return false;
         }
 

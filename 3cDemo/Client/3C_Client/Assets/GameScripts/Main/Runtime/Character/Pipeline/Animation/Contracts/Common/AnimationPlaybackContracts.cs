@@ -213,6 +213,15 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             ? CharacterAnimationSamplingBackendKind.Acl
             : CharacterAnimationSamplingBackendKind.NativeClip;
         public bool IsAcl => ResourceCatalogIndex >= 0;
+        public bool MatchesSource(
+            CharacterAnimationSamplingBackendKind backend,
+            AnimationClip clip,
+            int resourceCatalogIndex,
+            int groupClipIndex) =>
+            Backend == backend && (IsAcl
+                ? ResourceCatalogIndex == resourceCatalogIndex && GroupClipIndex == groupClipIndex
+                : Clip == clip);
+
         public float ClipTime { get; }
         public double ContinuousClipTime { get; }
         public float NormalizedTime { get; }

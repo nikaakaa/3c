@@ -14,6 +14,9 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
 {
     internal static class CharacterPoseFamilyPayloadPlanPass
     {
+        static readonly CharacterPoseFamilyPayloadAdapterCatalog s_FamilyPayloadAdapters =
+            new CharacterPoseFamilyPayloadAdapterCatalog();
+
         readonly struct CompiledValue
         {
             public CompiledValue(CharacterPosePortKind kind, int index, int producerOperationIndex = -1)
@@ -54,7 +57,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             public PoseStateId SourceStateId { get; }
         }
 
-        sealed class BindingBuilder
+        internal sealed class BindingBuilder
         {
             public BindingBuilder(
                 CharacterPresentationPoseGraphAsset graphAsset,
@@ -382,18 +385,26 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                         callChain,
                         values)
                     : new LinkedPoseCallCompilation(-1, handler.ExecutionDomain);
-                int stateMachineIndex = handler.Requires(
-                    CharacterPoseNodeRuntimeRequirement.StateMachine)
-                    ? CompileStateMachine(
-                        ownerAsset,
-                        RequirePayload<CharacterPoseStateMachineNodePayload>(irNode),
-                        scopedNodeId,
-                        state,
-                        scope,
-                        callChain,
-                        linkedPoseFragmentIndex,
-                        linkedPoseFragmentIdentity)
-                    : -1;
+                CharacterPoseFamilyPayloadBindingResult preboundFamilyPayload =
+                    handler.Requires(
+                        CharacterPoseNodeRuntimeRequirement.StateMachine)
+                        ? s_FamilyPayloadAdapters.Bind(
+                            CharacterPoseOperationFamily.StateMachine,
+                            new CharacterPoseFamilyPayloadBindingRequest(
+                                state,
+                                handler,
+                                irNode,
+                                node,
+                                scopedNodeId,
+                                scope,
+                                callChain,
+                                linkedPoseFragmentIndex,
+                                linkedPoseFragmentIdentity,
+                                -1,
+                                -1,
+                                -1,
+                                -1))
+                        : default;
                 CharacterPoseOperationCode expectedCode =
                     handler.NativeRole ==
                     CharacterPoseNativeNodeRole.PoseOutput &&
@@ -523,71 +534,26 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                         ? index
                         : throw new InvalidOperationException($"Animation transition owner '{scopedNodeId}' has no compiled policy payload.")
                     : -1;
-                int animationSlotIndex = handler.Requires(
-                    CharacterPoseNodeRuntimeRequirement.AnimationSlot)
-                    ? CompileAnimationSlot(
-                        RequirePayload<CharacterAnimationSlotPosePayload>(irNode),
-                        scopedNodeId,
-                        inputA,
-                        controlInputOperationIndex,
-                        playerIndex,
-                        blendNodeIndex,
-                        state)
-                    : -1;
-                int inertializationIndex = handler.Requires(
-                    CharacterPoseNodeRuntimeRequirement.Inertialization)
-                    ? CompileInertialization(state)
-                    : -1;
-                CharacterAnimationBoneMaskAsset boneMask = handler.BoneMask(irNode.Payload);
-                int maskIndex = boneMask
-                    ? CompileMask(boneMask, state.Rig, state.Masks, state.MaskIndices)
-                    : -1;
-                int additiveIndex = handler.Requires(
-                    CharacterPoseNodeRuntimeRequirement.Additive)
-                    ? CompileAdditiveReference(
-                        RequirePayload<CharacterAdditivePosePayload>(irNode),
-                        state.Rig,
-                        state.AdditiveReferences)
-                    : -1;
-                int modifyIndex = handler.Requires(
-                    CharacterPoseNodeRuntimeRequirement.ModifyBone)
-                    ? CompileModifyBone(
-                        RequirePayload<CharacterModifyBonePosePayload>(irNode),
-                        state)
-                    : -1;
-                int rootOrientationWarpIndex = handler.Requires(
-                    CharacterPoseNodeRuntimeRequirement.RootOrientationWarp)
-                    ? CompileRootOrientationWarp(
-                        RequirePayload<CharacterRootOrientationWarpPosePayload>(irNode),
-                        scopedNodeId,
-                        inputA,
-                        state)
-                    : -1;
-                int poseBoneIkGoalsIndex = handler.Kind == CharacterPoseNodeKind.PoseBoneIKGoals
-                    ? CompilePoseBoneIkGoals(
-                        RequirePayload<CharacterPoseBoneIkGoalsPayload>(irNode),
-                        scopedNodeId,
-                        state)
-                    : -1;
-                int footPlacementIndex = handler.Kind == CharacterPoseNodeKind.FootPlacement
-                    ? CompileFootPlacement(
-                        RequirePayload<CharacterFootPlacementPosePayload>(irNode),
-                        scopedNodeId,
-                        state)
-                    : -1;
-                int fullBodyIkIndex = handler.Kind == CharacterPoseNodeKind.FullBodyIK
-                    ? CompileFullBodyIk(
-                        scopedNodeId,
-                        state)
-                    : -1;
-                int clipPlayerIndex = handler.Requires(
-                    CharacterPoseNodeRuntimeRequirement.ClipPlayer)
-                    ? CompileClipPlayer(
-                        RequirePayload<CharacterClipPlayerPosePayload>(irNode),
-                        scopedNodeId,
-                        playerIndex,
-                        state)
-                    : -1;
+                CharacterPoseFamilyPayloadBindingResult familyPayload =
+                    handler.Requires(
+                        CharacterPoseNodeRuntimeRequirement.StateMachine)
+                        ? preboundFamilyPayload
+                        : s_FamilyPayloadAdapters.Bind(
+                            symbolic.Family,
+                            new CharacterPoseFamilyPayloadBindingRequest(
+                                state,
+                                handler,
+                                irNode,
+                                node,
+                                scopedNodeId,
+                                scope,
+                                callChain,
+                                linkedPoseFragmentIndex,
+                                linkedPoseFragmentIdentity,
+                                inputA,
+                                controlInputOperationIndex,
+                                playerIndex,
+                                blendNodeIndex));
                 PoseParameterResolvePolicy[] policies = CompilePolicies(
                     handler.ParameterPolicies(irNode.Payload),
                     state.Parameters,
@@ -621,22 +587,22 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                     handler.InputRange(irNode.Payload),
                     playerIndex,
                     blendNodeIndex,
-                    inertializationIndex,
-                    maskIndex,
-                    additiveIndex,
-                    modifyIndex,
-                    rootOrientationWarpIndex,
-                    poseBoneIkGoalsIndex,
-                    footPlacementIndex,
-                    fullBodyIkIndex,
+                    familyPayload.InertializationIndex,
+                    familyPayload.BoneMaskIndex,
+                    familyPayload.AdditiveReferenceIndex,
+                    familyPayload.ModifyBoneIndex,
+                    familyPayload.RootOrientationWarpIndex,
+                    familyPayload.PoseBoneIkGoalsIndex,
+                    familyPayload.FootPlacementIndex,
+                    familyPayload.FullBodyIkIndex,
                     outputFullBodyIkGoalContributionValueIndex,
                     outputFullBodyIkGoalSetValueIndex,
                     inputFullBodyIkGoalSetValueIndex,
                     fullBodyIkGoalContributionInputStart,
                     fullBodyIkGoalContributionInputs.Length,
-                    clipPlayerIndex,
-                    stateMachineIndex,
-                    animationSlotIndex,
+                    familyPayload.ClipPlayerIndex,
+                    familyPayload.StateMachineIndex,
+                    familyPayload.AnimationSlotIndex,
                     linkedPoseCall.CallIndex,
                     linkedPoseFragmentIndex,
                     handler.Weight(irNode.Payload),
@@ -831,7 +797,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             return result;
         }
 
-        static int CompileAnimationSlot(
+        internal static int CompileAnimationSlot(
             CharacterAnimationSlotPosePayload payload,
             PoseNodeId scopedNodeId,
             int sourcePoseValueIndex,
@@ -1073,7 +1039,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             identities[producerIndex] = producerIdentity;
         }
 
-        static int CompileModifyBone(
+        internal static int CompileModifyBone(
             CharacterModifyBonePosePayload payload,
             BindingBuilder state)
         {
@@ -1087,7 +1053,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             return index;
         }
 
-        static int CompilePoseBoneIkGoals(
+        internal static int CompilePoseBoneIkGoals(
             CharacterPoseBoneIkGoalsPayload payload,
             PoseNodeId scopedNodeId,
             BindingBuilder state)
@@ -1118,10 +1084,10 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             return index;
         }
 
-        static int CompileInertialization(BindingBuilder state) =>
+        internal static int CompileInertialization(BindingBuilder state) =>
             state.InertializationCount++;
 
-        static int CompileFootPlacement(
+        internal static int CompileFootPlacement(
             CharacterFootPlacementPosePayload payload,
             PoseNodeId scopedNodeId,
             BindingBuilder state)
@@ -1143,7 +1109,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             return index;
         }
 
-        static int CompileFullBodyIk(
+        internal static int CompileFullBodyIk(
             PoseNodeId scopedNodeId,
             BindingBuilder state)
         {
@@ -1160,7 +1126,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             return index;
         }
 
-        static int CompileStateMachine(
+        internal static int CompileStateMachine(
             CharacterPresentationPoseGraphAsset ownerAsset,
             CharacterPoseStateMachineNodePayload payload,
             PoseNodeId scopedNodeId,
@@ -1674,7 +1640,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             PoseStateId sourceStateId) =>
             new TransitionRuleId($"pose-state/{transitionId}/{sourceStateId}");
 
-        static int CompileClipPlayer(
+        internal static int CompileClipPlayer(
             CharacterClipPlayerPosePayload payload,
             PoseNodeId scopedNodeId,
             int playerIndex,
@@ -1692,7 +1658,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             return index;
         }
 
-        static int CompileRootOrientationWarp(
+        internal static int CompileRootOrientationWarp(
             CharacterRootOrientationWarpPosePayload payload,
             PoseNodeId scopedNodeId,
             int inputValueIndex,
@@ -1979,7 +1945,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             return result;
         }
 
-        static int CompileMask(
+        internal static int CompileMask(
             CharacterAnimationBoneMaskAsset mask,
             CharacterAnimationRigDefinition rig,
             List<CharacterPresentationDenseBoneMask> masks,
@@ -1995,7 +1961,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             return index;
         }
 
-        static int CompileAdditiveReference(
+        internal static int CompileAdditiveReference(
             CharacterAdditivePosePayload payload,
             CharacterAnimationRigDefinition rig,
             List<CharacterPresentationAdditiveReferenceDescriptor> references)
@@ -2140,7 +2106,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
             return operation;
         }
 
-        static TPayload RequirePayload<TPayload>(CharacterPoseIrNode node)
+        internal static TPayload RequirePayload<TPayload>(CharacterPoseIrNode node)
             where TPayload : CharacterPoseNodePayload
         {
             if (!(node?.Payload is TPayload payload))

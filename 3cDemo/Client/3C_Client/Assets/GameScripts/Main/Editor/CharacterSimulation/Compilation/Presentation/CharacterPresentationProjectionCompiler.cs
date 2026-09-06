@@ -111,7 +111,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             errors.AddRange(motionMatchingCompilation.Diagnostics);
             MotionMatchingProjectionPayload motionMatching =
                 motionMatchingCompilation.Payload;
-            string projectionRevision = ComputeProjectionRevision(
+            string projectionRevision = CharacterPresentationProjectionRevisionCompiler.Compute(
                 model.AnimationPresentationProfile,
                 model.Definition.EquipmentPresentationProfile,
                 reader.Contract.ContractHash,
@@ -172,7 +172,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                     out string[] footAnalysisTokens) ||
                 errors.Count > 0)
                 return false;
-            revision = ComputeProjectionRevision(
+            revision = CharacterPresentationProjectionRevisionCompiler.Compute(
                 definition.AnimationPresentationProfile,
                 definition.EquipmentPresentationProfile,
                 contract.ContractHash,
@@ -669,52 +669,6 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             CharacterAnimationBlendSpaceAxisPlan axis) =>
             parameter != null && axis != null && parameter.ParameterId.Equals(axis.ParameterId) &&
             parameter.ValueType == axis.ValueType && string.Equals(parameter.Unit, axis.Unit, StringComparison.Ordinal);
-
-       internal static string ComputeProjectionRevision(
-            CharacterAnimationPresentationProfile animationProfile,
-            UnityEngine.Object equipmentPresentationProfile,
-            StableHash contractHash,
-            IReadOnlyList<string> footAnalysisTokens,
-            MotionMatchingProjectionPayload motionMatching)
-        {
-            var values = new List<string>
-            {
-                CharacterPresentationProjection.CurrentAbiVersion,
-                contractHash.ToString()
-            };
-            AddProjectionAssetRevision(animationProfile, values);
-            AddProjectionAssetRevision(equipmentPresentationProfile, values);
-            CharacterPresentationMotionMatchingCompiler.AppendRevisionValues(
-                motionMatching,
-                values);
-            if (footAnalysisTokens != null)
-            {
-                for (int i = 0; i < footAnalysisTokens.Count; i++)
-                    values.Add(footAnalysisTokens[i]);
-            }
-            return StableHash.Compute(values.ToArray()).ToString();
-        }
-
-        static void AddProjectionAssetRevision(UnityEngine.Object root, List<string> values)
-        {
-            if (!root)
-            {
-                values.Add("none");
-                return;
-            }
-            string rootPath = AssetDatabase.GetAssetPath(root);
-            string[] dependencies = AssetDatabase.GetDependencies(rootPath, true)
-                .OrderBy(value => value, StringComparer.Ordinal)
-                .ToArray();
-            values.Add(rootPath);
-            for (int i = 0; i < dependencies.Length; i++)
-            {
-                string path = dependencies[i];
-                values.Add(path);
-                values.Add(AssetDatabase.AssetPathToGUID(path));
-                values.Add(AssetDatabase.GetAssetDependencyHash(path).ToString());
-            }
-        }
 
     }
 }

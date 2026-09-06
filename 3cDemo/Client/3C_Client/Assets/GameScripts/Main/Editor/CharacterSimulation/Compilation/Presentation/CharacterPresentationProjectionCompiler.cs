@@ -344,11 +344,13 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 ? null
                 : new CharacterAnimationRigPayload(profile.RigDefinition);
             ValidateClipPlayers(poseProgram, poseSources, profile.RigDefinition, errors);
-            CompileEquipmentProjection(
-                equipmentProfile,
-                equipmentPresentationProfile,
-                errors,
-                out EquipmentVisualProjectionBinding[] visualBindings);
+            CharacterPresentationEquipmentCompilationResult equipmentCompilation =
+                CharacterPresentationEquipmentCompiler.Compile(
+                    equipmentProfile,
+                    equipmentPresentationProfile);
+            errors.AddRange(equipmentCompilation.Diagnostics);
+            EquipmentVisualProjectionBinding[] visualBindings =
+                equipmentCompilation.VisualBindings.ToArray();
             if (errors.Count > 0)
                 return null;
 
@@ -1768,38 +1770,5 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             }
         }
 
-        static void CompileEquipmentProjection(
-            CharacterEquipmentProfile gameplayProfile,
-            CharacterEquipmentPresentationProfile presentationProfile,
-            List<string> errors,
-            out EquipmentVisualProjectionBinding[] visualBindings)
-        {
-            visualBindings = Array.Empty<EquipmentVisualProjectionBinding>();
-            if (!gameplayProfile && !presentationProfile)
-                return;
-            if (!gameplayProfile || !presentationProfile)
-            {
-                errors?.Add("Equipment Projection requires both Gameplay and Presentation Profiles.");
-                return;
-            }
-            presentationProfile.CollectConfigurationErrors(gameplayProfile, errors);
-            visualBindings = presentationProfile.VisualBindings
-                .Where(value => value != null)
-                .OrderBy(value => value.VisualBindingId.Value, StringComparer.Ordinal)
-                .Select(value => new EquipmentVisualProjectionBinding(value))
-                .ToArray();
-            var bindingIds = new HashSet<EquipmentVisualBindingId>();
-            for (int i = 0; i < visualBindings.Length; i++)
-            {
-                if (!visualBindings[i].VisualBindingId.IsValid || !bindingIds.Add(visualBindings[i].VisualBindingId))
-                    errors?.Add($"Equipment Projection visual binding #{i} is invalid or duplicated.");
-            }
-            for (int i = 0; i < gameplayProfile.Equipment.Count; i++)
-            {
-                EquipmentDefinition item = gameplayProfile.Equipment[i];
-                if (item && !bindingIds.Contains(item.VisualBindingId))
-                    errors?.Add($"Equipment '{item.EquipmentIdValue}' references unresolved visual binding '{item.VisualBindingIdValue}'.");
-            }
-        }
     }
 }

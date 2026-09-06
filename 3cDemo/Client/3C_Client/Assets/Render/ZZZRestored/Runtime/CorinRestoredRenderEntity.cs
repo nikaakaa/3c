@@ -21,7 +21,7 @@ namespace ZZZ.Rendering.Restored
         MaterialPropertyBlock properties;
 
         public Vector3 FacePosition => face.position;
-        public Vector3 FaceForward => face.forward;
+        public Vector3 FaceForward => face.localToWorldMatrix.MultiplyVector(Vector3.up).normalized;
         public Matrix4x4 WorldToObject => transform.worldToLocalMatrix;
 
         public Vector3 Position

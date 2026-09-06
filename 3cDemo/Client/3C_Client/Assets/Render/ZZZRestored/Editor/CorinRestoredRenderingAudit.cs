@@ -191,6 +191,8 @@ namespace ZZZ.Rendering.Restored.Editor
                 {
                     ["name"] = entity.name,
                     ["position"] = Vector(entity.transform.position),
+                    ["facePosition"] = Vector(entity.FacePosition),
+                    ["faceForward"] = Vector(entity.FaceForward),
                     ["renderers"] = rendererRows
                 });
             }

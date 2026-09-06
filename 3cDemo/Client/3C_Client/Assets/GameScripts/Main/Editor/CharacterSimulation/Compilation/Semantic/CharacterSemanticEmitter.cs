@@ -47,6 +47,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
 
         public OperationHandle EmitControlSkillPrograms(
             CharacterControlModuleContract contract,
+            CharacterSimulationSourceLocation controlSource,
             IReadOnlyList<CharacterControlMotionCompilationRecord> motions)
         {
             if (contract == null)
@@ -78,7 +79,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 string.Empty,
                 string.Empty,
                 $"control:{contract.ModuleId.Value}/root",
-                contentHash: contract.SemanticVersion.ToString());
+                contentHash: controlSource.ContentHash);
             return m_Builder.DeclareOperation(rootSource, SimulationOperationCode.Root, Array.Empty<int>());
         }
 

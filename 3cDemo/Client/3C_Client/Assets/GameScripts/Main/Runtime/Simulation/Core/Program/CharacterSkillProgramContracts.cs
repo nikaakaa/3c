@@ -246,7 +246,7 @@ namespace ThirdPersonSimulation
                     throw new InvalidDataException($"SkillProgram '{entry.Identity}' has no entry operation reference.");
                 string skillValue = RequirePrefix(entry.Identity, "skill:");
                 string actionProfileIdentity = RequireIdentity(entry, "ActionProfile", "action:");
-                if (!ContainsEntry(entries, ProgramCatalogEntryKind.Action, actionProfileIdentity))
+                if (!ContainsEntry(entries, ProgramCatalogEntryKind.Action, $"action:{actionProfileIdentity}"))
                     throw new InvalidDataException($"SkillProgram '{entry.Identity}' references missing Action profile '{actionProfileIdentity}'.");
                 ReadRelations(entry, out List<CharacterSkillDependency> dependencies, out List<CharacterSkillId> allowedFollowUps);
                 values.Add(new CharacterSkillProgramBinding(

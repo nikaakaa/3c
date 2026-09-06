@@ -170,7 +170,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 : m_GroupScalarPayloads;
             var result = new byte[payloads.Length][];
             for (int i = 0; i < payloads.Length; i++)
-                result[i] = payloads[i]?.bytes ?? Array.Empty<byte>();
+                result[i] = payloads[i] ? payloads[i].bytes : Array.Empty<byte>();
             return result;
         }
 
@@ -192,7 +192,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
                 CharacterAclDataBlockKind.BulkLow => BulkLowPayload,
                 _ => throw new ArgumentOutOfRangeException(nameof(kind))
             };
-            return payload?.bytes ?? Array.Empty<byte>();
+            return payload ? payload.bytes : Array.Empty<byte>();
         }
 
         public void ConfigureForBuild(

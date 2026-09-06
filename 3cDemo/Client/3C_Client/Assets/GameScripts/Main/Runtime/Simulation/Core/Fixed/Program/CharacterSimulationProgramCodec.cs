@@ -125,7 +125,7 @@ namespace ThirdPersonSimulation.Fixed
     public static class CharacterSimulationProgramCodec
     {
         const uint ArtifactMagic = 0x58494643;
-        const int ArtifactVersion = 17;
+        const int ArtifactVersion = 18;
         const int ProgramFormatVersion = 19;
         const int LayoutFormatVersion = 10;
         const int SourceMapStringTableVersion = 3;

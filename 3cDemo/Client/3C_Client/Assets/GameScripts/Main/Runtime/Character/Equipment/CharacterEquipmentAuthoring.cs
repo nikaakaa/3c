@@ -380,6 +380,16 @@ namespace ThirdPersonCharacter.Equipment
                         valid = false;
                     }
                 }
+                var producerIds = new HashSet<string>(StringComparer.Ordinal);
+                for (int producerIndex = 0; producerIndex < route.RequiredProducerIds.Count; producerIndex++)
+                {
+                    string producerId = EquipmentSlotDefinition.Normalize(route.RequiredProducerIds[producerIndex]);
+                    if (string.IsNullOrEmpty(producerId) || !producerIds.Add(producerId))
+                    {
+                        errors?.Add($"{owner}: Route implementation '{routeId}' has a missing or duplicated Producer '{producerId}'.");
+                        valid = false;
+                    }
+                }
             }
             return valid;
         }
@@ -523,6 +533,7 @@ namespace ThirdPersonCharacter.Equipment
                 else valid &= routes[i].CollectConfigurationErrors(definition, routeIds, slotIds, errors);
             }
             var featureIds = new HashSet<string>(StringComparer.Ordinal);
+            var codeBindingIds = new HashSet<string>(StringComparer.Ordinal);
             IReadOnlyList<CharacterEquipmentFeatureDefinition> features = Features;
             for (int i = 0; i < features.Count; i++)
             {
@@ -532,6 +543,11 @@ namespace ThirdPersonCharacter.Equipment
                     errors?.Add($"{name}: Equipment Feature #{i} is missing or duplicated.");
                     valid = false;
                     continue;
+                }
+                if (!string.IsNullOrEmpty(feature.CodeBindingIdValue) && !codeBindingIds.Add(feature.CodeBindingIdValue))
+                {
+                    errors?.Add($"{name}: Equipment Feature code binding '{feature.CodeBindingIdValue}' is duplicated.");
+                    valid = false;
                 }
                 valid &= feature.CollectConfigurationErrors(definition, this, errors);
             }

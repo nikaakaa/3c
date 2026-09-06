@@ -65,7 +65,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 for (int i = 0; i < values.Count; i++)
                 {
                     string tagId = values[i].Value;
-                    Bind(
+                    this.Bind(
                         operation,
                         route,
                         source,

@@ -12,7 +12,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
 {
     public static class CharacterSemanticFrontendCompiler
     {
-        public const string CompilerVersion = "character-simulation-compiler/24";
+        public const string CompilerVersion = "character-simulation-compiler/25";
         public static readonly OperationSetVersion OperationSetVersion = CharacterGameplayOperationSet.Version;
 
         public static CharacterSemanticFrontendResult Compile(CharacterPipelineDefinition definition)
@@ -161,7 +161,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                     report);
                 if (!report.IsValid)
                     return null;
-                OperationHandle controlRoot = emitter.EmitControlSkillPrograms(controlModule.Contract, motions);
+                OperationHandle controlRoot = emitter.EmitControlSkillPrograms(controlModule.Contract, controlSource, motions);
                 if (!controlRoot.IsValid)
                     return null;
                 builder.DeclareReference(

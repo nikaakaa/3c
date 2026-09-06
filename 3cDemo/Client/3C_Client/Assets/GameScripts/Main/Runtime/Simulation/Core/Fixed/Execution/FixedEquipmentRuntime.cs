@@ -280,14 +280,17 @@ namespace ThirdPersonSimulation.Fixed
 		EquipmentChangeId IEquipmentRuntimePort.AllocateChangeId() => new EquipmentChangeId(m_Handles.Next());
 		bool IEquipmentRuntimePort.HasActiveActionConflict(EquipmentSlotState slot, ulong sourceActionInstanceId)
 		{
-			FixedActionInstanceState active = m_Actions.FindOnlyActive();
-			return active.IsActive && active.InstanceId != sourceActionInstanceId && active.EquipmentContext.IsValid &&
-				active.EquipmentContext.SlotId == slot.SlotId && active.EquipmentContext.EquipmentRevision == slot.Revision;
+			foreach (FixedActionInstanceState active in m_Actions.EnumerateActiveActions())
+			{
+				if (active.InstanceId != sourceActionInstanceId && active.EquipmentContext.IsValid &&
+					active.EquipmentContext.SlotId == slot.SlotId && active.EquipmentContext.EquipmentRevision == slot.Revision)
+					return true;
+			}
+			return false;
 		}
 		bool IEquipmentRuntimePort.IsActionActive(ulong actionInstanceId)
 		{
-			FixedActionInstanceState active = m_Actions.FindOnlyActive();
-			return active.IsActive && active.InstanceId == actionInstanceId;
+			return m_Actions.TryGetInstance(actionInstanceId, out FixedActionInstanceState action) && action.IsActive;
 		}
 		void IEquipmentRuntimePort.ResetLocalState(int stateSlotIndex) => m_State.Reset(stateSlotIndex);
 		void IEquipmentRuntimePort.SetTags(string sourceId, IReadOnlyList<string> tags) => m_GameplayEffects.SetEquipmentTags(sourceId, tags);

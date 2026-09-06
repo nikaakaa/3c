@@ -120,18 +120,34 @@ namespace TreeDesigner.Editor
             if (string.IsNullOrWhiteSpace(declarationId))
                 throw new ArgumentException("Property port declaration identity is missing.", nameof(declarationId));
 
+            bool found = false;
+            descriptor = default;
             foreach (PropertyPortAuthoringDescriptor candidate in DescribePorts(node))
             {
                 if (candidate.Direction == direction &&
                     string.Equals(candidate.DeclarationId, declarationId, StringComparison.Ordinal))
                 {
+                    if (found)
+                        throw new InvalidOperationException($"Node '{node.GUID}' contains duplicate property declaration '{declarationId}' for direction '{direction}'.");
                     descriptor = candidate;
-                    return true;
+                    found = true;
                 }
             }
 
-            descriptor = default;
+            if (found)
+                return true;
             return false;
+        }
+
+        public static PropertyPortAuthoringDescriptor RequireByDeclaration(
+            BaseNode node,
+            string declarationId,
+            PortDirection direction)
+        {
+            return TryGetByDeclaration(node, declarationId, direction, out PropertyPortAuthoringDescriptor descriptor)
+                ? descriptor
+                : throw new InvalidOperationException(
+                    $"Node '{node?.GUID ?? "null"}' has no property declaration '{declarationId}' for direction '{direction}'.");
         }
 
         public static PropertyPortAuthoringDescriptor RequirePort(BaseNode node, string portId)
@@ -163,6 +179,26 @@ namespace TreeDesigner.Editor
             return $"{collectionId}.{declarationId}";
         }
 
+        public static PropertyPort AddByDeclaration(
+            BaseNode node,
+            string collectionId,
+            string declarationId,
+            string displayName,
+            Type propertyPortType,
+            PortDirection direction,
+            int index = -1)
+        {
+            return Add(
+                node,
+                collectionId,
+                PortIdForDeclaration(collectionId, declarationId),
+                displayName,
+                propertyPortType,
+                direction,
+                index,
+                declarationId);
+        }
+
         public static IReadOnlyList<Type> GetAcceptedValueTypes(BaseNode node, string portId) =>
             RequirePort(node, portId).AcceptedValueTypes;
 
@@ -189,14 +225,17 @@ namespace TreeDesigner.Editor
                 throw new InvalidOperationException($"Property port collection '{collectionId}' is not writable.");
             if (collection.Direction != direction)
                 throw new InvalidOperationException("Property port collection direction is invalid.");
+            if (string.IsNullOrWhiteSpace(declarationId))
+                throw new ArgumentException("Dynamic property port declaration identity is missing.", nameof(declarationId));
             if (DescribePorts(node).Any(value => string.Equals(value.PortId, portId, StringComparison.Ordinal)))
                 throw new InvalidOperationException($"Node '{node.GUID}' already contains property port '{portId}'.");
 
             PropertyPort port = (PropertyPort)Activator.CreateInstance(propertyPortType);
             string resolvedDisplayName = string.IsNullOrWhiteSpace(displayName) ? portId : displayName;
+            int insertIndex = index < 0 ? ports.Count : Math.Min(index, ports.Count);
             port.Name = resolvedDisplayName;
             port.Direction = direction;
-            port.Index = index < 0 ? ports.Count : index;
+            port.Index = insertIndex;
             port.ConfigureIdentity(
                 portId,
                 $"{collectionId}.{portId}",
@@ -204,7 +243,7 @@ namespace TreeDesigner.Editor
                 resolvedDisplayName,
                 resolvedDisplayName);
             port.ConfigureDeclaration(declarationId);
-            ports.Add(port);
+            ports.Insert(insertIndex, port);
             accessor.SetValue(ports);
             ReinitializeNode(node);
             return RequirePort(node, portId).Port;
@@ -263,6 +302,12 @@ namespace TreeDesigner.Editor
             ReinitializeNode(node);
         }
 
+        public static void RemoveByDeclaration(BaseNode node, string declarationId, PortDirection direction)
+        {
+            PropertyPortAuthoringDescriptor descriptor = RequireByDeclaration(node, declarationId, direction);
+            Remove(node, descriptor.PortId);
+        }
+
         public static bool CanConnect(
             BaseNode sourceNode,
             string sourcePortId,
@@ -292,6 +337,19 @@ namespace TreeDesigner.Editor
 
             return GetAcceptedValueTypes(targetNode, targetPort.PortId)
                 .Any(type => type == sourcePort.ValueType || type.IsAssignableFrom(sourcePort.ValueType));
+        }
+
+        public static bool CanConnectByDeclaration(
+            BaseNode sourceNode,
+            string sourceDeclarationId,
+            BaseNode targetNode,
+            string targetDeclarationId)
+        {
+            return CanConnect(
+                sourceNode,
+                RequireByDeclaration(sourceNode, sourceDeclarationId, PortDirection.Output).Port,
+                targetNode,
+                RequireByDeclaration(targetNode, targetDeclarationId, PortDirection.Input).Port);
         }
 
         public static PropertyEdge ReplaceBinding(
@@ -326,6 +384,25 @@ namespace TreeDesigner.Editor
                 graph.UnLinkProperty(edge);
 
             return graph.LinkProperty(sourceNode, targetNode, sourcePort, targetPort);
+        }
+
+        public static PropertyEdge ReplaceBindingByDeclaration(
+            BaseGraph graph,
+            string sourceNodeId,
+            string sourceDeclarationId,
+            string targetNodeId,
+            string targetDeclarationId)
+        {
+            if (graph == null)
+                throw new ArgumentNullException(nameof(graph));
+            BaseNode sourceNode = RequireNode(graph, sourceNodeId);
+            BaseNode targetNode = RequireNode(graph, targetNodeId);
+            return ReplaceBinding(
+                graph,
+                sourceNodeId,
+                RequireByDeclaration(sourceNode, sourceDeclarationId, PortDirection.Output).PortId,
+                targetNodeId,
+                RequireByDeclaration(targetNode, targetDeclarationId, PortDirection.Input).PortId);
         }
 
         public static void RemoveBinding(BaseGraph graph, string edgeId)

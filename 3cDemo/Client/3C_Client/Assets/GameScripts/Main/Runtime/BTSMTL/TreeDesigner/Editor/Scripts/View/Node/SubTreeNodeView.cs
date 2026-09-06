@@ -48,14 +48,14 @@ namespace TreeDesigner.Editor
                                     throw new System.InvalidOperationException($"Exposed property '{exposedProperty.DeclarationId}' has no PropertyPort implementation.");
                                 SubTreeNode.ApplyModify("Add InputPropertyPort", () =>
                                 {
-                                    PropertyPort propertyPort = PropertyPortAuthoringService.Add(
+                                    PropertyPort propertyPort = PropertyPortAuthoringService.AddByDeclaration(
                                         SubTreeNode,
                                         "m_InputPropertyPorts",
-                                        PropertyPortAuthoringService.PortIdForDeclaration("m_InputPropertyPorts", exposedProperty.DeclarationId),
+                                        exposedProperty.DeclarationId,
                                         exposedProperty.Name,
                                         propertyPortType,
                                         PortDirection.Input,
-                                        declarationId: exposedProperty.DeclarationId);
+                                        index: exposedProperty.Index);
                                     m_InputPortContainer.AddPropertyPort(propertyPort, exposedProperty.Name, Port.Capacity.Single);
                                     m_Node.GetNewSerializedTree();
                                     Refresh();
@@ -71,13 +71,13 @@ namespace TreeDesigner.Editor
             {
                 foreach (var propertyPort in SubTreeNode.InputPropertyPorts)
                 {
-                    string portId = propertyPort.PortId;
-                    e.AppendAction(propertyPort.DisplayName, (s) =>
-                    {
+                        string declarationId = propertyPort.DeclarationId;
+                        e.AppendAction(propertyPort.DisplayName, (s) =>
+                        {
                         SubTreeNode.ApplyModify("Remove InputPropertyPort", () =>
                         {
                             m_InputPortContainer.RemovePropertyPort(propertyPort);
-                            PropertyPortAuthoringService.Remove(SubTreeNode, portId);
+                            PropertyPortAuthoringService.RemoveByDeclaration(SubTreeNode, declarationId, PortDirection.Input);
                             m_Node.GetNewSerializedTree();
                             Refresh();
                             RefreshPorts();
@@ -107,14 +107,14 @@ namespace TreeDesigner.Editor
                                 throw new System.InvalidOperationException($"Exposed property '{exposedProperty.DeclarationId}' has no PropertyPort implementation.");
                             SubTreeNode.ApplyModify("Add OutputPropertyPort", () =>
                             {
-                                PropertyPort propertyPort = PropertyPortAuthoringService.Add(
-                                    SubTreeNode,
-                                    "m_OutputPropertyPorts",
-                                    PropertyPortAuthoringService.PortIdForDeclaration("m_OutputPropertyPorts", exposedProperty.DeclarationId),
-                                    exposedProperty.Name,
-                                    propertyPortType,
-                                    PortDirection.Output,
-                                    declarationId: exposedProperty.DeclarationId);
+                                PropertyPort propertyPort = PropertyPortAuthoringService.AddByDeclaration(
+                                        SubTreeNode,
+                                        "m_OutputPropertyPorts",
+                                        exposedProperty.DeclarationId,
+                                        exposedProperty.Name,
+                                        propertyPortType,
+                                        PortDirection.Output,
+                                        index: exposedProperty.Index);
                                 m_OutputPortContainer.AddPropertyPort(propertyPort, exposedProperty.Name, Port.Capacity.Multi);
                                 m_Node.GetNewSerializedTree();
                                 Refresh();
@@ -129,13 +129,13 @@ namespace TreeDesigner.Editor
             {
                 foreach (var propertyPort in SubTreeNode.OutputPropertyPorts)
                 {
-                    string portId = propertyPort.PortId;
-                    e.AppendAction(propertyPort.DisplayName, (s) =>
-                    {
+                        string declarationId = propertyPort.DeclarationId;
+                        e.AppendAction(propertyPort.DisplayName, (s) =>
+                        {
                         SubTreeNode.ApplyModify("Remove OutputPropertyPort", () =>
                         {
                             m_OutputPortContainer.RemovePropertyPort(propertyPort);
-                            PropertyPortAuthoringService.Remove(SubTreeNode, portId);
+                            PropertyPortAuthoringService.RemoveByDeclaration(SubTreeNode, declarationId, PortDirection.Output);
                             m_Node.GetNewSerializedTree();
                             Refresh();
                             RefreshPorts();

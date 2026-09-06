@@ -39,6 +39,12 @@ namespace TreeDesigner.Editor
         public bool SupportsShared { get; }
         public string ScopeId { get; }
         public bool Required { get; }
+        public TreeGraphReferenceOwnership? Ownership => SharedAsset
+            ? TreeGraphReferenceOwnership.Shared
+            : Tree != null
+                ? TreeGraphReferenceOwnership.Inline
+                : (TreeGraphReferenceOwnership?)null;
+        public bool IsAssigned => Tree != null;
     }
 
     public static class TreeGraphReferenceAuthoring

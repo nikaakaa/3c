@@ -251,12 +251,23 @@ namespace ThirdPersonSimulation
                 throw new ArgumentException("Character control module contract is incomplete.");
             ModuleId = moduleId;
             SemanticVersion = semanticVersion;
-            m_States = Freeze(states, value => value.Id, "state");
-            m_Transitions = Freeze(transitions, value => value.Id, "transition");
-            m_StateFields = Freeze(stateFields, value => value.Id, "state field");
-            m_Parameters = Freeze(parameters, value => value.Id, "parameter");
+            m_States = Freeze(
+                states,
+                value => value.Id,
+                "state",
+                (left, right) => Compare(left.EvaluationOrder, right.EvaluationOrder, left.Id.CompareTo(right.Id)));
+            m_Transitions = Freeze(
+                transitions,
+                value => value.Id,
+                "transition",
+                (left, right) => Compare(
+                    left.Priority,
+                    right.Priority,
+                    Compare(left.EvaluationOrder, right.EvaluationOrder, left.Id.CompareTo(right.Id))));
+            m_StateFields = Freeze(stateFields, value => value.Id, "state field", (left, right) => left.Id.CompareTo(right.Id));
+            m_Parameters = Freeze(parameters, value => value.Id, "parameter", (left, right) => left.Id.CompareTo(right.Id));
             m_InputValues = Freeze(inputValues, value => value, "input value");
-            m_Motions = Freeze(motions, value => value.Binding, "motion");
+            m_Motions = Freeze(motions, value => value.Binding, "motion", (left, right) => string.CompareOrdinal(left.Binding, right.Binding));
             m_Skills = Freeze(skills, value => value, "skill");
             InitialState = initialState;
             ValidateStateGraph();
@@ -355,7 +366,11 @@ namespace ThirdPersonSimulation
             }
         }
 
-        static ReadOnlyCollection<T> Freeze<T, TKey>(IEnumerable<T> source, Func<T, TKey> key, string label)
+        static ReadOnlyCollection<T> Freeze<T, TKey>(
+            IEnumerable<T> source,
+            Func<T, TKey> key,
+            string label,
+            Comparison<T> comparison = null)
             where T : class
         {
             var values = source == null ? new List<T>() : new List<T>(source);
@@ -365,8 +380,12 @@ namespace ThirdPersonSimulation
                 if (values[i] == null || !keys.Add(key(values[i])))
                     throw new ArgumentException($"Character control {label} identity is invalid or duplicated.", nameof(source));
             }
+            if (comparison != null)
+                values.Sort(comparison);
             return values.AsReadOnly();
         }
+
+        static int Compare(int left, int right, int tieBreaker) => left != right ? left.CompareTo(right) : tieBreaker;
 
         static ReadOnlyCollection<T> Freeze<T>(IEnumerable<T> source, Func<T, T> key, string label)
             where T : struct

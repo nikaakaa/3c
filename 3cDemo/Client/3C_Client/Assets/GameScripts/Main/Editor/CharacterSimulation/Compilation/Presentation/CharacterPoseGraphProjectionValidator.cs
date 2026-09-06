@@ -98,7 +98,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         }
     }
 
-    public static class CharacterPresentationPoseGraphValidator
+    public static class CharacterPoseTopologyValidator
     {
         enum GraphRole : byte
         {

@@ -786,7 +786,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor.AgentAuthoring
                     capabilityErrors[i]);
             }
             CharacterPoseGraphValidationReport graphValidation =
-                CharacterPresentationPoseGraphValidator.Validate(
+                CharacterPoseTopologyValidator.Validate(
                     plan.PoseGraph,
                     plan.Profile.RigDefinition,
                     CharacterPoseAuthoringPortProjection.Get);

@@ -1212,7 +1212,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             IReadOnlyList<string> capabilityErrors =
                 CharacterPoseGraphCapabilityValidator.Validate(m_Asset);
             CharacterPoseGraphValidationReport report =
-                CharacterPresentationPoseGraphValidator.Validate(
+            CharacterPoseTopologyValidator.Validate(
                     m_Asset,
                     m_Profile ? m_Profile.RigDefinition : null,
                     CharacterPoseAuthoringPortProjection.Get);

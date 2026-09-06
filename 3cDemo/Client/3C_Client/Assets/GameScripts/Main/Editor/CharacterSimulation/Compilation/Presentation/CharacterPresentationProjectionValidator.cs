@@ -16,7 +16,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
         internal bool IsValid => Diagnostics.Count == 0;
     }
 
-    internal static class CharacterPresentationProjectionValidator
+    internal static class CharacterPoseGraphProjectionValidator
     {
         internal static CharacterPresentationProjectionValidationResult Validate(
             CharacterPresentationProjection projection,

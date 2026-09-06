@@ -130,7 +130,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                 CharacterPresentationProducerCompiler.CollectTimelineCallSites(model.Root),
                 errors);
             CharacterPresentationProjectionValidationResult validation =
-                CharacterPresentationProjectionValidator.Validate(
+                CharacterPoseGraphProjectionValidator.Validate(
                     projection,
                     reader.Contract);
             errors.AddRange(validation.Diagnostics);

@@ -147,7 +147,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation
                              graphRoles.OrderBy(value => (byte)value))
                     {
                         CharacterPoseGraphValidationReport validation =
-                            CharacterPresentationPoseGraphValidator
+                            CharacterPoseTopologyValidator
                                 .ValidateClosedGraph(
                                     entry.Owner,
                                     entry.Graph,

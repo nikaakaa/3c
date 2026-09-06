@@ -91,7 +91,9 @@ foreach ($path in @(
     'Tools/ThirdPersonSimulation.Portable/ThirdPersonSimulation.Core/ThirdPersonSimulation.Core.csproj',
     'Tools/ThirdPersonSimulation.Portable/ThirdPersonSimulation.Float32/ThirdPersonSimulation.Float32.csproj',
     'Tools/ThirdPersonSimulation.Portable/ThirdPersonSimulation.Reader/ThirdPersonSimulation.Reader.csproj',
-    'Tools/ThirdPersonSimulation.Portable/ThirdPersonSimulation.Tests/ThirdPersonSimulation.Tests.csproj'
+    'Tools/ThirdPersonSimulation.Portable/ThirdPersonSimulation.Tests/ThirdPersonSimulation.Tests.csproj',
+    'Tools/ThirdPersonPerformanceCapture/ThirdPersonPerformanceCapture.Controller.csproj',
+    'Tools/ThirdPersonNetworkTest/ThirdPerson.NetworkTest.Orchestrator.csproj'
 )) {
     $null = $allowedProjectFiles.Add($path)
 }

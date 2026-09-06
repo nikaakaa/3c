@@ -16,6 +16,22 @@
 
 本次只更新现有执行文档的读取入口与写入分工，业务代码、迁移资产、编译和Build未执行。当前源码审查仍对应`bfe2b8aa27b43c832180794aeab8cc9f1f5ddd0a`；迁移器局部批准和整体质量未通过的边界详见规划文档当前审查节。后续实际执行结果由实现继续写在本文件中，不能把本次规则切换记成第21.x项完成。
 
+## 21.1 Pose Source Compiler分域小步（POSE-EXEC-20260906-02）
+
+状态：提交`203264abdda0c486e97b6c4960eae153bb033337`完成21.1的Pose Source子步；21.1整体仍未完成，其他Projection领域仍由总Compiler掌握。
+
+- 输入：`CharacterAnimationPresentationProfile`，包括root与Linked Pose Graph owners、reachable Pose Graph、Graph-owned Source Slot、Profile Source Binding和Rig。
+- 处理：新增`CharacterPresentationPoseSourceCompiler` Module。该Module集中处理Source Slot资产归属、reachable Graph遍历、Slot唯一性、Binding路径与类型校验、Binding.RequireValid、稳定SourceIndex分配和孤立Binding诊断；输出`CharacterPresentationPoseSourceCompilationResult`，其中包含typed `CharacterPresentationPoseSourceCompilationCatalog`与诊断列表。
+- 输出：`CharacterPresentationProjectionCompiler`只接收Source Compilation Result，把诊断合并到原有Projection诊断链，并继续把Catalog交给Motion Matching、Blend Space、Pose Source和Pose Compilation输入；Projection字段、Source identity、排序、错误文本顺序和发布调用没有改变。
+- 资源/状态归属：Source Compiler只拥有本次编译期的Catalog与诊断，不创建Runtime资源、Playable、缓存、Writer、第二Projection或fallback；总Compiler仍拥有整体Projection组合与唯一发布。
+- 删除旧路径：从总Compiler删除嵌套`PoseSourceCompilationEntry/Catalog`、`CompilePoseSourceCatalog`及其Pose Graph owner/reachability遍历；没有保留兼容别名或反向同步。
+- 修改文件：`C:/Users/Lenovo/.codex/worktrees/a323/3C/3cDemo/Client/3C_Client/Assets/GameScripts/Main/Editor/CharacterSimulation/Compilation/Presentation/CharacterPresentationProjectionCompiler.cs`、`C:/Users/Lenovo/.codex/worktrees/a323/3C/3cDemo/Client/3C_Client/Assets/GameScripts/Main/Editor/CharacterSimulation/Compilation/Presentation/CharacterPresentationPoseSourceCompiler.cs`及其`.meta`。
+- Center change：`faadf46ee02e41b99c38eca310e7f923`；RunId：`e2a433e9d7144452b6c61c13865768de`。
+- 静态证据：`git diff --check`通过；提交范围只有三个Pose Editor文件。
+- Compile证据：统一RunHost执行后状态为Faulted，日志实际使用`D:/Unity_Project_1/camera-zzz/3cDemo/Client/3C_Client`，不是本worktree，不能作为当前源码通过证据。日志：`D:/Unity_Project_1/3C-Artifacts/3c-gameplay/.staging/58af558e543f45f79855db6d833f8f62/Logs/unity-editor.log`。
+- 直接Unity batchmode也未形成当前worktree编译结果，只记录Licensing Client validation/access token失败。日志：`C:/Users/Lenovo/.codex/visualizations/pose-source-compile-20260906.log`。
+- 剩余项：未执行Corin迁移、正式Build或Projection重建；21.1的Foot事件、Producer/Camera/Cue、Blend/State、Motion Matching、Equipment和Revision Compiler尚未分域。外部未提交Runtime改动和Unity生成meta继续保留，不纳入本步。
+
 以下为原有历史实施记录。
 
 ## 固定接入

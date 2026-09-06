@@ -392,7 +392,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         Camera = 5,
         Cue = 6,
         Vfx = 7,
-        Ui = 8
+        Ui = 8,
+        ForceProducer = 9
     }
 
     public readonly struct CharacterPresentationCommand
@@ -413,8 +414,12 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             {
                 throw new ArgumentOutOfRangeException(nameof(sampleTime));
             }
-            if (IsPlaybackCommand(kind) && producerGeneration == 0)
+            if (RequiresProducerGeneration(kind) && producerGeneration == 0)
                 throw new ArgumentOutOfRangeException(nameof(producerGeneration));
+            if (RequiresProducerGeneration(kind) && producerGeneration != header.Activation.Generation)
+                throw new ArgumentException("Presentation producer generation does not match the event activation.", nameof(producerGeneration));
+            if (IsPlaybackCommand(kind) && sourceActionInstanceId == 0)
+                throw new ArgumentOutOfRangeException(nameof(sourceActionInstanceId));
             if (cycle < 0)
                 throw new ArgumentOutOfRangeException(nameof(cycle));
             if (!float.IsFinite(visualTimeScale) || visualTimeScale < 0f)
@@ -467,6 +472,12 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                    kind == CharacterPresentationCommandKind.CompleteProducer ||
                    kind == CharacterPresentationCommandKind.ReleaseProducer;
         }
+
+        static bool RequiresProducerGeneration(CharacterPresentationCommandKind kind) =>
+            IsPlaybackCommand(kind) ||
+            kind == CharacterPresentationCommandKind.Camera ||
+            kind == CharacterPresentationCommandKind.Cue ||
+            kind == CharacterPresentationCommandKind.ForceProducer;
 
         static string RequireIdentity(string value, string parameterName)
         {

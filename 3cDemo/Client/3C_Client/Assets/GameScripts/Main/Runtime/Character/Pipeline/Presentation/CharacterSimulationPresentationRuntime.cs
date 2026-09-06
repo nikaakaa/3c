@@ -228,6 +228,11 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     }
                     m_CurrentFrameSignals.Add(command);
                     break;
+                case CharacterPresentationCommandKind.ForceProducer:
+                    if (producer.Kind != CharacterPresentationProducerKind.Camera)
+                        throw new InvalidOperationException("Force Presentation command requires a Camera producer.");
+                    RequireCamera().Force(command, producer);
+                    break;
                 case CharacterPresentationCommandKind.Vfx:
                 case CharacterPresentationCommandKind.Ui:
                     m_CurrentFrameSignals.Add(command);
@@ -253,6 +258,11 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     break;
                 case CharacterPresentationCommandKind.Camera:
                     RequireCamera().Retire(command, producer);
+                    break;
+                case CharacterPresentationCommandKind.ForceProducer:
+                    if (producer.Kind != CharacterPresentationProducerKind.Camera)
+                        throw new InvalidOperationException("Force Presentation retirement requires a Camera producer.");
+                    RequireCamera().Force(command, producer);
                     break;
                 case CharacterPresentationCommandKind.Cue:
                 case CharacterPresentationCommandKind.Vfx:

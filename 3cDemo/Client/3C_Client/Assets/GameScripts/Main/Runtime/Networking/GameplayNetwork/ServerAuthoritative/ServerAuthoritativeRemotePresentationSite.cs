@@ -397,7 +397,8 @@ namespace ThirdPersonGameplay.Networking.ServerAuthoritative
                 m_Gameplay.Publish(value.GameplayFact);
                 return;
             }
-            if (value.PresentationCommand.Kind == PresentationCommandKind.Camera)
+            if (value.PresentationCommand.Kind == PresentationCommandKind.Camera ||
+                value.PresentationCommand.Kind == PresentationCommandKind.ForceProducer)
                 throw new InvalidOperationException("Remote replication cannot contain Camera commands.");
             m_Runtime.Publish(CharacterPresentationCommand.FromFloat32(value.PresentationCommand));
         }

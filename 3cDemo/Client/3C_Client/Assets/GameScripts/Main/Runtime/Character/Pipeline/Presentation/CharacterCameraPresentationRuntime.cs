@@ -173,6 +173,11 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             }
         }
 
+        public void Force(
+            CharacterPresentationCommand command,
+            CharacterPresentationProducerEntry producer) =>
+            Retire(command, producer);
+
         [PerformanceProbe("presentation.camera")]
         public void Present(CharacterBodyPresentationFrame bodyFrame, float presentationDeltaSeconds)
         {

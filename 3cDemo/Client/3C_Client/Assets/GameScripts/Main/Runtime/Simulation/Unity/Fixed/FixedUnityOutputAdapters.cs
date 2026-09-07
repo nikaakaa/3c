@@ -515,7 +515,8 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Fixed
                 command.ProducerGeneration,
                 command.Cycle,
                 command.SourceActionInstanceId,
-                command.VisualTimeScale.ToSingle());
+                command.VisualTimeScale.ToSingle(),
+                command.DomainPayload);
         }
 
         readonly struct ActivePresentationRecord

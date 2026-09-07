@@ -280,6 +280,11 @@ namespace ThirdPersonCharacter.Pipeline.Animation
             in ActionAnimationPlaybackCommand command) =>
             m_Action.Retire(in command);
 
+        internal void NotifyActionDomainEvent(
+            ulong actionInstanceId,
+            EventId causeEventId) =>
+            m_Action.NotifyDomainEvent(actionInstanceId, causeEventId);
+
         internal void ReplaceActionCommand(
             EventId targetEventId,
             in ActionAnimationPlaybackCommand replacement) =>

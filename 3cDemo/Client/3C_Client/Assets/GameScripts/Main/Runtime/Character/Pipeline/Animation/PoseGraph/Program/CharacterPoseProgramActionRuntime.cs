@@ -177,6 +177,11 @@ namespace ThirdPersonCharacter.Pipeline.Animation
         internal void Publish(in ActionAnimationPlaybackCommand command) =>
             m_ActorState.ActionPlayback.Publish(command);
 
+        internal void NotifyDomainEvent(
+            ulong actionInstanceId,
+            EventId causeEventId) =>
+            m_ActorState.ActionPlayback.NotifyDomainEvent(actionInstanceId, causeEventId);
+
         internal void Retire(in ActionAnimationPlaybackCommand command) =>
             m_ActorState.ActionPlayback.Retire(command);
 

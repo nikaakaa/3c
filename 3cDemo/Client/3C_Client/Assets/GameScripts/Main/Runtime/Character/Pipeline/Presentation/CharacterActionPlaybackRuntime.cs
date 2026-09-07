@@ -77,6 +77,8 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         readonly FixedCapacityFrameBuffer<
             ActionAnimationPlaybackLifecycleSnapshot> m_Snapshots;
         readonly CharacterActionPlaybackFrameTransaction m_Transaction;
+        readonly Queue<(ulong ActionInstanceId, EventId CauseEventId)> m_PendingDomainEvents =
+            new Queue<(ulong, EventId)>();
         CharacterActionPlaybackFrameTransaction m_ActiveTransaction;
 
         internal CharacterActionPlaybackRuntime(
@@ -156,6 +158,15 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             {
                 inboxLease = m_Inbox.BeginRead();
                 lifecycleLease = m_Lifecycle.BeginMutation();
+                while (m_PendingDomainEvents.Count != 0)
+                {
+                    (ulong actionInstanceId, EventId causeEventId) =
+                        m_PendingDomainEvents.Dequeue();
+                    m_Lifecycle.BeginActionSegment(
+                        lifecycleLease,
+                        actionInstanceId,
+                        causeEventId);
+                }
                 historyLease = m_CommittedSamples.BeginMutation();
                 m_Transaction.Begin(
                     frameIdentity,
@@ -202,6 +213,18 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                     m_Transaction.Close();
                 throw;
             }
+        }
+
+        internal void NotifyDomainEvent(
+            ulong actionInstanceId,
+            EventId causeEventId)
+        {
+            if (actionInstanceId == 0)
+                throw new ArgumentOutOfRangeException(nameof(actionInstanceId));
+            if (m_PendingDomainEvents.Count >= FrameCapacity)
+                throw new InvalidOperationException(
+                    "Character Action playback pending domain event capacity was exceeded.");
+            m_PendingDomainEvents.Enqueue((actionInstanceId, causeEventId));
         }
 
         internal void ReplaceSlotUsageBatch(

@@ -326,6 +326,22 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
                 CharacterPresentationCommand.FromFloat32(command),
                 producer);
 
+        public void NotifyDomainEvent(CharacterPresentationCommand command)
+        {
+            RequireAlive();
+            if (command.Kind != CharacterPresentationCommandKind.DomainEvent ||
+                command.SourceActionInstanceId == 0)
+            {
+                throw new ArgumentException(
+                    "Domain event notification requires a Domain event command with an Action instance.",
+                    nameof(command));
+            }
+            m_PoseFrame.RequireNoOpenMutation();
+            PoseProgram.NotifyActionDomainEvent(
+                command.SourceActionInstanceId,
+                command.Header.EventId);
+        }
+
         public void Publish(
             CharacterPresentationCommand command,
             CharacterPresentationProducerEntry producer)

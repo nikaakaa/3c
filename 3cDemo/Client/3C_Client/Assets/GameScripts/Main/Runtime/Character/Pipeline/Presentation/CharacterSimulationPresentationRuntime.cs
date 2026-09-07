@@ -217,6 +217,11 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             RequireAlive();
             if (command.Header.ActorId != m_ActorId)
                 throw new InvalidOperationException("Presentation command targets another Actor.");
+            if (command.Kind == CharacterPresentationCommandKind.DomainEvent)
+            {
+                m_Animation.NotifyDomainEvent(command);
+                return;
+            }
             CharacterPresentationProducerEntry producer = RequireProducer(command.ProducerId);
             switch (command.Kind)
             {

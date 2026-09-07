@@ -1,5 +1,14 @@
 ## 当前进度
 
+### 控制层 2.1b 推进记录（2026-09-07 晚）
+
+- 提交 `513c8fa7f`：`ThirdPersonCharacter.Control.Rules.asmdef` 显式引用补上 `UnityHFSM`（上次迁移漏项）；`movement-mode.state` 前缀提升为公共常量 `CharacterPresentationTrajectoryIntent.MovementModeStatePrefix`；新增 `CharacterMovementModeStateIdentities`，Projection 编译入口解析 `Definition.ControlModuleId` 对应控制合同，身份集合传入 `CharacterPoseTransitionRuleCompiler`，对带 `movement-mode.state` 前缀的 IdentityLiteral 做编译期校验（不命中构建失败并列出合法状态）。首战即逮住姿态图 `run-start-mode` 手抄 `RunStart` 错位。
+- 提交 `c5aec070b`：控制合同七状态无 RunStart，删除姿态图 idle→start 规则的 RunStart 死分支（运行时行为不变），全量重建 Corin 产物。
+- 提交 `8dca4cb82`：BuildAll 路径曾发布携带陈旧 SourceRevision 的 CorinFixedProgram，改走 `Tools/3C/Internal/Rebuild Gameplay Lab Assets` 全量重建修正；重建后 Projection/SimulationProgram 与已提交内容一致（构建确定性佐证）。
+- 2.1b replay 回归：trace 基线 `f169da25` 重放两次，第一次建基线（semantic `38fc3af1…`，1492 帧），第二次对账 `matched:1492` 零偏差。proof 位于 `Temp/CharacterInputReplayProofs/v5/f169da25…/20260907-181036…` 与 `20260907-181515…`。2.1b 剩余：表现采样对照（motion 全链路含 Turn）。
+- 提交 `2743a3589`：删除 TrainingEnemy 全链路（definition 既有无效、monster prefab、AI 目录、builder/菜单/Collector 死分支）；float32 变体靶子改为第二个 Corin（`NeutralCharacterControlSource`），launcher float32 校验从 Player+AI 改为 Player+Neutral；AI 重做分支合并后以正式变体回归。
+- 提交 `d0274cb21`：ACL 输入侧缓存。`CharacterAclAnimationResource` 落 `BuildInputIdentity`，`Complete` 编码前计算 acl-group-build-input/v1 哈希并与已发布资源比对，命中即从已发布资源与 quality.json 重建 artifact 跳过整组采样编码；发布层沿用旧文件时补盖身份。验证：重建#3 全量编码并落身份，重建#4 `[ACL] Read/sample` 零增长、重建通过。
+
 ### Corin 集成接手记录（2026-09-07）
 
 本批按用户新目标接入 BTSMTL、Timeline、PoseGraph、ACL、相机及相关姿态修正；最终验收对照 `D:/ZZZ_Dump/output/corin_replication/replication-guide/README.md`。下面历史总览不代表本批源码和产物已经验收，暂不批量更新任务勾选。Center 记录为 `9fa880d872184c41a3cc3c42f0bcc1c3`，工作目录为主目录。Timeline 本批接入提交 `0495e6425`，Skill 文件默认值修复提交 `93ad2a768`。

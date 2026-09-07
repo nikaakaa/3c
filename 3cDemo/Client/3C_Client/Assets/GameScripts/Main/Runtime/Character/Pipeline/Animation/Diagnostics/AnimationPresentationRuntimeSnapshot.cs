@@ -884,6 +884,47 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
         public TransitionRoutingRuntimeSnapshot Routing { get; }
     }
 
+    public readonly struct PoseTransitionRuleEvaluationSnapshot
+    {
+        internal PoseTransitionRuleEvaluationSnapshot(
+            PoseStateMachineId stateMachineId,
+            PoseStateTransitionId transitionId,
+            bool prospective,
+            bool ruleResult,
+            int operationIndex,
+            PoseTransitionRuleOperationCode operationCode,
+            PoseTransitionRuleValueKind valueKind,
+            bool boolValue,
+            float floatValue,
+            int enumValue,
+            string identityValue)
+        {
+            StateMachineId = stateMachineId;
+            TransitionId = transitionId;
+            Prospective = prospective;
+            RuleResult = ruleResult;
+            OperationIndex = operationIndex;
+            OperationCode = operationCode;
+            ValueKind = valueKind;
+            BoolValue = boolValue;
+            FloatValue = floatValue;
+            EnumValue = enumValue;
+            IdentityValue = identityValue ?? string.Empty;
+        }
+
+        public PoseStateMachineId StateMachineId { get; }
+        public PoseStateTransitionId TransitionId { get; }
+        public bool Prospective { get; }
+        public bool RuleResult { get; }
+        public int OperationIndex { get; }
+        public PoseTransitionRuleOperationCode OperationCode { get; }
+        public PoseTransitionRuleValueKind ValueKind { get; }
+        public bool BoolValue { get; }
+        public float FloatValue { get; }
+        public int EnumValue { get; }
+        public string IdentityValue { get; }
+    }
+
     public readonly struct RootOrientationWarpRuntimeSnapshot
     {
         internal RootOrientationWarpRuntimeSnapshot(
@@ -1349,6 +1390,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
         readonly AnimationReleasedPoseSourceSnapshot[] m_Releases;
         readonly AnimationSlotRuntimeSnapshot[] m_AnimationSlots;
         readonly PoseStateMachineRuntimeSnapshot[] m_PoseStateMachines;
+        readonly PoseTransitionRuleEvaluationSnapshot[]
+            m_PoseStateMachineRuleEvaluations;
         readonly RootOrientationWarpRuntimeSnapshot[] m_RootOrientationWarps;
         readonly CharacterLinkedPoseRuntimeGroupSnapshot[] m_LinkedPoseGroups;
         readonly AnimationLinkedPoseEntryRuntimeSnapshot[] m_LinkedPoseEntries;
@@ -1388,6 +1431,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
         readonly int m_ReleaseCount;
         readonly int m_AnimationSlotCount;
         readonly int m_PoseStateMachineCount;
+        readonly int m_PoseStateMachineRuleEvaluationCount;
         readonly int m_RootOrientationWarpCount;
         readonly int m_LinkedPoseGroupCount;
         readonly int m_LinkedPoseEntryCount;
@@ -1439,6 +1483,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
             int animationSlotCount,
             PoseStateMachineRuntimeSnapshot[] poseStateMachines,
             int poseStateMachineCount,
+            PoseTransitionRuleEvaluationSnapshot[]
+                poseStateMachineRuleEvaluations,
+            int poseStateMachineRuleEvaluationCount,
             RootOrientationWarpRuntimeSnapshot[] rootOrientationWarps,
             int rootOrientationWarpCount,
             CharacterLinkedPoseRuntimeGroupSnapshot[] linkedPoseGroups,
@@ -1513,6 +1560,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
             m_AnimationSlotCount = animationSlotCount;
             m_PoseStateMachines = poseStateMachines;
             m_PoseStateMachineCount = poseStateMachineCount;
+            m_PoseStateMachineRuleEvaluations =
+                poseStateMachineRuleEvaluations;
+            m_PoseStateMachineRuleEvaluationCount =
+                poseStateMachineRuleEvaluationCount;
             m_RootOrientationWarps = rootOrientationWarps;
             m_RootOrientationWarpCount = rootOrientationWarpCount;
             m_LinkedPoseGroups = linkedPoseGroups;
@@ -1588,6 +1639,11 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
             Buffer(m_AnimationSlots, m_AnimationSlotCount);
         public AnimationReadOnlyBuffer<PoseStateMachineRuntimeSnapshot> PoseStateMachines =>
             Buffer(m_PoseStateMachines, m_PoseStateMachineCount);
+        public AnimationReadOnlyBuffer<PoseTransitionRuleEvaluationSnapshot>
+            StateMachineRuleEvaluations =>
+                Buffer(
+                    m_PoseStateMachineRuleEvaluations,
+                    m_PoseStateMachineRuleEvaluationCount);
         public AnimationReadOnlyBuffer<RootOrientationWarpRuntimeSnapshot> RootOrientationWarps =>
             Buffer(m_RootOrientationWarps, m_RootOrientationWarpCount);
         public AnimationReadOnlyBuffer<CharacterLinkedPoseRuntimeGroupSnapshot> LinkedPoseGroups =>

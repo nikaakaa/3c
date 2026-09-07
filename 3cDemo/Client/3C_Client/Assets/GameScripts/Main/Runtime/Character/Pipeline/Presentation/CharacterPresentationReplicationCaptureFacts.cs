@@ -44,6 +44,10 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             Inertializations = new CharacterAnimationInertializationCapturePage(
                 SnapshotAvailable ? snapshot.Inertializations : default,
                 SnapshotAvailable);
+            RuleEvaluations = new CharacterAnimationRuleEvaluationCapturePage(
+                SnapshotAvailable
+                    ? snapshot.StateMachineRuleEvaluations
+                    : default);
         }
 
         [DiagnosticField]
@@ -137,6 +141,91 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
         [DiagnosticTable("inertializations", 1, 64)]
         [DiagnosticGroup("animation-inertialization")]
         public CharacterAnimationInertializationCapturePage Inertializations { get; }
+
+        [DiagnosticTable("transition-rule-evaluations", 1, 256)]
+        [DiagnosticGroup("animation-transition-rules")]
+        public CharacterAnimationRuleEvaluationCapturePage RuleEvaluations { get; }
+    }
+
+    public readonly struct CharacterAnimationRuleEvaluationCapturePage
+    {
+        readonly AnimationReadOnlyBuffer<PoseTransitionRuleEvaluationSnapshot>
+            m_Source;
+
+        public CharacterAnimationRuleEvaluationCapturePage(
+            AnimationReadOnlyBuffer<PoseTransitionRuleEvaluationSnapshot>
+                source)
+        {
+            m_Source = source;
+        }
+
+        public int Count => m_Source.Count;
+
+        public CharacterAnimationRuleEvaluationCaptureRow this[int index] =>
+            new CharacterAnimationRuleEvaluationCaptureRow(m_Source[index]);
+    }
+
+    public readonly struct CharacterAnimationRuleEvaluationCaptureRow
+    {
+        internal CharacterAnimationRuleEvaluationCaptureRow(
+            PoseTransitionRuleEvaluationSnapshot source)
+        {
+            StateMachineId = source.StateMachineId.Value;
+            TransitionId = source.TransitionId.Value;
+            Prospective = source.Prospective;
+            RuleResult = source.RuleResult;
+            OperationIndex = source.OperationIndex;
+            OperationCode = source.OperationCode;
+            ValueKind = source.ValueKind;
+            BoolValue = source.BoolValue;
+            FloatValue = source.FloatValue;
+            EnumValue = source.EnumValue;
+            IdentityValue = source.IdentityValue;
+        }
+
+        [DiagnosticField]
+        [DiagnosticKey("state-machine-id")]
+        public string StateMachineId { get; }
+
+        [DiagnosticField]
+        [DiagnosticKey("rule-transition-id")]
+        public string TransitionId { get; }
+
+        [DiagnosticField]
+        [DiagnosticKey("prospective")]
+        public bool Prospective { get; }
+
+        [DiagnosticField]
+        [DiagnosticKey("rule-result")]
+        public bool RuleResult { get; }
+
+        [DiagnosticField]
+        [DiagnosticKey("operation-index")]
+        public int OperationIndex { get; }
+
+        [DiagnosticField]
+        [DiagnosticKey("operation-code")]
+        public PoseTransitionRuleOperationCode OperationCode { get; }
+
+        [DiagnosticField]
+        [DiagnosticKey("value-kind")]
+        public PoseTransitionRuleValueKind ValueKind { get; }
+
+        [DiagnosticField]
+        [DiagnosticKey("bool-value")]
+        public bool BoolValue { get; }
+
+        [DiagnosticField]
+        [DiagnosticKey("float-value")]
+        public float FloatValue { get; }
+
+        [DiagnosticField]
+        [DiagnosticKey("enum-value")]
+        public int EnumValue { get; }
+
+        [DiagnosticField]
+        [DiagnosticKey("identity-value")]
+        public string IdentityValue { get; }
     }
 
     public readonly struct CharacterAnimationParameterCapturePage

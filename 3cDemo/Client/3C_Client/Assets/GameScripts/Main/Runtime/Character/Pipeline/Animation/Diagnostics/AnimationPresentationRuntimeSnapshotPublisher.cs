@@ -71,6 +71,32 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
                 return m_Page.PoseStateMachineCount;
             }
         }
+        internal int StateMachineRuleEvaluationCount
+        {
+            get
+            {
+                RequireValid();
+                return m_Page.StateMachineRuleEvaluationCount;
+            }
+        }
+        internal void CopyRuleEvaluationRows(
+            PoseTransitionRuleEvaluationSnapshot[] destination)
+        {
+            RequireValid();
+            if (destination == null ||
+                destination.Length <
+                m_Page.StateMachineRuleEvaluationCount)
+            {
+                throw new ArgumentException(
+                    "Pose actor StateMachine rule evaluation destination is invalid.");
+            }
+            Array.Copy(
+                m_Page.StateMachineRuleEvaluations,
+                0,
+                destination,
+                0,
+                m_Page.StateMachineRuleEvaluationCount);
+        }
         internal int InertializationCount
         {
             get
@@ -335,6 +361,17 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
                 PoseStateMachines =
                     new PoseStateMachineRuntimeSnapshot[
                         program.StateMachines.Count];
+                int ruleEvaluationCapacity = 0;
+                for (int i = 0; i < program.StateMachines.Count; i++)
+                {
+                    ruleEvaluationCapacity = checked(
+                        ruleEvaluationCapacity +
+                        ResolveRuleEvaluationCapacity(
+                            program.StateMachines[i]));
+                }
+                StateMachineRuleEvaluations =
+                    new PoseTransitionRuleEvaluationSnapshot[
+                        ruleEvaluationCapacity];
                 Inertializations =
                     new PoseInertializationSnapshot[
                         program.Inertializations.Count];
@@ -394,6 +431,9 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
             internal readonly AnimationSlotRuntimeSnapshot[] AnimationSlots;
             internal readonly PoseStateMachineRuntimeSnapshot[]
                 PoseStateMachines;
+            internal readonly PoseTransitionRuleEvaluationSnapshot[]
+                StateMachineRuleEvaluations;
+            internal int StateMachineRuleEvaluationCount;
             internal readonly PoseInertializationSnapshot[] Inertializations;
             internal readonly Vector3[] InertialPositionResiduals;
             internal readonly Vector3[] InertialRotationResiduals;
@@ -441,8 +481,37 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
             m_Page.ClipFootObservationCount = 0;
             m_Page.BlendSpacePlayerCount = 0;
             m_Page.BlendSpaceSampleCount = 0;
-            m_Page.RootOrientationWarpCount = 0;
-        }
+                m_Page.RootOrientationWarpCount = 0;
+                m_Page.StateMachineRuleEvaluationCount = 0;
+            }
+
+            internal static int ResolveRuleEvaluationCapacity(
+                CharacterPoseStateMachineDescriptor stateMachine)
+            {
+                int ruleCapacity = 1;
+                int maxOutgoing = 0;
+                for (int i = 0; i < stateMachine.Transitions.Count; i++)
+                {
+                    CharacterPoseStateTransitionDescriptor transition =
+                        stateMachine.Transitions[i];
+                    if (transition.Rule.Operations.Count > ruleCapacity)
+                        ruleCapacity = transition.Rule.Operations.Count;
+                    int outgoing = 0;
+                    for (int j = 0;
+                         j < stateMachine.Transitions.Count;
+                         j++)
+                    {
+                        if (stateMachine.Transitions[j].SourceStateIndex ==
+                            transition.SourceStateIndex)
+                        {
+                            outgoing++;
+                        }
+                    }
+                    if (outgoing > maxOutgoing)
+                        maxOutgoing = outgoing;
+                }
+                return Math.Max(maxOutgoing * ruleCapacity * 2, 1);
+            }
 
         internal CharacterPoseActorCommittedDiagnosticsView Capture(
             in CharacterPoseProgramResult result,
@@ -544,6 +613,17 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
                         stateMachines[i].CreateSnapshot();
                 }
                 m_Page.PoseStateMachineCount = stateMachines.Count;
+                int ruleEvaluationOffset = 0;
+                for (int i = 0; i < stateMachines.Count; i++)
+                {
+                    stateMachines[i].CopyRuleEvaluationRows(
+                        m_Page.StateMachineRuleEvaluations,
+                        ruleEvaluationOffset);
+                    ruleEvaluationOffset +=
+                        stateMachines[i].RuleEvaluationRowCount;
+                }
+                m_Page.StateMachineRuleEvaluationCount =
+                    ruleEvaluationOffset;
                 CaptureInertializations(inertializations);
                 for (int i = 0; i < rootOrientationWarps.Count; i++)
                 {
@@ -736,6 +816,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
                 m_Page.PoseStateMachines,
                 0,
                 m_Page.PoseStateMachines.Length);
+            Array.Clear(
+                m_Page.StateMachineRuleEvaluations,
+                0,
+                m_Page.StateMachineRuleEvaluations.Length);
             Array.Clear(
                 m_Page.Inertializations,
                 0,
@@ -1144,6 +1228,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
                 page.PoseStateMachines.Length)
                 throw new InvalidOperationException("Pose StateMachine diagnostics coverage is incomplete.");
             actorDiagnostics.CopyPoseStateMachines(page.PoseStateMachines);
+            actorDiagnostics.CopyRuleEvaluationRows(
+                page.StateMachineRuleEvaluations);
+            page.StateMachineRuleEvaluationCount =
+                actorDiagnostics.StateMachineRuleEvaluationCount;
             for (int i = 0;
                  i < actorDiagnostics.PoseStateMachineCount;
                  i++)
@@ -2342,6 +2430,18 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
                 Releases = new AnimationReleasedPoseSourceSnapshot[releaseCapacity];
                 AnimationSlots = new AnimationSlotRuntimeSnapshot[program.AnimationSlots.Count];
                 PoseStateMachines = new PoseStateMachineRuntimeSnapshot[program.StateMachines.Count];
+                int ruleEvaluationCapacity = 0;
+                for (int i = 0; i < program.StateMachines.Count; i++)
+                {
+                    ruleEvaluationCapacity = checked(
+                        ruleEvaluationCapacity +
+                        CharacterPoseActorCommittedDiagnosticsProjector
+                            .ResolveRuleEvaluationCapacity(
+                                program.StateMachines[i]));
+                }
+                StateMachineRuleEvaluations =
+                    new PoseTransitionRuleEvaluationSnapshot[
+                        ruleEvaluationCapacity];
                 PoseStateMachineBoneWeights = new float[
                     checked(program.StateMachines.Count * layout.BoneCount)];
                 RootOrientationWarps = new RootOrientationWarpRuntimeSnapshot[program.RootOrientationWarps.Count];
@@ -2414,6 +2514,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
             internal readonly AnimationReleasedPoseSourceSnapshot[] Releases;
             internal readonly AnimationSlotRuntimeSnapshot[] AnimationSlots;
             internal readonly PoseStateMachineRuntimeSnapshot[] PoseStateMachines;
+            internal readonly PoseTransitionRuleEvaluationSnapshot[]
+                StateMachineRuleEvaluations;
             internal readonly float[] PoseStateMachineBoneWeights;
             internal readonly RootOrientationWarpRuntimeSnapshot[] RootOrientationWarps;
             internal readonly CharacterLinkedPoseRuntimeGroupSnapshot[] LinkedPoseGroups;
@@ -2455,6 +2557,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
             internal int ReleaseCount;
             internal int AnimationSlotCount;
             internal int PoseStateMachineCount;
+            internal int StateMachineRuleEvaluationCount;
             internal int RootOrientationWarpCount;
             internal int LinkedPoseGroupCount;
             internal int LinkedPoseEntryCount;
@@ -2481,6 +2584,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
                 ReleaseCount = 0;
                 AnimationSlotCount = 0;
                 PoseStateMachineCount = 0;
+                StateMachineRuleEvaluationCount = 0;
                 RootOrientationWarpCount = 0;
                 LinkedPoseGroupCount = 0;
                 LinkedPoseEntryCount = 0;
@@ -2539,6 +2643,8 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
                     AnimationSlotCount,
                     PoseStateMachines,
                     PoseStateMachineCount,
+                    StateMachineRuleEvaluations,
+                    StateMachineRuleEvaluationCount,
                     RootOrientationWarps,
                     RootOrientationWarpCount,
                     LinkedPoseGroups,

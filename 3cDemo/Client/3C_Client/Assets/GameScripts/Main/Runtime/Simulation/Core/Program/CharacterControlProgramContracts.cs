@@ -169,7 +169,8 @@ namespace ThirdPersonSimulation
     public enum CharacterControlMotionSpace : byte
     {
         ActorLocal = 0,
-        World = 1
+        World = 1,
+        CameraRelative = 2
     }
 
     public sealed class CharacterControlMotionDescriptor

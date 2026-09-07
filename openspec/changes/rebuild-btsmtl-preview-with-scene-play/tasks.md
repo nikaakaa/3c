@@ -1,5 +1,7 @@
 实施按接口依赖推进：场景启动、恢复和共享UI可独立开展；角色实例、独立Timeline调用、Document v5与来源接线只等待各自正式合同的精确提交和发布结果，不要求其它change全量完成。本清单只实施预览消费端：主重构拥有控制FSM、SkillProgram/ActionInstance、v5基础与来源schema；Timeline拥有共用内容编译/执行、独立根构建、非Skill调用/状态/输出与同一v5内domain增量。场景控制层不要求所有目标具有角色，也不代做非Skill运行。
 
+执行与审查按 [design.md“执行协作与当前批次”](D:/Unity_Project_1/3C/openspec/changes/rebuild-btsmtl-preview-with-scene-play/design.md) 的 COMM-20260906-01 / EXEC-SCENEPLAY-20260906-01 进行。实现提交、验证及一次写全的问题写回当前 worktree 的 [implementation-audit.md](D:/Unity_Project_1/3C-worktrees/btsmtl-scene-play-preview/openspec/changes/rebuild-btsmtl-preview-with-scene-play/implementation-audit.md)；任务勾选保留本 worktree 实际进度。消息仅在确需执行、处理阻塞或接收交付时通知绝对文档路径与章节，不逐项回报或要求回执。协调文档由协调窗口独占维护，本任务只读。
+
 ## 1. 固定迁移范围与规范对账
 
 - [ ] 1.1 以主重构规划 d99093011、FSM澄清 3bf66c4ea 和控制基础 cbcd7fa42 为追溯起点，记录每项实际使用接口的后续精确提交、合同版本、发布状态及缺失项；不将基础类型存在当作完整迁移已完成。

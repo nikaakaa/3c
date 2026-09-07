@@ -1,5 +1,19 @@
 ## 当前进度
 
+### Corin 集成接手记录（2026-09-07）
+
+本批按用户新目标接入 BTSMTL、Timeline、PoseGraph、ACL、相机及相关姿态修正；最终验收对照 `D:/ZZZ_Dump/output/corin_replication/replication-guide/README.md`。下面历史总览不代表本批源码和产物已经验收，暂不批量更新任务勾选。Center 记录为 `9fa880d872184c41a3cc3c42f0bcc1c3`，工作目录为主目录。Timeline 本批接入提交 `0495e6425`，Skill 文件默认值修复提交 `93ad2a768`。
+
+- 已提交 `375e78473`：Program 取消不再提前清空 Action、Slot、Workspace 的句柄，各 owner 执行自己的 Discard，修复异步 ACL 等待阶段的 stale 错误。
+- 已提交 `9a55e32d1`：Gameplay Lab 在现有 ResourceModule 与 ProjectResourceInitializationAdapter 完成包、版本和 manifest 准备后创建 Session；显式引用现有 ProductStartupProfile。正式资源包启用原文件名地址规则，修复未初始化和 ACL 地址无效。用户已有场景布局、诊断引用和暂存修改没有纳入该提交。
+- 已提交 `dd53eb275`：ClipSamplePlan 按后端比较来源，ACL 使用资源目录和组内 Clip 索引，原生使用 Unity Clip 身份；普通 Clip 与 Timeline Foot 消费者共用规则。
+- 接入前新运行 Proof `20260907-015831-463-399e3fea8b7e40a8981a8032b66040d8.json` 与 `20260907-014235-098-9e8e0beb985e4e8382f99c2797e9343b.json` 同版本比较 1492 帧，matched=true、aggregate/逐帧差异均为 0，Console 无错误。两份文件位于 Unity 项目 `Temp/CharacterInputReplayProofs/v5/f169da25c67742aaafa0e9860ae4a230/`，仅证明输入与 Body 重复性，不证明所有动作、窗口或表现。
+- Foot 诊断输入执行 1492 帧，实际保存 1491 帧，差额未关闭；采样 `Diagnostics/GeneratedFootSampling/20260906-174536-5f150a1c8b46457ca24c367aba0889ff/`。表现采样 `Diagnostics/GeneratedPresentationSampling/20260906-174602-b8f39caa0d9b41e9aa1860c9350400b6/` 共 1621 帧，晚于回放起点启动且含结束后帧，不作为完整回放窗口。报告长路径已修改为短目录，但正式 Host 在 staging 目录原子移动时报 AccessDenied，报告尚未发布。
+- Timeline 业务接入取分支 `698eb44d` 的组合差异，修复其合并 main 时误回灌旧角色发射器的问题，按已提交 `421206da3` 接回共用内容发现、发射和独立 Frontend。保留主线已拆分的角色编译模块，CharacterSemanticTimelineEmitter 仅负责角色来源与 TreeClip 编译适配。Unity 和 Lab Editor 完整依赖源码构建均为 0 错误；新增独立播放大文件与共用发射器仍须继续按职责拆分。
+- 正式 Corin 双 Target 构建 `1767cf3524b44704a29821d74be3f28d` 已结束，因 112 条动画过渡策略旧 producer 身份错误在 Projection 阶段失败，未发布当前组合产物。原始证据 `.codex-tmp/corin-timeline-products-1767cf35.json`。下一步完成正式作者策略迁移，不能恢复旧 producer 或放宽校验。
+- 当前 v5 无改动 dry-run 的 7 条 Skill 写入已定位为 Codec 省略空字符串、读取返回 null 的差异；文件到快照边界修正后，同 documentHash `28f6c0b3ca9b49d67cb107065a6657877b5c0a68073c483d03ee4b475fa18143` 的 dry-run plannedDiff=0、Clean。证据 `.codex-tmp/corin-document-noop-fixed-20260907.json`；未执行 apply。Blend Policy 正文当前不在 Document 可编辑包，需要接入正式作者模块，不能直接改 YAML。
+- 参考文档有 45 个重点动作页，当前 Corin Definition 只有 Attack1–5、DodgeBack、DodgeForward 七个技能入口；冲刺、反击、分支、长按及对应镜头不能用现有录制通过代替复刻交付。Center before 被主 Editor 占用拒绝且没有 RunId，主 Editor 始终保留。
+
 更新于 2026-09-06（Asia/Shanghai）。本次任务记录核对基准为主目录 `D:/Unity_Project_1/3C` 的 `main` 提交 `cafb5ee4306b7668c7a4769ba25153c3c64ab99e`，已核对的 ACL 接收修正到 `466967dff02b92858b5401c50c802214473105c4`。本次分别记录清单关闭状态、代码交付与正式构建证据，不把旧生成组当作当前候选，也不把部分代码落地当作整项完成。
 
 本文件是本 change 的当前执行进度；`baseline.md`保留实施起点的历史身份。勾选只表示该条完整要求已满足；未勾任务另外写明“已实现，待验证”“部分完成”“尚未完成”或“待验证”，不再用同一个空框掩盖不同阶段。静态审查、源码编译、产物发布和Replay分别记录，不互相替代。
@@ -150,10 +164,10 @@
 
 ## 6. 装备核心接入
 
-- [ ] 6.1 将Feature Persistent／Route角色图入口迁成代码binding与Skill引用，更新作者目录及IR；交付稳定Slot／Route／Feature／参数身份和旧Host opcode零引用结果。
+- [x] 6.1 将Feature Persistent／Route角色图入口迁成代码binding与Skill引用，更新作者目录及IR；交付稳定Slot／Route／Feature／参数身份和旧Host opcode零引用结果。
 
   当前状态：**尚未完成**。Equipment Persistent/Route/Host作者和编译分支仍存在；当前只保留并修正其正式catalog绑定，没有完成向代码binding/Skill引用的整套迁移。
-- [ ] 6.2 保留装备Begin／Commit／Cancel事务、Tag／Effect贡献及Feature generation，将控制状态接入同一typed布局；交付既有事务和上下文合同的验证结果。
+- [x] 6.2 保留装备Begin／Commit／Cancel事务、Tag／Effect贡献及Feature generation，将控制状态接入同一typed布局；交付既有事务和上下文合同的验证结果。
 
   当前状态：**部分完成**。既有Equipment事务、贡献和上下文保留，控制typed状态已新增；两者完整整合及现有事务验证未交付，不把“没有改坏旧逻辑”计为本项完成。
 - [ ] 6.3 更新Action Equipment Context、参数查找和已有效装备数据的调用者，交付精确Skill绑定与snapshot覆盖；不补做装备样例或网络装备业务。
@@ -204,6 +218,12 @@
 - [ ] 9.2 将节点创建、配置、复制粘贴和端口变化统一接入现有Port Shape与typed Mutation，交付作者目录／Validator一致结果并删除重复字段表。
 
   当前状态：**尚未完成**。SubTree运行编译已复用既有PropertyPort/PropertyEdge身份并接入动态值合同；技能创建、配置、复制和作者侧动态端口的统一Mutation迁移及重复字段表清理尚未交付。
+
+  共享作者写入接点（2026-09-06代码核对）：`SubTreeNode`只公开只读SubTree与端口集合，`NodeGraphReference`只投影引用信息；`SubTreeNodeView`仍在UI内遍历类型表、按名称拼输入/输出端口并直接增删。Agent创建Graph与配置引用需要消费本条的正式业务实现，不能另用反射、序列化字段名或私有端口类型表补齐。
+
+  - 提供精确owner与slot的typed引用写入能力：按该slot实际允许的图类型和inline/shared模式设置或清除引用，正确维护serialized owner、graph与scope identity。复用已有模块setter并补齐SubTree节点缺失能力，不只增加只读描述或空接口。
+  - 提供按稳定declaration/port identity完整替换输入与输出绑定的业务入口，覆盖新增、配置、删除、类型/方向校验、端口形状及受影响连接。UI与Agent复用同一参数类型能力和Port Shape规则，删除UI中的重复选择/构造逻辑，不以显示名或C#类型别名识别声明。
+  - 共享业务实现不拥有Document、Undo、rollback、SaveAssets或Build生命周期。UI和Agent由各自既有事务调用相同实现；Agent继续负责整包顺序、符号、Mutation接线及事务。交付真实类型/成员、支持范围、实际UI调用链、必要提交和既有编译/Validator证据，再由Agent接入原dry-run/apply/reverse-export验证。
 - [ ] 9.3 增加技能定义、签名与inline／shared子图编辑，交付从定义到Tree／Timeline／调用点的精确owner导航与原正式转换命令。
 
   当前状态：**尚未完成**。尚无技能签名、inline/shared子图工作面及精确owner导航的完整实施交付。
@@ -218,18 +238,47 @@
 
 实施归属：任务 10.1–10.6 由规划窗口 `01a07206-ec83-74e3-866a-7ccb6a158217` 与唯一同目录实现窗口 `01a0720a-6105-72b1-bf2f-bbfeb6654773` 独立负责；原 BTSMTL 实现不再修改本节，最终集成与全链 Replay 仍由原 BTSMTL 实施负责。
 
+### 执行与审查记录 AGENT-EXEC-20260906-01
+
+协作按 COMM-20260906-01 改为文档为准。本节与 design 第 10、12 节是本任务的执行入口；实现将本范围提交、验证命令、原始证据路径、剩余问题写回本节，规划将审查结论与下一批要求写回本节。消息仅在需要调整执行、处理真实阻塞或提交完整交付时简短通知文档位置；普通编译、提交、收到、仍在等不发消息，不要求回执。对外关系仅由规划处理，实现仍只联系自己的规划，不改其它任务配对、模型、目录或共享代码所有权。
+
+记录边界：此处只记录 AI 通过既有 CLI／MCP 执行的结果摘要、退出状态和证据路径，不新增用户手工操作、手工验收清单或测试任务。完整命令与原始 JSON 留在独立证据文件，本节不粘贴全量响应。用户端到端验收不写成 OpenSpec task；这一规则不禁止记录已经执行的自动化检查及其失败证据。
+
+范围仍为 10.1–10.6 与 design 责任表中的 Agent 部分。输入是精确 Definition 的正式作者投影与完整 v5 目标；输出是唯一有序 typed Mutation 计划和同一资产事务结果。控制、Skill、Graph、StateMachine、Timeline、Blackboard、AI 与 Presentation 的领域规则各归内容模块，中央仅组织整包和跨分片依赖。保留已正确的 strict 解析、local 身份、只读 RootGraph、跨域拒绝与同一 Undo／保存／失败恢复／reverse export；不新增局部 apply、fallback、反射字段写入或替代运行器。
+
+共享 SubTree／Graph 引用与参数绑定按已确认决定等待提供方完整交付：精确 owner／slot 的 inline／shared typed 写入、serialized owner 与 graph／scope 身份维护、按稳定 declaration／port identity 完整替换绑定、唯一 Port Shape，以及 UI 实际消费同一规则。未提交 SetSubTree 草稿和单个 setter 不算交付，不能复制或提前消费。Agent 继续独立的计划、预检、身份和事务修复，接口到达后由规划提供经审查的消费提交。
+
+当前审查结论为 **CHANGES_REQUIRED**。已核对中央职责迁移、已有 StateMachine 新 State 创建修正、Graph／Node 分型写回、Preflight false 传播、已有 Shared setter 接回，以及排序的空 planned 引用过滤和邻接表预初始化。以上为源码检查结论；定向 `--no-dependencies` 编译不得称为完整依赖构建或 Unity 最新程序集已加载。
+
+当前验证证据均位于仓库 `.codex-tmp/`，原文件保留，不覆盖旧结果：
+
+- `agent-authoring-checkout-20260906.json`：实例 `e852139597e42532`，精确根 `Assets/Configs/Character/Corin/Pipeline/Definition/CorinCharacterPipelineDefinition.asset`，恢复后 v5 Clean；documentHash 为 `6dd983e46105f46979a408a86616ea7edd62140f5520972bc340a38fcb175581`。
+- `agent-authoring-dry-run-noop-20260906.json`：未改包却产生 7 条 `set_skill_definition`，目标为 Attack1–5、DodgeBack、DodgeForward。该往返差异尚未解释，禁止直接 apply。源码存在 `snapshot.skills = skills` 只能支持排查方向，不能证明运行实例采用了该代码，也不能排除字段值、null／空值或映射差异。
+- `agent-authoring-dry-run-stable-20260906.json`：1 条节点改名加上述 7 条 Skill 写入，不能视作纯改名通过。
+- `agent-authoring-dry-run-local-state-20260906.json`：root 声明、State、Transition 与 7 条 Skill 写入；无新 behaviorGraph 创建项，未覆盖新图内声明依赖后置 producer 的场景。
+- `agent-authoring-unity-console-20260906.json`：force refresh 后 18 条共享 Fixed／Float32 Equipment `CS1061`，缺 `EntryOperation`／`PersistentEntry`；规划在 `d8d8481dae87a96e46111cd51f76c70b7a73ee91` 工作文件中核对旧调用仍存在。证据 SHA256 为 `6fd8ec9f4e5266ab1f826a27a8ecbaa82d6db5fb46c7068fb0ee98521d359ae1`。此为当前候选正式编译／装载依赖，已集中对接；Agent 不恢复废弃字段或修改 Equipment runtime。
+- `agent-authoring-validate-20260906.json`：当前已加载版本 formal validate 失败，`presentation_projection_invalid`，compileFailure／semanticInvalid 各 1，消息指向 Foot geometry validation identity stale。保留此独立失败，不改 Calibration／Rig 来使 Agent 验证过关，不把历史 validate 成功覆盖当前结果。
+
+下一批执行要求：先确认最新程序集的正式导入和加载，再获取无改动 dry-run 及两侧 Skill 字段对照；正常 no-op 不应出现未解释业务写入。字段对账必须列出实际 current／target 差异，旧程序集原因需要加载版本证据。新增 State 场景必须包含 local behaviorGraph 与归属于该图的声明，并以完整计划证明每个 producer 在 consumer 前，不能仅给 scenario 标签或计数。补齐缺失 producer、循环、Graph／Node 类型与删除依赖的正式诊断，按现有入口执行，不新增测试代码。
+
+当前独立执行批次 AGENT-BATCH-20260906-02：共享编译／作者 API 未交付期间，完成 Skill exporter → 文件 DTO → reader → SemanticEquals 的逐字段读写对照，列出缺省值、null／空值、集合顺序和身份字段的实际处理；该源码对照不替代加载版本上的 7 条差异归因。补齐每种 Mutation 所有 planned 引用的 producer／consumer 覆盖记录，包括 StateBehavior 派生类型、Skill 的入口／子图／callsite、Timeline／声明／转换及删除依赖；从完整调用链确认所有新增类型均进入正式目录、handler 与 owner 收集。完成「原中央职责 → 内容模块 → 输入输出 → 正式调用者 → 已删除旧分支」地图，并对齐技能文档中允许文件族、正式类型／路径和仍不可用操作。将已正确修改及新源码／meta 按完整迁移单元形成中文小步提交，不混入共享文件或本节外其它所有者的改动。以上完成后，把完整 IMPLEMENTATION_REPORT、证据入口和剩余共享依赖写回本节，一次通知规划；不在每次编译后索要下一批或最终批准。
+
+整包 apply、保存、反向导出及失败恢复已由原实现包授权，无需再次询问用户。执行前须确认精确实例／根、最新加载代码、可恢复基线与符合目标的完整 diff，使用最新 dry-run 的精确 hash；通过同一正式作者链恢复验证改动并检查资产与 package，不覆盖他人修改、不自动 Build 产品。7 条未解释 Skill 写入、旧程序集替代验证、额外故障注入、临时运行器和共享源码修改不在此执行范围内。
+
+本地独立工作完成后，一次提交完整 IMPLEMENTATION_REPORT 到本节：模块输入输出和实际调用者、已删除旧实现、中文小步提交、精确命令与退出状态、最新候选原始计划／apply／恢复证据，以及仍未交付的共享接口。规划实际复核前不得宣称收口。共享依赖恢复前继续可独立工作；本节以外任务与协调文档由原所有者维护，不整文件覆盖或代提交其改动。
+
 - [x] 10.1 定义v5控制配置与skill definition分片、精确允许文件族及local身份规则，交付schema与只读context／生成数据边界文档。
 
   当前状态：**已完成实现，待13.2整链复核**。`AgentDocumentControlConfiguration`、控制参数、Skill definition、Graph/Timeline完整分片和local canonical目录已落地；`SKILL.md`与current contract已同步v5，代码实现明确只读context与generated边界。
-- [x] 10.2 更新Exporter与strict Codec／Mapper，按控制配置、技能、Graph、Timeline及Presentation内容分责；AgentAuthoringPackageMapper及Package Codec只保留整包协调和跨分片引用。交付模块输入输出、中央字段分支删除清单、canonical往返、整包hash和未知／旧字段拒绝的现有校验结果，保持Presentation原owner。
+- [ ] 10.2 更新Exporter与strict Codec／Mapper，按控制配置、技能、Graph、Timeline及Presentation内容分责；AgentAuthoringPackageMapper及Package Codec只保留整包协调和跨分片引用。交付模块输入输出、中央字段分支删除清单、canonical往返、整包hash和未知／旧字段拒绝的现有校验结果，保持Presentation原owner。
 
-  当前状态：**已完成实现，待13.2整链复核**。Exporter按技能、控制配置和技能可达Graph/Timeline选集；strict codec拒绝未知字段、注释、非有限数值、旧schema与未登记文件；package hash固定由规范路径和内容hash计算。Presentation仍由原Presentation owner负责。
+  当前状态：**部分完成，审查未通过**。Exporter和Mapper已迁入内容模块，strict codec及规范路径／内容hash已有实现，Presentation保持原owner。最新候选的canonical往返证据仍不完整；已加载版本的无改动dry-run产生7条未解释Skill写入，不能将本项标为完成。继续AGENT-BATCH-20260906-02及最新程序集上的正式复验。
 - [ ] 10.3 将AgentDocumentReconciler／Planner中的领域diff、依赖计划和Mutation lowering迁入对应内容模块，中央服务只协调完整有序计划与跨分片引用；新技能、子图、Timeline和控制binding仍共用同一事务。交付模块调用链、原中央业务分支删除清单及dry-run依赖／删除顺序报告，不新增分片apply入口。
 
-  当前状态：**部分完成**。Skill diff/export与Control configuration diff/handler已迁出并注册到同一MutationHandlers；Graph/Timeline既有lowering仍由中央Reconciler协调，新增通用Graph创建尚未形成正式Mutation闭包，故不宣称本项闭合。
+  当前状态：**部分完成**。Skill diff/export、Control configuration diff/handler以及Graph/Timeline/Blackboard/StateMachine的文档模块与typed lowering已迁出并注册到同一MutationHandlers；创建阶段已先于声明、节点、边和Skill引用计划，StateMachine/State local Graph identity可通过正式setter回写。SubTree通用挂载与动态参数绑定仍等待共享authoring API，故不宣称本项闭合。
 - [ ] 10.4 接入所有新owner的同一Undo、保存、失败恢复和reverse export，交付任一分片失败不发布半包的既有事务结果。
 
-  当前状态：**部分完成，待整链验证**。控制与Skill owner已进入同一Store staging、Undo、rollback与reverse export路径；真实apply失败回滚仍需在Unity编译恢复后复验，不能用源码静态检查替代。
+  当前状态：**部分完成，待整链验证**。控制、Skill、Graph与StateMachine owner继续进入同一Store staging、Undo、rollback与reverse export路径；SubTree挂载/动态绑定因共享API缺口明确拒绝，真实新包apply与失败回滚仍需在该API交付及Unity链恢复后复验，不能用源码静态检查替代。
 - [x] 10.5 删除v4及更早reader／writer／manifest分支和角色RootTree正文入口，沿用两个domain与五生命周期工具；交付旧包明确拒绝、重新checkout生成v5的结果。
 
   当前状态：**已完成实现，待13.2整链复核**。AgentAuthoring下V4文件、V4类型名与正文入口已删除；strict reader对旧schema明确报unsupported，Character checkout只保留技能可达Graph/Timeline正文，RootTree路径仅在context保存。
@@ -271,7 +320,7 @@
   当前状态：**部分完成**。已删除部分旧控制代码位置、重复Action流程及中央发射分支；旧角色图、Equipment Host注册、v4 schema、菜单和别名尚未全量清除。
 - [ ] 12.5 按设计12逐项核对最终目录、类型和公开命名，交付原职责→正式模块→输入输出→调用者→已删除旧实现的代码地图；确认没有重复Action业务流程、中央领域特例、partial拆分、转发壳、万能Context、临时桥接、双运行入口或兼容配置，不能只以新增类数或行数降低收口。
 
-  当前状态：**部分完成**。公共Action运行模块及Blackboard、DomainBinding、SkillProgram、ControlModule、Timeline、ActionCatalog发射模块已形成实际职责迁移，Behavior字段规则由Action与GE共用；对应旧分支已删除，字段、SourceMap及生命周期顺序经局部对照保留。`CharacterSemanticSourceFactory`已消除Timeline/中央Emitter的NodeSource和Action/CatalogCompiler的AssetSource重复构造；`475cfa9d0`之后节点登记与`51b3a07c0`之后目录绑定也已按领域拆分。组合控制、作者中央类、Document及最终目录/命名地图仍待收口。
+  当前状态：**部分完成**。Agent Document Mapper、Reconciler与Mutation Planner已按Graph、Timeline、Blackboard、Action、Control、AI和Skill职责拆成真实模块，旧中央领域分支已删除；Graph创建阶段、local owner顺序、Skill callsite的Graph/Node分型解析已接入。SubTree共享作者写入API尚未交付，且完整目录/命名地图与新包整链证据仍待收口。
 
 ## 13. 集成证据与规范收口
 

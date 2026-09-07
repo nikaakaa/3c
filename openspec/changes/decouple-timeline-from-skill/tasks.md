@@ -1,3 +1,20 @@
+## 执行协作约定（COMM-20260906-01）
+
+- 跨任务决定以 `D:/Unity_Project_1/3C/docs/coordination-progress.md` 对应章节为准，由协调窗口单独维护；规划和实现均读取，不复制维护第二份协调记录。
+- 本文件与同目录 `design.md` 是规划到实现的执行入口。实现进度、提交、实际验证及失败证据继续写入 `D:/Unity_Project_1/3C-worktrees/timeline-runtime/openspec/changes/decouple-timeline-from-skill/implementation/baseline-inventory.md` 和既有 Center 记录；本规划文件中的未勾选任务不得覆盖实现分支已核实的勾选状态。
+- 规划把审查结论和下一批要求集中写回现有文档。提报协调前一次写全背景、精确代码与证据、影响、已尝试处理、待决定事项及可行方案的业务取舍，不让接收者从聊天中拼接要求。
+- 消息只在需要开始或调整执行、处理阻塞、接收已审查交付时发送一次绝对路径和章节通知；普通提交、编译、进度、收到、已读、无变化不发消息，不要求回执，不定时催报。
+- `TASK_READY`、`CROSS_TASK_QUESTION`、`COORDINATION_INVALIDATION` 留作记录中的事件标签，不代替完整证据。沿用当前规划与实现配对，跨任务由协调窗口处理。
+- 已授权工作持续推进，小步中文提交；不新增重复方案，不改他人正确成果，不用兼容路径绕过未交付接口。
+
+### 当前执行边界（2026-09-06）
+
+- 已认可的时间核心与领域执行分离、完整 Action 身份传递保持不动。共同内容发射及 Character 委托接入继续按实际代码审查，不因一次编译就宣告全部独立播放完成。
+- 实现记录至 `4d61b82fc`：Corin Float32 与 Fixed 精确构建均通过 Semantic Emission；Presentation Projection 因 Foot Analysis geometry validation identity stale 失败，未发布新 Program。后续记录必须分开发射、发布、加载、运行验证。
+- 独立入口按协调文档“根与共同内容的关联合同”接入唯一公共 Root、Builder、codec/store；核对实际 ContentHash 格式与公共根的 64 位约束，发现不一致先记录精确来源，不另造影子 hash 或临时根类型。
+- 相机完整来源、generation 和 Complete/Release/Force 接线按协调文档 C-04 的现行写入分工实施；逐 Clip 动画表现修正策略仍按本任务 2.6、4.7 和设计第 13 节完成，不能以当前 Track producer 代替。
+- 非 Skill 正式调用、TreeClip 实际独立样例、作者与诊断接入、完整运行验证仍需完成；被删除的私有 Timeline codec/player 不得恢复。
+
 ## 1. 核对实际接线与保护范围
 
 - [ ] 1.1 核对主重构已提供的 SkillProgram、ActionInstance/SkillExecutionState、树控制和 Document v5 合同，交付精确代码入口、提交/工作区状态及缺口记录；不得以未接通类型作为完成依据。

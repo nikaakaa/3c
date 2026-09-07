@@ -1,5 +1,70 @@
 # PoseGraph串行实施记录
 
+## 文档协作与写入分工（COMM-20260906-01）
+
+自2026-09-06起，规划与实现按本节协作。本节及下面的当前执行要求优先于后文历史阶段记录；历史提交、编译与回放通过只覆盖原记录中的固定版本，不代表当前Canvas迁移或整体架构已通过审查。
+
+- 跨任务决定唯一入口为`D:/Unity_Project_1/3C/docs/coordination-progress.md`。规划自行读取其中的决定、负责方、动作和交付条件，该文件只由协调窗口维护。
+- 本文件`D:/Unity_Project_1/3C/openspec/changes/refactor-character-pose-graph-architecture/execution.md`由Pose规划维护当前范围、接口选择、完整执行要求、审查结论和需要协调的事件。详细要求在文档中合并成完整的一批，再通知实现读取具体章节。
+- 实现固定使用`C:/Users/Lenovo/.codex/worktrees/a323/3C`与`codex/posegraph-luna`，将提交、改动范围、验证及失败证据写回该工作树现有的`openspec/changes/refactor-character-pose-graph-architecture/execution.md`，并按实际完成状态更新同目录`tasks.md`。不再从聊天记录拼接要求，不另外建立一份方案或工作记录。
+- 原规划/实现配对保持不变：规划`01a06ca7-e964-7eb3-bbb0-fe97b2b26930`，实现`01a06ca7-e503-7e01-8943-7993b5aa81c4`。实现只联系本规划；跨任务问题由规划交协调窗口，不直接联系其它规划或实现。
+- 普通提交、编译、进度、已读、收到、仍在等和无变化只写记录，不发消息、不索取回执、不定时轮询。已授权的工作连续推进，不因减少消息而增加确认或停工。
+- 仅在需要开始或调整执行、处理无法自行解决的阻塞、接收已审查交付时发送一次简短通知；内容只包含现有文档绝对路径、章节或事件编号及所需动作。同一问题的连续补充先在文档中合并，不逐条发送。
+- `TASK_READY`、`CROSS_TASK_QUESTION`、`COORDINATION_INVALIDATION`保留为文档事件标签。提报前一次写全背景、固定源码与具体问题、证据绝对路径、受影响的输入输出、已尝试处理、需要决定的事项，以及可行方案的业务取舍；接收协调决定后由规划将执行要求收回本文档。只有现有资料确实不足的特殊情况才补一次针对性沟通，并回写结论。
+
+## 当前范围与审查（POSE-REVIEW-20260906-01）
+
+审查对象为实现工作树提交`bfe2b8aa27b43c832180794aeab8cc9f1f5ddd0a`及本次只读源码核对。整体结论仍是`CHANGES_REQUESTED`，没有整体`APPROVED`或`TASK_READY`。
+
+已批准范围与未完成范围如下：
+
+| 范围 | 当前结论与执行边界 |
+| --- | --- |
+| 既有Runtime模块 | 旧PosePlanExecutionRuntime、StagedExecutor、NativeProgram已删除，Source、Program、Constraint、Final Publication已形成真实职责。保留正确实现，继续收回根Runtime掌握的Workspace、Action、Slot、Motion Matching和Linked Pose内部提交/丢弃知识；不能用旧大类删除证明整体重构完成。 |
+| Corin一次性迁移器 | `4a3cb9114`、`a30c2ec79`、`1b26bb098`仅限迁移器源码审查通过，包含Legacy语义对账、写入前拒绝混合状态、事务恢复和保存后反序列化对账。尚未证明实际Corin迁移、正式Build及旧模型删除，不能扩大批准范围。 |
+| Compiler与Validator | ProjectionCompiler文件3051行、Family Payload Plan文件2164行、ProjectionValidator文件1609行仍承担多领域逻辑和递归图语义。工作树`tasks.md`第21.1–21.3项保持未完成，拆文件或增加转发入口不算职责分离。 |
+| 作者窗口与Canvas | PoseGraphEditor文件2204行，BottomDock文件1690行。CanvasCore数据模型已接入，877行CanvasView仍是自建GraphView；AuthoringView暴露可变图/节点，基类非virtual写API也未形成完整隔离。第21.5–21.7项及对应旧项仍未完成。 |
+| Preview | 正式Scene Play会话、场景、时钟和旧完整预览生命周期由既有预览任务负责。本任务消费正式命令与提交后的观察数据，并删除Pose窗口的独立预览运行/时钟/Seek链；第19.x项仍未完成，不扩大成第二预览系统。 |
+| TrainingEnemy | 整套退役范围保持。配置根、Prefab等删除成果保留，引用闭包、collector、场景/启动/构建专用引用按第15.x项继续对账；不迁移TrainingEnemy，不为缺失正式业务创建占位目标。 |
+
+`8fd3b010f`与`bfe2b8aa2`只修正任务真相和依赖说明，并未完成上述代码整改。当前完整剩余项以实现工作树`C:/Users/Lenovo/.codex/worktrees/a323/3C/openspec/changes/refactor-character-pose-graph-architecture/tasks.md`为执行清单；本节补足审查边界，不复制或另设第二份任务勾选。
+
+## 连续执行要求（POSE-EXEC-20260906-01）
+
+本批继续已有授权与现有工作树，不新建任务、分支或worktree，不重置、回退或改写历史，不夹带其它工作的未提交差异。下面是模块边界与交付要求，不新增本轮MR，也不替用户改变业务优先级。
+
+| 现有任务 | 输入、处理与输出 | 可审查的完成条件 |
+| --- | --- | --- |
+| 21.1 Projection编译 | 各领域接收所属作者数据和已验证输入，产出所属typed编译结果及诊断；总入口仅组合结果、统一身份并交唯一发布入口。 | 动画源、Foot事件、Producer/Camera/Cue、Blend/State、Motion Matching、Equipment与Revision计算按职责归属，修改某一领域无需修改总入口内部算法。既有字段和正确行为完整保留。 |
+| 21.2 Family绑定 | Node Definition或所属Family Adapter解释自己的payload；Pass消费已确定的symbolic operation和typed布局。 | Family内部知道如何绑定自身数据，中央Pass不再递归发现图语义或集中理解全部节点；Schedule、容量、Workspace、Batch确定后再封存ABI。 |
+| 21.3 验证 | 节点局部规则归Definition，跨节点连线、可达性和唯一Output/Assembler/FBBIK归Topology；最终校验消费封存结果。 | 删除第二套递归拓扑规则，Projection校验只承担版本、身份、容量及发布合同；错误保留Pass、节点和Source Map定位。 |
+| 21.4 根Runtime | 根接收帧输入，调用各模块正式协议，消费同一lineage的结果。 | 根只组织固定阶段、完成、Seal/Discard/Fault，模块自己掌握内部状态和资源；不得重新引入第二根、第二执行器或第二Writer。 |
+| 21.5–21.7 作者与Canvas | Graph、StateMachine、TransitionRule、Tuning/Diagnostics分别处理所属作者操作；所有资产写入经唯一Mutation，编译只读作者投影。 | 窗口只组合页面和导航。Canvas写入隔离与现成Graph Editor接入仍是未完成决策，不把当前自建表面描述为完整复用；工作树tasks中两组并列方案保留业务取舍，确需协调决定时一次成文，其他独立整改继续。 |
+| 18.x、19.x、20.x、21.8–21.9 | 完成保留资产迁移、正式Scene Play消费及唯一Character Build接线，接收必要且已提交的外部依赖。 | 用唯一Build生成对应Target和同组Projection，迁移对账后删除旧模型、旧Canvas、迁移入口及兼容读取；只在真实落地后更新任务与当前架构文档。 |
+
+每个代码小步必须说明业务输入、处理、输出、状态/资源归属、依赖和删除的旧路径，形成能独立解释和审查的中文提交；不以行数变少、空接口、转发类或同一中央状态拆成多个文件代替模块化。
+
+必要编译和正式构建使用已有统一入口，不新增测试代码、不把手动验证写进tasks。dotnet build/msbuild按项目要求使用`--disable-build-servers /nr:false /p:UseSharedCompilation=false`并在结束后立即执行`dotnet build-server shutdown`。Unity调用显式指定对应实例/项目路径，保留主验收Editor。已有证据只按其真实覆盖范围引用，源码编译、产物发布与用户端到端验收分别记录；失败保留原日志，不绕校验、不复制生成文件、不新增fallback。
+
+## 跨任务依赖与交付记录规则（POSE-DEPENDENCY-20260906-01）
+
+跨任务动态状态直接读取协调文档的对应问题/决定。当前本轮MR顺序是ACL、Timeline、Camera，PoseGraph整支不是其前置；本任务继续原Pose/Canvas范围，仅对实际共享边界作必要复核。
+
+- main已有正式Pose根事务及四类lease，不再为ACL提供另一套根。ACL共享Source/资源、根调用、属性发布、编译序列化的必要增量由主线按协调决定接收；历史源码来源核对不等于接收组合或产物已批准。
+- ACL的Projection v14与相机的v14字段布局不同，不能互读。唯一组合版本、完整字段、Create/codec/校验/hash/消费者和正式生成由主线统一；具体当前版本及构建状态读取协调文档P-07/P-08，不将旧数字固定成后续接入要求。
+- 当前Canvas迁移与独立质量整改不因ACL整支尚未合入而停工。实际触及共享Source/Projection时，只接完整、已提交、已审查的必要依赖，保留正确源代码、原meta/asmdef和完整字段，不从其它任务脏工作区复制，不将来源锚点当完整cherry-pick白名单。
+- Build来源与主线Foot前置分别读取协调文档P-02/P-14。TrainingEnemy的collector归属和实际引用问题需独立取证，不能用ACL交付或另一实例的几何验证替代本任务对账。
+
+实现写回一批完整记录时，至少包含对应任务/事件、稳定提交及绝对路径、实际调用链、输入输出与旧路径删除、运行命令/实例/版本、结果及证据路径、失败与剩余项。规划在本文件收回审查结论，逐项注明批准范围；只有接收方需要行动才发送该文档定位，不发送普通状态回执。
+
+## 本次文档切换证据（POSE-COMM-20260906-01）
+
+实现工作树已提交`415f1422e9502aff30a1137e81451d1d62a4933b`，仅给现有execution增加18行读取入口、写入分工和协作切换记录；没有修改业务代码、资产或任务完成勾选。两处文档的定向`git diff --check`均通过，原历史记录没有删除。本次未执行代码编译、迁移或正式Build。
+
+主目录执行要求已保存；当前主目录存在`index.lock`且有其它任务暂存内容，本次未操作主目录索引、删除锁或提交该工作区。锁沿用协调文档P-05的既有负责方处理，不因同一已登记状态再次发协调消息；实现可直接读取上述当前章节继续工作。
+
+以下为原有历史实施记录。
+
 ## 固定接入
 
 - 总源码及行为基线固定为`ad3527e103cc3235a63e8a1c1dbd26df5155e0ba`。

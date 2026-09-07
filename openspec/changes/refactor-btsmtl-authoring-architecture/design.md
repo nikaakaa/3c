@@ -64,6 +64,8 @@ Gameplay 控制状态机、技能内部局部状态机和 Presentation PoseState
 
 控制模块声明不可变合同：ModuleId、语义版本、参数／状态 schema、Input／Request 接口、所需能力与可引用的技能／producer 集合。Build 将 binding、参数和 schema 纳入角色运行包；运行时显式装配匹配实现。算法不伪装为一个万能图节点，也不被重新生成成角色状态机图。
 
+C# 控制状态机的运行时骨架采用项目 fork 的 UnityHFSM（本地嵌入包 `Packages/UnityHFSM`，remote 指向 nikaakaa/UnityHFSM，不再引用上游）。使用约束：时序由仿真 Tick 注入，不使用库的 float 秒与 Unity 时间驱动；数值只通过 typed 观察包进入迁移条件，双 Target 复用同一状态机实现，不按数值类型复制两套。库中 Unity 输入耦合的 Transition（OnKey/OnMouse）、协程 State 与可视化模块不进入控制层。状态身份（如 `presentation.movement-mode.state/WalkStart`）由模块代码常量声明，供姿态图与采样编译期引用，替代手抄字符串。
+
 控制binding与允许作者修改的参数值以CharacterPipelineDefinition中的正式配置为唯一真值；模块代码、参数schema、状态schema及默认定义保持只读。普通作者UI、Agent Mutation和Build必须共用已登记模块查询与同一参数解析／校验入口。Definition提供明确的配置写入API；Build发射实际解析后的配置值，不能仍读取代码默认值而忽略作者修改。未知参数、重复身份、类型不匹配、非法值或切换模块后不适用的配置按正式声明明确失败，不静默丢弃或增加私有回退规则。合法配置修改进入既有来源／Program身份链，运行时仍只消费正式Program。
 
 上述Definition配置、公共解析／校验和Frontend／Emitter消费由原BTSMTL实现负责，关联任务3.5与9.4；Agent任务只负责文档字段、快照、strict映射、有序Mutation及事务接入。现有CharacterControlModuleCatalog.Require和CharacterControlParameterDescriptor可作为共享基础，尚缺的作者API必须由原实现提交后提供真实成员清单，不能把规划中的接口名当作已经可用，也不能让Agent通过反射写字段或自建模块登记。

@@ -80,9 +80,13 @@
 
 ## 2. 角色与技能基础合同
 
-- [x] 2.1 定义C#显式StateMachine／State／Transition及角色控制模块合同，覆盖Enter／Tick／Exit、来源／目标、纯条件、优先级和稳定顺序、输入／结果、参数、typed状态schema与代码版本；通过既有登记／组合校验交付唯一模块目录。
+- [ ] 2.1 定义C#显式StateMachine／State／Transition及角色控制模块合同，覆盖Enter／Tick／Exit、来源／目标、纯条件、优先级和稳定顺序、输入／结果、参数、typed状态schema与代码版本；通过既有登记／组合校验交付唯一模块目录。
 
-  当前状态：**已完成**。cbcd7fa42、c2d9a203d及规则装配提交已提供显式State/Transition、只读条件端口、稳定选择顺序、typed控制状态、版本和唯一CharacterControlModuleCatalog。合同/目录/组合校验代码已核对，Runtime编译及当前正式Frontend构建已有成功证据；移动行为比较仍属于5.1和13.2。
+  当前状态：**部分完成（2026-09-07 收回已完成判定）**。cbcd7fa42、c2d9a203d及规则装配提交已提供自研显式State/Transition、只读条件端口、稳定选择顺序、typed控制状态、版本和唯一CharacterControlModuleCatalog，Runtime编译及正式Frontend构建已有成功证据。但Corin控制状态机（Idle/WalkStart/WalkLoop/WalkEnd/RunStart/RunLoop/RunEnd及迁移）当前仍寄宿在`CorinPlayableRootTree.asset`的图资产里、经Discovery从树发现后发射——即设计明确禁止的“重新生成成角色状态机图”形态；Turn控制状态缺失；姿态图迁移字面量因手抄身份与运行时fact错位（旧GUID）导致locomotion动画恒idle，已修复（c262837fb，采样证实状态机全链路恢复、replay 0帧偏差）。2026-09-07新增实施载体决定（design第2节）：控制状态机运行时骨架改用项目fork的UnityHFSM（嵌入包`Packages/UnityHFSM`，remote=nikaakaa/UnityHFSM），时序由仿真Tick注入。剩余工作：库改造（剥float秒/Unity时间、tick注入、typed观察包、删OnKey/OnMouse/协程/可视化）、现有自研合同映射到库骨架、Corin控制模块含Turn迁到库上、状态身份改为代码常量供姿态图编译期引用。
+
+- [ ] 2.1a 将fork的UnityHFSM改造成确定性控制骨架：计时全部改为注入的仿真Tick（整数），删除/隔离Unity时间与输入耦合成员（TransitionOnKey、TransitionOnMouse、CoState、ParallelStates、Visualization、Samples），迁移条件改为typed观察包谓词，双Target复用同一实现；交付改造清单与两端构建证据。
+
+- [ ] 2.1b 将Corin控制状态机从`CorinPlayableRootTree.asset`迁移到C#控制模块（UnityHFSM骨架）：七状态+Turn、迁移条件、每状态Timeline绑定与Locomotion参数（MoveSpeed/DurationSeconds等）进正式控制合同；状态身份输出为代码常量（`presentation.movement-mode.state/<Name>`），姿态图迁移字面量改为引用该常量并重建产物；交付replay回归（trace基线f169da25）与表现采样对照（motion状态机全链路含Turn）。
 - [ ] 2.2 定义SkillDefinition、入口签名、ActionProfile引用、子图依赖及允许的后续候选，交付相同策略被多个技能引用时仍可精确选中技能的作者／校验结果。
 
   当前状态：**部分完成**。a47532948、ceb50eb9e已接入SkillDefinition、ActionProfile引用和精确SkillId/入口目录；参数化子图签名、依赖及允许的后续候选尚未完整交付。
@@ -97,7 +101,7 @@
 
 - [ ] 3.1 将角色组合Discovery改为读取控制合同和技能闭包，迁移原Character／Equipment graph roots；通过正式Frontend报告验证根目录唯一且旧角色root不再生成。
 
-  当前状态：**部分完成**。ceb50eb9e已将Corin Discovery接到C#控制合同与技能记录；旧Character/Equipment作者入口和编译注册尚未全部删除，正式根目录唯一性报告未交付。
+  当前状态：**部分完成**。ceb50eb9e已将Corin Discovery接到C#控制合同与技能记录；旧Character/Equipment作者入口和编译注册尚未全部删除，正式根目录唯一性报告未交付。2026-09-07核实：控制状态机本体仍在`CorinPlayableRootTree.asset`（七状态State Body、迁移规则图、4个LocomotionInputMotion节点），Definition仍引用`m_RootTreeAsset`；2.1b迁移完成后此处需删除树内控制authoring与树发现分支，根树瘦身为纯Skill入口（见4.1的RootTree调度清理）。
 - [ ] 3.2 按设计12的职责迁移表，从CharacterSemanticEmitter迁出技能节点业务族及变量／装备／GE绑定发射，复用唯一操作目录与typed端口；CharacterSimulationProgramBuilder仅保留通用IR写入／索引／一致性约束。交付模块输入输出、实际调用链、中央分支删除清单及UI能力／Emitter／Target支持集一致结果；Timeline发射按已分配的owner接口接入。
 
   当前状态：**部分完成**。b419fcdb9→770ecfc51、3e1355410已迁出Blackboard声明/状态/作用域、领域绑定和技能目录；51aed878f→be440e2f5迁出控制合同；adc29ea30迁出Timeline编排并通过窄回调复用Graph拓扑。705f01d82进一步把Action/Behavior目录、标签条件及动作状态槽发射移入CharacterSemanticActionCatalogEmitter；`bf1289be3`统一Node/Asset来源工厂；`ae28b8998`、`147556f2f`、`0c416ac24 → a23eb2ae8`、`9a036e8ad`分别迁出Equipment、Input、Tag/Attribute及全局状态目录。`475cfa9d0 → 51b3a07c0`将节点登记和目录绑定继续按领域拆开，所有模块仍写入共享CatalogIndex与Builder，中央业务分支已删除。各模块进入实际Editor构建，局部对照确认语义保留；UI/Emitter/Target能力一致性报告、其余作者目录和最终发布证据尚未完整交付。

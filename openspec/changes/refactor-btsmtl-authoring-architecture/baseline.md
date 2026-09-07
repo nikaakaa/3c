@@ -317,4 +317,11 @@ Corin Definition 当前 `m_EquipmentCapabilityEnabled=0`，没有有效 Equipmen
 - 1.1：当前只具备运行程序集和关键资产的候选身份；DLL 不能从源码重建，tracked dirty patch、本地包内容身份以及 Development Center 的 source-before/editor receipt 仍缺失，保持未完成。
 - 1.2：已按 8 个 Locomotion 状态、16 条 Transition、7 个激活入口、8 个 Timeline、23 个 TreeClip、23 个 Window fact、Blackboard 输入/变量和当前 Equipment 空入口完成源到目标映射；空 Body 的 stopping 状态已修正为 `WalkStopping/RunStopping`，旧 Graph identity 只作 Source Map，新代码 identity 待实施登记。正式实现仍须由后续任务以 Replay 核对 identity/generation/barrier/Pose fact/Body 输出。
 - 1.3：已完成 proposal 中 2 个 New＋31 个 Modified capability 的实际入口、接口替换／保留、触碰范围和 Preview／Pose／Equipment／AI／KCC／Pipeline 保护边界矩阵。
-- 1.4：保持未完成。`f169da25c67742aaafa0e9860ae4a230` 已接受一次 `replay_start` 但没有结果封口；同版本重复与跨 ABI 的输入、Body、动作阶段、输出比较不能宣称通过。
+- 1.4：2026-09-07 更新：trace `f169da25c67742aaafa0e9860ae4a230` 已完成多次结果封口——标准 replay 于同一 Program 身份下连续两次 1492 帧逐帧 `matched`（proof `20260907-100726-718` 对 `20260907-051700-925`）；Projection 字面量修复重建后（ProjectionRevision `06ae25d7…`）再次完整回放 1492 帧、`divergent_frame_count=0`，`projection_revision` 字段差异为身份护栏预期（baseline 自动重建，见 `20260907-125020-340`）。表现层配套证据：修复后采样（`Diagnostics/GeneratedPresentationSampling/20260907-044940-…`）motion 状态机出现全链路（idle 424/WalkStart 66/WalkLoop 60/RunLoop 98/RunEnd 128 帧）。跨 ABI 双 Target 同输入比较仍未执行，保持未完成。另：locomotion 迁移字面量旧 GUID 错位曾导致状态机恒 idle（c262837fb 修复），是控制状态身份手抄字符串风险的实证，2.1b 交付代码常量后消除。
+
+## 2026-09-07 事实补充（控制层载体与诊断基础设施）
+
+- 控制状态机运行时骨架决定：项目 fork UnityHFSM 为本地嵌入包 `Packages/UnityHFSM`（remote=nikaakaa/UnityHFSM，manifest `file:UnityHFSM`，原上游引用已移除）；时序由仿真 Tick 注入。任务见 2.1/2.1a/2.1b。
+- 表现复制采样补齐三块观测列并已提交：事实帧列（`CharacterPresentationFactCaptureFrame`，movement-mode/播放时钟 owner，61ce9ee6f/4df9ad182）、迁移规则逐操作输入表（`transition-rule-evaluations`，ac20ee980）、状态机 pending target 与目标 provider 状态列（b58242da9）。诊断入口 `character.presentation_replication_diagnostics`（full 采样器）。
+- 回放视角对齐：trace schema 升 v4 记录录制起始相机航向、回放开始时恢复（27036267c）；v3 旧 trace 兼容读取。live 输入的相机相对转换链经采样与 trace 逐帧解码核实为正确（540 移动帧世界向量连续分布，208 个不同角度）。
+- 已知待删旧结构清单（2.1b/3.1/4.1 完成后执行）：`CorinPlayableRootTree.asset` 内控制状态机 authoring；Discovery 的控制树发现分支与 locomotion 节点发射；Definition 的 `m_RootTreeAsset`（根树瘦身为纯 Skill 入口）；姿态图 `movement-mode.state/…` 手抄字面量。

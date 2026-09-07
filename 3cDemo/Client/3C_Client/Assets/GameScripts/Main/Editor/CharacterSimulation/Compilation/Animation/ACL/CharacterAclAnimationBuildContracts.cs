@@ -179,6 +179,37 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation.Compilation.Animation.
             string groupContentHash,
             string buildInputIdentity,
             CharacterAclAnimationResourceManifest[] manifests,
+            CharacterAclAnimationQualityReport[] qualityReports)
+        {
+            GroupIndex = groupIndex >= 0
+                ? groupIndex
+                : throw new ArgumentOutOfRangeException(nameof(groupIndex));
+            GroupContentHash = string.IsNullOrWhiteSpace(groupContentHash)
+                ? throw new ArgumentException("ACL animation group content hash is required.", nameof(groupContentHash))
+                : groupContentHash;
+            BuildInputIdentity = string.IsNullOrWhiteSpace(buildInputIdentity)
+                ? throw new ArgumentException("ACL animation group build input identity is required.", nameof(buildInputIdentity))
+                : buildInputIdentity;
+            Manifests = manifests ?? throw new ArgumentNullException(nameof(manifests));
+            QualityReports = qualityReports ?? throw new ArgumentNullException(nameof(qualityReports));
+            if (Manifests.Length == 0 ||
+                QualityReports.Length != Manifests.Length)
+                throw new ArgumentException("ACL animation group artifact lengths are inconsistent.");
+            for (int i = 0; i < Manifests.Length; i++)
+            {
+                CharacterAclAnimationResourceManifest manifest = Manifests[i] ??
+                    throw new ArgumentException("ACL animation group manifest is missing.", nameof(manifests));
+                if (manifest.GroupClipIndex != i ||
+                    !string.Equals(manifest.GroupContentHash, GroupContentHash, StringComparison.Ordinal))
+                    throw new ArgumentException("ACL animation group manifest mapping is invalid.", nameof(manifests));
+            }
+        }
+
+        internal CharacterAclAnimationGroupArtifact(
+            int groupIndex,
+            string groupContentHash,
+            string buildInputIdentity,
+            CharacterAclAnimationResourceManifest[] manifests,
             byte[][] transformPayloads,
             byte[][] scalarPayloads,
             byte[] databaseHeaderPayload,
@@ -227,6 +258,7 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation.Compilation.Animation.
         internal byte[] BulkMediumPayload { get; }
         internal byte[] BulkLowPayload { get; }
         internal CharacterAclAnimationQualityReport[] QualityReports { get; }
+        internal bool HasPayloads => TransformPayloads != null;
 
         internal CharacterAnimationCompiledResourceDescriptor CreateDescriptor(
             int resourceIndex)

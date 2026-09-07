@@ -80,6 +80,8 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                     throw new InvalidOperationException(
                         $"ACL group '{group.AssetStem}' contains an invalid manifest mapping.");
                 }
+                if (!group.Artifact.HasPayloads)
+                    continue;
                 RequireEqualPayload(
                     entry.Resource.RequirePayload(
                         CharacterAclDataBlockKind.Transform,
@@ -101,6 +103,8 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                     group.Artifact.ScalarPayloads[i],
                     group.AssetStem);
             }
+            if (!group.Artifact.HasPayloads)
+                return;
             RequireEqualPayload(
                 entry.Resource.RequirePayload(
                     CharacterAclDataBlockKind.DatabaseHeader,
@@ -163,17 +167,18 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             {
                 expected.Add(
                     $"{entry.Folder}/{group.AssetStem}.transform.{i}.bytes");
-                if (group.Artifact.ScalarPayloads[i].Length > 0)
+                if (group.Artifact.Manifests[i].Scalar.Exists)
                     expected.Add(
                         $"{entry.Folder}/{group.AssetStem}.scalar.{i}.bytes");
             }
-            if (group.Artifact.DatabaseHeaderPayload.Length > 0)
+            CharacterAclAnimationResourceManifest manifest = group.Artifact.Manifests[0];
+            if (manifest.DatabaseHeader.Exists)
                 expected.Add(
                     $"{entry.Folder}/{group.AssetStem}.database.bytes");
-            if (group.Artifact.BulkMediumPayload.Length > 0)
+            if (manifest.BulkMedium.Exists)
                 expected.Add(
                     $"{entry.Folder}/{group.AssetStem}.medium.bytes");
-            if (group.Artifact.BulkLowPayload.Length > 0)
+            if (manifest.BulkLow.Exists)
                 expected.Add(
                     $"{entry.Folder}/{group.AssetStem}.low.bytes");
             if (expected.Count != entry.Paths.Count)

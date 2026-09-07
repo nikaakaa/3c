@@ -282,18 +282,6 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation.Compilation.Animation
                         new CharacterAclAnimationResourceManifest[clipCount];
                     for (int clipIndex = 0; clipIndex < clipCount; clipIndex++)
                         manifests[clipIndex] = entry.Resource.GetGroupManifest(clipIndex);
-                    byte[][] transformPayloads =
-                        entry.Resource.RequireGroupPayload(
-                            CharacterAclDataBlockKind.Transform);
-                    byte[][] scalarPayloads =
-                        entry.Resource.RequireGroupPayload(
-                            CharacterAclDataBlockKind.Scalar);
-                    byte[] databasePayload = entry.Resource.RequirePayload(
-                        CharacterAclDataBlockKind.DatabaseHeader, 0);
-                    byte[] mediumPayload = entry.Resource.RequirePayload(
-                        CharacterAclDataBlockKind.BulkMedium, 0);
-                    byte[] lowPayload = entry.Resource.RequirePayload(
-                        CharacterAclDataBlockKind.BulkLow, 0);
                     string reportPath =
                         $"{entry.Folder}/{entry.Stem}.quality.json";
                     CharacterAclAnimationQualityReport[] qualityReports =
@@ -303,11 +291,6 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation.Compilation.Animation
                         entry.Resource.Manifest.GroupContentHash,
                         buildInputIdentity,
                         manifests,
-                        transformPayloads,
-                        scalarPayloads,
-                        databasePayload,
-                        mediumPayload,
-                        lowPayload,
                         qualityReports);
                 }
                 catch (Exception)

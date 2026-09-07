@@ -39,6 +39,9 @@ namespace ThirdPersonCharacter.Editor.CharacterSimulation.Compilation.Animation.
                 throw new ArgumentNullException(nameof(artifact));
             if (context == null)
                 throw new ArgumentNullException(nameof(context));
+            if (!artifact.HasPayloads)
+                throw new InvalidOperationException(
+                    "ACL artifact publication requires in-memory compression payloads.");
             CharacterAclAnimationResourceManifest[] groupManifests = artifact.Manifests;
             byte[][] groupTransformPayloads = artifact.TransformPayloads;
             byte[][] groupScalarPayloads = artifact.ScalarPayloads;

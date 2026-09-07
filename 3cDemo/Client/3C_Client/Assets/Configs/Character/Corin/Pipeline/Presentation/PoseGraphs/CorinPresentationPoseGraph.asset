@@ -2299,7 +2299,7 @@ MonoBehaviour:
                 m_FloatLiteral: 0
                 m_EnumTypeId: 
                 m_EnumLiteral: 0
-                m_IdentityLiteral: presentation.movement-mode.state/95fea828-8395-5d62-9be5-5727b48acd0d
+                m_IdentityLiteral: presentation.movement-mode.state/RunLoop
               m_OutputOperationId: matches-target-mode
             m_BlendLogic: 1
             m_DurationSeconds: 0.15
@@ -2367,7 +2367,7 @@ MonoBehaviour:
                 m_FloatLiteral: 0
                 m_EnumTypeId: 
                 m_EnumLiteral: 0
-                m_IdentityLiteral: presentation.movement-mode.state/95fea828-8395-5d62-9be5-5727b48acd0d
+                m_IdentityLiteral: presentation.movement-mode.state/RunLoop
               - m_OperationId: run-start-mode
                 m_Kind: 16
                 m_InputA: 
@@ -2377,7 +2377,7 @@ MonoBehaviour:
                 m_FloatLiteral: 0
                 m_EnumTypeId: 
                 m_EnumLiteral: 0
-                m_IdentityLiteral: presentation.movement-mode.state/54223f0b-f2e9-5178-ab79-bc4269701214
+                m_IdentityLiteral: presentation.movement-mode.state/RunStart
               m_OutputOperationId: matches-run-start-or-loop-mode
             m_BlendLogic: 1
             m_DurationSeconds: 0.15
@@ -2465,7 +2465,7 @@ MonoBehaviour:
                 m_FloatLiteral: 0
                 m_EnumTypeId: 
                 m_EnumLiteral: 0
-                m_IdentityLiteral: presentation.movement-mode.state/95fea828-8395-5d62-9be5-5727b48acd0d
+                m_IdentityLiteral: presentation.movement-mode.state/RunLoop
               m_OutputOperationId: ready-to-transition
             m_BlendLogic: 1
             m_DurationSeconds: 0.15
@@ -2513,7 +2513,7 @@ MonoBehaviour:
                 m_FloatLiteral: 0
                 m_EnumTypeId: 
                 m_EnumLiteral: 0
-                m_IdentityLiteral: presentation.movement-mode.state/27d93ca2-0aa4-5da9-9e2b-9ab1a096bb15
+                m_IdentityLiteral: presentation.movement-mode.state/Turn
               m_OutputOperationId: matches-target-mode
             m_BlendLogic: 1
             m_DurationSeconds: 0.12
@@ -2649,7 +2649,7 @@ MonoBehaviour:
                 m_FloatLiteral: 0
                 m_EnumTypeId: 
                 m_EnumLiteral: 0
-                m_IdentityLiteral: presentation.movement-mode.state/129fb8de-2914-50f1-8bb6-e682ad76a67b
+                m_IdentityLiteral: presentation.movement-mode.state/WalkLoop
               m_OutputOperationId: ready-to-transition
             m_BlendLogic: 1
             m_DurationSeconds: 0.15
@@ -2697,7 +2697,7 @@ MonoBehaviour:
                 m_FloatLiteral: 0
                 m_EnumTypeId: 
                 m_EnumLiteral: 0
-                m_IdentityLiteral: presentation.movement-mode.state/95fea828-8395-5d62-9be5-5727b48acd0d
+                m_IdentityLiteral: presentation.movement-mode.state/RunLoop
               m_OutputOperationId: matches-target-mode
             m_BlendLogic: 1
             m_DurationSeconds: 0.3
@@ -2775,7 +2775,7 @@ MonoBehaviour:
                 m_FloatLiteral: 0
                 m_EnumTypeId: 
                 m_EnumLiteral: 0
-                m_IdentityLiteral: presentation.movement-mode.state/84c12f85-34ab-5f09-8b1f-c73166c3deb9
+                m_IdentityLiteral: presentation.movement-mode.state/RunEnd
               m_OutputOperationId: matches-stop-mode
             m_BlendLogic: 1
             m_DurationSeconds: 0.15
@@ -2823,7 +2823,7 @@ MonoBehaviour:
                 m_FloatLiteral: 0
                 m_EnumTypeId: 
                 m_EnumLiteral: 0
-                m_IdentityLiteral: presentation.movement-mode.state/95fea828-8395-5d62-9be5-5727b48acd0d
+                m_IdentityLiteral: presentation.movement-mode.state/RunLoop
               m_OutputOperationId: matches-target-mode
             m_BlendLogic: 1
             m_DurationSeconds: 0.1
@@ -2939,7 +2939,7 @@ MonoBehaviour:
                 m_FloatLiteral: 0
                 m_EnumTypeId: 
                 m_EnumLiteral: 0
-                m_IdentityLiteral: presentation.movement-mode.state/129fb8de-2914-50f1-8bb6-e682ad76a67b
+                m_IdentityLiteral: presentation.movement-mode.state/WalkLoop
               - m_OperationId: walk-start-mode
                 m_Kind: 16
                 m_InputA: 
@@ -2949,7 +2949,7 @@ MonoBehaviour:
                 m_FloatLiteral: 0
                 m_EnumTypeId: 
                 m_EnumLiteral: 0
-                m_IdentityLiteral: presentation.movement-mode.state/01fa46e2-ef80-5ac4-9acb-d874fd5b5f6b
+                m_IdentityLiteral: presentation.movement-mode.state/WalkStart
               m_OutputOperationId: matches-walk-start-or-loop-mode
             m_BlendLogic: 1
             m_DurationSeconds: 0.15
@@ -2997,7 +2997,7 @@ MonoBehaviour:
                 m_FloatLiteral: 0
                 m_EnumTypeId: 
                 m_EnumLiteral: 0
-                m_IdentityLiteral: presentation.movement-mode.state/129fb8de-2914-50f1-8bb6-e682ad76a67b
+                m_IdentityLiteral: presentation.movement-mode.state/WalkLoop
               m_OutputOperationId: matches-target-mode
             m_BlendLogic: 1
             m_DurationSeconds: 0.15
@@ -3045,7 +3045,7 @@ MonoBehaviour:
                 m_FloatLiteral: 0
                 m_EnumTypeId: 
                 m_EnumLiteral: 0
-                m_IdentityLiteral: presentation.movement-mode.state/95fea828-8395-5d62-9be5-5727b48acd0d
+                m_IdentityLiteral: presentation.movement-mode.state/RunLoop
               m_OutputOperationId: matches-target-mode
             m_BlendLogic: 1
             m_DurationSeconds: 0.15
@@ -3093,7 +3093,7 @@ MonoBehaviour:
                 m_FloatLiteral: 0
                 m_EnumTypeId: 
                 m_EnumLiteral: 0
-                m_IdentityLiteral: presentation.movement-mode.state/129fb8de-2914-50f1-8bb6-e682ad76a67b
+                m_IdentityLiteral: presentation.movement-mode.state/WalkLoop
               m_OutputOperationId: matches-target-mode
             m_BlendLogic: 1
             m_DurationSeconds: 0.1
@@ -3141,7 +3141,7 @@ MonoBehaviour:
                 m_FloatLiteral: 0
                 m_EnumTypeId: 
                 m_EnumLiteral: 0
-                m_IdentityLiteral: presentation.movement-mode.state/129fb8de-2914-50f1-8bb6-e682ad76a67b
+                m_IdentityLiteral: presentation.movement-mode.state/WalkLoop
               m_OutputOperationId: matches-target-mode
             m_BlendLogic: 1
             m_DurationSeconds: 0.15
@@ -3237,7 +3237,7 @@ MonoBehaviour:
                 m_FloatLiteral: 0
                 m_EnumTypeId: 
                 m_EnumLiteral: 0
-                m_IdentityLiteral: presentation.movement-mode.state/129fb8de-2914-50f1-8bb6-e682ad76a67b
+                m_IdentityLiteral: presentation.movement-mode.state/WalkLoop
               m_OutputOperationId: matches-target-mode
             m_BlendLogic: 1
             m_DurationSeconds: 0.3
@@ -3421,7 +3421,7 @@ MonoBehaviour:
                 m_FloatLiteral: 0
                 m_EnumTypeId: 
                 m_EnumLiteral: 0
-                m_IdentityLiteral: presentation.movement-mode.state/27d93ca2-0aa4-5da9-9e2b-9ab1a096bb15
+                m_IdentityLiteral: presentation.movement-mode.state/Turn
               m_OutputOperationId: matches-target-mode
             m_BlendLogic: 1
             m_DurationSeconds: 0.12
@@ -3469,7 +3469,7 @@ MonoBehaviour:
                 m_FloatLiteral: 0
                 m_EnumTypeId: 
                 m_EnumLiteral: 0
-                m_IdentityLiteral: presentation.movement-mode.state/27d93ca2-0aa4-5da9-9e2b-9ab1a096bb15
+                m_IdentityLiteral: presentation.movement-mode.state/Turn
               m_OutputOperationId: matches-target-mode
             m_BlendLogic: 1
             m_DurationSeconds: 0.12

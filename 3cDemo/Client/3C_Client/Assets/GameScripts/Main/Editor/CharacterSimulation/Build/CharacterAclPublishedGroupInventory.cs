@@ -157,7 +157,6 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             if (!Directory.Exists(fullFolder))
                 return new CharacterAclPublishedGroupInventory(
                     Array.Empty<CharacterAclPublishedGroupInventoryEntry>());
-            CharacterAclAnimationArtifactFileStore.Refresh();
             string[] files = Directory.GetFiles(
                 fullFolder,
                 "*",

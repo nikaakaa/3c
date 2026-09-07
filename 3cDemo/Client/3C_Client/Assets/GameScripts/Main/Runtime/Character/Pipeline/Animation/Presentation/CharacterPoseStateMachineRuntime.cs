@@ -158,6 +158,10 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
         readonly CharacterPoseTransitionRuleValue[] m_RuleValues;
         readonly PoseTransitionRuleEvaluationSnapshot[] m_RuleEvaluationRows;
         int m_RuleEvaluationRowCount;
+        PresentationPoseSourceAvailability m_LastTargetProviderAvailability =
+            PresentationPoseSourceAvailability.Pending;
+        PresentationPoseSourceFailureReason m_LastTargetProviderFailureReason =
+            PresentationPoseSourceFailureReason.None;
         readonly int[][] m_TransitionsBySource;
         readonly float[] m_TransitionDurations;
         readonly float[] m_TransitionCompletionDurations;
@@ -614,7 +618,12 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                 m_ActiveTransition != null ? m_BlendElapsed : 0f,
                 m_ActiveTransition?.CurveIndex ?? -1,
                 m_ActiveTransition?.BlendProfileIndex ?? -1,
-                m_RoutingWorkspace.Snapshot);
+                m_RoutingWorkspace.Snapshot,
+                m_HasPendingTarget,
+                m_PendingTargetTransition?.TransitionId ?? default,
+                m_PendingTargetRuleSatisfied,
+                m_LastTargetProviderAvailability,
+                m_LastTargetProviderFailureReason);
         }
 
         internal void PrepareFrame(
@@ -953,12 +962,21 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
             return null;
         }
 
+        void CacheTargetProviderStatus(
+            int targetStateIndex,
+            ICharacterPoseStateSourceRuntime sources)
+        {
+            PoseSourceProviderStatus status =
+                GetStateStatus(targetStateIndex, sources);
+            m_LastTargetProviderAvailability = status.Availability;
+            m_LastTargetProviderFailureReason = status.FailureReason;
+        }
+
         void RecordRuleEvaluation(
             CharacterPoseStateTransitionDescriptor transition,
             bool prospective,
             bool result)
-        {
-            int operationCount = transition.Rule.Operations.Count;
+        {            int operationCount = transition.Rule.Operations.Count;
             for (int i = 0; i < operationCount; i++)
             {
                 if (m_RuleEvaluationRowCount >= m_RuleEvaluationRows.Length)
@@ -1116,6 +1134,7 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Presentation
                     sources);
                 return;
             }
+            CacheTargetProviderStatus(selected.TargetStateIndex, sources);
             if (!sources.TryStageStateTarget(
                     m_Descriptor.States[selected.TargetStateIndex]
                         .SourceProviders))

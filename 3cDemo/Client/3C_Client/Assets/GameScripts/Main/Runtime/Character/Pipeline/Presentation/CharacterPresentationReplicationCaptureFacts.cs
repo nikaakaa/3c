@@ -310,7 +310,32 @@ namespace ThirdPersonCharacter.Pipeline.Presentation
             BlendElapsedSeconds = source.BlendElapsedSeconds;
             CurveIndex = source.CurveIndex;
             BlendProfileIndex = source.BlendProfileIndex;
+            HasPendingTarget = source.HasPendingTarget;
+            PendingTargetTransitionId = source.PendingTargetTransitionId.Value;
+            PendingTargetRuleSatisfied = source.PendingTargetRuleSatisfied;
+            TargetProviderAvailability = source.TargetProviderAvailability;
+            TargetProviderFailureReason = source.TargetProviderFailureReason;
         }
+
+        [DiagnosticField]
+        [DiagnosticKey("has-pending-target")]
+        public bool HasPendingTarget { get; }
+
+        [DiagnosticField]
+        [DiagnosticKey("pending-target-transition-id")]
+        public string PendingTargetTransitionId { get; }
+
+        [DiagnosticField]
+        [DiagnosticKey("pending-target-rule-satisfied")]
+        public bool PendingTargetRuleSatisfied { get; }
+
+        [DiagnosticField]
+        [DiagnosticKey("target-provider-availability")]
+        public PresentationPoseSourceAvailability TargetProviderAvailability { get; }
+
+        [DiagnosticField]
+        [DiagnosticKey("target-provider-failure-reason")]
+        public PresentationPoseSourceFailureReason TargetProviderFailureReason { get; }
 
         [DiagnosticField]
         [DiagnosticKey("state-machine-id")]

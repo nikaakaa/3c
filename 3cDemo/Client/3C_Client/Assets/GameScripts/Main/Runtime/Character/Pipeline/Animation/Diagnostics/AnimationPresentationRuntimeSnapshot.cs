@@ -844,7 +844,12 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
             float blendElapsedSeconds,
             int curveIndex,
             int blendProfileIndex,
-            TransitionRoutingRuntimeSnapshot routing)
+            TransitionRoutingRuntimeSnapshot routing,
+            bool hasPendingTarget,
+            PoseStateTransitionId pendingTargetTransitionId,
+            bool pendingTargetRuleSatisfied,
+            PresentationPoseSourceAvailability targetProviderAvailability,
+            PresentationPoseSourceFailureReason targetProviderFailureReason)
         {
             StateMachineId = stateMachineId;
             NodeId = nodeId;
@@ -863,6 +868,11 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
             CurveIndex = curveIndex;
             BlendProfileIndex = blendProfileIndex;
             Routing = routing;
+            HasPendingTarget = hasPendingTarget;
+            PendingTargetTransitionId = pendingTargetTransitionId;
+            PendingTargetRuleSatisfied = pendingTargetRuleSatisfied;
+            TargetProviderAvailability = targetProviderAvailability;
+            TargetProviderFailureReason = targetProviderFailureReason;
         }
 
         public PoseStateMachineId StateMachineId { get; }
@@ -882,6 +892,11 @@ namespace ThirdPersonCharacter.Pipeline.Animation.Diagnostics
         public int CurveIndex { get; }
         public int BlendProfileIndex { get; }
         public TransitionRoutingRuntimeSnapshot Routing { get; }
+        public bool HasPendingTarget { get; }
+        public PoseStateTransitionId PendingTargetTransitionId { get; }
+        public bool PendingTargetRuleSatisfied { get; }
+        public PresentationPoseSourceAvailability TargetProviderAvailability { get; }
+        public PresentationPoseSourceFailureReason TargetProviderFailureReason { get; }
     }
 
     public readonly struct PoseTransitionRuleEvaluationSnapshot

@@ -255,7 +255,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
 
         static JObject CaptureNodeExpression(CharacterPoseCanvasNode node)
         {
-            if (!node || node.Payload == null)
+            if (node == null || node.Payload == null)
                 throw new InvalidOperationException(
                     "Pose Canvas canonical expression contains an incomplete node.");
             return CaptureNodeExpression(

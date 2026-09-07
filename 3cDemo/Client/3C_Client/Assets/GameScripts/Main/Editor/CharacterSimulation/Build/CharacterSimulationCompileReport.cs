@@ -116,7 +116,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
 
     public sealed class CharacterSimulationBuildResult
     {
-        public CharacterSimulationBuildResult(
+        internal CharacterSimulationBuildResult(
             CharacterSemanticIrArtifactDescriptor artifact,
             IReadOnlyList<CharacterSimulationTargetBuildProduct> targetProducts,
             ThirdPersonCharacter.Pipeline.Animation.CharacterPresentationProjection presentationProjection,

@@ -19,7 +19,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             IReadOnlyList<CharacterAnimationPropertyImportCurveTarget> curves,
             IReadOnlyList<CharacterAnimationPropertyImportPoseGraphTarget> poseGraphs,
             IReadOnlyDictionary<string, CharacterPoseParameterDeclaration[]> graphParameters,
-            CharacterTypedPoseNode rootResolveNode,
+            CharacterPoseCanvasNode rootResolveNode,
             IReadOnlyList<CharacterPoseParameterPolicy> rootPolicies,
             CharacterAclCompressionSettings compression,
             IReadOnlyList<CharacterAnimationPropertyImportPrefabTarget> prefabs,

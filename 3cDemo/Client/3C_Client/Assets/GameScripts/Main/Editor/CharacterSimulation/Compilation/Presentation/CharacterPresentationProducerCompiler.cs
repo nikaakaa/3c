@@ -404,17 +404,6 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             return true;
         }
 
-        static IReadOnlyDictionary<string, IReadOnlyList<CharacterPresentationTimelineCallSite>> CollectTimelineCallSites(
-            CharacterAuthoringGraphOccurrence root)
-        {
-            var result = new Dictionary<string, List<CharacterPresentationTimelineCallSite>>(StringComparer.Ordinal);
-            CollectTimelineCallSites(root, result);
-            return result.ToDictionary(
-                pair => pair.Key,
-                pair => (IReadOnlyList<CharacterPresentationTimelineCallSite>)pair.Value.ToArray(),
-                StringComparer.Ordinal);
-        }
-
         static void CollectTimelineCallSites(
             CharacterAuthoringGraphOccurrence occurrence,
             Dictionary<string, List<CharacterPresentationTimelineCallSite>> result)

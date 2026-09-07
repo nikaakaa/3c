@@ -7,6 +7,7 @@ using ThirdPersonCharacter.Animation.TransitionRouting;
 using ThirdPersonCharacter.Control.Rules;
 using ThirdPersonCharacter.Editor.CharacterSimulation;
 using ThirdPersonCharacter.Editor.CharacterSimulation.Compilation.Animation;
+using ThirdPersonCharacter.Editor.CharacterSimulation.Compilation.Animation.ACL;
 using ThirdPersonCharacter.Editor.MotionMatching;
 using ThirdPersonCharacter.Equipment;
 using ThirdPersonCharacter.Pipeline.Animation;
@@ -148,7 +149,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
                     model.Timelines,
                     CharacterPresentationProducerCompiler.CollectTimelineCallSites(model.Root),
                     request.AnimationBuildInput,
-                    animationCatalog.AnimationResources,
+                    animationCatalog.AnimationResources.ToArray(),
                     movementModeStateIdentities,
                     projectionRevision,
                     errors);

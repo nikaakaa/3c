@@ -1,7 +1,9 @@
 using System;
+using ThirdPersonSimulation;
 using System.Collections.Generic;
 using System.Linq;
 using ThirdPersonCharacter.Equipment;
+using ThirdPersonCharacter.Pipeline.Animation;
 
 namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
 {

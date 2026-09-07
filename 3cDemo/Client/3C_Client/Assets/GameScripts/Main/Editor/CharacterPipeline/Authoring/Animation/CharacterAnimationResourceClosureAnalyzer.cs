@@ -51,7 +51,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             var categories = new Dictionary<AnimationClip, HashSet<string>>();
             foreach (CharacterPoseCanvasGraph graph in EnumerateReachablePoseGraphs(profile))
             {
-                foreach (CharacterTypedPoseNode node in graph.Nodes)
+                foreach (CharacterPoseCanvasNode node in graph.Nodes)
                 {
                     CharacterPresentationPoseSourceSlot slot = node?.PresentationPoseSourceSlot;
                     if (!slot)
@@ -178,7 +178,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             if (!visited.Add(key))
                 return;
             result.Add(graph);
-            foreach (CharacterTypedPoseNode node in graph.Nodes)
+            foreach (CharacterPoseCanvasNode node in graph.Nodes)
             {
                 if (node?.Payload is CharacterPoseSubgraphPayload subgraph &&
                     subgraph.Subgraph != null &&

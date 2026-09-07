@@ -1,4 +1,5 @@
 using System;
+using ThirdPersonCharacter.Pipeline.Editor;
 using System.Collections.Generic;
 using ThirdPersonCharacter.Pipeline.Animation;
 using UnityEngine;

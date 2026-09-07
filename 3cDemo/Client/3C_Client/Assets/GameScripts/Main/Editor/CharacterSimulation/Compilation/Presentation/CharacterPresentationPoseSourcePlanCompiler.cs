@@ -1,4 +1,5 @@
 using System;
+using ThirdPersonCharacter.Pipeline.Editor;
 using System.Collections.Generic;
 using System.Linq;
 using ThirdPersonCharacter.Editor.CharacterSimulation.Compilation.Animation;
@@ -232,7 +233,7 @@ namespace ThirdPersonCharacter.Pipeline.Simulation.Editor
             return result.ToArray();
         }
 
-       static void ValidateClipPlayers(
+        internal static void ValidateClipPlayers(
             CharacterPoseProgramImage posePlan,
             IReadOnlyList<CharacterPresentationPoseSourcePlan> poseSources,
             CharacterAnimationRigDefinition rig,

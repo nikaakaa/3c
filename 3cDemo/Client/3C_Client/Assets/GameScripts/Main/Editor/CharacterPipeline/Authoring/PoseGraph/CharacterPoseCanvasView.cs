@@ -282,10 +282,10 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         {
             style.flexGrow = 1f;
             Insert(0, new GridBackground());
-            AddManipulator(new ContentZoomer());
-            AddManipulator(new ContentDragger());
-            AddManipulator(new SelectionDragger());
-            AddManipulator(new RectangleSelector());
+            this.AddManipulator(new ContentZoomer());
+            this.AddManipulator(new ContentDragger());
+            this.AddManipulator(new SelectionDragger());
+            this.AddManipulator(new RectangleSelector());
             RegisterCallback<PointerMoveEvent>(evt => m_PastePosition = contentViewContainer.WorldToLocal(evt.position));
         }
 

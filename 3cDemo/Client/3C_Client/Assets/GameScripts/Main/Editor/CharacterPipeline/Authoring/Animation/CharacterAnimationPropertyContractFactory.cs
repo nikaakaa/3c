@@ -16,7 +16,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
             CharacterAnimationSourceResourceBinding[] sourceResourceBindings,
             CharacterAnimationPropertyAuthoringBinding[] propertyBindings,
             CharacterAnimationPropertyImportCompressionTarget compression,
-            CharacterTypedPoseNode rootResolveNode)
+            CharacterPoseCanvasNode rootResolveNode)
         {
             PropertyParameters = propertyParameters;
             GraphParameters = graphParameters;
@@ -35,7 +35,7 @@ namespace ThirdPersonCharacter.Pipeline.Editor
         internal CharacterAnimationSourceResourceBinding[] SourceResourceBindings { get; }
         internal CharacterAnimationPropertyAuthoringBinding[] PropertyBindings { get; }
         internal CharacterAnimationPropertyImportCompressionTarget Compression { get; }
-        internal CharacterTypedPoseNode RootResolveNode { get; }
+        internal CharacterPoseCanvasNode RootResolveNode { get; }
     }
 
     internal static class CharacterAnimationPropertyContractFactory
@@ -60,13 +60,13 @@ namespace ThirdPersonCharacter.Pipeline.Editor
                     .ToArray();
             CharacterPoseCanvasGraph rootGraph = poseGraph.Graph ??
                 throw new InvalidOperationException("Presentation Pose Graph has no root Graph.");
-            CharacterTypedPoseNode[] resolveNodes = rootGraph.Nodes
+            CharacterPoseCanvasNode[] resolveNodes = rootGraph.Nodes
                 .Where(value => value?.Payload is CharacterPoseParameterResolvePayload)
                 .ToArray();
             if (resolveNodes.Length != 1)
                 throw new InvalidOperationException(
                     $"Root Pose Graph must contain exactly one Pose Parameter Resolve node; found {resolveNodes.Length}.");
-            CharacterTypedPoseNode rootResolveNode = resolveNodes[0];
+            CharacterPoseCanvasNode rootResolveNode = resolveNodes[0];
             CharacterPoseParameterPolicy[] rootPolicies = BuildRootPolicies(
                 rootResolveNode.RequirePayload<CharacterPoseParameterResolvePayload>(),
                 propertyParameters);
